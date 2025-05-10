@@ -27,21 +27,31 @@ This roadmap outlines the planned improvements and current status of the Baa lan
     - [x] Stringification (`#`)
     - [x] Token Pasting (`##`) (concatenation)
     - [x] Macro recursion detection
-    - [ ] Implement full macro rescanning and robust substitution rules (complex edge cases).
     - [ ] Fully robust argument parsing (complex edge cases with literals/whitespace)
+    - [ ] **C99 Support**: Implement Variadic Macros (using `وسائط_إضافية` for `...` and `__وسائط_متغيرة__` for `__VA_ARGS__`).
 - **Conditional Compilation:**
-    - [ ] `#إذا expression` (if - implement full macro expansion and re-evaluation for identifiers in expressions)
     - [x] `#إذا_عرف MACRO` (ifdef)
     - [x] `#إذا_لم_يعرف MACRO` (ifndef)
     - [x] `#وإلا_إذا expression` (elif - constant expression evaluation)
     - [x] `#إلا` (else)
     - [x] `#نهاية_إذا` (endif)
     - [x] Support for bitwise operators (`&`, `|`, `^`, `~`, `<<`, `>>`) in conditional expressions.
+
+## Key Areas for C99 Compliance and Improvement
+
+- [ ] **Macro Expansion Rescanning**: Implement full rescanning of macro expansion results. The output of any macro substitution (from parameter replacement, `#`, or `##` operations) must be rescanned for further macro names to expand. This is critical for C99 compliance.
+- [ ] **Macro Expansion in Conditional Expressions**: Enhance the expression evaluator for `#إذا` and `#وإلا_إذا` to support full macro expansion (including function-like macros and rescanning of results) before evaluation. Currently, only object-like macros expanding directly to integer strings are partially handled.
+- [ ] **`__السطر__` (`__LINE__`) Expansion**: Ensure `__السطر__` (and its C99 equivalent `__LINE__`) expands to an integer constant, not a string literal.
+- [ ] **Multi-line Comment Handling**: Implement robust handling for multi-line comments (`/* ... */`) across all preprocessor stages, ensuring they are correctly stripped and do not interfere with parsing or directive recognition.
+- [ ] **Macro Redefinition Warnings/Errors**: Implement checks for macro redefinitions. Issue warnings or errors for incompatible redefinitions, as per C99 standard behavior.
+- [ ] **Predefined `__func__`**: Implement the C99 `__func__` predefined identifier (and its Baa equivalent, e.g., `__الدالة__`).
+
     - **Other Standard Directives:**
-        - [ ] `#error message`
-        - [ ] `#warning message` (Consider if distinct from `#error` or if compiler treats them similarly)
-        - [ ] `#line number "filename"`
-        - [ ] `#pragma directive` (Investigate common pragmas like `once`)
+        - [ ] `#خطأ message` (Baa: `#خطأ "رسالة الخطأ"`)
+        - [ ] `#تحذير message` (Baa: `#تحذير "رسالة التحذير"`)
+        - [ ] `#سطر number "filename"` (Baa: `#سطر ١٠٠ "ملف.ب"`)
+        - [ ] **C99 Support**: Implement `أمر_براغما` operator (Baa: `أمر_براغما("توجيه")`).
+        - [ ] `#براغما directive` (Baa: `#براغما توجيه_خاص`) (Investigate C99 standard pragmas like `STDC FP_CONTRACT`, `STDC FENV_ACCESS`, `STDC CX_LIMITED_RANGE`, and common Baa-specific pragmas like `مرة_واحدة` for `#pragma once`).
 
     ## Testing and Validation
 

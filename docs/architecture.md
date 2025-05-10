@@ -24,7 +24,7 @@ The initial stage that processes the source file before tokenization:
   - Detects circular includes and recursive macro expansion.
   - Enforces UTF-16LE input.
   - Provides error messages with file/line context.
-  - *Planned:* Bitwise operators in conditional expressions, predefined macros (`__FILE__`, `__LINE__`), UTF-8 input support.
+  - *Planned:* Bitwise operators in conditional expressions, predefined macros (`__الملف__`, `__السطر__`, `__التاريخ__`, `__الوقت__`, `__الدالة__`), Variadic Macros (`وسائط_إضافية`, `__وسائط_متغيرة__`), other standard directives (`#خطأ`, `#تحذير`, `#سطر`, `#براغما`, `أمر_براغما`), UTF-8 input support.
 
 ### 1. Lexer
 The lexical analyzer responsible for tokenizing source code. It has a modular structure:

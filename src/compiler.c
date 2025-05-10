@@ -7,8 +7,8 @@
 #include "baa/compiler.h"
 #include "baa/utils/utils.h"
 #include "baa/lexer/lexer.h"
-#include "baa/parser/parser.h"
-#include "baa/ast/ast_printer.h" // Include the AST printer header
+// #include "baa/parser/parser.h" // Removed as parser is being removed
+// #include "baa/ast/ast_printer.h" // Include the AST printer header - Removed as AST is being removed
 #include "baa/codegen/codegen.h"
 #include "baa/preprocessor/preprocessor.h"
 
@@ -99,39 +99,39 @@ int compile_baa_file(const char* filename) {
     }
     wprintf(L"--- End Lexer Tokens ---\n\n");
 
-    // --- Enable Parser ---
+    // --- Enable Parser --- (Section removed as parser is being removed)
     // Reset lexer to be used by parser
     // Re-initialize the lexer with the same preprocessed source.
     // For simplicity in this debug step, we'll re-initialize.
     // This means the preprocessed 'source' is tokenized twice if parsing proceeds.
-    baa_init_lexer(&lexer, source, wfilename);
+    // baa_init_lexer(&lexer, source, wfilename); // No longer needed as parser is removed
     // --- End Lexer Debugging Loop ---
 
-    // Initialize parser
-    BaaParser parser;
-    baa_init_parser(&parser, &lexer); // Initialize the parser with the lexer
+    // Initialize parser (Section removed as parser is being removed)
+    // BaaParser parser;
+    // baa_init_parser(&parser, &lexer, wfilename); // Initialize the parser with the lexer and filename
 
-    // Parse program
-    BaaProgram* program = baa_parse_program(&parser); // Use the correct parsing function
-    if (!program) {
-        // Check if the parser recorded an error message
-        const wchar_t* parser_error = baa_get_parser_error(&parser);
-        if (parser_error) {
-             fwprintf(stderr, L"Error: Parsing failed: %ls\n", parser_error);
-             // Potentially clear the error if needed: baa_clear_parser_error(&parser);
-        } else {
-            fprintf(stderr, "Error: Parsing failed (unknown parser error).\n");
-        }
-        free(source);
-        free(wfilename);
-        // Note: No need to free 'program' as it's NULL or invalid here
-         return 1;
-     }
+    // Parse program (Section removed as parser is being removed)
+    // BaaProgram* program = baa_parse_program(&parser); // Use the correct parsing function
+    // if (!program) {
+    //     // Check if the parser recorded an error message
+    //     const wchar_t* parser_error = baa_get_parser_error(&parser);
+    //     if (parser_error) {
+    //          fwprintf(stderr, L"Error: Parsing failed: %ls\n", parser_error);
+    //          // Potentially clear the error if needed: baa_clear_parser_error(&parser);
+    //     } else {
+    //         fprintf(stderr, "Error: Parsing failed (unknown parser error).\n");
+    //     }
+    //     free(source);
+    //     free(wfilename);
+    //     // Note: No need to free 'program' as it's NULL or invalid here
+    //      return 1;
+    //  }
 
-     // --- AST Printing ---
-     wprintf(L"\n"); // Add a newline before printing AST
-     baa_print_ast(stdout, program); // Print AST to standard output
-     wprintf(L"\n"); // Add a newline after printing AST
+     // --- AST Printing --- (Section removed as AST is being removed)
+     // wprintf(L"\n"); // Add a newline before printing AST
+     // baa_print_ast(stdout, program); // Print AST to standard output
+     // wprintf(L"\n"); // Add a newline after printing AST
      // --- End AST Printing ---
 
      // Initialize code generator
@@ -146,7 +146,7 @@ int compile_baa_file(const char* filename) {
     wchar_t* output_filename = (wchar_t*)malloc((wlen + 4) * sizeof(wchar_t)); // .ll is 3 chars + null terminator
     if (!output_filename) {
         fprintf(stderr, "Error: Memory allocation failed for output filename.\n");
-        baa_free_program(program);
+        // baa_free_program(program); // Removed as AST is being removed
         free(source);
         free(wfilename);
         return 1;
@@ -156,7 +156,7 @@ int compile_baa_file(const char* filename) {
     errno_t err_cpy = wcscpy_s(output_filename, wlen + 4, wfilename);
     if (err_cpy != 0) {
         fprintf(stderr, "Error: wcscpy_s failed for output filename.\n");
-        baa_free_program(program);
+        // baa_free_program(program); // Removed as AST is being removed
         free(source);
         free(wfilename);
         free(output_filename); // Free allocated memory
@@ -170,7 +170,7 @@ int compile_baa_file(const char* filename) {
         errno_t err_ext_cpy = wcscpy_s(ext, remaining_size, L".ll");
          if (err_ext_cpy != 0) {
             fprintf(stderr, "Error: wcscpy_s failed for extension replacement.\n");
-            baa_free_program(program);
+            // baa_free_program(program); // Removed as AST is being removed
             free(source);
             free(wfilename);
             free(output_filename);
@@ -181,7 +181,7 @@ int compile_baa_file(const char* filename) {
         errno_t err_cat = wcscat_s(output_filename, wlen + 4, L".ll");
         if (err_cat != 0) {
             fprintf(stderr, "Error: wcscat_s failed for appending extension.\n");
-            baa_free_program(program);
+            // baa_free_program(program); // Removed as AST is being removed
             free(source);
             free(wfilename);
             free(output_filename);
@@ -192,24 +192,27 @@ int compile_baa_file(const char* filename) {
     options.output_file = output_filename;
 
     // Initialize code generator
-    baa_init_codegen(&codegen, program, &options);
+    // baa_init_codegen(&codegen, program, &options); // AST 'program' argument removed
+    baa_init_codegen(&codegen, NULL /* program, */, &options);
 
-    // Generate code
-    if (!baa_generate_code(&codegen)) {
-        fprintf(stderr, "Error: Code generation failed: %ls\n", baa_get_codegen_error(&codegen));
-        free(output_filename);
-        baa_free_program(program);
-        free(source);
-        free(wfilename);
-        return 1;
-    }
 
-    wprintf(L"Code generation successful. Output written to %ls\n", output_filename);
+    // Generate code (This will likely fail or need significant rework without an AST)
+    // For now, let's comment it out to get a clean compile.
+    // if (!baa_generate_code(&codegen)) {
+    //     fprintf(stderr, "Error: Code generation failed: %ls\n", baa_get_codegen_error(&codegen));
+    //     free(output_filename);
+    //     // baa_free_program(program); // Removed as AST is being removed
+    //     free(source);
+    //     free(wfilename);
+    //     return 1;
+    // }
+
+    // wprintf(L"Code generation successful. Output written to %ls\n", output_filename); // Commented out as codegen is disabled
 
     // Clean up
     // baa_cleanup_codegen(); // Assuming this exists based on init - Called earlier now
-    // free(output_filename); // Freed earlier
-    baa_free_program(program); // Free the AST
+    free(output_filename); // Free output_filename as it's not used by a successful codegen path now
+    // baa_free_program(program); // Free the AST - Removed as AST is being removed
 
     // Clean up resources used by preprocessor/lexer
     free(source);

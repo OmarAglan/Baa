@@ -8,18 +8,176 @@
 
 ### 1.1 Preprocessor Directives
 
-Baa supports a preprocessor step that handles directives starting with `#` before lexical analysis.
+Baa supports a preprocessor step that handles directives starting with `#` before lexical analysis. These directives allow for file inclusion, macro definitions, and conditional compilation.
 
-*   **Include:** `#تضمين` is used to include the content of other files. - *[Implemented]*
-    *   `#تضمين "مسار/ملف/نسبي.ب"` : Includes a file relative to the current file's path.
-    *   `#تضمين <مكتبة_قياسية>` : Includes a file found in standard library include paths.
+#### 1.1.1 File Inclusion
 
-```baa
-#تضمين "my_definitions.b" // Include a local file
-#تضمين <standard_io>      // Include a standard library
-```
-*   **Macros:** `#تعريف`, `#الغاء_تعريف` - Basic parameterless define/undef implemented. *[Implemented]*
-*   **Conditional Compilation:** `#إذا_عرف`, `#إذا_لم_يعرف`, `#إلا`, `#نهاية_إذا` - Basic support implemented. *[Implemented]*
+* **`#تضمين` (Include):** Used to include the content of other files. - *[Implemented]*
+  * `#تضمين "مسار/ملف/نسبي.ب"` : Includes a file relative to the current file's path.
+  * `#تضمين <مكتبة_قياسية>` : Includes a file found in standard library include paths.
+
+    ```baa
+    #تضمين "my_definitions.b" // Include a local file
+    #تضمين <standard_io>      // Include a standard library
+    ```
+
+#### 1.1.2 Macro Definitions
+
+* **`#تعريف` (Define):** Defines a preprocessor macro. - *[Implemented]*
+  * **Object-like macros:** Replaces an identifier with a token sequence.
+
+        ```baa
+        #تعريف PI 3.14159
+        #تعريف GREETING "مرحباً بالعالم"
+        عدد_حقيقي x = PI.
+        اطبع(GREETING).
+        ```
+
+  * **Function-like macros:** Defines macros that take arguments.
+
+        ```baa
+        #تعريف MAX(a, b) ((a) > (b) ? (a) : (b))
+        عدد_صحيح الأكبر = MAX(10, 20). // Expands to ((10) > (20) ? (10) : (20))
+
+        #تعريف ADD(x, y) (x + y)
+        عدد_صحيح المجموع = ADD(5, 3). // Expands to (5 + 3)
+        ```
+
+  * **Stringification Operator (`#`):** Converts a macro parameter into a string literal. - *[Implemented]*
+
+        ```baa
+        #تعريف STRINGIFY(val) #val
+        اطبع(STRINGIFY(مرحبا)). // Expands to اطبع("مرحبا").
+        اطبع(STRINGIFY(123)).   // Expands to اطبع("123").
+        ```
+
+  * **Token Pasting Operator (`##`):** Concatenates two tokens. - *[Implemented]*
+
+        ```baa
+        #تعريف CONCAT(a, b) a##b
+        عدد_صحيح CONCAT(var, Name) = 10. // Declares عدد_صحيح varName = 10.
+        ```
+
+  * **Variadic Macros (C99):** Defines macros that can accept a variable number of arguments. For Baa, this is achieved using `وسائط_إضافية` in the parameter list and `__وسائط_متغيرة__` in the macro body. - *[Planned]*
+    *   `وسائط_إضافية` (wasā'iṭ iḍāfiyyah - additional arguments): Used in the parameter list to indicate variable arguments.
+    *   `__وسائط_متغيرة__` (al-wasā'iṭ al-mutaghayyirah - The Variable Arguments): The special identifier used in the macro body to refer to the arguments matched by `وسائط_إضافية`.
+        ```baa
+        #تعريف DEBUG_PRINT(تنسيق, وسائط_إضافية) اطبع(تنسيق + ": " + __وسائط_متغيرة__).
+        // Example usage:
+        // DEBUG_PRINT("رسالة تصحيح %d", 10).
+        ```
+
+* **`#الغاء_تعريف` (Undefine):** Removes a previously defined macro. - *[Implemented (Assumed, standard counterpart)]*
+
+    ```baa
+    #تعريف TEMP_MACRO 100
+    // TEMP_MACRO is 100
+    #الغاء_تعريف TEMP_MACRO
+    // TEMP_MACRO is no longer defined
+    ```
+
+#### 1.1.3 Conditional Compilation
+
+Directives for compiling parts of the code based on conditions. Expressions in these directives can use arithmetic, bitwise, and logical operators, as well as the `defined()` operator. - *[Implemented]*
+
+* **`#إذا` (If):** Compiles the subsequent code if the expression evaluates to true (non-zero). - *[Implemented]*
+
+    ```baa
+    #تعريف DEBUG_MODE 1
+    #إذا DEBUG_MODE
+        اطبع("وضع التصحيح مفعل.").
+    #نهاية_إذا
+
+    #تعريف VALUE 10
+    #إذا VALUE > 5 && defined(DEBUG_MODE)
+        اطبع("القيمة أكبر من 5 ووضع التصحيح مفعل.").
+    #نهاية_إذا
+    ```
+
+* **`#إذا_عرف` (If defined):** Compiles the subsequent code if the macro is defined. Equivalent to `#إذا defined(MACRO_NAME)`. - *[Implemented]*
+
+    ```baa
+    #تعريف MY_FEATURE
+    #إذا_عرف MY_FEATURE
+        اطبع("ميزة MY_FEATURE مفعلة.").
+    #نهاية_إذا
+    ```
+
+* **`#إذا_لم_يعرف` (If not defined):** Compiles the subsequent code if the macro is not defined. Equivalent to `#إذا !defined(MACRO_NAME)`. - *[Implemented]*
+
+    ```baa
+    #إذا_لم_يعرف PRODUCTION_BUILD
+        اطبع("هذا ليس بناء إنتاجي.").
+    #نهاية_إذا
+    ```
+
+* **`#وإلا_إذا` (Else if):** Compiles the subsequent code if the preceding `#إذا` or `#وإلا_إذا` condition was false, and its own expression evaluates to true. - *[Implemented]*
+
+    ```baa
+    #تعريف LEVEL 2
+    #إذا LEVEL == 1
+        اطبع("المستوى 1.").
+    #وإلا_إذا LEVEL == 2
+        اطبع("المستوى 2.").
+    #إلا
+        اطبع("مستوى آخر.").
+    #نهاية_إذا
+    ```
+
+* **`#إلا` (Else):** Compiles the subsequent code if the preceding `#إذا` or `#وإلا_إذا` condition was false. - *[Implemented]*
+* **`#نهاية_إذا` (End if):** Marks the end of a conditional compilation block. - *[Implemented]*
+* **`defined()` Operator:** Used within conditional expressions to check if a macro is defined. Returns `1` if defined, `0` otherwise. - *[Implemented]*
+
+    ```baa
+    #إذا defined(VERBOSE) || defined(EXTRA_DEBUG)
+        // Code for verbose or extra debug output
+    #نهاية_إذا
+    ```
+
+#### 1.1.4 Other Standard Directives (Planned)
+
+Baa plans to support other standard C preprocessor directives with Arabic keywords:
+
+* **`#خطأ "رسالة"` (`#error "message"`):** Instructs the preprocessor to report a fatal error. The compilation process stops. - *[Planned]*
+    ```baa
+    #إذا_لم_يعرف REQUIRED_FEATURE
+        #خطأ "الميزة المطلوبة REQUIRED_FEATURE غير معرفة."
+    #نهاية_إذا
+    ```
+* **`#تحذير "رسالة"` (`#warning "message"`):** Instructs the preprocessor to issue a warning message. Compilation typically continues. - *[Planned]*
+    ```baa
+    #تحذير "هذه الميزة مهملة وسيتم إزالتها في الإصدارات القادمة."
+    ```
+* **`#سطر رقم "اسم_الملف"` (`#line number "filename"`):** Changes the preprocessor's internally stored line number and filename. This affects the output of `__السطر__` and `__الملف__`. - *[Planned]*
+    ```baa
+    #سطر ١٠٠ "ملف_مصدر_آخر.ب"
+    // الآن __السطر__ سيكون ١٠٠ و __الملف__ سيكون "ملف_مصدر_آخر.ب"
+    ```
+* **`#براغما توجيه_خاص` (`#pragma directive`):** Used for implementation-defined directives. The specific `توجيه_خاص` (special directive) and its behavior depend on the Baa compiler. - *[Planned]*
+    * Example: `#براغما مرة_واحدة` (could be Baa's equivalent of `#pragma once`).
+* **`أمر_براغما("توجيه_نصي")` (`_Pragma("string_directive")`):** An operator (not a directive starting with `#`) that allows a macro to generate a `#براغما` directive. It takes a string literal which is then treated as the content of a `#براغما` directive. - *[Planned]*
+    ```baa
+    #تعريف DO_PRAGMA(x) أمر_براغما(#x)
+    // DO_PRAGMA(توجيه_خاص للتحسين)
+    // expands to: أمر_براغما("توجيه_خاص للتحسين")
+    // which is then processed as if #براغما توجيه_خاص للتحسين was written.
+    ```
+
+#### 1.1.5 Predefined Macros
+
+Baa provides several predefined macros that offer information about the compilation process. - *[Implemented]*
+
+* `__الملف__` : Expands to a string literal representing the name of the current source file.
+* `__السطر__` : Expands to an integer constant representing the current line number in the source file.
+* `__التاريخ__` : Expands to a string literal representing the compilation date (e.g., "May 09 2025").
+* `__الوقت__` : Expands to a string literal representing the compilation time (e.g., "07:40:00").
+* `__الدالة__` : Expands to a string literal representing the name of the current function (similar to C99's `__func__`). - *[Planned]*
+
+    ```baa
+    اطبع("تم التجميع من الملف: " + __الملف__).
+    اطبع("في السطر رقم: " + __السطر__).
+    // اطبع("في الدالة: " + __الدالة__). // Example if implemented
+    ```
 
 ### 1.2 Statement Termination
 
@@ -33,9 +191,6 @@ Statements are terminated with a dot (`.`) instead of a semicolon.
 ### 1.3 Function Declaration Example
 
 *(See Section 4.2 for full details)*
-Functions are declared using the `دالة` keyword.
-
-
 
 ```baa
 // [Implementation Pending] Main function (entry point) - Assuming void return if omitted
@@ -90,25 +245,29 @@ Control structures use Arabic keywords and dot termination.
 *(See Section 5 for full details)*
 
 ```baa
+عدد_صحيح a = 10.
+عدد_صحيح b = 5.
+
 // Increment and decrement
-متغير++.    // Postfix increment
---متغير.    // Prefix decrement
+a++.      // Postfix increment (a becomes 11)
+--b.      // Prefix decrement (b becomes 4)
 
 // Compound assignment
-متغير += 5.  // Add and assign
+a += b.   // Add and assign (a becomes 11 + 4 = 15)
 ```
 
 ## 2. Lexical Structure
 
-This section describes the low-level building blocks of Baa programs **after** preprocessing. Baa source files are expected to be encoded in **UTF-16LE**.
+This section describes the low-level building blocks of Baa programs **after** preprocessing. The Baa preprocessor accepts source files in UTF-8 (default if no BOM is present) or UTF-16LE. The processed output from the preprocessor, which is then fed to the lexer, is encoded in **UTF-16LE**.
 
 ### 2.1 Comments
 
-Baa supports standard C/C++ style comments:
+Baa supports standard C/C++ style comments, as well as documentation comments:
 
-*   **Single-line:** Begins with `//` and continues to the end of the line. The lexer skips these. - *[Implemented]*
-*   **Multi-line:** Begins with `/*` and ends with `*/`. These comments can span multiple lines. The lexer skips these. - *[Implemented]*
-*   **Preprocessor Directives:** Lines starting with `#` (e.g., `#تضمين`, `#تعريف`) are handled entirely by the preprocessor before lexical analysis. They are not treated as comments by the lexer. - *[Implemented for various directives]*
+* **Single-line:** Begins with `//` and continues to the end of the line. The lexer skips these. - *[Implemented]*
+* **Multi-line:** Begins with `/*` and ends with `*/`. These comments can span multiple lines. The lexer skips these. - *[Implemented]*
+* **Documentation Comments:** Begin with `/**` and end with `*/`. These are recognized by the lexer (as `BAA_TOKEN_DOC_COMMENT`) and their content can be extracted for documentation generation tools. - *[Implemented by Lexer]*
+* **Preprocessor Directives:** Lines starting with `#` (e.g., `#تضمين`, `#تعريف`) are handled entirely by the preprocessor before lexical analysis. They are not treated as comments by the lexer. - *[Implemented for various directives]*
 
 ```baa
 // هذا تعليق سطر واحد.
@@ -116,28 +275,32 @@ Baa supports standard C/C++ style comments:
   هذا تعليق
   متعدد الأسطر.
 */
+/**
+ * هذا تعليق توثيقي.
+ * يمكن أن يمتد عبر عدة أسطر.
+ */
 ```
 
 ### 2.2 Identifiers
 
 Identifiers are names used for variables, functions, types, etc.
 
-*   **Allowed Characters:** Arabic letters (Unicode ranges 0x0600-0x06FF, FB50-FDFF, FE70-FEFF), English letters (`a-z`, `A-Z`), Arabic-Indic digits (`٠-٩`), ASCII digits (`0-9`), and the underscore (`_`).
-*   **Starting Character:** Must begin with a letter (Arabic or English) or an underscore.
-*   **Case Sensitivity:** Identifiers are case-sensitive.
-*   **Reserved Words:** Keywords (see Section 2.3) cannot be used as identifiers.
+* **Allowed Characters:** Arabic letters (Unicode ranges 0x0600-0x06FF, FB50-FDFF, FE70-FEFF), English letters (`a-z`, `A-Z`), Arabic-Indic digits (`٠-٩`), ASCII digits (`0-9`), and the underscore (`_`).
+* **Starting Character:** Must begin with a letter (Arabic or English) or an underscore.
+* **Case Sensitivity:** Identifiers are case-sensitive.
+* **Reserved Words:** Keywords (see Section 2.3) cannot be used as identifiers.
 
 ```baa
 // أمثلة صحيحة (Valid Examples)
-متغير الإسم_الأول.
-متغير _temporaryValue.
-متغير قيمة_رقمية1.
-متغير القيمة٢.
+حرف الإسم_الأول.         // Example of a string type identifier
+عدد_صحيح _temporaryValue. // Example of an integer type identifier starting with underscore
+عدد_صحيح قيمة_رقمية1.    // Example with Arabic and Western digits
+حرف القيمة٢.             // Example with Arabic-Indic digits
 
 // أمثلة خاطئة (Invalid Examples)
-// متغير 1stValue. // Cannot start with a digit
-// متغير قيمة-خاصة. // Hyphen not allowed
-// متغير إذا. // Keyword cannot be an identifier
+// عدد_صحيح 1stValue. // Cannot start with a digit
+// حرف قيمة-خاصة.     // Hyphen not allowed
+// عدد_صحيح إذا.      // Keyword cannot be an identifier
 ```
 
 ### 2.3 Keywords
@@ -145,12 +308,12 @@ Identifiers are names used for variables, functions, types, etc.
 Keywords are reserved words with special meaning in the Baa language and cannot be used as identifiers.
 
 *(Based on `lexer.h` and `language.md`)*
-*   **Declarations:** `دالة`, `ثابت` (`const`), `خارجي` (`extern`) - *[Implemented/Partial]*
-    *   *Planned:* `متغير` (`var`), `نوع_مستخدم` (`typedef`), `ثابت` (`static` storage), `حجم` (`sizeof`)
-*   **Control Flow:** `إذا`, `وإلا`, `طالما`, `إرجع`, `توقف` (`break`), `أكمل` (`continue`) - *[Implemented]*
-    *   *Partial/Planned:* `من_أجل` (`for`), `افعل` (`do`), `اختر` (`switch`), `حالة` (`case`)
-*   **Types:** `عدد_صحيح`, `عدد_حقيقي`, `حرف`, `منطقي`, `فراغ` - *[Implemented]*
-*   **Boolean Literals:** `صحيح`, `خطأ` - *[Implemented]*
+
+* **Declarations:** `ثابت` (`const`), `مستقر` (`static`), `خارجي` (`extern`), `مضمن` (`inline`), `مقيد` (`restrict`), `نوع_مستخدم` (`typedef`), `حجم` (`sizeof`) - *[Implemented/Partial for `ثابت`/`خارجي`, Planned for others]*
+* **Control Flow:** `إذا`, `وإلا`, `طالما`, `إرجع`, `توقف` (`break`), `أكمل` (`continue`) - *[Implemented]*
+  * *Partial/Planned:* `لكل` (`for`), `افعل` (`do`), `اختر` (`switch`), `حالة` (`case`)
+* **Types:** `عدد_صحيح`, `عدد_حقيقي`, `حرف`, `منطقي`, `فراغ` - *[Implemented]*
+* **Boolean Literals:** `صحيح`, `خطأ` - *[Implemented]*
 
 *(Note: Standard library function names like `اطبع` are technically identifiers, not keywords)*
 
@@ -158,49 +321,54 @@ Keywords are reserved words with special meaning in the Baa language and cannot 
 
 Literals represent fixed values in the source code.
 
-*   **Integer Literals (`عدد_صحيح`):** Represent whole numbers. The lexer tokenizes these as `BAA_TOKEN_INT_LIT`.
-    *   **Decimal:** Sequences of Western digits (`0`-`9`) and/or Arabic-Indic digits (`٠`-`٩` / U+0660-U+0669).
-        - Examples: `123`, `٠`, `٤٢`, `1٠2` - *[Implemented]*
-    *   **Hexadecimal:** Must start with `0x` or `0X`, followed by hexadecimal digits (`0`-`9`, `a`-`f`, `A`-`F`).
-        - Examples: `0xFF`, `0x1a`, `0XDEADBEEF` - *[Implemented]*
-    *   **Binary:** Must start with `0b` or `0B`, followed by binary digits (`0` or `1`).
-        - Examples: `0b1010`, `0B11001` - *[Implemented]*
-    *   **Underscores for Readability:** Single underscores (`_`) can be used as separators within the digits of any integer literal type. They cannot be consecutive, at the very beginning of the digit sequence (immediately after a prefix like `0x_`), or at the end of the number.
-        - Examples: `1_000_000`, `0xAB_CD`, `0b10_10`, `١_٢٣٤` - *[Implemented]*
-*   **Floating-Point Literals (`عدد_حقيقي`):** Represent numbers with a fractional part or in scientific notation. The lexer tokenizes these as `BAA_TOKEN_FLOAT_LIT`.
-    *   **Decimal Representation:** Consist of an integer part, a decimal point, and a fractional part. Digits can be Western or Arabic-Indic.
-        - The decimal point can be a period `.` (U+002E) or an Arabic Decimal Separator `٫` (U+066B).
-        - Examples: `3.14`, `0.5`, `١٢٫٣٤`, `٠.٥`, `123.0` - *[Implemented]*
-        - Note: Literals like `.5` or `123.` are tokenized by the lexer as separate tokens (e.g., `DOT`, `INT_LIT`); their validity as floats is a parser concern.
-    *   **Scientific Notation:** Introduced by `e` or `E`, followed by an optional sign (`+` or `-`), and then one or more decimal digits (Western or Arabic-Indic). Can be applied to numbers with or without a decimal point.
-        - Examples: `1.23e4`, `5E-2`, `42e+0`, `1e10`, `٣٫١٤E-٠٢` - *[Implemented]*
-    *   **Underscores for Readability:** Single underscores (`_`) can be used as separators in the integer, fractional, and exponent parts of float literals, with the same restrictions as for integers.
-        - Examples: `1_234.567_890`, `3.141_592e+1_0` - *[Implemented]*
-*   **Boolean Literals (`منطقي`):**
-    *   `صحيح` (true) - *[Implemented]*
-    *   `خطأ` (false) - *[Implemented]*
-*   **Character Literals (`حرف`):** Represent single characters enclosed in single quotes (`'`).
-    *   `'a'`, `'أ'`, `'#'`, `'١'` - *[Implemented]*
-    *   Escape Sequences:
-        *   `'\n'` (newline), `'\t'` (tab), `'\\'` (backslash), `'\''` (single quote) - *[Implemented]*
-        *   `'\"'` (double quote) - *[Implemented]*
-        *   `'\r'` (carriage return), `'\0'` (null char) - *[Implemented]*
-        *   `'\uXXXX'` (Unicode escape, where XXXX are four hex digits) - *[Implemented]*
-*   **String Literals (`نص` - inferred type):** Represent sequences of characters enclosed in double quotes (`"`). Uses UTF-16LE encoding internally.
-    *   `"مرحباً"` - *[Implemented]*
-    *   `"Hello, World!"` - *[Implemented]*
-    *   Escape Sequences: Similar to characters: `\n`, `\t`, `\"`, `\\`, `\r`, `\0`, `\uXXXX` are implemented. - *[Implemented]*
-    *   **Multiline Strings:** Sequences of characters enclosed in triple double quotes (`"""`). Newlines within the string are preserved. Escape sequences are processed as in regular strings. - *[Implemented]*
-        - Example: `متغير نص_متعدد = """سطر أول\nسطر ثاني مع \t تاب.""".`
-    *   **Raw String Literals:** Prefixed with `خ` (Kha), these strings do not process escape sequences. All characters between the delimiters are taken literally.
-        - Single-line raw strings: `خ"..."`
-        - Multiline raw strings: `خ"""..."""` (newlines are preserved)
-        - Examples:
-            - `متغير مسار = خ"C:\Users\MyFolder\file.txt".` (Backslashes are literal)
-            - `متغير تعبير_نمطي = خ"\\d{3}-\\d{2}-\\d{4}".`
-            - `متغير خام_متعدد = خ"""هذا \n نص خام.
+* **Integer Literals (`عدد_صحيح`):** Represent whole numbers. The lexer tokenizes these as `BAA_TOKEN_INT_LIT`.
+  * **Decimal:** Sequences of Western digits (`0`-`9`) and/or Arabic-Indic digits (`٠`-`٩` / U+0660-U+0669).
+    * Examples: `123`, `٠`, `٤٢`, `1٠2` - *[Implemented]*
+  * **Hexadecimal:** Must start with `0x` or `0X`, followed by hexadecimal digits (`0`-`9`, `a`-`f`, `A`-`F`).
+    * Examples: `0xFF`, `0x1a`, `0XDEADBEEF` - *[Implemented]*
+  * **Binary:** Must start with `0b` or `0B`, followed by binary digits (`0` or `1`).
+    * Examples: `0b1010`, `0B11001` - *[Implemented]*
+  * **Underscores for Readability:** Single underscores (`_`) can be used as separators within the digits of any integer literal type. They cannot be consecutive, at the very beginning of the digit sequence (immediately after a prefix like `0x_`), or at the end of the number.
+    * Examples: `1_000_000`, `0xAB_CD`, `0b10_10`, `١_٢٣٤` - *[Implemented]*
+* **Floating-Point Literals (`عدد_حقيقي`):** Represent numbers with a fractional part or in scientific notation. The lexer tokenizes these as `BAA_TOKEN_FLOAT_LIT`.
+  * **Decimal Representation:** Consist of an integer part, a decimal point, and a fractional part. Digits can be Western or Arabic-Indic.
+    * The decimal point can be a period `.` (U+002E) or an Arabic Decimal Separator `٫` (U+066B).
+    * Examples: `3.14`, `0.5`, `١٢٫٣٤`, `٠.٥`, `123.0` - *[Implemented]*
+    * Note: Literals like `.5` or `123.` are tokenized by the lexer as separate tokens (e.g., `DOT`, `INT_LIT`); their validity as floats is a parser concern.
+  * **Scientific Notation:** Introduced by `e` or `E`, followed by an optional sign (`+` or `-`), and then one or more decimal digits (Western or Arabic-Indic). Can be applied to numbers with or without a decimal point.
+    * Examples: `1.23e4`, `5E-2`, `42e+0`, `1e10`, `٣٫١٤E-٠٢` - *[Implemented]*
+  * **Underscores for Readability:** Single underscores (`_`) can be used as separators in the integer, fractional, and exponent parts of float literals, with the same restrictions as for integers.
+    * Examples: `1_234.567_890`, `3.141_592e+1_0` - *[Implemented]*
+  * **Hexadecimal Floating-Point Constants (C99):** Must start with `0x` or `0X`, include a hexadecimal significand, a `p` or `P` exponent indicator, and a binary exponent. - *[Planned]*
+    * Examples: `0x1.ap0`, `0X1.BCDEp-10` (Exact Baa syntax for Arabic digits TBD)
+* **Boolean Literals (`منطقي`):**
+  * `صحيح` (true) - *[Implemented]*
+  * `خطأ` (false) - *[Implemented]*
+* **Character Literals (`حرف`):** Represent single characters enclosed in single quotes (`'`).
+  * `'a'`, `'أ'`, `'#'`, `'١'` - *[Implemented]*
+  * Escape Sequences:
+    * `'\n'` (newline), `'\t'` (tab), `'\\'` (backslash), `'\''` (single quote) - *[Implemented]*
+    * `'\"'` (double quote) - *[Implemented]*
+    * `'\r'` (carriage return), `'\0'` (null char) - *[Implemented]*
+    * `'\uXXXX'` (Unicode escape, where XXXX are four hex digits) - *[Implemented]*
+* **String Literals:** Represent sequences of characters enclosed in double quotes (`"`). Uses UTF-16LE encoding internally.
+  * `"مرحباً"` - *[Implemented]*
+  * `"Hello, World!"` - *[Implemented]*
+  * Escape Sequences: Similar to characters: `\n`, `\t`, `\"`, `\\`, `\r`, `\0`, `\uXXXX` are implemented. - *[Implemented]*
+  * **Multiline Strings:** Sequences of characters enclosed in triple double quotes (`"""`). Newlines within the string are preserved. Escape sequences are processed as in regular strings. - *[Implemented]*
+    * Example: `حرف نص_متعدد = """سطر أول\nسطر ثاني مع \t تاب.""".`
+  * **Raw String Literals:** Prefixed with `خ` (Kha), these strings do not process escape sequences. All characters between the delimiters are taken literally.
+    * Single-line raw strings: `خ"..."`
+    * Multiline raw strings: `خ"""..."""` (newlines are preserved)
+    * Examples:
+      * `حرف مسار = خ"C:\Users\MyFolder\file.txt".` (Backslashes are literal)
+      * `حرف تعبير_نمطي = خ"\\d{3}-\\d{2}-\\d{4}".`
+      * `حرف خام_متعدد = خ"""هذا \n نص خام.
               الهروب \t لا يعمل هنا.""".`
-        - *[Implemented]*
+    * *[Implemented]*
+* **Compound Literals (C99):** Allow the creation of unnamed objects of a given type using an initializer list. The syntax is `(type_name){initializer_list}`. - *[Planned]*
+  * Example: `دالة_تأخذ_مصفوفة((عدد_صحيح[]){1, 2, 3}).`
+  * Example: `مؤشر_للبنية = &(بنية_مثال){ .عضو1 = 10, .عضو2 = "نص" }.`
 
 ### 2.5 Operators
 
@@ -209,7 +377,8 @@ Operators perform operations on values. See Section 5 for a detailed list and pr
 ### 2.6 Separators / Delimiters
 
 Symbols used to structure code: `( ) { } [ ] , . :`
-*   **`.` (Dot):** Terminates statements. - *[Implemented]*
+
+* **`.` (Dot):** Terminates statements. - *[Implemented]*
 
 ## 3. Types
 
@@ -220,8 +389,9 @@ Baa has a static type system based on C, with Arabic names for built-in types.
 | Arabic Name | English Equiv. | Description            | Size   | Status      |
 | ----------- | -------------- | ---------------------- | ------ | ----------- |
 | `عدد_صحيح`  | `int`          | Signed Integer         | 32-bit | Implemented |
+| `عدد_صحيح_طويل_جدا` | `long long int` | Signed Long Long Integer | 64-bit | Planned     |
 | `عدد_حقيقي` | `float`        | Floating-point         | 32-bit | Implemented |
-| `حرف`       | `char`         | Character (`wchar_t`)  | 16-bit | Implemented |
+| `حرف`       | `char`         | Character / String     | 16-bit | Implemented |
 | `منطقي`     | `bool`         | Boolean (`صحيح`/`خطأ`) | 8-bit? | Implemented |
 | `فراغ`      | `void`         | Represents no value    | N/A    | Implemented |
 
@@ -233,20 +403,20 @@ Baa has a static type system based on C, with Arabic names for built-in types.
 | ----------- | -------------- | ------------------------------ | ------- | ----------------------------------------- |
 | `مصفوفة`    | array          | Ordered collection of elements | Partial | Basic AST/Type support exists.            |
 | `مؤشر`      | pointer        | Address of a variable          | Planned | Requires memory model & operator support. |
-| `بنية`      | struct         | Collection of named members    | Planned |                                           |
+| `بنية`      | struct         | Collection of named members. Supports C99 flexible array members (e.g., `type last_member[];`) as the last member. - *[Planned for flexible array members]* | Planned |                                           |
 | `اتحاد`     | union          | Shared memory for members      | Planned |                                           |
 
 ### 3.3 Type Compatibility & Conversion
 
 *(Based on current `types.c` implementation)*
 
-*   **General Principle:** Operations (like assignment, arithmetic) require operands of compatible types.
-*   **Implicit Conversions Allowed:**
-    *   `عدد_صحيح` -> `عدد_حقيقي` (Integer to Float)
-    *   `حرف` -> `عدد_صحيح` (Character to Integer)
-*   **Boolean Conversion:** In conditional contexts (like `if`, `while`), integer or float values might be implicitly converted (0 is false, non-zero is true). `منطقي` type is preferred. *(Needs verification)*.
-*   **Operators:** Require compatible operands (see Section 5). Results have defined types (e.g., comparison yields `منطقي`).
-*   **Explicit Casts:** Syntax and implementation for explicit type casting are *[Planned]*.
+* **General Principle:** Operations (like assignment, arithmetic) require operands of compatible types.
+* **Implicit Conversions Allowed:**
+  * `عدد_صحيح` -> `عدد_حقيقي` (Integer to Float)
+  * `حرف` -> `عدد_صحيح` (Character to Integer)
+* **Boolean Conversion:** In conditional contexts (like `if`, `while`), integer or float values might be implicitly converted (0 is false, non-zero is true). `منطقي` type is preferred. *(Needs verification)*.
+* **Operators:** Require compatible operands (see Section 5). Results have defined types (e.g., comparison yields `منطقي`).
+* **Explicit Casts:** Syntax and implementation for explicit type casting are *[Planned]*.
 
 *[Status: Type definitions exist. Enforcement via semantic analysis is currently limited.]*
 
@@ -258,9 +428,10 @@ Declarations introduce new names (identifiers) into a scope.
 
 Variables store values that can potentially change.
 
-*   **Syntax:** `type identifier ('=' initializer_expression)? '.'` - *[Implemented]*
-*   **Initialization:** Optional. If omitted, default value depends on scope (e.g., zero/null for globals/static, potentially uninitialized for locals - *needs clarification*).
-*   **Constants:** Use the `ثابت` keyword before the type to declare a constant whose value cannot be changed after initialization. Constants *must* be initialized. `ثابت type identifier = initializer_expression '.'` - *[Partial - Keyword parsed, semantic enforcement needed]*.
+* **Syntax:** `type identifier ('=' initializer_expression)? '.'` - *[Implemented]*
+* **Initialization:** Optional. If omitted, default value depends on scope (e.g., zero/null for globals/static, potentially uninitialized for locals - *needs clarification*).
+  * The `initializer_expression` can use C99-style designated initializers for arrays (e.g., `[index] = value`) and structs/unions (e.g., `.member = value`). - *[Planned]*
+* **Constants:** Use the `ثابت` keyword before the type to declare a constant whose value cannot be changed after initialization. Constants *must* be initialized. `ثابت type identifier = initializer_expression '.'` - *[Partial - Keyword parsed, semantic enforcement needed]*.
 
 ```baa
 عدد_صحيح counter.             // Variable, likely default initialized
@@ -270,16 +441,16 @@ Variables store values that can potentially change.
 // FLAG = خطأ.                // Error: Cannot assign to constant
 ```
 
-*   **Removed:** The `متغير` keyword is no longer planned for variable declarations.
+* **Removed:** The `متغير` keyword is no longer planned for variable declarations.
 
 ### 4.2 Function Declarations
 
 Functions define reusable blocks of code.
 
-*   **Syntax:** `return_type? identifier '(' parameter_list? ')' '{' statement* '}'` - *[Implementation Pending]*
-*   **Return Type:** Specified *before* the function identifier. If omitted, defaults to `فراغ` (void).
-*   **Parameters (`parameter_list`):** Comma-separated list of `type identifier`. `( )` for no parameters.
-*   **Entry Point:** The program must contain a function named `رئيسية` with no parameters and typically returning `عدد_صحيح`. `عدد_صحيح رئيسية() { ... إرجع 0. }`
+* **Syntax:** `return_type? identifier '(' parameter_list? ')' '{' statement* '}'` - *[Implementation Pending]*
+* **Return Type:** Specified *before* the function identifier. If omitted, defaults to `فراغ` (void).
+* **Parameters (`parameter_list`):** Comma-separated list of `type identifier`. `( )` for no parameters.
+* **Entry Point:** The program must contain a function named `رئيسية` with no parameters and typically returning `عدد_صحيح`. `عدد_صحيح رئيسية() { ... إرجع 0. }`
 
 ```baa
 // Function with no parameters, implicit void return
@@ -293,11 +464,21 @@ Functions define reusable blocks of code.
 }
 ```
 
-*   **Planned/Partial:** Optional parameters, rest parameters, named arguments (AST support exists, parsing/analysis status unclear).
+* **Planned/Partial:** Optional parameters, rest parameters, named arguments (AST support exists, parsing/analysis status unclear).
+* **Inline Functions (C99):** Functions can be prefixed with the `مضمن` (`inline`) keyword. This serves as a hint to the compiler to attempt to reduce function call overhead, typically by integrating the function's code directly at the call site. The exact behavior follows C99 semantics for `inline`. - *[Planned]*
 
 ### 4.3 Other Declarations (Planned)
 
 Support for `typedef` (`نوع_مستخدم`), `struct` (`بنية`), `union` (`اتحاد`), pointers (`مؤشر`), and `enum` is planned for closer C compatibility.
+
+### 4.4 Type Qualifiers (C99)
+
+Type qualifiers modify the properties of types. Baa plans to support C99 qualifiers.
+
+* **`ثابت` (`const`):** Indicates that the object's value cannot be changed after initialization. Constants *must* be initialized.
+  `ثابت type identifier = initializer_expression '.'` - *[Partial - Keyword parsed, semantic enforcement needed]*
+* **`مقيد` (`restrict`):** Can only be applied to pointers to an object type. It indicates that for the lifetime of the pointer, only that pointer itself or values derived directly from it (such as `pointer + 1`) will be used to access the object it points to. This is a hint for compiler optimizations and does not change the program's semantics if correctly used. - *[Planned]*
+* **`متطاير` (`volatile`):** Indicates that an object may be modified by means not under the control of the compiler (e.g., by hardware or another thread). Accesses to volatile objects should not be optimized away. - *[Planned]*
 
 ## 5. Operator Precedence and Associativity
 
@@ -305,7 +486,7 @@ The following table summarizes operator precedence (highest first) and associati
 
 | Precedence Level  | Operators          | Associativity | Notes                    | Status                  |
 | ----------------- | ------------------ | ------------- | ------------------------ | ----------------------- |
-| Highest (Primary) | `()` `[]` `. `     | Left-to-right | Grouping, Index, Member  | Implemented/Partial(.)  |
+| Highest (Primary) | `()` `[]` `.`     | Left-to-right | Grouping, Index, Member  | Implemented/Partial(.)  |
 | (Postfix)         | `++` `--`          | Left-to-right | Postfix Inc/Dec          | Implemented             |
 | (Unary)           | `++` `--`          | Right-to-left | Prefix Inc/Dec           | Implemented             |
 |                   | `+` `-` (unary)    | Right-to-left | Unary Plus/Minus         | Implemented             |
@@ -333,6 +514,7 @@ Statements are the units of execution. They are terminated by a dot (`.`).
 ### 6.1 Expression Statements
 
 An expression followed by a dot is a statement. The expression is evaluated for its side effects.
+
 ```baa
 counter++.             // Increment counter
 add(5, 3).             // Call function (result discarded)
@@ -342,6 +524,8 @@ x = y + 1.             // Assignment
 ### 6.2 Block Statements (Compound Statements)
 
 A sequence of zero or more statements enclosed in curly braces `{}`. Defines a block scope.
+In line with C99, declarations can be mixed with statements within a block, but an identifier must be declared before its first use in that scope. - *[Planned]*
+
 ```baa
 {
     عدد_صحيح temp = x.
@@ -353,8 +537,10 @@ A sequence of zero or more statements enclosed in curly braces `{}`. Defines a b
 ### 6.3 Conditional Statements (`if`/`else`)
 
 Executes statements based on a condition.
-*   **Syntax:** `إذا '(' expression ')' statement_or_block ( وإلا statement_or_block )?` - *[Implemented]*
-*   **Condition:** The `expression` is evaluated. It should result in a `منطقي` value (or be convertible to one).
+
+* **Syntax:** `إذا '(' expression ')' statement_or_block ( وإلا statement_or_block )?` - *[Implemented]*
+* **Condition:** The `expression` is evaluated. It should result in a `منطقي` value (or be convertible to one).
+
 ```baa
 إذا (x > 0) {
     اطبع("Positive").
@@ -372,8 +558,10 @@ Executes statements based on a condition.
 #### 6.4.1 `while` Loop
 
 Repeats a statement/block as long as a condition is true.
-*   **Syntax:** `طالما '(' expression ')' statement_or_block` - *[Implemented]*
-*   **Condition:** Evaluated *before* each iteration.
+
+* **Syntax:** `طالما '(' expression ')' statement_or_block` - *[Implemented]*
+* **Condition:** Evaluated *before* each iteration.
+
 ```baa
 عدد_صحيح i = 0.
 طالما (i < 5) {
@@ -385,14 +573,16 @@ Repeats a statement/block as long as a condition is true.
 #### 6.4.2 `for` Loop
 
 Provides initialization, condition, and post-iteration expressions for controlled looping.
-*   **Syntax:** `من_أجل '(' init_expr? ';' condition_expr? ';' incr_expr? ')' statement_or_block` - *[Implemented - Note: Uses semicolons ';', not dots '.' as separators inside parentheses]*.
-*   **Components:**
-    *   `init_expr`: Evaluated once before the loop.
-    *   `condition_expr`: Evaluated before each iteration. Loop continues if true.
-    *   `incr_expr`: Evaluated after each iteration.
+
+* **Syntax:** `لكل '(' init_expr? ';' condition_expr? ';' incr_expr? ')' statement_or_block` - *[Implemented - Note: Uses semicolons ';', not dots '.' as separators inside parentheses]*.
+* **Components:**
+  * `init_expr`: Evaluated once before the loop. This can be an expression or a C99-style declaration (e.g., `عدد_صحيح i = 0`). If it's a declaration, the scope of the declared variable(s) is limited to the loop. - *[Planned for declaration support]*
+  * `condition_expr`: Evaluated before each iteration. Loop continues if true.
+  * `incr_expr`: Evaluated after each iteration.
+
 ```baa
 // Example - Note the use of semicolons inside the parentheses
-من_أجل (عدد_صحيح i = 0; i < 10; i++) {
+لكل (عدد_صحيح i = 0; i < 10; i++) {
     اطبع(i).
 }
 ```
@@ -400,7 +590,8 @@ Provides initialization, condition, and post-iteration expressions for controlle
 #### 6.4.3 `do-while` Loop (Planned)
 
 Repeats a statement/block, evaluating the condition *after* the first iteration.
-*   **Syntax:** `افعل statement_or_block طالما '(' expression ')' '.'` - *[Partial - Keyword exists, AST/Parsing status unclear]*.
+
+* **Syntax:** `افعل statement_or_block طالما '(' expression ')' '.'` - *[Syntax Defined, Implementation Pending]*.
 
 ### 6.5 Jump Statements
 
@@ -409,29 +600,35 @@ Transfer control flow unconditionally.
 #### 6.5.1 `return` Statement
 
 Exits the current function, optionally returning a value.
-*   **Syntax:** `إرجع (expression)? '.'` - *[Implemented]*
-*   **Value:** If the function returns non-void, the `expression` type must be compatible with the declared return type.
+
+* **Syntax:** `إرجع (expression)? '.'` - *[Implemented]*
+* **Value:** If the function returns non-void, the `expression` type must be compatible with the declared return type.
 
 #### 6.5.2 `break` Statement
 
 Exits the innermost enclosing loop (`while`, `for`, `do`) or `switch` statement.
-*   **Syntax:** `توقف '.'` - *[Implemented]*
+
+* **Syntax:** `توقف '.'` - *[Implemented]*
 
 #### 6.5.3 `continue` Statement
 
 Skips the remainder of the current iteration of the innermost enclosing loop (`while`, `for`, `do`) and proceeds to the next iteration (evaluating the condition/increment).
-*   **Syntax:** `أكمل '.'` - *[Implemented]*
+
+* **Syntax:** `أكمل '.'` - *[Implemented]*
 
 #### 6.5.4 `goto` Statement (Planned)
 
 Unconditional jump to a labeled statement within the same function.
-*   **Syntax:** `اذهب identifier '.'` and `identifier ':' statement` - *[Planned]*.
+
+* **Syntax:** `اذهب identifier '.'` and `identifier ':' statement` - *[Planned]*.
 
 ### 6.6 `switch` Statement
 
 Selects a block of code to execute based on the value of an expression.
-*   **Syntax:** `اختر '(' expression ')' '{' case_group* '}'` - *[Implemented]*.
-*   **`case_group`:** Consists of one or more `حالة constant_expression ':'` labels or a `افتراضي ':'` (default) label, followed by statements. Execution falls through cases unless `توقف` is used.
+
+* **Syntax:** `اختر '(' expression ')' '{' case_group* '}'` - *[Implemented]*.
+* **`case_group`:** Consists of one or more `حالة constant_expression ':'` labels or a `افتراضي ':'` (default) label, followed by statements. Execution falls through cases unless `توقف` is used.
+
 ```baa
 // Example - Syntax/Semantics need verification
 اختر (day) {
@@ -451,15 +648,15 @@ Selects a block of code to execute based on the value of an expression.
 
 Baa uses lexical scoping, similar to C. The scope determines the visibility of identifiers (variables, functions, etc.).
 
-*   **Global Scope:** Declarations made outside any function are generally visible from their point of declaration to the end of the source file. *[Note: Visibility across multiple files via `خارجي` is planned but likely requires linker/codegen support].*
-*   **Function Scope:** Parameters and variables declared directly inside a function body (outside any nested blocks) are visible from their point of declaration to the end of the function.
-*   **Block Scope:** Variables declared inside a block (code enclosed in `{...}`, e.g., within an `if`, `while`, or compound statement) are visible only from their point of declaration to the end of that block (including nested blocks).
-*   **Shadowing:** A declaration in an inner scope can *shadow* (hide) a declaration with the same name from an outer scope. The inner declaration takes precedence within its scope.
+* **Global Scope:** Declarations made outside any function are generally visible from their point of declaration to the end of the source file. *[Note: Visibility across multiple files via `خارجي` is planned but likely requires linker/codegen support].*
+* **Function Scope:** Parameters and variables declared directly inside a function body (outside any nested blocks) are visible from their point of declaration to the end of the function.
+* **Block Scope:** Variables declared inside a block (code enclosed in `{...}`, e.g., within an `if`, `while`, or compound statement) are visible only from their point of declaration to the end of that block (including nested blocks).
+* **Shadowing:** A declaration in an inner scope can *shadow* (hide) a declaration with the same name from an outer scope. The inner declaration takes precedence within its scope.
 
 ```baa
 عدد_صحيح global_var = 10. // Global scope
 
-دالة test(عدد_صحيح param) { // Function scope starts
+test(عدد_صحيح param) { // Function scope starts
     عدد_صحيح func_var = param + global_var. // Can access global and param
 
     إذا (func_var > 20) { // Block scope starts
@@ -474,6 +671,7 @@ Baa uses lexical scoping, similar to C. The scope determines the visibility of i
 } // Function scope ends
 
 ```
+
 *[Status: Basic block scoping is likely handled by the parser structure. Full enforcement and symbol table management via `scope.h` happens during semantic analysis, which is currently underdeveloped.]*
 
 ## 8. Program Structure
@@ -503,9 +701,9 @@ my_module.ب
 
 (These are conventions, not strictly enforced by the compiler beyond identifier rules)
 
-*   Use clear and descriptive names in Arabic or English.
-*   Follow consistent casing (e.g., `snake_case` or `camelCase`).
-*   Avoid overly short or ambiguous names.
+* Use clear and descriptive names in Arabic or English.
+* Follow consistent casing (e.g., `snake_case` or `camelCase`).
+* Avoid overly short or ambiguous names.
 
 ```
 ```

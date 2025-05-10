@@ -12,9 +12,9 @@ typedef struct BaaDummyLLVMValue* LLVMValueRef;
 #endif
 
 #include "baa/codegen/codegen.h"
-#include "baa/ast/ast.h"
-#include "baa/ast/expressions.h"
-#include "baa/ast/statements.h"
+// #include "baa/ast/ast.h" // Removed as AST is being removed
+// #include "baa/ast/expressions.h" // Removed as AST is being removed
+// #include "baa/ast/statements.h" // Removed as AST is being removed
 #include <stdbool.h>
 #include <wchar.h>
 
@@ -38,22 +38,22 @@ bool baa_init_llvm_context(BaaLLVMContext* context, const wchar_t* module_name);
 // Clean up LLVM context
 void baa_cleanup_llvm_context(BaaLLVMContext* context);
 
-// Generate LLVM IR for a program
-bool baa_generate_llvm_ir(BaaLLVMContext* context, BaaProgram* program);
+// Generate LLVM IR for a program (AST-dependent, to be refactored or removed)
+bool baa_generate_llvm_ir(BaaLLVMContext* context, void* unused_program /* BaaProgram* program */); // AST type removed
 
-// Generate LLVM IR for a function
-bool baa_generate_llvm_function(BaaLLVMContext* context, BaaFunction* function);
+// Generate LLVM IR for a function (AST-dependent, to be refactored or removed)
+// bool baa_generate_llvm_function(BaaLLVMContext* context, BaaFunction* function);
 
-// Generate LLVM IR for a statement
-bool baa_generate_llvm_statement(BaaLLVMContext* context, BaaStmt* stmt);
+// Generate LLVM IR for a statement (AST-dependent, to be refactored or removed)
+// bool baa_generate_llvm_statement(BaaLLVMContext* context, BaaStmt* stmt);
 
-// Generate LLVM IR for an expression
-LLVMValueRef baa_generate_llvm_expression(BaaLLVMContext* context, BaaExpr* expr);
+// Generate LLVM IR for an expression (AST-dependent, to be refactored or removed)
+// LLVMValueRef baa_generate_llvm_expression(BaaLLVMContext* context, BaaExpr* expr);
 
-// Generate LLVM IR for control flow statements
-bool baa_generate_llvm_if_statement(BaaLLVMContext* context, BaaIfStmt* if_stmt);
-bool baa_generate_llvm_while_statement(BaaLLVMContext* context, BaaWhileStmt* while_stmt);
-bool baa_generate_llvm_return_statement(BaaLLVMContext* context, BaaReturnStmt* return_stmt);
+// Generate LLVM IR for control flow statements (AST-dependent, to be refactored or removed)
+// bool baa_generate_llvm_if_statement(BaaLLVMContext* context, BaaIfStmt* if_stmt);
+// bool baa_generate_llvm_while_statement(BaaLLVMContext* context, BaaWhileStmt* while_stmt);
+// bool baa_generate_llvm_return_statement(BaaLLVMContext* context, BaaReturnStmt* return_stmt);
 
 // Write LLVM IR to file
 bool baa_write_llvm_ir_to_file(BaaLLVMContext* context, const wchar_t* filename);

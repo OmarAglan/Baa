@@ -1,5 +1,5 @@
 #include "baa/lexer/lexer.h"
-#include "baa/parser/parser.h"
+// #include "baa/parser/parser.h" // Removed as parser is being removed
 #include "baa/codegen/codegen.h"
 #include "baa/utils/utils.h"
 #include "baa/preprocessor/preprocessor.h"

@@ -14,12 +14,12 @@ static bool g_llvm_initialized = false;
 #endif
 
 // Initialize code generation
-void baa_init_codegen(BaaCodeGen* gen, BaaProgram* program, const BaaCodeGenOptions* options) {
-    if (!gen || !program || !options) {
+void baa_init_codegen(BaaCodeGen* gen, void* unused_program /* BaaProgram* program */, const BaaCodeGenOptions* options) { // AST type removed
+    if (!gen || !options) { // Removed program check
         return;
     }
 
-    gen->program = program;
+    // gen->program = program; // Removed as AST is being removed
     gen->options = *options;
     gen->had_error = false;
     gen->error_message = NULL;
@@ -43,13 +43,17 @@ void baa_init_codegen(BaaCodeGen* gen, BaaProgram* program, const BaaCodeGenOpti
 
 // Generate code
 bool baa_generate_code(BaaCodeGen* gen) {
-    if (!gen || !gen->program) {
+    if (!gen /* || !gen->program */) { // Removed program check
         return false;
     }
 
 #ifdef LLVM_AVAILABLE
     // Generate LLVM IR
-    if (!baa_generate_llvm_ir(&g_llvm_context, gen->program)) {
+    // The call to baa_generate_llvm_ir needs to be updated as its signature changed (BaaProgram* removed)
+    // For now, commenting out the direct AST-dependent call.
+    // This function will need significant rework without an AST.
+    // if (!baa_generate_llvm_ir(&g_llvm_context, gen->program /* This was the AST program */)) {
+    if (!baa_generate_llvm_ir(&g_llvm_context, NULL /* Placeholder for removed program */)) {
         gen->had_error = true;
         gen->error_message = baa_get_llvm_error(&g_llvm_context);
         return false;
@@ -73,8 +77,8 @@ bool baa_generate_code(BaaCodeGen* gen) {
 }
 
 // Generate code for a function
-bool baa_generate_function(BaaCodeGen* gen, BaaFunction* function) {
-    if (!gen || !function) {
+bool baa_generate_function(BaaCodeGen* gen, void* unused_function /* BaaFunction* function */) { // AST type removed
+    if (!gen || !unused_function) {
         return false;
     }
 
@@ -89,8 +93,8 @@ bool baa_generate_function(BaaCodeGen* gen, BaaFunction* function) {
 }
 
 // Generate code for a statement
-bool baa_generate_statement(BaaCodeGen* gen, BaaStmt* stmt) {
-    if (!gen || !stmt) {
+bool baa_generate_statement(BaaCodeGen* gen, void* unused_stmt /* BaaStmt* stmt */) { // AST type removed
+    if (!gen || !unused_stmt) {
         return false;
     }
 
@@ -105,8 +109,8 @@ bool baa_generate_statement(BaaCodeGen* gen, BaaStmt* stmt) {
 }
 
 // Generate code for an expression
-bool baa_generate_expression(BaaCodeGen* gen, BaaExpr* expr) {
-    if (!gen || !expr) {
+bool baa_generate_expression(BaaCodeGen* gen, void* unused_expr /* BaaExpr* expr */) { // AST type removed
+    if (!gen || !unused_expr) {
         return false;
     }
 
@@ -166,7 +170,7 @@ bool baa_optimize_code(BaaCodeGen* gen) {
 #endif
 }
 
-bool baa_optimize_function(BaaCodeGen* gen, BaaFunction* function) {
+bool baa_optimize_function(BaaCodeGen* gen, void* unused_function /* BaaFunction* function */) { // AST type removed
 #ifdef LLVM_AVAILABLE
     // Placeholder for function optimization
     return true;
@@ -189,7 +193,7 @@ bool baa_generate_debug_info(BaaCodeGen* gen) {
 #endif
 }
 
-bool baa_generate_function_debug_info(BaaCodeGen* gen, BaaFunction* function) {
+bool baa_generate_function_debug_info(BaaCodeGen* gen, void* unused_function /* BaaFunction* function */) { // AST type removed
 #ifdef LLVM_AVAILABLE
     // Placeholder for function debug information generation
     return true;

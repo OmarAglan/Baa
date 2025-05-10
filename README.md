@@ -14,7 +14,9 @@ The project now supports:
   - `#الغاء_تعريف NAME` (Undefine macro)
   - Conditional compilation (`#إذا_عرف`, `#إذا_لم_يعرف`, `#إذا`, `#وإلا_إذا`, `#إلا`, `#نهاية_إذا`)
   - Stringification (`#`) and Token Pasting (`##`) operators in macros.
-  - Predefined Arabic macros: `__الملف__` (FILE), `__السطر__` (LINE), `__التاريخ__` (DATE), `__الوقت__` (TIME).
+  - Predefined Arabic macros: `__الملف__` (FILE), `__السطر__` (LINE), `__التاريخ__` (DATE), `__الوقت__` (TIME). (Planned: `__الدالة__` for `__func__`).
+  - Variadic Macros (Planned: `وسائط_إضافية` for `...`, `__وسائط_متغيرة__` for `__VA_ARGS__`).
+  - Other Standard Directives (Planned: `#خطأ`, `#تحذير`, `#سطر`, `#براغما`, and `أمر_براغما` operator).
 
 - Basic type system with K&R C compatibility
   - عدد_صحيح (int) - 32-bit integer

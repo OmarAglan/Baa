@@ -25,9 +25,6 @@ endif()
 # Add unit tests
 add_subdirectory(unit)
 
-# Add parser tests
-add_subdirectory(parser_tests)
-
 # Add codegen tests
 add_subdirectory(codegen_tests)
 

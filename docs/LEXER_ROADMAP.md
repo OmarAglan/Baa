@@ -19,12 +19,15 @@ This roadmap outlines the planned improvements and current status of the Baa lan
 - [ ] Special tokens (Comment - Defined, but comments currently skipped, not tokenized. See Comment Support section)
 - [x] Literals (Identifier - Basic Arabic/ASCII support)
 - [x] Literals (Int - `BAA_TOKEN_INT_LIT`)
+- [ ] Literals (Int): Add support for C99 `long long` suffixes (e.g., `LL`, `ULL`).
 - [x] Literals (Float - Defined `BAA_TOKEN_FLOAT_LIT`, identified by lexer syntax checks; value parsing occurs later)
+- [ ] Literals (Float): Add support for C99 hexadecimal float constants (e.g., `0x1.fp+2`).
 - [x] Literals (Char - Defined `BAA_TOKEN_CHAR_LIT`, scanned with escapes `\n, \t, \\, \', \", \r, \0, \uXXXX`)
 - [x] Literals (String - `BAA_TOKEN_STRING_LIT`, scanned with escapes `\n, \t, \\, \", \r, \0, \uXXXX`)
 - [x] Literals (Boolean - Defined `BAA_TOKEN_BOOL_LIT`, keywords `صحيح`/`خطأ` scanned)
-- [x] Keywords (FUNC, RETURN, IF, ELSE, WHILE, FOR, DO, SWITCH, CASE, BREAK, CONTINUE - Present in `lexer.c` keyword list)
-- [x] Keywords (VAR, CONST - Defined and added to `lexer.c` keyword list)
+- [ ] **Align Keywords**: Remove `FUNC` (`دالة`) as a keyword (use C-like function syntax). Other keywords (RETURN, IF, ELSE, WHILE, FOR, DO, SWITCH, CASE, BREAK, CONTINUE) are correct. (To align with `docs/language.md`)
+- [ ] **Align Keywords**: Remove `VAR` (`متغير`) as a keyword. `CONST` (`ثابت`) is correct. (To align with `docs/language.md`)
+- [ ] **Add C99 Keywords**: Support `inline` (Baa: `مضمن`?) and `restrict` (Baa: `مقيد`?) (Tokenization and Baa keyword TBD).
 - [x] Types (TYPE_INT, TYPE_FLOAT, TYPE_CHAR, TYPE_VOID, TYPE_BOOL - Defined and added to `lexer.c` keyword list)
 - [x] Operators (+, -, *, /, %, =, ==, !, !=, <, <=, >, >=)
 - [x] Operators (&&, || - Defined and scanning logic added in `lexer.c`)
@@ -73,10 +76,10 @@ This roadmap outlines the planned improvements and current status of the Baa lan
 ## Preprocessing
 
 - [x] **Handled by external `baa_preprocess` function:**
-    - [x] Include directives (`#تضمين`)
-    - [x] Basic Macro definitions (`#تعريف` - parameterless)
-    - [x] File inclusion logic
-    - [x] Conditional compilation (`#إذا_عرف`, etc. - *handled by preprocessor*)
+  - [x] Include directives (`#تضمين`)
+  - [x] Basic Macro definitions (`#تعريف` - parameterless)
+  - [x] File inclusion logic
+  - [x] Conditional compilation (`#إذا_عرف`, etc. - *handled by preprocessor*)
 
 ## Error Handling and Reporting
 
@@ -135,4 +138,4 @@ This roadmap outlines the planned improvements and current status of the Baa lan
     - Keyword lookup optimization.
     - String interning.
 
-6.  **[Misc]** Implement remaining basic escape sequences (`\r`, `\0` in strings, `\"` in chars). *[Done]*
+6. **[Misc]** Implement remaining basic escape sequences (`\r`, `\0` in strings, `\"` in chars). *[Done]*

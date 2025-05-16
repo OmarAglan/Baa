@@ -64,6 +64,7 @@ struct BaaPreprocessor
     PpSourceLocation *location_stack; // Stack to track original source locations
     size_t location_stack_count;
     size_t location_stack_capacity;
+    bool in_multiline_comment;        // True if currently inside a multi-line comment
 }; // Note: No typedef name here
 
 // Dynamic Buffer for Output

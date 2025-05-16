@@ -73,7 +73,7 @@ wchar_t *baa_preprocess(const BaaPpSource *source, const char **include_paths, w
     // pp_state.location_stack = NULL;      // Zero-initialized
     // pp_state.location_stack_count = 0;   // Zero-initialized
     // pp_state.location_stack_capacity = 0;// Zero-initialized
-
+    pp_state.in_multiline_comment = false; // Initialize new state
     // --- Push initial location (needed early for potential errors during macro init) ---
     PpSourceLocation initial_loc = {
         .file_path = source->source_name, // Use the provided source name

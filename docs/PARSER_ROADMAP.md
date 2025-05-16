@@ -1,140 +1,129 @@
-# Baa Language Parser Roadmap
+# Baa Language Parser Implementation Roadmap (New Design)
 
-This document outlines the implementation plan for the Baa language parser, organized by priority and planned features. Each section represents a development phase with specific objectives.
+**Status: This document outlines the implementation plan for the new Parser following the removal of the previous implementation. All items are planned unless otherwise noted. This roadmap aligns with the new AST design in `docs/AST.md`.**
 
-## Current Implementation Status (May 2025)
+## Phase 1: Parser Foundation & Basic Expressions/Statements
 
-**Note:** `parser.c` was recently refactored (split into `parser_helper.c`, `statement_parser.c`, `declaration_parser.c`).
+- **Parser Core Infrastructure:**
+  - [ ] Define `BaaParser` state structure (lexer instance, current/previous tokens, error state, source location tracking).
+  - [ ] Implement core token handling utilities: `advance()`, `peek()`, `match_token()`, `consume_token()`.
+  - [ ] Basic error reporting mechanism (`parser_error()`) - focus on clear messages and accurate `BaaSourceLocation`.
+  - [ ] Basic error synchronization strategy (`synchronize()`) - initial strategy: skip to next statement terminator `.` or common statement-starting keyword.
+- **Parser Module Setup:**
+  - [ ] Create initial C files and headers for core parser modules: `parser.c`/`parser.h` (main), `expression_parser.c`/`expression_parser.h`, `statement_parser.c`/`statement_parser.h`, `declaration_parser.c`/`declaration_parser.h`, `type_parser.c`/`type_parser.h` (as outlined in `PARSER.md`).
+- **Primary Expression Parsing:**
+  - [ ] Parse Literal Expressions (`BAA_EXPR_LITERAL` for numbers, strings, chars, booleans, null).
+  - [ ] Parse Identifier Expressions (as `BAA_EXPR_VARIABLE`).
+  - [ ] Parse Grouping Expressions (parentheses).
+- **Simple Statement Parsing:**
+  - [ ] Parse Expression Statements (`BAA_STMT_EXPR`).
+  - [ ] Parse Block Statements (`BAA_STMT_BLOCK`).
+- **Top-Level Program Structure:**
+  - [ ] Implement `baa_parse_program` to parse a sequence of (initially simple) statements or declarations, returning a `BaaProgram` AST node.
 
-The Baa parser currently implements:
+## Phase 2: Operators and Basic Declarations
 
-- ✅ Basic parser infrastructure with recursive descent approach
-- ✅ Expression parsing with precedence handling (via `expression_parser.c`)
-- ✅ Statement parsing for basic control flow (If, While, For, Return via `statement_parser.c`)
-- ✅ Declaration parsing for variables, functions, and imports (via `declaration_parser.c`)
-- ✅ Basic type annotation support (via `type_parser.c`)
-- ✅ Error detection and reporting mechanisms (basic)
-- ✅ Boolean type support (`منطقي` via `type_parser.c`)
-- ✅ Basic function parameter handling (via `declaration_parser.c`)
-- ✅ Basic operator support (including compound assignment, inc/dec via `expression_parser.c`)
+- **Unary and Binary Expression Parsing:**
+  - [ ] Implement parsing for unary operators (e.g., `!`, `-`) with correct precedence (`BAA_EXPR_UNARY`).
+  - [ ] Implement parsing for binary operators (e.g., `+`, `-`, `*`, `/`, `==`, `!=`, `<`, `>` etc.) primarily using a cascaded series of functions for precedence levels. Document this chosen strategy in detail in `docs/PARSER.md`, including how operator precedence and associativity from `src/operators/` are handled. (Consider Pratt parsing or Shunting-Yard if cascaded approach proves insufficient for complex cases.) (`BAA_EXPR_BINARY`).
+- **Assignment Expression Parsing:**
+  - [ ] Parse simple assignment (`=`) (`BAA_EXPR_ASSIGN`).
+  - [ ] Parse compound assignment operators (e.g., `+=`, `-=`).
+- **Variable Declaration Parsing (`BAA_STMT_VAR_DECL`):**
+  - [ ] Parse variable declarations (e.g., `عدد_صحيح اسم_المتغير.`).
+  - [ ] Parse variable declarations with initializers.
+  - [ ] Handle `ثابت` (const) modifier.
 
-## Implementation Priorities
+## Phase 3: Control Flow Statements
 
-### 1. Core Language Support (Immediate Focus)
+- **If Statements (`BAA_STMT_IF`):**
+  - [ ] Parse `إذا` (if) conditions.
+  - [ ] Parse `then` branch (single statement or block).
+  - [ ] Parse optional `وإلا` (else) branch.
+- **While Loops (`BAA_STMT_WHILE`):**
+  - [ ] Parse `طالما` (while) conditions.
+  - [ ] Parse loop body (single statement or block).
+- **Return Statements (`BAA_STMT_RETURN`):**
+  - [ ] Parse `إرجع` (return) statements.
+  - [ ] Parse optional return value expression.
 
-- ✅ Enhanced expression support (Assumed complete based on `PARSER.md`)
-  - ✅ Boolean literals (`صحيح`/`خطأ`)
-  - ✅ Compound assignment operators (`+=`, `-=`, `*=`, `/=`, `%=`)
-  * ✅ Increment/decrement operators (`++`, `--`)
-  * ✅ Array indexing expressions (`[]`)
+## Phase 4: Functions and More Control Flow
 
-- 🔲 Enhanced function support
-  - 🔲 Optional parameters
-  - 🔲 Rest parameters
-  - 🔲 Named arguments
-  - 🔲 Method vs. function distinction
+- **Function Declaration Parsing (`BAA_NODE_FUNCTION`):**
+  - [ ] Parse function name.
+  - [ ] Parse parameter list (initially simple types and names - `BaaParameter`).
+  - [ ] Parse return type.
+  - [ ] Parse function body (`BaaBlock`).
+  - [ ] Handle `مضمن` (inline) specifier.
+- **Function Call Expression Parsing (`BAA_EXPR_CALL`):**
+  - [ ] Parse function call syntax (callee expression, argument list).
+- **For Loops (`BAA_STMT_FOR`):**
+  - [ ] Parse `لكل` (for) loops: initializer, condition, increment clauses.
+  - [ ] Parse loop body.
+- **Break and Continue Statements (`BAA_STMT_BREAK`, `BAA_STMT_CONTINUE`):**
+  - [ ] Parse `توقف` (break) statements.
+  - [ ] Parse `أكمل` (continue) statements.
 
-- 🔲 Extended statement support
-  - ✅ For loops (`لكل`)
-  - 🔲 Switch/case statements
-  - 🔲 Break and continue statements
+## Phase 5: Advanced Types and Expressions
 
-### 2. Type System Enhancements (Short-term)
+- **Type Parsing (`type_parser.c` module - Planned):**
+  - [ ] Parse basic type annotations (`عدد_صحيح`, `عدد_حقيقي`, etc.).
+  - [ ] Parse array type annotations (e.g., `عدد_صحيح[]`).
+- **Array Literal & Indexing Expressions (`BAA_EXPR_ARRAY`, `BAA_EXPR_INDEX`):**
+  - [ ] Parse array literal expressions (e.g., `[1, 2, 3]`).
+  - [ ] Parse array indexing expressions (e.g., `my_array[0]`).
+- **Cast Expressions (`BAA_EXPR_CAST`):**
+  - [ ] Parse explicit type cast expressions.
+- **Switch Statements (`BAA_STMT_SWITCH`, `BAA_STMT_CASE`, `BAA_STMT_DEFAULT`):**
+  - [ ] Parse `اختر` (switch) expression.
+  - [ ] Parse `حالة` (case) labels with constant expressions.
+  - [ ] Parse `افتراضي` (default) labels.
+  - [ ] Parse statement blocks for cases.
+- **Specific Language Features from `language.md`:**
+    - [ ] Parse Compound Literals (C99-style).
+    - [ ] Parse Member Access operators (`::` and `->`) once struct/union parsing is available.
 
-- 🔲 Complete type system integration
-  - 🔲 Enhanced type checking during parsing
-  - 🔲 User-defined type parsing
-  - 🔲 Function type signatures
-  - 🔲 Support for generics/templates
 
-- 🔲 Advanced type features
-  - 🔲 Union types
-  - 🔲 Intersection types
-  - 🔲 Type inference helpers
+## Phase 6: Parser Infrastructure & Tooling Enhancements
 
-### 3. OOP and Module System (Medium-term)
+- **Error Handling and Recovery:**
+  - [ ] Develop more sophisticated error recovery strategies (e.g., panic mode with synchronization to specific tokens like statement terminators `.`, keywords, or delimiters like `}`).
+  - [ ] Design for context-specific and helpful error messages (e.g., "Expected an expression for the 'إذا' condition" instead of generic "Syntax error"). Ensure messages are suitable for Arabic and RTL display.
+- **RTL Source Code Considerations for Error Reporting:**
+  - [ ] Ensure parser error reporting mechanisms accurately convey `BaaSourceLocation` data so that tools (IDE plugins, etc.) can correctly highlight issues in RTL source code.
+- **Semantic Action Integration:**
+  - [ ] Define a clear strategy for how and when minimal semantic actions (beyond AST node creation) might be integrated during parsing, if any (e.g., very early symbol table interactions for specific forward declaration scenarios if the language design requires it). Primarily, AST construction is the parser's main semantic action.
 
-- 🔲 Class declaration support
-  - 🔲 Methods and properties
-  - 🔲 Constructors
-  - 🔲 Access modifiers
-  - 🔲 Inheritance
+## Future Considerations (Longer Term)
 
-- 🔲 Module system
-  - 🔲 Import/export declarations
-  - 🔲 Namespace resolution
-  - 🔲 Visibility rules
-
-### 4. Advanced Language Features (Long-term)
-
-- 🔲 Lambda expressions and closures
-  - 🔲 Arrow function syntax
-  - 🔲 Implicit returns
-  - 🔲 Closure capture analysis
-
-- 🔲 Pattern matching
-  - 🔲 Destructuring assignments
-  - 🔲 Advanced pattern matching in switch statements
-
-- 🔲 Asynchronous programming
-  - 🔲 Async/await syntax
-  - 🔲 Promise-like constructs
-
-### 5. Optimization and Tooling (Continuous)
-
-- 🔲 Parser performance optimization
-  - 🔲 Memoization for frequently parsed patterns
-  - 🔲 Symbol table integration
-  - 🔲 Efficient AST construction
-
-- 🔲 Error recovery enhancements
-  - 🔲 Improved synchronization points
-  - 🔲 More helpful error messages
-  - 🔲 Suggestions for fixes
-
-- 🔲 Developer experience
-  - 🔲 AST visualization tools
-  - 🔲 Parse tree debugging helpers
-  - 🔲 Documentation generation from parse tree
-
-## Implementation Notes
-
-### Priority Definitions
-
-- **Immediate**: Required for basic language functionality
-- **Short-term**: Required for a useful language
-- **Medium-term**: Required for a production-ready language
-- **Long-term**: Required for a feature-complete language
-- **Continuous**: Ongoing improvements
-
-### Implementation Strategy
-
-1. Focus on incremental improvements
-2. Ensure each component is well-tested before moving to the next
-3. Maintain backward compatibility with existing code
-4. Prioritize features that enable language user adoption
-
-### Challenges and Considerations
-
-- Balancing Arabic language syntax with programming language conventions
-- Ensuring error messages are clear in both Arabic and English contexts
-- Maintaining consistent performance as language features expand
-- Ensuring the parser is extensible for future language evolution
+- **Advanced Function Features:**
+  - [ ] Optional parameters with default values.
+  - [ ] Rest parameters.
+  - [ ] Named arguments in function calls.
+- **Structs, Unions, Enums:**
+  - [ ] Parse `بنية` (struct) definitions and member access.
+  - [ ] Parse `اتحاد` (union) definitions and member access.
+  - [ ] Parse `تعداد` (enum) definitions.
+- **Pointer-related syntax** (once pointers are fully designed in the type system).
+- **Module System:**
+  - [ ] Parse `تضمين` (import) directives if they are to be handled by the parser (currently preprocessor).
+  - [ ] Parse module declaration syntax if introduced.
+- **Integration with Semantic Analyzer for contextual parsing (e.g., distinguishing type names from variable names).**
+- **Parser Performance:**
+  - [ ] Profile parser performance on large Baa source files and identify potential bottlenecks for optimization (e.g., memoization for certain non-terminals if grammar becomes complex, though usually not needed for LL(k) grammars).
+- **Handling Preprocessor Output:**
+  - [ ] Continuously verify that the parser correctly handles various valid (and sometimes complex) token sequences that can result from preprocessor macro expansions.
 
 ## Test Strategy
 
-Each parser enhancement should include:
-
-1. Unit tests for individual parsing functions
-2. Integration tests with the lexer and AST
-3. End-to-end tests with complete programs
-4. Error case testing to ensure helpful error messages and recovery
-5. Tests for Unicode and RTL text handling in parsing
+- [ ] Unit tests for individual parsing functions (e.g., `parse_if_statement`, `parse_binary_expression`).
+  - [ ] Develop utility functions or a test harness to easily feed specific token sequences to individual parser functions for isolated unit testing.
+- [ ] Integration tests: Parse token streams from `lexer_test_suite.baa` and verify the generated AST structure (requires AST pretty-printer).
+- [ ] Error case testing: Ensure syntax errors are correctly reported with accurate location information.
+- [ ] Test recovery from syntax errors.
 
 ## Documentation Approach
 
-For each completed feature:
-1. Update this roadmap to mark completed items
-2. Update PARSER_STRUCTURE.md with new functionality
-3. Add code comments explaining complex parsing techniques
-4. Create example programs demonstrating new language features
+- [ ] Update `PARSER.md` continuously as features are implemented.
+- [ ] Add Doxygen comments to `parser.h` for all public structures and functions.
+- [ ] Document parsing logic and algorithms within source files.

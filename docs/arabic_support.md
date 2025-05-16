@@ -16,11 +16,10 @@ Baa (باء) provides comprehensive support for Arabic programming through:
 
 | Arabic | English | Description |
 |--------|---------|-------------|
-| دالة | function | Function declaration |
 | إذا | if | Conditional statement |
 | وإلا | else | Alternative branch |
 | طالما | while | While loop |
-| من_أجل | for | For loop |
+| لكل | for | For loop (C-style: init; condition; increment) |
 | افعل | do | Do-while loop |
 | اختر | switch | Switch statement |
 | حالة | case | Case label |
@@ -28,9 +27,16 @@ Baa (باء) provides comprehensive support for Arabic programming through:
 | استمر | continue| Continue statement |
 | إرجع | return | Return statement |
 | بنية | struct | Structure definition |
-| متغير | var | Variable keyword |
 | ثابت | const | Constant keyword |
 | اتحاد | union | Union definition |
+| مستقر | static | Static storage duration / internal linkage |
+| خارجي | extern | External linkage |
+| مضمن | inline | Inline function hint (C99) |
+| مقيد | restrict | Pointer optimization hint (C99) |
+| نوع_مستخدم | typedef | Type alias definition |
+| حجم | sizeof | Size of type/object operator |
+| متطاير | volatile | Volatile memory access qualifier (C99) |
+| تعداد | enum | Enumeration type definition |
 
 ### 2. Types (الأنواع)
 
@@ -38,6 +44,7 @@ Baa (باء) provides comprehensive support for Arabic programming through:
 |-------------|---------|----------------------|---------|
 | عدد_صحيح    | int     | Integer              | 32-bit  |
 | عدد_حقيقي   | float   | Floating-point       | 32-bit  |
+| عدد_صحيح_طويل_جدا | long long int | Signed Long Long Integer | 64-bit |
 | حرف        | char    | Character            | 16-bit  | (Lexer uses wchar_t)
 | فراغ        | void    | No type             | -       |
 | منطقي       | bool    | Boolean              | 8-bit   |
@@ -45,6 +52,7 @@ Baa (باء) provides comprehensive support for Arabic programming through:
 | مؤشر        | pointer  | Pointer type       | -       |
 | بنية        | struct   | Structure type     | -       |
 | اتحاد       | union    | Union type         | -       |
+| تعداد       | enum     | Enumeration type     | -       |
 
 ### 3. Operators (العمليات)
 
@@ -71,6 +79,8 @@ Baa (باء) provides comprehensive support for Arabic programming through:
 | Logical | و | && | Logical AND |
 | | أو | \|\| | Logical OR |
 | | ليس | ! | Logical NOT |
+| Member Access | وصول_مباشر | :: | Direct member access (for structs/unions) |
+| | وصول_مؤشر | -> | Pointer member access (for structs/unions) |
 
 ### 4. Boolean Literals (القيم المنطقية)
 
@@ -79,26 +89,85 @@ Baa (باء) provides comprehensive support for Arabic programming through:
 | صحيح | true | Boolean true value |
 | خطأ | false | Boolean false value |
 
-### 5. Numeric Literals (القيم العددية)
+### 5. Preprocessor Directives (توجيهات المعالج المسبق)
+
+Baa uses Arabic keywords for its preprocessor directives, aligning with C99 functionality:
+
+| Baa Directive             | C99 Equivalent     | Description                                                                 |
+|---------------------------|--------------------|-----------------------------------------------------------------------------|
+| `#تضمين`                  | `#include`         | Includes another source file.                                               |
+| `#تعريف`                  | `#define`          | Defines a macro. Supports object-like and function-like macros.             |
+| `وسائط_إضافية` (in def)   | `...` (in def)     | Indicates variadic arguments in a function-like macro definition. (Implemented) |
+| `__وسائط_متغيرة__` (in body) | `__VA_ARGS__` (in body) | Accesses variadic arguments within a macro expansion. (Implemented)         |
+| `#الغاء_تعريف`            | `#undef`           | Removes a macro definition.                                                 |
+| `#إذا`                    | `#if`              | Conditional compilation based on an expression. Uses `معرف` for `defined`. |
+| `#إذا_عرف`                | `#ifdef`           | Conditional compilation if a macro is defined. (Uses `معرف`)                |
+| `#إذا_لم_يعرف`            | `#ifndef`          | Conditional compilation if a macro is not defined. (Uses `!معرف`)         |
+| `#وإلا_إذا`                | `#elif`            | Else-if condition for conditional compilation.                              |
+| `#إلا`                    | `#else`            | Alternative branch for conditional compilation.                             |
+| `#نهاية_إذا`              | `#endif`           | Ends a conditional compilation block.                                       |
+| `#خطأ`                    | `#error`           | Reports a fatal error during preprocessing.                                 |
+| `#تحذير`                  | `#warning`         | Reports a warning message during preprocessing.                             |
+| `#سطر`                    | `#line`            | Modifies the reported line number and filename.                             |
+| `#براغما`                  | `#pragma`          | Implementation-defined directives.                                          |
+| `أمر_براغما("...")`       | `_Pragma("...")`   | Operator to generate a pragma directive from a string literal.              |
+
+**Predefined Macros:**
+
+| Baa Predefined Macro | C99 Equivalent | Description                                                                 |
+|----------------------|----------------|-----------------------------------------------------------------------------|
+| `__الملف__`          | `__FILE__`     | Expands to the current source file name as a string literal.                |
+| `__السطر__`          | `__LINE__`     | Expands to the current line number as an integer constant.                  |
+| `__التاريخ__`        | `__DATE__`     | Expands to the compilation date as a string literal (e.g., "May 10 2025").  |
+| `__الوقت__`          | `__TIME__`     | Expands to the compilation time as a string literal (e.g., "02:00:00").   |
+| `__الدالة__` | `__func__`     | Expands to `L"__BAA_FUNCTION_PLACEHOLDER__"` in preprocessor. Final value by later stages. |
+| `__إصدار_المعيار_باء__` | `__STDC_VERSION__` (conceptually) | Expands to a long int `10010L` representing Baa language version. |
+
+### 6. Numeric Literals (القيم العددية)
 
 Baa supports Arabic in numeric literals extensively:
+
 - **Arabic-Indic Digits (الأرقام الهندية):** Digits `٠` through `٩` (U+0660-U+0669) can be used wherever Western digits (`0`-`9`) are used, for both integers and floats.
-  - Examples: `متغير س = ١٢٣.` (s = 123), `متغير ص = ٣٫١٤.` (p = 3.14 using Arabic decimal separator)
+  - Examples: `عدد_صحيح س = ١٢٣.` (s = 123), `عدد_حقيقي ص = ٣٫١٤.` (p = 3.14 using Arabic decimal separator)
 - **Arabic Decimal Separator (الفاصلة العشرية العربية):** The character `٫` (U+066B) is recognized as a decimal separator in floating-point numbers, in addition to the period (`.`).
   - Example: `عدد_حقيقي pi = ٣٫١٤١٥٩.`
+  - **Scientific Notation:** Uses `أ` (alif) as the exponent marker (e.g., `1.23أ4` for `1.23e4`).
 - **Underscores with Arabic Numerals (الشرطة السفلية مع الأرقام العربية):** Underscores can be used as separators for readability with Arabic-Indic digits as well.
   - Example: `عدد_صحيح كبير = ١_٠٠٠_٠٠٠.` (one million)
+- **Literal Suffixes (لواحق القيم الحرفية):** Baa uses Arabic suffixes to specify integer and floating-point literal types. The lexer recognizes these suffixes and includes them in the token's lexeme. The interpretation of these suffixes to determine the exact numeric type (e.g., unsigned long long) is handled by later compiler stages.
+  - `غ` (ghayn): Unsigned (e.g., `123غ` for `123U`). - *[Lexer Implemented]*
+  - `ط` (ṭāʾ): Long (e.g., `456ط` for `456L`). - *[Lexer Implemented]*
+  - `طط` (ṭāʾ-ṭāʾ): Long Long (e.g., `789طط` for `789LL`). - *[Lexer Implemented]*
+  - `ح` (ḥāʾ): Float (e.g., `3.14ح` for `3.14F`). - *[Planned]*
+  - **Combinations for Integers:** Integer suffixes `غ`, `ط`, `طط` can be combined, and their order is flexible (e.g., `غط` is equivalent to `طغ`). - *[Lexer Implemented]*
+    - `غط` for Unsigned Long (e.g., `100غط`).
+    - `غطط` for Unsigned Long Long (e.g., `200غطط`).
 
-### 6. Character Literals (القيم الحرفية)
+### 7. Character and String Literals (القيم الحرفية والنصية)
 
-Character literals are enclosed in single quotes and support basic escape sequences:
+Character literals are enclosed in single quotes (`'ح'`). String literals are enclosed in double quotes (`"نص"`).
+Baa uses the backslash (`\`) as the escape character, followed by an Arabic letter or specific sequences for special characters.
+
+**Planned Arabic Escape Sequences:**
+- Newline: `\س`
+- Tab: `\م`
+- Backslash: `\\`
+- Single Quote: `\'`
+- Double Quote: `\"`
+- Carriage Return: `\ر`
+- Null Character: `\ص`
+- Unicode (4 hex digits): `\يXXXX` (e.g., `\ي0623` for 'أ')
+- Hex Byte (2 hex digits): `\هـHH` (e.g., `\هـ41` for 'A')
 
 ```baa
-متغير حرف1 : حرف = 'ب'.
-متغير حرف2 : حرف = '\t'. // Tab character
+حرف سطر_جديد = '\س'.
+حرف علامة_جدولة = '\م'.
+نص مثال = "هذا نص يتضمن \سسطر جديد و \متاب."
 ```
 
-### 7. Function Parameters (معاملات الدالة)
+*(Note: Standard C escapes like `\n`, `\t` are currently implemented; transition to full Arabic escapes is planned).*
+
+### 8. Function Parameters (معاملات الدالة)
 
 | Feature | Description |
 |---------|-------------|
@@ -112,7 +181,10 @@ Character literals are enclosed in single quotes and support basic escape sequen
 ### 1. Hello World
 
 ```baa
-دالة رئيسية() {
+// Baa uses C-style function declarations, e.g.:
+// عدد_صحيح رئيسية() { ... }
+// فراغ رئيسية() { ... }
+عدد_صحيح رئيسية() {
     اطبع("مرحباً بالعالم!").
     إرجع 0.
 }
@@ -121,7 +193,7 @@ Character literals are enclosed in single quotes and support basic escape sequen
 ### 2. Function with Parameters
 
 ```baa
-دالة جمع_الأرقام(عدد_صحيح أ، عدد_صحيح ب) {
+عدد_صحيح جمع_الأرقام(عدد_صحيح أ، عدد_صحيح ب) {
     إرجع أ + ب.
 }
 ```
@@ -140,7 +212,7 @@ Character literals are enclosed in single quotes and support basic escape sequen
 
 ```baa
 عدد_صحيح مجموع = 0.
-من_أجل (عدد_صحيح i = 1; i <= 10; i++) {
+لكل (عدد_صحيح i = 1; i <= 10; i++) {
     مجموع += i.
 }
 ```

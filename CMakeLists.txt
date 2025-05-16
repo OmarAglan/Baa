@@ -33,14 +33,6 @@ add_executable(baa
     # Operator files
     src/operators/operators.c
 
-    # AST files
-    src/ast/ast.c
-    src/ast/expressions.c
-    src/ast/statements.c
-    src/ast/literals.c
-    src/ast/function.c
-    src/ast/ast_printer.c # Add AST printer source file
-
     # Lexer files
     src/lexer/lexer.c
     src/lexer/number_parser.c
@@ -57,16 +49,6 @@ add_executable(baa
     src/preprocessor/preprocessor_core.c
     src/preprocessor/preprocessor_directives.c
     src/preprocessor/preprocessor_line_processing.c
-
-    # Parser files
-    src/parser/parser.c
-    src/parser/expression_parser.c
-    src/parser/statement_parser.c
-    src/parser/type_parser.c
-    src/parser/parser_helper.c
-    src/parser/declaration_parser.c
-    src/parser/control_flow_parser.c
-    src/parser/error_handling.c
 
     # Analysis files
     src/analysis/flow_analysis.c
@@ -161,64 +143,34 @@ set_target_properties(baa_preprocessor_tester PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin
 )
 
+# --- Standalone Lexer Tester ---
+add_executable(baa_lexer_tester
+    tools/baa_lexer_tester.c
 
-# تفعيل الاختبارات (معطل مؤقتاً)
-# enable_testing()
-# add_subdirectory(tests) # Keep this if tests are separate
-
-
-# --- Standalone Parser Tester ---
-add_executable(baa_parser_tester
-    tools/baa_parser_tester.c
-
-    # Dependencies (Source files needed for linking)
-    # Utils
-    src/utils/utils.c
-    # Preprocessor
-    src/preprocessor/preprocessor.c
-    src/preprocessor/preprocessor_utils.c
-    src/preprocessor/preprocessor_macros.c
-    src/preprocessor/preprocessor_expansion.c
-    src/preprocessor/preprocessor_conditionals.c
-    src/preprocessor/preprocessor_expr_eval.c
-    src/preprocessor/preprocessor_core.c
-    src/preprocessor/preprocessor_directives.c
-    src/preprocessor/preprocessor_line_processing.c
-    # Lexer
+    # Lexer files (needed by the tester)
     src/lexer/lexer.c
     src/lexer/number_parser.c
     src/lexer/lexer_char_utils.c
     src/lexer/token_scanners.c
-    # Parser
-    src/parser/parser.c
-    src/parser/expression_parser.c
-    src/parser/statement_parser.c
-    src/parser/type_parser.c
-    src/parser/parser_helper.c
-    src/parser/declaration_parser.c
-    src/parser/control_flow_parser.c
-    src/parser/error_handling.c # If still used by parser
-    # AST
-    src/ast/ast.c
-    src/ast/ast_printer.c
-    src/ast/expressions.c
-    src/ast/statements.c
-    src/ast/literals.c
-    src/ast/function.c
-    # Types
-    src/types/types.c
-    # Operators
-    src/operators/operators.c
+
+    # Utility files (needed by the lexer and tester)
+    src/utils/utils.c
+    # src/utils/errors.c # If errors.c exists and is needed
 )
 
-# Include directories for the parser tester
-target_include_directories(baa_parser_tester
+# Include directories for the lexer tester
+target_include_directories(baa_lexer_tester
     PRIVATE
-        ${PROJECT_SOURCE_DIR}/include
-        ${PROJECT_SOURCE_DIR}/src # Allow includes relative to src
+        ${CMAKE_SOURCE_DIR}/include  # For baa/lexer/lexer.h and baa/utils/*.h
+        ${CMAKE_SOURCE_DIR}/src/lexer # For lexer_internal.h if needed by included lexer files
 )
 
-# Set output directory for the parser tester executable
-set_target_properties(baa_parser_tester PROPERTIES
+# Set output directory for the lexer tester executable
+set_target_properties(baa_lexer_tester PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin
 )
+
+
+# تفعيل الاختبارات (معطل مؤقتاً)
+# enable_testing()
+# add_subdirectory(tests) # Keep this if tests are separate

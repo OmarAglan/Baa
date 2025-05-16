@@ -10,20 +10,24 @@ The project now supports:
 
 - **Preprocessor Directives:**
   - `#تضمين <...>` and `#تضمين "..."` (Include files)
-  - `#تعريف NAME ...` (Parameterless and function-like macro definition/substitution)
+  - `#تعريف NAME ...` (Parameterless and function-like macro definition/substitution, **including rescanning of expansion results**).
   - `#الغاء_تعريف NAME` (Undefine macro)
-  - Conditional compilation (`#إذا_عرف`, `#إذا_لم_يعرف`, `#إذا`, `#وإلا_إذا`, `#إلا`, `#نهاية_إذا`)
+  - Conditional compilation (`#إذا_عرف`, `#إذا_لم_يعرف`, `#إذا`, `#وإلا_إذا`, `#إلا`, `#نهاية_إذا`) (using `معرف` for `defined`)
   - Stringification (`#`) and Token Pasting (`##`) operators in macros.
-  - Predefined Arabic macros: `__الملف__` (FILE), `__السطر__` (LINE), `__التاريخ__` (DATE), `__الوقت__` (TIME).
+  - Predefined Arabic macros: `__الملف__` (FILE), `__السطر__` (LINE - expands to integer), `__التاريخ__` (DATE), `__الوقت__` (TIME). (Planned: `__الدالة__` for `__func__`, `__إصدار_المعيار_باء__` for Baa version).
+  - Variadic Macros (using `وسائط_إضافية` for `...`, and `__وسائط_متغيرة__` for `__VA_ARGS__`). - *[Implemented]*
+  - Additional Predefined Macros: `__الدالة__` (expands to placeholder `L"__BAA_FUNCTION_PLACEHOLDER__"`), `__إصدار_المعيار_باء__` (expands to `10010L`). - *[Implemented]*
+  - Other Standard Directives (Planned: `#خطأ`, `#تحذير`, `#سطر`, `#براغما`, and `أمر_براغما` operator).
 
-- Basic type system with K&R C compatibility
-  - عدد_صحيح (int) - 32-bit integer
-  - عدد_حقيقي (float) - 32-bit float
-  - حرف (char) - 16-bit UTF-16 character
-  - منطقي (boolean) - Logical true/false values (`صحيح`, `خطأ`)
-  - فراغ (void) - No value type
+- **Basic Type System (نظام الأنواع الأساسي):** (K&R C compatibility with Arabic keywords)
+  - `عدد_صحيح` (int) - 32-bit integer
+  - `عدد_حقيقي` (float) - 32-bit float
+  - `حرف` (char) - 16-bit UTF-16 character
+  - `منطقي` (boolean) - Logical true/false values (`صحيح`, `خطأ`)
+  - `فراغ` (void) - No value type
+  - (Planned: `عدد_صحيح_طويل_جدا` for long long int)
 
-- Core operator system
+- **Core Operator System (نظام المعاملات الأساسي):**
   - Arithmetic operators (+, -, *, /, %)
   - Comparison operators (==, !=, <, >, <=, >=)
   - Assignment operator (=)
@@ -33,12 +37,17 @@ The project now supports:
   - Type checking and validation
   - Arabic operator names
 
-- Control Flow Structures
-  - إذا/وإلا (if/else)
-  - طالما (while)
-  - إرجع (return)
+- **Control Flow Structures (بنى التحكم في التدفق):**
+  - `إذا`/`وإلا` (if/else)
+  - `طالما` (while)
+  - `لكل` (for - uses C-style semicolons internally)
+  - `إرجع` (return)
+  - `توقف` (break)
+  - `أكمل` (continue)
+  - `اختر`/`حالة`/`افتراضي` (switch/case/default)
+  - (Planned: `افعل` for do-while, `تعداد` for enum)
 
-- Function System
+- **Function System (نظام الدوال):** (Uses C-style declarations: `return_type name(params)`)
   - Regular function parameters
   - Optional parameters (with default values)
   - Rest parameters (variable argument lists)
@@ -47,13 +56,15 @@ The project now supports:
 
 - Literals
   - **Numeric Literals:**
-    - Integers: Decimal (Western `0-9` & Arabic-Indic `٠-٩`), Binary (`0b`/`0B`), Hexadecimal (`0x`/`0X`).
-    - Floats: Using `.` or Arabic `٫` as decimal separator. Scientific notation (`e`/`E`).
+    - Integers: Decimal (Western `0-9` & Arabic-Indic `٠-٩`), Binary (`0b`/`0B`), Hexadecimal (`0x`/`0X`). (Planned: Arabic suffixes like `غ` for unsigned, `ط` for long, `طط` for long long).
+    - Floats: Using `.` or Arabic `٫` as decimal separator. Scientific notation (using `أ` as exponent marker). (Planned: Arabic suffix `ح` for float).
     - Underscores (`_`) supported as separators in all number types.
-    - Examples: `123`, `١٢٣`, `0b1010`, `0xFACE`, `1_000_000`, `3.14`, `٣٫١٤`, `1.5e-2`.
-  - **String Literals:** `"..."` with standard C escapes and Unicode escapes (`\uXXXX`).
-  - **Character Literals:** `'...'` with standard C escapes and Unicode escapes (`\uXXXX`).
+    - Examples: `123`, `١٢٣غ`, `0b1010طط`, `0xFACEط`, `1_000_000`, `3.14ح`, `٣٫١٤`, `1.5أ-2`.
+  - **String Literals:** `"..."` (Planned: Arabic escapes like `\س`, `\م` using `\` as escape char).
+  - **Character Literals:** `'...'` (Planned: Arabic escapes like `\س`, `\م` using `\` as escape char).
   - **Boolean Literals:** `صحيح` (true), `خطأ` (false).
+  - (Planned: `تعداد` keyword for enumerations).
+  - (Planned: Struct/union member access using `::` for direct and `->` for pointer).
 
 - Arabic File Support
   - Native `.ب` extension
@@ -67,7 +78,7 @@ For detailed information about Arabic support, see [Arabic Support Documentation
 
 #### What's Working
 
-- **Preprocessor**: Handles includes (`#تضمين`), object-like and function-like macros (`#تعريف` with parameters, `#`, `##`), undefines (`#الغاء_تعريف`), conditional compilation (including expression evaluation for `#إذا`/`#وإلا_إذا`), predefined Arabic macros (`__الملف__`, `__السطر__`, `__التاريخ__`, `__الوقت__`). Error reporting is unified and provides original source locations (file, line, column).
+- **Preprocessor**: Handles includes (`#تضمين`), object-like and function-like macros (`#تعريف` with parameters, including variadic macros using `وسائط_إضافية`/`__وسائط_متغيرة__`, `#`, `##`, and **rescanning**), undefines (`#الغاء_تعريف`), conditional compilation (including expression evaluation for `#إذا`/`#وإلا_إذا`), predefined Arabic macros (`__الملف__`, `__السطر__` (as integer), `__التاريخ__`, `__الوقت__`). Error reporting is unified and provides original source locations (file, line, column).
 - **Core Architecture**: Well-defined architecture with clear separation of concerns
 - **Type System**: Basic types including Boolean, type conversion rules, and type checking
 - **AST (Abstract Syntax Tree)**: Comprehensive node structure, program, function nodes, enhanced parameter handling
@@ -75,6 +86,7 @@ For detailed information about Arabic support, see [Arabic Support Documentation
 - **Parser**: Recursive descent implementation, expression parsing with precedence, statement parsing
 - **Utils**: Memory management, string handling, error infrastructure
 - **Preprocessor integration with include and basic macro support.**
+- **Additional Predefined Macros**: `__الدالة__` (as placeholder) and `__إصدار_المعيار_باء__` are implemented in the preprocessor.
 
 #### What's Not Working
 
@@ -268,11 +280,12 @@ The Baa programming language supports two file extensions:
 ### Example Program
 
 ```baa
-#تضمين <مكتبة_طباعة>
+#تضمين <مكتبة_طباعة> // Assuming a Baa standard library header
 #تعريف EXIT_SUCCESS 0
 
 // مثال برنامج بسيط بلغة باء
-دالة رئيسية() {
+// Baa uses C-style function declarations
+عدد_صحيح رئيسية() {
     اطبع("مرحباً بالعالم!").
     إرجع EXIT_SUCCESS.
 }

@@ -337,17 +337,40 @@ bool handle_preprocessor_directive(BaaPreprocessor *pp_state, wchar_t *directive
                 wchar_t *macro_name = wcsndup_internal(name_start, name_len);
                 if (!macro_name) { *error_message = format_preprocessor_error_at_location(&directive_loc, L"فشل في تخصيص ذاكرة لاسم الماكرو في #تعريف."); success = false; }
                 else {
-                    bool is_function_like = false; size_t param_count = 0; wchar_t **params = NULL; wchar_t *body_start = name_end;
+                    bool is_function_like = false; bool is_variadic_macro = false; size_t param_count = 0; wchar_t **params = NULL; wchar_t *body_start = name_end;
+                    const wchar_t *variadic_keyword = L"وسائط_إضافية";
+                    size_t variadic_keyword_len = wcslen(variadic_keyword);
+
                     if (*name_end == L'(') {
                         is_function_like = true; wchar_t *param_ptr = name_end + 1; size_t params_capacity = 0;
                         while (success) {
                             while (iswspace(*param_ptr)) param_ptr++;
-                            if (*param_ptr == L')') { param_ptr++; break; }
-                            if (param_count > 0) {
+                            if (*param_ptr == L')') { param_ptr++; break; } // End of parameter list
+
+                            if (param_count > 0 || is_variadic_macro) { // If not the first param, or if variadic was just processed
+                                if (is_variadic_macro) { // No params allowed after variadic
+                                    *error_message = format_preprocessor_error_at_location(&directive_loc, L"تنسيق #تعريف غير صالح: لا يمكن أن يتبع 'وسائط_إضافية' معاملات أخرى."); success = false; break;
+                                }
                                 if (*param_ptr == L',') { param_ptr++; while (iswspace(*param_ptr)) param_ptr++; }
                                 else { *error_message = format_preprocessor_error_at_location(&directive_loc, L"تنسيق #تعريف غير صالح: متوقع ',' أو ')' بين معاملات الماكرو الوظيفي."); success = false; break; }
                             }
-                            if (!iswalpha(*param_ptr) && *param_ptr != L'_') { *error_message = format_preprocessor_error_at_location(&directive_loc, L"تنسيق #تعريف غير صالح: متوقع اسم معامل أو ')' بعد '('."); success = false; break; }
+
+                            // Check for variadic 'وسائط_إضافية'
+                            if (wcsncmp(param_ptr, variadic_keyword, variadic_keyword_len) == 0 &&
+                                (iswspace(*(param_ptr + variadic_keyword_len)) || *(param_ptr + variadic_keyword_len) == L')')) {
+                                is_variadic_macro = true;
+                                param_ptr += variadic_keyword_len;
+                                // 'وسائط_إضافية' must be the last thing before ')' or separated by whitespace then ')'
+                                while (iswspace(*param_ptr)) param_ptr++;
+                                if (*param_ptr != L')') {
+                                    *error_message = format_preprocessor_error_at_location(&directive_loc, L"تنسيق #تعريف غير صالح: 'وسائط_إضافية' يجب أن تكون المعامل الأخير."); success = false; break;
+                                }
+                                // Do not add 'وسائط_إضافية' to params list, just set flag and break from param parsing loop
+                                // The ')' will be consumed by the outer loop's break condition.
+                                continue; // Continue to check for ')'
+                            }
+
+                            if (!iswalpha(*param_ptr) && *param_ptr != L'_') { *error_message = format_preprocessor_error_at_location(&directive_loc, L"تنسيق #تعريف غير صالح: متوقع اسم معامل أو ')' أو 'وسائط_إضافية' بعد '('."); success = false; break; }
                             wchar_t *param_name_start = param_ptr; while (iswalnum(*param_ptr) || *param_ptr == L'_') param_ptr++; wchar_t *param_name_end = param_ptr; size_t param_name_len = param_name_end - param_name_start;
                             if (param_name_len == 0) { *error_message = format_preprocessor_error_at_location(&directive_loc, L"تنسيق #تعريف غير صالح: اسم معامل فارغ."); success = false; break; }
                             wchar_t *param_name = wcsndup_internal(param_name_start, param_name_len);
@@ -388,9 +411,13 @@ bool handle_preprocessor_directive(BaaPreprocessor *pp_state, wchar_t *directive
                         // which is a wcsndup'd copy, so it's modifiable.
                         *actual_body_end = L'\0';
 
-                        if (!add_macro(pp_state, macro_name, body_start, is_function_like, param_count, params)) {
+                        if (!add_macro(pp_state, macro_name, body_start, is_function_like, is_variadic_macro, param_count, params)) {
                             *error_message = format_preprocessor_error_at_location(&directive_loc, L"فشل في إضافة تعريف الماكرو '%ls' (نفاد الذاكرة؟).", macro_name); success = false;
-                            if (params) { for (size_t i = 0; i < param_count; ++i) free(params[i]); free(params); params = NULL; }
+                            // params are owned by add_macro if it fails after taking them, or freed by it.
+                            // If add_macro was never called or failed before taking ownership, params might still be here.
+                            // The current add_macro frees params if it fails after taking ownership.
+                            // If parsing params failed, they are freed above.
+                            // So, no explicit free here unless add_macro's contract changes.
                         }
                     }
                     free(macro_name);

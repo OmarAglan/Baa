@@ -1,6 +1,6 @@
 #include "baa/analysis/flow_analysis.h"
-#include "baa/ast/statements.h"
-#include "baa/ast/expressions.h"
+// #include "baa/ast/statements.h" // Removed as AST is being removed
+// #include "baa/ast/expressions.h" // Removed as AST is being removed
 #include "baa/types/types.h"
 #include "baa/utils/utils.h" // For memory allocation if needed
 #include "baa/analysis/flow_errors.h"
@@ -9,7 +9,8 @@
 
 // --- Moved from src/control_flow/control_flow.c (Analysis Parts) ---
 
-// Example implementation stub for analysis
+// Example implementation stub for analysis (Commented out as it depends on AST types)
+/*
 bool baa_analyze_control_flow(BaaBlock *block, BaaFlowContext *context, BaaType *expected_return_type)
 {
     if (!block || !context)
@@ -172,5 +173,5 @@ bool baa_while_is_infinite_loop(BaaWhileStmt *while_stmt)
     // TODO: Implement logic to detect obvious infinite loops (e.g., while(true))
     return false; // Placeholder
 }
-
+*/
 // --- End of moved code ---

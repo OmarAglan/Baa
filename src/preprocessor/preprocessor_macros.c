@@ -29,12 +29,13 @@ void free_macros(BaaPreprocessor *pp)
 // Helper function to add or update a macro definition
 // Returns true on success, false on allocation failure.
 // Handles reallocation of the macro array.
-bool add_macro(BaaPreprocessor *pp_state, const wchar_t *name, const wchar_t *body, bool is_function_like, size_t param_count, wchar_t **param_names)
+bool add_macro(BaaPreprocessor *pp_state, const wchar_t *name, const wchar_t *body, bool is_function_like, bool is_variadic, size_t param_count, wchar_t **param_names)
 {
     if (!pp_state || !name || !body)
     {
         // Free potentially allocated params if other args are invalid
-        if (is_function_like && param_names)
+        // is_variadic implies is_function_like for this cleanup
+        if ((is_function_like || is_variadic) && param_names)
         {
             for (size_t j = 0; j < param_count; ++j)
             {
@@ -65,6 +66,7 @@ bool add_macro(BaaPreprocessor *pp_state, const wchar_t *name, const wchar_t *bo
 
             pp_state->macros[i].body = _wcsdup(body);
             pp_state->macros[i].is_function_like = is_function_like;
+            pp_state->macros[i].is_variadic = is_function_like ? is_variadic : false; // Variadic only if function-like
             pp_state->macros[i].param_count = param_count;
             pp_state->macros[i].param_names = param_names; // Takes ownership
 
@@ -72,7 +74,7 @@ bool add_macro(BaaPreprocessor *pp_state, const wchar_t *name, const wchar_t *bo
             if (!pp_state->macros[i].body)
             {
                 // If body fails, try to clean up params if they were just assigned
-                if (is_function_like && param_names)
+                if ((is_function_like || is_variadic) && param_names)
                 {
                     for (size_t j = 0; j < param_count; ++j)
                     {
@@ -111,6 +113,7 @@ bool add_macro(BaaPreprocessor *pp_state, const wchar_t *name, const wchar_t *bo
     new_entry->name = _wcsdup(name);
     new_entry->body = _wcsdup(body);
     new_entry->is_function_like = is_function_like;
+    new_entry->is_variadic = is_function_like ? is_variadic : false; // Variadic only if function-like
     new_entry->param_count = param_count;
     new_entry->param_names = param_names; // Takes ownership of the passed array and its contents
 
@@ -120,7 +123,7 @@ bool add_macro(BaaPreprocessor *pp_state, const wchar_t *name, const wchar_t *bo
         // Clean up everything allocated for this new entry on failure
         free(new_entry->name); // Safe even if NULL
         free(new_entry->body); // Safe even if NULL
-        if (is_function_like && param_names)
+        if ((is_function_like || new_entry->is_variadic) && param_names) // Use new_entry->is_variadic here
         {
             for (size_t j = 0; j < param_count; ++j)
             {

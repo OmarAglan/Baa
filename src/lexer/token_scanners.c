@@ -255,6 +255,51 @@ BaaToken *scan_number(BaaLexer *lexer)
         synchronize(lexer);
         return error_token;
     }
+
+    if (!is_float) { // Integer suffixes are only for integer literals
+        const wchar_t GHAIN_SUFFIX = L'غ'; // U+063A
+        const wchar_t TAH_SUFFIX = L'ط';   // U+0637
+
+        bool suffix_seen_ghain = false;
+        bool suffix_seen_tah = false;       // True if one 'ط' is seen
+        bool suffix_seen_tah_tah = false;   // True if 'طط' is seen
+
+        // Try to parse up to 3 suffix characters (e.g., غطط or ططغ).
+        for (int i = 0; i < 3; ++i) {
+            wchar_t current_suffix_char = peek(lexer);
+
+            if (current_suffix_char == GHAIN_SUFFIX) {
+                if (suffix_seen_ghain) {
+                    // Already processed 'غ', cannot have it twice.
+                    break;
+                }
+                suffix_seen_ghain = true;
+                advance(lexer);
+            } else if (current_suffix_char == TAH_SUFFIX) {
+                if (suffix_seen_tah_tah) {
+                    // Already processed 'طط', cannot have more 'ط'.
+                    break;
+                }
+                if (suffix_seen_tah) {
+                    // This is the second 'ط', forming 'طط'.
+                    suffix_seen_tah = false; // No longer just 'ط'
+                    suffix_seen_tah_tah = true;
+                    advance(lexer);
+                } else {
+                    // This is the first 'ط'.
+                    suffix_seen_tah = true;
+                    advance(lexer);
+                }
+            } else {
+                // Not a recognized integer suffix character or sequence.
+                break;
+            }
+        }
+        // The lexeme will now include these suffixes.
+        // The actual interpretation of these (unsigned, long, long long)
+        // will be handled by the parser or semantic analyzer later.
+    }
+
     return make_token(lexer, is_float ? BAA_TOKEN_FLOAT_LIT : BAA_TOKEN_INT_LIT);
 }
 

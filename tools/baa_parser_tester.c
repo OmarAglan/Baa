@@ -13,10 +13,12 @@
 #include "baa/ast/ast_printer.h"
 
 // Helper: Convert char* to wchar_t* (copied from compiler.c for now)
-static wchar_t *char_to_wchar_tester(const char *str) {
+static wchar_t *char_to_wchar_tester(const char *str)
+{
     size_t len = strlen(str) + 1;
     wchar_t *wstr = malloc(len * sizeof(wchar_t));
-    if (!wstr) {
+    if (!wstr)
+    {
         return NULL;
     }
     size_t converted;
@@ -30,43 +32,51 @@ static wchar_t *char_to_wchar_tester(const char *str) {
 }
 
 // Helper function to print wide strings correctly (copied from preprocessor_tester.c)
-void print_wide_string_parser_tester(FILE* stream, const wchar_t* wstr) {
-    if (!wstr) return;
-    if (fwprintf(stream, L"%ls", wstr) < 0) {
+void print_wide_string_parser_tester(FILE *stream, const wchar_t *wstr)
+{
+    if (!wstr)
+        return;
+    if (fwprintf(stream, L"%ls", wstr) < 0)
+    {
         fprintf(stderr, "\n[Warning: fwprintf failed.]\n");
     }
 }
 
-
-int main(int argc, char *argv[]) {
+int main(int argc, char *argv[])
+{
     setlocale(LC_ALL, "");
 
-    if (argc != 2) {
+    if (argc != 2)
+    {
         fprintf(stderr, "Usage: %s <input_file.baa>\n", argv[0]);
         return 1;
     }
 
     const char *input_filename = argv[1];
     wchar_t *w_input_filename = char_to_wchar_tester(input_filename);
-    if (!w_input_filename) {
-         fprintf(stderr, "Error: Failed to convert input filename to wchar_t.\n");
-         return 1;
+    if (!w_input_filename)
+    {
+        fprintf(stderr, "Error: Failed to convert input filename to wchar_t.\n");
+        return 1;
     }
 
     // 1. Preprocess
-    wchar_t* pp_error_message = NULL;
+    wchar_t *pp_error_message = NULL;
     BaaPpSource pp_source = {
         .type = BAA_PP_SOURCE_FILE,
         .source_name = input_filename,
-        .data.file_path = input_filename
-    };
-    wchar_t* source_code = baa_preprocess(&pp_source, NULL, &pp_error_message);
+        .data.file_path = input_filename};
+    wchar_t *source_code = baa_preprocess(&pp_source, NULL, &pp_error_message);
 
-    if (!source_code) {
-        if (pp_error_message) {
+    if (!source_code)
+    {
+        if (pp_error_message)
+        {
             fwprintf(stderr, L"Preprocessor Error: %ls\n", pp_error_message);
             free(pp_error_message);
-        } else {
+        }
+        else
+        {
             fwprintf(stderr, L"Preprocessor Error: Failed for file %hs (unknown error).\n", input_filename);
         }
         free(w_input_filename);
@@ -86,13 +96,17 @@ int main(int argc, char *argv[]) {
     BaaParser parser;
     baa_init_parser(&parser, &lexer); // Initialize the parser with the lexer
     wprintf(L"--- Parsing Started ---\n");
-    BaaProgram* program = baa_parse_program(&parser);
+    BaaProgram *program = baa_parse_program(&parser);
 
-    if (!program) {
-        const wchar_t* parser_error = baa_get_parser_error(&parser);
-        if (parser_error) {
-             fwprintf(stderr, L"Parser Error: %ls\n", parser_error);
-        } else {
+    if (!program)
+    {
+        const wchar_t *parser_error = baa_get_parser_error(&parser);
+        if (parser_error)
+        {
+            fwprintf(stderr, L"Parser Error: %ls\n", parser_error);
+        }
+        else
+        {
             fprintf(stderr, "Parser Error: Parsing failed (unknown parser error).\n");
         }
         free(source_code);

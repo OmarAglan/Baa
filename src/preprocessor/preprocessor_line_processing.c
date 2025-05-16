@@ -1,190 +1,368 @@
 #include "preprocessor_internal.h"
 
-// Processes a regular code line (not a directive) for macro substitution.
-// Appends the processed line (with substitutions) to the output_buffer.
-// Returns true on success, false on error.
-// Sets error_message on error.
-bool process_code_line_for_macros(BaaPreprocessor *pp_state, const wchar_t *current_line, size_t line_len, DynamicWcharBuffer *output_buffer, wchar_t **error_message)
+// Helper function to perform one pass of macro scanning and substitution.
+// - input_line_content: The current version of the line to be scanned.
+// - original_line_number_for_errors: The original line number in the source file, for error reporting.
+// - one_pass_buffer: The dynamic buffer where the output of this single pass is built.
+// - overall_success: Pointer to a boolean that will be set to false on critical errors.
+// - error_message: Pointer to the error message string.
+// Returns true if at least one macro expansion occurred during this pass, false otherwise.
+static bool scan_and_substitute_macros_one_pass(
+    BaaPreprocessor *pp_state,
+    const wchar_t *input_line_content,
+    size_t original_line_number_for_errors, // Keep this for context of the original line
+    DynamicWcharBuffer *one_pass_buffer,
+    bool *overall_success,
+    wchar_t **error_message)
 {
-    bool success = true;
-    DynamicWcharBuffer substituted_line_buffer;
-    if (!init_dynamic_buffer(&substituted_line_buffer, line_len + 128))
+    bool expansion_occurred_this_pass = false;
+    const wchar_t *scan_ptr = input_line_content;
+
+    size_t current_col_in_this_scan_pass = 1;
+
+    while (*scan_ptr != L'\0' && *overall_success)
     {
-        PpSourceLocation error_loc = get_current_original_location(pp_state);
-        *error_message = format_preprocessor_error_at_location(&error_loc, L"فشل في تخصيص الذاكرة لمخزن السطر المؤقت للاستبدال.");
-        return false;
-    }
+        size_t token_start_col_for_error = current_col_in_this_scan_pass;
 
-    const wchar_t *line_ptr = current_line;
-    size_t original_line_number = pp_state->current_line_number; // Store line number for error reporting within this line
-
-    while (*line_ptr != L'\0' && success)
-    {
-        size_t current_char_col = pp_state->current_column_number; // Capture column before processing char/token
-
-        if (iswalpha(*line_ptr) || *line_ptr == L'_')
-        {
-            const wchar_t *id_start = line_ptr;
-            size_t id_start_col = current_char_col; // Use captured column
-            while (iswalnum(*line_ptr) || *line_ptr == L'_')
+        if (iswalpha(*scan_ptr) || *scan_ptr == L'_')
+        { // Potential identifier
+            const wchar_t *id_start = scan_ptr;
+            while (iswalnum(*scan_ptr) || *scan_ptr == L'_')
             {
-                line_ptr++;
-                pp_state->current_column_number++; // Update physical column as we scan
+                scan_ptr++;
+                current_col_in_this_scan_pass++;
             }
-            size_t id_len = line_ptr - id_start;
+            size_t id_len = scan_ptr - id_start;
             wchar_t *identifier = wcsndup_internal(id_start, id_len);
             if (!identifier)
             {
-                PpSourceLocation error_loc = get_current_original_location(pp_state);
-                // Adjust location for error within the line
-                error_loc.line = original_line_number;
-                error_loc.column = id_start_col;
-                *error_message = format_preprocessor_error_at_location(&error_loc, L"فشل في تخصيص ذاكرة للمعرف للاستبدال.");
-                success = false;
+                PpSourceLocation error_loc_data = get_current_original_location(pp_state);
+                error_loc_data.line = original_line_number_for_errors;
+                error_loc_data.column = token_start_col_for_error;
+                *error_message = format_preprocessor_error_at_location(&error_loc_data, L"فشل في تخصيص ذاكرة للمعرف للاستبدال.");
+                *overall_success = false;
                 break;
             }
 
-            // Check for predefined dynamic macros first
-            if (wcscmp(identifier, L"__الملف__") == 0) {
-                wchar_t quoted_file_path[MAX_PATH_LEN + 3]; // For quotes, path, and null
-                PpSourceLocation current_original_loc = get_current_original_location(pp_state);
-                const char* original_file_path = current_original_loc.file_path ? current_original_loc.file_path : "unknown_file";
-
-                // Convert char* path to wchar_t* for swprintf
-                wchar_t w_current_physical_path[MAX_PATH_LEN];
-                mbstowcs(w_current_physical_path, original_file_path, MAX_PATH_LEN);
-
-                // Escape backslashes in the path for the string literal
-                wchar_t escaped_path[MAX_PATH_LEN * 2]; // Worst case: all backslashes
+            bool predefined_expanded = false;
+            if (wcscmp(identifier, L"__الملف__") == 0)
+            {
+                wchar_t quoted_file_path[MAX_PATH_LEN + 3];
+                PpSourceLocation orig_loc = get_current_original_location(pp_state);
+                const char *path_for_macro = orig_loc.file_path ? orig_loc.file_path : "unknown_file";
+                wchar_t w_path[MAX_PATH_LEN];
+                mbstowcs(w_path, path_for_macro, MAX_PATH_LEN);
+                wchar_t escaped_path[MAX_PATH_LEN * 2];
                 wchar_t *ep = escaped_path;
-                for (const wchar_t *p = w_current_physical_path; *p; ++p) {
-                    if (*p == L'\\') { *ep++ = L'\\'; }
+                for (const wchar_t *p = w_path; *p; ++p)
+                {
+                    if (*p == L'\\')
+                        *ep++ = L'\\';
                     *ep++ = *p;
                 }
                 *ep = L'\0';
-
-                swprintf(quoted_file_path, sizeof(quoted_file_path)/sizeof(wchar_t), L"\"%ls\"", escaped_path);
-                if (!append_to_dynamic_buffer(&substituted_line_buffer, quoted_file_path)) { success = false; }
-                free(identifier); // Free the parsed identifier
-            } else if (wcscmp(identifier, L"__السطر__") == 0) {
-                wchar_t line_str[20]; // Buffer for line number string
-                // Use the original line number where the macro appeared
-                swprintf(line_str, sizeof(line_str)/sizeof(wchar_t), L"\"%zu\"", original_line_number);
-                if (!append_to_dynamic_buffer(&substituted_line_buffer, line_str)) { success = false; }
-                free(identifier); // Free the parsed identifier
-            } else {
-                // Not a predefined dynamic macro, proceed with normal macro lookup
-                const BaaMacro *macro = find_macro(pp_state, identifier);
-                if (macro && !is_macro_expanding(pp_state, macro))
+                swprintf(quoted_file_path, sizeof(quoted_file_path) / sizeof(wchar_t), L"\"%ls\"", escaped_path);
+                if (!append_to_dynamic_buffer(one_pass_buffer, quoted_file_path))
                 {
-                    // --- Push macro invocation location ---
-                    PpSourceLocation invocation_loc = {.file_path = pp_state->current_file_path, .line = original_line_number, .column = id_start_col};
-                    if (!push_location(pp_state, &invocation_loc)) {
-                        *error_message = format_preprocessor_error_at_location(&invocation_loc, L"فشل في دفع موقع استدعاء الماكرو (نفاد الذاكرة؟).");
-                        success = false; free(identifier); break;
-                    }
-
-                    // --- Push macro onto expansion stack ---
-                    if (!push_macro_expansion(pp_state, macro)) {
-                        *error_message = format_preprocessor_error_at_location(&invocation_loc, L"فشل في دفع الماكرو '%ls' إلى مكدس التوسيع (نفاد الذاكرة؟).", macro->name);
-                        pop_location(pp_state); success = false; free(identifier); break;
-                    }
-
-                    bool expansion_success = true;
-                    if (macro->is_function_like) {
-                        const wchar_t *invocation_ptr = line_ptr;
-                        size_t col_before_args = pp_state->current_column_number; // Track column before skipping space
-                        while (iswspace(*invocation_ptr)) { invocation_ptr++; pp_state->current_column_number++; }
-
-                        if (*invocation_ptr == L'(') {
-                            invocation_ptr++; pp_state->current_column_number++; // Consume '('
-                            size_t actual_arg_count = 0;
-                            wchar_t **arguments = parse_macro_arguments(pp_state, &invocation_ptr, macro->param_count, &actual_arg_count, error_message);
-                            if (!arguments) { expansion_success = false; } // Error set by parser
-                            else {
-                                if (actual_arg_count != macro->param_count) {
-                                    PpSourceLocation current_loc = get_current_original_location(pp_state);
-                                    *error_message = format_preprocessor_error_at_location(&current_loc, L"عدد وسيطات غير صحيح للماكرو '%ls' (متوقع %zu، تم الحصول على %zu).", macro->name, macro->param_count, actual_arg_count);
-                                    expansion_success = false;
-                                } else {
-                                    DynamicWcharBuffer expansion_result_buffer;
-                                    if (!init_dynamic_buffer(&expansion_result_buffer, 128)) {
-                                        PpSourceLocation current_loc = get_current_original_location(pp_state);
-                                        *error_message = format_preprocessor_error_at_location(&current_loc, L"فشل في تهيئة المخزن المؤقت لنتيجة توسيع الماكرو '%ls'.", macro->name);
-                                        expansion_success = false;
-                                    } else {
-                                        if (!substitute_macro_body(pp_state, &expansion_result_buffer, macro, arguments, actual_arg_count, error_message)) {
-                                            expansion_success = false; // Error set by substitute
-                                        } else {
-                                            // TODO: Rescan expansion_result_buffer
-                                            if (!append_to_dynamic_buffer(&substituted_line_buffer, expansion_result_buffer.buffer)) {
-                                                expansion_success = false;
-                                            }
-                                        }
-                                        free_dynamic_buffer(&expansion_result_buffer);
-                                    }
-                                }
-                                for (size_t i = 0; i < actual_arg_count; ++i) free(arguments[i]);
-                                free(arguments);
-                            }
-                            line_ptr = invocation_ptr; // Update main pointer
-                        } else {
-                            // Not followed by '(', treat as normal identifier
-                            pp_state->current_column_number = col_before_args; // Reset column if no args parsed
-                            if (!append_dynamic_buffer_n(&substituted_line_buffer, id_start, id_len)) expansion_success = false;
-                        }
-                    } else { // Object-like macro
-                        DynamicWcharBuffer expansion_result_buffer;
-                        if (!init_dynamic_buffer(&expansion_result_buffer, 128)) {
-                            PpSourceLocation current_loc = get_current_original_location(pp_state);
-                            *error_message = format_preprocessor_error_at_location(&current_loc, L"فشل في تهيئة المخزن المؤقت لنتيجة توسيع الماكرو '%ls'.", macro->name);
-                            expansion_success = false;
-                        } else {
-                            if (!substitute_macro_body(pp_state, &expansion_result_buffer, macro, NULL, 0, error_message)) {
-                                expansion_success = false; // Error set by substitute
-                            } else {
-                                // TODO: Rescan expansion_result_buffer
-                                if (!append_to_dynamic_buffer(&substituted_line_buffer, expansion_result_buffer.buffer)) {
-                                    expansion_success = false;
-                                }
-                            }
-                            free_dynamic_buffer(&expansion_result_buffer);
-                        }
-                    }
-
-                    pop_macro_expansion(pp_state); // Pop macro from expansion stack
-                    pop_location(pp_state);        // Pop location stack
-
-                    if (!expansion_success) { success = false; }
-                } else if (macro) { // Recursive expansion detected
-                    PpSourceLocation current_loc = get_current_original_location(pp_state);
-                    *error_message = format_preprocessor_error_at_location(&current_loc, L"تم اكتشاف استدعاء ذاتي للماكرو '%ls'.", macro->name);
-                    success = false;
-                } else { // Not a macro
-                    if (!append_dynamic_buffer_n(&substituted_line_buffer, id_start, id_len)) success = false;
+                    *overall_success = false;
                 }
-                free(identifier); // Free the parsed identifier here, after all checks
-            } // End of 'else' for predefined dynamic macros check
+                expansion_occurred_this_pass = true;
+                predefined_expanded = true;
+            }
+            else if (wcscmp(identifier, L"__السطر__") == 0)
+            {
+                wchar_t line_str[20];
+                // __السطر__ should refer to the line number of the current line being processed by process_code_line_for_macros
+                swprintf(line_str, sizeof(line_str) / sizeof(wchar_t), L"%zu", original_line_number_for_errors); // Standard: integer
+                if (!append_to_dynamic_buffer(one_pass_buffer, line_str))
+                {
+                    *overall_success = false;
+                }
+                expansion_occurred_this_pass = true;
+                predefined_expanded = true;
+            }
+            else if (wcscmp(identifier, L"__الدالة__") == 0)
+            {
+                if (!append_to_dynamic_buffer(one_pass_buffer, L"\"__BAA_FUNCTION_PLACEHOLDER__\""))
+                {
+                    *overall_success = false;
+                }
+                expansion_occurred_this_pass = true;
+                predefined_expanded = true;
+            }
+            else if (wcscmp(identifier, L"__إصدار_المعيار_باء__") == 0)
+            {
+                if (!append_to_dynamic_buffer(one_pass_buffer, L"10010L"))
+                {
+                    *overall_success = false;
+                }
+                expansion_occurred_this_pass = true;
+                predefined_expanded = true;
+            }
+
+            if (predefined_expanded)
+            {
+                free(identifier);
+                if (!*overall_success)
+                    break;
+                continue;
+            }
+
+            const BaaMacro *macro = find_macro(pp_state, identifier);
+            if (macro && !is_macro_expanding(pp_state, macro))
+            {
+                PpSourceLocation invocation_loc_data = get_current_original_location(pp_state);
+                invocation_loc_data.line = original_line_number_for_errors;
+                invocation_loc_data.column = token_start_col_for_error;
+
+                if (!push_location(pp_state, &invocation_loc_data))
+                {
+                    *error_message = format_preprocessor_error_at_location(&invocation_loc_data, L"فشل في دفع موقع استدعاء الماكرو.");
+                    *overall_success = false;
+                    free(identifier);
+                    break;
+                }
+                if (!push_macro_expansion(pp_state, macro))
+                {
+                    *error_message = format_preprocessor_error_at_location(&invocation_loc_data, L"فشل في دفع الماكرو '%ls' إلى مكدس التوسيع.", macro->name);
+                    pop_location(pp_state);
+                    *overall_success = false;
+                    free(identifier);
+                    break;
+                }
+
+                DynamicWcharBuffer single_expansion_result;
+                if (!init_dynamic_buffer(&single_expansion_result, 128))
+                {
+                    PpSourceLocation err_loc_init = get_current_original_location(pp_state); // Should be invocation_loc_data
+                    *error_message = format_preprocessor_error_at_location(&err_loc_init, L"فشل تهيئة مخزن التوسيع.");
+                    pop_macro_expansion(pp_state);
+                    pop_location(pp_state);
+                    *overall_success = false;
+                    free(identifier);
+                    break;
+                }
+
+                bool current_expansion_succeeded = true;
+                const wchar_t *ptr_after_invocation_args = scan_ptr;
+
+                if (macro->is_function_like)
+                {
+                    const wchar_t *arg_scan_ptr = scan_ptr;
+                    size_t col_at_arg_scan_start = current_col_in_this_scan_pass;
+                    while (iswspace(*arg_scan_ptr))
+                    {
+                        arg_scan_ptr++;
+                        col_at_arg_scan_start++;
+                    }
+
+                    if (*arg_scan_ptr == L'(')
+                    {
+                        arg_scan_ptr++;
+                        col_at_arg_scan_start++;
+
+                        size_t original_pp_state_col = pp_state->current_column_number;
+                        pp_state->current_column_number = col_at_arg_scan_start;
+
+                        size_t actual_arg_count = 0;
+                        // Pass the macro itself to handle variadic argument parsing
+                        wchar_t **arguments = parse_macro_arguments(pp_state, &arg_scan_ptr, macro, &actual_arg_count, error_message);
+
+                        ptr_after_invocation_args = arg_scan_ptr;
+                        current_col_in_this_scan_pass = pp_state->current_column_number; // This might need adjustment based on how parse_macro_arguments updates column
+                        pp_state->current_column_number = original_pp_state_col;
+
+                        if (!arguments)
+                        {
+                            current_expansion_succeeded = false; // Error message already set by parse_macro_arguments
+                        }
+                        else
+                        {
+                            // parse_macro_arguments now handles count validation for non-variadic
+                            // and ensures actual_arg_count is param_count + 1 for variadic (even if VA_ARGS is empty)
+                            // So, no explicit count check needed here if arguments is not NULL.
+                            if (!substitute_macro_body(pp_state, &single_expansion_result, macro, arguments, actual_arg_count, error_message))
+                            {
+                                current_expansion_succeeded = false;
+                            }
+                            for (size_t i = 0; i < actual_arg_count; ++i)
+                                free(arguments[i]);
+                            free(arguments);
+                        }
+                    }
+                    else
+                    { // Function-like macro name not followed by '(', treat as object-like or plain identifier
+                        if (!append_to_dynamic_buffer(one_pass_buffer, identifier))
+                        {
+                            *overall_success = false;
+                        }
+                        current_expansion_succeeded = false; // Not a valid function-like macro expansion
+                    }
+                }
+                else
+                { // Object-like macro
+                    if (!substitute_macro_body(pp_state, &single_expansion_result, macro, NULL, 0, error_message))
+                    {
+                        current_expansion_succeeded = false;
+                    }
+                }
+
+                pop_macro_expansion(pp_state);
+                pop_location(pp_state);
+
+                if (current_expansion_succeeded)
+                {
+                    if (!append_to_dynamic_buffer(one_pass_buffer, single_expansion_result.buffer))
+                    {
+                        *overall_success = false;
+                    }
+                    else
+                    {
+                        if (macro->is_function_like || wcscmp(identifier, single_expansion_result.buffer) != 0)
+                        {
+                            expansion_occurred_this_pass = true;
+                        }
+                    }
+                }
+                else if (*overall_success && !*error_message && !macro->is_function_like)
+                {
+                    if (!append_to_dynamic_buffer(one_pass_buffer, identifier))
+                    {
+                        *overall_success = false;
+                    }
+                }
+                else if (*overall_success && !*error_message && macro->is_function_like && (scan_ptr == ptr_after_invocation_args))
+                {
+                    // This means function-like macro name was not followed by '(', already handled by appending identifier.
+                }
+                free_dynamic_buffer(&single_expansion_result);
+                scan_ptr = ptr_after_invocation_args;
+            }
+            else
+            {
+                if (!append_to_dynamic_buffer(one_pass_buffer, identifier))
+                {
+                    *overall_success = false;
+                }
+            }
+            free(identifier);
         }
         else
-        {
-            // Append non-identifier character
-            if (!append_dynamic_buffer_n(&substituted_line_buffer, line_ptr, 1)) success = false;
-            line_ptr++;
-            pp_state->current_column_number++; // Update physical column
+        { // Not an identifier start
+            // Re-typed call to append_dynamic_buffer_n
+            if (!append_dynamic_buffer_n(one_pass_buffer, scan_ptr, 1))
+            {
+                *overall_success = false;
+            }
+            scan_ptr++;
+            current_col_in_this_scan_pass++;
         }
-    } // End while processing line chars
+        if (!*overall_success)
+            break;
+    }
+    return expansion_occurred_this_pass;
+}
 
-    if (success) {
-        if (!append_to_dynamic_buffer(output_buffer, substituted_line_buffer.buffer)) {
-            success = false;
-            if (!*error_message) {
-                 PpSourceLocation current_loc = get_current_original_location(pp_state);
-                 *error_message = format_preprocessor_error_at_location(&current_loc, L"فشل في إلحاق السطر المستبدل بمخزن الإخراج المؤقت.");
+bool process_code_line_for_macros(BaaPreprocessor *pp_state,
+                                  const wchar_t *initial_current_line,
+                                  size_t initial_line_len_unused,
+                                  DynamicWcharBuffer *output_buffer,
+                                  wchar_t **error_message)
+{
+    DynamicWcharBuffer current_pass_input_buffer;
+    DynamicWcharBuffer current_pass_output_buffer;
+
+    if (!init_dynamic_buffer(&current_pass_input_buffer, wcslen(initial_current_line) + 256))
+    {
+        PpSourceLocation temp_loc = get_current_original_location(pp_state);
+        *error_message = format_preprocessor_error_at_location(&temp_loc, L"فشل في تهيئة المخزن المؤقت لسطر المعالجة (الإدخال).");
+        return false;
+    }
+    if (!append_to_dynamic_buffer(&current_pass_input_buffer, initial_current_line))
+    {
+        PpSourceLocation temp_loc = get_current_original_location(pp_state);
+        *error_message = format_preprocessor_error_at_location(&temp_loc, L"فشل في نسخ السطر الأولي إلى مخزن المعالجة (الإدخال).");
+        free_dynamic_buffer(&current_pass_input_buffer);
+        return false;
+    }
+
+    size_t original_line_number = pp_state->current_line_number;
+    bool overall_success_for_line = true;
+    int pass_count = 0;
+    const int MAX_RESCAN_PASSES = 256;
+
+    bool expansion_made_this_pass;
+    do
+    {
+        if (!init_dynamic_buffer(&current_pass_output_buffer, current_pass_input_buffer.length + 128))
+        {
+            overall_success_for_line = false;
+            PpSourceLocation temp_loc = get_current_original_location(pp_state);
+            *error_message = format_preprocessor_error_at_location(&temp_loc, L"فشل في تهيئة المخزن المؤقت لجولة الفحص (الإخراج).");
+            break;
+        }
+
+        expansion_made_this_pass = scan_and_substitute_macros_one_pass(
+            pp_state,
+            current_pass_input_buffer.buffer,
+            original_line_number,
+            &current_pass_output_buffer,
+            &overall_success_for_line,
+            error_message);
+
+        free_dynamic_buffer(&current_pass_input_buffer);
+
+        // Transfer content from current_pass_output_buffer to current_pass_input_buffer for the next pass
+        if (!init_dynamic_buffer(&current_pass_input_buffer, current_pass_output_buffer.length + 128))
+        {
+            overall_success_for_line = false;
+            PpSourceLocation temp_loc = get_current_original_location(pp_state);
+            *error_message = format_preprocessor_error_at_location(&temp_loc, L"فشل في إعادة تهيئة مخزن الإدخال للجولة التالية.");
+            free_dynamic_buffer(&current_pass_output_buffer);
+            break;
+        }
+        if (current_pass_output_buffer.length > 0)
+        {
+            if (!append_to_dynamic_buffer(&current_pass_input_buffer, current_pass_output_buffer.buffer))
+            {
+                overall_success_for_line = false;
+                PpSourceLocation temp_loc = get_current_original_location(pp_state);
+                *error_message = format_preprocessor_error_at_location(&temp_loc, L"فشل في نسخ محتوى الجولة إلى مخزن الإدخال التالي.");
+                free_dynamic_buffer(&current_pass_output_buffer);
+                break;
             }
         }
-    }
-    free_dynamic_buffer(&substituted_line_buffer);
+        free_dynamic_buffer(&current_pass_output_buffer);
 
-    return success;
+        if (!overall_success_for_line)
+            break;
+
+        pass_count++;
+        if (pass_count > MAX_RESCAN_PASSES)
+        {
+            PpSourceLocation err_loc_data = get_current_original_location(pp_state);
+            err_loc_data.line = original_line_number;
+            err_loc_data.column = 1;
+            *error_message = format_preprocessor_error_at_location(&err_loc_data, L"تم تجاوز الحد الأقصى لمرات إعادة فحص الماكرو لسطر واحد (%d).", MAX_RESCAN_PASSES);
+            overall_success_for_line = false;
+            break;
+        }
+
+    } while (expansion_made_this_pass && overall_success_for_line);
+
+    if (overall_success_for_line)
+    {
+        if (!append_to_dynamic_buffer(output_buffer, current_pass_input_buffer.buffer))
+        {
+            if (!*error_message)
+            {
+                PpSourceLocation temp_loc = get_current_original_location(pp_state);
+                *error_message = format_preprocessor_error_at_location(&temp_loc, L"فشل في إلحاق السطر النهائي بمخزن الإخراج المؤقت.");
+            }
+            overall_success_for_line = false;
+        }
+    }
+
+    free_dynamic_buffer(&current_pass_input_buffer);
+    return overall_success_for_line;
 }

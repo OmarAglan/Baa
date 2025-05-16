@@ -1,7 +1,5 @@
 # Add subdirectories for each component
 add_subdirectory(lexer)
-add_subdirectory(parser)
-add_subdirectory(ast)
 add_subdirectory(codegen)
 add_subdirectory(utils)
 add_subdirectory(types)

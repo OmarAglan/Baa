@@ -8,20 +8,20 @@ This roadmap outlines the high-level plan for the Baa language project. For deta
 
 ### Immediate Goals (0.2.0)
 
-1.  **Preprocessor Enhancements:** Implement conditional compilation (`#إذا_عرف`, `#إلا`, `#نهاية_إذا`, etc.). (See `PREPROCESSOR_ROADMAP.md` for details).
+1.  **Preprocessor Enhancements:** Continue Preprocessor Enhancements: Implement remaining C99 features (Variadic Macros, `__func__`, `#error`, `#pragma`, etc. with Arabic syntax), and full macro expansion in conditional expressions. (Macro rescanning and basic conditionals are now implemented). (See `PREPROCESSOR_ROADMAP.md` for details).
 2.  **Parser Enhancements:** Complete core control flow parsing, restore decimal number parsing, implement full operator precedence, enhance UTF-8 support, add robust error recovery, and implement comprehensive source position tracking. (See `PARSER_ROADMAP.md` for details).
 3.  **Code Generation (Priority):** Complete LLVM integration, implement the basic code emission pipeline (expressions, statements, control flow), add debug information support, and optimize generated code for Arabic text handling.
 4.  **Lexer Enhancements:**
     - **Completed:** Significantly improved numeric literal scanning (Arabic-Indic digits, binary/hex prefixes, underscores, Arabic decimal separator `٫`). String/char escape handling is robust (`\uXXXX`, standard C escapes; `\'` in strings is an error). Comment skipping (`//`, `/* */`, `#`) is functional. Error message for invalid string escapes clarified. Lexer modularization is complete.
-    - **Ongoing/Next:** Focus on comprehensive testing of all token types, edge case robustness, and ensuring consistent error reporting quality. Review and refine `LEXER_ROADMAP.md` for any remaining specific tasks.
-5.  **AST Improvements:** Enhance scope management, improve modularity, implement comprehensive control flow node handling, and add robust error state tracking. (See `AST_ROADMAP.md` for details).
+    - **Ongoing/Next:** Implement planned Arabic syntax for literals (escape sequences, suffixes, float exponent `أ`). Focus on comprehensive testing of all token types, edge case robustness, and ensuring consistent error reporting quality. Review and refine `LEXER_ROADMAP.md`.
+5.  **AST Improvements:** Enhance scope management, improve modularity, implement comprehensive control flow node handling (including `تعداد` for enum), and add robust error state tracking. (See `AST_ROADMAP.md` for details).
 
 ### Mid-term Goals (0.3.0)
 
-1.  **Advanced Language Features:** Modules, custom types (structs/records), exception handling, function overloading.
+1.  **Advanced Language Features:** Modules, custom types (structs/records with `::`/`->` access), exception handling, function overloading.
 2.  **AST and Type System Improvements:** Type inference, generics/templates, user-defined types (unions, enums), improved memory management (ref counting/GC).
 3.  **Lexer and Parser Enhancements:** Improved Unicode/RTL support, enhanced error recovery, better source location tracking.
-4.  **Arabic Language Support:** Full RTL support, enhanced Arabic error messages, standard library documentation, formatting tools.
+4.  **Arabic Language Support:** Complete Arabization of planned language syntax elements (keywords, operators, literals), full RTL support, enhanced Arabic error messages, standard library documentation, formatting tools.
 5.  **Development Tools:** IDE plugins, code completion, real-time syntax checking, debugging tools.
 
 ### Long-term Goals (0.4.0)

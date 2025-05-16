@@ -1,6 +1,8 @@
-# Baa Language AST Structure Documentation
+# Baa Language AST Structure Documentation (New Design)
 
-This document provides a comprehensive reference for the Abstract Syntax Tree (AST) structure used in the Baa programming language compiler. The goal is to establish a clear standard for all AST components to ensure consistency across the compiler implementation.
+**Status: This document outlines the new design for the Abstract Syntax Tree (AST) following the removal of the previous implementation. Items here are largely planned unless otherwise noted.**
+
+This document provides a comprehensive reference for the Abstract Syntax Tree (AST) structure to be implemented for the Baa programming language compiler. The goal is to establish a clear standard for all AST components to ensure consistency across the compiler implementation.
 
 ## Core Design Principles
 
@@ -124,27 +126,43 @@ The Baa language type system is represented by the following structures:
 // Type kinds
 typedef enum {
     BAA_TYPE_VOID,    // فراغ
-    BAA_TYPE_INT,     // عدد_صحيح
-    BAA_TYPE_FLOAT,   // عدد_حقيقي
+    BAA_TYPE_INT,     // عدد_صحيح (Covers int, long, long long via modifiers)
+    BAA_TYPE_FLOAT,   // عدد_حقيقي (Covers float, double via modifiers)
     BAA_TYPE_CHAR,    // حرف
-    BAA_TYPE_STRING,  // نص
+    // BAA_TYPE_STRING,  // نص - Strings are typically handled as arrays of char or pointer to char
     BAA_TYPE_BOOL,    // منطقي
-    BAA_TYPE_NULL,    // فارغ
-    BAA_TYPE_ERROR,   // خطأ
+    // BAA_TYPE_NULL,    // فارغ - Null is usually a literal, not a distinct type itself
+    BAA_TYPE_ERROR,   // خطأ (For internal error representation)
     BAA_TYPE_ARRAY,   // مصفوفة
+    BAA_TYPE_POINTER, // مؤشر (Planned)
+    BAA_TYPE_STRUCT,  // بنية (Planned)
+    BAA_TYPE_UNION,   // اتحاد (Planned)
+    BAA_TYPE_ENUM     // تعداد (Planned)
 } BaaTypeKind;
 
-// Type structure
+// Type structure (To be refined, should align with types.h if possible)
 typedef struct BaaType {
     BaaTypeKind kind;         // Type kind
-    const wchar_t* name;      // Type name in Arabic
-    uint32_t size;           // Size in bytes
-    bool is_signed;          // Whether type is signed
-    struct BaaType* next;    // For linked list of types
+    const wchar_t* name;      // Type name in Arabic (e.g., "عدد_صحيح")
+    uint32_t size;           // Size in bytes (determined by target and modifiers)
+    // Modifiers for basic types (e.g., for int: unsigned, long, long long)
+    // bool is_unsigned;
+    // bool is_long;
+    // bool is_long_long;
+    // bool is_double; // For float type
+    // Consider a flags field for modifiers.
+    struct BaaType* next;    // For linked list of types or for pointer/array base types
 
     // Array type information (only valid if kind == BAA_TYPE_ARRAY)
     struct BaaType* element_type; // Type of array elements
-    size_t array_size;           // Number of elements (0 for dynamic arrays)
+    size_t array_size;           // Number of elements (0 for dynamic arrays / incomplete)
+
+    // Pointer type information (only valid if kind == BAA_TYPE_POINTER)
+    // struct BaaType* pointed_to_type;
+
+    // Struct/Union/Enum information (Planned)
+    // struct BaaSymbolTable* members; // For structs/unions
+    // struct BaaEnumItem* enum_items; // For enums
 } BaaType;
 ```
 
@@ -168,11 +186,14 @@ typedef struct {
     // Value storage (only one is used based on kind)
     union {
         bool bool_value;
-        int int_value;
-        float float_value;
+        long long int_value; // To accommodate all integer sizes, including those with suffixes
+        double float_value;  // To accommodate all float sizes (float, potentially double later)
         wchar_t char_value;
-        wchar_t* string_value;
+        wchar_t* string_value; // string_value should be duplicated
     };
+    // Add fields for suffixes if they affect type/value interpretation at AST level,
+    // or handle this during semantic analysis based on full lexeme.
+    // For now, assuming lexer provides full lexeme, and parser/semantic analyzer interprets.
 } BaaLiteralData;
 ```
 

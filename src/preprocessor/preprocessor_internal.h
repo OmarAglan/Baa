@@ -64,6 +64,7 @@ struct BaaPreprocessor
     PpSourceLocation *location_stack; // Stack to track original source locations
     size_t location_stack_count;
     size_t location_stack_capacity;
+    bool in_multiline_comment;        // True if currently inside a multi-line comment
 }; // Note: No typedef name here
 
 // Dynamic Buffer for Output
@@ -132,7 +133,7 @@ typedef struct
 // From preprocessor_utils.c
 bool init_dynamic_buffer(DynamicWcharBuffer *db, size_t initial_capacity);
 bool append_to_dynamic_buffer(DynamicWcharBuffer *db, const wchar_t *str_to_append);
-bool append_dynamic_buffer_n(DynamicWcharBuffer *db, const wchar_t *str_to_append, size_t n);
+bool append_dynamic_buffer_n(DynamicWcharBuffer* db, const wchar_t* str_to_append, size_t n); // Re-typed
 void free_dynamic_buffer(DynamicWcharBuffer *db);
 wchar_t *wcsndup_internal(const wchar_t *s, size_t n); // Renamed to avoid potential conflicts if wcsndup exists
 // Reads file content, detecting UTF-8/UTF-16LE encoding.
@@ -154,7 +155,7 @@ PpSourceLocation get_current_original_location(const BaaPreprocessor *pp); // Ge
 void free_location_stack(BaaPreprocessor *pp);
 
 // From preprocessor_macros.c
-bool add_macro(BaaPreprocessor *pp_state, const wchar_t *name, const wchar_t *body, bool is_function_like, size_t param_count, wchar_t **param_names);
+bool add_macro(BaaPreprocessor *pp_state, const wchar_t *name, const wchar_t *body, bool is_function_like, bool is_variadic, size_t param_count, wchar_t **param_names);
 const BaaMacro *find_macro(const BaaPreprocessor *pp_state, const wchar_t *name);
 bool undefine_macro(BaaPreprocessor *pp_state, const wchar_t *name);
 void free_macros(BaaPreprocessor *pp);
@@ -164,7 +165,7 @@ bool push_macro_expansion(BaaPreprocessor *pp_state, const BaaMacro *macro);
 void pop_macro_expansion(BaaPreprocessor *pp_state);
 bool is_macro_expanding(const BaaPreprocessor *pp_state, const BaaMacro *macro);
 void free_macro_expansion_stack(BaaPreprocessor *pp_state);
-wchar_t **parse_macro_arguments(BaaPreprocessor *pp_state, const wchar_t **invocation_ptr_ref, size_t expected_arg_count, size_t *actual_arg_count, wchar_t **error_message);
+wchar_t **parse_macro_arguments(BaaPreprocessor *pp_state, const wchar_t **invocation_ptr_ref, const BaaMacro *macro, size_t *actual_arg_count, wchar_t **error_message);
 bool substitute_macro_body(BaaPreprocessor *pp_state, DynamicWcharBuffer *output_buffer, const BaaMacro *macro, wchar_t **arguments, size_t arg_count, wchar_t **error_message);
 bool stringify_argument(BaaPreprocessor *pp_state, DynamicWcharBuffer *output_buffer, const wchar_t *argument, wchar_t **error_message);
 

@@ -11,8 +11,9 @@ typedef struct
     wchar_t *name;         // Macro name
     wchar_t *body;         // Macro body (replacement text)
     bool is_function_like; // True if defined with (...)
-    size_t param_count;    // Number of parameters
-    wchar_t **param_names; // Array of parameter names (NULL if not function-like)
+    size_t param_count;    // Number of named parameters
+    wchar_t **param_names; // Array of named parameter names (NULL if not function-like)
+    bool is_variadic;      // True if the function-like macro is variadic (ends with وسائط_إضافية)
 } BaaMacro;
 
 // Forward declaration for the preprocessor state structure (Opaque Pointer)

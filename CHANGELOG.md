@@ -4,12 +4,61 @@ All notable changes to the B (باء) compiler project will be documented in thi
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.1.12.0] - 2025-05-09
+## [0.1.14.0] - 2025-05-14
 
 ### Added
+
+- **Preprocessor:** Implemented predefined macros `__الدالة__` (expands to `L"__BAA_FUNCTION_PLACEHOLDER__"`) and `__إصدار_المعيار_باء__` (expands to `10010L`). (Files affected: `src/preprocessor/preprocessor.c`, `src/preprocessor/preprocessor_line_processing.c`).
+- **Testing:** Added tests for `__الدالة__` and `__إصدار_المعيار_باء__` to `tests/resources/preprocessor_test_cases/consolidated_preprocessor_test.baa`.
+
+## [0.1.13.0] - 2025-05-11
+
+### Added
+
+- **Lexer:** Implemented support for Arabic integer literal suffixes: `غ` (unsigned), `ط` (long), `طط` (long long), and their combinations (e.g., `غط`, `ططغ`). The lexer now correctly tokenizes these suffixes as part of `BAA_TOKEN_INT_LIT`. (File affected: `src/lexer/token_scanners.c`).
+- **Lexer:** Added C99 keywords `مضمن` (inline) and `مقيد` (restrict) to the lexer. This includes new token types `BAA_TOKEN_KEYWORD_INLINE` and `BAA_TOKEN_KEYWORD_RESTRICT` and updates to the keyword recognition logic. (Files affected: `include/baa/lexer/lexer.h`, `src/lexer/lexer.c`).
+- **Lexer:** Removed `دالة` (BAA_TOKEN_FUNC) and `متغير` (BAA_TOKEN_VAR) as keywords from the lexer, aligning with the language specification that Baa uses C-style function and variable declarations. These will now be tokenized as identifiers. (Files affected: `include/baa/lexer/lexer.h`, `src/lexer/lexer.c`).
+- **Tools:** Added a new `baa_lexer_tester` tool (`tools/baa_lexer_tester.c`) to facilitate testing of the lexer by tokenizing a Baa source file and printing the token stream. Added to `CMakeLists.txt`.
+- **Preprocessor:** Implemented `معرف` as the Arabic equivalent for the `defined` operator in conditional expressions. (File affected: `src/preprocessor/preprocessor_expr_eval.c`).
+- **Preprocessor:** Implemented macro expansion rescanning. The preprocessor now correctly rescans the output of a macro expansion for further macro names to be replaced, adhering more closely to C99 standards. This includes handling nested expansions and using the macro expansion stack to prevent direct recursion during the rescan of a macro's own output. (Files affected: `src/preprocessor/preprocessor_line_processing.c`).
+- **Preprocessor:** Corrected `__السطر__` (`__LINE__`) predefined macro to expand to an integer constant as per C standard, instead of a string literal. (File affected: `src/preprocessor/preprocessor_line_processing.c`).
+- **Preprocessor:** Implemented C99-style Variadic Macros using Arabic syntax: `وسائط_إضافية` (for `...`) in parameter lists and `__وسائط_متغيرة__` (for `__VA_ARGS__`) in macro bodies. This includes parsing, argument collection, and substitution logic. (Files affected: `include/baa/preprocessor/preprocessor.h`, `src/preprocessor/preprocessor_macros.c`, `src/preprocessor/preprocessor_directives.c`, `src/preprocessor/preprocessor_expansion.c`, `src/preprocessor/preprocessor_line_processing.c`, `src/preprocessor/preprocessor.c`).
+- **Testing:** Added comprehensive test cases for `معرف` operator, `#الغاء_تعريف` directive, various complex macro rescanning scenarios, and variadic macros to `tests/resources/preprocessor_test_cases/consolidated_preprocessor_test.baa`.
+- **Testing:** Added test cases for new Arabic integer suffixes to `tests/resources/lexer_test_cases/lexer_test_suite.baa`.
+- **Testing:** Added test cases for new keywords `مضمن` and `مقيد` to `tests/resources/lexer_test_cases/lexer_test_suite.baa`.
+
+### Changed
+
+- **Documentation:** Extensive updates across `docs/language.md`, `docs/c_comparison.md`, `docs/arabic_support.md`, `docs/architecture.md`, `README.md`, `docs/PREPROCESSOR_ROADMAP.md`, and `docs/LEXER_ROADMAP.md` to:
+  - Finalize and document Arabic keywords for: `معرف` (for `defined`), `__إصدار_المعيار_باء__` (for Baa version), `__الدالة__` (for `__func__`), variadic macros (`وسائط_إضافية`, `__وسائط_متغيرة__`), other standard directives (`#خطأ`, `#تحذير`, `#سطر`, `أمر_براغما`, `#براغما`), `تعداد` (for `enum`), `لكل` (for C-style `for` loop).
+  - Finalize and document Arabic syntax for: float exponent marker (`أ`), literal suffixes (`غ`, `ط`, `طط`, `ح`), and escape sequences (using `\` + Arabic letter).
+  - Clarify struct/union member access (`::` for direct, `->` for pointer).
+  - Remove `دالة` as a function declaration keyword and `متغير` as a variable declaration keyword from documentation and update examples to C-style.
+  - Ensure consistency in logical operator representation (symbols `&&, ||, !` used in syntax).
+  - General alignment of C99 features and their Baa equivalents, including keywords like `مستقر`, `خارجي`, `مضمن`, `مقيد`, `متطاير`, `نوع_مستخدم`, `حجم` and type `عدد_صحيح_طويل_جدا`.
+- **Lexer:** Updated keyword list in `src/lexer/lexer.c` to use `لكل` for `for` and `أكمل` for `continue` to match documentation.
+- **Tests:** Updated `tests/resources/preprocessor_test_cases/consolidated_preprocessor_test.baa` to use `معرف` instead of `defined`.
+
+### Fixed
+
+- **Preprocessor Build:** Resolved various compiler errors (including "undeclared function" and "lvalue" issues) in `src/preprocessor/preprocessor_line_processing.c` related to the rescanning implementation through code refactoring and build cleaning.
+
+### Known Issues
+
+- **Preprocessor:** Token pasting (`##`) during the rescanning phase (i.e., when `##` appears in the output of a previous expansion, not in an original macro body) is not fully correctly handled. Operands of `##` that are macro names might be expanded prematurely before pasting, or the `##` operator itself might be treated literally. This is a known limitation of the current rescanning implementation.
+
+## [0.1.12.0] - 2025-05-09
+
+### Major Refactoring
+
+- **Core Components:** Removed old AST and Parser components to facilitate a fresh start and redesign. (Commit: `454a715`)
+
+### Added
+
 - **Preprocessor:** Implemented support for bitwise operators (`&`, `|`, `^`, `~`, `<<`, `>>`) in conditional compilation expressions (`#إذا`, `#وإلا_إذا`).
 
 ### Changed
+
 - **Lexer:**
   - Consolidated the internal `keywords` array definition to `src/lexer/lexer.c`, making it globally accessible via `extern` declaration in `include/baa/lexer/lexer_internal.h`. This removes duplication from `src/lexer/token_scanners.c`.
   - The size of the keywords array (`NUM_KEYWORDS`) is now also globally available via `extern const size_t`.
@@ -34,6 +83,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Testing:** Consolidated individual preprocessor test files from `tests/resources/preprocessor_test_cases/` into a single file `tests/resources/preprocessor_test_cases/consolidated_preprocessor_test.baa`. The original files were removed after successful testing of the consolidated file.
 
 ### Fixed
+
 - **Build:** Resolved redefinition error for `struct KeywordMapping` by ensuring its definition resides only in `include/baa/lexer/lexer_internal.h`.
 - **Preprocessor:**
   - Corrected handling of comments within `#elif` directive expressions.
@@ -51,11 +101,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Temporarily stubbed parser functions (`baa_parse_function_rest`, `baa_parse_variable_rest`, `baa_parse_import_directive`) in `src/parser/declaration_parser.c` to resolve "undefined symbol" linker errors and allow the project to build for preprocessor testing. These stubs are temporary, and the underlying parser logic for these declaration types will require further attention.
 
 ### Deprecated
+
 - The `[0.1.11.0] - 2025-05-08` entry below is now superseded by this entry due to further changes and a more accurate date. Consider removing or merging.
 
 ## [0.1.11.0] - 2025-05-08 (Superseded)
 
 ### Added
+
 - **Preprocessor:** Added Input Source Abstraction, allowing `baa_preprocess` to accept input from files (`BAA_PP_SOURCE_FILE`) or directly from wide character strings (`BAA_PP_SOURCE_STRING`) via the new `BaaPpSource` struct.
 - **Preprocessor:** Added Input Source Abstraction, allowing `baa_preprocess` to accept input from files (`BAA_PP_SOURCE_FILE`) or directly from wide character strings (`BAA_PP_SOURCE_STRING`) via the new `BaaPpSource` struct.
 - **Preprocessor:** Added support for reading UTF-8 encoded input files (with or without BOM), in addition to UTF-16LE. Encoding is auto-detected.
@@ -64,12 +116,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Lexer:** Added support for raw string literals (`خ"..."` and `خ"""..."""`), including single-line newline error handling. (Commit: 5caef53)
 
 ### Fixed
+
 - **Compiler:** Fixed use-after-free bug and potential infinite loop in lexer token processing loop (`compiler.c`) by refactoring to a standard `for` loop, ensuring correct termination on EOF or ERROR tokens. (Commit: d08a915)
 - **Lexer:** Corrected handling of single-line raw strings (`خ"..."`) to properly report an error if a newline is encountered before the closing quote. (Commit: 5caef53)
 
 ### Changed
-- **Lexer:** Improved error reporting for multiline strings by tracking start line/column. (Commit: 9b4b8a0)
 
+- **Lexer:** Improved error reporting for multiline strings by tracking start line/column. (Commit: 9b4b8a0)
 
 ## [0.1.10.0] - 2025-05-07
 

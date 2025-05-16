@@ -47,8 +47,8 @@ static PpExprToken make_identifier_token(PpExprTokenizer* tz) {
         return make_error_token(tz, L"فشل في تخصيص ذاكرة للمعرف في التعبير الشرطي.");
     }
 
-    // Check if it's the 'defined' keyword
-    if (wcscmp(text, L"defined") == 0) {
+    // Check if it's the 'معرف' (defined) keyword
+    if (wcscmp(text, L"معرف") == 0) {
         free(text);
         return make_token(PP_EXPR_TOKEN_DEFINED);
     }

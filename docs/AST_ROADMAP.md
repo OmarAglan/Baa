@@ -1,175 +1,140 @@
-# Baa Language AST Implementation Roadmap
+# Baa Language AST Implementation Roadmap (New Design)
 
-This document outlines planned improvements to the Abstract Syntax Tree (AST) implementation
-for the Baa programming language compiler. Each improvement is categorized and its current status
-is indicated.
+**Status: This document outlines the implementation plan for the new Abstract Syntax Tree (AST) following the removal of the previous implementation. All items are planned unless otherwise noted.**
 
-## Memory Management
+## Core Design Principles (Adopted from AST.md)
 
-- [x] Consistent memory ownership across all AST nodes
-- [x] Proper cleanup functions for all node types
-- [x] String duplication for identifiers and literals
-- [x] Unified memory management strategy with clear ownership rules
+- [x] Standardized Node Structure (Base `BaaNode`, `BaaExpr`, `BaaStmt`)
+- [x] Data Pointer Approach (`void* data` for specific node data)
+- [x] Type Enumeration (`BaaNodeKind`, `BaaExprKind`, `BaaStmtKind`)
+- [x] Clear Memory Ownership Rules (Creator allocates, user frees via `baa_free_node`, etc.)
+- [x] Consistent String Handling (Duplication for identifiers/literals)
 
-## AST Structural Improvements
+## Phase 1: Foundational AST Structures
 
-- [x] Standardize naming conventions (BaaExprKind, BaaStmtKind, BaaNodeKind instead of BaaExprType, etc.)
-- [x] Remove embedding of data in union; use void* data pointer approach with specific type structs
-- [x] Standardize expression structure in expressions.h and expressions.c
-- [x] Standardize statement structure in statements.h and statements.c
-- [x] Remove redundant expression types (BAA_EXPR_BOOL, BAA_EXPR_INT, etc)
-- [x] Consolidate AST node types and expression types to eliminate overlap
-- [x] Standardize AST node types
-- [x] Add documentation for AST structures and memory ownership
+- **Base Nodes & Kinds:**
+  - [ ] Define `BaaNode`, `BaaExpr`, `BaaStmt` base structs in `ast.h` (or equivalent header).
+    - [ ] **New Sub-task:** Clarify and implement the precise interrelationship and hierarchy between `BaaNode`, `BaaExpr`, and `BaaStmt` (e.g., decide on struct embedding vs. unified kind enum vs. distinct hierarchies as per `AST.md` discussion, and implement chosen approach).
+  - [ ] Define `BaaNodeKind` enum (`BAA_NODE_PROGRAM`, `BAA_NODE_FUNCTION`, `BAA_NODE_EXPRESSION`, `BAA_NODE_STATEMENT`, etc.).
+  - [ ] Define `BaaExprKind` enum.
+  - [ ] Define `BaaStmtKind` enum.
+  - [ ] Implement `BaaSourceLocation` struct:
+    - [ ] Initial implementation with start line/column and filename.
+    - [ ] Future Consideration: Evaluate adding end line/column or token length for more precise source mapping.
+  - [ ] Implement creation functions (`baa_ast_create_node`, `baa_ast_create_expr`, `baa_ast_create_stmt`).
+    - [ ] **New Sub-task:** Implement type-safe accessor helpers/macros for `void* data` payloads (e.g., `AS_LITERAL_EXPR_DATA(node)`) to improve code safety and readability when accessing specific node data.
+  - [ ] Implement destruction functions (`baa_ast_free_node`, `baa_ast_free_expr`, `baa_ast_free_stmt`).
 
-## Code Generation
+- **Basic Literal Expressions (`BAA_EXPR_LITERAL`):**
+  - [ ] Define `BaaLiteralKind` enum (`BAA_LITERAL_BOOL`, `BAA_LITERAL_INT`, `BAA_LITERAL_FLOAT`, `BAA_LITERAL_CHAR`, `BAA_LITERAL_STRING`, `BAA_LITERAL_NULL`).
+  - [ ] Define `BaaLiteralData` struct (with union for values, ensuring `long long` for int, `double` for float).
+  - [ ] Implement creation/freeing for literal expression nodes.
 
-- [x] Update LLVM code generator for standardized AST structure
-- [x] Support for basic literal types in code generator
-- [x] Support for control flow statements (if/while)
-- [ ] Improve type checking in code generation
-- [ ] Support for all statement types in code generator
-- [ ] Function and parameter code generation
-- [ ] Module-level code generation
-- [ ] Optimization pass integration
+- **Basic Variable Expressions (`BAA_EXPR_VARIABLE`):**
+  - [ ] Define `BaaVariableExpr` struct (for `wchar_t* name`).
+  - [ ] Implement creation/freeing for variable expression nodes.
 
-## Type System
+- **Basic Statement Types:**
+  - [ ] `BAA_STMT_EXPR`: Define `BaaExprStmt` struct.
+  - [ ] `BAA_STMT_BLOCK`: Define `BaaBlock` struct (dynamic array of statements).
+  - [ ] Implement creation/freeing for these statement nodes.
 
-- [x] Basic type system with size and alignment information
-- [x] Boolean type support (منطقي)
-- [ ] Type compatibility checking
-- [ ] Type conversion operations
-- [ ] User-defined types support (structs, unions, enums)
-- [ ] Type inference
-- [ ] Generics/templates support
-- [ ] Union types
-- [ ] Intersection types
+## Phase 2: Core Expressions & Declarations
 
-## Function and Parameter Handling
+- **Unary Expressions (`BAA_EXPR_UNARY`):**
+  - [ ] Define `BaaUnaryOpKind` enum.
+  - [ ] Define `BaaUnaryExpr` struct.
+  - [ ] Implement creation/freeing.
+- **Binary Expressions (`BAA_EXPR_BINARY`):**
+  - [ ] Define `BaaBinaryOpKind` enum.
+  - [ ] Define `BaaBinaryExpr` struct.
+  - [ ] Implement creation/freeing.
+- **Assignment Expressions (`BAA_EXPR_ASSIGN`):**
+  - [ ] Define `BaaAssignExpr` struct.
+  - [ ] Implement creation/freeing.
+- **Variable Declaration Statements (`BAA_STMT_VAR_DECL`):**
+  - [ ] Define `BaaVarDeclStmt` struct (name, type reference, initializer).
+  - [ ] Implement creation/freeing.
 
-- [x] Basic function declaration parsing
-- [x] Complete function parameter lists
-- [x] Function signature validation
-- [x] Optional parameter support
-- [x] Rest parameter support
-- [x] Method vs. function distinction
-- [x] Named argument support
-- [ ] Parameter type checking
-- [x] Function overloading
-- [ ] Return type validation
-- [ ] Method call handling
-- [x] Named parameter argument passing
-- [ ] Default parameter value evaluation
-- [x] Rest parameter handling
-- [ ] Anonymous function expressions (Lambdas)
-- [ ] Closure capture analysis
+## Phase 3: Control Flow & Function Calls
 
-## Control Flow Statements
+- **Function Call Expressions (`BAA_EXPR_CALL`):**
+  - [ ] Define `BaaCallExpr` struct (callee, arguments, count).
+  - [ ] Implement creation/freeing.
+- **If Statements (`BAA_STMT_IF`):**
+  - [ ] Define `BaaIfStmt` struct (condition, then_statement, else_statement).
+  - [ ] Implement creation/freeing.
+- **While Statements (`BAA_STMT_WHILE`):**
+  - [ ] Define `BaaWhileStmt` struct (condition, body).
+  - [ ] Implement creation/freeing.
+- **Return Statements (`BAA_STMT_RETURN`):**
+  - [ ] Define `BaaReturnStmt` struct (value).
+  - [ ] Implement creation/freeing.
 
-- [x] If-else statements
-- [x] While loops
-- [x] Block statements with proper scope
-- [x] For loops
-- [x] Switch/case statements
-- [x] Break/continue statements
+## Phase 4: Advanced Structures & Program Representation
 
-## Expression Handling
+- **Function Definitions (`BAA_NODE_FUNCTION`):**
+  - [ ] Define `BaaParameter` struct (name, type reference, modifiers).
+  - [ ] Define `BaaFunction` struct (name, return_type_ref, parameters, body, modifiers).
+  - [ ] Implement creation/freeing for function and parameter nodes.
+- **Program Structure (`BAA_NODE_PROGRAM`):**
+  - [ ] Define `BaaProgram` struct (array of top-level nodes).
+  - [ ] Implement creation/freeing.
+- **For Loops (`BAA_STMT_FOR`):**
+  - [ ] Define `BaaForStmt` struct (initializer, condition, increment, body).
+  - [ ] Implement creation/freeing.
+- **Switch/Case Statements (`BAA_STMT_SWITCH`, `BAA_STMT_CASE`, `BAA_STMT_DEFAULT`):**
+  - [ ] Define `BaaSwitchStmt`, `BaaCaseStmt`, `BaaDefaultStmt` structs.
+  - [ ] Implement creation/freeing.
+- **Break/Continue Statements (`BAA_STMT_BREAK`, `BAA_STMT_CONTINUE`):**
+  - [ ] Define `BaaBreakStmt`, `BaaContinueStmt` structs.
+  - [ ] Implement creation/freeing.
 
-- [x] Binary operations
-- [x] Unary operations
-- [x] Literal values (including Boolean literals صحيح/خطأ)
-- [x] Variable references
-- [x] Function calls
-- [x] Compound assignment operators (+=, -=, *=, /=, %=)
-- [x] Increment/decrement operators (++, --)
-- [ ] Ternary conditional operator
-- [x] Array indexing
-- [x] Member access (structs/classes)
-- [ ] Pattern matching / Destructuring assignments
+## Phase 5: Type System Representation in AST
 
-## Arrays and Collections
-- [x] Array type definition
-- [x] Array creation expression
-- [x] Array indexing
-- [ ] Array methods (length, push, pop, etc.)
-- [ ] Array iteration
-- [ ] Slice operations
-- [ ] Exception handling constructs
+- **Type Nodes/References:**
+  - [ ] Define `BaaType` struct and `BaaTypeKind` enum (as per `AST.md` and `types.h`).
+    - [ ] Ensure `BaaType` struct includes fields/flags for modifiers (e.g., unsigned, long, long_long for integers; double for floats) to distinguish variations of base types like BAA_TYPE_INT and BAA_TYPE_FLOAT.
+  - [ ] Ensure AST nodes that refer to types (e.g., `BaaVarDeclStmt`, `BaaFunction` for return/params, `BaaCastExpr`) use pointers to `BaaType` structs.
+  - [ ] Implement creation/freeing for `BaaType` nodes if they are dynamically allocated as part of the AST (or manage them via a separate type table/cache).
+- **AST Nodes for Type Definitions:**
+    - [ ] Plan and define AST node structures for user-defined types (e.g., `BaaStructDefNode`, `BaaUnionDefNode`, `BaaEnumDefNode`, `BaaTypedefNode`) as these language features are tackled by the parser.
+- **Array Expressions & Indexing (`BAA_EXPR_ARRAY`, `BAA_EXPR_INDEX`):**
+  - [ ] Define `BaaArrayExpr` and `BaaIndexExpr` structs.
+  - [ ] Implement creation/freeing.
+- **Cast Expressions (`BAA_EXPR_CAST`):**
+  - [ ] Define `BaaCastExpr` struct (target_type_ref, expression).
+  - [ ] Implement creation/freeing.
 
-## Error Handling
+## Phase 6: Advanced AST Infrastructure & Utilities
 
-- [x] Basic error reporting
-- [x] Source location tracking
-- [ ] Comprehensive error reporting
-- [ ] Recoverable parsing errors
-- [ ] Type error reporting
-- [ ] Runtime error handling
-- [ ] Add robust error state tracking within AST nodes
+- **AST Node Enhancements:**
+  - [ ] Consider adding parent pointers to AST nodes (evaluate trade-offs: ease of navigation vs. complexity of construction/modification).
+  - [ ] Design and implement a unique ID system for AST nodes (for debugging, analysis, cross-referencing).
+  - [ ] Refine storage for "Node Modifiers" (e.g., `ثابت`, `مضمن`, `مقيد`) in relevant AST nodes (e.g., using a bitmask or dedicated flags struct in `BaaVarDeclStmt`, `BaaFunction`). Ensure all modifiers from `language.md` are covered.
+- **AST Traversal & Transformation:**
+  - [ ] Design and implement a basic AST Visitor pattern infrastructure for traversals (e.g., for semantic analysis, code generation).
+  - [ ] Plan for AST transformation capabilities (e.g., for desugaring complex constructs or early optimization passes).
+- **AST Utilities:**
+  - [ ] Implement an AST pretty-printer (outputs a textual representation of the AST, useful for debugging parser output).
+  - [ ] Implement AST validation utilities (to check for structural integrity, e.g., correct child node types, non-NULL required children).
+  - [ ] AST serialization/deserialization (for debugging or inter-tool communication).
 
-## Unicode and Internationalization
+## Future Considerations (Longer Term)
 
-- [x] Basic wide character support
-- [ ] Full Unicode support for identifiers
-- [ ] Complete support for right-to-left text
-- [ ] Localized error messages
-- [ ] Advanced character encoding handling
-- [ ] AST support for async/await constructs
+- [ ] AST support for `struct`, `union`, `enum` declarations and usage (covered in Phase 5/6 for node definitions).
+- [ ] AST nodes for pointer operations (dereference, address-of).
+- [ ] AST representation for module system (`BAA_NODE_IMPORT`, `BAA_NODE_MODULE`).
+- [ ] Enhanced error state tracking within AST nodes (e.g., a flag if a node or its subtree contains errors).
+- [ ] Support for planned advanced language features (lambdas, pattern matching, async/await) by defining corresponding AST nodes.
+- [ ] AST Annotations for Semantic Analysis: Define specific fields in expression/identifier nodes to store resolved types and links to symbol table entries post-semantic analysis.
+- [ ] Lvalue/Rvalue Distinction: Investigate if AST nodes need explicit flags or distinct types to represent lvalue contexts for expressions, or if this is purely a semantic analysis concern.
+- [ ] Memory Management Optimization: Evaluate and potentially implement an arena allocator or a dedicated memory pool for AST nodes to improve allocation performance and simplify freeing the entire tree.
 
-## AST Modularity and Transformations
 
-- [x] Basic block management with add_statement functionality
-- [ ] AST visitors for traversal
-- [ ] AST transformation framework
-- [ ] AST serialization and deserialization
-- [ ] AST validation passes
-- [ ] Visitor pattern enhancements for complex traversals
+## Documentation & Testing
 
-## Scope Management
-
-- [x] Basic variable declaration and scoping
-- [ ] Complete block-level scoping
-- [ ] Variable shadowing rules
-- [ ] Lexical closure support
-- [ ] Module-level scope
-- [ ] Class/method implementation (OOP support)
-- [ ] Module system enhancements (import/export, namespaces)
-
-## Optimization Infrastructure
-
-- [ ] Constant folding
-- [ ] Dead code elimination
-- [ ] Expression simplification
-- [ ] Common subexpression elimination
-- [ ] AST support for metaprogramming features
-
-## Documentation
-
-- [x] AST structure documentation
-- [x] Memory ownership documentation
-- [ ] AST structure diagrams
-- [ ] Code generation process documentation
-- [ ] API documentation for library users
-- [ ] Add comprehensive tests for all AST node types
-- [ ] Add tests for error conditions and recovery related to AST
-- [ ] Add tests for Unicode and RTL text handling in AST nodes
-- [ ] Add tests for memory management and resource leaks in AST
-
-## Implementation Priorities
-1. ✓ ~~Function parameter handling~~
-2. ✓ ~~For loop implementation~~
-3. ✓ ~~Switch/case statements~~
-4. ✓ ~~Break/continue statements~~
-5. ✓ ~~Array creation and indexing~~
-6. ✓ Boolean literal support
-7. ✓ Advanced operator support
-8. Class/method implementation
-9. Anonymous function expressions
-10. Pattern matching
-11. Module system enhancements
-12. Type inference
-13. Generics/templates
-14. Exception handling
-15. Anonymous functions / Closures
-16. Pattern matching
-17. Async/await support
-18. Metaprogramming support
+- [ ] Update `AST.md` continuously as structures are finalized and implemented.
+- [ ] Add Doxygen comments to `ast.h` (or equivalent header) for all public structures and functions.
+- [ ] Develop unit tests for each AST node type creation, data storage, and freeing.
+- [ ] Add tests for memory management and resource leaks in AST operations.

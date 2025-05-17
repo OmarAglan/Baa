@@ -13,7 +13,11 @@ set(CMAKE_C_STANDARD_REQUIRED ON)
 # option(SKIP_PARSER "Skip compiling the parser components" OFF)
 
 add_definitions(-DUNICODE -D_UNICODE -D_CRT_SECURE_NO_WARNINGS)
-set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /IGNORE:4006 /IGNORE:4099") # Ignore certain linker warnings if needed
+
+# MSVC specific linker flags
+if(MSVC)
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /IGNORE:4006 /IGNORE:4099")
+endif()
 
 # إضافة مجلد التضمين الرئيسي
 include_directories(${CMAKE_SOURCE_DIR}/include)

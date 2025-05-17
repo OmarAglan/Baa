@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <wchar.h>
 #include <locale.h> // For setlocale
+#include <string.h> // For strcmp
 
 // Include the public preprocessor header
 #include "baa/preprocessor/preprocessor.h"
@@ -38,20 +39,29 @@ int main(int argc, char *argv[]) {
     setlocale(LC_ALL, "");
 
     if (argc != 2) {
-        fprintf(stderr, "Usage: %s <input_file.baa>\n", argv[0]);
+        fprintf(stderr, "Usage: %s <input_file.baa | ->\n", argv[0]);
+        fprintf(stderr, "       Pass '-' as the argument to read from stdin.\n");
         return 1;
     }
 
-    const char *input_file = argv[1];
+    const char *input_arg = argv[1];
     wchar_t *error_message = NULL;
     const char *include_paths[] = {NULL}; // No standard include paths for this simple test
+    BaaPpSource pp_source;
+
+    if (strcmp(input_arg, "-") == 0) {
+        // Read from stdin
+        pp_source.type = BAA_PP_SOURCE_STDIN;
+        pp_source.source_name = "<stdin>";
+        // data.file_path or data.source_string is not used for stdin
+    } else {
+        // Read from file
+        pp_source.type = BAA_PP_SOURCE_FILE;
+        pp_source.source_name = input_arg; // Use input_file path as the name
+        pp_source.data.file_path = input_arg;
+    }
 
     // Call the preprocessor
-    BaaPpSource pp_source = {
-        .type = BAA_PP_SOURCE_FILE,
-        .source_name = input_file, // Use input_file path as the name
-        .data.file_path = input_file
-    };
     wchar_t *processed_output = baa_preprocess(&pp_source, include_paths, &error_message);
 
     // --- Process Results ---

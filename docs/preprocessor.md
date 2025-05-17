@@ -194,6 +194,6 @@ if (!processed_source) {
 - **Input Abstraction:** The preprocessor currently supports input from files and strings via `BaaPpSource`. Future work could extend this to include standard input (`stdin`).
 - **Error Recovery:** Improve error recovery mechanisms within directives and expressions.
 - **Macro Expansion in Conditional Expressions**: Enhance the expression evaluator for `#إذا` and `#وإلا_إذا` to support full macro expansion (including function-like macros and rescanning of results) before evaluation.
-- **Multi-line Comment Handling**: Implement robust handling for multi-line comments (`/* ... */`) across all preprocessor stages.
+- **Multi-line Comment Handling**: Robust handling for multi-line comments (`/* ... */`) is implemented. The preprocessor correctly identifies and skips multi-line comments, maintaining the comment state across line boundaries. Single-line comments (`//`) are also handled.
 - **Macro Redefinition Warnings/Errors**: Implement checks for macro redefinitions.
 - **Implement Remaining C99 Preprocessor Features**: Such as `#error` (`#خطأ`), `#warning` (`#تحذير`), `#line` (`#سطر`), `_Pragma` (`أمر_براغما`), and `#pragma` (`#براغما`). (`__الدالة__` placeholder and `__إصدار_المعيار_باء__` are now implemented).

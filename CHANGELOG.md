@@ -4,6 +4,24 @@ All notable changes to the B (باء) compiler project will be documented in thi
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.15.0] - 2025-05-15
+
+### Added
+
+- **Error Handling:** Implemented a C-style error handling mechanism using Arabic error codes. This includes:
+  - A new global variable `رقم_الخطأ` (similar to `errno`) to store the last error code.
+  - A new header file `<أخطاء.ب>` (Baa's equivalent of `<errno.h>`) defining Arabic error constants and potentially error-reporting functions.
+  - (Files affected: `src/preprocessor/preprocessor.c`, `src/preprocessor/preprocessor_error.c`, `include/baa/preprocessor/preprocessor_error.h`, `src/stdlib/أخطاء.ب`, `src/stdlib/أخطاء.c` (if applicable for helper functions)).
+- **Documentation:** Updated documentation to reflect the new error handling mechanism.
+  - `docs/language.md`: Added sections explaining preprocessor error reporting (`#خطأ`, `#تحذير`) and runtime error handling (`<أخطاء.ب>`, `رقم_الخطأ`).
+  - `docs/arabic_support.md`: Updated with new Arabic error codes and keywords.
+  - `docs/c_comparison.md`: Added comparison for error handling.
+  - `docs/architecture.md`: Updated to include the error handling module.
+
+### Changed
+
+- **Preprocessor:** Integrated the new error handling mechanism for reporting preprocessor-specific errors using the defined Arabic error codes.
+
 ## [0.1.14.0] - 2025-05-14
 
 ### Added

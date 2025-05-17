@@ -26,7 +26,7 @@ typedef struct BaaPreprocessor BaaPreprocessor;
 typedef enum {
     BAA_PP_SOURCE_FILE,   // Input is a file path
     BAA_PP_SOURCE_STRING, // Input is a wide character string in memory
-    // BAA_PP_SOURCE_STDIN // Future: Input from standard input
+    BAA_PP_SOURCE_STDIN   // Input from standard input
 } BaaPpSourceType;
 
 // Structure to represent the input source for the preprocessor

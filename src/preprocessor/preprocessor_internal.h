@@ -138,6 +138,8 @@ void free_dynamic_buffer(DynamicWcharBuffer *db);
 wchar_t *wcsndup_internal(const wchar_t *s, size_t n); // Renamed to avoid potential conflicts if wcsndup exists
 // Reads file content, detecting UTF-8/UTF-16LE encoding.
 wchar_t *read_file_content(BaaPreprocessor *pp_state, const char *file_path, wchar_t **error_message);
+// Reads stream content (e.g., from stdin)
+wchar_t *read_stream_content(FILE *stream, const char* stream_name, wchar_t **error_message);
 char *get_absolute_path(const char *file_path);
 char *get_directory_part(const char *file_path);
 // Updated error formatter to potentially accept an explicit location

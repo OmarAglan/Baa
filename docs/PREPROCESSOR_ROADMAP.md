@@ -9,7 +9,7 @@ This roadmap outlines the planned improvements and current status of the Baa lan
 - [x] File encoding detection (UTF-8 with/without BOM, UTF-16LE)
 - [x] Dynamic buffer for output generation
 - [x] Error reporting via output parameter
-- [x] Input source abstraction (file, string). ([ ] Add stdin support)
+- [x] Input source abstraction (file, string, stdin). ([x] Add stdin support)
 - [x] Support for UTF-8 input files (with conversion to internal wchar_t)
 - [x] Improved error reporting (unified system with original file, line, and column numbers, including through expansions)
 
@@ -43,7 +43,7 @@ This roadmap outlines the planned improvements and current status of the Baa lan
 - [ ] **Macro Expansion in Conditional Expressions**: Enhance the expression evaluator for `#إذا` and `#وإلا_إذا` to support full macro expansion (including function-like macros and rescanning of results) before evaluation. Currently, only object-like macros expanding directly to integer strings are partially handled.
 - [x] **`__السطر__` (`__LINE__`) Expansion**: Ensure `__السطر__` (and its C99 equivalent `__LINE__`) expands to an integer constant, not a string literal. (Corrected during rescanning implementation).
 - [ ] **Token Pasting (`##`) during Rescanning**: Enhance the rescanning logic in `process_code_line_for_macros` to correctly handle the `##` operator when it appears in the output of a macro expansion. This includes ensuring operands of `##` are not prematurely expanded if they are macro names themselves, and that the pasted token is then subject to further rescanning.
-- [ ] **Multi-line Comment Handling**: Implement robust handling for multi-line comments (`/* ... */`) across all preprocessor stages, ensuring they are correctly stripped and do not interfere with parsing or directive recognition.
+- [ ] **Multi-line Comment Handling**: Implement robust handling for multi-line comments (`/* ... */`) across all preprocessor stages, ensuring they are correctly stripped and do not interfere with parsing or directive recognition. (Basic skipping is implemented in core processing; full robust handling pending).
 - [ ] **Macro Redefinition Warnings/Errors**: Implement checks for macro redefinitions. Issue warnings or errors for incompatible redefinitions, as per C99 standard behavior.
 - [x] **Predefined `__func__`**: Implement the C99 `__func__` predefined identifier (Baa: `__الدالة__`).
 - [x] **Predefined `__STDC_VERSION__` equivalent**: Implement Baa's version macro `__إصدار_المعيار_باء__`.
@@ -68,7 +68,7 @@ This roadmap outlines the planned improvements and current status of the Baa lan
 
 1. **Robustness & Advanced Features:**
     - [x] Support for UTF-8 input files.
-    - [x] Input source abstraction (file, string). (*stdin not yet implemented*)
+    - [x] Input source abstraction (file, string, stdin).
     - [x] Support for bitwise operators (`&`, `|`, `^`, `~`, `<<`, `>>`) in conditional expressions.
     - [x] Predefined macros (`__الملف__`, `__السطر__` (as int), `__التاريخ__`, `__الوقت__`, `__الدالة__` (placeholder), `__إصدار_المعيار_باء__`).
     - [ ] Improve error recovery mechanisms (allow continuation after some errors to find more issues).

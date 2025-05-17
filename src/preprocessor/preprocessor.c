@@ -1,6 +1,7 @@
 #include "baa/preprocessor/preprocessor.h" // Public API
 #include "preprocessor_internal.h"         // Internal definitions and function declarations
 #include <time.h>                          // For __التاريخ__ and __الوقت__
+#include <stdio.h>                         // For stdin
 
 // --- Public Preprocessor Function ---
 
@@ -180,6 +181,36 @@ wchar_t *baa_preprocess(const BaaPpSource *source, const char **include_paths, w
 
         // Directly process the string content using the new function
         final_output = process_string(&pp_state, source->data.source_string, error_message);
+        // Pop the location stack after processing the string
+        pop_location(&pp_state);
+    }
+    else if (source->type == BAA_PP_SOURCE_STDIN)
+    {
+        // --- Push starting location for stdin processing ---
+        PpSourceLocation stdin_start_loc = {
+            .file_path = source->source_name, // e.g., "<stdin>"
+            .line = 1,
+            .column = 1};
+        if (!push_location(&pp_state, &stdin_start_loc))
+        {
+            *error_message = format_preprocessor_error_at_location(&stdin_start_loc, L"فشل في دفع الموقع الأولي لـ stdin (نفاد الذاكرة؟).");
+            free_macros(&pp_state);
+            return NULL;
+        }
+        // --- End Push initial location ---
+
+        // Read content from stdin
+        wchar_t *stdin_content = read_stream_content(stdin, source->source_name, error_message);
+        if (!stdin_content)
+        {
+            // error_message would be set by read_stream_content
+            pop_location(&pp_state);
+            free_macros(&pp_state);
+            return NULL;
+        }
+
+        final_output = process_string(&pp_state, stdin_content, error_message);
+        free(stdin_content); // Free the content read from stdin
         // Pop the location stack after processing the string
         pop_location(&pp_state);
     }

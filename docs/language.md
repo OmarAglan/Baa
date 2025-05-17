@@ -183,6 +183,26 @@ Baa provides several predefined macros that offer information about the compilat
 * `__الدالة__` : Expands to a string literal placeholder `L"__BAA_FUNCTION_PLACEHOLDER__"`. Actual function name substitution is intended for later compiler stages. - *[Implemented by Preprocessor as placeholder]*
 * `__إصدار_المعيار_باء__` : Expands to a long integer constant `10010L` (representing Baa language version 0.1.10). - *[Implemented by Preprocessor]*
 
+#### 1.1.6 Preprocessor Error Reporting
+
+The Baa preprocessor has its own mechanism for reporting issues encountered during the preprocessing phase. This is distinct from the runtime error handling described in Section 2.A.
+
+* **`#خطأ "رسالة"` (`#error "message"`):** Instructs the preprocessor to report a fatal error. The compilation process stops. The message provided is displayed to the user. This is useful for asserting conditions that must be true for compilation to proceed. - *[Planned, see Section 1.1.4]*
+
+    ```baa
+    #إذا_لم_يعرف REQUIRED_FEATURE
+        #خطأ "الميزة المطلوبة REQUIRED_FEATURE غير معرفة."
+    #نهاية_إذا
+    ```
+
+* **`#تحذير "رسالة"` (`#warning "message"`):** Instructs the preprocessor to issue a warning message. Compilation typically continues, but the warning indicates a potential issue or deprecated feature. - *[Planned, see Section 1.1.4]*
+
+    ```baa
+    #تحذير "هذه الميزة مهملة وسيتم إزالتها في الإصدارات القادمة."
+    ```
+
+These directives provide a way to communicate compile-time problems directly from the source code, controlled by the developer.
+
     ```baa
     اطبع("تم التجميع من الملف: " + __الملف__).
     اطبع("في السطر رقم: " + __السطر__).
@@ -406,6 +426,64 @@ Operators perform operations on values. See Section 5 for a detailed list and pr
 Symbols used to structure code: `( ) { } [ ] , . :`
 
 * **`.` (Dot):** Terminates statements. - *[Implemented]*
+
+## 2.A Error Handling (Runtime)
+
+Baa incorporates a runtime error handling mechanism similar to C's `errno` system, allowing functions to report errors that occur during program execution. This is separate from preprocessor directives like `#خطأ` which handle compile-time issues.
+
+To utilize this system, programs should include the `<أخطاء.ب>` header file. This header defines a global variable, `رقم_الخطأ` (error number), and a set of Arabic error codes (macros) representing various runtime error conditions.
+
+### 2.A.1 Accessing Error Information
+
+* **`<أخطاء.ب>` Header:** Must be included to use the error handling features.
+  ```baa
+  #تضمين <أخطاء.ب>
+  ```
+* **`رقم_الخطأ` (Global Error Variable):** After a library function call that can fail, `رقم_الخطأ` will be set to a non-zero value if an error occurred, or to `نجاح` (success, typically 0) if the operation was successful. It is crucial to check `رقم_الخطأ` immediately after a potentially failing function call, as subsequent successful calls might reset it.
+* **Error Codes:** `<أخطاء.ب>` defines macros for specific error conditions. These are integer constants. Examples include:
+    * `نجاح` (Success)
+    * `خطأ_عام` (General error)
+    * `خطأ_في_المدخلات` (Input error)
+    * `ملف_غير_موجود` (File not found)
+    * `ذاكرة_غير_كافية` (Insufficient memory)
+    * `وصول_مرفوض` (Permission denied)
+    * *(A comprehensive list of error codes is available in `<أخطاء.ب>`)*
+
+### 2.A.2 Example Usage
+
+```baa
+#تضمين <أخطاء.ب>
+#تضمين <ملفات.ب> // Assuming a file operations library
+
+فراغ main() {
+    ملف م = افتح_ملف("ملف_لا_يوجد.txt", "قراءة").
+    إذا (رقم_الخطأ != نجاح) {
+        إذا (رقم_الخطأ == ملف_غير_موجود) {
+            اطبع("خطأ: الملف المحدد غير موجود.").
+        } وإلا إذا (رقم_الخطأ == وصول_مرفوض) {
+            اطبع("خطأ: لا توجد صلاحية للوصول إلى الملف.").
+        } وإلا {
+            اطبع("حدث خطأ غير معروف أثناء محاولة فتح الملف. رمز الخطأ: " + رقم_الخطأ).
+        }
+        إرجع.
+    }
+
+    // ... proceed with file operations ...
+    اغلق_الملف(م).
+    إذا (رقم_الخطأ != نجاح) {
+        اطبع("خطأ أثناء إغلاق الملف.").
+    }
+}
+```
+
+### 2.A.3 Best Practices
+
+1.  **Check `رقم_الخطأ`:** Always check `رقم_الخطأ` after calling functions that might set it.
+2.  **Check Immediately:** Check `رقم_الخطأ` before any other function call that could also set it, as its value is not guaranteed to persist.
+3.  **Specific Codes:** Handle specific error codes relevant to the function called. Provide user-friendly messages.
+4.  **Clear on Success:** Functions should set `رقم_الخطأ` to `نجاح` upon successful completion if they are designed to use this error mechanism.
+
+This system provides a standardized way for Baa programs and libraries to report and handle runtime errors.
 
 ## 3. Types
 

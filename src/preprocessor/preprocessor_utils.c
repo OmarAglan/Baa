@@ -1,4 +1,5 @@
 #include "preprocessor_internal.h"
+#include <errno.h> // For errno
 
 // --- Location Stack ---
 
@@ -479,6 +480,104 @@ wchar_t *read_file_content(BaaPreprocessor *pp_state, const char *file_path, wch
     fclose(file);
     return buffer_w;
 }
+
+// Reads the content of a stream (e.g., stdin), assuming UTF-8 encoding.
+// Returns a dynamically allocated wchar_t* string (caller must free).
+// Returns NULL on error and sets error_message.
+wchar_t *read_stream_content(FILE *stream, const char* stream_name, wchar_t **error_message)
+{
+    *error_message = NULL;
+    DynamicWcharBuffer temp_buffer_w;
+    char mb_chunk[1024];
+    size_t bytes_read_chunk;
+
+    if (!init_dynamic_buffer(&temp_buffer_w, 2048)) {
+        *error_message = format_preprocessor_error_at_location(NULL, L"فشل في تهيئة المخزن المؤقت الديناميكي لقراءة الدفق '%hs'.", stream_name);
+        return NULL;
+    }
+
+    // Read in chunks
+    while ((bytes_read_chunk = fread(mb_chunk, 1, sizeof(mb_chunk) -1 , stream)) > 0) {
+        mb_chunk[bytes_read_chunk] = '\0'; // Null-terminate the chunk
+
+        // Convert UTF-8 chunk to wchar_t and append to dynamic buffer
+        wchar_t *w_chunk_buffer = NULL;
+        int required_wchars_chunk;
+
+#ifdef _WIN32
+        required_wchars_chunk = MultiByteToWideChar(CP_UTF8, 0, mb_chunk, -1, NULL, 0);
+        if (required_wchars_chunk <= 0) {
+            *error_message = format_preprocessor_error_at_location(NULL, L"فشل في حساب حجم التحويل من UTF-8 للدفق '%hs'.", stream_name);
+            free_dynamic_buffer(&temp_buffer_w);
+            return NULL;
+        }
+        w_chunk_buffer = malloc(required_wchars_chunk * sizeof(wchar_t));
+        if (!w_chunk_buffer) {
+            *error_message = format_preprocessor_error_at_location(NULL, L"فشل في تخصيص الذاكرة للمخزن المؤقت wchar_t للدفق '%hs'.", stream_name);
+            free_dynamic_buffer(&temp_buffer_w);
+            return NULL;
+        }
+        int converted_wchars_chunk = MultiByteToWideChar(CP_UTF8, 0, mb_chunk, -1, w_chunk_buffer, required_wchars_chunk);
+        if (converted_wchars_chunk <= 0) {
+            *error_message = format_preprocessor_error_at_location(NULL, L"فشل في تحويل محتوى الدفق '%hs' من UTF-8 إلى wchar_t.", stream_name);
+            free(w_chunk_buffer);
+            free_dynamic_buffer(&temp_buffer_w);
+            return NULL;
+        }
+#else
+        // Use mbstowcs on POSIX
+        size_t required_wchars_check_chunk = mbstowcs(NULL, mb_chunk, 0);
+        if (required_wchars_check_chunk == (size_t)-1) {
+            *error_message = format_preprocessor_error_at_location(NULL, L"تسلسل بايت UTF-8 غير صالح في الدفق '%hs' أو فشل في تحديد حجم التحويل.", stream_name);
+            free_dynamic_buffer(&temp_buffer_w);
+            return NULL;
+        }
+        size_t num_wchars_chunk = required_wchars_check_chunk;
+        w_chunk_buffer = malloc((num_wchars_chunk + 1) * sizeof(wchar_t));
+        if (!w_chunk_buffer) {
+            *error_message = format_preprocessor_error_at_location(NULL, L"فشل في تخصيص الذاكرة للمخزن المؤقت wchar_t للدفق '%hs'.", stream_name);
+            free_dynamic_buffer(&temp_buffer_w);
+            return NULL;
+        }
+        size_t converted_wchars_chunk = mbstowcs(w_chunk_buffer, mb_chunk, num_wchars_chunk + 1);
+        if (converted_wchars_chunk == (size_t)-1) {
+            *error_message = format_preprocessor_error_at_location(NULL, L"فشل في تحويل محتوى الدفق '%hs' من UTF-8 إلى wchar_t (تسلسل غير صالح؟).", stream_name);
+            free(w_chunk_buffer);
+            free_dynamic_buffer(&temp_buffer_w);
+            return NULL;
+        }
+        w_chunk_buffer[num_wchars_chunk] = L'\0'; // Ensure null termination
+#endif
+
+        if (!append_to_dynamic_buffer(&temp_buffer_w, w_chunk_buffer)) {
+            *error_message = format_preprocessor_error_at_location(NULL, L"فشل في إلحاق محتوى الدفق المحول '%hs' بالمخزن المؤقت.", stream_name);
+            free(w_chunk_buffer);
+            free_dynamic_buffer(&temp_buffer_w);
+            return NULL;
+        }
+        free(w_chunk_buffer);
+    }
+
+    if (ferror(stream)) {
+        *error_message = format_preprocessor_error_at_location(NULL, L"خطأ أثناء قراءة الدفق '%hs': %hs", stream_name, strerror(errno));
+        clearerr(stream); // Clear error indicator for future operations on stream if any
+        free_dynamic_buffer(&temp_buffer_w);
+        return NULL;
+    }
+
+    // Finalize the buffer (shrink to fit if desired, or just return its content)
+    // For now, just duplicate the buffer content to a new allocation of exact size.
+    wchar_t* final_content = wcsndup_internal(temp_buffer_w.buffer, temp_buffer_w.length);
+    free_dynamic_buffer(&temp_buffer_w);
+
+    if (!final_content) {
+         *error_message = format_preprocessor_error_at_location(NULL, L"فشل في تخصيص الذاكرة للمحتوى النهائي من الدفق '%hs'.", stream_name);
+        return NULL;
+    }
+
+    return final_content;
+}
+
 
 // --- Path Helpers ---
 

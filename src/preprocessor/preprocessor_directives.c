@@ -315,6 +315,7 @@ bool handle_preprocessor_directive(BaaPreprocessor *pp_state, wchar_t *directive
             // Found #تضمين directive
             wchar_t *path_spec_start = directive_start + include_directive_len;
             // Column number updated by caller before calling this function
+
             while (iswspace(*path_spec_start))
             {
                 path_spec_start++;
@@ -494,17 +495,24 @@ bool handle_preprocessor_directive(BaaPreprocessor *pp_state, wchar_t *directive
         {
             wchar_t *name_start = directive_start + define_directive_len;
             // Column number updated by caller
+            size_t name_start_col_offset = define_directive_len; // Chars from '#' to end of "تعريف"
+
             while (iswspace(*name_start))
             {
                 name_start++; /* pp_state->current_column_number++; */
+                name_start_col_offset++;
             }
+
+            // Create a more precise location for errors related to the name
+            PpSourceLocation name_error_loc = directive_loc; // Base location is the start of the directive line
+            name_error_loc.column += name_start_col_offset;  // Adjust column to where name should start
+
             wchar_t *name_end = name_start;
             while (*name_end != L'\0' && !iswspace(*name_end) && *name_end != L'(')
                 name_end++;
-
             if (name_start == name_end)
             {
-                *error_message = format_preprocessor_error_at_location(&directive_loc, L"تنسيق #تعريف غير صالح: اسم الماكرو مفقود.");
+                *error_message = format_preprocessor_error_at_location(&name_error_loc, L"تنسيق #تعريف غير صالح: اسم الماكرو مفقود.");
                 success = false;
             }
             else
@@ -513,7 +521,7 @@ bool handle_preprocessor_directive(BaaPreprocessor *pp_state, wchar_t *directive
                 wchar_t *macro_name = wcsndup_internal(name_start, name_len);
                 if (!macro_name)
                 {
-                    *error_message = format_preprocessor_error_at_location(&directive_loc, L"فشل في تخصيص ذاكرة لاسم الماكرو في #تعريف.");
+                    *error_message = format_preprocessor_error_at_location(&name_error_loc, L"فشل في تخصيص ذاكرة لاسم الماكرو في #تعريف.");
                     success = false;
                 }
                 else
@@ -526,18 +534,26 @@ bool handle_preprocessor_directive(BaaPreprocessor *pp_state, wchar_t *directive
                     const wchar_t *variadic_keyword = L"وسائط_إضافية";
                     size_t variadic_keyword_len = wcslen(variadic_keyword);
 
+                    PpSourceLocation param_parse_loc = name_error_loc; // Start with name loc for param errors
+
                     if (*name_end == L'(')
                     {
                         is_function_like = true;
                         wchar_t *param_ptr = name_end + 1;
                         size_t params_capacity = 0;
+
                         while (success)
                         {
+                            size_t current_param_start_col_offset = param_ptr - name_start; // Relative to name_start
+                            PpSourceLocation current_arg_loc = name_error_loc;
+                            current_arg_loc.column += current_param_start_col_offset;
+
                             while (iswspace(*param_ptr))
                                 param_ptr++;
                             if (*param_ptr == L')')
                             {
                                 param_ptr++;
+                                current_arg_loc.column++;
                                 break;
                             } // End of parameter list
 
@@ -545,7 +561,7 @@ bool handle_preprocessor_directive(BaaPreprocessor *pp_state, wchar_t *directive
                             { // If not the first param, or if variadic was just processed
                                 if (is_variadic_macro)
                                 { // No params allowed after variadic
-                                    *error_message = format_preprocessor_error_at_location(&directive_loc, L"تنسيق #تعريف غير صالح: لا يمكن أن يتبع 'وسائط_إضافية' معاملات أخرى.");
+                                    *error_message = format_preprocessor_error_at_location(&current_arg_loc, L"تنسيق #تعريف غير صالح: لا يمكن أن يتبع 'وسائط_إضافية' معاملات أخرى.");
                                     success = false;
                                     break;
                                 }
@@ -553,11 +569,11 @@ bool handle_preprocessor_directive(BaaPreprocessor *pp_state, wchar_t *directive
                                 {
                                     param_ptr++;
                                     while (iswspace(*param_ptr))
-                                        param_ptr++;
+                                        param_ptr++; // Column update handled by general loop progress
                                 }
                                 else
                                 {
-                                    *error_message = format_preprocessor_error_at_location(&directive_loc, L"تنسيق #تعريف غير صالح: متوقع ',' أو ')' بين معاملات الماكرو الوظيفي.");
+                                    *error_message = format_preprocessor_error_at_location(&current_arg_loc, L"تنسيق #تعريف غير صالح: متوقع ',' أو ')' بين معاملات الماكرو الوظيفي.");
                                     success = false;
                                     break;
                                 }
@@ -571,10 +587,10 @@ bool handle_preprocessor_directive(BaaPreprocessor *pp_state, wchar_t *directive
                                 param_ptr += variadic_keyword_len;
                                 // 'وسائط_إضافية' must be the last thing before ')' or separated by whitespace then ')'
                                 while (iswspace(*param_ptr))
-                                    param_ptr++;
+                                    param_ptr++; // Column update handled by general loop progress
                                 if (*param_ptr != L')')
                                 {
-                                    *error_message = format_preprocessor_error_at_location(&directive_loc, L"تنسيق #تعريف غير صالح: 'وسائط_إضافية' يجب أن تكون المعامل الأخير.");
+                                    *error_message = format_preprocessor_error_at_location(&current_arg_loc, L"تنسيق #تعريف غير صالح: 'وسائط_إضافية' يجب أن تكون المعامل الأخير.");
                                     success = false;
                                     break;
                                 }
@@ -585,7 +601,7 @@ bool handle_preprocessor_directive(BaaPreprocessor *pp_state, wchar_t *directive
 
                             if (!iswalpha(*param_ptr) && *param_ptr != L'_')
                             {
-                                *error_message = format_preprocessor_error_at_location(&directive_loc, L"تنسيق #تعريف غير صالح: متوقع اسم معامل أو ')' أو 'وسائط_إضافية' بعد '('.");
+                                *error_message = format_preprocessor_error_at_location(&current_arg_loc, L"تنسيق #تعريف غير صالح: متوقع اسم معامل أو ')' أو 'وسائط_إضافية' بعد '('.");
                                 success = false;
                                 break;
                             }
@@ -596,14 +612,14 @@ bool handle_preprocessor_directive(BaaPreprocessor *pp_state, wchar_t *directive
                             size_t param_name_len = param_name_end - param_name_start;
                             if (param_name_len == 0)
                             {
-                                *error_message = format_preprocessor_error_at_location(&directive_loc, L"تنسيق #تعريف غير صالح: اسم معامل فارغ.");
+                                *error_message = format_preprocessor_error_at_location(&current_arg_loc, L"تنسيق #تعريف غير صالح: اسم معامل فارغ.");
                                 success = false;
                                 break;
                             }
                             wchar_t *param_name = wcsndup_internal(param_name_start, param_name_len);
                             if (!param_name)
                             {
-                                *error_message = format_preprocessor_error_at_location(&directive_loc, L"فشل في تخصيص ذاكرة لاسم المعامل في #تعريف.");
+                                *error_message = format_preprocessor_error_at_location(&current_arg_loc, L"فشل في تخصيص ذاكرة لاسم المعامل في #تعريف.");
                                 success = false;
                                 break;
                             }
@@ -614,7 +630,7 @@ bool handle_preprocessor_directive(BaaPreprocessor *pp_state, wchar_t *directive
                                 if (!new_params)
                                 {
                                     free(param_name);
-                                    *error_message = format_preprocessor_error_at_location(&directive_loc, L"فشل في إعادة تخصيص الذاكرة لمعاملات الماكرو في #تعريف.");
+                                    *error_message = format_preprocessor_error_at_location(&current_arg_loc, L"فشل في إعادة تخصيص الذاكرة لمعاملات الماكرو في #تعريف.");
                                     success = false;
                                     break;
                                 }
@@ -680,6 +696,8 @@ bool handle_preprocessor_directive(BaaPreprocessor *pp_state, wchar_t *directive
                             // The current add_macro frees params if it fails after taking ownership.
                             // If parsing params failed, they are freed above.
                             // So, no explicit free here unless add_macro's contract changes.
+                            // Make sure name_error_loc is used here if body is missing or add_macro fails.
+                            // add_macro itself might need to accept a location for its internal errors.
                         }
                     }
                     free(macro_name);

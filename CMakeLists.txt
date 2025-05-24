@@ -108,6 +108,24 @@ target_include_directories(baa_lexer_tester
         ${CMAKE_SOURCE_DIR}/src/lexer # For lexer_internal.h if needed by included lexer files
 )
 
+# --- Standalone AST Tester ---
+add_executable(baa_ast_tester
+    tools/baa_ast_tester.c
+)
+
+# Link dependencies for the AST tester
+target_link_libraries(baa_ast_tester PRIVATE
+    baa_ast          # The new AST library we defined
+    baa_utils        # AST uses utils for memory, and tester might too
+    BaaCommonSettings # For common compiler/project settings
+)
+
+# Include directories for the AST tester
+target_include_directories(baa_ast_tester
+    PRIVATE
+        ${CMAKE_SOURCE_DIR}/include  # To find "baa/ast/ast.h", "baa/utils/utils.h"
+        # No need for ${CMAKE_SOURCE_DIR}/src/ast here as public headers are in include/
+)
 # تفعيل الاختبارات (معطل مؤقتاً)
 # enable_testing()
 # add_subdirectory(tests) # Keep this if tests are separate

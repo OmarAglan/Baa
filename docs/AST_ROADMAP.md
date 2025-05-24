@@ -1,140 +1,263 @@
-# Baa Language AST Implementation Roadmap (New Design)
+## Updated `docs/AST_ROADMAP.md` (v2 - Detailed)
 
-**Status: This document outlines the implementation plan for the new Abstract Syntax Tree (AST) following the removal of the previous implementation. All items are planned unless otherwise noted.**
+**Status: This document outlines the detailed implementation plan for the new Abstract Syntax Tree (AST), following Design v2. All items are planned unless otherwise noted.**
 
-## Core Design Principles (Adopted from AST.md)
+The new AST (Abstract Syntax Tree) will be built around a unified `BaaNode` structure. Each `BaaNode` will have a `kind` (from a comprehensive `BaaNodeKind` enum) and a `void* data` pointer to a specific data structure tailored to that kind. It will also include a `BaaSourceSpan` for precise error reporting. Memory management will be a key focus, with dedicated creation and freeing functions.
 
-- [x] Standardized Node Structure (Base `BaaNode`, `BaaExpr`, `BaaStmt`)
-- [x] Data Pointer Approach (`void* data` for specific node data)
-- [x] Type Enumeration (`BaaNodeKind`, `BaaExprKind`, `BaaStmtKind`)
-- [x] Clear Memory Ownership Rules (Creator allocates, user frees via `baa_free_node`, etc.)
-- [x] Consistent String Handling (Duplication for identifiers/literals)
+### Phase 0: Core Definitions & Setup
 
-## Phase 1: Foundational AST Structures
+**Goal:** Establish the absolute foundational types and structures for the AST.
 
-- **Base Nodes & Kinds:**
-  - [ ] Define `BaaNode`, `BaaExpr`, `BaaStmt` base structs in `ast.h` (or equivalent header).
-    - [ ] **New Sub-task:** Clarify and implement the precise interrelationship and hierarchy between `BaaNode`, `BaaExpr`, and `BaaStmt` (e.g., decide on struct embedding vs. unified kind enum vs. distinct hierarchies as per `AST.md` discussion, and implement chosen approach).
-  - [ ] Define `BaaNodeKind` enum (`BAA_NODE_PROGRAM`, `BAA_NODE_FUNCTION`, `BAA_NODE_EXPRESSION`, `BAA_NODE_STATEMENT`, etc.).
-  - [ ] Define `BaaExprKind` enum.
-  - [ ] Define `BaaStmtKind` enum.
-  - [ ] Implement `BaaSourceLocation` struct:
-    - [ ] Initial implementation with start line/column and filename.
-    - [ ] Future Consideration: Evaluate adding end line/column or token length for more precise source mapping.
-  - [ ] Implement creation functions (`baa_ast_create_node`, `baa_ast_create_expr`, `baa_ast_create_stmt`).
-    - [ ] **New Sub-task:** Implement type-safe accessor helpers/macros for `void* data` payloads (e.g., `AS_LITERAL_EXPR_DATA(node)`) to improve code safety and readability when accessing specific node data.
-  - [ ] Implement destruction functions (`baa_ast_free_node`, `baa_ast_free_expr`, `baa_ast_free_stmt`).
+1. **Define `BaaSourceLocation` and `BaaSourceSpan`:**
+    * **File:** `ast_types.h` (or similar, e.g., `ast_core.h`)
+    * **Description:** Implement the `BaaSourceLocation` (filename, line, column) and `BaaSourceSpan` (start and end `BaaSourceLocation`) structs. These are fundamental for error reporting and tooling.
+    * **Details:**
+        * `filename` in `BaaSourceLocation` should be `const char*` (assuming canonical, shared strings for filenames).
+        * Line and column are `size_t` and 1-based.
+    * **Verification:** Review struct definitions for completeness.
 
-- **Basic Literal Expressions (`BAA_EXPR_LITERAL`):**
-  - [ ] Define `BaaLiteralKind` enum (`BAA_LITERAL_BOOL`, `BAA_LITERAL_INT`, `BAA_LITERAL_FLOAT`, `BAA_LITERAL_CHAR`, `BAA_LITERAL_STRING`, `BAA_LITERAL_NULL`).
-  - [ ] Define `BaaLiteralData` struct (with union for values, ensuring `long long` for int, `double` for float).
-  - [ ] Implement creation/freeing for literal expression nodes.
+2. **Define Initial `BaaNodeKind` Enum:**
+    * **File:** `ast_types.h` (or `ast_node.h`)
+    * **Description:** Create the `BaaNodeKind` enum. Start with a few essential kinds needed for early testing, like `BAA_NODE_KIND_PROGRAM`, `BAA_NODE_KIND_LITERAL_EXPR`, `BAA_NODE_KIND_UNKNOWN`.
+    * **Details:** Plan for future expansion to cover all language constructs.
+    * **Verification:** Enum values are distinct. Naming convention is clear.
 
-- **Basic Variable Expressions (`BAA_EXPR_VARIABLE`):**
-  - [ ] Define `BaaVariableExpr` struct (for `wchar_t* name`).
-  - [ ] Implement creation/freeing for variable expression nodes.
+3. **Define `BaaNode` Base Structure:**
+    * **File:** `ast_node.h` (or `ast_core.h`)
+    * **Description:** Implement the `BaaNode` struct containing `BaaNodeKind kind`, `BaaSourceSpan span`, and `void* data`.
+    * **Details:** Include comments explaining each field's purpose.
+    * **Verification:** Struct definition is correct.
 
-- **Basic Statement Types:**
-  - [ ] `BAA_STMT_EXPR`: Define `BaaExprStmt` struct.
-  - [ ] `BAA_STMT_BLOCK`: Define `BaaBlock` struct (dynamic array of statements).
-  - [ ] Implement creation/freeing for these statement nodes.
+4. **Define `BaaAstNodeModifiers` and Basic Flags:**
+    * **File:** `ast_types.h`
+    * **Description:** Define `typedef uint32_t BaaAstNodeModifiers;` and initial `#define` constants for `BAA_MOD_NONE`, `BAA_MOD_CONST`.
+    * **Verification:** Bit flags are unique powers of 2.
 
-## Phase 2: Core Expressions & Declarations
+5. **Basic AST Memory Utilities (Prototypes):**
+    * **File:** `ast_memory.h` (or `ast_utils.h`)
+    * **Description:** Declare prototypes for the core node creation and destruction functions:
+        * `BaaNode* baa_ast_new_node(BaaNodeKind kind, BaaSourceSpan span);` (allocates `BaaNode` and initializes basic fields, `data` is initially NULL or handled by more specific functions).
+        * `void baa_ast_free_node(BaaNode* node);` (master free function).
+    * **Details:** These will be the workhorses for AST manipulation.
+    * **Verification:** Function signatures are clear and match the intended memory management model.
 
-- **Unary Expressions (`BAA_EXPR_UNARY`):**
-  - [ ] Define `BaaUnaryOpKind` enum.
-  - [ ] Define `BaaUnaryExpr` struct.
-  - [ ] Implement creation/freeing.
-- **Binary Expressions (`BAA_EXPR_BINARY`):**
-  - [ ] Define `BaaBinaryOpKind` enum.
-  - [ ] Define `BaaBinaryExpr` struct.
-  - [ ] Implement creation/freeing.
-- **Assignment Expressions (`BAA_EXPR_ASSIGN`):**
-  - [ ] Define `BaaAssignExpr` struct.
-  - [ ] Implement creation/freeing.
-- **Variable Declaration Statements (`BAA_STMT_VAR_DECL`):**
-  - [ ] Define `BaaVarDeclStmt` struct (name, type reference, initializer).
-  - [ ] Implement creation/freeing.
+6. **Basic AST Memory Utilities (Implementation):**
+    * **File:** `ast_memory.c` (or `ast_utils.c`)
+    * **Description:** Implement `baa_ast_new_node`. This function will:
+        * Allocate memory for a `BaaNode`.
+        * Initialize `kind` and `span`.
+        * Initialize `data` to `NULL`.
+        * Return the allocated node or `NULL` on failure.
+    * Implement the basic structure for `baa_ast_free_node`. Initially, it might just free `node->data` (if not NULL) and then `node` itself. The recursive freeing of children and specific data will be added as node types are implemented.
+    * **Verification:** Basic allocation and freeing work without leaks for simple nodes (tested with `BAA_NODE_KIND_UNKNOWN` and NULL data).
 
-## Phase 3: Control Flow & Function Calls
+### Phase 1: Minimal Expressions & Statements
 
-- **Function Call Expressions (`BAA_EXPR_CALL`):**
-  - [ ] Define `BaaCallExpr` struct (callee, arguments, count).
-  - [ ] Implement creation/freeing.
-- **If Statements (`BAA_STMT_IF`):**
-  - [ ] Define `BaaIfStmt` struct (condition, then_statement, else_statement).
-  - [ ] Implement creation/freeing.
-- **While Statements (`BAA_STMT_WHILE`):**
-  - [ ] Define `BaaWhileStmt` struct (condition, body).
-  - [ ] Implement creation/freeing.
-- **Return Statements (`BAA_STMT_RETURN`):**
-  - [ ] Define `BaaReturnStmt` struct (value).
-  - [ ] Implement creation/freeing.
+**Goal:** Implement a few essential AST node types to allow the parser to start building a very basic tree.
 
-## Phase 4: Advanced Structures & Program Representation
+1. **Literal Expression Node (`BAA_NODE_KIND_LITERAL_EXPR`):**
+    * **File (Defs):** `ast_expressions.h` (for `BaaLiteralExprData`), `ast_types.h` (add `BAA_NODE_KIND_LITERAL_EXPR` to enum).
+    * **File (Funcs):** `ast_expressions.c` (for creation/freeing helpers).
+    * **Description:**
+        * Define `BaaLiteralKind` enum (`BAA_LITERAL_KIND_INT`, `BAA_LITERAL_KIND_STRING`, etc.).
+        * Define `BaaLiteralExprData` struct with `BaaLiteralKind literal_kind`, the `union value`, and `BaaType* determined_type` (pointer to canonical type).
+        * Implement `BaaNode* baa_ast_new_literal_int_node(BaaSourceSpan span, long long value, BaaType* type);`
+        * Implement `BaaNode* baa_ast_new_literal_string_node(BaaSourceSpan span, const wchar_t* value, BaaType* type);` (duplicates string).
+        * Update `baa_ast_free_node`'s dispatch to call a helper `void baa_ast_free_literal_expr_data(BaaLiteralExprData* data);` which frees `string_value` if it's a string literal.
+    * **Verification:** Can create, inspect, and free integer and string literal nodes. Memory for duplicated strings is managed.
 
-- **Function Definitions (`BAA_NODE_FUNCTION`):**
-  - [ ] Define `BaaParameter` struct (name, type reference, modifiers).
-  - [ ] Define `BaaFunction` struct (name, return_type_ref, parameters, body, modifiers).
-  - [ ] Implement creation/freeing for function and parameter nodes.
-- **Program Structure (`BAA_NODE_PROGRAM`):**
-  - [ ] Define `BaaProgram` struct (array of top-level nodes).
-  - [ ] Implement creation/freeing.
-- **For Loops (`BAA_STMT_FOR`):**
-  - [ ] Define `BaaForStmt` struct (initializer, condition, increment, body).
-  - [ ] Implement creation/freeing.
-- **Switch/Case Statements (`BAA_STMT_SWITCH`, `BAA_STMT_CASE`, `BAA_STMT_DEFAULT`):**
-  - [ ] Define `BaaSwitchStmt`, `BaaCaseStmt`, `BaaDefaultStmt` structs.
-  - [ ] Implement creation/freeing.
-- **Break/Continue Statements (`BAA_STMT_BREAK`, `BAA_STMT_CONTINUE`):**
-  - [ ] Define `BaaBreakStmt`, `BaaContinueStmt` structs.
-  - [ ] Implement creation/freeing.
+2. **Identifier Expression Node (`BAA_NODE_KIND_IDENTIFIER_EXPR`):**
+    * **File (Defs):** `ast_expressions.h` (for `BaaIdentifierExprData`), `ast_types.h` (add kind).
+    * **File (Funcs):** `ast_expressions.c`.
+    * **Description:**
+        * Define `BaaIdentifierExprData` struct with `wchar_t* name;`.
+        * Implement `BaaNode* baa_ast_new_identifier_expr_node(BaaSourceSpan span, const wchar_t* name);` (duplicates name).
+        * Update `baa_ast_free_node` to call `baa_ast_free_identifier_expr_data(BaaIdentifierExprData* data);` which frees `name`.
+    * **Verification:** Can create, inspect, and free identifier nodes. Name is correctly duplicated and freed.
 
-## Phase 5: Type System Representation in AST
+3. **Expression Statement Node (`BAA_NODE_KIND_EXPR_STMT`):**
+    * **File (Defs):** `ast_statements.h` (for `BaaExprStmtData`), `ast_types.h` (add kind).
+    * **File (Funcs):** `ast_statements.c`.
+    * **Description:**
+        * Define `BaaExprStmtData` struct with `BaaNode* expression;`.
+        * Implement `BaaNode* baa_ast_new_expr_stmt_node(BaaSourceSpan span, BaaNode* expression_node);`.
+        * Update `baa_ast_free_node` to call `baa_ast_free_expr_stmt_data(BaaExprStmtData* data);` which recursively calls `baa_ast_free_node(data->expression);`.
+    * **Verification:** Can create expression statements wrapping literal or identifier nodes. Freeing is recursive.
 
-- **Type Nodes/References:**
-  - [ ] Define `BaaType` struct and `BaaTypeKind` enum (as per `AST.md` and `types.h`).
-    - [ ] Ensure `BaaType` struct includes fields/flags for modifiers (e.g., unsigned, long, long_long for integers; double for floats) to distinguish variations of base types like BAA_TYPE_INT and BAA_TYPE_FLOAT.
-  - [ ] Ensure AST nodes that refer to types (e.g., `BaaVarDeclStmt`, `BaaFunction` for return/params, `BaaCastExpr`) use pointers to `BaaType` structs.
-  - [ ] Implement creation/freeing for `BaaType` nodes if they are dynamically allocated as part of the AST (or manage them via a separate type table/cache).
-- **AST Nodes for Type Definitions:**
-    - [ ] Plan and define AST node structures for user-defined types (e.g., `BaaStructDefNode`, `BaaUnionDefNode`, `BaaEnumDefNode`, `BaaTypedefNode`) as these language features are tackled by the parser.
-- **Array Expressions & Indexing (`BAA_EXPR_ARRAY`, `BAA_EXPR_INDEX`):**
-  - [ ] Define `BaaArrayExpr` and `BaaIndexExpr` structs.
-  - [ ] Implement creation/freeing.
-- **Cast Expressions (`BAA_EXPR_CAST`):**
-  - [ ] Define `BaaCastExpr` struct (target_type_ref, expression).
-  - [ ] Implement creation/freeing.
+4. **Block Statement Node (`BAA_NODE_KIND_BLOCK_STMT`):**
+    * **File (Defs):** `ast_statements.h` (for `BaaBlockStmtData`), `ast_types.h` (add kind).
+    * **File (Funcs):** `ast_statements.c`.
+    * **Description:**
+        * Define `BaaBlockStmtData` struct with `BaaNode** statements; size_t count; size_t capacity;`.
+        * Implement `BaaNode* baa_ast_new_block_stmt_node(BaaSourceSpan span);`.
+        * Implement `void baa_ast_add_stmt_to_block(BaaNode* block_node, BaaNode* statement_node);` (handles dynamic array resizing).
+        * Update `baa_ast_free_node` to call `baa_ast_free_block_stmt_data(BaaBlockStmtData* data);` which iterates through `statements`, calls `baa_ast_free_node` on each, then frees the `statements` array.
+    * **Verification:** Can create blocks, add statements. Freeing is recursive. Dynamic array works.
 
-## Phase 6: Advanced AST Infrastructure & Utilities
+5. **Program Node (`BAA_NODE_KIND_PROGRAM`):**
+    * **File (Defs):** `ast_program.h` (for `BaaProgramData`), `ast_types.h` (add kind).
+    * **File (Funcs):** `ast_program.c`.
+    * **Description:**
+        * Define `BaaProgramData` struct similar to `BaaBlockStmtData` but for `top_level_declarations`.
+        * Implement creation, adding declarations, and freeing logic analogous to `BaaBlockStmtData`.
+    * **Verification:** Can create the root program node.
 
-- **AST Node Enhancements:**
-  - [ ] Consider adding parent pointers to AST nodes (evaluate trade-offs: ease of navigation vs. complexity of construction/modification).
-  - [ ] Design and implement a unique ID system for AST nodes (for debugging, analysis, cross-referencing).
-  - [ ] Refine storage for "Node Modifiers" (e.g., `ثابت`, `مضمن`, `مقيد`) in relevant AST nodes (e.g., using a bitmask or dedicated flags struct in `BaaVarDeclStmt`, `BaaFunction`). Ensure all modifiers from `language.md` are covered.
-- **AST Traversal & Transformation:**
-  - [ ] Design and implement a basic AST Visitor pattern infrastructure for traversals (e.g., for semantic analysis, code generation).
-  - [ ] Plan for AST transformation capabilities (e.g., for desugaring complex constructs or early optimization passes).
-- **AST Utilities:**
-  - [ ] Implement an AST pretty-printer (outputs a textual representation of the AST, useful for debugging parser output).
-  - [ ] Implement AST validation utilities (to check for structural integrity, e.g., correct child node types, non-NULL required children).
-  - [ ] AST serialization/deserialization (for debugging or inter-tool communication).
+6. **Type-Safe Accessor Macros (Initial Set):**
+    * **File:** `ast_utils.h`
+    * **Description:** Implement the first set of accessor macros for the node types created in this phase (e.g., `BaaNodeGetLiteralData`, `BaaNodeGetBlockStmtData`).
+    * **Details:** Macros should check `node`, `node->data`, and `node->kind` before casting and returning.
+    * **Verification:** Macros compile and work correctly for valid and invalid node inputs.
 
-## Future Considerations (Longer Term)
+### Phase 2: Basic Declarations & Binary/Unary Expressions
 
-- [ ] AST support for `struct`, `union`, `enum` declarations and usage (covered in Phase 5/6 for node definitions).
-- [ ] AST nodes for pointer operations (dereference, address-of).
-- [ ] AST representation for module system (`BAA_NODE_IMPORT`, `BAA_NODE_MODULE`).
-- [ ] Enhanced error state tracking within AST nodes (e.g., a flag if a node or its subtree contains errors).
-- [ ] Support for planned advanced language features (lambdas, pattern matching, async/await) by defining corresponding AST nodes.
-- [ ] AST Annotations for Semantic Analysis: Define specific fields in expression/identifier nodes to store resolved types and links to symbol table entries post-semantic analysis.
-- [ ] Lvalue/Rvalue Distinction: Investigate if AST nodes need explicit flags or distinct types to represent lvalue contexts for expressions, or if this is purely a semantic analysis concern.
-- [ ] Memory Management Optimization: Evaluate and potentially implement an arena allocator or a dedicated memory pool for AST nodes to improve allocation performance and simplify freeing the entire tree.
+**Goal:** Expand AST capabilities to represent simple declarations and common expressions.
 
+1. **Variable Declaration Statement Node (`BAA_NODE_KIND_VAR_DECL_STMT`):**
+    * **File (Defs):** `ast_declarations.h` (for `BaaVarDeclData`), `ast_types.h` (add kind).
+    * **File (Funcs):** `ast_declarations.c`.
+    * **Description:**
+        * Define `BaaVarDeclData` with `wchar_t* name; BaaAstNodeModifiers modifiers; BaaNode* type_node; BaaNode* initializer_expr;`.
+        * Implement `baa_ast_new_var_decl_node(...)`.
+        * Update `baa_ast_free_node` for `BaaVarDeclData` (free name, type_node, initializer_expr).
+    * **Verification:** Can represent `ثابت عدد_صحيح س = 10.`.
 
-## Documentation & Testing
+2. **Type Representation Node (`BAA_NODE_KIND_TYPE`):**
+    * **File (Defs):** `ast_types.h` (for `BaaTypeAstData`, `BaaTypeAstKind`), update `BaaNodeKind`.
+    * **File (Funcs):** `ast_types.c`.
+    * **Description:**
+        * Define `BaaTypeAstKind` (`PRIMITIVE`, `ARRAY`, etc.).
+        * Define `BaaTypeAstData` union to hold specific type syntax info (e.g., primitive name string, array element type node).
+        * Implement `baa_ast_new_primitive_type_node(BaaSourceSpan span, const wchar_t* type_name_str);`.
+        * Implement `baa_ast_new_array_type_node(BaaSourceSpan span, BaaNode* element_type_node, BaaNode* size_expr_node);`.
+        * Update `baa_ast_free_node` for `BaaTypeAstData`.
+    * **Verification:** Can represent simple type syntax like `عدد_صحيح` and `حرف[]`.
 
-- [ ] Update `AST.md` continuously as structures are finalized and implemented.
-- [ ] Add Doxygen comments to `ast.h` (or equivalent header) for all public structures and functions.
-- [ ] Develop unit tests for each AST node type creation, data storage, and freeing.
-- [ ] Add tests for memory management and resource leaks in AST operations.
+3. **Binary Expression Node (`BAA_NODE_KIND_BINARY_EXPR`):**
+    * **File (Defs):** `ast_expressions.h` (for `BaaBinaryExprData`, `BaaBinaryOperatorKind`), `ast_types.h` (add kind).
+    * **File (Funcs):** `ast_expressions.c`.
+    * **Description:**
+        * Define `BaaBinaryOperatorKind` enum (ADD, SUB, EQUAL, etc.).
+        * Define `BaaBinaryExprData` with `BaaBinaryOperatorKind op_kind; BaaNode* left_expr; BaaNode* right_expr;`.
+        * Implement `baa_ast_new_binary_expr_node(...)`.
+        * Update `baa_ast_free_node` (recursively free left/right).
+    * **Verification:** Can represent `a + b`.
+
+4. **Unary Expression Node (`BAA_NODE_KIND_UNARY_EXPR`):**
+    * **File (Defs):** `ast_expressions.h` (for `BaaUnaryExprData`, `BaaUnaryOperatorKind`), `ast_types.h` (add kind).
+    * **File (Funcs):** `ast_expressions.c`.
+    * **Description:**
+        * Define `BaaUnaryOperatorKind` enum (UNARY_MINUS, LOGICAL_NOT, etc.).
+        * Define `BaaUnaryExprData` with `BaaUnaryOperatorKind op_kind; BaaNode* operand_expr;`.
+        * Implement `baa_ast_new_unary_expr_node(...)`.
+        * Update `baa_ast_free_node` (recursively free operand).
+    * **Verification:** Can represent `-x` or `!flag`.
+
+5. **Assignment Expression Node (`BAA_NODE_KIND_ASSIGN_EXPR`):**
+    * **File (Defs):** `ast_expressions.h` (for `BaaAssignExprData`), `ast_types.h` (add kind).
+    * **File (Funcs):** `ast_expressions.c`.
+    * **Description:**
+        * Define `BaaAssignExprData` with `BaaNode* target_lvalue; BaaNode* value_expr;`. (Note: Target must be an lvalue, e.g., identifier or index expr).
+        * Implement `baa_ast_new_assign_expr_node(...)`.
+        * Update `baa_ast_free_node`.
+    * **Verification:** Can represent `x = y`.
+
+### Phase 3: Control Flow & Function Definitions
+
+**Goal:** Support core control flow statements and function definitions.
+
+1. **If Statement Node (`BAA_NODE_KIND_IF_STMT`):**
+    * **File (Defs/Funcs):** `ast_statements.h`/`.c`, `ast_types.h`.
+    * **Description:** Define `BaaIfStmtData` (`condition_expr`, `then_stmt`, `else_stmt`). Implement creation/freeing.
+    * **Verification:** Can represent `إذا (x > 0) { ... } وإلا { ... }`.
+
+2. **Return Statement Node (`BAA_NODE_KIND_RETURN_STMT`):**
+    * **File (Defs/Funcs):** `ast_statements.h`/`.c`, `ast_types.h`.
+    * **Description:** Define `BaaReturnStmtData` (`value_expr` (optional)). Implement creation/freeing.
+    * **Verification:** Can represent `إرجع x.` and `إرجع.`.
+
+3. **Parameter Node (`BAA_NODE_KIND_PARAMETER`):**
+    * **File (Defs/Funcs):** `ast_declarations.h`/`.c` (for `BaaParameterData`), `ast_types.h`.
+    * **Description:** Define `BaaParameterData` (`name`, `type_node`). Implement creation/freeing.
+    * **Verification:** Can represent function parameters like `عدد_صحيح x`.
+
+4. **Function Definition Node (`BAA_NODE_KIND_FUNCTION_DEF`):**
+    * **File (Defs/Funcs):** `ast_declarations.h`/`.c` (for `BaaFunctionDefData`), `ast_types.h`.
+    * **Description:** Define `BaaFunctionDefData` (`name`, `modifiers`, `return_type_node`, `parameters` (array of `BaaNode*` of kind `PARAMETER`), `body` (block stmt), `is_variadic`). Implement creation/freeing.
+    * **Verification:** Can represent a full function definition.
+
+5. **Call Expression Node (`BAA_NODE_KIND_CALL_EXPR`):**
+    * **File (Defs/Funcs):** `ast_expressions.h`/`.c` (for `BaaCallExprData`), `ast_types.h`.
+    * **Description:** Define `BaaCallExprData` (`callee_expr`, `arguments` (array of `BaaNode*` expression kinds)). Implement creation/freeing.
+    * **Verification:** Can represent `my_func(a, b)`.
+
+6. **While Statement Node (`BAA_NODE_KIND_WHILE_STMT`):**
+    * **File (Defs/Funcs):** `ast_statements.h`/`.c`, `ast_types.h`.
+    * **Description:** Define `BaaWhileStmtData` (`condition_expr`, `body_stmt`). Implement creation/freeing.
+    * **Verification:** Can represent `طالما (x < 10) { ... }`.
+
+### Phase 4: Advanced Expressions and Statements
+
+**Goal:** Add support for more complex language features.
+
+1. **For Statement Node (`BAA_NODE_KIND_FOR_STMT`):**
+    * **File (Defs/Funcs):** `ast_statements.h`/`.c`, `ast_types.h`.
+    * **Description:** Define `BaaForStmtData` (`initializer_stmt` (var decl or expr stmt), `condition_expr`, `increment_expr`, `body_stmt`). Implement creation/freeing.
+    * **Verification:** Can represent `لكل (عدد_صحيح i = 0; i < 10; i++) { ... }`.
+
+2. **Break & Continue Statement Nodes (`BAA_NODE_KIND_BREAK_STMT`, `BAA_NODE_KIND_CONTINUE_STMT`):**
+    * **File (Defs/Funcs):** `ast_statements.h`/`.c`, `ast_types.h`.
+    * **Description:** Data struct might be empty or hold label info later. Implement creation/freeing.
+    * **Verification:** Simple break/continue can be represented.
+
+3. **Array Literal Expression Node (`BAA_NODE_KIND_ARRAY_LITERAL_EXPR`):**
+    * **File (Defs/Funcs):** `ast_expressions.h`/`.c`, `ast_types.h`.
+    * **Description:** Define `BaaArrayLiteralExprData` (`elements` (array of `BaaNode*` expression kinds)). Implement creation/freeing.
+    * **Verification:** Can represent `[1, 2, "مرحبا"]`.
+
+4. **Index Expression Node (`BAA_NODE_KIND_INDEX_EXPR`):**
+    * **File (Defs/Funcs):** `ast_expressions.h`/`.c`, `ast_types.h`.
+    * **Description:** Define `BaaIndexExprData` (`array_expr`, `index_expr`). Implement creation/freeing.
+    * **Verification:** Can represent `my_array[i]`.
+
+5. **Cast Expression Node (`BAA_NODE_KIND_CAST_EXPR`):**
+    * **File (Defs/Funcs):** `ast_expressions.h`/`.c`, `ast_types.h`.
+    * **Description:** Define `BaaCastExprData` (`target_type_node` (kind `TYPE`), `expression_to_cast`). Implement creation/freeing.
+    * **Verification:** Can represent `(عدد_حقيقي)my_int_var`.
+
+### Phase 5: AST Infrastructure & Utilities
+
+**Goal:** Finalize core AST utilities and prepare for semantic analysis and code generation.
+
+1. **Complete Type-Safe Accessor Macros:**
+    * **File:** `ast_utils.h`
+    * **Description:** Implement accessor macros for ALL `BaaNodeKind` data types defined.
+    * **Verification:** All macros are present and function correctly.
+
+2. **AST Visitor Pattern Implementation:**
+    * **File:** `ast_visitor.h`, `ast_visitor.c`
+    * **Description:**
+        * Define `BaaASTVisitor` struct with `pre_visit_node` and `post_visit_node` function pointers (or more specific visit methods if chosen).
+        * Implement `void baa_ast_traverse(BaaNode* root_node, BaaASTVisitor* visitor, void* user_data);` to perform a depth-first traversal.
+    * **Verification:** A simple visitor can traverse a basic AST.
+
+3. **AST Pretty-Printer Utility:**
+    * **File:** `ast_printer.h`, `ast_printer.c`
+    * **Description:** Implement an AST pretty-printer using the Visitor pattern. It should output a human-readable textual representation of the AST.
+    * **Details:** Output should clearly show node kinds, data (e.g., literal values, operator types, identifier names), and tree structure (indentation).
+    * **Verification:** Pretty-printer output matches expected for various AST structures.
+
+4. **Parent Pointers (Decision & Implementation if chosen):**
+    * **Description:** Evaluate and decide whether to add `BaaNode* parent;` to `BaaNode`.
+    * If yes: Update `baa_ast_new_node` and all functions that build the tree structure (e.g., `baa_ast_add_stmt_to_block`, `baa_ast_new_binary_expr_node`) to correctly set parent pointers. This adds complexity to tree construction and modification but can simplify some analyses.
+    * **Verification:** Parent pointers are correctly set and managed.
+
+5. **Unique Node IDs (Optional Enhancement):**
+    * **Description:** Consider adding a `size_t node_id;` to `BaaNode`, assigned uniquely upon creation. Useful for debugging and analysis.
+    * **Verification:** IDs are unique.
+
+### Future Considerations (Beyond initial redesign scope)
+
+* AST support for `struct`, `union`, `enum` declarations and member access.
+* AST nodes for pointer operations (dereference, address-of).
+* AST representation for module system (`#تضمين` if parser handles, explicit `module` keywords).
+* AST Annotations for Semantic Analysis results (e.g., `resolved_type`, `symbol_table_entry` pointers within existing node data structures or `BaaNode` itself).

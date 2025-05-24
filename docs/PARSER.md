@@ -1,23 +1,22 @@
-# Baa Language Parser Structure Documentation (New Design)
+# Baa Language Parser Structure Documentation (New Design v2)
 
-**Status: This document outlines the new design for the Parser following the removal of the previous implementation. Items here are largely planned unless otherwise noted.**
+**Status: This document outlines the revised design for the Parser. Items here are largely planned unless otherwise noted. This parser will generate an AST conforming to the new `AST.md` (v2) design.**
 
-This document provides a comprehensive reference for the parser implementation in the Baa programming language compiler. The parser's role is to transform token sequences produced by the lexer into an Abstract Syntax Tree (AST) representation, based on the design in `docs/AST.md`.
-
-## 0. Grammar Basis
-
-While a separate formal BNF/EBNF grammar document is not strictly maintained for Baa at this stage, the structure of the recursive descent parsing functions is directly guided by the syntax rules specified in `docs/language.md`. The parser implementation itself serves as an executable form of the language grammar. Consideration may be given to formally documenting the grammar if language complexity significantly increases or if parser generator tools are explored in the future.
+This document provides a comprehensive reference for the parser implementation in the Baa programming language compiler. The parser's role is to transform token sequences produced by the lexer into an Abstract Syntax Tree (AST), specifically a tree of `BaaNode` structures.
 
 ## 1. Core Design Principles
 
-1.  **Modularity**: The parser is organized into specialized modules for different language constructs (Expressions, Statements, Declarations, Types).
-2.  **Recursive Descent Approach**: The parser uses a top-down, predictive recursive descent parsing technique. Each significant non-terminal in the Baa grammar will correspond to a parsing function.
-3.  **Syntactic Focus & AST Integration**: The parser is strictly responsible for syntactic validation and constructing the Abstract Syntax Tree (AST). It achieves this by invoking dedicated AST node creation functions (e.g., `baa_ast_new_binary_expr(...)`) which encapsulate AST construction logic. Semantic checks (e.g., type checking, scope resolution) are deferred to a subsequent Semantic Analysis phase. The parser may collect type *information* (e.g., from type annotations) and store it in the AST, but does not validate its semantic correctness.
-4.  **Error Handling**: Robust error detection, reporting, and a defined recovery mechanism are integral to the design.
+1. **Modularity**: The parser is organized into logical modules/files for different language constructs (e.g., `expression_parser.c`, `statement_parser.c`, `declaration_parser.c`, `type_parser.c`).
+2. **Recursive Descent Approach**: The parser uses a top-down, predictive recursive descent parsing technique. Each significant non-terminal in the Baa grammar will typically correspond to a parsing function that returns a `BaaNode*`.
+3. **Syntactic Focus & AST Construction**:
+    * The parser is strictly responsible for syntactic validation according to Baa's grammar.
+    * Upon successful recognition of a grammar rule, it constructs the appropriate `BaaNode` (including its specific `data` struct) using AST creation functions (e.g., `baa_ast_new_binary_expr_node(...)`).
+    * Semantic checks (e.g., type checking, scope resolution) are deferred to a subsequent Semantic Analysis phase. The parser collects syntactic information (like type names in declarations) and stores it in the AST.
+4. **Error Handling & Recovery**: Robust error detection, reporting (with accurate `BaaSourceSpan`), and a defined recovery mechanism (panic mode with synchronization) are integral.
 
 ## 2. Parser Architecture
 
-The parser is structured into the following key components:
+The parser state and core logic reside in `parser.c`, with specialized parsing functions in separate modules:
 
 ```
 BaaParser (Main Parser - parser.c)
@@ -25,117 +24,128 @@ BaaParser (Main Parser - parser.c)
 ├── Statement Parser (statement_parser.c)
 ├── Declaration Parser (declaration_parser.c)
 └── Type Parser (type_parser.c)
-└── Parser Helpers (parser_utils.c or similar - for common utilities like token consumption, error reporting)
+└── Parser Utilities (parser_utils.c - token consumption, error reporting, etc.)
 ```
 
-## 3. Current Implementation Status (New Design - May 2025)
+Each parsing function (e.g., `parse_if_statement`, `parse_binary_expression`) will return a `BaaNode*` representing the construct parsed, or `NULL` if a syntax error occurred that couldn't be recovered from for that construct.
 
-**Note:** Following the removal of the old parser components, the parser is being rebuilt. Most features listed below are planned for the new implementation. The modular structure is the intended organization.
+## 3. Parser State
 
-- 🔲 Basic parser infrastructure with recursive descent approach.
-- 🔲 Expression parsing with precedence handling.
-- 🔲 Statement parsing for basic control flow.
-- 🔲 Declaration parsing for variables, functions.
-- 🔲 Basic type information collection from annotations.
-- 🔲 Error detection and reporting mechanisms.
-- 🔲 Boolean type support (`منطقي`) parsing.
-- 🔲 Basic function parameter parsing.
-- 🔲 Basic operator parsing.
-
-## 4. Parser State
-
-The parser maintains its state in the `BaaParser` structure (defined in `parser.h` or an internal header):
+The parser maintains its state in the `BaaParser` structure (defined in an internal parser header):
 
 ```c
 typedef struct {
     BaaLexer* lexer;           // Pointer to the lexer instance providing tokens
-    BaaToken current_token;    // The current token being processed
-    BaaToken previous_token;   // The most recently consumed token
+    BaaToken current_token;    // The current token being processed (lookahead)
+    BaaToken previous_token;   // The most recently consumed token (useful for source span)
     bool had_error;            // Flag: true if any syntax error has been encountered
     bool panic_mode;           // Flag: true if the parser is currently recovering from an error
-    // const wchar_t* error_message; // Error messages are typically reported, not stored long-term in parser state
-    // BaaSourceLocation location; // Current location is usually derived from current_token.loc
+    // DiagnosticContext* diagnostics; // Optional: For collecting multiple parse errors
 } BaaParser;
 ```
 
-## 5. Module Organization
+The `previous_token.span.start` and `current_token.span.end` (or `previous_token.span.end` after consumption) will be used to construct `BaaSourceSpan` for AST nodes.
 
-### Main Parser (`parser.c`/`parser.h`)
--   Entry point for parsing a complete program (e.g., `baa_parse_program`).
--   Manages the `BaaParser` state and core token consumption utilities (`advance`, `consume`, `match`, `check`, `peek`).
--   Dispatches to specialized parsers for top-level constructs (e.g., declarations, statements).
+## 4. Parsing Process & Key Function Responsibilities
 
-### Expression Parser (`expression_parser.c`/`expression_parser.h`)
--   Parses all types of expressions, adhering to Baa's operator precedence and associativity rules (defined in `src/operators/`).
--   **Strategy:** Expression parsing will primarily use a cascaded series of functions, each handling a specific level of operator precedence (e.g., `parse_assignment_expr()`, `parse_logical_or_expr()`, ..., `parse_primary_expr()`). This directly models the precedence hierarchy. For complex interactions or future extensibility, techniques like Pratt parsing might be considered if the cascaded approach becomes unwieldy.
--   Supports literals, identifiers (variables), function calls, unary/binary operators, assignments, grouping parentheses, array indexing, etc.
+### 4.1 Main Parser (`parser.c`, `parser.h`)
 
-### Statement Parser (`statement_parser.c`/`statement_parser.h`)
--   Parses various statement types.
--   `parse_statement()`: A dispatch function that determines the kind of statement based on the current token (e.g., `إذا`, `طالما`, `{`, identifier for expression statement).
--   Parses control flow statements (if (`إذا`), while (`طالما`), for (`لكل`), return (`إرجع`)). Support for `switch` (`اختر`), `case` (`حالة`), `break` (`توقف`), and `continue` (`أكمل`) is planned.
--   Handles blocks (`{ ... }`) and expression statements.
+* **`BaaParser* baa_parser_create(BaaLexer* lexer)`**: Initializes a new parser.
+* **`void baa_parser_free(BaaParser* parser)`**: Frees parser resources.
+* **`BaaNode* baa_parse_program(BaaParser* parser)`**: Entry point. Parses a sequence of top-level declarations (function definitions, global variable declarations) until `BAA_TOKEN_EOF`. Returns a `BaaNode*` of kind `BAA_NODE_KIND_PROGRAM`.
+* **Token Handling Utilities (internal in `parser_utils.c`):**
+  * `advance(BaaParser* p)`: Consumes `current_token`, makes next token current.
+  * `consume_token(BaaParser* p, BaaTokenType expected, const wchar_t* error_message)`: Consumes if `current_token.type == expected`, otherwise reports error.
+  * `match_token(BaaParser* p, BaaTokenType type)`: Consumes if `current_token.type == type`, returns true/false.
+  * `check_token(BaaParser* p, BaaTokenType type)`: Returns true if `current_token.type == type`, no consumption.
+  * `peek_token(BaaParser* p)`: Returns `current_token.type` without consumption.
 
-### Declaration Parser (`declaration_parser.c`/`declaration_parser.h`)
--   Parses declarations for variables, constants, functions, and potentially user-defined types (structs, enums) later.
--   `parse_declaration()`: A dispatch function for different kinds of declarations.
--   **Note:** Initial focus will be on variable and function declarations. The stubbed functions mentioned previously (`baa_parse_function_rest`, etc.) will be implemented or integrated here.
+### 4.2 Declaration Parser (`declaration_parser.c`)
 
-### Type Parser (`type_parser.c`/`type_parser.h`)
--   Parses type annotations found in declarations (variables, function parameters, return types).
--   Constructs preliminary `BaaType` representations (or references to predefined types) to be stored in the AST. Semantic validation of these types occurs later.
--   Handles primitive types (e.g., `عدد_صحيح`), array type syntax (e.g., `type[]`), and potentially pointer/struct/enum type syntax in the future.
+* **`BaaNode* parse_declaration(BaaParser* parser)`**: Dispatches based on keywords like type names (for variable/function), `ثابت`, etc.
+* **`BaaNode* parse_function_definition(BaaParser* parser)`**: Parses return type (using `parse_type_specifier`), name, parameters, and body. Returns `BaaNode*` of kind `BAA_NODE_KIND_FUNCTION_DEF`.
+  * Parameters: Parses a list of `type_specifier identifier`, creating `BaaNode*`s of kind `BAA_NODE_KIND_PARAMETER`.
+* **`BaaNode* parse_variable_declaration_statement(BaaParser* parser, BaaAstNodeModifiers initial_modifiers)`**: Parses `ثابت? type_specifier identifier ('=' expression)? '.'`. Returns `BaaNode*` of kind `BAA_NODE_KIND_VAR_DECL_STMT`. Handles `ثابت` modifier.
 
-## 6. Parsing Process
+### 4.3 Type Parser (`type_parser.c`)
 
-The parsing process generally follows this flow:
-1.  Initialize `BaaParser` with an initialized `BaaLexer`. Fetch the first token.
-2.  Call `baa_parse_program()`, which typically parses a sequence of top-level declarations until `BAA_TOKEN_EOF`.
-3.  `parse_declaration()` or `parse_statement()` (for top-level script-like code if supported) is called.
-4.  These functions recursively call other parsing functions for sub-constructs (e.g., `parse_expression()`, `parse_block_statement()`).
-5.  Each successful recognition of a grammar rule results in the creation of an AST node via dedicated AST creation functions (e.g., `baa_ast_new_if_stmt(...)`).
-6.  If a syntax error is encountered, `parser_error()` is called, and error recovery (`synchronize()`) is attempted.
+* **`BaaNode* parse_type_specifier(BaaParser* parser)`**: Parses a type specification from the token stream (e.g., `عدد_صحيح`, `حرف[]`, `مؤشر<نوع>`).
+  * Returns a `BaaNode*` of kind `BAA_NODE_KIND_TYPE`.
+  * The `BaaTypeAstData` within this node will capture the structure of the parsed type (e.g., base name, array markers).
 
-## 7. Error Handling and Recovery
+### 4.4 Statement Parser (`statement_parser.c`)
 
-The parser employs a "panic mode" error recovery strategy:
-1.  **Detection:** An error is detected when an unexpected token is encountered (e.g., by `consume_token` or a failed `match_token` where a specific token was required).
-2.  **Reporting:** `parser_error()` is called. This function:
-    *   Sets `parser->had_error = true`.
-    *   Prints an informative error message in Arabic, including the source location (`previous_token.loc` or `current_token.loc`) and ideally what was expected vs. what was found.
-    *   Avoids reporting further errors while already in panic mode to prevent cascades.
-3.  **Panic Mode Activation:** `parser->panic_mode = true`. While in panic mode, the parser avoids creating AST nodes for the construct where the error occurred.
-4.  **Synchronization (`synchronize()`):**
-    *   The parser advances tokens, discarding them, until it reaches a point considered safe to resume parsing.
-    *   Synchronization points typically include:
-        *   Statement terminators (`.`).
-        *   Keywords that unambiguously start new declarations or major statements (e.g., `إذا`, `طالما`, `لكل`, `إرجع`, `ثابت`, type keywords like `عدد_صحيح`).
-        *   Delimiters that often end a construct, like `}` (after which a new statement might begin).
-    *   The goal is to skip the problematic section and find the start of a subsequent, potentially valid construct.
-5.  **Panic Mode Deactivation:** Once a synchronization point is reached (or EOF), `parser->panic_mode` is cleared, allowing parsing to resume normally.
+* **`BaaNode* parse_statement(BaaParser* parser)`**: Dispatches based on current token (`إذا`, `طالما`, `{`, expression start, etc.).
+* **`BaaNode* parse_block_statement(BaaParser* parser)`**: Parses `{ statement* }`. Returns `BaaNode*` of kind `BAA_NODE_KIND_BLOCK_STMT`.
+* **`BaaNode* parse_if_statement(BaaParser* parser)`**: Parses `إذا (condition) then_branch (وإلا else_branch)?`. Returns `BaaNode*` of kind `BAA_NODE_KIND_IF_STMT`.
+* **`BaaNode* parse_expression_statement(BaaParser* parser)`**: Parses `expression '.'`. Returns `BaaNode*` of kind `BAA_NODE_KIND_EXPR_STMT`.
+* *(Similar functions for `while`, `for`, `return`, `break`, `continue`)*
 
-This strategy aims to report multiple distinct syntax errors in a single compilation pass.
+### 4.5 Expression Parser (`expression_parser.c`)
 
-## 8. Public API (Example - to be defined in `parser.h`)
+* **`BaaNode* parse_expression(BaaParser* parser)`**: Entry point for parsing any expression. Typically starts by calling the lowest precedence level (e.g., `parse_assignment_expression`).
+* **Precedence Climbing using Cascaded Functions:**
+  * `BaaNode* parse_assignment_expression(BaaParser* parser)` (handles `=`, `+=`, etc., right-associative)
+  * `BaaNode* parse_logical_or_expression(BaaParser* parser)` (handles `||`)
+  * `BaaNode* parse_logical_and_expression(BaaParser* parser)` (handles `&&`)
+  * ... (levels for bitwise, equality, relational, shift, additive, multiplicative) ...
+  * `BaaNode* parse_unary_expression(BaaParser* parser)` (handles `!`, `-` (unary), `~`, `++` (prefix), `--` (prefix))
+  * `BaaNode* parse_postfix_expression(BaaParser* parser)` (handles function calls `()`, array indexing `[]`, `++` (postfix), `--` (postfix))
+  * `BaaNode* parse_primary_expression(BaaParser* parser)`: Parses literals, identifiers, `( expression )`.
+* Each function consumes operators of its precedence level and calls the function for the next higher precedence level to parse operands.
+* **Example: `parse_additive_expression`**
+
+    ```c
+    // BaaNode* parse_additive_expression(BaaParser* p) {
+    //     BaaNode* node = parse_multiplicative_expression(p);
+    //     while (match_token(p, BAA_TOKEN_PLUS) || match_token(p, BAA_TOKEN_MINUS)) {
+    //         BaaTokenType op_type = p->previous_token.type; // Operator just consumed
+    //         BaaNode* right = parse_multiplicative_expression(p);
+    //         // node = baa_ast_new_binary_expr_node(op_type_to_binary_kind(op_type), node, right, span);
+    //     }
+    //     return node;
+    // }
+    ```
+
+## 5. Error Handling and Recovery
+
+The parser will use a "panic mode" error recovery strategy:
+
+1. **Detection**: When an unexpected token is found (e.g., `consume_token` fails), an error is detected.
+2. **Reporting (`parser_error(BaaParser* p, const wchar_t* message_format, ...)`):**
+    * Sets `p->had_error = true`.
+    * Prints an informative error message (in Arabic) using `p->previous_token.span` or `p->current_token.span.start` for location.
+    * Avoids cascading reports if already in `panic_mode`.
+3. **Panic Mode Activation**: `p->panic_mode = true`. No AST nodes are created for the erroneous construct.
+4. **Synchronization (`synchronize(BaaParser* p)`):**
+    * Called after reporting an error.
+    * Discards tokens by calling `advance()` until a "safe" point is reached or EOF.
+    * **Synchronization Points:**
+        * Statement terminator (`.`).
+        * Keywords that reliably start a new statement or declaration (e.g., `إذا`, `طالما`, `لكل`, `إرجع`, `عدد_صحيح`, `حرف`, `فراغ` when starting a function def, `ثابت`).
+        * Opening brace `{` (often starts a new block/scope).
+        * Closing brace `}` (often ends a block, look for next statement).
+5. **Panic Mode Deactivation**: Once synchronized, `p->panic_mode` is cleared.
+
+## 6. Public API (Example - `parser.h`)
 
 ```c
-// Opaque struct for the parser state
-typedef struct BaaParser BaaParser;
+#ifndef BAA_PARSER_H
+#define BAA_PARSER_H
 
-// Creates and initializes a new parser instance.
-// Takes an initialized lexer. The parser does NOT take ownership of the lexer.
+#include "baa/lexer/lexer.h" // For BaaLexer, BaaToken
+#include "baa/ast/ast.h"     // For BaaNode (once ast.h defines it)
+
+typedef struct BaaParser BaaParser; // Opaque struct
+
 BaaParser* baa_parser_create(BaaLexer* lexer);
-
-// Frees the parser instance. Does not free the lexer.
 void baa_parser_free(BaaParser* parser);
 
-// Main parsing function. Parses the entire token stream from the lexer.
-// Returns the root of the AST (e.g., a BaaProgram node) or NULL if fatal errors occurred.
-BaaProgram* baa_parse_program(BaaParser* parser);
+// Parses the entire token stream, returns the root BaaNode (kind BAA_NODE_KIND_PROGRAM)
+// or NULL on unrecoverable errors.
+BaaNode* baa_parse_program(BaaParser* parser);
 
-// Error status functions
 bool baa_parser_had_error(const BaaParser* parser);
-// Specific error messages are typically printed directly; a function to get a list of errors might be added later.
-```
+// const wchar_t* baa_parser_get_last_error_message(const BaaParser* parser); // Consider a diagnostic list
 
-This provides a more detailed view of the parser's design and operational principles.
+#endif // BAA_PARSER_H

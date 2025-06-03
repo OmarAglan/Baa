@@ -109,6 +109,126 @@ bool scan_and_substitute_macros_one_pass(
                 continue;
             }
 
+            // Special handling for 'معرف' operator to prevent argument expansion
+            if (wcscmp(identifier, L"معرف") == 0)
+            {
+                // Append 'معرف' literally to the output buffer
+                if (!append_to_dynamic_buffer(one_pass_buffer, L"معرف"))
+                {
+                    *overall_success = false;
+                    free(identifier);
+                    break;
+                }
+                
+                // Skip and copy whitespace after 'معرف'
+                while (iswspace(*scan_ptr))
+                {
+                    if (!append_dynamic_buffer_n(one_pass_buffer, scan_ptr, 1))
+                    {
+                        *overall_success = false;
+                        break;
+                    }
+                    scan_ptr++;
+                    current_col_in_this_scan_pass++;
+                }
+                
+                if (!*overall_success)
+                {
+                    free(identifier);
+                    break;
+                }
+                
+                bool has_parens = false;
+                if (*scan_ptr == L'(')
+                {
+                    has_parens = true;
+                    if (!append_dynamic_buffer_n(one_pass_buffer, scan_ptr, 1))
+                    {
+                        *overall_success = false;
+                        free(identifier);
+                        break;
+                    }
+                    scan_ptr++;
+                    current_col_in_this_scan_pass++;
+                    
+                    // Copy whitespace inside parentheses
+                    while (iswspace(*scan_ptr))
+                    {
+                        if (!append_dynamic_buffer_n(one_pass_buffer, scan_ptr, 1))
+                        {
+                            *overall_success = false;
+                            break;
+                        }
+                        scan_ptr++;
+                        current_col_in_this_scan_pass++;
+                    }
+                    
+                    if (!*overall_success)
+                    {
+                        free(identifier);
+                        break;
+                    }
+                }
+                
+                // Copy the identifier argument without expansion
+                const wchar_t *arg_start = scan_ptr;
+                if (iswalpha(*scan_ptr) || *scan_ptr == L'_')
+                {
+                    while (iswalnum(*scan_ptr) || *scan_ptr == L'_')
+                    {
+                        scan_ptr++;
+                        current_col_in_this_scan_pass++;
+                    }
+                    size_t arg_len = scan_ptr - arg_start;
+                    if (!append_dynamic_buffer_n(one_pass_buffer, arg_start, arg_len))
+                    {
+                        *overall_success = false;
+                        free(identifier);
+                        break;
+                    }
+                }
+                // If not an identifier, let expression evaluator catch the error later
+                
+                if (has_parens)
+                {
+                    // Copy whitespace before closing paren
+                    while (iswspace(*scan_ptr))
+                    {
+                        if (!append_dynamic_buffer_n(one_pass_buffer, scan_ptr, 1))
+                        {
+                            *overall_success = false;
+                            break;
+                        }
+                        scan_ptr++;
+                        current_col_in_this_scan_pass++;
+                    }
+                    
+                    if (!*overall_success)
+                    {
+                        free(identifier);
+                        break;
+                    }
+                    
+                    if (*scan_ptr == L')')
+                    {
+                        if (!append_dynamic_buffer_n(one_pass_buffer, scan_ptr, 1))
+                        {
+                            *overall_success = false;
+                            free(identifier);
+                            break;
+                        }
+                        scan_ptr++;
+                        current_col_in_this_scan_pass++;
+                    }
+                    // If ')' missing, let expression evaluator handle the error
+                }
+                
+                // Don't set expansion_occurred_this_pass = true here
+                // because we didn't actually change anything - we just preserved it
+                free(identifier);
+                continue;
+            }
+
             const BaaMacro *macro = find_macro(pp_state, identifier);
             if (macro && !is_macro_expanding(pp_state, macro))
             {

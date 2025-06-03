@@ -153,6 +153,69 @@ MIN_ARGS(فقط_أ).            // Expected: first_arg_is_a then
   تعبير مركب مع "معرف" صحيح.
 #نهاية_إذا
 
+// --- اختبار معرف مع وسيط ماكرو (الاختبار الحاسم لعدم التوسيع) ---
+#تعريف ACTUAL_TARGET_MACRO real_value
+#تعريف POINTER_MACRO ACTUAL_TARGET_MACRO
+
+// معرف POINTER_MACRO should check if POINTER_MACRO is defined (it is). It should NOT expand POINTER_MACRO to ACTUAL_TARGET_MACRO first.
+#إذا معرف POINTER_MACRO
+  نجح_معرف_مؤشر: POINTER_MACRO معرف (لم يتم توسيعه).
+#إلا
+  فشل: POINTER_MACRO يجب أن يكون معرف.
+#نهاية_إذا
+
+// معرف ACTUAL_TARGET_MACRO should check if ACTUAL_TARGET_MACRO is defined (it is).
+#إذا معرف ACTUAL_TARGET_MACRO
+  نجح_معرف_هدف: ACTUAL_TARGET_MACRO معرف.
+#إلا
+  فشل: ACTUAL_TARGET_MACRO يجب أن يكون معرف.
+#نهاية_إذا
+
+#تعريف UNPOINTED_MACRO some_other_value
+// معرف POINTER_TO_UNDEFINED should check if POINTER_TO_UNDEFINED is defined (it's not).
+#إذا معرف POINTER_TO_UNDEFINED_MACRO
+  فشل: POINTER_TO_UNDEFINED_MACRO لا يجب أن يكون معرف.
+#إلا
+  نجح_معرف_غير_معرف: POINTER_TO_UNDEFINED_MACRO غير معرف.
+#نهاية_إذا
+
+// اختبار معرف معرف (فحص ما إذا كان "معرف" معرف كماكرو)
+#إذا معرف معرف
+  فشل: معرف لا يجب أن يكون معرف كماكرو بشكل افتراضي.
+#إلا
+  نجح_معرف_معرف: معرف ليس ماكرو (صحيح).
+#نهاية_إذا
+
+// تعريف "معرف" كماكرو، ثم اختبار
+#تعريف معرف test_value
+#إذا معرف معرف
+  نجح_معرف_كماكرو: معرف الآن معرف كماكرو.
+#إلا
+  فشل: معرف يجب أن يكون معرف كماكرو الآن.
+#نهاية_إذا
+#الغاء_تعريف معرف
+
+// اختبار حفظ المسافات البيضاء
+#تعريف SPACED_MACRO
+#إذا معرف    SPACED_MACRO
+  نجح_مسافات: معرف مع مسافات يعمل.
+#نهاية_إذا
+#إذا معرف (   SPACED_MACRO   )
+  نجح_مسافات_أقواس: معرف مع مسافات وأقواس يعمل.
+#نهاية_إذا
+
+// اختبار تعبير مركب مع معرف
+#تعريف FLAG1 1
+#تعريف FLAG2 1
+#إذا معرف FLAG1 && معرف FLAG2 && FLAG1 + FLAG2 == 2
+  نجح_تعبير_مركب: معرف في تعبير مركب يعمل.
+#نهاية_إذا
+
+// اختبار أن التوسيع العادي لا يزال يعمل
+#إذا POINTER_MACRO == real_value  // هذا يجب أن يوسع POINTER_MACRO
+  نجح_توسيع_عادي: التوسيع العادي للماكرو لا يزال يعمل.
+#نهاية_إذا
+
 #إذا FEATURE_A == 1
   FEATURE_A قيمتها 1 (صحيح).
 #نهاية_إذا

@@ -4,6 +4,50 @@ All notable changes to the B (باء) compiler project will be documented in thi
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.23.0] - 2025-06-03 (Function-Like Macro Expansion in Conditional Expressions)
+
+### Added
+
+- **Preprocessor: Full Function-Like Macro Expansion in Conditional Expressions:**
+  - Implemented complete support for function-like macro expansion within `#إذا` and `#وإلا_إذا` conditional expressions before evaluation.
+  - Function-like macros with arguments are now properly expanded, including nested function-like macro calls within arguments.
+  - Supports complex macro rescanning scenarios where function-like macros expand to content that contains other macro references.
+  - Preserves correct `معرف` (defined) operator behavior - arguments to `معرف` are not macro-expanded before evaluation.
+  - **Examples now working:**
+    - `#إذا IS_ZERO(ADD_FOR_IF(5, -5))` → expands to `#إذا ((5+-5) == 0)` → evaluates correctly
+    - `#إذا IS_GREATER(MAX_SIZE, CURRENT_SIZE)` → expands to `#إذا ((100) > (50))` → evaluates correctly
+    - `#إذا NESTED_CALC(5, 3, 2) == 17` → expands to `#إذا ((((5) * (3))) + (2)) == 17` → evaluates correctly
+
+### Fixed
+
+- **Preprocessor: Enhanced Function-Like Macro Processing in Conditionals:**
+  - Fixed limitation where function-like macros in conditional expressions were not being fully expanded before expression evaluation.
+  - Improved macro expansion pipeline to properly handle complex nested function-like macro scenarios within conditional contexts.
+  - Enhanced rescan logic to work correctly within conditional expression evaluation.
+
+### Changed
+
+- **Preprocessor: Conditional Expression Processing:**
+  - Modified conditional expression evaluation pipeline to perform full macro expansion (including function-like macros) before parsing and evaluating the expression.
+  - Enhanced macro expansion integration within `#إذا`/`#وإلا_إذا` directive processing while maintaining `معرف` operator special handling.
+
+### Known Issues
+
+- **Preprocessor: Zero-Parameter Function-Like Macro Bug:** 
+  - Zero-parameter function-like macros (e.g., `GET_BASE()`) may expand incorrectly to `()` instead of their macro body in conditional expressions.
+  - This affects expressions like `#إذا IS_EQUAL(GET_BASE(), 42)` where `GET_BASE()` should expand to `BASE_VALUE_IF` but instead expands to empty parentheses.
+- **Preprocessor: Ternary Operator Support (`? :`):** 
+  - The expression evaluator does not yet support ternary conditional expressions using `condition ? true_value : false_value` syntax.
+  - Expressions containing ternary operators will result in syntax errors during conditional expression evaluation.
+
+### Technical Details
+
+- **Files Modified:**
+  - `src/preprocessor/preprocessor_line_processing.c`: Enhanced macro expansion logic for conditional expressions
+  - Existing macro expansion infrastructure leveraged for conditional expression contexts
+- **Impact**: Significantly improves preprocessor C99 compliance and enables complex macro-based conditional compilation patterns.
+- **Backward Compatibility**: Fully maintained - existing simpler conditional expressions continue to work as before.
+
 ## [0.1.22.0] - 2025-06-03 (Critical Preprocessor Fix: `معرف` Operator Compliance)
 
 ### Fixed

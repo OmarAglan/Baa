@@ -423,7 +423,7 @@ bool evaluate_preprocessor_expression(BaaPreprocessor *pp_state, const wchar_t *
     fwprintf(stderr, L"DEBUG #if Fully Expanded Expr: [%ls]\n", expanded_expression_str); // Uncomment for debugging
     PpExprTokenizer tz = {
         .current = expanded_expression_str,                           // Use the fully expanded string
-        .expression_string_start = raw_expression,                    // Store the beginning of the expression string
+        .expression_string_start = expanded_expression_str,           // Store the beginning of the expanded expression string
         .expr_string_column_offset = pp_state->current_column_number, // Column where this expression starts on the original line
         .start = expanded_expression_str,
         .pp_state = pp_state,                    // Pass the state for context
@@ -540,7 +540,19 @@ static bool parse_primary_pp_expr(PpExprTokenizer *tz, long *result)
             next_token = get_next_pp_expr_token(tz); // Get token inside parens
         }
 
-        if (next_token.type != PP_EXPR_TOKEN_IDENTIFIER)
+        if (next_token.type == PP_EXPR_TOKEN_IDENTIFIER)
+        {
+            // Check if the identifier macro is defined
+            *result = (find_macro(tz->pp_state, next_token.text) != NULL) ? 1L : 0L; // Result is 1 or 0
+            free(next_token.text);
+        }
+        else if (next_token.type == PP_EXPR_TOKEN_DEFINED)
+        {
+            // Special case: معرف معرف - treat the second معرف as identifier "معرف"
+            // Check if there's a macro named "معرف" (there shouldn't be, so result is 0)
+            *result = (find_macro(tz->pp_state, L"معرف") != NULL) ? 1L : 0L;
+        }
+        else
         {
             if (next_token.type != PP_EXPR_TOKEN_ERROR)
             {
@@ -550,10 +562,6 @@ static bool parse_primary_pp_expr(PpExprTokenizer *tz, long *result)
                 free(next_token.text); // Free if allocated
             return false;
         }
-
-        // Check if the identifier macro is defined
-        *result = (find_macro(tz->pp_state, next_token.text) != NULL) ? 1L : 0L; // Result is 1 or 0
-        free(next_token.text);
 
         // Check for closing parenthesis if needed
         if (parens)

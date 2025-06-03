@@ -39,6 +39,7 @@ This roadmap outlines the planned improvements and current status of the Baa lan
   * [x] `#نهاية_إذا` (endif)
   * [x] Support for bitwise operators (`&`, `|`, `^`, `~`, `<<`, `>>`) in conditional expressions. (v0.1.12.0)
   * [x] Support for decimal, hexadecimal (`0x`), and binary (`0b`) integer literals in conditional expressions. (v0.1.15.0)
+  * [ ] **Ternary Operator Support (`? :`)**: Add support for conditional expressions using the ternary operator `condition ? true_value : false_value` in preprocessor conditional expressions.
 * **Other Standard Directives:**
   * [x] `#خطأ "message"` (Baa: `#خطأ "رسالة الخطأ"`) - Implemented (v0.1.15.0)
   * [x] `#تحذير "message"` (Baa: `#تحذير "رسالة التحذير"`) - Implemented (v0.1.15.0)
@@ -53,8 +54,8 @@ This roadmap outlines the planned improvements and current status of the Baa lan
 * [x] **Predefined `__func__`**: Implemented `__الدالة__` (expands to placeholder `L"__BAA_FUNCTION_PLACEHOLDER__"`). (v0.1.14.0)
 * [x] **Predefined `__STDC_VERSION__` equivalent**: Implemented `__إصدار_المعيار_باء__` (e.g., `10150L`). (v0.1.14.0, value updated v0.1.15.0)
 * [x] **`معرف` Operator C Standard Compliance**: Fixed critical bug where `معرف` operator arguments were incorrectly macro-expanded before evaluation. Now correctly preserves argument identifiers for proper `defined` operator behavior. (v0.1.22.0)
-* [ ] **Full Macro Expansion in Conditional Expressions (#إذا, #وإلا_إذا)**:
-  * While identifiers that are object-like macros expanding to integers are handled, full expansion of *function-like* macros within the expression string *before* evaluation is not yet complete. This includes handling their arguments and rescanning their results.
+* [x] **Full Macro Expansion in Conditional Expressions (#إذا, #وإلا_إذا)**:
+  * Complete support for function-like macro expansion within conditional expression strings before evaluation, including argument handling and result rescanning. Preserves correct `معرف` operator behavior. (v0.1.23.0)
 * [ ] **Token Pasting (`##`) during Rescanning (Complex Cases)**:
   * The `##` operator works in direct macro bodies.
   * Known Issue: Complex interactions when `##` appears as part of a macro expansion output that is then rescanned, or when its operands are themselves complex macros, may not be fully robust. This requires careful review of the rescan loop and how it forms new tokens after pasting.

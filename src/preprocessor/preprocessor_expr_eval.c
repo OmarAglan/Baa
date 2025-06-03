@@ -342,7 +342,7 @@ static wchar_t *fully_expand_expression_string(BaaPreprocessor *pp_state,
             *error_message = format_preprocessor_error_at_location(&error_loc, L"فشل تهيئة مخزن الإخراج لتوسيع تعبير #إذا.");
             break;
         }
-        expansion_made_this_pass = scan_and_substitute_macros_one_pass(
+        expansion_made_this_pass = scan_and_expand_macros_for_expressions(
             pp_state,
             current_input_buffer.buffer,
             original_line_number_for_errors,

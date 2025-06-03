@@ -1,5 +1,379 @@
 #include "preprocessor_internal.h"
 
+// Helper function to perform one pass of macro scanning and substitution for conditional expressions.
+// This is identical to scan_and_substitute_macros_one_pass() WITH the special 'معرف' operator handling.
+// This allows function-like macros to be fully expanded in conditional expressions (#إذا/#وإلا_إذا)
+// while still preserving the correct behavior of the 'معرف' operator.
+bool scan_and_expand_macros_for_expressions(
+    BaaPreprocessor *pp_state,
+    const wchar_t *input_line_content,
+    size_t original_line_number_for_errors,
+    DynamicWcharBuffer *one_pass_buffer,
+    bool *overall_success,
+    wchar_t **error_message)
+{
+    bool expansion_occurred_this_pass = false;
+    const wchar_t *scan_ptr = input_line_content;
+
+    size_t current_col_in_this_scan_pass = 1;
+
+    while (*scan_ptr != L'\0' && *overall_success)
+    {
+        size_t token_start_col_for_error = current_col_in_this_scan_pass;
+
+        if (iswalpha(*scan_ptr) || *scan_ptr == L'_')
+        { // Potential identifier
+            const wchar_t *id_start = scan_ptr;
+            while (iswalnum(*scan_ptr) || *scan_ptr == L'_')
+            {
+                scan_ptr++;
+                current_col_in_this_scan_pass++;
+            }
+            size_t id_len = scan_ptr - id_start;
+            wchar_t *identifier = wcsndup_internal(id_start, id_len);
+            if (!identifier)
+            {
+                PpSourceLocation error_loc_data = get_current_original_location(pp_state);
+                error_loc_data.line = original_line_number_for_errors;
+                error_loc_data.column = token_start_col_for_error;
+                *error_message = format_preprocessor_error_at_location(&error_loc_data, L"فشل في تخصيص ذاكرة للمعرف للاستبدال.");
+                *overall_success = false;
+                break;
+            }
+
+            bool predefined_expanded = false;
+            if (wcscmp(identifier, L"__الملف__") == 0)
+            {
+                wchar_t quoted_file_path[MAX_PATH_LEN + 3];
+                PpSourceLocation orig_loc = get_current_original_location(pp_state);
+                const char *path_for_macro = orig_loc.file_path ? orig_loc.file_path : "unknown_file";
+                wchar_t w_path[MAX_PATH_LEN];
+                mbstowcs(w_path, path_for_macro, MAX_PATH_LEN);
+                wchar_t escaped_path[MAX_PATH_LEN * 2];
+                wchar_t *ep = escaped_path;
+                for (const wchar_t *p = w_path; *p; ++p)
+                {
+                    if (*p == L'\\')
+                        *ep++ = L'\\';
+                    *ep++ = *p;
+                }
+                *ep = L'\0';
+                swprintf(quoted_file_path, sizeof(quoted_file_path) / sizeof(wchar_t), L"\"%ls\"", escaped_path);
+                if (!append_to_dynamic_buffer(one_pass_buffer, quoted_file_path))
+                {
+                    *overall_success = false;
+                }
+                expansion_occurred_this_pass = true;
+                predefined_expanded = true;
+            }
+            else if (wcscmp(identifier, L"__السطر__") == 0)
+            {
+                wchar_t line_str[20];
+                swprintf(line_str, sizeof(line_str) / sizeof(wchar_t), L"%zu", original_line_number_for_errors);
+                if (!append_to_dynamic_buffer(one_pass_buffer, line_str))
+                {
+                    *overall_success = false;
+                }
+                expansion_occurred_this_pass = true;
+                predefined_expanded = true;
+            }
+            else if (wcscmp(identifier, L"__الدالة__") == 0)
+            {
+                if (!append_to_dynamic_buffer(one_pass_buffer, L"\"__BAA_FUNCTION_PLACEHOLDER__\""))
+                {
+                    *overall_success = false;
+                }
+                expansion_occurred_this_pass = true;
+                predefined_expanded = true;
+            }
+            else if (wcscmp(identifier, L"__إصدار_المعيار_باء__") == 0)
+            {
+                if (!append_to_dynamic_buffer(one_pass_buffer, L"10010L"))
+                {
+                    *overall_success = false;
+                }
+                expansion_occurred_this_pass = true;
+                predefined_expanded = true;
+            }
+
+            if (predefined_expanded)
+            {
+                free(identifier);
+                if (!*overall_success)
+                    break;
+                continue;
+            }
+
+            // Special handling for 'معرف' operator to prevent argument expansion
+            if (wcscmp(identifier, L"معرف") == 0)
+            {
+                // Append 'معرف' literally to the output buffer
+                if (!append_to_dynamic_buffer(one_pass_buffer, L"معرف"))
+                {
+                    *overall_success = false;
+                    free(identifier);
+                    break;
+                }
+                
+                // Skip and copy whitespace after 'معرف'
+                while (iswspace(*scan_ptr))
+                {
+                    if (!append_dynamic_buffer_n(one_pass_buffer, scan_ptr, 1))
+                    {
+                        *overall_success = false;
+                        break;
+                    }
+                    scan_ptr++;
+                    current_col_in_this_scan_pass++;
+                }
+                
+                if (!*overall_success)
+                {
+                    free(identifier);
+                    break;
+                }
+                
+                bool has_parens = false;
+                if (*scan_ptr == L'(')
+                {
+                    has_parens = true;
+                    if (!append_dynamic_buffer_n(one_pass_buffer, scan_ptr, 1))
+                    {
+                        *overall_success = false;
+                        free(identifier);
+                        break;
+                    }
+                    scan_ptr++;
+                    current_col_in_this_scan_pass++;
+                    
+                    // Copy whitespace inside parentheses
+                    while (iswspace(*scan_ptr))
+                    {
+                        if (!append_dynamic_buffer_n(one_pass_buffer, scan_ptr, 1))
+                        {
+                            *overall_success = false;
+                            break;
+                        }
+                        scan_ptr++;
+                        current_col_in_this_scan_pass++;
+                    }
+                    
+                    if (!*overall_success)
+                    {
+                        free(identifier);
+                        break;
+                    }
+                }
+                
+                // Copy the identifier argument without expansion
+                const wchar_t *arg_start = scan_ptr;
+                if (iswalpha(*scan_ptr) || *scan_ptr == L'_')
+                {
+                    while (iswalnum(*scan_ptr) || *scan_ptr == L'_')
+                    {
+                        scan_ptr++;
+                        current_col_in_this_scan_pass++;
+                    }
+                    size_t arg_len = scan_ptr - arg_start;
+                    if (!append_dynamic_buffer_n(one_pass_buffer, arg_start, arg_len))
+                    {
+                        *overall_success = false;
+                        free(identifier);
+                        break;
+                    }
+                }
+                // If not an identifier, let expression evaluator catch the error later
+                
+                if (has_parens)
+                {
+                    // Copy whitespace before closing paren
+                    while (iswspace(*scan_ptr))
+                    {
+                        if (!append_dynamic_buffer_n(one_pass_buffer, scan_ptr, 1))
+                        {
+                            *overall_success = false;
+                            break;
+                        }
+                        scan_ptr++;
+                        current_col_in_this_scan_pass++;
+                    }
+                    
+                    if (!*overall_success)
+                    {
+                        free(identifier);
+                        break;
+                    }
+                    
+                    if (*scan_ptr == L')')
+                    {
+                        if (!append_dynamic_buffer_n(one_pass_buffer, scan_ptr, 1))
+                        {
+                            *overall_success = false;
+                            free(identifier);
+                            break;
+                        }
+                        scan_ptr++;
+                        current_col_in_this_scan_pass++;
+                    }
+                    // If ')' missing, let expression evaluator handle the error
+                }
+                
+                // Don't set expansion_occurred_this_pass = true here
+                // because we didn't actually change anything - we just preserved it
+                free(identifier);
+                continue;
+            }
+
+            const BaaMacro *macro = find_macro(pp_state, identifier);
+            if (macro && !is_macro_expanding(pp_state, macro))
+            {
+                PpSourceLocation invocation_loc_data = get_current_original_location(pp_state);
+                invocation_loc_data.line = original_line_number_for_errors;
+                invocation_loc_data.column = token_start_col_for_error;
+
+                if (!push_location(pp_state, &invocation_loc_data))
+                {
+                    *error_message = format_preprocessor_error_at_location(&invocation_loc_data, L"فشل في دفع موقع استدعاء الماكرو.");
+                    *overall_success = false;
+                    free(identifier);
+                    break;
+                }
+                if (!push_macro_expansion(pp_state, macro))
+                {
+                    *error_message = format_preprocessor_error_at_location(&invocation_loc_data, L"فشل في دفع الماكرو '%ls' إلى مكدس التوسيع.", macro->name);
+                    pop_location(pp_state);
+                    *overall_success = false;
+                    free(identifier);
+                    break;
+                }
+
+                DynamicWcharBuffer single_expansion_result;
+                if (!init_dynamic_buffer(&single_expansion_result, 128))
+                {
+                    PpSourceLocation err_loc_init = get_current_original_location(pp_state);
+                    *error_message = format_preprocessor_error_at_location(&err_loc_init, L"فشل تهيئة مخزن التوسيع.");
+                    pop_macro_expansion(pp_state);
+                    pop_location(pp_state);
+                    *overall_success = false;
+                    free(identifier);
+                    break;
+                }
+
+                bool current_expansion_succeeded = true;
+                const wchar_t *ptr_after_invocation_args = scan_ptr;
+
+                if (macro->is_function_like)
+                {
+                    const wchar_t *arg_scan_ptr = scan_ptr;
+                    size_t col_at_arg_scan_start = current_col_in_this_scan_pass;
+                    while (iswspace(*arg_scan_ptr))
+                    {
+                        arg_scan_ptr++;
+                        col_at_arg_scan_start++;
+                    }
+
+                    if (*arg_scan_ptr == L'(')
+                    {
+                        arg_scan_ptr++;
+                        col_at_arg_scan_start++;
+
+                        size_t original_pp_state_col = pp_state->current_column_number;
+                        pp_state->current_column_number = col_at_arg_scan_start;
+
+                        size_t actual_arg_count = 0;
+                        wchar_t **arguments = parse_macro_arguments(pp_state, &arg_scan_ptr, macro, &actual_arg_count, error_message);
+
+                        ptr_after_invocation_args = arg_scan_ptr;
+                        current_col_in_this_scan_pass = pp_state->current_column_number;
+                        pp_state->current_column_number = original_pp_state_col;
+
+                        if (!arguments)
+                        {
+                            current_expansion_succeeded = false;
+                        }
+                        else
+                        {
+                            if (!substitute_macro_body(pp_state, &single_expansion_result, macro, arguments, actual_arg_count, error_message))
+                            {
+                                current_expansion_succeeded = false;
+                            }
+                            for (size_t i = 0; i < actual_arg_count; ++i)
+                                free(arguments[i]);
+                            free(arguments);
+                        }
+                    }
+                    else
+                    { // Function-like macro name not followed by '(', treat as plain identifier
+                        if (!append_to_dynamic_buffer(one_pass_buffer, identifier))
+                        {
+                            *overall_success = false;
+                        }
+                        current_expansion_succeeded = false;
+                    }
+                }
+                else
+                { // Object-like macro
+                    if (!substitute_macro_body(pp_state, &single_expansion_result, macro, NULL, 0, error_message))
+                    {
+                        current_expansion_succeeded = false;
+                    }
+                }
+
+                pop_macro_expansion(pp_state);
+                pop_location(pp_state);
+
+                if (current_expansion_succeeded)
+                {
+                    if (!append_to_dynamic_buffer(one_pass_buffer, single_expansion_result.buffer))
+                    {
+                        *overall_success = false;
+                    }
+                    else
+                    {
+                        if (macro->is_function_like || wcscmp(identifier, single_expansion_result.buffer) != 0)
+                        {
+                            expansion_occurred_this_pass = true;
+                        }
+                    }
+                }
+                else if (*overall_success && !*error_message && !macro->is_function_like)
+                {
+                    if (!append_to_dynamic_buffer(one_pass_buffer, identifier))
+                    {
+                        *overall_success = false;
+                    }
+                }
+                else if (*overall_success && !*error_message && macro->is_function_like && (scan_ptr == ptr_after_invocation_args))
+                {
+                    // Function-like macro name was not followed by '(', already handled
+                }
+                free_dynamic_buffer(&single_expansion_result);
+                scan_ptr = ptr_after_invocation_args;
+            }
+            else
+            {
+                if (!append_to_dynamic_buffer(one_pass_buffer, identifier))
+                {
+                    *overall_success = false;
+                }
+            }
+            free(identifier);
+        }
+        else
+        { // Not an identifier start
+            if (!append_dynamic_buffer_n(one_pass_buffer, scan_ptr, 1))
+            {
+                *overall_success = false;
+            }
+            scan_ptr++;
+            current_col_in_this_scan_pass++;
+        }
+        if (!*overall_success)
+            break;
+    }
+    return expansion_occurred_this_pass;
+}
+
 // Helper function to perform one pass of macro scanning and substitution.
 // - input_line_content: The current version of the line to be scanned.
 // - original_line_number_for_errors: The original line number in the source file, for error reporting.

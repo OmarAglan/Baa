@@ -210,6 +210,14 @@ bool scan_and_substitute_macros_one_pass(
     DynamicWcharBuffer *one_pass_buffer,
     bool *overall_success,
     wchar_t **error_message);
+// New function for expression expansion without 'معرف' special handling
+bool scan_and_expand_macros_for_expressions(
+    BaaPreprocessor *pp_state,
+    const wchar_t *input_line_content,
+    size_t original_line_number_for_errors,
+    DynamicWcharBuffer *one_pass_buffer,
+    bool *overall_success,
+    wchar_t **error_message);
 
 // From preprocessor_core.c
 wchar_t *process_file(BaaPreprocessor *pp_state, const char *file_path, wchar_t **error_message);

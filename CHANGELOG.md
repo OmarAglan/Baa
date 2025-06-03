@@ -4,6 +4,42 @@ All notable changes to the B (باء) compiler project will be documented in thi
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.22.0] - 2025-06-03 (Critical Preprocessor Fix: `معرف` Operator Compliance)
+
+### Fixed
+
+- **Preprocessor: `معرف` (defined) Operator C Standard Compliance (Critical Fix):**
+  - Fixed major bug where arguments to the `معرف` operator were incorrectly being macro-expanded before evaluation, violating C standard behavior.
+  - The `معرف MACRO_NAME` operator now correctly checks if `MACRO_NAME` is defined as a macro without expanding `MACRO_NAME` first.
+  - **Example**: `#إذا معرف POINTER_MACRO` now correctly checks if `POINTER_MACRO` is defined, instead of incorrectly expanding `POINTER_MACRO` to its value and then checking if that value is defined as a macro.
+  - This resolves a critical compliance issue that could cause incorrect conditional compilation behavior.
+- **Preprocessor: Infinite Rescan Loop Prevention:**
+  - Fixed infinite rescan loops that could occur during macro expansion in conditional expressions.
+  - Removed erroneous `expansion_occurred_this_pass = true` flag that was causing endless rescanning cycles.
+  - Added proper termination conditions to prevent preprocessor hangs.
+- **Preprocessor: Expression Evaluator Column Calculation:**
+  - Fixed corrupted column numbers in error messages from conditional expression evaluation.
+  - Corrected tokenizer reference points to provide accurate error location reporting.
+  - Column numbers now correctly point to the problematic token within `#إذا`/`#وإلا_إذا` expressions.
+- **Preprocessor: `معرف معرف` Edge Case:**
+  - Fixed handling of the edge case `معرف معرف` (checking if "معرف" itself is defined as a macro).
+  - Now correctly evaluates to false when `معرف` is not defined as a macro, and true when it is defined as a macro.
+  - Maintains proper C standard behavior where `معرف` can appear as both operator and operand.
+
+### Changed
+
+- **Preprocessor: Enhanced Error Recovery:**
+  - Improved error handling in conditional expression evaluation to provide more informative error messages.
+  - Enhanced diagnostic reporting to maintain processing context during error conditions.
+
+### Technical Details
+
+- **Files Modified:**
+  - `src/preprocessor/preprocessor_line_processing.c`: Fixed `معرف` argument preservation logic
+  - `src/preprocessor/preprocessor_expr_eval.c`: Fixed column calculation and `معرف معرف` handling
+- **Impact**: This fix resolves a fundamental preprocessor compliance issue that could affect any conditional compilation using the `معرف` operator with macro arguments.
+- **Backward Compatibility**: Fully maintained - existing code will now behave correctly according to C standards.
+
 ## [0.1.21.0] - 2025-05-31 (Conceptual Lexer Updates & Bug Identification)
 
 ### Added (Conceptual - Lexer)

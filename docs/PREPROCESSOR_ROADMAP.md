@@ -52,6 +52,7 @@ This roadmap outlines the planned improvements and current status of the Baa lan
 * [x] **`__السطر__` (`__LINE__`) Expansion**: Corrected to expand to an integer constant. (v0.1.13.0)
 * [x] **Predefined `__func__`**: Implemented `__الدالة__` (expands to placeholder `L"__BAA_FUNCTION_PLACEHOLDER__"`). (v0.1.14.0)
 * [x] **Predefined `__STDC_VERSION__` equivalent**: Implemented `__إصدار_المعيار_باء__` (e.g., `10150L`). (v0.1.14.0, value updated v0.1.15.0)
+* [x] **`معرف` Operator C Standard Compliance**: Fixed critical bug where `معرف` operator arguments were incorrectly macro-expanded before evaluation. Now correctly preserves argument identifiers for proper `defined` operator behavior. (v0.1.22.0)
 * [ ] **Full Macro Expansion in Conditional Expressions (#إذا, #وإلا_إذا)**:
   * While identifiers that are object-like macros expanding to integers are handled, full expansion of *function-like* macros within the expression string *before* evaluation is not yet complete. This includes handling their arguments and rescanning their results.
 * [ ] **Token Pasting (`##`) during Rescanning (Complex Cases)**:
@@ -66,9 +67,8 @@ This roadmap outlines the planned improvements and current status of the Baa lan
 
 ## Known Issues / Areas for Refinement (from `CHANGELOG.md`)
 
-* **`معرف` Operator Argument Expansion**: The argument to the `معرف` (defined) operator within `#إذا`/`#وإلا_إذا` expressions might still be (pending specific fix and verification) macro-expanded before `معرف` evaluates it, which is incorrect. Standard behavior is for `معرف` to operate on the raw identifier.
 * **Error/Warning Location Precision (Remaining Areas)**:
-  * Column tracking within conditional expressions and for some directive arguments/macro call arguments has been enhanced (v0.1.16.0, v0.1.17.0).
+  * Column tracking within conditional expressions and for some directive arguments/macro call arguments has been enhanced (v0.1.16.0, v0.1.17.0, v0.1.22.0).
   * Further refinement for precise column reporting is an ongoing effort across all error sites.
 
 ## Testing and Validation

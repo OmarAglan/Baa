@@ -1,5 +1,125 @@
 #include "preprocessor_internal.h"
 
+// Helper function to normalize whitespace in macro body for comparison
+// Returns a new allocated string with normalized whitespace
+static wchar_t *normalize_macro_body(const wchar_t *body)
+{
+    if (!body) return NULL;
+    
+    size_t len = wcslen(body);
+    wchar_t *normalized = malloc((len + 1) * sizeof(wchar_t));
+    if (!normalized) return NULL;
+    
+    const wchar_t *src = body;
+    wchar_t *dst = normalized;
+    bool in_whitespace = false;
+    
+    // Skip leading whitespace
+    while (iswspace(*src)) src++;
+    
+    while (*src) {
+        if (iswspace(*src)) {
+            if (!in_whitespace) {
+                *dst++ = L' '; // Replace any whitespace with single space
+                in_whitespace = true;
+            }
+            src++;
+        } else {
+            *dst++ = *src++;
+            in_whitespace = false;
+        }
+    }
+    
+    // Remove trailing whitespace
+    while (dst > normalized && dst[-1] == L' ') dst--;
+    
+    *dst = L'\0';
+    return normalized;
+}
+
+// Helper function to compare parameter lists of two macros
+static bool are_parameter_lists_equivalent(const BaaMacro *macro1, const BaaMacro *macro2)
+{
+    // Check if both are function-like
+    if (macro1->is_function_like != macro2->is_function_like)
+        return false;
+    
+    // If neither is function-like, they're equivalent
+    if (!macro1->is_function_like && !macro2->is_function_like)
+        return true;
+    
+    // Check parameter count and variadic status
+    if (macro1->param_count != macro2->param_count)
+        return false;
+    
+    if (macro1->is_variadic != macro2->is_variadic)
+        return false;
+    
+    // According to C99 standard, parameter names don't need to match for compatibility
+    // Only the count and variadic status matter for the signature
+    return true;
+}
+
+// Helper function to check if two macro bodies are equivalent
+static bool are_macro_bodies_equivalent(const wchar_t *body1, const wchar_t *body2)
+{
+    if (!body1 && !body2) return true;
+    if (!body1 || !body2) return false;
+    
+    // Normalize whitespace for comparison
+    wchar_t *norm1 = normalize_macro_body(body1);
+    wchar_t *norm2 = normalize_macro_body(body2);
+    
+    if (!norm1 || !norm2) {
+        free(norm1);
+        free(norm2);
+        return false;
+    }
+    
+    bool equivalent = (wcscmp(norm1, norm2) == 0);
+    
+    free(norm1);
+    free(norm2);
+    return equivalent;
+}
+
+// Helper function to check if two macros are equivalent according to C99 standard
+static bool are_macros_equivalent(const BaaMacro *existing, const BaaMacro *new_macro)
+{
+    if (!existing || !new_macro) return false;
+    
+    // Check if parameter lists are equivalent
+    if (!are_parameter_lists_equivalent(existing, new_macro))
+        return false;
+    
+    // Check if bodies are equivalent
+    return are_macro_bodies_equivalent(existing->body, new_macro->body);
+}
+
+// Helper function to check if a macro is a predefined macro
+static bool is_predefined_macro(const wchar_t *name)
+{
+    if (!name) return false;
+    
+    const wchar_t *predefined_macros[] = {
+        L"__الملف__",
+        L"__السطر__", 
+        L"__التاريخ__",
+        L"__الوقت__",
+        L"__الدالة__",
+        L"__إصدار_المعيار_باء__",
+        NULL
+    };
+    
+    for (size_t i = 0; predefined_macros[i]; i++) {
+        if (wcscmp(name, predefined_macros[i]) == 0) {
+            return true;
+        }
+    }
+    
+    return false;
+}
+
 // Helper function to free macro storage
 void free_macros(BaaPreprocessor *pp)
 {
@@ -51,29 +171,21 @@ bool add_macro(BaaPreprocessor *pp_state, const wchar_t *name, const wchar_t *bo
     {
         if (wcscmp(pp_state->macros[i].name, name) == 0)
         {
-            // Redefinition: Free old body and params, update with new ones
-            // Note: C standard usually warns/errors on incompatible redefinition.
-            // Here, we just replace everything.
-            free(pp_state->macros[i].body);
-            if (pp_state->macros[i].is_function_like && pp_state->macros[i].param_names)
+            // Found existing macro - check for redefinition compatibility
+            BaaMacro new_macro = {
+                .name = (wchar_t*)name,
+                .body = (wchar_t*)body,
+                .is_function_like = is_function_like,
+                .is_variadic = is_function_like ? is_variadic : false,
+                .param_count = param_count,
+                .param_names = param_names
+            };
+            
+            // Check if the redefinition is equivalent to the existing macro
+            if (are_macros_equivalent(&pp_state->macros[i], &new_macro))
             {
-                for (size_t j = 0; j < pp_state->macros[i].param_count; ++j)
-                {
-                    free(pp_state->macros[i].param_names[j]);
-                }
-                free(pp_state->macros[i].param_names);
-            }
-
-            pp_state->macros[i].body = baa_strdup(body);
-            pp_state->macros[i].is_function_like = is_function_like;
-            pp_state->macros[i].is_variadic = is_function_like ? is_variadic : false; // Variadic only if function-like
-            pp_state->macros[i].param_count = param_count;
-            pp_state->macros[i].param_names = param_names; // Takes ownership
-
-            // Check if allocations succeeded
-            if (!pp_state->macros[i].body)
-            {
-                // If body fails, try to clean up params if they were just assigned
+                // Identical redefinition - allowed silently per C99 standard
+                // Free the new parameters since we're keeping the old definition
                 if ((is_function_like || is_variadic) && param_names)
                 {
                     for (size_t j = 0; j < param_count; ++j)
@@ -82,11 +194,81 @@ bool add_macro(BaaPreprocessor *pp_state, const wchar_t *name, const wchar_t *bo
                     }
                     free(param_names);
                 }
-                pp_state->macros[i].param_names = NULL; // Ensure it's NULL on failure
-                // Macro entry might be in a bad state, but we signal failure
-                return false;
+                return true; // Successful, no change needed
             }
-            return true; // Redefinition successful
+            else
+            {
+                // Incompatible redefinition - issue warning through diagnostic system
+                PpSourceLocation current_loc = get_current_original_location(pp_state);
+                
+                // Check if it's a predefined macro (more serious)
+                if (is_predefined_macro(name))
+                {
+                    // Report error for predefined macro redefinition
+                    // Use format_preprocessor_error_at_location which handles the diagnostic system internally
+                    wchar_t *error_msg = format_preprocessor_error_at_location(&current_loc, 
+                        L"إعادة تعريف الماكرو المدمج '%ls' غير مسموحة.", name);
+                    if (error_msg) {
+                        // The error has been added to diagnostics by format_preprocessor_error_at_location
+                        free(error_msg);
+                    }
+                    
+                    // Free the new parameters and reject the redefinition
+                    if ((is_function_like || is_variadic) && param_names)
+                    {
+                        for (size_t j = 0; j < param_count; ++j)
+                        {
+                            free(param_names[j]);
+                        }
+                        free(param_names);
+                    }
+                    return false; // Reject predefined macro redefinition
+                }
+                else
+                {
+                    // Issue warning for regular macro incompatible redefinition
+                    wchar_t *warning_msg = format_preprocessor_warning_at_location(&current_loc,
+                        L"إعادة تعريف الماكرو '%ls' بتعريف مختلف، سيتم استبدال التعريف السابق.", name);
+                    if (warning_msg) {
+                        fwprintf(stderr, L"%ls\n", warning_msg);
+                        free(warning_msg);
+                    }
+                    
+                    // Proceed with replacement after warning
+                    free(pp_state->macros[i].body);
+                    if (pp_state->macros[i].is_function_like && pp_state->macros[i].param_names)
+                    {
+                        for (size_t j = 0; j < pp_state->macros[i].param_count; ++j)
+                        {
+                            free(pp_state->macros[i].param_names[j]);
+                        }
+                        free(pp_state->macros[i].param_names);
+                    }
+
+                    pp_state->macros[i].body = baa_strdup(body);
+                    pp_state->macros[i].is_function_like = is_function_like;
+                    pp_state->macros[i].is_variadic = is_function_like ? is_variadic : false;
+                    pp_state->macros[i].param_count = param_count;
+                    pp_state->macros[i].param_names = param_names; // Takes ownership
+
+                    // Check if allocations succeeded
+                    if (!pp_state->macros[i].body)
+                    {
+                        // If body fails, try to clean up params if they were just assigned
+                        if ((is_function_like || is_variadic) && param_names)
+                        {
+                            for (size_t j = 0; j < param_count; ++j)
+                            {
+                                free(param_names[j]);
+                            }
+                            free(param_names);
+                        }
+                        pp_state->macros[i].param_names = NULL; // Ensure it's NULL on failure
+                        return false;
+                    }
+                    return true; // Redefinition successful with warning
+                }
+            }
         }
     }
 

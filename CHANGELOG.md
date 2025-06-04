@@ -4,6 +4,72 @@ All notable changes to the B (باء) compiler project will be documented in thi
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.25.0] - 2025-06-04 (Macro Redefinition Warnings/Errors)
+
+### Added
+
+- **Preprocessor: C99-Compliant Macro Redefinition Checking:**
+  - Implemented comprehensive macro redefinition validation according to C99 standard (ISO/IEC 9899:1999 section 6.10.3).
+  - **Macro Equivalence Detection**: Added sophisticated comparison system that checks macro compatibility by comparing normalized macro bodies and parameter signatures.
+  - **Whitespace Normalization**: Implemented intelligent whitespace normalization for macro body comparison that:
+    - Strips leading and trailing whitespace
+    - Converts multiple consecutive whitespace characters to single spaces
+    - Enables proper equivalence checking as per C99 requirements
+  - **Parameter List Comparison**: Added parameter signature validation that compares:
+    - Function-like vs object-like macro types
+    - Parameter count matching
+    - Variadic macro status (`وسائط_إضافية`) compatibility
+    - C99-compliant behavior where parameter names don't need to match for equivalent macros
+  - **Predefined Macro Protection**: Special handling for predefined macros (`__الملف__`, `__السطر__`, `__التاريخ__`, `__الوقت__`, `__الدالة__`, `__إصدار_المعيار_باء__`) with error reporting for redefinition attempts.
+
+### Enhanced
+
+- **Preprocessor: Redefinition Behavior:**
+  - **Identical Redefinitions**: Silent acceptance of identical macro redefinitions as per C99 standard
+  - **Incompatible Redefinitions**: Warning messages with Arabic text informing users of macro replacement
+  - **Predefined Macro Errors**: Error reporting for attempts to redefine built-in macros with rejection of redefinition
+  - **Memory Management**: Proper cleanup of macro parameters during redefinition scenarios
+
+### Changed
+
+- **Preprocessor: Macro Management System:**
+  - Enhanced `add_macro()` function in `src/preprocessor/preprocessor_macros.c` to include redefinition checking logic
+  - Integrated macro comparison with existing diagnostic reporting system
+  - Added memory-safe handling of parameter arrays during macro redefinition scenarios
+  - **Error Messages**: All redefinition warnings and errors use Arabic language with precise location information
+
+### Added (Implementation Details)
+
+- **New Helper Functions in `src/preprocessor/preprocessor_macros.c`:**
+  - `normalize_macro_body()`: Normalizes whitespace in macro bodies for comparison
+  - `are_parameter_lists_equivalent()`: Compares macro parameter signatures according to C99 rules
+  - `are_macro_bodies_equivalent()`: Compares macro replacement text with normalization
+  - `are_macros_equivalent()`: Main equivalence checking function combining parameter and body comparison
+  - `is_predefined_macro()`: Identifies built-in macros that should not be redefined
+
+### Fixed
+
+- **Preprocessor: Standards Compliance:**
+  - Fixed silent macro replacement behavior that didn't conform to C99 standard requirements
+  - Resolved lack of warnings for incompatible macro redefinitions
+  - Fixed missing protection for predefined macros against user redefinition
+
+### Technical Details
+
+- **Files Modified:**
+  - `src/preprocessor/preprocessor_macros.c`: Complete redefinition checking implementation
+  - Enhanced integration with existing error recovery and diagnostic systems
+- **C99 Compliance**: Full adherence to ISO/IEC 9899:1999 section 6.10.3 for macro redefinition behavior
+- **Memory Safety**: All new functions properly handle memory allocation/deallocation with error recovery
+- **Arabic Language Support**: All user-facing messages use Arabic text with proper formatting
+
+### Benefits
+
+- **Standards Compliance**: Brings Baa preprocessor into full C99 compliance for macro redefinition behavior
+- **Developer Experience**: Clear warnings help developers identify unintentional macro redefinitions
+- **Code Quality**: Prevents silent behavior changes from incompatible macro redefinitions
+- **IDE Integration**: Provides proper diagnostic information for language servers and development tools
+
 ## [0.1.24.0] - 2025-06-04 (Comprehensive Preprocessor Error Recovery System)
 
 ### Added

@@ -1194,9 +1194,11 @@ bool validate_and_recover_conditional_stack(BaaPreprocessor *pp_state)
     {
         PpSourceLocation error_loc = get_current_original_location(pp_state);
         
-        // Report each unmatched conditional using direct formatting
-        wchar_t *unmatched_msg = format_preprocessor_error_at_location(&error_loc,
+        // Report each unmatched conditional using enhanced diagnostics
+        add_error_with_suggestion(pp_state, &error_loc,
+            L"أضف #نهاية_إذا لكل توجيه شرطي غير مكتمل",
             L"توجيه شرطي غير مطابق - مفقود #نهاية_إذا (العدد: %zu)", pp_state->conditional_stack_count);
+        wchar_t *unmatched_msg = NULL; // No longer needed, diagnostics system handles this
         if (unmatched_msg) {
             fwprintf(stderr, L"%ls\n", unmatched_msg);
             free(unmatched_msg);
@@ -1231,8 +1233,9 @@ bool should_abort_processing(BaaPreprocessor *pp_state, size_t max_errors)
     if (error_count >= max_errors)
     {
         PpSourceLocation error_loc = get_current_original_location(pp_state);
-        wchar_t *limit_msg = format_preprocessor_error_at_location(&error_loc,
+        add_fatal_error(pp_state, &error_loc,
             L"تم تجاوز الحد الأقصى للأخطاء (%zu) - إيقاف المعالجة", max_errors);
+        wchar_t *limit_msg = NULL; // No longer needed, diagnostics system handles this
         if (limit_msg) {
             fwprintf(stderr, L"%ls\n", limit_msg);
             free(limit_msg);
@@ -1330,8 +1333,10 @@ bool can_continue_after_error(BaaPreprocessor *pp_state, const wchar_t *current_
     if (pp_state->conditional_stack_count > 100) // Reasonable nesting limit
     {
         PpSourceLocation error_loc = get_current_original_location(pp_state);
-        wchar_t *nesting_msg = format_preprocessor_error_at_location(&error_loc,
+        add_error_with_suggestion(pp_state, &error_loc,
+            L"قلل من مستوى التداخل أو أعد تنظيم التوجيهات الشرطية",
             L"تم تجاوز حد تداخل التوجيهات الشرطية (العدد: %zu)", pp_state->conditional_stack_count);
+        wchar_t *nesting_msg = NULL; // No longer needed, diagnostics system handles this
         if (nesting_msg) {
             fwprintf(stderr, L"%ls\n", nesting_msg);
             free(nesting_msg);

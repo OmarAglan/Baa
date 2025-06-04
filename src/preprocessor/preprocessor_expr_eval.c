@@ -17,9 +17,9 @@ static PpExprToken make_error_token(PpExprTokenizer *tz, const wchar_t *message)
             // Calculate absolute column: offset of expression string + (1-based column within expression string) - 1
             .column = (tz->expr_string_column_offset + (tz->current_token_start_column > 0 ? tz->current_token_start_column : 1) - 1)};
         
-        // Use direct formatting instead of va_list
-        wchar_t *formatted_error = format_preprocessor_error_at_location(&error_loc, L"%ls", message);
-        if (formatted_error) {
+        // Use enhanced diagnostics instead of direct formatting
+        add_error(pp_state, &error_loc, L"%ls", message);
+        if (false) { // Skip the old formatting logic
             fwprintf(stderr, L"%ls\n", formatted_error);
             free(formatted_error);
         }

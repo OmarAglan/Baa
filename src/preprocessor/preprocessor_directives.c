@@ -163,7 +163,9 @@ bool handle_preprocessor_directive(BaaPreprocessor *pp_state, wchar_t *directive
 
         if (name_start == name_end)
         {
-            *error_message = format_preprocessor_error_at_location(&directive_loc, L"تنسيق #إذا_لم_يعرف غير صالح: اسم الماكرو مفقود.");
+            add_error_with_suggestion(pp_state, &directive_loc,
+                L"أضف اسم الماكرو بعد #إذا_لم_يعرف، مثل: #إذا_لم_يعرف MY_MACRO",
+                L"تنسيق #إذا_لم_يعرف غير صالح: اسم الماكرو مفقود");
             success = false;
         }
         else
@@ -205,7 +207,9 @@ bool handle_preprocessor_directive(BaaPreprocessor *pp_state, wchar_t *directive
         *is_conditional_directive = true;
         if (pp_state->conditional_stack_count == 0)
         {
-            *error_message = format_preprocessor_error_at_location(&directive_loc, L"#إلا بدون #إذا/#إذا_عرف/#إذا_لم_يعرف مطابق.");
+            add_error_with_suggestion(pp_state, &directive_loc,
+                L"تأكد من وجود #إذا أو #إذا_عرف أو #إذا_لم_يعرف قبل استخدام #إلا",
+                L"#إلا بدون #إذا/#إذا_عرف/#إذا_لم_يعرف مطابق");
             success = false;
         }
         else
@@ -229,7 +233,9 @@ bool handle_preprocessor_directive(BaaPreprocessor *pp_state, wchar_t *directive
         *is_conditional_directive = true;
         if (pp_state->conditional_stack_count == 0)
         {
-            *error_message = format_preprocessor_error_at_location(&directive_loc, L"#وإلا_إذا بدون #إذا/#إذا_عرف/#إذا_لم_يعرف مطابق.");
+            add_error_with_suggestion(pp_state, &directive_loc,
+                L"تأكد من وجود #إذا أو #إذا_عرف أو #إذا_لم_يعرف قبل استخدام #وإلا_إذا",
+                L"#وإلا_إذا بدون #إذا/#إذا_عرف/#إذا_لم_يعرف مطابق");
             success = false;
         }
         else
@@ -359,7 +365,9 @@ bool handle_preprocessor_directive(BaaPreprocessor *pp_state, wchar_t *directive
                 size_t include_path_len = path_end - path_start;
                 if (include_path_len == 0)
                 {
-                    *error_message = format_preprocessor_error_at_location(&directive_loc, L"تنسيق #تضمين غير صالح: مسار الملف فارغ.");
+                    add_error_with_suggestion(pp_state, &directive_loc,
+                        L"أضف مسار الملف بين علامتي اقتباس، مثل: #تضمين \"header.h\"",
+                        L"تنسيق #تضمين غير صالح: مسار الملف فارغ");
                     success = false;
                 }
                 else

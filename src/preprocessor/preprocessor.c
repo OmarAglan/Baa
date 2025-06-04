@@ -2,21 +2,12 @@
 #include "preprocessor_internal.h"         // Internal definitions and function declarations
 #include <time.h>                          // For __التاريخ__ and __الوقت__
 
-// Helper function to report a simple diagnostic with a single string argument
-// This is a trick to get a va_list for a single string argument
-// We'll call add_preprocessor_diagnostic internally
-static void report_simple_diag(BaaPreprocessor * s, const PpSourceLocation *l, bool is_err, const wchar_t *fmt, ...)
-{
-    va_list args;
-    va_start(args, fmt);
-    add_preprocessor_diagnostic(s, l, is_err, fmt, args);
-    va_end(args);
-}
-
-// Helper function to report an unterminated conditional block
+// Helper function to report an unterminated conditional block using enhanced diagnostics
 void report_unterminated_conditional(BaaPreprocessor * st, const PpSourceLocation *loc)
 {
-    report_simple_diag(st, loc, true, L"%ls", L"كتلة شرطية غير منتهية في نهاية المعالجة (مفقود #نهاية_إذا).");
+    add_error_with_suggestion(st, loc,
+        L"تأكد من أن كل #إذا أو #إذا_عرف أو #إذا_لم_يعرف له #نهاية_إذا مطابق",
+        L"كتلة شرطية غير منتهية في نهاية المعالجة (مفقود #نهاية_إذا)");
 }
 
 
@@ -28,6 +19,7 @@ wchar_t *baa_preprocess(const BaaPpSource *source, const char **include_paths, w
     {
         if (error_message)
         {
+            // Use legacy formatter for early errors before preprocessor state is initialized
             PpSourceLocation early_error_loc = {"(preprocessor_init)", 0, 0};
             *error_message = format_preprocessor_error_at_location(&early_error_loc, L"وسيطات غير صالحة تم تمريرها إلى المعالج المسبق (المصدر أو اسم المصدر أو مؤشر رسالة الخطأ هو NULL).");
         }

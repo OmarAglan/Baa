@@ -950,11 +950,13 @@ bool attempt_directive_recovery(BaaPreprocessor *pp_state, const wchar_t **curre
     
     PpSourceLocation error_loc = get_current_original_location(pp_state);
     
-    // Report recovery attempt
-    va_list empty_args;
-    memset(&empty_args, 0, sizeof(empty_args));
-    add_preprocessor_diagnostic(pp_state, &error_loc, false, 
-        L"محاولة استرداد من خطأ التوجيه - البحث عن نقطة آمنة للمتابعة", empty_args);
+    // Report recovery attempt - use direct formatting instead of va_list
+    wchar_t *recovery_msg = format_preprocessor_warning_at_location(&error_loc, 
+        L"محاولة استرداد من خطأ التوجيه - البحث عن نقطة آمنة للمتابعة");
+    if (recovery_msg) {
+        fwprintf(stderr, L"%ls\n", recovery_msg);
+        free(recovery_msg);
+    }
     
     // Find next directive
     const wchar_t *next_directive = find_next_directive(*current_pos);
@@ -977,9 +979,12 @@ bool attempt_directive_recovery(BaaPreprocessor *pp_state, const wchar_t **curre
         
         // Report successful recovery
         PpSourceLocation recovery_loc = get_current_original_location(pp_state);
-        memset(&empty_args, 0, sizeof(empty_args));
-        add_preprocessor_diagnostic(pp_state, &recovery_loc, false,
-            L"تم الاسترداد بنجاح - استئناف المعالجة من السطر %zu", empty_args);
+        wchar_t *success_msg = format_preprocessor_warning_at_location(&recovery_loc,
+            L"تم الاسترداد بنجاح - استئناف المعالجة من السطر %zu", pp_state->current_line_number);
+        if (success_msg) {
+            fwprintf(stderr, L"%ls\n", success_msg);
+            free(success_msg);
+        }
         
         return true;
     }
@@ -1000,13 +1005,12 @@ bool validate_and_recover_conditional_stack(BaaPreprocessor *pp_state)
     {
         PpSourceLocation error_loc = get_current_original_location(pp_state);
         
-        // Report each unmatched conditional
-        for (size_t i = 0; i < pp_state->conditional_stack_count; i++)
-        {
-            va_list empty_args;
-            memset(&empty_args, 0, sizeof(empty_args));
-            add_preprocessor_diagnostic(pp_state, &error_loc, true,
-                L"توجيه شرطي غير مطابق - مفقود #نهاية_إذا", empty_args);
+        // Report each unmatched conditional using direct formatting
+        wchar_t *unmatched_msg = format_preprocessor_error_at_location(&error_loc,
+            L"توجيه شرطي غير مطابق - مفقود #نهاية_إذا (العدد: %zu)", pp_state->conditional_stack_count);
+        if (unmatched_msg) {
+            fwprintf(stderr, L"%ls\n", unmatched_msg);
+            free(unmatched_msg);
         }
         
         // Clear the stack to prevent further issues
@@ -1038,10 +1042,12 @@ bool should_abort_processing(BaaPreprocessor *pp_state, size_t max_errors)
     if (error_count >= max_errors)
     {
         PpSourceLocation error_loc = get_current_original_location(pp_state);
-        va_list empty_args;
-        memset(&empty_args, 0, sizeof(empty_args));
-        add_preprocessor_diagnostic(pp_state, &error_loc, true,
-            L"تم تجاوز الحد الأقصى للأخطاء (%zu) - إيقاف المعالجة", empty_args);
+        wchar_t *limit_msg = format_preprocessor_error_at_location(&error_loc,
+            L"تم تجاوز الحد الأقصى للأخطاء (%zu) - إيقاف المعالجة", max_errors);
+        if (limit_msg) {
+            fwprintf(stderr, L"%ls\n", limit_msg);
+            free(limit_msg);
+        }
         return true;
     }
     
@@ -1090,10 +1096,12 @@ bool attempt_include_recovery(BaaPreprocessor *pp_state, const wchar_t *failed_p
             if (temp_error) free(temp_error);
             
             PpSourceLocation recovery_loc = get_current_original_location(pp_state);
-            va_list empty_args;
-            memset(&empty_args, 0, sizeof(empty_args));
-            add_preprocessor_diagnostic(pp_state, &recovery_loc, false,
-                L"تم العثور على ملف بديل: %hs", empty_args);
+            wchar_t *alt_found_msg = format_preprocessor_warning_at_location(&recovery_loc,
+                L"تم العثور على ملف بديل: %hs", alt_path);
+            if (alt_found_msg) {
+                fwprintf(stderr, L"%ls\n", alt_found_msg);
+                free(alt_found_msg);
+            }
             
             *recovered_content = content;
             return true;
@@ -1133,10 +1141,12 @@ bool can_continue_after_error(BaaPreprocessor *pp_state, const wchar_t *current_
     if (pp_state->conditional_stack_count > 100) // Reasonable nesting limit
     {
         PpSourceLocation error_loc = get_current_original_location(pp_state);
-        va_list empty_args;
-        memset(&empty_args, 0, sizeof(empty_args));
-        add_preprocessor_diagnostic(pp_state, &error_loc, true,
-            L"تم تجاوز حد تداخل التوجيهات الشرطية", empty_args);
+        wchar_t *nesting_msg = format_preprocessor_error_at_location(&error_loc,
+            L"تم تجاوز حد تداخل التوجيهات الشرطية (العدد: %zu)", pp_state->conditional_stack_count);
+        if (nesting_msg) {
+            fwprintf(stderr, L"%ls\n", nesting_msg);
+            free(nesting_msg);
+        }
         return false;
     }
     

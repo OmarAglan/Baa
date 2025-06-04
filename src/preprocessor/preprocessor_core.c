@@ -158,14 +158,34 @@ wchar_t *process_file(BaaPreprocessor *pp_state, const char *file_path, wchar_t 
                     const wchar_t *current_pos = line_start;
                     if (attempt_directive_recovery(pp_state, &current_pos))
                     {
-                        // Update line_start to continue from recovery point
+                        // Recovery successful - update line_start to continue from recovery point
                         line_start = (wchar_t *)current_pos;
                         clear_error_state(pp_state);
                         free(current_line);
-                        continue; // Skip to next iteration
+                        continue; // Skip to next iteration - don't set success = false
+                    }
+                    else
+                    {
+                        // Recovery failed, but try to continue with next line
+                        fwprintf(stderr, L"DEBUG: Directive recovery failed, skipping to next line\n");
+                        free(current_line);
+                        if (line_end != NULL)
+                        {
+                            line_start = line_end + 1;
+                            pp_state->current_line_number++;
+                        }
+                        else
+                        {
+                            break; // End of file
+                        }
+                        continue; // Continue processing instead of aborting
                     }
                 }
-                success = false;
+                else
+                {
+                    // Cannot continue after this error - abort processing
+                    success = false;
+                }
             }
         }
         else if (!pp_state->skipping_lines)
@@ -340,7 +360,30 @@ wchar_t *process_string(BaaPreprocessor *pp_state, const wchar_t *source_string,
             bool local_is_conditional_directive_ps; // For process_string
             if (!handle_preprocessor_directive(pp_state, effective_line_start + 1, NULL, &output_buffer, error_message, &local_is_conditional_directive_ps))
             {
-                success = false;
+                // Attempt error recovery for directive processing in string mode
+                if (can_continue_after_error(pp_state, L"string_directive_processing"))
+                {
+                    // For string processing, we can't use full directive recovery since we don't have file position
+                    // Just skip to next line and continue
+                    fwprintf(stderr, L"DEBUG: String directive error, skipping to next line\n");
+                    free(current_line);
+                    if (line_end != NULL)
+                    {
+                        line_start = line_end + 1;
+                        pp_state->current_line_number++;
+                    }
+                    else
+                    {
+                        break; // End of string
+                    }
+                    clear_error_state(pp_state);
+                    continue; // Continue processing instead of aborting
+                }
+                else
+                {
+                    // Cannot continue after this error - abort processing
+                    success = false;
+                }
             }
         }
         else if (!pp_state->skipping_lines)

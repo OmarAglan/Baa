@@ -4,6 +4,162 @@ All notable changes to the B (باء) compiler project will be documented in thi
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.25.0] - 2025-06-04 (Macro Redefinition Warnings/Errors)
+
+### Added
+
+- **Preprocessor: C99-Compliant Macro Redefinition Checking:**
+  - Implemented comprehensive macro redefinition validation according to C99 standard (ISO/IEC 9899:1999 section 6.10.3).
+  - **Macro Equivalence Detection**: Added sophisticated comparison system that checks macro compatibility by comparing normalized macro bodies and parameter signatures.
+  - **Whitespace Normalization**: Implemented intelligent whitespace normalization for macro body comparison that:
+    - Strips leading and trailing whitespace
+    - Converts multiple consecutive whitespace characters to single spaces
+    - Enables proper equivalence checking as per C99 requirements
+  - **Parameter List Comparison**: Added parameter signature validation that compares:
+    - Function-like vs object-like macro types
+    - Parameter count matching
+    - Variadic macro status (`وسائط_إضافية`) compatibility
+    - C99-compliant behavior where parameter names don't need to match for equivalent macros
+  - **Predefined Macro Protection**: Special handling for predefined macros (`__الملف__`, `__السطر__`, `__التاريخ__`, `__الوقت__`, `__الدالة__`, `__إصدار_المعيار_باء__`) with error reporting for redefinition attempts.
+
+### Enhanced
+
+- **Preprocessor: Redefinition Behavior:**
+  - **Identical Redefinitions**: Silent acceptance of identical macro redefinitions as per C99 standard
+  - **Incompatible Redefinitions**: Warning messages with Arabic text informing users of macro replacement
+  - **Predefined Macro Errors**: Error reporting for attempts to redefine built-in macros with rejection of redefinition
+  - **Memory Management**: Proper cleanup of macro parameters during redefinition scenarios
+
+### Changed
+
+- **Preprocessor: Macro Management System:**
+  - Enhanced `add_macro()` function in `src/preprocessor/preprocessor_macros.c` to include redefinition checking logic
+  - Integrated macro comparison with existing diagnostic reporting system
+  - Added memory-safe handling of parameter arrays during macro redefinition scenarios
+  - **Error Messages**: All redefinition warnings and errors use Arabic language with precise location information
+
+### Added (Implementation Details)
+
+- **New Helper Functions in `src/preprocessor/preprocessor_macros.c`:**
+  - `normalize_macro_body()`: Normalizes whitespace in macro bodies for comparison
+  - `are_parameter_lists_equivalent()`: Compares macro parameter signatures according to C99 rules
+  - `are_macro_bodies_equivalent()`: Compares macro replacement text with normalization
+  - `are_macros_equivalent()`: Main equivalence checking function combining parameter and body comparison
+  - `is_predefined_macro()`: Identifies built-in macros that should not be redefined
+
+### Fixed
+
+- **Preprocessor: Standards Compliance:**
+  - Fixed silent macro replacement behavior that didn't conform to C99 standard requirements
+  - Resolved lack of warnings for incompatible macro redefinitions
+  - Fixed missing protection for predefined macros against user redefinition
+
+### Technical Details
+
+- **Files Modified:**
+  - `src/preprocessor/preprocessor_macros.c`: Complete redefinition checking implementation
+  - Enhanced integration with existing error recovery and diagnostic systems
+- **C99 Compliance**: Full adherence to ISO/IEC 9899:1999 section 6.10.3 for macro redefinition behavior
+- **Memory Safety**: All new functions properly handle memory allocation/deallocation with error recovery
+- **Arabic Language Support**: All user-facing messages use Arabic text with proper formatting
+
+### Benefits
+
+- **Standards Compliance**: Brings Baa preprocessor into full C99 compliance for macro redefinition behavior
+- **Developer Experience**: Clear warnings help developers identify unintentional macro redefinitions
+- **Code Quality**: Prevents silent behavior changes from incompatible macro redefinitions
+- **IDE Integration**: Provides proper diagnostic information for language servers and development tools
+
+## [0.1.24.0] - 2025-06-04 (Comprehensive Preprocessor Error Recovery System)
+
+### Added
+
+- **Preprocessor: Comprehensive Error Recovery System:**
+  - Implemented robust error recovery mechanisms that allow the preprocessor to continue processing after encountering errors, reporting multiple errors in a single compilation pass.
+  - **Diagnostic System**: Added centralized error and warning collection with precise source location tracking (file, line, column).
+  - **Error Recovery Utilities**: 
+    - `skip_to_next_line()`: Basic line-level recovery for malformed directives
+    - `find_next_directive()`: Smart synchronization to next preprocessor directive
+    - `attempt_directive_recovery()`: Intelligent recovery from directive parsing errors
+    - `validate_and_recover_conditional_stack()`: Automatic cleanup of unmatched conditional directives
+    - `should_abort_processing()`: Configurable error limits to prevent error flooding
+    - `can_continue_after_error()`: Decision logic for recovery vs. abort scenarios
+    - `attempt_include_recovery()`: File inclusion error recovery with alternative file extensions
+  - **Enhanced Expression Evaluator**: Integrated error recovery into conditional expression evaluation (`#إذا`, `#وإلا_إذا`) with graceful handling of malformed expressions, division by zero protection, and undefined macro handling.
+  - **Error Limits and Safeguards**: Configurable error thresholds (default: 25 errors per file, 50 globally) to prevent overwhelming users with error messages while detecting infinite loops and resource exhaustion.
+
+### Enhanced
+
+- **Preprocessor: Core Processing Pipeline:**
+  - Updated `process_file()` and `process_string()` functions to integrate error recovery at each processing step
+  - Added graceful degradation when errors occur, allowing continued processing of valid code sections
+  - Enhanced conditional stack validation at file completion to detect unmatched `#إذا`/`#نهاية_إذا` pairs
+- **Preprocessor: Expression Evaluation:**
+  - Enhanced conditional expression evaluator with robust error handling for syntax errors, division by zero, and undefined macros
+  - Improved error reporting with precise token location information within expressions
+  - Added graceful fallback behavior for malformed expressions while maintaining conditional processing integrity
+- **Preprocessor: Error Reporting:**
+  - All error messages now include precise Arabic error descriptions with file, line, and column information
+  - Multiple errors are collected and reported together, improving developer productivity
+  - Enhanced error context preservation during recovery operations
+
+### Changed
+
+- **Preprocessor: Architecture:**
+  - Refactored error handling throughout the preprocessor to use the new diagnostic accumulation system
+  - Modified core processing loops to check error limits and attempt recovery instead of immediate termination
+  - Enhanced internal state management to support continued processing after errors
+- **Preprocessor: Error Messages:**
+  - Standardized all error messages to use Arabic with consistent formatting
+  - Improved error location precision for directive arguments and macro invocation errors
+  - Added recovery status reporting to inform users when preprocessing continues after errors
+
+### Fixed
+
+- **Preprocessor: Robustness:**
+  - Fixed potential crashes from malformed conditional directives by implementing proper error boundaries
+  - Resolved issues with unmatched conditional blocks causing preprocessing to continue in wrong state
+  - Fixed memory leaks during error recovery by ensuring proper cleanup of partially processed content
+- **Preprocessor: Error Handling:**
+  - Fixed cascading errors where one error would cause multiple follow-up errors for the same issue
+  - Improved handling of circular include detection with better error messages
+  - Fixed column number calculation errors in expression evaluation error reporting
+
+### Added (Testing)
+
+- **Comprehensive Test Suite:**
+  - `tests/unit/preprocessor/test_error_recovery.c`: Unit tests covering all error recovery scenarios including malformed conditionals, missing endif statements, unknown directives, expression errors, and error count limits
+  - `tests/resources/preprocessor_test_cases/error_recovery_test.baa`: Integration test file with various error scenarios to validate recovery behavior
+  - Test coverage for continued processing after recoverable errors and validation of error limit mechanisms
+
+### Added (Documentation)
+
+- **Complete Documentation**: `docs/PREPROCESSOR_ERROR_RECOVERY.md` providing comprehensive coverage of:
+  - System architecture and design principles
+  - Implementation details for all recovery mechanisms
+  - Usage examples and integration guidance
+  - Testing strategies and methodologies
+  - Configuration options and customization
+  - Future enhancement roadmap
+
+### Technical Details
+
+- **Files Modified/Added:**
+  - `src/preprocessor/preprocessor_utils.c`: Added all error recovery utilities and enhanced diagnostic system
+  - `src/preprocessor/preprocessor_core.c`: Integrated error recovery into main processing loops
+  - `src/preprocessor/preprocessor_expr_eval.c`: Enhanced with robust error handling and recovery
+  - `src/preprocessor/preprocessor_internal.h`: Added function declarations for new error recovery system
+  - Multiple test files and comprehensive documentation
+- **Impact**: Significantly improves preprocessor robustness and user experience by enabling multiple error reporting and graceful error handling
+- **Backward Compatibility**: Fully maintained - existing code continues to work with enhanced error reporting
+
+### Benefits
+
+- **Improved Developer Experience**: Users can see and fix multiple errors at once instead of iterative single-error fixing
+- **Enhanced Robustness**: Preprocessor handles malformed code gracefully without crashes or undefined behavior
+- **Better IDE Integration**: Comprehensive diagnostic information enables better language server implementation and IDE error display
+- **Production Ready**: Memory-safe implementation with proper resource cleanup during error conditions
+
 ## [0.1.23.0] - 2025-06-03 (Function-Like Macro Expansion in Conditional Expressions)
 
 ### Added

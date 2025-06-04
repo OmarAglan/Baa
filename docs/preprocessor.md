@@ -37,6 +37,11 @@ The preprocessor takes a Baa source file (or string) as input, processes these d
             Example: `#تعريف LOG(fmt, وسائط_إضافية) printf(fmt, __وسائط_متغيرة__)`
   * **Rescanning:** The output of macro expansions (after argument substitution, `#`, and `##`) is rescanned for further macro names to be expanded, adhering to C99 standards.
   * Detects and prevents direct self-recursive macro expansion.
+  * **C99-Compliant Macro Redefinition Checking:**
+    * **Identical Redefinitions:** Silent acceptance of identical macro redefinitions as per C99 standard (ISO/IEC 9899:1999 section 6.10.3).
+    * **Incompatible Redefinitions:** Warning messages in Arabic when attempting to redefine a macro with different replacement text or parameter signature.
+    * **Predefined Macro Protection:** Error reporting for attempts to redefine built-in macros (`__الملف__`, `__السطر__`, etc.) with rejection of redefinition.
+    * **Intelligent Comparison:** Uses whitespace normalization and parameter signature matching to determine macro equivalence according to C99 rules.
 * **`#الغاء_تعريف` (Undefine):** Removes a macro definition (e.g., `#الغاء_تعريف PI`).
 * **Conditional Compilation:**
   * `#إذا expression`: Evaluates a constant integer expression. Undefined identifiers are treated as 0.

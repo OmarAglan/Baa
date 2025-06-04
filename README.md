@@ -2,7 +2,7 @@
 
 B (باء) is a programming language designed to support Arabic syntax while maintaining conceptual alignment with C features. It allows developers to write code using Arabic keywords and identifiers. The project aims to provide a complete compiler toolchain, including a preprocessor, lexer, parser, semantic analyzer, and code generator.
 
-## Current Status (Reflects Build System v0.1.18.0 / Preprocessor v0.1.17.0 / Lexer conceptual v0.1.21.0)
+## Current Status (Reflects Build System v0.1.25.0 / Preprocessor v0.1.25.0 / Lexer conceptual v0.1.21.0)
 
 The project is actively under development. Key components and their status:
 
@@ -17,12 +17,13 @@ The project is actively under development. Key components and their status:
 * **Preprocessor (`src/preprocessor/`):** - *Actively Developed & Largely Functional*
   * Handles file inclusion (`#تضمين`) with relative and standard path resolution, circular include detection.
   * Supports macro definitions (`#تعريف`) including object-like, function-like (with parameters, stringification `#`, token pasting `##`, variadic arguments `وسائط_إضافية`/`__وسائط_متغيرة__`), and rescanning of expansion results.
+  * **C99-Compliant Macro Redefinition Checking:** Intelligent comparison with whitespace normalization, warnings for incompatible redefinitions, errors for predefined macro redefinitions, silent acceptance of identical redefinitions.
   * Handles `#الغاء_تعريف` (undefine).
   * Implements conditional compilation (`#إذا`, `#إذا_عرف`, `#إذا_لم_يعرف`, `#وإلا_إذا`, `#إلا`, `#نهاية_إذا`) with expression evaluation (supports arithmetic, comparison, logical, bitwise operators, decimal/hex/binary literals, and the `معرف` operator).
   * Provides predefined Arabic macros (`__الملف__`, `__السطر__` as integer, `__التاريخ__`, `__الوقت__`, `__الدالة__` placeholder, `__إصدار_المعيار_باء__`).
   * Supports `#خطأ` and `#تحذير` directives.
   * Input file encoding detection (UTF-8 default, UTF-16LE with BOM). Outputs UTF-16LE `wchar_t*` stream.
-  * Error reporting provides original source locations (file, line, column) and is being enhanced for multi-error reporting.
+  * Comprehensive error recovery system with multi-error reporting and smart synchronization.
   * *See `docs/PREPROCESSOR_ROADMAP.md` and `CHANGELOG.md` for latest features and known issues.*
 
 * **Lexer (`src/lexer/`):** - *Actively Developed & Largely Functional*

@@ -17,15 +17,12 @@ static PpExprToken make_error_token(PpExprTokenizer *tz, const wchar_t *message)
             // Calculate absolute column: offset of expression string + (1-based column within expression string) - 1
             .column = (tz->expr_string_column_offset + (tz->current_token_start_column > 0 ? tz->current_token_start_column : 1) - 1)};
         
-        // Create a va_list for the diagnostic system
-        // Since we have a simple string, we'll use a wrapper function
-        wchar_t final_message[512];
-        swprintf(final_message, sizeof(final_message) / sizeof(wchar_t), L"%ls", message);
-        
-        // Use a helper to call add_preprocessor_diagnostic with proper va_list
-        va_list dummy_args;
-        memset(&dummy_args, 0, sizeof(dummy_args)); // Initialize to avoid issues
-        add_preprocessor_diagnostic(tz->pp_state, &error_loc, true, final_message, dummy_args);
+        // Use direct formatting instead of va_list
+        wchar_t *formatted_error = format_preprocessor_error_at_location(&error_loc, L"%ls", message);
+        if (formatted_error) {
+            fwprintf(stderr, L"%ls\n", formatted_error);
+            free(formatted_error);
+        }
     }
     return (PpExprToken){.type = PP_EXPR_TOKEN_ERROR};
 }

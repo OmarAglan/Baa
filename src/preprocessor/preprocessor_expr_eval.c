@@ -3,36 +3,49 @@
 
 // --- Preprocessor Expression Evaluation Implementation ---
 
-// Helper to create an error token
+// Helper to create an error token - now uses diagnostic system
 static PpExprToken make_error_token(PpExprTokenizer *tz, const wchar_t *message)
 {
-    if (tz->error_message && !*tz->error_message)
-    { // Set error only once
-        if (tz->pp_state)
-        {
-            // Get the original location (file, line) from the stack
-            PpSourceLocation original_loc = get_current_original_location(tz->pp_state);
-            // Use the column number captured *before* the token was consumed
-            PpSourceLocation error_loc = {
-                .file_path = original_loc.file_path,
-                .line = original_loc.line,
-                // Calculate absolute column: offset of expression string + (1-based column within expression string) - 1
-                .column = (tz->expr_string_column_offset + (tz->current_token_start_column > 0 ? tz->current_token_start_column : 1) - 1)};
-            // If the message is a format string, we need to handle potential varargs.
-            // For simplicity in this refactor, assuming 'message' is a simple string or we pass it as a single arg.
-            // A more robust solution might involve changing make_error_token to accept varargs.
-            wchar_t final_message[512];                                                        // Assuming a max length for simplicity
-            swprintf(final_message, sizeof(final_message) / sizeof(wchar_t), L"%ls", message); // Basic formatting
-            *tz->error_message = format_preprocessor_error_at_location(&error_loc, final_message);
-        }
-        else
-        {
-            // Fallback if pp_state isn't available
-            PpSourceLocation generic_loc = {"(expr_eval_no_context)", 0, 0};
-            *tz->error_message = format_preprocessor_error_at_location(&generic_loc, L"خطأ في مقيم التعبير (لا يوجد سياق): %ls", message);
-        }
+    if (tz->pp_state)
+    {
+        // Get the original location (file, line) from the stack
+        PpSourceLocation original_loc = get_current_original_location(tz->pp_state);
+        // Use the column number captured *before* the token was consumed
+        PpSourceLocation error_loc = {
+            .file_path = original_loc.file_path,
+            .line = original_loc.line,
+            // Calculate absolute column: offset of expression string + (1-based column within expression string) - 1
+            .column = (tz->expr_string_column_offset + (tz->current_token_start_column > 0 ? tz->current_token_start_column : 1) - 1)};
+        
+        // Create a va_list for the diagnostic system
+        // Since we have a simple string, we'll use a wrapper function
+        wchar_t final_message[512];
+        swprintf(final_message, sizeof(final_message) / sizeof(wchar_t), L"%ls", message);
+        
+        // Use a helper to call add_preprocessor_diagnostic with proper va_list
+        va_list dummy_args;
+        memset(&dummy_args, 0, sizeof(dummy_args)); // Initialize to avoid issues
+        add_preprocessor_diagnostic(tz->pp_state, &error_loc, true, final_message, dummy_args);
     }
     return (PpExprToken){.type = PP_EXPR_TOKEN_ERROR};
+}
+
+// Helper function to report expression errors with va_list support
+static void report_expression_error(PpExprTokenizer *tz, const wchar_t *format, ...)
+{
+    if (tz->pp_state)
+    {
+        PpSourceLocation original_loc = get_current_original_location(tz->pp_state);
+        PpSourceLocation error_loc = {
+            .file_path = original_loc.file_path,
+            .line = original_loc.line,
+            .column = (tz->expr_string_column_offset + (tz->current_token_start_column > 0 ? tz->current_token_start_column : 1) - 1)};
+        
+        va_list args;
+        va_start(args, format);
+        add_preprocessor_diagnostic(tz->pp_state, &error_loc, true, format, args);
+        va_end(args);
+    }
 }
 
 // Helper to create a simple token
@@ -402,24 +415,37 @@ static wchar_t *fully_expand_expression_string(BaaPreprocessor *pp_state,
     return final_expanded_string;
 }
 
-bool evaluate_preprocessor_expression(BaaPreprocessor *pp_state, const wchar_t *raw_expression, bool *value, wchar_t **error_message, const char *abs_path_unused)
+bool evaluate_preprocessor_expression(BaaPreprocessor *pp_state, const wchar_t *raw_expression, bool *value, const char *abs_path_unused)
 {
     // The caller (handle_preprocessor_directive) must ensure that
     // pp_state->current_column_number is set to the column where the `expression` string
     // *starts on the original source line* before this function is called.
     // This value will be used to initialize tz.expr_string_column_offset.
 
-    *error_message = NULL;
     *value = false; // Default to false
 
     // Store the original line number of the #if directive for error reporting and __LINE__ expansion
     size_t directive_line_number = pp_state->current_line_number;
-    wchar_t *expanded_expression_str = fully_expand_expression_string(pp_state, raw_expression, directive_line_number, error_message);
+    
+    // For fully_expand_expression_string, we still need a temporary error_message for backward compatibility
+    wchar_t *temp_error_message = NULL;
+    wchar_t *expanded_expression_str = fully_expand_expression_string(pp_state, raw_expression, directive_line_number, &temp_error_message);
     if (!expanded_expression_str)
     {
-        // error_message already set by fully_expand_expression_string
+        // Report the error through diagnostic system if temp_error_message was set
+        if (temp_error_message)
+        {
+            PpSourceLocation error_loc = get_current_original_location(pp_state);
+            report_expression_error_simple(pp_state, &error_loc, L"%ls", temp_error_message);
+            free(temp_error_message);
+        }
         return false;
     }
+    if (temp_error_message)
+    {
+        free(temp_error_message); // Clean up if set but expansion succeeded
+    }
+    
     fwprintf(stderr, L"DEBUG #if Fully Expanded Expr: [%ls]\n", expanded_expression_str); // Uncomment for debugging
     PpExprTokenizer tz = {
         .current = expanded_expression_str,                           // Use the fully expanded string
@@ -428,7 +454,6 @@ bool evaluate_preprocessor_expression(BaaPreprocessor *pp_state, const wchar_t *
         .start = expanded_expression_str,
         .pp_state = pp_state,                    // Pass the state for context
         .abs_path = pp_state->current_file_path, // Use current file from pp_state for context
-        .error_message = error_message,
         .current_token_start_column = 1 // Reset column for the start of tokenizing the expanded string
     };
     // tz.current_token_start_column will be calculated by get_next_pp_expr_token relative to expression_string_start
@@ -436,7 +461,7 @@ bool evaluate_preprocessor_expression(BaaPreprocessor *pp_state, const wchar_t *
     if (!parse_and_evaluate_pp_expr(&tz, &result_value))
     {
         free(expanded_expression_str);
-        // Error message should be set by the parser/evaluator
+        // Error already reported through diagnostic system
         return false;
     }
 
@@ -457,6 +482,18 @@ bool evaluate_preprocessor_expression(BaaPreprocessor *pp_state, const wchar_t *
     *value = (result_value != 0); // Final result: 0 is false, non-zero is true
     free(expanded_expression_str);
     return true;
+}
+
+// Helper function to report expression errors with simple parameters
+static void report_expression_error_simple(BaaPreprocessor *pp_state, const PpSourceLocation *loc, const wchar_t *format, ...)
+{
+    if (pp_state)
+    {
+        va_list args;
+        va_start(args, format);
+        add_preprocessor_diagnostic(pp_state, loc, true, format, args);
+        va_end(args);
+    }
 }
 
 // Main parsing function - starts with unary operators

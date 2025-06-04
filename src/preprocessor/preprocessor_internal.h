@@ -139,7 +139,6 @@ typedef struct
     const wchar_t *start;
     BaaPreprocessor *pp_state; // Now points to the struct, not the typedef
     const char *abs_path;
-    wchar_t **error_message;
     size_t current_token_start_column; // 1-based column *within the expression string* where the current token started
 } PpExprTokenizer;
 
@@ -161,6 +160,17 @@ wchar_t *format_preprocessor_warning_at_location(const PpSourceLocation *locatio
 // New function to add a diagnostic (error or warning) to the preprocessor state
 void add_preprocessor_diagnostic(BaaPreprocessor *pp_state, const PpSourceLocation *loc, bool is_error, const wchar_t *format, va_list args_list);
 void free_diagnostics_list(BaaPreprocessor *pp_state);
+
+// Error Recovery and Synchronization Utilities
+void skip_to_next_line(BaaPreprocessor *pp_state, const wchar_t **current_pos);
+const wchar_t *find_next_directive(const wchar_t *content);
+bool is_conditional_directive_keyword(const wchar_t *directive_line);
+bool attempt_directive_recovery(BaaPreprocessor *pp_state, const wchar_t **current_pos);
+bool validate_and_recover_conditional_stack(BaaPreprocessor *pp_state);
+bool should_abort_processing(BaaPreprocessor *pp_state, size_t max_errors);
+bool attempt_include_recovery(BaaPreprocessor *pp_state, const wchar_t *failed_path, wchar_t **recovered_content);
+void clear_error_state(BaaPreprocessor *pp_state);
+bool can_continue_after_error(BaaPreprocessor *pp_state, const wchar_t *current_context);
 
 // File Stack
 bool push_file_stack(BaaPreprocessor *pp, const char *abs_path);
@@ -195,7 +205,7 @@ void update_skipping_state(BaaPreprocessor *pp_state);
 void free_conditional_stack(BaaPreprocessor *pp);
 
 // From preprocessor_expr_eval.c
-bool evaluate_preprocessor_expression(BaaPreprocessor *pp_state, const wchar_t *expression, bool *value, wchar_t **error_message, const char *abs_path);
+bool evaluate_preprocessor_expression(BaaPreprocessor *pp_state, const wchar_t *expression, bool *value, const char *abs_path);
 
 // From preprocessor_directives.c
 bool handle_preprocessor_directive(BaaPreprocessor *pp_state, wchar_t *directive_start, const char *abs_path, DynamicWcharBuffer *output_buffer, wchar_t **error_message, bool *is_conditional_directive);

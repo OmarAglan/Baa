@@ -849,3 +849,296 @@ void free_diagnostics_list(BaaPreprocessor *pp_state)
         pp_state->diagnostic_capacity = 0;
     }
 }
+
+// --- Error Recovery and Synchronization Utilities ---
+
+// Skips to the next line, used for error recovery
+void skip_to_next_line(BaaPreprocessor *pp_state, const wchar_t **current_pos)
+{
+    if (!pp_state || !current_pos || !*current_pos)
+        return;
+    
+    // Skip to end of current line
+    while (**current_pos != L'\0' && **current_pos != L'\n')
+    {
+        (*current_pos)++;
+    }
+    
+    // Skip the newline character if present
+    if (**current_pos == L'\n')
+    {
+        (*current_pos)++;
+        pp_state->current_line_number++;
+        pp_state->current_column_number = 1;
+    }
+}
+
+// Finds the next preprocessor directive for synchronization
+const wchar_t *find_next_directive(const wchar_t *content)
+{
+    if (!content)
+        return NULL;
+    
+    const wchar_t *pos = content;
+    
+    while (*pos != L'\0')
+    {
+        // Skip to beginning of line
+        while (*pos != L'\0' && *pos != L'\n')
+            pos++;
+        
+        if (*pos == L'\n')
+            pos++; // Skip newline
+        
+        // Skip leading whitespace on new line
+        while (*pos == L' ' || *pos == L'\t')
+            pos++;
+        
+        // Check if this line starts with '#'
+        if (*pos == L'#')
+        {
+            return pos;
+        }
+    }
+    
+    return NULL; // No more directives found
+}
+
+// Checks if a directive is a conditional directive for recovery
+bool is_conditional_directive_keyword(const wchar_t *directive_line)
+{
+    if (!directive_line || *directive_line != L'#')
+        return false;
+    
+    const wchar_t *keyword = directive_line + 1; // Skip '#'
+    
+    // Skip whitespace after '#'
+    while (*keyword == L' ' || *keyword == L'\t')
+        keyword++;
+    
+    // Check for conditional directive keywords
+    const wchar_t *conditionals[] = {
+        L"إذا",        // #if
+        L"إذا_عرف",    // #ifdef
+        L"إذا_لم_يعرف", // #ifndef
+        L"وإلا_إذا",    // #elif
+        L"إلا",        // #else
+        L"نهاية_إذا",   // #endif
+        NULL
+    };
+    
+    for (int i = 0; conditionals[i]; i++)
+    {
+        size_t len = wcslen(conditionals[i]);
+        if (wcsncmp(keyword, conditionals[i], len) == 0)
+        {
+            // Check that it's followed by whitespace or end of string
+            wchar_t next_char = keyword[len];
+            if (next_char == L'\0' || iswspace(next_char))
+                return true;
+        }
+    }
+    
+    return false;
+}
+
+// Attempts to recover from a malformed directive by skipping to a safe point
+bool attempt_directive_recovery(BaaPreprocessor *pp_state, const wchar_t **current_pos)
+{
+    if (!pp_state || !current_pos || !*current_pos)
+        return false;
+    
+    PpSourceLocation error_loc = get_current_original_location(pp_state);
+    
+    // Report recovery attempt
+    va_list empty_args;
+    memset(&empty_args, 0, sizeof(empty_args));
+    add_preprocessor_diagnostic(pp_state, &error_loc, false, 
+        L"محاولة استرداد من خطأ التوجيه - البحث عن نقطة آمنة للمتابعة", empty_args);
+    
+    // Find next directive
+    const wchar_t *next_directive = find_next_directive(*current_pos);
+    
+    if (next_directive)
+    {
+        // Count skipped lines for accurate line tracking
+        const wchar_t *line_counter = *current_pos;
+        while (line_counter < next_directive)
+        {
+            if (*line_counter == L'\n')
+            {
+                pp_state->current_line_number++;
+            }
+            line_counter++;
+        }
+        
+        *current_pos = next_directive;
+        pp_state->current_column_number = 1;
+        
+        // Report successful recovery
+        PpSourceLocation recovery_loc = get_current_original_location(pp_state);
+        memset(&empty_args, 0, sizeof(empty_args));
+        add_preprocessor_diagnostic(pp_state, &recovery_loc, false,
+            L"تم الاسترداد بنجاح - استئناف المعالجة من السطر %zu", empty_args);
+        
+        return true;
+    }
+    
+    // If no next directive found, skip to end
+    skip_to_next_line(pp_state, current_pos);
+    return false;
+}
+
+// Validates and attempts to recover conditional directive stack
+bool validate_and_recover_conditional_stack(BaaPreprocessor *pp_state)
+{
+    if (!pp_state)
+        return false;
+    
+    // Check for unmatched conditionals
+    if (pp_state->conditional_stack_count > 0)
+    {
+        PpSourceLocation error_loc = get_current_original_location(pp_state);
+        
+        // Report each unmatched conditional
+        for (size_t i = 0; i < pp_state->conditional_stack_count; i++)
+        {
+            va_list empty_args;
+            memset(&empty_args, 0, sizeof(empty_args));
+            add_preprocessor_diagnostic(pp_state, &error_loc, true,
+                L"توجيه شرطي غير مطابق - مفقود #نهاية_إذا", empty_args);
+        }
+        
+        // Clear the stack to prevent further issues
+        pp_state->conditional_stack_count = 0;
+        pp_state->conditional_branch_taken_stack_count = 0;
+        pp_state->skipping_lines = false;
+        
+        return true; // Recovery attempted
+    }
+    
+    return false; // No recovery needed
+}
+
+// Checks if the current error count exceeds a threshold for aborting
+bool should_abort_processing(BaaPreprocessor *pp_state, size_t max_errors)
+{
+    if (!pp_state)
+        return true;
+    
+    size_t error_count = 0;
+    for (size_t i = 0; i < pp_state->diagnostic_count; i++)
+    {
+        // Count errors (assuming errors have specific formatting that can be detected)
+        // For now, we'll assume all diagnostics are errors until we add warning support
+        // TODO: Add is_warning field to PreprocessorDiagnostic
+        error_count++;
+    }
+    
+    if (error_count >= max_errors)
+    {
+        PpSourceLocation error_loc = get_current_original_location(pp_state);
+        va_list empty_args;
+        memset(&empty_args, 0, sizeof(empty_args));
+        add_preprocessor_diagnostic(pp_state, &error_loc, true,
+            L"تم تجاوز الحد الأقصى للأخطاء (%zu) - إيقاف المعالجة", empty_args);
+        return true;
+    }
+    
+    return false;
+}
+
+// Attempts to recover from include errors by trying alternative paths
+bool attempt_include_recovery(BaaPreprocessor *pp_state, const wchar_t *failed_path, 
+                             wchar_t **recovered_content)
+{
+    if (!pp_state || !failed_path || !recovered_content)
+        return false;
+    
+    *recovered_content = NULL;
+    
+    // Convert wide path to multibyte for file operations
+    char *failed_path_mb = NULL;
+    int required_bytes = WideCharToMultiByte(CP_UTF8, 0, failed_path, -1, NULL, 0, NULL, NULL);
+    if (required_bytes > 0)
+    {
+        failed_path_mb = malloc(required_bytes);
+        if (failed_path_mb)
+        {
+            WideCharToMultiByte(CP_UTF8, 0, failed_path, -1, failed_path_mb, required_bytes, NULL, NULL);
+        }
+    }
+    
+    if (!failed_path_mb)
+        return false;
+    
+    // Try alternative extensions
+    const char *alt_extensions[] = {".baa", ".h", ".hpp", ".txt", NULL};
+    
+    for (int i = 0; alt_extensions[i]; i++)
+    {
+        char alt_path[MAX_PATH_LEN];
+        snprintf(alt_path, MAX_PATH_LEN, "%s%s", failed_path_mb, alt_extensions[i]);
+        
+        wchar_t *temp_error = NULL;
+        wchar_t *content = read_file_content(pp_state, alt_path, &temp_error);
+        
+        if (content)
+        {
+            // Successfully found alternative
+            free(failed_path_mb);
+            if (temp_error) free(temp_error);
+            
+            PpSourceLocation recovery_loc = get_current_original_location(pp_state);
+            va_list empty_args;
+            memset(&empty_args, 0, sizeof(empty_args));
+            add_preprocessor_diagnostic(pp_state, &recovery_loc, false,
+                L"تم العثور على ملف بديل: %hs", empty_args);
+            
+            *recovered_content = content;
+            return true;
+        }
+        
+        if (temp_error) free(temp_error);
+    }
+    
+    free(failed_path_mb);
+    return false;
+}
+
+// Clears error state to allow continued processing
+void clear_error_state(BaaPreprocessor *pp_state)
+{
+    if (pp_state)
+    {
+        pp_state->had_error_this_pass = false;
+    }
+}
+
+// Checks if we can continue processing after an error
+bool can_continue_after_error(BaaPreprocessor *pp_state, const wchar_t *current_context)
+{
+    if (!pp_state)
+        return false;
+    
+    // Don't continue if we have too many errors
+    if (should_abort_processing(pp_state, 50)) // Max 50 errors
+        return false;
+    
+    // Don't continue if we're in a critical section (like macro expansion)
+    if (pp_state->expanding_macros_count > 10) // Prevent runaway recursion
+        return false;
+    
+    // Check for infinite loops in conditional processing
+    if (pp_state->conditional_stack_count > 100) // Reasonable nesting limit
+    {
+        PpSourceLocation error_loc = get_current_original_location(pp_state);
+        va_list empty_args;
+        memset(&empty_args, 0, sizeof(empty_args));
+        add_preprocessor_diagnostic(pp_state, &error_loc, true,
+            L"تم تجاوز حد تداخل التوجيهات الشرطية", empty_args);
+        return false;
+    }
+    
+    return true;
+}

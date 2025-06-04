@@ -92,10 +92,9 @@ bool handle_preprocessor_directive(BaaPreprocessor *pp_state, wchar_t *directive
             size_t original_directive_col_for_expr_eval = pp_state->current_column_number;
             pp_state->current_column_number = expr_col_offset_on_line;
 
-            if (!evaluate_preprocessor_expression(pp_state, expression_only, &expr_value, error_message, abs_path))
+            if (!evaluate_preprocessor_expression(pp_state, expression_only, &expr_value, abs_path))
             {
-                if (!*error_message) // Check if evaluator set a specific error
-                    *error_message = format_preprocessor_error_at_location(&directive_loc, L"خطأ في تقييم تعبير #إذا.");
+                // Error already reported through diagnostic system
                 success = false;
             }
             else
@@ -280,10 +279,9 @@ bool handle_preprocessor_directive(BaaPreprocessor *pp_state, wchar_t *directive
                 else
                 {
                     bool condition_met = false;
-                    if (!evaluate_preprocessor_expression(pp_state, expression_only, &condition_met, error_message, abs_path))
+                    if (!evaluate_preprocessor_expression(pp_state, expression_only, &condition_met, abs_path))
                     {
-                        if (!*error_message) // Check if evaluator set a specific error
-                            *error_message = format_preprocessor_error_at_location(&directive_loc, L"خطأ في تقييم تعبير #وإلا_إذا.");
+                        // Error already reported through diagnostic system
                         success = false;
                     }
                     else

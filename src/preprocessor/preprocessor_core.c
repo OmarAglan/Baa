@@ -67,13 +67,19 @@ wchar_t *process_file(BaaPreprocessor *pp_state, const char *file_path, wchar_t 
         return NULL;
     }
 
-    // 3. Process Lines and Directives
+    // 3. Process Lines and Directives with Error Recovery
     wchar_t *line_start = file_content;
     wchar_t *line_end;
     bool success = true;
 
     while (*line_start != L'\0' && success)
     {
+        // Check if we should abort due to too many errors
+        if (should_abort_processing(pp_state, 25)) // Max 25 errors per file
+        {
+            success = false;
+            break;
+        }
         line_end = wcschr(line_start, L'\n');
         size_t line_len;
         if (line_end != NULL)
@@ -145,6 +151,20 @@ wchar_t *process_file(BaaPreprocessor *pp_state, const char *file_path, wchar_t 
             bool local_is_conditional_directive_pf; // For process_file
             if (!handle_preprocessor_directive(pp_state, effective_line_start + 1, abs_path, &output_buffer, error_message, &local_is_conditional_directive_pf))
             {
+                // Attempt error recovery for directive processing
+                if (can_continue_after_error(pp_state, L"directive_processing"))
+                {
+                    // Try to recover by skipping to next directive or line
+                    const wchar_t *current_pos = line_start;
+                    if (attempt_directive_recovery(pp_state, &current_pos))
+                    {
+                        // Update line_start to continue from recovery point
+                        line_start = (wchar_t *)current_pos;
+                        clear_error_state(pp_state);
+                        free(current_line);
+                        continue; // Skip to next iteration
+                    }
+                }
                 success = false;
             }
         }
@@ -204,7 +224,10 @@ wchar_t *process_file(BaaPreprocessor *pp_state, const char *file_path, wchar_t 
 
     free(file_content); // Original content buffer no longer needed
 
-    // 4. Clean up stack and restore context for this file
+    // 4. Validate conditional stack and attempt recovery if needed
+    validate_and_recover_conditional_stack(pp_state);
+
+    // 5. Clean up stack and restore context for this file
     pop_file_stack(pp_state);
     free(abs_path); // Free the absolute path string we allocated
     pp_state->current_file_path = prev_file_path;

@@ -1,0 +1,46 @@
+// Test file for preprocessor error recovery system
+// This file contains various types of errors to test recovery
+
+#define VALID_MACRO 42
+
+// Test malformed conditional directive
+#if INVALID_EXPRESSION_HERE &&&
+    بعض الكود هنا
+#endif
+
+// Test missing endif
+#if 1
+    كود داخل الشرط الأول
+    #if 2
+        كود متداخل
+    // Missing #endif for inner conditional
+
+// Test invalid macro definition
+#define 123INVALID_NAME "test"
+
+// Test valid code after errors
+#define ANOTHER_VALID_MACRO "hello"
+
+// Test circular include prevention
+#include "error_recovery_test.baa"
+
+// Test unknown directive
+#unknown_directive some content here
+
+// Test valid directive to confirm recovery
+#define FINAL_MACRO "recovery successful"
+
+// Test expression evaluation errors
+#if UNDEFINED_MACRO + 5 / 0
+    كود لا يجب أن يظهر
+#else
+    كود بديل
+#endif
+
+// Test unterminated string in macro
+#define BAD_STRING "unterminated string
+
+// More valid code to test continued processing
+int main() {
+    return 0;
+}

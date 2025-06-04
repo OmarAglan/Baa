@@ -13,6 +13,7 @@ This roadmap outlines the planned improvements and current status of the Baa lan
 * [x] Support for UTF-8 input files (with conversion to internal `wchar_t`)
 * [x] Improved error reporting (unified system with original file, line, and column numbers, including through expansions)
 * [x] Foundation for Error Recovery (accumulating multiple diagnostics instead of halting on first). (v0.1.17.0)
+* [x] **Comprehensive Error Recovery System**: Full implementation of robust error recovery mechanisms allowing continued processing after errors, with smart synchronization strategies and configurable error limits. (v0.1.24.0)
 
 ## Directive Handling
 
@@ -61,11 +62,12 @@ This roadmap outlines the planned improvements and current status of the Baa lan
   * The `##` operator works in direct macro bodies.
   * Known Issue: Complex interactions when `##` appears as part of a macro expansion output that is then rescanned, or when its operands are themselves complex macros, may not be fully robust. This requires careful review of the rescan loop and how it forms new tokens after pasting.
 * [ ] **Macro Redefinition Warnings/Errors**: Implement checks for macro redefinitions. Issue warnings or errors for incompatible redefinitions, as per C99 standard behavior (currently, redefinitions replace silently).
-* [ ] **Error Recovery Mechanisms (Full Implementation):** (Foundation laid in v0.1.17.0)
-  * **Task:** Systematically update all error reporting sites in directive parsing (`preprocessor_directives.c`) to use `add_preprocessor_diagnostic` and implement robust line-level synchronization (e.g., skip to end of directive line, or try to find next valid directive).
-  * **Task:** Systematically update error reporting in macro expansion (`preprocessor_expansion.c`, `preprocessor_line_processing.c`) to use `add_preprocessor_diagnostic` and attempt to continue line processing (e.g., by outputting the unexpanded macro name or skipping the problematic expansion).
-  * **Task:** Refine conditional expression error handling (`preprocessor_expr_eval.c`) to use `add_preprocessor_diagnostic` and ensure the conditional stack is safely managed (e.g., by assuming false on evaluation error and attempting to find matching `#نهاية_إذا`).
-  * **Task:** Define and implement clear synchronization strategies (e.g., skip to EOL for most directive errors, attempt to find matching `#نهاية_إذا` for unterminated conditionals).
+* [x] **Error Recovery Mechanisms (Full Implementation):** (Foundation laid in v0.1.17.0, Completed in v0.1.24.0)
+  * [x] **Completed:** Systematically updated all error reporting sites in directive parsing (`preprocessor_directives.c`) to use `add_preprocessor_diagnostic` and implement robust line-level synchronization.
+  * [x] **Completed:** Updated error reporting in macro expansion (`preprocessor_expansion.c`, `preprocessor_line_processing.c`) to use `add_preprocessor_diagnostic` and attempt to continue line processing.
+  * [x] **Completed:** Refined conditional expression error handling (`preprocessor_expr_eval.c`) to use `add_preprocessor_diagnostic` and ensure the conditional stack is safely managed.
+  * [x] **Completed:** Defined and implemented clear synchronization strategies including directive recovery, expression recovery, and conditional stack validation.
+  * [x] **Added:** Configurable error limits and smart recovery decision logic to prevent error flooding while maintaining comprehensive error reporting.
 
 ## Known Issues / Areas for Refinement (from `CHANGELOG.md`)
 
@@ -77,12 +79,14 @@ This roadmap outlines the planned improvements and current status of the Baa lan
 
 * [x] Basic preprocessor tester tool (`tools/baa_preprocessor_tester.c`).
 * [x] Consolidated test file (`tests/resources/preprocessor_test_cases/preprocessor_test_all.baa`) covering many features.
+* [x] **Error Recovery Test Suite (v0.1.24.0):**
+  * `tests/unit/preprocessor/test_error_recovery.c`: Comprehensive unit tests covering all error recovery scenarios including malformed conditionals, missing endif statements, unknown directives, expression errors, and error count limits.
+  * `tests/resources/preprocessor_test_cases/error_recovery_test.baa`: Integration test file with various error scenarios to validate recovery behavior.
 * [ ] **More Unit Tests:** Develop granular unit tests for:
   * Directive parsing logic (`preprocessor_directives.c`).
   * Include path resolution.
   * Macro definition, expansion (especially edge cases for `#`, `##`, variadics, rescanning), and undefinition.
   * Conditional compilation logic and expression evaluation (all operators, `معرف`).
-  * Error reporting and recovery mechanisms.
 * [ ] **Integration Tests:** Expand tests that verify interaction with the lexer (e.g., ensuring preprocessor output is correctly tokenized).
 * [ ] **Standard Compliance Tests:** Consider adapting or creating tests based on C99 preprocessor conformance suites.
 

@@ -63,9 +63,25 @@ The Baa preprocessor automatically defines the following macros:
 
 ### 4. Error Handling and Reporting (معالجة الأخطاء)
 
-* Reports errors and warnings with precise location information (original file, line, and column), even through include files and macro expansions.
-* Foundation for error recovery is implemented, allowing the preprocessor to accumulate multiple diagnostics (errors/warnings) in a single pass instead of halting on the first error. Full implementation of synchronization strategies after each error type is ongoing.
-* Error messages are primarily in Arabic.
+* **Comprehensive Error Recovery System:** The preprocessor now includes a robust error recovery system that allows continued processing after encountering errors, reporting multiple errors in a single compilation pass.
+* **Diagnostic System:** Centralized error and warning collection with precise source location tracking (file, line, column), even through include files and macro expansions.
+* **Error Recovery Utilities:** Smart synchronization mechanisms to recover from various error types:
+  - **Directive Recovery:** Handles unknown directives and malformed directive syntax
+  - **Expression Recovery:** Graceful handling of malformed conditional expressions with division by zero protection
+  - **Include Recovery:** Attempts alternative file extensions when includes fail
+  - **Conditional Stack Validation:** Automatic cleanup of unmatched conditional directives
+* **Error Limits:** Configurable error thresholds (default: 25 errors per file, 50 globally) to prevent overwhelming users with error messages
+* **Continued Processing:** After recoverable errors, the preprocessor continues processing valid code sections, providing more comprehensive error reporting
+* **Arabic Error Messages:** All error messages are provided in Arabic with consistent formatting and precise location information
+* **Enhanced Robustness:** Prevents crashes from malformed input and ensures proper memory management during error conditions
+
+### 5. Error Recovery Features (ميزات استرداد الأخطاء)
+
+* **Multiple Error Reporting:** Users can see and fix multiple errors at once instead of iterative single-error fixing
+* **Smart Synchronization:** Uses preprocessor directives as natural synchronization points for recovery
+* **Graceful Degradation:** When errors occur, valid code sections are still processed and included in output where possible
+* **Memory Safety:** Ensures no memory leaks during error recovery with proper cleanup of partially processed content
+* **IDE Integration Ready:** Provides comprehensive diagnostic information for better language server implementation
 
 ## Preprocessor Structure (بنية المعالج المسبق)
 

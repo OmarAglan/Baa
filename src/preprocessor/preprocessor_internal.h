@@ -36,12 +36,21 @@ typedef struct
     size_t column;
 } PpSourceLocation;
 
-// Structure to store a single error/warning entry
+// Add severity levels
+typedef enum {
+    PP_DIAGNOSTIC_INFO,     // Informational messages
+    PP_DIAGNOSTIC_WARNING,  // Non-fatal issues
+    PP_DIAGNOSTIC_ERROR,    // Standard errors that allow continuation
+    PP_DIAGNOSTIC_FATAL     // Critical errors that should stop processing
+} PpDiagnosticSeverity;
+
+// Enhanced diagnostic structure
 typedef struct
 {
-    wchar_t *message;          // The formatted error/warning message
-    PpSourceLocation location; // The original source location of the error/warning
-    // bool is_warning;      // Could add this later to distinguish warnings
+    wchar_t *message;                    // The formatted error/warning message
+    PpSourceLocation location;           // The original source location
+    PpDiagnosticSeverity severity;       // Severity level
+    wchar_t *recovery_suggestion;        // Optional recovery suggestion (can be NULL)
 } PreprocessorDiagnostic;
 
 // Structure to hold preprocessor state
@@ -78,6 +87,13 @@ struct BaaPreprocessor
     size_t diagnostic_count;
     size_t diagnostic_capacity;
     bool had_error_this_pass; // True if any error (not warning) was reported
+    
+    // Add to BaaPreprocessor struct:
+    size_t fatal_error_count;           // Count of fatal errors
+    size_t error_count;                 // Count of non-fatal errors
+    size_t warning_count;               // Count of warnings
+    size_t nesting_depth;               // Current include nesting depth
+    size_t max_nesting_depth;           // Maximum allowed nesting depth (default 50)
 }; // Note: No typedef name here
 
 // Dynamic Buffer for Output
@@ -161,6 +177,17 @@ wchar_t *format_preprocessor_warning_at_location(const PpSourceLocation *locatio
 void add_preprocessor_diagnostic(BaaPreprocessor *pp_state, const PpSourceLocation *loc, bool is_error, const wchar_t *format, va_list args_list);
 void free_diagnostics_list(BaaPreprocessor *pp_state);
 
+// Enhanced diagnostic function
+void add_preprocessor_diagnostic_with_severity(BaaPreprocessor *pp_state, const PpSourceLocation *loc,
+                                               PpDiagnosticSeverity severity, const wchar_t *recovery_suggestion,
+                                               const wchar_t *format, va_list args_list);
+
+// Convenience wrappers for enhanced diagnostics
+void add_fatal_diagnostic(BaaPreprocessor *pp_state, const PpSourceLocation *loc, const wchar_t *format, ...);
+void add_error_with_suggestion(BaaPreprocessor *pp_state, const PpSourceLocation *loc, const wchar_t *recovery_suggestion, const wchar_t *format, ...);
+void add_warning_with_suggestion(BaaPreprocessor *pp_state, const PpSourceLocation *loc, const wchar_t *recovery_suggestion, const wchar_t *format, ...);
+void add_info_diagnostic(BaaPreprocessor *pp_state, const PpSourceLocation *loc, const wchar_t *format, ...);
+
 // Error Recovery and Synchronization Utilities
 void skip_to_next_line(BaaPreprocessor *pp_state, const wchar_t **current_pos);
 const wchar_t *find_next_directive(const wchar_t *content);
@@ -171,6 +198,11 @@ bool should_abort_processing(BaaPreprocessor *pp_state, size_t max_errors);
 bool attempt_include_recovery(BaaPreprocessor *pp_state, const wchar_t *failed_path, wchar_t **recovered_content);
 void clear_error_state(BaaPreprocessor *pp_state);
 bool can_continue_after_error(BaaPreprocessor *pp_state, const wchar_t *current_context);
+
+// Enhanced recovery functions
+bool attempt_directive_recovery_enhanced(BaaPreprocessor *pp_state, const wchar_t **current_pos, const wchar_t *directive_type);
+bool attempt_include_recovery_enhanced(BaaPreprocessor *pp_state, const wchar_t *failed_path, wchar_t **recovered_content);
+bool can_continue_after_error_enhanced(BaaPreprocessor *pp_state, const wchar_t *current_context);
 
 // File Stack
 bool push_file_stack(BaaPreprocessor *pp, const char *abs_path);

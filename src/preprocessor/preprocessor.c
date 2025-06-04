@@ -71,6 +71,13 @@ wchar_t *baa_preprocess(const BaaPpSource *source, const char **include_paths, w
             pp_state.include_path_count++;
         }
     }
+    
+    // Initialize enhanced error tracking fields
+    pp_state.fatal_error_count = 0;
+    pp_state.error_count = 0;
+    pp_state.warning_count = 0;
+    pp_state.nesting_depth = 0;
+    pp_state.max_nesting_depth = 50; // Default maximum nesting depth
 
     // Other fields are initialized to 0/NULL by the zero-initialization:
     // pp_state.open_files_stack = NULL;
@@ -256,19 +263,107 @@ wchar_t *baa_preprocess(const BaaPpSource *source, const char **include_paths, w
         report_unterminated_conditional(&pp_state, &error_loc);
     }
 
-    // If errors occurred, populate the output error_message parameter
+    // Enhanced error reporting with severity grouping and recovery suggestions
     if (pp_state.had_error_this_pass && error_message)
     {
         DynamicWcharBuffer combined_errors_buffer;
-        init_dynamic_buffer(&combined_errors_buffer, 256 * pp_state.diagnostic_count);
+        size_t initial_size = 512 * pp_state.diagnostic_count; // Increased for enhanced content
+        init_dynamic_buffer(&combined_errors_buffer, initial_size);
+        
+        // Add summary header
+        wchar_t summary_header[256];
+        swprintf(summary_header, sizeof(summary_header)/sizeof(wchar_t),
+            L"=== ملخص نتائج المعالج المسبق ===\n"
+            L"الأخطاء الفادحة: %zu، الأخطاء: %zu، التحذيرات: %zu، عمق التداخل: %zu\n\n",
+            pp_state.fatal_error_count, pp_state.error_count,
+            pp_state.warning_count, pp_state.nesting_depth);
+        append_to_dynamic_buffer(&combined_errors_buffer, summary_header);
+        
+        // Group diagnostics by severity
+        // First, fatal errors
+        if (pp_state.fatal_error_count > 0)
+        {
+            append_to_dynamic_buffer(&combined_errors_buffer, L"--- الأخطاء الفادحة ---\n");
+            for (size_t i = 0; i < pp_state.diagnostic_count; ++i)
+            {
+                if (pp_state.diagnostics[i].severity == PP_DIAGNOSTIC_FATAL)
+                {
+                    append_to_dynamic_buffer(&combined_errors_buffer, pp_state.diagnostics[i].message);
+                    if (pp_state.diagnostics[i].recovery_suggestion)
+                    {
+                        append_to_dynamic_buffer(&combined_errors_buffer, L"\n  💡 اقتراح: ");
+                        append_to_dynamic_buffer(&combined_errors_buffer, pp_state.diagnostics[i].recovery_suggestion);
+                    }
+                    append_to_dynamic_buffer(&combined_errors_buffer, L"\n\n");
+                }
+            }
+        }
+        
+        // Then, regular errors
+        if (pp_state.error_count > 0)
+        {
+            append_to_dynamic_buffer(&combined_errors_buffer, L"--- الأخطاء ---\n");
+            for (size_t i = 0; i < pp_state.diagnostic_count; ++i)
+            {
+                if (pp_state.diagnostics[i].severity == PP_DIAGNOSTIC_ERROR)
+                {
+                    append_to_dynamic_buffer(&combined_errors_buffer, pp_state.diagnostics[i].message);
+                    if (pp_state.diagnostics[i].recovery_suggestion)
+                    {
+                        append_to_dynamic_buffer(&combined_errors_buffer, L"\n  💡 اقتراح: ");
+                        append_to_dynamic_buffer(&combined_errors_buffer, pp_state.diagnostics[i].recovery_suggestion);
+                    }
+                    append_to_dynamic_buffer(&combined_errors_buffer, L"\n\n");
+                }
+            }
+        }
+        
+        // Then, warnings
+        if (pp_state.warning_count > 0)
+        {
+            append_to_dynamic_buffer(&combined_errors_buffer, L"--- التحذيرات ---\n");
+            for (size_t i = 0; i < pp_state.diagnostic_count; ++i)
+            {
+                if (pp_state.diagnostics[i].severity == PP_DIAGNOSTIC_WARNING)
+                {
+                    append_to_dynamic_buffer(&combined_errors_buffer, pp_state.diagnostics[i].message);
+                    if (pp_state.diagnostics[i].recovery_suggestion)
+                    {
+                        append_to_dynamic_buffer(&combined_errors_buffer, L"\n  💡 اقتراح: ");
+                        append_to_dynamic_buffer(&combined_errors_buffer, pp_state.diagnostics[i].recovery_suggestion);
+                    }
+                    append_to_dynamic_buffer(&combined_errors_buffer, L"\n\n");
+                }
+            }
+        }
+        
+        // Finally, info messages
+        bool has_info = false;
         for (size_t i = 0; i < pp_state.diagnostic_count; ++i)
         {
-            append_to_dynamic_buffer(&combined_errors_buffer, pp_state.diagnostics[i].message);
-            if (i < pp_state.diagnostic_count - 1)
+            if (pp_state.diagnostics[i].severity == PP_DIAGNOSTIC_INFO)
             {
+                if (!has_info)
+                {
+                    append_to_dynamic_buffer(&combined_errors_buffer, L"--- معلومات إضافية ---\n");
+                    has_info = true;
+                }
+                append_to_dynamic_buffer(&combined_errors_buffer, pp_state.diagnostics[i].message);
                 append_to_dynamic_buffer(&combined_errors_buffer, L"\n");
             }
         }
+        
+        // Add footer with general suggestions if there were errors
+        if (pp_state.fatal_error_count > 0 || pp_state.error_count > 0)
+        {
+            append_to_dynamic_buffer(&combined_errors_buffer,
+                L"\n=== نصائح عامة ===\n"
+                L"• راجع الأخطاء من الأعلى إلى الأسفل\n"
+                L"• أصلح الأخطاء الفادحة أولاً\n"
+                L"• تأكد من صحة صيغة التوجيهات\n"
+                L"• تحقق من مسارات الملفات\n");
+        }
+        
         *error_message = combined_errors_buffer.buffer; // Transfer ownership
         if (final_output)
             free(final_output); // Free potentially partial output if errors

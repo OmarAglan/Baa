@@ -34,12 +34,15 @@ wchar_t *process_file(BaaPreprocessor *pp_state, const char *file_path, wchar_t 
     {
         // Use the location stack to report the error at the include site
         PpSourceLocation error_loc = get_current_original_location(pp_state);
-        *error_message = format_preprocessor_error_at_location(&error_loc, L"تم اكتشاف تضمين دائري: الملف '%hs' مضمن بالفعل.", abs_path);
+        add_fatal_diagnostic(pp_state, &error_loc, L"تم اكتشاف تضمين دائري: الملف '%hs' مضمن بالفعل.", abs_path);
         free(abs_path);
         pp_state->current_file_path = prev_file_path; // Restore before returning
         pp_state->current_line_number = prev_line_number;
         return NULL;
     }
+    
+    // Track nesting depth
+    pp_state->nesting_depth++;
 
     // 2. Read File Content (handles UTF-8 and UTF-16LE with BOM detection)
     wchar_t *file_content = read_file_content(pp_state, abs_path, error_message);
@@ -74,9 +77,11 @@ wchar_t *process_file(BaaPreprocessor *pp_state, const char *file_path, wchar_t 
 
     while (*line_start != L'\0' && success)
     {
-        // Check if we should abort due to too many errors
-        if (should_abort_processing(pp_state, 25)) // Max 25 errors per file
+        // Enhanced error checking with progressive limits
+        if (!can_continue_after_error_enhanced(pp_state, L"file_processing"))
         {
+            PpSourceLocation error_loc = get_current_original_location(pp_state);
+            add_info_diagnostic(pp_state, &error_loc, L"توقف معالجة الملف بسبب تجاوز حدود الأخطاء");
             success = false;
             break;
         }
@@ -151,23 +156,50 @@ wchar_t *process_file(BaaPreprocessor *pp_state, const char *file_path, wchar_t 
             bool local_is_conditional_directive_pf; // For process_file
             if (!handle_preprocessor_directive(pp_state, effective_line_start + 1, abs_path, &output_buffer, error_message, &local_is_conditional_directive_pf))
             {
-                // Attempt error recovery for directive processing
-                if (can_continue_after_error(pp_state, L"directive_processing"))
+                // Enhanced error recovery for directive processing
+                if (can_continue_after_error_enhanced(pp_state, L"directive_processing"))
                 {
-                    // Try to recover by skipping to next directive or line
+                    // Extract directive type for enhanced recovery
+                    wchar_t *directive_type = NULL;
+                    wchar_t *space_pos = wcschr(effective_line_start + 1, L' ');
+                    wchar_t *tab_pos = wcschr(effective_line_start + 1, L'\t');
+                    wchar_t *first_whitespace = NULL;
+                    
+                    if (space_pos && tab_pos) {
+                        first_whitespace = (space_pos < tab_pos) ? space_pos : tab_pos;
+                    } else if (space_pos) {
+                        first_whitespace = space_pos;
+                    } else if (tab_pos) {
+                        first_whitespace = tab_pos;
+                    }
+                    
+                    if (first_whitespace) {
+                        size_t directive_len = first_whitespace - (effective_line_start + 1);
+                        directive_type = wcsndup_internal(effective_line_start + 1, directive_len);
+                    } else {
+                        directive_type = baa_strdup(effective_line_start + 1);
+                    }
+                    
+                    // Try enhanced recovery with context
                     const wchar_t *current_pos = line_start;
-                    if (attempt_directive_recovery(pp_state, &current_pos))
+                    if (attempt_directive_recovery_enhanced(pp_state, &current_pos, directive_type))
                     {
                         // Recovery successful - update line_start to continue from recovery point
                         line_start = (wchar_t *)current_pos;
                         clear_error_state(pp_state);
+                        free(directive_type);
                         free(current_line);
                         continue; // Skip to next iteration - don't set success = false
                     }
                     else
                     {
                         // Recovery failed, but try to continue with next line
-                        fwprintf(stderr, L"DEBUG: Directive recovery failed, skipping to next line\n");
+                        PpSourceLocation error_loc = get_current_original_location(pp_state);
+                        add_warning_with_suggestion(pp_state, &error_loc,
+                            L"تحقق من صحة صيغة التوجيه أو احذف السطر إذا لم يكن ضرورياً",
+                            L"فشل استرداد التوجيه، الانتقال للسطر التالي");
+                        
+                        free(directive_type);
                         free(current_line);
                         if (line_end != NULL)
                         {
@@ -180,6 +212,8 @@ wchar_t *process_file(BaaPreprocessor *pp_state, const char *file_path, wchar_t 
                         }
                         continue; // Continue processing instead of aborting
                     }
+                    
+                    free(directive_type);
                 }
                 else
                 {
@@ -236,6 +270,7 @@ wchar_t *process_file(BaaPreprocessor *pp_state, const char *file_path, wchar_t 
         free_dynamic_buffer(&output_buffer); // Free partially built output
         free(file_content);
         pop_file_stack(pp_state);
+        pp_state->nesting_depth--; // Decrease nesting depth on error exit
         free(abs_path);
         pp_state->current_file_path = prev_file_path; // Restore before returning
         pp_state->current_line_number = prev_line_number;
@@ -249,6 +284,7 @@ wchar_t *process_file(BaaPreprocessor *pp_state, const char *file_path, wchar_t 
 
     // 5. Clean up stack and restore context for this file
     pop_file_stack(pp_state);
+    pp_state->nesting_depth--; // Decrease nesting depth when exiting file
     free(abs_path); // Free the absolute path string we allocated
     pp_state->current_file_path = prev_file_path;
     pp_state->current_line_number = prev_line_number;

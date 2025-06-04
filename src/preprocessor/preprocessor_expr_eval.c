@@ -786,7 +786,10 @@ static bool parse_binary_expression_rhs(PpExprTokenizer *tz, int min_prec, long 
         case PP_EXPR_TOKEN_SLASH:
             if (rhs == 0)
             {
-                make_error_token(tz, L"قسمة على صفر في التعبير الشرطي.");
+                PpSourceLocation error_loc = get_current_original_location(tz->pp_state);
+                add_error_with_suggestion(tz->pp_state, &error_loc,
+                    L"تحقق من أن المقسوم عليه ليس صفراً، أو استخدم تعبيراً مختلفاً",
+                    L"قسمة على صفر في التعبير الشرطي");
                 return false;
             }
             *lhs = current_lhs / rhs;
@@ -794,7 +797,10 @@ static bool parse_binary_expression_rhs(PpExprTokenizer *tz, int min_prec, long 
         case PP_EXPR_TOKEN_PERCENT:
             if (rhs == 0)
             {
-                make_error_token(tz, L"قسمة على صفر (معامل الباقي) في التعبير الشرطي.");
+                PpSourceLocation error_loc = get_current_original_location(tz->pp_state);
+                add_error_with_suggestion(tz->pp_state, &error_loc,
+                    L"تحقق من أن المقسوم عليه ليس صفراً في عملية الباقي",
+                    L"قسمة على صفر (معامل الباقي) في التعبير الشرطي");
                 return false;
             }
             *lhs = current_lhs % rhs;

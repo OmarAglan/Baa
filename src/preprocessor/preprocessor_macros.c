@@ -204,14 +204,10 @@ bool add_macro(BaaPreprocessor *pp_state, const wchar_t *name, const wchar_t *bo
                 // Check if it's a predefined macro (more serious)
                 if (is_predefined_macro(name))
                 {
-                    // Report error for predefined macro redefinition
-                    // Use format_preprocessor_error_at_location which handles the diagnostic system internally
-                    wchar_t *error_msg = format_preprocessor_error_at_location(&current_loc, 
-                        L"إعادة تعريف الماكرو المدمج '%ls' غير مسموحة.", name);
-                    if (error_msg) {
-                        // The error has been added to diagnostics by format_preprocessor_error_at_location
-                        free(error_msg);
-                    }
+                    // Report error for predefined macro redefinition with enhanced diagnostics
+                    add_error_with_suggestion(pp_state, &current_loc,
+                        L"الماكروهات المدمجة محمية ولا يمكن إعادة تعريفها، استخدم اسماً مختلفاً للماكرو",
+                        L"إعادة تعريف الماكرو المدمج '%ls' غير مسموحة", name);
                     
                     // Free the new parameters and reject the redefinition
                     if ((is_function_like || is_variadic) && param_names)
@@ -226,13 +222,10 @@ bool add_macro(BaaPreprocessor *pp_state, const wchar_t *name, const wchar_t *bo
                 }
                 else
                 {
-                    // Issue warning for regular macro incompatible redefinition
-                    wchar_t *warning_msg = format_preprocessor_warning_at_location(&current_loc,
-                        L"إعادة تعريف الماكرو '%ls' بتعريف مختلف، سيتم استبدال التعريف السابق.", name);
-                    if (warning_msg) {
-                        fwprintf(stderr, L"%ls\n", warning_msg);
-                        free(warning_msg);
-                    }
+                    // Issue warning for regular macro incompatible redefinition with enhanced diagnostics
+                    add_warning_with_suggestion(pp_state, &current_loc,
+                        L"تحقق من أن التعريف الجديد للماكرو هو المطلوب، أو استخدم #الغاء_تعريف أولاً",
+                        L"إعادة تعريف الماكرو '%ls' بتعريف مختلف، سيتم استبدال التعريف السابق", name);
                     
                     // Proceed with replacement after warning
                     free(pp_state->macros[i].body);

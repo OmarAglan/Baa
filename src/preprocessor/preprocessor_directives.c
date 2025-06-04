@@ -79,7 +79,9 @@ bool handle_preprocessor_directive(BaaPreprocessor *pp_state, wchar_t *directive
 
         if (!expression_only || expr_len == 0) // Check if expression is empty after stripping comment/whitespace
         {
-            *error_message = format_preprocessor_error_at_location(&directive_loc, L"تنسيق #إذا غير صالح: التعبير مفقود.");
+            add_error_with_suggestion(pp_state, &directive_loc,
+                L"أضف تعبيراً صالحاً مثل: #إذا 1 أو #إذا عرف(MACRO_NAME)",
+                L"تنسيق #إذا غير صالح: التعبير مفقود");
             success = false;
             if (expression_only)
                 free(expression_only); // Free if allocated but empty
@@ -101,7 +103,7 @@ bool handle_preprocessor_directive(BaaPreprocessor *pp_state, wchar_t *directive
             {
                 if (!push_conditional(pp_state, expr_value))
                 {
-                    *error_message = format_preprocessor_error_at_location(&directive_loc, L"فشل في دفع الحالة الشرطية لـ #إذا (نفاد الذاكرة؟).");
+                    add_fatal_diagnostic(pp_state, &directive_loc, L"فشل في دفع الحالة الشرطية لـ #إذا (نفاد الذاكرة؟)");
                     success = false;
                 }
             }
@@ -122,7 +124,9 @@ bool handle_preprocessor_directive(BaaPreprocessor *pp_state, wchar_t *directive
 
         if (name_start == name_end)
         {
-            *error_message = format_preprocessor_error_at_location(&directive_loc, L"تنسيق #إذا_عرف غير صالح: اسم الماكرو مفقود.");
+            add_error_with_suggestion(pp_state, &directive_loc,
+                L"أضف اسم ماكرو صالح مثل: #إذا_عرف MY_MACRO",
+                L"تنسيق #إذا_عرف غير صالح: اسم الماكرو مفقود");
             success = false;
         }
         else
@@ -189,7 +193,9 @@ bool handle_preprocessor_directive(BaaPreprocessor *pp_state, wchar_t *directive
         *is_conditional_directive = true;
         if (!pop_conditional(pp_state))
         {
-            *error_message = format_preprocessor_error_at_location(&directive_loc, L"#نهاية_إذا بدون #إذا/#إذا_عرف/#إذا_لم_يعرف مطابق.");
+            add_error_with_suggestion(pp_state, &directive_loc,
+                L"تحقق من أن كل #إذا، #إذا_عرف، أو #إذا_لم_يعرف له #نهاية_إذا مطابق",
+                L"#نهاية_إذا بدون #إذا/#إذا_عرف/#إذا_لم_يعرف مطابق");
             success = false;
         }
     }
@@ -342,7 +348,9 @@ bool handle_preprocessor_directive(BaaPreprocessor *pp_state, wchar_t *directive
             }
             else
             {
-                *error_message = format_preprocessor_error_at_location(&directive_loc, L"تنسيق #تضمين غير صالح: يجب أن يتبع اسم الملف بـ \" أو <.");
+                add_error_with_suggestion(pp_state, &directive_loc,
+                    L"استخدم \"filename.baa\" للملفات المحلية أو <system_header.h> لملفات النظام",
+                    L"تنسيق #تضمين غير صالح: يجب أن يتبع اسم الملف بـ \" أو <");
                 success = false;
             }
 
@@ -410,8 +418,29 @@ bool handle_preprocessor_directive(BaaPreprocessor *pp_state, wchar_t *directive
                                 }
                                 if (!found)
                                 {
-                                    *error_message = format_preprocessor_error_at_location(&directive_loc, L"تعذر العثور على ملف التضمين '<%hs>' في مسارات التضمين.", include_path_mb);
-                                    success = false;
+                                    // Try enhanced include recovery first
+                                    wchar_t *recovered_content = NULL;
+                                    if (attempt_include_recovery_enhanced(pp_state, include_path_w, &recovered_content))
+                                    {
+                                        // Recovery successful - append recovered content
+                                        if (!append_to_dynamic_buffer(output_buffer, recovered_content))
+                                        {
+                                            add_error_with_suggestion(pp_state, &directive_loc,
+                                                L"تحقق من توفر ذاكرة كافية في النظام",
+                                                L"فشل في إلحاق المحتوى المسترد من '%hs'", include_path_mb);
+                                            success = false;
+                                        }
+                                        free(recovered_content);
+                                    }
+                                    else
+                                    {
+                                        add_error_with_suggestion(pp_state, &directive_loc,
+                                            L"1. تحقق من وجود الملف في مسارات التضمين\n"
+                                            L"2. أضف مسار الملف إلى خيارات التضمين\n"
+                                            L"3. تحقق من صحة اسم الملف وامتداده",
+                                            L"تعذر العثور على ملف التضمين '<%hs>' في مسارات التضمين", include_path_mb);
+                                        success = false;
+                                    }
                                 }
                             }
                             else
@@ -510,7 +539,9 @@ bool handle_preprocessor_directive(BaaPreprocessor *pp_state, wchar_t *directive
                 name_end++;
             if (name_start == name_end)
             {
-                *error_message = format_preprocessor_error_at_location(&name_error_loc, L"تنسيق #تعريف غير صالح: اسم الماكرو مفقود.");
+                add_error_with_suggestion(pp_state, &name_error_loc,
+                    L"أضف اسم ماكرو صالح مثل: #تعريف MY_MACRO 123 أو #تعريف FUNC(x) (x*2)",
+                    L"تنسيق #تعريف غير صالح: اسم الماكرو مفقود");
                 success = false;
             }
             else
@@ -762,7 +793,7 @@ bool handle_preprocessor_directive(BaaPreprocessor *pp_state, wchar_t *directive
             size_t message_len = message_end - message_start;
             wchar_t *actual_message_content = wcsndup_internal(message_start, message_len);
 
-            *error_message = format_preprocessor_error_at_location(&directive_loc, L"%ls", actual_message_content ? actual_message_content : L"");
+            add_fatal_diagnostic(pp_state, &directive_loc, L"%ls", actual_message_content ? actual_message_content : L"");
             free(actual_message_content);
             success = false; // Fatal error
         }
@@ -791,18 +822,15 @@ bool handle_preprocessor_directive(BaaPreprocessor *pp_state, wchar_t *directive
             size_t message_len = message_end - message_start;
             wchar_t *actual_message_content = wcsndup_internal(message_start, message_len);
 
-            wchar_t *formatted_warning = format_preprocessor_warning_at_location(&directive_loc, L"%ls", actual_message_content ? actual_message_content : L"");
-            if (formatted_warning)
-            {
-                fwprintf(stderr, L"%ls\n", formatted_warning); // Print to stderr
-                free(formatted_warning);
-            }
+            add_warning_with_suggestion(pp_state, &directive_loc, NULL, L"%ls", actual_message_content ? actual_message_content : L"");
             free(actual_message_content);
             // success remains true, preprocessing continues
         }
         else
         {
-            *error_message = format_preprocessor_error_at_location(&directive_loc, L"توجيه معالج مسبق غير معروف يبدأ بـ '#'.");
+            add_error_with_suggestion(pp_state, &directive_loc,
+                L"التوجيهات المدعومة: تضمين، تعريف، الغاء_تعريف، إذا، إذا_عرف، إذا_لم_يعرف، إلا، وإلا_إذا، نهاية_إذا، خطأ، تحذير",
+                L"توجيه معالج مسبق غير معروف يبدأ بـ '#'");
             success = false;
         }
     }

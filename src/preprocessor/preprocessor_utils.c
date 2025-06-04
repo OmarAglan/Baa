@@ -835,6 +835,189 @@ void add_preprocessor_diagnostic(BaaPreprocessor *pp_state, const PpSourceLocati
     }
 }
 
+// Enhanced diagnostic function with severity levels and recovery suggestions
+void add_preprocessor_diagnostic_with_severity(BaaPreprocessor *pp_state, const PpSourceLocation *loc,
+                                               PpDiagnosticSeverity severity, const wchar_t *recovery_suggestion,
+                                               const wchar_t *format, va_list args_list)
+{
+    if (!pp_state || !loc || !format)
+        return;
+
+    // Create a copy of args_list as vswprintf might be called multiple times
+    va_list args_copy;
+    va_copy(args_copy, args_list);
+
+    // Determine required size for the formatted message from format and args_list
+    int needed_chars = vswprintf(NULL, 0, format, args_copy);
+    va_end(args_copy); // Clean up the copied va_list
+
+    if (needed_chars < 0)
+    {
+        // Error in formatting, skip adding the diagnostic
+        return;
+    }
+
+    size_t message_len = (size_t)needed_chars;
+    wchar_t *formatted_message_body = malloc((message_len + 1) * sizeof(wchar_t));
+    if (!formatted_message_body)
+        return; // Out of memory
+
+    // Format the actual message body
+    vswprintf(formatted_message_body, message_len + 1, format, args_list);
+
+    // Create severity-specific formatted message
+    wchar_t *full_diagnostic_message = NULL;
+    const wchar_t *severity_prefix = NULL;
+    
+    switch (severity) {
+        case PP_DIAGNOSTIC_INFO:
+            severity_prefix = L"معلومات";
+            break;
+        case PP_DIAGNOSTIC_WARNING:
+            severity_prefix = L"تحذير";
+            break;
+        case PP_DIAGNOSTIC_ERROR:
+            severity_prefix = L"خطأ";
+            break;
+        case PP_DIAGNOSTIC_FATAL:
+            severity_prefix = L"خطأ فادح";
+            break;
+    }
+
+    // Format with severity prefix
+    size_t prefix_base_len = wcslen(L":%zu:%zu: : ") + wcslen(severity_prefix);
+    size_t path_len = loc && loc->file_path ? strlen(loc->file_path) : strlen("(unknown file)");
+    size_t prefix_buffer_size = path_len + prefix_base_len + 30;
+    char *prefix_mb = malloc(prefix_buffer_size);
+    if (!prefix_mb)
+    {
+        free(formatted_message_body);
+        return;
+    }
+
+    snprintf(prefix_mb, prefix_buffer_size, "%hs:%zu:%zu: %ls: ",
+             loc && loc->file_path ? loc->file_path : "(unknown file)",
+             loc ? loc->line : 0,
+             loc ? loc->column : 0,
+             severity_prefix);
+
+    // Convert prefix to wchar_t
+    wchar_t *prefix_w = NULL;
+    int required_wchars = MultiByteToWideChar(CP_UTF8, 0, prefix_mb, -1, NULL, 0);
+    if (required_wchars > 0)
+    {
+        prefix_w = malloc(required_wchars * sizeof(wchar_t));
+        if (prefix_w)
+        {
+            MultiByteToWideChar(CP_UTF8, 0, prefix_mb, -1, prefix_w, required_wchars);
+        }
+    }
+    free(prefix_mb);
+
+    if (!prefix_w)
+    {
+        free(formatted_message_body);
+        return;
+    }
+
+    // Combine prefix and message
+    size_t prefix_len = wcslen(prefix_w);
+    size_t msg_len = wcslen(formatted_message_body);
+    size_t total_len = prefix_len + msg_len;
+    full_diagnostic_message = malloc((total_len + 1) * sizeof(wchar_t));
+
+    if (!full_diagnostic_message)
+    {
+        free(formatted_message_body);
+        free(prefix_w);
+        return;
+    }
+
+    wcscpy(full_diagnostic_message, prefix_w);
+    wcscat(full_diagnostic_message, formatted_message_body);
+    free(prefix_w);
+    free(formatted_message_body);
+
+    // Copy recovery suggestion if provided
+    wchar_t *suggestion_copy = NULL;
+    if (recovery_suggestion)
+    {
+        suggestion_copy = baa_strdup(recovery_suggestion);
+    }
+
+    // Expand diagnostics array if needed
+    if (pp_state->diagnostic_count >= pp_state->diagnostic_capacity)
+    {
+        size_t new_capacity = (pp_state->diagnostic_capacity == 0) ? 8 : pp_state->diagnostic_capacity * 2;
+        PreprocessorDiagnostic *new_diagnostics = realloc(pp_state->diagnostics, new_capacity * sizeof(PreprocessorDiagnostic));
+        if (!new_diagnostics)
+        {
+            free(full_diagnostic_message);
+            free(suggestion_copy);
+            return; // Out of memory
+        }
+        pp_state->diagnostics = new_diagnostics;
+        pp_state->diagnostic_capacity = new_capacity;
+    }
+
+    // Store the diagnostic
+    pp_state->diagnostics[pp_state->diagnostic_count].message = full_diagnostic_message;
+    pp_state->diagnostics[pp_state->diagnostic_count].location = *loc;
+    pp_state->diagnostics[pp_state->diagnostic_count].severity = severity;
+    pp_state->diagnostics[pp_state->diagnostic_count].recovery_suggestion = suggestion_copy;
+    pp_state->diagnostic_count++;
+
+    // Update counters and flags
+    switch (severity) {
+        case PP_DIAGNOSTIC_INFO:
+            break;
+        case PP_DIAGNOSTIC_WARNING:
+            pp_state->warning_count++;
+            break;
+        case PP_DIAGNOSTIC_ERROR:
+            pp_state->error_count++;
+            pp_state->had_error_this_pass = true;
+            break;
+        case PP_DIAGNOSTIC_FATAL:
+            pp_state->fatal_error_count++;
+            pp_state->had_error_this_pass = true;
+            break;
+    }
+}
+
+// Convenience wrapper functions
+void add_fatal_diagnostic(BaaPreprocessor *pp_state, const PpSourceLocation *loc, const wchar_t *format, ...)
+{
+    va_list args;
+    va_start(args, format);
+    add_preprocessor_diagnostic_with_severity(pp_state, loc, PP_DIAGNOSTIC_FATAL, NULL, format, args);
+    va_end(args);
+}
+
+void add_error_with_suggestion(BaaPreprocessor *pp_state, const PpSourceLocation *loc, const wchar_t *recovery_suggestion, const wchar_t *format, ...)
+{
+    va_list args;
+    va_start(args, format);
+    add_preprocessor_diagnostic_with_severity(pp_state, loc, PP_DIAGNOSTIC_ERROR, recovery_suggestion, format, args);
+    va_end(args);
+}
+
+void add_warning_with_suggestion(BaaPreprocessor *pp_state, const PpSourceLocation *loc, const wchar_t *recovery_suggestion, const wchar_t *format, ...)
+{
+    va_list args;
+    va_start(args, format);
+    add_preprocessor_diagnostic_with_severity(pp_state, loc, PP_DIAGNOSTIC_WARNING, recovery_suggestion, format, args);
+    va_end(args);
+}
+
+void add_info_diagnostic(BaaPreprocessor *pp_state, const PpSourceLocation *loc, const wchar_t *format, ...)
+{
+    va_list args;
+    va_start(args, format);
+    add_preprocessor_diagnostic_with_severity(pp_state, loc, PP_DIAGNOSTIC_INFO, NULL, format, args);
+    va_end(args);
+}
+
 void free_diagnostics_list(BaaPreprocessor *pp_state)
 {
     if (pp_state && pp_state->diagnostics)
@@ -842,11 +1025,17 @@ void free_diagnostics_list(BaaPreprocessor *pp_state)
         for (size_t i = 0; i < pp_state->diagnostic_count; ++i)
         {
             free(pp_state->diagnostics[i].message);
+            free(pp_state->diagnostics[i].recovery_suggestion); // Free recovery suggestions
         }
         free(pp_state->diagnostics);
         pp_state->diagnostics = NULL;
         pp_state->diagnostic_count = 0;
         pp_state->diagnostic_capacity = 0;
+        
+        // Reset enhanced counters
+        pp_state->fatal_error_count = 0;
+        pp_state->error_count = 0;
+        pp_state->warning_count = 0;
     }
 }
 
@@ -1151,4 +1340,247 @@ bool can_continue_after_error(BaaPreprocessor *pp_state, const wchar_t *current_
     }
     
     return true;
+}
+
+// Enhanced error continuation check with progressive limits
+bool can_continue_after_error_enhanced(BaaPreprocessor *pp_state, const wchar_t *current_context)
+{
+    if (!pp_state)
+        return false;
+    
+    // Progressive error limits based on nesting depth
+    size_t max_errors = 50;
+    if (pp_state->nesting_depth > 30) {
+        max_errors = 10; // Stricter limit for deep nesting
+    } else if (pp_state->nesting_depth > 20) {
+        max_errors = 20;
+    } else if (pp_state->nesting_depth > 10) {
+        max_errors = 35;
+    }
+    
+    // Check for fatal errors - stop immediately
+    if (pp_state->fatal_error_count > 0)
+    {
+        PpSourceLocation error_loc = get_current_original_location(pp_state);
+        add_info_diagnostic(pp_state, &error_loc, L"توقف المعالجة بسبب خطأ فادح");
+        return false;
+    }
+    
+    // Check total error count against progressive limit
+    if (pp_state->error_count >= max_errors)
+    {
+        PpSourceLocation error_loc = get_current_original_location(pp_state);
+        add_error_with_suggestion(pp_state, &error_loc, 
+            L"راجع الأخطاء السابقة وقم بإصلاحها قبل المتابعة",
+            L"تم تجاوز الحد الأقصى للأخطاء (%zu) في عمق التداخل %zu", 
+            max_errors, pp_state->nesting_depth);
+        return false;
+    }
+    
+    // Check nesting depth limits
+    if (pp_state->nesting_depth > pp_state->max_nesting_depth)
+    {
+        PpSourceLocation error_loc = get_current_original_location(pp_state);
+        add_fatal_diagnostic(pp_state, &error_loc,
+            L"تم تجاوز الحد الأقصى لعمق تداخل الملفات (%zu)", pp_state->max_nesting_depth);
+        return false;
+    }
+    
+    // Check for runaway macro expansion
+    if (pp_state->expanding_macros_count > 20)
+    {
+        PpSourceLocation error_loc = get_current_original_location(pp_state);
+        add_fatal_diagnostic(pp_state, &error_loc,
+            L"تم تجاوز حد توسيع الماكرو - احتمال تكرار لا نهائي");
+        return false;
+    }
+    
+    // Check conditional nesting
+    if (pp_state->conditional_stack_count > 50)
+    {
+        PpSourceLocation error_loc = get_current_original_location(pp_state);
+        add_error_with_suggestion(pp_state, &error_loc,
+            L"تحقق من أن كل #إذا له #نهاية_إذا مطابق",
+            L"عمق التداخل للتوجيهات الشرطية مرتفع جداً (%zu)", pp_state->conditional_stack_count);
+        return false;
+    }
+    
+    return true;
+}
+
+// Enhanced directive recovery with context-aware suggestions
+bool attempt_directive_recovery_enhanced(BaaPreprocessor *pp_state, const wchar_t **current_pos, const wchar_t *directive_type)
+{
+    if (!pp_state || !current_pos || !*current_pos)
+        return false;
+    
+    PpSourceLocation error_loc = get_current_original_location(pp_state);
+    
+    // Provide context-specific recovery suggestions
+    const wchar_t *recovery_suggestion = NULL;
+    if (directive_type)
+    {
+        if (wcscmp(directive_type, L"إذا") == 0 || wcscmp(directive_type, L"إذا_عرف") == 0 || wcscmp(directive_type, L"إذا_لم_يعرف") == 0)
+        {
+            recovery_suggestion = L"تحقق من صحة التعبير الشرطي وتأكد من إنهاء الكتلة بـ #نهاية_إذا";
+        }
+        else if (wcscmp(directive_type, L"تضمين") == 0)
+        {
+            recovery_suggestion = L"تحقق من وجود الملف وصحة المسار، استخدم علامات الاقتباس المناسبة";
+        }
+        else if (wcscmp(directive_type, L"عرف") == 0)
+        {
+            recovery_suggestion = L"تحقق من صحة اسم الماكرو والتعريف";
+        }
+        else
+        {
+            recovery_suggestion = L"راجع صيغة التوجيه أو استخدم توجيهاً صحيحاً";
+        }
+    }
+    
+    // Report recovery attempt with suggestion
+    add_warning_with_suggestion(pp_state, &error_loc, recovery_suggestion,
+        L"محاولة استرداد من خطأ التوجيه '%ls' - البحث عن نقطة آمنة للمتابعة", 
+        directive_type ? directive_type : L"غير معروف");
+    
+    // Find next directive
+    const wchar_t *next_directive = find_next_directive(*current_pos);
+    
+    if (next_directive)
+    {
+        // Count skipped lines for accurate line tracking
+        const wchar_t *line_counter = *current_pos;
+        size_t skipped_lines = 0;
+        while (line_counter < next_directive)
+        {
+            if (*line_counter == L'\n')
+            {
+                pp_state->current_line_number++;
+                skipped_lines++;
+            }
+            line_counter++;
+        }
+        
+        *current_pos = next_directive;
+        pp_state->current_column_number = 1;
+        
+        // Report successful recovery
+        PpSourceLocation recovery_loc = get_current_original_location(pp_state);
+        add_info_diagnostic(pp_state, &recovery_loc,
+            L"تم الاسترداد بنجاح - تم تخطي %zu سطر، استئناف المعالجة من السطر %zu", 
+            skipped_lines, pp_state->current_line_number);
+        
+        return true;
+    }
+    
+    // If no next directive found, skip to end
+    skip_to_next_line(pp_state, current_pos);
+    add_warning_with_suggestion(pp_state, &error_loc,
+        L"تحقق من بقية الملف للتأكد من عدم وجود توجيهات معلقة",
+        L"لم يتم العثور على توجيه صالح للاسترداد");
+    return false;
+}
+
+// Enhanced include recovery with better suggestions and alternative searching
+bool attempt_include_recovery_enhanced(BaaPreprocessor *pp_state, const wchar_t *failed_path, wchar_t **recovered_content)
+{
+    if (!pp_state || !failed_path || !recovered_content)
+        return false;
+    
+    *recovered_content = NULL;
+    PpSourceLocation error_loc = get_current_original_location(pp_state);
+    
+    // Convert wide path to multibyte for file operations
+    char *failed_path_mb = NULL;
+    int required_bytes = WideCharToMultiByte(CP_UTF8, 0, failed_path, -1, NULL, 0, NULL, NULL);
+    if (required_bytes > 0)
+    {
+        failed_path_mb = malloc(required_bytes);
+        if (failed_path_mb)
+        {
+            WideCharToMultiByte(CP_UTF8, 0, failed_path, -1, failed_path_mb, required_bytes, NULL, NULL);
+        }
+    }
+    
+    if (!failed_path_mb)
+    {
+        add_error_with_suggestion(pp_state, &error_loc,
+            L"تحقق من صحة اسم الملف وترميز المسار",
+            L"فشل في تحويل مسار الملف للبحث عن بدائل");
+        return false;
+    }
+    
+    // Try alternative extensions with specific suggestions
+    const char *alt_extensions[] = {".baa", ".h", ".hpp", ".inc", ".txt", NULL};
+    const wchar_t *extension_suggestions[] = {
+        L"ملف بلغة باء - تحقق من صحة الاسم",
+        L"ملف رأسية C - قد يحتاج تعديل للتوافق مع باء", 
+        L"ملف رأسية C++ - قد يحتاج تعديل للتوافق مع باء",
+        L"ملف تضمين - تحقق من المحتوى",
+        L"ملف نصي - قد لا يحتوي على توجيهات صحيحة"
+    };
+    
+    for (int i = 0; alt_extensions[i]; i++)
+    {
+        char alt_path[MAX_PATH_LEN];
+        snprintf(alt_path, MAX_PATH_LEN, "%s%s", failed_path_mb, alt_extensions[i]);
+        
+        wchar_t *temp_error = NULL;
+        wchar_t *content = read_file_content(pp_state, alt_path, &temp_error);
+        
+        if (content)
+        {
+            // Successfully found alternative
+            free(failed_path_mb);
+            if (temp_error) free(temp_error);
+            
+            add_warning_with_suggestion(pp_state, &error_loc, extension_suggestions[i],
+                L"تم العثور على ملف بديل: %hs", alt_path);
+            
+            *recovered_content = content;
+            return true;
+        }
+        
+        if (temp_error) free(temp_error);
+    }
+    
+    // Try searching in include paths with more detailed reporting
+    if (pp_state->include_paths)
+    {
+        for (size_t i = 0; i < pp_state->include_path_count; i++)
+        {
+            char full_path[MAX_PATH_LEN];
+            snprintf(full_path, MAX_PATH_LEN, "%s%c%s", 
+                pp_state->include_paths[i], PATH_SEPARATOR, failed_path_mb);
+            
+            wchar_t *temp_error = NULL;
+            wchar_t *content = read_file_content(pp_state, full_path, &temp_error);
+            
+            if (content)
+            {
+                free(failed_path_mb);
+                if (temp_error) free(temp_error);
+                
+                add_warning_with_suggestion(pp_state, &error_loc,
+                    L"تم العثور على الملف في مسار التضمين - تحقق من أن هذا هو المطلوب",
+                    L"تم العثور على الملف في مسار التضمين: %s", pp_state->include_paths[i]);
+                
+                *recovered_content = content;
+                return true;
+            }
+            
+            if (temp_error) free(temp_error);
+        }
+    }
+    
+    // Final attempt - report detailed failure with comprehensive suggestions
+    add_error_with_suggestion(pp_state, &error_loc,
+        L"1. تحقق من وجود الملف في المسار الصحيح\n"
+        L"2. تأكد من أن اسم الملف مكتوب بشكل صحيح\n"
+        L"3. أضف مسار الملف إلى مسارات التضمين\n"
+        L"4. تحقق من أذونات الوصول للملف",
+        L"فشل في العثور على الملف '%ls' أو أي بديل مناسب", failed_path);
+    
+    free(failed_path_mb);
+    return false;
 }

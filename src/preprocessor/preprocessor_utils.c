@@ -59,9 +59,117 @@ void free_location_stack(BaaPreprocessor *pp)
     pp->location_stack_capacity = 0;
 }
 
-// --- Legacy formatting functions removed - using enhanced diagnostics system ---
+// --- Legacy formatting functions (restored for compatibility) ---
 
-// Legacy warning formatter also removed - using enhanced diagnostics system
+// Legacy error formatter - formats error message with location information
+wchar_t *format_preprocessor_error_at_location(const PpSourceLocation *location, const wchar_t *format, ...)
+{
+    if (!format) {
+        return NULL;
+    }
+    
+    // Handle NULL location gracefully
+    const char *file = location ? location->file_path : "(unknown)";
+    size_t line = location ? location->line : 0;
+    size_t column = location ? location->column : 0;
+    
+    // Use a large buffer for the variadic formatting
+    const size_t temp_buffer_size = 2048;
+    wchar_t temp_buffer[2048];
+    
+    va_list args;
+    va_start(args, format);
+    int result = vswprintf(temp_buffer, temp_buffer_size, format, args);
+    va_end(args);
+    
+    if (result < 0) {
+        // Formatting failed, return a basic error message
+        const wchar_t *fallback = L"[ERROR] Formatting failed";
+        wchar_t *error_msg = malloc((wcslen(fallback) + 1) * sizeof(wchar_t));
+        if (error_msg) {
+            wcscpy(error_msg, fallback);
+        }
+        return error_msg;
+    }
+    
+    // Calculate the size needed for the final formatted message
+    const size_t location_prefix_max = 512; // Space for "[ERROR] file:line:column: "
+    size_t total_size = location_prefix_max + wcslen(temp_buffer) + 1;
+    
+    wchar_t *final_message = malloc(total_size * sizeof(wchar_t));
+    if (!final_message) {
+        return NULL;
+    }
+    
+    // Format the complete message with location information
+    if (line > 0 && column > 0) {
+        swprintf(final_message, total_size, L"[ERROR] %hs:%zu:%zu: %ls",
+                 file, line, column, temp_buffer);
+    } else if (line > 0) {
+        swprintf(final_message, total_size, L"[ERROR] %hs:%zu: %ls",
+                 file, line, temp_buffer);
+    } else {
+        swprintf(final_message, total_size, L"[ERROR] %hs: %ls",
+                 file, temp_buffer);
+    }
+    
+    return final_message;
+}
+
+// Legacy warning formatter - formats warning message with location information
+wchar_t *format_preprocessor_warning_at_location(const PpSourceLocation *location, const wchar_t *format, ...)
+{
+    if (!format) {
+        return NULL;
+    }
+    
+    // Handle NULL location gracefully
+    const char *file = location ? location->file_path : "(unknown)";
+    size_t line = location ? location->line : 0;
+    size_t column = location ? location->column : 0;
+    
+    // Use a large buffer for the variadic formatting
+    const size_t temp_buffer_size = 2048;
+    wchar_t temp_buffer[2048];
+    
+    va_list args;
+    va_start(args, format);
+    int result = vswprintf(temp_buffer, temp_buffer_size, format, args);
+    va_end(args);
+    
+    if (result < 0) {
+        // Formatting failed, return a basic warning message
+        const wchar_t *fallback = L"[WARNING] Formatting failed";
+        wchar_t *warning_msg = malloc((wcslen(fallback) + 1) * sizeof(wchar_t));
+        if (warning_msg) {
+            wcscpy(warning_msg, fallback);
+        }
+        return warning_msg;
+    }
+    
+    // Calculate the size needed for the final formatted message
+    const size_t location_prefix_max = 512; // Space for "[WARNING] file:line:column: "
+    size_t total_size = location_prefix_max + wcslen(temp_buffer) + 1;
+    
+    wchar_t *final_message = malloc(total_size * sizeof(wchar_t));
+    if (!final_message) {
+        return NULL;
+    }
+    
+    // Format the complete message with location information
+    if (line > 0 && column > 0) {
+        swprintf(final_message, total_size, L"[WARNING] %hs:%zu:%zu: %ls",
+                 file, line, column, temp_buffer);
+    } else if (line > 0) {
+        swprintf(final_message, total_size, L"[WARNING] %hs:%zu: %ls",
+                 file, line, temp_buffer);
+    } else {
+        swprintf(final_message, total_size, L"[WARNING] %hs: %ls",
+                 file, temp_buffer);
+    }
+    
+    return final_message;
+}
 
 // --- Dynamic Buffer for Output ---
 
@@ -966,11 +1074,7 @@ bool validate_and_recover_conditional_stack(BaaPreprocessor *pp_state)
         add_error_with_suggestion(pp_state, &error_loc,
             L"أضف #نهاية_إذا لكل توجيه شرطي غير مكتمل",
             L"توجيه شرطي غير مطابق - مفقود #نهاية_إذا (العدد: %zu)", pp_state->conditional_stack_count);
-        wchar_t *unmatched_msg = NULL; // No longer needed, diagnostics system handles this
-        if (unmatched_msg) {
-            fwprintf(stderr, L"%ls\n", unmatched_msg);
-            free(unmatched_msg);
-        }
+        // Note: Enhanced diagnostics system handles error reporting
         
         // Clear the stack to prevent further issues
         pp_state->conditional_stack_count = 0;
@@ -1001,13 +1105,9 @@ bool should_abort_processing(BaaPreprocessor *pp_state, size_t max_errors)
     if (error_count >= max_errors)
     {
         PpSourceLocation error_loc = get_current_original_location(pp_state);
-        add_fatal_error(pp_state, &error_loc,
+        add_fatal_diagnostic(pp_state, &error_loc,
             L"تم تجاوز الحد الأقصى للأخطاء (%zu) - إيقاف المعالجة", max_errors);
-        wchar_t *limit_msg = NULL; // No longer needed, diagnostics system handles this
-        if (limit_msg) {
-            fwprintf(stderr, L"%ls\n", limit_msg);
-            free(limit_msg);
-        }
+        // Note: Enhanced diagnostics system handles error reporting
         return true;
     }
     
@@ -1104,11 +1204,7 @@ bool can_continue_after_error(BaaPreprocessor *pp_state, const wchar_t *current_
         add_error_with_suggestion(pp_state, &error_loc,
             L"قلل من مستوى التداخل أو أعد تنظيم التوجيهات الشرطية",
             L"تم تجاوز حد تداخل التوجيهات الشرطية (العدد: %zu)", pp_state->conditional_stack_count);
-        wchar_t *nesting_msg = NULL; // No longer needed, diagnostics system handles this
-        if (nesting_msg) {
-            fwprintf(stderr, L"%ls\n", nesting_msg);
-            free(nesting_msg);
-        }
+        // Note: Enhanced diagnostics system handles error reporting
         return false;
     }
     

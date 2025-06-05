@@ -3,6 +3,9 @@
 
 // --- Preprocessor Expression Evaluation Implementation ---
 
+// Forward declarations
+static void report_expression_error_simple(BaaPreprocessor *pp_state, const PpSourceLocation *loc, const wchar_t *format, ...);
+
 // Helper to create an error token - now uses diagnostic system
 static PpExprToken make_error_token(PpExprTokenizer *tz, const wchar_t *message)
 {
@@ -18,11 +21,7 @@ static PpExprToken make_error_token(PpExprTokenizer *tz, const wchar_t *message)
             .column = (tz->expr_string_column_offset + (tz->current_token_start_column > 0 ? tz->current_token_start_column : 1) - 1)};
         
         // Use enhanced diagnostics instead of direct formatting
-        add_error(pp_state, &error_loc, L"%ls", message);
-        if (false) { // Skip the old formatting logic
-            fwprintf(stderr, L"%ls\n", formatted_error);
-            free(formatted_error);
-        }
+        add_error_with_suggestion(tz->pp_state, &error_loc, NULL, L"%ls", message);
     }
     return (PpExprToken){.type = PP_EXPR_TOKEN_ERROR};
 }
@@ -40,7 +39,7 @@ static void report_expression_error(PpExprTokenizer *tz, const wchar_t *format, 
         
         va_list args;
         va_start(args, format);
-        add_preprocessor_diagnostic(tz->pp_state, &error_loc, true, format, args);
+        add_preprocessor_diagnostic_with_severity(tz->pp_state, &error_loc, PP_DIAGNOSTIC_ERROR, L"تحقق من بناء جملة التعبير الشرطي", format, args);
         va_end(args);
     }
 }
@@ -325,7 +324,7 @@ static wchar_t *fully_expand_expression_string(BaaPreprocessor *pp_state,
         PpSourceLocation error_loc = get_current_original_location(pp_state);
         error_loc.line = original_line_number_for_errors;
         error_loc.column = 1;
-        *error_message = format_preprocessor_error_at_location(&error_loc, L"فشل تهيئة مخزن الإدخال لتوسيع تعبير #إذا.");
+        add_error_with_suggestion(pp_state, &error_loc, NULL, L"فشل تهيئة مخزن الإدخال لتوسيع تعبير #إذا.");
         return NULL;
     }
     if (!append_to_dynamic_buffer(&current_input_buffer, expression_str))
@@ -333,7 +332,7 @@ static wchar_t *fully_expand_expression_string(BaaPreprocessor *pp_state,
         PpSourceLocation error_loc = get_current_original_location(pp_state);
         error_loc.line = original_line_number_for_errors;
         error_loc.column = 1;
-        *error_message = format_preprocessor_error_at_location(&error_loc, L"فشل نسخ التعبير إلى مخزن الإدخال لتوسيع تعبير #إذا.");
+        add_error_with_suggestion(pp_state, &error_loc, NULL, L"فشل نسخ التعبير إلى مخزن الإدخال لتوسيع تعبير #إذا.");
         free_dynamic_buffer(&current_input_buffer);
         return NULL;
     }
@@ -443,7 +442,6 @@ bool evaluate_preprocessor_expression(BaaPreprocessor *pp_state, const wchar_t *
         free(temp_error_message); // Clean up if set but expansion succeeded
     }
     
-    fwprintf(stderr, L"DEBUG #if Fully Expanded Expr: [%ls]\n", expanded_expression_str); // Uncomment for debugging
     PpExprTokenizer tz = {
         .current = expanded_expression_str,                           // Use the fully expanded string
         .expression_string_start = expanded_expression_str,           // Store the beginning of the expanded expression string
@@ -488,7 +486,7 @@ static void report_expression_error_simple(BaaPreprocessor *pp_state, const PpSo
     {
         va_list args;
         va_start(args, format);
-        add_preprocessor_diagnostic(pp_state, loc, true, format, args);
+        add_preprocessor_diagnostic_with_severity(pp_state, loc, PP_DIAGNOSTIC_ERROR, L"تأكد من صحة المعاملات والأقواس في التعبير", format, args);
         va_end(args);
     }
 }

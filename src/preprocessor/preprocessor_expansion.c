@@ -55,7 +55,7 @@ bool stringify_argument(BaaPreprocessor *pp_state, DynamicWcharBuffer *output_bu
     if (!init_dynamic_buffer(&temp_buffer, initial_capacity))
     {
         PpSourceLocation error_loc = get_current_original_location(pp_state);
-        *error_message = format_preprocessor_error_at_location(&error_loc, L"فشل في تخصيص ذاكرة مؤقتة لتسلسل الوسيطة.");
+        add_error_with_suggestion(pp_state, &error_loc, NULL, L"فشل في تخصيص ذاكرة مؤقتة لتسلسل الوسيطة.");
         return false;
     }
 
@@ -95,7 +95,7 @@ bool stringify_argument(BaaPreprocessor *pp_state, DynamicWcharBuffer *output_bu
         if (!append_to_dynamic_buffer(output_buffer, temp_buffer.buffer))
         {
             PpSourceLocation error_loc = get_current_original_location(pp_state);
-            *error_message = format_preprocessor_error_at_location(&error_loc, L"فشل في إلحاق الوسيطة المتسلسلة للمخرج.");
+            add_error_with_suggestion(pp_state, &error_loc, NULL, L"فشل في إلحاق الوسيطة المتسلسلة للمخرج.");
             success = false;
         }
     }

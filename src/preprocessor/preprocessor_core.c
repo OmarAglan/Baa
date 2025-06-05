@@ -17,7 +17,7 @@ wchar_t *process_file(BaaPreprocessor *pp_state, const char *file_path, wchar_t 
     {
         // Get the location of the #include directive that caused this error
         PpSourceLocation error_loc = get_current_original_location(pp_state);
-        *error_message = format_preprocessor_error_at_location(&error_loc, L"فشل في الحصول على المسار المطلق لملف التضمين '%hs'.", file_path);
+        add_error_with_suggestion(pp_state, &error_loc, NULL, L"فشل في الحصول على المسار المطلق لملف التضمين '%hs'.", file_path);
         // Restore context before returning on error (though it might be the same)
         pp_state->current_file_path = prev_file_path;
         pp_state->current_line_number = prev_line_number;
@@ -61,7 +61,7 @@ wchar_t *process_file(BaaPreprocessor *pp_state, const char *file_path, wchar_t 
     if (!init_dynamic_buffer(&output_buffer, wcslen(file_content) + 1024))
     {
         PpSourceLocation error_loc = get_current_original_location(pp_state); // Get location before error
-        *error_message = format_preprocessor_error_at_location(&error_loc, L"فشل في تخصيص الذاكرة لمخزن الإخراج المؤقت.");
+        add_error_with_suggestion(pp_state, &error_loc, NULL, L"فشل في تخصيص الذاكرة لمخزن الإخراج المؤقت.");
         free(file_content);
         pop_file_stack(pp_state);
         free(abs_path);
@@ -107,12 +107,10 @@ wchar_t *process_file(BaaPreprocessor *pp_state, const char *file_path, wchar_t 
         if (!current_line)
         {
             PpSourceLocation error_loc = get_current_original_location(pp_state);
-            *error_message = format_preprocessor_error_at_location(&error_loc, L"فشل في تخصيص الذاكرة لسطر.");
+            add_error_with_suggestion(pp_state, &error_loc, NULL, L"فشل في تخصيص الذاكرة لسطر.");
             success = false;
             break;
         }
-
-        fwprintf(stderr, L"DEBUG: Processing line %zu: [%ls]\n", pp_state->current_line_number, current_line); // DEBUG PRINT
 
         // Reset physical column for the start of the line
         pp_state->current_column_number = 1;
@@ -127,7 +125,6 @@ wchar_t *process_file(BaaPreprocessor *pp_state, const char *file_path, wchar_t 
 
         if (wcsncmp(effective_line_start, L"//", 2) == 0)
         {
-            fwprintf(stderr, L"DEBUG: Skipping comment line %zu\n", pp_state->current_line_number); // DEBUG PRINT
             // Single-line comment, skip the rest of the line processing
             free(current_line); // Free the duplicated line
             // Advance to next line in the main loop
@@ -152,7 +149,6 @@ wchar_t *process_file(BaaPreprocessor *pp_state, const char *file_path, wchar_t 
             // Call the new function to handle all directive logic.
             // This function is responsible for its own output (e.g., from #include via output_buffer)
             // and for updating the success flag.
-            // fwprintf(stderr, L"DEBUG PF: Calling handle_preprocessor_directive for line %zu: [%ls]\n", pp_state->current_line_number, effective_line_start);
             bool local_is_conditional_directive_pf; // For process_file
             if (!handle_preprocessor_directive(pp_state, effective_line_start + 1, abs_path, &output_buffer, error_message, &local_is_conditional_directive_pf))
             {
@@ -239,7 +235,7 @@ wchar_t *process_file(BaaPreprocessor *pp_state, const char *file_path, wchar_t 
                     success = false;
                     if (!*error_message) {
                         PpSourceLocation current_loc = get_current_original_location(pp_state);
-                        *error_message = format_preprocessor_error_at_location(&current_loc, L"فشل في إلحاق السطر بمخزن الإخراج المؤقت.");
+                        add_error_with_suggestion(pp_state, &current_loc, NULL, L"فشل في إلحاق السطر بمخزن الإخراج المؤقت.");
                     }
                 }
             }
@@ -322,7 +318,7 @@ wchar_t *process_string(BaaPreprocessor *pp_state, const wchar_t *source_string,
     if (!init_dynamic_buffer(&output_buffer, wcslen(source_string) + 1024))
     {
         PpSourceLocation error_loc = get_current_original_location(pp_state);
-        *error_message = format_preprocessor_error_at_location(&error_loc, L"فشل في تخصيص الذاكرة لمخزن الإخراج المؤقت للسلسلة.");
+        add_error_with_suggestion(pp_state, &error_loc, NULL, L"فشل في تخصيص الذاكرة لمخزن الإخراج المؤقت للسلسلة.");
         // Restore context before returning
         pp_state->current_file_path = prev_file_path;
         pp_state->current_line_number = prev_line_number;
@@ -355,7 +351,7 @@ wchar_t *process_string(BaaPreprocessor *pp_state, const wchar_t *source_string,
         if (!current_line)
         {
             PpSourceLocation error_loc = get_current_original_location(pp_state);
-            *error_message = format_preprocessor_error_at_location(&error_loc, L"فشل في تخصيص الذاكرة لسطر من السلسلة.");
+            add_error_with_suggestion(pp_state, &error_loc, NULL, L"فشل في تخصيص الذاكرة لسطر من السلسلة.");
             success = false;
             break;
         }
@@ -392,7 +388,6 @@ wchar_t *process_string(BaaPreprocessor *pp_state, const wchar_t *source_string,
         {
             // Call the new function to handle all directive logic.
             // Note: abs_path is NULL for string processing.
-            // fwprintf(stderr, L"DEBUG PS: Calling handle_preprocessor_directive for line %zu: [%ls]\n", pp_state->current_line_number, effective_line_start);
             bool local_is_conditional_directive_ps; // For process_string
             if (!handle_preprocessor_directive(pp_state, effective_line_start + 1, NULL, &output_buffer, error_message, &local_is_conditional_directive_ps))
             {
@@ -401,7 +396,6 @@ wchar_t *process_string(BaaPreprocessor *pp_state, const wchar_t *source_string,
                 {
                     // For string processing, we can't use full directive recovery since we don't have file position
                     // Just skip to next line and continue
-                    fwprintf(stderr, L"DEBUG: String directive error, skipping to next line\n");
                     free(current_line);
                     if (line_end != NULL)
                     {
@@ -425,7 +419,6 @@ wchar_t *process_string(BaaPreprocessor *pp_state, const wchar_t *source_string,
         else if (!pp_state->skipping_lines)
         {
             // Not a directive and not skipping: process line for macro substitution.
-            // fwprintf(stderr, L"DEBUG PS: Calling process_code_line_for_macros for line %zu: [%ls]\n", pp_state->current_line_number, current_line);
             if (!process_code_line_for_macros(pp_state, current_line, line_len, &output_buffer, error_message))
             {
                 success = false;
@@ -438,7 +431,7 @@ wchar_t *process_string(BaaPreprocessor *pp_state, const wchar_t *source_string,
                     success = false;
                     if (!*error_message) {
                         PpSourceLocation current_loc = get_current_original_location(pp_state);
-                        *error_message = format_preprocessor_error_at_location(&current_loc, L"فشل في إلحاق السطر بمخزن الإخراج المؤقت.");
+                        add_error_with_suggestion(pp_state, &current_loc, NULL, L"فشل في إلحاق السطر بمخزن الإخراج المؤقت.");
                     }
                 }
             }

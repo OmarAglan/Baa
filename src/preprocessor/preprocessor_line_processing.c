@@ -36,7 +36,7 @@ bool scan_and_expand_macros_for_expressions(
                 PpSourceLocation error_loc_data = get_current_original_location(pp_state);
                 error_loc_data.line = original_line_number_for_errors;
                 error_loc_data.column = token_start_col_for_error;
-                *error_message = format_preprocessor_error_at_location(&error_loc_data, L"فشل في تخصيص ذاكرة للمعرف للاستبدال.");
+                add_error_with_suggestion(pp_state, &error_loc_data, NULL, L"فشل في تخصيص ذاكرة للمعرف للاستبدال.");
                 *overall_success = false;
                 break;
             }
@@ -233,14 +233,14 @@ bool scan_and_expand_macros_for_expressions(
 
                 if (!push_location(pp_state, &invocation_loc_data))
                 {
-                    *error_message = format_preprocessor_error_at_location(&invocation_loc_data, L"فشل في دفع موقع استدعاء الماكرو.");
+                    add_error_with_suggestion(pp_state, &invocation_loc_data, NULL, L"فشل في دفع موقع استدعاء الماكرو.");
                     *overall_success = false;
                     free(identifier);
                     break;
                 }
                 if (!push_macro_expansion(pp_state, macro))
                 {
-                    *error_message = format_preprocessor_error_at_location(&invocation_loc_data, L"فشل في دفع الماكرو '%ls' إلى مكدس التوسيع.", macro->name);
+                    add_error_with_suggestion(pp_state, &invocation_loc_data, NULL, L"فشل في دفع الماكرو '%ls' إلى مكدس التوسيع.", macro->name);
                     pop_location(pp_state);
                     *overall_success = false;
                     free(identifier);
@@ -251,7 +251,7 @@ bool scan_and_expand_macros_for_expressions(
                 if (!init_dynamic_buffer(&single_expansion_result, 128))
                 {
                     PpSourceLocation err_loc_init = get_current_original_location(pp_state);
-                    *error_message = format_preprocessor_error_at_location(&err_loc_init, L"فشل تهيئة مخزن التوسيع.");
+                    add_error_with_suggestion(pp_state, &err_loc_init, NULL, L"فشل تهيئة مخزن التوسيع.");
                     pop_macro_expansion(pp_state);
                     pop_location(pp_state);
                     *overall_success = false;

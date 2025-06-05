@@ -135,7 +135,7 @@ bool handle_preprocessor_directive(BaaPreprocessor *pp_state, wchar_t *directive
             wchar_t *macro_name = wcsndup_internal(name_start, name_len);
             if (!macro_name)
             {
-                *error_message = format_preprocessor_error_at_location(&directive_loc, L"فشل في تخصيص ذاكرة لاسم الماكرو في #إذا_عرف.");
+                add_error_with_suggestion(pp_state, &directive_loc, NULL, L"فشل في تخصيص ذاكرة لاسم الماكرو في #إذا_عرف.");
                 success = false;
             }
             else
@@ -143,7 +143,7 @@ bool handle_preprocessor_directive(BaaPreprocessor *pp_state, wchar_t *directive
                 bool is_defined = (find_macro(pp_state, macro_name) != NULL);
                 if (!push_conditional(pp_state, is_defined))
                 {
-                    *error_message = format_preprocessor_error_at_location(&directive_loc, L"فشل في دفع الحالة الشرطية لـ #إذا_عرف (نفاد الذاكرة؟).");
+                    add_error_with_suggestion(pp_state, &directive_loc, NULL, L"فشل في دفع الحالة الشرطية لـ #إذا_عرف (نفاد الذاكرة؟).");
                     success = false;
                 }
                 free(macro_name);
@@ -174,7 +174,7 @@ bool handle_preprocessor_directive(BaaPreprocessor *pp_state, wchar_t *directive
             wchar_t *macro_name = wcsndup_internal(name_start, name_len);
             if (!macro_name)
             {
-                *error_message = format_preprocessor_error_at_location(&directive_loc, L"فشل في تخصيص ذاكرة لاسم الماكرو في #إذا_لم_يعرف.");
+                add_error_with_suggestion(pp_state, &directive_loc, NULL, L"فشل في تخصيص ذاكرة لاسم الماكرو في #إذا_لم_يعرف.");
                 success = false;
             }
             else
@@ -182,7 +182,7 @@ bool handle_preprocessor_directive(BaaPreprocessor *pp_state, wchar_t *directive
                 bool is_defined = (find_macro(pp_state, macro_name) != NULL);
                 if (!push_conditional(pp_state, !is_defined))
                 { // Note the negation
-                    *error_message = format_preprocessor_error_at_location(&directive_loc, L"فشل في دفع الحالة الشرطية لـ #إذا_لم_يعرف (نفاد الذاكرة؟).");
+                    add_error_with_suggestion(pp_state, &directive_loc, NULL, L"فشل في دفع الحالة الشرطية لـ #إذا_لم_يعرف (نفاد الذاكرة؟).");
                     success = false;
                 }
                 free(macro_name);

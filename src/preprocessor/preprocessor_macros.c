@@ -8,7 +8,11 @@ static wchar_t *normalize_macro_body(const wchar_t *body)
     
     size_t len = wcslen(body);
     wchar_t *normalized = malloc((len + 1) * sizeof(wchar_t));
-    if (!normalized) return NULL;
+    if (!normalized) {
+        // Memory allocation failure - this is a system-level error
+        // No location context available in this helper function
+        return NULL;
+    }
     
     const wchar_t *src = body;
     wchar_t *dst = normalized;
@@ -71,6 +75,8 @@ static bool are_macro_bodies_equivalent(const wchar_t *body1, const wchar_t *bod
     wchar_t *norm2 = normalize_macro_body(body2);
     
     if (!norm1 || !norm2) {
+        // Memory allocation failure during normalization
+        // This is a system-level issue, treat as non-equivalent
         free(norm1);
         free(norm2);
         return false;
@@ -153,6 +159,18 @@ bool add_macro(BaaPreprocessor *pp_state, const wchar_t *name, const wchar_t *bo
 {
     if (!pp_state || !name || !body)
     {
+        // Invalid parameters for macro definition
+        if (pp_state) {
+            PpSourceLocation current_loc = get_current_original_location(pp_state);
+            if (!name) {
+                PP_REPORT_ERROR(pp_state, &current_loc, PP_ERROR_INVALID_MACRO_NAME, "macro",
+                    L"اسم الماكرو مفقود أو غير صحيح.");
+            } else if (!body) {
+                PP_REPORT_ERROR(pp_state, &current_loc, PP_ERROR_MACRO_EXPANSION_FAILED, "macro",
+                    L"جسم الماكرو '%ls' مفقود أو غير صحيح.", name);
+            }
+        }
+        
         // Free potentially allocated params if other args are invalid
         // is_variadic implies is_function_like for this cleanup
         if ((is_function_like || is_variadic) && param_names)
@@ -204,14 +222,9 @@ bool add_macro(BaaPreprocessor *pp_state, const wchar_t *name, const wchar_t *bo
                 // Check if it's a predefined macro (more serious)
                 if (is_predefined_macro(name))
                 {
-                    // Report error for predefined macro redefinition
-                    // Use format_preprocessor_error_at_location which handles the diagnostic system internally
-                    wchar_t *error_msg = format_preprocessor_error_at_location(&current_loc, 
+                    // Report error for predefined macro redefinition using enhanced error system
+                    PP_REPORT_ERROR(pp_state, &current_loc, PP_ERROR_MACRO_REDEFINITION, "macro",
                         L"إعادة تعريف الماكرو المدمج '%ls' غير مسموحة.", name);
-                    if (error_msg) {
-                        // The error has been added to diagnostics by format_preprocessor_error_at_location
-                        free(error_msg);
-                    }
                     
                     // Free the new parameters and reject the redefinition
                     if ((is_function_like || is_variadic) && param_names)
@@ -226,13 +239,9 @@ bool add_macro(BaaPreprocessor *pp_state, const wchar_t *name, const wchar_t *bo
                 }
                 else
                 {
-                    // Issue warning for regular macro incompatible redefinition
-                    wchar_t *warning_msg = format_preprocessor_warning_at_location(&current_loc,
+                    // Issue warning for regular macro incompatible redefinition using enhanced error system
+                    PP_REPORT_WARNING(pp_state, &current_loc, PP_ERROR_MACRO_REDEFINITION, "macro",
                         L"إعادة تعريف الماكرو '%ls' بتعريف مختلف، سيتم استبدال التعريف السابق.", name);
-                    if (warning_msg) {
-                        fwprintf(stderr, L"%ls\n", warning_msg);
-                        free(warning_msg);
-                    }
                     
                     // Proceed with replacement after warning
                     free(pp_state->macros[i].body);
@@ -254,6 +263,10 @@ bool add_macro(BaaPreprocessor *pp_state, const wchar_t *name, const wchar_t *bo
                     // Check if allocations succeeded
                     if (!pp_state->macros[i].body)
                     {
+                        // Memory allocation failure during macro body replacement
+                        PP_REPORT_FATAL(pp_state, &current_loc, PP_ERROR_OUT_OF_MEMORY, "memory",
+                            L"فشل في تخصيص الذاكرة لجسم الماكرو '%ls'.", name);
+                        
                         // If body fails, try to clean up params if they were just assigned
                         if ((is_function_like || is_variadic) && param_names)
                         {
@@ -279,6 +292,11 @@ bool add_macro(BaaPreprocessor *pp_state, const wchar_t *name, const wchar_t *bo
         BaaMacro *new_macros = realloc(pp_state->macros, new_capacity * sizeof(BaaMacro));
         if (!new_macros)
         {
+            // Memory reallocation failure for macro array expansion
+            PpSourceLocation current_loc = get_current_original_location(pp_state);
+            PP_REPORT_FATAL(pp_state, &current_loc, PP_ERROR_OUT_OF_MEMORY, "memory",
+                L"فشل في إعادة تخصيص الذاكرة لتوسيع مصفوفة الماكرو لإضافة '%ls'.", name);
+            
             // Free params if reallocation fails, as ownership wasn't transferred
             if (is_function_like && param_names)
             {
@@ -304,6 +322,11 @@ bool add_macro(BaaPreprocessor *pp_state, const wchar_t *name, const wchar_t *bo
     // Check allocations
     if (!new_entry->name || !new_entry->body)
     {
+        // Memory allocation failure for new macro entry
+        PpSourceLocation current_loc = get_current_original_location(pp_state);
+        PP_REPORT_FATAL(pp_state, &current_loc, PP_ERROR_OUT_OF_MEMORY, "memory",
+            L"فشل في تخصيص الذاكرة لإدخال الماكرو الجديد '%ls'.", name);
+        
         // Clean up everything allocated for this new entry on failure
         free(new_entry->name);                                           // Safe even if NULL
         free(new_entry->body);                                           // Safe even if NULL

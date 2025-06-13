@@ -37,7 +37,23 @@ PpSourceLocation get_current_original_location(const BaaPreprocessor *pp)
 {
     if (pp->location_stack_count > 0)
     {
-        return pp->location_stack[pp->location_stack_count - 1];
+        PpSourceLocation stack_loc = pp->location_stack[pp->location_stack_count - 1];
+        
+        // IMPROVEMENT: If the location stack only contains the initial location (line 1)
+        // and we're currently processing a different line, use the current physical location
+        // This fixes the line number reporting bug where all errors report line 1:1
+        if (pp->location_stack_count == 1 &&
+            stack_loc.line == 1 && stack_loc.column == 1 &&
+            pp->current_line_number > 1)
+        {
+            // Use current physical location for better error reporting
+            return (PpSourceLocation){
+                .file_path = pp->current_file_path ? pp->current_file_path : stack_loc.file_path,
+                .line = pp->current_line_number,
+                .column = pp->current_column_number};
+        }
+        
+        return stack_loc;
     }
     else
     {
@@ -47,6 +63,16 @@ PpSourceLocation get_current_original_location(const BaaPreprocessor *pp)
             .file_path = pp->current_file_path ? pp->current_file_path : "(unknown)",
             .line = pp->current_line_number,
             .column = pp->current_column_number};
+    }
+}
+
+// Updates the location on the top of the stack (if any exists)
+void update_current_location(BaaPreprocessor *pp, size_t line, size_t column)
+{
+    if (pp->location_stack_count > 0)
+    {
+        pp->location_stack[pp->location_stack_count - 1].line = line;
+        pp->location_stack[pp->location_stack_count - 1].column = column;
     }
 }
 

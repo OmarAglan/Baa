@@ -1,0 +1,14 @@
+// Line 1: This is a comment
+// Line 2: Another comment  
+#تعريف TEST_MACRO "hello"
+
+// Line 5: This line should trigger a warning
+#تعريف PI 3.14
+
+// Line 8: Redefine PI to trigger warning at this line
+#تعريف PI 3.14159
+
+// Line 11: Use the macro
+PI is defined as PI
+
+// Line 14: End of file

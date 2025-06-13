@@ -2,7 +2,7 @@
 
 B (باء) is a programming language designed to support Arabic syntax while maintaining conceptual alignment with C features. It allows developers to write code using Arabic keywords and identifiers. The project aims to provide a complete compiler toolchain, including a preprocessor, lexer, parser, semantic analyzer, and code generator.
 
-## Current Status (Reflects Build System v0.1.26.0 / Preprocessor v0.1.26.0 / Lexer conceptual v0.1.21.0)
+## Current Status (Reflects Build System v0.1.27.0 / Preprocessor v0.1.27.0 / Lexer conceptual v0.1.21.0)
 
 The project is actively under development. Key components and their status:
 

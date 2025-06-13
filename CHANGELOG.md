@@ -4,6 +4,40 @@ All notable changes to the B (باء) compiler project will be documented in thi
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.27.0] - 2025-06-13 (Line Number Reporting Bug Fix)
+
+### Fixed
+
+- **Preprocessor: Line Number Reporting in Error Messages (Critical Fix):**
+  - Fixed critical bug where all preprocessor errors and warnings incorrectly reported `line 1:1` instead of actual line numbers from the source files.
+  - **Root Cause**: The location stack within the preprocessor was never updated during file processing, remaining at the initial position throughout preprocessing.
+  - **Fix**: Added `update_current_location()` function to properly maintain the current location during line-by-line processing and enhanced fallback logic in `get_current_original_location()` to provide more accurate location reporting.
+  - **Impact**: Error messages now display correct line numbers, dramatically improving debugging experience and making error reporting useful for developers.
+  - This fix ensures that preprocessor diagnostics provide meaningful location information for all error and warning scenarios.
+
+### Enhanced
+
+- **Preprocessor: Location Tracking and Error Reporting:**
+  - Improved location stack management to track current processing position accurately throughout file processing.
+  - Enhanced error reporting fallback mechanisms to provide better location approximations when precise tracking is unavailable.
+  - Maintained backward compatibility with existing error reporting interfaces while improving accuracy.
+
+### Technical Details
+
+- **Files Modified:**
+  - `src/preprocessor/preprocessor_core.c`: Added `update_current_location()` function and integrated location tracking into main processing loop.
+  - `src/preprocessor/preprocessor_utils.c`: Enhanced `get_current_original_location()` function with improved fallback logic.
+  - `src/preprocessor/preprocessor_internal.h`: Added function declarations for new location tracking functionality.
+- **Standards Compliance**: Improves diagnostic reporting to match expected preprocessor behavior with accurate source location information.
+- **Testing**: Bug fix verified through comprehensive testing with various error scenarios across multiple source files.
+
+### Benefits
+
+- **Improved Developer Experience**: Developers can now quickly locate and fix preprocessor errors with accurate line number information.
+- **Enhanced Debugging**: Error messages are now actionable with precise source location references.
+- **Better IDE Integration**: Accurate location information enables proper error highlighting and navigation in development environments.
+- **Increased Productivity**: Eliminates confusion and time wasted trying to locate errors reported at incorrect line numbers.
+
 ## [0.1.26.0] - 2025-06-13 (Zero-Parameter Function-Like Macro Bug Fix)
 
 ### Fixed

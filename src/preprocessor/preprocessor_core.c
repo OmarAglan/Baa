@@ -101,7 +101,7 @@ wchar_t *process_file(BaaPreprocessor *pp_state, const char *file_path, wchar_t 
             break;
         }
 
-        fwprintf(stderr, L"DEBUG: Processing line %zu: [%ls]\n", pp_state->current_line_number, current_line); // DEBUG PRINT
+        // fwprintf(stderr, L"DEBUG: Processing line %zu: [%ls]\n", pp_state->current_line_number, current_line); // DEBUG PRINT
 
         // Reset physical column for the start of the line
         pp_state->current_column_number = 1;
@@ -116,7 +116,6 @@ wchar_t *process_file(BaaPreprocessor *pp_state, const char *file_path, wchar_t 
 
         if (wcsncmp(effective_line_start, L"//", 2) == 0)
         {
-            fwprintf(stderr, L"DEBUG: Skipping comment line %zu\n", pp_state->current_line_number); // DEBUG PRINT
             // Single-line comment, skip the rest of the line processing
             free(current_line); // Free the duplicated line
             // Advance to next line in the main loop
@@ -124,6 +123,8 @@ wchar_t *process_file(BaaPreprocessor *pp_state, const char *file_path, wchar_t 
             {
                 line_start = line_end + 1;
                 pp_state->current_line_number++;
+                // Update the location stack with the current line number for accurate error reporting
+                update_current_location(pp_state, pp_state->current_line_number, 1);
             }
             else
             {
@@ -182,6 +183,8 @@ wchar_t *process_file(BaaPreprocessor *pp_state, const char *file_path, wchar_t 
         {
             line_start = line_end + 1;       // Move to the next line
             pp_state->current_line_number++; // Increment line number
+            // Update the location stack with the current line number for accurate error reporting
+            update_current_location(pp_state, pp_state->current_line_number, 1);
             // Column reset happens at the start of the next line processing
         }
         else
@@ -299,6 +302,8 @@ wchar_t *process_string(BaaPreprocessor *pp_state, const wchar_t *source_string,
             {
                 line_start = line_end + 1;
                 pp_state->current_line_number++;
+                // Update the location stack with the current line number for accurate error reporting
+                update_current_location(pp_state, pp_state->current_line_number, 1);
             }
             else
             {

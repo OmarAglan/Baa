@@ -171,6 +171,7 @@ void free_file_stack(BaaPreprocessor *pp);
 bool push_location(BaaPreprocessor *pp, const PpSourceLocation *location);
 void pop_location(BaaPreprocessor *pp);
 PpSourceLocation get_current_original_location(const BaaPreprocessor *pp); // Gets location from top of stack
+void update_current_location(BaaPreprocessor *pp, size_t line, size_t column); // Updates location on top of stack
 void free_location_stack(BaaPreprocessor *pp);
 
 // From preprocessor_macros.c

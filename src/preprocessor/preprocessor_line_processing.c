@@ -61,6 +61,10 @@ bool scan_and_expand_macros_for_expressions(
                 swprintf(quoted_file_path, sizeof(quoted_file_path) / sizeof(wchar_t), L"\"%ls\"", escaped_path);
                 if (!append_to_dynamic_buffer(one_pass_buffer, quoted_file_path))
                 {
+                    PpSourceLocation temp_loc = get_current_original_location(pp_state);
+                    temp_loc.line = original_line_number_for_errors;
+                    temp_loc.column = token_start_col_for_error;
+                    PP_REPORT_FATAL(pp_state, &temp_loc, PP_ERROR_ALLOCATION_FAILED, "line_processing", L"فشل في إلحاق مسار الملف المحدد مسبقاً.");
                     *overall_success = false;
                 }
                 expansion_occurred_this_pass = true;
@@ -72,6 +76,10 @@ bool scan_and_expand_macros_for_expressions(
                 swprintf(line_str, sizeof(line_str) / sizeof(wchar_t), L"%zu", original_line_number_for_errors);
                 if (!append_to_dynamic_buffer(one_pass_buffer, line_str))
                 {
+                    PpSourceLocation temp_loc = get_current_original_location(pp_state);
+                    temp_loc.line = original_line_number_for_errors;
+                    temp_loc.column = token_start_col_for_error;
+                    PP_REPORT_FATAL(pp_state, &temp_loc, PP_ERROR_ALLOCATION_FAILED, "line_processing", L"فشل في إلحاق رقم السطر المحدد مسبقاً.");
                     *overall_success = false;
                 }
                 expansion_occurred_this_pass = true;
@@ -81,6 +89,10 @@ bool scan_and_expand_macros_for_expressions(
             {
                 if (!append_to_dynamic_buffer(one_pass_buffer, L"\"__BAA_FUNCTION_PLACEHOLDER__\""))
                 {
+                    PpSourceLocation temp_loc = get_current_original_location(pp_state);
+                    temp_loc.line = original_line_number_for_errors;
+                    temp_loc.column = token_start_col_for_error;
+                    PP_REPORT_FATAL(pp_state, &temp_loc, PP_ERROR_ALLOCATION_FAILED, "line_processing", L"فشل في إلحاق اسم الدالة المحدد مسبقاً.");
                     *overall_success = false;
                 }
                 expansion_occurred_this_pass = true;
@@ -90,6 +102,10 @@ bool scan_and_expand_macros_for_expressions(
             {
                 if (!append_to_dynamic_buffer(one_pass_buffer, L"10010L"))
                 {
+                    PpSourceLocation temp_loc = get_current_original_location(pp_state);
+                    temp_loc.line = original_line_number_for_errors;
+                    temp_loc.column = token_start_col_for_error;
+                    PP_REPORT_FATAL(pp_state, &temp_loc, PP_ERROR_ALLOCATION_FAILED, "line_processing", L"فشل في إلحاق إصدار المعيار المحدد مسبقاً.");
                     *overall_success = false;
                 }
                 expansion_occurred_this_pass = true;
@@ -110,6 +126,10 @@ bool scan_and_expand_macros_for_expressions(
                 // Append 'معرف' literally to the output buffer
                 if (!append_to_dynamic_buffer(one_pass_buffer, L"معرف"))
                 {
+                    PpSourceLocation temp_loc = get_current_original_location(pp_state);
+                    temp_loc.line = original_line_number_for_errors;
+                    temp_loc.column = token_start_col_for_error;
+                    PP_REPORT_FATAL(pp_state, &temp_loc, PP_ERROR_ALLOCATION_FAILED, "line_processing", L"فشل في إلحاق مشغل معرف.");
                     *overall_success = false;
                     free(identifier);
                     break;
@@ -120,6 +140,10 @@ bool scan_and_expand_macros_for_expressions(
                 {
                     if (!append_dynamic_buffer_n(one_pass_buffer, scan_ptr, 1))
                     {
+                        PpSourceLocation temp_loc = get_current_original_location(pp_state);
+                        temp_loc.line = original_line_number_for_errors;
+                        temp_loc.column = current_col_in_this_scan_pass;
+                        PP_REPORT_FATAL(pp_state, &temp_loc, PP_ERROR_ALLOCATION_FAILED, "line_processing", L"فشل في إلحاق مساحة بيضاء بعد معرف.");
                         *overall_success = false;
                         break;
                     }
@@ -139,6 +163,10 @@ bool scan_and_expand_macros_for_expressions(
                     has_parens = true;
                     if (!append_dynamic_buffer_n(one_pass_buffer, scan_ptr, 1))
                     {
+                        PpSourceLocation temp_loc = get_current_original_location(pp_state);
+                        temp_loc.line = original_line_number_for_errors;
+                        temp_loc.column = current_col_in_this_scan_pass;
+                        PP_REPORT_FATAL(pp_state, &temp_loc, PP_ERROR_ALLOCATION_FAILED, "line_processing", L"فشل في إلحاق قوس فتح لمعرف.");
                         *overall_success = false;
                         free(identifier);
                         break;
@@ -151,6 +179,10 @@ bool scan_and_expand_macros_for_expressions(
                     {
                         if (!append_dynamic_buffer_n(one_pass_buffer, scan_ptr, 1))
                         {
+                            PpSourceLocation temp_loc = get_current_original_location(pp_state);
+                            temp_loc.line = original_line_number_for_errors;
+                            temp_loc.column = current_col_in_this_scan_pass;
+                            PP_REPORT_FATAL(pp_state, &temp_loc, PP_ERROR_ALLOCATION_FAILED, "line_processing", L"فشل في إلحاق مساحة بيضاء داخل أقواس معرف.");
                             *overall_success = false;
                             break;
                         }
@@ -177,6 +209,10 @@ bool scan_and_expand_macros_for_expressions(
                     size_t arg_len = scan_ptr - arg_start;
                     if (!append_dynamic_buffer_n(one_pass_buffer, arg_start, arg_len))
                     {
+                        PpSourceLocation temp_loc = get_current_original_location(pp_state);
+                        temp_loc.line = original_line_number_for_errors;
+                        temp_loc.column = current_col_in_this_scan_pass - arg_len;
+                        PP_REPORT_FATAL(pp_state, &temp_loc, PP_ERROR_ALLOCATION_FAILED, "line_processing", L"فشل في إلحاق وسيطة معرف.");
                         *overall_success = false;
                         free(identifier);
                         break;
@@ -191,6 +227,10 @@ bool scan_and_expand_macros_for_expressions(
                     {
                         if (!append_dynamic_buffer_n(one_pass_buffer, scan_ptr, 1))
                         {
+                            PpSourceLocation temp_loc = get_current_original_location(pp_state);
+                            temp_loc.line = original_line_number_for_errors;
+                            temp_loc.column = current_col_in_this_scan_pass;
+                            PP_REPORT_FATAL(pp_state, &temp_loc, PP_ERROR_ALLOCATION_FAILED, "line_processing", L"فشل في إلحاق مساحة بيضاء قبل قوس الإغلاق لمعرف.");
                             *overall_success = false;
                             break;
                         }
@@ -208,6 +248,10 @@ bool scan_and_expand_macros_for_expressions(
                     {
                         if (!append_dynamic_buffer_n(one_pass_buffer, scan_ptr, 1))
                         {
+                            PpSourceLocation temp_loc = get_current_original_location(pp_state);
+                            temp_loc.line = original_line_number_for_errors;
+                            temp_loc.column = current_col_in_this_scan_pass;
+                            PP_REPORT_FATAL(pp_state, &temp_loc, PP_ERROR_ALLOCATION_FAILED, "line_processing", L"فشل في إلحاق قوس الإغلاق لمعرف.");
                             *overall_success = false;
                             free(identifier);
                             break;
@@ -306,6 +350,10 @@ bool scan_and_expand_macros_for_expressions(
                     { // Function-like macro name not followed by '(', treat as plain identifier
                         if (!append_to_dynamic_buffer(one_pass_buffer, identifier))
                         {
+                            PpSourceLocation temp_loc = get_current_original_location(pp_state);
+                            temp_loc.line = original_line_number_for_errors;
+                            temp_loc.column = token_start_col_for_error;
+                            PP_REPORT_FATAL(pp_state, &temp_loc, PP_ERROR_ALLOCATION_FAILED, "line_processing", L"فشل في إلحاق اسم الماكرو كمعرف عادي.");
                             *overall_success = false;
                         }
                         current_expansion_succeeded = false;
@@ -326,6 +374,10 @@ bool scan_and_expand_macros_for_expressions(
                 {
                     if (!append_to_dynamic_buffer(one_pass_buffer, single_expansion_result.buffer))
                     {
+                        PpSourceLocation temp_loc = get_current_original_location(pp_state);
+                        temp_loc.line = original_line_number_for_errors;
+                        temp_loc.column = token_start_col_for_error;
+                        PP_REPORT_FATAL(pp_state, &temp_loc, PP_ERROR_ALLOCATION_FAILED, "line_processing", L"فشل في إلحاق نتيجة توسيع الماكرو.");
                         *overall_success = false;
                     }
                     else
@@ -340,6 +392,10 @@ bool scan_and_expand_macros_for_expressions(
                 {
                     if (!append_to_dynamic_buffer(one_pass_buffer, identifier))
                     {
+                        PpSourceLocation temp_loc = get_current_original_location(pp_state);
+                        temp_loc.line = original_line_number_for_errors;
+                        temp_loc.column = token_start_col_for_error;
+                        PP_REPORT_FATAL(pp_state, &temp_loc, PP_ERROR_ALLOCATION_FAILED, "line_processing", L"فشل في إلحاق المعرف غير الموسع.");
                         *overall_success = false;
                     }
                 }
@@ -354,6 +410,10 @@ bool scan_and_expand_macros_for_expressions(
             {
                 if (!append_to_dynamic_buffer(one_pass_buffer, identifier))
                 {
+                    PpSourceLocation temp_loc = get_current_original_location(pp_state);
+                    temp_loc.line = original_line_number_for_errors;
+                    temp_loc.column = token_start_col_for_error;
+                    PP_REPORT_FATAL(pp_state, &temp_loc, PP_ERROR_ALLOCATION_FAILED, "line_processing", L"فشل في إلحاق المعرف العادي.");
                     *overall_success = false;
                 }
             }
@@ -363,6 +423,10 @@ bool scan_and_expand_macros_for_expressions(
         { // Not an identifier start
             if (!append_dynamic_buffer_n(one_pass_buffer, scan_ptr, 1))
             {
+                PpSourceLocation temp_loc = get_current_original_location(pp_state);
+                temp_loc.line = original_line_number_for_errors;
+                temp_loc.column = current_col_in_this_scan_pass;
+                PP_REPORT_FATAL(pp_state, &temp_loc, PP_ERROR_ALLOCATION_FAILED, "line_processing", L"فشل في إلحاق الحرف غير المعرف.");
                 *overall_success = false;
             }
             scan_ptr++;
@@ -439,6 +503,10 @@ bool scan_and_substitute_macros_one_pass(
                 swprintf(quoted_file_path, sizeof(quoted_file_path) / sizeof(wchar_t), L"\"%ls\"", escaped_path);
                 if (!append_to_dynamic_buffer(one_pass_buffer, quoted_file_path))
                 {
+                    PpSourceLocation temp_loc = get_current_original_location(pp_state);
+                    temp_loc.line = original_line_number_for_errors;
+                    temp_loc.column = token_start_col_for_error;
+                    PP_REPORT_FATAL(pp_state, &temp_loc, PP_ERROR_ALLOCATION_FAILED, "line_processing", L"فشل في إلحاق مسار الملف المحدد مسبقاً.");
                     *overall_success = false;
                 }
                 expansion_occurred_this_pass = true;
@@ -451,6 +519,10 @@ bool scan_and_substitute_macros_one_pass(
                 swprintf(line_str, sizeof(line_str) / sizeof(wchar_t), L"%zu", original_line_number_for_errors); // Standard: integer
                 if (!append_to_dynamic_buffer(one_pass_buffer, line_str))
                 {
+                    PpSourceLocation temp_loc = get_current_original_location(pp_state);
+                    temp_loc.line = original_line_number_for_errors;
+                    temp_loc.column = token_start_col_for_error;
+                    PP_REPORT_FATAL(pp_state, &temp_loc, PP_ERROR_ALLOCATION_FAILED, "line_processing", L"فشل في إلحاق رقم السطر المحدد مسبقاً.");
                     *overall_success = false;
                 }
                 expansion_occurred_this_pass = true;
@@ -460,6 +532,10 @@ bool scan_and_substitute_macros_one_pass(
             {
                 if (!append_to_dynamic_buffer(one_pass_buffer, L"\"__BAA_FUNCTION_PLACEHOLDER__\""))
                 {
+                    PpSourceLocation temp_loc = get_current_original_location(pp_state);
+                    temp_loc.line = original_line_number_for_errors;
+                    temp_loc.column = token_start_col_for_error;
+                    PP_REPORT_FATAL(pp_state, &temp_loc, PP_ERROR_ALLOCATION_FAILED, "line_processing", L"فشل في إلحاق اسم الدالة المحدد مسبقاً.");
                     *overall_success = false;
                 }
                 expansion_occurred_this_pass = true;
@@ -469,6 +545,10 @@ bool scan_and_substitute_macros_one_pass(
             {
                 if (!append_to_dynamic_buffer(one_pass_buffer, L"10010L"))
                 {
+                    PpSourceLocation temp_loc = get_current_original_location(pp_state);
+                    temp_loc.line = original_line_number_for_errors;
+                    temp_loc.column = token_start_col_for_error;
+                    PP_REPORT_FATAL(pp_state, &temp_loc, PP_ERROR_ALLOCATION_FAILED, "line_processing", L"فشل في إلحاق إصدار المعيار المحدد مسبقاً.");
                     *overall_success = false;
                 }
                 expansion_occurred_this_pass = true;
@@ -489,6 +569,10 @@ bool scan_and_substitute_macros_one_pass(
                 // Append 'معرف' literally to the output buffer
                 if (!append_to_dynamic_buffer(one_pass_buffer, L"معرف"))
                 {
+                    PpSourceLocation temp_loc = get_current_original_location(pp_state);
+                    temp_loc.line = original_line_number_for_errors;
+                    temp_loc.column = token_start_col_for_error;
+                    PP_REPORT_FATAL(pp_state, &temp_loc, PP_ERROR_ALLOCATION_FAILED, "line_processing", L"فشل في إلحاق مشغل معرف.");
                     *overall_success = false;
                     free(identifier);
                     break;
@@ -499,6 +583,10 @@ bool scan_and_substitute_macros_one_pass(
                 {
                     if (!append_dynamic_buffer_n(one_pass_buffer, scan_ptr, 1))
                     {
+                        PpSourceLocation temp_loc = get_current_original_location(pp_state);
+                        temp_loc.line = original_line_number_for_errors;
+                        temp_loc.column = current_col_in_this_scan_pass;
+                        PP_REPORT_FATAL(pp_state, &temp_loc, PP_ERROR_ALLOCATION_FAILED, "line_processing", L"فشل في إلحاق مساحة بيضاء بعد معرف.");
                         *overall_success = false;
                         break;
                     }
@@ -518,6 +606,10 @@ bool scan_and_substitute_macros_one_pass(
                     has_parens = true;
                     if (!append_dynamic_buffer_n(one_pass_buffer, scan_ptr, 1))
                     {
+                        PpSourceLocation temp_loc = get_current_original_location(pp_state);
+                        temp_loc.line = original_line_number_for_errors;
+                        temp_loc.column = current_col_in_this_scan_pass;
+                        PP_REPORT_FATAL(pp_state, &temp_loc, PP_ERROR_ALLOCATION_FAILED, "line_processing", L"فشل في إلحاق قوس فتح لمعرف.");
                         *overall_success = false;
                         free(identifier);
                         break;
@@ -530,6 +622,10 @@ bool scan_and_substitute_macros_one_pass(
                     {
                         if (!append_dynamic_buffer_n(one_pass_buffer, scan_ptr, 1))
                         {
+                            PpSourceLocation temp_loc = get_current_original_location(pp_state);
+                            temp_loc.line = original_line_number_for_errors;
+                            temp_loc.column = current_col_in_this_scan_pass;
+                            PP_REPORT_FATAL(pp_state, &temp_loc, PP_ERROR_ALLOCATION_FAILED, "line_processing", L"فشل في إلحاق مساحة بيضاء داخل أقواس معرف.");
                             *overall_success = false;
                             break;
                         }
@@ -556,6 +652,10 @@ bool scan_and_substitute_macros_one_pass(
                     size_t arg_len = scan_ptr - arg_start;
                     if (!append_dynamic_buffer_n(one_pass_buffer, arg_start, arg_len))
                     {
+                        PpSourceLocation temp_loc = get_current_original_location(pp_state);
+                        temp_loc.line = original_line_number_for_errors;
+                        temp_loc.column = current_col_in_this_scan_pass - arg_len;
+                        PP_REPORT_FATAL(pp_state, &temp_loc, PP_ERROR_ALLOCATION_FAILED, "line_processing", L"فشل في إلحاق وسيطة معرف.");
                         *overall_success = false;
                         free(identifier);
                         break;
@@ -570,6 +670,10 @@ bool scan_and_substitute_macros_one_pass(
                     {
                         if (!append_dynamic_buffer_n(one_pass_buffer, scan_ptr, 1))
                         {
+                            PpSourceLocation temp_loc = get_current_original_location(pp_state);
+                            temp_loc.line = original_line_number_for_errors;
+                            temp_loc.column = current_col_in_this_scan_pass;
+                            PP_REPORT_FATAL(pp_state, &temp_loc, PP_ERROR_ALLOCATION_FAILED, "line_processing", L"فشل في إلحاق مساحة بيضاء قبل قوس الإغلاق لمعرف.");
                             *overall_success = false;
                             break;
                         }
@@ -587,6 +691,10 @@ bool scan_and_substitute_macros_one_pass(
                     {
                         if (!append_dynamic_buffer_n(one_pass_buffer, scan_ptr, 1))
                         {
+                            PpSourceLocation temp_loc = get_current_original_location(pp_state);
+                            temp_loc.line = original_line_number_for_errors;
+                            temp_loc.column = current_col_in_this_scan_pass;
+                            PP_REPORT_FATAL(pp_state, &temp_loc, PP_ERROR_ALLOCATION_FAILED, "line_processing", L"فشل في إلحاق قوس الإغلاق لمعرف.");
                             *overall_success = false;
                             free(identifier);
                             break;
@@ -689,6 +797,10 @@ bool scan_and_substitute_macros_one_pass(
                     { // Function-like macro name not followed by '(', treat as object-like or plain identifier
                         if (!append_to_dynamic_buffer(one_pass_buffer, identifier))
                         {
+                            PpSourceLocation temp_loc = get_current_original_location(pp_state);
+                            temp_loc.line = original_line_number_for_errors;
+                            temp_loc.column = token_start_col_for_error;
+                            PP_REPORT_FATAL(pp_state, &temp_loc, PP_ERROR_ALLOCATION_FAILED, "line_processing", L"فشل في إلحاق اسم الماكرو كمعرف عادي.");
                             *overall_success = false;
                         }
                         current_expansion_succeeded = false; // Not a valid function-like macro expansion
@@ -709,6 +821,10 @@ bool scan_and_substitute_macros_one_pass(
                 {
                     if (!append_to_dynamic_buffer(one_pass_buffer, single_expansion_result.buffer))
                     {
+                        PpSourceLocation temp_loc = get_current_original_location(pp_state);
+                        temp_loc.line = original_line_number_for_errors;
+                        temp_loc.column = token_start_col_for_error;
+                        PP_REPORT_FATAL(pp_state, &temp_loc, PP_ERROR_ALLOCATION_FAILED, "line_processing", L"فشل في إلحاق نتيجة توسيع الماكرو.");
                         *overall_success = false;
                     }
                     else
@@ -723,6 +839,10 @@ bool scan_and_substitute_macros_one_pass(
                 {
                     if (!append_to_dynamic_buffer(one_pass_buffer, identifier))
                     {
+                        PpSourceLocation temp_loc = get_current_original_location(pp_state);
+                        temp_loc.line = original_line_number_for_errors;
+                        temp_loc.column = token_start_col_for_error;
+                        PP_REPORT_FATAL(pp_state, &temp_loc, PP_ERROR_ALLOCATION_FAILED, "line_processing", L"فشل في إلحاق المعرف غير الموسع.");
                         *overall_success = false;
                     }
                 }
@@ -737,6 +857,10 @@ bool scan_and_substitute_macros_one_pass(
             {
                 if (!append_to_dynamic_buffer(one_pass_buffer, identifier))
                 {
+                    PpSourceLocation temp_loc = get_current_original_location(pp_state);
+                    temp_loc.line = original_line_number_for_errors;
+                    temp_loc.column = token_start_col_for_error;
+                    PP_REPORT_FATAL(pp_state, &temp_loc, PP_ERROR_ALLOCATION_FAILED, "line_processing", L"فشل في إلحاق المعرف العادي.");
                     *overall_success = false;
                 }
             }
@@ -747,6 +871,10 @@ bool scan_and_substitute_macros_one_pass(
             // Re-typed call to append_dynamic_buffer_n
             if (!append_dynamic_buffer_n(one_pass_buffer, scan_ptr, 1))
             {
+                PpSourceLocation temp_loc = get_current_original_location(pp_state);
+                temp_loc.line = original_line_number_for_errors;
+                temp_loc.column = current_col_in_this_scan_pass;
+                PP_REPORT_FATAL(pp_state, &temp_loc, PP_ERROR_ALLOCATION_FAILED, "line_processing", L"فشل في إلحاق الحرف غير المعرف.");
                 *overall_success = false;
             }
             scan_ptr++;
@@ -793,7 +921,7 @@ bool process_code_line_for_macros(BaaPreprocessor *pp_state,
         {
             overall_success_for_line = false;
             PpSourceLocation temp_loc = get_current_original_location(pp_state);
-            *error_message = format_preprocessor_error_at_location(&temp_loc, L"فشل في تهيئة المخزن المؤقت لجولة الفحص (الإخراج).");
+            PP_REPORT_FATAL(pp_state, &temp_loc, PP_ERROR_ALLOCATION_FAILED, "line_processing", L"فشل في تهيئة المخزن المؤقت لجولة الفحص (الإخراج).");
             break;
         }
 
@@ -812,7 +940,7 @@ bool process_code_line_for_macros(BaaPreprocessor *pp_state,
         {
             overall_success_for_line = false;
             PpSourceLocation temp_loc = get_current_original_location(pp_state);
-            *error_message = format_preprocessor_error_at_location(&temp_loc, L"فشل في إعادة تهيئة مخزن الإدخال للجولة التالية.");
+            PP_REPORT_FATAL(pp_state, &temp_loc, PP_ERROR_ALLOCATION_FAILED, "line_processing", L"فشل في إعادة تهيئة مخزن الإدخال للجولة التالية.");
             free_dynamic_buffer(&current_pass_output_buffer);
             break;
         }
@@ -822,7 +950,7 @@ bool process_code_line_for_macros(BaaPreprocessor *pp_state,
             {
                 overall_success_for_line = false;
                 PpSourceLocation temp_loc = get_current_original_location(pp_state);
-                *error_message = format_preprocessor_error_at_location(&temp_loc, L"فشل في نسخ محتوى الجولة إلى مخزن الإدخال التالي.");
+                PP_REPORT_FATAL(pp_state, &temp_loc, PP_ERROR_ALLOCATION_FAILED, "line_processing", L"فشل في نسخ محتوى الجولة إلى مخزن الإدخال التالي.");
                 free_dynamic_buffer(&current_pass_output_buffer);
                 break;
             }
@@ -838,7 +966,7 @@ bool process_code_line_for_macros(BaaPreprocessor *pp_state,
             PpSourceLocation err_loc_data = get_current_original_location(pp_state);
             err_loc_data.line = original_line_number;
             err_loc_data.column = 1;
-            *error_message = format_preprocessor_error_at_location(&err_loc_data, L"تم تجاوز الحد الأقصى لمرات إعادة فحص الماكرو لسطر واحد (%d).", MAX_RESCAN_PASSES);
+            PP_REPORT_ERROR(pp_state, &err_loc_data, PP_ERROR_MACRO_TOO_COMPLEX, "line_processing", L"تم تجاوز الحد الأقصى لمرات إعادة فحص الماكرو لسطر واحد (%d).", MAX_RESCAN_PASSES);
             overall_success_for_line = false;
             break;
         }
@@ -852,7 +980,7 @@ bool process_code_line_for_macros(BaaPreprocessor *pp_state,
             if (!*error_message)
             {
                 PpSourceLocation temp_loc = get_current_original_location(pp_state);
-                *error_message = format_preprocessor_error_at_location(&temp_loc, L"فشل في إلحاق السطر النهائي بمخزن الإخراج المؤقت.");
+                PP_REPORT_FATAL(pp_state, &temp_loc, PP_ERROR_ALLOCATION_FAILED, "line_processing", L"فشل في إلحاق السطر النهائي بمخزن الإخراج المؤقت.");
             }
             overall_success_for_line = false;
         }

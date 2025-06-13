@@ -17,7 +17,8 @@ wchar_t *process_file(BaaPreprocessor *pp_state, const char *file_path, wchar_t 
     {
         // Get the location of the #include directive that caused this error
         PpSourceLocation error_loc = get_current_original_location(pp_state);
-        *error_message = format_preprocessor_error_at_location(&error_loc, L"فشل في الحصول على المسار المطلق لملف التضمين '%hs'.", file_path);
+        PP_REPORT_ERROR(pp_state, &error_loc, PP_ERROR_INVALID_FILE_PATH, "file",
+                       L"فشل في الحصول على المسار المطلق لملف التضمين '%hs'.", file_path);
         // Restore context before returning on error (though it might be the same)
         pp_state->current_file_path = prev_file_path;
         pp_state->current_line_number = prev_line_number;
@@ -34,7 +35,8 @@ wchar_t *process_file(BaaPreprocessor *pp_state, const char *file_path, wchar_t 
     {
         // Use the location stack to report the error at the include site
         PpSourceLocation error_loc = get_current_original_location(pp_state);
-        *error_message = format_preprocessor_error_at_location(&error_loc, L"تم اكتشاف تضمين دائري: الملف '%hs' مضمن بالفعل.", abs_path);
+        PP_REPORT_ERROR(pp_state, &error_loc, PP_ERROR_CIRCULAR_INCLUDE, "file",
+                       L"تم اكتشاف تضمين دائري: الملف '%hs' مضمن بالفعل.", abs_path);
         free(abs_path);
         pp_state->current_file_path = prev_file_path; // Restore before returning
         pp_state->current_line_number = prev_line_number;
@@ -58,7 +60,8 @@ wchar_t *process_file(BaaPreprocessor *pp_state, const char *file_path, wchar_t 
     if (!init_dynamic_buffer(&output_buffer, wcslen(file_content) + 1024))
     {
         PpSourceLocation error_loc = get_current_original_location(pp_state); // Get location before error
-        *error_message = format_preprocessor_error_at_location(&error_loc, L"فشل في تخصيص الذاكرة لمخزن الإخراج المؤقت.");
+        PP_REPORT_FATAL(pp_state, &error_loc, PP_ERROR_ALLOCATION_FAILED, "memory",
+                       L"فشل في تخصيص الذاكرة لمخزن الإخراج المؤقت.");
         free(file_content);
         pop_file_stack(pp_state);
         free(abs_path);
@@ -96,7 +99,8 @@ wchar_t *process_file(BaaPreprocessor *pp_state, const char *file_path, wchar_t 
         if (!current_line)
         {
             PpSourceLocation error_loc = get_current_original_location(pp_state);
-            *error_message = format_preprocessor_error_at_location(&error_loc, L"فشل في تخصيص الذاكرة لسطر.");
+            PP_REPORT_FATAL(pp_state, &error_loc, PP_ERROR_ALLOCATION_FAILED, "memory",
+                           L"فشل في تخصيص الذاكرة لسطر.");
             success = false;
             break;
         }
@@ -166,7 +170,8 @@ wchar_t *process_file(BaaPreprocessor *pp_state, const char *file_path, wchar_t 
                     success = false;
                     if (!*error_message) {
                         PpSourceLocation current_loc = get_current_original_location(pp_state);
-                        *error_message = format_preprocessor_error_at_location(&current_loc, L"فشل في إلحاق السطر بمخزن الإخراج المؤقت.");
+                        PP_REPORT_FATAL(pp_state, &current_loc, PP_ERROR_BUFFER_OVERFLOW, "memory",
+                                       L"فشل في إلحاق السطر بمخزن الإخراج المؤقت.");
                     }
                 }
             }
@@ -246,7 +251,8 @@ wchar_t *process_string(BaaPreprocessor *pp_state, const wchar_t *source_string,
     if (!init_dynamic_buffer(&output_buffer, wcslen(source_string) + 1024))
     {
         PpSourceLocation error_loc = get_current_original_location(pp_state);
-        *error_message = format_preprocessor_error_at_location(&error_loc, L"فشل في تخصيص الذاكرة لمخزن الإخراج المؤقت للسلسلة.");
+        PP_REPORT_FATAL(pp_state, &error_loc, PP_ERROR_ALLOCATION_FAILED, "memory",
+                       L"فشل في تخصيص الذاكرة لمخزن الإخراج المؤقت للسلسلة.");
         // Restore context before returning
         pp_state->current_file_path = prev_file_path;
         pp_state->current_line_number = prev_line_number;
@@ -279,7 +285,8 @@ wchar_t *process_string(BaaPreprocessor *pp_state, const wchar_t *source_string,
         if (!current_line)
         {
             PpSourceLocation error_loc = get_current_original_location(pp_state);
-            *error_message = format_preprocessor_error_at_location(&error_loc, L"فشل في تخصيص الذاكرة لسطر من السلسلة.");
+            PP_REPORT_FATAL(pp_state, &error_loc, PP_ERROR_ALLOCATION_FAILED, "memory",
+                           L"فشل في تخصيص الذاكرة لسطر من السلسلة.");
             success = false;
             break;
         }
@@ -341,7 +348,8 @@ wchar_t *process_string(BaaPreprocessor *pp_state, const wchar_t *source_string,
                     success = false;
                     if (!*error_message) {
                         PpSourceLocation current_loc = get_current_original_location(pp_state);
-                        *error_message = format_preprocessor_error_at_location(&current_loc, L"فشل في إلحاق السطر بمخزن الإخراج المؤقت.");
+                        PP_REPORT_FATAL(pp_state, &current_loc, PP_ERROR_BUFFER_OVERFLOW, "memory",
+                                       L"فشل في إلحاق السطر بمخزن الإخراج المؤقت.");
                     }
                 }
             }

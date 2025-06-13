@@ -6,6 +6,7 @@
 #include <wchar.h>
 #include <stdbool.h>
 #include <stddef.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -36,12 +37,76 @@ typedef struct
     size_t column;
 } PpSourceLocation;
 
-// Structure to store a single error/warning entry
+// Enhanced severity levels for diagnostic classification
+typedef enum
+{
+    PP_DIAG_FATAL,   // System errors - halt immediately (memory, I/O)
+    PP_DIAG_ERROR,   // Syntax/semantic errors - continue with recovery
+    PP_DIAG_WARNING, // Warnings - continue processing normally
+    PP_DIAG_NOTE     // Informational - continue processing normally
+} PpDiagnosticSeverity;
+
+// Error code ranges for categorization
+#define PP_ERROR_DIRECTIVE_BASE 1000
+#define PP_ERROR_MACRO_BASE 2000
+#define PP_ERROR_EXPRESSION_BASE 3000
+#define PP_ERROR_FILE_BASE 4000
+#define PP_ERROR_MEMORY_BASE 5000
+#define PP_ERROR_SYNTAX_BASE 6000
+
+// Specific error codes
+#define PP_ERROR_UNKNOWN_DIRECTIVE (PP_ERROR_DIRECTIVE_BASE + 1)
+#define PP_ERROR_MISSING_ENDIF (PP_ERROR_DIRECTIVE_BASE + 2)
+#define PP_ERROR_INVALID_INCLUDE (PP_ERROR_DIRECTIVE_BASE + 3)
+#define PP_ERROR_MISSING_MACRO_NAME (PP_ERROR_DIRECTIVE_BASE + 4)
+#define PP_ERROR_MACRO_REDEFINITION (PP_ERROR_MACRO_BASE + 1)
+#define PP_ERROR_MACRO_ARG_MISMATCH (PP_ERROR_MACRO_BASE + 2)
+#define PP_ERROR_DIVISION_BY_ZERO (PP_ERROR_EXPRESSION_BASE + 1)
+#define PP_ERROR_UNDEFINED_IDENTIFIER (PP_ERROR_EXPRESSION_BASE + 2)
+#define PP_ERROR_FILE_NOT_FOUND (PP_ERROR_FILE_BASE + 1)
+#define PP_ERROR_CIRCULAR_INCLUDE (PP_ERROR_FILE_BASE + 2)
+#define PP_ERROR_OUT_OF_MEMORY (PP_ERROR_MEMORY_BASE + 1)
+
+// Error limit configuration
 typedef struct
 {
-    wchar_t *message;          // The formatted error/warning message
-    PpSourceLocation location; // The original source location of the error/warning
-    // bool is_warning;      // Could add this later to distinguish warnings
+    size_t max_errors;      // Maximum errors before stopping (default: 100)
+    size_t max_warnings;    // Maximum warnings before stopping (default: 1000)
+    size_t max_notes;       // Maximum notes (default: SIZE_MAX - unlimited)
+    bool stop_on_fatal;     // Halt on fatal errors (default: true)
+    size_t cascading_limit; // Max consecutive errors in same context (default: 10)
+} PpErrorLimits;
+
+// Recovery state tracking
+typedef struct
+{
+    size_t consecutive_errors;    // Track cascading failures
+    size_t errors_this_line;      // Prevent infinite loops on single line
+    size_t directive_errors;      // Track directive-specific issues
+    size_t expression_errors;     // Track expression evaluation failures
+    bool in_recovery_mode;        // Flag indicating recovery state
+    const char *recovery_context; // Current recovery context
+} PpRecoveryState;
+
+// Recovery action types
+typedef enum
+{
+    PP_RECOVERY_CONTINUE,         // Continue processing normally
+    PP_RECOVERY_SKIP_LINE,        // Skip to next line
+    PP_RECOVERY_SKIP_DIRECTIVE,   // Skip current directive
+    PP_RECOVERY_SYNC_CONDITIONAL, // Synchronize conditional stack
+    PP_RECOVERY_HALT              // Stop processing
+} PpRecoveryAction;
+
+// Enhanced structure to store a single diagnostic entry
+typedef struct
+{
+    wchar_t *message;              // Formatted diagnostic message
+    PpSourceLocation location;     // Original source location
+    PpDiagnosticSeverity severity; // Diagnostic severity level
+    uint32_t error_code;           // Unique error identifier (for i18n)
+    const char *category;          // Error category ("directive", "macro", etc.)
+    wchar_t *suggestion;           // Optional fix suggestion (may be NULL)
 } PreprocessorDiagnostic;
 
 // Structure to hold preprocessor state
@@ -73,11 +138,21 @@ struct BaaPreprocessor
     size_t location_stack_count;
     size_t location_stack_capacity;
 
-    // For accumulating multiple errors/diagnostics
+    // Enhanced error management system
     PreprocessorDiagnostic *diagnostics;
     size_t diagnostic_count;
     size_t diagnostic_capacity;
-    bool had_error_this_pass; // True if any error (not warning) was reported
+
+    // Error counting by severity
+    size_t fatal_count;
+    size_t error_count;
+    size_t warning_count;
+    size_t note_count;
+
+    // Configuration and state
+    PpErrorLimits error_limits;
+    PpRecoveryState recovery_state;
+    bool had_fatal_error; // Replaces had_error_this_pass
 }; // Note: No typedef name here
 
 // Dynamic Buffer for Output
@@ -158,8 +233,65 @@ char *get_directory_part(const char *file_path);
 // Updated error formatter to potentially accept an explicit location
 wchar_t *format_preprocessor_error_at_location(const PpSourceLocation *location, const wchar_t *format, ...);
 wchar_t *format_preprocessor_warning_at_location(const PpSourceLocation *location, const wchar_t *format, ...);
-// New function to add a diagnostic (error or warning) to the preprocessor state
+// Legacy function to add a diagnostic (error or warning) to the preprocessor state
 void add_preprocessor_diagnostic(BaaPreprocessor *pp_state, const PpSourceLocation *loc, bool is_error, const wchar_t *format, va_list args_list);
+
+// Enhanced diagnostic collection with full severity and categorization support
+void add_preprocessor_diagnostic_ex(
+    BaaPreprocessor *pp_state,
+    const PpSourceLocation *loc,
+    PpDiagnosticSeverity severity,
+    uint32_t error_code,
+    const char *category,
+    const wchar_t *suggestion,
+    const wchar_t *format,
+    ...
+);
+
+// Convenience macros for common diagnostic types
+#define PP_REPORT_FATAL(pp, loc, code, cat, fmt, ...) \
+    add_preprocessor_diagnostic_ex(pp, loc, PP_DIAG_FATAL, code, cat, NULL, fmt, ##__VA_ARGS__)
+
+#define PP_REPORT_ERROR(pp, loc, code, cat, fmt, ...) \
+    add_preprocessor_diagnostic_ex(pp, loc, PP_DIAG_ERROR, code, cat, NULL, fmt, ##__VA_ARGS__)
+
+#define PP_REPORT_WARNING(pp, loc, code, cat, fmt, ...) \
+    add_preprocessor_diagnostic_ex(pp, loc, PP_DIAG_WARNING, code, cat, NULL, fmt, ##__VA_ARGS__)
+
+#define PP_REPORT_NOTE(pp, loc, code, cat, fmt, ...) \
+    add_preprocessor_diagnostic_ex(pp, loc, PP_DIAG_NOTE, code, cat, NULL, fmt, ##__VA_ARGS__)
+
+// Error recovery management
+PpRecoveryAction determine_recovery_action(
+    BaaPreprocessor *pp_state,
+    PpDiagnosticSeverity severity,
+    const char *category,
+    const PpSourceLocation *location
+);
+
+bool execute_recovery_action(
+    BaaPreprocessor *pp_state,
+    PpRecoveryAction action,
+    const wchar_t **current_position
+);
+
+// Error limit management
+bool should_continue_processing(const BaaPreprocessor *pp_state);
+bool increment_error_count(BaaPreprocessor *pp_state, PpDiagnosticSeverity severity);
+bool has_reached_error_limit(const BaaPreprocessor *pp_state, PpDiagnosticSeverity severity);
+void reset_recovery_state(BaaPreprocessor *pp_state, const char *new_context);
+
+// Synchronization functions
+bool sync_to_next_directive(BaaPreprocessor *pp_state, const wchar_t **line_ptr);
+bool sync_to_next_line(BaaPreprocessor *pp_state, const wchar_t **line_ptr);
+bool sync_expression_parsing(BaaPreprocessor *pp_state, const wchar_t **expr_ptr, wchar_t terminator);
+bool recover_conditional_stack(BaaPreprocessor *pp_state);
+
+// Enhanced error system initialization and cleanup
+bool init_preprocessor_error_system(BaaPreprocessor *pp_state);
+void cleanup_preprocessor_error_system(BaaPreprocessor *pp_state);
+wchar_t* generate_error_summary(const BaaPreprocessor *pp_state);
+
 void free_diagnostics_list(BaaPreprocessor *pp_state);
 
 // File Stack
@@ -170,7 +302,7 @@ void free_file_stack(BaaPreprocessor *pp);
 // Location Stack
 bool push_location(BaaPreprocessor *pp, const PpSourceLocation *location);
 void pop_location(BaaPreprocessor *pp);
-PpSourceLocation get_current_original_location(const BaaPreprocessor *pp); // Gets location from top of stack
+PpSourceLocation get_current_original_location(const BaaPreprocessor *pp);     // Gets location from top of stack
 void update_current_location(BaaPreprocessor *pp, size_t line, size_t column); // Updates location on top of stack
 void free_location_stack(BaaPreprocessor *pp);
 
@@ -225,6 +357,6 @@ wchar_t *process_file(BaaPreprocessor *pp_state, const char *file_path, wchar_t 
 wchar_t *process_string(BaaPreprocessor *pp_state, const wchar_t *source_string, wchar_t **error_message); // New function for string input
 
 // From preprocessor.c (internal helper)
-void report_unterminated_conditional(BaaPreprocessor * st, const PpSourceLocation *loc);
+void report_unterminated_conditional(BaaPreprocessor *st, const PpSourceLocation *loc);
 
 #endif // BAA_PREPROCESSOR_INTERNAL_H

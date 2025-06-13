@@ -815,8 +815,6 @@ void add_preprocessor_diagnostic(BaaPreprocessor *pp_state, const PpSourceLocati
         }
         // pp_state->diagnostics[pp_state->diagnostic_count].message = fallback_msg; // (Simplified, needs proper struct init)
         // pp_state->diagnostics[pp_state->diagnostic_count].location = *loc;
-        // pp_state->diagnostic_count++;
-        // pp_state->had_error_this_pass = true;
         // For now, let's just skip adding the diagnostic if formatting itself fails.
         // The original va_end(args_list) will be called by the caller of add_preprocessor_diagnostic
         return;
@@ -857,7 +855,7 @@ void add_preprocessor_diagnostic(BaaPreprocessor *pp_state, const PpSourceLocati
 
     if (is_error)
     {
-        pp_state->had_error_this_pass = true;
+        pp_state->had_fatal_error = true;
     }
 }
 
@@ -874,4 +872,413 @@ void free_diagnostics_list(BaaPreprocessor *pp_state)
         pp_state->diagnostic_count = 0;
         pp_state->diagnostic_capacity = 0;
     }
+}
+
+// --- Enhanced Error System Implementation ---
+
+// Initialize the error system with default configuration
+bool init_preprocessor_error_system(BaaPreprocessor *pp_state)
+{
+    if (!pp_state) return false;
+    
+    // Initialize error limits with defaults
+    pp_state->error_limits.max_errors = 100;
+    pp_state->error_limits.max_warnings = 1000;
+    pp_state->error_limits.max_notes = SIZE_MAX; // Unlimited
+    pp_state->error_limits.stop_on_fatal = true;
+    pp_state->error_limits.cascading_limit = 10;
+    
+    // Initialize error counters
+    pp_state->fatal_count = 0;
+    pp_state->error_count = 0;
+    pp_state->warning_count = 0;
+    pp_state->note_count = 0;
+    pp_state->had_fatal_error = false;
+    
+    // Initialize recovery state
+    pp_state->recovery_state.consecutive_errors = 0;
+    pp_state->recovery_state.errors_this_line = 0;
+    pp_state->recovery_state.directive_errors = 0;
+    pp_state->recovery_state.expression_errors = 0;
+    pp_state->recovery_state.in_recovery_mode = false;
+    pp_state->recovery_state.recovery_context = "initialization";
+    
+    return true;
+}
+
+// Enhanced diagnostic collection with full severity and categorization support
+void add_preprocessor_diagnostic_ex(
+    BaaPreprocessor *pp_state,
+    const PpSourceLocation *loc,
+    PpDiagnosticSeverity severity,
+    uint32_t error_code,
+    const char *category,
+    const wchar_t *suggestion,
+    const wchar_t *format,
+    ...)
+{
+    if (!pp_state || !loc || !format) return;
+    
+    // Check if we should continue processing based on limits
+    if (!should_continue_processing(pp_state)) {
+        return;
+    }
+    
+    // Increment error count and check limits
+    if (!increment_error_count(pp_state, severity)) {
+        return; // Hit error limit
+    }
+    
+    // Format the diagnostic message
+    va_list args;
+    va_start(args, format);
+    
+    va_list args_copy;
+    va_copy(args_copy, args);
+    int needed_chars = vswprintf(NULL, 0, format, args_copy);
+    va_end(args_copy);
+    
+    if (needed_chars < 0) {
+        va_end(args);
+        return; // Formatting error
+    }
+    
+    size_t message_len = (size_t)needed_chars;
+    wchar_t *formatted_message_body = malloc((message_len + 1) * sizeof(wchar_t));
+    if (!formatted_message_body) {
+        va_end(args);
+        return; // Out of memory
+    }
+    
+    vswprintf(formatted_message_body, message_len + 1, format, args);
+    va_end(args);
+    
+    // Format with location information based on severity
+    wchar_t *full_message;
+    switch (severity) {
+        case PP_DIAG_FATAL:
+            full_message = format_preprocessor_error_at_location(loc, L"خطأ فادح: %ls", formatted_message_body);
+            break;
+        case PP_DIAG_ERROR:
+            full_message = format_preprocessor_error_at_location(loc, L"%ls", formatted_message_body);
+            break;
+        case PP_DIAG_WARNING:
+            full_message = format_preprocessor_warning_at_location(loc, L"%ls", formatted_message_body);
+            break;
+        case PP_DIAG_NOTE:
+            full_message = format_preprocessor_warning_at_location(loc, L"ملاحظة: %ls", formatted_message_body);
+            break;
+        default:
+            full_message = format_preprocessor_error_at_location(loc, L"%ls", formatted_message_body);
+            break;
+    }
+    
+    free(formatted_message_body);
+    
+    if (!full_message) {
+        return; // Formatting error
+    }
+    
+    // Ensure diagnostic array has capacity
+    if (pp_state->diagnostic_count >= pp_state->diagnostic_capacity) {
+        size_t new_capacity = (pp_state->diagnostic_capacity == 0) ? 8 : pp_state->diagnostic_capacity * 2;
+        PreprocessorDiagnostic *new_diagnostics = realloc(pp_state->diagnostics, new_capacity * sizeof(PreprocessorDiagnostic));
+        if (!new_diagnostics) {
+            free(full_message);
+            return; // Out of memory
+        }
+        pp_state->diagnostics = new_diagnostics;
+        pp_state->diagnostic_capacity = new_capacity;
+    }
+    
+    // Store the diagnostic
+    PreprocessorDiagnostic *diag = &pp_state->diagnostics[pp_state->diagnostic_count];
+    diag->message = full_message;
+    diag->location = *loc;
+    diag->severity = severity;
+    diag->error_code = error_code;
+    diag->category = category;
+    diag->suggestion = suggestion ? wcsdup(suggestion) : NULL;
+    
+    pp_state->diagnostic_count++;
+    
+    // Set fatal flag if needed
+    if (severity == PP_DIAG_FATAL) {
+        pp_state->had_fatal_error = true;
+    }
+}
+
+// Check if processing should continue based on error limits
+bool should_continue_processing(const BaaPreprocessor *pp_state)
+{
+    if (!pp_state) return false;
+    
+    return !pp_state->had_fatal_error &&
+           pp_state->error_count < pp_state->error_limits.max_errors &&
+           pp_state->warning_count < pp_state->error_limits.max_warnings;
+}
+
+// Increment error count and check limits
+bool increment_error_count(BaaPreprocessor *pp_state, PpDiagnosticSeverity severity)
+{
+    if (!pp_state) return false;
+    
+    switch (severity) {
+        case PP_DIAG_FATAL:
+            pp_state->fatal_count++;
+            return !pp_state->error_limits.stop_on_fatal;
+        case PP_DIAG_ERROR:
+            pp_state->error_count++;
+            pp_state->recovery_state.consecutive_errors++;
+            return pp_state->error_count < pp_state->error_limits.max_errors;
+        case PP_DIAG_WARNING:
+            pp_state->warning_count++;
+            return pp_state->warning_count < pp_state->error_limits.max_warnings;
+        case PP_DIAG_NOTE:
+            pp_state->note_count++;
+            return true; // Notes don't stop processing
+    }
+    return true;
+}
+
+// Check if specific error limit reached
+bool has_reached_error_limit(const BaaPreprocessor *pp_state, PpDiagnosticSeverity severity)
+{
+    if (!pp_state) return true;
+    
+    switch (severity) {
+        case PP_DIAG_FATAL:
+            return pp_state->fatal_count > 0 && pp_state->error_limits.stop_on_fatal;
+        case PP_DIAG_ERROR:
+            return pp_state->error_count >= pp_state->error_limits.max_errors;
+        case PP_DIAG_WARNING:
+            return pp_state->warning_count >= pp_state->error_limits.max_warnings;
+        case PP_DIAG_NOTE:
+            return pp_state->note_count >= pp_state->error_limits.max_notes;
+    }
+    return false;
+}
+
+// Reset recovery state for new context
+void reset_recovery_state(BaaPreprocessor *pp_state, const char *new_context)
+{
+    if (!pp_state) return;
+    
+    pp_state->recovery_state.consecutive_errors = 0;
+    pp_state->recovery_state.errors_this_line = 0;
+    pp_state->recovery_state.in_recovery_mode = false;
+    pp_state->recovery_state.recovery_context = new_context;
+}
+
+// Determine appropriate recovery action based on error context
+PpRecoveryAction determine_recovery_action(
+    BaaPreprocessor *pp_state,
+    PpDiagnosticSeverity severity,
+    const char *category,
+    const PpSourceLocation *location)
+{
+    if (!pp_state || !category) return PP_RECOVERY_HALT;
+    
+    // Check for fatal errors
+    if (severity == PP_DIAG_FATAL) {
+        return PP_RECOVERY_HALT;
+    }
+    
+    // Check cascading error limits
+    if (pp_state->recovery_state.consecutive_errors > pp_state->error_limits.cascading_limit) {
+        return PP_RECOVERY_HALT;
+    }
+    
+    // Category-specific recovery logic
+    if (strcmp(category, "directive") == 0) {
+        return PP_RECOVERY_SKIP_DIRECTIVE;
+    } else if (strcmp(category, "expression") == 0) {
+        return PP_RECOVERY_CONTINUE; // Can usually continue expression evaluation
+    } else if (strcmp(category, "macro") == 0) {
+        return PP_RECOVERY_CONTINUE; // Skip expansion, continue parsing
+    } else if (strcmp(category, "file") == 0) {
+        return PP_RECOVERY_SKIP_LINE; // Skip include, continue
+    }
+    
+    return PP_RECOVERY_CONTINUE;
+}
+
+// Execute recovery action
+bool execute_recovery_action(
+    BaaPreprocessor *pp_state,
+    PpRecoveryAction action,
+    const wchar_t **current_position)
+{
+    if (!pp_state) return false;
+    
+    switch (action) {
+        case PP_RECOVERY_CONTINUE:
+            return true;
+            
+        case PP_RECOVERY_SKIP_LINE:
+            return sync_to_next_line(pp_state, current_position);
+            
+        case PP_RECOVERY_SKIP_DIRECTIVE:
+            return sync_to_next_directive(pp_state, current_position);
+            
+        case PP_RECOVERY_SYNC_CONDITIONAL:
+            return recover_conditional_stack(pp_state);
+            
+        case PP_RECOVERY_HALT:
+            return false;
+    }
+    
+    return true;
+}
+
+// Directive-level synchronization - skip to next preprocessor directive
+bool sync_to_next_directive(BaaPreprocessor *pp_state, const wchar_t **line_ptr)
+{
+    if (!line_ptr || !*line_ptr || !pp_state) return false;
+    
+    // Skip to end of current line
+    while (**line_ptr && **line_ptr != L'\n') {
+        (*line_ptr)++;
+    }
+    
+    // Skip the newline if present
+    if (**line_ptr == L'\n') {
+        (*line_ptr)++;
+        pp_state->current_line_number++;
+        pp_state->current_column_number = 1;
+    }
+    
+    // Reset recovery state for new line
+    pp_state->recovery_state.errors_this_line = 0;
+    
+    return true;
+}
+
+// Line-level synchronization - skip to next line
+bool sync_to_next_line(BaaPreprocessor *pp_state, const wchar_t **line_ptr)
+{
+    return sync_to_next_directive(pp_state, line_ptr); // Same implementation
+}
+
+// Expression recovery - skip to next safe point in expression
+bool sync_expression_parsing(BaaPreprocessor *pp_state, const wchar_t **expr_ptr, wchar_t terminator)
+{
+    if (!expr_ptr || !*expr_ptr || !pp_state) return false;
+    
+    // Skip to next safe parsing point
+    int paren_depth = 0;
+    while (**expr_ptr && **expr_ptr != terminator) {
+        if (**expr_ptr == L'(') {
+            paren_depth++;
+        } else if (**expr_ptr == L')') {
+            paren_depth--;
+            if (paren_depth < 0) break;
+        }
+        (*expr_ptr)++;
+    }
+    
+    return **expr_ptr != L'\0';
+}
+
+// Conditional stack recovery - attempt to repair conditional nesting
+bool recover_conditional_stack(BaaPreprocessor *pp_state)
+{
+    if (!pp_state) return false;
+    
+    // For now, just reset recovery state
+    // TODO: Implement more sophisticated conditional stack recovery
+    reset_recovery_state(pp_state, "conditional_recovery");
+    
+    return true;
+}
+
+// Generate backward-compatible error summary from collected diagnostics
+wchar_t* generate_error_summary(const BaaPreprocessor *pp_state)
+{
+    if (!pp_state || pp_state->diagnostic_count == 0) {
+        return NULL; // No errors
+    }
+    
+    DynamicWcharBuffer summary = {0};
+    if (!init_dynamic_buffer(&summary, 1024)) {
+        return wcsdup(L"فشل في إنشاء ملخص الأخطاء");
+    }
+    
+    // Add summary header
+    if (pp_state->fatal_count > 0) {
+        swprintf(summary.buffer + summary.length, summary.capacity - summary.length,
+                L"تم العثور على %zu خطأ فادح، ", pp_state->fatal_count);
+        summary.length = wcslen(summary.buffer);
+    }
+    if (pp_state->error_count > 0) {
+        swprintf(summary.buffer + summary.length, summary.capacity - summary.length,
+                L"تم العثور على %zu خطأ، ", pp_state->error_count);
+        summary.length = wcslen(summary.buffer);
+    }
+    if (pp_state->warning_count > 0) {
+        swprintf(summary.buffer + summary.length, summary.capacity - summary.length,
+                L"تم العثور على %zu تحذير", pp_state->warning_count);
+        summary.length = wcslen(summary.buffer);
+    }
+    
+    if (!append_to_dynamic_buffer(&summary, L":\n\n")) {
+        free_dynamic_buffer(&summary);
+        return wcsdup(L"فشل في تنسيق ملخص الأخطاء");
+    }
+    
+    // Add detailed error messages (limit to first 10 for readability)
+    size_t errors_shown = 0;
+    const size_t max_errors_in_summary = 10;
+    
+    for (size_t i = 0; i < pp_state->diagnostic_count && errors_shown < max_errors_in_summary; i++) {
+        const PreprocessorDiagnostic *diag = &pp_state->diagnostics[i];
+        
+        // Skip notes in summary for brevity
+        if (diag->severity == PP_DIAG_NOTE) continue;
+        
+        if (!append_to_dynamic_buffer(&summary, diag->message) ||
+            !append_to_dynamic_buffer(&summary, L"\n")) {
+            break;
+        }
+        errors_shown++;
+    }
+    
+    // Add truncation notice if more errors exist
+    if (pp_state->diagnostic_count > max_errors_in_summary) {
+        size_t remaining = pp_state->diagnostic_count - max_errors_in_summary;
+        wchar_t truncation_msg[256];
+        swprintf(truncation_msg, sizeof(truncation_msg)/sizeof(wchar_t),
+                L"\n... و %zu خطأ إضافي\n", remaining);
+        append_to_dynamic_buffer(&summary, truncation_msg);
+    }
+    
+    return summary.buffer; // Transfer ownership
+}
+
+// Enhanced cleanup that handles new diagnostic fields
+void cleanup_preprocessor_error_system(BaaPreprocessor *pp_state)
+{
+    if (!pp_state) return;
+    
+    // Free all diagnostics including new fields
+    if (pp_state->diagnostics) {
+        for (size_t i = 0; i < pp_state->diagnostic_count; ++i) {
+            free(pp_state->diagnostics[i].message);
+            free(pp_state->diagnostics[i].suggestion);
+        }
+        free(pp_state->diagnostics);
+        pp_state->diagnostics = NULL;
+    }
+    
+    // Reset all counters
+    pp_state->diagnostic_count = 0;
+    pp_state->diagnostic_capacity = 0;
+    pp_state->fatal_count = 0;
+    pp_state->error_count = 0;
+    pp_state->warning_count = 0;
+    pp_state->note_count = 0;
+    pp_state->had_fatal_error = false;
+    
+    // Reset recovery state
+    reset_recovery_state(pp_state, "cleanup");
 }

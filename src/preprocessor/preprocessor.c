@@ -98,7 +98,17 @@ wchar_t *baa_preprocess(const BaaPpSource *source, const char **include_paths, w
     // pp_state.diagnostics = NULL;         // Zero-initialized
     // pp_state.diagnostic_count = 0;       // Zero-initialized
     // pp_state.diagnostic_capacity = 0;    // Zero-initialized
-    // pp_state.had_error_this_pass = false; // Zero-initialized
+    // pp_state.had_error_this_pass = false; // Zero-initialized (now had_fatal_error)
+
+    // Initialize enhanced error system
+    if (!init_preprocessor_error_system(&pp_state)) {
+        if (error_message) {
+            PpSourceLocation early_error_loc = {source->source_name, 0, 0};
+            *error_message = format_preprocessor_error_at_location(&early_error_loc,
+                L"فشل في تهيئة نظام الأخطاء المحسن للمعالج المسبق.");
+        }
+        return NULL;
+    }
 
     // --- Push initial location (needed early for potential errors during macro init) ---
     PpSourceLocation initial_loc = {
@@ -246,7 +256,7 @@ wchar_t *baa_preprocess(const BaaPpSource *source, const char **include_paths, w
 
     // Check for unterminated conditional block after processing is complete
     // This check needs to happen *after* cleanup of stacks but *before* returning potentially bad output
-    if (pp_state.conditional_stack_count > 0 && !pp_state.had_error_this_pass) // Only if no other error already reported
+    if (pp_state.conditional_stack_count > 0 && !pp_state.had_fatal_error) // Only if no fatal error already reported
     {
         // If an error already occurred, keep that primary error message
         // Otherwise, report the unterminated block error.
@@ -257,25 +267,15 @@ wchar_t *baa_preprocess(const BaaPpSource *source, const char **include_paths, w
     }
 
     // If errors occurred, populate the output error_message parameter
-    if (pp_state.had_error_this_pass && error_message)
+    if ((pp_state.had_fatal_error || pp_state.error_count > 0) && error_message)
     {
-        DynamicWcharBuffer combined_errors_buffer;
-        init_dynamic_buffer(&combined_errors_buffer, 256 * pp_state.diagnostic_count);
-        for (size_t i = 0; i < pp_state.diagnostic_count; ++i)
-        {
-            append_to_dynamic_buffer(&combined_errors_buffer, pp_state.diagnostics[i].message);
-            if (i < pp_state.diagnostic_count - 1)
-            {
-                append_to_dynamic_buffer(&combined_errors_buffer, L"\n");
-            }
-        }
-        *error_message = combined_errors_buffer.buffer; // Transfer ownership
+        *error_message = generate_error_summary(&pp_state); // Use enhanced error summary
         if (final_output)
             free(final_output); // Free potentially partial output if errors
 
         final_output = NULL;
     }
-    free_diagnostics_list(&pp_state); // Clean up the internal diagnostics list
+    cleanup_preprocessor_error_system(&pp_state); // Clean up the enhanced error system
     free_location_stack(&pp_state);   // Now free the location stack
 
     return final_output; // Return processed source (NULL if errors and we chose to nullify)

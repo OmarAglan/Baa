@@ -79,6 +79,7 @@ bool handle_preprocessor_directive(BaaPreprocessor *pp_state, wchar_t *directive
 
         if (!expression_only || expr_len == 0) // Check if expression is empty after stripping comment/whitespace
         {
+            PP_REPORT_ERROR(pp_state, &directive_loc, PP_ERROR_INVALID_DIRECTIVE_SYNTAX, "directive", L"تنسيق #إذا غير صالح: التعبير مفقود.");
             *error_message = format_preprocessor_error_at_location(&directive_loc, L"تنسيق #إذا غير صالح: التعبير مفقود.");
             success = false;
             if (expression_only)
@@ -95,13 +96,16 @@ bool handle_preprocessor_directive(BaaPreprocessor *pp_state, wchar_t *directive
             if (!evaluate_preprocessor_expression(pp_state, expression_only, &expr_value, error_message, abs_path))
             {
                 if (!*error_message) // Check if evaluator set a specific error
-                    *error_message = format_preprocessor_error_at_location(&directive_loc, L"خطأ في تقييم تعبير #إذا.");
+                    PP_REPORT_ERROR(pp_state, &directive_loc, PP_ERROR_EXPRESSION_TOO_COMPLEX, "expression", L"خطأ في تقييم تعبير #إذا.");
+                    if (!*error_message) // Only set if evaluator didn't provide a specific error
+                        *error_message = format_preprocessor_error_at_location(&directive_loc, L"خطأ في تقييم تعبير #إذا.");
                 success = false;
             }
             else
             {
                 if (!push_conditional(pp_state, expr_value))
                 {
+                    PP_REPORT_FATAL(pp_state, &directive_loc, PP_ERROR_OUT_OF_MEMORY, "memory", L"فشل في دفع الحالة الشرطية لـ #إذا (نفاد الذاكرة؟).");
                     *error_message = format_preprocessor_error_at_location(&directive_loc, L"فشل في دفع الحالة الشرطية لـ #إذا (نفاد الذاكرة؟).");
                     success = false;
                 }
@@ -123,6 +127,7 @@ bool handle_preprocessor_directive(BaaPreprocessor *pp_state, wchar_t *directive
 
         if (name_start == name_end)
         {
+            PP_REPORT_ERROR(pp_state, &directive_loc, PP_ERROR_MISSING_MACRO_NAME, "directive", L"تنسيق #إذا_عرف غير صالح: اسم الماكرو مفقود.");
             *error_message = format_preprocessor_error_at_location(&directive_loc, L"تنسيق #إذا_عرف غير صالح: اسم الماكرو مفقود.");
             success = false;
         }
@@ -132,6 +137,7 @@ bool handle_preprocessor_directive(BaaPreprocessor *pp_state, wchar_t *directive
             wchar_t *macro_name = wcsndup_internal(name_start, name_len);
             if (!macro_name)
             {
+                PP_REPORT_FATAL(pp_state, &directive_loc, PP_ERROR_ALLOCATION_FAILED, "memory", L"فشل في تخصيص ذاكرة لاسم الماكرو في #إذا_عرف.");
                 *error_message = format_preprocessor_error_at_location(&directive_loc, L"فشل في تخصيص ذاكرة لاسم الماكرو في #إذا_عرف.");
                 success = false;
             }
@@ -140,6 +146,7 @@ bool handle_preprocessor_directive(BaaPreprocessor *pp_state, wchar_t *directive
                 bool is_defined = (find_macro(pp_state, macro_name) != NULL);
                 if (!push_conditional(pp_state, is_defined))
                 {
+                    PP_REPORT_FATAL(pp_state, &directive_loc, PP_ERROR_OUT_OF_MEMORY, "memory", L"فشل في دفع الحالة الشرطية لـ #إذا_عرف (نفاد الذاكرة؟).");
                     *error_message = format_preprocessor_error_at_location(&directive_loc, L"فشل في دفع الحالة الشرطية لـ #إذا_عرف (نفاد الذاكرة؟).");
                     success = false;
                 }
@@ -160,6 +167,7 @@ bool handle_preprocessor_directive(BaaPreprocessor *pp_state, wchar_t *directive
 
         if (name_start == name_end)
         {
+            PP_REPORT_ERROR(pp_state, &directive_loc, PP_ERROR_MISSING_MACRO_NAME, "directive", L"تنسيق #إذا_لم_يعرف غير صالح: اسم الماكرو مفقود.");
             *error_message = format_preprocessor_error_at_location(&directive_loc, L"تنسيق #إذا_لم_يعرف غير صالح: اسم الماكرو مفقود.");
             success = false;
         }
@@ -169,6 +177,7 @@ bool handle_preprocessor_directive(BaaPreprocessor *pp_state, wchar_t *directive
             wchar_t *macro_name = wcsndup_internal(name_start, name_len);
             if (!macro_name)
             {
+                PP_REPORT_FATAL(pp_state, &directive_loc, PP_ERROR_ALLOCATION_FAILED, "memory", L"فشل في تخصيص ذاكرة لاسم الماكرو في #إذا_لم_يعرف.");
                 *error_message = format_preprocessor_error_at_location(&directive_loc, L"فشل في تخصيص ذاكرة لاسم الماكرو في #إذا_لم_يعرف.");
                 success = false;
             }
@@ -177,6 +186,7 @@ bool handle_preprocessor_directive(BaaPreprocessor *pp_state, wchar_t *directive
                 bool is_defined = (find_macro(pp_state, macro_name) != NULL);
                 if (!push_conditional(pp_state, !is_defined))
                 { // Note the negation
+                    PP_REPORT_FATAL(pp_state, &directive_loc, PP_ERROR_OUT_OF_MEMORY, "memory", L"فشل في دفع الحالة الشرطية لـ #إذا_لم_يعرف (نفاد الذاكرة؟).");
                     *error_message = format_preprocessor_error_at_location(&directive_loc, L"فشل في دفع الحالة الشرطية لـ #إذا_لم_يعرف (نفاد الذاكرة؟).");
                     success = false;
                 }
@@ -190,6 +200,7 @@ bool handle_preprocessor_directive(BaaPreprocessor *pp_state, wchar_t *directive
         *is_conditional_directive = true;
         if (!pop_conditional(pp_state))
         {
+            PP_REPORT_ERROR(pp_state, &directive_loc, PP_ERROR_UNTERMINATED_CONDITION, "directive", L"#نهاية_إذا بدون #إذا/#إذا_عرف/#إذا_لم_يعرف مطابق.");
             *error_message = format_preprocessor_error_at_location(&directive_loc, L"#نهاية_إذا بدون #إذا/#إذا_عرف/#إذا_لم_يعرف مطابق.");
             success = false;
         }
@@ -200,6 +211,7 @@ bool handle_preprocessor_directive(BaaPreprocessor *pp_state, wchar_t *directive
         *is_conditional_directive = true;
         if (pp_state->conditional_stack_count == 0)
         {
+            PP_REPORT_ERROR(pp_state, &directive_loc, PP_ERROR_UNTERMINATED_CONDITION, "directive", L"#إلا بدون #إذا/#إذا_عرف/#إذا_لم_يعرف مطابق.");
             *error_message = format_preprocessor_error_at_location(&directive_loc, L"#إلا بدون #إذا/#إذا_عرف/#إذا_لم_يعرف مطابق.");
             success = false;
         }
@@ -224,6 +236,7 @@ bool handle_preprocessor_directive(BaaPreprocessor *pp_state, wchar_t *directive
         *is_conditional_directive = true;
         if (pp_state->conditional_stack_count == 0)
         {
+            PP_REPORT_ERROR(pp_state, &directive_loc, PP_ERROR_UNTERMINATED_CONDITION, "directive", L"#وإلا_إذا بدون #إذا/#إذا_عرف/#إذا_لم_يعرف مطابق.");
             *error_message = format_preprocessor_error_at_location(&directive_loc, L"#وإلا_إذا بدون #إذا/#إذا_عرف/#إذا_لم_يعرف مطابق.");
             success = false;
         }
@@ -272,6 +285,7 @@ bool handle_preprocessor_directive(BaaPreprocessor *pp_state, wchar_t *directive
 
                 if (!expression_only || expr_len == 0) // Check if expression is empty
                 {
+                    PP_REPORT_ERROR(pp_state, &directive_loc, PP_ERROR_INVALID_DIRECTIVE_SYNTAX, "directive", L"تنسيق #وإلا_إذا غير صالح: التعبير مفقود.");
                     *error_message = format_preprocessor_error_at_location(&directive_loc, L"تنسيق #وإلا_إذا غير صالح: التعبير مفقود.");
                     success = false;
                     if (expression_only)
@@ -283,7 +297,9 @@ bool handle_preprocessor_directive(BaaPreprocessor *pp_state, wchar_t *directive
                     if (!evaluate_preprocessor_expression(pp_state, expression_only, &condition_met, error_message, abs_path))
                     {
                         if (!*error_message) // Check if evaluator set a specific error
-                            *error_message = format_preprocessor_error_at_location(&directive_loc, L"خطأ في تقييم تعبير #وإلا_إذا.");
+                            PP_REPORT_ERROR(pp_state, &directive_loc, PP_ERROR_EXPRESSION_TOO_COMPLEX, "expression", L"خطأ في تقييم تعبير #وإلا_إذا.");
+                            if (!*error_message) // Only set if evaluator didn't provide a specific error
+                                *error_message = format_preprocessor_error_at_location(&directive_loc, L"خطأ في تقييم تعبير #وإلا_إذا.");
                         success = false;
                     }
                     else
@@ -344,6 +360,7 @@ bool handle_preprocessor_directive(BaaPreprocessor *pp_state, wchar_t *directive
             }
             else
             {
+                PP_REPORT_ERROR(pp_state, &directive_loc, PP_ERROR_INVALID_INCLUDE, "directive", L"تنسيق #تضمين غير صالح: يجب أن يتبع اسم الملف بـ \" أو <.");
                 *error_message = format_preprocessor_error_at_location(&directive_loc, L"تنسيق #تضمين غير صالح: يجب أن يتبع اسم الملف بـ \" أو <.");
                 success = false;
             }
@@ -353,6 +370,7 @@ bool handle_preprocessor_directive(BaaPreprocessor *pp_state, wchar_t *directive
                 size_t include_path_len = path_end - path_start;
                 if (include_path_len == 0)
                 {
+                    PP_REPORT_ERROR(pp_state, &directive_loc, PP_ERROR_INVALID_INCLUDE, "directive", L"تنسيق #تضمين غير صالح: مسار الملف فارغ.");
                     *error_message = format_preprocessor_error_at_location(&directive_loc, L"تنسيق #تضمين غير صالح: مسار الملف فارغ.");
                     success = false;
                 }
@@ -361,6 +379,7 @@ bool handle_preprocessor_directive(BaaPreprocessor *pp_state, wchar_t *directive
                     wchar_t *include_path_w = wcsndup_internal(path_start, include_path_len);
                     if (!include_path_w)
                     {
+                        PP_REPORT_FATAL(pp_state, &directive_loc, PP_ERROR_ALLOCATION_FAILED, "memory", L"فشل في تخصيص ذاكرة لمسار التضمين.");
                         *error_message = format_preprocessor_error_at_location(&directive_loc, L"فشل في تخصيص ذاكرة لمسار التضمين.");
                         success = false;
                     }
@@ -375,12 +394,14 @@ bool handle_preprocessor_directive(BaaPreprocessor *pp_state, wchar_t *directive
                                 WideCharToMultiByte(CP_UTF8, 0, include_path_w, -1, include_path_mb, required_bytes, NULL, NULL);
                             else
                             {
+                                PP_REPORT_FATAL(pp_state, &directive_loc, PP_ERROR_ALLOCATION_FAILED, "memory", L"فشل في تخصيص ذاكرة لمسار التضمين (MB).");
                                 *error_message = format_preprocessor_error_at_location(&directive_loc, L"فشل في تخصيص ذاكرة لمسار التضمين (MB).");
                                 success = false;
                             }
                         }
                         else
                         {
+                            PP_REPORT_ERROR(pp_state, &directive_loc, PP_ERROR_ENCODING_ERROR, "file", L"فشل في تحويل مسار التضمين إلى UTF-8.");
                             *error_message = format_preprocessor_error_at_location(&directive_loc, L"فشل في تحويل مسار التضمين إلى UTF-8.");
                             success = false;
                         }
@@ -412,6 +433,7 @@ bool handle_preprocessor_directive(BaaPreprocessor *pp_state, wchar_t *directive
                                 }
                                 if (!found)
                                 {
+                                    PP_REPORT_ERROR(pp_state, &directive_loc, PP_ERROR_FILE_NOT_FOUND, "file", L"تعذر العثور على ملف التضمين '<%hs>' في مسارات التضمين.", include_path_mb);
                                     *error_message = format_preprocessor_error_at_location(&directive_loc, L"تعذر العثور على ملف التضمين '<%hs>' في مسارات التضمين.", include_path_mb);
                                     success = false;
                                 }
@@ -421,6 +443,7 @@ bool handle_preprocessor_directive(BaaPreprocessor *pp_state, wchar_t *directive
                                 char *current_dir = get_directory_part(pp_state->current_file_path);
                                 if (!current_dir)
                                 {
+                                    PP_REPORT_ERROR(pp_state, &directive_loc, PP_ERROR_INVALID_FILE_PATH, "file", L"فشل في الحصول على دليل الملف الحالي.");
                                     *error_message = format_preprocessor_error_at_location(&directive_loc, L"فشل في الحصول على دليل الملف الحالي.");
                                     success = false;
                                 }
@@ -432,6 +455,7 @@ bool handle_preprocessor_directive(BaaPreprocessor *pp_state, wchar_t *directive
                                     free(current_dir);
                                     if (!full_include_path)
                                     {
+                                        PP_REPORT_FATAL(pp_state, &directive_loc, PP_ERROR_ALLOCATION_FAILED, "memory", L"فشل في تخصيص ذاكرة للمسار النسبي المدمج.");
                                         *error_message = format_preprocessor_error_at_location(&directive_loc, L"فشل في تخصيص ذاكرة للمسار النسبي المدمج.");
                                         success = false;
                                     }
@@ -447,6 +471,7 @@ bool handle_preprocessor_directive(BaaPreprocessor *pp_state, wchar_t *directive
                                 PpSourceLocation include_loc = {.file_path = pp_state->current_file_path, .line = pp_state->current_line_number, .column = 1};
                                 if (!push_location(pp_state, &include_loc))
                                 {
+                                    PP_REPORT_FATAL(pp_state, &include_loc, PP_ERROR_OUT_OF_MEMORY, "memory", L"فشل في دفع موقع التضمين (نفاد الذاكرة؟).");
                                     *error_message = format_preprocessor_error_at_location(&include_loc, L"فشل في دفع موقع التضمين (نفاد الذاكرة؟).");
                                     success = false;
                                 }
@@ -465,6 +490,7 @@ bool handle_preprocessor_directive(BaaPreprocessor *pp_state, wchar_t *directive
                                             if (!*error_message)
                                             {
                                                 PpSourceLocation current_loc = get_current_original_location(pp_state);
+                                                PP_REPORT_FATAL(pp_state, &current_loc, PP_ERROR_OUT_OF_MEMORY, "memory", L"فشل في إلحاق المحتوى المضمن من '%hs'.", full_include_path);
                                                 *error_message = format_preprocessor_error_at_location(&current_loc, L"فشل في إلحاق المحتوى المضمن من '%hs'.", full_include_path);
                                             }
                                             success = false;
@@ -485,6 +511,7 @@ bool handle_preprocessor_directive(BaaPreprocessor *pp_state, wchar_t *directive
             }
             else if (success)
             {
+                PP_REPORT_ERROR(pp_state, &directive_loc, PP_ERROR_INVALID_INCLUDE, "directive", L"تنسيق #تضمين غير صالح: علامة الاقتباس أو القوس الختامي مفقود.");
                 *error_message = format_preprocessor_error_at_location(&directive_loc, L"تنسيق #تضمين غير صالح: علامة الاقتباس أو القوس الختامي مفقود.");
                 success = false;
             }
@@ -512,6 +539,7 @@ bool handle_preprocessor_directive(BaaPreprocessor *pp_state, wchar_t *directive
                 name_end++;
             if (name_start == name_end)
             {
+                PP_REPORT_ERROR(pp_state, &name_error_loc, PP_ERROR_MISSING_MACRO_NAME, "directive", L"تنسيق #تعريف غير صالح: اسم الماكرو مفقود.");
                 *error_message = format_preprocessor_error_at_location(&name_error_loc, L"تنسيق #تعريف غير صالح: اسم الماكرو مفقود.");
                 success = false;
             }
@@ -521,6 +549,7 @@ bool handle_preprocessor_directive(BaaPreprocessor *pp_state, wchar_t *directive
                 wchar_t *macro_name = wcsndup_internal(name_start, name_len);
                 if (!macro_name)
                 {
+                    PP_REPORT_FATAL(pp_state, &name_error_loc, PP_ERROR_ALLOCATION_FAILED, "memory", L"فشل في تخصيص ذاكرة لاسم الماكرو في #تعريف.");
                     *error_message = format_preprocessor_error_at_location(&name_error_loc, L"فشل في تخصيص ذاكرة لاسم الماكرو في #تعريف.");
                     success = false;
                 }
@@ -561,6 +590,7 @@ bool handle_preprocessor_directive(BaaPreprocessor *pp_state, wchar_t *directive
                             { // If not the first param, or if variadic was just processed
                                 if (is_variadic_macro)
                                 { // No params allowed after variadic
+                                    PP_REPORT_ERROR(pp_state, &current_arg_loc, PP_ERROR_INVALID_MACRO_PARAM, "directive", L"تنسيق #تعريف غير صالح: لا يمكن أن يتبع 'وسائط_إضافية' معاملات أخرى.");
                                     *error_message = format_preprocessor_error_at_location(&current_arg_loc, L"تنسيق #تعريف غير صالح: لا يمكن أن يتبع 'وسائط_إضافية' معاملات أخرى.");
                                     success = false;
                                     break;
@@ -573,6 +603,7 @@ bool handle_preprocessor_directive(BaaPreprocessor *pp_state, wchar_t *directive
                                 }
                                 else
                                 {
+                                    PP_REPORT_ERROR(pp_state, &current_arg_loc, PP_ERROR_INVALID_MACRO_PARAM, "directive", L"تنسيق #تعريف غير صالح: متوقع ',' أو ')' بين معاملات الماكرو الوظيفي.");
                                     *error_message = format_preprocessor_error_at_location(&current_arg_loc, L"تنسيق #تعريف غير صالح: متوقع ',' أو ')' بين معاملات الماكرو الوظيفي.");
                                     success = false;
                                     break;
@@ -590,6 +621,7 @@ bool handle_preprocessor_directive(BaaPreprocessor *pp_state, wchar_t *directive
                                     param_ptr++; // Column update handled by general loop progress
                                 if (*param_ptr != L')')
                                 {
+                                    PP_REPORT_ERROR(pp_state, &current_arg_loc, PP_ERROR_INVALID_MACRO_PARAM, "directive", L"تنسيق #تعريف غير صالح: 'وسائط_إضافية' يجب أن تكون المعامل الأخير.");
                                     *error_message = format_preprocessor_error_at_location(&current_arg_loc, L"تنسيق #تعريف غير صالح: 'وسائط_إضافية' يجب أن تكون المعامل الأخير.");
                                     success = false;
                                     break;
@@ -601,6 +633,7 @@ bool handle_preprocessor_directive(BaaPreprocessor *pp_state, wchar_t *directive
 
                             if (!iswalpha(*param_ptr) && *param_ptr != L'_')
                             {
+                                PP_REPORT_ERROR(pp_state, &current_arg_loc, PP_ERROR_INVALID_MACRO_PARAM, "directive", L"تنسيق #تعريف غير صالح: متوقع اسم معامل أو ')' أو 'وسائط_إضافية' بعد '('.");
                                 *error_message = format_preprocessor_error_at_location(&current_arg_loc, L"تنسيق #تعريف غير صالح: متوقع اسم معامل أو ')' أو 'وسائط_إضافية' بعد '('.");
                                 success = false;
                                 break;
@@ -612,6 +645,7 @@ bool handle_preprocessor_directive(BaaPreprocessor *pp_state, wchar_t *directive
                             size_t param_name_len = param_name_end - param_name_start;
                             if (param_name_len == 0)
                             {
+                                PP_REPORT_ERROR(pp_state, &current_arg_loc, PP_ERROR_INVALID_MACRO_PARAM, "directive", L"تنسيق #تعريف غير صالح: اسم معامل فارغ.");
                                 *error_message = format_preprocessor_error_at_location(&current_arg_loc, L"تنسيق #تعريف غير صالح: اسم معامل فارغ.");
                                 success = false;
                                 break;
@@ -619,6 +653,7 @@ bool handle_preprocessor_directive(BaaPreprocessor *pp_state, wchar_t *directive
                             wchar_t *param_name = wcsndup_internal(param_name_start, param_name_len);
                             if (!param_name)
                             {
+                                PP_REPORT_FATAL(pp_state, &current_arg_loc, PP_ERROR_ALLOCATION_FAILED, "memory", L"فشل في تخصيص ذاكرة لاسم المعامل في #تعريف.");
                                 *error_message = format_preprocessor_error_at_location(&current_arg_loc, L"فشل في تخصيص ذاكرة لاسم المعامل في #تعريف.");
                                 success = false;
                                 break;
@@ -630,6 +665,7 @@ bool handle_preprocessor_directive(BaaPreprocessor *pp_state, wchar_t *directive
                                 if (!new_params)
                                 {
                                     free(param_name);
+                                    PP_REPORT_FATAL(pp_state, &current_arg_loc, PP_ERROR_ALLOCATION_FAILED, "memory", L"فشل في إعادة تخصيص الذاكرة لمعاملات الماكرو في #تعريف.");
                                     *error_message = format_preprocessor_error_at_location(&current_arg_loc, L"فشل في إعادة تخصيص الذاكرة لمعاملات الماكرو في #تعريف.");
                                     success = false;
                                     break;
@@ -689,6 +725,7 @@ bool handle_preprocessor_directive(BaaPreprocessor *pp_state, wchar_t *directive
 
                         if (!add_macro(pp_state, macro_name, body_start, is_function_like, is_variadic_macro, param_count, params))
                         {
+                            PP_REPORT_FATAL(pp_state, &directive_loc, PP_ERROR_ALLOCATION_FAILED, "memory", L"فشل في إضافة تعريف الماكرو '%ls' (نفاد الذاكرة؟).", macro_name);
                             *error_message = format_preprocessor_error_at_location(&directive_loc, L"فشل في إضافة تعريف الماكرو '%ls' (نفاد الذاكرة؟).", macro_name);
                             success = false;
                             // params are owned by add_macro if it fails after taking them, or freed by it.
@@ -719,6 +756,7 @@ bool handle_preprocessor_directive(BaaPreprocessor *pp_state, wchar_t *directive
                 name_end++;
             if (name_start == name_end)
             {
+                PP_REPORT_ERROR(pp_state, &directive_loc, PP_ERROR_MISSING_MACRO_NAME, "directive", L"تنسيق #الغاء_تعريف غير صالح: اسم الماكرو مفقود.");
                 *error_message = format_preprocessor_error_at_location(&directive_loc, L"تنسيق #الغاء_تعريف غير صالح: اسم الماكرو مفقود.");
                 success = false;
             }
@@ -728,6 +766,7 @@ bool handle_preprocessor_directive(BaaPreprocessor *pp_state, wchar_t *directive
                 wchar_t *macro_name = wcsndup_internal(name_start, name_len);
                 if (!macro_name)
                 {
+                    PP_REPORT_FATAL(pp_state, &directive_loc, PP_ERROR_ALLOCATION_FAILED, "memory", L"فشل في تخصيص ذاكرة لاسم الماكرو في #الغاء_تعريف.");
                     *error_message = format_preprocessor_error_at_location(&directive_loc, L"فشل في تخصيص ذاكرة لاسم الماكرو في #الغاء_تعريف.");
                     success = false;
                 }
@@ -764,6 +803,7 @@ bool handle_preprocessor_directive(BaaPreprocessor *pp_state, wchar_t *directive
             size_t message_len = message_end - message_start;
             wchar_t *actual_message_content = wcsndup_internal(message_start, message_len);
 
+            PP_REPORT_FATAL(pp_state, &directive_loc, PP_ERROR_DIRECTIVE_NOT_ALLOWED, "directive", L"%ls", actual_message_content ? actual_message_content : L"");
             *error_message = format_preprocessor_error_at_location(&directive_loc, L"%ls", actual_message_content ? actual_message_content : L"");
             free(actual_message_content);
             success = false; // Fatal error
@@ -793,6 +833,7 @@ bool handle_preprocessor_directive(BaaPreprocessor *pp_state, wchar_t *directive
             size_t message_len = message_end - message_start;
             wchar_t *actual_message_content = wcsndup_internal(message_start, message_len);
 
+            PP_REPORT_WARNING(pp_state, &directive_loc, PP_ERROR_DIRECTIVE_NOT_ALLOWED, "directive", L"%ls", actual_message_content ? actual_message_content : L"");
             wchar_t *formatted_warning = format_preprocessor_warning_at_location(&directive_loc, L"%ls", actual_message_content ? actual_message_content : L"");
             if (formatted_warning)
             {
@@ -804,6 +845,7 @@ bool handle_preprocessor_directive(BaaPreprocessor *pp_state, wchar_t *directive
         }
         else
         {
+            PP_REPORT_ERROR(pp_state, &directive_loc, PP_ERROR_UNKNOWN_DIRECTIVE, "directive", L"توجيه معالج مسبق غير معروف يبدأ بـ '#'.");
             *error_message = format_preprocessor_error_at_location(&directive_loc, L"توجيه معالج مسبق غير معروف يبدأ بـ '#'.");
             success = false;
         }

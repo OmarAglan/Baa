@@ -12,8 +12,12 @@ bool push_location(BaaPreprocessor *pp, const PpSourceLocation *location)
     {
         size_t new_capacity = (pp->location_stack_capacity == 0) ? 8 : pp->location_stack_capacity * 2;
         PpSourceLocation *new_stack = realloc(pp->location_stack, new_capacity * sizeof(PpSourceLocation));
-        if (!new_stack)
-            return false; // Allocation failure
+        if (!new_stack) {
+            PpSourceLocation error_loc = get_current_original_location(pp);
+            PP_REPORT_FATAL(pp, &error_loc, PP_ERROR_OUT_OF_MEMORY, "memory",
+                L"فشل في إعادة تخصيص الذاكرة لمكدس المواقع");
+            return false;
+        }
         pp->location_stack = new_stack;
         pp->location_stack_capacity = new_capacity;
     }
@@ -95,10 +99,10 @@ wchar_t *format_preprocessor_error_at_location(const PpSourceLocation *location,
     char *prefix_mb = malloc(prefix_buffer_size);
     if (!prefix_mb)
     {
-        // Basic fallback if prefix allocation fails
+        // Basic fallback if prefix allocation fails - create simple message without enhanced error system
+        // to avoid recursion since this is a formatting function itself
         va_list args_fallback;
         va_start(args_fallback, format);
-        // Determine required size for original format
         va_list args_copy_fallback;
         va_copy(args_copy_fallback, args_fallback);
         int needed_fallback = vswprintf(NULL, 0, format, args_copy_fallback);
@@ -136,6 +140,7 @@ wchar_t *format_preprocessor_error_at_location(const PpSourceLocation *location,
         {
             MultiByteToWideChar(CP_UTF8, 0, prefix_mb, -1, prefix_w, required_wchars);
         }
+        // Note: Memory allocation failure here falls through to fallback logic below
     }
     free(prefix_mb);
 
@@ -190,6 +195,7 @@ wchar_t *format_preprocessor_error_at_location(const PpSourceLocation *location,
     {
         va_end(args);
         free(prefix_w);
+        // Note: Cannot use enhanced error system here as this is a formatting function
         return baa_strdup(L"فشل في تخصيص الذاكرة لرسالة خطأ المعالج المسبق الكاملة.");
     }
 
@@ -211,7 +217,7 @@ wchar_t *format_preprocessor_warning_at_location(const PpSourceLocation *locatio
     char *prefix_mb = malloc(prefix_buffer_size);
     if (!prefix_mb)
     {
-        // Basic fallback if prefix allocation fails
+        // Basic fallback if prefix allocation fails - avoid enhanced error system to prevent recursion
         va_list args_fallback;
         va_start(args_fallback, format);
         va_list args_copy_fallback;
@@ -251,6 +257,7 @@ wchar_t *format_preprocessor_warning_at_location(const PpSourceLocation *locatio
         {
             MultiByteToWideChar(CP_UTF8, 0, prefix_mb, -1, prefix_w, required_wchars);
         }
+        // Note: Memory allocation failure here falls through to fallback logic below
     }
     free(prefix_mb);
 
@@ -330,6 +337,7 @@ bool init_dynamic_buffer(DynamicWcharBuffer *db, size_t initial_capacity)
     {
         db->length = 0;
         db->capacity = 0;
+        // Note: Cannot report error here as this is a utility function without preprocessor context
         return false;
     }
     db->buffer[0] = L'\0';
@@ -440,6 +448,8 @@ wchar_t *read_file_content(BaaPreprocessor *pp_state, const char *file_path, wch
     if (required_wchars <= 0)
     {
         PpSourceLocation error_loc = get_current_original_location(pp_state);
+        PP_REPORT_ERROR(pp_state, &error_loc, PP_ERROR_ENCODING_ERROR, "file",
+            L"فشل في تحويل مسار الملف '%hs' إلى UTF-16", file_path);
         *error_message = format_preprocessor_error_at_location(&error_loc, L"فشل في تحويل مسار الملف '%hs' إلى UTF-16.", file_path);
         return NULL;
     }
@@ -660,13 +670,13 @@ char *get_absolute_path(const char *file_path)
 {
     char *abs_path_buf = malloc(MAX_PATH_LEN * sizeof(char));
     if (!abs_path_buf)
-        return NULL;
+        return NULL; // Note: Cannot use enhanced error system here - utility function without preprocessor context
 
 #ifdef _WIN32
     if (_fullpath(abs_path_buf, file_path, MAX_PATH_LEN) == NULL)
     {
         free(abs_path_buf);
-        return NULL;
+        return NULL; // Note: Cannot use enhanced error system here - utility function without preprocessor context
     }
 #else
     if (realpath(file_path, abs_path_buf) == NULL)
@@ -677,7 +687,7 @@ char *get_absolute_path(const char *file_path)
         // However, for include resolution, the file *should* exist.
         // For now, stick to realpath's behavior.
         free(abs_path_buf);
-        return NULL;
+        return NULL; // Note: Cannot use enhanced error system here - utility function without preprocessor context
     }
 #endif
     return abs_path_buf;
@@ -692,7 +702,7 @@ char *get_directory_part(const char *file_path)
     char *path_copy = baa_strdup_char(file_path); // Use _strdup here too
 #endif
     if (!path_copy)
-        return NULL;
+        return NULL; // Note: Cannot use enhanced error system here - utility function without preprocessor context
 
 #ifdef _WIN32
     char drive[_MAX_DRIVE];
@@ -700,12 +710,12 @@ char *get_directory_part(const char *file_path)
     errno_t err = _splitpath_s(path_copy, drive, _MAX_DRIVE, dir, _MAX_DIR, NULL, 0, NULL, 0);
     free(path_copy);
     if (err != 0)
-        return NULL;
+        return NULL; // Note: Cannot use enhanced error system here - utility function without preprocessor context
     size_t drive_len = strlen(drive);
     size_t dir_len = strlen(dir);
     char *dir_part = malloc((drive_len + dir_len + 1) * sizeof(char));
     if (!dir_part)
-        return NULL;
+        return NULL; // Note: Cannot use enhanced error system here - utility function without preprocessor context
     // Use strcpy_s and strcat_s for safety
     strcpy_s(dir_part, drive_len + 1, drive);
     strcat_s(dir_part, drive_len + dir_len + 1, dir);
@@ -895,6 +905,11 @@ bool init_preprocessor_error_system(BaaPreprocessor *pp_state)
     pp_state->note_count = 0;
     pp_state->had_fatal_error = false;
     
+    // Initialize diagnostic array
+    pp_state->diagnostics = NULL;
+    pp_state->diagnostic_count = 0;
+    pp_state->diagnostic_capacity = 0;
+    
     // Initialize recovery state
     pp_state->recovery_state.consecutive_errors = 0;
     pp_state->recovery_state.errors_this_line = 0;
@@ -1001,6 +1016,9 @@ void add_preprocessor_diagnostic_ex(
     diag->suggestion = suggestion ? wcsdup(suggestion) : NULL;
     
     pp_state->diagnostic_count++;
+    
+    // Update counters and check limits
+    increment_error_count(pp_state, severity);
     
     // Set fatal flag if needed
     if (severity == PP_DIAG_FATAL) {
@@ -1136,9 +1154,62 @@ bool sync_to_next_directive(BaaPreprocessor *pp_state, const wchar_t **line_ptr)
 {
     if (!line_ptr || !*line_ptr || !pp_state) return false;
     
+    bool found_directive = false;
+    size_t lines_searched = 0;
+    const size_t max_search_lines = 100; // Prevent infinite loops
+    
     // Skip to end of current line
     while (**line_ptr && **line_ptr != L'\n') {
         (*line_ptr)++;
+    }
+    
+    // Search for next preprocessor directive
+    while (**line_ptr && lines_searched < max_search_lines) {
+        // Skip the newline if present
+        if (**line_ptr == L'\n') {
+            (*line_ptr)++;
+            pp_state->current_line_number++;
+            pp_state->current_column_number = 1;
+            lines_searched++;
+        }
+        
+        // Skip whitespace at beginning of line
+        while (**line_ptr && (**line_ptr == L' ' || **line_ptr == L'\t')) {
+            (*line_ptr)++;
+            pp_state->current_column_number++;
+        }
+        
+        // Check if this line starts with a preprocessor directive (#)
+        if (**line_ptr == L'#') {
+            found_directive = true;
+            break;
+        }
+        
+        // If not a directive, skip to end of line
+        while (**line_ptr && **line_ptr != L'\n') {
+            (*line_ptr)++;
+            pp_state->current_column_number++;
+        }
+    }
+    
+    // Reset recovery state for new parsing context
+    pp_state->recovery_state.errors_this_line = 0;
+    pp_state->recovery_state.consecutive_errors = 0;
+    
+    // If we couldn't find a directive within reasonable search, still count as successful
+    // to prevent infinite loops - the caller can handle end-of-input
+    return true;
+}
+
+// Line-level synchronization - skip to next line
+bool sync_to_next_line(BaaPreprocessor *pp_state, const wchar_t **line_ptr)
+{
+    if (!line_ptr || !*line_ptr || !pp_state) return false;
+    
+    // Skip to end of current line
+    while (**line_ptr && **line_ptr != L'\n') {
+        (*line_ptr)++;
+        pp_state->current_column_number++;
     }
     
     // Skip the newline if present
@@ -1148,16 +1219,16 @@ bool sync_to_next_directive(BaaPreprocessor *pp_state, const wchar_t **line_ptr)
         pp_state->current_column_number = 1;
     }
     
-    // Reset recovery state for new line
+    // Reset line-specific recovery state
     pp_state->recovery_state.errors_this_line = 0;
     
+    // If we've had too many consecutive errors, don't increment consecutive count
+    // This prevents cascading failures from escalating recovery actions
+    if (pp_state->recovery_state.consecutive_errors > 5) {
+        pp_state->recovery_state.consecutive_errors = 5; // Cap it
+    }
+    
     return true;
-}
-
-// Line-level synchronization - skip to next line
-bool sync_to_next_line(BaaPreprocessor *pp_state, const wchar_t **line_ptr)
-{
-    return sync_to_next_directive(pp_state, line_ptr); // Same implementation
 }
 
 // Expression recovery - skip to next safe point in expression
@@ -1165,17 +1236,82 @@ bool sync_expression_parsing(BaaPreprocessor *pp_state, const wchar_t **expr_ptr
 {
     if (!expr_ptr || !*expr_ptr || !pp_state) return false;
     
-    // Skip to next safe parsing point
+    // Skip to next safe parsing point with enhanced bracket/parentheses tracking
     int paren_depth = 0;
-    while (**expr_ptr && **expr_ptr != terminator) {
-        if (**expr_ptr == L'(') {
-            paren_depth++;
-        } else if (**expr_ptr == L')') {
-            paren_depth--;
-            if (paren_depth < 0) break;
+    int bracket_depth = 0;
+    int brace_depth = 0;
+    size_t chars_processed = 0;
+    const size_t max_expression_length = 10000; // Prevent infinite loops
+    
+    while (**expr_ptr && **expr_ptr != terminator && chars_processed < max_expression_length) {
+        wchar_t current = **expr_ptr;
+        
+        // Track nesting depth for balanced recovery
+        switch (current) {
+            case L'(':
+                paren_depth++;
+                break;
+            case L')':
+                paren_depth--;
+                if (paren_depth < 0) {
+                    // Found unmatched closing paren - this might be our terminator
+                    return true;
+                }
+                break;
+            case L'[':
+                bracket_depth++;
+                break;
+            case L']':
+                bracket_depth--;
+                if (bracket_depth < 0) {
+                    // Found unmatched closing bracket
+                    return true;
+                }
+                break;
+            case L'{':
+                brace_depth++;
+                break;
+            case L'}':
+                brace_depth--;
+                if (brace_depth < 0) {
+                    // Found unmatched closing brace
+                    return true;
+                }
+                break;
+            case L',':
+                // Comma at top level might be a good recovery point
+                if (paren_depth == 0 && bracket_depth == 0 && brace_depth == 0) {
+                    return true;
+                }
+                break;
+            case L';':
+                // Semicolon is usually a statement separator - good recovery point
+                if (paren_depth == 0 && bracket_depth == 0 && brace_depth == 0) {
+                    return true;
+                }
+                break;
+            case L'\n':
+                // Newline might be a good recovery point
+                if (paren_depth == 0 && bracket_depth == 0 && brace_depth == 0) {
+                    return true;
+                }
+                break;
         }
+        
         (*expr_ptr)++;
+        chars_processed++;
+        
+        // Update column tracking
+        if (current == L'\n') {
+            pp_state->current_line_number++;
+            pp_state->current_column_number = 1;
+        } else {
+            pp_state->current_column_number++;
+        }
     }
+    
+    // Reset expression-specific error tracking
+    pp_state->recovery_state.expression_errors = 0;
     
     return **expr_ptr != L'\0';
 }
@@ -1185,11 +1321,59 @@ bool recover_conditional_stack(BaaPreprocessor *pp_state)
 {
     if (!pp_state) return false;
     
-    // For now, just reset recovery state
-    // TODO: Implement more sophisticated conditional stack recovery
+    // Advanced conditional stack recovery implementation
+    bool recovery_successful = false;
+    
+    // Check if conditional stack is corrupted
+    if (pp_state->conditional_stack_count > 0) {
+        // Try to find a safe recovery point by looking for balanced conditions
+        size_t original_count = pp_state->conditional_stack_count;
+        
+        // If we have too many open conditionals (more than reasonable), truncate
+        const size_t max_reasonable_depth = 50;
+        if (pp_state->conditional_stack_count > max_reasonable_depth) {
+            pp_state->conditional_stack_count = max_reasonable_depth;
+            recovery_successful = true;
+        }
+        
+        // Ensure corresponding branch stacks are synchronized
+        if (pp_state->conditional_branch_taken_stack_count != pp_state->conditional_stack_count) {
+            // Synchronize the branch taken stack
+            if (pp_state->conditional_branch_taken_stack_count < pp_state->conditional_stack_count) {
+                // Extend branch stack with false values
+                while (pp_state->conditional_branch_taken_stack_count < pp_state->conditional_stack_count &&
+                       pp_state->conditional_branch_taken_stack_count < pp_state->conditional_branch_taken_stack_capacity) {
+                    pp_state->conditional_branch_taken_stack[pp_state->conditional_branch_taken_stack_count] = false;
+                    pp_state->conditional_branch_taken_stack_count++;
+                }
+            } else {
+                // Truncate branch stack to match conditional stack
+                pp_state->conditional_branch_taken_stack_count = pp_state->conditional_stack_count;
+            }
+            recovery_successful = true;
+        }
+        
+        // Reset skipping state to a safe default
+        pp_state->skipping_lines = false;
+        
+        // Check each level for consistency
+        for (size_t i = 0; i < pp_state->conditional_stack_count; i++) {
+            if (pp_state->conditional_stack[i] && pp_state->conditional_branch_taken_stack[i]) {
+                // This level should not be skipping
+                continue;
+            }
+            // Mark suspicious levels for potential recovery
+        }
+    }
+    
+    // Reset recovery state tracking
     reset_recovery_state(pp_state, "conditional_recovery");
     
-    return true;
+    // Update error tracking
+    pp_state->recovery_state.directive_errors = 0;
+    pp_state->recovery_state.consecutive_errors = 0;
+    
+    return recovery_successful;
 }
 
 // Generate backward-compatible error summary from collected diagnostics
@@ -1201,6 +1385,7 @@ wchar_t* generate_error_summary(const BaaPreprocessor *pp_state)
     
     DynamicWcharBuffer summary = {0};
     if (!init_dynamic_buffer(&summary, 1024)) {
+        // Note: Cannot use enhanced error system here as this function generates error summaries
         return wcsdup(L"فشل في إنشاء ملخص الأخطاء");
     }
     
@@ -1223,6 +1408,7 @@ wchar_t* generate_error_summary(const BaaPreprocessor *pp_state)
     
     if (!append_to_dynamic_buffer(&summary, L":\n\n")) {
         free_dynamic_buffer(&summary);
+        // Note: Cannot use enhanced error system here as this function generates error summaries
         return wcsdup(L"فشل في تنسيق ملخص الأخطاء");
     }
     

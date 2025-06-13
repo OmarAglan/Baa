@@ -54,7 +54,11 @@ static PpExprToken make_identifier_token(PpExprTokenizer *tz)
     wchar_t *text = wcsndup_internal(tz->start, len); // Use internal wcsndup
     if (!text)
     {
-        return make_error_token(tz, L"فشل في تخصيص ذاكرة للمعرف في التعبير الشرطي.");
+        PpSourceLocation error_loc = get_current_original_location(tz->pp_state);
+        error_loc.column = tz->expr_string_column_offset + tz->current_token_start_column - 1;
+        PP_REPORT_FATAL(tz->pp_state, &error_loc, PP_ERROR_ALLOCATION_FAILED, "expression",
+                       L"فشل في تخصيص ذاكرة للمعرف في التعبير الشرطي.");
+        return (PpExprToken){.type = PP_EXPR_TOKEN_ERROR};
     }
 
     // Check if it's the 'معرف' (defined) keyword
@@ -148,7 +152,11 @@ static PpExprToken get_next_pp_expr_token(PpExprTokenizer *tz)
             return make_token(PP_EXPR_TOKEN_EQEQ);
         }
         // Single '=' is assignment, invalid in preprocessor expr
-        return make_error_token(tz, L"المعامل '=' غير صالح في التعبير الشرطي.");
+        PpSourceLocation error_loc = get_current_original_location(tz->pp_state);
+        error_loc.column = tz->expr_string_column_offset + tz->current_token_start_column - 1;
+        PP_REPORT_ERROR(tz->pp_state, &error_loc, PP_ERROR_INVALID_OPERATOR, "expression",
+                       L"المعامل '=' غير صالح في التعبير الشرطي.");
+        return (PpExprToken){.type = PP_EXPR_TOKEN_ERROR};
     case L'<':
         if (*(tz->current + 1) == L'=')
         {
@@ -239,7 +247,11 @@ static PpExprToken get_next_pp_expr_token(PpExprTokenizer *tz)
                 value = wcstol(tz->start + 2, &endptr, base);
                 if (endptr == tz->start + 2)
                 { // No valid hex digits after 0x
-                    return make_error_token(tz, L"رقم سداسي عشري غير صالح بعد '0x' في التعبير الشرطي.");
+                    PpSourceLocation error_loc = get_current_original_location(tz->pp_state);
+                    error_loc.column = tz->expr_string_column_offset + tz->current_token_start_column - 1;
+                    PP_REPORT_ERROR(tz->pp_state, &error_loc, PP_ERROR_INVALID_NUMBER_FORMAT, "expression",
+                                   L"رقم سداسي عشري غير صالح بعد '0x' في التعبير الشرطي.");
+                    return (PpExprToken){.type = PP_EXPR_TOKEN_ERROR};
                 }
             }
             else if (*(tz->start + 1) == L'b' || *(tz->start + 1) == L'B')
@@ -249,7 +261,11 @@ static PpExprToken get_next_pp_expr_token(PpExprTokenizer *tz)
                 value = wcstol(tz->start + 2, &endptr, base);
                 if (endptr == tz->start + 2)
                 { // No valid binary digits after 0b
-                    return make_error_token(tz, L"رقم ثنائي غير صالح بعد '0b' في التعبير الشرطي.");
+                    PpSourceLocation error_loc = get_current_original_location(tz->pp_state);
+                    error_loc.column = tz->expr_string_column_offset + tz->current_token_start_column - 1;
+                    PP_REPORT_ERROR(tz->pp_state, &error_loc, PP_ERROR_INVALID_NUMBER_FORMAT, "expression",
+                                   L"رقم ثنائي غير صالح بعد '0b' في التعبير الشرطي.");
+                    return (PpExprToken){.type = PP_EXPR_TOKEN_ERROR};
                 }
             }
             else
@@ -266,7 +282,11 @@ static PpExprToken get_next_pp_expr_token(PpExprTokenizer *tz)
         }
         if (endptr == tz->start)
         { // No valid digits parsed
-            return make_error_token(tz, L"رقم غير صالح في التعبير الشرطي.");
+            PpSourceLocation error_loc = get_current_original_location(tz->pp_state);
+            error_loc.column = tz->expr_string_column_offset + tz->current_token_start_column - 1;
+            PP_REPORT_ERROR(tz->pp_state, &error_loc, PP_ERROR_INVALID_NUMBER_FORMAT, "expression",
+                           L"رقم غير صالح في التعبير الشرطي.");
+            return (PpExprToken){.type = PP_EXPR_TOKEN_ERROR};
         }
         size_t num_len = endptr - tz->start;
         tz->current = endptr; // Advance tokenizer past the number
@@ -289,7 +309,11 @@ static PpExprToken get_next_pp_expr_token(PpExprTokenizer *tz)
     }
 
     // Unknown character
-    return make_error_token(tz, L"رمز غير متوقع في التعبير الشرطي.");
+    PpSourceLocation error_loc = get_current_original_location(tz->pp_state);
+    error_loc.column = tz->expr_string_column_offset + tz->current_token_start_column - 1;
+    PP_REPORT_ERROR(tz->pp_state, &error_loc, PP_ERROR_UNEXPECTED_TOKEN, "expression",
+                   L"رمز غير متوقع في التعبير الشرطي.");
+    return (PpExprToken){.type = PP_EXPR_TOKEN_ERROR};
 }
 
 // --- Actual Expression Evaluation Function ---
@@ -315,7 +339,9 @@ static wchar_t *fully_expand_expression_string(BaaPreprocessor *pp_state,
         PpSourceLocation error_loc = get_current_original_location(pp_state);
         error_loc.line = original_line_number_for_errors;
         error_loc.column = 1;
-        *error_message = format_preprocessor_error_at_location(&error_loc, L"فشل تهيئة مخزن الإدخال لتوسيع تعبير #إذا.");
+        PP_REPORT_FATAL(pp_state, &error_loc, PP_ERROR_ALLOCATION_FAILED, "expression",
+                       L"فشل تهيئة مخزن الإدخال لتوسيع تعبير #إذا.");
+        *error_message = baa_strdup(L"فشل تهيئة مخزن الإدخال لتوسيع تعبير #إذا.");
         return NULL;
     }
     if (!append_to_dynamic_buffer(&current_input_buffer, expression_str))
@@ -323,7 +349,9 @@ static wchar_t *fully_expand_expression_string(BaaPreprocessor *pp_state,
         PpSourceLocation error_loc = get_current_original_location(pp_state);
         error_loc.line = original_line_number_for_errors;
         error_loc.column = 1;
-        *error_message = format_preprocessor_error_at_location(&error_loc, L"فشل نسخ التعبير إلى مخزن الإدخال لتوسيع تعبير #إذا.");
+        PP_REPORT_FATAL(pp_state, &error_loc, PP_ERROR_ALLOCATION_FAILED, "expression",
+                       L"فشل نسخ التعبير إلى مخزن الإدخال لتوسيع تعبير #إذا.");
+        *error_message = baa_strdup(L"فشل نسخ التعبير إلى مخزن الإدخال لتوسيع تعبير #إذا.");
         free_dynamic_buffer(&current_input_buffer);
         return NULL;
     }
@@ -339,7 +367,9 @@ static wchar_t *fully_expand_expression_string(BaaPreprocessor *pp_state,
             PpSourceLocation error_loc = get_current_original_location(pp_state);
             error_loc.line = original_line_number_for_errors;
             error_loc.column = 1;
-            *error_message = format_preprocessor_error_at_location(&error_loc, L"فشل تهيئة مخزن الإخراج لتوسيع تعبير #إذا.");
+            PP_REPORT_FATAL(pp_state, &error_loc, PP_ERROR_ALLOCATION_FAILED, "expression",
+                           L"فشل تهيئة مخزن الإخراج لتوسيع تعبير #إذا.");
+            *error_message = baa_strdup(L"فشل تهيئة مخزن الإخراج لتوسيع تعبير #إذا.");
             break;
         }
         expansion_made_this_pass = scan_and_expand_macros_for_expressions(
@@ -356,7 +386,9 @@ static wchar_t *fully_expand_expression_string(BaaPreprocessor *pp_state,
             PpSourceLocation error_loc = get_current_original_location(pp_state);
             error_loc.line = original_line_number_for_errors;
             error_loc.column = 1;
-            *error_message = format_preprocessor_error_at_location(&error_loc, L"فشل إعادة تهيئة مخزن الإدخال لتوسيع تعبير #إذا.");
+            PP_REPORT_FATAL(pp_state, &error_loc, PP_ERROR_ALLOCATION_FAILED, "expression",
+                           L"فشل إعادة تهيئة مخزن الإدخال لتوسيع تعبير #إذا.");
+            *error_message = baa_strdup(L"فشل إعادة تهيئة مخزن الإدخال لتوسيع تعبير #إذا.");
             free_dynamic_buffer(&current_output_buffer);
             break;
         }
@@ -368,7 +400,9 @@ static wchar_t *fully_expand_expression_string(BaaPreprocessor *pp_state,
                 PpSourceLocation error_loc = get_current_original_location(pp_state);
                 error_loc.line = original_line_number_for_errors;
                 error_loc.column = 1;
-                *error_message = format_preprocessor_error_at_location(&error_loc, L"فشل نسخ إلى مخزن الإدخال لتوسيع تعبير #إذا.");
+                PP_REPORT_FATAL(pp_state, &error_loc, PP_ERROR_ALLOCATION_FAILED, "expression",
+                               L"فشل نسخ إلى مخزن الإدخال لتوسيع تعبير #إذا.");
+                *error_message = baa_strdup(L"فشل نسخ إلى مخزن الإدخال لتوسيع تعبير #إذا.");
                 free_dynamic_buffer(&current_output_buffer);
                 break;
             }
@@ -382,7 +416,9 @@ static wchar_t *fully_expand_expression_string(BaaPreprocessor *pp_state,
             PpSourceLocation error_loc = get_current_original_location(pp_state);
             error_loc.line = original_line_number_for_errors;
             error_loc.column = 1;
-            *error_message = format_preprocessor_error_at_location(&error_loc, L"تم تجاوز الحد الأقصى لمرات إعادة فحص الماكرو لتعبير #إذا (%d).", MAX_RESCAN_PASSES);
+            PP_REPORT_ERROR(pp_state, &error_loc, PP_ERROR_EXPRESSION_TOO_COMPLEX, "expression",
+                           L"تم تجاوز الحد الأقصى لمرات إعادة فحص الماكرو لتعبير #إذا (%d).", MAX_RESCAN_PASSES);
+            *error_message = baa_strdup(L"تم تجاوز الحد الأقصى لمرات إعادة فحص الماكرو لتعبير #إذا.");
             overall_success = false;
             break;
         }
@@ -395,7 +431,9 @@ static wchar_t *fully_expand_expression_string(BaaPreprocessor *pp_state,
             PpSourceLocation error_loc = get_current_original_location(pp_state);
             error_loc.line = original_line_number_for_errors;
             error_loc.column = 1;
-            *error_message = format_preprocessor_error_at_location(&error_loc, L"فشل في تخصيص الذاكرة للسلسلة النهائية لتعبير #إذا.");
+            PP_REPORT_FATAL(pp_state, &error_loc, PP_ERROR_ALLOCATION_FAILED, "expression",
+                           L"فشل في تخصيص الذاكرة للسلسلة النهائية لتعبير #إذا.");
+            *error_message = baa_strdup(L"فشل في تخصيص الذاكرة للسلسلة النهائية لتعبير #إذا.");
         }
     }
     free_dynamic_buffer(&current_input_buffer);
@@ -448,7 +486,10 @@ bool evaluate_preprocessor_expression(BaaPreprocessor *pp_state, const wchar_t *
         {
             // When making this error, use directive_line_number and tz.current_token_start_column
             // (or an approximation of column within the expanded_expression_str)
-            make_error_token(&tz, L"رموز زائدة في نهاية التعبير الشرطي.");
+            PpSourceLocation error_loc = get_current_original_location(tz.pp_state);
+            error_loc.column = tz.expr_string_column_offset + tz.current_token_start_column - 1;
+            PP_REPORT_ERROR(tz.pp_state, &error_loc, PP_ERROR_UNEXPECTED_TOKEN, "expression",
+                           L"رموز زائدة في نهاية التعبير الشرطي.");
         }
         free(expanded_expression_str);
         return false;

@@ -114,7 +114,7 @@ bool scan_and_expand_macros_for_expressions(
                     free(identifier);
                     break;
                 }
-                
+
                 // Skip and copy whitespace after 'معرف'
                 while (iswspace(*scan_ptr))
                 {
@@ -126,13 +126,13 @@ bool scan_and_expand_macros_for_expressions(
                     scan_ptr++;
                     current_col_in_this_scan_pass++;
                 }
-                
+
                 if (!*overall_success)
                 {
                     free(identifier);
                     break;
                 }
-                
+
                 bool has_parens = false;
                 if (*scan_ptr == L'(')
                 {
@@ -145,7 +145,7 @@ bool scan_and_expand_macros_for_expressions(
                     }
                     scan_ptr++;
                     current_col_in_this_scan_pass++;
-                    
+
                     // Copy whitespace inside parentheses
                     while (iswspace(*scan_ptr))
                     {
@@ -157,14 +157,14 @@ bool scan_and_expand_macros_for_expressions(
                         scan_ptr++;
                         current_col_in_this_scan_pass++;
                     }
-                    
+
                     if (!*overall_success)
                     {
                         free(identifier);
                         break;
                     }
                 }
-                
+
                 // Copy the identifier argument without expansion
                 const wchar_t *arg_start = scan_ptr;
                 if (iswalpha(*scan_ptr) || *scan_ptr == L'_')
@@ -183,7 +183,7 @@ bool scan_and_expand_macros_for_expressions(
                     }
                 }
                 // If not an identifier, let expression evaluator catch the error later
-                
+
                 if (has_parens)
                 {
                     // Copy whitespace before closing paren
@@ -197,13 +197,13 @@ bool scan_and_expand_macros_for_expressions(
                         scan_ptr++;
                         current_col_in_this_scan_pass++;
                     }
-                    
+
                     if (!*overall_success)
                     {
                         free(identifier);
                         break;
                     }
-                    
+
                     if (*scan_ptr == L')')
                     {
                         if (!append_dynamic_buffer_n(one_pass_buffer, scan_ptr, 1))
@@ -217,7 +217,7 @@ bool scan_and_expand_macros_for_expressions(
                     }
                     // If ')' missing, let expression evaluator handle the error
                 }
-                
+
                 // Don't set expansion_occurred_this_pass = true here
                 // because we didn't actually change anything - we just preserved it
                 free(identifier);
@@ -493,7 +493,7 @@ bool scan_and_substitute_macros_one_pass(
                     free(identifier);
                     break;
                 }
-                
+
                 // Skip and copy whitespace after 'معرف'
                 while (iswspace(*scan_ptr))
                 {
@@ -505,13 +505,13 @@ bool scan_and_substitute_macros_one_pass(
                     scan_ptr++;
                     current_col_in_this_scan_pass++;
                 }
-                
+
                 if (!*overall_success)
                 {
                     free(identifier);
                     break;
                 }
-                
+
                 bool has_parens = false;
                 if (*scan_ptr == L'(')
                 {
@@ -524,7 +524,7 @@ bool scan_and_substitute_macros_one_pass(
                     }
                     scan_ptr++;
                     current_col_in_this_scan_pass++;
-                    
+
                     // Copy whitespace inside parentheses
                     while (iswspace(*scan_ptr))
                     {
@@ -536,14 +536,14 @@ bool scan_and_substitute_macros_one_pass(
                         scan_ptr++;
                         current_col_in_this_scan_pass++;
                     }
-                    
+
                     if (!*overall_success)
                     {
                         free(identifier);
                         break;
                     }
                 }
-                
+
                 // Copy the identifier argument without expansion
                 const wchar_t *arg_start = scan_ptr;
                 if (iswalpha(*scan_ptr) || *scan_ptr == L'_')
@@ -562,7 +562,7 @@ bool scan_and_substitute_macros_one_pass(
                     }
                 }
                 // If not an identifier, let expression evaluator catch the error later
-                
+
                 if (has_parens)
                 {
                     // Copy whitespace before closing paren
@@ -576,13 +576,13 @@ bool scan_and_substitute_macros_one_pass(
                         scan_ptr++;
                         current_col_in_this_scan_pass++;
                     }
-                    
+
                     if (!*overall_success)
                     {
                         free(identifier);
                         break;
                     }
-                    
+
                     if (*scan_ptr == L')')
                     {
                         if (!append_dynamic_buffer_n(one_pass_buffer, scan_ptr, 1))
@@ -596,7 +596,7 @@ bool scan_and_substitute_macros_one_pass(
                     }
                     // If ')' missing, let expression evaluator handle the error
                 }
-                
+
                 // Don't set expansion_occurred_this_pass = true here
                 // because we didn't actually change anything - we just preserved it
                 free(identifier);

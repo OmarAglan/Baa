@@ -40,7 +40,7 @@ This roadmap outlines the planned improvements and current status of the Baa lan
   * [x] Support for bitwise operators (`&`, `|`, `^`, `~`, `<<`, `>>`) in conditional expressions. (v0.1.12.0)
   * [x] Support for decimal, hexadecimal (`0x`), and binary (`0b`) integer literals in conditional expressions. (v0.1.15.0)
   * [ ] **Ternary Operator Support (`? :`)**: Add support for conditional expressions using the ternary operator `condition ? true_value : false_value` in preprocessor conditional expressions.
-  * [ ] **Zero-Parameter Function-Like Macro Bug**: Fix issue where zero-parameter function-like macros (e.g., `GET_BASE()`) expand incorrectly to `()` instead of their macro body. Currently affects macro expansion in conditional expressions.
+  * [x] **Zero-Parameter Function-Like Macro Bug**: Fix issue where zero-parameter function-like macros (e.g., `GET_BASE()`) expand incorrectly to `()` instead of their macro body. Fixed in `parse_macro_arguments()` function by properly allocating empty arguments array for zero-parameter cases. (v0.1.26.0)
 * **Other Standard Directives:**
   * [x] `#خطأ "message"` (Baa: `#خطأ "رسالة الخطأ"`) - Implemented (v0.1.15.0)
   * [x] `#تحذير "message"` (Baa: `#تحذير "رسالة التحذير"`) - Implemented (v0.1.15.0)
@@ -61,12 +61,12 @@ This roadmap outlines the planned improvements and current status of the Baa lan
   * The `##` operator works in direct macro bodies.
   * Known Issue: Complex interactions when `##` appears as part of a macro expansion output that is then rescanned, or when its operands are themselves complex macros, may not be fully robust. This requires careful review of the rescan loop and how it forms new tokens after pasting.
 * [x] **Macro Redefinition Warnings/Errors**: Implemented comprehensive C99-compliant macro redefinition checking with intelligent comparison system. Issues warnings for incompatible redefinitions and errors for predefined macro redefinitions, with silent acceptance of identical redefinitions as per C99 standard. (v0.1.25.0)
-* [x] **Error Recovery Mechanisms (Full Implementation):** (Foundation laid in v0.1.17.0, Completed in v0.1.24.0)
-  * [x] **Completed:** Systematically updated all error reporting sites in directive parsing (`preprocessor_directives.c`) to use `add_preprocessor_diagnostic` and implement robust line-level synchronization.
-  * [x] **Completed:** Updated error reporting in macro expansion (`preprocessor_expansion.c`, `preprocessor_line_processing.c`) to use `add_preprocessor_diagnostic` and attempt to continue line processing.
-  * [x] **Completed:** Refined conditional expression error handling (`preprocessor_expr_eval.c`) to use `add_preprocessor_diagnostic` and ensure the conditional stack is safely managed.
-  * [x] **Completed:** Defined and implemented clear synchronization strategies including directive recovery, expression recovery, and conditional stack validation.
-  * [x] **Added:** Configurable error limits and smart recovery decision logic to prevent error flooding while maintaining comprehensive error reporting.
+* [ ] **Error Recovery Mechanisms:** ()
+  * [ ]  Systematically update all error reporting sites in directive parsing (`preprocessor_directives.c`) to use `add_preprocessor_diagnostic` and implement robust line-level synchronization.
+  * [ ] Update error reporting in macro expansion (`preprocessor_expansion.c`, `preprocessor_line_processing.c`) to use `add_preprocessor_diagnostic` and attempt to continue line processing.
+  * [ ] Refine conditional expression error handling (`preprocessor_expr_eval.c`) to use `add_preprocessor_diagnostic` and ensure the conditional stack is safely managed.
+  * [ ] Define and implemente clear synchronization strategies including directive recovery, expression recovery, and conditional stack validation.
+  * [ ] Add Configurable error limits and smart recovery decision logic to prevent error flooding while maintaining comprehensive error reporting.
 
 ## Known Issues / Areas for Refinement (from `CHANGELOG.md`)
 

@@ -4,6 +4,38 @@ All notable changes to the B (باء) compiler project will be documented in thi
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.26.0] - 2025-06-13 (Zero-Parameter Function-Like Macro Bug Fix)
+
+### Fixed
+
+- **Preprocessor: Zero-Parameter Function-Like Macro Expansion (Critical Fix):**
+  - Fixed critical bug where zero-parameter function-like macros (e.g., `GET_BASE()`) were expanding incorrectly to `()` instead of their macro body in conditional expressions and all other contexts.
+  - **Root Cause**: The `parse_macro_arguments()` function in `src/preprocessor/preprocessor_expansion.c` was returning `NULL` for zero-parameter macros instead of allocating an empty arguments array.
+  - **Fix**: Added proper allocation logic for empty arguments array when `named_param_count == 0` and `*actual_arg_count == 0`.
+  - **Impact**: Resolves macro expansion failures in conditional expressions like `#إذا IS_EQUAL(GET_BASE(), 42)` where `GET_BASE()` now correctly expands to its defined value instead of empty parentheses.
+  - This fix ensures C99-compliant behavior for zero-parameter function-like macros across all preprocessor contexts.
+
+### Enhanced
+
+- **Preprocessor: Macro Expansion Robustness:**
+  - Improved argument parsing logic to handle edge cases in function-like macro expansion.
+  - Enhanced memory management for macro argument arrays in zero-parameter scenarios.
+  - Maintained backward compatibility with existing macro definitions and expansions.
+
+### Technical Details
+
+- **Files Modified:**
+  - `src/preprocessor/preprocessor_expansion.c`: Fixed `parse_macro_arguments()` function to properly allocate empty arguments array for zero-parameter macros.
+- **Standards Compliance**: Brings zero-parameter function-like macro behavior into full C99 compliance.
+- **Testing**: Bug fix verified through comprehensive testing of zero-parameter macros in various contexts including conditional expressions.
+
+### Benefits
+
+- **Fixed Conditional Compilation**: Zero-parameter macros now work correctly in `#إذا` and `#وإلا_إذا` expressions.
+- **Improved Standards Compliance**: Aligns Baa preprocessor behavior with C99 standard for function-like macro expansion.
+- **Enhanced Reliability**: Eliminates unexpected empty parentheses expansion that could cause compilation errors.
+- **Developer Experience**: Developers can now reliably use zero-parameter function-like macros in all contexts without workarounds.
+
 ## [0.1.25.0] - 2025-06-04 (Macro Redefinition Warnings/Errors)
 
 ### Added

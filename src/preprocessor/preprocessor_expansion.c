@@ -411,6 +411,17 @@ wchar_t **parse_macro_arguments(BaaPreprocessor *pp_state, const wchar_t **invoc
       // This case should be covered by the empty VA_ARGS addition, unless something went wrong.
     }
 
+    // Fix for zero-parameter function-like macros: allocate empty array instead of returning NULL
+    if (named_param_count == 0 && *actual_arg_count == 0 && args == NULL) {
+        args = malloc(sizeof(wchar_t*) * 1); // Allocate minimal array
+        if (!args) {
+            PpSourceLocation error_loc = get_current_original_location(pp_state);
+            *error_message = format_preprocessor_error_at_location(&error_loc, L"فشل في تخصيص مصفوفة فارغة للماكرو بدون معاملات '%ls'.", macro->name);
+            goto parse_error;
+        }
+        // Note: No need to initialize array contents since actual_arg_count is 0
+    }
+
     *invocation_ptr_ref = ptr;
     return args;
 

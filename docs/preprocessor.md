@@ -113,7 +113,6 @@ if (processed_code) {
 
 ## Current Known Issues and Limitations
 
-* **Zero-Parameter Function-Like Macro Bug:** Zero-parameter function-like macros (e.g., `GET_BASE()`) may expand incorrectly to `()` instead of their macro body in conditional expressions. This affects expressions like `#إذا IS_EQUAL(GET_BASE(), 42)` where `GET_BASE()` should expand to its defined value.
 * **Ternary Operator Support (`? :`):** The expression evaluator does not yet support ternary conditional expressions using `condition ? true_value : false_value` syntax in `#إذا`/`#وإلا_إذا` expressions.
 * **Full Error Recovery:** While the foundation for accumulating multiple errors is in place, most error-handling sites in the preprocessor still need to be updated to fully utilize this by attempting synchronization and continuation instead of immediately halting.
 * **Token Pasting (`##`) during Rescanning (Complex Cases):** Complex interactions of `##` when it appears as part of a macro expansion output, or when its operands are complex macros, may not be fully robust.

@@ -29,6 +29,8 @@ wchar_t *baa_preprocess(const BaaPpSource *source, const char **include_paths, w
         if (error_message)
         {
             PpSourceLocation early_error_loc = {"(preprocessor_init)", 0, 0};
+            // Note: For early errors before preprocessor initialization, we still use legacy format
+            // since the unified error system may not be available yet
             *error_message = format_preprocessor_error_at_location(&early_error_loc, L"وسيطات غير صالحة تم تمريرها إلى المعالج المسبق (المصدر أو اسم المصدر أو مؤشر رسالة الخطأ هو NULL).");
         }
         return NULL;
@@ -38,6 +40,7 @@ wchar_t *baa_preprocess(const BaaPpSource *source, const char **include_paths, w
         if (error_message)
         {
             PpSourceLocation early_error_loc = {source->source_name, 0, 0};
+            // Note: For early errors before preprocessor initialization, we still use legacy format
             *error_message = format_preprocessor_error_at_location(&early_error_loc, L"وسيطات غير صالحة: نوع المصدر هو ملف ولكن مسار الملف هو NULL.");
         }
         return NULL;
@@ -47,6 +50,7 @@ wchar_t *baa_preprocess(const BaaPpSource *source, const char **include_paths, w
         if (error_message)
         {
             PpSourceLocation early_error_loc = {source->source_name, 0, 0};
+            // Note: For early errors before preprocessor initialization, we still use legacy format
             *error_message = format_preprocessor_error_at_location(&early_error_loc, L"وسيطات غير صالحة: نوع المصدر هو سلسلة ولكن مؤشر السلسلة هو NULL.");
         }
         return NULL;
@@ -98,7 +102,18 @@ wchar_t *baa_preprocess(const BaaPpSource *source, const char **include_paths, w
     // pp_state.diagnostics = NULL;         // Zero-initialized
     // pp_state.diagnostic_count = 0;       // Zero-initialized
     // pp_state.diagnostic_capacity = 0;    // Zero-initialized
-    // pp_state.had_error_this_pass = false; // Zero-initialized
+    // pp_state.had_error_this_pass = false; // Zero-initialized (now had_fatal_error)
+
+    // Initialize enhanced error system
+    if (!init_preprocessor_error_system(&pp_state)) {
+        if (error_message) {
+            PpSourceLocation early_error_loc = {source->source_name, 0, 0};
+            // Note: Error system init failed, so we must use legacy format
+            *error_message = format_preprocessor_error_at_location(&early_error_loc,
+                L"فشل في تهيئة نظام الأخطاء المحسن للمعالج المسبق.");
+        }
+        return NULL;
+    }
 
     // --- Push initial location (needed early for potential errors during macro init) ---
     PpSourceLocation initial_loc = {
@@ -138,8 +153,10 @@ wchar_t *baa_preprocess(const BaaPpSource *source, const char **include_paths, w
         // or call add_preprocessor_diagnostic and then process it.
         // Let's assume add_macro will use add_preprocessor_diagnostic internally if it can.
         // For now, if add_macro returns false, we set the main error message.
+        PP_REPORT_ERROR(&pp_state, &initial_loc, PP_ERROR_MACRO_EXPANSION_FAILED, "macro_definition",
+            L"فشل في تعريف الماكرو المدمج __التاريخ__.");
         if (error_message)
-            *error_message = format_preprocessor_error_at_location(&initial_loc, L"فشل في تعريف الماكرو المدمج __التاريخ__.");
+            *error_message = generate_error_summary(&pp_state);
 
         // Cleanup any partially initialized state if necessary before returning
         return NULL;
@@ -147,8 +164,10 @@ wchar_t *baa_preprocess(const BaaPpSource *source, const char **include_paths, w
     if (!add_macro(&pp_state, L"__الوقت__", time_str, false, false, 0, NULL))
     {
         // Error handling if add_macro fails
+        PP_REPORT_ERROR(&pp_state, &initial_loc, PP_ERROR_MACRO_EXPANSION_FAILED, "macro_definition",
+            L"فشل في تعريف الماكرو المدمج __الوقت__.");
         if (error_message)
-            *error_message = format_preprocessor_error_at_location(&initial_loc, L"فشل في تعريف الماكرو المدمج __الوقت__.");
+            *error_message = generate_error_summary(&pp_state);
         // Cleanup...
         return NULL;
     }
@@ -156,8 +175,10 @@ wchar_t *baa_preprocess(const BaaPpSource *source, const char **include_paths, w
     // The actual function name replacement would happen in later compiler stages.
     if (!add_macro(&pp_state, L"__الدالة__", L"\"__BAA_FUNCTION_PLACEHOLDER__\"", false, false, 0, NULL))
     {
+        PP_REPORT_ERROR(&pp_state, &initial_loc, PP_ERROR_MACRO_EXPANSION_FAILED, "macro_definition",
+            L"فشل في تعريف الماكرو المدمج __الدالة__.");
         if (error_message)
-            *error_message = format_preprocessor_error_at_location(&initial_loc, L"فشل في تعريف الماكرو المدمج __الدالة__.");
+            *error_message = generate_error_summary(&pp_state);
         // Cleanup other predefined macros if necessary
         free_macros(&pp_state); // Will free __التاريخ__ and __الوقت__ if they were added
         return NULL;
@@ -167,8 +188,10 @@ wchar_t *baa_preprocess(const BaaPpSource *source, const char **include_paths, w
     // This expands to an integer constant.
     if (!add_macro(&pp_state, L"__إصدار_المعيار_باء__", L"10150L", false, false, 0, NULL))
     {
+        PP_REPORT_ERROR(&pp_state, &initial_loc, PP_ERROR_MACRO_EXPANSION_FAILED, "macro_definition",
+            L"فشل في تعريف الماكرو المدمج __إصدار_المعيار_باء__.");
         if (error_message)
-            *error_message = format_preprocessor_error_at_location(&initial_loc, L"فشل في تعريف الماكرو المدمج __إصدار_المعيار_باء__.");
+            *error_message = generate_error_summary(&pp_state);
         // Cleanup other predefined macros
         free_macros(&pp_state); // Will free previous ones
         return NULL;
@@ -189,9 +212,11 @@ wchar_t *baa_preprocess(const BaaPpSource *source, const char **include_paths, w
         if (!push_location(&pp_state, &file_start_loc))
         {
             // This is a critical setup error, probably still use direct error_message
+            PP_REPORT_FATAL(&pp_state, &file_start_loc, PP_ERROR_OUT_OF_MEMORY, "system",
+                L"فشل في دفع الموقع الأولي للملف (نفاد الذاكرة؟).");
             if (error_message)
             {
-                *error_message = format_preprocessor_error_at_location(&file_start_loc, L"فشل في دفع الموقع الأولي للملف (نفاد الذاكرة؟).");
+                *error_message = generate_error_summary(&pp_state);
             }
             // Cleanup initialized state before returning`
             free_macros(&pp_state);
@@ -214,9 +239,11 @@ wchar_t *baa_preprocess(const BaaPpSource *source, const char **include_paths, w
             .column = 1};
         if (!push_location(&pp_state, &string_start_loc))
         {
+            PP_REPORT_FATAL(&pp_state, &string_start_loc, PP_ERROR_OUT_OF_MEMORY, "system",
+                L"فشل في دفع الموقع الأولي للسلسلة (نفاد الذاكرة؟).");
             if (error_message)
             {
-                *error_message = format_preprocessor_error_at_location(&string_start_loc, L"فشل في دفع الموقع الأولي للسلسلة (نفاد الذاكرة؟).");
+                *error_message = generate_error_summary(&pp_state);
             }
             free_macros(&pp_state);
             return NULL;
@@ -246,7 +273,7 @@ wchar_t *baa_preprocess(const BaaPpSource *source, const char **include_paths, w
 
     // Check for unterminated conditional block after processing is complete
     // This check needs to happen *after* cleanup of stacks but *before* returning potentially bad output
-    if (pp_state.conditional_stack_count > 0 && !pp_state.had_error_this_pass) // Only if no other error already reported
+    if (pp_state.conditional_stack_count > 0 && !pp_state.had_fatal_error) // Only if no fatal error already reported
     {
         // If an error already occurred, keep that primary error message
         // Otherwise, report the unterminated block error.
@@ -257,25 +284,15 @@ wchar_t *baa_preprocess(const BaaPpSource *source, const char **include_paths, w
     }
 
     // If errors occurred, populate the output error_message parameter
-    if (pp_state.had_error_this_pass && error_message)
+    if ((pp_state.had_fatal_error || pp_state.error_count > 0) && error_message)
     {
-        DynamicWcharBuffer combined_errors_buffer;
-        init_dynamic_buffer(&combined_errors_buffer, 256 * pp_state.diagnostic_count);
-        for (size_t i = 0; i < pp_state.diagnostic_count; ++i)
-        {
-            append_to_dynamic_buffer(&combined_errors_buffer, pp_state.diagnostics[i].message);
-            if (i < pp_state.diagnostic_count - 1)
-            {
-                append_to_dynamic_buffer(&combined_errors_buffer, L"\n");
-            }
-        }
-        *error_message = combined_errors_buffer.buffer; // Transfer ownership
+        *error_message = generate_error_summary(&pp_state); // Use enhanced error summary
         if (final_output)
             free(final_output); // Free potentially partial output if errors
 
         final_output = NULL;
     }
-    free_diagnostics_list(&pp_state); // Clean up the internal diagnostics list
+    cleanup_preprocessor_error_system(&pp_state); // Clean up the enhanced error system
     free_location_stack(&pp_state);   // Now free the location stack
 
     return final_output; // Return processed source (NULL if errors and we chose to nullify)

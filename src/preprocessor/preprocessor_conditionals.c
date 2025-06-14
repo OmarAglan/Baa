@@ -26,7 +26,16 @@ bool push_conditional(BaaPreprocessor *pp_state, bool condition_met)
         size_t new_capacity = (pp_state->conditional_stack_capacity == 0) ? 4 : pp_state->conditional_stack_capacity * 2;
         bool *new_main_stack = realloc(pp_state->conditional_stack, new_capacity * sizeof(bool));
         if (!new_main_stack)
+        {
+            PpSourceLocation error_loc = {
+                .file_path = pp_state->current_file_path,
+                .line = pp_state->current_line_number,
+                .column = pp_state->current_column_number
+            };
+            PP_REPORT_FATAL(pp_state, &error_loc, PP_ERROR_OUT_OF_MEMORY, "memory",
+                           L"فشل في تخصيص الذاكرة لمكدس الشروط الرئيسي.");
             return false;
+        }
         pp_state->conditional_stack = new_main_stack;
         pp_state->conditional_stack_capacity = new_capacity;
     }
@@ -36,7 +45,16 @@ bool push_conditional(BaaPreprocessor *pp_state, bool condition_met)
         size_t new_capacity = (pp_state->conditional_branch_taken_stack_capacity == 0) ? 4 : pp_state->conditional_branch_taken_stack_capacity * 2;
         bool *new_branch_stack = realloc(pp_state->conditional_branch_taken_stack, new_capacity * sizeof(bool));
         if (!new_branch_stack)
+        {
+            PpSourceLocation error_loc = {
+                .file_path = pp_state->current_file_path,
+                .line = pp_state->current_line_number,
+                .column = pp_state->current_column_number
+            };
+            PP_REPORT_FATAL(pp_state, &error_loc, PP_ERROR_OUT_OF_MEMORY, "memory",
+                           L"فشل في تخصيص الذاكرة لمكدس الفروع الشرطية.");
             return false; // Should ideally handle potential mismatch if one realloc fails
+        }
         pp_state->conditional_branch_taken_stack = new_branch_stack;
         pp_state->conditional_branch_taken_stack_capacity = new_capacity;
     }
@@ -58,13 +76,26 @@ bool pop_conditional(BaaPreprocessor *pp_state)
 {
     if (pp_state->conditional_stack_count == 0)
     {
+        PpSourceLocation error_loc = {
+            .file_path = pp_state->current_file_path,
+            .line = pp_state->current_line_number,
+            .column = pp_state->current_column_number
+        };
+        PP_REPORT_ERROR(pp_state, &error_loc, PP_ERROR_UNTERMINATED_CONDITION, "directive",
+                       L"محاولة إغلاق كتلة شرطية بدون كتلة مفتوحة (تجاوز سفلي في المكدس).");
         return false; // Stack underflow
     }
     // Ensure counts match before decrementing (should always be true if logic is correct)
     if (pp_state->conditional_branch_taken_stack_count != pp_state->conditional_stack_count)
     {
-        // Internal error state, maybe log or handle?
-        // For now, just signal failure.
+        PpSourceLocation error_loc = {
+            .file_path = pp_state->current_file_path,
+            .line = pp_state->current_line_number,
+            .column = pp_state->current_column_number
+        };
+        PP_REPORT_FATAL(pp_state, &error_loc, PP_ERROR_ALLOCATION_FAILED, "memory",
+                       L"حالة خطأ داخلية: عدم تطابق أعداد مكدسات الشروط (%zu != %zu).",
+                       pp_state->conditional_branch_taken_stack_count, pp_state->conditional_stack_count);
         return false;
     }
     pp_state->conditional_stack_count--;

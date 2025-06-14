@@ -57,7 +57,8 @@ bool stringify_argument(BaaPreprocessor *pp_state, DynamicWcharBuffer *output_bu
         PpSourceLocation error_loc = get_current_original_location(pp_state);
         PP_REPORT_FATAL(pp_state, &error_loc, PP_ERROR_OUT_OF_MEMORY, "macro",
                        L"فشل في تخصيص ذاكرة مؤقتة لتسلسل الوسيطة.");
-        *error_message = format_preprocessor_error_at_location(&error_loc, L"فشل في تخصيص ذاكرة مؤقتة لتسلسل الوسيطة.");
+        PP_REPORT_FATAL(pp_state, &error_loc, PP_ERROR_ALLOCATION_FAILED, "memory", L"فشل في تخصيص ذاكرة مؤقتة لتسلسل الوسيطة.");
+        if (error_message) *error_message = generate_error_summary(pp_state);
         return false;
     }
 
@@ -99,7 +100,8 @@ bool stringify_argument(BaaPreprocessor *pp_state, DynamicWcharBuffer *output_bu
             PpSourceLocation error_loc = get_current_original_location(pp_state);
             PP_REPORT_ERROR(pp_state, &error_loc, PP_ERROR_STRINGIFICATION_ERROR, "macro",
                            L"فشل في إلحاق الوسيطة المتسلسلة للمخرج.");
-            *error_message = format_preprocessor_error_at_location(&error_loc, L"فشل في إلحاق الوسيطة المتسلسلة للمخرج.");
+            PP_REPORT_FATAL(pp_state, &error_loc, PP_ERROR_BUFFER_OVERFLOW, "memory", L"فشل في إلحاق الوسيطة المتسلسلة للمخرج.");
+            if (error_message) *error_message = generate_error_summary(pp_state);
             success = false;
         }
     }
@@ -185,7 +187,8 @@ wchar_t **parse_macro_arguments(BaaPreprocessor *pp_state, const wchar_t **invoc
                     {
                         PP_REPORT_ERROR(pp_state, &comma_loc, PP_ERROR_MACRO_ARG_MISMATCH, "macro",
                                        L"تنسيق استدعاء الماكرو غير صالح: متوقع ',' أو ')' بين الوسيطات.");
-                        *error_message = format_preprocessor_error_at_location(&comma_loc, L"تنسيق استدعاء الماكرو غير صالح: متوقع ',' أو ')' بين الوسيطات.");
+                        PP_REPORT_ERROR(pp_state, &comma_loc, PP_ERROR_INVALID_MACRO_PARAM, "macro", L"تنسيق استدعاء الماكرو غير صالح: متوقع ',' أو ')' بين الوسيطات.");
+                        if (error_message) *error_message = generate_error_summary(pp_state);
                         goto parse_error;
                     }
                 }
@@ -285,7 +288,8 @@ wchar_t **parse_macro_arguments(BaaPreprocessor *pp_state, const wchar_t **invoc
             // Error occurred scanning this argument, use arg_start_loc
             PP_REPORT_ERROR(pp_state, &arg_start_loc, PP_ERROR_UNBALANCED_PARENTHESES, "macro",
                            L"أقواس غير متطابقة في وسيطات الماكرو.");
-            *error_message = format_preprocessor_error_at_location(&arg_start_loc, L"أقواس غير متطابقة في وسيطات الماكرو.");
+            PP_REPORT_ERROR(pp_state, &arg_start_loc, PP_ERROR_UNBALANCED_PARENTHESES, "macro", L"أقواس غير متطابقة في وسيطات الماكرو.");
+            if (error_message) *error_message = generate_error_summary(pp_state);
             goto parse_error;
         }
         if (in_string || in_char)
@@ -293,7 +297,8 @@ wchar_t **parse_macro_arguments(BaaPreprocessor *pp_state, const wchar_t **invoc
             // Error occurred scanning this argument, use arg_start_loc
             PP_REPORT_ERROR(pp_state, &arg_start_loc, PP_ERROR_UNTERMINATED_STRING, "macro",
                            L"علامة اقتباس غير منتهية في وسيطات الماكرو.");
-            *error_message = format_preprocessor_error_at_location(&arg_start_loc, L"علامة اقتباس غير منتهية في وسيطات الماكرو.");
+            PP_REPORT_ERROR(pp_state, &arg_start_loc, PP_ERROR_UNTERMINATED_STRING, "macro", L"علامة اقتباس غير منتهية في وسيطات الماكرو.");
+            if (error_message) *error_message = generate_error_summary(pp_state);
             goto parse_error;
         }
 
@@ -331,7 +336,8 @@ wchar_t **parse_macro_arguments(BaaPreprocessor *pp_state, const wchar_t **invoc
             // Error allocating for this argument, use arg_start_loc
             PP_REPORT_FATAL(pp_state, &arg_start_loc, PP_ERROR_OUT_OF_MEMORY, "macro",
                            L"فشل في تخصيص ذاكرة لوسيطة الماكرو.");
-            *error_message = format_preprocessor_error_at_location(&arg_start_loc, L"فشل في تخصيص ذاكرة لوسيطة الماكرو.");
+            PP_REPORT_FATAL(pp_state, &arg_start_loc, PP_ERROR_ALLOCATION_FAILED, "memory", L"فشل في تخصيص ذاكرة لوسيطة الماكرو.");
+            if (error_message) *error_message = generate_error_summary(pp_state);
             goto parse_error;
         }
 
@@ -346,7 +352,8 @@ wchar_t **parse_macro_arguments(BaaPreprocessor *pp_state, const wchar_t **invoc
                 free(arg_str);
                 PP_REPORT_FATAL(pp_state, &arg_start_loc, PP_ERROR_OUT_OF_MEMORY, "macro",
                                L"فشل إعادة تخصيص وسيطات الماكرو.");
-                *error_message = format_preprocessor_error_at_location(&arg_start_loc, L"فشل إعادة تخصيص وسيطات الماكرو.");
+                PP_REPORT_FATAL(pp_state, &arg_start_loc, PP_ERROR_ALLOCATION_FAILED, "memory", L"فشل إعادة تخصيص وسيطات الماكرو.");
+                if (error_message) *error_message = generate_error_summary(pp_state);
                 goto parse_error;
             }
             args = new_args;
@@ -361,7 +368,8 @@ wchar_t **parse_macro_arguments(BaaPreprocessor *pp_state, const wchar_t **invoc
             PpSourceLocation call_loc = get_current_original_location(pp_state);
             PP_REPORT_ERROR(pp_state, &call_loc, PP_ERROR_MISSING_TOKEN, "macro",
                            L"قوس إغلاق ')' مفقود في استدعاء الماكرو.");
-            *error_message = format_preprocessor_error_at_location(&call_loc, L"قوس إغلاق ')' مفقود في استدعاء الماكرو.");
+            PP_REPORT_ERROR(pp_state, &call_loc, PP_ERROR_UNBALANCED_PARENTHESES, "macro", L"قوس إغلاق ')' مفقود في استدعاء الماكرو.");
+            if (error_message) *error_message = generate_error_summary(pp_state);
             goto parse_error;
         }
 
@@ -383,7 +391,8 @@ wchar_t **parse_macro_arguments(BaaPreprocessor *pp_state, const wchar_t **invoc
             error_loc.column += (ptr - (*invocation_ptr_ref)); // Adjust column to current scan point
             PP_REPORT_ERROR(pp_state, &error_loc, PP_ERROR_MISSING_TOKEN, "macro",
                            L"تنسيق استدعاء الماكرو غير صالح: قوس الإغلاق ')' مفقود بعد الوسيطات.");
-            *error_message = format_preprocessor_error_at_location(&error_loc, L"تنسيق استدعاء الماكرو غير صالح: قوس الإغلاق ')' مفقود بعد الوسيطات.");
+            PP_REPORT_ERROR(pp_state, &error_loc, PP_ERROR_UNBALANCED_PARENTHESES, "macro", L"تنسيق استدعاء الماكرو غير صالح: قوس الإغلاق ')' مفقود بعد الوسيطات.");
+            if (error_message) *error_message = generate_error_summary(pp_state);
             goto parse_error;
         }
     }
@@ -400,7 +409,8 @@ wchar_t **parse_macro_arguments(BaaPreprocessor *pp_state, const wchar_t **invoc
                 va_alloc_loc.column += (ptr - (*invocation_ptr_ref)); // Point to where VA_ARGS should start
                 PP_REPORT_FATAL(pp_state, &va_alloc_loc, PP_ERROR_OUT_OF_MEMORY, "macro",
                                L"فشل تخصيص __VA_ARGS__ فارغ.");
-                *error_message = format_preprocessor_error_at_location(&va_alloc_loc, L"فشل تخصيص __VA_ARGS__ فارغ.");
+                PP_REPORT_FATAL(pp_state, &va_alloc_loc, PP_ERROR_ALLOCATION_FAILED, "memory", L"فشل تخصيص __VA_ARGS__ فارغ.");
+                if (error_message) *error_message = generate_error_summary(pp_state);
                 goto parse_error;
             }
             args = new_args;
@@ -413,7 +423,8 @@ wchar_t **parse_macro_arguments(BaaPreprocessor *pp_state, const wchar_t **invoc
             va_dup_loc.column += (ptr - (*invocation_ptr_ref));
             PP_REPORT_FATAL(pp_state, &va_dup_loc, PP_ERROR_OUT_OF_MEMORY, "macro",
                            L"فشل نسخ __VA_ARGS__ فارغ.");
-            *error_message = format_preprocessor_error_at_location(&va_dup_loc, L"فشل نسخ __VA_ARGS__ فارغ.");
+            PP_REPORT_FATAL(pp_state, &va_dup_loc, PP_ERROR_ALLOCATION_FAILED, "memory", L"فشل نسخ __VA_ARGS__ فارغ.");
+            if (error_message) *error_message = generate_error_summary(pp_state);
             goto parse_error;
         }
         (*actual_arg_count)++;
@@ -426,7 +437,8 @@ wchar_t **parse_macro_arguments(BaaPreprocessor *pp_state, const wchar_t **invoc
         // Point error to the location of the macro call itself
         PP_REPORT_ERROR(pp_state, &error_loc, PP_ERROR_MACRO_ARG_MISMATCH, "macro",
                        L"عدد وسيطات غير صحيح للماكرو '%ls' (متوقع %zu، تم الحصول على %zu).", macro->name, named_param_count, *actual_arg_count);
-        *error_message = format_preprocessor_error_at_location(&error_loc, L"عدد وسيطات غير صحيح للماكرو '%ls' (متوقع %zu، تم الحصول على %zu).", macro->name, named_param_count, *actual_arg_count);
+        PP_REPORT_ERROR(pp_state, &error_loc, PP_ERROR_MACRO_ARG_MISMATCH, "macro", L"عدد وسيطات غير صحيح للماكرو '%ls' (متوقع %zu، تم الحصول على %zu).", macro->name, named_param_count, *actual_arg_count);
+        if (error_message) *error_message = generate_error_summary(pp_state);
         goto parse_error;
     }
     // For variadic, minimum is named_param_count (VA_ARGS is empty), actual_arg_count becomes named_param_count + 1
@@ -442,7 +454,8 @@ wchar_t **parse_macro_arguments(BaaPreprocessor *pp_state, const wchar_t **invoc
             PpSourceLocation error_loc = get_current_original_location(pp_state);
             PP_REPORT_FATAL(pp_state, &error_loc, PP_ERROR_OUT_OF_MEMORY, "macro",
                            L"فشل في تخصيص مصفوفة فارغة للماكرو بدون معاملات '%ls'.", macro->name);
-            *error_message = format_preprocessor_error_at_location(&error_loc, L"فشل في تخصيص مصفوفة فارغة للماكرو بدون معاملات '%ls'.", macro->name);
+            PP_REPORT_FATAL(pp_state, &error_loc, PP_ERROR_ALLOCATION_FAILED, "memory", L"فشل في تخصيص مصفوفة فارغة للماكرو بدون معاملات '%ls'.", macro->name);
+            if (error_message) *error_message = generate_error_summary(pp_state);
             goto parse_error;
         }
         // Note: No need to initialize array contents since actual_arg_count is 0
@@ -477,7 +490,8 @@ bool substitute_macro_body(BaaPreprocessor *pp_state, DynamicWcharBuffer *output
         PpSourceLocation el = get_current_original_location(pp_state);
         PP_REPORT_FATAL(pp_state, &el, PP_ERROR_OUT_OF_MEMORY, "macro",
                        L"فشل تهيئة مخزن الرمز المعلق.");
-        *error_message = format_preprocessor_error_at_location(&el, L"فشل تهيئة مخزن الرمز المعلق.");
+        PP_REPORT_FATAL(pp_state, &el, PP_ERROR_ALLOCATION_FAILED, "memory", L"فشل تهيئة مخزن الرمز المعلق.");
+        if (error_message) *error_message = generate_error_summary(pp_state);
         return false;
     }
 
@@ -516,7 +530,8 @@ bool substitute_macro_body(BaaPreprocessor *pp_state, DynamicWcharBuffer *output
                 PpSourceLocation el = get_current_original_location(pp_state);
                 PP_REPORT_ERROR(pp_state, &el, PP_ERROR_INVALID_CONCATENATION, "macro",
                                L"## في موقع غير صالح بـ '%ls'.", macro->name);
-                *error_message = format_preprocessor_error_at_location(&el, L"## في موقع غير صالح بـ '%ls'.", macro->name);
+                PP_REPORT_ERROR(pp_state, &el, PP_ERROR_INVALID_CONCATENATION, "macro", L"## في موقع غير صالح بـ '%ls'.", macro->name);
+                if (error_message) *error_message = generate_error_summary(pp_state);
                 success = false;
                 break;
             }
@@ -546,7 +561,8 @@ bool substitute_macro_body(BaaPreprocessor *pp_state, DynamicWcharBuffer *output
                 PpSourceLocation el = get_current_original_location(pp_state);
                 PP_REPORT_ERROR(pp_state, &el, PP_ERROR_INVALID_CONCATENATION, "macro",
                                L"## يجب أن يتبعه معرف أو رقم أو __وسائط_متغيرة__ في '%ls'.", macro->name);
-                *error_message = format_preprocessor_error_at_location(&el, L"## يجب أن يتبعه معرف أو رقم أو __وسائط_متغيرة__ في '%ls'.", macro->name);
+                PP_REPORT_ERROR(pp_state, &el, PP_ERROR_INVALID_CONCATENATION, "macro", L"## يجب أن يتبعه معرف أو رقم أو __وسائط_متغيرة__ في '%ls'.", macro->name);
+                if (error_message) *error_message = generate_error_summary(pp_state);
                 success = false;
                 break;
             }
@@ -557,7 +573,8 @@ bool substitute_macro_body(BaaPreprocessor *pp_state, DynamicWcharBuffer *output
                 PpSourceLocation el = get_current_original_location(pp_state);
                 PP_REPORT_FATAL(pp_state, &el, PP_ERROR_OUT_OF_MEMORY, "macro",
                                L"فشل تخصيص RHS لـ ##.");
-                *error_message = format_preprocessor_error_at_location(&el, L"فشل تخصيص RHS لـ ##.");
+                PP_REPORT_FATAL(pp_state, &el, PP_ERROR_ALLOCATION_FAILED, "memory", L"فشل تخصيص RHS لـ ##.");
+                if (error_message) *error_message = generate_error_summary(pp_state);
                 success = false;
                 break;
             }
@@ -595,7 +612,8 @@ bool substitute_macro_body(BaaPreprocessor *pp_state, DynamicWcharBuffer *output
                 PpSourceLocation el = get_current_original_location(pp_state);
                 PP_REPORT_FATAL(pp_state, &el, PP_ERROR_OUT_OF_MEMORY, "macro",
                                L"فشل تخصيص قيمة RHS لـ ##.");
-                *error_message = format_preprocessor_error_at_location(&el, L"فشل تخصيص قيمة RHS لـ ##.");
+                PP_REPORT_FATAL(pp_state, &el, PP_ERROR_ALLOCATION_FAILED, "memory", L"فشل تخصيص قيمة RHS لـ ##.");
+                if (error_message) *error_message = generate_error_summary(pp_state);
                 success = false;
                 break;
             }
@@ -620,7 +638,8 @@ bool substitute_macro_body(BaaPreprocessor *pp_state, DynamicWcharBuffer *output
                 PpSourceLocation el = get_current_original_location(pp_state);
                 PP_REPORT_ERROR(pp_state, &el, PP_ERROR_INVALID_CONCATENATION, "macro",
                                L"فشل إلحاق قيمة RHS لـ ##.");
-                *error_message = format_preprocessor_error_at_location(&el, L"فشل إلحاق قيمة RHS لـ ##.");
+                PP_REPORT_FATAL(pp_state, &el, PP_ERROR_BUFFER_OVERFLOW, "memory", L"فشل إلحاق قيمة RHS لـ ##.");
+                if (error_message) *error_message = generate_error_summary(pp_state);
                 break;
             }
             pending_token_active = true;
@@ -675,7 +694,8 @@ bool substitute_macro_body(BaaPreprocessor *pp_state, DynamicWcharBuffer *output
                     PpSourceLocation el = get_current_original_location(pp_state);
                     PP_REPORT_FATAL(pp_state, &el, PP_ERROR_OUT_OF_MEMORY, "macro",
                                    L"فشل تخصيص معرف لـ #.");
-                    *error_message = format_preprocessor_error_at_location(&el, L"فشل تخصيص معرف لـ #.");
+                    PP_REPORT_FATAL(pp_state, &el, PP_ERROR_ALLOCATION_FAILED, "memory", L"فشل تخصيص معرف لـ #.");
+                    if (error_message) *error_message = generate_error_summary(pp_state);
                     success = false;
                     break;
                 }
@@ -726,7 +746,8 @@ bool substitute_macro_body(BaaPreprocessor *pp_state, DynamicWcharBuffer *output
                 PpSourceLocation el = get_current_original_location(pp_state);
                 PP_REPORT_FATAL(pp_state, &el, PP_ERROR_OUT_OF_MEMORY, "macro",
                                L"فشل تخصيص معرف بنص ماكرو '%ls'.", macro->name);
-                *error_message = format_preprocessor_error_at_location(&el, L"فشل تخصيص معرف بنص ماكرو '%ls'.", macro->name);
+                PP_REPORT_FATAL(pp_state, &el, PP_ERROR_ALLOCATION_FAILED, "memory", L"فشل تخصيص معرف بنص ماكرو '%ls'.", macro->name);
+                if (error_message) *error_message = generate_error_summary(pp_state);
                 success = false;
                 break;
             }
@@ -789,7 +810,8 @@ bool substitute_macro_body(BaaPreprocessor *pp_state, DynamicWcharBuffer *output
                 PpSourceLocation el = get_current_original_location(pp_state);
                 PP_REPORT_ERROR(pp_state, &el, PP_ERROR_MACRO_EXPANSION_FAILED, "macro",
                                L"فشل إلحاق الرمز المعلق الأخير في '%ls'.", macro->name);
-                *error_message = format_preprocessor_error_at_location(&el, L"فشل إلحاق الرمز المعلق الأخير في '%ls'.", macro->name);
+                PP_REPORT_FATAL(pp_state, &el, PP_ERROR_BUFFER_OVERFLOW, "memory", L"فشل إلحاق الرمز المعلق الأخير في '%ls'.", macro->name);
+                if (error_message) *error_message = generate_error_summary(pp_state);
             }
         }
     }

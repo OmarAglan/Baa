@@ -23,11 +23,12 @@ static PpExprToken make_error_token(PpExprTokenizer *tz, const wchar_t *message)
             // A more robust solution might involve changing make_error_token to accept varargs.
             wchar_t final_message[512];                                                        // Assuming a max length for simplicity
             swprintf(final_message, sizeof(final_message) / sizeof(wchar_t), L"%ls", message); // Basic formatting
-            *tz->error_message = format_preprocessor_error_at_location(&error_loc, final_message);
+            PP_REPORT_ERROR(tz->pp_state, &error_loc, PP_ERROR_EXPRESSION_TOO_COMPLEX, "expression", final_message);
+            if (tz->error_message) *tz->error_message = generate_error_summary(tz->pp_state);
         }
         else
         {
-            // Fallback if pp_state isn't available
+            // Fallback if pp_state isn't available - use legacy format for no-context errors
             PpSourceLocation generic_loc = {"(expr_eval_no_context)", 0, 0};
             *tz->error_message = format_preprocessor_error_at_location(&generic_loc, L"خطأ في مقيم التعبير (لا يوجد سياق): %ls", message);
         }

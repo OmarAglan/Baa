@@ -450,14 +450,16 @@ wchar_t *read_file_content(BaaPreprocessor *pp_state, const char *file_path, wch
         PpSourceLocation error_loc = get_current_original_location(pp_state);
         PP_REPORT_ERROR(pp_state, &error_loc, PP_ERROR_ENCODING_ERROR, "file",
             L"فشل في تحويل مسار الملف '%hs' إلى UTF-16", file_path);
-        *error_message = format_preprocessor_error_at_location(&error_loc, L"فشل في تحويل مسار الملف '%hs' إلى UTF-16.", file_path);
+        PP_REPORT_ERROR(pp_state, &error_loc, PP_ERROR_ENCODING_ERROR, "file", L"فشل في تحويل مسار الملف '%hs' إلى UTF-16.", file_path);
+        if (error_message) *error_message = generate_error_summary(pp_state);
         return NULL;
     }
     wchar_t *w_file_path = malloc(required_wchars * sizeof(wchar_t));
     if (!w_file_path)
     {
         PpSourceLocation error_loc = get_current_original_location(pp_state);
-        *error_message = format_preprocessor_error_at_location(&error_loc, L"فشل في تخصيص الذاكرة لمسار الملف (UTF-16) '%hs'.", file_path);
+        PP_REPORT_FATAL(pp_state, &error_loc, PP_ERROR_ALLOCATION_FAILED, "memory", L"فشل في تخصيص الذاكرة لمسار الملف (UTF-16) '%hs'.", file_path);
+        if (error_message) *error_message = generate_error_summary(pp_state);
         return NULL;
     }
     MultiByteToWideChar(CP_UTF8, 0, file_path, -1, w_file_path, required_wchars);
@@ -471,7 +473,8 @@ wchar_t *read_file_content(BaaPreprocessor *pp_state, const char *file_path, wch
     if (!file)
     {
         PpSourceLocation error_loc = get_current_original_location(pp_state);
-        *error_message = format_preprocessor_error_at_location(&error_loc, L"فشل في فتح الملف '%hs'.", file_path);
+        PP_REPORT_ERROR(pp_state, &error_loc, PP_ERROR_FILE_NOT_FOUND, "file", L"فشل في فتح الملف '%hs'.", file_path);
+        if (error_message) *error_message = generate_error_summary(pp_state);
         return NULL;
     }
 
@@ -513,7 +516,8 @@ wchar_t *read_file_content(BaaPreprocessor *pp_state, const char *file_path, wch
     if (content_size_bytes < 0)
     { // Should not happen, but check
         PpSourceLocation error_loc = get_current_original_location(pp_state);
-        *error_message = format_preprocessor_error_at_location(&error_loc, L"خطأ في حساب حجم الملف '%hs'.", file_path);
+        PP_REPORT_ERROR(pp_state, &error_loc, PP_ERROR_FILE_TOO_LARGE, "file", L"خطأ في حساب حجم الملف '%hs'.", file_path);
+        if (error_message) *error_message = generate_error_summary(pp_state);
         fclose(file);
         return NULL;
     }
@@ -524,7 +528,8 @@ wchar_t *read_file_content(BaaPreprocessor *pp_state, const char *file_path, wch
         if (!buffer_w)
         {
             PpSourceLocation error_loc = get_current_original_location(pp_state);
-            *error_message = format_preprocessor_error_at_location(&error_loc, L"فشل في تخصيص الذاكرة لملف فارغ '%hs'.", file_path);
+            PP_REPORT_FATAL(pp_state, &error_loc, PP_ERROR_ALLOCATION_FAILED, "memory", L"فشل في تخصيص الذاكرة لملف فارغ '%hs'.", file_path);
+            if (error_message) *error_message = generate_error_summary(pp_state);
             return NULL;
         }
         buffer_w[0] = L'\0';
@@ -538,7 +543,8 @@ wchar_t *read_file_content(BaaPreprocessor *pp_state, const char *file_path, wch
         if (content_size_bytes % sizeof(wchar_t) != 0)
         {
             PpSourceLocation error_loc = get_current_original_location(pp_state);
-            *error_message = format_preprocessor_error_at_location(&error_loc, L"حجم محتوى الملف '%hs' (UTF-16LE) ليس من مضاعفات حجم wchar_t.", file_path);
+            PP_REPORT_ERROR(pp_state, &error_loc, PP_ERROR_ENCODING_ERROR, "file", L"حجم محتوى الملف '%hs' (UTF-16LE) ليس من مضاعفات حجم wchar_t.", file_path);
+            if (error_message) *error_message = generate_error_summary(pp_state);
             fclose(file);
             return NULL;
         }
@@ -547,7 +553,8 @@ wchar_t *read_file_content(BaaPreprocessor *pp_state, const char *file_path, wch
         if (!buffer_w)
         {
             PpSourceLocation error_loc = get_current_original_location(pp_state);
-            *error_message = format_preprocessor_error_at_location(&error_loc, L"فشل في تخصيص الذاكرة لمحتوى الملف (UTF-16LE) '%hs'.", file_path);
+            PP_REPORT_FATAL(pp_state, &error_loc, PP_ERROR_ALLOCATION_FAILED, "memory", L"فشل في تخصيص الذاكرة لمحتوى الملف (UTF-16LE) '%hs'.", file_path);
+            if (error_message) *error_message = generate_error_summary(pp_state);
             fclose(file);
             return NULL;
         }
@@ -555,7 +562,8 @@ wchar_t *read_file_content(BaaPreprocessor *pp_state, const char *file_path, wch
         if (bytes_read != (size_t)content_size_bytes)
         {
             PpSourceLocation error_loc = get_current_original_location(pp_state);
-            *error_message = format_preprocessor_error_at_location(&error_loc, L"فشل في قراءة محتوى الملف (UTF-16LE) بالكامل من '%hs'.", file_path);
+            PP_REPORT_ERROR(pp_state, &error_loc, PP_ERROR_FILE_NOT_FOUND, "file", L"فشل في قراءة محتوى الملف (UTF-16LE) بالكامل من '%hs'.", file_path);
+            if (error_message) *error_message = generate_error_summary(pp_state);
             free(buffer_w);
             fclose(file);
             return NULL;
@@ -569,7 +577,8 @@ wchar_t *read_file_content(BaaPreprocessor *pp_state, const char *file_path, wch
         if (!buffer_mb)
         {
             PpSourceLocation error_loc = get_current_original_location(pp_state);
-            *error_message = format_preprocessor_error_at_location(&error_loc, L"فشل في تخصيص الذاكرة لمحتوى الملف (UTF-8) '%hs'.", file_path);
+            PP_REPORT_FATAL(pp_state, &error_loc, PP_ERROR_ALLOCATION_FAILED, "memory", L"فشل في تخصيص الذاكرة لمحتوى الملف (UTF-8) '%hs'.", file_path);
+            if (error_message) *error_message = generate_error_summary(pp_state);
             fclose(file);
             return NULL;
         }
@@ -577,7 +586,8 @@ wchar_t *read_file_content(BaaPreprocessor *pp_state, const char *file_path, wch
         if (bytes_read != (size_t)content_size_bytes)
         {
             PpSourceLocation error_loc = get_current_original_location(pp_state);
-            *error_message = format_preprocessor_error_at_location(&error_loc, L"فشل في قراءة محتوى الملف (UTF-8) بالكامل من '%hs'.", file_path);
+            PP_REPORT_ERROR(pp_state, &error_loc, PP_ERROR_FILE_NOT_FOUND, "file", L"فشل في قراءة محتوى الملف (UTF-8) بالكامل من '%hs'.", file_path);
+            if (error_message) *error_message = generate_error_summary(pp_state);
             free(buffer_mb);
             fclose(file);
             return NULL;
@@ -590,7 +600,8 @@ wchar_t *read_file_content(BaaPreprocessor *pp_state, const char *file_path, wch
         if (required_wchars <= 0)
         {
             PpSourceLocation error_loc = get_current_original_location(pp_state);
-            *error_message = format_preprocessor_error_at_location(&error_loc, L"فشل في حساب حجم التحويل من UTF-8 للملف '%hs'.", file_path);
+            PP_REPORT_ERROR(pp_state, &error_loc, PP_ERROR_ENCODING_ERROR, "file", L"فشل في حساب حجم التحويل من UTF-8 للملف '%hs'.", file_path);
+            if (error_message) *error_message = generate_error_summary(pp_state);
             free(buffer_mb);
             fclose(file);
             return NULL;
@@ -599,7 +610,8 @@ wchar_t *read_file_content(BaaPreprocessor *pp_state, const char *file_path, wch
         if (!buffer_w)
         {
             PpSourceLocation error_loc = get_current_original_location(pp_state);
-            *error_message = format_preprocessor_error_at_location(&error_loc, L"فشل في تخصيص الذاكرة للمخزن المؤقت wchar_t للملف '%hs'.", file_path);
+            PP_REPORT_FATAL(pp_state, &error_loc, PP_ERROR_ALLOCATION_FAILED, "memory", L"فشل في تخصيص الذاكرة للمخزن المؤقت wchar_t للملف '%hs'.", file_path);
+            if (error_message) *error_message = generate_error_summary(pp_state);
             free(buffer_mb);
             fclose(file);
             return NULL;
@@ -608,7 +620,8 @@ wchar_t *read_file_content(BaaPreprocessor *pp_state, const char *file_path, wch
         if (converted_wchars <= 0)
         {
             PpSourceLocation error_loc = get_current_original_location(pp_state);
-            *error_message = format_preprocessor_error_at_location(&error_loc, L"فشل في تحويل محتوى الملف '%hs' من UTF-8 إلى wchar_t.", file_path);
+            PP_REPORT_ERROR(pp_state, &error_loc, PP_ERROR_ENCODING_ERROR, "file", L"فشل في تحويل محتوى الملف '%hs' من UTF-8 إلى wchar_t.", file_path);
+            if (error_message) *error_message = generate_error_summary(pp_state);
             free(buffer_w);
             free(buffer_mb);
             fclose(file);
@@ -621,7 +634,8 @@ wchar_t *read_file_content(BaaPreprocessor *pp_state, const char *file_path, wch
         if (required_wchars_check == (size_t)-1)
         {
             PpSourceLocation error_loc = get_current_original_location(pp_state);
-            *error_message = format_preprocessor_error_at_location(&error_loc, L"تسلسل بايت UTF-8 غير صالح في الملف '%hs' أو فشل في تحديد حجم التحويل.", file_path);
+            PP_REPORT_ERROR(pp_state, &error_loc, PP_ERROR_ENCODING_ERROR, "file", L"تسلسل بايت UTF-8 غير صالح في الملف '%hs' أو فشل في تحديد حجم التحويل.", file_path);
+            if (error_message) *error_message = generate_error_summary(pp_state);
             free(buffer_mb);
             fclose(file);
             return NULL;
@@ -631,7 +645,8 @@ wchar_t *read_file_content(BaaPreprocessor *pp_state, const char *file_path, wch
         if (!buffer_w)
         {
             PpSourceLocation error_loc = get_current_original_location(pp_state);
-            *error_message = format_preprocessor_error_at_location(&error_loc, L"فشل في تخصيص الذاكرة للمخزن المؤقت wchar_t للملف '%hs'.", file_path);
+            PP_REPORT_FATAL(pp_state, &error_loc, PP_ERROR_ALLOCATION_FAILED, "memory", L"فشل في تخصيص الذاكرة للمخزن المؤقت wchar_t للملف '%hs'.", file_path);
+            if (error_message) *error_message = generate_error_summary(pp_state);
             free(buffer_mb);
             fclose(file);
             return NULL;
@@ -640,7 +655,8 @@ wchar_t *read_file_content(BaaPreprocessor *pp_state, const char *file_path, wch
         if (converted_wchars == (size_t)-1)
         {
             PpSourceLocation error_loc = get_current_original_location(pp_state);
-            *error_message = format_preprocessor_error_at_location(&error_loc, L"فشل في تحويل محتوى الملف '%hs' من UTF-8 إلى wchar_t (تسلسل غير صالح؟).", file_path);
+            PP_REPORT_ERROR(pp_state, &error_loc, PP_ERROR_ENCODING_ERROR, "file", L"فشل في تحويل محتوى الملف '%hs' من UTF-8 إلى wchar_t (تسلسل غير صالح؟).", file_path);
+            if (error_message) *error_message = generate_error_summary(pp_state);
             free(buffer_w);
             free(buffer_mb);
             fclose(file);
@@ -654,7 +670,8 @@ wchar_t *read_file_content(BaaPreprocessor *pp_state, const char *file_path, wch
     {
         // Should not happen due to logic above, but handle defensively
         PpSourceLocation error_loc = get_current_original_location(pp_state);
-        *error_message = format_preprocessor_error_at_location(&error_loc, L"خطأ داخلي: ترميز ملف غير معروف تم اكتشافه لـ '%hs'.", file_path);
+        PP_REPORT_ERROR(pp_state, &error_loc, PP_ERROR_ENCODING_ERROR, "file", L"خطأ داخلي: ترميز ملف غير معروف تم اكتشافه لـ '%hs'.", file_path);
+        if (error_message) *error_message = generate_error_summary(pp_state);
         fclose(file);
         return NULL;
     }
@@ -809,6 +826,7 @@ void add_preprocessor_diagnostic(BaaPreprocessor *pp_state, const PpSourceLocati
     {
         // Error in formatting, use a fallback message
         // This diagnostic itself won't have a super precise location for the formatting error.
+        // For internal formatting errors, we still use the legacy format to avoid recursion
         wchar_t *fallback_msg = format_preprocessor_error_at_location(loc, L"فشل داخلي: خطأ في تنسيق رسالة التشخيص الأصلية.");
         // Add this fallback message as a new diagnostic
         // This could lead to recursion if format_preprocessor_error_at_location also fails badly,
@@ -839,6 +857,7 @@ void add_preprocessor_diagnostic(BaaPreprocessor *pp_state, const PpSourceLocati
     vswprintf(formatted_message_body, message_len + 1, format, args_list); // Use original args_list
 
     // Prepend location information to the formatted_message_body
+    // For legacy diagnostic compatibility, we still use the old formatter
     wchar_t *full_diagnostic_message = is_error ? format_preprocessor_error_at_location(loc, L"%ls", formatted_message_body) : format_preprocessor_warning_at_location(loc, L"%ls", formatted_message_body);
 
     free(formatted_message_body); // Free the intermediate message body
@@ -972,9 +991,12 @@ void add_preprocessor_diagnostic_ex(
     wchar_t *full_message;
     switch (severity) {
         case PP_DIAG_FATAL:
+            // For internal error formatting, we still use the legacy format
             full_message = format_preprocessor_error_at_location(loc, L"خطأ فادح: %ls", formatted_message_body);
             break;
         case PP_DIAG_ERROR:
+            // For internal error formatting, we still use the legacy format
+            // For internal error formatting, we still use the legacy format
             full_message = format_preprocessor_error_at_location(loc, L"%ls", formatted_message_body);
             break;
         case PP_DIAG_WARNING:

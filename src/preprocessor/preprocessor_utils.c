@@ -1411,21 +1411,53 @@ wchar_t* generate_error_summary(const BaaPreprocessor *pp_state)
         return wcsdup(L"فشل في إنشاء ملخص الأخطاء");
     }
     
-    // Add summary header
+    // Add summary header with cleaner, less repetitive format
+    wchar_t temp_buffer[128];
+    bool needs_separator = false;
+    
+    // Start with the single prefix
+    if (!append_to_dynamic_buffer(&summary, L"تم العثور على ")) {
+        free_dynamic_buffer(&summary);
+        return wcsdup(L"فشل في تنسيق ملخص الأخطاء");
+    }
+    
     if (pp_state->fatal_count > 0) {
-        swprintf(summary.buffer + summary.length, summary.capacity - summary.length,
-                L"تم العثور على %zu خطأ فادح، ", pp_state->fatal_count);
-        summary.length = wcslen(summary.buffer);
+        swprintf(temp_buffer, sizeof(temp_buffer)/sizeof(wchar_t), L"%zu خطأ فادح", pp_state->fatal_count);
+        if (!append_to_dynamic_buffer(&summary, temp_buffer)) {
+            free_dynamic_buffer(&summary);
+            return wcsdup(L"فشل في تنسيق ملخص الأخطاء");
+        }
+        needs_separator = true;
     }
+    
     if (pp_state->error_count > 0) {
-        swprintf(summary.buffer + summary.length, summary.capacity - summary.length,
-                L"تم العثور على %zu خطأ، ", pp_state->error_count);
-        summary.length = wcslen(summary.buffer);
+        if (needs_separator) {
+            if (!append_to_dynamic_buffer(&summary, L"، ")) {
+                free_dynamic_buffer(&summary);
+                return wcsdup(L"فشل في تنسيق ملخص الأخطاء");
+            }
+        }
+        swprintf(temp_buffer, sizeof(temp_buffer)/sizeof(wchar_t), L"%zu خطأ", pp_state->error_count);
+        if (!append_to_dynamic_buffer(&summary, temp_buffer)) {
+            free_dynamic_buffer(&summary);
+            return wcsdup(L"فشل في تنسيق ملخص الأخطاء");
+        }
+        needs_separator = true;
     }
+    
     if (pp_state->warning_count > 0) {
-        swprintf(summary.buffer + summary.length, summary.capacity - summary.length,
-                L"تم العثور على %zu تحذير", pp_state->warning_count);
-        summary.length = wcslen(summary.buffer);
+        if (needs_separator) {
+            if (!append_to_dynamic_buffer(&summary, L"، ")) {
+                free_dynamic_buffer(&summary);
+                return wcsdup(L"فشل في تنسيق ملخص الأخطاء");
+            }
+        }
+        swprintf(temp_buffer, sizeof(temp_buffer)/sizeof(wchar_t), L"%zu تحذير", pp_state->warning_count);
+        if (!append_to_dynamic_buffer(&summary, temp_buffer)) {
+            free_dynamic_buffer(&summary);
+            return wcsdup(L"فشل في تنسيق ملخص الأخطاء");
+        }
+        needs_separator = true;
     }
     
     if (!append_to_dynamic_buffer(&summary, L":\n\n")) {

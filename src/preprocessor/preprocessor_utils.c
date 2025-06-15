@@ -1,6 +1,6 @@
 #include "preprocessor_internal.h"
-//#include <iconv.h>
-#include <errno.h> // For errno
+// #include <iconv.h>
+#include <errno.h>  // For errno
 #include <string.h> // For strlen
 
 // --- Location Stack ---
@@ -12,10 +12,11 @@ bool push_location(BaaPreprocessor *pp, const PpSourceLocation *location)
     {
         size_t new_capacity = (pp->location_stack_capacity == 0) ? 8 : pp->location_stack_capacity * 2;
         PpSourceLocation *new_stack = realloc(pp->location_stack, new_capacity * sizeof(PpSourceLocation));
-        if (!new_stack) {
+        if (!new_stack)
+        {
             PpSourceLocation error_loc = get_current_original_location(pp);
             PP_REPORT_FATAL(pp, &error_loc, PP_ERROR_OUT_OF_MEMORY, "memory",
-                L"فشل في إعادة تخصيص الذاكرة لمكدس المواقع");
+                            L"فشل في إعادة تخصيص الذاكرة لمكدس المواقع");
             return false;
         }
         pp->location_stack = new_stack;
@@ -42,7 +43,7 @@ PpSourceLocation get_current_original_location(const BaaPreprocessor *pp)
     if (pp->location_stack_count > 0)
     {
         PpSourceLocation stack_loc = pp->location_stack[pp->location_stack_count - 1];
-        
+
         // IMPROVEMENT: If the location stack only contains the initial location (line 1)
         // and we're currently processing a different line, use the current physical location
         // This fixes the line number reporting bug where all errors report line 1:1
@@ -56,7 +57,7 @@ PpSourceLocation get_current_original_location(const BaaPreprocessor *pp)
                 .line = pp->current_line_number,
                 .column = pp->current_column_number};
         }
-        
+
         return stack_loc;
     }
     else
@@ -449,9 +450,10 @@ wchar_t *read_file_content(BaaPreprocessor *pp_state, const char *file_path, wch
     {
         PpSourceLocation error_loc = get_current_original_location(pp_state);
         PP_REPORT_ERROR(pp_state, &error_loc, PP_ERROR_ENCODING_ERROR, "file",
-            L"فشل في تحويل مسار الملف '%hs' إلى UTF-16", file_path);
+                        L"فشل في تحويل مسار الملف '%hs' إلى UTF-16", file_path);
         PP_REPORT_ERROR(pp_state, &error_loc, PP_ERROR_ENCODING_ERROR, "file", L"فشل في تحويل مسار الملف '%hs' إلى UTF-16.", file_path);
-        if (error_message) *error_message = generate_error_summary(pp_state);
+        if (error_message)
+            *error_message = generate_error_summary(pp_state);
         return NULL;
     }
     wchar_t *w_file_path = malloc(required_wchars * sizeof(wchar_t));
@@ -459,7 +461,8 @@ wchar_t *read_file_content(BaaPreprocessor *pp_state, const char *file_path, wch
     {
         PpSourceLocation error_loc = get_current_original_location(pp_state);
         PP_REPORT_FATAL(pp_state, &error_loc, PP_ERROR_ALLOCATION_FAILED, "memory", L"فشل في تخصيص الذاكرة لمسار الملف (UTF-16) '%hs'.", file_path);
-        if (error_message) *error_message = generate_error_summary(pp_state);
+        if (error_message)
+            *error_message = generate_error_summary(pp_state);
         return NULL;
     }
     MultiByteToWideChar(CP_UTF8, 0, file_path, -1, w_file_path, required_wchars);
@@ -474,7 +477,8 @@ wchar_t *read_file_content(BaaPreprocessor *pp_state, const char *file_path, wch
     {
         PpSourceLocation error_loc = get_current_original_location(pp_state);
         PP_REPORT_ERROR(pp_state, &error_loc, PP_ERROR_FILE_NOT_FOUND, "file", L"فشل في فتح الملف '%hs'.", file_path);
-        if (error_message) *error_message = generate_error_summary(pp_state);
+        if (error_message)
+            *error_message = generate_error_summary(pp_state);
         return NULL;
     }
 
@@ -517,7 +521,8 @@ wchar_t *read_file_content(BaaPreprocessor *pp_state, const char *file_path, wch
     { // Should not happen, but check
         PpSourceLocation error_loc = get_current_original_location(pp_state);
         PP_REPORT_ERROR(pp_state, &error_loc, PP_ERROR_FILE_TOO_LARGE, "file", L"خطأ في حساب حجم الملف '%hs'.", file_path);
-        if (error_message) *error_message = generate_error_summary(pp_state);
+        if (error_message)
+            *error_message = generate_error_summary(pp_state);
         fclose(file);
         return NULL;
     }
@@ -529,7 +534,8 @@ wchar_t *read_file_content(BaaPreprocessor *pp_state, const char *file_path, wch
         {
             PpSourceLocation error_loc = get_current_original_location(pp_state);
             PP_REPORT_FATAL(pp_state, &error_loc, PP_ERROR_ALLOCATION_FAILED, "memory", L"فشل في تخصيص الذاكرة لملف فارغ '%hs'.", file_path);
-            if (error_message) *error_message = generate_error_summary(pp_state);
+            if (error_message)
+                *error_message = generate_error_summary(pp_state);
             return NULL;
         }
         buffer_w[0] = L'\0';
@@ -544,7 +550,8 @@ wchar_t *read_file_content(BaaPreprocessor *pp_state, const char *file_path, wch
         {
             PpSourceLocation error_loc = get_current_original_location(pp_state);
             PP_REPORT_ERROR(pp_state, &error_loc, PP_ERROR_ENCODING_ERROR, "file", L"حجم محتوى الملف '%hs' (UTF-16LE) ليس من مضاعفات حجم wchar_t.", file_path);
-            if (error_message) *error_message = generate_error_summary(pp_state);
+            if (error_message)
+                *error_message = generate_error_summary(pp_state);
             fclose(file);
             return NULL;
         }
@@ -554,7 +561,8 @@ wchar_t *read_file_content(BaaPreprocessor *pp_state, const char *file_path, wch
         {
             PpSourceLocation error_loc = get_current_original_location(pp_state);
             PP_REPORT_FATAL(pp_state, &error_loc, PP_ERROR_ALLOCATION_FAILED, "memory", L"فشل في تخصيص الذاكرة لمحتوى الملف (UTF-16LE) '%hs'.", file_path);
-            if (error_message) *error_message = generate_error_summary(pp_state);
+            if (error_message)
+                *error_message = generate_error_summary(pp_state);
             fclose(file);
             return NULL;
         }
@@ -563,7 +571,8 @@ wchar_t *read_file_content(BaaPreprocessor *pp_state, const char *file_path, wch
         {
             PpSourceLocation error_loc = get_current_original_location(pp_state);
             PP_REPORT_ERROR(pp_state, &error_loc, PP_ERROR_FILE_NOT_FOUND, "file", L"فشل في قراءة محتوى الملف (UTF-16LE) بالكامل من '%hs'.", file_path);
-            if (error_message) *error_message = generate_error_summary(pp_state);
+            if (error_message)
+                *error_message = generate_error_summary(pp_state);
             free(buffer_w);
             fclose(file);
             return NULL;
@@ -578,7 +587,8 @@ wchar_t *read_file_content(BaaPreprocessor *pp_state, const char *file_path, wch
         {
             PpSourceLocation error_loc = get_current_original_location(pp_state);
             PP_REPORT_FATAL(pp_state, &error_loc, PP_ERROR_ALLOCATION_FAILED, "memory", L"فشل في تخصيص الذاكرة لمحتوى الملف (UTF-8) '%hs'.", file_path);
-            if (error_message) *error_message = generate_error_summary(pp_state);
+            if (error_message)
+                *error_message = generate_error_summary(pp_state);
             fclose(file);
             return NULL;
         }
@@ -587,7 +597,8 @@ wchar_t *read_file_content(BaaPreprocessor *pp_state, const char *file_path, wch
         {
             PpSourceLocation error_loc = get_current_original_location(pp_state);
             PP_REPORT_ERROR(pp_state, &error_loc, PP_ERROR_FILE_NOT_FOUND, "file", L"فشل في قراءة محتوى الملف (UTF-8) بالكامل من '%hs'.", file_path);
-            if (error_message) *error_message = generate_error_summary(pp_state);
+            if (error_message)
+                *error_message = generate_error_summary(pp_state);
             free(buffer_mb);
             fclose(file);
             return NULL;
@@ -601,7 +612,8 @@ wchar_t *read_file_content(BaaPreprocessor *pp_state, const char *file_path, wch
         {
             PpSourceLocation error_loc = get_current_original_location(pp_state);
             PP_REPORT_ERROR(pp_state, &error_loc, PP_ERROR_ENCODING_ERROR, "file", L"فشل في حساب حجم التحويل من UTF-8 للملف '%hs'.", file_path);
-            if (error_message) *error_message = generate_error_summary(pp_state);
+            if (error_message)
+                *error_message = generate_error_summary(pp_state);
             free(buffer_mb);
             fclose(file);
             return NULL;
@@ -611,7 +623,8 @@ wchar_t *read_file_content(BaaPreprocessor *pp_state, const char *file_path, wch
         {
             PpSourceLocation error_loc = get_current_original_location(pp_state);
             PP_REPORT_FATAL(pp_state, &error_loc, PP_ERROR_ALLOCATION_FAILED, "memory", L"فشل في تخصيص الذاكرة للمخزن المؤقت wchar_t للملف '%hs'.", file_path);
-            if (error_message) *error_message = generate_error_summary(pp_state);
+            if (error_message)
+                *error_message = generate_error_summary(pp_state);
             free(buffer_mb);
             fclose(file);
             return NULL;
@@ -621,7 +634,8 @@ wchar_t *read_file_content(BaaPreprocessor *pp_state, const char *file_path, wch
         {
             PpSourceLocation error_loc = get_current_original_location(pp_state);
             PP_REPORT_ERROR(pp_state, &error_loc, PP_ERROR_ENCODING_ERROR, "file", L"فشل في تحويل محتوى الملف '%hs' من UTF-8 إلى wchar_t.", file_path);
-            if (error_message) *error_message = generate_error_summary(pp_state);
+            if (error_message)
+                *error_message = generate_error_summary(pp_state);
             free(buffer_w);
             free(buffer_mb);
             fclose(file);
@@ -635,7 +649,8 @@ wchar_t *read_file_content(BaaPreprocessor *pp_state, const char *file_path, wch
         {
             PpSourceLocation error_loc = get_current_original_location(pp_state);
             PP_REPORT_ERROR(pp_state, &error_loc, PP_ERROR_ENCODING_ERROR, "file", L"تسلسل بايت UTF-8 غير صالح في الملف '%hs' أو فشل في تحديد حجم التحويل.", file_path);
-            if (error_message) *error_message = generate_error_summary(pp_state);
+            if (error_message)
+                *error_message = generate_error_summary(pp_state);
             free(buffer_mb);
             fclose(file);
             return NULL;
@@ -646,7 +661,8 @@ wchar_t *read_file_content(BaaPreprocessor *pp_state, const char *file_path, wch
         {
             PpSourceLocation error_loc = get_current_original_location(pp_state);
             PP_REPORT_FATAL(pp_state, &error_loc, PP_ERROR_ALLOCATION_FAILED, "memory", L"فشل في تخصيص الذاكرة للمخزن المؤقت wchar_t للملف '%hs'.", file_path);
-            if (error_message) *error_message = generate_error_summary(pp_state);
+            if (error_message)
+                *error_message = generate_error_summary(pp_state);
             free(buffer_mb);
             fclose(file);
             return NULL;
@@ -656,7 +672,8 @@ wchar_t *read_file_content(BaaPreprocessor *pp_state, const char *file_path, wch
         {
             PpSourceLocation error_loc = get_current_original_location(pp_state);
             PP_REPORT_ERROR(pp_state, &error_loc, PP_ERROR_ENCODING_ERROR, "file", L"فشل في تحويل محتوى الملف '%hs' من UTF-8 إلى wchar_t (تسلسل غير صالح؟).", file_path);
-            if (error_message) *error_message = generate_error_summary(pp_state);
+            if (error_message)
+                *error_message = generate_error_summary(pp_state);
             free(buffer_w);
             free(buffer_mb);
             fclose(file);
@@ -671,7 +688,8 @@ wchar_t *read_file_content(BaaPreprocessor *pp_state, const char *file_path, wch
         // Should not happen due to logic above, but handle defensively
         PpSourceLocation error_loc = get_current_original_location(pp_state);
         PP_REPORT_ERROR(pp_state, &error_loc, PP_ERROR_ENCODING_ERROR, "file", L"خطأ داخلي: ترميز ملف غير معروف تم اكتشافه لـ '%hs'.", file_path);
-        if (error_message) *error_message = generate_error_summary(pp_state);
+        if (error_message)
+            *error_message = generate_error_summary(pp_state);
         fclose(file);
         return NULL;
     }
@@ -908,27 +926,28 @@ void free_diagnostics_list(BaaPreprocessor *pp_state)
 // Initialize the error system with default configuration
 bool init_preprocessor_error_system(BaaPreprocessor *pp_state)
 {
-    if (!pp_state) return false;
-    
+    if (!pp_state)
+        return false;
+
     // Initialize error limits with defaults
     pp_state->error_limits.max_errors = 100;
     pp_state->error_limits.max_warnings = 1000;
     pp_state->error_limits.max_notes = SIZE_MAX; // Unlimited
     pp_state->error_limits.stop_on_fatal = true;
-    pp_state->error_limits.cascading_limit = 10;
-    
+    pp_state->error_limits.cascading_limit = 50;
+
     // Initialize error counters
     pp_state->fatal_count = 0;
     pp_state->error_count = 0;
     pp_state->warning_count = 0;
     pp_state->note_count = 0;
     pp_state->had_fatal_error = false;
-    
+
     // Initialize diagnostic array
     pp_state->diagnostics = NULL;
     pp_state->diagnostic_count = 0;
     pp_state->diagnostic_capacity = 0;
-    
+
     // Initialize recovery state
     pp_state->recovery_state.consecutive_errors = 0;
     pp_state->recovery_state.errors_this_line = 0;
@@ -936,7 +955,7 @@ bool init_preprocessor_error_system(BaaPreprocessor *pp_state)
     pp_state->recovery_state.expression_errors = 0;
     pp_state->recovery_state.in_recovery_mode = false;
     pp_state->recovery_state.recovery_context = "initialization";
-    
+
     return true;
 }
 
@@ -951,83 +970,92 @@ void add_preprocessor_diagnostic_ex(
     const wchar_t *format,
     ...)
 {
-    if (!pp_state || !loc || !format) return;
-    
+    if (!pp_state || !loc || !format)
+        return;
+
     // Check if we should continue processing based on limits
-    if (!should_continue_processing(pp_state)) {
+    if (!should_continue_processing(pp_state))
+    {
         return;
     }
-    
+
     // Increment error count and check limits
-    if (!increment_error_count(pp_state, severity)) {
+    if (!increment_error_count(pp_state, severity))
+    {
         return; // Hit error limit
     }
-    
+
     // Format the diagnostic message
     va_list args;
     va_start(args, format);
-    
+
     va_list args_copy;
     va_copy(args_copy, args);
     int needed_chars = vswprintf(NULL, 0, format, args_copy);
     va_end(args_copy);
-    
-    if (needed_chars < 0) {
+
+    if (needed_chars < 0)
+    {
         va_end(args);
         return; // Formatting error
     }
-    
+
     size_t message_len = (size_t)needed_chars;
     wchar_t *formatted_message_body = malloc((message_len + 1) * sizeof(wchar_t));
-    if (!formatted_message_body) {
+    if (!formatted_message_body)
+    {
         va_end(args);
         return; // Out of memory
     }
-    
+
     vswprintf(formatted_message_body, message_len + 1, format, args);
     va_end(args);
-    
+
     // Format with location information based on severity
     wchar_t *full_message;
-    switch (severity) {
-        case PP_DIAG_FATAL:
-            // For internal error formatting, we still use the legacy format
-            full_message = format_preprocessor_error_at_location(loc, L"خطأ فادح: %ls", formatted_message_body);
-            break;
-        case PP_DIAG_ERROR:
-            // For internal error formatting, we still use the legacy format
-            // For internal error formatting, we still use the legacy format
-            full_message = format_preprocessor_error_at_location(loc, L"%ls", formatted_message_body);
-            break;
-        case PP_DIAG_WARNING:
-            full_message = format_preprocessor_warning_at_location(loc, L"%ls", formatted_message_body);
-            break;
-        case PP_DIAG_NOTE:
-            full_message = format_preprocessor_warning_at_location(loc, L"ملاحظة: %ls", formatted_message_body);
-            break;
-        default:
-            full_message = format_preprocessor_error_at_location(loc, L"%ls", formatted_message_body);
-            break;
+    switch (severity)
+    {
+    case PP_DIAG_FATAL:
+        // For internal error formatting, we still use the legacy format
+        full_message = format_preprocessor_error_at_location(loc, L"خطأ فادح: %ls", formatted_message_body);
+        break;
+    case PP_DIAG_ERROR:
+        // For internal error formatting, we still use the legacy format
+        // For internal error formatting, we still use the legacy format
+        full_message = format_preprocessor_error_at_location(loc, L"%ls", formatted_message_body);
+        break;
+    case PP_DIAG_WARNING:
+        full_message = format_preprocessor_warning_at_location(loc, L"%ls", formatted_message_body);
+        break;
+    case PP_DIAG_NOTE:
+        full_message = format_preprocessor_warning_at_location(loc, L"ملاحظة: %ls", formatted_message_body);
+        break;
+    default:
+        full_message = format_preprocessor_error_at_location(loc, L"%ls", formatted_message_body);
+        break;
     }
-    
+
     free(formatted_message_body);
-    
-    if (!full_message) {
+
+    if (!full_message)
+    {
         return; // Formatting error
     }
-    
+
     // Ensure diagnostic array has capacity
-    if (pp_state->diagnostic_count >= pp_state->diagnostic_capacity) {
+    if (pp_state->diagnostic_count >= pp_state->diagnostic_capacity)
+    {
         size_t new_capacity = (pp_state->diagnostic_capacity == 0) ? 8 : pp_state->diagnostic_capacity * 2;
         PreprocessorDiagnostic *new_diagnostics = realloc(pp_state->diagnostics, new_capacity * sizeof(PreprocessorDiagnostic));
-        if (!new_diagnostics) {
+        if (!new_diagnostics)
+        {
             free(full_message);
             return; // Out of memory
         }
         pp_state->diagnostics = new_diagnostics;
         pp_state->diagnostic_capacity = new_capacity;
     }
-    
+
     // Store the diagnostic
     PreprocessorDiagnostic *diag = &pp_state->diagnostics[pp_state->diagnostic_count];
     diag->message = full_message;
@@ -1036,14 +1064,15 @@ void add_preprocessor_diagnostic_ex(
     diag->error_code = error_code;
     diag->category = category;
     diag->suggestion = suggestion ? wcsdup(suggestion) : NULL;
-    
+
     pp_state->diagnostic_count++;
-    
+
     // Update counters and check limits
     increment_error_count(pp_state, severity);
-    
+
     // Set fatal flag if needed
-    if (severity == PP_DIAG_FATAL) {
+    if (severity == PP_DIAG_FATAL)
+    {
         pp_state->had_fatal_error = true;
     }
 }
@@ -1051,8 +1080,9 @@ void add_preprocessor_diagnostic_ex(
 // Check if processing should continue based on error limits
 bool should_continue_processing(const BaaPreprocessor *pp_state)
 {
-    if (!pp_state) return false;
-    
+    if (!pp_state)
+        return false;
+
     return !pp_state->had_fatal_error &&
            pp_state->error_count < pp_state->error_limits.max_errors &&
            pp_state->warning_count < pp_state->error_limits.max_warnings;
@@ -1061,22 +1091,24 @@ bool should_continue_processing(const BaaPreprocessor *pp_state)
 // Increment error count and check limits
 bool increment_error_count(BaaPreprocessor *pp_state, PpDiagnosticSeverity severity)
 {
-    if (!pp_state) return false;
-    
-    switch (severity) {
-        case PP_DIAG_FATAL:
-            pp_state->fatal_count++;
-            return !pp_state->error_limits.stop_on_fatal;
-        case PP_DIAG_ERROR:
-            pp_state->error_count++;
-            pp_state->recovery_state.consecutive_errors++;
-            return pp_state->error_count < pp_state->error_limits.max_errors;
-        case PP_DIAG_WARNING:
-            pp_state->warning_count++;
-            return pp_state->warning_count < pp_state->error_limits.max_warnings;
-        case PP_DIAG_NOTE:
-            pp_state->note_count++;
-            return true; // Notes don't stop processing
+    if (!pp_state)
+        return false;
+
+    switch (severity)
+    {
+    case PP_DIAG_FATAL:
+        pp_state->fatal_count++;
+        return !pp_state->error_limits.stop_on_fatal;
+    case PP_DIAG_ERROR:
+        pp_state->error_count++;
+        pp_state->recovery_state.consecutive_errors++;
+        return pp_state->error_count < pp_state->error_limits.max_errors;
+    case PP_DIAG_WARNING:
+        pp_state->warning_count++;
+        return pp_state->warning_count < pp_state->error_limits.max_warnings;
+    case PP_DIAG_NOTE:
+        pp_state->note_count++;
+        return true; // Notes don't stop processing
     }
     return true;
 }
@@ -1084,17 +1116,19 @@ bool increment_error_count(BaaPreprocessor *pp_state, PpDiagnosticSeverity sever
 // Check if specific error limit reached
 bool has_reached_error_limit(const BaaPreprocessor *pp_state, PpDiagnosticSeverity severity)
 {
-    if (!pp_state) return true;
-    
-    switch (severity) {
-        case PP_DIAG_FATAL:
-            return pp_state->fatal_count > 0 && pp_state->error_limits.stop_on_fatal;
-        case PP_DIAG_ERROR:
-            return pp_state->error_count >= pp_state->error_limits.max_errors;
-        case PP_DIAG_WARNING:
-            return pp_state->warning_count >= pp_state->error_limits.max_warnings;
-        case PP_DIAG_NOTE:
-            return pp_state->note_count >= pp_state->error_limits.max_notes;
+    if (!pp_state)
+        return true;
+
+    switch (severity)
+    {
+    case PP_DIAG_FATAL:
+        return pp_state->fatal_count > 0 && pp_state->error_limits.stop_on_fatal;
+    case PP_DIAG_ERROR:
+        return pp_state->error_count >= pp_state->error_limits.max_errors;
+    case PP_DIAG_WARNING:
+        return pp_state->warning_count >= pp_state->error_limits.max_warnings;
+    case PP_DIAG_NOTE:
+        return pp_state->note_count >= pp_state->error_limits.max_notes;
     }
     return false;
 }
@@ -1102,8 +1136,9 @@ bool has_reached_error_limit(const BaaPreprocessor *pp_state, PpDiagnosticSeveri
 // Reset recovery state for new context
 void reset_recovery_state(BaaPreprocessor *pp_state, const char *new_context)
 {
-    if (!pp_state) return;
-    
+    if (!pp_state)
+        return;
+
     pp_state->recovery_state.consecutive_errors = 0;
     pp_state->recovery_state.errors_this_line = 0;
     pp_state->recovery_state.in_recovery_mode = false;
@@ -1117,29 +1152,39 @@ PpRecoveryAction determine_recovery_action(
     const char *category,
     const PpSourceLocation *location)
 {
-    if (!pp_state || !category) return PP_RECOVERY_HALT;
-    
+    if (!pp_state || !category)
+        return PP_RECOVERY_HALT;
+
     // Check for fatal errors
-    if (severity == PP_DIAG_FATAL) {
+    if (severity == PP_DIAG_FATAL)
+    {
         return PP_RECOVERY_HALT;
     }
-    
+
     // Check cascading error limits
-    if (pp_state->recovery_state.consecutive_errors > pp_state->error_limits.cascading_limit) {
+    if (pp_state->recovery_state.consecutive_errors > pp_state->error_limits.cascading_limit)
+    {
         return PP_RECOVERY_HALT;
     }
-    
+
     // Category-specific recovery logic
-    if (strcmp(category, "directive") == 0) {
+    if (strcmp(category, "directive") == 0)
+    {
         return PP_RECOVERY_SKIP_DIRECTIVE;
-    } else if (strcmp(category, "expression") == 0) {
+    }
+    else if (strcmp(category, "expression") == 0)
+    {
         return PP_RECOVERY_CONTINUE; // Can usually continue expression evaluation
-    } else if (strcmp(category, "macro") == 0) {
+    }
+    else if (strcmp(category, "macro") == 0)
+    {
         return PP_RECOVERY_CONTINUE; // Skip expansion, continue parsing
-    } else if (strcmp(category, "file") == 0) {
+    }
+    else if (strcmp(category, "file") == 0)
+    {
         return PP_RECOVERY_SKIP_LINE; // Skip include, continue
     }
-    
+
     return PP_RECOVERY_CONTINUE;
 }
 
@@ -1149,75 +1194,84 @@ bool execute_recovery_action(
     PpRecoveryAction action,
     const wchar_t **current_position)
 {
-    if (!pp_state) return false;
-    
-    switch (action) {
-        case PP_RECOVERY_CONTINUE:
-            return true;
-            
-        case PP_RECOVERY_SKIP_LINE:
-            return sync_to_next_line(pp_state, current_position);
-            
-        case PP_RECOVERY_SKIP_DIRECTIVE:
-            return sync_to_next_directive(pp_state, current_position);
-            
-        case PP_RECOVERY_SYNC_CONDITIONAL:
-            return recover_conditional_stack(pp_state);
-            
-        case PP_RECOVERY_HALT:
-            return false;
+    if (!pp_state)
+        return false;
+
+    switch (action)
+    {
+    case PP_RECOVERY_CONTINUE:
+        return true;
+
+    case PP_RECOVERY_SKIP_LINE:
+        return sync_to_next_line(pp_state, current_position);
+
+    case PP_RECOVERY_SKIP_DIRECTIVE:
+        return sync_to_next_directive(pp_state, current_position);
+
+    case PP_RECOVERY_SYNC_CONDITIONAL:
+        return recover_conditional_stack(pp_state);
+
+    case PP_RECOVERY_HALT:
+        return false;
     }
-    
+
     return true;
 }
 
 // Directive-level synchronization - skip to next preprocessor directive
 bool sync_to_next_directive(BaaPreprocessor *pp_state, const wchar_t **line_ptr)
 {
-    if (!line_ptr || !*line_ptr || !pp_state) return false;
-    
+    if (!line_ptr || !*line_ptr || !pp_state)
+        return false;
+
     bool found_directive = false;
     size_t lines_searched = 0;
     const size_t max_search_lines = 100; // Prevent infinite loops
-    
+
     // Skip to end of current line
-    while (**line_ptr && **line_ptr != L'\n') {
+    while (**line_ptr && **line_ptr != L'\n')
+    {
         (*line_ptr)++;
     }
-    
+
     // Search for next preprocessor directive
-    while (**line_ptr && lines_searched < max_search_lines) {
+    while (**line_ptr && lines_searched < max_search_lines)
+    {
         // Skip the newline if present
-        if (**line_ptr == L'\n') {
+        if (**line_ptr == L'\n')
+        {
             (*line_ptr)++;
             pp_state->current_line_number++;
             pp_state->current_column_number = 1;
             lines_searched++;
         }
-        
+
         // Skip whitespace at beginning of line
-        while (**line_ptr && (**line_ptr == L' ' || **line_ptr == L'\t')) {
+        while (**line_ptr && (**line_ptr == L' ' || **line_ptr == L'\t'))
+        {
             (*line_ptr)++;
             pp_state->current_column_number++;
         }
-        
+
         // Check if this line starts with a preprocessor directive (#)
-        if (**line_ptr == L'#') {
+        if (**line_ptr == L'#')
+        {
             found_directive = true;
             break;
         }
-        
+
         // If not a directive, skip to end of line
-        while (**line_ptr && **line_ptr != L'\n') {
+        while (**line_ptr && **line_ptr != L'\n')
+        {
             (*line_ptr)++;
             pp_state->current_column_number++;
         }
     }
-    
+
     // Reset recovery state for new parsing context
     pp_state->recovery_state.errors_this_line = 0;
     pp_state->recovery_state.consecutive_errors = 0;
-    
+
     // If we couldn't find a directive within reasonable search, still count as successful
     // to prevent infinite loops - the caller can handle end-of-input
     return true;
@@ -1226,290 +1280,337 @@ bool sync_to_next_directive(BaaPreprocessor *pp_state, const wchar_t **line_ptr)
 // Line-level synchronization - skip to next line
 bool sync_to_next_line(BaaPreprocessor *pp_state, const wchar_t **line_ptr)
 {
-    if (!line_ptr || !*line_ptr || !pp_state) return false;
-    
+    if (!line_ptr || !*line_ptr || !pp_state)
+        return false;
+
     // Skip to end of current line
-    while (**line_ptr && **line_ptr != L'\n') {
+    while (**line_ptr && **line_ptr != L'\n')
+    {
         (*line_ptr)++;
         pp_state->current_column_number++;
     }
-    
+
     // Skip the newline if present
-    if (**line_ptr == L'\n') {
+    if (**line_ptr == L'\n')
+    {
         (*line_ptr)++;
         pp_state->current_line_number++;
         pp_state->current_column_number = 1;
     }
-    
+
     // Reset line-specific recovery state
     pp_state->recovery_state.errors_this_line = 0;
-    
+
     // If we've had too many consecutive errors, don't increment consecutive count
     // This prevents cascading failures from escalating recovery actions
-    if (pp_state->recovery_state.consecutive_errors > 5) {
+    if (pp_state->recovery_state.consecutive_errors > 5)
+    {
         pp_state->recovery_state.consecutive_errors = 5; // Cap it
     }
-    
+
     return true;
 }
 
 // Expression recovery - skip to next safe point in expression
 bool sync_expression_parsing(BaaPreprocessor *pp_state, const wchar_t **expr_ptr, wchar_t terminator)
 {
-    if (!expr_ptr || !*expr_ptr || !pp_state) return false;
-    
+    if (!expr_ptr || !*expr_ptr || !pp_state)
+        return false;
+
     // Skip to next safe parsing point with enhanced bracket/parentheses tracking
     int paren_depth = 0;
     int bracket_depth = 0;
     int brace_depth = 0;
     size_t chars_processed = 0;
     const size_t max_expression_length = 10000; // Prevent infinite loops
-    
-    while (**expr_ptr && **expr_ptr != terminator && chars_processed < max_expression_length) {
+
+    while (**expr_ptr && **expr_ptr != terminator && chars_processed < max_expression_length)
+    {
         wchar_t current = **expr_ptr;
-        
+
         // Track nesting depth for balanced recovery
-        switch (current) {
-            case L'(':
-                paren_depth++;
-                break;
-            case L')':
-                paren_depth--;
-                if (paren_depth < 0) {
-                    // Found unmatched closing paren - this might be our terminator
-                    return true;
-                }
-                break;
-            case L'[':
-                bracket_depth++;
-                break;
-            case L']':
-                bracket_depth--;
-                if (bracket_depth < 0) {
-                    // Found unmatched closing bracket
-                    return true;
-                }
-                break;
-            case L'{':
-                brace_depth++;
-                break;
-            case L'}':
-                brace_depth--;
-                if (brace_depth < 0) {
-                    // Found unmatched closing brace
-                    return true;
-                }
-                break;
-            case L',':
-                // Comma at top level might be a good recovery point
-                if (paren_depth == 0 && bracket_depth == 0 && brace_depth == 0) {
-                    return true;
-                }
-                break;
-            case L';':
-                // Semicolon is usually a statement separator - good recovery point
-                if (paren_depth == 0 && bracket_depth == 0 && brace_depth == 0) {
-                    return true;
-                }
-                break;
-            case L'\n':
-                // Newline might be a good recovery point
-                if (paren_depth == 0 && bracket_depth == 0 && brace_depth == 0) {
-                    return true;
-                }
-                break;
+        switch (current)
+        {
+        case L'(':
+            paren_depth++;
+            break;
+        case L')':
+            paren_depth--;
+            if (paren_depth < 0)
+            {
+                // Found unmatched closing paren - this might be our terminator
+                return true;
+            }
+            break;
+        case L'[':
+            bracket_depth++;
+            break;
+        case L']':
+            bracket_depth--;
+            if (bracket_depth < 0)
+            {
+                // Found unmatched closing bracket
+                return true;
+            }
+            break;
+        case L'{':
+            brace_depth++;
+            break;
+        case L'}':
+            brace_depth--;
+            if (brace_depth < 0)
+            {
+                // Found unmatched closing brace
+                return true;
+            }
+            break;
+        case L',':
+            // Comma at top level might be a good recovery point
+            if (paren_depth == 0 && bracket_depth == 0 && brace_depth == 0)
+            {
+                return true;
+            }
+            break;
+        case L';':
+            // Semicolon is usually a statement separator - good recovery point
+            if (paren_depth == 0 && bracket_depth == 0 && brace_depth == 0)
+            {
+                return true;
+            }
+            break;
+        case L'\n':
+            // Newline might be a good recovery point
+            if (paren_depth == 0 && bracket_depth == 0 && brace_depth == 0)
+            {
+                return true;
+            }
+            break;
         }
-        
+
         (*expr_ptr)++;
         chars_processed++;
-        
+
         // Update column tracking
-        if (current == L'\n') {
+        if (current == L'\n')
+        {
             pp_state->current_line_number++;
             pp_state->current_column_number = 1;
-        } else {
+        }
+        else
+        {
             pp_state->current_column_number++;
         }
     }
-    
+
     // Reset expression-specific error tracking
     pp_state->recovery_state.expression_errors = 0;
-    
+
     return **expr_ptr != L'\0';
 }
 
 // Conditional stack recovery - attempt to repair conditional nesting
 bool recover_conditional_stack(BaaPreprocessor *pp_state)
 {
-    if (!pp_state) return false;
-    
+    if (!pp_state)
+        return false;
+
     // Advanced conditional stack recovery implementation
     bool recovery_successful = false;
-    
+
     // Check if conditional stack is corrupted
-    if (pp_state->conditional_stack_count > 0) {
+    if (pp_state->conditional_stack_count > 0)
+    {
         // Try to find a safe recovery point by looking for balanced conditions
         size_t original_count = pp_state->conditional_stack_count;
-        
+
         // If we have too many open conditionals (more than reasonable), truncate
         const size_t max_reasonable_depth = 50;
-        if (pp_state->conditional_stack_count > max_reasonable_depth) {
+        if (pp_state->conditional_stack_count > max_reasonable_depth)
+        {
             pp_state->conditional_stack_count = max_reasonable_depth;
             recovery_successful = true;
         }
-        
+
         // Ensure corresponding branch stacks are synchronized
-        if (pp_state->conditional_branch_taken_stack_count != pp_state->conditional_stack_count) {
+        if (pp_state->conditional_branch_taken_stack_count != pp_state->conditional_stack_count)
+        {
             // Synchronize the branch taken stack
-            if (pp_state->conditional_branch_taken_stack_count < pp_state->conditional_stack_count) {
+            if (pp_state->conditional_branch_taken_stack_count < pp_state->conditional_stack_count)
+            {
                 // Extend branch stack with false values
                 while (pp_state->conditional_branch_taken_stack_count < pp_state->conditional_stack_count &&
-                       pp_state->conditional_branch_taken_stack_count < pp_state->conditional_branch_taken_stack_capacity) {
+                       pp_state->conditional_branch_taken_stack_count < pp_state->conditional_branch_taken_stack_capacity)
+                {
                     pp_state->conditional_branch_taken_stack[pp_state->conditional_branch_taken_stack_count] = false;
                     pp_state->conditional_branch_taken_stack_count++;
                 }
-            } else {
+            }
+            else
+            {
                 // Truncate branch stack to match conditional stack
                 pp_state->conditional_branch_taken_stack_count = pp_state->conditional_stack_count;
             }
             recovery_successful = true;
         }
-        
+
         // Reset skipping state to a safe default
         pp_state->skipping_lines = false;
-        
+
         // Check each level for consistency
-        for (size_t i = 0; i < pp_state->conditional_stack_count; i++) {
-            if (pp_state->conditional_stack[i] && pp_state->conditional_branch_taken_stack[i]) {
+        for (size_t i = 0; i < pp_state->conditional_stack_count; i++)
+        {
+            if (pp_state->conditional_stack[i] && pp_state->conditional_branch_taken_stack[i])
+            {
                 // This level should not be skipping
                 continue;
             }
             // Mark suspicious levels for potential recovery
         }
     }
-    
+
     // Reset recovery state tracking
     reset_recovery_state(pp_state, "conditional_recovery");
-    
+
     // Update error tracking
     pp_state->recovery_state.directive_errors = 0;
     pp_state->recovery_state.consecutive_errors = 0;
-    
+
     return recovery_successful;
 }
 
 // Generate backward-compatible error summary from collected diagnostics
-wchar_t* generate_error_summary(const BaaPreprocessor *pp_state)
+wchar_t *generate_error_summary(const BaaPreprocessor *pp_state)
 {
-    if (!pp_state || pp_state->diagnostic_count == 0) {
+    if (!pp_state || pp_state->diagnostic_count == 0)
+    {
         return NULL; // No errors
     }
-    
+
     DynamicWcharBuffer summary = {0};
-    if (!init_dynamic_buffer(&summary, 1024)) {
+    if (!init_dynamic_buffer(&summary, 1024))
+    {
         // Note: Cannot use enhanced error system here as this function generates error summaries
         return wcsdup(L"فشل في إنشاء ملخص الأخطاء");
     }
-    
+
     // Add summary header with cleaner, less repetitive format
     wchar_t temp_buffer[128];
     bool needs_separator = false;
-    
+
     // Start with the single prefix
-    if (!append_to_dynamic_buffer(&summary, L"تم العثور على ")) {
+    if (!append_to_dynamic_buffer(&summary, L"تم العثور على "))
+    {
         free_dynamic_buffer(&summary);
         return wcsdup(L"فشل في تنسيق ملخص الأخطاء");
     }
-    
-    if (pp_state->fatal_count > 0) {
-        swprintf(temp_buffer, sizeof(temp_buffer)/sizeof(wchar_t), L"%zu خطأ فادح", pp_state->fatal_count);
-        if (!append_to_dynamic_buffer(&summary, temp_buffer)) {
+
+    if (pp_state->fatal_count > 0)
+    {
+        swprintf(temp_buffer, sizeof(temp_buffer) / sizeof(wchar_t), L"%zu خطأ فادح", pp_state->fatal_count);
+        if (!append_to_dynamic_buffer(&summary, temp_buffer))
+        {
             free_dynamic_buffer(&summary);
             return wcsdup(L"فشل في تنسيق ملخص الأخطاء");
         }
         needs_separator = true;
     }
-    
-    if (pp_state->error_count > 0) {
-        if (needs_separator) {
-            if (!append_to_dynamic_buffer(&summary, L"، ")) {
+
+    if (pp_state->error_count > 0)
+    {
+        if (needs_separator)
+        {
+            if (!append_to_dynamic_buffer(&summary, L"، "))
+            {
                 free_dynamic_buffer(&summary);
                 return wcsdup(L"فشل في تنسيق ملخص الأخطاء");
             }
         }
-        swprintf(temp_buffer, sizeof(temp_buffer)/sizeof(wchar_t), L"%zu خطأ", pp_state->error_count);
-        if (!append_to_dynamic_buffer(&summary, temp_buffer)) {
+        swprintf(temp_buffer, sizeof(temp_buffer) / sizeof(wchar_t), L"%zu خطأ", pp_state->error_count);
+        if (!append_to_dynamic_buffer(&summary, temp_buffer))
+        {
             free_dynamic_buffer(&summary);
             return wcsdup(L"فشل في تنسيق ملخص الأخطاء");
         }
         needs_separator = true;
     }
-    
-    if (pp_state->warning_count > 0) {
-        if (needs_separator) {
-            if (!append_to_dynamic_buffer(&summary, L"، ")) {
+
+    if (pp_state->warning_count > 0)
+    {
+        if (needs_separator)
+        {
+            if (!append_to_dynamic_buffer(&summary, L"، "))
+            {
                 free_dynamic_buffer(&summary);
                 return wcsdup(L"فشل في تنسيق ملخص الأخطاء");
             }
         }
-        swprintf(temp_buffer, sizeof(temp_buffer)/sizeof(wchar_t), L"%zu تحذير", pp_state->warning_count);
-        if (!append_to_dynamic_buffer(&summary, temp_buffer)) {
+        swprintf(temp_buffer, sizeof(temp_buffer) / sizeof(wchar_t), L"%zu تحذير", pp_state->warning_count);
+        if (!append_to_dynamic_buffer(&summary, temp_buffer))
+        {
             free_dynamic_buffer(&summary);
             return wcsdup(L"فشل في تنسيق ملخص الأخطاء");
         }
         needs_separator = true;
     }
-    
-    if (!append_to_dynamic_buffer(&summary, L":\n\n")) {
+
+    if (!append_to_dynamic_buffer(&summary, L":\n\n"))
+    {
         free_dynamic_buffer(&summary);
         // Note: Cannot use enhanced error system here as this function generates error summaries
         return wcsdup(L"فشل في تنسيق ملخص الأخطاء");
     }
-    
-    // Add detailed error messages (limit to first 10 for readability)
+
+    // Add detailed error messages (limit to first 50 for readability)
     size_t errors_shown = 0;
-    const size_t max_errors_in_summary = 10;
-    
-    for (size_t i = 0; i < pp_state->diagnostic_count && errors_shown < max_errors_in_summary; i++) {
+    const size_t max_errors_in_summary = 50; // Limit to 50 errors in summary
+
+    for (size_t i = 0; i < pp_state->diagnostic_count && errors_shown < max_errors_in_summary; i++)
+    {
         const PreprocessorDiagnostic *diag = &pp_state->diagnostics[i];
-        
+
         // Skip notes in summary for brevity
-        if (diag->severity == PP_DIAG_NOTE) continue;
-        
+        if (diag->severity == PP_DIAG_NOTE)
+            continue;
+
         if (!append_to_dynamic_buffer(&summary, diag->message) ||
-            !append_to_dynamic_buffer(&summary, L"\n")) {
+            !append_to_dynamic_buffer(&summary, L"\n"))
+        {
             break;
         }
         errors_shown++;
     }
-    
+
     // Add truncation notice if more errors exist
-    if (pp_state->diagnostic_count > max_errors_in_summary) {
+    if (pp_state->diagnostic_count > max_errors_in_summary)
+    {
         size_t remaining = pp_state->diagnostic_count - max_errors_in_summary;
         wchar_t truncation_msg[256];
-        swprintf(truncation_msg, sizeof(truncation_msg)/sizeof(wchar_t),
-                L"\n... و %zu خطأ إضافي\n", remaining);
+        swprintf(truncation_msg, sizeof(truncation_msg) / sizeof(wchar_t),
+                 L"\n... و %zu خطأ إضافي\n", remaining);
         append_to_dynamic_buffer(&summary, truncation_msg);
     }
-    
+
     return summary.buffer; // Transfer ownership
 }
 
 // Enhanced cleanup that handles new diagnostic fields
 void cleanup_preprocessor_error_system(BaaPreprocessor *pp_state)
 {
-    if (!pp_state) return;
-    
+    if (!pp_state)
+        return;
+
     // Free all diagnostics including new fields
-    if (pp_state->diagnostics) {
-        for (size_t i = 0; i < pp_state->diagnostic_count; ++i) {
+    if (pp_state->diagnostics)
+    {
+        for (size_t i = 0; i < pp_state->diagnostic_count; ++i)
+        {
             free(pp_state->diagnostics[i].message);
             free(pp_state->diagnostics[i].suggestion);
         }
         free(pp_state->diagnostics);
         pp_state->diagnostics = NULL;
     }
-    
+
     // Reset all counters
     pp_state->diagnostic_count = 0;
     pp_state->diagnostic_capacity = 0;
@@ -1518,7 +1619,7 @@ void cleanup_preprocessor_error_system(BaaPreprocessor *pp_state)
     pp_state->warning_count = 0;
     pp_state->note_count = 0;
     pp_state->had_fatal_error = false;
-    
+
     // Reset recovery state
     reset_recovery_state(pp_state, "cleanup");
 }

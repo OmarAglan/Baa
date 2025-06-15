@@ -81,7 +81,14 @@ bool handle_preprocessor_directive(BaaPreprocessor *pp_state, wchar_t *directive
         {
             PP_REPORT_ERROR(pp_state, &directive_loc, PP_ERROR_INVALID_DIRECTIVE_SYNTAX, "directive", L"تنسيق #إذا غير صالح: التعبير مفقود.");
             if (error_message) *error_message = generate_error_summary(pp_state);
-            success = false;
+            success = true; // Recoverable syntax error - continue processing
+            // Push a false condition to maintain conditional stack state
+            if (!push_conditional(pp_state, false))
+            {
+                PP_REPORT_FATAL(pp_state, &directive_loc, PP_ERROR_OUT_OF_MEMORY, "memory", L"فشل في دفع الحالة الشرطية لـ #إذا (نفاد الذاكرة؟).");
+                if (error_message) *error_message = generate_error_summary(pp_state);
+                success = false; // Keep as fatal - this is memory allocation failure
+            }
             if (expression_only)
                 free(expression_only); // Free if allocated but empty
         }
@@ -99,7 +106,14 @@ bool handle_preprocessor_directive(BaaPreprocessor *pp_state, wchar_t *directive
                     PP_REPORT_ERROR(pp_state, &directive_loc, PP_ERROR_EXPRESSION_TOO_COMPLEX, "expression", L"خطأ في تقييم تعبير #إذا.");
                     if (!*error_message) // Only set if evaluator didn't provide a specific error
                         *error_message = generate_error_summary(pp_state);
-                success = false;
+                success = true; // Recoverable expression error - continue processing
+                // Push a false condition to maintain conditional stack state
+                if (!push_conditional(pp_state, false))
+                {
+                    PP_REPORT_FATAL(pp_state, &directive_loc, PP_ERROR_OUT_OF_MEMORY, "memory", L"فشل في دفع الحالة الشرطية لـ #إذا (نفاد الذاكرة؟).");
+                    if (error_message) *error_message = generate_error_summary(pp_state);
+                    success = false;
+                }
             }
             else
             {
@@ -129,7 +143,14 @@ bool handle_preprocessor_directive(BaaPreprocessor *pp_state, wchar_t *directive
         {
             PP_REPORT_ERROR(pp_state, &directive_loc, PP_ERROR_MISSING_MACRO_NAME, "directive", L"تنسيق #إذا_عرف غير صالح: اسم الماكرو مفقود.");
             if (error_message) *error_message = generate_error_summary(pp_state);
-            success = false;
+            // Push a false condition to maintain conditional stack state
+            if (!push_conditional(pp_state, false))
+            {
+                PP_REPORT_FATAL(pp_state, &directive_loc, PP_ERROR_OUT_OF_MEMORY, "memory", L"فشل في دفع الحالة الشرطية لـ #إذا_عرف (نفاد الذاكرة؟).");
+                if (error_message) *error_message = generate_error_summary(pp_state);
+                return false;
+            }
+            return true; // Recoverable syntax error - continue processing
         }
         else
         {
@@ -139,7 +160,7 @@ bool handle_preprocessor_directive(BaaPreprocessor *pp_state, wchar_t *directive
             {
                 PP_REPORT_FATAL(pp_state, &directive_loc, PP_ERROR_ALLOCATION_FAILED, "memory", L"فشل في تخصيص ذاكرة لاسم الماكرو في #إذا_عرف.");
                 if (error_message) *error_message = generate_error_summary(pp_state);
-                success = false;
+                success = false; // Keep as fatal - this is memory allocation failure
             }
             else
             {
@@ -169,7 +190,14 @@ bool handle_preprocessor_directive(BaaPreprocessor *pp_state, wchar_t *directive
         {
             PP_REPORT_ERROR(pp_state, &directive_loc, PP_ERROR_MISSING_MACRO_NAME, "directive", L"تنسيق #إذا_لم_يعرف غير صالح: اسم الماكرو مفقود.");
             if (error_message) *error_message = generate_error_summary(pp_state);
-            success = false;
+            // Push a false condition to maintain conditional stack state
+            if (!push_conditional(pp_state, false))
+            {
+                PP_REPORT_FATAL(pp_state, &directive_loc, PP_ERROR_OUT_OF_MEMORY, "memory", L"فشل في دفع الحالة الشرطية لـ #إذا_لم_يعرف (نفاد الذاكرة؟).");
+                if (error_message) *error_message = generate_error_summary(pp_state);
+                return false;
+            }
+            return true; // Recoverable syntax error - continue processing
         }
         else
         {
@@ -179,7 +207,7 @@ bool handle_preprocessor_directive(BaaPreprocessor *pp_state, wchar_t *directive
             {
                 PP_REPORT_FATAL(pp_state, &directive_loc, PP_ERROR_ALLOCATION_FAILED, "memory", L"فشل في تخصيص ذاكرة لاسم الماكرو في #إذا_لم_يعرف.");
                 if (error_message) *error_message = generate_error_summary(pp_state);
-                success = false;
+                success = false; // Keep as fatal - this is memory allocation failure
             }
             else
             {
@@ -202,7 +230,7 @@ bool handle_preprocessor_directive(BaaPreprocessor *pp_state, wchar_t *directive
         {
             PP_REPORT_ERROR(pp_state, &directive_loc, PP_ERROR_UNTERMINATED_CONDITION, "directive", L"#نهاية_إذا بدون #إذا/#إذا_عرف/#إذا_لم_يعرف مطابق.");
             if (error_message) *error_message = generate_error_summary(pp_state);
-            success = false;
+            return true; // Recoverable directive syntax error - continue processing
         }
     }
     else if (wcsncmp(directive_start, else_directive, else_directive_len) == 0 &&
@@ -213,7 +241,7 @@ bool handle_preprocessor_directive(BaaPreprocessor *pp_state, wchar_t *directive
         {
             PP_REPORT_ERROR(pp_state, &directive_loc, PP_ERROR_UNTERMINATED_CONDITION, "directive", L"#إلا بدون #إذا/#إذا_عرف/#إذا_لم_يعرف مطابق.");
             if (error_message) *error_message = generate_error_summary(pp_state);
-            success = false;
+            return true; // Recoverable directive syntax error - continue processing
         }
         else
         {
@@ -238,7 +266,7 @@ bool handle_preprocessor_directive(BaaPreprocessor *pp_state, wchar_t *directive
         {
             PP_REPORT_ERROR(pp_state, &directive_loc, PP_ERROR_UNTERMINATED_CONDITION, "directive", L"#وإلا_إذا بدون #إذا/#إذا_عرف/#إذا_لم_يعرف مطابق.");
             if (error_message) *error_message = generate_error_summary(pp_state);
-            success = false;
+            return true; // Recoverable directive syntax error - continue processing
         }
         else
         {
@@ -287,7 +315,7 @@ bool handle_preprocessor_directive(BaaPreprocessor *pp_state, wchar_t *directive
                 {
                     PP_REPORT_ERROR(pp_state, &directive_loc, PP_ERROR_INVALID_DIRECTIVE_SYNTAX, "directive", L"تنسيق #وإلا_إذا غير صالح: التعبير مفقود.");
                     if (error_message) *error_message = generate_error_summary(pp_state);
-                    success = false;
+                    success = true; // Recoverable syntax error - continue processing
                     if (expression_only)
                         free(expression_only); // Free if allocated but empty
                 }
@@ -300,7 +328,7 @@ bool handle_preprocessor_directive(BaaPreprocessor *pp_state, wchar_t *directive
                             PP_REPORT_ERROR(pp_state, &directive_loc, PP_ERROR_EXPRESSION_TOO_COMPLEX, "expression", L"خطأ في تقييم تعبير #وإلا_إذا.");
                             if (!*error_message) // Only set if evaluator didn't provide a specific error
                                 *error_message = generate_error_summary(pp_state);
-                        success = false;
+                        success = true; // Recoverable expression error - continue processing
                     }
                     else
                     {
@@ -362,7 +390,7 @@ bool handle_preprocessor_directive(BaaPreprocessor *pp_state, wchar_t *directive
             {
                 PP_REPORT_ERROR(pp_state, &directive_loc, PP_ERROR_INVALID_INCLUDE, "directive", L"تنسيق #تضمين غير صالح: يجب أن يتبع اسم الملف بـ \" أو <.");
                 if (error_message) *error_message = generate_error_summary(pp_state);
-                success = false;
+                success = true; // Recoverable syntax error - continue processing
             }
 
             if (success && path_end != NULL)
@@ -372,7 +400,7 @@ bool handle_preprocessor_directive(BaaPreprocessor *pp_state, wchar_t *directive
                 {
                     PP_REPORT_ERROR(pp_state, &directive_loc, PP_ERROR_INVALID_INCLUDE, "directive", L"تنسيق #تضمين غير صالح: مسار الملف فارغ.");
                     if (error_message) *error_message = generate_error_summary(pp_state);
-                    success = false;
+                    success = true; // Recoverable syntax error - continue processing
                 }
                 else
                 {
@@ -403,7 +431,7 @@ bool handle_preprocessor_directive(BaaPreprocessor *pp_state, wchar_t *directive
                         {
                             PP_REPORT_ERROR(pp_state, &directive_loc, PP_ERROR_ENCODING_ERROR, "file", L"فشل في تحويل مسار التضمين إلى UTF-8.");
                             if (error_message) *error_message = generate_error_summary(pp_state);
-                            success = false;
+                            success = true; // Recoverable encoding error - continue processing
                         }
 
                         if (success && include_path_mb)
@@ -435,7 +463,7 @@ bool handle_preprocessor_directive(BaaPreprocessor *pp_state, wchar_t *directive
                                 {
                                     PP_REPORT_ERROR(pp_state, &directive_loc, PP_ERROR_FILE_NOT_FOUND, "file", L"تعذر العثور على ملف التضمين '<%hs>' في مسارات التضمين.", include_path_mb);
                                     if (error_message) *error_message = generate_error_summary(pp_state);
-                                    success = false;
+                                    success = true; // Recoverable file not found error - continue processing
                                 }
                             }
                             else
@@ -445,7 +473,7 @@ bool handle_preprocessor_directive(BaaPreprocessor *pp_state, wchar_t *directive
                                 {
                                     PP_REPORT_ERROR(pp_state, &directive_loc, PP_ERROR_INVALID_FILE_PATH, "file", L"فشل في الحصول على دليل الملف الحالي.");
                                     if (error_message) *error_message = generate_error_summary(pp_state);
-                                    success = false;
+                                    success = true; // Recoverable file path error - continue processing
                                 }
                                 else
                                 {
@@ -481,7 +509,7 @@ bool handle_preprocessor_directive(BaaPreprocessor *pp_state, wchar_t *directive
                                     pop_location(pp_state);
                                     if (!included_content)
                                     {
-                                        success = false;
+                                        success = true; // Recoverable include error - continue processing
                                     }
                                     else
                                     {
@@ -513,7 +541,7 @@ bool handle_preprocessor_directive(BaaPreprocessor *pp_state, wchar_t *directive
             {
                 PP_REPORT_ERROR(pp_state, &directive_loc, PP_ERROR_INVALID_INCLUDE, "directive", L"تنسيق #تضمين غير صالح: علامة الاقتباس أو القوس الختامي مفقود.");
                 if (error_message) *error_message = generate_error_summary(pp_state);
-                success = false;
+                success = true; // Recoverable syntax error - continue processing
             }
             // #تضمين processed, don't append original line
         }
@@ -541,7 +569,7 @@ bool handle_preprocessor_directive(BaaPreprocessor *pp_state, wchar_t *directive
             {
                 PP_REPORT_ERROR(pp_state, &name_error_loc, PP_ERROR_MISSING_MACRO_NAME, "directive", L"تنسيق #تعريف غير صالح: اسم الماكرو مفقود.");
                 if (error_message) *error_message = generate_error_summary(pp_state);
-                success = false;
+                return true; // Recoverable syntax error - continue processing
             }
             else
             {
@@ -592,7 +620,7 @@ bool handle_preprocessor_directive(BaaPreprocessor *pp_state, wchar_t *directive
                                 { // No params allowed after variadic
                                     PP_REPORT_ERROR(pp_state, &current_arg_loc, PP_ERROR_INVALID_MACRO_PARAM, "directive", L"تنسيق #تعريف غير صالح: لا يمكن أن يتبع 'وسائط_إضافية' معاملات أخرى.");
                                     if (error_message) *error_message = generate_error_summary(pp_state);
-                                    success = false;
+                                    success = true; // Recoverable syntax error - continue processing
                                     break;
                                 }
                                 if (*param_ptr == L',')
@@ -605,7 +633,7 @@ bool handle_preprocessor_directive(BaaPreprocessor *pp_state, wchar_t *directive
                                 {
                                     PP_REPORT_ERROR(pp_state, &current_arg_loc, PP_ERROR_INVALID_MACRO_PARAM, "directive", L"تنسيق #تعريف غير صالح: متوقع ',' أو ')' بين معاملات الماكرو الوظيفي.");
                                     if (error_message) *error_message = generate_error_summary(pp_state);
-                                    success = false;
+                                    success = true; // Recoverable syntax error - continue processing
                                     break;
                                 }
                             }
@@ -623,7 +651,7 @@ bool handle_preprocessor_directive(BaaPreprocessor *pp_state, wchar_t *directive
                                 {
                                     PP_REPORT_ERROR(pp_state, &current_arg_loc, PP_ERROR_INVALID_MACRO_PARAM, "directive", L"تنسيق #تعريف غير صالح: 'وسائط_إضافية' يجب أن تكون المعامل الأخير.");
                                     if (error_message) *error_message = generate_error_summary(pp_state);
-                                    success = false;
+                                    success = true; // Recoverable syntax error - continue processing
                                     break;
                                 }
                                 // Do not add 'وسائط_إضافية' to params list, just set flag and break from param parsing loop
@@ -635,7 +663,7 @@ bool handle_preprocessor_directive(BaaPreprocessor *pp_state, wchar_t *directive
                             {
                                 PP_REPORT_ERROR(pp_state, &current_arg_loc, PP_ERROR_INVALID_MACRO_PARAM, "directive", L"تنسيق #تعريف غير صالح: متوقع اسم معامل أو ')' أو 'وسائط_إضافية' بعد '('.");
                                 if (error_message) *error_message = generate_error_summary(pp_state);
-                                success = false;
+                                success = true; // Recoverable syntax error - continue processing
                                 break;
                             }
                             wchar_t *param_name_start = param_ptr;
@@ -647,7 +675,7 @@ bool handle_preprocessor_directive(BaaPreprocessor *pp_state, wchar_t *directive
                             {
                                 PP_REPORT_ERROR(pp_state, &current_arg_loc, PP_ERROR_INVALID_MACRO_PARAM, "directive", L"تنسيق #تعريف غير صالح: اسم معامل فارغ.");
                                 if (error_message) *error_message = generate_error_summary(pp_state);
-                                success = false;
+                                success = true; // Recoverable syntax error - continue processing
                                 break;
                             }
                             wchar_t *param_name = wcsndup_internal(param_name_start, param_name_len);
@@ -758,7 +786,7 @@ bool handle_preprocessor_directive(BaaPreprocessor *pp_state, wchar_t *directive
             {
                 PP_REPORT_ERROR(pp_state, &directive_loc, PP_ERROR_MISSING_MACRO_NAME, "directive", L"تنسيق #الغاء_تعريف غير صالح: اسم الماكرو مفقود.");
                 if (error_message) *error_message = generate_error_summary(pp_state);
-                success = false;
+                return true; // Recoverable syntax error - continue processing
             }
             else
             {
@@ -847,7 +875,7 @@ bool handle_preprocessor_directive(BaaPreprocessor *pp_state, wchar_t *directive
         {
             PP_REPORT_ERROR(pp_state, &directive_loc, PP_ERROR_UNKNOWN_DIRECTIVE, "directive", L"توجيه معالج مسبق غير معروف يبدأ بـ '#'.");
             if (error_message) *error_message = generate_error_summary(pp_state);
-            success = false;
+            success = true; // Recoverable syntax error - continue processing
         }
     }
     // Conditional directives and skipped lines don't produce output.

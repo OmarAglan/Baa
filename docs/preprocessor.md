@@ -37,6 +37,11 @@ The preprocessor takes a Baa source file (or string) as input, processes these d
             Example: `#تعريف LOG(fmt, وسائط_إضافية) printf(fmt, __وسائط_متغيرة__)`
   * **Rescanning:** The output of macro expansions (after argument substitution, `#`, and `##`) is rescanned for further macro names to be expanded, adhering to C99 standards.
   * Detects and prevents direct self-recursive macro expansion.
+  * **C99-Compliant Macro Redefinition Checking:**
+    * **Identical Redefinitions:** Silent acceptance of identical macro redefinitions as per C99 standard (ISO/IEC 9899:1999 section 6.10.3).
+    * **Incompatible Redefinitions:** Warning messages in Arabic when attempting to redefine a macro with different replacement text or parameter signature.
+    * **Predefined Macro Protection:** Error reporting for attempts to redefine built-in macros (`__الملف__`, `__السطر__`, etc.) with rejection of redefinition.
+    * **Intelligent Comparison:** Uses whitespace normalization and parameter signature matching to determine macro equivalence according to C99 rules.
 * **`#الغاء_تعريف` (Undefine):** Removes a macro definition (e.g., `#الغاء_تعريف PI`).
 * **Conditional Compilation:**
   * `#إذا expression`: Evaluates a constant integer expression. Undefined identifiers are treated as 0.
@@ -46,6 +51,7 @@ The preprocessor takes a Baa source file (or string) as input, processes these d
   * `#إلا`: Else branch.
   * `#نهاية_إذا`: Ends a conditional block.
   * **Expression Evaluation:** Supports arithmetic (`+`, `-`, `*`, `/`, `%`), comparison (`==`, `!=`, `<`, `>`, `<=`, `>=`), logical (`&&`, `||`, `!`), and bitwise (`&`, `|`, `^`, `~`, `<<`, `>>`) operators with standard C precedence. Also supports the `معرف(IDENTIFIER)` or `معرف IDENTIFIER` operator. Integer literals can be decimal, hexadecimal (`0x...`), or binary (`0b...`).
+  * **Full Macro Expansion in Conditionals:** Function-like macros (with arguments) are now fully expanded within `#إذا` and `#وإلا_إذا` expressions before evaluation, including nested function-like macro calls and complex rescanning scenarios. The `معرف` operator arguments are correctly preserved without expansion.
 * **`#خطأ "message"` (Error):** Halts preprocessing and reports the specified message as a fatal error.
 * **`#تحذير "message"` (Warning):** Prints the specified message to `stderr` and preprocessing continues.
 
@@ -107,9 +113,8 @@ if (processed_code) {
 
 ## Current Known Issues and Limitations
 
+* **Ternary Operator Support (`? :`):** The expression evaluator does not yet support ternary conditional expressions using `condition ? true_value : false_value` syntax in `#إذا`/`#وإلا_إذا` expressions.
 * **Full Error Recovery:** While the foundation for accumulating multiple errors is in place, most error-handling sites in the preprocessor still need to be updated to fully utilize this by attempting synchronization and continuation instead of immediately halting.
-* **`معرف` Operator Argument Expansion:** The argument to the `معرف` (defined) operator within `#إذا`/`#وإلا_إذا` expressions might still be (pending specific fix and verification) macro-expanded before `معرف` evaluates it.
-* **Full Macro Expansion in Conditional Expressions:** Full expansion of function-like macros and their rescanned results *within* `#إذا`/`#وإلا_إذا` expressions before evaluation is not yet complete.
 * **Token Pasting (`##`) during Rescanning (Complex Cases):** Complex interactions of `##` when it appears as part of a macro expansion output, or when its operands are complex macros, may not be fully robust.
 * **Error/Warning Location Precision:** While significantly improved, further refinement for precise column reporting in all error scenarios is an ongoing effort.
 

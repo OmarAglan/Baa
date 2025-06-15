@@ -39,6 +39,9 @@ This roadmap outlines the planned improvements and current status of the Baa lan
   * [x] `#نهاية_إذا` (endif)
   * [x] Support for bitwise operators (`&`, `|`, `^`, `~`, `<<`, `>>`) in conditional expressions. (v0.1.12.0)
   * [x] Support for decimal, hexadecimal (`0x`), and binary (`0b`) integer literals in conditional expressions. (v0.1.15.0)
+  * [ ] **Ternary Operator Support (`? :`)**: Add support for conditional expressions using the ternary operator `condition ? true_value : false_value` in preprocessor conditional expressions.
+  * [x] **Zero-Parameter Function-Like Macro Bug**: Fix issue where zero-parameter function-like macros (e.g., `GET_BASE()`) expand incorrectly to `()` instead of their macro body. Fixed in `parse_macro_arguments()` function by properly allocating empty arguments array for zero-parameter cases. (v0.1.26.0)
+  * [x] **Line Number Reporting Bug**: Fix critical issue where all preprocessor errors/warnings incorrectly reported `line 1:1` instead of actual line numbers. Fixed by adding `update_current_location()` function and enhancing fallback logic in `get_current_original_location()` to properly maintain location stack during file processing. (v0.1.27.0)
 * **Other Standard Directives:**
   * [x] `#خطأ "message"` (Baa: `#خطأ "رسالة الخطأ"`) - Implemented (v0.1.15.0)
   * [x] `#تحذير "message"` (Baa: `#تحذير "رسالة التحذير"`) - Implemented (v0.1.15.0)
@@ -52,23 +55,24 @@ This roadmap outlines the planned improvements and current status of the Baa lan
 * [x] **`__السطر__` (`__LINE__`) Expansion**: Corrected to expand to an integer constant. (v0.1.13.0)
 * [x] **Predefined `__func__`**: Implemented `__الدالة__` (expands to placeholder `L"__BAA_FUNCTION_PLACEHOLDER__"`). (v0.1.14.0)
 * [x] **Predefined `__STDC_VERSION__` equivalent**: Implemented `__إصدار_المعيار_باء__` (e.g., `10150L`). (v0.1.14.0, value updated v0.1.15.0)
-* [ ] **Full Macro Expansion in Conditional Expressions (#إذا, #وإلا_إذا)**:
-  * While identifiers that are object-like macros expanding to integers are handled, full expansion of *function-like* macros within the expression string *before* evaluation is not yet complete. This includes handling their arguments and rescanning their results.
+* [x] **`معرف` Operator C Standard Compliance**: Fixed critical bug where `معرف` operator arguments were incorrectly macro-expanded before evaluation. Now correctly preserves argument identifiers for proper `defined` operator behavior. (v0.1.22.0)
+* [x] **Full Macro Expansion in Conditional Expressions (#إذا, #وإلا_إذا)**:
+  * Complete support for function-like macro expansion within conditional expression strings before evaluation, including argument handling and result rescanning. Preserves correct `معرف` operator behavior. (v0.1.23.0)
 * [ ] **Token Pasting (`##`) during Rescanning (Complex Cases)**:
   * The `##` operator works in direct macro bodies.
   * Known Issue: Complex interactions when `##` appears as part of a macro expansion output that is then rescanned, or when its operands are themselves complex macros, may not be fully robust. This requires careful review of the rescan loop and how it forms new tokens after pasting.
-* [ ] **Macro Redefinition Warnings/Errors**: Implement checks for macro redefinitions. Issue warnings or errors for incompatible redefinitions, as per C99 standard behavior (currently, redefinitions replace silently).
-* [ ] **Error Recovery Mechanisms (Full Implementation):** (Foundation laid in v0.1.17.0)
-  * **Task:** Systematically update all error reporting sites in directive parsing (`preprocessor_directives.c`) to use `add_preprocessor_diagnostic` and implement robust line-level synchronization (e.g., skip to end of directive line, or try to find next valid directive).
-  * **Task:** Systematically update error reporting in macro expansion (`preprocessor_expansion.c`, `preprocessor_line_processing.c`) to use `add_preprocessor_diagnostic` and attempt to continue line processing (e.g., by outputting the unexpanded macro name or skipping the problematic expansion).
-  * **Task:** Refine conditional expression error handling (`preprocessor_expr_eval.c`) to use `add_preprocessor_diagnostic` and ensure the conditional stack is safely managed (e.g., by assuming false on evaluation error and attempting to find matching `#نهاية_إذا`).
-  * **Task:** Define and implement clear synchronization strategies (e.g., skip to EOL for most directive errors, attempt to find matching `#نهاية_إذا` for unterminated conditionals).
+* [x] **Macro Redefinition Warnings/Errors**: Implemented comprehensive C99-compliant macro redefinition checking with intelligent comparison system. Issues warnings for incompatible redefinitions and errors for predefined macro redefinitions, with silent acceptance of identical redefinitions as per C99 standard. (v0.1.25.0)
+* [ ] **Error Recovery Mechanisms:** ()
+  * [ ]  Systematically update all error reporting sites in directive parsing (`preprocessor_directives.c`) to use `add_preprocessor_diagnostic` and implement robust line-level synchronization.
+  * [ ] Update error reporting in macro expansion (`preprocessor_expansion.c`, `preprocessor_line_processing.c`) to use `add_preprocessor_diagnostic` and attempt to continue line processing.
+  * [ ] Refine conditional expression error handling (`preprocessor_expr_eval.c`) to use `add_preprocessor_diagnostic` and ensure the conditional stack is safely managed.
+  * [ ] Define and implemente clear synchronization strategies including directive recovery, expression recovery, and conditional stack validation.
+  * [ ] Add Configurable error limits and smart recovery decision logic to prevent error flooding while maintaining comprehensive error reporting.
 
 ## Known Issues / Areas for Refinement (from `CHANGELOG.md`)
 
-* **`معرف` Operator Argument Expansion**: The argument to the `معرف` (defined) operator within `#إذا`/`#وإلا_إذا` expressions might still be (pending specific fix and verification) macro-expanded before `معرف` evaluates it, which is incorrect. Standard behavior is for `معرف` to operate on the raw identifier.
 * **Error/Warning Location Precision (Remaining Areas)**:
-  * Column tracking within conditional expressions and for some directive arguments/macro call arguments has been enhanced (v0.1.16.0, v0.1.17.0).
+  * Column tracking within conditional expressions and for some directive arguments/macro call arguments has been enhanced (v0.1.16.0, v0.1.17.0, v0.1.22.0).
   * Further refinement for precise column reporting is an ongoing effort across all error sites.
 
 ## Testing and Validation

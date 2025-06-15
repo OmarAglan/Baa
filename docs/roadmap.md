@@ -1,9 +1,9 @@
 # Baa Language Roadmap (خارطة الطريق)
 
-## Current Version State (Mid-May 2025)
+## Current Version State (June 2025)
 
-* **Build System:** Refactored to v0.1.18.0 (Modular, Target-Centric CMake)
-* **Preprocessor:** Features up to v0.1.17.0 (C99 alignment, Arabic directives, error recovery foundation)
+* **Build System:** Refactored to v0.1.25.0 (Modular, Target-Centric CMake)
+* **Preprocessor:** Features up to v0.1.25.0 (C99 alignment, Arabic directives, comprehensive error recovery, macro redefinition checking)
 * **Lexer:** Functionality largely aligned with v0.1.13.0+ (Arabic numerals, advanced literals, doc comments)
 * **Core (Types, Operators, Utils):** Foundational elements implemented.
 * **Parser & AST:** Previous versions removed; currently **under redesign and re-implementation.**
@@ -27,18 +27,18 @@ This roadmap outlines the high-level plan for the Baa language project. For deta
 * [x] File inclusion (`#تضمين`) with relative/standard paths, circular include detection.
 * [x] Macro definition (`#تعريف`): object-like, function-like.
 * [x] Macro expansion: Argument substitution, stringification (`#`), token pasting (`##`), variadic macros (`وسائط_إضافية`, `__وسائط_متغيرة__`), **full rescanning**.
+* [x] **C99-Compliant Macro Redefinition Checking:** Intelligent comparison with whitespace normalization, warnings for incompatible redefinitions, errors for predefined macro redefinitions. (v0.1.25.0)
 * [x] Macro undefinition (`#الغاء_تعريف`).
 * [x] Conditional compilation (`#إذا`, `#إذا_عرف`, `#إذا_لم_يعرف`, `#وإلا_إذا`, `#إلا`, `#نهاية_إذا`).
 * [x] Expression evaluation in conditionals (arithmetic, comparison, logical, bitwise, `معرف`, numeric literals).
 * [x] Predefined macros (`__الملف__`, `__السطر__` (int), `__التاريخ__`, `__الوقت__`, `__الدالة__` (placeholder), `__إصدار_المعيار_باء__`).
 * [x] `#خطأ` and `#تحذير` directives implemented.
 * [x] Input encoding detection (UTF-8 default, UTF-16LE with BOM).
-* [x] Foundation for multi-error reporting.
+* [x] **Comprehensive Error Recovery System:** Multi-error reporting, smart synchronization strategies, configurable error limits, graceful degradation. (v0.1.24.0)
 * **Next/Ongoing:**
-  * Complete error recovery mechanisms (systematic updates for robust continuation).
-  * Finalize known issues (e.g., `معرف` argument expansion, complex `##` in rescans).
+  * Finalize known issues (e.g., complex `##` in rescans, zero-parameter function-like macro bug).
   * Implement remaining standard directives (`#سطر`, `#براغما`, `أمر_براغما`).
-  * Full macro expansion (including function-like) *within* conditional expressions.
+  * Add ternary operator support (`? :`) in conditional expressions.
   * *See `docs/PREPROCESSOR_ROADMAP.md`.*
 
 ### 1.3 Lexer (Status: Actively Developed, Most Core Features Implemented)

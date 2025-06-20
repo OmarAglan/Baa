@@ -234,6 +234,16 @@ static PpExprToken get_next_pp_expr_token(PpExprTokenizer *tz)
         if (tz->pp_state)
             tz->pp_state->current_column_number++;
         return make_token(PP_EXPR_TOKEN_TILDE);
+    case L'?':
+        tz->current++;
+        if (tz->pp_state)
+            tz->pp_state->current_column_number++;
+        return make_token(PP_EXPR_TOKEN_QUESTION);
+    case L':':
+        tz->current++;
+        if (tz->pp_state)
+            tz->pp_state->current_column_number++;
+        return make_token(PP_EXPR_TOKEN_COLON);
     }
 
     // Check for integer literals
@@ -501,21 +511,76 @@ bool evaluate_preprocessor_expression(BaaPreprocessor *pp_state, const wchar_t *
     return true;
 }
 
-// Main parsing function - starts with unary operators
+// Forward declaration for ternary parsing
+static bool parse_ternary_pp_expr(PpExprTokenizer *tz, long *result);
+
+// Main parsing function - starts with ternary (lowest precedence)
 static bool parse_and_evaluate_pp_expr(PpExprTokenizer *tz, long *result)
 {
-    long lhs;
-    if (!parse_unary_pp_expr(tz, &lhs))
+    return parse_ternary_pp_expr(tz, result);
+}
+
+// Parse ternary expressions: condition ? true_expr : false_expr
+static bool parse_ternary_pp_expr(PpExprTokenizer *tz, long *result)
+{
+    long condition;
+    
+    // Parse the left side (everything except ternary)
+    if (!parse_unary_pp_expr(tz, &condition))
     {
         return false;
     }
 
     // Now parse binary operators with precedence climbing
-    if (!parse_binary_expression_rhs(tz, 0, &lhs, result))
+    if (!parse_binary_expression_rhs(tz, 0, &condition, &condition))
     {
         return false;
     }
 
+    // Check if we have a ternary operator
+    const wchar_t *current_pos_backup = tz->current;
+    PpExprToken question_token = get_next_pp_expr_token(tz);
+    
+    if (question_token.type != PP_EXPR_TOKEN_QUESTION)
+    {
+        // Not a ternary expression, restore position and return the condition value
+        tz->current = current_pos_backup;
+        *result = condition;
+        return true;
+    }
+
+    // We have a ternary operator, parse true_expr
+    long true_expr;
+    if (!parse_ternary_pp_expr(tz, &true_expr))  // Right-associative: parse full ternary on the right
+    {
+        return false;
+    }
+
+    // Expect colon
+    PpExprToken colon_token = get_next_pp_expr_token(tz);
+    if (colon_token.type != PP_EXPR_TOKEN_COLON)
+    {
+        if (colon_token.type != PP_EXPR_TOKEN_ERROR)
+        {
+            if (tz->pp_state)
+            {
+                PpSourceLocation error_loc = get_current_original_location(tz->pp_state);
+                error_loc.column = tz->expr_string_column_offset + (tz->current_token_start_column > 0 ? tz->current_token_start_column : 1) - 1;
+                PP_REPORT_ERROR(tz->pp_state, &error_loc, PP_ERROR_UNEXPECTED_TOKEN, "expression", L"متوقع ':' بعد التعبير الحقيقي في العامل الثلاثي.");
+            }
+        }
+        return false;
+    }
+
+    // Parse false_expr
+    long false_expr;
+    if (!parse_ternary_pp_expr(tz, &false_expr))  // Right-associative: parse full ternary on the right
+    {
+        return false;
+    }
+
+    // Evaluate the ternary expression with short-circuit behavior
+    *result = (condition != 0) ? true_expr : false_expr;
     return true;
 }
 

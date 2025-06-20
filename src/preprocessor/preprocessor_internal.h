@@ -234,6 +234,9 @@ typedef enum
     PP_EXPR_TOKEN_RSHIFT,    // >>
     // Logical NOT
     PP_EXPR_TOKEN_BANG,
+    // Ternary operator
+    PP_EXPR_TOKEN_QUESTION,  // ?
+    PP_EXPR_TOKEN_COLON,     // :
 } PpExprTokenType;
 
 // Token structure for expression evaluator

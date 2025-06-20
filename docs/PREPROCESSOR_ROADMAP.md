@@ -39,7 +39,7 @@ This roadmap outlines the planned improvements and current status of the Baa lan
   * [x] `#نهاية_إذا` (endif)
   * [x] Support for bitwise operators (`&`, `|`, `^`, `~`, `<<`, `>>`) in conditional expressions. (v0.1.12.0)
   * [x] Support for decimal, hexadecimal (`0x`), and binary (`0b`) integer literals in conditional expressions. (v0.1.15.0)
-  * [ ] **Ternary Operator Support (`? :`)**: Add support for conditional expressions using the ternary operator `condition ? true_value : false_value` in preprocessor conditional expressions.
+  * [x] **Ternary Operator Support (`? :`)**: Support for conditional expressions using the ternary operator `condition ? true_value : false_value` in preprocessor conditional expressions. (v0.1.28.0)
   * [x] **Zero-Parameter Function-Like Macro Bug**: Fix issue where zero-parameter function-like macros (e.g., `GET_BASE()`) expand incorrectly to `()` instead of their macro body. Fixed in `parse_macro_arguments()` function by properly allocating empty arguments array for zero-parameter cases. (v0.1.26.0)
   * [x] **Line Number Reporting Bug**: Fix critical issue where all preprocessor errors/warnings incorrectly reported `line 1:1` instead of actual line numbers. Fixed by adding `update_current_location()` function and enhancing fallback logic in `get_current_original_location()` to properly maintain location stack during file processing. (v0.1.27.0)
 * **Other Standard Directives:**
@@ -63,11 +63,35 @@ This roadmap outlines the planned improvements and current status of the Baa lan
   * Known Issue: Complex interactions when `##` appears as part of a macro expansion output that is then rescanned, or when its operands are themselves complex macros, may not be fully robust. This requires careful review of the rescan loop and how it forms new tokens after pasting.
 * [x] **Macro Redefinition Warnings/Errors**: Implemented comprehensive C99-compliant macro redefinition checking with intelligent comparison system. Issues warnings for incompatible redefinitions and errors for predefined macro redefinitions, with silent acceptance of identical redefinitions as per C99 standard. (v0.1.25.0)
 * [ ] **Error Recovery Mechanisms:** ()
-  * [ ]  Systematically update all error reporting sites in directive parsing (`preprocessor_directives.c`) to use `add_preprocessor_diagnostic` and implement robust line-level synchronization.
-  * [ ] Update error reporting in macro expansion (`preprocessor_expansion.c`, `preprocessor_line_processing.c`) to use `add_preprocessor_diagnostic` and attempt to continue line processing.
-  * [ ] Refine conditional expression error handling (`preprocessor_expr_eval.c`) to use `add_preprocessor_diagnostic` and ensure the conditional stack is safely managed.
-  * [ ] Define and implemente clear synchronization strategies including directive recovery, expression recovery, and conditional stack validation.
-  * [ ] Add Configurable error limits and smart recovery decision logic to prevent error flooding while maintaining comprehensive error reporting.
+  * **Directive Parsing Error Recovery:**
+    * [ ] Update [`#تضمين`](src/preprocessor/preprocessor_directives.c) directive parsing to use [`add_preprocessor_diagnostic()`](src/preprocessor/preprocessor_directives.c) for file not found errors and continue processing
+    * [ ] Enhance [`#تعريف`](src/preprocessor/preprocessor_directives.c) macro definition error handling to recover from malformed parameter lists and invalid macro names
+    * [ ] Implement [`#الغاء_تعريف`](src/preprocessor/preprocessor_directives.c) error recovery for undefined macro warnings while continuing directive processing
+    * [ ] Add robust error handling for [`#خطأ`](src/preprocessor/preprocessor_directives.c) and [`#تحذير`](src/preprocessor/preprocessor_directives.c) directive malformed message strings
+    * [ ] Implement line-level synchronization in directive parsing to skip to next valid directive after encountering parse errors
+  * **Macro Expansion Error Recovery:**
+    * [ ] Update [`expand_macro()`](src/preprocessor/preprocessor_expansion.c) to use [`add_preprocessor_diagnostic()`](src/preprocessor/preprocessor_expansion.c) for undefined macro references and continue expansion
+    * [ ] Enhance function-like macro argument parsing in [`parse_macro_arguments()`](src/preprocessor/preprocessor_expansion.c) to recover from mismatched parentheses and argument count errors
+    * [ ] Implement stringification error recovery for [`#`](src/preprocessor/preprocessor_expansion.c) operator with invalid operands
+    * [ ] Add token pasting error recovery for [`##`](src/preprocessor/preprocessor_expansion.c) operator when operands cannot form valid tokens
+    * [ ] Improve recursive macro detection recovery to safely unwind expansion stack and continue processing
+    * [ ] Enhance variadic macro expansion error handling for [`وسائط_إضافية`](src/preprocessor/preprocessor_expansion.c) and [`__وسائط_متغيرة__`](src/preprocessor/preprocessor_expansion.c) edge cases
+  * **Conditional Expression Error Recovery:**
+    * [ ] Update [`evaluate_constant_expression()`](src/preprocessor/preprocessor_expr_eval.c) to use [`add_preprocessor_diagnostic()`](src/preprocessor/preprocessor_expr_eval.c) for syntax errors and return safe default values
+    * [ ] Implement division by zero error recovery in conditional expression evaluation with appropriate warnings
+    * [ ] Add [`معرف`](src/preprocessor/preprocessor_expr_eval.c) operator error handling for malformed identifier arguments
+    * [ ] Enhance conditional stack management to safely handle malformed [`#إذا`](src/preprocessor/preprocessor_expr_eval.c)/[`#نهاية_إذا`](src/preprocessor/preprocessor_expr_eval.c) nesting
+    * [ ] Implement recovery strategies for invalid integer literals and overflow conditions in conditional expressions
+  * **Synchronization Strategy Implementation:**
+    * [ ] Define directive-level synchronization points to resume parsing after encountering invalid directives
+    * [ ] Implement expression-level recovery to continue evaluation after encountering invalid operators or operands
+    * [ ] Add conditional stack validation and automatic cleanup for unmatched [`#إذا`](src/preprocessor/preprocessor_conditionals.c)/[`#نهاية_إذا`](src/preprocessor/preprocessor_conditionals.c) pairs
+    * [ ] Create line-boundary synchronization to ensure errors in one line don't corrupt subsequent line processing
+  * **Configurable Error Management:**
+    * [ ] Add configurable error limits with separate thresholds for errors, warnings, and notes
+    * [ ] Implement smart error suppression to avoid cascading errors from the same root cause
+    * [ ] Create error recovery decision logic based on error severity and context
+    * [ ] Add option to treat certain recoverable errors as warnings to improve development workflow
 
 ## Known Issues / Areas for Refinement (from `CHANGELOG.md`)
 

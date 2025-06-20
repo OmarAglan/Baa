@@ -4,6 +4,15 @@ All notable changes to the B (باء) compiler project will be documented in thi
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.28.0] - 2025-06-20 (Ternary Operator Support)
+
+### Added
+
+- **Preprocessor: Ternary Operator Support (`? :`):**
+  - Added support for ternary conditional expressions (`condition ? true_value : false_value`) in preprocessor conditional expressions (`#إذا`, `#وإلا_إذا`).
+  - Updated documentation and roadmap to reflect this feature.
+  - Example usage and operator details are now included in [`docs/preprocessor.md`](docs/preprocessor.md).
+
 ## [0.1.27.0] - 2025-06-13 (Line Number Reporting Bug Fix)
 
 ### Fixed
@@ -143,7 +152,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Preprocessor: Comprehensive Error Recovery System:**
   - Implemented robust error recovery mechanisms that allow the preprocessor to continue processing after encountering errors, reporting multiple errors in a single compilation pass.
   - **Diagnostic System**: Added centralized error and warning collection with precise source location tracking (file, line, column).
-  - **Error Recovery Utilities**: 
+  - **Error Recovery Utilities**:
     - `skip_to_next_line()`: Basic line-level recovery for malformed directives
     - `find_next_directive()`: Smart synchronization to next preprocessor directive
     - `attempt_directive_recovery()`: Intelligent recovery from directive parsing errors
@@ -255,10 +264,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Known Issues
 
-- **Preprocessor: Zero-Parameter Function-Like Macro Bug:** 
+- **Preprocessor: Zero-Parameter Function-Like Macro Bug:**
   - Zero-parameter function-like macros (e.g., `GET_BASE()`) may expand incorrectly to `()` instead of their macro body in conditional expressions.
   - This affects expressions like `#إذا IS_EQUAL(GET_BASE(), 42)` where `GET_BASE()` should expand to `BASE_VALUE_IF` but instead expands to empty parentheses.
-- **Preprocessor: Ternary Operator Support (`? :`):** 
+- **Preprocessor: Ternary Operator Support (`? :`):**
   - The expression evaluator does not yet support ternary conditional expressions using `condition ? true_value : false_value` syntax.
   - Expressions containing ternary operators will result in syntax errors during conditional expression evaluation.
 

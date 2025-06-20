@@ -12,7 +12,7 @@ endif()
 # Add other policies as you discover needs, e.g., CMP0077 for overriding exported targets.
 
 project(baa
-    VERSION 0.1.25.0
+    VERSION 0.1.27.0
     DESCRIPTION "لغة باء - The Baa Programming Language"
     LANGUAGES C
 )

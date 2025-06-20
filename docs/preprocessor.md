@@ -50,7 +50,7 @@ The preprocessor takes a Baa source file (or string) as input, processes these d
   * `#وإلا_إذا expression`: Else-if branch.
   * `#إلا`: Else branch.
   * `#نهاية_إذا`: Ends a conditional block.
-  * **Expression Evaluation:** Supports arithmetic (`+`, `-`, `*`, `/`, `%`), comparison (`==`, `!=`, `<`, `>`, `<=`, `>=`), logical (`&&`, `||`, `!`), and bitwise (`&`, `|`, `^`, `~`, `<<`, `>>`) operators with standard C precedence. Also supports the `معرف(IDENTIFIER)` or `معرف IDENTIFIER` operator. Integer literals can be decimal, hexadecimal (`0x...`), or binary (`0b...`).
+  * **Expression Evaluation:** Supports arithmetic (`+`, `-`, `*`, `/`, `%`), comparison (`==`, `!=`, `<`, `>`, `<=`, `>=`), logical (`&&`, `||`, `!`), bitwise (`&`, `|`, `^`, `~`, `<<`, `>>`), and ternary conditional (`? :`) operators with standard C precedence. Also supports the `معرف(IDENTIFIER)` or `معرف IDENTIFIER` operator. Integer literals can be decimal, hexadecimal (`0x...`), or binary (`0b...`).
   * **Full Macro Expansion in Conditionals:** Function-like macros (with arguments) are now fully expanded within `#إذا` and `#وإلا_إذا` expressions before evaluation, including nested function-like macro calls and complex rescanning scenarios. The `معرف` operator arguments are correctly preserved without expansion.
 * **`#خطأ "message"` (Error):** Halts preprocessing and reports the specified message as a fatal error.
 * **`#تحذير "message"` (Warning):** Prints the specified message to `stderr` and preprocessing continues.
@@ -111,11 +111,29 @@ if (processed_code) {
 // ...
 ```
 
+### Example: Ternary Operator in Preprocessor Conditionals
+
+You can now use the ternary operator (`? :`) in preprocessor conditional expressions:
+
+```baa
+#تعريف USE_FAST 1
+#إذا USE_FAST ? 100 : 200
+    // This block is included because USE_FAST is 1 (true), so 100 is the result (nonzero)
+#إلا
+    // This block would be included if USE_FAST was 0 (false), so 200 would be the result (nonzero)
+#نهاية_إذا
+
+#إذا 0 ? 1 : 0
+    // This block is NOT included (result is 0)
+#إلا
+    // This block IS included (result is nonzero)
+#نهاية_إذا
+```
+
 ## Current Known Issues and Limitations
 
-* **Ternary Operator Support (`? :`):** The expression evaluator does not yet support ternary conditional expressions using `condition ? true_value : false_value` syntax in `#إذا`/`#وإلا_إذا` expressions.
 * **Full Error Recovery:** While the foundation for accumulating multiple errors is in place, most error-handling sites in the preprocessor still need to be updated to fully utilize this by attempting synchronization and continuation instead of immediately halting.
-* **Token Pasting (`##`) during Rescanning (Complex Cases):** Complex interactions of `##` when it appears as part of a macro expansion output, or when its operands are complex macros, may not be fully robust.
+* **Complex Token Pasting (`##`) during Rescanning:** While the `##` operator works correctly in direct macro bodies, complex interactions when `##` appears as part of a macro expansion output that is then rescanned, or when its operands are themselves complex macros, may not be fully robust. This requires careful review of the rescan loop and how it forms new tokens after pasting.
 * **Error/Warning Location Precision:** While significantly improved, further refinement for precise column reporting in all error scenarios is an ongoing effort.
 
 *For detailed ongoing tasks and future plans, please refer to `docs/PREPROCESSOR_ROADMAP.md`.*

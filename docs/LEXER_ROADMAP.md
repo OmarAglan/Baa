@@ -57,6 +57,7 @@ This roadmap outlines the planned improvements and current status of the Baa lan
 
 * [x] Integer parsing (decimal, hex, binary) by `number_parser.c`.
 * [x] Float parsing (decimal, basic scientific) by `number_parser.c`.
+* [x] Arabic exponent marker `'أ'` implemented for scientific notation, replacing `'e'/'E'`.
 * [x] Arabic-Indic digit support in lexemes passed to `number_parser.c`.
 * [x] Underscores in number lexemes passed to `number_parser.c`.
 * [ ] **Crucial Next Step:** Ensure `number_parser.c` (functions like `baa_parse_number`) can correctly interpret the full lexemes produced by `scan_number`, including:

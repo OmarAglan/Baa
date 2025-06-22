@@ -31,7 +31,7 @@ The primary role of the lexer is to identify and categorize sequences of charact
   * Allows underscores (`_`) as separators for readability in numbers.
   * Recognizes Arabic integer literal suffixes (`غ` for unsigned, `ط` for long, `طط` for long long, and their combinations like `غط`). The lexer includes these in the token's lexeme.
   * Parses floating-point numbers using `.` or the Arabic decimal separator `٫`.
-  * Supports scientific notation for floats using Arabic `أ` exponent marker. (Previously `e` or `E` were used).
+  * Scientific notation for floats now uses the Arabic exponent marker `'أ'`, replacing `'e'/'E'`.
   * Support for hexadecimal float constants (e.g., `0x1.fp+2`) using Baa's `أ` exponent marker is planned.
 * **String and Character Literals:**
   * (Details on string/char literals, including multiline, raw, and escape sequences remain largely the same as previously documented.)

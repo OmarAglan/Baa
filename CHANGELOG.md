@@ -613,7 +613,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Remove `دالة` as a function declaration keyword and `متغير` as a variable declaration keyword from documentation and update examples to C-style.
   - Ensure consistency in logical operator representation (symbols `&&, ||, !` used in syntax).
   - General alignment of C99 features and their Baa equivalents, including keywords like `مستقر`, `خارجي`, `مضمن`, `مقيد`, `متطاير`, `نوع_مستخدم`, `حجم` and type `عدد_صحيح_طويل_جدا`.
-- **Lexer:** Updated keyword list in `src/lexer/lexer.c` to use `لكل` for `for` and `أكمل` for `continue` to match documentation.
+- **Lexer:** Updated keyword list in `src/lexer/lexer.c` to use `لكل` for `for` and `استمر` for `continue` to match documentation.
 - **Tests:** Updated `tests/resources/preprocessor_test_cases/consolidated_preprocessor_test.baa` to use `معرف` instead of `defined`.
 
 ### Fixed

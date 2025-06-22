@@ -93,7 +93,7 @@ This roadmap outlines the high-level plan for the Baa language project. For deta
   * Assignment expressions.
   * Basic statements (expression statements, blocks).
   * Variable declarations (with type annotations and initializers).
-  * Control flow statements (`إذا`, `وإلا`, `طالما`, `لكل`, `إرجع`, `توقف`, `أكمل`, `اختر`).
+  * Control flow statements (`إذا`, `وإلا`, `طالما`, `لكل`, `إرجع`, `توقف`, `استمر`, `اختر`).
   * Function declarations (C-style: name, parameters, return type, body).
   * Function call expressions.
   * Type parsing (basic annotations, array types).

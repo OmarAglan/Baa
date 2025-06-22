@@ -79,7 +79,7 @@ typedef enum
     BAA_TOKEN_SWITCH,           // اختر
     BAA_TOKEN_RETURN,           // إرجع
     BAA_TOKEN_BREAK,            // توقف
-    BAA_TOKEN_CONTINUE,         // أكمل
+    BAA_TOKEN_CONTINUE,         // استمر
 
     // Types
     BAA_TOKEN_TYPE_INT,   // عدد_صحيح

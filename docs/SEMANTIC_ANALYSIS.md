@@ -58,7 +58,7 @@ The Semantic Analysis phase is a critical part of the Baa compiler that bridges 
     - [ ] Integrate and adapt existing `src/analysis/flow_analysis.c` to work with the new AST.
     - [ ] Verify that all paths in non-void functions return a value.
     - [ ] Check for unreachable code.
-    - [ ] Validate correct usage of `توقف` (break) and `أكمل` (continue).
+    - [ ] Validate correct usage of `توقف` (break) and `استمر` (continue).
     - [ ] **Future Enhancements:**
         - [ ] Implement more precise "all paths return" analysis using graph-based algorithms.
         - [ ] Add definite assignment analysis (ensuring variables are assigned before use).

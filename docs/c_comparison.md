@@ -78,7 +78,7 @@ This document compares C99 language features with their B (باء) equivalents. 
 | `case`         | `حالة`               | Implemented       | Parsing/AST/Semantics planned.                                                                            |
 | `default`      | `افتراضي` (assumed)   | Planned (Lexer/Parser/AST) | Keyword `افتراضي` not yet in lexer; assumed for C parity.                                                 |
 | `break`        | `توقف`               | Implemented       | Parsing/AST/Semantics planned.                                                                            |
-| `continue`     | `استمر`              | Implemented (Lexer `أكمل` corrected to `استمر`) | Parsing/AST/Semantics planned.                                                                          |
+| `continue`     | `استمر`              | Implemented | Parsing/AST/Semantics planned.                                                                          |
 | `return`       | `إرجع`               | Implemented       | Parsing/AST/Semantics planned.                                                                            |
 | `goto`         | `اذهب` (tentative)   | Planned (Lexer/Parser/AST) | Not yet in lexer.                                                                                       |
 | Labeled Stmts  | `معرف:` (tentative)   | Planned (Parser/AST) |                                                                                                         |

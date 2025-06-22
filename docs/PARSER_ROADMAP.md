@@ -215,7 +215,7 @@ The parser will employ a recursive descent strategy, with distinct modules for p
 
 2. **Implement `parse_break_statement` and `parse_continue_statement`:**
     * **File:** `statement_parser.c`.
-    * **Description:** Parse `توقف.` and `أكمل.`.
+    * **Description:** Parse `توقف.` and `استمر.`.
     * **Verification:** Correctly parsed.
 
 3. **Extend `parse_type_specifier` for Arrays:**

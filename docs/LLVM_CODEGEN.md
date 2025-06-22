@@ -76,7 +76,7 @@ A main dispatch function (e.g., `codegen_node(BaaNode*)`) will switch on the AST
     *   `LLVMBuildCondBr` for loop condition.
     *   `LLVMBuildBr` for looping back or exiting.
     *   `break` (`توقف`) jumps to the after-loop block.
-    *   `continue` (`أكمل`) jumps to the loop header (for `while`) or increment block (for `for`).
+    *   `continue` (`استمر`) jumps to the loop header (for `while`) or increment block (for `for`).
 *   **Return Statements (`إرجع`):** `LLVMBuildRet` (with value) or `LLVMBuildRetVoid`.
 
 ### 3.6. Functions

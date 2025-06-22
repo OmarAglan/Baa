@@ -49,7 +49,7 @@
   - [ ] Ensure non-void functions have `إرجع` with a value on at least one path (basic check).
 - **Control Flow Analysis Integration (from `src/analysis/flow_analysis.c`):**
   - [ ] Adapt existing `flow_analysis.c` to traverse the new AST.
-  - [ ] Perform checks for `توقف` (break) and `أكمل` (continue) statement validity within loops/switches.
+  - [ ] Perform checks for `توقف` (break) and `استمر` (continue) statement validity within loops/switches.
 - **Conditional Expression Type Checking:**
   - [ ] Ensure conditions in `إذا`, `طالما`, `لكل` are boolean or convertible to boolean.
 

@@ -322,7 +322,7 @@ Keywords are reserved words with special meaning in the Baa language and cannot 
 *(Based on `lexer.h` and `language.md`)*
 
 * **Declarations:** `ثابت` (`const`), `مستقر` (`static`), `خارجي` (`extern`), `مضمن` (`inline`), `مقيد` (`restrict`), `نوع_مستخدم` (`typedef`), `حجم` (`sizeof`), `تعداد` (`enum`) - *[Lexer Implemented for `ثابت`, `مضمن`, `مقيد`; Partial/Planned for others]*
-* **Control Flow:** `إذا`, `وإلا`, `طالما`, `إرجع`, `توقف` (`break`), `أكمل` (`continue`) - *[Implemented]*
+* **Control Flow:** `إذا`, `وإلا`, `طالما`, `إرجع`, `توقف` (`break`), `استمر` (`continue`) - *[Implemented]*
   * *Partial/Planned:* `لكل` (`for`), `افعل` (`do`), `اختر` (`switch`), `حالة` (`case`)
 * **Types:** `عدد_صحيح`, `عدد_حقيقي`, `حرف`, `منطقي`, `فراغ` - *[Implemented]*
 * **Boolean Literals:** `صحيح`, `خطأ` - *[Implemented]*
@@ -635,7 +635,7 @@ Exits the innermost enclosing loop (`while`, `for`, `do`) or `switch` statement.
 
 Skips the remainder of the current iteration of the innermost enclosing loop (`while`, `for`, `do`) and proceeds to the next iteration (evaluating the condition/increment).
 
-* **Syntax:** `أكمل '.'` - *[Implemented]*
+* **Syntax:** `استمر '.'` - *[Implemented]*
 
 #### 6.5.4 `goto` Statement (Planned)
 

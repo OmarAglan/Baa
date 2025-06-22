@@ -24,7 +24,7 @@ struct KeywordMapping keywords[] = {
     {L"اختر", BAA_TOKEN_SWITCH},
     {L"حالة", BAA_TOKEN_CASE},
     {L"توقف", BAA_TOKEN_BREAK},
-    {L"أكمل", BAA_TOKEN_CONTINUE},         // Note: docs/language.md uses أكمل for "continue" - lexer uses استمر
+    {L"استمر", BAA_TOKEN_CONTINUE},         //  "continue"
     {L"ثابت", BAA_TOKEN_CONST},            // Keyword for constant declaration
     {L"مضمن", BAA_TOKEN_KEYWORD_INLINE},   // Keyword for inline
     {L"مقيد", BAA_TOKEN_KEYWORD_RESTRICT}, // Keyword for restrict

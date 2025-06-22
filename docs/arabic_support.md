@@ -24,7 +24,7 @@ Baa (باء) provides comprehensive support for Arabic programming through:
 | `اختر`              | `switch`        | Switch statement                               |
 | `حالة`              | `case`          | Case label                                     |
 | `توقف`              | `break`         | Break statement                                |
-| `استمر`             | `continue`      | Continue statement (Corrected from `أكمل`)      |
+| `استمر`             | `continue`      | Continue statement       |
 | `إرجع`              | `return`        | Return statement                               |
 | `بنية`              | `struct`        | Structure definition                           |
 | `ثابت`              | `const`         | Constant keyword                               |

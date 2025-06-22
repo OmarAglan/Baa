@@ -44,7 +44,7 @@ This roadmap outlines the planned improvements and current status of the Baa lan
     * [x] Unicode escape sequences (`\uXXXX` removed; now `\يXXXX`). (Conceptual: Implemented `\ي`, removed `\u`)
     * [x] Multiline strings (`"""..."""`). (v0.1.31.0) - Fixed bug where the opening `"""` delimiter was incorrectly tokenized as an empty string literal.
     * [x] Raw string literals (`خ"..."`, `خ"""..."""`), including single-line newline error handling. (v0.1.31.0) - Fixed bug where the opening `خ"""` delimiter was incorrectly tokenized.
-    * [x] Implement Baa-specific Arabic escape sequences (`\س`, `\م`, `\ر`, `\ص`, `\يXXXX`, `\هـHH`) in `scan_string` and `scan_multiline_string_literal`. (Conceptual: Implemented, but bug in multiline string processing)
+    * [x] Implement Baa-specific Arabic escape sequences (`\س`, `\م`, `\ر`, `\ص`, `\يXXXX`, `\هـHH`) in `scan_string` and `scan_multiline_string_literal`. (v0.1.32.0)
   * [x] Boolean Literals (`BAA_TOKEN_BOOL_LIT`): `صحيح`, `خطأ`.
 * **Keywords:**
   * [x] All current Baa keywords tokenized correctly (e.g., `إذا`, `لكل`, `ثابت`).

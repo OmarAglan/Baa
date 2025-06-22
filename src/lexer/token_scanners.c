@@ -725,50 +725,44 @@ BaaToken *scan_multiline_string_literal(BaaLexer *lexer, size_t token_start_line
 
         if (peek(lexer) == L'\\')
         {
-            advance(lexer); // Consume '\'
+             advance(lexer); // Consume '\'
             if (is_at_end(lexer))
-            { // Unterminated escape at EOF
-                free(buffer);
-                BaaToken *err_token = make_error_token(lexer, L"سلسلة نصية متعددة الأسطر غير منتهية (تسلسل هروب عند EOF، بدأت في السطر %zu، العمود %zu)", token_start_line, token_start_col);
-                return err_token;
-            }
+                break;                                    // Unterminated escape at EOF
             wchar_t baa_escape_char_key = advance(lexer); // Consume the Arabic escape key char
-            wchar_t char_to_append_val;                   // Use a temp var to hold the char to append
-
             switch (baa_escape_char_key)
             {
-            case L'س':
-                char_to_append_val = L'\n';
+            case L'س': // Baa Newline
+                append_char_to_buffer(&buffer, &buffer_len, &buffer_cap, L'\n');
                 break;
-            case L'م':
-                char_to_append_val = L'\t';
+            case L'م': // Baa Tab
+                append_char_to_buffer(&buffer, &buffer_len, &buffer_cap, L'\t');
                 break;
-            case L'ر':
-                char_to_append_val = L'\r';
+            case L'ر': // Baa Carriage Return
+                append_char_to_buffer(&buffer, &buffer_len, &buffer_cap, L'\r');
                 break;
-            case L'ص':
-                char_to_append_val = L'\0';
+            case L'ص': // Baa Null Character
+                append_char_to_buffer(&buffer, &buffer_len, &buffer_cap, L'\0');
                 break;
-            case L'\\':
-                char_to_append_val = L'\\';
+            case L'\\': // Baa Backslash (remains the same)
+                append_char_to_buffer(&buffer, &buffer_len, &buffer_cap, L'\\');
                 break;
-            case L'"':
-                char_to_append_val = L'"';
-                break; // Escaped double quote
-            case L'\'':
-                char_to_append_val = L'\'';
-                break; // Escaped single quote
-            case L'ي': // Baa Unicode escape \يXXXX
+            case L'"': // Baa Double Quote (remains the same)
+                append_char_to_buffer(&buffer, &buffer_len, &buffer_cap, L'"');
+                break;
+            case L'\'': // Baa Single Quote (can appear in strings)
+                append_char_to_buffer(&buffer, &buffer_len, &buffer_cap, L'\'');
+                break;
+            case L'ي': // Baa Unicode escape \يXXXX (replaces \uXXXX)
             {
                 int value = scan_hex_escape(lexer, 4);
                 if (value == -1)
                 {
                     free(buffer);
-                    BaaToken *err_token = make_error_token(lexer, L"تسلسل هروب يونيكود غير صالح (\\uXXXX) في سلسلة متعددة الأسطر (بدأت في السطر %zu، العمود %zu)", token_start_line, token_start_col);
+                    BaaToken *err_token = make_error_token(lexer, L"تسلسل هروب يونيكود غير صالح (\\يXXXX) في سلسلة متعددة الأسطر (بدأت في السطر %zu، العمود %zu)", token_start_line, token_start_col);
                     synchronize(lexer);
                     return err_token;
                 }
-                char_to_append_val = (wchar_t)value;
+                append_char_to_buffer(&buffer, &buffer_len, &buffer_cap, (wchar_t)value);
                 break;
             }
             case L'ه': // Baa Hex byte escape \هـHH
@@ -780,26 +774,28 @@ BaaToken *scan_multiline_string_literal(BaaLexer *lexer, size_t token_start_line
                     if (byte_val == -1 || byte_val > 0xFF)
                     {
                         free(buffer);
-                        return make_error_token(lexer, L"تسلسل هروب سداسي عشري '\\هـHH' غير صالح في سلسلة متعددة الأسطر (بدأت في السطر %zu، العمود %zu)", token_start_line, token_start_col);
+                        BaaToken *err_token = make_error_token(lexer, L"تسلسل هروب سداسي عشري '\\هـHH' غير صالح في سلسلة متعددة الأسطر (بدأت في السطر %zu، العمود %zu)", token_start_line, token_start_col);
+                        synchronize(lexer);
+                        return err_token;
                     }
-                    char_to_append_val = (wchar_t)byte_val;
+                    append_char_to_buffer(&buffer, &buffer_len, &buffer_cap, (wchar_t)byte_val);
                 }
                 else
                 {
                     free(buffer);
-                    return make_error_token(lexer, L"تسلسل هروب غير صالح: '\\ه' يجب أن يتبعها 'ـ' في سلسلة متعددة الأسطر (بدأت في السطر %zu، العمود %zu)", token_start_line, token_start_col);
+                    BaaToken *err_token = make_error_token(lexer, L"تسلسل هروب غير صالح: '\\ه' يجب أن يتبعها 'ـ' في سلسلة متعددة الأسطر (بدأت في السطر %zu، العمود %zu)", token_start_line, token_start_col);
+                    synchronize(lexer);
+                    return err_token;
                 }
                 break;
             }
             default:
                 free(buffer);
-                BaaToken *err_token = make_error_token(lexer, L"تسلسل هروب غير صالح '\\%lc' في سلسلة متعددة الأسطر (بدأت في السطر %zu، العمود %zu)", baa_escape_char_key, token_start_line, token_start_col);
+                BaaToken *err_token = make_error_token(lexer, L"تسلسل هروب غير صالح '\\%lc' في سلسلة نصية متعددة الأسطر (بدأت في السطر %zu، العمود %zu)", baa_escape_char_key, token_start_line, token_start_col);
                 synchronize(lexer);
                 return err_token;
             }
-            // Always append the resolved character after an escape sequence
-            append_char_to_buffer(&buffer, &buffer_len, &buffer_cap, char_to_append_val);
-            if (buffer == NULL) // Check after append_char_to_buffer
+            if (buffer == NULL)
                 return make_error_token(lexer, L"فشل في إعادة تخصيص ذاكرة لسلسلة متعددة الأسطر (السطر %zu)", token_start_line);
         }
         else

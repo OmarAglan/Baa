@@ -4,6 +4,19 @@ All notable changes to the B (باء) compiler project will be documented in thi
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.32.0] - 2025-06-22
+
+### Fixed
+
+- **Lexer:** Enhanced escape sequence handling for multiline strings (`"""..."""`) in `src/lexer/token_scanners.c`.
+  - Multiline string literals now correctly process Baa-specific Arabic escape sequences (`\س`, `\م`, `\ر`, `\ص`, `\يXXXX`, `\هـHH`) without errors.
+  - Commit: `<commit_hash_placeholder>`
+
+### Documentation Updates
+
+- Updated `docs/LEXER_ROADMAP.md` to reflect fixes for multiline string escape handling.
+- Updated `docs/lexer.md` to include details about enhanced escape sequence handling for multiline strings.
+
 ## [0.1.31.0] - 2025-06-22
 
 ### Fixed

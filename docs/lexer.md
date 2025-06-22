@@ -37,6 +37,7 @@ The primary role of the lexer is to identify and categorize sequences of charact
   * Handles single-quoted character literals (`'...'`).
   * Processes Baa-specific Arabic escape sequences (`\س`, `\م`, `\ر`, `\ص`, `\يXXXX`, `\هـHH`) using `\` as the escape character. (Standard C-style escapes like `\n`, `\t`, `\uXXXX` are replaced by their Arabic equivalents).
   * Fixed issues with tokenizing opening delimiters for multiline strings (`"""`) and raw strings (`خ"""`) in v0.1.31.0.
+  * Enhanced escape sequence handling for multiline strings in v0.1.32.0.
 
 ### 3. Comment Handling
 

@@ -428,16 +428,24 @@ BaaToken *baa_lexer_next_token(BaaLexer *lexer)
                 lexer->source[lexer->current + 2] == L'"' &&
                 lexer->source[lexer->current + 3] == L'"')
             {
+                // Raw multiline string: خ"""..."""
                 size_t start_line = lexer->line;
                 size_t start_col = lexer->column;
-                // scan_raw_string_literal itself will consume the 'خ"""'
+                // FIX: Consume the opening 'خ"""' delimiter before calling scanner
+                advance(lexer); // 'خ'
+                advance(lexer); // First '"'
+                advance(lexer); // Second '"'
+                advance(lexer); // Third '"'
                 return scan_raw_string_literal(lexer, true, start_line, start_col);
             }
             else
             {
+                // Raw single-line string: خ"..."
                 size_t start_line = lexer->line;
                 size_t start_col = lexer->column;
-                // scan_raw_string_literal itself will consume the 'خ"'
+                // FIX: Consume the opening 'خ"' delimiter before calling scanner
+                advance(lexer); // 'خ'
+                advance(lexer); // '"'
                 return scan_raw_string_literal(lexer, false, start_line, start_col);
             }
         }
@@ -451,7 +459,10 @@ BaaToken *baa_lexer_next_token(BaaLexer *lexer)
         {
             size_t start_line = lexer->line;
             size_t start_col = lexer->column;
-            // scan_multiline_string_literal will consume '"""'
+            // FIX: Consume the opening '"""' delimiter before calling scanner
+            advance(lexer); // First '"'
+            advance(lexer); // Second '"'
+            advance(lexer); // Third '"'
             return scan_multiline_string_literal(lexer, start_line, start_col);
         }
         else

@@ -39,12 +39,12 @@ This roadmap outlines the planned improvements and current status of the Baa lan
   * [x] Character Literals (`BAA_TOKEN_CHAR_LIT`):
     * [x] Unicode escape sequences (`\uXXXX` removed; now `\يXXXX`). (Conceptual: Implemented `\ي`, removed `\u`)
     * [x] Implement Baa-specific Arabic escape sequences (`\س`, `\م`, `\ر`, `\ص`, `\يXXXX`, `\هـHH`) using `\` as the escape character. (Conceptual: Implemented)
-  * [ ] String Literals (`BAA_TOKEN_STRING_LIT`):
+  * [x] String Literals (`BAA_TOKEN_STRING_LIT`):
     * [x] Standard C escape sequences (now replaced by Baa Arabic equivalents).
     * [x] Unicode escape sequences (`\uXXXX` removed; now `\يXXXX`). (Conceptual: Implemented `\ي`, removed `\u`)
-    * [ ] Multiline strings (`"""..."""`). (v0.1.11.0) - *Known Bug: Escape sequences within multiline strings are not correctly processed, leading to "Unexpected character: '\'" errors. Lexer also incorrectly tokenizes the opening `"""` as an empty string literal.*
-    * [x] Raw string literals (`خ"..."`, `خ"""..."""`), including single-line newline error handling. (v0.1.11.0)
-    * [ ] Implement Baa-specific Arabic escape sequences (`\س`, `\م`, `\ر`, `\ص`, `\يXXXX`, `\هـHH`) in `scan_string` and `scan_multiline_string_literal`. (Conceptual: Implemented, but bug in multiline string processing)
+    * [x] Multiline strings (`"""..."""`). (v0.1.31.0) - Fixed bug where the opening `"""` delimiter was incorrectly tokenized as an empty string literal.
+    * [x] Raw string literals (`خ"..."`, `خ"""..."""`), including single-line newline error handling. (v0.1.31.0) - Fixed bug where the opening `خ"""` delimiter was incorrectly tokenized.
+    * [x] Implement Baa-specific Arabic escape sequences (`\س`, `\م`, `\ر`, `\ص`, `\يXXXX`, `\هـHH`) in `scan_string` and `scan_multiline_string_literal`. (Conceptual: Implemented, but bug in multiline string processing)
   * [x] Boolean Literals (`BAA_TOKEN_BOOL_LIT`): `صحيح`, `خطأ`.
 * **Keywords:**
   * [x] All current Baa keywords tokenized correctly (e.g., `إذا`, `لكل`, `ثابت`).

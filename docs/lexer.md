@@ -25,7 +25,6 @@ The primary role of the lexer is to identify and categorize sequences of charact
 * **Identifiers:** Recognizes identifiers composed of Arabic letters (from standard Unicode ranges for Arabic), English letters, Arabic-Indic digits (`٠`-`٩`), ASCII digits (`0-9`), and underscores (`_`).
 * **Keywords:** Identifies reserved Arabic keywords (e.g., `إذا`, `لكل`, `ثابت`, `مضمن`, `مقيد`).
 * **Numeric Literals:**
-  * (Details on numeric literals, including Arabic digits, suffixes, exponent markers, hex/binary remain largely the same as previously documented.)
   * Parses integers in decimal, hexadecimal (`0x`/`0X`), and binary (`0b`/`0B`) formats.
   * Supports Arabic-Indic digits within all parts of numeric literals.
   * Allows underscores (`_`) as separators for readability in numbers.
@@ -34,10 +33,10 @@ The primary role of the lexer is to identify and categorize sequences of charact
   * Scientific notation for floats now uses the Arabic exponent marker `'أ'`, replacing `'e'/'E'`.
   * Support for hexadecimal float constants (e.g., `0x1.fp+2`) using Baa's `أ` exponent marker is planned.
 * **String and Character Literals:**
-  * (Details on string/char literals, including multiline, raw, and escape sequences remain largely the same as previously documented.)
   * Handles standard double-quoted strings (`"..."`), multiline triple-quoted strings (`"""..."""`), and raw strings (prefixed with `خ`, e.g., `خ"..."`, `خ"""..."""`).
   * Handles single-quoted character literals (`'...'`).
   * Processes Baa-specific Arabic escape sequences (`\س`, `\م`, `\ر`, `\ص`, `\يXXXX`, `\هـHH`) using `\` as the escape character. (Standard C-style escapes like `\n`, `\t`, `\uXXXX` are replaced by their Arabic equivalents).
+  * Fixed issues with tokenizing opening delimiters for multiline strings (`"""`) and raw strings (`خ"""`) in v0.1.31.0.
 
 ### 3. Comment Handling
 

@@ -4,6 +4,20 @@ All notable changes to the B (باء) compiler project will be documented in thi
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.31.0] - 2025-06-22
+
+### Fixed
+
+- **Lexer:** Corrected tokenization of opening delimiters for multiline strings (`"""`) and raw strings (`خ"""`) in `src/lexer/lexer.c`.
+  - Multiline strings (`"""..."""`) now correctly consume the opening `"""` delimiter before calling the scanner.
+  - Raw strings (`خ"""..."""`) now correctly consume the opening `خ"""` delimiter before calling the scanner.
+  - Commit: `d4f3a2b`
+
+### Documentation Updates
+
+- Updated `docs/LEXER_ROADMAP.md` to reflect fixes for multiline and raw string tokenization.
+- Updated `docs/lexer.md` to include details about the corrected handling of opening delimiters for multiline and raw strings.
+
 ## [0.1.30.0] - 2025-06-22
 
 ### Changed

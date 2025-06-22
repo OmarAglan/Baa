@@ -324,7 +324,8 @@ BaaNumber *baa_parse_number(const wchar_t *text, size_t length, BaaNumberError *
                 }
                 is_decimal = true;
             }
-            else if (text[i] == 'e' || text[i] == 'E')
+            // UPDATED: Check for Arabic exponent marker 'أ' instead of 'e'/'E'
+            else if (text[i] == L'أ')
             {
                 is_scientific = true;
                 break;
@@ -354,7 +355,8 @@ BaaNumber *baa_parse_number(const wchar_t *text, size_t length, BaaNumberError *
             size_t e_pos = 0;
             for (e_pos = 0; e_pos < length; e_pos++)
             {
-                if (text[e_pos] == 'e' || text[e_pos] == 'E')
+                // UPDATED: Check for Arabic exponent marker 'أ' instead of 'e'/'E'
+                if (text[e_pos] == L'أ')
                     break;
                 if (text[e_pos] == '.' || text[e_pos] == L'٫')
                     has_dec_point = true;

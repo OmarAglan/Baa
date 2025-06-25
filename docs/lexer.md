@@ -31,7 +31,7 @@ The primary role of the lexer is to identify and categorize sequences of charact
   * Recognizes Arabic integer literal suffixes (`غ` for unsigned, `ط` for long, `طط` for long long, and their combinations like `غط`). The lexer includes these in the token's lexeme.
   * Parses floating-point numbers using `.` or the Arabic decimal separator `٫`.
   * Scientific notation for floats now uses the Arabic exponent marker `'أ'`, replacing `'e'/'E'`.
-  * Support for hexadecimal float constants (e.g., `0x1.fp+2`) using Baa's `أ` exponent marker is planned.
+  * Supports hexadecimal float constants (e.g., `0x1.aأ+2`), which must include a hexadecimal part (integer or fractional) and an exponent part prefixed with `أ`.
 * **String and Character Literals:**
   * Handles standard double-quoted strings (`"..."`), multiline triple-quoted strings (`"""..."""`), and raw strings (prefixed with `خ`, e.g., `خ"..."`, `خ"""..."""`).
   * Handles single-quoted character literals (`'...'`).
@@ -150,7 +150,7 @@ A comprehensive list of `BaaTokenType` values can be found in `include/baa/lexer
 
 ## Future Improvements and Roadmap Items
 
-* Support for hexadecimal float constants (e.g., `0x1.fp+2`) using Baa's `أ` exponent marker.
+* Enhanced error recovery mechanisms and more specific error token types.
 * Enhanced error recovery mechanisms and more specific error token types.
 * Further Unicode support for identifiers based on UAX #31.
 * Performance optimizations (e.g., for keyword lookup, string interning) as needed.

@@ -209,6 +209,27 @@ static BaaNumberError parse_integer_part(const wchar_t *text, size_t *pos, size_
     return BAA_NUM_SUCCESS;
 }
 
+// Parse the fractional part of a hexadecimal float
+static BaaNumberError parse_hex_fractional_part(const wchar_t *text, size_t *pos, size_t length, double *value)
+{
+    double result = 0;
+    double place = 1.0 / 16.0;
+    bool has_digits = false;
+
+    while (*pos < length && baa_is_hex_digit(text[*pos]))
+    {
+        has_digits = true;
+        int digit = hex_to_decimal(text[*pos]);
+        result += digit * place;
+        place /= 16.0;
+        (*pos)++;
+    }
+
+    // It's okay to have no digits after the point, e.g., "0x1."
+    *value = result;
+    return BAA_NUM_SUCCESS;
+}
+
 static BaaNumberError parse_decimal_part(const wchar_t *text, size_t *pos, size_t length, double *value)
 {
     double result = 0;
@@ -282,13 +303,59 @@ BaaNumber *baa_parse_number(const wchar_t *text, size_t length, BaaNumberError *
     if (length >= 2 && text[0] == '0' && (text[1] == 'x' || text[1] == 'X'))
     {
         pos = 2; // Skip "0x" prefix
-        long long int_value;
-        parse_error = parse_hex_integer(text, &pos, length, &int_value);
 
-        if (parse_error == BAA_NUM_SUCCESS)
-        {
-            number->type = BAA_NUM_INTEGER;
-            number->int_value = int_value;
+        // Check for hex float (must have 'أ' for exponent)
+        bool is_hex_float = false;
+        for (size_t i = pos; i < length; i++) {
+            if (text[i] == L'أ') {
+                is_hex_float = true;
+                break;
+            }
+        }
+
+        if (is_hex_float) {
+            long long int_part = 0;
+            double frac_part = 0.0;
+
+            // Parse integer part (can be empty)
+            size_t start_pos = pos;
+            if (text[pos] != '.') {
+                parse_error = parse_hex_integer(text, &pos, length, &int_part);
+            } else {
+                parse_error = BAA_NUM_SUCCESS; // No integer part, which is valid
+            }
+
+            // Parse fractional part if a dot is present
+            if (pos < length && text[pos] == '.') {
+                pos++; // Skip '.'
+                parse_error = parse_hex_fractional_part(text, &pos, length, &frac_part);
+            }
+
+            if (parse_error == BAA_NUM_SUCCESS) {
+                // Parse exponent
+                if (pos < length && text[pos] == L'أ') {
+                    pos++; // Skip 'أ'
+                    int exponent;
+                    parse_error = parse_exponent(text, &pos, length, &exponent);
+                    if (parse_error == BAA_NUM_SUCCESS) {
+                        number->type = BAA_NUM_SCIENTIFIC;
+                        double mantissa = (double)int_part + frac_part;
+                        number->decimal_value = mantissa * pow(2.0, exponent);
+                    }
+                } else {
+                    parse_error = BAA_NUM_INVALID_FORMAT; // Missing exponent
+                }
+            }
+        } else {
+            // Regular hex integer
+            long long int_value;
+            parse_error = parse_hex_integer(text, &pos, length, &int_value);
+
+            if (parse_error == BAA_NUM_SUCCESS)
+            {
+                number->type = BAA_NUM_INTEGER;
+                number->int_value = int_value;
+            }
         }
     }
     // Handle binary format (0b...)
@@ -427,7 +494,25 @@ BaaNumber *baa_parse_number(const wchar_t *text, size_t length, BaaNumberError *
         free(raw_text);
         free(number);
         if (error)
-            *error = parse_error;
+            *error = BAA_NUM_SUCCESS;
+        return NULL;
+    }
+
+    // Check for float suffix 'ح' at the end of the number
+    if (pos < length && text[pos] == L'ح') {
+        pos++; // Consume the suffix
+        // The number is forced to be a float type.
+        if (number->type == BAA_NUM_INTEGER) {
+            number->type = BAA_NUM_DECIMAL;
+            number->decimal_value = (double)number->int_value;
+        }
+    }
+
+    if (pos < length) {
+        // There are unprocessed characters left in the number lexeme
+        free(raw_text);
+        free(number);
+        if (error) *error = BAA_NUM_INVALID_FORMAT;
         return NULL;
     }
 

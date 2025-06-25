@@ -71,9 +71,11 @@ BaaToken *scan_number(BaaLexer *lexer)
             advance(lexer);                      // Consume '0'
             advance(lexer);                      // Consume 'x' or 'X'
             number_start_index = lexer->current; // Digits start after prefix
-            if (!is_valid_digit(peek(lexer)))
+            wchar_t char_after_prefix = peek(lexer);
+            // For hex literals, a hex digit OR a decimal point is valid after the prefix.
+            if (!is_valid_digit(char_after_prefix) && char_after_prefix != L'.' && char_after_prefix != 0x066B)
             {
-                BaaToken *error_token = make_error_token(lexer, L"عدد سداسي عشر غير صالح: يجب أن يتبع البادئة 0x/0X رقم سداسي عشري واحد على الأقل (السطر %zu، العمود %zu)", lexer->line, lexer->column);
+                BaaToken *error_token = make_error_token(lexer, L"عدد سداسي عشر غير صالح: يجب أن يتبع البادئة 0x/0X رقم سداسي عشري أو فاصلة عشرية (السطر %zu، العمود %zu)", lexer->line, lexer->column);
                 synchronize(lexer);
                 return error_token;
             }
@@ -141,8 +143,11 @@ BaaToken *scan_number(BaaLexer *lexer)
     }
 
     wchar_t current_peek = peek(lexer);
-    if (base_prefix == 0 && (current_peek == L'.' || current_peek == 0x066B))
+    // Handle fractional part for both decimal (base 0) and hexadecimal (base 'x') numbers.
+    if ((base_prefix == 0 || base_prefix == 'x') && (current_peek == L'.' || current_peek == 0x066B))
     {
+        bool (*is_digit_for_frac)(wchar_t) = (base_prefix == 'x') ? is_baa_hex_digit : is_baa_digit;
+
         wchar_t next_peek = peek_next(lexer);
         if (next_peek == L'_')
         {
@@ -150,16 +155,15 @@ BaaToken *scan_number(BaaLexer *lexer)
             synchronize(lexer);
             return error_token;
         }
-        if (is_baa_digit(next_peek))
+
+        // A digit must follow the decimal point.
+        if (is_digit_for_frac(next_peek))
         {
             is_float = true;
             advance(lexer); // Consume '.' or '٫'
             last_char_was_underscore = false;
-            while (is_baa_digit(peek(lexer)) || peek(lexer) == L'_')
+            while (is_digit_for_frac(peek(lexer)) || peek(lexer) == L'_')
             {
-                // wchar_t char_in_frac_loop = peek(lexer);
-                // fwprintf(stderr, L"DEBUG scan_number frac_loop: char='%lc'(%u), is_baa_digit=%d, is_underscore=%d\n",
-                //     char_in_frac_loop, (unsigned int)char_in_frac_loop, is_baa_digit(char_in_frac_loop), char_in_frac_loop == L'_');
                 if (peek(lexer) == L'_')
                 {
                     if (last_char_was_underscore)
@@ -172,7 +176,7 @@ BaaToken *scan_number(BaaLexer *lexer)
                 }
                 else
                 {
-                    if (!is_baa_digit(peek(lexer)))
+                    if (!is_digit_for_frac(peek(lexer)))
                         break;
                     last_char_was_underscore = false;
                 }
@@ -194,7 +198,8 @@ BaaToken *scan_number(BaaLexer *lexer)
      */
     const wchar_t ARABIC_EXPONENT_MARKER_ALIF_HAMZA = L'أ'; // U+0623
 
-    if (base_prefix == 0 && current_peek == ARABIC_EXPONENT_MARKER_ALIF_HAMZA)
+    // Exponent part can follow decimal or hexadecimal floats.
+    if (current_peek == ARABIC_EXPONENT_MARKER_ALIF_HAMZA)
     {
         wchar_t next_peek_exp = peek_next(lexer);
         if (next_peek_exp == L'_')

@@ -34,8 +34,8 @@ This roadmap outlines the planned improvements and current status of the Baa lan
     * [x] Float literal starting with `.` (e.g., `.456`). (v0.1.21.0)
     * [x] Scientific notation (now uses `أ`, `e`/`E` removed). (Conceptual: `أ` implemented, `e`/`E` removed)
     * [x] Underscores for readability. (v0.1.10.0)
-    * [x] Implement Baa Arabic float suffix `ح`. (Conceptual: Implemented)
-    * [ ] Support C99 hexadecimal float constants (e.g., `0x1.fp+2`), adapting to Baa's `أ` exponent marker. (Pending)
+    * [x] Implement Baa Arabic float suffix `ح`.
+    * [x] Support C99 hexadecimal float constants (e.g., `0x1.fp+2`), adapting to Baa's `أ` exponent marker.
   * [x] Character Literals (`BAA_TOKEN_CHAR_LIT`):
     * [x] Unicode escape sequences (`\uXXXX` removed; now `\يXXXX`). (Conceptual: Implemented `\ي`, removed `\u`)
     * [x] Implement Baa-specific Arabic escape sequences (`\س`, `\م`, `\ر`, `\ص`, `\يXXXX`, `\هـHH`) using `\` as the escape character. (Conceptual: Implemented)

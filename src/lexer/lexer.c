@@ -709,6 +709,25 @@ const wchar_t *baa_token_type_to_string(BaaTokenType type)
         return L"BAA_TOKEN_SEMICOLON";
     case BAA_TOKEN_COLON:
         return L"BAA_TOKEN_COLON";
+    
+    // Specific error token types
+    case BAA_TOKEN_ERROR_UNTERMINATED_STRING:
+        return L"BAA_TOKEN_ERROR_UNTERMINATED_STRING";
+    case BAA_TOKEN_ERROR_UNTERMINATED_CHAR:
+        return L"BAA_TOKEN_ERROR_UNTERMINATED_CHAR";
+    case BAA_TOKEN_ERROR_UNTERMINATED_COMMENT:
+        return L"BAA_TOKEN_ERROR_UNTERMINATED_COMMENT";
+    case BAA_TOKEN_ERROR_INVALID_ESCAPE:
+        return L"BAA_TOKEN_ERROR_INVALID_ESCAPE";
+    case BAA_TOKEN_ERROR_INVALID_NUMBER:
+        return L"BAA_TOKEN_ERROR_INVALID_NUMBER";
+    case BAA_TOKEN_ERROR_INVALID_CHARACTER:
+        return L"BAA_TOKEN_ERROR_INVALID_CHARACTER";
+    case BAA_TOKEN_ERROR_NUMBER_OVERFLOW:
+        return L"BAA_TOKEN_ERROR_NUMBER_OVERFLOW";
+    case BAA_TOKEN_ERROR_INVALID_SUFFIX:
+        return L"BAA_TOKEN_ERROR_INVALID_SUFFIX";
+    
     default:
         return L"BAA_TOKEN_INVALID_TYPE_IN_TO_STRING";
     }
@@ -734,4 +753,84 @@ bool baa_token_is_operator(BaaTokenType type)
     return (type >= BAA_TOKEN_PLUS && type <= BAA_TOKEN_OR) ||
            (type >= BAA_TOKEN_PLUS_EQUAL && type <= BAA_TOKEN_PERCENT_EQUAL) ||
            (type >= BAA_TOKEN_INCREMENT && type <= BAA_TOKEN_DECREMENT);
+}
+
+bool baa_token_is_error(BaaTokenType type)
+{
+    return type == BAA_TOKEN_ERROR ||
+           (type >= BAA_TOKEN_ERROR_UNTERMINATED_STRING && type <= BAA_TOKEN_ERROR_INVALID_SUFFIX);
+}
+
+// Error context utilities
+BaaErrorContext *baa_create_error_context(uint32_t error_code, const char *category,
+                                          const wchar_t *suggestion,
+                                          const wchar_t *context_before,
+                                          const wchar_t *context_after)
+{
+    BaaErrorContext *context = malloc(sizeof(BaaErrorContext));
+    if (!context)
+    {
+        fprintf(stderr, "FATAL: Failed to allocate memory for error context.\n");
+        return NULL;
+    }
+
+    context->error_code = error_code;
+    context->category = category; // Assuming category is a string literal
+    context->suggestion = suggestion ? wcsdup(suggestion) : NULL;
+    context->context_before = context_before ? wcsdup(context_before) : NULL;
+    context->context_after = context_after ? wcsdup(context_after) : NULL;
+
+    return context;
+}
+
+void baa_free_error_context(BaaErrorContext *context)
+{
+    if (context)
+    {
+        free(context->suggestion);
+        free(context->context_before);
+        free(context->context_after);
+        free(context);
+    }
+}
+
+const wchar_t *baa_get_error_category_description(const char *category)
+{
+    if (!category) return L"غير محدد";
+    
+    if (strcmp(category, "string") == 0) return L"سلسلة نصية";
+    if (strcmp(category, "character") == 0) return L"محرف";
+    if (strcmp(category, "number") == 0) return L"رقم";
+    if (strcmp(category, "comment") == 0) return L"تعليق";
+    if (strcmp(category, "escape") == 0) return L"تسلسل هروب";
+    if (strcmp(category, "general") == 0) return L"عام";
+    
+    return L"غير معروف";
+}
+
+const wchar_t *baa_get_error_type_description(BaaTokenType error_type)
+{
+    switch (error_type)
+    {
+    case BAA_TOKEN_ERROR:
+        return L"خطأ عام";
+    case BAA_TOKEN_ERROR_UNTERMINATED_STRING:
+        return L"سلسلة نصية غير منتهية";
+    case BAA_TOKEN_ERROR_UNTERMINATED_CHAR:
+        return L"محرف غير منته";
+    case BAA_TOKEN_ERROR_UNTERMINATED_COMMENT:
+        return L"تعليق غير منته";
+    case BAA_TOKEN_ERROR_INVALID_ESCAPE:
+        return L"تسلسل هروب غير صالح";
+    case BAA_TOKEN_ERROR_INVALID_NUMBER:
+        return L"تنسيق رقم غير صالح";
+    case BAA_TOKEN_ERROR_INVALID_CHARACTER:
+        return L"محرف غير صالح";
+    case BAA_TOKEN_ERROR_NUMBER_OVERFLOW:
+        return L"فيض في الرقم";
+    case BAA_TOKEN_ERROR_INVALID_SUFFIX:
+        return L"لاحقة غير صالحة";
+    default:
+        return L"نوع خطأ غير معروف";
+    }
 }

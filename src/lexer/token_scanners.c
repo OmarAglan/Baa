@@ -494,7 +494,12 @@ BaaToken *scan_string(BaaLexer *lexer)
     wchar_t *buffer = malloc(buffer_cap * sizeof(wchar_t));
     if (!buffer)
     {
-        return make_error_token(lexer, L"فشل في تخصيص ذاكرة لسلسلة نصية (السطر %zu)", lexer->line);
+        return make_specific_error_token(lexer,
+            BAA_TOKEN_ERROR,
+            9001, "memory",
+            L"تحقق من توفر ذاكرة كافية في النظام",
+            L"فشل في تخصيص ذاكرة لسلسلة نصية (السطر %zu)",
+            lexer->line);
     }
     size_t start_line = lexer->line;
     // lexer->start is at the opening quote. advance() consumes it.
@@ -561,14 +566,24 @@ BaaToken *scan_string(BaaLexer *lexer)
                     if (byte_val == -1 || byte_val > 0xFF)
                     { // byte_val must be 0-255
                         free(buffer);
-                        return make_error_token(lexer, L"تسلسل هروب سداسي عشري '\\هـHH' غير صالح في سلسلة نصية (بدأت في السطر %zu، العمود %zu)", start_line, start_col);
+                        return make_specific_error_token(lexer,
+                            BAA_TOKEN_ERROR_INVALID_ESCAPE,
+                            1002, "escape",
+                            L"استخدم تسلسل هروب صالح مثل \\هـ01 إلى \\هـFF",
+                            L"تسلسل هروب سداسي عشري '\\هـHH' غير صالح في سلسلة نصية (بدأت في السطر %zu، العمود %zu)",
+                            start_line, start_col);
                     }
                     append_char_to_buffer(&buffer, &buffer_len, &buffer_cap, (wchar_t)byte_val);
                 }
                 else
                 {
                     free(buffer);
-                    return make_error_token(lexer, L"تسلسل هروب غير صالح: '\\ه' يجب أن يتبعها 'ـ' في سلسلة نصية (بدأت في السطر %zu، العمود %zu)", start_line, start_col);
+                    return make_specific_error_token(lexer,
+                        BAA_TOKEN_ERROR_INVALID_ESCAPE,
+                        1002, "escape",
+                        L"استخدم \\هـHH للهروب السداسي عشري",
+                        L"تسلسل هروب غير صالح: '\\ه' يجب أن يتبعها 'ـ' في سلسلة نصية (بدأت في السطر %zu، العمود %zu)",
+                        start_line, start_col);
                 }
                 break;
             }
@@ -584,7 +599,12 @@ BaaToken *scan_string(BaaLexer *lexer)
                 return error_token;
             }
             if (buffer == NULL)
-                return make_error_token(lexer, L"فشل في إعادة تخصيص ذاكرة لسلسلة نصية (السطر %zu)", start_line);
+                return make_specific_error_token(lexer,
+                    BAA_TOKEN_ERROR,
+                    9001, "memory",
+                    L"تحقق من توفر ذاكرة كافية في النظام",
+                    L"فشل في إعادة تخصيص ذاكرة لسلسلة نصية (السطر %zu)",
+                    start_line);
         }
         else
         {
@@ -595,7 +615,12 @@ BaaToken *scan_string(BaaLexer *lexer)
             } // Track newlines inside string
             append_char_to_buffer(&buffer, &buffer_len, &buffer_cap, c);
             if (buffer == NULL)
-                return make_error_token(lexer, L"فشل في إعادة تخصيص ذاكرة لسلسلة نصية (السطر %zu)", start_line);
+                return make_specific_error_token(lexer,
+                    BAA_TOKEN_ERROR,
+                    9001, "memory",
+                    L"تحقق من توفر ذاكرة كافية في النظام",
+                    L"فشل في إعادة تخصيص ذاكرة لسلسلة نصية (السطر %zu)",
+                    start_line);
             advance(lexer);
         }
     }
@@ -616,7 +641,12 @@ BaaToken *scan_string(BaaLexer *lexer)
     advance(lexer);                                                  // Consume closing quote "
     append_char_to_buffer(&buffer, &buffer_len, &buffer_cap, L'\0'); // Null-terminate the content
     if (buffer == NULL)
-        return make_error_token(lexer, L"فشل في إعادة تخصيص الذاكرة عند إنهاء السلسلة النصية (بدأت في السطر %zu)", start_line);
+        return make_specific_error_token(lexer,
+            BAA_TOKEN_ERROR,
+            9001, "memory",
+            L"تحقق من توفر ذاكرة كافية في النظام",
+            L"فشل في إعادة تخصيص الذاكرة عند إنهاء السلسلة النصية (بدأت في السطر %zu)",
+            start_line);
 
     // For make_token, lexer->start should be at the opening quote, lexer->current should be after closing quote.
     // The external dispatcher (baa_lexer_next_token) sets lexer->start.
@@ -648,7 +678,12 @@ BaaToken *scan_doc_comment(BaaLexer *lexer, size_t token_start_line, size_t toke
     wchar_t *buffer = malloc(buffer_cap * sizeof(wchar_t));
     if (!buffer)
     {
-        return make_error_token(lexer, L"فشل في تخصيص ذاكرة لتعليق التوثيق (بدأ في السطر %zu، العمود %zu)", token_start_line, token_start_col);
+        return make_specific_error_token(lexer,
+            BAA_TOKEN_ERROR,
+            9001, "memory",
+            L"تحقق من توفر ذاكرة كافية في النظام",
+            L"فشل في تخصيص ذاكرة لتعليق التوثيق (بدأ في السطر %zu، العمود %zu)",
+            token_start_line, token_start_col);
     }
 
     // When called, lexer->current is positioned *after* the opening /**
@@ -659,7 +694,12 @@ BaaToken *scan_doc_comment(BaaLexer *lexer, size_t token_start_line, size_t toke
         if (is_at_end(lexer))
         {
             free(buffer);
-            BaaToken *err_token = make_error_token(lexer, L"تعليق توثيق غير منتهٍ (بدأ في السطر %zu، العمود %zu)", token_start_line, token_start_col);
+            BaaToken *err_token = make_specific_error_token(lexer,
+                BAA_TOKEN_ERROR_UNTERMINATED_COMMENT,
+                1007, "comment",
+                L"أضف */ لإنهاء تعليق التوثيق",
+                L"تعليق توثيق غير منتهٍ (بدأ في السطر %zu، العمود %zu)",
+                token_start_line, token_start_col);
             return err_token;
         }
 
@@ -678,14 +718,24 @@ BaaToken *scan_doc_comment(BaaLexer *lexer, size_t token_start_line, size_t toke
         if (buffer == NULL)
         { // Check if realloc failed in append_char_to_buffer
             // Error token creation might fail too, but try
-            return make_error_token(lexer, L"فشل في إعادة تخصيص الذاكرة لتعليق التوثيق (السطر %zu)", token_start_line);
+            return make_specific_error_token(lexer,
+                BAA_TOKEN_ERROR,
+                9001, "memory",
+                L"تحقق من توفر ذاكرة كافية في النظام",
+                L"فشل في إعادة تخصيص الذاكرة لتعليق التوثيق (السطر %zu)",
+                token_start_line);
         }
     }
 
     append_char_to_buffer(&buffer, &buffer_len, &buffer_cap, L'\0'); // Null-terminate the content
     if (buffer == NULL)
     {
-        return make_error_token(lexer, L"فشل في إعادة تخصيص الذاكرة عند إنهاء تعليق التوثيق (بدأ في السطر %zu)", token_start_line);
+        return make_specific_error_token(lexer,
+            BAA_TOKEN_ERROR,
+            9001, "memory",
+            L"تحقق من توفر ذاكرة كافية في النظام",
+            L"فشل في إعادة تخصيص الذاكرة عند إنهاء تعليق التوثيق (بدأ في السطر %zu)",
+            token_start_line);
     }
 
     BaaToken *token = malloc(sizeof(BaaToken));
@@ -887,7 +937,12 @@ BaaToken *scan_multiline_string_literal(BaaLexer *lexer, size_t token_start_line
     if (!buffer)
     {
         // Use the passed start_line for error reporting if possible, though lexer->line is current
-        return make_error_token(lexer, L"فشل في تخصيص ذاكرة لسلسلة نصية متعددة الأسطر (بدأت في السطر %zu، العمود %zu)", token_start_line, token_start_col);
+        return make_specific_error_token(lexer,
+            BAA_TOKEN_ERROR,
+            9001, "memory",
+            L"تحقق من توفر ذاكرة كافية في النظام",
+            L"فشل في تخصيص ذاكرة لسلسلة نصية متعددة الأسطر (بدأت في السطر %zu، العمود %zu)",
+            token_start_line, token_start_col);
     }
 
     // When this function is called from baa_lexer_next_token:
@@ -979,7 +1034,12 @@ BaaToken *scan_multiline_string_literal(BaaLexer *lexer, size_t token_start_line
                     if (byte_val == -1 || byte_val > 0xFF)
                     {
                         free(buffer);
-                        BaaToken *err_token = make_error_token(lexer, L"تسلسل هروب سداسي عشري '\\هـHH' غير صالح في سلسلة متعددة الأسطر (بدأت في السطر %zu، العمود %zu)", token_start_line, token_start_col);
+                        BaaToken *err_token = make_specific_error_token(lexer,
+                            BAA_TOKEN_ERROR_INVALID_ESCAPE,
+                            1002, "escape",
+                            L"استخدم تسلسل هروب صالح مثل \\هـ01 إلى \\هـFF",
+                            L"تسلسل هروب سداسي عشري '\\هـHH' غير صالح في سلسلة متعددة الأسطر (بدأت في السطر %zu، العمود %zu)",
+                            token_start_line, token_start_col);
                         synchronize(lexer);
                         return err_token;
                     }
@@ -988,7 +1048,12 @@ BaaToken *scan_multiline_string_literal(BaaLexer *lexer, size_t token_start_line
                 else
                 {
                     free(buffer);
-                    BaaToken *err_token = make_error_token(lexer, L"تسلسل هروب غير صالح: '\\ه' يجب أن يتبعها 'ـ' في سلسلة متعددة الأسطر (بدأت في السطر %zu، العمود %zu)", token_start_line, token_start_col);
+                    BaaToken *err_token = make_specific_error_token(lexer,
+                        BAA_TOKEN_ERROR_INVALID_ESCAPE,
+                        1002, "escape",
+                        L"استخدم \\هـHH للهروب السداسي عشري",
+                        L"تسلسل هروب غير صالح: '\\ه' يجب أن يتبعها 'ـ' في سلسلة متعددة الأسطر (بدأت في السطر %zu، العمود %zu)",
+                        token_start_line, token_start_col);
                     synchronize(lexer);
                     return err_token;
                 }
@@ -1006,7 +1071,12 @@ BaaToken *scan_multiline_string_literal(BaaLexer *lexer, size_t token_start_line
                 return err_token;
             }
             if (buffer == NULL)
-                return make_error_token(lexer, L"فشل في إعادة تخصيص ذاكرة لسلسلة متعددة الأسطر (السطر %zu)", token_start_line);
+                return make_specific_error_token(lexer,
+                    BAA_TOKEN_ERROR,
+                    9001, "memory",
+                    L"تحقق من توفر ذاكرة كافية في النظام",
+                    L"فشل في إعادة تخصيص ذاكرة لسلسلة متعددة الأسطر (السطر %zu)",
+                    token_start_line);
         }
         else
         {
@@ -1014,13 +1084,23 @@ BaaToken *scan_multiline_string_literal(BaaLexer *lexer, size_t token_start_line
             // advance() handles line/column updates for newline
             append_char_to_buffer(&buffer, &buffer_len, &buffer_cap, c_to_append);
             if (buffer == NULL)
-                return make_error_token(lexer, L"فشل في إعادة تخصيص ذاكرة لسلسلة متعددة الأسطر (السطر %zu)", token_start_line);
+                return make_specific_error_token(lexer,
+                    BAA_TOKEN_ERROR,
+                    9001, "memory",
+                    L"تحقق من توفر ذاكرة كافية في النظام",
+                    L"فشل في إعادة تخصيص ذاكرة لسلسلة متعددة الأسطر (السطر %zu)",
+                    token_start_line);
         }
     }
 
     append_char_to_buffer(&buffer, &buffer_len, &buffer_cap, L'\0'); // Null-terminate the content
     if (buffer == NULL)
-        return make_error_token(lexer, L"فشل في إعادة تخصيص الذاكرة عند إنهاء السلسلة متعددة الأسطر (بدأت في السطر %zu)", token_start_line);
+        return make_specific_error_token(lexer,
+            BAA_TOKEN_ERROR,
+            9001, "memory",
+            L"تحقق من توفر ذاكرة كافية في النظام",
+            L"فشل في إعادة تخصيص الذاكرة عند إنهاء السلسلة متعددة الأسطر (بدأت في السطر %zu)",
+            token_start_line);
 
     BaaToken *token = malloc(sizeof(BaaToken));
     if (!token)
@@ -1045,7 +1125,12 @@ BaaToken *scan_raw_string_literal(BaaLexer *lexer, bool is_multiline, size_t tok
     wchar_t *buffer = malloc(buffer_cap * sizeof(wchar_t));
     if (!buffer)
     {
-        return make_error_token(lexer, L"فشل في تخصيص ذاكرة لسلسلة نصية خام (بدأت في السطر %zu، العمود %zu)", token_start_line, token_start_col);
+        return make_specific_error_token(lexer,
+            BAA_TOKEN_ERROR,
+            9001, "memory",
+            L"تحقق من توفر ذاكرة كافية في النظام",
+            L"فشل في تخصيص ذاكرة لسلسلة نصية خام (بدأت في السطر %zu، العمود %zu)",
+            token_start_line, token_start_col);
     }
 
     // When this function is called:
@@ -1062,7 +1147,12 @@ BaaToken *scan_raw_string_literal(BaaLexer *lexer, bool is_multiline, size_t tok
             if (is_at_end(lexer))
             {
                 free(buffer);
-                BaaToken *err_token = make_error_token(lexer, L"سلسلة نصية خام متعددة الأسطر غير منتهية (بدأت في السطر %zu، العمود %zu)", token_start_line, token_start_col);
+                BaaToken *err_token = make_specific_error_token(lexer,
+                    BAA_TOKEN_ERROR_UNTERMINATED_STRING,
+                    1001, "string",
+                    L"أضف علامة اقتباس مزدوجة ثلاثية \"\"\" في نهاية السلسلة الخام",
+                    L"سلسلة نصية خام متعددة الأسطر غير منتهية (بدأت في السطر %zu، العمود %zu)",
+                    token_start_line, token_start_col);
                 return err_token;
             }
 
@@ -1079,7 +1169,12 @@ BaaToken *scan_raw_string_literal(BaaLexer *lexer, bool is_multiline, size_t tok
             // No escape sequence processing for raw strings
             append_char_to_buffer(&buffer, &buffer_len, &buffer_cap, advance(lexer));
             if (buffer == NULL)
-                return make_error_token(lexer, L"فشل في إعادة تخصيص ذاكرة لسلسلة خام متعددة الأسطر (السطر %zu)", token_start_line);
+                return make_specific_error_token(lexer,
+                    BAA_TOKEN_ERROR,
+                    9001, "memory",
+                    L"تحقق من توفر ذاكرة كافية في النظام",
+                    L"فشل في إعادة تخصيص ذاكرة لسلسلة خام متعددة الأسطر (السطر %zu)",
+                    token_start_line);
         }
     }
     else
@@ -1105,7 +1200,12 @@ BaaToken *scan_raw_string_literal(BaaLexer *lexer, bool is_multiline, size_t tok
             // No escape sequence processing for raw strings
             append_char_to_buffer(&buffer, &buffer_len, &buffer_cap, advance(lexer));
             if (buffer == NULL)
-                return make_error_token(lexer, L"فشل في إعادة تخصيص ذاكرة لسلسلة خام (السطر %zu)", token_start_line);
+                return make_specific_error_token(lexer,
+                    BAA_TOKEN_ERROR,
+                    9001, "memory",
+                    L"تحقق من توفر ذاكرة كافية في النظام",
+                    L"فشل في إعادة تخصيص ذاكرة لسلسلة خام (السطر %zu)",
+                    token_start_line);
         }
 
         if (is_at_end(lexer) || peek(lexer) != L'"')
@@ -1127,7 +1227,12 @@ BaaToken *scan_raw_string_literal(BaaLexer *lexer, bool is_multiline, size_t tok
 
     append_char_to_buffer(&buffer, &buffer_len, &buffer_cap, L'\0'); // Null-terminate
     if (buffer == NULL)
-        return make_error_token(lexer, L"فشل في إعادة تخصيص الذاكرة عند إنهاء السلسلة الخام (بدأت في السطر %zu)", token_start_line);
+        return make_specific_error_token(lexer,
+            BAA_TOKEN_ERROR,
+            9001, "memory",
+            L"تحقق من توفر ذاكرة كافية في النظام",
+            L"فشل في إعادة تخصيص الذاكرة عند إنهاء السلسلة الخام (بدأت في السطر %zu)",
+            token_start_line);
 
     BaaToken *token = malloc(sizeof(BaaToken));
     if (!token)

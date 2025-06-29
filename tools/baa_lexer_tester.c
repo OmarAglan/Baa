@@ -139,8 +139,8 @@ int main(int argc, char *argv_char[])
     if (!source_to_lex)
     {
         // Default to a simple test string if no file is provided
-        // This string includes error cases to test enhanced error handling
-        static const wchar_t default_source[] = L"123.45غ\n67.89حح\nvalid123.45ح";
+        // This string includes comprehensive error cases to test enhanced error handling
+        static const wchar_t default_source[] = L"\"unterminated\n\"invalid\\q\"\n'unterminated\n123غغ\n/* unterminated";
         source_to_lex = default_source;
         source_name_for_lexer = L"<default_test_string>";
         wprintf(L"No input file provided. Using default test string:\n\"");

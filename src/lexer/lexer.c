@@ -147,11 +147,7 @@ BaaToken *make_token(BaaLexer *lexer, BaaTokenType type)
     return token;
 }
 
-// Creates an error token with a formatted message (dynamically allocated)
-BaaToken *make_error_token(BaaLexer *lexer, const wchar_t *format, ...)
-{
-    return make_specific_error_token(lexer, BAA_TOKEN_ERROR, 0, "general", NULL, format);
-}
+
 
 BaaToken *make_specific_error_token(BaaLexer *lexer, BaaTokenType error_type,
                                     uint32_t error_code, const char *category,
@@ -582,7 +578,11 @@ BaaToken *baa_lexer_next_token(BaaLexer *lexer)
     case L'&':
         if (!match(lexer, L'&'))
         {
-            BaaToken *error_token = make_error_token(lexer, L"عامل غير صالح: علامة '&' مفردة (هل تقصد '&&'؟)");
+            BaaToken *error_token = make_specific_error_token(lexer,
+                BAA_TOKEN_ERROR_INVALID_CHARACTER,
+                1008, "operator",
+                L"استخدم && للعامل المنطقي AND",
+                L"عامل غير صالح: علامة '&' مفردة (هل تقصد '&&'؟)");
             synchronize(lexer);
             return error_token;
         }
@@ -590,15 +590,23 @@ BaaToken *baa_lexer_next_token(BaaLexer *lexer)
     case L'|':
         if (!match(lexer, L'|'))
         {
-            BaaToken *error_token = make_error_token(lexer, L"عامل غير صالح: علامة '|' مفردة (هل تقصد '||'؟)");
+            BaaToken *error_token = make_specific_error_token(lexer,
+                BAA_TOKEN_ERROR_INVALID_CHARACTER,
+                1008, "operator",
+                L"استخدم || للعامل المنطقي OR",
+                L"عامل غير صالح: علامة '|' مفردة (هل تقصد '||'؟)");
             synchronize(lexer);
             return error_token;
         }
         return make_token(lexer, BAA_TOKEN_OR);
     }
 
-    BaaToken *error_token = make_error_token(lexer, L"حرف غير متوقع: '%lc' (الكود: %u) في السطر %zu، العمود %zu",
-                                             c, (unsigned int)c, lexer->line, lexer->column);
+    BaaToken *error_token = make_specific_error_token(lexer,
+        BAA_TOKEN_ERROR_INVALID_CHARACTER,
+        1009, "character",
+        L"تحقق من صحة الحرف أو احذفه",
+        L"حرف غير متوقع: '%lc' (الكود: %u) في السطر %zu، العمود %zu",
+        c, (unsigned int)c, lexer->line, lexer->column);
     synchronize(lexer);
     return error_token;
 }

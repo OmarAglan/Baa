@@ -742,7 +742,6 @@ static bool parse_primary_pp_expr(PpExprTokenizer *tz, long *result)
                 // TODO: Implement full macro expansion and re-evaluation here.
                 *result = 0L;
                 // Report a warning? Or just evaluate to 0 silently? C standard is 0.
-                // make_error_token(tz, L"Warning: Macro body is not a simple integer, evaluating as 0.");
             }
             else
             {

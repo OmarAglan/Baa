@@ -50,6 +50,28 @@ void print_token_for_tester(const BaaToken *token, int count)
         }
     }
     wprintf(L"]\n");
+
+    // Print enhanced error information if available
+    if (token->error) {
+        wprintf(L"      ERROR INFO:\n");
+        wprintf(L"        Code: %u\n", token->error->error_code);
+        wprintf(L"        Category: %hs\n", token->error->category ? token->error->category : "(null)");
+        if (token->error->suggestion) {
+            wprintf(L"        Suggestion: ");
+            print_wide_string_tester(stdout, token->error->suggestion);
+            wprintf(L"\n");
+        }
+        if (token->error->context_before) {
+            wprintf(L"        Context Before: ");
+            print_wide_string_tester(stdout, token->error->context_before);
+            wprintf(L"\n");
+        }
+        if (token->error->context_after) {
+            wprintf(L"        Context After: ");
+            print_wide_string_tester(stdout, token->error->context_after);
+            wprintf(L"\n");
+        }
+    }
 }
 
 int main(int argc, char *argv_char[])
@@ -117,10 +139,8 @@ int main(int argc, char *argv_char[])
     if (!source_to_lex)
     {
         // Default to a simple test string if no file is provided
-        // This string includes spaces, tabs, and newlines.
-        // Let's use the example from your tools/baa_lexer_tester.c for direct comparison
-        // but modify it to test new whitespace tokens.
-        static const wchar_t default_source[] = L"  \tident1\n\nvar1 = 10.\n// comment to be ignored\n";
+        // This string includes error cases to test enhanced error handling
+        static const wchar_t default_source[] = L"\"unterminated string\n\"invalid\\q escape\"\n'unterminated\n0x\n/* unterminated comment";
         source_to_lex = default_source;
         source_name_for_lexer = L"<default_test_string>";
         wprintf(L"No input file provided. Using default test string:\n\"");

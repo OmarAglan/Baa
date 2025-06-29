@@ -28,16 +28,17 @@ The primary role of the lexer is to identify and categorize sequences of charact
   * Parses integers in decimal, hexadecimal (`0x`/`0X`), and binary (`0b`/`0B`) formats.
   * Supports Arabic-Indic digits within all parts of numeric literals.
   * Allows underscores (`_`) as separators for readability in numbers.
-  * Recognizes Arabic integer literal suffixes (`غ` for unsigned, `ط` for long, `طط` for long long, and their combinations like `غط`). The lexer includes these in the token's lexeme.
+  * Recognizes Arabic integer literal suffixes (`غ` for unsigned, `ط` for long, `طط` for long long, and their combinations like `غط`). The lexer includes these in the token's lexeme (implemented and working).
+  * Recognizes Arabic float suffix `ح` for floating-point literals (implemented and working).
   * Parses floating-point numbers using `.` or the Arabic decimal separator `٫`.
-  * Scientific notation for floats now uses the Arabic exponent marker `'أ'`, replacing `'e'/'E'`.
-  * Supports hexadecimal float constants (e.g., `0x1.aأ+2`), which must include a hexadecimal part (integer or fractional) and an exponent part prefixed with `أ`.
+  * Scientific notation for floats uses the Arabic exponent marker `'أ'` (implemented and working), replacing `'e'/'E'`.
+  * Supports hexadecimal float constants (e.g., `0x1.aأ+2`), which must include a hexadecimal part (integer or fractional) and an exponent part prefixed with `أ` (implemented and working).
 * **String and Character Literals:**
   * Handles standard double-quoted strings (`"..."`), multiline triple-quoted strings (`"""..."""`), and raw strings (prefixed with `خ`, e.g., `خ"..."`, `خ"""..."""`).
   * Handles single-quoted character literals (`'...'`).
-  * Processes Baa-specific Arabic escape sequences (`\س`, `\م`, `\ر`, `\ص`, `\يXXXX`, `\هـHH`) using `\` as the escape character. (Standard C-style escapes like `\n`, `\t`, `\uXXXX` are replaced by their Arabic equivalents).
+  * Processes Baa-specific Arabic escape sequences (`\س`, `\م`, `\ر`, `\ص`, `\يXXXX`, `\هـHH`) using `\` as the escape character. (Standard C-style escapes like `\n`, `\t`, `\uXXXX` are replaced by their Arabic equivalents). All escape sequences work correctly in regular strings, character literals, and multiline strings.
   * Fixed issues with tokenizing opening delimiters for multiline strings (`"""`) and raw strings (`خ"""`) in v0.1.31.0.
-  * Enhanced escape sequence handling for multiline strings in v0.1.32.0.
+  * Enhanced escape sequence handling for multiline strings in v0.1.32.0 - now working correctly.
 
 ### 3. Comment Handling
 

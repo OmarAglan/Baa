@@ -29,22 +29,23 @@ This roadmap outlines the planned improvements and current status of the Baa lan
     * [x] Arabic-Indic digits (`٠-٩`). (v0.1.10.0)
     * [x] Underscores (`_`) for readability. (v0.1.10.0)
     * [x] Arabic Suffixes (`غ`, `ط`, `طط`, combinations like `غط`, `ططغ`) - Lexer tokenizes as part of `BAA_TOKEN_INT_LIT`. (v0.1.13.0)
-  * [ ] Floating-Point Literals (`BAA_TOKEN_FLOAT_LIT`):
-    * [x] Decimal representation with `.` or Arabic `٫` (U+066B). (v0.1.10.0) - *Note: Lexer correctly captures `٫`, display issue in tester.*
-    * [x] Float literal starting with `.` (e.g., `.456`). (v0.1.21.0)
-    * [x] Scientific notation (now uses `أ`, `e`/`E` removed). (Conceptual: `أ` implemented, `e`/`E` removed)
+  * [x] Floating-Point Literals (`BAA_TOKEN_FLOAT_LIT`):
+    * [x] Decimal representation with `.` or Arabic `٫` (U+066B). (v0.1.10.0)
+    * [x] Float literal starting with `.` (e.g., `.456`). (Working)
+    * [x] Scientific notation (now uses `أ`, `e`/`E` removed). (Implemented and working)
     * [x] Underscores for readability. (v0.1.10.0)
-    * [x] Implement Baa Arabic float suffix `ح`.
-    * [x] Support C99 hexadecimal float constants (e.g., `0x1.fp+2`), adapting to Baa's `أ` exponent marker.
+    * [x] Baa Arabic float suffix `ح`. (Implemented and working)
+    * [x] Support C99 hexadecimal float constants (e.g., `0x1.fp+2`), adapting to Baa's `أ` exponent marker. (Implemented and working)
   * [x] Character Literals (`BAA_TOKEN_CHAR_LIT`):
     * [x] Unicode escape sequences (`\uXXXX` removed; now `\يXXXX`). (Conceptual: Implemented `\ي`, removed `\u`)
-    * [x] Implement Baa-specific Arabic escape sequences (`\س`, `\م`, `\ر`, `\ص`, `\يXXXX`, `\هـHH`) using `\` as the escape character. (Conceptual: Implemented)
+    * [x] Implement Baa-specific Arabic escape sequences (`\س`, `\م`, `\ر`, `\ص`, `\يXXXX`, `\هـHH`) using `\` as the escape character. (Implemented and working)
   * [x] String Literals (`BAA_TOKEN_STRING_LIT`):
     * [x] Standard C escape sequences (now replaced by Baa Arabic equivalents).
     * [x] Unicode escape sequences (`\uXXXX` removed; now `\يXXXX`). (Conceptual: Implemented `\ي`, removed `\u`)
     * [x] Multiline strings (`"""..."""`). (v0.1.31.0) - Fixed bug where the opening `"""` delimiter was incorrectly tokenized as an empty string literal.
     * [x] Raw string literals (`خ"..."`, `خ"""..."""`), including single-line newline error handling. (v0.1.31.0) - Fixed bug where the opening `خ"""` delimiter was incorrectly tokenized.
-    * [x] Implement Baa-specific Arabic escape sequences (`\س`, `\م`, `\ر`, `\ص`, `\يXXXX`, `\هـHH`) in `scan_string` and `scan_multiline_string_literal`. (v0.1.32.0)
+    * [x] Implement Baa-specific Arabic escape sequences (`\س`, `\م`, `\ر`, `\ص`, `\يXXXX`, `\هـHH`) in `scan_string` and `scan_multiline_string_literal`. (Working - v0.1.32.0)
+0.1.32.0)
   * [x] Boolean Literals (`BAA_TOKEN_BOOL_LIT`): `صحيح`, `خطأ`.
 * **Keywords:**
   * [x] All current Baa keywords tokenized correctly (e.g., `إذا`, `لكل`, `ثابت`).
@@ -60,16 +61,16 @@ This roadmap outlines the planned improvements and current status of the Baa lan
 * [x] Arabic exponent marker `'أ'` implemented for scientific notation, replacing `'e'/'E'`.
 * [x] Arabic-Indic digit support in lexemes passed to `number_parser.c`.
 * [x] Underscores in number lexemes passed to `number_parser.c`.
-* [ ] **Crucial Next Step:** Ensure `number_parser.c` (functions like `baa_parse_number`) can correctly interpret the full lexemes produced by `scan_number`, including:
-  * [ ] Integer suffixes (`غ`, `ط`, `طط`) to determine actual type (unsigned, long, etc.) and value. (Lexer tokenizes, parser needs to interpret).
-  * [ ] Float suffix `ح` (once implemented in lexer).
-  * [ ] Arabic exponent marker `أ` (now conceptually implemented in lexer).
-  * [ ] Hexadecimal float components (once implemented in lexer).
+* [x] **Completed:** `number_parser.c` (functions like `baa_parse_number`) correctly interprets the full lexemes produced by `scan_number`, including:
+  * [x] Integer suffixes (`غ`, `ط`, `طط`) to determine actual type (unsigned, long, etc.) and value.
+  * [x] Float suffix `ح` (implemented and working in lexer).
+  * [x] Arabic exponent marker `أ` (implemented and working in lexer).
+  * [x] Hexadecimal float components (implemented and working in lexer).
 
 ## 4. String & Character Literal Value Processing
 
 * [x] Lexer's `scan_string`, `scan_char_literal`, `scan_multiline_string_literal`, `scan_raw_string_literal` process standard C and `\uXXXX` escapes, storing the resulting value in `token->lexeme`.
-* [x] Baa-specific Arabic escape sequences are now conceptually implemented in scanner functions to correctly process them into their corresponding character values.
+* [x] Baa-specific Arabic escape sequences are implemented and working in scanner functions to correctly process them into their corresponding character values.
 
 ## 5. Arabic Language Support & Unicode (Lexer-specific)
 
@@ -122,7 +123,7 @@ This roadmap outlines the planned improvements and current status of the Baa lan
 
 * [x] String/Char literals: Lexer processes escapes and stores the final value in `token->lexeme`.
 * [x] Comment tokens: Lexer stores content only (delimiters excluded) in `token->lexeme`.
-* [ ] Numeric literals: Lexer captures the full textual lexeme. `number_parser.c` converts this. Ensure `number_parser.c` is updated for all planned numeric literal features (suffixes `ح`, exponent `أ`, hex floats).
+* [x] Numeric literals: Lexer captures the full textual lexeme. `number_parser.c` converts this and supports all numeric literal features (suffixes `ح`, exponent `أ`, hex floats).
 * [x] Source Location Precision: Tokens store start line/column.
 * [ ] **Enhance Token Location:** Add full source span (`BaaSourceSpan` or similar with start/end line/col) to `BaaToken` for more precise error reporting and tooling. This involves updating `BaaToken` struct and `make_token` logic.
 
@@ -168,4 +169,4 @@ This roadmap outlines the planned improvements and current status of the Baa lan
 6. **Performance Optimizations:** As needed, based on profiling.
 
 ## Known Issues / Bugs to Fix (from recent testing)
-   **[VERIFY] Numeric Lexeme Content:** Arabic-Indic digits (e.g., `٠١٢٣`) and the Arabic decimal separator (`٫`) in source code appear as Western digits or `?` in the `baa_lexer_tester`'s printout of token lexemes. This has been verified to be a display issue in the tester tool/console; the lexer correctly preserves the raw source characters in `BaaToken.lexeme`.
+   **[RESOLVED] Numeric Lexeme Content:** Arabic-Indic digits (e.g., `٠١٢٣`) and the Arabic decimal separator (`٫`) in source code appear as Western digits or `?` in the `baa_lexer_tester`'s printout of token lexemes. This has been verified to be a display issue in the tester tool/console only; the lexer correctly preserves the raw source characters in `BaaToken.lexeme`.

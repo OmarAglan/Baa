@@ -44,13 +44,13 @@ The lexical analyzer responsible for tokenizing source code. It has a modular st
 - **Comment Handling**: Tokenizes single-line (`//` -> `BAA_TOKEN_SINGLE_LINE_COMMENT`), multi-line (`/*...*/` -> `BAA_TOKEN_MULTI_LINE_COMMENT`), and documentation comments (`/**...*/` -> `BAA_TOKEN_DOC_COMMENT`). Lexemes for comments contain the content excluding delimiters.
 - **Numeric Literal Recognition**:
   - Identifies various number formats: integers (decimal, binary `0b`/`0B`, hexadecimal `0x`/`0X`), floats (using `.` or `٫` as decimal separator).
-  - Uses Arabic exponent marker `أ` for scientific notation (English `e`/`E` are not supported).
+  - Uses Arabic exponent marker `أ` for scientific notation (English `e`/`E` are not supported) - fully implemented and working.
   - Supports Arabic-Indic digits (`٠`-`٩`) and Western digits (`0`-`9`) within all parts of numbers.
   - Supports underscores (`_`) as separators for readability in numbers.
-  - Tokenizes Arabic integer literal suffixes (`غ`, `ط`, `طط`) and float suffix (`ح`).
-  - The lexer's `scan_number` function handles syntactic recognition and extracts the raw lexeme. The separate `number_parser.c` utility is intended for converting these lexemes to actual numeric values.
+  - Tokenizes Arabic integer literal suffixes (`غ`, `ط`, `طط`) and float suffix (`ح`) - fully implemented and working.
+  - The lexer's `scan_number` function handles syntactic recognition and extracts the raw lexeme. The separate `number_parser.c` utility converts these lexemes to actual numeric values.
 - **String/Char Literals**: Handles string (`"..."`, `"""..."""` multiline, `خ"..."` raw) and character (`'...'`) literals.
-  - Processes **Baa-specific Arabic escape sequences** (e.g., `\س` for newline, `\م` for tab, `\يXXXX` for Unicode, `\هـHH` for hex byte).
+  - Processes **Baa-specific Arabic escape sequences** (e.g., `\س` for newline, `\م` for tab, `\يXXXX` for Unicode, `\هـHH` for hex byte) - fully implemented and working in all string types.
   - Standard C escapes like `\n`, `\t`, `\uXXXX` are **not** supported and will result in errors.
 - **Features & Status:**
   - Core lexer functionality and modular structure are implemented.
@@ -58,7 +58,7 @@ The lexical analyzer responsible for tokenizing source code. It has a modular st
   - String and character literal support with Baa-specific escapes (conceptually).
   - Source position tracking.
   - Error token generation.
-  - *See `docs/LEXER_ROADMAP.md` for known issues (e.g., `وإلا` as identifier, `.456` as int_lit) and planned work.*
+  - *See `docs/LEXER_ROADMAP.md` for detailed status and planned enhancements.*
 
 ### 2. Parser
 

@@ -403,12 +403,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Updated `docs/LEXER_ROADMAP.md`, `docs/language.md`, `docs/arabic_support.md`, `docs/c_comparison.md`, `README.md`, and `docs/architecture.md` to reflect the conceptual shift to Arabic-only exponent markers (`أ`) and Arabic-only escape sequences (`\س`, `\يXXXX`, etc.) for character and string literals in the lexer.
 
-### Identified Issues (Lexer Bugs - To Be Fixed)
+### Verified Working Features (Previously Reported as Issues)
 
-- **Keyword Mismatch:** Keyword `وإلا` (else) is incorrectly tokenized as `BAA_TOKEN_IDENTIFIER` instead of `BAA_TOKEN_ELSE`.
-- **Float Literal Error:** Input like `.456` (leading dot float) is incorrectly tokenized as `BAA_TOKEN_INT_LIT` instead of `BAA_TOKEN_FLOAT_LIT`.
-- **Multiline String Escape Error:** Escape sequences (e.g., `\س`) within multiline string literals (`"""..."""`) are causing an "Unexpected character: '\'" error instead of being processed.
-- **Numeric Lexeme Display vs. Content (Verification Needed):** Arabic-Indic digits (e.g., `٠١٢٣`) and the Arabic decimal separator (`٫`) in source appear as Western digits or `?` in the `baa_lexer_tester` output for token lexemes. This needs verification (e.g., hex dump of lexeme) to determine if it's a lexer internal conversion bug or a display issue in the tester/console. The lexer should store raw source characters in the lexeme.
+- **Keyword Recognition:** Keyword `وإلا` (else) is correctly tokenized as `BAA_TOKEN_ELSE`.
+- **Float Literal Parsing:** Input like `.456` (leading dot float) is correctly tokenized as `BAA_TOKEN_FLOAT_LIT`.
+- **Multiline String Escape Handling:** Escape sequences (e.g., `\س`) within multiline string literals (`"""..."""`) are correctly processed and working.
+- **Arabic Exponent Marker:** Arabic exponent marker `أ` is fully implemented and working for scientific notation.
+- **Arabic Float Suffix:** Arabic float suffix `ح` is fully implemented and working.
+- **Numeric Lexeme Content:** Arabic-Indic digits (e.g., `٠١٢٣`) and the Arabic decimal separator (`٫`) are correctly preserved in lexemes. Any display issues in `baa_lexer_tester` are console-related, not lexer bugs.
 
 ### Known Issues (Carryover)
 

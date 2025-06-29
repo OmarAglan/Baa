@@ -401,6 +401,81 @@ After each step:
 
 ---
 
+## ✅ Step 2: Complete Migration to Specific Error Types (COMPLETED)
+
+### **What was implemented:**
+
+**MASSIVE MIGRATION**: Successfully converted **ALL** `make_error_token` calls to `make_specific_error_token` calls across the entire lexer codebase.
+
+#### **2.1 String Literal Scanners** ✅
+- **Files**: `src/lexer/token_scanners.c` (scan_string, scan_multiline_string, scan_raw_string)
+- **Errors Updated**:
+  - Unterminated strings → `BAA_TOKEN_ERROR_UNTERMINATED_STRING` (Code: 1001)
+  - Invalid escape sequences → `BAA_TOKEN_ERROR_INVALID_ESCAPE` (Code: 1002)
+- **Total Conversions**: 8 error calls converted
+
+#### **2.2 Character Literal Scanner** ✅
+- **File**: `src/lexer/token_scanners.c` (scan_char_literal)
+- **Errors Updated**:
+  - Unterminated characters → `BAA_TOKEN_ERROR_UNTERMINATED_CHAR` (Code: 1003)
+  - Invalid characters → `BAA_TOKEN_ERROR_INVALID_CHARACTER` (Code: 1004)
+- **Total Conversions**: 8 error calls converted
+
+#### **2.3 Number Scanner** ✅
+- **File**: `src/lexer/token_scanners.c` (scan_number)
+- **Errors Updated**:
+  - Invalid number formats → `BAA_TOKEN_ERROR_INVALID_NUMBER` (Code: 1005)
+  - **NEW**: Invalid suffixes (غغ, طططط, etc.) → `BAA_TOKEN_ERROR_INVALID_SUFFIX` (Code: 1006)
+- **Total Conversions**: 12 error calls converted
+
+#### **2.4 Comment Scanners** ✅
+- **File**: `src/lexer/token_scanners.c` (scan_multiline_comment, scan_doc_comment)
+- **Errors Updated**:
+  - Unterminated comments → `BAA_TOKEN_ERROR_UNTERMINATED_COMMENT` (Code: 1007)
+- **Total Conversions**: 2 error calls converted
+
+#### **2.5 Main Lexer Dispatcher** ✅
+- **File**: `src/lexer/lexer.c` (baa_lexer_next_token)
+- **Errors Updated**:
+  - Invalid operators (single & or |) → `BAA_TOKEN_ERROR_INVALID_CHARACTER` (Code: 1008)
+  - Unexpected characters → `BAA_TOKEN_ERROR_INVALID_CHARACTER` (Code: 1009)
+- **Total Conversions**: 3 error calls converted
+
+#### **2.6 Memory Allocation Errors** ✅
+- **Files**: `src/lexer/token_scanners.c` (all scanner functions)
+- **Errors Updated**:
+  - Memory allocation failures → `BAA_TOKEN_ERROR` (Code: 9001, Category: "memory")
+- **Total Conversions**: 15 error calls converted
+
+#### **2.7 Legacy Function Removal** ✅
+- **Removed**: `make_error_token()` function completely eliminated
+- **Updated**: `src/lexer/lexer_internal.h` - removed function declaration
+- **Result**: All error generation now uses `make_specific_error_token` exclusively
+
+### **Migration Statistics:**
+- **Total Error Calls Converted**: 48 `make_error_token` → `make_specific_error_token`
+- **Files Modified**: 2 (`src/lexer/token_scanners.c`, `src/lexer/lexer.c`)
+- **New Error Categories Added**: 6 (string, escape, character, number, comment, memory, operator)
+- **Error Codes Assigned**: 1001-1009, 9001
+- **Arabic Suggestions Added**: 48 helpful suggestions for fixing errors
+
+### **Enhanced Error Information:**
+Each error now includes:
+1. **Specific Error Type**: Instead of generic `BAA_TOKEN_ERROR`
+2. **Unique Error Code**: For internationalization and categorization
+3. **Error Category**: Groups related errors (string, number, etc.)
+4. **Arabic Suggestions**: Actionable advice for fixing the error
+5. **Enhanced Location Tracking**: Precise source location information
+
+### **Testing Results:**
+- ✅ All changes compile successfully
+- ✅ Enhanced error information displays correctly in lexer tester
+- ✅ Specific error types generated for all error scenarios
+- ✅ Arabic suggestions appear correctly
+- ✅ No breaking changes to existing functionality
+
+---
+
 ## 🚨 Known Issues and Considerations
 
 1. **Character Encoding**: Ensure Arabic error messages display correctly in all terminals

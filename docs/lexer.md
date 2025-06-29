@@ -57,11 +57,50 @@ The primary role of the lexer is to identify and categorize sequences of charact
 * Example: ` \t ` -> `Token(WHITESPACE, "  \t ", line, col)`
 * **`BAA_TOKEN_NEWLINE`**: Tokenizes newline sequences (`\n`, `\r`, `\r\n`). The lexeme is the actual sequence encountered (e.g., `"\n"` or `"\r\n"`), and the token's location points to the start of this sequence. Line and column tracking are updated accordingly by the lexer.
 
-### 4. Error Handling
+### 4. Enhanced Error Handling System
 
-* Identifies lexical errors such as unexpected characters, unterminated string/character/comment literals, and invalid escape sequences.
-* When an error is encountered, it generates a `BAA_TOKEN_ERROR` token. The `lexeme` field of this token contains an error message (often in Arabic for number-related errors, English for others currently).
-* Includes basic error synchronization to attempt to continue tokenizing after an error.
+The Baa lexer features a comprehensive error handling system that provides specific error types, detailed error information, and helpful suggestions for fixing errors.
+
+#### 4.1 Specific Error Token Types
+
+Instead of generic `BAA_TOKEN_ERROR` tokens, the lexer now generates specific error types:
+
+* **`BAA_TOKEN_ERROR_UNTERMINATED_STRING`** (Code: 1001): Missing closing quote in string literals
+* **`BAA_TOKEN_ERROR_INVALID_ESCAPE`** (Code: 1002): Invalid escape sequences in strings/characters
+* **`BAA_TOKEN_ERROR_UNTERMINATED_CHAR`** (Code: 1003): Missing closing quote in character literals
+* **`BAA_TOKEN_ERROR_INVALID_CHARACTER`** (Code: 1004): Invalid characters (e.g., newlines in char literals)
+* **`BAA_TOKEN_ERROR_INVALID_NUMBER`** (Code: 1005): Invalid number formats (e.g., `0x` without digits)
+* **`BAA_TOKEN_ERROR_INVALID_SUFFIX`** (Code: 1006): Invalid literal suffixes (e.g., `غغ`, `طططط`)
+* **`BAA_TOKEN_ERROR_UNTERMINATED_COMMENT`** (Code: 1007): Missing closing `*/` in comments
+* **`BAA_TOKEN_ERROR`** (Code: 9001): Memory allocation errors and other system errors
+
+#### 4.2 Enhanced Error Information
+
+Each error token includes rich contextual information through the `BaaErrorContext` structure:
+
+```c
+typedef struct {
+    unsigned int error_code;        // Unique error code for internationalization
+    const char* category;          // Error category ("string", "number", etc.)
+    const wchar_t* suggestion;     // Helpful suggestion in Arabic
+    const wchar_t* context_before; // Source context before error (optional)
+    const wchar_t* context_after;  // Source context after error (optional)
+} BaaErrorContext;
+```
+
+#### 4.3 Arabic Error Messages and Suggestions
+
+All error messages and suggestions are provided in Arabic:
+
+* **Unterminated String**: `"أضف علامة اقتباس مزدوجة \" في نهاية السلسلة"` (Add a double quote " at the end of the string)
+* **Invalid Escape**: `"استخدم تسلسل هروب صالح مثل \\س أو \\م أو \\يXXXX"` (Use a valid escape sequence like \س or \م or \يXXXX)
+* **Invalid Suffix**: `"استخدم لاحقة غ واحدة فقط للأعداد غير المُوقعة"` (Use only one غ suffix for unsigned numbers)
+
+#### 4.4 Error Recovery and Synchronization
+
+* Includes robust error synchronization to continue tokenizing after errors
+* Attempts to recover gracefully from lexical errors
+* Provides precise source location information for all errors
 
 ### 5. Modular Structure
 
@@ -89,20 +128,36 @@ typedef struct {
 } BaaLexer;
 ```
 
-### `BaaToken` (Token Structure)
+### `BaaToken` (Enhanced Token Structure)
 
-Represents a single token:
+Represents a single token with enhanced error handling capabilities:
 
 ```c
 typedef struct {
-    BaaTokenType type;       // Enum identifying the token's type
+    BaaTokenType type;       // Enum identifying the token's type (including specific error types)
     const wchar_t* lexeme;   // Pointer to the string of characters forming the token (dynamically allocated)
     // For string, char, and comment tokens, this is the *processed content*.
     // For other tokens (keywords, identifiers, numbers, operators), this is the raw source text.
+    // For error tokens, this contains the Arabic error message.
     size_t length;           // Length of the lexeme (content length for processed types)
     size_t line;            // Line number where the token begins
     size_t column;          // Column number where the token begins
+    BaaSourceSpan span;     // Enhanced source location tracking
+    BaaErrorContext* error; // Error-specific information (NULL for non-error tokens)
 } BaaToken;
+```
+
+#### Enhanced Source Location (`BaaSourceSpan`)
+
+```c
+typedef struct {
+    size_t start_line;      // Starting line number (1-based)
+    size_t start_column;    // Starting column number (1-based)
+    size_t end_line;        // Ending line number (1-based)
+    size_t end_column;      // Ending column number (1-based)
+    size_t start_offset;    // Character offset from source start
+    size_t end_offset;      // Character offset from source start
+} BaaSourceSpan;
 ```
 
 A comprehensive list of `BaaTokenType` values can be found in `include/baa/lexer/lexer.h`.
@@ -137,8 +192,13 @@ A comprehensive list of `BaaTokenType` values can be found in `include/baa/lexer
         //         (int)token->length, token->lexeme,
         //         token->line, token->column);
 
-        if (token->type == BAA_TOKEN_ERROR) {
-            // fwprintf(stderr, L"Lexical Error: %ls\n", token->lexeme);
+        // Enhanced error handling with specific error types
+        if (baa_token_is_error(token)) {
+            // fwprintf(stderr, L"Lexical Error [%u]: %ls\n",
+            //          token->error->error_code, token->lexeme);
+            // if (token->error->suggestion) {
+            //     fwprintf(stderr, L"Suggestion: %ls\n", token->error->suggestion);
+            // }
         }
 
         BaaTokenType current_type = token->type; // Store before freeing
@@ -149,12 +209,22 @@ A comprehensive list of `BaaTokenType` values can be found in `include/baa/lexer
     } while (true);
     ```
 
+## Recent Major Improvements
+
+### ✅ Enhanced Error Handling System (Completed)
+
+* **Specific Error Types**: Implemented 8 specific error token types instead of generic errors
+* **Rich Error Context**: Added error codes, categories, and Arabic suggestions
+* **Complete Migration**: All 48 error generation points now use the enhanced system
+* **Memory Management**: Proper cleanup of error contexts and enhanced token structures
+* **Arabic Localization**: All error messages and suggestions provided in Arabic
+
 ## Future Improvements and Roadmap Items
 
-* Enhanced error recovery mechanisms and more specific error token types.
-* Enhanced error recovery mechanisms and more specific error token types.
-* Further Unicode support for identifiers based on UAX #31.
-* Performance optimizations (e.g., for keyword lookup, string interning) as needed.
-* Robust source mapping if preprocessor outputs `#line` directives.
+* Enhanced error recovery mechanisms with configurable error limits
+* Source context extraction for better error reporting
+* Further Unicode support for identifiers based on UAX #31
+* Performance optimizations (e.g., for keyword lookup, string interning) as needed
+* Robust source mapping if preprocessor outputs `#line` directives
 
 *For a detailed list of ongoing tasks and future plans, refer to `docs/LEXER_ROADMAP.md`.*

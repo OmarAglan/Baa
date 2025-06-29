@@ -39,7 +39,12 @@ The lexical analyzer responsible for tokenizing source code. It has a modular st
 - **Token Generation**: Converts source text (UTF-16LE output from preprocessor) into a stream of tokens.
 - **Unicode Support**: Full support for Arabic characters in identifiers, literals, and keywords. Recognizes Arabic-Indic digits.
 - **Source Tracking**: Accurate line and column tracking for tokens and errors.
-- **Error Detection**: Identifies lexical errors (e.g., unexpected characters, unterminated literals, invalid escapes) and provides diagnostic messages.
+- **Enhanced Error Handling**: Comprehensive error detection and reporting system with:
+  - **Specific Error Types**: 8 distinct error token types (unterminated strings/chars/comments, invalid escapes/numbers/suffixes/characters)
+  - **Error Codes**: Unique codes (1001-1009, 9001) for internationalization and categorization
+  - **Arabic Messages**: All error messages and suggestions provided in Arabic
+  - **Rich Context**: Error categories, helpful suggestions, and precise source location tracking
+  - **Error Recovery**: Robust synchronization to continue tokenizing after errors
 - **Whitespace and Newlines**: Tokenizes spaces/tabs (`BAA_TOKEN_WHITESPACE`) and newlines (`BAA_TOKEN_NEWLINE`) separately.
 - **Comment Handling**: Tokenizes single-line (`//` -> `BAA_TOKEN_SINGLE_LINE_COMMENT`), multi-line (`/*...*/` -> `BAA_TOKEN_MULTI_LINE_COMMENT`), and documentation comments (`/**...*/` -> `BAA_TOKEN_DOC_COMMENT`). Lexemes for comments contain the content excluding delimiters.
 - **Numeric Literal Recognition**:
@@ -169,12 +174,26 @@ Comprehensive testing infrastructure:
 
 ## Error Handling
 
-Robust error handling system:
+Comprehensive error handling system with enhanced lexical error support:
 
-- **Error Types**: Lexical, Preprocessor, Parser (planned), Semantic (planned), CodeGen (planned).
-- **Arabic Messages**: Aim for error messages in Arabic (ongoing).
-- **Error Recovery**: Graceful error recovery where possible (e.g., preprocessor, parser panic mode).
-- **Source Location**: Precise error reporting with file, line, and column.
+### Lexical Error Handling ✅ (Fully Implemented)
+- **Specific Error Types**: 8 distinct error token types with unique error codes
+- **Error Categories**: Organized by type (string, escape, character, number, comment, memory, operator)
+- **Arabic Localization**: Complete Arabic error messages and actionable suggestions
+- **Rich Context**: Error codes, categories, suggestions, and enhanced source location tracking
+- **Error Recovery**: Robust synchronization mechanisms to continue after errors
+- **Memory Management**: Proper cleanup of error contexts and enhanced token structures
+
+### Other Error Types
+- **Preprocessor Errors**: File inclusion, macro expansion, conditional compilation errors
+- **Parser Errors**: Syntax error detection, reporting, and basic panic mode recovery (planned)
+- **Semantic Errors**: Type checking, scope resolution errors (planned)
+- **CodeGen Errors**: Code generation and optimization errors (planned)
+
+### Error Reporting Features
+- **Source Location**: Precise error reporting with file, line, and column information
+- **Enhanced Spans**: Start/end positions and character offsets for better IDE integration
+- **Error Codes**: Unique numeric codes for internationalization and tooling support
 
 ## Memory Management
 

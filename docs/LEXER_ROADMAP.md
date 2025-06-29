@@ -10,7 +10,8 @@ This roadmap outlines the planned improvements and current status of the Baa lan
 * [x] Lexer initialization and management (`BaaLexer` struct, `baa_init_lexer`).
 * [x] Source code navigation and tracking (current position, start of token).
 * [x] Line and column tracking.
-* [x] Basic error token creation (`make_error_token`, `BAA_TOKEN_ERROR`).
+* [x] ~~Basic error token creation (`make_error_token`, `BAA_TOKEN_ERROR`).~~ **REPLACED**
+* [x] **Enhanced error handling system** (`make_specific_error_token`, specific error types). ✅ **COMPLETED**
 * [x] Token memory management (`make_token` allocates, `baa_free_token` frees).
 * [x] Tokenize whitespace and newlines instead of skipping.
 * [ ] **Future:** Add support for more token types for language extensions if Baa evolves significantly.

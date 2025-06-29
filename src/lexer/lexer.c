@@ -1,4 +1,5 @@
 #include "baa/lexer/lexer.h"
+#include "baa/utils/utils.h"  // For baa_strdup and other utilities
 #include <assert.h>
 #include <errno.h>
 #include <stdlib.h>
@@ -131,6 +132,18 @@ BaaToken *make_token(BaaLexer *lexer, BaaTokenType type)
     ((wchar_t *)token->lexeme)[token->length] = L'\0'; // Null-terminate
     token->line = lexer->line;
     token->column = lexer->start_token_column; // Use the recorded start column
+    
+    // Initialize span (enhanced source location)
+    token->span.start_line = lexer->line;
+    token->span.start_column = lexer->start_token_column;
+    token->span.end_line = lexer->line;
+    token->span.end_column = lexer->column;
+    token->span.start_offset = lexer->start;
+    token->span.end_offset = lexer->current;
+    
+    // Initialize error context to NULL for non-error tokens
+    token->error = NULL;
+    
     return token;
 }
 
@@ -223,6 +236,15 @@ BaaToken *make_specific_error_token(BaaLexer *lexer, BaaTokenType error_type,
     token->length = wcslen(buffer);
     token->line = lexer->line;
     token->column = lexer->column;
+    
+    // Initialize span for error tokens
+    token->span.start_line = lexer->line;
+    token->span.start_column = lexer->column > 0 ? lexer->column - 1 : 1;
+    token->span.end_line = lexer->line;
+    token->span.end_column = lexer->column;
+    token->span.start_offset = lexer->current > 0 ? lexer->current - 1 : 0;
+    token->span.end_offset = lexer->current;
+    
     token->error = baa_create_error_context(error_code, category, suggestion, NULL, NULL);
     return token;
 }
@@ -255,6 +277,10 @@ void baa_free_token(BaaToken *token)
         if (token->lexeme)
         {
             free((wchar_t *)token->lexeme);
+        }
+        if (token->error)
+        {
+            baa_free_error_context(token->error);
         }
         free(token);
     }
@@ -776,9 +802,9 @@ BaaErrorContext *baa_create_error_context(uint32_t error_code, const char *categ
 
     context->error_code = error_code;
     context->category = category; // Assuming category is a string literal
-    context->suggestion = suggestion ? wcsdup(suggestion) : NULL;
-    context->context_before = context_before ? wcsdup(context_before) : NULL;
-    context->context_after = context_after ? wcsdup(context_after) : NULL;
+    context->suggestion = suggestion ? baa_strdup(suggestion) : NULL;
+    context->context_before = context_before ? baa_strdup(context_before) : NULL;
+    context->context_after = context_after ? baa_strdup(context_after) : NULL;
 
     return context;
 }

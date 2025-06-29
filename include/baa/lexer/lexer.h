@@ -212,9 +212,15 @@ BaaToken *baa_lexer_next_token(BaaLexer *lexer);
 bool baa_token_is_keyword(BaaTokenType type);
 bool baa_token_is_type(BaaTokenType type);
 bool baa_token_is_operator(BaaTokenType type);
+bool baa_token_is_error(BaaTokenType type);
 
-// Error handling (Removed, handled via BAA_TOKEN_ERROR)
-// const wchar_t* baa_get_lexer_error(BaaLexer* lexer);
-// void baa_clear_lexer_error(BaaLexer* lexer);
+// Error handling utilities
+BaaErrorContext *baa_create_error_context(uint32_t error_code, const char *category,
+                                          const wchar_t *suggestion,
+                                          const wchar_t *context_before,
+                                          const wchar_t *context_after);
+void baa_free_error_context(BaaErrorContext *context);
+const wchar_t *baa_get_error_category_description(const char *category);
+const wchar_t *baa_get_error_type_description(BaaTokenType error_type);
 
 #endif /* BAA_LEXER_H */

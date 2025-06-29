@@ -7,6 +7,12 @@
 // Forward declaration for baa_is_arabic_digit
 bool baa_is_arabic_digit(wchar_t c);
 
+// Arabic suffix character constants
+static const wchar_t ARABIC_GHAIN_SUFFIX = L'غ'; // U+063A (unsigned)
+static const wchar_t ARABIC_TAH_SUFFIX = L'ط';   // U+0637 (long)
+static const wchar_t ARABIC_HAH_SUFFIX = L'ح';   // U+062D (float)
+
+
 // Arabic-Indic digits (٠١٢٣٤٥٦٧٨٩)
 static const wchar_t ARABIC_DIGITS[] = {0x0660, 0x0661, 0x0662, 0x0663, 0x0664,
                                         0x0665, 0x0666, 0x0667, 0x0668, 0x0669};
@@ -264,6 +270,89 @@ static BaaNumberError parse_decimal_part(const wchar_t *text, size_t *pos, size_
     return BAA_NUM_SUCCESS;
 }
 
+/**
+ * Initialize suffix flags in a BaaNumber struct to false.
+ * Should be called when creating a new BaaNumber.
+ */
+static void initialize_suffix_flags(BaaNumber *number)
+{
+    number->is_unsigned = false;
+    number->is_long = false;
+    number->is_long_long = false;
+    number->has_float_suffix = false;
+}
+
+/**
+ * Parse Arabic numeric suffixes from the text starting at position *pos.
+ * Updates the BaaNumber struct with appropriate suffix flags.
+ *
+ * @param text The input text containing the number and suffixes
+ * @param pos Pointer to current position (will be updated)
+ * @param length Total length of the text
+ * @param number The BaaNumber struct to update with suffix information
+ */
+static void parse_arabic_suffixes(const wchar_t *text, size_t *pos, size_t length, BaaNumber *number)
+{
+    bool ghain_seen = false;
+    int tah_count = 0; // 0 = none, 1 = long, 2 = long long
+
+    // Process up to 3 suffix characters (max possible: ططغ)
+    for (int i = 0; i < 3 && *pos < length; ++i)
+    {
+        wchar_t current_char = text[*pos];
+
+        if (current_char == ARABIC_TAH_SUFFIX)
+        {
+           if (tah_count < 2)
+           { // Allow up to 2 'ط' characters
+                tah_count++;
+                (*pos)++;
+            }
+            else
+            {
+                break; // Already have طط, can't have more
+            }
+        }
+       else if (current_char == ARABIC_GHAIN_SUFFIX)
+        {
+            if (ghain_seen)
+            {
+                break; // Can't have غ twice
+            }
+            number->is_unsigned = true;
+            ghain_seen = true;
+            (*pos)++;
+        }
+        else if (current_char == ARABIC_HAH_SUFFIX)
+        {
+            // Float suffix - promote integer to float if needed
+            if (number->type == BAA_NUM_INTEGER)
+            {
+                number->type = BAA_NUM_DECIMAL;
+                number->decimal_value = (double)number->int_value;
+            }
+            number->has_float_suffix = true;
+            (*pos)++;
+            break; // Float suffix should be last
+        }
+        else
+        {
+            break; // Not a recognized suffix character
+        }
+    }
+
+    // Set final long/long long flags based on count
+    if (tah_count == 1)
+    {
+        number->is_long = true;
+    }
+    else if (tah_count == 2)
+    {
+        number->is_long_long = true;
+    }
+}
+
+
 BaaNumber *baa_parse_number(const wchar_t *text, size_t length, BaaNumberError *error)
 {
     if (!text || length == 0)
@@ -280,6 +369,7 @@ BaaNumber *baa_parse_number(const wchar_t *text, size_t length, BaaNumberError *
             *error = BAA_NUM_MEMORY_ERROR;
         return NULL;
     }
+    initialize_suffix_flags(number); // Initialize new suffix flags
 
     // Copy the raw text
     wchar_t *raw_text = (wchar_t *)malloc((length + 1) * sizeof(wchar_t));
@@ -498,15 +588,8 @@ BaaNumber *baa_parse_number(const wchar_t *text, size_t length, BaaNumberError *
         return NULL;
     }
 
-    // Check for float suffix 'ح' at the end of the number
-    if (pos < length && text[pos] == L'ح') {
-        pos++; // Consume the suffix
-        // The number is forced to be a float type.
-        if (number->type == BAA_NUM_INTEGER) {
-            number->type = BAA_NUM_DECIMAL;
-            number->decimal_value = (double)number->int_value;
-        }
-    }
+    // --- NEW: Parse Arabic suffixes ---
+    parse_arabic_suffixes(text, &pos, length, number);
 
     if (pos < length) {
         // There are unprocessed characters left in the number lexeme

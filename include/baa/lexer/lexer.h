@@ -25,6 +25,11 @@ typedef struct
     };
     const wchar_t *raw_text; // Original text representation
     size_t text_length;
+    // --- NEW SUFFIX FLAGS ---
+    bool is_unsigned;        // 'غ' suffix
+    bool is_long;           // 'ط' suffix  
+    bool is_long_long;      // 'طط' suffix
+    bool has_float_suffix;  // 'ح' suffix
 } BaaNumber;
 
 // Error codes for number parsing

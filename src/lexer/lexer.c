@@ -137,6 +137,14 @@ BaaToken *make_token(BaaLexer *lexer, BaaTokenType type)
 // Creates an error token with a formatted message (dynamically allocated)
 BaaToken *make_error_token(BaaLexer *lexer, const wchar_t *format, ...)
 {
+    return make_specific_error_token(lexer, BAA_TOKEN_ERROR, 0, "general", NULL, format);
+}
+
+BaaToken *make_specific_error_token(BaaLexer *lexer, BaaTokenType error_type,
+                                    uint32_t error_code, const char *category,
+                                    const wchar_t *suggestion,
+                                    const wchar_t *format, ...)
+{
     BaaToken *token = malloc(sizeof(BaaToken));
     if (!token)
     {
@@ -149,8 +157,7 @@ BaaToken *make_error_token(BaaLexer *lexer, const wchar_t *format, ...)
     va_list args, args_copy;
 
     va_start(args, format);
-    va_copy(args_copy, args); // Copy va_list for the size calculation
-
+    va_copy(args_copy, args);
     size_t initial_size = 256;
     buffer = malloc(initial_size * sizeof(wchar_t));
     if (!buffer)
@@ -211,11 +218,12 @@ BaaToken *make_error_token(BaaLexer *lexer, const wchar_t *format, ...)
     }
 #endif
 
-    token->type = BAA_TOKEN_ERROR;
+    token->type = error_type;
     token->lexeme = buffer;
     token->length = wcslen(buffer);
     token->line = lexer->line;
     token->column = lexer->column;
+    token->error = baa_create_error_context(error_code, category, suggestion, NULL, NULL);
     return token;
 }
 

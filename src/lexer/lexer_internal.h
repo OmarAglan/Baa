@@ -18,8 +18,19 @@ bool match(BaaLexer *lexer, wchar_t expected);
 BaaToken *make_token(BaaLexer *lexer, BaaTokenType type);
 BaaToken *make_error_token(BaaLexer *lexer, const wchar_t *format, ...);
 
+// Enhanced error token creation
+BaaToken *make_specific_error_token(BaaLexer *lexer, BaaTokenType error_type,
+                                   uint32_t error_code, const char *category,
+                                   const wchar_t *suggestion,
+                                   const wchar_t *format, ...);
+
 // Error recovery
 void synchronize(BaaLexer *lexer);
+void enhanced_synchronize(BaaLexer *lexer, BaaTokenType error_type);
+
+// Source span utilities
+BaaSourceSpan calculate_source_span(BaaLexer *lexer, size_t start_offset);
+void update_token_span(BaaToken *token, BaaLexer *lexer);
 
 // String/Char literal helpers
 void append_char_to_buffer(wchar_t **buffer, size_t *len, size_t *capacity, wchar_t c);

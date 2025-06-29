@@ -55,8 +55,18 @@ typedef enum
 {
     // Special tokens
     BAA_TOKEN_EOF,                 // End of file
-    BAA_TOKEN_ERROR,               // Error token
+    BAA_TOKEN_ERROR,               // Generic error token
     BAA_TOKEN_UNKNOWN,             // Unknown token
+    
+    // Specific error token types for better error handling
+    BAA_TOKEN_ERROR_UNTERMINATED_STRING,    // Unterminated string literal
+    BAA_TOKEN_ERROR_UNTERMINATED_CHAR,      // Unterminated character literal
+    BAA_TOKEN_ERROR_UNTERMINATED_COMMENT,   // Unterminated comment
+    BAA_TOKEN_ERROR_INVALID_ESCAPE,         // Invalid escape sequence
+    BAA_TOKEN_ERROR_INVALID_NUMBER,         // Invalid number format
+    BAA_TOKEN_ERROR_INVALID_CHARACTER,      // Invalid character
+    BAA_TOKEN_ERROR_NUMBER_OVERFLOW,        // Number too large
+    BAA_TOKEN_ERROR_INVALID_SUFFIX,         // Invalid literal suffix
     BAA_TOKEN_WHITESPACE,          // Sequence of spaces/tabs
     BAA_TOKEN_NEWLINE,             // Newline character(s)
     BAA_TOKEN_SINGLE_LINE_COMMENT, // Content of // comment
@@ -135,15 +145,42 @@ typedef enum
 } BaaTokenType;
 
 /**
+ * Enhanced source span for better error reporting
+ */
+typedef struct
+{
+    size_t start_line;
+    size_t start_column;
+    size_t end_line;
+    size_t end_column;
+    size_t start_offset;  // Character offset from start of source
+    size_t end_offset;    // Character offset from start of source
+} BaaSourceSpan;
+
+/**
+ * Error context for enhanced error reporting
+ */
+typedef struct
+{
+    wchar_t *suggestion;      // Optional fix suggestion (may be NULL)
+    wchar_t *context_before;  // Text before error location (may be NULL)
+    wchar_t *context_after;   // Text after error location (may be NULL)
+    uint32_t error_code;      // Unique error identifier
+    const char *category;     // Error category ("string", "number", "character", etc.)
+} BaaErrorContext;
+
+/**
  * Token structure representing a lexical token
  */
 typedef struct
 {
-    BaaTokenType type; // Type of the token
-    wchar_t *lexeme;   // The actual text of the token (parser will take ownership)
-    size_t length;     // Length of the lexeme
-    size_t line;       // Line number in source
-    size_t column;     // Column number in source
+    BaaTokenType type;        // Type of the token
+    wchar_t *lexeme;          // The actual text of the token (parser will take ownership)
+    size_t length;            // Length of the lexeme
+    size_t line;              // Line number in source (for backward compatibility)
+    size_t column;            // Column number in source (for backward compatibility)
+    BaaSourceSpan span;       // Enhanced source location information
+    BaaErrorContext *error;   // Enhanced error context (only for error tokens, may be NULL)
 } BaaToken;
 
 /**

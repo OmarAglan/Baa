@@ -360,8 +360,15 @@ BaaToken *scan_number(BaaLexer *lexer)
             {
                 if (suffix_seen_ghain)
                 {
-                    // Already processed 'غ', cannot have it twice.
-                    break;
+                    // Already processed 'غ', cannot have it twice - this is an error
+                    BaaToken *error_token = make_specific_error_token(lexer,
+                        BAA_TOKEN_ERROR_INVALID_SUFFIX,
+                        1006, "number",
+                        L"استخدم لاحقة غ واحدة فقط للأعداد غير المُوقعة",
+                        L"لاحقة رقم غير صالحة: لا يمكن استخدام 'غ' أكثر من مرة (السطر %zu، العمود %zu)",
+                        lexer->line, lexer->column);
+                    synchronize(lexer);
+                    return error_token;
                 }
                 suffix_seen_ghain = true;
                 advance(lexer);
@@ -370,8 +377,15 @@ BaaToken *scan_number(BaaLexer *lexer)
             {
                 if (suffix_seen_tah_tah)
                 {
-                    // Already processed 'طط', cannot have more 'ط'.
-                    break;
+                    // Already processed 'طط', cannot have more 'ط' - this is an error
+                    BaaToken *error_token = make_specific_error_token(lexer,
+                        BAA_TOKEN_ERROR_INVALID_SUFFIX,
+                        1006, "number",
+                        L"استخدم لاحقات صالحة: ط (long) أو طط (long long)",
+                        L"لاحقة رقم غير صالحة: لا يمكن استخدام أكثر من 'طط' (السطر %zu، العمود %zu)",
+                        lexer->line, lexer->column);
+                    synchronize(lexer);
+                    return error_token;
                 }
                 if (suffix_seen_tah)
                 {
@@ -389,10 +403,38 @@ BaaToken *scan_number(BaaLexer *lexer)
             }
             else
             {
+                // Check if it's an invalid suffix character that looks like it might be intended as a suffix
+                if (current_suffix_char == L'ح') // Float suffix on integer
+                {
+                    BaaToken *error_token = make_specific_error_token(lexer,
+                        BAA_TOKEN_ERROR_INVALID_SUFFIX,
+                        1006, "number",
+                        L"لاحقة 'ح' مخصصة للأعداد العشرية فقط",
+                        L"لاحقة رقم غير صالحة: لا يمكن استخدام 'ح' مع الأعداد الصحيحة (السطر %zu، العمود %zu)",
+                        lexer->line, lexer->column);
+                    synchronize(lexer);
+                    return error_token;
+                }
                 // Not a recognized integer suffix character or sequence.
                 break;
             }
         }
+
+        // Check for any remaining invalid suffix characters after valid parsing
+        wchar_t next_char = peek(lexer);
+        if (next_char == GHAIN_SUFFIX || next_char == TAH_SUFFIX || next_char == L'ح')
+        {
+            // There are more suffix characters that couldn't be parsed - invalid combination
+            BaaToken *error_token = make_specific_error_token(lexer,
+                BAA_TOKEN_ERROR_INVALID_SUFFIX,
+                1006, "number",
+                L"استخدم لاحقات صالحة: غ (unsigned)، ط (long)، طط (long long)، ح (float)",
+                L"لاحقة رقم غير صالحة: تركيبة لاحقات غير مدعومة (السطر %zu، العمود %zu)",
+                lexer->line, lexer->column);
+            synchronize(lexer);
+            return error_token;
+        }
+
         // The lexeme will now include these suffixes.
         // The actual interpretation of these (unsigned, long, long long)
         // will be handled by the parser or semantic analyzer.
@@ -409,6 +451,36 @@ BaaToken *scan_number(BaaLexer *lexer)
         {
             // Consume the 'ح' suffix. It becomes part of the BAA_TOKEN_FLOAT_LIT lexeme.
             advance(lexer);
+
+            // Check for invalid additional suffixes after 'ح'
+            wchar_t next_char = peek(lexer);
+            if (next_char == L'غ' || next_char == L'ط' || next_char == ARABIC_FLOAT_SUFFIX_HAH)
+            {
+                BaaToken *error_token = make_specific_error_token(lexer,
+                    BAA_TOKEN_ERROR_INVALID_SUFFIX,
+                    1006, "number",
+                    L"لاحقة 'ح' يجب أن تكون الأخيرة في الأعداد العشرية",
+                    L"لاحقة رقم غير صالحة: لا يمكن إضافة لاحقات بعد 'ح' (السطر %zu، العمود %zu)",
+                    lexer->line, lexer->column);
+                synchronize(lexer);
+                return error_token;
+            }
+        }
+        else
+        {
+            // Check for invalid integer suffixes on float numbers
+            wchar_t next_char = peek(lexer);
+            if (next_char == L'غ' || next_char == L'ط')
+            {
+                BaaToken *error_token = make_specific_error_token(lexer,
+                    BAA_TOKEN_ERROR_INVALID_SUFFIX,
+                    1006, "number",
+                    L"استخدم لاحقة 'ح' للأعداد العشرية",
+                    L"لاحقة رقم غير صالحة: لاحقات الأعداد الصحيحة غير مدعومة للأعداد العشرية (السطر %zu، العمود %zu)",
+                    lexer->line, lexer->column);
+                synchronize(lexer);
+                return error_token;
+            }
         }
     }
 

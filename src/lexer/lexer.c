@@ -19,7 +19,7 @@ struct KeywordMapping keywords[] = {
     {L"إذا", BAA_TOKEN_IF},
     {L"وإلا", BAA_TOKEN_ELSE},
     {L"طالما", BAA_TOKEN_WHILE},
-    {L"لكل", BAA_TOKEN_FOR}, // Note: docs/language.md uses لكل for "for" - lexer uses لأجل
+    {L"لكل", BAA_TOKEN_FOR},
     {L"افعل", BAA_TOKEN_DO},
     {L"اختر", BAA_TOKEN_SWITCH},
     {L"حالة", BAA_TOKEN_CASE},

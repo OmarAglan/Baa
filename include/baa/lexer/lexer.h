@@ -5,6 +5,7 @@
 #include <wchar.h>
 #include <stdbool.h>
 #include <stddef.h>
+#include <stdint.h>
 
 // Number token types
 typedef enum
@@ -155,7 +156,7 @@ typedef struct
     size_t end_column;
     size_t start_offset;  // Character offset from start of source
     size_t end_offset;    // Character offset from start of source
-} BaaSourceSpan;
+} BaaLexerSourceSpan;
 
 /**
  * Error context for enhanced error reporting
@@ -179,7 +180,7 @@ typedef struct
     size_t length;            // Length of the lexeme
     size_t line;              // Line number in source (for backward compatibility)
     size_t column;            // Column number in source (for backward compatibility)
-    BaaSourceSpan span;       // Enhanced source location information
+    BaaLexerSourceSpan span;  // Enhanced source location information
     BaaErrorContext *error;   // Enhanced error context (only for error tokens, may be NULL)
 } BaaToken;
 

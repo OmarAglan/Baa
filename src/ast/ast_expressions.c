@@ -1,5 +1,5 @@
 // src/ast/ast_expressions.c
-#include "baa/ast/ast.h"       // For BaaNode, BaaSourceSpan, specific node creation prototypes
+#include "baa/ast/ast.h"       // For BaaNode, BaaAstSourceSpan, specific node creation prototypes
 #include "baa/ast/ast_types.h" // For BaaNodeKind, BaaLiteralExprData, BaaLiteralKind
 #include "ast_expressions.h"   // For internal prototypes like baa_ast_free_literal_expr_data
 
@@ -11,7 +11,7 @@
 
 // --- Literal Expression Node Creation ---
 
-BaaNode *baa_ast_new_literal_int_node(BaaSourceSpan span, long long value, BaaType *type)
+BaaNode *baa_ast_new_literal_int_node(BaaAstSourceSpan span, long long value, BaaType *type)
 {
     BaaNode *node = baa_ast_new_node(BAA_NODE_KIND_LITERAL_EXPR, span);
     if (!node)
@@ -35,7 +35,7 @@ BaaNode *baa_ast_new_literal_int_node(BaaSourceSpan span, long long value, BaaTy
     return node;
 }
 
-BaaNode *baa_ast_new_literal_string_node(BaaSourceSpan span, const wchar_t *value, BaaType *type)
+BaaNode *baa_ast_new_literal_string_node(BaaAstSourceSpan span, const wchar_t *value, BaaType *type)
 {
     BaaNode *node = baa_ast_new_node(BAA_NODE_KIND_LITERAL_EXPR, span);
     if (!node)

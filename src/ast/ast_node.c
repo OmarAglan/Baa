@@ -1,4 +1,4 @@
-#include "baa/ast/ast.h"     // For BaaNode, BaaNodeKind, BaaSourceSpan, and function prototypes
+#include "baa/ast/ast.h"     // For BaaNode, BaaNodeKind, BaaAstSourceSpan, and function prototypes
 #include "ast_expressions.h" // For baa_ast_free_literal_expr_data (internal header)
 #include "baa/utils/utils.h" // For baa_malloc, baa_free
 #include <stdlib.h>          // For NULL
@@ -13,11 +13,11 @@
  * will call this and then allocate and assign the specific data structure.
  *
  * @param kind The BaaNodeKind for the new node.
- * @param span The BaaSourceSpan indicating the node's location in the source code.
+ * @param span The BaaAstSourceSpan indicating the node's location in the source code.
  * @return A pointer to the newly allocated BaaNode, or NULL on allocation failure.
  *         The caller is responsible for populating node->data if necessary.
  */
-BaaNode *baa_ast_new_node(BaaNodeKind kind, BaaSourceSpan span)
+BaaNode *baa_ast_new_node(BaaNodeKind kind, BaaAstSourceSpan span)
 {
     BaaNode *node = (BaaNode *)baa_malloc(sizeof(BaaNode));
     if (!node)

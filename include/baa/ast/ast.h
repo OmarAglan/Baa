@@ -14,11 +14,11 @@
  * will call this and then allocate and assign the specific data structure.
  *
  * @param kind The BaaNodeKind for the new node.
- * @param span The BaaSourceSpan indicating the node's location in the source code.
+ * @param span The BaaAstSourceSpan indicating the node's location in the source code.
  * @return A pointer to the newly allocated BaaNode, or NULL on allocation failure.
  *         The caller is responsible for populating node->data if necessary.
  */
-BaaNode *baa_ast_new_node(BaaNodeKind kind, BaaSourceSpan span);
+BaaNode *baa_ast_new_node(BaaNodeKind kind, BaaAstSourceSpan span);
 
 /**
  * @brief Frees a BaaNode and its associated data recursively.
@@ -54,7 +54,7 @@ void baa_ast_free_node(BaaNode *node);
  *             The AST node does not take ownership of this type pointer.
  * @return A pointer to the new BaaNode, or NULL on failure.
  */
-BaaNode *baa_ast_new_literal_int_node(BaaSourceSpan span, long long value, BaaType *type);
+BaaNode *baa_ast_new_literal_int_node(BaaAstSourceSpan span, long long value, BaaType *type);
 
 /**
  * @brief Creates a new AST node representing a string literal.
@@ -68,7 +68,7 @@ BaaNode *baa_ast_new_literal_int_node(BaaSourceSpan span, long long value, BaaTy
  *             The AST node does not take ownership of this type pointer.
  * @return A pointer to the new BaaNode, or NULL on failure.
  */
-BaaNode *baa_ast_new_literal_string_node(BaaSourceSpan span, const wchar_t *value, BaaType *type);
+BaaNode *baa_ast_new_literal_string_node(BaaAstSourceSpan span, const wchar_t *value, BaaType *type);
 
 // Add prototypes for other literal types (float, bool, char, null) as needed:
 // BaaNode* baa_ast_new_literal_float_node(BaaSourceSpan span, double value, BaaType* type);

@@ -44,7 +44,7 @@ int main(int argc, char *argv[])
 
     BaaSourceLocation loc_start = {"test.baa", 1, 1};
     BaaSourceLocation loc_end = {"test.baa", 1, 10};
-    BaaSourceSpan span = {loc_start, loc_end};
+    BaaAstSourceSpan span = {loc_start, loc_end};
 
     // 1. Test basic node (unchanged)
     wprintf(L"\nTesting basic node creation and freeing:\n");

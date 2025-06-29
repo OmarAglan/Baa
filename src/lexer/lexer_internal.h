@@ -29,7 +29,7 @@ void synchronize(BaaLexer *lexer);
 void enhanced_synchronize(BaaLexer *lexer, BaaTokenType error_type);
 
 // Source span utilities
-BaaSourceSpan calculate_source_span(BaaLexer *lexer, size_t start_offset);
+BaaLexerSourceSpan calculate_source_span(BaaLexer *lexer, size_t start_offset);
 void update_token_span(BaaToken *token, BaaLexer *lexer);
 
 // String/Char literal helpers

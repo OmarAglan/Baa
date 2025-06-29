@@ -27,11 +27,11 @@ typedef struct BaaSourceLocation
  * @brief Defines a span of source code, from a start to an end location.
  * Every AST node will have a span.
  */
-typedef struct BaaSourceSpan
+typedef struct BaaAstSourceSpan
 {
     BaaSourceLocation start; /**< The starting location of the AST node's corresponding source text. */
     BaaSourceLocation end;   /**< The ending location of the AST node's corresponding source text. */
-} BaaSourceSpan;
+} BaaAstSourceSpan;
 
 // --- Unified AST Node Kind Enumeration ---
 
@@ -133,11 +133,11 @@ typedef struct BaaNode BaaNode;
  */
 struct BaaNode
 {
-    BaaNodeKind kind;   /**< The specific kind of this AST node, determining the structure of 'data'. */
-    BaaSourceSpan span; /**< The source code span (start and end location) this node represents. */
-    void *data;         /**< Pointer to a kind-specific data structure containing details for this node.
-                             This must be cast to the appropriate type based on 'kind'. Can be NULL for
-                             simple nodes that don't require extra data (e.g., a break statement). */
+    BaaNodeKind kind;      /**< The specific kind of this AST node, determining the structure of 'data'. */
+    BaaAstSourceSpan span; /**< The source code span (start and end location) this node represents. */
+    void *data;            /**< Pointer to a kind-specific data structure containing details for this node.
+                                This must be cast to the appropriate type based on 'kind'. Can be NULL for
+                                simple nodes that don't require extra data (e.g., a break statement). */
     // Future considerations:
     // BaaType* resolved_type;    /**< Populated by semantic analyzer: pointer to canonical BaaType. */
     // BaaNode* parent_node;      /**< Optional: pointer to the parent node in the AST. */

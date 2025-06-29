@@ -1,5 +1,5 @@
 #include "baa/lexer/token_scanners.h" // For BaaToken and BaaLexer types, and scan_* declarations
-#include "lexer_internal.h" // For make_token, make_error_token, peek, advance etc.
+#include "lexer_internal.h" // For make_token, peek, advance etc.
 #include <stdlib.h>                   // For malloc, realloc, free
 #include <string.h>                   // For wcslen, wcsncpy, wcscpy
 #include <wctype.h>                   // For iswalnum
@@ -663,9 +663,18 @@ BaaToken *scan_string(BaaLexer *lexer)
     token->length = buffer_len - 1; // Don't count our internal null terminator
     token->line = start_line;
     token->column = start_col;
-    // This token creation is a bit different from make_token as it uses an already prepared buffer.
-    // Consider a make_token_from_buffer or similar if this pattern repeats.
-    // For now, this is okay.
+
+    // Initialize span (enhanced source location)
+    token->span.start_line = start_line;
+    token->span.start_column = start_col;
+    token->span.end_line = lexer->line;
+    token->span.end_column = lexer->column;
+    token->span.start_offset = lexer->start;
+    token->span.end_offset = lexer->current;
+
+    // Initialize error context to NULL for non-error tokens
+    token->error = NULL;
+
     return token;
 }
 
@@ -750,6 +759,17 @@ BaaToken *scan_doc_comment(BaaLexer *lexer, size_t token_start_line, size_t toke
     token->length = buffer_len - 1;      // Don't count our internal null terminator
     token->line = token_start_line;
     token->column = token_start_col;
+
+    // Initialize span (enhanced source location)
+    token->span.start_line = token_start_line;
+    token->span.start_column = token_start_col;
+    token->span.end_line = lexer->line;
+    token->span.end_column = lexer->column;
+    token->span.start_offset = lexer->start;
+    token->span.end_offset = lexer->current;
+
+    // Initialize error context to NULL for non-error tokens
+    token->error = NULL;
 
     return token;
 }
@@ -1115,6 +1135,17 @@ BaaToken *scan_multiline_string_literal(BaaLexer *lexer, size_t token_start_line
     token->line = token_start_line;
     token->column = token_start_col;
 
+    // Initialize span (enhanced source location)
+    token->span.start_line = token_start_line;
+    token->span.start_column = token_start_col;
+    token->span.end_line = lexer->line;
+    token->span.end_column = lexer->column;
+    token->span.start_offset = lexer->start;
+    token->span.end_offset = lexer->current;
+
+    // Initialize error context to NULL for non-error tokens
+    token->error = NULL;
+
     return token;
 }
 
@@ -1247,6 +1278,17 @@ BaaToken *scan_raw_string_literal(BaaLexer *lexer, bool is_multiline, size_t tok
     token->line = token_start_line;
     token->column = token_start_col;
 
+    // Initialize span (enhanced source location)
+    token->span.start_line = token_start_line;
+    token->span.start_column = token_start_col;
+    token->span.end_line = lexer->line;
+    token->span.end_column = lexer->column;
+    token->span.start_offset = lexer->start;
+    token->span.end_offset = lexer->current;
+
+    // Initialize error context to NULL for non-error tokens
+    token->error = NULL;
+
     return token;
 }
 
@@ -1332,10 +1374,6 @@ BaaToken *scan_multi_line_comment(BaaLexer *lexer, size_t comment_delimiter_star
     if (!terminated)
     {
         // Error token should point to the start of the unterminated comment "/*"
-        // To do this with make_error_token which uses current lexer state, we'd have to reset:
-        // lexer->current = lexer->start; // (where lexer->start was the original "//") - this is complex.
-        // A better make_error_token would accept a location.
-        // For now, using the specific start_line/col passed in:
         return make_specific_error_token(lexer,
             BAA_TOKEN_ERROR_UNTERMINATED_COMMENT,
             1007, "comment",

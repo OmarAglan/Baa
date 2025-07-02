@@ -245,8 +245,35 @@ BaaToken *make_specific_error_token(BaaLexer *lexer, BaaTokenType error_type,
     token->span.end_column = lexer->column;
     token->span.start_offset = lexer->current > 0 ? lexer->current - 1 : 0;
     token->span.end_offset = lexer->current;
-    
-    token->error = baa_create_error_context(error_code, category, suggestion, NULL, NULL);
+
+    // Step 4: Enhanced Error Context - Extract source context and generate smart suggestions
+    wchar_t *before_context = NULL;
+    wchar_t *after_context = NULL;
+    size_t error_position = calculate_error_character_position(lexer);
+    extract_error_context(lexer, error_position, &before_context, &after_context);
+
+    // Generate enhanced suggestion if none provided or enhance existing one
+    wchar_t *enhanced_suggestion = NULL;
+    if (!suggestion)
+    {
+        enhanced_suggestion = generate_error_suggestion(error_type, before_context);
+    }
+    else
+    {
+        // Use provided suggestion but could enhance it in the future
+        enhanced_suggestion = baa_strdup(suggestion);
+    }
+
+    token->error = baa_create_error_context(error_code, category,
+                                           enhanced_suggestion ? enhanced_suggestion : suggestion,
+                                           before_context, after_context);
+
+    // Clean up temporary allocations
+    if (enhanced_suggestion && enhanced_suggestion != suggestion)
+    {
+        free(enhanced_suggestion);
+    }
+
     return token;
 }
 
@@ -601,6 +628,337 @@ BaaToken *make_successful_token(BaaLexer *lexer, BaaTokenType type)
         baa_reset_consecutive_errors(lexer);
     }
     return token;
+}
+
+// Step 4: Error Context Enhancement - Source Context Extraction Functions
+
+/**
+ * Extract source context around error location
+ * @param lexer The lexer instance
+ * @param error_position Character position of the error in source
+ * @param before_context Output parameter for context before error (caller must free)
+ * @param after_context Output parameter for context after error (caller must free)
+ */
+void extract_error_context(BaaLexer *lexer, size_t error_position,
+                          wchar_t **before_context, wchar_t **after_context)
+{
+    if (!lexer || !lexer->source || !before_context || !after_context)
+    {
+        if (before_context) *before_context = NULL;
+        if (after_context) *after_context = NULL;
+        return;
+    }
+
+    const size_t context_length = 30; // Characters to show before/after error
+    size_t start_pos = 0;
+    size_t end_pos = lexer->source_length;
+
+    // Calculate before context start position
+    if (error_position > context_length)
+    {
+        start_pos = error_position - context_length;
+    }
+
+    // Calculate after context end position
+    if (error_position + context_length < lexer->source_length)
+    {
+        end_pos = error_position + context_length;
+    }
+
+    // Extract before context
+    if (error_position > start_pos)
+    {
+        size_t before_len = error_position - start_pos;
+        *before_context = malloc((before_len + 1) * sizeof(wchar_t));
+        if (*before_context)
+        {
+            wcsncpy(*before_context, lexer->source + start_pos, before_len);
+            (*before_context)[before_len] = L'\0';
+        }
+    }
+    else
+    {
+        *before_context = NULL;
+    }
+
+    // Extract after context
+    if (error_position < end_pos)
+    {
+        size_t after_len = end_pos - error_position;
+        *after_context = malloc((after_len + 1) * sizeof(wchar_t));
+        if (*after_context)
+        {
+            wcsncpy(*after_context, lexer->source + error_position, after_len);
+            (*after_context)[after_len] = L'\0';
+        }
+    }
+    else
+    {
+        *after_context = NULL;
+    }
+}
+
+/**
+ * Calculate error position in source
+ * @param lexer The lexer instance
+ * @return Character position of current error location
+ */
+size_t calculate_error_character_position(BaaLexer *lexer)
+{
+    if (!lexer)
+        return 0;
+
+    // Use current position as error position
+    return lexer->current;
+}
+
+/**
+ * Get line content for error reporting
+ * @param lexer The lexer instance
+ * @param line_number Line number to extract (1-based)
+ * @return Allocated string containing the line content (caller must free), or NULL on error
+ */
+wchar_t* get_current_line_content(BaaLexer *lexer, size_t line_number)
+{
+    if (!lexer || !lexer->source || line_number == 0)
+        return NULL;
+
+    const wchar_t *source = lexer->source;
+    size_t current_line = 1;
+    size_t line_start = 0;
+    size_t line_end = 0;
+    size_t pos = 0;
+
+    // Find the start of the requested line
+    while (pos < lexer->source_length && current_line < line_number)
+    {
+        if (source[pos] == L'\n')
+        {
+            current_line++;
+            line_start = pos + 1;
+        }
+        pos++;
+    }
+
+    // If we didn't find the line, return NULL
+    if (current_line != line_number)
+        return NULL;
+
+    // Find the end of the line
+    line_end = line_start;
+    while (line_end < lexer->source_length && source[line_end] != L'\n')
+    {
+        line_end++;
+    }
+
+    // Extract the line content
+    size_t line_length = line_end - line_start;
+    wchar_t *line_content = malloc((line_length + 1) * sizeof(wchar_t));
+    if (!line_content)
+        return NULL;
+
+    wcsncpy(line_content, source + line_start, line_length);
+    line_content[line_length] = L'\0';
+
+    return line_content;
+}
+
+// Step 4: Smart Suggestions System
+
+/**
+ * Generate contextual suggestions based on error type and content
+ * @param error_type The type of error encountered
+ * @param error_context The context around the error (may be NULL)
+ * @return Allocated suggestion string in Arabic (caller must free), or NULL if no suggestion
+ */
+wchar_t* generate_error_suggestion(BaaTokenType error_type, const wchar_t* error_context)
+{
+    switch (error_type)
+    {
+        case BAA_TOKEN_ERROR_UNTERMINATED_STRING:
+            return suggest_string_termination_fix(error_context);
+
+        case BAA_TOKEN_ERROR_INVALID_ESCAPE:
+            if (error_context && wcslen(error_context) > 0)
+                return suggest_escape_sequence_fix(error_context[0]);
+            return baa_strdup(L"تحقق من تسلسل الهروب واستخدم التسلسلات الصحيحة: \\س، \\م، \\ر، \\ص، \\يXXXX، \\هـHH");
+
+        case BAA_TOKEN_ERROR_INVALID_NUMBER:
+        case BAA_TOKEN_ERROR_NUMBER_OVERFLOW:
+            return suggest_number_format_fix(error_context);
+
+        case BAA_TOKEN_ERROR_INVALID_CHARACTER:
+            return baa_strdup(L"تأكد من استخدام الأحرف المسموحة في لغة باء (أحرف عربية، إنجليزية، أرقام، شرطة سفلية)");
+
+        case BAA_TOKEN_ERROR_INVALID_SUFFIX:
+            return baa_strdup(L"استخدم اللواحق الصحيحة: غ (غير مُوقع)، ط (طويل)، طط (طويل جداً)، ح (حقيقي)");
+
+        case BAA_TOKEN_ERROR_UNTERMINATED_CHAR:
+            return baa_strdup(L"أضف علامة اقتباس مفردة ' لإنهاء الحرف");
+
+        default:
+            return NULL;
+    }
+}
+
+/**
+ * Suggest escape sequence fix based on invalid escape character
+ * @param invalid_escape_char The invalid escape character
+ * @return Allocated suggestion string in Arabic (caller must free)
+ */
+wchar_t* suggest_escape_sequence_fix(wchar_t invalid_escape_char)
+{
+    wchar_t *suggestion = malloc(300 * sizeof(wchar_t));
+    if (!suggestion)
+        return NULL;
+
+    switch (invalid_escape_char)
+    {
+        case L'س':
+            wcscpy(suggestion, L"استخدم \\س للسطر الجديد (SEEN)");
+            break;
+        case L'م':
+            wcscpy(suggestion, L"استخدم \\م للتبويب (MEEM)");
+            break;
+        case L'ر':
+            wcscpy(suggestion, L"استخدم \\ر للإرجاع (REH)");
+            break;
+        case L'ص':
+            wcscpy(suggestion, L"استخدم \\ص للحرف الفارغ (SAD)");
+            break;
+        case L'\\':
+            wcscpy(suggestion, L"استخدم \\\\ للشرطة المائلة العكسية");
+            break;
+        case L'"':
+            wcscpy(suggestion, L"استخدم \\\" لعلامة الاقتباس المزدوجة");
+            break;
+        case L'\'':
+            wcscpy(suggestion, L"استخدم \\' لعلامة الاقتباس المفردة");
+            break;
+        case L'ي':
+            wcscpy(suggestion, L"استخدم \\يXXXX للهروب اليونيكود (مثل \\ي0623 للحرف 'أ') - YEH مع 4 أرقام سداسية عشرية");
+            break;
+        case L'ه':
+            wcscpy(suggestion, L"استخدم \\هـHH للهروب السداسي عشري (مثل \\هـ41 للحرف A) - HEH مع تطويل ثم رقمان سداسيان");
+            break;
+        // Common mistakes - suggest correct Baa equivalents
+        case L'n':
+            wcscpy(suggestion, L"استخدم \\س بدلاً من \\n للسطر الجديد - باء تستخدم الأحرف العربية للهروب");
+            break;
+        case L't':
+            wcscpy(suggestion, L"استخدم \\م بدلاً من \\t للتبويب - باء تستخدم الأحرف العربية للهروب");
+            break;
+        case L'r':
+            wcscpy(suggestion, L"استخدم \\ر بدلاً من \\r للإرجاع - باء تستخدم الأحرف العربية للهروب");
+            break;
+        case L'0':
+            wcscpy(suggestion, L"استخدم \\ص بدلاً من \\0 للحرف الفارغ - باء تستخدم الأحرف العربية للهروب");
+            break;
+        case L'u':
+            wcscpy(suggestion, L"استخدم \\يXXXX بدلاً من \\uXXXX للهروب اليونيكود - باء تستخدم \\ي مع 4 أرقام سداسية");
+            break;
+        case L'x':
+            wcscpy(suggestion, L"استخدم \\هـHH بدلاً من \\xHH للهروب السداسي عشري - باء تستخدم \\هـ مع رقمين سداسيين");
+            break;
+        default:
+            swprintf(suggestion, 300, L"تسلسل هروب غير صالح '\\%lc' - استخدم: \\س (سطر جديد)، \\م (تبويب)، \\ر (إرجاع)، \\ص (فارغ)، \\\\، \\\"، \\'، \\يXXXX (يونيكود)، \\هـHH (سداسي عشري)", invalid_escape_char);
+            break;
+    }
+
+    return suggestion;
+}
+
+/**
+ * Suggest number format fix based on invalid number
+ * @param invalid_number The invalid number string (may be NULL)
+ * @return Allocated suggestion string in Arabic (caller must free)
+ */
+wchar_t* suggest_number_format_fix(const wchar_t* invalid_number)
+{
+    wchar_t *suggestion = malloc(400 * sizeof(wchar_t));
+    if (!suggestion)
+        return NULL;
+
+    if (!invalid_number)
+    {
+        wcscpy(suggestion, L"تأكد من صيغة الرقم الصحيحة: ١٢٣ أو 123 للأعداد الصحيحة، ٣٫١٤ أو 3.14 للأعداد العشرية");
+        return suggestion;
+    }
+
+    // Check for common number format issues
+    if (wcschr(invalid_number, L'.') && wcschr(invalid_number, L'٫'))
+    {
+        wcscpy(suggestion, L"لا تخلط بين النقطة العشرية الإنجليزية (.) والعربية (٫) - استخدم واحدة فقط");
+    }
+    else if (wcsstr(invalid_number, L"..") || wcsstr(invalid_number, L"٫٫"))
+    {
+        wcscpy(suggestion, L"لا تستخدم فاصلتين عشريتين متتاليتين - استخدم فاصلة واحدة فقط (. أو ٫)");
+    }
+    else if (wcschr(invalid_number, L'e') || wcschr(invalid_number, L'E'))
+    {
+        wcscpy(suggestion, L"استخدم 'أ' بدلاً من 'e' أو 'E' للترميز العلمي (مثل: ١٫٥أ٣ أو 1.5أ3)");
+    }
+    else if (wcsstr(invalid_number, L"__"))
+    {
+        wcscpy(suggestion, L"لا تستخدم شرطتين سفليتين متتاليتين - استخدم شرطة واحدة للفصل (مثل: ١_٠٠٠_٠٠٠)");
+    }
+    else if (wcsstr(invalid_number, L"0x") && !wcschr(invalid_number, L'أ'))
+    {
+        wcscpy(suggestion, L"للأرقام السداسية العشرية، تأكد من الصيغة الصحيحة: 0x1A2B أو استخدم اللواحق العربية");
+    }
+    else if (wcsstr(invalid_number, L"ll") || wcsstr(invalid_number, L"LL"))
+    {
+        wcscpy(suggestion, L"استخدم اللاحقة العربية 'طط' بدلاً من 'll' أو 'LL' للأعداد الطويلة جداً");
+    }
+    else if (wcschr(invalid_number, L'u') || wcschr(invalid_number, L'U'))
+    {
+        wcscpy(suggestion, L"استخدم اللاحقة العربية 'غ' بدلاً من 'u' أو 'U' للأعداد غير المُوقعة");
+    }
+    else if (wcschr(invalid_number, L'f') || wcschr(invalid_number, L'F'))
+    {
+        wcscpy(suggestion, L"استخدم اللاحقة العربية 'ح' بدلاً من 'f' أو 'F' للأعداد الحقيقية");
+    }
+    else
+    {
+        wcscpy(suggestion, L"تحقق من صيغة الرقم: الأرقام (٠-٩ أو 0-9)، الفاصلة العشرية (٫ أو .)، الترميز العلمي (أ)، اللواحق (غ، ط، طط، ح)");
+    }
+
+    return suggestion;
+}
+
+/**
+ * Suggest string termination fix based on partial string
+ * @param partial_string The partial string content (may be NULL)
+ * @return Allocated suggestion string in Arabic (caller must free)
+ */
+wchar_t* suggest_string_termination_fix(const wchar_t* partial_string)
+{
+    wchar_t *suggestion = malloc(250 * sizeof(wchar_t));
+    if (!suggestion)
+        return NULL;
+
+    if (!partial_string)
+    {
+        wcscpy(suggestion, L"أضف علامة اقتباس مزدوجة \" لإنهاء السلسلة النصية");
+        return suggestion;
+    }
+
+    // Check if it looks like a multiline string attempt
+    if (wcschr(partial_string, L'\n'))
+    {
+        wcscpy(suggestion, L"للسلاسل متعددة الأسطر، استخدم \"\"\" في البداية والنهاية");
+    }
+    // Check if it looks like a raw string attempt
+    else if (wcslen(partial_string) > 0 && partial_string[0] == L'خ')
+    {
+        wcscpy(suggestion, L"للسلاسل الخام، استخدم خ\" في البداية و \" في النهاية");
+    }
+    else
+    {
+        wcscpy(suggestion, L"أضف علامة اقتباس مزدوجة \" في نهاية السلسلة النصية");
+    }
+
+    return suggestion;
 }
 
 BaaToken *baa_lexer_next_token(BaaLexer *lexer)

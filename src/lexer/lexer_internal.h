@@ -28,6 +28,12 @@ BaaToken *make_specific_error_token(BaaLexer *lexer, BaaTokenType error_type,
 void synchronize(BaaLexer *lexer);
 void enhanced_synchronize(BaaLexer *lexer, BaaTokenType error_type);
 
+// Specific synchronization strategies
+void synchronize_string_error(BaaLexer *lexer);      // Find next quote or newline
+void synchronize_number_error(BaaLexer *lexer);      // Find next non-digit character
+void synchronize_comment_error(BaaLexer *lexer);     // Find next */ or EOF
+void synchronize_general_error(BaaLexer *lexer);     // Current basic strategy
+
 // Source span utilities
 BaaLexerSourceSpan calculate_source_span(BaaLexer *lexer, size_t start_offset);
 void update_token_span(BaaToken *token, BaaLexer *lexer);

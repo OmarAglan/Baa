@@ -103,7 +103,12 @@ void baa_init_lexer(BaaLexer *lexer, const wchar_t *source, const wchar_t *filen
     lexer->line = 1;
     lexer->column = 1;             // Columns should be 1-based for users
     lexer->start_token_column = 1; // Initialize start_token_column
-    // Note: No had_error field in the struct per lexer.h
+
+    // Initialize enhanced error recovery fields
+    lexer->error_count = 0;
+    lexer->consecutive_errors = 0;
+    lexer->error_limit_reached = false;
+    baa_init_error_recovery_config(&lexer->recovery_config);
 }
 
 // Creates a token by copying the lexeme from the source
@@ -366,6 +371,84 @@ void synchronize(BaaLexer *lexer)
             break;
         }
         advance(lexer);
+    }
+}
+
+// Enhanced error recovery functions
+void baa_init_error_recovery_config(BaaErrorRecoveryConfig *config)
+{
+    if (!config) return;
+
+    config->max_errors = 50;
+    config->max_consecutive_errors = 10;
+    config->stop_on_unterminated_string = false;
+    config->stop_on_invalid_number = false;
+    config->continue_after_comment_errors = true;
+    config->sync_search_limit = 1000;
+}
+
+bool baa_should_continue_lexing(const BaaLexer *lexer)
+{
+    if (!lexer) return false;
+
+    if (lexer->error_limit_reached) return false;
+    if (lexer->error_count >= lexer->recovery_config.max_errors) return false;
+    if (lexer->consecutive_errors >= lexer->recovery_config.max_consecutive_errors) return false;
+
+    return true;
+}
+
+void baa_increment_error_count(BaaLexer *lexer, BaaTokenType error_type)
+{
+    if (!lexer) return;
+
+    lexer->error_count++;
+    lexer->consecutive_errors++;
+
+    // Check specific stopping conditions
+    switch (error_type)
+    {
+        case BAA_TOKEN_ERROR_UNTERMINATED_STRING:
+            if (lexer->recovery_config.stop_on_unterminated_string)
+            {
+                lexer->error_limit_reached = true;
+                return;
+            }
+            break;
+
+        case BAA_TOKEN_ERROR_INVALID_NUMBER:
+            if (lexer->recovery_config.stop_on_invalid_number)
+            {
+                lexer->error_limit_reached = true;
+                return;
+            }
+            break;
+
+        case BAA_TOKEN_ERROR_UNTERMINATED_COMMENT:
+            if (!lexer->recovery_config.continue_after_comment_errors)
+            {
+                lexer->error_limit_reached = true;
+                return;
+            }
+            break;
+
+        default:
+            break;
+    }
+
+    // Check general limits
+    if (lexer->error_count >= lexer->recovery_config.max_errors ||
+        lexer->consecutive_errors >= lexer->recovery_config.max_consecutive_errors)
+    {
+        lexer->error_limit_reached = true;
+    }
+}
+
+void baa_reset_consecutive_errors(BaaLexer *lexer)
+{
+    if (lexer)
+    {
+        lexer->consecutive_errors = 0;
     }
 }
 

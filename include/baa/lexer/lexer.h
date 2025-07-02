@@ -159,6 +159,19 @@ typedef struct
 } BaaLexerSourceSpan;
 
 /**
+ * Error recovery configuration for the lexer
+ */
+typedef struct
+{
+    size_t max_errors;                    // Maximum total errors before stopping (default: 50)
+    size_t max_consecutive_errors;        // Maximum consecutive errors before stopping (default: 10)
+    bool stop_on_unterminated_string;     // Stop lexing on unterminated strings (default: false)
+    bool stop_on_invalid_number;          // Stop lexing on invalid numbers (default: false)
+    bool continue_after_comment_errors;   // Continue after comment errors (default: true)
+    size_t sync_search_limit;             // Maximum characters to search during sync (default: 1000)
+} BaaErrorRecoveryConfig;
+
+/**
  * Error context for enhanced error reporting
  */
 typedef struct
@@ -196,6 +209,12 @@ typedef struct
     size_t line;               // Current line number
     size_t column;             // Current column number
     size_t start_token_column; // Column where the current token started
+
+    // Enhanced error recovery fields
+    size_t error_count;                   // Total number of errors encountered
+    size_t consecutive_errors;            // Number of consecutive errors
+    bool error_limit_reached;             // Flag indicating error limit was reached
+    BaaErrorRecoveryConfig recovery_config; // Error recovery configuration
 } BaaLexer;
 
 // Lexer functions
@@ -223,5 +242,11 @@ BaaErrorContext *baa_create_error_context(uint32_t error_code, const char *categ
 void baa_free_error_context(BaaErrorContext *context);
 const wchar_t *baa_get_error_category_description(const char *category);
 const wchar_t *baa_get_error_type_description(BaaTokenType error_type);
+
+// Enhanced error recovery functions
+void baa_init_error_recovery_config(BaaErrorRecoveryConfig *config);
+bool baa_should_continue_lexing(const BaaLexer *lexer);
+void baa_increment_error_count(BaaLexer *lexer, BaaTokenType error_type);
+void baa_reset_consecutive_errors(BaaLexer *lexer);
 
 #endif /* BAA_LEXER_H */

@@ -81,7 +81,8 @@ BaaToken *scan_number(BaaLexer *lexer)
                     L"أضف رقم سداسي عشري صالح بعد 0x",
                     L"عدد سداسي عشر غير صالح: يجب أن يتبع البادئة 0x/0X رقم سداسي عشري أو فاصلة عشرية (السطر %zu، العمود %zu)",
                     lexer->line, lexer->column);
-                synchronize(lexer);
+                baa_increment_error_count(lexer, BAA_TOKEN_ERROR_INVALID_NUMBER);
+                enhanced_synchronize(lexer, BAA_TOKEN_ERROR_INVALID_NUMBER);
                 return error_token;
             }
         }
@@ -100,7 +101,8 @@ BaaToken *scan_number(BaaLexer *lexer)
                     L"أضف رقم ثنائي صالح (0 أو 1) بعد 0b",
                     L"عدد ثنائي غير صالح: يجب أن يتبع البادئة 0b/0B رقم ثنائي واحد على الأقل (السطر %zu، العمود %zu)",
                     lexer->line, lexer->column);
-                synchronize(lexer);
+                baa_increment_error_count(lexer, BAA_TOKEN_ERROR_INVALID_NUMBER);
+                enhanced_synchronize(lexer, BAA_TOKEN_ERROR_INVALID_NUMBER);
                 return error_token;
             }
         }
@@ -136,7 +138,8 @@ BaaToken *scan_number(BaaLexer *lexer)
                     L"استخدم الشرطة السفلية لفصل الأرقام فقط، وليس في البداية أو متتالية",
                     L"شرطة سفلية غير صالحة في العدد: متتالية أو مباشرة بعد البادئة (السطر %zu، العمود %zu).",
                     lexer->line, lexer->column);
-                synchronize(lexer);
+                baa_increment_error_count(lexer, BAA_TOKEN_ERROR_INVALID_NUMBER);
+                enhanced_synchronize(lexer, BAA_TOKEN_ERROR_INVALID_NUMBER);
                 return error_token;
             }
             last_char_was_underscore = true;
@@ -158,7 +161,8 @@ BaaToken *scan_number(BaaLexer *lexer)
             L"احذف الشرطة السفلية من نهاية الرقم",
             L"شرطة سفلية غير صالحة في العدد (السطر %zu، العمود %zu): لا يمكن أن تكون في نهاية الرقم.",
             lexer->line, lexer->column - 1);
-        synchronize(lexer);
+        baa_increment_error_count(lexer, BAA_TOKEN_ERROR_INVALID_NUMBER);
+        enhanced_synchronize(lexer, BAA_TOKEN_ERROR_INVALID_NUMBER);
         return error_token;
     }
 
@@ -177,7 +181,8 @@ BaaToken *scan_number(BaaLexer *lexer)
                 L"أضف رقم بعد الفاصلة العشرية قبل الشرطة السفلية",
                 L"شرطة سفلية غير صالحة في العدد (السطر %zu، العمود %zu): لا يمكن أن تتبع الفاصلة العشرية مباشرة.",
                 lexer->line, lexer->column + 1);
-            synchronize(lexer);
+            baa_increment_error_count(lexer, BAA_TOKEN_ERROR_INVALID_NUMBER);
+            enhanced_synchronize(lexer, BAA_TOKEN_ERROR_INVALID_NUMBER);
             return error_token;
         }
 
@@ -199,7 +204,8 @@ BaaToken *scan_number(BaaLexer *lexer)
                             L"استخدم شرطة سفلية واحدة فقط لفصل الأرقام",
                             L"شرطة سفلية غير صالحة في العدد (السطر %zu، العمود %zu): لا يمكن أن تكون متتالية.",
                             lexer->line, lexer->column);
-                        synchronize(lexer);
+                        baa_increment_error_count(lexer, BAA_TOKEN_ERROR_INVALID_NUMBER);
+                        enhanced_synchronize(lexer, BAA_TOKEN_ERROR_INVALID_NUMBER);
                         return error_token;
                     }
                     last_char_was_underscore = true;
@@ -220,7 +226,8 @@ BaaToken *scan_number(BaaLexer *lexer)
                     L"احذف الشرطة السفلية من نهاية الجزء الكسري",
                     L"شرطة سفلية غير صالحة في العدد (السطر %zu، العمود %zu): لا يمكن أن تكون في نهاية الجزء الكسري.",
                     lexer->line, lexer->column - 1);
-                synchronize(lexer);
+                baa_increment_error_count(lexer, BAA_TOKEN_ERROR_INVALID_NUMBER);
+                enhanced_synchronize(lexer, BAA_TOKEN_ERROR_INVALID_NUMBER);
                 return error_token;
             }
         }
@@ -245,7 +252,8 @@ BaaToken *scan_number(BaaLexer *lexer)
                 L"أضف رقم بعد علامة الأس 'أ' قبل الشرطة السفلية",
                 L"شرطة سفلية غير صالحة في العدد (السطر %zu، العمود %zu): لا يمكن أن تتبع علامة الأس 'أ' مباشرة.",
                 lexer->line, lexer->column + 1);
-            synchronize(lexer);
+            baa_increment_error_count(lexer, BAA_TOKEN_ERROR_INVALID_NUMBER);
+            enhanced_synchronize(lexer, BAA_TOKEN_ERROR_INVALID_NUMBER);
             return error_token;
         }
         bool has_exponent_part = false;
@@ -265,7 +273,8 @@ BaaToken *scan_number(BaaLexer *lexer)
                         L"أضف رقم بعد علامة الأس (+/-) قبل الشرطة السفلية",
                         L"شرطة سفلية غير صالحة في العدد (السطر %zu، العمود %zu): لا يمكن أن تتبع علامة الأس (+/-) في الأس 'أ' مباشرة.",
                         lexer->line, lexer->column + 2);
-                    synchronize(lexer);
+                    baa_increment_error_count(lexer, BAA_TOKEN_ERROR_INVALID_NUMBER);
+                    enhanced_synchronize(lexer, BAA_TOKEN_ERROR_INVALID_NUMBER);
                     return error_token;
                 }
                 if (is_baa_digit(after_sign_peek))
@@ -295,7 +304,8 @@ BaaToken *scan_number(BaaLexer *lexer)
                     L"أضف رقم صالح بعد علامة الأس 'أ'",
                     L"تنسيق أس غير صالح بعد 'أ' (السطر %zu، العمود %zu)",
                     lexer->line, lexer->column);
-                synchronize(lexer);
+                baa_increment_error_count(lexer, BAA_TOKEN_ERROR_INVALID_NUMBER);
+                enhanced_synchronize(lexer, BAA_TOKEN_ERROR_INVALID_NUMBER);
                 return error_token;
             }
             last_char_was_underscore = false;
@@ -314,7 +324,8 @@ BaaToken *scan_number(BaaLexer *lexer)
                             L"استخدم شرطة سفلية واحدة فقط لفصل الأرقام في الأس",
                             L"شرطة سفلية غير صالحة في العدد (السطر %zu، العمود %zu): لا يمكن أن تكون متتالية في الأس.",
                             lexer->line, lexer->column);
-                        synchronize(lexer);
+                        baa_increment_error_count(lexer, BAA_TOKEN_ERROR_INVALID_NUMBER);
+                        enhanced_synchronize(lexer, BAA_TOKEN_ERROR_INVALID_NUMBER);
                         return error_token;
                     }
                     last_char_was_underscore = true;
@@ -335,7 +346,8 @@ BaaToken *scan_number(BaaLexer *lexer)
                     L"احذف الشرطة السفلية من نهاية الأس",
                     L"شرطة سفلية غير صالحة في العدد (السطر %zu، العمود %zu): لا يمكن أن تكون في نهاية الأس.",
                     lexer->line, lexer->column - 1);
-                synchronize(lexer);
+                baa_increment_error_count(lexer, BAA_TOKEN_ERROR_INVALID_NUMBER);
+                enhanced_synchronize(lexer, BAA_TOKEN_ERROR_INVALID_NUMBER);
                 return error_token;
             }
         }
@@ -367,7 +379,8 @@ BaaToken *scan_number(BaaLexer *lexer)
                         L"استخدم لاحقة غ واحدة فقط للأعداد غير المُوقعة",
                         L"لاحقة رقم غير صالحة: لا يمكن استخدام 'غ' أكثر من مرة (السطر %zu، العمود %zu)",
                         lexer->line, lexer->column);
-                    synchronize(lexer);
+                    baa_increment_error_count(lexer, BAA_TOKEN_ERROR_INVALID_SUFFIX);
+                    enhanced_synchronize(lexer, BAA_TOKEN_ERROR_INVALID_SUFFIX);
                     return error_token;
                 }
                 suffix_seen_ghain = true;
@@ -384,7 +397,8 @@ BaaToken *scan_number(BaaLexer *lexer)
                         L"استخدم لاحقات صالحة: ط (long) أو طط (long long)",
                         L"لاحقة رقم غير صالحة: لا يمكن استخدام أكثر من 'طط' (السطر %zu، العمود %zu)",
                         lexer->line, lexer->column);
-                    synchronize(lexer);
+                    baa_increment_error_count(lexer, BAA_TOKEN_ERROR_INVALID_SUFFIX);
+                    enhanced_synchronize(lexer, BAA_TOKEN_ERROR_INVALID_SUFFIX);
                     return error_token;
                 }
                 if (suffix_seen_tah)
@@ -412,7 +426,8 @@ BaaToken *scan_number(BaaLexer *lexer)
                         L"لاحقة 'ح' مخصصة للأعداد العشرية فقط",
                         L"لاحقة رقم غير صالحة: لا يمكن استخدام 'ح' مع الأعداد الصحيحة (السطر %zu، العمود %zu)",
                         lexer->line, lexer->column);
-                    synchronize(lexer);
+                    baa_increment_error_count(lexer, BAA_TOKEN_ERROR_INVALID_SUFFIX);
+                    enhanced_synchronize(lexer, BAA_TOKEN_ERROR_INVALID_SUFFIX);
                     return error_token;
                 }
                 // Not a recognized integer suffix character or sequence.
@@ -431,7 +446,8 @@ BaaToken *scan_number(BaaLexer *lexer)
                 L"استخدم لاحقات صالحة: غ (unsigned)، ط (long)، طط (long long)، ح (float)",
                 L"لاحقة رقم غير صالحة: تركيبة لاحقات غير مدعومة (السطر %zu، العمود %zu)",
                 lexer->line, lexer->column);
-            synchronize(lexer);
+            baa_increment_error_count(lexer, BAA_TOKEN_ERROR_INVALID_SUFFIX);
+            enhanced_synchronize(lexer, BAA_TOKEN_ERROR_INVALID_SUFFIX);
             return error_token;
         }
 
@@ -462,7 +478,8 @@ BaaToken *scan_number(BaaLexer *lexer)
                     L"لاحقة 'ح' يجب أن تكون الأخيرة في الأعداد العشرية",
                     L"لاحقة رقم غير صالحة: لا يمكن إضافة لاحقات بعد 'ح' (السطر %zu، العمود %zu)",
                     lexer->line, lexer->column);
-                synchronize(lexer);
+                baa_increment_error_count(lexer, BAA_TOKEN_ERROR_INVALID_SUFFIX);
+                enhanced_synchronize(lexer, BAA_TOKEN_ERROR_INVALID_SUFFIX);
                 return error_token;
             }
         }
@@ -478,7 +495,8 @@ BaaToken *scan_number(BaaLexer *lexer)
                     L"استخدم لاحقة 'ح' للأعداد العشرية",
                     L"لاحقة رقم غير صالحة: لاحقات الأعداد الصحيحة غير مدعومة للأعداد العشرية (السطر %zu، العمود %zu)",
                     lexer->line, lexer->column);
-                synchronize(lexer);
+                baa_increment_error_count(lexer, BAA_TOKEN_ERROR_INVALID_SUFFIX);
+                enhanced_synchronize(lexer, BAA_TOKEN_ERROR_INVALID_SUFFIX);
                 return error_token;
             }
         }
@@ -551,7 +569,8 @@ BaaToken *scan_string(BaaLexer *lexer)
                         L"استخدم تسلسل هروب صالح مثل \\س أو \\م أو \\يXXXX",
                         L"تسلسل هروب يونيكود غير صالح (\\يXXXX) في سلسلة نصية (بدأت في السطر %zu، العمود %zu)",
                         start_line, start_col);
-                    synchronize(lexer);
+                    baa_increment_error_count(lexer, BAA_TOKEN_ERROR_INVALID_ESCAPE);
+                    enhanced_synchronize(lexer, BAA_TOKEN_ERROR_INVALID_ESCAPE);
                     return error_token;
                 }
                 append_char_to_buffer(&buffer, &buffer_len, &buffer_cap, (wchar_t)value);
@@ -595,7 +614,8 @@ BaaToken *scan_string(BaaLexer *lexer)
                     L"استخدم تسلسل هروب صالح مثل \\س أو \\م أو \\يXXXX",
                     L"تسلسل هروب غير صالح '\\%lc' في سلسلة نصية (بدأت في السطر %zu، العمود %zu)",
                     baa_escape_char_key, start_line, start_col);
-                synchronize(lexer);
+                baa_increment_error_count(lexer, BAA_TOKEN_ERROR_INVALID_ESCAPE);
+                enhanced_synchronize(lexer, BAA_TOKEN_ERROR_INVALID_ESCAPE);
                 return error_token;
             }
             if (buffer == NULL)
@@ -634,8 +654,9 @@ BaaToken *scan_string(BaaLexer *lexer)
             L"أضف علامة اقتباس مزدوجة \" في نهاية السلسلة",
             L"سلسلة نصية غير منتهية (بدأت في السطر %zu، العمود %zu)",
             start_line, start_col);
+        baa_increment_error_count(lexer, BAA_TOKEN_ERROR_UNTERMINATED_STRING);
         if (!is_at_end(lexer))
-            synchronize(lexer); // Don't synchronize if already at EOF
+            enhanced_synchronize(lexer, BAA_TOKEN_ERROR_UNTERMINATED_STRING); // Don't synchronize if already at EOF
         return error_token;
     }
     advance(lexer);                                                  // Consume closing quote "
@@ -843,7 +864,8 @@ BaaToken *scan_char_literal(BaaLexer *lexer)
                     L"استخدم تسلسل هروب صالح مثل \\س أو \\م أو \\يXXXX",
                     L"تسلسل هروب يونيكود غير صالح (\\يXXXX) في قيمة حرفية (بدأت في السطر %zu، العمود %zu)",
                     start_line, start_col);
-                synchronize(lexer);
+                baa_increment_error_count(lexer, BAA_TOKEN_ERROR_INVALID_ESCAPE);
+                enhanced_synchronize(lexer, BAA_TOKEN_ERROR_INVALID_ESCAPE);
                 return error_token;
             }
             value_char = (wchar_t)value;
@@ -882,7 +904,8 @@ BaaToken *scan_char_literal(BaaLexer *lexer)
                 L"استخدم تسلسل هروب صالح مثل \\س أو \\م أو \\يXXXX",
                 L"تسلسل هروب غير صالح '\\%lc' في قيمة حرفية (بدأت في السطر %zu، العمود %zu)",
                 baa_escape_char_key, start_line, start_col);
-            synchronize(lexer);
+            baa_increment_error_count(lexer, BAA_TOKEN_ERROR_INVALID_ESCAPE);
+            enhanced_synchronize(lexer, BAA_TOKEN_ERROR_INVALID_ESCAPE);
             return error_token;
         }
     }
@@ -898,7 +921,8 @@ BaaToken *scan_char_literal(BaaLexer *lexer)
                 L"استخدم تسلسل هروب \\س للسطر الجديد",
                 L"سطر جديد غير مسموح به في قيمة حرفية (بدأت في السطر %zu، العمود %zu)",
                 start_line, start_col);
-            synchronize(lexer); // Synchronize as this is a recoverable error.
+            baa_increment_error_count(lexer, BAA_TOKEN_ERROR_INVALID_CHARACTER);
+            enhanced_synchronize(lexer, BAA_TOKEN_ERROR_INVALID_CHARACTER); // Synchronize as this is a recoverable error.
             return error_token;
         }
         if (value_char == L'\'') // e.g. '' (empty char literal)
@@ -909,7 +933,8 @@ BaaToken *scan_char_literal(BaaLexer *lexer)
                 L"أضف محرف بين علامتي الاقتباس المفردتين",
                 L"قيمة حرفية فارغة ('') (بدأت في السطر %zu، العمود %zu)",
                 start_line, start_col);
-            synchronize(lexer);
+            baa_increment_error_count(lexer, BAA_TOKEN_ERROR_INVALID_CHARACTER);
+            enhanced_synchronize(lexer, BAA_TOKEN_ERROR_INVALID_CHARACTER);
             return error_token;
         }
     }
@@ -943,7 +968,8 @@ BaaToken *scan_char_literal(BaaLexer *lexer)
                 L"استخدم محرف واحد فقط بين علامتي الاقتباس المفردتين",
                 L"قيمة حرفية غير صالحة (متعددة الأحرف أو علامة اقتباس مفقودة؟ بدأت في السطر %zu، العمود %zu)",
                 start_line, start_col);
-            synchronize(lexer); // Attempt to recover
+            baa_increment_error_count(lexer, BAA_TOKEN_ERROR_INVALID_CHARACTER);
+            enhanced_synchronize(lexer, BAA_TOKEN_ERROR_INVALID_CHARACTER); // Attempt to recover
             return error_token;
         }
     }
@@ -982,6 +1008,7 @@ BaaToken *scan_multiline_string_literal(BaaLexer *lexer, size_t token_start_line
                 L"أضف علامة اقتباس مزدوجة ثلاثية \"\"\" في نهاية السلسلة",
                 L"سلسلة نصية متعددة الأسطر غير منتهية (بدأت في السطر %zu، العمود %zu)",
                 token_start_line, token_start_col);
+            baa_increment_error_count(lexer, BAA_TOKEN_ERROR_UNTERMINATED_STRING);
             // No synchronize at EOF
             return err_token;
         }
@@ -1039,7 +1066,8 @@ BaaToken *scan_multiline_string_literal(BaaLexer *lexer, size_t token_start_line
                         L"استخدم تسلسل هروب صالح مثل \\س أو \\م أو \\يXXXX",
                         L"تسلسل هروب يونيكود غير صالح (\\يXXXX) في سلسلة متعددة الأسطر (بدأت في السطر %zu، العمود %zu)",
                         token_start_line, token_start_col);
-                    synchronize(lexer);
+                    baa_increment_error_count(lexer, BAA_TOKEN_ERROR_INVALID_ESCAPE);
+                    enhanced_synchronize(lexer, BAA_TOKEN_ERROR_INVALID_ESCAPE);
                     return err_token;
                 }
                 append_char_to_buffer(&buffer, &buffer_len, &buffer_cap, (wchar_t)value);
@@ -1060,7 +1088,8 @@ BaaToken *scan_multiline_string_literal(BaaLexer *lexer, size_t token_start_line
                             L"استخدم تسلسل هروب صالح مثل \\هـ01 إلى \\هـFF",
                             L"تسلسل هروب سداسي عشري '\\هـHH' غير صالح في سلسلة متعددة الأسطر (بدأت في السطر %zu، العمود %zu)",
                             token_start_line, token_start_col);
-                        synchronize(lexer);
+                        baa_increment_error_count(lexer, BAA_TOKEN_ERROR_INVALID_ESCAPE);
+                        enhanced_synchronize(lexer, BAA_TOKEN_ERROR_INVALID_ESCAPE);
                         return err_token;
                     }
                     append_char_to_buffer(&buffer, &buffer_len, &buffer_cap, (wchar_t)byte_val);
@@ -1074,7 +1103,8 @@ BaaToken *scan_multiline_string_literal(BaaLexer *lexer, size_t token_start_line
                         L"استخدم \\هـHH للهروب السداسي عشري",
                         L"تسلسل هروب غير صالح: '\\ه' يجب أن يتبعها 'ـ' في سلسلة متعددة الأسطر (بدأت في السطر %zu، العمود %zu)",
                         token_start_line, token_start_col);
-                    synchronize(lexer);
+                    baa_increment_error_count(lexer, BAA_TOKEN_ERROR_INVALID_ESCAPE);
+                    enhanced_synchronize(lexer, BAA_TOKEN_ERROR_INVALID_ESCAPE);
                     return err_token;
                 }
                 break;
@@ -1087,7 +1117,8 @@ BaaToken *scan_multiline_string_literal(BaaLexer *lexer, size_t token_start_line
                     L"استخدم تسلسل هروب صالح مثل \\س أو \\م أو \\يXXXX",
                     L"تسلسل هروب غير صالح '\\%lc' في سلسلة نصية متعددة الأسطر (بدأت في السطر %zu، العمود %zu)",
                     baa_escape_char_key, token_start_line, token_start_col);
-                synchronize(lexer);
+                baa_increment_error_count(lexer, BAA_TOKEN_ERROR_INVALID_ESCAPE);
+                enhanced_synchronize(lexer, BAA_TOKEN_ERROR_INVALID_ESCAPE);
                 return err_token;
             }
             if (buffer == NULL)
@@ -1224,8 +1255,9 @@ BaaToken *scan_raw_string_literal(BaaLexer *lexer, bool is_multiline, size_t tok
                     L"استخدم خ\"\"\" للسلاسل الخام متعددة الأسطر أو أضف \" لإنهاء السلسلة",
                     L"سلسلة نصية خام أحادية السطر غير منتهية قبل السطر الجديد (بدأت في السطر %zu، العمود %zu)",
                     token_start_line, token_start_col);
+                baa_increment_error_count(lexer, BAA_TOKEN_ERROR_UNTERMINATED_STRING);
                 // Do not consume the newline, let synchronize handle it or next token be on new line.
-                synchronize(lexer); // Try to recover
+                enhanced_synchronize(lexer, BAA_TOKEN_ERROR_UNTERMINATED_STRING); // Try to recover
                 return err_token;
             }
             // No escape sequence processing for raw strings
@@ -1248,9 +1280,10 @@ BaaToken *scan_raw_string_literal(BaaLexer *lexer, bool is_multiline, size_t tok
                 L"أضف علامة اقتباس مزدوجة \" في نهاية السلسلة الخام",
                 L"سلسلة نصية خام أحادية السطر غير منتهية (بدأت في السطر %zu، العمود %zu)",
                 token_start_line, token_start_col);
+            baa_increment_error_count(lexer, BAA_TOKEN_ERROR_UNTERMINATED_STRING);
             // No synchronize if at EOF, otherwise synchronize might have been called if newline was hit
             if (!is_at_end(lexer) && peek(lexer) != L'\n')
-                synchronize(lexer);
+                enhanced_synchronize(lexer, BAA_TOKEN_ERROR_UNTERMINATED_STRING);
             return err_token;
         }
         advance(lexer); // Consume closing quote "

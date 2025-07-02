@@ -256,10 +256,18 @@ BaaLexer *baa_create_lexer(const wchar_t *source)
     if (!lexer)
         return NULL;
     lexer->source = source;
+    lexer->source_length = wcslen(source);
     lexer->start = 0;
     lexer->current = 0;
     lexer->line = 1;
     lexer->column = 0;
+
+    // Initialize enhanced error recovery fields
+    lexer->error_count = 0;
+    lexer->consecutive_errors = 0;
+    lexer->error_limit_reached = false;
+    baa_init_error_recovery_config(&lexer->recovery_config);
+
     return lexer;
 }
 
@@ -582,6 +590,17 @@ void synchronize_general_error(BaaLexer *lexer)
 {
     // Use the existing synchronize function as fallback
     synchronize(lexer);
+}
+
+// Helper function to create successful tokens and reset consecutive errors
+BaaToken *make_successful_token(BaaLexer *lexer, BaaTokenType type)
+{
+    BaaToken *token = make_token(lexer, type);
+    if (token && !baa_token_is_error(type))
+    {
+        baa_reset_consecutive_errors(lexer);
+    }
+    return token;
 }
 
 BaaToken *baa_lexer_next_token(BaaLexer *lexer)

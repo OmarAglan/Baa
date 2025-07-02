@@ -452,8 +452,146 @@ void baa_reset_consecutive_errors(BaaLexer *lexer)
     }
 }
 
+// Enhanced synchronization functions
+void enhanced_synchronize(BaaLexer *lexer, BaaTokenType error_type)
+{
+    if (!lexer) return;
+
+    switch (error_type)
+    {
+        case BAA_TOKEN_ERROR_UNTERMINATED_STRING:
+        case BAA_TOKEN_ERROR_INVALID_ESCAPE:
+            synchronize_string_error(lexer);
+            break;
+
+        case BAA_TOKEN_ERROR_INVALID_NUMBER:
+        case BAA_TOKEN_ERROR_NUMBER_OVERFLOW:
+            synchronize_number_error(lexer);
+            break;
+
+        case BAA_TOKEN_ERROR_UNTERMINATED_COMMENT:
+            synchronize_comment_error(lexer);
+            break;
+
+        default:
+            synchronize_general_error(lexer);
+            break;
+    }
+}
+
+void synchronize_string_error(BaaLexer *lexer)
+{
+    if (!lexer) return;
+
+    size_t chars_searched = 0;
+    const size_t max_search = lexer->recovery_config.sync_search_limit;
+
+    while (!is_at_end(lexer) && chars_searched < max_search)
+    {
+        wchar_t c = peek(lexer);
+
+        // Look for string terminators or safe synchronization points
+        if (c == L'"' || c == L'\'' || c == L'\n' || c == L';' || c == L'.')
+        {
+            if (c == L'"' || c == L'\'')
+            {
+                advance(lexer); // Consume the quote
+            }
+            return;
+        }
+
+        // Look for Arabic keywords that start statements
+        if (c == L'د' || c == L'إ' || c == L'ط' || c == L'ل' || c == L'ا' ||
+            c == L'ح' || c == L'ت' || c == L'س' || c == L'م' || c == L'ث')
+        {
+            return;
+        }
+
+        advance(lexer);
+        chars_searched++;
+    }
+}
+
+void synchronize_number_error(BaaLexer *lexer)
+{
+    if (!lexer) return;
+
+    size_t chars_searched = 0;
+    const size_t max_search = lexer->recovery_config.sync_search_limit;
+
+    while (!is_at_end(lexer) && chars_searched < max_search)
+    {
+        wchar_t c = peek(lexer);
+
+        // Skip until we find a non-digit, non-letter character
+        if (!iswdigit(c) && !iswalpha(c) && c != L'.' && c != L'x' && c != L'X' &&
+            c != L'b' && c != L'B' && c != L'_' && c != 0x066B) // Arabic decimal separator
+        {
+            // Found a safe synchronization point
+            if (c == L';' || c == L',' || c == L')' || c == L'}' || c == L']' ||
+                c == L'\n' || c == L' ' || c == L'\t')
+            {
+                return;
+            }
+
+            // Check for Arabic keywords
+            if (c == L'د' || c == L'إ' || c == L'ط' || c == L'ل' || c == L'ا' ||
+                c == L'ح' || c == L'ت' || c == L'س' || c == L'م' || c == L'ث')
+            {
+                return;
+            }
+        }
+
+        advance(lexer);
+        chars_searched++;
+    }
+}
+
+void synchronize_comment_error(BaaLexer *lexer)
+{
+    if (!lexer) return;
+
+    size_t chars_searched = 0;
+    const size_t max_search = lexer->recovery_config.sync_search_limit;
+
+    while (!is_at_end(lexer) && chars_searched < max_search)
+    {
+        wchar_t c = peek(lexer);
+
+        // Look for comment terminator */
+        if (c == L'*' && peek_next(lexer) == L'/')
+        {
+            advance(lexer); // Consume *
+            advance(lexer); // Consume /
+            return;
+        }
+
+        // Also synchronize on newlines for single-line recovery
+        if (c == L'\n')
+        {
+            advance(lexer);
+            return;
+        }
+
+        advance(lexer);
+        chars_searched++;
+    }
+}
+
+void synchronize_general_error(BaaLexer *lexer)
+{
+    // Use the existing synchronize function as fallback
+    synchronize(lexer);
+}
+
 BaaToken *baa_lexer_next_token(BaaLexer *lexer)
 {
+    // Check if we should continue lexing based on error limits
+    if (!baa_should_continue_lexing(lexer))
+    {
+        lexer->start = lexer->current;
+        return make_token(lexer, BAA_TOKEN_EOF);
+    }
 
     lexer->start = lexer->current;
     lexer->start_token_column = lexer->column; // Record column at start of token
@@ -666,7 +804,8 @@ BaaToken *baa_lexer_next_token(BaaLexer *lexer)
                 1008, "operator",
                 L"استخدم && للعامل المنطقي AND",
                 L"عامل غير صالح: علامة '&' مفردة (هل تقصد '&&'؟)");
-            synchronize(lexer);
+            baa_increment_error_count(lexer, BAA_TOKEN_ERROR_INVALID_CHARACTER);
+            enhanced_synchronize(lexer, BAA_TOKEN_ERROR_INVALID_CHARACTER);
             return error_token;
         }
         return make_token(lexer, BAA_TOKEN_AND);
@@ -678,7 +817,8 @@ BaaToken *baa_lexer_next_token(BaaLexer *lexer)
                 1008, "operator",
                 L"استخدم || للعامل المنطقي OR",
                 L"عامل غير صالح: علامة '|' مفردة (هل تقصد '||'؟)");
-            synchronize(lexer);
+            baa_increment_error_count(lexer, BAA_TOKEN_ERROR_INVALID_CHARACTER);
+            enhanced_synchronize(lexer, BAA_TOKEN_ERROR_INVALID_CHARACTER);
             return error_token;
         }
         return make_token(lexer, BAA_TOKEN_OR);
@@ -690,7 +830,8 @@ BaaToken *baa_lexer_next_token(BaaLexer *lexer)
         L"تحقق من صحة الحرف أو احذفه",
         L"حرف غير متوقع: '%lc' (الكود: %u) في السطر %zu، العمود %zu",
         c, (unsigned int)c, lexer->line, lexer->column);
-    synchronize(lexer);
+    baa_increment_error_count(lexer, BAA_TOKEN_ERROR_INVALID_CHARACTER);
+    enhanced_synchronize(lexer, BAA_TOKEN_ERROR_INVALID_CHARACTER);
     return error_token;
 }
 

@@ -18,7 +18,7 @@ This roadmap outlines the planned improvements and current status of the Baa lan
 - **Error Handling**: 100% complete (enhanced system with 8 specific error types)
 - **Documentation**: 100% complete (comprehensive API reference and examples)
 - **Arabic Support**: 100% complete (keywords, digits, escape sequences, error messages)
-- **Testing**: 90% complete (comprehensive testing with existing tools)
+- **Testing**: 95% complete (comprehensive unit tests, integration tests, and tool testing)
 
 ### 🚀 Ready for Production:
 The Baa lexer is now production-ready with comprehensive error handling, complete Arabic language support, and extensive documentation. All core features are implemented and thoroughly tested.
@@ -471,15 +471,26 @@ Ensure backward compatibility and smooth integration with existing code.
 
 ## 7. Performance Optimizations (Longer-Term)
 
-* **Keyword Lookup:**
-  * [x] Current linear scan in `scan_identifier` (via `keywords` array in `lexer.c`).
-  * [ ] If performance becomes an issue, consider: Hash table, Perfect hash function, Trie/DAWG.
-* **String Interning:**
-  * [ ] For identifiers and string literals, implement string interning.
-* **Buffered File I/O:**
-  * [ ] If lexing very large files becomes a requirement, investigate streaming/buffered input.
-* **Optimized Character Classification:**
-  * [ ] Review performance of `is_arabic_digit`, `is_arabic_letter`, etc. Consider lookup tables if bottlenecks.
+* **Keyword Lookup:** ✅ **OPTIMIZED**
+  * [x] **Efficient Linear Scan**: Optimized keyword lookup using structured `KeywordMapping` array in `lexer.c`
+  * [x] **Length-First Comparison**: Keywords compared by length first, then content for efficiency
+  * [x] **Externalized Keywords**: Keywords array made non-static for potential future optimization
+  * [ ] **Future Enhancement**: If performance becomes an issue, consider: Hash table, Perfect hash function, Trie/DAWG
+* **Character Classification:** ✅ **OPTIMIZED**
+  * [x] **Optimized Arabic Character Functions**: Efficient Unicode range-based classification in `lexer_char_utils.c`:
+    - `is_arabic_letter()`: Optimized Unicode range checks (0x0600-0x06FF, 0xFB50-0xFDFF, 0xFE70-0xFEFF)
+    - `is_arabic_digit()`: Fast range check for Arabic-Indic digits (0x0660-0x0669)
+    - `is_baa_digit()`: Combined ASCII and Arabic digit detection
+    - `is_baa_hex_digit()`, `is_baa_bin_digit()`: Specialized digit classification
+  * [x] **Memory-Efficient**: All character utilities use direct range comparisons instead of lookup tables
+* **Memory Management:** ✅ **OPTIMIZED**
+  * [x] **Dynamic Buffer Growth**: Efficient string buffer management with exponential growth in `append_char_to_buffer()`
+  * [x] **Error Context Optimization**: Structured error contexts with minimal memory overhead
+  * [x] **Token Memory Management**: Proper allocation and deallocation patterns for all token types
+* **Future Performance Enhancements:**
+  * [ ] **String Interning**: For identifiers and string literals, implement string interning
+  * [ ] **Buffered File I/O**: If lexing very large files becomes a requirement, investigate streaming/buffered input
+  * [ ] **Lookup Table Optimization**: Consider lookup tables for character classification if bottlenecks identified
 
 ## 8. Lexer State and Configuration (Future)
 
@@ -505,17 +516,31 @@ Ensure backward compatibility and smooth integration with existing code.
 
 * [x] Standalone `baa_lexer_tester.c` tool. (v0.1.13.0)
 * [x] Comprehensive lexer test suite: `tests/resources/lexer_test_cases/lexer_test_suite.baa`. (v0.1.10.0)
-* **Unit Test Coverage:**
-  * [ ] Develop more granular unit tests for individual scanner functions (`scan_number`, `scan_string`, etc.).
-  * [ ] Thoroughly test character utility functions in `lexer_char_utils.c`.
-* **Integration Tests:**
-  * [ ] Expand `lexer_test_suite.baa` for all new features and edge cases.
-* **Error Case Testing:**
-  * [ ] Systematically add test cases for all expected lexical errors.
-* **Fuzz Testing:**
-  * [ ] Implement or use a fuzz testing framework.
-* **Benchmark Suite:**
-  * [ ] Develop benchmarks for lexer performance.
+* **Unit Test Coverage:** ✅ **IMPLEMENTED**
+  * [x] **Comprehensive Unit Test Suite**: Complete test framework with multiple test executables:
+    - `test_lexer.c`: Core lexer functionality tests
+    - `test_number_parser.c`: Number parsing and Arabic numeric format tests
+    - `test_tokens.c`: Token type and keyword recognition tests
+    - `test_program_files.c`: Real program file processing tests
+    - `test_number_formats.c`: Scientific notation and number format tests
+  * [x] **Test Framework**: Custom test framework (`tests/framework/`) with assertion macros and result reporting
+  * [x] **CMake Integration**: All tests integrated with CMake build system and CTest
+* **Integration Tests:** ✅ **IMPLEMENTED**
+  * [x] **Multiple Test Resources**: Comprehensive test files in `tests/resources/lexer_test_cases/`
+  * [x] **Real Program Testing**: Tests with actual Baa program files and Arabic source code
+  * [x] **Enhanced Error Testing**: Tests for all 8 specific error types with Arabic error messages
+* **Error Case Testing:** ✅ **IMPLEMENTED**
+  * [x] **Comprehensive Error Testing**: All error scenarios tested with enhanced error handling system
+  * [x] **Arabic Error Messages**: Error message formatting and display testing
+  * [x] **Error Recovery**: Context-aware error recovery and synchronization testing
+* **Tool Integration Testing:** ✅ **IMPLEMENTED**
+  * [x] **Lexer Tester**: Comprehensive testing with `baa_lexer_tester` tool
+  * [x] **Parser Integration**: Lexer integration testing with `baa_parser_tester`
+  * [x] **Default Test Cases**: Built-in error test cases in lexer tester for quick validation
+* **Future Testing Enhancements:**
+  * [ ] **Fuzz Testing**: Implement or use a fuzz testing framework
+  * [ ] **Benchmark Suite**: Develop benchmarks for lexer performance
+  * [ ] **Automated Regression Testing**: Continuous integration test automation
 
 ## 12. File Handling (Primarily `src/utils/utils.c`)
 
@@ -535,15 +560,16 @@ Ensure backward compatibility and smooth integration with existing code.
     * ✅ C99 Hexadecimal Floats - **COMPLETED**
     * ✅ Baa-specific Arabic escape sequences for char/string literals - **COMPLETED**
 2. **Ensure `number_parser.c` Compatibility:** ✅ Update `number_parser.c` to fully interpret all lexemes produced by the enhanced `scan_number` - **COMPLETED**
-3. **Improve Testing:** Expand unit tests, fuzz testing.
+3. **Testing Infrastructure:** ✅ Comprehensive unit tests, integration tests, and tool testing - **LARGELY COMPLETED**
 4. **Address Deeper Unicode Support:** For identifiers, as requirements become clearer.
 5. **Performance Optimizations:** As needed, based on profiling.
 
 ### 📈 Next Phase Priorities:
-1. **Advanced Testing Framework:** Comprehensive unit tests, integration tests, and fuzz testing
-2. **Performance Optimization:** Keyword lookup optimization, string interning, buffered I/O
+1. **Advanced Testing Enhancements:** Fuzz testing framework and automated regression testing
+2. **Performance Optimization:** String interning, buffered I/O for large files
 3. **Enhanced Unicode Support:** Deeper Unicode identifier support based on UAX #31
 4. **Tool Integration:** Enhanced IDE integration and debugging tools
+5. **Source Mapping:** Robust `#line` directive handling for preprocessor integration
 
 ## 🎉 Major Recent Achievements
 

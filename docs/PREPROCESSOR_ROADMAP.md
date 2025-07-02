@@ -99,47 +99,53 @@ This roadmap outlines the planned improvements and current status of the Baa lan
 
 * [x] **Foundation**: Error collection infrastructure with diagnostic storage
 * [x] **Basic Recovery**: Accumulating multiple diagnostics instead of halting on first error
-* [ ] **Enhanced Error System Architecture**: Comprehensive unified error collection system
-  * [ ] **Phase 1: Foundation** (9 days estimated)
-    * [ ] Enhanced data structures with severity levels (fatal, error, warning, note)
-    * [ ] Error limit management with configurable thresholds
-    * [ ] Enhanced diagnostic collection API with categorization
-    * [ ] Recovery state tracking and management
-  * [ ] **Phase 2: Core Module Updates** (15 days estimated)
-    * [ ] Update `preprocessor_directives.c` (~176 error sites)
-    * [ ] Update `preprocessor_expansion.c` (~30 error sites)
-    * [ ] Update `preprocessor_expr_eval.c` (~15 error sites)
-    * [ ] Update `preprocessor_line_processing.c` (~25 error sites)
-  * [ ] **Phase 3: Recovery & Testing** (15 days estimated)
-    * [ ] Implement context-aware recovery strategies
-    * [ ] Add synchronization points for different error types
-    * [ ] Comprehensive error recovery testing
-    * [ ] Performance optimization for error-free processing
+* [x] **Enhanced Error System Architecture**: Comprehensive unified error collection system (v0.1.30.0+)
+  * [x] **Phase 1: Foundation** (Completed)
+    * [x] Enhanced data structures with severity levels (fatal, error, warning, note)
+    * [x] Error limit management with configurable thresholds
+    * [x] Enhanced diagnostic collection API with categorization (`add_preprocessor_diagnostic_ex()`)
+    * [x] Recovery state tracking and management (`PpRecoveryState`, `PpErrorLimits`)
+  * [x] **Phase 2: Core Module Updates** (Completed)
+    * [x] Update `preprocessor_directives.c` with enhanced error reporting
+    * [x] Update `preprocessor_expansion.c` with diagnostic collection
+    * [x] Update `preprocessor_expr_eval.c` with error recovery
+    * [x] Update `preprocessor_line_processing.c` with error handling
+  * [x] **Phase 3: Recovery & Testing** (Completed)
+    * [x] Implement context-aware recovery strategies (`determine_recovery_action()`, `execute_recovery_action()`)
+    * [x] Add synchronization points for different error types (`sync_to_next_directive()`, `sync_to_next_line()`, `sync_expression_parsing()`)
+    * [x] Comprehensive error recovery testing framework
+    * [x] Performance optimization for error-free processing
 
-### Error Categories and Recovery Strategies
+### Error Categories and Recovery Strategies (Implemented)
 
-* [ ] **Directive Errors** (1000-1999 range):
-  * Unknown directive → Skip directive, continue at next line
-  * Missing `#نهاية_إذا` → Auto-insert at EOF
-  * Invalid include path → Skip include, continue processing
-* [ ] **Macro Errors** (2000-2999 range):
-  * Redefinition warning → Use new definition, continue
-  * Argument count mismatch → Skip expansion, continue parsing
-  * Invalid parameter name → Skip macro definition, next line
-* [ ] **Expression Errors** (3000-3999 range):
-  * Undefined identifier → Treat as 0, continue evaluation
-  * Division by zero → Return 0, continue evaluation
-  * Invalid operator → Skip operator, next operand
-* [ ] **File Errors** (4000-4999 range):
-  * File not found → Skip include, next line
-  * Circular include → Skip include, next line
-  * Encoding error → Skip file, next line
-* [ ] **Memory Errors** (5000-5999 range):
-  * Allocation failure → Halt immediately (fatal)
-  * Stack overflow → Halt immediately (fatal)
-* [ ] **Syntax Errors** (6000-6999 range):
-  * Unterminated string → Auto-terminate at end of line
-  * Invalid character → Skip character, continue
+* [x] **Directive Errors** (1000-1999 range):
+  * [x] Unknown directive → Skip directive, continue at next line
+  * [x] Missing `#نهاية_إذا` → Auto-insert at EOF with warning
+  * [x] Invalid include path → Skip include, continue processing
+  * [x] Malformed directive syntax → Synchronize to next line
+* [x] **Macro Errors** (2000-2999 range):
+  * [x] Redefinition warning → Use new definition, continue
+  * [x] Argument count mismatch → Skip expansion, continue parsing
+  * [x] Invalid parameter name → Skip macro definition, next line
+  * [x] Recursive macro expansion → Detect and prevent infinite recursion
+* [x] **Expression Errors** (3000-3999 range):
+  * [x] Undefined identifier → Treat as 0, continue evaluation
+  * [x] Division by zero → Return 0 with warning, continue evaluation
+  * [x] Invalid operator → Skip operator, synchronize to next operand
+  * [x] Malformed integer literals → Use 0, continue parsing
+* [x] **File Errors** (4000-4999 range):
+  * [x] File not found → Skip include, continue processing
+  * [x] Circular include → Skip include, continue processing
+  * [x] Encoding error → Report error, skip file
+  * [x] Permission denied → Report error, skip file
+* [x] **Memory Errors** (5000-5999 range):
+  * [x] Allocation failure → Halt immediately (fatal)
+  * [x] Stack overflow → Halt immediately (fatal)
+  * [x] Buffer overflow → Halt immediately (fatal)
+* [x] **Syntax Errors** (6000-6999 range):
+  * [x] Unterminated string → Auto-terminate at end of line
+  * [x] Invalid character → Skip character, continue parsing
+  * [x] Malformed tokens → Synchronize to next valid token
 
 ### Migration Implementation Plan
 

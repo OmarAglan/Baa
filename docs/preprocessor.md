@@ -63,8 +63,8 @@ The Baa preprocessor automatically defines the following macros:
 * `__السطر__`: Expands to the current line number (integer constant).
 * `__التاريخ__`: Expands to the compilation date (string literal, e.g., `"May 21 2025"`).
 * `__الوقت__`: Expands to the compilation time (string literal, e.g., `"10:30:00"`).
-* `__الدالة__`: Expands to a placeholder string literal `L"__BAA_FUNCTION_PLACEHOLDER__"`. (Actual function name substitution occurs in later compiler stages).
-* `__إصدار_المعيار_باء__`: Expands to a long integer constant representing the Baa language version (e.g., `10170L` for v0.1.17.0).
+* `__الدالة__`: Expands to a placeholder string literal `"__BAA_FUNCTION_PLACEHOLDER__"`. (Actual function name substitution occurs in later compiler stages).
+* `__إصدار_المعيار_باء__`: Expands to a long integer constant representing the Baa language version (currently `10150L` for v0.1.15.0).
 
 ### 4. Error Handling and Reporting (معالجة الأخطاء)
 
@@ -76,26 +76,79 @@ The Baa preprocessor automatically defines the following macros:
   * **Warnings** (`PP_DIAG_WARNING`): Non-critical issues that don't prevent successful preprocessing
   * **Notes** (`PP_DIAG_NOTE`): Informational messages and debugging information
 * **Error Categories**: Errors are categorized for better organization and recovery strategies:
-  * **Directive errors**: Preprocessor directive parsing issues
-  * **Macro errors**: Macro definition and expansion problems
-  * **Expression errors**: Conditional expression evaluation failures
-  * **File errors**: File I/O and include-related issues
-  * **Memory errors**: Memory management failures
-  * **Syntax errors**: General syntax problems
+  * **Directive errors** (1000-1999 range): Preprocessor directive parsing issues
+  * **Macro errors** (2000-2999 range): Macro definition and expansion problems
+  * **Expression errors** (3000-3999 range): Conditional expression evaluation failures
+  * **File errors** (4000-4999 range): File I/O and include-related issues
+  * **Memory errors** (5000-5999 range): Memory management failures
+  * **Syntax errors** (6000-6999 range): General syntax problems
 * **Configurable Error Limits**: Supports configurable thresholds to prevent error flooding:
   * Maximum errors before stopping (default: 100)
   * Maximum warnings before stopping (default: 1000)
   * Cascading error prevention to avoid repetitive error reports
 * **Smart Recovery Strategies**: Context-aware error recovery that continues processing when possible:
-  * Skip invalid directives and continue at next line
-  * Handle missing `#نهاية_إذا` by auto-insertion at end of file
-  * Treat undefined identifiers as 0 in conditional expressions
-  * Skip failed include files and continue processing
+  * **Directive-level synchronization**: Skip invalid directives and continue at next line
+  * **Expression-level recovery**: Continue evaluation after encountering invalid operators or operands
+  * **Conditional stack validation**: Automatic cleanup for unmatched `#إذا`/`#نهاية_إذا` pairs
+  * **Line-boundary synchronization**: Ensure errors in one line don't corrupt subsequent line processing
+  * **File-level recovery**: Skip failed include files and continue processing
+  * **Macro expansion recovery**: Handle argument count mismatches and invalid parameter names
+* **Recovery Functions**: Implemented recovery functions include:
+  * `sync_to_next_directive()`: Synchronize to next preprocessor directive
+  * `sync_to_next_line()`: Synchronize to next line boundary
+  * `sync_expression_parsing()`: Recover from expression parsing errors
+  * `recover_conditional_stack()`: Validate and repair conditional compilation stack
 * **Arabic Language Support**: Error messages are primarily in Arabic with proper formatting and cultural considerations.
 
 ## Preprocessor Structure (بنية المعالج المسبق)
 
-The preprocessor is implemented as a modular component within the `src/preprocessor/` directory, with functionalities split into several files (e.g., `preprocessor_directives.c`, `preprocessor_macros.c`, `preprocessor_expansion.c`, `preprocessor_expr_eval.c`). It uses an internal header `preprocessor_internal.h` for shared definitions. The public API is defined in `include/baa/preprocessor/preprocessor.h`.
+The preprocessor is implemented as a modular component within the `src/preprocessor/` directory, with functionalities split into several files:
+
+* **`preprocessor.c`**: Main entry point and initialization, defines `baa_preprocess()` function
+* **`preprocessor_core.c`**: Core file and string processing functions (`process_file()`, `process_string()`)
+* **`preprocessor_directives.c`**: Handles all preprocessor directives (`#تضمين`, `#تعريف`, `#إذا`, etc.)
+* **`preprocessor_macros.c`**: Macro definition, lookup, and management functions
+* **`preprocessor_expansion.c`**: Macro expansion, argument parsing, and substitution logic
+* **`preprocessor_conditionals.c`**: Conditional compilation stack management
+* **`preprocessor_expr_eval.c`**: Expression evaluation for conditional directives
+* **`preprocessor_line_processing.c`**: Line-by-line macro scanning and substitution
+* **`preprocessor_utils.c`**: Utility functions for error handling, location tracking, and file operations
+* **`preprocessor_internal.h`**: Internal header with shared definitions and function declarations
+
+The public API is defined in `include/baa/preprocessor/preprocessor.h` and consists primarily of the `baa_preprocess()` function and supporting data structures.
+
+## Internal API Functions (واجهة برمجة التطبيقات الداخلية)
+
+The preprocessor provides several internal API functions for advanced error handling and state management:
+
+### Error System Functions
+
+* **`init_preprocessor_error_system(BaaPreprocessor *pp_state)`**: Initializes the error collection system
+* **`cleanup_preprocessor_error_system(BaaPreprocessor *pp_state)`**: Cleans up error system resources
+* **`generate_error_summary(const BaaPreprocessor *pp_state)`**: Generates a summary of all collected errors
+* **`add_preprocessor_diagnostic_ex()`**: Adds a diagnostic message with full context information
+
+### Location Tracking Functions
+
+* **`push_location(BaaPreprocessor *pp, const PpSourceLocation *location)`**: Pushes a location onto the location stack
+* **`pop_location(BaaPreprocessor *pp)`**: Pops a location from the location stack
+* **`get_current_original_location(const BaaPreprocessor *pp)`**: Gets the current location from the stack
+* **`update_current_location(BaaPreprocessor *pp, size_t line, size_t column)`**: Updates the current location
+
+### File Stack Management
+
+* **`push_file_stack(BaaPreprocessor *pp, const char *abs_path)`**: Pushes a file onto the include stack
+* **`pop_file_stack(BaaPreprocessor *pp)`**: Pops a file from the include stack
+* **`free_file_stack(BaaPreprocessor *pp)`**: Frees the file stack resources
+
+### Recovery and Synchronization Functions
+
+* **`determine_recovery_action()`**: Determines the appropriate recovery action for an error
+* **`execute_recovery_action()`**: Executes a recovery action
+* **`should_continue_processing(const BaaPreprocessor *pp_state)`**: Checks if processing should continue
+* **`sync_to_next_directive(BaaPreprocessor *pp_state, const wchar_t **line_ptr)`**: Synchronizes to the next directive
+* **`sync_to_next_line(BaaPreprocessor *pp_state, const wchar_t **line_ptr)`**: Synchronizes to the next line
+* **`sync_expression_parsing(BaaPreprocessor *pp_state, const wchar_t **expr_ptr, wchar_t terminator)`**: Recovers from expression parsing errors
 
 ## Usage (الاستخدام)
 
@@ -185,9 +238,22 @@ int x = VALID_MACRO;                // Processing continues with valid macros
 Error messages follow a consistent Arabic format with location information:
 
 ```
-خطأ في المعالج المسبق في الملف "program.ب" السطر 15 العمود 8: تنسيق #تعريف غير صالح: اسم الماكرو مفقود
-تحذير في المعالج المسبق في الملف "program.ب" السطر 20 العمود 12: إعادة تعريف الماكرو 'PI'
+program.ب:15:8: خطأ: تنسيق #تعريف غير صالح: اسم الماكرو مفقود
+program.ب:20:12: تحذير: إعادة تعريف الماكرو 'PI'
 ```
+
+The format is: `filename:line:column: severity: message`
+
+### Error Categories and Codes
+
+The preprocessor uses a systematic error code system:
+
+* **1000-1999**: Directive errors (unknown directives, malformed syntax)
+* **2000-2999**: Macro errors (redefinition, expansion failures, argument mismatches)
+* **3000-3999**: Expression errors (invalid operators, division by zero, undefined identifiers)
+* **4000-4999**: File errors (file not found, circular includes, encoding issues)
+* **5000-5999**: Memory errors (allocation failures, stack overflow)
+* **6000-6999**: Syntax errors (unterminated strings, invalid characters)
 
 ## Current Known Issues and Limitations
 
@@ -195,5 +261,22 @@ Error messages follow a consistent Arabic format with location information:
 * **Complex Token Pasting (`##`) during Rescanning**: While the `##` operator works correctly in direct macro bodies, complex interactions when `##` appears as part of a macro expansion output that is then rescanned, or when its operands are themselves complex macros, may not be fully robust. This requires careful review of the rescan loop and how it forms new tokens after pasting.
 * **Error/Warning Location Precision**: While significantly improved, further refinement for precise column reporting in all error scenarios is an ongoing effort.
 * **Performance Optimization**: The enhanced error system is designed to have minimal overhead during error-free processing, but performance optimization is still being refined.
+* **Unimplemented Directives**: The following standard directives are planned but not yet implemented:
+  * `#سطر` (line number control)
+  * `#براغما` (pragma directives)
+  * `أمر_براغما` (_Pragma operator)
+
+## Performance Characteristics
+
+The preprocessor is designed with the following performance targets:
+
+* **Error-Free Processing**: < 5% overhead compared to basic implementation
+* **Error Collection**: < 10% overhead with up to 10 errors
+* **Memory Usage**: < 100KB additional memory for 100 collected errors
+* **Error Formatting**: < 1ms per error message generation
+
+## Thread Safety
+
+The current preprocessor implementation is **not thread-safe**. Each preprocessing operation should use a separate `BaaPreprocessor` instance. The preprocessor maintains internal state that would be corrupted by concurrent access.
 
 *For detailed ongoing tasks and future plans, please refer to `docs/PREPROCESSOR_ROADMAP.md`.*

@@ -68,9 +68,30 @@ The Baa preprocessor automatically defines the following macros:
 
 ### 4. Error Handling and Reporting (معالجة الأخطاء)
 
-* Reports errors and warnings with precise location information (original file, line, and column), even through include files and macro expansions.
-* Foundation for error recovery is implemented, allowing the preprocessor to accumulate multiple diagnostics (errors/warnings) in a single pass instead of halting on the first error. Full implementation of synchronization strategies after each error type is ongoing.
-* Error messages are primarily in Arabic.
+* **Comprehensive Error Collection**: Reports errors and warnings with precise location information (original file, line, and column), even through include files and macro expansions.
+* **Enhanced Error Recovery**: The preprocessor implements an advanced error collection system that accumulates multiple diagnostics (errors/warnings) in a single pass instead of halting on the first error. This allows for more comprehensive error reporting and better development workflow.
+* **Severity Levels**: Supports multiple diagnostic severity levels:
+  * **Fatal Errors** (`PP_DIAG_FATAL`): Critical system errors that halt processing immediately (e.g., memory allocation failures)
+  * **Errors** (`PP_DIAG_ERROR`): Syntax and semantic errors that allow recovery and continued processing
+  * **Warnings** (`PP_DIAG_WARNING`): Non-critical issues that don't prevent successful preprocessing
+  * **Notes** (`PP_DIAG_NOTE`): Informational messages and debugging information
+* **Error Categories**: Errors are categorized for better organization and recovery strategies:
+  * **Directive errors**: Preprocessor directive parsing issues
+  * **Macro errors**: Macro definition and expansion problems
+  * **Expression errors**: Conditional expression evaluation failures
+  * **File errors**: File I/O and include-related issues
+  * **Memory errors**: Memory management failures
+  * **Syntax errors**: General syntax problems
+* **Configurable Error Limits**: Supports configurable thresholds to prevent error flooding:
+  * Maximum errors before stopping (default: 100)
+  * Maximum warnings before stopping (default: 1000)
+  * Cascading error prevention to avoid repetitive error reports
+* **Smart Recovery Strategies**: Context-aware error recovery that continues processing when possible:
+  * Skip invalid directives and continue at next line
+  * Handle missing `#نهاية_إذا` by auto-insertion at end of file
+  * Treat undefined identifiers as 0 in conditional expressions
+  * Skip failed include files and continue processing
+* **Arabic Language Support**: Error messages are primarily in Arabic with proper formatting and cultural considerations.
 
 ## Preprocessor Structure (بنية المعالج المسبق)
 
@@ -130,10 +151,49 @@ You can now use the ternary operator (`? :`) in preprocessor conditional express
 #نهاية_إذا
 ```
 
+## Error Recovery Examples
+
+### Directive Error Recovery
+```baa
+#تعريف VALID_MACRO 42
+#unknown_directive invalid syntax    // Error reported, directive skipped
+#تعريف ANOTHER_VALID 123            // Processing continues
+```
+
+### Macro Error Recovery
+```baa
+#تعريف FUNC(a, b) a + b
+FUNC(1)                             // Error: wrong argument count, expansion skipped
+int x = VALID_MACRO;                // Processing continues with valid macros
+```
+
+### Expression Error Recovery
+```baa
+#إذا UNDEFINED_MACRO / 0 > 1        // Warning: undefined treated as 0, division by zero handled
+    int valid_code = 42;            // Block processing continues
+#نهاية_إذا
+```
+
+### File Error Recovery
+```baa
+#تضمين "nonexistent.h"             // Error reported, include skipped
+#تعريف AFTER_ERROR 123             // Processing continues
+```
+
+## Error Message Format
+
+Error messages follow a consistent Arabic format with location information:
+
+```
+خطأ في المعالج المسبق في الملف "program.ب" السطر 15 العمود 8: تنسيق #تعريف غير صالح: اسم الماكرو مفقود
+تحذير في المعالج المسبق في الملف "program.ب" السطر 20 العمود 12: إعادة تعريف الماكرو 'PI'
+```
+
 ## Current Known Issues and Limitations
 
-* **Full Error Recovery:** While the foundation for accumulating multiple errors is in place, most error-handling sites in the preprocessor still need to be updated to fully utilize this by attempting synchronization and continuation instead of immediately halting.
-* **Complex Token Pasting (`##`) during Rescanning:** While the `##` operator works correctly in direct macro bodies, complex interactions when `##` appears as part of a macro expansion output that is then rescanned, or when its operands are themselves complex macros, may not be fully robust. This requires careful review of the rescan loop and how it forms new tokens after pasting.
-* **Error/Warning Location Precision:** While significantly improved, further refinement for precise column reporting in all error scenarios is an ongoing effort.
+* **Enhanced Error System Migration**: While the foundation for comprehensive error collection is in place, migration of all error-handling sites to the new system is ongoing. Some error sites may still halt processing immediately instead of attempting recovery.
+* **Complex Token Pasting (`##`) during Rescanning**: While the `##` operator works correctly in direct macro bodies, complex interactions when `##` appears as part of a macro expansion output that is then rescanned, or when its operands are themselves complex macros, may not be fully robust. This requires careful review of the rescan loop and how it forms new tokens after pasting.
+* **Error/Warning Location Precision**: While significantly improved, further refinement for precise column reporting in all error scenarios is an ongoing effort.
+* **Performance Optimization**: The enhanced error system is designed to have minimal overhead during error-free processing, but performance optimization is still being refined.
 
 *For detailed ongoing tasks and future plans, please refer to `docs/PREPROCESSOR_ROADMAP.md`.*

@@ -93,16 +93,83 @@ This roadmap outlines the planned improvements and current status of the Baa lan
     * [x] Create error recovery decision logic based on error severity and context
     * [x] Add option to treat certain recoverable errors as warnings to improve development workflow
 
-## Known Issues / Areas for Refinement (from `CHANGELOG.md`)
+## Enhanced Error System Implementation
+
+### Unified Error Collection System (v0.1.27.0+)
+
+* [x] **Foundation**: Error collection infrastructure with diagnostic storage
+* [x] **Basic Recovery**: Accumulating multiple diagnostics instead of halting on first error
+* [ ] **Enhanced Error System Architecture**: Comprehensive unified error collection system
+  * [ ] **Phase 1: Foundation** (9 days estimated)
+    * [ ] Enhanced data structures with severity levels (fatal, error, warning, note)
+    * [ ] Error limit management with configurable thresholds
+    * [ ] Enhanced diagnostic collection API with categorization
+    * [ ] Recovery state tracking and management
+  * [ ] **Phase 2: Core Module Updates** (15 days estimated)
+    * [ ] Update `preprocessor_directives.c` (~176 error sites)
+    * [ ] Update `preprocessor_expansion.c` (~30 error sites)
+    * [ ] Update `preprocessor_expr_eval.c` (~15 error sites)
+    * [ ] Update `preprocessor_line_processing.c` (~25 error sites)
+  * [ ] **Phase 3: Recovery & Testing** (15 days estimated)
+    * [ ] Implement context-aware recovery strategies
+    * [ ] Add synchronization points for different error types
+    * [ ] Comprehensive error recovery testing
+    * [ ] Performance optimization for error-free processing
+
+### Error Categories and Recovery Strategies
+
+* [ ] **Directive Errors** (1000-1999 range):
+  * Unknown directive → Skip directive, continue at next line
+  * Missing `#نهاية_إذا` → Auto-insert at EOF
+  * Invalid include path → Skip include, continue processing
+* [ ] **Macro Errors** (2000-2999 range):
+  * Redefinition warning → Use new definition, continue
+  * Argument count mismatch → Skip expansion, continue parsing
+  * Invalid parameter name → Skip macro definition, next line
+* [ ] **Expression Errors** (3000-3999 range):
+  * Undefined identifier → Treat as 0, continue evaluation
+  * Division by zero → Return 0, continue evaluation
+  * Invalid operator → Skip operator, next operand
+* [ ] **File Errors** (4000-4999 range):
+  * File not found → Skip include, next line
+  * Circular include → Skip include, next line
+  * Encoding error → Skip file, next line
+* [ ] **Memory Errors** (5000-5999 range):
+  * Allocation failure → Halt immediately (fatal)
+  * Stack overflow → Halt immediately (fatal)
+* [ ] **Syntax Errors** (6000-6999 range):
+  * Unterminated string → Auto-terminate at end of line
+  * Invalid character → Skip character, continue
+
+### Migration Implementation Plan
+
+* [ ] **Error Code Assignment**: Systematic assignment of error codes across all 266+ error sites
+* [ ] **Severity Classification**: Proper categorization of all error conditions
+* [ ] **Recovery Logic**: Implementation of context-aware recovery strategies
+* [ ] **Synchronization Points**: Safe stopping points for error recovery
+* [ ] **Performance Optimization**: Maintain <5% overhead for error-free processing
+* [ ] **Backward Compatibility**: Preserve existing public API and error message formats
+
+## Known Issues / Areas for Refinement
 
 * **Error/Warning Location Precision (Remaining Areas)**:
   * Column tracking within conditional expressions and for some directive arguments/macro call arguments has been enhanced (v0.1.16.0, v0.1.17.0, v0.1.22.0).
   * Further refinement for precise column reporting is an ongoing effort across all error sites.
+* **Enhanced Error System Migration**:
+  * Most error-handling sites still need updates to utilize the new diagnostic collection system
+  * Synchronization strategies need implementation for different error contexts
+  * Error limit enforcement and cascading error prevention needs refinement
 
 ## Testing and Validation
 
 * [x] Basic preprocessor tester tool (`tools/baa_preprocessor_tester.c`).
 * [x] Consolidated test file (`tests/resources/preprocessor_test_cases/preprocessor_test_all.baa`) covering many features.
+* [ ] **Enhanced Error System Testing**:
+  * [ ] **Unit Tests**: Error collection functions, severity classification, limit management, recovery decision logic
+  * [ ] **Integration Tests**: End-to-end processing with multiple errors, multi-file scenarios, complex macro expansion with errors
+  * [ ] **Recovery Tests**: Directive error recovery, macro error recovery, expression error recovery, cascading error handling
+  * [ ] **Performance Tests**: Memory usage with many errors, processing speed impact, large file error handling
+  * [ ] **Regression Tests**: Backward compatibility, existing error messages, API compatibility, error format consistency
 * [ ] **More Unit Tests:** Develop granular unit tests for:
   * Directive parsing logic (`preprocessor_directives.c`).
   * Include path resolution.
@@ -111,5 +178,12 @@ This roadmap outlines the planned improvements and current status of the Baa lan
   * Error reporting and recovery mechanisms.
 * [ ] **Integration Tests:** Expand tests that verify interaction with the lexer (e.g., ensuring preprocessor output is correctly tokenized).
 * [ ] **Standard Compliance Tests:** Consider adapting or creating tests based on C99 preprocessor conformance suites.
+
+## Performance Targets
+
+* **Error-Free Processing**: < 5% overhead compared to current implementation
+* **Error Collection**: < 10% overhead with up to 10 errors
+* **Memory Usage**: < 100KB additional memory for 100 collected errors
+* **Error Formatting**: < 1ms per error message generation
 
 This roadmap reflects the current understanding and priorities. It will be updated as development progresses.

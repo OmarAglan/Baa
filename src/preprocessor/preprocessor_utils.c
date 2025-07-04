@@ -979,13 +979,7 @@ void add_preprocessor_diagnostic_ex(
         return;
     }
 
-    // Increment error count and check limits
-    if (!increment_error_count(pp_state, severity))
-    {
-        return; // Hit error limit
-    }
-
-    // Format the diagnostic message
+    // Format the diagnostic message first
     va_list args;
     va_start(args, format);
 
@@ -1067,7 +1061,7 @@ void add_preprocessor_diagnostic_ex(
 
     pp_state->diagnostic_count++;
 
-    // Update counters and check limits
+    // Increment error count after diagnostic is stored
     increment_error_count(pp_state, severity);
 
     // Set fatal flag if needed

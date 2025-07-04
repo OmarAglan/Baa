@@ -57,6 +57,7 @@ typedef enum BaaNodeKind
     // Expression Kinds
     BAA_NODE_KIND_LITERAL_EXPR,    /**< Represents a literal value (integer, string, etc.). data: BaaLiteralExprData* */
     BAA_NODE_KIND_IDENTIFIER_EXPR, /**< An identifier used as an expression. data: BaaIdentifierExprData* */
+    BAA_NODE_KIND_BINARY_EXPR,     /**< A binary expression (e.g., a + b). data: BaaBinaryExprData* */
 
     // Type Representation Kinds (for type syntax parsed from code)
     // BAA_NODE_KIND_TYPE,           // To be added: Represents a type specification. data: BaaTypeAstData*
@@ -133,6 +134,56 @@ typedef struct BaaIdentifierExprData
     wchar_t *name; /**< Duplicated identifier name. Owner must free. */
     // Future: BaaSymbol* resolved_symbol; /**< Link to symbol table entry after resolution. */
 } BaaIdentifierExprData;
+
+// == Binary Expression Data ==
+
+/**
+ * @brief Enumerates the different kinds of binary operators.
+ */
+typedef enum BaaBinaryOperatorKind
+{
+    // Arithmetic operators
+    BAA_BINARY_OP_ADD,      /**< Addition (+) */
+    BAA_BINARY_OP_SUBTRACT, /**< Subtraction (-) */
+    BAA_BINARY_OP_MULTIPLY, /**< Multiplication (*) */
+    BAA_BINARY_OP_DIVIDE,   /**< Division (/) */
+    BAA_BINARY_OP_MODULO,   /**< Modulo (%) */
+
+    // Comparison operators
+    BAA_BINARY_OP_EQUAL,         /**< Equality (==) */
+    BAA_BINARY_OP_NOT_EQUAL,     /**< Inequality (!=) */
+    BAA_BINARY_OP_LESS_THAN,     /**< Less than (<) */
+    BAA_BINARY_OP_LESS_EQUAL,    /**< Less than or equal (<=) */
+    BAA_BINARY_OP_GREATER_THAN,  /**< Greater than (>) */
+    BAA_BINARY_OP_GREATER_EQUAL, /**< Greater than or equal (>=) */
+
+    // Logical operators
+    BAA_BINARY_OP_LOGICAL_AND, /**< Logical AND (&&) */
+    BAA_BINARY_OP_LOGICAL_OR,  /**< Logical OR (||) */
+
+    // Bitwise operators (for future expansion)
+    // BAA_BINARY_OP_BITWISE_AND,
+    // BAA_BINARY_OP_BITWISE_OR,
+    // BAA_BINARY_OP_BITWISE_XOR,
+    // BAA_BINARY_OP_LEFT_SHIFT,
+    // BAA_BINARY_OP_RIGHT_SHIFT,
+
+    // Assignment operators (for future expansion)
+    // BAA_BINARY_OP_ASSIGN,
+    // BAA_BINARY_OP_ADD_ASSIGN,
+    // etc.
+} BaaBinaryOperatorKind;
+
+/**
+ * @brief Data structure for a binary expression node (BAA_NODE_KIND_BINARY_EXPR).
+ */
+typedef struct BaaBinaryExprData
+{
+    BaaNode *left_operand;               /**< Left operand expression. */
+    BaaNode *right_operand;              /**< Right operand expression. */
+    BaaBinaryOperatorKind operator_kind; /**< The binary operator. */
+    // Future: BaaType* result_type; /**< Type of the result after semantic analysis. */
+} BaaBinaryExprData;
 
 // --- Base AST Node Structure ---
 // Forward declaration, as BaaNode might be used by specific data structs

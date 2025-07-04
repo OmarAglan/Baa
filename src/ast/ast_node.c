@@ -96,6 +96,13 @@ void baa_ast_free_node(BaaNode *node)
         }
         break;
 
+    case BAA_NODE_KIND_BINARY_EXPR:
+        if (node->data)
+        {
+            baa_ast_free_binary_expr_data((BaaBinaryExprData *)node->data);
+        }
+        break;
+
     // --- Statement Kinds ---
     case BAA_NODE_KIND_EXPR_STMT:
         if (node->data)

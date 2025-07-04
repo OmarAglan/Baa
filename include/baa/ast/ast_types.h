@@ -79,6 +79,8 @@ typedef uint32_t BaaAstNodeModifiers;
 #define BAA_MOD_STATIC (1U << 1) /**< 'مستقر' (static) modifier. */
 // Add BAA_MOD_INLINE, BAA_MOD_RESTRICT etc. as needed
 
+// --- Specific AST Node Data Structures ---
+
 // --- Literal Expression Specific Structures ---
 
 /**
@@ -143,5 +145,20 @@ struct BaaNode
     // BaaNode* parent_node;      /**< Optional: pointer to the parent node in the AST. */
     // size_t unique_id;          /**< Optional: for debugging or analysis passes. */
 };
+
+// --- Additional AST Node Data Structures (defined after BaaNode) ---
+
+// == Program Structure Data ==
+
+/**
+ * @brief Data structure for BAA_NODE_KIND_PROGRAM nodes.
+ * Represents the root of the AST, containing all top-level declarations.
+ */
+typedef struct BaaProgramData
+{
+    BaaNode **top_level_declarations; /**< Dynamic array of BaaNode* (function defs, global var decls). */
+    size_t count;                     /**< Number of declarations currently stored. */
+    size_t capacity;                  /**< Current capacity of the declarations array. */
+} BaaProgramData;
 
 #endif // BAA_AST_TYPES_H

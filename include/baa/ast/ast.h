@@ -2,6 +2,8 @@
 #define BAA_AST_H
 
 #include "baa/ast/ast_types.h" // Include the core type definitions
+#include "baa/types/types.h"   // For BaaType
+#include <stdbool.h>           // For bool
 
 // --- Core AST Node Lifecycle Functions ---
 
@@ -81,5 +83,27 @@ BaaNode *baa_ast_new_literal_string_node(BaaAstSourceSpan span, const wchar_t *v
 // and called by baa_ast_free_node's dispatch.
 // Example (internal declaration, not for this public header yet):
 // void baa_ast_free_literal_expr_data(BaaLiteralExprData* data);
+
+// == Program Nodes ==
+
+/**
+ * @brief Creates a new AST node representing a program (root of the AST).
+ * The node's kind will be BAA_NODE_KIND_PROGRAM.
+ * Its data will point to a BaaProgramData struct with an empty declarations array.
+ *
+ * @param span The source span of the program.
+ * @return A pointer to the new BaaNode, or NULL on failure.
+ */
+BaaNode *baa_ast_new_program_node(BaaAstSourceSpan span);
+
+/**
+ * @brief Adds a top-level declaration to a program node.
+ * Handles dynamic array resizing as needed.
+ *
+ * @param program_node A BaaNode* of kind BAA_NODE_KIND_PROGRAM.
+ * @param declaration_node A BaaNode* representing a top-level declaration.
+ * @return true on success, false on failure (e.g., memory allocation failure).
+ */
+bool baa_ast_add_declaration_to_program(BaaNode *program_node, BaaNode *declaration_node);
 
 #endif // BAA_AST_H

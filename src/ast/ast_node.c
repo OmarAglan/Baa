@@ -1,5 +1,6 @@
 #include "baa/ast/ast.h"     // For BaaNode, BaaNodeKind, BaaAstSourceSpan, and function prototypes
 #include "ast_expressions.h" // For baa_ast_free_literal_expr_data (internal header)
+#include "ast_program.h"     // For baa_ast_free_program_data (internal header)
 #include "baa/utils/utils.h" // For baa_malloc, baa_free
 #include <stdlib.h>          // For NULL
 #include <string.h>          // For memset (optional, for zeroing memory)
@@ -73,9 +74,10 @@ void baa_ast_free_node(BaaNode *node)
 
     // --- Program Structure Kinds ---
     case BAA_NODE_KIND_PROGRAM:
-        // if (node->data) {
-        //     baa_ast_free_program_data((BaaProgramData*)node->data); // To be implemented
-        // }
+        if (node->data)
+        {
+            baa_ast_free_program_data((BaaProgramData *)node->data);
+        }
         break;
 
     // --- Expression Kinds ---

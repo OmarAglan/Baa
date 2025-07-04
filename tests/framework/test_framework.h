@@ -148,13 +148,10 @@ void print_test_results();
 
 // --- Enhanced Testing Utilities ---
 
-// Forward declarations for Baa types
-struct BaaNode;
-struct BaaToken;
-struct BaaLexer;
-typedef struct BaaNode BaaNode;
-typedef struct BaaToken BaaToken;
-typedef struct BaaLexer BaaLexer;
+// Include Baa headers for type definitions
+#include "baa/ast/ast_types.h"
+#include "baa/lexer/lexer.h"
+#include "baa/parser/parser.h"
 
 // AST Testing Utilities
 BaaNode *create_test_ast_node(int kind, const char *test_data);

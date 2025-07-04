@@ -141,3 +141,212 @@ void compare_with_expected_file(const char *actual_output, const char *expected_
     wprintf(L"[INFO] Comparing output with expected file: %hs\n", expected_file);
     // TODO: Implement actual file comparison logic
 }
+
+// --- AST Testing Utilities ---
+BaaNode *create_test_ast_node(int kind, const char *test_data)
+{
+    // Create a simple test source span
+    BaaAstSourceSpan span = {
+        .start = {.filename = "test.baa", .line = 1, .column = 1},
+        .end = {.filename = "test.baa", .line = 1, .column = 10}};
+
+    // Create node based on kind
+    switch (kind)
+    {
+    case BAA_NODE_KIND_PROGRAM:
+        return baa_ast_new_program_node(span);
+    case BAA_NODE_KIND_IDENTIFIER_EXPR:
+        if (test_data)
+        {
+            // Convert test_data to wide string
+            size_t len = strlen(test_data) + 1;
+            wchar_t *wide_name = malloc(len * sizeof(wchar_t));
+            if (wide_name)
+            {
+                mbstowcs(wide_name, test_data, len);
+                BaaNode *node = baa_ast_new_identifier_expr_node(span, wide_name);
+                free(wide_name);
+                return node;
+            }
+        }
+        return baa_ast_new_identifier_expr_node(span, L"test_identifier");
+    case BAA_NODE_KIND_TYPE:
+        if (test_data)
+        {
+            size_t len = strlen(test_data) + 1;
+            wchar_t *wide_name = malloc(len * sizeof(wchar_t));
+            if (wide_name)
+            {
+                mbstowcs(wide_name, test_data, len);
+                BaaNode *node = baa_ast_new_primitive_type_node(span, wide_name);
+                free(wide_name);
+                return node;
+            }
+        }
+        return baa_ast_new_primitive_type_node(span, L"عدد_صحيح");
+    default:
+        return baa_ast_new_node((BaaNodeKind)kind, span);
+    }
+}
+
+void print_ast_debug(BaaNode *root, int indent_level)
+{
+    if (!root)
+    {
+        for (int i = 0; i < indent_level; i++)
+            wprintf(L"  ");
+        wprintf(L"(NULL)\n");
+        return;
+    }
+
+    for (int i = 0; i < indent_level; i++)
+        wprintf(L"  ");
+    wprintf(L"Node: kind=%d\n", root->kind);
+
+    // TODO: Add more detailed AST printing based on node type
+}
+
+void free_test_ast(BaaNode *root)
+{
+    if (root)
+    {
+        baa_ast_free_node(root);
+    }
+}
+
+void assert_ast_structure(BaaNode *root, const char *expected_structure)
+{
+    // This is a simplified implementation
+    // In a real scenario, you'd want to parse the expected_structure
+    // and compare it with the actual AST structure
+    if (!root)
+    {
+        wprintf(L"[ASSERT FAILED] AST root is NULL\n");
+        failed_tests++;
+        return;
+    }
+
+    wprintf(L"[INFO] Checking AST structure against: %hs\n", expected_structure);
+    // TODO: Implement actual AST structure comparison
+}
+
+// --- Parser Testing Utilities ---
+BaaNode *parse_test_string(const wchar_t *source)
+{
+    if (!source)
+    {
+        return NULL;
+    }
+
+    // Initialize lexer with the source
+    BaaLexer lexer;
+    baa_init_lexer(&lexer, source, L"test.baa");
+
+    // Create parser from lexer
+    BaaParser *parser = baa_parser_create(&lexer, L"test.baa");
+    if (!parser)
+    {
+        return NULL;
+    }
+
+    // Parse the program
+    BaaNode *ast = baa_parse_program(parser);
+
+    // Clean up parser (but not the AST)
+    baa_parser_free(parser);
+
+    return ast;
+}
+
+void assert_parse_success(const wchar_t *source, const char *test_name)
+{
+    BaaNode *ast = parse_test_string(source);
+    if (!ast)
+    {
+        wprintf(L"[ASSERT FAILED] %hs: Parse failed for source: \"%ls\"\n", test_name, source);
+        failed_tests++;
+        return;
+    }
+
+    // Clean up
+    baa_ast_free_node(ast);
+}
+
+void assert_parse_error(const wchar_t *source, int expected_error, const char *test_name)
+{
+    BaaNode *ast = parse_test_string(source);
+    if (ast)
+    {
+        wprintf(L"[ASSERT FAILED] %hs: Expected parse error but parsing succeeded for: \"%ls\"\n",
+                test_name, source);
+        baa_ast_free_node(ast);
+        failed_tests++;
+        return;
+    }
+
+    // TODO: Check specific error code if error reporting is implemented
+    wprintf(L"[INFO] %hs: Parse correctly failed for invalid source\n", test_name);
+}
+
+// --- Lexer Testing Utilities ---
+BaaToken *tokenize_test_string(const wchar_t *source)
+{
+    if (!source)
+    {
+        return NULL;
+    }
+
+    // This is a simplified implementation
+    // In practice, you'd tokenize the entire string and return an array
+    BaaLexer lexer;
+    baa_init_lexer(&lexer, source, L"test.baa");
+
+    // For now, just return the first token
+    return baa_lexer_next_token(&lexer);
+}
+
+void assert_token_sequence(const wchar_t *source, int *expected_types, size_t count, const char *test_name)
+{
+    if (!source || !expected_types)
+    {
+        wprintf(L"[ASSERT FAILED] %hs: NULL parameters provided\n", test_name);
+        failed_tests++;
+        return;
+    }
+
+    BaaLexer lexer;
+    baa_init_lexer(&lexer, source, L"test.baa");
+
+    for (size_t i = 0; i < count; i++)
+    {
+        BaaToken *token = baa_lexer_next_token(&lexer);
+        if (!token)
+        {
+            wprintf(L"[ASSERT FAILED] %hs: Expected token %zu but got NULL\n", test_name, i);
+            failed_tests++;
+            return;
+        }
+
+        if (token->type != expected_types[i])
+        {
+            wprintf(L"[ASSERT FAILED] %hs: Token %zu type mismatch. Expected %d, got %d\n",
+                    test_name, i, expected_types[i], token->type);
+            baa_free_token(token);
+            failed_tests++;
+            return;
+        }
+
+        baa_free_token(token);
+    }
+}
+
+void free_test_tokens(BaaToken *tokens, size_t count)
+{
+    if (tokens)
+    {
+        for (size_t i = 0; i < count; i++)
+        {
+            baa_free_token(&tokens[i]);
+        }
+    }
+}

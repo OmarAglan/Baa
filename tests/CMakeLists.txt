@@ -2,13 +2,7 @@
 enable_testing()
 
 # Add test framework
-add_library(test_framework
-    framework/test_framework.c
-)
-target_include_directories(test_framework
-    PUBLIC
-        ${CMAKE_CURRENT_SOURCE_DIR}/framework
-)
+add_subdirectory(framework)
 
 # Common test settings
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/tests)

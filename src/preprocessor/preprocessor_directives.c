@@ -426,7 +426,31 @@ bool handle_preprocessor_directive(BaaPreprocessor *pp_state, wchar_t *directive
             }
 
             size_t message_len = actual_message_end - actual_message_start;
-            wchar_t *actual_message_content = wcsndup_internal(actual_message_start, message_len);
+            wchar_t *raw_message_content = wcsndup_internal(actual_message_start, message_len);
+
+            // Expand macros in the message content
+            wchar_t *actual_message_content = raw_message_content;
+            if (raw_message_content && wcslen(raw_message_content) > 0)
+            {
+                DynamicWcharBuffer expanded_buffer;
+                if (init_dynamic_buffer(&expanded_buffer, wcslen(raw_message_content) + 256))
+                {
+                    wchar_t *expansion_error = NULL;
+                    if (process_code_line_for_macros(pp_state, raw_message_content, wcslen(raw_message_content), &expanded_buffer, &expansion_error))
+                    {
+                        // Use expanded content
+                        actual_message_content = _wcsdup(expanded_buffer.buffer);
+                        free(raw_message_content);
+                    }
+                    else
+                    {
+                        // Expansion failed, use original content
+                        if (expansion_error)
+                            free(expansion_error);
+                    }
+                    free_dynamic_buffer(&expanded_buffer);
+                }
+            }
 
             PP_REPORT_FATAL(pp_state, &directive_loc, PP_ERROR_DIRECTIVE_NOT_ALLOWED, "directive", L"%ls", actual_message_content ? actual_message_content : L"");
             if (error_message)
@@ -489,7 +513,31 @@ bool handle_preprocessor_directive(BaaPreprocessor *pp_state, wchar_t *directive
             }
 
             size_t message_len = actual_message_end - actual_message_start;
-            wchar_t *actual_message_content = wcsndup_internal(actual_message_start, message_len);
+            wchar_t *raw_message_content = wcsndup_internal(actual_message_start, message_len);
+
+            // Expand macros in the message content
+            wchar_t *actual_message_content = raw_message_content;
+            if (raw_message_content && wcslen(raw_message_content) > 0)
+            {
+                DynamicWcharBuffer expanded_buffer;
+                if (init_dynamic_buffer(&expanded_buffer, wcslen(raw_message_content) + 256))
+                {
+                    wchar_t *expansion_error = NULL;
+                    if (process_code_line_for_macros(pp_state, raw_message_content, wcslen(raw_message_content), &expanded_buffer, &expansion_error))
+                    {
+                        // Use expanded content
+                        actual_message_content = _wcsdup(expanded_buffer.buffer);
+                        free(raw_message_content);
+                    }
+                    else
+                    {
+                        // Expansion failed, use original content
+                        if (expansion_error)
+                            free(expansion_error);
+                    }
+                    free_dynamic_buffer(&expanded_buffer);
+                }
+            }
 
             PP_REPORT_WARNING(pp_state, &directive_loc, PP_ERROR_DIRECTIVE_NOT_ALLOWED, "directive", L"%ls", actual_message_content ? actual_message_content : L"");
             wchar_t *formatted_warning = format_preprocessor_warning_at_location(&directive_loc, L"%ls", actual_message_content ? actual_message_content : L"");

@@ -65,15 +65,16 @@ The new AST (Abstract Syntax Tree) will be built around a unified `BaaNode` stru
         * Implement `BaaNode* baa_ast_new_literal_string_node(BaaSourceSpan span, const wchar_t* value, BaaType* type);` (duplicates string).
         * Implement helper `void baa_ast_free_literal_expr_data(BaaLiteralExprData* data);`.
         * Update `baa_ast_free_node`'s dispatch to call the helper.
-    * **Status:** [x] COMPLETED (Steps 1.1, 1.2)
+    * **Status:** [x] COMPLETED (Steps 1.1, 1.2) - 2025-01-04
 
 2. **Identifier Expression Node (`BAA_NODE_KIND_IDENTIFIER_EXPR`):**
-    * **File (Defs):** `include/baa/ast/ast_types.h` (add kind), `src/ast/ast_expressions.h` (for `BaaIdentifierExprData` - or a new `ast_specific_data.h`).
+    * **File (Defs):** `include/baa/ast/ast_types.h` (add kind), `src/ast/ast_expressions.h` (for `BaaIdentifierExprData`).
     * **File (Funcs):** `include/baa/ast/ast.h` (public creation), `src/ast/ast_expressions.c` (implementation).
     * **Description:**
         * Define `BaaIdentifierExprData` struct with `wchar_t* name;`.
         * Implement `BaaNode* baa_ast_new_identifier_expr_node(BaaSourceSpan span, const wchar_t* name);` (duplicates name).
         * Update `baa_ast_free_node` to call `baa_ast_free_identifier_expr_data(BaaIdentifierExprData* data);` which frees `name`.
+    * **Status:** [x] COMPLETED - 2025-01-04
     * **Verification:** Can create, inspect, and free identifier nodes. Name is correctly duplicated and freed.
 
 3. **Expression Statement Node (`BAA_NODE_KIND_EXPR_STMT`):**
@@ -83,6 +84,7 @@ The new AST (Abstract Syntax Tree) will be built around a unified `BaaNode` stru
         * Define `BaaExprStmtData` struct with `BaaNode* expression;`.
         * Implement `BaaNode* baa_ast_new_expr_stmt_node(BaaSourceSpan span, BaaNode* expression_node);`.
         * Update `baa_ast_free_node` to call `baa_ast_free_expr_stmt_data(BaaExprStmtData* data);` which recursively calls `baa_ast_free_node(data->expression);`.
+    * **Status:** [x] COMPLETED - 2025-01-04
     * **Verification:** Can create expression statements wrapping literal or identifier nodes. Freeing is recursive.
 
 4. **Block Statement Node (`BAA_NODE_KIND_BLOCK_STMT`):**
@@ -91,8 +93,9 @@ The new AST (Abstract Syntax Tree) will be built around a unified `BaaNode` stru
     * **Description:**
         * Define `BaaBlockStmtData` struct with `BaaNode** statements; size_t count; size_t capacity;`.
         * Implement `BaaNode* baa_ast_new_block_stmt_node(BaaSourceSpan span);`.
-        * Implement `void baa_ast_add_stmt_to_block(BaaNode* block_node, BaaNode* statement_node);` (handles dynamic array resizing).
+        * Implement `bool baa_ast_add_stmt_to_block(BaaNode* block_node, BaaNode* statement_node);` (handles dynamic array resizing).
         * Update `baa_ast_free_node` to call `baa_ast_free_block_stmt_data(BaaBlockStmtData* data);` which iterates through `statements`, calls `baa_ast_free_node` on each, then frees the `statements` array.
+    * **Status:** [x] COMPLETED - 2025-01-04
     * **Verification:** Can create blocks, add statements. Freeing is recursive. Dynamic array works.
 
 5. **Program Node (`BAA_NODE_KIND_PROGRAM`):**
@@ -100,7 +103,10 @@ The new AST (Abstract Syntax Tree) will be built around a unified `BaaNode` stru
     * **File (Funcs):** `include/baa/ast/ast.h` (public creation), `src/ast/ast_program.c` (implementation).
     * **Description:**
         * Define `BaaProgramData` struct similar to `BaaBlockStmtData` but for `top_level_declarations`.
+        * Implement `BaaNode* baa_ast_new_program_node(BaaSourceSpan span);`.
+        * Implement `bool baa_ast_add_declaration_to_program(BaaNode* program_node, BaaNode* declaration_node);`.
         * Implement creation, adding declarations, and freeing logic analogous to `BaaBlockStmtData`.
+    * **Status:** [x] COMPLETED - 2025-01-04
     * **Verification:** Can create the root program node.
 
 6. **Type-Safe Accessor Macros (Initial Set):**

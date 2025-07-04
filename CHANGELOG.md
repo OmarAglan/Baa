@@ -4,6 +4,30 @@ All notable changes to the B (باء) compiler project will be documented in thi
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.34.0] - 2025-01-04
+
+### Added
+
+- **AST Implementation (Phase 1 - Essential Nodes):**
+  - Completed implementation of core AST node types required for minimal parsing functionality:
+    - **Program Node (`BAA_NODE_KIND_PROGRAM`)**: Root AST node with `BaaProgramData` structure containing dynamic array of top-level declarations. Includes `baa_ast_new_program_node()` and `baa_ast_add_declaration_to_program()` functions.
+    - **Identifier Expression Node (`BAA_NODE_KIND_IDENTIFIER_EXPR`)**: Variable/function name references with `BaaIdentifierExprData` structure. Includes `baa_ast_new_identifier_expr_node()` function with proper string duplication.
+    - **Expression Statement Node (`BAA_NODE_KIND_EXPR_STMT`)**: Statements consisting of single expressions with `BaaExprStmtData` structure. Includes `baa_ast_new_expr_stmt_node()` function.
+    - **Block Statement Node (`BAA_NODE_KIND_BLOCK_STMT`)**: Compound statements with `BaaBlockStmtData` structure containing dynamic array of sub-statements. Includes `baa_ast_new_block_stmt_node()` and `baa_ast_add_stmt_to_block()` functions.
+  - **Files Added:**
+    - `src/ast/ast_program.h` and `src/ast/ast_program.c` - Program node implementation
+    - `src/ast/ast_statements.h` and `src/ast/ast_statements.c` - Statement node implementations
+  - **Files Modified:**
+    - `include/baa/ast/ast_types.h` - Added new node kinds and data structures
+    - `include/baa/ast/ast.h` - Added public function prototypes
+    - `src/ast/ast_node.c` - Updated `baa_ast_free_node()` dispatch for new node types
+    - `src/ast/CMakeLists.txt` - Added new source files to build
+  - All implementations include proper memory management with recursive freeing and dynamic array handling.
+
+### Documentation Updates
+
+- Updated `docs/AST_ROADMAP.md` to mark Phase 1 tasks as completed with implementation dates.
+
 ## [0.1.33.0] - 2025-06-23
 
 ### Fixed

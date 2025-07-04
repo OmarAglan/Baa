@@ -29,12 +29,12 @@ void test_if_true_condition(void)
     TEST_SETUP();
     wprintf(L"Testing #إذا with true condition...\n");
 
-    const wchar_t *source = L"#إذا 1\nincluded_text\n#نهاية_إذا\nexcluded_text";
+    const wchar_t *source = L"#إذا 1\nنص_مضمن\n#نهاية_إذا\nنص_خارجي";
     wchar_t *result = preprocess_string(source);
 
     ASSERT_NOT_NULL(result, L"Preprocessing should succeed");
-    ASSERT_WSTR_CONTAINS(result, L"included_text");
-    ASSERT_WSTR_CONTAINS(result, L"excluded_text");
+    ASSERT_WSTR_CONTAINS(result, L"نص_مضمن");
+    ASSERT_WSTR_CONTAINS(result, L"نص_خارجي");
 
     free(result);
 
@@ -47,12 +47,12 @@ void test_if_false_condition(void)
     TEST_SETUP();
     wprintf(L"Testing #إذا with false condition...\n");
 
-    const wchar_t *source = L"#إذا 0\nexcluded_text\n#نهاية_إذا\nincluded_text";
+    const wchar_t *source = L"#إذا 0\nنص_مستبعد\n#نهاية_إذا\nنص_مضمن";
     wchar_t *result = preprocess_string(source);
 
     ASSERT_NOT_NULL(result, L"Preprocessing should succeed");
     // excluded_text should not be in the result
-    ASSERT_WSTR_CONTAINS(result, L"included_text");
+    ASSERT_WSTR_CONTAINS(result, L"نص_مضمن");
 
     free(result);
 
@@ -65,11 +65,11 @@ void test_ifdef_defined_macro(void)
     TEST_SETUP();
     wprintf(L"Testing #إذا_عرف with defined macro...\n");
 
-    const wchar_t *source = L"#تعريف DEFINED_MACRO 1\n#إذا_عرف DEFINED_MACRO\nincluded_text\n#نهاية_إذا";
+    const wchar_t *source = L"#تعريف ماكرو_معرف 1\n#إذا_عرف ماكرو_معرف\nنص_مضمن\n#نهاية_إذا";
     wchar_t *result = preprocess_string(source);
 
     ASSERT_NOT_NULL(result, L"Preprocessing should succeed");
-    ASSERT_WSTR_CONTAINS(result, L"included_text");
+    ASSERT_WSTR_CONTAINS(result, L"نص_مضمن");
 
     free(result);
 
@@ -82,11 +82,11 @@ void test_ifdef_undefined_macro(void)
     TEST_SETUP();
     wprintf(L"Testing #إذا_عرف with undefined macro...\n");
 
-    const wchar_t *source = L"#إذا_عرف UNDEFINED_MACRO\nexcluded_text\n#نهاية_إذا\nincluded_text";
+    const wchar_t *source = L"#إذا_عرف ماكرو_غير_معرف\nنص_مستبعد\n#نهاية_إذا\nنص_مضمن";
     wchar_t *result = preprocess_string(source);
 
     ASSERT_NOT_NULL(result, L"Preprocessing should succeed");
-    ASSERT_WSTR_CONTAINS(result, L"included_text");
+    ASSERT_WSTR_CONTAINS(result, L"نص_مضمن");
 
     free(result);
 
@@ -237,7 +237,7 @@ void test_unterminated_conditional(void)
     TEST_SETUP();
     wprintf(L"Testing unterminated conditional...\n");
 
-    const wchar_t *source = L"#إذا 1\nunterminated_block";
+    const wchar_t *source = L"#إذا_عرف MY_MACRO\nunterminated_block";
     wchar_t *result = preprocess_string(source);
 
     // This should produce an error

@@ -175,7 +175,31 @@ typedef enum BaaBinaryOperatorKind
     // etc.
 } BaaBinaryOperatorKind;
 
-// BaaBinaryExprData will be defined after BaaNode to avoid circular dependency
+// == Unary Expression Data ==
+
+/**
+ * @brief Enumerates the different kinds of unary operators.
+ */
+typedef enum BaaUnaryOperatorKind
+{
+    // Arithmetic unary operators
+    BAA_UNARY_OP_PLUS,  /**< Unary plus (+a) */
+    BAA_UNARY_OP_MINUS, /**< Unary minus (-a) */
+
+    // Logical unary operators
+    BAA_UNARY_OP_LOGICAL_NOT, /**< Logical NOT (!a) */
+
+    // Bitwise unary operators (for future expansion)
+    // BAA_UNARY_OP_BITWISE_NOT, /**< Bitwise NOT (~a) */
+
+    // Pre/post increment/decrement (for future expansion)
+    // BAA_UNARY_OP_PRE_INCREMENT,
+    // BAA_UNARY_OP_POST_INCREMENT,
+    // BAA_UNARY_OP_PRE_DECREMENT,
+    // BAA_UNARY_OP_POST_DECREMENT,
+} BaaUnaryOperatorKind;
+
+// BaaBinaryExprData and BaaUnaryExprData will be defined after BaaNode to avoid circular dependency
 
 // --- Base AST Node Structure ---
 // Forward declaration, as BaaNode might be used by specific data structs
@@ -236,6 +260,16 @@ typedef struct BaaBinaryExprData
     BaaBinaryOperatorKind operator_kind; /**< The binary operator. */
     // Future: BaaType* result_type; /**< Type of the result after semantic analysis. */
 } BaaBinaryExprData;
+
+/**
+ * @brief Data structure for a unary expression node (BAA_NODE_KIND_UNARY_EXPR).
+ */
+typedef struct BaaUnaryExprData
+{
+    BaaNode *operand;                   /**< The operand expression. */
+    BaaUnaryOperatorKind operator_kind; /**< The unary operator. */
+    // Future: BaaType* result_type; /**< Type of the result after semantic analysis. */
+} BaaUnaryExprData;
 
 /**
  * @brief Data structure for a block statement node (BAA_NODE_KIND_BLOCK_STMT).

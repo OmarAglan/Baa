@@ -127,6 +127,36 @@ BaaNode *baa_ast_new_binary_expr_node(BaaAstSourceSpan span, BaaNode *left_opera
     return node;
 }
 
+// --- Unary Expression Node Creation ---
+
+BaaNode *baa_ast_new_unary_expr_node(BaaAstSourceSpan span, BaaNode *operand, BaaUnaryOperatorKind operator_kind)
+{
+    BaaNode *node = baa_ast_new_node(BAA_NODE_KIND_UNARY_EXPR, span);
+    if (!node)
+    {
+        return NULL; // Allocation for BaaNode failed
+    }
+
+    if (!operand)
+    {
+        baa_ast_free_node(node); // Clean up the partially created BaaNode
+        return NULL;             // Invalid operand
+    }
+
+    BaaUnaryExprData *data = (BaaUnaryExprData *)baa_malloc(sizeof(BaaUnaryExprData));
+    if (!data)
+    {
+        baa_ast_free_node(node); // Clean up the partially created BaaNode
+        return NULL;
+    }
+
+    data->operand = operand;
+    data->operator_kind = operator_kind;
+
+    node->data = data;
+    return node;
+}
+
 // --- Expression Node Data Freeing ---
 
 // --- Literal Expression Node Data Freeing ---
@@ -189,4 +219,22 @@ void baa_ast_free_binary_expr_data(BaaBinaryExprData *data)
     }
 
     baa_free(data); // Free the BaaBinaryExprData struct itself
+}
+
+// --- Unary Expression Node Data Freeing ---
+
+void baa_ast_free_unary_expr_data(BaaUnaryExprData *data)
+{
+    if (!data)
+    {
+        return;
+    }
+
+    // Recursively free the operand
+    if (data->operand)
+    {
+        baa_ast_free_node(data->operand);
+    }
+
+    baa_free(data); // Free the BaaUnaryExprData struct itself
 }

@@ -107,6 +107,20 @@ BaaNode *baa_ast_new_identifier_expr_node(BaaAstSourceSpan span, const wchar_t *
  */
 BaaNode *baa_ast_new_binary_expr_node(BaaAstSourceSpan span, BaaNode *left_operand, BaaNode *right_operand, BaaBinaryOperatorKind operator_kind);
 
+// == Unary Expressions ==
+
+/**
+ * @brief Creates a new AST node representing a unary expression.
+ * The node's kind will be BAA_NODE_KIND_UNARY_EXPR.
+ * Its data will point to a BaaUnaryExprData struct.
+ *
+ * @param span The source span of the unary expression.
+ * @param operand The operand expression. Must not be NULL.
+ * @param operator_kind The unary operator kind.
+ * @return A pointer to the new BaaNode, or NULL on failure.
+ */
+BaaNode *baa_ast_new_unary_expr_node(BaaAstSourceSpan span, BaaNode *operand, BaaUnaryOperatorKind operator_kind);
+
 // We will also need a specific free function for BaaLiteralExprData's contents.
 // This will be declared internally (e.g., in ast_expressions.h if we create it)
 // and called by baa_ast_free_node's dispatch.

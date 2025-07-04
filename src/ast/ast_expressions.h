@@ -30,6 +30,15 @@ void baa_ast_free_identifier_expr_data(BaaIdentifierExprData *data);
  */
 void baa_ast_free_binary_expr_data(BaaBinaryExprData *data);
 
+/**
+ * @brief Frees the data associated with a BAA_NODE_KIND_UNARY_EXPR.
+ * Recursively frees the operand.
+ * It then frees the BaaUnaryExprData struct itself.
+ *
+ * @param data Pointer to the BaaUnaryExprData to free. Must not be NULL.
+ */
+void baa_ast_free_unary_expr_data(BaaUnaryExprData *data);
+
 // Add other internal expression-related AST function declarations here in the future
 
 #endif // BAA_AST_EXPRESSIONS_INTERNAL_H

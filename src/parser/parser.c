@@ -1,12 +1,14 @@
 // src/parser/parser.c
 #include "baa/parser/parser.h"
-#include "parser_internal.h" // For BaaParser struct definition
-#include "parser_utils.h"    // For parser utility function declarations
-#include "baa/utils/utils.h" // For baa_malloc, baa_free
-#include "baa/lexer/lexer.h" // For baa_lexer_next_token, baa_free_token
-#include <stdio.h>           // For error printing (temporary), fwprintf, vfwprintf
-#include <stdarg.h>          // For va_list, va_start, va_end
-#include <stdlib.h>          // For NULL
+#include "parser_internal.h"  // For BaaParser struct definition
+#include "parser_utils.h"     // For parser utility function declarations
+#include "statement_parser.h" // For parse_statement
+#include "baa/utils/utils.h"  // For baa_malloc, baa_free
+#include "baa/lexer/lexer.h"  // For baa_lexer_next_token, baa_free_token
+#include "baa/ast/ast.h"      // For AST node creation functions
+#include <stdio.h>            // For error printing (temporary), fwprintf, vfwprintf
+#include <stdarg.h>           // For va_list, va_start, va_end
+#include <stdlib.h>           // For NULL
 
 // Forward declarations are now in parser_utils.h
 
@@ -324,12 +326,71 @@ void advance(BaaParser *parser)
     }
 }
 
-// Stub for baa_parse_program - will be implemented later
 BaaNode *baa_parse_program(BaaParser *parser)
 {
-    (void)parser; // Mark as unused for now
-    // TODO: Implement parsing logic
-    return NULL;
+    if (!parser)
+    {
+        return NULL;
+    }
+
+    // Create source span for the entire program
+    BaaAstSourceSpan span = {
+        .start = {
+            .filename = parser->source_filename,
+            .line = parser->current_token.line,
+            .column = parser->current_token.column},
+        .end = {.filename = parser->source_filename, .line = parser->current_token.line, .column = parser->current_token.column}};
+
+    // Create the program node
+    BaaNode *program_node = baa_ast_new_program_node(span);
+    if (!program_node)
+    {
+        parser_error_at_token(parser, &parser->current_token,
+                              L"فشل في إنشاء عقدة البرنامج");
+        return NULL;
+    }
+
+    // Parse top-level constructs until EOF
+    while (!check_token(parser, BAA_TOKEN_EOF))
+    {
+        // For now, treat all top-level constructs as statements
+        // Later, we'll add proper declaration parsing (functions, global variables, etc.)
+        BaaNode *declaration = parse_statement(parser);
+
+        if (declaration)
+        {
+            if (!baa_ast_add_declaration_to_program(program_node, declaration))
+            {
+                // Failed to add declaration to program
+                baa_ast_free_node(declaration);
+                baa_ast_free_node(program_node);
+                parser_error_at_token(parser, &parser->current_token,
+                                      L"فشل في إضافة الإعلان إلى البرنامج");
+                return NULL;
+            }
+        }
+        else
+        {
+            // Error parsing declaration - try to recover
+            if (parser->panic_mode)
+            {
+                synchronize(parser);
+            }
+            else
+            {
+                // If we're not in panic mode but got a NULL declaration,
+                // something went wrong - break to avoid infinite loop
+                break;
+            }
+        }
+    }
+
+    // Update the end position of the program span
+    span.end.line = parser->current_token.line;
+    span.end.column = parser->current_token.column;
+    program_node->span = span;
+
+    return program_node;
 }
 
 /**

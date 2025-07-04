@@ -67,6 +67,37 @@ BaaNode *baa_ast_new_literal_string_node(BaaAstSourceSpan span, const wchar_t *v
 
 // Implement baa_ast_new_literal_float_node, _bool_node, _char_node, _null_node similarly later...
 
+// --- Identifier Expression Node Creation ---
+
+BaaNode *baa_ast_new_identifier_expr_node(BaaAstSourceSpan span, const wchar_t *name)
+{
+    BaaNode *node = baa_ast_new_node(BAA_NODE_KIND_IDENTIFIER_EXPR, span);
+    if (!node)
+    {
+        return NULL; // Allocation for BaaNode failed
+    }
+
+    BaaIdentifierExprData *data = (BaaIdentifierExprData *)baa_malloc(sizeof(BaaIdentifierExprData));
+    if (!data)
+    {
+        baa_ast_free_node(node); // Clean up the partially created BaaNode
+        return NULL;
+    }
+
+    data->name = baa_strdup(name); // Duplicate the identifier name
+    if (!data->name && name != NULL)
+    { // Check if baa_strdup failed for non-NULL input
+        baa_free(data);
+        baa_ast_free_node(node);
+        return NULL;
+    }
+
+    node->data = data;
+    return node;
+}
+
+// --- Expression Node Data Freeing ---
+
 // --- Literal Expression Node Data Freeing ---
 
 void baa_ast_free_literal_expr_data(BaaLiteralExprData *data)
@@ -87,4 +118,21 @@ void baa_ast_free_literal_expr_data(BaaLiteralExprData *data)
     // Note: data->determined_type is a non-owned pointer to a canonical type, so we don't free it here.
 
     baa_free(data); // Free the BaaLiteralExprData struct itself
+}
+
+// --- Identifier Expression Node Data Freeing ---
+
+void baa_ast_free_identifier_expr_data(BaaIdentifierExprData *data)
+{
+    if (!data)
+    {
+        return;
+    }
+
+    if (data->name)
+    {
+        baa_free(data->name); // Free the duplicated identifier name
+    }
+
+    baa_free(data); // Free the BaaIdentifierExprData struct itself
 }

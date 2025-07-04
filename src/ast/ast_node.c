@@ -88,6 +88,13 @@ void baa_ast_free_node(BaaNode *node)
         }
         break;
 
+    case BAA_NODE_KIND_IDENTIFIER_EXPR:
+        if (node->data)
+        {
+            baa_ast_free_identifier_expr_data((BaaIdentifierExprData *)node->data);
+        }
+        break;
+
         // Add cases for BAA_NODE_KIND_FUNCTION_DEF, BAA_NODE_KIND_PARAMETER,
         // BAA_NODE_KIND_EXPR_STMT, BAA_NODE_KIND_BLOCK_STMT, BAA_NODE_KIND_VAR_DECL_STMT,
         // BAA_NODE_KIND_IDENTIFIER_EXPR, BAA_NODE_KIND_TYPE, etc., as they are implemented.

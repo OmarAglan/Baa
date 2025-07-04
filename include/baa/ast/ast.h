@@ -78,6 +78,20 @@ BaaNode *baa_ast_new_literal_string_node(BaaAstSourceSpan span, const wchar_t *v
 // BaaNode* baa_ast_new_literal_char_node(BaaSourceSpan span, wchar_t value, BaaType* type);
 // BaaNode* baa_ast_new_literal_null_node(BaaSourceSpan span, BaaType* type);
 
+// == Identifier Expressions ==
+
+/**
+ * @brief Creates a new AST node representing an identifier expression.
+ * The node's kind will be BAA_NODE_KIND_IDENTIFIER_EXPR.
+ * Its data will point to a BaaIdentifierExprData struct.
+ * The provided identifier name will be duplicated.
+ *
+ * @param span The source span of the identifier.
+ * @param name The identifier name. This function will duplicate it.
+ * @return A pointer to the new BaaNode, or NULL on failure.
+ */
+BaaNode *baa_ast_new_identifier_expr_node(BaaAstSourceSpan span, const wchar_t *name);
+
 // We will also need a specific free function for BaaLiteralExprData's contents.
 // This will be declared internally (e.g., in ast_expressions.h if we create it)
 // and called by baa_ast_free_node's dispatch.

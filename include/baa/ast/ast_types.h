@@ -50,13 +50,13 @@ typedef enum BaaNodeKind
     // BAA_NODE_KIND_PARAMETER,      // To be added: A function parameter. data: BaaParameterData*
 
     // Statement Kinds
-    // BAA_NODE_KIND_EXPR_STMT,      // To be added: An expression statement. data: BaaExprStmtData*
+    BAA_NODE_KIND_EXPR_STMT, /**< An expression statement. data: BaaExprStmtData* */
     // BAA_NODE_KIND_BLOCK_STMT,     // To be added: A block of statements { ... }. data: BaaBlockStmtData*
     // BAA_NODE_KIND_VAR_DECL_STMT,  // To be added: A variable declaration statement. data: BaaVarDeclData*
 
     // Expression Kinds
-    BAA_NODE_KIND_LITERAL_EXPR, /**< Represents a literal value (integer, string, etc.). data: BaaLiteralExprData* */
-    // BAA_NODE_KIND_IDENTIFIER_EXPR,// To be added: An identifier used as an expression. data: BaaIdentifierExprData*
+    BAA_NODE_KIND_LITERAL_EXPR,    /**< Represents a literal value (integer, string, etc.). data: BaaLiteralExprData* */
+    BAA_NODE_KIND_IDENTIFIER_EXPR, /**< An identifier used as an expression. data: BaaIdentifierExprData* */
 
     // Type Representation Kinds (for type syntax parsed from code)
     // BAA_NODE_KIND_TYPE,           // To be added: Represents a type specification. data: BaaTypeAstData*
@@ -122,6 +122,17 @@ typedef struct BaaLiteralExprData
     // Optional: For debugging or very precise error messages if needed later.
     // wchar_t* original_lexeme;
 } BaaLiteralExprData;
+
+// == Identifier Expression Data ==
+
+/**
+ * @brief Data structure for an identifier expression node (BAA_NODE_KIND_IDENTIFIER_EXPR).
+ */
+typedef struct BaaIdentifierExprData
+{
+    wchar_t *name; /**< Duplicated identifier name. Owner must free. */
+    // Future: BaaSymbol* resolved_symbol; /**< Link to symbol table entry after resolution. */
+} BaaIdentifierExprData;
 
 // --- Base AST Node Structure ---
 // Forward declaration, as BaaNode might be used by specific data structs

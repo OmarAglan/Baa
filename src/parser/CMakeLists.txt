@@ -1,7 +1,9 @@
 # src/parser/CMakeLists.txt
 add_library(baa_parser STATIC
     parser.c
-    # Add other parser_*.c files here later (e.g., expression_parser.c)
+    expression_parser.c
+    statement_parser.c
+    # Add other parser_*.c files here later (e.g., declaration_parser.c)
 )
 
 target_include_directories(baa_parser

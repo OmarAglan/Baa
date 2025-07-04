@@ -1,18 +1,14 @@
 // src/parser/parser.c
 #include "baa/parser/parser.h"
 #include "parser_internal.h" // For BaaParser struct definition
+#include "parser_utils.h"    // For parser utility function declarations
 #include "baa/utils/utils.h" // For baa_malloc, baa_free
 #include "baa/lexer/lexer.h" // For baa_lexer_next_token, baa_free_token
 #include <stdio.h>           // For error printing (temporary), fwprintf, vfwprintf
 #include <stdarg.h>          // For va_list, va_start, va_end
 #include <stdlib.h>          // For NULL
 
-// Forward declaration for advance, as it's called by baa_parser_create
-static void advance(BaaParser *parser);
-// Forward declaration for error reporting utility
-static void parser_error_at_token(BaaParser *parser, const BaaToken *token, const wchar_t *message_format, ...);
-// Forward declaration for synchronization
-static void synchronize(BaaParser *parser);
+// Forward declarations are now in parser_utils.h
 
 /**
  * @brief Attempts to recover from a syntax error by discarding tokens.
@@ -31,7 +27,7 @@ static void synchronize(BaaParser *parser);
  *
  * @param parser Pointer to the BaaParser instance.
  */
-static void synchronize(BaaParser *parser)
+void synchronize(BaaParser *parser)
 {
     if (!parser)
         return;
@@ -91,7 +87,7 @@ static void synchronize(BaaParser *parser)
  * @param message_format A printf-style format string for the error message.
  * @param ... Additional arguments for the format string.
  */
-static void parser_error_at_token(BaaParser *parser, const BaaToken *token, const wchar_t *message_format, ...)
+void parser_error_at_token(BaaParser *parser, const BaaToken *token, const wchar_t *message_format, ...)
 {
     if (!parser || parser->panic_mode)
     { // Don't report if already panicking
@@ -123,7 +119,7 @@ static void parser_error_at_token(BaaParser *parser, const BaaToken *token, cons
  * @param type The expected BaaTokenType.
  * @return True if the current token's type matches, false otherwise.
  */
-static bool check_token(BaaParser *parser, BaaTokenType type)
+bool check_token(BaaParser *parser, BaaTokenType type)
 {
     if (!parser)
         return false;
@@ -138,7 +134,7 @@ static bool check_token(BaaParser *parser, BaaTokenType type)
  * @param type The expected BaaTokenType to match and consume.
  * @return True if the token was matched and consumed, false otherwise.
  */
-static bool match_token(BaaParser *parser, BaaTokenType type)
+bool match_token(BaaParser *parser, BaaTokenType type)
 {
     if (!parser)
         return false;
@@ -160,7 +156,7 @@ static bool match_token(BaaParser *parser, BaaTokenType type)
  * @param error_message_format A printf-style format string for the error message if the token does not match.
  * @param ... Additional arguments for the error message format string.
  */
-static void consume_token(BaaParser *parser, BaaTokenType expected_type, const wchar_t *error_message_format, ...)
+void consume_token(BaaParser *parser, BaaTokenType expected_type, const wchar_t *error_message_format, ...)
 {
     if (!parser)
         return;
@@ -237,7 +233,7 @@ BaaParser *baa_parser_create(BaaLexer *lexer, const wchar_t *source_filename)
  * Skips over lexical error tokens, reporting them and continuing to the next
  * valid token or EOF. Manages lexeme ownership for current_token and previous_token.
  */
-static void advance(BaaParser *parser)
+void advance(BaaParser *parser)
 {
     // 1. Free the lexeme of the *old* previous_token (the one about to be overwritten)
     if (parser->previous_token.lexeme != NULL)

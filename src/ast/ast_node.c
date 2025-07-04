@@ -1,6 +1,7 @@
 #include "baa/ast/ast.h"     // For BaaNode, BaaNodeKind, BaaAstSourceSpan, and function prototypes
 #include "ast_expressions.h" // For baa_ast_free_literal_expr_data (internal header)
 #include "ast_program.h"     // For baa_ast_free_program_data (internal header)
+#include "ast_statements.h"  // For baa_ast_free_expr_stmt_data (internal header)
 #include "baa/utils/utils.h" // For baa_malloc, baa_free
 #include <stdlib.h>          // For NULL
 #include <string.h>          // For memset (optional, for zeroing memory)
@@ -95,9 +96,17 @@ void baa_ast_free_node(BaaNode *node)
         }
         break;
 
+    // --- Statement Kinds ---
+    case BAA_NODE_KIND_EXPR_STMT:
+        if (node->data)
+        {
+            baa_ast_free_expr_stmt_data((BaaExprStmtData *)node->data);
+        }
+        break;
+
         // Add cases for BAA_NODE_KIND_FUNCTION_DEF, BAA_NODE_KIND_PARAMETER,
-        // BAA_NODE_KIND_EXPR_STMT, BAA_NODE_KIND_BLOCK_STMT, BAA_NODE_KIND_VAR_DECL_STMT,
-        // BAA_NODE_KIND_IDENTIFIER_EXPR, BAA_NODE_KIND_TYPE, etc., as they are implemented.
+        // BAA_NODE_KIND_BLOCK_STMT, BAA_NODE_KIND_VAR_DECL_STMT,
+        // BAA_NODE_KIND_TYPE, etc., as they are implemented.
         // Each case will call a specific `baa_ast_free_..._data()` helper.
 
     default:

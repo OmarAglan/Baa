@@ -50,8 +50,8 @@ typedef enum BaaNodeKind
     // BAA_NODE_KIND_PARAMETER,      // To be added: A function parameter. data: BaaParameterData*
 
     // Statement Kinds
-    BAA_NODE_KIND_EXPR_STMT, /**< An expression statement. data: BaaExprStmtData* */
-    // BAA_NODE_KIND_BLOCK_STMT,     // To be added: A block of statements { ... }. data: BaaBlockStmtData*
+    BAA_NODE_KIND_EXPR_STMT,  /**< An expression statement. data: BaaExprStmtData* */
+    BAA_NODE_KIND_BLOCK_STMT, /**< A block of statements { ... }. data: BaaBlockStmtData* */
     // BAA_NODE_KIND_VAR_DECL_STMT,  // To be added: A variable declaration statement. data: BaaVarDeclData*
 
     // Expression Kinds
@@ -171,5 +171,16 @@ typedef struct BaaProgramData
     size_t count;                     /**< Number of declarations currently stored. */
     size_t capacity;                  /**< Current capacity of the declarations array. */
 } BaaProgramData;
+
+// == Statement Data ==
+
+/**
+ * @brief Data structure for an expression statement node (BAA_NODE_KIND_EXPR_STMT).
+ * Represents a statement that consists of a single expression followed by a terminator.
+ */
+typedef struct BaaExprStmtData
+{
+    BaaNode *expression; /**< The expression (BaaNode* with an expression kind). */
+} BaaExprStmtData;
 
 #endif // BAA_AST_TYPES_H

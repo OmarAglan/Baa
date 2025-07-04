@@ -120,4 +120,17 @@ BaaNode *baa_ast_new_program_node(BaaAstSourceSpan span);
  */
 bool baa_ast_add_declaration_to_program(BaaNode *program_node, BaaNode *declaration_node);
 
+// == Statement Nodes ==
+
+/**
+ * @brief Creates a new AST node representing an expression statement.
+ * The node's kind will be BAA_NODE_KIND_EXPR_STMT.
+ * Its data will point to a BaaExprStmtData struct.
+ *
+ * @param span The source span of the statement.
+ * @param expression_node A BaaNode* representing the expression. Must not be NULL.
+ * @return A pointer to the new BaaNode, or NULL on failure.
+ */
+BaaNode *baa_ast_new_expr_stmt_node(BaaAstSourceSpan span, BaaNode *expression_node);
+
 #endif // BAA_AST_H

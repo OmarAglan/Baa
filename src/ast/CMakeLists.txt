@@ -2,7 +2,8 @@ add_library(baa_ast STATIC
     ast_node.c
     ast_expressions.c
     ast_program.c
-    # Add other ast_*.c files here as they are created (e.g., ast_statements.c)
+    ast_statements.c
+    # Add other ast_*.c files here as they are created
 )
 
 target_include_directories(baa_ast

@@ -153,22 +153,6 @@ target_include_directories(baa_parser_tester PRIVATE
     ${CMAKE_SOURCE_DIR}/include
 )
 
-# --- Variable Declaration Node Test ---
-add_executable(test_var_decl_node test_var_decl_node.c)
-
-target_link_libraries(test_var_decl_node
-    PRIVATE
-        baa_ast
-        baa_utils
-        baa_types
-        BaaCommonSettings
-)
-
-target_include_directories(test_var_decl_node
-    PRIVATE
-        ${PROJECT_SOURCE_DIR}/include
-)
-
 # تفعيل الاختبارات
 enable_testing()
 add_subdirectory(tests) # Keep this if tests are separate

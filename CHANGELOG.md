@@ -4,6 +4,47 @@ All notable changes to the B (باء) compiler project will be documented in thi
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Priority 3] - 2025-07-04 - Extended AST and Parser Features
+
+### Added
+
+- **Variable Declaration Node (BAA_NODE_KIND_VAR_DECL_STMT)**
+  - Implemented `BaaVarDeclData` structure with name, modifiers, type_node, and initializer_expr fields
+  - Created `baa_ast_new_var_decl_node()` function for creating variable declaration nodes
+  - Added `baa_ast_free_var_decl_data()` cleanup function
+  - Updated `baa_ast_free_node()` dispatch to handle variable declaration nodes
+  - Files: `src/ast/ast_declarations.h`, `src/ast/ast_declarations.c`
+
+- **Expression Precedence Parsing**
+  - Implemented precedence climbing algorithm for binary expressions
+  - Added `parse_binary_expression_rhs()` function with proper operator precedence
+  - Enhanced `parse_unary_expression()` to handle unary operators (+, -, !)
+  - Supports all binary operators: arithmetic (+, -, *, /, %), comparison (<, <=, >, >=), equality (==, !=), logical (&&, ||)
+  - Proper associativity and precedence handling for complex expressions
+  - Files: `src/parser/expression_parser.c`, `src/parser/expression_parser.h`
+
+- **Type Specifier Parsing**
+  - Implemented `parse_type_specifier()` function for primitive and array types
+  - Support for primitive types: عدد_صحيح, عدد_حقيقي, حرف, فراغ, منطقي
+  - Support for array types with syntax: `type[size]` and `type[]`
+  - Integration with existing AST type nodes
+  - Files: `src/parser/type_parser.c`, `src/parser/type_parser.h`
+
+- **Variable Declaration Parsing**
+  - Implemented `parse_variable_declaration_statement()` function
+  - Support for modifiers (const, static, etc.)
+  - Optional initializer expressions
+  - Integration with statement parsing through `could_start_declaration()` helper
+  - Files: `src/parser/declaration_parser.c`, `src/parser/declaration_parser.h`
+  - Updated: `src/parser/statement_parser.c`
+
+### Technical Details
+- All new parser functions follow established error handling patterns
+- Proper memory management with cleanup on parse errors
+- Arabic language support maintained throughout
+- Integration with existing lexer token types
+- Comprehensive source span tracking for error reporting
+
 ## [0.1.34.0] - 2025-01-04
 
 ### Added

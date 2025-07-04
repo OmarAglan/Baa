@@ -99,11 +99,11 @@ void test_ifndef_defined_macro(void)
     TEST_SETUP();
     wprintf(L"Testing #إذا_لم_يعرف with defined macro...\n");
 
-    const wchar_t *source = L"#تعريف DEFINED_MACRO 1\n#إذا_لم_يعرف DEFINED_MACRO\nexcluded_text\n#نهاية_إذا\nincluded_text";
+    const wchar_t *source = L"#تعريف ماكرو_معرف 1\n#إذا_لم_يعرف ماكرو_معرف\nنص_مستبعد\n#نهاية_إذا\nنص_مضمن";
     wchar_t *result = preprocess_string(source);
 
     ASSERT_NOT_NULL(result, L"Preprocessing should succeed");
-    ASSERT_WSTR_CONTAINS(result, L"included_text");
+    ASSERT_WSTR_CONTAINS(result, L"نص_مضمن");
 
     free(result);
 
@@ -116,11 +116,11 @@ void test_ifndef_undefined_macro(void)
     TEST_SETUP();
     wprintf(L"Testing #إذا_لم_يعرف with undefined macro...\n");
 
-    const wchar_t *source = L"#إذا_لم_يعرف UNDEFINED_MACRO\nincluded_text\n#نهاية_إذا";
+    const wchar_t *source = L"#إذا_لم_يعرف ماكرو_غير_معرف\nنص_مضمن\n#نهاية_إذا";
     wchar_t *result = preprocess_string(source);
 
     ASSERT_NOT_NULL(result, L"Preprocessing should succeed");
-    ASSERT_WSTR_CONTAINS(result, L"included_text");
+    ASSERT_WSTR_CONTAINS(result, L"نص_مضمن");
 
     free(result);
 
@@ -133,11 +133,11 @@ void test_if_else_true_condition(void)
     TEST_SETUP();
     wprintf(L"Testing #إذا #إلا with true condition...\n");
 
-    const wchar_t *source = L"#إذا 1\ntrue_branch\n#إلا\nfalse_branch\n#نهاية_إذا";
+    const wchar_t *source = L"#إذا 1\nفرع_صحيح\n#إلا\nفرع_خطأ\n#نهاية_إذا";
     wchar_t *result = preprocess_string(source);
 
     ASSERT_NOT_NULL(result, L"Preprocessing should succeed");
-    ASSERT_WSTR_CONTAINS(result, L"true_branch");
+    ASSERT_WSTR_CONTAINS(result, L"فرع_صحيح");
 
     free(result);
 
@@ -150,11 +150,11 @@ void test_if_else_false_condition(void)
     TEST_SETUP();
     wprintf(L"Testing #إذا #إلا with false condition...\n");
 
-    const wchar_t *source = L"#إذا 0\ntrue_branch\n#إلا\nfalse_branch\n#نهاية_إذا";
+    const wchar_t *source = L"#إذا 0\nفرع_صحيح\n#إلا\nفرع_خطأ\n#نهاية_إذا";
     wchar_t *result = preprocess_string(source);
 
     ASSERT_NOT_NULL(result, L"Preprocessing should succeed");
-    ASSERT_WSTR_CONTAINS(result, L"false_branch");
+    ASSERT_WSTR_CONTAINS(result, L"فرع_خطأ");
 
     free(result);
 
@@ -167,12 +167,12 @@ void test_nested_conditionals(void)
     TEST_SETUP();
     wprintf(L"Testing nested conditionals...\n");
 
-    const wchar_t *source = L"#إذا 1\nouter_true\n#إذا 1\ninner_true\n#نهاية_إذا\n#نهاية_إذا";
+    const wchar_t *source = L"#إذا 1\nخارجي_صحيح\n#إذا 1\nداخلي_صحيح\n#نهاية_إذا\n#نهاية_إذا";
     wchar_t *result = preprocess_string(source);
 
     ASSERT_NOT_NULL(result, L"Preprocessing should succeed");
-    ASSERT_WSTR_CONTAINS(result, L"outer_true");
-    ASSERT_WSTR_CONTAINS(result, L"inner_true");
+    ASSERT_WSTR_CONTAINS(result, L"خارجي_صحيح");
+    ASSERT_WSTR_CONTAINS(result, L"داخلي_صحيح");
 
     free(result);
 
@@ -185,12 +185,12 @@ void test_nested_conditionals_mixed(void)
     TEST_SETUP();
     wprintf(L"Testing nested conditionals with mixed conditions...\n");
 
-    const wchar_t *source = L"#إذا 1\nouter_true\n#إذا 0\ninner_excluded\n#نهاية_إذا\nstill_outer\n#نهاية_إذا";
+    const wchar_t *source = L"#إذا 1\nخارجي_صحيح\n#إذا 0\nداخلي_مستبعد\n#نهاية_إذا\nلا_يزال_خارجي\n#نهاية_إذا";
     wchar_t *result = preprocess_string(source);
 
     ASSERT_NOT_NULL(result, L"Preprocessing should succeed");
-    ASSERT_WSTR_CONTAINS(result, L"outer_true");
-    ASSERT_WSTR_CONTAINS(result, L"still_outer");
+    ASSERT_WSTR_CONTAINS(result, L"خارجي_صحيح");
+    ASSERT_WSTR_CONTAINS(result, L"لا_يزال_خارجي");
 
     free(result);
 
@@ -203,11 +203,11 @@ void test_complex_expressions(void)
     TEST_SETUP();
     wprintf(L"Testing complex expressions in conditionals...\n");
 
-    const wchar_t *source = L"#إذا (1 + 1) == 2\nmath_works\n#نهاية_إذا";
+    const wchar_t *source = L"#إذا (1 + 1) == 2\nالرياضيات_تعمل\n#نهاية_إذا";
     wchar_t *result = preprocess_string(source);
 
     ASSERT_NOT_NULL(result, L"Preprocessing should succeed");
-    ASSERT_WSTR_CONTAINS(result, L"math_works");
+    ASSERT_WSTR_CONTAINS(result, L"الرياضيات_تعمل");
 
     free(result);
 
@@ -220,11 +220,11 @@ void test_macro_in_conditional_expression(void)
     TEST_SETUP();
     wprintf(L"Testing macro in conditional expression...\n");
 
-    const wchar_t *source = L"#تعريف VALUE 5\n#إذا VALUE > 3\nvalue_is_large\n#نهاية_إذا";
+    const wchar_t *source = L"#تعريف قيمة 5\n#إذا قيمة > 3\nالقيمة_كبيرة\n#نهاية_إذا";
     wchar_t *result = preprocess_string(source);
 
     ASSERT_NOT_NULL(result, L"Preprocessing should succeed");
-    ASSERT_WSTR_CONTAINS(result, L"value_is_large");
+    ASSERT_WSTR_CONTAINS(result, L"القيمة_كبيرة");
 
     free(result);
 
@@ -237,7 +237,7 @@ void test_unterminated_conditional(void)
     TEST_SETUP();
     wprintf(L"Testing unterminated conditional...\n");
 
-    const wchar_t *source = L"#إذا_عرف MY_MACRO\nunterminated_block";
+    const wchar_t *source = L"#إذا_عرف ماكرو_اختبار\nكتلة_غير_منتهية";
     wchar_t *result = preprocess_string(source);
 
     // This should produce an error
@@ -260,7 +260,7 @@ void test_mismatched_endif(void)
     TEST_SETUP();
     wprintf(L"Testing mismatched #نهاية_إذا...\n");
 
-    const wchar_t *source = L"#نهاية_إذا\ntext_after";
+    const wchar_t *source = L"#نهاية_إذا\nنص_بعدها";
     wchar_t *result = preprocess_string(source);
 
     // This should produce an error

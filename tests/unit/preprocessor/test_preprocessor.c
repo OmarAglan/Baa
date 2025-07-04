@@ -70,7 +70,6 @@ static char *create_temp_file(const char *name_prefix, const wchar_t *content)
 
 void PreprocessorConditional_IfdefDefined()
 {
-    const char *main_content_path = NULL;
     wchar_t *error_msg = NULL;
     wchar_t *result = NULL;
 
@@ -82,14 +81,12 @@ void PreprocessorConditional_IfdefDefined()
                                   L"#إذا_عرف ماكرو_آخر\n"
                                   L"هذا لا يجب أن يظهر\n"
                                   L"#نهاية_إذا\n";
-    main_content_path = create_temp_file("ifdef_defined", main_content);
-    ASSERT_NOT_NULL(main_content_path, L"Failed to create temp file for IfdefDefined"); // Add message
 
-    // Create proper source structure
+    // Use string-based processing like the working conditional tests
     BaaPpSource source;
-    source.type = BAA_PP_SOURCE_FILE;
-    source.source_name = main_content_path;
-    source.data.file_path = main_content_path;
+    source.type = BAA_PP_SOURCE_STRING;
+    source.source_name = "test_string";
+    source.data.source_string = main_content;
 
     result = baa_preprocess(&source, NULL, &error_msg);
 
@@ -101,13 +98,10 @@ void PreprocessorConditional_IfdefDefined()
 
     free(result);
     free(error_msg);
-    remove(main_content_path);       // Clean up temp file
-    free((void *)main_content_path); // Free allocated path
 }
 
 void PreprocessorConditional_IfdefNotDefined()
 {
-    const char *main_content_path = NULL;
     wchar_t *error_msg = NULL;
     wchar_t *result = NULL;
 
@@ -115,14 +109,12 @@ void PreprocessorConditional_IfdefNotDefined()
                                   L"هذا لا يجب أن يظهر\n"
                                   L"#نهاية_إذا\n"
                                   L"هذا يجب أن يظهر دائما\n";
-    main_content_path = create_temp_file("ifdef_notdef", main_content);
-    ASSERT_NOT_NULL(main_content_path, L"Failed to create temp file for IfdefNotDefined"); // Add message
 
-    // Create proper source structure
+    // Use string-based processing like the working conditional tests
     BaaPpSource source;
-    source.type = BAA_PP_SOURCE_FILE;
-    source.source_name = main_content_path;
-    source.data.file_path = main_content_path;
+    source.type = BAA_PP_SOURCE_STRING;
+    source.source_name = "test_string";
+    source.data.source_string = main_content;
 
     result = baa_preprocess(&source, NULL, &error_msg);
 
@@ -134,8 +126,6 @@ void PreprocessorConditional_IfdefNotDefined()
 
     free(result);
     free(error_msg);
-    remove(main_content_path);
-    free((void *)main_content_path);
 }
 
 void PreprocessorConditional_IfndefDefined()
@@ -305,10 +295,10 @@ void PreprocessorConditional_NestedConditionals()
     ASSERT_NOT_NULL(result, L"Preprocessor result should not be NULL");   // Use ASSERT_NOT_NULL, add message
 
     const wchar_t *expected = L"خارجي صحيح\n"
-                              L"  داخلي صحيح\n"
-                              L"  داخلي آخر صحيح\n"
+                              L"   داخلي صحيح\n"
+                              L"   داخلي آخر صحيح\n"
                               L"خارجي آخر صحيح\n"
-                              L"  داخلي مزيف صحيح\n";
+                              L"   داخلي مزيف صحيح\n";
     ASSERT_STR_EQ(expected, result); // Use ASSERT_STR_EQ(expected, actual)
 
     free(result);

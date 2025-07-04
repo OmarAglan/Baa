@@ -195,6 +195,30 @@ void assert_wstr_contains(const wchar_t *haystack, const wchar_t *needle, const 
         }                                                                                       \
     } while (0)
 
+#define ASSERT_PTR_EQ(expected, actual)                                                                   \
+    do                                                                                                    \
+    {                                                                                                     \
+        if ((expected) != (actual))                                                                       \
+        {                                                                                                 \
+            wprintf(L"[ASSERT FAILED] Pointers not equal\n");                                             \
+            wprintf(L"                Expected: %p, Actual: %p\n", (void *)(expected), (void *)(actual)); \
+            wprintf(L"                File: %hs, Line: %d\n", __FILE__, __LINE__);                        \
+            failed_tests++;                                                                               \
+        }                                                                                                 \
+    } while (0)
+
+#define ASSERT_PTR_NE(expected, actual)                                                           \
+    do                                                                                            \
+    {                                                                                             \
+        if ((expected) == (actual))                                                               \
+        {                                                                                         \
+            wprintf(L"[ASSERT FAILED] Expected pointers to be different, but both were equal\n"); \
+            wprintf(L"                Pointer: %p\n", (void *)(expected));                        \
+            wprintf(L"                File: %hs, Line: %d\n", __FILE__, __LINE__);                \
+            failed_tests++;                                                                       \
+        }                                                                                         \
+    } while (0)
+
 #define ASSERT_WSTR_EQ(expected, actual) \
     assert_wstr_eq((expected), (actual), __func__)
 

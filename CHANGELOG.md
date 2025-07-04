@@ -64,6 +64,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - `CMakeLists.txt` - Enabled testing infrastructure
   - All implementations include proper memory management, recursive freeing, and comprehensive error handling. Unit tests verify correct creation, validation, and cleanup of type nodes.
 
+- **Comprehensive Testing Infrastructure (Priority 2.5):**
+  - **Enhanced Test Framework**: Extended existing test framework with comprehensive testing utilities including AST testing utilities, parser testing utilities, lexer testing utilities, file testing utilities, memory tracking utilities, and string testing utilities.
+  - **Advanced Assertion Macros**: Added specialized macros for different data types including `ASSERT_PTR_EQ/NE` for pointer comparisons, `ASSERT_WSTR_EQ/CONTAINS` for wide string testing, `ASSERT_PARSE_SUCCESS/ERROR` for parser testing, and `ASSERT_NO_MEMORY_LEAKS` for memory validation.
+  - **Complete AST Node Test Coverage**: Created comprehensive unit tests for all implemented AST node types:
+    - **Program Nodes** (`test_ast_program.c`): Tests program creation, declaration addition, invalid operations, and memory management with dynamic array growth
+    - **Literal Expression Nodes** (`test_ast_literals.c`): Tests integer and string literals, edge cases with extreme values, empty strings, long strings, and comprehensive memory management
+    - **Identifier Expression Nodes** (`test_ast_identifiers.c`): Tests Arabic identifiers, mixed character names, edge cases with very long names, and memory management across multiple identifiers
+    - **Binary Expression Nodes** (`test_ast_binary_expressions.c`): Tests all arithmetic operators (+, -, *, /, %), comparison operators (==, !=, <, <=, >, >=), logical operators (&&, ||), nested expressions, and invalid operations
+    - **Type Representation Nodes** (`test_ast_types.c`): Tests primitive types, array types, invalid operations, and memory management (previously implemented)
+  - **Test Results**: All 23 individual test cases across 5 test suites pass with 100% success rate, providing comprehensive coverage of AST node creation, validation, error handling, and memory management.
+  - **Build System Integration**: Updated CMakeLists.txt with common test settings, proper library linking, and CTest integration with appropriate labels for test categorization.
+
 ### Fixed
 
 - **Parser Naming Conflicts**: Resolved symbol name collisions between lexer and parser utility functions by adding `baa_parser_` prefix to parser utility functions:

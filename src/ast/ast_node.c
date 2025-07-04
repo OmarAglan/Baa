@@ -104,6 +104,13 @@ void baa_ast_free_node(BaaNode *node)
         }
         break;
 
+    case BAA_NODE_KIND_BLOCK_STMT:
+        if (node->data)
+        {
+            baa_ast_free_block_stmt_data((BaaBlockStmtData *)node->data);
+        }
+        break;
+
         // Add cases for BAA_NODE_KIND_FUNCTION_DEF, BAA_NODE_KIND_PARAMETER,
         // BAA_NODE_KIND_BLOCK_STMT, BAA_NODE_KIND_VAR_DECL_STMT,
         // BAA_NODE_KIND_TYPE, etc., as they are implemented.

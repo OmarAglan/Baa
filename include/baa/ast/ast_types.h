@@ -183,4 +183,16 @@ typedef struct BaaExprStmtData
     BaaNode *expression; /**< The expression (BaaNode* with an expression kind). */
 } BaaExprStmtData;
 
+/**
+ * @brief Data structure for a block statement node (BAA_NODE_KIND_BLOCK_STMT).
+ * Represents a compound statement containing multiple sub-statements.
+ */
+typedef struct BaaBlockStmtData
+{
+    BaaNode **statements; /**< Dynamic array of BaaNode* (statement kinds). */
+    size_t count;         /**< Number of statements currently stored. */
+    size_t capacity;      /**< Current capacity of the statements array. */
+    // Future: BaaScope* scope; /**< Link to its scope in symbol table. */
+} BaaBlockStmtData;
+
 #endif // BAA_AST_TYPES_H

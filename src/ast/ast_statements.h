@@ -11,6 +11,14 @@
  */
 void baa_ast_free_expr_stmt_data(BaaExprStmtData *data);
 
+/**
+ * @brief Frees the data associated with a BAA_NODE_KIND_BLOCK_STMT.
+ * Recursively frees all statements and then frees the BaaBlockStmtData struct itself.
+ *
+ * @param data Pointer to the BaaBlockStmtData to free. Must not be NULL.
+ */
+void baa_ast_free_block_stmt_data(BaaBlockStmtData *data);
+
 // Add other internal statement-related AST function declarations here in the future
 
 #endif // BAA_AST_STATEMENTS_INTERNAL_H

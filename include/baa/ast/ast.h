@@ -133,4 +133,24 @@ bool baa_ast_add_declaration_to_program(BaaNode *program_node, BaaNode *declarat
  */
 BaaNode *baa_ast_new_expr_stmt_node(BaaAstSourceSpan span, BaaNode *expression_node);
 
+/**
+ * @brief Creates a new AST node representing a block statement.
+ * The node's kind will be BAA_NODE_KIND_BLOCK_STMT.
+ * Its data will point to a BaaBlockStmtData struct with an empty statements array.
+ *
+ * @param span The source span of the block.
+ * @return A pointer to the new BaaNode, or NULL on failure.
+ */
+BaaNode *baa_ast_new_block_stmt_node(BaaAstSourceSpan span);
+
+/**
+ * @brief Adds a statement to a block statement node.
+ * Handles dynamic array resizing as needed.
+ *
+ * @param block_node A BaaNode* of kind BAA_NODE_KIND_BLOCK_STMT.
+ * @param statement_node A BaaNode* representing a statement.
+ * @return true on success, false on failure (e.g., memory allocation failure).
+ */
+bool baa_ast_add_stmt_to_block(BaaNode *block_node, BaaNode *statement_node);
+
 #endif // BAA_AST_H

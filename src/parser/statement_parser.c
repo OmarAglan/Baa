@@ -2,16 +2,10 @@
 #include "statement_parser.h"
 #include "expression_parser.h"
 #include "parser_internal.h"
+#include "parser_utils.h"
 #include "baa/ast/ast.h"
 #include "baa/lexer/lexer.h"
 #include <stdio.h>
-
-// Forward declarations for parser utility functions (defined in parser.c)
-extern void advance(BaaParser *parser);
-extern bool check_token(BaaParser *parser, BaaTokenType type);
-extern bool match_token(BaaParser *parser, BaaTokenType type);
-extern void consume_token(BaaParser *parser, BaaTokenType expected, const wchar_t *error_message_format, ...);
-extern void parser_error_at_token(BaaParser *parser, BaaToken *token, const wchar_t *message_format, ...);
 
 BaaNode *parse_expression_statement(BaaParser *parser)
 {
@@ -28,9 +22,7 @@ BaaNode *parse_expression_statement(BaaParser *parser)
         .end = {
             .filename = parser->source_filename,
             .line = parser->current_token.line,
-            .column = parser->current_token.column + parser->current_token.length
-        }
-    };
+            .column = parser->current_token.column + parser->current_token.length}};
 
     // Expect and consume the dot terminator
     consume_token(parser, BAA_TOKEN_DOT, L"توقع '.' بعد التعبير في الجملة");
@@ -54,14 +46,8 @@ BaaNode *parse_block_statement(BaaParser *parser)
         .start = {
             .filename = parser->source_filename,
             .line = parser->current_token.line,
-            .column = parser->current_token.column
-        },
-        .end = {
-            .filename = parser->source_filename,
-            .line = parser->current_token.line,
-            .column = parser->current_token.column + 1
-        }
-    };
+            .column = parser->current_token.column},
+        .end = {.filename = parser->source_filename, .line = parser->current_token.line, .column = parser->current_token.column + 1}};
 
     // Consume the opening brace
     consume_token(parser, BAA_TOKEN_LBRACE, L"توقع '{' لبداية الكتلة");
@@ -84,8 +70,8 @@ BaaNode *parse_block_statement(BaaParser *parser)
                 // Failed to add statement to block
                 baa_ast_free_node(stmt);
                 baa_ast_free_node(block_node);
-                parser_error_at_token(parser, &parser->current_token, 
-                                     L"فشل في إضافة الجملة إلى الكتلة");
+                parser_error_at_token(parser, &parser->current_token,
+                                      L"فشل في إضافة الجملة إلى الكتلة");
                 return NULL;
             }
         }
@@ -116,15 +102,15 @@ BaaNode *parse_statement(BaaParser *parser)
     case BAA_TOKEN_LBRACE:
         return parse_block_statement(parser);
 
-    // Add more statement types here as they are implemented
-    // case BAA_TOKEN_IF:
-    //     return parse_if_statement(parser);
-    // case BAA_TOKEN_WHILE:
-    //     return parse_while_statement(parser);
-    // case BAA_TOKEN_FOR:
-    //     return parse_for_statement(parser);
-    // case BAA_TOKEN_RETURN:
-    //     return parse_return_statement(parser);
+        // Add more statement types here as they are implemented
+        // case BAA_TOKEN_IF:
+        //     return parse_if_statement(parser);
+        // case BAA_TOKEN_WHILE:
+        //     return parse_while_statement(parser);
+        // case BAA_TOKEN_FOR:
+        //     return parse_for_statement(parser);
+        // case BAA_TOKEN_RETURN:
+        //     return parse_return_statement(parser);
 
     default:
         // Default to expression statement

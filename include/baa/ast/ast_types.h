@@ -58,6 +58,7 @@ typedef enum BaaNodeKind
     BAA_NODE_KIND_LITERAL_EXPR,    /**< Represents a literal value (integer, string, etc.). data: BaaLiteralExprData* */
     BAA_NODE_KIND_IDENTIFIER_EXPR, /**< An identifier used as an expression. data: BaaIdentifierExprData* */
     BAA_NODE_KIND_BINARY_EXPR,     /**< A binary expression (e.g., a + b). data: BaaBinaryExprData* */
+    BAA_NODE_KIND_UNARY_EXPR,      /**< A unary expression (e.g., -a, !b). data: BaaUnaryExprData* */
 
     // Type Representation Kinds (for type syntax parsed from code)
     // BAA_NODE_KIND_TYPE,           // To be added: Represents a type specification. data: BaaTypeAstData*
@@ -174,16 +175,7 @@ typedef enum BaaBinaryOperatorKind
     // etc.
 } BaaBinaryOperatorKind;
 
-/**
- * @brief Data structure for a binary expression node (BAA_NODE_KIND_BINARY_EXPR).
- */
-typedef struct BaaBinaryExprData
-{
-    BaaNode *left_operand;               /**< Left operand expression. */
-    BaaNode *right_operand;              /**< Right operand expression. */
-    BaaBinaryOperatorKind operator_kind; /**< The binary operator. */
-    // Future: BaaType* result_type; /**< Type of the result after semantic analysis. */
-} BaaBinaryExprData;
+// BaaBinaryExprData will be defined after BaaNode to avoid circular dependency
 
 // --- Base AST Node Structure ---
 // Forward declaration, as BaaNode might be used by specific data structs
@@ -233,6 +225,17 @@ typedef struct BaaExprStmtData
 {
     BaaNode *expression; /**< The expression (BaaNode* with an expression kind). */
 } BaaExprStmtData;
+
+/**
+ * @brief Data structure for a binary expression node (BAA_NODE_KIND_BINARY_EXPR).
+ */
+typedef struct BaaBinaryExprData
+{
+    BaaNode *left_operand;               /**< Left operand expression. */
+    BaaNode *right_operand;              /**< Right operand expression. */
+    BaaBinaryOperatorKind operator_kind; /**< The binary operator. */
+    // Future: BaaType* result_type; /**< Type of the result after semantic analysis. */
+} BaaBinaryExprData;
 
 /**
  * @brief Data structure for a block statement node (BAA_NODE_KIND_BLOCK_STMT).

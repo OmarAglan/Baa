@@ -115,9 +115,9 @@ The new AST (Abstract Syntax Tree) will be built around a unified `BaaNode` stru
     * **Details:** Macros should check `node`, `node->data`, and `node->kind` before casting and returning.
     * **Verification:** Macros compile and work correctly for valid and invalid node inputs.
 
-### Phase 2: Basic Declarations & Binary/Unary Expressions
+### Phase 2: Basic Declarations & Binary/Unary Expressions ✅ COMPLETED
 
-**Goal:** Expand AST capabilities to represent simple declarations and common expressions.
+**Goal:** ✅ Expand AST capabilities to represent simple declarations and common expressions.
 
 1. **Variable Declaration Statement Node (`BAA_NODE_KIND_VAR_DECL_STMT`):** ✅ COMPLETED
     * **File (Defs):** `ast_declarations.h` (for `BaaVarDeclData`), `ast_types.h` (add kind).
@@ -139,22 +139,22 @@ The new AST (Abstract Syntax Tree) will be built around a unified `BaaNode` stru
         * Update `baa_ast_free_node` for `BaaTypeAstData`.
     * **Verification:** Can represent simple type syntax like `عدد_صحيح` and `حرف[]`.
 
-3. **Binary Expression Node (`BAA_NODE_KIND_BINARY_EXPR`):**
+3. **Binary Expression Node (`BAA_NODE_KIND_BINARY_EXPR`):** ✅ COMPLETED
     * **File (Defs):** `ast_expressions.h` (for `BaaBinaryExprData`, `BaaBinaryOperatorKind`), `ast_types.h` (add kind).
     * **File (Funcs):** `ast_expressions.c`.
     * **Description:**
-        * Define `BaaBinaryOperatorKind` enum (ADD, SUB, EQUAL, etc.).
-        * Define `BaaBinaryExprData` with `BaaBinaryOperatorKind op_kind; BaaNode* left_expr; BaaNode* right_expr;`.
-        * Implement `baa_ast_new_binary_expr_node(...)`.
-        * Update `baa_ast_free_node` (recursively free left/right).
-    * **Verification:** Can represent `a + b`.
+        * ✅ Define `BaaBinaryOperatorKind` enum (ADD, SUB, EQUAL, etc.).
+        * ✅ Define `BaaBinaryExprData` with `BaaBinaryOperatorKind op_kind; BaaNode* left_expr; BaaNode* right_expr;`.
+        * ✅ Implement `baa_ast_new_binary_expr_node(...)`.
+        * ✅ Update `baa_ast_free_node` (recursively free left/right).
+    * **Verification:** ✅ Can represent `a + b`.
 
-4. **Unary Expression Node (`BAA_NODE_KIND_UNARY_EXPR`):**
+4. **Unary Expression Node (`BAA_NODE_KIND_UNARY_EXPR`):** ✅ COMPLETED
     * **File (Defs):** `ast_expressions.h` (for `BaaUnaryExprData`, `BaaUnaryOperatorKind`), `ast_types.h` (add kind).
     * **File (Funcs):** `ast_expressions.c`.
     * **Description:**
-        * Define `BaaUnaryOperatorKind` enum (UNARY_MINUS, LOGICAL_NOT, etc.).
-        * Define `BaaUnaryExprData` with `BaaUnaryOperatorKind op_kind; BaaNode* operand_expr;`.
+        * ✅ Define `BaaUnaryOperatorKind` enum (UNARY_MINUS, LOGICAL_NOT, etc.).
+        * ✅ Define `BaaUnaryExprData` with `BaaUnaryOperatorKind op_kind; BaaNode* operand_expr;`.
         * Implement `baa_ast_new_unary_expr_node(...)`.
         * Update `baa_ast_free_node` (recursively free operand).
     * **Verification:** Can represent `-x` or `!flag`.

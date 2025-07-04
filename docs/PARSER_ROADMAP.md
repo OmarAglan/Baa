@@ -85,9 +85,9 @@ The parser will employ a recursive descent strategy, with distinct modules for p
     * **Status:** [x] COMPLETED - 2025-01-04
     * **Verification:** `baa_parse_program` can now parse a sequence of simple expression statements and block statements.
 
-### Phase 2: Unary, Postfix, and Basic Binary Expressions
+### Phase 2: Unary, Postfix, and Basic Binary Expressions ✅ PARTIALLY COMPLETED
 
-**Goal:** Expand expression parsing capabilities.
+**Goal:** ✅ Expand expression parsing capabilities.
 
 1. **Implement `parse_postfix_expression`:**
     * **File:** `expression_parser.c`.
@@ -162,9 +162,9 @@ The parser will employ a recursive descent strategy, with distinct modules for p
     * **Description:** Parses `طالما (condition) body_statement`.
     * **Verification:** Parses while loops.
 
-### Phase 4: Type Specifiers & Declarations
+### Phase 4: Type Specifiers & Declarations ✅ COMPLETED
 
-**Goal:** Enable parsing of type information and variable/function declarations.
+**Goal:** ✅ Enable parsing of type information and variable/function declarations.
 
 1. **Implement `parse_type_specifier` (Basic Primitive Types):** ✅ COMPLETED
     * **File:** `type_parser.c`.

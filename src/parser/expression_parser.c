@@ -4,7 +4,6 @@
 #include "parser_utils.h"
 #include "baa/ast/ast.h"
 #include "baa/lexer/lexer.h"
-#include "baa/types/types.h"
 #include <stdio.h>
 
 BaaNode *parse_primary_expression(BaaParser *parser)
@@ -29,9 +28,9 @@ BaaNode *parse_primary_expression(BaaParser *parser)
                 .column = parser->current_token.column},
             .end = {.filename = parser->source_filename, .line = parser->current_token.line, .column = parser->current_token.column + parser->current_token.length}};
 
-        // Use a default integer type for now - this should be determined properly later
-        BaaNode *node = baa_ast_new_literal_int_node(span, value, baa_type_int);
-        advance(parser); // Consume the token
+        // Use NULL type for now - this should be determined properly later
+        BaaNode *node = baa_ast_new_literal_int_node(span, value, NULL);
+        baa_parser_advance(parser); // Consume the token
         return node;
     }
 
@@ -48,9 +47,9 @@ BaaNode *parse_primary_expression(BaaParser *parser)
         // Use the token's lexeme as the string value
         const wchar_t *string_value = parser->current_token.lexeme ? parser->current_token.lexeme : L"";
 
-        // Use a default string type for now - this should be determined properly later
-        BaaNode *node = baa_ast_new_literal_string_node(span, string_value, baa_type_string);
-        advance(parser); // Consume the token
+        // Use NULL type for now - this should be determined properly later
+        BaaNode *node = baa_ast_new_literal_string_node(span, string_value, NULL);
+        baa_parser_advance(parser); // Consume the token
         return node;
     }
 
@@ -68,26 +67,26 @@ BaaNode *parse_primary_expression(BaaParser *parser)
         const wchar_t *identifier_name = parser->current_token.lexeme ? parser->current_token.lexeme : L"";
 
         BaaNode *node = baa_ast_new_identifier_expr_node(span, identifier_name);
-        advance(parser); // Consume the token
+        baa_parser_advance(parser); // Consume the token
         return node;
     }
 
     if (parser->current_token.type == BAA_TOKEN_LPAREN)
     {
-        advance(parser);                          // Consume '('
+        baa_parser_advance(parser);               // Consume '('
         BaaNode *expr = parse_expression(parser); // Recursively parse the expression inside
         if (!expr)
         {
             return NULL; // Error in parsing the inner expression
         }
 
-        consume_token(parser, BAA_TOKEN_RPAREN, L"توقع ')' بعد التعبير");
+        baa_parser_consume_token(parser, BAA_TOKEN_RPAREN, L"توقع ')' بعد التعبير");
         return expr; // Return the inner expression (grouping doesn't create a new node)
     }
 
     // If we reach here, we have an unexpected token
-    parser_error_at_token(parser, &parser->current_token,
-                          L"توقع تعبير أساسي (رقم، نص، معرف، أو '(')");
+    baa_parser_error_at_token(parser, &parser->current_token,
+                              L"توقع تعبير أساسي (رقم، نص، معرف، أو '(')");
     return NULL;
 }
 

@@ -25,7 +25,7 @@ BaaNode *parse_expression_statement(BaaParser *parser)
             .column = parser->current_token.column + parser->current_token.length}};
 
     // Expect and consume the dot terminator
-    consume_token(parser, BAA_TOKEN_DOT, L"توقع '.' بعد التعبير في الجملة");
+    baa_parser_consume_token(parser, BAA_TOKEN_DOT, L"توقع '.' بعد التعبير في الجملة");
 
     // Create the expression statement node
     BaaNode *stmt_node = baa_ast_new_expr_stmt_node(span, expr);
@@ -50,7 +50,7 @@ BaaNode *parse_block_statement(BaaParser *parser)
         .end = {.filename = parser->source_filename, .line = parser->current_token.line, .column = parser->current_token.column + 1}};
 
     // Consume the opening brace
-    consume_token(parser, BAA_TOKEN_LBRACE, L"توقع '{' لبداية الكتلة");
+    baa_parser_consume_token(parser, BAA_TOKEN_LBRACE, L"توقع '{' لبداية الكتلة");
 
     // Create the block statement node
     BaaNode *block_node = baa_ast_new_block_stmt_node(span);
@@ -60,7 +60,7 @@ BaaNode *parse_block_statement(BaaParser *parser)
     }
 
     // Parse statements until we hit the closing brace or EOF
-    while (!check_token(parser, BAA_TOKEN_RBRACE) && !check_token(parser, BAA_TOKEN_EOF))
+    while (!baa_parser_check_token(parser, BAA_TOKEN_RBRACE) && !baa_parser_check_token(parser, BAA_TOKEN_EOF))
     {
         BaaNode *stmt = parse_statement(parser);
         if (stmt)
@@ -70,8 +70,8 @@ BaaNode *parse_block_statement(BaaParser *parser)
                 // Failed to add statement to block
                 baa_ast_free_node(stmt);
                 baa_ast_free_node(block_node);
-                parser_error_at_token(parser, &parser->current_token,
-                                      L"فشل في إضافة الجملة إلى الكتلة");
+                baa_parser_error_at_token(parser, &parser->current_token,
+                                          L"فشل في إضافة الجملة إلى الكتلة");
                 return NULL;
             }
         }
@@ -89,7 +89,7 @@ BaaNode *parse_block_statement(BaaParser *parser)
     block_node->span = span;
 
     // Consume the closing brace
-    consume_token(parser, BAA_TOKEN_RBRACE, L"توقع '}' لنهاية الكتلة");
+    baa_parser_consume_token(parser, BAA_TOKEN_RBRACE, L"توقع '}' لنهاية الكتلة");
 
     return block_node;
 }

@@ -12,7 +12,7 @@
  *
  * @param parser Pointer to the parser state.
  */
-void advance(BaaParser *parser);
+void baa_parser_advance(BaaParser *parser);
 
 /**
  * @brief Checks if the current token's type matches the given type.
@@ -21,7 +21,7 @@ void advance(BaaParser *parser);
  * @param type The token type to check against.
  * @return True if the current token's type matches, false otherwise.
  */
-bool check_token(BaaParser *parser, BaaTokenType type);
+bool baa_parser_check_token(BaaParser *parser, BaaTokenType type);
 
 /**
  * @brief Checks if the current token matches the given type and consumes it if so.
@@ -30,7 +30,7 @@ bool check_token(BaaParser *parser, BaaTokenType type);
  * @param type The token type to match.
  * @return True if the token was matched and consumed, false otherwise.
  */
-bool match_token(BaaParser *parser, BaaTokenType type);
+bool baa_parser_match_token(BaaParser *parser, BaaTokenType type);
 
 /**
  * @brief Consumes a token of the expected type or reports an error.
@@ -40,7 +40,7 @@ bool match_token(BaaParser *parser, BaaTokenType type);
  * @param error_message_format Format string for the error message.
  * @param ... Additional arguments for the error message format string.
  */
-void consume_token(BaaParser *parser, BaaTokenType expected_type, const wchar_t *error_message_format, ...);
+void baa_parser_consume_token(BaaParser *parser, BaaTokenType expected_type, const wchar_t *error_message_format, ...);
 
 /**
  * @brief Reports a parser error at the given token location.
@@ -50,7 +50,7 @@ void consume_token(BaaParser *parser, BaaTokenType expected_type, const wchar_t 
  * @param message_format Format string for the error message.
  * @param ... Additional arguments for the format string.
  */
-void parser_error_at_token(BaaParser *parser, const BaaToken *token, const wchar_t *message_format, ...);
+void baa_parser_error_at_token(BaaParser *parser, const BaaToken *token, const wchar_t *message_format, ...);
 
 /**
  * @brief Attempts to recover from a syntax error by discarding tokens.
@@ -58,6 +58,6 @@ void parser_error_at_token(BaaParser *parser, const BaaToken *token, const wchar
  *
  * @param parser Pointer to the parser state.
  */
-void synchronize(BaaParser *parser);
+void baa_parser_synchronize(BaaParser *parser);
 
 #endif // BAA_PARSER_UTILS_INTERNAL_H

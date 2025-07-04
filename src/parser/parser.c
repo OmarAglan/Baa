@@ -1,16 +1,16 @@
 // src/parser/parser.c
 #include "baa/parser/parser.h"
-#include "parser_internal.h"  // For BaaParser struct definition
-#include "parser_utils.h"     // For parser utility function declarations
+#include "parser_internal.h" // For BaaParser struct definition
+#include "parser_utils.h"    // For parser utility function declarations
 #include "statement_parser.h" // For parse_statement
 #include "baa/utils/utils.h"  // For baa_malloc, baa_free
 #include "baa/lexer/lexer.h"  // For baa_lexer_next_token, baa_free_token
-#include "baa/ast/ast.h"      // For AST node creation functions
+#include "baa/ast/ast.h"     // For AST node creation functions
 #include <stdio.h>            // For error printing (temporary), fwprintf, vfwprintf
 #include <stdarg.h>           // For va_list, va_start, va_end
 #include <stdlib.h>           // For NULL
 
-// Forward declarations are now in parser_utils.h
+// Forward declarations are now in parser_utils.h (baa_parser_*)
 
 /**
  * @brief Attempts to recover from a syntax error by discarding tokens.
@@ -29,7 +29,7 @@
  *
  * @param parser Pointer to the BaaParser instance.
  */
-void synchronize(BaaParser *parser)
+void baa_parser_synchronize(BaaParser *parser)
 {
     if (!parser)
         return;
@@ -73,7 +73,7 @@ void synchronize(BaaParser *parser)
             // Not a recovery point based on current token type
             break;
         }
-        advance(parser); // Consume the token and try the next one
+        baa_parser_advance(parser); // Consume the token and try the next one
     }
     // If EOF is reached, panic mode is implicitly over.
     parser->panic_mode = false; // Cleared at EOF
@@ -89,7 +89,7 @@ void synchronize(BaaParser *parser)
  * @param message_format A printf-style format string for the error message.
  * @param ... Additional arguments for the format string.
  */
-void parser_error_at_token(BaaParser *parser, const BaaToken *token, const wchar_t *message_format, ...)
+void baa_parser_error_at_token(BaaParser *parser, const BaaToken *token, const wchar_t *message_format, ...)
 {
     if (!parser || parser->panic_mode)
     { // Don't report if already panicking
@@ -121,7 +121,7 @@ void parser_error_at_token(BaaParser *parser, const BaaToken *token, const wchar
  * @param type The expected BaaTokenType.
  * @return True if the current token's type matches, false otherwise.
  */
-bool check_token(BaaParser *parser, BaaTokenType type)
+bool baa_parser_check_token(BaaParser *parser, BaaTokenType type)
 {
     if (!parser)
         return false;
@@ -136,15 +136,15 @@ bool check_token(BaaParser *parser, BaaTokenType type)
  * @param type The expected BaaTokenType to match and consume.
  * @return True if the token was matched and consumed, false otherwise.
  */
-bool match_token(BaaParser *parser, BaaTokenType type)
+bool baa_parser_match_token(BaaParser *parser, BaaTokenType type)
 {
     if (!parser)
         return false;
-    if (!check_token(parser, type))
+    if (!baa_parser_check_token(parser, type))
     {
         return false;
     }
-    advance(parser);
+    baa_parser_advance(parser);
     return true;
 }
 
@@ -158,14 +158,14 @@ bool match_token(BaaParser *parser, BaaTokenType type)
  * @param error_message_format A printf-style format string for the error message if the token does not match.
  * @param ... Additional arguments for the error message format string.
  */
-void consume_token(BaaParser *parser, BaaTokenType expected_type, const wchar_t *error_message_format, ...)
+void baa_parser_consume_token(BaaParser *parser, BaaTokenType expected_type, const wchar_t *error_message_format, ...)
 {
     if (!parser)
         return;
 
     if (parser->current_token.type == expected_type)
     {
-        advance(parser);
+        baa_parser_advance(parser);
         return;
     }
 
@@ -178,7 +178,7 @@ void consume_token(BaaParser *parser, BaaTokenType expected_type, const wchar_t 
     va_end(args);
 
     // Report the error using the already formatted message_body
-    parser_error_at_token(parser, &parser->current_token, L"%ls", message_body);
+    baa_parser_error_at_token(parser, &parser->current_token, L"%ls", message_body);
     // Note: synchronize() is typically called by the parsing rule that detects an unrecoverable state,
     // not directly by consume_token itself, to allow the rule to decide if it can recover differently.
 }
@@ -220,7 +220,7 @@ BaaParser *baa_parser_create(BaaLexer *lexer, const wchar_t *source_filename)
 
     // Prime the pump: Fetch the first token to be current_token.
     // previous_token will remain in its initial state after this first advance.
-    advance(parser);
+    baa_parser_advance(parser);
 
     // If the very first token is an error from the lexer, report it.
     // (The advance function itself will loop to get a non-error token or EOF)
@@ -235,7 +235,7 @@ BaaParser *baa_parser_create(BaaLexer *lexer, const wchar_t *source_filename)
  * Skips over lexical error tokens, reporting them and continuing to the next
  * valid token or EOF. Manages lexeme ownership for current_token and previous_token.
  */
-void advance(BaaParser *parser)
+void baa_parser_advance(BaaParser *parser)
 {
     // 1. Free the lexeme of the *old* previous_token (the one about to be overwritten)
     if (parser->previous_token.lexeme != NULL)
@@ -256,7 +256,7 @@ void advance(BaaParser *parser)
         {
             // This indicates a critical failure in the lexer (e.g., malloc failed for token)
             // Report a parser-level error and set current_token to EOF to stop.
-            parser_error_at_token(parser, &parser->current_token, L"فشل معجمي حرج: لم يتم إرجاع رمز مميز.");
+            baa_parser_error_at_token(parser, &parser->current_token, L"فشل معجمي حرج: لم يتم إرجاع رمز مميز.");
             parser->had_error = true; // Signal a general error
             parser->current_token.type = BAA_TOKEN_EOF;
             parser->current_token.lexeme = NULL; // No lexeme for this synthetic EOF
@@ -318,8 +318,8 @@ void advance(BaaParser *parser)
 
         // Lexical error encountered. We report it here because 'advance' is responsible for
         // dealing with tokens from the lexer.
-        parser_error_at_token(parser, &parser->current_token, L"خطأ معجمي: %ls",
-                              parser->current_token.lexeme ? parser->current_token.lexeme : L"Unknown lexical error");
+        baa_parser_error_at_token(parser, &parser->current_token, L"خطأ معجمي: %ls",
+                                  parser->current_token.lexeme ? parser->current_token.lexeme : L"Unknown lexical error");
         // parser->had_error is already set by parser_error_at_token
         // The loop continues to fetch the next token after a lexical error.
         // The erroneous token's lexeme in current_token will be freed on the next advance.
@@ -345,13 +345,13 @@ BaaNode *baa_parse_program(BaaParser *parser)
     BaaNode *program_node = baa_ast_new_program_node(span);
     if (!program_node)
     {
-        parser_error_at_token(parser, &parser->current_token,
-                              L"فشل في إنشاء عقدة البرنامج");
+        baa_parser_error_at_token(parser, &parser->current_token,
+                                  L"فشل في إنشاء عقدة البرنامج");
         return NULL;
     }
 
     // Parse top-level constructs until EOF
-    while (!check_token(parser, BAA_TOKEN_EOF))
+    while (!baa_parser_check_token(parser, BAA_TOKEN_EOF))
     {
         // For now, treat all top-level constructs as statements
         // Later, we'll add proper declaration parsing (functions, global variables, etc.)
@@ -364,8 +364,8 @@ BaaNode *baa_parse_program(BaaParser *parser)
                 // Failed to add declaration to program
                 baa_ast_free_node(declaration);
                 baa_ast_free_node(program_node);
-                parser_error_at_token(parser, &parser->current_token,
-                                      L"فشل في إضافة الإعلان إلى البرنامج");
+                baa_parser_error_at_token(parser, &parser->current_token,
+                                          L"فشل في إضافة الإعلان إلى البرنامج");
                 return NULL;
             }
         }
@@ -374,7 +374,7 @@ BaaNode *baa_parse_program(BaaParser *parser)
             // Error parsing declaration - try to recover
             if (parser->panic_mode)
             {
-                synchronize(parser);
+                baa_parser_synchronize(parser);
             }
             else
             {

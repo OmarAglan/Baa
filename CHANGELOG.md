@@ -76,6 +76,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - **Test Results**: All 23 individual test cases across 5 test suites pass with 100% success rate, providing comprehensive coverage of AST node creation, validation, error handling, and memory management.
   - **Build System Integration**: Updated CMakeLists.txt with common test settings, proper library linking, and CTest integration with appropriate labels for test categorization.
 
+- **Comprehensive Preprocessor Test Coverage (Priority 2.5):**
+  - **Macro Functionality Tests** (`test_preprocessor_macros.c`): 13 test cases covering object-like macros, function-like macros, Arabic macro names, nested expansion, redefinition, undefinition, string literals, empty macros, whitespace handling, recursive prevention, and invalid definitions. Success rate: 84.62% (11/13 passed).
+  - **Predefined Macro Tests** (`test_preprocessor_predefined.c`): 12 test cases covering all predefined macros (`__الملف__`, `__السطر__`, `__التاريخ__`, `__الوقت__`, `__الدالة__`, `__إصدار_المعيار_باء__`), macro usage in expressions, redefinition prevention, multiline behavior, and edge cases. Success rate: 66.67% (8/12 passed).
+  - **Conditional Compilation Tests** (`test_preprocessor_conditionals.c`): 15 test cases covering `#إذا`, `#إذا_عرف`, `#إذا_لم_يعرف`, `#إلا`, `#نهاية_إذا` directives, nested conditionals, complex expressions, macro integration, error handling, and Arabic content. Success rate: 100% (15/15 passed).
+  - **Error and Warning Directive Tests** (`test_preprocessor_directives.c`): 12 test cases covering `#خطأ` and `#تحذير` directives, Arabic messages, conditional integration, macro expansion in messages, multiple directives, and invalid syntax handling.
+  - **Enhanced Test Infrastructure**: Created comprehensive helper functions for string and file preprocessing, proper error message handling, and systematic testing of both positive and negative scenarios.
+  - **Build System Integration**: Updated CMakeLists.txt with modular test configuration, proper library linking, and CTest integration with appropriate labels for test categorization.
+
 ### Fixed
 
 - **Parser Naming Conflicts**: Resolved symbol name collisions between lexer and parser utility functions by adding `baa_parser_` prefix to parser utility functions:

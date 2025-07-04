@@ -23,7 +23,23 @@ BaaNode *parse_primary_expression(BaaParser *parser);
  */
 BaaNode *parse_expression(BaaParser *parser);
 
-// Add more expression parsing function declarations here as they are implemented
-// e.g., parse_unary_expression, parse_binary_expression, etc.
+/**
+ * @brief Parses a unary expression (unary operators + primary expressions).
+ *
+ * @param parser Pointer to the parser state.
+ * @return A BaaNode* representing the unary expression, or NULL on error.
+ */
+BaaNode *parse_unary_expression(BaaParser *parser);
+
+/**
+ * @brief Parses binary expressions using precedence climbing.
+ * This handles all binary operators with proper precedence and associativity.
+ *
+ * @param parser Pointer to the parser state.
+ * @param min_precedence Minimum precedence level to parse.
+ * @param left_expr The left operand expression.
+ * @return A BaaNode* representing the binary expression, or NULL on error.
+ */
+BaaNode *parse_binary_expression_rhs(BaaParser *parser, int min_precedence, BaaNode *left_expr);
 
 #endif // BAA_EXPRESSION_PARSER_INTERNAL_H

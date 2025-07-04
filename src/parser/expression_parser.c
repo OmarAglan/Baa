@@ -90,9 +90,245 @@ BaaNode *parse_primary_expression(BaaParser *parser)
     return NULL;
 }
 
+// Helper function to get precedence of a token type
+static int get_token_precedence(BaaTokenType token_type)
+{
+    switch (token_type)
+    {
+    // Logical OR (lowest precedence)
+    case BAA_TOKEN_OR:
+        return 10;
+
+    // Logical AND
+    case BAA_TOKEN_AND:
+        return 20;
+
+    // Equality operators
+    case BAA_TOKEN_EQUAL_EQUAL:
+    case BAA_TOKEN_BANG_EQUAL:
+        return 30;
+
+    // Comparison operators
+    case BAA_TOKEN_LESS:
+    case BAA_TOKEN_LESS_EQUAL:
+    case BAA_TOKEN_GREATER:
+    case BAA_TOKEN_GREATER_EQUAL:
+        return 40;
+
+    // Additive operators
+    case BAA_TOKEN_PLUS:
+    case BAA_TOKEN_MINUS:
+        return 50;
+
+    // Multiplicative operators (highest precedence)
+    case BAA_TOKEN_STAR:
+    case BAA_TOKEN_SLASH:
+    case BAA_TOKEN_PERCENT:
+        return 60;
+
+    default:
+        return -1; // Not a binary operator
+    }
+}
+
+// Helper function to convert token type to binary operator kind
+static BaaBinaryOperatorKind token_to_binary_op(BaaTokenType token_type)
+{
+    switch (token_type)
+    {
+    case BAA_TOKEN_PLUS:
+        return BAA_BINARY_OP_ADD;
+    case BAA_TOKEN_MINUS:
+        return BAA_BINARY_OP_SUBTRACT;
+    case BAA_TOKEN_STAR:
+        return BAA_BINARY_OP_MULTIPLY;
+    case BAA_TOKEN_SLASH:
+        return BAA_BINARY_OP_DIVIDE;
+    case BAA_TOKEN_PERCENT:
+        return BAA_BINARY_OP_MODULO;
+    case BAA_TOKEN_EQUAL_EQUAL:
+        return BAA_BINARY_OP_EQUAL;
+    case BAA_TOKEN_BANG_EQUAL:
+        return BAA_BINARY_OP_NOT_EQUAL;
+    case BAA_TOKEN_LESS:
+        return BAA_BINARY_OP_LESS_THAN;
+    case BAA_TOKEN_LESS_EQUAL:
+        return BAA_BINARY_OP_LESS_EQUAL;
+    case BAA_TOKEN_GREATER:
+        return BAA_BINARY_OP_GREATER_THAN;
+    case BAA_TOKEN_GREATER_EQUAL:
+        return BAA_BINARY_OP_GREATER_EQUAL;
+    case BAA_TOKEN_AND:
+        return BAA_BINARY_OP_LOGICAL_AND;
+    case BAA_TOKEN_OR:
+        return BAA_BINARY_OP_LOGICAL_OR;
+    default:
+        // This should not happen if get_token_precedence returned a valid precedence
+        return BAA_BINARY_OP_ADD; // Default fallback
+    }
+}
+
 BaaNode *parse_expression(BaaParser *parser)
 {
-    // For now, just delegate to primary expression parsing
-    // This will be expanded to handle operator precedence levels
+    // Start with unary expression parsing
+    BaaNode *left_expr = parse_unary_expression(parser);
+    if (!left_expr)
+    {
+        return NULL;
+    }
+
+    // Then handle binary operators with precedence climbing
+    return parse_binary_expression_rhs(parser, 0, left_expr);
+}
+
+BaaNode *parse_unary_expression(BaaParser *parser)
+{
+    // Check for unary operators
+    if (parser->current_token.type == BAA_TOKEN_MINUS)
+    {
+        // Create source span for the unary operator
+        BaaAstSourceSpan span = {
+            .start = {
+                .filename = parser->source_filename,
+                .line = parser->current_token.line,
+                .column = parser->current_token.column},
+            .end = {.filename = parser->source_filename, .line = parser->current_token.line, .column = parser->current_token.column + parser->current_token.length}};
+
+        baa_parser_advance(parser); // Consume the '-' token
+
+        // Parse the operand (recursively handle unary expressions)
+        BaaNode *operand = parse_unary_expression(parser);
+        if (!operand)
+        {
+            return NULL;
+        }
+
+        // Update span to include the operand
+        span.end = operand->span.end;
+
+        // Create unary expression node
+        return baa_ast_new_unary_expr_node(span, operand, BAA_UNARY_OP_MINUS);
+    }
+    else if (parser->current_token.type == BAA_TOKEN_PLUS)
+    {
+        // Create source span for the unary operator
+        BaaAstSourceSpan span = {
+            .start = {
+                .filename = parser->source_filename,
+                .line = parser->current_token.line,
+                .column = parser->current_token.column},
+            .end = {.filename = parser->source_filename, .line = parser->current_token.line, .column = parser->current_token.column + parser->current_token.length}};
+
+        baa_parser_advance(parser); // Consume the '+' token
+
+        // Parse the operand (recursively handle unary expressions)
+        BaaNode *operand = parse_unary_expression(parser);
+        if (!operand)
+        {
+            return NULL;
+        }
+
+        // Update span to include the operand
+        span.end = operand->span.end;
+
+        // Create unary expression node
+        return baa_ast_new_unary_expr_node(span, operand, BAA_UNARY_OP_PLUS);
+    }
+    else if (parser->current_token.type == BAA_TOKEN_BANG)
+    {
+        // Create source span for the unary operator
+        BaaAstSourceSpan span = {
+            .start = {
+                .filename = parser->source_filename,
+                .line = parser->current_token.line,
+                .column = parser->current_token.column},
+            .end = {.filename = parser->source_filename, .line = parser->current_token.line, .column = parser->current_token.column + parser->current_token.length}};
+
+        baa_parser_advance(parser); // Consume the '!' token
+
+        // Parse the operand (recursively handle unary expressions)
+        BaaNode *operand = parse_unary_expression(parser);
+        if (!operand)
+        {
+            return NULL;
+        }
+
+        // Update span to include the operand
+        span.end = operand->span.end;
+
+        // Create unary expression node
+        return baa_ast_new_unary_expr_node(span, operand, BAA_UNARY_OP_LOGICAL_NOT);
+    }
+
+    // No unary operator, parse primary expression
     return parse_primary_expression(parser);
+}
+
+BaaNode *parse_binary_expression_rhs(BaaParser *parser, int min_precedence, BaaNode *left_expr)
+{
+    if (!left_expr)
+    {
+        return NULL;
+    }
+
+    while (true)
+    {
+        // Check if current token is a binary operator
+        int token_precedence = get_token_precedence(parser->current_token.type);
+
+        // If it's not a binary operator or precedence is too low, we're done
+        if (token_precedence < min_precedence)
+        {
+            return left_expr;
+        }
+
+        // Remember the operator token and advance
+        BaaTokenType operator_token = parser->current_token.type;
+        BaaAstSourceSpan operator_span = {
+            .start = {
+                .filename = parser->source_filename,
+                .line = parser->current_token.line,
+                .column = parser->current_token.column},
+            .end = {.filename = parser->source_filename, .line = parser->current_token.line, .column = parser->current_token.column + parser->current_token.length}};
+
+        baa_parser_advance(parser); // Consume the operator
+
+        // Parse the right operand
+        BaaNode *right_expr = parse_unary_expression(parser);
+        if (!right_expr)
+        {
+            baa_ast_free_node(left_expr);
+            return NULL;
+        }
+
+        // Check if the next operator has higher precedence
+        int next_precedence = get_token_precedence(parser->current_token.type);
+        if (next_precedence > token_precedence)
+        {
+            // Parse the right side with higher precedence first
+            right_expr = parse_binary_expression_rhs(parser, token_precedence + 1, right_expr);
+            if (!right_expr)
+            {
+                baa_ast_free_node(left_expr);
+                return NULL;
+            }
+        }
+
+        // Create the binary expression node
+        BaaAstSourceSpan expr_span = {
+            .start = left_expr->span.start,
+            .end = right_expr->span.end};
+
+        BaaBinaryOperatorKind op_kind = token_to_binary_op(operator_token);
+        BaaNode *binary_expr = baa_ast_new_binary_expr_node(expr_span, left_expr, right_expr, op_kind);
+        if (!binary_expr)
+        {
+            baa_ast_free_node(left_expr);
+            baa_ast_free_node(right_expr);
+            return NULL;
+        }
+
+        // The binary expression becomes the new left operand for the next iteration
+        left_expr = binary_expr;
+    }
 }

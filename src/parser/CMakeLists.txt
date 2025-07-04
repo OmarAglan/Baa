@@ -3,7 +3,9 @@ add_library(baa_parser STATIC
     parser.c
     expression_parser.c
     statement_parser.c
-    # Add other parser_*.c files here later (e.g., declaration_parser.c)
+    type_parser.c
+    declaration_parser.c
+    # Add other parser_*.c files here later
 )
 
 target_include_directories(baa_parser

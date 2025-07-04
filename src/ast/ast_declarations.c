@@ -1,19 +1,19 @@
 #include "ast_declarations.h"
 #include "baa/ast/ast.h"
-#include "baa/utils/memory.h"
+#include "baa/utils/utils.h"
 
 /**
  * @file ast_declarations.c
  * @brief Implementation of AST declaration node creation and management functions.
- * 
+ *
  * This file implements functions for creating and managing AST nodes related to
  * declarations (variable declarations, function declarations, etc.).
  */
 
 // --- Variable Declaration Node Creation ---
 
-BaaNode *baa_ast_new_var_decl_node(BaaAstSourceSpan span, const wchar_t *name, 
-                                   BaaAstNodeModifiers modifiers, BaaNode *type_node, 
+BaaNode *baa_ast_new_var_decl_node(BaaAstSourceSpan span, const wchar_t *name,
+                                   BaaAstNodeModifiers modifiers, BaaNode *type_node,
                                    BaaNode *initializer_expr)
 {
     BaaNode *node = baa_ast_new_node(BAA_NODE_KIND_VAR_DECL_STMT, span);
@@ -39,7 +39,7 @@ BaaNode *baa_ast_new_var_decl_node(BaaAstSourceSpan span, const wchar_t *name,
     }
 
     data->modifiers = modifiers;
-    data->type_node = type_node;         // Take ownership of the type node
+    data->type_node = type_node;               // Take ownership of the type node
     data->initializer_expr = initializer_expr; // Take ownership of the initializer expression (can be NULL)
 
     node->data = data;

@@ -1,5 +1,6 @@
 add_library(baa_ast STATIC
     ast_node.c
+    ast_declarations.c
     ast_expressions.c
     ast_program.c
     ast_statements.c

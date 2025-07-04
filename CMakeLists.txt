@@ -153,6 +153,6 @@ target_include_directories(baa_parser_tester PRIVATE
     ${CMAKE_SOURCE_DIR}/include
 )
 
-# تفعيل الاختبارات (معطل مؤقتاً)
-# enable_testing()
-# add_subdirectory(tests) # Keep this if tests are separate
+# تفعيل الاختبارات
+enable_testing()
+add_subdirectory(tests) # Keep this if tests are separate

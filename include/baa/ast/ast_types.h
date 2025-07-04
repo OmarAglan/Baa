@@ -61,7 +61,7 @@ typedef enum BaaNodeKind
     BAA_NODE_KIND_UNARY_EXPR,      /**< A unary expression (e.g., -a, !b). data: BaaUnaryExprData* */
 
     // Type Representation Kinds (for type syntax parsed from code)
-    // BAA_NODE_KIND_TYPE,           // To be added: Represents a type specification. data: BaaTypeAstData*
+    BAA_NODE_KIND_TYPE, /**< Represents a type specification. data: BaaTypeAstData* */
 
     // Add more kinds here as they are designed and implemented...
 
@@ -282,5 +282,43 @@ typedef struct BaaBlockStmtData
     size_t capacity;      /**< Current capacity of the statements array. */
     // Future: BaaScope* scope; /**< Link to its scope in symbol table. */
 } BaaBlockStmtData;
+
+// == Type Representation Data ==
+
+/**
+ * @brief Enumerates the different kinds of type specifications that can be parsed from source code.
+ * This represents the syntactic form of types as they appear in the source, before semantic analysis.
+ */
+typedef enum BaaTypeAstKind
+{
+    BAA_TYPE_AST_KIND_PRIMITIVE,    /**< Primitive type (e.g., "عدد_صحيح", "حرف"). */
+    BAA_TYPE_AST_KIND_ARRAY,        /**< Array type (e.g., "عدد_صحيح[10]"). */
+    BAA_TYPE_AST_KIND_POINTER,      /**< Pointer type (future implementation). */
+    BAA_TYPE_AST_KIND_USER_DEFINED, /**< User-defined type (future implementation for struct/enum names). */
+} BaaTypeAstKind;
+
+/**
+ * @brief Data structure for a type representation node (BAA_NODE_KIND_TYPE).
+ * This structure represents the type as parsed from the source code.
+ * Semantic analysis will resolve this to a canonical BaaType* from the types.c system.
+ */
+typedef struct BaaTypeAstData
+{
+    BaaTypeAstKind type_ast_kind; /**< The kind of type specification. */
+    union
+    {
+        struct
+        {                  // For BAA_TYPE_AST_KIND_PRIMITIVE
+            wchar_t *name; /**< Duplicated type name (e.g., L"عدد_صحيح"). */
+        } primitive;
+        struct
+        {                               // For BAA_TYPE_AST_KIND_ARRAY
+            BaaNode *element_type_node; /**< BaaNode* of kind BAA_NODE_KIND_TYPE for the element type. */
+            BaaNode *size_expr;         /**< Optional: BaaNode* expression for array size (NULL for dynamic arrays). */
+        } array;
+        // Future: struct for pointer, struct/union/enum names
+    } specifier;
+    // Future: BaaType* resolved_canonical_type; /**< Populated by semantic analyzer. */
+} BaaTypeAstData;
 
 #endif // BAA_AST_TYPES_H

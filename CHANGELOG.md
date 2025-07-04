@@ -40,6 +40,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - `src/parser/CMakeLists.txt` - Added new source files and baa_ast dependency
   - All implementations include proper error handling, memory management, and AST node creation.
 
+- **AST Implementation (Phase 3 - Extended Expression Nodes):**
+  - Completed implementation of additional expression node types:
+    - **Binary Expression Node (`BAA_NODE_KIND_BINARY_EXPR`)**: Arithmetic and logical binary operations with `BaaBinaryExprData` structure and `BaaBinaryOperatorKind` enum. Supports addition, subtraction, multiplication, division, modulo, comparison operators (==, !=, <, <=, >, >=), and logical operators (&&, ||).
+    - **Unary Expression Node (`BAA_NODE_KIND_UNARY_EXPR`)**: Unary operations with `BaaUnaryExprData` structure and `BaaUnaryOperatorKind` enum. Supports unary plus (+), unary minus (-), and logical NOT (!).
+  - Both implementations include proper recursive memory management and follow established AST patterns.
+
+- **AST Implementation (Phase 3 - Type Representation Nodes):**
+  - Completed implementation of type representation AST nodes for parsing type specifications:
+    - **Type Representation Node (`BAA_NODE_KIND_TYPE`)**: Represents type specifications as parsed from source code with `BaaTypeAstData` structure and `BaaTypeAstKind` enum. Supports primitive types (e.g., "عدد_صحيح", "حرف") and array types with optional size expressions.
+    - **Primitive Type Creation**: `baa_ast_new_primitive_type_node()` function for creating primitive type nodes with proper string duplication.
+    - **Array Type Creation**: `baa_ast_new_array_type_node()` function for creating array type nodes with element type validation and optional size expressions.
+  - **Files Added:**
+    - `src/ast/ast_types.h` and `src/ast/ast_types.c` - Type representation node implementation
+    - `tests/unit/ast/test_ast_types.c` - Comprehensive unit tests for type nodes
+    - `tests/unit/ast/CMakeLists.txt` - Test configuration
+  - **Files Modified:**
+    - `include/baa/ast/ast_types.h` - Added `BaaTypeAstKind` enum and `BaaTypeAstData` structure
+    - `include/baa/ast/ast.h` - Added public function prototypes for type node creation
+    - `src/ast/ast_node.c` - Updated `baa_ast_free_node()` dispatch for type nodes
+    - `src/ast/CMakeLists.txt` - Added ast_types.c to build
+    - `tests/unit/CMakeLists.txt` - Added AST test subdirectory
+    - `CMakeLists.txt` - Enabled testing infrastructure
+  - All implementations include proper memory management, recursive freeing, and comprehensive error handling. Unit tests verify correct creation, validation, and cleanup of type nodes.
+
+### Fixed
+
+- **Parser Naming Conflicts**: Resolved symbol name collisions between lexer and parser utility functions by adding `baa_parser_` prefix to parser utility functions:
+  - `advance()` → `baa_parser_advance()`
+  - `check_token()` → `baa_parser_check_token()`
+  - `match_token()` → `baa_parser_match_token()`
+  - `consume_token()` → `baa_parser_consume_token()`
+  - `parser_error_at_token()` → `baa_parser_error_at_token()`
+  - `synchronize()` → `baa_parser_synchronize()`
+  - Updated all references across parser modules (`parser.c`, `expression_parser.c`, `statement_parser.c`) and the shared header (`parser_utils.h`).
+  - This maintains clean separation between lexer and parser functionality while avoiding symbol name collisions during linking.
+
 ### Documentation Updates
 
 - Updated `docs/AST_ROADMAP.md` to mark Phase 1 tasks as completed with implementation dates.

@@ -182,4 +182,29 @@ BaaNode *baa_ast_new_block_stmt_node(BaaAstSourceSpan span);
  */
 bool baa_ast_add_stmt_to_block(BaaNode *block_node, BaaNode *statement_node);
 
+// == Type Representation Nodes ==
+
+/**
+ * @brief Creates a new AST node representing a primitive type specification.
+ * The node's kind will be BAA_NODE_KIND_TYPE.
+ * Its data will point to a BaaTypeAstData struct with BAA_TYPE_AST_KIND_PRIMITIVE.
+ *
+ * @param span The source span of the type specification.
+ * @param type_name The name of the primitive type (e.g., L"عدد_صحيح"). This function will duplicate it.
+ * @return A pointer to the new BaaNode, or NULL on failure.
+ */
+BaaNode *baa_ast_new_primitive_type_node(BaaAstSourceSpan span, const wchar_t *type_name);
+
+/**
+ * @brief Creates a new AST node representing an array type specification.
+ * The node's kind will be BAA_NODE_KIND_TYPE.
+ * Its data will point to a BaaTypeAstData struct with BAA_TYPE_AST_KIND_ARRAY.
+ *
+ * @param span The source span of the array type specification.
+ * @param element_type_node A BaaNode* of kind BAA_NODE_KIND_TYPE representing the element type. Must not be NULL.
+ * @param size_expr A BaaNode* expression for the array size, or NULL for dynamic arrays.
+ * @return A pointer to the new BaaNode, or NULL on failure.
+ */
+BaaNode *baa_ast_new_array_type_node(BaaAstSourceSpan span, BaaNode *element_type_node, BaaNode *size_expr);
+
 #endif // BAA_AST_H

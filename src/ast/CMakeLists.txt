@@ -3,6 +3,7 @@ add_library(baa_ast STATIC
     ast_expressions.c
     ast_program.c
     ast_statements.c
+    ast_types.c
     # Add other ast_*.c files here as they are created
 )
 

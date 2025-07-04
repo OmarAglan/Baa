@@ -1,6 +1,9 @@
 # Core tests
 add_subdirectory(core)
 
+# AST tests
+add_subdirectory(ast)
+
 # Lexer tests
 add_subdirectory(lexer)
 

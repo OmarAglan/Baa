@@ -24,9 +24,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - `src/ast/CMakeLists.txt` - Added new source files to build
   - All implementations include proper memory management with recursive freeing and dynamic array handling.
 
+- **Parser Implementation (Phase 1 - Basic Parser Functionality):**
+  - Completed implementation of fundamental parser functions to create AST from tokens:
+    - **Parser Module Structure**: Set up modular parser architecture with `expression_parser.c`, `statement_parser.c`, and `parser_utils.h`. Updated CMakeLists.txt to include baa_ast dependency. Refactored parser utility functions to be shared across modules.
+    - **parse_primary_expression**: Implemented parsing of literals (integers, strings), identifiers, and parenthesized expressions. Includes proper AST node creation and error handling.
+    - **baa_parse_program**: Replaced stub implementation with full program parsing logic. Creates program AST node, loops through top-level constructs until EOF, handles error recovery with synchronization.
+    - **parse_expression_statement**: Implemented parsing of expression statements with dot terminators. Creates expression statement AST nodes with proper source span tracking.
+    - **Basic Statement Parsing Dispatcher**: Implemented `parse_statement()` function that dispatches to appropriate statement parsers based on token type. Handles block statements and defaults to expression statements.
+  - **Files Added:**
+    - `src/parser/expression_parser.h` and `src/parser/expression_parser.c` - Expression parsing functionality
+    - `src/parser/statement_parser.h` and `src/parser/statement_parser.c` - Statement parsing functionality
+    - `src/parser/parser_utils.h` - Shared parser utility function declarations
+  - **Files Modified:**
+    - `src/parser/parser.c` - Implemented `baa_parse_program()`, refactored utility functions to be non-static
+    - `src/parser/CMakeLists.txt` - Added new source files and baa_ast dependency
+  - All implementations include proper error handling, memory management, and AST node creation.
+
 ### Documentation Updates
 
 - Updated `docs/AST_ROADMAP.md` to mark Phase 1 tasks as completed with implementation dates.
+- Updated `docs/PARSER_ROADMAP.md` to mark Phase 1 tasks as completed with implementation dates.
 
 ## [0.1.33.0] - 2025-06-23
 

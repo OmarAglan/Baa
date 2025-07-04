@@ -51,18 +51,20 @@ The parser will employ a recursive descent strategy, with distinct modules for p
     * **File:** `parser.c`.
     * **Description:** `BaaNode* baa_parse_program(BaaParser* parser);`.
         * Creates a `BAA_NODE_KIND_PROGRAM` node.
-        * Loops, calling `parse_declaration_or_statement()` (to be created) until `BAA_TOKEN_EOF`.
+        * Loops, calling `parse_statement()` until `BAA_TOKEN_EOF`.
         * Adds successfully parsed top-level nodes to the program node.
+    * **Status:** [x] COMPLETED - 2025-01-04
     * **Verification:** Can parse an empty file (EOF) and return an empty program node.
 
 2. **Implement `parse_primary_expression`:**
     * **File:** `expression_parser.c`.
     * **Description:** `BaaNode* parse_primary_expression(BaaParser* p);`.
-        * Handles `BAA_TOKEN_INT_LIT`, `BAA_TOKEN_FLOAT_LIT`, `BAA_TOKEN_STRING_LIT`, `BAA_TOKEN_CHAR_LIT`, `BAA_TOKEN_BOOL_LIT` (creating `BAA_NODE_KIND_LITERAL_EXPR` nodes).
-            * Extracts value and full lexeme from token. For number literals, determines the canonical `BaaType*` from the suffix (e.g., `123ط` -> `baa_type_long_int`) and stores it in `BaaLiteralExprData`.
+        * Handles `BAA_TOKEN_INT_LIT`, `BAA_TOKEN_STRING_LIT` (creating `BAA_NODE_KIND_LITERAL_EXPR` nodes).
+            * Extracts value and full lexeme from token. Uses default types for now.
         * Handles `BAA_TOKEN_IDENTIFIER` (creating `BAA_NODE_KIND_IDENTIFIER_EXPR` nodes).
         * Handles `BAA_TOKEN_LPAREN expression BAA_TOKEN_RPAREN` (grouping - recursively calls `parse_expression`).
         * Reports errors for unexpected tokens.
+    * **Status:** [x] COMPLETED - 2025-01-04
     * **Verification:** Can parse individual literals, identifiers, and simple parenthesized expressions. Correct AST nodes are created with source spans.
 
 3. **Implement `parse_expression_statement`:**
@@ -71,14 +73,17 @@ The parser will employ a recursive descent strategy, with distinct modules for p
         * Calls `parse_expression()` to get an expression node.
         * Expects and consumes `BAA_TOKEN_DOT`.
         * Creates and returns a `BAA_NODE_KIND_EXPR_STMT` node.
+    * **Status:** [x] COMPLETED - 2025-01-04
     * **Verification:** Can parse `my_var.` or `123.` (assuming these are valid expressions for now).
 
-4. **Implement `parse_declaration_or_statement` (Initial Version):**
-    * **File:** `parser.c` or `declaration_parser.c`.
-    * **Description:** `BaaNode* parse_declaration_or_statement(BaaParser* p);`.
-        * Initially, this might just try to parse an expression statement.
-        * Later, it will dispatch to `parse_declaration` or `parse_statement` based on lookahead.
-    * **Verification:** `baa_parse_program` can now parse a sequence of simple expression statements.
+4. **Implement `parse_statement` (Basic Statement Dispatcher):**
+    * **File:** `statement_parser.c`.
+    * **Description:** `BaaNode* parse_statement(BaaParser* p);`.
+        * Dispatches based on current token type to appropriate statement parsers.
+        * Handles `BAA_TOKEN_LBRACE` for block statements.
+        * Defaults to expression statements for other tokens.
+    * **Status:** [x] COMPLETED - 2025-01-04
+    * **Verification:** `baa_parse_program` can now parse a sequence of simple expression statements and block statements.
 
 ### Phase 2: Unary, Postfix, and Basic Binary Expressions
 

@@ -1,11 +1,12 @@
-#include "baa/ast/ast.h"     // For BaaNode, BaaNodeKind, BaaAstSourceSpan, and function prototypes
-#include "ast_expressions.h" // For baa_ast_free_literal_expr_data (internal header)
-#include "ast_program.h"     // For baa_ast_free_program_data (internal header)
-#include "ast_statements.h"  // For baa_ast_free_expr_stmt_data (internal header)
-#include "ast_types.h"       // For baa_ast_free_type_ast_data (internal header)
-#include "baa/utils/utils.h" // For baa_malloc, baa_free
-#include <stdlib.h>          // For NULL
-#include <string.h>          // For memset (optional, for zeroing memory)
+#include "baa/ast/ast.h"      // For BaaNode, BaaNodeKind, BaaAstSourceSpan, and function prototypes
+#include "ast_declarations.h" // For baa_ast_free_var_decl_data (internal header)
+#include "ast_expressions.h"  // For baa_ast_free_literal_expr_data (internal header)
+#include "ast_program.h"      // For baa_ast_free_program_data (internal header)
+#include "ast_statements.h"   // For baa_ast_free_expr_stmt_data (internal header)
+#include "ast_types.h"        // For baa_ast_free_type_ast_data (internal header)
+#include "baa/utils/utils.h"  // For baa_malloc, baa_free
+#include <stdlib.h>           // For NULL
+#include <string.h>           // For memset (optional, for zeroing memory)
 
 /**
  * @brief Creates a new generic BaaNode.
@@ -123,6 +124,13 @@ void baa_ast_free_node(BaaNode *node)
         if (node->data)
         {
             baa_ast_free_block_stmt_data((BaaBlockStmtData *)node->data);
+        }
+        break;
+
+    case BAA_NODE_KIND_VAR_DECL_STMT:
+        if (node->data)
+        {
+            baa_ast_free_var_decl_data((BaaVarDeclData *)node->data);
         }
         break;
 

@@ -50,9 +50,9 @@ typedef enum BaaNodeKind
     // BAA_NODE_KIND_PARAMETER,      // To be added: A function parameter. data: BaaParameterData*
 
     // Statement Kinds
-    BAA_NODE_KIND_EXPR_STMT,  /**< An expression statement. data: BaaExprStmtData* */
-    BAA_NODE_KIND_BLOCK_STMT, /**< A block of statements { ... }. data: BaaBlockStmtData* */
-    // BAA_NODE_KIND_VAR_DECL_STMT,  // To be added: A variable declaration statement. data: BaaVarDeclData*
+    BAA_NODE_KIND_EXPR_STMT,     /**< An expression statement. data: BaaExprStmtData* */
+    BAA_NODE_KIND_BLOCK_STMT,    /**< A block of statements { ... }. data: BaaBlockStmtData* */
+    BAA_NODE_KIND_VAR_DECL_STMT, /**< A variable declaration statement. data: BaaVarDeclData* */
 
     // Expression Kinds
     BAA_NODE_KIND_LITERAL_EXPR,    /**< Represents a literal value (integer, string, etc.). data: BaaLiteralExprData* */
@@ -282,6 +282,20 @@ typedef struct BaaBlockStmtData
     size_t capacity;      /**< Current capacity of the statements array. */
     // Future: BaaScope* scope; /**< Link to its scope in symbol table. */
 } BaaBlockStmtData;
+
+/**
+ * @brief Data structure for a variable declaration statement node (BAA_NODE_KIND_VAR_DECL_STMT).
+ * Represents a variable declaration with optional type annotation and initializer.
+ */
+typedef struct BaaVarDeclData
+{
+    wchar_t *name;                 /**< Duplicated variable name. Owner must free. */
+    BaaAstNodeModifiers modifiers; /**< Modifiers like const (ثابت), static (مستقر), etc. */
+    BaaNode *type_node;            /**< BaaNode* of kind BAA_NODE_KIND_TYPE (the declared type syntax). */
+    BaaNode *initializer_expr;     /**< Optional initializer expression (BaaNode* with an expression kind). Can be NULL. */
+    // Future: BaaSymbol* symbol_entry; /**< Link to symbol table after resolution. */
+    // BaaType* resolved_canonical_type; /**< Pointer to canonical BaaType after semantic analysis. */
+} BaaVarDeclData;
 
 // == Type Representation Data ==
 

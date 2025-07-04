@@ -207,4 +207,22 @@ BaaNode *baa_ast_new_primitive_type_node(BaaAstSourceSpan span, const wchar_t *t
  */
 BaaNode *baa_ast_new_array_type_node(BaaAstSourceSpan span, BaaNode *element_type_node, BaaNode *size_expr);
 
+// == Variable Declaration Statements ==
+
+/**
+ * @brief Creates a new AST node representing a variable declaration statement.
+ * The node's kind will be BAA_NODE_KIND_VAR_DECL_STMT.
+ * Its data will point to a BaaVarDeclData struct.
+ *
+ * @param span The source span of the variable declaration.
+ * @param name The variable name. This function will duplicate it.
+ * @param modifiers Modifiers like const (ثابت), static (مستقر), etc.
+ * @param type_node A BaaNode* of kind BAA_NODE_KIND_TYPE representing the variable type. Must not be NULL.
+ * @param initializer_expr A BaaNode* expression for initialization, or NULL if no initializer.
+ * @return A pointer to the new BaaNode, or NULL on failure.
+ */
+BaaNode *baa_ast_new_var_decl_node(BaaAstSourceSpan span, const wchar_t *name,
+                                   BaaAstNodeModifiers modifiers, BaaNode *type_node,
+                                   BaaNode *initializer_expr);
+
 #endif // BAA_AST_H

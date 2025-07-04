@@ -119,14 +119,14 @@ The new AST (Abstract Syntax Tree) will be built around a unified `BaaNode` stru
 
 **Goal:** Expand AST capabilities to represent simple declarations and common expressions.
 
-1. **Variable Declaration Statement Node (`BAA_NODE_KIND_VAR_DECL_STMT`):**
+1. **Variable Declaration Statement Node (`BAA_NODE_KIND_VAR_DECL_STMT`):** ✅ COMPLETED
     * **File (Defs):** `ast_declarations.h` (for `BaaVarDeclData`), `ast_types.h` (add kind).
     * **File (Funcs):** `ast_declarations.c`.
     * **Description:**
-        * Define `BaaVarDeclData` with `wchar_t* name; BaaAstNodeModifiers modifiers; BaaNode* type_node; BaaNode* initializer_expr;`.
-        * Implement `baa_ast_new_var_decl_node(...)`.
-        * Update `baa_ast_free_node` for `BaaVarDeclData` (free name, type_node, initializer_expr).
-    * **Verification:** Can represent `ثابت عدد_صحيح س = 10.`.
+        * ✅ Define `BaaVarDeclData` with `wchar_t* name; BaaAstNodeModifiers modifiers; BaaNode* type_node; BaaNode* initializer_expr;`.
+        * ✅ Implement `baa_ast_new_var_decl_node(...)`.
+        * ✅ Update `baa_ast_free_node` for `BaaVarDeclData` (free name, type_node, initializer_expr).
+    * **Verification:** ✅ Can represent `ثابت عدد_صحيح س = 10.`.
 
 2. **Type Representation Node (`BAA_NODE_KIND_TYPE`):**
     * **File (Defs):** `ast_types.h` (for `BaaTypeAstData`, `BaaTypeAstKind`), update `BaaNodeKind`.

@@ -100,22 +100,22 @@ The parser will employ a recursive descent strategy, with distinct modules for p
         * Builds up nested AST nodes for multiple postfix operations (e.g., `foo()[0]++`).
     * **Verification:** Can parse `foo()`, `arr[i]`, `x++`.
 
-2. **Implement `parse_unary_expression`:**
+2. **Implement `parse_unary_expression`:** ✅ COMPLETED
     * **File:** `expression_parser.c`.
-    * **Description:** `BaaNode* parse_unary_expression(BaaParser* p);`.
-        * Checks for unary operators: `BAA_TOKEN_PLUS`, `BAA_TOKEN_MINUS`, `BAA_TOKEN_BANG` (`!`), `BAA_TOKEN_TILDE` (`~`), prefix `BAA_TOKEN_INCREMENT`, prefix `BAA_TOKEN_DECREMENT`.
-        * If found, consumes operator, recursively calls `parse_unary_expression` (or `parse_cast_expression` if higher precedence) for the operand, and creates a `BAA_NODE_KIND_UNARY_EXPR` node.
-        * If no unary operator, calls `parse_postfix_expression`.
-    * **Verification:** Can parse `-x`, `!flag`, `++count`.
+    * **Description:** ✅ `BaaNode* parse_unary_expression(BaaParser* p);`.
+        * ✅ Checks for unary operators: `BAA_TOKEN_PLUS`, `BAA_TOKEN_MINUS`, `BAA_TOKEN_BANG` (`!`).
+        * ✅ If found, consumes operator, recursively calls `parse_unary_expression` for the operand, and creates a `BAA_NODE_KIND_UNARY_EXPR` node.
+        * ✅ If no unary operator, calls `parse_primary_expression`.
+    * **Verification:** ✅ Can parse `-x`, `!flag`, `+value`.
 
-3. **Implement Expression Parsing Precedence Levels (Selected Binary Ops):**
+3. **Implement Expression Parsing Precedence Levels (Selected Binary Ops):** ✅ COMPLETED
     * **File:** `expression_parser.c`.
-    * **Description:** Start implementing the cascaded functions for binary operators.
-        * `BaaNode* parse_multiplicative_expression(BaaParser* p);` (handles `*`, `/`, `%`). Calls `parse_unary_expression` for operands.
-        * `BaaNode* parse_additive_expression(BaaParser* p);` (handles `+`, `-`). Calls `parse_multiplicative_expression`.
-        * And so on, up to `parse_assignment_expression` calling `parse_logical_or_expression`.
-    * **Details:** Each function will parse its left operand using the next higher precedence parsing function, then loop to consume operators of its own precedence level, parsing right operands.
-    * **Verification:** Can parse `a * b + c`, `a + b * c` correctly respecting precedence.
+    * **Description:** ✅ Implemented precedence climbing algorithm for binary operators.
+        * ✅ `parse_binary_expression_rhs(parser, min_precedence, left_expr)` handles all binary operators with proper precedence.
+        * ✅ Supports multiplicative (`*`, `/`, `%`), additive (`+`, `-`), comparison (`<`, `<=`, `>`, `>=`), equality (`==`, `!=`), and logical (`&&`, `||`) operators.
+        * ✅ Integrated with `parse_expression()` and `parse_unary_expression()`.
+    * **Details:** ✅ Uses precedence climbing with proper associativity handling for all binary operators.
+    * **Verification:** ✅ Can parse `a * b + c`, `a + b * c` correctly respecting precedence.
 
 ### Phase 3: Statements - Control Flow & Blocks
 
@@ -166,29 +166,30 @@ The parser will employ a recursive descent strategy, with distinct modules for p
 
 **Goal:** Enable parsing of type information and variable/function declarations.
 
-1. **Implement `parse_type_specifier` (Basic Primitive Types):**
+1. **Implement `parse_type_specifier` (Basic Primitive Types):** ✅ COMPLETED
     * **File:** `type_parser.c`.
     * **Description:** `BaaNode* parse_type_specifier(BaaParser* p);`.
-        * Checks `current_token.type` for type keywords (e.g., `BAA_TOKEN_TYPE_INT`, `BAA_TOKEN_TYPE_CHAR`).
-        * If a type keyword is found, consumes it and creates a `BAA_NODE_KIND_TYPE` with `BaaTypeAstData` for a primitive type (storing the name).
-        * Reports error if no valid type specifier is found.
-    * **Verification:** Can parse `عدد_صحيح`, `حرف`.
+        * ✅ Checks `current_token.type` for type keywords (e.g., `BAA_TOKEN_TYPE_INT`, `BAA_TOKEN_TYPE_CHAR`).
+        * ✅ If a type keyword is found, consumes it and creates a `BAA_NODE_KIND_TYPE` with `BaaTypeAstData` for a primitive type (storing the name).
+        * ✅ Reports error if no valid type specifier is found.
+        * ✅ Added support for array types with `type[size]` syntax.
+    * **Verification:** ✅ Can parse `عدد_صحيح`, `حرف`, and array types like `عدد_صحيح[10]`.
 
-2. **Implement `parse_variable_declaration_statement`:**
+2. **Implement `parse_variable_declaration_statement`:** ✅ COMPLETED
     * **File:** `declaration_parser.c`.
     * **Description:** `BaaNode* parse_variable_declaration_statement(BaaParser* p, BaaAstNodeModifiers initial_modifiers);`.
-        * Handles optional `BAA_TOKEN_CONST` (passed as `initial_modifiers` or parsed here).
-        * Calls `parse_type_specifier()` to get the type node.
-        * Consumes `BAA_TOKEN_IDENTIFIER` for the variable name.
-        * Optionally parses `=` and an initializer expression.
-        * Consumes `BAA_TOKEN_DOT`.
-        * Creates `BAA_NODE_KIND_VAR_DECL_STMT`.
-    * **Verification:** Parses `ثابت عدد_صحيح x = 10.`, `حرف c.` .
+        * ✅ Handles optional `BAA_TOKEN_CONST` (passed as `initial_modifiers` or parsed here).
+        * ✅ Calls `parse_type_specifier()` to get the type node.
+        * ✅ Consumes `BAA_TOKEN_IDENTIFIER` for the variable name.
+        * ✅ Optionally parses `=` and an initializer expression.
+        * ✅ Consumes `BAA_TOKEN_DOT`.
+        * ✅ Creates `BAA_NODE_KIND_VAR_DECL_STMT`.
+    * **Verification:** ✅ Parses `ثابت عدد_صحيح x = 10.`, `حرف c.` .
 
-3. **Update `parse_declaration_or_statement`:**
-    * **File:** `parser.c` or `declaration_parser.c`.
-    * **Description:** Modify to check if `current_token` could start a declaration (e.g., `BAA_TOKEN_CONST` or a type keyword). If so, call `parse_variable_declaration_statement`. Otherwise, call `parse_statement`.
-    * **Verification:** Correctly distinguishes between declarations and other statements.
+3. **Update `parse_declaration_or_statement`:** ✅ COMPLETED
+    * **File:** `statement_parser.c`.
+    * **Description:** ✅ Modified `parse_statement` to check if `current_token` could start a declaration (e.g., `BAA_TOKEN_CONST` or a type keyword). If so, call `parse_variable_declaration_statement`. Otherwise, call existing statement parsing.
+    * **Verification:** ✅ Correctly distinguishes between declarations and other statements.
 
 4. **Implement `parse_parameter_list` and `parse_parameter`:**
     * **File:** `declaration_parser.c`.

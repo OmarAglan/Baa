@@ -1,6 +1,7 @@
 // src/parser/statement_parser.c
 #include "statement_parser.h"
 #include "expression_parser.h"
+#include "declaration_parser.h"
 #include "parser_internal.h"
 #include "parser_utils.h"
 #include "baa/ast/ast.h"
@@ -94,9 +95,25 @@ BaaNode *parse_block_statement(BaaParser *parser)
     return block_node;
 }
 
+// Helper function to check if current token could start a declaration
+static bool could_start_declaration(BaaParser *parser)
+{
+    // Check for modifiers or type keywords
+    return parser->current_token.type == BAA_TOKEN_CONST ||
+           parser->current_token.type == BAA_TOKEN_KEYWORD_INLINE ||
+           parser->current_token.type == BAA_TOKEN_KEYWORD_RESTRICT ||
+           baa_token_is_type(parser->current_token.type);
+}
+
 BaaNode *parse_statement(BaaParser *parser)
 {
-    // Dispatch based on the current token type
+    // Check if this could be a declaration first
+    if (could_start_declaration(parser))
+    {
+        return parse_variable_declaration_statement(parser, BAA_MOD_NONE);
+    }
+
+    // Dispatch based on the current token type for statements
     switch (parser->current_token.type)
     {
     case BAA_TOKEN_LBRACE:

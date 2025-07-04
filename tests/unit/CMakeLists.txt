@@ -7,6 +7,9 @@ add_subdirectory(ast)
 # Lexer tests
 add_subdirectory(lexer)
 
+# Parser tests
+add_subdirectory(parser)
+
 # Preprocessor tests
 add_subdirectory(preprocessor)
 

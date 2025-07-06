@@ -881,46 +881,46 @@ wchar_t* suggest_number_format_fix(const wchar_t* invalid_number)
 
     if (!invalid_number)
     {
-        wcscpy(suggestion, L"تأكد من صيغة الرقم الصحيحة: ١٢٣ أو 123 للأعداد الصحيحة، ٣٫١٤ أو 3.14 للأعداد العشرية");
+        wcscpy_s(suggestion, 400, L"تأكد من صيغة الرقم الصحيحة: ١٢٣ أو 123 للأعداد الصحيحة، ٣٫١٤ أو 3.14 للأعداد العشرية");
         return suggestion;
     }
 
     // Check for common number format issues
     if (wcschr(invalid_number, L'.') && wcschr(invalid_number, L'٫'))
     {
-        wcscpy(suggestion, L"لا تخلط بين النقطة العشرية الإنجليزية (.) والعربية (٫) - استخدم واحدة فقط");
+        wcscpy_s(suggestion, 400, L"لا تخلط بين النقطة العشرية الإنجليزية (.) والعربية (٫) - استخدم واحدة فقط");
     }
     else if (wcsstr(invalid_number, L"..") || wcsstr(invalid_number, L"٫٫"))
     {
-        wcscpy(suggestion, L"لا تستخدم فاصلتين عشريتين متتاليتين - استخدم فاصلة واحدة فقط (. أو ٫)");
+        wcscpy_s(suggestion, 400, L"لا تستخدم فاصلتين عشريتين متتاليتين - استخدم فاصلة واحدة فقط (. أو ٫)");
     }
     else if (wcschr(invalid_number, L'e') || wcschr(invalid_number, L'E'))
     {
-        wcscpy(suggestion, L"استخدم 'أ' بدلاً من 'e' أو 'E' للترميز العلمي (مثل: ١٫٥أ٣ أو 1.5أ3)");
+        wcscpy_s(suggestion, 400, L"استخدم 'أ' بدلاً من 'e' أو 'E' للترميز العلمي (مثل: ١٫٥أ٣ أو 1.5أ3)");
     }
     else if (wcsstr(invalid_number, L"__"))
     {
-        wcscpy(suggestion, L"لا تستخدم شرطتين سفليتين متتاليتين - استخدم شرطة واحدة للفصل (مثل: ١_٠٠٠_٠٠٠)");
+        wcscpy_s(suggestion, 400, L"لا تستخدم شرطتين سفليتين متتاليتين - استخدم شرطة واحدة للفصل (مثل: ١_٠٠٠_٠٠٠)");
     }
     else if (wcsstr(invalid_number, L"0x") && !wcschr(invalid_number, L'أ'))
     {
-        wcscpy(suggestion, L"للأرقام السداسية العشرية، تأكد من الصيغة الصحيحة: 0x1A2B أو استخدم اللواحق العربية");
+        wcscpy_s(suggestion, 400, L"للأرقام السداسية العشرية، تأكد من الصيغة الصحيحة: 0x1A2B أو استخدم اللواحق العربية");
     }
     else if (wcsstr(invalid_number, L"ll") || wcsstr(invalid_number, L"LL"))
     {
-        wcscpy(suggestion, L"استخدم اللاحقة العربية 'طط' بدلاً من 'll' أو 'LL' للأعداد الطويلة جداً");
+        wcscpy_s(suggestion, 400, L"استخدم اللاحقة العربية 'طط' بدلاً من 'll' أو 'LL' للأعداد الطويلة جداً");
     }
     else if (wcschr(invalid_number, L'u') || wcschr(invalid_number, L'U'))
     {
-        wcscpy(suggestion, L"استخدم اللاحقة العربية 'غ' بدلاً من 'u' أو 'U' للأعداد غير المُوقعة");
+        wcscpy_s(suggestion, 400, L"استخدم اللاحقة العربية 'غ' بدلاً من 'u' أو 'U' للأعداد غير المُوقعة");
     }
     else if (wcschr(invalid_number, L'f') || wcschr(invalid_number, L'F'))
     {
-        wcscpy(suggestion, L"استخدم اللاحقة العربية 'ح' بدلاً من 'f' أو 'F' للأعداد الحقيقية");
+        wcscpy_s(suggestion, 400, L"استخدم اللاحقة العربية 'ح' بدلاً من 'f' أو 'F' للأعداد الحقيقية");
     }
     else
     {
-        wcscpy(suggestion, L"تحقق من صيغة الرقم: الأرقام (٠-٩ أو 0-9)، الفاصلة العشرية (٫ أو .)، الترميز العلمي (أ)، اللواحق (غ، ط، طط، ح)");
+        wcscpy_s(suggestion, 400, L"تحقق من صيغة الرقم: الأرقام (٠-٩ أو 0-9)، الفاصلة العشرية (٫ أو .)، الترميز العلمي (أ)، اللواحق (غ، ط، طط، ح)");
     }
 
     return suggestion;

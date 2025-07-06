@@ -154,5 +154,5 @@ target_include_directories(baa_parser_tester PRIVATE
 )
 
 # تفعيل الاختبارات
-#enable_testing()
-#add_subdirectory(tests) # Keep this if tests are separate
+enable_testing()
+add_subdirectory(tests) # Keep this if tests are separate

@@ -11,8 +11,8 @@ void test_binary_expr_arithmetic_operations(void)
     baa_init_type_system();
 
     BaaAstSourceSpan span = {
-        .start = {.filename = "test.baa", .line = 1, .column = 1},
-        .end = {.filename = "test.baa", .line = 1, .column = 10}};
+        .start = {.filename = L"test.baa", .line = 1, .column = 1},
+        .end = {.filename = L"test.baa", .line = 1, .column = 10}};
 
     // Create operand nodes
     BaaNode *left = baa_ast_new_literal_int_node(span, 10, baa_type_int);
@@ -74,8 +74,8 @@ void test_binary_expr_comparison_operations(void)
     baa_init_type_system();
 
     BaaAstSourceSpan span = {
-        .start = {.filename = "test.baa", .line = 1, .column = 1},
-        .end = {.filename = "test.baa", .line = 1, .column = 10}};
+        .start = {.filename = L"test.baa", .line = 1, .column = 1},
+        .end = {.filename = L"test.baa", .line = 1, .column = 10}};
 
     // Test comparison operators
     BaaBinaryOperatorKind comparison_ops[] = {
@@ -125,8 +125,8 @@ void test_binary_expr_logical_operations(void)
     baa_init_type_system();
 
     BaaAstSourceSpan span = {
-        .start = {.filename = "test.baa", .line = 1, .column = 1},
-        .end = {.filename = "test.baa", .line = 1, .column = 10}};
+        .start = {.filename = L"test.baa", .line = 1, .column = 1},
+        .end = {.filename = L"test.baa", .line = 1, .column = 10}};
 
     // Test logical operators
     BaaBinaryOperatorKind logical_ops[] = {
@@ -169,8 +169,8 @@ void test_binary_expr_nested_expressions(void)
     baa_init_type_system();
 
     BaaAstSourceSpan span = {
-        .start = {.filename = "test.baa", .line = 1, .column = 1},
-        .end = {.filename = "test.baa", .line = 1, .column = 20}};
+        .start = {.filename = L"test.baa", .line = 1, .column = 1},
+        .end = {.filename = L"test.baa", .line = 1, .column = 20}};
 
     // Create nested expression: (10 + 5) * (20 - 15)
     BaaNode *left_left = baa_ast_new_literal_int_node(span, 10, baa_type_int);
@@ -215,8 +215,8 @@ void test_binary_expr_invalid_operations(void)
     baa_init_type_system();
 
     BaaAstSourceSpan span = {
-        .start = {.filename = "test.baa", .line = 1, .column = 1},
-        .end = {.filename = "test.baa", .line = 1, .column = 10}};
+        .start = {.filename = L"test.baa", .line = 1, .column = 1},
+        .end = {.filename = L"test.baa", .line = 1, .column = 10}};
 
     BaaNode *valid_operand = baa_ast_new_literal_int_node(span, 42, baa_type_int);
 

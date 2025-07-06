@@ -8,8 +8,8 @@ void test_identifier_node_creation(void)
     wprintf(L"Testing identifier node creation...\n");
 
     BaaAstSourceSpan span = {
-        .start = {.filename = "test.baa", .line = 1, .column = 1},
-        .end = {.filename = "test.baa", .line = 1, .column = 10}};
+        .start = {.filename = L"test.baa", .line = 1, .column = 1},
+        .end = {.filename = L"test.baa", .line = 1, .column = 10}};
 
     // Test creating an identifier node
     const wchar_t *test_name = L"متغير_اختبار";
@@ -36,8 +36,8 @@ void test_identifier_node_arabic_names(void)
     wprintf(L"Testing identifier node with Arabic names...\n");
 
     BaaAstSourceSpan span = {
-        .start = {.filename = "test.baa", .line = 1, .column = 1},
-        .end = {.filename = "test.baa", .line = 1, .column = 15}};
+        .start = {.filename = L"test.baa", .line = 1, .column = 1},
+        .end = {.filename = L"test.baa", .line = 1, .column = 15}};
 
     // Test various Arabic identifier names
     const wchar_t *arabic_names[] = {
@@ -72,8 +72,8 @@ void test_identifier_node_mixed_names(void)
     wprintf(L"Testing identifier node with mixed character names...\n");
 
     BaaAstSourceSpan span = {
-        .start = {.filename = "test.baa", .line = 1, .column = 1},
-        .end = {.filename = "test.baa", .line = 1, .column = 20}};
+        .start = {.filename = L"test.baa", .line = 1, .column = 1},
+        .end = {.filename = L"test.baa", .line = 1, .column = 20}};
 
     // Test mixed Arabic and Latin identifiers (if supported)
     const wchar_t *mixed_names[] = {
@@ -107,8 +107,8 @@ void test_identifier_node_invalid_operations(void)
     wprintf(L"Testing identifier node invalid operations...\n");
 
     BaaAstSourceSpan span = {
-        .start = {.filename = "test.baa", .line = 1, .column = 1},
-        .end = {.filename = "test.baa", .line = 1, .column = 10}};
+        .start = {.filename = L"test.baa", .line = 1, .column = 1},
+        .end = {.filename = L"test.baa", .line = 1, .column = 10}};
 
     // Test creating identifier with NULL name (should be allowed)
     BaaNode *null_identifier = baa_ast_new_identifier_expr_node(span, NULL);
@@ -139,8 +139,8 @@ void test_identifier_node_edge_cases(void)
     wprintf(L"Testing identifier node edge cases...\n");
 
     BaaAstSourceSpan span = {
-        .start = {.filename = "test.baa", .line = 1, .column = 1},
-        .end = {.filename = "test.baa", .line = 1, .column = 100}};
+        .start = {.filename = L"test.baa", .line = 1, .column = 1},
+        .end = {.filename = L"test.baa", .line = 1, .column = 100}};
 
     // Test with very long identifier name
     wchar_t long_name[1000];
@@ -185,8 +185,8 @@ void test_identifier_node_memory_management(void)
     wprintf(L"Testing identifier node memory management...\n");
 
     BaaAstSourceSpan span = {
-        .start = {.filename = "test.baa", .line = 1, .column = 1},
-        .end = {.filename = "test.baa", .line = 1, .column = 15}};
+        .start = {.filename = L"test.baa", .line = 1, .column = 1},
+        .end = {.filename = L"test.baa", .line = 1, .column = 15}};
 
     // Create multiple identifier nodes to test memory management
     const int num_identifiers = 50;

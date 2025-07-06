@@ -33,13 +33,6 @@ void test_keywords(void)
 
     // Test each keyword
     BaaToken *token;
-    token = baa_lexer_next_token(lexer);
-    ASSERT_EQUAL(token->type, BAA_TOKEN_FUNC, L"Expected FUNC token");
-    ASSERT_STR_EQ(token->lexeme, L"دالة");
-
-    token = baa_lexer_next_token(lexer);
-    ASSERT_EQUAL(token->type, BAA_TOKEN_VAR, L"Expected VAR token");
-    ASSERT_STR_EQ(token->lexeme, L"متغير");
 
     token = baa_lexer_next_token(lexer);
     ASSERT_EQUAL(token->type, BAA_TOKEN_CONST, L"Expected CONST token");

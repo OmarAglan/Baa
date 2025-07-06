@@ -133,7 +133,7 @@ BaaToken *make_token(BaaLexer *lexer, BaaTokenType type)
         free(token);
         return NULL;
     }
-    wcsncpy((wchar_t *)token->lexeme, &lexer->source[lexer->start], token->length);
+    wcsncpy_s((wchar_t *)token->lexeme, token->length + 1, &lexer->source[lexer->start], token->length);
     ((wchar_t *)token->lexeme)[token->length] = L'\0'; // Null-terminate
     token->line = lexer->line;
     token->column = lexer->start_token_column; // Use the recorded start column
@@ -184,10 +184,10 @@ BaaToken *make_specific_error_token(BaaLexer *lexer, BaaTokenType error_type,
     }
 
 #ifdef _WIN32
-    int needed = _vsnwprintf(buffer, initial_size, format, args);
+    int needed = _vsnwprintf_s(buffer, initial_size, initial_size - 1, format, args);
     if (needed < 0)
     {
-        wcscpy(buffer, L"خطأ غير معروف في تنسيق رسالة الخطأ الداخلية.");
+        wcscpy_s(buffer, initial_size, L"خطأ غير معروف في تنسيق رسالة الخطأ الداخلية.");
         needed = wcslen(buffer);
     }
 #else
@@ -672,7 +672,7 @@ void extract_error_context(BaaLexer *lexer, size_t error_position,
         *before_context = malloc((before_len + 1) * sizeof(wchar_t));
         if (*before_context)
         {
-            wcsncpy(*before_context, lexer->source + start_pos, before_len);
+            wcsncpy_s(*before_context, before_len + 1, lexer->source + start_pos, before_len);
             (*before_context)[before_len] = L'\0';
         }
     }
@@ -688,7 +688,7 @@ void extract_error_context(BaaLexer *lexer, size_t error_position,
         *after_context = malloc((after_len + 1) * sizeof(wchar_t));
         if (*after_context)
         {
-            wcsncpy(*after_context, lexer->source + error_position, after_len);
+            wcsncpy_s(*after_context, after_len + 1, lexer->source + error_position, after_len);
             (*after_context)[after_len] = L'\0';
         }
     }
@@ -757,7 +757,7 @@ wchar_t* get_current_line_content(BaaLexer *lexer, size_t line_number)
     if (!line_content)
         return NULL;
 
-    wcsncpy(line_content, source + line_start, line_length);
+    wcsncpy_s(line_content, line_length + 1, source + line_start, line_length);
     line_content[line_length] = L'\0';
 
     return line_content;
@@ -815,50 +815,50 @@ wchar_t* suggest_escape_sequence_fix(wchar_t invalid_escape_char)
     switch (invalid_escape_char)
     {
         case L'س':
-            wcscpy(suggestion, L"استخدم \\س للسطر الجديد (SEEN)");
+            wcscpy_s(suggestion, 300, L"استخدم \\س للسطر الجديد (SEEN)");
             break;
         case L'م':
-            wcscpy(suggestion, L"استخدم \\م للتبويب (MEEM)");
+            wcscpy_s(suggestion, 300, L"استخدم \\م للتبويب (MEEM)");
             break;
         case L'ر':
-            wcscpy(suggestion, L"استخدم \\ر للإرجاع (REH)");
+            wcscpy_s(suggestion, 300, L"استخدم \\ر للإرجاع (REH)");
             break;
         case L'ص':
-            wcscpy(suggestion, L"استخدم \\ص للحرف الفارغ (SAD)");
+            wcscpy_s(suggestion, 300, L"استخدم \\ص للحرف الفارغ (SAD)");
             break;
         case L'\\':
-            wcscpy(suggestion, L"استخدم \\\\ للشرطة المائلة العكسية");
+            wcscpy_s(suggestion, 300, L"استخدم \\\\ للشرطة المائلة العكسية");
             break;
         case L'"':
-            wcscpy(suggestion, L"استخدم \\\" لعلامة الاقتباس المزدوجة");
+            wcscpy_s(suggestion, 300, L"استخدم \\\" لعلامة الاقتباس المزدوجة");
             break;
         case L'\'':
-            wcscpy(suggestion, L"استخدم \\' لعلامة الاقتباس المفردة");
+            wcscpy_s(suggestion, 300, L"استخدم \\' لعلامة الاقتباس المفردة");
             break;
         case L'ي':
-            wcscpy(suggestion, L"استخدم \\يXXXX للهروب اليونيكود (مثل \\ي0623 للحرف 'أ') - YEH مع 4 أرقام سداسية عشرية");
+            wcscpy_s(suggestion, 300, L"استخدم \\يXXXX للهروب اليونيكود (مثل \\ي0623 للحرف 'أ') - YEH مع 4 أرقام سداسية عشرية");
             break;
         case L'ه':
-            wcscpy(suggestion, L"استخدم \\هـHH للهروب السداسي عشري (مثل \\هـ41 للحرف A) - HEH مع تطويل ثم رقمان سداسيان");
+            wcscpy_s(suggestion, 300, L"استخدم \\هـHH للهروب السداسي عشري (مثل \\هـ41 للحرف A) - HEH مع تطويل ثم رقمان سداسيان");
             break;
         // Common mistakes - suggest correct Baa equivalents
         case L'n':
-            wcscpy(suggestion, L"استخدم \\س بدلاً من \\n للسطر الجديد - باء تستخدم الأحرف العربية للهروب");
+            wcscpy_s(suggestion, 300, L"استخدم \\س بدلاً من \\n للسطر الجديد - باء تستخدم الأحرف العربية للهروب");
             break;
         case L't':
-            wcscpy(suggestion, L"استخدم \\م بدلاً من \\t للتبويب - باء تستخدم الأحرف العربية للهروب");
+            wcscpy_s(suggestion, 300, L"استخدم \\م بدلاً من \\t للتبويب - باء تستخدم الأحرف العربية للهروب");
             break;
         case L'r':
-            wcscpy(suggestion, L"استخدم \\ر بدلاً من \\r للإرجاع - باء تستخدم الأحرف العربية للهروب");
+            wcscpy_s(suggestion, 300, L"استخدم \\ر بدلاً من \\r للإرجاع - باء تستخدم الأحرف العربية للهروب");
             break;
         case L'0':
-            wcscpy(suggestion, L"استخدم \\ص بدلاً من \\0 للحرف الفارغ - باء تستخدم الأحرف العربية للهروب");
+            wcscpy_s(suggestion, 300, L"استخدم \\ص بدلاً من \\0 للحرف الفارغ - باء تستخدم الأحرف العربية للهروب");
             break;
         case L'u':
-            wcscpy(suggestion, L"استخدم \\يXXXX بدلاً من \\uXXXX للهروب اليونيكود - باء تستخدم \\ي مع 4 أرقام سداسية");
+            wcscpy_s(suggestion, 300, L"استخدم \\يXXXX بدلاً من \\uXXXX للهروب اليونيكود - باء تستخدم \\ي مع 4 أرقام سداسية");
             break;
         case L'x':
-            wcscpy(suggestion, L"استخدم \\هـHH بدلاً من \\xHH للهروب السداسي عشري - باء تستخدم \\هـ مع رقمين سداسيين");
+            wcscpy_s(suggestion, 300, L"استخدم \\هـHH بدلاً من \\xHH للهروب السداسي عشري - باء تستخدم \\هـ مع رقمين سداسيين");
             break;
         default:
             swprintf(suggestion, 300, L"تسلسل هروب غير صالح '\\%lc' - استخدم: \\س (سطر جديد)، \\م (تبويب)، \\ر (إرجاع)، \\ص (فارغ)، \\\\، \\\"، \\'، \\يXXXX (يونيكود)، \\هـHH (سداسي عشري)", invalid_escape_char);

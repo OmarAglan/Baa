@@ -380,7 +380,7 @@ BaaNumber *baa_parse_number(const wchar_t *text, size_t length, BaaNumberError *
             *error = BAA_NUM_MEMORY_ERROR;
         return NULL;
     }
-    wcsncpy(raw_text, text, length);
+    wcsncpy_s(raw_text, length + 1, text, length);
     raw_text[length] = L'\0';
 
     number->raw_text = raw_text;

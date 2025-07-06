@@ -1377,14 +1377,14 @@ BaaToken *scan_single_line_comment(BaaLexer *lexer, size_t comment_delimiter_sta
 }
 
 /**
- * @brief Scans the content of a multi-line comment (between /* and * /).
- * Assumes lexer->start is positioned at the first '/' of the "/*".
- * The opening "/*" is consumed by the caller (baa_lexer_next_token).
- * This function consumes the comment content and the closing "* /".
+ * @brief Scans the content of a multi-line comment (between slash-star and star-slash).
+ * Assumes lexer->start is positioned at the first '/' of the opening delimiter.
+ * The opening delimiter is consumed by the caller (baa_lexer_next_token).
+ * This function consumes the comment content and the closing delimiter.
  *
  * @param lexer Pointer to the BaaLexer instance.
- * @param comment_delimiter_start_line Line where the opening "/*" started.
- * @param comment_delimiter_start_col Column where the opening "/*" started.
+ * @param comment_delimiter_start_line Line where the opening delimiter started.
+ * @param comment_delimiter_start_col Column where the opening delimiter started.
  * @return A BaaToken of type BAA_TOKEN_MULTI_LINE_COMMENT or BAA_TOKEN_ERROR if unterminated.
  */
 BaaToken *scan_multi_line_comment(BaaLexer *lexer, size_t comment_delimiter_start_line, size_t comment_delimiter_start_col)

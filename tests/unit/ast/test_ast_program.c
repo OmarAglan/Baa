@@ -9,8 +9,8 @@ void test_program_node_creation(void)
 
     // Create a source span for testing
     BaaAstSourceSpan span = {
-        .start = {.filename = "test.baa", .line = 1, .column = 1},
-        .end = {.filename = "test.baa", .line = 10, .column = 1}};
+        .start = {.filename = L"test.baa", .line = 1, .column = 1},
+        .end = {.filename = L"test.baa", .line = 10, .column = 1}};
 
     // Test creating a program node
     BaaNode *program_node = baa_ast_new_program_node(span);
@@ -37,8 +37,8 @@ void test_program_node_add_declaration(void)
     wprintf(L"Testing program node declaration addition...\n");
 
     BaaAstSourceSpan span = {
-        .start = {.filename = "test.baa", .line = 1, .column = 1},
-        .end = {.filename = "test.baa", .line = 10, .column = 1}};
+        .start = {.filename = L"test.baa", .line = 1, .column = 1},
+        .end = {.filename = L"test.baa", .line = 10, .column = 1}};
 
     // Create program node
     BaaNode *program_node = baa_ast_new_program_node(span);
@@ -78,8 +78,8 @@ void test_program_node_invalid_operations(void)
     wprintf(L"Testing program node invalid operations...\n");
 
     BaaAstSourceSpan span = {
-        .start = {.filename = "test.baa", .line = 1, .column = 1},
-        .end = {.filename = "test.baa", .line = 10, .column = 1}};
+        .start = {.filename = L"test.baa", .line = 1, .column = 1},
+        .end = {.filename = L"test.baa", .line = 10, .column = 1}};
 
     // Test adding declaration to NULL program
     BaaNode *declaration = baa_ast_new_identifier_expr_node(span, L"test_declaration");
@@ -105,8 +105,8 @@ void test_program_node_memory_management(void)
     wprintf(L"Testing program node memory management...\n");
 
     BaaAstSourceSpan span = {
-        .start = {.filename = "test.baa", .line = 1, .column = 1},
-        .end = {.filename = "test.baa", .line = 10, .column = 1}};
+        .start = {.filename = L"test.baa", .line = 1, .column = 1},
+        .end = {.filename = L"test.baa", .line = 10, .column = 1}};
 
     // Create program with multiple declarations
     BaaNode *program_node = baa_ast_new_program_node(span);

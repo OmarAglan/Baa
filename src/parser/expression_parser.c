@@ -4,6 +4,7 @@
 #include "parser_utils.h"
 #include "baa/ast/ast.h"
 #include "baa/lexer/lexer.h"
+#include "baa/utils/utils.h"
 #include <stdio.h>
 
 BaaNode *parse_primary_expression(BaaParser *parser)

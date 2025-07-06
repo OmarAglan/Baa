@@ -115,6 +115,33 @@ void baa_parser_error_at_token(BaaParser *parser, const BaaToken *token, const w
 }
 
 /**
+ * @brief Reports a parser error at the current token location.
+ * Convenience function that wraps baa_parser_error_at_token with the current token.
+ *
+ * @param parser Pointer to the BaaParser instance.
+ * @param message_format A printf-style format string for the error message.
+ * @param ... Additional arguments for the format string.
+ */
+void baa_parser_error(BaaParser *parser, const wchar_t *message_format, ...)
+{
+    if (!parser)
+    {
+        return;
+    }
+
+    va_list args;
+    va_start(args, message_format);
+
+    // Create a temporary buffer for the formatted message
+    wchar_t message_buffer[512];
+    vswprintf(message_buffer, sizeof(message_buffer) / sizeof(wchar_t), message_format, args);
+    va_end(args);
+
+    // Call the main error function with the current token
+    baa_parser_error_at_token(parser, &parser->current_token, L"%ls", message_buffer);
+}
+
+/**
  * @brief Checks if the current token's type matches the expected type.
  * Does not consume the token.
  *

@@ -19,7 +19,7 @@ void test_simple_program(void)
     // First line: comment
     token = baa_lexer_next_token(lexer);
     ASSERT_NOT_NULL(token, L"Failed to get comment token");
-    ASSERT_EQUAL(token->type, BAA_TOKEN_COMMENT, L"Expected COMMENT token");
+    ASSERT_EQUAL(token->type, BAA_TOKEN_SINGLE_LINE_COMMENT, L"Expected SINGLE_LINE_COMMENT token");
 
     // Skip preprocessor directive (#تضمين) as lexer ignores them
     // <
@@ -60,7 +60,7 @@ void test_program_test(void)
     // First line: comment
     token = baa_lexer_next_token(lexer);
     ASSERT_NOT_NULL(token, L"Failed to get comment token");
-    ASSERT_EQUAL(token->type, BAA_TOKEN_COMMENT, L"Expected COMMENT token");
+    ASSERT_EQUAL(token->type, BAA_TOKEN_SINGLE_LINE_COMMENT, L"Expected SINGLE_LINE_COMMENT token");
 
     // Skip preprocessor directive (#تضمين) as lexer ignores them
     // <

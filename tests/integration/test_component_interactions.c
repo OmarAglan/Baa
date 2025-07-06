@@ -130,7 +130,7 @@ void test_parser_to_ast_interaction(void)
     
     BaaLiteralExprData* second_literal = (BaaLiteralExprData*)second_expr_data->expression->data;
     ASSERT_EQ(BAA_LITERAL_KIND_STRING, second_literal->literal_kind);
-    ASSERT_NOT_NULL(second_literal->value.string_value);
+    ASSERT_NOT_NULL(second_literal->value.string_value, L"Second literal string value should not be NULL");
     
     baa_ast_free_node(ast);
     baa_parser_free(parser);

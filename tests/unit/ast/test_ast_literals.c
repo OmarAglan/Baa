@@ -13,8 +13,8 @@ void test_literal_int_node_creation(void)
     baa_init_type_system();
 
     BaaAstSourceSpan span = {
-        .start = {.filename = "test.baa", .line = 1, .column = 1},
-        .end = {.filename = "test.baa", .line = 1, .column = 5}};
+        .start = {.filename = L"test.baa", .line = 1, .column = 1},
+        .end = {.filename = L"test.baa", .line = 1, .column = 5}};
 
     // Test creating an integer literal node
     long long test_value = 42;
@@ -45,8 +45,8 @@ void test_literal_string_node_creation(void)
     baa_init_type_system();
 
     BaaAstSourceSpan span = {
-        .start = {.filename = "test.baa", .line = 1, .column = 1},
-        .end = {.filename = "test.baa", .line = 1, .column = 10}};
+        .start = {.filename = L"test.baa", .line = 1, .column = 1},
+        .end = {.filename = L"test.baa", .line = 1, .column = 10}};
 
     // Test creating a string literal node
     const wchar_t *test_string = L"مرحبا";
@@ -75,8 +75,8 @@ void test_literal_node_invalid_operations(void)
     wprintf(L"Testing literal node invalid operations...\n");
 
     BaaAstSourceSpan span = {
-        .start = {.filename = "test.baa", .line = 1, .column = 1},
-        .end = {.filename = "test.baa", .line = 1, .column = 5}};
+        .start = {.filename = L"test.baa", .line = 1, .column = 1},
+        .end = {.filename = L"test.baa", .line = 1, .column = 5}};
 
     // Test creating string literal with NULL string (should be allowed)
     BaaNode *null_string = baa_ast_new_literal_string_node(span, NULL, baa_type_string);
@@ -109,8 +109,8 @@ void test_literal_node_edge_cases(void)
     baa_init_type_system();
 
     BaaAstSourceSpan span = {
-        .start = {.filename = "test.baa", .line = 1, .column = 1},
-        .end = {.filename = "test.baa", .line = 1, .column = 10}};
+        .start = {.filename = L"test.baa", .line = 1, .column = 1},
+        .end = {.filename = L"test.baa", .line = 1, .column = 10}};
 
     // Test with extreme integer values
     BaaNode *max_int = baa_ast_new_literal_int_node(span, 9223372036854775807LL, baa_type_int);
@@ -164,8 +164,8 @@ void test_literal_node_memory_management(void)
     baa_init_type_system();
 
     BaaAstSourceSpan span = {
-        .start = {.filename = "test.baa", .line = 1, .column = 1},
-        .end = {.filename = "test.baa", .line = 1, .column = 10}};
+        .start = {.filename = L"test.baa", .line = 1, .column = 1},
+        .end = {.filename = L"test.baa", .line = 1, .column = 10}};
 
     // Create multiple literal nodes to test memory management
     const int num_literals = 100;

@@ -144,7 +144,7 @@ target_link_libraries(baa_parser_tester PRIVATE
     baa_parser       # The new parser library
     baa_lexer        # Parser uses the lexer
     baa_preprocessor # Parser tester will preprocess input
-    baa_ast          # For BaaNode type, even if parsing is stubbed+    baa_utils        # General utilities
+    baa_ast          # For BaaNode type, even if parsing is stubbed+    baa_utils        # General utilities, for logging and diagnostics
     BaaCommonSettings
 )
 
@@ -154,5 +154,5 @@ target_include_directories(baa_parser_tester PRIVATE
 )
 
 # تفعيل الاختبارات
-#enable_testing()
-#add_subdirectory(tests) # Keep this if tests are separate
+enable_testing()
+add_subdirectory(tests) # Keep this if tests are separate

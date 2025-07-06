@@ -10,8 +10,8 @@ void test_primitive_type_node_creation(void)
 
     // Create a source span for testing
     BaaAstSourceSpan span = {
-        .start = {.filename = "test.baa", .line = 1, .column = 1},
-        .end = {.filename = "test.baa", .line = 1, .column = 10}};
+        .start = {.filename = L"test.baa", .line = 1, .column = 1},
+        .end = {.filename = L"test.baa", .line = 1, .column = 10}};
 
     // Test creating a primitive type node
     BaaNode *type_node = baa_ast_new_primitive_type_node(span, L"عدد_صحيح");
@@ -39,8 +39,8 @@ void test_array_type_node_creation(void)
 
     // Create a source span for testing
     BaaAstSourceSpan span = {
-        .start = {.filename = "test.baa", .line = 1, .column = 1},
-        .end = {.filename = "test.baa", .line = 1, .column = 15}};
+        .start = {.filename = L"test.baa", .line = 1, .column = 1},
+        .end = {.filename = L"test.baa", .line = 1, .column = 15}};
 
     // First create an element type node (primitive type)
     BaaNode *element_type = baa_ast_new_primitive_type_node(span, L"عدد_صحيح");
@@ -55,7 +55,7 @@ void test_array_type_node_creation(void)
     // Cast and verify the data
     BaaTypeAstData *type_data = (BaaTypeAstData *)array_type->data;
     ASSERT_EQ(BAA_TYPE_AST_KIND_ARRAY, type_data->type_ast_kind);
-    ASSERT_EQ(element_type, type_data->specifier.array.element_type_node);
+    ASSERT_PTR_EQ(element_type, type_data->specifier.array.element_type_node);
     ASSERT_NULL(type_data->specifier.array.size_expr, L"Size expression should be NULL for dynamic array");
 
     // Verify the element type is correct
@@ -76,8 +76,8 @@ void test_invalid_type_node_creation(void)
     wprintf(L"Testing invalid type node creation...\n");
 
     BaaAstSourceSpan span = {
-        .start = {.filename = "test.baa", .line = 1, .column = 1},
-        .end = {.filename = "test.baa", .line = 1, .column = 10}};
+        .start = {.filename = L"test.baa", .line = 1, .column = 1},
+        .end = {.filename = L"test.baa", .line = 1, .column = 10}};
 
     // Test creating primitive type with NULL name
     BaaNode *invalid_primitive = baa_ast_new_primitive_type_node(span, NULL);

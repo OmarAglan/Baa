@@ -193,7 +193,7 @@ int main(int argc, char *argv_char[])
         free(file_content_buffer);
     }
     // If source_name_for_lexer was strdup'd (for file input case)
-    if (source_name_for_lexer != L"<string_input>" && source_name_for_lexer != L"<default_test_string>")
+    if (wcscmp(source_name_for_lexer, L"<string_input>") != 0 && wcscmp(source_name_for_lexer, L"<default_test_string>") != 0)
     {
         baa_free((void *)source_name_for_lexer);
     }

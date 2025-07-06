@@ -1,4 +1,5 @@
 #include "baa/lexer/lexer.h"
+#include "baa/utils/utils.h"
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>

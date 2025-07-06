@@ -1,4 +1,5 @@
 #include "baa/lexer/lexer.h"
+#include "baa/utils/utils.h"
 #include "test_framework.h"
 #include <wchar.h>
 #include <stdlib.h>

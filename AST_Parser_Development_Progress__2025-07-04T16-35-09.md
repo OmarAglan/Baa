@@ -148,74 +148,182 @@
 
 ## Priority 4: Function Definitions and Calls
 
-**Status:** 🔄 **READY TO START**
+**Status:** ✅ **COMPLETED** (2025-07-06)
 
 **Goal:** Implement function definition AST nodes, parameter nodes, function call expressions, and their corresponding parser functions to enable function declarations and calls in Baa.
 
+**Completion Summary:**
+- ✅ All 7 subtasks completed successfully
+- ✅ Function definitions with parameters and return types fully supported
+- ✅ Function call expressions with argument lists implemented
+- ✅ Proper precedence handling and parser integration
+- ✅ Comprehensive error handling and memory management
+- ✅ Ready for Arabic function syntax like `عدد_صحيح جمع(عدد_صحيح أ، عدد_صحيح ب) { ... }`
+
 ### 4.1 Function Parameter AST Node
-- **Status:** ❌ **NOT STARTED**
+- **Status:** ✅ **COMPLETED** (2025-07-06)
 - **Description:** Add `BAA_NODE_KIND_PARAMETER` AST node type with `BaaParameterData` structure.
-- **Tasks:**
-  - Add `BAA_NODE_KIND_PARAMETER` to `BaaNodeKind` enum
-  - Define `BaaParameterData` structure with `name` and `type_node` fields
-  - Implement `baa_ast_new_parameter_node()` creation function
-  - Implement `baa_ast_free_parameter_data()` cleanup function
-  - Update AST node freeing dispatcher
+- **Completed Tasks:**
+  - ✅ Added `BAA_NODE_KIND_PARAMETER` to `BaaNodeKind` enum
+  - ✅ Defined `BaaParameterData` structure with `name` and `type_node` fields
+  - ✅ Implemented `baa_ast_new_parameter_node()` creation function
+  - ✅ Implemented `baa_ast_free_parameter_data()` cleanup function
+  - ✅ Updated AST node freeing dispatcher
 
 ### 4.2 Function Definition AST Node
-- **Status:** ❌ **NOT STARTED**
+- **Status:** ✅ **COMPLETED** (2025-07-06)
 - **Description:** Add `BAA_NODE_KIND_FUNCTION_DEF` AST node type with `BaaFunctionDefData` structure.
-- **Tasks:**
-  - Add `BAA_NODE_KIND_FUNCTION_DEF` to `BaaNodeKind` enum
-  - Define `BaaFunctionDefData` structure with name, modifiers, return type, parameters, body, and variadic flag
-  - Implement `baa_ast_new_function_def_node()` creation function
-  - Implement parameter management utilities
-  - Implement `baa_ast_free_function_def_data()` cleanup function
-  - Update AST node freeing dispatcher
+- **Completed Tasks:**
+  - ✅ Added `BAA_NODE_KIND_FUNCTION_DEF` to `BaaNodeKind` enum
+  - ✅ Defined `BaaFunctionDefData` structure with name, modifiers, return type, parameters, body, and variadic flag
+  - ✅ Implemented `baa_ast_new_function_def_node()` creation function
+  - ✅ Implemented parameter management utilities (`baa_ast_add_function_parameter()`)
+  - ✅ Implemented `baa_ast_free_function_def_data()` cleanup function
+  - ✅ Updated AST node freeing dispatcher
 
 ### 4.3 Function Call Expression AST Node
-- **Status:** ❌ **NOT STARTED**
+- **Status:** ✅ **COMPLETED** (2025-07-06)
 - **Description:** Add `BAA_NODE_KIND_CALL_EXPR` AST node type with `BaaCallExprData` structure.
-- **Tasks:**
-  - Add `BAA_NODE_KIND_CALL_EXPR` to `BaaNodeKind` enum
-  - Define `BaaCallExprData` structure with callee expression and arguments array
-  - Implement `baa_ast_new_call_expr_node()` creation function
-  - Implement argument management utilities
-  - Implement `baa_ast_free_call_expr_data()` cleanup function
-  - Update AST node freeing dispatcher
+- **Completed Tasks:**
+  - ✅ Added `BAA_NODE_KIND_CALL_EXPR` to `BaaNodeKind` enum
+  - ✅ Defined `BaaCallExprData` structure with callee expression and arguments array
+  - ✅ Implemented `baa_ast_new_call_expr_node()` creation function
+  - ✅ Implemented argument management utilities (`baa_ast_add_call_argument()`)
+  - ✅ Implemented `baa_ast_free_call_expr_data()` cleanup function
+  - ✅ Updated AST node freeing dispatcher
 
 ### 4.4 Function Parameter Parser
-- **Status:** ❌ **NOT STARTED**
+- **Status:** ✅ **COMPLETED** (2025-07-06)
 - **Description:** Add parser functions for function parameters.
-- **Tasks:**
-  - Implement `parse_parameter()` function for single parameter parsing
-  - Implement `parse_parameter_list()` function for parameter list parsing
-  - Handle parameter syntax: `type_specifier identifier`
-  - Support empty parameter lists and multiple parameters
+- **Completed Tasks:**
+  - ✅ Implemented `parse_parameter()` function for single parameter parsing
+  - ✅ Implemented `parse_parameter_list()` function for parameter list parsing
+  - ✅ Handled parameter syntax: `type_specifier identifier`
+  - ✅ Added support for empty parameter lists and multiple parameters
+  - ✅ Proper error handling and memory management
 
 ### 4.5 Function Definition Parser
-- **Status:** ❌ **NOT STARTED**
+- **Status:** ✅ **COMPLETED** (2025-07-06)
 - **Description:** Add parser function for complete function definitions.
-- **Tasks:**
-  - Implement `parse_function_definition()` function
-  - Handle optional return type parsing (defaults to void)
-  - Parse function name, parameter list, and body
-  - Support function syntax: `[return_type] function_name(parameters) { body }`
-  - Integration with declaration parsing
+- **Completed Tasks:**
+  - ✅ Implemented `parse_function_definition()` function
+  - ✅ Added return type parsing with type specifier support
+  - ✅ Parsed function name, parameter list, and body
+  - ✅ Supported function syntax: `[modifiers] return_type function_name(parameters) { body }`
+  - ✅ Integrated with declaration parsing system
 
 ### 4.6 Function Call Expression Parser
-- **Status:** ❌ **NOT STARTED**
+- **Status:** ✅ **COMPLETED** (2025-07-06)
 - **Description:** Add parser function for function call expressions.
-- **Tasks:**
-  - Implement `parse_call_expression()` function
-  - Handle argument list parsing with proper comma separation
-  - Support function call syntax: `function_name(arg1, arg2, ...)`
-  - Integration with postfix expression parsing
+- **Completed Tasks:**
+  - ✅ Implemented `parse_call_expression()` function
+  - ✅ Added argument list parsing with proper comma separation
+  - ✅ Supported function call syntax: `function_name(arg1, arg2, ...)`
+  - ✅ Integrated with postfix expression parsing (`parse_postfix_expression()`)
 
 ### 4.7 Parser Integration
-- **Status:** ❌ **NOT STARTED**
+- **Status:** ✅ **COMPLETED** (2025-07-06)
 - **Description:** Update parser dispatchers to handle function-related constructs.
+- **Completed Tasks:**
+  - ✅ Created `parse_declaration_or_statement()` to recognize function definitions
+  - ✅ Implemented lookahead logic to distinguish functions from variables
+  - ✅ Updated `parse_postfix_expression()` to handle function calls
+  - ✅ Ensured proper precedence and associativity for function calls
+  - ✅ Updated main parser to use new declaration dispatcher
+
+---
+
+## Priority 5: Advanced Language Features
+
+**Status:** 🔄 **READY TO START**
+
+**Goal:** Implement advanced language constructs including user-defined types (structs, unions, enums), arrays, and enhanced type system features to move toward a more complete language implementation.
+
+### 5.1 Array Types and Literals
+- **Status:** ❌ **NOT STARTED**
+- **Description:** Implement comprehensive array support with type checking and literal syntax.
 - **Tasks:**
-  - Update `parse_declaration_or_statement()` to recognize function definitions
-  - Update `parse_postfix_expression()` to handle function calls
-  - Ensure proper precedence and associativity for function calls
+  - Extend `parse_type_specifier()` to handle array type syntax: `type_specifier[]`
+  - Add `BAA_NODE_KIND_ARRAY_LITERAL` AST node for array literal expressions
+  - Implement `parse_array_literal_expression()` for `[element1, element2, ...]` syntax
+  - Add array indexing expression support: `array[index]`
+  - Implement multi-dimensional array support
+
+### 5.2 Struct Definitions and Member Access
+- **Status:** ❌ **NOT STARTED**
+- **Description:** Add support for user-defined struct types with member access.
+- **Tasks:**
+  - Add `BAA_NODE_KIND_STRUCT_DEF` AST node for struct definitions
+  - Implement `parse_struct_definition()` for `بنية` keyword
+  - Add `BAA_NODE_KIND_MEMBER_ACCESS` for dot notation: `struct.member`
+  - Implement struct literal syntax and parsing
+  - Add struct member declaration parsing
+
+### 5.3 Union and Enum Support
+- **Status:** ❌ **NOT STARTED**
+- **Description:** Implement union and enumeration types for advanced data modeling.
+- **Tasks:**
+  - Add `BAA_NODE_KIND_UNION_DEF` AST node for union definitions
+  - Add `BAA_NODE_KIND_ENUM_DEF` AST node for enumeration definitions
+  - Implement `parse_union_definition()` for `اتحاد` keyword
+  - Implement `parse_enum_definition()` for `تعداد` keyword
+  - Add enum member access and value assignment parsing
+
+### 5.4 Pointer Types and Operations
+- **Status:** ❌ **NOT STARTED**
+- **Description:** Add pointer type support with dereference and address-of operations.
+- **Tasks:**
+  - Extend type parsing to handle pointer syntax: `مؤشر<type>`
+  - Add `BAA_NODE_KIND_DEREFERENCE` for pointer dereferencing: `*ptr`
+  - Add `BAA_NODE_KIND_ADDRESS_OF` for address-of operator: `&variable`
+  - Implement pointer arithmetic expressions
+  - Add pointer type checking and validation
+
+### 5.5 Enhanced Expression Features
+- **Status:** ❌ **NOT STARTED**
+- **Description:** Add advanced expression constructs and operators.
+- **Tasks:**
+  - Implement ternary conditional operator: `condition ? true_expr : false_expr`
+  - Add compound assignment operators: `+=`, `-=`, `*=`, `/=`
+  - Implement increment/decrement operators: `++`, `--`
+  - Add sizeof operator for type and expression size queries
+  - Implement cast expressions for explicit type conversion
+
+---
+
+## Next Development Phase: Semantic Analysis
+
+After completing Priority 5, the next major phase will be **Semantic Analysis** (Phase 3 from the main roadmap):
+
+### Upcoming Semantic Analysis Features:
+- **Symbol Table & Name Resolution**: Implement scope management and identifier resolution
+- **Type Checking**: Add comprehensive type validation and compatibility checking
+- **Control Flow Analysis**: Validate return paths, unreachable code detection
+- **AST Annotation**: Enhance AST nodes with semantic information for code generation
+
+### Integration with Code Generation:
+- **LLVM IR Generation**: Translate semantically-analyzed AST to LLVM IR
+- **Target Code Generation**: Generate machine code for target platforms
+- **Optimization Integration**: Apply LLVM optimization passes
+
+---
+
+## Summary of Completed Work
+
+### ✅ **Completed Priorities:**
+1. **Priority 1: Essential AST Nodes** - Core AST infrastructure
+2. **Priority 2: Basic Parser Implementation** - Fundamental parsing capabilities
+3. **Priority 3: Extended AST and Parser Features** - Control flow statements
+4. **Priority 4: Function Definitions and Calls** - Complete function support
+
+### 🎯 **Current Capabilities:**
+- ✅ Full Arabic syntax support with wide string handling
+- ✅ Complete expression parsing with proper precedence
+- ✅ All control flow statements (if, while, for, return, break, continue)
+- ✅ Variable declarations with type specifiers and initialization
+- ✅ Function definitions with parameters and return types
+- ✅ Function call expressions with argument lists
+- ✅ Comprehensive error handling and memory management
+- ✅ Robust parser integration and dispatching
+
+The Baa language parser and AST system is now capable of handling a significant subset of C-like language constructs with Arabic keywords, providing a solid foundation for the next development phases.

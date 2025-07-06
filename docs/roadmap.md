@@ -86,18 +86,19 @@ This roadmap outlines the high-level plan for the Baa language project. For deta
 
 ### 2.2 Parser - New Design
 
-* **(In Progress/Planned)** Implement core parser infrastructure (recursive descent, token handling, error reporting/recovery).
-* **(In Progress/Planned)** Develop parsing functions for:
-  * Primary expressions (literals, identifiers, grouping).
-  * Unary and binary expressions with correct precedence and associativity.
-  * Assignment expressions.
-  * Basic statements (expression statements, blocks).
-  * Variable declarations (with type annotations and initializers).
-  * Control flow statements (`إذا`, `وإلا`, `طالما`, `لكل`, `إرجع`, `توقف`, `استمر`, `اختر`).
-  * Function declarations (C-style: name, parameters, return type, body).
-  * Function call expressions.
-  * Type parsing (basic annotations, array types).
-* **(Planned)** Integration with the new AST generation.
+* ✅ **(COMPLETED)** Core parser infrastructure (recursive descent, token handling, error reporting/recovery).
+* ✅ **(COMPLETED)** Parsing functions implemented for:
+  * ✅ Primary expressions (literals, identifiers, grouping).
+  * ✅ Unary and binary expressions with correct precedence and associativity.
+  * ✅ Assignment expressions.
+  * ✅ Basic statements (expression statements, blocks).
+  * ✅ Variable declarations (with type annotations and initializers).
+  * ✅ Control flow statements (`إذا`, `وإلا`, `طالما`, `لكل`, `إرجع`, `توقف`, `استمر`, `اختر`).
+  * ✅ Function declarations (C-style: name, parameters, return type, body).
+  * ✅ Function call expressions.
+  * ✅ Type parsing (basic annotations, array types).
+* ✅ **(COMPLETED)** Integration with the new AST generation.
+* **(Next Phase)** Advanced language features: structs, unions, enums, pointers, arrays.
 * *See `docs/PARSER.md` and `docs/PARSER_ROADMAP.md`.*
 
 ---

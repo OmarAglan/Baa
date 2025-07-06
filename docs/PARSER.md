@@ -65,10 +65,14 @@ The `previous_token.span.start` and `current_token.span.end` (or `previous_token
 
 ### 4.2 Declaration Parser (`declaration_parser.c`)
 
-* **`BaaNode* parse_declaration(BaaParser* parser)`**: Dispatches based on keywords like type names (for variable/function), `ثابت`, etc.
-* **`BaaNode* parse_function_definition(BaaParser* parser)`**: Parses return type (using `parse_type_specifier`), name, parameters, and body. Returns `BaaNode*` of kind `BAA_NODE_KIND_FUNCTION_DEF`.
-  * Parameters: Parses a list of `type_specifier identifier`, creating `BaaNode*`s of kind `BAA_NODE_KIND_PARAMETER`.
-* **`BaaNode* parse_variable_declaration_statement(BaaParser* parser, BaaAstNodeModifiers initial_modifiers)`**: Parses `ثابت? type_specifier identifier ('=' expression)? '.'`. Returns `BaaNode*` of kind `BAA_NODE_KIND_VAR_DECL_STMT`. Handles `ثابت` modifier.
+* **`BaaNode* parse_declaration_or_statement(BaaParser* parser)`**: ✅ **IMPLEMENTED** - Smart dispatcher that distinguishes between function definitions, variable declarations, and statements using lookahead logic.
+* **`BaaNode* parse_function_definition(BaaParser* parser, BaaAstNodeModifiers initial_modifiers)`**: ✅ **IMPLEMENTED** - Parses complete function definitions with return type, name, parameters, and body. Returns `BaaNode*` of kind `BAA_NODE_KIND_FUNCTION_DEF`.
+  * **Function Parameters**: Uses `parse_parameter_list()` to parse comma-separated parameter lists, creating `BaaNode*`s of kind `BAA_NODE_KIND_PARAMETER`.
+  * **Syntax Support**: `[modifiers] return_type function_name(parameter_list) { body }`
+  * **Arabic Example**: `عدد_صحيح جمع(عدد_صحيح أ، عدد_صحيح ب) { إرجع أ + ب؛ }`
+* **`BaaNode* parse_parameter(BaaParser* parser)`**: ✅ **IMPLEMENTED** - Parses individual function parameters with type and name.
+* **`bool parse_parameter_list(BaaParser* parser, BaaNode*** parameters, size_t* parameter_count)`**: ✅ **IMPLEMENTED** - Parses complete parameter lists with proper error handling.
+* **`BaaNode* parse_variable_declaration_statement(BaaParser* parser, BaaAstNodeModifiers initial_modifiers)`**: ✅ **IMPLEMENTED** - Parses `ثابت? type_specifier identifier ('=' expression)? '.'`. Returns `BaaNode*` of kind `BAA_NODE_KIND_VAR_DECL_STMT`. Handles `ثابت` modifier.
 
 ### 4.3 Type Parser (`type_parser.c`)
 
@@ -93,7 +97,8 @@ The `previous_token.span.start` and `current_token.span.end` (or `previous_token
   * `BaaNode* parse_logical_and_expression(BaaParser* parser)` (handles `&&`)
   * ... (levels for bitwise, equality, relational, shift, additive, multiplicative) ...
   * `BaaNode* parse_unary_expression(BaaParser* parser)` (handles `!`, `-` (unary), `~`, `++` (prefix), `--` (prefix))
-  * `BaaNode* parse_postfix_expression(BaaParser* parser)` (handles function calls `()`, array indexing `[]`, `++` (postfix), `--` (postfix))
+  * `BaaNode* parse_postfix_expression(BaaParser* parser, BaaNode* base_expr)` ✅ **IMPLEMENTED** - Handles function calls `()`, array indexing `[]`, `++` (postfix), `--` (postfix)
+  * `BaaNode* parse_call_expression(BaaParser* parser, BaaNode* callee_expr)` ✅ **IMPLEMENTED** - Parses function call expressions with argument lists
   * `BaaNode* parse_primary_expression(BaaParser* parser)`: Parses literals, identifiers, `( expression )`.
 * Each function consumes operators of its precedence level and calls the function for the next higher precedence level to parse operands.
 * **Example: `parse_additive_expression`**
@@ -109,6 +114,44 @@ The `previous_token.span.start` and `current_token.span.end` (or `previous_token
     //     return node;
     // }
     ```
+
+### 4.6 Function Support (✅ COMPLETED - Priority 4)
+
+The parser now has comprehensive support for function definitions and function call expressions:
+
+#### Function Definitions
+* **Syntax**: `[modifiers] return_type function_name(parameter_list) { body }`
+* **Arabic Example**: `عدد_صحيح جمع(عدد_صحيح أ، عدد_صحيح ب) { إرجع أ + ب؛ }`
+* **AST Node**: `BAA_NODE_KIND_FUNCTION_DEF` with `BaaFunctionDefData`
+* **Features**:
+  - Parameter lists with type and name parsing
+  - Return type specification
+  - Function body as block statement
+  - Modifier support (const, inline, etc.)
+  - Empty parameter list support: `void function_name() { ... }`
+
+#### Function Parameters
+* **Syntax**: `type_specifier identifier`
+* **AST Node**: `BAA_NODE_KIND_PARAMETER` with `BaaParameterData`
+* **Features**:
+  - Type-safe parameter declarations
+  - Multiple parameter support with comma separation
+  - Proper error handling for malformed parameters
+
+#### Function Call Expressions
+* **Syntax**: `function_name(argument_list)`
+* **Arabic Example**: `نتيجة = جمع(٥، ١٠)؛`
+* **AST Node**: `BAA_NODE_KIND_CALL_EXPR` with `BaaCallExprData`
+* **Features**:
+  - Argument list parsing with comma separation
+  - Empty argument list support: `function_name()`
+  - Nested function calls: `outer(inner(x), y)`
+  - Proper precedence as postfix expressions
+
+#### Parser Integration
+* **Smart Dispatching**: `parse_declaration_or_statement()` uses lookahead to distinguish function definitions from variable declarations
+* **Precedence Handling**: Function calls are handled as postfix expressions with correct precedence
+* **Error Recovery**: Comprehensive error handling with proper cleanup of partially constructed AST nodes
 
 ## 5. Error Handling and Recovery
 

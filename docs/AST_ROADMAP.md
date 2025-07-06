@@ -182,20 +182,20 @@ The new AST (Abstract Syntax Tree) will be built around a unified `BaaNode` stru
     * **Description:** Define `BaaReturnStmtData` (`value_expr` (optional)). Implement creation/freeing.
     * **Verification:** Can represent `إرجع x.` and `إرجع.`.
 
-3. **Parameter Node (`BAA_NODE_KIND_PARAMETER`):**
+3. **Parameter Node (`BAA_NODE_KIND_PARAMETER`):** ✅ **COMPLETED** (2025-07-06)
     * **File (Defs/Funcs):** `ast_declarations.h`/`.c` (for `BaaParameterData`), `ast_types.h`.
-    * **Description:** Define `BaaParameterData` (`name`, `type_node`). Implement creation/freeing.
-    * **Verification:** Can represent function parameters like `عدد_صحيح x`.
+    * **Description:** ✅ Defined `BaaParameterData` (`name`, `type_node`). ✅ Implemented creation/freeing.
+    * **Verification:** ✅ Can represent function parameters like `عدد_صحيح x`.
 
-4. **Function Definition Node (`BAA_NODE_KIND_FUNCTION_DEF`):**
+4. **Function Definition Node (`BAA_NODE_KIND_FUNCTION_DEF`):** ✅ **COMPLETED** (2025-07-06)
     * **File (Defs/Funcs):** `ast_declarations.h`/`.c` (for `BaaFunctionDefData`), `ast_types.h`.
-    * **Description:** Define `BaaFunctionDefData` (`name`, `modifiers`, `return_type_node`, `parameters` (array of `BaaNode*` of kind `PARAMETER`), `body` (block stmt), `is_variadic`). Implement creation/freeing.
-    * **Verification:** Can represent a full function definition.
+    * **Description:** ✅ Defined `BaaFunctionDefData` (`name`, `modifiers`, `return_type_node`, `parameters` (array of `BaaNode*` of kind `PARAMETER`), `body` (block stmt), `is_variadic`). ✅ Implemented creation/freeing with parameter management utilities.
+    * **Verification:** ✅ Can represent full function definitions with Arabic syntax.
 
-5. **Call Expression Node (`BAA_NODE_KIND_CALL_EXPR`):**
+5. **Call Expression Node (`BAA_NODE_KIND_CALL_EXPR`):** ✅ **COMPLETED** (2025-07-06)
     * **File (Defs/Funcs):** `ast_expressions.h`/`.c` (for `BaaCallExprData`), `ast_types.h`.
-    * **Description:** Define `BaaCallExprData` (`callee_expr`, `arguments` (array of `BaaNode*` expression kinds)). Implement creation/freeing.
-    * **Verification:** Can represent `my_func(a, b)`.
+    * **Description:** ✅ Defined `BaaCallExprData` (`callee_expr`, `arguments` (array of `BaaNode*` expression kinds)). ✅ Implemented creation/freeing with argument management utilities.
+    * **Verification:** ✅ Can represent function calls like `جمع(أ، ب)` with proper argument handling.
 
 6. **While Statement Node (`BAA_NODE_KIND_WHILE_STMT`):**
     * **File (Defs/Funcs):** `ast_statements.h`/`.c`, `ast_types.h`.

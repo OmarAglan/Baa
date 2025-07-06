@@ -157,6 +157,80 @@ BaaNode *baa_ast_new_unary_expr_node(BaaAstSourceSpan span, BaaNode *operand, Ba
     return node;
 }
 
+// --- Call Expression Node Creation ---
+
+BaaNode *baa_ast_new_call_expr_node(BaaAstSourceSpan span, BaaNode *callee_expr)
+{
+    BaaNode *node = baa_ast_new_node(BAA_NODE_KIND_CALL_EXPR, span);
+    if (!node)
+    {
+        return NULL; // Allocation for BaaNode failed
+    }
+
+    if (!callee_expr)
+    {
+        baa_ast_free_node(node); // Clean up the partially created BaaNode
+        return NULL;             // Callee expression is required
+    }
+
+    BaaCallExprData *data = (BaaCallExprData *)baa_malloc(sizeof(BaaCallExprData));
+    if (!data)
+    {
+        baa_ast_free_node(node); // Clean up the partially created BaaNode
+        return NULL;
+    }
+
+    // Initialize the data structure
+    data->callee_expr = callee_expr; // Take ownership of the callee expression
+    data->arguments = NULL;          // Initialize empty arguments array
+    data->argument_count = 0;
+    data->argument_capacity = 0;
+
+    node->data = data;
+    return node;
+}
+
+// --- Call Expression Node Utility Functions ---
+
+bool baa_ast_add_call_argument(BaaNode *call_expr_node, BaaNode *argument_node)
+{
+    if (!call_expr_node || !argument_node)
+    {
+        return false; // Invalid input
+    }
+
+    // Validate node type
+    if (call_expr_node->kind != BAA_NODE_KIND_CALL_EXPR)
+    {
+        return false; // Not a call expression node
+    }
+
+    BaaCallExprData *data = (BaaCallExprData *)call_expr_node->data;
+    if (!data)
+    {
+        return false; // Invalid call expression data
+    }
+
+    // Check if we need to resize the arguments array
+    if (data->argument_count >= data->argument_capacity)
+    {
+        size_t new_capacity = (data->argument_capacity == 0) ? 4 : data->argument_capacity * 2;
+        BaaNode **new_arguments = (BaaNode **)baa_realloc(data->arguments, new_capacity * sizeof(BaaNode *));
+        if (!new_arguments)
+        {
+            return false; // Memory allocation failed
+        }
+        data->arguments = new_arguments;
+        data->argument_capacity = new_capacity;
+    }
+
+    // Add the argument to the array
+    data->arguments[data->argument_count] = argument_node;
+    data->argument_count++;
+
+    return true;
+}
+
 // --- Expression Node Data Freeing ---
 
 // --- Literal Expression Node Data Freeing ---
@@ -237,4 +311,36 @@ void baa_ast_free_unary_expr_data(BaaUnaryExprData *data)
     }
 
     baa_free(data); // Free the BaaUnaryExprData struct itself
+}
+
+// --- Call Expression Node Data Freeing ---
+
+void baa_ast_free_call_expr_data(BaaCallExprData *data)
+{
+    if (!data)
+    {
+        return;
+    }
+
+    // Recursively free the callee expression
+    if (data->callee_expr)
+    {
+        baa_ast_free_node(data->callee_expr);
+    }
+
+    // Recursively free all argument expressions
+    if (data->arguments)
+    {
+        for (size_t i = 0; i < data->argument_count; i++)
+        {
+            if (data->arguments[i])
+            {
+                baa_ast_free_node(data->arguments[i]);
+            }
+        }
+        baa_free(data->arguments); // Free the arguments array itself
+    }
+
+    // Free the data structure itself
+    baa_free(data);
 }

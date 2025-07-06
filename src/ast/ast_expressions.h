@@ -39,6 +39,15 @@ void baa_ast_free_binary_expr_data(BaaBinaryExprData *data);
  */
 void baa_ast_free_unary_expr_data(BaaUnaryExprData *data);
 
+/**
+ * @brief Frees the data associated with a BAA_NODE_KIND_CALL_EXPR.
+ * Recursively frees the callee expression and all argument expressions.
+ * Frees the arguments array and the BaaCallExprData struct itself.
+ *
+ * @param data Pointer to the BaaCallExprData to free. Must not be NULL.
+ */
+void baa_ast_free_call_expr_data(BaaCallExprData *data);
+
 // Add other internal expression-related AST function declarations here in the future
 
 #endif // BAA_AST_EXPRESSIONS_INTERNAL_H

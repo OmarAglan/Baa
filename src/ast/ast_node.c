@@ -83,6 +83,20 @@ void baa_ast_free_node(BaaNode *node)
         }
         break;
 
+    case BAA_NODE_KIND_PARAMETER:
+        if (node->data)
+        {
+            baa_ast_free_parameter_data((BaaParameterData *)node->data);
+        }
+        break;
+
+    case BAA_NODE_KIND_FUNCTION_DEF:
+        if (node->data)
+        {
+            baa_ast_free_function_def_data((BaaFunctionDefData *)node->data);
+        }
+        break;
+
     // --- Expression Kinds ---
     case BAA_NODE_KIND_LITERAL_EXPR:
         if (node->data)
@@ -109,6 +123,13 @@ void baa_ast_free_node(BaaNode *node)
         if (node->data)
         {
             baa_ast_free_unary_expr_data((BaaUnaryExprData *)node->data);
+        }
+        break;
+
+    case BAA_NODE_KIND_CALL_EXPR:
+        if (node->data)
+        {
+            baa_ast_free_call_expr_data((BaaCallExprData *)node->data);
         }
         break;
 

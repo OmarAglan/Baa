@@ -24,4 +24,28 @@
  */
 void baa_ast_free_var_decl_data(BaaVarDeclData *data);
 
+// --- Parameter Node Functions ---
+
+/**
+ * @brief Frees the data associated with a BAA_NODE_KIND_PARAMETER.
+ * Recursively frees the type_node if it exists.
+ * Frees the duplicated parameter name.
+ * Finally frees the BaaParameterData struct itself.
+ *
+ * @param data Pointer to the BaaParameterData to free. Must not be NULL.
+ */
+void baa_ast_free_parameter_data(BaaParameterData *data);
+
+// --- Function Definition Node Functions ---
+
+/**
+ * @brief Frees the data associated with a BAA_NODE_KIND_FUNCTION_DEF.
+ * Recursively frees the return_type_node, all parameter nodes, and body if they exist.
+ * Frees the duplicated function name and parameters array.
+ * Finally frees the BaaFunctionDefData struct itself.
+ *
+ * @param data Pointer to the BaaFunctionDefData to free. Must not be NULL.
+ */
+void baa_ast_free_function_def_data(BaaFunctionDefData *data);
+
 #endif // BAA_AST_DECLARATIONS_H

@@ -42,4 +42,24 @@ BaaNode *parse_unary_expression(BaaParser *parser);
  */
 BaaNode *parse_binary_expression_rhs(BaaParser *parser, int min_precedence, BaaNode *left_expr);
 
+/**
+ * @brief Parses a postfix expression (function calls, array access, member access).
+ * This handles expressions that come after a primary expression.
+ *
+ * @param parser Pointer to the parser state.
+ * @param base_expr The base expression to apply postfix operations to.
+ * @return A BaaNode* representing the postfix expression, or NULL on error.
+ */
+BaaNode *parse_postfix_expression(BaaParser *parser, BaaNode *base_expr);
+
+/**
+ * @brief Parses a function call expression with arguments.
+ * Expected syntax: callee_expr '(' [argument (',' argument)*] ')'
+ *
+ * @param parser Pointer to the parser state.
+ * @param callee_expr The callee expression (function to call).
+ * @return A BaaNode* of kind BAA_NODE_KIND_CALL_EXPR representing the function call, or NULL on error.
+ */
+BaaNode *parse_call_expression(BaaParser *parser, BaaNode *callee_expr);
+
 #endif // BAA_EXPRESSION_PARSER_INTERNAL_H

@@ -3,6 +3,7 @@
 #include "parser_internal.h" // For BaaParser struct definition
 #include "parser_utils.h"    // For parser utility function declarations
 #include "statement_parser.h" // For parse_statement
+#include "declaration_parser.h" // For parse_declaration_or_statement
 #include "baa/utils/utils.h"  // For baa_malloc, baa_free
 #include "baa/lexer/lexer.h"  // For baa_lexer_next_token, baa_free_token
 #include "baa/ast/ast.h"     // For AST node creation functions
@@ -353,9 +354,8 @@ BaaNode *baa_parse_program(BaaParser *parser)
     // Parse top-level constructs until EOF
     while (!baa_parser_check_token(parser, BAA_TOKEN_EOF))
     {
-        // For now, treat all top-level constructs as statements
-        // Later, we'll add proper declaration parsing (functions, global variables, etc.)
-        BaaNode *declaration = parse_statement(parser);
+        // Parse declarations (functions, variables) and statements
+        BaaNode *declaration = parse_declaration_or_statement(parser);
 
         if (declaration)
         {

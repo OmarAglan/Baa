@@ -88,7 +88,134 @@
 
 ### 📈 __Overall Progress__
 
-- __Completed Priorities__: 1, 2, 2.5 (with Arabic compliance)
-- __Current Priority__: 2.6 (Build System Stabilization)
-- __Next Priority__: 3 (Extended AST and Parser Features)
-- __Compiler Readiness__: Preprocessor component production-ready
+- __Completed Priorities__: 1, 2, 2.5 (with Arabic compliance), 3 (Extended AST and Parser Features)
+- __Current Priority__: 4 (Advanced Language Features)
+- __Next Priority__: 5 (Function Definitions and Calls)
+- __Compiler Readiness__: AST and Parser components production-ready with full control flow support
+
+## Priority 3: Extended AST and Parser Features ✅ COMPLETED
+
+**Status:** ✅ **COMPLETED** - All control flow statements implemented
+
+### 3.1 Control Flow Statements Implementation
+- **Status:** ✅ **COMPLETED**
+- **Description:** Complete implementation of all major control flow constructs with Arabic keywords.
+
+#### If Statements (إذا/وإلا)
+- ✅ `BAA_NODE_KIND_IF_STMT` AST node type with `BaaIfStmtData`
+- ✅ `baa_ast_new_if_stmt_node()` creation function
+- ✅ `parse_if_statement()` parser function
+- ✅ Support for optional else clause: `إذا (condition) { ... } وإلا { ... }`
+
+#### While Loops (طالما)
+- ✅ `BAA_NODE_KIND_WHILE_STMT` AST node type with `BaaWhileStmtData`
+- ✅ `baa_ast_new_while_stmt_node()` creation function
+- ✅ `parse_while_statement()` parser function
+- ✅ Syntax: `طالما (condition) { ... }`
+
+#### For Loops (لكل)
+- ✅ `BAA_NODE_KIND_FOR_STMT` AST node type with `BaaForStmtData`
+- ✅ `baa_ast_new_for_stmt_node()` creation function
+- ✅ `parse_for_statement()` parser function
+- ✅ C-style syntax: `لكل (init; condition; increment) { ... }`
+- ✅ Support for optional initializer, condition, and increment expressions
+
+#### Return Statements (إرجع)
+- ✅ `BAA_NODE_KIND_RETURN_STMT` AST node type with `BaaReturnStmtData`
+- ✅ `baa_ast_new_return_stmt_node()` creation function
+- ✅ `parse_return_statement()` parser function
+- ✅ Support for optional return values: `إرجع value.` or `إرجع.`
+
+#### Break/Continue Statements (توقف/استمر)
+- ✅ `BAA_NODE_KIND_BREAK_STMT` and `BAA_NODE_KIND_CONTINUE_STMT` AST node types
+- ✅ `baa_ast_new_break_stmt_node()` and `baa_ast_new_continue_stmt_node()` functions
+- ✅ `parse_break_statement()` and `parse_continue_statement()` parser functions
+- ✅ Simple syntax: `توقف.` and `استمر.`
+
+### 3.2 Parser Integration
+- ✅ Updated `parse_statement()` dispatcher to handle all control flow tokens
+- ✅ Comprehensive error handling with Arabic error messages
+- ✅ Proper source location tracking for all control flow constructs
+- ✅ Memory management with recursive AST node freeing
+
+### 3.3 Previously Completed Features
+- ✅ Binary Expression Support (`BAA_NODE_KIND_BINARY_EXPR`)
+- ✅ Unary Expression Support (`BAA_NODE_KIND_UNARY_EXPR`)
+- ✅ Type Representation (`BAA_NODE_KIND_TYPE`)
+- ✅ Variable Declaration Features (`BAA_NODE_KIND_VAR_DECL_STMT`)
+- ✅ Expression Precedence Parsing (precedence climbing algorithm)
+- ✅ Type Specifier Parsing (primitive types + arrays)
+
+## Priority 4: Function Definitions and Calls
+
+**Status:** 🔄 **READY TO START**
+
+**Goal:** Implement function definition AST nodes, parameter nodes, function call expressions, and their corresponding parser functions to enable function declarations and calls in Baa.
+
+### 4.1 Function Parameter AST Node
+- **Status:** ❌ **NOT STARTED**
+- **Description:** Add `BAA_NODE_KIND_PARAMETER` AST node type with `BaaParameterData` structure.
+- **Tasks:**
+  - Add `BAA_NODE_KIND_PARAMETER` to `BaaNodeKind` enum
+  - Define `BaaParameterData` structure with `name` and `type_node` fields
+  - Implement `baa_ast_new_parameter_node()` creation function
+  - Implement `baa_ast_free_parameter_data()` cleanup function
+  - Update AST node freeing dispatcher
+
+### 4.2 Function Definition AST Node
+- **Status:** ❌ **NOT STARTED**
+- **Description:** Add `BAA_NODE_KIND_FUNCTION_DEF` AST node type with `BaaFunctionDefData` structure.
+- **Tasks:**
+  - Add `BAA_NODE_KIND_FUNCTION_DEF` to `BaaNodeKind` enum
+  - Define `BaaFunctionDefData` structure with name, modifiers, return type, parameters, body, and variadic flag
+  - Implement `baa_ast_new_function_def_node()` creation function
+  - Implement parameter management utilities
+  - Implement `baa_ast_free_function_def_data()` cleanup function
+  - Update AST node freeing dispatcher
+
+### 4.3 Function Call Expression AST Node
+- **Status:** ❌ **NOT STARTED**
+- **Description:** Add `BAA_NODE_KIND_CALL_EXPR` AST node type with `BaaCallExprData` structure.
+- **Tasks:**
+  - Add `BAA_NODE_KIND_CALL_EXPR` to `BaaNodeKind` enum
+  - Define `BaaCallExprData` structure with callee expression and arguments array
+  - Implement `baa_ast_new_call_expr_node()` creation function
+  - Implement argument management utilities
+  - Implement `baa_ast_free_call_expr_data()` cleanup function
+  - Update AST node freeing dispatcher
+
+### 4.4 Function Parameter Parser
+- **Status:** ❌ **NOT STARTED**
+- **Description:** Add parser functions for function parameters.
+- **Tasks:**
+  - Implement `parse_parameter()` function for single parameter parsing
+  - Implement `parse_parameter_list()` function for parameter list parsing
+  - Handle parameter syntax: `type_specifier identifier`
+  - Support empty parameter lists and multiple parameters
+
+### 4.5 Function Definition Parser
+- **Status:** ❌ **NOT STARTED**
+- **Description:** Add parser function for complete function definitions.
+- **Tasks:**
+  - Implement `parse_function_definition()` function
+  - Handle optional return type parsing (defaults to void)
+  - Parse function name, parameter list, and body
+  - Support function syntax: `[return_type] function_name(parameters) { body }`
+  - Integration with declaration parsing
+
+### 4.6 Function Call Expression Parser
+- **Status:** ❌ **NOT STARTED**
+- **Description:** Add parser function for function call expressions.
+- **Tasks:**
+  - Implement `parse_call_expression()` function
+  - Handle argument list parsing with proper comma separation
+  - Support function call syntax: `function_name(arg1, arg2, ...)`
+  - Integration with postfix expression parsing
+
+### 4.7 Parser Integration
+- **Status:** ❌ **NOT STARTED**
+- **Description:** Update parser dispatchers to handle function-related constructs.
+- **Tasks:**
+  - Update `parse_declaration_or_statement()` to recognize function definitions
+  - Update `parse_postfix_expression()` to handle function calls
+  - Ensure proper precedence and associativity for function calls

@@ -45,9 +45,9 @@ typedef enum BaaNodeKind
     BAA_NODE_KIND_UNKNOWN = 0, /**< Represents an uninitialized or error/placeholder node. data: NULL */
 
     // Program Structure Kinds
-    BAA_NODE_KIND_PROGRAM, /**< Represents the root of the AST, a collection of top-level declarations. data: BaaProgramData* */
-    // BAA_NODE_KIND_FUNCTION_DEF,   // To be added: Function definition. data: BaaFunctionDefData*
-    // BAA_NODE_KIND_PARAMETER,      // To be added: A function parameter. data: BaaParameterData*
+    BAA_NODE_KIND_PROGRAM,      /**< Represents the root of the AST, a collection of top-level declarations. data: BaaProgramData* */
+    BAA_NODE_KIND_PARAMETER,    /**< A function parameter. data: BaaParameterData* */
+    BAA_NODE_KIND_FUNCTION_DEF, /**< A function definition. data: BaaFunctionDefData* */
 
     // Statement Kinds
     BAA_NODE_KIND_EXPR_STMT,     /**< An expression statement. data: BaaExprStmtData* */
@@ -65,6 +65,7 @@ typedef enum BaaNodeKind
     BAA_NODE_KIND_IDENTIFIER_EXPR, /**< An identifier used as an expression. data: BaaIdentifierExprData* */
     BAA_NODE_KIND_BINARY_EXPR,     /**< A binary expression (e.g., a + b). data: BaaBinaryExprData* */
     BAA_NODE_KIND_UNARY_EXPR,      /**< A unary expression (e.g., -a, !b). data: BaaUnaryExprData* */
+    BAA_NODE_KIND_CALL_EXPR,       /**< A function call expression (e.g., func(a, b)). data: BaaCallExprData* */
 
     // Type Representation Kinds (for type syntax parsed from code)
     BAA_NODE_KIND_TYPE, /**< Represents a type specification. data: BaaTypeAstData* */
@@ -245,6 +246,34 @@ typedef struct BaaProgramData
     size_t capacity;                  /**< Current capacity of the declarations array. */
 } BaaProgramData;
 
+/**
+ * @brief Data structure for BAA_NODE_KIND_PARAMETER nodes.
+ * Represents a function parameter with its name and type.
+ */
+typedef struct BaaParameterData
+{
+    wchar_t *name;         /**< Parameter name (duplicated string). */
+    BaaNode *type_node;    /**< Type specification (BaaNode* of kind BAA_NODE_KIND_TYPE). */
+    // Future: BaaType* resolved_type; /**< Resolved type after semantic analysis. */
+} BaaParameterData;
+
+/**
+ * @brief Data structure for BAA_NODE_KIND_FUNCTION_DEF nodes.
+ * Represents a function definition with its name, return type, parameters, and body.
+ */
+typedef struct BaaFunctionDefData
+{
+    wchar_t *name;                      /**< Function name (duplicated string). */
+    BaaAstNodeModifiers modifiers;      /**< Function modifiers (e.g., static, inline). */
+    BaaNode *return_type_node;          /**< Return type specification (BaaNode* of kind BAA_NODE_KIND_TYPE). */
+    BaaNode **parameters;               /**< Dynamic array of BaaNode* (each of kind BAA_NODE_KIND_PARAMETER). */
+    size_t parameter_count;             /**< Number of parameters currently stored. */
+    size_t parameter_capacity;          /**< Current capacity of the parameters array. */
+    BaaNode *body;                      /**< Function body (BaaNode* of kind BAA_NODE_KIND_BLOCK_STMT). */
+    bool is_variadic;                   /**< For C-style varargs (...). */
+    // Future: BaaSymbol* symbol_entry; /**< Link to symbol table after resolution. */
+} BaaFunctionDefData;
+
 // == Statement Data ==
 
 /**
@@ -276,6 +305,19 @@ typedef struct BaaUnaryExprData
     BaaUnaryOperatorKind operator_kind; /**< The unary operator. */
     // Future: BaaType* result_type; /**< Type of the result after semantic analysis. */
 } BaaUnaryExprData;
+
+/**
+ * @brief Data structure for a function call expression node (BAA_NODE_KIND_CALL_EXPR).
+ * Represents a function call with its callee and arguments.
+ */
+typedef struct BaaCallExprData
+{
+    BaaNode *callee_expr;               /**< The callee expression (typically an identifier or member access). */
+    BaaNode **arguments;                /**< Dynamic array of BaaNode* (expression kinds) for arguments. */
+    size_t argument_count;              /**< Number of arguments currently stored. */
+    size_t argument_capacity;           /**< Current capacity of the arguments array. */
+    // Future: BaaType* result_type; /**< Type of the result after semantic analysis. */
+} BaaCallExprData;
 
 /**
  * @brief Data structure for a block statement node (BAA_NODE_KIND_BLOCK_STMT).

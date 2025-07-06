@@ -121,6 +121,29 @@ BaaNode *baa_ast_new_binary_expr_node(BaaAstSourceSpan span, BaaNode *left_opera
  */
 BaaNode *baa_ast_new_unary_expr_node(BaaAstSourceSpan span, BaaNode *operand, BaaUnaryOperatorKind operator_kind);
 
+// == Call Expressions ==
+
+/**
+ * @brief Creates a new AST node representing a function call expression.
+ * The node's kind will be BAA_NODE_KIND_CALL_EXPR.
+ * Its data will point to a BaaCallExprData struct with an empty arguments array.
+ *
+ * @param span The source span of the call expression.
+ * @param callee_expr The callee expression (typically an identifier). Must not be NULL.
+ * @return A pointer to the new BaaNode, or NULL on failure.
+ */
+BaaNode *baa_ast_new_call_expr_node(BaaAstSourceSpan span, BaaNode *callee_expr);
+
+/**
+ * @brief Adds an argument to a function call expression node.
+ * Handles dynamic array resizing as needed.
+ *
+ * @param call_expr_node A BaaNode* of kind BAA_NODE_KIND_CALL_EXPR. Must not be NULL.
+ * @param argument_node A BaaNode* expression to add as an argument. Must not be NULL.
+ * @return true on success, false on failure (e.g., memory allocation failure).
+ */
+bool baa_ast_add_call_argument(BaaNode *call_expr_node, BaaNode *argument_node);
+
 // We will also need a specific free function for BaaLiteralExprData's contents.
 // This will be declared internally (e.g., in ast_expressions.h if we create it)
 // and called by baa_ast_free_node's dispatch.
@@ -148,6 +171,49 @@ BaaNode *baa_ast_new_program_node(BaaAstSourceSpan span);
  * @return true on success, false on failure (e.g., memory allocation failure).
  */
 bool baa_ast_add_declaration_to_program(BaaNode *program_node, BaaNode *declaration_node);
+
+// == Parameter Nodes ==
+
+/**
+ * @brief Creates a new AST node representing a function parameter.
+ * The node's kind will be BAA_NODE_KIND_PARAMETER.
+ * Its data will point to a BaaParameterData struct.
+ *
+ * @param span The source span of the parameter.
+ * @param name The parameter name. This function will duplicate it.
+ * @param type_node A BaaNode* of kind BAA_NODE_KIND_TYPE representing the parameter type. Must not be NULL.
+ * @return A pointer to the new BaaNode, or NULL on failure.
+ */
+BaaNode *baa_ast_new_parameter_node(BaaAstSourceSpan span, const wchar_t *name, BaaNode *type_node);
+
+// == Function Definition Nodes ==
+
+/**
+ * @brief Creates a new AST node representing a function definition.
+ * The node's kind will be BAA_NODE_KIND_FUNCTION_DEF.
+ * Its data will point to a BaaFunctionDefData struct with an empty parameters array.
+ *
+ * @param span The source span of the function definition.
+ * @param name The function name. This function will duplicate it.
+ * @param modifiers Function modifiers (e.g., static, inline).
+ * @param return_type_node A BaaNode* of kind BAA_NODE_KIND_TYPE representing the return type. Must not be NULL.
+ * @param body A BaaNode* of kind BAA_NODE_KIND_BLOCK_STMT representing the function body. Must not be NULL.
+ * @param is_variadic Whether the function accepts variable arguments.
+ * @return A pointer to the new BaaNode, or NULL on failure.
+ */
+BaaNode *baa_ast_new_function_def_node(BaaAstSourceSpan span, const wchar_t *name,
+                                       BaaAstNodeModifiers modifiers, BaaNode *return_type_node,
+                                       BaaNode *body, bool is_variadic);
+
+/**
+ * @brief Adds a parameter to a function definition node.
+ * Handles dynamic array resizing as needed.
+ *
+ * @param function_def_node A BaaNode* of kind BAA_NODE_KIND_FUNCTION_DEF. Must not be NULL.
+ * @param parameter_node A BaaNode* of kind BAA_NODE_KIND_PARAMETER to add. Must not be NULL.
+ * @return true on success, false on failure (e.g., memory allocation failure).
+ */
+bool baa_ast_add_function_parameter(BaaNode *function_def_node, BaaNode *parameter_node);
 
 // == Statement Nodes ==
 

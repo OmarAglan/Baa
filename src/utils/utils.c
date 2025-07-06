@@ -15,7 +15,7 @@ void baa_set_error(BaaError error, const wchar_t *message)
     current_error = error;
     if (message)
     {
-        wcsncpy(error_message, message, sizeof(error_message) / sizeof(wchar_t) - 1);
+        wcsncpy_s(error_message, sizeof(error_message) / sizeof(wchar_t), message, sizeof(error_message) / sizeof(wchar_t) - 1);
         error_message[sizeof(error_message) / sizeof(wchar_t) - 1] = L'\0';
     }
     else
@@ -71,7 +71,7 @@ wchar_t *baa_strdup(const wchar_t *str)
 
     if (new_str)
     {
-        wcscpy(new_str, str);
+        wcscpy_s(new_str, len, str);
     }
 
     return new_str;
@@ -89,7 +89,7 @@ wchar_t *baa_strndup(const wchar_t *str, size_t n)
 
     if (new_str)
     {
-        wcsncpy(new_str, str, len);
+        wcsncpy_s(new_str, len + 1, str, len);
         new_str[len] = L'\0';
     }
 
@@ -135,7 +135,11 @@ wchar_t *baa_read_file(const wchar_t *filename)
     FILE *file = NULL;
 
 #ifdef _WIN32
-    file = _wfopen(filename, L"rb");
+    errno_t err = _wfopen_s(&file, filename, L"rb");
+    if (err != 0)
+    {
+        file = NULL;
+    }
 #else
     // Convert wchar_t* to char* for non-Windows systems
     size_t len = wcslen(filename);
@@ -194,8 +198,9 @@ wchar_t *baa_read_file(const wchar_t *filename)
     buffer[file_size] = '\0';
 
     // Convert to wide string
-    size_t wide_len = mbstowcs(NULL, buffer, 0) + 1;
-    if (wide_len == (size_t)-1)
+    size_t wide_len;
+    errno_t conv_err = mbstowcs_s(&wide_len, NULL, 0, buffer, 0);
+    if (conv_err != 0)
     {
         free(buffer);
         baa_set_error(BAA_ERROR_ENCODING, L"فشل في تحويل الترميز");
@@ -210,7 +215,15 @@ wchar_t *baa_read_file(const wchar_t *filename)
         return NULL;
     }
 
-    mbstowcs(wide_buffer, buffer, wide_len);
+    size_t converted;
+    conv_err = mbstowcs_s(&converted, wide_buffer, wide_len, buffer, wide_len - 1);
+    if (conv_err != 0)
+    {
+        free(buffer);
+        free(wide_buffer);
+        baa_set_error(BAA_ERROR_ENCODING, L"فشل في تحويل الترميز");
+        return NULL;
+    }
     free(buffer);
 
     return wide_buffer;

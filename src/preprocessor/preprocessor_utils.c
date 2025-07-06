@@ -1057,7 +1057,7 @@ void add_preprocessor_diagnostic_ex(
     diag->severity = severity;
     diag->error_code = error_code;
     diag->category = category;
-    diag->suggestion = suggestion ? wcsdup(suggestion) : NULL;
+    diag->suggestion = suggestion ? _wcsdup(suggestion) : NULL;
 
     pp_state->diagnostic_count++;
 
@@ -1484,7 +1484,7 @@ wchar_t *generate_error_summary(const BaaPreprocessor *pp_state)
     if (!init_dynamic_buffer(&summary, 1024))
     {
         // Note: Cannot use enhanced error system here as this function generates error summaries
-        return wcsdup(L"فشل في إنشاء ملخص الأخطاء");
+        return _wcsdup(L"فشل في إنشاء ملخص الأخطاء");
     }
 
     // Add summary header with cleaner, less repetitive format
@@ -1495,7 +1495,7 @@ wchar_t *generate_error_summary(const BaaPreprocessor *pp_state)
     if (!append_to_dynamic_buffer(&summary, L"تم العثور على "))
     {
         free_dynamic_buffer(&summary);
-        return wcsdup(L"فشل في تنسيق ملخص الأخطاء");
+        return _wcsdup(L"فشل في تنسيق ملخص الأخطاء");
     }
 
     if (pp_state->fatal_count > 0)
@@ -1504,7 +1504,7 @@ wchar_t *generate_error_summary(const BaaPreprocessor *pp_state)
         if (!append_to_dynamic_buffer(&summary, temp_buffer))
         {
             free_dynamic_buffer(&summary);
-            return wcsdup(L"فشل في تنسيق ملخص الأخطاء");
+            return _wcsdup(L"فشل في تنسيق ملخص الأخطاء");
         }
         needs_separator = true;
     }
@@ -1516,14 +1516,14 @@ wchar_t *generate_error_summary(const BaaPreprocessor *pp_state)
             if (!append_to_dynamic_buffer(&summary, L"، "))
             {
                 free_dynamic_buffer(&summary);
-                return wcsdup(L"فشل في تنسيق ملخص الأخطاء");
+                return _wcsdup(L"فشل في تنسيق ملخص الأخطاء");
             }
         }
         swprintf(temp_buffer, sizeof(temp_buffer) / sizeof(wchar_t), L"%zu خطأ", pp_state->error_count);
         if (!append_to_dynamic_buffer(&summary, temp_buffer))
         {
             free_dynamic_buffer(&summary);
-            return wcsdup(L"فشل في تنسيق ملخص الأخطاء");
+            return _wcsdup(L"فشل في تنسيق ملخص الأخطاء");
         }
         needs_separator = true;
     }
@@ -1535,14 +1535,14 @@ wchar_t *generate_error_summary(const BaaPreprocessor *pp_state)
             if (!append_to_dynamic_buffer(&summary, L"، "))
             {
                 free_dynamic_buffer(&summary);
-                return wcsdup(L"فشل في تنسيق ملخص الأخطاء");
+                return _wcsdup(L"فشل في تنسيق ملخص الأخطاء");
             }
         }
         swprintf(temp_buffer, sizeof(temp_buffer) / sizeof(wchar_t), L"%zu تحذير", pp_state->warning_count);
         if (!append_to_dynamic_buffer(&summary, temp_buffer))
         {
             free_dynamic_buffer(&summary);
-            return wcsdup(L"فشل في تنسيق ملخص الأخطاء");
+            return _wcsdup(L"فشل في تنسيق ملخص الأخطاء");
         }
         needs_separator = true;
     }
@@ -1551,7 +1551,7 @@ wchar_t *generate_error_summary(const BaaPreprocessor *pp_state)
     {
         free_dynamic_buffer(&summary);
         // Note: Cannot use enhanced error system here as this function generates error summaries
-        return wcsdup(L"فشل في تنسيق ملخص الأخطاء");
+        return _wcsdup(L"فشل في تنسيق ملخص الأخطاء");
     }
 
     // Add detailed error messages (limit to first 50 for readability)

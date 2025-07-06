@@ -23,9 +23,9 @@ Defines a point in the source code.
 
 ```c
 typedef struct {
-    const char* filename; // Pointer to the (canonical) filename string
-    size_t line;          // 1-based line number
-    size_t column;        // 1-based column number
+    const wchar_t* filename; // Pointer to the (canonical) filename string
+    size_t line;             // 1-based line number
+    size_t column;           // 1-based column number
 } BaaSourceLocation;
 ```
 

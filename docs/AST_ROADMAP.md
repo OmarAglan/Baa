@@ -12,7 +12,7 @@ The new AST (Abstract Syntax Tree) will be built around a unified `BaaNode` stru
     * **File:** `include/baa/ast/ast_types.h`
     * **Description:** Implement the `BaaSourceLocation` (filename, line, column) and `BaaSourceSpan` (start and end `BaaSourceLocation`) structs. These are fundamental for error reporting and tooling.
     * **Details:**
-        * `filename` in `BaaSourceLocation` should be `const char*` (assuming canonical, shared strings for filenames).
+        * `filename` in `BaaSourceLocation` should be `const wchar_t*` (assuming canonical, shared strings for filenames).
         * Line and column are `size_t` and 1-based.
     * **Status:** [x] COMPLETED (Step 0.1)
 

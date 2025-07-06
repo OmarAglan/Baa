@@ -147,8 +147,8 @@ BaaNode *create_test_ast_node(int kind, const char *test_data)
 {
     // Create a simple test source span
     BaaAstSourceSpan span = {
-        .start = {.filename = "test.baa", .line = 1, .column = 1},
-        .end = {.filename = "test.baa", .line = 1, .column = 10}};
+        .start = {.filename = L"test.baa", .line = 1, .column = 1},
+        .end = {.filename = L"test.baa", .line = 1, .column = 10}};
 
     // Create node based on kind
     switch (kind)

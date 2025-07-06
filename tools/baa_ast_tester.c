@@ -42,8 +42,8 @@ int main(int argc, char *argv[])
 
     wprintf(L"--- Baa AST Tester ---\n");
 
-    BaaSourceLocation loc_start = {"test.baa", 1, 1};
-    BaaSourceLocation loc_end = {"test.baa", 1, 10};
+    BaaSourceLocation loc_start = {L"test.baa", 1, 1};
+    BaaSourceLocation loc_end = {L"test.baa", 1, 10};
     BaaAstSourceSpan span = {loc_start, loc_end};
 
     // 1. Test basic node (unchanged)

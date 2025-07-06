@@ -18,9 +18,9 @@ typedef struct BaaType BaaType;
  */
 typedef struct BaaSourceLocation
 {
-    const char *filename; /**< Pointer to the canonical filename string (owned elsewhere, e.g., by compiler context). */
-    size_t line;          /**< 1-based line number. */
-    size_t column;        /**< 1-based column number of the start of the token/construct. */
+    const wchar_t *filename; /**< Pointer to the canonical filename string (owned elsewhere, e.g., by compiler context). */
+    size_t line;             /**< 1-based line number. */
+    size_t column;           /**< 1-based column number of the start of the token/construct. */
 } BaaSourceLocation;
 
 /**

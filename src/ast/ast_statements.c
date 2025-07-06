@@ -155,3 +155,265 @@ void baa_ast_free_block_stmt_data(BaaBlockStmtData *data)
     // Free the BaaBlockStmtData struct itself
     baa_free(data);
 }
+
+// --- Control Flow Statement Node Creation ---
+
+// --- If Statement Node Creation ---
+
+BaaNode *baa_ast_new_if_stmt_node(BaaAstSourceSpan span, BaaNode *condition_expr, BaaNode *then_stmt, BaaNode *else_stmt)
+{
+    BaaNode *node = baa_ast_new_node(BAA_NODE_KIND_IF_STMT, span);
+    if (!node)
+    {
+        return NULL; // Allocation for BaaNode failed
+    }
+
+    if (!condition_expr || !then_stmt)
+    {
+        baa_ast_free_node(node); // Clean up the partially created BaaNode
+        return NULL;             // Invalid required parameters
+    }
+
+    BaaIfStmtData *data = (BaaIfStmtData *)baa_malloc(sizeof(BaaIfStmtData));
+    if (!data)
+    {
+        baa_ast_free_node(node); // Clean up the partially created BaaNode
+        return NULL;
+    }
+
+    data->condition_expr = condition_expr;
+    data->then_stmt = then_stmt;
+    data->else_stmt = else_stmt; // Can be NULL
+
+    node->data = data;
+    return node;
+}
+
+// --- While Statement Node Creation ---
+
+BaaNode *baa_ast_new_while_stmt_node(BaaAstSourceSpan span, BaaNode *condition_expr, BaaNode *body_stmt)
+{
+    BaaNode *node = baa_ast_new_node(BAA_NODE_KIND_WHILE_STMT, span);
+    if (!node)
+    {
+        return NULL; // Allocation for BaaNode failed
+    }
+
+    if (!condition_expr || !body_stmt)
+    {
+        baa_ast_free_node(node); // Clean up the partially created BaaNode
+        return NULL;             // Invalid required parameters
+    }
+
+    BaaWhileStmtData *data = (BaaWhileStmtData *)baa_malloc(sizeof(BaaWhileStmtData));
+    if (!data)
+    {
+        baa_ast_free_node(node); // Clean up the partially created BaaNode
+        return NULL;
+    }
+
+    data->condition_expr = condition_expr;
+    data->body_stmt = body_stmt;
+
+    node->data = data;
+    return node;
+}
+
+// --- For Statement Node Creation ---
+
+BaaNode *baa_ast_new_for_stmt_node(BaaAstSourceSpan span, BaaNode *initializer_stmt, BaaNode *condition_expr, BaaNode *increment_expr, BaaNode *body_stmt)
+{
+    BaaNode *node = baa_ast_new_node(BAA_NODE_KIND_FOR_STMT, span);
+    if (!node)
+    {
+        return NULL; // Allocation for BaaNode failed
+    }
+
+    if (!body_stmt)
+    {
+        baa_ast_free_node(node); // Clean up the partially created BaaNode
+        return NULL;             // Body statement is required
+    }
+
+    BaaForStmtData *data = (BaaForStmtData *)baa_malloc(sizeof(BaaForStmtData));
+    if (!data)
+    {
+        baa_ast_free_node(node); // Clean up the partially created BaaNode
+        return NULL;
+    }
+
+    data->initializer_stmt = initializer_stmt; // Can be NULL
+    data->condition_expr = condition_expr;     // Can be NULL
+    data->increment_expr = increment_expr;     // Can be NULL
+    data->body_stmt = body_stmt;
+
+    node->data = data;
+    return node;
+}
+
+// --- Return Statement Node Creation ---
+
+BaaNode *baa_ast_new_return_stmt_node(BaaAstSourceSpan span, BaaNode *value_expr)
+{
+    BaaNode *node = baa_ast_new_node(BAA_NODE_KIND_RETURN_STMT, span);
+    if (!node)
+    {
+        return NULL; // Allocation for BaaNode failed
+    }
+
+    BaaReturnStmtData *data = (BaaReturnStmtData *)baa_malloc(sizeof(BaaReturnStmtData));
+    if (!data)
+    {
+        baa_ast_free_node(node); // Clean up the partially created BaaNode
+        return NULL;
+    }
+
+    data->value_expr = value_expr; // Can be NULL for void returns
+
+    node->data = data;
+    return node;
+}
+
+// --- Break Statement Node Creation ---
+
+BaaNode *baa_ast_new_break_stmt_node(BaaAstSourceSpan span)
+{
+    BaaNode *node = baa_ast_new_node(BAA_NODE_KIND_BREAK_STMT, span);
+    if (!node)
+    {
+        return NULL; // Allocation for BaaNode failed
+    }
+
+    // Break statements don't need additional data
+    node->data = NULL;
+    return node;
+}
+
+// --- Continue Statement Node Creation ---
+
+BaaNode *baa_ast_new_continue_stmt_node(BaaAstSourceSpan span)
+{
+    BaaNode *node = baa_ast_new_node(BAA_NODE_KIND_CONTINUE_STMT, span);
+    if (!node)
+    {
+        return NULL; // Allocation for BaaNode failed
+    }
+
+    // Continue statements don't need additional data
+    node->data = NULL;
+    return node;
+}
+
+// --- Control Flow Statement Node Data Freeing ---
+
+// --- If Statement Node Data Freeing ---
+
+void baa_ast_free_if_stmt_data(BaaIfStmtData *data)
+{
+    if (!data)
+    {
+        return;
+    }
+
+    // Recursively free the condition expression
+    if (data->condition_expr)
+    {
+        baa_ast_free_node(data->condition_expr);
+    }
+
+    // Recursively free the then statement
+    if (data->then_stmt)
+    {
+        baa_ast_free_node(data->then_stmt);
+    }
+
+    // Recursively free the else statement (if present)
+    if (data->else_stmt)
+    {
+        baa_ast_free_node(data->else_stmt);
+    }
+
+    // Free the BaaIfStmtData struct itself
+    baa_free(data);
+}
+
+// --- While Statement Node Data Freeing ---
+
+void baa_ast_free_while_stmt_data(BaaWhileStmtData *data)
+{
+    if (!data)
+    {
+        return;
+    }
+
+    // Recursively free the condition expression
+    if (data->condition_expr)
+    {
+        baa_ast_free_node(data->condition_expr);
+    }
+
+    // Recursively free the body statement
+    if (data->body_stmt)
+    {
+        baa_ast_free_node(data->body_stmt);
+    }
+
+    // Free the BaaWhileStmtData struct itself
+    baa_free(data);
+}
+
+// --- For Statement Node Data Freeing ---
+
+void baa_ast_free_for_stmt_data(BaaForStmtData *data)
+{
+    if (!data)
+    {
+        return;
+    }
+
+    // Recursively free the initializer statement (if present)
+    if (data->initializer_stmt)
+    {
+        baa_ast_free_node(data->initializer_stmt);
+    }
+
+    // Recursively free the condition expression (if present)
+    if (data->condition_expr)
+    {
+        baa_ast_free_node(data->condition_expr);
+    }
+
+    // Recursively free the increment expression (if present)
+    if (data->increment_expr)
+    {
+        baa_ast_free_node(data->increment_expr);
+    }
+
+    // Recursively free the body statement
+    if (data->body_stmt)
+    {
+        baa_ast_free_node(data->body_stmt);
+    }
+
+    // Free the BaaForStmtData struct itself
+    baa_free(data);
+}
+
+// --- Return Statement Node Data Freeing ---
+
+void baa_ast_free_return_stmt_data(BaaReturnStmtData *data)
+{
+    if (!data)
+    {
+        return;
+    }
+
+    // Recursively free the value expression (if present)
+    if (data->value_expr)
+    {
+        baa_ast_free_node(data->value_expr);
+    }
+
+    // Free the BaaReturnStmtData struct itself
+    baa_free(data);
+}

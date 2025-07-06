@@ -53,6 +53,12 @@ typedef enum BaaNodeKind
     BAA_NODE_KIND_EXPR_STMT,     /**< An expression statement. data: BaaExprStmtData* */
     BAA_NODE_KIND_BLOCK_STMT,    /**< A block of statements { ... }. data: BaaBlockStmtData* */
     BAA_NODE_KIND_VAR_DECL_STMT, /**< A variable declaration statement. data: BaaVarDeclData* */
+    BAA_NODE_KIND_IF_STMT,       /**< An if statement (إذا). data: BaaIfStmtData* */
+    BAA_NODE_KIND_WHILE_STMT,    /**< A while loop statement (طالما). data: BaaWhileStmtData* */
+    BAA_NODE_KIND_FOR_STMT,      /**< A for loop statement (لكل). data: BaaForStmtData* */
+    BAA_NODE_KIND_RETURN_STMT,   /**< A return statement (إرجع). data: BaaReturnStmtData* */
+    BAA_NODE_KIND_BREAK_STMT,    /**< A break statement (توقف). data: NULL */
+    BAA_NODE_KIND_CONTINUE_STMT, /**< A continue statement (استمر). data: NULL */
 
     // Expression Kinds
     BAA_NODE_KIND_LITERAL_EXPR,    /**< Represents a literal value (integer, string, etc.). data: BaaLiteralExprData* */
@@ -296,6 +302,48 @@ typedef struct BaaVarDeclData
     // Future: BaaSymbol* symbol_entry; /**< Link to symbol table after resolution. */
     // BaaType* resolved_canonical_type; /**< Pointer to canonical BaaType after semantic analysis. */
 } BaaVarDeclData;
+
+/**
+ * @brief Data structure for an if statement node (BAA_NODE_KIND_IF_STMT).
+ * Represents an if statement with optional else branch.
+ */
+typedef struct BaaIfStmtData
+{
+    BaaNode *condition_expr; /**< Condition expression (BaaNode* with an expression kind). */
+    BaaNode *then_stmt;      /**< Statement or block for the 'then' branch (BaaNode* with a statement kind). */
+    BaaNode *else_stmt;      /**< Optional statement or block for the 'else' branch (BaaNode* with a statement kind). Can be NULL. */
+} BaaIfStmtData;
+
+/**
+ * @brief Data structure for a while statement node (BAA_NODE_KIND_WHILE_STMT).
+ * Represents a while loop statement.
+ */
+typedef struct BaaWhileStmtData
+{
+    BaaNode *condition_expr; /**< Condition expression (BaaNode* with an expression kind). */
+    BaaNode *body_stmt;      /**< Body statement or block (BaaNode* with a statement kind). */
+} BaaWhileStmtData;
+
+/**
+ * @brief Data structure for a for statement node (BAA_NODE_KIND_FOR_STMT).
+ * Represents a C-style for loop statement.
+ */
+typedef struct BaaForStmtData
+{
+    BaaNode *initializer_stmt; /**< Initializer statement (variable declaration or expression statement). Can be NULL. */
+    BaaNode *condition_expr;   /**< Condition expression (BaaNode* with an expression kind). Can be NULL. */
+    BaaNode *increment_expr;   /**< Increment expression (BaaNode* with an expression kind). Can be NULL. */
+    BaaNode *body_stmt;        /**< Body statement or block (BaaNode* with a statement kind). */
+} BaaForStmtData;
+
+/**
+ * @brief Data structure for a return statement node (BAA_NODE_KIND_RETURN_STMT).
+ * Represents a return statement with optional return value.
+ */
+typedef struct BaaReturnStmtData
+{
+    BaaNode *value_expr; /**< Optional return value expression (BaaNode* with an expression kind). Can be NULL for void returns. */
+} BaaReturnStmtData;
 
 // == Type Representation Data ==
 

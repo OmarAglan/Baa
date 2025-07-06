@@ -225,4 +225,76 @@ BaaNode *baa_ast_new_var_decl_node(BaaAstSourceSpan span, const wchar_t *name,
                                    BaaAstNodeModifiers modifiers, BaaNode *type_node,
                                    BaaNode *initializer_expr);
 
+// == Control Flow Statements ==
+
+/**
+ * @brief Creates a new AST node representing an if statement.
+ * The node's kind will be BAA_NODE_KIND_IF_STMT.
+ * Its data will point to a BaaIfStmtData struct.
+ *
+ * @param span The source span of the if statement.
+ * @param condition_expr A BaaNode* expression for the condition. Must not be NULL.
+ * @param then_stmt A BaaNode* statement for the 'then' branch. Must not be NULL.
+ * @param else_stmt A BaaNode* statement for the 'else' branch, or NULL if no else clause.
+ * @return A pointer to the new BaaNode, or NULL on failure.
+ */
+BaaNode *baa_ast_new_if_stmt_node(BaaAstSourceSpan span, BaaNode *condition_expr, BaaNode *then_stmt, BaaNode *else_stmt);
+
+/**
+ * @brief Creates a new AST node representing a while statement.
+ * The node's kind will be BAA_NODE_KIND_WHILE_STMT.
+ * Its data will point to a BaaWhileStmtData struct.
+ *
+ * @param span The source span of the while statement.
+ * @param condition_expr A BaaNode* expression for the condition. Must not be NULL.
+ * @param body_stmt A BaaNode* statement for the body. Must not be NULL.
+ * @return A pointer to the new BaaNode, or NULL on failure.
+ */
+BaaNode *baa_ast_new_while_stmt_node(BaaAstSourceSpan span, BaaNode *condition_expr, BaaNode *body_stmt);
+
+/**
+ * @brief Creates a new AST node representing a for statement.
+ * The node's kind will be BAA_NODE_KIND_FOR_STMT.
+ * Its data will point to a BaaForStmtData struct.
+ *
+ * @param span The source span of the for statement.
+ * @param initializer_stmt A BaaNode* statement for initialization, or NULL.
+ * @param condition_expr A BaaNode* expression for the condition, or NULL.
+ * @param increment_expr A BaaNode* expression for the increment, or NULL.
+ * @param body_stmt A BaaNode* statement for the body. Must not be NULL.
+ * @return A pointer to the new BaaNode, or NULL on failure.
+ */
+BaaNode *baa_ast_new_for_stmt_node(BaaAstSourceSpan span, BaaNode *initializer_stmt, BaaNode *condition_expr, BaaNode *increment_expr, BaaNode *body_stmt);
+
+/**
+ * @brief Creates a new AST node representing a return statement.
+ * The node's kind will be BAA_NODE_KIND_RETURN_STMT.
+ * Its data will point to a BaaReturnStmtData struct.
+ *
+ * @param span The source span of the return statement.
+ * @param value_expr A BaaNode* expression for the return value, or NULL for void returns.
+ * @return A pointer to the new BaaNode, or NULL on failure.
+ */
+BaaNode *baa_ast_new_return_stmt_node(BaaAstSourceSpan span, BaaNode *value_expr);
+
+/**
+ * @brief Creates a new AST node representing a break statement.
+ * The node's kind will be BAA_NODE_KIND_BREAK_STMT.
+ * Its data will be NULL (break statements don't need additional data).
+ *
+ * @param span The source span of the break statement.
+ * @return A pointer to the new BaaNode, or NULL on failure.
+ */
+BaaNode *baa_ast_new_break_stmt_node(BaaAstSourceSpan span);
+
+/**
+ * @brief Creates a new AST node representing a continue statement.
+ * The node's kind will be BAA_NODE_KIND_CONTINUE_STMT.
+ * Its data will be NULL (continue statements don't need additional data).
+ *
+ * @param span The source span of the continue statement.
+ * @return A pointer to the new BaaNode, or NULL on failure.
+ */
+BaaNode *baa_ast_new_continue_stmt_node(BaaAstSourceSpan span);
+
 #endif // BAA_AST_H

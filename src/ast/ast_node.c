@@ -134,6 +134,42 @@ void baa_ast_free_node(BaaNode *node)
         }
         break;
 
+    case BAA_NODE_KIND_IF_STMT:
+        if (node->data)
+        {
+            baa_ast_free_if_stmt_data((BaaIfStmtData *)node->data);
+        }
+        break;
+
+    case BAA_NODE_KIND_WHILE_STMT:
+        if (node->data)
+        {
+            baa_ast_free_while_stmt_data((BaaWhileStmtData *)node->data);
+        }
+        break;
+
+    case BAA_NODE_KIND_FOR_STMT:
+        if (node->data)
+        {
+            baa_ast_free_for_stmt_data((BaaForStmtData *)node->data);
+        }
+        break;
+
+    case BAA_NODE_KIND_RETURN_STMT:
+        if (node->data)
+        {
+            baa_ast_free_return_stmt_data((BaaReturnStmtData *)node->data);
+        }
+        break;
+
+    case BAA_NODE_KIND_BREAK_STMT:
+        // Break statements don't have data to free (node->data is NULL)
+        break;
+
+    case BAA_NODE_KIND_CONTINUE_STMT:
+        // Continue statements don't have data to free (node->data is NULL)
+        break;
+
     // --- Type Representation Kinds ---
     case BAA_NODE_KIND_TYPE:
         if (node->data)

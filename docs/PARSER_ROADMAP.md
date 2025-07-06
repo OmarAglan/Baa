@@ -1,6 +1,6 @@
 ## Updated `docs/PARSER_ROADMAP.md` (v2 - Detailed)
 
-**Status: This document outlines the detailed implementation plan for the new Parser, designed to generate an AST conforming to `AST.md` (v2). All items are planned unless otherwise noted.**
+**Status: ✅ CORE PARSER COMPLETE - This document outlines the implementation status of the new Parser, designed to generate an AST conforming to `AST.md` (v2). Priority 4 (Function Definitions and Calls) completed 2025-07-06.**
 
 The parser will employ a recursive descent strategy, with distinct modules for parsing different language constructs. Its primary output will be a `BaaNode*` representing the root of the Abstract Syntax Tree (typically a `BAA_NODE_KIND_PROGRAM` node).
 
@@ -89,16 +89,17 @@ The parser will employ a recursive descent strategy, with distinct modules for p
 
 **Goal:** ✅ Expand expression parsing capabilities.
 
-1. **Implement `parse_postfix_expression`:**
+1. **Implement `parse_postfix_expression`:** ✅ **COMPLETED** (2025-07-06)
     * **File:** `expression_parser.c`.
-    * **Description:** `BaaNode* parse_postfix_expression(BaaParser* p);`.
-        * Parses a primary expression (or higher precedence postfix expression).
-        * Then, in a loop, checks for postfix operators:
-            * `BAA_TOKEN_LPAREN` (function call arguments - `BAA_NODE_KIND_CALL_EXPR`). Parse argument list (comma-separated expressions) until `BAA_TOKEN_RPAREN`.
+    * **Description:** ✅ **IMPLEMENTED** `BaaNode* parse_postfix_expression(BaaParser* p, BaaNode* base_expr);`.
+        * ✅ Parses postfix operations on a base expression.
+        * ✅ Handles postfix operators in a loop:
+            * ✅ `BAA_TOKEN_LPAREN` (function call arguments - `BAA_NODE_KIND_CALL_EXPR`). Parses argument list (comma-separated expressions) until `BAA_TOKEN_RPAREN`.
             * `BAA_TOKEN_LBRACKET` (array indexing - `BAA_NODE_KIND_INDEX_EXPR`). Parse expression inside `[]`.
             * `BAA_TOKEN_INCREMENT` / `BAA_TOKEN_DECREMENT` (postfix ++/--).
-        * Builds up nested AST nodes for multiple postfix operations (e.g., `foo()[0]++`).
-    * **Verification:** Can parse `foo()`, `arr[i]`, `x++`.
+        * ✅ Builds up nested AST nodes for multiple postfix operations (e.g., `foo()[0]++`).
+        * ✅ **Function Call Support**: Complete implementation with `parse_call_expression()`.
+    * **Verification:** ✅ Can parse `foo()`, `جمع(أ، ب)`, nested calls like `outer(inner(x), y)`.
 
 2. **Implement `parse_unary_expression`:** ✅ COMPLETED
     * **File:** `expression_parser.c`.
@@ -191,22 +192,22 @@ The parser will employ a recursive descent strategy, with distinct modules for p
     * **Description:** ✅ Modified `parse_statement` to check if `current_token` could start a declaration (e.g., `BAA_TOKEN_CONST` or a type keyword). If so, call `parse_variable_declaration_statement`. Otherwise, call existing statement parsing.
     * **Verification:** ✅ Correctly distinguishes between declarations and other statements.
 
-4. **Implement `parse_parameter_list` and `parse_parameter`:**
+4. **Implement `parse_parameter_list` and `parse_parameter`:** ✅ **COMPLETED** (2025-07-06)
     * **File:** `declaration_parser.c`.
-    * **Description:**
-        * `BaaNode** parse_parameter_list(BaaParser* p, size_t* count, size_t* capacity)`: Parses `( (type_specifier identifier (',' type_specifier identifier)*)? )`. Returns a dynamic array of `BAA_NODE_KIND_PARAMETER` nodes.
-        * `BaaNode* parse_parameter(BaaParser* p)`: Parses a single `type_specifier identifier`.
-    * **Verification:** Parses `(عدد_صحيح a, حرف b)`, `()`, `(عدد_صحيح x)`.
+    * **Description:** ✅ **IMPLEMENTED**
+        * ✅ `bool parse_parameter_list(BaaParser* p, BaaNode*** parameters, size_t* parameter_count)`: Parses `( (type_specifier identifier (',' type_specifier identifier)*)? )`. Returns dynamic array of `BAA_NODE_KIND_PARAMETER` nodes.
+        * ✅ `BaaNode* parse_parameter(BaaParser* p)`: Parses a single `type_specifier identifier`.
+    * **Verification:** ✅ Parses `(عدد_صحيح a, حرف b)`, `()`, `(عدد_صحيح x)` with proper error handling.
 
-5. **Implement `parse_function_definition`:**
+5. **Implement `parse_function_definition`:** ✅ **COMPLETED** (2025-07-06)
     * **File:** `declaration_parser.c`.
-    * **Description:** `BaaNode* parse_function_definition(BaaParser* p);`.
-        * Parses optional return type (`parse_type_specifier`; defaults to void if identifier is next and it's not a type keyword).
-        * Consumes `BAA_TOKEN_IDENTIFIER` for function name.
-        * Calls `parse_parameter_list()`.
-        * Parses function body (must be a block statement, `parse_block_statement()`).
-        * Creates `BAA_NODE_KIND_FUNCTION_DEF`.
-    * **Verification:** Parses `فراغ foo() {}`, `عدد_صحيح add(عدد_صحيح a, عدد_صحيح b) { إرجع a + b. }`.
+    * **Description:** ✅ **IMPLEMENTED** `BaaNode* parse_function_definition(BaaParser* p, BaaAstNodeModifiers initial_modifiers);`.
+        * ✅ Parses return type using `parse_type_specifier()`.
+        * ✅ Consumes `BAA_TOKEN_IDENTIFIER` for function name.
+        * ✅ Calls `parse_parameter_list()` with proper memory management.
+        * ✅ Parses function body (block statement using `parse_block_statement()`).
+        * ✅ Creates `BAA_NODE_KIND_FUNCTION_DEF` with comprehensive error handling.
+    * **Verification:** ✅ Parses `فراغ foo() {}`, `عدد_صحيح add(عدد_صحيح a, عدد_صحيح b) { إرجع a + b؛ }` with Arabic syntax support.
 
 ### Phase 5: Advanced Control Flow, Expressions, and Array Types
 

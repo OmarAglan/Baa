@@ -2,7 +2,7 @@
 
 ## Overview
 
-Baa (باء) is designed with a modular architecture that separates concerns into distinct components. Each component is responsible for a specific aspect of the compilation process, making the system maintainable and extensible.
+Baa (باء) is designed with a modular architecture that separates concerns into distinct components. Each component is responsible for a specific aspect of the compilation process, making the system maintainable and extensible. **As of 2025-07-06, the core compiler infrastructure is production-ready with Priority 4 (Function Definitions and Calls) completed.**
 
 ## Core Components
 

@@ -1,6 +1,6 @@
 # Baa Language AST Structure Documentation (New Design v2)
 
-**Status: This document outlines the revised design for the Abstract Syntax Tree (AST). Items here are largely planned unless otherwise noted.**
+**Status: ✅ CORE AST COMPLETE - This document outlines the implemented design for the Abstract Syntax Tree (AST). Priority 4 (Function Definitions and Calls) completed 2025-07-06. All core AST node types are implemented and functional.**
 
 This document provides a comprehensive reference for the Abstract Syntax Tree (AST) structure to be implemented for the Baa programming language compiler. The goal is to establish a clear standard for all AST components to ensure consistency across the compiler implementation.
 

@@ -53,3 +53,24 @@ target_link_libraries(test_preprocessor_directives PRIVATE ${PREPROCESSOR_TEST_L
 target_include_directories(test_preprocessor_directives PRIVATE ${PREPROCESSOR_TEST_INCLUDE_DIRS})
 add_test(NAME test_preprocessor_directives COMMAND test_preprocessor_directives)
 set_tests_properties(test_preprocessor_directives PROPERTIES LABELS "unit;preprocessor;directives")
+
+# Comprehensive file-based preprocessor tests
+add_executable(test_preprocessor_comprehensive test_preprocessor_comprehensive.c)
+target_link_libraries(test_preprocessor_comprehensive PRIVATE ${PREPROCESSOR_TEST_LIBRARIES})
+target_include_directories(test_preprocessor_comprehensive PRIVATE ${PREPROCESSOR_TEST_INCLUDE_DIRS})
+add_test(NAME test_preprocessor_comprehensive COMMAND test_preprocessor_comprehensive)
+set_tests_properties(test_preprocessor_comprehensive PROPERTIES LABELS "unit;preprocessor;comprehensive;integration")
+
+# Advanced macro feature tests
+add_executable(test_preprocessor_advanced_macros test_preprocessor_advanced_macros.c)
+target_link_libraries(test_preprocessor_advanced_macros PRIVATE ${PREPROCESSOR_TEST_LIBRARIES})
+target_include_directories(test_preprocessor_advanced_macros PRIVATE ${PREPROCESSOR_TEST_INCLUDE_DIRS})
+add_test(NAME test_preprocessor_advanced_macros COMMAND test_preprocessor_advanced_macros)
+set_tests_properties(test_preprocessor_advanced_macros PROPERTIES LABELS "unit;preprocessor;macros;advanced")
+
+# Advanced expression evaluation tests
+add_executable(test_preprocessor_expressions test_preprocessor_expressions.c)
+target_link_libraries(test_preprocessor_expressions PRIVATE ${PREPROCESSOR_TEST_LIBRARIES})
+target_include_directories(test_preprocessor_expressions PRIVATE ${PREPROCESSOR_TEST_INCLUDE_DIRS})
+add_test(NAME test_preprocessor_expressions COMMAND test_preprocessor_expressions)
+set_tests_properties(test_preprocessor_expressions PROPERTIES LABELS "unit;preprocessor;expressions;advanced")

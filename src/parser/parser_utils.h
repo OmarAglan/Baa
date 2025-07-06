@@ -53,6 +53,16 @@ void baa_parser_consume_token(BaaParser *parser, BaaTokenType expected_type, con
 void baa_parser_error_at_token(BaaParser *parser, const BaaToken *token, const wchar_t *message_format, ...);
 
 /**
+ * @brief Reports a parser error at the current token location.
+ * Convenience function that wraps baa_parser_error_at_token with the current token.
+ *
+ * @param parser Pointer to the parser state.
+ * @param message_format Format string for the error message.
+ * @param ... Additional arguments for the format string.
+ */
+void baa_parser_error(BaaParser *parser, const wchar_t *message_format, ...);
+
+/**
  * @brief Attempts to recover from a syntax error by discarding tokens.
  * Advances tokens until a synchronization point is found or EOF is reached.
  *

@@ -939,23 +939,23 @@ wchar_t* suggest_string_termination_fix(const wchar_t* partial_string)
 
     if (!partial_string)
     {
-        wcscpy(suggestion, L"أضف علامة اقتباس مزدوجة \" لإنهاء السلسلة النصية");
+        wcscpy_s(suggestion, 250, L"أضف علامة اقتباس مزدوجة \" لإنهاء السلسلة النصية");
         return suggestion;
     }
 
     // Check if it looks like a multiline string attempt
     if (wcschr(partial_string, L'\n'))
     {
-        wcscpy(suggestion, L"للسلاسل متعددة الأسطر، استخدم \"\"\" في البداية والنهاية");
+        wcscpy_s(suggestion, 250, L"للسلاسل متعددة الأسطر، استخدم \"\"\" في البداية والنهاية");
     }
     // Check if it looks like a raw string attempt
     else if (wcslen(partial_string) > 0 && partial_string[0] == L'خ')
     {
-        wcscpy(suggestion, L"للسلاسل الخام، استخدم خ\" في البداية و \" في النهاية");
+        wcscpy_s(suggestion, 250, L"للسلاسل الخام، استخدم خ\" في البداية و \" في النهاية");
     }
     else
     {
-        wcscpy(suggestion, L"أضف علامة اقتباس مزدوجة \" في نهاية السلسلة النصية");
+        wcscpy_s(suggestion, 250, L"أضف علامة اقتباس مزدوجة \" في نهاية السلسلة النصية");
     }
 
     return suggestion;

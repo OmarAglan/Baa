@@ -10,6 +10,7 @@ set(PREPROCESSOR_TEST_LIBRARIES
 set(PREPROCESSOR_TEST_INCLUDE_DIRS
     ${PROJECT_SOURCE_DIR}/include
     ${PROJECT_SOURCE_DIR}/tests/framework
+    ${PROJECT_SOURCE_DIR}/src/preprocessor
 )
 
 # Original preprocessor conditional tests

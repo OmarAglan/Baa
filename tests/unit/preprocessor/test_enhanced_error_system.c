@@ -5,7 +5,7 @@
 #include <string.h>
 
 #include "baa/preprocessor/preprocessor.h"
-#include "src/preprocessor/preprocessor_internal.h"
+#include "preprocessor_internal.h"
 
 // Test the enhanced error system functionality
 void test_error_severity_classification() {

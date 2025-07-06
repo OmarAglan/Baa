@@ -15,13 +15,13 @@ void print_node_info(const BaaNode *node, const char *description)
         wprintf(L"%hs: Node is NULL\n", description);
         return;
     }
-    wprintf(L"%hs: Node Kind: %d, Span: (%s L%zu C%zu - %s L%zu C%zu), Data: %p\n",
+    wprintf(L"%hs: Node Kind: %d, Span: (%ls L%zu C%zu - %ls L%zu C%zu), Data: %p\n",
             description,
             node->kind,
-            node->span.start.filename ? node->span.start.filename : "N/A",
+            node->span.start.filename ? node->span.start.filename : L"N/A",
             node->span.start.line,
             node->span.start.column,
-            node->span.end.filename ? node->span.end.filename : "N/A",
+            node->span.end.filename ? node->span.end.filename : L"N/A",
             node->span.end.line,
             node->span.end.column,
             node->data);

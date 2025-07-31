@@ -1,3 +1,4 @@
+// preprocessor_core.c
 #include "preprocessor_internal.h"
 #include <wctype.h>
 // --- Core Recursive Processing Function ---

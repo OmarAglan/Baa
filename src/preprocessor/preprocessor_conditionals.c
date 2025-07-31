@@ -1,3 +1,4 @@
+// preprocessor_conditionals.c
 #include "preprocessor_internal.h"
 
 // --- Conditional Compilation Stack Helpers ---

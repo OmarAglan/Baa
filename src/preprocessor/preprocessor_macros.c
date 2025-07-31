@@ -1,3 +1,4 @@
+// preprocessor_macros.c
 #include "preprocessor_internal.h"
 
 // Helper function to normalize whitespace in macro body for comparison

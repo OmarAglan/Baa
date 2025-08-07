@@ -201,6 +201,7 @@ struct BaaPreprocessor
     // #سطر directive support
     const char *overridden_file_path; ///< File path override from #سطر directive
     size_t line_number_override;      ///< Line number override from #سطر directive (0 = no override)
+    size_t line_override_base;        ///< Line number where override was applied (for calculating current line)
     bool has_line_override;           ///< Whether line override is active
 
     // #براغما directive support

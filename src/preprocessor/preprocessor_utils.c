@@ -79,7 +79,19 @@ PpSourceLocation get_current_original_location(const BaaPreprocessor *pp)
     if (pp->has_line_override)
     {
         base_loc.file_path = pp->overridden_file_path ? pp->overridden_file_path : base_loc.file_path;
-        base_loc.line = pp->line_number_override;
+        // Calculate current line based on C99 semantics:
+        // The line with the #line directive stays its original number
+        // The next line becomes the specified number
+        // So: specified_line + (current_physical_line - (override_line + 1))
+        if (pp->current_line_number > pp->line_override_base)
+        {
+            size_t lines_after_override = pp->current_line_number - pp->line_override_base;
+            base_loc.line = pp->line_number_override + lines_after_override - 1;
+        }
+        else
+        {
+            base_loc.line = pp->line_number_override;
+        }
     }
 
     return base_loc;

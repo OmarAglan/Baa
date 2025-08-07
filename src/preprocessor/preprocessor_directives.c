@@ -1156,14 +1156,14 @@ bool handle_preprocessor_directive(BaaPreprocessor *pp_state, wchar_t *directive
                     }
 
                     // Apply the #سطر directive for the next line (C99 behavior)
-                    // Set override to take effect on the next increment
+                    // The next line after the #سطر directive should have the specified line number
                     pp_state->line_number_override = (size_t)line_num;
                     pp_state->overridden_file_path = new_filename; // Takes ownership
                     pp_state->has_line_override = true;
                     
-                    // The key is that we need to adjust the current line number so that
-                    // when it gets incremented, the next line will have the correct number
-                    pp_state->current_line_number = (size_t)line_num - 1;
+                    // Record the current line where the override was applied and the target line
+                    // This way we can calculate: target_line + (current_physical_line - override_physical_line)
+                    pp_state->line_override_base = pp_state->current_line_number;
                 }
                 else if (new_filename)
                 {

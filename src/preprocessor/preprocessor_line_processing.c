@@ -74,7 +74,9 @@ bool scan_and_expand_macros_for_expressions(
             else if (wcscmp(identifier, L"__السطر__") == 0)
             {
                 wchar_t line_str[20];
-                swprintf(line_str, sizeof(line_str) / sizeof(wchar_t), L"%zu", original_line_number_for_errors);
+                // Get current location which respects #سطر overrides
+                PpSourceLocation current_loc = get_current_original_location(pp_state);
+                swprintf(line_str, sizeof(line_str) / sizeof(wchar_t), L"%zu", current_loc.line);
                 if (!append_to_dynamic_buffer(one_pass_buffer, line_str))
                 {
                     PpSourceLocation temp_loc = get_current_original_location(pp_state);
@@ -719,8 +721,9 @@ bool scan_and_substitute_macros_one_pass(
             else if (wcscmp(identifier, L"__السطر__") == 0)
             {
                 wchar_t line_str[20];
-                // __السطر__ should refer to the line number of the current line being processed by process_code_line_for_macros
-                swprintf(line_str, sizeof(line_str) / sizeof(wchar_t), L"%zu", original_line_number_for_errors); // Standard: integer
+                // Get current location which respects #سطر overrides
+                PpSourceLocation current_loc = get_current_original_location(pp_state);
+                swprintf(line_str, sizeof(line_str) / sizeof(wchar_t), L"%zu", current_loc.line);
                 if (!append_to_dynamic_buffer(one_pass_buffer, line_str))
                 {
                     PpSourceLocation temp_loc = get_current_original_location(pp_state);

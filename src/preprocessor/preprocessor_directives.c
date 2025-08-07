@@ -1050,18 +1050,53 @@ bool handle_preprocessor_directive(BaaPreprocessor *pp_state, wchar_t *directive
                 return true; // Recoverable syntax error - continue processing
             }
 
-            // Parse line number
-            wchar_t *line_num_end = args_start;
+            // Expand macros in the #سطر directive arguments
+            wchar_t *expanded_args = NULL;
+            size_t args_len = wcslen(args_start);
+            DynamicWcharBuffer expansion_buffer;
+            if (init_dynamic_buffer(&expansion_buffer, args_len + 256))
+            {
+                wchar_t *expansion_error = NULL;
+                if (process_code_line_for_macros(pp_state, args_start, args_len, &expansion_buffer, &expansion_error))
+                {
+                    expanded_args = _wcsdup(expansion_buffer.buffer);
+                }
+                else
+                {
+                    if (expansion_error)
+                    {
+                        PP_REPORT_ERROR(pp_state, &directive_loc, PP_ERROR_INVALID_DIRECTIVE_SYNTAX, "directive", L"فشل في توسيع الماكرو في #سطر: %ls", expansion_error);
+                        free(expansion_error);
+                    }
+                    else
+                    {
+                        PP_REPORT_ERROR(pp_state, &directive_loc, PP_ERROR_INVALID_DIRECTIVE_SYNTAX, "directive", L"فشل في توسيع الماكرو في #سطر: خطأ غير معروف.");
+                    }
+                    if (error_message)
+                        *error_message = generate_error_summary(pp_state);
+                    free_dynamic_buffer(&expansion_buffer);
+                    return true; // Recoverable syntax error - continue processing
+                }
+                free_dynamic_buffer(&expansion_buffer);
+            }
+
+            // Use expanded arguments if available, otherwise use original
+            wchar_t *processed_args = expanded_args ? expanded_args : args_start;
+
+            // Parse line number from processed arguments
+            wchar_t *line_num_end = processed_args;
             while (*line_num_end != L'\0' && !iswspace(*line_num_end))
                 line_num_end++;
 
-            size_t line_num_len = line_num_end - args_start;
-            wchar_t *line_num_str = wcsndup_internal(args_start, line_num_len);
+            size_t line_num_len = line_num_end - processed_args;
+            wchar_t *line_num_str = wcsndup_internal(processed_args, line_num_len);
             if (!line_num_str)
             {
                 PP_REPORT_FATAL(pp_state, &directive_loc, PP_ERROR_ALLOCATION_FAILED, "memory", L"فشل في تخصيص ذاكرة لرقم السطر في #سطر.");
                 if (error_message)
                     *error_message = generate_error_summary(pp_state);
+                if (expanded_args)
+                    free(expanded_args);
                 success = false;
             }
             else
@@ -1075,6 +1110,8 @@ bool handle_preprocessor_directive(BaaPreprocessor *pp_state, wchar_t *directive
                     if (error_message)
                         *error_message = generate_error_summary(pp_state);
                     free(line_num_str);
+                    if (expanded_args)
+                        free(expanded_args);
                     return true; // Recoverable syntax error - continue processing
                 }
 
@@ -1093,6 +1130,8 @@ bool handle_preprocessor_directive(BaaPreprocessor *pp_state, wchar_t *directive
                         if (error_message)
                             *error_message = generate_error_summary(pp_state);
                         free(line_num_str);
+                        if (expanded_args)
+                            free(expanded_args);
                         return true; // Recoverable syntax error - continue processing
                     }
 
@@ -1104,6 +1143,8 @@ bool handle_preprocessor_directive(BaaPreprocessor *pp_state, wchar_t *directive
                         if (error_message)
                             *error_message = generate_error_summary(pp_state);
                         free(line_num_str);
+                        if (expanded_args)
+                            free(expanded_args);
                         return true; // Recoverable syntax error - continue processing
                     }
 
@@ -1115,6 +1156,8 @@ bool handle_preprocessor_directive(BaaPreprocessor *pp_state, wchar_t *directive
                         if (error_message)
                             *error_message = generate_error_summary(pp_state);
                         free(line_num_str);
+                        if (expanded_args)
+                            free(expanded_args);
                         success = false;
                     }
                     else
@@ -1171,6 +1214,8 @@ bool handle_preprocessor_directive(BaaPreprocessor *pp_state, wchar_t *directive
                 }
 
                 free(line_num_str);
+                if (expanded_args)
+                    free(expanded_args);
             }
             // #سطر processed
         }

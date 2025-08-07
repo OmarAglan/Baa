@@ -37,6 +37,8 @@ bool handle_preprocessor_directive(BaaPreprocessor *pp_state, wchar_t *directive
     size_t warning_directive_len = wcslen(warning_directive);
     const wchar_t *line_directive = L"سطر";
     size_t line_directive_len = wcslen(line_directive);
+    const wchar_t *pragma_directive = L"براغما";
+    size_t pragma_directive_len = wcslen(pragma_directive);
 
     PpSourceLocation directive_loc = get_current_original_location(pp_state); // Get location for potential errors
 
@@ -1166,6 +1168,62 @@ bool handle_preprocessor_directive(BaaPreprocessor *pp_state, wchar_t *directive
                 free(line_num_str);
             }
             // #سطر processed
+        }
+        else if (wcsncmp(directive_start, pragma_directive, pragma_directive_len) == 0 &&
+                 (directive_start[pragma_directive_len] == L'\0' || iswspace(directive_start[pragma_directive_len]))) // #براغما
+        {
+            wchar_t *pragma_args = directive_start + pragma_directive_len;
+            while (iswspace(*pragma_args))
+                pragma_args++;
+
+            if (*pragma_args == L'\0')
+            {
+                // Empty pragma - silently ignore as per C99 standard
+                // #براغما processed (no-op)
+            }
+            else
+            {
+                // Check for "مرة_واحدة" pragma
+                const wchar_t *pragma_once_keyword = L"مرة_واحدة";
+                size_t pragma_once_len = wcslen(pragma_once_keyword);
+
+                if (wcsncmp(pragma_args, pragma_once_keyword, pragma_once_len) == 0 &&
+                    (pragma_args[pragma_once_len] == L'\0' || iswspace(pragma_args[pragma_once_len])))
+                {
+                    // Handle #براغما مرة_واحدة
+                    char *current_abs_path = get_absolute_path(pp_state->current_file_path);
+                    if (!current_abs_path)
+                    {
+                        PP_REPORT_ERROR(pp_state, &directive_loc, PP_ERROR_INVALID_FILE_PATH, "directive", L"فشل في الحصول على المسار المطلق للملف الحالي في #براغما مرة_واحدة.");
+                        if (error_message)
+                            *error_message = generate_error_summary(pp_state);
+                        success = true; // Recoverable error - continue processing
+                    }
+                    else
+                    {
+                        if (!add_pragma_once_file(pp_state, current_abs_path))
+                        {
+                            PP_REPORT_FATAL(pp_state, &directive_loc, PP_ERROR_ALLOCATION_FAILED, "memory", L"فشل في إضافة الملف إلى قائمة #براغما مرة_واحدة (نفاد الذاكرة؟).");
+                            if (error_message)
+                                *error_message = generate_error_summary(pp_state);
+                            success = false;
+                        }
+                        free(current_abs_path);
+                    }
+                }
+                else
+                {
+                    // Other pragma - silently ignore as per C99 standard
+                    // Extract pragma name for potential future use (but don't report error for unknown pragmas)
+                    wchar_t *pragma_end = pragma_args;
+                    while (*pragma_end != L'\0' && !iswspace(*pragma_end))
+                        pragma_end++;
+                    
+                    // Could log debug info here if needed, but C99 standard says to ignore unknown pragmas
+                    // No error reporting needed - just silently ignore
+                }
+            }
+            // #براغما processed
         }
         else
         {

@@ -82,3 +82,11 @@ target_link_libraries(test_preprocessor_line_directive PRIVATE ${PREPROCESSOR_TE
 target_include_directories(test_preprocessor_line_directive PRIVATE ${PREPROCESSOR_TEST_INCLUDE_DIRS})
 add_test(NAME test_preprocessor_line_directive COMMAND test_preprocessor_line_directive)
 set_tests_properties(test_preprocessor_line_directive PROPERTIES LABELS "unit;preprocessor;directives;line")
+
+
+# Pragma directive tests
+add_executable(test_preprocessor_pragma test_preprocessor_pragma.c)
+target_link_libraries(test_preprocessor_pragma PRIVATE ${PREPROCESSOR_TEST_LIBRARIES})
+target_include_directories(test_preprocessor_pragma PRIVATE ${PREPROCESSOR_TEST_INCLUDE_DIRS})
+add_test(NAME test_preprocessor_pragma COMMAND test_preprocessor_pragma)
+set_tests_properties(test_preprocessor_pragma PROPERTIES LABELS "unit;preprocessor;directives;pragma")

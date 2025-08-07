@@ -1653,3 +1653,51 @@ void cleanup_preprocessor_error_system(BaaPreprocessor *pp_state)
     // Reset recovery state
     reset_recovery_state(pp_state, "cleanup");
 }
+
+// --- #براغما directive helper functions ---
+
+// Check if a file is already marked with #براغما مرة_واحدة
+bool is_pragma_once_file(const BaaPreprocessor *pp_state, const char *abs_path)
+{
+    if (!pp_state || !abs_path)
+        return false;
+
+    for (size_t i = 0; i < pp_state->pragma_once_count; i++)
+    {
+        if (strcmp(pp_state->pragma_once_files[i], abs_path) == 0)
+            return true;
+    }
+    return false;
+}
+
+// Add a file to the pragma once list
+bool add_pragma_once_file(BaaPreprocessor *pp_state, const char *abs_path)
+{
+    if (!pp_state || !abs_path)
+        return false;
+
+    // Check if already in the list
+    if (is_pragma_once_file(pp_state, abs_path))
+        return true;
+
+    // Ensure capacity
+    if (pp_state->pragma_once_count >= pp_state->pragma_once_capacity)
+    {
+        size_t new_capacity = (pp_state->pragma_once_capacity == 0) ? 8 : pp_state->pragma_once_capacity * 2;
+        char **new_array = realloc(pp_state->pragma_once_files, new_capacity * sizeof(char *));
+        if (!new_array)
+            return false;
+
+        pp_state->pragma_once_files = new_array;
+        pp_state->pragma_once_capacity = new_capacity;
+    }
+
+    // Add the file path (make a copy)
+    char *path_copy = baa_strdup_char(abs_path);
+    if (!path_copy)
+        return false;
+
+    pp_state->pragma_once_files[pp_state->pragma_once_count] = path_copy;
+    pp_state->pragma_once_count++;
+    return true;
+}

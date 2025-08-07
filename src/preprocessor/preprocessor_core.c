@@ -26,6 +26,23 @@ wchar_t *process_file(BaaPreprocessor *pp_state, const char *file_path, wchar_t 
         return NULL;
     }
 
+    // Check for #براغما مرة_واحدة before processing
+    if (is_pragma_once_file(pp_state, abs_path))
+    {
+        // File is marked with #براغما مرة_واحدة and already processed, skip it
+        free(abs_path);
+        pp_state->current_file_path = prev_file_path;
+        pp_state->current_line_number = prev_line_number;
+        
+        // Return empty content (successfully processed, but no output)
+        wchar_t *empty_result = malloc(sizeof(wchar_t));
+        if (empty_result)
+        {
+            empty_result[0] = L'\0';
+        }
+        return empty_result;
+    }
+
     // Set current context for this file
     pp_state->current_file_path = abs_path; // Use the allocated absolute path
     pp_state->current_line_number = 1;      // Start at line 1

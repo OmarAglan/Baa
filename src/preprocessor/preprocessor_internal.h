@@ -535,4 +535,8 @@ wchar_t *process_string(BaaPreprocessor *pp_state, const wchar_t *source_string,
 // From preprocessor.c (internal helper)
 void report_unterminated_conditional(BaaPreprocessor *st, const PpSourceLocation *loc);
 
+// #براغما directive helper functions
+bool is_pragma_once_file(const BaaPreprocessor *pp_state, const char *abs_path);
+bool add_pragma_once_file(BaaPreprocessor *pp_state, const char *abs_path);
+
 #endif // BAA_PREPROCESSOR_INTERNAL_H

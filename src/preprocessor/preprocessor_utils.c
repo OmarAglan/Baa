@@ -85,7 +85,7 @@ PpSourceLocation get_current_original_location(const BaaPreprocessor *pp)
         if (pp->current_line_number > pp->line_override_base)
         {
             size_t lines_after_override = pp->current_line_number - pp->line_override_base;
-            base_loc.line = pp->line_number_override + lines_after_override;
+            base_loc.line = pp->line_number_override + lines_after_override - 1;
         }
         else
         {

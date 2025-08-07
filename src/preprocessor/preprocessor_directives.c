@@ -35,6 +35,8 @@ bool handle_preprocessor_directive(BaaPreprocessor *pp_state, wchar_t *directive
     size_t error_directive_len = wcslen(error_directive);
     const wchar_t *warning_directive = L"تحذير";
     size_t warning_directive_len = wcslen(warning_directive);
+    const wchar_t *line_directive = L"سطر";
+    size_t line_directive_len = wcslen(line_directive);
 
     PpSourceLocation directive_loc = get_current_original_location(pp_state); // Get location for potential errors
 
@@ -1030,6 +1032,140 @@ bool handle_preprocessor_directive(BaaPreprocessor *pp_state, wchar_t *directive
                 }
             }
             // #الغاء_تعريف processed
+        }
+        else if (wcsncmp(directive_start, line_directive, line_directive_len) == 0 &&
+                 (directive_start[line_directive_len] == L'\0' || iswspace(directive_start[line_directive_len]))) // #سطر
+        {
+            wchar_t *args_start = directive_start + line_directive_len;
+            while (iswspace(*args_start))
+                args_start++;
+
+            if (*args_start == L'\0')
+            {
+                PP_REPORT_ERROR(pp_state, &directive_loc, PP_ERROR_INVALID_DIRECTIVE_SYNTAX, "directive", L"تنسيق #سطر غير صالح: رقم السطر مفقود.");
+                if (error_message)
+                    *error_message = generate_error_summary(pp_state);
+                return true; // Recoverable syntax error - continue processing
+            }
+
+            // Parse line number
+            wchar_t *line_num_end = args_start;
+            while (*line_num_end != L'\0' && !iswspace(*line_num_end))
+                line_num_end++;
+
+            size_t line_num_len = line_num_end - args_start;
+            wchar_t *line_num_str = wcsndup_internal(args_start, line_num_len);
+            if (!line_num_str)
+            {
+                PP_REPORT_FATAL(pp_state, &directive_loc, PP_ERROR_ALLOCATION_FAILED, "memory", L"فشل في تخصيص ذاكرة لرقم السطر في #سطر.");
+                if (error_message)
+                    *error_message = generate_error_summary(pp_state);
+                success = false;
+            }
+            else
+            {
+                // Convert line number string to integer
+                wchar_t *endptr;
+                unsigned long line_num = wcstoul(line_num_str, &endptr, 10);
+                if (*endptr != L'\0' || line_num == 0)
+                {
+                    PP_REPORT_ERROR(pp_state, &directive_loc, PP_ERROR_INVALID_NUMBER_FORMAT, "directive", L"تنسيق #سطر غير صالح: رقم السطر يجب أن يكون عددًا صحيحًا موجبًا.");
+                    if (error_message)
+                        *error_message = generate_error_summary(pp_state);
+                    free(line_num_str);
+                    return true; // Recoverable syntax error - continue processing
+                }
+
+                // Check for optional filename
+                wchar_t *filename_start = line_num_end;
+                while (iswspace(*filename_start))
+                    filename_start++;
+
+                char *new_filename = NULL;
+                if (*filename_start != L'\0')
+                {
+                    // Parse filename (should be in quotes)
+                    if (*filename_start != L'"')
+                    {
+                        PP_REPORT_ERROR(pp_state, &directive_loc, PP_ERROR_INVALID_DIRECTIVE_SYNTAX, "directive", L"تنسيق #سطر غير صالح: اسم الملف يجب أن يكون محاطًا بعلامات اقتباس.");
+                        if (error_message)
+                            *error_message = generate_error_summary(pp_state);
+                        free(line_num_str);
+                        return true; // Recoverable syntax error - continue processing
+                    }
+
+                    wchar_t *filename_content_start = filename_start + 1;
+                    wchar_t *filename_end = wcschr(filename_content_start, L'"');
+                    if (!filename_end)
+                    {
+                        PP_REPORT_ERROR(pp_state, &directive_loc, PP_ERROR_INVALID_DIRECTIVE_SYNTAX, "directive", L"تنسيق #سطر غير صالح: علامة الاقتباس الختامية لاسم الملف مفقودة.");
+                        if (error_message)
+                            *error_message = generate_error_summary(pp_state);
+                        free(line_num_str);
+                        return true; // Recoverable syntax error - continue processing
+                    }
+
+                    size_t filename_len = filename_end - filename_content_start;
+                    wchar_t *filename_w = wcsndup_internal(filename_content_start, filename_len);
+                    if (!filename_w)
+                    {
+                        PP_REPORT_FATAL(pp_state, &directive_loc, PP_ERROR_ALLOCATION_FAILED, "memory", L"فشل في تخصيص ذاكرة لاسم الملف في #سطر.");
+                        if (error_message)
+                            *error_message = generate_error_summary(pp_state);
+                        free(line_num_str);
+                        success = false;
+                    }
+                    else
+                    {
+                        // Convert filename to UTF-8
+                        int required_bytes = WideCharToMultiByte(CP_UTF8, 0, filename_w, -1, NULL, 0, NULL, NULL);
+                        if (required_bytes > 0)
+                        {
+                            new_filename = malloc(required_bytes);
+                            if (new_filename)
+                            {
+                                WideCharToMultiByte(CP_UTF8, 0, filename_w, -1, new_filename, required_bytes, NULL, NULL);
+                            }
+                            else
+                            {
+                                PP_REPORT_FATAL(pp_state, &directive_loc, PP_ERROR_ALLOCATION_FAILED, "memory", L"فشل في تخصيص ذاكرة لاسم الملف (UTF-8) في #سطر.");
+                                if (error_message)
+                                    *error_message = generate_error_summary(pp_state);
+                                success = false;
+                            }
+                        }
+                        else
+                        {
+                            PP_REPORT_ERROR(pp_state, &directive_loc, PP_ERROR_ENCODING_ERROR, "file", L"فشل في تحويل اسم الملف إلى UTF-8 في #سطر.");
+                            if (error_message)
+                                *error_message = generate_error_summary(pp_state);
+                            success = true; // Recoverable encoding error - continue processing
+                        }
+                        free(filename_w);
+                    }
+                }
+
+                if (success)
+                {
+                    // Free previous overridden filename if it exists
+                    if (pp_state->overridden_file_path)
+                    {
+                        free((char*)pp_state->overridden_file_path);
+                    }
+
+                    // Apply the #سطر directive
+                    pp_state->line_number_override = (size_t)line_num;
+                    pp_state->overridden_file_path = new_filename; // Takes ownership
+                    pp_state->has_line_override = true;
+                }
+                else if (new_filename)
+                {
+                    free(new_filename);
+                }
+
+                free(line_num_str);
+            }
+            // #سطر processed
         }
         else
         {

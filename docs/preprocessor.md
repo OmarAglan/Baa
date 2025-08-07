@@ -12,6 +12,8 @@ The Baa preprocessor is a crucial initial stage in the Baa compilation pipeline.
 
 The preprocessor takes a Baa source file (or string) as input, processes these directives, and produces a single, unified translation unit (as a wide character string, typically UTF-16LE) which is then passed to the Baa lexer.
 
+**Current Version**: v0.1.30.0 (95% complete with enhanced error system and comprehensive macro support)
+
 ## Features (الميزات)
 
 ### 1. File Handling and Encoding

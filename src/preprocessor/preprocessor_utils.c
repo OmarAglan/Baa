@@ -41,6 +41,8 @@ void pop_location(BaaPreprocessor *pp)
 // Gets the location from the top of the stack. Returns a default location if stack is empty.
 PpSourceLocation get_current_original_location(const BaaPreprocessor *pp)
 {
+    PpSourceLocation base_loc;
+    
     if (pp->location_stack_count > 0)
     {
         PpSourceLocation stack_loc = pp->location_stack[pp->location_stack_count - 1];
@@ -53,23 +55,34 @@ PpSourceLocation get_current_original_location(const BaaPreprocessor *pp)
             pp->current_line_number > 1)
         {
             // Use current physical location for better error reporting
-            return (PpSourceLocation){
+            base_loc = (PpSourceLocation){
                 .file_path = pp->current_file_path ? pp->current_file_path : stack_loc.file_path,
                 .line = pp->current_line_number,
                 .column = pp->current_column_number};
         }
-
-        return stack_loc;
+        else
+        {
+            base_loc = stack_loc;
+        }
     }
     else
     {
         // Return a default/unknown location if stack is empty
         // Use the current physical location as a fallback if available
-        return (PpSourceLocation){
+        base_loc = (PpSourceLocation){
             .file_path = pp->current_file_path ? pp->current_file_path : "(unknown)",
             .line = pp->current_line_number,
             .column = pp->current_column_number};
     }
+
+    // Apply #سطر directive overrides if active
+    if (pp->has_line_override)
+    {
+        base_loc.file_path = pp->overridden_file_path ? pp->overridden_file_path : base_loc.file_path;
+        base_loc.line = pp->line_number_override;
+    }
+
+    return base_loc;
 }
 
 // Updates the location on the top of the stack (if any exists)
@@ -1605,6 +1618,28 @@ void cleanup_preprocessor_error_system(BaaPreprocessor *pp_state)
         free(pp_state->diagnostics);
         pp_state->diagnostics = NULL;
     }
+
+    // Clean up #سطر directive state
+    if (pp_state->overridden_file_path)
+    {
+        free((char*)pp_state->overridden_file_path);
+        pp_state->overridden_file_path = NULL;
+    }
+    pp_state->line_number_override = 0;
+    pp_state->has_line_override = false;
+
+    // Clean up #براغما directive state
+    if (pp_state->pragma_once_files)
+    {
+        for (size_t i = 0; i < pp_state->pragma_once_count; ++i)
+        {
+            free(pp_state->pragma_once_files[i]);
+        }
+        free(pp_state->pragma_once_files);
+        pp_state->pragma_once_files = NULL;
+    }
+    pp_state->pragma_once_count = 0;
+    pp_state->pragma_once_capacity = 0;
 
     // Reset all counters
     pp_state->diagnostic_count = 0;

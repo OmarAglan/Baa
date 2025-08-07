@@ -198,6 +198,16 @@ struct BaaPreprocessor
     size_t location_stack_count;      ///< Depth of location stack
     size_t location_stack_capacity;   ///< Capacity of location stack
 
+    // #سطر directive support
+    const char *overridden_file_path; ///< File path override from #سطر directive
+    size_t line_number_override;      ///< Line number override from #سطر directive (0 = no override)
+    bool has_line_override;           ///< Whether line override is active
+
+    // #براغما directive support
+    char **pragma_once_files;         ///< Array of absolute paths marked with #براغما مرة_واحدة
+    size_t pragma_once_count;         ///< Number of files marked with #براغما مرة_واحدة
+    size_t pragma_once_capacity;      ///< Capacity of pragma_once_files array
+
     // Enhanced error management system
     PreprocessorDiagnostic *diagnostics; ///< Array of collected diagnostics
     size_t diagnostic_count;          ///< Number of collected diagnostics

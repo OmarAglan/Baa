@@ -75,3 +75,10 @@ target_link_libraries(test_preprocessor_expressions PRIVATE ${PREPROCESSOR_TEST_
 target_include_directories(test_preprocessor_expressions PRIVATE ${PREPROCESSOR_TEST_INCLUDE_DIRS})
 add_test(NAME test_preprocessor_expressions COMMAND test_preprocessor_expressions)
 set_tests_properties(test_preprocessor_expressions PROPERTIES LABELS "unit;preprocessor;expressions;advanced")
+
+# Line directive tests
+add_executable(test_preprocessor_line_directive test_preprocessor_line_directive.c)
+target_link_libraries(test_preprocessor_line_directive PRIVATE ${PREPROCESSOR_TEST_LIBRARIES})
+target_include_directories(test_preprocessor_line_directive PRIVATE ${PREPROCESSOR_TEST_INCLUDE_DIRS})
+add_test(NAME test_preprocessor_line_directive COMMAND test_preprocessor_line_directive)
+set_tests_properties(test_preprocessor_line_directive PROPERTIES LABELS "unit;preprocessor;directives;line")

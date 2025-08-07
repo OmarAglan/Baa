@@ -121,6 +121,209 @@ bool scan_and_expand_macros_for_expressions(
                 continue;
             }
 
+            // Special handling for 'أمر_براغما' operator (also support 'براغما' for _Pragma)
+            if (wcscmp(identifier, L"أمر_براغما") == 0 || wcscmp(identifier, L"براغما") == 0)
+            {
+                // Process _Pragma operator - converts string literal to pragma directive
+                // Skip whitespace after 'أمر_براغما'
+                while (iswspace(*scan_ptr))
+                {
+                    scan_ptr++;
+                    current_col_in_this_scan_pass++;
+                }
+
+                // Expect opening parenthesis
+                if (*scan_ptr != L'(')
+                {
+                    PpSourceLocation temp_loc = get_current_original_location(pp_state);
+                    temp_loc.line = original_line_number_for_errors;
+                    temp_loc.column = current_col_in_this_scan_pass;
+                    PP_REPORT_ERROR(pp_state, &temp_loc, PP_ERROR_MISSING_TOKEN, "line_processing", L"متوقع '(' بعد أمر_براغما.");
+                    *overall_success = false;
+                    free(identifier);
+                    break;
+                }
+                scan_ptr++; // Skip '('
+                current_col_in_this_scan_pass++;
+
+                // Skip whitespace inside parentheses
+                while (iswspace(*scan_ptr))
+                {
+                    scan_ptr++;
+                    current_col_in_this_scan_pass++;
+                }
+
+                // Expect string literal
+                if (*scan_ptr != L'"')
+                {
+                    PpSourceLocation temp_loc = get_current_original_location(pp_state);
+                    temp_loc.line = original_line_number_for_errors;
+                    temp_loc.column = current_col_in_this_scan_pass;
+                    PP_REPORT_ERROR(pp_state, &temp_loc, PP_ERROR_MISSING_TOKEN, "line_processing", L"متوقع نص مقتبس بعد أمر_براغما(.");
+                    *overall_success = false;
+                    free(identifier);
+                    break;
+                }
+
+                scan_ptr++; // Skip opening quote
+                current_col_in_this_scan_pass++;
+
+                // Extract string literal content
+                DynamicWcharBuffer pragma_content;
+                if (!init_dynamic_buffer(&pragma_content, 128))
+                {
+                    PpSourceLocation temp_loc = get_current_original_location(pp_state);
+                    temp_loc.line = original_line_number_for_errors;
+                    temp_loc.column = current_col_in_this_scan_pass;
+                    PP_REPORT_FATAL(pp_state, &temp_loc, PP_ERROR_ALLOCATION_FAILED, "line_processing", L"فشل في تهيئة مخزن محتوى أمر_براغما.");
+                    *overall_success = false;
+                    free(identifier);
+                    break;
+                }
+
+                // Parse string literal with escape sequences
+                bool string_complete = false;
+                while (*scan_ptr != L'\0' && !string_complete)
+                {
+                    if (*scan_ptr == L'"')
+                    {
+                        string_complete = true;
+                        scan_ptr++; // Skip closing quote
+                        current_col_in_this_scan_pass++;
+                    }
+                    else if (*scan_ptr == L'\\' && *(scan_ptr + 1) != L'\0')
+                    {
+                        // Handle escape sequences
+                        scan_ptr++; // Skip backslash
+                        current_col_in_this_scan_pass++;
+                        wchar_t escaped_char = *scan_ptr;
+                        
+                        switch (escaped_char)
+                        {
+                            case L'n':
+                                escaped_char = L'\n';
+                                break;
+                            case L't':
+                                escaped_char = L'\t';
+                                break;
+                            case L'r':
+                                escaped_char = L'\r';
+                                break;
+                            case L'\\':
+                                escaped_char = L'\\';
+                                break;
+                            case L'"':
+                                escaped_char = L'"';
+                                break;
+                            default:
+                                // Leave as-is for other escape sequences
+                                if (!append_dynamic_buffer_n(&pragma_content, L"\\", 1))
+                                {
+                                    PpSourceLocation temp_loc = get_current_original_location(pp_state);
+                                    temp_loc.line = original_line_number_for_errors;
+                                    temp_loc.column = current_col_in_this_scan_pass;
+                                    PP_REPORT_FATAL(pp_state, &temp_loc, PP_ERROR_ALLOCATION_FAILED, "line_processing", L"فشل في إلحاق محتوى أمر_براغما.");
+                                    *overall_success = false;
+                                    free_dynamic_buffer(&pragma_content);
+                                    free(identifier);
+                                    break;
+                                }
+                                break;
+                        }
+
+                        if (!*overall_success) break;
+
+                        if (!append_dynamic_buffer_n(&pragma_content, &escaped_char, 1))
+                        {
+                            PpSourceLocation temp_loc = get_current_original_location(pp_state);
+                            temp_loc.line = original_line_number_for_errors;
+                            temp_loc.column = current_col_in_this_scan_pass;
+                            PP_REPORT_FATAL(pp_state, &temp_loc, PP_ERROR_ALLOCATION_FAILED, "line_processing", L"فشل في إلحاق محتوى أمر_براغما.");
+                            *overall_success = false;
+                            free_dynamic_buffer(&pragma_content);
+                            free(identifier);
+                            break;
+                        }
+
+                        scan_ptr++;
+                        current_col_in_this_scan_pass++;
+                    }
+                    else
+                    {
+                        if (!append_dynamic_buffer_n(&pragma_content, scan_ptr, 1))
+                        {
+                            PpSourceLocation temp_loc = get_current_original_location(pp_state);
+                            temp_loc.line = original_line_number_for_errors;
+                            temp_loc.column = current_col_in_this_scan_pass;
+                            PP_REPORT_FATAL(pp_state, &temp_loc, PP_ERROR_ALLOCATION_FAILED, "line_processing", L"فشل في إلحاق محتوى أمر_براغما.");
+                            *overall_success = false;
+                            free_dynamic_buffer(&pragma_content);
+                            free(identifier);
+                            break;
+                        }
+                        scan_ptr++;
+                        current_col_in_this_scan_pass++;
+                    }
+                }
+
+                if (!*overall_success)
+                {
+                    break;
+                }
+
+                if (!string_complete)
+                {
+                    PpSourceLocation temp_loc = get_current_original_location(pp_state);
+                    temp_loc.line = original_line_number_for_errors;
+                    temp_loc.column = current_col_in_this_scan_pass;
+                    PP_REPORT_ERROR(pp_state, &temp_loc, PP_ERROR_UNTERMINATED_STRING, "line_processing", L"نص مقتبس غير مكتمل في أمر_براغما.");
+                    *overall_success = false;
+                    free_dynamic_buffer(&pragma_content);
+                    free(identifier);
+                    break;
+                }
+
+                // Skip whitespace before closing parenthesis
+                while (iswspace(*scan_ptr))
+                {
+                    scan_ptr++;
+                    current_col_in_this_scan_pass++;
+                }
+
+                // Expect closing parenthesis
+                if (*scan_ptr != L')')
+                {
+                    PpSourceLocation temp_loc = get_current_original_location(pp_state);
+                    temp_loc.line = original_line_number_for_errors;
+                    temp_loc.column = current_col_in_this_scan_pass;
+                    PP_REPORT_ERROR(pp_state, &temp_loc, PP_ERROR_MISSING_TOKEN, "line_processing", L"متوقع ')' بعد نص أمر_براغما.");
+                    *overall_success = false;
+                    free_dynamic_buffer(&pragma_content);
+                    free(identifier);
+                    break;
+                }
+                scan_ptr++; // Skip ')'
+                current_col_in_this_scan_pass++;
+
+                // Process the pragma directive
+                if (pragma_content.length > 0)
+                {
+                    // Call the pragma processing function directly
+                    PpSourceLocation pragma_loc = get_current_original_location(pp_state);
+                    pragma_loc.line = original_line_number_for_errors;
+                    pragma_loc.column = token_start_col_for_error;
+                    
+                    if (!process_pragma_directive(pp_state, pragma_content.buffer, &pragma_loc, error_message))
+                    {
+                        *overall_success = false;
+                    }
+                }
+
+                free_dynamic_buffer(&pragma_content);
+                free(identifier);
+                continue;
+            }
+
             // Special handling for 'معرف' operator to prevent argument expansion
             if (wcscmp(identifier, L"معرف") == 0)
             {
@@ -561,6 +764,209 @@ bool scan_and_substitute_macros_one_pass(
                 free(identifier);
                 if (!*overall_success)
                     break;
+                continue;
+            }
+
+            // Special handling for 'أمر_براغما' operator (also support 'براغما' for _Pragma)
+            if (wcscmp(identifier, L"أمر_براغما") == 0 || wcscmp(identifier, L"براغما") == 0)
+            {
+                // Process _Pragma operator - converts string literal to pragma directive
+                // Skip whitespace after operator
+                while (iswspace(*scan_ptr))
+                {
+                    scan_ptr++;
+                    current_col_in_this_scan_pass++;
+                }
+
+                // Expect opening parenthesis
+                if (*scan_ptr != L'(')
+                {
+                    PpSourceLocation temp_loc = get_current_original_location(pp_state);
+                    temp_loc.line = original_line_number_for_errors;
+                    temp_loc.column = current_col_in_this_scan_pass;
+                    PP_REPORT_ERROR(pp_state, &temp_loc, PP_ERROR_MISSING_TOKEN, "line_processing", L"متوقع '(' بعد مشغل براغما.");
+                    *overall_success = false;
+                    free(identifier);
+                    break;
+                }
+                scan_ptr++; // Skip '('
+                current_col_in_this_scan_pass++;
+
+                // Skip whitespace inside parentheses
+                while (iswspace(*scan_ptr))
+                {
+                    scan_ptr++;
+                    current_col_in_this_scan_pass++;
+                }
+
+                // Expect string literal
+                if (*scan_ptr != L'"')
+                {
+                    PpSourceLocation temp_loc = get_current_original_location(pp_state);
+                    temp_loc.line = original_line_number_for_errors;
+                    temp_loc.column = current_col_in_this_scan_pass;
+                    PP_REPORT_ERROR(pp_state, &temp_loc, PP_ERROR_MISSING_TOKEN, "line_processing", L"متوقع نص مقتبس بعد مشغل براغما(.");
+                    *overall_success = false;
+                    free(identifier);
+                    break;
+                }
+
+                scan_ptr++; // Skip opening quote
+                current_col_in_this_scan_pass++;
+
+                // Extract string literal content
+                DynamicWcharBuffer pragma_content;
+                if (!init_dynamic_buffer(&pragma_content, 128))
+                {
+                    PpSourceLocation temp_loc = get_current_original_location(pp_state);
+                    temp_loc.line = original_line_number_for_errors;
+                    temp_loc.column = current_col_in_this_scan_pass;
+                    PP_REPORT_FATAL(pp_state, &temp_loc, PP_ERROR_ALLOCATION_FAILED, "line_processing", L"فشل في تهيئة مخزن محتوى مشغل براغما.");
+                    *overall_success = false;
+                    free(identifier);
+                    break;
+                }
+
+                // Parse string literal with escape sequences
+                bool string_complete = false;
+                while (*scan_ptr != L'\0' && !string_complete)
+                {
+                    if (*scan_ptr == L'"')
+                    {
+                        string_complete = true;
+                        scan_ptr++; // Skip closing quote
+                        current_col_in_this_scan_pass++;
+                    }
+                    else if (*scan_ptr == L'\\' && *(scan_ptr + 1) != L'\0')
+                    {
+                        // Handle escape sequences
+                        scan_ptr++; // Skip backslash
+                        current_col_in_this_scan_pass++;
+                        wchar_t escaped_char = *scan_ptr;
+                        
+                        switch (escaped_char)
+                        {
+                            case L'n':
+                                escaped_char = L'\n';
+                                break;
+                            case L't':
+                                escaped_char = L'\t';
+                                break;
+                            case L'r':
+                                escaped_char = L'\r';
+                                break;
+                            case L'\\':
+                                escaped_char = L'\\';
+                                break;
+                            case L'"':
+                                escaped_char = L'"';
+                                break;
+                            default:
+                                // Leave as-is for other escape sequences
+                                if (!append_dynamic_buffer_n(&pragma_content, L"\\", 1))
+                                {
+                                    PpSourceLocation temp_loc = get_current_original_location(pp_state);
+                                    temp_loc.line = original_line_number_for_errors;
+                                    temp_loc.column = current_col_in_this_scan_pass;
+                                    PP_REPORT_FATAL(pp_state, &temp_loc, PP_ERROR_ALLOCATION_FAILED, "line_processing", L"فشل في إلحاق محتوى مشغل براغما.");
+                                    *overall_success = false;
+                                    free_dynamic_buffer(&pragma_content);
+                                    free(identifier);
+                                    break;
+                                }
+                                break;
+                        }
+
+                        if (!*overall_success) break;
+
+                        if (!append_dynamic_buffer_n(&pragma_content, &escaped_char, 1))
+                        {
+                            PpSourceLocation temp_loc = get_current_original_location(pp_state);
+                            temp_loc.line = original_line_number_for_errors;
+                            temp_loc.column = current_col_in_this_scan_pass;
+                            PP_REPORT_FATAL(pp_state, &temp_loc, PP_ERROR_ALLOCATION_FAILED, "line_processing", L"فشل في إلحاق محتوى مشغل براغما.");
+                            *overall_success = false;
+                            free_dynamic_buffer(&pragma_content);
+                            free(identifier);
+                            break;
+                        }
+
+                        scan_ptr++;
+                        current_col_in_this_scan_pass++;
+                    }
+                    else
+                    {
+                        if (!append_dynamic_buffer_n(&pragma_content, scan_ptr, 1))
+                        {
+                            PpSourceLocation temp_loc = get_current_original_location(pp_state);
+                            temp_loc.line = original_line_number_for_errors;
+                            temp_loc.column = current_col_in_this_scan_pass;
+                            PP_REPORT_FATAL(pp_state, &temp_loc, PP_ERROR_ALLOCATION_FAILED, "line_processing", L"فشل في إلحاق محتوى مشغل براغما.");
+                            *overall_success = false;
+                            free_dynamic_buffer(&pragma_content);
+                            free(identifier);
+                            break;
+                        }
+                        scan_ptr++;
+                        current_col_in_this_scan_pass++;
+                    }
+                }
+
+                if (!*overall_success)
+                {
+                    break;
+                }
+
+                if (!string_complete)
+                {
+                    PpSourceLocation temp_loc = get_current_original_location(pp_state);
+                    temp_loc.line = original_line_number_for_errors;
+                    temp_loc.column = current_col_in_this_scan_pass;
+                    PP_REPORT_ERROR(pp_state, &temp_loc, PP_ERROR_UNTERMINATED_STRING, "line_processing", L"نص مقتبس غير مكتمل في مشغل براغما.");
+                    *overall_success = false;
+                    free_dynamic_buffer(&pragma_content);
+                    free(identifier);
+                    break;
+                }
+
+                // Skip whitespace before closing parenthesis
+                while (iswspace(*scan_ptr))
+                {
+                    scan_ptr++;
+                    current_col_in_this_scan_pass++;
+                }
+
+                // Expect closing parenthesis
+                if (*scan_ptr != L')')
+                {
+                    PpSourceLocation temp_loc = get_current_original_location(pp_state);
+                    temp_loc.line = original_line_number_for_errors;
+                    temp_loc.column = current_col_in_this_scan_pass;
+                    PP_REPORT_ERROR(pp_state, &temp_loc, PP_ERROR_MISSING_TOKEN, "line_processing", L"متوقع ')' بعد نص مشغل براغما.");
+                    *overall_success = false;
+                    free_dynamic_buffer(&pragma_content);
+                    free(identifier);
+                    break;
+                }
+                scan_ptr++; // Skip ')'
+                current_col_in_this_scan_pass++;
+
+                // Process the pragma directive
+                if (pragma_content.length > 0)
+                {
+                    // Call the pragma processing function directly
+                    PpSourceLocation pragma_loc = get_current_original_location(pp_state);
+                    pragma_loc.line = original_line_number_for_errors;
+                    pragma_loc.column = token_start_col_for_error;
+                    
+                    if (!process_pragma_directive(pp_state, pragma_content.buffer, &pragma_loc, error_message))
+                    {
+                        *overall_success = false;
+                    }
+                }
+
+                free_dynamic_buffer(&pragma_content);
+                free(identifier);
                 continue;
             }
 

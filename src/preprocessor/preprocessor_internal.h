@@ -539,4 +539,8 @@ void report_unterminated_conditional(BaaPreprocessor *st, const PpSourceLocation
 bool is_pragma_once_file(const BaaPreprocessor *pp_state, const char *abs_path);
 bool add_pragma_once_file(BaaPreprocessor *pp_state, const char *abs_path);
 
+// Helper function for _Pragma operator
+bool process_pragma_directive(BaaPreprocessor *pp_state, const wchar_t *pragma_content,
+                             const PpSourceLocation *location, wchar_t **error_message);
+
 #endif // BAA_PREPROCESSOR_INTERNAL_H

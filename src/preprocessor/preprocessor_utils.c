@@ -1701,3 +1701,65 @@ bool add_pragma_once_file(BaaPreprocessor *pp_state, const char *abs_path)
     pp_state->pragma_once_count++;
     return true;
 }
+
+// Helper function for _Pragma operator - processes pragma directive content
+bool process_pragma_directive(BaaPreprocessor *pp_state, const wchar_t *pragma_content,
+                             const PpSourceLocation *location, wchar_t **error_message)
+{
+    if (!pragma_content || !pp_state)
+        return false;
+
+    // Skip leading whitespace
+    const wchar_t *content = pragma_content;
+    while (iswspace(*content))
+        content++;
+
+    // Empty pragma - silently ignore as per C99 standard
+    if (*content == L'\0')
+        return true;
+
+    // Check for "مرة_واحدة" pragma
+    const wchar_t *pragma_once_keyword = L"مرة_واحدة";
+    size_t pragma_once_len = wcslen(pragma_once_keyword);
+
+    if (wcsncmp(content, pragma_once_keyword, pragma_once_len) == 0 &&
+        (content[pragma_once_len] == L'\0' || iswspace(content[pragma_once_len])))
+    {
+        // Handle #pragma once equivalent
+        PpSourceLocation current_loc = get_current_original_location(pp_state);
+        const char *current_file_path = current_loc.file_path;
+
+        if (current_file_path)
+        {
+            char *current_abs_path = get_absolute_path(current_file_path);
+            if (!current_abs_path)
+            {
+                if (location)
+                {
+                    PP_REPORT_ERROR(pp_state, location, PP_ERROR_ALLOCATION_FAILED, "pragma_processing",
+                                   L"فشل في الحصول على المسار المطلق للملف الحالي لمعالجة أمر_براغما مرة_واحدة.");
+                }
+                return false;
+            }
+
+            if (!add_pragma_once_file(pp_state, current_abs_path))
+            {
+                free(current_abs_path);
+                if (location)
+                {
+                    PP_REPORT_ERROR(pp_state, location, PP_ERROR_ALLOCATION_FAILED, "pragma_processing",
+                                   L"فشل في إضافة الملف إلى قائمة أمر_براغما مرة_واحدة.");
+                }
+                return false;
+            }
+            free(current_abs_path);
+        }
+        return true;
+    }
+    else
+    {
+        // Other pragma - silently ignore as per C99 standard
+        // C99 standard says to ignore unknown pragmas without error
+        return true;
+    }
+}

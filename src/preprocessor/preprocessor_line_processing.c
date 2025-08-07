@@ -103,7 +103,7 @@ bool scan_and_expand_macros_for_expressions(
             }
             else if (wcscmp(identifier, L"__إصدار_المعيار_باء__") == 0)
             {
-                if (!append_to_dynamic_buffer(one_pass_buffer, L"10010L"))
+                if (!append_to_dynamic_buffer(one_pass_buffer, L"10150L"))
                 {
                     PpSourceLocation temp_loc = get_current_original_location(pp_state);
                     temp_loc.line = original_line_number_for_errors;
@@ -750,7 +750,7 @@ bool scan_and_substitute_macros_one_pass(
             }
             else if (wcscmp(identifier, L"__إصدار_المعيار_باء__") == 0)
             {
-                if (!append_to_dynamic_buffer(one_pass_buffer, L"10010L"))
+                if (!append_to_dynamic_buffer(one_pass_buffer, L"10150L"))
                 {
                     PpSourceLocation temp_loc = get_current_original_location(pp_state);
                     temp_loc.line = original_line_number_for_errors;

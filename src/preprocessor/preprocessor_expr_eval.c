@@ -1,3 +1,4 @@
+// preprocessor_expr_eval.c
 #include "preprocessor_internal.h"
 #include <wctype.h>
 
@@ -289,9 +290,37 @@ static PpExprToken get_next_pp_expr_token(PpExprTokenizer *tz)
             }
             else
             {
-                // Regular decimal (could be octal in C, but preprocessor often treats as decimal or disallows)
-                // For simplicity, let's assume decimal if starts with 0 and not 0x/0b.
-                value = wcstol(tz->start, &endptr, base);
+                // Handle octal numbers (starting with 0 but not 0x/0b)
+                // Check if it has non-octal digits (8 or 9) - if so, treat as invalid
+                const wchar_t *check_ptr = tz->start + 1;
+                bool is_valid_octal = true;
+                while (check_ptr < tz->start + (tz->current - tz->start) && iswdigit(*check_ptr))
+                {
+                    if (*check_ptr == L'8' || *check_ptr == L'9')
+                    {
+                        is_valid_octal = false;
+                        break;
+                    }
+                    check_ptr++;
+                }
+                
+                if (is_valid_octal)
+                {
+                    // Parse as octal (base 8)
+                    base = 8;
+                    value = wcstol(tz->start, &endptr, base);
+                }
+                else
+                {
+                    // Invalid octal literal - report error
+                    if (tz->pp_state)
+                    {
+                        PpSourceLocation error_loc = get_current_original_location(tz->pp_state);
+                        error_loc.column = tz->expr_string_column_offset + (tz->current_token_start_column > 0 ? tz->current_token_start_column : 1) - 1;
+                        PP_REPORT_ERROR(tz->pp_state, &error_loc, PP_ERROR_INVALID_NUMBER_FORMAT, "expression", L"رقم ثماني غير صالح يحتوي على أرقام 8 أو 9 في التعبير الشرطي.");
+                    }
+                    return (PpExprToken){.type = PP_EXPR_TOKEN_ERROR};
+                }
             }
         }
         else

@@ -1,3 +1,4 @@
+// preprocessor_utils.c
 #include "preprocessor_internal.h"
 // #include <iconv.h>
 #include <errno.h>  // For errno
@@ -40,6 +41,8 @@ void pop_location(BaaPreprocessor *pp)
 // Gets the location from the top of the stack. Returns a default location if stack is empty.
 PpSourceLocation get_current_original_location(const BaaPreprocessor *pp)
 {
+    PpSourceLocation base_loc;
+    
     if (pp->location_stack_count > 0)
     {
         PpSourceLocation stack_loc = pp->location_stack[pp->location_stack_count - 1];
@@ -52,23 +55,45 @@ PpSourceLocation get_current_original_location(const BaaPreprocessor *pp)
             pp->current_line_number > 1)
         {
             // Use current physical location for better error reporting
-            return (PpSourceLocation){
+            base_loc = (PpSourceLocation){
                 .file_path = pp->current_file_path ? pp->current_file_path : stack_loc.file_path,
                 .line = pp->current_line_number,
                 .column = pp->current_column_number};
         }
-
-        return stack_loc;
+        else
+        {
+            base_loc = stack_loc;
+        }
     }
     else
     {
         // Return a default/unknown location if stack is empty
         // Use the current physical location as a fallback if available
-        return (PpSourceLocation){
+        base_loc = (PpSourceLocation){
             .file_path = pp->current_file_path ? pp->current_file_path : "(unknown)",
             .line = pp->current_line_number,
             .column = pp->current_column_number};
     }
+
+    // Apply #سطر directive overrides if active
+    if (pp->has_line_override)
+    {
+        base_loc.file_path = pp->overridden_file_path ? pp->overridden_file_path : base_loc.file_path;
+        // Calculate current line based on C99 semantics:
+        // The #line directive makes the next line have the specified number
+        // So: specified_line + (current_physical_line - (override_line + 1))
+        if (pp->current_line_number > pp->line_override_base)
+        {
+            size_t lines_after_override = pp->current_line_number - pp->line_override_base;
+            base_loc.line = pp->line_number_override + lines_after_override - 1;
+        }
+        else
+        {
+            base_loc.line = pp->line_number_override;
+        }
+    }
+
+    return base_loc;
 }
 
 // Updates the location on the top of the stack (if any exists)
@@ -1605,6 +1630,28 @@ void cleanup_preprocessor_error_system(BaaPreprocessor *pp_state)
         pp_state->diagnostics = NULL;
     }
 
+    // Clean up #سطر directive state
+    if (pp_state->overridden_file_path)
+    {
+        free((char*)pp_state->overridden_file_path);
+        pp_state->overridden_file_path = NULL;
+    }
+    pp_state->line_number_override = 0;
+    pp_state->has_line_override = false;
+
+    // Clean up #براغما directive state
+    if (pp_state->pragma_once_files)
+    {
+        for (size_t i = 0; i < pp_state->pragma_once_count; ++i)
+        {
+            free(pp_state->pragma_once_files[i]);
+        }
+        free(pp_state->pragma_once_files);
+        pp_state->pragma_once_files = NULL;
+    }
+    pp_state->pragma_once_count = 0;
+    pp_state->pragma_once_capacity = 0;
+
     // Reset all counters
     pp_state->diagnostic_count = 0;
     pp_state->diagnostic_capacity = 0;
@@ -1616,4 +1663,114 @@ void cleanup_preprocessor_error_system(BaaPreprocessor *pp_state)
 
     // Reset recovery state
     reset_recovery_state(pp_state, "cleanup");
+}
+
+// --- #براغما directive helper functions ---
+
+// Check if a file is already marked with #براغما مرة_واحدة
+bool is_pragma_once_file(const BaaPreprocessor *pp_state, const char *abs_path)
+{
+    if (!pp_state || !abs_path)
+        return false;
+
+    for (size_t i = 0; i < pp_state->pragma_once_count; i++)
+    {
+        if (strcmp(pp_state->pragma_once_files[i], abs_path) == 0)
+            return true;
+    }
+    return false;
+}
+
+// Add a file to the pragma once list
+bool add_pragma_once_file(BaaPreprocessor *pp_state, const char *abs_path)
+{
+    if (!pp_state || !abs_path)
+        return false;
+
+    // Check if already in the list
+    if (is_pragma_once_file(pp_state, abs_path))
+        return true;
+
+    // Ensure capacity
+    if (pp_state->pragma_once_count >= pp_state->pragma_once_capacity)
+    {
+        size_t new_capacity = (pp_state->pragma_once_capacity == 0) ? 8 : pp_state->pragma_once_capacity * 2;
+        char **new_array = realloc(pp_state->pragma_once_files, new_capacity * sizeof(char *));
+        if (!new_array)
+            return false;
+
+        pp_state->pragma_once_files = new_array;
+        pp_state->pragma_once_capacity = new_capacity;
+    }
+
+    // Add the file path (make a copy)
+    char *path_copy = baa_strdup_char(abs_path);
+    if (!path_copy)
+        return false;
+
+    pp_state->pragma_once_files[pp_state->pragma_once_count] = path_copy;
+    pp_state->pragma_once_count++;
+    return true;
+}
+
+// Helper function for _Pragma operator - processes pragma directive content
+bool process_pragma_directive(BaaPreprocessor *pp_state, const wchar_t *pragma_content,
+                             const PpSourceLocation *location, wchar_t **error_message)
+{
+    if (!pragma_content || !pp_state)
+        return false;
+
+    // Skip leading whitespace
+    const wchar_t *content = pragma_content;
+    while (iswspace(*content))
+        content++;
+
+    // Empty pragma - silently ignore as per C99 standard
+    if (*content == L'\0')
+        return true;
+
+    // Check for "مرة_واحدة" pragma
+    const wchar_t *pragma_once_keyword = L"مرة_واحدة";
+    size_t pragma_once_len = wcslen(pragma_once_keyword);
+
+    if (wcsncmp(content, pragma_once_keyword, pragma_once_len) == 0 &&
+        (content[pragma_once_len] == L'\0' || iswspace(content[pragma_once_len])))
+    {
+        // Handle #pragma once equivalent
+        PpSourceLocation current_loc = get_current_original_location(pp_state);
+        const char *current_file_path = current_loc.file_path;
+
+        if (current_file_path)
+        {
+            char *current_abs_path = get_absolute_path(current_file_path);
+            if (!current_abs_path)
+            {
+                if (location)
+                {
+                    PP_REPORT_ERROR(pp_state, location, PP_ERROR_ALLOCATION_FAILED, "pragma_processing",
+                                   L"فشل في الحصول على المسار المطلق للملف الحالي لمعالجة أمر_براغما مرة_واحدة.");
+                }
+                return false;
+            }
+
+            if (!add_pragma_once_file(pp_state, current_abs_path))
+            {
+                free(current_abs_path);
+                if (location)
+                {
+                    PP_REPORT_ERROR(pp_state, location, PP_ERROR_ALLOCATION_FAILED, "pragma_processing",
+                                   L"فشل في إضافة الملف إلى قائمة أمر_براغما مرة_واحدة.");
+                }
+                return false;
+            }
+            free(current_abs_path);
+        }
+        return true;
+    }
+    else
+    {
+        // Other pragma - silently ignore as per C99 standard
+        // C99 standard says to ignore unknown pragmas without error
+        return true;
+    }
 }

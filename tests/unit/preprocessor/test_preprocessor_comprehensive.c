@@ -13,6 +13,22 @@
 static char* get_test_resource_path(const char* filename) {
     static char full_path[512];
     
+    // Try multiple possible paths to find the test resources
+    // First try the path assuming we're running from the build directory
+#ifdef _WIN32
+    sprintf_s(full_path, sizeof(full_path), "../tests/resources/preprocessor_test_cases/%s", filename);
+#else
+    sprintf(full_path, "../tests/resources/preprocessor_test_cases/%s", filename);
+#endif
+    
+    // Check if the file exists at this path
+    FILE* test_file = fopen(full_path, "r");
+    if (test_file) {
+        fclose(test_file);
+        return full_path;
+    }
+    
+    // Try the original relative path (for cases where we're running from source root)
 #ifdef _WIN32
     sprintf_s(full_path, sizeof(full_path), "tests/resources/preprocessor_test_cases/%s", filename);
 #else
@@ -32,8 +48,10 @@ static wchar_t* preprocess_file(const char* filename, wchar_t** error_message) {
     source.data.file_path = file_path;
     
     // Set up include paths to point to the test resources directory
+    // Try both possible locations for include files
     const char* include_paths[] = {
-        "tests/resources/preprocessor_test_cases",
+        "../tests/resources/preprocessor_test_cases",  // From build directory
+        "tests/resources/preprocessor_test_cases",     // From source root
         NULL
     };
     

@@ -11,4 +11,7 @@
 // Line 11: Use the macro
 PI is defined as PI
 
-// Line 14: End of file
+// Line 13: Use TEST_MACRO
+Test macro says: TEST_MACRO
+
+// Line 15: End of file

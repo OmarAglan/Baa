@@ -75,3 +75,26 @@ target_link_libraries(test_preprocessor_expressions PRIVATE ${PREPROCESSOR_TEST_
 target_include_directories(test_preprocessor_expressions PRIVATE ${PREPROCESSOR_TEST_INCLUDE_DIRS})
 add_test(NAME test_preprocessor_expressions COMMAND test_preprocessor_expressions)
 set_tests_properties(test_preprocessor_expressions PROPERTIES LABELS "unit;preprocessor;expressions;advanced")
+
+# Line directive tests
+add_executable(test_preprocessor_line_directive test_preprocessor_line_directive.c)
+target_link_libraries(test_preprocessor_line_directive PRIVATE ${PREPROCESSOR_TEST_LIBRARIES})
+target_include_directories(test_preprocessor_line_directive PRIVATE ${PREPROCESSOR_TEST_INCLUDE_DIRS})
+add_test(NAME test_preprocessor_line_directive COMMAND test_preprocessor_line_directive)
+set_tests_properties(test_preprocessor_line_directive PROPERTIES LABELS "unit;preprocessor;directives;line")
+
+
+# Pragma directive tests
+add_executable(test_preprocessor_pragma test_preprocessor_pragma.c)
+target_link_libraries(test_preprocessor_pragma PRIVATE ${PREPROCESSOR_TEST_LIBRARIES})
+target_include_directories(test_preprocessor_pragma PRIVATE ${PREPROCESSOR_TEST_INCLUDE_DIRS})
+add_test(NAME test_preprocessor_pragma COMMAND test_preprocessor_pragma)
+set_tests_properties(test_preprocessor_pragma PROPERTIES LABELS "unit;preprocessor;directives;pragma")
+
+
+# Pragma operator tests
+add_executable(test_preprocessor_pragma_operator test_preprocessor_pragma_operator.c)
+target_link_libraries(test_preprocessor_pragma_operator PRIVATE ${PREPROCESSOR_TEST_LIBRARIES})
+target_include_directories(test_preprocessor_pragma_operator PRIVATE ${PREPROCESSOR_TEST_INCLUDE_DIRS})
+add_test(NAME test_preprocessor_pragma_operator COMMAND test_preprocessor_pragma_operator)
+set_tests_properties(test_preprocessor_pragma_operator PROPERTIES LABELS "unit;preprocessor;operators;pragma")

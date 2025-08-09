@@ -12,6 +12,8 @@ The Baa preprocessor is a crucial initial stage in the Baa compilation pipeline.
 
 The preprocessor takes a Baa source file (or string) as input, processes these directives, and produces a single, unified translation unit (as a wide character string, typically UTF-16LE) which is then passed to the Baa lexer.
 
+**Current Version**: v0.1.31.0 (98% complete with C99-compliant preprocessor features including line control, pragma directives, and _Pragma operator)
+
 ## Features (الميزات)
 
 ### 1. File Handling and Encoding
@@ -52,6 +54,15 @@ The preprocessor takes a Baa source file (or string) as input, processes these d
   * `#نهاية_إذا`: Ends a conditional block.
   * **Expression Evaluation:** Supports arithmetic (`+`, `-`, `*`, `/`, `%`), comparison (`==`, `!=`, `<`, `>`, `<=`, `>=`), logical (`&&`, `||`, `!`), bitwise (`&`, `|`, `^`, `~`, `<<`, `>>`), and ternary conditional (`? :`) operators with standard C precedence. Also supports the `معرف(IDENTIFIER)` or `معرف IDENTIFIER` operator. Integer literals can be decimal, hexadecimal (`0x...`), or binary (`0b...`).
   * **Full Macro Expansion in Conditionals:** Function-like macros (with arguments) are now fully expanded within `#إذا` and `#وإلا_إذا` expressions before evaluation, including nested function-like macro calls and complex rescanning scenarios. The `معرف` operator arguments are correctly preserved without expansion.
+* **`#سطر` (Line Control):**
+  * `#سطر 100`: Sets the line number for the next line to 100.
+  * `#سطر 50 "custom_file.baa"`: Sets both line number and filename for error reporting.
+  * Affects `__السطر__` macro expansion and error location reporting.
+  * Supports macro expansion in arguments.
+* **`#براغما` (Pragma):**
+  * `#براغما مرة_واحدة`: Prevents multiple inclusion of the same file (pragma once).
+  * `#براغما unknown_directive`: Unknown pragma directives are silently ignored as per C99 standard.
+  * Empty pragma directives are allowed and ignored.
 * **`#خطأ "message"` (Error):** Halts preprocessing and reports the specified message as a fatal error.
 * **`#تحذير "message"` (Warning):** Prints the specified message to `stderr` and preprocessing continues.
 
@@ -59,12 +70,21 @@ The preprocessor takes a Baa source file (or string) as input, processes these d
 
 The Baa preprocessor automatically defines the following macros:
 
-* `__الملف__`: Expands to the current source file name (string literal).
-* `__السطر__`: Expands to the current line number (integer constant).
+* `__الملف__`: Expands to the current source file name (string literal). Can be overridden by `#سطر` directive.
+* `__السطر__`: Expands to the current line number (integer constant). Affected by `#سطر` directive overrides.
 * `__التاريخ__`: Expands to the compilation date (string literal, e.g., `"May 21 2025"`).
 * `__الوقت__`: Expands to the compilation time (string literal, e.g., `"10:30:00"`).
 * `__الدالة__`: Expands to a placeholder string literal `"__BAA_FUNCTION_PLACEHOLDER__"`. (Actual function name substitution occurs in later compiler stages).
 * `__إصدار_المعيار_باء__`: Expands to a long integer constant representing the Baa language version (currently `10150L` for v0.1.15.0).
+
+### 5. Preprocessor Operators (مشغلات المعالج المسبق)
+
+* **`أمر_براغما("string")` (_Pragma Operator):**
+  * Converts a string literal into a pragma directive during macro expansion.
+  * Also supports the shorter form `براغما("string")`.
+  * Example: `أمر_براغما("مرة_واحدة")` is equivalent to `#براغما مرة_واحدة`.
+  * Supports escape sequences within the string literal (`\n`, `\t`, `\"`, `\\`, etc.).
+  * Can be used within macros to generate pragma directives dynamically.
 
 ### 4. Error Handling and Reporting (معالجة الأخطاء)
 
@@ -243,6 +263,44 @@ program.ب:20:12: تحذير: إعادة تعريف الماكرو 'PI'
 ```
 
 The format is: `filename:line:column: severity: message`
+
+## Examples (أمثلة)
+
+### Line Control Directive
+```baa
+#سطر 100
+int x = 42;        // This line is reported as line 100
+int y = __السطر__; // y gets the value 101
+
+#سطر 50 "math.baa"
+float pi = 3.14;   // This appears to be from "math.baa" at line 50
+```
+
+### Pragma Directives
+```baa
+// Header file: utils.baa
+#براغما مرة_واحدة
+// This file will only be included once, even if #تضمين appears multiple times
+
+#define UTILITY_VERSION 1
+
+// Using _Pragma operator in macro
+#تعريف ONCE_MACRO أمر_براغما("مرة_واحدة")
+ONCE_MACRO  // Equivalent to #براغما مرة_واحدة
+
+// Short form
+براغما("unknown_directive")  // Silently ignored
+```
+
+### Combined Usage
+```baa
+#تعريف HEADER_GUARD(name) \
+    #سطر 1 name ".baa" \
+    أمر_براغما("مرة_واحدة")
+
+HEADER_GUARD("config")
+// Sets line to 1, filename to "config.baa", and enables pragma once
+```
 
 ### Error Categories and Codes
 

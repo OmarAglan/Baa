@@ -1,3 +1,4 @@
+// preprocessor_internal.h
 #ifndef BAA_PREPROCESSOR_INTERNAL_H
 #define BAA_PREPROCESSOR_INTERNAL_H
 
@@ -196,6 +197,17 @@ struct BaaPreprocessor
     PpSourceLocation *location_stack; ///< Stack to track original source locations
     size_t location_stack_count;      ///< Depth of location stack
     size_t location_stack_capacity;   ///< Capacity of location stack
+
+    // #سطر directive support
+    const char *overridden_file_path; ///< File path override from #سطر directive
+    size_t line_number_override;      ///< Line number override from #سطر directive (0 = no override)
+    size_t line_override_base;        ///< Line number where override was applied (for calculating current line)
+    bool has_line_override;           ///< Whether line override is active
+
+    // #براغما directive support
+    char **pragma_once_files;         ///< Array of absolute paths marked with #براغما مرة_واحدة
+    size_t pragma_once_count;         ///< Number of files marked with #براغما مرة_واحدة
+    size_t pragma_once_capacity;      ///< Capacity of pragma_once_files array
 
     // Enhanced error management system
     PreprocessorDiagnostic *diagnostics; ///< Array of collected diagnostics
@@ -523,5 +535,13 @@ wchar_t *process_string(BaaPreprocessor *pp_state, const wchar_t *source_string,
 
 // From preprocessor.c (internal helper)
 void report_unterminated_conditional(BaaPreprocessor *st, const PpSourceLocation *loc);
+
+// #براغما directive helper functions
+bool is_pragma_once_file(const BaaPreprocessor *pp_state, const char *abs_path);
+bool add_pragma_once_file(BaaPreprocessor *pp_state, const char *abs_path);
+
+// Helper function for _Pragma operator
+bool process_pragma_directive(BaaPreprocessor *pp_state, const wchar_t *pragma_content,
+                             const PpSourceLocation *location, wchar_t **error_message);
 
 #endif // BAA_PREPROCESSOR_INTERNAL_H

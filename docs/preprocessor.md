@@ -75,7 +75,7 @@ The Baa preprocessor automatically defines the following macros:
 * `__التاريخ__`: Expands to the compilation date (string literal, e.g., `"May 21 2025"`).
 * `__الوقت__`: Expands to the compilation time (string literal, e.g., `"10:30:00"`).
 * `__الدالة__`: Expands to a placeholder string literal `"__BAA_FUNCTION_PLACEHOLDER__"`. (Actual function name substitution occurs in later compiler stages).
-* `__إصدار_المعيار_باء__`: Expands to a long integer constant representing the Baa language version (currently `10010L` for v0.1.01.0).
+* `__إصدار_المعيار_باء__`: Expands to a long integer constant representing the Baa language version (currently `10150L` for v0.1.15.0).
 
 ### 5. Preprocessor Operators (مشغلات المعالج المسبق)
 

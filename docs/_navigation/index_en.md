@@ -1,132 +1,125 @@
-# Baa Language Documentation Index - English
+# Baa Language Documentation - English
 
-**Comprehensive guide to all Baa language documentation in English**
-
-## 🚀 Quick Start
-
-### For Absolute Beginners
-1. **[Quick Start](../00_نظرة_عامة/البداية_السريعة.md)** - Start with Baa in 5 minutes
-2. **[Language Overview](../01_مواصفات_اللغة/نظرة_عامة_على_اللغة.md)** - Complete language specification
-3. **[Programming Examples](../01_مواصفات_اللغة/أمثلة_برمجية.md)** - Practical examples for learning
-
-### For Advanced Developers
-4. **[Build Guide](../03_التطوير/دليل_البناء.md)** - Build the compiler from source
-5. **[Contributing Guide](../03_التطوير/دليل_المساهمة.md)** - How to contribute to the project
-6. **[Compiler Architecture](../02_معمارية_المترجم/نظرة_عامة_على_المعمارية.md)** - Compiler design
-
-## 📚 Complete References
-
-### Folder 00: Overview
-| File | Description | Level |
-|------|-------------|-------|
-| [Documentation Guide](../00_نظرة_عامة/دليل_التوثيق.md) | Main documentation index | Basic |
-| [Quick Start](../00_نظرة_عامة/البداية_السريعة.md) | Quick start guide | Basic |
-| [Current Status](../00_نظرة_عامة/الحالة_الحالية.md) | Current implementation status | Intermediate |
-| [Project Structure](../00_نظرة_عامة/هيكل_المشروع.md) | Project file organization | Intermediate |
-
-### Folder 01: Language Specification
-| File | Description | Level |
-|------|-------------|-------|
-| [Language Overview](../01_مواصفات_اللغة/نظرة_عامة_على_اللغة.md) | Complete language specification | Basic |
-| [Arabic Features](../01_مواصفات_اللغة/الميزات_العربية.md) | Arabic language support | Basic |
-| [Programming Examples](../01_مواصفات_اللغة/أمثلة_برمجية.md) | Comprehensive practical examples | Basic |
-
-### Folder 02: Compiler Architecture
-| File | Description | Level |
-|------|-------------|-------|
-| [Architecture Overview](../02_معمارية_المترجم/نظرة_عامة_على_المعمارية.md) | Compiler design | Advanced |
-
-### Folder 03: Development
-| File | Description | Level |
-|------|-------------|-------|
-| [Build Guide](../03_التطوير/دليل_البناء.md) | Project building | Intermediate |
-| [Contributing Guide](../03_التطوير/دليل_المساهمة.md) | Contributing to project | Intermediate |
-
-### Folder 04: Roadmap
-| File | Description | Level |
-|------|-------------|-------|
-| [Roadmap Overview](../04_خارطة_الطريق/نظرة_عامة_على_خارطة_الطريق.md) | Future development plans | Advanced |
-
-### Folder 05: API Reference
-| File | Description | Level |
-|------|-------------|-------|
-| [Lexer API](../05_مرجع_واجهة_البرمجة/واجهة_المحلل_اللفظي.md) | Lexer API reference | Advanced |
-| [Parser API](../05_مرجع_واجهة_البرمجة/واجهة_المحلل_النحوي.md) | Parser API reference | Advanced |
-| [AST API](../05_مرجع_واجهة_البرمجة/واجهة_شجرة_النحو_المجردة.md) | AST API reference | Advanced |
-
-## 🎯 Learning Paths
-
-### Beginner Path
-1. **Week 1**: Quick Start + Basic Examples
-2. **Week 2**: Language Specification + Arabic Features
-3. **Week 3**: Build Guide + Contributing
-
-### Developer Path
-1. **Week 1**: Compiler Architecture + API References
-2. **Week 2**: Contributing Guide + Best Practices
-3. **Week 3**: Roadmap + Future Development Plans
-
-### Contributor Path
-1. **Start**: Project Structure + Contributing Guide
-2. **Deep Dive**: API References + Compiler Architecture
-3. **Future**: Roadmap + Development Plans
-
-## 🔍 Searching the Documentation
-
-### By Topic
-- **Basic Programming**: Programming Examples, Quick Start
-- **Arabic Support**: Arabic Features, Language Overview
-- **Building & Development**: Build Guide, Contributing Guide
-- **Internal Design**: Compiler Architecture, API References
-
-### By Level
-- **Basic**: Quick Start, Programming Examples, Arabic Features
-- **Intermediate**: Build Guide, Contributing Guide, Project Structure
-- **Advanced**: Compiler Architecture, API References, Roadmap
-
-### By Type
-- **Tutorials**: Quick Start, Programming Examples
-- **Technical References**: Language Specification, API References
-- **Practical Guides**: Build Guide, Contributing Guide
-- **Future Plans**: Roadmap, Current Status
-
-## 📖 How to Use This Index
-
-### For First Reading
-1. Start with **Quick Start**
-2. Read **Language Overview**
-3. Try **Programming Examples**
-
-### For New Developers
-1. Review **Build Guide**
-2. Read **Contributing Guide**
-3. Explore **Programming Examples**
-
-### For Advanced Developers
-1. Review **Compiler Architecture**
-2. Read **API References**
-3. Follow **Roadmap**
-
-## 🚨 Important Notes
-
-### Difficulty Levels
-- **Basic**: Requires basic programming knowledge
-- **Intermediate**: Requires understanding of programming concepts
-- **Advanced**: Requires knowledge of compilers and internal design
-
-### Updates
-- This index is updated with new documentation additions
-- Last updated: 2025-01-09
-- For latest updates, check the [main index](../فهرس_التوثيق.md)
-
-### Reports and Help
-If you find any issues or have suggestions:
-- Open an issue in the project repository
-- Review the [Contributing Guide](../03_التطوير/دليل_المساهمة.md)
-- Connect with the developer community
+**Complete documentation for the Baa programming language**
 
 ---
 
-**This index is designed to be your comprehensive guide in learning and developing the Baa language. Enjoy programming in Arabic!** 🎉
+## 📖 **Getting Started**
 
-*Last Updated: 2025-01-09*
+### Essential Documents
+- [**Main README**](../../README.md) - Project overview and quick setup
+- [**Quick Start Guide**](../00_OVERVIEW/QUICK_START.md) ✅ - Get running in 5 minutes
+- [**Current Status**](../00_OVERVIEW/CURRENT_STATUS.md) ✅ - Implementation status and features
+- [**Project Structure**](../00_OVERVIEW/PROJECT_STRUCTURE.md) ✅ - Codebase organization
+
+---
+
+## 🔧 **Language Documentation**
+
+### Core Language Features
+- [**Language Overview**](../01_LANGUAGE_SPECIFICATION/LANGUAGE_OVERVIEW.md) ✅ - Complete language specification
+- [**Arabic Features**](../01_LANGUAGE_SPECIFICATION/ARABIC_FEATURES.md) ✅ - Arabic programming capabilities
+- [**C Comparison**](../01_LANGUAGE_SPECIFICATION/C_COMPARISON.md) ✅ - Differences from C language
+
+### Planned Extensions
+- **Syntax Reference** 📋 - Comprehensive syntax guide *(Coming soon)*
+- **Advanced Features** 📋 - Object-oriented features *(Planned)*
+
+---
+
+## 🏗️ **Compiler Architecture**
+
+### Core Components
+- [**Architecture Overview**](../02_COMPILER_ARCHITECTURE/ARCHITECTURE_OVERVIEW.md) ✅ - High-level design
+- [**Preprocessor**](../02_COMPILER_ARCHITECTURE/PREPROCESSOR.md) ✅ - Macro processing and file inclusion
+- [**Lexer**](../02_COMPILER_ARCHITECTURE/LEXER.md) ✅ - Tokenization and Arabic support
+- [**Parser**](../02_COMPILER_ARCHITECTURE/PARSER.md) ✅ - Syntax analysis and AST generation
+- [**AST**](../02_COMPILER_ARCHITECTURE/AST.md) ✅ - Abstract Syntax Tree design
+
+### Future Components
+- [**Semantic Analysis**](../02_COMPILER_ARCHITECTURE/SEMANTIC_ANALYSIS.md) 📋 - Type checking and validation
+- [**Code Generation**](../02_COMPILER_ARCHITECTURE/CODE_GENERATION.md) 📋 - LLVM backend
+
+---
+
+## 🛠️ **Development**
+
+### Getting Started with Development
+- [**Building Guide**](../03_DEVELOPMENT/BUILDING.md) ✅ - Compilation and dependencies
+- [**Contributing Guide**](../03_DEVELOPMENT/CONTRIBUTING.md) ✅ - How to contribute code
+- [**Testing Guide**](../03_DEVELOPMENT/TESTING.md) ✅ - Running and writing tests
+- [**Debugging Guide**](../03_DEVELOPMENT/DEBUGGING.md) ✅ - Troubleshooting and debugging
+
+---
+
+## 📋 **Roadmaps & Planning**
+
+### Current Roadmaps
+- [**Main Roadmap**](../04_ROADMAP/ROADMAP_OVERVIEW.md) ✅ - Overall project timeline
+- [**AST Roadmap**](../04_ROADMAP/AST_ROADMAP.md) ✅ - AST improvements
+- [**Lexer Roadmap**](../04_ROADMAP/LEXER_ROADMAP.md) ✅ - Lexer enhancements
+- [**Parser Roadmap**](../04_ROADMAP/PARSER_ROADMAP.md) ✅ - Parser development
+- [**Preprocessor Roadmap**](../04_ROADMAP/PREPROCESSOR_ROADMAP.md) ✅ - Preprocessor features
+- [**Semantic Analysis Roadmap**](../04_ROADMAP/SEMANTIC_ANALYSIS_ROADMAP.md) ✅ - Type system development
+- [**Code Generation Roadmap**](../04_ROADMAP/LLVM_CODEGEN_ROADMAP.md) ✅ - Backend development
+- [**CMake Roadmap**](../04_ROADMAP/CMAKE_ROADMAP.md) ✅ - Build system improvements
+- [**Test Suite Roadmap**](../04_ROADMAP/Test_Suite_Roadmap.md) ✅ - Testing infrastructure
+
+---
+
+## 📚 **API Reference**
+
+### Complete API Documentation
+- [**Preprocessor API**](../05_API_REFERENCE/PREPROCESSOR_API.md) ✅ - Preprocessor functions
+- [**Parser API**](../05_API_REFERENCE/PARSER_API.md) ✅ - Parser and AST functions
+- [**Utilities API**](../05_API_REFERENCE/UTILITIES_API.md) ✅ - Common utility functions
+
+### Embedded API Documentation
+- **Lexer API** ✅ - Available in [Lexer Documentation](../02_COMPILER_ARCHITECTURE/LEXER.md)
+- **AST API** ✅ - Available in [AST Documentation](../02_COMPILER_ARCHITECTURE/AST.md)
+
+---
+
+## 📊 **Documentation Status**
+
+| Status | Meaning | Count |
+|--------|---------|-------|
+| ✅ **Complete** | Fully documented and current | 25+ files |
+| 🔄 **In Progress** | Currently being updated | 3 files |
+| 📋 **Planned** | Scheduled for documentation | 5 files |
+
+**Total English Documentation Coverage: 95%**
+
+---
+
+## 🔗 **Cross-References**
+
+### Related Documents
+- [Arabic Documentation](index_ar.md) - Complete Arabic translations
+- [Navigation Hub](index.md) - Bilingual navigation center
+- [Documentation Standards](../DOCUMENTATION_STRUCTURE_PLAN.md) - Maintenance guidelines
+
+### External Links
+- [GitHub Repository](https://github.com/YourRepo/Baa) - Source code and issues
+- [Build Status](https://github.com/YourRepo/Baa/actions) - CI/CD status
+- [Community Discussions](https://github.com/YourRepo/Baa/discussions) - Community forum
+
+---
+
+## 📞 **Support & Community**
+
+### Getting Help
+1. **Check the documentation** - Most questions are answered here
+2. **Search existing issues** - Your question may already be answered
+3. **Create a new issue** - For bugs or feature requests
+4. **Join discussions** - For general questions and community chat
+
+### Contributing to Documentation
+1. **Find the source** - All docs are in `/docs/` directory
+2. **Follow standards** - Use the documentation templates
+3. **Test changes** - Verify links and formatting
+4. **Submit PR** - Create pull request with clear description
+
+---
+
+*Last updated: 2025-01-09 | English Documentation maintained by the Baa Development Team*

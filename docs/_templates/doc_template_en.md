@@ -1,63 +1,121 @@
-# English Documentation Template for Baa Language
+# [Document Title]
 
-**Main Title** - Brief description of the topic
+**Available in:** [English](#) | [العربية](../path/to/arabic/version.md)
+
+**Status:** ✅ Complete / 🔄 In Progress / 📋 Planned / ⚠️ Needs Update  
+**Last Updated:** YYYY-MM-DD  
+**Version Compatibility:** v1.0.0+  
 
 ## Overview
 
-Comprehensive description of the topic and goals covered by this guide.
+Brief description of what this document covers and why it's important.
 
-## Core Content
+## Table of Contents
 
-### Main Topic 1
-Topic details with practical examples.
+- [Section 1](#section-1)
+- [Section 2](#section-2)
+- [Examples](#examples)
+- [API Reference](#api-reference)
+- [See Also](#see-also)
+
+## Section 1
+
+Content with clear hierarchical structure.
+
+### Subsection 1.1
+
+Detailed information with:
+- Clear explanations
+- Code examples using Baa syntax
+- Arabic keywords where relevant
+
+### Subsection 1.2
+
+More content following the same pattern.
+
+## Section 2
+
+### Code Examples
 
 ```baa
-// Practical code example
-عدد_صحيح رئيسية() {
-    اطبع("Practical example").
-    إرجع ٠.
+// Example with Arabic syntax
+عدد_صحيح العدد = ٥;
+إذا (العدد > ٠) {
+    طباعة("العدد موجب");
 }
 ```
 
-### Main Topic 2
-More details and guidance.
+### Important Notes
 
-### Main Topic 3
-Best practices and tips.
+> **Note:** Use this format for important information
+> 
+> **Warning:** Use this format for warnings
+> 
+> **Tip:** Use this format for helpful tips
 
-## Practical Examples
+## API Reference
 
-### Example 1: [Example Description]
-```baa
-// Example code
+### Function Name
+
+**Signature:**
+```c
+return_type function_name(parameter_type parameter_name);
 ```
 
-### Example 2: [Example Description]
-```baa
-// Example code
+**Description:** Brief description of what the function does.
+
+**Parameters:**
+- `parameter_name`: Description of the parameter
+
+**Returns:** Description of return value
+
+**Example:**
+```c
+// Usage example
 ```
 
-## Best Practices
+## Examples
 
-- [Tip 1]
-- [Tip 2]
-- [Tip 3]
+### Example 1: Basic Usage
+
+```baa
+// Complete working example
+عدد_صحيح الرئيسية() {
+    // Code here
+    إرجع ٠;
+}
+```
+
+### Example 2: Advanced Usage
+
+More complex examples as needed.
 
 ## Troubleshooting
 
-### Problem: [Problem Description]
-**Solution:** [Solution Description]
+Common issues and solutions:
 
-### Problem: [Problem Description]
-**Solution:** [Solution Description]
+1. **Issue**: Description of problem
+   **Solution**: How to fix it
 
-## Related References
+2. **Issue**: Another problem
+   **Solution**: Another fix
 
-- [Link to related topic 1](path/file.md)
-- [Link to related topic 2](path/file.md)
+## See Also
+
+- [Related Document 1](../path/to/doc1.md) - Brief description
+- [Related Document 2](../path/to/doc2.md) - Brief description
+- [External Link](https://example.com) - Description
 
 ---
 
-**Last Updated:** [YYYY-MM-DD]  
-**Author:** [Contributor Name]  
-**Reviewers:** [Reviewer Names]
+## Contributing
+
+To improve this document:
+1. Check the [Contributing Guide](../03_DEVELOPMENT/CONTRIBUTING.md)
+2. Follow the [Documentation Standards](../DOCUMENTATION_STRUCTURE_PLAN.md)
+3. Test all code examples
+4. Update both English and Arabic versions
+
+---
+
+*This document is part of the [Baa Language Documentation](../NAVIGATION.md)*

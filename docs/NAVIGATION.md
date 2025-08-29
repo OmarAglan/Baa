@@ -9,42 +9,41 @@
 
 ### 📖 Getting Started
 - [**Main README**](../README.md) - Project overview and quick setup
-- [**Quick Start Guide**](QUICK_START.md) *(Coming Soon)* - Step-by-step getting started
-- [**Current Status Summary**](CURRENT_STATUS_SUMMARY.md) - Current implementation status
-- [**Project Structure**](project_structure.md) - Codebase organization
+- [**Quick Start Guide**](00_OVERVIEW/QUICK_START.md) ✅ - Step-by-step getting started
+- [**Current Status Summary**](00_OVERVIEW/CURRENT_STATUS.md) ✅ - Current implementation status
+- [**Project Structure**](00_OVERVIEW/PROJECT_STRUCTURE.md) ✅ - Codebase organization
 
-### 🔧 Language Documentation  
-- [**Language Overview**](language.md) - Complete language specification
-- [**Arabic Features**](arabic_support.md) - Arabic language support details
-- [**C Language Comparison**](c_comparison.md) - Comparison with C features
+### 🔧 Language Documentation
+- [**Language Overview**](01_LANGUAGE_SPECIFICATION/LANGUAGE_OVERVIEW.md) ✅ - Complete language specification
+- [**Arabic Features**](01_LANGUAGE_SPECIFICATION/ARABIC_FEATURES.md) ✅ - Arabic language support details
+- [**C Language Comparison**](01_LANGUAGE_SPECIFICATION/C_COMPARISON.md) ✅ - Comparison with C features
 
 ### 🏗️ Compiler Architecture
-- [**Architecture Overview**](architecture.md) - Compiler design and structure
-- [**Preprocessor Documentation**](preprocessor.md) - Preprocessor features and usage
-- [**Lexer Documentation**](lexer.md) - Lexical analysis and tokenization
-- [**Parser Documentation**](PARSER.md) - Parsing and syntax analysis  
-- [**AST Documentation**](AST.md) - Abstract Syntax Tree design
-- [**Semantic Analysis**](SEMANTIC_ANALYSIS.md) - Semantic analysis design *(Planned)*
+- [**Architecture Overview**](02_COMPILER_ARCHITECTURE/ARCHITECTURE_OVERVIEW.md) ✅ - Compiler design and structure
+- [**Preprocessor Documentation**](02_COMPILER_ARCHITECTURE/PREPROCESSOR.md) ✅ - Preprocessor features and usage
+- [**Lexer Documentation**](02_COMPILER_ARCHITECTURE/LEXER.md) ✅ - Lexical analysis and tokenization
+- [**Parser Documentation**](02_COMPILER_ARCHITECTURE/PARSER.md) ✅ - Parsing and syntax analysis
+- [**AST Documentation**](02_COMPILER_ARCHITECTURE/AST.md) ✅ - Abstract Syntax Tree design
+- [**Semantic Analysis**](02_COMPILER_ARCHITECTURE/SEMANTIC_ANALYSIS.md) 📋 - Semantic analysis design *(Planned)*
+- [**Code Generation**](02_COMPILER_ARCHITECTURE/CODE_GENERATION.md) 📋 - Code generation design *(Planned)*
 
 ### 📋 Development & Roadmaps
-- [**Main Roadmap**](roadmap.md) - Project roadmap and milestones
-- [**Development Guide**](development.md) - Building and contributing
-- [**AST Roadmap**](AST_ROADMAP.md) - AST implementation roadmap
-- [**Lexer Roadmap**](LEXER_ROADMAP.md) - Lexer development roadmap
-- [**Parser Roadmap**](PARSER_ROADMAP.md) - Parser development roadmap
-- [**Preprocessor Roadmap**](PREPROCESSOR_ROADMAP.md) - Preprocessor roadmap
-- [**Semantic Analysis Roadmap**](SEMANTIC_ANALYSIS_ROADMAP.md) - Semantic analysis roadmap
-- [**Code Generation Roadmap**](LLVM_CODEGEN_ROADMAP.md) - Code generation roadmap
-
-### 🧪 Testing
-- [**Test Suite**](Test_Suite.md) - Testing framework and procedures
-- [**Test Suite Roadmap**](Test_Suite_Roadmap.md) - Testing development plan
+- [**Main Roadmap**](04_ROADMAP/ROADMAP_OVERVIEW.md) ✅ - Project roadmap and milestones
+- [**Development Guide**](03_DEVELOPMENT/BUILDING.md) ✅ - Building and contributing
+- [**Testing Guide**](03_DEVELOPMENT/TESTING.md) ✅ - Testing framework and procedures
+- [**AST Roadmap**](04_ROADMAP/AST_ROADMAP.md) 🔄 - AST implementation roadmap
+- [**Lexer Roadmap**](04_ROADMAP/LEXER_ROADMAP.md) 🔄 - Lexer development roadmap
+- [**Parser Roadmap**](04_ROADMAP/PARSER_ROADMAP.md) 🔄 - Parser development roadmap
+- [**Preprocessor Roadmap**](04_ROADMAP/PREPROCESSOR_ROADMAP.md) 🔄 - Preprocessor roadmap
+- [**Semantic Analysis Roadmap**](04_ROADMAP/SEMANTIC_ANALYSIS_ROADMAP.md) 🔄 - Semantic analysis roadmap
+- [**Code Generation Roadmap**](04_ROADMAP/LLVM_CODEGEN_ROADMAP.md) 🔄 - Code generation roadmap
+- [**Test Suite Roadmap**](04_ROADMAP/Test_Suite_Roadmap.md) 🔄 - Testing development plan
 
 ### 📚 API Reference *(In Development)*
-- **Preprocessor API** *(Coming Soon)*
-- **Lexer API** - Available in [lexer.md](lexer.md)
-- **Parser API** *(Coming Soon)*
-- **AST API** - Available in [AST.md](AST.md)
+- **Preprocessor API** 📋 *(Planned)*
+- **Lexer API** ✅ - Available in [LEXER.md](02_COMPILER_ARCHITECTURE/LEXER.md)
+- **Parser API** 📋 *(Planned)*
+- **AST API** ✅ - Available in [AST.md](02_COMPILER_ARCHITECTURE/AST.md)
 
 ---
 

@@ -1,6 +1,12 @@
-# لغة البرمجة باء (B Programming Language)
+# Baa Programming Language (لغة البرمجة باء)
 
-باء هي لغة برمجة مصممة لدعم النحو العربي مع الحفاظ على التوافق المفاهيمي مع ميزات لغة C. تتيح للمطورين كتابة الكود باستخدام الكلمات المفتاحية والمعرفات العربية. يهدف المشروع إلى توفير سلسلة أدوات مترجم كاملة، بما في ذلك معالج مسبق، ومحلل لفظي، ومحلل نحوي، ومحلل دلالي، ومولد كود.
+**Available in / متوفر باللغة:** [English](#english) | [العربية](README_AR.md)
+
+---
+
+## English
+
+Baa is a programming language designed to support Arabic syntax while maintaining conceptual compatibility with C language features. It allows developers to write code using Arabic keywords and identifiers. The project aims to provide a complete compiler toolchain, including a preprocessor, lexer, parser, semantic analyzer, and code generator.
 
 ## الحالة الحالية (محدث 2025-01-09 - المترجم الأساسي مكتمل)
 

@@ -8,253 +8,317 @@
 
 Baa is a programming language designed to support Arabic syntax while maintaining conceptual compatibility with C language features. It allows developers to write code using Arabic keywords and identifiers. The project aims to provide a complete compiler toolchain, including a preprocessor, lexer, parser, semantic analyzer, and code generator.
 
-## الحالة الحالية (محدث 2025-01-09 - المترجم الأساسي مكتمل)
+## Current Status (Updated 2025-01-09 - Core Compiler Complete)
 
-وصل مترجم لغة باء إلى معلم مهم مع اكتمال **الأولوية 4: تعريفات الدوال والاستدعاءات** في يوليو 2025. البنية التحتية الأساسية للمترجم الآن وظيفية بالكامل وجاهزة للإنتاج، وتدعم مجموعة شاملة من البنى اللغوية الشبيهة بـ C مع الكلمات المفتاحية والنحو العربي. المكونات الرئيسية وحالتها:
+The Baa language compiler has reached a significant milestone with the completion of **Priority 4: Function Definitions and Calls** in July 2025. The core compiler infrastructure is now fully functional and production-ready, supporting a comprehensive set of C-like language constructs with Arabic keywords and syntax. Key components and their status:
 
-### الميزات الأساسية والحالة
+### Core Features and Status
 
-* **نظام البناء (CMake):**
-  * **معاد الهيكلة:** يستخدم الآن نهجاً معيارياً يركز على الأهداف. مكتبات المكونات (الأدوات المساعدة، الأنواع، المحلل اللفظي، المعالج المسبق، إلخ) تُبنى كمكتبات ثابتة وتُربط صراحة.
-  * **البناء خارج المصدر مُفرض.**
-  * **تعريفات التجميع المشتركة:** تُدار عبر مكتبة واجهة `BaaCommonSettings` (معرفة في `cmake/BaaCompilerSettings.cmake`).
-  * تكامل LLVM شرطي ويُدار بواسطة مكتبة `baa_codegen`.
+* **Build System (CMake):**
+  * **Restructured:** Now uses a modular, target-focused approach. Component libraries (utils, types, lexer, preprocessor, etc.) are built as static libraries and explicitly linked.
+  * **Out-of-source builds enforced.**
+  * **Shared compilation definitions:** Managed via `BaaCommonSettings` interface library (defined in `cmake/BaaCompilerSettings.cmake`).
+  * LLVM integration is conditional and managed by `baa_codegen` library.
 
-* **المعالج المسبق (`src/preprocessor/`):** - ✅ **جاهز للإنتاج (مكتمل 100%)**
-  * يتعامل مع تضمين الملفات (`#تضمين`) مع حل المسار النسبي والقياسي، واكتشاف التضمين الدائري.
-  * يدعم تعريفات الماكرو (`#تعريف`) بما في ذلك الكائنية، والشبيهة بالدالة (مع المعاملات، تحويل النص إلى سلسلة `#`, لصق الرموز `##`, المعاملات المتغيرة `وسائط_إضافية`/`__وسائط_متغيرة__`)، وإعادة المسح لنتائج التوسع.
-  * فحص إعادة تعريف الماكرو متوافق مع C99 مع مقارنة ذكية.
-  * يتعامل مع `#الغاء_تعريف` (إلغاء التعريف).
-  * ينفذ التجميع الشرطي (`#إذا`, `#إذا_عرف`, `#إذا_لم_يعرف`, `#وإلا_إذا`, `#إلا`, `#نهاية_إذا`) مع تقييم التعبيرات.
-  * يوفر ماكروات عربية معرفة مسبقاً (`__الملف__`, `__السطر__`, `__التاريخ__`, `__الوقت__`, إلخ).
-  * يدعم توجيهات `#خطأ` و `#تحذير`.
-  * اكتشاف ترميز ملف الإدخال (UTF-8 افتراضي، UTF-16LE مع BOM).
-  * نظام استرداد خطأ شامل مع تقارير أخطاء متعددة.
+* **Preprocessor (`src/preprocessor/`):** - ✅ **Production Ready (100% Complete)**
+  * Handles file inclusion (`#تضمين`) with relative and standard path resolution, circular inclusion detection.
+  * Supports macro definitions (`#تعريف`) including object-like, function-like (with parameters, stringification `#`, token pasting `##`, variadic parameters `وسائط_إضافية`/`__وسائط_متغيرة__`), and rescanning of expansion results.
+  * C99-compatible macro redefinition checking with intelligent comparison.
+  * Handles `#الغاء_تعريف` (undefine).
+  * Implements conditional compilation (`#إذا`, `#إذا_عرف`, `#إذا_لم_يعرف`, `#وإلا_إذا`, `#إلا`, `#نهاية_إذا`) with expression evaluation.
+  * Provides Arabic predefined macros (`__الملف__`, `__السطر__`, `__التاريخ__`, `__الوقت__`, etc.).
+  * Supports `#خطأ` and `#تحذير` directives.
+  * Input file encoding detection (UTF-8 default, UTF-16LE with BOM).
+  * Comprehensive error recovery system with multiple error reporting.
 
-* **المحلل اللفظي (`src/lexer/`):** - ✅ **جاهز للإنتاج (مكتمل 100%)**
-  * يُرمز التدفق المُعالج مسبقاً UTF-16LE.
-  * يدعم المعرفات العربية/الإنجليزية، الأرقام العربية-الهندية، الكلمات المفتاحية العربية.
-  * يُرمز المسافات البيضاء والأسطر الجديدة وجميع أنواع التعليقات كرموز منفصلة.
-  * يتعامل مع القيم الحرفية العددية مع الأرقام العربية-الهندية والبادئات والشرطات السفلية.
-  * يتعامل مع السلاسل النصية والحروف مع تسلسلات الهروب العربية المخصصة لباء.
-  * تتبع دقيق للخط/العمود وتقرير الأخطاء اللفظية.
+* **Lexer (`src/lexer/`):** - ✅ **Production Ready (100% Complete)**
+  * Tokenizes preprocessed UTF-16LE stream.
+  * Supports Arabic/English identifiers, Arabic-Indic numerals, Arabic keywords.
+  * Tokenizes whitespace, newlines, and all comment types as separate tokens.
+  * Handles numeric literals with Arabic-Indic digits, prefixes, and underscores.
+  * Handles string and character literals with custom Baa Arabic escape sequences.
+  * Precise line/column tracking and lexical error reporting.
 
-* **المحلل النحوي (`src/parser/`):** - ✅ **جاهز للإنتاج (الميزات الأساسية مكتملة)**
-  * ✅ **إعادة التصميم الكاملة منتهية** - محلل نحوي تنازلي تكراري حديث مع معالجة شاملة للأخطاء.
-  * ✅ **الأولوية 4 مكتملة (2025-07-06)** - تعريفات الدوال والاستدعاءات منفذة بالكامل.
-  * ✅ **دعم كامل للتعبيرات** - خوارزمية تسلق الأولوية مع جميع العمليات.
-  * ✅ **جمل التحكم في التدفق** - If/else، while، for، return، break، continue.
-  * ✅ **إعلانات المتغيرات** - محددات النوع، التهيئة، معدل const.
-  * ✅ **دعم الدوال** - تعريفات دوال كاملة مع المعاملات والاستدعاءات.
-  * ✅ **النحو العربي** - دعم أصلي للكلمات المفتاحية العربية في جميع أنحاء اللغة.
+* **Parser (`src/parser/`):** - ✅ **Production Ready (Core Features Complete)**
+  * ✅ **Complete redesign finished** - Modern recursive descent parser with comprehensive error handling.
+  * ✅ **Priority 4 Complete (2025-07-06)** - Function definitions and calls fully implemented.
+  * ✅ **Full expression support** - Precedence climbing algorithm with all operators.
+  * ✅ **Control flow statements** - If/else, while, for, return, break, continue.
+  * ✅ **Variable declarations** - Type specifiers, initialization, const qualifier.
+  * ✅ **Function support** - Complete function definitions with parameters and calls.
+  * ✅ **Arabic syntax** - Native support for Arabic keywords throughout the language.
 
-* **شجرة النحو المجردة (AST):** - ✅ **جاهز للإنتاج (الميزات الأساسية مكتملة)**
-  * ✅ **إعادة التصميم الكاملة منتهية** - هيكل `BaaNode` موحد مع اتحاد مميز.
-  * ✅ **الأولوية 4 مكتملة (2025-07-06)** - عقد الدالة والمعامل وتعبير الاستدعاء.
-  * ✅ **أنواع عقد شاملة** - جميع التعبيرات والجمل والإعلانات منفذة.
-  * ✅ **إدارة الذاكرة** - إنشاء قوي وتنظيف ومعالجة أخطاء.
-  * ✅ **امتدادات المصدر** - تتبع موقع مصدر دقيق لجميع العقد.
+* **Abstract Syntax Tree (AST):** - ✅ **Production Ready (Core Features Complete)**
+  * ✅ **Complete redesign finished** - Unified `BaaNode` structure with tagged union.
+  * ✅ **Priority 4 Complete (2025-07-06)** - Function, parameter, and call expression nodes.
+  * ✅ **Comprehensive node types** - All expressions, statements, and declarations implemented.
+  * ✅ **Memory management** - Robust creation, cleanup, and error handling.
+  * ✅ **Source spans** - Precise source location tracking for all nodes.
 
-* **نظام الأنواع (`src/types/`):** - *الأساسيات منفذة*
-  * الأنواع الأساسية منفذة (`عدد_صحيح`, `عدد_حقيقي`, `حرف`, `منطقي`, `فراغ`).
-  * قواعد فحص النوع والتحويل الأساسية معرفة.
-  * دعم نوع المصفوفة (`BAA_TYPE_ARRAY`) موجود على مستوى نظام الأنواع.
+* **Type System (`src/types/`):** - *Basics Implemented*
+  * Basic types implemented (`عدد_صحيح`, `عدد_حقيقي`, `حرف`, `منطقي`, `فراغ`).
+  * Basic type checking and conversion rules defined.
+  * Array type support (`BAA_TYPE_ARRAY`) exists at type system level.
 
-* **العمليات (`src/operators/`):** - *الأساسيات منفذة*
-  * تعريفات للعمليات الحسابية والمقارنة والمنطقية والتعيين.
-  * جدول أولوية العمليات معرف.
-  * التحقق الأساسي من النوع للعمليات.
+* **Operators (`src/operators/`):** - *Basics Implemented*
+  * Definitions for arithmetic, comparison, logical, and assignment operators.
+  * Operator precedence table defined.
+  * Basic type checking for operators.
 
-### 🚀 القدرات الحالية (الأولوية 4 مكتملة - يوليو 2025):
-* **لغة أساسية كاملة:** متغيرات، دوال، تحكم في التدفق، تعبيرات مع نحو عربي كامل
-* **نظام دوال جاهز للإنتاج:** تعريفات دوال مع معاملات، استدعاءات دوال، وجمل الإرجاع
-* **معالجة أخطاء قوية:** تقرير أخطاء شامل مع رسائل عربية واسترداد ذكي
-* **تكامل عربي أصلي:** دعم Unicode كامل مع كلمات مفتاحية وأسماء ومسلسلات هروب عربية
-* **ترميز كامل:** أرقام عربية، قيم حرفية نصية، تعليقات، وجميع البنى اللغوية
+### 🚀 Current Capabilities (Priority 4 Complete - July 2025)
 
-### 📋 مرحلة التطوير التالية (الأولوية 5 - مخططة):
-* **نظام أنواع متقدم:** مصفوفات، هياكل، اتحادات، تعدادات، وأنواع مؤشرات
-* **التحليل الدلالي:** جداول رموز، فحص نوع، حل نطاق، وتحليل تدفق التحكم
-* **توليد الكود:** توليد LLVM IR، تحسين، وتوليد كود الهدف
-* **المكتبة القياسية:** مكتبة قياسية عربية شاملة مع دوال I/O والرياضيات والسلاسل النصية
+* **Complete core language:** Variables, functions, control flow, expressions with full Arabic syntax
+* **Production-ready function system:** Function definitions with parameters, function calls, and return statements
+* **Robust error handling:** Comprehensive error reporting with Arabic messages and intelligent recovery
+* **Native Arabic integration:** Full Unicode support with Arabic keywords, identifiers, and escape sequences
+* **Complete tokenization:** Arabic numerals, string literals, comments, and all language constructs
 
-### 🎯 نضج المشروع:
-* **المترجم الأساسي:** جاهز للإنتاج مع اختبار وتوثيق شاملين.
-* **التوطين العربي:** رسائل خطأ عربية كاملة ودعم كلمات مفتاحية.
-* **التوثيق:** توثيق واسع مع مراجع API وأمثلة.
+### 📋 Next Development Phase (Priority 5 - Planned)
 
-### خارطة الطريق
+* **Advanced type system:** Arrays, structs, unions, enums, and pointer types
+* **Semantic analysis:** Symbol tables, type checking, scope resolution, and control flow analysis
+* **Code generation:** LLVM IR generation, optimization, and target code generation
+* **Standard library:** Comprehensive Arabic standard library with I/O, math, and string functions
 
-* **الحالة الحالية (بعد اكتمال الأولوية 4):**
-    1. **✅ تنفيذ المحلل النحوي وشجرة النحو المجردة مكتمل:** محلل نحوي تنازلي تكراري حديث مع نظام شجرة نحو مجردة موحد
-    2. **✅ نظام الدوال مكتمل:** دعم كامل لتعريفات الدوال والمعاملات والاستدعاءات
-    3. **✅ ميزات اللغة الأساسية مكتملة:** متغيرات، تحكم في التدفق، تعبيرات، وجمل
-    4. **📋 جاهز للأولوية 5:** ميزات لغة متقدمة وتحليل دلالي
-* **أهداف المرحلة التالية (الأولوية 5 وما بعدها):**
-    1. **نظام أنواع متقدم:** تنفيذ مصفوفات، هياكل، اتحادات، تعدادات، ومؤشرات
-    2. **محرك التحليل الدلالي:** جداول رموز، فحص نوع، وحل نطاق
-    3. **خلفية توليد الكود:** توليد LLVM IR وتكامل التحسين
-    4. **تطوير المكتبة القياسية:** دوال مكتبة قياسية عربية موطنة
+### 🎯 Project Maturity
 
-## هيكل المشروع
+* **Core compiler:** Production-ready with comprehensive testing and documentation.
+* **Arabic localization:** Complete Arabic error messages and keyword support.
+* **Documentation:** Extensive documentation with API references and examples.
 
-المشروع منظم بطريقة معيارية:
+### Roadmap
 
-```
+* **Current Status (After Priority 4 Completion):**
+    1. **✅ Parser and AST implementation complete:** Modern recursive descent parser with unified AST system
+    2. **✅ Function system complete:** Full support for function definitions, parameters, and calls
+    3. **✅ Core language features complete:** Variables, control flow, expressions, and statements
+    4. **📋 Ready for Priority 5:** Advanced language features and semantic analysis
+* **Next Phase Goals (Priority 5 and Beyond):**
+    1. **Advanced type system:** Implement arrays, structs, unions, enums, and pointers
+    2. **Semantic analysis engine:** Symbol tables, type checking, and scope resolution
+    3. **Code generation backend:** LLVM IR generation and optimization integration
+    4. **Standard library development:** Localized Arabic standard library functions
+
+## Project Structure
+
+The project is organized in a modular way:
+
+```text
 baa/
-├── cmake/                  # وحدات CMake مخصصة
-├── docs/                   # التوثيق
-├── include/                # ملفات الرأس العامة (منظمة حسب المكون)
+├── cmake/                  # Custom CMake modules
+├── docs/                   # Documentation
+├── include/                # Public header files (organized by component)
 │   └── baa/
-├── src/                    # الكود المصدري (منظم حسب المكون)
-│   ├── CMakeLists.txt      # يضيف دلائل فرعية للمكونات
-│   ├── analysis/           # التحليل الدلالي وتحليل التدفق
-│   ├── ast/                # تنفيذ شجرة النحو المجردة الجديدة
-│   ├── codegen/            # توليد الكود
-│   ├── compiler.c          # منطق المترجم الأساسي
-│   ├── lexer/              # المحلل اللفظي
-│   ├── main.c              # نقطة دخول الملف التنفيذي الرئيسي
-│   ├── operators/          # العمليات
-│   ├── parser/             # تنفيذ المحلل النحوي الجديد
-│   ├── preprocessor/       # المعالج المسبق
-│   ├── types/              # الأنواع
-│   └── utils/              # الأدوات المساعدة
-├── tests/                  # اختبارات الوحدة والتكامل
-└── tools/                  # أدوات مساعدة قابلة للتنفيذ مستقلة
+├── src/                    # Source code (organized by component)
+│   ├── CMakeLists.txt      # Adds subdirectories for components
+│   ├── analysis/           # Semantic analysis and flow analysis
+│   ├── ast/                # New AST implementation
+│   ├── codegen/            # Code generation
+│   ├── compiler.c          # Core compiler logic
+│   ├── lexer/              # Lexical analyzer
+│   ├── main.c              # Main executable entry point
+│   ├── operators/          # Operators
+│   ├── parser/             # New parser implementation
+│   ├── preprocessor/       # Preprocessor
+│   ├── types/              # Types
+│   └── utils/              # Utilities
+├── tests/                  # Unit and integration tests
+└── tools/                  # Standalone executable helper tools
 ```
 
-*لهيكل بصري أكثر تفصيلاً، انظر [هيكل المشروع](docs/00_نظرة_عامة/هيكل_المشروع.md).*
+*For a more detailed visual structure, see [Project Structure](docs/project_structure.md).*
 
-## التوثيق
+## Documentation
 
-### 📚 التوثيق الكامل
-- **[دليل التوثيق](docs/00_نظرة_عامة/دليل_التوثيق.md)** - فهرس توثيق كامل
-- **[دليل البداية السريعة](docs/00_نظرة_عامة/البداية_السريعة.md)** - ابدأ مع باء في 5 دقائق
+### 📚 Complete Documentation
 
-### 🚀 روابط سريعة
-- [مواصفات اللغة](docs/01_مواصفات_اللغة/نظرة_عامة_على_اللغة.md) - مواصفات كاملة للغة باء
-- [الحالة الحالية](docs/00_نظرة_عامة/الحالة_الحالية.md) - ملخص الحالة الحالية للتنفيذ
-- [الميزات العربية](docs/01_مواصفات_اللغة/الميزات_العربية.md) - تفاصيل دعم اللغة العربية
-- [المعمارية](docs/02_معمارية_المترجم/نظرة_عامة_على_المعمارية.md) - نظرة عامة على معمارية المترجم
-- [دليل البناء](docs/03_التطوير/دليل_البناء.md) - دليل البناء والمساهمة
-- [خارطة الطريق](docs/04_خارطة_الطريق/نظرة_عامة_على_خارطة_الطريق.md) - خطط التطوير المستقبلية
+For comprehensive documentation, visit:
 
-## البناء من المصدر
+* **[Documentation Guide](docs/NAVIGATION.md)** - Complete documentation index
+* **[Quick Start Guide](docs/QUICK_START.md)** - Get started with Baa in 5 minutes
+* **[Current Status Summary](docs/CURRENT_STATUS_SUMMARY.md)** - Current implementation status
 
-### المتطلبات المسبقة
+### 🚀 Quick Links
 
-* CMake (3.20 أو أحدث)
-* مترجم C متوافق مع C11 (يُستخدم Clang-cl لـ Windows في CI)
+* **[Language Specification](docs/language.md)** - Complete Baa language specification
+* **[Arabic Features](docs/arabic_support.md)** - Arabic language support details
+* **[Architecture Overview](docs/architecture.md)** - Compiler architecture overview
+* **[Development Guide](docs/development.md)** - Building and contributing guide
+* **[Roadmap](docs/roadmap.md)** - Future development plans
+
+## Building from Source
+
+### Prerequisites
+
+* CMake (3.20 or newer)
+* C11-compatible C compiler (Clang-cl for Windows is used in CI)
 * Git
-* (اختياري) مكتبات تطوير LLVM (للخلفية LLVM)
+* (Optional) LLVM development libraries (for LLVM backend)
 
-### خطوات البناء
+### Build Steps
 
-**مطلوب** إجراء بناء خارج المصدر.
+**Out-of-source builds are required.**
 
-1. استنساخ المستودع:
+1. Clone the repository:
 
     ```bash
     git clone <repository-url>
     cd baa
     ```
 
-2. إنشاء دليل بناء:
+2. Create build directory:
 
     ```bash
     mkdir build
     cd build
     ```
 
-3. التكوين باستخدام CMake (من دليل `build`):
-    * **Windows (مع Clang-cl من أدوات LLVM):**
+3. Configure with CMake (from `build` directory):
+    * **Windows (with Clang-cl from LLVM tools):**
 
         ```bash
         cmake -G "Ninja" -DCMAKE_C_COMPILER="C:/Program Files/LLVM/bin/clang-cl.exe" ..
         ```
 
-        *(اضبط مسار `clang-cl.exe` حسب الحاجة.)*
-    * **Linux/macOS (باستخدام مترجم C الافتراضي للنظام، مثل GCC أو Clang):**
+        *(Adjust `clang-cl.exe` path as needed.)*
+    * **Linux/macOS (using system default C compiler, e.g., GCC or Clang):**
 
         ```bash
         cmake -G "Ninja" ..
         ```
 
-    * **لتمكين خلفية LLVM (إذا كان LLVM مثبتاً):**
-        أضف `-DUSE_LLVM=ON` إلى أمر cmake الخاص بك. قد تحتاج `-DLLVM_DIR=/path/to/llvm/lib/cmake/llvm` إذا لم يتمكن CMake من العثور على LLVM تلقائياً.
+    * **To enable LLVM backend (if LLVM is installed):**
+        Add `-DUSE_LLVM=ON` to your cmake command. You may need `-DLLVM_DIR=/path/to/llvm/lib/cmake/llvm` if CMake can't find LLVM automatically.
 
-4. بناء المشروع:
+4. Build the project:
 
     ```bash
     cmake --build .
-    # أو، إذا كنت تستخدم مولد Ninja:
+    # Or, if using Ninja generator:
     # ninja
     ```
 
-    الملفات التنفيذية ستكون في دليل `build` (مثل `baa.exe`, `baa_lexer_tester.exe`).
+    Executables will be in the `build` directory (e.g., `baa.exe`, `baa_lexer_tester.exe`).
 
-### تشغيل الأدوات التنفيذية
+### Running the Tools
 
-* **اختبار المعالج المسبق:**
+* **Test the preprocessor:**
 
     ```bash
-    # بعد البناء:
+    # After building:
     ./build/tools/baa_preprocessor_tester <path/to/your/file.baa>
     ```
 
-* **اختبار المحلل اللفظي:**
+* **Test the lexer:**
 
     ```bash
-    # بعد البناء:
+    # After building:
     ./build/tools/baa_lexer_tester <path/to/your/file.baa>
     ```
 
-    (الإخراج مكتوب الآن إلى `lexer_test_output.txt` في دليل العمل الحالي)
+    (Output is now written to `lexer_test_output.txt` in the current working directory)
 
-* **اختبار المحلل النحوي (عند توفره):**
+* **Test the parser (when available):**
 
     ```bash
-    # بعد البناء:
+    # After building:
     ./build/tools/baa_parser_tester <path/to/your/file.baa>
     ```
 
-## نقاط بارزة في اللغة (الحالية والمخططة)
+## Language Highlights (Current and Planned)
 
-* **النحو العربي:** كلمات مفتاحية، معرفات، ودعم مخطط لمزيد من البنى العربية.
-* **المعالج المسبق:** ميزات متوافقة مع C99 مع توجيهات عربية.
-* **نظام الأنواع:** كتابة ثابتة مع أنواع C أساسية وأسماء عربية.
-* **القيم الحرفية:**
-  * دعم الأرقام العربية-الهندية (`٠-٩`).
-  * فاصل عشري عربي (`٫`).
-  * علامة أس عربية `أ` للأعداد العشرية (تحل محل `e`/`E`).
-  * لواحق عربية للأعداد الصحيحة (`غ`, `ط`, `طط`) والعشرية (`ح`).
-  * تسلسلات هروب عربية مخصصة لباء (مثل `\س`, `\م`, `\يXXXX`) للسلاسل والحروف؛ الهروب على نمط C مثل `\n`, `\uXXXX` غير مدعوم.
-  * تنسيقات سلاسل نصية متنوعة (عادية، متعددة الأسطر `"""..."""`, خام `خ"..."`).
-* **منهي الجملة:** يستخدم `.` (نقطة) بدلاً من `;`.
+* **Arabic syntax:** Keywords, identifiers, and planned support for more Arabic constructs.
+* **Preprocessor:** C99-compatible features with Arabic directives.
+* **Type system:** Static typing with basic C types and Arabic names.
+* **Literals:**
+  * Arabic-Indic numeral support (`٠-٩`).
+  * Arabic decimal separator (`٫`).
+  * Arabic exponent marker `أ` for decimal numbers (replaces `e`/`E`).
+  * Arabic suffixes for integers (`غ`, `ط`, `طط`) and decimals (`ح`).
+  * Custom Baa Arabic escape sequences (e.g., `\س`, `\م`, `\يXXXX`) for strings and characters; C-style escapes like `\n`, `\uXXXX` are not supported.
+  * Various string formats (normal, multiline `"""..."""`, raw `خ"..."`).
+* **Statement terminator:** Uses `.` (period) instead of `;`.
 
-### مثال برنامج
+### Example Program
 
 ```baa
 // program.baa
-#تضمين <مكتبة_افتراضية_للطباعة> // افتراض مكتبة طباعة قياسية لباء
+#تضمين <مكتبة_افتراضية_للطباعة> // Assuming a standard Baa print library
 
 #تعريف EXIT_SUCCESS 0
 
-// باء تستخدم إعلانات دوال على نمط C
+// Baa uses C-style function declarations
 عدد_صحيح رئيسية() {
-    اطبع("!مرحباً بالعالم"). // دالة طباعة افتراضية
+    اطبع("!مرحباً بالعالم"). // Default print function
     إرجع EXIT_SUCCESS.
 }
 ```
 
-## المساهمة
+## Quick Start
 
-المساهمات مرحب بها! يرجى الرجوع إلى `docs/development.md` لمعايير الترميز وتفاصيل نظام البناء وإرشادات تنفيذ المكونات. المجالات الرئيسية للمساهمة حالياً تشمل التحليل الدلالي وتوليد الكود.
+### Requirements
 
-## الرخصة
+- **CMake 3.20+**
+- **C++17-compatible compiler** (GCC 9+, Clang 10+, MSVC 2019+)
+- **LLVM 15+ (optional)** - for code generation
 
-هذا المشروع مرخص تحت رخصة MIT - انظر ملف [LICENSE](LICENSE) للتفاصيل.
+### Building
+
+```bash
+# Clone the repository
+git clone https://github.com/your-username/baa.git
+cd baa
+
+# Create build directory
+mkdir build && cd build
+
+# Configure the project
+cmake ..
+
+# Build
+cmake --build .
+
+# Run tests
+ctest
+```
+
+### Quick Example
+
+```baa
+// Simple Baa program example
+#تضمين <stdio.h>
+
+دالة عدد_صحيح الرئيسية() {
+    عدد_صحيح العدد = ١٠؛
+    إذا (العدد > ٥) {
+        طباعة("العدد أكبر من خمسة\ن")؛
+    }
+    إرجاع ٠؛
+}
+```
+
+## Contributing
+
+Contributions are welcome! Please refer to `docs/development.md` for coding standards, build system details, and component implementation guidelines. Key areas for contribution currently include semantic analysis and code generation.
+
+For contributing guidelines, see:
+
+- **[Contributing Guide](docs/development.md)** - Development workflow and standards
+- **[Architecture Overview](docs/architecture.md)** - Understanding the codebase
+- **[Current Status](docs/CURRENT_STATUS_SUMMARY.md)** - What's implemented and what's needed
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## Support
+
+- **Documentation:** [docs/](docs/)
+- **Issues:** [GitHub Issues](https://github.com/your-username/baa/issues)
+- **Discussions:** [GitHub Discussions](https://github.com/your-username/baa/discussions)
 
 ---
 
-**ملاحظة:** هذا التوثيق متوفر أيضاً [بالإنجليزية](README.md).
+**Baa Programming Language - Arabic Programming for the Future** 🚀
+
+**Note:** This documentation is also available [in Arabic](README_AR.md).

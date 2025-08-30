@@ -141,7 +141,7 @@ Create a file called `hello.ب`:
 
 ```bash
 # استنساخ المستودع
-git clone <repository-url>
+git clone https://github.com/OmarAglan/baa.git
 cd baa
 
 # إنشاء دليل البناء

@@ -127,7 +127,7 @@ All documentation is available in both **English** and **Arabic**:
 - **Priority 1**: Basic lexer and preprocessor (Q2 2024)
 - **Priority 2**: Parser foundation and AST (Q3 2024)  
 - **Priority 3**: Expression parsing and control flow (Q4 2024)
-- **Priority 4**: Function definitions and calls (Q1 2025)
+- **Priority 4**: Function definitions and calls (July 2025)
 
 ### **📋 Upcoming Milestones**
 - **Priority 5**: Semantic analysis and type system (Q2 2025)

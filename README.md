@@ -266,7 +266,7 @@ For comprehensive documentation, visit:
 
 ```bash
 # Clone the repository
-git clone https://github.com/your-username/baa.git
+git clone https://github.com/[username]/baa.git
 cd baa
 
 # Create build directory

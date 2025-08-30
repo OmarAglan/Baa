@@ -314,8 +314,8 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ## Support
 
 - **Documentation:** [docs/](docs/)
-- **Issues:** [GitHub Issues](https://github.com/your-username/baa/issues)
-- **Discussions:** [GitHub Discussions](https://github.com/your-username/baa/discussions)
+- **Issues:** [GitHub Issues](https://github.com/OmarAglan/baa/issues)
+- **Discussions:** [GitHub Discussions](https://github.com/OmarAglan/baa/discussions)
 
 ---
 

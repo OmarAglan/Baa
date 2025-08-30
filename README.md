@@ -259,7 +259,7 @@ For comprehensive documentation, visit:
 ### Requirements
 
 - **CMake 3.20+**
-- **C++17-compatible compiler** (GCC 9+, Clang 10+, MSVC 2019+)
+- **C11-compatible compiler** (GCC 9+, Clang 10+, MSVC 2019+)
 - **LLVM 15+ (optional)** - for code generation
 
 ### Building

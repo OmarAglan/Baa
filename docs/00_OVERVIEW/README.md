@@ -150,7 +150,7 @@ All documentation is available in both **English** and **Arabic**:
 ### **For Researchers**
 1. Study the [Architecture Documentation](../02_COMPILER_ARCHITECTURE/)
 2. Review the [Language Specification](../01_LANGUAGE_SPECIFICATION/)
-3. Examine the [Source Code](https://github.com/[username]/[repository])
+3. Examine the [Source Code](https://github.com/OmarAglan/baa)
 
 ## 📞 **Support and Community**
 

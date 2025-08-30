@@ -20,7 +20,7 @@
 
 ```bash
 # Clone the repository
-git clone <repository-url>
+git clone https://github.com/[username]/[repository].git
 cd baa
 
 # Create build directory

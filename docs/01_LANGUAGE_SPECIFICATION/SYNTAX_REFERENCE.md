@@ -358,7 +358,7 @@ my-variable    // Hyphen not allowed
 // Simple Hello World in Baa
 عدد_صحيح الرئيسية() {
     طباعة("مرحبا بالعالم!");
-    إرجع ٠;
+    إرجع ٠.
 }
 ```
 

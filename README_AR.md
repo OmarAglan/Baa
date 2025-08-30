@@ -149,7 +149,7 @@ baa/
 1. استنساخ المستودع:
 
     ```bash
-    git clone https://github.com/[username]/[repository].git
+    git clone https://github.com/OmarAglan/baa.git
     cd baa
     ```
 

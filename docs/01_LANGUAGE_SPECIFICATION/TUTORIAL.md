@@ -76,7 +76,7 @@ Let's understand our first program:
 - `طباعة()` means "print()" - outputs text to the screen
 - `إرجع ٠` means "return 0" - indicates successful program completion
 - The curly braces `{}` define the function body
-- The semicolon `;` ends each statement
+- The period `.` ends each statement
 
 ### Exercise 1.1: Personalized Greeting
 

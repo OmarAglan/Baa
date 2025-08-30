@@ -22,7 +22,7 @@ Baa is a programming language designed to support Arabic syntax while maintainin
 
 1. **Fork and Clone**
    ```bash
-   git clone https://github.com/your-username/baa.git
+   git clone https://github.com/[username]/[repository].git
    cd baa
    ```
 

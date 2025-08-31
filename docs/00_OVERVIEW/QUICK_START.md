@@ -115,14 +115,14 @@ Create a file called `hello.ب`:
 
 ### 6. Next Steps
 
-1. **Read the documentation**: Start with [Language Specification](language.md)
+1. **Read the documentation**: Start with [Language Specification](../01_LANGUAGE_SPECIFICATION/LANGUAGE_OVERVIEW.md)
 2. **Explore examples**: Check out test files in `tests/resources/`
-3. **Learn the architecture**: Read [Architecture Overview](architecture.md)
-4. **Contribute**: See [Development Guide](development.md)
+3. **Learn the architecture**: Read [Architecture Overview](../02_COMPILER_ARCHITECTURE/ARCHITECTURE_OVERVIEW.md)
+4. **Contribute**: See [Development Guide](../03_DEVELOPMENT/CONTRIBUTING.md)
 
 ### 7. Getting Help
 
-- **Documentation**: [Complete Documentation Index](NAVIGATION.md)
+- **Documentation**: [Complete Documentation Index](../_navigation/index.md)
 - **Issues**: Create an issue on the project repository
 - **Community**: Join discussions about Arabic programming languages
 
@@ -236,14 +236,14 @@ cmake --build .
 
 ### 6. الخطوات التالية
 
-1. **اقرأ التوثيق**: ابدأ بـ [مواصفات اللغة](ar/مواصفات_اللغة.md)
+1. **اقرأ التوثيق**: ابدأ بـ [مواصفات اللغة](../01_مواصفات_اللغة/نظرة_عامة_على_اللغة.md)
 2. **استكشف الأمثلة**: تحقق من ملفات الاختبار في `tests/resources/`
-3. **تعلم المعمارية**: اقرأ [نظرة عامة على المعمارية](ar/نظرة_عامة_على_المعمارية.md) *(قريباً)*
-4. **ساهم**: انظر [دليل التطوير](ar/دليل_التطوير.md) *(قريباً)*
+3. **تعلم المعمارية**: اقرأ [نظرة عامة على المعمارية](../02_معمارية_المترجم/نظرة_عامة_على_المعمارية.md)
+4. **ساهم**: انظر [دليل التطوير](../03_التطوير/دليل_المساهمة.md)
 
 ### 7. الحصول على المساعدة
 
-- **التوثيق**: [فهرس التوثيق الكامل](NAVIGATION.md)
+- **التوثيق**: [فهرس التوثيق الكامل](../_navigation/index_ar.md)
 - **المشاكل**: أنشئ مشكلة في مستودع المشروع
 - **المجتمع**: انضم للنقاشات حول لغات البرمجة العربية
 

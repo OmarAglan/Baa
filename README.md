@@ -134,17 +134,17 @@ baa/
 
 For comprehensive documentation, visit:
 
-* **[Documentation Guide](docs/NAVIGATION.md)** - Complete documentation index
-* **[Quick Start Guide](docs/QUICK_START.md)** - Get started with Baa in 5 minutes
-* **[Current Status Summary](docs/CURRENT_STATUS_SUMMARY.md)** - Current implementation status
+* **[Documentation Guide](docs/_navigation/index.md)** - Complete documentation index
+* **[Quick Start Guide](docs/00_OVERVIEW/QUICK_START.md)** - Get started with Baa in 5 minutes
+* **[Current Status Summary](docs/00_OVERVIEW/CURRENT_STATUS.md)** - Current implementation status
 
 ### 🚀 Quick Links
 
-* **[Language Specification](docs/language.md)** - Complete Baa language specification
-* **[Arabic Features](docs/arabic_support.md)** - Arabic language support details
-* **[Architecture Overview](docs/architecture.md)** - Compiler architecture overview
-* **[Development Guide](docs/development.md)** - Building and contributing guide
-* **[Roadmap](docs/roadmap.md)** - Future development plans
+* **[Language Specification](docs/01_LANGUAGE_SPECIFICATION/LANGUAGE_OVERVIEW.md)** - Complete Baa language specification
+* **[Arabic Features](docs/01_LANGUAGE_SPECIFICATION/ARABIC_FEATURES.md)** - Arabic language support details
+* **[Architecture Overview](docs/02_COMPILER_ARCHITECTURE/ARCHITECTURE_OVERVIEW.md)** - Compiler architecture overview
+* **[Development Guide](docs/03_DEVELOPMENT/CONTRIBUTING.md)** - Building and contributing guide
+* **[Roadmap](docs/04_ROADMAP/ROADMAP_OVERVIEW.md)** - Future development plans
 
 ## Building from Source
 
@@ -303,13 +303,13 @@ Contributions are welcome! Please refer to `docs/development.md` for coding stan
 
 For contributing guidelines, see:
 
-- **[Contributing Guide](docs/development.md)** - Development workflow and standards
-- **[Architecture Overview](docs/architecture.md)** - Understanding the codebase
-- **[Current Status](docs/CURRENT_STATUS_SUMMARY.md)** - What's implemented and what's needed
+- **[Contributing Guide](docs/03_DEVELOPMENT/CONTRIBUTING.md)** - Development workflow and standards
+- **[Architecture Overview](docs/02_COMPILER_ARCHITECTURE/ARCHITECTURE_OVERVIEW.md)** - Understanding the codebase
+- **[Current Status](docs/00_OVERVIEW/CURRENT_STATUS.md)** - What's implemented and what's needed
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the MIT License - see the [LICENSE](./LICENSE) file for details.
 
 ## Support
 

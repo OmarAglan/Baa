@@ -305,8 +305,8 @@ All functions return `BaaResult` values or use the error reporter for detailed e
 ## 🔗 Related APIs
 
 - **[Lexer API](LEXER_API.md)** - Next stage after preprocessing
-- **[Error Reporting API](ERROR_REPORTING_API.md)** - Error handling utilities
-- **[Memory Management API](MEMORY_API.md)** - Memory allocation utilities
+- **[Utilities API](UTILITIES_API.md)** - Error handling and memory utilities
+- **[Parser API](PARSER_API.md)** - Next stage after preprocessing
 
 ---
 

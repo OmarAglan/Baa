@@ -434,7 +434,7 @@ baa_hashmap_destroy(map);
 
 ## 🔗 Related APIs
 
-- **[Error Reporting API](ERROR_REPORTING_API.md)** - Error handling utilities
+- **[AST API](../02_COMPILER_ARCHITECTURE/AST.md)** - Uses utility functions
 - **[Preprocessor API](PREPROCESSOR_API.md)** - Uses utility functions
 - **[Lexer API](LEXER_API.md)** - Uses string and vector utilities
 

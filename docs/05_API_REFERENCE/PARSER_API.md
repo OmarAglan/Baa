@@ -361,8 +361,8 @@ Common error scenarios and recovery strategies:
 ## 🔗 Related APIs
 
 - **[Lexer API](LEXER_API.md)** - Token input for parser
-- **[AST API](AST_API.md)** - AST node manipulation
-- **[Error Reporting API](ERROR_REPORTING_API.md)** - Error handling utilities
+- **[AST API](../02_COMPILER_ARCHITECTURE/AST.md)** - AST node manipulation
+- **[Utilities API](UTILITIES_API.md)** - Error handling utilities
 
 ---
 

@@ -80,28 +80,28 @@ The Baa preprocessor is now a mature, production-ready component with comprehens
 * [x] **Macro Redefinition Warnings/Errors**: Implemented comprehensive C99-compliant macro redefinition checking with intelligent comparison system. Issues warnings for incompatible redefinitions and errors for predefined macro redefinitions, with silent acceptance of identical redefinitions as per C99 standard. (v0.1.25.0)
 * [x] **Error Recovery Mechanisms:** ()
   * **Directive Parsing Error Recovery:**
-    * [x] Update [`#تضمين`](src/preprocessor/preprocessor_directives.c) directive parsing to use [`add_preprocessor_diagnostic()`](src/preprocessor/preprocessor_directives.c) for file not found errors and continue processing
-    * [x] Enhance [`#تعريف`](src/preprocessor/preprocessor_directives.c) macro definition error handling to recover from malformed parameter lists and invalid macro names
-    * [x] Implement [`#الغاء_تعريف`](src/preprocessor/preprocessor_directives.c) error recovery for undefined macro warnings while continuing directive processing
-    * [x] Add robust error handling for [`#خطأ`](src/preprocessor/preprocessor_directives.c) and [`#تحذير`](src/preprocessor/preprocessor_directives.c) directive malformed message strings
+    * [x] Update [`#تضمين`](../../src/preprocessor/preprocessor_directives.c) directive parsing to use [`add_preprocessor_diagnostic()`](../../src/preprocessor/preprocessor_directives.c) for file not found errors and continue processing
+    * [x] Enhance [`#تعريف`](../../src/preprocessor/preprocessor_directives.c) macro definition error handling to recover from malformed parameter lists and invalid macro names
+    * [x] Implement [`#الغاء_تعريف`](../../src/preprocessor/preprocessor_directives.c) error recovery for undefined macro warnings while continuing directive processing
+    * [x] Add robust error handling for [`#خطأ`](../../src/preprocessor/preprocessor_directives.c) and [`#تحذير`](../../src/preprocessor/preprocessor_directives.c) directive malformed message strings
     * [x] Implement line-level synchronization in directive parsing to skip to next valid directive after encountering parse errors
   * **Macro Expansion Error Recovery:**
-    * [x] Update [`expand_macro()`](src/preprocessor/preprocessor_expansion.c) to use [`add_preprocessor_diagnostic()`](src/preprocessor/preprocessor_expansion.c) for undefined macro references and continue expansion
-    * [x] Enhance function-like macro argument parsing in [`parse_macro_arguments()`](src/preprocessor/preprocessor_expansion.c) to recover from mismatched parentheses and argument count errors
-    * [x] Implement stringification error recovery for [`#`](src/preprocessor/preprocessor_expansion.c) operator with invalid operands
-    * [x] Add token pasting error recovery for [`##`](src/preprocessor/preprocessor_expansion.c) operator when operands cannot form valid tokens
+    * [x] Update [`expand_macro()`](../../src/preprocessor/preprocessor_expansion.c) to use [`add_preprocessor_diagnostic()`](../../src/preprocessor/preprocessor_expansion.c) for undefined macro references and continue expansion
+    * [x] Enhance function-like macro argument parsing in [`parse_macro_arguments()`](../../src/preprocessor/preprocessor_expansion.c) to recover from mismatched parentheses and argument count errors
+    * [x] Implement stringification error recovery for [`#`](../../src/preprocessor/preprocessor_expansion.c) operator with invalid operands
+    * [x] Add token pasting error recovery for [`##`](../../src/preprocessor/preprocessor_expansion.c) operator when operands cannot form valid tokens
     * [x] Improve recursive macro detection recovery to safely unwind expansion stack and continue processing
-    * [x] Enhance variadic macro expansion error handling for [`وسائط_إضافية`](src/preprocessor/preprocessor_expansion.c) and [`__وسائط_متغيرة__`](src/preprocessor/preprocessor_expansion.c) edge cases
+    * [x] Enhance variadic macro expansion error handling for [`وسائط_إضافية`](../../src/preprocessor/preprocessor_expansion.c) and [`__وسائط_متغيرة__`](../../src/preprocessor/preprocessor_expansion.c) edge cases
   * **Conditional Expression Error Recovery:**
-    * [x] Update [`evaluate_constant_expression()`](src/preprocessor/preprocessor_expr_eval.c) to use [`add_preprocessor_diagnostic()`](src/preprocessor/preprocessor_expr_eval.c) for syntax errors and return safe default values
+    * [x] Update [`evaluate_constant_expression()`](../../src/preprocessor/preprocessor_expr_eval.c) to use [`add_preprocessor_diagnostic()`](../../src/preprocessor/preprocessor_expr_eval.c) for syntax errors and return safe default values
     * [x] Implement division by zero error recovery in conditional expression evaluation with appropriate warnings
-    * [x] Add [`معرف`](src/preprocessor/preprocessor_expr_eval.c) operator error handling for malformed identifier arguments
-    * [x] Enhance conditional stack management to safely handle malformed [`#إذا`](src/preprocessor/preprocessor_expr_eval.c)/[`#نهاية_إذا`](src/preprocessor/preprocessor_expr_eval.c) nesting
+    * [x] Add [`معرف`](../../src/preprocessor/preprocessor_expr_eval.c) operator error handling for malformed identifier arguments
+    * [x] Enhance conditional stack management to safely handle malformed [`#إذا`](../../src/preprocessor/preprocessor_expr_eval.c)/[`#نهاية_إذا`](../../src/preprocessor/preprocessor_expr_eval.c) nesting
     * [x] Implement recovery strategies for invalid integer literals and overflow conditions in conditional expressions
   * **Synchronization Strategy Implementation:**
     * [x] Define directive-level synchronization points to resume parsing after encountering invalid directives
     * [x] Implement expression-level recovery to continue evaluation after encountering invalid operators or operands
-    * [x] Add conditional stack validation and automatic cleanup for unmatched [`#إذا`](src/preprocessor/preprocessor_conditionals.c)/[`#نهاية_إذا`](src/preprocessor/preprocessor_conditionals.c) pairs
+    * [x] Add conditional stack validation and automatic cleanup for unmatched [`#إذا`](../../src/preprocessor/preprocessor_conditionals.c)/[`#نهاية_إذا`](../../src/preprocessor/preprocessor_conditionals.c) pairs
     * [x] Create line-boundary synchronization to ensure errors in one line don't corrupt subsequent line processing
   * **Configurable Error Management:**
     * [x] Add configurable error limits with separate thresholds for errors, warnings, and notes

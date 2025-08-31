@@ -1,0 +1,74 @@
+name: Sync Documentation
+
+on:
+  push:
+    branches: [ main ]
+    paths: [ 'docs/**' ]
+
+jobs:
+  sync-docs:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout main repository
+      uses: actions/checkout@v4
+      with:
+        path: temp-baa
+        
+    - name: Get last commit info from main repo
+      id: main-repo-info
+      run: |
+        cd temp-baa
+        echo "commit_sha=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
+        
+        # Handle multi-line commit messages properly
+        commit_message="$(git log -1 --pretty=%B)"
+        echo "commit_message<<EOF" >> $GITHUB_OUTPUT
+        echo "$commit_message" >> $GITHUB_OUTPUT
+        echo "EOF" >> $GITHUB_OUTPUT
+        
+        echo "commit_author=$(git log -1 --pretty=%an)" >> $GITHUB_OUTPUT
+        cd ..
+        
+    - name: Checkout wiki repository
+      uses: actions/checkout@v4
+      with:
+        repository: ${{ github.repository }}.wiki
+        token: ${{ secrets.GITHUB_TOKEN }}
+        path: wiki
+        
+    - name: Sync documentation files
+      run: |
+        # Remove existing docs from wiki
+        rm -rf wiki/docs
+        
+        # Copy docs from main repo to wiki
+        cp -r temp-baa/docs wiki/
+        
+        # Navigate to wiki directory
+        cd wiki
+        
+        # Configure git
+        git config user.name "github-actions[bot]"
+        git config user.email "github-actions[bot]@users.noreply.github.com"
+        
+        # Check if there are any changes
+        if git diff --quiet && git diff --staged --quiet; then
+          echo "No changes to commit"
+          exit 0
+        fi
+        
+        # Add all changes
+        git add .
+        
+        # Commit with info from main repo
+        git commit -m "Sync docs from main repo
+        
+        Commit: ${{ steps.main-repo-info.outputs.commit_sha }}
+        Author: ${{ steps.main-repo-info.outputs.commit_author }}
+        
+        Original commit message:
+        ${{ steps.main-repo-info.outputs.commit_message }}"
+        
+        # Push changes
+        git push

@@ -1387,6 +1387,10 @@ bool process_code_line_for_macros(BaaPreprocessor *pp_state,
     int pass_count = 0;
     const int MAX_RESCAN_PASSES = 256;
 
+    // Track content between passes to detect infinite loops
+    wchar_t *previous_pass_content = NULL;
+    wchar_t *two_passes_ago_content = NULL;
+
     bool expansion_made_this_pass;
     do
     {
@@ -1434,6 +1438,35 @@ bool process_code_line_for_macros(BaaPreprocessor *pp_state,
             break;
 
         pass_count++;
+        
+        // Detect infinite loops by checking if we've seen this content before
+        if (expansion_made_this_pass && pass_count >= 3)
+        {
+            wchar_t *current_content = current_pass_input_buffer.buffer;
+            
+            // Check for 2-cycle: A->B->A->B...
+            if (previous_pass_content && current_content && wcscmp(current_content, previous_pass_content) == 0)
+            {
+                PpSourceLocation err_loc_data = get_current_original_location(pp_state);
+                err_loc_data.line = original_line_number;
+                err_loc_data.column = 1;
+                PP_REPORT_ERROR(pp_state, &err_loc_data, PP_ERROR_MACRO_TOO_COMPLEX, "line_processing", L"تم اكتشاف حلقة لا نهائية في توسيع الماكرو (دورة من مرحلتين).");
+                overall_success_for_line = false;
+                break;
+            }
+            
+            // Check for 3-cycle: A->B->C->A->B->C...
+            if (two_passes_ago_content && current_content && wcscmp(current_content, two_passes_ago_content) == 0)
+            {
+                PpSourceLocation err_loc_data = get_current_original_location(pp_state);
+                err_loc_data.line = original_line_number;
+                err_loc_data.column = 1;
+                PP_REPORT_ERROR(pp_state, &err_loc_data, PP_ERROR_MACRO_TOO_COMPLEX, "line_processing", L"تم اكتشاف حلقة لا نهائية في توسيع الماكرو (دورة من ثلاث مراحل).");
+                overall_success_for_line = false;
+                break;
+            }
+        }
+        
         if (pass_count > MAX_RESCAN_PASSES)
         {
             PpSourceLocation err_loc_data = get_current_original_location(pp_state);
@@ -1442,6 +1475,25 @@ bool process_code_line_for_macros(BaaPreprocessor *pp_state,
             PP_REPORT_ERROR(pp_state, &err_loc_data, PP_ERROR_MACRO_TOO_COMPLEX, "line_processing", L"تم تجاوز الحد الأقصى لمرات إعادة فحص الماكرو لسطر واحد (%d).", MAX_RESCAN_PASSES);
             overall_success_for_line = false;
             break;
+        }
+        
+        // Update tracking for cycle detection
+        if (expansion_made_this_pass)
+        {
+            // Shift the tracking window
+            free(two_passes_ago_content);
+            two_passes_ago_content = previous_pass_content;
+            if (current_pass_input_buffer.buffer) {
+                size_t len = wcslen(current_pass_input_buffer.buffer);
+                previous_pass_content = malloc((len + 1) * sizeof(wchar_t));
+                if (previous_pass_content) {
+                    wcscpy(previous_pass_content, current_pass_input_buffer.buffer);
+                } else {
+                    previous_pass_content = NULL;
+                }
+            } else {
+                previous_pass_content = NULL;
+            }
         }
 
     } while (expansion_made_this_pass && overall_success_for_line);
@@ -1458,6 +1510,10 @@ bool process_code_line_for_macros(BaaPreprocessor *pp_state,
             overall_success_for_line = false;
         }
     }
+
+    // Cleanup tracking variables
+    free(previous_pass_content);
+    free(two_passes_ago_content);
 
     free_dynamic_buffer(&current_pass_input_buffer);
     return overall_success_for_line;

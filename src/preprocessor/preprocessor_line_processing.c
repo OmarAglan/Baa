@@ -669,7 +669,70 @@ bool scan_and_substitute_macros_one_pass(
     {
         size_t token_start_col_for_error = current_col_in_this_scan_pass;
 
-        if (iswalpha(*scan_ptr) || *scan_ptr == L'_')
+        // Handle string literals - skip over them completely to prevent macro expansion inside
+        if (*scan_ptr == L'"')
+        {
+            // Copy the opening quote
+            if (!append_dynamic_buffer_n(one_pass_buffer, scan_ptr, 1))
+            {
+                PpSourceLocation temp_loc = get_current_original_location(pp_state);
+                temp_loc.line = original_line_number_for_errors;
+                temp_loc.column = current_col_in_this_scan_pass;
+                PP_REPORT_FATAL(pp_state, &temp_loc, PP_ERROR_ALLOCATION_FAILED, "line_processing", L"فشل في إلحاق علامة الاقتباس الافتتاحية.");
+                *overall_success = false;
+                break;
+            }
+            scan_ptr++;
+            current_col_in_this_scan_pass++;
+
+            // Copy everything inside the string literal until closing quote
+            bool string_complete = false;
+            while (*scan_ptr != L'\0' && !string_complete)
+            {
+                if (*scan_ptr == L'"')
+                {
+                    string_complete = true;
+                }
+                else if (*scan_ptr == L'\\' && *(scan_ptr + 1) != L'\0')
+                {
+                    // Handle escape sequences - copy both backslash and escaped character
+                    if (!append_dynamic_buffer_n(one_pass_buffer, scan_ptr, 1))
+                    {
+                        PpSourceLocation temp_loc = get_current_original_location(pp_state);
+                        temp_loc.line = original_line_number_for_errors;
+                        temp_loc.column = current_col_in_this_scan_pass;
+                        PP_REPORT_FATAL(pp_state, &temp_loc, PP_ERROR_ALLOCATION_FAILED, "line_processing", L"فشل في إلحاق محتوى السلسلة النصية.");
+                        *overall_success = false;
+                        break;
+                    }
+                    scan_ptr++;
+                    current_col_in_this_scan_pass++;
+                }
+
+                // Copy the current character
+                if (!append_dynamic_buffer_n(one_pass_buffer, scan_ptr, 1))
+                {
+                    PpSourceLocation temp_loc = get_current_original_location(pp_state);
+                    temp_loc.line = original_line_number_for_errors;
+                    temp_loc.column = current_col_in_this_scan_pass;
+                    PP_REPORT_FATAL(pp_state, &temp_loc, PP_ERROR_ALLOCATION_FAILED, "line_processing", L"فشل في إلحاق محتوى السلسلة النصية.");
+                    *overall_success = false;
+                    break;
+                }
+                scan_ptr++;
+                current_col_in_this_scan_pass++;
+            }
+
+            if (!*overall_success)
+                break;
+
+            if (!string_complete)
+            {
+                // Unterminated string literal - this is typically a syntax error that should be handled by the lexer
+                // For now, we'll continue processing but could add a warning here
+            }
+        }
+        else if (iswalpha(*scan_ptr) || *scan_ptr == L'_')
         { // Potential identifier
             const wchar_t *id_start = scan_ptr;
             while (iswalnum(*scan_ptr) || *scan_ptr == L'_')

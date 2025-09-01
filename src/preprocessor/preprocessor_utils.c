@@ -999,9 +999,15 @@ void add_preprocessor_diagnostic_ex(
         return;
 
     // Check if we should continue processing based on limits
-    if (!should_continue_processing(pp_state))
+    // For diagnostic collection, we're more permissive - only stop if we've hit hard limits
+    // Fatal errors don't prevent collection of other diagnostics in the same session
+    if (pp_state->error_count >= pp_state->error_limits.max_errors && severity == PP_DIAG_ERROR)
     {
-        return;
+        return; // Stop collecting errors if we've hit the error limit
+    }
+    if (pp_state->warning_count >= pp_state->error_limits.max_warnings && severity == PP_DIAG_WARNING)
+    {
+        return; // Stop collecting warnings if we've hit the warning limit
     }
 
     // Format the diagnostic message first

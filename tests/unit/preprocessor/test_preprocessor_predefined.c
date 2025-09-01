@@ -162,7 +162,7 @@ void test_predefined_version_macro(void)
     ASSERT_NOT_NULL(result, L"Preprocessing should succeed");
 
     // Should expand to version number (10150L)
-    ASSERT_WSTR_CONTAINS(result, L"10150L");
+    ASSERT_WSTR_CONTAINS(result, L"10150ط");
 
     free(result);
 
@@ -175,7 +175,7 @@ void test_predefined_macros_in_expressions(void)
     TEST_SETUP();
     wprintf(L"Testing predefined macros in expressions...\n");
 
-    const wchar_t *source = L"#إذا __إصدار_المعيار_باء__ >= 10000L\nversion_ok\n#نهاية_إذا";
+    const wchar_t *source = L"#إذا __إصدار_المعيار_باء__ >= 10000ط\nversion_ok\n#نهاية_إذا";
     wchar_t *result = preprocess_string(source);
 
     ASSERT_NOT_NULL(result, L"Preprocessing should succeed");
@@ -249,7 +249,7 @@ void test_all_predefined_macros_together(void)
     ASSERT_WSTR_CONTAINS(result, L"test_string"); // __الملف__
     ASSERT_WSTR_CONTAINS(result, L"1");           // __السطر__
     ASSERT_WSTR_CONTAINS(result, L"\"");          // __التاريخ__ and __الوقت__ should have quotes
-    ASSERT_WSTR_CONTAINS(result, L"10150L");      // __إصدار_المعيار_باء__
+    ASSERT_WSTR_CONTAINS(result, L"10150ط");      // __إصدار_المعيار_باء__
 
     free(result);
 
@@ -268,7 +268,7 @@ void test_predefined_macros_with_user_macros(void)
     ASSERT_NOT_NULL(result, L"Preprocessing should succeed");
 
     // MY_VERSION should expand to the predefined version macro value
-    ASSERT_WSTR_CONTAINS(result, L"10150L");
+    ASSERT_WSTR_CONTAINS(result, L"10150ط");
 
     free(result);
 

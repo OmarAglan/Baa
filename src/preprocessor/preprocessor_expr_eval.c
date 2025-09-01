@@ -338,8 +338,44 @@ static PpExprToken get_next_pp_expr_token(PpExprTokenizer *tz)
             }
             return (PpExprToken){.type = PP_EXPR_TOKEN_ERROR};
         }
+        
+        // Check for Arabic literal suffixes (Baa language standard)
+        if (endptr)
+        {
+            // ط = long, طط = long long, غ = unsigned, combinations allowed
+            if (*endptr == L'ط')
+            {
+                endptr++; // Skip first ط
+                if (*endptr == L'ط') // long long
+                {
+                    endptr++; // Skip second ط
+                }
+                if (*endptr == L'غ') // unsigned long or unsigned long long
+                {
+                    endptr++; // Skip غ
+                }
+            }
+            else if (*endptr == L'غ')
+            {
+                endptr++; // Skip غ (unsigned)
+                if (*endptr == L'ط') // unsigned long
+                {
+                    endptr++; // Skip ط
+                    if (*endptr == L'ط') // unsigned long long
+                    {
+                        endptr++; // Skip second ط
+                    }
+                }
+            }
+            // Also support legacy English L/l for compatibility during transition
+            else if (*endptr == L'L' || *endptr == L'l')
+            {
+                endptr++; // Skip the L/l suffix
+            }
+        }
+        
         size_t num_len = endptr - tz->start;
-        tz->current = endptr; // Advance tokenizer past the number
+        tz->current = endptr; // Advance tokenizer past the number including suffix
         // tz->current is advanced. current_token_start_column refers to the start.
         // No global column update needed here; it's relative to the expression string.
 

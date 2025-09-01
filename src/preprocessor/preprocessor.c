@@ -185,9 +185,9 @@ wchar_t *baa_preprocess(const BaaPpSource *source, const char **include_paths, w
         return NULL;
     }
 
-    // Define __إصدار_المعيار_باء__ as 10150L (for version 0.1.15, as per language.md example)
-    // This expands to an integer constant.
-    if (!add_macro(&pp_state, L"__إصدار_المعيار_باء__", L"10150L", false, false, 0, NULL))
+    // Define __إصدار_المعيار_باء__ as 10150ط (for version 0.1.15, using Arabic long suffix)
+    // This expands to a long integer constant.
+    if (!add_macro(&pp_state, L"__إصدار_المعيار_باء__", L"10150ط", false, false, 0, NULL))
     {
         PP_REPORT_ERROR(&pp_state, &initial_loc, PP_ERROR_MACRO_EXPANSION_FAILED, "macro_definition",
             L"فشل في تعريف الماكرو المدمج __إصدار_المعيار_باء__.");

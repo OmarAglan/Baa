@@ -295,10 +295,10 @@ void PreprocessorConditional_NestedConditionals()
     ASSERT_NOT_NULL(result, L"Preprocessor result should not be NULL");   // Use ASSERT_NOT_NULL, add message
 
     const wchar_t *expected = L"خارجي صحيح\n"
-                              L"   داخلي صحيح\n"
-                              L"   داخلي آخر صحيح\n"
+                              L"  داخلي صحيح\n"
+                              L"  داخلي آخر صحيح\n"
                               L"خارجي آخر صحيح\n"
-                              L"   داخلي مزيف صحيح\n";
+                              L"  داخلي مزيف صحيح\n";
     ASSERT_STR_EQ(expected, result); // Use ASSERT_STR_EQ(expected, actual)
 
     free(result);

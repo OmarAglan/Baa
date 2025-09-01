@@ -102,13 +102,15 @@ void test_line_directive_error_reporting(void)
     wchar_t *error_msg = NULL;
     wchar_t *result = preprocess_string_with_error(source, &error_msg);
 
-    // Should fail with an error that reports line 1000 and error_file.baa
+    // Should fail with an error that reports line 999 and error_file.baa
+    // The #سطر directive makes the next line have the specified number,
+    // so #خطأ appears on line 999 (the line after #سطر 999)
     ASSERT_NULL(result, L"Preprocessing should fail with #خطأ directive");
     ASSERT_NOT_NULL(error_msg, L"Error message should be provided");
 
     if (error_msg)
     {
-        ASSERT_WSTR_CONTAINS(error_msg, L"1000");
+        ASSERT_WSTR_CONTAINS(error_msg, L"999");
         ASSERT_WSTR_CONTAINS(error_msg, L"error_file.baa");
         free(error_msg);
     }

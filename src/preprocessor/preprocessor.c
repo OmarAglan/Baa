@@ -185,9 +185,9 @@ wchar_t *baa_preprocess(const BaaPpSource *source, const char **include_paths, w
         return NULL;
     }
 
-    // Define __إصدار_المعيار_باء__ as 10150L (for version 0.1.15, as per language.md example)
-    // This expands to an integer constant.
-    if (!add_macro(&pp_state, L"__إصدار_المعيار_باء__", L"10150L", false, false, 0, NULL))
+    // Define __إصدار_المعيار_باء__ as 10150ط (for version 0.1.15, using Arabic long suffix)
+    // This expands to a long integer constant.
+    if (!add_macro(&pp_state, L"__إصدار_المعيار_باء__", L"10150ط", false, false, 0, NULL))
     {
         PP_REPORT_ERROR(&pp_state, &initial_loc, PP_ERROR_MACRO_EXPANSION_FAILED, "macro_definition",
             L"فشل في تعريف الماكرو المدمج __إصدار_المعيار_باء__.");
@@ -263,6 +263,22 @@ wchar_t *baa_preprocess(const BaaPpSource *source, const char **include_paths, w
         pop_location(&pp_state);
     }
 
+    // Check for unterminated conditional block BEFORE cleaning up conditional stack
+    // This check needs to happen *before* cleanup of conditional stack but *after* processing is complete
+    if (pp_state.conditional_stack_count > 0 && !pp_state.had_fatal_error) // Only if no fatal error already reported
+    {
+        // Get location information BEFORE any potential cleanup that might affect location stack
+        PpSourceLocation error_loc = {
+            .file_path = pp_state.current_file_path ? pp_state.current_file_path : "unknown",
+            .line = pp_state.current_line_number,
+            .column = pp_state.current_column_number
+        };
+        
+        // If an error already occurred, keep that primary error message
+        // Otherwise, report the unterminated block error.
+        report_unterminated_conditional(&pp_state, &error_loc);
+    }
+
     // --- Cleanup ---
     // Free all dynamically allocated resources held by the state struct
     free_file_stack(&pp_state);
@@ -271,18 +287,6 @@ wchar_t *baa_preprocess(const BaaPpSource *source, const char **include_paths, w
     free_macro_expansion_stack(&pp_state);
     // Location stack is freed *after* potential final error reporting below
     // Note: pp_state.current_file_path is managed within process_file and its callers
-
-    // Check for unterminated conditional block after processing is complete
-    // This check needs to happen *after* cleanup of stacks but *before* returning potentially bad output
-    if (pp_state.conditional_stack_count > 0 && !pp_state.had_fatal_error) // Only if no fatal error already reported
-    {
-        // If an error already occurred, keep that primary error message
-        // Otherwise, report the unterminated block error.
-        PpSourceLocation error_loc = get_current_original_location(&pp_state);
-        // Use a va_list for add_preprocessor_diagnostic
-        // This is a bit clunky for a single string, but keeps add_preprocessor_diagnostic consistent
-        report_unterminated_conditional(&pp_state, &error_loc);
-    }
 
     // If errors occurred, populate the output error_message parameter
     if ((pp_state.had_fatal_error || pp_state.error_count > 0) && error_message)

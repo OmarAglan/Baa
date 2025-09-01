@@ -131,7 +131,7 @@ void test_macro_undef(void)
     TEST_SETUP();
     wprintf(L"Testing macro undefinition...\n");
 
-    const wchar_t *source = L"#تعريف TEMP 42\n#إلغاء_تعريف TEMP\nTEMP";
+    const wchar_t *source = L"#تعريف TEMP 42\n#الغاء_تعريف TEMP\nTEMP";
     wchar_t *result = preprocess_string(source);
 
     ASSERT_NOT_NULL(result, L"Preprocessing should succeed");

@@ -60,7 +60,9 @@ add_executable(test_preprocessor_comprehensive test_preprocessor_comprehensive.c
 target_link_libraries(test_preprocessor_comprehensive PRIVATE ${PREPROCESSOR_TEST_LIBRARIES})
 target_include_directories(test_preprocessor_comprehensive PRIVATE ${PREPROCESSOR_TEST_INCLUDE_DIRS})
 add_test(NAME test_preprocessor_comprehensive COMMAND test_preprocessor_comprehensive)
-set_tests_properties(test_preprocessor_comprehensive PROPERTIES LABELS "unit;preprocessor;comprehensive;integration")
+set_tests_properties(test_preprocessor_comprehensive PROPERTIES 
+    LABELS "unit;preprocessor;comprehensive;integration"
+    WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
 
 # Advanced macro feature tests
 add_executable(test_preprocessor_advanced_macros test_preprocessor_advanced_macros.c)

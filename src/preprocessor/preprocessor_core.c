@@ -176,14 +176,58 @@ wchar_t *process_file(BaaPreprocessor *pp_state, const char *file_path, wchar_t 
             // Not a directive and not skipping: process line for macro substitution.
             // The process_code_line_for_macros function appends the processed line (without newline) to output_buffer.
 
-            if (!process_code_line_for_macros(pp_state, current_line, line_len, &output_buffer, error_message))
+            // Process line for macro substitution while preserving whitespace
+            if (current_line && wcslen(current_line) > 0)
             {
-                success = false;
-            }
-            else
-            {
-                // Append newline after successfully processing and appending the code line
-                if (!append_to_dynamic_buffer(&output_buffer, L"\n"))
+                // For lines that contain only whitespace, preserve them as-is
+                wchar_t *trimmed_line = current_line;
+                while (iswspace(*trimmed_line)) trimmed_line++;
+                
+                if (*trimmed_line == L'\0')
+                {
+                    // Line contains only whitespace - preserve as-is
+                    if (!append_to_dynamic_buffer(&output_buffer, current_line))
+                    {
+                        success = false;
+                    }
+                }
+                else
+                {
+                    // Line has content - process normally but with fallback
+                    size_t output_length_before = output_buffer.length;
+                    
+                    if (!process_code_line_for_macros(pp_state, current_line, line_len, &output_buffer, error_message))
+                    {
+                        success = false;
+                    }
+                    else
+                    {
+                        size_t output_length_after = output_buffer.length;
+                        
+                        // Check if sufficient content was added (should be at least as much as the trimmed content)
+                        size_t expected_min_length = wcslen(trimmed_line);
+                        size_t actual_added_length = output_length_after - output_length_before;
+                        
+                        if (actual_added_length < expected_min_length)
+                        {
+                            // Content appears to be truncated or missing
+                            // Remove what was added and use original line
+                            output_buffer.length = output_length_before;
+                            if (output_buffer.buffer && output_length_before < output_buffer.capacity)
+                            {
+                                output_buffer.buffer[output_length_before] = L'\0';
+                            }
+                            
+                            if (!append_to_dynamic_buffer(&output_buffer, current_line))
+                            {
+                                success = false;
+                            }
+                        }
+                    }
+                }
+                
+                // Append newline after processing
+                if (success && !append_to_dynamic_buffer(&output_buffer, L"\n"))
                 {
                     success = false;
                     if (!*error_message) {
@@ -354,14 +398,58 @@ wchar_t *process_string(BaaPreprocessor *pp_state, const wchar_t *source_string,
         {
             // Not a directive and not skipping: process line for macro substitution.
 
-            if (!process_code_line_for_macros(pp_state, current_line, line_len, &output_buffer, error_message))
+            // Process line for macro substitution while preserving whitespace
+            if (current_line && wcslen(current_line) > 0)
             {
-                success = false;
-            }
-            else
-            {
-                // Append newline after successfully processing and appending the code line
-                if (!append_to_dynamic_buffer(&output_buffer, L"\n"))
+                // For lines that contain only whitespace, preserve them as-is
+                wchar_t *trimmed_line = current_line;
+                while (iswspace(*trimmed_line)) trimmed_line++;
+                
+                if (*trimmed_line == L'\0')
+                {
+                    // Line contains only whitespace - preserve as-is
+                    if (!append_to_dynamic_buffer(&output_buffer, current_line))
+                    {
+                        success = false;
+                    }
+                }
+                else
+                {
+                    // Line has content - process normally but with fallback
+                    size_t output_length_before = output_buffer.length;
+                    
+                    if (!process_code_line_for_macros(pp_state, current_line, line_len, &output_buffer, error_message))
+                    {
+                        success = false;
+                    }
+                    else
+                    {
+                        size_t output_length_after = output_buffer.length;
+                        
+                        // Check if sufficient content was added (should be at least as much as the trimmed content)
+                        size_t expected_min_length = wcslen(trimmed_line);
+                        size_t actual_added_length = output_length_after - output_length_before;
+                        
+                        if (actual_added_length < expected_min_length)
+                        {
+                            // Content appears to be truncated or missing
+                            // Remove what was added and use original line
+                            output_buffer.length = output_length_before;
+                            if (output_buffer.buffer && output_length_before < output_buffer.capacity)
+                            {
+                                output_buffer.buffer[output_length_before] = L'\0';
+                            }
+                            
+                            if (!append_to_dynamic_buffer(&output_buffer, current_line))
+                            {
+                                success = false;
+                            }
+                        }
+                    }
+                }
+                
+                // Append newline after processing
+                if (success && !append_to_dynamic_buffer(&output_buffer, L"\n"))
                 {
                     success = false;
                     if (!*error_message) {

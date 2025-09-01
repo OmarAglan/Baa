@@ -496,7 +496,7 @@ bool evaluate_preprocessor_expression(BaaPreprocessor *pp_state, const wchar_t *
         // error_message already set by fully_expand_expression_string
         return false;
     }
-    fwprintf(stderr, L"DEBUG #if Fully Expanded Expr: [%ls]\n", expanded_expression_str); // Uncomment for debugging
+    // fwprintf(stderr, L"DEBUG #if Fully Expanded Expr: [%ls]\n", expanded_expression_str); // Uncomment for debugging
     PpExprTokenizer tz = {
         .current = expanded_expression_str,                           // Use the fully expanded string
         .expression_string_start = expanded_expression_str,           // Store the beginning of the expanded expression string

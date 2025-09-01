@@ -123,7 +123,7 @@ wchar_t *process_file(BaaPreprocessor *pp_state, const char *file_path, wchar_t 
             break;
         }
 
-        // fwprintf(stderr, L"DEBUG: Processing line %zu: [%ls]\n", pp_state->current_line_number, current_line); // DEBUG PRINT
+
 
         // Reset physical column for the start of the line
         pp_state->current_column_number = 1;
@@ -164,7 +164,7 @@ wchar_t *process_file(BaaPreprocessor *pp_state, const char *file_path, wchar_t 
             // Call the new function to handle all directive logic.
             // This function is responsible for its own output (e.g., from #include via output_buffer)
             // and for updating the success flag.
-            // fwprintf(stderr, L"DEBUG PF: Calling handle_preprocessor_directive for line %zu: [%ls]\n", pp_state->current_line_number, effective_line_start);
+
             bool local_is_conditional_directive_pf; // For process_file
             if (!handle_preprocessor_directive(pp_state, effective_line_start + 1, abs_path, &output_buffer, error_message, &local_is_conditional_directive_pf))
             {
@@ -175,7 +175,7 @@ wchar_t *process_file(BaaPreprocessor *pp_state, const char *file_path, wchar_t 
         {
             // Not a directive and not skipping: process line for macro substitution.
             // The process_code_line_for_macros function appends the processed line (without newline) to output_buffer.
-            // fwprintf(stderr, L"DEBUG PF: Calling process_code_line_for_macros for line %zu: [%ls]\n", pp_state->current_line_number, current_line);
+
             if (!process_code_line_for_macros(pp_state, current_line, line_len, &output_buffer, error_message))
             {
                 success = false;
@@ -343,7 +343,7 @@ wchar_t *process_string(BaaPreprocessor *pp_state, const wchar_t *source_string,
         {
             // Call the new function to handle all directive logic.
             // Note: abs_path is NULL for string processing.
-            // fwprintf(stderr, L"DEBUG PS: Calling handle_preprocessor_directive for line %zu: [%ls]\n", pp_state->current_line_number, effective_line_start);
+
             bool local_is_conditional_directive_ps; // For process_string
             if (!handle_preprocessor_directive(pp_state, effective_line_start + 1, NULL, &output_buffer, error_message, &local_is_conditional_directive_ps))
             {
@@ -353,7 +353,7 @@ wchar_t *process_string(BaaPreprocessor *pp_state, const wchar_t *source_string,
         else if (!pp_state->skipping_lines)
         {
             // Not a directive and not skipping: process line for macro substitution.
-            // fwprintf(stderr, L"DEBUG PS: Calling process_code_line_for_macros for line %zu: [%ls]\n", pp_state->current_line_number, current_line);
+
             if (!process_code_line_for_macros(pp_state, current_line, line_len, &output_buffer, error_message))
             {
                 success = false;

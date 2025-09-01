@@ -927,6 +927,7 @@ void add_preprocessor_diagnostic(BaaPreprocessor *pp_state, const PpSourceLocati
 
     if (is_error)
     {
+        pp_state->error_count++;
         pp_state->had_fatal_error = true;
     }
 }

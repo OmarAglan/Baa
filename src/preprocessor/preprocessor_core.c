@@ -120,7 +120,7 @@ wchar_t *process_file(BaaPreprocessor *pp_state, const char *file_path, wchar_t 
             PP_REPORT_FATAL(pp_state, &error_loc, PP_ERROR_ALLOCATION_FAILED, "memory",
                            L"فشل في تخصيص الذاكرة لسطر.");
             success = false;
-            break;
+            break; // current_line is NULL, so no need to free
         }
 
 
@@ -140,6 +140,7 @@ wchar_t *process_file(BaaPreprocessor *pp_state, const char *file_path, wchar_t 
         {
             // Single-line comment, skip the rest of the line processing
             free(current_line); // Free the duplicated line
+            current_line = NULL; // Ensure no double-free
             // Advance to next line in the main loop
             if (line_end != NULL)
             {
@@ -169,6 +170,7 @@ wchar_t *process_file(BaaPreprocessor *pp_state, const char *file_path, wchar_t 
             if (!handle_preprocessor_directive(pp_state, effective_line_start + 1, abs_path, &output_buffer, error_message, &local_is_conditional_directive_pf))
             {
                 success = false;
+                // Note: current_line will be freed at end of loop iteration
             }
         }
         else if (!pp_state->skipping_lines)
@@ -242,6 +244,7 @@ wchar_t *process_file(BaaPreprocessor *pp_state, const char *file_path, wchar_t 
         // Comment lines (//) are handled before this block and 'continue' the loop.
 
         free(current_line); // Free the duplicated line
+        current_line = NULL; // Ensure no double-free
 
         if (!success)
             break; // Exit loop on error
@@ -350,7 +353,7 @@ wchar_t *process_string(BaaPreprocessor *pp_state, const wchar_t *source_string,
             PP_REPORT_FATAL(pp_state, &error_loc, PP_ERROR_ALLOCATION_FAILED, "memory",
                            L"فشل في تخصيص الذاكرة لسطر من السلسلة.");
             success = false;
-            break;
+            break; // current_line is NULL, so no need to free
         }
 
         pp_state->current_column_number = 1;
@@ -367,6 +370,7 @@ wchar_t *process_string(BaaPreprocessor *pp_state, const wchar_t *source_string,
         {
             // Single-line comment, skip line processing
             free(current_line);
+            current_line = NULL; // Ensure no double-free
             if (line_end != NULL)
             {
                 line_start = line_end + 1;
@@ -463,6 +467,7 @@ wchar_t *process_string(BaaPreprocessor *pp_state, const wchar_t *source_string,
         // If skipping_lines is true and it's not a directive handled above, the line is effectively skipped.
 
         free(current_line);
+        current_line = NULL; // Ensure no double-free
 
         if (!success)
             break;

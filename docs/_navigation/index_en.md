@@ -70,7 +70,7 @@
 ## 📚 **API Reference**
 
 ### Complete API Documentation
-- [**Preprocessor API**](../05_API_REFERENCE/PREPROCESSOR_API.md) ✅ - Preprocessor functions
+- [**Preprocessor API**](../05_API_REFERENCE/PREPROCESSOR_API.md) ✅ - Public preprocessor API
 - [**Parser API**](../05_API_REFERENCE/PARSER_API.md) ✅ - Parser and AST functions
 - [**Utilities API**](../05_API_REFERENCE/UTILITIES_API.md) ✅ - Common utility functions
 
@@ -96,8 +96,8 @@
 
 ### Related Documents
 - [Arabic Documentation](index_ar.md) - Complete Arabic translations
-- [Navigation Hub](index.md) - Bilingual navigation center
-- [Documentation Standards](../DOCUMENTATION_STRUCTURE_PLAN.md) - Maintenance guidelines
+- [Bilingual Hub](../index.md) - Root documentation hub
+- [Documentation Templates](../_templates/doc_template_en.md) - Authoring guidance
 
 ### External Links
 - [GitHub Repository](https://github.com/YourRepo/Baa) - Source code and issues

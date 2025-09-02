@@ -137,6 +137,8 @@ The preprocessor is implemented as a modular component within the `src/preproces
 
 The public API is defined in `include/baa/preprocessor/preprocessor.h` and consists primarily of the `baa_preprocess()` function and supporting data structures.
 
+See also: [Architecture Diagram](../_assets/diagrams/architecture_diagram.md)
+
 ## Internal API Functions (واجهة برمجة التطبيقات الداخلية)
 
 The preprocessor provides several internal API functions for advanced error handling and state management:

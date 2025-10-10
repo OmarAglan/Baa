@@ -103,7 +103,7 @@ bool scan_and_expand_macros_for_expressions(
             }
             else if (wcscmp(identifier, L"__إصدار_المعيار_باء__") == 0)
             {
-                if (!append_to_dynamic_buffer(one_pass_buffer, L"10150L"))
+                if (!append_to_dynamic_buffer(one_pass_buffer, L"10150ط"))
                 {
                     PpSourceLocation temp_loc = get_current_original_location(pp_state);
                     temp_loc.line = original_line_number_for_errors;
@@ -669,7 +669,70 @@ bool scan_and_substitute_macros_one_pass(
     {
         size_t token_start_col_for_error = current_col_in_this_scan_pass;
 
-        if (iswalpha(*scan_ptr) || *scan_ptr == L'_')
+        // Handle string literals - skip over them completely to prevent macro expansion inside
+        if (*scan_ptr == L'"')
+        {
+            // Copy the opening quote
+            if (!append_dynamic_buffer_n(one_pass_buffer, scan_ptr, 1))
+            {
+                PpSourceLocation temp_loc = get_current_original_location(pp_state);
+                temp_loc.line = original_line_number_for_errors;
+                temp_loc.column = current_col_in_this_scan_pass;
+                PP_REPORT_FATAL(pp_state, &temp_loc, PP_ERROR_ALLOCATION_FAILED, "line_processing", L"فشل في إلحاق علامة الاقتباس الافتتاحية.");
+                *overall_success = false;
+                break;
+            }
+            scan_ptr++;
+            current_col_in_this_scan_pass++;
+
+            // Copy everything inside the string literal until closing quote
+            bool string_complete = false;
+            while (*scan_ptr != L'\0' && !string_complete)
+            {
+                if (*scan_ptr == L'"')
+                {
+                    string_complete = true;
+                }
+                else if (*scan_ptr == L'\\' && *(scan_ptr + 1) != L'\0')
+                {
+                    // Handle escape sequences - copy both backslash and escaped character
+                    if (!append_dynamic_buffer_n(one_pass_buffer, scan_ptr, 1))
+                    {
+                        PpSourceLocation temp_loc = get_current_original_location(pp_state);
+                        temp_loc.line = original_line_number_for_errors;
+                        temp_loc.column = current_col_in_this_scan_pass;
+                        PP_REPORT_FATAL(pp_state, &temp_loc, PP_ERROR_ALLOCATION_FAILED, "line_processing", L"فشل في إلحاق محتوى السلسلة النصية.");
+                        *overall_success = false;
+                        break;
+                    }
+                    scan_ptr++;
+                    current_col_in_this_scan_pass++;
+                }
+
+                // Copy the current character
+                if (!append_dynamic_buffer_n(one_pass_buffer, scan_ptr, 1))
+                {
+                    PpSourceLocation temp_loc = get_current_original_location(pp_state);
+                    temp_loc.line = original_line_number_for_errors;
+                    temp_loc.column = current_col_in_this_scan_pass;
+                    PP_REPORT_FATAL(pp_state, &temp_loc, PP_ERROR_ALLOCATION_FAILED, "line_processing", L"فشل في إلحاق محتوى السلسلة النصية.");
+                    *overall_success = false;
+                    break;
+                }
+                scan_ptr++;
+                current_col_in_this_scan_pass++;
+            }
+
+            if (!*overall_success)
+                break;
+
+            if (!string_complete)
+            {
+                // Unterminated string literal - this is typically a syntax error that should be handled by the lexer
+                // For now, we'll continue processing but could add a warning here
+            }
+        }
+        else if (iswalpha(*scan_ptr) || *scan_ptr == L'_')
         { // Potential identifier
             const wchar_t *id_start = scan_ptr;
             while (iswalnum(*scan_ptr) || *scan_ptr == L'_')
@@ -750,7 +813,7 @@ bool scan_and_substitute_macros_one_pass(
             }
             else if (wcscmp(identifier, L"__إصدار_المعيار_باء__") == 0)
             {
-                if (!append_to_dynamic_buffer(one_pass_buffer, L"10150L"))
+                if (!append_to_dynamic_buffer(one_pass_buffer, L"10150ط"))
                 {
                     PpSourceLocation temp_loc = get_current_original_location(pp_state);
                     temp_loc.line = original_line_number_for_errors;
@@ -1324,6 +1387,10 @@ bool process_code_line_for_macros(BaaPreprocessor *pp_state,
     int pass_count = 0;
     const int MAX_RESCAN_PASSES = 256;
 
+    // Track content between passes to detect infinite loops
+    wchar_t *previous_pass_content = NULL;
+    wchar_t *two_passes_ago_content = NULL;
+
     bool expansion_made_this_pass;
     do
     {
@@ -1371,6 +1438,35 @@ bool process_code_line_for_macros(BaaPreprocessor *pp_state,
             break;
 
         pass_count++;
+        
+        // Detect infinite loops by checking if we've seen this content before
+        if (expansion_made_this_pass && pass_count >= 3)
+        {
+            wchar_t *current_content = current_pass_input_buffer.buffer;
+            
+            // Check for 2-cycle: A->B->A->B...
+            if (previous_pass_content && current_content && wcscmp(current_content, previous_pass_content) == 0)
+            {
+                PpSourceLocation err_loc_data = get_current_original_location(pp_state);
+                err_loc_data.line = original_line_number;
+                err_loc_data.column = 1;
+                PP_REPORT_ERROR(pp_state, &err_loc_data, PP_ERROR_MACRO_TOO_COMPLEX, "line_processing", L"تم اكتشاف حلقة لا نهائية في توسيع الماكرو (دورة من مرحلتين).");
+                overall_success_for_line = false;
+                break;
+            }
+            
+            // Check for 3-cycle: A->B->C->A->B->C...
+            if (two_passes_ago_content && current_content && wcscmp(current_content, two_passes_ago_content) == 0)
+            {
+                PpSourceLocation err_loc_data = get_current_original_location(pp_state);
+                err_loc_data.line = original_line_number;
+                err_loc_data.column = 1;
+                PP_REPORT_ERROR(pp_state, &err_loc_data, PP_ERROR_MACRO_TOO_COMPLEX, "line_processing", L"تم اكتشاف حلقة لا نهائية في توسيع الماكرو (دورة من ثلاث مراحل).");
+                overall_success_for_line = false;
+                break;
+            }
+        }
+        
         if (pass_count > MAX_RESCAN_PASSES)
         {
             PpSourceLocation err_loc_data = get_current_original_location(pp_state);
@@ -1379,6 +1475,25 @@ bool process_code_line_for_macros(BaaPreprocessor *pp_state,
             PP_REPORT_ERROR(pp_state, &err_loc_data, PP_ERROR_MACRO_TOO_COMPLEX, "line_processing", L"تم تجاوز الحد الأقصى لمرات إعادة فحص الماكرو لسطر واحد (%d).", MAX_RESCAN_PASSES);
             overall_success_for_line = false;
             break;
+        }
+        
+        // Update tracking for cycle detection
+        if (expansion_made_this_pass)
+        {
+            // Shift the tracking window
+            free(two_passes_ago_content);
+            two_passes_ago_content = previous_pass_content;
+            if (current_pass_input_buffer.buffer) {
+                size_t len = wcslen(current_pass_input_buffer.buffer);
+                previous_pass_content = malloc((len + 1) * sizeof(wchar_t));
+                if (previous_pass_content) {
+                    wcscpy(previous_pass_content, current_pass_input_buffer.buffer);
+                } else {
+                    previous_pass_content = NULL;
+                }
+            } else {
+                previous_pass_content = NULL;
+            }
         }
 
     } while (expansion_made_this_pass && overall_success_for_line);
@@ -1395,6 +1510,10 @@ bool process_code_line_for_macros(BaaPreprocessor *pp_state,
             overall_success_for_line = false;
         }
     }
+
+    // Cleanup tracking variables
+    free(previous_pass_content);
+    free(two_passes_ago_content);
 
     free_dynamic_buffer(&current_pass_input_buffer);
     return overall_success_for_line;

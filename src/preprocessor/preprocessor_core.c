@@ -120,10 +120,10 @@ wchar_t *process_file(BaaPreprocessor *pp_state, const char *file_path, wchar_t 
             PP_REPORT_FATAL(pp_state, &error_loc, PP_ERROR_ALLOCATION_FAILED, "memory",
                            L"فشل في تخصيص الذاكرة لسطر.");
             success = false;
-            break;
+            break; // current_line is NULL, so no need to free
         }
 
-        // fwprintf(stderr, L"DEBUG: Processing line %zu: [%ls]\n", pp_state->current_line_number, current_line); // DEBUG PRINT
+
 
         // Reset physical column for the start of the line
         pp_state->current_column_number = 1;
@@ -140,6 +140,7 @@ wchar_t *process_file(BaaPreprocessor *pp_state, const char *file_path, wchar_t 
         {
             // Single-line comment, skip the rest of the line processing
             free(current_line); // Free the duplicated line
+            current_line = NULL; // Ensure no double-free
             // Advance to next line in the main loop
             if (line_end != NULL)
             {
@@ -164,26 +165,71 @@ wchar_t *process_file(BaaPreprocessor *pp_state, const char *file_path, wchar_t 
             // Call the new function to handle all directive logic.
             // This function is responsible for its own output (e.g., from #include via output_buffer)
             // and for updating the success flag.
-            // fwprintf(stderr, L"DEBUG PF: Calling handle_preprocessor_directive for line %zu: [%ls]\n", pp_state->current_line_number, effective_line_start);
+
             bool local_is_conditional_directive_pf; // For process_file
             if (!handle_preprocessor_directive(pp_state, effective_line_start + 1, abs_path, &output_buffer, error_message, &local_is_conditional_directive_pf))
             {
                 success = false;
+                // Note: current_line will be freed at end of loop iteration
             }
         }
         else if (!pp_state->skipping_lines)
         {
             // Not a directive and not skipping: process line for macro substitution.
             // The process_code_line_for_macros function appends the processed line (without newline) to output_buffer.
-            // fwprintf(stderr, L"DEBUG PF: Calling process_code_line_for_macros for line %zu: [%ls]\n", pp_state->current_line_number, current_line);
-            if (!process_code_line_for_macros(pp_state, current_line, line_len, &output_buffer, error_message))
+
+            // Process line for macro substitution while preserving whitespace
+            if (current_line && wcslen(current_line) > 0)
             {
-                success = false;
-            }
-            else
-            {
-                // Append newline after successfully processing and appending the code line
-                if (!append_to_dynamic_buffer(&output_buffer, L"\n"))
+                // For lines that contain only whitespace, preserve them as-is
+                wchar_t *trimmed_line = current_line;
+                while (iswspace(*trimmed_line)) trimmed_line++;
+                
+                if (*trimmed_line == L'\0')
+                {
+                    // Line contains only whitespace - preserve as-is
+                    if (!append_to_dynamic_buffer(&output_buffer, current_line))
+                    {
+                        success = false;
+                    }
+                }
+                else
+                {
+                    // Line has content - process normally but with fallback
+                    size_t output_length_before = output_buffer.length;
+                    
+                    if (!process_code_line_for_macros(pp_state, current_line, line_len, &output_buffer, error_message))
+                    {
+                        success = false;
+                    }
+                    else
+                    {
+                        size_t output_length_after = output_buffer.length;
+                        
+                        // Check if sufficient content was added (should be at least as much as the trimmed content)
+                        size_t expected_min_length = wcslen(trimmed_line);
+                        size_t actual_added_length = output_length_after - output_length_before;
+                        
+                        if (actual_added_length < expected_min_length)
+                        {
+                            // Content appears to be truncated or missing
+                            // Remove what was added and use original line
+                            output_buffer.length = output_length_before;
+                            if (output_buffer.buffer && output_length_before < output_buffer.capacity)
+                            {
+                                output_buffer.buffer[output_length_before] = L'\0';
+                            }
+                            
+                            if (!append_to_dynamic_buffer(&output_buffer, current_line))
+                            {
+                                success = false;
+                            }
+                        }
+                    }
+                }
+                
+                // Append newline after processing
+                if (success && !append_to_dynamic_buffer(&output_buffer, L"\n"))
                 {
                     success = false;
                     if (!*error_message) {
@@ -198,6 +244,7 @@ wchar_t *process_file(BaaPreprocessor *pp_state, const char *file_path, wchar_t 
         // Comment lines (//) are handled before this block and 'continue' the loop.
 
         free(current_line); // Free the duplicated line
+        current_line = NULL; // Ensure no double-free
 
         if (!success)
             break; // Exit loop on error
@@ -306,7 +353,7 @@ wchar_t *process_string(BaaPreprocessor *pp_state, const wchar_t *source_string,
             PP_REPORT_FATAL(pp_state, &error_loc, PP_ERROR_ALLOCATION_FAILED, "memory",
                            L"فشل في تخصيص الذاكرة لسطر من السلسلة.");
             success = false;
-            break;
+            break; // current_line is NULL, so no need to free
         }
 
         pp_state->current_column_number = 1;
@@ -323,6 +370,7 @@ wchar_t *process_string(BaaPreprocessor *pp_state, const wchar_t *source_string,
         {
             // Single-line comment, skip line processing
             free(current_line);
+            current_line = NULL; // Ensure no double-free
             if (line_end != NULL)
             {
                 line_start = line_end + 1;
@@ -343,7 +391,7 @@ wchar_t *process_string(BaaPreprocessor *pp_state, const wchar_t *source_string,
         {
             // Call the new function to handle all directive logic.
             // Note: abs_path is NULL for string processing.
-            // fwprintf(stderr, L"DEBUG PS: Calling handle_preprocessor_directive for line %zu: [%ls]\n", pp_state->current_line_number, effective_line_start);
+
             bool local_is_conditional_directive_ps; // For process_string
             if (!handle_preprocessor_directive(pp_state, effective_line_start + 1, NULL, &output_buffer, error_message, &local_is_conditional_directive_ps))
             {
@@ -353,15 +401,59 @@ wchar_t *process_string(BaaPreprocessor *pp_state, const wchar_t *source_string,
         else if (!pp_state->skipping_lines)
         {
             // Not a directive and not skipping: process line for macro substitution.
-            // fwprintf(stderr, L"DEBUG PS: Calling process_code_line_for_macros for line %zu: [%ls]\n", pp_state->current_line_number, current_line);
-            if (!process_code_line_for_macros(pp_state, current_line, line_len, &output_buffer, error_message))
+
+            // Process line for macro substitution while preserving whitespace
+            if (current_line && wcslen(current_line) > 0)
             {
-                success = false;
-            }
-            else
-            {
-                // Append newline after successfully processing and appending the code line
-                if (!append_to_dynamic_buffer(&output_buffer, L"\n"))
+                // For lines that contain only whitespace, preserve them as-is
+                wchar_t *trimmed_line = current_line;
+                while (iswspace(*trimmed_line)) trimmed_line++;
+                
+                if (*trimmed_line == L'\0')
+                {
+                    // Line contains only whitespace - preserve as-is
+                    if (!append_to_dynamic_buffer(&output_buffer, current_line))
+                    {
+                        success = false;
+                    }
+                }
+                else
+                {
+                    // Line has content - process normally but with fallback
+                    size_t output_length_before = output_buffer.length;
+                    
+                    if (!process_code_line_for_macros(pp_state, current_line, line_len, &output_buffer, error_message))
+                    {
+                        success = false;
+                    }
+                    else
+                    {
+                        size_t output_length_after = output_buffer.length;
+                        
+                        // Check if sufficient content was added (should be at least as much as the trimmed content)
+                        size_t expected_min_length = wcslen(trimmed_line);
+                        size_t actual_added_length = output_length_after - output_length_before;
+                        
+                        if (actual_added_length < expected_min_length)
+                        {
+                            // Content appears to be truncated or missing
+                            // Remove what was added and use original line
+                            output_buffer.length = output_length_before;
+                            if (output_buffer.buffer && output_length_before < output_buffer.capacity)
+                            {
+                                output_buffer.buffer[output_length_before] = L'\0';
+                            }
+                            
+                            if (!append_to_dynamic_buffer(&output_buffer, current_line))
+                            {
+                                success = false;
+                            }
+                        }
+                    }
+                }
+                
+                // Append newline after processing
+                if (success && !append_to_dynamic_buffer(&output_buffer, L"\n"))
                 {
                     success = false;
                     if (!*error_message) {
@@ -375,6 +467,7 @@ wchar_t *process_string(BaaPreprocessor *pp_state, const wchar_t *source_string,
         // If skipping_lines is true and it's not a directive handled above, the line is effectively skipped.
 
         free(current_line);
+        current_line = NULL; // Ensure no double-free
 
         if (!success)
             break;

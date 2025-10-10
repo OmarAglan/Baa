@@ -584,7 +584,7 @@ BaaNumber *baa_parse_number(const wchar_t *text, size_t length, BaaNumberError *
         free(raw_text);
         free(number);
         if (error)
-            *error = BAA_NUM_SUCCESS;
+            *error = parse_error;
         return NULL;
     }
 

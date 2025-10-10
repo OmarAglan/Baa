@@ -96,6 +96,7 @@ typedef enum
     BAA_TOKEN_RETURN,           // إرجع
     BAA_TOKEN_BREAK,            // توقف
     BAA_TOKEN_CONTINUE,         // استمر
+    BAA_TOKEN_SIZEOF,           // حجم
 
     // Types
     BAA_TOKEN_TYPE_INT,   // عدد_صحيح
@@ -131,6 +132,12 @@ typedef enum
     // Increment/decrement operators
     BAA_TOKEN_INCREMENT, // ++
     BAA_TOKEN_DECREMENT, // --
+
+    // Bitwise operators
+    BAA_TOKEN_TILDE, // ~
+
+    // Scope operator
+    BAA_TOKEN_DOUBLE_COLON, // ::
 
     // Delimiters
     BAA_TOKEN_LPAREN,    // (

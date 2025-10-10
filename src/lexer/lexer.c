@@ -1,13 +1,13 @@
 #include "baa/lexer/lexer.h"
-#include "baa/utils/utils.h"  // For baa_strdup and other utilities
+#include "baa/utils/utils.h" // For baa_strdup and other utilities
 #include <assert.h>
 #include <errno.h>
 #include <stdlib.h>
 #include <stdio.h> // For error messages
 #include <string.h>
 #include <wctype.h>
-#include <stdarg.h> // Needed for va_list, etc.
-#include "lexer_internal.h" // For internal helper declarations
+#include <stdarg.h>                   // Needed for va_list, etc.
+#include "lexer_internal.h"           // For internal helper declarations
 #include "baa/lexer/token_scanners.h" // For scan_* function declarations (public as requested)
 
 // Array of keywords and their corresponding token types
@@ -25,7 +25,8 @@ struct KeywordMapping keywords[] = {
     {L"اختر", BAA_TOKEN_SWITCH},
     {L"حالة", BAA_TOKEN_CASE},
     {L"توقف", BAA_TOKEN_BREAK},
-    {L"استمر", BAA_TOKEN_CONTINUE},         //  "continue"
+    {L"استمر", BAA_TOKEN_CONTINUE},        //  "continue"
+    {L"حجم", BAA_TOKEN_SIZEOF},            // Keyword for sizeof
     {L"ثابت", BAA_TOKEN_CONST},            // Keyword for constant declaration
     {L"مضمن", BAA_TOKEN_KEYWORD_INLINE},   // Keyword for inline
     {L"مقيد", BAA_TOKEN_KEYWORD_RESTRICT}, // Keyword for restrict
@@ -137,7 +138,7 @@ BaaToken *make_token(BaaLexer *lexer, BaaTokenType type)
     ((wchar_t *)token->lexeme)[token->length] = L'\0'; // Null-terminate
     token->line = lexer->line;
     token->column = lexer->start_token_column; // Use the recorded start column
-    
+
     // Initialize span (enhanced source location)
     token->span.start_line = lexer->line;
     token->span.start_column = lexer->start_token_column;
@@ -145,14 +146,12 @@ BaaToken *make_token(BaaLexer *lexer, BaaTokenType type)
     token->span.end_column = lexer->column;
     token->span.start_offset = lexer->start;
     token->span.end_offset = lexer->current;
-    
+
     // Initialize error context to NULL for non-error tokens
     token->error = NULL;
-    
+
     return token;
 }
-
-
 
 BaaToken *make_specific_error_token(BaaLexer *lexer, BaaTokenType error_type,
                                     uint32_t error_code, const char *category,
@@ -237,7 +236,7 @@ BaaToken *make_specific_error_token(BaaLexer *lexer, BaaTokenType error_type,
     token->length = wcslen(buffer);
     token->line = lexer->line;
     token->column = lexer->column;
-    
+
     // Initialize span for error tokens
     token->span.start_line = lexer->line;
     token->span.start_column = lexer->column > 0 ? lexer->column - 1 : 1;
@@ -265,8 +264,8 @@ BaaToken *make_specific_error_token(BaaLexer *lexer, BaaTokenType error_type,
     }
 
     token->error = baa_create_error_context(error_code, category,
-                                           enhanced_suggestion ? enhanced_suggestion : suggestion,
-                                           before_context, after_context);
+                                            enhanced_suggestion ? enhanced_suggestion : suggestion,
+                                            before_context, after_context);
 
     // Clean up temporary allocations
     if (enhanced_suggestion && enhanced_suggestion != suggestion)
@@ -412,7 +411,8 @@ void synchronize(BaaLexer *lexer)
 // Enhanced error recovery functions
 void baa_init_error_recovery_config(BaaErrorRecoveryConfig *config)
 {
-    if (!config) return;
+    if (!config)
+        return;
 
     config->max_errors = 50;
     config->max_consecutive_errors = 10;
@@ -424,18 +424,23 @@ void baa_init_error_recovery_config(BaaErrorRecoveryConfig *config)
 
 bool baa_should_continue_lexing(const BaaLexer *lexer)
 {
-    if (!lexer) return false;
+    if (!lexer)
+        return false;
 
-    if (lexer->error_limit_reached) return false;
-    if (lexer->error_count >= lexer->recovery_config.max_errors) return false;
-    if (lexer->consecutive_errors >= lexer->recovery_config.max_consecutive_errors) return false;
+    if (lexer->error_limit_reached)
+        return false;
+    if (lexer->error_count >= lexer->recovery_config.max_errors)
+        return false;
+    if (lexer->consecutive_errors >= lexer->recovery_config.max_consecutive_errors)
+        return false;
 
     return true;
 }
 
 void baa_increment_error_count(BaaLexer *lexer, BaaTokenType error_type)
 {
-    if (!lexer) return;
+    if (!lexer)
+        return;
 
     lexer->error_count++;
     lexer->consecutive_errors++;
@@ -443,32 +448,32 @@ void baa_increment_error_count(BaaLexer *lexer, BaaTokenType error_type)
     // Check specific stopping conditions
     switch (error_type)
     {
-        case BAA_TOKEN_ERROR_UNTERMINATED_STRING:
-            if (lexer->recovery_config.stop_on_unterminated_string)
-            {
-                lexer->error_limit_reached = true;
-                return;
-            }
-            break;
+    case BAA_TOKEN_ERROR_UNTERMINATED_STRING:
+        if (lexer->recovery_config.stop_on_unterminated_string)
+        {
+            lexer->error_limit_reached = true;
+            return;
+        }
+        break;
 
-        case BAA_TOKEN_ERROR_INVALID_NUMBER:
-            if (lexer->recovery_config.stop_on_invalid_number)
-            {
-                lexer->error_limit_reached = true;
-                return;
-            }
-            break;
+    case BAA_TOKEN_ERROR_INVALID_NUMBER:
+        if (lexer->recovery_config.stop_on_invalid_number)
+        {
+            lexer->error_limit_reached = true;
+            return;
+        }
+        break;
 
-        case BAA_TOKEN_ERROR_UNTERMINATED_COMMENT:
-            if (!lexer->recovery_config.continue_after_comment_errors)
-            {
-                lexer->error_limit_reached = true;
-                return;
-            }
-            break;
+    case BAA_TOKEN_ERROR_UNTERMINATED_COMMENT:
+        if (!lexer->recovery_config.continue_after_comment_errors)
+        {
+            lexer->error_limit_reached = true;
+            return;
+        }
+        break;
 
-        default:
-            break;
+    default:
+        break;
     }
 
     // Check general limits
@@ -490,33 +495,35 @@ void baa_reset_consecutive_errors(BaaLexer *lexer)
 // Enhanced synchronization functions
 void enhanced_synchronize(BaaLexer *lexer, BaaTokenType error_type)
 {
-    if (!lexer) return;
+    if (!lexer)
+        return;
 
     switch (error_type)
     {
-        case BAA_TOKEN_ERROR_UNTERMINATED_STRING:
-        case BAA_TOKEN_ERROR_INVALID_ESCAPE:
-            synchronize_string_error(lexer);
-            break;
+    case BAA_TOKEN_ERROR_UNTERMINATED_STRING:
+    case BAA_TOKEN_ERROR_INVALID_ESCAPE:
+        synchronize_string_error(lexer);
+        break;
 
-        case BAA_TOKEN_ERROR_INVALID_NUMBER:
-        case BAA_TOKEN_ERROR_NUMBER_OVERFLOW:
-            synchronize_number_error(lexer);
-            break;
+    case BAA_TOKEN_ERROR_INVALID_NUMBER:
+    case BAA_TOKEN_ERROR_NUMBER_OVERFLOW:
+        synchronize_number_error(lexer);
+        break;
 
-        case BAA_TOKEN_ERROR_UNTERMINATED_COMMENT:
-            synchronize_comment_error(lexer);
-            break;
+    case BAA_TOKEN_ERROR_UNTERMINATED_COMMENT:
+        synchronize_comment_error(lexer);
+        break;
 
-        default:
-            synchronize_general_error(lexer);
-            break;
+    default:
+        synchronize_general_error(lexer);
+        break;
     }
 }
 
 void synchronize_string_error(BaaLexer *lexer)
 {
-    if (!lexer) return;
+    if (!lexer)
+        return;
 
     size_t chars_searched = 0;
     const size_t max_search = lexer->recovery_config.sync_search_limit;
@@ -549,7 +556,8 @@ void synchronize_string_error(BaaLexer *lexer)
 
 void synchronize_number_error(BaaLexer *lexer)
 {
-    if (!lexer) return;
+    if (!lexer)
+        return;
 
     size_t chars_searched = 0;
     const size_t max_search = lexer->recovery_config.sync_search_limit;
@@ -584,7 +592,8 @@ void synchronize_number_error(BaaLexer *lexer)
 
 void synchronize_comment_error(BaaLexer *lexer)
 {
-    if (!lexer) return;
+    if (!lexer)
+        return;
 
     size_t chars_searched = 0;
     const size_t max_search = lexer->recovery_config.sync_search_limit;
@@ -640,12 +649,14 @@ BaaToken *make_successful_token(BaaLexer *lexer, BaaTokenType type)
  * @param after_context Output parameter for context after error (caller must free)
  */
 void extract_error_context(BaaLexer *lexer, size_t error_position,
-                          wchar_t **before_context, wchar_t **after_context)
+                           wchar_t **before_context, wchar_t **after_context)
 {
     if (!lexer || !lexer->source || !before_context || !after_context)
     {
-        if (before_context) *before_context = NULL;
-        if (after_context) *after_context = NULL;
+        if (before_context)
+            *before_context = NULL;
+        if (after_context)
+            *after_context = NULL;
         return;
     }
 
@@ -718,7 +729,7 @@ size_t calculate_error_character_position(BaaLexer *lexer)
  * @param line_number Line number to extract (1-based)
  * @return Allocated string containing the line content (caller must free), or NULL on error
  */
-wchar_t* get_current_line_content(BaaLexer *lexer, size_t line_number)
+wchar_t *get_current_line_content(BaaLexer *lexer, size_t line_number)
 {
     if (!lexer || !lexer->source || line_number == 0)
         return NULL;
@@ -771,33 +782,33 @@ wchar_t* get_current_line_content(BaaLexer *lexer, size_t line_number)
  * @param error_context The context around the error (may be NULL)
  * @return Allocated suggestion string in Arabic (caller must free), or NULL if no suggestion
  */
-wchar_t* generate_error_suggestion(BaaTokenType error_type, const wchar_t* error_context)
+wchar_t *generate_error_suggestion(BaaTokenType error_type, const wchar_t *error_context)
 {
     switch (error_type)
     {
-        case BAA_TOKEN_ERROR_UNTERMINATED_STRING:
-            return suggest_string_termination_fix(error_context);
+    case BAA_TOKEN_ERROR_UNTERMINATED_STRING:
+        return suggest_string_termination_fix(error_context);
 
-        case BAA_TOKEN_ERROR_INVALID_ESCAPE:
-            if (error_context && wcslen(error_context) > 0)
-                return suggest_escape_sequence_fix(error_context[0]);
-            return baa_strdup(L"تحقق من تسلسل الهروب واستخدم التسلسلات الصحيحة: \\س، \\م، \\ر، \\ص، \\يXXXX، \\هـHH");
+    case BAA_TOKEN_ERROR_INVALID_ESCAPE:
+        if (error_context && wcslen(error_context) > 0)
+            return suggest_escape_sequence_fix(error_context[0]);
+        return baa_strdup(L"تحقق من تسلسل الهروب واستخدم التسلسلات الصحيحة: \\س، \\م، \\ر، \\ص، \\يXXXX، \\هـHH");
 
-        case BAA_TOKEN_ERROR_INVALID_NUMBER:
-        case BAA_TOKEN_ERROR_NUMBER_OVERFLOW:
-            return suggest_number_format_fix(error_context);
+    case BAA_TOKEN_ERROR_INVALID_NUMBER:
+    case BAA_TOKEN_ERROR_NUMBER_OVERFLOW:
+        return suggest_number_format_fix(error_context);
 
-        case BAA_TOKEN_ERROR_INVALID_CHARACTER:
-            return baa_strdup(L"تأكد من استخدام الأحرف المسموحة في لغة باء (أحرف عربية، إنجليزية، أرقام، شرطة سفلية)");
+    case BAA_TOKEN_ERROR_INVALID_CHARACTER:
+        return baa_strdup(L"تأكد من استخدام الأحرف المسموحة في لغة باء (أحرف عربية، إنجليزية، أرقام، شرطة سفلية)");
 
-        case BAA_TOKEN_ERROR_INVALID_SUFFIX:
-            return baa_strdup(L"استخدم اللواحق الصحيحة: غ (غير مُوقع)، ط (طويل)، طط (طويل جداً)، ح (حقيقي)");
+    case BAA_TOKEN_ERROR_INVALID_SUFFIX:
+        return baa_strdup(L"استخدم اللواحق الصحيحة: غ (غير مُوقع)، ط (طويل)، طط (طويل جداً)، ح (حقيقي)");
 
-        case BAA_TOKEN_ERROR_UNTERMINATED_CHAR:
-            return baa_strdup(L"أضف علامة اقتباس مفردة ' لإنهاء الحرف");
+    case BAA_TOKEN_ERROR_UNTERMINATED_CHAR:
+        return baa_strdup(L"أضف علامة اقتباس مفردة ' لإنهاء الحرف");
 
-        default:
-            return NULL;
+    default:
+        return NULL;
     }
 }
 
@@ -806,7 +817,7 @@ wchar_t* generate_error_suggestion(BaaTokenType error_type, const wchar_t* error
  * @param invalid_escape_char The invalid escape character
  * @return Allocated suggestion string in Arabic (caller must free)
  */
-wchar_t* suggest_escape_sequence_fix(wchar_t invalid_escape_char)
+wchar_t *suggest_escape_sequence_fix(wchar_t invalid_escape_char)
 {
     wchar_t *suggestion = malloc(300 * sizeof(wchar_t));
     if (!suggestion)
@@ -814,55 +825,55 @@ wchar_t* suggest_escape_sequence_fix(wchar_t invalid_escape_char)
 
     switch (invalid_escape_char)
     {
-        case L'س':
-            wcscpy_s(suggestion, 300, L"استخدم \\س للسطر الجديد (SEEN)");
-            break;
-        case L'م':
-            wcscpy_s(suggestion, 300, L"استخدم \\م للتبويب (MEEM)");
-            break;
-        case L'ر':
-            wcscpy_s(suggestion, 300, L"استخدم \\ر للإرجاع (REH)");
-            break;
-        case L'ص':
-            wcscpy_s(suggestion, 300, L"استخدم \\ص للحرف الفارغ (SAD)");
-            break;
-        case L'\\':
-            wcscpy_s(suggestion, 300, L"استخدم \\\\ للشرطة المائلة العكسية");
-            break;
-        case L'"':
-            wcscpy_s(suggestion, 300, L"استخدم \\\" لعلامة الاقتباس المزدوجة");
-            break;
-        case L'\'':
-            wcscpy_s(suggestion, 300, L"استخدم \\' لعلامة الاقتباس المفردة");
-            break;
-        case L'ي':
-            wcscpy_s(suggestion, 300, L"استخدم \\يXXXX للهروب اليونيكود (مثل \\ي0623 للحرف 'أ') - YEH مع 4 أرقام سداسية عشرية");
-            break;
-        case L'ه':
-            wcscpy_s(suggestion, 300, L"استخدم \\هـHH للهروب السداسي عشري (مثل \\هـ41 للحرف A) - HEH مع تطويل ثم رقمان سداسيان");
-            break;
-        // Common mistakes - suggest correct Baa equivalents
-        case L'n':
-            wcscpy_s(suggestion, 300, L"استخدم \\س بدلاً من \\n للسطر الجديد - باء تستخدم الأحرف العربية للهروب");
-            break;
-        case L't':
-            wcscpy_s(suggestion, 300, L"استخدم \\م بدلاً من \\t للتبويب - باء تستخدم الأحرف العربية للهروب");
-            break;
-        case L'r':
-            wcscpy_s(suggestion, 300, L"استخدم \\ر بدلاً من \\r للإرجاع - باء تستخدم الأحرف العربية للهروب");
-            break;
-        case L'0':
-            wcscpy_s(suggestion, 300, L"استخدم \\ص بدلاً من \\0 للحرف الفارغ - باء تستخدم الأحرف العربية للهروب");
-            break;
-        case L'u':
-            wcscpy_s(suggestion, 300, L"استخدم \\يXXXX بدلاً من \\uXXXX للهروب اليونيكود - باء تستخدم \\ي مع 4 أرقام سداسية");
-            break;
-        case L'x':
-            wcscpy_s(suggestion, 300, L"استخدم \\هـHH بدلاً من \\xHH للهروب السداسي عشري - باء تستخدم \\هـ مع رقمين سداسيين");
-            break;
-        default:
-            swprintf(suggestion, 300, L"تسلسل هروب غير صالح '\\%lc' - استخدم: \\س (سطر جديد)، \\م (تبويب)، \\ر (إرجاع)، \\ص (فارغ)، \\\\، \\\"، \\'، \\يXXXX (يونيكود)، \\هـHH (سداسي عشري)", invalid_escape_char);
-            break;
+    case L'س':
+        wcscpy_s(suggestion, 300, L"استخدم \\س للسطر الجديد (SEEN)");
+        break;
+    case L'م':
+        wcscpy_s(suggestion, 300, L"استخدم \\م للتبويب (MEEM)");
+        break;
+    case L'ر':
+        wcscpy_s(suggestion, 300, L"استخدم \\ر للإرجاع (REH)");
+        break;
+    case L'ص':
+        wcscpy_s(suggestion, 300, L"استخدم \\ص للحرف الفارغ (SAD)");
+        break;
+    case L'\\':
+        wcscpy_s(suggestion, 300, L"استخدم \\\\ للشرطة المائلة العكسية");
+        break;
+    case L'"':
+        wcscpy_s(suggestion, 300, L"استخدم \\\" لعلامة الاقتباس المزدوجة");
+        break;
+    case L'\'':
+        wcscpy_s(suggestion, 300, L"استخدم \\' لعلامة الاقتباس المفردة");
+        break;
+    case L'ي':
+        wcscpy_s(suggestion, 300, L"استخدم \\يXXXX للهروب اليونيكود (مثل \\ي0623 للحرف 'أ') - YEH مع 4 أرقام سداسية عشرية");
+        break;
+    case L'ه':
+        wcscpy_s(suggestion, 300, L"استخدم \\هـHH للهروب السداسي عشري (مثل \\هـ41 للحرف A) - HEH مع تطويل ثم رقمان سداسيان");
+        break;
+    // Common mistakes - suggest correct Baa equivalents
+    case L'n':
+        wcscpy_s(suggestion, 300, L"استخدم \\س بدلاً من \\n للسطر الجديد - باء تستخدم الأحرف العربية للهروب");
+        break;
+    case L't':
+        wcscpy_s(suggestion, 300, L"استخدم \\م بدلاً من \\t للتبويب - باء تستخدم الأحرف العربية للهروب");
+        break;
+    case L'r':
+        wcscpy_s(suggestion, 300, L"استخدم \\ر بدلاً من \\r للإرجاع - باء تستخدم الأحرف العربية للهروب");
+        break;
+    case L'0':
+        wcscpy_s(suggestion, 300, L"استخدم \\ص بدلاً من \\0 للحرف الفارغ - باء تستخدم الأحرف العربية للهروب");
+        break;
+    case L'u':
+        wcscpy_s(suggestion, 300, L"استخدم \\يXXXX بدلاً من \\uXXXX للهروب اليونيكود - باء تستخدم \\ي مع 4 أرقام سداسية");
+        break;
+    case L'x':
+        wcscpy_s(suggestion, 300, L"استخدم \\هـHH بدلاً من \\xHH للهروب السداسي عشري - باء تستخدم \\هـ مع رقمين سداسيين");
+        break;
+    default:
+        swprintf(suggestion, 300, L"تسلسل هروب غير صالح '\\%lc' - استخدم: \\س (سطر جديد)، \\م (تبويب)، \\ر (إرجاع)، \\ص (فارغ)، \\\\، \\\"، \\'، \\يXXXX (يونيكود)، \\هـHH (سداسي عشري)", invalid_escape_char);
+        break;
     }
 
     return suggestion;
@@ -873,7 +884,7 @@ wchar_t* suggest_escape_sequence_fix(wchar_t invalid_escape_char)
  * @param invalid_number The invalid number string (may be NULL)
  * @return Allocated suggestion string in Arabic (caller must free)
  */
-wchar_t* suggest_number_format_fix(const wchar_t* invalid_number)
+wchar_t *suggest_number_format_fix(const wchar_t *invalid_number)
 {
     wchar_t *suggestion = malloc(400 * sizeof(wchar_t));
     if (!suggestion)
@@ -931,7 +942,7 @@ wchar_t* suggest_number_format_fix(const wchar_t* invalid_number)
  * @param partial_string The partial string content (may be NULL)
  * @return Allocated suggestion string in Arabic (caller must free)
  */
-wchar_t* suggest_string_termination_fix(const wchar_t* partial_string)
+wchar_t *suggest_string_termination_fix(const wchar_t *partial_string)
 {
     wchar_t *suggestion = malloc(250 * sizeof(wchar_t));
     if (!suggestion)
@@ -1142,6 +1153,11 @@ BaaToken *baa_lexer_next_token(BaaLexer *lexer)
     case L'.':
         return make_token(lexer, BAA_TOKEN_DOT);
     case L':':
+        if (peek(lexer) == L':')
+        {
+            advance(lexer);
+            return make_token(lexer, BAA_TOKEN_DOUBLE_COLON);
+        }
         return make_token(lexer, BAA_TOKEN_COLON);
     case L';':
         return make_token(lexer, BAA_TOKEN_SEMICOLON);
@@ -1163,6 +1179,8 @@ BaaToken *baa_lexer_next_token(BaaLexer *lexer)
         return match(lexer, L'=') ? make_token(lexer, BAA_TOKEN_LESS_EQUAL) : make_token(lexer, BAA_TOKEN_LESS);
     case L'>':
         return match(lexer, L'=') ? make_token(lexer, BAA_TOKEN_GREATER_EQUAL) : make_token(lexer, BAA_TOKEN_GREATER);
+    case L'~':
+        return make_token(lexer, BAA_TOKEN_TILDE);
     case L'\'':
         return scan_char_literal(lexer);
     case 0x060C:
@@ -1177,10 +1195,10 @@ BaaToken *baa_lexer_next_token(BaaLexer *lexer)
         if (!match(lexer, L'&'))
         {
             BaaToken *error_token = make_specific_error_token(lexer,
-                BAA_TOKEN_ERROR_INVALID_CHARACTER,
-                1008, "operator",
-                L"استخدم && للعامل المنطقي AND",
-                L"عامل غير صالح: علامة '&' مفردة (هل تقصد '&&'؟)");
+                                                              BAA_TOKEN_ERROR_INVALID_CHARACTER,
+                                                              1008, "operator",
+                                                              L"استخدم && للعامل المنطقي AND",
+                                                              L"عامل غير صالح: علامة '&' مفردة (هل تقصد '&&'؟)");
             baa_increment_error_count(lexer, BAA_TOKEN_ERROR_INVALID_CHARACTER);
             enhanced_synchronize(lexer, BAA_TOKEN_ERROR_INVALID_CHARACTER);
             return error_token;
@@ -1190,10 +1208,10 @@ BaaToken *baa_lexer_next_token(BaaLexer *lexer)
         if (!match(lexer, L'|'))
         {
             BaaToken *error_token = make_specific_error_token(lexer,
-                BAA_TOKEN_ERROR_INVALID_CHARACTER,
-                1008, "operator",
-                L"استخدم || للعامل المنطقي OR",
-                L"عامل غير صالح: علامة '|' مفردة (هل تقصد '||'؟)");
+                                                              BAA_TOKEN_ERROR_INVALID_CHARACTER,
+                                                              1008, "operator",
+                                                              L"استخدم || للعامل المنطقي OR",
+                                                              L"عامل غير صالح: علامة '|' مفردة (هل تقصد '||'؟)");
             baa_increment_error_count(lexer, BAA_TOKEN_ERROR_INVALID_CHARACTER);
             enhanced_synchronize(lexer, BAA_TOKEN_ERROR_INVALID_CHARACTER);
             return error_token;
@@ -1202,11 +1220,11 @@ BaaToken *baa_lexer_next_token(BaaLexer *lexer)
     }
 
     BaaToken *error_token = make_specific_error_token(lexer,
-        BAA_TOKEN_ERROR_INVALID_CHARACTER,
-        1009, "character",
-        L"تحقق من صحة الحرف أو احذفه",
-        L"حرف غير متوقع: '%lc' (الكود: %u) في السطر %zu، العمود %zu",
-        c, (unsigned int)c, lexer->line, lexer->column);
+                                                      BAA_TOKEN_ERROR_INVALID_CHARACTER,
+                                                      1009, "character",
+                                                      L"تحقق من صحة الحرف أو احذفه",
+                                                      L"حرف غير متوقع: '%lc' (الكود: %u) في السطر %zu، العمود %zu",
+                                                      c, (unsigned int)c, lexer->line, lexer->column);
     baa_increment_error_count(lexer, BAA_TOKEN_ERROR_INVALID_CHARACTER);
     enhanced_synchronize(lexer, BAA_TOKEN_ERROR_INVALID_CHARACTER);
     return error_token;
@@ -1270,6 +1288,8 @@ const wchar_t *baa_token_type_to_string(BaaTokenType type)
         return L"BAA_TOKEN_BREAK";
     case BAA_TOKEN_CONTINUE:
         return L"BAA_TOKEN_CONTINUE";
+    case BAA_TOKEN_SIZEOF:
+        return L"BAA_TOKEN_SIZEOF";
     case BAA_TOKEN_TYPE_INT:
         return L"BAA_TOKEN_TYPE_INT";
     case BAA_TOKEN_TYPE_FLOAT:
@@ -1324,6 +1344,10 @@ const wchar_t *baa_token_type_to_string(BaaTokenType type)
         return L"BAA_TOKEN_INCREMENT";
     case BAA_TOKEN_DECREMENT:
         return L"BAA_TOKEN_DECREMENT";
+    case BAA_TOKEN_TILDE:
+        return L"BAA_TOKEN_TILDE";
+    case BAA_TOKEN_DOUBLE_COLON:
+        return L"BAA_TOKEN_DOUBLE_COLON";
     case BAA_TOKEN_LPAREN:
         return L"BAA_TOKEN_LPAREN";
     case BAA_TOKEN_RPAREN:
@@ -1344,7 +1368,7 @@ const wchar_t *baa_token_type_to_string(BaaTokenType type)
         return L"BAA_TOKEN_SEMICOLON";
     case BAA_TOKEN_COLON:
         return L"BAA_TOKEN_COLON";
-    
+
     // Specific error token types
     case BAA_TOKEN_ERROR_UNTERMINATED_STRING:
         return L"BAA_TOKEN_ERROR_UNTERMINATED_STRING";
@@ -1362,7 +1386,7 @@ const wchar_t *baa_token_type_to_string(BaaTokenType type)
         return L"BAA_TOKEN_ERROR_NUMBER_OVERFLOW";
     case BAA_TOKEN_ERROR_INVALID_SUFFIX:
         return L"BAA_TOKEN_ERROR_INVALID_SUFFIX";
-    
+
     default:
         return L"BAA_TOKEN_INVALID_TYPE_IN_TO_STRING";
     }
@@ -1431,15 +1455,22 @@ void baa_free_error_context(BaaErrorContext *context)
 
 const wchar_t *baa_get_error_category_description(const char *category)
 {
-    if (!category) return L"غير محدد";
-    
-    if (strcmp(category, "string") == 0) return L"سلسلة نصية";
-    if (strcmp(category, "character") == 0) return L"محرف";
-    if (strcmp(category, "number") == 0) return L"رقم";
-    if (strcmp(category, "comment") == 0) return L"تعليق";
-    if (strcmp(category, "escape") == 0) return L"تسلسل هروب";
-    if (strcmp(category, "general") == 0) return L"عام";
-    
+    if (!category)
+        return L"غير محدد";
+
+    if (strcmp(category, "string") == 0)
+        return L"سلسلة نصية";
+    if (strcmp(category, "character") == 0)
+        return L"محرف";
+    if (strcmp(category, "number") == 0)
+        return L"رقم";
+    if (strcmp(category, "comment") == 0)
+        return L"تعليق";
+    if (strcmp(category, "escape") == 0)
+        return L"تسلسل هروب";
+    if (strcmp(category, "general") == 0)
+        return L"عام";
+
     return L"غير معروف";
 }
 

@@ -1,5 +1,11 @@
 # دعم اللغة العربية (Arabic Language Support)
 
+**Available in:** [English](#) | [العربية](../01_مواصفات_اللغة/الميزات_العربية.md)
+
+**Status:** 🚧 In Progress (Priority 4 Complete - Core Features Implemented)
+**Last Updated:** 2025-11-06
+**Version Compatibility:** v0.1.15+
+
 ## Overview
 
 Baa (باء) provides comprehensive support for Arabic programming through:
@@ -118,8 +124,8 @@ Baa uses Arabic keywords for its preprocessor directives, aligning with C99 func
 | --------------------------- | -------------- | --------------------------------------------------------------------------- |
 | `__الملف__`                 | `__FILE__`     | Expands to the current source file name as a string literal.                |
 | `__السطر__`                 | `__LINE__`     | Expands to the current line number as an integer constant.                  |
-| `__التاريخ__`               | `__DATE__`     | Expands to the compilation date as a string literal (e.g., "May 10 2025").  |
-| `__الوقت__`                 | `__TIME__`     | Expands to the compilation time as a string literal (e.g., "02:00:00").   |
+| `__التاريخ__`               | `__DATE__`     | Expands to the compilation date as a string literal (e.g., "Nov 06 2025").  |
+| `__الوقت__`                 | `__TIME__`     | Expands to the compilation time as a string literal (e.g., "08:32:00").   |
 | `__الدالة__`                | `__func__`     | Expands to `L"__BAA_FUNCTION_PLACEHOLDER__"` in preprocessor. Final value by later stages. |
 | `__إصدار_المعيار_باء__`       | `__STDC_VERSION__` (conceptually) | Expands to a long int (e.g., `10210L`) representing Baa language version. |
 
@@ -194,9 +200,8 @@ Baa uses the backslash (`\`) as the escape character, followed by a **Baa-specif
 ### 1. Hello World
 
 ```baa
-// Baa uses C-style function declarations, e.g.:
-// عدد_صحيح رئيسية() { ... }
-// فراغ رئيسية() { ... }
+// Baa uses C-style function declarations
+// Main function entry point
 عدد_صحيح رئيسية() {
     اطبع("مرحباً بالعالم!").
     إرجع 0.
@@ -296,5 +301,17 @@ Error: Incompatible type in assignment
 
 ## Version Support (دعم الإصدارات)
 
-- Version 0.1.x: Focus on core language features, preprocessor, lexer, parser, basic AST, and foundational Arabic support.
-- Future Versions: Semantic analysis, code generation, advanced language features, and enhanced tooling.
+- **Version 0.1.15 (Current - November 2025):**
+  - ✅ Priority 4 Complete: Core compiler with preprocessor, lexer, parser, and AST
+  - ✅ Full Unicode support for Arabic identifiers and keywords
+  - ✅ Complete preprocessor with Arabic directives
+  - ✅ Variables, functions, control flow, expressions, basic types
+  - 🚧 Semantic analysis in progress
+  - 📋 Code generation planned
+
+- **Future Versions:**
+  - Advanced semantic analysis
+  - LLVM code generation
+  - Struct, union, enum, pointer support
+  - Enhanced tooling and IDE integration
+  - Comprehensive standard library

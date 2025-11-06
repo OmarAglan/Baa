@@ -1,13 +1,22 @@
-# Baa Language Parser Structure Documentation (New Design v2)
+# Baa Language Parser Structure Documentation
 
-**Status: This document outlines the revised design for the Parser. Items here are largely planned unless otherwise noted. This parser will generate an AST conforming to the new `AST.md` (v2) design.**
+---
+**Status:** Production-Ready ✅
+**Last Updated:** 2025-11-06
+**Version:** v0.1.15+
+**Priority 4:** Completed (Function Definitions and Calls)
+**Implementation:** Core parser infrastructure complete with recursive descent parsing
+
+---
+
+**Note:** This document describes the production-ready parser implementation. The parser generates an AST conforming to the [`AST.md`](AST.md) design with full support for function definitions, function calls, and core language constructs.
 
 This document provides a comprehensive reference for the parser implementation in the Baa programming language compiler. The parser's role is to transform token sequences produced by the lexer into an Abstract Syntax Tree (AST), specifically a tree of `BaaNode` structures.
 
 ## 1. Core Design Principles
 
-1. **Modularity**: The parser is organized into logical modules/files for different language constructs (e.g., `expression_parser.c`, `statement_parser.c`, `declaration_parser.c`, `type_parser.c`).
-2. **Recursive Descent Approach**: The parser uses a top-down, predictive recursive descent parsing technique. Each significant non-terminal in the Baa grammar will typically correspond to a parsing function that returns a `BaaNode*`.
+1. **Modularity**: The parser is organized into logical modules/files for different language constructs ([`expression_parser.c`](../../src/parser/expression_parser.c), [`statement_parser.c`](../../src/parser/statement_parser.c), [`declaration_parser.c`](../../src/parser/declaration_parser.c), [`type_parser.c`](../../src/parser/type_parser.c)).
+2. **Recursive Descent Approach**: The parser uses a top-down, predictive recursive descent parsing technique. Each significant non-terminal in the Baa grammar corresponds to a parsing function that returns a `BaaNode*`.
 3. **Syntactic Focus & AST Construction**:
     * The parser is strictly responsible for syntactic validation according to Baa's grammar.
     * Upon successful recognition of a grammar rule, it constructs the appropriate `BaaNode` (including its specific `data` struct) using AST creation functions (e.g., `baa_ast_new_binary_expr_node(...)`).
@@ -16,20 +25,18 @@ This document provides a comprehensive reference for the parser implementation i
 
 ## 2. Parser Architecture
 
-The parser state and core logic reside in `parser.c`, with specialized parsing functions in separate modules:
+The parser state and core logic reside in [`parser.c`](../../src/parser/parser.c), with specialized parsing functions in separate modules:
 
-``` c
-
+```
 BaaParser (Main Parser - parser.c)
 ├── Expression Parser (expression_parser.c)
 ├── Statement Parser (statement_parser.c)
 ├── Declaration Parser (declaration_parser.c)
 └── Type Parser (type_parser.c)
-└── Parser Utilities (parser_utils.c - token consumption, error reporting, etc.)
-
+└── Parser Utilities (parser_utils.h - token consumption, error reporting, etc.)
 ```
 
-Each parsing function (e.g., `parse_if_statement`, `parse_binary_expression`) will return a `BaaNode*` representing the construct parsed, or `NULL` if a syntax error occurred that couldn't be recovered from for that construct.
+Each parsing function (e.g., `parse_if_statement`, `parse_binary_expression`) returns a `BaaNode*` representing the construct parsed, or `NULL` if a syntax error occurred that couldn't be recovered from for that construct.
 
 ## 3. Parser State
 
@@ -115,9 +122,9 @@ The `previous_token.span.start` and `current_token.span.end` (or `previous_token
     // }
     ```
 
-### 4.6 Function Support (✅ COMPLETED - Priority 4)
+### 4.6 Function Support ✅ Production-Ready (Priority 4 Completed)
 
-The parser now has comprehensive support for function definitions and function call expressions:
+The parser has comprehensive support for function definitions and function call expressions:
 
 #### Function Definitions
 * **Syntax**: `[modifiers] return_type function_name(parameter_list) { body }`

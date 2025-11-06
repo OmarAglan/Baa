@@ -1,14 +1,23 @@
-# Baa Language AST Structure Documentation (New Design v2)
+# Baa Language AST Structure Documentation
 
-**Status: ✅ CORE AST COMPLETE - This document outlines the implemented design for the Abstract Syntax Tree (AST). Priority 4 (Function Definitions and Calls) completed 2025-07-06. All core AST node types are implemented and functional.**
+---
+**Status:** Production-Ready ✅
+**Last Updated:** 2025-11-06
+**Version:** v0.1.15+
+**Priority 4:** Completed (Function Definitions and Calls)
+**Implementation:** All core AST node types implemented and functional
+
+---
+
+**Note:** This document describes the production-ready AST implementation. Priority 4 (Function Definitions and Calls) was completed in November 2025. All core AST node types for expressions, statements, declarations, and functions are implemented and functional.
 
 This document provides a comprehensive reference for the Abstract Syntax Tree (AST) structure to be implemented for the Baa programming language compiler. The goal is to establish a clear standard for all AST components to ensure consistency across the compiler implementation.
 
 ## 1. Core Design Principles
 
-1. **Unified Node Structure**: All AST elements (program, declarations, statements, expressions, types) are represented by a single base `BaaNode` structure.
+1. **Unified Node Structure**: All AST elements (program, declarations, statements, expressions, types) are represented by a single base [`BaaNode`](../../include/baa/ast/ast.h) structure.
 2. **Discriminated Union via `void* data`**: `BaaNode->kind` (an enum `BaaNodeKind`) determines the actual type of the node. `BaaNode->data` points to a specific data structure for that kind.
-3. **Type-Safe Accessors**: Macros will be provided for safely casting `BaaNode->data` to the correct specific data type based on `BaaNode->kind`.
+3. **Type-Safe Accessors**: Macros are provided for safely casting `BaaNode->data` to the correct specific data type based on `BaaNode->kind`.
 4. **Clear Memory Ownership**:
     * All `BaaNode`s and their associated `data` structs are dynamically allocated.
     * The `baa_ast_free_node(BaaNode* node)` function is responsible for recursively freeing a node, its specific data, any owned child nodes, and any duplicated strings within its data.

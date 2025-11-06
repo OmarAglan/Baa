@@ -1,12 +1,20 @@
 # Baa Language Architecture
 
+---
+**Status:** Core Infrastructure Production-Ready ✅ | Semantic Analysis & Code Generation Planned 📋
+**Last Updated:** 2025-11-06
+**Version:** v0.1.15+
+**Priority 4 Status:** Completed (Preprocessor, Lexer, Parser, AST with Function Support)
+
+---
+
 ## Overview
 
-Baa (باء) is designed with a modular architecture that separates concerns into distinct components. Each component is responsible for a specific aspect of the compilation process, making the system maintainable and extensible. **As of 2025-07-06, the core compiler infrastructure is production-ready with Priority 4 (Function Definitions and Calls) completed.**
+Baa (باء) is designed with a modular architecture that separates concerns into distinct components. Each component is responsible for a specific aspect of the compilation process, making the system maintainable and extensible. **As of 2025-11-06, the core compiler infrastructure is production-ready with Priority 4 (Function Definitions and Calls) completed.**
 
 ## Core Components
 
-### 0. Preprocessor (المعالج المسبق)
+### 0. Preprocessor (المعالج المسبق) ✅ Production-Ready
 
 The initial stage that processes the source file before tokenization:
 
@@ -29,7 +37,7 @@ The initial stage that processes the source file before tokenization:
   - Provides predefined macros (`__الملف__`, `__السطر__` (int), `__التاريخ__`, `__الوقت__`, `__الدالة__` (placeholder), `__إصدار_المعيار_باء__`).
   - *See `docs/PREPROCESSOR_ROADMAP.md` for latest status, including error recovery enhancements.*
 
-### 1. Lexer
+### 1. Lexer ✅ Production-Ready
 
 The lexical analyzer responsible for tokenizing source code. It has a modular structure:
 
@@ -65,27 +73,29 @@ The lexical analyzer responsible for tokenizing source code. It has a modular st
   - Error token generation.
   - *See `docs/LEXER_ROADMAP.md` for detailed status and planned enhancements.*
 
-### 2. Parser
+### 2. Parser ✅ Production-Ready
 
 Transforms tokens into a structured AST:
 
-- **Status**: New Design v2 - Core infrastructure implemented (v0.1.19.0), detailed parsing rules ongoing.
+- **Status**: Production-ready with Priority 4 completed (v0.1.15+). Function definitions, function calls, and core language constructs fully implemented.
 - **Approach**: Recursive descent.
 - **Output**: Abstract Syntax Tree (AST) composed of `BaaNode`s.
-- **Error Handling**: Syntax error detection, reporting, and basic panic mode recovery.
-- *Refer to `docs/PARSER.md` and `docs/PARSER_ROADMAP.md` for details on the new design.*
+- **Error Handling**: Syntax error detection, reporting, and panic mode recovery.
+- **Completed Features**: Variable declarations, expressions (literals, identifiers, binary, unary, calls), statements (if, while, for, return, block), function definitions with parameters.
+- *Refer to [`docs/PARSER.md`](PARSER.md) and [`docs/PARSER_ROADMAP.md`](../04_ROADMAP/PARSER_ROADMAP.md) for details.*
 
-### 3. Abstract Syntax Tree (AST)
+### 3. Abstract Syntax Tree (AST) ✅ Production-Ready
 
 The AST module provides the foundation for representing code structure using a unified `BaaNode` approach.
 
-- **Status**: New Design v2 - Core types and basic literal nodes implemented (v0.1.18.0), ongoing development for other node types.
+- **Status**: Production-ready with Priority 4 completed (v0.1.15+). All core node types implemented for expressions, statements, declarations, and functions.
 - **Structure**:
   - Unified `BaaNode` with `BaaNodeKind kind`, `BaaSourceSpan span`, and `void* data`.
-  - Specific data structs (e.g., `BaaLiteralExprData`) for each node kind.
+  - Specific data structs (e.g., `BaaLiteralExprData`, `BaaFunctionDefData`, `BaaCallExprData`) for each node kind.
 - **Memory Management**: `baa_ast_new_node()` for base creation, `baa_ast_free_node()` for recursive freeing.
 - **Traversal**: Visitor pattern planned for AST traversal.
-- *Refer to `docs/AST.md` and `docs/AST_ROADMAP.md` for details on the new design.*
+- **Completed Node Types**: Program, function definitions, parameters, variable declarations, expressions (literal, identifier, binary, unary, call, assignment), statements (block, if, while, for, return, expression).
+- *Refer to [`docs/AST.md`](AST.md) and [`docs/AST_ROADMAP.md`](../04_ROADMAP/AST_ROADMAP.md) for details.*
 
 ### 4. Type System
 
@@ -130,29 +140,29 @@ Utility functions and support features:
 - **File Operations**: Source file handling with UTF-8/UTF-16LE auto-detection (in preprocessor) and UTF-16LE processing (in lexer).
 - **Features & Status:** Implemented.
 
-### 8. Semantic Analysis (Planned)
+### 8. Semantic Analysis 📋 Planned
 
 Responsible for verifying static semantics, name resolution, and type checking.
 
-- **Status**: Basic flow analysis structure exists (`src/analysis/`), but full semantic analysis is pending the new AST.
+- **Status**: Planned for future implementation. Basic flow analysis structure exists (`src/analysis/`), but full semantic analysis awaits completion.
 - **Features (Planned):**
   - Symbol table management and scope handling.
   - Name resolution (linking identifiers to declarations).
   - Comprehensive type checking and inference.
   - Control flow analysis (reachability, return paths).
   - AST annotation with semantic information.
-  - *See `docs/SEMANTIC_ANALYSIS.md` and `docs/SEMANTIC_ANALYSIS_ROADMAP.md`.*
+  - *See [`docs/SEMANTIC_ANALYSIS.md`](SEMANTIC_ANALYSIS.md) and [`docs/SEMANTIC_ANALYSIS_ROADMAP.md`](../04_ROADMAP/SEMANTIC_ANALYSIS_ROADMAP.md).*
 
-### 9. Code Generation (Planned)
+### 9. Code Generation 📋 Planned
 
 Transforms the (semantically analyzed) AST into executable code or intermediate representation.
 
-- **Status**: Basic LLVM integration stubs and conditional build logic exist. Actual IR generation from AST is pending.
+- **Status**: Planned for future implementation. Basic LLVM integration stubs and conditional build logic exist. Actual IR generation from AST is pending.
 - **Features (Planned):**
-  - LLVM IR generation from the new, semantically-analyzed AST.
+  - LLVM IR generation from the semantically-analyzed AST.
   - Optimization passes, debug information, source mapping.
   - Support for multiple target platforms (x86-64, ARM64, Wasm).
-  - *See `docs/LLVM_CODEGEN.md` and `docs/LLVM_CODEGEN_ROADMAP.md`.*
+  - *See [`docs/CODE_GENERATION.md`](CODE_GENERATION.md) and [`docs/LLVM_CODEGEN_ROADMAP.md`](../04_ROADMAP/LLVM_CODEGEN_ROADMAP.md).*
 
 ## Build System
 

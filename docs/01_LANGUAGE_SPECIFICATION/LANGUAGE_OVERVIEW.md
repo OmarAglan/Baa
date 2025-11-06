@@ -2,6 +2,12 @@
 
 # B (باء) Language Specification
 
+**Available in:** [English](#) | [العربية](../01_مواصفات_اللغة/نظرة_عامة_على_اللغة.md)
+
+**Status:** 🚧 In Progress (Priority 4 Complete - Core Features Implemented)
+**Last Updated:** 2025-11-06
+**Version Compatibility:** v0.1.15+
+
 ## 1. Basic Syntax Examples
 
 * (Note: See subsequent sections for detailed definitions)*
@@ -154,16 +160,16 @@ Baa plans to support other standard C preprocessor directives with Arabic keywor
     #تحذير "هذه الميزة مهملة وسيتم إزالتها في الإصدارات القادمة."
     ```
 
-* **`#سطر رقم "اسم_الملف"` (`#line number "filename"`):** Changes the preprocessor's internally stored line number and filename. This affects the output of `__السطر__` and `__الملف__`. - *[Planned]*
+* **`#سطر رقم "اسم_الملف"` (`#line number "filename"`):** Changes the preprocessor's internally stored line number and filename. This affects the output of `__السطر__` and `__الملف__`. - *[Implemented]*
 
     ```baa
     #سطر ١٠٠ "ملف_مصدر_آخر.ب"
     // الآن __السطر__ سيكون ١٠٠ و __الملف__ سيكون "ملف_مصدر_آخر.ب"
     ```
 
-* **`#براغما توجيه_خاص` (`#pragma directive`):** Used for implementation-defined directives. The specific `توجيه_خاص` (special directive) and its behavior depend on the Baa compiler. - *[Planned]*
+* **`#براغما توجيه_خاص` (`#pragma directive`):** Used for implementation-defined directives. The specific `توجيه_خاص` (special directive) and its behavior depend on the Baa compiler. - *[Implemented]*
   * Example: `#براغما مرة_واحدة` (could be Baa's equivalent of `#pragma once`).
-* **`أمر_براغما("توجيه_نصي")` (`_Pragma("string_directive")`):** An operator (not a directive starting with `#`) that allows a macro to generate a `#براغما` directive. It takes a string literal which is then treated as the content of a `#براغما` directive. - *[Planned]*
+* **`أمر_براغما("توجيه_نصي")` (`_Pragma("string_directive")`):** An operator (not a directive starting with `#`) that allows a macro to generate a `#براغما` directive. It takes a string literal which is then treated as the content of a `#براغما` directive. - *[Implemented]*
 
     ```baa
     #تعريف DO_PRAGMA(x) أمر_براغما(#x)
@@ -178,8 +184,8 @@ Baa provides several predefined macros that offer information about the compilat
 
 * `__الملف__` : Expands to a string literal representing the name of the current source file.
 * `__السطر__` : Expands to an integer constant representing the current line number in the source file.
-* `__التاريخ__` : Expands to a string literal representing the compilation date (e.g., "May 09 2025").
-* `__الوقت__` : Expands to a string literal representing the compilation time (e.g., "07:40:00").
+* `__التاريخ__` : Expands to a string literal representing the compilation date (e.g., "Nov 06 2025").
+* `__الوقت__` : Expands to a string literal representing the compilation time (e.g., "08:21:00").
 * `__الدالة__` : Expands to a string literal placeholder `L"__BAA_FUNCTION_PLACEHOLDER__"`. Actual function name substitution is intended for later compiler stages. - *[Implemented by Preprocessor as placeholder]*
 * `__إصدار_المعيار_باء__` : Expands to a long integer constant `10150L` (representing Baa language version 0.1.15, value updated). - *[Implemented by Preprocessor]*
 
@@ -200,15 +206,15 @@ Statements are terminated with a dot (`.`) instead of a semicolon.
 
 ### 1.3 Function Declaration Example
 
-* (See Section 4.2 for full details)*
+*(See Section 4.2 for full details)*
 
 ```baa
-// [Implementation Pending] Main function (entry point) - Assuming void return if omitted
+// [Implemented] Main function (entry point) - Assuming void return if omitted
 فراغ رئيسية() {
     // Function body
 }
 
-// [Implementation Pending] Function with integer parameter and return value
+// [Implemented] Function with integer parameter and return value
 عدد_صحيح مربع(عدد_صحيح س) {
     إرجع س * س.
 }
@@ -467,20 +473,20 @@ Variables store values that can potentially change.
 
 Functions define reusable blocks of code.
 
-* **Syntax:** `return_type? identifier '(' parameter_list? ')' '{' statement* '}'` (C-style declaration) - *[Implementation Pending]*
+* **Syntax:** `return_type? identifier '(' parameter_list? ')' '{' statement* '}'` (C-style declaration) - *[Implemented]*
 * **Return Type:** Specified *before* the function identifier. If omitted, defaults to `فراغ` (void).
 * **Parameters (`parameter_list`):** Comma-separated list of `type identifier`. `( )` for no parameters.
 * **Entry Point:** The program must contain a function named `رئيسية` with no parameters and typically returning `عدد_صحيح`. `عدد_صحيح رئيسية() { ... إرجع 0. }`
 
 ```baa
-// Function with no parameters, implicit void return
-فراغ print_hello() {
+// Function with no parameters, explicit void return
+فراغ اطبع_مرحبا() {
     اطبع("مرحبا!").
 }
 
 // Function with parameters and explicit return type
 عدد_صحيح أضف(عدد_صحيح a, عدد_صحيح b) {
-    إرجع a + b. // Keyword `مستقر` for static functions is planned.
+    إرجع a + b.
 }
 ```
 
@@ -647,11 +653,11 @@ Unconditional jump to a labeled statement within the same function.
 
 Selects a block of code to execute based on the value of an expression.
 
-* **Syntax:** `اختر '(' expression ')' '{' case_group* '}'` - *[Implemented]*.
+* **Syntax:** `اختر '(' expression ')' '{' case_group* '}'` - *[Planned]*.
 * **`case_group`:** Consists of one or more `حالة constant_expression ':'` labels or a `افتراضي ':'` (default) label, followed by statements. Execution falls through cases unless `توقف` is used.
 
 ```baa
-// Example - Syntax/Semantics need verification
+// Example - PLANNED FEATURE (not yet fully implemented)
 اختر (day) {
     حالة 1:
         اطبع("Monday").
@@ -662,7 +668,6 @@ Selects a block of code to execute based on the value of an expression.
     افتراضي:
         اطبع("Other day").
 }
-
 ```
 
 ## 7. Scope Rules
@@ -702,7 +707,7 @@ test(عدد_صحيح param) { // Function scope starts
 Every executable program must have a main function (`رئيسية`) which serves as the entry point.
 
 ```baa
-// مثال برنامج بسيط بلغة باء
+// مثال برنامج بسيط بلغة باء (Simple program example in Baa)
 عدد_صحيح رئيسية() {
     اطبع("مرحباً بالعالم!").
     إرجع 0. // Conventionally return 0 on success
@@ -711,11 +716,15 @@ Every executable program must have a main function (`رئيسية`) which serves
 
 ### 8.2 File Extension
 
-Baa source code files typically use the `.ب` extension.
+Baa source code files use the `.ب` (Arabic letter Baa) or `.baa` extensions.
 
-```Baa
-  برنامج.ب
-  my_module.ب
+**Examples:**
+
+```
+برنامج.ب
+my_module.ب
+calculator.baa
+مكتبة.ب
 ```
 
 ## 9. Naming Conventions

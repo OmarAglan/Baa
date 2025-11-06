@@ -1,5 +1,13 @@
 # Baa Preprocessor Documentation (توثيق المعالج المسبق)
 
+---
+**Status:** Production-Ready ✅
+**Last Updated:** 2025-11-06
+**Version:** v0.1.15+
+**Implementation:** Complete with C99-compliant features, enhanced error handling, and full Arabic directive support
+
+---
+
 ## Overview (نظرة عامة)
 
 The Baa preprocessor is a crucial initial stage in the Baa compilation pipeline. It operates on Baa source files **before** lexical analysis (tokenization). Its primary responsibilities include:
@@ -12,7 +20,7 @@ The Baa preprocessor is a crucial initial stage in the Baa compilation pipeline.
 
 The preprocessor takes a Baa source file (or string) as input, processes these directives, and produces a single, unified translation unit (as a wide character string, typically UTF-16LE) which is then passed to the Baa lexer.
 
-**Current Version**: v0.1.31.0 (98% complete with C99-compliant preprocessor features including line control, pragma directives, and _Pragma operator)
+**Implementation Status**: Production-ready with comprehensive C99-compliant preprocessor features including line control, pragma directives, and _Pragma operator.
 
 ## Features (الميزات)
 
@@ -319,10 +327,6 @@ The preprocessor uses a systematic error code system:
 * **Complex Token Pasting (`##`) during Rescanning**: While the `##` operator works correctly in direct macro bodies, complex interactions when `##` appears as part of a macro expansion output that is then rescanned, or when its operands are themselves complex macros, may not be fully robust. This requires careful review of the rescan loop and how it forms new tokens after pasting.
 * **Error/Warning Location Precision**: While significantly improved, further refinement for precise column reporting in all error scenarios is an ongoing effort.
 * **Performance Optimization**: The enhanced error system is designed to have minimal overhead during error-free processing, but performance optimization is still being refined.
-* **Unimplemented Directives**: The following standard directives are planned but not yet implemented:
-  * `#سطر` (line number control)
-  * `#براغما` (pragma directives)
-  * `أمر_براغما` (_Pragma operator)
 
 ## Performance Characteristics
 
@@ -337,4 +341,4 @@ The preprocessor is designed with the following performance targets:
 
 The current preprocessor implementation is **not thread-safe**. Each preprocessing operation should use a separate `BaaPreprocessor` instance. The preprocessor maintains internal state that would be corrupted by concurrent access.
 
-*For detailed ongoing tasks and future plans, please refer to `docs/PREPROCESSOR_ROADMAP.md`.*
+*For detailed ongoing tasks and future plans, please refer to [`docs/PREPROCESSOR_ROADMAP.md`](../04_ROADMAP/PREPROCESSOR_ROADMAP.md).*

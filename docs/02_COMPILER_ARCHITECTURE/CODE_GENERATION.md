@@ -1,6 +1,15 @@
 # Baa Language LLVM Code Generation Design
 
-**Status: This document outlines the planned design for the LLVM Code Generation phase. This phase operates on a semantically analyzed and annotated AST from the Semantic Analysis phase.**
+---
+**Status:** Planned 📋
+**Last Updated:** 2025-11-06
+**Version:** v0.1.15+
+**Implementation:** Future phase - awaits completion of Semantic Analysis
+**Dependencies:** Requires completed Semantic Analysis phase
+
+---
+
+**Note:** This document outlines the planned design for the LLVM Code Generation phase. This phase will operate on a semantically analyzed and annotated AST from the Semantic Analysis phase. Basic LLVM integration stubs and conditional build logic exist in [`src/codegen/`](../../src/codegen/), but actual IR generation from AST is planned for future implementation.
 
 ## 1. Overview and Goals
 
@@ -14,7 +23,7 @@ The LLVM Code Generation phase is responsible for translating the Baa Abstract S
 *   **Debuggability:** Lay the groundwork for generating debug information that maps IR back to Baa source code.
 *   **Modularity:** Design the code generator in a modular way, typically by having functions to generate IR for each type of AST node.
 
-**Input:** Semantically Analyzed and Annotated Baa AST.
+**Input:** Semantically Analyzed and Annotated Baa AST (from [`SEMANTIC_ANALYSIS.md`](SEMANTIC_ANALYSIS.md)).
 **Output:** An LLVM Module (`LLVMModuleRef`) containing the generated IR.
 
 ## 2. Core Components and Architecture
@@ -128,7 +137,12 @@ A main dispatch function (e.g., `codegen_node(BaaNode*)`) will switch on the AST
 *   Generating DWARF (or CodeView on Windows) debug information is crucial for source-level debugging.
 *   This involves using LLVM's `DIBuilder` API to create metadata for files, scopes, functions, variables, types, and source locations, and attaching this metadata to LLVM IR instructions.
 
-## Arabic/RTL Considerations
+## 9. Arabic/RTL Considerations
 
 *   LLVM IR itself uses an ASCII-based syntax for identifiers. Original Arabic identifiers from Baa source will need to be mangled or mapped to valid LLVM IR identifiers if they are to be directly represented (though often, symbols are just memory locations/registers at this stage).
 *   Debug information is where the original Arabic names and source locations (critical for RTL) must be accurately preserved and encoded.
+*   Source mapping must maintain bidirectional links between LLVM IR and original Arabic source code for debugging and error reporting.
+
+---
+
+*For detailed planning and future implementation roadmap, please refer to [`docs/LLVM_CODEGEN_ROADMAP.md`](../04_ROADMAP/LLVM_CODEGEN_ROADMAP.md).*

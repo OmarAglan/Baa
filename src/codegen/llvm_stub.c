@@ -1,5 +1,4 @@
 #include "baa/codegen/llvm_codegen.h"
-// #include "baa/ast/ast.h" // Removed as AST is being removed
 #include <stdbool.h>
 #include <wchar.h>
 
@@ -23,7 +22,7 @@ const wchar_t* baa_get_llvm_error(BaaLLVMContext* context) {
 }
 
 // Generate LLVM IR for a program
-bool baa_generate_llvm_ir(BaaLLVMContext* context, void* unused_program /* BaaProgram* program */) { // AST type removed
+bool baa_generate_llvm_ir(BaaLLVMContext* context, BaaNode* program_node) {
     if (context) {
         context->had_error = true;
         context->error_message = L"LLVM support not available";
@@ -49,7 +48,7 @@ void baa_cleanup_llvm_context(BaaLLVMContext* context) {
 
 // Note: The return type here MUST match the header declaration (LLVMValueRef)
 // even when LLVM is not available. We return NULL, which is compatible.
-LLVMValueRef baa_generate_llvm_expression(BaaLLVMContext* context, void* unused_expr /* BaaExpr* expr */) { // AST type removed
+LLVMValueRef baa_generate_llvm_expression(BaaLLVMContext* context, BaaNode* expr_node) {
     if (context) {
         context->had_error = true;
         context->error_message = L"LLVM support not available";
@@ -57,7 +56,7 @@ LLVMValueRef baa_generate_llvm_expression(BaaLLVMContext* context, void* unused_
     return NULL;
 }
 
-bool baa_generate_llvm_function(BaaLLVMContext* context, void* unused_function /* BaaFunction* function */) { // AST type removed
+bool baa_generate_llvm_function(BaaLLVMContext* context, BaaNode* function_node) {
     if (context) {
         context->had_error = true;
         context->error_message = L"LLVM support not available";
@@ -65,7 +64,7 @@ bool baa_generate_llvm_function(BaaLLVMContext* context, void* unused_function /
     return false;
 }
 
-bool baa_generate_llvm_statement(BaaLLVMContext* context, void* unused_stmt /* BaaStmt* stmt */) { // AST type removed
+bool baa_generate_llvm_statement(BaaLLVMContext* context, BaaNode* stmt_node) {
     if (context) {
         context->had_error = true;
         context->error_message = L"LLVM support not available";
@@ -73,7 +72,7 @@ bool baa_generate_llvm_statement(BaaLLVMContext* context, void* unused_stmt /* B
     return false;
 }
 
-bool baa_generate_llvm_if_statement(BaaLLVMContext* context, void* unused_if_stmt /* BaaIfStmt* if_stmt */) { // AST type removed
+bool baa_generate_llvm_if_statement(BaaLLVMContext* context, BaaIfStmtData* if_stmt_data) {
     if (context) {
         context->had_error = true;
         context->error_message = L"LLVM support not available";
@@ -81,7 +80,7 @@ bool baa_generate_llvm_if_statement(BaaLLVMContext* context, void* unused_if_stm
     return false;
 }
 
-bool baa_generate_llvm_while_statement(BaaLLVMContext* context, void* unused_while_stmt /* BaaWhileStmt* while_stmt */) { // AST type removed
+bool baa_generate_llvm_while_statement(BaaLLVMContext* context, BaaWhileStmtData* while_stmt_data) {
     if (context) {
         context->had_error = true;
         context->error_message = L"LLVM support not available";
@@ -89,7 +88,7 @@ bool baa_generate_llvm_while_statement(BaaLLVMContext* context, void* unused_whi
     return false;
 }
 
-bool baa_generate_llvm_return_statement(BaaLLVMContext* context, void* unused_return_stmt /* BaaReturnStmt* return_stmt */) { // AST type removed
+bool baa_generate_llvm_return_statement(BaaLLVMContext* context, BaaReturnStmtData* return_stmt_data) {
     if (context) {
         context->had_error = true;
         context->error_message = L"LLVM support not available";

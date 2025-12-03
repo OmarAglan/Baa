@@ -439,55 +439,94 @@ BaaNode *parse_function_definition(BaaParser *parser, BaaAstNodeModifiers initia
  */
 static bool looks_like_function_definition(BaaParser *parser)
 {
-    // We need to look ahead to see if after [modifiers] type_specifier identifier we have '('
-    // This is a simplified heuristic - a more robust implementation would use proper lookahead
+    // Clone the lexer to perform lookahead without disturbing the parser state
+    BaaLexer lookahead_lexer = *parser->lexer;
+    
+    // We start looking from the *next* token, because parser->current_token is already fetched.
+    // However, the lookahead logic needs to scan the sequence starting from current_token.
+    // Since we can't easily "push back" parser->current_token into the lexer clone,
+    // we will simulate the scan using the parser's current_token as the start,
+    // and then fetch subsequent tokens from the cloned lexer.
 
-    // Save current parser state
-    BaaToken saved_current = parser->current_token;
-    BaaToken saved_previous = parser->previous_token;
-
-    // Skip modifiers
-    while (parser->current_token.type == BAA_TOKEN_CONST ||
-           parser->current_token.type == BAA_TOKEN_KEYWORD_INLINE ||
-           parser->current_token.type == BAA_TOKEN_KEYWORD_RESTRICT)
+    BaaTokenType current_type = parser->current_token.type;
+    
+    // 1. Skip Modifiers
+    // Check current token
+    while (current_type == BAA_TOKEN_CONST ||
+           current_type == BAA_TOKEN_KEYWORD_INLINE ||
+           current_type == BAA_TOKEN_KEYWORD_RESTRICT)
     {
-        baa_parser_advance(parser);
+        // Fetch next token from lookahead lexer
+        // Loop to skip trivia (matching parser behavior)
+        BaaToken* next = NULL;
+        for (;;) {
+            next = baa_lexer_next_token(&lookahead_lexer);
+            if (!next) return false;
+            if (next->type != BAA_TOKEN_WHITESPACE &&
+                next->type != BAA_TOKEN_NEWLINE &&
+                next->type != BAA_TOKEN_SINGLE_LINE_COMMENT &&
+                next->type != BAA_TOKEN_MULTI_LINE_COMMENT &&
+                next->type != BAA_TOKEN_DOC_COMMENT) {
+                break;
+            }
+            baa_free_token(next);
+        }
+        current_type = next->type;
+        baa_free_token(next);
     }
 
-    // Skip type specifier (simplified - assumes single token type)
-    if (baa_token_is_type(parser->current_token.type))
+    // 2. Skip Type Specifier
+    if (baa_token_is_type(current_type))
     {
-        baa_parser_advance(parser);
+        // Fetch next
+        BaaToken* next = NULL;
+        for (;;) {
+            next = baa_lexer_next_token(&lookahead_lexer);
+            if (!next) return false;
+            if (next->type != BAA_TOKEN_WHITESPACE &&
+                next->type != BAA_TOKEN_NEWLINE &&
+                next->type != BAA_TOKEN_SINGLE_LINE_COMMENT &&
+                next->type != BAA_TOKEN_MULTI_LINE_COMMENT &&
+                next->type != BAA_TOKEN_DOC_COMMENT) {
+                break;
+            }
+            baa_free_token(next);
+        }
+        current_type = next->type;
+        baa_free_token(next);
     }
     else
     {
-        // Restore parser state and return false
-        parser->current_token = saved_current;
-        parser->previous_token = saved_previous;
         return false;
     }
 
-    // Skip identifier (function/variable name)
-    if (parser->current_token.type == BAA_TOKEN_IDENTIFIER)
+    // 3. Skip Identifier
+    if (current_type == BAA_TOKEN_IDENTIFIER)
     {
-        baa_parser_advance(parser);
+        // Fetch next
+        BaaToken* next = NULL;
+        for (;;) {
+            next = baa_lexer_next_token(&lookahead_lexer);
+            if (!next) return false;
+            if (next->type != BAA_TOKEN_WHITESPACE &&
+                next->type != BAA_TOKEN_NEWLINE &&
+                next->type != BAA_TOKEN_SINGLE_LINE_COMMENT &&
+                next->type != BAA_TOKEN_MULTI_LINE_COMMENT &&
+                next->type != BAA_TOKEN_DOC_COMMENT) {
+                break;
+            }
+            baa_free_token(next);
+        }
+        current_type = next->type;
+        baa_free_token(next);
     }
     else
     {
-        // Restore parser state and return false
-        parser->current_token = saved_current;
-        parser->previous_token = saved_previous;
         return false;
     }
 
-    // Check if next token is '(' (function definition) or something else (variable declaration)
-    bool is_function = (parser->current_token.type == BAA_TOKEN_LPAREN);
-
-    // Restore parser state
-    parser->current_token = saved_current;
-    parser->previous_token = saved_previous;
-
-    return is_function;
+    // 4. Check for '('
+    return (current_type == BAA_TOKEN_LPAREN);
 }
 
 BaaNode *parse_declaration_or_statement(BaaParser *parser)

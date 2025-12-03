@@ -2,47 +2,47 @@
 add_library(baa_codegen)
 
 # Add LLVM-specific files only if LLVM is available and found
-if(USE_LLVM AND LLVM_FOUND) # Check both the option and if find_package succeeded
-    target_sources(baa_codegen PRIVATE
-        codegen.c
-        llvm_codegen.c
-    )
-    target_compile_definitions(baa_codegen PRIVATE
-    LLVM_AVAILABLE=1
-    )
+if(USE_LLVM)
+    # Check if we have manual configuration or find_package success
+    if (LLVM_FOUND OR EXISTS "C:/Program Files/LLVM/include/llvm-c/Core.h")
+        message(STATUS "Enabling LLVM Backend (Manual/Auto)")
+        
+        target_sources(baa_codegen PRIVATE
+            codegen.c
+            llvm_codegen.c
+        )
+        target_compile_definitions(baa_codegen PRIVATE
+            LLVM_AVAILABLE=1
+        )
 
-    # Make sure LLVM CMake modules are included (may not be strictly necessary if find_package in root works well)
-    # list(APPEND CMAKE_MODULE_PATH "${LLVM_CMAKE_DIR}") # Likely not needed here
-    # include(AddLLVM) # Likely not needed here
-
-    # Get required LLVM libraries
-    # Prefer linking against imported LLVM targets
-    # llvm_map_components_to_libnames(llvm_libs ... )
-    # Note: llvm_map_components_to_libnames is useful for older CMake/LLVM versions
-    # or specific scenarios, but linking imported targets is generally preferred.
-
-    # Print the determined LLVM libraries for debugging (optional)
-    # message(STATUS "LLVM Libraries (via map): ${llvm_libs}")
-
-    # Add LLVM include directories
-    target_include_directories(baa_codegen PRIVATE ${LLVM_INCLUDE_DIRS})
-
-    # Link against imported LLVM targets
-    target_link_libraries(baa_codegen
-        PRIVATE
-            LLVM::Core
-            LLVM::Support
-            LLVM::IRReader
-            LLVM::Analysis
-            LLVM::Target
-            LLVM::MCJIT
-            LLVM::ExecutionEngine
-            LLVM::NativeTarget # For LLVMInitializeNativeTarget etc.
-            LLVM::NativeAsmPrinter # Often needed with NativeTarget
-            LLVM::NativeAsmParser # If parsing inline asm
-            # Add other LLVM:: targets corresponding to the components listed above if needed
-            # ${llvm_libs} # If using llvm_map_components_to_libnames
-    )
+        if (LLVM_FOUND)
+             target_include_directories(baa_codegen PRIVATE ${LLVM_INCLUDE_DIRS})
+             target_link_libraries(baa_codegen
+                PRIVATE
+                    LLVM::Core
+                    LLVM::Support
+                    LLVM::Analysis
+                    LLVM::Target
+                    LLVM::ExecutionEngine
+                    LLVM::NativeTarget
+            )
+        else()
+            # Manual Fallback for Windows Installation
+            message(STATUS "Using Manual LLVM Configuration")
+            target_include_directories(baa_codegen PRIVATE "C:/Program Files/LLVM/include")
+            link_directories("C:/Program Files/LLVM/lib")
+            target_link_libraries(baa_codegen PRIVATE "LLVM-C")
+        endif()
+    else()
+        message(WARNING "LLVM requested but not found. Falling back to stub.")
+        target_sources(baa_codegen PRIVATE
+            codegen.c
+            llvm_stub.c
+        )
+        target_compile_definitions(baa_codegen PRIVATE
+            LLVM_AVAILABLE=0
+        )
+    endif()
 else()
     # Add stub implementation when LLVM is not available
     target_sources(baa_codegen PRIVATE

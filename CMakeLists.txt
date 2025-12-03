@@ -28,6 +28,7 @@ endif()
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 if (WIN32)
+    add_compile_options(/utf-8) # Enforce UTF-8 source encoding for MSVC
     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /IGNORE:4006 /IGNORE:4099") # Ignore certain linker warnings if needed
 else()
     # Linux/macOS specific linker options (none needed here for these specific ignores)
@@ -53,7 +54,7 @@ target_include_directories(baa PRIVATE
 # --- Conditional LLVM Handling ---
 # Check if LLVM is available (You might need to adjust how LLVM_AVAILABLE is set/found)
 # For now, assume it's OFF unless explicitly enabled or found via find_package(LLVM)
-option(USE_LLVM "Enable LLVM backend" OFF) # Example option
+option(USE_LLVM "Enable LLVM backend" ON) # Enable by default
 
 if(USE_LLVM)
     # Attempt to find LLVM (adjust paths/version as needed)

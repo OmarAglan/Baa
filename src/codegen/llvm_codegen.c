@@ -205,23 +205,33 @@ void baa_cleanup_llvm_context(BaaLLVMContext *context)
 }
 
 // Generate LLVM IR for a program
-bool baa_generate_llvm_ir(BaaLLVMContext *context, BaaProgram *program)
+bool baa_generate_llvm_ir(BaaLLVMContext *context, BaaNode *program_node)
 {
-    if (!context || !program)
+    if (!context || !program_node || program_node->kind != BAA_NODE_KIND_PROGRAM)
     {
-        set_llvm_error(context, L"Invalid program");
+        set_llvm_error(context, L"Invalid program node");
         return false;
     }
 
-    // Generate code for each function in the program
-    for (size_t i = 0; i < program->function_count; i++)
+    BaaProgramData *program_data = (BaaProgramData *)program_node->data;
+    if (!program_data)
     {
+        set_llvm_error(context, L"Invalid program data");
+        return false;
+    }
 
-        BaaFunction *func = program->functions[i]; // Correct if functions is BaaFunction**
-        if (!baa_generate_llvm_function(context, func))
+    // Generate code for each top-level declaration
+    for (size_t i = 0; i < program_data->count; i++)
+    {
+        BaaNode *decl = program_data->top_level_declarations[i];
+        if (decl->kind == BAA_NODE_KIND_FUNCTION_DEF)
         {
-            return false;
+            if (!baa_generate_llvm_function(context, decl))
+            {
+                return false;
+            }
         }
+        // Handle global variables later
     }
 
     // Verify the module
@@ -249,70 +259,54 @@ bool baa_generate_llvm_ir(BaaLLVMContext *context, BaaProgram *program)
 }
 
 // Generate LLVM IR for a function
-bool baa_generate_llvm_function(BaaLLVMContext *context, BaaFunction *function)
+bool baa_generate_llvm_function(BaaLLVMContext *context, BaaNode *function_node)
 {
-    if (!context || !function)
+    if (!context || !function_node || function_node->kind != BAA_NODE_KIND_FUNCTION_DEF)
     {
-        set_llvm_error(context, L"Invalid function");
+        set_llvm_error(context, L"Invalid function node");
+        return false;
+    }
+
+    BaaFunctionDefData *func_data = (BaaFunctionDefData *)function_node->data;
+    if (!func_data)
+    {
+        set_llvm_error(context, L"Invalid function data");
         return false;
     }
 
     // Convert function name to char*
-    char *c_function_name = wchar_to_char(function->name);
+    char *c_function_name = wchar_to_char(func_data->name);
     if (!c_function_name)
     {
         set_llvm_error(context, L"Failed to convert function name");
         return false;
     }
 
-    // Get return type
-    LLVMTypeRef return_type = baa_type_to_llvm_type(context, function->return_type);
-    if (!return_type)
-    {
-        free(c_function_name);
-        return false;
-    }
+    // TODO: Extract return type from func_data->return_type_node
+    // For now assuming INT for simplicity or we need a helper to convert AST Type to BaaType
+    // LLVMTypeRef return_type = baa_type_to_llvm_type(context, function->return_type);
+    LLVMTypeRef return_type = LLVMInt32TypeInContext(context->llvm_context); // Temporary Fix
 
     // Create function type
     LLVMTypeRef *param_types = NULL;
     size_t param_count = 0;
 
-    // Set up parameter types if any
-    if (function->parameter_count > 0 && function->parameters)
+    if (func_data->parameter_count > 0 && func_data->parameters)
     {
-        param_types = (LLVMTypeRef *)malloc(sizeof(LLVMTypeRef) * function->parameter_count);
-        if (!param_types)
+        param_types = (LLVMTypeRef *)malloc(sizeof(LLVMTypeRef) * func_data->parameter_count);
+        // ... parameter processing placeholder ...
+        // Needs logic to extract type from AST nodes
+        for (size_t i = 0; i < func_data->parameter_count; i++)
         {
-            free(c_function_name);
-            set_llvm_error(context, L"Memory allocation failure");
-            return false;
+            param_types[i] = LLVMInt32TypeInContext(context->llvm_context); // Temporary Fix
         }
-
-        for (size_t i = 0; i < function->parameter_count; i++)
-        {
-            if (!function->parameters[i]) {
-                fprintf(stderr, "Error: NULL parameter found in function %ls\n", function->name);
-                free(param_types);
-                return NULL;
-            }
-            if (!function->parameters[i]->type) {
-                fprintf(stderr, "Error: NULL type for parameter %ls in function %ls\n", function->parameters[i]->name, function->name);
-                free(param_types);
-                return NULL;
-            }
-            param_types[i] = baa_type_to_llvm_type(context, function->parameters[i]->type);
-        }
-
-        param_count = function->parameter_count;
+        param_count = func_data->parameter_count;
     }
 
     LLVMTypeRef function_type = LLVMFunctionType(return_type, param_types, param_count, 0);
 
-    // Free the parameter types array if it was allocated
     if (param_types)
-    {
         free(param_types);
-    }
 
     // Create function
     LLVMValueRef llvm_function = LLVMAddFunction(context->llvm_module, c_function_name, function_type);
@@ -331,94 +325,25 @@ bool baa_generate_llvm_function(BaaLLVMContext *context, BaaFunction *function)
     LLVMBasicBlockRef entry_block = LLVMAppendBasicBlockInContext(
         context->llvm_context, llvm_function, "entry");
 
-    // Position builder at the end of the entry block
     LLVMPositionBuilderAtEnd(context->llvm_builder, entry_block);
 
-    // Save current function and block
     context->current_function = llvm_function;
     context->current_block = entry_block;
 
-    // Name parameters
-    if (function->parameter_count > 0 && function->parameters)
-    {
-        for (size_t i = 0; i < function->parameter_count; i++)
-        {
-            LLVMValueRef param = LLVMGetParam(llvm_function, i);
-            char *param_name = NULL; // Declare param_name here
-
-            if (function->parameters[i] && function->parameters[i]->name) {
-                param_name = wchar_to_char(function->parameters[i]->name);
-                LLVMSetValueName2(param, param_name, strlen(param_name));
-                // Don't free param_name yet, needed for alloca
-            } else {
-                char default_name[16];
-                snprintf(default_name, sizeof(default_name), "arg%zu", i);
-                param_name = strdup(default_name); // Use strdup for char*
-                LLVMSetValueName2(param, default_name, strlen(default_name));
-            }
-
-            // Create allocas for all parameters
-            LLVMValueRef alloca = LLVMBuildAlloca(
-                context->llvm_builder,
-                LLVMTypeOf(param),
-                param_name ? param_name : "arg"); // Use param_name or default
-
-            // Store the incoming parameter value to the stack
-            LLVMBuildStore(context->llvm_builder, param, alloca);
-
-            if (param_name) { // Free param_name after use
-                free(param_name); // Use free for strdup result
-            }
-        }
-    }
-
     // Generate code for function body
-    if (function->body)
+    if (func_data->body)
     {
-        // Generate code for each statement in the block directly
-        for (size_t i = 0; i < function->body->count; ++i)
+        // Body is a Block Statement Node
+        if (!baa_generate_llvm_statement(context, func_data->body))
         {
-            if (!baa_generate_llvm_statement(context, function->body->statements[i]))
-            {
-                return false;
-            }
+            return false;
         }
     }
 
-    // Add return instruction if needed
+    // Add return instruction if needed (default void/int)
     if (LLVMGetBasicBlockTerminator(entry_block) == NULL)
     {
-        if (function->return_type && function->return_type->kind != BAA_TYPE_VOID)
-        {
-            // For non-void functions, return a default value
-            LLVMValueRef default_return_value = NULL;
-
-            switch (function->return_type->kind)
-            {
-            case BAA_TYPE_INT:
-                default_return_value = LLVMConstInt(LLVMInt32TypeInContext(context->llvm_context), 0, 0);
-                break;
-            case BAA_TYPE_FLOAT:
-                default_return_value = LLVMConstReal(LLVMFloatTypeInContext(context->llvm_context), 0.0);
-                break;
-            case BAA_TYPE_CHAR:
-                default_return_value = LLVMConstInt(LLVMInt8TypeInContext(context->llvm_context), 0, 0);
-                break;
-            case BAA_TYPE_BOOL:
-                default_return_value = LLVMConstInt(LLVMInt1TypeInContext(context->llvm_context), 0, 0);
-                break;
-            default:
-                set_llvm_error(context, L"Unsupported return type");
-                return false;
-            }
-
-            LLVMBuildRet(context->llvm_builder, default_return_value);
-        }
-        else
-        {
-            // For void functions, just return void
-            LLVMBuildRetVoid(context->llvm_builder);
-        }
+        LLVMBuildRet(context->llvm_builder, LLVMConstInt(LLVMInt32TypeInContext(context->llvm_context), 0, 0));
     }
 
     return true;

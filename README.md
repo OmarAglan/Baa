@@ -1,7 +1,5 @@
 # Baa Programming Language (لغة البرمجة باء)
 
-**Available in / متوفر باللغة:** [English](#english) | [العربية](README_AR.md)
-
 ---
 
 ## English

@@ -1,9 +1,7 @@
 # Baa Language Lexer API Reference
 
-**Available in:** [English](#) | [العربية](../05_مرجع_واجهة_البرمجة/واجهة_المحلل_اللفظي.md)
-
 **Status:** ✅ Complete  
-**Last Updated:** 2025-01-09  
+**Last Updated:** 2025-12-05  
 **Version Compatibility:** v1.0.0+  
 
 ## Overview
@@ -402,4 +400,4 @@ void classify_token(BaaToken* token) {
 
 ---
 
-*This document is part of the [Baa Language Documentation](../NAVIGATION.md)*
+*This document is part of the [Baa Language Documentation](../index.md)*

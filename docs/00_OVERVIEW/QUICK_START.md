@@ -1,22 +1,21 @@
 # Baa Language Quick Start Guide
-# دليل البداية السريعة للغة باء
 
-**Get started with Baa in 5 minutes!** | **ابدأ مع باء في 5 دقائق!**
+**Get started with Baa in 5 minutes!**
 
-**Available in:** [English](#english-quick-start) | [العربية](#arabic-quick-start---دليل-البداية-السريعة-باللغة-العربية)
+**Status:** ✅ Complete  
+**Last Updated:** 2025-12-05  
+**Version:** v0.1.27.0+
 
 ---
 
-## English Quick Start
-
-### 1. Prerequisites
+## 1. Prerequisites
 
 - **CMake** (3.20 or higher)
 - **C11 compliant compiler** (GCC, Clang, or MSVC)
 - **Git**
 - **(Optional)** LLVM development libraries
 
-### 2. Clone and Build
+## 2. Clone and Build
 
 ```bash
 # Clone the repository
@@ -37,7 +36,7 @@ cmake -G "Ninja" -DCMAKE_C_COMPILER="C:/Program Files/LLVM/bin/clang-cl.exe" ..
 cmake --build .
 ```
 
-### 3. Test the Installation
+## 3. Test the Installation
 
 ```bash
 # Test the lexer
@@ -50,23 +49,24 @@ cmake --build .
 ./tools/baa_parser_tester ../tests/resources/parser_tests/valid_simple.baa
 ```
 
-### 4. Your First Baa Program
+## 4. Your First Baa Program
 
-Create a file called `hello.ب`:
+Create a file called `hello.baa`:
 
 ```baa
-// hello.ب - Your first Baa program
-#تضمين <stdio> // Standard I/O (hypothetical)
-
+// hello.baa - Your first Baa program
 عدد_صحيح رئيسية() {
     اطبع("مرحباً بالعالم!").
-    إرجع 0.
+    إرجع ٠.
 }
 ```
 
-### 5. Language Features Overview
+> **Note:** Baa uses `.` (period) as the statement terminator, not `;` (semicolon).
 
-#### Arabic Keywords
+## 5. Language Features Overview
+
+### Arabic Keywords
+
 ```baa
 // Variables and constants
 عدد_صحيح العدد = ١٠.
@@ -90,12 +90,13 @@ Create a file called `hello.ب`:
     العدد = العدد + ١.
 }
 
-لكل (عدد_صحيح ي = ٠؛ ي < ١٠؛ ي++) {
+لكل (عدد_صحيح ي = ٠; ي < ١٠; ي++) {
     اطبع(ي).
 }
 ```
 
-#### Arabic Numerals and Strings
+### Arabic Numerals and Strings
+
 ```baa
 // Arabic-Indic numerals
 عدد_صحيح عدد_عربي = ١٢٣٤٥.
@@ -113,145 +114,34 @@ Create a file called `hello.ب`:
 حرف همزة = '\ي0623'.      // Arabic letter Alef with Hamza above
 ```
 
-### 6. Next Steps
+## 6. Key Syntax Differences from C
+
+| Feature | C | Baa |
+|---------|---|-----|
+| Statement terminator | `;` | `.` |
+| Keywords | English | Arabic (`إذا`, `طالما`, `إرجع`) |
+| Struct member access | `.` | `::` |
+| Exponent marker | `e`/`E` | `أ` |
+| Escape sequences | `\n`, `\t` | `\س`, `\م` |
+
+## 7. Next Steps
 
 1. **Read the documentation**: Start with [Language Specification](../01_LANGUAGE_SPECIFICATION/LANGUAGE_OVERVIEW.md)
 2. **Explore examples**: Check out test files in `tests/resources/`
 3. **Learn the architecture**: Read [Architecture Overview](../02_COMPILER_ARCHITECTURE/ARCHITECTURE_OVERVIEW.md)
 4. **Contribute**: See [Development Guide](../03_DEVELOPMENT/CONTRIBUTING.md)
 
-### 7. Getting Help
+## 8. Getting Help
 
-- **Documentation**: [Complete Documentation Index](../_navigation/index.md)
+- **Documentation**: [Complete Documentation Index](../index.md)
 - **Issues**: Create an issue on the project repository
 - **Community**: Join discussions about Arabic programming languages
 
 ---
 
-## Arabic Quick Start - دليل البداية السريعة باللغة العربية
+## Common Issues and Solutions
 
-### 1. المتطلبات المسبقة
-
-- **CMake** (3.20 أو أحدث)
-- **مترجم C11 متوافق** (GCC, Clang, أو MSVC)
-- **Git**
-- **(اختياري)** مكتبات تطوير LLVM
-
-### 2. الاستنساخ والبناء
-
-```bash
-# استنساخ المستودع
-git clone https://github.com/OmarAglan/baa.git
-cd baa
-
-# إنشاء دليل البناء
-mkdir build
-cd build
-
-# التكوين (Linux/macOS)
-cmake -G "Ninja" ..
-
-# التكوين (Windows مع LLVM/Clang)
-cmake -G "Ninja" -DCMAKE_C_COMPILER="C:/Program Files/LLVM/bin/clang-cl.exe" ..
-
-# البناء
-cmake --build .
-```
-
-### 3. اختبار التثبيت
-
-```bash
-# اختبار المحلل اللفظي
-./tools/baa_lexer_tester ../tests/resources/lexer_test_cases/lexer_test_suite.baa
-
-# اختبار المعالج المسبق
-./tools/baa_preprocessor_tester ../tests/resources/preprocessor_test_cases/preprocessor_test_all.baa
-
-# اختبار المحلل النحوي (إذا كان متوفراً)
-./tools/baa_parser_tester ../tests/resources/parser_tests/valid_simple.baa
-```
-
-### 4. برنامجك الأول بلغة باء
-
-أنشئ ملف يسمى `مرحبا.ب`:
-
-```baa
-// مرحبا.ب - برنامجك الأول بلغة باء
-#تضمين <stdio> // إدخال/إخراج قياسي (افتراضي)
-
-عدد_صحيح رئيسية() {
-    اطبع("مرحباً بالعالم!").
-    إرجع 0.
-}
-```
-
-### 5. نظرة عامة على ميزات اللغة
-
-#### الكلمات المفتاحية العربية
-```baa
-// المتغيرات والثوابت
-عدد_صحيح العدد = ١٠.
-ثابت عدد_حقيقي PI = ٣٫١٤١٥٩.
-منطقي النتيجة = صحيح.
-
-// الدوال
-عدد_صحيح جمع(عدد_صحيح أ، عدد_صحيح ب) {
-    إرجع أ + ب.
-}
-
-// التحكم في التدفق
-إذا (العدد > ٥) {
-    اطبع("العدد أكبر من خمسة").
-} وإلا {
-    اطبع("العدد خمسة أو أقل").
-}
-
-// الحلقات
-طالما (العدد < ٢٠) {
-    العدد = العدد + ١.
-}
-
-لكل (عدد_صحيح ي = ٠؛ ي < ١٠؛ ي++) {
-    اطبع(ي).
-}
-```
-
-#### الأرقام والسلاسل النصية العربية
-```baa
-// الأرقام العربية-الهندية
-عدد_صحيح عدد_عربي = ١٢٣٤٥.
-عدد_حقيقي رقم_عشري = ٣٫١٤.
-
-// الترميز العلمي مع علامة الأس العربية
-عدد_حقيقي كبير = ١٫٢٣أ٦.  // 1.23 × 10^6
-
-// تسلسلات الهروب العربية
-حرف سطر_جديد = '\س'.     // سطر جديد
-حرف تاب = '\م'.           // تاب
-نص رسالة = "مرحبا\سبالعالم".  // "Hello\nWorld"
-
-// هروب Unicode
-حرف همزة = '\ي0623'.      // حرف الألف مع الهمزة فوق
-```
-
-### 6. الخطوات التالية
-
-1. **اقرأ التوثيق**: ابدأ بـ [مواصفات اللغة](../01_مواصفات_اللغة/نظرة_عامة_على_اللغة.md)
-2. **استكشف الأمثلة**: تحقق من ملفات الاختبار في `tests/resources/`
-3. **تعلم المعمارية**: اقرأ [نظرة عامة على المعمارية](../02_معمارية_المترجم/نظرة_عامة_على_المعمارية.md)
-4. **ساهم**: انظر [دليل التطوير](../03_التطوير/دليل_المساهمة.md)
-
-### 7. الحصول على المساعدة
-
-- **التوثيق**: [فهرس التوثيق الكامل](../_navigation/index_ar.md)
-- **المشاكل**: أنشئ مشكلة في مستودع المشروع
-- **المجتمع**: انضم للنقاشات حول لغات البرمجة العربية
-
----
-
-## Common Issues and Solutions / المشاكل الشائعة والحلول
-
-### Build Issues / مشاكل البناء
+### Build Issues
 
 **Problem**: `CMake Error: CMAKE_C_COMPILER not set`  
 **Solution**: Install a C compiler or specify the compiler path:
@@ -261,33 +151,19 @@ cmake -DCMAKE_C_COMPILER=gcc ..
 cmake -DCMAKE_C_COMPILER=clang ..
 ```
 
-**المشكلة**: `خطأ CMake: CMAKE_C_COMPILER غير محدد`  
-**الحل**: ثبت مترجم C أو حدد مسار المترجم:
-```bash
-cmake -DCMAKE_C_COMPILER=gcc ..
-# أو
-cmake -DCMAKE_C_COMPILER=clang ..
-```
-
-### Character Encoding / ترميز الحروف
+### Character Encoding
 
 **Problem**: Arabic text appears garbled  
 **Solution**: Ensure your source files are saved as UTF-8 or UTF-16LE with BOM
 
-**المشكلة**: النص العربي يظهر مشوهاً  
-**الحل**: تأكد أن ملفات المصدر محفوظة بـ UTF-8 أو UTF-16LE مع BOM
-
-### Tool Output / إخراج الأدوات
+### Tool Output
 
 **Problem**: Lexer test output not visible  
 **Solution**: Check the generated `lexer_test_output.txt` file in your current directory
 
-**المشكلة**: إخراج اختبار المحلل اللفظي غير مرئي  
-**الحل**: تحقق من ملف `lexer_test_output.txt` المولد في دليلك الحالي
-
 ---
 
-## Feature Checklist / قائمة فحص الميزات
+## Feature Checklist
 
 Use this checklist to verify your Baa installation is working correctly:
 
@@ -298,16 +174,6 @@ Use this checklist to verify your Baa installation is working correctly:
 - [ ] 📋 **Semantic Analysis**: Symbol resolution *(Next Phase)*
 - [ ] 📋 **Code Generation**: LLVM IR output *(Next Phase)*
 
-استخدم هذه القائمة للتحقق من أن تثبيت باء يعمل بشكل صحيح:
-
-- [ ] ✅ **المعالج المسبق**: يمكنه التعامل مع توجيهات `#تضمين` و `#تعريف`
-- [ ] ✅ **المحلل اللفظي**: يرمز الكلمات المفتاحية والأرقام العربية بشكل صحيح
-- [ ] ✅ **المحلل النحوي**: يحلل تعريفات واستدعاءات الدوال
-- [ ] ✅ **شجرة النحو المجردة**: يبني أشجار نحو مجردة كاملة
-- [ ] 📋 **التحليل الدلالي**: حل الرموز *(المرحلة التالية)*
-- [ ] 📋 **توليد الكود**: إخراج LLVM IR *(المرحلة التالية)*
-
 ---
 
-**Ready to start programming in Arabic? Welcome to Baa!** 🎉  
-**مستعد لبدء البرمجة بالعربية؟ مرحباً بك في باء!** 🎉
+**Ready to start programming in Arabic? Welcome to Baa!** 🎉

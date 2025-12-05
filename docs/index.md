@@ -75,6 +75,15 @@ Baa (باء) is a modern programming language that brings Arabic syntax to syste
 | [**CodeGen**](05_API_REFERENCE/CODEGEN_API.md) | Code generation |
 | [**Utilities**](05_API_REFERENCE/UTILITIES_API.md) | Helper functions |
 
+### Examples
+| Example | Description |
+|---------|-------------|
+| [**Hello World**](06_EXAMPLES/hello_world.baa) | Basic program |
+| [**Variables**](06_EXAMPLES/variables.baa) | Types and declarations |
+| [**Functions**](06_EXAMPLES/functions.baa) | Function definitions |
+| [**Control Flow**](06_EXAMPLES/control_flow.baa) | Loops and conditionals |
+| [**Arabic Showcase**](06_EXAMPLES/arabic_showcase.baa) | Full Arabic features |
+
 ### Compiler Internals
 | Document | Description |
 |----------|-------------|

@@ -1,15 +1,20 @@
-# Baa Language Roadmap (خارطة الطريق)
+# Baa Language Roadmap
 
-## Current Version State (v0.2.0.0 - Critical Maintenance)
+**Last Updated:** 2025-12-05  
+**Version:** v0.1.27.0
 
-**Overall Status:** The core compiler infrastructure is built, but currently in a **Critical Maintenance** phase due to regressions in the preprocessor discovered during advanced testing.
+## Current Version State
 
-* **Build System:** ✅ **COMPLETE** - Modular CMake is stable.
-* **Lexer:** ✅ **PRODUCTION READY** - Stable, feature-complete, and robust.
-* **Parser & AST:** ✅ **COMPLETE (v3)** - Core language parsing (Functions, Control Flow) is done.
-* **Preprocessor:** ⚠️ **CRITICAL REGRESSION** - Core directives work, but advanced macro expansion (stringification, pasting) is currently broken and needs immediate fixing.
-* **Semantic Analysis:** 📅 **NEXT MAJOR PHASE** - Design phase complete; implementation pending.
-* **Codegen:** 🛠️ **REFACTORING REQUIRED** - Needs alignment with new AST (v3).
+**Overall Status:** Core compiler infrastructure production-ready. Full pipeline (Preprocessor → Lexer → Parser → AST → CodeGen stub) is operational.
+
+| Component | Status |
+|-----------|--------|
+| **Build System** | ✅ Complete |
+| **Preprocessor** | ✅ Production Ready |
+| **Lexer** | ✅ Production Ready |
+| **Parser & AST** | ✅ Production Ready |
+| **Semantic Analysis** | 📋 Next Phase |
+| **Code Generation** | 🔄 Stub (LLVM pending) |
 
 ---
 

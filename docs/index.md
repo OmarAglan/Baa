@@ -40,6 +40,8 @@ Baa (باء) is a programming language designed to support Arabic syntax while m
 - [**Lexer API**](05_API_REFERENCE/LEXER_API.md) - Lexer functions
 - [**Parser API**](05_API_REFERENCE/PARSER_API.md) - Parser functions
 - [**Preprocessor API**](05_API_REFERENCE/PREPROCESSOR_API.md) - Preprocessor functions
+- [**AST API**](05_API_REFERENCE/AST_API.md) - Abstract Syntax Tree functions
+- [**Code Generation API**](05_API_REFERENCE/CODEGEN_API.md) - Code generation functions
 - [**Utilities API**](05_API_REFERENCE/UTILITIES_API.md) - Utility functions
 
 ### Roadmap

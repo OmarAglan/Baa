@@ -1,10 +1,8 @@
 # Baa Compiler Architecture Visual Overview
 
-**Available in:** [English](#) | [العربية](../02_معمارية_المترجم/نظرة_مرئية_شاملة.md)
-
 **Status:** ✅ Complete  
-**Last Updated:** 2025-01-09  
-**Version Compatibility:** v1.0.0+  
+**Last Updated:** 2025-12-05  
+**Version:** v0.1.27.0
 
 ## Overview
 
@@ -248,4 +246,4 @@ typedef struct BaaNode {
 
 ---
 
-*This document is part of the [Baa Language Documentation](../NAVIGATION.md)*
+*This document is part of the [Baa Language Documentation](../index.md)*

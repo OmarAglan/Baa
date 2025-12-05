@@ -1,9 +1,9 @@
-# Baa Preprocessor Documentation (توثيق المعالج المسبق)
+# Baa Preprocessor Documentation
 
 ---
-**Status:** Production-Ready ✅
-**Last Updated:** 2025-11-06
-**Version:** v0.1.15+
+**Status:** Production-Ready ✅  
+**Last Updated:** 2025-12-05  
+**Version:** v0.1.27.0  
 **Implementation:** Complete with C99-compliant features, enhanced error handling, and full Arabic directive support
 
 ---

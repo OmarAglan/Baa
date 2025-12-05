@@ -1,10 +1,10 @@
-# Baa Language AST Structure Documentation
+# Baa Language AST Documentation
 
 ---
-**Status:** Production-Ready ✅
-**Last Updated:** 2025-11-06
-**Version:** v0.1.15+
-**Priority 4:** Completed (Function Definitions and Calls)
+**Status:** Production-Ready ✅  
+**Last Updated:** 2025-12-05  
+**Version:** v0.1.27.0  
+**Priority 4:** Completed (Function Definitions and Calls)  
 **Implementation:** All core AST node types implemented and functional
 
 ---

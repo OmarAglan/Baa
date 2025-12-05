@@ -1,16 +1,16 @@
 # Baa Language Architecture
 
 ---
-**Status:** Core Infrastructure Production-Ready ✅ | Semantic Analysis & Code Generation Planned 📋
-**Last Updated:** 2025-11-06
-**Version:** v0.1.15+
+**Status:** Core Infrastructure Production-Ready ✅ | Semantic Analysis & Code Generation In Progress 🔄  
+**Last Updated:** 2025-12-05  
+**Version:** v0.1.27.0  
 **Priority 4 Status:** Completed (Preprocessor, Lexer, Parser, AST with Function Support)
 
 ---
 
 ## Overview
 
-Baa (باء) is designed with a modular architecture that separates concerns into distinct components. Each component is responsible for a specific aspect of the compilation process, making the system maintainable and extensible. **As of 2025-11-06, the core compiler infrastructure is production-ready with Priority 4 (Function Definitions and Calls) completed.**
+Baa (باء) is designed with a modular architecture that separates concerns into distinct components. Each component is responsible for a specific aspect of the compilation process, making the system maintainable and extensible. **As of 2025-12-05, the core compiler infrastructure is production-ready with Priority 4 (Function Definitions and Calls) completed. The full pipeline (Preprocessor → Lexer → Parser → AST → CodeGen stub) is connected and operational.**
 
 ## Core Components
 

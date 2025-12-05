@@ -318,5 +318,3 @@ This project is licensed under the MIT License - see the [LICENSE](./LICENSE) fi
 ---
 
 **Baa Programming Language - Arabic Programming for the Future** 🚀
-
-**Note:** This documentation is also available [in Arabic](README_AR.md).

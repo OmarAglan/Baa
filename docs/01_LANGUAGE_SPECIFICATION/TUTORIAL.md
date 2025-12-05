@@ -2,7 +2,7 @@
 
 **Status:** ✅ Complete  
 **Last Updated:** 2025-12-05  
-**Version Compatibility:** v1.0.0+  
+**Version:** v0.1.27.0
 
 ## Overview
 

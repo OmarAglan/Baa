@@ -1,101 +1,104 @@
-# هيكل مشروع لغة باء (Baa Project Structure)
+# Baa Project Structure
 
-## نظرة عامة (Overview)
+## Overview
 
-يوضح هذا المستند الهيكل التنظيمي لمجلدات وملفات مشروع مترجم لغة باء. يهدف هذا الهيكل إلى تحقيق الوضوح، الفصل بين الاهتمامات، وتسهيل عملية التطوير والصيانة.
+This document describes the organizational structure of the Baa compiler project. The structure aims to achieve clarity, separation of concerns, and ease of development and maintenance.
 
-## المجلدات الرئيسية (Main Directories)
+## Main Directories
 
 ```
 baa/
-├── .editorconfig            # إعدادات المحرر لتوحيد نمط الشيفرة
-├── .gitignore               # الملفات والمجلدات التي يتجاهلها Git
-├── CHANGELOG.md             # سجل التغييرات والإصدارات
-├── CMakeLists.txt           # ملف بناء المشروع الرئيسي (CMake)
-├── LICENSE                  # رخصة المشروع (MIT)
-├── README.md                # معلومات عامة عن المشروع ومقدمة
+├── .editorconfig            # Editor settings for consistent code style
+├── .gitignore               # Files ignored by Git
+├── CHANGELOG.md             # Version history and release notes
+├── CMakeLists.txt           # Main CMake build file
+├── LICENSE                  # MIT License
+├── README.md                # Project overview and introduction
 │
-├── cmake/                   # وحدات CMake المخصصة (Custom CMake modules)
-│   └── BaaCompilerSettings.cmake # إعدادات المترجم المشتركة (مثال)
+├── cmake/                   # Custom CMake modules
+│   └── BaaCompilerSettings.cmake # Shared compiler settings
 │
-├── docs/                    # مجلد التوثيق (Documentation)
-│   ├── AST.md               # (تصميم جديد) وثيقة تصميم شجرة النحو المجردة
-│   ├── AST_ROADMAP.md       # (تصميم جديد) خارطة طريق تنفيذ شجرة النحو المجردة
-│   ├── CMAKE_ROADMAP.md     # خارطة طريق تطوير نظام البناء CMake
-│   ├── LEXER_ROADMAP.md     # خارطة طريق تطوير المحلل اللفظي
-│   ├── LLVM_CODEGEN.md      # وثيقة تصميم توليد الشيفرة باستخدام LLVM
-│   ├── LLVM_CODEGEN_ROADMAP.md # خارطة طريق تنفيذ توليد الشيفرة LLVM
-│   ├── PARSER.md            # (تصميم جديد) وثيقة تصميم المحلل النحوي
-│   ├── PARSER_ROADMAP.md    # (تصميم جديد) خارطة طريق تنفيذ المحلل النحوي
-│   ├── PREPROCESSOR_ROADMAP.md # خارطة طريق تطوير المعالج المسبق
-│   ├── SEMANTIC_ANALYSIS.md # (مخطط) وثيقة تصميم التحليل الدلالي
-│   ├── SEMANTIC_ANALYSIS_ROADMAP.md # (مخطط) خارطة طريق التحليل الدلالي
-│   ├── arabic_support.md    # تفاصيل دعم اللغة العربية
-│   ├── architecture.md      # نظرة عامة على معمارية المترجم
-│   ├── c_comparison.md      # مقارنة مع لغة C
-│   ├── development.md       # دليل تطوير المشروع
-│   ├── language.md          # مواصفات لغة باء
-│   ├── lexer.md             # وثائق المحلل اللفظي
-│   ├── preprocessor.md      # وثائق المعالج المسبق
-│   ├── project_structure.md # هذا الملف (هيكل المشروع)
-│   └── roadmap.md           # خارطة الطريق العامة للمشروع
+├── docs/                    # Documentation
+│   ├── index.md             # Documentation entry point
+│   ├── 00_OVERVIEW/         # Overview and getting started
+│   ├── 01_LANGUAGE_SPECIFICATION/  # Language reference
+│   ├── 02_COMPILER_ARCHITECTURE/   # Compiler internals
+│   ├── 03_DEVELOPMENT/      # Development guides
+│   ├── 04_ROADMAP/          # Development roadmaps
+│   └── 05_API_REFERENCE/    # API documentation
 │
-├── include/                 # ملفات الرأس العامة للمكتبات (Public headers for libraries)
-│   └── baa/                 # مساحة الاسم الرئيسية لمكتبات باء
-│       ├── analysis/        # واجهات التحليل الدلالي وتحليل التدفق
+├── include/                 # Public header files
+│   └── baa/                 # Main namespace for Baa libraries
+│       ├── analysis/        # Semantic analysis interfaces
 │       │   ├── flow_analysis.h
 │       │   └── flow_errors.h
-│       ├── codegen/         # واجهات توليد الشيفرة
+│       ├── ast/             # AST definitions
+│       │   ├── ast.h
+│       │   └── ast_types.h
+│       ├── codegen/         # Code generation interfaces
 │       │   ├── codegen.h
 │       │   └── llvm_codegen.h
-│       ├── compiler.h       # واجهة المترجم الرئيسية (الدالة compile_baa_file)
-│       ├── diagnostics/     # (مخطط، يعتمد على AST) واجهات نظام التشخيصات والأخطاء
+│       ├── compiler.h       # Main compiler interface
+│       ├── diagnostics/     # Error reporting
 │       │   └── diagnostics.h
-│       ├── lexer/           # واجهات المحلل اللفظي
-│       │   ├── lexer.h              # الواجهة العامة للمحلل اللفظي
-│       │   ├── lexer_char_utils.h   # أدوات مساعدة للحروف (عامة إذا احتاجتها مكونات أخرى)
-│       │   ├── lexer_internal.h     # (عادة لا يكون هنا، بل في src/lexer) تعريفات داخلية إذا كانت مشتركة بشكل استثنائي
-│       │   └── token_scanners.h   # (عادة لا يكون هنا، بل في src/lexer)
-│       ├── operators/       # واجهة نظام العمليات
+│       ├── lexer/           # Lexer interfaces
+│       │   ├── lexer.h
+│       │   ├── lexer_char_utils.h
+│       │   └── token_scanners.h
+│       ├── operators/       # Operator system
 │       │   └── operators.h
-│       ├── preprocessor/    # واجهة المعالج المسبق
+│       ├── parser/          # Parser interface
+│       │   └── parser.h
+│       ├── preprocessor/    # Preprocessor interface
 │       │   └── preprocessor.h
-│       ├── types/           # واجهة نظام الأنواع
+│       ├── types/           # Type system interface
 │       │   └── types.h
-│       └── utils/           # واجهات الأدوات المساعدة
+│       └── utils/           # Utility interfaces
 │           ├── errors.h
 │           └── utils.h
 │
-├── src/                     # الشيفرة المصدرية للمكتبات والمترجم (Source code)
-│   ├── CMakeLists.txt       # يضيف المجلدات الفرعية للمكونات كمكتبات
+├── src/                     # Source code
+│   ├── CMakeLists.txt       # Adds component subdirectories
 │   │
-│   ├── analysis/            # تنفيذ التحليل الدلالي وتحليل التدفق
+│   ├── analysis/            # Semantic analysis implementation
 │   │   ├── CMakeLists.txt
 │   │   ├── flow_analysis.c
 │   │   └── flow_errors.c
 │   │
-│   ├── codegen/             # تنفيذ توليد الشيفرة
+│   ├── ast/                 # AST implementation
 │   │   ├── CMakeLists.txt
-│   │   ├── codegen.c        # المنطق العام لتوليد الشيفرة
-│   │   ├── llvm_codegen.c   # تنفيذ توليد الشيفرة باستخدام LLVM (إذا كان LLVM مفعلاً)
-│   │   └── llvm_stub.c      # تنفيذ بديل (stub) عند تعطيل LLVM
+│   │   ├── ast.c
+│   │   └── ast_nodes.c
 │   │
-│   ├── compiler.c           # منطق الترجمة الرئيسي (جزء من مكتبة baa_compiler_lib)
-│   │
-│   ├── lexer/               # تنفيذ المحلل اللفظي
+│   ├── codegen/             # Code generation implementation
 │   │   ├── CMakeLists.txt
-│   │   ├── lexer.c              # المنطق الرئيسي للمحلل اللفظي
-│   │   ├── lexer_char_utils.c   # تنفيذ أدوات الحروف
-│   │   ├── number_parser.c      # محلل الأرقام (تحويل النص إلى قيمة)
-│   │   └── token_scanners.c     # دوال مسح أنواع الرموز المختلفة
+│   │   ├── codegen.c        # General code generation logic
+│   │   ├── llvm_codegen.c   # LLVM backend (when enabled)
+│   │   └── llvm_stub.c      # Stub when LLVM is disabled
 │   │
-│   ├── main.c               # نقطة الدخول الرئيسية لبرنامج المترجم `baa`
+│   ├── compiler.c           # Main compilation logic
 │   │
-│   ├── operators/           # تنفيذ نظام العمليات
+│   ├── lexer/               # Lexer implementation
+│   │   ├── CMakeLists.txt
+│   │   ├── lexer.c          # Core lexer logic
+│   │   ├── lexer_char_utils.c # Character utilities
+│   │   ├── number_parser.c  # Number literal conversion
+│   │   └── token_scanners.c # Token scanning functions
+│   │
+│   ├── main.c               # Main entry point for `baa` executable
+│   │
+│   ├── operators/           # Operator implementation
 │   │   ├── CMakeLists.txt
 │   │   └── operators.c
 │   │
-│   ├── preprocessor/        # تنفيذ المعالج المسبق
+│   ├── parser/              # Parser implementation
+│   │   ├── CMakeLists.txt
+│   │   ├── parser.c
+│   │   ├── declaration_parser.c
+│   │   ├── expression_parser.c
+│   │   └── statement_parser.c
+│   │
+│   ├── preprocessor/        # Preprocessor implementation
 │   │   ├── CMakeLists.txt
 │   │   ├── preprocessor.c
 │   │   ├── preprocessor_conditionals.c
@@ -103,78 +106,73 @@ baa/
 │   │   ├── preprocessor_directives.c
 │   │   ├── preprocessor_expansion.c
 │   │   ├── preprocessor_expr_eval.c
-│   │   ├── preprocessor_internal.h    # تعريفات داخلية مشتركة للمعالج المسبق
+│   │   ├── preprocessor_internal.h
 │   │   ├── preprocessor_line_processing.c
 │   │   ├── preprocessor_macros.c
 │   │   └── preprocessor_utils.c
 │   │
-│   ├── types/               # تنفيذ نظام الأنواع
+│   ├── types/               # Type system implementation
 │   │   ├── CMakeLists.txt
 │   │   └── types.c
 │   │
-│   └── utils/               # تنفيذ الأدوات المساعدة
+│   └── utils/               # Utility implementation
 │       ├── CMakeLists.txt
 │       └── utils.c
 │
-├── tests/                   # الاختبارات (Unit and Integration Tests)
-│   ├── CMakeLists.txt       # إعداد بيئة الاختبارات
+├── tests/                   # Test suite
+│   ├── CMakeLists.txt       # Test configuration
 │   │
-│   ├── framework/           # إطار عمل بسيط للاختبارات
+│   ├── framework/           # Simple test framework
 │   │   ├── test_framework.c
 │   │   └── test_framework.h
 │   │
-│   ├── codegen_tests/       # اختبارات خاصة بتوليد الشيفرة (حالياً قد تعتمد على AST القديم)
-│   │   ├── CMakeLists.txt
-│   │   ├── llvm_codegen_test.c # (قد يحتاج لتحديث أو تعطيل مؤقت)
-│   │   ├── llvm_test.c         # (قد يحتاج لتحديث أو تعطيل مؤقت)
-│   │   └── test_codegen.c      # (قد يحتاج لتحديث أو تعطيل مؤقت)
-│   │
-│   ├── integration/         # اختبارات التكامل (مخطط لها)
+│   ├── codegen_tests/       # Code generation tests
 │   │   └── CMakeLists.txt
 │   │
-│   ├── resources/           # ملفات الإدخال للاختبارات
-│   │   ├── lexer_test_cases/
-│   │   │   └── lexer_test_suite.baa
-│   │   └── preprocessor_test_cases/
-│   │       ├── include_test_header.baa
-│   │       ├── nested_include.baa
-│   │       └── preprocessor_test_all.baa
+│   ├── integration/         # Integration tests (planned)
+│   │   └── CMakeLists.txt
 │   │
-│   └── unit/                # اختبارات الوحدات لكل مكون
-│       ├── CMakeLists.txt     # يضيف مجلدات اختبارات الوحدات الفرعية
-│       ├── core/              # اختبارات المكونات الأساسية (الأنواع، العمليات)
-│       │   ├── CMakeLists.txt
-│       │   ├── test_operators.c # (قد يعتمد جزئيًا على AST/Parser القديم)
-│       │   └── test_types.c
+│   ├── resources/           # Test input files
+│   │   ├── lexer_test_cases/
+│   │   ├── parser_tests/
+│   │   └── preprocessor_test_cases/
+│   │
+│   └── unit/                # Unit tests for each component
+│       ├── CMakeLists.txt
+│       ├── core/
 │       ├── lexer/
-│       │   ├── CMakeLists.txt
-│       │   └── ... (ملفات اختبار المحلل اللفظي)
 │       ├── preprocessor/
-│       │   ├── CMakeLists.txt
-│       │   └── test_preprocessor.c
 │       └── utils/
-│           ├── CMakeLists.txt
-│           └── test_utils.c
 │
-└── tools/                   # أدوات مساعدة للمطورين أو المستخدمين
-    ├── baa_lexer_tester.c       # أداة اختبار المحلل اللفظي
-    ├── baa_parser_tester.c      # (مخطط) أداة اختبار المحلل النحوي (تعتمد على المحلل الجديد)
-    └── baa_preprocessor_tester.c # أداة اختبار المعالج المسبق
+└── tools/                   # Developer/user tools
+    ├── baa_lexer_tester.c
+    ├── baa_parser_tester.c
+    └── baa_preprocessor_tester.c
 ```
 
-## ملاحظات على الهيكل (Notes on Structure)
+## Notes on Structure
 
-* **`include/baa/`**: يحتوي على ملفات الرأس العامة (`.h`) التي تشكل الواجهة البرمجية (API) لكل مكتبة من مكونات المترجم. يجب أن تكون هذه الملفات مستقلة قدر الإمكان ولا تكشف التفاصيل الداخلية للتنفيذ.
-* **`src/<component>/`**: كل مكون رئيسي للمترجم (مثل `lexer`, `preprocessor`, `types`) له مجلده الخاص داخل `src/`.
-  * **`src/<component>/CMakeLists.txt`**: يعرف كيفية بناء المكتبة الثابتة (static library) الخاصة بالمكون (مثلاً `baa_lexer`, `baa_utils`).
-  * **`src/<component>/*.c`**: ملفات الشيفرة المصدرية لتنفيذ المكون.
-  * **`src/<component>/*_internal.h` (مثال: `preprocessor_internal.h`)**: ملفات رأس داخلية تستخدم لمشاركة التعريفات والدوال بين ملفات `.c` المختلفة *داخل نفس المكون فقط*. لا يجب تضمينها من خارج مجلد المكون.
-* **`src/compiler.c`**: يحتوي على المنطق الرئيسي لتنسيق عملية الترجمة (استدعاء المعالج المسبق، المحلل اللفظي، إلخ). يتم بناؤه الآن كجزء من مكتبة `baa_compiler_lib`.
-* **`src/main.c`**: نقطة الدخول لبرنامج `baa` القابل للتنفيذ. يستدعي بشكل أساسي الدوال من `baa_compiler_lib`.
-* **Parser & AST**: نظرًا لأنهما قيد إعادة التصميم، فإن ملفاتهما المحددة في `include/baa/ast`, `include/baa/parser`, `src/ast`, `src/parser` قد تكون بسيطة جدًا أو غير موجودة حاليًا حتى يكتمل التصميم الجديد.
-* **CMake Build System**:
-  * **Root `CMakeLists.txt`**: يدير المشروع بشكل عام، يحدد الخيارات، يجد الحزم (مثل LLVM)، ويضيف المجلدات الفرعية الرئيسية (`src`, `tests`, `tools`).
-  * **`cmake/BaaCompilerSettings.cmake`**: وحدة CMake مخصصة لتحديد إعدادات المترجم المشتركة (مثل تعريفات `UNICODE`) عبر مكتبة واجهة `BaaCommonSettings`.
-  * **Target-Centric Approach**: يتم تطبيق خصائص البناء (تعريفات، مسارات تضمين، روابط) على الأهداف المحددة (المكتبات والبرامج التنفيذية) بدلاً من استخدام أوامر عامة.
+### Header Files (`include/baa/`)
 
-يهدف هذا الهيكل إلى توفير أساس منظم وقابل للتطوير لمشروع لغة باء.
+Contains public header files (`.h`) that form the API for each compiler component. These files should be as independent as possible and not expose internal implementation details.
+
+### Source Files (`src/<component>/`)
+
+Each major compiler component (e.g., `lexer`, `preprocessor`, `types`) has its own directory inside `src/`:
+
+- **`src/<component>/CMakeLists.txt`**: Defines how to build the static library for that component
+- **`src/<component>/*.c`**: Source files implementing the component
+- **`src/<component>/*_internal.h`**: Internal headers shared between `.c` files *within the same component only*
+
+### Build System
+
+- **Root `CMakeLists.txt`**: Main project configuration, options, package finding
+- **`cmake/BaaCompilerSettings.cmake`**: Shared compiler settings via `BaaCommonSettings` interface library
+- **Target-Centric Approach**: Build properties applied to specific targets, not globally
+
+### Main Files
+
+- **`src/compiler.c`**: Orchestrates the compilation process (preprocessing, lexing, parsing, etc.)
+- **`src/main.c`**: Entry point for the `baa` executable
+
+This structure provides an organized and scalable foundation for the Baa project.

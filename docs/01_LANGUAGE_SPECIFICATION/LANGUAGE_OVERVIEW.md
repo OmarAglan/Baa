@@ -1,11 +1,7 @@
-# لغة باء - مواصفات اللغة
+# Baa Language Specification
 
-# B (باء) Language Specification
-
-**Available in:** [English](#) | [العربية](../01_مواصفات_اللغة/نظرة_عامة_على_اللغة.md)
-
-**Status:** 🚧 In Progress (Priority 4 Complete - Core Features Implemented)
-**Last Updated:** 2025-11-06
+**Status:** 🚧 In Progress (Priority 4 Complete - Core Features Implemented)  
+**Last Updated:** 2025-12-05  
 **Version Compatibility:** v0.1.15+
 
 ## 1. Basic Syntax Examples

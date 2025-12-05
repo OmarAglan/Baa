@@ -1,9 +1,7 @@
 # Baa Language Tutorial
 
-**Available in:** [English](#) | [العربية](../01_مواصفات_اللغة/دروس_تفاعلية.md)
-
 **Status:** ✅ Complete  
-**Last Updated:** 2025-01-09  
+**Last Updated:** 2025-12-05  
 **Version Compatibility:** v1.0.0+  
 
 ## Overview
@@ -732,4 +730,4 @@ Congratulations! You've completed the Baa language tutorial. Here's what you can
 
 ---
 
-*This tutorial is part of the [Baa Language Documentation](../NAVIGATION.md)*
+*This tutorial is part of the [Baa Language Documentation](../index.md)*

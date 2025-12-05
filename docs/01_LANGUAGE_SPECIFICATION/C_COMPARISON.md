@@ -1,31 +1,36 @@
-# C99 and B (باء) Comparison
+# C99 and Baa (باء) Comparison
+
+**Last Updated:** 2025-12-05  
+**Version:** v0.1.27.0
 
 ## Overview
 
-This document compares C99 language features with their B (باء) equivalents. Baa aims for conceptual alignment with many C features while introducing Arabic syntax and potentially some modern constructs. The status column reflects the current state of implementation (Lexer, Preprocessor, Core Systems) or planning for future phases (Parser, AST, Semantic Analysis, Code Generation).
+This document compares C99 language features with their Baa (باء) equivalents. Baa aims for conceptual alignment with many C features while introducing Arabic syntax and modern constructs.
 
-**Note:** "Implemented (Lexer/PP)" means the syntax is recognized by the lexer or handled by the preprocessor. Full parsing, semantic validation, and code generation for these features are often pending the new Parser/AST and subsequent compiler stages.
+**Status Legend:**
+- **✅ Complete** - Fully implemented (Lexer, Parser, AST)
+- **🔄 In Progress** - Parsing works, semantic analysis pending
+- **📋 Planned** - Future work
 
 ## Language Features
 
 ### Basic Types
 
-| C99 Feature     | B (باء) Equivalent        | Status                 | Notes                                                                 |
+| C99 Feature     | Baa (باء) Equivalent        | Status                 | Notes                                                                 |
 | ----------------- | ------------------------- | ---------------------- | --------------------------------------------------------------------- |
-| `char`          | `حرف`                     | Implemented (Core/Lexer) | Baa `حرف` is 16-bit (`wchar_t`) for Unicode.                          |
-| `int`           | `عدد_صحيح`                | Implemented (Core/Lexer) | Typically 32-bit signed integer.                                        |
-| `float`         | `عدد_حقيقي`               | Implemented (Core/Lexer) | Typically 32-bit floating point. Literal suffix `ح`.                    |
-| `double`        | `عدد_حقيقي` (modifier)    | Planned (Semantic/CodeGen) | Baa `عدد_حقيقي` might be `float` or `double` based on context/suffix. |
-| `long double`   | (No direct equivalent yet)  | Planned (Future)       |                                                                       |
-| `void`          | `فراغ`                    | Implemented (Core/Lexer) | Represents no value.                                                  |
-| `_Bool`/`bool`  | `منطقي`                   | Implemented (Core/Lexer) | Literals: `صحيح` (true), `خطأ` (false).                             |
-| `short int`     | `عدد_صحيح` (modifier)    | Planned (Semantic/CodeGen) |                                                                       |
-| `long int`      | `عدد_صحيح` (modifier `ط`)  | Planned (Semantic/CodeGen) | Via suffix `ط` on literals. Type system needs to distinguish.       |
-| `long long int` | `عدد_صحيح_طويل_جدا`       | Implemented (Lexer Suffix `طط`) / Planned (Type System/Semantic) | Keyword planned. Suffix `طط` on literals. |
-| `unsigned char` | `حرف` (modifier `غ`)      | Planned (Semantic/CodeGen) | Via suffix `غ` on char literals if applicable, or type system.     |
-| `unsigned int`  | `عدد_صحيح` (modifier `غ`)  | Planned (Semantic/CodeGen) | Via suffix `غ` on int literals. Type system needs to distinguish.        |
-| ... (other unsigned types) | (modifier `غ`)         | Planned (Semantic/CodeGen) |                                                                       |
-| `enum`          | `تعداد`                    | Planned (Parser/AST)   | Keyword `تعداد` exists.                                                |
+| `char`          | `حرف`                     | ✅ Complete | Baa `حرف` is 16-bit (`wchar_t`) for Unicode.                          |
+| `int`           | `عدد_صحيح`                | ✅ Complete | Typically 32-bit signed integer.                                        |
+| `float`         | `عدد_حقيقي`               | ✅ Complete | Typically 32-bit floating point. Literal suffix `ح`.                    |
+| `double`        | `عدد_حقيقي` (modifier)    | 🔄 In Progress | Baa `عدد_حقيقي` might be `float` or `double` based on context/suffix. |
+| `long double`   | (No direct equivalent yet)  | 📋 Planned       |                                                                       |
+| `void`          | `فراغ`                    | ✅ Complete | Represents no value.                                                  |
+| `_Bool`/`bool`  | `منطقي`                   | ✅ Complete | Literals: `صحيح` (true), `خطأ` (false).                             |
+| `short int`     | `عدد_صحيح` (modifier)    | 🔄 In Progress |                                                                       |
+| `long int`      | `عدد_صحيح` (modifier `ط`)  | 🔄 In Progress | Via suffix `ط` on literals. Type system needs to distinguish.       |
+| `long long int` | `عدد_صحيح_طويل_جدا`       | 🔄 In Progress | Keyword planned. Suffix `طط` on literals. |
+| `unsigned char` | `حرف` (modifier `غ`)      | 🔄 In Progress | Via suffix `غ` on char literals if applicable, or type system.     |
+| `unsigned int`  | `عدد_صحيح` (modifier `غ`)  | 🔄 In Progress | Via suffix `غ` on int literals. Type system needs to distinguish.        |
+| `enum`          | `تعداد`                    | 🔄 In Progress | Keyword `تعداد` exists, parser support pending.                        |
 
 ### Derived Types
 

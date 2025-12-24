@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.0.6] - In Progress
+- Added `إذا` (If) statement.
+- Added Block Scopes `{ ... }`.
+- Added Comparison Operators (`==`, `!=`).
+
 ## [0.0.5] - Completed
 - **Breaking:** Renamed `رقم` to `صحيح` (int) to align with C types.
 - Added support for Single Line Comments (`//`).

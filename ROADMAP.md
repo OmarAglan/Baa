@@ -1,6 +1,13 @@
 # Baa Roadmap
 
+## v0.0.6 (Current)
+- [ ] Lexer: Handle `{`, `}`, `(`, `)`, `==`, `!=`.
+- [ ] Lexer: Keyword `إذا`.
+- [ ] Parser: Recursive Block parsing.
+- [ ] Codegen: Label generation and Conditional Jumps (`je`, `jne`).
+
 ## v0.0.5 (Done)
+- [x] **Renamed** `رقم` to `صحيح` (int).
 - [x] **Comments:** Support comments (`//` or `#`).
 - [x] **Multi-digit Parsing:** Improve robustness of Arabic number parsing.
 - [x] **Error Handling:** Better error messages ("Variable 'x' not found").

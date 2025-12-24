@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <stdbool.h>
+#include <string.h>
 
 // --- LEXER ---
 
@@ -13,6 +14,9 @@ typedef enum {
     TOKEN_INT,      // 0-9 or ٠-٩
     TOKEN_RETURN,   // إرجع
     TOKEN_PRINT,    // اطبع
+    TOKEN_KEYWORD_INT, // رقم
+    TOKEN_IDENTIFIER, // Variable names (e.g., س)
+    TOKEN_ASSIGN,     // =
     TOKEN_DOT,      // .
     TOKEN_PLUS,     // +
     TOKEN_MINUS,    // -
@@ -21,7 +25,7 @@ typedef enum {
 
 typedef struct {
     TokenType type;
-    char* value;    // For numbers
+    char* value; // For keywords and identifiers
     int line;
 } Token;
 
@@ -38,11 +42,13 @@ Token lexer_next_token(Lexer* lexer);
 // --- AST (PARSER) ---
 
 typedef enum {
-    NODE_PROGRAM,
-    NODE_RETURN,
-    NODE_PRINT,     // New Node
-    NODE_INT,       // Leaf node: 5
-    NODE_BIN_OP     // Tree node: 5 + 2
+    NODE_PROGRAM, // New: Program
+    NODE_RETURN,  // New: Return
+    NODE_PRINT,   // New: Print
+    NODE_VAR_DECL, // New: Declaration
+    NODE_VAR_REF,  // New: Usage
+    NODE_INT,     // New: Integer
+    NODE_BIN_OP   // New: Binary Operation
 } NodeType;
 
 typedef enum { OP_ADD, OP_SUB } OpType;
@@ -51,29 +57,23 @@ struct Node; // Forward declaration
 
 typedef struct Node {
     NodeType type;
-    struct Node* next; // For Linked List of statements
+    struct Node* next; // For linked list of statements
     union {
-        struct {
-            struct Node* statements;
-        } program;
+        struct { struct Node* statements; } program;
+        struct { struct Node* expression; } return_stmt;
+        struct { struct Node* expression; } print_stmt;
         
-        struct {
-            struct Node* expression; // Return now holds an expression, not just int
-        } return_stmt;
+        struct { 
+            char* name; 
+            struct Node* expression; 
+        } var_decl; // رقم x = 5
 
-        struct {
-            struct Node* expression;
-        } print_stmt;
+        struct { 
+            char* name; 
+        } var_ref;  // x + 1
 
-        struct {
-            int value;
-        } integer;
-
-        struct {
-            struct Node* left;
-            struct Node* right;
-            OpType op;
-        } bin_op;
+        struct { int value; } integer;
+        struct { struct Node* left; struct Node* right; OpType op; } bin_op;
     } data;
 } Node;
 

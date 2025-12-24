@@ -1,10 +1,42 @@
 #include "baa.h"
+#include <string.h>
+// --- Simple Symbol Table ---
+// Maps names to stack offsets (e.g., "x" -> -8)
+typedef struct {
+    char name[32];
+    int offset;
+} Symbol;
 
+Symbol symbols[100];
+int symbol_count = 0;
+int current_stack_offset = 0;
+
+void add_symbol(const char* name) {
+    current_stack_offset -= 8; // 8 bytes for 64-bit integer
+    strcpy(symbols[symbol_count].name, name);
+    symbols[symbol_count].offset = current_stack_offset;
+    symbol_count++;
+}
+
+int get_symbol_offset(const char* name) {
+    for (int i = 0; i < symbol_count; i++) {
+        if (strcmp(symbols[i].name, name) == 0) {
+            return symbols[i].offset;
+        }
+    }
+    printf("Codegen Error: Undefined variable %s\n", name);
+    exit(1);
+}
 // Helper to generate code for expressions
 // Result will always end up in %rax
 void gen_expr(Node* node, FILE* file) {
     if (node->type == NODE_INT) {
         fprintf(file, "    mov $%d, %%rax\n", node->data.integer.value);
+    }
+    else if (node->type == NODE_VAR_REF) {
+        // Load variable from stack to RAX
+        int offset = get_symbol_offset(node->data.var_ref.name);
+        fprintf(file, "    mov %d(%%rbp), %%rax\n", offset);
     }
     else if (node->type == NODE_BIN_OP) {
         // 1. Calculate Right side, push to stack
@@ -31,10 +63,12 @@ void codegen(Node* node, FILE* file) {
         fprintf(file, ".globl main\n");
         fprintf(file, "main:\n");
         
-        // --- FUNCTION ENTRY ---
-        // Stack alignment (16-bytes) + Shadow Space (32-bytes)
-        // main entry stack is off by 8. sub 40 aligns (8+40=48, 48%16=0) and gives 32b space.
-        fprintf(file, "    sub $40, %%rsp\n");
+        // --- PROLOGUE (Stack Frame) ---
+        fprintf(file, "    push %%rbp\n");      // Save old base pointer
+        fprintf(file, "    mov %%rsp, %%rbp\n"); // Set new base pointer
+        // Reserve space for 16 variables (16 * 8 = 128 bytes) + Shadow Space (32)
+        // Must align stack to 16 bytes.
+        fprintf(file, "    sub $160, %%rsp\n"); 
 
         // Loop through statements
         Node* current = node->data.program.statements;
@@ -43,11 +77,20 @@ void codegen(Node* node, FILE* file) {
             current = current->next;
         }
 
-        // --- FUNCTION EXIT (Implicit return 0) ---
+        // --- EPILOGUE ---
         fprintf(file, "    mov $0, %%rax\n");
-        fprintf(file, "    add $40, %%rsp\n");
+        fprintf(file, "    leave\n"); // Restore RSP and RBP
         fprintf(file, "    ret\n");
     } 
+    else if (node->type == NODE_VAR_DECL) {
+        // Calculate value
+        gen_expr(node->data.var_decl.expression, file);
+        // Add to symbol table
+        add_symbol(node->data.var_decl.name);
+        // Store RAX into stack
+        int offset = get_symbol_offset(node->data.var_decl.name);
+        fprintf(file, "    mov %%rax, %d(%%rbp)\n", offset);
+    }
     else if (node->type == NODE_PRINT) {
         gen_expr(node->data.print_stmt.expression, file);
         // Windows ABI:
@@ -59,8 +102,7 @@ void codegen(Node* node, FILE* file) {
     }
     else if (node->type == NODE_RETURN) {
         gen_expr(node->data.return_stmt.expression, file);
-        // Restore stack before returning
-        fprintf(file, "    add $40, %%rsp\n");
+        fprintf(file, "    leave\n");
         fprintf(file, "    ret\n");
     }
 }

@@ -23,7 +23,16 @@ Node* parse_primary(Lexer* l) {
         eat(l, TOKEN_INT);
         return node;
     }
-    printf("Parser Error: Expected integer\n");
+    // New: Handle Variable Reference (Usage)
+    if (current_token.type == TOKEN_IDENTIFIER) {
+        Node* node = malloc(sizeof(Node));
+        node->type = NODE_VAR_REF;
+        node->data.var_ref.name = strdup(current_token.value);
+        node->next = NULL;
+        eat(l, TOKEN_IDENTIFIER);
+        return node;
+    }
+    printf("Parser Error: Expected integer or identifier\n");
     exit(1);
 }
 
@@ -68,6 +77,27 @@ Node* parse_statement(Lexer* l) {
         eat(l, TOKEN_PRINT);
         stmt->type = NODE_PRINT;
         stmt->data.print_stmt.expression = parse_expression(l);
+        eat(l, TOKEN_DOT);
+        return stmt;
+    }
+    // New: Variable Declaration (رقم x = 5.)
+    else if (current_token.type == TOKEN_KEYWORD_INT) {
+        eat(l, TOKEN_KEYWORD_INT); // Eat 'رقم'
+        
+        if (current_token.type != TOKEN_IDENTIFIER) {
+            printf("Parser Error: Expected variable name\n"); exit(1);
+        }
+        char* name = strdup(current_token.value);
+        eat(l, TOKEN_IDENTIFIER);
+
+        eat(l, TOKEN_ASSIGN); // Eat '='
+
+        Node* expr = parse_expression(l);
+
+        stmt->type = NODE_VAR_DECL;
+        stmt->data.var_decl.name = name;
+        stmt->data.var_decl.expression = expr;
+
         eat(l, TOKEN_DOT);
         return stmt;
     }

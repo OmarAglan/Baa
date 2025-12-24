@@ -76,9 +76,17 @@ Token lexer_next_token(Lexer* l) {
         return token;
     }
 
-    // Keyword: إرجع
+    // Keyword: إرجع (8 bytes)
     if (strncmp(current, "إرجع", 8) == 0) {
         token.type = TOKEN_RETURN;
+        l->pos += 8;
+        return token;
+    }
+
+    // Keyword: اطبع (8 bytes)
+    // Hex: D8 A7 D8 B7 D8 A8 D8 B9
+    if (strncmp(current, "اطبع", 8) == 0) {
+        token.type = TOKEN_PRINT;
         l->pos += 8;
         return token;
     }

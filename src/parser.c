@@ -19,12 +19,12 @@ Node* parse_primary(Lexer* l) {
         Node* node = malloc(sizeof(Node));
         node->type = NODE_INT;
         node->data.integer.value = atoi(current_token.value);
+        node->next = NULL;
         eat(l, TOKEN_INT);
         return node;
     }
     printf("Parser Error: Expected integer\n");
     exit(1);
-    return NULL;
 }
 
 Node* parse_expression(Lexer* l) {
@@ -45,7 +45,7 @@ Node* parse_expression(Lexer* l) {
         new_node->data.bin_op.left = left;
         new_node->data.bin_op.right = right;
         new_node->data.bin_op.op = op;
-
+        new_node->next = NULL;
         // The new node becomes the left side for the next iteration
         // (Handles 1 + 2 + 3)
         left = new_node;
@@ -53,29 +53,48 @@ Node* parse_expression(Lexer* l) {
     return left;
 }
 
-Node* parse(Lexer* l) {
-    current_token = lexer_next_token(l);
+Node* parse_statement(Lexer* l) {
+    Node* stmt = malloc(sizeof(Node));
+    stmt->next = NULL;
 
     if (current_token.type == TOKEN_RETURN) {
         eat(l, TOKEN_RETURN);
-
-        // Parse Expression instead of just Integer
-        Node* expr = parse_expression(l);
-
+        stmt->type = NODE_RETURN;
+        stmt->data.return_stmt.expression = parse_expression(l);
         eat(l, TOKEN_DOT);
+        return stmt;
+    } 
+    else if (current_token.type == TOKEN_PRINT) {
+        eat(l, TOKEN_PRINT);
+        stmt->type = NODE_PRINT;
+        stmt->data.print_stmt.expression = parse_expression(l);
+        eat(l, TOKEN_DOT);
+        return stmt;
+    }
+    
+    printf("Parser Error: Unknown statement\n");
+    exit(1);
+}
 
-        Node* ret_node = malloc(sizeof(Node));
-        ret_node->type = NODE_RETURN;
-        ret_node->data.return_stmt.expression = expr;
+Node* parse(Lexer* l) {
+    current_token = lexer_next_token(l);
+    Node* head = NULL;
+    Node* tail = NULL;
 
-        Node* program = malloc(sizeof(Node));
-        program->type = NODE_PROGRAM;
-        program->data.program.statement = ret_node;
-
-        return program;
+    // Parse until EOF
+    while (current_token.type != TOKEN_EOF) {
+        Node* stmt = parse_statement(l);
+        if (head == NULL) {
+            head = stmt;
+            tail = stmt;
+        } else {
+            tail->next = stmt;
+            tail = stmt;
+        }
     }
 
-    printf("Parser Error: Program must start with return\n");
-    exit(1);
-    return NULL;
+    Node* program = malloc(sizeof(Node));
+    program->type = NODE_PROGRAM;
+    program->data.program.statements = head;
+    return program;
 }

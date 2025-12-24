@@ -12,6 +12,7 @@ typedef enum {
     TOKEN_EOF,
     TOKEN_INT,      // 0-9 or ٠-٩
     TOKEN_RETURN,   // إرجع
+    TOKEN_PRINT,    // اطبع
     TOKEN_DOT,      // .
     TOKEN_PLUS,     // +
     TOKEN_MINUS,    // -
@@ -39,27 +40,30 @@ Token lexer_next_token(Lexer* lexer);
 typedef enum {
     NODE_PROGRAM,
     NODE_RETURN,
+    NODE_PRINT,     // New Node
     NODE_INT,       // Leaf node: 5
     NODE_BIN_OP     // Tree node: 5 + 2
 } NodeType;
 
-typedef enum {
-    OP_ADD,
-    OP_SUB
-} OpType;
+typedef enum { OP_ADD, OP_SUB } OpType;
 
 struct Node; // Forward declaration
 
 typedef struct Node {
     NodeType type;
+    struct Node* next; // For Linked List of statements
     union {
         struct {
-            struct Node* statement;
+            struct Node* statements;
         } program;
         
         struct {
             struct Node* expression; // Return now holds an expression, not just int
         } return_stmt;
+
+        struct {
+            struct Node* expression;
+        } print_stmt;
 
         struct {
             int value;

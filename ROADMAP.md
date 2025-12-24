@@ -1,9 +1,14 @@
 # Baa Roadmap
 
-## v0.0.4 (Current)
-- [ ] Lexer: Parse Identifiers (Arabic names) and `=`.
-- [ ] Parser: Handle Variable Declarations and Lookups.
-- [ ] Codegen: Implement Stack Frame (RBP) and Local Variable offsets.
+## v0.0.5 (Done)
+- [x] **Comments:** Support comments (`//` or `#`).
+- [x] **Multi-digit Parsing:** Improve robustness of Arabic number parsing.
+- [x] **Error Handling:** Better error messages ("Variable 'x' not found").
+
+## v0.0.4 (Done)
+- [x] Lexer: Parse Identifiers (Arabic names) and `=`.
+- [x] Parser: Handle Variable Declarations and Lookups.
+- [x] Codegen: Implement Stack Frame (RBP) and Local Variable offsets.
 
 ## v0.0.3 (Done)
 - [x] Lexer: Handle `اطبع`.

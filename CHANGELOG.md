@@ -1,7 +1,11 @@
 # Changelog
 
-## [0.0.4] - In Progress
-- Added `رقم` (Int) type keyword.
+## [0.0.5] - Completed
+- **Breaking:** Renamed `رقم` to `صحيح` (int) to align with C types.
+- Added support for Single Line Comments (`//`).
+
+## [0.0.4] - Completed
+- Added `رقم` (Int) type keyword. 
 - Added Variable Declaration (`رقم name = val.`).
 - Added Variable Usage in expressions.
 

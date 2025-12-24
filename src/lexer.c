@@ -26,9 +26,20 @@ int is_arabic_digit(const char* c) {
 Token lexer_next_token(Lexer* l) {
     Token token = {0};
     
+    // 1. Skip Whitespace
     while (l->pos < l->len && isspace(l->src[l->pos])) {
         if (l->src[l->pos] == '\n') l->line++;
         l->pos++;
+    }
+
+    // 2. Check for Comments (//)
+    if (l->pos + 1 < l->len && l->src[l->pos] == '/' && l->src[l->pos+1] == '/') {
+        // Skip until newline
+        while (l->pos < l->len && l->src[l->pos] != '\n') {
+            l->pos++;
+        }
+        // Recursively call next_token to get the actual next token
+        return lexer_next_token(l);
     }
 
     if (l->pos >= l->len) { token.type = TOKEN_EOF; return token; }
@@ -76,7 +87,8 @@ Token lexer_next_token(Lexer* l) {
         // Check Keywords
         if (strcmp(word, "إرجع") == 0) token.type = TOKEN_RETURN;
         else if (strcmp(word, "اطبع") == 0) token.type = TOKEN_PRINT;
-        else if (strcmp(word, "رقم") == 0) token.type = TOKEN_KEYWORD_INT;
+        // CHANGED: Check for "صحيح" instead of "رقم"
+        else if (strcmp(word, "صحيح") == 0) token.type = TOKEN_KEYWORD_INT;
         else {
             // Not a keyword? It's a variable name.
             token.type = TOKEN_IDENTIFIER;

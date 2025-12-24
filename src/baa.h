@@ -14,7 +14,7 @@ typedef enum {
     TOKEN_INT,      // 0-9 or ٠-٩
     TOKEN_RETURN,   // إرجع
     TOKEN_PRINT,    // اطبع
-    TOKEN_KEYWORD_INT, // رقم
+    TOKEN_KEYWORD_INT, // صحيح
     TOKEN_IDENTIFIER, // Variable names (e.g., س)
     TOKEN_ASSIGN,     // =
     TOKEN_DOT,      // .

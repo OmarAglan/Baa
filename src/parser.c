@@ -80,12 +80,13 @@ Node* parse_statement(Lexer* l) {
         eat(l, TOKEN_DOT);
         return stmt;
     }
-    // New: Variable Declaration (رقم x = 5.)
+    // New: Variable Declaration (صحيح x = 5.)
     else if (current_token.type == TOKEN_KEYWORD_INT) {
-        eat(l, TOKEN_KEYWORD_INT); // Eat 'رقم'
+        eat(l, TOKEN_KEYWORD_INT); // Eat 'صحيح'
         
         if (current_token.type != TOKEN_IDENTIFIER) {
-            printf("Parser Error: Expected variable name\n"); exit(1);
+            printf("Parser Error: Expected variable name after 'صحيح'\n");
+            exit(1);
         }
         char* name = strdup(current_token.value);
         eat(l, TOKEN_IDENTIFIER);

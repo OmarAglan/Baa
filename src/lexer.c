@@ -7,6 +7,15 @@ void lexer_init(Lexer* l, const char* src) {
     l->pos = 0;
     l->len = strlen(src);
     l->line = 1;
+
+    // FIX: Check for UTF-8 Byte Order Mark (BOM)
+    // The sequence is 0xEF, 0xBB, 0xBF
+    if (l->len >= 3 && 
+        (unsigned char)src[0] == 0xEF && 
+        (unsigned char)src[1] == 0xBB && 
+        (unsigned char)src[2] == 0xBF) {
+        l->pos = 3; // Skip the first 3 bytes
+    }
 }
 
 Token lexer_next_token(Lexer* l) {
@@ -56,7 +65,14 @@ Token lexer_next_token(Lexer* l) {
     }
 
     token.type = TOKEN_INVALID;
-    printf("Lexer Error: Unknown char at line %d\n", l->line);
+    unsigned char c1 = (unsigned char)l->src[l->pos];
+    unsigned char c2 = (l->pos + 1 < l->len) ? (unsigned char)l->src[l->pos + 1] : 0;
+    
+    printf("Lexer Error at line %d.\n", l->line);
+    printf("Found byte: 0x%02X", c1);
+    if (c2) printf(" 0x%02X", c2);
+    printf("\nExpected 'إ' (0xD8 0xA5). You might have a typo or encoding issue.\n");
+    
     exit(1);
     return token;
 }

@@ -8,79 +8,105 @@ int main() {
     FILE* f = fopen("test.b", "wb");
     if (!f) return 1;
 
-    // --- Definitions ---
-    // Keywords
-    unsigned char decl_int[] = {0xD8, 0xB5, 0xD8, 0xAD, 0xD9, 0x8A, 0xD8, 0xAD, 0x20}; // صحيح 
-    unsigned char while_kw[] = {0xD8, 0xB7, 0xD8, 0xA7, 0xD9, 0x84, 0xD9, 0x85, 0xD8, 0xA7, 0x20}; // طالما 
-    unsigned char print[] = {0xD8, 0xA7, 0xD8, 0xB7, 0xD8, 0xA8, 0xD8, 0xB9, 0x20}; // اطبع 
-    unsigned char ret[] = {0xD8, 0xA5, 0xD8, 0xB1, 0xD8, 0xAC, 0xD8, 0xB9, 0x20}; // إرجع 
+    // --- UTF-8 Tokens ---
+    unsigned char int_kw[] = {0xD8, 0xB5, 0xD8, 0xAD, 0xD9, 0x8A, 0xD8, 0xAD, 0x20}; // صحيح 
+    unsigned char return_kw[] = {0xD8, 0xA5, 0xD8, 0xB1, 0xD8, 0xAC, 0xD8, 0xB9, 0x20}; // إرجع 
+    unsigned char print_kw[] = {0xD8, 0xA7, 0xD8, 0xB7, 0xD8, 0xA8, 0xD8, 0xB9, 0x20}; // اطبع 
+    
+    // Identifiers
+    unsigned char global_var[] = {0xD8, 0xB9, 0xD8, 0xA7, 0xD9, 0x85, 0xD9, 0x84, 0x20}; // عامل (factor)
+    unsigned char func_name[] = {0xD8, 0xB6, 0xD8, 0xA7, 0xD8, 0xB9, 0xD9, 0x81}; // ضاعف (double) NO SPACE
+    unsigned char main_name[] = {0xD8, 0xA7, 0xD9, 0x84, 0xD8, 0xB1, 0xD8, 0xA6, 0xD9, 0x8A, 0xD8, 0xB3, 0xD9, 0x8A, 0xD8, 0xA9}; // الرئيسية (main)
+    unsigned char var_s[] = {0xD8, 0xB3}; // س (param)
+    unsigned char var_n[] = {0xD9, 0x86, 0x20}; // ن (local 1)
+    unsigned char var_m[] = {0xD9, 0x85, 0x20}; // م (local 2)
 
-    // Vars/Nums
-    unsigned char var_s[] = {0xD8, 0xB3, 0x20}; // س 
-    unsigned char n5[] = {0xD9, 0xA5}; // ٥
-    unsigned char n1[] = {0xD9, 0xA1}; // ١
-    unsigned char n0[] = {0xD9, 0xA0}; // ٠
-
-    // Symbols
-    unsigned char eq[] = {0x3D, 0x20}; // = 
-    unsigned char neq[] = {0x21, 0x3D, 0x20}; // != 
-    unsigned char sub[] = {0x2D, 0x20}; // - 
-    unsigned char dot[] = {0x2E, 0x0A}; // . \n
-    unsigned char lparen[] = {0x28, 0x20}; // (
-    unsigned char rparen[] = {0x29, 0x20}; // )
-    unsigned char lbrace[] = {0x7B, 0x0A}; // { \n
-    unsigned char rbrace[] = {0x7D, 0x0A}; // } \n
+    // Symbols / Literals
+    unsigned char eq[] = {0x3D, 0x20}; 
+    unsigned char plus[] = {0x2B, 0x20}; 
+    unsigned char lp[] = {0x28, 0x20}; 
+    unsigned char rp[] = {0x29, 0x20}; 
+    unsigned char lb[] = {0x7B, 0x0A}; 
+    unsigned char rb[] = {0x7D, 0x0A}; 
+    unsigned char dot[] = {0x2E, 0x0A};
+    unsigned char sp[] = {0x20};
+    
+    unsigned char n2[] = {0xD9, 0xA2};
+    unsigned char n10[] = {0xD9, 0xA1, 0xD9, 0xA0};
+    unsigned char n0[] = {0xD9, 0xA0};
 
     // --- Code Generation ---
 
-    // 1. صحيح س = ٥.
-    write_bytes(f, decl_int, sizeof(decl_int));
-    write_bytes(f, var_s, sizeof(var_s));
+    // 1. Global: صحيح عامل = ٢.
+    write_bytes(f, int_kw, sizeof(int_kw));
+    write_bytes(f, global_var, sizeof(global_var));
     write_bytes(f, eq, sizeof(eq));
-    write_bytes(f, n5, sizeof(n5));
+    write_bytes(f, n2, sizeof(n2));
     write_bytes(f, dot, sizeof(dot));
 
-    // 2. طالما (س != ٠) {
-    write_bytes(f, while_kw, sizeof(while_kw));
-    write_bytes(f, lparen, sizeof(lparen));
+    // 2. Func: صحيح ضاعف(صحيح س) {
+    write_bytes(f, int_kw, sizeof(int_kw));
+    write_bytes(f, func_name, sizeof(func_name));
+    write_bytes(f, sp, 1);
+    write_bytes(f, lp, sizeof(lp));
+    write_bytes(f, int_kw, sizeof(int_kw));
     write_bytes(f, var_s, sizeof(var_s));
-    write_bytes(f, neq, sizeof(neq));
-    write_bytes(f, n0, sizeof(n0));
-    write_bytes(f, rparen, sizeof(rparen));
-    write_bytes(f, lbrace, sizeof(lbrace));
+    write_bytes(f, rp, sizeof(rp));
+    write_bytes(f, lb, sizeof(lb));
 
-    //    اطبع س.
-    write_bytes(f, print, sizeof(print));
+    //    إرجع س + س.
+    write_bytes(f, return_kw, sizeof(return_kw));
     write_bytes(f, var_s, sizeof(var_s));
-    write_bytes(f, dot, sizeof(dot));
-
-    //    س = س - ١. (Re-assignment logic - Wait, we need to implement assignment to existing vars!)
-    //    Current parser handles NODE_VAR_DECL (int x = 5) but not simple assignment (x = 5).
-    //    Let's hack it using declaration shadowing for now to test the loop structure, 
-    //    OR quickly add assignment node. 
-    
-    //    Let's pause and add Assignment Node in Parser/Codegen quickly below before running this test.
-    //    Actually, let's just create an infinite loop printing 5 once to test the structure first.
-    //    No wait, infinite loops are annoying to test.
-    
-    //    Okay, I will include the Assignment Logic in this step implicitly because loops are useless without it.
-    
-    //    س = س - ١.
-    write_bytes(f, var_s, sizeof(var_s)); // Identifier
-    write_bytes(f, eq, sizeof(eq));       // =
-    write_bytes(f, var_s, sizeof(var_s)); // s
-    write_bytes(f, sub, sizeof(sub));     // -
-    write_bytes(f, n1, sizeof(n1));       // 1
+    write_bytes(f, sp, 1);
+    write_bytes(f, plus, sizeof(plus));
+    write_bytes(f, var_s, sizeof(var_s));
     write_bytes(f, dot, sizeof(dot));
 
     // }
-    write_bytes(f, rbrace, sizeof(rbrace));
+    write_bytes(f, rb, sizeof(rb));
 
-    // 3. إرجع ٠.
-    write_bytes(f, ret, sizeof(ret));
+    // 3. Main: صحيح الرئيسية() {
+    write_bytes(f, int_kw, sizeof(int_kw));
+    write_bytes(f, main_name, sizeof(main_name));
+    write_bytes(f, sp, 1);
+    write_bytes(f, lp, sizeof(lp));
+    write_bytes(f, rp, sizeof(rp));
+    write_bytes(f, lb, sizeof(lb));
+
+    //    صحيح ن = ١٠.
+    write_bytes(f, int_kw, sizeof(int_kw));
+    write_bytes(f, var_n, sizeof(var_n));
+    write_bytes(f, eq, sizeof(eq));
+    write_bytes(f, n10, sizeof(n10));
+    write_bytes(f, dot, sizeof(dot));
+
+    //    صحيح م = ضاعف(ن).
+    write_bytes(f, int_kw, sizeof(int_kw));
+    write_bytes(f, var_m, sizeof(var_m));
+    write_bytes(f, eq, sizeof(eq));
+    write_bytes(f, func_name, sizeof(func_name));
+    write_bytes(f, sp, 1);
+    write_bytes(f, lp, sizeof(lp));
+    write_bytes(f, var_n, sizeof(var_n));
+    write_bytes(f, rp, sizeof(rp));
+    write_bytes(f, dot, sizeof(dot));
+
+    //    اطبع م + عامل.
+    write_bytes(f, print_kw, sizeof(print_kw));
+    write_bytes(f, var_m, sizeof(var_m));
+    write_bytes(f, plus, sizeof(plus));
+    write_bytes(f, global_var, sizeof(global_var));
+    write_bytes(f, dot, sizeof(dot));
+
+    //    إرجع ٠.
+    write_bytes(f, return_kw, sizeof(return_kw));
     write_bytes(f, n0, sizeof(n0));
     write_bytes(f, dot, sizeof(dot));
 
+    // }
+    write_bytes(f, rb, sizeof(rb));
+
     fclose(f);
+    printf("Created test.b with Function Logic.\n");
     return 0;
 }

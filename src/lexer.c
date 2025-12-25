@@ -1,3 +1,8 @@
+/**
+ * @file lexer.c
+ * @brief Tokenizes UTF-8 Arabic Source Code.
+ */
+
 #include "baa.h"
 #include <ctype.h>
 
@@ -6,15 +11,16 @@ void lexer_init(Lexer* l, const char* src) {
     l->pos = 0;
     l->len = strlen(src);
     l->line = 1;
-    
-    // FIX: Check for UTF-8 Byte Order Mark (BOM)
-    // The sequence is 0xEF, 0xBB, 0xBF
-    if (l->len >= 3 && (unsigned char)src[0] == 0xEF && (unsigned char)src[1] == 0xBB && (unsigned char)src[2] == 0xBF) l->pos = 3;
+    // Skip UTF-8 BOM if present
+    if (l->len >= 3 && (unsigned char)src[0] == 0xEF && (unsigned char)src[1] == 0xBB && (unsigned char)src[2] == 0xBF) {
+        l->pos = 3;
+    }
 }
-// Helper to check for Arabic Digit (UTF-8: 0xD9 0xA0 to 0xD9 0xA9)
+
+// Helpers for Arabic UTF-8 ranges
 int is_arabic_start_byte(char c) {
     unsigned char ub = (unsigned char)c;
-    return (ub >= 0xD8 && ub <= 0xDB); // Common Arabic range starts
+    return (ub >= 0xD8 && ub <= 0xDB);
 }
 
 int is_arabic_digit(const char* c) {
@@ -32,10 +38,9 @@ Token lexer_next_token(Lexer* l) {
         l->pos++;
     }
 
-    // 2. Check for Comments (//)
+    // 2. Skip Comments (//)
     if (l->pos + 1 < l->len && l->src[l->pos] == '/' && l->src[l->pos+1] == '/') {
         while (l->pos < l->len && l->src[l->pos] != '\n') l->pos++;
-        // Recursively call next_token to get the actual next token
         return lexer_next_token(l);
     }
 
@@ -43,22 +48,22 @@ Token lexer_next_token(Lexer* l) {
 
     const char* current = l->src + l->pos;
 
-    // Single/Double Char Tokens
+    // 3. Single Character Tokens
     if (*current == '.') { token.type = TOKEN_DOT; l->pos++; return token; }
+    if (*current == ',') { token.type = TOKEN_COMMA; l->pos++; return token; } // New
     if (*current == '+') { token.type = TOKEN_PLUS; l->pos++; return token; }
     if (*current == '-') { token.type = TOKEN_MINUS; l->pos++; return token; }
     if (*current == '(') { token.type = TOKEN_LPAREN; l->pos++; return token; }
     if (*current == ')') { token.type = TOKEN_RPAREN; l->pos++; return token; }
     if (*current == '{') { token.type = TOKEN_LBRACE; l->pos++; return token; }
     if (*current == '}') { token.type = TOKEN_RBRACE; l->pos++; return token; }
-    
+
+    // 4. Double Character Tokens
     if (*current == '!') {
         if (l->pos + 1 < l->len && l->src[l->pos+1] == '=') {
             token.type = TOKEN_NEQ; l->pos += 2; return token;
         }
-        // Assuming just '!' for now is invalid in this version
     }
-
     if (*current == '=') { 
         if (l->pos + 1 < l->len && l->src[l->pos+1] == '=') {
             token.type = TOKEN_EQ; l->pos += 2; return token;
@@ -66,7 +71,7 @@ Token lexer_next_token(Lexer* l) {
         token.type = TOKEN_ASSIGN; l->pos++; return token; 
     }
 
-    // Numbers
+    // 5. Numbers (Normalizing Arabic Digits to ASCII)
     if (isdigit(*current) || is_arabic_digit(current)) {
         token.type = TOKEN_INT;
         char buffer[64] = {0}; 
@@ -83,12 +88,11 @@ Token lexer_next_token(Lexer* l) {
         return token;
     }
 
-    // Identifiers and Keywords (Arabic)
+    // 6. Keywords & Identifiers
     if (is_arabic_start_byte(*current)) {
-        // Find end of word
         size_t start = l->pos;
         while (l->pos < l->len && !isspace(l->src[l->pos]) && 
-               strchr(".+-=(){}", l->src[l->pos]) == NULL) { // Stop at symbols
+               strchr(".+-,=(){}", l->src[l->pos]) == NULL) { // Added comma to stop list
             l->pos++;
         }
         
@@ -97,19 +101,17 @@ Token lexer_next_token(Lexer* l) {
         strncpy(word, l->src + start, len);
         word[len] = '\0';
 
-        // Check Keywords
         if (strcmp(word, "إرجع") == 0) token.type = TOKEN_RETURN;
         else if (strcmp(word, "اطبع") == 0) token.type = TOKEN_PRINT;
         else if (strcmp(word, "صحيح") == 0) token.type = TOKEN_KEYWORD_INT;
         else if (strcmp(word, "إذا") == 0) token.type = TOKEN_IF;
         else if (strcmp(word, "طالما") == 0) token.type = TOKEN_WHILE;
         else {
-            // Not a keyword? It's a variable name.
             token.type = TOKEN_IDENTIFIER;
-            token.value = word; // Keep the name
+            token.value = word;
             return token;
         }
-        free(word); // Free if it was a keyword
+        free(word);
         return token;
     }
 

@@ -1,6 +1,6 @@
 /**
  * @file codegen.c
- * @brief Generates x86_64 Assembly (Windows ABI) from AST.
+ * @brief Generates x86_64 Assembly with Math/Logic Support.
  */
 
 #include "baa.h"
@@ -110,21 +110,39 @@ void gen_expr(Node* node, FILE* file) {
         fprintf(file, "    add $32, %%rsp\n"); // Cleanup shadow
     }
     else if (node->type == NODE_BIN_OP) {
+        // Calculate Right first
         gen_expr(node->data.bin_op.right, file);
         fprintf(file, "    push %%rax\n");
+        // Calculate Left
         gen_expr(node->data.bin_op.left, file);
         fprintf(file, "    pop %%rbx\n");
         
-        if (node->data.bin_op.op == OP_ADD) fprintf(file, "    add %%rbx, %%rax\n");
-        else if (node->data.bin_op.op == OP_SUB) fprintf(file, "    sub %%rbx, %%rax\n");
-        else if (node->data.bin_op.op == OP_EQ) {
+        // Left is in RAX, Right is in RBX
+        
+        if (node->data.bin_op.op == OP_ADD) {
+            fprintf(file, "    add %%rbx, %%rax\n");
+        } else if (node->data.bin_op.op == OP_SUB) {
+            fprintf(file, "    sub %%rbx, %%rax\n");
+        } else if (node->data.bin_op.op == OP_MUL) {
+            fprintf(file, "    imul %%rbx, %%rax\n");
+        } else if (node->data.bin_op.op == OP_DIV) {
+            fprintf(file, "    cqo\n"); // Sign extend RAX to RDX:RAX
+            fprintf(file, "    idiv %%rbx\n"); // Result in RAX
+        } else if (node->data.bin_op.op == OP_MOD) {
+            fprintf(file, "    cqo\n");
+            fprintf(file, "    idiv %%rbx\n");
+            fprintf(file, "    mov %%rdx, %%rax\n"); // Remainder is in RDX
+        } 
+        else {
+            // Comparisons
             fprintf(file, "    cmp %%rbx, %%rax\n");
-            fprintf(file, "    sete %%al\n");
-            fprintf(file, "    movzbq %%al, %%rax\n");
-        }
-        else if (node->data.bin_op.op == OP_NEQ) {
-            fprintf(file, "    cmp %%rbx, %%rax\n");
-            fprintf(file, "    setne %%al\n");
+            if (node->data.bin_op.op == OP_EQ) fprintf(file, "    sete %%al\n");
+            else if (node->data.bin_op.op == OP_NEQ) fprintf(file, "    setne %%al\n");
+            else if (node->data.bin_op.op == OP_LT) fprintf(file, "    setl %%al\n");
+            else if (node->data.bin_op.op == OP_GT) fprintf(file, "    setg %%al\n");
+            else if (node->data.bin_op.op == OP_LTE) fprintf(file, "    setle %%al\n");
+            else if (node->data.bin_op.op == OP_GTE) fprintf(file, "    setge %%al\n");
+            
             fprintf(file, "    movzbq %%al, %%rax\n");
         }
     }

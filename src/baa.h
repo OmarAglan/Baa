@@ -1,7 +1,7 @@
 /**
  * @file baa.h
  * @brief Main header file defining Data Structures for the Baa Compiler.
- * @version 0.0.8
+ * @version 0.0.9
  */
 
 #ifndef BAA_H
@@ -36,13 +36,22 @@ typedef enum {
     // Symbols
     TOKEN_ASSIGN,       // =
     TOKEN_DOT,          // .
-    TOKEN_COMMA,        // , (New in v0.0.8 for arguments)
+    TOKEN_COMMA,        // ,
     
-    // Math & Logic
+    // Math
     TOKEN_PLUS,         // +
     TOKEN_MINUS,        // -
+    TOKEN_STAR,         // * (New)
+    TOKEN_SLASH,        // / (New)
+    TOKEN_PERCENT,      // % (New)
+    
+    // Logic / Relational
     TOKEN_EQ,           // ==
     TOKEN_NEQ,          // !=
+    TOKEN_LT,           // < (New)
+    TOKEN_GT,           // > (New)
+    TOKEN_LTE,          // <= (New)
+    TOKEN_GTE,          // >= (New)
     
     // Grouping
     TOKEN_LPAREN,       // (
@@ -101,17 +110,28 @@ typedef enum {
     NODE_CALL_STMT,     // Function Call as a statement: foo();
     
     // Expressions
-    NODE_BIN_OP,        // Math: a + b
+    NODE_BIN_OP,        // Math/Logic
     NODE_INT,           // Literal: 5
     NODE_VAR_REF,       // Usage: x
     NODE_CALL_EXPR      // Function Call as expression: x = foo();
 } NodeType;
 
+/**
+ * @enum OpType
+ * @brief Supported binary operations.
+ */
 typedef enum { 
     OP_ADD,     // +
     OP_SUB,     // -
+    OP_MUL,     // *
+    OP_DIV,     // /
+    OP_MOD,     // %
     OP_EQ,      // ==
-    OP_NEQ      // !=
+    OP_NEQ,     // !=
+    OP_LT,      // <
+    OP_GT,      // >
+    OP_LTE,     // <=
+    OP_GTE      // >=
 } OpType;
 
 struct Node; // Forward declaration

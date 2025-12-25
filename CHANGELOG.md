@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.0.9] - Completed
+- **Math:** Added Multiplication (`*`), Division (`/`), and Modulo (`%`).
+- **Logic:** Added Relational Operators: `<`, `>`, `<=`, `>=`.
+- **Parser:** Implemented Operator Precedence (PEMDAS) to handle complex expressions correctly (e.g., `1 + 2 * 3` is `7`, not `9`).
+
 ## [0.0.8] - Completed
 - **Major Architecture Shift:** Program structure changed from a linear script to a list of Declarations (Functions & Globals).
 - **Functions:** Added Function Definitions (`صحيح func(...) {...}`) and Function Calls (`func(...)`).

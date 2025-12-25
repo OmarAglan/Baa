@@ -36,8 +36,9 @@ Node* parse_expression();
 Node* parse_statement();
 Node* parse_block();
 
-// --- Expression Parsing ---
+// --- Expression Parsing (Precedence Layers) ---
 
+// Level 1: Primary (Literals, Vars, Parens, Calls)
 Node* parse_primary() {
     if (parser.current.type == TOKEN_INT) {
         Node* node = malloc(sizeof(Node));
@@ -52,7 +53,7 @@ Node* parse_primary() {
         char* name = strdup(parser.current.value);
         eat(TOKEN_IDENTIFIER);
 
-        // Check if Function Call: name(...)
+        // Function Call: name(...)
         if (parser.current.type == TOKEN_LPAREN) {
             eat(TOKEN_LPAREN);
             Node* head_arg = NULL;
@@ -99,17 +100,18 @@ Node* parse_primary() {
     exit(1);
 }
 
-Node* parse_expression() {
+// Level 2: Multiplicative (*, /, %)
+Node* parse_multiplicative() {
     Node* left = parse_primary();
     
-    while (parser.current.type == TOKEN_PLUS || parser.current.type == TOKEN_MINUS ||
-           parser.current.type == TOKEN_EQ || parser.current.type == TOKEN_NEQ) {
+    while (parser.current.type == TOKEN_STAR || 
+           parser.current.type == TOKEN_SLASH || 
+           parser.current.type == TOKEN_PERCENT) {
         
         OpType op;
-        if (parser.current.type == TOKEN_PLUS) op = OP_ADD;
-        else if (parser.current.type == TOKEN_MINUS) op = OP_SUB;
-        else if (parser.current.type == TOKEN_EQ) op = OP_EQ;
-        else op = OP_NEQ;
+        if (parser.current.type == TOKEN_STAR) op = OP_MUL;
+        else if (parser.current.type == TOKEN_SLASH) op = OP_DIV;
+        else op = OP_MOD;
 
         eat(parser.current.type);
         Node* right = parse_primary();
@@ -123,6 +125,81 @@ Node* parse_expression() {
         left = new_node;
     }
     return left;
+}
+
+// Level 3: Additive (+, -)
+Node* parse_additive() {
+    Node* left = parse_multiplicative();
+    
+    while (parser.current.type == TOKEN_PLUS || parser.current.type == TOKEN_MINUS) {
+        OpType op;
+        if (parser.current.type == TOKEN_PLUS) op = OP_ADD;
+        else op = OP_SUB;
+
+        eat(parser.current.type);
+        Node* right = parse_multiplicative();
+        
+        Node* new_node = malloc(sizeof(Node));
+        new_node->type = NODE_BIN_OP;
+        new_node->data.bin_op.left = left;
+        new_node->data.bin_op.right = right;
+        new_node->data.bin_op.op = op;
+        new_node->next = NULL;
+        left = new_node;
+    }
+    return left;
+}
+
+// Level 4: Relational (<, >, <=, >=)
+Node* parse_relational() {
+    Node* left = parse_additive();
+    
+    while (parser.current.type == TOKEN_LT || parser.current.type == TOKEN_GT ||
+           parser.current.type == TOKEN_LTE || parser.current.type == TOKEN_GTE) {
+        
+        OpType op;
+        if (parser.current.type == TOKEN_LT) op = OP_LT;
+        else if (parser.current.type == TOKEN_GT) op = OP_GT;
+        else if (parser.current.type == TOKEN_LTE) op = OP_LTE;
+        else op = OP_GTE;
+
+        eat(parser.current.type);
+        Node* right = parse_additive();
+        
+        Node* new_node = malloc(sizeof(Node));
+        new_node->type = NODE_BIN_OP;
+        new_node->data.bin_op.left = left;
+        new_node->data.bin_op.right = right;
+        new_node->data.bin_op.op = op;
+        new_node->next = NULL;
+        left = new_node;
+    }
+    return left;
+}
+
+// Level 5: Equality (==, !=)
+Node* parse_equality() {
+    Node* left = parse_relational();
+    
+    while (parser.current.type == TOKEN_EQ || parser.current.type == TOKEN_NEQ) {
+        OpType op = (parser.current.type == TOKEN_EQ) ? OP_EQ : OP_NEQ;
+        eat(parser.current.type);
+        Node* right = parse_relational();
+        
+        Node* new_node = malloc(sizeof(Node));
+        new_node->type = NODE_BIN_OP;
+        new_node->data.bin_op.left = left;
+        new_node->data.bin_op.right = right;
+        new_node->data.bin_op.op = op;
+        new_node->next = NULL;
+        left = new_node;
+    }
+    return left;
+}
+
+// Main expression entry point
+Node* parse_expression() {
+    return parse_equality();
 }
 
 // --- Statement Parsing ---

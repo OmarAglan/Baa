@@ -50,15 +50,18 @@ Token lexer_next_token(Lexer* l) {
 
     // 3. Single Character Tokens
     if (*current == '.') { token.type = TOKEN_DOT; l->pos++; return token; }
-    if (*current == ',') { token.type = TOKEN_COMMA; l->pos++; return token; } // New
+    if (*current == ',') { token.type = TOKEN_COMMA; l->pos++; return token; }
     if (*current == '+') { token.type = TOKEN_PLUS; l->pos++; return token; }
     if (*current == '-') { token.type = TOKEN_MINUS; l->pos++; return token; }
+    if (*current == '*') { token.type = TOKEN_STAR; l->pos++; return token; } // New
+    if (*current == '/') { token.type = TOKEN_SLASH; l->pos++; return token; } // New
+    if (*current == '%') { token.type = TOKEN_PERCENT; l->pos++; return token; } // New
     if (*current == '(') { token.type = TOKEN_LPAREN; l->pos++; return token; }
     if (*current == ')') { token.type = TOKEN_RPAREN; l->pos++; return token; }
     if (*current == '{') { token.type = TOKEN_LBRACE; l->pos++; return token; }
     if (*current == '}') { token.type = TOKEN_RBRACE; l->pos++; return token; }
 
-    // 4. Double Character Tokens
+    // 4. Double/Single Character Tokens (Comparisons)
     if (*current == '!') {
         if (l->pos + 1 < l->len && l->src[l->pos+1] == '=') {
             token.type = TOKEN_NEQ; l->pos += 2; return token;
@@ -69,6 +72,18 @@ Token lexer_next_token(Lexer* l) {
             token.type = TOKEN_EQ; l->pos += 2; return token;
         }
         token.type = TOKEN_ASSIGN; l->pos++; return token; 
+    }
+    if (*current == '<') {
+        if (l->pos + 1 < l->len && l->src[l->pos+1] == '=') {
+            token.type = TOKEN_LTE; l->pos += 2; return token;
+        }
+        token.type = TOKEN_LT; l->pos++; return token;
+    }
+    if (*current == '>') {
+        if (l->pos + 1 < l->len && l->src[l->pos+1] == '=') {
+            token.type = TOKEN_GTE; l->pos += 2; return token;
+        }
+        token.type = TOKEN_GT; l->pos++; return token;
     }
 
     // 5. Numbers (Normalizing Arabic Digits to ASCII)
@@ -92,7 +107,7 @@ Token lexer_next_token(Lexer* l) {
     if (is_arabic_start_byte(*current)) {
         size_t start = l->pos;
         while (l->pos < l->len && !isspace(l->src[l->pos]) && 
-               strchr(".+-,=(){}", l->src[l->pos]) == NULL) { // Added comma to stop list
+               strchr(".+-,=(){}!<>*/%", l->src[l->pos]) == NULL) { // Updated stop list
             l->pos++;
         }
         

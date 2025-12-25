@@ -5,17 +5,18 @@ A compiled, Arabic-syntax systems programming language built from scratch in C.
 ## Features
 *   **Native:** Compiles to x86_64 Assembly / Windows Executable.
 *   **Arabic Syntax:** Full support for Arabic keywords and numerals.
-*   **Control Flow:** Supports conditionals and blocks.
+*   **Control Flow:** Supports conditionals, loops, and blocks.
 *   **Simple:** Clean, period-terminated syntax.
 
 ## Example
 
 ```baa
-// حساب بسيط
-صحيح س = ٤٢.
+// عد تنازلي
+صحيح س = ٥.
 
-إذا (س == ٤٢) {
-    اطبع ١.
+طالما (س != ٠) {
+    اطبع س.
+    س = س - ١.
 }
 
 إرجع ٠.

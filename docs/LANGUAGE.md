@@ -1,9 +1,9 @@
-# Baa Language Specification (v0.0.6)
+# Baa Language Specification (v0.0.7)
 
 Baa (باء) is a compiled systems programming language using Arabic syntax. It compiles directly to native machine code (via Assembly/GCC) on Windows.
 
 ## 1. Structure
-*   **File Format:** Source files must be **UTF-8** encoded. extension `.b`.
+*   **File Format:** Source files must be **UTF-8** encoded. Extension `.b` is recommended.
 *   **Statements:** Every statement must end with a period (`.`).
 *   **Comments:** Single-line comments start with `//`.
 
@@ -14,15 +14,20 @@ Baa is statically typed. It mimics C data types using Arabic terms.
 | :--- | :--- | :--- |
 | **`صحيح`** | `int` | Integer number (64-bit currently) |
 
-**Declaration Syntax:**
+### 2.1. Declaration
+Creates a new variable.
+**Syntax:** `صحيح <identifier> = <expression>.`
+
 ```baa
-صحيح <identifier> = <expression>.
+صحيح س = ٥٠.
 ```
 
-**Example:**
+### 2.2. Assignment
+Updates the value of an existing variable.
+**Syntax:** `<identifier> = <expression>.`
+
 ```baa
-// تعريف متغير
-صحيح العمر = ٢٥.
+س = س + ١.
 ```
 
 ## 3. Input / Output
@@ -39,13 +44,6 @@ Prints a signed integer followed by a newline.
 ### 4.1. Blocks
 Statements can be grouped together using curly braces `{ ... }` to create a scope.
 
-```baa
-{
-    صحيح س = ١.
-    اطبع س.
-}
-```
-
 ### 4.2. Conditional (If)
 Executes a block of code only if the condition is true (non-zero).
 
@@ -56,10 +54,13 @@ Executes a block of code only if the condition is true (non-zero).
 }
 ```
 
-**Example:**
+### 4.3. Loops (While)
+Repeats a block of code as long as the condition is true.
+
+**Syntax:**
 ```baa
-إذا (العمر > ١٨) {
-    اطبع ١.
+طالما (<condition>) {
+    <statements>
 }
 ```
 
@@ -93,12 +94,12 @@ Exits the program and returns a status code to the operating system.
 ## 7. Complete Example
 
 ```baa
-// برنامج بسيط للمقارنة
-صحيح الهدف = ٤٢.
-صحيح المدخل = ٤٠ + ٢.
+// برنامج العد التنازلي
+صحيح العداد = ٥.
 
-إذا (المدخل == الهدف) {
-    اطبع ١. // يطبع ١ إذا كانت متساوية
+طالما (العداد != ٠) {
+    اطبع العداد.
+    العداد = العداد - ١.
 }
 
 إرجع ٠.

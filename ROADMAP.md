@@ -13,15 +13,16 @@
 
 # Core Language
 
-### v0.0.7 (Next Steps)
-- [ ] **Loops:** `طالما` (While loop).
-- [ ] **Unary Operators:** `!` (Not), `-` (Negative numbers).
-
-### v0.0.8 (Planned)
-- [ ] **Functions:** Defining and calling functions.
-- [ ] **Args:** Function arguments.
+### v0.0.8 (Next Steps)
+- [ ] **Functions:** Defining functions (`دالة`).
+- [ ] **Calls:** Calling functions with arguments.
+- [ ] **Stack Frames:** Handling recursive calls properly.
 
 # Completed
+
+### v0.0.7 (Done)
+- [x] **Loops:** `طالما` (While loop).
+- [x] **Unary Operators:** `!` (Not), `-` (Negative numbers).
 
 ## v0.0.6 (Done)
 - [x] Lexer: Handle `{`, `}`, `(`, `)`, `==`, `!=`.

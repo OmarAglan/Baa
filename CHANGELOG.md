@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.0.7] - Completed
+- Added **Loops**: `طالما` (While loop).
+- Added **Variable Re-assignment**: `x = 5.` (updating existing variables).
+- Implemented loop code generation using label jumps.
+
 ## [0.0.6] - Completed
 - Added `إذا` (If) statement.
 - Added Block Scopes `{ ... }`.

@@ -5,21 +5,32 @@ A compiled, Arabic-syntax systems programming language built from scratch in C.
 ## Features
 *   **Native:** Compiles to x86_64 Assembly / Windows Executable.
 *   **Arabic Syntax:** Full support for Arabic keywords and numerals.
+*   **Functions:** Define and call functions with arguments.
+*   **Scoping:** Supports Global and Local variables.
 *   **Control Flow:** Supports conditionals, loops, and blocks.
 *   **Simple:** Clean, period-terminated syntax.
 
 ## Example
 
 ```baa
-// عد تنازلي
-صحيح س = ٥.
+// متغير عام (Global Variable)
+صحيح عامل = ٢.
 
-طالما (س != ٠) {
-    اطبع س.
-    س = س - ١.
+// تعريف دالة (Function Definition)
+صحيح ضاعف(صحيح س) {
+    إرجع س + س.
 }
 
-إرجع ٠.
+// نقطة البداية (Entry Point)
+صحيح الرئيسية() {
+    صحيح ن = ١٠.
+    صحيح م = ضاعف(ن).
+    
+    // ٢٠ + ٢ = ٢٢
+    اطبع م + عامل.
+    
+    إرجع ٠.
+}
 ```
 
 ## Documentation

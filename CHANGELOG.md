@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.0.8] - Completed
+- **Major Architecture Shift:** Program structure changed from a linear script to a list of Declarations (Functions & Globals).
+- **Functions:** Added Function Definitions (`صحيح func(...) {...}`) and Function Calls (`func(...)`).
+- **Scoping:** Implemented Global vs Local variable scope.
+- **Entry Point:** Added detection for `الرئيسية` (Main) function as the mandatory entry point.
+- **Windows x64 ABI:** Implemented compliant Stack Frames, Register Argument Passing (RCX, RDX, R8, R9), and Shadow Space allocation.
+- **Fix:** Resolved issue where global variables were ignoring initializers.
+
 ## [0.0.7] - Completed
 - Added **Loops**: `طالما` (While loop).
 - Added **Variable Re-assignment**: `x = 5.` (updating existing variables).

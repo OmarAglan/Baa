@@ -2,31 +2,25 @@
 
 ## Core Language Development
 
-### v0.0.8 (Current Priority: Functions & Structure)
-This version shifts the language from a linear script to a structured systems language.
+### v0.0.9 (Next Priority: Advanced Math & Logic)
+Currently, Baa is basically an adder/subtractor. We need full arithmetic and boolean logic to build real algorithms.
+- [ ] **Arithmetic:** `*` (Multiply), `/` (Divide), `%` (Modulo).
+    - *Challenge:* x86 division uses the `RDX:RAX` register pair, requiring special handling in codegen.
+- [ ] **Comparisons:** `<`, `>`, `<=`, `>=`.
+- [ ] **Logic Operators:** `&&` (AND), `||` (OR), `!` (NOT).
+- [ ] **Negative Numbers:** Parsing unary minus `-5`.
 
-#### Phase 1: Structure & Globals (v0.0.8-alpha)
-- [ ] **AST Refactor:** Change Root Node to hold a list of *Declarations* (Functions/Globals) instead of *Statements*.
-- [ ] **Parser Logic:** Implement `peek()` lookahead to resolve the ambiguity between `صحيح س = ...` (Variable) and `صحيح س(...)` (Function).
-- [ ] **Global Variables:** Implement `.data` section generation for variables defined outside functions.
+### v0.1.0 (Milestone: Text Support)
+The "Hello World" release. Shifting from a number-cruncher to a general-purpose language.
+- [ ] **New Type:** `حرف` (Char) - 8-bit integer.
+- [ ] **String Literals:** Parsing `"مرحباً بالعالم"` and storing them in the `.rdata` section.
+- [ ] **Polymorphic Print:** Updating `اطبع` to handle Strings and Chars, not just Integers.
 
-#### Phase 2: Function Definitions (v0.0.8-beta)
-- [ ] **Entry Point:** Detect function `الرئيسية` and export it as `main`.
-- [ ] **Stack Frames:** Implement standard x64 Prologue (`push rbp`, `mov rbp, rsp`, `sub rsp`) and Epilogue.
-- [ ] **Scope Management:** Implement a Symbol Table stack (reset local offsets when entering a function).
-
-#### Phase 3: Calls & ABI (v0.0.8-final)
-- [ ] **Function Calls:** Parse `func(arg1, arg2)`.
-- [ ] **Parameters:** Handle arguments in function definitions.
-- [ ] **Windows x64 ABI:**
-    - [ ] Pass first 4 args in `RCX`, `RDX`, `R8`, `R9`.
-    - [ ] Spill registers to stack in the Prologue (Shadow backing).
-    - [ ] Align Stack to 16 bytes before calls.
-    - [ ] Allocate 32-byte "Shadow Space" for callees.
-
-### v0.0.9 (Planned)
-- [ ] **FFI (Foreign Function Interface):** Keyword `خارجي` to import C functions (e.g., `malloc`, `free`).
-- [ ] **Recursion:** Stress test stack frames with recursive algorithms (Fibonacci).
+### v0.1.1 (Structured Data)
+Moving beyond single variables to collections.
+- [ ] **Arrays:** Fixed-size stack arrays (e.g., `صحيح مصفوفة[١٠].`).
+- [ ] **Indexing:** Reading/Writing `مصفوفة[٠]`.
+- [ ] **Advanced Loops:** `لكل` (For Loop) syntax to iterate easily over arrays.
 
 ---
 
@@ -44,6 +38,16 @@ This version shifts the language from a linear script to a structured systems la
 ---
 
 ## Completed Milestones
+
+### v0.0.8 (Done)
+- [x] **Functions:** Function Definitions (`صحيح func(...) {...}`) and Calls (`func(...)`).
+- [x] **Entry Point:** Mandatory `الرئيسية` function exported as `main`.
+- [x] **Scoping:** Global Variables (Data Section) vs Local Variables (Stack).
+- [x] **Windows x64 ABI:** 
+    - [x] Register passing (RCX, RDX, R8, R9).
+    - [x] Stack alignment (16-byte).
+    - [x] Shadow Space allocation.
+- [x] **Parser:** Lookahead logic to distinguish Variables from Functions.
 
 ### v0.0.7 (Done)
 - [x] **Loops:** `طالما` (While loop).

@@ -1,133 +1,246 @@
-# Baa Compiler Internals (v0.0.7)
+# Baa Compiler Internals (v0.0.8 Specification)
 
-This document provides a comprehensive technical overview of the Baa compiler's architecture, data structures, and algorithms. It is intended for compiler developers.
+**Version:** 0.0.8 (Functions & Scoping)
+**Target Architecture:** x86-64 (AMD64)
+**Target OS:** Windows (MinGW-w64 Toolchain)
+**Calling Convention:** Microsoft x64 ABI
+
+This document details the internal architecture, data structures, memory models, and algorithms used in the Baa compiler.
 
 ---
 
-## 1. System Architecture
+## 1. Pipeline Architecture
 
-The compiler follows a traditional **Single-Pass Frontend, Single-Pass Backend** architecture.
+The compiler operates as a multi-stage pipeline. Unlike previous versions, v0.0.8 introduces a **Semantic Analysis** phase (integrated into parsing/codegen) to handle scoping and symbol resolution.
 
 ```mermaid
-[Source Code (.b)] -> [Lexer] -> [Token Stream] -> [Parser] -> [Abstract Syntax Tree (AST)] -> [Code Generator] -> [Assembly (.s)] -> [GCC/LD] -> [Executable (.exe)]
+graph TD
+    A[Source File (.b)] -->|UTF-8 Stream| B(Lexer)
+    B -->|Token Stream| C(Parser)
+    C -->|Abstract Syntax Tree| D{Semantic Check}
+    D -->|Symbol Tables| E(Code Generator)
+    E -->|x86_64 Assembly| F(Output .s)
+    F -->|GCC/AS| G(Object File .o)
+    G -->|GCC/LD| H(Executable .exe)
 ```
-
-### 1.1. Design Philosophy
-1.  **No Dependencies:** Uses standard C11 libraries only.
-2.  **Platform:** Windows x86_64 (MinGW Toolchain).
-3.  **Encoding:** Strictly UTF-8. The compiler manually handles multi-byte Arabic sequences.
-4.  **Simplicity:** Favor readable code over premature optimization.
 
 ---
 
-## 2. The Lexer (`src/lexer.c`)
+## 2. Lexical Analysis (Lexer)
 
-The Lexer (or Scanner) converts raw bytes into meaningful `Token` structures.
+The Lexer (`src/lexer.c`) transforms raw bytes into `Token` structures.
 
-### 2.1. UTF-8 Handling
-Since Baa uses Arabic syntax, the Lexer must handle multi-byte characters.
-*   **BOM detection:** It checks the first 3 bytes for `0xEF 0xBB 0xBF` and skips them.
-*   **Arabic Digits:** Arabic-Indic digits (`٠`-`٩`) are 2 bytes in UTF-8 (`0xD9 0xA0` to `0xD9 0xA9`). The lexer normalizes these into ASCII strings (`"0"`-`"9"`) for the rest of the compiler.
-*   **Keywords:** Keywords are detected by byte-comparison using `strncmp`.
+### 2.1. State Machine
+*   **Input:** `const char* src` (UTF-8 encoded string).
+*   **BOM Handling:** Detects `0xEF 0xBB 0xBF` at index 0 and advances position by 3.
+*   **Arabic Normalization:** 
+    *   Arabic-Indic digits (`٠`-`٩`) are detected via UTF-8 sequences (`0xD9 0xA0` - `0xD9 0xA9`).
+    *   They are immediately converted to ASCII `0`-`9` in the `Token.value` field to simplify the Parser and `atoi()` calls.
 
 ### 2.2. Token Structure
-Defined in `baa.h`:
 ```c
 typedef struct {
-    TokenType type; // Enum identifying the token category
-    char* value;    // Null-terminated string (for IDs and Numbers)
-    int line;       // Source line number
+    TokenType type; // Discriminator (INT, IF, IDENTIFIER, etc.)
+    char* value;    // Payload:
+                    // - Identifiers: The name (UTF-8)
+                    // - Numbers: ASCII representation
+                    // - Keywords/Symbols: NULL
+    int line;       // Source line number for error reporting
 } Token;
 ```
 
 ---
 
-## 3. The Parser (`src/parser.c`)
+## 3. Syntactic Analysis (Parser)
 
-The Parser uses a **Recursive Descent** strategy. It builds the AST by predicting the grammatical structure based on the current token.
+The Parser (`src/parser.c`) builds the AST. v0.0.8 introduces **Lookahead** to resolve the C-style "Type Name" ambiguity.
 
-### 3.1. Grammar Rules (BNF-style)
+### 3.1. The Ambiguity Problem
+In C (and Baa), `صحيح س` could be the start of:
+1.  `صحيح س = ٥.` (Global Variable)
+2.  `صحيح س() { ... }` (Function Definition)
+
+### 3.2. Lookahead Solution
+The Parser struct maintains a buffer of tokens to peek ahead without consuming.
+
+```c
+typedef struct {
+    Lexer* lexer;
+    Token current; // The token we are processing
+    Token next;    // The lookahead token
+} Parser;
+```
+
+**Algorithm:**
+1.  Match Type (`صحيح`).
+2.  Match Identifier (`Name`).
+3.  **Peek** `parser->next.type`:
+    *   If `TOKEN_LPAREN` `(` $\to$ Parse **Function**.
+    *   If `TOKEN_ASSIGN` `=` or `TOKEN_DOT` `.` $\to$ Parse **Variable**.
+
+### 3.3. Formal Grammar (BNF)
 ```text
-Program     -> Statement* EOF
-Block       -> "{" Statement* "}"
-Statement   -> ReturnStmt | PrintStmt | VarDecl | AssignStmt | IfStmt | WhileStmt
-ReturnStmt  -> "إرجع" Expression "."
-PrintStmt   -> "اطبع" Expression "."
-VarDecl     -> "صحيح" Identifier "=" Expression "."
-AssignStmt  -> Identifier "=" Expression "."
-IfStmt      -> "إذا" "(" Expression ")" Statement
-WhileStmt   -> "طالما" "(" Expression ")" Statement
-Expression  -> Term { ("+" | "-" | "==" | "!=") Term }
-Term        -> Integer | Identifier | "(" Expression ")"
+Program       ::= Declaration* EOF
+Declaration   ::= FuncDecl | GlobalVarDecl
+GlobalVarDecl ::= "صحيح" ID ("=" Expr)? "."
+FuncDecl      ::= "صحيح" ID "(" ParamList ")" Block
+ParamList     ::= ε | Param ("," Param)*
+Param         ::= "صحيح" ID
+Block         ::= "{" Statement* "}"
+Statement     ::= Return | Print | LocalVarDecl | Assign | If | While | CallStmt
+LocalVarDecl  ::= "صحيح" ID "=" Expr "."
+Assign        ::= ID "=" Expr "."
+CallStmt      ::= CallExpr "."
+Expr          ::= Term { Op Term }
+Term          ::= INT | ID | CallExpr | "(" Expr ")"
+CallExpr      ::= ID "(" ArgList ")"
+ArgList       ::= ε | Expr ("," Expr)*
 ```
 
 ---
 
 ## 4. The Abstract Syntax Tree (AST)
 
-The AST is a tree of `Node` structs. It uses a **Tagged Union** pattern.
+The AST is a polymorphic tree structure defined in `src/baa.h`.
 
-### 4.1. Node Types
-| Node Type | Description | Data Field Used |
+### 4.1. Node Data Structures
+The `Node` struct uses a tagged union. Below are the configurations for v0.0.8:
+
+| Node Type | Description | Union Data (`data.*`) |
 | :--- | :--- | :--- |
-| `NODE_PROGRAM` | Root. | `data.program.statements` |
-| `NODE_BLOCK` | Scope `{...}`. | `data.block.statements` |
-| `NODE_VAR_DECL` | Declaration. | `data.var_decl` (`name`, `expression`) |
-| `NODE_ASSIGN` | Assignment. | `data.assign_stmt` (`name`, `expression`) |
-| `NODE_VAR_REF` | Usage. | `data.var_ref` (`name`) |
-| `NODE_IF` | Logic. | `data.if_stmt` (`condition`, `then_branch`) |
-| `NODE_WHILE` | Loop. | `data.while_stmt` (`condition`, `body`) |
-| `NODE_BIN_OP` | Math. | `data.bin_op` (`left`, `right`, `op`) |
-| `NODE_INT` | Literal. | `data.integer` (`value`) |
-| `NODE_PRINT` | Output. | `data.print_stmt` (`expression`) |
-| `NODE_RETURN` | Exit. | `data.return_stmt` (`expression`) |
+| **`NODE_PROGRAM`** | Root. | `struct Node* declarations;` (Linked List) |
+| **`NODE_FUNC_DEF`** | Function Definition. | `char* name;`<br>`struct Node* params;`<br>`struct Node* body;`<br>`int stack_size;` (Calc during codegen) |
+| **`NODE_PARAM`** | Parameter. | `char* name;` |
+| **`NODE_BLOCK`** | Scope. | `struct Node* statements;` |
+| **`NODE_VAR_DECL`** | Var Definition. | `char* name;`<br>`struct Node* expression;`<br>`bool is_global;` |
+| **`NODE_CALL`** | Function Call. | `char* name;`<br>`struct Node* args;` |
+| **`NODE_RETURN`** | Return Statement. | `struct Node* expression;` |
 
 ---
 
-## 5. Code Generation (`src/codegen.c`)
+## 5. Semantic Analysis (Symbol Tables)
 
-This module traverses the AST and emits x86_64 Assembly (AT&T Syntax).
+To handle Scope (Global vs Local), we implement a **Hierarchical Symbol Table**.
 
-### 5.1. The Stack Machine Model
-*   **Accumulator:** `RAX` stores expression results.
-*   **Scratch:** `RBX` is used as temporary storage.
-*   **Stack:** Used for pushing operands during binary operations.
+### 5.1. Structures
+```c
+typedef enum { SCOPE_GLOBAL, SCOPE_LOCAL } ScopeType;
 
-### 5.2. Memory Layout & Stack Frame
-*   **Variable Storage:** Variables are stored at negative offsets from `RBP` (e.g., `[RBP - 8]`, `[RBP - 16]`).
-*   **Shadow Space:** We reserve 32 bytes (`sub $160, %rsp`) to satisfy Windows x64 ABI requirements for calling functions like `printf`.
-
-### 5.3. Control Flow Implementation
-
-#### If Statement
-1.  Generate Label ID `N`.
-2.  Compare condition with False.
-3.  `je .Lend_N` (Jump to end if False).
-4.  Emit Body.
-5.  Label `.Lend_N`.
-
-#### While Loop
-The loop uses **Two Labels**:
-1.  **Start Label (`.Lstart_N`):** Emitted before the condition check.
-2.  **End Label (`.Lend_N`):** Used to exit the loop.
-
-**Logic Flow:**
-1.  `.Lstart_N:`
-2.  Evaluate Condition.
-3.  `cmp $0, %rax` -> `je .Lend_N` (Exit if False).
-4.  Emit Body.
-5.  `jmp .Lstart_N` (Loop back).
-6.  `.Lend_N:`
-
-### 5.4. Symbol Table
-Implemented as a global array `Symbol symbols[100]`. It maps string names to stack offsets. It handles both declarations (adding new entries) and assignments/references (looking up existing entries).
-
----
-
-## 6. Build & Link Process (`src/main.c`)
-
-1.  **IO:** Reads the source file into a buffer.
-2.  **Compile:** Calls Lexer -> Parser -> Codegen.
-3.  **Output:** Writes `out.s` to disk.
-4.  **System Call:** Invokes `gcc out.s -o out.exe` to handle linking and PE header generation.
+typedef struct {
+    char name[64];
+    ScopeType scope;
+    int offset; // For Locals: Offset from RBP (e.g., -8)
+                // For Globals: 0 (Addressed by label)
+} Symbol;
 ```
+
+### 5.2. Resolution Logic
+The compiler maintains two lists: `GlobalSymbols` and `LocalSymbols`.
+
+1.  **On Function Entry:** Clear `LocalSymbols`. Reset `CurrentStackOffset`.
+2.  **On Parameter Parse:** Add param to `LocalSymbols`. Assign stack offset (`-8`, `-16`...).
+3.  **On Variable Decl:** Add to `LocalSymbols` (or `Global` if outside function).
+4.  **On Variable Usage (Look up):**
+    1.  Search `LocalSymbols`. If found $\to$ Use `N(%rbp)`.
+    2.  Search `GlobalSymbols`. If found $\to$ Use `Name(%rip)`.
+    3.  If not found $\to$ **Compiler Error**.
+
+---
+
+## 6. Code Generation (Windows x64 ABI)
+
+This is the strict contract required to run on Windows 64-bit architecture.
+
+### 6.1. Register Usage
+*   **`RAX`**: Accumulator / Return Value.
+*   **`RCX`**, **`RDX`**, **`R8`**, **`R9`**: First 4 integer arguments.
+*   **`RBP`**: Base Pointer (Frame Pointer).
+*   **`RSP`**: Stack Pointer.
+*   **`RBX`**, **`R12-R15`**: Callee-saved (Must preserve if used).
+*   **`R10`**, **`R11`**: Volatile scratch registers.
+
+### 6.2. Stack Frame Layout
+Every function creates a stack frame. The stack grows **downwards** (towards lower addresses).
+
+| Memory Address | Content | Who Allocates? |
+| :--- | :--- | :--- |
+| `RBP + 16 + (N*8)` | **Argument N** (5, 6...) | Caller |
+| ... | ... | Caller |
+| `RBP + 48` | **Argument 5** | Caller |
+| `RBP + 40` | Shadow Space (Arg 4 home) | Caller |
+| `RBP + 32` | Shadow Space (Arg 3 home) | Caller |
+| `RBP + 24` | Shadow Space (Arg 2 home) | Caller |
+| `RBP + 16` | Shadow Space (Arg 1 home) | Caller |
+| `RBP + 8` | **Return Address** | CPU (`call`) |
+| `RBP` | **Old RBP** | Callee (`push rbp`) |
+| `RBP - 8` | **Spilled Param 1** (RCX) | Callee |
+| `RBP - 16` | **Spilled Param 2** (RDX) | Callee |
+| `RBP - 24` | **Local Var 1** | Callee |
+| ... | ... | ... |
+
+### 6.3. Function Prologue (Standard)
+Generated at the start of every function.
+
+```asm
+push %rbp           ; Save caller's frame
+mov %rsp, %rbp      ; Set new frame pointer
+sub $X, %rsp        ; Allocate X bytes. X must be 16-byte aligned.
+```
+
+**Calculating X:**
+`X = (NumLocals * 8) + (NumParams * 8) + 32 (Shadow Space for calls inside)`.
+Must round `X` up so `(X + 8)` is divisible by 16 (to account for the pushed RBP).
+
+### 6.4. Parameter Spilling
+Because arguments arrive in registers (`RCX`, `RDX`...), but we treat them as variables that can be modified, the Prologue immediately dumps them onto the stack.
+
+```asm
+; Assuming function(a, b)
+mov %rcx, -8(%rbp)  ; Spill Arg 1 (a)
+mov %rdx, -16(%rbp) ; Spill Arg 2 (b)
+```
+Now, `a` and `b` are just local variables at `-8` and `-16`.
+
+### 6.5. Function Call Sequence (The Caller)
+When generating a `NODE_CALL`:
+
+1.  **Stack Alignment:** Ensure `%rsp` is 16-byte aligned before `call`.
+2.  **Arguments > 4:** Push arguments 5, 6, etc., onto the stack in **Reverse Order**.
+3.  **Arguments 1-4:** Move values into `%rcx`, `%rdx`, `%r8`, `%r9`.
+4.  **Shadow Space:** Ensure 32 bytes are reserved at `(%rsp)` (GCC usually handles this via `sub` in prologue, or we `sub $32, %rsp` here).
+5.  **Call:** `call FunctionName`.
+6.  **Cleanup:** If we pushed args (5+), `add $N, %rsp` to clear them. Result is in `%rax`.
+
+---
+
+## 7. Global Data Section
+
+Global variables are declared in the assembly `.data` section.
+
+```asm
+.section .data
+global_var_1: .quad 0
+```
+
+*   **Reading:** `mov global_var_1(%rip), %rax`
+*   **Writing:** `mov %rax, global_var_1(%rip)`
+
+---
+
+## 8. Naming Mangling & Entry Point
+
+### 8.1. Entry Point
+The compiler searches for `الرئيسية`.
+It generates a `main` label that calls it:
+
+```asm
+.globl main
+main:
+    call الرئيسية  ; The user's main function
+    ret
+```
+
+### 8.2. Name Mangling
+Currently, Baa identifiers map 1:1 to Assembly labels.
+*   Baa: `جمع` $\to$ Asm: `جمع` (MinGW handles UTF-8 labels correctly).
+*   Future consideration: If we link with C, we might need standard ASCII names or explicit exports.

@@ -1,36 +1,72 @@
-# Baa Language Specification (v0.0.7)
+# Baa Language Specification (v0.0.8)
 
 Baa (باء) is a compiled systems programming language using Arabic syntax. It compiles directly to native machine code (via Assembly/GCC) on Windows.
 
-## 1. Structure
-*   **File Format:** Source files must be **UTF-8** encoded. Extension `.b` is recommended.
-*   **Statements:** Every statement must end with a period (`.`).
-*   **Comments:** Single-line comments start with `//`.
+## 1. Program Structure
+A Baa program is a collection of **Global Variables** and **Functions**.
+*   **File Format:** Source files must be **UTF-8** encoded. Extension `.b`.
+*   **Entry Point:** Execution starts at the function named **`الرئيسية`** (Main).
+*   **Statements:** End with a period (`.`).
+*   **Comments:** Start with `//`.
 
 ## 2. Variables & Types
-Baa is statically typed. It mimics C data types using Arabic terms.
+Baa is statically typed.
 
 | Baa Type | C Equivalent | Description |
 | :--- | :--- | :--- |
 | **`صحيح`** | `int` | Integer number (64-bit currently) |
 
-### 2.1. Declaration
-Creates a new variable.
-**Syntax:** `صحيح <identifier> = <expression>.`
-
+### 2.1. Global Variables
+Defined outside of any function. Visible everywhere.
 ```baa
-صحيح س = ٥٠.
+صحيح النسخة = ١.
 ```
 
-### 2.2. Assignment
-Updates the value of an existing variable.
-**Syntax:** `<identifier> = <expression>.`
+### 2.2. Local Variables
+Defined inside a function. Visible only within that function.
+```baa
+صحيح الرئيسية() {
+    صحيح س = ٥٠. // Local variable
+    ...
+}
+```
 
+### 2.3. Assignment
+Updates the value of an existing variable.
 ```baa
 س = س + ١.
 ```
 
-## 3. Input / Output
+## 3. Functions
+Functions allow code reuse and modularity.
+
+### 3.1. Definition
+**Syntax:** `Type Name(Params) { Body }`
+
+```baa
+صحيح جمع(صحيح أ, صحيح ب) {
+    إرجع أ + ب.
+}
+```
+
+### 3.2. Calling
+**Syntax:** `Name(Args)`
+
+```baa
+صحيح الناتج = جمع(١٠, ٢٠).
+```
+
+### 3.3. The Entry Point (`الرئيسية`)
+Every program must have this function. It takes no arguments and returns an integer (exit code).
+
+```baa
+صحيح الرئيسية() {
+    // Your code here
+    إرجع ٠.
+}
+```
+
+## 4. Input / Output
 **Syntax:** `اطبع <expression>.`
 
 Prints a signed integer followed by a newline.
@@ -39,68 +75,53 @@ Prints a signed integer followed by a newline.
 اطبع ١٠٠.
 ```
 
-## 4. Control Flow
+## 5. Control Flow
 
-### 4.1. Blocks
-Statements can be grouped together using curly braces `{ ... }` to create a scope.
+### 5.1. Conditional (If)
+Executes a block if the condition is true.
 
-### 4.2. Conditional (If)
-Executes a block of code only if the condition is true (non-zero).
-
-**Syntax:**
 ```baa
-إذا (<condition>) {
-    <statements>
+إذا (س > ١٠) {
+    اطبع ١.
 }
 ```
 
-### 4.3. Loops (While)
-Repeats a block of code as long as the condition is true.
+### 5.2. Loops (While)
+Repeats a block as long as the condition is true.
 
-**Syntax:**
 ```baa
-طالما (<condition>) {
-    <statements>
+طالما (س > ٠) {
+    س = س - ١.
 }
 ```
 
-## 5. Expressions & Operators
+## 6. Operators
 
-### 5.1. Literals
-*   **Arabic-Indic Digits:** `٠` `١` `٢` `٣` `٤` `٥` `٦` `٧` `٨` `٩`
-*   **Western Digits:** `0`-`9`
-
-### 5.2. Operators
-
-| Operator | Description | Result |
-| :--- | :--- | :--- |
-| `+` | Addition | Integer |
-| `-` | Subtraction | Integer |
-| `==` | Equals | 1 (True) or 0 (False) |
-| `!=` | Not Equals | 1 (True) or 0 (False) |
-
-### 5.3. Identifiers
-Variable names can contain Arabic letters, English letters, and underscores. They must not start with a digit.
-
-## 6. Program Exit
-Exits the program and returns a status code to the operating system.
-
-**Syntax:** `إرجع <code >.`
-
-```baa
-إرجع ٠.
-```
+| Operator | Description |
+| :--- | :--- |
+| `+`, `-` | Addition, Subtraction |
+| `==`, `!=` | Equality Checks |
 
 ## 7. Complete Example
 
 ```baa
-// برنامج العد التنازلي
-صحيح العداد = ٥.
+// متغير عام (Global)
+صحيح عامل_الضرب = ٢.
 
-طالما (العداد != ٠) {
-    اطبع العداد.
-    العداد = العداد - ١.
+// تعريف دالة (Function Definition)
+صحيح ضاعف_الرقم(صحيح س) {
+    إرجع س + س.
 }
 
-إرجع ٠.
+// نقطة البداية (Entry Point)
+صحيح الرئيسية() {
+    صحيح البداية = ١٠.
+    صحيح الناتج = ضاعف_الرقم(البداية).
+    
+    // يجب أن يطبع ٢٠
+    اطبع الناتج.
+    
+    إرجع ٠.
+}
+```
 ```

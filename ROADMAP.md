@@ -1,6 +1,36 @@
 # Baa Roadmap
 
-# Baa Studio (Editor)
+## Core Language Development
+
+### v0.0.8 (Current Priority: Functions & Structure)
+This version shifts the language from a linear script to a structured systems language.
+
+#### Phase 1: Structure & Globals (v0.0.8-alpha)
+- [ ] **AST Refactor:** Change Root Node to hold a list of *Declarations* (Functions/Globals) instead of *Statements*.
+- [ ] **Parser Logic:** Implement `peek()` lookahead to resolve the ambiguity between `صحيح س = ...` (Variable) and `صحيح س(...)` (Function).
+- [ ] **Global Variables:** Implement `.data` section generation for variables defined outside functions.
+
+#### Phase 2: Function Definitions (v0.0.8-beta)
+- [ ] **Entry Point:** Detect function `الرئيسية` and export it as `main`.
+- [ ] **Stack Frames:** Implement standard x64 Prologue (`push rbp`, `mov rbp, rsp`, `sub rsp`) and Epilogue.
+- [ ] **Scope Management:** Implement a Symbol Table stack (reset local offsets when entering a function).
+
+#### Phase 3: Calls & ABI (v0.0.8-final)
+- [ ] **Function Calls:** Parse `func(arg1, arg2)`.
+- [ ] **Parameters:** Handle arguments in function definitions.
+- [ ] **Windows x64 ABI:**
+    - [ ] Pass first 4 args in `RCX`, `RDX`, `R8`, `R9`.
+    - [ ] Spill registers to stack in the Prologue (Shadow backing).
+    - [ ] Align Stack to 16 bytes before calls.
+    - [ ] Allocate 32-byte "Shadow Space" for callees.
+
+### v0.0.9 (Planned)
+- [ ] **FFI (Foreign Function Interface):** Keyword `خارجي` to import C functions (e.g., `malloc`, `free`).
+- [ ] **Recursion:** Stress test stack frames with recursive algorithms (Fibonacci).
+
+---
+
+## Baa Studio (Editor)
 *A custom editor built from scratch in C.*
 
 ### Phase 1: The Linter (CLI)
@@ -11,48 +41,35 @@
 - [ ] Render text.
 - [ ] Handle keyboard input.
 
-# Core Language
+---
 
-### v0.0.8 (Next Steps)
-- [ ] **Functions:** Defining functions (`دالة`).
-- [ ] **Calls:** Calling functions with arguments.
-- [ ] **Stack Frames:** Handling recursive calls properly.
-
-# Completed
+## Completed Milestones
 
 ### v0.0.7 (Done)
 - [x] **Loops:** `طالما` (While loop).
-- [x] **Unary Operators:** `!` (Not), `-` (Negative numbers).
+- [x] **Assignments:** Update existing variables (`x = 1.`).
+- [x] **Codegen:** Implemented Loop Labels (Start/End).
 
-## v0.0.6 (Done)
-- [x] Lexer: Handle `{`, `}`, `(`, `)`, `==`, `!=`.
-- [x] Lexer: Keyword `إذا`.
-- [x] Parser: Recursive Block parsing.
-- [x] Codegen: Label generation and Conditional Jumps (`je`, `jne`).
-- [x] Comprehensive Documentation Update (Internals & API).
+### v0.0.6 (Done)
+- [x] **Control Flow:** `إذا` (If), Blocks `{...}`.
+- [x] **Logic:** Comparisons (`==`, `!=`).
+- [x] **Codegen:** Label generation and Conditional Jumps (`je`).
+- [x] **Docs:** Comprehensive Internals & API documentation.
 
-## v0.0.5 (Done)
-- [x] **Renamed** `رقم` to `صحيح` (int).
-- [x] **Comments:** Support comments (`//` or `#`).
-- [x] **Multi-digit Parsing:** Improve robustness of Arabic number parsing.
-- [x] **Error Handling:** Better error messages ("Variable 'x' not found").
+### v0.0.5 (Done)
+- [x] **Type System:** Renamed `رقم` to `صحيح` (int).
+- [x] **Comments:** Added Single Line Comments (`//`).
 
-## v0.0.4 (Done)
-- [x] Lexer: Parse Identifiers (Arabic names) and `=`.
-- [x] Parser: Handle Variable Declarations and Lookups.
-- [x] Codegen: Implement Stack Frame (RBP) and Local Variable offsets.
+### v0.0.4 (Done)
+- [x] **Memory:** Variable Declarations and Stack Offsets.
+- [x] **Symbol Table:** Basic global lookup.
 
-## v0.0.3 (Done)
-- [x] Lexer: Handle `اطبع`.
-- [x] Parser: Handle list of statements (Linked List).
-- [x] Codegen: Define Data Section (Format string).
-- [x] Codegen: Call `printf` using Windows x64 ABI.
+### v0.0.3 (Done)
+- [x] **I/O:** Added `اطبع` (Print) via Windows `printf`.
+- [x] **Parser:** Support for multiple statements (Linked List).
 
-## v0.0.2 (Done)
-- [x] Lexer: Handle Arabic Digits (٠-٩).
-- [x] Lexer: Handle `+` and `-`.
-- [x] Parser: Handle Binary Expressions (1 + 2).
-- [x] Codegen: Generate `add` and `sub` assembly.
+### v0.0.2 (Done)
+- [x] **Math:** Arabic Numerals (٠-٩) and Operators (+, -).
 
-## v0.0.1 (Done)
-- [x] Basic Pipeline (Lexer -> Parser -> Codegen -> GCC).
+### v0.0.1 (Done)
+- [x] **Core:** Basic Pipeline (Lexer -> Parser -> Codegen -> GCC).

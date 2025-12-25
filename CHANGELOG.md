@@ -1,9 +1,11 @@
 # Changelog
 
-## [0.0.6] - In Progress
+## [0.0.6] - Completed
 - Added `إذا` (If) statement.
 - Added Block Scopes `{ ... }`.
 - Added Comparison Operators (`==`, `!=`).
+- Implemented Label generation and Conditional Jumps in Codegen.
+- Comprehensive Documentation Update (Internals & API).
 
 ## [0.0.5] - Completed
 - **Breaking:** Renamed `رقم` to `صحيح` (int) to align with C types.

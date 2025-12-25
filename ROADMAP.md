@@ -1,10 +1,34 @@
 # Baa Roadmap
 
-## v0.0.6 (Current)
-- [ ] Lexer: Handle `{`, `}`, `(`, `)`, `==`, `!=`.
-- [ ] Lexer: Keyword `إذا`.
-- [ ] Parser: Recursive Block parsing.
-- [ ] Codegen: Label generation and Conditional Jumps (`je`, `jne`).
+# Baa Studio (Editor)
+*A custom editor built from scratch in C.*
+
+### Phase 1: The Linter (CLI)
+- [ ] Build a tool that reads `.b` files and outputs colored text to the terminal using ANSI codes.
+
+### Phase 2: The GUI (Windows API)
+- [ ] Create a window using `windows.h`.
+- [ ] Render text.
+- [ ] Handle keyboard input.
+
+# Core Language
+
+### v0.0.7 (Next Steps)
+- [ ] **Loops:** `طالما` (While loop).
+- [ ] **Unary Operators:** `!` (Not), `-` (Negative numbers).
+
+### v0.0.8 (Planned)
+- [ ] **Functions:** Defining and calling functions.
+- [ ] **Args:** Function arguments.
+
+# Completed
+
+## v0.0.6 (Done)
+- [x] Lexer: Handle `{`, `}`, `(`, `)`, `==`, `!=`.
+- [x] Lexer: Keyword `إذا`.
+- [x] Parser: Recursive Block parsing.
+- [x] Codegen: Label generation and Conditional Jumps (`je`, `jne`).
+- [x] Comprehensive Documentation Update (Internals & API).
 
 ## v0.0.5 (Done)
 - [x] **Renamed** `رقم` to `صحيح` (int).

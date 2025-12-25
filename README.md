@@ -5,19 +5,26 @@ A compiled, Arabic-syntax systems programming language built from scratch in C.
 ## Features
 *   **Native:** Compiles to x86_64 Assembly / Windows Executable.
 *   **Arabic Syntax:** Full support for Arabic keywords and numerals.
+*   **Control Flow:** Supports conditionals and blocks.
 *   **Simple:** Clean, period-terminated syntax.
 
 ## Example
 
 ```baa
+// حساب بسيط
 صحيح س = ٤٢.
-اطبع س + ٨.
+
+إذا (س == ٤٢) {
+    اطبع ١.
+}
+
 إرجع ٠.
 ```
 
 ## Documentation
-*   [Language Guide (Syntax)](docs/LANGUAGE.md)
-*   [Compiler Internals (Architecture)](docs/INTERNALS.md)
+*   [User Guide (How to Use)](docs/USER_GUIDE.md)
+*   [Language Specification (Syntax)](docs/LANGUAGE.md)
+*   [Compiler Internals](docs/INTERNALS.md)
 *   [Roadmap](ROADMAP.md)
 *   [Changelog](CHANGELOG.md)
 

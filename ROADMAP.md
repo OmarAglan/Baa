@@ -2,22 +2,15 @@
 
 ## Core Language Development
 
-### v0.0.9 (Next Priority: Advanced Math & Logic)
-Currently, Baa is basically an adder/subtractor. We need full arithmetic and boolean logic to build real algorithms.
-
-- [x] **Arithmetic:** `*` (Multiply), `/` (Divide), `%` (Modulo).
-    - *Implemented:* x86 division using `cqo` + `idiv` handling `RDX:RAX`.
-- [x] **Comparisons:** `<`, `>`, `<=`, `>=`.
-- [x] **Logic Operators:** `==`, `!=` (AND/OR/NOT pushed to v0.1.0).
-- [ ] **Negative Numbers:** Parsing unary minus `-5` (Pushed to v0.1.0).
-
-### v0.1.0 (Milestone: Text Support)
+### v0.1.0 (Current: Milestone: Text Support & Logic Operators)
 The "Hello World" release. Shifting from a number-cruncher to a general-purpose language.
 - [ ] **New Type:** `حرف` (Char) - 8-bit integer.
 - [ ] **String Literals:** Parsing `"مرحباً بالعالم"` and storing them in the `.rdata` section.
 - [ ] **Polymorphic Print:** Updating `اطبع` to handle Strings and Chars, not just Integers.
+- [ ] **Negative Numbers:** Parsing unary minus `-5`.
+- [ ] **Logic Operators:** `و` (AND), `أو` (OR), `لا` (NOT).
 
-### v0.1.1 (Structured Data)
+### v0.1.1 (Next: Structured Data)
 Moving beyond single variables to collections.
 - [ ] **Arrays:** Fixed-size stack arrays (e.g., `صحيح مصفوفة[١٠].`).
 - [ ] **Indexing:** Reading/Writing `مصفوفة[٠]`.

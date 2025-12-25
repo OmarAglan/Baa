@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.1.0] - In Progress
+- Added **String Literals** (`"text"`).
+- Added **Character Literals** (`'x'`).
+- Added **Unary Minus** (`-5`).
+- Updated `اطبع` to support printing strings via `%s`.
+
 ## [0.0.9] - Completed
 - **Math:** Added Multiplication (`*`), Division (`/`), and Modulo (`%`).
 - **Logic:** Added Relational Operators: `<`, `>`, `<=`, `>=`.

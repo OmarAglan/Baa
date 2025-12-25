@@ -10,6 +10,7 @@ typedef struct {
 Symbol symbols[100];
 int symbol_count = 0;
 int current_stack_offset = 0;
+int label_counter = 0; // New: Unique label generator
 
 void add_symbol(const char* name) {
     current_stack_offset -= 8; // 8 bytes for 64-bit integer
@@ -48,40 +49,60 @@ void gen_expr(Node* node, FILE* file) {
         
         // 3. Pop Right side into RBX
         fprintf(file, "    pop %%rbx\n");
-        if (node->data.bin_op.op == OP_ADD) fprintf(file, "    add %%rbx, %%rax\n");
-        else fprintf(file, "    sub %%rbx, %%rax\n");
+        
+        if (node->data.bin_op.op == OP_ADD) {
+            fprintf(file, "    add %%rbx, %%rax\n");
+        } else if (node->data.bin_op.op == OP_SUB) {
+            fprintf(file, "    sub %%rbx, %%rax\n");
+        } else if (node->data.bin_op.op == OP_EQ) {
+            fprintf(file, "    cmp %%rbx, %%rax\n");
+            fprintf(file, "    sete %%al\n"); // Set AL to 1 if equal
+            fprintf(file, "    movzbq %%al, %%rax\n"); // Zero-extend AL to RAX
+        } else if (node->data.bin_op.op == OP_NEQ) {
+            fprintf(file, "    cmp %%rbx, %%rax\n");
+            fprintf(file, "    setne %%al\n"); 
+            fprintf(file, "    movzbq %%al, %%rax\n");
+        }
     }
 }
 
 void codegen(Node* node, FILE* file) {
-    if (node->type == NODE_PROGRAM) {
-        // Data section for format string
-        fprintf(file, ".section .rdata,\"dr\"\n");
-        fprintf(file, "fmt_int: .asciz \"%%d\\n\"\n"); // "%d\n"
+    if (node == NULL) return;
 
-        fprintf(file, ".text\n");
-        fprintf(file, ".globl main\n");
-        fprintf(file, "main:\n");
-        
-        // --- PROLOGUE (Stack Frame) ---
-        fprintf(file, "    push %%rbp\n");      // Save old base pointer
-        fprintf(file, "    mov %%rsp, %%rbp\n"); // Set new base pointer
-        // Reserve space for 16 variables (16 * 8 = 128 bytes) + Shadow Space (32)
-        // Must align stack to 16 bytes.
+    if (node->type == NODE_PROGRAM) {
+        fprintf(file, ".section .rdata,\"dr\"\n");
+        fprintf(file, "fmt_int: .asciz \"%%d\\n\"\n");
+        fprintf(file, ".text\n.globl main\nmain:\n");
+        fprintf(file, "    push %%rbp\n");
+        fprintf(file, "    mov %%rsp, %%rbp\n");
         fprintf(file, "    sub $160, %%rsp\n"); 
 
-        // Loop through statements
         Node* current = node->data.program.statements;
-        while (current != NULL) {
-            codegen(current, file);
-            current = current->next;
-        }
+        while (current != NULL) { codegen(current, file); current = current->next; }
 
-        // --- EPILOGUE ---
         fprintf(file, "    mov $0, %%rax\n");
-        fprintf(file, "    leave\n"); // Restore RSP and RBP
-        fprintf(file, "    ret\n");
+        fprintf(file, "    leave\n    ret\n");
     } 
+    else if (node->type == NODE_BLOCK) {
+        Node* current = node->data.block.statements;
+        while (current != NULL) { codegen(current, file); current = current->next; }
+    }
+    else if (node->type == NODE_IF) {
+        int label_end = label_counter++;
+        
+        // 1. Calculate condition
+        gen_expr(node->data.if_stmt.condition, file);
+        
+        // 2. Check if false (0). If so, jump to end.
+        fprintf(file, "    cmp $0, %%rax\n");
+        fprintf(file, "    je .Lend_%d\n", label_end);
+        
+        // 3. Generate 'Then' block
+        codegen(node->data.if_stmt.then_branch, file);
+        
+        // 4. Label for end
+        fprintf(file, ".Lend_%d:\n", label_end);
+    }
     else if (node->type == NODE_VAR_DECL) {
         // Calculate value
         gen_expr(node->data.var_decl.expression, file);
@@ -102,7 +123,6 @@ void codegen(Node* node, FILE* file) {
     }
     else if (node->type == NODE_RETURN) {
         gen_expr(node->data.return_stmt.expression, file);
-        fprintf(file, "    leave\n");
-        fprintf(file, "    ret\n");
+        fprintf(file, "    leave\n    ret\n");
     }
 }

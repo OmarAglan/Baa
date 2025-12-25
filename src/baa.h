@@ -15,12 +15,19 @@ typedef enum {
     TOKEN_RETURN,   // إرجع
     TOKEN_PRINT,    // اطبع
     TOKEN_KEYWORD_INT, // صحيح
+    TOKEN_IF,           // إذا
     TOKEN_IDENTIFIER, // Variable names (e.g., س)
     TOKEN_ASSIGN,     // =
+    TOKEN_EQ,           // ==
+    TOKEN_NEQ,          // !=
     TOKEN_DOT,      // .
     TOKEN_PLUS,     // +
     TOKEN_MINUS,    // -
-    TOKEN_INVALID
+    TOKEN_LPAREN,       // (
+    TOKEN_RPAREN,       // )
+    TOKEN_LBRACE,       // {
+    TOKEN_RBRACE,       // }
+    TOKEN_INVALID  // Invalid token
 } TokenType;
 
 typedef struct {
@@ -43,37 +50,43 @@ Token lexer_next_token(Lexer* lexer);
 
 typedef enum {
     NODE_PROGRAM, // New: Program
+    NODE_BLOCK,         // New: List of statements
     NODE_RETURN,  // New: Return
     NODE_PRINT,   // New: Print
     NODE_VAR_DECL, // New: Declaration
+    NODE_IF,            // New: If statement
     NODE_VAR_REF,  // New: Usage
     NODE_INT,     // New: Integer
     NODE_BIN_OP   // New: Binary Operation
 } NodeType;
 
-typedef enum { OP_ADD, OP_SUB } OpType;
+typedef enum { 
+    OP_ADD,     // +
+    OP_SUB,     // -
+    OP_EQ,      // ==
+    OP_NEQ      // !=
+} OpType;
 
 struct Node; // Forward declaration
 
 typedef struct Node {
     NodeType type;
-    struct Node* next; // For linked list of statements
+    struct Node* next; // Link to next node
     union {
-        struct { struct Node* statements; } program;
-        struct { struct Node* expression; } return_stmt;
-        struct { struct Node* expression; } print_stmt;
+        struct { struct Node* statements; } program; // List of statements
+        struct { struct Node* statements; } block; // { stmt; stmt; }
         
         struct { 
-            char* name; 
-            struct Node* expression; 
-        } var_decl; // رقم x = 5
+            struct Node* condition;
+            struct Node* then_branch;
+        } if_stmt; // if (condition) { stmt; stmt; }
 
-        struct { 
-            char* name; 
-        } var_ref;  // x + 1
-
-        struct { int value; } integer;
-        struct { struct Node* left; struct Node* right; OpType op; } bin_op;
+        struct { struct Node* expression; } return_stmt; // return <expression>;
+        struct { struct Node* expression; } print_stmt; // print <expression>;
+        struct { char* name; struct Node* expression; } var_decl; // <identifier> = <expression>;
+        struct { char* name; } var_ref; // <identifier>
+        struct { int value; } integer; // <integer>
+        struct { struct Node* left; struct Node* right; OpType op; } bin_op; // <left> <op> <right>
     } data;
 } Node;
 

@@ -34,10 +34,7 @@ Token lexer_next_token(Lexer* l) {
 
     // 2. Check for Comments (//)
     if (l->pos + 1 < l->len && l->src[l->pos] == '/' && l->src[l->pos+1] == '/') {
-        // Skip until newline
-        while (l->pos < l->len && l->src[l->pos] != '\n') {
-            l->pos++;
-        }
+        while (l->pos < l->len && l->src[l->pos] != '\n') l->pos++;
         // Recursively call next_token to get the actual next token
         return lexer_next_token(l);
     }
@@ -46,11 +43,28 @@ Token lexer_next_token(Lexer* l) {
 
     const char* current = l->src + l->pos;
 
-    // Symbols
+    // Single/Double Char Tokens
     if (*current == '.') { token.type = TOKEN_DOT; l->pos++; return token; }
     if (*current == '+') { token.type = TOKEN_PLUS; l->pos++; return token; }
     if (*current == '-') { token.type = TOKEN_MINUS; l->pos++; return token; }
-    if (*current == '=') { token.type = TOKEN_ASSIGN; l->pos++; return token; }
+    if (*current == '(') { token.type = TOKEN_LPAREN; l->pos++; return token; }
+    if (*current == ')') { token.type = TOKEN_RPAREN; l->pos++; return token; }
+    if (*current == '{') { token.type = TOKEN_LBRACE; l->pos++; return token; }
+    if (*current == '}') { token.type = TOKEN_RBRACE; l->pos++; return token; }
+    
+    if (*current == '!') {
+        if (l->pos + 1 < l->len && l->src[l->pos+1] == '=') {
+            token.type = TOKEN_NEQ; l->pos += 2; return token;
+        }
+        // Assuming just '!' for now is invalid in this version
+    }
+
+    if (*current == '=') { 
+        if (l->pos + 1 < l->len && l->src[l->pos+1] == '=') {
+            token.type = TOKEN_EQ; l->pos += 2; return token;
+        }
+        token.type = TOKEN_ASSIGN; l->pos++; return token; 
+    }
 
     // Numbers
     if (isdigit(*current) || is_arabic_digit(current)) {
@@ -74,8 +88,7 @@ Token lexer_next_token(Lexer* l) {
         // Find end of word
         size_t start = l->pos;
         while (l->pos < l->len && !isspace(l->src[l->pos]) && 
-               l->src[l->pos] != '.' && l->src[l->pos] != '+' && 
-               l->src[l->pos] != '-' && l->src[l->pos] != '=') {
+               strchr(".+-=(){}", l->src[l->pos]) == NULL) { // Stop at symbols
             l->pos++;
         }
         
@@ -87,8 +100,9 @@ Token lexer_next_token(Lexer* l) {
         // Check Keywords
         if (strcmp(word, "إرجع") == 0) token.type = TOKEN_RETURN;
         else if (strcmp(word, "اطبع") == 0) token.type = TOKEN_PRINT;
-        // CHANGED: Check for "صحيح" instead of "رقم"
         else if (strcmp(word, "صحيح") == 0) token.type = TOKEN_KEYWORD_INT;
+        // New Keyword: إذا
+        else if (strcmp(word, "إذا") == 0) token.type = TOKEN_IF;
         else {
             // Not a keyword? It's a variable name.
             token.type = TOKEN_IDENTIFIER;

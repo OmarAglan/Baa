@@ -92,11 +92,13 @@ Node* parse_block(Lexer* l) {
 Node* parse_statement(Lexer* l) {
     Node* stmt = malloc(sizeof(Node));
     stmt->next = NULL;
-
+    
+    // Block
     if (current_token.type == TOKEN_LBRACE) {
         free(stmt); // Avoid leak, parse_block allocates new
         return parse_block(l);
     }
+    // Return Statement
     else if (current_token.type == TOKEN_RETURN) {
         eat(l, TOKEN_RETURN);
         stmt->type = NODE_RETURN;
@@ -104,6 +106,7 @@ Node* parse_statement(Lexer* l) {
         eat(l, TOKEN_DOT);
         return stmt;
     } 
+    // Print Statement
     else if (current_token.type == TOKEN_PRINT) {
         eat(l, TOKEN_PRINT);
         stmt->type = NODE_PRINT;
@@ -124,7 +127,21 @@ Node* parse_statement(Lexer* l) {
         eat(l, TOKEN_DOT);
         return stmt;
     }
-    // New: If Statement
+    // Check for Identifier start (e.g. "x = ...")
+    else if (current_token.type == TOKEN_IDENTIFIER) {
+        char* name = strdup(current_token.value);
+        eat(l, TOKEN_IDENTIFIER);
+        eat(l, TOKEN_ASSIGN);
+        Node* expr = parse_expression(l);
+        
+        stmt->type = NODE_ASSIGN;
+        stmt->data.assign_stmt.name = name;
+        stmt->data.assign_stmt.expression = expr;
+    
+        eat(l, TOKEN_DOT);
+        return stmt;
+    }
+    // If Statement
     else if (current_token.type == TOKEN_IF) {
         eat(l, TOKEN_IF);
         eat(l, TOKEN_LPAREN);
@@ -138,7 +155,21 @@ Node* parse_statement(Lexer* l) {
         stmt->data.if_stmt.then_branch = then_branch;
         return stmt;
     }
-    
+    // While Statement
+    else if (current_token.type == TOKEN_WHILE) {
+        eat(l, TOKEN_WHILE);
+        eat(l, TOKEN_LPAREN);
+        Node* condition = parse_expression(l);
+        eat(l, TOKEN_RPAREN);
+        
+        Node* body = parse_statement(l); // Parses block or single stmt
+
+        stmt->type = NODE_WHILE;
+        stmt->data.while_stmt.condition = condition;
+        stmt->data.while_stmt.body = body;
+        return stmt;
+    }
+    // Invalid Statement
     printf("Parser Error: Unknown statement type %d\n", current_token.type);
     exit(1);
 }

@@ -67,8 +67,9 @@ void gen_expr(Node* node, FILE* file) {
 }
 
 void codegen(Node* node, FILE* file) {
+    // NULL Check
     if (node == NULL) return;
-
+    // Program
     if (node->type == NODE_PROGRAM) {
         fprintf(file, ".section .rdata,\"dr\"\n");
         fprintf(file, "fmt_int: .asciz \"%%d\\n\"\n");
@@ -83,10 +84,12 @@ void codegen(Node* node, FILE* file) {
         fprintf(file, "    mov $0, %%rax\n");
         fprintf(file, "    leave\n    ret\n");
     } 
+    // Block
     else if (node->type == NODE_BLOCK) {
         Node* current = node->data.block.statements;
         while (current != NULL) { codegen(current, file); current = current->next; }
     }
+    // If Statement
     else if (node->type == NODE_IF) {
         int label_end = label_counter++;
         
@@ -103,6 +106,31 @@ void codegen(Node* node, FILE* file) {
         // 4. Label for end
         fprintf(file, ".Lend_%d:\n", label_end);
     }
+    // While Statement
+    else if (node->type == NODE_WHILE) {
+        int label_start = label_counter++;
+        int label_end = label_counter++;
+
+        // 1. Label Start
+        fprintf(file, ".Lstart_%d:\n", label_start);
+
+        // 2. Calculate Condition
+        gen_expr(node->data.while_stmt.condition, file);
+
+        // 3. Check if False (0). Jump to End.
+        fprintf(file, "    cmp $0, %%rax\n");
+        fprintf(file, "    je .Lend_%d\n", label_end);
+
+        // 4. Generate Body
+        codegen(node->data.while_stmt.body, file);
+
+        // 5. Jump back to Start
+        fprintf(file, "    jmp .Lstart_%d\n", label_start);
+
+        // 6. Label End
+        fprintf(file, ".Lend_%d:\n", label_end);
+    }
+    // Variable Declaration
     else if (node->type == NODE_VAR_DECL) {
         // Calculate value
         gen_expr(node->data.var_decl.expression, file);
@@ -112,6 +140,14 @@ void codegen(Node* node, FILE* file) {
         int offset = get_symbol_offset(node->data.var_decl.name);
         fprintf(file, "    mov %%rax, %d(%%rbp)\n", offset);
     }
+    // Assignment Statement
+    else if (node->type == NODE_ASSIGN) {
+        gen_expr(node->data.assign_stmt.expression, file);
+        // Find existing offset
+        int offset = get_symbol_offset(node->data.assign_stmt.name); 
+        fprintf(file, "    mov %%rax, %d(%%rbp)\n", offset);
+    }
+    // Print Statement
     else if (node->type == NODE_PRINT) {
         gen_expr(node->data.print_stmt.expression, file);
         // Windows ABI:

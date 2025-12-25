@@ -101,8 +101,8 @@ Token lexer_next_token(Lexer* l) {
         if (strcmp(word, "إرجع") == 0) token.type = TOKEN_RETURN;
         else if (strcmp(word, "اطبع") == 0) token.type = TOKEN_PRINT;
         else if (strcmp(word, "صحيح") == 0) token.type = TOKEN_KEYWORD_INT;
-        // New Keyword: إذا
         else if (strcmp(word, "إذا") == 0) token.type = TOKEN_IF;
+        else if (strcmp(word, "طالما") == 0) token.type = TOKEN_WHILE;
         else {
             // Not a keyword? It's a variable name.
             token.type = TOKEN_IDENTIFIER;

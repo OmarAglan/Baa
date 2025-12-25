@@ -16,6 +16,7 @@ typedef enum {
     TOKEN_PRINT,    // اطبع
     TOKEN_KEYWORD_INT, // صحيح
     TOKEN_IF,           // إذا
+    TOKEN_WHILE,      // طالما
     TOKEN_IDENTIFIER, // Variable names (e.g., س)
     TOKEN_ASSIGN,     // =
     TOKEN_EQ,           // ==
@@ -52,9 +53,11 @@ typedef enum {
     NODE_PROGRAM, // New: Program
     NODE_BLOCK,         // New: List of statements
     NODE_RETURN,  // New: Return
+    NODE_ASSIGN, // New: Assignment
     NODE_PRINT,   // New: Print
     NODE_VAR_DECL, // New: Declaration
     NODE_IF,            // New: If statement
+    NODE_WHILE,         // New: While statement
     NODE_VAR_REF,  // New: Usage
     NODE_INT,     // New: Integer
     NODE_BIN_OP   // New: Binary Operation
@@ -76,17 +79,25 @@ typedef struct Node {
         struct { struct Node* statements; } program; // List of statements
         struct { struct Node* statements; } block; // { stmt; stmt; }
         
+        // New: If structure
         struct { 
             struct Node* condition;
             struct Node* then_branch;
         } if_stmt; // if (condition) { stmt; stmt; }
-
+        
+        // New: While structure (Same structure as If, fundamentally)
+        struct {
+            struct Node* condition;
+            struct Node* body;
+        } while_stmt;
+        
         struct { struct Node* expression; } return_stmt; // return <expression>;
         struct { struct Node* expression; } print_stmt; // print <expression>;
         struct { char* name; struct Node* expression; } var_decl; // <identifier> = <expression>;
         struct { char* name; } var_ref; // <identifier>
         struct { int value; } integer; // <integer>
         struct { struct Node* left; struct Node* right; OpType op; } bin_op; // <left> <op> <right>
+        struct { char* name; struct Node* expression; } assign_stmt; // Existing var
     } data;
 } Node;
 

@@ -1,4 +1,4 @@
-# Baa Language Specification (v0.0.8)
+# Baa Language Specification (v0.0.9)
 
 Baa (باء) is a compiled systems programming language using Arabic syntax. It compiles directly to native machine code (via Assembly/GCC) on Windows.
 
@@ -97,10 +97,28 @@ Repeats a block as long as the condition is true.
 
 ## 6. Operators
 
-| Operator | Description |
-| :--- | :--- |
-| `+`, `-` | Addition, Subtraction |
-| `==`, `!=` | Equality Checks |
+Baa follows standard mathematical order of operations (PEMDAS).
+
+### 6.1. Arithmetic
+| Operator | Description | Example | Result |
+| :--- | :--- | :--- | :--- |
+| `+` | Addition | `١٠ + ٥` | `١٥` |
+| `-` | Subtraction | `١٠ - ٥` | `٥` |
+| `*` | Multiplication | `١٠ * ٥` | `٥٠` |
+| `/` | Division (Integer) | `١٠ / ٣` | `٣` |
+| `%` | Modulo (Remainder) | `١٠ % ٣` | `١` |
+
+### 6.2. Comparison
+Returns `1` for True, `0` for False.
+
+| Operator | Description | Example |
+| :--- | :--- | :--- |
+| `==` | Equal | `٥ == ٥` |
+| `!=` | Not Equal | `٥ != ٤` |
+| `<` | Less Than | `٣ < ٥` |
+| `>` | Greater Than | `٥ > ٣` |
+| `<=` | Less or Equal | `٥ <= ٥` |
+| `>=` | Greater or Equal | `٥ >= ٤` |
 
 ## 7. Complete Example
 
@@ -110,18 +128,21 @@ Repeats a block as long as the condition is true.
 
 // تعريف دالة (Function Definition)
 صحيح ضاعف_الرقم(صحيح س) {
-    إرجع س + س.
+    إرجع س * عامل_الضرب.
 }
 
 // نقطة البداية (Entry Point)
 صحيح الرئيسية() {
     صحيح البداية = ١٠.
+    
+    // ٢٠
     صحيح الناتج = ضاعف_الرقم(البداية).
     
-    // يجب أن يطبع ٢٠
-    اطبع الناتج.
+    // باقي القسمة: ٢٠ % ٣ = ٢
+    صحيح الباقي = الناتج % ٣.
+    
+    اطبع الباقي.
     
     إرجع ٠.
 }
-```
 ```

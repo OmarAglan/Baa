@@ -4,11 +4,12 @@
 
 ### v0.0.9 (Next Priority: Advanced Math & Logic)
 Currently, Baa is basically an adder/subtractor. We need full arithmetic and boolean logic to build real algorithms.
-- [ ] **Arithmetic:** `*` (Multiply), `/` (Divide), `%` (Modulo).
-    - *Challenge:* x86 division uses the `RDX:RAX` register pair, requiring special handling in codegen.
-- [ ] **Comparisons:** `<`, `>`, `<=`, `>=`.
-- [ ] **Logic Operators:** `&&` (AND), `||` (OR), `!` (NOT).
-- [ ] **Negative Numbers:** Parsing unary minus `-5`.
+
+- [x] **Arithmetic:** `*` (Multiply), `/` (Divide), `%` (Modulo).
+    - *Implemented:* x86 division using `cqo` + `idiv` handling `RDX:RAX`.
+- [x] **Comparisons:** `<`, `>`, `<=`, `>=`.
+- [x] **Logic Operators:** `==`, `!=` (AND/OR/NOT pushed to v0.1.0).
+- [ ] **Negative Numbers:** Parsing unary minus `-5` (Pushed to v0.1.0).
 
 ### v0.1.0 (Milestone: Text Support)
 The "Hello World" release. Shifting from a number-cruncher to a general-purpose language.
@@ -38,6 +39,11 @@ Moving beyond single variables to collections.
 ---
 
 ## Completed Milestones
+
+### v0.0.9 (Done)
+- [x] **Advanced Math:** Multiplication, Division, Modulo.
+- [x] **Comparisons:** Greater/Less than logic.
+- [x] **Parser:** Operator Precedence Climbing (PEMDAS).
 
 ### v0.0.8 (Done)
 - [x] **Functions:** Function Definitions (`صحيح func(...) {...}`) and Calls (`func(...)`).

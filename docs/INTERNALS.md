@@ -1,6 +1,6 @@
-# Baa Compiler Internals (v0.0.8 Specification)
+# Baa Compiler Internals (v0.0.9 Specification)
 
-**Version:** 0.0.8 (Functions & Scoping)
+**Version:** 0.0.9 (Functions & Scoping)
 **Target Architecture:** x86-64 (AMD64)
 **Target OS:** Windows (MinGW-w64 Toolchain)
 **Calling Convention:** Microsoft x64 ABI
@@ -92,7 +92,7 @@ LocalVarDecl  ::= "صحيح" ID "=" Expr "."
 Assign        ::= ID "=" Expr "."
 CallStmt      ::= CallExpr "."
 Expr          ::= Term { Op Term }
-Term          ::= INT | ID | CallExpr | "(" Expr ")"
+Term          ::= INT | ID | CallExpr | "(" Expr ")" | Unary
 CallExpr      ::= ID "(" ArgList ")"
 ArgList       ::= ε | Expr ("," Expr)*
 ```
@@ -115,6 +115,7 @@ The `Node` struct uses a tagged union. Below are the configurations for v0.0.8:
 | **`NODE_VAR_DECL`** | Var Definition. | `char* name;`<br>`struct Node* expression;`<br>`bool is_global;` |
 | **`NODE_CALL`** | Function Call. | `char* name;`<br>`struct Node* args;` |
 | **`NODE_RETURN`** | Return Statement. | `struct Node* expression;` |
+| **`NODE_BIN_OP`** | Math/Logic. | `left`, `right`, `op` (ADD, SUB, MUL, DIV, MOD, EQ, NEQ, LT, GT, LTE, GTE). |
 
 ---
 
@@ -210,6 +211,23 @@ When generating a `NODE_CALL`:
 4.  **Shadow Space:** Ensure 32 bytes are reserved at `(%rsp)` (GCC usually handles this via `sub` in prologue, or we `sub $32, %rsp` here).
 5.  **Call:** `call FunctionName`.
 6.  **Cleanup:** If we pushed args (5+), `add $N, %rsp` to clear them. Result is in `%rax`.
+
+### 6.6. Arithmetic & Logic (New in v0.0.9)
+ 
+**Multiplication (`*`):** Uses `imul %rbx, %rax`.
+
+**Division (`/`) & Modulo (`%`):**
+x86-64 Division is complex. It divides the 128-bit value in `RDX:RAX` by the operand.
+1.  Ensure `RAX` holds the dividend.
+2.  Execute `cqo` (Convert Quad to Oct) to sign-extend `RAX` into `RDX`.
+3.  Execute `idiv %rbx`.
+    *   Quotient (`/`) is stored in `RAX`.
+    *   Remainder (`%`) is stored in `RDX`.
+
+**Comparisons (`<`, `>`, etc.):**
+1.  `cmp %rbx, %rax`
+2.  Use conditional set instructions: `sete` (==), `setne` (!=), `setl` (<), `setg` (>), `setle` (<=), `setge` (>=).
+3.  `movzbq %al, %rax` (Zero extend boolean byte to integer).
 
 ---
 

@@ -1,4 +1,4 @@
-# Baa Internal API Reference (v0.0.8)
+# Baa Internal API Reference (v0.0.9)
 
 This document details the C functions, enumerations, and structures defined in `src/baa.h`. It reflects the architecture changes for supporting Functions, Global Scope, and the Windows x64 ABI.
 

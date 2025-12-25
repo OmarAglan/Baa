@@ -8,6 +8,7 @@ A compiled, Arabic-syntax systems programming language built from scratch in C.
 *   **Functions:** Define and call functions with arguments.
 *   **Scoping:** Supports Global and Local variables.
 *   **Control Flow:** Supports conditionals, loops, and blocks.
+*   **Math:** Full arithmetic (+, -, *, /, %) and comparisons (<, >, <=, >=).
 *   **Simple:** Clean, period-terminated syntax.
 
 ## Example
@@ -26,8 +27,8 @@ A compiled, Arabic-syntax systems programming language built from scratch in C.
     صحيح ن = ١٠.
     صحيح م = ضاعف(ن).
     
-    // ٢٠ + ٢ = ٢٢
-    اطبع م + عامل.
+    // ٢٠ * ٢ + ١ = ٤١
+    اطبع (م * عامل) + ١.
     
     إرجع ٠.
 }

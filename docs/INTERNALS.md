@@ -1,6 +1,6 @@
 # Baa Compiler Internals
 
-> **Version:** 0.1.1 | [← Language Spec](LANGUAGE.md) | [API Reference →](API_REFERENCE.md)
+> **Version:** 0.1.2 | [← Language Spec](LANGUAGE.md) | [API Reference →](API_REFERENCE.md)
 
 **Target Architecture:** x86-64 (AMD64)  
 **Target OS:** Windows (MinGW-w64 Toolchain)  
@@ -63,10 +63,10 @@ The Lexer (`src/lexer.c`) transforms raw bytes into `Token` structures.
 | **Arabic Numerals** | Normalizes `٠`-`٩` → `0`-`9` |
 | **Arabic Punctuation** | Handles `؛` (semicolon) `0xD8 0x9B` |
 
-### 2.2. Token Types (v0.1.1)
+### 2.2. Token Types
 
 ```
-Keywords:    صحيح, إذا, طالما, لكل, اطبع, إرجع
+Keywords:    صحيح, نص, إذا, طالما, لكل, اطبع, إرجع
 Literals:    INTEGER, STRING, CHAR
 Operators:   + - * / % ++ -- ! && ||
 Comparison:  == != < > <= >=
@@ -86,14 +86,16 @@ The Parser (`src/parser.c`) builds the AST using Recursive Descent with 1-token 
 Program       ::= Declaration* EOF
 Declaration   ::= FuncDecl | GlobalVarDecl
 
-FuncDecl      ::= "صحيح" ID "(" ParamList ")" Block
-GlobalVarDecl ::= "صحيح" ID ("=" Expr)? "."
+FuncDecl      ::= Type ID "(" ParamList ")" Block
+GlobalVarDecl ::= Type ID ("=" Expr)? "."
+
+Type          ::= "صحيح" | "نص"
 
 Block         ::= "{" Statement* "}"
 Statement     ::= VarDecl | ArrayDecl | Assign | ArrayAssign
                 | If | While | For | Return | Print | CallStmt
 
-VarDecl       ::= "صحيح" ID "=" Expr "."
+VarDecl       ::= Type ID "=" Expr "."
 ArrayDecl     ::= "صحيح" ID "[" INT "]" "."
 Assign        ::= ID "=" Expr "."
 ArrayAssign   ::= ID "[" Expr "]" "=" Expr "."
@@ -153,26 +155,36 @@ typedef struct Node {
 
 ## 5. Semantic Analysis
 
-### 5.1. Symbol Table
+### 5.1. Data Types
+
+The compiler now tracks variable types to ensure correct code generation.
+
+```c
+typedef enum {
+    TYPE_INT,       // صحيح (8 bytes)
+    TYPE_STRING     // نص (8 bytes - char*)
+} DataType;
+```
+
+### 5.2. Symbol Table
+
+The symbol table maps identifiers to their memory location and type.
 
 ```c
 typedef struct {
     char name[32];
     ScopeType scope;  // GLOBAL or LOCAL
+    DataType type;    // TYPE_INT or TYPE_STRING
     int offset;       // Stack offset (locals) or data address (globals)
 } Symbol;
 ```
 
-### 5.2. Memory Allocation
+### 5.3. Memory Allocation
 
-| Type | Allocation | Notes |
-|------|------------|-------|
-| Scalar (`int`) | 8 bytes | Single stack slot |
-| Array (`int[N]`) | `N × 8` bytes | Contiguous stack slots |
-
-**Array Layout:**
-- `offset` points to base address
-- Element `i` at `base - (i × 8)` (stack grows down)
+| Type | C Type | Size | Notes |
+|------|--------|------|-------|
+| `صحيح` | `int64_t` | 8 bytes | Signed integer |
+| `نص` | `char*` | 8 bytes | Pointer to .rdata string |
 
 ---
 
@@ -183,53 +195,15 @@ typedef struct {
 | Requirement | Implementation |
 |-------------|----------------|
 | **Register Args** | RCX, RDX, R8, R9 for first 4 params |
-| **Stack Alignment** | 16-byte aligned before `call` |
+| **Stack Alignment** | 16-byte aligned before `call` (Size 272) |
 | **Shadow Space** | 32 bytes reserved for callee |
 | **Return Value** | RAX |
 
-### 6.2. Array Access
+### 6.2. Printing
 
-To access `arr[i]`:
-
-```asm
-# 1. Compute index → RAX
-# 2. Move to RCX
-movq %rax, %rcx
-# 3. Calculate offset
-imulq $8, %rcx        # i × 8
-negq %rcx             # Negate (stack grows down)
-addq $OFFSET, %rcx    # Add base offset
-# 4. Load value
-movq (%rbp, %rcx, 1), %rax
-```
-
-### 6.3. Short-Circuit Evaluation
-
-**AND (`&&`):**
-```
-1. Evaluate left → if 0, jump to END (result = 0)
-2. Evaluate right
-3. Compare right != 0 → result
-```
-
-**OR (`||`):**
-```
-1. Evaluate left → if != 0, jump to TRUE (result = 1)
-2. Evaluate right → if != 0, jump to TRUE
-3. Default: result = 0
-```
-
-### 6.4. For Loop Pattern
-
-```asm
-    # Init code
-.Lfor_start_N:
-    # Condition → if false, jump to .Lfor_end_N
-    # Body code
-    # Increment code
-    jmp .Lfor_start_N
-.Lfor_end_N:
-```
+The `اطبع` statement uses the symbol type to determine the format string:
+- If `TYPE_INT` → call `printf("%d\n")`
+- If `TYPE_STRING` → call `printf("%s\n")`
 
 ---
 

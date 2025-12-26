@@ -7,7 +7,7 @@
 ## 🎯 Current Focus: v0.1.2
 
 ### Recursion & Advanced Types
-- [ ] **Recursion** — Stress test stack frame logic with recursive functions (Fibonacci, Factorial)
+- [x] **Recursion** — Stress test stack frame logic with recursive functions (Fibonacci, Factorial)
 - [ ] **String Variables** — `نص` type (currently strings are only literals)
 - [ ] **Break/Continue** — Loop control statements (`توقف`, `استمر`)
 

@@ -1,7 +1,7 @@
 /**
  * @file codegen.c
  * @brief يقوم بتوليد كود التجميع (Assembly) للتركيب المعماري x86_64 مع دعم العمليات الحسابية والمنطقية والمصفوفات وحلقات التكرار.
- * @version 0.1.1 (Phase 3 - For Loop)
+ * @version 0.1.2 (Recursion Support - String Variables)
  */
 
 #include "baa.h"
@@ -150,7 +150,8 @@ void gen_expr(Node* node, FILE* file) {
     }
     else if (node->type == NODE_CALL_EXPR) {
         // استدعاء دالة: اتباع اتفاقية Windows (RCX, RDX, R8, R9)
-        const char* regs[] = {"%%rcx", "%%rdx", "%%r8", "%%r9"};
+        // FIXED: Use single % because these are passed as %s arguments to fprintf
+        const char* regs[] = {"%rcx", "%rdx", "%r8", "%r9"};
         int arg_idx = 0;
         Node* arg = node->data.call.args;
         while (arg != NULL) {
@@ -332,11 +333,14 @@ void codegen(Node* node, FILE* file) {
         // مقدمة الدالة (Prologue)
         fprintf(file, "    push %%rbp\n");
         fprintf(file, "    mov %%rsp, %%rbp\n");
-        fprintf(file, "    sub $264, %%rsp\n"); // حجز مساحة للإطارات المتداخلة (256 + محاذاة)
+        // حجز مساحة للإطارات المتداخلة (272 بايت)
+        // 272 = 17 * 16 (لضمان المحاذاة على حدود 16 بايت)
+        fprintf(file, "    sub $272, %%rsp\n"); 
 
         // تفريغ المعاملات إلى المكدس (Spill Parameters)
         Node* param = node->data.func_def.params;
-        const char* regs[] = {"%%rcx", "%%rdx", "%%r8", "%%r9"};
+        // FIXED: Use single % for string arguments
+        const char* regs[] = {"%rcx", "%rdx", "%r8", "%r9"};
         int p_idx = 0;
         while (param != NULL) {
             add_local(param->data.var_decl.name, 1); // المعاملات حجمها 1

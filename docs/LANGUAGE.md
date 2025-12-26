@@ -1,6 +1,6 @@
 # Baa Language Specification
 
-> **Version:** 0.1.1 | [← User Guide](USER_GUIDE.md) | [Compiler Internals →](INTERNALS.md)
+> **Version:** 0.1.2 | [← User Guide](USER_GUIDE.md) | [Compiler Internals →](INTERNALS.md)
 
 Baa (باء) is a compiled systems programming language using Arabic syntax. It compiles directly to native machine code via Assembly/GCC on Windows.
 
@@ -48,17 +48,21 @@ Baa is statically typed. All variables must be declared with their type.
 | Baa Type | C Equivalent | Description | Example |
 |----------|--------------|-------------|---------|
 | `صحيح` | `int` | 64-bit integer | `صحيح س = ٥.` |
-| `نص` | `string` | String literal (read-only) | `"مرحباً"` |
+| `نص` | `char*` | String pointer (Reference) | `نص اسم = "باء".` |
 | `حرف` | `char` | Single character | `'أ'` |
 
 ### 2.2. Scalar Variables
 
-**Syntax:** `صحيح <identifier> = <expression>.`
+**Syntax:** `<type> <identifier> = <expression>.`
 
 ```baa
-صحيح س = ٥٠.           // تعريف متغير
-صحيح ص = س + ١٠.       // استخدام في تعبير
-س = ١٠٠.               // إعادة تعيين القيمة
+// Integer
+صحيح س = ٥٠.
+س = ١٠٠.
+
+// String (Pointer to text)
+نص رسالة = "مرحباً".
+رسالة = "وداعاً".
 ```
 
 ### 2.3. Arrays
@@ -123,6 +127,20 @@ Every program **must** have a main function:
 }
 ```
 
+### 3.4. Recursion (التكرار)
+
+Functions can call themselves (recursion), provided there is a base case to terminate the loop.
+
+```baa
+// حساب متتالية فيبوناتشي
+صحيح فيبوناتشي(صحيح ن) {
+    إذا (ن <= ١) {
+        إرجع ن.
+    }
+    إرجع فيبوناتشي(ن - ١) + فيبوناتشي(ن - ٢).
+}
+```
+
 ---
 
 ## 4. Input / Output
@@ -138,10 +156,9 @@ Prints an integer, string, or character followed by a newline.
 اطبع ١٠٠.                 // طباعة رقم
 اطبع 'أ'.                 // طباعة حرف
 
-// طباعة متعددة
-صحيح س = ٤٢.
-اطبع "القيمة هي: ".
-اطبع س.
+// طباعة متغيرات
+نص اسم = "علي".
+اطبع اسم.
 ```
 
 ---
@@ -279,22 +296,8 @@ From highest to lowest:
 }
 
 صحيح الرئيسية() {
-    صحيح أرقام[٥].
-    
-    // ملء المصفوفة
-    لكل (صحيح س = ٠؛ س < ٥؛ س++) {
-        أرقام[س] = س * ١٠.
-    }
-    
-    // التحقق والطباعة
-    صحيح ص = ٠.
-    طالما (ص < ٥) {
-        إذا (أرقام[ص] > ٢٠ && أرقام[ص] < ٥٠) {
-            اطبع "رقم متوسط: ".
-            اطبع أرقام[ص].
-        }
-        ص++.
-    }
+    نص ترحيب = "حساب المضروب: ".
+    اطبع ترحيب.
     
     // حساب المضروب
     اطبع "مضروب ٥ = ".

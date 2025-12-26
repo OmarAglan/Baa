@@ -1,7 +1,7 @@
 /**
  * @file baa.h
  * @brief ملف الرأس الرئيسي الذي يعرف هياكل البيانات لمحوسب لغة "باء" (Baa Compiler).
- * @version 0.1.1 (Phase 3 - For Loop)
+ * @version 0.1.2 (Recursion Support - String Variables)
  */
 
 #ifndef BAA_H
@@ -30,17 +30,18 @@ typedef enum {
     
     // الكلمات المفتاحية (Keywords)
     TOKEN_KEYWORD_INT,  // صحيح
+    TOKEN_KEYWORD_STRING, // نص (جديد)
     TOKEN_RETURN,       // إرجع
     TOKEN_PRINT,        // اطبع
     TOKEN_IF,           // إذا
     TOKEN_WHILE,        // طالما
-    TOKEN_FOR,          // لكل (جديد)
+    TOKEN_FOR,          // لكل
     
     // الرموز (Symbols)
     TOKEN_ASSIGN,       // =
     TOKEN_DOT,          // .
     TOKEN_COMMA,        // ,
-    TOKEN_SEMICOLON,    // ؛ (جديد - فاصلة منقوطة عربية)
+    TOKEN_SEMICOLON,    // ؛
     
     // العمليات الحسابية (Math)
     TOKEN_PLUS,         // +
@@ -48,8 +49,8 @@ typedef enum {
     TOKEN_STAR,         // *
     TOKEN_SLASH,        // /
     TOKEN_PERCENT,      // %
-    TOKEN_INC,          // ++ (جديد)
-    TOKEN_DEC,          // -- (جديد)
+    TOKEN_INC,          // ++
+    TOKEN_DEC,          // --
     
     // العمليات المنطقية والعلائقية (Logic / Relational)
     TOKEN_EQ,           // ==
@@ -124,7 +125,7 @@ typedef enum {
     NODE_PRINT,         // جملة الطباعة (اطبع)
     NODE_IF,            // جملة الشرط (إذا)
     NODE_WHILE,         // جملة التكرار (طالما)
-    NODE_FOR,           // جملة التكرار المحدد (لكل) - جديد
+    NODE_FOR,           // جملة التكرار المحدد (لكل)
     NODE_ASSIGN,        // جملة التعيين (س = 5)
     NODE_CALL_STMT,     // استدعاء دالة كجملة
     
@@ -136,13 +137,22 @@ typedef enum {
     // التعبيرات (Expressions)
     NODE_BIN_OP,        // العمليات الثنائية (+، -، *، /)
     NODE_UNARY_OP,      // العمليات الأحادية (!، -)
-    NODE_POSTFIX_OP,    // العمليات اللاحقة (++، --) - جديد
+    NODE_POSTFIX_OP,    // العمليات اللاحقة (++، --)
     NODE_INT,           // قيمة عددية صحيحة
     NODE_STRING,        // قيمة نصية
     NODE_CHAR,          // قيمة حرفية
     NODE_VAR_REF,       // إشارة لمتغير
     NODE_CALL_EXPR      // تعبير استدعاء دالة
 } NodeType;
+
+/**
+ * @enum DataType
+ * @brief أنواع البيانات المدعومة في اللغة.
+ */
+typedef enum {
+    TYPE_INT,           // صحيح (int64)
+    TYPE_STRING         // نص (char*)
+} DataType;
 
 /**
  * @enum OpType
@@ -164,8 +174,8 @@ typedef enum {
 typedef enum {
     UOP_NEG, // السالب (-)
     UOP_NOT, // النفي (!)
-    UOP_INC, // الزيادة (++) - جديد
-    UOP_DEC  // النقصان (--) - جديد
+    UOP_INC, // الزيادة (++)
+    UOP_DEC  // النقصان (--)
 } UnaryOpType;
 
 struct Node;
@@ -189,6 +199,7 @@ typedef struct Node {
         // تعريف دالة
         struct { 
             char* name;          // اسم الدالة
+            DataType return_type; // نوع الإرجاع (جديد)
             struct Node* params; // قائمة المعاملات (متغيرات)
             struct Node* body;   // جسم الدالة (كتلة)
         } func_def;
@@ -196,6 +207,7 @@ typedef struct Node {
         // تعريف متغير (عادي)
         struct { 
             char* name;              // اسم المتغير
+            DataType type;           // نوع البيانات (جديد: صحيح أو نص)
             struct Node* expression; // القيمة الابتدائية (اختياري)
             bool is_global;          // هل هو متغير عام؟
         } var_decl;
@@ -227,7 +239,7 @@ typedef struct Node {
         struct { struct Node* expression; } print_stmt;
         struct { char* name; struct Node* expression; } assign_stmt;
 
-        // جملة التكرار المحددة (لكل) - جديد
+        // جملة التكرار المحددة (لكل)
         struct {
             struct Node* init;      // التهيئة (مثل: صحيح س = 0)
             struct Node* condition; // الشرط (مثل: س < 10)

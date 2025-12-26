@@ -8,10 +8,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
-### Planned
-- Recursion support
-- String variables (`نص` type)
-- Break/Continue statements (`توقف`, `استمر`)
+### Added
+- **Recursion** — Functions can now call themselves recursively.
+- **Stack Alignment** — Improved x64 stack alignment (16-byte) to prevent crashes during deep recursion.
 
 ---
 

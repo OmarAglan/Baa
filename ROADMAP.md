@@ -1,82 +1,134 @@
 # Baa Roadmap
 
-## Core Language Development
-
-### v0.1.0 (Current: Milestone: Text Support & Logic Operators)
-The "Hello World" release. Shifting from a number-cruncher to a general-purpose language.
-- [x] **String Literals:** `"text"` (Stored in `.rdata`).
-- [x] **Char Literals:** `'x'`.
-- [x] **Unary Minus:** `-5`.
-- [x] **Polymorphic Print:** `اطبع` supports strings and integers.
-
-### v0.1.1 (Next: Structured Data)
-Moving beyond single variables to collections.
-- [ ] **Arrays:** Fixed-size stack arrays (e.g., `صحيح مصفوفة[١٠].`).
-- [ ] **Indexing:** Reading/Writing `مصفوفة[٠]`.
-- [ ] **Advanced Loops:** `لكل` (For Loop) syntax to iterate easily over arrays.
+> Track the development progress of the Baa programming language
 
 ---
 
-## Baa Studio (Editor)
-*A custom editor built from scratch in C.*
+## 🎯 Current Focus: v0.1.2
 
-### Phase 1: The Linter (CLI)
-- [ ] Build a tool that reads `.b` files and outputs colored text to the terminal using ANSI codes.
+### Recursion & Advanced Types
+- [ ] **Recursion** — Stress test stack frame logic with recursive functions (Fibonacci, Factorial)
+- [ ] **String Variables** — `نص` type (currently strings are only literals)
+- [ ] **Break/Continue** — Loop control statements (`توقف`, `استمر`)
 
-### Phase 2: The GUI (Windows API)
-- [ ] Create a window using `windows.h`.
-- [ ] Render text.
-- [ ] Handle keyboard input.
+### v0.1.3 (Planned: Optimization)
+- [ ] **Constant Folding** — Evaluate `1 + 2` at compile time
+- [ ] **Dead Code Elimination** — Remove unreachable code after return
 
 ---
 
-## Completed Milestones
+## 🖥️ Baa Studio (Editor)
 
-### v0.1.0 (Done)
-- [x] **Strings:** Added string literal support.
-- [x] **Printing:** Updated `اطبع` to handle multiple types.
-- [x] **Negative Numbers:** Added unary minus support.
+*A custom code editor built from scratch in C*
 
-### v0.0.9 (Done)
-- [x] **Advanced Math:** Multiplication, Division, Modulo.
-- [x] **Comparisons:** Greater/Less than logic.
-- [x] **Parser:** Operator Precedence Climbing (PEMDAS).
+See [Editor Roadmap](docs/EDITOR_ROADMAP.md) for detailed phases.
 
-### v0.0.8 (Done)
-- [x] **Functions:** Function Definitions (`صحيح func(...) {...}`) and Calls (`func(...)`).
-- [x] **Entry Point:** Mandatory `الرئيسية` function exported as `main`.
-- [x] **Scoping:** Global Variables (Data Section) vs Local Variables (Stack).
-- [x] **Windows x64 ABI:** 
-    - [x] Register passing (RCX, RDX, R8, R9).
-    - [x] Stack alignment (16-byte).
-    - [x] Shadow Space allocation.
-- [x] **Parser:** Lookahead logic to distinguish Variables from Functions.
+| Phase | Goal | Status |
+|-------|------|--------|
+| Phase 1 | CLI Syntax Highlighter (ANSI codes) | 📋 Planned |
+| Phase 2 | GUI Window (Win32 API) | 📋 Planned |
+| Phase 3 | Text Editing & Input | 📋 Planned |
+| Phase 4 | Compiler Integration | 📋 Planned |
 
-### v0.0.7 (Done)
-- [x] **Loops:** `طالما` (While loop).
-- [x] **Assignments:** Update existing variables (`x = 1.`).
-- [x] **Codegen:** Implemented Loop Labels (Start/End).
+---
 
-### v0.0.6 (Done)
-- [x] **Control Flow:** `إذا` (If), Blocks `{...}`.
-- [x] **Logic:** Comparisons (`==`, `!=`).
-- [x] **Codegen:** Label generation and Conditional Jumps (`je`).
-- [x] **Docs:** Comprehensive Internals & API documentation.
+## ✅ Completed Milestones
 
-### v0.0.5 (Done)
-- [x] **Type System:** Renamed `رقم` to `صحيح` (int).
-- [x] **Comments:** Added Single Line Comments (`//`).
+<details>
+<summary><strong>v0.1.1</strong> — Structured Data</summary>
 
-### v0.0.4 (Done)
-- [x] **Memory:** Variable Declarations and Stack Offsets.
-- [x] **Symbol Table:** Basic global lookup.
+- [x] **Arrays** — Fixed-size stack arrays (`صحيح قائمة[١٠]`)
+- [x] **For Loop** — `لكل (..؛..؛..)` syntax
+- [x] **Logic Operators** — `&&`, `||`, `!` with short-circuiting
+- [x] **Postfix Operators** — `++`, `--`
 
-### v0.0.3 (Done)
-- [x] **I/O:** Added `اطبع` (Print) via Windows `printf`.
-- [x] **Parser:** Support for multiple statements (Linked List).
+</details>
 
-### v0.0.2 (Done)
-- [x] **Math:** Arabic Numerals (٠-٩) and Operators (+, -).
+<details>
+<summary><strong>v0.1.0</strong> — Text & Unary</summary>
 
-### v0.0.1 (Done)
-- [x] **Core:** Basic Pipeline (Lexer -> Parser -> Codegen -> GCC).
+- [x] **Strings** — String literal support (`"..."`)
+- [x] **Characters** — Character literals (`'...'`)
+- [x] **Printing** — Updated `اطبع` to handle multiple types
+- [x] **Negative Numbers** — Unary minus support
+
+</details>
+
+<details>
+<summary><strong>v0.0.9</strong> — Advanced Math</summary>
+
+- [x] **Math** — Multiplication, Division, Modulo
+- [x] **Comparisons** — Greater/Less than logic (`<`, `>`, `<=`, `>=`)
+- [x] **Parser** — Operator Precedence Climbing (PEMDAS)
+
+</details>
+
+<details>
+<summary><strong>v0.0.8</strong> — Functions</summary>
+
+- [x] **Functions** — Function definitions and calls
+- [x] **Entry Point** — Mandatory `الرئيسية` exported as `main`
+- [x] **Scoping** — Global vs Local variables
+- [x] **Windows x64 ABI** — Register passing, stack alignment, shadow space
+
+</details>
+
+<details>
+<summary><strong>v0.0.7</strong> — Loops</summary>
+
+- [x] **While Loop** — `طالما` implementation
+- [x] **Assignments** — Update existing variables
+
+</details>
+
+<details>
+<summary><strong>v0.0.6</strong> — Control Flow</summary>
+
+- [x] **If Statement** — `إذا` with blocks
+- [x] **Comparisons** — `==`, `!=`
+- [x] **Documentation** — Comprehensive Internals & API docs
+
+</details>
+
+<details>
+<summary><strong>v0.0.5</strong> — Type System</summary>
+
+- [x] Renamed `رقم` to `صحيح` (int)
+- [x] Single line comments (`//`)
+
+</details>
+
+<details>
+<summary><strong>v0.0.4</strong> — Variables</summary>
+
+- [x] Variable declarations and stack offsets
+- [x] Basic symbol table
+
+</details>
+
+<details>
+<summary><strong>v0.0.3</strong> — I/O</summary>
+
+- [x] `اطبع` (Print) via Windows `printf`
+- [x] Multiple statements support
+
+</details>
+
+<details>
+<summary><strong>v0.0.2</strong> — Math</summary>
+
+- [x] Arabic numerals (٠-٩)
+- [x] Addition and subtraction
+
+</details>
+
+<details>
+<summary><strong>v0.0.1</strong> — Foundation</summary>
+
+- [x] Basic pipeline: Lexer → Parser → Codegen → GCC
+
+</details>
+
+---
+
+*For detailed changes, see the [Changelog](CHANGELOG.md)*

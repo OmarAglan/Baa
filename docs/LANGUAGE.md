@@ -1,167 +1,309 @@
-# Baa Language Specification (v0.0.9)
+# Baa Language Specification
 
-Baa (باء) is a compiled systems programming language using Arabic syntax. It compiles directly to native machine code (via Assembly/GCC) on Windows.
+> **Version:** 0.1.1 | [← User Guide](USER_GUIDE.md) | [Compiler Internals →](INTERNALS.md)
+
+Baa (باء) is a compiled systems programming language using Arabic syntax. It compiles directly to native machine code via Assembly/GCC on Windows.
+
+---
+
+## Table of Contents
+
+- [Program Structure](#1-program-structure)
+- [Variables & Types](#2-variables--types)
+- [Functions](#3-functions)
+- [Input / Output](#4-input--output)
+- [Control Flow](#5-control-flow)
+- [Operators](#6-operators)
+- [Complete Example](#7-complete-example)
+
+---
 
 ## 1. Program Structure
+
 A Baa program is a collection of **Global Variables** and **Functions**.
-*   **File Format:** Source files must be **UTF-8** encoded. Extension `.b`.
-*   **Entry Point:** Execution starts at the function named **`الرئيسية`** (Main).
-*   **Statements:** End with a period (`.`).
-*   **Comments:** Start with `//`.
 
-## 2. Variables & Types
-Baa is statically typed.
+| Aspect | Description |
+|--------|-------------|
+| **File Format** | UTF-8 encoded, `.b` extension |
+| **Entry Point** | `الرئيسية` (Main) function |
+| **Statements** | End with period (`.`) |
+| **Comments** | Single-line with `//` |
 
-| Baa Type | C Equivalent | Description |
-| :--- | :--- | :--- |
-| **`صحيح`** | `int` | Integer number (64-bit currently) |
-| **`نص`** | `string` | String literal (Read-only for now) |
-| **`حرف`** | `char` | Single character (ASCII only for now) |
+### Minimal Program
 
-### 2.1. Global Variables
-Defined outside of any function. Visible everywhere.
-*Note: Currently only `صحيح` variables are supported.*
-```baa
-صحيح النسخة = ١.
-```
-
-### 2.2. Local Variables
-Defined inside a function. Visible only within that function.
-*Note: Currently only `صحيح` variables are supported.*
 ```baa
 صحيح الرئيسية() {
-    صحيح س = ٥٠. // Local variable
-    ...
+    إرجع ٠.
 }
 ```
 
-### 2.3. Assignment
-Updates the value of an existing variable.
+---
+
+## 2. Variables & Types
+
+Baa is statically typed. All variables must be declared with their type.
+
+### 2.1. Supported Types
+
+| Baa Type | C Equivalent | Description | Example |
+|----------|--------------|-------------|---------|
+| `صحيح` | `int` | 64-bit integer | `صحيح س = ٥.` |
+| `نص` | `string` | String literal (read-only) | `"مرحباً"` |
+| `حرف` | `char` | Single character | `'أ'` |
+
+### 2.2. Scalar Variables
+
+**Syntax:** `صحيح <identifier> = <expression>.`
+
 ```baa
-س = س + ١.
+صحيح س = ٥٠.           // تعريف متغير
+صحيح ص = س + ١٠.       // استخدام في تعبير
+س = ١٠٠.               // إعادة تعيين القيمة
 ```
 
-### 2.4. Literals
-*   **Arabic-Indic Digits:** `٠` `١` `٢` `٣` `٤` `٥` `٦` `٧` `٨` `٩`
-*   **Western Digits:** `0`-`9`
-*   **String Literals:** `"نص"`
-*   **Character Literals:** `'أ'` (Currently ASCII only inside quotes `'a'`)
+### 2.3. Arrays
+
+Fixed-size arrays allocated on the stack.
+
+**Syntax:** `صحيح <identifier>[<size>].`
+
+```baa
+// تعريف مصفوفة من ٥ عناصر
+صحيح قائمة[٥].
+
+// تعيين قيمة (الفهرس يبدأ من ٠)
+قائمة[٠] = ١٠.
+قائمة[١] = ٢٠.
+
+// قراءة قيمة
+صحيح أول = قائمة[٠].
+
+// استخدام متغير كفهرس
+صحيح س = ٢.
+قائمة[س] = ٣٠.
+```
+
+---
 
 ## 3. Functions
-Functions allow code reuse and modularity.
+
+Functions enable code reuse and modularity.
 
 ### 3.1. Definition
-**Syntax:** `Type Name(Params) { Body }`
+
+**Syntax:** `<type> <name>(<parameters>) { <body> }`
 
 ```baa
 صحيح جمع(صحيح أ, صحيح ب) {
     إرجع أ + ب.
 }
+
+صحيح مربع(صحيح س) {
+    إرجع س * س.
+}
 ```
 
 ### 3.2. Calling
-**Syntax:** `Name(Args)`
+
+**Syntax:** `<name>(<arguments>)`
 
 ```baa
-صحيح الناتج = جمع(١٠, ٢٠).
+صحيح الناتج = جمع(١٠, ٢٠).   // الناتج = ٣٠
+صحيح م = مربع(٥).            // م = ٢٥
 ```
 
-### 3.3. The Entry Point (`الرئيسية`)
-Every program must have this function. It takes no arguments and returns an integer (exit code).
+### 3.3. Entry Point (`الرئيسية`)
+
+Every program **must** have a main function:
 
 ```baa
 صحيح الرئيسية() {
-    // Your code here
-    إرجع ٠.
+    // كود البرنامج هنا
+    إرجع ٠.  // ٠ يعني نجاح التنفيذ
 }
 ```
 
+---
+
 ## 4. Input / Output
+
+### Print Statement
+
 **Syntax:** `اطبع <expression>.`
 
-Prints an integer, string, or character followed by a newline. The compiler automatically detects the type.
+Prints an integer, string, or character followed by a newline.
 
 ```baa
-// طباعة رقم
-اطبع ١٠٠.
+اطبع "مرحباً بالعالم".    // طباعة نص
+اطبع ١٠٠.                 // طباعة رقم
+اطبع 'أ'.                 // طباعة حرف
 
-// طباعة نص
-اطبع "مرحباً بالعالم".
-
-// طباعة حرف
-اطبع 'أ'.
+// طباعة متعددة
+صحيح س = ٤٢.
+اطبع "القيمة هي: ".
+اطبع س.
 ```
+
+---
 
 ## 5. Control Flow
 
-### 5.1. Conditional (If)
+### 5.1. Conditional (`إذا`)
+
 Executes a block if the condition is true.
 
+**Syntax:** `إذا (<condition>) { <body> }`
+
 ```baa
+صحيح س = ١٥.
+
 إذا (س > ١٠) {
-    اطبع ١.
+    اطبع "س أكبر من ١٠".
+}
+
+إذا (س == ١٥) {
+    اطبع "س يساوي ١٥".
 }
 ```
 
-### 5.2. Loops (While)
-Repeats a block as long as the condition is true.
+### 5.2. While Loop (`طالما`)
+
+Repeats a block while the condition is true.
+
+**Syntax:** `طالما (<condition>) { <body> }`
 
 ```baa
+صحيح س = ٥.
+
 طالما (س > ٠) {
+    اطبع س.
     س = س - ١.
 }
+// يطبع: ٥ ٤ ٣ ٢ ١
 ```
+
+### 5.3. For Loop (`لكل`)
+
+C-style loop using Arabic semicolon `؛` as separator.
+
+**Syntax:** `لكل (<init>؛ <condition>؛ <increment>) { <body> }`
+
+```baa
+// طباعة الأرقام من ٠ إلى ٩
+لكل (صحيح س = ٠؛ س < ١٠؛ س++) {
+    اطبع س.
+}
+
+// العد التنازلي
+لكل (صحيح س = ١٠؛ س >= ١؛ س--) {
+    اطبع س.
+}
+```
+
+---
 
 ## 6. Operators
 
-Baa follows standard mathematical order of operations (PEMDAS).
-
 ### 6.1. Arithmetic
-| Operator | Description | Example | Result |
-| :--- | :--- | :--- | :--- |
-| `+` | Addition | `١٠ + ٥` | `١٥` |
-| `-` | Subtraction | `١٠ - ٥` | `٥` |
-| `*` | Multiplication | `١٠ * ٥` | `٥٠` |
-| `/` | Division (Integer) | `١٠ / ٣` | `٣` |
-| `%` | Modulo (Remainder) | `١٠ % ٣` | `١` |
-
-### 6.2. Comparison
-Returns `1` for True, `0` for False.
 
 | Operator | Description | Example |
-| :--- | :--- | :--- |
-| `==` | Equal | `٥ == ٥` |
-| `!=` | Not Equal | `٥ != ٤` |
-| `<` | Less Than | `٣ < ٥` |
-| `>` | Greater Than | `٥ > ٣` |
-| `<=` | Less or Equal | `٥ <= ٥` |
-| `>=` | Greater or Equal | `٥ >= ٤` |
+|----------|-------------|---------|
+| `+` | Addition | `٥ + ٣` → `٨` |
+| `-` | Subtraction | `٥ - ٣` → `٢` |
+| `*` | Multiplication | `٥ * ٣` → `١٥` |
+| `/` | Division | `١٠ / ٢` → `٥` |
+| `%` | Modulo | `١٠ % ٣` → `١` |
+| `++` | Increment (postfix) | `س++` |
+| `--` | Decrement (postfix) | `س--` |
+| `-` | Negative (unary) | `-٥` |
+
+### 6.2. Comparison
+
+| Operator | Description | Example |
+|----------|-------------|---------|
+| `==` | Equal | `س == ٥` |
+| `!=` | Not equal | `س != ٥` |
+| `<` | Less than | `س < ١٠` |
+| `>` | Greater than | `س > ١٠` |
+| `<=` | Less or equal | `س <= ١٠` |
+| `>=` | Greater or equal | `س >= ١٠` |
+
+### 6.3. Logical
+
+| Operator | Description | Behavior |
+|----------|-------------|----------|
+| `&&` | AND | Short-circuit: stops if left is false |
+| `\|\|` | OR | Short-circuit: stops if left is true |
+| `!` | NOT | Inverts truth value |
+
+```baa
+// Short-circuit example
+إذا (س > ٠ && س < ١٠) {
+    اطبع "س بين ١ و ٩".
+}
+
+إذا (س == ٠ || س == ١٠) {
+    اطبع "س هو ٠ أو ١٠".
+}
+
+إذا (!خطأ) {
+    اطبع "لا يوجد خطأ".
+}
+```
+
+### 6.4. Operator Precedence
+
+From highest to lowest:
+
+1. `()` — Parentheses
+2. `!`, `-` (unary), `++`, `--` — Unary operators
+3. `*`, `/`, `%` — Multiplication, Division, Modulo
+4. `+`, `-` — Addition, Subtraction
+5. `<`, `>`, `<=`, `>=` — Relational
+6. `==`, `!=` — Equality
+7. `&&` — Logical AND
+8. `||` — Logical OR
+
+---
 
 ## 7. Complete Example
 
 ```baa
-// متغير عام (Global)
-صحيح عامل_الضرب = ٢.
-
-// تعريف دالة (Function Definition)
-صحيح ضاعف_الرقم(صحيح س) {
-    إرجع س * عامل_الضرب.
+// برنامج يوضح ميزات اللغة
+صحيح مضروب(صحيح ن) {
+    صحيح نتيجة = ١.
+    لكل (صحيح س = ٢؛ س <= ن؛ س++) {
+        نتيجة = نتيجة * س.
+    }
+    إرجع نتيجة.
 }
 
-// نقطة البداية (Entry Point)
 صحيح الرئيسية() {
-    اطبع "برنامج المضاعفة".
+    صحيح أرقام[٥].
     
-    صحيح البداية = -١٠. // Unary Minus support
+    // ملء المصفوفة
+    لكل (صحيح س = ٠؛ س < ٥؛ س++) {
+        أرقام[س] = س * ١٠.
+    }
     
-    اطبع "البداية: " + البداية.
+    // التحقق والطباعة
+    صحيح ص = ٠.
+    طالما (ص < ٥) {
+        إذا (أرقام[ص] > ٢٠ && أرقام[ص] < ٥٠) {
+            اطبع "رقم متوسط: ".
+            اطبع أرقام[ص].
+        }
+        ص++.
+    }
     
-    صحيح الناتج = ضاعف_الرقم(البداية).
-    
-    صحيح الباقي = الناتج % ٣.
-    
-    اطبع "الباقي: " + الباقي.
+    // حساب المضروب
+    اطبع "مضروب ٥ = ".
+    اطبع مضروب(٥).
     
     إرجع ٠.
 }
 ```
+
+---
+
+*[← User Guide](USER_GUIDE.md) | [Compiler Internals →](INTERNALS.md)*

@@ -1,7 +1,7 @@
 /**
  * @file baa.h
  * @brief Main header file defining Data Structures for the Baa Compiler.
- * @version 0.0.9
+ * @version 0.1.0
  */
 
 #ifndef BAA_H
@@ -24,6 +24,8 @@
 typedef enum {
     TOKEN_EOF,
     TOKEN_INT,          // Literals: 123
+    TOKEN_STRING,       // "hello" (New)
+    TOKEN_CHAR,         // 'a'     (New)
     TOKEN_IDENTIFIER,   // Names: x, my_func
     
     // Keywords
@@ -41,17 +43,17 @@ typedef enum {
     // Math
     TOKEN_PLUS,         // +
     TOKEN_MINUS,        // -
-    TOKEN_STAR,         // * (New)
-    TOKEN_SLASH,        // / (New)
-    TOKEN_PERCENT,      // % (New)
+    TOKEN_STAR,         // *
+    TOKEN_SLASH,        // /
+    TOKEN_PERCENT,      // %
     
     // Logic / Relational
     TOKEN_EQ,           // ==
     TOKEN_NEQ,          // !=
-    TOKEN_LT,           // < (New)
-    TOKEN_GT,           // > (New)
-    TOKEN_LTE,          // <= (New)
-    TOKEN_GTE,          // >= (New)
+    TOKEN_LT,           // <
+    TOKEN_GT,           // >
+    TOKEN_LTE,          // <=
+    TOKEN_GTE,          // >=
     
     // Grouping
     TOKEN_LPAREN,       // (
@@ -68,7 +70,7 @@ typedef enum {
  */
 typedef struct {
     TokenType type;
-    char* value;    // ASCII representation of payload (Name or Number)
+    char* value;    // ASCII representation (Number) or UTF-8 Content (String/ID)
     int line;       // Source line number for debugging
 } Token;
 
@@ -101,19 +103,21 @@ typedef enum {
     NODE_VAR_DECL,      // Variable Declaration (Global or Local)
     
     // Statements
-    NODE_BLOCK,         // Scope { ... }
-    NODE_RETURN,        // Return statement
-    NODE_PRINT,         // Print statement
-    NODE_IF,            // Conditional
-    NODE_WHILE,         // Loop
-    NODE_ASSIGN,        // Re-assignment: x = 5
-    NODE_CALL_STMT,     // Function Call as a statement: foo();
+    NODE_BLOCK,         // Scope { ... } and Function Body
+    NODE_RETURN,        // Return Statement
+    NODE_PRINT,         // Print Statement
+    NODE_IF,            // If Statement
+    NODE_WHILE,         // While Loop
+    NODE_ASSIGN,        // Assignment and Re-assignment
+    NODE_CALL_STMT,     // Function Call
     
     // Expressions
-    NODE_BIN_OP,        // Math/Logic
-    NODE_INT,           // Literal: 5
-    NODE_VAR_REF,       // Usage: x
-    NODE_CALL_EXPR      // Function Call as expression: x = foo();
+    NODE_BIN_OP,        // Binary Operations
+    NODE_INT,           // Integer Literal
+    NODE_STRING,        // String Literal
+    NODE_CHAR,          // Character Literal
+    NODE_VAR_REF,       // Variable Reference
+    NODE_CALL_EXPR      // Function Call Expression
 } NodeType;
 
 /**
@@ -181,6 +185,14 @@ typedef struct Node {
 
         // Expressions
         struct { int value; } integer;
+        // New: String Literal
+        struct { 
+            char* value; 
+            int id; // Assigned during codegen for label (.Lstr_N)
+        } string_lit;
+        // New: Char Literal
+        struct { int value; } char_lit; 
+
         struct { char* name; } var_ref;
         struct { struct Node* left; struct Node* right; OpType op; } bin_op;
     } data;

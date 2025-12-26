@@ -15,15 +15,19 @@ Baa is statically typed.
 | Baa Type | C Equivalent | Description |
 | :--- | :--- | :--- |
 | **`صحيح`** | `int` | Integer number (64-bit currently) |
+| **`نص`** | `string` | String literal (Read-only for now) |
+| **`حرف`** | `char` | Single character (ASCII only for now) |
 
 ### 2.1. Global Variables
 Defined outside of any function. Visible everywhere.
+*Note: Currently only `صحيح` variables are supported.*
 ```baa
 صحيح النسخة = ١.
 ```
 
 ### 2.2. Local Variables
 Defined inside a function. Visible only within that function.
+*Note: Currently only `صحيح` variables are supported.*
 ```baa
 صحيح الرئيسية() {
     صحيح س = ٥٠. // Local variable
@@ -36,6 +40,12 @@ Updates the value of an existing variable.
 ```baa
 س = س + ١.
 ```
+
+### 2.4. Literals
+*   **Arabic-Indic Digits:** `٠` `١` `٢` `٣` `٤` `٥` `٦` `٧` `٨` `٩`
+*   **Western Digits:** `0`-`9`
+*   **String Literals:** `"نص"`
+*   **Character Literals:** `'أ'` (Currently ASCII only inside quotes `'a'`)
 
 ## 3. Functions
 Functions allow code reuse and modularity.
@@ -69,10 +79,17 @@ Every program must have this function. It takes no arguments and returns an inte
 ## 4. Input / Output
 **Syntax:** `اطبع <expression>.`
 
-Prints a signed integer followed by a newline.
+Prints an integer, string, or character followed by a newline. The compiler automatically detects the type.
 
 ```baa
+// طباعة رقم
 اطبع ١٠٠.
+
+// طباعة نص
+اطبع "مرحباً بالعالم".
+
+// طباعة حرف
+اطبع 'أ'.
 ```
 
 ## 5. Control Flow
@@ -133,15 +150,17 @@ Returns `1` for True, `0` for False.
 
 // نقطة البداية (Entry Point)
 صحيح الرئيسية() {
-    صحيح البداية = ١٠.
+    اطبع "برنامج المضاعفة".
     
-    // ٢٠
+    صحيح البداية = -١٠. // Unary Minus support
+    
+    اطبع "البداية: " + البداية.
+    
     صحيح الناتج = ضاعف_الرقم(البداية).
     
-    // باقي القسمة: ٢٠ % ٣ = ٢
     صحيح الباقي = الناتج % ٣.
     
-    اطبع الباقي.
+    اطبع "الباقي: " + الباقي.
     
     إرجع ٠.
 }

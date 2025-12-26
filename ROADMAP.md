@@ -4,11 +4,10 @@
 
 ### v0.1.0 (Current: Milestone: Text Support & Logic Operators)
 The "Hello World" release. Shifting from a number-cruncher to a general-purpose language.
-- [ ] **New Type:** `حرف` (Char) - 8-bit integer.
-- [ ] **String Literals:** Parsing `"مرحباً بالعالم"` and storing them in the `.rdata` section.
-- [ ] **Polymorphic Print:** Updating `اطبع` to handle Strings and Chars, not just Integers.
-- [ ] **Negative Numbers:** Parsing unary minus `-5`.
-- [ ] **Logic Operators:** `و` (AND), `أو` (OR), `لا` (NOT).
+- [x] **String Literals:** `"text"` (Stored in `.rdata`).
+- [x] **Char Literals:** `'x'`.
+- [x] **Unary Minus:** `-5`.
+- [x] **Polymorphic Print:** `اطبع` supports strings and integers.
 
 ### v0.1.1 (Next: Structured Data)
 Moving beyond single variables to collections.
@@ -32,6 +31,11 @@ Moving beyond single variables to collections.
 ---
 
 ## Completed Milestones
+
+### v0.1.0 (Done)
+- [x] **Strings:** Added string literal support.
+- [x] **Printing:** Updated `اطبع` to handle multiple types.
+- [x] **Negative Numbers:** Added unary minus support.
 
 ### v0.0.9 (Done)
 - [x] **Advanced Math:** Multiplication, Division, Modulo.

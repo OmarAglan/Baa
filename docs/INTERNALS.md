@@ -92,7 +92,7 @@ LocalVarDecl  ::= "صحيح" ID "=" Expr "."
 Assign        ::= ID "=" Expr "."
 CallStmt      ::= CallExpr "."
 Expr          ::= Term { Op Term }
-Term          ::= INT | ID | CallExpr | "(" Expr ")" | Unary
+Term          ::= INT | STRING | CHAR | ID | CallExpr | "(" Expr ")" | Unary
 CallExpr      ::= ID "(" ArgList ")"
 ArgList       ::= ε | Expr ("," Expr)*
 ```
@@ -116,6 +116,8 @@ The `Node` struct uses a tagged union. Below are the configurations for v0.0.8:
 | **`NODE_CALL`** | Function Call. | `char* name;`<br>`struct Node* args;` |
 | **`NODE_RETURN`** | Return Statement. | `struct Node* expression;` |
 | **`NODE_BIN_OP`** | Math/Logic. | `left`, `right`, `op` (ADD, SUB, MUL, DIV, MOD, EQ, NEQ, LT, GT, LTE, GTE). |
+| **`NODE_STRING`** | String Literal. | `char* value;`<br>`int id;` (Used for label generation) |
+| **`NODE_CHAR`** | Char Literal. | `int value;` (Stored as integer) |
 
 ---
 
@@ -229,6 +231,16 @@ x86-64 Division is complex. It divides the 128-bit value in `RDX:RAX` by the ope
 2.  Use conditional set instructions: `sete` (==), `setne` (!=), `setl` (<), `setg` (>), `setle` (<=), `setge` (>=).
 3.  `movzbq %al, %rax` (Zero extend boolean byte to integer).
 
+### 6.7. String Handling (New in v0.1.0)
+String literals are collected during AST traversal or Code Generation.
+1.  **Deduplication:** The compiler checks if the string exists in the `String Table`.
+2.  **ID Assignment:** A unique ID is assigned (e.g., `.Lstr_1`).
+3.  **Code Gen:** `lea .Lstr_1(%rip), %rax` (Load Effective Address of the string).
+4.  **Data Section:** At the end of compilation, the compiler emits the string table into `.rdata`.
+    ```asm
+    .section .rdata,"dr"
+    .Lstr_1: .asciz "My String"
+    ```
 ---
 
 ## 7. Global Data Section

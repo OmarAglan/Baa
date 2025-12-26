@@ -48,20 +48,58 @@ Token lexer_next_token(Lexer* l) {
 
     const char* current = l->src + l->pos;
 
-    // 3. Single Character Tokens
+    // 3. STRINGS
+    if (*current == '"') {
+        l->pos++; // Skip opening quote
+        size_t start = l->pos;
+        while (l->pos < l->len && l->src[l->pos] != '"') {
+            if (l->src[l->pos] == '\n') l->line++;
+            l->pos++;
+        }
+        
+        if (l->pos >= l->len) { printf("Lexer Error: Unterminated string\n"); exit(1); }
+        
+        size_t len = l->pos - start;
+        char* str = malloc(len + 1);
+        strncpy(str, l->src + start, len);
+        str[len] = '\0';
+        
+        l->pos++; // Skip closing quote
+        
+        token.type = TOKEN_STRING;
+        token.value = str;
+        return token;
+    }
+
+    // 4. CHARS (Simple 1-byte for now, TODO: UTF-8 char literal support)
+    if (*current == '\'') {
+        l->pos++; // Skip '
+        char c = l->src[l->pos]; // Only ASCII chars supported inside '' for now
+        l->pos++;
+        if (l->src[l->pos] != '\'') { printf("Lexer Error: Expected '\n"); exit(1); }
+        l->pos++; // Skip '
+        
+        token.type = TOKEN_CHAR;
+        // Store as string to reuse 'value' field logic
+        char* val = malloc(2); val[0] = c; val[1] = '\0';
+        token.value = val;
+        return token;
+    }
+
+    // 5. Symbols
     if (*current == '.') { token.type = TOKEN_DOT; l->pos++; return token; }
     if (*current == ',') { token.type = TOKEN_COMMA; l->pos++; return token; }
     if (*current == '+') { token.type = TOKEN_PLUS; l->pos++; return token; }
     if (*current == '-') { token.type = TOKEN_MINUS; l->pos++; return token; }
-    if (*current == '*') { token.type = TOKEN_STAR; l->pos++; return token; } // New
-    if (*current == '/') { token.type = TOKEN_SLASH; l->pos++; return token; } // New
-    if (*current == '%') { token.type = TOKEN_PERCENT; l->pos++; return token; } // New
+    if (*current == '*') { token.type = TOKEN_STAR; l->pos++; return token; }
+    if (*current == '/') { token.type = TOKEN_SLASH; l->pos++; return token; }
+    if (*current == '%') { token.type = TOKEN_PERCENT; l->pos++; return token; }
     if (*current == '(') { token.type = TOKEN_LPAREN; l->pos++; return token; }
     if (*current == ')') { token.type = TOKEN_RPAREN; l->pos++; return token; }
     if (*current == '{') { token.type = TOKEN_LBRACE; l->pos++; return token; }
     if (*current == '}') { token.type = TOKEN_RBRACE; l->pos++; return token; }
 
-    // 4. Double/Single Character Tokens (Comparisons)
+    // 6. Double/Single Character Tokens (Comparisons)
     if (*current == '!') {
         if (l->pos + 1 < l->len && l->src[l->pos+1] == '=') {
             token.type = TOKEN_NEQ; l->pos += 2; return token;
@@ -86,7 +124,7 @@ Token lexer_next_token(Lexer* l) {
         token.type = TOKEN_GT; l->pos++; return token;
     }
 
-    // 5. Numbers (Normalizing Arabic Digits to ASCII)
+    // 7. Numbers (Normalizing Arabic Digits to ASCII)
     if (isdigit(*current) || is_arabic_digit(current)) {
         token.type = TOKEN_INT;
         char buffer[64] = {0}; 
@@ -103,11 +141,11 @@ Token lexer_next_token(Lexer* l) {
         return token;
     }
 
-    // 6. Keywords & Identifiers
+    // 8. Keywords & Identifiers
     if (is_arabic_start_byte(*current)) {
         size_t start = l->pos;
         while (l->pos < l->len && !isspace(l->src[l->pos]) && 
-               strchr(".+-,=(){}!<>*/%", l->src[l->pos]) == NULL) { // Updated stop list
+               strchr(".+-,=(){}!<>*/%\"'", l->src[l->pos]) == NULL) { // Added " and '
             l->pos++;
         }
         

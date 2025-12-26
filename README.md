@@ -9,6 +9,7 @@ A compiled, Arabic-syntax systems programming language built from scratch in C.
 *   **Scoping:** Supports Global and Local variables.
 *   **Control Flow:** Supports conditionals, loops, and blocks.
 *   **Math:** Full arithmetic (+, -, *, /, %) and comparisons (<, >, <=, >=).
+*   **Text:** Support for String (`"..."`) and Character (`'...'`) literals.
 *   **Simple:** Clean, period-terminated syntax.
 
 ## Example
@@ -24,6 +25,7 @@ A compiled, Arabic-syntax systems programming language built from scratch in C.
 
 // نقطة البداية (Entry Point)
 صحيح الرئيسية() {
+    اطبع "بدأ البرنامج...".
     صحيح ن = ١٠.
     صحيح م = ضاعف(ن).
     

@@ -11,12 +11,12 @@ Currently, you must build Baa from source.
 ## 2. Your First Program
 Create a file named `hello.b` (make sure to save it as UTF-8):
 
-```baa
-// هذا برنامجي الأول
-صحيح رقم = ١.
-اطبع رقم.
-إرجع ٠.
-```
+
+ ```baa
+ // هذا برنامجي الأول
+اطبع "مرحباً بالعالم".
+ إرجع ٠.
+ ```
 
 ## 3. Compiling
 Open PowerShell and run:

@@ -101,6 +101,7 @@ The AST is a tagged union representing the grammatical structure.
 *   `NODE_CALL`: Function Call.
 *   `NODE_RETURN` / `NODE_PRINT`: Statements.
 *   `NODE_BIN_OP` / `NODE_INT` / `NODE_VAR_REF`: Expressions.
+*   `NODE_STRING` / `NODE_CHAR`: Literals.
 
 #### The `Node` Struct
 ```c
@@ -142,6 +143,8 @@ typedef struct Node {
         
         // Leaf
         struct { int value; } integer;
+        struct { char* value; int id; } string_lit;
+        struct { int value; } char_lit;
         struct { char* name; } var_ref;
         struct { char* name; } param; // For parameter definition
     } data;

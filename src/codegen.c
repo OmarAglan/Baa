@@ -47,15 +47,24 @@ void add_local(const char* name) {
 
 Symbol* lookup_symbol(const char* name) {
     // 1. Check Locals (Shadowing)
-    for (int i = 0; i < local_count; i++) {
-        if (strcmp(local_symbols[i].name, name) == 0) return &local_symbols[i];
-    }
+    for (int i = 0; i < local_count; i++) if (strcmp(local_symbols[i].name, name) == 0) return &local_symbols[i];
     // 2. Check Globals
-    for (int i = 0; i < global_count; i++) {
-        if (strcmp(global_symbols[i].name, name) == 0) return &global_symbols[i];
+    for (int i = 0; i < global_count; i++) if (strcmp(global_symbols[i].name, name) == 0) return &global_symbols[i];
+    printf("Codegen Error: Undefined symbol '%s'\n", name); exit(1);
+}
+
+// --- String Table ---
+typedef struct { char* content; int id; } StringEntry;
+StringEntry string_table[100];
+int string_count = 0;
+
+int register_string(char* content) {
+    for(int i=0; i<string_count; i++) {
+        if(strcmp(string_table[i].content, content) == 0) return string_table[i].id;
     }
-    printf("Codegen Error: Undefined symbol '%s'\n", name);
-    exit(1);
+    string_table[string_count].content = content;
+    string_table[string_count].id = string_count;
+    return string_count++;
 }
 
 // --- Generator ---
@@ -67,13 +76,19 @@ void gen_expr(Node* node, FILE* file) {
     if (node->type == NODE_INT) {
         fprintf(file, "    mov $%d, %%rax\n", node->data.integer.value);
     }
+    // New: String Literal -> Load Address
+    else if (node->type == NODE_STRING) {
+        int id = register_string(node->data.string_lit.value);
+        fprintf(file, "    lea .Lstr_%d(%%rip), %%rax\n", id);
+    }
+    // New: Char Literal -> Load Value
+    else if (node->type == NODE_CHAR) {
+        fprintf(file, "    mov $%d, %%rax\n", node->data.char_lit.value);
+    }
     else if (node->type == NODE_VAR_REF) {
         Symbol* sym = lookup_symbol(node->data.var_ref.name);
-        if (sym->scope == SCOPE_LOCAL) {
-            fprintf(file, "    mov %d(%%rbp), %%rax\n", sym->offset);
-        } else {
-            fprintf(file, "    mov %s(%%rip), %%rax\n", sym->name);
-        }
+        if (sym->scope == SCOPE_LOCAL) fprintf(file, "    mov %d(%%rbp), %%rax\n", sym->offset);
+        else fprintf(file, "    mov %s(%%rip), %%rax\n", sym->name);
     }
     else if (node->type == NODE_CALL_EXPR) {
         // Function Call Expression (x = foo())
@@ -96,7 +111,7 @@ void gen_expr(Node* node, FILE* file) {
             if (i < 4) {
                 fprintf(file, "    pop %s\n", regs[i]);
             } else {
-                // Stack args not supported yet in this simplified version
+                // Stack args not supported yet and max 4 args supported
                 printf("Error: Too many arguments (Max 4 supported in v0.0.8)\n");
                 exit(1);
             }
@@ -117,22 +132,11 @@ void gen_expr(Node* node, FILE* file) {
         gen_expr(node->data.bin_op.left, file);
         fprintf(file, "    pop %%rbx\n");
         
-        // Left is in RAX, Right is in RBX
-        
-        if (node->data.bin_op.op == OP_ADD) {
-            fprintf(file, "    add %%rbx, %%rax\n");
-        } else if (node->data.bin_op.op == OP_SUB) {
-            fprintf(file, "    sub %%rbx, %%rax\n");
-        } else if (node->data.bin_op.op == OP_MUL) {
-            fprintf(file, "    imul %%rbx, %%rax\n");
-        } else if (node->data.bin_op.op == OP_DIV) {
-            fprintf(file, "    cqo\n"); // Sign extend RAX to RDX:RAX
-            fprintf(file, "    idiv %%rbx\n"); // Result in RAX
-        } else if (node->data.bin_op.op == OP_MOD) {
-            fprintf(file, "    cqo\n");
-            fprintf(file, "    idiv %%rbx\n");
-            fprintf(file, "    mov %%rdx, %%rax\n"); // Remainder is in RDX
-        } 
+        if (node->data.bin_op.op == OP_ADD) fprintf(file, "    add %%rbx, %%rax\n");
+        else if (node->data.bin_op.op == OP_SUB) fprintf(file, "    sub %%rbx, %%rax\n");
+        else if (node->data.bin_op.op == OP_MUL) fprintf(file, "    imul %%rbx, %%rax\n");
+        else if (node->data.bin_op.op == OP_DIV) { fprintf(file, "    cqo\n    idiv %%rbx\n"); }
+        else if (node->data.bin_op.op == OP_MOD) { fprintf(file, "    cqo\n    idiv %%rbx\n    mov %%rdx, %%rax\n"); }
         else {
             // Comparisons
             fprintf(file, "    cmp %%rbx, %%rax\n");
@@ -155,6 +159,7 @@ void codegen(Node* node, FILE* file) {
         // 1. Data Section (Globals)
         fprintf(file, ".section .rdata,\"dr\"\n");
         fprintf(file, "fmt_int: .asciz \"%%d\\n\"\n");
+        fprintf(file, "fmt_str: .asciz \"%%s\\n\"\n"); // String format
         
         fprintf(file, ".data\n");
         Node* decl = node->data.program.declarations;
@@ -162,11 +167,9 @@ void codegen(Node* node, FILE* file) {
             if (decl->type == NODE_VAR_DECL && decl->data.var_decl.is_global) {
                 // BUG FIX: Check for initializer value
                 int init_value = 0;
-                if (decl->data.var_decl.expression != NULL && 
-                    decl->data.var_decl.expression->type == NODE_INT) {
+                if (decl->data.var_decl.expression != NULL && decl->data.var_decl.expression->type == NODE_INT) {
                     init_value = decl->data.var_decl.expression->data.integer.value;
                 }
-                
                 fprintf(file, "%s: .quad %d\n", decl->data.var_decl.name, init_value);
                 add_global(decl->data.var_decl.name);
             }
@@ -183,18 +186,18 @@ void codegen(Node* node, FILE* file) {
             }
             decl = decl->next;
         }
+
+        // Dump String Table at end
+        fprintf(file, "\n.section .rdata,\"dr\"\n");
+        for(int i=0; i<string_count; i++) {
+            fprintf(file, ".Lstr_%d: .asciz \"%s\"\n", string_table[i].id, string_table[i].content);
+        }
     }
     else if (node->type == NODE_FUNC_DEF) {
         enter_function_scope();
-        
-        // Handle Main Entry Point mapping
-        if (strcmp(node->data.func_def.name, "الرئيسية") == 0) {
-            fprintf(file, ".globl main\nmain:\n");
-        } else {
-            fprintf(file, "%s:\n", node->data.func_def.name);
-        }
+        if (strcmp(node->data.func_def.name, "الرئيسية") == 0) fprintf(file, ".globl main\nmain:\n");
+        else fprintf(file, "%s:\n", node->data.func_def.name);
 
-        // PROLOGUE
         fprintf(file, "    push %%rbp\n");
         fprintf(file, "    mov %%rsp, %%rbp\n");
         // Allocate generous stack frame (256 bytes + alignment)
@@ -237,19 +240,11 @@ void codegen(Node* node, FILE* file) {
     else if (node->type == NODE_ASSIGN) {
         gen_expr(node->data.assign_stmt.expression, file);
         Symbol* sym = lookup_symbol(node->data.assign_stmt.name);
-        if (sym->scope == SCOPE_LOCAL) {
-            fprintf(file, "    mov %%rax, %d(%%rbp)\n", sym->offset);
-        } else {
-            fprintf(file, "    mov %%rax, %s(%%rip)\n", sym->name);
-        }
+        if (sym->scope == SCOPE_LOCAL) fprintf(file, "    mov %%rax, %d(%%rbp)\n", sym->offset);
+        else fprintf(file, "    mov %%rax, %s(%%rip)\n", sym->name);
     }
     else if (node->type == NODE_CALL_STMT) {
-        // Statement wrapper for call expression logic
-        // We need to construct a temp expression node or refactor gen_expr to be callable
-        // Hack: Create a temporary Node to pass to gen_expr
-        Node temp;
-        temp.type = NODE_CALL_EXPR;
-        temp.data.call = node->data.call;
+        Node temp; temp.type = NODE_CALL_EXPR; temp.data.call = node->data.call;
         gen_expr(&temp, file);
     }
     else if (node->type == NODE_RETURN) {
@@ -259,8 +254,15 @@ void codegen(Node* node, FILE* file) {
     else if (node->type == NODE_PRINT) {
         gen_expr(node->data.print_stmt.expression, file);
         fprintf(file, "    mov %%rax, %%rdx\n");
-        fprintf(file, "    lea fmt_int(%%rip), %%rcx\n");
-        fprintf(file, "    sub $32, %%rsp\n"); // Shadow space for printf
+        
+        // Polymorphic Print Logic
+        if (node->data.print_stmt.expression->type == NODE_STRING) {
+            fprintf(file, "    lea fmt_str(%%rip), %%rcx\n");
+        } else {
+            fprintf(file, "    lea fmt_int(%%rip), %%rcx\n");
+        }
+
+        fprintf(file, "    sub $32, %%rsp\n");
         fprintf(file, "    call printf\n");
         fprintf(file, "    add $32, %%rsp\n");
     }

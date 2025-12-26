@@ -38,14 +38,55 @@ Node* parse_block();
 
 // --- Expression Parsing (Precedence Layers) ---
 
-// Level 1: Primary (Literals, Vars, Parens, Calls)
+// Level 1: Primary (Literals, Vars, Parens, Calls, Unary Minus)
 Node* parse_primary() {
+    // Unary Minus (Negative Numbers)
+    if (parser.current.type == TOKEN_MINUS) {
+        eat(TOKEN_MINUS);
+        // We handle this by creating a synthetic "0 - X" binary op
+        Node* zero = malloc(sizeof(Node));
+        zero->type = NODE_INT;
+        zero->data.integer.value = 0;
+        zero->next = NULL;
+
+        Node* operand = parse_primary(); // Recurse to get the number/expr
+
+        Node* node = malloc(sizeof(Node));
+        node->type = NODE_BIN_OP;
+        node->data.bin_op.left = zero;
+        node->data.bin_op.right = operand;
+        node->data.bin_op.op = OP_SUB;
+        node->next = NULL;
+        return node;
+    }
+
     if (parser.current.type == TOKEN_INT) {
         Node* node = malloc(sizeof(Node));
         node->type = NODE_INT;
         node->data.integer.value = atoi(parser.current.value);
         node->next = NULL;
         eat(TOKEN_INT);
+        return node;
+    }
+
+    // New: String Literals
+    if (parser.current.type == TOKEN_STRING) {
+        Node* node = malloc(sizeof(Node));
+        node->type = NODE_STRING;
+        node->data.string_lit.value = strdup(parser.current.value);
+        node->data.string_lit.id = -1; // Assigned in codegen
+        node->next = NULL;
+        eat(TOKEN_STRING);
+        return node;
+    }
+
+    // New: Char Literals
+    if (parser.current.type == TOKEN_CHAR) {
+        Node* node = malloc(sizeof(Node));
+        node->type = NODE_CHAR;
+        node->data.char_lit.value = (int)parser.current.value[0];
+        node->next = NULL;
+        eat(TOKEN_CHAR);
         return node;
     }
     
@@ -130,12 +171,8 @@ Node* parse_multiplicative() {
 // Level 3: Additive (+, -)
 Node* parse_additive() {
     Node* left = parse_multiplicative();
-    
     while (parser.current.type == TOKEN_PLUS || parser.current.type == TOKEN_MINUS) {
-        OpType op;
-        if (parser.current.type == TOKEN_PLUS) op = OP_ADD;
-        else op = OP_SUB;
-
+        OpType op = (parser.current.type == TOKEN_PLUS) ? OP_ADD : OP_SUB;
         eat(parser.current.type);
         Node* right = parse_multiplicative();
         

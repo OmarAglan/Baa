@@ -1,7 +1,7 @@
 /**
  * @file baa.h
- * @brief Main header file defining Data Structures for the Baa Compiler.
- * @version 0.1.0
+ * @brief ملف الرأس الرئيسي الذي يعرف هياكل البيانات لمحوسب لغة "باء" (Baa Compiler).
+ * @version 0.1.1 (Phase 1)
  */
 
 #ifndef BAA_H
@@ -14,203 +14,225 @@
 #include <string.h>
 
 // ============================================================================
-// LEXER DEFINITIONS
+// تعريفات المحلل اللفظي (Lexer)
 // ============================================================================
 
 /**
  * @enum TokenType
- * @brief Categorizes the atomic units of the source code.
+ * @brief تصنيف الوحدات الذرية (Atomic Units) للكود المصدري.
  */
 typedef enum {
-    TOKEN_EOF,
-    TOKEN_INT,          // Literals: 123
-    TOKEN_STRING,       // "hello" (New)
-    TOKEN_CHAR,         // 'a'     (New)
-    TOKEN_IDENTIFIER,   // Names: x, my_func
+    TOKEN_EOF,          // نهاية الملف
+    TOKEN_INT,          // رقم صحيح: 123
+    TOKEN_STRING,       // نص: "مرحباً"
+    TOKEN_CHAR,         // حرف: 'أ'
+    TOKEN_IDENTIFIER,   // معرف: اسم متغير أو دالة (س، ص، الرئيسية)
     
-    // Keywords
+    // الكلمات المفتاحية (Keywords)
     TOKEN_KEYWORD_INT,  // صحيح
     TOKEN_RETURN,       // إرجع
     TOKEN_PRINT,        // اطبع
     TOKEN_IF,           // إذا
     TOKEN_WHILE,        // طالما
     
-    // Symbols
+    // الرموز (Symbols)
     TOKEN_ASSIGN,       // =
     TOKEN_DOT,          // .
     TOKEN_COMMA,        // ,
     
-    // Math
+    // العمليات الحسابية (Math)
     TOKEN_PLUS,         // +
     TOKEN_MINUS,        // -
     TOKEN_STAR,         // *
     TOKEN_SLASH,        // /
     TOKEN_PERCENT,      // %
     
-    // Logic / Relational
+    // العمليات المنطقية والعلائقية (Logic / Relational)
     TOKEN_EQ,           // ==
     TOKEN_NEQ,          // !=
     TOKEN_LT,           // <
     TOKEN_GT,           // >
     TOKEN_LTE,          // <=
     TOKEN_GTE,          // >=
+    TOKEN_AND,          // &&
+    TOKEN_OR,           // ||
+    TOKEN_NOT,          // !
     
-    // Grouping
+    // التجميع (Grouping)
     TOKEN_LPAREN,       // (
     TOKEN_RPAREN,       // )
     TOKEN_LBRACE,       // {
     TOKEN_RBRACE,       // }
     
-    TOKEN_INVALID
+    TOKEN_INVALID       // وحدة غير صالحة
 } TokenType;
 
 /**
  * @struct Token
- * @brief Represents a single token extracted from the source.
+ * @brief يمثل وحدة لفظية واحدة مستخرجة من المصدر.
  */
 typedef struct {
-    TokenType type;
-    char* value;    // ASCII representation (Number) or UTF-8 Content (String/ID)
-    int line;       // Source line number for debugging
+    TokenType type;     // نوع الوحدة
+    char* value;        // القيمة النصية (للأرقام والنصوص والمعرفات)
+    int line;           // رقم السطر في الكود المصدري
 } Token;
 
 /**
  * @struct Lexer
- * @brief Maintains the state of the text scanning process.
+ * @brief يحافظ على حالة عملية مسح النص وتفكيكه.
  */
 typedef struct {
-    const char* src;
-    size_t pos;
-    size_t len;
-    int line;
+    const char* src;    // نص المصدر
+    size_t pos;         // الموقع الحالي للمسح
+    size_t len;         // طول نص المصدر
+    int line;           // السطر الحالي
 } Lexer;
 
+/**
+ * @brief تهيئة المحلل اللفظي بنص المصدر.
+ */
 void lexer_init(Lexer* lexer, const char* src);
+
+/**
+ * @brief استخراج الوحدة اللفظية (Token) التالية من المصدر.
+ */
 Token lexer_next_token(Lexer* lexer);
 
 // ============================================================================
-// PARSER & AST DEFINITIONS
+// تعريفات المحلل القواعدي وشجرة الإعراب (Parser & AST)
 // ============================================================================
 
 /**
  * @enum NodeType
- * @brief Discriminator for the Polymorphic AST Node.
+ * @brief مميز لنوع العقدة في شجرة الإعراب المجردة (AST).
  */
 typedef enum {
-    // Top Level
-    NODE_PROGRAM,       // Root: Contains list of Declarations
-    NODE_FUNC_DEF,      // Function Definition
-    NODE_VAR_DECL,      // Variable Declaration (Global or Local)
+    // المستوى الأعلى
+    NODE_PROGRAM,       // البرنامج: يحتوي على قائمة التصريحات
+    NODE_FUNC_DEF,      // تعريف دالة
+    NODE_VAR_DECL,      // تعريف متغير (عام أو محلي)
     
-    // Statements
-    NODE_BLOCK,         // Scope { ... } and Function Body
-    NODE_RETURN,        // Return Statement
-    NODE_PRINT,         // Print Statement
-    NODE_IF,            // If Statement
-    NODE_WHILE,         // While Loop
-    NODE_ASSIGN,        // Assignment and Re-assignment
-    NODE_CALL_STMT,     // Function Call
+    // الجمل البرمجية (Statements)
+    NODE_BLOCK,         // نطاق { ... } وكتلة الدالة
+    NODE_RETURN,        // جملة الإرجاع (إرجع)
+    NODE_PRINT,         // جملة الطباعة (اطبع)
+    NODE_IF,            // جملة الشرط (إذا)
+    NODE_WHILE,         // جملة التكرار (طالما)
+    NODE_ASSIGN,        // جملة التعيين (س = 5)
+    NODE_CALL_STMT,     // استدعاء دالة كجملة
     
-    // Expressions
-    NODE_BIN_OP,        // Binary Operations
-    NODE_INT,           // Integer Literal
-    NODE_STRING,        // String Literal
-    NODE_CHAR,          // Character Literal
-    NODE_VAR_REF,       // Variable Reference
-    NODE_CALL_EXPR      // Function Call Expression
+    // التعبيرات (Expressions)
+    NODE_BIN_OP,        // العمليات الثنائية (+، -، *، /)
+    NODE_UNARY_OP,      // العمليات الأحادية (!، -)
+    NODE_INT,           // قيمة عددية صحيحة
+    NODE_STRING,        // قيمة نصية
+    NODE_CHAR,          // قيمة حرفية
+    NODE_VAR_REF,       // إشارة لمتغير
+    NODE_CALL_EXPR      // تعبير استدعاء دالة
 } NodeType;
 
 /**
  * @enum OpType
- * @brief Supported binary operations.
+ * @brief أنواع العمليات الثنائية المدعومة.
  */
 typedef enum { 
-    OP_ADD,     // +
-    OP_SUB,     // -
-    OP_MUL,     // *
-    OP_DIV,     // /
-    OP_MOD,     // %
-    OP_EQ,      // ==
-    OP_NEQ,     // !=
-    OP_LT,      // <
-    OP_GT,      // >
-    OP_LTE,     // <=
-    OP_GTE      // >=
+    // عمليات حسابية
+    OP_ADD, OP_SUB, OP_MUL, OP_DIV, OP_MOD,
+    // عمليات مقارنة
+    OP_EQ, OP_NEQ, OP_LT, OP_GT, OP_LTE, OP_GTE,
+    // عمليات منطقية
+    OP_AND, OP_OR
 } OpType;
 
-struct Node; // Forward declaration
+/**
+ * @enum UnaryOpType
+ * @brief أنواع العمليات الأحادية المدعومة.
+ */
+typedef enum {
+    UOP_NEG, // السالب (-)
+    UOP_NOT  // النفي (!)
+} UnaryOpType;
+
+struct Node;
 
 /**
  * @struct Node
- * @brief The fundamental building block of the Abstract Syntax Tree.
- *        Uses a Tagged Union to store data specific to the Node Type.
+ * @brief اللبنة الأساسية لشجرة الإعراب المجردة.
+ *        تستخدم اتحاداً مسمى (Tagged Union) لتخزين البيانات الخاصة بنوع العقدة.
  */
 typedef struct Node {
-    NodeType type;
-    struct Node* next; // Linked List pointer (next statement/declaration)
+    NodeType type;      // نوع العقدة
+    struct Node* next;  // مؤشر للعقدة التالية (في القوائم المرتبطة للجمل/التصريحات)
 
     union {
-        // Root: List of functions and globals
+        // البرنامج: قائمة الدوال والمتغيرات العامة
         struct { struct Node* declarations; } program;
         
-        // Scope: List of statements
+        // الكتلة: قائمة من الجمل البرمجية
         struct { struct Node* statements; } block;
         
-        // Function Definition
+        // تعريف دالة
         struct { 
-            char* name; 
-            struct Node* params; // Linked list of VarDecls (reused for params)
-            struct Node* body;   // NODE_BLOCK
+            char* name;          // اسم الدالة
+            struct Node* params; // قائمة المعاملات (متغيرات)
+            struct Node* body;   // جسم الدالة (كتلة)
         } func_def;
 
-        // Variable Declaration (Used for Globals, Locals, and Params)
+        // تعريف متغير
         struct { 
-            char* name; 
-            struct Node* expression; // Initial value (optional for params)
-            bool is_global;          // Flag for memory storage location
+            char* name;              // اسم المتغير
+            struct Node* expression; // القيمة الابتدائية (اختياري)
+            bool is_global;          // هل هو متغير عام؟
         } var_decl;
 
-        // Function Call
+        // استدعاء دالة
         struct {
-            char* name;
-            struct Node* args;       // Linked list of expressions
+            char* name;         // اسم الدالة المستدعاة
+            struct Node* args;  // قائمة الوسائط (تعبيرات)
         } call;
 
-        // Statements
+        // جمل الشرط والتكرار والإرجاع والطباعة والتعيين
         struct { struct Node* condition; struct Node* then_branch; } if_stmt;
         struct { struct Node* condition; struct Node* body; } while_stmt;
         struct { struct Node* expression; } return_stmt;
         struct { struct Node* expression; } print_stmt;
         struct { char* name; struct Node* expression; } assign_stmt;
 
-        // Expressions
+        // التعبيرات الأساسية والعمليات
         struct { int value; } integer;
-        // New: String Literal
-        struct { 
-            char* value; 
-            int id; // Assigned during codegen for label (.Lstr_N)
-        } string_lit;
-        // New: Char Literal
+        struct { char* value; int id; } string_lit;
         struct { int value; } char_lit; 
 
         struct { char* name; } var_ref;
         struct { struct Node* left; struct Node* right; OpType op; } bin_op;
+        
+        // العمليات الأحادية (!x، -x)
+        struct { struct Node* operand; UnaryOpType op; } unary_op; 
     } data;
 } Node;
 
-// Parser needs a Lookahead buffer now
+/**
+ * @struct Parser
+ * @brief يمثل حالة عملية التحليل القواعدي مع تخزين مؤقت للوحدة الحالية والتالية (Lookahead).
+ */
 typedef struct {
     Lexer* lexer;
     Token current;
-    Token next;     // Lookahead token
+    Token next;     
 } Parser;
 
+/**
+ * @brief بدء عملية التحليل القواعدي وبناء الشجرة (AST).
+ */
 Node* parse(Lexer* lexer);
 
 // ============================================================================
-// CODEGEN DEFINITIONS
+// تعريفات مولد الكود (Codegen)
 // ============================================================================
 
+/**
+ * @brief توليد كود التجميع (Assembly) للتركيب المعماري x86_64 من الشجرة.
+ */
 void codegen(Node* node, FILE* file);
 
 #endif // BAA_H

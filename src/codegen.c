@@ -1,6 +1,6 @@
 /**
  * @file codegen.c
- * @brief يقوم بتوليد كود التجميع (Assembly) للتركيب المعماري x86_64 مع دعم العمليات الحسابية والمنطقية.
+ * @brief يقوم بتوليد كود التجميع (Assembly) للتركيب المعماري x86_64 مع دعم العمليات الحسابية والمنطقية والمصفوفات.
  */
 
 #include "baa.h"
@@ -41,13 +41,38 @@ void add_global(const char* name) {
 void enter_function_scope() { local_count = 0; current_stack_offset = 0; }
 
 /**
- * @brief إضافة متغير محلي لجدول الرموز.
+ * @brief إضافة متغير محلي.
+ * @param size عدد وحدات 64-بت المطلوبة (1 للأعداد الصحيحة، N للمصفوفات).
  */
-void add_local(const char* name) {
-    current_stack_offset -= 8; // كل خلية تأخذ 8 بايت (64-بت)
+void add_local(const char* name, int size) {
+    // لحساب الإزاحة الأساسية للمصفوفة:
+    // المصفوفة تُحجز ككتلة. الإزاحة المسجلة في الجدول ستشير إلى العنصر الأول (الفهرس 0).
+    // مثال: المصفوفة حجم 2.
+    // المكدس الحالي: -8.
+    // نحجز 16 بايت. المكدس الجديد: -24.
+    // العنصر 0 عند -16. العنصر 1 عند -24.
+    // إذا سجلنا الإزاحة كـ -16:
+    // عنوان العنصر i = القاعدة - (i * 8).
+    // i=0: -16 - 0 = -16 (صحيح)
+    // i=1: -16 - 8 = -24 (صحيح)
+    
+    // الصيغة: إزاحة الرمز = (الإزاحة الحالية - 8)
+    // الإزاحة الحالية الجديدة = الإزاحة الحالية - (الحجم * 8)
+    
+    // ملاحظة: هذا يفترض أننا نملأ من الأعلى للأسفل وأن عنوان الأساس هو العنوان "الأعلى" في الذاكرة.
+    
+    // تصحيح المنطق البسيط:
+    // نعتبر الرمز يشير إلى "بداية" الحجز في المكدس (أعلى عنوان).
+    
+    // 1. تحديد موقع الرمز (بداية الكتلة المحجوزة)
+    int symbol_offset = current_stack_offset - 8;
+    
+    // 2. تحديث مؤشر المكدس لحجز المساحة كاملة
+    current_stack_offset -= (size * 8);
+    
     strcpy(local_symbols[local_count].name, name);
     local_symbols[local_count].scope = SCOPE_LOCAL;
-    local_symbols[local_count].offset = current_stack_offset;
+    local_symbols[local_count].offset = symbol_offset;
     local_count++;
 }
 
@@ -100,6 +125,23 @@ void gen_expr(Node* node, FILE* file) {
         Symbol* sym = lookup_symbol(node->data.var_ref.name);
         if (sym->scope == SCOPE_LOCAL) fprintf(file, "    mov %d(%%rbp), %%rax\n", sym->offset);
         else fprintf(file, "    mov %s(%%rip), %%rax\n", sym->name);
+    }
+    // الوصول للمصفوفة (قراءة)
+    else if (node->type == NODE_ARRAY_ACCESS) {
+        Symbol* sym = lookup_symbol(node->data.array_op.name);
+        // 1. حساب الفهرس
+        gen_expr(node->data.array_op.index, file);
+        // نقل الفهرس إلى RCX
+        fprintf(file, "    mov %%rax, %%rcx\n");
+        
+        // 2. حساب العنوان: RBP + Offset - (Index * 8)
+        // نقوم بذلك يدوياً لأن عنونة x86 لا تدعم طرح الإزاحة الديناميكية بسهولة مع إزاحة سالبة ثابتة
+        fprintf(file, "    imul $8, %%rcx\n");      // Index * 8
+        fprintf(file, "    neg %%rcx\n");           // -(Index * 8)
+        fprintf(file, "    add $%d, %%rcx\n", sym->offset); // Offset + (-(Index*8))
+        
+        // تحميل القيمة من العنوان المحسوب
+        fprintf(file, "    mov (%%rbp, %%rcx, 1), %%rax\n");
     }
     else if (node->type == NODE_CALL_EXPR) {
         // استدعاء دالة: اتباع اتفاقية Windows (RCX, RDX, R8, R9)
@@ -236,18 +278,18 @@ void codegen(Node* node, FILE* file) {
         // التعامل مع دالة "الرئيسية" كنقطة دخول main
         if (strcmp(node->data.func_def.name, "الرئيسية") == 0) fprintf(file, ".globl main\nmain:\n");
         else fprintf(file, "%s:\n", node->data.func_def.name);
-        
+
         // مقدمة الدالة (Prologue)
         fprintf(file, "    push %%rbp\n");
         fprintf(file, "    mov %%rsp, %%rbp\n");
         fprintf(file, "    sub $264, %%rsp\n"); // حجز مساحة للإطارات المتداخلة (256 + محاذاة)
-        
+
         // تفريغ المعاملات إلى المكدس (Spill Parameters)
         Node* param = node->data.func_def.params;
         const char* regs[] = {"%%rcx", "%%rdx", "%%r8", "%%r9"};
         int p_idx = 0;
         while (param != NULL) {
-            add_local(param->data.var_decl.name);
+            add_local(param->data.var_decl.name, 1); // المعاملات حجمها 1
             int offset = lookup_symbol(param->data.var_decl.name)->offset;
             if (p_idx < 4) fprintf(file, "    mov %s, %d(%%rbp)\n", regs[p_idx], offset);
             param = param->next;
@@ -265,12 +307,39 @@ void codegen(Node* node, FILE* file) {
         Node* stmt = node->data.block.statements;
         while (stmt != NULL) { codegen(stmt, file); stmt = stmt->next; }
     }
+    // تعريف متغير محلي (حجم 1)
     else if (node->type == NODE_VAR_DECL) {
-        // تعريف متغير محلي
         gen_expr(node->data.var_decl.expression, file);
-        add_local(node->data.var_decl.name);
+        add_local(node->data.var_decl.name, 1);
         int offset = lookup_symbol(node->data.var_decl.name)->offset;
         fprintf(file, "    mov %%rax, %d(%%rbp)\n", offset);
+    }
+    // تعريف مصفوفة (حجز مساحة فقط في جدول الرموز)
+    else if (node->type == NODE_ARRAY_DECL) {
+        add_local(node->data.array_decl.name, node->data.array_decl.size);
+    }
+    // تعيين مصفوفة (كتابة)
+    else if (node->type == NODE_ARRAY_ASSIGN) {
+        Symbol* sym = lookup_symbol(node->data.array_op.name);
+        
+        // 1. حساب القيمة وحفظها في المكدس
+        gen_expr(node->data.array_op.value, file);
+        fprintf(file, "    push %%rax\n");
+        
+        // 2. حساب الفهرس ونقله إلى RCX
+        gen_expr(node->data.array_op.index, file);
+        fprintf(file, "    mov %%rax, %%rcx\n");
+        
+        // 3. استرجاع القيمة إلى RAX
+        fprintf(file, "    pop %%rax\n");
+        
+        // 4. حساب العنوان: RBP + Offset - (Index * 8)
+        fprintf(file, "    imul $8, %%rcx\n");
+        fprintf(file, "    neg %%rcx\n");
+        fprintf(file, "    add $%d, %%rcx\n", sym->offset);
+        
+        // التخزين في الذاكرة
+        fprintf(file, "    mov %%rax, (%%rbp, %%rcx, 1)\n");
     }
     else if (node->type == NODE_ASSIGN) {
         gen_expr(node->data.assign_stmt.expression, file);

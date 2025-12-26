@@ -47,7 +47,7 @@ Node* parse_block();
 
 // --- تحليل التعبيرات (حسب مستويات الأولوية) ---
 
-// المستوى 1: التعبيرات الأساسية (أرقام، نصوص، متغيرات، أقواس، استدعاءات)
+// المستوى 1: التعبيرات الأساسية (أرقام، نصوص، متغيرات، أقواس، استدعاءات، وصول للمصفوفات)
 Node* parse_primary() {
     if (parser.current.type == TOKEN_INT) {
         Node* node = malloc(sizeof(Node));
@@ -62,7 +62,7 @@ Node* parse_primary() {
         Node* node = malloc(sizeof(Node));
         node->type = NODE_STRING;
         node->data.string_lit.value = strdup(parser.current.value);
-        node->data.string_lit.id = -1; // يتم تعيين المعرف أثناء توليد الكود
+        node->data.string_lit.id = -1;
         node->next = NULL;
         eat(TOKEN_STRING);
         return node;
@@ -81,7 +81,7 @@ Node* parse_primary() {
         char* name = strdup(parser.current.value);
         eat(TOKEN_IDENTIFIER);
 
-        // استدعاء دالة: اسم(وسائط...)
+        // التحقق من استدعاء دالة: اسم(...)
         if (parser.current.type == TOKEN_LPAREN) {
             eat(TOKEN_LPAREN);
             Node* head_arg = NULL;
@@ -109,7 +109,22 @@ Node* parse_primary() {
             return node;
         }
 
-        // إذا لم يكن استدعاءً، فهو إشارة لمتغير
+        // التحقق من الوصول لمصفوفة: اسم[فهرس] (جديد)
+        if (parser.current.type == TOKEN_LBRACKET) {
+            eat(TOKEN_LBRACKET);
+            Node* index = parse_expression();
+            eat(TOKEN_RBRACKET);
+
+            Node* node = malloc(sizeof(Node));
+            node->type = NODE_ARRAY_ACCESS;
+            node->data.array_op.name = name;
+            node->data.array_op.index = index;
+            node->data.array_op.value = NULL;
+            node->next = NULL;
+            return node;
+        }
+
+        // وإلا، فهو إشارة لمتغير عادي
         Node* node = malloc(sizeof(Node));
         node->type = NODE_VAR_REF;
         node->data.var_ref.name = name;
@@ -347,6 +362,26 @@ Node* parse_statement() {
         eat(TOKEN_KEYWORD_INT);
         char* name = strdup(parser.current.value);
         eat(TOKEN_IDENTIFIER);
+
+        // التحقق من تعريف مصفوفة: صحيح س[5].
+        if (parser.current.type == TOKEN_LBRACKET) {
+            eat(TOKEN_LBRACKET);
+            if (parser.current.type != TOKEN_INT) {
+                printf("Parser Error: Array size must be a constant integer\n"); exit(1);
+            }
+            int size = atoi(parser.current.value);
+            eat(TOKEN_INT);
+            eat(TOKEN_RBRACKET);
+            eat(TOKEN_DOT);
+
+            stmt->type = NODE_ARRAY_DECL;
+            stmt->data.array_decl.name = name;
+            stmt->data.array_decl.size = size;
+            stmt->data.array_decl.is_global = false;
+            return stmt;
+        }
+
+        // تعريف متغير عادي
         eat(TOKEN_ASSIGN);
         Node* expr = parse_expression();
         eat(TOKEN_DOT);
@@ -359,8 +394,25 @@ Node* parse_statement() {
     
     // جملة التعيين أو استدعاء الدالة
     else if (parser.current.type == TOKEN_IDENTIFIER) {
+        // التحقق من تعيين مصفوفة: س[0] = 5.
+        if (parser.next.type == TOKEN_LBRACKET) {
+            char* name = strdup(parser.current.value);
+            eat(TOKEN_IDENTIFIER);
+            eat(TOKEN_LBRACKET);
+            Node* index = parse_expression();
+            eat(TOKEN_RBRACKET);
+            eat(TOKEN_ASSIGN);
+            Node* value = parse_expression();
+            eat(TOKEN_DOT);
+
+            stmt->type = NODE_ARRAY_ASSIGN;
+            stmt->data.array_op.name = name;
+            stmt->data.array_op.index = index;
+            stmt->data.array_op.value = value;
+            return stmt;
+        }
         // التحقق من المعاينة (Lookahead) للتمييز بين التعيين والاستدعاء
-        if (parser.next.type == TOKEN_ASSIGN) {
+        else if (parser.next.type == TOKEN_ASSIGN) {
             char* name = strdup(parser.current.value);
             eat(TOKEN_IDENTIFIER);
             eat(TOKEN_ASSIGN);

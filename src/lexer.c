@@ -92,7 +92,7 @@ Token lexer_next_token(Lexer* l) {
         return token;
     }
 
-    // معالجة الرموز والعمليات (نقطة، فاصلة، جمع، طرح، إلخ)
+    // معالجة الرموز والعمليات
     if (*current == '.') { token.type = TOKEN_DOT; l->pos++; return token; }
     if (*current == ',') { token.type = TOKEN_COMMA; l->pos++; return token; }
     if (*current == '+') { token.type = TOKEN_PLUS; l->pos++; return token; }
@@ -104,6 +104,9 @@ Token lexer_next_token(Lexer* l) {
     if (*current == ')') { token.type = TOKEN_RPAREN; l->pos++; return token; }
     if (*current == '{') { token.type = TOKEN_LBRACE; l->pos++; return token; }
     if (*current == '}') { token.type = TOKEN_RBRACE; l->pos++; return token; }
+    // الأقواس المعقوفة للمصفوفات (جديد)
+    if (*current == '[') { token.type = TOKEN_LBRACKET; l->pos++; return token; }
+    if (*current == ']') { token.type = TOKEN_RBRACKET; l->pos++; return token; }
 
     // معالجة العمليات المنطقية (&&، ||، !)
     if (*current == '&') {
@@ -120,7 +123,7 @@ Token lexer_next_token(Lexer* l) {
         if (l->pos + 1 < l->len && l->src[l->pos+1] == '=') {
             token.type = TOKEN_NEQ; l->pos += 2; return token;
         }
-        token.type = TOKEN_NOT; l->pos++; return token; // نفي أحادي
+        token.type = TOKEN_NOT; l->pos++; return token;
     }
 
     // معالجة عمليات المقارنة والتعيين (=، ==، <، <=، >، >=)
@@ -161,11 +164,11 @@ Token lexer_next_token(Lexer* l) {
         return token;
     }
 
-    // معالجة المعرفات والكلمات المفتاحية المكتوبة بالعربية
+    // معالجة المعرفات والكلمات المفتاحية
     if (is_arabic_start_byte(*current)) {
         size_t start = l->pos;
         while (l->pos < l->len && !isspace(l->src[l->pos]) && 
-               strchr(".+-,=(){}!<>*/%&|\"'", l->src[l->pos]) == NULL) { 
+               strchr(".+-,=(){}[]!<>*/%&|\"'", l->src[l->pos]) == NULL) { // تمت إضافة []
             l->pos++;
         }
         

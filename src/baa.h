@@ -1,7 +1,7 @@
 /**
  * @file baa.h
  * @brief ملف الرأس الرئيسي الذي يعرف هياكل البيانات لمحوسب لغة "باء" (Baa Compiler).
- * @version 0.1.1 (Phase 1)
+ * @version 0.1.1 (Phase 2 - Arrays)
  */
 
 #ifndef BAA_H
@@ -63,6 +63,8 @@ typedef enum {
     TOKEN_RPAREN,       // )
     TOKEN_LBRACE,       // {
     TOKEN_RBRACE,       // }
+    TOKEN_LBRACKET,     // [ (جديد للمصفوفات)
+    TOKEN_RBRACKET,     // ] (جديد للمصفوفات)
     
     TOKEN_INVALID       // وحدة غير صالحة
 } TokenType;
@@ -121,6 +123,11 @@ typedef enum {
     NODE_ASSIGN,        // جملة التعيين (س = 5)
     NODE_CALL_STMT,     // استدعاء دالة كجملة
     
+    // المصفوفات (جديد)
+    NODE_ARRAY_DECL,    // تعريف مصفوفة: صحيح س[5].
+    NODE_ARRAY_ASSIGN,  // تعيين عنصر مصفوفة: س[0] = 1.
+    NODE_ARRAY_ACCESS,  // قراءة عنصر مصفوفة: س[0]
+    
     // التعبيرات (Expressions)
     NODE_BIN_OP,        // العمليات الثنائية (+، -، *، /)
     NODE_UNARY_OP,      // العمليات الأحادية (!، -)
@@ -178,12 +185,26 @@ typedef struct Node {
             struct Node* body;   // جسم الدالة (كتلة)
         } func_def;
 
-        // تعريف متغير
+        // تعريف متغير (عادي)
         struct { 
             char* name;              // اسم المتغير
             struct Node* expression; // القيمة الابتدائية (اختياري)
             bool is_global;          // هل هو متغير عام؟
         } var_decl;
+
+        // تعريف مصفوفة (جديد)
+        struct {
+            char* name;     // اسم المصفوفة
+            int size;       // حجم المصفوفة (ثابت حالياً)
+            bool is_global; // هل هي عامة؟ (المحلي فقط مدعوم حالياً)
+        } array_decl;
+
+        // عمليات المصفوفات (جديد) - للتعيين والقراءة
+        struct {
+            char* name;          // اسم المصفوفة
+            struct Node* index;  // الفهرس (Index)
+            struct Node* value;  // القيمة (للتعيين فقط، NULL للقراءة)
+        } array_op;
 
         // استدعاء دالة
         struct {

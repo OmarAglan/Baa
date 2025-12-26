@@ -1,46 +1,67 @@
-#include "baa/lexer/lexer.h"
-// #include "baa/parser/parser.h" // Removed as parser is being removed
-#include "baa/codegen/codegen.h"
-#include "baa/utils/utils.h"
-#include "baa/preprocessor/preprocessor.h"
-#include "baa/compiler.h"
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <locale.h>
+/**
+ * @file main.c
+ * @brief نقطة الدخول لمحوسب لغة "باء" (Baa Compiler).
+ */
+
+#include "baa.h"
 
 /**
- * @brief Print usage information.
- *
- * This function prints the correct usage of the program to the console.
- *
- * @param argv The argument vector containing the program name and arguments.
+ * @brief دالة مساعدة لقراءة محتوى الملف بالكامل وتحميله في الذاكرة.
  */
-static void print_usage(const char *program_name) {
-    printf("الاستخدام خاطئ\n");
-    printf("الرجاء استخدام الأمر بالشكل الصحيح\n");
-    printf("%s \n<المسار_إلي_الملف_المراد_تجميعه>", program_name);
+char* read_file(const char* path) {
+    FILE* f = fopen(path, "rb");
+    if (!f) {
+        printf("Could not open file %s\n", path);
+        exit(1);
+    }
+    fseek(f, 0, SEEK_END);
+    long length = ftell(f);
+    fseek(f, 0, SEEK_SET);
+    char* buffer = malloc(length + 1);
+    fread(buffer, 1, length, f);
+    buffer[length] = '\0';
+    fclose(f);
+    return buffer;
 }
 
 /**
- * @brief The main entry point of the program.
- *
- * This function checks the number of command-line arguments and processes the input file.
- *
- * @param argc The argument count.
- * @param argv The argument vector.
- * @return An integer representing the exit status of the program.
+ * @brief الدالة الرئيسية التي تدير مراحل المعالجة (تحليل، إعراب، توليد، تجميع).
  */
-int main(int argc, char **argv) {
-    setlocale(LC_ALL, "");  // Set locale for proper wide char handling
-
+int main(int argc, char** argv) {
     if (argc < 2) {
-        print_usage(argv[0]);
+        printf("Usage: baa <file.b>\n");
         return 1;
     }
 
-    // Call the centralized compilation function
-    int result = compile_baa_file(argv[1]);
+    // 1. القراءة: تحميل الكود المصدري
+    char* source = read_file(argv[1]);
 
-    return result;
+    // 2. التحليل اللفظي: تحويل النص إلى وحدات (Tokens)
+    Lexer lexer;
+    lexer_init(&lexer, source);
+
+    // 3. التحليل القواعدي: بناء شجرة الإعراب (AST)
+    Node* ast = parse(&lexer);
+
+    // 4. توليد الكود: إنتاج ملف تجميع (Assembly)
+    FILE* asm_file = fopen("out.s", "w");
+    if (!asm_file) {
+        perror("Failed to open out.s");
+        return 1;
+    }
+    codegen(ast, asm_file);
+    fclose(asm_file);
+
+    // 5. التجميع والربط: استخدام GCC لإنتاج الملف التنفيذي
+    int result = system("gcc out.s -o out.exe");
+    
+    free(source);
+    
+    if (result == 0) {
+        printf("Build successful. Run ./out.exe\n");
+        return 0;
+    } else {
+        printf("Build failed.\n");
+        return 1;
+    }
 }

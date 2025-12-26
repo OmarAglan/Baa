@@ -1,7 +1,0 @@
-// هذا الملف header_test.baa
-#تعريف HEADER_VAL 100
-#تعريف HEADER_MSG "رسالة من الهيدر"
-
-سطر من header_test.baa
-Header value is: HEADER_VAL
-Header message is: HEADER_MSG

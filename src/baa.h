@@ -1,7 +1,7 @@
 /**
  * @file baa.h
  * @brief ملف الرأس الرئيسي الذي يعرف هياكل البيانات لمحوسب لغة "باء" (Baa Compiler).
- * @version 0.1.1 (Phase 2 - Arrays)
+ * @version 0.1.1 (Phase 3 - For Loop)
  */
 
 #ifndef BAA_H
@@ -34,11 +34,13 @@ typedef enum {
     TOKEN_PRINT,        // اطبع
     TOKEN_IF,           // إذا
     TOKEN_WHILE,        // طالما
+    TOKEN_FOR,          // لكل (جديد)
     
     // الرموز (Symbols)
     TOKEN_ASSIGN,       // =
     TOKEN_DOT,          // .
     TOKEN_COMMA,        // ,
+    TOKEN_SEMICOLON,    // ؛ (جديد - فاصلة منقوطة عربية)
     
     // العمليات الحسابية (Math)
     TOKEN_PLUS,         // +
@@ -46,6 +48,8 @@ typedef enum {
     TOKEN_STAR,         // *
     TOKEN_SLASH,        // /
     TOKEN_PERCENT,      // %
+    TOKEN_INC,          // ++ (جديد)
+    TOKEN_DEC,          // -- (جديد)
     
     // العمليات المنطقية والعلائقية (Logic / Relational)
     TOKEN_EQ,           // ==
@@ -63,8 +67,8 @@ typedef enum {
     TOKEN_RPAREN,       // )
     TOKEN_LBRACE,       // {
     TOKEN_RBRACE,       // }
-    TOKEN_LBRACKET,     // [ (جديد للمصفوفات)
-    TOKEN_RBRACKET,     // ] (جديد للمصفوفات)
+    TOKEN_LBRACKET,     // [
+    TOKEN_RBRACKET,     // ]
     
     TOKEN_INVALID       // وحدة غير صالحة
 } TokenType;
@@ -120,10 +124,11 @@ typedef enum {
     NODE_PRINT,         // جملة الطباعة (اطبع)
     NODE_IF,            // جملة الشرط (إذا)
     NODE_WHILE,         // جملة التكرار (طالما)
+    NODE_FOR,           // جملة التكرار المحدد (لكل) - جديد
     NODE_ASSIGN,        // جملة التعيين (س = 5)
     NODE_CALL_STMT,     // استدعاء دالة كجملة
     
-    // المصفوفات (جديد)
+    // المصفوفات
     NODE_ARRAY_DECL,    // تعريف مصفوفة: صحيح س[5].
     NODE_ARRAY_ASSIGN,  // تعيين عنصر مصفوفة: س[0] = 1.
     NODE_ARRAY_ACCESS,  // قراءة عنصر مصفوفة: س[0]
@@ -131,6 +136,7 @@ typedef enum {
     // التعبيرات (Expressions)
     NODE_BIN_OP,        // العمليات الثنائية (+، -، *، /)
     NODE_UNARY_OP,      // العمليات الأحادية (!، -)
+    NODE_POSTFIX_OP,    // العمليات اللاحقة (++، --) - جديد
     NODE_INT,           // قيمة عددية صحيحة
     NODE_STRING,        // قيمة نصية
     NODE_CHAR,          // قيمة حرفية
@@ -157,7 +163,9 @@ typedef enum {
  */
 typedef enum {
     UOP_NEG, // السالب (-)
-    UOP_NOT  // النفي (!)
+    UOP_NOT, // النفي (!)
+    UOP_INC, // الزيادة (++) - جديد
+    UOP_DEC  // النقصان (--) - جديد
 } UnaryOpType;
 
 struct Node;
@@ -192,14 +200,14 @@ typedef struct Node {
             bool is_global;          // هل هو متغير عام؟
         } var_decl;
 
-        // تعريف مصفوفة (جديد)
+        // تعريف مصفوفة
         struct {
             char* name;     // اسم المصفوفة
             int size;       // حجم المصفوفة (ثابت حالياً)
             bool is_global; // هل هي عامة؟ (المحلي فقط مدعوم حالياً)
         } array_decl;
 
-        // عمليات المصفوفات (جديد) - للتعيين والقراءة
+        // عمليات المصفوفات - للتعيين والقراءة
         struct {
             char* name;          // اسم المصفوفة
             struct Node* index;  // الفهرس (Index)
@@ -212,12 +220,20 @@ typedef struct Node {
             struct Node* args;  // قائمة الوسائط (تعبيرات)
         } call;
 
-        // جمل الشرط والتكرار والإرجاع والطباعة والتعيين
+        // جمل التحكم
         struct { struct Node* condition; struct Node* then_branch; } if_stmt;
         struct { struct Node* condition; struct Node* body; } while_stmt;
         struct { struct Node* expression; } return_stmt;
         struct { struct Node* expression; } print_stmt;
         struct { char* name; struct Node* expression; } assign_stmt;
+
+        // جملة التكرار المحددة (لكل) - جديد
+        struct {
+            struct Node* init;      // التهيئة (مثل: صحيح س = 0)
+            struct Node* condition; // الشرط (مثل: س < 10)
+            struct Node* increment; // الزيادة (مثل: س = س + 1 أو س++)
+            struct Node* body;      // جسم الحلقة
+        } for_stmt;
 
         // التعبيرات الأساسية والعمليات
         struct { int value; } integer;
@@ -227,8 +243,11 @@ typedef struct Node {
         struct { char* name; } var_ref;
         struct { struct Node* left; struct Node* right; OpType op; } bin_op;
         
-        // العمليات الأحادية (!x، -x)
-        struct { struct Node* operand; UnaryOpType op; } unary_op; 
+        // العمليات الأحادية واللاحقة
+        struct { 
+            struct Node* operand; // المعامل (مثل اسم المتغير)
+            UnaryOpType op;       // نوع العملية (++، --، !، -)
+        } unary_op; 
     } data;
 } Node;
 

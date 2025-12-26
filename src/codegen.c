@@ -1,6 +1,7 @@
 /**
  * @file codegen.c
- * @brief يقوم بتوليد كود التجميع (Assembly) للتركيب المعماري x86_64 مع دعم العمليات الحسابية والمنطقية والمصفوفات.
+ * @brief يقوم بتوليد كود التجميع (Assembly) للتركيب المعماري x86_64 مع دعم العمليات الحسابية والمنطقية والمصفوفات وحلقات التكرار.
+ * @version 0.1.1 (Phase 3 - For Loop)
  */
 
 #include "baa.h"
@@ -65,9 +66,10 @@ void add_local(const char* name, int size) {
     // نعتبر الرمز يشير إلى "بداية" الحجز في المكدس (أعلى عنوان).
     
     // 1. تحديد موقع الرمز (بداية الكتلة المحجوزة)
+    // نعتبر الرمز يشير إلى "بداية" الحجز في المكدس (أعلى عنوان/أقل إزاحة سالبة)
     int symbol_offset = current_stack_offset - 8;
     
-    // 2. تحديث مؤشر المكدس لحجز المساحة كاملة
+    // 2. تحديث مؤشر المكدس لحجز المساحة كاملة (المكدس ينمو للأسفل)
     current_stack_offset -= (size * 8);
     
     strcpy(local_symbols[local_count].name, name);
@@ -105,7 +107,10 @@ int register_string(char* content) {
     return string_count++;
 }
 
-// --- المولد (Generator) ---
+// --- تصريح مسبق للمولد ---
+void codegen(Node* node, FILE* file);
+
+// --- مولد التعبيرات (Expression Generator) ---
 
 /**
  * @brief توليد كود التجميع لتعبير معين. النتيجة تخزن دائماً في مسجل %rax.
@@ -164,7 +169,52 @@ void gen_expr(Node* node, FILE* file) {
         fprintf(file, "    call %s\n", node->data.call.name);
         fprintf(file, "    add $32, %%rsp\n");
     }
-    // العمليات الأحادية
+    // العمليات الأحادية واللاحقة
+    else if (node->type == NODE_POSTFIX_OP) {
+        // التعامل مع ++ و --
+        Node* operand = node->data.unary_op.operand;
+        
+        if (operand->type == NODE_VAR_REF) {
+            Symbol* sym = lookup_symbol(operand->data.var_ref.name);
+            // تحميل القيمة الحالية
+            if (sym->scope == SCOPE_LOCAL) fprintf(file, "    mov %d(%%rbp), %%rax\n", sym->offset);
+            else fprintf(file, "    mov %s(%%rip), %%rax\n", sym->name);
+            
+            // حفظ القيمة الأصلية لاستخدامها كنتيجة للتعبير
+            fprintf(file, "    mov %%rax, %%rdx\n"); 
+            
+            // التعديل
+            if (node->data.unary_op.op == UOP_INC) fprintf(file, "    add $1, %%rdx\n");
+            else fprintf(file, "    sub $1, %%rdx\n");
+            
+            // التخزين
+            if (sym->scope == SCOPE_LOCAL) fprintf(file, "    mov %%rdx, %d(%%rbp)\n", sym->offset);
+            else fprintf(file, "    mov %%rdx, %s(%%rip)\n", sym->name);
+            
+            // %rax لا يزال يحتوي على القيمة القديمة (Postfix)
+        }
+        else if (operand->type == NODE_ARRAY_ACCESS) {
+            Symbol* sym = lookup_symbol(operand->data.array_op.name);
+            
+            // حساب العنوان (يخزن في RCX)
+            gen_expr(operand->data.array_op.index, file);
+            fprintf(file, "    mov %%rax, %%rcx\n");
+            fprintf(file, "    imul $8, %%rcx\n");
+            fprintf(file, "    neg %%rcx\n");
+            fprintf(file, "    add $%d, %%rcx\n", sym->offset);
+            
+            // تحميل القيمة
+            fprintf(file, "    mov (%%rbp, %%rcx, 1), %%rax\n");
+            
+            // نسخ للتعديل
+            fprintf(file, "    mov %%rax, %%rdx\n");
+            if (node->data.unary_op.op == UOP_INC) fprintf(file, "    add $1, %%rdx\n");
+            else fprintf(file, "    sub $1, %%rdx\n");
+            
+            // التخزين
+            fprintf(file, "    mov %%rdx, (%%rbp, %%rcx, 1)\n");
+        }
+    }
     else if (node->type == NODE_UNARY_OP) {
         gen_expr(node->data.unary_op.operand, file);
         if (node->data.unary_op.op == UOP_NEG) {
@@ -316,6 +366,7 @@ void codegen(Node* node, FILE* file) {
     }
     // تعريف مصفوفة (حجز مساحة فقط في جدول الرموز)
     else if (node->type == NODE_ARRAY_DECL) {
+        // حجز مساحة المصفوفة في جدول الرموز
         add_local(node->data.array_decl.name, node->data.array_decl.size);
     }
     // تعيين مصفوفة (كتابة)
@@ -382,6 +433,55 @@ void codegen(Node* node, FILE* file) {
         fprintf(file, "    cmp $0, %%rax\n");
         fprintf(file, "    je .Lend_%d\n", label_end);
         codegen(node->data.while_stmt.body, file);
+        fprintf(file, "    jmp .Lstart_%d\n", label_start);
+        fprintf(file, ".Lend_%d:\n", label_end);
+    }
+    // جملة التكرار "لكل" (For Loop) - جديد
+    else if (node->type == NODE_FOR) {
+        int label_start = label_counter++;
+        int label_end = label_counter++;
+
+        // 1. التهيئة (Initialization)
+        if (node->data.for_stmt.init) {
+            // يمكن أن تكون تعريف متغير أو تعيين
+            if (node->data.for_stmt.init->type == NODE_VAR_DECL) {
+                // تكرار منطق NODE_VAR_DECL
+                gen_expr(node->data.for_stmt.init->data.var_decl.expression, file);
+                add_local(node->data.for_stmt.init->data.var_decl.name, 1);
+                int offset = lookup_symbol(node->data.for_stmt.init->data.var_decl.name)->offset;
+                fprintf(file, "    mov %%rax, %d(%%rbp)\n", offset);
+            } 
+            else if (node->data.for_stmt.init->type == NODE_ASSIGN) {
+                codegen(node->data.for_stmt.init, file);
+            }
+            else {
+                gen_expr(node->data.for_stmt.init, file);
+            }
+        }
+
+        fprintf(file, ".Lstart_%d:\n", label_start);
+
+        // 2. الشرط (Condition)
+        if (node->data.for_stmt.condition) {
+            gen_expr(node->data.for_stmt.condition, file);
+            fprintf(file, "    cmp $0, %%rax\n");
+            fprintf(file, "    je .Lend_%d\n", label_end);
+        }
+
+        // 3. الجسم (Body)
+        codegen(node->data.for_stmt.body, file);
+
+        // 4. الزيادة (Increment)
+        if (node->data.for_stmt.increment) {
+            // قد تكون تعيين أو عملية لاحقة (++)
+            if (node->data.for_stmt.increment->type == NODE_ASSIGN) {
+                codegen(node->data.for_stmt.increment, file);
+            } else {
+                // إذا كانت تعبير (مثل س++)
+                gen_expr(node->data.for_stmt.increment, file);
+            }
+        }
+
         fprintf(file, "    jmp .Lstart_%d\n", label_start);
         fprintf(file, ".Lend_%d:\n", label_end);
     }

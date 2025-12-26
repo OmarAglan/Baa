@@ -1,6 +1,7 @@
 /**
  * @file lexer.c
  * @brief يقوم بتحويل الكود المصدري المكتوب باللغة العربية (UTF-8) إلى وحدات لفظية (Tokens).
+ * @version 0.1.1 (Phase 3 - For Loop)
  */
 
 #include "baa.h"
@@ -92,11 +93,33 @@ Token lexer_next_token(Lexer* l) {
         return token;
     }
 
+    // معالجة الفاصلة المنقوطة العربية (؛) - UTF-8: 0xD8 0x9B
+    if ((unsigned char)*current == 0xD8 && l->pos + 1 < l->len && (unsigned char)l->src[l->pos+1] == 0x9B) {
+        token.type = TOKEN_SEMICOLON;
+        l->pos += 2;
+        return token;
+    }
+
     // معالجة الرموز والعمليات
     if (*current == '.') { token.type = TOKEN_DOT; l->pos++; return token; }
     if (*current == ',') { token.type = TOKEN_COMMA; l->pos++; return token; }
-    if (*current == '+') { token.type = TOKEN_PLUS; l->pos++; return token; }
-    if (*current == '-') { token.type = TOKEN_MINUS; l->pos++; return token; }
+    
+    // الجمع والزيادة (++ و +)
+    if (*current == '+') { 
+        if (l->pos + 1 < l->len && l->src[l->pos+1] == '+') {
+            token.type = TOKEN_INC; l->pos += 2; return token;
+        }
+        token.type = TOKEN_PLUS; l->pos++; return token; 
+    }
+    
+    // الطرح والنقصان (-- و -)
+    if (*current == '-') { 
+        if (l->pos + 1 < l->len && l->src[l->pos+1] == '-') {
+            token.type = TOKEN_DEC; l->pos += 2; return token;
+        }
+        token.type = TOKEN_MINUS; l->pos++; return token; 
+    }
+
     if (*current == '*') { token.type = TOKEN_STAR; l->pos++; return token; }
     if (*current == '/') { token.type = TOKEN_SLASH; l->pos++; return token; }
     if (*current == '%') { token.type = TOKEN_PERCENT; l->pos++; return token; }
@@ -104,7 +127,6 @@ Token lexer_next_token(Lexer* l) {
     if (*current == ')') { token.type = TOKEN_RPAREN; l->pos++; return token; }
     if (*current == '{') { token.type = TOKEN_LBRACE; l->pos++; return token; }
     if (*current == '}') { token.type = TOKEN_RBRACE; l->pos++; return token; }
-    // الأقواس المعقوفة للمصفوفات (جديد)
     if (*current == '[') { token.type = TOKEN_LBRACKET; l->pos++; return token; }
     if (*current == ']') { token.type = TOKEN_RBRACKET; l->pos++; return token; }
 
@@ -168,7 +190,12 @@ Token lexer_next_token(Lexer* l) {
     if (is_arabic_start_byte(*current)) {
         size_t start = l->pos;
         while (l->pos < l->len && !isspace(l->src[l->pos]) && 
-               strchr(".+-,=(){}[]!<>*/%&|\"'", l->src[l->pos]) == NULL) { // تمت إضافة []
+               strchr(".+-,=(){}[]!<>*/%&|\"'", l->src[l->pos]) == NULL) {
+            // ملاحظة: الفاصلة المنقوطة العربية (؛) تبدأ بـ 0xD8 وهي ضمن النطاق العربي
+            // لذلك يجب التحقق منها وإيقاف قراءة المعرف إذا وجدناها
+            if ((unsigned char)l->src[l->pos] == 0xD8 && (unsigned char)l->src[l->pos+1] == 0x9B) {
+                break;
+            }
             l->pos++;
         }
         
@@ -183,6 +210,7 @@ Token lexer_next_token(Lexer* l) {
         else if (strcmp(word, "صحيح") == 0) token.type = TOKEN_KEYWORD_INT;
         else if (strcmp(word, "إذا") == 0) token.type = TOKEN_IF;
         else if (strcmp(word, "طالما") == 0) token.type = TOKEN_WHILE;
+        else if (strcmp(word, "لكل") == 0) token.type = TOKEN_FOR; // الكلمة المفتاحية الجديدة
         else {
             // إذا لم تكن كلمة مفتاحية، فهي معرف (اسم متغير أو دالة)
             token.type = TOKEN_IDENTIFIER;

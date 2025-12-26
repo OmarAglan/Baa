@@ -1,6 +1,7 @@
 /**
  * @file parser.c
  * @brief يقوم بتحليل الوحدات اللفظية وبناء شجرة الإعراب المجردة (AST) باستخدام طريقة الانحدار العودي (Recursive Descent).
+ * @version 0.1.1 (Phase 3 - For Loop)
  */
 
 #include "baa.h"
@@ -47,41 +48,37 @@ Node* parse_block();
 
 // --- تحليل التعبيرات (حسب مستويات الأولوية) ---
 
-// المستوى 1: التعبيرات الأساسية (أرقام، نصوص، متغيرات، أقواس، استدعاءات، وصول للمصفوفات)
+// المستوى 1: التعبيرات الأساسية واللاحقة (Postfix)
 Node* parse_primary() {
+    Node* node = NULL;
+
     if (parser.current.type == TOKEN_INT) {
-        Node* node = malloc(sizeof(Node));
+        node = malloc(sizeof(Node));
         node->type = NODE_INT;
         node->data.integer.value = atoi(parser.current.value);
         node->next = NULL;
         eat(TOKEN_INT);
-        return node;
     }
-    
-    if (parser.current.type == TOKEN_STRING) {
-        Node* node = malloc(sizeof(Node));
+    else if (parser.current.type == TOKEN_STRING) {
+        node = malloc(sizeof(Node));
         node->type = NODE_STRING;
         node->data.string_lit.value = strdup(parser.current.value);
         node->data.string_lit.id = -1;
         node->next = NULL;
         eat(TOKEN_STRING);
-        return node;
     }
-
-    if (parser.current.type == TOKEN_CHAR) {
-        Node* node = malloc(sizeof(Node));
+    else if (parser.current.type == TOKEN_CHAR) {
+        node = malloc(sizeof(Node));
         node->type = NODE_CHAR;
         node->data.char_lit.value = (int)parser.current.value[0];
         node->next = NULL;
         eat(TOKEN_CHAR);
-        return node;
     }
-    
-    if (parser.current.type == TOKEN_IDENTIFIER) {
+    else if (parser.current.type == TOKEN_IDENTIFIER) {
         char* name = strdup(parser.current.value);
         eat(TOKEN_IDENTIFIER);
 
-        // التحقق من استدعاء دالة: اسم(...)
+        // استدعاء دالة: اسم(...)
         if (parser.current.type == TOKEN_LPAREN) {
             eat(TOKEN_LPAREN);
             Node* head_arg = NULL;
@@ -101,54 +98,73 @@ Node* parse_primary() {
             }
             eat(TOKEN_RPAREN);
 
-            Node* node = malloc(sizeof(Node));
+            node = malloc(sizeof(Node));
             node->type = NODE_CALL_EXPR;
             node->data.call.name = name;
             node->data.call.args = head_arg;
             node->next = NULL;
-            return node;
         }
-
-        // التحقق من الوصول لمصفوفة: اسم[فهرس] (جديد)
-        if (parser.current.type == TOKEN_LBRACKET) {
+        // الوصول لمصفوفة: اسم[فهرس]
+        else if (parser.current.type == TOKEN_LBRACKET) {
             eat(TOKEN_LBRACKET);
             Node* index = parse_expression();
             eat(TOKEN_RBRACKET);
 
-            Node* node = malloc(sizeof(Node));
+            node = malloc(sizeof(Node));
             node->type = NODE_ARRAY_ACCESS;
             node->data.array_op.name = name;
             node->data.array_op.index = index;
             node->data.array_op.value = NULL;
             node->next = NULL;
-            return node;
         }
-
-        // وإلا، فهو إشارة لمتغير عادي
-        Node* node = malloc(sizeof(Node));
-        node->type = NODE_VAR_REF;
-        node->data.var_ref.name = name;
-        node->next = NULL;
-        return node;
+        // متغير عادي
+        else {
+            node = malloc(sizeof(Node));
+            node->type = NODE_VAR_REF;
+            node->data.var_ref.name = name;
+            node->next = NULL;
+        }
     }
-
-    if (parser.current.type == TOKEN_LPAREN) {
+    else if (parser.current.type == TOKEN_LPAREN) {
         eat(TOKEN_LPAREN);
-        Node* expr = parse_expression();
+        node = parse_expression();
         eat(TOKEN_RPAREN);
-        return expr;
+    }
+    else {
+        printf("Parser Error: Expected expression at line %d\n", parser.current.line);
+        exit(1);
     }
 
-    printf("Parser Error: Expected expression at line %d\n", parser.current.line);
-    exit(1);
+    // التحقق من العمليات اللاحقة (Postfix Operators: ++, --)
+    // مثال: س++ أو مصفوفة[0]++
+    if (parser.current.type == TOKEN_INC || parser.current.type == TOKEN_DEC) {
+        UnaryOpType op = (parser.current.type == TOKEN_INC) ? UOP_INC : UOP_DEC;
+        eat(parser.current.type);
+
+        Node* postfix = malloc(sizeof(Node));
+        postfix->type = NODE_POSTFIX_OP;
+        postfix->data.unary_op.operand = node;
+        postfix->data.unary_op.op = op;
+        postfix->next = NULL;
+        return postfix;
+    }
+
+    return node;
 }
 
-// المستوى 1.5: العمليات الأحادية (!، -)
+// المستوى 1.5: العمليات الأحادية والبادئة (!, -, ++, --)
 Node* parse_unary() {
-    if (parser.current.type == TOKEN_MINUS || parser.current.type == TOKEN_NOT) {
-        UnaryOpType op = (parser.current.type == TOKEN_MINUS) ? UOP_NEG : UOP_NOT;
+    if (parser.current.type == TOKEN_MINUS || parser.current.type == TOKEN_NOT ||
+        parser.current.type == TOKEN_INC || parser.current.type == TOKEN_DEC) {
+        
+        UnaryOpType op;
+        if (parser.current.type == TOKEN_MINUS) op = UOP_NEG;
+        else if (parser.current.type == TOKEN_NOT) op = UOP_NOT;
+        else if (parser.current.type == TOKEN_INC) op = UOP_INC; // ++س
+        else op = UOP_DEC; // --س
+
         eat(parser.current.type);
-        Node* operand = parse_unary(); // دعم العمليات المتكررة مثل !!س أو - -5
+        Node* operand = parse_unary();
         
         Node* node = malloc(sizeof(Node));
         node->type = NODE_UNARY_OP;
@@ -356,6 +372,80 @@ Node* parse_statement() {
         stmt->data.while_stmt.body = body;
         return stmt;
     }
+    // جملة التكرار "لكل" (For Loop)
+    // التركيب: لكل ( تهيئة ؛ شرط ؛ زيادة ) جملة
+    else if (parser.current.type == TOKEN_FOR) {
+        eat(TOKEN_FOR);
+        eat(TOKEN_LPAREN);
+
+        // 1. التهيئة (Initialization)
+        Node* init = NULL;
+        if (parser.current.type == TOKEN_KEYWORD_INT) {
+            // تعريف متغير داخل الحلقة (مثل: صحيح س = 0)
+            eat(TOKEN_KEYWORD_INT);
+            char* name = strdup(parser.current.value);
+            eat(TOKEN_IDENTIFIER);
+            eat(TOKEN_ASSIGN);
+            Node* expr = parse_expression();
+            eat(TOKEN_SEMICOLON); // الفاصلة المنقوطة العربية
+
+            init = malloc(sizeof(Node));
+            init->type = NODE_VAR_DECL;
+            init->data.var_decl.name = name;
+            init->data.var_decl.expression = expr;
+            init->data.var_decl.is_global = false;
+        } else {
+            // تعيين قيمة (مثل: س = 0) أو تعبير آخر
+            if (parser.current.type == TOKEN_IDENTIFIER && parser.next.type == TOKEN_ASSIGN) {
+                char* name = strdup(parser.current.value);
+                eat(TOKEN_IDENTIFIER);
+                eat(TOKEN_ASSIGN);
+                Node* expr = parse_expression();
+                eat(TOKEN_SEMICOLON);
+
+                init = malloc(sizeof(Node));
+                init->type = NODE_ASSIGN;
+                init->data.assign_stmt.name = name;
+                init->data.assign_stmt.expression = expr;
+            } else {
+                // تعبير عادي (أو فارغ)
+                if (parser.current.type != TOKEN_SEMICOLON) {
+                    init = parse_expression();
+                }
+                eat(TOKEN_SEMICOLON);
+            }
+        }
+
+        // 2. الشرط (Condition)
+        Node* cond = parse_expression();
+        eat(TOKEN_SEMICOLON);
+
+        // 3. الزيادة (Increment)
+        Node* incr = NULL;
+        if (parser.current.type == TOKEN_IDENTIFIER && parser.next.type == TOKEN_ASSIGN) {
+            char* name = strdup(parser.current.value);
+            eat(TOKEN_IDENTIFIER);
+            eat(TOKEN_ASSIGN);
+            Node* expr = parse_expression();
+            
+            incr = malloc(sizeof(Node));
+            incr->type = NODE_ASSIGN;
+            incr->data.assign_stmt.name = name;
+            incr->data.assign_stmt.expression = expr;
+        } else {
+            incr = parse_expression(); // مثل س++
+        }
+        eat(TOKEN_RPAREN);
+
+        Node* body = parse_statement();
+
+        stmt->type = NODE_FOR;
+        stmt->data.for_stmt.init = init;
+        stmt->data.for_stmt.condition = cond;
+        stmt->data.for_stmt.increment = incr;
+        stmt->data.for_stmt.body = body;
+        return stmt;
+    }
     
     // تعريف متغير محلي (صحيح س = 5.)
     else if (parser.current.type == TOKEN_KEYWORD_INT) {
@@ -363,12 +453,10 @@ Node* parse_statement() {
         char* name = strdup(parser.current.value);
         eat(TOKEN_IDENTIFIER);
 
-        // التحقق من تعريف مصفوفة: صحيح س[5].
+        // تعريف مصفوفة: صحيح س[5].
         if (parser.current.type == TOKEN_LBRACKET) {
             eat(TOKEN_LBRACKET);
-            if (parser.current.type != TOKEN_INT) {
-                printf("Parser Error: Array size must be a constant integer\n"); exit(1);
-            }
+            if (parser.current.type != TOKEN_INT) { printf("Parser Error: Array size must be int\n"); exit(1); }
             int size = atoi(parser.current.value);
             eat(TOKEN_INT);
             eat(TOKEN_RBRACKET);
@@ -394,24 +482,47 @@ Node* parse_statement() {
     
     // جملة التعيين أو استدعاء الدالة
     else if (parser.current.type == TOKEN_IDENTIFIER) {
-        // التحقق من تعيين مصفوفة: س[0] = 5.
+        // تعيين مصفوفة: س[0] = 5.
         if (parser.next.type == TOKEN_LBRACKET) {
             char* name = strdup(parser.current.value);
             eat(TOKEN_IDENTIFIER);
             eat(TOKEN_LBRACKET);
             Node* index = parse_expression();
             eat(TOKEN_RBRACKET);
-            eat(TOKEN_ASSIGN);
-            Node* value = parse_expression();
-            eat(TOKEN_DOT);
-
-            stmt->type = NODE_ARRAY_ASSIGN;
-            stmt->data.array_op.name = name;
-            stmt->data.array_op.index = index;
-            stmt->data.array_op.value = value;
-            return stmt;
+            // قد يكون تعبيراً (وصول للمصفوفة) متبوعاً بعملية لاحقة مثل ++
+            // ولكن هنا نحن نتوقع جملة كاملة، غالباً تعيين أو عملية بمؤثر جانبي
+            // إذا كان التالي هو =
+            if (parser.current.type == TOKEN_ASSIGN) {
+                eat(TOKEN_ASSIGN);
+                Node* value = parse_expression();
+                eat(TOKEN_DOT);
+                stmt->type = NODE_ARRAY_ASSIGN;
+                stmt->data.array_op.name = name;
+                stmt->data.array_op.index = index;
+                stmt->data.array_op.value = value;
+                return stmt;
+            }
+            // إذا كان التالي ++ أو -- (س[0]++.)
+            else if (parser.current.type == TOKEN_INC || parser.current.type == TOKEN_DEC) {
+                // نعيد بناء عقدة الوصول للمصفوفة
+                Node* access = malloc(sizeof(Node));
+                access->type = NODE_ARRAY_ACCESS;
+                access->data.array_op.name = name;
+                access->data.array_op.index = index;
+                access->data.array_op.value = NULL;
+                
+                UnaryOpType op = (parser.current.type == TOKEN_INC) ? UOP_INC : UOP_DEC;
+                eat(parser.current.type);
+                eat(TOKEN_DOT);
+                
+                // نعيدها كعقدة عملية لاحقة، المولد سيتعامل معها كجملة
+                stmt->type = NODE_POSTFIX_OP;
+                stmt->data.unary_op.operand = access;
+                stmt->data.unary_op.op = op;
+                return stmt;
+            }
         }
-        // التحقق من المعاينة (Lookahead) للتمييز بين التعيين والاستدعاء
+        // تعيين متغير: س = 5.
         else if (parser.next.type == TOKEN_ASSIGN) {
             char* name = strdup(parser.current.value);
             eat(TOKEN_IDENTIFIER);
@@ -423,6 +534,7 @@ Node* parse_statement() {
             stmt->data.assign_stmt.expression = expr;
             return stmt;
         } 
+        // استدعاء دالة: س().
         else if (parser.next.type == TOKEN_LPAREN) {
             Node* expr = parse_expression();
             eat(TOKEN_DOT);
@@ -431,6 +543,16 @@ Node* parse_statement() {
             stmt->data.call.args = expr->data.call.args;
             free(expr);
             return stmt;
+        }
+        // جملة تعبيرية (مثل س++.)
+        else if (parser.next.type == TOKEN_INC || parser.next.type == TOKEN_DEC) {
+            Node* expr = parse_expression();
+            eat(TOKEN_DOT);
+            // يمكننا إرجاع التعبير مباشرة، والمولد سيتعامل معه
+            // ولكن للحفاظ على الاتساق، العقدة التي تم إرجاعها هي NODE_POSTFIX_OP
+            // وهي نوع صالح من الجمل (تعبير له أثر جانبي)
+            free(stmt); // التخلص من العقدة الفارغة
+            return expr;
         }
     }
     printf("Parser Error: Unknown statement at line %d\n", parser.current.line);

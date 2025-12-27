@@ -1,7 +1,7 @@
 /**
  * @file parser.c
  * @brief يقوم بتحليل الوحدات اللفظية وبناء شجرة الإعراب المجردة (AST) باستخدام طريقة الانحدار العودي (Recursive Descent).
- * @version 0.1.2 (String Variables and Re)
+ * @version 0.1.2 (Loop Control)
  */
 
 #include "baa.h"
@@ -151,7 +151,6 @@ Node* parse_primary() {
     }
 
     // التحقق من العمليات اللاحقة (Postfix Operators: ++, --)
-    // مثال: س++ أو مصفوفة[0]++
     if (parser.current.type == TOKEN_INC || parser.current.type == TOKEN_DEC) {
         UnaryOpType op = (parser.current.type == TOKEN_INC) ? UOP_INC : UOP_DEC;
         eat(parser.current.type);
@@ -353,6 +352,22 @@ Node* parse_statement() {
         return stmt;
     } 
     
+    // جملة التوقف (توقف.)
+    else if (parser.current.type == TOKEN_BREAK) {
+        eat(TOKEN_BREAK);
+        eat(TOKEN_DOT);
+        stmt->type = NODE_BREAK;
+        return stmt;
+    }
+
+    // جملة الاستمرار (استمر.)
+    else if (parser.current.type == TOKEN_CONTINUE) {
+        eat(TOKEN_CONTINUE);
+        eat(TOKEN_DOT);
+        stmt->type = NODE_CONTINUE;
+        return stmt;
+    }
+
     // جملة الطباعة (اطبع تعبير.)
     else if (parser.current.type == TOKEN_PRINT) {
         eat(TOKEN_PRINT);
@@ -388,7 +403,6 @@ Node* parse_statement() {
         return stmt;
     }
     // جملة التكرار "لكل" (For Loop)
-    // التركيب: لكل ( تهيئة ؛ شرط ؛ زيادة ) جملة
     else if (parser.current.type == TOKEN_FOR) {
         eat(TOKEN_FOR);
         eat(TOKEN_LPAREN);
@@ -426,7 +440,6 @@ Node* parse_statement() {
                 init->data.assign_stmt.name = name;
                 init->data.assign_stmt.expression = expr;
             } else {
-                // تعبير عادي (أو فارغ)
                 if (parser.current.type != TOKEN_SEMICOLON) {
                     init = parse_expression();
                 }
@@ -521,9 +534,7 @@ Node* parse_statement() {
                 stmt->data.array_op.value = value;
                 return stmt;
             }
-            // إذا كان التالي ++ أو -- (س[0]++.)
             else if (parser.current.type == TOKEN_INC || parser.current.type == TOKEN_DEC) {
-                // نعيد بناء عقدة الوصول للمصفوفة
                 Node* access = malloc(sizeof(Node));
                 access->type = NODE_ARRAY_ACCESS;
                 access->data.array_op.name = name;
@@ -534,7 +545,6 @@ Node* parse_statement() {
                 eat(parser.current.type);
                 eat(TOKEN_DOT);
                 
-                // نعيدها كعقدة عملية لاحقة، المولد سيتعامل معها كجملة
                 stmt->type = NODE_POSTFIX_OP;
                 stmt->data.unary_op.operand = access;
                 stmt->data.unary_op.op = op;

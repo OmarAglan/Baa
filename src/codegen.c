@@ -1,7 +1,7 @@
 /**
  * @file codegen.c
- * @brief يقوم بتوليد كود التجميع (Assembly) للتركيب المعماري x86_64 مع دعم العمليات الحسابية والمنطقية والمصفوفات وحلقات التكرار والمتغيرات النصية.
- * @version 0.1.2 (String Variables)
+ * @brief يقوم بتوليد كود التجميع (Assembly) للتركيب المعماري x86_64 مع دعم العمليات الحسابية والمنطقية والمصفوفات وحلقات التكرار والمتغيرات النصية والتحكم في الحلقات.
+ * @version 0.1.2 (Loop Control)
  */
 
 #include "baa.h"
@@ -26,6 +26,33 @@ Symbol global_symbols[100]; int global_count = 0;
 Symbol local_symbols[100]; int local_count = 0; 
 int current_stack_offset = 0; // يتتبع موقع الـ RSP بالنسبة للـ RBP
 int label_counter = 0;        // لإنشاء تسميات فريدة للجمل الشرطية وحلقات التكرار
+
+// --- مكدس ملصقات الحلقات (Loop Label Stack) ---
+// لدعم الحلقات المتداخلة (Nested Loops)
+int loop_continue_stack[100]; // يخزن ملصق "استمر" للحلقة الحالية
+int loop_break_stack[100];    // يخزن ملصق "توقف" للحلقة الحالية
+int loop_depth = 0;           // عمق التداخل الحالي
+
+void push_loop(int continue_label, int break_label) {
+    if (loop_depth >= 100) { printf("Codegen Error: Loops nested too deeply\n"); exit(1); }
+    loop_continue_stack[loop_depth] = continue_label;
+    loop_break_stack[loop_depth] = break_label;
+    loop_depth++;
+}
+
+void pop_loop() {
+    if (loop_depth > 0) loop_depth--;
+}
+
+int get_current_continue_label() {
+    if (loop_depth == 0) { printf("Codegen Error: 'continue' outside of loop\n"); exit(1); }
+    return loop_continue_stack[loop_depth - 1];
+}
+
+int get_current_break_label() {
+    if (loop_depth == 0) { printf("Codegen Error: 'break' outside of loop\n"); exit(1); }
+    return loop_break_stack[loop_depth - 1];
+}
 
 /**
  * @brief إضافة متغير عام لجدول الرموز.
@@ -392,26 +419,30 @@ void codegen(Node* node, FILE* file) {
         gen_expr(node->data.return_stmt.expression, file);
         fprintf(file, "    leave\n    ret\n");
     }
+    else if (node->type == NODE_BREAK) {
+        int label_break = get_current_break_label();
+        fprintf(file, "    jmp .Lend_%d\n", label_break);
+    }
+    else if (node->type == NODE_CONTINUE) {
+        int label_continue = get_current_continue_label();
+        // الاستمرار يقفز إلى ملصق "التحديث" في حلقات for، أو "البداية" في while
+        // نستخدم نفس التسمية .Lcontinue_X في كلا الحالتين لتوحيد المعالجة
+        fprintf(file, "    jmp .Lcontinue_%d\n", label_continue);
+    }
     else if (node->type == NODE_PRINT) {
         gen_expr(node->data.print_stmt.expression, file);
         fprintf(file, "    mov %%rax, %%rdx\n");
         
         // اختيار صيغة الطباعة بناءً على نوع التعبير
         if (node->data.print_stmt.expression->type == NODE_STRING) {
-            // إذا كان التعبير نصاً ثابتاً ("...")
             fprintf(file, "    lea fmt_str(%%rip), %%rcx\n");
         } 
         else if (node->data.print_stmt.expression->type == NODE_VAR_REF) {
-            // إذا كان متغيراً، يجب فحص نوعه في الجدول
             Symbol* sym = lookup_symbol(node->data.print_stmt.expression->data.var_ref.name);
-            if (sym->type == TYPE_STRING) {
-                fprintf(file, "    lea fmt_str(%%rip), %%rcx\n");
-            } else {
-                fprintf(file, "    lea fmt_int(%%rip), %%rcx\n");
-            }
+            if (sym->type == TYPE_STRING) fprintf(file, "    lea fmt_str(%%rip), %%rcx\n");
+            else fprintf(file, "    lea fmt_int(%%rip), %%rcx\n");
         } 
         else {
-            // الافتراضي (للأرقام والعمليات الحسابية)
             fprintf(file, "    lea fmt_int(%%rip), %%rcx\n");
         }
         
@@ -430,17 +461,32 @@ void codegen(Node* node, FILE* file) {
     else if (node->type == NODE_WHILE) {
         int label_start = label_counter++;
         int label_end = label_counter++;
+        
+        // دفع الملصقات للمكدس (start هو مكان الاستمرار في while)
+        push_loop(label_start, label_end);
+
+        // ملصق الاستمرار في while هو نفسه البداية
+        fprintf(file, ".Lcontinue_%d:\n", label_start); 
         fprintf(file, ".Lstart_%d:\n", label_start);
+        
         gen_expr(node->data.while_stmt.condition, file);
         fprintf(file, "    cmp $0, %%rax\n");
         fprintf(file, "    je .Lend_%d\n", label_end);
+        
         codegen(node->data.while_stmt.body, file);
+        
         fprintf(file, "    jmp .Lstart_%d\n", label_start);
         fprintf(file, ".Lend_%d:\n", label_end);
+        
+        pop_loop();
     }
     else if (node->type == NODE_FOR) {
         int label_start = label_counter++;
         int label_end = label_counter++;
+        int label_continue = label_counter++; // ملصق خاص للاستمرار (التحديث)
+
+        // دفع الملصقات للمكدس
+        push_loop(label_continue, label_end);
 
         if (node->data.for_stmt.init) {
             if (node->data.for_stmt.init->type == NODE_VAR_DECL) {
@@ -467,6 +513,9 @@ void codegen(Node* node, FILE* file) {
 
         codegen(node->data.for_stmt.body, file);
 
+        // نقطة القفز لجملة "استمر"
+        fprintf(file, ".Lcontinue_%d:\n", label_continue);
+
         if (node->data.for_stmt.increment) {
             if (node->data.for_stmt.increment->type == NODE_ASSIGN) {
                 codegen(node->data.for_stmt.increment, file);
@@ -477,5 +526,7 @@ void codegen(Node* node, FILE* file) {
 
         fprintf(file, "    jmp .Lstart_%d\n", label_start);
         fprintf(file, ".Lend_%d:\n", label_end);
+        
+        pop_loop();
     }
 }

@@ -66,7 +66,7 @@ The Lexer (`src/lexer.c`) transforms raw bytes into `Token` structures.
 ### 2.2. Token Types
 
 ```
-Keywords:    صحيح, نص, إذا, طالما, لكل, اطبع, إرجع
+Keywords:    صحيح, نص, إذا, طالما, لكل, اطبع, إرجع, توقف, استمر
 Literals:    INTEGER, STRING, CHAR
 Operators:   + - * / % ++ -- ! && ||
 Comparison:  == != < > <= >=
@@ -94,6 +94,7 @@ Type          ::= "صحيح" | "نص"
 Block         ::= "{" Statement* "}"
 Statement     ::= VarDecl | ArrayDecl | Assign | ArrayAssign
                 | If | While | For | Return | Print | CallStmt
+                | Break | Continue
 
 VarDecl       ::= Type ID "=" Expr "."
 ArrayDecl     ::= "صحيح" ID "[" INT "]" "."
@@ -103,6 +104,8 @@ ArrayAssign   ::= ID "[" Expr "]" "=" Expr "."
 If            ::= "إذا" "(" Expr ")" Block
 While         ::= "طالما" "(" Expr ")" Block
 For           ::= "لكل" "(" Init? "؛" Expr? "؛" Update? ")" Block
+Break         ::= "توقف" "."
+Continue      ::= "استمر" "."
 Return        ::= "إرجع" Expr "."
 Print         ::= "اطبع" Expr "."
 ```
@@ -136,7 +139,7 @@ The AST uses a tagged union structure for type-safe node representation.
 | **Structure** | `NODE_PROGRAM`, `NODE_FUNC_DEF`, `NODE_BLOCK`, `NODE_PARAM` |
 | **Variables** | `NODE_VAR_DECL`, `NODE_ASSIGN`, `NODE_VAR_REF` |
 | **Arrays** | `NODE_ARRAY_DECL`, `NODE_ARRAY_ACCESS`, `NODE_ARRAY_ASSIGN` |
-| **Control** | `NODE_IF`, `NODE_WHILE`, `NODE_FOR`, `NODE_RETURN` |
+| **Control** | `NODE_IF`, `NODE_WHILE`, `NODE_FOR`, `NODE_RETURN`, `NODE_BREAK`, `NODE_CONTINUE` |
 | **Expressions** | `NODE_BIN_OP`, `NODE_UNARY_OP`, `NODE_POSTFIX_OP` |
 | **Literals** | `NODE_INT`, `NODE_STRING`, `NODE_CHAR` |
 | **Calls** | `NODE_CALL_EXPR`, `NODE_CALL_STMT`, `NODE_PRINT` |
@@ -190,7 +193,21 @@ typedef struct {
 
 ## 6. Code Generation
 
-### 6.1. Windows x64 ABI Compliance
+### 6.1. Loop Control (Break/Continue)
+
+To support nested loops, the code generator maintains stacks for loop labels:
+
+- **Loop Start Stack**: Used by `continue` to jump to the next iteration (or update step in `for`).
+- **Loop End Stack**: Used by `break` to jump out of the loop.
+
+**Logic:**
+1. **Enter Loop:** Push `.Lstart_X` and `.Lend_X` to respective stacks.
+2. **Inside Loop:** 
+   - `NODE_BREAK` → `jmp .Lend_X` (top of stack)
+   - `NODE_CONTINUE` → `jmp .Lstart_X` (top of stack)
+3. **Exit Loop:** Pop from stacks.
+
+### 6.2. Windows x64 ABI Compliance
 
 | Requirement | Implementation |
 |-------------|----------------|
@@ -199,7 +216,7 @@ typedef struct {
 | **Shadow Space** | 32 bytes reserved for callee |
 | **Return Value** | RAX |
 
-### 6.2. Printing
+### 6.3. Printing
 
 The `اطبع` statement uses the symbol type to determine the format string:
 - If `TYPE_INT` → call `printf("%d\n")`

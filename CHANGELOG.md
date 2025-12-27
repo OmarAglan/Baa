@@ -8,11 +8,24 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+### Planned
+- Constant folding optimization
+- Dead code elimination
+
+---
+
+## [0.1.2] - 2025-12-27
+
 ### Added
-- **String Variables** — `نص` type for declaring string variables (e.g., `نص س = "مرحبا".`).
-- **Type System** — Compiler now tracks `int` vs `string` types in the symbol table.
-- **Recursion** — Functions can now call themselves recursively.
-- **Stack Alignment** — Improved x64 stack alignment (16-byte) to prevent crashes during deep recursion.
+- **Recursion** — Functions can now call themselves recursively (e.g., Fibonacci, Factorial).
+- **String Variables** — Introduced `نص` keyword to declare string variables (behaves like `char*`).
+- **Loop Control** — Added `توقف` (break) to exit loops immediately.
+- **Loop Control** — Added `استمر` (continue) to skip to the next iteration.
+- **Type System** — Internal symbol table now strictly tracks `TYPE_INT` vs `TYPE_STRING`.
+
+### Fixed
+- **Stack Alignment** — Enforced 16-byte stack alignment in generated x64 assembly to prevent crashes during external API calls and deep recursion.
+- **Register Names** — Fixed double-percent typo in register names in `codegen.c`.
 
 ---
 

@@ -1,7 +1,7 @@
 /**
  * @file baa.h
  * @brief ملف الرأس الرئيسي الذي يعرف هياكل البيانات لمحوسب لغة "باء" (Baa Compiler).
- * @version 0.1.2 (Recursion Support - String Variables)
+ * @version 0.1.2 (Loop Control)
  */
 
 #ifndef BAA_H
@@ -30,12 +30,14 @@ typedef enum {
     
     // الكلمات المفتاحية (Keywords)
     TOKEN_KEYWORD_INT,  // صحيح
-    TOKEN_KEYWORD_STRING, // نص (جديد)
+    TOKEN_KEYWORD_STRING, // نص
     TOKEN_RETURN,       // إرجع
     TOKEN_PRINT,        // اطبع
     TOKEN_IF,           // إذا
     TOKEN_WHILE,        // طالما
     TOKEN_FOR,          // لكل
+    TOKEN_BREAK,        // توقف (جديد)
+    TOKEN_CONTINUE,     // استمر (جديد)
     
     // الرموز (Symbols)
     TOKEN_ASSIGN,       // =
@@ -126,6 +128,8 @@ typedef enum {
     NODE_IF,            // جملة الشرط (إذا)
     NODE_WHILE,         // جملة التكرار (طالما)
     NODE_FOR,           // جملة التكرار المحدد (لكل)
+    NODE_BREAK,         // جملة التوقف (توقف) - جديد
+    NODE_CONTINUE,      // جملة الاستمرار (استمر) - جديد
     NODE_ASSIGN,        // جملة التعيين (س = 5)
     NODE_CALL_STMT,     // استدعاء دالة كجملة
     
@@ -199,7 +203,7 @@ typedef struct Node {
         // تعريف دالة
         struct { 
             char* name;          // اسم الدالة
-            DataType return_type; // نوع الإرجاع (جديد)
+            DataType return_type; // نوع الإرجاع
             struct Node* params; // قائمة المعاملات (متغيرات)
             struct Node* body;   // جسم الدالة (كتلة)
         } func_def;
@@ -207,7 +211,7 @@ typedef struct Node {
         // تعريف متغير (عادي)
         struct { 
             char* name;              // اسم المتغير
-            DataType type;           // نوع البيانات (جديد: صحيح أو نص)
+            DataType type;           // نوع البيانات (صحيح أو نص)
             struct Node* expression; // القيمة الابتدائية (اختياري)
             bool is_global;          // هل هو متغير عام؟
         } var_decl;

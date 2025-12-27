@@ -210,10 +210,32 @@ C-style loop using Arabic semicolon `؛` as separator.
 لكل (صحيح س = ٠؛ س < ١٠؛ س++) {
     اطبع س.
 }
+```
 
-// العد التنازلي
-لكل (صحيح س = ١٠؛ س >= ١؛ س--) {
-    اطبع س.
+### 5.4. Loop Control (`توقف` & `استمر`)
+
+- **`توقف` (Break)**: Exits the loop immediately.
+- **`استمر` (Continue)**: Skips the rest of the current iteration and proceeds to the next one.
+
+**Example:**
+
+```baa
+صحيح الرئيسية() {
+    لكل (صحيح س = ٠؛ س < ١٠؛ س++) {
+        // تخطي الرقم ٥
+        إذا (س == ٥) {
+            استمر.
+        }
+        
+        // الخروج عند الوصول للرقم ٨
+        إذا (س == ٨) {
+            توقف.
+        }
+        
+        اطبع س.
+    }
+    // الناتج: ٠ ١ ٢ ٣ ٤ ٦ ٧
+    إرجع ٠.
 }
 ```
 

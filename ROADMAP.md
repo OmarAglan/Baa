@@ -8,7 +8,7 @@
 
 ### Recursion & Advanced Types
 - [x] **Recursion** — Stress test stack frame logic with recursive functions (Fibonacci, Factorial)
-- [ ] **String Variables** — `نص` type (currently strings are only literals)
+- [x] **String Variables** — `نص` type (char* pointer behavior)
 - [ ] **Break/Continue** — Loop control statements (`توقف`, `استمر`)
 
 ### v0.1.3 (Planned: Optimization)

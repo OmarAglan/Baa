@@ -1,7 +1,7 @@
 /**
  * @file parser.c
  * @brief يقوم بتحليل الوحدات اللفظية وبناء شجرة الإعراب المجردة (AST) باستخدام طريقة الانحدار العودي (Recursive Descent).
- * @version 0.1.1 (Phase 3 - For Loop)
+ * @version 0.1.2 (String Variables and Re)
  */
 
 #include "baa.h"
@@ -39,6 +39,21 @@ void eat(TokenType type) {
                parser.current.type, type, parser.current.line);
         exit(1);
     }
+}
+
+/**
+ * @brief التحقق مما إذا كانت الوحدة الحالية تمثل نوع بيانات (صحيح أو نص).
+ */
+bool is_type_keyword(TokenType type) {
+    return (type == TOKEN_KEYWORD_INT || type == TOKEN_KEYWORD_STRING);
+}
+
+/**
+ * @brief تحويل وحدة النوع إلى قيمة DataType.
+ */
+DataType token_to_datatype(TokenType type) {
+    if (type == TOKEN_KEYWORD_STRING) return TYPE_STRING;
+    return TYPE_INT;
 }
 
 // --- تصريحات مسبقة ---
@@ -380,22 +395,25 @@ Node* parse_statement() {
 
         // 1. التهيئة (Initialization)
         Node* init = NULL;
-        if (parser.current.type == TOKEN_KEYWORD_INT) {
+        if (is_type_keyword(parser.current.type)) {
             // تعريف متغير داخل الحلقة (مثل: صحيح س = 0)
-            eat(TOKEN_KEYWORD_INT);
+            DataType dt = token_to_datatype(parser.current.type);
+            eat(parser.current.type);
+            
             char* name = strdup(parser.current.value);
             eat(TOKEN_IDENTIFIER);
             eat(TOKEN_ASSIGN);
             Node* expr = parse_expression();
-            eat(TOKEN_SEMICOLON); // الفاصلة المنقوطة العربية
+            eat(TOKEN_SEMICOLON);
 
             init = malloc(sizeof(Node));
             init->type = NODE_VAR_DECL;
             init->data.var_decl.name = name;
+            init->data.var_decl.type = dt;
             init->data.var_decl.expression = expr;
             init->data.var_decl.is_global = false;
         } else {
-            // تعيين قيمة (مثل: س = 0) أو تعبير آخر
+            // تعيين قيمة أو تعبير آخر
             if (parser.current.type == TOKEN_IDENTIFIER && parser.next.type == TOKEN_ASSIGN) {
                 char* name = strdup(parser.current.value);
                 eat(TOKEN_IDENTIFIER);
@@ -447,14 +465,16 @@ Node* parse_statement() {
         return stmt;
     }
     
-    // تعريف متغير محلي (صحيح س = 5.)
-    else if (parser.current.type == TOKEN_KEYWORD_INT) {
-        eat(TOKEN_KEYWORD_INT);
+    // تعريف متغير محلي (صحيح س = 5. أو نص س = "...")
+    else if (is_type_keyword(parser.current.type)) {
+        DataType dt = token_to_datatype(parser.current.type);
+        eat(parser.current.type);
         char* name = strdup(parser.current.value);
         eat(TOKEN_IDENTIFIER);
 
-        // تعريف مصفوفة: صحيح س[5].
+        // تعريف مصفوفة: صحيح س[5]. (للمتغيرات الصحيحة فقط حالياً)
         if (parser.current.type == TOKEN_LBRACKET) {
+            if (dt != TYPE_INT) { printf("Parser Error: Only int arrays are supported currently\n"); exit(1); }
             eat(TOKEN_LBRACKET);
             if (parser.current.type != TOKEN_INT) { printf("Parser Error: Array size must be int\n"); exit(1); }
             int size = atoi(parser.current.value);
@@ -475,6 +495,7 @@ Node* parse_statement() {
         eat(TOKEN_DOT);
         stmt->type = NODE_VAR_DECL;
         stmt->data.var_decl.name = name;
+        stmt->data.var_decl.type = dt; // تحديد نوع المتغير
         stmt->data.var_decl.expression = expr;
         stmt->data.var_decl.is_global = false;
         return stmt;
@@ -489,9 +510,7 @@ Node* parse_statement() {
             eat(TOKEN_LBRACKET);
             Node* index = parse_expression();
             eat(TOKEN_RBRACKET);
-            // قد يكون تعبيراً (وصول للمصفوفة) متبوعاً بعملية لاحقة مثل ++
-            // ولكن هنا نحن نتوقع جملة كاملة، غالباً تعيين أو عملية بمؤثر جانبي
-            // إذا كان التالي هو =
+            
             if (parser.current.type == TOKEN_ASSIGN) {
                 eat(TOKEN_ASSIGN);
                 Node* value = parse_expression();
@@ -548,10 +567,7 @@ Node* parse_statement() {
         else if (parser.next.type == TOKEN_INC || parser.next.type == TOKEN_DEC) {
             Node* expr = parse_expression();
             eat(TOKEN_DOT);
-            // يمكننا إرجاع التعبير مباشرة، والمولد سيتعامل معه
-            // ولكن للحفاظ على الاتساق، العقدة التي تم إرجاعها هي NODE_POSTFIX_OP
-            // وهي نوع صالح من الجمل (تعبير له أثر جانبي)
-            free(stmt); // التخلص من العقدة الفارغة
+            free(stmt);
             return expr;
         }
     }
@@ -563,8 +579,10 @@ Node* parse_statement() {
  * @brief تحليل التصريحات ذات المستوى الأعلى (دوال أو متغيرات عامة).
  */
 Node* parse_declaration() {
-    if (parser.current.type == TOKEN_KEYWORD_INT) {
-        eat(TOKEN_KEYWORD_INT);
+    if (is_type_keyword(parser.current.type)) {
+        DataType dt = token_to_datatype(parser.current.type);
+        eat(parser.current.type);
+        
         if (parser.current.type != TOKEN_IDENTIFIER) { printf("Parser Error: Expected Identifier\n"); exit(1); }
         char* name = strdup(parser.current.value);
         eat(TOKEN_IDENTIFIER);
@@ -576,12 +594,16 @@ Node* parse_declaration() {
             Node* tail_param = NULL;
             if (parser.current.type != TOKEN_RPAREN) {
                 while (1) {
-                    eat(TOKEN_KEYWORD_INT);
+                    if (!is_type_keyword(parser.current.type)) { printf("Parser Error: Expected type for param\n"); exit(1); }
+                    DataType param_dt = token_to_datatype(parser.current.type);
+                    eat(parser.current.type);
+                    
                     char* pname = strdup(parser.current.value);
                     eat(TOKEN_IDENTIFIER);
                     Node* param = malloc(sizeof(Node));
                     param->type = NODE_VAR_DECL;
                     param->data.var_decl.name = pname;
+                    param->data.var_decl.type = param_dt;
                     param->data.var_decl.expression = NULL;
                     param->data.var_decl.is_global = false;
                     param->next = NULL;
@@ -596,6 +618,7 @@ Node* parse_declaration() {
             Node* func = malloc(sizeof(Node));
             func->type = NODE_FUNC_DEF;
             func->data.func_def.name = name;
+            func->data.func_def.return_type = dt;
             func->data.func_def.params = head_param;
             func->data.func_def.body = body;
             func->next = NULL;
@@ -609,6 +632,7 @@ Node* parse_declaration() {
             Node* var = malloc(sizeof(Node));
             var->type = NODE_VAR_DECL;
             var->data.var_decl.name = name;
+            var->data.var_decl.type = dt;
             var->data.var_decl.expression = expr;
             var->data.var_decl.is_global = true;
             var->next = NULL;

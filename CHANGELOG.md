@@ -9,6 +9,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ## [Unreleased]
 
 ### Added
+- **String Variables** — `نص` type for declaring string variables (e.g., `نص س = "مرحبا".`).
+- **Type System** — Compiler now tracks `int` vs `string` types in the symbol table.
 - **Recursion** — Functions can now call themselves recursively.
 - **Stack Alignment** — Improved x64 stack alignment (16-byte) to prevent crashes during deep recursion.
 

@@ -1,7 +1,7 @@
 /**
  * @file codegen.c
- * @brief يقوم بتوليد كود التجميع (Assembly) للتركيب المعماري x86_64 مع دعم العمليات الحسابية والمنطقية والمصفوفات وحلقات التكرار.
- * @version 0.1.2 (Recursion Support - String Variables)
+ * @brief يقوم بتوليد كود التجميع (Assembly) للتركيب المعماري x86_64 مع دعم العمليات الحسابية والمنطقية والمصفوفات وحلقات التكرار والمتغيرات النصية.
+ * @version 0.1.2 (String Variables)
  */
 
 #include "baa.h"
@@ -18,6 +18,7 @@ typedef enum { SCOPE_GLOBAL, SCOPE_LOCAL } ScopeType;
 typedef struct { 
     char name[32];     // اسم الرمز
     ScopeType scope;   // النطاق (عام أو محلي)
+    DataType type;     // نوع البيانات (صحيح أو نص)
     int offset;        // الإزاحة من مؤشر القاعدة (RBP) للمتغيرات المحلية
 } Symbol;
 
@@ -29,9 +30,10 @@ int label_counter = 0;        // لإنشاء تسميات فريدة للجمل
 /**
  * @brief إضافة متغير عام لجدول الرموز.
  */
-void add_global(const char* name) {
+void add_global(const char* name, DataType type) {
     strcpy(global_symbols[global_count].name, name);
     global_symbols[global_count].scope = SCOPE_GLOBAL;
+    global_symbols[global_count].type = type;
     global_symbols[global_count].offset = 0;
     global_count++;
 }
@@ -45,28 +47,8 @@ void enter_function_scope() { local_count = 0; current_stack_offset = 0; }
  * @brief إضافة متغير محلي.
  * @param size عدد وحدات 64-بت المطلوبة (1 للأعداد الصحيحة، N للمصفوفات).
  */
-void add_local(const char* name, int size) {
-    // لحساب الإزاحة الأساسية للمصفوفة:
-    // المصفوفة تُحجز ككتلة. الإزاحة المسجلة في الجدول ستشير إلى العنصر الأول (الفهرس 0).
-    // مثال: المصفوفة حجم 2.
-    // المكدس الحالي: -8.
-    // نحجز 16 بايت. المكدس الجديد: -24.
-    // العنصر 0 عند -16. العنصر 1 عند -24.
-    // إذا سجلنا الإزاحة كـ -16:
-    // عنوان العنصر i = القاعدة - (i * 8).
-    // i=0: -16 - 0 = -16 (صحيح)
-    // i=1: -16 - 8 = -24 (صحيح)
-    
-    // الصيغة: إزاحة الرمز = (الإزاحة الحالية - 8)
-    // الإزاحة الحالية الجديدة = الإزاحة الحالية - (الحجم * 8)
-    
-    // ملاحظة: هذا يفترض أننا نملأ من الأعلى للأسفل وأن عنوان الأساس هو العنوان "الأعلى" في الذاكرة.
-    
-    // تصحيح المنطق البسيط:
-    // نعتبر الرمز يشير إلى "بداية" الحجز في المكدس (أعلى عنوان).
-    
+void add_local(const char* name, int size, DataType type) {
     // 1. تحديد موقع الرمز (بداية الكتلة المحجوزة)
-    // نعتبر الرمز يشير إلى "بداية" الحجز في المكدس (أعلى عنوان/أقل إزاحة سالبة)
     int symbol_offset = current_stack_offset - 8;
     
     // 2. تحديث مؤشر المكدس لحجز المساحة كاملة (المكدس ينمو للأسفل)
@@ -74,6 +56,7 @@ void add_local(const char* name, int size) {
     
     strcpy(local_symbols[local_count].name, name);
     local_symbols[local_count].scope = SCOPE_LOCAL;
+    local_symbols[local_count].type = type;
     local_symbols[local_count].offset = symbol_offset;
     local_count++;
 }
@@ -121,6 +104,7 @@ void gen_expr(Node* node, FILE* file) {
     }
     else if (node->type == NODE_STRING) {
         int id = register_string(node->data.string_lit.value);
+        // تحميل عنوان النص (Pointer)
         fprintf(file, "    lea .Lstr_%d(%%rip), %%rax\n", id);
     }
     else if (node->type == NODE_CHAR) {
@@ -140,7 +124,6 @@ void gen_expr(Node* node, FILE* file) {
         fprintf(file, "    mov %%rax, %%rcx\n");
         
         // 2. حساب العنوان: RBP + Offset - (Index * 8)
-        // نقوم بذلك يدوياً لأن عنونة x86 لا تدعم طرح الإزاحة الديناميكية بسهولة مع إزاحة سالبة ثابتة
         fprintf(file, "    imul $8, %%rcx\n");      // Index * 8
         fprintf(file, "    neg %%rcx\n");           // -(Index * 8)
         fprintf(file, "    add $%d, %%rcx\n", sym->offset); // Offset + (-(Index*8))
@@ -150,7 +133,6 @@ void gen_expr(Node* node, FILE* file) {
     }
     else if (node->type == NODE_CALL_EXPR) {
         // استدعاء دالة: اتباع اتفاقية Windows (RCX, RDX, R8, R9)
-        // FIXED: Use single % because these are passed as %s arguments to fprintf
         const char* regs[] = {"%rcx", "%rdx", "%r8", "%r9"};
         int arg_idx = 0;
         Node* arg = node->data.call.args;
@@ -304,7 +286,8 @@ void codegen(Node* node, FILE* file) {
                     init_value = decl->data.var_decl.expression->data.integer.value;
                 }
                 fprintf(file, "%s: .quad %d\n", decl->data.var_decl.name, init_value);
-                add_global(decl->data.var_decl.name);
+                // تمرير نوع المتغير العام
+                add_global(decl->data.var_decl.name, decl->data.var_decl.type);
             }
             decl = decl->next;
         }
@@ -334,16 +317,15 @@ void codegen(Node* node, FILE* file) {
         fprintf(file, "    push %%rbp\n");
         fprintf(file, "    mov %%rsp, %%rbp\n");
         // حجز مساحة للإطارات المتداخلة (272 بايت)
-        // 272 = 17 * 16 (لضمان المحاذاة على حدود 16 بايت)
         fprintf(file, "    sub $272, %%rsp\n"); 
 
         // تفريغ المعاملات إلى المكدس (Spill Parameters)
         Node* param = node->data.func_def.params;
-        // FIXED: Use single % for string arguments
         const char* regs[] = {"%rcx", "%rdx", "%r8", "%r9"};
         int p_idx = 0;
         while (param != NULL) {
-            add_local(param->data.var_decl.name, 1); // المعاملات حجمها 1
+            // تسجيل المعاملات كمتغيرات محلية مع أنواعها
+            add_local(param->data.var_decl.name, 1, param->data.var_decl.type);
             int offset = lookup_symbol(param->data.var_decl.name)->offset;
             if (p_idx < 4) fprintf(file, "    mov %s, %d(%%rbp)\n", regs[p_idx], offset);
             param = param->next;
@@ -364,14 +346,14 @@ void codegen(Node* node, FILE* file) {
     // تعريف متغير محلي (حجم 1)
     else if (node->type == NODE_VAR_DECL) {
         gen_expr(node->data.var_decl.expression, file);
-        add_local(node->data.var_decl.name, 1);
+        add_local(node->data.var_decl.name, 1, node->data.var_decl.type);
         int offset = lookup_symbol(node->data.var_decl.name)->offset;
         fprintf(file, "    mov %%rax, %d(%%rbp)\n", offset);
     }
     // تعريف مصفوفة (حجز مساحة فقط في جدول الرموز)
     else if (node->type == NODE_ARRAY_DECL) {
-        // حجز مساحة المصفوفة في جدول الرموز
-        add_local(node->data.array_decl.name, node->data.array_decl.size);
+        // المصفوفات حالياً تدعم الأرقام الصحيحة فقط (TYPE_INT)
+        add_local(node->data.array_decl.name, node->data.array_decl.size, TYPE_INT);
     }
     // تعيين مصفوفة (كتابة)
     else if (node->type == NODE_ARRAY_ASSIGN) {
@@ -403,7 +385,6 @@ void codegen(Node* node, FILE* file) {
         else fprintf(file, "    mov %%rax, %s(%%rip)\n", sym->name);
     }
     else if (node->type == NODE_CALL_STMT) {
-        // معاملة الاستدعاء كتعبير ولكن بدون استخدام القيمة الناتجة
         Node temp; temp.type = NODE_CALL_EXPR; temp.data.call = node->data.call;
         gen_expr(&temp, file);
     }
@@ -414,9 +395,26 @@ void codegen(Node* node, FILE* file) {
     else if (node->type == NODE_PRINT) {
         gen_expr(node->data.print_stmt.expression, file);
         fprintf(file, "    mov %%rax, %%rdx\n");
-        // اختيار صيغة الطباعة المناسبة بناءً على النوع المستنتج
-        if (node->data.print_stmt.expression->type == NODE_STRING) fprintf(file, "    lea fmt_str(%%rip), %%rcx\n");
-        else fprintf(file, "    lea fmt_int(%%rip), %%rcx\n");
+        
+        // اختيار صيغة الطباعة بناءً على نوع التعبير
+        if (node->data.print_stmt.expression->type == NODE_STRING) {
+            // إذا كان التعبير نصاً ثابتاً ("...")
+            fprintf(file, "    lea fmt_str(%%rip), %%rcx\n");
+        } 
+        else if (node->data.print_stmt.expression->type == NODE_VAR_REF) {
+            // إذا كان متغيراً، يجب فحص نوعه في الجدول
+            Symbol* sym = lookup_symbol(node->data.print_stmt.expression->data.var_ref.name);
+            if (sym->type == TYPE_STRING) {
+                fprintf(file, "    lea fmt_str(%%rip), %%rcx\n");
+            } else {
+                fprintf(file, "    lea fmt_int(%%rip), %%rcx\n");
+            }
+        } 
+        else {
+            // الافتراضي (للأرقام والعمليات الحسابية)
+            fprintf(file, "    lea fmt_int(%%rip), %%rcx\n");
+        }
+        
         fprintf(file, "    sub $32, %%rsp\n");
         fprintf(file, "    call printf\n");
         fprintf(file, "    add $32, %%rsp\n");
@@ -440,18 +438,14 @@ void codegen(Node* node, FILE* file) {
         fprintf(file, "    jmp .Lstart_%d\n", label_start);
         fprintf(file, ".Lend_%d:\n", label_end);
     }
-    // جملة التكرار "لكل" (For Loop) - جديد
     else if (node->type == NODE_FOR) {
         int label_start = label_counter++;
         int label_end = label_counter++;
 
-        // 1. التهيئة (Initialization)
         if (node->data.for_stmt.init) {
-            // يمكن أن تكون تعريف متغير أو تعيين
             if (node->data.for_stmt.init->type == NODE_VAR_DECL) {
-                // تكرار منطق NODE_VAR_DECL
                 gen_expr(node->data.for_stmt.init->data.var_decl.expression, file);
-                add_local(node->data.for_stmt.init->data.var_decl.name, 1);
+                add_local(node->data.for_stmt.init->data.var_decl.name, 1, node->data.for_stmt.init->data.var_decl.type);
                 int offset = lookup_symbol(node->data.for_stmt.init->data.var_decl.name)->offset;
                 fprintf(file, "    mov %%rax, %d(%%rbp)\n", offset);
             } 
@@ -465,23 +459,18 @@ void codegen(Node* node, FILE* file) {
 
         fprintf(file, ".Lstart_%d:\n", label_start);
 
-        // 2. الشرط (Condition)
         if (node->data.for_stmt.condition) {
             gen_expr(node->data.for_stmt.condition, file);
             fprintf(file, "    cmp $0, %%rax\n");
             fprintf(file, "    je .Lend_%d\n", label_end);
         }
 
-        // 3. الجسم (Body)
         codegen(node->data.for_stmt.body, file);
 
-        // 4. الزيادة (Increment)
         if (node->data.for_stmt.increment) {
-            // قد تكون تعيين أو عملية لاحقة (++)
             if (node->data.for_stmt.increment->type == NODE_ASSIGN) {
                 codegen(node->data.for_stmt.increment, file);
             } else {
-                // إذا كانت تعبير (مثل س++)
                 gen_expr(node->data.for_stmt.increment, file);
             }
         }

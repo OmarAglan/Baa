@@ -4,16 +4,12 @@
 
 ---
 
-## 🎯 Current Focus: v0.1.2
+## 🎯 Current Focus: v0.1.4
 
-### Recursion & Advanced Types
-- [x] **Recursion** — Stress test stack frame logic with recursive functions (Fibonacci, Factorial)
-- [x] **String Variables** — `نص` type (char* pointer behavior)
-- [x] **Break/Continue** — Loop control statements (`توقف`, `استمر`)
-
-### v0.1.3 (Planned: Optimization)
-- [ ] **Constant Folding** — Evaluate `1 + 2` at compile time
-- [ ] **Dead Code Elimination** — Remove unreachable code after return
+### Optimizations & Refinement
+- [ ] **Dead Code Elimination** — Remove unreachable code after `return` or `break`
+- [ ] **Global String Optimization** — Deduplicate string literals in `.rdata`
+- [ ] **Unary Float** — Support for floating point literals (future)
 
 ---
 
@@ -33,6 +29,24 @@ See [Editor Roadmap](docs/EDITOR_ROADMAP.md) for detailed phases.
 ---
 
 ## ✅ Completed Milestones
+
+<details>
+<summary><strong>v0.1.3</strong> — Control Flow & Optimizations</summary>
+
+- [x] **Extended If** — Support `وإلا` (Else) and `وإلا إذا` (Else If)
+- [x] **Switch Statement** — `اختر` (Switch), `حالة` (Case), `افتراضي` (Default)
+- [x] **Constant Folding** — Compile-time math (`١ + ٢` → `٣`)
+
+</details>
+
+<details>
+<summary><strong>v0.1.2</strong> — Recursion & Strings</summary>
+
+- [x] **Recursion** — Stack alignment fix
+- [x] **String Variables** — `نص` type
+- [x] **Loop Control** — `توقف` (Break) & `استمر` (Continue)
+
+</details>
 
 <details>
 <summary><strong>v0.1.1</strong> — Structured Data</summary>

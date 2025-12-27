@@ -94,7 +94,7 @@ Type          ::= "صحيح" | "نص"
 Block         ::= "{" Statement* "}"
 Statement     ::= VarDecl | ArrayDecl | Assign | ArrayAssign
                 | If | While | For | Return | Print | CallStmt
-                | Break | Continue
+                | Break | Continue | Switch
 
 VarDecl       ::= Type ID "=" Expr "."
 ArrayDecl     ::= "صحيح" ID "[" INT "]" "."
@@ -106,6 +106,9 @@ While         ::= "طالما" "(" Expr ")" Block
 For           ::= "لكل" "(" Init? "؛" Expr? "؛" Update? ")" Block
 Break         ::= "توقف" "."
 Continue      ::= "استمر" "."
+Switch        ::= "اختر" "(" Expr ")" "{" Case* Default? "}"
+Case          ::= "حالة" (INT | CHAR) ":" Statement*
+Default       ::= "افتراضي" ":" Statement*
 Return        ::= "إرجع" Expr "."
 Print         ::= "اطبع" Expr "."
 ```
@@ -139,7 +142,7 @@ The AST uses a tagged union structure for type-safe node representation.
 | **Structure** | `NODE_PROGRAM`, `NODE_FUNC_DEF`, `NODE_BLOCK`, `NODE_PARAM` |
 | **Variables** | `NODE_VAR_DECL`, `NODE_ASSIGN`, `NODE_VAR_REF` |
 | **Arrays** | `NODE_ARRAY_DECL`, `NODE_ARRAY_ACCESS`, `NODE_ARRAY_ASSIGN` |
-| **Control** | `NODE_IF`, `NODE_WHILE`, `NODE_FOR`, `NODE_RETURN`, `NODE_BREAK`, `NODE_CONTINUE` |
+| **Control** | `NODE_IF`, `NODE_WHILE`, `NODE_FOR`, `NODE_RETURN`, `NODE_BREAK`, `NODE_CONTINUE`, `NODE_SWITCH`, `NODE_CASE` |
 | **Expressions** | `NODE_BIN_OP`, `NODE_UNARY_OP`, `NODE_POSTFIX_OP` |
 | **Literals** | `NODE_INT`, `NODE_STRING`, `NODE_CHAR` |
 | **Calls** | `NODE_CALL_EXPR`, `NODE_CALL_STMT`, `NODE_PRINT` |
@@ -188,6 +191,19 @@ typedef struct {
 |------|--------|------|-------|
 | `صحيح` | `int64_t` | 8 bytes | Signed integer |
 | `نص` | `char*` | 8 bytes | Pointer to .rdata string |
+
+---
+
+### 5.4. Constant Folding (Optimization)
+
+The parser performs constant folding on arithmetic expressions. If both operands of a binary operation are integer literals, the compiler evaluates the result at compile-time.
+
+**Example:**
+- Source: `٢ * ٣ + ٤`
+- Parse Tree (Before): `BinOp(+, BinOp(*, 2, 3), 4)`
+- Parse Tree (After): `Int(10)`
+
+**Supported Operations:** `+`, `-`, `*`, `/`, `%`
 
 ---
 

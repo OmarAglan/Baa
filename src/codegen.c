@@ -1,7 +1,7 @@
 /**
  * @file codegen.c
- * @brief يقوم بتوليد كود التجميع (Assembly) للتركيب المعماري x86_64 مع دعم العمليات الحسابية والمنطقية والمصفوفات وحلقات التكرار والمتغيرات النصية والتحكم في الحلقات.
- * @version 0.1.2 (Loop Control)
+ * @brief يقوم بتوليد كود التجميع (Assembly) للتركيب المعماري x86_64 مع دعم العمليات الحسابية والمنطقية والمصفوفات وحلقات التكرار والمتغيرات النصية والتحكم في الحلقات والشروط الممتدة وجمل الاختيار.
+ * @version 0.1.3 (Switch Statement)
  */
 
 #include "baa.h"
@@ -28,14 +28,28 @@ int current_stack_offset = 0; // يتتبع موقع الـ RSP بالنسبة �
 int label_counter = 0;        // لإنشاء تسميات فريدة للجمل الشرطية وحلقات التكرار
 
 // --- مكدس ملصقات الحلقات (Loop Label Stack) ---
-// لدعم الحلقات المتداخلة (Nested Loops)
-int loop_continue_stack[100]; // يخزن ملصق "استمر" للحلقة الحالية
-int loop_break_stack[100];    // يخزن ملصق "توقف" للحلقة الحالية
-int loop_depth = 0;           // عمق التداخل الحالي
+int loop_continue_stack[100]; 
+int loop_break_stack[100];    
+int loop_depth = 0;           
 
 void push_loop(int continue_label, int break_label) {
     if (loop_depth >= 100) { printf("Codegen Error: Loops nested too deeply\n"); exit(1); }
     loop_continue_stack[loop_depth] = continue_label;
+    loop_break_stack[loop_depth] = break_label;
+    loop_depth++;
+}
+
+// دالة خاصة لدفع نطاق جملة "اختر"
+// جملة الاختيار تقبل "توقف" لكنها لا تقبل "استمر" (إلا إذا كانت داخل حلقة)
+// لذا، ملصق "استمر" يرث قيمته من النطاق السابق
+void push_switch(int break_label) {
+    if (loop_depth >= 100) { printf("Codegen Error: Nesting too deep\n"); exit(1); }
+    
+    // وراثة ملصق الاستمرار من الحلقة المحيطة (إن وجدت)
+    // إذا لم تكن هناك حلقة (Depth 0)، نضع 0 (غير صالح)
+    int current_continue = (loop_depth > 0) ? loop_continue_stack[loop_depth - 1] : 0;
+    
+    loop_continue_stack[loop_depth] = current_continue;
     loop_break_stack[loop_depth] = break_label;
     loop_depth++;
 }
@@ -45,12 +59,14 @@ void pop_loop() {
 }
 
 int get_current_continue_label() {
-    if (loop_depth == 0) { printf("Codegen Error: 'continue' outside of loop\n"); exit(1); }
+    if (loop_depth == 0 || loop_continue_stack[loop_depth - 1] == 0) { 
+        printf("Codegen Error: 'continue' outside of loop\n"); exit(1); 
+    }
     return loop_continue_stack[loop_depth - 1];
 }
 
 int get_current_break_label() {
-    if (loop_depth == 0) { printf("Codegen Error: 'break' outside of loop\n"); exit(1); }
+    if (loop_depth == 0) { printf("Codegen Error: 'break' outside of loop or switch\n"); exit(1); }
     return loop_break_stack[loop_depth - 1];
 }
 
@@ -370,6 +386,82 @@ void codegen(Node* node, FILE* file) {
         Node* stmt = node->data.block.statements;
         while (stmt != NULL) { codegen(stmt, file); stmt = stmt->next; }
     }
+    // معالجة جملة الاختيار (Switch Case)
+    else if (node->type == NODE_SWITCH) {
+        int label_end = label_counter++;
+        int label_default = -1; // -1 يعني لا يوجد افتراضي
+        
+        // تسجيل ملصق النهاية لدعم "توقف" (break)
+        push_switch(label_end);
+
+        // 1. تقييم تعبير الاختيار
+        gen_expr(node->data.switch_stmt.expression, file);
+        
+        // 2. المرور الأول: توليد المقارنات والقفزات (Pass 1)
+        Node* curr_case = node->data.switch_stmt.cases;
+        // سنحتاج لتخزين معرفات الملصقات لكل حالة لاستخدامها في المرور الثاني
+        // لتبسيط الأمر (بدون مصفوفات ديناميكية)، سنعتمد على عداد label_counter المتزايد
+        // سنولد معرف ملصق لكل حالة ونقوم بتوليد القفزة
+        
+        // مشكلة: كيف نعرف نفس معرف الملصق في المرور الثاني؟
+        // حل: تخزين المعرفات في قائمة مؤقتة أو مصفوفة ثابتة الحجم
+        int case_labels[256]; // حد أقصى 256 حالة في الجملة الواحدة
+        int case_count = 0;
+
+        while (curr_case != NULL) {
+            if (curr_case->data.case_stmt.is_default) {
+                label_default = label_counter++;
+                case_labels[case_count++] = label_default;
+            } else {
+                int lbl = label_counter++;
+                case_labels[case_count++] = lbl;
+                
+                // مقارنة القيمة
+                // نفترض أن القيمة رقم صحيح أو حرف (كلاهما int)
+                int val = 0;
+                if (curr_case->data.case_stmt.value->type == NODE_INT) 
+                    val = curr_case->data.case_stmt.value->data.integer.value;
+                else if (curr_case->data.case_stmt.value->type == NODE_CHAR)
+                    val = curr_case->data.case_stmt.value->data.char_lit.value;
+                
+                // مقارنة %rax بالقيمة
+                fprintf(file, "    cmp $%d, %%rax\n", val);
+                fprintf(file, "    je .Lcase_%d\n", lbl);
+            }
+            curr_case = curr_case->next;
+        }
+
+        // إذا لم يحدث تطابق، اقفز للافتراضي أو النهاية
+        if (label_default != -1) {
+            fprintf(file, "    jmp .Lcase_%d\n", label_default);
+        } else {
+            fprintf(file, "    jmp .Lend_%d\n", label_end);
+        }
+
+        // 3. المرور الثاني: توليد أجسام الحالات (Pass 2)
+        curr_case = node->data.switch_stmt.cases;
+        int i = 0;
+        while (curr_case != NULL) {
+            fprintf(file, ".Lcase_%d:\n", case_labels[i]);
+            
+            // توليد جمل الحالة
+            Node* stmt = curr_case->data.case_stmt.body;
+            while (stmt != NULL) {
+                codegen(stmt, file);
+                stmt = stmt->next;
+            }
+            
+            // في C، التنفيذ يكمل للحالة التالية (Fallthrough)
+            // إلا إذا وجد "توقف" (break) الذي تمت معالجته في NODE_BREAK
+            
+            curr_case = curr_case->next;
+            i++;
+        }
+
+        // ملصق النهاية
+        fprintf(file, ".Lend_%d:\n", label_end);
+        pop_loop();
+    }
     // تعريف متغير محلي (حجم 1)
     else if (node->type == NODE_VAR_DECL) {
         gen_expr(node->data.var_decl.expression, file);
@@ -450,12 +542,29 @@ void codegen(Node* node, FILE* file) {
         fprintf(file, "    call printf\n");
         fprintf(file, "    add $32, %%rsp\n");
     }
+    // تحديث NODE_IF لدعم وإلا (else)
     else if (node->type == NODE_IF) {
+        int label_else = label_counter++;
         int label_end = label_counter++;
+        
         gen_expr(node->data.if_stmt.condition, file);
         fprintf(file, "    cmp $0, %%rax\n");
-        fprintf(file, "    je .Lend_%d\n", label_end);
+        // إذا كان الشرط خطأ، اقفز إلى ملصق "وإلا"
+        fprintf(file, "    je .Lelse_%d\n", label_else);
+        
+        // تنفيذ الفرع "إذا"
         codegen(node->data.if_stmt.then_branch, file);
+        // القفز إلى النهاية لتجاوز "وإلا"
+        fprintf(file, "    jmp .Lend_%d\n", label_end);
+        
+        // ملصق "وإلا"
+        fprintf(file, ".Lelse_%d:\n", label_else);
+        // تنفيذ الفرع "وإلا" إذا وجد
+        if (node->data.if_stmt.else_branch) {
+            codegen(node->data.if_stmt.else_branch, file);
+        }
+        
+        // نهاية الجملة
         fprintf(file, ".Lend_%d:\n", label_end);
     }
     else if (node->type == NODE_WHILE) {

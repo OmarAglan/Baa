@@ -1,7 +1,7 @@
 /**
  * @file lexer.c
  * @brief يقوم بتحويل الكود المصدري المكتوب باللغة العربية (UTF-8) إلى وحدات لفظية (Tokens).
- * @version 0.1.2 (Loop Control)
+ * @version 0.1.3 (Switch Statement)
  */
 
 #include "baa.h"
@@ -103,6 +103,7 @@ Token lexer_next_token(Lexer* l) {
     // معالجة الرموز والعمليات
     if (*current == '.') { token.type = TOKEN_DOT; l->pos++; return token; }
     if (*current == ',') { token.type = TOKEN_COMMA; l->pos++; return token; }
+    if (*current == ':') { token.type = TOKEN_COLON; l->pos++; return token; } // جديد: النقطتان الرأسيتان
     
     // الجمع والزيادة (++ و +)
     if (*current == '+') { 
@@ -190,7 +191,7 @@ Token lexer_next_token(Lexer* l) {
     if (is_arabic_start_byte(*current)) {
         size_t start = l->pos;
         while (l->pos < l->len && !isspace(l->src[l->pos]) && 
-               strchr(".+-,=(){}[]!<>*/%&|\"'", l->src[l->pos]) == NULL) {
+               strchr(".+-,=:(){}[]!<>*/%&|\"'", l->src[l->pos]) == NULL) {
             // ملاحظة: الفاصلة المنقوطة العربية (؛) تبدأ بـ 0xD8 وهي ضمن النطاق العربي
             // لذلك يجب التحقق منها وإيقاف قراءة المعرف إذا وجدناها
             if ((unsigned char)l->src[l->pos] == 0xD8 && (unsigned char)l->src[l->pos+1] == 0x9B) {
@@ -210,10 +211,14 @@ Token lexer_next_token(Lexer* l) {
         else if (strcmp(word, "صحيح") == 0) token.type = TOKEN_KEYWORD_INT;
         else if (strcmp(word, "نص") == 0) token.type = TOKEN_KEYWORD_STRING;
         else if (strcmp(word, "إذا") == 0) token.type = TOKEN_IF;
+        else if (strcmp(word, "وإلا") == 0) token.type = TOKEN_ELSE;
         else if (strcmp(word, "طالما") == 0) token.type = TOKEN_WHILE;
         else if (strcmp(word, "لكل") == 0) token.type = TOKEN_FOR;
-        else if (strcmp(word, "توقف") == 0) token.type = TOKEN_BREAK; // جديد
-        else if (strcmp(word, "استمر") == 0) token.type = TOKEN_CONTINUE; // جديد
+        else if (strcmp(word, "توقف") == 0) token.type = TOKEN_BREAK;
+        else if (strcmp(word, "استمر") == 0) token.type = TOKEN_CONTINUE;
+        else if (strcmp(word, "اختر") == 0) token.type = TOKEN_SWITCH; // جديد
+        else if (strcmp(word, "حالة") == 0) token.type = TOKEN_CASE; // جديد
+        else if (strcmp(word, "افتراضي") == 0) token.type = TOKEN_DEFAULT; // جديد
         else {
             // إذا لم تكن كلمة مفتاحية، فهي معرف (اسم متغير أو دالة)
             token.type = TOKEN_IDENTIFIER;

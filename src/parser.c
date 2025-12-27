@@ -1,7 +1,7 @@
 /**
  * @file parser.c
  * @brief يقوم بتحليل الوحدات اللفظية وبناء شجرة الإعراب المجردة (AST) باستخدام طريقة الانحدار العودي (Recursive Descent).
- * @version 0.1.2 (Loop Control)
+ * @version 0.1.3 (Optimization - Constant Folding)
  */
 
 #include "baa.h"
@@ -60,6 +60,7 @@ DataType token_to_datatype(TokenType type) {
 Node* parse_expression();
 Node* parse_statement();
 Node* parse_block();
+Node* parse_primary();
 
 // --- تحليل التعبيرات (حسب مستويات الأولوية) ---
 
@@ -198,8 +199,30 @@ Node* parse_multiplicative() {
         if (parser.current.type == TOKEN_STAR) op = OP_MUL;
         else if (parser.current.type == TOKEN_SLASH) op = OP_DIV;
         else op = OP_MOD;
+        
         eat(parser.current.type);
         Node* right = parse_unary();
+
+        // **Constant Folding Optimization**
+        // إذا كان الطرفان أرقاماً ثابتة، قم بالحساب فوراً
+        if (left->type == NODE_INT && right->type == NODE_INT) {
+            int result = 0;
+            if (op == OP_MUL) {
+                result = left->data.integer.value * right->data.integer.value;
+            } else if (op == OP_DIV) {
+                if (right->data.integer.value == 0) { printf("Error: Division by zero\n"); exit(1); }
+                result = left->data.integer.value / right->data.integer.value;
+            } else if (op == OP_MOD) {
+                if (right->data.integer.value == 0) { printf("Error: Modulo by zero\n"); exit(1); }
+                result = left->data.integer.value % right->data.integer.value;
+            }
+            
+            // تحديث العقدة اليسرى بالنتيجة وحذف العقدة اليمنى
+            left->data.integer.value = result;
+            free(right); // تحرير الذاكرة (بسيط هنا)
+            continue; // المتابعة مع النتيجة كطرف أيسر جديد
+        }
+
         Node* new_node = malloc(sizeof(Node));
         new_node->type = NODE_BIN_OP;
         new_node->data.bin_op.left = left;
@@ -218,6 +241,21 @@ Node* parse_additive() {
         OpType op = (parser.current.type == TOKEN_PLUS) ? OP_ADD : OP_SUB;
         eat(parser.current.type);
         Node* right = parse_multiplicative();
+
+        // **Constant Folding Optimization**
+        if (left->type == NODE_INT && right->type == NODE_INT) {
+            int result = 0;
+            if (op == OP_ADD) {
+                result = left->data.integer.value + right->data.integer.value;
+            } else {
+                result = left->data.integer.value - right->data.integer.value;
+            }
+            
+            left->data.integer.value = result;
+            free(right);
+            continue;
+        }
+
         Node* new_node = malloc(sizeof(Node));
         new_node->type = NODE_BIN_OP;
         new_node->data.bin_op.left = left;
@@ -314,6 +352,78 @@ Node* parse_expression() {
 // --- تحليل الجمل البرمجية (Statements) ---
 
 /**
+ * @brief تحليل حالة واحدة داخل جملة الاختيار (switch case).
+ */
+Node* parse_case() {
+    Node* node = malloc(sizeof(Node));
+    node->type = NODE_CASE;
+    node->next = NULL;
+
+    if (parser.current.type == TOKEN_DEFAULT) {
+        eat(TOKEN_DEFAULT);
+        eat(TOKEN_COLON);
+        node->data.case_stmt.is_default = true;
+        node->data.case_stmt.value = NULL;
+    } else {
+        eat(TOKEN_CASE);
+        // نتوقع قيمة ثابتة (رقم أو حرف)
+        // حالياً نستخدم parse_primary ولكن يجب التحقق في codegen أو semantic
+        node->data.case_stmt.value = parse_primary();
+        eat(TOKEN_COLON);
+        node->data.case_stmt.is_default = false;
+    }
+
+    // تحليل الجمل داخل الحالة حتى نصل إلى حالة أخرى أو نهاية الكتلة
+    Node* head_stmt = NULL;
+    Node* tail_stmt = NULL;
+
+    while (parser.current.type != TOKEN_CASE && 
+           parser.current.type != TOKEN_DEFAULT && 
+           parser.current.type != TOKEN_RBRACE && 
+           parser.current.type != TOKEN_EOF) {
+        
+        Node* stmt = parse_statement();
+        if (head_stmt == NULL) { head_stmt = stmt; tail_stmt = stmt; }
+        else { tail_stmt->next = stmt; tail_stmt = stmt; }
+    }
+
+    node->data.case_stmt.body = head_stmt;
+    return node;
+}
+
+/**
+ * @brief تحليل جملة الاختيار (Switch).
+ */
+Node* parse_switch() {
+    eat(TOKEN_SWITCH);
+    eat(TOKEN_LPAREN);
+    Node* expr = parse_expression();
+    eat(TOKEN_RPAREN);
+    eat(TOKEN_LBRACE);
+
+    Node* head_case = NULL;
+    Node* tail_case = NULL;
+
+    while (parser.current.type != TOKEN_RBRACE && parser.current.type != TOKEN_EOF) {
+        if (parser.current.type == TOKEN_CASE || parser.current.type == TOKEN_DEFAULT) {
+            Node* case_node = parse_case();
+            if (head_case == NULL) { head_case = case_node; tail_case = case_node; }
+            else { tail_case->next = case_node; tail_case = case_node; }
+        } else {
+            printf("Parser Error: Expected 'case' or 'default' inside switch\n");
+            exit(1);
+        }
+    }
+    eat(TOKEN_RBRACE);
+
+    Node* node = malloc(sizeof(Node));
+    node->type = NODE_SWITCH;
+    node->data.switch_stmt.expression = expr;
+    node->data.switch_stmt.cases = head_case;
+    return node;
+}
+
+/**
  * @brief تحليل كتلة من الكود { ... }.
  */
 Node* parse_block() {
@@ -343,6 +453,12 @@ Node* parse_statement() {
     // جملة الكتلة
     if (parser.current.type == TOKEN_LBRACE) { free(stmt); return parse_block(); }
     
+    // جملة الاختيار (اختر ...) - جديد
+    else if (parser.current.type == TOKEN_SWITCH) {
+        free(stmt);
+        return parse_switch();
+    }
+
     // جملة الإرجاع (إرجع تعبير.)
     else if (parser.current.type == TOKEN_RETURN) {
         eat(TOKEN_RETURN);
@@ -377,16 +493,26 @@ Node* parse_statement() {
         return stmt;
     }
     
-    // جملة الشرط (إذا (تعبير) جملة)
+    // جملة الشرط (إذا (تعبير) ... وإلا ...)
     else if (parser.current.type == TOKEN_IF) {
         eat(TOKEN_IF);
         eat(TOKEN_LPAREN);
         Node* cond = parse_expression();
         eat(TOKEN_RPAREN);
-        Node* then = parse_statement();
+        Node* then_branch = parse_statement();
+        
+        Node* else_branch = NULL;
+        if (parser.current.type == TOKEN_ELSE) {
+            eat(TOKEN_ELSE);
+            // هذا يعالج "وإلا { ... }" وأيضاً "وإلا إذا ... "
+            // لأن "إذا" هي مجرد جملة أخرى يمكن أن تأتي بعد "وإلا"
+            else_branch = parse_statement();
+        }
+
         stmt->type = NODE_IF;
         stmt->data.if_stmt.condition = cond;
-        stmt->data.if_stmt.then_branch = then;
+        stmt->data.if_stmt.then_branch = then_branch;
+        stmt->data.if_stmt.else_branch = else_branch;
         return stmt;
     }
     

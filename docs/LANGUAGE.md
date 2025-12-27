@@ -1,6 +1,6 @@
 # Baa Language Specification
 
-> **Version:** 0.1.2 | [← User Guide](USER_GUIDE.md) | [Compiler Internals →](INTERNALS.md)
+> **Version:** 0.1.3 | [← User Guide](USER_GUIDE.md) | [Compiler Internals →](INTERNALS.md)
 
 Baa (باء) is a compiled systems programming language using Arabic syntax. It compiles directly to native machine code via Assembly/GCC on Windows.
 
@@ -165,21 +165,32 @@ Prints an integer, string, or character followed by a newline.
 
 ## 5. Control Flow
 
-### 5.1. Conditional (`إذا`)
+### 5.1. Conditional (`إذا` / `وإلا`)
 
-Executes a block if the condition is true.
+Executes a block based on conditions.
 
-**Syntax:** `إذا (<condition>) { <body> }`
+**Syntax:**
+```baa
+إذا (<condition>) {
+    // ...
+} وإلا إذا (<condition>) {
+    // ...
+} وإلا {
+    // ...
+}
+```
+
+**Example:**
 
 ```baa
 صحيح س = ١٥.
 
-إذا (س > ١٠) {
-    اطبع "س أكبر من ١٠".
-}
-
-إذا (س == ١٥) {
-    اطبع "س يساوي ١٥".
+إذا (س > ٢٠) {
+    اطبع "كبير جداً".
+} وإلا إذا (س > ١٠) {
+    اطبع "متوسط".
+} وإلا {
+    اطبع "صغير".
 }
 ```
 
@@ -239,7 +250,49 @@ C-style loop using Arabic semicolon `؛` as separator.
 }
 ```
 
----
+### 5.5. Switch Statement (`اختر`)
+
+Selects a block of code to execute based on a value.
+
+- **`اختر` (Switch)**: Starts the statement.
+- **`حالة` (Case)**: Defines a value to match.
+- **`افتراضي` (Default)**: Defines the code to run if no case matches.
+- **`:` (Colon)**: Separator after the case value.
+
+**Syntax:**
+```baa
+اختر (<expression>) {
+    حالة <value>:
+        // code...
+        توقف.
+    حالة <value>:
+        // code...
+        توقف.
+    افتراضي:
+        // code...
+        توقف.
+}
+```
+
+**Note:** Just like in C, execution "falls through" to the next case unless you use `توقف` (break).
+
+**Example:**
+
+```baa
+صحيح س = ٢.
+
+اختر (س) {
+    حالة ١:
+        اطبع "واحد".
+        توقف.
+    حالة ٢:
+        اطبع "اثنان".
+        توقف.
+    افتراضي:
+        اطبع "رقم آخر".
+        توقف.
+}
+```
 
 ## 6. Operators
 

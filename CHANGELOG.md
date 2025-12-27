@@ -9,8 +9,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ## [Unreleased]
 
 ### Planned
-- Constant folding optimization
-- Dead code elimination
+- Dead code elimination optimization
+
+---
+
+## [0.1.3] - 2025-12-27
+
+### Added
+- **Extended If** — Added support for `وإلا` (Else) and `وإلا إذا` (Else If) blocks.
+- **Switch Statement** — Implemented `اختر` (Switch), `حالة` (Case), and `افتراضي` (Default) for clean multi-way branching.
+- **Constant Folding** — Compiler now optimizes arithmetic expressions with constant operands at compile-time (e.g., `2 * 3 + 4` generates `10` directly).
+
+### Changed
+- **Parser** — Enhanced expression parsing to support immediate evaluation of constant binary operations.
+- **Codegen** — Improved label management for nested control structures (`if`, `switch`, `loops`).
 
 ---
 
@@ -29,7 +41,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ---
 
-## [0.1.1] - Structured Data
+## [0.1.1] - 2025-12-26 - Structured Data
 
 ### Added
 - **Arrays** — Declaration (`صحيح قائمة[٥]`), access (`قائمة[٠]`), and assignment (`قائمة[٠] = ١`)
@@ -39,7 +51,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ---
 
-## [0.1.0] - Text & Unary
+## [0.1.0] - 2025-12-26 - Text & Unary
 
 ### Added
 - **String Literals** — `"text"` support
@@ -52,7 +64,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ---
 
-## [0.0.9] - Advanced Math
+## [0.0.9] - 2025-12-26 - Advanced Math
 
 ### Added
 - **Multiplication** (`*`), **Division** (`/`), and **Modulo** (`%`)
@@ -63,7 +75,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ---
 
-## [0.0.8] - Functions
+## [0.0.8] - 2025-12-26 - Functions
 
 ### Added
 - **Function Definitions** — `صحيح func(...) {...}` syntax
@@ -80,7 +92,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ---
 
-## [0.0.7] - Loops
+## [0.0.7] - 2025-12-25 - Loops
 
 ### Added
 - **While Loop** — `طالما` statement
@@ -91,7 +103,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ---
 
-## [0.0.6] - Control Flow
+## [0.0.6] - 2025-12-25 - Control Flow
 
 ### Added
 - **If Statement** — `إذا` conditional
@@ -104,7 +116,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ---
 
-## [0.0.5] - Type System
+## [0.0.5] - 2025-12-25 - Type System
 
 ### Changed
 - **Breaking:** Renamed `رقم` to `صحيح` (int) to align with C types
@@ -114,7 +126,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ---
 
-## [0.0.4] - Variables
+## [0.0.4] - 2025-12-24 - Variables
 
 ### Added
 - `رقم` (Int) type keyword
@@ -123,7 +135,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ---
 
-## [0.0.3] - I/O
+## [0.0.3] - 2025-12-24 - I/O
 
 ### Added
 - `اطبع` (Print) statement
@@ -132,7 +144,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ---
 
-## [0.0.2] - Math
+## [0.0.2] - 2025-12-24 - Math
 
 ### Added
 - Arabic numeral support (٠-٩)
@@ -140,7 +152,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ---
 
-## [0.0.1] - Initial Release
+## [0.0.1] - 2025-12-24 - Initial Release
 
 ### Added
 - Initial compiler implementation

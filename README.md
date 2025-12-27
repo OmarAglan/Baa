@@ -2,7 +2,7 @@
 
 <div align="center">
 
-![Version](https://img.shields.io/badge/version-0.1.2-blue.svg)
+![Version](https://img.shields.io/badge/version-0.1.3-blue.svg)
 ![Platform](https://img.shields.io/badge/platform-Windows-lightgrey.svg)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
 
@@ -22,7 +22,7 @@
 | 🌍 **Full Arabic Syntax** | Arabic keywords, numerals (٠-٩), and punctuation (`.` `؛`) |
 | ⚡ **Functions** | Define and call functions with parameters and return values |
 | 📦 **Arrays** | Fixed-size stack arrays (`صحيح قائمة[١٠]`) |
-| 🔄 **Control Flow** | `إذا` (If), `طالما` (While), `لكل` (For), `توقف` (Break), `استمر` (Continue) |
+| 🔄 **Control Flow** | `إذا` (If), `طالما` (While), `لكل` (For), `توقف` (Break), `استمر` (Continue) | `اختر` (Switch), `حالة` (Case), `افتراضي` (Default) |
 | ➕ **Full Operators** | Arithmetic, comparison, and logical operators with short-circuit evaluation |
 | 📝 **Text Support** | String (`"..."`) and character (`'...'`) literals |
 

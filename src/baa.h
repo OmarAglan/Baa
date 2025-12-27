@@ -1,7 +1,7 @@
 /**
  * @file baa.h
  * @brief ملف الرأس الرئيسي الذي يعرف هياكل البيانات لمحوسب لغة "باء" (Baa Compiler).
- * @version 0.1.2 (Loop Control)
+ * @version 0.1.3 (Switch Statement)
  */
 
 #ifndef BAA_H
@@ -34,15 +34,20 @@ typedef enum {
     TOKEN_RETURN,       // إرجع
     TOKEN_PRINT,        // اطبع
     TOKEN_IF,           // إذا
+    TOKEN_ELSE,         // وإلا
     TOKEN_WHILE,        // طالما
     TOKEN_FOR,          // لكل
-    TOKEN_BREAK,        // توقف (جديد)
-    TOKEN_CONTINUE,     // استمر (جديد)
+    TOKEN_BREAK,        // توقف
+    TOKEN_CONTINUE,     // استمر
+    TOKEN_SWITCH,       // اختر (جديد)
+    TOKEN_CASE,         // حالة (جديد)
+    TOKEN_DEFAULT,      // افتراضي (جديد)
     
     // الرموز (Symbols)
     TOKEN_ASSIGN,       // =
     TOKEN_DOT,          // .
     TOKEN_COMMA,        // ,
+    TOKEN_COLON,        // : (جديد)
     TOKEN_SEMICOLON,    // ؛
     
     // العمليات الحسابية (Math)
@@ -128,8 +133,10 @@ typedef enum {
     NODE_IF,            // جملة الشرط (إذا)
     NODE_WHILE,         // جملة التكرار (طالما)
     NODE_FOR,           // جملة التكرار المحدد (لكل)
-    NODE_BREAK,         // جملة التوقف (توقف) - جديد
-    NODE_CONTINUE,      // جملة الاستمرار (استمر) - جديد
+    NODE_SWITCH,        // جملة الاختيار (اختر) - جديد
+    NODE_CASE,          // حالة الاختيار (حالة/افتراضي) - جديد
+    NODE_BREAK,         // جملة التوقف (توقف)
+    NODE_CONTINUE,      // جملة الاستمرار (استمر)
     NODE_ASSIGN,        // جملة التعيين (س = 5)
     NODE_CALL_STMT,     // استدعاء دالة كجملة
     
@@ -237,7 +244,12 @@ typedef struct Node {
         } call;
 
         // جمل التحكم
-        struct { struct Node* condition; struct Node* then_branch; } if_stmt;
+        struct { 
+            struct Node* condition; 
+            struct Node* then_branch; 
+            struct Node* else_branch;
+        } if_stmt;
+        
         struct { struct Node* condition; struct Node* body; } while_stmt;
         struct { struct Node* expression; } return_stmt;
         struct { struct Node* expression; } print_stmt;
@@ -245,11 +257,24 @@ typedef struct Node {
 
         // جملة التكرار المحددة (لكل)
         struct {
-            struct Node* init;      // التهيئة (مثل: صحيح س = 0)
-            struct Node* condition; // الشرط (مثل: س < 10)
-            struct Node* increment; // الزيادة (مثل: س = س + 1 أو س++)
+            struct Node* init;      // التهيئة
+            struct Node* condition; // الشرط
+            struct Node* increment; // الزيادة
             struct Node* body;      // جسم الحلقة
         } for_stmt;
+
+        // جملة الاختيار (اختر) - جديد
+        struct {
+            struct Node* expression; // القيمة التي يتم الاختيار بناء عليها
+            struct Node* cases;      // قائمة الحالات (Node* next list)
+        } switch_stmt;
+
+        // حالة الاختيار (حالة / افتراضي) - جديد
+        struct {
+            struct Node* value;      // القيمة الثابتة للحالة (NULL للحالة الافتراضية)
+            struct Node* body;       // قائمة الجمل داخل الحالة
+            bool is_default;         // هل هي الحالة الافتراضية؟
+        } case_stmt;
 
         // التعبيرات الأساسية والعمليات
         struct { int value; } integer;

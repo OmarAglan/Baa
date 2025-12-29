@@ -1,7 +1,20 @@
 cmake_minimum_required(VERSION 3.10)
-project(baa VERSION 0.1.2 LANGUAGES C)
+project(baa VERSION 0.2.0 LANGUAGES C)
 
 set(CMAKE_C_STANDARD 11)
 
+# List of source files
+set(SOURCES
+    src/main.c
+    src/lexer.c
+    src/parser.c
+    src/codegen.c
+)
+
+# Add resource file for Windows (Icon & Version Info)
+if(WIN32)
+    list(APPEND SOURCES src/baa.rc)
+endif()
+
 # Windows executable extension
-add_executable(baa src/main.c src/lexer.c src/parser.c src/codegen.c)
+add_executable(baa ${SOURCES})

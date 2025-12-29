@@ -15,7 +15,11 @@
 - [x] **Information Flags** (`--version`, `--help`, `-v`).
 - [x] **Build Pipeline** — Orchestrate Lexer -> Parser -> Codegen -> GCC.
 
-### v0.2.1: The Diagnostic Engine (Error Reporting) 🚨
+### v0.2.1: Polish & Branding 🎨
+- [x] **Executable Icon** — Embed `.ico` resource.
+- [x] **Metadata** — Version info, Copyright, Description in `.exe`.
+
+### v0.2.2: The Diagnostic Engine (Error Reporting) 🚨
 - [ ] **Source Tracking** — Update `Token` and `Node` to store Filename, Line, and Column.
 - [ ] **Error Module** — Create a dedicated error reporting system.
 - [ ] **Pretty Printing** — Display errors with context:
@@ -27,7 +31,7 @@
     ```
 - [ ] **Panic Recovery** — Modify Parser to skip tokens until a semicolon `.` or brace `}` upon error to discover subsequent errors.
 
-### v0.2.2: The Semantic Pass (Type Checker) 🧠
+### v0.2.3: The Semantic Pass (Type Checker) 🧠
 - [ ] **Pass Separation** — Completely separate Parsing from Code Generation.
     - `parse()` returns a raw AST.
     - `analyze()` walks the AST to check types and resolve symbols.
@@ -36,7 +40,7 @@
 - [ ] **Type Checking** — Validate assignments (`int = string` should fail here, not in ASM).
 - [ ] **Symbol Resolution** — Check for undefined variables before code generation starts.
 
-### v0.2.3: Multi-File Compilation (The Linker) 🔗
+### v0.2.4: Multi-File Compilation (The Linker) 🔗
 - [ ] **Import System** — Add `استورد "file.b"` syntax.
 - [ ] **File Resolution** — Locate files relative to the current source or standard path.
 - [ ] **Header Generation** — internal mechanism to expose public symbols.

@@ -13,6 +13,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ---
 
+## [0.2.1] - 2025-12-29
+
+### Added
+- **Executable Branding** — Added a custom icon (`.ico`) and version metadata to `baa.exe`.
+- **Windows Integration** — File properties now show "Baa Programming Language" and version info.
+
+---
+
 ## [0.2.0] - 2025-12-29
 
 ### Added

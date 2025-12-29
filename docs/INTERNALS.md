@@ -1,6 +1,6 @@
 # Baa Compiler Internals
 
-> **Version:** 0.1.2 | [← Language Spec](LANGUAGE.md) | [API Reference →](API_REFERENCE.md)
+> **Version:** 0.2.0 | [← Language Spec](LANGUAGE.md) | [API Reference →](API_REFERENCE.md)
 
 **Target Architecture:** x86-64 (AMD64)  
 **Target OS:** Windows (MinGW-w64 Toolchain)  
@@ -25,7 +25,9 @@ This document details the internal architecture, data structures, and algorithms
 
 ## 1. Pipeline Architecture
 
-The compiler operates as a multi-stage pipeline with integrated semantic analysis.
+The compiler is orchestrated by the **Driver** (`src/main.c`), which acts as the entry point and build manager. It parses command-line arguments to determine which stages of compilation to run.
+
+### 1.1. Compilation Stages
 
 ```mermaid
 flowchart LR
@@ -34,19 +36,30 @@ flowchart LR
     C -->|AST| D["Semantic Check"]
     D -->|Symbol Tables| E["Code Generator"]
     E --> F[".s Assembly"]
-    F -->|GCC| G[".exe Executable"]
+    F -->|GCC -c| G[".o Object"]
+    G -->|GCC -o| H[".exe Executable"]
     
     style A fill:#e1f5fe
-    style G fill:#c8e6c9
+    style H fill:#c8e6c9
 ```
 
-| Stage | Input | Output | File |
-|-------|-------|--------|------|
-| Lexer | UTF-8 source | Token stream | `lexer.c` |
-| Parser | Tokens | AST | `parser.c` |
-| Semantic | AST | Symbol tables | (integrated) |
-| Codegen | AST + Symbols | x86-64 Assembly | `codegen.c` |
-| GCC | Assembly | Executable | (external) |
+| Stage | Input | Output | Component | Description |
+|-------|-------|--------|-----------|-------------|
+| **1. Frontend** | `.b` Source | AST | `lexer.c`, `parser.c` | Tokenizes and builds the syntax tree. Optimizations like Constant Folding happen here. |
+| **2. Backend** | AST | `.s` Assembly | `codegen.c` | Generates x86-64 assembly code (AT&T syntax). |
+| **3. Assemble** | `.s` Assembly | `.o` Object | `gcc -c` | Invokes external assembler (GAS via GCC) to create machine code. |
+| **4. Link** | `.o` Object | `.exe` Executable | `gcc` | Links with C Runtime (CRT) to produce final binary. |
+
+### 1.2. The Driver (CLI)
+
+The driver logic in `main.c` supports various compilation modes controlled by flags:
+
+| Flag | Mode | Output | Action |
+|------|------|--------|--------|
+| (Default) | **Compile & Link** | `.exe` | Runs full pipeline. Deletes intermediate `.s` and `.o` files. |
+| `-o <file>`| **Custom Output** | `<file>` | Specifies the final filename. |
+| `-S` | **Assembly Only** | `.s` | Stops after codegen. Preserves the assembly file. |
+| `-c` | **Compile Only** | `.o` | Stops after assembling. Does not link. |
 
 ---
 
@@ -66,11 +79,11 @@ The Lexer (`src/lexer.c`) transforms raw bytes into `Token` structures.
 ### 2.2. Token Types
 
 ```
-Keywords:    صحيح, نص, إذا, طالما, لكل, اطبع, إرجع, توقف, استمر
+Keywords:    صحيح, نص, إذا, وإلا, طالما, لكل, اختر, حالة, افتراضي, اطبع, إرجع, توقف, استمر
 Literals:    INTEGER, STRING, CHAR
 Operators:   + - * / % ++ -- ! && ||
 Comparison:  == != < > <= >=
-Delimiters:  ( ) { } [ ] , . ؛
+Delimiters:  ( ) { } [ ] , . : ؛
 Special:     IDENTIFIER, EOF
 ```
 
@@ -93,22 +106,23 @@ Type          ::= "صحيح" | "نص"
 
 Block         ::= "{" Statement* "}"
 Statement     ::= VarDecl | ArrayDecl | Assign | ArrayAssign
-                | If | While | For | Return | Print | CallStmt
-                | Break | Continue | Switch
+                | If | Switch | While | For | Return | Print | CallStmt
+                | Break | Continue
 
 VarDecl       ::= Type ID "=" Expr "."
 ArrayDecl     ::= "صحيح" ID "[" INT "]" "."
 Assign        ::= ID "=" Expr "."
 ArrayAssign   ::= ID "[" Expr "]" "=" Expr "."
 
-If            ::= "إذا" "(" Expr ")" Block
+If            ::= "إذا" "(" Expr ")" Block ("وإلا" (Block | If))?
+Switch        ::= "اختر" "(" Expr ")" "{" Case* Default? "}"
+Case          ::= "حالة" (INT | CHAR) ":" Statement*
+Default       ::= "افتراضي" ":" Statement*
+
 While         ::= "طالما" "(" Expr ")" Block
 For           ::= "لكل" "(" Init? "؛" Expr? "؛" Update? ")" Block
 Break         ::= "توقف" "."
 Continue      ::= "استمر" "."
-Switch        ::= "اختر" "(" Expr ")" "{" Case* Default? "}"
-Case          ::= "حالة" (INT | CHAR) ":" Statement*
-Default       ::= "افتراضي" ":" Statement*
 Return        ::= "إرجع" Expr "."
 Print         ::= "اطبع" Expr "."
 ```
@@ -159,11 +173,11 @@ typedef struct Node {
 
 ---
 
-## 5. Semantic Analysis
+## 5. Semantic Analysis & Optimizations
 
 ### 5.1. Data Types
 
-The compiler now tracks variable types to ensure correct code generation.
+The compiler tracks variable types to ensure correct code generation.
 
 ```c
 typedef enum {
@@ -209,19 +223,18 @@ The parser performs constant folding on arithmetic expressions. If both operands
 
 ## 6. Code Generation
 
-### 6.1. Loop Control (Break/Continue)
+### 6.1. Loop Control & Branching
 
-To support nested loops, the code generator maintains stacks for loop labels:
+To support nested loops and switches, the code generator maintains stacks:
 
-- **Loop Start Stack**: Used by `continue` to jump to the next iteration (or update step in `for`).
-- **Loop End Stack**: Used by `break` to jump out of the loop.
+- **Loop Start Stack**: Used by `continue`.
+- **Loop End Stack**: Used by `break`.
 
-**Logic:**
-1. **Enter Loop:** Push `.Lstart_X` and `.Lend_X` to respective stacks.
-2. **Inside Loop:** 
-   - `NODE_BREAK` → `jmp .Lend_X` (top of stack)
-   - `NODE_CONTINUE` → `jmp .Lstart_X` (top of stack)
-3. **Exit Loop:** Pop from stacks.
+**Switch Logic:**
+1. Evaluate expression.
+2. Generate comparisons for all cases (Pass 1).
+3. Generate bodies for all cases (Pass 2).
+4. Handle default case or fallthrough.
 
 ### 6.2. Windows x64 ABI Compliance
 

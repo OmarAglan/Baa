@@ -1,6 +1,6 @@
 # Baa User Guide
 
-Welcome to Baa (باء)! This guide will help you write your first Arabic computer program.
+Welcome to Baa (باء)! This guide will help you write your first Arabic computer program and use the Baa compiler toolchain.
 
 ---
 
@@ -8,10 +8,9 @@ Welcome to Baa (باء)! This guide will help you write your first Arabic comput
 
 - [Installation](#1-installation)
 - [Your First Program](#2-your-first-program)
-- [Compiling](#3-compiling)
-- [Running](#4-running)
-- [Common Patterns](#5-common-patterns)
-- [Troubleshooting](#6-troubleshooting)
+- [Command Line Interface](#3-command-line-interface)
+- [Common Patterns](#4-common-patterns)
+- [Troubleshooting](#5-troubleshooting)
 
 ---
 
@@ -38,7 +37,7 @@ cmake ..
 cmake --build .
 ```
 
-After building, you will have `baa.exe` in your build directory.
+After building, you will have `baa.exe` in your `build` directory.
 
 ---
 
@@ -68,39 +67,58 @@ Create a file named `hello.b` using any text editor. **Important:** Save the fil
 
 ---
 
-## 3. Compiling
+## 3. Command Line Interface
 
-Open PowerShell in your build directory and run:
+The Baa compiler `baa.exe` is now a robust command-line tool.
+
+### Basic Compilation and Execution
 
 ```powershell
-.\baa.exe path\to\your\hello.b
-```
+# Compile and link to default output (out.exe)
+.\baa.exe hello.b
 
-This creates `out.exe` in the current directory.
+# Run the generated executable
+.\out.exe```
 
-### What Happens During Compilation
+### Command-Line Flags
 
-1. **Lexing** — Source code is tokenized
-2. **Parsing** — Tokens are organized into an Abstract Syntax Tree
-3. **Code Generation** — Assembly code is generated (`out.s`)
-4. **Linking** — GCC compiles assembly to executable (`out.exe`)
+| Flag | Description | Example |
+|------|-------------|---------|
+| `<input.b>` | Source file to compile. Multiple files can be provided (future: requires import system). | `.\baa.exe main.b` |
+| `-o <file>` | Specify the output filename (e.g., `myapp.exe`, `mylib.o`, `output.s`). | `.\baa.exe -o myprog.exe hello.b` |
+| `-S` | **Compile only to Assembly.** Produces `.s` file, does not invoke assembler/linker. | `.\baa.exe -S hello.b` (creates `hello.s`) |
+| `-c` | **Compile and Assemble.** Produces object file (`.o`), does not link. (Future: for multi-file linking). | `.\baa.exe -c hello.b` (creates `hello.o`) |
+| `--help`, `-h` | Display help message and usage. | `.\baa.exe --help` |
+| `--version` | Display compiler version. | `.\baa.exe --version` |
+
+### Compilation Workflow (`-o`, `-S`, `-c`)
+
+You can control the compilation stages:
+
+1.  **Source to Assembly**:
+    ```powershell
+    .\baa.exe -S program.b -o program.s
+    # This will create 'program.s'
+    ```
+2.  **Assembly to Object File (via GCC)**:
+    ```powershell
+    # Requires 'gcc' in PATH
+    gcc -c program.s -o program.o
+    ```
+3.  **Link Object Files to Executable (via GCC)**:
+    ```powershell
+    # Requires 'gcc' in PATH
+    gcc program.o -o program.exe
+    ```
+4.  **Full Pipeline (default)**:
+    ```powershell
+    .\baa.exe program.b -o program.exe
+    # This is equivalent to steps 1-3 if gcc is installed
+    ```
 
 ---
 
-## 4. Running
-
-```powershell
-.\out.exe
-```
-
-You should see:
-```
-مرحباً بالعالم!
-```
-
----
-
-## 5. Common Patterns
+## 4. Common Patterns
 
 ### Variables and Math
 
@@ -137,6 +155,8 @@ You should see:
     
     إذا (العمر >= ١٨) {
         اطبع "أنت بالغ".
+    } وإلا {
+        اطبع "لست بالغاً".
     }
     
     إرجع ٠.
@@ -159,14 +179,14 @@ You should see:
 
 ---
 
-## 6. Troubleshooting
+## 5. Troubleshooting
 
 ### Common Errors
 
 | Error | Cause | Solution |
 |-------|-------|----------|
 | `Lexer Error: Unknown char` | File not saved as UTF-8 | In VS Code: Click encoding in status bar → "Save with Encoding" → "UTF-8" |
-| `Parser Error: Expected ...` | Syntax error | Check for missing `.` at end of statements |
+| `Parser Error: Expected ...` | Syntax error | Check for missing `.` at end of statements, `}` or parentheses. |
 | `Undefined symbol` | Variable used before declaration | Declare variables before using them |
 | `Cannot find الرئيسية` | Missing main function | Every program needs `صحيح الرئيسية() { ... }` |
 

@@ -9,7 +9,24 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ## [Unreleased]
 
 ### Planned
-- Dead code elimination optimization
+- Diagnostic Engine (Better error reporting)
+
+---
+
+## [0.2.0] - 2025-12-29
+
+### Added
+- **CLI Driver** — Completely rewritten `main.c` to act as a proper compiler frontend.
+- **Flags** — Added support for standard compiler flags:
+    - `-o <file>`: Specify output filename.
+    - `-S`: Compile to assembly only (skip assembler/linker).
+    - `-c`: Compile to object file (skip linker).
+    - `--help`: Print usage information.
+    - `--version`: Print version and build date.
+- **Pipeline** — The compiler now orchestrates `gcc` automatically for assembling and linking.
+
+### Changed
+- **Architecture** — Moved from a simple "transpiler script" model to a multi-stage pipeline model.
 
 ---
 

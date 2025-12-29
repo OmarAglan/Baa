@@ -1,7 +1,7 @@
 /**
  * @file baa.h
  * @brief ملف الرأس الرئيسي الذي يعرف هياكل البيانات لمحوسب لغة "باء" (Baa Compiler).
- * @version 0.1.3 (Switch Statement)
+ * @version 0.2.0 (The Driver)
  */
 
 #ifndef BAA_H
@@ -12,6 +12,10 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <string.h>
+
+// معلومات الإصدار
+#define BAA_VERSION "0.2.0"
+#define BAA_BUILD_DATE __DATE__
 
 // ============================================================================
 // تعريفات المحلل اللفظي (Lexer)
@@ -39,15 +43,15 @@ typedef enum {
     TOKEN_FOR,          // لكل
     TOKEN_BREAK,        // توقف
     TOKEN_CONTINUE,     // استمر
-    TOKEN_SWITCH,       // اختر (جديد)
-    TOKEN_CASE,         // حالة (جديد)
-    TOKEN_DEFAULT,      // افتراضي (جديد)
+    TOKEN_SWITCH,       // اختر
+    TOKEN_CASE,         // حالة
+    TOKEN_DEFAULT,      // افتراضي
     
     // الرموز (Symbols)
     TOKEN_ASSIGN,       // =
     TOKEN_DOT,          // .
     TOKEN_COMMA,        // ,
-    TOKEN_COLON,        // : (جديد)
+    TOKEN_COLON,        // :
     TOKEN_SEMICOLON,    // ؛
     
     // العمليات الحسابية (Math)
@@ -133,8 +137,8 @@ typedef enum {
     NODE_IF,            // جملة الشرط (إذا)
     NODE_WHILE,         // جملة التكرار (طالما)
     NODE_FOR,           // جملة التكرار المحدد (لكل)
-    NODE_SWITCH,        // جملة الاختيار (اختر) - جديد
-    NODE_CASE,          // حالة الاختيار (حالة/افتراضي) - جديد
+    NODE_SWITCH,        // جملة الاختيار (اختر)
+    NODE_CASE,          // حالة الاختيار (حالة/افتراضي)
     NODE_BREAK,         // جملة التوقف (توقف)
     NODE_CONTINUE,      // جملة الاستمرار (استمر)
     NODE_ASSIGN,        // جملة التعيين (س = 5)
@@ -263,16 +267,16 @@ typedef struct Node {
             struct Node* body;      // جسم الحلقة
         } for_stmt;
 
-        // جملة الاختيار (اختر) - جديد
+        // جملة الاختيار (اختر)
         struct {
             struct Node* expression; // القيمة التي يتم الاختيار بناء عليها
-            struct Node* cases;      // قائمة الحالات (Node* next list)
+            struct Node* cases;      // قائمة الحالات
         } switch_stmt;
 
-        // حالة الاختيار (حالة / افتراضي) - جديد
+        // حالة الاختيار (حالة / افتراضي)
         struct {
-            struct Node* value;      // القيمة الثابتة للحالة (NULL للحالة الافتراضية)
-            struct Node* body;       // قائمة الجمل داخل الحالة
+            struct Node* value;      // القيمة الثابتة للحالة
+            struct Node* body;       // قائمة الجمل
             bool is_default;         // هل هي الحالة الافتراضية؟
         } case_stmt;
 

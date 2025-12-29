@@ -46,10 +46,16 @@ void eat(TokenType type) {
         return;
     }
 
-    if (parser.panic_mode) return; // لا تبلغ عن أخطاء إضافية أثناء وضع الذعر
+    if (parser.panic_mode) return;
     
     parser.panic_mode = true;
-    error_report(parser.current, "Expected token type %d but found '%s'", type, parser.current.value ? parser.current.value : "EOF");
+    
+    // تحسين رسالة الخطأ
+    // إذا كانت الوحدة الحالية لها قيمة نصية (مثل اسم متغير)، اعرضها
+    // وإلا اعرض نوعها كنص
+    const char* found_text = parser.current.value ? parser.current.value : token_type_to_str(parser.current.type);
+    
+    error_report(parser.current, "Expected '%s' but found '%s'", token_type_to_str(type), found_text);
 }
 
 /**

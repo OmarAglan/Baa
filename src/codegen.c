@@ -324,12 +324,21 @@ void codegen(Node* node, FILE* file) {
         Node* decl = node->data.program.declarations;
         while (decl != NULL) {
             if (decl->type == NODE_VAR_DECL && decl->data.var_decl.is_global) {
-                int init_value = 0;
-                if (decl->data.var_decl.expression != NULL && decl->data.var_decl.expression->type == NODE_INT) {
-                    init_value = decl->data.var_decl.expression->data.integer.value;
+                // 1. التعامل مع النصوص
+                if (decl->data.var_decl.expression != NULL && decl->data.var_decl.expression->type == NODE_STRING) {
+                    int id = register_string(decl->data.var_decl.expression->data.string_lit.value);
+                    // تخزين عنوان النص (.Lstr_X) في المتغير
+                    fprintf(file, "%s: .quad .Lstr_%d\n", decl->data.var_decl.name, id);
+                } 
+                // 2. التعامل مع الأرقام (أو الافتراضي 0)
+                else {
+                    int init_value = 0;
+                    if (decl->data.var_decl.expression != NULL && decl->data.var_decl.expression->type == NODE_INT) {
+                        init_value = decl->data.var_decl.expression->data.integer.value;
+                    }
+                    fprintf(file, "%s: .quad %d\n", decl->data.var_decl.name, init_value);
                 }
-                fprintf(file, "%s: .quad %d\n", decl->data.var_decl.name, init_value);
-                // تمرير نوع المتغير العام
+                
                 add_global(decl->data.var_decl.name, decl->data.var_decl.type);
             }
             decl = decl->next;

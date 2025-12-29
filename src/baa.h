@@ -121,6 +121,11 @@ void lexer_init(Lexer* lexer, const char* src, const char* filename);
  */
 Token lexer_next_token(Lexer* lexer);
 
+/**
+ * @brief تحويل نوع الوحدة إلى نص مقروء (لأغراض التنقيح).
+ */
+const char* token_type_to_str(TokenType type);
+
 // ============================================================================
 // نظام الأخطاء (Error System) - جديد
 // ============================================================================

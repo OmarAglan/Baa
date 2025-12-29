@@ -1,7 +1,7 @@
 /**
  * @file lexer.c
  * @brief يقوم بتحويل الكود المصدري المكتوب باللغة العربية (UTF-8) إلى وحدات لفظية (Tokens).
- * @version 0.2.2 (Diagnostic Engine - Location Tracking)
+ * @version 0.2.2 (Diagnostic Engine - Location Tracking & String Helpers)
  */
 
 #include "baa.h"
@@ -266,4 +266,63 @@ Token lexer_next_token(Lexer* l) {
     printf("Lexer Error: Unknown byte 0x%02X at %s:%d:%d\n", (unsigned char)*current, l->filename, l->line, l->col);
     exit(1);
     return token;
+}
+
+/**
+ * @brief تحويل نوع الوحدة إلى نص مقروء (لأغراض التنقيح ورسائل الخطأ).
+ */
+const char* token_type_to_str(TokenType type) {
+    switch (type) {
+        case TOKEN_EOF: return "EOF";
+        case TOKEN_INT: return "INTEGER";
+        case TOKEN_STRING: return "STRING";
+        case TOKEN_CHAR: return "CHAR";
+        case TOKEN_IDENTIFIER: return "IDENTIFIER";
+        
+        // Keywords
+        case TOKEN_KEYWORD_INT: return "صحيح";
+        case TOKEN_KEYWORD_STRING: return "نص";
+        case TOKEN_RETURN: return "إرجع";
+        case TOKEN_PRINT: return "اطبع";
+        case TOKEN_IF: return "إذا";
+        case TOKEN_ELSE: return "وإلا";
+        case TOKEN_WHILE: return "طالما";
+        case TOKEN_FOR: return "لكل";
+        case TOKEN_BREAK: return "توقف";
+        case TOKEN_CONTINUE: return "استمر";
+        case TOKEN_SWITCH: return "اختر";
+        case TOKEN_CASE: return "حالة";
+        case TOKEN_DEFAULT: return "افتراضي";
+        
+        // Symbols
+        case TOKEN_ASSIGN: return "=";
+        case TOKEN_DOT: return ".";
+        case TOKEN_COMMA: return ",";
+        case TOKEN_COLON: return ":";
+        case TOKEN_SEMICOLON: return "؛";
+        case TOKEN_PLUS: return "+";
+        case TOKEN_MINUS: return "-";
+        case TOKEN_STAR: return "*";
+        case TOKEN_SLASH: return "/";
+        case TOKEN_PERCENT: return "%";
+        case TOKEN_INC: return "++";
+        case TOKEN_DEC: return "--";
+        case TOKEN_EQ: return "==";
+        case TOKEN_NEQ: return "!=";
+        case TOKEN_LT: return "<";
+        case TOKEN_GT: return ">";
+        case TOKEN_LTE: return "<=";
+        case TOKEN_GTE: return ">=";
+        case TOKEN_AND: return "&&";
+        case TOKEN_OR: return "||";
+        case TOKEN_NOT: return "!";
+        case TOKEN_LPAREN: return "(";
+        case TOKEN_RPAREN: return ")";
+        case TOKEN_LBRACE: return "{";
+        case TOKEN_RBRACE: return "}";
+        case TOKEN_LBRACKET: return "[";
+        case TOKEN_RBRACKET: return "]";
+        
+        default: return "UNKNOWN";
+    }
 }

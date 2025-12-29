@@ -19,17 +19,11 @@
 - [x] **Executable Icon** — Embed `.ico` resource.
 - [x] **Metadata** — Version info, Copyright, Description in `.exe`.
 
-### v0.2.2: The Diagnostic Engine (Error Reporting) 🚨
-- [ ] **Source Tracking** — Update `Token` and `Node` to store Filename, Line, and Column.
-- [ ] **Error Module** — Create a dedicated error reporting system.
-- [ ] **Pretty Printing** — Display errors with context:
-    ```text
-    خطأ في الملف 'main.b' سطر ١٠:
-    ١٠ |    اطبع "مرحباً" + ١٠.
-       |          ^^^^^^^
-       | لا يمكن جمع نص مع رقم.
-    ```
-- [ ] **Panic Recovery** — Modify Parser to skip tokens until a semicolon `.` or brace `}` upon error to discover subsequent errors.
+### v0.2.2: The Diagnostic Engine 🚨
+- [x] **Source Tracking** — Update `Token` and `Node` to store Filename, Line, and Column.
+- [x] **Error Module** — Create a dedicated error reporting system.
+- [x] **Pretty Printing** — Display errors with context (`^` pointers).
+- [x] **Panic Recovery** — Continue parsing after errors.
 
 ### v0.2.3: The Semantic Pass (Type Checker) 🧠
 - [ ] **Pass Separation** — Completely separate Parsing from Code Generation.

@@ -14,6 +14,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ---
 
+## [0.2.2] - 2025-12-29
+
+### Added
+- **Diagnostic Engine** — New error reporting system that displays the filename, line number, column number, and the actual source code line with a pointer (`^`) to the error location.
+- **Panic Recovery** — The parser now attempts to recover from syntax errors (by skipping tokens until a statement boundary) to report multiple errors in a single run.
+- **Lexer Location** — Lexer now tracks column numbers and filenames.
+
+### Fixed
+- **Global Strings** — Fixed a bug where global string variables initialized with string literals would output `(null)` at runtime. They now correctly point to the `.rdata` label.
+
+---
+
 ## [0.2.1] - 2025-12-29
 
 ### Added

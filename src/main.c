@@ -2,7 +2,7 @@
  * @file main.c
  * @brief نقطة الدخول ومحرك سطر الأوامر (CLI Driver).
  * يقوم بإدارة عملية الترجمة من التحليل إلى التجميع والربط.
- * @version 0.2.0
+ * @version 0.2.2 (Diagnostic Engine Integration)
  */
 
 #include "baa.h"
@@ -143,10 +143,18 @@ int main(int argc, char** argv) {
     
     char* source = read_file(config.input_file);
     
+    // تمرير اسم الملف للـ Lexer لتتبع الأخطاء
     Lexer lexer;
-    lexer_init(&lexer, source);
+    lexer_init(&lexer, source, config.input_file);
     
     Node* ast = parse(&lexer);
+
+    // التحقق من وجود أخطاء قبل المتابعة
+    if (error_has_occurred()) {
+        fprintf(stderr, "Aborting due to compilation errors.\n");
+        free(source);
+        return 1;
+    }
     
     if (config.verbose) printf("[INFO] AST generated successfully.\n");
 

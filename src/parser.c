@@ -1,7 +1,7 @@
 /**
  * @file parser.c
  * @brief يقوم بتحليل الوحدات اللفظية وبناء شجرة الإعراب المجردة (AST) باستخدام طريقة الانحدار العودي (Recursive Descent).
- * @version 0.1.3 (Optimization - Constant Folding)
+ * @version 0.2.2 (Diagnostic Engine & Panic Recovery)
  */
 
 #include "baa.h"
@@ -16,7 +16,13 @@ Parser parser;
  */
 void advance() {
     parser.current = parser.next;
-    parser.next = lexer_next_token(parser.lexer);
+    
+    while (true) {
+        parser.next = lexer_next_token(parser.lexer);
+        if (parser.next.type != TOKEN_INVALID) break;
+        // إذا وجدنا وحدة غير صالحة، نبلغ عن الخطأ ونستمر في البحث
+        error_report(parser.next, "Found invalid token.");
+    }
 }
 
 /**
@@ -24,8 +30,11 @@ void advance() {
  */
 void init_parser(Lexer* l) {
     parser.lexer = l;
-    parser.current = lexer_next_token(l);
-    parser.next = lexer_next_token(l);
+    parser.panic_mode = false;
+    parser.had_error = false;
+    advance(); // Load first token into parser.next (current is garbage initially)
+    parser.current = parser.next; // Sync
+    advance(); // Load next token
 }
 
 /**
@@ -34,11 +43,13 @@ void init_parser(Lexer* l) {
 void eat(TokenType type) {
     if (parser.current.type == type) {
         advance();
-    } else {
-        printf("Parser Error: Unexpected token %d (Expected %d) at line %d\n", 
-               parser.current.type, type, parser.current.line);
-        exit(1);
+        return;
     }
+
+    if (parser.panic_mode) return; // لا تبلغ عن أخطاء إضافية أثناء وضع الذعر
+    
+    parser.panic_mode = true;
+    error_report(parser.current, "Expected token type %d but found '%s'", type, parser.current.value ? parser.current.value : "EOF");
 }
 
 /**
@@ -54,6 +65,40 @@ bool is_type_keyword(TokenType type) {
 DataType token_to_datatype(TokenType type) {
     if (type == TOKEN_KEYWORD_STRING) return TYPE_STRING;
     return TYPE_INT;
+}
+
+/**
+ * @brief محاولة التعافي من الخطأ بالقفز إلى بداية الجملة التالية.
+ */
+void synchronize() {
+    parser.panic_mode = false;
+
+    while (parser.current.type != TOKEN_EOF) {
+        // إذا وجدنا فاصلة منقوطة، فغالباً انتهت الجملة السابقة
+        if (parser.current.type == TOKEN_SEMICOLON || parser.current.type == TOKEN_DOT) {
+            advance();
+            return;
+        }
+
+        // إذا وجدنا كلمة مفتاحية تبدأ جملة جديدة
+        switch (parser.current.type) {
+            case TOKEN_KEYWORD_INT:
+            case TOKEN_KEYWORD_STRING:
+            case TOKEN_IF:
+            case TOKEN_WHILE:
+            case TOKEN_FOR:
+            case TOKEN_PRINT:
+            case TOKEN_RETURN:
+            case TOKEN_SWITCH:
+            case TOKEN_BREAK:
+            case TOKEN_CONTINUE:
+                return;
+            default:
+                ;
+        }
+
+        advance();
+    }
 }
 
 // --- تصريحات مسبقة ---
@@ -104,6 +149,7 @@ Node* parse_primary() {
             if (parser.current.type != TOKEN_RPAREN) {
                 while (1) {
                     Node* arg = parse_expression();
+                    if (!arg) break; // Error recovery
                     arg->next = NULL;
                     if (head_arg == NULL) { head_arg = arg; tail_arg = arg; }
                     else { tail_arg->next = arg; tail_arg = arg; }
@@ -147,12 +193,15 @@ Node* parse_primary() {
         eat(TOKEN_RPAREN);
     }
     else {
-        printf("Parser Error: Expected expression at line %d\n", parser.current.line);
-        exit(1);
+        if (!parser.panic_mode) {
+            error_report(parser.current, "Expected expression.");
+            parser.panic_mode = true;
+        }
+        return NULL;
     }
 
     // التحقق من العمليات اللاحقة (Postfix Operators: ++, --)
-    if (parser.current.type == TOKEN_INC || parser.current.type == TOKEN_DEC) {
+    if (node && (parser.current.type == TOKEN_INC || parser.current.type == TOKEN_DEC)) {
         UnaryOpType op = (parser.current.type == TOKEN_INC) ? UOP_INC : UOP_DEC;
         eat(parser.current.type);
 
@@ -175,12 +224,14 @@ Node* parse_unary() {
         UnaryOpType op;
         if (parser.current.type == TOKEN_MINUS) op = UOP_NEG;
         else if (parser.current.type == TOKEN_NOT) op = UOP_NOT;
-        else if (parser.current.type == TOKEN_INC) op = UOP_INC; // ++س
-        else op = UOP_DEC; // --س
+        else if (parser.current.type == TOKEN_INC) op = UOP_INC;
+        else op = UOP_DEC;
 
         eat(parser.current.type);
         Node* operand = parse_unary();
         
+        if (!operand) return NULL; // Error propagation
+
         Node* node = malloc(sizeof(Node));
         node->type = NODE_UNARY_OP;
         node->data.unary_op.operand = operand;
@@ -194,6 +245,8 @@ Node* parse_unary() {
 // المستوى 2: عمليات الضرب والقسمة وباقي القسمة (*، /، %)
 Node* parse_multiplicative() {
     Node* left = parse_unary();
+    if (!left) return NULL;
+
     while (parser.current.type == TOKEN_STAR || parser.current.type == TOKEN_SLASH || parser.current.type == TOKEN_PERCENT) {
         OpType op;
         if (parser.current.type == TOKEN_STAR) op = OP_MUL;
@@ -202,53 +255,27 @@ Node* parse_multiplicative() {
         
         eat(parser.current.type);
         Node* right = parse_unary();
+        if (!right) return NULL;
 
         // **Constant Folding Optimization**
-        // إذا كان الطرفان أرقاماً ثابتة، قم بالحساب فوراً
         if (left->type == NODE_INT && right->type == NODE_INT) {
             int result = 0;
             if (op == OP_MUL) {
                 result = left->data.integer.value * right->data.integer.value;
             } else if (op == OP_DIV) {
-                if (right->data.integer.value == 0) { printf("Error: Division by zero\n"); exit(1); }
-                result = left->data.integer.value / right->data.integer.value;
+                if (right->data.integer.value == 0) { 
+                    error_report(parser.current, "Division by zero.");
+                    result = 0; 
+                } else {
+                    result = left->data.integer.value / right->data.integer.value;
+                }
             } else if (op == OP_MOD) {
-                if (right->data.integer.value == 0) { printf("Error: Modulo by zero\n"); exit(1); }
-                result = left->data.integer.value % right->data.integer.value;
-            }
-            
-            // تحديث العقدة اليسرى بالنتيجة وحذف العقدة اليمنى
-            left->data.integer.value = result;
-            free(right); // تحرير الذاكرة (بسيط هنا)
-            continue; // المتابعة مع النتيجة كطرف أيسر جديد
-        }
-
-        Node* new_node = malloc(sizeof(Node));
-        new_node->type = NODE_BIN_OP;
-        new_node->data.bin_op.left = left;
-        new_node->data.bin_op.right = right;
-        new_node->data.bin_op.op = op;
-        new_node->next = NULL;
-        left = new_node;
-    }
-    return left;
-}
-
-// المستوى 3: عمليات الجمع والطرح (+، -)
-Node* parse_additive() {
-    Node* left = parse_multiplicative();
-    while (parser.current.type == TOKEN_PLUS || parser.current.type == TOKEN_MINUS) {
-        OpType op = (parser.current.type == TOKEN_PLUS) ? OP_ADD : OP_SUB;
-        eat(parser.current.type);
-        Node* right = parse_multiplicative();
-
-        // **Constant Folding Optimization**
-        if (left->type == NODE_INT && right->type == NODE_INT) {
-            int result = 0;
-            if (op == OP_ADD) {
-                result = left->data.integer.value + right->data.integer.value;
-            } else {
-                result = left->data.integer.value - right->data.integer.value;
+                if (right->data.integer.value == 0) { 
+                    error_report(parser.current, "Modulo by zero.");
+                    result = 0;
+                } else {
+                    result = left->data.integer.value % right->data.integer.value;
+                }
             }
             
             left->data.integer.value = result;
@@ -267,18 +294,30 @@ Node* parse_additive() {
     return left;
 }
 
-// المستوى 4: عمليات المقارنة العلائقية (<، >، <=، >=)
-Node* parse_relational() {
-    Node* left = parse_additive();
-    while (parser.current.type == TOKEN_LT || parser.current.type == TOKEN_GT ||
-           parser.current.type == TOKEN_LTE || parser.current.type == TOKEN_GTE) {
-        OpType op;
-        if (parser.current.type == TOKEN_LT) op = OP_LT;
-        else if (parser.current.type == TOKEN_GT) op = OP_GT;
-        else if (parser.current.type == TOKEN_LTE) op = OP_LTE;
-        else op = OP_GTE;
+// المستوى 3: عمليات الجمع والطرح (+، -)
+Node* parse_additive() {
+    Node* left = parse_multiplicative();
+    if (!left) return NULL;
+
+    while (parser.current.type == TOKEN_PLUS || parser.current.type == TOKEN_MINUS) {
+        OpType op = (parser.current.type == TOKEN_PLUS) ? OP_ADD : OP_SUB;
         eat(parser.current.type);
-        Node* right = parse_additive();
+        Node* right = parse_multiplicative();
+        if (!right) return NULL;
+
+        // **Constant Folding Optimization**
+        if (left->type == NODE_INT && right->type == NODE_INT) {
+            int result = 0;
+            if (op == OP_ADD) {
+                result = left->data.integer.value + right->data.integer.value;
+            } else {
+                result = left->data.integer.value - right->data.integer.value;
+            }
+            left->data.integer.value = result;
+            free(right);
+            continue;
+        }
+
         Node* new_node = malloc(sizeof(Node));
         new_node->type = NODE_BIN_OP;
         new_node->data.bin_op.left = left;
@@ -290,13 +329,44 @@ Node* parse_relational() {
     return left;
 }
 
-// المستوى 5: عمليات التساوي (==، !=)
+// المستوى 4: عمليات المقارنة العلائقية
+Node* parse_relational() {
+    Node* left = parse_additive();
+    if (!left) return NULL;
+
+    while (parser.current.type == TOKEN_LT || parser.current.type == TOKEN_GT ||
+           parser.current.type == TOKEN_LTE || parser.current.type == TOKEN_GTE) {
+        OpType op;
+        if (parser.current.type == TOKEN_LT) op = OP_LT;
+        else if (parser.current.type == TOKEN_GT) op = OP_GT;
+        else if (parser.current.type == TOKEN_LTE) op = OP_LTE;
+        else op = OP_GTE;
+        eat(parser.current.type);
+        Node* right = parse_additive();
+        if (!right) return NULL;
+
+        Node* new_node = malloc(sizeof(Node));
+        new_node->type = NODE_BIN_OP;
+        new_node->data.bin_op.left = left;
+        new_node->data.bin_op.right = right;
+        new_node->data.bin_op.op = op;
+        new_node->next = NULL;
+        left = new_node;
+    }
+    return left;
+}
+
+// المستوى 5: عمليات التساوي
 Node* parse_equality() {
     Node* left = parse_relational();
+    if (!left) return NULL;
+
     while (parser.current.type == TOKEN_EQ || parser.current.type == TOKEN_NEQ) {
         OpType op = (parser.current.type == TOKEN_EQ) ? OP_EQ : OP_NEQ;
         eat(parser.current.type);
         Node* right = parse_relational();
+        if (!right) return NULL;
+
         Node* new_node = malloc(sizeof(Node));
         new_node->type = NODE_BIN_OP;
         new_node->data.bin_op.left = left;
@@ -311,9 +381,13 @@ Node* parse_equality() {
 // المستوى 6: العملية المنطقية "و" (&&)
 Node* parse_logical_and() {
     Node* left = parse_equality();
+    if (!left) return NULL;
+
     while (parser.current.type == TOKEN_AND) {
         eat(TOKEN_AND);
         Node* right = parse_equality();
+        if (!right) return NULL;
+
         Node* new_node = malloc(sizeof(Node));
         new_node->type = NODE_BIN_OP;
         new_node->data.bin_op.left = left;
@@ -328,9 +402,13 @@ Node* parse_logical_and() {
 // المستوى 7: العملية المنطقية "أو" (||)
 Node* parse_logical_or() {
     Node* left = parse_logical_and();
+    if (!left) return NULL;
+
     while (parser.current.type == TOKEN_OR) {
         eat(TOKEN_OR);
         Node* right = parse_logical_and();
+        if (!right) return NULL;
+
         Node* new_node = malloc(sizeof(Node));
         new_node->type = NODE_BIN_OP;
         new_node->data.bin_op.left = left;
@@ -351,9 +429,6 @@ Node* parse_expression() {
 
 // --- تحليل الجمل البرمجية (Statements) ---
 
-/**
- * @brief تحليل حالة واحدة داخل جملة الاختيار (switch case).
- */
 Node* parse_case() {
     Node* node = malloc(sizeof(Node));
     node->type = NODE_CASE;
@@ -366,14 +441,11 @@ Node* parse_case() {
         node->data.case_stmt.value = NULL;
     } else {
         eat(TOKEN_CASE);
-        // نتوقع قيمة ثابتة (رقم أو حرف)
-        // حالياً نستخدم parse_primary ولكن يجب التحقق في codegen أو semantic
         node->data.case_stmt.value = parse_primary();
         eat(TOKEN_COLON);
         node->data.case_stmt.is_default = false;
     }
 
-    // تحليل الجمل داخل الحالة حتى نصل إلى حالة أخرى أو نهاية الكتلة
     Node* head_stmt = NULL;
     Node* tail_stmt = NULL;
 
@@ -383,17 +455,18 @@ Node* parse_case() {
            parser.current.type != TOKEN_EOF) {
         
         Node* stmt = parse_statement();
-        if (head_stmt == NULL) { head_stmt = stmt; tail_stmt = stmt; }
-        else { tail_stmt->next = stmt; tail_stmt = stmt; }
+        if (stmt) {
+            if (head_stmt == NULL) { head_stmt = stmt; tail_stmt = stmt; }
+            else { tail_stmt->next = stmt; tail_stmt = stmt; }
+        } else {
+            synchronize(); // Panic recovery inside switch
+        }
     }
 
     node->data.case_stmt.body = head_stmt;
     return node;
 }
 
-/**
- * @brief تحليل جملة الاختيار (Switch).
- */
 Node* parse_switch() {
     eat(TOKEN_SWITCH);
     eat(TOKEN_LPAREN);
@@ -410,8 +483,8 @@ Node* parse_switch() {
             if (head_case == NULL) { head_case = case_node; tail_case = case_node; }
             else { tail_case->next = case_node; tail_case = case_node; }
         } else {
-            printf("Parser Error: Expected 'case' or 'default' inside switch\n");
-            exit(1);
+            error_report(parser.current, "Expected 'case' or 'default' inside switch.");
+            synchronize();
         }
     }
     eat(TOKEN_RBRACE);
@@ -423,17 +496,18 @@ Node* parse_switch() {
     return node;
 }
 
-/**
- * @brief تحليل كتلة من الكود { ... }.
- */
 Node* parse_block() {
     eat(TOKEN_LBRACE);
     Node* head = NULL;
     Node* tail = NULL;
     while (parser.current.type != TOKEN_RBRACE && parser.current.type != TOKEN_EOF) {
         Node* stmt = parse_statement();
-        if (head == NULL) { head = stmt; tail = stmt; } 
-        else { tail->next = stmt; tail = stmt; }
+        if (stmt) {
+            if (head == NULL) { head = stmt; tail = stmt; } 
+            else { tail->next = stmt; tail = stmt; }
+        } else {
+            synchronize();
+        }
     }
     eat(TOKEN_RBRACE);
     Node* block = malloc(sizeof(Node));
@@ -443,24 +517,18 @@ Node* parse_block() {
     return block;
 }
 
-/**
- * @brief تحليل جملة برمجية واحدة.
- */
 Node* parse_statement() {
+    if (parser.current.type == TOKEN_LBRACE) return parse_block();
+    
     Node* stmt = malloc(sizeof(Node));
     stmt->next = NULL;
 
-    // جملة الكتلة
-    if (parser.current.type == TOKEN_LBRACE) { free(stmt); return parse_block(); }
-    
-    // جملة الاختيار (اختر ...) - جديد
-    else if (parser.current.type == TOKEN_SWITCH) {
+    if (parser.current.type == TOKEN_SWITCH) {
         free(stmt);
         return parse_switch();
     }
 
-    // جملة الإرجاع (إرجع تعبير.)
-    else if (parser.current.type == TOKEN_RETURN) {
+    if (parser.current.type == TOKEN_RETURN) {
         eat(TOKEN_RETURN);
         stmt->type = NODE_RETURN;
         stmt->data.return_stmt.expression = parse_expression();
@@ -468,24 +536,21 @@ Node* parse_statement() {
         return stmt;
     } 
     
-    // جملة التوقف (توقف.)
-    else if (parser.current.type == TOKEN_BREAK) {
+    if (parser.current.type == TOKEN_BREAK) {
         eat(TOKEN_BREAK);
         eat(TOKEN_DOT);
         stmt->type = NODE_BREAK;
         return stmt;
     }
 
-    // جملة الاستمرار (استمر.)
-    else if (parser.current.type == TOKEN_CONTINUE) {
+    if (parser.current.type == TOKEN_CONTINUE) {
         eat(TOKEN_CONTINUE);
         eat(TOKEN_DOT);
         stmt->type = NODE_CONTINUE;
         return stmt;
     }
 
-    // جملة الطباعة (اطبع تعبير.)
-    else if (parser.current.type == TOKEN_PRINT) {
+    if (parser.current.type == TOKEN_PRINT) {
         eat(TOKEN_PRINT);
         stmt->type = NODE_PRINT;
         stmt->data.print_stmt.expression = parse_expression();
@@ -493,8 +558,7 @@ Node* parse_statement() {
         return stmt;
     }
     
-    // جملة الشرط (إذا (تعبير) ... وإلا ...)
-    else if (parser.current.type == TOKEN_IF) {
+    if (parser.current.type == TOKEN_IF) {
         eat(TOKEN_IF);
         eat(TOKEN_LPAREN);
         Node* cond = parse_expression();
@@ -504,8 +568,6 @@ Node* parse_statement() {
         Node* else_branch = NULL;
         if (parser.current.type == TOKEN_ELSE) {
             eat(TOKEN_ELSE);
-            // هذا يعالج "وإلا { ... }" وأيضاً "وإلا إذا ... "
-            // لأن "إذا" هي مجرد جملة أخرى يمكن أن تأتي بعد "وإلا"
             else_branch = parse_statement();
         }
 
@@ -516,8 +578,7 @@ Node* parse_statement() {
         return stmt;
     }
     
-    // جملة التكرار (طالما (تعبير) جملة)
-    else if (parser.current.type == TOKEN_WHILE) {
+    if (parser.current.type == TOKEN_WHILE) {
         eat(TOKEN_WHILE);
         eat(TOKEN_LPAREN);
         Node* cond = parse_expression();
@@ -528,15 +589,13 @@ Node* parse_statement() {
         stmt->data.while_stmt.body = body;
         return stmt;
     }
-    // جملة التكرار "لكل" (For Loop)
-    else if (parser.current.type == TOKEN_FOR) {
+
+    if (parser.current.type == TOKEN_FOR) {
         eat(TOKEN_FOR);
         eat(TOKEN_LPAREN);
 
-        // 1. التهيئة (Initialization)
         Node* init = NULL;
         if (is_type_keyword(parser.current.type)) {
-            // تعريف متغير داخل الحلقة (مثل: صحيح س = 0)
             DataType dt = token_to_datatype(parser.current.type);
             eat(parser.current.type);
             
@@ -553,7 +612,6 @@ Node* parse_statement() {
             init->data.var_decl.expression = expr;
             init->data.var_decl.is_global = false;
         } else {
-            // تعيين قيمة أو تعبير آخر
             if (parser.current.type == TOKEN_IDENTIFIER && parser.next.type == TOKEN_ASSIGN) {
                 char* name = strdup(parser.current.value);
                 eat(TOKEN_IDENTIFIER);
@@ -573,11 +631,9 @@ Node* parse_statement() {
             }
         }
 
-        // 2. الشرط (Condition)
         Node* cond = parse_expression();
         eat(TOKEN_SEMICOLON);
 
-        // 3. الزيادة (Increment)
         Node* incr = NULL;
         if (parser.current.type == TOKEN_IDENTIFIER && parser.next.type == TOKEN_ASSIGN) {
             char* name = strdup(parser.current.value);
@@ -590,7 +646,7 @@ Node* parse_statement() {
             incr->data.assign_stmt.name = name;
             incr->data.assign_stmt.expression = expr;
         } else {
-            incr = parse_expression(); // مثل س++
+            incr = parse_expression();
         }
         eat(TOKEN_RPAREN);
 
@@ -604,20 +660,22 @@ Node* parse_statement() {
         return stmt;
     }
     
-    // تعريف متغير محلي (صحيح س = 5. أو نص س = "...")
-    else if (is_type_keyword(parser.current.type)) {
+    if (is_type_keyword(parser.current.type)) {
         DataType dt = token_to_datatype(parser.current.type);
         eat(parser.current.type);
         char* name = strdup(parser.current.value);
         eat(TOKEN_IDENTIFIER);
 
-        // تعريف مصفوفة: صحيح س[5]. (للمتغيرات الصحيحة فقط حالياً)
         if (parser.current.type == TOKEN_LBRACKET) {
-            if (dt != TYPE_INT) { printf("Parser Error: Only int arrays are supported currently\n"); exit(1); }
+            if (dt != TYPE_INT) { error_report(parser.current, "Only int arrays are supported."); exit(1); }
             eat(TOKEN_LBRACKET);
-            if (parser.current.type != TOKEN_INT) { printf("Parser Error: Array size must be int\n"); exit(1); }
-            int size = atoi(parser.current.value);
-            eat(TOKEN_INT);
+            int size = 0;
+            if (parser.current.type == TOKEN_INT) {
+                size = atoi(parser.current.value);
+                eat(TOKEN_INT);
+            } else {
+                error_report(parser.current, "Array size must be integer.");
+            }
             eat(TOKEN_RBRACKET);
             eat(TOKEN_DOT);
 
@@ -628,21 +686,18 @@ Node* parse_statement() {
             return stmt;
         }
 
-        // تعريف متغير عادي
         eat(TOKEN_ASSIGN);
         Node* expr = parse_expression();
         eat(TOKEN_DOT);
         stmt->type = NODE_VAR_DECL;
         stmt->data.var_decl.name = name;
-        stmt->data.var_decl.type = dt; // تحديد نوع المتغير
+        stmt->data.var_decl.type = dt;
         stmt->data.var_decl.expression = expr;
         stmt->data.var_decl.is_global = false;
         return stmt;
     }
     
-    // جملة التعيين أو استدعاء الدالة
-    else if (parser.current.type == TOKEN_IDENTIFIER) {
-        // تعيين مصفوفة: س[0] = 5.
+    if (parser.current.type == TOKEN_IDENTIFIER) {
         if (parser.next.type == TOKEN_LBRACKET) {
             char* name = strdup(parser.current.value);
             eat(TOKEN_IDENTIFIER);
@@ -677,7 +732,6 @@ Node* parse_statement() {
                 return stmt;
             }
         }
-        // تعيين متغير: س = 5.
         else if (parser.next.type == TOKEN_ASSIGN) {
             char* name = strdup(parser.current.value);
             eat(TOKEN_IDENTIFIER);
@@ -689,7 +743,6 @@ Node* parse_statement() {
             stmt->data.assign_stmt.expression = expr;
             return stmt;
         } 
-        // استدعاء دالة: س().
         else if (parser.next.type == TOKEN_LPAREN) {
             Node* expr = parse_expression();
             eat(TOKEN_DOT);
@@ -699,7 +752,6 @@ Node* parse_statement() {
             free(expr);
             return stmt;
         }
-        // جملة تعبيرية (مثل س++.)
         else if (parser.next.type == TOKEN_INC || parser.next.type == TOKEN_DEC) {
             Node* expr = parse_expression();
             eat(TOKEN_DOT);
@@ -707,35 +759,45 @@ Node* parse_statement() {
             return expr;
         }
     }
-    printf("Parser Error: Unknown statement at line %d\n", parser.current.line);
-    exit(1);
+    
+    error_report(parser.current, "Unexpected token or statement.");
+    free(stmt);
+    return NULL;
 }
 
-/**
- * @brief تحليل التصريحات ذات المستوى الأعلى (دوال أو متغيرات عامة).
- */
 Node* parse_declaration() {
     if (is_type_keyword(parser.current.type)) {
         DataType dt = token_to_datatype(parser.current.type);
         eat(parser.current.type);
         
-        if (parser.current.type != TOKEN_IDENTIFIER) { printf("Parser Error: Expected Identifier\n"); exit(1); }
-        char* name = strdup(parser.current.value);
-        eat(TOKEN_IDENTIFIER);
+        char* name = NULL;
+        if (parser.current.type == TOKEN_IDENTIFIER) {
+            name = strdup(parser.current.value);
+            eat(TOKEN_IDENTIFIER);
+        } else {
+            error_report(parser.current, "Expected identifier after type.");
+            synchronize();
+            return NULL;
+        }
 
-        // إذا وجد قوس، فهو تعريف دالة
         if (parser.current.type == TOKEN_LPAREN) {
             eat(TOKEN_LPAREN);
             Node* head_param = NULL;
             Node* tail_param = NULL;
             if (parser.current.type != TOKEN_RPAREN) {
                 while (1) {
-                    if (!is_type_keyword(parser.current.type)) { printf("Parser Error: Expected type for param\n"); exit(1); }
+                    if (!is_type_keyword(parser.current.type)) { 
+                        error_report(parser.current, "Expected type for parameter."); 
+                    }
                     DataType param_dt = token_to_datatype(parser.current.type);
                     eat(parser.current.type);
                     
-                    char* pname = strdup(parser.current.value);
-                    eat(TOKEN_IDENTIFIER);
+                    char* pname = NULL;
+                    if (parser.current.type == TOKEN_IDENTIFIER) {
+                        pname = strdup(parser.current.value);
+                        eat(TOKEN_IDENTIFIER);
+                    }
+
                     Node* param = malloc(sizeof(Node));
                     param->type = NODE_VAR_DECL;
                     param->data.var_decl.name = pname;
@@ -745,6 +807,7 @@ Node* parse_declaration() {
                     param->next = NULL;
                     if (head_param == NULL) { head_param = param; tail_param = param; }
                     else { tail_param->next = param; tail_param = param; }
+                    
                     if (parser.current.type == TOKEN_COMMA) eat(TOKEN_COMMA);
                     else break;
                 }
@@ -760,7 +823,6 @@ Node* parse_declaration() {
             func->next = NULL;
             return func;
         }
-        // وإلا، فهو تعريف متغير عام
         else {
             Node* expr = NULL;
             if (parser.current.type == TOKEN_ASSIGN) { eat(TOKEN_ASSIGN); expr = parse_expression(); }
@@ -775,21 +837,27 @@ Node* parse_declaration() {
             return var;
         }
     }
-    printf("Parser Error: Unexpected token at Top Level\n");
-    exit(1);
+    
+    error_report(parser.current, "Expected declaration (function or global variable).");
+    synchronize();
+    return NULL;
 }
 
-/**
- * @brief تحليل نص المصدر بالكامل وبناء الشجرة.
- */
 Node* parse(Lexer* l) {
     init_parser(l);
+    
+    // تهيئة نظام الأخطاء بمؤشر المصدر للطباعة
+    error_init(l->src);
+
     Node* head = NULL;
     Node* tail = NULL;
     while (parser.current.type != TOKEN_EOF) {
         Node* decl = parse_declaration();
-        if (head == NULL) { head = decl; tail = decl; }
-        else { tail->next = decl; tail = decl; }
+        if (decl) {
+            if (head == NULL) { head = decl; tail = decl; }
+            else { tail->next = decl; tail = decl; }
+        }
+        // If decl is NULL, synchronize() was likely called inside parse_declaration
     }
     Node* program = malloc(sizeof(Node));
     program->type = NODE_PROGRAM;

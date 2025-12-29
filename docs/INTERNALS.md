@@ -1,6 +1,6 @@
 # Baa Compiler Internals
 
-> **Version:** 0.2.0 | [← Language Spec](LANGUAGE.md) | [API Reference →](API_REFERENCE.md)
+> **Version:** 0.2.2 | [← Language Spec](LANGUAGE.md) | [API Reference →](API_REFERENCE.md)
 
 **Target Architecture:** x86-64 (AMD64)  
 **Target OS:** Windows (MinGW-w64 Toolchain)  
@@ -61,13 +61,36 @@ The driver logic in `main.c` supports various compilation modes controlled by fl
 | `-S` | **Assembly Only** | `.s` | Stops after codegen. Preserves the assembly file. |
 | `-c` | **Compile Only** | `.o` | Stops after assembling. Does not link. |
 
----
+### 1.3. Diagnostic Engine
+
+The compiler uses a centralized **Error Reporting Module** (`src/error.c`) to handle compilation errors gracefully.
+
+**Features:**
+- **Source Context**: Prints the actual line of code where the error occurred.
+- **Pointers**: Uses `^` to point exactly to the offending token.
+- **Panic Mode Recovery**: When a syntax error is found, the parser does not exit immediately. Instead, it enters "Panic Mode":
+    1.  It reports the error.
+    2.  It skips tokens forward until it finds a **Synchronization Point**.
+    3.  **Synchronization Points**: Semicolon `.`, Right Brace `}`, or Keywords (`صحيح`, `إذا`, etc.).
+    4.  Parsing resumes to find subsequent errors.
 
 ## 2. Lexical Analysis
 
 The Lexer (`src/lexer.c`) transforms raw bytes into `Token` structures.
 
-### 2.1. Key Features
+### 2.1. Location Tracking
+
+The Lexer now tracks the **Column Number** in addition to the Line Number.
+
+```c
+typedef struct {
+    int line;
+    int col;
+    const char* filename;
+} Location;
+```
+
+### 2.2. Key Features
 
 | Feature | Description |
 |---------|-------------|
@@ -76,7 +99,7 @@ The Lexer (`src/lexer.c`) transforms raw bytes into `Token` structures.
 | **Arabic Numerals** | Normalizes `٠`-`٩` → `0`-`9` |
 | **Arabic Punctuation** | Handles `؛` (semicolon) `0xD8 0x9B` |
 
-### 2.2. Token Types
+### 2.3. Token Types
 
 ```
 Keywords:    صحيح, نص, إذا, وإلا, طالما, لكل, اختر, حالة, افتراضي, اطبع, إرجع, توقف, استمر
@@ -142,6 +165,24 @@ Unary        ::= ("!" | "-" | "++" | "--") Unary | Postfix
 Postfix      ::= Primary { "++" | "--" }
 Primary      ::= INT | STRING | CHAR | ID | ArrayAccess | Call | "(" Expr ")"
 ```
+
+---
+
+### 3.3. Error Handling Strategy
+
+The parser uses `synchronize()` to recover from errors.
+
+**Example Scenario:**
+```baa
+صحيح س = ١٠  // Error: Missing dot
+صحيح ص = ٢٠.
+```
+
+1.  Parser expects `.` but finds `صحيح`.
+2.  `report_error()` is called.
+3.  `synchronize()` is called. It skips until it sees `صحيح` (start of next statement).
+4.  Parser continues parsing `صحيح ص = ٢٠.`.
+5.  At the end, compiler exits with status 1 if any errors were found.
 
 ---
 

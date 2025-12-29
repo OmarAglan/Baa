@@ -9,7 +9,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ## [Unreleased]
 
 ### Planned
-- Diagnostic Engine (Better error reporting)
+- **Diagnostic Engine** — Pretty printing errors with source code context.
+- **Panic Recovery** — Compiler attempts to continue parsing after errors.
 
 ---
 

@@ -1,7 +1,7 @@
 /**
  * @file baa.h
  * @brief ملف الرأس الرئيسي الذي يعرف هياكل البيانات لمحوسب لغة "باء" (Baa Compiler).
- * @version 0.2.0 (The Driver)
+ * @version 0.2.2 (Diagnostic Engine)
  */
 
 #ifndef BAA_H
@@ -12,9 +12,10 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <string.h>
+#include <stdarg.h> // For variable arguments in error reporting
 
 // معلومات الإصدار
-#define BAA_VERSION "0.2.0"
+#define BAA_VERSION "0.2.2"
 #define BAA_BUILD_DATE __DATE__
 
 // ============================================================================
@@ -91,8 +92,10 @@ typedef enum {
  */
 typedef struct {
     TokenType type;     // نوع الوحدة
-    char* value;        // القيمة النصية (للأرقام والنصوص والمعرفات)
-    int line;           // رقم السطر في الكود المصدري
+    char* value;        // القيمة النصية
+    int line;           // رقم السطر
+    int col;            // رقم العمود (جديد)
+    const char* filename; // اسم الملف (جديد)
 } Token;
 
 /**
@@ -104,17 +107,45 @@ typedef struct {
     size_t pos;         // الموقع الحالي للمسح
     size_t len;         // طول نص المصدر
     int line;           // السطر الحالي
+    int col;            // العمود الحالي (جديد)
+    const char* filename; // اسم الملف الحالي (جديد)
 } Lexer;
 
 /**
  * @brief تهيئة المحلل اللفظي بنص المصدر.
  */
-void lexer_init(Lexer* lexer, const char* src);
+void lexer_init(Lexer* lexer, const char* src, const char* filename);
 
 /**
  * @brief استخراج الوحدة اللفظية (Token) التالية من المصدر.
  */
 Token lexer_next_token(Lexer* lexer);
+
+// ============================================================================
+// نظام الأخطاء (Error System) - جديد
+// ============================================================================
+
+/**
+ * @brief تهيئة نظام الأخطاء بمؤشر للكود المصدري (للطباعة).
+ */
+void error_init(const char* source);
+
+/**
+ * @brief الإبلاغ عن خطأ مع تحديد الموقع والرسالة.
+ * @param token الوحدة التي حدث عندها الخطأ (للحصول على السطر والعمود)
+ * @param message رسالة الخطأ (صيغة printf)
+ */
+void error_report(Token token, const char* message, ...);
+
+/**
+ * @brief التحقق مما إذا حدثت أخطاء أثناء الترجمة.
+ */
+bool error_has_occurred();
+
+/**
+ * @brief إعادة تعيين حالة الأخطاء (اختياري).
+ */
+void error_reset();
 
 // ============================================================================
 // تعريفات المحلل القواعدي وشجرة الإعراب (Parser & AST)
@@ -303,7 +334,9 @@ typedef struct Node {
 typedef struct {
     Lexer* lexer;
     Token current;
-    Token next;     
+    Token next;
+    bool panic_mode; // وضع الذعر للتعافي من الأخطاء (جديد)
+    bool had_error;  // هل حدث خطأ أثناء التحليل؟
 } Parser;
 
 /**

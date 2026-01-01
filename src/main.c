@@ -1,8 +1,7 @@
 /**
  * @file main.c
  * @brief نقطة الدخول ومحرك سطر الأوامر (CLI Driver).
- * يقوم بإدارة عملية الترجمة من التحليل إلى التجميع والربط.
- * @version 0.2.2 (Diagnostic Engine Integration)
+ * @version 0.2.3 (Updater Integration)
  */
 
 #include "baa.h"
@@ -67,6 +66,7 @@ char* change_extension(const char* filename, const char* new_ext) {
 void print_help() {
     printf("Baa Compiler (baa) - The Arabic Programming Language\n");
     printf("Usage: baa [options] file...\n");
+    printf("       baa update\n");
     printf("Options:\n");
     printf("  -o <file>    Place the output into <file>\n");
     printf("  -S           Compile only; do not assemble or link (generates .s)\n");
@@ -98,6 +98,13 @@ int main(int argc, char** argv) {
         return 1;
     }
 
+    // 1. التحقق من أمر التحديث (Update Command)
+    if (strcmp(argv[1], "update") == 0) {
+        run_updater();
+        return 0;
+    }
+
+    // 2. تحليل المعاملات (Argument Parsing)
     for (int i = 1; i < argc; i++) {
         char* arg = argv[i];
         if (arg[0] == '-') {

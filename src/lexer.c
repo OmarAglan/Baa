@@ -271,7 +271,7 @@ Token lexer_next_token(Lexer* l) {
 /**
  * @brief تحويل نوع الوحدة إلى نص مقروء (لأغراض التنقيح ورسائل الخطأ).
  */
-const char* token_type_to_str(TokenType type) {
+const char* token_type_to_str(BaaTokenType type) {
     switch (type) {
         case TOKEN_EOF: return "EOF";
         case TOKEN_INT: return "INTEGER";

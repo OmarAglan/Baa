@@ -1,7 +1,7 @@
 /**
  * @file baa.h
  * @brief ملف الرأس الرئيسي الذي يعرف هياكل البيانات لمحوسب لغة "باء" (Baa Compiler).
- * @version 0.2.2 (Diagnostic Engine)
+ * @version 0.2.3 (Distribution & Updater)
  */
 
 #ifndef BAA_H
@@ -12,10 +12,10 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <string.h>
-#include <stdarg.h> // For variable arguments in error reporting
+#include <stdarg.h>
 
 // معلومات الإصدار
-#define BAA_VERSION "0.2.2"
+#define BAA_VERSION "0.2.3"
 #define BAA_BUILD_DATE __DATE__
 
 // ============================================================================
@@ -23,7 +23,7 @@
 // ============================================================================
 
 /**
- * @enum TokenType
+ * @enum BaaTokenType
  * @brief تصنيف الوحدات الذرية (Atomic Units) للكود المصدري.
  */
 typedef enum {
@@ -84,18 +84,18 @@ typedef enum {
     TOKEN_RBRACKET,     // ]
     
     TOKEN_INVALID       // وحدة غير صالحة
-} TokenType;
+} BaaTokenType;
 
 /**
  * @struct Token
  * @brief يمثل وحدة لفظية واحدة مستخرجة من المصدر.
  */
 typedef struct {
-    TokenType type;     // نوع الوحدة
+    BaaTokenType type;     // نوع الوحدة
     char* value;        // القيمة النصية
     int line;           // رقم السطر
-    int col;            // رقم العمود (جديد)
-    const char* filename; // اسم الملف (جديد)
+    int col;            // رقم العمود
+    const char* filename; // اسم الملف
 } Token;
 
 /**
@@ -107,8 +107,8 @@ typedef struct {
     size_t pos;         // الموقع الحالي للمسح
     size_t len;         // طول نص المصدر
     int line;           // السطر الحالي
-    int col;            // العمود الحالي (جديد)
-    const char* filename; // اسم الملف الحالي (جديد)
+    int col;            // العمود الحالي
+    const char* filename; // اسم الملف الحالي
 } Lexer;
 
 /**
@@ -122,12 +122,12 @@ void lexer_init(Lexer* lexer, const char* src, const char* filename);
 Token lexer_next_token(Lexer* lexer);
 
 /**
- * @brief تحويل نوع الوحدة إلى نص مقروء (لأغراض التنقيح).
+ * @brief تحويل نوع الوحدة إلى نص مقروء.
  */
-const char* token_type_to_str(TokenType type);
+const char* token_type_to_str(BaaTokenType type);
 
 // ============================================================================
-// نظام الأخطاء (Error System) - جديد
+// نظام الأخطاء (Diagnostic Engine)
 // ============================================================================
 
 /**
@@ -151,6 +151,15 @@ bool error_has_occurred();
  * @brief إعادة تعيين حالة الأخطاء (اختياري).
  */
 void error_reset();
+
+// ============================================================================
+// نظام التحديث (Updater)
+// ============================================================================
+
+/**
+ * @brief التحقق من وجود تحديثات وتنزيلها.
+ */
+void run_updater(void);
 
 // ============================================================================
 // تعريفات المحلل القواعدي وشجرة الإعراب (Parser & AST)
@@ -340,7 +349,7 @@ typedef struct {
     Lexer* lexer;
     Token current;
     Token next;
-    bool panic_mode; // وضع الذعر للتعافي من الأخطاء (جديد)
+    bool panic_mode; // وضع الذعر للتعافي من الأخطاء
     bool had_error;  // هل حدث خطأ أثناء التحليل؟
 } Parser;
 

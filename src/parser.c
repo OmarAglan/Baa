@@ -40,7 +40,7 @@ void init_parser(Lexer* l) {
 /**
  * @brief التأكد من أن الوحدة الحالية من نوع معين واستهلاكها، وإلا يتم إظهار خطأ.
  */
-void eat(TokenType type) {
+void eat(BaaTokenType type) {
     if (parser.current.type == type) {
         advance();
         return;
@@ -61,14 +61,14 @@ void eat(TokenType type) {
 /**
  * @brief التحقق مما إذا كانت الوحدة الحالية تمثل نوع بيانات (صحيح أو نص).
  */
-bool is_type_keyword(TokenType type) {
+bool is_type_keyword(BaaTokenType type) {
     return (type == TOKEN_KEYWORD_INT || type == TOKEN_KEYWORD_STRING);
 }
 
 /**
  * @brief تحويل وحدة النوع إلى قيمة DataType.
  */
-DataType token_to_datatype(TokenType type) {
+DataType token_to_datatype(BaaTokenType type) {
     if (type == TOKEN_KEYWORD_STRING) return TYPE_STRING;
     return TYPE_INT;
 }

@@ -25,7 +25,11 @@
 - [x] **Pretty Printing** — Display errors with context (`^` pointers).
 - [x] **Panic Recovery** — Continue parsing after errors.
 
-### v0.2.3: The Semantic Pass (Type Checker) 🧠
+### v0.2.3: Distribution & Updater 📦
+- [ ] **Windows Installer** — Create `setup.exe` using Inno Setup to install Baa and add it to `PATH`.
+- [ ] **Self-Updater** — Implement `baa update` command to download the latest release from GitHub.
+
+### v0.2.4: The Semantic Pass (Type Checker) 🧠
 - [ ] **Pass Separation** — Completely separate Parsing from Code Generation.
     - `parse()` returns a raw AST.
     - `analyze()` walks the AST to check types and resolve symbols.
@@ -34,7 +38,7 @@
 - [ ] **Type Checking** — Validate assignments (`int = string` should fail here, not in ASM).
 - [ ] **Symbol Resolution** — Check for undefined variables before code generation starts.
 
-### v0.2.4: Multi-File Compilation (The Linker) 🔗
+### v0.2.5: Multi-File Compilation (The Linker) 🔗
 - [ ] **Import System** — Add `استورد "file.b"` syntax.
 - [ ] **File Resolution** — Locate files relative to the current source or standard path.
 - [ ] **Header Generation** — internal mechanism to expose public symbols.

@@ -85,11 +85,13 @@ The Baa compiler `baa.exe` is now a robust command-line tool.
 | Flag | Description | Example |
 |------|-------------|---------|
 | `<input.b>` | Source file to compile. Multiple files can be provided (future: requires import system). | `.\baa.exe main.b` |
+| `update` | **Self Update.** Checks the server for the latest version and updates Baa. | `.\baa.exe update` |
 | `-o <file>` | Specify the output filename (e.g., `myapp.exe`, `mylib.o`, `output.s`). | `.\baa.exe -o myprog.exe hello.b` |
 | `-S` | **Compile only to Assembly.** Produces `.s` file, does not invoke assembler/linker. | `.\baa.exe -S hello.b` (creates `hello.s`) |
 | `-c` | **Compile and Assemble.** Produces object file (`.o`), does not link. (Future: for multi-file linking). | `.\baa.exe -c hello.b` (creates `hello.o`) |
 | `--help`, `-h` | Display help message and usage. | `.\baa.exe --help` |
 | `--version` | Display compiler version. | `.\baa.exe --version` |
+
 
 ### Compilation Workflow (`-o`, `-S`, `-c`)
 

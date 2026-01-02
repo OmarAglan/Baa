@@ -6,8 +6,8 @@ IDI_ICON1 ICON "../resources/icon.ico"
 
 // 2. Version Information
 VS_VERSION_INFO VERSIONINFO
-FILEVERSION     0,2,0,0
-PRODUCTVERSION  0,2,0,0
+FILEVERSION     0,2,3,0
+PRODUCTVERSION  0,2,3,0
 FILEFLAGSMASK   0x3fL
 #ifdef _DEBUG
 FILEFLAGS       0x1L
@@ -20,16 +20,16 @@ FILESUBTYPE     VFT2_UNKNOWN
 BEGIN
     BLOCK "StringFileInfo"
     BEGIN
-        BLOCK "040904b0" // Language: US English, Charset: Unicode
+        BLOCK "040904b0"
         BEGIN
             VALUE "CompanyName",      "Baa Language Team"
             VALUE "FileDescription",  "Baa Compiler (باء)"
-            VALUE "FileVersion",      "0.2.0"
+            VALUE "FileVersion",      "0.2.3"
             VALUE "InternalName",     "baa"
             VALUE "LegalCopyright",   "Copyright (C) 2025"
             VALUE "OriginalFilename", "baa.exe"
             VALUE "ProductName",      "Baa Programming Language"
-            VALUE "ProductVersion",   "0.2.0"
+            VALUE "ProductVersion",   "0.2.3"
         END
     END
     BLOCK "VarFileInfo"

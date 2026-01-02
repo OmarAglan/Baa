@@ -9,8 +9,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ## [Unreleased]
 
 ### Planned
-- **Diagnostic Engine** — Pretty printing errors with source code context.
-- **Panic Recovery** — Compiler attempts to continue parsing after errors.
+- Semantic Analysis Pass (Type Checker)
+
+---
+
+## [0.2.3] - 2025-12-29
+
+### Added
+- **Windows Installer** — Created a professional `setup.exe` using Inno Setup. It installs the compiler, documentation, and creates Start Menu shortcuts.
+- **PATH Integration** — The installer automatically adds Baa to the system `PATH` environment variable, allowing `baa` to be run from any console.
+- **Auto Updater** — Added `baa update` command. It checks a remote server for new versions and downloads/installs updates automatically.
+- **Update Logic** — Implemented `src/updater.c` using native Windows APIs (`UrlMon`, `WinINet`) to handle downloads without external dependencies like curl.
 
 ---
 

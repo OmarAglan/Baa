@@ -13,8 +13,8 @@
 // ⚠️ TODO: Change these URLs to your GitHub Pages path
 // Example: "https://username.github.io/baa/version.txt"
 // ---------------------------------------------------------
-#define UPDATE_URL_VERSION "https://example.com/baa/version.txt"
-#define UPDATE_URL_SETUP   "https://example.com/baa/baa_setup.exe"
+#define UPDATE_URL_VERSION "https://omardev.engineer/baaInstaller/version.txt"
+#define UPDATE_URL_SETUP   "https://omardev.engineer/baaInstaller/baa_setup.exe"
 
 // ربط مكتبة urlmon و wininet
 #pragma comment(lib, "urlmon.lib")

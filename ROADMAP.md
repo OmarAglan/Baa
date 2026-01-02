@@ -26,8 +26,9 @@
 - [x] **Panic Recovery** — Continue parsing after errors.
 
 ### v0.2.3: Distribution & Updater 📦
-- [ ] **Windows Installer** — Create `setup.exe` using Inno Setup to install Baa and add it to `PATH`.
-- [ ] **Self-Updater** — Implement `baa update` command to download the latest release from GitHub.
+- [x] **Windows Installer** — Create `setup.exe` using Inno Setup.
+- [x] **PATH Integration** — Add compiler to system environment variables.
+- [x] **Self-Updater** — Implement `baa update` command.
 
 ### v0.2.4: The Semantic Pass (Type Checker) 🧠
 - [ ] **Pass Separation** — Completely separate Parsing from Code Generation.

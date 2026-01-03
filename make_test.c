@@ -3,7 +3,7 @@
 void w(FILE* f, const unsigned char* b, size_t s) { fwrite(b, 1, s, f); }
 
 int main() {
-    FILE* f = fopen("test.b", "wb");
+    FILE* f = fopen("test.baa", "wb");
     if (!f) return 1;
 
     // --- Keywords ---
@@ -67,6 +67,6 @@ int main() {
     w(f, rb, sizeof(rb)); // } Main
 
     fclose(f);
-    printf("Generated test.b with Constant Folding Optimization.\n");
+    printf("Generated test.baa with Constant Folding Optimization.\n");
     return 0;
 }

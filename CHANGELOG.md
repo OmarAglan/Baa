@@ -6,12 +6,27 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ---
 
+## [0.2.4] - 2026-01-03
+
+### Added
+- **Semantic Analyzer** — New compilation pass (`analysis.c`) that validates symbols and types before code generation.
+- **Pass Separation** — The compiler now has distinct phases: Parse → Analyze → Codegen.
+- **Symbol Table Sharing** — `Symbol` struct moved to `baa.h` for use by both analyzer and codegen.
+- **Scope Stack** — Proper handling of nested blocks and variable shadowing with `enter_scope`/`exit_scope`.
+- **Type Checking** — Validates type compatibility in assignments (e.g., cannot assign string to int).
+
+### Changed
+- **File Extension** — Standard source file extension changed from `.b` to `.baa`.
+- **Reserved Extension** — `.baahd` reserved for future header files (Baa Header).
+- **Help Message** — Updated to show `.baa` extension and document both extensions.
+- **Documentation** — All docs updated to use `.baa` extension.
+
+---
+
 ## [Unreleased]
 
 ### Planned
-- Semantic Analysis Pass (Type Checker)
-
----
+- Multi-file compilation with import system
 
 ## [0.2.3] - 2025-12-29
 

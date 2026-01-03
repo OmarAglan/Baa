@@ -1,6 +1,6 @@
 # Baa Language Specification
 
-> **Version:** 0.1.3 | [← User Guide](USER_GUIDE.md) | [Compiler Internals →](INTERNALS.md)
+> **Version:** 0.2.4 | [← User Guide](USER_GUIDE.md) | [Compiler Internals →](INTERNALS.md)
 
 Baa (باء) is a compiled systems programming language using Arabic syntax. It compiles directly to native machine code via Assembly/GCC on Windows.
 
@@ -24,7 +24,7 @@ A Baa program is a collection of **Global Variables** and **Functions**.
 
 | Aspect | Description |
 |--------|-------------|
-| **File Format** | UTF-8 encoded, `.b` extension |
+| **File Format** | UTF-8 encoded, `.baa` extension (`.baahd` for headers) |
 | **Entry Point** | `الرئيسية` (Main) function |
 | **Statements** | End with period (`.`) |
 | **Comments** | Single-line with `//` |

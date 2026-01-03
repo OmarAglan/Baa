@@ -1,30 +1,18 @@
 /**
  * @file codegen.c
  * @brief يقوم بتوليد كود التجميع (Assembly) للتركيب المعماري x86_64 مع دعم العمليات الحسابية والمنطقية والمصفوفات وحلقات التكرار والمتغيرات النصية والتحكم في الحلقات والشروط الممتدة وجمل الاختيار.
- * @version 0.1.3 (Switch Statement)
+ * @version 0.2.4 (Semantic Analysis & Extension Migration)
  */
 
 #include "baa.h"
 #include <string.h>
 
-// --- نظام جدول الرموز (Symbol Table) ---
+// ============================================================================
+// متغيرات مولد الكود (Codegen State)
+// ============================================================================
 
-typedef enum { SCOPE_GLOBAL, SCOPE_LOCAL } ScopeType;
+// جدول الرموز موجود في analysis.c ومعرف في baa.h كـ extern
 
-/**
- * @struct Symbol
- * @brief يمثل رمزاً (متغيراً) في جدول الرموز.
- */
-typedef struct { 
-    char name[32];     // اسم الرمز
-    ScopeType scope;   // النطاق (عام أو محلي)
-    DataType type;     // نوع البيانات (صحيح أو نص)
-    int offset;        // الإزاحة من مؤشر القاعدة (RBP) للمتغيرات المحلية
-} Symbol;
-
-Symbol global_symbols[100]; int global_count = 0;
-Symbol local_symbols[100]; int local_count = 0; 
-int current_stack_offset = 0; // يتتبع موقع الـ RSP بالنسبة للـ RBP
 int label_counter = 0;        // لإنشاء تسميات فريدة للجمل الشرطية وحلقات التكرار
 
 // --- مكدس ملصقات الحلقات (Loop Label Stack) ---
@@ -68,51 +56,6 @@ int get_current_continue_label() {
 int get_current_break_label() {
     if (loop_depth == 0) { printf("Codegen Error: 'break' outside of loop or switch\n"); exit(1); }
     return loop_break_stack[loop_depth - 1];
-}
-
-/**
- * @brief إضافة متغير عام لجدول الرموز.
- */
-void add_global(const char* name, DataType type) {
-    strcpy(global_symbols[global_count].name, name);
-    global_symbols[global_count].scope = SCOPE_GLOBAL;
-    global_symbols[global_count].type = type;
-    global_symbols[global_count].offset = 0;
-    global_count++;
-}
-
-/**
- * @brief تهيئة نطاق الوظيفة (تصفير المتغيرات المحلية).
- */
-void enter_function_scope() { local_count = 0; current_stack_offset = 0; }
-
-/**
- * @brief إضافة متغير محلي.
- * @param size عدد وحدات 64-بت المطلوبة (1 للأعداد الصحيحة، N للمصفوفات).
- */
-void add_local(const char* name, int size, DataType type) {
-    // 1. تحديد موقع الرمز (بداية الكتلة المحجوزة)
-    int symbol_offset = current_stack_offset - 8;
-    
-    // 2. تحديث مؤشر المكدس لحجز المساحة كاملة (المكدس ينمو للأسفل)
-    current_stack_offset -= (size * 8);
-    
-    strcpy(local_symbols[local_count].name, name);
-    local_symbols[local_count].scope = SCOPE_LOCAL;
-    local_symbols[local_count].type = type;
-    local_symbols[local_count].offset = symbol_offset;
-    local_count++;
-}
-
-/**
- * @brief البحث عن رمز بالاسم في النطاق المحلي ثم العام.
- */
-Symbol* lookup_symbol(const char* name) {
-    // التحقق من المتغيرات المحلية أولاً (Shadowing)
-    for (int i = 0; i < local_count; i++) if (strcmp(local_symbols[i].name, name) == 0) return &local_symbols[i];
-    // التحقق من المتغيرات العامة
-    for (int i = 0; i < global_count; i++) if (strcmp(global_symbols[i].name, name) == 0) return &global_symbols[i];
-    printf("Codegen Error: Undefined symbol '%s'\n", name); exit(1);
 }
 
 // --- جدول النصوص (String Table) ---

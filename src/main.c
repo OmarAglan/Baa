@@ -1,7 +1,7 @@
 /**
  * @file main.c
  * @brief نقطة الدخول ومحرك سطر الأوامر (CLI Driver).
- * @version 0.2.3 (Updater Integration)
+ * @version 0.2.4 (Semantic Analysis & Extension Migration)
  */
 
 #include "baa.h"
@@ -11,7 +11,7 @@
 // ============================================================================
 
 typedef struct {
-    char* input_file;       // ملف المصدر (.b)
+    char* input_file;       // ملف المصدر (.baa)
     char* output_file;      // ملف الخرج (.exe, .o, .s)
     bool assembly_only;     // -S: إنتاج كود تجميع فقط
     bool compile_only;      // -c: تجميع إلى كائن فقط (بدون ربط)
@@ -46,7 +46,7 @@ char* read_file(const char* path) {
 }
 
 /**
- * @brief تغيير امتداد الملف (مثلاً من .b إلى .s).
+ * @brief تغيير امتداد الملف (مثلاً من .baa إلى .s).
  */
 char* change_extension(const char* filename, const char* new_ext) {
     char* dot = strrchr(filename, '.');
@@ -65,7 +65,7 @@ char* change_extension(const char* filename, const char* new_ext) {
  */
 void print_help() {
     printf("Baa Compiler (baa) - The Arabic Programming Language\n");
-    printf("Usage: baa [options] file...\n");
+    printf("Usage: baa [options] file.baa\n");
     printf("       baa update\n");
     printf("Options:\n");
     printf("  -o <file>    Place the output into <file>\n");
@@ -74,6 +74,9 @@ void print_help() {
     printf("  -v           Verbose mode\n");
     printf("  --version    Display version information\n");
     printf("  --help       Display this information\n");
+    printf("\nFile Extensions:\n");
+    printf("  .baa         Baa source file\n");
+    printf("  .baahd       Baa header file (reserved for future use)\n");
 }
 
 /**
@@ -165,7 +168,18 @@ int main(int argc, char** argv) {
     
     if (config.verbose) printf("[INFO] AST generated successfully.\n");
 
-    // --- المرحلة 2: الواجهة الخلفية (Backend - Codegen) ---
+    // --- المرحلة 2: التحليل الدلالي (Semantic Analysis) ---
+    if (config.verbose) printf("[INFO] Running semantic analysis...\n");
+    
+    if (!analyze(ast)) {
+        fprintf(stderr, "Aborting due to semantic errors.\n");
+        free(source);
+        return 1;
+    }
+    
+    if (config.verbose) printf("[INFO] Semantic analysis passed.\n");
+
+    // --- المرحلة 3: الواجهة الخلفية (Backend - Codegen) ---
     // نولد دائماً ملف تجميع مؤقت أو نهائي
     char* asm_file = config.assembly_only ? config.output_file : "temp.s";
     

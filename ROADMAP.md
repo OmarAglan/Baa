@@ -31,19 +31,20 @@
 - [x] **Self-Updater** — Implement `baa update` command.
 
 ### v0.2.4: The Semantic Pass (Type Checker) 🧠
-- [ ] **Pass Separation** — Completely separate Parsing from Code Generation.
+- [x] **File Extension Migration** — Changed from `.b` to `.baa`. Reserved `.baahd` for headers.
+- [x] **Pass Separation** — Completely separate Parsing from Code Generation.
     - `parse()` returns a raw AST.
     - `analyze()` walks the AST to check types and resolve symbols.
     - `codegen()` takes a validated AST.
-- [ ] **Scope Analysis** — Implement a tree-based symbol table (not just global/local lists) to handle nested blocks correctly.
-- [ ] **Type Checking** — Validate assignments (`int = string` should fail here, not in ASM).
-- [ ] **Symbol Resolution** — Check for undefined variables before code generation starts.
+- [x] **Symbol Resolution** — Check for undefined variables before code generation starts.
+- [x] **Scope Analysis** — Implemented scope stack to properly handle nested blocks and variable shadowing.
+- [x] **Type Checking** — Validate assignments (int = string now fails during semantic analysis).
 
 ### v0.2.5: Multi-File Compilation (The Linker) 🔗
-- [ ] **Import System** — Add `استورد "file.b"` syntax.
+- [ ] **Import System** — Add `استورد "file.baa"` syntax.
 - [ ] **File Resolution** — Locate files relative to the current source or standard path.
 - [ ] **Header Generation** — internal mechanism to expose public symbols.
-- [ ] **Driver Update** — Update CLI to accept multiple input files (`baa main.b lib.b`).
+- [ ] **Driver Update** — Update CLI to accept multiple input files (`baa main.baa lib.baa`).
 
 ---
 

@@ -2,7 +2,7 @@
 
 <div align="center">
 
-![Version](https://img.shields.io/badge/version-0.1.3-blue.svg)
+![Version](https://img.shields.io/badge/version-0.2.4-blue.svg)
 ![Platform](https://img.shields.io/badge/platform-Windows-lightgrey.svg)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
 
@@ -44,7 +44,7 @@ cmake --build .
 
 ### 2. Write Your First Program
 
-Create `hello.b` (save as **UTF-8**):
+Create `hello.baa` (save as **UTF-8**):
 
 ```baa
 صحيح الرئيسية() {
@@ -56,7 +56,7 @@ Create `hello.b` (save as **UTF-8**):
 ### 3. Compile & Run
 
 ```powershell
-.\baa.exe ..\hello.b
+.\baa.exe ..\hello.baa
 .\out.exe
 ```
 
@@ -130,6 +130,6 @@ cmake --build .
 
 ```powershell
 # From the build directory
-.\baa.exe ..\test.b
+.\baa.exe ..\test_suite.baa
 .\out.exe
 ```

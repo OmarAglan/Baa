@@ -1,7 +1,7 @@
 /**
  * @file baa.h
  * @brief ملف الرأس الرئيسي الذي يعرف هياكل البيانات لمحوسب لغة "باء" (Baa Compiler).
- * @version 0.2.3 (Distribution & Updater)
+ * @version 0.2.4 (Semantic Analysis & Extension Migration)
  */
 
 #ifndef BAA_H
@@ -15,7 +15,7 @@
 #include <stdarg.h>
 
 // معلومات الإصدار
-#define BAA_VERSION "0.2.3"
+#define BAA_VERSION "0.2.4"
 #define BAA_BUILD_DATE __DATE__
 
 // ============================================================================
@@ -357,6 +357,65 @@ typedef struct {
  * @brief بدء عملية التحليل القواعدي وبناء الشجرة (AST).
  */
 Node* parse(Lexer* lexer);
+
+// ============================================================================
+// نظام جدول الرموز (Symbol Table) - مشترك بين التحليل الدلالي ومولد الكود
+// ============================================================================
+
+/**
+ * @enum ScopeType
+ * @brief نطاق الرمز (عام أو محلي).
+ */
+typedef enum { SCOPE_GLOBAL, SCOPE_LOCAL } ScopeType;
+
+/**
+ * @struct Symbol
+ * @brief يمثل رمزاً (متغيراً) في جدول الرموز.
+ */
+typedef struct { 
+    char name[32];     // اسم الرمز
+    ScopeType scope;   // النطاق (عام أو محلي)
+    DataType type;     // نوع البيانات (صحيح أو نص)
+    int offset;        // الإزاحة من مؤشر القاعدة (RBP) للمتغيرات المحلية
+} Symbol;
+
+// جدول الرموز العام والمحلي (مشترك بين المراحل)
+extern Symbol global_symbols[100];
+extern int global_count;
+extern Symbol local_symbols[100];
+extern int local_count;
+extern int current_stack_offset;
+
+// ============================================================================
+// تعريفات المحلل الدلالي (Semantic Analysis)
+// ============================================================================
+
+/**
+ * @brief تحليل الشجرة (AST) للتحقق من الرموز والأنواع قبل توليد الكود.
+ * @return true إذا نجح التحليل، false إذا وجدت أخطاء.
+ */
+bool analyze(Node* ast);
+
+/**
+ * @brief إضافة متغير عام لجدول الرموز.
+ */
+void add_global(const char* name, DataType type);
+
+/**
+ * @brief تهيئة نطاق الوظيفة (تصفير المتغيرات المحلية).
+ */
+void enter_function_scope(void);
+
+/**
+ * @brief إضافة متغير محلي.
+ * @param size عدد وحدات 64-بت المطلوبة (1 للأعداد الصحيحة، N للمصفوفات).
+ */
+void add_local(const char* name, int size, DataType type);
+
+/**
+ * @brief البحث عن رمز بالاسم في النطاق المحلي ثم العام.
+ */
+Symbol* lookup_symbol(const char* name);
 
 // ============================================================================
 // تعريفات مولد الكود (Codegen)

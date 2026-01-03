@@ -1,6 +1,6 @@
 # Baa Compiler Internals
 
-> **Version:** 0.2.2 | [← Language Spec](LANGUAGE.md) | [API Reference →](API_REFERENCE.md)
+> **Version:** 0.2.4 | [← Language Spec](LANGUAGE.md) | [API Reference →](API_REFERENCE.md)
 
 **Target Architecture:** x86-64 (AMD64)  
 **Target OS:** Windows (MinGW-w64 Toolchain)  
@@ -31,10 +31,10 @@ The compiler is orchestrated by the **Driver** (`src/main.c`), which acts as the
 
 ```mermaid
 flowchart LR
-    A[".b Source"] --> B["Lexer"]
+    A[".baa Source"] --> B["Lexer"]
     B -->|Tokens| C["Parser"]
-    C -->|AST| D["Semantic Check"]
-    D -->|Symbol Tables| E["Code Generator"]
+    C -->|AST| D["Semantic Analyzer"]
+    D -->|Validated AST| E["Code Generator"]
     E --> F[".s Assembly"]
     F -->|GCC -c| G[".o Object"]
     G -->|GCC -o| H[".exe Executable"]
@@ -45,10 +45,12 @@ flowchart LR
 
 | Stage | Input | Output | Component | Description |
 |-------|-------|--------|-----------|-------------|
-| **1. Frontend** | `.b` Source | AST | `lexer.c`, `parser.c` | Tokenizes and builds the syntax tree. Optimizations like Constant Folding happen here. |
-| **2. Backend** | AST | `.s` Assembly | `codegen.c` | Generates x86-64 assembly code (AT&T syntax). |
-| **3. Assemble** | `.s` Assembly | `.o` Object | `gcc -c` | Invokes external assembler (GAS via GCC) to create machine code. |
-| **4. Link** | `.o` Object | `.exe` Executable | `gcc` | Links with C Runtime (CRT) to produce final binary. |
+| **1. Lexer** | `.baa` Source | Tokens | `lexer.c` | Tokenizes UTF-8 source into atomic units. |
+| **2. Parser** | Tokens | AST | `parser.c` | Builds abstract syntax tree. Constant folding happens here. |
+| **3. Analyzer** | AST | Validated AST | `analysis.c` | Validates symbols and types. Populates symbol table. |
+| **4. Codegen** | Validated AST | `.s` Assembly | `codegen.c` | Generates x86-64 assembly code (AT&T syntax). |
+| **5. Assemble** | `.s` Assembly | `.o` Object | `gcc -c` | Invokes external assembler (GAS via GCC). |
+| **6. Link** | `.o` Object | `.exe` Executable | `gcc` | Links with C Runtime (CRT). |
 
 ### 1.2. The Driver (CLI)
 

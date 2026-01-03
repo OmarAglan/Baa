@@ -31,19 +31,42 @@
 - [x] **Self-Updater** — Implement `baa update` command.
 
 ### v0.2.4: The Semantic Pass (Type Checker) 🧠
-- [ ] **Pass Separation** — Completely separate Parsing from Code Generation.
+- [] **File Extension Migration** — Change `.b` to `.baa`. Reserved `.baahd` for headers.
+- [] **Pass Separation** — Completely separate Parsing from Code Generation.
     - `parse()` returns a raw AST.
     - `analyze()` walks the AST to check types and resolve symbols.
     - `codegen()` takes a validated AST.
-- [ ] **Scope Analysis** — Implement a tree-based symbol table (not just global/local lists) to handle nested blocks correctly.
-- [ ] **Type Checking** — Validate assignments (`int = string` should fail here, not in ASM).
-- [ ] **Symbol Resolution** — Check for undefined variables before code generation starts.
+- [] **Symbol Resolution** — Check for undefined variables before code generation starts.
+- [] **Scope Analysis** — Implement scope stack to properly handle nested blocks and variable shadowing.
+- [] **Type Checking** — Validate assignments (int = string now fails during semantic analysis).
 
-### v0.2.5: Multi-File Compilation (The Linker) 🔗
-- [ ] **Import System** — Add `استورد "file.b"` syntax.
-- [ ] **File Resolution** — Locate files relative to the current source or standard path.
-- [ ] **Header Generation** — internal mechanism to expose public symbols.
-- [ ] **Driver Update** — Update CLI to accept multiple input files (`baa main.b lib.b`).
+### v0.2.5: Multi-File & Include System 🔗
+- [ ] **Include Directive** — `#تضمين "file.baahd"` (C-style `#include`).
+- [ ] **Header Files** — `.baahd` extension for declarations (function signatures, extern variables).
+- [ ] **Multi-file CLI** — Accept multiple inputs: `baa main.baa lib.baa -o out.exe`.
+- [ ] **Linker Integration** — Compile each file to `.o` then link together.
+
+### v0.2.6: Preprocessor Directives 📝
+- [ ] **Define** — `#تعريف اسم قيمة` for compile-time constants.
+- [ ] **Conditional** — `#إذا`, `#إذا_عرف`, `#إذا_لم_يعرف`, `#وإلا`, `#وإلا_إذا`, `#نهاية_إذا` for conditional compilation.
+- [ ] **Undefine** — `#الغاء_تعريف` to remove definitions.
+
+### v0.2.7: Constants & Immutability 🔒
+- [ ] **Constant Keyword** — `ثابت` for immutable variables: `ثابت صحيح حد = ١٠٠.`
+- [ ] **Const Checking** — Semantic error on reassignment of constants.
+- [ ] **Array Constants** — Support constant arrays.
+
+### v0.2.8: Warnings & Diagnostics ⚠️
+- [ ] **Warning System** — Separate warnings from errors (non-fatal).
+- [ ] **Unused Variables** — Warn if variable declared but never used.
+- [ ] **Dead Code** — Warn about code after `إرجع` or `توقف`.
+- [ ] **`-W` Flags** — `-Wall`, `-Werror` to control warning behavior.
+
+### v0.2.9: Input & UX Polish 🎨
+- [ ] **Input Statement** — `اقرأ س.` (scanf) for reading user input.
+- [ ] **Boolean Type** — `منطقي` type with `صحيح`/`خطأ` literals.
+- [ ] **Colored Output** — ANSI colors for errors (red), warnings (yellow).
+- [ ] **Compile Timing** — Show compilation time with `-v`.
 
 ---
 

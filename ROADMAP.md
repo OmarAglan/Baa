@@ -41,10 +41,12 @@
 - [x] **Type Checking** — Validate assignments (int = string now fails during semantic analysis).
 
 ### v0.2.5: Multi-File & Include System 🔗
-- [ ] **Include Directive** — `#تضمين "file.baahd"` (C-style `#include`).
-- [ ] **Header Files** — `.baahd` extension for declarations (function signatures, extern variables).
-- [ ] **Multi-file CLI** — Accept multiple inputs: `baa main.baa lib.baa -o out.exe`.
-- [ ] **Linker Integration** — Compile each file to `.o` then link together.
+- [x] **File Extension Migration** — Change `.b` to `.baa`. Reserved `.baahd` for headers.
+- [x] **Include Directive** — `#تضمين "file.baahd"` (C-style `#include`).
+- [x] **Header Files** — `.baahd` extension for declarations (function signatures, extern variables).
+- [x] **Function Prototypes** — Declarations without types `صحيح دالة().` (Added).
+- [x] **Multi-file CLI** — Accept multiple inputs: `baa main.baa lib.baa -o out.exe`.
+- [x] **Linker Integration** — Compile each file to `.o` then link together.
 
 ### v0.2.6: Preprocessor Directives 📝
 - [ ] **Define** — `#تعريف اسم قيمة` for compile-time constants.

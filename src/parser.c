@@ -819,13 +819,26 @@ Node* parse_declaration() {
                 }
             }
             eat(TOKEN_RPAREN);
-            Node* body = parse_block();
+
+            // التحقق مما إذا كان نموذجاً أولياً (ينتهي بنقطة) أو تعريفاً كاملاً (ينتهي بكتلة)
+            Node* body = NULL;
+            bool is_proto = false;
+
+            if (parser.current.type == TOKEN_DOT) {
+                eat(TOKEN_DOT);
+                is_proto = true;
+            } else {
+                body = parse_block();
+                is_proto = false;
+            }
+
             Node* func = malloc(sizeof(Node));
             func->type = NODE_FUNC_DEF;
             func->data.func_def.name = name;
             func->data.func_def.return_type = dt;
             func->data.func_def.params = head_param;
             func->data.func_def.body = body;
+            func->data.func_def.is_prototype = is_proto;
             func->next = NULL;
             return func;
         }
@@ -853,7 +866,7 @@ Node* parse(Lexer* l) {
     init_parser(l);
     
     // تهيئة نظام الأخطاء بمؤشر المصدر للطباعة
-    error_init(l->src);
+    error_init(l->state.source);
 
     Node* head = NULL;
     Node* tail = NULL;

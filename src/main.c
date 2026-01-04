@@ -65,15 +65,22 @@ char* change_extension(const char* filename, const char* new_ext) {
  */
 void print_help() {
     printf("Baa Compiler (baa) - The Arabic Programming Language\n");
-    printf("Usage: baa [options] file...\n");
-    printf("       baa update\n");
+    printf("Usage: baa [options] <files>...\n");
     printf("Options:\n");
-    printf("  -o <file>    Place the output into <file>\n");
-    printf("  -S           Compile only; do not assemble or link (generates .s)\n");
-    printf("  -c           Compile and assemble, but do not link (generates .o)\n");
-    printf("  -v           Verbose mode\n");
-    printf("  --version    Display version information\n");
-    printf("  --help       Display this information\n");
+    printf("  -o <file>    Specify output filename\n");
+    printf("  -S, -s       Compile to assembly only (.s)\n");
+    printf("  -c           Compile to object file only (.o)\n");
+    printf("  -v           Enable verbose output\n");
+    printf("  --help, -h   Show this help message\n");
+    printf("  --version    Show version info\n");
+    printf("\n");
+    printf("Commands:\n");
+    printf("  update       Update compiler to the latest version\n");
+    printf("\n");
+    printf("Examples:\n");
+    printf("  baa main.baa\n");
+    printf("  baa main.baa lib.baa -o app.exe\n");
+    printf("  baa -S main.baa\n");
 }
 
 /**
@@ -92,23 +99,27 @@ int main(int argc, char** argv) {
     CompilerConfig config = {0};
     config.output_file = NULL;
 
-    // 1. تحليل المعاملات (Argument Parsing)
+    char* input_files[32];  // دعم حتى 32 ملف مصدر
+    int input_count = 0;
+    
+    // 0. التحقق من وجود معاملات
     if (argc < 2) {
         print_help();
         return 1;
     }
 
     // 1. التحقق من أمر التحديث (Update Command)
-    if (strcmp(argv[1], "update") == 0) {
+    // يجب أن يكون "update" هو المعامل الوحيد
+    if (argc == 2 && strcmp(argv[1], "update") == 0) {
         run_updater();
         return 0;
     }
-
+    
     // 2. تحليل المعاملات (Argument Parsing)
     for (int i = 1; i < argc; i++) {
         char* arg = argv[i];
         if (arg[0] == '-') {
-            if (strcmp(arg, "-S") == 0) config.assembly_only = true;
+            if (strcmp(arg, "-S") == 0 || strcmp(arg, "-s") == 0) config.assembly_only = true;
             else if (strcmp(arg, "-c") == 0) config.compile_only = true;
             else if (strcmp(arg, "-v") == 0) config.verbose = true;
             else if (strcmp(arg, "-o") == 0) {
@@ -128,104 +139,129 @@ int main(int argc, char** argv) {
                 return 1;
             }
         } else {
-            if (config.input_file == NULL) config.input_file = arg;
-            else { printf("Error: Multiple input files not supported yet\n"); return 1; }
+            if (input_count < 32) {
+                input_files[input_count++] = arg;
+            } else {
+                printf("Error: Too many input files (Max 32)\n");
+                return 1; 
+            }
         }
     }
 
-    if (!config.input_file) {
+    if (input_count == 0) {
         printf("Error: No input file specified\n");
         return 1;
     }
 
-    // تحديد اسم الملف المخرج الافتراضي إذا لم يتم تحديده
+    // تحديد اسم الملف المخرج الافتراضي
     if (!config.output_file) {
-        if (config.assembly_only) config.output_file = change_extension(config.input_file, ".s");
-        else if (config.compile_only) config.output_file = change_extension(config.input_file, ".o");
+        if (config.assembly_only) config.output_file = NULL; // سيتم تحديده لكل ملف
+        else if (config.compile_only) config.output_file = NULL; // سيتم تحديده لكل ملف
         else config.output_file = strdup("out.exe");
     }
 
-    // --- المرحلة 1: الواجهة الأمامية (Frontend) ---
-    if (config.verbose) printf("[INFO] Compiling %s...\n", config.input_file);
-    
-    char* source = read_file(config.input_file);
-    
-    // تمرير اسم الملف للـ Lexer لتتبع الأخطاء
-    Lexer lexer;
-    lexer_init(&lexer, source, config.input_file);
-    
-    Node* ast = parse(&lexer);
+    // قائمة ملفات الكائنات للربط
+    char* obj_files_to_link[32];
+    int obj_count = 0;
 
-    // التحقق من وجود أخطاء النحو قبل المتابعة
-    if (error_has_occurred()) {
-        fprintf(stderr, "Aborting due to syntax errors.\n");
-        free(source);
-        return 1;
+    // --- حلقة المعالجة لكل ملف ---
+    for (int i = 0; i < input_count; i++) {
+        char* current_input = input_files[i];
+        
+        if (config.verbose) printf("\n[INFO] Processing %s (%d/%d)...\n", current_input, i+1, input_count);
+
+        // 1. قراءة الملف
+        char* source = read_file(current_input);
+        
+        // 2. التحليل اللفظي والقواعدي
+        Lexer lexer;
+        lexer_init(&lexer, source, current_input);
+        Node* ast = parse(&lexer);
+
+        if (error_has_occurred()) {
+            fprintf(stderr, "Aborting %s due to syntax errors.\n", current_input);
+            free(source);
+            return 1;
+        }
+
+        // 3. التحليل الدلالي
+        if (config.verbose) printf("[INFO] Running semantic analysis...\n");
+        if (!analyze(ast)) {
+            fprintf(stderr, "Aborting %s due to semantic errors.\n", current_input);
+            free(source);
+            return 1;
+        }
+
+        // 4. توليد كود التجميع (Codegen)
+        char* asm_file;
+        if (config.assembly_only && input_count == 1 && config.output_file) asm_file = config.output_file;
+        else asm_file = change_extension(current_input, ".s");
+        
+        FILE* f_asm = fopen(asm_file, "w");
+        if (!f_asm) { printf("Error: Could not write assembly file '%s'\n", asm_file); return 1; }
+        codegen(ast, f_asm);
+        fclose(f_asm);
+        
+        free(source); // لم نعد بحاجة للمصدر
+
+        if (config.assembly_only) {
+            if (config.verbose) printf("[INFO] Generated assembly: %s\n", asm_file);
+            continue; // انتقل للملف التالي
+        }
+
+        // 5. التجميع (Assembly)
+        char* obj_file;
+        if (config.compile_only && input_count == 1 && config.output_file) obj_file = config.output_file;
+        else obj_file = change_extension(current_input, ".o");
+
+        char cmd_assemble[1024];
+        sprintf(cmd_assemble, "gcc -c %s -o %s", asm_file, obj_file);
+        
+        if (config.verbose) printf("[CMD] %s\n", cmd_assemble);
+        if (system(cmd_assemble) != 0) {
+            printf("Error: Assembler failed for %s\n", current_input);
+            return 1;
+        }
+
+        // تنظيف ملف التجميع المؤقت إذا لم يكن مطلوباً
+        if (!config.assembly_only && !config.verbose) {
+            remove(asm_file);
+            if (asm_file != config.output_file) free(asm_file); // تحرير الاسم المولد
+        }
+
+        obj_files_to_link[obj_count++] = obj_file;
     }
-    
-    if (config.verbose) printf("[INFO] Syntax tree generated.\n");
 
-    // --- المرحلة 1.5: التحليل الدلالي (Semantic Analysis) ---
-    if (config.verbose) printf("[INFO] Running semantic analysis...\n");
-    
-    if (!analyze(ast)) {
-        fprintf(stderr, "Aborting due to semantic errors.\n");
-        free(source);
-        return 1;
-    }
-
-    // --- المرحلة 2: الواجهة الخلفية (Backend - Codegen) ---
-    // نولد دائماً ملف تجميع مؤقت أو نهائي
-    char* asm_file = config.assembly_only ? config.output_file : "temp.s";
-    
-    FILE* f_asm = fopen(asm_file, "w");
-    if (!f_asm) { printf("Error: Could not write assembly file\n"); return 1; }
-    
-    codegen(ast, f_asm);
-    fclose(f_asm);
-    
-    if (config.verbose) printf("[INFO] Assembly generated at %s.\n", asm_file);
-
-    // إذا طلب المستخدم كود التجميع فقط، نتوقف هنا
-    if (config.assembly_only) {
-        free(source);
+    // إذا طلب المستخدم -S أو -c، نتوقف هنا
+    if (config.assembly_only || config.compile_only) {
         return 0;
     }
 
-    // --- المرحلة 3: التجميع (Assemble) ---
-    char* obj_file = config.compile_only ? config.output_file : "temp.o";
-    char cmd_assemble[1024];
-    sprintf(cmd_assemble, "gcc -c %s -o %s", asm_file, obj_file);
-    
-    if (config.verbose) printf("[CMD] %s\n", cmd_assemble);
-    if (system(cmd_assemble) != 0) {
-        printf("Error: Assembler (gcc) failed.\n");
-        return 1;
-    }
+    // --- المرحلة النهائية: الربط (Linking) ---
+    if (config.verbose) printf("\n[INFO] Linking %d object files...\n", obj_count);
 
-    // إذا طلب المستخدم التجميع فقط (-c)، نتوقف هنا
-    if (config.compile_only) {
-        remove("temp.s");
-        free(source);
-        return 0;
+    char cmd_link[4096];
+    strcpy(cmd_link, "gcc");
+    for (int i = 0; i < obj_count; i++) {
+        strcat(cmd_link, " ");
+        strcat(cmd_link, obj_files_to_link[i]);
     }
+    strcat(cmd_link, " -o ");
+    strcat(cmd_link, config.output_file);
 
-    // --- المرحلة 4: الربط (Link) ---
-    char cmd_link[1024];
-    sprintf(cmd_link, "gcc %s -o %s", obj_file, config.output_file);
-    
     if (config.verbose) printf("[CMD] %s\n", cmd_link);
     if (system(cmd_link) != 0) {
-        printf("Error: Linker (gcc) failed.\n");
+        printf("Error: Linker failed.\n");
         return 1;
     }
 
-    // التنظيف
+    // تنظيف ملفات الكائنات المؤقتة
     if (!config.verbose) {
-        remove("temp.s");
-        remove("temp.o");
+        for (int i = 0; i < obj_count; i++) {
+            remove(obj_files_to_link[i]);
+            // free(obj_files_to_link[i]); // تم تخصيصه بواسطة change_extension
+        }
     }
-    free(source);
 
     if (config.verbose) printf("[INFO] Build successful: %s\n", config.output_file);
     return 0;

@@ -24,7 +24,7 @@ A Baa program is a collection of **Global Variables** and **Functions**.
 
 | Aspect | Description |
 |--------|-------------|
-| **File Format** | UTF-8 encoded, `.b` extension |
+| **File Format** | UTF-8 encoded, `.baa` extension |
 | **Entry Point** | `الرئيسية` (Main) function |
 | **Statements** | End with period (`.`) |
 | **Comments** | Single-line with `//` |
@@ -39,7 +39,26 @@ A Baa program is a collection of **Global Variables** and **Functions**.
 
 ---
 
-## 2. Variables & Types
+## 2. Preprocessor (المعالج القبلي)
+Since v0.2.6, Baa supports preprocessor directives.
+
+### 2.1. Include Directive (`#تضمين`)
+Include other files (headers) into the current file. This works like C's `#include`.
+
+**Syntax:** `#تضمين "file.baahd"`
+
+```baa
+#تضمين "math.baahd"
+
+صحيح الرئيسية() {
+    ...
+}
+```
+
+---
+
+## 3. Variables & Types
+
 
 Baa is statically typed. All variables must be declared with their type.
 
@@ -107,7 +126,24 @@ Functions enable code reuse and modularity.
 }
 ```
 
-### 3.2. Calling
+### 3.2. Function Prototypes (النماذج الأولية)
+
+To use a function defined in another file (or later in the same file), you can declare its prototype without a body.
+
+**Syntax:** `<type> <name>(<parameters>).`
+
+```baa
+// Prototype declaration (notice the dot at the end)
+صحيح جمع(صحيح أ, صحيح ب).
+
+صحيح الرئيسية() {
+    // This calls 'جمع' which is defined elsewhere
+    اطبع جمع(١٠, ٢٠).
+    إرجع ٠.
+}
+```
+
+### 3.3. Calling
 
 **Syntax:** `<name>(<arguments>)`
 
@@ -116,7 +152,7 @@ Functions enable code reuse and modularity.
 صحيح م = مربع(٥).            // م = ٢٥
 ```
 
-### 3.3. Entry Point (`الرئيسية`)
+### 3.4. Entry Point (`الرئيسية`)
 
 Every program **must** have a main function:
 
@@ -127,7 +163,7 @@ Every program **must** have a main function:
 }
 ```
 
-### 3.4. Recursion (التكرار)
+### 3.5. Recursion (التكرار)
 
 Functions can call themselves (recursion), provided there is a base case to terminate the loop.
 

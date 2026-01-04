@@ -7,34 +7,43 @@
 #include "baa.h"
 #include <ctype.h>
 
+// قراءة ملف (من main.c، يجب أن تكون متاحة للجميع الآن)
+char* read_file(const char* path);
+
 /**
  * @brief تهيئة المحلل اللفظي بنص المصدر وتخطي الـ BOM إذا وجد.
  */
-void lexer_init(Lexer* l, const char* src, const char* filename) {
-    l->src = src;
-    l->pos = 0;
-    l->len = strlen(src);
-    l->line = 1;
-    l->col = 1;
-    l->filename = filename; // تخزين اسم الملف
+void lexer_init(Lexer* l, char* src, const char* filename) {
+    l->stack_depth = 0;
+    
+    // تهيئة الحالة الحالية
+    l->state.source = src;
+    l->state.filename = filename; // تخزين اسم الملف
+    l->state.line = 1;
+    l->state.col = 1;
+    l->state.cur_char = src;
 
     // تخطي علامة ترتيب البايت (BOM) لملفات UTF-8 إذا كانت موجودة
-    if (l->len >= 3 && (unsigned char)src[0] == 0xEF && (unsigned char)src[1] == 0xBB && (unsigned char)src[2] == 0xBF) {
-        l->pos = 3;
+    size_t len = strlen(src);
+    if (len >= 3 && (unsigned char)src[0] == 0xEF && (unsigned char)src[1] == 0xBB && (unsigned char)src[2] == 0xBF) {
+        l->state.cur_char += 3;
     }
 }
 
 /**
  * @brief دالة مساعدة لتقديم المؤشر وتحديث السطر والعمود.
  */
+/**
+ * @brief دالة مساعدة لتقديم المؤشر وتحديث السطر والعمود.
+ */
 void advance_pos(Lexer* l) {
-    if (l->src[l->pos] == '\n') {
-        l->line++;
-        l->col = 1;
+    if (*l->state.cur_char == '\n') {
+        l->state.line++;
+        l->state.col = 1;
     } else {
-        l->col++;
+        l->state.col++;
     }
-    l->pos++;
+    l->state.cur_char++;
 }
 
 /**
@@ -57,48 +66,140 @@ int is_arabic_digit(const char* c) {
 /**
  * @brief استخراج الوحدة اللفظية التالية.
  */
+// Helper to peek current char
+char peek(Lexer* l) { return *l->state.cur_char; }
+// Helper to peek next char
+char peek_next(Lexer* l) { return *(l->state.cur_char + 1); }
+
+
 Token lexer_next_token(Lexer* l) {
     Token token = {0};
     
-    // تخطي المسافات البيضاء والأسطر الجديدة
-    while (l->pos < l->len && isspace(l->src[l->pos])) {
-        advance_pos(l);
-    }
-
-    // تخطي التعليقات التي تبدأ بـ //
-    if (l->pos + 1 < l->len && l->src[l->pos] == '/' && l->src[l->pos+1] == '/') {
-        while (l->pos < l->len && l->src[l->pos] != '\n') {
-            l->pos++; // لا نحتاج لتحديث العمود بدقة داخل التعليق، فقط السطر عند النهاية
+    // 0. حلقة لتجاوز المسافات ومعالجة التضمين
+    while (1) {
+        // تخطي المسافات البيضاء والأسطر الجديدة
+        while (peek(l) != '\0' && isspace(peek(l))) {
+            advance_pos(l);
         }
-        // عند الوصول للسطر الجديد، الحلقة التالية ستعالجه وتحدث السطر
-        return lexer_next_token(l);
+
+        // تخطي التعليقات //
+        if (peek(l) == '/' && peek_next(l) == '/') {
+            while (peek(l) != '\0' && peek(l) != '\n') {
+                l->state.cur_char++; // تخطي سريع
+            }
+            continue; // إعادة المحاولة (لمعالجة السطر الجديد)
+        }
+
+        // معالجة الموجه # (Preprocessor)
+        if (peek(l) == '#') {
+            advance_pos(l); // consume '#'
+            
+            // قراءة الموجه
+            if (is_arabic_start_byte(peek(l))) {
+                 // نحتاج لقراءة الكلمة "تضمين"
+                 // بايتات "تضمين" UTF-8: d8 aa d8 b6 d9 85 d9 8a d9 86
+                 // للتبسيط، سنقرأ الكلمة ونتحقق منها
+                 char* directive_start = l->state.cur_char;
+                 while (!isspace(peek(l)) && peek(l) != '\0') advance_pos(l);
+                 
+                 // مقارنة "تضمين"
+                 // نقوم بنسخ مؤقت
+                 size_t len = l->state.cur_char - directive_start;
+                 if (len == 10 && strncmp(directive_start, "تضمين", 10) == 0) {
+                     // 1. تخطي المسافات
+                     while (peek(l) != '\0' && isspace(peek(l))) advance_pos(l);
+                     
+                     // 2. توقع اسم الملف كنص "..."
+                     if (peek(l) != '"') {
+                         printf("Preprocessor Error: Expected filename string after #تضمين at %s:%d\n", l->state.filename, l->state.line);
+                         exit(1);
+                     }
+                     advance_pos(l); // skip "
+
+                     char* path_start = l->state.cur_char;
+                     while (peek(l) != '"' && peek(l) != '\0') advance_pos(l);
+                     
+                     size_t path_len = l->state.cur_char - path_start;
+                     char* path = malloc(path_len + 1);
+                     strncpy(path, path_start, path_len);
+                     path[path_len] = '\0';
+                     
+                     advance_pos(l); // skip "
+                     
+                     // 3. قراءة الملف الجديد
+                     char* new_src = read_file(path);
+                     if (!new_src) {
+                         printf("Preprocessor Error: Could not include file '%s'\n", path);
+                         exit(1);
+                     }
+                     
+                     // 4. وضع الحالة الحالية في المكدس (Push)
+                     if (l->stack_depth >= 10) {
+                          printf("Preprocessor Error: Too many nested includes (Max 10)\n");
+                          exit(1);
+                     }
+                     l->stack[l->stack_depth++] = l->state;
+                     
+                     // 5. تهيئة الحالة الجديدة
+                     l->state.source = new_src;
+                     l->state.cur_char = new_src;
+                     l->state.filename = strdup(path); // يجب تحريره لاحقاً
+                     l->state.line = 1;
+                     l->state.col = 1;
+                     
+                     // free(path); // path is now owned by filename (if we duplicate wisely, but here simple strdup)
+                     
+                     continue; // ابدأ تحليل الملف الجديد فوراً
+                 }
+            }
+            // إذا لم يكن #تضمين، نعتبره خطأ أو نعالجه كرمز عادي (حالياً لا يوجد غير التضمين)
+             printf("Preprocessor Error: Unknown directive at %s:%d\n", l->state.filename, l->state.line);
+             exit(1);
+        }
+
+        // نهاية الملف EOF
+        if (peek(l) == '\0') {
+            // إذا كنا داخل ملف مضمن، نعود للملف السابق (Pop)
+            if (l->stack_depth > 0) {
+                // cleanup current
+                free(l->state.source);
+                // free((void*)l->state.filename); // if duplicated
+
+                // pop
+                l->state = l->stack[--l->stack_depth];
+                continue; // أكمل من حيث توقفنا في الملف السابق
+            }
+            token.type = TOKEN_EOF;
+            token.filename = l->state.filename;
+            token.line = l->state.line;
+            token.col = l->state.col;
+            return token;
+        }
+
+        break; // وجدنا بداية رمز صالح
     }
 
-    // تسجيل موقع بداية الوحدة الحالية
-    token.line = l->line;
-    token.col = l->col;
-    token.filename = l->filename;
+    // تسجيل الموقع
+    token.line = l->state.line;
+    token.col = l->state.col;
+    token.filename = l->state.filename;
 
-    // التحقق من نهاية الملف
-    if (l->pos >= l->len) { token.type = TOKEN_EOF; return token; }
-
-    const char* current = l->src + l->pos;
+    char* current = l->state.cur_char;
 
     // --- معالجة النصوص ("...") ---
     if (*current == '"') {
         advance_pos(l); // تخطي " البداية
-        size_t start = l->pos;
-        while (l->pos < l->len && l->src[l->pos] != '"') {
+        char* start = l->state.cur_char;
+        while (peek(l) != '"' && peek(l) != '\0') {
             advance_pos(l);
         }
-        if (l->pos >= l->len) { 
-            // استخدام نظام الأخطاء الجديد (سيتم تنفيذه لاحقاً، حالياً طباعة مباشرة)
-            printf("Lexer Error: Unterminated string at %s:%d:%d\n", l->filename, l->line, l->col); 
+        if (peek(l) == '\0') { 
+            printf("Lexer Error: Unterminated string at %s:%d:%d\n", l->state.filename, l->state.line, l->state.col); 
             exit(1); 
         }
-        size_t len = l->pos - start;
+        size_t len = l->state.cur_char - start;
         char* str = malloc(len + 1);
-        strncpy(str, l->src + start, len);
+        strncpy(str, start, len);
         str[len] = '\0';
         advance_pos(l); // تخطي " النهاية
         token.type = TOKEN_STRING;
@@ -109,10 +210,10 @@ Token lexer_next_token(Lexer* l) {
     // --- معالجة الحروف ('...') ---
     if (*current == '\'') {
         advance_pos(l);
-        char c = l->src[l->pos];
+        char c = *l->state.cur_char;
         advance_pos(l);
-        if (l->src[l->pos] != '\'') { 
-            printf("Lexer Error: Expected ' at %s:%d:%d\n", l->filename, l->line, l->col); 
+        if (*l->state.cur_char != '\'') { 
+            printf("Lexer Error: Expected ' at %s:%d:%d\n", l->state.filename, l->state.line, l->state.col); 
             exit(1); 
         }
         advance_pos(l);
@@ -123,9 +224,9 @@ Token lexer_next_token(Lexer* l) {
     }
 
     // معالجة الفاصلة المنقوطة العربية (؛)
-    if ((unsigned char)*current == 0xD8 && l->pos + 1 < l->len && (unsigned char)l->src[l->pos+1] == 0x9B) {
+    if ((unsigned char)*current == 0xD8 && (unsigned char)*(l->state.cur_char+1) == 0x9B) {
         token.type = TOKEN_SEMICOLON;
-        l->pos += 2; l->col += 2; // تحديث يدوي لأننا قفزنا بايتين
+        l->state.cur_char += 2; l->state.col += 2; 
         return token;
     }
 
@@ -136,16 +237,16 @@ Token lexer_next_token(Lexer* l) {
     
     // الجمع والزيادة (++ و +)
     if (*current == '+') { 
-        if (l->pos + 1 < l->len && l->src[l->pos+1] == '+') {
-            token.type = TOKEN_INC; l->pos += 2; l->col += 2; return token;
+        if (*(l->state.cur_char+1) == '+') {
+            token.type = TOKEN_INC; l->state.cur_char += 2; l->state.col += 2; return token;
         }
         token.type = TOKEN_PLUS; advance_pos(l); return token; 
     }
     
     // الطرح والنقصان (-- و -)
     if (*current == '-') { 
-        if (l->pos + 1 < l->len && l->src[l->pos+1] == '-') {
-            token.type = TOKEN_DEC; l->pos += 2; l->col += 2; return token;
+        if (*(l->state.cur_char+1) == '-') {
+            token.type = TOKEN_DEC; l->state.cur_char += 2; l->state.col += 2; return token;
         }
         token.type = TOKEN_MINUS; advance_pos(l); return token; 
     }
@@ -162,57 +263,61 @@ Token lexer_next_token(Lexer* l) {
 
     // معالجة العمليات المنطقية (&&، ||، !)
     if (*current == '&') {
-        if (l->pos + 1 < l->len && l->src[l->pos+1] == '&') {
-            token.type = TOKEN_AND; l->pos += 2; l->col += 2; return token;
+        if (*(l->state.cur_char+1) == '&') {
+            token.type = TOKEN_AND; l->state.cur_char += 2; l->state.col += 2; return token;
         }
     }
     if (*current == '|') {
-        if (l->pos + 1 < l->len && l->src[l->pos+1] == '|') {
-            token.type = TOKEN_OR; l->pos += 2; l->col += 2; return token;
+        if (*(l->state.cur_char+1) == '|') {
+            token.type = TOKEN_OR; l->state.cur_char += 2; l->state.col += 2; return token;
         }
     }
     if (*current == '!') {
-        if (l->pos + 1 < l->len && l->src[l->pos+1] == '=') {
-            token.type = TOKEN_NEQ; l->pos += 2; l->col += 2; return token;
+        if (*(l->state.cur_char+1) == '=') {
+            token.type = TOKEN_NEQ; l->state.cur_char += 2; l->state.col += 2; return token;
         }
         token.type = TOKEN_NOT; advance_pos(l); return token;
     }
 
     // معالجة عمليات المقارنة والتعيين (=، ==، <، <=، >، >=)
     if (*current == '=') { 
-        if (l->pos + 1 < l->len && l->src[l->pos+1] == '=') {
-            token.type = TOKEN_EQ; l->pos += 2; l->col += 2; return token;
+        if (*(l->state.cur_char+1) == '=') {
+            token.type = TOKEN_EQ; l->state.cur_char += 2; l->state.col += 2; return token;
         }
         token.type = TOKEN_ASSIGN; advance_pos(l); return token; 
     }
     if (*current == '<') {
-        if (l->pos + 1 < l->len && l->src[l->pos+1] == '=') {
-            token.type = TOKEN_LTE; l->pos += 2; l->col += 2; return token;
+        if (*(l->state.cur_char+1) == '=') {
+            token.type = TOKEN_LTE; l->state.cur_char += 2; l->state.col += 2; return token;
         }
         token.type = TOKEN_LT; advance_pos(l); return token;
     }
     if (*current == '>') {
-        if (l->pos + 1 < l->len && l->src[l->pos+1] == '=') {
-            token.type = TOKEN_GTE; l->pos += 2; l->col += 2; return token;
+        if (*(l->state.cur_char+1) == '=') {
+            token.type = TOKEN_GTE; l->state.cur_char += 2; l->state.col += 2; return token;
         }
         token.type = TOKEN_GT; advance_pos(l); return token;
     }
 
-    // معالجة الأرقام (تدعم الأرقام العربية ٠-٩ والأرقام الغربية 0-9)
-    if (isdigit(*current) || is_arabic_digit(current)) {
+    // معالجة الأرقام
+    // if (isdigit(*current) || is_arabic_digit(current)) ...
+    // Note: is_arabic_digit expects char*, so we pass current. Check bounds?
+    // current is safe pointer.
+    
+    if (isdigit((unsigned char)*current) || is_arabic_digit(current)) {
         token.type = TOKEN_INT;
         char buffer[64] = {0}; 
         int buf_idx = 0;
-        while (l->pos < l->len) {
-            const char* c = l->src + l->pos;
-            if (isdigit(*c)) { 
+        
+        while (1) {
+            char* c = l->state.cur_char;
+            if (isdigit((unsigned char)*c)) { 
                 buffer[buf_idx++] = *c; 
                 advance_pos(l); 
             } 
             else if (is_arabic_digit(c)) {
-                // تحويل الرقم العربي (UTF-8) إلى مكافئه في ASCII
                 buffer[buf_idx++] = ((unsigned char)c[1] - 0xA0) + '0';
-                l->pos += 2; l->col += 2;
+                l->state.cur_char += 2; l->state.col += 2;
             } else { break; }
         }
         token.value = strdup(buffer);
@@ -221,20 +326,19 @@ Token lexer_next_token(Lexer* l) {
 
     // معالجة المعرفات والكلمات المفتاحية
     if (is_arabic_start_byte(*current)) {
-        size_t start = l->pos;
-        while (l->pos < l->len && !isspace(l->src[l->pos]) && 
-               strchr(".+-,=:(){}[]!<>*/%&|\"'", l->src[l->pos]) == NULL) {
-            // ملاحظة: الفاصلة المنقوطة العربية (؛) تبدأ بـ 0xD8 وهي ضمن النطاق العربي
-            // لذلك يجب التحقق منها وإيقاف قراءة المعرف إذا وجدناها
-            if ((unsigned char)l->src[l->pos] == 0xD8 && (unsigned char)l->src[l->pos+1] == 0x9B) {
+        char* start = l->state.cur_char;
+        while (!isspace(peek(l)) && peek(l) != '\0' && 
+               strchr(".+-,=:(){}[]!<>*/%&|\"'", peek(l)) == NULL) {
+            // Check arabic semicolon
+            if ((unsigned char)*l->state.cur_char == 0xD8 && (unsigned char)*(l->state.cur_char+1) == 0x9B) {
                 break;
             }
             advance_pos(l);
         }
         
-        size_t len = l->pos - start;
+        size_t len = l->state.cur_char - start;
         char* word = malloc(len + 1);
-        strncpy(word, l->src + start, len);
+        strncpy(word, start, len);
         word[len] = '\0';
 
         // التحقق مما إذا كانت الكلمة كلمة مفتاحية محجوزة
@@ -252,7 +356,6 @@ Token lexer_next_token(Lexer* l) {
         else if (strcmp(word, "حالة") == 0) token.type = TOKEN_CASE;
         else if (strcmp(word, "افتراضي") == 0) token.type = TOKEN_DEFAULT;
         else {
-            // إذا لم تكن كلمة مفتاحية، فهي معرف (اسم متغير أو دالة)
             token.type = TOKEN_IDENTIFIER;
             token.value = word;
             return token;
@@ -263,7 +366,7 @@ Token lexer_next_token(Lexer* l) {
 
     // إذا وصلنا لهنا، فهذا يعني وجود محرف غير معروف
     token.type = TOKEN_INVALID;
-    printf("Lexer Error: Unknown byte 0x%02X at %s:%d:%d\n", (unsigned char)*current, l->filename, l->line, l->col);
+    printf("Lexer Error: Unknown byte 0x%02X at %s:%d:%d\n", (unsigned char)*current, l->state.filename, l->state.line, l->state.col);
     exit(1);
     return token;
 }

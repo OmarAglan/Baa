@@ -31,7 +31,7 @@ The compiler is orchestrated by the **Driver** (`src/main.c`), which acts as the
 
 ```mermaid
 flowchart LR
-    A[".b Source"] --> B["Lexer"]
+    A[".baa Source"] --> B["Lexer"]
     B -->|Tokens| C["Parser"]
     C -->|AST| D["Semantic Analysis"]
     D -->|Validated AST| E["Code Generator"]
@@ -45,7 +45,7 @@ flowchart LR
 
 | Stage | Input | Output | Component | Description |
 |-------|-------|--------|-----------|-------------|
-| **1. Frontend** | `.b` Source | AST | `lexer.c`, `parser.c` | Tokenizes and builds the syntax tree. |
+| **1. Frontend** | `.baa` Source | AST | `lexer.c`, `parser.c` | Tokenizes and builds the syntax tree. |
 | **2. Analysis** | AST | Valid AST | `analysis.c` | **Semantic Pass**: Checks types, scopes, and resolves symbols. |
 | **3. Backend** | AST | `.s` Assembly | `codegen.c` | Generates x86-64 assembly code (AT&T syntax). |
 | **4. Assemble** | `.s` Assembly | `.o` Object | `gcc -c` | Invokes external assembler. |
@@ -60,6 +60,7 @@ The driver logic in `main.c` supports various compilation modes controlled by fl
 |------|------|--------|--------|
 | (Default) | **Compile & Link** | `.exe` | Runs full pipeline. Deletes intermediate `.s` and `.o` files. |
 | `-o <file>`| **Custom Output** | `<file>` | Specifies the final filename. |
+| (Multiple Files) | **Multi-File Build** | `.exe` | Compiles each `.baa` to `.o` and links them. |
 | `-S` | **Assembly Only** | `.s` | Stops after codegen. Preserves the assembly file. |
 | `-c` | **Compile Only** | `.o` | Stops after assembling. Does not link. |
 

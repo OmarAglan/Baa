@@ -43,7 +43,8 @@ After building, you will have `baa.exe` in your `build` directory.
 
 ## 2. Your First Program
 
-Create a file named `hello.b` using any text editor. **Important:** Save the file as **UTF-8** encoding.
+Create a file named `hello.baa` using any text editor. **Important:** Save the file as **UTF-8** encoding.
+
 
 ```baa
 // هذا برنامجي الأول
@@ -75,7 +76,7 @@ The Baa compiler `baa.exe` is now a robust command-line tool.
 
 ```powershell
 # Compile and link to default output (out.exe)
-.\baa.exe hello.b
+.\baa.exe hello.baa
 
 # Run the generated executable
 .\out.exe```
@@ -84,11 +85,11 @@ The Baa compiler `baa.exe` is now a robust command-line tool.
 
 | Flag | Description | Example |
 |------|-------------|---------|
-| `<input.b>` | Source file to compile. Multiple files can be provided (future: requires import system). | `.\baa.exe main.b` |
+| `<input.baa>` | Source file(s) to compile. | `.\baa.exe main.baa lib.baa` |
 | `update` | **Self Update.** Checks the server for the latest version and updates Baa. | `.\baa.exe update` |
-| `-o <file>` | Specify the output filename (e.g., `myapp.exe`, `mylib.o`, `output.s`). | `.\baa.exe -o myprog.exe hello.b` |
-| `-S` | **Compile only to Assembly.** Produces `.s` file, does not invoke assembler/linker. | `.\baa.exe -S hello.b` (creates `hello.s`) |
-| `-c` | **Compile and Assemble.** Produces object file (`.o`), does not link. (Future: for multi-file linking). | `.\baa.exe -c hello.b` (creates `hello.o`) |
+| `-o <file>` | Specify the output filename (e.g., `myapp.exe`, `mylib.o`, `output.s`). | `.\baa.exe -o myprog.exe hello.baa` |
+| `-S`, `-s` | **Compile only to Assembly.** Produces `.s` file, does not invoke assembler/linker. | `.\baa.exe -S hello.baa` (creates `hello.s`) |
+| `-c` | **Compile and Assemble.** Produces object file (`.o`), does not link. | `.\baa.exe -c hello.baa` (creates `hello.o`) |
 | `--help`, `-h` | Display help message and usage. | `.\baa.exe --help` |
 | `--version` | Display compiler version. | `.\baa.exe --version` |
 
@@ -99,7 +100,7 @@ You can control the compilation stages:
 
 1.  **Source to Assembly**:
     ```powershell
-    .\baa.exe -S program.b -o program.s
+    .\baa.exe -S program.baa -o program.s
     # This will create 'program.s'
     ```
 2.  **Assembly to Object File (via GCC)**:
@@ -114,7 +115,7 @@ You can control the compilation stages:
     ```
 4.  **Full Pipeline (default)**:
     ```powershell
-    .\baa.exe program.b -o program.exe
+    .\baa.exe program.baa -o program.exe
     # This is equivalent to steps 1-3 if gcc is installed
     ```
 

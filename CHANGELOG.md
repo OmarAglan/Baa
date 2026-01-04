@@ -15,6 +15,22 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ---
 
+## [0.2.5] - 2026-01-04
+### Added
+- **Multi-File Compilation**: Support for compiling multiple `.b` files and linking them into a single executable.
+- **Function Prototypes**: New syntax `صحيح دالة().` to declare functions without definition (for cross-file usage).
+- **Preprocessor**: Implemented `#تضمين` (`#include`) to include header files.
+- **File Extensions**: Adopted `.baa` for source files and `.baahd` for headers.
+
+### Changed
+- **Defaults**: Examples and documentation now favor `.baa` over `.b`.
+
+### Fixed
+- **CLI Arguments**: Fixed crash when running `baa` without arguments.
+- **Flags**: Added support for lowercase `-s` (same as `-S`).
+- **Updater Logic**: Fixed version comparison to respect SemVer (e.g., 0.2.5 is newer than 0.2.4) instead of blindly flagging inequality as an update.
+- **Auto-Update Trigger**: `baa update <file>` no longer triggers the updater; strict `baa update` syntax is now enforced.
+
 ## [0.2.4] - 2026-01-04
 
 ### Added

@@ -56,8 +56,20 @@ int check_for_updates() {
     printf("[Update] Latest version: %s\n", buffer);
     printf("[Update] Current version: %s\n", BAA_VERSION);
 
-    // 4. مقارنة الإصدارات (مقارنة نصية بسيطة)
-    if (strcmp(buffer, BAA_VERSION) != 0) {
+    // 4. مقارنة الإصدارات (مقارنة دلالية بسيطة)
+    // نفترض الصيغة: X.Y.Z
+    int v1_maj, v1_min, v1_patch;
+    int v2_maj, v2_min, v2_patch;
+
+    sscanf(buffer, "%d.%d.%d", &v1_maj, &v1_min, &v1_patch); // Remote
+    sscanf(BAA_VERSION, "%d.%d.%d", &v2_maj, &v2_min, &v2_patch); // Local
+    
+    bool update_needed = false;
+    if (v1_maj > v2_maj) update_needed = true;
+    else if (v1_maj == v2_maj && v1_min > v2_min) update_needed = true;
+    else if (v1_maj == v2_maj && v1_min == v2_min && v1_patch > v2_patch) update_needed = true;
+
+    if (update_needed) {
         printf("[Update] New version available!\n");
         return 1;
     }

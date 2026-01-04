@@ -1,7 +1,7 @@
 /**
  * @file baa.h
  * @brief ملف الرأس الرئيسي الذي يعرف هياكل البيانات لمحوسب لغة "باء" (Baa Compiler).
- * @version 0.2.4 (Semantic Analysis)
+ * @version 0.2.5 (Multi-File Support)
  */
 
 #ifndef BAA_H
@@ -15,7 +15,7 @@
 #include <stdarg.h>
 
 // معلومات الإصدار
-#define BAA_VERSION "0.2.4"
+#define BAA_VERSION "0.2.5"
 #define BAA_BUILD_DATE __DATE__
 
 // ============================================================================
@@ -100,21 +100,34 @@ typedef struct {
 
 /**
  * @struct Lexer
- * @brief يحافظ على حالة عملية مسح النص وتفكيكه.
+ * @struct LexerState
+ * @brief يحافظ على حالة المحلل اللفظي (لدعم التضمين المتداخل).
  */
 typedef struct {
-    const char* src;    // نص المصدر
-    size_t pos;         // الموقع الحالي للمسح
-    size_t len;         // طول نص المصدر
-    int line;           // السطر الحالي
-    int col;            // العمود الحالي
+    char* source;
+    char* cur_char;
     const char* filename; // اسم الملف الحالي
+    int line;
+    int col;
+} LexerState;
+
+// المحلل اللفظي (The Lexer)
+typedef struct {
+    // الحالة الحالية
+    LexerState state;
+
+    // مكدس التضمين (Include Stack)
+    LexerState stack[10]; // أقصى عمق للتضمين: 10
+    int stack_depth;
 } Lexer;
 
 /**
- * @brief تهيئة المحلل اللفظي بنص المصدر.
+ * @brief تهيئة المحلل اللفظي بنص المصدر وتخطي الـ BOM إذا وجد.
  */
-void lexer_init(Lexer* lexer, const char* src, const char* filename);
+void lexer_init(Lexer* lexer, char* src, const char* filename);
+
+// قراءة ملف بالكامل إلى ذاكرة
+char* read_file(const char* path);
 
 /**
  * @brief استخراج الوحدة اللفظية (Token) التالية من المصدر.
@@ -261,7 +274,8 @@ typedef struct Node {
             char* name;          // اسم الدالة
             DataType return_type; // نوع الإرجاع
             struct Node* params; // قائمة المعاملات (متغيرات)
-            struct Node* body;   // جسم الدالة (كتلة)
+            struct Node* body;   // جسم الدالة (كتلة) - NULL if prototype
+            bool is_prototype;   // هل هو نموذج أولي؟ (بدون جسم)
         } func_def;
 
         // تعريف متغير (عادي)

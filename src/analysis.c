@@ -222,8 +222,10 @@ static void analyze_node(Node* node) {
                 param = param->next;
             }
 
-            // تحليل جسم الدالة
-            analyze_node(node->data.func_def.body);
+            // تحليل جسم الدالة فقط إذا لم تكن نموذجاً أولياً
+            if (!node->data.func_def.is_prototype) {
+                analyze_node(node->data.func_def.body);
+            }
             break;
         }
 

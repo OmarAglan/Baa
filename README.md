@@ -44,7 +44,7 @@ cmake --build .
 
 ### 2. Write Your First Program
 
-Create `hello.b` (save as **UTF-8**):
+Create `hello.baa` (save as **UTF-8**):
 
 ```baa
 صحيح الرئيسية() {
@@ -56,7 +56,7 @@ Create `hello.b` (save as **UTF-8**):
 ### 3. Compile & Run
 
 ```powershell
-.\baa.exe ..\hello.b
+.\baa.exe ..\hello.baa
 .\out.exe
 ```
 
@@ -130,6 +130,6 @@ cmake --build .
 
 ```powershell
 # From the build directory
-.\baa.exe ..\test.b
+.\baa.exe ..\test.baa
 .\out.exe
 ```

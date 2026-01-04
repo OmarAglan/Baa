@@ -348,10 +348,14 @@ void codegen(Node* node, FILE* file) {
     }
     // تعريف الدالة
     else if (node->type == NODE_FUNC_DEF) {
+        if (node->data.func_def.is_prototype) return;
         enter_function_scope();
-        // التعامل مع دالة "الرئيسية" كنقطة دخول main
-        if (strcmp(node->data.func_def.name, "الرئيسية") == 0) fprintf(file, ".globl main\nmain:\n");
-        else fprintf(file, "%s:\n", node->data.func_def.name);
+        if (strcmp(node->data.func_def.name, "الرئيسية") == 0) {
+            fprintf(file, ".globl main\nmain:\n");
+        } else {
+            fprintf(file, ".globl %s\n", node->data.func_def.name);
+            fprintf(file, "%s:\n", node->data.func_def.name);
+        }
 
         // مقدمة الدالة (Prologue)
         fprintf(file, "    push %%rbp\n");

@@ -1,26 +1,14 @@
 /**
  * @file codegen.c
- * @brief يقوم بتوليد كود التجميع (Assembly) للتركيب المعماري x86_64 مع دعم العمليات الحسابية والمنطقية والمصفوفات وحلقات التكرار والمتغيرات النصية والتحكم في الحلقات والشروط الممتدة وجمل الاختيار.
- * @version 0.1.3 (Switch Statement)
+ * @brief يقوم بتوليد كود التجميع (Assembly) للتركيب المعماري x86_64.
+ * @version 0.2.4 (Semantic Analysis Integration)
  */
 
 #include "baa.h"
 #include <string.h>
 
 // --- نظام جدول الرموز (Symbol Table) ---
-
-typedef enum { SCOPE_GLOBAL, SCOPE_LOCAL } ScopeType;
-
-/**
- * @struct Symbol
- * @brief يمثل رمزاً (متغيراً) في جدول الرموز.
- */
-typedef struct { 
-    char name[32];     // اسم الرمز
-    ScopeType scope;   // النطاق (عام أو محلي)
-    DataType type;     // نوع البيانات (صحيح أو نص)
-    int offset;        // الإزاحة من مؤشر القاعدة (RBP) للمتغيرات المحلية
-} Symbol;
+// ملاحظة: تم نقل تعريفات Struct Symbol و Enum ScopeType إلى baa.h
 
 Symbol global_symbols[100]; int global_count = 0;
 Symbol local_symbols[100]; int local_count = 0; 

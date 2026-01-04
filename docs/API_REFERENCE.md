@@ -10,9 +10,10 @@ This document details the C functions, enumerations, and structures defined in `
 
 - [Lexer Module](#1-lexer-module)
 - [Parser Module](#2-parser-module)
-- [Codegen Module](#3-codegen-module)
-- [Symbol Table](#4-symbol-table)
-- [Data Structures](#5-data-structures)
+- [Semantic Analysis](#3-semantic-analysis)
+- [Codegen Module](#4-codegen-module)
+- [Symbol Table](#5-symbol-table)
+- [Data Structures](#6-data-structures)
 
 ---
 
@@ -98,7 +99,32 @@ Node* ast = parse(&lexer);
 
 ---
 
-## 3. Codegen Module
+## 3. Semantic Analysis
+
+Handles type checking and logic validation.
+
+### `analyze`
+
+```c
+bool analyze(Node* program)
+```
+
+Runs the semantic pass on the AST.
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `program` | `Node*` | The root AST node |
+
+**Returns:** `true` if valid, `false` if errors were found.
+
+**Behavior:**
+- Traverses the entire tree.
+- Reports errors using `error_report`.
+- Does not modify the AST, only validates it.
+
+---
+
+## 4. Codegen Module
 
 Handles x86-64 assembly generation.
 
@@ -128,9 +154,22 @@ Recursively generates assembly code from AST.
 
 ---
 
-## 4. Symbol Table
+## 5. Symbol Table
 
 Manages variable scope and resolution.
+
+### Symbol Structure
+
+Moved to `baa.h` for shared use between Analysis and Codegen.
+
+```c
+typedef struct { 
+    char name[32];     // Variable name
+    ScopeType scope;   // SCOPE_GLOBAL or SCOPE_LOCAL
+    DataType type;     // TYPE_INT or TYPE_STRING
+    int offset;        // Stack offset or memory address
+} Symbol;
+```
 
 ### `add_local`
 
@@ -171,7 +210,7 @@ Searches for a symbol by name.
 
 ---
 
-## 5. Data Structures
+## 6. Data Structures
 
 ### Token
 

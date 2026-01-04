@@ -1,7 +1,7 @@
 /**
  * @file main.c
  * @brief نقطة الدخول ومحرك سطر الأوامر (CLI Driver).
- * @version 0.2.3 (Updater Integration)
+ * @version 0.2.4 (Semantic Analysis Integration)
  */
 
 #include "baa.h"
@@ -156,14 +156,23 @@ int main(int argc, char** argv) {
     
     Node* ast = parse(&lexer);
 
-    // التحقق من وجود أخطاء قبل المتابعة
+    // التحقق من وجود أخطاء النحو قبل المتابعة
     if (error_has_occurred()) {
-        fprintf(stderr, "Aborting due to compilation errors.\n");
+        fprintf(stderr, "Aborting due to syntax errors.\n");
         free(source);
         return 1;
     }
     
-    if (config.verbose) printf("[INFO] AST generated successfully.\n");
+    if (config.verbose) printf("[INFO] Syntax tree generated.\n");
+
+    // --- المرحلة 1.5: التحليل الدلالي (Semantic Analysis) ---
+    if (config.verbose) printf("[INFO] Running semantic analysis...\n");
+    
+    if (!analyze(ast)) {
+        fprintf(stderr, "Aborting due to semantic errors.\n");
+        free(source);
+        return 1;
+    }
 
     // --- المرحلة 2: الواجهة الخلفية (Backend - Codegen) ---
     // نولد دائماً ملف تجميع مؤقت أو نهائي

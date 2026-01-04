@@ -9,7 +9,24 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ## [Unreleased]
 
 ### Planned
-- Semantic Analysis Pass (Type Checker)
+- Function Prototypes: Updating Node struct and parser.c to accept declarations without bodies.
+- Codegen & Analysis: Skipping body generation/analysis for prototypes.
+- Driver Update: Refactoring main.c to loop through multiple input files (.b), compile them to objects (.o), and link them.
+
+---
+
+## [0.2.4] - 2026-01-04
+
+### Added
+- **Semantic Analysis Pass** — Implemented a dedicated validation phase (`src/analysis.c`) that runs before code generation. It checks for:
+    - **Symbol Resolution**: Ensures variables are declared before use.
+    - **Type Checking**: strictly enforces `TYPE_INT` vs `TYPE_STRING` compatibility in assignments and operations.
+    - **Scope Validation**: Tracks global vs local variable declarations.
+- **Shared Symbol Definitions** — Moved `Symbol` and `ScopeType` to `src/baa.h` to allow sharing between Analysis and Codegen modules.
+
+### Changed
+- **Compiler Pipeline** — Updated `src/main.c` to invoke the analyzer after parsing. Compilation now aborts immediately if semantic errors are found.
+- **Code Generator** — Refactored `src/codegen.c` to rely on the shared symbol definitions.
 
 ---
 

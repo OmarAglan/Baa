@@ -31,14 +31,14 @@
 - [x] **Self-Updater** — Implement `baa update` command.
 
 ### v0.2.4: The Semantic Pass (Type Checker) 🧠
-- [] **File Extension Migration** — Change `.b` to `.baa`. Reserved `.baahd` for headers.
-- [] **Pass Separation** — Completely separate Parsing from Code Generation.
+- [ ] **File Extension Migration** — Change `.b` to `.baa`. Reserved `.baahd` for headers.
+- [x] **Pass Separation** — Completely separate Parsing from Code Generation.
     - `parse()` returns a raw AST.
     - `analyze()` walks the AST to check types and resolve symbols.
     - `codegen()` takes a validated AST.
-- [] **Symbol Resolution** — Check for undefined variables before code generation starts.
-- [] **Scope Analysis** — Implement scope stack to properly handle nested blocks and variable shadowing.
-- [] **Type Checking** — Validate assignments (int = string now fails during semantic analysis).
+- [x] **Symbol Resolution** — Check for undefined variables before code generation starts.
+- [x] **Scope Analysis** — Implement scope stack to properly handle nested blocks and variable shadowing.
+- [x] **Type Checking** — Validate assignments (int = string now fails during semantic analysis).
 
 ### v0.2.5: Multi-File & Include System 🔗
 - [ ] **Include Directive** — `#تضمين "file.baahd"` (C-style `#include`).
@@ -130,7 +130,7 @@
 <details>
 <summary><strong>v0.1.3</strong> — Control Flow & Optimizations</summary>
 
-- [x] **Extended If** — Support `وإلا` (Else) and `وإلا إذا` (Else If)
+- [x] **Extended If** — Support `وإلا` (Else) and `وإلا إذا` (Else If) blocks.
 - [x] **Switch Statement** — `اختر` (Switch), `حالة` (Case), `افتراضي` (Default)
 - [x] **Constant Folding** — Compile-time math (`١ + ٢` → `٣`)
 

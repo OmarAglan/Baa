@@ -1,6 +1,6 @@
 # Baa Compiler Internals
 
-> **Version:** 0.2.2 | [← Language Spec](LANGUAGE.md) | [API Reference →](API_REFERENCE.md)
+> **Version:** 0.2.4 | [← Language Spec](LANGUAGE.md) | [API Reference →](API_REFERENCE.md)
 
 **Target Architecture:** x86-64 (AMD64)  
 **Target OS:** Windows (MinGW-w64 Toolchain)  
@@ -33,8 +33,8 @@ The compiler is orchestrated by the **Driver** (`src/main.c`), which acts as the
 flowchart LR
     A[".b Source"] --> B["Lexer"]
     B -->|Tokens| C["Parser"]
-    C -->|AST| D["Semantic Check"]
-    D -->|Symbol Tables| E["Code Generator"]
+    C -->|AST| D["Semantic Analysis"]
+    D -->|Validated AST| E["Code Generator"]
     E --> F[".s Assembly"]
     F -->|GCC -c| G[".o Object"]
     G -->|GCC -o| H[".exe Executable"]
@@ -45,10 +45,12 @@ flowchart LR
 
 | Stage | Input | Output | Component | Description |
 |-------|-------|--------|-----------|-------------|
-| **1. Frontend** | `.b` Source | AST | `lexer.c`, `parser.c` | Tokenizes and builds the syntax tree. Optimizations like Constant Folding happen here. |
-| **2. Backend** | AST | `.s` Assembly | `codegen.c` | Generates x86-64 assembly code (AT&T syntax). |
-| **3. Assemble** | `.s` Assembly | `.o` Object | `gcc -c` | Invokes external assembler (GAS via GCC) to create machine code. |
-| **4. Link** | `.o` Object | `.exe` Executable | `gcc` | Links with C Runtime (CRT) to produce final binary. |
+| **1. Frontend** | `.b` Source | AST | `lexer.c`, `parser.c` | Tokenizes and builds the syntax tree. |
+| **2. Analysis** | AST | Valid AST | `analysis.c` | **Semantic Pass**: Checks types, scopes, and resolves symbols. |
+| **3. Backend** | AST | `.s` Assembly | `codegen.c` | Generates x86-64 assembly code (AT&T syntax). |
+| **4. Assemble** | `.s` Assembly | `.o` Object | `gcc -c` | Invokes external assembler. |
+| **5. Link** | `.o` Object | `.exe` Executable | `gcc` | Links with C Runtime. |
+
 
 ### 1.2. The Driver (CLI)
 
@@ -214,31 +216,21 @@ typedef struct Node {
 
 ---
 
-## 5. Semantic Analysis & Optimizations
+## 5. Semantic Analysis
 
-### 5.1. Data Types
+The Semantic Analyzer (`src/analysis.c`) performs a static check on the AST before code generation.
 
-The compiler tracks variable types to ensure correct code generation.
+### 5.1. Responsibilities
 
-```c
-typedef enum {
-    TYPE_INT,       // صحيح (8 bytes)
-    TYPE_STRING     // نص (8 bytes - char*)
-} DataType;
-```
+1.  **Symbol Resolution**: Ensures variables are declared before use.
+2.  **Type Checking**: strictly enforces `TYPE_INT` vs `TYPE_STRING`.
+3.  **Scope Validation**: Manages visibility rules for global vs local variables.
 
-### 5.2. Symbol Table
+### 5.2. Analysis Logic
 
-The symbol table maps identifiers to their memory location and type.
-
-```c
-typedef struct {
-    char name[32];
-    ScopeType scope;  // GLOBAL or LOCAL
-    DataType type;    // TYPE_INT or TYPE_STRING
-    int offset;       // Stack offset (locals) or data address (globals)
-} Symbol;
-```
+The analyzer walks the AST recursively. It maintains a **Symbol Table** stack to track active variables in the current scope. If it encounters:
+- `x = "text"` (where x is `int`): Reports a type mismatch error.
+- `print y` (where y is undeclared): Reports an undefined symbol error.
 
 ### 5.3. Memory Allocation
 

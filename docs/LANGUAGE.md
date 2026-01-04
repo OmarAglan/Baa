@@ -43,10 +43,23 @@ A Baa program is a collection of **Global Variables** and **Functions**.
 Since v0.2.6, Baa supports preprocessor directives.
 
 ### 2.1. Include Directive (`#تضمين`)
-Include other files (headers) into the current file. This works like C's `#include`.
+Include other files (headers) into the current file. This works like C's `#include`, copying the content of the included file into the current file at the directive's location.
 
 **Syntax:** `#تضمين "file.baahd"`
 
+**Rules:**
+- **Quotes**: Filenames must be enclosed in double quotes.
+- **Recursion**: Nested includes are supported (up to depth 10).
+- **Extension**: Conventionally, use `.baahd` for headers, but any text file can be included.
+
+**Example:**
+
+`math.baahd`:
+```baa
+صحيح جمع(صحيح أ, صحيح ب). // Prototype
+```
+
+`main.baa`:
 ```baa
 #تضمين "math.baahd"
 

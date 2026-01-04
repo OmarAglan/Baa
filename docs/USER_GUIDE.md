@@ -87,16 +87,26 @@ The Baa compiler `baa.exe` is now a robust command-line tool.
 |------|-------------|---------|
 | `<input.baa>` | Source file(s) to compile. | `.\baa.exe main.baa lib.baa` |
 | `update` | **Self Update.** Checks the server for the latest version and updates Baa. | `.\baa.exe update` |
-| `-o <file>` | Specify the output filename (e.g., `myapp.exe`, `mylib.o`, `output.s`). | `.\baa.exe -o myprog.exe hello.baa` |
-| `-S`, `-s` | **Compile only to Assembly.** Produces `.s` file, does not invoke assembler/linker. | `.\baa.exe -S hello.baa` (creates `hello.s`) |
-| `-c` | **Compile and Assemble.** Produces object file (`.o`), does not link. | `.\baa.exe -c hello.baa` (creates `hello.o`) |
+| `-o <file>` | Specify the output filename (e.g., `myapp.exe`, `mylib.o`, `output.s`). | `.\baa.exe main.baa -o myapp.exe` |
+| `-S`, `-s` | **Compile only to Assembly.** Produces `.s` file, does not invoke assembler/linker. | `.\baa.exe -S main.baa` (creates `main.s`) |
+| `-c` | **Compile and Assemble.** Produces object file (`.o`), does not link. | `.\baa.exe -c main.baa` (creates `main.o`) |
 | `--help`, `-h` | Display help message and usage. | `.\baa.exe --help` |
 | `--version` | Display compiler version. | `.\baa.exe --version` |
 
 
-### Compilation Workflow (`-o`, `-S`, `-c`)
+### Compilation Workflow
 
-You can control the compilation stages:
+The compiler can handle multiple source files and produce a single executable.
+
+#### 1. Simple Build (Recommended)
+Compile multiple files and link them automatically:
+```powershell
+.\baa.exe main.baa utils.baa math.baa -o myapp.exe
+.\myapp.exe
+```
+
+#### 2. Manual Steps (`-o`, `-S`, `-c`)
+You can control the compilation stages if needed:
 
 1.  **Source to Assembly**:
     ```powershell
@@ -121,7 +131,43 @@ You can control the compilation stages:
 
 ---
 
-## 4. Common Patterns
+## 4. Organizing Code (Multi-File Projects)
+
+As your program grows, you should split it into multiple files.
+
+### Using Headers (`.baahd`)
+
+Use header files for function prototypes and shared declarations.
+
+**math.baahd** (Header):
+```baa
+// Declare function prototypes here
+صحيح جمع(صحيح أ, صحيح ب).
+```
+
+**math.baa** (Implementation):
+```baa
+// Implement the valid code here
+صحيح جمع(صحيح أ, صحيح ب) {
+    إرجع أ + ب.
+}
+```
+
+**main.baa** (Main Program):
+```baa
+#تضمين "math.baahd"
+
+صحيح الرئيسية() {
+    اطبع جمع(١٠, ٢٠).
+    إرجع ٠.
+}
+```
+
+> **Note:** The `#تضمين` directive currently looks for files relative to the directory where you run the compiler.
+
+---
+
+## 5. Common Patterns
 
 ### Variables and Math
 

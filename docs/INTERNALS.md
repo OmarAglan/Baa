@@ -81,16 +81,26 @@ The compiler uses a centralized **Error Reporting Module** (`src/error.c`) to ha
 
 The Lexer (`src/lexer.c`) transforms raw bytes into `Token` structures.
 
-### 2.1. Location Tracking
+### 2.1. Internal Structure
 
-The Lexer now tracks the **Column Number** in addition to the Line Number.
+The Lexer now supports **Nested Includes** via a state stack.
 
 ```c
+// Represents the state of a single file being parsed
 typedef struct {
+    char* source;       // Full source code buffer
+    char* cur_char;     // Current reading pointer
+    const char* filename;
     int line;
     int col;
-    const char* filename;
-} Location;
+} LexerState;
+
+// The main Lexer context
+typedef struct {
+    LexerState state;       // Current active file state
+    LexerState stack[10];   // Stack for nested includes (max depth 10)
+    int stack_depth;
+} Lexer;
 ```
 
 ### 2.2. Key Features
@@ -198,9 +208,10 @@ The AST uses a tagged union structure for type-safe node representation.
 | Category | Node Types |
 |----------|------------|
 | **Structure** | `NODE_PROGRAM`, `NODE_FUNC_DEF`, `NODE_BLOCK`, `NODE_PARAM` |
-| **Variables** | `NODE_VAR_DECL`, `NODE_ASSIGN`, `NODE_VAR_REF` |
-| **Arrays** | `NODE_ARRAY_DECL`, `NODE_ARRAY_ACCESS`, `NODE_ARRAY_ASSIGN` |
-| **Control** | `NODE_IF`, `NODE_WHILE`, `NODE_FOR`, `NODE_RETURN`, `NODE_BREAK`, `NODE_CONTINUE`, `NODE_SWITCH`, `NODE_CASE` |
+| **Variable Decls** | `NODE_VAR_DECL`, `NODE_ASSIGN`, `NODE_VAR_REF` |
+| **Array Decls** | `NODE_ARRAY_DECL`, `NODE_ARRAY_ACCESS`, `NODE_ARRAY_ASSIGN` |
+| **Control Flow** | `NODE_IF`, `NODE_WHILE`, `NODE_FOR`, `NODE_RETURN` |
+| **Branching** | `NODE_SWITCH`, `NODE_CASE`, `NODE_BREAK`, `NODE_CONTINUE` |
 | **Expressions** | `NODE_BIN_OP`, `NODE_UNARY_OP`, `NODE_POSTFIX_OP` |
 | **Literals** | `NODE_INT`, `NODE_STRING`, `NODE_CHAR` |
 | **Calls** | `NODE_CALL_EXPR`, `NODE_CALL_STMT`, `NODE_PRINT` |
@@ -224,10 +235,12 @@ The Semantic Analyzer (`src/analysis.c`) performs a static check on the AST befo
 ### 5.1. Responsibilities
 
 1.  **Symbol Resolution**: Ensures variables are declared before use.
-2.  **Type Checking**: strictly enforces `TYPE_INT` vs `TYPE_STRING`.
-3.  **Scope Validation**: Manages visibility rules for global vs local variables.
+2.  **Type Checking**: Strictly enforces `TYPE_INT` vs `TYPE_STRING` compatibility.
+3.  **Scope Validation**: Manages visibility rules.
 
-### 5.2. Analysis Logic
+### 5.2. Isolation Note
+
+Currently, `analysis.c` and `codegen.c` **maintain separate symbol tables**. This isolation ensures that the validation logic is independent of the generation logic, though it requires both modules to track scope similarly. Future versions may unify this into a shared Context object.
 
 The analyzer walks the AST recursively. It maintains a **Symbol Table** stack to track active variables in the current scope. If it encounters:
 - `x = "text"` (where x is `int`): Reports a type mismatch error.

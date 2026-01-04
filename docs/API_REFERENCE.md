@@ -24,7 +24,7 @@ Handles UTF-8 string processing and tokenization.
 ### `lexer_init`
 
 ```c
-void lexer_init(Lexer* l, const char* src)
+void lexer_init(Lexer* l, char* src, const char* filename)
 ```
 
 Initializes a new Lexer instance.
@@ -32,12 +32,14 @@ Initializes a new Lexer instance.
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | `l` | `Lexer*` | Pointer to Lexer struct to initialize |
-| `src` | `const char*` | UTF-8 source code string |
+| `src` | `char*` | Source code buffer (mutable for internal pointer usage) |
+| `filename` | `const char*` | Name of the file (for error reporting) |
 
 **Behavior:**
-- Sets up position pointers to start of source
-- Detects and skips UTF-8 BOM (`0xEF 0xBB 0xBF`) if present
-- Initializes line counter to 1
+- Initializes the state stack depth to 0.
+- Sets up position pointers (`cur_char`) to start of source.
+- Detects and skips UTF-8 BOM (`0xEF 0xBB 0xBF`) if present.
+- Initializes line counter to 1.
 
 ---
 
@@ -171,42 +173,7 @@ typedef struct {
 } Symbol;
 ```
 
-### `add_local`
-
-```c
-void add_local(const char* name, int size)
-```
-
-Registers a local variable, parameter, or array.
-
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `name` | `const char*` | Variable identifier |
-| `size` | `int` | Slots to reserve (1 for scalar, N for array[N]) |
-
-**Behavior:**
-- Decrements `current_stack_offset` by `size × 8`
-- Records base address in symbol table
-
----
-
-### `lookup_symbol`
-
-```c
-Symbol* lookup_symbol(const char* name)
-```
-
-Searches for a symbol by name.
-
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `name` | `const char*` | Symbol name to find |
-
-**Returns:** Pointer to `Symbol` if found, `NULL` otherwise.
-
-**Search Order:**
-1. Local scope
-2. Global scope
+> **Note**: Symbol table management functions (`add_local`, `lookup`, etc.) are currently implemented as static helper functions within `analysis.c` and `codegen.c` independently to maintain module isolation.
 
 ---
 

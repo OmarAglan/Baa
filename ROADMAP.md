@@ -31,7 +31,7 @@
 - [x] **Self-Updater** — Implement `baa update` command.
 
 ### v0.2.4: The Semantic Pass (Type Checker) 🧠
-- [ ] **File Extension Migration** — Change `.b` to `.baa`. Reserved `.baahd` for headers.
+- [x] **File Extension Migration** — Change `.b` to `.baa`. Reserved `.baahd` for headers.
 - [x] **Pass Separation** — Completely separate Parsing from Code Generation.
     - `parse()` returns a raw AST.
     - `analyze()` walks the AST to check types and resolve symbols.

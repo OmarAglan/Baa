@@ -8,10 +8,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
-### Planned
-- Function Prototypes: Updating Node struct and parser.c to accept declarations without bodies.
-- Codegen & Analysis: Skipping body generation/analysis for prototypes.
-- Driver Update: Refactoring main.c to loop through multiple input files (.b), compile them to objects (.o), and link them.
+### Planned (v0.2.6)
+- **Advanced Preprocessor**: Definitions (`#تعريف`), Conditionals (`#إذا`, `#وإلا`).
+- **Constants**: Immutable variables (`ثابت`) and constant checking.
+- **Warnings**: Diagnostic warnings for unused variables and dead code.
 
 ---
 

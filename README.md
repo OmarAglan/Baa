@@ -20,6 +20,7 @@
 |---------|-------------|
 | 🖥️ **Native Compilation** | Compiles directly to x86_64 Assembly → Windows Executable |
 | 🌍 **Full Arabic Syntax** | Arabic keywords, numerals (٠-٩), and punctuation (`.` `؛`) |
+| 🧩 **Modular Code** | `#تضمين` (Include), `.baa` source files, and `.baahd` headers |
 | ⚡ **Functions** | Define and call functions with parameters and return values |
 | 📦 **Arrays** | Fixed-size stack arrays (`صحيح قائمة[١٠]`) |
 | 🔄 **Control Flow** | `إذا` (If), `طالما` (While), `لكل` (For), `توقف` (Break), `استمر` (Continue) | `اختر` (Switch), `حالة` (Case), `افتراضي` (Default) |

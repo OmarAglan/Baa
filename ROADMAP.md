@@ -49,9 +49,9 @@
 - [x] **Linker Integration** — Compile each file to `.o` then link together.
 
 ### v0.2.6: Preprocessor Directives 📝
-- [ ] **Define** — `#تعريف اسم قيمة` for compile-time constants.
-- [ ] **Conditional** — `#إذا`, `#إذا_عرف`, `#إذا_لم_يعرف`, `#وإلا`, `#وإلا_إذا`, `#نهاية_إذا` for conditional compilation.
-- [ ] **Undefine** — `#الغاء_تعريف` to remove definitions.
+- [x] **Define** — `#تعريف اسم قيمة` for compile-time constants.
+- [x] **Conditional** — `#إذا_عرف`, `#إذا_عرف`, `#إذا_لم_يعرف`, `#وإلا`, `#وإلا_إذا`, `#نهاية_إذا` for conditional compilation.
+- [x] **Undefine** — `#الغاء_تعريف` to remove definitions.
 
 ### v0.2.7: Constants & Immutability 🔒
 - [ ] **Constant Keyword** — `ثابت` for immutable variables: `ثابت صحيح حد = ١٠٠.`

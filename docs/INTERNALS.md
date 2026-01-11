@@ -1,6 +1,6 @@
 # Baa Compiler Internals
 
-> **Version:** 0.2.4 | [← Language Spec](LANGUAGE.md) | [API Reference →](API_REFERENCE.md)
+> **Version:** 0.2.6 | [← Language Spec](LANGUAGE.md) | [API Reference →](API_REFERENCE.md)
 
 **Target Architecture:** x86-64 (AMD64)  
 **Target OS:** Windows (MinGW-w64 Toolchain)  
@@ -31,7 +31,7 @@ The compiler is orchestrated by the **Driver** (`src/main.c`), which acts as the
 
 ```mermaid
 flowchart LR
-    A[".baa Source"] --> B["Lexer"]
+    A[".baa Source"] --> B["Lexer + Preprocessor"]
     B -->|Tokens| C["Parser"]
     C -->|AST| D["Semantic Analysis"]
     D -->|Validated AST| E["Code Generator"]
@@ -45,7 +45,7 @@ flowchart LR
 
 | Stage | Input | Output | Component | Description |
 |-------|-------|--------|-----------|-------------|
-| **1. Frontend** | `.baa` Source | AST | `lexer.c`, `parser.c` | Tokenizes and builds the syntax tree. |
+| **1. Frontend** | `.baa` Source | AST | `lexer.c`, `parser.c` | Tokenizes, handles macros, and builds the syntax tree. |
 | **2. Analysis** | AST | Valid AST | `analysis.c` | **Semantic Pass**: Checks types, scopes, and resolves symbols. |
 | **3. Backend** | AST | `.s` Assembly | `codegen.c` | Generates x86-64 assembly code (AT&T syntax). |
 | **4. Assemble** | `.s` Assembly | `.o` Object | `gcc -c` | Invokes external assembler. |
@@ -83,7 +83,7 @@ The Lexer (`src/lexer.c`) transforms raw bytes into `Token` structures.
 
 ### 2.1. Internal Structure
 
-The Lexer now supports **Nested Includes** via a state stack.
+The Lexer now supports **Nested Includes** via a state stack and **Macro Definitions**.
 
 ```c
 // Represents the state of a single file being parsed
@@ -95,15 +95,50 @@ typedef struct {
     int col;
 } LexerState;
 
+// Definition (Macro)
+typedef struct {
+    char* name;
+    char* value;
+} Macro;
+
 // The main Lexer context
 typedef struct {
     LexerState state;       // Current active file state
     LexerState stack[10];   // Stack for nested includes (max depth 10)
     int stack_depth;
+    
+    // Preprocessor state
+    Macro macros[100];      // Table of definitions
+    int macro_count;
+    bool skipping;          // True if inside disabled #if block
 } Lexer;
 ```
 
-### 2.2. Key Features
+### 2.2. Preprocessor Logic
+
+The preprocessor is integrated directly into the `lexer_next_token` function. It intercepts directives starting with `#` before tokenizing normal code.
+
+#### 2.2.1. Definitions (`#تعريف`)
+When `#تعريف NAME VALUE` is encountered:
+1.  The name and value are parsed as strings.
+2.  They are stored in the `macros` table.
+3.  Later, when the Lexer scans an `IDENTIFIER`, it checks the macro table.
+4.  If a match is found, the token's value is replaced with the macro's value, and its type is updated based on the value (e.g., `INT` or `STRING`).
+
+#### 2.2.2. Conditionals (`#إذا_عرف`)
+When `#إذا_عرف NAME` is encountered:
+1.  The lexer checks if `NAME` exists in the macro table.
+2.  If it exists, normal parsing continues.
+3.  If not, the lexer enters **Skipping Mode**.
+4.  In Skipping Mode, all tokens are discarded until `#وإلا` or `#نهاية` is found.
+
+#### 2.2.3. Undefine (`#الغاء_تعريف`)
+When `#الغاء_تعريف NAME` is encountered:
+1.  The lexer searches for `NAME` in the macro table.
+2.  If found, the entry is removed (by shifting subsequent entries).
+3.  If not found, the directive is ignored.
+
+### 2.3. Key Features
 
 | Feature | Description |
 |---------|-------------|
@@ -112,7 +147,7 @@ typedef struct {
 | **Arabic Numerals** | Normalizes `٠`-`٩` → `0`-`9` |
 | **Arabic Punctuation** | Handles `؛` (semicolon) `0xD8 0x9B` |
 
-### 2.3. Token Types
+### 2.4. Token Types
 
 ```
 Keywords:    صحيح, نص, إذا, وإلا, طالما, لكل, اختر, حالة, افتراضي, اطبع, إرجع, توقف, استمر

@@ -1,6 +1,6 @@
 # Baa Language Specification
 
-> **Version:** 0.1.3 | [← User Guide](USER_GUIDE.md) | [Compiler Internals →](INTERNALS.md)
+> **Version:** 0.2.6 | [← User Guide](USER_GUIDE.md) | [Compiler Internals →](INTERNALS.md)
 
 Baa (باء) is a compiled systems programming language using Arabic syntax. It compiles directly to native machine code via Assembly/GCC on Windows.
 
@@ -9,12 +9,13 @@ Baa (باء) is a compiled systems programming language using Arabic syntax. It 
 ## Table of Contents
 
 - [Program Structure](#1-program-structure)
-- [Variables & Types](#2-variables--types)
-- [Functions](#3-functions)
-- [Input / Output](#4-input--output)
-- [Control Flow](#5-control-flow)
-- [Operators](#6-operators)
-- [Complete Example](#7-complete-example)
+- [Preprocessor](#2-preprocessor)
+- [Variables & Types](#3-variables--types)
+- [Functions](#4-functions)
+- [Input / Output](#5-input--output)
+- [Control Flow](#6-control-flow)
+- [Operators](#7-operators)
+- [Complete Example](#8-complete-example)
 
 ---
 
@@ -40,42 +41,68 @@ A Baa program is a collection of **Global Variables** and **Functions**.
 ---
 
 ## 2. Preprocessor (المعالج القبلي)
-Since v0.2.6, Baa supports preprocessor directives.
+
+The preprocessor handles directives before the code is compiled. All directives start with `#`.
 
 ### 2.1. Include Directive (`#تضمين`)
-Include other files (headers) into the current file. This works like C's `#include`, copying the content of the included file into the current file at the directive's location.
+Include other files (headers) into the current file. This works like C's `#include`.
 
 **Syntax:** `#تضمين "file.baahd"`
 
-**Rules:**
-- **Quotes**: Filenames must be enclosed in double quotes.
-- **Recursion**: Nested includes are supported (up to depth 10).
-- **Extension**: Conventionally, use `.baahd` for headers, but any text file can be included.
-
 **Example:**
-
-`math.baahd`:
-```baa
-صحيح جمع(صحيح أ, صحيح ب). // Prototype
-```
-
-`main.baa`:
 ```baa
 #تضمين "math.baahd"
+```
+
+### 2.2. Definitions (`#تعريف`)
+Define compile-time constants (macros). The compiler replaces the identifier with the specified value wherever it appears in the code.
+
+**Syntax:** `#تعريف <name> <value>`
+
+**Example:**
+```baa
+#تعريف حد_أقصى ١٠٠
+#تعريف رسالة "مرحباً"
 
 صحيح الرئيسية() {
-    ...
+    // سيتم استبدال 'حد_أقصى' بـ ١٠٠
+    صحيح س = حد_أقصى.
+    اطبع رسالة.
+    إرجع ٠.
 }
+```
+
+### 2.3. Conditional Compilation (`#إذا_عرف`)
+Include or exclude blocks of code based on whether a symbol is defined.
+
+**Syntax:**
+```baa
+#إذا_عرف <name>
+    // يتم تجميعه إذا كان الاسم معرفاً
+#وإلا
+    // يتم تجميعه إذا لم يكن الاسم معرفاً
+#نهاية
+```
+
+### 2.4. Undefine Directive (`#الغاء_تعريف`)
+Remove a previously defined macro.
+
+**Syntax:** `#الغاء_تعريف <name>`
+
+**Example:**
+```baa
+#تعريف تصحيح ١
+#الغاء_تعريف تصحيح
+// الآن 'تصحيح' غير معرف
 ```
 
 ---
 
 ## 3. Variables & Types
 
-
 Baa is statically typed. All variables must be declared with their type.
 
-### 2.1. Supported Types
+### 3.1. Supported Types
 
 | Baa Type | C Equivalent | Description | Example |
 |----------|--------------|-------------|---------|
@@ -83,7 +110,7 @@ Baa is statically typed. All variables must be declared with their type.
 | `نص` | `char*` | String pointer (Reference) | `نص اسم = "باء".` |
 | `حرف` | `char` | Single character | `'أ'` |
 
-### 2.2. Scalar Variables
+### 3.2. Scalar Variables
 
 **Syntax:** `<type> <identifier> = <expression>.`
 
@@ -97,7 +124,7 @@ Baa is statically typed. All variables must be declared with their type.
 رسالة = "وداعاً".
 ```
 
-### 2.3. Arrays
+### 3.3. Arrays
 
 Fixed-size arrays allocated on the stack.
 
@@ -121,11 +148,11 @@ Fixed-size arrays allocated on the stack.
 
 ---
 
-## 3. Functions
+## 4. Functions
 
 Functions enable code reuse and modularity.
 
-### 3.1. Definition
+### 4.1. Definition
 
 **Syntax:** `<type> <name>(<parameters>) { <body> }`
 
@@ -139,7 +166,7 @@ Functions enable code reuse and modularity.
 }
 ```
 
-### 3.2. Function Prototypes (النماذج الأولية)
+### 4.2. Function Prototypes (النماذج الأولية)
 
 To use a function defined in another file (or later in the same file), you can declare its prototype without a body.
 
@@ -156,7 +183,7 @@ To use a function defined in another file (or later in the same file), you can d
 }
 ```
 
-### 3.3. Calling
+### 4.3. Calling
 
 **Syntax:** `<name>(<arguments>)`
 
@@ -165,7 +192,7 @@ To use a function defined in another file (or later in the same file), you can d
 صحيح م = مربع(٥).            // م = ٢٥
 ```
 
-### 3.4. Entry Point (`الرئيسية`)
+### 4.4. Entry Point (`الرئيسية`)
 
 Every program **must** have a main function:
 
@@ -176,7 +203,7 @@ Every program **must** have a main function:
 }
 ```
 
-### 3.5. Recursion (التكرار)
+### 4.5. Recursion (التكرار)
 
 Functions can call themselves (recursion), provided there is a base case to terminate the loop.
 
@@ -192,7 +219,7 @@ Functions can call themselves (recursion), provided there is a base case to term
 
 ---
 
-## 4. Input / Output
+## 5. Input / Output
 
 ### Print Statement
 
@@ -212,9 +239,9 @@ Prints an integer, string, or character followed by a newline.
 
 ---
 
-## 5. Control Flow
+## 6. Control Flow
 
-### 5.1. Conditional (`إذا` / `وإلا`)
+### 6.1. Conditional (`إذا` / `وإلا`)
 
 Executes a block based on conditions.
 
@@ -243,7 +270,7 @@ Executes a block based on conditions.
 }
 ```
 
-### 5.2. While Loop (`طالما`)
+### 6.2. While Loop (`طالما`)
 
 Repeats a block while the condition is true.
 
@@ -259,7 +286,7 @@ Repeats a block while the condition is true.
 // يطبع: ٥ ٤ ٣ ٢ ١
 ```
 
-### 5.3. For Loop (`لكل`)
+### 6.3. For Loop (`لكل`)
 
 C-style loop using Arabic semicolon `؛` as separator.
 
@@ -272,7 +299,7 @@ C-style loop using Arabic semicolon `؛` as separator.
 }
 ```
 
-### 5.4. Loop Control (`توقف` & `استمر`)
+### 6.4. Loop Control (`توقف` & `استمر`)
 
 - **`توقف` (Break)**: Exits the loop immediately.
 - **`استمر` (Continue)**: Skips the rest of the current iteration and proceeds to the next one.
@@ -299,7 +326,7 @@ C-style loop using Arabic semicolon `؛` as separator.
 }
 ```
 
-### 5.5. Switch Statement (`اختر`)
+### 6.5. Switch Statement (`اختر`)
 
 Selects a block of code to execute based on a value.
 
@@ -343,9 +370,11 @@ Selects a block of code to execute based on a value.
 }
 ```
 
-## 6. Operators
+---
 
-### 6.1. Arithmetic
+## 7. Operators
+
+### 7.1. Arithmetic
 
 | Operator | Description | Example |
 |----------|-------------|---------|
@@ -358,7 +387,7 @@ Selects a block of code to execute based on a value.
 | `--` | Decrement (postfix) | `س--` |
 | `-` | Negative (unary) | `-٥` |
 
-### 6.2. Comparison
+### 7.2. Comparison
 
 | Operator | Description | Example |
 |----------|-------------|---------|
@@ -369,7 +398,7 @@ Selects a block of code to execute based on a value.
 | `<=` | Less or equal | `س <= ١٠` |
 | `>=` | Greater or equal | `س >= ١٠` |
 
-### 6.3. Logical
+### 7.3. Logical
 
 | Operator | Description | Behavior |
 |----------|-------------|----------|
@@ -392,7 +421,7 @@ Selects a block of code to execute based on a value.
 }
 ```
 
-### 6.4. Operator Precedence
+### 7.4. Operator Precedence
 
 From highest to lowest:
 
@@ -407,26 +436,16 @@ From highest to lowest:
 
 ---
 
-## 7. Complete Example
+## 8. Complete Example
 
 ```baa
-// برنامج يوضح ميزات اللغة
-صحيح مضروب(صحيح ن) {
-    صحيح نتيجة = ١.
-    لكل (صحيح س = ٢؛ س <= ن؛ س++) {
-        نتيجة = نتيجة * س.
-    }
-    إرجع نتيجة.
-}
+#تعريف الحد_الأقصى ١٠
 
 صحيح الرئيسية() {
-    نص ترحيب = "حساب المضروب: ".
-    اطبع ترحيب.
-    
-    // حساب المضروب
-    اطبع "مضروب ٥ = ".
-    اطبع مضروب(٥).
-    
+    // استخدام الثابت المعرف
+    لكل (صحيح س = ١؛ س <= الحد_الأقصى؛ س++) {
+        اطبع س.
+    }
     إرجع ٠.
 }
 ```

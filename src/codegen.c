@@ -1,7 +1,7 @@
 /**
  * @file codegen.c
  * @brief يقوم بتوليد كود التجميع (Assembly) للتركيب المعماري x86_64.
- * @version 0.2.4 (Semantic Analysis Integration)
+ * @version 0.2.5 (Hotfix: Reset State)
  */
 
 #include "baa.h"
@@ -10,17 +10,29 @@
 // --- نظام جدول الرموز (Symbol Table) ---
 // ملاحظة: تم نقل تعريفات Struct Symbol و Enum ScopeType إلى baa.h
 
-Symbol global_symbols[100]; int global_count = 0;
-Symbol local_symbols[100]; int local_count = 0; 
-int current_stack_offset = 0; // يتتبع موقع الـ RSP بالنسبة للـ RBP
-int label_counter = 0;        // لإنشاء تسميات فريدة للجمل الشرطية وحلقات التكرار
+static Symbol global_symbols[100]; static int global_count = 0;
+static Symbol local_symbols[100]; static int local_count = 0; 
+static int current_stack_offset = 0; // يتتبع موقع الـ RSP بالنسبة للـ RBP
+static int label_counter = 0;        // لإنشاء تسميات فريدة للجمل الشرطية وحلقات التكرار
 
 // --- مكدس ملصقات الحلقات (Loop Label Stack) ---
-int loop_continue_stack[100]; 
-int loop_break_stack[100];    
-int loop_depth = 0;           
+static int loop_continue_stack[100]; 
+static int loop_break_stack[100];    
+static int loop_depth = 0;           
 
-void push_loop(int continue_label, int break_label) {
+/**
+ * @brief إعادة تعيين حالة المولد (يستخدم عند بدء ملف جديد).
+ */
+static void reset_codegen() {
+    global_count = 0;
+    local_count = 0;
+    current_stack_offset = 0;
+    label_counter = 0;
+    loop_depth = 0;
+    // ملاحظة: جدول النصوص يتم تصفيره أيضاً في دالة register_string عبر string_count
+}
+
+static void push_loop(int continue_label, int break_label) {
     if (loop_depth >= 100) { printf("Codegen Error: Loops nested too deeply\n"); exit(1); }
     loop_continue_stack[loop_depth] = continue_label;
     loop_break_stack[loop_depth] = break_label;
@@ -30,7 +42,7 @@ void push_loop(int continue_label, int break_label) {
 // دالة خاصة لدفع نطاق جملة "اختر"
 // جملة الاختيار تقبل "توقف" لكنها لا تقبل "استمر" (إلا إذا كانت داخل حلقة)
 // لذا، ملصق "استمر" يرث قيمته من النطاق السابق
-void push_switch(int break_label) {
+static void push_switch(int break_label) {
     if (loop_depth >= 100) { printf("Codegen Error: Nesting too deep\n"); exit(1); }
     
     // وراثة ملصق الاستمرار من الحلقة المحيطة (إن وجدت)
@@ -42,18 +54,18 @@ void push_switch(int break_label) {
     loop_depth++;
 }
 
-void pop_loop() {
+static void pop_loop() {
     if (loop_depth > 0) loop_depth--;
 }
 
-int get_current_continue_label() {
+static int get_current_continue_label() {
     if (loop_depth == 0 || loop_continue_stack[loop_depth - 1] == 0) { 
         printf("Codegen Error: 'continue' outside of loop\n"); exit(1); 
     }
     return loop_continue_stack[loop_depth - 1];
 }
 
-int get_current_break_label() {
+static int get_current_break_label() {
     if (loop_depth == 0) { printf("Codegen Error: 'break' outside of loop or switch\n"); exit(1); }
     return loop_break_stack[loop_depth - 1];
 }
@@ -61,7 +73,7 @@ int get_current_break_label() {
 /**
  * @brief إضافة متغير عام لجدول الرموز.
  */
-void add_global(const char* name, DataType type) {
+static void add_global(const char* name, DataType type) {
     strcpy(global_symbols[global_count].name, name);
     global_symbols[global_count].scope = SCOPE_GLOBAL;
     global_symbols[global_count].type = type;
@@ -72,13 +84,13 @@ void add_global(const char* name, DataType type) {
 /**
  * @brief تهيئة نطاق الوظيفة (تصفير المتغيرات المحلية).
  */
-void enter_function_scope() { local_count = 0; current_stack_offset = 0; }
+static void enter_function_scope() { local_count = 0; current_stack_offset = 0; }
 
 /**
  * @brief إضافة متغير محلي.
  * @param size عدد وحدات 64-بت المطلوبة (1 للأعداد الصحيحة، N للمصفوفات).
  */
-void add_local(const char* name, int size, DataType type) {
+static void add_local(const char* name, int size, DataType type) {
     // 1. تحديد موقع الرمز (بداية الكتلة المحجوزة)
     int symbol_offset = current_stack_offset - 8;
     
@@ -95,7 +107,7 @@ void add_local(const char* name, int size, DataType type) {
 /**
  * @brief البحث عن رمز بالاسم في النطاق المحلي ثم العام.
  */
-Symbol* lookup_symbol(const char* name) {
+static Symbol* lookup_symbol(const char* name) {
     // التحقق من المتغيرات المحلية أولاً (Shadowing)
     for (int i = 0; i < local_count; i++) if (strcmp(local_symbols[i].name, name) == 0) return &local_symbols[i];
     // التحقق من المتغيرات العامة
@@ -106,13 +118,13 @@ Symbol* lookup_symbol(const char* name) {
 // --- جدول النصوص (String Table) ---
 
 typedef struct { char* content; int id; } StringEntry;
-StringEntry string_table[100];
-int string_count = 0;
+static StringEntry string_table[100];
+static int string_count = 0;
 
 /**
  * @brief تسجيل نص ثابت وتعيين معرف فريد له.
  */
-int register_string(char* content) {
+static int register_string(char* content) {
     for(int i=0; i<string_count; i++) {
         if(strcmp(string_table[i].content, content) == 0) return string_table[i].id;
     }
@@ -129,7 +141,7 @@ void codegen(Node* node, FILE* file);
 /**
  * @brief توليد كود التجميع لتعبير معين. النتيجة تخزن دائماً في مسجل %rax.
  */
-void gen_expr(Node* node, FILE* file) {
+static void gen_expr(Node* node, FILE* file) {
     if (node->type == NODE_INT) {
         fprintf(file, "    mov $%d, %%rax\n", node->data.integer.value);
     }
@@ -302,6 +314,10 @@ void codegen(Node* node, FILE* file) {
     if (node == NULL) return;
 
     if (node->type == NODE_PROGRAM) {
+        // RESET STATE FOR NEW FILE
+        reset_codegen();
+        string_count = 0; // Reset string table for new translation unit
+
         // 1. قسم البيانات الثابتة (سلاسل النصوص وصيغ الطباعة)
         fprintf(file, ".section .rdata,\"dr\"\n");
         fprintf(file, "fmt_int: .asciz \"%%d\\n\"\n");

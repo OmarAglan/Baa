@@ -8,12 +8,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
-### Planned (v0.2.6)
-- **Advanced Preprocessor**: Definitions (`#تعريف`), Conditionals (`#إذا`, `#وإلا`).
+### Planned (v0.2.7)
 - **Constants**: Immutable variables (`ثابت`) and constant checking.
 - **Warnings**: Diagnostic warnings for unused variables and dead code.
 
 ---
+## [0.2.6] - 2026-01-11
+
+### Added
+- **Preprocessor Engine** — Integrated directly into the Lexer to handle directives before parsing.
+- **Macro Definitions** — Implemented `#تعريف <name> <value>` to define compile-time constants.
+- **Conditional Compilation** — Implemented `#إذا_عرف`, `#وإلا`, and `#نهاية` to conditionally include or exclude code blocks.
+- **Undefine Directive** — Implemented `#الغاء_تعريف` to remove macro definitions.
+
+### Fixed
+- **Codegen State Leak** — Fixed a critical bug where symbol tables, label counters, and loop stacks were not reset when compiling multiple files, causing symbol collisions and invalid assembly generation.
 
 ## [0.2.5] - 2026-01-04
 ### Added

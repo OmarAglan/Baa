@@ -1,6 +1,6 @@
 # Baa Internal API Reference
 
-> **Version:** 0.1.1 | [← Internals](INTERNALS.md)
+> **Version:** 0.2.6 | [← Internals](INTERNALS.md)
 
 This document details the C functions, enumerations, and structures defined in `src/baa.h`.
 
@@ -19,7 +19,7 @@ This document details the C functions, enumerations, and structures defined in `
 
 ## 1. Lexer Module
 
-Handles UTF-8 string processing and tokenization.
+Handles UTF-8 string processing, tokenization, and **preprocessing**.
 
 ### `lexer_init`
 
@@ -40,6 +40,7 @@ Initializes a new Lexer instance.
 - Sets up position pointers (`cur_char`) to start of source.
 - Detects and skips UTF-8 BOM (`0xEF 0xBB 0xBF`) if present.
 - Initializes line counter to 1.
+- **Initializes the macro table** for the preprocessor.
 
 ---
 
@@ -49,7 +50,7 @@ Initializes a new Lexer instance.
 Token lexer_next_token(Lexer* l)
 ```
 
-Consumes input and returns the next valid token.
+Consumes input and returns the next valid token. **Handles preprocessor directives internally.**
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
@@ -58,12 +59,15 @@ Consumes input and returns the next valid token.
 **Returns:** `Token` struct. Returns `TOKEN_EOF` at end of file.
 
 **Behavior:**
-- Skips whitespace and comments (`//`)
-- Identifies keywords: `صحيح`, `إذا`, `طالما`, `لكل`, `اطبع`, `إرجع`
-- Handles Arabic semicolon `؛` (UTF-8 `0xD8 0x9B`)
-- Handles multi-char operators: `++`, `--`, `&&`, `||`, `<=`, `>=`, `==`, `!=`
-- Normalizes Arabic-Indic digits (`٠`-`٩`) to ASCII (`0`-`9`)
-- Allocates memory for `token.value` (caller must free)
+- Skips whitespace and comments (`//`).
+- **Preprocessor:**
+  - Handles `#تعريف` (define) to register macros.
+  - Handles `#إذا_عرف`, `#وإلا`, `#نهاية` to conditionally skip code.
+  - Handles `#تضمين` to push new files onto the stack.
+  - Replaces identifiers with macro values if defined.
+- Identifies keywords, literals, and operators.
+- Handles Arabic semicolon `؛`.
+- Normalizes Arabic-Indic digits (`٠`-`٩`).
 
 ---
 
@@ -179,19 +183,43 @@ typedef struct {
 
 ## 6. Data Structures
 
+### Lexer & Preprocessor Structures
+
+```c
+// Macro Definition
+typedef struct {
+    char* name;
+    char* value;
+} Macro;
+
+// Lexer State
+typedef struct {
+    LexerState state;       // Current file state
+    LexerState stack[10];   // Include stack
+    int stack_depth;
+    
+    // Preprocessor
+    Macro macros[100];      // Defined macros
+    int macro_count;
+    bool skipping;          // True if inside disabled #if block
+} Lexer;
+```
+
 ### Token
 
 Represents a single atomic unit of source code.
 
 ```c
 typedef struct {
-    TokenType type;  // Discriminator (TOKEN_FOR, TOKEN_INT, etc.)
-    char* value;     // Payload (name for ID, digits for INT)
-    int line;        // Source line number (for errors)
+    BaaTokenType type;  // Discriminator (TOKEN_INT, TOKEN_IF, etc.)
+    char* value;        // Payload (name for ID, digits for INT)
+    int line;           // Source line number (for errors)
+    int col;            // Source column
+    const char* filename;
 } Token;
 ```
 
-### TokenType Enum
+### BaaTokenType Enum
 
 ```c
 typedef enum {

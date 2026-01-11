@@ -1,7 +1,7 @@
 /**
  * @file lexer.c
  * @brief يقوم بتحويل الكود المصدري المكتوب باللغة العربية (UTF-8) إلى وحدات لفظية (Tokens).
- * @version 0.2.2 (Diagnostic Engine - Location Tracking & String Helpers)
+ * @version 0.2.6 (Preprocessor Implementation + Undefine)
  */
 
 #include "baa.h"
@@ -15,6 +15,8 @@ char* read_file(const char* path);
  */
 void lexer_init(Lexer* l, char* src, const char* filename) {
     l->stack_depth = 0;
+    l->macro_count = 0;
+    l->skipping = false;
     
     // تهيئة الحالة الحالية
     l->state.source = src;
@@ -71,6 +73,49 @@ char peek(Lexer* l) { return *l->state.cur_char; }
 // Helper to peek next char
 char peek_next(Lexer* l) { return *(l->state.cur_char + 1); }
 
+/**
+ * @brief إضافة تعريف ماكرو جديد.
+ */
+void add_macro(Lexer* l, char* name, char* value) {
+    if (l->macro_count >= 100) {
+        printf("Preprocessor Error: Too many macros defined (Max 100).\n");
+        exit(1);
+    }
+    l->macros[l->macro_count].name = strdup(name);
+    l->macros[l->macro_count].value = strdup(value);
+    l->macro_count++;
+}
+
+/**
+ * @brief إزالة تعريف ماكرو.
+ */
+static void remove_macro(Lexer* l, const char* name) {
+    for (int i = 0; i < l->macro_count; i++) {
+        if (strcmp(l->macros[i].name, name) == 0) {
+            free(l->macros[i].name);
+            free(l->macros[i].value);
+            // إزاحة العناصر المتبقية
+            for (int j = i; j < l->macro_count - 1; j++) {
+                l->macros[j] = l->macros[j+1];
+            }
+            l->macro_count--;
+            return;
+        }
+    }
+}
+
+/**
+ * @brief البحث عن ماكرو بالاسم.
+ */
+char* get_macro_value(Lexer* l, const char* name) {
+    for (int i = 0; i < l->macro_count; i++) {
+        if (strcmp(l->macros[i].name, name) == 0) {
+            return l->macros[i].value;
+        }
+    }
+    return NULL;
+}
+
 
 Token lexer_next_token(Lexer* l) {
     Token token = {0};
@@ -90,84 +135,160 @@ Token lexer_next_token(Lexer* l) {
             continue; // إعادة المحاولة (لمعالجة السطر الجديد)
         }
 
-        // معالجة الموجه # (Preprocessor)
+        // ====================================================================
+        // معالجة الموجهات (Preprocessor Directives)
+        // ====================================================================
         if (peek(l) == '#') {
             advance_pos(l); // consume '#'
             
             // قراءة الموجه
             if (is_arabic_start_byte(peek(l))) {
-                 // نحتاج لقراءة الكلمة "تضمين"
-                 // بايتات "تضمين" UTF-8: d8 aa d8 b6 d9 85 d9 8a d9 86
-                 // للتبسيط، سنقرأ الكلمة ونتحقق منها
-                 char* directive_start = l->state.cur_char;
+                 char* dir_start = l->state.cur_char;
                  while (!isspace(peek(l)) && peek(l) != '\0') advance_pos(l);
                  
-                 // مقارنة "تضمين"
-                 // نقوم بنسخ مؤقت
-                 size_t len = l->state.cur_char - directive_start;
-                 if (len == 10 && strncmp(directive_start, "تضمين", 10) == 0) {
-                     // 1. تخطي المسافات
+                 size_t len = l->state.cur_char - dir_start;
+                 char* directive = malloc(len + 1);
+                 strncpy(directive, dir_start, len);
+                 directive[len] = '\0';
+                 
+                 // 1. #تضمين (Include)
+                 if (strcmp(directive, "تضمين") == 0) {
+                     if (l->skipping) { free(directive); continue; }
+
                      while (peek(l) != '\0' && isspace(peek(l))) advance_pos(l);
-                     
-                     // 2. توقع اسم الملف كنص "..."
                      if (peek(l) != '"') {
-                         printf("Preprocessor Error: Expected filename string after #تضمين at %s:%d\n", l->state.filename, l->state.line);
-                         exit(1);
+                         printf("Preprocessor Error: Expected filename string after #تضمين\n"); exit(1);
                      }
                      advance_pos(l); // skip "
-
                      char* path_start = l->state.cur_char;
                      while (peek(l) != '"' && peek(l) != '\0') advance_pos(l);
-                     
                      size_t path_len = l->state.cur_char - path_start;
                      char* path = malloc(path_len + 1);
                      strncpy(path, path_start, path_len);
                      path[path_len] = '\0';
-                     
                      advance_pos(l); // skip "
-                     
-                     // 3. قراءة الملف الجديد
+
                      char* new_src = read_file(path);
                      if (!new_src) {
                          printf("Preprocessor Error: Could not include file '%s'\n", path);
                          exit(1);
                      }
                      
-                     // 4. وضع الحالة الحالية في المكدس (Push)
-                     if (l->stack_depth >= 10) {
-                          printf("Preprocessor Error: Too many nested includes (Max 10)\n");
-                          exit(1);
-                     }
+                     if (l->stack_depth >= 10) { printf("Preprocessor Error: Max include depth.\n"); exit(1); }
                      l->stack[l->stack_depth++] = l->state;
                      
-                     // 5. تهيئة الحالة الجديدة
                      l->state.source = new_src;
                      l->state.cur_char = new_src;
-                     l->state.filename = strdup(path); // يجب تحريره لاحقاً
+                     l->state.filename = strdup(path);
                      l->state.line = 1;
                      l->state.col = 1;
                      
-                     // free(path); // path is now owned by filename (if we duplicate wisely, but here simple strdup)
-                     
-                     continue; // ابدأ تحليل الملف الجديد فوراً
+                     free(directive);
+                     free(path);
+                     continue;
                  }
+                 // 2. #تعريف (Define)
+                 else if (strcmp(directive, "تعريف") == 0) {
+                     if (l->skipping) { free(directive); continue; }
+
+                     // قراءة الاسم
+                     while (peek(l) != '\0' && isspace(peek(l))) advance_pos(l);
+                     char* name_start = l->state.cur_char;
+                     while (!isspace(peek(l)) && peek(l) != '\0') advance_pos(l);
+                     size_t name_len = l->state.cur_char - name_start;
+                     char* name = malloc(name_len + 1);
+                     strncpy(name, name_start, name_len);
+                     name[name_len] = '\0';
+
+                     // قراءة القيمة (باقي السطر)
+                     while (peek(l) != '\0' && isspace(peek(l)) && peek(l) != '\n') advance_pos(l);
+                     char* val_start = l->state.cur_char;
+                     while (peek(l) != '\n' && peek(l) != '\0' && peek(l) != '\r') advance_pos(l); // لنهاية السطر
+                     size_t val_len = l->state.cur_char - val_start;
+                     char* val = malloc(val_len + 1);
+                     strncpy(val, val_start, val_len);
+                     val[val_len] = '\0';
+
+                     // تنظيف القيمة من المسافات الزائدة في النهاية
+                     while(val_len > 0 && isspace(val[val_len-1])) val[--val_len] = '\0';
+
+                     add_macro(l, name, val);
+                     free(name);
+                     free(val);
+                     free(directive);
+                     continue;
+                 }
+                 // 3. #إذا_عرف (If Defined)
+                 else if (strcmp(directive, "إذا_عرف") == 0) {
+                     // قراءة الاسم
+                     while (peek(l) != '\0' && isspace(peek(l))) advance_pos(l);
+                     char* name_start = l->state.cur_char;
+                     while (!isspace(peek(l)) && peek(l) != '\0') advance_pos(l);
+                     size_t name_len = l->state.cur_char - name_start;
+                     char* name = malloc(name_len + 1);
+                     strncpy(name, name_start, name_len);
+                     name[name_len] = '\0';
+
+                     bool defined = (get_macro_value(l, name) != NULL);
+                     // إذا كنا نتخطى أصلاً، نستمر في التخطي
+                     if (!l->skipping) {
+                         l->skipping = !defined;
+                     }
+                     
+                     free(name);
+                     free(directive);
+                     continue;
+                 }
+                 // 4. #وإلا (Else)
+                 else if (strcmp(directive, "وإلا") == 0) {
+                     l->skipping = !l->skipping;
+                     free(directive);
+                     continue;
+                 }
+                 // 5. #نهاية (End)
+                 else if (strcmp(directive, "نهاية") == 0) {
+                     l->skipping = false;
+                     free(directive);
+                     continue;
+                 }
+                 // 6. #الغاء_تعريف (Undefine)
+                 else if (strcmp(directive, "الغاء_تعريف") == 0) {
+                     if (l->skipping) { free(directive); continue; }
+
+                     // قراءة الاسم
+                     while (peek(l) != '\0' && isspace(peek(l))) advance_pos(l);
+                     char* name_start = l->state.cur_char;
+                     while (!isspace(peek(l)) && peek(l) != '\0') advance_pos(l);
+                     size_t name_len = l->state.cur_char - name_start;
+                     char* name = malloc(name_len + 1);
+                     strncpy(name, name_start, name_len);
+                     name[name_len] = '\0';
+
+                     remove_macro(l, name);
+                     free(name);
+                     free(directive);
+                     continue;
+                 }
+                 
+                 free(directive);
             }
-            // إذا لم يكن #تضمين، نعتبره خطأ أو نعالجه كرمز عادي (حالياً لا يوجد غير التضمين)
              printf("Preprocessor Error: Unknown directive at %s:%d\n", l->state.filename, l->state.line);
              exit(1);
+        }
+
+        // إذا كنا في وضع التخطي، نتجاهل كل شيء حتى نجد #
+        if (l->skipping) {
+            advance_pos(l);
+            continue;
         }
 
         // نهاية الملف EOF
         if (peek(l) == '\0') {
             // إذا كنا داخل ملف مضمن، نعود للملف السابق (Pop)
             if (l->stack_depth > 0) {
-                // cleanup current
                 free(l->state.source);
-                // free((void*)l->state.filename); // if duplicated
-
-                // pop
                 l->state = l->stack[--l->stack_depth];
-                continue; // أكمل من حيث توقفنا في الملف السابق
+                continue; 
             }
             token.type = TOKEN_EOF;
             token.filename = l->state.filename;
@@ -176,7 +297,7 @@ Token lexer_next_token(Lexer* l) {
             return token;
         }
 
-        break; // وجدنا بداية رمز صالح
+        break; // وجدنا بداية رمز صالح ونحن لسن في وضع التخطي
     }
 
     // تسجيل الموقع
@@ -341,7 +462,36 @@ Token lexer_next_token(Lexer* l) {
         strncpy(word, start, len);
         word[len] = '\0';
 
-        // التحقق مما إذا كانت الكلمة كلمة مفتاحية محجوزة
+        // 1. Check for Macro substitution
+        char* macro_val = get_macro_value(l, word);
+        if (macro_val != NULL) {
+            // استبدال الرمز بقيمة الماكرو
+            if (macro_val[0] == '"') {
+                token.type = TOKEN_STRING;
+                // إزالة علامات التنصيص
+                size_t vlen = strlen(macro_val);
+                if (vlen >= 2) {
+                    char* val = malloc(vlen - 1);
+                    strncpy(val, macro_val + 1, vlen - 2);
+                    val[vlen - 2] = '\0';
+                    token.value = val;
+                } else {
+                    token.value = strdup("");
+                }
+            } 
+            else if (isdigit((unsigned char)macro_val[0]) || is_arabic_digit(macro_val)) {
+                token.type = TOKEN_INT;
+                token.value = strdup(macro_val);
+            }
+            else {
+                token.type = TOKEN_IDENTIFIER;
+                token.value = strdup(macro_val);
+            }
+            free(word);
+            return token;
+        }
+
+        // 2. الكلمات المفتاحية المحجوزة
         if (strcmp(word, "إرجع") == 0) token.type = TOKEN_RETURN;
         else if (strcmp(word, "اطبع") == 0) token.type = TOKEN_PRINT;
         else if (strcmp(word, "صحيح") == 0) token.type = TOKEN_KEYWORD_INT;

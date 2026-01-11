@@ -1,7 +1,7 @@
 /**
  * @file baa.h
  * @brief ملف الرأس الرئيسي الذي يعرف هياكل البيانات لمحوسب لغة "باء" (Baa Compiler).
- * @version 0.2.5 (Multi-File Support)
+ * @version 0.2.6 (Preprocessor)
  */
 
 #ifndef BAA_H
@@ -15,7 +15,7 @@
 #include <stdarg.h>
 
 // معلومات الإصدار
-#define BAA_VERSION "0.2.5"
+#define BAA_VERSION "0.2.6"
 #define BAA_BUILD_DATE __DATE__
 
 // ============================================================================
@@ -99,9 +99,17 @@ typedef struct {
 } Token;
 
 /**
- * @struct Lexer
+ * @struct Macro
+ * @brief تمثيل لتعريف ماكرو (Preprocessor Macro).
+ */
+typedef struct {
+    char* name;  // اسم الماكرو
+    char* value; // القيمة الاستبدالية
+} Macro;
+
+/**
  * @struct LexerState
- * @brief يحافظ على حالة المحلل اللفظي (لدعم التضمين المتداخل).
+ * @brief يحافظ على حالة المحلل اللفظي لملف واحد (لدعم التضمين المتداخل).
  */
 typedef struct {
     char* source;
@@ -111,7 +119,10 @@ typedef struct {
     int col;
 } LexerState;
 
-// المحلل اللفظي (The Lexer)
+/**
+ * @struct Lexer
+ * @brief المحلل اللفظي والمعالج القبلي (Lexer & Preprocessor).
+ */
 typedef struct {
     // الحالة الحالية
     LexerState state;
@@ -119,6 +130,11 @@ typedef struct {
     // مكدس التضمين (Include Stack)
     LexerState stack[10]; // أقصى عمق للتضمين: 10
     int stack_depth;
+
+    // حالة المعالج القبلي (Preprocessor State)
+    Macro macros[100];    // جدول الماكروهات (حد أقصى 100)
+    int macro_count;      // عدد الماكروهات المعرفة
+    bool skipping;        // هل نحن في وضع التخطي؟ (بسبب #إذا_عرف)
 } Lexer;
 
 /**

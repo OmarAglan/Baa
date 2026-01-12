@@ -1,7 +1,7 @@
 <div dir="rtl">
 
 <div align="center">
-<img width="260" height="260" alt="gpt-image-1 5_b_A_professional_logo_ (1)" src="https://github.com/user-attachments/assets/9b1c29f2-5dd7-4a38-a1be-19be6afe64f6" />
+<img width="260" height="260" alt="Baa Logo" src="resources/logo.png" />
 
 
 ![Version](https://img.shields.io/badge/version-0.2.7-blue.svg)

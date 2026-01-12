@@ -1,7 +1,7 @@
 /**
  * @file lexer.c
  * @brief يقوم بتحويل الكود المصدري المكتوب باللغة العربية (UTF-8) إلى وحدات لفظية (Tokens).
- * @version 0.2.6 (Preprocessor Implementation + Undefine)
+ * @version 0.2.7 (Constants & Immutability)
  */
 
 #include "baa.h"
@@ -496,6 +496,7 @@ Token lexer_next_token(Lexer* l) {
         else if (strcmp(word, "اطبع") == 0) token.type = TOKEN_PRINT;
         else if (strcmp(word, "صحيح") == 0) token.type = TOKEN_KEYWORD_INT;
         else if (strcmp(word, "نص") == 0) token.type = TOKEN_KEYWORD_STRING;
+        else if (strcmp(word, "ثابت") == 0) token.type = TOKEN_CONST;
         else if (strcmp(word, "إذا") == 0) token.type = TOKEN_IF;
         else if (strcmp(word, "وإلا") == 0) token.type = TOKEN_ELSE;
         else if (strcmp(word, "طالما") == 0) token.type = TOKEN_WHILE;
@@ -535,6 +536,7 @@ const char* token_type_to_str(BaaTokenType type) {
         // Keywords
         case TOKEN_KEYWORD_INT: return "صحيح";
         case TOKEN_KEYWORD_STRING: return "نص";
+        case TOKEN_CONST: return "ثابت";
         case TOKEN_RETURN: return "إرجع";
         case TOKEN_PRINT: return "اطبع";
         case TOKEN_IF: return "إذا";

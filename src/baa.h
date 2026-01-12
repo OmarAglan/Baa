@@ -1,7 +1,7 @@
 /**
  * @file baa.h
  * @brief ملف الرأس الرئيسي الذي يعرف هياكل البيانات لمحوسب لغة "باء" (Baa Compiler).
- * @version 0.2.6 (Preprocessor)
+ * @version 0.2.7 (Constants & Immutability)
  */
 
 #ifndef BAA_H
@@ -15,7 +15,7 @@
 #include <stdarg.h>
 
 // معلومات الإصدار
-#define BAA_VERSION "0.2.6"
+#define BAA_VERSION "0.2.7"
 #define BAA_BUILD_DATE __DATE__
 
 // ============================================================================
@@ -36,6 +36,7 @@ typedef enum {
     // الكلمات المفتاحية (Keywords)
     TOKEN_KEYWORD_INT,  // صحيح
     TOKEN_KEYWORD_STRING, // نص
+    TOKEN_CONST,        // ثابت
     TOKEN_RETURN,       // إرجع
     TOKEN_PRINT,        // اطبع
     TOKEN_IF,           // إذا
@@ -295,11 +296,12 @@ typedef struct Node {
         } func_def;
 
         // تعريف متغير (عادي)
-        struct { 
+        struct {
             char* name;              // اسم المتغير
             DataType type;           // نوع البيانات (صحيح أو نص)
             struct Node* expression; // القيمة الابتدائية (اختياري)
             bool is_global;          // هل هو متغير عام؟
+            bool is_const;           // هل هو ثابت (immutable)؟
         } var_decl;
 
         // تعريف مصفوفة
@@ -307,6 +309,7 @@ typedef struct Node {
             char* name;     // اسم المصفوفة
             int size;       // حجم المصفوفة (ثابت حالياً)
             bool is_global; // هل هي عامة؟ (المحلي فقط مدعوم حالياً)
+            bool is_const;  // هل هي ثابتة (immutable)؟
         } array_decl;
 
         // عمليات المصفوفات - للتعيين والقراءة
@@ -405,11 +408,12 @@ typedef enum {
  * @struct Symbol
  * @brief يمثل رمزاً (متغيراً) في جدول الرموز.
  */
-typedef struct { 
+typedef struct {
     char name[32];     // اسم الرمز
     ScopeType scope;   // النطاق (عام أو محلي)
     DataType type;     // نوع البيانات (صحيح أو نص)
     int offset;        // الإزاحة في المكدس أو العنوان
+    bool is_const;     // هل هو ثابت (immutable)؟
 } Symbol;
 
 /**

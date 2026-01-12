@@ -1,7 +1,7 @@
 /**
  * @file parser.c
  * @brief يقوم بتحليل الوحدات اللفظية وبناء شجرة الإعراب المجردة (AST) باستخدام طريقة الانحدار العودي (Recursive Descent).
- * @version 0.2.2 (Diagnostic Engine & Panic Recovery)
+ * @version 0.2.7 (Constants & Immutability)
  */
 
 #include "baa.h"
@@ -90,6 +90,7 @@ void synchronize() {
         switch (parser.current.type) {
             case TOKEN_KEYWORD_INT:
             case TOKEN_KEYWORD_STRING:
+            case TOKEN_CONST:
             case TOKEN_IF:
             case TOKEN_WHILE:
             case TOKEN_FOR:
@@ -666,6 +667,13 @@ Node* parse_statement() {
         return stmt;
     }
     
+    // التحقق من وجود كلمة ثابت (const)
+    bool is_const = false;
+    if (parser.current.type == TOKEN_CONST) {
+        is_const = true;
+        eat(TOKEN_CONST);
+    }
+
     if (is_type_keyword(parser.current.type)) {
         DataType dt = token_to_datatype(parser.current.type);
         eat(parser.current.type);
@@ -689,7 +697,13 @@ Node* parse_statement() {
             stmt->data.array_decl.name = name;
             stmt->data.array_decl.size = size;
             stmt->data.array_decl.is_global = false;
+            stmt->data.array_decl.is_const = is_const;
             return stmt;
+        }
+
+        // الثوابت يجب أن يكون لها قيمة ابتدائية
+        if (is_const && parser.current.type != TOKEN_ASSIGN) {
+            error_report(parser.current, "Constant must be initialized.");
         }
 
         eat(TOKEN_ASSIGN);
@@ -700,6 +714,7 @@ Node* parse_statement() {
         stmt->data.var_decl.type = dt;
         stmt->data.var_decl.expression = expr;
         stmt->data.var_decl.is_global = false;
+        stmt->data.var_decl.is_const = is_const;
         return stmt;
     }
     
@@ -772,6 +787,13 @@ Node* parse_statement() {
 }
 
 Node* parse_declaration() {
+    // التحقق من وجود كلمة ثابت (const) للتصريحات العامة
+    bool is_const = false;
+    if (parser.current.type == TOKEN_CONST) {
+        is_const = true;
+        eat(TOKEN_CONST);
+    }
+
     if (is_type_keyword(parser.current.type)) {
         DataType dt = token_to_datatype(parser.current.type);
         eat(parser.current.type);
@@ -787,6 +809,10 @@ Node* parse_declaration() {
         }
 
         if (parser.current.type == TOKEN_LPAREN) {
+            // الدوال لا يمكن أن تكون ثوابت
+            if (is_const) {
+                error_report(parser.current, "Functions cannot be declared as const.");
+            }
             eat(TOKEN_LPAREN);
             Node* head_param = NULL;
             Node* tail_param = NULL;
@@ -843,6 +869,11 @@ Node* parse_declaration() {
             return func;
         }
         else {
+            // الثوابت العامة يجب أن يكون لها قيمة ابتدائية
+            if (is_const && parser.current.type != TOKEN_ASSIGN) {
+                error_report(parser.current, "Constant must be initialized.");
+            }
+
             Node* expr = NULL;
             if (parser.current.type == TOKEN_ASSIGN) { eat(TOKEN_ASSIGN); expr = parse_expression(); }
             eat(TOKEN_DOT);
@@ -852,6 +883,7 @@ Node* parse_declaration() {
             var->data.var_decl.type = dt;
             var->data.var_decl.expression = expr;
             var->data.var_decl.is_global = true;
+            var->data.var_decl.is_const = is_const;
             var->next = NULL;
             return var;
         }

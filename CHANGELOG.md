@@ -8,9 +8,32 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
-### Planned (v0.2.7)
-- **Constants**: Immutable variables (`ثابت`) and constant checking.
+### Planned (v0.2.8)
 - **Warnings**: Diagnostic warnings for unused variables and dead code.
+- **Warning Flags**: `-Wall`, `-Werror` to control warning behavior.
+
+---
+## [0.2.7] - 2026-01-12
+
+### Added
+- **Constant Keyword (`ثابت`)** — Declare immutable variables that cannot be reassigned after initialization.
+  - Syntax: `ثابت صحيح حد = ١٠٠.` (const int limit = 100)
+  - Works for both global and local variables.
+- **Constant Arrays** — Support for immutable arrays: `ثابت صحيح قائمة[٥].`
+- **Const Checking** — Semantic analysis now detects and reports:
+  - Reassignment to constant variables.
+  - Modification of constant array elements.
+  - Constants declared without initialization.
+
+### Changed
+- **Symbol Table** — Added `is_const` flag to track constant status.
+- **Parser** — Updated to recognize `ثابت` keyword before type declarations.
+- **Semantic Analysis** — Enhanced to enforce immutability rules.
+
+### Technical Details
+- Constants must be initialized at declaration time.
+- Functions cannot be declared as const.
+- Const checking happens during semantic analysis phase (before code generation).
 
 ---
 ## [0.2.6] - 2026-01-11

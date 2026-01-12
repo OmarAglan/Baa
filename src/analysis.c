@@ -1,8 +1,8 @@
 /**
  * @file analysis.c
  * @brief وحدة التحليل الدلالي (Semantic Analysis).
- * @details تقوم هذه الوحدة بالتحقق من صحة البرنامج قبل توليد الكود، بما في ذلك التحقق من الأنواع (Type Checking) والتحقق من النطاقات (Scope Analysis).
- * @version 0.2.4
+ * @details تقوم هذه الوحدة بالتحقق من صحة البرنامج قبل توليد الكود، بما في ذلك التحقق من الأنواع (Type Checking) والتحقق من النطاقات (Scope Analysis) والتحقق من الثوابت (Const Checking).
+ * @version 0.2.7
  */
 
 #include "baa.h"
@@ -58,7 +58,7 @@ static void reset_analysis() {
 /**
  * @brief إضافة رمز إلى النطاق الحالي.
  */
-static void add_symbol(const char* name, ScopeType scope, DataType type) {
+static void add_symbol(const char* name, ScopeType scope, DataType type, bool is_const) {
     if (scope == SCOPE_GLOBAL) {
         // التحقق من التكرار
         for (int i = 0; i < global_count; i++) {
@@ -72,6 +72,7 @@ static void add_symbol(const char* name, ScopeType scope, DataType type) {
         strcpy(global_symbols[global_count].name, name);
         global_symbols[global_count].scope = SCOPE_GLOBAL;
         global_symbols[global_count].type = type;
+        global_symbols[global_count].is_const = is_const;
         global_count++;
     } else {
         // التحقق من التكرار محلياً
@@ -86,6 +87,7 @@ static void add_symbol(const char* name, ScopeType scope, DataType type) {
         strcpy(local_symbols[local_count].name, name);
         local_symbols[local_count].scope = SCOPE_LOCAL;
         local_symbols[local_count].type = type;
+        local_symbols[local_count].is_const = is_const;
         local_count++;
     }
 }
@@ -202,10 +204,15 @@ static void analyze_node(Node* node) {
                         exprType == TYPE_INT ? "INTEGER" : "STRING");
                 }
             }
-            // 2. إضافة الرمز
-            add_symbol(node->data.var_decl.name, 
+            // 2. التحقق من أن الثوابت لها قيم ابتدائية
+            if (node->data.var_decl.is_const && !node->data.var_decl.expression) {
+                semantic_error("Constant '%s' must be initialized.", node->data.var_decl.name);
+            }
+            // 3. إضافة الرمز
+            add_symbol(node->data.var_decl.name,
                        node->data.var_decl.is_global ? SCOPE_GLOBAL : SCOPE_LOCAL,
-                       node->data.var_decl.type);
+                       node->data.var_decl.type,
+                       node->data.var_decl.is_const);
             break;
         }
 
@@ -213,11 +220,11 @@ static void analyze_node(Node* node) {
             // الدخول في نطاق دالة جديدة (تصفير المحلي)
             local_count = 0;
             
-            // إضافة المعاملات كمتغيرات محلية
+            // إضافة المعاملات كمتغيرات محلية (المعاملات ليست ثوابت افتراضياً)
             Node* param = node->data.func_def.params;
             while (param) {
                 if (param->type == NODE_VAR_DECL) {
-                     add_symbol(param->data.var_decl.name, SCOPE_LOCAL, param->data.var_decl.type);
+                     add_symbol(param->data.var_decl.name, SCOPE_LOCAL, param->data.var_decl.type, false);
                 }
                 param = param->next;
             }
@@ -243,6 +250,10 @@ static void analyze_node(Node* node) {
             if (!sym) {
                 semantic_error("Assignment to undefined variable '%s'.", node->data.assign_stmt.name);
             } else {
+                // التحقق من الثوابت: لا يمكن إعادة تعيين قيمة ثابت
+                if (sym->is_const) {
+                    semantic_error("Cannot reassign constant '%s'.", node->data.assign_stmt.name);
+                }
                 DataType exprType = infer_type(node->data.assign_stmt.expression);
                 if (exprType != sym->type) {
                     semantic_error("Type mismatch in assignment to '%s'.", node->data.assign_stmt.name);
@@ -342,13 +353,18 @@ static void analyze_node(Node* node) {
             break;
 
         case NODE_ARRAY_DECL:
-            add_symbol(node->data.array_decl.name, SCOPE_LOCAL, TYPE_INT);
+            add_symbol(node->data.array_decl.name, SCOPE_LOCAL, TYPE_INT, node->data.array_decl.is_const);
             break;
 
         case NODE_ARRAY_ASSIGN: {
             Symbol* sym = lookup(node->data.array_op.name);
             if (!sym) {
                 semantic_error("Assignment to undefined array '%s'.", node->data.array_op.name);
+            } else {
+                // التحقق من الثوابت: لا يمكن تعديل عناصر مصفوفة ثابتة
+                if (sym->is_const) {
+                    semantic_error("Cannot modify constant array '%s'.", node->data.array_op.name);
+                }
             }
             if (infer_type(node->data.array_op.index) != TYPE_INT) {
                 semantic_error("Array index must be integer.");

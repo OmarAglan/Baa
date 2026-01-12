@@ -1,6 +1,6 @@
 # Baa Internal API Reference
 
-> **Version:** 0.2.6 | [← Internals](INTERNALS.md)
+> **Version:** 0.2.6 | [← User Guide](USER_GUIDE.md) | [Internals →](INTERNALS.md)
 
 This document details the C functions, enumerations, and structures defined in `src/baa.h`.
 
@@ -38,7 +38,7 @@ Initializes a new Lexer instance.
 **Behavior:**
 - Initializes the state stack depth to 0.
 - Sets up position pointers (`cur_char`) to start of source.
-- Detects and skips UTF-8 BOM (`0xEF 0xBB 0xBF`) if present.
++- Detects and skips UTF-8 BOM (Byte Order Mark: `0xEF 0xBB 0xBF`) if present.
 - Initializes line counter to 1.
 - **Initializes the macro table** for the preprocessor.
 
@@ -61,9 +61,11 @@ Consumes input and returns the next valid token. **Handles preprocessor directiv
 **Behavior:**
 - Skips whitespace and comments (`//`).
 - **Preprocessor:**
-  - Handles `#تعريف` (define) to register macros.
-  - Handles `#إذا_عرف`, `#وإلا`, `#نهاية` to conditionally skip code.
-  - Handles `#تضمين` to push new files onto the stack.
+  - Handles `#تعريف <name> <value>` (define) to register macros.
+  - Handles `#إذا_عرف <name>` (ifdef) to conditionally compile code.
+  - Handles `#وإلا` (else) and `#نهاية` (endif) for conditional blocks.
+  - Handles `#تضمين "file"` (include) to push new files onto the stack.
+  - Handles `#الغاء_تعريف <name>` (undefine) to remove macro definitions.
   - Replaces identifiers with macro values if defined.
 - Identifies keywords, literals, and operators.
 - Handles Arabic semicolon `؛`.
@@ -90,7 +92,7 @@ Entry point for the parsing phase.
 **Returns:** Pointer to root `Node` (type `NODE_PROGRAM`).
 
 **Behavior:**
-- Initializes internal `Parser` state with 1-token lookahead
+- Initializes internal `Parser` state with 2-token lookahead (current + next)
 - Parses list of declarations (global variables or functions)
 - Implements operator precedence climbing for expressions
 - Builds linked-list AST structure
@@ -98,7 +100,7 @@ Entry point for the parsing phase.
 **Example:**
 ```c
 Lexer lexer;
-lexer_init(&lexer, source_code);
+lexer_init(&lexer, source_code, "filename.baa");
 Node* ast = parse(&lexer);
 // Use ast...
 ```
@@ -124,6 +126,10 @@ Runs the semantic pass on the AST.
 **Returns:** `true` if valid, `false` if errors were found.
 
 **Behavior:**
+- **Type Checking**: Ensures type compatibility in assignments and operations.
+- **Symbol Resolution**: Verifies variables are declared before use.
+- **Scope Validation**: Tracks global vs local scope and prevents redefinitions.
+- **Control Flow Validation**: Ensures `break`/`continue` are only used within loops/switches.
 - Traverses the entire tree.
 - Reports errors using `error_report`.
 - Does not modify the AST, only validates it.
@@ -158,7 +164,31 @@ Recursively generates assembly code from AST.
 - Indexed addressing for array access
 - Label-based control flow for loops
 
----
+
+## 5a. Error Reporting
+
+Centralized diagnostic system for compiler errors.
+
+### `error_init`
+
+```c
+void error_init(const char* source)
+```
+
+Initializes the error reporting system with the source code for context display.
+
+### `error_report`
+
+```c
+void error_report(Token token, const char* message, ...)
+```
+
+Reports an error with source location, line context, and a pointer to the error position.
+
+**Features:**
+- Displays filename, line, and column
+- Shows the actual source line with a `^` pointer
+- Supports printf-style formatting
 
 ## 5. Symbol Table
 
@@ -177,11 +207,13 @@ typedef struct {
 } Symbol;
 ```
 
-> **Note**: Symbol table management functions (`add_local`, `lookup`, etc.) are currently implemented as static helper functions within `analysis.c` and `codegen.c` independently to maintain module isolation.
+> **Note**: Symbol table management functions (`add_local`, `lookup`, etc.) are implemented as static helper functions within `analysis.c` and `codegen.c` independently. In v0.2.4+, the `Symbol` struct definition is shared via `baa.h` to enable semantic analysis before code generation.
 
 ---
 
 ## 6. Data Structures
+
+### 6.1. Preprocessor Structures
 
 ### Lexer & Preprocessor Structures
 
@@ -192,10 +224,19 @@ typedef struct {
     char* value;
 } Macro;
 
+// State for a single file
+typedef struct {
+    char* source;
+    char* cur_char;
+    const char* filename;
+    int line;
+    int col;
+} LexerState;
+
 // Lexer State
 typedef struct {
     LexerState state;       // Current file state
-    LexerState stack[10];   // Include stack
+    LexerState stack[10];   // Include stack (max depth: 10)
     int stack_depth;
     
     // Preprocessor
@@ -205,7 +246,7 @@ typedef struct {
 } Lexer;
 ```
 
-### Token
+### 6.2. Token
 
 Represents a single atomic unit of source code.
 
@@ -218,6 +259,7 @@ typedef struct {
     const char* filename;
 } Token;
 ```
+### 6.3. Token Types
 
 ### BaaTokenType Enum
 
@@ -259,6 +301,7 @@ typedef enum {
 ```
 
 ---
+### 6.4. AST Node Structure
 
 ### Node (AST)
 
@@ -270,19 +313,22 @@ typedef struct Node {
     struct Node* next;  // Linked list pointer
     
     union {
-        // Program
+        // Program (root node)
         struct { struct Node* declarations; } program;
         
-        // Function
+        // Function definition
         struct {
             char* name;
+            DataType return_type;
             struct Node* params;
             struct Node* body;
+            bool is_prototype;  // NEW in v0.2.5
         } func;
         
         // Variable declaration
         struct {
             char* name;
+            DataType type;
             struct Node* expression;
             bool is_global;
         } var_decl;
@@ -308,6 +354,19 @@ typedef struct Node {
             struct Node* increment;
             struct Node* body;
         } for_stmt;
+        
+        // Switch statement (NEW in v0.1.3)
+        struct {
+            struct Node* expression;
+            struct Node* cases;
+        } switch_stmt;
+        
+        // Case statement
+        struct {
+            struct Node* value;
+            struct Node* body;
+            bool is_default;
+        } case_stmt;
         
         // Binary operation
         struct {
@@ -336,6 +395,7 @@ typedef struct Node {
 ```
 
 ---
+### 6.5. Node Types
 
 ### NodeType Enum
 
@@ -364,6 +424,10 @@ typedef enum {
     NODE_WHILE,
     NODE_FOR,
     NODE_RETURN,
+    NODE_SWITCH,      // NEW in v0.1.3
+    NODE_CASE,        // NEW in v0.1.3
+    NODE_BREAK,       // NEW in v0.1.2
+    NODE_CONTINUE,    // NEW in v0.1.2
     NODE_PRINT,
     
     // Expressions
@@ -382,4 +446,4 @@ typedef enum {
 
 ---
 
-*[← Internals](INTERNALS.md)*
+*[← User Guide](USER_GUIDE.md) | [Internals →](INTERNALS.md)*

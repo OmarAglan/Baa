@@ -16,42 +16,63 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ## [0.2.6] - 2026-01-11
 
 ### Added
-- **Preprocessor Engine** — Integrated directly into the Lexer to handle directives before parsing.
-- **Macro Definitions** — Implemented `#تعريف <name> <value>` to define compile-time constants.
-- **Conditional Compilation** — Implemented `#إذا_عرف`, `#وإلا`, and `#نهاية` to conditionally include or exclude code blocks.
-- **Undefine Directive** — Implemented `#الغاء_تعريف` to remove macro definitions.
+- **Preprocessor Engine** – Fully integrated into Lexer (`lexer.c`) to handle directives before tokenization.
+- **Macro Definitions** – Implemented `#تعريف <name> <value>` to define compile-time constants.
+- **Conditional Compilation** – Implemented `#إذا_عرف`, `#وإلا`, and `#نهاية` to conditionally include or exclude code blocks.
+- **Undefine Directive** – Implemented `#الغاء_تعريف` to remove macro definitions.
+- **Macro Substitution** – Identifiers are automatically replaced with macro values during lexing.
 
 ### Fixed
-- **Codegen State Leak** — Fixed a critical bug where symbol tables, label counters, and loop stacks were not reset when compiling multiple files, causing symbol collisions and invalid assembly generation.
+- **Codegen State Leak** – Fixed critical bug where symbol tables, label counters, and loop stacks were not reset between compilation units.
+- Added `reset_codegen()` function called at start of each `NODE_PROGRAM` in `codegen.c`.
+- Prevents symbol collisions and invalid assembly when compiling multiple files.
+
+### Technical Details
+- Preprocessor directives are handled in `lexer_next_token()` before any tokenization.
+- Include stack depth limited to 10 levels to prevent infinite recursion.
+- Macro table size limited to 100 entries.
+- File state (source, line, col, filename) properly tracked through include stack.
 
 ## [0.2.5] - 2026-01-04
 ### Added
-- **Multi-File Compilation**: Support for compiling multiple `.b` files and linking them into a single executable.
+- **Multi-File Compilation**: Full support for compiling multiple `.baa` files into a single executable.
+  - Each file compiled to `.o` independently, then linked together.
+  - Proper handling of compilation errors per file.
 - **Function Prototypes**: New syntax `صحيح دالة().` to declare functions without definition (for cross-file usage).
-- **Preprocessor**: Implemented `#تضمين` (`#include`) to include header files.
-- **File Extensions**: Adopted `.baa` for source files and `.baahd` for headers.
+- **Include Directive**: Implemented `#تضمين "file"` (include) for header files.
+  - Nested includes supported up to 10 levels deep.
+  - Proper filename tracking for error reporting.
+- **File Extension Convention**: Standardized `.baa` for source, `.baahd` for headers.
 
 ### Changed
-- **Defaults**: Examples and documentation now favor `.baa` over `.b`.
+- **Documentation**: Updated all examples to use `.baa` extension.
+- **CLI**: Multi-file compilation now primary workflow.
 
 ### Fixed
 - **CLI Arguments**: Fixed crash when running `baa` without arguments.
-- **Flags**: Added support for lowercase `-s` (same as `-S`).
-- **Updater Logic**: Fixed version comparison to respect SemVer (e.g., 0.2.5 is newer than 0.2.4) instead of blindly flagging inequality as an update.
-- **Auto-Update Trigger**: `baa update <file>` no longer triggers the updater; strict `baa update` syntax is now enforced.
+- **Lowercase `-s` Flag**: Added support for `-s` as alias for `-S`.
+- **Updater Version Logic**: Fixed semantic version comparison (now properly compares major.minor.patch).
+- **Update Command Parsing**: `baa update` must now be used alone (no filename arguments).
 
 ## [0.2.4] - 2026-01-04
 
 ### Added
 - **Semantic Analysis Pass** — Implemented a dedicated validation phase (`src/analysis.c`) that runs before code generation. It checks for:
     - **Symbol Resolution**: Ensures variables are declared before use.
-    - **Type Checking**: strictly enforces `TYPE_INT` vs `TYPE_STRING` compatibility in assignments and operations.
+    - **Type Checking**: Strictly enforces `TYPE_INT` vs `TYPE_STRING` compatibility.
     - **Scope Validation**: Tracks global vs local variable declarations.
+    - **Control Flow Validation**: Ensures `break`/`continue` only used in valid contexts.
 - **Shared Symbol Definitions** — Moved `Symbol` and `ScopeType` to `src/baa.h` to allow sharing between Analysis and Codegen modules.
 
 ### Changed
 - **Compiler Pipeline** — Updated `src/main.c` to invoke the analyzer after parsing. Compilation now aborts immediately if semantic errors are found.
 - **Code Generator** — Refactored `src/codegen.c` to rely on the shared symbol definitions.
+
+
+### Technical Details
+- Analyzer maintains separate symbol tables from codegen (isolation).
+- Type inference implemented for all expression types.
+- Nested scope tracking (global/local only - no block-level yet).
 
 ---
 
@@ -59,21 +80,36 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Added
 - **Windows Installer** — Created a professional `setup.exe` using Inno Setup. It installs the compiler, documentation, and creates Start Menu shortcuts.
-- **PATH Integration** — The installer automatically adds Baa to the system `PATH` environment variable, allowing `baa` to be run from any console.
+- **PATH Integration** – Installer automatically adds Baa to system `PATH` environment variable.
+  - Enables `baa` command from any directory.
 - **Auto Updater** — Added `baa update` command. It checks a remote server for new versions and downloads/installs updates automatically.
-- **Update Logic** — Implemented `src/updater.c` using native Windows APIs (`UrlMon`, `WinINet`) to handle downloads without external dependencies like curl.
+- **Update System** – Implemented `src/updater.c` using native Windows APIs.
+  - Uses `URLDownloadToFileA` from `urlmon.lib`.
+  - Downloads installer to temp directory.
+  - Launches installer and exits current process.
+
+### Technical Details
+- Version checking via HTTP GET to `version.txt`.
+- Semantic version comparison (major.minor.patch).
+- Cache clearing to ensure fresh version data.
 
 ---
 
 ## [0.2.2] - 2025-12-29
 
 ### Added
-- **Diagnostic Engine** — New error reporting system that displays the filename, line number, column number, and the actual source code line with a pointer (`^`) to the error location.
-- **Panic Recovery** — The parser now attempts to recover from syntax errors (by skipping tokens until a statement boundary) to report multiple errors in a single run.
-- **Lexer Location** — Lexer now tracks column numbers and filenames.
+- **Diagnostic Engine** (`src/error.c`) – Professional error reporting with source context.
+  - Displays: `[Error] filename:line:col: message`
+  - Shows actual source line with `^` pointer to error position.
+  - Printf-style formatting support.
+- **Panic Mode Recovery** – Parser continues after syntax errors to find multiple issues.
+  - Synchronizes at statement boundaries (`;`, `.`, `}`, keywords).
+  - Prevents cascading error messages.
+- **Enhanced Token Tracking** – All tokens now store `filename`, `line`, and `col`.
 
 ### Fixed
-- **Global Strings** — Fixed a bug where global string variables initialized with string literals would output `(null)` at runtime. They now correctly point to the `.rdata` label.
+- **Global String Initialization** – Fixed bug where `نص س = "text".` would print `(null)`.
+  - Now correctly emits `.quad .Lstr_N` in data section.
 
 ---
 
@@ -81,6 +117,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Added
 - **Executable Branding** — Added a custom icon (`.ico`) and version metadata to `baa.exe`.
+    - Resource file: `src/baa.rc`
+    - Displays in Windows Explorer properties.
 - **Windows Integration** — File properties now show "Baa Programming Language" and version info.
 
 ---
@@ -88,17 +126,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ## [0.2.0] - 2025-12-29
 
 ### Added
-- **CLI Driver** — Completely rewritten `main.c` to act as a proper compiler frontend.
+- **CLI Driver** – Complete rewrite of `main.c` as professional build system.
+  - Argument parsing with flag support.
+  - Multi-stage compilation pipeline.
+  - Automatic invocation of GCC for assembly/linking.
 - **Flags** — Added support for standard compiler flags:
     - `-o <file>`: Specify output filename.
     - `-S`: Compile to assembly only (skip assembler/linker).
     - `-c`: Compile to object file (skip linker).
+    - `-v`: Verbose output.
     - `--help`: Print usage information.
     - `--version`: Print version and build date.
-- **Pipeline** — The compiler now orchestrates `gcc` automatically for assembling and linking.
+- **GCC Integration** – Automatic invocation via `system()` calls.
 
 ### Changed
-- **Architecture** — Moved from a simple "transpiler script" model to a multi-stage pipeline model.
+- **Architecture** – Transformed from simple transpiler to full compilation toolchain.
 
 ---
 

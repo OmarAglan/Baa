@@ -54,7 +54,7 @@ flowchart LR
 
 ### 1.2. The Driver (CLI)
 
-The driver logic in `main.c` supports various compilation modes controlled by flags:
+The driver in `main.c` (v0.2.0+) supports multi-file compilation and various modes:
 
 | Flag | Mode | Output | Action |
 |------|------|--------|--------|
@@ -63,6 +63,9 @@ The driver logic in `main.c` supports various compilation modes controlled by fl
 | (Multiple Files) | **Multi-File Build** | `.exe` | Compiles each `.baa` to `.o` and links them. |
 | `-S` | **Assembly Only** | `.s` | Stops after codegen. Preserves the assembly file. |
 | `-c` | **Compile Only** | `.o` | Stops after assembling. Does not link. |
+| `--version` | **Version Info** | stdout | Displays compiler version and build date. |
+| `--help`, `-h` | **Help** | stdout | Shows usage information. |
+| `update` | **Self-Update** | - | Downloads and installs the latest version. |
 
 ### 1.3. Diagnostic Engine
 
@@ -88,7 +91,7 @@ The Lexer now supports **Nested Includes** via a state stack and **Macro Definit
 ```c
 // Represents the state of a single file being parsed
 typedef struct {
-    char* source;       // Full source code buffer
+    char* source;       // Full source code buffer (owned by this state)
     char* cur_char;     // Current reading pointer
     const char* filename;
     int line;
@@ -103,7 +106,7 @@ typedef struct {
 
 // The main Lexer context
 typedef struct {
-    LexerState state;       // Current active file state
+    LexerState state;       // Current file state
     LexerState stack[10];   // Stack for nested includes (max depth 10)
     int stack_depth;
     
@@ -122,8 +125,10 @@ The preprocessor is integrated directly into the `lexer_next_token` function. It
 When `#تعريف NAME VALUE` is encountered:
 1.  The name and value are parsed as strings.
 2.  They are stored in the `macros` table.
-3.  Later, when the Lexer scans an `IDENTIFIER`, it checks the macro table.
-4.  If a match is found, the token's value is replaced with the macro's value, and its type is updated based on the value (e.g., `INT` or `STRING`).
+3.  When the Lexer later encounters an `IDENTIFIER`:
+    - It checks the macro table
+    - If found, replaces the token's value with the macro value
+    - Updates the token type based on the value (INT if numeric, STRING if quoted, IDENTIFIER otherwise)
 
 #### 2.2.2. Conditionals (`#إذا_عرف`)
 When `#إذا_عرف NAME` is encountered:
@@ -137,6 +142,14 @@ When `#الغاء_تعريف NAME` is encountered:
 1.  The lexer searches for `NAME` in the macro table.
 2.  If found, the entry is removed (by shifting subsequent entries).
 3.  If not found, the directive is ignored.
+
+#### 2.2.4. Include (`#تضمين`)
+When `#تضمين "file"` is encountered:
+1.  The filename is extracted from the quoted string.
+2.  The file is read into memory using `read_file()`.
+3.  The current lexer state is pushed onto the include stack.
+4.  The lexer state is updated to point to the new file's content.
+5.  When EOF is reached, the previous state is popped and restored.
 
 ### 2.3. Key Features
 
@@ -269,13 +282,17 @@ The Semantic Analyzer (`src/analysis.c`) performs a static check on the AST befo
 
 ### 5.1. Responsibilities
 
-1.  **Symbol Resolution**: Ensures variables are declared before use.
+1.  **Symbol Resolution**: Verifies variables are declared before use.
 2.  **Type Checking**: Strictly enforces `TYPE_INT` vs `TYPE_STRING` compatibility.
 3.  **Scope Validation**: Manages visibility rules.
+4.  **Control Flow Validation**: Ensures `break` and `continue` are used only within loops/switches.
+5.  **Function Validation**: Checks function prototypes and definitions match.
 
 ### 5.2. Isolation Note
 
-Currently, `analysis.c` and `codegen.c` **maintain separate symbol tables**. This isolation ensures that the validation logic is independent of the generation logic, though it requires both modules to track scope similarly. Future versions may unify this into a shared Context object.
+Since v0.2.4, `analysis.c` and `codegen.c` **maintain separate symbol tables** for isolation. The `Symbol` struct definition is shared via `baa.h`, but each module manages its own table. This ensures validation logic is independent from generation logic.
+
+**Future improvement:** Unify symbol tables into a shared context object passed between phases.
 
 The analyzer walks the AST recursively. It maintains a **Symbol Table** stack to track active variables in the current scope. If it encounters:
 - `x = "text"` (where x is `int`): Reports a type mismatch error.
@@ -296,10 +313,11 @@ The parser performs constant folding on arithmetic expressions. If both operands
 
 **Example:**
 - Source: `٢ * ٣ + ٤`
-- Parse Tree (Before): `BinOp(+, BinOp(*, 2, 3), 4)`
-- Parse Tree (After): `Int(10)`
+- Before folding: `BinOp(+, BinOp(*, 2, 3), 4)`
+- After folding: `Int(10)`
 
 **Supported Operations:** `+`, `-`, `*`, `/`, `%`
+**Note:** Division/modulo by zero is detected and reported during folding.
 
 ---
 
@@ -309,14 +327,37 @@ The parser performs constant folding on arithmetic expressions. If both operands
 
 To support nested loops and switches, the code generator maintains stacks:
 
-- **Loop Start Stack**: Used by `continue`.
-- **Loop End Stack**: Used by `break`.
+- **Loop Continue Stack** (`loop_continue_stack`): Stores labels for `continue` statements.
+- **Loop Break Stack** (`loop_break_stack`): Stores labels for `break` statements.
+- **Loop Depth Counter** (`loop_depth`): Tracks nesting level.
 
-**Switch Logic:**
-1. Evaluate expression.
-2. Generate comparisons for all cases (Pass 1).
-3. Generate bodies for all cases (Pass 2).
-4. Handle default case or fallthrough.
+**Special Case - Switch Statements:**
+- Switch accepts `break` but not `continue` (unless nested in a loop).
+- When entering a switch, the continue label is inherited from the enclosing loop (if any).
+- The break label points to the end of the switch.
+
+**Switch Code Generation Logic:**
+1. **Pass 1 - Comparisons**: Generate jump instructions for all case values.
+   - Store case label IDs in an array for Pass 2.
+   - If no match, jump to default (if exists) or end.
+2. **Pass 2 - Bodies**: Generate code for each case body.
+   - Uses the stored label IDs from Pass 1.
+   - Natural fallthrough between cases (C-style).
+3. **End Label**: All breaks jump here.
+
+**State Management:**
+```c
+// Reset state for each compilation unit
+static void reset_codegen() {
+    global_count = 0;
+    local_count = 0;
+    current_stack_offset = 0;
+    label_counter = 0;
+    loop_depth = 0;
+}
+```
+
+**Critical:** `reset_codegen()` is called at the start of each file compilation to prevent state leakage between translation units.
 
 ### 6.2. Windows x64 ABI Compliance
 
@@ -324,8 +365,10 @@ To support nested loops and switches, the code generator maintains stacks:
 |-------------|----------------|
 | **Register Args** | RCX, RDX, R8, R9 for first 4 params |
 | **Stack Alignment** | 16-byte aligned before `call` (Size 272) |
-| **Shadow Space** | 32 bytes reserved for callee |
+| **Shadow Space** | 32 bytes reserved above parameters for callee |
 | **Return Value** | RAX |
+| **Caller-saved** | RAX, RCX, RDX, R8-R11 |
+| **Callee-saved** | RBX, RBP, RDI, RSI, R12-R15 |
 
 ### 6.3. Printing
 
@@ -348,7 +391,7 @@ The `اطبع` statement uses the symbol type to determine the format string:
 Strings are collected during parsing and emitted with unique labels:
 
 ```asm
-.section .rdata
+.section .rdata,"dr"
 .LC0:
     .asciz "مرحباً"
 .LC1:
@@ -362,7 +405,8 @@ Strings are collected during parsing and emitted with unique labels:
 | Aspect | Details |
 |--------|---------|
 | **Entry Point** | `الرئيسية` → exported as `main` |
-| **Name Mangling** | None (direct UTF-8 labels) |
+| **Name Mangling** | None - functions use their Arabic UTF-8 names as assembly labels |
+| **Special Case** | `الرئيسية` is explicitly exported as `main` using `.globl main` |
 | **External Calls** | C runtime (`printf`, etc.) via `@PLT` |
 
 ---

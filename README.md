@@ -2,7 +2,7 @@
 
 <div align="center">
 
-![Version](https://img.shields.io/badge/version-0.2.4-blue.svg)
+![Version](https://img.shields.io/badge/version-0.2.6-blue.svg)
 ![Platform](https://img.shields.io/badge/platform-Windows-lightgrey.svg)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
 
@@ -18,14 +18,18 @@
 
 | Feature | Description |
 |---------|-------------|
-| 🖥️ **Native Compilation** | Compiles directly to x86_64 Assembly → Windows Executable |
+| 🖥️ **Native Compilation** | Compiles to x86-64 Assembly → Native Windows Executables |
 | 🌍 **Full Arabic Syntax** | Arabic keywords, numerals (٠-٩), and punctuation (`.` `؛`) |
-| 🧩 **Modular Code** | `#تضمين` (Include), `.baa` source files, and `.baahd` headers |
+| 🧩 **Modular Code** | `#تضمين` (Include), multi-file compilation, `.baahd` headers |
+| 🔧 **Preprocessor** | `#تعريف` (Define), `#إذا_عرف` (Ifdef), `#الغاء_تعريف` (Undefine) |
 | ⚡ **Functions** | Define and call functions with parameters and return values |
 | 📦 **Arrays** | Fixed-size stack arrays (`صحيح قائمة[١٠]`) |
-| 🔄 **Control Flow** | `إذا` (If), `طالما` (While), `لكل` (For), `توقف` (Break), `استمر` (Continue) | `اختر` (Switch), `حالة` (Case), `افتراضي` (Default) |
+| 🔄 **Control Flow** | `إذا`/`وإلا` (If/Else), `طالما` (While), `لكل` (For) |
+| 🎯 **Advanced Control** | `اختر` (Switch), `حالة` (Case), `افتراضي` (Default), `توقف` (Break), `استمر` (Continue) |
 | ➕ **Full Operators** | Arithmetic, comparison, and logical operators with short-circuit evaluation |
 | 📝 **Text Support** | String (`"..."`) and character (`'...'`) literals |
+| ✅ **Type Safety** | Static type checking (v0.2.4+) with semantic analysis |
+| 🔄 **Self-Updating** | Built-in updater (`baa update`) |
 
 ---
 
@@ -33,7 +37,7 @@
 
 ### 1. Build the Compiler
 
-**Prerequisites:** PowerShell, [CMake](https://cmake.org/), [MinGW-w64](https://www.mingw-w64.org/) (GCC)
+**Prerequisites:** Windows, PowerShell, [CMake](https://cmake.org/) 3.10+, [MinGW-w64](https://www.mingw-w64.org/) with GCC
 
 ```powershell
 git clone https://github.com/YourUsername/Baa.git
@@ -45,7 +49,7 @@ cmake --build .
 
 ### 2. Write Your First Program
 
-Create `hello.baa` (save as **UTF-8**):
+Create `hello.baa` (⚠️ **IMPORTANT:** Save as **UTF-8** encoding):
 
 ```baa
 صحيح الرئيسية() {
@@ -57,9 +61,13 @@ Create `hello.baa` (save as **UTF-8**):
 ### 3. Compile & Run
 
 ```powershell
+# Compile
 .\baa.exe ..\hello.baa
+
+# Run
 .\out.exe
 ```
+**Output:** `مرحباً بالعالم!`
 
 ---
 
@@ -68,15 +76,16 @@ Create `hello.baa` (save as **UTF-8**):
 ```baa
 // حساب مجموع مصفوفة
 صحيح الرئيسية() {
+    // Declare array of 5 integers
     صحيح قائمة[٥].
     صحيح مجموع = ٠.
 
-    // ملء المصفوفة بالقيم ٠، ١٠، ٢٠، ٣٠، ٤٠
+    // Fill array with values 0, 10, 20, 30, 40
     لكل (صحيح س = ٠؛ س < ٥؛ س++) {
         قائمة[س] = س * ١٠.
     }
 
-    // جمع كل القيم
+    // Sum all values
     لكل (صحيح س = ٠؛ س < ٥؛ س++) {
         مجموع = مجموع + قائمة[س].
     }
@@ -87,6 +96,7 @@ Create `hello.baa` (save as **UTF-8**):
     إرجع ٠.
 }
 ```
+**Output:** `المجموع هو: 100` (0 + 10 + 20 + 30 + 40)
 
 ---
 
@@ -95,7 +105,7 @@ Create `hello.baa` (save as **UTF-8**):
 | Document | Description |
 |----------|-------------|
 | [User Guide](docs/USER_GUIDE.md) | Getting started and basic usage |
-| [Language Specification](docs/LANGUAGE.md) | Complete syntax reference |
+| [Language Specification](docs/LANGUAGE.md) | Complete syntax and features reference |
 | [Compiler Internals](docs/INTERNALS.md) | Architecture and implementation details |
 | [API Reference](docs/API_REFERENCE.md) | Internal C API documentation |
 | [Roadmap](ROADMAP.md) | Future development plans |
@@ -110,6 +120,7 @@ Create `hello.baa` (save as **UTF-8**):
 - **CMake** 3.10+
 - **MinGW-w64** with GCC
 - **PowerShell** (Windows)
+- **Git** (for cloning)
 
 ### Build Steps
 
@@ -125,12 +136,25 @@ cd build
 # Generate and build
 cmake ..
 cmake --build .
+
+# The compiler is now at: build/baa.exe
 ```
 
 ### Running Tests
 
 ```powershell
-# From the build directory
+# Generate test file
+gcc ../make_test.c -o make_test
+./make_test
+
+# Compile and run
 .\baa.exe ..\test.baa
 .\out.exe
+```
+
+**Expected Output:**
+```
+100
+1
+2
 ```

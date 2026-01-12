@@ -52,6 +52,7 @@ Include other files (headers) into the current file. This works like C's `#inclu
 **Example:**
 ```baa
 #تضمين "math.baahd"
+// This includes the header file "math.baahd"
 ```
 
 ### 2.2. Definitions (`#تعريف`)
@@ -78,9 +79,20 @@ Include or exclude blocks of code based on whether a symbol is defined.
 **Syntax:**
 ```baa
 #إذا_عرف <name>
-    // يتم تجميعه إذا كان الاسم معرفاً
+    // Compiled if <name> is defined
 #وإلا
-    // يتم تجميعه إذا لم يكن الاسم معرفاً
+    // Compiled if <name> is NOT defined
+#نهاية
+```
+
+**Example:**
+```baa
+#تعريف تصحيح 1
+
+#إذا_عرف تصحيح
+    اطبع "Debug mode enabled".
+#وإلا
+    اطبع "Release mode".
 #نهاية
 ```
 
@@ -91,9 +103,10 @@ Remove a previously defined macro.
 
 **Example:**
 ```baa
+// Use تصحيح macro...
 #تعريف تصحيح ١
 #الغاء_تعريف تصحيح
-// الآن 'تصحيح' غير معرف
+// Now 'تصحيح' is undefined
 ```
 
 ---
@@ -157,10 +170,12 @@ Functions enable code reuse and modularity.
 **Syntax:** `<type> <name>(<parameters>) { <body> }`
 
 ```baa
+// Function that adds two integers
 صحيح جمع(صحيح أ, صحيح ب) {
     إرجع أ + ب.
 }
 
+// Function that squares an integer
 صحيح مربع(صحيح س) {
     إرجع س * س.
 }
@@ -170,14 +185,14 @@ Functions enable code reuse and modularity.
 
 To use a function defined in another file (or later in the same file), you can declare its prototype without a body.
 
-**Syntax:** `<type> <name>(<parameters>).`
+**Syntax:** `<type> <name>(<parameters>).` ← Note the dot at the end!
 
 ```baa
 // Prototype declaration (notice the dot at the end)
 صحيح جمع(صحيح أ, صحيح ب).
 
 صحيح الرئيسية() {
-    // This calls 'جمع' which is defined elsewhere
+    // Calls 'جمع' defined in another file
     اطبع جمع(١٠, ٢٠).
     إرجع ٠.
 }
@@ -198,10 +213,11 @@ Every program **must** have a main function:
 
 ```baa
 صحيح الرئيسية() {
-    // كود البرنامج هنا
-    إرجع ٠.  // ٠ يعني نجاح التنفيذ
+    // Program code here
+    إرجع ٠.  // 0 means success
 }
 ```
+**Important:** The entry point **must** be named `الرئيسية` (ar-ra'īsīyah). It is exported as `main` in the generated assembly.
 
 ### 4.5. Recursion (التكرار)
 
@@ -225,7 +241,7 @@ Functions can call themselves (recursion), provided there is a base case to term
 
 **Syntax:** `اطبع <expression>.`
 
-Prints an integer, string, or character followed by a newline.
++Prints an integer or string followed by a newline.
 
 ```baa
 اطبع "مرحباً بالعالم".    // طباعة نص
@@ -288,7 +304,7 @@ Repeats a block while the condition is true.
 
 ### 6.3. For Loop (`لكل`)
 
-C-style loop using Arabic semicolon `؛` as separator.
+C-style loop using **Arabic semicolon `؛`** as separator (NOT regular semicolon).
 
 **Syntax:** `لكل (<init>؛ <condition>؛ <increment>) { <body> }`
 
@@ -328,7 +344,7 @@ C-style loop using Arabic semicolon `؛` as separator.
 
 ### 6.5. Switch Statement (`اختر`)
 
-Selects a block of code to execute based on a value.
+Multi-way branching based on integer or character values.
 
 - **`اختر` (Switch)**: Starts the statement.
 - **`حالة` (Case)**: Defines a value to match.
@@ -350,7 +366,7 @@ Selects a block of code to execute based on a value.
 }
 ```
 
-**Note:** Just like in C, execution "falls through" to the next case unless you use `توقف` (break).
+**Note:** Just like in C, execution "falls through" to the next case unless you explicitly use `توقف` (break).
 
 **Example:**
 
@@ -406,14 +422,12 @@ Selects a block of code to execute based on a value.
 | `\|\|` | OR | Short-circuit: stops if left is true |
 | `!` | NOT | Inverts truth value |
 
+**Short-circuit Evaluation:** `&&` stops if left is false; `||` stops if left is true.
+
 ```baa
 // Short-circuit example
 إذا (س > ٠ && س < ١٠) {
     اطبع "س بين ١ و ٩".
-}
-
-إذا (س == ٠ || س == ١٠) {
-    اطبع "س هو ٠ أو ١٠".
 }
 
 إذا (!خطأ) {
@@ -434,6 +448,8 @@ From highest to lowest:
 7. `&&` — Logical AND
 8. `||` — Logical OR
 
+**Note:** Use parentheses `()` to override precedence when needed.
+
 ---
 
 ## 8. Complete Example
@@ -441,8 +457,9 @@ From highest to lowest:
 ```baa
 #تعريف الحد_الأقصى ١٠
 
+// Main function
 صحيح الرئيسية() {
-    // استخدام الثابت المعرف
+    // Use the defined constant
     لكل (صحيح س = ١؛ س <= الحد_الأقصى؛ س++) {
         اطبع س.
     }

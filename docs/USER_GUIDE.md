@@ -19,7 +19,7 @@ Welcome to Baa (باء)! This guide will help you write your first Arabic comput
 Currently, you must build Baa from source.
 
 ### Prerequisites
-- **CMake** 3.10 or later
+- **CMake** 3.10 or higher
 - **MinGW-w64** (GCC compiler)
 - **PowerShell** (Windows)
 
@@ -70,7 +70,7 @@ Create a file named `hello.baa` using any text editor. **Important:** Save the f
 
 ## 3. Command Line Interface
 
-The Baa compiler `baa.exe` is now a robust command-line tool.
+The Baa compiler `baa.exe` is a full-featured command-line tool (since v0.2.0).
 
 ### Basic Compilation and Execution
 
@@ -78,7 +78,7 @@ The Baa compiler `baa.exe` is now a robust command-line tool.
 # Compile and link to default output (out.exe)
 .\baa.exe hello.baa
 
-# Run the generated executable
+# Run the program
 .\out.exe```
 
 ### Command-Line Flags
@@ -90,6 +90,7 @@ The Baa compiler `baa.exe` is now a robust command-line tool.
 | `-o <file>` | Specify the output filename (e.g., `myapp.exe`, `mylib.o`, `output.s`). | `.\baa.exe main.baa -o myapp.exe` |
 | `-S`, `-s` | **Compile only to Assembly.** Produces `.s` file, does not invoke assembler/linker. | `.\baa.exe -S main.baa` (creates `main.s`) |
 | `-c` | **Compile and Assemble.** Produces object file (`.o`), does not link. | `.\baa.exe -c main.baa` (creates `main.o`) |
+| `-v` | Enable verbose output (shows all compilation steps). | `.\baa.exe -v main.baa` |
 | `--help`, `-h` | Display help message and usage. | `.\baa.exe --help` |
 | `--version` | Display compiler version. | `.\baa.exe --version` |
 
@@ -131,7 +132,21 @@ You can control the compilation stages if needed:
 
 ---
 
-## 4. Organizing Code (Multi-File Projects)
+## 4. File Types
+
+| Extension | Type | Description | Example |
+|-----------|------|-------------|---------|
+| `.baa` | Source File | Main Baa source code | `main.baa`, `lib.baa` |
+| `.baahd` | Header File | Function prototypes and declarations | `math.baahd` |
+| `.s` | Assembly | Generated assembly code (with `-S`) | `main.s` |
+| `.o` | Object File | Compiled binary object (with `-c`) | `main.o` |
+| `.exe` | Executable | Final linked program | `out.exe` |
+
+**Note:** Header files (`.baahd`) are included using `#تضمين` directive and contain only declarations (prototypes), not implementations.
+
+---
+
+## 5. Organizing Code (Multi-File Projects)
 
 As your program grows, you should split it into multiple files.
 
@@ -141,13 +156,13 @@ Use header files for function prototypes and shared declarations.
 
 **math.baahd** (Header):
 ```baa
-// Declare function prototypes here
+// Function prototype (declaration only)
 صحيح جمع(صحيح أ, صحيح ب).
 ```
 
 **math.baa** (Implementation):
 ```baa
-// Implement the valid code here
+// Actual function implementation
 صحيح جمع(صحيح أ, صحيح ب) {
     إرجع أ + ب.
 }
@@ -155,6 +170,7 @@ Use header files for function prototypes and shared declarations.
 
 **main.baa** (Main Program):
 ```baa
+// Include the header
 #تضمين "math.baahd"
 
 صحيح الرئيسية() {
@@ -163,11 +179,16 @@ Use header files for function prototypes and shared declarations.
 }
 ```
 
-> **Note:** The `#تضمين` directive currently looks for files relative to the directory where you run the compiler.
+**Compilation:**
+```powershell
+.\baa.exe main.baa math.baa -o myapp.exe
+```
+
+> **Note:** The `#تضمين` directive looks for files relative to the directory where you run the compiler.
 
 ---
 
-## 5. Common Patterns
+## 6. Common Patterns
 
 ### Variables and Math
 
@@ -199,6 +220,7 @@ Use header files for function prototypes and shared declarations.
 ### Conditionals
 
 ```baa
+// If-else statement
 صحيح الرئيسية() {
     صحيح العمر = ١٨.
     
@@ -220,6 +242,7 @@ Use header files for function prototypes and shared declarations.
 }
 
 صحيح الرئيسية() {
+    // Calculate square
     صحيح نتيجة = مربع(٥).
     اطبع نتيجة.  // يطبع ٢٥
     إرجع ٠.
@@ -235,9 +258,11 @@ Use header files for function prototypes and shared declarations.
 | Error | Cause | Solution |
 |-------|-------|----------|
 | `Lexer Error: Unknown char` | File not saved as UTF-8 | In VS Code: Click encoding in status bar → "Save with Encoding" → "UTF-8" |
-| `Parser Error: Expected ...` | Syntax error | Check for missing `.` at end of statements, `}` or parentheses. |
+| `Parser Error: Expected ...` | Syntax error | Check for missing `.` (dot) at end of statements, missing `}`, or unmatched parentheses. Use Arabic semicolon `؛` in for loops. |
 | `Undefined symbol` | Variable used before declaration | Declare variables before using them |
 | `Cannot find الرئيسية` | Missing main function | Every program needs `صحيح الرئيسية() { ... }` |
+| `Type mismatch` | Assigning wrong type | Cannot assign strings to integers or vice versa |
+| `break/continue outside loop` | Control flow error | `توقف` and `استمر` must be inside loops or switches |
 
 ### Getting Help
 

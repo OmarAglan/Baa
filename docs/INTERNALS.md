@@ -1,6 +1,6 @@
 # Baa Compiler Internals
 
-> **Version:** 0.2.6 | [← Language Spec](LANGUAGE.md) | [API Reference →](API_REFERENCE.md)
+> **Version:** 0.2.7 | [← Language Spec](LANGUAGE.md) | [API Reference →](API_REFERENCE.md)
 
 **Target Architecture:** x86-64 (AMD64)  
 **Target OS:** Windows (MinGW-w64 Toolchain)  
@@ -163,13 +163,15 @@ When `#تضمين "file"` is encountered:
 ### 2.4. Token Types
 
 ```
-Keywords:    صحيح, نص, إذا, وإلا, طالما, لكل, اختر, حالة, افتراضي, اطبع, إرجع, توقف, استمر
+Keywords:    صحيح, نص, ثابت, إذا, وإلا, طالما, لكل, اختر, حالة, افتراضي, اطبع, إرجع, توقف, استمر
 Literals:    INTEGER, STRING, CHAR
 Operators:   + - * / % ++ -- ! && ||
 Comparison:  == != < > <= >=
 Delimiters:  ( ) { } [ ] , . : ؛
 Special:     IDENTIFIER, EOF
 ```
+
+> **Note:** `ثابت` (const) was added in v0.2.7 for immutable variable declarations.
 
 ---
 
@@ -184,8 +186,10 @@ Program       ::= Declaration* EOF
 Declaration   ::= FuncDecl | GlobalVarDecl
 
 FuncDecl      ::= Type ID "(" ParamList ")" Block
-GlobalVarDecl ::= Type ID ("=" Expr)? "."
+                | Type ID "(" ParamList ")" "."    // Prototype (v0.2.5+)
+GlobalVarDecl ::= ConstMod? Type ID ("=" Expr)? "."
 
+ConstMod      ::= "ثابت"                           // NEW in v0.2.7
 Type          ::= "صحيح" | "نص"
 
 Block         ::= "{" Statement* "}"
@@ -193,8 +197,8 @@ Statement     ::= VarDecl | ArrayDecl | Assign | ArrayAssign
                 | If | Switch | While | For | Return | Print | CallStmt
                 | Break | Continue
 
-VarDecl       ::= Type ID "=" Expr "."
-ArrayDecl     ::= "صحيح" ID "[" INT "]" "."
+VarDecl       ::= ConstMod? Type ID "=" Expr "."   // Updated in v0.2.7
+ArrayDecl     ::= ConstMod? "صحيح" ID "[" INT "]" "."  // Updated in v0.2.7
 Assign        ::= ID "=" Expr "."
 ArrayAssign   ::= ID "[" Expr "]" "=" Expr "."
 
@@ -285,10 +289,34 @@ The Semantic Analyzer (`src/analysis.c`) performs a static check on the AST befo
 1.  **Symbol Resolution**: Verifies variables are declared before use.
 2.  **Type Checking**: Strictly enforces `TYPE_INT` vs `TYPE_STRING` compatibility.
 3.  **Scope Validation**: Manages visibility rules.
-4.  **Control Flow Validation**: Ensures `break` and `continue` are used only within loops/switches.
-5.  **Function Validation**: Checks function prototypes and definitions match.
+4.  **Constant Checking** (v0.2.7+): Prevents reassignment of immutable variables.
+5.  **Control Flow Validation**: Ensures `break` and `continue` are used only within loops/switches.
+6.  **Function Validation**: Checks function prototypes and definitions match.
 
-### 5.2. Isolation Note
+### 5.2. Constant Checking (v0.2.7+)
+
+The analyzer tracks the `is_const` flag for each symbol and enforces immutability:
+
+| Error Condition | Error Message |
+|-----------------|---------------|
+| Reassigning a constant | `Cannot reassign constant '<name>'` |
+| Modifying constant array element | `Cannot modify constant array '<name>'` |
+| Constant without initializer | `Constant '<name>' must be initialized` |
+
+**Implementation:**
+```c
+// In add_symbol()
+static void add_symbol(const char* name, ScopeType scope, DataType type, bool is_const) {
+    // ... store is_const flag
+}
+
+// In NODE_ASSIGN handling
+if (sym->is_const) {
+    semantic_error("Cannot reassign constant '%s'.", name);
+}
+```
+
+### 5.3. Isolation Note
 
 Since v0.2.4, `analysis.c` and `codegen.c` **maintain separate symbol tables** for isolation. The `Symbol` struct definition is shared via `baa.h`, but each module manages its own table. This ensures validation logic is independent from generation logic.
 
@@ -297,8 +325,9 @@ Since v0.2.4, `analysis.c` and `codegen.c` **maintain separate symbol tables** f
 The analyzer walks the AST recursively. It maintains a **Symbol Table** stack to track active variables in the current scope. If it encounters:
 - `x = "text"` (where x is `int`): Reports a type mismatch error.
 - `print y` (where y is undeclared): Reports an undefined symbol error.
+- `x = 5` (where x is `const`): Reports a const reassignment error (v0.2.7+).
 
-### 5.3. Memory Allocation
+### 5.4. Memory Allocation
 
 | Type | C Type | Size | Notes |
 |------|--------|------|-------|
@@ -307,7 +336,7 @@ The analyzer walks the AST recursively. It maintains a **Symbol Table** stack to
 
 ---
 
-### 5.4. Constant Folding (Optimization)
+### 5.5. Constant Folding (Optimization)
 
 The parser performs constant folding on arithmetic expressions. If both operands of a binary operation are integer literals, the compiler evaluates the result at compile-time.
 

@@ -1,6 +1,6 @@
 # Baa Internal API Reference
 
-> **Version:** 0.2.6 | [← User Guide](USER_GUIDE.md) | [Internals →](INTERNALS.md)
+> **Version:** 0.2.7 | [← User Guide](USER_GUIDE.md) | [Internals →](INTERNALS.md)
 
 This document details the C functions, enumerations, and structures defined in `src/baa.h`.
 
@@ -12,8 +12,9 @@ This document details the C functions, enumerations, and structures defined in `
 - [Parser Module](#2-parser-module)
 - [Semantic Analysis](#3-semantic-analysis)
 - [Codegen Module](#4-codegen-module)
-- [Symbol Table](#5-symbol-table)
-- [Data Structures](#6-data-structures)
+- [Error Reporting](#5-error-reporting)
+- [Symbol Table](#6-symbol-table)
+- [Data Structures](#7-data-structures)
 
 ---
 
@@ -109,7 +110,7 @@ Node* ast = parse(&lexer);
 
 ## 3. Semantic Analysis
 
-Handles type checking and logic validation.
+Handles type checking, symbol resolution, and **constant validation**.
 
 ### `analyze`
 
@@ -129,10 +130,16 @@ Runs the semantic pass on the AST.
 - **Type Checking**: Ensures type compatibility in assignments and operations.
 - **Symbol Resolution**: Verifies variables are declared before use.
 - **Scope Validation**: Tracks global vs local scope and prevents redefinitions.
+- **Constant Checking** (v0.2.7+): Prevents reassignment of `ثابت` variables.
 - **Control Flow Validation**: Ensures `break`/`continue` are only used within loops/switches.
 - Traverses the entire tree.
 - Reports errors using `error_report`.
 - Does not modify the AST, only validates it.
+
+**Constant Validation Rules:**
+- Constants must be initialized at declaration time.
+- Reassigning a constant produces: `Cannot reassign constant '<name>'`.
+- Modifying constant array elements produces: `Cannot modify constant array '<name>'`.
 
 ---
 
@@ -165,7 +172,9 @@ Recursively generates assembly code from AST.
 - Label-based control flow for loops
 
 
-## 5a. Error Reporting
+---
+
+## 5. Error Reporting
 
 Centralized diagnostic system for compiler errors.
 
@@ -190,7 +199,9 @@ Reports an error with source location, line context, and a pointer to the error 
 - Shows the actual source line with a `^` pointer
 - Supports printf-style formatting
 
-## 5. Symbol Table
+---
+
+## 6. Symbol Table
 
 Manages variable scope and resolution.
 
@@ -199,21 +210,30 @@ Manages variable scope and resolution.
 Moved to `baa.h` for shared use between Analysis and Codegen.
 
 ```c
-typedef struct { 
+typedef struct {
     char name[32];     // Variable name
     ScopeType scope;   // SCOPE_GLOBAL or SCOPE_LOCAL
     DataType type;     // TYPE_INT or TYPE_STRING
     int offset;        // Stack offset or memory address
+    bool is_const;     // NEW in v0.2.7: Immutability flag
 } Symbol;
 ```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `name` | `char[32]` | Variable identifier (Arabic UTF-8) |
+| `scope` | `ScopeType` | `SCOPE_GLOBAL` or `SCOPE_LOCAL` |
+| `type` | `DataType` | `TYPE_INT` or `TYPE_STRING` |
+| `offset` | `int` | Stack offset (local) or memory address (global) |
+| `is_const` | `bool` | `true` if declared with `ثابت` (v0.2.7+) |
 
 > **Note**: Symbol table management functions (`add_local`, `lookup`, etc.) are implemented as static helper functions within `analysis.c` and `codegen.c` independently. In v0.2.4+, the `Symbol` struct definition is shared via `baa.h` to enable semantic analysis before code generation.
 
 ---
 
-## 6. Data Structures
+## 7. Data Structures
 
-### 6.1. Preprocessor Structures
+### 7.1. Preprocessor Structures
 
 ### Lexer & Preprocessor Structures
 
@@ -246,7 +266,7 @@ typedef struct {
 } Lexer;
 ```
 
-### 6.2. Token
+### 7.2. Token
 
 Represents a single atomic unit of source code.
 
@@ -259,7 +279,7 @@ typedef struct {
     const char* filename;
 } Token;
 ```
-### 6.3. Token Types
+### 7.3. Token Types
 
 ### BaaTokenType Enum
 
@@ -276,11 +296,19 @@ typedef enum {
     
     // Keywords
     TOKEN_TYPE_INT,     // صحيح
+    TOKEN_TYPE_STRING,  // نص
+    TOKEN_CONST,        // ثابت (NEW in v0.2.7)
     TOKEN_IF,           // إذا
+    TOKEN_ELSE,         // وإلا
     TOKEN_WHILE,        // طالما
     TOKEN_FOR,          // لكل
+    TOKEN_SWITCH,       // اختر
+    TOKEN_CASE,         // حالة
+    TOKEN_DEFAULT,      // افتراضي
     TOKEN_PRINT,        // اطبع
     TOKEN_RETURN,       // إرجع
+    TOKEN_BREAK,        // توقف
+    TOKEN_CONTINUE,     // استمر
     
     // Operators
     TOKEN_PLUS, TOKEN_MINUS, TOKEN_STAR, TOKEN_SLASH, TOKEN_MOD,
@@ -293,15 +321,16 @@ typedef enum {
     TOKEN_LPAREN, TOKEN_RPAREN,     // ( )
     TOKEN_LBRACE, TOKEN_RBRACE,     // { }
     TOKEN_LBRACKET, TOKEN_RBRACKET, // [ ]
-    TOKEN_DOT, TOKEN_COMMA,
+    TOKEN_DOT, TOKEN_COMMA, TOKEN_COLON,
     TOKEN_SEMICOLON,                // ؛
+    TOKEN_ASSIGN,                   // =
     
     TOKEN_INVALID
 } TokenType;
 ```
 
 ---
-### 6.4. AST Node Structure
+### 7.4. AST Node Structure
 
 ### Node (AST)
 
@@ -331,6 +360,7 @@ typedef struct Node {
             DataType type;
             struct Node* expression;
             bool is_global;
+            bool is_const;      // NEW in v0.2.7
         } var_decl;
         
         // Array declaration
@@ -338,6 +368,7 @@ typedef struct Node {
             char* name;
             int size;
             bool is_global;
+            bool is_const;      // NEW in v0.2.7
         } array_decl;
         
         // Array access/assign
@@ -395,7 +426,7 @@ typedef struct Node {
 ```
 
 ---
-### 6.5. Node Types
+### 7.5. Node Types
 
 ### NodeType Enum
 

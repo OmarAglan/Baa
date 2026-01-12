@@ -1,3 +1,4 @@
+<div dir="rtl">
 # Baa (باء) Programming Language
 
 <div align="center">
@@ -158,3 +159,4 @@ gcc ../make_test.c -o make_test
 1
 2
 ```
+</div>

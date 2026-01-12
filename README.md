@@ -1,9 +1,10 @@
 <div dir="rtl">
-# Baa (باء) Programming Language
 
 <div align="center">
+<img width="260" height="260" alt="gpt-image-1 5_b_A_professional_logo_ (1)" src="https://github.com/user-attachments/assets/9b1c29f2-5dd7-4a38-a1be-19be6afe64f6" />
 
-![Version](https://img.shields.io/badge/version-0.2.6-blue.svg)
+
+![Version](https://img.shields.io/badge/version-0.2.7-blue.svg)
 ![Platform](https://img.shields.io/badge/platform-Windows-lightgrey.svg)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
 

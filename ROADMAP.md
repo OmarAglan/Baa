@@ -54,9 +54,9 @@
 - [x] **Undefine** — `#الغاء_تعريف` to remove definitions.
 
 ### v0.2.7: Constants & Immutability 🔒
-- [ ] **Constant Keyword** — `ثابت` for immutable variables: `ثابت صحيح حد = ١٠٠.`
-- [ ] **Const Checking** — Semantic error on reassignment of constants.
-- [ ] **Array Constants** — Support constant arrays.
+- [x] **Constant Keyword** — `ثابت` for immutable variables: `ثابت صحيح حد = ١٠٠.`
+- [x] **Const Checking** — Semantic error on reassignment of constants.
+- [x] **Array Constants** — Support constant arrays.
 
 ### v0.2.8: Warnings & Diagnostics ⚠️
 - [ ] **Warning System** — Separate warnings from errors (non-fatal).

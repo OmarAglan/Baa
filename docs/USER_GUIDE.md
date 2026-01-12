@@ -60,6 +60,7 @@ Create a file named `hello.baa` using any text editor. **Important:** Save the f
 |------|---------|
 | `//` | Single-line comment |
 | `صحيح` | Integer type (like `int` in C) |
+| `ثابت` | Constant modifier (immutable variable) |
 | `الرئيسية` | Main function (program entry point) |
 | `اطبع` | Print statement |
 | `إرجع` | Return statement |
@@ -190,16 +191,20 @@ Use header files for function prototypes and shared declarations.
 
 ## 6. Common Patterns
 
-### Variables and Math
+### Variables and Constants
 
 ```baa
 صحيح الرئيسية() {
+    // Regular variable (can be changed)
     صحيح س = ١٠.
-    صحيح ص = ٢٠.
-    صحيح مجموع = س + ص.
+    س = ٢٠.  // ✓ OK
     
-    اطبع "المجموع: ".
-    اطبع مجموع.
+    // Constant (cannot be changed)
+    ثابت صحيح ص = ٣٠.
+    // ص = ٤٠.  // ✗ Error: Cannot reassign constant
+    
+    صحيح مجموع = س + ص.
+    اطبع مجموع.  // يطبع ٥٠
     
     إرجع ٠.
 }
@@ -262,6 +267,8 @@ Use header files for function prototypes and shared declarations.
 | `Undefined symbol` | Variable used before declaration | Declare variables before using them |
 | `Cannot find الرئيسية` | Missing main function | Every program needs `صحيح الرئيسية() { ... }` |
 | `Type mismatch` | Assigning wrong type | Cannot assign strings to integers or vice versa |
+| `Cannot reassign constant` | Modifying a constant | Constants declared with `ثابت` cannot be changed after initialization |
+| `Constant must be initialized` | Missing initial value | Constants require a value at declaration: `ثابت صحيح س = ١٠.` |
 | `break/continue outside loop` | Control flow error | `توقف` and `استمر` must be inside loops or switches |
 
 ### Getting Help

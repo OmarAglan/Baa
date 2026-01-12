@@ -1,6 +1,6 @@
 # Baa Language Specification
 
-> **Version:** 0.2.6 | [← User Guide](USER_GUIDE.md) | [Compiler Internals →](INTERNALS.md)
+> **Version:** 0.2.7 | [← User Guide](USER_GUIDE.md) | [Compiler Internals →](INTERNALS.md)
 
 Baa (باء) is a compiled systems programming language using Arabic syntax. It compiles directly to native machine code via Assembly/GCC on Windows.
 
@@ -11,11 +11,12 @@ Baa (باء) is a compiled systems programming language using Arabic syntax. It 
 - [Program Structure](#1-program-structure)
 - [Preprocessor](#2-preprocessor)
 - [Variables & Types](#3-variables--types)
-- [Functions](#4-functions)
-- [Input / Output](#5-input--output)
-- [Control Flow](#6-control-flow)
-- [Operators](#7-operators)
-- [Complete Example](#8-complete-example)
+- [Constants](#4-constants)
+- [Functions](#5-functions)
+- [Input / Output](#6-input--output)
+- [Control Flow](#7-control-flow)
+- [Operators](#8-operators)
+- [Complete Example](#9-complete-example)
 
 ---
 
@@ -161,11 +162,65 @@ Fixed-size arrays allocated on the stack.
 
 ---
 
-## 4. Functions
+## 4. Constants (الثوابت)
+
+Constants are immutable variables that cannot be reassigned after initialization.
+
+### 4.1. Constant Declaration
+
+Use the `ثابت` keyword before the type to declare a constant.
+
+**Syntax:** `ثابت <type> <identifier> = <expression>.`
+
+```baa
+// Global constant
+ثابت صحيح الحد_الأقصى = ١٠٠.
+
+صحيح الرئيسية() {
+    // Local constant
+    ثابت صحيح المعامل = ٥.
+    
+    اطبع الحد_الأقصى.  // ✓ OK: Reading constant
+    اطبع المعامل.      // ✓ OK: Reading constant
+    
+    // الحد_الأقصى = ٢٠٠.  // ✗ Error: Cannot reassign constant
+    
+    إرجع ٠.
+}
+```
+
+### 4.2. Constant Arrays
+
+Arrays can also be declared as constants to prevent modification of their elements.
+
+**Syntax:** `ثابت صحيح <identifier>[<size>].`
+
+```baa
+صحيح الرئيسية() {
+    ثابت صحيح أرقام[٣].
+    
+    // أرقام[٠] = ١٠.  // ✗ Error: Cannot modify constant array
+    
+    إرجع ٠.
+}
+```
+
+### 4.3. Rules for Constants
+
+| Rule | Description |
+|------|-------------|
+| **Must be initialized** | Constants require an initial value at declaration |
+| **Cannot be reassigned** | Attempting to reassign produces a semantic error |
+| **Array elements immutable** | Elements of constant arrays cannot be modified |
+| **Functions cannot be const** | The `ثابت` keyword applies only to variables |
+
+---
+
+## 5. Functions
 
 Functions enable code reuse and modularity.
 
-### 4.1. Definition
+### 5.1. Definition
 
 **Syntax:** `<type> <name>(<parameters>) { <body> }`
 
@@ -181,7 +236,7 @@ Functions enable code reuse and modularity.
 }
 ```
 
-### 4.2. Function Prototypes (النماذج الأولية)
+### 5.2. Function Prototypes (النماذج الأولية)
 
 To use a function defined in another file (or later in the same file), you can declare its prototype without a body.
 
@@ -198,7 +253,7 @@ To use a function defined in another file (or later in the same file), you can d
 }
 ```
 
-### 4.3. Calling
+### 5.3. Calling
 
 **Syntax:** `<name>(<arguments>)`
 
@@ -207,7 +262,7 @@ To use a function defined in another file (or later in the same file), you can d
 صحيح م = مربع(٥).            // م = ٢٥
 ```
 
-### 4.4. Entry Point (`الرئيسية`)
+### 5.4. Entry Point (`الرئيسية`)
 
 Every program **must** have a main function:
 
@@ -219,7 +274,7 @@ Every program **must** have a main function:
 ```
 **Important:** The entry point **must** be named `الرئيسية` (ar-ra'īsīyah). It is exported as `main` in the generated assembly.
 
-### 4.5. Recursion (التكرار)
+### 5.5. Recursion (التكرار)
 
 Functions can call themselves (recursion), provided there is a base case to terminate the loop.
 
@@ -235,7 +290,7 @@ Functions can call themselves (recursion), provided there is a base case to term
 
 ---
 
-## 5. Input / Output
+## 6. Input / Output
 
 ### Print Statement
 
@@ -255,9 +310,9 @@ Functions can call themselves (recursion), provided there is a base case to term
 
 ---
 
-## 6. Control Flow
+## 7. Control Flow
 
-### 6.1. Conditional (`إذا` / `وإلا`)
+### 7.1. Conditional (`إذا` / `وإلا`)
 
 Executes a block based on conditions.
 
@@ -286,7 +341,7 @@ Executes a block based on conditions.
 }
 ```
 
-### 6.2. While Loop (`طالما`)
+### 7.2. While Loop (`طالما`)
 
 Repeats a block while the condition is true.
 
@@ -302,7 +357,7 @@ Repeats a block while the condition is true.
 // يطبع: ٥ ٤ ٣ ٢ ١
 ```
 
-### 6.3. For Loop (`لكل`)
+### 7.3. For Loop (`لكل`)
 
 C-style loop using **Arabic semicolon `؛`** as separator (NOT regular semicolon).
 
@@ -315,7 +370,7 @@ C-style loop using **Arabic semicolon `؛`** as separator (NOT regular semicolon
 }
 ```
 
-### 6.4. Loop Control (`توقف` & `استمر`)
+### 7.4. Loop Control (`توقف` & `استمر`)
 
 - **`توقف` (Break)**: Exits the loop immediately.
 - **`استمر` (Continue)**: Skips the rest of the current iteration and proceeds to the next one.
@@ -342,7 +397,7 @@ C-style loop using **Arabic semicolon `؛`** as separator (NOT regular semicolon
 }
 ```
 
-### 6.5. Switch Statement (`اختر`)
+### 7.5. Switch Statement (`اختر`)
 
 Multi-way branching based on integer or character values.
 
@@ -388,9 +443,9 @@ Multi-way branching based on integer or character values.
 
 ---
 
-## 7. Operators
+## 8. Operators
 
-### 7.1. Arithmetic
+### 8.1. Arithmetic
 
 | Operator | Description | Example |
 |----------|-------------|---------|
@@ -403,7 +458,7 @@ Multi-way branching based on integer or character values.
 | `--` | Decrement (postfix) | `س--` |
 | `-` | Negative (unary) | `-٥` |
 
-### 7.2. Comparison
+### 8.2. Comparison
 
 | Operator | Description | Example |
 |----------|-------------|---------|
@@ -414,7 +469,7 @@ Multi-way branching based on integer or character values.
 | `<=` | Less or equal | `س <= ١٠` |
 | `>=` | Greater or equal | `س >= ١٠` |
 
-### 7.3. Logical
+### 8.3. Logical
 
 | Operator | Description | Behavior |
 |----------|-------------|----------|
@@ -435,7 +490,7 @@ Multi-way branching based on integer or character values.
 }
 ```
 
-### 7.4. Operator Precedence
+### 8.4. Operator Precedence
 
 From highest to lowest:
 
@@ -452,16 +507,23 @@ From highest to lowest:
 
 ---
 
-## 8. Complete Example
+## 9. Complete Example
 
 ```baa
+// استخدام الثوابت والماكرو
 #تعريف الحد_الأقصى ١٠
+
+// ثابت عام
+ثابت صحيح المعامل = ٢.
 
 // Main function
 صحيح الرئيسية() {
-    // Use the defined constant
-    لكل (صحيح س = ١؛ س <= الحد_الأقصى؛ س++) {
-        اطبع س.
+    // ثابت محلي
+    ثابت صحيح البداية = ١.
+    
+    // طباعة الأرقام المضاعفة
+    لكل (صحيح س = البداية؛ س <= الحد_الأقصى؛ س++) {
+        اطبع س * المعامل.
     }
     إرجع ٠.
 }

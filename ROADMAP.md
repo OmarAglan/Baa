@@ -77,44 +77,357 @@
 *Goal: Decouple the language from x86 Assembly to enable optimizations and multiple backends.*
 
 ### v0.3.0: Baa IR (Intermediate Representation)
-- [ ] **IR Design** — Define a simplified, linear instruction set (Three-Address Code).
-    - Example: `ADD t0, t1, t2` (virtual registers).
-- [ ] **AST to IR** — Write a lowering pass to convert the AST tree into a Control Flow Graph (CFG) of IR blocks.
-- [ ] **IR Printer** — Debug tool to print the IR in a readable format (`--dump-ir`).
+- [ ] **IR Design** – Define a simplified, linear instruction set (Three-Address Code).
+- Example: `ADD t0, t1, t2` (virtual registers).
+- [ ] **AST to IR** – Write a lowering pass to convert the AST tree into a Control Flow Graph (CFG) of IR blocks.
+- [ ] **IR Printer** – Debug tool to print the IR in a readable format (`--dump-ir`).
 
 ### v0.3.1: The Optimizer ⚡
-- [ ] **Control Flow Analysis** — Detect unreachable blocks.
-- [ ] **Dead Code Elimination** — Remove instructions that don't affect the output.
-- [ ] **Constant Propagation** — If `x = 10` and `y = x + 5`, replace with `y = 15`.
-- [ ] **Loop Invariant Code Motion** — Move static calculations out of loops.
+- [ ] **Control Flow Analysis** – Detect unreachable blocks.
+- [ ] **Dead Code Elimination** – Remove instructions that don't affect the output.
+- [ ] **Constant Propagation** – If `x = 10` and `y = x + 5`, replace with `y = 15`.
+- [ ] **Loop Invariant Code Motion** – Move static calculations out of loops.
 
 ### v0.3.2: The Backend (Target Independence)
-- [ ] **Instruction Selection** — Convert IR to abstract machine instructions.
-- [ ] **Register Allocation** — Map virtual registers (t0, t1...) to physical x64 registers (RAX, RBX...) using Linear Scan or Graph Coloring.
-- [ ] **Code Emission** — Write the final assembly text.
+- [ ] **Instruction Selection** – Convert IR to abstract machine instructions.
+- [ ] **Register Allocation** – Map virtual registers (t0, t1...) to physical x64 registers (RAX, RBX...) using Linear Scan or Graph Coloring.
+- [ ] **Code Emission** – Write the final assembly text.
 
 ---
 
-## 📚 Phase 4: The Ecosystem & Standard Library (v0.4.x)
+## 📚 Phase 3.5: Language Completeness (v0.3.3 - v0.3.9)
+
+*Goal: Add essential features to make Baa practical for real-world programs before Phase 4.*
+
+### v0.3.3: Array Initialization 📊
+**Goal:** Enable direct initialization of arrays with values.
+#### Features
+- [ ] **Array Literal Syntax** – Initialize arrays with comma-separated values using `{` `}`.
+  
+**Syntax:**
+```baa
+صحيح قائمة[٥] = {١، ٢، ٣، ٤، ٥}.
+
+// With Arabic comma (،) or regular comma (,)
+صحيح أرقام[٣] = {١٠، ٢٠، ٣٠}.
+```
+
+#### Implementation Tasks
+- [ ] **Parser**: Handle `{` `}` initializer list after array declaration.
+- [ ] **Parser**: Support both Arabic comma `،` (U+060C) and regular comma `,` as separators.
+- [ ] **Semantic Analysis**: Verify initializer count matches array size.
+- [ ] **Codegen**: Generate sequential assignments in `.data` section (for globals) or stack initialization (for locals).
+
+#### Deferred to v0.3.8
+- Multi-dimensional arrays: `صحيح مصفوفة[٣][٤].`
+- Array length operator: `صحيح طول = حجم(قائمة).`
+
+---
+
+### v0.3.4: Enumerations & Structures 🏗️
+**Goal:** Add compound types for better code organization and type safety.
+
+#### Features
+- [ ] **Enum Declaration** – Named integer constants with type safety.
+- [ ] **Struct Declaration** – Group related data into composite types.
+- [ ] **Member Access** – Use `:` (colon) operator for accessing members.
+
+**Complete Example:**
+```baa
+// ١. تعريف التعداد (Enumeration)
+// يحدد مجموعة من الألوان الممكنة
+تعداد لون {
+    أحمر،
+    أزرق،
+    أسود،
+    أبيض
+}
+// ٢. تعريف الهيكل (Structure)
+// يجمع بيانات السيارة
+هيكل سيارة {
+    نص موديل.
+    صحيح سنة_الصنع.
+    تعداد لون لون_السيارة.
+}
+
+صحيح الرئيسية() {
+    // تعريف متغير من نوع الهيكل
+    هيكل سيارة س.
+    
+    // ٣. استخدام النقطتين (:) للوصول لأعضاء الهيكل
+    س:موديل = "تويوتا كورولا".
+    س:سنة_الصنع = ٢٠٢٤.
+    
+    // ٤. استخدام النقطتين (:) للوصول لقيم التعداد
+    س:لون_السيارة = لون:أحمر.
+    
+    // طباعة البيانات
+    اطبع "بيانات السيارة الجديدة:".
+    اطبع س:موديل.
+    اطبع س:سنة_الصنع.
+    
+    // ٥. استخدام التعداد في الشروط
+    إذا (س:لون_السيارة == لون:أحمر) {
+        اطبع "تحذير: السيارات الحمراء سريعة!".
+    } وإلا {
+        اطبع "لون السيارة هادئ.".
+    }
+    
+    إرجع ٠.
+}
+```
+
+#### Implementation Tasks
+**Enumerations:**
+- [ ] **Token**: Add `TOKEN_ENUM` for `تعداد` keyword.
+- [ ] **Parser**: Parse enum declaration: `تعداد <name> { <members> }`.
+- [ ] **Parser**: Support Arabic comma `،` between enum members.
+- [ ] **Semantic**: Auto-assign integer values (0, 1, 2...).
+- [ ] **Semantic**: Enum values accessible via `<enum_name>:<value_name>`.
+- [ ] **Type System**: Add `TYPE_ENUM` to `DataType`.
+
+**Structures:**
+- [ ] **Token**: Add `TOKEN_STRUCT` for `هيكل` keyword.
+- [ ] **Token**: Add `TOKEN_COLON` for `:` (already exists, verify usage).
+- [ ] **Parser**: Parse struct declaration: `هيكل <name> { <fields> }`.
+- [ ] **Parser**: Parse struct instantiation: `هيكل <name> <var>.`
+- [ ] **Parser**: Parse member access: `<var>:<member>`.
+- [ ] **Semantic**: Track struct definitions in symbol table.
+- [ ] **Semantic**: Validate member access against struct definition.
+- [ ] **Memory Layout**: Calculate field offsets with padding/alignment.
+- [ ] **Codegen**: Emit struct definitions and member access code.
+
+### v0.3.5: Character Type 📝
+**Goal:** Add proper character type to align with C conventions.
+
+#### Features
+- [ ] **Character Type (`حرف`)** – Proper 1-byte character type (like C's `char`).
+- [ ] **String-Char Relationship** – Strings (`نص`) become arrays of characters (`حرف[]`).
+
+**Syntax:**
+```baa
+// Character variable
+حرف ح = 'أ'.
+// String as char array (internal representation)
+نص اسم = "أحمد".  // Equivalent to: حرف اسم[] = {'أ', 'ح', 'م', 'د', '\0'}.
+```
+
+#### Implementation Tasks
+- [ ] **Token**: Already have `TOKEN_CHAR` for literals.
+- [ ] **Token**: Add `TOKEN_KEYWORD_CHAR` for `حرف` type keyword.
+- [ ] **Type System**: Add `TYPE_CHAR` to `DataType` enum.
+- [ ] **Semantic**: Distinguish between `char` and `int` (currently chars are ints).
+- [ ] **Codegen**: Generate 1-byte storage for `حرف` (currently 8-byte).
+- [ ] **String Representation**: Update internal string handling to use `char*`.
+
+#### Deferred to v0.3.9
+- String operations: `طول_نص()`, `دمج_نص()`, `قارن_نص()`
+- String indexing: `اسم[٠]` returns `حرف`
+
+---
+
+### v0.3.6: System Improvements 🔧
+**Goal:** Refine and enhance existing compiler systems.
+
+#### Focus Areas
+- [ ] **Error Messages** – Improve clarity and helpfulness of diagnostic messages.
+- [ ] **Code Quality** – Refactor complex functions, improve code organization.
+- [ ] **Memory Management** – Fix memory leaks, improve buffer handling.
+- [ ] **Performance** – Profile and optimize slow compilation paths.
+- [ ] **Documentation** – Update all docs to reflect v0.3.3-0.3.5 changes.
+- [ ] **Edge Cases** – Fix known bugs and handle corner cases.
+
+#### Specific Improvements
+- [ ] Improve panic mode recovery in parser.
+- [ ] Better handling of UTF-8 edge cases in lexer.
+- [ ] Optimize symbol table lookups (consider hash table).
+- [ ] Add more comprehensive error recovery.
+- [ ] Improve codegen output readability (comments in assembly).
+
+---
+
+### v0.3.7: Testing & Quality Assurance ✅
+**Goal:** Establish robust testing infrastructure and fix accumulated issues.
+
+#### Test System
+- [ ] **Test Framework** – Create automated test runner.
+  - Script to compile and run `.baa` test files.
+  - Compare actual output vs expected output.
+  - Report pass/fail with clear diagnostics.
+
+- [ ] **Test Categories**:
+  - [ ] **Lexer Tests** – Token generation, UTF-8 handling, preprocessor.
+  - [ ] **Parser Tests** – Syntax validation, error recovery.
+  - [ ] **Semantic Tests** – Type checking, scope validation.
+  - [ ] **Codegen Tests** – Correct assembly output, execution results.
+  - [ ] **Integration Tests** – Full programs with expected output.
+
+- [ ] **Test Coverage**:
+  - [ ] All language features (v0.0.1 - v0.3.6).
+  - [ ] Edge cases and corner cases.
+  - [ ] Error conditions (syntax errors, type mismatches, etc.).
+  - [ ] Multi-file compilation scenarios.
+  - [ ] Preprocessor directive combinations.
+
+#### Bug Fixes & Refinements
+- [ ] **Known Issues** – Fix all open bugs from previous versions.
+- [ ] **Regression Testing** – Ensure new features don't break old code.
+- [ ] **Stress Testing** – Test with large files, deep nesting, many symbols.
+- [ ] **Arabic Text Edge Cases** – Test various Arabic Unicode scenarios.
+
+#### Documentation
+- [ ] **Testing Guide** – Document how to run tests and add new ones.
+- [ ] **Known Limitations** – Document current language limitations.
+- [ ] **Migration Guide** – Help users update code for v0.3.x changes.
+
+---
+
+### v0.3.8: Advanced Arrays & String Operations 📐
+**Goal:** Complete array and string functionality.
+
+#### Features
+- [ ] **Multi-dimensional Arrays**:
+  ```baa
+  صحيح مصفوفة[٣][٤].
+  مصفوفة[٠][٠] = ١٠.
+  مصفوفة[١][٢] = ٢٠.
+  ```
+- [ ] **Array Length Operator**:
+  ```baa
+  صحيح قائمة[١٠].
+  صحيح الطول = حجم(قائمة).  // Returns 10
+  ```
+
+- [ ] **Array Bounds Checking** (Optional debug mode):
+  - Runtime checks with `-g` flag.
+  - Panic on out-of-bounds access.
+
+#### Implementation
+- [ ] **Parser**: Parse multi-dimensional array declarations and access.
+- [ ] **Semantic**: Track array dimensions in symbol table.
+- [ ] **Codegen**: Calculate offsets for multi-dimensional arrays (row-major order).
+- [ ] **Built-in**: Implement `حجم()` as compiler intrinsic or standard function.
+
+---
+
+### v0.3.9: String Operations Library 🔤
+**Goal:** Make strings practical for real programs.
+
+#### Features
+- [ ] **String Length**:
+  ```baa
+  نص اسم = "أحمد".
+  صحيح الطول = طول_نص(اسم).  // Returns 4
+  ```
+
+- [ ] **String Concatenation**:
+  ```baa
+  نص كامل = دمج_نص(اسم, " علي").  // "أحمد علي"
+  ```
+
+- [ ] **String Comparison**:
+  ```baa
+  صحيح نتيجة = قارن_نص(اسم, "محمد").  // 0 if equal, -1/<0/1 otherwise
+  ```
+
+- [ ] **String Indexing** (read-only):
+  ```baa
+  حرف أول = اسم[٠].  // Get character at index
+  ```
+- [ ] **String Copy**:
+  ```baa
+  نص نسخة = نسخ_نص(اسم).
+  ```
+
+#### Implementation
+- [ ] **Standard Library**: Create `baalib.baa` with string functions.
+- [ ] **C Integration**: Wrap C string functions (`strlen`, `strcmp`, `strcpy`, etc.).
+- [ ] **UTF-8 Aware**: Ensure functions handle multi-byte Arabic characters correctly.
+- [ ] **Memory Safety**: Document string memory management rules.
+
+---
+
+## 📚 Phase 4: Advanced Features & Standard Library (v0.4.x)
 
 *Goal: Make Baa useful for real-world applications.*
 
-### v0.4.0: Compound Types (Structs)
-- [ ] **Struct Definition** — `هيكل نقطة { صحيح س. صحيح ص. }`.
-- [ ] **Member Access** — `نقطة.س = ١٠.`
-- [ ] **Memory Layout** — Handle padding and alignment.
-
-### v0.4.1: Pointers & Memory
+### v0.4.0: Pointers & Memory Management 🎯
+**Goal:** Add manual memory management capabilities.
+- [ ] **Pointer Type**:
+  ```baa
+  صحيح* مؤشر.  // Pointer to integer
+  ```
 - [ ] **Address-of Operator** — `&` (or Arabic equivalent like `عنوان`).
 - [ ] **Dereference Operator** — `*` (or Arabic equivalent like `قيمة`).
-- [ ] **Dynamic Allocation** — Integration with `malloc`/`free`.
+- [ ] **Dynamic Allocation**:
+  ```baa
+  صحيح* ذاكرة = حجز_ذاكرة(١٠ * حجم(صحيح)).  // malloc equivalent
+  تحرير_ذاكرة(ذاكرة).  // free equivalent
+  ```
 
-### v0.4.2: Standard Library (BaaLib)
+- [ ] **Null Pointer** – `عدم` keyword for NULL.
+
+### v0.4.1: Formatted Output & Input 🖨️
+**Goal:** Professional I/O capabilities.
+
+- [ ] **Formatted Output**:
+  ```baa
+  // Printf-style
+  اطبع_منسق("الاسم: %s، العمر: %d", اسم, عمر).
+  
+  // Or interpolation
+  اطبع("الاسم: {اسم}، العمر: {عمر}").
+  ```
+- [ ] **User Input**:
+  ```baa
+  نص إدخال = اقرأ_سطر().
+  صحيح رقم = اقرأ_رقم().
+  ```
+
+### v0.4.2: File I/O 📁
+**Goal:** Read and write files.
+
+- [ ] **File Operations**:
+  ```baa
+  صحيح ملف = فتح_ملف("data.txt", "قراءة").
+  نص سطر = اقرأ_سطر_من_ملف(ملف).
+  اكتب_إلى_ملف(ملف, "نص جديد").
+  اغلق_ملف(ملف).
+  ```
+
+### v0.4.3: Standard Library (BaaLib) 📚
 - [ ] **IO Module** — File reading/writing (`ملف.اقرأ`, `ملف.اكتب`).
-- [ ] **String Module** — String manipulation (length, concat, split).
-- [ ] **Math Module** — Advanced math functions (sqrt, pow, sin, cos).
+- [ ] **Math Module** – Advanced math functions:
+  ```baa
+  صحيح جذر = جذر_تربيعي(١٦).
+  صحيح قوة = أس(٢, ١٠).
+  ```
 - [ ] **System Module** — Executing commands, environment variables.
+- [ ] **Time Module** – Date/time operations.
 
+### v0.4.4: Floating Point Support 🔢
+**Goal:** Add decimal number support.
+
+- [ ] **Float Type (`عشري`)**:
+  ```baa
+  عشري باي = ٣.١٤١٥٩.
+  عشري نصف = ٠.٥.
+  ```
+
+- [ ] **Float Operations** – Arithmetic, comparison, math functions.
+- [ ] **Type Conversion** – `صحيح إلى عشري()`, `عشري إلى صحيح()`.
+
+### v0.4.5: Error Handling 🛡️
+**Goal:** Graceful error management.
+
+- [ ] **Assertions**:
+  ```baa
+  تأكد(س > ٠, "س يجب أن يكون موجباً").
+  ```
+
+- [ ] **Error Returns** – Convention for returning error codes.
+- [ ] **Panic/Abort** – `توقف_فوري("رسالة خطأ")`.
+ 
 ---
 
 ## 🚀 Phase 5: Self-Hosting (v1.0.0)

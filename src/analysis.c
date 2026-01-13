@@ -1,8 +1,13 @@
 /**
  * @file analysis.c
  * @brief وحدة التحليل الدلالي (Semantic Analysis).
- * @details تقوم هذه الوحدة بالتحقق من صحة البرنامج قبل توليد الكود، بما في ذلك التحقق من الأنواع (Type Checking) والتحقق من النطاقات (Scope Analysis) والتحقق من الثوابت (Const Checking).
- * @version 0.2.7
+ * @details تقوم هذه الوحدة بالتحقق من صحة البرنامج قبل توليد الكود، بما في ذلك:
+ *          - التحقق من الأنواع (Type Checking)
+ *          - التحقق من النطاقات (Scope Analysis)
+ *          - التحقق من الثوابت (Const Checking)
+ *          - اكتشاف المتغيرات غير المستخدمة (Unused Variables)
+ *          - اكتشاف الكود الميت (Dead Code)
+ * @version 0.2.8
  */
 
 #include "baa.h"
@@ -23,6 +28,9 @@ static int local_count = 0;
 static bool has_error = false;
 static bool inside_loop = false;
 static bool inside_switch = false;
+
+// معلومات الملف الحالي (للتحذيرات)
+static const char* current_filename = NULL;
 
 // ============================================================================
 // دوال مساعدة (Helper Functions)
@@ -58,7 +66,8 @@ static void reset_analysis() {
 /**
  * @brief إضافة رمز إلى النطاق الحالي.
  */
-static void add_symbol(const char* name, ScopeType scope, DataType type, bool is_const) {
+static void add_symbol(const char* name, ScopeType scope, DataType type, bool is_const,
+                       int decl_line, int decl_col, const char* decl_file) {
     if (scope == SCOPE_GLOBAL) {
         // التحقق من التكرار
         for (int i = 0; i < global_count; i++) {
@@ -73,6 +82,10 @@ static void add_symbol(const char* name, ScopeType scope, DataType type, bool is
         global_symbols[global_count].scope = SCOPE_GLOBAL;
         global_symbols[global_count].type = type;
         global_symbols[global_count].is_const = is_const;
+        global_symbols[global_count].is_used = false;
+        global_symbols[global_count].decl_line = decl_line;
+        global_symbols[global_count].decl_col = decl_col;
+        global_symbols[global_count].decl_file = decl_file;
         global_count++;
     } else {
         // التحقق من التكرار محلياً
@@ -83,28 +96,80 @@ static void add_symbol(const char* name, ScopeType scope, DataType type, bool is
             }
         }
         if (local_count >= 100) { semantic_error("Too many local variables."); return; }
+        
+        // تحذير إذا كان المتغير المحلي يحجب متغيراً عاماً
+        for (int i = 0; i < global_count; i++) {
+            if (strcmp(global_symbols[i].name, name) == 0) {
+                warning_report(WARN_SHADOW_VARIABLE, decl_file, decl_line, decl_col,
+                    "Local variable '%s' shadows global variable.", name);
+                break;
+            }
+        }
 
         strcpy(local_symbols[local_count].name, name);
         local_symbols[local_count].scope = SCOPE_LOCAL;
         local_symbols[local_count].type = type;
         local_symbols[local_count].is_const = is_const;
+        local_symbols[local_count].is_used = false;
+        local_symbols[local_count].decl_line = decl_line;
+        local_symbols[local_count].decl_col = decl_col;
+        local_symbols[local_count].decl_file = decl_file;
         local_count++;
     }
 }
 
 /**
  * @brief البحث عن رمز بالاسم.
+ * @param mark_used إذا كان true، يتم تعليم المتغير كمستخدم.
  */
-static Symbol* lookup(const char* name) {
+static Symbol* lookup(const char* name, bool mark_used) {
     // البحث في المحلي أولاً
     for (int i = 0; i < local_count; i++) {
-        if (strcmp(local_symbols[i].name, name) == 0) return &local_symbols[i];
+        if (strcmp(local_symbols[i].name, name) == 0) {
+            if (mark_used) local_symbols[i].is_used = true;
+            return &local_symbols[i];
+        }
     }
     // البحث في العام
     for (int i = 0; i < global_count; i++) {
-        if (strcmp(global_symbols[i].name, name) == 0) return &global_symbols[i];
+        if (strcmp(global_symbols[i].name, name) == 0) {
+            if (mark_used) global_symbols[i].is_used = true;
+            return &global_symbols[i];
+        }
     }
     return NULL;
+}
+
+/**
+ * @brief التحقق من المتغيرات غير المستخدمة في النطاق المحلي.
+ */
+static void check_unused_local_variables(void) {
+    for (int i = 0; i < local_count; i++) {
+        if (!local_symbols[i].is_used) {
+            warning_report(WARN_UNUSED_VARIABLE,
+                local_symbols[i].decl_file,
+                local_symbols[i].decl_line,
+                local_symbols[i].decl_col,
+                "Variable '%s' is declared but never used.",
+                local_symbols[i].name);
+        }
+    }
+}
+
+/**
+ * @brief التحقق من المتغيرات العامة غير المستخدمة.
+ */
+static void check_unused_global_variables(void) {
+    for (int i = 0; i < global_count; i++) {
+        if (!global_symbols[i].is_used) {
+            warning_report(WARN_UNUSED_VARIABLE,
+                global_symbols[i].decl_file,
+                global_symbols[i].decl_line,
+                global_symbols[i].decl_col,
+                "Global variable '%s' is declared but never used.",
+                global_symbols[i].name);
+        }
+    }
 }
 
 // ============================================================================
@@ -130,7 +195,7 @@ static DataType infer_type(Node* node) {
             return TYPE_STRING;
             
         case NODE_VAR_REF: {
-            Symbol* sym = lookup(node->data.var_ref.name);
+            Symbol* sym = lookup(node->data.var_ref.name, true); // تعليم كمستخدم
             if (!sym) {
                 semantic_error("Undefined variable '%s'.", node->data.var_ref.name);
                 return TYPE_INT; // استرداد الخطأ
@@ -140,7 +205,7 @@ static DataType infer_type(Node* node) {
 
         case NODE_ARRAY_ACCESS: {
             // حالياً المصفوفات تدعم الأعداد الصحيحة فقط
-            Symbol* sym = lookup(node->data.array_op.name);
+            Symbol* sym = lookup(node->data.array_op.name, true); // تعليم كمستخدم
             if (!sym) {
                 semantic_error("Undefined array '%s'.", node->data.array_op.name);
             }
@@ -180,6 +245,47 @@ static DataType infer_type(Node* node) {
     }
 }
 
+/**
+ * @brief التحقق مما إذا كانت الجملة توقف التدفق (return/break/continue).
+ */
+static bool is_terminating_statement(Node* node) {
+    if (!node) return false;
+    return (node->type == NODE_RETURN ||
+            node->type == NODE_BREAK ||
+            node->type == NODE_CONTINUE);
+}
+
+/**
+ * @brief تحليل كتلة من الجمل مع اكتشاف الكود الميت.
+ * @param statements قائمة الجمل
+ * @param context سياق الكتلة (للرسائل)
+ */
+static void analyze_statements_with_dead_code_check(Node* statements, const char* context) {
+    bool found_terminator = false;
+    int terminator_line = 0;
+    
+    Node* stmt = statements;
+    while (stmt) {
+        if (found_terminator) {
+            // كود ميت بعد return/break/continue
+            warning_report(WARN_DEAD_CODE, current_filename, terminator_line, 1,
+                "Unreachable code after '%s' statement.", context);
+            // نستمر في التحليل لاكتشاف أخطاء أخرى
+            found_terminator = false; // تجنب تحذيرات متعددة
+        }
+        
+        analyze_node(stmt);
+        
+        if (is_terminating_statement(stmt)) {
+            found_terminator = true;
+            // TODO: الحصول على رقم السطر الفعلي من العقدة
+            terminator_line = 0; // سيظهر كسطر 0 مؤقتاً
+        }
+        
+        stmt = stmt->next;
+    }
+}
+
 static void analyze_node(Node* node) {
     if (!node) return;
 
@@ -190,6 +296,8 @@ static void analyze_node(Node* node) {
                 analyze_node(decl);
                 decl = decl->next;
             }
+            // في نهاية البرنامج، التحقق من المتغيرات العامة غير المستخدمة
+            check_unused_global_variables();
             break;
         }
 
@@ -208,15 +316,22 @@ static void analyze_node(Node* node) {
             if (node->data.var_decl.is_const && !node->data.var_decl.expression) {
                 semantic_error("Constant '%s' must be initialized.", node->data.var_decl.name);
             }
-            // 3. إضافة الرمز
+            // 3. إضافة الرمز (مع معلومات الموقع للتحذيرات)
+            // TODO: الحصول على رقم السطر الفعلي من العقدة
             add_symbol(node->data.var_decl.name,
                        node->data.var_decl.is_global ? SCOPE_GLOBAL : SCOPE_LOCAL,
                        node->data.var_decl.type,
-                       node->data.var_decl.is_const);
+                       node->data.var_decl.is_const,
+                       1, 1, current_filename); // مؤقتاً: سطر 1، عمود 1
             break;
         }
 
         case NODE_FUNC_DEF: {
+            // التحقق من المتغيرات المحلية غير المستخدمة في الدالة السابقة
+            if (local_count > 0) {
+                check_unused_local_variables();
+            }
+            
             // الدخول في نطاق دالة جديدة (تصفير المحلي)
             local_count = 0;
             
@@ -224,7 +339,11 @@ static void analyze_node(Node* node) {
             Node* param = node->data.func_def.params;
             while (param) {
                 if (param->type == NODE_VAR_DECL) {
-                     add_symbol(param->data.var_decl.name, SCOPE_LOCAL, param->data.var_decl.type, false);
+                    // المعاملات تُعتبر "مستخدمة" ضمنياً (لتجنب تحذيرات خاطئة)
+                    add_symbol(param->data.var_decl.name, SCOPE_LOCAL, param->data.var_decl.type, false,
+                               1, 1, current_filename);
+                    // تعليم المعامل كمستخدم مباشرة
+                    local_symbols[local_count - 1].is_used = true;
                 }
                 param = param->next;
             }
@@ -233,20 +352,20 @@ static void analyze_node(Node* node) {
             if (!node->data.func_def.is_prototype) {
                 analyze_node(node->data.func_def.body);
             }
+            
+            // التحقق من المتغيرات غير المستخدمة في هذه الدالة
+            check_unused_local_variables();
             break;
         }
 
         case NODE_BLOCK: {
-            Node* stmt = node->data.block.statements;
-            while (stmt) {
-                analyze_node(stmt);
-                stmt = stmt->next;
-            }
+            // تحليل الجمل مع اكتشاف الكود الميت
+            analyze_statements_with_dead_code_check(node->data.block.statements, "return/break");
             break;
         }
 
         case NODE_ASSIGN: {
-            Symbol* sym = lookup(node->data.assign_stmt.name);
+            Symbol* sym = lookup(node->data.assign_stmt.name, true); // تعليم كمستخدم
             if (!sym) {
                 semantic_error("Assignment to undefined variable '%s'.", node->data.assign_stmt.name);
             } else {
@@ -353,11 +472,12 @@ static void analyze_node(Node* node) {
             break;
 
         case NODE_ARRAY_DECL:
-            add_symbol(node->data.array_decl.name, SCOPE_LOCAL, TYPE_INT, node->data.array_decl.is_const);
+            add_symbol(node->data.array_decl.name, SCOPE_LOCAL, TYPE_INT, node->data.array_decl.is_const,
+                       1, 1, current_filename);
             break;
 
         case NODE_ARRAY_ASSIGN: {
-            Symbol* sym = lookup(node->data.array_op.name);
+            Symbol* sym = lookup(node->data.array_op.name, true); // تعليم كمستخدم
             if (!sym) {
                 semantic_error("Assignment to undefined array '%s'.", node->data.array_op.name);
             } else {
@@ -382,9 +502,15 @@ static void analyze_node(Node* node) {
 
 /**
  * @brief نقطة الدخول الرئيسية للتحليل.
+ * @param program عقدة البرنامج
+ * @return true إذا لم تحدث أخطاء
  */
 bool analyze(Node* program) {
     reset_analysis();
+    
+    // تعيين اسم الملف الحالي (مؤقتاً نستخدم "source")
+    current_filename = "source";
+    
     analyze_node(program);
     return !has_error;
 }

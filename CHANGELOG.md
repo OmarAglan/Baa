@@ -8,11 +8,51 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
-### Planned (v0.2.8)
-- **Warnings**: Diagnostic warnings for unused variables and dead code.
-- **Warning Flags**: `-Wall`, `-Werror` to control warning behavior.
+### Planned (v0.2.9)
+- **Input Statement**: `اقرأ س.` (scanf) for reading user input.
+- **Boolean Type**: `منطقي` type with `صحيح`/`خطأ` literals.
+- **Compile Timing**: Show compilation time with `-v`.
 
 ---
+
+## [0.2.8] - 2026-01-13
+
+### Added
+- **Warning System** — Non-fatal diagnostic messages for potential code issues.
+  - **Unused Variable Warning** (`-Wunused-variable`): Detects variables declared but never used.
+  - **Dead Code Warning** (`-Wdead-code`): Detects unreachable code after `إرجع` (return) or `توقف` (break).
+  - **Shadow Variable Warning**: Warns when local variable shadows a global variable.
+- **Warning Flags** — Command-line options to control warning behavior:
+  - `-Wall`: Enable all warnings.
+  - `-Werror`: Treat warnings as errors (compilation fails).
+  - `-Wunused-variable`: Enable only unused variable warning.
+  - `-Wdead-code`: Enable only dead code warning.
+  - `-Wno-<warning>`: Disable specific warning.
+- **Colored Output** — ANSI color support for terminal output:
+  - Errors displayed in red.
+  - Warnings displayed in yellow.
+  - Line numbers displayed in cyan.
+  - Automatic detection of terminal capability (Windows 10+, Unix TTY).
+  - `-Wcolor` to force colors, `-Wno-color` to disable.
+
+### Changed
+- **Symbol Table** — Extended with usage tracking fields:
+  - `is_used`: Tracks whether variable is referenced.
+  - `decl_line`, `decl_col`, `decl_file`: Stores declaration location for accurate warning messages.
+- **Semantic Analysis** — Enhanced to:
+  - Track variable usage during AST traversal.
+  - Detect code after terminating statements (return/break/continue).
+  - Check for local-global variable shadowing.
+- **Diagnostic Engine** — Upgraded from error-only to full error+warning system.
+
+### Technical Details
+- Warnings are disabled by default (must use `-Wall` or specific `-W<type>`).
+- Warning configuration stored in global `g_warning_config` structure.
+- ANSI escape codes used for colors: `\033[31m` (red), `\033[33m` (yellow), `\033[36m` (cyan).
+- Windows: Uses `SetConsoleMode()` to enable `ENABLE_VIRTUAL_TERMINAL_PROCESSING`.
+
+---
+
 ## [0.2.7] - 2026-01-12
 
 ### Added

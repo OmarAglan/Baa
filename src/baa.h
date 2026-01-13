@@ -1,7 +1,7 @@
 /**
  * @file baa.h
  * @brief ملف الرأس الرئيسي الذي يعرف هياكل البيانات لمحوسب لغة "باء" (Baa Compiler).
- * @version 0.2.7 (Constants & Immutability)
+ * @version 0.2.8 (Warnings & Diagnostics)
  */
 
 #ifndef BAA_H
@@ -15,7 +15,7 @@
 #include <stdarg.h>
 
 // معلومات الإصدار
-#define BAA_VERSION "0.2.7"
+#define BAA_VERSION "0.2.8"
 #define BAA_BUILD_DATE __DATE__
 
 // ============================================================================
@@ -157,13 +157,46 @@ Token lexer_next_token(Lexer* lexer);
 const char* token_type_to_str(BaaTokenType type);
 
 // ============================================================================
-// نظام الأخطاء (Diagnostic Engine)
+// نظام التشخيص (Diagnostic Engine) - الأخطاء والتحذيرات
 // ============================================================================
+
+/**
+ * @enum WarningType
+ * @brief أنواع التحذيرات المدعومة.
+ */
+typedef enum {
+    WARN_UNUSED_VARIABLE,    // متغير معرف لكن غير مستخدم
+    WARN_DEAD_CODE,          // كود بعد إرجع أو توقف
+    WARN_IMPLICIT_RETURN,    // دالة بدون إرجع صريح
+    WARN_SHADOW_VARIABLE,    // متغير محلي يحجب متغير عام
+    WARN_COUNT               // عدد التحذيرات (للتكرار)
+} WarningType;
+
+/**
+ * @struct WarningConfig
+ * @brief إعدادات التحذيرات.
+ */
+typedef struct {
+    bool enabled[WARN_COUNT];   // تفعيل/تعطيل كل نوع
+    bool warnings_as_errors;    // -Werror: معاملة التحذيرات كأخطاء
+    bool all_warnings;          // -Wall: تفعيل جميع التحذيرات
+    bool colored_output;        // ألوان ANSI في الخرج
+} WarningConfig;
+
+/**
+ * @brief إعدادات التحذيرات العامة (تُستخدم في جميع الوحدات).
+ */
+extern WarningConfig g_warning_config;
 
 /**
  * @brief تهيئة نظام الأخطاء بمؤشر للكود المصدري (للطباعة).
  */
 void error_init(const char* source);
+
+/**
+ * @brief تهيئة إعدادات التحذيرات الافتراضية.
+ */
+void warning_init(void);
 
 /**
  * @brief الإبلاغ عن خطأ مع تحديد الموقع والرسالة.
@@ -173,14 +206,39 @@ void error_init(const char* source);
 void error_report(Token token, const char* message, ...);
 
 /**
+ * @brief الإبلاغ عن تحذير مع تحديد الموقع والرسالة.
+ * @param type نوع التحذير
+ * @param filename اسم الملف
+ * @param line رقم السطر
+ * @param col رقم العمود
+ * @param message رسالة التحذير (صيغة printf)
+ */
+void warning_report(WarningType type, const char* filename, int line, int col, const char* message, ...);
+
+/**
  * @brief التحقق مما إذا حدثت أخطاء أثناء الترجمة.
  */
 bool error_has_occurred();
 
 /**
+ * @brief التحقق مما إذا حدثت تحذيرات أثناء الترجمة.
+ */
+bool warning_has_occurred();
+
+/**
+ * @brief الحصول على عدد التحذيرات.
+ */
+int warning_get_count();
+
+/**
  * @brief إعادة تعيين حالة الأخطاء (اختياري).
  */
 void error_reset();
+
+/**
+ * @brief إعادة تعيين حالة التحذيرات.
+ */
+void warning_reset();
 
 // ============================================================================
 // نظام التحديث (Updater)
@@ -414,6 +472,10 @@ typedef struct {
     DataType type;     // نوع البيانات (صحيح أو نص)
     int offset;        // الإزاحة في المكدس أو العنوان
     bool is_const;     // هل هو ثابت (immutable)؟
+    bool is_used;      // هل تم استخدام هذا المتغير؟ (للتحذيرات)
+    int decl_line;     // سطر التعريف (للتحذيرات)
+    int decl_col;      // عمود التعريف (للتحذيرات)
+    const char* decl_file; // ملف التعريف (للتحذيرات)
 } Symbol;
 
 /**

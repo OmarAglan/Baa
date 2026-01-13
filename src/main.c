@@ -1,7 +1,7 @@
 /**
  * @file main.c
  * @brief نقطة الدخول ومحرك سطر الأوامر (CLI Driver).
- * @version 0.2.4 (Semantic Analysis Integration)
+ * @version 0.2.8 (Warnings & Diagnostics)
  */
 
 #include "baa.h"
@@ -11,11 +11,12 @@
 // ============================================================================
 
 typedef struct {
-    char* input_file;       // ملف المصدر (.b)
+    char* input_file;       // ملف المصدر (.baa)
     char* output_file;      // ملف الخرج (.exe, .o, .s)
     bool assembly_only;     // -S: إنتاج كود تجميع فقط
     bool compile_only;      // -c: تجميع إلى كائن فقط (بدون ربط)
     bool verbose;           // -v: وضع التفاصيل
+    bool show_timings;      // -v: عرض وقت الترجمة
 } CompilerConfig;
 
 // ============================================================================
@@ -61,25 +62,88 @@ char* change_extension(const char* filename, const char* new_ext) {
 }
 
 /**
+ * @brief تحليل علم تحذير (-W...).
+ * @return true إذا تم التعرف على العلم.
+ */
+static bool parse_warning_flag(const char* flag) {
+    // -Wall: تفعيل جميع التحذيرات
+    if (strcmp(flag, "-Wall") == 0) {
+        g_warning_config.all_warnings = true;
+        return true;
+    }
+    
+    // -Werror: معاملة التحذيرات كأخطاء
+    if (strcmp(flag, "-Werror") == 0) {
+        g_warning_config.warnings_as_errors = true;
+        return true;
+    }
+    
+    // -Wno-color: تعطيل الألوان
+    if (strcmp(flag, "-Wno-color") == 0) {
+        g_warning_config.colored_output = false;
+        return true;
+    }
+    
+    // -Wcolor: تفعيل الألوان
+    if (strcmp(flag, "-Wcolor") == 0) {
+        g_warning_config.colored_output = true;
+        return true;
+    }
+    
+    // -Wunused-variable: تفعيل تحذير المتغيرات غير المستخدمة
+    if (strcmp(flag, "-Wunused-variable") == 0) {
+        g_warning_config.enabled[WARN_UNUSED_VARIABLE] = true;
+        return true;
+    }
+    
+    // -Wno-unused-variable: تعطيل تحذير المتغيرات غير المستخدمة
+    if (strcmp(flag, "-Wno-unused-variable") == 0) {
+        g_warning_config.enabled[WARN_UNUSED_VARIABLE] = false;
+        return true;
+    }
+    
+    // -Wdead-code: تفعيل تحذير الكود الميت
+    if (strcmp(flag, "-Wdead-code") == 0) {
+        g_warning_config.enabled[WARN_DEAD_CODE] = true;
+        return true;
+    }
+    
+    // -Wno-dead-code: تعطيل تحذير الكود الميت
+    if (strcmp(flag, "-Wno-dead-code") == 0) {
+        g_warning_config.enabled[WARN_DEAD_CODE] = false;
+        return true;
+    }
+    
+    return false;
+}
+
+/**
  * @brief طباعة رسالة المساعدة.
  */
 void print_help() {
     printf("Baa Compiler (baa) - The Arabic Programming Language\n");
     printf("Usage: baa [options] <files>...\n");
-    printf("Options:\n");
+    printf("\nOptions:\n");
     printf("  -o <file>    Specify output filename\n");
     printf("  -S, -s       Compile to assembly only (.s)\n");
     printf("  -c           Compile to object file only (.o)\n");
-    printf("  -v           Enable verbose output\n");
+    printf("  -v           Enable verbose output with timing\n");
     printf("  --help, -h   Show this help message\n");
     printf("  --version    Show version info\n");
-    printf("\n");
-    printf("Commands:\n");
+    printf("\nWarning Options:\n");
+    printf("  -Wall              Enable all warnings\n");
+    printf("  -Werror            Treat warnings as errors\n");
+    printf("  -Wunused-variable  Warn about unused variables\n");
+    printf("  -Wdead-code        Warn about unreachable code\n");
+    printf("  -Wno-<warning>     Disable specific warning\n");
+    printf("  -Wcolor            Force colored output\n");
+    printf("  -Wno-color         Disable colored output\n");
+    printf("\nCommands:\n");
     printf("  update       Update compiler to the latest version\n");
-    printf("\n");
-    printf("Examples:\n");
+    printf("\nExamples:\n");
     printf("  baa main.baa\n");
     printf("  baa main.baa lib.baa -o app.exe\n");
+    printf("  baa -Wall -Werror main.baa\n");
     printf("  baa -S main.baa\n");
 }
 
@@ -102,6 +166,9 @@ int main(int argc, char** argv) {
     char* input_files[32];  // دعم حتى 32 ملف مصدر
     int input_count = 0;
     
+    // تهيئة نظام التحذيرات
+    warning_init();
+    
     // 0. التحقق من وجود معاملات
     if (argc < 2) {
         print_help();
@@ -121,7 +188,10 @@ int main(int argc, char** argv) {
         if (arg[0] == '-') {
             if (strcmp(arg, "-S") == 0 || strcmp(arg, "-s") == 0) config.assembly_only = true;
             else if (strcmp(arg, "-c") == 0) config.compile_only = true;
-            else if (strcmp(arg, "-v") == 0) config.verbose = true;
+            else if (strcmp(arg, "-v") == 0) {
+                config.verbose = true;
+                config.show_timings = true;
+            }
             else if (strcmp(arg, "-o") == 0) {
                 if (i + 1 < argc) config.output_file = argv[++i];
                 else { printf("Error: -o requires a filename\n"); return 1; }
@@ -134,6 +204,13 @@ int main(int argc, char** argv) {
                 print_version();
                 return 0;
             }
+            // أعلام التحذيرات (-W...)
+            else if (strncmp(arg, "-W", 2) == 0) {
+                if (!parse_warning_flag(arg)) {
+                    printf("Error: Unknown warning flag '%s'\n", arg);
+                    return 1;
+                }
+            }
             else {
                 printf("Error: Unknown flag '%s'\n", arg);
                 return 1;
@@ -143,7 +220,7 @@ int main(int argc, char** argv) {
                 input_files[input_count++] = arg;
             } else {
                 printf("Error: Too many input files (Max 32)\n");
-                return 1; 
+                return 1;
             }
         }
     }
@@ -188,6 +265,13 @@ int main(int argc, char** argv) {
         if (config.verbose) printf("[INFO] Running semantic analysis...\n");
         if (!analyze(ast)) {
             fprintf(stderr, "Aborting %s due to semantic errors.\n", current_input);
+            free(source);
+            return 1;
+        }
+        
+        // التحقق من التحذيرات كأخطاء
+        if (g_warning_config.warnings_as_errors && warning_has_occurred()) {
+            fprintf(stderr, "Aborting %s: warnings treated as errors (-Werror).\n", current_input);
             free(source);
             return 1;
         }
@@ -263,6 +347,12 @@ int main(int argc, char** argv) {
         }
     }
 
+    // ملخص التحذيرات
+    int warn_count = warning_get_count();
+    if (warn_count > 0 && config.verbose) {
+        printf("[INFO] Compilation completed with %d warning(s).\n", warn_count);
+    }
+    
     if (config.verbose) printf("[INFO] Build successful: %s\n", config.output_file);
     return 0;
 }

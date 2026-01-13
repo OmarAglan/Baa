@@ -1,6 +1,6 @@
 # Baa Compiler Internals
 
-> **Version:** 0.2.7 | [← Language Spec](LANGUAGE.md) | [API Reference →](API_REFERENCE.md)
+> **Version:** 0.2.8 | [← Language Spec](LANGUAGE.md) | [API Reference →](API_REFERENCE.md)
 
 **Target Architecture:** x86-64 (AMD64)  
 **Target OS:** Windows (MinGW-w64 Toolchain)  
@@ -69,16 +69,29 @@ The driver in `main.c` (v0.2.0+) supports multi-file compilation and various mod
 
 ### 1.3. Diagnostic Engine
 
-The compiler uses a centralized **Error Reporting Module** (`src/error.c`) to handle compilation errors gracefully.
+The compiler uses a centralized **Diagnostic Module** (`src/error.c`) to handle errors and warnings.
 
-**Features:**
+**Error Features:**
 - **Source Context**: Prints the actual line of code where the error occurred.
 - **Pointers**: Uses `^` to point exactly to the offending token.
+- **Colored Output**: Errors displayed in red (ANSI) when terminal supports it (v0.2.8+).
 - **Panic Mode Recovery**: When a syntax error is found, the parser does not exit immediately. Instead, it enters "Panic Mode":
     1.  It reports the error.
     2.  It skips tokens forward until it finds a **Synchronization Point**.
     3.  **Synchronization Points**: Semicolon `.`, Right Brace `}`, or Keywords (`صحيح`, `إذا`, etc.).
     4.  Parsing resumes to find subsequent errors.
+
+**Warning Features (v0.2.8+):**
+- **Non-fatal**: Warnings do not stop compilation by default.
+- **Colored Output**: Warnings displayed in yellow (ANSI) when terminal supports it.
+- **Warning Names**: Each warning shows its type in brackets: `[-Wunused-variable]`.
+- **Configurable**: Enable with `-Wall` or specific `-W<type>` flags.
+- **Errors Mode**: Use `-Werror` to treat warnings as fatal errors.
+
+**ANSI Color Support:**
+- Windows 10+: Automatically enables Virtual Terminal Processing.
+- Unix/Linux: Detects TTY via `isatty()`.
+- Override with `-Wcolor` (force on) or `-Wno-color` (force off).
 
 ## 2. Lexical Analysis
 
@@ -292,6 +305,8 @@ The Semantic Analyzer (`src/analysis.c`) performs a static check on the AST befo
 4.  **Constant Checking** (v0.2.7+): Prevents reassignment of immutable variables.
 5.  **Control Flow Validation**: Ensures `break` and `continue` are used only within loops/switches.
 6.  **Function Validation**: Checks function prototypes and definitions match.
+7.  **Usage Tracking** (v0.2.8+): Tracks variable usage for unused variable warnings.
+8.  **Dead Code Detection** (v0.2.8+): Detects unreachable code after `return`/`break`.
 
 ### 5.2. Constant Checking (v0.2.7+)
 
@@ -303,20 +318,51 @@ The analyzer tracks the `is_const` flag for each symbol and enforces immutabilit
 | Modifying constant array element | `Cannot modify constant array '<name>'` |
 | Constant without initializer | `Constant '<name>' must be initialized` |
 
+### 5.3. Warning Generation (v0.2.8+)
+
+The analyzer generates warnings for potential issues that don't prevent compilation:
+
+#### Unused Variable Detection
+
+**Algorithm:**
+1. Each symbol has an `is_used` flag initialized to `false`.
+2. When a variable is referenced (in expressions, assignments, etc.), the flag is set to `true`.
+3. At end of function scope, all local variables with `is_used == false` generate a warning.
+4. At end of program, all global variables with `is_used == false` generate a warning.
+
+**Exception:** Function parameters are marked as "used" implicitly to avoid false positives.
+
+#### Dead Code Detection
+
+**Algorithm:**
+1. While analyzing a block, track if a "terminating" statement was encountered.
+2. Terminating statements: `NODE_RETURN`, `NODE_BREAK`, `NODE_CONTINUE`.
+3. If a terminating statement was found and there are more statements after it, generate a warning.
+
 **Implementation:**
 ```c
-// In add_symbol()
-static void add_symbol(const char* name, ScopeType scope, DataType type, bool is_const) {
-    // ... store is_const flag
-}
-
-// In NODE_ASSIGN handling
-if (sym->is_const) {
-    semantic_error("Cannot reassign constant '%s'.", name);
+static void analyze_statements_with_dead_code_check(Node* statements, const char* context) {
+    bool found_terminator = false;
+    Node* stmt = statements;
+    while (stmt) {
+        if (found_terminator) {
+            warning_report(WARN_DEAD_CODE, ...);
+            found_terminator = false; // Avoid multiple warnings
+        }
+        analyze_node(stmt);
+        if (is_terminating_statement(stmt)) {
+            found_terminator = true;
+        }
+        stmt = stmt->next;
+    }
 }
 ```
 
-### 5.3. Isolation Note
+#### Variable Shadowing
+
+When a local variable is declared with the same name as a global variable, a `WARN_SHADOW_VARIABLE` warning is generated.
+
+### 5.4. Isolation Note
 
 Since v0.2.4, `analysis.c` and `codegen.c` **maintain separate symbol tables** for isolation. The `Symbol` struct definition is shared via `baa.h`, but each module manages its own table. This ensures validation logic is independent from generation logic.
 
@@ -327,7 +373,7 @@ The analyzer walks the AST recursively. It maintains a **Symbol Table** stack to
 - `print y` (where y is undeclared): Reports an undefined symbol error.
 - `x = 5` (where x is `const`): Reports a const reassignment error (v0.2.7+).
 
-### 5.4. Memory Allocation
+### 5.5. Memory Allocation
 
 | Type | C Type | Size | Notes |
 |------|--------|------|-------|
@@ -336,7 +382,7 @@ The analyzer walks the AST recursively. It maintains a **Symbol Table** stack to
 
 ---
 
-### 5.5. Constant Folding (Optimization)
+### 5.6. Constant Folding (Optimization)
 
 The parser performs constant folding on arithmetic expressions. If both operands of a binary operation are integer literals, the compiler evaluates the result at compile-time.
 

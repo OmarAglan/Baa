@@ -1,6 +1,6 @@
 # Baa Internal API Reference
 
-> **Version:** 0.2.7 | [← User Guide](USER_GUIDE.md) | [Internals →](INTERNALS.md)
+> **Version:** 0.2.8 | [← User Guide](USER_GUIDE.md) | [Internals →](INTERNALS.md)
 
 This document details the C functions, enumerations, and structures defined in `src/baa.h`.
 
@@ -12,7 +12,7 @@ This document details the C functions, enumerations, and structures defined in `
 - [Parser Module](#2-parser-module)
 - [Semantic Analysis](#3-semantic-analysis)
 - [Codegen Module](#4-codegen-module)
-- [Error Reporting](#5-error-reporting)
+- [Diagnostic System](#5-diagnostic-system)
 - [Symbol Table](#6-symbol-table)
 - [Data Structures](#7-data-structures)
 
@@ -174,11 +174,13 @@ Recursively generates assembly code from AST.
 
 ---
 
-## 5. Error Reporting
+## 5. Diagnostic System
 
-Centralized diagnostic system for compiler errors.
+Centralized diagnostic system for compiler errors and warnings (v0.2.8+).
 
-### `error_init`
+### 5.1. Error Reporting
+
+#### `error_init`
 
 ```c
 void error_init(const char* source)
@@ -186,7 +188,7 @@ void error_init(const char* source)
 
 Initializes the error reporting system with the source code for context display.
 
-### `error_report`
+#### `error_report`
 
 ```c
 void error_report(Token token, const char* message, ...)
@@ -198,6 +200,74 @@ Reports an error with source location, line context, and a pointer to the error 
 - Displays filename, line, and column
 - Shows the actual source line with a `^` pointer
 - Supports printf-style formatting
+- **Colored output** (red) when terminal supports ANSI codes (v0.2.8+)
+
+### 5.2. Warning System (v0.2.8+)
+
+#### `warning_init`
+
+```c
+void warning_init(void)
+```
+
+Initializes the warning configuration with default settings. Called automatically at startup.
+
+#### `warning_report`
+
+```c
+void warning_report(WarningType type, const char* filename, int line, int col, const char* message, ...)
+```
+
+Reports a warning with source location and warning type.
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `type` | `WarningType` | Category of warning (e.g., `WARN_UNUSED_VARIABLE`) |
+| `filename` | `const char*` | Source filename |
+| `line` | `int` | Line number |
+| `col` | `int` | Column number |
+| `message` | `const char*` | Printf-style format string |
+
+**Features:**
+- Only emitted if warning type is enabled (via `-Wall` or specific `-W<type>`)
+- **Colored output** (yellow) when terminal supports ANSI codes
+- Shows warning name in brackets: `[-Wunused-variable]`
+- With `-Werror`, warnings are displayed as errors (red)
+
+### 5.3. Warning Types
+
+```c
+typedef enum {
+    WARN_UNUSED_VARIABLE,    // Variable declared but never used
+    WARN_DEAD_CODE,          // Unreachable code after return/break
+    WARN_IMPLICIT_RETURN,    // Function without explicit return (future)
+    WARN_SHADOW_VARIABLE,    // Local variable shadows global
+    WARN_COUNT               // Total count (for iteration)
+} WarningType;
+```
+
+### 5.4. Warning Configuration
+
+```c
+typedef struct {
+    bool enabled[WARN_COUNT];   // Enable/disable each warning type
+    bool warnings_as_errors;    // -Werror: treat warnings as errors
+    bool all_warnings;          // -Wall: enable all warnings
+    bool colored_output;        // ANSI colors in output
+} WarningConfig;
+
+extern WarningConfig g_warning_config;
+```
+
+### 5.5. State Query Functions
+
+| Function | Return | Description |
+|----------|--------|-------------|
+| `error_has_occurred()` | `bool` | Returns `true` if any error was reported |
+| `warning_has_occurred()` | `bool` | Returns `true` if any warning was reported |
+| `warning_get_count()` | `int` | Returns total number of warnings |
+| `error_reset()` | `void` | Resets error state |
+| `warning_reset()` | `void` | Resets warning state and counter |
 
 ---
 
@@ -211,11 +281,15 @@ Moved to `baa.h` for shared use between Analysis and Codegen.
 
 ```c
 typedef struct {
-    char name[32];     // Variable name
-    ScopeType scope;   // SCOPE_GLOBAL or SCOPE_LOCAL
-    DataType type;     // TYPE_INT or TYPE_STRING
-    int offset;        // Stack offset or memory address
-    bool is_const;     // NEW in v0.2.7: Immutability flag
+    char name[32];         // Variable name
+    ScopeType scope;       // SCOPE_GLOBAL or SCOPE_LOCAL
+    DataType type;         // TYPE_INT or TYPE_STRING
+    int offset;            // Stack offset or memory address
+    bool is_const;         // Immutability flag (v0.2.7+)
+    bool is_used;          // Usage tracking for warnings (v0.2.8+)
+    int decl_line;         // Declaration line (v0.2.8+)
+    int decl_col;          // Declaration column (v0.2.8+)
+    const char* decl_file; // Declaration file (v0.2.8+)
 } Symbol;
 ```
 
@@ -226,6 +300,10 @@ typedef struct {
 | `type` | `DataType` | `TYPE_INT` or `TYPE_STRING` |
 | `offset` | `int` | Stack offset (local) or memory address (global) |
 | `is_const` | `bool` | `true` if declared with `ثابت` (v0.2.7+) |
+| `is_used` | `bool` | `true` if variable is referenced (v0.2.8+) |
+| `decl_line` | `int` | Line number where symbol was declared (v0.2.8+) |
+| `decl_col` | `int` | Column number where symbol was declared (v0.2.8+) |
+| `decl_file` | `const char*` | Filename where symbol was declared (v0.2.8+) |
 
 > **Note**: Symbol table management functions (`add_local`, `lookup`, etc.) are implemented as static helper functions within `analysis.c` and `codegen.c` independently. In v0.2.4+, the `Symbol` struct definition is shared via `baa.h` to enable semantic analysis before code generation.
 

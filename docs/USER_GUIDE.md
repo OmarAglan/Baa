@@ -91,9 +91,21 @@ The Baa compiler `baa.exe` is a full-featured command-line tool (since v0.2.0).
 | `-o <file>` | Specify the output filename (e.g., `myapp.exe`, `mylib.o`, `output.s`). | `.\baa.exe main.baa -o myapp.exe` |
 | `-S`, `-s` | **Compile only to Assembly.** Produces `.s` file, does not invoke assembler/linker. | `.\baa.exe -S main.baa` (creates `main.s`) |
 | `-c` | **Compile and Assemble.** Produces object file (`.o`), does not link. | `.\baa.exe -c main.baa` (creates `main.o`) |
-| `-v` | Enable verbose output (shows all compilation steps). | `.\baa.exe -v main.baa` |
+| `-v` | Enable verbose output (shows all compilation steps with timing). | `.\baa.exe -v main.baa` |
 | `--help`, `-h` | Display help message and usage. | `.\baa.exe --help` |
 | `--version` | Display compiler version. | `.\baa.exe --version` |
+
+### Warning Flags (v0.2.8+)
+
+| Flag | Description | Example |
+|------|-------------|---------|
+| `-Wall` | Enable all warnings. | `.\baa.exe -Wall main.baa` |
+| `-Werror` | Treat warnings as errors (compilation fails). | `.\baa.exe -Wall -Werror main.baa` |
+| `-Wunused-variable` | Warn about unused variables. | `.\baa.exe -Wunused-variable main.baa` |
+| `-Wdead-code` | Warn about unreachable code after `إرجع`/`توقف`. | `.\baa.exe -Wdead-code main.baa` |
+| `-Wno-<warning>` | Disable a specific warning. | `.\baa.exe -Wall -Wno-unused-variable main.baa` |
+| `-Wcolor` | Force colored output. | `.\baa.exe -Wall -Wcolor main.baa` |
+| `-Wno-color` | Disable colored output. | `.\baa.exe -Wall -Wno-color main.baa` |
 
 
 ### Compilation Workflow
@@ -270,6 +282,16 @@ Use header files for function prototypes and shared declarations.
 | `Cannot reassign constant` | Modifying a constant | Constants declared with `ثابت` cannot be changed after initialization |
 | `Constant must be initialized` | Missing initial value | Constants require a value at declaration: `ثابت صحيح س = ١٠.` |
 | `break/continue outside loop` | Control flow error | `توقف` and `استمر` must be inside loops or switches |
+
+### Common Warnings (v0.2.8+)
+
+| Warning | Cause | Solution |
+|---------|-------|----------|
+| `Variable 'x' is declared but never used` | Unused variable | Remove the variable or use it in your code |
+| `Unreachable code after 'return/break'` | Dead code | Remove code after `إرجع` or `توقف` statements |
+| `Local variable 'x' shadows global variable` | Variable shadowing | Rename the local variable to avoid confusion |
+
+> **Note:** Warnings are non-fatal by default. Use `-Werror` to treat them as errors.
 
 ### Getting Help
 

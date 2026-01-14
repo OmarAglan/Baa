@@ -1,7 +1,7 @@
 /**
  * @file parser.c
  * @brief يقوم بتحليل الوحدات اللفظية وبناء شجرة الإعراب المجردة (AST) باستخدام طريقة الانحدار العودي (Recursive Descent).
- * @version 0.2.7 (Constants & Immutability)
+ * @version 0.2.9 (Input & UX Polish)
  */
 
 #include "baa.h"
@@ -59,10 +59,10 @@ void eat(BaaTokenType type) {
 }
 
 /**
- * @brief التحقق مما إذا كانت الوحدة الحالية تمثل نوع بيانات (صحيح أو نص).
+ * @brief التحقق مما إذا كانت الوحدة الحالية تمثل نوع بيانات (صحيح أو نص أو منطقي).
  */
 bool is_type_keyword(BaaTokenType type) {
-    return (type == TOKEN_KEYWORD_INT || type == TOKEN_KEYWORD_STRING);
+    return (type == TOKEN_KEYWORD_INT || type == TOKEN_KEYWORD_STRING || type == TOKEN_KEYWORD_BOOL);
 }
 
 /**
@@ -70,6 +70,7 @@ bool is_type_keyword(BaaTokenType type) {
  */
 DataType token_to_datatype(BaaTokenType type) {
     if (type == TOKEN_KEYWORD_STRING) return TYPE_STRING;
+    if (type == TOKEN_KEYWORD_BOOL) return TYPE_BOOL;
     return TYPE_INT;
 }
 
@@ -90,11 +91,13 @@ void synchronize() {
         switch (parser.current.type) {
             case TOKEN_KEYWORD_INT:
             case TOKEN_KEYWORD_STRING:
+            case TOKEN_KEYWORD_BOOL:
             case TOKEN_CONST:
             case TOKEN_IF:
             case TOKEN_WHILE:
             case TOKEN_FOR:
             case TOKEN_PRINT:
+            case TOKEN_READ:
             case TOKEN_RETURN:
             case TOKEN_SWITCH:
             case TOKEN_BREAK:
@@ -141,6 +144,20 @@ Node* parse_primary() {
         node->data.char_lit.value = (int)parser.current.value[0];
         node->next = NULL;
         eat(TOKEN_CHAR);
+    }
+    else if (parser.current.type == TOKEN_TRUE) {
+        node = malloc(sizeof(Node));
+        node->type = NODE_BOOL;
+        node->data.bool_lit.value = true;
+        node->next = NULL;
+        eat(TOKEN_TRUE);
+    }
+    else if (parser.current.type == TOKEN_FALSE) {
+        node = malloc(sizeof(Node));
+        node->type = NODE_BOOL;
+        node->data.bool_lit.value = false;
+        node->next = NULL;
+        eat(TOKEN_FALSE);
     }
     else if (parser.current.type == TOKEN_IDENTIFIER) {
         char* name = strdup(parser.current.value);
@@ -561,6 +578,20 @@ Node* parse_statement() {
         eat(TOKEN_PRINT);
         stmt->type = NODE_PRINT;
         stmt->data.print_stmt.expression = parse_expression();
+        eat(TOKEN_DOT);
+        return stmt;
+    }
+    
+    if (parser.current.type == TOKEN_READ) {
+        eat(TOKEN_READ);
+        if (parser.current.type != TOKEN_IDENTIFIER) {
+            error_report(parser.current, "Expected variable name after 'اقرأ'.");
+            free(stmt);
+            return NULL;
+        }
+        stmt->type = NODE_READ;
+        stmt->data.read_stmt.var_name = strdup(parser.current.value);
+        eat(TOKEN_IDENTIFIER);
         eat(TOKEN_DOT);
         return stmt;
     }

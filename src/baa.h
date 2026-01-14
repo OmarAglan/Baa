@@ -1,7 +1,7 @@
 /**
  * @file baa.h
  * @brief ملف الرأس الرئيسي الذي يعرف هياكل البيانات لمحوسب لغة "باء" (Baa Compiler).
- * @version 0.2.8 (Warnings & Diagnostics)
+ * @version 0.2.9 (Input & UX Polish)
  */
 
 #ifndef BAA_H
@@ -15,7 +15,7 @@
 #include <stdarg.h>
 
 // معلومات الإصدار
-#define BAA_VERSION "0.2.8"
+#define BAA_VERSION "0.2.9"
 #define BAA_BUILD_DATE __DATE__
 
 // ============================================================================
@@ -36,9 +36,11 @@ typedef enum {
     // الكلمات المفتاحية (Keywords)
     TOKEN_KEYWORD_INT,  // صحيح
     TOKEN_KEYWORD_STRING, // نص
+    TOKEN_KEYWORD_BOOL, // منطقي
     TOKEN_CONST,        // ثابت
     TOKEN_RETURN,       // إرجع
     TOKEN_PRINT,        // اطبع
+    TOKEN_READ,         // اقرأ
     TOKEN_IF,           // إذا
     TOKEN_ELSE,         // وإلا
     TOKEN_WHILE,        // طالما
@@ -48,6 +50,8 @@ typedef enum {
     TOKEN_SWITCH,       // اختر
     TOKEN_CASE,         // حالة
     TOKEN_DEFAULT,      // افتراضي
+    TOKEN_TRUE,         // صواب
+    TOKEN_FALSE,        // خطأ
     
     // الرموز (Symbols)
     TOKEN_ASSIGN,       // =
@@ -276,6 +280,7 @@ typedef enum {
     NODE_CONTINUE,      // جملة الاستمرار (استمر)
     NODE_ASSIGN,        // جملة التعيين (س = 5)
     NODE_CALL_STMT,     // استدعاء دالة كجملة
+    NODE_READ,          // جملة الإدخال (اقرأ)
     
     // المصفوفات
     NODE_ARRAY_DECL,    // تعريف مصفوفة: صحيح س[5].
@@ -289,6 +294,7 @@ typedef enum {
     NODE_INT,           // قيمة عددية صحيحة
     NODE_STRING,        // قيمة نصية
     NODE_CHAR,          // قيمة حرفية
+    NODE_BOOL,          // قيمة منطقية (صواب/خطأ)
     NODE_VAR_REF,       // إشارة لمتغير
     NODE_CALL_EXPR      // تعبير استدعاء دالة
 } NodeType;
@@ -299,7 +305,8 @@ typedef enum {
  */
 typedef enum {
     TYPE_INT,           // صحيح (int64)
-    TYPE_STRING         // نص (char*)
+    TYPE_STRING,        // نص (char*)
+    TYPE_BOOL           // منطقي (bool - stored as int 0/1)
 } DataType;
 
 /**
@@ -393,6 +400,7 @@ typedef struct Node {
         struct { struct Node* condition; struct Node* body; } while_stmt;
         struct { struct Node* expression; } return_stmt;
         struct { struct Node* expression; } print_stmt;
+        struct { char* var_name; } read_stmt;        // جملة الإدخال
         struct { char* name; struct Node* expression; } assign_stmt;
 
         // جملة التكرار المحددة (لكل)
@@ -419,7 +427,8 @@ typedef struct Node {
         // التعبيرات الأساسية والعمليات
         struct { int value; } integer;
         struct { char* value; int id; } string_lit;
-        struct { int value; } char_lit; 
+        struct { int value; } char_lit;
+        struct { bool value; } bool_lit;             // قيمة منطقية
 
         struct { char* name; } var_ref;
         struct { struct Node* left; struct Node* right; OpType op; } bin_op;

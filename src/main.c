@@ -1,10 +1,17 @@
 /**
  * @file main.c
  * @brief نقطة الدخول ومحرك سطر الأوامر (CLI Driver).
- * @version 0.2.8 (Warnings & Diagnostics)
+ * @version 0.2.9 (Input & UX Polish)
  */
 
 #include "baa.h"
+#include <time.h>
+
+#ifdef _WIN32
+#include <windows.h>
+#else
+#include <sys/time.h>
+#endif
 
 // ============================================================================
 // إعدادات المترجم (Compiler Configuration)
@@ -17,7 +24,28 @@ typedef struct {
     bool compile_only;      // -c: تجميع إلى كائن فقط (بدون ربط)
     bool verbose;           // -v: وضع التفاصيل
     bool show_timings;      // -v: عرض وقت الترجمة
+    double start_time;      // وقت بدء الترجمة
 } CompilerConfig;
+
+// ============================================================================
+// دوال قياس الوقت (Timing Functions)
+// ============================================================================
+
+/**
+ * @brief الحصول على الوقت الحالي بدقة عالية (بالثواني).
+ */
+static double get_time_seconds(void) {
+#ifdef _WIN32
+    LARGE_INTEGER freq, counter;
+    QueryPerformanceFrequency(&freq);
+    QueryPerformanceCounter(&counter);
+    return (double)counter.QuadPart / (double)freq.QuadPart;
+#else
+    struct timeval tv;
+    gettimeofday(&tv, NULL);
+    return tv.tv_sec + tv.tv_usec / 1000000.0;
+#endif
+}
 
 // ============================================================================
 // دالات مساعدة (Helper Functions)
@@ -168,6 +196,9 @@ int main(int argc, char** argv) {
     
     // تهيئة نظام التحذيرات
     warning_init();
+    
+    // تسجيل وقت البدء
+    config.start_time = get_time_seconds();
     
     // 0. التحقق من وجود معاملات
     if (argc < 2) {
@@ -353,6 +384,12 @@ int main(int argc, char** argv) {
         printf("[INFO] Compilation completed with %d warning(s).\n", warn_count);
     }
     
-    if (config.verbose) printf("[INFO] Build successful: %s\n", config.output_file);
+    // عرض وقت الترجمة
+    if (config.verbose) {
+        double elapsed = get_time_seconds() - config.start_time;
+        printf("[INFO] Build successful: %s\n", config.output_file);
+        printf("[INFO] Compilation time: %.3f seconds\n", elapsed);
+    }
+    
     return 0;
 }

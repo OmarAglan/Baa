@@ -1,7 +1,7 @@
 /**
  * @file lexer.c
  * @brief يقوم بتحويل الكود المصدري المكتوب باللغة العربية (UTF-8) إلى وحدات لفظية (Tokens).
- * @version 0.2.7 (Constants & Immutability)
+ * @version 0.2.9 (Input & UX Polish)
  */
 
 #include "baa.h"
@@ -494,8 +494,10 @@ Token lexer_next_token(Lexer* l) {
         // 2. الكلمات المفتاحية المحجوزة
         if (strcmp(word, "إرجع") == 0) token.type = TOKEN_RETURN;
         else if (strcmp(word, "اطبع") == 0) token.type = TOKEN_PRINT;
+        else if (strcmp(word, "اقرأ") == 0) token.type = TOKEN_READ;
         else if (strcmp(word, "صحيح") == 0) token.type = TOKEN_KEYWORD_INT;
         else if (strcmp(word, "نص") == 0) token.type = TOKEN_KEYWORD_STRING;
+        else if (strcmp(word, "منطقي") == 0) token.type = TOKEN_KEYWORD_BOOL;
         else if (strcmp(word, "ثابت") == 0) token.type = TOKEN_CONST;
         else if (strcmp(word, "إذا") == 0) token.type = TOKEN_IF;
         else if (strcmp(word, "وإلا") == 0) token.type = TOKEN_ELSE;
@@ -506,6 +508,8 @@ Token lexer_next_token(Lexer* l) {
         else if (strcmp(word, "اختر") == 0) token.type = TOKEN_SWITCH;
         else if (strcmp(word, "حالة") == 0) token.type = TOKEN_CASE;
         else if (strcmp(word, "افتراضي") == 0) token.type = TOKEN_DEFAULT;
+        else if (strcmp(word, "صواب") == 0) token.type = TOKEN_TRUE;
+        else if (strcmp(word, "خطأ") == 0) token.type = TOKEN_FALSE;
         else {
             token.type = TOKEN_IDENTIFIER;
             token.value = word;
@@ -536,9 +540,11 @@ const char* token_type_to_str(BaaTokenType type) {
         // Keywords
         case TOKEN_KEYWORD_INT: return "صحيح";
         case TOKEN_KEYWORD_STRING: return "نص";
+        case TOKEN_KEYWORD_BOOL: return "منطقي";
         case TOKEN_CONST: return "ثابت";
         case TOKEN_RETURN: return "إرجع";
         case TOKEN_PRINT: return "اطبع";
+        case TOKEN_READ: return "اقرأ";
         case TOKEN_IF: return "إذا";
         case TOKEN_ELSE: return "وإلا";
         case TOKEN_WHILE: return "طالما";
@@ -548,6 +554,8 @@ const char* token_type_to_str(BaaTokenType type) {
         case TOKEN_SWITCH: return "اختر";
         case TOKEN_CASE: return "حالة";
         case TOKEN_DEFAULT: return "افتراضي";
+        case TOKEN_TRUE: return "صواب";
+        case TOKEN_FALSE: return "خطأ";
         
         // Symbols
         case TOKEN_ASSIGN: return "=";

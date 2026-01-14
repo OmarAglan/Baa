@@ -1,7 +1,7 @@
 /**
  * @file make_test.c
- * @brief Generates a test.baa file with Warnings & Diagnostics tests.
- * @version 0.2.8 Test Suite
+ * @brief Generates a test.baa file with v0.2.9 (Input & UX Polish) tests.
+ * @version 0.2.9 Test Suite
  */
 
 #include <stdio.h>
@@ -26,32 +26,38 @@ int main() {
 
     // Values
     unsigned char n0[] = {0x30}; // 0
+    unsigned char n1[] = {0x31}; // 1
     unsigned char n10[] = {0x31, 0x30}; // 10
-    unsigned char n42[] = {0x34, 0x32}; // 42
-    unsigned char n100[] = {0x31, 0x30, 0x30}; // 100
 
     // Keywords
     unsigned char kw_int[] = {0xD8, 0xB5, 0xD8, 0xAD, 0xD9, 0x8A, 0xD8, 0xAD, 0x20}; // صحيح
+    unsigned char kw_bool[] = {0xD9, 0x85, 0xD9, 0x86, 0xD8, 0xB7, 0xD9, 0x82, 0xD9, 0x8A, 0x20}; // منطقي
     unsigned char kw_print[] = {0xD8, 0xA7, 0xD8, 0xB7, 0xD8, 0xA8, 0xD8, 0xB9, 0x20}; // اطبع
+    unsigned char kw_read[] = {0xD8, 0xA7, 0xD9, 0x82, 0xD8, 0xB1, 0xD8, 0xA3, 0x20}; // اقرأ
     unsigned char kw_ret[] = {0xD8, 0xA5, 0xD8, 0xB1, 0xD8, 0xAC, 0xD8, 0xB9, 0x20}; // إرجع
+    unsigned char kw_if[] = {0xD8, 0xA5, 0xD8, 0xB0, 0xD8, 0xA7, 0x20}; // إذا
+    unsigned char kw_else[] = {0xD9, 0x88, 0xD8, 0xA5, 0xD9, 0x84, 0xD8, 0xA7, 0x20}; // وإلا
     unsigned char name_main[] = {0xD8, 0xA7, 0xD9, 0x84, 0xD8, 0xB1, 0xD8, 0xA6, 0xD9, 0x8A, 0xD8, 0xB3, 0xD9, 0x8A, 0xD8, 0xA9}; // الرئيسية
+
+    // Boolean literals
+    unsigned char kw_true[] = {0xD8, 0xB5, 0xD9, 0x88, 0xD8, 0xA7, 0xD8, 0xA8}; // صواب
+    unsigned char kw_false[] = {0xD8, 0xAE, 0xD8, 0xB7, 0xD8, 0xA3}; // خطأ
 
     // Variable names
     unsigned char name_x[] = {0xD8, 0xB3}; // س (x)
-    unsigned char name_y[] = {0xD8, 0xB5}; // ص (y) - unused variable
-    unsigned char name_z[] = {0xD8, 0xB9}; // ع (z) - used variable
-    unsigned char name_unused[] = {0xD8, 0xBA, 0xD9, 0x8A, 0xD8, 0xB1, 0x5F, 0xD9, 0x85, 0xD8, 0xB3, 0xD8, 0xAA, 0xD8, 0xAE, 0xD8, 0xAF, 0xD9, 0x85}; // غير_مستخدم
+    unsigned char name_b[] = {0xD8, 0xA8}; // ب (b - for bool)
+    unsigned char name_result[] = {0xD9, 0x86, 0xD8, 0xAA, 0xD9, 0x8A, 0xD8, 0xAC, 0xD8, 0xA9}; // نتيجة
 
-    // Comment text (ASCII for simplicity)
-    unsigned char txt_unused[] = "Test: Unused variable warning";
-    unsigned char txt_dead[] = "Test: Dead code warning";
-    unsigned char txt_used[] = "Test: Used variable (no warning)";
+    // Comment texts
+    unsigned char txt_bool_test[] = "Test: Boolean type and literals";
+    unsigned char txt_input_test[] = "Test: Input statement (read)";
+    unsigned char txt_cond_test[] = "Test: Boolean in conditions";
 
     // --- Code Generation ---
 
-    // Comment: Test Suite for v0.2.8 Warnings
+    // Comment: Test Suite for v0.2.9
     w(f, comment, sizeof(comment));
-    fprintf(f, "v0.2.8 Warning System Test\n");
+    fprintf(f, "v0.2.9 Input & Boolean Test Suite\n\n");
 
     // صحيح الرئيسية() {
     w(f, kw_int, sizeof(kw_int));
@@ -59,92 +65,151 @@ int main() {
     w(f, lp, sizeof(lp));
     w(f, lb, sizeof(lb));
 
-    // --- Test 1: Unused Variable Warning ---
-    // // Test: Unused variable warning
+    // --- Test 1: Boolean Type and Literals ---
+    // // Test: Boolean type and literals
     w(f, sp, 1); w(f, sp, 1); w(f, sp, 1); w(f, sp, 1);
     w(f, comment, sizeof(comment));
-    fwrite(txt_unused, 1, sizeof(txt_unused)-1, f);
+    fwrite(txt_bool_test, 1, sizeof(txt_bool_test)-1, f);
     w(f, nl, 1);
 
-    // صحيح ص = 42.  (unused - should trigger warning with -Wall)
+    // منطقي ب = صواب.
     w(f, sp, 1); w(f, sp, 1); w(f, sp, 1); w(f, sp, 1);
-    w(f, kw_int, sizeof(kw_int));
-    w(f, name_y, sizeof(name_y));
+    w(f, kw_bool, sizeof(kw_bool));
+    w(f, name_b, sizeof(name_b));
     w(f, sp, 1);
     w(f, eq, sizeof(eq));
-    w(f, n42, sizeof(n42));
+    w(f, kw_true, sizeof(kw_true));
     w(f, dot, sizeof(dot));
 
-    // --- Test 2: Used Variable (No Warning) ---
-    // // Test: Used variable (no warning)
+    // --- Test 2: Boolean in conditions ---
+    // // Test: Boolean in conditions
     w(f, sp, 1); w(f, sp, 1); w(f, sp, 1); w(f, sp, 1);
     w(f, comment, sizeof(comment));
-    fwrite(txt_used, 1, sizeof(txt_used)-1, f);
+    fwrite(txt_cond_test, 1, sizeof(txt_cond_test)-1, f);
     w(f, nl, 1);
 
-    // صحيح ع = 100.
+    // إذا (ب) {
     w(f, sp, 1); w(f, sp, 1); w(f, sp, 1); w(f, sp, 1);
-    w(f, kw_int, sizeof(kw_int));
-    w(f, name_z, sizeof(name_z));
-    w(f, sp, 1);
-    w(f, eq, sizeof(eq));
-    w(f, n100, sizeof(n100));
-    w(f, dot, sizeof(dot));
+    w(f, kw_if, sizeof(kw_if));
+    fprintf(f, "(");
+    w(f, name_b, sizeof(name_b));
+    fprintf(f, ") ");
+    w(f, lb, sizeof(lb));
 
-    // اطبع ع.  (this uses ع)
+    //     اطبع 1.
+    w(f, sp, 1); w(f, sp, 1); w(f, sp, 1); w(f, sp, 1);
     w(f, sp, 1); w(f, sp, 1); w(f, sp, 1); w(f, sp, 1);
     w(f, kw_print, sizeof(kw_print));
-    w(f, name_z, sizeof(name_z));
+    w(f, n1, sizeof(n1));
     w(f, dot, sizeof(dot));
 
-    // --- Test 3: Dead Code Warning ---
-    // // Test: Dead code warning
+    // }
+    w(f, sp, 1); w(f, sp, 1); w(f, sp, 1); w(f, sp, 1);
+    w(f, rb, sizeof(rb));
+    w(f, nl, 1);
+
+    // --- Test 3: Input Statement (commented out for automated testing) ---
+    // // Test: Input statement (read) - uncomment to test interactively
     w(f, sp, 1); w(f, sp, 1); w(f, sp, 1); w(f, sp, 1);
     w(f, comment, sizeof(comment));
-    fwrite(txt_dead, 1, sizeof(txt_dead)-1, f);
+    fwrite(txt_input_test, 1, sizeof(txt_input_test)-1, f);
     w(f, nl, 1);
+
+    // صحيح س = 0.
+    w(f, sp, 1); w(f, sp, 1); w(f, sp, 1); w(f, sp, 1);
+    w(f, kw_int, sizeof(kw_int));
+    w(f, name_x, sizeof(name_x));
+    w(f, sp, 1);
+    w(f, eq, sizeof(eq));
+    w(f, n0, sizeof(n0));
+    w(f, dot, sizeof(dot));
+
+    // // اقرأ س.  (uncomment this line to test input)
+    w(f, sp, 1); w(f, sp, 1); w(f, sp, 1); w(f, sp, 1);
+    w(f, comment, sizeof(comment));
+    w(f, kw_read, sizeof(kw_read));
+    w(f, name_x, sizeof(name_x));
+    w(f, dot, sizeof(dot));
+
+    // اطبع س.
+    w(f, sp, 1); w(f, sp, 1); w(f, sp, 1); w(f, sp, 1);
+    w(f, kw_print, sizeof(kw_print));
+    w(f, name_x, sizeof(name_x));
+    w(f, dot, sizeof(dot));
+
+    // --- Test 4: Boolean false ---
+    // منطقي نتيجة = خطأ.
+    w(f, sp, 1); w(f, sp, 1); w(f, sp, 1); w(f, sp, 1);
+    w(f, kw_bool, sizeof(kw_bool));
+    w(f, name_result, sizeof(name_result));
+    w(f, sp, 1);
+    w(f, eq, sizeof(eq));
+    w(f, kw_false, sizeof(kw_false));
+    w(f, dot, sizeof(dot));
+
+    // إذا (نتيجة) {
+    w(f, sp, 1); w(f, sp, 1); w(f, sp, 1); w(f, sp, 1);
+    w(f, kw_if, sizeof(kw_if));
+    fprintf(f, "(");
+    w(f, name_result, sizeof(name_result));
+    fprintf(f, ") ");
+    w(f, lb, sizeof(lb));
+
+    //     اطبع 10.
+    w(f, sp, 1); w(f, sp, 1); w(f, sp, 1); w(f, sp, 1);
+    w(f, sp, 1); w(f, sp, 1); w(f, sp, 1); w(f, sp, 1);
+    w(f, kw_print, sizeof(kw_print));
+    w(f, n10, sizeof(n10));
+    w(f, dot, sizeof(dot));
+
+    // } وإلا {
+    w(f, sp, 1); w(f, sp, 1); w(f, sp, 1); w(f, sp, 1);
+    fprintf(f, "} ");
+    w(f, kw_else, sizeof(kw_else));
+    w(f, lb, sizeof(lb));
+
+    //     اطبع 0.
+    w(f, sp, 1); w(f, sp, 1); w(f, sp, 1); w(f, sp, 1);
+    w(f, sp, 1); w(f, sp, 1); w(f, sp, 1); w(f, sp, 1);
+    w(f, kw_print, sizeof(kw_print));
+    w(f, n0, sizeof(n0));
+    w(f, dot, sizeof(dot));
+
+    // }
+    w(f, sp, 1); w(f, sp, 1); w(f, sp, 1); w(f, sp, 1);
+    w(f, rb, sizeof(rb));
 
     // إرجع 0.
     w(f, sp, 1); w(f, sp, 1); w(f, sp, 1); w(f, sp, 1);
     w(f, kw_ret, sizeof(kw_ret));
-    w(f, n0, 1);
-    w(f, dot, sizeof(dot));
-
-    // صحيح س = 10.  (dead code - after return)
-    w(f, sp, 1); w(f, sp, 1); w(f, sp, 1); w(f, sp, 1);
-    w(f, kw_int, sizeof(kw_int));
-    w(f, name_x, sizeof(name_x));
-    w(f, sp, 1);
-    w(f, eq, sizeof(eq));
-    w(f, n10, sizeof(n10));
-    w(f, dot, sizeof(dot));
-
-    // اطبع س.  (also dead code)
-    w(f, sp, 1); w(f, sp, 1); w(f, sp, 1); w(f, sp, 1);
-    w(f, kw_print, sizeof(kw_print));
-    w(f, name_x, sizeof(name_x));
+    w(f, n0, sizeof(n0));
     w(f, dot, sizeof(dot));
 
     w(f, rb, sizeof(rb)); // }
 
     fclose(f);
     
-    printf("Generated test.baa with Warning System tests (v0.2.8).\n");
+    printf("Generated test.baa with v0.2.9 tests (Input & Boolean).\n");
     printf("\n");
-    printf("Expected behavior:\n");
-    printf("  - Without -Wall: No warnings, compiles and runs normally.\n");
-    printf("  - With -Wall: Shows warnings for:\n");
-    printf("      1. Unused variable 'ص' (y)\n");
-    printf("      2. Dead code after 'إرجع' (return)\n");
-    printf("  - With -Wall -Werror: Compilation fails due to warnings.\n");
+    printf("Features tested:\n");
+    printf("  1. Boolean type (منطقي) with literals (صواب/خطأ)\n");
+    printf("  2. Boolean variables in conditions\n");
+    printf("  3. Input statement (اقرأ) - commented out for automated testing\n");
+    printf("  4. Compile timing with -v flag\n");
     printf("\n");
     printf("Test commands:\n");
-    printf("  baa test.baa                    (no warnings)\n");
-    printf("  baa -Wall test.baa              (show warnings)\n");
-    printf("  baa -Wall -Werror test.baa      (fail on warnings)\n");
-    printf("  baa -Wunused-variable test.baa  (only unused var warning)\n");
+    printf("  baa test.baa -o test.exe         (compile)\n");
+    printf("  baa -v test.baa -o test.exe      (compile with timing)\n");
+    printf("  test.exe                          (run - should output: 1, 0, 0)\n");
     printf("\n");
-    printf("Expected output (when run): 100\n");
+    printf("Expected output:\n");
+    printf("  1\n");
+    printf("  0\n");
+    printf("  0\n");
+    printf("\n");
+    printf("To test input (اقرأ):\n");
+    printf("  1. Edit test.baa and uncomment the اقرأ line\n");
+    printf("  2. Recompile and run, then enter a number when prompted\n");
     
     return 0;
 }

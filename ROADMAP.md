@@ -59,15 +59,15 @@
 - [x] **Array Constants** — Support constant arrays.
 
 ### v0.2.8: Warnings & Diagnostics ⚠️
-- [ ] **Warning System** — Separate warnings from errors (non-fatal).
-- [ ] **Unused Variables** — Warn if variable declared but never used.
-- [ ] **Dead Code** — Warn about code after `إرجع` or `توقف`.
-- [ ] **`-W` Flags** — `-Wall`, `-Werror` to control warning behavior.
+- [x] **Warning System** — Separate warnings from errors (non-fatal).
+- [x] **Unused Variables** — Warn if variable declared but never used.
+- [x] **Dead Code** — Warn about code after `إرجع` or `توقف`.
+- [x] **`-W` Flags** — `-Wall`, `-Werror` to control warning behavior.
 
 ### v0.2.9: Input & UX Polish 🎨
 - [ ] **Input Statement** — `اقرأ س.` (scanf) for reading user input.
-- [ ] **Boolean Type** — `منطقي` type with `صحيح`/`خطأ` literals.
-- [ ] **Colored Output** — ANSI colors for errors (red), warnings (yellow).
+- [ ] **Boolean Type** — `منطقي` type with `صواب`/`خطأ` literals.
+- [x] **Colored Output** — ANSI colors for errors (red), warnings (yellow). *(Implemented in v0.2.8)*
 - [ ] **Compile Timing** — Show compilation time with `-v`.
 
 ---

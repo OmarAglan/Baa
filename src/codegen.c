@@ -1,7 +1,7 @@
 /**
  * @file codegen.c
  * @brief يقوم بتوليد كود التجميع (Assembly) للتركيب المعماري x86_64.
- * @version 0.2.5 (Hotfix: Reset State)
+ * @version 0.2.9 (Input & UX Polish)
  */
 
 #include "baa.h"
@@ -152,6 +152,9 @@ static void gen_expr(Node* node, FILE* file) {
     }
     else if (node->type == NODE_CHAR) {
         fprintf(file, "    mov $%d, %%rax\n", node->data.char_lit.value);
+    }
+    else if (node->type == NODE_BOOL) {
+        fprintf(file, "    mov $%d, %%rax\n", node->data.bool_lit.value ? 1 : 0);
     }
     else if (node->type == NODE_VAR_REF) {
         Symbol* sym = lookup_symbol(node->data.var_ref.name);
@@ -322,6 +325,7 @@ void codegen(Node* node, FILE* file) {
         fprintf(file, ".section .rdata,\"dr\"\n");
         fprintf(file, "fmt_int: .asciz \"%%d\\n\"\n");
         fprintf(file, "fmt_str: .asciz \"%%s\\n\"\n");
+        fprintf(file, "fmt_scan_int: .asciz \"%%d\"\n");  // صيغة قراءة الأعداد
         
         // 2. قسم البيانات العامة (Globals)
         fprintf(file, ".data\n");
@@ -557,6 +561,25 @@ void codegen(Node* node, FILE* file) {
         
         fprintf(file, "    sub $32, %%rsp\n");
         fprintf(file, "    call printf\n");
+        fprintf(file, "    add $32, %%rsp\n");
+    }
+    // جملة الإدخال (اقرأ)
+    else if (node->type == NODE_READ) {
+        Symbol* sym = lookup_symbol(node->data.read_stmt.var_name);
+        
+        // تحميل عنوان المتغير إلى RDX (الوسيط الثاني لـ scanf)
+        if (sym->scope == SCOPE_LOCAL) {
+            fprintf(file, "    lea %d(%%rbp), %%rdx\n", sym->offset);
+        } else {
+            fprintf(file, "    lea %s(%%rip), %%rdx\n", sym->name);
+        }
+        
+        // تحميل صيغة القراءة إلى RCX (الوسيط الأول لـ scanf)
+        fprintf(file, "    lea fmt_scan_int(%%rip), %%rcx\n");
+        
+        // استدعاء scanf
+        fprintf(file, "    sub $32, %%rsp\n");
+        fprintf(file, "    call scanf\n");
         fprintf(file, "    add $32, %%rsp\n");
     }
     // تحديث NODE_IF لدعم وإلا (else)

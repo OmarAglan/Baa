@@ -7,7 +7,7 @@
  *          - التحقق من الثوابت (Const Checking)
  *          - اكتشاف المتغيرات غير المستخدمة (Unused Variables)
  *          - اكتشاف الكود الميت (Dead Code)
- * @version 0.2.8
+ * @version 0.2.9
  */
 
 #include "baa.h"
@@ -180,6 +180,18 @@ static void check_unused_global_variables(void) {
 static void analyze_node(Node* node);
 
 /**
+ * @brief تحويل نوع البيانات إلى نص.
+ */
+static const char* datatype_to_str(DataType type) {
+    switch (type) {
+        case TYPE_INT: return "INTEGER";
+        case TYPE_STRING: return "STRING";
+        case TYPE_BOOL: return "BOOLEAN";
+        default: return "UNKNOWN";
+    }
+}
+
+/**
  * @brief استنتاج نوع التعبير.
  * @return DataType نوع التعبير الناتج.
  */
@@ -193,6 +205,9 @@ static DataType infer_type(Node* node) {
         
         case NODE_STRING:
             return TYPE_STRING;
+        
+        case NODE_BOOL:
+            return TYPE_BOOL;
             
         case NODE_VAR_REF: {
             Symbol* sym = lookup(node->data.var_ref.name, true); // تعليم كمستخدم
@@ -225,10 +240,32 @@ static DataType infer_type(Node* node) {
             DataType left = infer_type(node->data.bin_op.left);
             DataType right = infer_type(node->data.bin_op.right);
             
-            // العمليات الحسابية والمنطقية تتطلب أعداداً صحيحة
-            if (left != TYPE_INT || right != TYPE_INT) {
-                semantic_error("Binary operations require INTEGER operands.");
+            // العمليات الحسابية تتطلب أعداداً صحيحة
+            OpType op = node->data.bin_op.op;
+            if (op == OP_ADD || op == OP_SUB || op == OP_MUL || op == OP_DIV || op == OP_MOD) {
+                if (left != TYPE_INT || right != TYPE_INT) {
+                    semantic_error("Arithmetic operations require INTEGER operands.");
+                }
+                return TYPE_INT;
             }
+            
+            // عمليات المقارنة تتطلب أنواعاً متوافقة وتعيد منطقي
+            if (op == OP_EQ || op == OP_NEQ || op == OP_LT || op == OP_GT || op == OP_LTE || op == OP_GTE) {
+                if (left != right) {
+                    semantic_error("Comparison operations require matching types.");
+                }
+                return TYPE_BOOL;
+            }
+            
+            // العمليات المنطقية (AND/OR) تتطلب منطقي أو صحيح وتعيد منطقي
+            if (op == OP_AND || op == OP_OR) {
+                // نقبل INT أو BOOL لأن C تعامل القيم غير الصفرية كـ true
+                if ((left != TYPE_INT && left != TYPE_BOOL) || (right != TYPE_INT && right != TYPE_BOOL)) {
+                    semantic_error("Logical operations require INTEGER or BOOLEAN operands.");
+                }
+                return TYPE_BOOL;
+            }
+            
             return TYPE_INT;
         }
 
@@ -305,11 +342,18 @@ static void analyze_node(Node* node) {
             // 1. التحقق من نوع التعبير المخصص (إن وجد)
             if (node->data.var_decl.expression) {
                 DataType exprType = infer_type(node->data.var_decl.expression);
-                if (exprType != node->data.var_decl.type) {
+                DataType declType = node->data.var_decl.type;
+                
+                // السماح بتعيين BOOL إلى INT والعكس (التوافق الضمني)
+                bool compatible = (exprType == declType) ||
+                                  (exprType == TYPE_BOOL && declType == TYPE_INT) ||
+                                  (exprType == TYPE_INT && declType == TYPE_BOOL);
+                
+                if (!compatible) {
                     semantic_error("Type mismatch in declaration of '%s'. Expected %s but got %s.",
                         node->data.var_decl.name,
-                        node->data.var_decl.type == TYPE_INT ? "INTEGER" : "STRING",
-                        exprType == TYPE_INT ? "INTEGER" : "STRING");
+                        datatype_to_str(declType),
+                        datatype_to_str(exprType));
                 }
             }
             // 2. التحقق من أن الثوابت لها قيم ابتدائية
@@ -382,7 +426,8 @@ static void analyze_node(Node* node) {
         }
 
         case NODE_IF: {
-            if (infer_type(node->data.if_stmt.condition) != TYPE_INT) {
+            DataType condType = infer_type(node->data.if_stmt.condition);
+            if (condType != TYPE_INT && condType != TYPE_BOOL) {
                 semantic_error("'if' condition must be an integer/boolean.");
             }
             analyze_node(node->data.if_stmt.then_branch);
@@ -393,7 +438,8 @@ static void analyze_node(Node* node) {
         }
 
         case NODE_WHILE: {
-            if (infer_type(node->data.while_stmt.condition) != TYPE_INT) {
+            DataType condType = infer_type(node->data.while_stmt.condition);
+            if (condType != TYPE_INT && condType != TYPE_BOOL) {
                 semantic_error("'while' condition must be an integer/boolean.");
             }
             bool prev_loop = inside_loop;
@@ -408,7 +454,8 @@ static void analyze_node(Node* node) {
             // For now, we treat init variables as function-local (like C89/Baa current implementation).
             if (node->data.for_stmt.init) analyze_node(node->data.for_stmt.init);
             if (node->data.for_stmt.condition) {
-                if (infer_type(node->data.for_stmt.condition) != TYPE_INT) {
+                DataType condType = infer_type(node->data.for_stmt.condition);
+                if (condType != TYPE_INT && condType != TYPE_BOOL) {
                     semantic_error("'for' condition must be an integer/boolean.");
                 }
             }
@@ -465,6 +512,23 @@ static void analyze_node(Node* node) {
         case NODE_PRINT:
             infer_type(node->data.print_stmt.expression);
             break;
+        
+        case NODE_READ: {
+            // التحقق من أن المتغير معرف وقابل للتعديل
+            Symbol* sym = lookup(node->data.read_stmt.var_name, true);
+            if (!sym) {
+                semantic_error("Reading into undefined variable '%s'.", node->data.read_stmt.var_name);
+            } else {
+                if (sym->is_const) {
+                    semantic_error("Cannot read into constant variable '%s'.", node->data.read_stmt.var_name);
+                }
+                // حالياً نقبل القراءة فقط في المتغيرات الصحيحة
+                if (sym->type != TYPE_INT) {
+                    semantic_error("'اقرأ' currently only supports INTEGER variables.");
+                }
+            }
+            break;
+        }
             
         case NODE_CALL_STMT:
             // استنتاج النوع للتحقق من وجود الدالة

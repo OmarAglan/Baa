@@ -1,6 +1,6 @@
 # Baa Compiler Internals
 
-> **Version:** 0.2.8 | [← Language Spec](LANGUAGE.md) | [API Reference →](API_REFERENCE.md)
+> **Version:** 0.2.9 | [← Language Spec](LANGUAGE.md) | [API Reference →](API_REFERENCE.md)
 
 **Target Architecture:** x86-64 (AMD64)  
 **Target OS:** Windows (MinGW-w64 Toolchain)  
@@ -176,8 +176,8 @@ When `#تضمين "file"` is encountered:
 ### 2.4. Token Types
 
 ```
-Keywords:    صحيح, نص, ثابت, إذا, وإلا, طالما, لكل, اختر, حالة, افتراضي, اطبع, إرجع, توقف, استمر
-Literals:    INTEGER, STRING, CHAR
+Keywords:    صحيح, نص, منطقي, ثابت, إذا, وإلا, طالما, لكل, اختر, حالة, افتراضي, اطبع, اقرأ, إرجع, توقف, استمر
+Literals:    INTEGER, STRING, CHAR, TRUE, FALSE
 Operators:   + - * / % ++ -- ! && ||
 Comparison:  == != < > <= >=
 Delimiters:  ( ) { } [ ] , . : ؛
@@ -278,8 +278,8 @@ The AST uses a tagged union structure for type-safe node representation.
 | **Control Flow** | `NODE_IF`, `NODE_WHILE`, `NODE_FOR`, `NODE_RETURN` |
 | **Branching** | `NODE_SWITCH`, `NODE_CASE`, `NODE_BREAK`, `NODE_CONTINUE` |
 | **Expressions** | `NODE_BIN_OP`, `NODE_UNARY_OP`, `NODE_POSTFIX_OP` |
-| **Literals** | `NODE_INT`, `NODE_STRING`, `NODE_CHAR` |
-| **Calls** | `NODE_CALL_EXPR`, `NODE_CALL_STMT`, `NODE_PRINT` |
+| **Literals** | `NODE_INT`, `NODE_STRING`, `NODE_CHAR`, `NODE_BOOL` |
+| **Calls & I/O** | `NODE_CALL_EXPR`, `NODE_CALL_STMT`, `NODE_PRINT`, `NODE_READ` |
 
 ### 4.2. Node Structure
 
@@ -300,7 +300,7 @@ The Semantic Analyzer (`src/analysis.c`) performs a static check on the AST befo
 ### 5.1. Responsibilities
 
 1.  **Symbol Resolution**: Verifies variables are declared before use.
-2.  **Type Checking**: Strictly enforces `TYPE_INT` vs `TYPE_STRING` compatibility.
+2.  **Type Checking**: Enforces `TYPE_INT`, `TYPE_STRING`, and `TYPE_BOOL` compatibility.
 3.  **Scope Validation**: Manages visibility rules.
 4.  **Constant Checking** (v0.2.7+): Prevents reassignment of immutable variables.
 5.  **Control Flow Validation**: Ensures `break` and `continue` are used only within loops/switches.

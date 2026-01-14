@@ -1,6 +1,6 @@
 # Baa Language Specification
 
-> **Version:** 0.2.7 | [← User Guide](USER_GUIDE.md) | [Compiler Internals →](INTERNALS.md)
+> **Version:** 0.2.9 | [← User Guide](USER_GUIDE.md) | [Compiler Internals →](INTERNALS.md)
 
 Baa (باء) is a compiled systems programming language using Arabic syntax. It compiles directly to native machine code via Assembly/GCC on Windows.
 
@@ -123,6 +123,7 @@ Baa is statically typed. All variables must be declared with their type.
 | `صحيح` | `int` | 64-bit integer | `صحيح س = ٥.` |
 | `نص` | `char*` | String pointer (Reference) | `نص اسم = "باء".` |
 | `حرف` | `char` | Single character | `'أ'` |
+| `منطقي` | `bool` | Boolean (True/False) | `منطقي ب = صواب.` |
 
 ### 3.2. Scalar Variables
 
@@ -292,11 +293,11 @@ Functions can call themselves (recursion), provided there is a base case to term
 
 ## 6. Input / Output
 
-### Print Statement
+### 6.1. Print Statement (`اطبع`)
 
 **Syntax:** `اطبع <expression>.`
 
-+Prints an integer or string followed by a newline.
+Prints an integer or string followed by a newline.
 
 ```baa
 اطبع "مرحباً بالعالم".    // طباعة نص
@@ -306,6 +307,21 @@ Functions can call themselves (recursion), provided there is a base case to term
 // طباعة متغيرات
 نص اسم = "علي".
 اطبع اسم.
+```
+
+### 6.2. Input Statement (`اقرأ`)
+
+**Syntax:** `اقرأ <variable>.`
+
+Reads an integer from standard input and stores it in the specified variable.
+
+```baa
+صحيح العمر.
+اطبع "كم عمرك؟ ".
+اقرأ العمر.
+
+اطبع "عمرك هو: ".
+اطبع العمر.
 ```
 
 ---

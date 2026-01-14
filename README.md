@@ -4,7 +4,7 @@
 <img width="260" height="260" alt="Baa Logo" src="resources/logo.png" />
 
 
-![Version](https://img.shields.io/badge/version-0.2.7-blue.svg)
+![Version](https://img.shields.io/badge/version-0.2.9-blue.svg)
 ![Platform](https://img.shields.io/badge/platform-Windows-lightgrey.svg)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
 
@@ -30,6 +30,8 @@
 | 🎯 **Advanced Control** | `اختر` (Switch), `حالة` (Case), `افتراضي` (Default), `توقف` (Break), `استمر` (Continue) |
 | ➕ **Full Operators** | Arithmetic, comparison, and logical operators with short-circuit evaluation |
 | 📝 **Text Support** | String (`"..."`) and character (`'...'`) literals |
+| ❓ **Boolean Logic** | `منطقي` type with `صواب` (True) and `خطأ` (False) |
+| ⌨️ **User Input** | `اقرأ` (Read) statement for integer input |
 | ✅ **Type Safety** | Static type checking (v0.2.4+) with semantic analysis |
 | 🔄 **Self-Updating** | Built-in updater (`baa update`) |
 

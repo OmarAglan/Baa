@@ -8,9 +8,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
-### Planned (v0.2.9)
+## [0.2.9] - 2026-01-14
+
+### Added
 - **Input Statement**: `اقرأ س.` (scanf) for reading user input.
-- **Boolean Type**: `منطقي` type with `صحيح`/`خطأ` literals.
+- **Boolean Type**: `منطقي` type with `صواب`/`خطأ` literals.
 - **Compile Timing**: Show compilation time with `-v`.
 
 ---

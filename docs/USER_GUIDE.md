@@ -266,6 +266,41 @@ Use header files for function prototypes and shared declarations.
 }
 ```
 
+### Reading Input
+
+You can read integer input from the user using the `اقرأ` statement.
+
+```baa
+صحيح الرئيسية() {
+    صحيح العمر.
+    اطبع "أدخل عمرك: ".
+    اقرأ العمر.
+    
+    إذا (العمر >= ١٨) {
+        اطبع "أنت بالغ.".
+    } وإلا {
+        اطبع "أنت قاصر.".
+    }
+    إرجع ٠.
+}
+```
+
+### Boolean Logic
+
+Use `منطقي` variables to store true (`صواب`) or false (`خطأ`) values.
+
+```baa
+صحيح الرئيسية() {
+    منطقي جاهز = صواب.
+    
+    إذا (جاهز) {
+        اطبع "النظام جاهز!".
+    }
+    
+    إرجع ٠.
+}
+```
+
 ---
 
 ## 5. Troubleshooting

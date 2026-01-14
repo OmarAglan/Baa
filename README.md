@@ -1,7 +1,7 @@
 <div dir="rtl">
 
 <div align="center">
-<img width="260" height="260" alt="Baa Logo" src="resources/logo.png" />
+<img width="260" height="260" alt="Baa Logo" src="resources/Logo.png" />
 
 
 ![Version](https://img.shields.io/badge/version-0.2.9-blue.svg)
@@ -37,6 +37,15 @@
 
 ---
 
+## 🧩 Compatibility
+
+| Item | Supported | Notes |
+|------|-----------|------|
+| OS | Windows (x86-64) | Toolchain expects MinGW-w64 GCC |
+| Toolchain | CMake 3.10+, MinGW-w64 GCC | `gcc` must be available in `PATH` |
+| Source encoding | UTF-8 | Arabic text requires UTF-8 files |
+| Terminal | Windows Terminal / PowerShell | Enable UTF-8 if output looks garbled |
+
 ## 🚀 Quick Start
 
 ### 1. Build the Compiler
@@ -44,7 +53,7 @@
 **Prerequisites:** Windows, PowerShell, [CMake](https://cmake.org/) 3.10+, [MinGW-w64](https://www.mingw-w64.org/) with GCC
 
 ```powershell
-git clone https://github.com/YourUsername/Baa.git
+git clone https://github.com/OmarAglan/Baa.git
 cd Baa
 mkdir build && cd build
 cmake ..
@@ -147,19 +156,19 @@ cmake --build .
 ### Running Tests
 
 ```powershell
-# Generate test file
-gcc ../make_test.c -o make_test
-./make_test
+# Generate test.baa
+gcc ..\make_test.c -o make_test.exe
+.\make_test.exe
 
 # Compile and run
-.\baa.exe ..\test.baa
-.\out.exe
+.\baa.exe .\test.baa -o test.exe
+.\test.exe
 ```
 
 **Expected Output:**
 ```
-100
 1
-2
+0
+0
 ```
 </div>

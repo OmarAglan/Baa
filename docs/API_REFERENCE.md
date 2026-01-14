@@ -1,6 +1,6 @@
 # Baa Internal API Reference
 
-> **Version:** 0.2.8 | [← User Guide](USER_GUIDE.md) | [Internals →](INTERNALS.md)
+> **Version:** 0.2.9 | [← User Guide](USER_GUIDE.md) | [Internals →](INTERNALS.md)
 
 This document details the C functions, enumerations, and structures defined in `src/baa.h`.
 
@@ -14,7 +14,8 @@ This document details the C functions, enumerations, and structures defined in `
 - [Codegen Module](#4-codegen-module)
 - [Diagnostic System](#5-diagnostic-system)
 - [Symbol Table](#6-symbol-table)
-- [Data Structures](#7-data-structures)
+- [Updater](#7-updater)
+- [Data Structures](#8-data-structures)
 
 ---
 
@@ -39,9 +40,9 @@ Initializes a new Lexer instance.
 **Behavior:**
 - Initializes the state stack depth to 0.
 - Sets up position pointers (`cur_char`) to start of source.
-+- Detects and skips UTF-8 BOM (Byte Order Mark: `0xEF 0xBB 0xBF`) if present.
+- Detects and skips UTF-8 BOM (Byte Order Mark: `0xEF 0xBB 0xBF`) if present.
 - Initializes line counter to 1.
-- **Initializes the macro table** for the preprocessor.
+- Resets preprocessor state (`macro_count = 0`, `skipping = false`).
 
 ---
 
@@ -309,9 +310,26 @@ typedef struct {
 
 ---
 
-## 7. Data Structures
+## 7. Updater
 
-### 7.1. Preprocessor Structures
+### `run_updater`
+
+```c
+void run_updater(void);
+```
+
+Runs the built-in updater.
+
+**Notes (v0.2.9):**
+- Implemented in [updater.c](file:///D:/My%20Dev%20Life/Software%20Dev/Baa/src/updater.c).
+- Windows-only implementation (links against `urlmon` and `wininet` on Windows builds).
+- Invoked from the CLI as `baa update` (must be the only argument).
+
+---
+
+## 8. Data Structures
+
+### 8.1. Preprocessor Structures
 
 ### Lexer & Preprocessor Structures
 
@@ -344,7 +362,7 @@ typedef struct {
 } Lexer;
 ```
 
-### 7.2. Token
+### 8.2. Token
 
 Represents a single atomic unit of source code.
 
@@ -357,58 +375,74 @@ typedef struct {
     const char* filename;
 } Token;
 ```
-### 7.3. Token Types
+### 8.3. Token Types
 
 ### BaaTokenType Enum
 
 ```c
 typedef enum {
-    // End of file
     TOKEN_EOF,
-    
-    // Literals
-    TOKEN_INT,          // 123, ١٢٣
-    TOKEN_STRING,       // "مرحباً"
-    TOKEN_CHAR,         // 'أ'
-    TOKEN_ID,           // متغير
-    
-    // Keywords
-    TOKEN_TYPE_INT,     // صحيح
-    TOKEN_TYPE_STRING,  // نص
-    TOKEN_CONST,        // ثابت (NEW in v0.2.7)
-    TOKEN_IF,           // إذا
-    TOKEN_ELSE,         // وإلا
-    TOKEN_WHILE,        // طالما
-    TOKEN_FOR,          // لكل
-    TOKEN_SWITCH,       // اختر
-    TOKEN_CASE,         // حالة
-    TOKEN_DEFAULT,      // افتراضي
-    TOKEN_PRINT,        // اطبع
-    TOKEN_RETURN,       // إرجع
-    TOKEN_BREAK,        // توقف
-    TOKEN_CONTINUE,     // استمر
-    
-    // Operators
-    TOKEN_PLUS, TOKEN_MINUS, TOKEN_STAR, TOKEN_SLASH, TOKEN_MOD,
-    TOKEN_INC, TOKEN_DEC,           // ++, --
-    TOKEN_EQ, TOKEN_NE,             // ==, !=
-    TOKEN_LT, TOKEN_GT, TOKEN_LTE, TOKEN_GTE,
-    TOKEN_AND, TOKEN_OR, TOKEN_NOT, // &&, ||, !
-    
-    // Delimiters
-    TOKEN_LPAREN, TOKEN_RPAREN,     // ( )
-    TOKEN_LBRACE, TOKEN_RBRACE,     // { }
-    TOKEN_LBRACKET, TOKEN_RBRACKET, // [ ]
-    TOKEN_DOT, TOKEN_COMMA, TOKEN_COLON,
-    TOKEN_SEMICOLON,                // ؛
-    TOKEN_ASSIGN,                   // =
-    
+    TOKEN_INT,
+    TOKEN_STRING,
+    TOKEN_CHAR,
+    TOKEN_IDENTIFIER,
+
+    TOKEN_KEYWORD_INT,
+    TOKEN_KEYWORD_STRING,
+    TOKEN_KEYWORD_BOOL,
+    TOKEN_CONST,
+    TOKEN_RETURN,
+    TOKEN_PRINT,
+    TOKEN_READ,
+    TOKEN_IF,
+    TOKEN_ELSE,
+    TOKEN_WHILE,
+    TOKEN_FOR,
+    TOKEN_BREAK,
+    TOKEN_CONTINUE,
+    TOKEN_SWITCH,
+    TOKEN_CASE,
+    TOKEN_DEFAULT,
+    TOKEN_TRUE,
+    TOKEN_FALSE,
+
+    TOKEN_ASSIGN,
+    TOKEN_DOT,
+    TOKEN_COMMA,
+    TOKEN_COLON,
+    TOKEN_SEMICOLON,
+
+    TOKEN_PLUS,
+    TOKEN_MINUS,
+    TOKEN_STAR,
+    TOKEN_SLASH,
+    TOKEN_PERCENT,
+    TOKEN_INC,
+    TOKEN_DEC,
+
+    TOKEN_EQ,
+    TOKEN_NEQ,
+    TOKEN_LT,
+    TOKEN_GT,
+    TOKEN_LTE,
+    TOKEN_GTE,
+    TOKEN_AND,
+    TOKEN_OR,
+    TOKEN_NOT,
+
+    TOKEN_LPAREN,
+    TOKEN_RPAREN,
+    TOKEN_LBRACE,
+    TOKEN_RBRACE,
+    TOKEN_LBRACKET,
+    TOKEN_RBRACKET,
+
     TOKEN_INVALID
-} TokenType;
+} BaaTokenType;
 ```
 
 ---
-### 7.4. AST Node Structure
+### 8.4. AST Node Structure
 
 ### Node (AST)
 
@@ -416,95 +450,89 @@ The AST is a tagged union representing grammatical structure.
 
 ```c
 typedef struct Node {
-    NodeType type;      // Discriminator
-    struct Node* next;  // Linked list pointer
-    
+    NodeType type;
+    struct Node* next;
+
     union {
-        // Program (root node)
         struct { struct Node* declarations; } program;
-        
-        // Function definition
+        struct { struct Node* statements; } block;
+
         struct {
             char* name;
             DataType return_type;
             struct Node* params;
-            struct Node* body;
-            bool is_prototype;  // NEW in v0.2.5
-        } func;
-        
-        // Variable declaration
+            struct Node* body;   // NULL if prototype
+            bool is_prototype;
+        } func_def;
+
         struct {
             char* name;
             DataType type;
-            struct Node* expression;
+            struct Node* expression; // Required for locals, optional for globals
             bool is_global;
-            bool is_const;      // NEW in v0.2.7
+            bool is_const;
         } var_decl;
-        
-        // Array declaration
+
         struct {
             char* name;
             int size;
             bool is_global;
-            bool is_const;      // NEW in v0.2.7
+            bool is_const;
         } array_decl;
-        
-        // Array access/assign
+
         struct {
             char* name;
             struct Node* index;
-            struct Node* value;  // NULL for read
+            struct Node* value; // NULL for read
         } array_op;
-        
-        // For loop
+
+        struct {
+            char* name;
+            struct Node* args;
+        } call;
+
+        struct {
+            struct Node* condition;
+            struct Node* then_branch;
+            struct Node* else_branch;
+        } if_stmt;
+
+        struct { struct Node* condition; struct Node* body; } while_stmt;
+        struct { struct Node* expression; } return_stmt;
+        struct { struct Node* expression; } print_stmt;
+        struct { char* var_name; } read_stmt;
+        struct { char* name; struct Node* expression; } assign_stmt;
+
         struct {
             struct Node* init;
             struct Node* condition;
             struct Node* increment;
             struct Node* body;
         } for_stmt;
-        
-        // Switch statement (NEW in v0.1.3)
-        struct {
-            struct Node* expression;
-            struct Node* cases;
-        } switch_stmt;
-        
-        // Case statement
+
+        struct { struct Node* expression; struct Node* cases; } switch_stmt;
+
         struct {
             struct Node* value;
             struct Node* body;
             bool is_default;
         } case_stmt;
-        
-        // Binary operation
-        struct {
-            struct Node* left;
-            struct Node* right;
-            OpType op;
-        } bin_op;
-        
-        // Unary/Postfix operation
-        struct {
-            struct Node* operand;
-            UnaryOpType op;
-        } unary_op;
-        
-        // Literals
-        struct { int value; } int_lit;
-        struct { char* value; } string_lit;
+
+        struct { int value; } integer;
+        struct { char* value; int id; } string_lit;
         struct { int value; } char_lit;
-        
-        // Variable reference
+        struct { bool value; } bool_lit;
+
         struct { char* name; } var_ref;
-        
-        // ... additional fields
+        struct { struct Node* left; struct Node* right; OpType op; } bin_op;
+
+        struct { struct Node* operand; UnaryOpType op; } unary_op;
     } data;
 } Node;
 ```
 
 ---
-### 7.5. Node Types
+### 8.5. Node Types
 
 ### NodeType Enum
 
@@ -513,43 +541,32 @@ typedef enum {
     // Top-level
     NODE_PROGRAM,
     NODE_FUNC_DEF,
-    NODE_PARAM,
-    
-    // Blocks
     NODE_BLOCK,
-    
-    // Variables
     NODE_VAR_DECL,
-    NODE_ASSIGN,
-    NODE_VAR_REF,
-    
-    // Arrays
-    NODE_ARRAY_DECL,
-    NODE_ARRAY_ACCESS,
-    NODE_ARRAY_ASSIGN,
-    
-    // Control flow
     NODE_IF,
     NODE_WHILE,
     NODE_FOR,
     NODE_RETURN,
-    NODE_SWITCH,      // NEW in v0.1.3
-    NODE_CASE,        // NEW in v0.1.3
-    NODE_BREAK,       // NEW in v0.1.2
-    NODE_CONTINUE,    // NEW in v0.1.2
+    NODE_SWITCH,
+    NODE_CASE,
+    NODE_BREAK,
+    NODE_CONTINUE,
+    NODE_ASSIGN,
+    NODE_CALL_STMT,
+    NODE_READ,
+    NODE_ARRAY_DECL,
+    NODE_ARRAY_ASSIGN,
+    NODE_ARRAY_ACCESS,
     NODE_PRINT,
-    
-    // Expressions
     NODE_BIN_OP,
     NODE_UNARY_OP,
     NODE_POSTFIX_OP,
-    NODE_CALL_EXPR,
-    NODE_CALL_STMT,
-    
-    // Literals
     NODE_INT,
     NODE_STRING,
-    NODE_CHAR
+    NODE_CHAR,
+    NODE_BOOL,
+    NODE_VAR_REF,
+    NODE_CALL_EXPR
 } NodeType;
 ```
 

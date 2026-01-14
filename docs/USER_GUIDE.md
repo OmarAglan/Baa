@@ -18,6 +18,11 @@ Welcome to Baa (باء)! This guide will help you write your first Arabic comput
 
 Currently, you must build Baa from source.
 
+### Platform Support (v0.2.9)
+
+- **Supported:** Windows (x86-64) with MinGW-w64 toolchain
+- **Not supported:** Linux/macOS (the compiler and updater are currently Windows-first)
+
 ### Prerequisites
 - **CMake** 3.10 or higher
 - **MinGW-w64** (GCC compiler)
@@ -38,6 +43,22 @@ cmake --build .
 ```
 
 After building, you will have `baa.exe` in your `build` directory.
+
+### Optional: Add `baa.exe` to PATH
+
+From PowerShell (current user):
+
+```powershell
+$baaDir = (Resolve-Path .\build).Path
+$current = [Environment]::GetEnvironmentVariable("Path", "User")
+[Environment]::SetEnvironmentVariable("Path", "$current;$baaDir", "User")
+```
+
+Open a new terminal and verify:
+
+```powershell
+baa --version
+```
 
 ---
 
@@ -80,7 +101,8 @@ The Baa compiler `baa.exe` is a full-featured command-line tool (since v0.2.0).
 .\baa.exe hello.baa
 
 # Run the program
-.\out.exe```
+.\out.exe
+```
 
 ### Command-Line Flags
 
@@ -95,6 +117,13 @@ The Baa compiler `baa.exe` is a full-featured command-line tool (since v0.2.0).
 | `--help`, `-h` | Display help message and usage. | `.\baa.exe --help` |
 | `--version` | Display compiler version. | `.\baa.exe --version` |
 
+### Output Naming Rules (v0.2.9)
+
+- Default output executable is `out.exe` (when linking).
+- With `-S` or `-c`, output defaults to `<input>.s` / `<input>.o`.
+- `-o <file>` is only applied for `-S` / `-c` when compiling a single input file.
+- `update` must be used alone: `.\baa.exe update`
+
 ### Warning Flags (v0.2.8+)
 
 | Flag | Description | Example |
@@ -106,6 +135,8 @@ The Baa compiler `baa.exe` is a full-featured command-line tool (since v0.2.0).
 | `-Wno-<warning>` | Disable a specific warning. | `.\baa.exe -Wall -Wno-unused-variable main.baa` |
 | `-Wcolor` | Force colored output. | `.\baa.exe -Wall -Wcolor main.baa` |
 | `-Wno-color` | Disable colored output. | `.\baa.exe -Wall -Wno-color main.baa` |
+
+**Note:** The compiler currently exposes flags for `unused-variable` and `dead-code`. The shadowing warning exists, but is only enabled via `-Wall` (there is no dedicated `-Wshadow-variable` flag yet).
 
 
 ### Compilation Workflow
@@ -156,6 +187,15 @@ You can control the compilation stages if needed:
 | `.exe` | Executable | Final linked program | `out.exe` |
 
 **Note:** Header files (`.baahd`) are included using `#تضمين` directive and contain only declarations (prototypes), not implementations.
+
+## 4. Deployment Notes
+
+Baa’s compiler driver invokes `gcc` to assemble and link output binaries, so deployment typically requires:
+
+- `baa.exe` available on the target machine (for example, on `PATH`)
+- MinGW-w64 `gcc` available on `PATH`
+
+If you distribute `baa.exe` to another Windows machine, ensure the MinGW-w64 toolchain is installed there as well.
 
 ---
 
@@ -272,7 +312,7 @@ You can read integer input from the user using the `اقرأ` statement.
 
 ```baa
 صحيح الرئيسية() {
-    صحيح العمر.
+    صحيح العمر = ٠.
     اطبع "أدخل عمرك: ".
     اقرأ العمر.
     
@@ -309,22 +349,25 @@ Use `منطقي` variables to store true (`صواب`) or false (`خطأ`) values
 
 | Error | Cause | Solution |
 |-------|-------|----------|
-| `Lexer Error: Unknown char` | File not saved as UTF-8 | In VS Code: Click encoding in status bar → "Save with Encoding" → "UTF-8" |
-| `Parser Error: Expected ...` | Syntax error | Check for missing `.` (dot) at end of statements, missing `}`, or unmatched parentheses. Use Arabic semicolon `؛` in for loops. |
-| `Undefined symbol` | Variable used before declaration | Declare variables before using them |
-| `Cannot find الرئيسية` | Missing main function | Every program needs `صحيح الرئيسية() { ... }` |
-| `Type mismatch` | Assigning wrong type | Cannot assign strings to integers or vice versa |
-| `Cannot reassign constant` | Modifying a constant | Constants declared with `ثابت` cannot be changed after initialization |
-| `Constant must be initialized` | Missing initial value | Constants require a value at declaration: `ثابت صحيح س = ١٠.` |
-| `break/continue outside loop` | Control flow error | `توقف` and `استمر` must be inside loops or switches |
+| `Lexer Error: Unknown byte 0x..` | Unsupported character/byte in source | Ensure the file is UTF-8 and only uses supported punctuation and operators |
+| `Lexer Error: Unterminated string ...` | Missing closing `"` | Close the string literal before the statement terminator `.` |
+| `[Error] <file>:<line>:<col>: ...` | Syntax error (parser) | Check for missing `.` at statement end, missing `}`, or unmatched parentheses |
+| `[Semantic Error] Assignment to undefined variable '...'` | Variable used before declaration | Declare variables before using them |
+| `[Semantic Error] Type mismatch in assignment to '...'` | Assigning wrong type | Do not assign `نص` to `صحيح` (or vice versa) |
+| `[Semantic Error] Cannot reassign constant '...'` | Modifying a constant | Constants declared with `ثابت` cannot be changed after initialization |
+| `Aborting <file> due to syntax errors.` | Parser reported one or more errors | Fix reported `[Error]` diagnostics and recompile |
+| `Aborting <file> due to semantic errors.` | Analyzer reported one or more errors | Fix reported `[Semantic Error]` messages and recompile |
 
 ### Common Warnings (v0.2.8+)
 
 | Warning | Cause | Solution |
 |---------|-------|----------|
-| `Variable 'x' is declared but never used` | Unused variable | Remove the variable or use it in your code |
-| `Unreachable code after 'return/break'` | Dead code | Remove code after `إرجع` or `توقف` statements |
-| `Local variable 'x' shadows global variable` | Variable shadowing | Rename the local variable to avoid confusion |
+| `[-Wunused-variable] Variable 'x' is declared but never used.` | Unused variable | Remove the variable or use it |
+| `[-Wunused-variable] Global variable 'x' is declared but never used.` | Unused global | Remove it or reference it |
+| `[-Wdead-code] Unreachable code after 'return/break' statement.` | Dead code after terminator | Remove code after `إرجع`/`توقف`/`استمر` |
+| `[-Wshadow-variable] Local variable 'x' shadows global variable.` | Variable shadowing | Rename the local variable |
+
+**Note:** Some warnings may currently show line number `0` due to missing AST line tracking in semantic analysis.
 
 > **Note:** Warnings are non-fatal by default. Use `-Werror` to treat them as errors.
 

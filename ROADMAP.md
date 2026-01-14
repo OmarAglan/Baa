@@ -65,10 +65,10 @@
 - [x] **`-W` Flags** — `-Wall`, `-Werror` to control warning behavior.
 
 ### v0.2.9: Input & UX Polish 🎨
-- [ ] **Input Statement** — `اقرأ س.` (scanf) for reading user input.
-- [ ] **Boolean Type** — `منطقي` type with `صواب`/`خطأ` literals.
+- [x] **Input Statement** — `اقرأ س.` (scanf) for reading user input.
+- [x] **Boolean Type** — `منطقي` type with `صواب`/`خطأ` literals.
 - [x] **Colored Output** — ANSI colors for errors (red), warnings (yellow). *(Implemented in v0.2.8)*
-- [ ] **Compile Timing** — Show compilation time with `-v`.
+- [x] **Compile Timing** — Show compilation time with `-v`.
 
 ---
 

@@ -51,6 +51,20 @@ flowchart LR
 | **4. Assemble** | `.s` Assembly | `.o` Object | `gcc -c` | Invokes external assembler. |
 | **5. Link** | `.o` Object | `.exe` Executable | `gcc` | Links with C Runtime. |
 
+### 1.1.1. Component Map
+
+```mermaid
+flowchart TB
+    Driver["Driver / CLI\nsrc/main.c"] --> Lexer["Lexer + Preprocessor\nsrc/lexer.c"]
+    Lexer --> Parser["Parser\nsrc/parser.c"]
+    Parser --> Analyzer["Semantic Analysis\nsrc/analysis.c"]
+    Analyzer --> Codegen["Code Generator\nsrc/codegen.c"]
+    Codegen --> GCC["External Toolchain\nMinGW-w64 gcc"]
+
+    Driver --> Diagnostics["Diagnostics\nsrc/error.c"]
+    Driver --> Updater["Updater\nsrc/updater.c (Windows-only)"]
+```
+
 
 ### 1.2. The Driver (CLI)
 
@@ -59,10 +73,11 @@ The driver in `main.c` (v0.2.0+) supports multi-file compilation and various mod
 | Flag | Mode | Output | Action |
 |------|------|--------|--------|
 | (Default) | **Compile & Link** | `.exe` | Runs full pipeline. Deletes intermediate `.s` and `.o` files. |
-| `-o <file>`| **Custom Output** | `<file>` | Specifies the final filename. |
+| `-o <file>` | **Custom Output** | `.exe` | Sets the linked output filename (default: `out.exe`). |
 | (Multiple Files) | **Multi-File Build** | `.exe` | Compiles each `.baa` to `.o` and links them. |
-| `-S` | **Assembly Only** | `.s` | Stops after codegen. Preserves the assembly file. |
-| `-c` | **Compile Only** | `.o` | Stops after assembling. Does not link. |
+| `-S`, `-s` | **Assembly Only** | `.s` | Stops after codegen. Writes `<input>.s` (or `-o` when a single input file is used). |
+| `-c` | **Compile Only** | `.o` | Stops after assembling. Writes `<input>.o` (or `-o` when a single input file is used). |
+| `-v` | **Verbose** | - | Prints commands and compilation time; keeps intermediate `.s` files. |
 | `--version` | **Version Info** | stdout | Displays compiler version and build date. |
 | `--help`, `-h` | **Help** | stdout | Shows usage information. |
 | `update` | **Self-Update** | - | Downloads and installs the latest version. |
@@ -203,14 +218,14 @@ FuncDecl      ::= Type ID "(" ParamList ")" Block
 GlobalVarDecl ::= ConstMod? Type ID ("=" Expr)? "."
 
 ConstMod      ::= "ثابت"                           // NEW in v0.2.7
-Type          ::= "صحيح" | "نص"
+Type          ::= "صحيح" | "نص" | "منطقي"          // Updated in v0.2.9
 
 Block         ::= "{" Statement* "}"
 Statement     ::= VarDecl | ArrayDecl | Assign | ArrayAssign
-                | If | Switch | While | For | Return | Print | CallStmt
+                | If | Switch | While | For | Return | Print | Read | CallStmt
                 | Break | Continue
 
-VarDecl       ::= ConstMod? Type ID "=" Expr "."   // Updated in v0.2.7
+VarDecl       ::= ConstMod? Type ID "=" Expr "."   // Local declarations require an initializer
 ArrayDecl     ::= ConstMod? "صحيح" ID "[" INT "]" "."  // Updated in v0.2.7
 Assign        ::= ID "=" Expr "."
 ArrayAssign   ::= ID "[" Expr "]" "=" Expr "."
@@ -226,6 +241,7 @@ Break         ::= "توقف" "."
 Continue      ::= "استمر" "."
 Return        ::= "إرجع" Expr "."
 Print         ::= "اطبع" Expr "."
+Read          ::= "اقرأ" ID "."
 ```
 
 ### 3.2. Expression Precedence
@@ -272,14 +288,14 @@ The AST uses a tagged union structure for type-safe node representation.
 
 | Category | Node Types |
 |----------|------------|
-| **Structure** | `NODE_PROGRAM`, `NODE_FUNC_DEF`, `NODE_BLOCK`, `NODE_PARAM` |
-| **Variable Decls** | `NODE_VAR_DECL`, `NODE_ASSIGN`, `NODE_VAR_REF` |
+| **Structure** | `NODE_PROGRAM`, `NODE_FUNC_DEF`, `NODE_BLOCK` |
+| **Variables** | `NODE_VAR_DECL`, `NODE_ASSIGN`, `NODE_VAR_REF` |
 | **Array Decls** | `NODE_ARRAY_DECL`, `NODE_ARRAY_ACCESS`, `NODE_ARRAY_ASSIGN` |
 | **Control Flow** | `NODE_IF`, `NODE_WHILE`, `NODE_FOR`, `NODE_RETURN` |
 | **Branching** | `NODE_SWITCH`, `NODE_CASE`, `NODE_BREAK`, `NODE_CONTINUE` |
-| **Expressions** | `NODE_BIN_OP`, `NODE_UNARY_OP`, `NODE_POSTFIX_OP` |
+| **Expressions** | `NODE_BIN_OP`, `NODE_UNARY_OP`, `NODE_POSTFIX_OP`, `NODE_CALL_EXPR` |
 | **Literals** | `NODE_INT`, `NODE_STRING`, `NODE_CHAR`, `NODE_BOOL` |
-| **Calls & I/O** | `NODE_CALL_EXPR`, `NODE_CALL_STMT`, `NODE_PRINT`, `NODE_READ` |
+| **Calls & I/O** | `NODE_CALL_STMT`, `NODE_PRINT`, `NODE_READ` |
 
 ### 4.2. Node Structure
 
@@ -379,6 +395,9 @@ The analyzer walks the AST recursively. It maintains a **Symbol Table** stack to
 |------|--------|------|-------|
 | `صحيح` | `int64_t` | 8 bytes | Signed integer |
 | `نص` | `char*` | 8 bytes | Pointer to .rdata string |
+| `منطقي` | `bool` (stored as int) | 8 bytes | Stored as 0/1 in 8-byte slots |
+
+**I/O note (v0.2.9):** The current backend emits `printf("%d\\n", ...)` and `scanf("%d", ...)`, so printed/read integers are effectively 32-bit even though storage uses 8 bytes.
 
 ---
 

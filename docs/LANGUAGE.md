@@ -120,10 +120,11 @@ Baa is statically typed. All variables must be declared with their type.
 
 | Baa Type | C Equivalent | Description | Example |
 |----------|--------------|-------------|---------|
-| `صحيح` | `int` | 64-bit integer | `صحيح س = ٥.` |
+| `صحيح` | `int64_t` (stored) | Integer value (stored as 8 bytes) | `صحيح س = ٥.` |
 | `نص` | `char*` | String pointer (Reference) | `نص اسم = "باء".` |
-| `حرف` | `char` | Single character | `'أ'` |
-| `منطقي` | `bool` | Boolean (True/False) | `منطقي ب = صواب.` |
+| `منطقي` | `bool` (stored as int) | Boolean value (`صواب`/`خطأ`, stored as 1/0) | `منطقي ب = صواب.` |
+
+**Character literals:** Baa supports character literals like `'أ'`, but there is currently no dedicated `حرف` type keyword; character literals behave like integers in expressions and code generation.
 
 ### 3.2. Scalar Variables
 
@@ -297,7 +298,12 @@ Functions can call themselves (recursion), provided there is a base case to term
 
 **Syntax:** `اطبع <expression>.`
 
-Prints an integer or string followed by a newline.
+Prints a value followed by a newline.
+
+**Current implementation notes (v0.2.9):**
+- `صحيح` and `منطقي` values are printed using C `printf("%d\n", ...)` (so output is effectively 32-bit).
+- `نص` values are printed using `printf("%s\n", ...)`.
+- Character literals like `'أ'` are treated as integer values during code generation and print as their numeric code.
 
 ```baa
 اطبع "مرحباً بالعالم".    // طباعة نص
@@ -315,8 +321,11 @@ Prints an integer or string followed by a newline.
 
 Reads an integer from standard input and stores it in the specified variable.
 
+**Current implementation notes (v0.2.9):**
+- Input uses C `scanf("%d", ...)` and is intended for `صحيح` variables.
+
 ```baa
-صحيح العمر.
+صحيح العمر = ٠.
 اطبع "كم عمرك؟ ".
 اقرأ العمر.
 

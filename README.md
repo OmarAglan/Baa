@@ -118,6 +118,7 @@ Create `hello.baa` (⚠️ **IMPORTANT:** Save as **UTF-8** encoding):
 | Document | Description |
 |----------|-------------|
 | [User Guide](docs/USER_GUIDE.md) | Getting started and basic usage |
+| [Arabic Book](docs/BAA_BOOK_AR.md) | Definitive Arabic learning + reference (draft) |
 | [Language Specification](docs/LANGUAGE.md) | Complete syntax and features reference |
 | [Compiler Internals](docs/INTERNALS.md) | Architecture and implementation details |
 | [API Reference](docs/API_REFERENCE.md) | Internal C API documentation |
@@ -170,5 +171,27 @@ gcc ..\make_test.c -o make_test.exe
 1
 0
 0
+```
+
+---
+
+## ✅ Verification (Suggested)
+
+To verify documentation examples against the implementation:
+
+```powershell
+cmake -S . -B build
+cmake --build build
+.\build\baa.exe --help
+.\build\baa.exe --version
+```
+
+For a quick end-to-end sanity check:
+
+```powershell
+gcc .\make_test.c -o .\build\make_test.exe
+.\build\make_test.exe
+.\build\baa.exe .\build\test.baa -o .\build\test_suite.exe
+.\build\test_suite.exe
 ```
 </div>

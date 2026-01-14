@@ -5,6 +5,19 @@
 
 ---
 
+## 📚 Documentation Track (Definitive Arabic Book)
+
+*Goal: Produce a Kernighan & Ritchie–style first book for Baa, in Arabic, serving as the definitive learning + reference resource.*
+
+- [ ] **Write the Arabic “Baa Book”** — book-length guide in Arabic with exercises.
+- [ ] **Define terminology glossary** — consistent Arabic technical vocabulary.
+- [ ] **Create example suite** — verified, idiomatic examples that compile with v0.2.9.
+- [ ] **Add exercises and challenges** — per chapter, with expected outputs.
+- [ ] **Add debugging and performance chapters** — common pitfalls, diagnostics, optimization notes.
+- [ ] **Native technical review** — review by Arabic-speaking engineers before release.
+
+---
+
 ## 🏗️ Phase 2: Architecture Overhaul (The Professional Arc)
 
 *Goal: Transform Baa from a linear prototype into a modular, robust compiler toolchain.*

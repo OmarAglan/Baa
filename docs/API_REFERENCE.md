@@ -1,8 +1,8 @@
 # Baa Internal API Reference
 
-> **Version:** 0.3.0 | [← User Guide](USER_GUIDE.md) | [Internals →](INTERNALS.md)
+> **Version:** 0.3.0.2 | [← User Guide](USER_GUIDE.md) | [Internals →](INTERNALS.md)
 
-This document details the C functions, enumerations, and structures defined in `src/baa.h` and `src/ir.h`.
+This document details the C functions, enumerations, and structures defined in `src/baa.h`, `src/ir.h`, and `src/ir_builder.h`.
 
 ---
 
@@ -12,11 +12,12 @@ This document details the C functions, enumerations, and structures defined in `
 - [Parser Module](#2-parser-module)
 - [Semantic Analysis](#3-semantic-analysis)
 - [IR Module](#4-ir-module)
-- [Codegen Module](#5-codegen-module)
-- [Diagnostic System](#6-diagnostic-system)
-- [Symbol Table](#7-symbol-table)
-- [Updater](#8-updater)
-- [Data Structures](#9-data-structures)
+- [IR Builder Module](#5-ir-builder-module)
+- [Codegen Module](#6-codegen-module)
+- [Diagnostic System](#7-diagnostic-system)
+- [Symbol Table](#8-symbol-table)
+- [Updater](#9-updater)
+- [Data Structures](#10-data-structures)
 
 ---
 
@@ -574,7 +575,386 @@ extern IRType* IR_TYPE_I64_T;    // ص٦٤
 
 ---
 
-## 5. Codegen Module
+## 5. IR Builder Module (v0.3.0.2+)
+
+The IR Builder Module (`src/ir_builder.h`, `src/ir_builder.c`) provides a convenient builder pattern API for constructing IR.
+
+### 5.1. Builder Context
+
+#### `IRBuilder` struct
+
+```c
+typedef struct IRBuilder {
+    IRModule* module;           // Target module
+    IRFunc* current_func;       // Current function being built
+    IRBlock* insert_block;      // Current insertion block
+    
+    // Source location tracking
+    const char* src_file;
+    int src_line;
+    int src_col;
+    
+    // Statistics
+    int insts_emitted;
+    int blocks_created;
+} IRBuilder;
+```
+
+### 5.2. Lifecycle Functions
+
+#### `ir_builder_new`
+
+```c
+IRBuilder* ir_builder_new(IRModule* module)
+```
+
+Creates a new IR builder.
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `module` | `IRModule*` | Target module (can be NULL) |
+
+**Returns:** New builder instance.
+
+---
+
+#### `ir_builder_free`
+
+```c
+void ir_builder_free(IRBuilder* builder)
+```
+
+Frees an IR builder. Does NOT free the module or any IR created.
+
+---
+
+### 5.3. Function & Block Creation
+
+#### `ir_builder_create_func`
+
+```c
+IRFunc* ir_builder_create_func(IRBuilder* builder, const char* name, IRType* ret_type)
+```
+
+Creates a new function and sets it as current.
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `builder` | `IRBuilder*` | The builder |
+| `name` | `const char*` | Function name |
+| `ret_type` | `IRType*` | Return type |
+
+**Returns:** The new function.
+
+---
+
+#### `ir_builder_create_block`
+
+```c
+IRBlock* ir_builder_create_block(IRBuilder* builder, const char* label)
+```
+
+Creates a new block in the current function.
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `builder` | `IRBuilder*` | The builder |
+| `label` | `const char*` | Block label (Arabic, e.g., "بداية") |
+
+---
+
+#### `ir_builder_set_insert_point`
+
+```c
+void ir_builder_set_insert_point(IRBuilder* builder, IRBlock* block)
+```
+
+Sets the insertion point. All subsequent emit functions will append to this block.
+
+---
+
+### 5.4. Register Allocation
+
+#### `ir_builder_alloc_reg`
+
+```c
+int ir_builder_alloc_reg(IRBuilder* builder)
+```
+
+Allocates a new virtual register.
+
+**Returns:** New register number (`%م<n>`).
+
+---
+
+### 5.5. Emit Functions - Arithmetic
+
+#### `ir_builder_emit_add`
+
+```c
+int ir_builder_emit_add(IRBuilder* builder, IRType* type, IRValue* lhs, IRValue* rhs)
+```
+
+Emits: `%dest = جمع type lhs, rhs`
+
+**Returns:** Destination register number.
+
+---
+
+#### `ir_builder_emit_sub`
+
+```c
+int ir_builder_emit_sub(IRBuilder* builder, IRType* type, IRValue* lhs, IRValue* rhs)
+```
+
+Emits: `%dest = طرح type lhs, rhs`
+
+---
+
+#### `ir_builder_emit_mul`
+
+```c
+int ir_builder_emit_mul(IRBuilder* builder, IRType* type, IRValue* lhs, IRValue* rhs)
+```
+
+Emits: `%dest = ضرب type lhs, rhs`
+
+---
+
+#### `ir_builder_emit_div`
+
+```c
+int ir_builder_emit_div(IRBuilder* builder, IRType* type, IRValue* lhs, IRValue* rhs)
+```
+
+Emits: `%dest = قسم type lhs, rhs`
+
+---
+
+### 5.6. Emit Functions - Memory
+
+#### `ir_builder_emit_alloca`
+
+```c
+int ir_builder_emit_alloca(IRBuilder* builder, IRType* type)
+```
+
+Emits: `%dest = حجز type`
+
+**Returns:** Destination register (pointer to allocated space).
+
+---
+
+#### `ir_builder_emit_load`
+
+```c
+int ir_builder_emit_load(IRBuilder* builder, IRType* type, IRValue* ptr)
+```
+
+Emits: `%dest = حمل type, ptr`
+
+---
+
+#### `ir_builder_emit_store`
+
+```c
+void ir_builder_emit_store(IRBuilder* builder, IRValue* value, IRValue* ptr)
+```
+
+Emits: `خزن value, ptr`
+
+**Note:** Store has no result register.
+
+---
+
+### 5.7. Emit Functions - Comparison
+
+#### `ir_builder_emit_cmp`
+
+```c
+int ir_builder_emit_cmp(IRBuilder* builder, IRCmpPred pred, IRValue* lhs, IRValue* rhs)
+```
+
+Emits: `%dest = قارن pred lhs, rhs`
+
+**Returns:** Destination register (i1/boolean result).
+
+---
+
+#### Convenience Comparison Functions
+
+```c
+int ir_builder_emit_cmp_eq(IRBuilder* builder, IRValue* lhs, IRValue* rhs);  // يساوي
+int ir_builder_emit_cmp_ne(IRBuilder* builder, IRValue* lhs, IRValue* rhs);  // لا_يساوي
+int ir_builder_emit_cmp_gt(IRBuilder* builder, IRValue* lhs, IRValue* rhs);  // أكبر
+int ir_builder_emit_cmp_lt(IRBuilder* builder, IRValue* lhs, IRValue* rhs);  // أصغر
+int ir_builder_emit_cmp_ge(IRBuilder* builder, IRValue* lhs, IRValue* rhs);  // أكبر_أو_يساوي
+int ir_builder_emit_cmp_le(IRBuilder* builder, IRValue* lhs, IRValue* rhs);  // أصغر_أو_يساوي
+```
+
+---
+
+### 5.8. Emit Functions - Control Flow
+
+#### `ir_builder_emit_br`
+
+```c
+void ir_builder_emit_br(IRBuilder* builder, IRBlock* target)
+```
+
+Emits: `قفز target`
+
+Automatically updates CFG successor edges.
+
+---
+
+#### `ir_builder_emit_br_cond`
+
+```c
+void ir_builder_emit_br_cond(IRBuilder* builder, IRValue* cond, IRBlock* if_true, IRBlock* if_false)
+```
+
+Emits: `قفز_شرط cond, if_true, if_false`
+
+Automatically updates CFG successor edges.
+
+---
+
+#### `ir_builder_emit_ret`
+
+```c
+void ir_builder_emit_ret(IRBuilder* builder, IRValue* value)
+```
+
+Emits: `رجوع value`
+
+---
+
+#### `ir_builder_emit_ret_void`
+
+```c
+void ir_builder_emit_ret_void(IRBuilder* builder)
+```
+
+Emits: `رجوع` (void return)
+
+---
+
+### 5.9. Emit Functions - Calls
+
+#### `ir_builder_emit_call`
+
+```c
+int ir_builder_emit_call(IRBuilder* builder, const char* target, IRType* ret_type, IRValue** args, int arg_count)
+```
+
+Emits: `%dest = نداء ret_type @target(args...)`
+
+**Returns:** Destination register (-1 for void calls).
+
+---
+
+#### `ir_builder_emit_call_void`
+
+```c
+void ir_builder_emit_call_void(IRBuilder* builder, const char* target, IRValue** args, int arg_count)
+```
+
+Emits: `نداء فراغ @target(args...)`
+
+---
+
+### 5.10. Control Flow Helpers
+
+#### `ir_builder_create_if_then`
+
+```c
+void ir_builder_create_if_then(IRBuilder* builder, IRValue* cond,
+                                const char* then_label, const char* merge_label,
+                                IRBlock** then_block, IRBlock** merge_block)
+```
+
+Creates an if-then structure with blocks and emits conditional branch.
+
+---
+
+#### `ir_builder_create_if_else`
+
+```c
+void ir_builder_create_if_else(IRBuilder* builder, IRValue* cond,
+                                const char* then_label, const char* else_label,
+                                const char* merge_label,
+                                IRBlock** then_block, IRBlock** else_block,
+                                IRBlock** merge_block)
+```
+
+Creates an if-then-else structure with blocks and emits conditional branch.
+
+---
+
+#### `ir_builder_create_while`
+
+```c
+void ir_builder_create_while(IRBuilder* builder,
+                              const char* header_label, const char* body_label,
+                              const char* exit_label,
+                              IRBlock** header_block, IRBlock** body_block,
+                              IRBlock** exit_block)
+```
+
+Creates a while loop structure with header, body, and exit blocks.
+
+---
+
+### 5.11. Constant Helpers
+
+```c
+IRValue* ir_builder_const_int(int64_t value);      // i64 constant
+IRValue* ir_builder_const_i64(int64_t value);      // i64 constant
+IRValue* ir_builder_const_i32(int32_t value);      // i32 constant
+IRValue* ir_builder_const_bool(int value);         // i1 constant
+IRValue* ir_builder_const_string(IRBuilder* builder, const char* str);  // String constant
+```
+
+---
+
+### 5.12. Example Usage
+
+```c
+// Create module and builder
+IRModule* module = ir_module_new("test");
+IRBuilder* builder = ir_builder_new(module);
+
+// Create function: صحيح الرئيسية()
+IRFunc* func = ir_builder_create_func(builder, "الرئيسية", IR_TYPE_I64_T);
+
+// Create entry block
+IRBlock* entry = ir_builder_create_block(builder, "بداية");
+ir_builder_set_insert_point(builder, entry);
+
+// Emit: %م٠ = حجز ص٦٤
+int ptr = ir_builder_emit_alloca(builder, IR_TYPE_I64_T);
+
+// Emit: خزن ص٦٤ ١٠, %م٠
+ir_builder_emit_store(builder, ir_builder_const_i64(10), ir_value_reg(ptr, ir_type_ptr(IR_TYPE_I64_T)));
+
+// Emit: %م١ = حمل ص٦٤ %م٠
+int val = ir_builder_emit_load(builder, IR_TYPE_I64_T, ir_value_reg(ptr, ir_type_ptr(IR_TYPE_I64_T)));
+
+// Emit: رجوع ص٦٤ %م١
+ir_builder_emit_ret(builder, ir_value_reg(val, IR_TYPE_I64_T));
+
+// Print IR
+ir_module_print(module, stdout, 1);
+
+// Cleanup
+ir_builder_free(builder);
+ir_module_free(module);
+```
+
+---
+
+## 6. Codegen Module
 
 Handles x86-64 assembly generation.
 
@@ -605,7 +985,7 @@ Recursively generates assembly code from AST.
 
 ---
 
-## 6. Diagnostic System
+## 7. Diagnostic System
 
 Centralized diagnostic system for compiler errors and warnings (v0.2.8+).
 
@@ -702,7 +1082,7 @@ extern WarningConfig g_warning_config;
 
 ---
 
-## 7. Symbol Table
+## 8. Symbol Table
 
 Manages variable scope and resolution.
 
@@ -740,7 +1120,7 @@ typedef struct {
 
 ---
 
-## 8. Updater
+## 9. Updater
 
 ### `run_updater`
 
@@ -757,9 +1137,9 @@ Runs the built-in updater.
 
 ---
 
-## 9. Data Structures
+## 10. Data Structures
 
-### 8.1. Preprocessor Structures
+### 10.1. Preprocessor Structures
 
 ### Lexer & Preprocessor Structures
 
@@ -792,7 +1172,7 @@ typedef struct {
 } Lexer;
 ```
 
-### 8.2. Token
+### 10.2. Token
 
 Represents a single atomic unit of source code.
 
@@ -805,7 +1185,7 @@ typedef struct {
     const char* filename;
 } Token;
 ```
-### 8.3. Token Types
+### 10.3. Token Types
 
 ### BaaTokenType Enum
 
@@ -872,7 +1252,7 @@ typedef enum {
 ```
 
 ---
-### 8.4. AST Node Structure
+### 10.4. AST Node Structure
 
 ### Node (AST)
 
@@ -962,7 +1342,7 @@ typedef struct Node {
 ```
 
 ---
-### 8.5. Node Types
+### 10.5. Node Types
 
 ### NodeType Enum
 

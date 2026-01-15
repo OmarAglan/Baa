@@ -8,7 +8,35 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
-## [0.3.0] - 2026-01-15
+## [0.3.0.2] - 2026-01-15
+
+### Added
+- **IR Builder Pattern API** — Convenient builder API for IR construction (`src/ir_builder.h`, `src/ir_builder.c`).
+  - **`IRBuilder` context struct**: Tracks current function, block, and source location for instruction emission.
+  - **Function creation**: `ir_builder_create_func()`, `ir_builder_add_param()`.
+  - **Block creation**: `ir_builder_create_block()`, `ir_builder_set_insert_point()`.
+  - **Register allocation**: `ir_builder_alloc_reg()`, `ir_builder_reg_value()`.
+  - **Emit functions**: Comprehensive set of `ir_builder_emit_*()` functions for all instruction types:
+    - Arithmetic: `emit_add`, `emit_sub`, `emit_mul`, `emit_div`, `emit_mod`, `emit_neg`
+    - Memory: `emit_alloca`, `emit_load`, `emit_store`
+    - Comparison: `emit_cmp`, `emit_cmp_eq`, `emit_cmp_ne`, `emit_cmp_gt`, `emit_cmp_lt`, `emit_cmp_ge`, `emit_cmp_le`
+    - Logical: `emit_and`, `emit_or`, `emit_not`
+    - Control flow: `emit_br`, `emit_br_cond`, `emit_ret`, `emit_ret_void`, `emit_ret_int`
+    - Function calls: `emit_call`, `emit_call_void`
+    - SSA: `emit_phi`, `phi_add_incoming`, `emit_copy`
+    - Type conversion: `emit_cast`
+  - **Constant helpers**: `ir_builder_const_int()`, `const_i64()`, `const_i32()`, `const_bool()`, `const_string()`.
+  - **Control flow structure helpers**: `ir_builder_create_if_then()`, `create_if_else()`, `create_while()`.
+  - **Global variables**: `ir_builder_create_global()`, `create_global_init()`, `get_global()`.
+  - **Statistics**: `ir_builder_get_inst_count()`, `get_block_count()`, `print_stats()`.
+
+### Changed
+- **CMakeLists.txt**: Added `src/ir_builder.c` to build.
+- **ROADMAP.md**: Marked v0.3.0.2 as completed.
+
+---
+
+## [0.3.0.1] - 2026-01-15
 
 ### Added
 - **Intermediate Representation (IR)** — Phase 3 begins with the introduction of Baa's Arabic-first IR.
@@ -36,7 +64,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - **ROADMAP.md**: Added detailed sub-versions (v0.3.0.1 through v0.3.2.9) for Phase 3.
 
 ### Note
-- This release introduces the IR infrastructure only. AST-to-IR lowering will be added in v0.3.0.2.
+- This release introduces the IR infrastructure only. AST-to-IR lowering will be added in v0.3.0.3.
 - Current compilation still uses direct AST-to-assembly code generation.
 
 ---

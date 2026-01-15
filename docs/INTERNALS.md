@@ -1,6 +1,6 @@
 # Baa Compiler Internals
 
-> **Version:** 0.3.0 | [← Language Spec](LANGUAGE.md) | [API Reference →](API_REFERENCE.md)
+> **Version:** 0.3.0.2 | [← Language Spec](LANGUAGE.md) | [API Reference →](API_REFERENCE.md)
 
 **Target Architecture:** x86-64 (AMD64)
 **Target OS:** Windows (MinGW-w64 Toolchain)
@@ -556,9 +556,9 @@ The `int_to_arabic_numerals()` function converts integers to Arabic-Indic digits
 }
 ```
 
-### 6.8. IR Module API
+### 6.8. IR Module API (Low-Level)
 
-Key functions for building IR:
+Key functions for building IR directly (without builder):
 
 ```c
 // Module
@@ -590,6 +590,58 @@ IRInst* ir_inst_phi(IRType* type, int dest);
 void ir_module_print(IRModule* module, FILE* out, int use_arabic);
 void ir_module_dump(IRModule* module, const char* filename, int use_arabic);
 ```
+
+### 6.9. IR Builder API (High-Level, v0.3.0.2+)
+
+The IR Builder (`src/ir_builder.h`, `src/ir_builder.c`) provides a convenient builder pattern API:
+
+```c
+// Builder lifecycle
+IRBuilder* ir_builder_new(IRModule* module);
+void ir_builder_free(IRBuilder* builder);
+
+// Function/Block creation
+IRFunc* ir_builder_create_func(IRBuilder* builder, const char* name, IRType* ret_type);
+IRBlock* ir_builder_create_block(IRBuilder* builder, const char* label);
+void ir_builder_set_insert_point(IRBuilder* builder, IRBlock* block);
+
+// Register allocation
+int ir_builder_alloc_reg(IRBuilder* builder);
+
+// Emit instructions (auto-appends to current block)
+int ir_builder_emit_add(IRBuilder* builder, IRType* type, IRValue* lhs, IRValue* rhs);
+int ir_builder_emit_sub(IRBuilder* builder, IRType* type, IRValue* lhs, IRValue* rhs);
+int ir_builder_emit_mul(IRBuilder* builder, IRType* type, IRValue* lhs, IRValue* rhs);
+int ir_builder_emit_alloca(IRBuilder* builder, IRType* type);
+int ir_builder_emit_load(IRBuilder* builder, IRType* type, IRValue* ptr);
+void ir_builder_emit_store(IRBuilder* builder, IRValue* value, IRValue* ptr);
+void ir_builder_emit_br(IRBuilder* builder, IRBlock* target);
+void ir_builder_emit_br_cond(IRBuilder* builder, IRValue* cond, IRBlock* if_true, IRBlock* if_false);
+void ir_builder_emit_ret(IRBuilder* builder, IRValue* value);
+int ir_builder_emit_call(IRBuilder* builder, const char* target, IRType* ret_type, IRValue** args, int arg_count);
+
+// Control flow structure helpers
+void ir_builder_create_if_then(IRBuilder* builder, IRValue* cond,
+                                const char* then_label, const char* merge_label,
+                                IRBlock** then_block, IRBlock** merge_block);
+void ir_builder_create_while(IRBuilder* builder,
+                              const char* header_label, const char* body_label,
+                              const char* exit_label,
+                              IRBlock** header_block, IRBlock** body_block,
+                              IRBlock** exit_block);
+
+// Constants
+IRValue* ir_builder_const_int(int64_t value);
+IRValue* ir_builder_const_i64(int64_t value);
+IRValue* ir_builder_const_bool(int value);
+```
+
+**Benefits over low-level API:**
+- Automatic register allocation
+- Automatic CFG edge management (successors/predecessors)
+- Source location propagation
+- Control flow structure helpers for if/else/while
+- Statistics tracking
 
 For full specification, see [BAA_IR_SPECIFICATION.md](BAA_IR_SPECIFICATION.md).
 

@@ -102,13 +102,16 @@
 - [x] **Create `ir.h`** — Header file with all IR definitions.
 - [x] **Create `ir.c`** — Implementation with helper functions and IR printing.
 
-#### v0.3.0.2: IR Builder Functions
-- [ ] **`ir_create_func()`** — Create a new IR function.
-- [ ] **`ir_create_block()`** — Create a new basic block with label.
-- [ ] **`ir_append_inst()`** — Add instruction to block.
-- [ ] **`ir_new_temp()`** — Allocate next virtual register `%م<n>`.
-- [ ] **`ir_set_successor()`** — Link blocks for control flow.
-- [ ] **Create `ir_builder.c`** — Implementation of builder functions.
+#### v0.3.0.2: IR Builder Functions ✅ COMPLETED (2026-01-15)
+- [x] **`IRBuilder` context struct** — Builder pattern with insertion point tracking.
+- [x] **`ir_builder_create_func()`** — Create a new IR function.
+- [x] **`ir_builder_create_block()`** — Create a new basic block with label.
+- [x] **`ir_builder_set_insert_point()`** — Set insertion point for new instructions.
+- [x] **`ir_builder_alloc_reg()`** — Allocate next virtual register `%م<n>`.
+- [x] **`ir_builder_emit_*()`** — Emit instructions (add, sub, mul, div, load, store, br, ret, call, etc.).
+- [x] **Control flow helpers** — `ir_builder_create_if_then()`, `ir_builder_create_while()`.
+- [x] **Create `ir_builder.h`** — Header file with builder API.
+- [x] **Create `ir_builder.c`** — Implementation of builder functions.
 
 #### v0.3.0.3: AST to IR Lowering (Expressions)
 - [ ] **`lower_expr()`** — Main expression lowering dispatcher.

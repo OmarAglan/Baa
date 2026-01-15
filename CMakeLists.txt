@@ -13,6 +13,7 @@ set(SOURCES
     src/error.c
     src/updater.c
     src/ir.c          # Intermediate Representation (Phase 3)
+    src/ir_builder.c  # IR Builder pattern API (v0.3.0.2)
 )
 
 # Add resource file for Windows (Icon & Version Info)

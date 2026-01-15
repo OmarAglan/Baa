@@ -8,6 +8,39 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-01-15
+
+### Added
+- **Intermediate Representation (IR)** — Phase 3 begins with the introduction of Baa's Arabic-first IR.
+  - **IR Module** (`src/ir.h`, `src/ir.c`): Complete SSA-form IR infrastructure.
+  - **Arabic Opcodes**: `جمع` (add), `طرح` (sub), `ضرب` (mul), `قسم` (div), `حمل` (load), `خزن` (store), `قفز` (br), `رجوع` (ret), `نداء` (call), `فاي` (phi).
+  - **IR Type System**: `ص٦٤` (i64), `ص٣٢` (i32), `ص٨` (i8), `ص١` (bool), `مؤشر` (ptr), `فراغ` (void).
+  - **Arabic Numerals**: Register names use Arabic-Indic numerals (`%م٠`, `%م١`, `%م٢`).
+  - **SSA Form**: Phi nodes for control flow merging, single assignment per register.
+  - **IR Printing**: `ir_module_print()` for debugging with `--dump-ir` flag (Arabic or English output).
+
+### Technical Details
+- **Data Structures**:
+  - `IRModule`: Top-level container for functions, globals, and string table.
+  - `IRFunc`: Function with parameters, basic blocks, and virtual register allocation.
+  - `IRBlock`: Basic block with label, instruction list, and CFG edges (predecessors/successors).
+  - `IRInst`: Individual instruction with opcode, type, destination register, and operands.
+  - `IRValue`: Operand types (register, constant int, constant string, block label, global/function reference).
+  - `IRType`: Type kinds (void, i1, i8, i16, i32, i64, pointer, array, function).
+- **Helper Functions**: Constructors and destructors for all IR structures.
+- **Comparison Predicates**: `يساوي` (eq), `لا_يساوي` (ne), `أكبر` (gt), `أصغر` (lt), `أكبر_أو_يساوي` (ge), `أصغر_أو_يساوي` (le).
+- **IR Specification Document**: Full specification in `docs/BAA_IR_SPECIFICATION.md`.
+
+### Changed
+- **CMakeLists.txt**: Updated to version 0.3.0, added `src/ir.c` to build.
+- **ROADMAP.md**: Added detailed sub-versions (v0.3.0.1 through v0.3.2.9) for Phase 3.
+
+### Note
+- This release introduces the IR infrastructure only. AST-to-IR lowering will be added in v0.3.0.2.
+- Current compilation still uses direct AST-to-assembly code generation.
+
+---
+
 ## [0.2.9] - 2026-01-14
 
 ### Added

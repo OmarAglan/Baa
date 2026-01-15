@@ -1,7 +1,7 @@
 # Baa Roadmap
 
 > Track the development progress of the Baa programming language.
-> **Current Status:** Phase 2 (Architecture Overhaul)
+> **Current Status:** Phase 3 - Intermediate Representation (v0.3.0)
 
 ---
 
@@ -85,21 +85,22 @@
 
 ---
 
-## ⚙️ Phase 3: The Intermediate Representation (v0.3.x)
+## ⚙️ Phase 3: The Intermediate Representation (v0.3.x) ← CURRENT
 
 *Goal: Decouple the language from x86 Assembly to enable optimizations and multiple backends.*
 
 > **Design Document:** See [BAA_IR_SPECIFICATION.md](docs/BAA_IR_SPECIFICATION.md) for full IR specification.
 
-### v0.3.0: IR Foundation 🏗️
+### v0.3.0: IR Foundation 🏗️ ← IN PROGRESS
 
-#### v0.3.0.1: IR Data Structures
-- [ ] **Define `IROp` enum** — All opcodes: `IR_OP_ADD`, `IR_OP_SUB`, `IR_OP_MUL`, etc.
-- [ ] **Define `IRType` enum** — Types: `IR_TYPE_I64`, `IR_TYPE_I32`, `IR_TYPE_I8`, `IR_TYPE_I1`, `IR_TYPE_PTR`.
-- [ ] **Define `IRInst` struct** — Instruction with opcode, type, dest register, operands.
-- [ ] **Define `IRBlock` struct** — Basic block with label, instruction list, successors.
-- [ ] **Define `IRFunc` struct** — Function with name, return type, entry block, register counter.
-- [ ] **Create `ir.h`** — Header file with all IR definitions.
+#### v0.3.0.1: IR Data Structures ✅ COMPLETED (2026-01-15)
+- [x] **Define `IROp` enum** — All opcodes: `IR_OP_ADD`, `IR_OP_SUB`, `IR_OP_MUL`, etc.
+- [x] **Define `IRType` enum** — Types: `IR_TYPE_I64`, `IR_TYPE_I32`, `IR_TYPE_I8`, `IR_TYPE_I1`, `IR_TYPE_PTR`.
+- [x] **Define `IRInst` struct** — Instruction with opcode, type, dest register, operands.
+- [x] **Define `IRBlock` struct** — Basic block with label, instruction list, successors.
+- [x] **Define `IRFunc` struct** — Function with name, return type, entry block, register counter.
+- [x] **Create `ir.h`** — Header file with all IR definitions.
+- [x] **Create `ir.c`** — Implementation with helper functions and IR printing.
 
 #### v0.3.0.2: IR Builder Functions
 - [ ] **`ir_create_func()`** — Create a new IR function.

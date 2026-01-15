@@ -1,8 +1,8 @@
 # Baa Internal API Reference
 
-> **Version:** 0.2.9 | [← User Guide](USER_GUIDE.md) | [Internals →](INTERNALS.md)
+> **Version:** 0.3.0 | [← User Guide](USER_GUIDE.md) | [Internals →](INTERNALS.md)
 
-This document details the C functions, enumerations, and structures defined in `src/baa.h`.
+This document details the C functions, enumerations, and structures defined in `src/baa.h` and `src/ir.h`.
 
 ---
 
@@ -11,11 +11,12 @@ This document details the C functions, enumerations, and structures defined in `
 - [Lexer Module](#1-lexer-module)
 - [Parser Module](#2-parser-module)
 - [Semantic Analysis](#3-semantic-analysis)
-- [Codegen Module](#4-codegen-module)
-- [Diagnostic System](#5-diagnostic-system)
-- [Symbol Table](#6-symbol-table)
-- [Updater](#7-updater)
-- [Data Structures](#8-data-structures)
+- [IR Module](#4-ir-module)
+- [Codegen Module](#5-codegen-module)
+- [Diagnostic System](#6-diagnostic-system)
+- [Symbol Table](#7-symbol-table)
+- [Updater](#8-updater)
+- [Data Structures](#9-data-structures)
 
 ---
 
@@ -144,7 +145,436 @@ Runs the semantic pass on the AST.
 
 ---
 
-## 4. Codegen Module
+## 4. IR Module (v0.3.0+)
+
+The IR Module (`src/ir.h`, `src/ir.c`) provides Baa's Arabic-first Intermediate Representation.
+
+### 4.1. Type Construction
+
+#### `ir_type_ptr`
+
+```c
+IRType* ir_type_ptr(IRType* pointee)
+```
+
+Creates a pointer type.
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `pointee` | `IRType*` | The type being pointed to |
+
+**Returns:** New `IRType*` with `kind = IR_TYPE_PTR`.
+
+---
+
+#### `ir_type_array`
+
+```c
+IRType* ir_type_array(IRType* element, int count)
+```
+
+Creates an array type.
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `element` | `IRType*` | Element type |
+| `count` | `int` | Number of elements |
+
+**Returns:** New `IRType*` with `kind = IR_TYPE_ARRAY`.
+
+---
+
+### 4.2. Value Construction
+
+#### `ir_value_reg`
+
+```c
+IRValue* ir_value_reg(int reg_num, IRType* type)
+```
+
+Creates a virtual register reference.
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `reg_num` | `int` | Register number (e.g., 0 for `%م٠`) |
+| `type` | `IRType*` | Type of the value in the register |
+
+---
+
+#### `ir_value_const_int`
+
+```c
+IRValue* ir_value_const_int(int64_t value, IRType* type)
+```
+
+Creates an integer constant.
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `value` | `int64_t` | The constant value |
+| `type` | `IRType*` | Type (defaults to `IR_TYPE_I64_T` if NULL) |
+
+---
+
+#### `ir_value_const_str`
+
+```c
+IRValue* ir_value_const_str(const char* str, int id)
+```
+
+Creates a string constant reference.
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `str` | `const char*` | String content |
+| `id` | `int` | String table ID |
+
+---
+
+### 4.3. Instruction Construction
+
+#### `ir_inst_binary`
+
+```c
+IRInst* ir_inst_binary(IROp op, IRType* type, int dest, IRValue* lhs, IRValue* rhs)
+```
+
+Creates a binary operation (add, sub, mul, div, etc.).
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `op` | `IROp` | Operation (e.g., `IR_OP_ADD`) |
+| `type` | `IRType*` | Result type |
+| `dest` | `int` | Destination register number |
+| `lhs` | `IRValue*` | Left operand |
+| `rhs` | `IRValue*` | Right operand |
+
+---
+
+#### `ir_inst_cmp`
+
+```c
+IRInst* ir_inst_cmp(IRCmpPred pred, int dest, IRValue* lhs, IRValue* rhs)
+```
+
+Creates a comparison instruction.
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `pred` | `IRCmpPred` | Comparison predicate (e.g., `IR_CMP_EQ`) |
+| `dest` | `int` | Destination register (result is `i1`) |
+| `lhs` | `IRValue*` | Left operand |
+| `rhs` | `IRValue*` | Right operand |
+
+---
+
+#### `ir_inst_load`
+
+```c
+IRInst* ir_inst_load(IRType* type, int dest, IRValue* ptr)
+```
+
+Creates a memory load instruction.
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `type` | `IRType*` | Type of value to load |
+| `dest` | `int` | Destination register |
+| `ptr` | `IRValue*` | Pointer to load from |
+
+---
+
+#### `ir_inst_store`
+
+```c
+IRInst* ir_inst_store(IRValue* value, IRValue* ptr)
+```
+
+Creates a memory store instruction. No destination register.
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `value` | `IRValue*` | Value to store |
+| `ptr` | `IRValue*` | Pointer to store to |
+
+---
+
+#### `ir_inst_br`
+
+```c
+IRInst* ir_inst_br(IRBlock* target)
+```
+
+Creates an unconditional branch.
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `target` | `IRBlock*` | Target basic block |
+
+---
+
+#### `ir_inst_br_cond`
+
+```c
+IRInst* ir_inst_br_cond(IRValue* cond, IRBlock* if_true, IRBlock* if_false)
+```
+
+Creates a conditional branch.
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `cond` | `IRValue*` | Condition (must be `i1`) |
+| `if_true` | `IRBlock*` | Target if condition is true |
+| `if_false` | `IRBlock*` | Target if condition is false |
+
+---
+
+#### `ir_inst_ret`
+
+```c
+IRInst* ir_inst_ret(IRValue* value)
+```
+
+Creates a return instruction.
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `value` | `IRValue*` | Return value (NULL for void) |
+
+---
+
+#### `ir_inst_call`
+
+```c
+IRInst* ir_inst_call(const char* target, IRType* ret_type, int dest, IRValue** args, int arg_count)
+```
+
+Creates a function call.
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `target` | `const char*` | Function name |
+| `ret_type` | `IRType*` | Return type |
+| `dest` | `int` | Destination register (-1 for void) |
+| `args` | `IRValue**` | Array of argument values |
+| `arg_count` | `int` | Number of arguments |
+
+---
+
+#### `ir_inst_phi`
+
+```c
+IRInst* ir_inst_phi(IRType* type, int dest)
+```
+
+Creates a phi node for SSA.
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `type` | `IRType*` | Type of the phi result |
+| `dest` | `int` | Destination register |
+
+Use `ir_inst_phi_add()` to add incoming values.
+
+---
+
+### 4.4. Block & Function Construction
+
+#### `ir_block_new`
+
+```c
+IRBlock* ir_block_new(const char* label, int id)
+```
+
+Creates a new basic block.
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `label` | `const char*` | Block label (Arabic, e.g., "بداية") |
+| `id` | `int` | Numeric ID for internal use |
+
+---
+
+#### `ir_block_append`
+
+```c
+void ir_block_append(IRBlock* block, IRInst* inst)
+```
+
+Appends an instruction to a block.
+
+---
+
+#### `ir_func_new`
+
+```c
+IRFunc* ir_func_new(const char* name, IRType* ret_type)
+```
+
+Creates a new function.
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `name` | `const char*` | Function name |
+| `ret_type` | `IRType*` | Return type |
+
+---
+
+#### `ir_func_alloc_reg`
+
+```c
+int ir_func_alloc_reg(IRFunc* func)
+```
+
+Allocates a new virtual register number.
+
+**Returns:** The next available register number.
+
+---
+
+#### `ir_func_new_block`
+
+```c
+IRBlock* ir_func_new_block(IRFunc* func, const char* label)
+```
+
+Creates and adds a new block to a function.
+
+---
+
+### 4.5. Module Construction
+
+#### `ir_module_new`
+
+```c
+IRModule* ir_module_new(const char* name)
+```
+
+Creates a new IR module.
+
+---
+
+#### `ir_module_add_func`
+
+```c
+void ir_module_add_func(IRModule* module, IRFunc* func)
+```
+
+Adds a function to the module.
+
+---
+
+#### `ir_module_add_string`
+
+```c
+int ir_module_add_string(IRModule* module, const char* str)
+```
+
+Adds a string to the string table.
+
+**Returns:** String ID for referencing in IR.
+
+---
+
+### 4.6. Printing & Debugging
+
+#### `ir_module_print`
+
+```c
+void ir_module_print(IRModule* module, FILE* out, int use_arabic)
+```
+
+Prints the IR module to a file.
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `module` | `IRModule*` | The module to print |
+| `out` | `FILE*` | Output file handle |
+| `use_arabic` | `int` | 1 for Arabic names, 0 for English |
+
+---
+
+#### `ir_module_dump`
+
+```c
+void ir_module_dump(IRModule* module, const char* filename, int use_arabic)
+```
+
+Convenience wrapper that opens a file and prints the module.
+
+---
+
+### 4.7. Arabic Name Conversion
+
+#### `ir_op_to_arabic`
+
+```c
+const char* ir_op_to_arabic(IROp op)
+```
+
+Converts an opcode to its Arabic name.
+
+**Example:** `ir_op_to_arabic(IR_OP_ADD)` returns `"جمع"`.
+
+---
+
+#### `ir_cmp_pred_to_arabic`
+
+```c
+const char* ir_cmp_pred_to_arabic(IRCmpPred pred)
+```
+
+Converts a comparison predicate to its Arabic name.
+
+**Example:** `ir_cmp_pred_to_arabic(IR_CMP_EQ)` returns `"يساوي"`.
+
+---
+
+#### `ir_type_to_arabic`
+
+```c
+const char* ir_type_to_arabic(IRType* type)
+```
+
+Converts a type to its Arabic representation.
+
+**Example:** `ir_type_to_arabic(IR_TYPE_I64_T)` returns `"ص٦٤"`.
+
+---
+
+#### `int_to_arabic_numerals`
+
+```c
+char* int_to_arabic_numerals(int n, char* buf)
+```
+
+Converts an integer to Arabic-Indic numerals.
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `n` | `int` | Number to convert |
+| `buf` | `char*` | Output buffer (must be at least 32 bytes) |
+
+**Example:** `int_to_arabic_numerals(42, buf)` returns `"٤٢"`.
+
+---
+
+### 4.8. Predefined Types
+
+Global type singletons for convenience:
+
+```c
+extern IRType* IR_TYPE_VOID_T;   // فراغ
+extern IRType* IR_TYPE_I1_T;     // ص١
+extern IRType* IR_TYPE_I8_T;     // ص٨
+extern IRType* IR_TYPE_I16_T;    // ص١٦
+extern IRType* IR_TYPE_I32_T;    // ص٣٢
+extern IRType* IR_TYPE_I64_T;    // ص٦٤
+```
+
+---
+
+## 5. Codegen Module
 
 Handles x86-64 assembly generation.
 
@@ -175,7 +605,7 @@ Recursively generates assembly code from AST.
 
 ---
 
-## 5. Diagnostic System
+## 6. Diagnostic System
 
 Centralized diagnostic system for compiler errors and warnings (v0.2.8+).
 
@@ -272,7 +702,7 @@ extern WarningConfig g_warning_config;
 
 ---
 
-## 6. Symbol Table
+## 7. Symbol Table
 
 Manages variable scope and resolution.
 
@@ -310,7 +740,7 @@ typedef struct {
 
 ---
 
-## 7. Updater
+## 8. Updater
 
 ### `run_updater`
 
@@ -327,7 +757,7 @@ Runs the built-in updater.
 
 ---
 
-## 8. Data Structures
+## 9. Data Structures
 
 ### 8.1. Preprocessor Structures
 

@@ -1,9 +1,9 @@
 # Baa Compiler Internals
 
-> **Version:** 0.2.9 | [← Language Spec](LANGUAGE.md) | [API Reference →](API_REFERENCE.md)
+> **Version:** 0.3.0 | [← Language Spec](LANGUAGE.md) | [API Reference →](API_REFERENCE.md)
 
-**Target Architecture:** x86-64 (AMD64)  
-**Target OS:** Windows (MinGW-w64 Toolchain)  
+**Target Architecture:** x86-64 (AMD64)
+**Target OS:** Windows (MinGW-w64 Toolchain)
 **Calling Convention:** Microsoft x64 ABI
 
 This document details the internal architecture, data structures, and algorithms used in the Baa compiler.
@@ -17,9 +17,10 @@ This document details the internal architecture, data structures, and algorithms
 - [Syntactic Analysis](#3-syntactic-analysis)
 - [Abstract Syntax Tree](#4-abstract-syntax-tree)
 - [Semantic Analysis](#5-semantic-analysis)
-- [Code Generation](#6-code-generation)
-- [Global Data Section](#7-global-data-section)
-- [Naming & Entry Point](#8-naming--entry-point)
+- [Intermediate Representation](#6-intermediate-representation)
+- [Code Generation](#7-code-generation)
+- [Global Data Section](#8-global-data-section)
+- [Naming & Entry Point](#9-naming--entry-point)
 
 ---
 
@@ -34,22 +35,30 @@ flowchart LR
     A[".baa Source"] --> B["Lexer + Preprocessor"]
     B -->|Tokens| C["Parser"]
     C -->|AST| D["Semantic Analysis"]
-    D -->|Validated AST| E["Code Generator"]
-    E --> F[".s Assembly"]
-    F -->|GCC -c| G[".o Object"]
-    G -->|GCC -o| H[".exe Executable"]
+    D -->|Validated AST| E["IR Lowering"]
+    E -->|IR| F["Optimizer"]
+    F -->|Optimized IR| G["Code Generator"]
+    G --> H[".s Assembly"]
+    H -->|GCC -c| I[".o Object"]
+    I -->|GCC -o| J[".exe Executable"]
     
     style A fill:#e1f5fe
-    style H fill:#c8e6c9
+    style J fill:#c8e6c9
+    style E fill:#fff3e0
+    style F fill:#fff3e0
 ```
 
 | Stage | Input | Output | Component | Description |
 |-------|-------|--------|-----------|-------------|
 | **1. Frontend** | `.baa` Source | AST | `lexer.c`, `parser.c` | Tokenizes, handles macros, and builds the syntax tree. |
 | **2. Analysis** | AST | Valid AST | `analysis.c` | **Semantic Pass**: Checks types, scopes, and resolves symbols. |
-| **3. Backend** | AST | `.s` Assembly | `codegen.c` | Generates x86-64 assembly code (AT&T syntax). |
-| **4. Assemble** | `.s` Assembly | `.o` Object | `gcc -c` | Invokes external assembler. |
-| **5. Link** | `.o` Object | `.exe` Executable | `gcc` | Links with C Runtime. |
+| **3. IR Lowering** | AST | IR | `ir.c` (v0.3.0+) | Converts AST to SSA-form Intermediate Representation. |
+| **4. Optimization** | IR | Optimized IR | (future) | Dead code elimination, constant propagation, etc. |
+| **5. Backend** | IR | `.s` Assembly | `codegen.c` | Generates x86-64 assembly code (AT&T syntax). |
+| **6. Assemble** | `.s` Assembly | `.o` Object | `gcc -c` | Invokes external assembler. |
+| **7. Link** | `.o` Object | `.exe` Executable | `gcc` | Links with C Runtime. |
+
+> **Note (v0.3.0):** IR infrastructure is implemented but AST-to-IR lowering is not yet connected. Current compilation still uses direct AST-to-assembly.
 
 ### 1.1.1. Component Map
 
@@ -58,11 +67,14 @@ flowchart TB
     Driver["Driver / CLI\nsrc/main.c"] --> Lexer["Lexer + Preprocessor\nsrc/lexer.c"]
     Lexer --> Parser["Parser\nsrc/parser.c"]
     Parser --> Analyzer["Semantic Analysis\nsrc/analysis.c"]
-    Analyzer --> Codegen["Code Generator\nsrc/codegen.c"]
+    Analyzer --> IR["IR Module\nsrc/ir.c (v0.3.0+)"]
+    IR --> Codegen["Code Generator\nsrc/codegen.c"]
     Codegen --> GCC["External Toolchain\nMinGW-w64 gcc"]
 
     Driver --> Diagnostics["Diagnostics\nsrc/error.c"]
     Driver --> Updater["Updater\nsrc/updater.c (Windows-only)"]
+    
+    style IR fill:#fff3e0
 ```
 
 
@@ -415,7 +427,175 @@ The parser performs constant folding on arithmetic expressions. If both operands
 
 ---
 
-## 6. Code Generation
+## 6. Intermediate Representation (v0.3.0+)
+
+The IR Module (`src/ir.h`, `src/ir.c`) provides an Arabic-first Intermediate Representation using SSA (Static Single Assignment) form.
+
+### 6.1. Design Philosophy
+
+Baa's IR is designed with three goals:
+1. **Arabic Identity**: All opcodes, types, and predicates have Arabic names.
+2. **Technical Parity**: Comparable to LLVM IR, GIMPLE, or WebAssembly in capabilities.
+3. **SSA Form**: Each virtual register is assigned exactly once, enabling powerful optimizations.
+
+### 6.2. IR Structure
+
+```
+IRModule
+├── globals: IRGlobal*      // Global variables
+├── funcs: IRFunc*          // Functions
+└── strings: IRStringEntry* // String literal table
+
+IRFunc
+├── name: char*
+├── ret_type: IRType*
+├── params: IRParam[]
+├── blocks: IRBlock*        // Linked list of basic blocks
+├── entry: IRBlock*         // Entry block pointer
+└── next_reg: int           // Virtual register counter
+
+IRBlock
+├── label: char*            // Arabic label (e.g., "بداية", "حلقة")
+├── id: int
+├── first/last: IRInst*     // Instruction list
+├── succs[2]: IRBlock*      // Successors (0-2 for br/br_cond)
+├── preds: IRBlock**        // Predecessors (dynamic array)
+└── next: IRBlock*          // Next block in function
+
+IRInst
+├── op: IROp                // Opcode
+├── type: IRType*           // Result type
+├── dest: int               // Destination register (-1 if none)
+├── operands[4]: IRValue*   // Up to 4 operands
+├── cmp_pred: IRCmpPred     // For comparison instructions
+├── phi_entries: IRPhiEntry* // For phi nodes
+└── call_*: ...             // For call instructions
+```
+
+### 6.3. IR Opcodes (Arabic)
+
+| Category | Opcode | Arabic | Description |
+|----------|--------|--------|-------------|
+| **Arithmetic** | `IR_OP_ADD` | جمع | Addition |
+| | `IR_OP_SUB` | طرح | Subtraction |
+| | `IR_OP_MUL` | ضرب | Multiplication |
+| | `IR_OP_DIV` | قسم | Division |
+| | `IR_OP_MOD` | باقي | Modulo |
+| | `IR_OP_NEG` | سالب | Negation |
+| **Memory** | `IR_OP_ALLOCA` | حجز | Stack allocation |
+| | `IR_OP_LOAD` | حمل | Load from memory |
+| | `IR_OP_STORE` | خزن | Store to memory |
+| **Comparison** | `IR_OP_CMP` | قارن | Compare with predicate |
+| **Logical** | `IR_OP_AND` | و | Bitwise AND |
+| | `IR_OP_OR` | أو | Bitwise OR |
+| | `IR_OP_NOT` | نفي | Bitwise NOT |
+| **Control** | `IR_OP_BR` | قفز | Unconditional branch |
+| | `IR_OP_BR_COND` | قفز_شرط | Conditional branch |
+| | `IR_OP_RET` | رجوع | Return |
+| | `IR_OP_CALL` | نداء | Function call |
+| **SSA** | `IR_OP_PHI` | فاي | Phi node |
+| | `IR_OP_COPY` | نسخ | Copy value |
+| **Conversion** | `IR_OP_CAST` | تحويل | Type cast |
+
+### 6.4. IR Types (Arabic)
+
+| Type | Arabic | Bits | Description |
+|------|--------|------|-------------|
+| `IR_TYPE_VOID` | فراغ | 0 | No value |
+| `IR_TYPE_I1` | ص١ | 1 | Boolean |
+| `IR_TYPE_I8` | ص٨ | 8 | Byte/Char |
+| `IR_TYPE_I16` | ص١٦ | 16 | Short |
+| `IR_TYPE_I32` | ص٣٢ | 32 | Int |
+| `IR_TYPE_I64` | ص٦٤ | 64 | Long (primary) |
+| `IR_TYPE_PTR` | مؤشر | 64 | Pointer |
+| `IR_TYPE_ARRAY` | مصفوفة | varies | Array |
+| `IR_TYPE_FUNC` | دالة | - | Function type |
+
+### 6.5. Comparison Predicates
+
+| Predicate | Arabic | Description |
+|-----------|--------|-------------|
+| `IR_CMP_EQ` | يساوي | Equal |
+| `IR_CMP_NE` | لا_يساوي | Not Equal |
+| `IR_CMP_GT` | أكبر | Greater Than |
+| `IR_CMP_LT` | أصغر | Less Than |
+| `IR_CMP_GE` | أكبر_أو_يساوي | Greater or Equal |
+| `IR_CMP_LE` | أصغر_أو_يساوي | Less or Equal |
+
+### 6.6. Virtual Registers
+
+Registers use Arabic naming with Arabic-Indic numerals:
+- Format: `%م<n>` where `م` = مؤقت (temporary)
+- Examples: `%م٠`, `%م١`, `%م٢`, ...
+
+The `int_to_arabic_numerals()` function converts integers to Arabic-Indic digits (٠١٢٣٤٥٦٧٨٩).
+
+### 6.7. Example IR Output
+
+**Baa Source:**
+```baa
+صحيح الرئيسية() {
+    صحيح س = ١٠.
+    صحيح ص = ٢٠.
+    إرجع س + ص.
+}
+```
+
+**Generated IR (Arabic mode):**
+```
+دالة الرئيسية() -> ص٦٤ {
+بداية:
+    %م٠ = حجز ص٦٤
+    خزن ص٦٤ ١٠, %م٠
+    %م١ = حجز ص٦٤
+    خزن ص٦٤ ٢٠, %م١
+    %م٢ = حمل ص٦٤ %م٠
+    %م٣ = حمل ص٦٤ %م١
+    %م٤ = جمع ص٦٤ %م٢, %م٣
+    رجوع ص٦٤ %م٤
+}
+```
+
+### 6.8. IR Module API
+
+Key functions for building IR:
+
+```c
+// Module
+IRModule* ir_module_new(const char* name);
+void ir_module_add_func(IRModule* module, IRFunc* func);
+int ir_module_add_string(IRModule* module, const char* str);
+
+// Function
+IRFunc* ir_func_new(const char* name, IRType* ret_type);
+int ir_func_alloc_reg(IRFunc* func);
+IRBlock* ir_func_new_block(IRFunc* func, const char* label);
+
+// Block
+IRBlock* ir_block_new(const char* label, int id);
+void ir_block_append(IRBlock* block, IRInst* inst);
+
+// Instructions
+IRInst* ir_inst_binary(IROp op, IRType* type, int dest, IRValue* lhs, IRValue* rhs);
+IRInst* ir_inst_cmp(IRCmpPred pred, int dest, IRValue* lhs, IRValue* rhs);
+IRInst* ir_inst_load(IRType* type, int dest, IRValue* ptr);
+IRInst* ir_inst_store(IRValue* value, IRValue* ptr);
+IRInst* ir_inst_br(IRBlock* target);
+IRInst* ir_inst_br_cond(IRValue* cond, IRBlock* if_true, IRBlock* if_false);
+IRInst* ir_inst_ret(IRValue* value);
+IRInst* ir_inst_call(const char* target, IRType* ret_type, int dest, IRValue** args, int arg_count);
+IRInst* ir_inst_phi(IRType* type, int dest);
+
+// Printing
+void ir_module_print(IRModule* module, FILE* out, int use_arabic);
+void ir_module_dump(IRModule* module, const char* filename, int use_arabic);
+```
+
+For full specification, see [BAA_IR_SPECIFICATION.md](BAA_IR_SPECIFICATION.md).
+
+---
+
+## 7. Code Generation
 
 ### 6.1. Loop Control & Branching
 
@@ -472,7 +652,7 @@ The `اطبع` statement uses the symbol type to determine the format string:
 
 ---
 
-## 7. Global Data Section
+## 8. Global Data Section
 
 | Section | Contents |
 |---------|----------|
@@ -494,7 +674,7 @@ Strings are collected during parsing and emitted with unique labels:
 
 ---
 
-## 8. Naming & Entry Point
+## 9. Naming & Entry Point
 
 | Aspect | Details |
 |--------|---------|

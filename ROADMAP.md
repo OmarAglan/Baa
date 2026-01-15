@@ -89,22 +89,236 @@
 
 *Goal: Decouple the language from x86 Assembly to enable optimizations and multiple backends.*
 
-### v0.3.0: Baa IR (Intermediate Representation)
-- [ ] **IR Design** – Define a simplified, linear instruction set (Three-Address Code).
-- Example: `ADD t0, t1, t2` (virtual registers).
-- [ ] **AST to IR** – Write a lowering pass to convert the AST tree into a Control Flow Graph (CFG) of IR blocks.
-- [ ] **IR Printer** – Debug tool to print the IR in a readable format (`--dump-ir`).
+> **Design Document:** See [BAA_IR_SPECIFICATION.md](docs/BAA_IR_SPECIFICATION.md) for full IR specification.
+
+### v0.3.0: IR Foundation 🏗️
+
+#### v0.3.0.1: IR Data Structures
+- [ ] **Define `IROp` enum** — All opcodes: `IR_OP_ADD`, `IR_OP_SUB`, `IR_OP_MUL`, etc.
+- [ ] **Define `IRType` enum** — Types: `IR_TYPE_I64`, `IR_TYPE_I32`, `IR_TYPE_I8`, `IR_TYPE_I1`, `IR_TYPE_PTR`.
+- [ ] **Define `IRInst` struct** — Instruction with opcode, type, dest register, operands.
+- [ ] **Define `IRBlock` struct** — Basic block with label, instruction list, successors.
+- [ ] **Define `IRFunc` struct** — Function with name, return type, entry block, register counter.
+- [ ] **Create `ir.h`** — Header file with all IR definitions.
+
+#### v0.3.0.2: IR Builder Functions
+- [ ] **`ir_create_func()`** — Create a new IR function.
+- [ ] **`ir_create_block()`** — Create a new basic block with label.
+- [ ] **`ir_append_inst()`** — Add instruction to block.
+- [ ] **`ir_new_temp()`** — Allocate next virtual register `%م<n>`.
+- [ ] **`ir_set_successor()`** — Link blocks for control flow.
+- [ ] **Create `ir_builder.c`** — Implementation of builder functions.
+
+#### v0.3.0.3: AST to IR Lowering (Expressions)
+- [ ] **`lower_expr()`** — Main expression lowering dispatcher.
+- [ ] **Lower `NODE_INT`** — Return immediate value.
+- [ ] **Lower `NODE_VAR_REF`** — Generate `حمل` (load) instruction.
+- [ ] **Lower `NODE_BIN_OP`** — Generate `جمع`/`طرح`/`ضرب`/`قسم` instructions.
+- [ ] **Lower `NODE_UNARY_OP`** — Generate `سالب`/`نفي` instructions.
+- [ ] **Lower `NODE_CALL_EXPR`** — Generate `نداء` (call) instruction.
+
+#### v0.3.0.4: AST to IR Lowering (Statements)
+- [ ] **`lower_stmt()`** — Main statement lowering dispatcher.
+- [ ] **Lower `NODE_VAR_DECL`** — Generate `حجز` (alloca) + `خزن` (store).
+- [ ] **Lower `NODE_ASSIGN`** — Generate `خزن` (store) instruction.
+- [ ] **Lower `NODE_RETURN`** — Generate `رجوع` (return) instruction.
+- [ ] **Lower `NODE_PRINT`** — Generate `نداء @اطبع()` call.
+- [ ] **Lower `NODE_READ`** — Generate `نداء @اقرأ()` call.
+
+#### v0.3.0.5: AST to IR Lowering (Control Flow)
+- [ ] **Lower `NODE_IF`** — Create condition block + true/false blocks + merge block.
+- [ ] **Lower `NODE_WHILE`** — Create header/body/exit blocks with back edge.
+- [ ] **Lower `NODE_FOR`** — Create init/header/body/increment/exit blocks.
+- [ ] **Lower `NODE_SWITCH`** — Create comparison chain + case blocks.
+- [ ] **Lower `NODE_BREAK`** — Generate `قفز` to loop exit.
+- [ ] **Lower `NODE_CONTINUE`** — Generate `قفز` to loop header/increment.
+
+#### v0.3.0.6: IR Printer
+- [ ] **`ir_print_func()`** — Print function header and all blocks.
+- [ ] **`ir_print_block()`** — Print block label and all instructions.
+- [ ] **`ir_print_inst()`** — Print single instruction with Arabic opcodes.
+- [ ] **Arabic numeral output** — Print register numbers in Arabic (٠١٢٣٤٥٦٧٨٩).
+- [ ] **`--dump-ir` CLI flag** — Add command-line option to print IR.
+
+#### v0.3.0.7: Integration & Testing
+- [ ] **Integrate IR into pipeline** — AST → IR (skip direct codegen).
+- [ ] **Create `ir_test.baa`** — Simple test programs.
+- [ ] **Verify IR output** — Check IR text matches specification.
+- [ ] **Update `main.c`** — Add IR phase between analysis and codegen.
+
+---
 
 ### v0.3.1: The Optimizer ⚡
-- [ ] **Control Flow Analysis** – Detect unreachable blocks.
-- [ ] **Dead Code Elimination** – Remove instructions that don't affect the output.
-- [ ] **Constant Propagation** – If `x = 10` and `y = x + 5`, replace with `y = 15`.
-- [ ] **Loop Invariant Code Motion** – Move static calculations out of loops.
 
-### v0.3.2: The Backend (Target Independence)
-- [ ] **Instruction Selection** – Convert IR to abstract machine instructions.
-- [ ] **Register Allocation** – Map virtual registers (t0, t1...) to physical x64 registers (RAX, RBX...) using Linear Scan or Graph Coloring.
-- [ ] **Code Emission** – Write the final assembly text.
+#### v0.3.1.1: Analysis Infrastructure
+- [ ] **CFG validation** — Verify all blocks have terminators.
+- [ ] **Predecessor lists** — Build predecessor list for each block.
+- [ ] **Dominator tree** — Compute dominance relationships.
+- [ ] **Define `IRPass` interface** — Function pointer for optimization passes.
+
+#### v0.3.1.2: Constant Folding (طي_الثوابت)
+- [ ] **Detect constant operands** — Both operands are immediate values.
+- [ ] **Fold arithmetic** — `جمع ص٦٤ ٥، ٣` → `٨`.
+- [ ] **Fold comparisons** — `قارن أكبر ص٦٤ ١٠، ٥` → `صواب`.
+- [ ] **Replace instruction** — Remove op, use constant result.
+
+#### v0.3.1.3: Dead Code Elimination (حذف_الميت)
+- [ ] **Mark used values** — Walk from terminators backward.
+- [ ] **Identify dead instructions** — Result never used.
+- [ ] **Remove dead instructions** — Delete from block.
+- [ ] **Remove unreachable blocks** — No predecessors (except entry).
+
+#### v0.3.1.4: Copy Propagation (نشر_النسخ)
+- [ ] **Detect copy instructions** — `%م١ = %م٠` pattern.
+- [ ] **Replace uses** — Substitute original for copy.
+- [ ] **Remove redundant copies** — Delete copy instruction.
+
+#### v0.3.1.5: Common Subexpression Elimination (حذف_المكرر)
+- [ ] **Hash expressions** — Create signature for each operation.
+- [ ] **Detect duplicates** — Same op + same operands.
+- [ ] **Replace with existing result** — Reuse previous computation.
+
+#### v0.3.1.6: Optimization Pipeline
+- [ ] **Pass ordering** — Define optimal pass sequence.
+- [ ] **Iteration** — Run passes until no changes.
+- [ ] **`-O0`, `-O1`, `-O2` flags** — Control optimization level.
+- [ ] **`--dump-ir-opt`** — Print IR after optimization.
+
+---
+
+### v0.3.2: The Backend (Target Independence) 🎯
+
+#### v0.3.2.1: Instruction Selection
+- [ ] **Define `MachineInst`** — Abstract machine instruction.
+- [ ] **IR to Machine mapping** — `جمع` → `ADD`, `حمل` → `MOV`, etc.
+- [ ] **Pattern matching** — Select optimal instruction sequences.
+- [ ] **Handle immediates** — Inline constants where possible.
+
+#### v0.3.2.2: Register Allocation
+- [ ] **Liveness analysis** — Compute live ranges for each virtual register.
+- [ ] **Linear scan allocator** — Simple, fast allocation algorithm.
+- [ ] **Spilling** — Handle register pressure by spilling to stack.
+- [ ] **Map to x64 registers** — RAX, RBX, RCX, RDX, R8-R15.
+
+#### v0.3.2.3: Code Emission
+- [ ] **Emit function prologue** — Stack setup, callee-saved registers.
+- [ ] **Emit instructions** — Generate AT&T syntax assembly.
+- [ ] **Emit function epilogue** — Stack teardown, return.
+- [ ] **Emit data section** — Global variables and string literals.
+
+#### v0.3.2.4: Backend Integration
+- [ ] **Replace old codegen** — IR → Backend → Assembly.
+- [ ] **Verify output** — Compare with old codegen results.
+- [ ] **Performance testing** — Ensure no regression.
+- [ ] **Remove legacy codegen** — Delete `codegen.c` direct AST translation.
+
+---
+
+### v0.3.2.5: SSA Construction 🔄
+
+#### v0.3.2.5.1: Memory to Register Promotion
+- [ ] **Identify promotable allocas** — Single-block allocas with no escaping.
+- [ ] **Replace loads/stores** — Convert to direct register use.
+- [ ] **Remove dead allocas** — Delete promoted `حجز` instructions.
+
+#### v0.3.2.5.2: Phi Node Insertion
+- [ ] **Compute dominance frontiers** — Where Phi nodes are needed.
+- [ ] **Insert Phi placeholders** — Add `فاي` at join points.
+- [ ] **Rename variables** — SSA renaming pass with reaching definitions.
+- [ ] **Connect Phi operands** — Link values from predecessor blocks.
+
+#### v0.3.2.5.3: SSA Validation
+- [ ] **Verify SSA properties** — Each register defined exactly once.
+- [ ] **Check dominance** — Definition dominates all uses.
+- [ ] **Validate Phi nodes** — One operand per predecessor.
+- [ ] **`--verify-ssa` flag** — Debug option to run SSA checks.
+
+---
+
+### v0.3.2.6: IR Stabilization & Polish 🧹
+
+#### v0.3.2.6.1: IR Memory Management
+- [ ] **Arena allocator for IR** — Fast allocation, bulk deallocation.
+- [ ] **IR cloning** — Deep copy of functions/blocks.
+- [ ] **IR destruction** — Clean up all IR memory.
+
+#### v0.3.2.6.2: Debug Information
+- [ ] **Source location tracking** — Map IR instructions to source lines.
+- [ ] **Variable name preservation** — Keep original names for debugging.
+- [ ] **`--debug-info` flag** — Emit debug metadata in assembly.
+
+#### v0.3.2.6.3: IR Serialization
+- [ ] **Text IR writer** — Output canonical IR text format.
+- [ ] **Text IR reader** — Parse IR text back to data structures.
+- [ ] **Round-trip testing** — Write → Read → Compare.
+
+---
+
+### v0.3.2.7: Advanced Optimizations 🚀
+
+#### v0.3.2.7.1: Loop Optimizations
+- [ ] **Loop detection** — Identify natural loops via back edges.
+- [ ] **Loop invariant code motion** — Hoist constant computations.
+- [ ] **Strength reduction** — Replace expensive ops (mul → shift).
+- [ ] **Loop unrolling** — Optional with `-funroll-loops`.
+
+#### v0.3.2.7.2: Inlining
+- [ ] **Inline heuristics** — Small functions, single call site.
+- [ ] **Inline expansion** — Copy function body to call site.
+- [ ] **Post-inline cleanup** — Re-run optimization passes.
+
+#### v0.3.2.7.3: Tail Call Optimization
+- [ ] **Detect tail calls** — Call immediately before return.
+- [ ] **Convert to jump** — Replace call+ret with jump.
+- [ ] **Stack reuse** — Reuse caller's stack frame.
+
+---
+
+### v0.3.2.8: Multi-Target Preparation 🌐
+
+#### v0.3.2.8.1: Target Abstraction
+- [ ] **Define `Target` interface** — Register info, calling convention.
+- [ ] **x86-64 target** — Current implementation as first target.
+- [ ] **Target selection** — `--target=x86_64-windows` flag.
+
+#### v0.3.2.8.2: Calling Convention Abstraction
+- [ ] **Define `CallingConv` struct** — Arg registers, return register.
+- [ ] **Windows x64 ABI** — Current convention as default.
+- [ ] **SystemV AMD64 ABI** — Linux/macOS convention (future).
+
+#### v0.3.2.8.3: Code Model Options
+- [ ] **Small code model** — All code/data within 2GB (default).
+- [ ] **PIC support** — Position independent code flag.
+- [ ] **Stack protection** — Optional stack canaries.
+
+---
+
+### v0.3.2.9: IR Verification & Benchmarking ✅
+
+#### v0.3.2.9.1: Comprehensive IR Verification
+- [ ] **Well-formedness checks** — All functions have entry blocks.
+- [ ] **Type consistency** — Operand types match instruction requirements.
+- [ ] **CFG integrity** — All branches point to valid blocks.
+- [ ] **SSA verification** — Run `--verify-ssa` on all test programs.
+- [ ] **`baa --verify` mode** — Run all verification passes.
+
+#### v0.3.2.9.2: Performance Benchmarking
+- [ ] **Compile-time benchmark** — Compare old vs new codegen speed.
+- [ ] **Runtime benchmark** — Compare generated code performance.
+- [ ] **Memory usage profiling** — Track peak memory during compilation.
+- [ ] **Benchmark suite** — Collection of representative programs.
+
+#### v0.3.2.9.3: Regression Testing
+- [ ] **Output comparison** — Old codegen vs IR-based codegen.
+- [ ] **Test all v0.2.x programs** — Ensure backward compatibility.
+- [ ] **Edge case testing** — Complex control flow, nested loops, recursion.
+- [ ] **Error case testing** — Verify error messages unchanged.
+
+#### v0.3.2.9.4: Documentation & Cleanup
+- [ ] **Update INTERNALS.md** — Document new IR pipeline.
+- [ ] **IR Developer Guide** — How to add new IR instructions.
+- [ ] **Remove deprecated code** — Clean up old codegen paths.
+- [ ] **Code review checklist** — Ensure code quality standards.
 
 ---
 

@@ -1,13 +1,14 @@
 /**
  * @file ir_lower.h
- * @brief AST to IR lowering (IR Lowering) - Expressions + Statements
- * @version 0.3.0.4
+ * @brief AST to IR lowering (IR Lowering) - Expressions + Statements + Control Flow
+ * @version 0.3.0.5
  *
  * This module lowers validated AST nodes into Baa's IR using IRBuilder.
  *
  * Current scope:
  * - v0.3.0.3: expression lowering
  * - v0.3.0.4: statement lowering (var decl/assign/return/print/read)
+ * - v0.3.0.5: control-flow lowering (if/while/for/switch/break/continue)
  */
 
 #ifndef BAA_IR_LOWER_H
@@ -37,6 +38,14 @@ typedef struct IRLowerCtx {
     // Each binding maps a variable name -> pointer register.
     IRLowerBinding locals[256];
     int local_count;
+
+    // Label generator for CFG lowering (unique suffixes for Arabic labels).
+    int label_counter;
+
+    // Control-flow context stacks (for break/continue).
+    struct IRBlock* break_targets[64];
+    struct IRBlock* continue_targets[64];
+    int cf_depth;
 } IRLowerCtx;
 
 /**

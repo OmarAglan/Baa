@@ -129,13 +129,13 @@
 - [x] **Lower `NODE_PRINT`** — Generate `نداء @اطبع()` call.
 - [x] **Lower `NODE_READ`** — Generate `نداء @اقرأ()` call.
 
-#### v0.3.0.5: AST to IR Lowering (Control Flow)
-- [ ] **Lower `NODE_IF`** — Create condition block + true/false blocks + merge block.
-- [ ] **Lower `NODE_WHILE`** — Create header/body/exit blocks with back edge.
-- [ ] **Lower `NODE_FOR`** — Create init/header/body/increment/exit blocks.
-- [ ] **Lower `NODE_SWITCH`** — Create comparison chain + case blocks.
-- [ ] **Lower `NODE_BREAK`** — Generate `قفز` to loop exit.
-- [ ] **Lower `NODE_CONTINUE`** — Generate `قفز` to loop header/increment.
+#### v0.3.0.5: AST to IR Lowering (Control Flow) ✅ COMPLETED (2026-01-16)
+- [x] **Lower `NODE_IF`** — Create condition block + true/false blocks + merge block.
+- [x] **Lower `NODE_WHILE`** — Create header/body/exit blocks with back edge.
+- [x] **Lower `NODE_FOR`** — Create init/header/body/increment/exit blocks.
+- [x] **Lower `NODE_SWITCH`** — Create comparison chain + case blocks.
+- [x] **Lower `NODE_BREAK`** — Generate `قفز` to loop exit.
+- [x] **Lower `NODE_CONTINUE`** — Generate `قفز` to loop header/increment.
 
 #### v0.3.0.6: IR Printer
 - [ ] **`ir_print_func()`** — Print function header and all blocks.

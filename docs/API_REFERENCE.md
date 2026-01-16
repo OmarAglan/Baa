@@ -1,6 +1,6 @@
 # Baa Internal API Reference
 
-> **Version:** 0.3.0.4 | [← User Guide](USER_GUIDE.md) | [Internals →](INTERNALS.md)
+> **Version:** 0.3.0.5 | [← User Guide](USER_GUIDE.md) | [Internals →](INTERNALS.md)
 
 This document details the C functions, enumerations, and structures defined in `src/baa.h`, `src/ir.h`, `src/ir_builder.h`, and `src/ir_lower.h`.
 
@@ -971,6 +971,12 @@ typedef struct IRLowerCtx {
 
     IRLowerBinding locals[256];
     int local_count;
+
+    int label_counter;
+
+    struct IRBlock* break_targets[64];
+    struct IRBlock* continue_targets[64];
+    int cf_depth;
 } IRLowerCtx;
 ```
 
@@ -1025,13 +1031,15 @@ void lower_stmt(IRLowerCtx* ctx, Node* stmt);
 
 Lowers a single AST statement into IR using the active builder insertion point.
 
-Supported statements (v0.3.0.4):
+Supported statements (v0.3.0.5):
 - `NODE_VAR_DECL`: `حجز` + `خزن` and bind local
 - `NODE_ASSIGN`: `خزن` into existing local
 - `NODE_RETURN`: `رجوع`
 - `NODE_PRINT`: `نداء @اطبع(...)`
 - `NODE_READ`: `نداء @اقرأ(%ptr)`
 - `NODE_CALL_STMT`: lowered through call expression path
+- `NODE_IF`, `NODE_WHILE`, `NODE_FOR`, `NODE_SWITCH`
+- `NODE_BREAK`, `NODE_CONTINUE`
 
 ---
 

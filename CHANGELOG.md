@@ -8,6 +8,25 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.3.0.5] - 2026-01-16
+
+### Added
+- **AST → IR Lowering (Control Flow)** — Implemented CFG-based lowering for control-flow nodes using Arabic block labels and IR branches.
+  - Updated lowering context [`IRLowerCtx`](src/ir_lower.h:34) with:
+    - Label counter for unique block labels
+    - Break/continue target stacks for nested loops/switch
+  - Implemented lowering in [`src/ir_lower.c`](src/ir_lower.c:1) for:
+    - `NODE_IF` → `قفز_شرط` + then/else blocks + merge block
+    - `NODE_WHILE` → header/body/exit blocks with back edge `قفز`
+    - `NODE_FOR` → init + header/body/increment/exit blocks (`استمر` targets increment)
+    - `NODE_SWITCH` → comparison chain via `قارن يساوي` + case blocks + default + end (with C-style fallthrough)
+    - `NODE_BREAK` / `NODE_CONTINUE` → `قفز` to active targets
+
+### Note
+- IR lowering is still not integrated into the CLI pipeline (`src/main.c`) yet; this will land in v0.3.0.7.
+
+---
+
 ## [0.3.0.4] - 2026-01-16
 
 ### Added

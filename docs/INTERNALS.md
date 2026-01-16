@@ -1,6 +1,6 @@
 # Baa Compiler Internals
 
-> **Version:** 0.3.0.4 | [← Language Spec](LANGUAGE.md) | [API Reference →](API_REFERENCE.md)
+> **Version:** 0.3.0.5 | [← Language Spec](LANGUAGE.md) | [API Reference →](API_REFERENCE.md)
 
 **Target Architecture:** x86-64 (AMD64)
 **Target OS:** Windows (MinGW-w64 Toolchain)
@@ -58,7 +58,7 @@ flowchart LR
 | **6. Assemble** | `.s` Assembly | `.o` Object | `gcc -c` | Invokes external assembler. |
 | **7. Link** | `.o` Object | `.exe` Executable | `gcc` | Links with C Runtime. |
 
-> **Note (v0.3.0.4):** IR infrastructure + expression/statement lowering are implemented, but IR is not yet wired into the driver pipeline. Current compilation still uses direct AST-to-assembly.
+> **Note (v0.3.0.5):** IR infrastructure + expression/statement/control-flow lowering are implemented, but IR is not yet wired into the driver pipeline. Current compilation still uses direct AST-to-assembly.
 
 ### 1.1.1. Component Map
 
@@ -669,6 +669,20 @@ Statement lowering is implemented in the same module and currently supports:
 - `NODE_RETURN`: emit `رجوع`
 - `NODE_PRINT`: emit `نداء @اطبع(...)` (builtin call)
 - `NODE_READ`: emit `نداء @اقرأ(%ptr)` (builtin call)
+
+### 6.12. AST → IR Lowering (Control Flow, v0.3.0.5+)
+
+Control flow lowering extends statement lowering to produce a full CFG using:
+- `قفز` (unconditional branch)
+- `قفز_شرط` (conditional branch)
+
+Currently lowered control-flow nodes:
+- `NODE_IF`: then/else/merge blocks with `قفز_شرط`
+- `NODE_WHILE`: header/body/exit blocks, back edge to header (`قفز`)
+- `NODE_FOR`: init + header/body/increment/exit blocks (`استمر` targets increment)
+- `NODE_SWITCH`: comparison-chain dispatch + case blocks + default + end (with fallthrough)
+- `NODE_BREAK`: branch to active loop/switch exit block
+- `NODE_CONTINUE`: branch to active loop header/increment block
 
 For full specification, see [BAA_IR_SPECIFICATION.md](BAA_IR_SPECIFICATION.md).
 

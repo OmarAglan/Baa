@@ -14,6 +14,7 @@ set(SOURCES
     src/updater.c
     src/ir.c          # Intermediate Representation (Phase 3)
     src/ir_builder.c  # IR Builder pattern API (v0.3.0.2)
+    src/ir_lower.c    # AST -> IR lowering (v0.3.0.3)
 )
 
 # Add resource file for Windows (Icon & Version Info)

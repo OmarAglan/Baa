@@ -113,13 +113,13 @@
 - [x] **Create `ir_builder.h`** — Header file with builder API.
 - [x] **Create `ir_builder.c`** — Implementation of builder functions.
 
-#### v0.3.0.3: AST to IR Lowering (Expressions)
-- [ ] **`lower_expr()`** — Main expression lowering dispatcher.
-- [ ] **Lower `NODE_INT`** — Return immediate value.
-- [ ] **Lower `NODE_VAR_REF`** — Generate `حمل` (load) instruction.
-- [ ] **Lower `NODE_BIN_OP`** — Generate `جمع`/`طرح`/`ضرب`/`قسم` instructions.
-- [ ] **Lower `NODE_UNARY_OP`** — Generate `سالب`/`نفي` instructions.
-- [ ] **Lower `NODE_CALL_EXPR`** — Generate `نداء` (call) instruction.
+#### v0.3.0.3: AST to IR Lowering (Expressions) ✅ COMPLETED (2026-01-16)
+- [x] **`lower_expr()`** — Main expression lowering dispatcher.
+- [x] **Lower `NODE_INT`** — Return immediate value.
+- [x] **Lower `NODE_VAR_REF`** — Generate `حمل` (load) instruction.
+- [x] **Lower `NODE_BIN_OP`** — Generate `جمع`/`طرح`/`ضرب`/`قسم` instructions.
+- [x] **Lower `NODE_UNARY_OP`** — Generate `سالب`/`نفي` instructions.
+- [x] **Lower `NODE_CALL_EXPR`** — Generate `نداء` (call) instruction.
 
 #### v0.3.0.4: AST to IR Lowering (Statements)
 - [ ] **`lower_stmt()`** — Main statement lowering dispatcher.

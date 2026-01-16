@@ -1,8 +1,8 @@
 # Baa Internal API Reference
 
-> **Version:** 0.3.0.2 | [← User Guide](USER_GUIDE.md) | [Internals →](INTERNALS.md)
+> **Version:** 0.3.0.3 | [← User Guide](USER_GUIDE.md) | [Internals →](INTERNALS.md)
 
-This document details the C functions, enumerations, and structures defined in `src/baa.h`, `src/ir.h`, and `src/ir_builder.h`.
+This document details the C functions, enumerations, and structures defined in `src/baa.h`, `src/ir.h`, `src/ir_builder.h`, and `src/ir_lower.h`.
 
 ---
 
@@ -13,11 +13,12 @@ This document details the C functions, enumerations, and structures defined in `
 - [Semantic Analysis](#3-semantic-analysis)
 - [IR Module](#4-ir-module)
 - [IR Builder Module](#5-ir-builder-module)
-- [Codegen Module](#6-codegen-module)
-- [Diagnostic System](#7-diagnostic-system)
-- [Symbol Table](#8-symbol-table)
-- [Updater](#9-updater)
-- [Data Structures](#10-data-structures)
+- [IR Lowering Module](#6-ir-lowering-module)
+- [Codegen Module](#7-codegen-module)
+- [Diagnostic System](#8-diagnostic-system)
+- [Symbol Table](#9-symbol-table)
+- [Updater](#10-updater)
+- [Data Structures](#11-data-structures)
 
 ---
 
@@ -954,7 +955,69 @@ ir_module_free(module);
 
 ---
 
-## 6. Codegen Module
+## 6. IR Lowering Module (v0.3.0.3+)
+
+The IR Lowering module lowers validated AST nodes into Baa IR using the IR Builder.
+
+Files:
+- [`src/ir_lower.h`](src/ir_lower.h)
+- [`src/ir_lower.c`](src/ir_lower.c)
+
+### 6.1. `IRLowerCtx`
+
+```c
+typedef struct IRLowerCtx {
+    IRBuilder* builder;
+
+    IRLowerBinding locals[256];
+    int local_count;
+} IRLowerCtx;
+```
+
+A small context object used during lowering:
+- Holds the active `IRBuilder` insertion point
+- Tracks local variable bindings (name → pointer register)
+
+---
+
+### 6.2. `ir_lower_ctx_init`
+
+```c
+void ir_lower_ctx_init(IRLowerCtx* ctx, IRBuilder* builder);
+```
+
+Initializes the lowering context.
+
+---
+
+### 6.3. `ir_lower_bind_local`
+
+```c
+void ir_lower_bind_local(IRLowerCtx* ctx, const char* name, int ptr_reg, IRType* value_type);
+```
+
+Binds a local variable name to its `حجز` pointer register. This enables `NODE_VAR_REF` lowering to emit `حمل` from the pointer.
+
+---
+
+### 6.4. `lower_expr`
+
+```c
+IRValue* lower_expr(IRLowerCtx* ctx, Node* expr);
+```
+
+Main expression lowering dispatcher.
+
+Currently supports:
+- `NODE_INT` → immediate constant
+- `NODE_VAR_REF` → `حمل` (load)
+- `NODE_BIN_OP` → arithmetic (`جمع`/`طرح`/`ضرب`/`قسم`/`باقي`), comparisons (`قارن`), and boolean ops (`و`/`أو`)
+- `NODE_UNARY_OP` → `سالب` and boolean `نفي`
+- `NODE_CALL_EXPR` → `نداء`
+
+---
+
+## 7. Codegen Module
 
 Handles x86-64 assembly generation.
 
@@ -985,11 +1048,11 @@ Recursively generates assembly code from AST.
 
 ---
 
-## 7. Diagnostic System
+## 8. Diagnostic System
 
 Centralized diagnostic system for compiler errors and warnings (v0.2.8+).
 
-### 5.1. Error Reporting
+### 8.1. Error Reporting
 
 #### `error_init`
 
@@ -1013,7 +1076,7 @@ Reports an error with source location, line context, and a pointer to the error 
 - Supports printf-style formatting
 - **Colored output** (red) when terminal supports ANSI codes (v0.2.8+)
 
-### 5.2. Warning System (v0.2.8+)
+### 8.2. Warning System (v0.2.8+)
 
 #### `warning_init`
 
@@ -1045,7 +1108,7 @@ Reports a warning with source location and warning type.
 - Shows warning name in brackets: `[-Wunused-variable]`
 - With `-Werror`, warnings are displayed as errors (red)
 
-### 5.3. Warning Types
+### 8.3. Warning Types
 
 ```c
 typedef enum {
@@ -1057,7 +1120,7 @@ typedef enum {
 } WarningType;
 ```
 
-### 5.4. Warning Configuration
+### 8.4. Warning Configuration
 
 ```c
 typedef struct {
@@ -1070,7 +1133,7 @@ typedef struct {
 extern WarningConfig g_warning_config;
 ```
 
-### 5.5. State Query Functions
+### 8.5. State Query Functions
 
 | Function | Return | Description |
 |----------|--------|-------------|
@@ -1082,7 +1145,7 @@ extern WarningConfig g_warning_config;
 
 ---
 
-## 8. Symbol Table
+## 9. Symbol Table
 
 Manages variable scope and resolution.
 
@@ -1120,7 +1183,7 @@ typedef struct {
 
 ---
 
-## 9. Updater
+## 10. Updater
 
 ### `run_updater`
 
@@ -1137,9 +1200,9 @@ Runs the built-in updater.
 
 ---
 
-## 10. Data Structures
+## 11. Data Structures
 
-### 10.1. Preprocessor Structures
+### 11.1. Preprocessor Structures
 
 ### Lexer & Preprocessor Structures
 
@@ -1172,7 +1235,7 @@ typedef struct {
 } Lexer;
 ```
 
-### 10.2. Token
+### 11.2. Token
 
 Represents a single atomic unit of source code.
 
@@ -1185,7 +1248,7 @@ typedef struct {
     const char* filename;
 } Token;
 ```
-### 10.3. Token Types
+### 11.3. Token Types
 
 ### BaaTokenType Enum
 
@@ -1252,7 +1315,7 @@ typedef enum {
 ```
 
 ---
-### 10.4. AST Node Structure
+### 11.4. AST Node Structure
 
 ### Node (AST)
 
@@ -1342,7 +1405,7 @@ typedef struct Node {
 ```
 
 ---
-### 10.5. Node Types
+### 11.5. Node Types
 
 ### NodeType Enum
 

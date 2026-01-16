@@ -8,6 +8,26 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.3.0.3] - 2026-01-16
+
+### Added
+- **AST → IR Lowering (Expressions)** — Initial expression lowering layer built on top of the IR Builder.
+  - New module: [`src/ir_lower.h`](src/ir_lower.h) + [`src/ir_lower.c`](src/ir_lower.c)
+  - Implemented [`lower_expr()`](src/ir_lower.c:146) for:
+    - `NODE_INT` → constant immediate
+    - `NODE_VAR_REF` → `حمل` (load) from local binding table
+    - `NODE_BIN_OP` → arithmetic (`جمع`/`طرح`/`ضرب`/`قسم`/`باقي`) + comparisons (`قارن`) + boolean ops (`و`/`أو`)
+    - `NODE_UNARY_OP` → `سالب` (neg) and boolean `نفي` (not)
+    - `NODE_CALL_EXPR` → `نداء` (call) with argument lowering
+  - Added lightweight lowering context + local bindings API:
+    - [`IRLowerCtx`](src/ir_lower.h:36)
+    - [`ir_lower_bind_local()`](src/ir_lower.c:35)
+
+### Changed
+- **Build System** — Added [`src/ir_lower.c`](CMakeLists.txt:7) to CMake sources.
+
+---
+
 ## [0.3.0.2] - 2026-01-15
 
 ### Added

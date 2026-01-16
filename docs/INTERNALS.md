@@ -1,6 +1,6 @@
 # Baa Compiler Internals
 
-> **Version:** 0.3.0.2 | [← Language Spec](LANGUAGE.md) | [API Reference →](API_REFERENCE.md)
+> **Version:** 0.3.0.3 | [← Language Spec](LANGUAGE.md) | [API Reference →](API_REFERENCE.md)
 
 **Target Architecture:** x86-64 (AMD64)
 **Target OS:** Windows (MinGW-w64 Toolchain)
@@ -52,13 +52,13 @@ flowchart LR
 |-------|-------|--------|-----------|-------------|
 | **1. Frontend** | `.baa` Source | AST | `lexer.c`, `parser.c` | Tokenizes, handles macros, and builds the syntax tree. |
 | **2. Analysis** | AST | Valid AST | `analysis.c` | **Semantic Pass**: Checks types, scopes, and resolves symbols. |
-| **3. IR Lowering** | AST | IR | `ir.c` (v0.3.0+) | Converts AST to SSA-form Intermediate Representation. |
+| **3. IR Lowering** | AST | IR | `ir_lower.c` (v0.3.0.3+) + `ir_builder.c` | Converts AST expressions to SSA-form Intermediate Representation using the IR Builder. |
 | **4. Optimization** | IR | Optimized IR | (future) | Dead code elimination, constant propagation, etc. |
 | **5. Backend** | IR | `.s` Assembly | `codegen.c` | Generates x86-64 assembly code (AT&T syntax). |
 | **6. Assemble** | `.s` Assembly | `.o` Object | `gcc -c` | Invokes external assembler. |
 | **7. Link** | `.o` Object | `.exe` Executable | `gcc` | Links with C Runtime. |
 
-> **Note (v0.3.0):** IR infrastructure is implemented but AST-to-IR lowering is not yet connected. Current compilation still uses direct AST-to-assembly.
+> **Note (v0.3.0.3):** IR infrastructure and expression lowering are implemented, but IR is not yet wired into the driver pipeline. Current compilation still uses direct AST-to-assembly.
 
 ### 1.1.1. Component Map
 
@@ -67,13 +67,15 @@ flowchart TB
     Driver["Driver / CLI\nsrc/main.c"] --> Lexer["Lexer + Preprocessor\nsrc/lexer.c"]
     Lexer --> Parser["Parser\nsrc/parser.c"]
     Parser --> Analyzer["Semantic Analysis\nsrc/analysis.c"]
-    Analyzer --> IR["IR Module\nsrc/ir.c (v0.3.0+)"]
+    Analyzer --> Lower["IR Lowering\nsrc/ir_lower.c (v0.3.0.3+)"]
+    Lower --> IR["IR Module\nsrc/ir.c (v0.3.0+)"]
     IR --> Codegen["Code Generator\nsrc/codegen.c"]
     Codegen --> GCC["External Toolchain\nMinGW-w64 gcc"]
 
     Driver --> Diagnostics["Diagnostics\nsrc/error.c"]
     Driver --> Updater["Updater\nsrc/updater.c (Windows-only)"]
     
+    style Lower fill:#fff3e0
     style IR fill:#fff3e0
 ```
 
@@ -643,13 +645,29 @@ IRValue* ir_builder_const_bool(int value);
 - Control flow structure helpers for if/else/while
 - Statistics tracking
 
+### 6.10. AST → IR Lowering (Expressions, v0.3.0.3+)
+
+Expression lowering lives in `src/ir_lower.h` and `src/ir_lower.c` and is built on top of the IR Builder (`src/ir_builder.h`, `src/ir_builder.c`).
+
+Key concepts:
+- `IRLowerCtx`: Lowering context (builder + simple local bindings table).
+- `ir_lower_bind_local()`: Bind a variable name to its `حجز` pointer register. *(Statement lowering will populate this in v0.3.0.4.)*
+- `lower_expr()`: Lower AST expressions into IR operands (`IRValue*`) and emits IR instructions via the builder.
+
+Currently lowered expressions:
+- `NODE_INT`, `NODE_STRING`, `NODE_CHAR`, `NODE_BOOL`
+- `NODE_VAR_REF` (loads via `حمل`)
+- `NODE_BIN_OP` (arithmetic, comparisons, logical ops)
+- `NODE_UNARY_OP` (neg/not)
+- `NODE_CALL_EXPR` (calls via `نداء`)
+
 For full specification, see [BAA_IR_SPECIFICATION.md](BAA_IR_SPECIFICATION.md).
 
 ---
 
 ## 7. Code Generation
 
-### 6.1. Loop Control & Branching
+### 7.1. Loop Control & Branching
 
 To support nested loops and switches, the code generator maintains stacks:
 
@@ -685,7 +703,7 @@ static void reset_codegen() {
 
 **Critical:** `reset_codegen()` is called at the start of each file compilation to prevent state leakage between translation units.
 
-### 6.2. Windows x64 ABI Compliance
+### 7.2. Windows x64 ABI Compliance
 
 | Requirement | Implementation |
 |-------------|----------------|
@@ -696,7 +714,7 @@ static void reset_codegen() {
 | **Caller-saved** | RAX, RCX, RDX, R8-R11 |
 | **Callee-saved** | RBX, RBP, RDI, RSI, R12-R15 |
 
-### 6.3. Printing
+### 7.3. Printing
 
 The `اطبع` statement uses the symbol type to determine the format string:
 - If `TYPE_INT` → call `printf("%d\n")`

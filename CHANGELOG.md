@@ -8,6 +8,23 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.3.0.4] - 2026-01-16
+
+### Added
+- **AST → IR Lowering (Statements)** — Implemented initial statement lowering on top of the existing expression lowering.
+  - Extended the IR lowering module: [`src/ir_lower.h`](src/ir_lower.h) + [`src/ir_lower.c`](src/ir_lower.c)
+  - Added [`lower_stmt()`](src/ir_lower.c:377) and [`lower_stmt_list()`](src/ir_lower.c:369) to lower:
+    - `NODE_VAR_DECL` → `حجز` (alloca) + `خزن` (store) + bind local name for `NODE_VAR_REF`
+    - `NODE_ASSIGN` → `خزن` (store) to an existing local binding
+    - `NODE_RETURN` → `رجوع` (return)
+    - `NODE_PRINT` → `نداء @اطبع(...)` (call)
+    - `NODE_READ` → `نداء @اقرأ(%ptr)` (call)
+
+### Note
+- IR lowering is still not integrated into the driver pipeline (`src/main.c`) yet; this work prepares v0.3.0.7 integration.
+
+---
+
 ## [0.3.0.3] - 2026-01-16
 
 ### Added

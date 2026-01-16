@@ -1,6 +1,6 @@
 # Baa Compiler Internals
 
-> **Version:** 0.3.0.3 | [← Language Spec](LANGUAGE.md) | [API Reference →](API_REFERENCE.md)
+> **Version:** 0.3.0.4 | [← Language Spec](LANGUAGE.md) | [API Reference →](API_REFERENCE.md)
 
 **Target Architecture:** x86-64 (AMD64)
 **Target OS:** Windows (MinGW-w64 Toolchain)
@@ -52,13 +52,13 @@ flowchart LR
 |-------|-------|--------|-----------|-------------|
 | **1. Frontend** | `.baa` Source | AST | `lexer.c`, `parser.c` | Tokenizes, handles macros, and builds the syntax tree. |
 | **2. Analysis** | AST | Valid AST | `analysis.c` | **Semantic Pass**: Checks types, scopes, and resolves symbols. |
-| **3. IR Lowering** | AST | IR | `ir_lower.c` (v0.3.0.3+) + `ir_builder.c` | Converts AST expressions to SSA-form Intermediate Representation using the IR Builder. |
+| **3. IR Lowering** | AST | IR | `ir_lower.c` (v0.3.0.3+) + `ir_builder.c` | Converts AST expressions/statements to SSA-form Intermediate Representation using the IR Builder. |
 | **4. Optimization** | IR | Optimized IR | (future) | Dead code elimination, constant propagation, etc. |
 | **5. Backend** | IR | `.s` Assembly | `codegen.c` | Generates x86-64 assembly code (AT&T syntax). |
 | **6. Assemble** | `.s` Assembly | `.o` Object | `gcc -c` | Invokes external assembler. |
 | **7. Link** | `.o` Object | `.exe` Executable | `gcc` | Links with C Runtime. |
 
-> **Note (v0.3.0.3):** IR infrastructure and expression lowering are implemented, but IR is not yet wired into the driver pipeline. Current compilation still uses direct AST-to-assembly.
+> **Note (v0.3.0.4):** IR infrastructure + expression/statement lowering are implemented, but IR is not yet wired into the driver pipeline. Current compilation still uses direct AST-to-assembly.
 
 ### 1.1.1. Component Map
 
@@ -660,6 +660,15 @@ Currently lowered expressions:
 - `NODE_BIN_OP` (arithmetic, comparisons, logical ops)
 - `NODE_UNARY_OP` (neg/not)
 - `NODE_CALL_EXPR` (calls via `نداء`)
+
+### 6.11. AST → IR Lowering (Statements, v0.3.0.4+)
+
+Statement lowering is implemented in the same module and currently supports:
+- `NODE_VAR_DECL`: emit `حجز` + `خزن` and bind the variable name via `ir_lower_bind_local()`
+- `NODE_ASSIGN`: emit `خزن` to an existing local binding
+- `NODE_RETURN`: emit `رجوع`
+- `NODE_PRINT`: emit `نداء @اطبع(...)` (builtin call)
+- `NODE_READ`: emit `نداء @اقرأ(%ptr)` (builtin call)
 
 For full specification, see [BAA_IR_SPECIFICATION.md](BAA_IR_SPECIFICATION.md).
 

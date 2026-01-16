@@ -1,16 +1,13 @@
 /**
  * @file ir_lower.h
- * @brief AST to IR lowering (IR Lowering) - Expressions
- * @version 0.3.0.3
+ * @brief AST to IR lowering (IR Lowering) - Expressions + Statements
+ * @version 0.3.0.4
  *
  * This module lowers validated AST nodes into Baa's IR using IRBuilder.
  *
- * Current scope (v0.3.0.3): expression lowering:
- * - NODE_INT
- * - NODE_VAR_REF
- * - NODE_BIN_OP (add/sub/mul/div)
- * - NODE_UNARY_OP (neg/not)
- * - NODE_CALL_EXPR
+ * Current scope:
+ * - v0.3.0.3: expression lowering
+ * - v0.3.0.4: statement lowering (var decl/assign/return/print/read)
  */
 
 #ifndef BAA_IR_LOWER_H
@@ -67,6 +64,20 @@ void ir_lower_bind_local(IRLowerCtx* ctx, const char* name, int ptr_reg, IRType*
  * fresh copy via ir_value_reg()/ir_value_const_int(), etc.
  */
 IRValue* lower_expr(IRLowerCtx* ctx, Node* expr);
+
+// ============================================================================
+// Statement lowering (v0.3.0.4)
+// ============================================================================
+
+/**
+ * @brief Lower a single statement node.
+ */
+void lower_stmt(IRLowerCtx* ctx, Node* stmt);
+
+/**
+ * @brief Lower a linked-list of statements (as used in NODE_BLOCK).
+ */
+void lower_stmt_list(IRLowerCtx* ctx, Node* first_stmt);
 
 #ifdef __cplusplus
 }

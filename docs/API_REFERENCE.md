@@ -1,6 +1,6 @@
 # Baa Internal API Reference
 
-> **Version:** 0.3.0.3 | [← User Guide](USER_GUIDE.md) | [Internals →](INTERNALS.md)
+> **Version:** 0.3.0.4 | [← User Guide](USER_GUIDE.md) | [Internals →](INTERNALS.md)
 
 This document details the C functions, enumerations, and structures defined in `src/baa.h`, `src/ir.h`, `src/ir_builder.h`, and `src/ir_lower.h`.
 
@@ -1014,6 +1014,34 @@ Currently supports:
 - `NODE_BIN_OP` → arithmetic (`جمع`/`طرح`/`ضرب`/`قسم`/`باقي`), comparisons (`قارن`), and boolean ops (`و`/`أو`)
 - `NODE_UNARY_OP` → `سالب` and boolean `نفي`
 - `NODE_CALL_EXPR` → `نداء`
+
+---
+
+### 6.5. `lower_stmt`
+
+```c
+void lower_stmt(IRLowerCtx* ctx, Node* stmt);
+```
+
+Lowers a single AST statement into IR using the active builder insertion point.
+
+Supported statements (v0.3.0.4):
+- `NODE_VAR_DECL`: `حجز` + `خزن` and bind local
+- `NODE_ASSIGN`: `خزن` into existing local
+- `NODE_RETURN`: `رجوع`
+- `NODE_PRINT`: `نداء @اطبع(...)`
+- `NODE_READ`: `نداء @اقرأ(%ptr)`
+- `NODE_CALL_STMT`: lowered through call expression path
+
+---
+
+### 6.6. `lower_stmt_list`
+
+```c
+void lower_stmt_list(IRLowerCtx* ctx, Node* first_stmt);
+```
+
+Lowers a linked list of statements (e.g., the statements list inside `NODE_BLOCK`).
 
 ---
 

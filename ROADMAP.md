@@ -121,13 +121,13 @@
 - [x] **Lower `NODE_UNARY_OP`** — Generate `سالب`/`نفي` instructions.
 - [x] **Lower `NODE_CALL_EXPR`** — Generate `نداء` (call) instruction.
 
-#### v0.3.0.4: AST to IR Lowering (Statements)
-- [ ] **`lower_stmt()`** — Main statement lowering dispatcher.
-- [ ] **Lower `NODE_VAR_DECL`** — Generate `حجز` (alloca) + `خزن` (store).
-- [ ] **Lower `NODE_ASSIGN`** — Generate `خزن` (store) instruction.
-- [ ] **Lower `NODE_RETURN`** — Generate `رجوع` (return) instruction.
-- [ ] **Lower `NODE_PRINT`** — Generate `نداء @اطبع()` call.
-- [ ] **Lower `NODE_READ`** — Generate `نداء @اقرأ()` call.
+#### v0.3.0.4: AST to IR Lowering (Statements) ✅ COMPLETED (2026-01-16)
+- [x] **`lower_stmt()`** — Main statement lowering dispatcher.
+- [x] **Lower `NODE_VAR_DECL`** — Generate `حجز` (alloca) + `خزن` (store).
+- [x] **Lower `NODE_ASSIGN`** — Generate `خزن` (store) instruction.
+- [x] **Lower `NODE_RETURN`** — Generate `رجوع` (return) instruction.
+- [x] **Lower `NODE_PRINT`** — Generate `نداء @اطبع()` call.
+- [x] **Lower `NODE_READ`** — Generate `نداء @اقرأ()` call.
 
 #### v0.3.0.5: AST to IR Lowering (Control Flow)
 - [ ] **Lower `NODE_IF`** — Create condition block + true/false blocks + merge block.

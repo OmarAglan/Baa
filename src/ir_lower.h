@@ -88,6 +88,21 @@ void lower_stmt(IRLowerCtx* ctx, Node* stmt);
  */
 void lower_stmt_list(IRLowerCtx* ctx, Node* first_stmt);
 
+// ============================================================================
+// Program lowering (v0.3.0.7)
+// ============================================================================
+
+/**
+ * @brief Lower a validated AST program (NODE_PROGRAM) into an IR module.
+ *
+ * This is the main integration entry point for the driver pipeline in v0.3.0.7.
+ *
+ * @param program Root AST node (must be NODE_PROGRAM).
+ * @param module_name Optional module name (usually filename).
+ * @return Newly allocated IRModule (caller owns; free with ir_module_free()).
+ */
+IRModule* ir_lower_program(Node* program, const char* module_name);
+
 #ifdef __cplusplus
 }
 #endif

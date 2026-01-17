@@ -1,6 +1,6 @@
 # Baa Internal API Reference
 
-> **Version:** 0.3.0.6 | [← User Guide](USER_GUIDE.md) | [Internals →](INTERNALS.md)
+> **Version:** 0.3.0.7 | [← User Guide](USER_GUIDE.md) | [Internals →](INTERNALS.md)
 
 This document details the C functions, enumerations, and structures defined in `src/baa.h`, `src/ir.h`, `src/ir_builder.h`, and `src/ir_lower.h`.
 
@@ -1074,6 +1074,30 @@ Supported statements (v0.3.0.5):
 - `NODE_CALL_STMT`: lowered through call expression path
 - `NODE_IF`, `NODE_WHILE`, `NODE_FOR`, `NODE_SWITCH`
 - `NODE_BREAK`, `NODE_CONTINUE`
+
+---
+
+### 6.7. `ir_lower_program` (v0.3.0.7)
+
+```c
+IRModule* ir_lower_program(Node* program, const char* module_name);
+```
+
+Top-level entry point for the driver: converts a validated `NODE_PROGRAM` AST into a fully-populated `IRModule`.
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `program` | `Node*` | Root AST node (must be `NODE_PROGRAM`) |
+| `module_name` | `const char*` | Optional module name (usually filename) |
+
+**Returns:** Newly allocated `IRModule` (caller owns; free with `ir_module_free()`).
+
+**Behavior:**
+1. Creates a new `IRModule` and `IRBuilder`
+2. Walks top-level declarations:
+   - Global variables (`NODE_VAR_DECL` with `is_global`) → `ir_builder_create_global_init()`
+   - Functions (`NODE_FUNC_DEF`) → `ir_builder_create_func()` + parameter spilling + `lower_stmt()`
+3. Returns the fully-lowered module
 
 ---
 

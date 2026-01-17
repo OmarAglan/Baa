@@ -219,20 +219,34 @@ IRValue* lower_expr(IRLowerCtx* ctx, Node* expr) {
             return ir_builder_const_i64((int64_t)expr->data.integer.value);
 
         case NODE_VAR_REF: {
-            IRLowerBinding* b = find_local(ctx, expr->data.var_ref.name);
-            if (!b) {
-                // Not yet lowered variable declaration (v0.3.0.4) => no binding.
-                fprintf(stderr, "IR Lower Error: unresolved local '%s' (no binding)\n",
-                        expr->data.var_ref.name ? expr->data.var_ref.name : "???");
-                return ir_builder_const_i64(0);
+            const char* name = expr->data.var_ref.name;
+
+            // 1) Local variable (stack slot)
+            IRLowerBinding* b = find_local(ctx, name);
+            if (b) {
+                IRType* value_type = b->value_type ? b->value_type : IR_TYPE_I64_T;
+
+                // Use a typeless pointer operand to avoid leaking dynamically allocated pointer types.
+                IRValue* ptr = ir_value_reg(b->ptr_reg, NULL);
+                int loaded = ir_builder_emit_load(ctx->builder, value_type, ptr);
+                return ir_value_reg(loaded, value_type);
             }
 
-            IRType* value_type = b->value_type ? b->value_type : IR_TYPE_I64_T;
+            // 2) Global variable (module scope)
+            IRGlobal* g = NULL;
+            if (ctx->builder && ctx->builder->module && name) {
+                g = ir_module_find_global(ctx->builder->module, name);
+            }
+            if (g) {
+                // Globals are addressable; load from @name
+                IRValue* gptr = ir_value_global(name, g->type);
+                int loaded = ir_builder_emit_load(ctx->builder, g->type, gptr);
+                return ir_value_reg(loaded, g->type);
+            }
 
-            // Use a typeless pointer operand to avoid leaking dynamically allocated pointer types.
-            IRValue* ptr = ir_value_reg(b->ptr_reg, NULL);
-            int loaded = ir_builder_emit_load(ctx->builder, value_type, ptr);
-            return ir_value_reg(loaded, value_type);
+            fprintf(stderr, "IR Lower Error: unresolved variable '%s' (no local/global binding)\n",
+                    name ? name : "???");
+            return ir_builder_const_i64(0);
         }
 
         case NODE_BIN_OP: {
@@ -369,21 +383,34 @@ static void lower_var_decl(IRLowerCtx* ctx, Node* stmt) {
 static void lower_assign(IRLowerCtx* ctx, Node* stmt) {
     if (!ctx || !ctx->builder || !stmt) return;
 
-    IRLowerBinding* b = find_local(ctx, stmt->data.assign_stmt.name);
-    if (!b) {
-        fprintf(stderr, "IR Lower Error: assignment to unknown local '%s'\n",
-                stmt->data.assign_stmt.name ? stmt->data.assign_stmt.name : "???");
+    const char* name = stmt->data.assign_stmt.name;
+
+    IRLowerBinding* b = find_local(ctx, name);
+    if (b) {
+        IRType* value_type = b->value_type ? b->value_type : IR_TYPE_I64_T;
+
+        IRValue* rhs = lower_expr(ctx, stmt->data.assign_stmt.expression);
+
+        // خزن <rhs>, %ptr
+        (void)value_type; // reserved for future casts/type checks
+        IRValue* ptr = ir_value_reg(b->ptr_reg, NULL);
+        ir_builder_emit_store(ctx->builder, rhs, ptr);
         return;
     }
 
-    IRType* value_type = b->value_type ? b->value_type : IR_TYPE_I64_T;
+    // Assignment to a global (module scope)
+    IRGlobal* g = NULL;
+    if (ctx->builder && ctx->builder->module && name) {
+        g = ir_module_find_global(ctx->builder->module, name);
+    }
+    if (g) {
+        IRValue* rhs = lower_expr(ctx, stmt->data.assign_stmt.expression);
+        IRValue* gptr = ir_value_global(name, g->type);
+        ir_builder_emit_store(ctx->builder, rhs, gptr);
+        return;
+    }
 
-    IRValue* rhs = lower_expr(ctx, stmt->data.assign_stmt.expression);
-
-    // خزن <rhs>, %ptr
-    (void)value_type; // reserved for future casts/type checks
-    IRValue* ptr = ir_value_reg(b->ptr_reg, NULL);
-    ir_builder_emit_store(ctx->builder, rhs, ptr);
+    fprintf(stderr, "IR Lower Error: assignment to unknown variable '%s'\n", name ? name : "???");
 }
 
 static void lower_return(IRLowerCtx* ctx, Node* stmt) {
@@ -789,4 +816,118 @@ void lower_stmt(IRLowerCtx* ctx, Node* stmt) {
             fprintf(stderr, "IR Lower Error: unsupported stmt node type (%d)\n", (int)stmt->type);
             return;
     }
+}
+
+// ============================================================================
+// Program lowering (v0.3.0.7)
+// ============================================================================
+
+static IRValue* ir_lower_global_init_value(IRBuilder* builder, Node* expr, IRType* expected_type) {
+    if (!builder) return NULL;
+
+    if (!expr) {
+        return ir_value_const_int(0, expected_type ? expected_type : IR_TYPE_I64_T);
+    }
+
+    switch (expr->type) {
+        case NODE_INT:
+            return ir_value_const_int((int64_t)expr->data.integer.value,
+                                      expected_type ? expected_type : IR_TYPE_I64_T);
+
+        case NODE_BOOL:
+            return ir_value_const_int(expr->data.bool_lit.value ? 1 : 0,
+                                      expected_type ? expected_type : IR_TYPE_I1_T);
+
+        case NODE_CHAR:
+            return ir_value_const_int((int64_t)expr->data.char_lit.value,
+                                      expected_type ? expected_type : IR_TYPE_I64_T);
+
+        case NODE_STRING:
+            // Adds to module string table and returns pointer value.
+            return ir_builder_const_string(builder, expr->data.string_lit.value);
+
+        default:
+            // Non-constant global initializers are not supported yet; fall back to zero.
+            return ir_value_const_int(0, expected_type ? expected_type : IR_TYPE_I64_T);
+    }
+}
+
+IRModule* ir_lower_program(Node* program, const char* module_name) {
+    if (!program || program->type != NODE_PROGRAM) return NULL;
+
+    IRModule* module = ir_module_new(module_name ? module_name : "module");
+    if (!module) return NULL;
+
+    IRBuilder* builder = ir_builder_new(module);
+    if (!builder) {
+        ir_module_free(module);
+        return NULL;
+    }
+
+    // Walk top-level declarations: globals + functions
+    for (Node* decl = program->data.program.declarations; decl; decl = decl->next) {
+        // Globals
+        if (decl->type == NODE_VAR_DECL && decl->data.var_decl.is_global) {
+            IRType* gtype = ir_type_from_datatype(decl->data.var_decl.type);
+            IRValue* init = ir_lower_global_init_value(builder, decl->data.var_decl.expression, gtype);
+
+            (void)ir_builder_create_global_init(builder, decl->data.var_decl.name, gtype, init,
+                                                decl->data.var_decl.is_const ? 1 : 0);
+            continue;
+        }
+
+        // Functions
+        if (decl->type == NODE_FUNC_DEF) {
+            IRType* ret_type = ir_type_from_datatype(decl->data.func_def.return_type);
+            IRFunc* func = ir_builder_create_func(builder, decl->data.func_def.name, ret_type);
+            if (!func) continue;
+
+            func->is_prototype = decl->data.func_def.is_prototype;
+
+            // Prototypes don't have a body or blocks.
+            if (func->is_prototype) {
+                // Still add parameters for signature printing.
+                for (Node* p = decl->data.func_def.params; p; p = p->next) {
+                    if (p->type != NODE_VAR_DECL) continue;
+                    IRType* ptype = ir_type_from_datatype(p->data.var_decl.type);
+                    (void)ir_builder_add_param(builder, p->data.var_decl.name, ptype);
+                }
+                continue;
+            }
+
+            // Entry block
+            IRBlock* entry = ir_builder_create_block(builder, "بداية");
+            ir_builder_set_insert_point(builder, entry);
+
+            IRLowerCtx ctx;
+            ir_lower_ctx_init(&ctx, builder);
+
+            // Parameters: add params, then spill into allocas so existing lowering can treat them like locals.
+            for (Node* p = decl->data.func_def.params; p; p = p->next) {
+                if (p->type != NODE_VAR_DECL) continue;
+
+                IRType* ptype = ir_type_from_datatype(p->data.var_decl.type);
+                const char* pname = p->data.var_decl.name ? p->data.var_decl.name : NULL;
+
+                int preg = ir_builder_add_param(builder, pname, ptype);
+
+                if (pname) {
+                    int ptr_reg = ir_builder_emit_alloca(builder, ptype);
+                    ir_lower_bind_local(&ctx, pname, ptr_reg, ptype);
+
+                    IRValue* val = ir_value_reg(preg, ptype);   // %معامل<n>
+                    IRValue* ptr = ir_value_reg(ptr_reg, NULL); // typeless pointer
+                    ir_builder_emit_store(builder, val, ptr);
+                }
+            }
+
+            // Lower function body (NODE_BLOCK)
+            if (decl->data.func_def.body) {
+                lower_stmt(&ctx, decl->data.func_def.body);
+            }
+        }
+    }
+
+    ir_builder_free(builder);
+    return module;
 }

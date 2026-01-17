@@ -8,6 +8,27 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.3.0.7] - 2026-01-17
+
+### Added
+- **IR phase integrated into the driver pipeline** — the compiler now builds IR for each translation unit after semantic analysis.
+  - New program-level lowering entry point: [`ir_lower_program()`](src/ir_lower.c:855) declared in [`src/ir_lower.h`](src/ir_lower.h:104).
+  - Driver now runs: Parse → Analyze → **Lower IR** → (current) AST→Assembly codegen (IR→backend is still pending) in [`src/main.c`](src/main.c:325).
+
+- **`--emit-ir` CLI flag** — writes Arabic IR to `<input>.ir` next to the source file using [`ir_module_dump()`](src/ir.c:1693).
+  - Implemented in [`src/main.c`](src/main.c:158).
+
+### Changed
+- **`--dump-ir` now uses the integrated IR phase** (instead of a separate ad-hoc lowering path), printing the same IR module produced by [`ir_lower_program()`](src/ir_lower.c:855).
+
+### Fixed
+- **Global variable references during IR lowering** — expression/assignment lowering now resolves module-scope globals (e.g. `@حد`) when no local binding exists:
+  - [`lower_expr()`](src/ir_lower.c:209) resolves globals in `NODE_VAR_REF`
+  - [`lower_assign()`](src/ir_lower.c:383) supports stores to globals
+
+### Testing
+- Added integration IR test program: [`tests/ir_test.baa`](tests/ir_test.baa:1)
+
 ## [0.3.0.6] - 2026-01-17
 
 ### Added

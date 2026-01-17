@@ -1,4 +1,4 @@
-# Baa Roadmap
+# Baa Roadmap (Updated)
 
 > Track the development progress of the Baa programming language.
 > **Current Status:** Phase 3 - Intermediate Representation (v0.3.0)
@@ -9,7 +9,7 @@
 
 *Goal: Produce a Kernighan & Ritchie–style first book for Baa, in Arabic, serving as the definitive learning + reference resource.*
 
-- [ ] **Write the Arabic “Baa Book”** — book-length guide in Arabic with exercises.
+- [ ] **Write the Arabic "Baa Book"** — book-length guide in Arabic with exercises.
 - [ ] **Define terminology glossary** — consistent Arabic technical vocabulary.
 - [ ] **Create example suite** — verified, idiomatic examples that compile with v0.2.9.
 - [ ] **Add exercises and challenges** — per chapter, with expected outputs.
@@ -282,18 +282,25 @@
 
 #### v0.3.2.8.1: Target Abstraction
 - [ ] **Define `Target` interface** — Register info, calling convention.
-- [ ] **x86-64 target** — Current implementation as first target.
+- [ ] **x86-64 Windows target** — Current implementation as first target.
 - [ ] **Target selection** — `--target=x86_64-windows` flag.
 
 #### v0.3.2.8.2: Calling Convention Abstraction
 - [ ] **Define `CallingConv` struct** — Arg registers, return register.
 - [ ] **Windows x64 ABI** — Current convention as default.
-- [ ] **SystemV AMD64 ABI** — Linux/macOS convention (future).
+- [ ] **SystemV AMD64 ABI** — Linux/macOS convention.
 
 #### v0.3.2.8.3: Code Model Options
 - [ ] **Small code model** — All code/data within 2GB (default).
 - [ ] **PIC support** — Position independent code flag.
 - [ ] **Stack protection** — Optional stack canaries.
+
+#### v0.3.2.8.4: Linux x86-64 Target 🐧
+- [ ] **SystemV AMD64 ABI implementation** — Different calling convention.
+- [ ] **ELF output support** — Instead of PE/COFF.
+- [ ] **Linux syscall wrappers** — Or libc linking.
+- [ ] **GCC/Clang backend for Linux** — For Linux assembly.
+- [ ] **Cross-compilation** — `--target=x86_64-linux` from Windows.
 
 ---
 
@@ -326,9 +333,9 @@
 
 ---
 
-## 📚 Phase 3.5: Language Completeness (v0.3.3 - v0.3.9)
+## 📚 Phase 3.5: Language Completeness (v0.3.3 - v0.3.12)
 
-*Goal: Add essential features to make Baa practical for real-world programs before Phase 4.*
+*Goal: Add essential features to make Baa practical for real-world programs and ready for self-hosting.*
 
 ### v0.3.3: Array Initialization 📊
 **Goal:** Enable direct initialization of arrays with values.
@@ -366,15 +373,14 @@
 **Complete Example:**
 ```baa
 // ١. تعريف التعداد (Enumeration)
-// يحدد مجموعة من الألوان الممكنة
 تعداد لون {
     أحمر،
     أزرق،
     أسود،
     أبيض
 }
+
 // ٢. تعريف الهيكل (Structure)
-// يجمع بيانات السيارة
 هيكل سيارة {
     نص موديل.
     صحيح سنة_الصنع.
@@ -382,26 +388,17 @@
 }
 
 صحيح الرئيسية() {
-    // تعريف متغير من نوع الهيكل
     هيكل سيارة س.
     
-    // ٣. استخدام النقطتين (:) للوصول لأعضاء الهيكل
     س:موديل = "تويوتا كورولا".
     س:سنة_الصنع = ٢٠٢٤.
-    
-    // ٤. استخدام النقطتين (:) للوصول لقيم التعداد
     س:لون_السيارة = لون:أحمر.
     
-    // طباعة البيانات
-    اطبع "بيانات السيارة الجديدة:".
     اطبع س:موديل.
     اطبع س:سنة_الصنع.
     
-    // ٥. استخدام التعداد في الشروط
     إذا (س:لون_السيارة == لون:أحمر) {
         اطبع "تحذير: السيارات الحمراء سريعة!".
-    } وإلا {
-        اطبع "لون السيارة هادئ.".
     }
     
     إرجع ٠.
@@ -428,6 +425,8 @@
 - [ ] **Memory Layout**: Calculate field offsets with padding/alignment.
 - [ ] **Codegen**: Emit struct definitions and member access code.
 
+---
+
 ### v0.3.5: Character Type 📝
 **Goal:** Add proper character type to align with C conventions.
 
@@ -437,9 +436,7 @@
 
 **Syntax:**
 ```baa
-// Character variable
 حرف ح = 'أ'.
-// String as char array (internal representation)
 نص اسم = "أحمد".  // Equivalent to: حرف اسم[] = {'أ', 'ح', 'م', 'د', '\0'}.
 ```
 
@@ -457,7 +454,56 @@
 
 ---
 
-### v0.3.6: System Improvements 🔧
+### v0.3.6: Low-Level Operations 🔧
+**Goal:** Add bitwise operations and low-level features needed for systems programming.
+
+#### Features
+- [ ] **Bitwise Operators**:
+  ```baa
+  صحيح أ = ٥ & ٣.      // AND: 5 & 3 = 1
+  صحيح ب = ٥ | ٣.      // OR:  5 | 3 = 7
+  صحيح ج = ٥ ^ ٣.      // XOR: 5 ^ 3 = 6
+  صحيح د = ~٥.         // NOT: ~5 = -6
+  صحيح هـ = ١ << ٤.    // Left shift:  1 << 4 = 16
+  صحيح و = ١٦ >> ٢.    // Right shift: 16 >> 2 = 4
+  ```
+
+- [ ] **Sizeof Operator**:
+  ```baa
+  صحيح حجم_صحيح = حجم(صحيح).    // Returns 8
+  صحيح حجم_حرف = حجم(حرف).      // Returns 1
+  صحيح حجم_مصفوفة = حجم(قائمة). // Returns array size in bytes
+  ```
+
+- [ ] **Void Type**:
+  ```baa
+  عدم اطبع_رسالة() {
+      اطبع "مرحباً".
+      // No return needed
+  }
+  ```
+
+- [ ] **Escape Sequences**:
+  ```baa
+  نص سطر = "سطر١\nسطر٢".     // Newline
+  نص جدول = "عمود١\tعمود٢".  // Tab
+  نص مسار = "C:\\ملفات".     // Backslash
+  حرف صفر = '\٠'.            // Null character
+  ```
+
+#### Implementation Tasks
+- [ ] **Lexer**: Tokenize `&`, `|`, `^`, `~`, `<<`, `>>`.
+- [ ] **Parser**: Add bitwise operators with correct precedence.
+- [ ] **Parser**: Parse `حجم(type)` and `حجم(expr)` expressions.
+- [ ] **Lexer**: Add `عدم` keyword for void type.
+- [ ] **Lexer**: Handle escape sequences in string/char literals.
+- [ ] **Semantic**: Type check bitwise operations (integers only).
+- [ ] **Codegen**: Generate bitwise assembly instructions.
+- [ ] **Codegen**: Calculate sizes for `حجم` operator.
+
+---
+
+### v0.3.7: System Improvements 🔧
 **Goal:** Refine and enhance existing compiler systems.
 
 #### Focus Areas
@@ -465,7 +511,7 @@
 - [ ] **Code Quality** – Refactor complex functions, improve code organization.
 - [ ] **Memory Management** – Fix memory leaks, improve buffer handling.
 - [ ] **Performance** – Profile and optimize slow compilation paths.
-- [ ] **Documentation** – Update all docs to reflect v0.3.3-0.3.5 changes.
+- [ ] **Documentation** – Update all docs to reflect v0.3.3-0.3.6 changes.
 - [ ] **Edge Cases** – Fix known bugs and handle corner cases.
 
 #### Specific Improvements
@@ -477,7 +523,7 @@
 
 ---
 
-### v0.3.7: Testing & Quality Assurance ✅
+### v0.3.8: Testing & Quality Assurance ✅
 **Goal:** Establish robust testing infrastructure and fix accumulated issues.
 
 #### Test System
@@ -494,11 +540,27 @@
   - [ ] **Integration Tests** – Full programs with expected output.
 
 - [ ] **Test Coverage**:
-  - [ ] All language features (v0.0.1 - v0.3.6).
+  - [ ] All language features (v0.0.1 - v0.3.7).
   - [ ] Edge cases and corner cases.
   - [ ] Error conditions (syntax errors, type mismatches, etc.).
   - [ ] Multi-file compilation scenarios.
   - [ ] Preprocessor directive combinations.
+
+#### CI/CD Setup
+- [ ] **GitHub Actions workflow**:
+  ```yaml
+  name: Baa CI
+  on: [push, pull_request]
+  jobs:
+    build-and-test:
+      runs-on: windows-latest
+      steps:
+        - uses: actions/checkout@v3
+        - name: Build Baa
+          run: gcc src/*.c -o baa.exe
+        - name: Run Tests
+          run: ./run_tests.bat
+  ```
 
 #### Bug Fixes & Refinements
 - [ ] **Known Issues** – Fix all open bugs from previous versions.
@@ -506,17 +568,12 @@
 - [ ] **Stress Testing** – Test with large files, deep nesting, many symbols.
 - [ ] **Arabic Text Edge Cases** – Test various Arabic Unicode scenarios.
 
-#### Documentation
-- [ ] **Testing Guide** – Document how to run tests and add new ones.
-- [ ] **Known Limitations** – Document current language limitations.
-- [ ] **Migration Guide** – Help users update code for v0.3.x changes.
-
 ---
 
-### v0.3.8: Advanced Arrays & String Operations 📐
+### v0.3.9: Advanced Arrays & String Operations 📐
 **Goal:** Complete array and string functionality.
 
-#### Features
+#### Array Features
 - [ ] **Multi-dimensional Arrays**:
   ```baa
   صحيح مصفوفة[٣][٤].
@@ -526,117 +583,195 @@
 - [ ] **Array Length Operator**:
   ```baa
   صحيح قائمة[١٠].
-  صحيح الطول = حجم(قائمة).  // Returns 10
+  صحيح الطول = حجم(قائمة) / حجم(صحيح).  // Returns 10
   ```
-
 - [ ] **Array Bounds Checking** (Optional debug mode):
   - Runtime checks with `-g` flag.
   - Panic on out-of-bounds access.
+
+#### String Operations
+- [ ] **String Length**: `صحيح الطول = طول_نص(اسم).`
+- [ ] **String Concatenation**: `نص كامل = دمج_نص(اسم, " علي").`
+- [ ] **String Comparison**: `صحيح نتيجة = قارن_نص(اسم, "محمد").`
+- [ ] **String Indexing** (read-only): `حرف أول = اسم[٠].`
+- [ ] **String Copy**: `نص نسخة = نسخ_نص(اسم).`
 
 #### Implementation
 - [ ] **Parser**: Parse multi-dimensional array declarations and access.
 - [ ] **Semantic**: Track array dimensions in symbol table.
 - [ ] **Codegen**: Calculate offsets for multi-dimensional arrays (row-major order).
-- [ ] **Built-in**: Implement `حجم()` as compiler intrinsic or standard function.
+- [ ] **Standard Library**: Create `baalib.baa` with string functions.
+- [ ] **UTF-8 Aware**: Ensure functions handle multi-byte Arabic characters correctly.
 
 ---
 
-### v0.3.9: String Operations Library 🔤
-**Goal:** Make strings practical for real programs.
+### v0.3.10: Pointers & References 🎯
+**Goal:** Add pointer types for manual memory management and data structures.
 
 #### Features
-- [ ] **String Length**:
+- [ ] **Pointer Type Declaration**:
   ```baa
-  نص اسم = "أحمد".
-  صحيح الطول = طول_نص(اسم).  // Returns 4
+  صحيح* مؤشر.           // Pointer to integer
+  حرف* نص_مؤشر.         // Pointer to character (C-string)
+  هيكل سيارة* س_مؤشر.   // Pointer to struct
   ```
 
-- [ ] **String Concatenation**:
+- [ ] **Address-of Operator** (`&`):
   ```baa
-  نص كامل = دمج_نص(اسم, " علي").  // "أحمد علي"
+  صحيح س = ١٠.
+  صحيح* م = &س.         // م points to س
   ```
 
-- [ ] **String Comparison**:
+- [ ] **Dereference Operator** (`*`):
   ```baa
-  صحيح نتيجة = قارن_نص(اسم, "محمد").  // 0 if equal, -1/<0/1 otherwise
+  صحيح قيمة = *م.       // قيمة = 10
+  *م = ٢٠.              // س now equals 20
   ```
 
-- [ ] **String Indexing** (read-only):
+- [ ] **Null Pointer**:
   ```baa
-  حرف أول = اسم[٠].  // Get character at index
-  ```
-- [ ] **String Copy**:
-  ```baa
-  نص نسخة = نسخ_نص(اسم).
+  صحيح* م = عدم.        // Null pointer
+  إذا (م == عدم) {
+      اطبع "مؤشر فارغ".
+  }
   ```
 
-#### Implementation
-- [ ] **Standard Library**: Create `baalib.baa` with string functions.
-- [ ] **C Integration**: Wrap C string functions (`strlen`, `strcmp`, `strcpy`, etc.).
-- [ ] **UTF-8 Aware**: Ensure functions handle multi-byte Arabic characters correctly.
-- [ ] **Memory Safety**: Document string memory management rules.
+- [ ] **Pointer Arithmetic**:
+  ```baa
+  صحيح قائمة[٥] = {١، ٢، ٣، ٤، ٥}.
+  صحيح* م = &قائمة[٠].
+  م = م + ١.             // Points to قائمة[١]
+  اطبع *م.               // Prints 2
+  ```
+
+#### Implementation Tasks
+- [ ] **Lexer**: Handle `*` in type context vs multiplication.
+- [ ] **Parser**: Parse pointer type declarations.
+- [ ] **Parser**: Parse address-of (`&`) and dereference (`*`) expressions.
+- [ ] **Type System**: Add `TYPE_POINTER` with base type tracking.
+- [ ] **Semantic**: Validate pointer operations (can't dereference non-pointer).
+- [ ] **Semantic**: Type check pointer arithmetic.
+- [ ] **Codegen**: Generate LEA for address-of.
+- [ ] **Codegen**: Generate proper load/store for dereference.
 
 ---
 
-## 📚 Phase 4: Advanced Features & Standard Library (v0.4.x)
+### v0.3.11: Dynamic Memory 🧠
+**Goal:** Enable heap allocation for dynamic data structures.
 
-*Goal: Make Baa useful for real-world applications.*
-
-### v0.4.0: Pointers & Memory Management 🎯
-**Goal:** Add manual memory management capabilities.
-- [ ] **Pointer Type**:
+#### Features
+- [ ] **Memory Allocation**:
   ```baa
-  صحيح* مؤشر.  // Pointer to integer
-  ```
-- [ ] **Address-of Operator** — `&` (or Arabic equivalent like `عنوان`).
-- [ ] **Dereference Operator** — `*` (or Arabic equivalent like `قيمة`).
-- [ ] **Dynamic Allocation**:
-  ```baa
-  صحيح* ذاكرة = حجز_ذاكرة(١٠ * حجم(صحيح)).  // malloc equivalent
-  تحرير_ذاكرة(ذاكرة).  // free equivalent
+  // Allocate memory for 10 integers
+  صحيح* قائمة = حجز_ذاكرة(١٠ * حجم(صحيح)).
+  
+  // Allocate memory for a struct
+  هيكل سيارة* س = حجز_ذاكرة(حجم(هيكل سيارة)).
   ```
 
-- [ ] **Null Pointer** – `عدم` keyword for NULL.
+- [ ] **Memory Deallocation**:
+  ```baa
+  تحرير_ذاكرة(قائمة).
+  تحرير_ذاكرة(س).
+  ```
 
-### v0.4.1: Formatted Output & Input 🖨️
+- [ ] **Memory Reallocation**:
+  ```baa
+  // Resize array to 20 integers
+  قائمة = إعادة_حجز(قائمة, ٢٠ * حجم(صحيح)).
+  ```
+
+- [ ] **Memory Operations**:
+  ```baa
+  // Copy memory
+  نسخ_ذاكرة(وجهة, مصدر, حجم).
+  
+  // Set memory to value
+  تعيين_ذاكرة(مؤشر, ٠, حجم).
+  ```
+
+#### Implementation Tasks
+- [ ] **Runtime**: Link with C malloc/free or implement custom allocator.
+- [ ] **Built-in Functions**: Add `حجز_ذاكرة`, `تحرير_ذاكرة`, `إعادة_حجز`.
+- [ ] **Semantic**: Track allocated memory for warnings.
+- [ ] **Codegen**: Generate calls to allocation functions.
+
+---
+
+### v0.3.12: File I/O 📁
+**Goal:** Enable reading and writing files for compiler self-hosting.
+
+#### Features
+- [ ] **File Opening**:
+  ```baa
+  صحيح ملف = فتح_ملف("بيانات.txt", "قراءة").
+  صحيح ملف_كتابة = فتح_ملف("ناتج.txt", "كتابة").
+  صحيح ملف_إضافة = فتح_ملف("سجل.txt", "إضافة").
+  ```
+
+- [ ] **File Reading**:
+  ```baa
+  حرف حرف_واحد = اقرأ_حرف(ملف).
+  نص سطر = اقرأ_سطر(ملف).
+  صحيح بايتات = اقرأ_ملف(ملف, مخزن, حجم).
+  ```
+
+- [ ] **File Writing**:
+  ```baa
+  اكتب_حرف(ملف, 'أ').
+  اكتب_سطر(ملف, "مرحباً").
+  اكتب_ملف(ملف, بيانات, حجم).
+  ```
+
+- [ ] **File Closing**:
+  ```baa
+  اغلق_ملف(ملف).
+  ```
+
+- [ ] **File Status**:
+  ```baa
+  منطقي انتهى = نهاية_ملف(ملف).
+  صحيح موقع = موقع_ملف(ملف).
+  اذهب_لموقع(ملف, ٠).
+  ```
+
+#### Implementation Tasks
+- [ ] **Runtime**: Wrap C stdio functions (fopen, fread, fwrite, fclose).
+- [ ] **Built-in Functions**: Add file operation functions.
+- [ ] **Error Handling**: Return error codes for failed operations.
+- [ ] **Codegen**: Generate calls to file functions.
+
+---
+
+## 📚 Phase 4: Standard Library & Polish (v0.4.x)
+
+*Goal: Make Baa production-ready with a comprehensive standard library.*
+
+### v0.4.0: Formatted Output & Input 🖨️
 **Goal:** Professional I/O capabilities.
 
 - [ ] **Formatted Output**:
   ```baa
-  // Printf-style
-  اطبع_منسق("الاسم: %s، العمر: %d", اسم, عمر).
-  
-  // Or interpolation
-  اطبع("الاسم: {اسم}، العمر: {عمر}").
+  اطبع_منسق("الاسم: %s، العمر: %d\n", اسم, عمر).
   ```
-- [ ] **User Input**:
+- [ ] **String Formatting**:
+  ```baa
+  نص رسالة = نسق("النتيجة: %d", قيمة).
+  ```
+- [ ] **Formatted Input**:
   ```baa
   نص إدخال = اقرأ_سطر().
   صحيح رقم = اقرأ_رقم().
   ```
 
-### v0.4.2: File I/O 📁
-**Goal:** Read and write files.
+### v0.4.1: Standard Library (مكتبة باء) 📚
+- [ ] **Math Module** — `جذر_تربيعي()`, `أس()`, `مطلق()`, `عشوائي()`.
+- [ ] **String Module** — Complete string manipulation.
+- [ ] **IO Module** — File and console operations.
+- [ ] **System Module** — Environment variables, command execution.
+- [ ] **Time Module** — Date/time operations.
 
-- [ ] **File Operations**:
-  ```baa
-  صحيح ملف = فتح_ملف("data.txt", "قراءة").
-  نص سطر = اقرأ_سطر_من_ملف(ملف).
-  اكتب_إلى_ملف(ملف, "نص جديد").
-  اغلق_ملف(ملف).
-  ```
-
-### v0.4.3: Standard Library (BaaLib) 📚
-- [ ] **IO Module** — File reading/writing (`ملف.اقرأ`, `ملف.اكتب`).
-- [ ] **Math Module** – Advanced math functions:
-  ```baa
-  صحيح جذر = جذر_تربيعي(١٦).
-  صحيح قوة = أس(٢, ١٠).
-  ```
-- [ ] **System Module** — Executing commands, environment variables.
-- [ ] **Time Module** – Date/time operations.
-
-### v0.4.4: Floating Point Support 🔢
+### v0.4.2: Floating Point Support 🔢
 **Goal:** Add decimal number support.
 
 - [ ] **Float Type (`عشري`)**:
@@ -644,30 +779,282 @@
   عشري باي = ٣.١٤١٥٩.
   عشري نصف = ٠.٥.
   ```
-
 - [ ] **Float Operations** – Arithmetic, comparison, math functions.
-- [ ] **Type Conversion** – `صحيح إلى عشري()`, `عشري إلى صحيح()`.
+- [ ] **Type Conversion** – `صحيح_إلى_عشري()`, `عشري_إلى_صحيح()`.
 
-### v0.4.5: Error Handling 🛡️
+### v0.4.3: Error Handling 🛡️
 **Goal:** Graceful error management.
 
 - [ ] **Assertions**:
   ```baa
   تأكد(س > ٠, "س يجب أن يكون موجباً").
   ```
+- [ ] **Error Codes** – Standardized error return values.
+- [ ] **Panic Function** – `توقف_فوري("رسالة خطأ")`.
 
-- [ ] **Error Returns** – Convention for returning error codes.
-- [ ] **Panic/Abort** – `توقف_فوري("رسالة خطأ")`.
- 
+### v0.4.4: Final Polish 🎨
+- [ ] **Complete Documentation** — All features documented.
+- [ ] **Tutorial Series** — Step-by-step learning materials.
+- [ ] **Example Programs** — Comprehensive example collection.
+- [ ] **Performance Optimization** — Profile and optimize compiler.
+
 ---
 
 ## 🚀 Phase 5: Self-Hosting (v1.0.0)
 
 *Goal: The ultimate proof of capability — Baa compiling itself.*
 
-- [ ] **Rewrite Compiler** — Port `src/*.c` to `src/*.b`.
-- [ ] **Bootstrap** — Use the C compiler (v0.4) to compile the Baa compiler (v1.0).
-- [ ] **Optimization** — Ensure the Baa-written compiler is as fast as the C one.
+### v0.9.0: Bootstrap Preparation 🔧
+
+#### v0.9.0.1: Freeze C Compiler
+- [ ] **Tag final C version** — `git tag v0.9-bootstrap-c`
+- [ ] **Document exact build steps** — GCC version, flags, environment.
+- [ ] **Archive C compiler binary** — Store `baa.exe` built from C.
+- [ ] **Create bootstrap documentation** — How to rebuild from scratch.
+
+#### v0.9.0.2: Self-Hosting Requirements Check
+- [ ] **Feature audit** — Verify all compiler-needed features exist.
+- [ ] **Test complex programs** — Compile programs similar to compiler size.
+- [ ] **Memory stress test** — Handle large source files.
+- [ ] **Error recovery test** — Compiler handles malformed input gracefully.
+
+### v0.9.1: Rewrite Lexer 📝
+- [ ] **Port `lexer.c` → `lexer.baa`** — Token generation in Baa.
+- [ ] **Compile with C-Baa** — Use C compiler to build.
+- [ ] **Test lexer output** — Compare tokens with C version.
+- [ ] **Fix any language gaps** — Add missing features discovered.
+
+### v0.9.2: Rewrite Parser 🌳
+- [ ] **Port `parser.c` → `parser.baa`** — AST construction in Baa.
+- [ ] **Compile with C-Baa** — Build using C compiler.
+- [ ] **Test AST output** — Compare trees with C version.
+- [ ] **Handle recursion depth** — Ensure stack is sufficient.
+
+### v0.9.3: Rewrite Semantic Analysis 🔍
+- [ ] **Port `analysis.c` → `analysis.baa`** — Type checking in Baa.
+- [ ] **Symbol table in Baa** — Rewrite symbol management.
+- [ ] **Test type errors** — Verify same errors as C version.
+
+### v0.9.4: Rewrite IR 🔄
+- [ ] **Port `ir.c` → `ir.baa`** — IR generation in Baa.
+- [ ] **Port `ir_lower.c` → `ir_lower.baa`** — Lowering in Baa.
+- [ ] **Test IR output** — Compare with C version.
+
+### v0.9.5: Rewrite Code Generator ⚙️
+- [ ] **Port `codegen.c` → `codegen.baa`** — Assembly generation in Baa.
+- [ ] **Handle all targets** — Windows x64, Linux x64.
+- [ ] **Test generated assembly** — Compare with C version.
+
+### v0.9.6: Rewrite Driver 🚗
+- [ ] **Port `main.c` → `main.baa`** — CLI and orchestration in Baa.
+- [ ] **Port `error.c` → `error.baa`** — Diagnostics in Baa.
+- [ ] **Full compiler in Baa** — All components ported.
+
+### v1.0.0: First Self-Compile 🏆
+- [ ] **Compile Baa compiler with C-Baa** — Produces baa₁.
+- [ ] **Test baa₁** — Run full test suite.
+- [ ] **Compile Baa compiler with baa₁** — Produces baa₂.
+- [ ] **Compile Baa compiler with baa₂** — Produces baa₃.
+- [ ] **Verify baa₂ == baa₃** — Reproducible builds!
+- [ ] **Release v1.0.0** — Historic milestone! 🎉
+
+#### Bootstrap Verification Script
+```bash
+#!/bin/bash
+# verify_bootstrap.sh
+
+echo "Stage 0: Building with C compiler..."
+./baa_c baa.baa -o baa1.exe
+
+echo "Stage 1: Building with Baa (first generation)..."
+./baa1.exe baa.baa -o baa2.exe
+
+echo "Stage 2: Building with Baa (second generation)..."
+./baa2.exe baa.baa -o baa3.exe
+
+echo "Verifying reproducibility..."
+if diff baa2.exe baa3.exe > /dev/null; then
+    echo "✅ SUCCESS: baa2 and baa3 are identical!"
+    echo "🎉 BAA IS SELF-HOSTING!"
+else
+    echo "❌ FAILURE: baa2 and baa3 differ!"
+    exit 1
+fi
+```
+
+---
+
+## 🔨 Phase 6: Own Assembler (v1.5.0)
+
+*Goal: Remove dependency on external assembler (GAS/MASM).*
+
+### v1.5.0: Baa Assembler (مُجمِّع باء) 🔧
+
+#### v1.5.0.1: Assembler Foundation
+- [ ] **Define instruction encoding tables** — x86-64 opcode maps.
+- [ ] **Parse assembly text** — Tokenize AT&T/Intel syntax.
+- [ ] **Build instruction IR** — Internal representation of machine code.
+- [ ] **Handle labels** — Track label addresses for jumps.
+
+#### v1.5.0.2: x86-64 Encoding
+- [ ] **REX prefixes** — 64-bit register encoding.
+- [ ] **ModR/M and SIB bytes** — Addressing mode encoding.
+- [ ] **Immediate encoding** — Handle different immediate sizes.
+- [ ] **Displacement encoding** — Memory offset encoding.
+- [ ] **Instruction validation** — Check valid operand combinations.
+
+#### v1.5.0.3: Object File Generation
+- [ ] **COFF format (Windows)** — Generate .obj files.
+- [ ] **ELF format (Linux)** — Generate .o files.
+- [ ] **Section handling** — .text, .data, .bss, .rodata.
+- [ ] **Symbol table** — Export/import symbols.
+- [ ] **Relocation entries** — Handle address fixups.
+
+#### v1.5.0.4: Assembler Integration
+- [ ] **Replace GAS calls** — Use internal assembler.
+- [ ] **`--use-internal-asm` flag** — Optional internal assembler.
+- [ ] **Verify output** — Compare with GAS output.
+- [ ] **Performance test** — Ensure acceptable speed.
+
+#### v1.5.0.5: Assembler Polish
+- [ ] **Error messages** — Clear assembly error diagnostics.
+- [ ] **Debug info** — Generate debug symbols.
+- [ ] **Listing output** — Optional assembly listing with addresses.
+- [ ] **Documentation** — Assembler internals guide.
+
+---
+
+## 🔗 Phase 7: Own Linker (v2.0.0)
+
+*Goal: Remove dependency on external linker (ld/link.exe).*
+
+### v2.0.0: Baa Linker (رابط باء) 🔗
+
+#### v2.0.0.1: Linker Foundation
+- [ ] **Parse object files** — Read COFF/ELF format.
+- [ ] **Symbol resolution** — Match symbol references to definitions.
+- [ ] **Section merging** — Combine sections from multiple objects.
+- [ ] **Memory layout** — Assign virtual addresses to sections.
+
+#### v2.0.0.2: Relocation Processing
+- [ ] **Apply relocations** — Fix up addresses in code/data.
+- [ ] **Handle relocation types** — PC-relative, absolute, GOT, PLT.
+- [ ] **Overflow detection** — Check address range limits.
+
+#### v2.0.0.3: Executable Generation (Windows)
+- [ ] **PE header** — DOS stub, PE signature, file header.
+- [ ] **Optional header** — Entry point, section alignment, subsystem.
+- [ ] **Section headers** — .text, .data, .rdata, .bss.
+- [ ] **Import table** — For C runtime and Windows API.
+- [ ] **Export table** — If building DLLs (future).
+- [ ] **Generate .exe** — Complete Windows executable.
+
+#### v2.0.0.4: Executable Generation (Linux)
+- [ ] **ELF header** — File identification, entry point.
+- [ ] **Program headers** — Loadable segments.
+- [ ] **Section headers** — .text, .data, .rodata, .bss.
+- [ ] **Dynamic linking info** — For libc linkage.
+- [ ] **Generate executable** — Complete Linux binary.
+
+#### v2.0.0.5: Linker Features
+- [ ] **Static libraries** — Link .a/.lib archives.
+- [ ] **Library search paths** — `-L` flag support.
+- [ ] **Entry point selection** — Custom entry point support.
+- [ ] **Strip symbols** — Remove debug symbols for release.
+- [ ] **Map file** — Generate link map for debugging.
+
+#### v2.0.0.6: Linker Integration
+- [ ] **Replace ld/link calls** — Use internal linker.
+- [ ] **`--use-internal-linker` flag** — Optional internal linker.
+- [ ] **Verify output** — Compare with system linker output.
+- [ ] **End-to-end test** — Compile and link without external tools.
+
+---
+
+## 🏆 Phase 8: Full Independence (v3.0.0)
+
+*Goal: Zero external dependencies — Baa builds itself with no external tools.*
+
+### v3.0.0: Complete Toolchain 🛠️
+
+#### v3.0.0.1: Remove C Runtime Dependency
+
+**Windows:**
+- [ ] **Direct Windows API calls** — Replace printf with WriteConsoleA.
+- [ ] **Implement `اطبع` natively** — Direct syscall/API.
+- [ ] **Implement `اقرأ` natively** — ReadConsoleA.
+- [ ] **Implement memory functions** — HeapAlloc/HeapFree instead of malloc/free.
+- [ ] **Implement file I/O** — CreateFile, ReadFile, WriteFile.
+- [ ] **Custom entry point** — Replace C runtime startup.
+
+**Linux:**
+- [ ] **Direct syscalls** — write, read, mmap, exit.
+- [ ] **Implement `اطبع` natively** — syscall to write(1, ...).
+- [ ] **Implement `اقرأ` natively** — syscall to read(0, ...).
+- [ ] **Implement memory functions** — mmap/munmap for allocation.
+- [ ] **Implement file I/O** — open, read, write, close syscalls.
+- [ ] **Custom _start** — No libc dependency.
+
+#### v3.0.0.2: Native Standard Library
+- [ ] **Rewrite string functions in Baa** — No C dependency.
+- [ ] **Rewrite math functions in Baa** — Pure Baa implementation.
+- [ ] **Rewrite memory functions in Baa** — Custom allocator.
+- [ ] **Full standard library in Baa** — All library code in Baa.
+
+#### v3.0.0.3: Self-Contained Build
+- [ ] **Single binary compiler** — No external dependencies.
+- [ ] **Cross-compilation support** — Build Linux binary on Windows and vice versa.
+- [ ] **Reproducible builds** — Same source → identical binary.
+- [ ] **Bootstrap from source** — Document minimal bootstrap path.
+
+#### v3.0.0.4: Verification & Release
+- [ ] **Full test suite passes** — All tests without external tools.
+- [ ] **Benchmark comparison** — Performance vs GCC toolchain.
+- [ ] **Security audit** — Review for vulnerabilities.
+- [ ] **Documentation complete** — Full toolchain documentation.
+- [ ] **Release v3.0.0** — Fully independent Baa! 🎉
+
+### Toolchain Comparison
+
+```
+┌────────────────────────────────────────────────────────────────┐
+│                    Baa Toolchain Evolution                     │
+├────────────────────────────────────────────────────────────────┤
+│                                                                │
+│  v0.2.x (Current):                                             │
+│  ┌─────────┐   ┌───────────────────────────────────────────┐  │
+│  │   Baa   │ → │  GCC (assembler + linker + C runtime)     │  │
+│  │ Compiler│   │                                           │  │
+│  └─────────┘   └───────────────────────────────────────────┘  │
+│                                                                │
+│  v1.0.0 (Self-Hosting):                                        │
+│  ┌─────────┐   ┌───────────────────────────────────────────┐  │
+│  │   Baa   │ → │  GCC (assembler + linker + C runtime)     │  │
+│  │ in Baa! │   │                                           │  │
+│  └─────────┘   └───────────────────────────────────────────┘  │
+│                                                                │
+│  v1.5.0 (Own Assembler):                                       │
+│  ┌─────────┐   ┌─────────┐   ┌─────────────────────────────┐  │
+│  │   Baa   │ → │   Baa   │ → │  GCC (linker + C runtime)   │  │
+│  │ Compiler│   │ Assembler│  │                             │  │
+│  └─────────┘   └─────────┘   └─────────────────────────────┘  │
+│                                                                │
+│  v2.0.0 (Own Linker):                                          │
+│  ┌─────────┐   ┌─────────┐   ┌─────────┐   ┌───────────────┐  │
+│  │   Baa   │ → │   Baa   │ → │   Baa   │ → │  C Runtime    │  │
+│  │ Compiler│   │ Assembler│  │  Linker │   │  (printf etc) │  │
+│  └─────────┘   └─────────┘   └─────────┘   └───────────────┘  │
+│                                                                │
+│  v3.0.0 (Full Independence):                                   │
+│  ┌─────────────────────────────────────────────────────────┐  │
+│  │              Baa Toolchain (100% Baa)                   │  │
+│  │  Compiler → Assembler → Linker → Native Runtime         │  │
+│  │                                                         │  │
+│  │                 No External Dependencies!               │  │
+│  └─────────────────────────────────────────────────────────┘  │
+│                                                                │
+└────────────────────────────────────────────────────────────────┘
+```
 
 ---
 
@@ -785,6 +1172,20 @@
 - [x] Basic pipeline: Lexer → Parser → Codegen → GCC
 
 </details>
+
+---
+
+## 📊 Timeline Summary
+
+| Phase | Version | Milestone | Dependencies |
+|-------|---------|-----------|--------------|
+| Phase 3 | v0.3.x | IR Complete | GCC |
+| Phase 3.5 | v0.3.3-v0.3.12 | Language Complete | GCC |
+| Phase 4 | v0.4.x | Standard Library | GCC |
+| Phase 5 | v1.0.0 | **Self-Hosting** 🏆 | GCC |
+| Phase 6 | v1.5.0 | Own Assembler | GCC (linker only) |
+| Phase 7 | v2.0.0 | Own Linker | C Runtime only |
+| Phase 8 | v3.0.0 | **Full Independence** 🏆 | **Nothing!** |
 
 ---
 

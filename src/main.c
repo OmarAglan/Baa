@@ -5,6 +5,7 @@
  */
 
 #include "baa.h"
+#include "ir_lower.h"
 #include <time.h>
 
 #ifdef _WIN32
@@ -24,6 +25,7 @@ typedef struct {
     bool compile_only;      // -c: تجميع إلى كائن فقط (بدون ربط)
     bool verbose;           // -v: وضع التفاصيل
     bool show_timings;      // -v: عرض وقت الترجمة
+    bool dump_ir;           // --dump-ir: طباعة IR بعد التحليل الدلالي
     double start_time;      // وقت بدء الترجمة
 } CompilerConfig;
 
@@ -80,13 +82,135 @@ char* read_file(const char* path) {
 char* change_extension(const char* filename, const char* new_ext) {
     char* dot = strrchr(filename, '.');
     if (!dot || dot == filename) return strdup(new_ext + (dot == filename)); // Fallback
-    
+
     size_t base_len = dot - filename;
     size_t ext_len = strlen(new_ext);
     char* new_name = malloc(base_len + ext_len + 1);
     strncpy(new_name, filename, base_len);
     strcpy(new_name + base_len, new_ext);
     return new_name;
+}
+
+// ============================================================================
+// IR Dumping (--dump-ir) helpers (v0.3.0.6)
+// ============================================================================
+
+static IRType* get_i8_ptr_type(void) {
+    static IRType* cached = NULL;
+    if (!cached) {
+        cached = ir_type_ptr(IR_TYPE_I8_T);
+    }
+    return cached;
+}
+
+static IRType* ir_type_from_datatype(DataType t) {
+    switch (t) {
+        case TYPE_BOOL:   return IR_TYPE_I1_T;
+        case TYPE_STRING: return get_i8_ptr_type();
+        case TYPE_INT:
+        default:          return IR_TYPE_I64_T;
+    }
+}
+
+static IRValue* ir_lower_global_init(IRBuilder* builder, Node* expr, IRType* expected_type) {
+    if (!builder) return NULL;
+
+    if (!expr) {
+        return ir_value_const_int(0, expected_type ? expected_type : IR_TYPE_I64_T);
+    }
+
+    switch (expr->type) {
+        case NODE_INT:
+            return ir_value_const_int((int64_t)expr->data.integer.value,
+                                      expected_type ? expected_type : IR_TYPE_I64_T);
+
+        case NODE_BOOL:
+            return ir_value_const_int(expr->data.bool_lit.value ? 1 : 0,
+                                      expected_type ? expected_type : IR_TYPE_I1_T);
+
+        case NODE_CHAR:
+            return ir_value_const_int((int64_t)expr->data.char_lit.value,
+                                      expected_type ? expected_type : IR_TYPE_I64_T);
+
+        case NODE_STRING:
+            // Note: returns an IRValue with type مؤشر[ص٨] and adds it to the module string table.
+            return ir_builder_const_string(builder, expr->data.string_lit.value);
+
+        default:
+            // Non-constant global initializers will be supported later.
+            // For now, keep it as zero and allow --dump-ir output to proceed.
+            return ir_value_const_int(0, expected_type ? expected_type : IR_TYPE_I64_T);
+    }
+}
+
+static void dump_ir_for_ast(Node* ast, const char* module_name) {
+    if (!ast || ast->type != NODE_PROGRAM) return;
+
+    IRModule* module = ir_module_new(module_name ? module_name : "module");
+    if (!module) return;
+
+    IRBuilder* builder = ir_builder_new(module);
+    if (!builder) {
+        ir_module_free(module);
+        return;
+    }
+
+    // Walk top-level declarations: globals + functions
+    for (Node* decl = ast->data.program.declarations; decl; decl = decl->next) {
+        if (decl->type == NODE_VAR_DECL && decl->data.var_decl.is_global) {
+            IRType* gtype = ir_type_from_datatype(decl->data.var_decl.type);
+            IRValue* init = ir_lower_global_init(builder, decl->data.var_decl.expression, gtype);
+            (void)ir_builder_create_global_init(builder, decl->data.var_decl.name, gtype, init,
+                                                decl->data.var_decl.is_const ? 1 : 0);
+            continue;
+        }
+
+        if (decl->type == NODE_FUNC_DEF) {
+            IRType* ret_type = ir_type_from_datatype(decl->data.func_def.return_type);
+            IRFunc* func = ir_builder_create_func(builder, decl->data.func_def.name, ret_type);
+            if (!func) continue;
+
+            func->is_prototype = decl->data.func_def.is_prototype;
+
+            // Create entry block for non-prototypes
+            IRLowerCtx lower;
+            IRBlock* entry = NULL;
+
+            if (!func->is_prototype) {
+                entry = ir_builder_create_block(builder, "بداية");
+                ir_builder_set_insert_point(builder, entry);
+                ir_lower_ctx_init(&lower, builder);
+            }
+
+            // Parameters: add params to function, then spill into allocas so lowering can treat them like locals.
+            for (Node* p = decl->data.func_def.params; p; p = p->next) {
+                if (p->type != NODE_VAR_DECL) continue;
+
+                IRType* ptype = ir_type_from_datatype(p->data.var_decl.type);
+                const char* pname = p->data.var_decl.name ? p->data.var_decl.name : NULL;
+
+                int preg = ir_builder_add_param(builder, pname, ptype);
+
+                if (!func->is_prototype && pname) {
+                    int ptr_reg = ir_builder_emit_alloca(builder, ptype);
+                    ir_lower_bind_local(&lower, pname, ptr_reg, ptype);
+
+                    IRValue* val = ir_value_reg(preg, ptype);   // %معامل<n>
+                    IRValue* ptr = ir_value_reg(ptr_reg, NULL); // typeless pointer
+                    ir_builder_emit_store(builder, val, ptr);
+                }
+            }
+
+            if (!func->is_prototype && decl->data.func_def.body) {
+                lower_stmt(&lower, decl->data.func_def.body);
+            }
+        }
+    }
+
+    ir_module_print(module, stdout, 1);
+
+    ir_builder_free(builder);
+    ir_module_free(module);
 }
 
 /**
@@ -156,6 +280,7 @@ void print_help() {
     printf("  -S, -s       Compile to assembly only (.s)\n");
     printf("  -c           Compile to object file only (.o)\n");
     printf("  -v           Enable verbose output with timing\n");
+    printf("  --dump-ir    Dump Baa IR (Arabic) to stdout after analysis\n");
     printf("  --help, -h   Show this help message\n");
     printf("  --version    Show version info\n");
     printf("\nWarning Options:\n");
@@ -222,6 +347,9 @@ int main(int argc, char** argv) {
             else if (strcmp(arg, "-v") == 0) {
                 config.verbose = true;
                 config.show_timings = true;
+            }
+            else if (strcmp(arg, "--dump-ir") == 0) {
+                config.dump_ir = true;
             }
             else if (strcmp(arg, "-o") == 0) {
                 if (i + 1 < argc) config.output_file = argv[++i];
@@ -305,6 +433,13 @@ int main(int argc, char** argv) {
             fprintf(stderr, "Aborting %s: warnings treated as errors (-Werror).\n", current_input);
             free(source);
             return 1;
+        }
+
+        // 3.5. طباعة IR (اختياري) --dump-ir
+        // ملاحظة: هذا لا يغير مسار الترجمة الحالي (لا يزال codegen يعتمد على AST).
+        if (config.dump_ir) {
+            if (config.verbose) printf("[INFO] Dumping IR (--dump-ir)...\n");
+            dump_ir_for_ast(ast, current_input);
         }
 
         // 4. توليد كود التجميع (Codegen)

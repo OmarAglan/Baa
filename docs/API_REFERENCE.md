@@ -1,6 +1,6 @@
 # Baa Internal API Reference
 
-> **Version:** 0.3.0.5 | [← User Guide](USER_GUIDE.md) | [Internals →](INTERNALS.md)
+> **Version:** 0.3.0.6 | [← User Guide](USER_GUIDE.md) | [Internals →](INTERNALS.md)
 
 This document details the C functions, enumerations, and structures defined in `src/baa.h`, `src/ir.h`, `src/ir_builder.h`, and `src/ir_lower.h`.
 
@@ -503,6 +503,40 @@ void ir_module_dump(IRModule* module, const char* filename, int use_arabic)
 ```
 
 Convenience wrapper that opens a file and prints the module.
+
+---
+
+### Compatibility Printer Wrappers (v0.3.0.6)
+
+These wrappers exist to match the roadmap task naming (`ir_print_*`) and print to `stdout` using Arabic output:
+
+#### `ir_print_func`
+
+```c
+void ir_print_func(IRFunc* func)
+```
+
+Prints a single function to stdout (Arabic mode). Implemented in [`ir_print_func()`](src/ir.c:1715).
+
+---
+
+#### `ir_print_block`
+
+```c
+void ir_print_block(IRBlock* block)
+```
+
+Prints a single basic block to stdout (Arabic mode). Implemented in [`ir_print_block()`](src/ir.c:1711).
+
+---
+
+#### `ir_print_inst`
+
+```c
+void ir_print_inst(IRInst* inst)
+```
+
+Prints a single instruction to stdout (Arabic mode). Implemented in [`ir_print_inst()`](src/ir.c:1707).
 
 ---
 

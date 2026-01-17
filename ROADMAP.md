@@ -137,12 +137,12 @@
 - [x] **Lower `NODE_BREAK`** — Generate `قفز` to loop exit.
 - [x] **Lower `NODE_CONTINUE`** — Generate `قفز` to loop header/increment.
 
-#### v0.3.0.6: IR Printer
-- [ ] **`ir_print_func()`** — Print function header and all blocks.
-- [ ] **`ir_print_block()`** — Print block label and all instructions.
-- [ ] **`ir_print_inst()`** — Print single instruction with Arabic opcodes.
-- [ ] **Arabic numeral output** — Print register numbers in Arabic (٠١٢٣٤٥٦٧٨٩).
-- [ ] **`--dump-ir` CLI flag** — Add command-line option to print IR.
+#### v0.3.0.6: IR Printer ✅ COMPLETED (2026-01-17)
+- [x] **`ir_print_func()`** — Print function header and all blocks.
+- [x] **`ir_print_block()`** — Print block label and all instructions.
+- [x] **`ir_print_inst()`** — Print single instruction with Arabic opcodes.
+- [x] **Arabic numeral output** — Print register numbers in Arabic (٠١٢٣٤٥٦٧٨٩).
+- [x] **`--dump-ir` CLI flag** — Add command-line option to print IR.
 
 #### v0.3.0.7: Integration & Testing
 - [ ] **Integrate IR into pipeline** — AST → IR (skip direct codegen).

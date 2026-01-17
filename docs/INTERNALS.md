@@ -1,6 +1,6 @@
 # Baa Compiler Internals
 
-> **Version:** 0.3.0.5 | [← Language Spec](LANGUAGE.md) | [API Reference →](API_REFERENCE.md)
+> **Version:** 0.3.0.6 | [← Language Spec](LANGUAGE.md) | [API Reference →](API_REFERENCE.md)
 
 **Target Architecture:** x86-64 (AMD64)
 **Target OS:** Windows (MinGW-w64 Toolchain)
@@ -58,7 +58,7 @@ flowchart LR
 | **6. Assemble** | `.s` Assembly | `.o` Object | `gcc -c` | Invokes external assembler. |
 | **7. Link** | `.o` Object | `.exe` Executable | `gcc` | Links with C Runtime. |
 
-> **Note (v0.3.0.5):** IR infrastructure + expression/statement/control-flow lowering are implemented, but IR is not yet wired into the driver pipeline. Current compilation still uses direct AST-to-assembly.
+> **Note (v0.3.0.6):** IR infrastructure + expression/statement/control-flow lowering are implemented. The CLI can now dump IR via `--dump-ir`, but full compilation still uses direct AST-to-assembly (IR is not yet wired into the main pipeline).
 
 ### 1.1.1. Component Map
 
@@ -92,6 +92,7 @@ The driver in `main.c` (v0.2.0+) supports multi-file compilation and various mod
 | `-S`, `-s` | **Assembly Only** | `.s` | Stops after codegen. Writes `<input>.s` (or `-o` when a single input file is used). |
 | `-c` | **Compile Only** | `.o` | Stops after assembling. Writes `<input>.o` (or `-o` when a single input file is used). |
 | `-v` | **Verbose** | - | Prints commands and compilation time; keeps intermediate `.s` files. |
+| `--dump-ir` | **IR Dump** | stdout | Prints Baa IR (Arabic) after semantic analysis (v0.3.0.6). |
 | `--version` | **Version Info** | stdout | Displays compiler version and build date. |
 | `--help`, `-h` | **Help** | stdout | Shows usage information. |
 | `update` | **Self-Update** | - | Downloads and installs the latest version. |
@@ -685,6 +686,27 @@ Currently lowered control-flow nodes:
 - `NODE_CONTINUE`: branch to active loop header/increment block
 
 For full specification, see [BAA_IR_SPECIFICATION.md](BAA_IR_SPECIFICATION.md).
+
+### 6.13. IR Printer (v0.3.0.6)
+
+The IR printer provides a canonical, Arabic-first text format for debugging and tooling.
+
+- Core printer entry point: [`ir_module_print()`](src/ir.c:1641)
+- Instruction formatting: [`ir_inst_print()`](src/ir.c:1355)
+- Values / registers / immediates: [`ir_value_print()`](src/ir.c:1348)
+- Arabic-Indic numerals for registers: [`int_to_arabic_numerals()`](src/ir.c:53)
+
+The driver exposes the printer via the CLI flag `--dump-ir` implemented in [`src/main.c`](src/main.c:1). This flag:
+1. Parses + analyzes the source as usual.
+2. Builds an IR module using [`IRBuilder`](src/ir_builder.h:43) and lowers AST statements using [`lower_stmt()`](src/ir_lower.c:725).
+3. Prints IR to stdout.
+
+> **Note:** This is currently a debug path for inspection only. The main compilation pipeline still generates assembly directly from AST (full IR pipeline integration is scheduled for v0.3.0.7).
+
+**Example invocation:**
+```powershell
+build\baa.exe --dump-ir program.baa
+```
 
 ---
 

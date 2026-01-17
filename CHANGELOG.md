@@ -8,6 +8,24 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.3.0.6] - 2026-01-17
+
+### Added
+- **IR Printer (Arabic-first)** — Canonical IR text output aligned with the IR text grammar in [`docs/BAA_IR_SPECIFICATION.md`](docs/BAA_IR_SPECIFICATION.md:398).
+  - Implemented/updated IR printing in [`src/ir.c`](src/ir.c:1146):
+    - [`ir_func_print()`](src/ir.c:1554) — prints function header + blocks using `دالة @... -> ... {}` format.
+    - [`ir_block_print()`](src/ir.c:1527) — prints block labels with Arabic-Indic digits for label suffixes.
+    - [`ir_inst_print()`](src/ir.c:1355) — prints instructions with Arabic opcodes and Arabic comma `،`.
+    - [`ir_value_print()`](src/ir.c:1348) — prints `%م<n>` registers and immediates using Arabic-Indic numerals.
+  - Added compatibility wrappers for the roadmap task names:
+    - [`ir_print_func()`](src/ir.c:1715), [`ir_print_block()`](src/ir.c:1711), [`ir_print_inst()`](src/ir.c:1707)
+
+- **CLI flag `--dump-ir`** — Dumps IR to stdout after semantic analysis (does not replace the main AST→assembly pipeline yet).
+  - Implemented in [`src/main.c`](src/main.c:1) via a lightweight AST→IR build using [`IRBuilder`](src/ir_builder.h:43) + lowering helpers from [`src/ir_lower.c`](src/ir_lower.c:1), then printed with [`ir_module_print()`](src/ir.c:1641).
+
+### Note
+- IR is currently generated for `--dump-ir` output only; full pipeline integration remains scheduled for v0.3.0.7.
+
 ## [0.3.0.5] - 2026-01-16
 
 ### Added

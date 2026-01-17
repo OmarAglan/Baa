@@ -88,6 +88,8 @@ void lower_stmt(IRLowerCtx* ctx, Node* stmt);
  */
 void lower_stmt_list(IRLowerCtx* ctx, Node* first_stmt);
 
+IRModule* ir_lower_program(Node* program, const char* module_name);
+
 #ifdef __cplusplus
 }
 #endif

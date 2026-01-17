@@ -1,6 +1,6 @@
 # Baa Compiler Internals
 
-> **Version:** 0.3.0.5 | [← Language Spec](LANGUAGE.md) | [API Reference →](API_REFERENCE.md)
+> **Version:** 0.3.0.6 | [← Language Spec](LANGUAGE.md) | [API Reference →](API_REFERENCE.md)
 
 **Target Architecture:** x86-64 (AMD64)
 **Target OS:** Windows (MinGW-w64 Toolchain)
@@ -58,7 +58,7 @@ flowchart LR
 | **6. Assemble** | `.s` Assembly | `.o` Object | `gcc -c` | Invokes external assembler. |
 | **7. Link** | `.o` Object | `.exe` Executable | `gcc` | Links with C Runtime. |
 
-> **Note (v0.3.0.5):** IR infrastructure + expression/statement/control-flow lowering are implemented, but IR is not yet wired into the driver pipeline. Current compilation still uses direct AST-to-assembly.
+> **Note (v0.3.0.6):** IR infrastructure + expression/statement/control-flow lowering are implemented, and the IR can be printed via `--dump-ir`. The main compilation pipeline still uses direct AST-to-assembly until v0.3.0.7.
 
 ### 1.1.1. Component Map
 
@@ -92,6 +92,7 @@ The driver in `main.c` (v0.2.0+) supports multi-file compilation and various mod
 | `-S`, `-s` | **Assembly Only** | `.s` | Stops after codegen. Writes `<input>.s` (or `-o` when a single input file is used). |
 | `-c` | **Compile Only** | `.o` | Stops after assembling. Writes `<input>.o` (or `-o` when a single input file is used). |
 | `-v` | **Verbose** | - | Prints commands and compilation time; keeps intermediate `.s` files. |
+| `--dump-ir` | **IR Dump** | stdout | Lowers AST → IR and prints IR (Arabic). Stops after IR dump. |
 | `--version` | **Version Info** | stdout | Displays compiler version and build date. |
 | `--help`, `-h` | **Help** | stdout | Shows usage information. |
 | `update` | **Self-Update** | - | Downloads and installs the latest version. |

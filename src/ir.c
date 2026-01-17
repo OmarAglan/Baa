@@ -44,6 +44,40 @@ static const char* arabic_digits[] = {
     "٠", "١", "٢", "٣", "٤", "٥", "٦", "٧", "٨", "٩"
 };
 
+static char* int64_to_arabic_numerals(int64_t n, char* buf) {
+    if (!buf) return buf;
+
+    if (n == 0) {
+        strcpy(buf, "٠");
+        return buf;
+    }
+
+    int is_negative = n < 0;
+    uint64_t u = is_negative ? (uint64_t)(-(n + 1)) + 1 : (uint64_t)n;
+
+    char temp[128];
+    int pos = 0;
+
+    while (u > 0) {
+        int digit = (int)(u % 10);
+        temp[pos++] = arabic_digits[digit][0];
+        temp[pos++] = arabic_digits[digit][1];
+        u /= 10;
+    }
+
+    int buf_pos = 0;
+    if (is_negative) {
+        buf[buf_pos++] = '-';
+    }
+
+    for (int i = pos - 2; i >= 0; i -= 2) {
+        buf[buf_pos++] = temp[i];
+        buf[buf_pos++] = temp[i + 1];
+    }
+    buf[buf_pos] = '\0';
+    return buf;
+}
+
 /**
  * Convert an integer to Arabic-Indic numerals
  * @param n The number to convert
@@ -1147,6 +1181,55 @@ void ir_module_free(IRModule* module) {
 // IR Printing (for debugging with --dump-ir)
 // ============================================================================
 
+static void ir_type_print(IRType* type, FILE* out, int use_arabic) {
+    if (!out) return;
+    if (!type) {
+        fputs(use_arabic ? "فراغ" : "void", out);
+        return;
+    }
+
+    char num_buf[64];
+    const char* sep = use_arabic ? "، " : ", ";
+
+    switch (type->kind) {
+        case IR_TYPE_VOID: fputs(use_arabic ? "فراغ" : "void", out); return;
+        case IR_TYPE_I1:   fputs(use_arabic ? "ص١" : "i1", out); return;
+        case IR_TYPE_I8:   fputs(use_arabic ? "ص٨" : "i8", out); return;
+        case IR_TYPE_I16:  fputs(use_arabic ? "ص١٦" : "i16", out); return;
+        case IR_TYPE_I32:  fputs(use_arabic ? "ص٣٢" : "i32", out); return;
+        case IR_TYPE_I64:  fputs(use_arabic ? "ص٦٤" : "i64", out); return;
+
+        case IR_TYPE_PTR:
+            fputs(use_arabic ? "مؤشر[" : "ptr[", out);
+            ir_type_print(type->data.pointee, out, use_arabic);
+            fputc(']', out);
+            return;
+
+        case IR_TYPE_ARRAY:
+            fputs(use_arabic ? "مصفوفة[" : "array[", out);
+            ir_type_print(type->data.array.element, out, use_arabic);
+            fputs(sep, out);
+            if (use_arabic) fputs(int_to_arabic_numerals(type->data.array.count, num_buf), out);
+            else fprintf(out, "%d", type->data.array.count);
+            fputc(']', out);
+            return;
+
+        case IR_TYPE_FUNC:
+            fputs(use_arabic ? "دالة(" : "func(", out);
+            for (int i = 0; i < type->data.func.param_count; i++) {
+                if (i > 0) fputs(sep, out);
+                ir_type_print(type->data.func.params[i], out, use_arabic);
+            }
+            fputs(") -> ", out);
+            ir_type_print(type->data.func.ret, out, use_arabic);
+            return;
+
+        default:
+            fputs(use_arabic ? "مجهول" : "unknown", out);
+            return;
+    }
+}
+
 /**
  * Print a value
  */
@@ -1174,7 +1257,7 @@ void ir_value_print(IRValue* val, FILE* out, int use_arabic) {
             
         case IR_VAL_CONST_INT:
             if (use_arabic) {
-                fprintf(out, "%s", int_to_arabic_numerals((int)val->data.const_int, num_buf));
+                fprintf(out, "%s", int64_to_arabic_numerals(val->data.const_int, num_buf));
             } else {
                 fprintf(out, "%lld", (long long)val->data.const_int);
             }
@@ -1190,11 +1273,11 @@ void ir_value_print(IRValue* val, FILE* out, int use_arabic) {
             
         case IR_VAL_BLOCK:
             if (val->data.block && val->data.block->label) {
-                fprintf(out, ":%s", val->data.block->label);
+                fprintf(out, "%%%s", val->data.block->label);
             } else if (val->data.block) {
-                fprintf(out, ":block%d", val->data.block->id);
+                fprintf(out, "%%block%d", val->data.block->id);
             } else {
-                fprintf(out, ":???");
+                fprintf(out, "%%???");
             }
             break;
             
@@ -1217,7 +1300,6 @@ void ir_value_print(IRValue* val, FILE* out, int use_arabic) {
  */
 void ir_inst_print(IRInst* inst, FILE* out, int use_arabic) {
     if (!inst) return;
-    
     char num_buf[64];
     
     // Print destination if it exists
@@ -1233,66 +1315,124 @@ void ir_inst_print(IRInst* inst, FILE* out, int use_arabic) {
         fprintf(out, "    ");
     }
     
-    // Print opcode
-    if (use_arabic) {
-        fprintf(out, "%s ", ir_op_to_arabic(inst->op));
-    } else {
-        fprintf(out, "%s ", ir_op_to_english(inst->op));
-    }
-    
-    // Print type for typed operations
-    if (inst->type && inst->type->kind != IR_TYPE_VOID && 
-        inst->op != IR_OP_BR && inst->op != IR_OP_BR_COND) {
-        if (use_arabic) {
-            fprintf(out, "%s ", ir_type_to_arabic(inst->type));
-        } else {
-            fprintf(out, "%s ", ir_type_to_english(inst->type));
+    const char* sep = use_arabic ? "، " : ", ";
+
+    if (use_arabic) fprintf(out, "%s", ir_op_to_arabic(inst->op));
+    else fprintf(out, "%s", ir_op_to_english(inst->op));
+    fputc(' ', out);
+
+    switch (inst->op) {
+        case IR_OP_ALLOCA: {
+            IRType* t = inst->type;
+            if (t && t->kind == IR_TYPE_PTR) t = t->data.pointee;
+            ir_type_print(t, out, use_arabic);
+            break;
         }
-    }
-    
-    // Print comparison predicate for CMP
-    if (inst->op == IR_OP_CMP) {
-        if (use_arabic) {
-            fprintf(out, "%s ", ir_cmp_pred_to_arabic(inst->cmp_pred));
-        } else {
-            fprintf(out, "%s ", ir_cmp_pred_to_english(inst->cmp_pred));
-        }
-    }
-    
-    // Print operands for most instructions
-    if (inst->op != IR_OP_CALL && inst->op != IR_OP_PHI) {
-        for (int i = 0; i < inst->operand_count; i++) {
-            if (i > 0) fprintf(out, ", ");
-            ir_value_print(inst->operands[i], out, use_arabic);
-        }
-    }
-    
-    // Special handling for call
-    if (inst->op == IR_OP_CALL) {
-        fprintf(out, "@%s(", inst->call_target ? inst->call_target : "???");
-        for (int i = 0; i < inst->call_arg_count; i++) {
-            if (i > 0) fprintf(out, ", ");
-            if (inst->call_args && inst->call_args[i]) {
-                ir_value_print(inst->call_args[i], out, use_arabic);
+
+        case IR_OP_LOAD: {
+            ir_type_print(inst->type, out, use_arabic);
+            if (inst->operand_count > 0) {
+                fputs(sep, out);
+                ir_value_print(inst->operands[0], out, use_arabic);
             }
+            break;
         }
-        fprintf(out, ")");
-    }
-    
-    // Special handling for phi
-    if (inst->op == IR_OP_PHI) {
-        IRPhiEntry* entry = inst->phi_entries;
-        while (entry) {
-            fprintf(out, " [");
-            ir_value_print(entry->value, out, use_arabic);
-            fprintf(out, ", ");
-            if (entry->block && entry->block->label) {
-                fprintf(out, ":%s", entry->block->label);
-            } else if (entry->block) {
-                fprintf(out, ":block%d", entry->block->id);
+
+        case IR_OP_STORE: {
+            IRType* vt = (inst->operand_count > 0 && inst->operands[0]) ? inst->operands[0]->type : NULL;
+            ir_type_print(vt, out, use_arabic);
+            fputc(' ', out);
+            if (inst->operand_count > 0) ir_value_print(inst->operands[0], out, use_arabic);
+            if (inst->operand_count > 1) {
+                fputs(sep, out);
+                ir_value_print(inst->operands[1], out, use_arabic);
             }
-            fprintf(out, "]");
-            entry = entry->next;
+            break;
+        }
+
+        case IR_OP_CMP: {
+            if (use_arabic) fprintf(out, "%s ", ir_cmp_pred_to_arabic(inst->cmp_pred));
+            else fprintf(out, "%s ", ir_cmp_pred_to_english(inst->cmp_pred));
+
+            IRType* ot = (inst->operand_count > 0 && inst->operands[0]) ? inst->operands[0]->type : NULL;
+            ir_type_print(ot, out, use_arabic);
+            fputc(' ', out);
+
+            for (int i = 0; i < inst->operand_count; i++) {
+                if (i > 0) fputs(sep, out);
+                ir_value_print(inst->operands[i], out, use_arabic);
+            }
+            break;
+        }
+
+        case IR_OP_BR: {
+            if (inst->operand_count > 0) ir_value_print(inst->operands[0], out, use_arabic);
+            break;
+        }
+
+        case IR_OP_BR_COND: {
+            for (int i = 0; i < inst->operand_count; i++) {
+                if (i > 0) fputs(sep, out);
+                ir_value_print(inst->operands[i], out, use_arabic);
+            }
+            break;
+        }
+
+        case IR_OP_RET: {
+            if (inst->operand_count <= 0) {
+                break;
+            }
+            ir_type_print(inst->type, out, use_arabic);
+            fputc(' ', out);
+            ir_value_print(inst->operands[0], out, use_arabic);
+            break;
+        }
+
+        case IR_OP_CALL: {
+            ir_type_print(inst->type, out, use_arabic);
+            fprintf(out, " @%s(", inst->call_target ? inst->call_target : "???");
+            for (int i = 0; i < inst->call_arg_count; i++) {
+                if (i > 0) fputs(sep, out);
+                if (inst->call_args && inst->call_args[i]) {
+                    ir_value_print(inst->call_args[i], out, use_arabic);
+                }
+            }
+            fputc(')', out);
+            break;
+        }
+
+        case IR_OP_PHI: {
+            ir_type_print(inst->type, out, use_arabic);
+            fputc(' ', out);
+            int first = 1;
+            for (IRPhiEntry* entry = inst->phi_entries; entry; entry = entry->next) {
+                if (!first) fputs(sep, out);
+                first = 0;
+                fputc('[', out);
+                ir_value_print(entry->value, out, use_arabic);
+                fputs(sep, out);
+                if (entry->block && entry->block->label) {
+                    fprintf(out, "%%%s", entry->block->label);
+                } else if (entry->block) {
+                    fprintf(out, "%%block%d", entry->block->id);
+                } else {
+                    fputs("%???", out);
+                }
+                fputc(']', out);
+            }
+            break;
+        }
+
+        default: {
+            if (inst->type && inst->type->kind != IR_TYPE_VOID) {
+                ir_type_print(inst->type, out, use_arabic);
+                fputc(' ', out);
+            }
+            for (int i = 0; i < inst->operand_count; i++) {
+                if (i > 0) fputs(sep, out);
+                ir_value_print(inst->operands[i], out, use_arabic);
+            }
+            break;
         }
     }
     
@@ -1330,31 +1470,27 @@ void ir_func_print(IRFunc* func, FILE* out, int use_arabic) {
     
     // Print function header
     if (use_arabic) {
-        fprintf(out, "دالة %s(", func->name ? func->name : "???");
+        fprintf(out, "دالة @%s(", func->name ? func->name : "???");
     } else {
-        fprintf(out, "func %s(", func->name ? func->name : "???");
+        fprintf(out, "func @%s(", func->name ? func->name : "???");
     }
     
     // Print parameters
     for (int i = 0; i < func->param_count; i++) {
         if (i > 0) fprintf(out, ", ");
         if (use_arabic) {
-            fprintf(out, "%s %%م%s", 
+            fprintf(out, "%s %%معامل%s",
                     ir_type_to_arabic(func->params[i].type),
-                    int_to_arabic_numerals(func->params[i].reg, num_buf));
+                    int_to_arabic_numerals(i, num_buf));
         } else {
-            fprintf(out, "%s %%r%d", 
+            fprintf(out, "%s %%arg%d",
                     ir_type_to_english(func->params[i].type),
-                    func->params[i].reg);
+                    i);
         }
     }
     
     fprintf(out, ") -> ");
-    if (use_arabic) {
-        fprintf(out, "%s", ir_type_to_arabic(func->ret_type));
-    } else {
-        fprintf(out, "%s", ir_type_to_english(func->ret_type));
-    }
+    ir_type_print(func->ret_type, out, use_arabic);
     
     if (func->is_prototype) {
         fprintf(out, ";\n\n");
@@ -1365,7 +1501,12 @@ void ir_func_print(IRFunc* func, FILE* out, int use_arabic) {
     
     // Print blocks
     IRBlock* block = func->blocks;
+    int first_block = 1;
     while (block) {
+        if (!first_block) {
+            fprintf(out, "\n");
+        }
+        first_block = 0;
         ir_block_print(block, out, use_arabic);
         block = block->next;
     }
@@ -1379,18 +1520,16 @@ void ir_func_print(IRFunc* func, FILE* out, int use_arabic) {
 void ir_global_print(IRGlobal* global, FILE* out, int use_arabic) {
     if (!global) return;
     
-    fprintf(out, "@%s: ", global->name ? global->name : "???");
-    
     if (use_arabic) {
-        fprintf(out, "%s", ir_type_to_arabic(global->type));
+        fprintf(out, "عام @%s = %s", global->name ? global->name : "???", ir_type_to_arabic(global->type));
         if (global->is_const) fprintf(out, " ثابت");
     } else {
-        fprintf(out, "%s", ir_type_to_english(global->type));
+        fprintf(out, "global @%s = %s", global->name ? global->name : "???", ir_type_to_english(global->type));
         if (global->is_const) fprintf(out, " const");
     }
     
     if (global->init) {
-        fprintf(out, " = ");
+        fprintf(out, " ");
         ir_value_print(global->init, out, use_arabic);
     }
     
@@ -1466,4 +1605,16 @@ void ir_module_dump(IRModule* module, const char* filename, int use_arabic) {
     }
     ir_module_print(module, out, use_arabic);
     fclose(out);
+}
+
+void ir_print_inst(IRInst* inst, FILE* out) {
+    ir_inst_print(inst, out, 1);
+}
+
+void ir_print_block(IRBlock* block, FILE* out) {
+    ir_block_print(block, out, 1);
+}
+
+void ir_print_func(IRFunc* func, FILE* out) {
+    ir_func_print(func, out, 1);
 }

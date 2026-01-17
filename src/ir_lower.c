@@ -790,3 +790,128 @@ void lower_stmt(IRLowerCtx* ctx, Node* stmt) {
             return;
     }
 }
+
+static IRValue* lower_global_init(IRBuilder* builder, Node* expr) {
+    if (!builder || !expr) return NULL;
+
+    switch (expr->type) {
+        case NODE_INT:
+            return ir_builder_const_i64((int64_t)expr->data.integer.value);
+        case NODE_BOOL:
+            return ir_builder_const_bool(expr->data.bool_lit.value ? 1 : 0);
+        case NODE_CHAR:
+            return ir_builder_const_i64((int64_t)expr->data.char_lit.value);
+        case NODE_STRING:
+            return ir_builder_const_string(builder, expr->data.string_lit.value);
+        default:
+            return NULL;
+    }
+}
+
+IRModule* ir_lower_program(Node* program, const char* module_name) {
+    if (!program || program->type != NODE_PROGRAM) return NULL;
+
+    IRModule* module = ir_module_new(module_name ? module_name : "module");
+    if (!module) return NULL;
+
+    IRBuilder* builder = ir_builder_new(module);
+    if (!builder) {
+        ir_module_free(module);
+        return NULL;
+    }
+
+    for (Node* decl = program->data.program.declarations; decl; decl = decl->next) {
+        if (decl->type == NODE_VAR_DECL && decl->data.var_decl.is_global) {
+            IRType* t = ir_type_from_datatype(decl->data.var_decl.type);
+            IRValue* init = lower_global_init(builder, decl->data.var_decl.expression);
+
+            if (init) {
+                (void)ir_builder_create_global_init(builder, decl->data.var_decl.name, t, init, decl->data.var_decl.is_const ? 1 : 0);
+            } else {
+                (void)ir_builder_create_global(builder, decl->data.var_decl.name, t, decl->data.var_decl.is_const ? 1 : 0);
+            }
+            continue;
+        }
+
+        if (decl->type == NODE_FUNC_DEF) {
+            IRType* ret_type = ir_type_from_datatype(decl->data.func_def.return_type);
+            IRFunc* func = ir_builder_create_func(builder, decl->data.func_def.name, ret_type);
+
+            int param_count = 0;
+            for (Node* p = decl->data.func_def.params; p; p = p->next) param_count++;
+
+            int* param_regs = NULL;
+            IRType** param_types = NULL;
+            const char** param_names = NULL;
+
+            if (param_count > 0) {
+                param_regs = (int*)malloc(sizeof(int) * (size_t)param_count);
+                param_types = (IRType**)malloc(sizeof(IRType*) * (size_t)param_count);
+                param_names = (const char**)malloc(sizeof(const char*) * (size_t)param_count);
+            }
+
+            int i = 0;
+            for (Node* p = decl->data.func_def.params; p; p = p->next) {
+                IRType* pt = IR_TYPE_I64_T;
+                const char* pn = NULL;
+                if (p->type == NODE_VAR_DECL) {
+                    pt = ir_type_from_datatype(p->data.var_decl.type);
+                    pn = p->data.var_decl.name;
+                }
+
+                int preg = ir_builder_add_param(builder, pn, pt);
+
+                if (param_regs) param_regs[i] = preg;
+                if (param_types) param_types[i] = pt;
+                if (param_names) param_names[i] = pn;
+                i++;
+            }
+
+            if (decl->data.func_def.is_prototype) {
+                if (func) func->is_prototype = true;
+                if (param_regs) free(param_regs);
+                if (param_types) free(param_types);
+                if (param_names) free(param_names);
+                continue;
+            }
+
+            IRBlock* entry = ir_builder_create_block_and_set(builder, "بداية");
+            (void)entry;
+
+            IRLowerCtx ctx;
+            ir_lower_ctx_init(&ctx, builder);
+
+            for (int p = 0; p < param_count; p++) {
+                IRType* vt = param_types ? param_types[p] : IR_TYPE_I64_T;
+                const char* name = param_names ? param_names[p] : NULL;
+                int preg = param_regs ? param_regs[p] : p;
+
+                int ptr_reg = ir_builder_emit_alloca(builder, vt);
+                if (name) {
+                    ir_lower_bind_local(&ctx, name, ptr_reg, vt);
+                }
+
+                IRValue* ptr = ir_value_reg(ptr_reg, NULL);
+                IRValue* pv = ir_value_reg(preg, vt);
+                ir_builder_emit_store(builder, pv, ptr);
+            }
+
+            if (decl->data.func_def.body) {
+                lower_stmt(&ctx, decl->data.func_def.body);
+            }
+
+            if (!ir_builder_is_block_terminated(builder)) {
+                IRValue* zero = ir_value_const_int(0, ret_type);
+                ir_builder_emit_ret(builder, zero);
+            }
+
+            if (param_regs) free(param_regs);
+            if (param_types) free(param_types);
+            if (param_names) free(param_names);
+            continue;
+        }
+    }
+
+    ir_builder_free(builder);
+    return module;
+}

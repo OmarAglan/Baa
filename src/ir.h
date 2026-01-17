@@ -511,6 +511,10 @@ void ir_global_print(IRGlobal* global, FILE* out, int use_arabic);
 void ir_module_print(IRModule* module, FILE* out, int use_arabic);
 void ir_module_dump(IRModule* module, const char* filename, int use_arabic);
 
+void ir_print_inst(IRInst* inst, FILE* out);
+void ir_print_block(IRBlock* block, FILE* out);
+void ir_print_func(IRFunc* func, FILE* out);
+
 // English name conversion (for debugging)
 const char* ir_op_to_english(IROp op);
 const char* ir_cmp_pred_to_english(IRCmpPred pred);

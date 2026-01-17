@@ -8,6 +8,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.3.0.6] - 2026-01-17
+
+### Added
+- **IR Printer (Text Format)** — Stabilized Arabic-first IR printing output (types, operands, punctuation) in [ir.c](src/ir.c) + [ir.h](src/ir.h).
+  - Added convenience wrappers: `ir_print_func()`, `ir_print_block()`, `ir_print_inst()` (Arabic output).
+  - Added `ir_lower_program()` to lower a full AST program to an `IRModule*` for debugging in [ir_lower.c](src/ir_lower.c) + [ir_lower.h](src/ir_lower.h).
+- **CLI**: Added `--dump-ir` flag in [main.c](src/main.c) to print IR and stop (no assembly/linking).
+- Added IR printer smoke test: [ir_printer.baa](tests/ir_printer.baa).
+
+### Changed
+- Updated compiler version macro to `0.3.0.6` in [baa.h](src/baa.h).
+
 ## [0.3.0.5] - 2026-01-16
 
 ### Added

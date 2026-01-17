@@ -1,6 +1,6 @@
 # Baa Internal API Reference
 
-> **Version:** 0.3.0.5 | [← User Guide](USER_GUIDE.md) | [Internals →](INTERNALS.md)
+> **Version:** 0.3.0.6 | [← User Guide](USER_GUIDE.md) | [Internals →](INTERNALS.md)
 
 This document details the C functions, enumerations, and structures defined in `src/baa.h`, `src/ir.h`, `src/ir_builder.h`, and `src/ir_lower.h`.
 
@@ -505,6 +505,34 @@ void ir_module_dump(IRModule* module, const char* filename, int use_arabic)
 Convenience wrapper that opens a file and prints the module.
 
 ---
+
+#### `ir_print_func`
+
+```c
+void ir_print_func(IRFunc* func, FILE* out)
+```
+
+Arabic-only convenience wrapper around `ir_func_print(func, out, 1)`.
+
+---
+
+#### `ir_print_block`
+
+```c
+void ir_print_block(IRBlock* block, FILE* out)
+```
+
+Arabic-only convenience wrapper around `ir_block_print(block, out, 1)`.
+
+---
+
+#### `ir_print_inst`
+
+```c
+void ir_print_inst(IRInst* inst, FILE* out)
+```
+
+Arabic-only convenience wrapper around `ir_inst_print(inst, out, 1)`.
 
 ### 4.7. Arabic Name Conversion
 
@@ -1052,6 +1080,16 @@ void lower_stmt_list(IRLowerCtx* ctx, Node* first_stmt);
 Lowers a linked list of statements (e.g., the statements list inside `NODE_BLOCK`).
 
 ---
+
+### 6.7. `ir_lower_program` (v0.3.0.6+)
+
+```c
+IRModule* ir_lower_program(Node* program, const char* module_name);
+```
+
+Lowers a full `NODE_PROGRAM` AST into an `IRModule*` for debugging/printing (used by `baa --dump-ir`).
+
+## 7. Codegen Module
 
 ## 7. Codegen Module
 

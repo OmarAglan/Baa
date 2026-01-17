@@ -5,6 +5,8 @@
  */
 
 #include "baa.h"
+#include "ir_lower.h"
+#include "ir.h"
 #include <time.h>
 
 #ifdef _WIN32
@@ -24,6 +26,7 @@ typedef struct {
     bool compile_only;      // -c: تجميع إلى كائن فقط (بدون ربط)
     bool verbose;           // -v: وضع التفاصيل
     bool show_timings;      // -v: عرض وقت الترجمة
+    bool dump_ir;           // --dump-ir: طباعة IR والتوقف
     double start_time;      // وقت بدء الترجمة
 } CompilerConfig;
 
@@ -156,6 +159,7 @@ void print_help() {
     printf("  -S, -s       Compile to assembly only (.s)\n");
     printf("  -c           Compile to object file only (.o)\n");
     printf("  -v           Enable verbose output with timing\n");
+    printf("  --dump-ir    Print Baa IR (Arabic) and stop\n");
     printf("  --help, -h   Show this help message\n");
     printf("  --version    Show version info\n");
     printf("\nWarning Options:\n");
@@ -226,6 +230,9 @@ int main(int argc, char** argv) {
             else if (strcmp(arg, "-o") == 0) {
                 if (i + 1 < argc) config.output_file = argv[++i];
                 else { printf("Error: -o requires a filename\n"); return 1; }
+            }
+            else if (strcmp(arg, "--dump-ir") == 0) {
+                config.dump_ir = true;
             }
             else if (strcmp(arg, "--help") == 0 || strcmp(arg, "-h") == 0) {
                 print_help();
@@ -307,6 +314,20 @@ int main(int argc, char** argv) {
             return 1;
         }
 
+        if (config.dump_ir) {
+            if (config.verbose) printf("[INFO] Lowering AST to IR...\n");
+            IRModule* ir = ir_lower_program(ast, current_input);
+            if (!ir) {
+                fprintf(stderr, "Aborting %s: failed to lower IR.\n", current_input);
+                free(source);
+                return 1;
+            }
+            ir_module_print(ir, stdout, 1);
+            ir_module_free(ir);
+            free(source);
+            continue;
+        }
+
         // 4. توليد كود التجميع (Codegen)
         char* asm_file;
         if (config.assembly_only && input_count == 1 && config.output_file) asm_file = config.output_file;
@@ -348,7 +369,7 @@ int main(int argc, char** argv) {
     }
 
     // إذا طلب المستخدم -S أو -c، نتوقف هنا
-    if (config.assembly_only || config.compile_only) {
+    if (config.dump_ir || config.assembly_only || config.compile_only) {
         return 0;
     }
 

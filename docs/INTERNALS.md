@@ -1,6 +1,6 @@
 # Baa Compiler Internals
 
-> **Version:** 0.3.0.7 | [← Language Spec](LANGUAGE.md) | [API Reference →](API_REFERENCE.md)
+> **Version:** 0.3.1.1 | [← Language Spec](LANGUAGE.md) | [API Reference →](API_REFERENCE.md)
 
 **Target Architecture:** x86-64 (AMD64)
 **Target OS:** Windows (MinGW-w64 Toolchain)
@@ -53,7 +53,7 @@ flowchart LR
 | **1. Frontend** | `.baa` Source | AST | `lexer.c`, `parser.c` | Tokenizes, handles macros, and builds the syntax tree. |
 | **2. Analysis** | AST | Valid AST | `analysis.c` | **Semantic Pass**: Checks types, scopes, and resolves symbols. |
 | **3. IR Lowering** | AST | IR | `ir_lower.c` (v0.3.0.3+) + `ir_builder.c` | Converts AST expressions/statements to SSA-form Intermediate Representation using the IR Builder. |
-| **4. Optimization** | IR | Optimized IR | (future) | Dead code elimination, constant propagation, etc. |
+| **4. Optimization** | IR | Optimized IR | [`src/ir_analysis.c`](src/ir_analysis.c:1) + [`src/ir_pass.h`](src/ir_pass.h:1) (v0.3.1.1+) | Analysis infrastructure (CFG validation, predecessors, dominance) + future optimization passes. |
 | **5. Backend** | IR | `.s` Assembly | `codegen.c` | Generates x86-64 assembly code (AT&T syntax). |
 | **6. Assemble** | `.s` Assembly | `.o` Object | `gcc -c` | Invokes external assembler. |
 | **7. Link** | `.o` Object | `.exe` Executable | `gcc` | Links with C Runtime. |
@@ -708,6 +708,26 @@ The driver exposes the printer via the CLI flag `--dump-ir` implemented in [`src
 ```powershell
 build\baa.exe --dump-ir program.baa
 ```
+
+---
+
+### 6.14. IR Analysis Infrastructure (v0.3.1.1)
+
+The IR analysis layer provides foundational compiler analyses required by the upcoming optimizer pipeline:
+
+- **CFG validation**: ensure each block has a terminator (`قفز` / `قفز_شرط` / `رجوع`)
+  - [`ir_func_validate_cfg()`](src/ir_analysis.h:36)
+  - [`ir_module_validate_cfg()`](src/ir_analysis.h:42)
+
+- **Predecessor rebuilding**: recompute `preds[]` and `succs[]` from terminator instructions (useful after IR edits)
+  - [`ir_func_rebuild_preds()`](src/ir_analysis.h:56)
+  - [`ir_module_rebuild_preds()`](src/ir_analysis.h:61)
+
+- **Dominator tree + dominance frontier**: compute `idom` for each block and build dominance frontier sets
+  - [`ir_func_compute_dominators()`](src/ir_analysis.h:77)
+  - [`ir_module_compute_dominators()`](src/ir_analysis.h:82)
+
+> Implementation lives in [`src/ir_analysis.c`](src/ir_analysis.c:1).
 
 ---
 

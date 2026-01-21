@@ -8,6 +8,22 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.3.1.1] - 2026-01-21
+
+### Added
+- **IR analysis infrastructure (CFG + dominance)** — foundational analysis utilities for the upcoming optimizer:
+  - CFG validation (`ir_func_validate_cfg()`, `ir_module_validate_cfg()`) in [src/ir_analysis.c](src/ir_analysis.c) / [src/ir_analysis.h](src/ir_analysis.h)
+  - Predecessor rebuild (`ir_func_rebuild_preds()`, `ir_module_rebuild_preds()`) in [src/ir_analysis.c](src/ir_analysis.c) / [src/ir_analysis.h](src/ir_analysis.h)
+  - Dominator tree + dominance frontier (`ir_func_compute_dominators()`, `ir_module_compute_dominators()`) in [src/ir_analysis.c](src/ir_analysis.c) / [src/ir_analysis.h](src/ir_analysis.h)
+
+- **IRPass interface** — a minimal pass abstraction for the optimization pipeline in [src/ir_pass.c](src/ir_pass.c) / [src/ir_pass.h](src/ir_pass.h)
+
+### Changed
+- **Build system** — added IR analysis + pass sources to [CMakeLists.txt](CMakeLists.txt)
+
+### Testing
+- Added IR analysis smoke test: [tests/ir_analysis_test.c](tests/ir_analysis_test.c)
+
 ## [0.3.0.7] - 2026-01-17
 
 ### Added

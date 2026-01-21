@@ -1,8 +1,8 @@
 # Baa Internal API Reference
 
-> **Version:** 0.3.0.7 | [← User Guide](USER_GUIDE.md) | [Internals →](INTERNALS.md)
+> **Version:** 0.3.1.1 | [← User Guide](USER_GUIDE.md) | [Internals →](INTERNALS.md)
 
-This document details the C functions, enumerations, and structures defined in `src/baa.h`, `src/ir.h`, `src/ir_builder.h`, and `src/ir_lower.h`.
+This document details the C functions, enumerations, and structures defined in `src/baa.h`, `src/ir.h`, `src/ir_builder.h`, `src/ir_lower.h`, `src/ir_analysis.h`, and `src/ir_pass.h`.
 
 ---
 
@@ -607,6 +607,102 @@ extern IRType* IR_TYPE_I16_T;    // ص١٦
 extern IRType* IR_TYPE_I32_T;    // ص٣٢
 extern IRType* IR_TYPE_I64_T;    // ص٦٤
 ```
+
+---
+
+### 4.9. IR Analysis Module (v0.3.1.1)
+
+Provides analysis utilities over IR functions/blocks:
+- CFG validation
+- Predecessor rebuilding
+- Dominator tree + dominance frontier
+
+#### `ir_func_validate_cfg`
+
+```c
+bool ir_func_validate_cfg(IRFunc* func);
+```
+
+Validates basic CFG well-formedness for a function:
+- all blocks have terminators
+- terminators have well-formed operands (branch targets are blocks, etc.)
+
+---
+
+#### `ir_module_validate_cfg`
+
+```c
+bool ir_module_validate_cfg(IRModule* module);
+```
+
+Validates CFG for all functions in a module.
+
+---
+
+#### `ir_func_rebuild_preds`
+
+```c
+void ir_func_rebuild_preds(IRFunc* func);
+```
+
+Clears and rebuilds `succs[]` and `preds[]` for all blocks based on terminator instructions.
+
+---
+
+#### `ir_module_rebuild_preds`
+
+```c
+void ir_module_rebuild_preds(IRModule* module);
+```
+
+Rebuilds CFG edges for all functions in a module.
+
+---
+
+#### `ir_func_compute_dominators`
+
+```c
+void ir_func_compute_dominators(IRFunc* func);
+```
+
+Computes immediate dominators (`idom`) and dominance frontier sets (`dom_frontier`) for a function.
+
+---
+
+#### `ir_module_compute_dominators`
+
+```c
+void ir_module_compute_dominators(IRModule* module);
+```
+
+Computes dominators for all functions in a module.
+
+---
+
+### 4.10. IR Pass Module (v0.3.1.1)
+
+Defines a minimal pass interface for the optimizer pipeline.
+
+#### `IRPass`
+
+```c
+typedef bool (*IRPassRunFn)(IRModule* module);
+
+typedef struct IRPass {
+    const char* name;
+    IRPassRunFn run;
+} IRPass;
+```
+
+---
+
+#### `ir_pass_run`
+
+```c
+bool ir_pass_run(IRPass* pass, IRModule* module);
+```
+
+Runs a pass (NULL-safe). Returns `true` if the pass changed the module.
 
 ---
 

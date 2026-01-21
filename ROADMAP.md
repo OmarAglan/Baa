@@ -96,12 +96,12 @@
 
 ### v0.3.1: The Optimizer ⚡
 
-#### v0.3.1.1: Analysis Infrastructure
+#### v0.3.1.1: Analysis Infrastructure ✅ COMPLETED (2026-01-21)
 
-- [ ] **CFG validation** — Verify all blocks have terminators.
-- [ ] **Predecessor lists** — Build predecessor list for each block.
-- [ ] **Dominator tree** — Compute dominance relationships.
-- [ ] **Define `IRPass` interface** — Function pointer for optimization passes.
+- [x] **CFG validation** — Verify all blocks have terminators.
+- [x] **Predecessor lists** — Build predecessor list for each block.
+- [x] **Dominator tree** — Compute dominance relationships.
+- [x] **Define `IRPass` interface** — Function pointer for optimization passes.
 
 #### v0.3.1.2: Constant Folding (طي_الثوابت)
 

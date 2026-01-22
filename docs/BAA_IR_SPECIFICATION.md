@@ -77,6 +77,7 @@ Virtual registers use the prefix `%م` (مؤقت = temporary):
 ```
 
 **Rules:**
+
 - Each `%م<n>` is assigned exactly once (SSA property)
 - Numbers use Arabic numerals: `%م٠`, `%م١`, `%م٢٣`
 - Function parameters: `%معامل٠`, `%معامل١`
@@ -177,6 +178,7 @@ Stack allocations create addressable memory:
 ### 5.1 Basic Blocks
 
 Each basic block has:
+
 - A unique Arabic label (e.g., `بداية:`, `حلقة:`, `نهاية:`)
 - Zero or more non-terminating instructions
 - Exactly one terminating instruction (`قفز`, `قفز_شرط`, or `رجوع`)
@@ -202,6 +204,7 @@ Each basic block has:
 ```
 
 Example:
+
 ```
 دالة @مضاعفة(ص٦٤ %معامل٠) -> ص٦٤ {
 بداية:
@@ -242,7 +245,9 @@ Local variables are lowered to stack allocations:
 ```baa
 صحيح س = ١٠.
 ```
+
 Becomes:
+
 ```
 %م٠ = حجز ص٦٤
 خزن ص٦٤ ١٠، %م٠
@@ -251,10 +256,13 @@ Becomes:
 ### 6.3 Control Flow Lowering
 
 If-else statements:
+
 ```baa
 إذا (س > ٠) { اطبع س. } وإلا { اطبع ٠. }
 ```
+
 Becomes:
+
 ```
     %م١ = حمل ص٦٤، %م٠
     %م٢ = قارن أكبر ص٦٤ %م١، ٠
@@ -305,6 +313,7 @@ Becomes:
 ### 8.1 Simple Function
 
 **Baa Source:**
+
 ```baa
 صحيح مربع(صحيح س) {
     إرجع س * س.
@@ -312,6 +321,7 @@ Becomes:
 ```
 
 **Baa IR:**
+
 ```
 دالة @مربع(ص٦٤ %معامل٠) -> ص٦٤ {
 بداية:
@@ -323,6 +333,7 @@ Becomes:
 ### 8.2 Loop with Counter
 
 **Baa Source:**
+
 ```baa
 صحيح مجموع(صحيح ن) {
     صحيح ج = ٠.
@@ -334,6 +345,7 @@ Becomes:
 ```
 
 **Baa IR:**
+
 ```
 دالة @مجموع(ص٦٤ %معامل٠) -> ص٦٤ {
 بداية:
@@ -366,6 +378,7 @@ Becomes:
 ### 8.3 Conditional with Phi
 
 **Baa Source:**
+
 ```baa
 صحيح أقصى(صحيح أ، صحيح ب) {
     صحيح ن.
@@ -375,6 +388,7 @@ Becomes:
 ```
 
 **Baa IR (with phi optimization):**
+
 ```
 دالة @أقصى(ص٦٤ %معامل٠، ص٦٤ %معامل١) -> ص٦٤ {
 بداية:

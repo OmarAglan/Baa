@@ -103,12 +103,12 @@
 - [x] **Dominator tree** — Compute dominance relationships.
 - [x] **Define `IRPass` interface** — Function pointer for optimization passes.
 
-#### v0.3.1.2: Constant Folding (طي_الثوابت)
+#### v0.3.1.2: Constant Folding (طي_الثوابت) ✅ COMPLETED (2026-01-22)
 
-- [ ] **Detect constant operands** — Both operands are immediate values.
-- [ ] **Fold arithmetic** — `جمع ص٦٤ ٥، ٣` → `٨`.
-- [ ] **Fold comparisons** — `قارن أكبر ص٦٤ ١٠، ٥` → `صواب`.
-- [ ] **Replace instruction** — Remove op, use constant result.
+- [x] **Detect constant operands** — Both operands are immediate values.
+- [x] **Fold arithmetic** — `جمع ص٦٤ ٥، ٣` → `٨`.
+- [x] **Fold comparisons** — `قارن أكبر ص٦٤ ١٠، ٥` → `صواب`.
+- [x] **Replace instruction** — Remove op, use constant result.
 
 #### v0.3.1.3: Dead Code Elimination (حذف_الميت)
 

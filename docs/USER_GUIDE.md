@@ -24,6 +24,7 @@ Currently, you must build Baa from source.
 - **Not supported:** Linux/macOS (the compiler and updater are currently Windows-first)
 
 ### Prerequisites
+
 - **CMake** 3.10 or higher
 - **MinGW-w64** (GCC compiler)
 - **PowerShell** (Windows)
@@ -65,7 +66,6 @@ baa --version
 ## 2. Your First Program
 
 Create a file named `hello.baa` using any text editor. **Important:** Save the file as **UTF-8** encoding.
-
 
 ```baa
 // هذا برنامجي الأول
@@ -138,37 +138,46 @@ The Baa compiler `baa.exe` is a full-featured command-line tool (since v0.2.0).
 
 **Note:** The compiler currently exposes flags for `unused-variable` and `dead-code`. The shadowing warning exists, but is only enabled via `-Wall` (there is no dedicated `-Wshadow-variable` flag yet).
 
-
 ### Compilation Workflow
 
 The compiler can handle multiple source files and produce a single executable.
 
 #### 1. Simple Build (Recommended)
+
 Compile multiple files and link them automatically:
+
 ```powershell
 .\baa.exe main.baa utils.baa math.baa -o myapp.exe
 .\myapp.exe
 ```
 
 #### 2. Manual Steps (`-o`, `-S`, `-c`)
+
 You can control the compilation stages if needed:
 
-1.  **Source to Assembly**:
+1. **Source to Assembly**:
+
     ```powershell
     .\baa.exe -S program.baa -o program.s
     # This will create 'program.s'
     ```
-2.  **Assembly to Object File (via GCC)**:
+
+2. **Assembly to Object File (via GCC)**:
+
     ```powershell
     # Requires 'gcc' in PATH
     gcc -c program.s -o program.o
     ```
-3.  **Link Object Files to Executable (via GCC)**:
+
+3. **Link Object Files to Executable (via GCC)**:
+
     ```powershell
     # Requires 'gcc' in PATH
     gcc program.o -o program.exe
     ```
-4.  **Full Pipeline (default)**:
+
+4. **Full Pipeline (default)**:
+
     ```powershell
     .\baa.exe program.baa -o program.exe
     # This is equivalent to steps 1-3 if gcc is installed
@@ -208,12 +217,14 @@ As your program grows, you should split it into multiple files.
 Use header files for function prototypes and shared declarations.
 
 **math.baahd** (Header):
+
 ```baa
 // Function prototype (declaration only)
 صحيح جمع(صحيح أ, صحيح ب).
 ```
 
 **math.baa** (Implementation):
+
 ```baa
 // Actual function implementation
 صحيح جمع(صحيح أ, صحيح ب) {
@@ -222,6 +233,7 @@ Use header files for function prototypes and shared declarations.
 ```
 
 **main.baa** (Main Program):
+
 ```baa
 // Include the header
 #تضمين "math.baahd"
@@ -233,6 +245,7 @@ Use header files for function prototypes and shared declarations.
 ```
 
 **Compilation:**
+
 ```powershell
 .\baa.exe main.baa math.baa -o myapp.exe
 ```

@@ -14,11 +14,12 @@ This document details the C functions, enumerations, and structures defined in `
 - [IR Module](#4-ir-module)
 - [IR Builder Module](#5-ir-builder-module)
 - [IR Lowering Module](#6-ir-lowering-module)
-- [Codegen Module](#7-codegen-module)
-- [Diagnostic System](#8-diagnostic-system)
-- [Symbol Table](#9-symbol-table)
-- [Updater](#10-updater)
-- [Data Structures](#11-data-structures)
+- [IR Optimization Passes](#7-ir-optimization-passes)
+- [Codegen Module](#8-codegen-module)
+- [Diagnostic System](#9-diagnostic-system)
+- [Symbol Table](#10-symbol-table)
+- [Updater](#11-updater)
+- [Data Structures](#12-data-structures)
 
 ---
 
@@ -41,6 +42,7 @@ Initializes a new Lexer instance.
 | `filename` | `const char*` | Name of the file (for error reporting) |
 
 **Behavior:**
+
 - Initializes the state stack depth to 0.
 - Sets up position pointers (`cur_char`) to start of source.
 - Detects and skips UTF-8 BOM (Byte Order Mark: `0xEF 0xBB 0xBF`) if present.
@@ -64,6 +66,7 @@ Consumes input and returns the next valid token. **Handles preprocessor directiv
 **Returns:** `Token` struct. Returns `TOKEN_EOF` at end of file.
 
 **Behavior:**
+
 - Skips whitespace and comments (`//`).
 - **Preprocessor:**
   - Handles `#تعريف <name> <value>` (define) to register macros.
@@ -97,12 +100,14 @@ Entry point for the parsing phase.
 **Returns:** Pointer to root `Node` (type `NODE_PROGRAM`).
 
 **Behavior:**
+
 - Initializes internal `Parser` state with 2-token lookahead (current + next)
 - Parses list of declarations (global variables or functions)
 - Implements operator precedence climbing for expressions
 - Builds linked-list AST structure
 
 **Example:**
+
 ```c
 Lexer lexer;
 lexer_init(&lexer, source_code, "filename.baa");
@@ -131,6 +136,7 @@ Runs the semantic pass on the AST.
 **Returns:** `true` if valid, `false` if errors were found.
 
 **Behavior:**
+
 - **Type Checking**: Ensures type compatibility in assignments and operations.
 - **Symbol Resolution**: Verifies variables are declared before use.
 - **Scope Validation**: Tracks global vs local scope and prevents redefinitions.
@@ -141,6 +147,7 @@ Runs the semantic pass on the AST.
 - Does not modify the AST, only validates it.
 
 **Constant Validation Rules:**
+
 - Constants must be initialized at declaration time.
 - Reassigning a constant produces: `Cannot reassign constant '<name>'`.
 - Modifying constant array elements produces: `Cannot modify constant array '<name>'`.
@@ -613,6 +620,7 @@ extern IRType* IR_TYPE_I64_T;    // ص٦٤
 ### 4.9. IR Analysis Module (v0.3.1.1)
 
 Provides analysis utilities over IR functions/blocks:
+
 - CFG validation
 - Predecessor rebuilding
 - Dominator tree + dominance frontier
@@ -624,6 +632,7 @@ bool ir_func_validate_cfg(IRFunc* func);
 ```
 
 Validates basic CFG well-formedness for a function:
+
 - all blocks have terminators
 - terminators have well-formed operands (branch targets are blocks, etc.)
 
@@ -1090,6 +1099,7 @@ ir_module_free(module);
 The IR Lowering module lowers validated AST nodes into Baa IR using the IR Builder.
 
 Files:
+
 - [`src/ir_lower.h`](src/ir_lower.h)
 - [`src/ir_lower.c`](src/ir_lower.c)
 
@@ -1111,6 +1121,7 @@ typedef struct IRLowerCtx {
 ```
 
 A small context object used during lowering:
+
 - Holds the active `IRBuilder` insertion point
 - Tracks local variable bindings (name → pointer register)
 
@@ -1145,6 +1156,7 @@ IRValue* lower_expr(IRLowerCtx* ctx, Node* expr);
 Main expression lowering dispatcher.
 
 Currently supports:
+
 - `NODE_INT` → immediate constant
 - `NODE_VAR_REF` → `حمل` (load)
 - `NODE_BIN_OP` → arithmetic (`جمع`/`طرح`/`ضرب`/`قسم`/`باقي`), comparisons (`قارن`), and boolean ops (`و`/`أو`)
@@ -1162,6 +1174,7 @@ void lower_stmt(IRLowerCtx* ctx, Node* stmt);
 Lowers a single AST statement into IR using the active builder insertion point.
 
 Supported statements (v0.3.0.5):
+
 - `NODE_VAR_DECL`: `حجز` + `خزن` and bind local
 - `NODE_ASSIGN`: `خزن` into existing local
 - `NODE_RETURN`: `رجوع`
@@ -1189,6 +1202,7 @@ Top-level entry point for the driver: converts a validated `NODE_PROGRAM` AST in
 **Returns:** Newly allocated `IRModule` (caller owns; free with `ir_module_free()`).
 
 **Behavior:**
+
 1. Creates a new `IRModule` and `IRBuilder`
 2. Walks top-level declarations:
    - Global variables (`NODE_VAR_DECL` with `is_global`) → `ir_builder_create_global_init()`
@@ -1204,6 +1218,34 @@ void lower_stmt_list(IRLowerCtx* ctx, Node* first_stmt);
 ```
 
 Lowers a linked list of statements (e.g., the statements list inside `NODE_BLOCK`).
+
+---
+
+## 7. IR Optimization Passes
+
+### 7.1. Constant Folding (طي_الثوابت)
+
+#### `ir_constfold_run`
+
+```c
+bool ir_constfold_run(IRModule* module)
+```
+
+Runs the constant folding pass on the given IR module. Folds arithmetic and comparison instructions with constant operands, replaces register uses, and removes folded instructions.
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `module`  | `IRModule*` | The IR module to optimize |
+
+**Returns:** `true` if the module was modified, `false` otherwise.
+
+#### `IR_PASS_CONSTFOLD`
+
+```c
+extern IRPass IR_PASS_CONSTFOLD;
+```
+
+Descriptor for the constant folding pass, usable with the IR optimizer pipeline.
 
 ---
 
@@ -1225,16 +1267,17 @@ Recursively generates assembly code from AST.
 | `file` | `FILE*` | Open file handle for output (`out.s`) |
 
 **Generated Sections:**
+
 - `.data` — Global variables
 - `.rdata` — String literals
 - `.text` — Function bodies
 
 **Assembly Features:**
+
 - Windows x64 ABI compliant stack frames
 - Short-circuit evaluation for `&&` and `||`
 - Indexed addressing for array access
 - Label-based control flow for loops
-
 
 ---
 
@@ -1261,6 +1304,7 @@ void error_report(Token token, const char* message, ...)
 Reports an error with source location, line context, and a pointer to the error position.
 
 **Features:**
+
 - Displays filename, line, and column
 - Shows the actual source line with a `^` pointer
 - Supports printf-style formatting
@@ -1293,6 +1337,7 @@ Reports a warning with source location and warning type.
 | `message` | `const char*` | Printf-style format string |
 
 **Features:**
+
 - Only emitted if warning type is enabled (via `-Wall` or specific `-W<type>`)
 - **Colored output** (yellow) when terminal supports ANSI codes
 - Shows warning name in brackets: `[-Wunused-variable]`
@@ -1384,6 +1429,7 @@ void run_updater(void);
 Runs the built-in updater.
 
 **Notes (v0.2.9):**
+
 - Implemented in [updater.c](file:///D:/My%20Dev%20Life/Software%20Dev/Baa/src/updater.c).
 - Windows-only implementation (links against `urlmon` and `wininet` on Windows builds).
 - Invoked from the CLI as `baa update` (must be the only argument).
@@ -1438,6 +1484,7 @@ typedef struct {
     const char* filename;
 } Token;
 ```
+
 ### 11.3. Token Types
 
 ### BaaTokenType Enum
@@ -1505,6 +1552,7 @@ typedef enum {
 ```
 
 ---
+
 ### 11.4. AST Node Structure
 
 ### Node (AST)
@@ -1595,6 +1643,7 @@ typedef struct Node {
 ```
 
 ---
+
 ### 11.5. Node Types
 
 ### NodeType Enum

@@ -46,22 +46,26 @@ A Baa program is a collection of **Global Variables** and **Functions**.
 The preprocessor handles directives before the code is compiled. All directives start with `#`.
 
 ### 2.1. Include Directive (`#تضمين`)
+
 Include other files (headers) into the current file. This works like C's `#include`.
 
 **Syntax:** `#تضمين "file.baahd"`
 
 **Example:**
+
 ```baa
 #تضمين "math.baahd"
 // This includes the header file "math.baahd"
 ```
 
 ### 2.2. Definitions (`#تعريف`)
+
 Define compile-time constants (macros). The compiler replaces the identifier with the specified value wherever it appears in the code.
 
 **Syntax:** `#تعريف <name> <value>`
 
 **Example:**
+
 ```baa
 #تعريف حد_أقصى ١٠٠
 #تعريف رسالة "مرحباً"
@@ -75,9 +79,11 @@ Define compile-time constants (macros). The compiler replaces the identifier wit
 ```
 
 ### 2.3. Conditional Compilation (`#إذا_عرف`)
+
 Include or exclude blocks of code based on whether a symbol is defined.
 
 **Syntax:**
+
 ```baa
 #إذا_عرف <name>
     // Compiled if <name> is defined
@@ -87,6 +93,7 @@ Include or exclude blocks of code based on whether a symbol is defined.
 ```
 
 **Example:**
+
 ```baa
 #تعريف تصحيح 1
 
@@ -98,11 +105,13 @@ Include or exclude blocks of code based on whether a symbol is defined.
 ```
 
 ### 2.4. Undefine Directive (`#الغاء_تعريف`)
+
 Remove a previously defined macro.
 
 **Syntax:** `#الغاء_تعريف <name>`
 
 **Example:**
+
 ```baa
 // Use تصحيح macro...
 #تعريف تصحيح ١
@@ -274,6 +283,7 @@ Every program **must** have a main function:
     إرجع ٠.  // 0 means success
 }
 ```
+
 **Important:** The entry point **must** be named `الرئيسية` (ar-ra'īsīyah). It is exported as `main` in the generated assembly.
 
 ### 5.5. Recursion (التكرار)
@@ -301,6 +311,7 @@ Functions can call themselves (recursion), provided there is a base case to term
 Prints a value followed by a newline.
 
 **Current implementation notes (v0.2.9):**
+
 - `صحيح` and `منطقي` values are printed using C `printf("%d\n", ...)` (so output is effectively 32-bit).
 - `نص` values are printed using `printf("%s\n", ...)`.
 - Character literals like `'أ'` are treated as integer values during code generation and print as their numeric code.
@@ -322,6 +333,7 @@ Prints a value followed by a newline.
 Reads an integer from standard input and stores it in the specified variable.
 
 **Current implementation notes (v0.2.9):**
+
 - Input uses C `scanf("%d", ...)` and is intended for `صحيح` variables.
 
 ```baa
@@ -342,6 +354,7 @@ Reads an integer from standard input and stores it in the specified variable.
 Executes a block based on conditions.
 
 **Syntax:**
+
 ```baa
 إذا (<condition>) {
     // ...
@@ -432,6 +445,7 @@ Multi-way branching based on integer or character values.
 - **`:` (Colon)**: Separator after the case value.
 
 **Syntax:**
+
 ```baa
 اختر (<expression>) {
     حالة <value>:

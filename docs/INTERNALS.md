@@ -1,6 +1,6 @@
 # Baa Compiler Internals
 
-> **Version:** 0.3.1.1 | [← Language Spec](LANGUAGE.md) | [API Reference →](API_REFERENCE.md)
+> **Version:** 0.3.1.2 | [← Language Spec](LANGUAGE.md) | [API Reference →](API_REFERENCE.md)
 
 **Target Architecture:** x86-64 (AMD64)
 **Target OS:** Windows (MinGW-w64 Toolchain)
@@ -18,6 +18,7 @@ This document details the internal architecture, data structures, and algorithms
 - [Abstract Syntax Tree](#4-abstract-syntax-tree)
 - [Semantic Analysis](#5-semantic-analysis)
 - [Intermediate Representation](#6-intermediate-representation)
+- [IR Constant Folding Pass](#615-ir-constant-folding-pass)
 - [Code Generation](#7-code-generation)
 - [Global Data Section](#8-global-data-section)
 - [Naming & Entry Point](#9-naming--entry-point)
@@ -79,7 +80,6 @@ flowchart TB
     style IR fill:#fff3e0
 ```
 
-
 ### 1.2. The Driver (CLI)
 
 The driver in `main.c` (v0.2.0+) supports multi-file compilation and various modes:
@@ -103,16 +103,18 @@ The driver in `main.c` (v0.2.0+) supports multi-file compilation and various mod
 The compiler uses a centralized **Diagnostic Module** (`src/error.c`) to handle errors and warnings.
 
 **Error Features:**
+
 - **Source Context**: Prints the actual line of code where the error occurred.
 - **Pointers**: Uses `^` to point exactly to the offending token.
 - **Colored Output**: Errors displayed in red (ANSI) when terminal supports it (v0.2.8+).
 - **Panic Mode Recovery**: When a syntax error is found, the parser does not exit immediately. Instead, it enters "Panic Mode":
-    1.  It reports the error.
-    2.  It skips tokens forward until it finds a **Synchronization Point**.
-    3.  **Synchronization Points**: Semicolon `.`, Right Brace `}`, or Keywords (`صحيح`, `إذا`, etc.).
-    4.  Parsing resumes to find subsequent errors.
+    1. It reports the error.
+    2. It skips tokens forward until it finds a **Synchronization Point**.
+    3. **Synchronization Points**: Semicolon `.`, Right Brace `}`, or Keywords (`صحيح`, `إذا`, etc.).
+    4. Parsing resumes to find subsequent errors.
 
 **Warning Features (v0.2.8+):**
+
 - **Non-fatal**: Warnings do not stop compilation by default.
 - **Colored Output**: Warnings displayed in yellow (ANSI) when terminal supports it.
 - **Warning Names**: Each warning shows its type in brackets: `[-Wunused-variable]`.
@@ -120,6 +122,7 @@ The compiler uses a centralized **Diagnostic Module** (`src/error.c`) to handle 
 - **Errors Mode**: Use `-Werror` to treat warnings as fatal errors.
 
 **ANSI Color Support:**
+
 - Windows 10+: Automatically enables Virtual Terminal Processing.
 - Unix/Linux: Detects TTY via `isatty()`.
 - Override with `-Wcolor` (force on) or `-Wno-color` (force off).
@@ -166,34 +169,42 @@ typedef struct {
 The preprocessor is integrated directly into the `lexer_next_token` function. It intercepts directives starting with `#` before tokenizing normal code.
 
 #### 2.2.1. Definitions (`#تعريف`)
+
 When `#تعريف NAME VALUE` is encountered:
-1.  The name and value are parsed as strings.
-2.  They are stored in the `macros` table.
-3.  When the Lexer later encounters an `IDENTIFIER`:
+
+1. The name and value are parsed as strings.
+2. They are stored in the `macros` table.
+3. When the Lexer later encounters an `IDENTIFIER`:
     - It checks the macro table
     - If found, replaces the token's value with the macro value
     - Updates the token type based on the value (INT if numeric, STRING if quoted, IDENTIFIER otherwise)
 
 #### 2.2.2. Conditionals (`#إذا_عرف`)
+
 When `#إذا_عرف NAME` is encountered:
-1.  The lexer checks if `NAME` exists in the macro table.
-2.  If it exists, normal parsing continues.
-3.  If not, the lexer enters **Skipping Mode**.
-4.  In Skipping Mode, all tokens are discarded until `#وإلا` or `#نهاية` is found.
+
+1. The lexer checks if `NAME` exists in the macro table.
+2. If it exists, normal parsing continues.
+3. If not, the lexer enters **Skipping Mode**.
+4. In Skipping Mode, all tokens are discarded until `#وإلا` or `#نهاية` is found.
 
 #### 2.2.3. Undefine (`#الغاء_تعريف`)
+
 When `#الغاء_تعريف NAME` is encountered:
-1.  The lexer searches for `NAME` in the macro table.
-2.  If found, the entry is removed (by shifting subsequent entries).
-3.  If not found, the directive is ignored.
+
+1. The lexer searches for `NAME` in the macro table.
+2. If found, the entry is removed (by shifting subsequent entries).
+3. If not found, the directive is ignored.
 
 #### 2.2.4. Include (`#تضمين`)
+
 When `#تضمين "file"` is encountered:
-1.  The filename is extracted from the quoted string.
-2.  The file is read into memory using `read_file()`.
-3.  The current lexer state is pushed onto the include stack.
-4.  The lexer state is updated to point to the new file's content.
-5.  When EOF is reached, the previous state is popped and restored.
+
+1. The filename is extracted from the quoted string.
+2. The file is read into memory using `read_file()`.
+3. The current lexer state is pushed onto the include stack.
+4. The lexer state is updated to point to the new file's content.
+5. When EOF is reached, the previous state is popped and restored.
 
 ### 2.3. Key Features
 
@@ -283,16 +294,17 @@ Primary      ::= INT | STRING | CHAR | ID | ArrayAccess | Call | "(" Expr ")"
 The parser uses `synchronize()` to recover from errors.
 
 **Example Scenario:**
+
 ```baa
 صحيح س = ١٠  // Error: Missing dot
 صحيح ص = ٢٠.
 ```
 
-1.  Parser expects `.` but finds `صحيح`.
-2.  `report_error()` is called.
-3.  `synchronize()` is called. It skips until it sees `صحيح` (start of next statement).
-4.  Parser continues parsing `صحيح ص = ٢٠.`.
-5.  At the end, compiler exits with status 1 if any errors were found.
+1. Parser expects `.` but finds `صحيح`.
+2. `report_error()` is called.
+3. `synchronize()` is called. It skips until it sees `صحيح` (start of next statement).
+4. Parser continues parsing `صحيح ص = ٢٠.`.
+5. At the end, compiler exits with status 1 if any errors were found.
 
 ---
 
@@ -331,14 +343,14 @@ The Semantic Analyzer (`src/analysis.c`) performs a static check on the AST befo
 
 ### 5.1. Responsibilities
 
-1.  **Symbol Resolution**: Verifies variables are declared before use.
-2.  **Type Checking**: Enforces `TYPE_INT`, `TYPE_STRING`, and `TYPE_BOOL` compatibility.
-3.  **Scope Validation**: Manages visibility rules.
-4.  **Constant Checking** (v0.2.7+): Prevents reassignment of immutable variables.
-5.  **Control Flow Validation**: Ensures `break` and `continue` are used only within loops/switches.
-6.  **Function Validation**: Checks function prototypes and definitions match.
-7.  **Usage Tracking** (v0.2.8+): Tracks variable usage for unused variable warnings.
-8.  **Dead Code Detection** (v0.2.8+): Detects unreachable code after `return`/`break`.
+1. **Symbol Resolution**: Verifies variables are declared before use.
+2. **Type Checking**: Enforces `TYPE_INT`, `TYPE_STRING`, and `TYPE_BOOL` compatibility.
+3. **Scope Validation**: Manages visibility rules.
+4. **Constant Checking** (v0.2.7+): Prevents reassignment of immutable variables.
+5. **Control Flow Validation**: Ensures `break` and `continue` are used only within loops/switches.
+6. **Function Validation**: Checks function prototypes and definitions match.
+7. **Usage Tracking** (v0.2.8+): Tracks variable usage for unused variable warnings.
+8. **Dead Code Detection** (v0.2.8+): Detects unreachable code after `return`/`break`.
 
 ### 5.2. Constant Checking (v0.2.7+)
 
@@ -357,6 +369,7 @@ The analyzer generates warnings for potential issues that don't prevent compilat
 #### Unused Variable Detection
 
 **Algorithm:**
+
 1. Each symbol has an `is_used` flag initialized to `false`.
 2. When a variable is referenced (in expressions, assignments, etc.), the flag is set to `true`.
 3. At end of function scope, all local variables with `is_used == false` generate a warning.
@@ -367,11 +380,13 @@ The analyzer generates warnings for potential issues that don't prevent compilat
 #### Dead Code Detection
 
 **Algorithm:**
+
 1. While analyzing a block, track if a "terminating" statement was encountered.
 2. Terminating statements: `NODE_RETURN`, `NODE_BREAK`, `NODE_CONTINUE`.
 3. If a terminating statement was found and there are more statements after it, generate a warning.
 
 **Implementation:**
+
 ```c
 static void analyze_statements_with_dead_code_check(Node* statements, const char* context) {
     bool found_terminator = false;
@@ -401,6 +416,7 @@ Since v0.2.4, `analysis.c` and `codegen.c` **maintain separate symbol tables** f
 **Future improvement:** Unify symbol tables into a shared context object passed between phases.
 
 The analyzer walks the AST recursively. It maintains a **Symbol Table** stack to track active variables in the current scope. If it encounters:
+
 - `x = "text"` (where x is `int`): Reports a type mismatch error.
 - `print y` (where y is undeclared): Reports an undefined symbol error.
 - `x = 5` (where x is `const`): Reports a const reassignment error (v0.2.7+).
@@ -422,6 +438,7 @@ The analyzer walks the AST recursively. It maintains a **Symbol Table** stack to
 The parser performs constant folding on arithmetic expressions. If both operands of a binary operation are integer literals, the compiler evaluates the result at compile-time.
 
 **Example:**
+
 - Source: `٢ * ٣ + ٤`
 - Before folding: `BinOp(+, BinOp(*, 2, 3), 4)`
 - After folding: `Int(10)`
@@ -438,6 +455,7 @@ The IR Module (`src/ir.h`, `src/ir.c`) provides an Arabic-first Intermediate Rep
 ### 6.1. Design Philosophy
 
 Baa's IR is designed with three goals:
+
 1. **Arabic Identity**: All opcodes, types, and predicates have Arabic names.
 2. **Technical Parity**: Comparable to LLVM IR, GIMPLE, or WebAssembly in capabilities.
 3. **SSA Form**: Each virtual register is assigned exactly once, enabling powerful optimizations.
@@ -529,6 +547,7 @@ IRInst
 ### 6.6. Virtual Registers
 
 Registers use Arabic naming with Arabic-Indic numerals:
+
 - Format: `%م<n>` where `م` = مؤقت (temporary)
 - Examples: `%م٠`, `%م١`, `%م٢`, ...
 
@@ -537,6 +556,7 @@ The `int_to_arabic_numerals()` function converts integers to Arabic-Indic digits
 ### 6.7. Example IR Output
 
 **Baa Source:**
+
 ```baa
 صحيح الرئيسية() {
     صحيح س = ١٠.
@@ -546,6 +566,7 @@ The `int_to_arabic_numerals()` function converts integers to Arabic-Indic digits
 ```
 
 **Generated IR (Arabic mode):**
+
 ```
 دالة الرئيسية() -> ص٦٤ {
 بداية:
@@ -641,6 +662,7 @@ IRValue* ir_builder_const_bool(int value);
 ```
 
 **Benefits over low-level API:**
+
 - Automatic register allocation
 - Automatic CFG edge management (successors/predecessors)
 - Source location propagation
@@ -652,11 +674,13 @@ IRValue* ir_builder_const_bool(int value);
 Expression lowering lives in `src/ir_lower.h` and `src/ir_lower.c` and is built on top of the IR Builder (`src/ir_builder.h`, `src/ir_builder.c`).
 
 Key concepts:
+
 - `IRLowerCtx`: Lowering context (builder + simple local bindings table).
 - `ir_lower_bind_local()`: Bind a variable name to its `حجز` pointer register. *(Statement lowering will populate this in v0.3.0.4.)*
 - `lower_expr()`: Lower AST expressions into IR operands (`IRValue*`) and emits IR instructions via the builder.
 
 Currently lowered expressions:
+
 - `NODE_INT`, `NODE_STRING`, `NODE_CHAR`, `NODE_BOOL`
 - `NODE_VAR_REF` (loads via `حمل`)
 - `NODE_BIN_OP` (arithmetic, comparisons, logical ops)
@@ -666,6 +690,7 @@ Currently lowered expressions:
 ### 6.11. AST → IR Lowering (Statements, v0.3.0.4+)
 
 Statement lowering is implemented in the same module and currently supports:
+
 - `NODE_VAR_DECL`: emit `حجز` + `خزن` and bind the variable name via `ir_lower_bind_local()`
 - `NODE_ASSIGN`: emit `خزن` to an existing local binding
 - `NODE_RETURN`: emit `رجوع`
@@ -675,10 +700,12 @@ Statement lowering is implemented in the same module and currently supports:
 ### 6.12. AST → IR Lowering (Control Flow, v0.3.0.5+)
 
 Control flow lowering extends statement lowering to produce a full CFG using:
+
 - `قفز` (unconditional branch)
 - `قفز_شرط` (conditional branch)
 
 Currently lowered control-flow nodes:
+
 - `NODE_IF`: then/else/merge blocks with `قفز_شرط`
 - `NODE_WHILE`: header/body/exit blocks, back edge to header (`قفز`)
 - `NODE_FOR`: init + header/body/increment/exit blocks (`استمر` targets increment)
@@ -698,6 +725,7 @@ The IR printer provides a canonical, Arabic-first text format for debugging and 
 - Arabic-Indic numerals for registers: [`int_to_arabic_numerals()`](src/ir.c:53)
 
 The driver exposes the printer via the CLI flag `--dump-ir` implemented in [`src/main.c`](src/main.c:1). This flag:
+
 1. Parses + analyzes the source as usual.
 2. Builds an IR module using [`IRBuilder`](src/ir_builder.h:43) and lowers AST statements using [`lower_stmt()`](src/ir_lower.c:725).
 3. Prints IR to stdout.
@@ -705,6 +733,7 @@ The driver exposes the printer via the CLI flag `--dump-ir` implemented in [`src
 > **Note:** This is currently a debug path for inspection only. The main compilation pipeline still generates assembly directly from AST (full IR pipeline integration is scheduled for v0.3.0.7).
 
 **Example invocation:**
+
 ```powershell
 build\baa.exe --dump-ir program.baa
 ```
@@ -731,6 +760,35 @@ The IR analysis layer provides foundational compiler analyses required by the up
 
 ---
 
+### 6.15. IR Constant Folding Pass (طي_الثوابت) — v0.3.1.2
+
+The IR constant folding pass optimizes Baa IR by evaluating arithmetic and comparison instructions at compile time when both operands are immediate constants. It replaces all uses of the folded register with the constant value and removes the instruction from its block.
+
+**File:** [src/ir_constfold.c](src/ir_constfold.c)
+
+**Entry Point:** [`ir_constfold_run()`](src/ir_constfold.c)
+
+**Pass Descriptor:** [`IR_PASS_CONSTFOLD`](src/ir_constfold.c) (used with the optimizer pipeline).
+
+**Supported Operations:**
+
+- Arithmetic: جمع (add), طرح (sub), ضرب (mul), قسم (div), باقي (mod)
+- Comparisons: قارن <predicate> (eq, ne, gt, lt, ge, le)
+
+**How it works:**
+
+1. Scans each function and block for foldable instructions.
+2. If both operands are immediate integer constants, computes the result.
+3. Replaces all uses of the destination register with a new constant IRValue.
+4. Removes the folded instruction from its block.
+5. Pass is function-local; virtual registers are scoped per function.
+
+**Testing:** See [tests/ir_constfold_test.c](tests/ir_constfold_test.c).
+
+**API:** See [docs/API_REFERENCE.md](API_REFERENCE.md) for function signatures.
+
+---
+
 ## 7. Code Generation
 
 ### 7.1. Loop Control & Branching
@@ -742,11 +800,13 @@ To support nested loops and switches, the code generator maintains stacks:
 - **Loop Depth Counter** (`loop_depth`): Tracks nesting level.
 
 **Special Case - Switch Statements:**
+
 - Switch accepts `break` but not `continue` (unless nested in a loop).
 - When entering a switch, the continue label is inherited from the enclosing loop (if any).
 - The break label points to the end of the switch.
 
 **Switch Code Generation Logic:**
+
 1. **Pass 1 - Comparisons**: Generate jump instructions for all case values.
    - Store case label IDs in an array for Pass 2.
    - If no match, jump to default (if exists) or end.
@@ -756,6 +816,7 @@ To support nested loops and switches, the code generator maintains stacks:
 3. **End Label**: All breaks jump here.
 
 **State Management:**
+
 ```c
 // Reset state for each compilation unit
 static void reset_codegen() {
@@ -783,6 +844,7 @@ static void reset_codegen() {
 ### 7.3. Printing
 
 The `اطبع` statement uses the symbol type to determine the format string:
+
 - If `TYPE_INT` → call `printf("%d\n")`
 - If `TYPE_STRING` → call `printf("%s\n")`
 

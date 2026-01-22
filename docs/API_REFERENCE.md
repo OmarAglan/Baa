@@ -14,11 +14,12 @@ This document details the C functions, enumerations, and structures defined in `
 - [IR Module](#4-ir-module)
 - [IR Builder Module](#5-ir-builder-module)
 - [IR Lowering Module](#6-ir-lowering-module)
-- [Codegen Module](#7-codegen-module)
-- [Diagnostic System](#8-diagnostic-system)
-- [Symbol Table](#9-symbol-table)
-- [Updater](#10-updater)
-- [Data Structures](#11-data-structures)
+- [IR Optimization Passes](#7-ir-optimization-passes)
+- [Codegen Module](#8-codegen-module)
+- [Diagnostic System](#9-diagnostic-system)
+- [Symbol Table](#10-symbol-table)
+- [Updater](#11-updater)
+- [Data Structures](#12-data-structures)
 
 ---
 
@@ -148,6 +149,37 @@ Runs the semantic pass on the AST.
 ---
 
 ## 4. IR Module (v0.3.0+)
+...existing content...
+
+---
+
+## 7. IR Optimization Passes
+
+### 7.1. Constant Folding (طي_الثوابت)
+
+#### `ir_constfold_run`
+
+```c
+bool ir_constfold_run(IRModule* module)
+```
+
+Runs the constant folding pass on the given IR module. Folds arithmetic and comparison instructions with constant operands, replaces register uses, and removes folded instructions.
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `module`  | `IRModule*` | The IR module to optimize |
+
+**Returns:** `true` if the module was modified, `false` otherwise.
+
+#### `IR_PASS_CONSTFOLD`
+
+```c
+extern IRPass IR_PASS_CONSTFOLD;
+```
+
+Descriptor for the constant folding pass, usable with the IR optimizer pipeline.
+
+---
 
 The IR Module (`src/ir.h`, `src/ir.c`) provides Baa's Arabic-first Intermediate Representation.
 

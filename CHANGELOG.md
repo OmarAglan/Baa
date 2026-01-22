@@ -7,6 +7,27 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ---
 
 ## [Unreleased]
+## [0.3.1.2] - 2026-01-22
+
+### Added
+- **IR constant folding pass (طي_الثوابت)** — new optimization pass for Baa IR:
+  - Implements arithmetic and comparison folding when both operands are immediate constants.
+  - Removes folded instructions and replaces register uses with constant values.
+  - Pass entry point: [`ir_constfold_run()`](src/ir_constfold.c), pass descriptor: [`IR_PASS_CONSTFOLD`](src/ir_constfold.c).
+  - API header: [`src/ir_constfold.h`](src/ir_constfold.h).
+  - Integrated into optimizer pipeline via [`IRPass`](src/ir_pass.h).
+- **Tests:** Added [`tests/ir_constfold_test.c`](tests/ir_constfold_test.c) for pass verification.
+
+### Changed
+- **Build system:** Added `src/ir_constfold.c` to [CMakeLists.txt](CMakeLists.txt).
+
+### Technical Details
+- Constant folding supports: جمع/طرح/ضرب/قسم/باقي (add/sub/mul/div/mod) and قارن <pred> (comparisons).
+- Folded instructions are removed from IR; all uses of their destination register are replaced with constant immediates.
+- Pass is function-local; virtual registers are scoped per function.
+
+### Testing
+- [`tests/ir_constfold_test.c`](tests/ir_constfold_test.c): Verifies folding, instruction removal, and register replacement.
 
 ## [0.3.1.1] - 2026-01-21
 

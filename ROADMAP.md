@@ -117,11 +117,11 @@
 - [x] **Remove dead instructions** — Delete from block.
 - [x] **Remove unreachable blocks** — No predecessors (except entry).
 
-#### v0.3.1.4: Copy Propagation (نشر_النسخ)
+#### v0.3.1.4: Copy Propagation (نشر_النسخ) ✅ COMPLETED (2026-01-27)
 
-- [ ] **Detect copy instructions** — `%م١ = %م٠` pattern.
-- [ ] **Replace uses** — Substitute original for copy.
-- [ ] **Remove redundant copies** — Delete copy instruction.
+- [x] **Detect copy instructions** — `IR_OP_COPY` (`نسخ`) instruction pattern.
+- [x] **Replace uses** — Substitute original for copy in operands / call args / phi entries.
+- [x] **Remove redundant copies** — Delete `نسخ` instruction after propagation.
 
 #### v0.3.1.5: Common Subexpression Elimination (حذف_المكرر)
 

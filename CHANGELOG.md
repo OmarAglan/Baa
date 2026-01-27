@@ -8,6 +8,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.3.1.4] - 2026-01-27
+
+### Added
+- **IR copy propagation pass (نشر_النسخ)** — new optimization pass for Baa IR:
+  - Replaces uses of `نسخ`-defined SSA registers with their original source value.
+  - Canonicalizes copy chains (`%م٢ = نسخ %م١`, `%م١ = نسخ %م٠`) so later passes see fewer intermediates.
+  - Updates operands in normal instructions, call arguments, and phi incoming values.
+  - Pass entry point: [`src/ir_copyprop.c`](src/ir_copyprop.c:1), API header: [`src/ir_copyprop.h`](src/ir_copyprop.h:1).
+- **Tests:** Added [`tests/ir_copyprop_test.c`](tests/ir_copyprop_test.c:1) for pass verification.
+
+### Changed
+- **Build system:** Added [`src/ir_copyprop.c`](src/ir_copyprop.c:1) to [`CMakeLists.txt`](CMakeLists.txt:1).
+- **Docs:** Extended IR optimizer API reference with copy propagation entry points in [`docs/API_REFERENCE.md`](docs/API_REFERENCE.md:1).
+
 ## [0.3.1.3] - 2026-01-27
 
 ### Added

@@ -1278,6 +1278,32 @@ Descriptor for the dead code elimination pass, usable with the IR optimizer pipe
 
 ---
 
+### 7.3. Copy Propagation (نشر_النسخ)
+
+#### `ir_copyprop_run`
+
+```c
+bool ir_copyprop_run(IRModule* module)
+```
+
+Runs copy propagation on the given IR module. Replaces uses of registers defined by copy instructions (`نسخ`) with their original source values and removes redundant copy instructions.
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `module`  | `IRModule*` | The IR module to optimize |
+
+**Returns:** `true` if the module was modified, `false` otherwise.
+
+#### `IR_PASS_COPYPROP`
+
+```c
+extern IRPass IR_PASS_COPYPROP;
+```
+
+Descriptor for the copy propagation pass, usable with the IR optimizer pipeline.
+
+---
+
 ## 7. Codegen Module
 
 Handles x86-64 assembly generation.

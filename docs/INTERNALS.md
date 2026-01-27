@@ -20,6 +20,7 @@ This document details the internal architecture, data structures, and algorithms
 - [Intermediate Representation](#6-intermediate-representation)
 - [IR Constant Folding Pass](#615-ir-constant-folding-pass)
 - [IR Dead Code Elimination Pass](#616-ir-dead-code-elimination-pass)
+- [IR Copy Propagation Pass](#617-ir-copy-propagation-pass)
 - [Code Generation](#7-code-generation)
 - [Global Data Section](#8-global-data-section)
 - [Naming & Entry Point](#9-naming--entry-point)
@@ -817,6 +818,31 @@ The IR dead code elimination pass removes useless IR after lowering/other optimi
 **Testing:** See [`tests/ir_dce_test.c`](tests/ir_dce_test.c:1).
 
 **API:** See [docs/API_REFERENCE.md](API_REFERENCE.md) for function signatures.
+
+---
+
+### 6.17. IR Copy Propagation Pass (نشر_النسخ) — v0.3.1.4
+
+The IR copy propagation pass removes redundant SSA copy chains by replacing uses of registers defined by `نسخ` (`IR_OP_COPY`) with their original source values. This simplifies the IR and improves the effectiveness of later passes (like common subexpression elimination and dead code elimination).
+
+**File:** [`src/ir_copyprop.c`](src/ir_copyprop.c:1)
+
+**Entry Point:** [`ir_copyprop_run()`](src/ir_copyprop.c:1)
+
+**Pass Descriptor:** [`IR_PASS_COPYPROP`](src/ir_copyprop.c:1)
+
+**Scope:** Function-local (virtual registers are scoped per function in the current IR).
+
+**What it does:**
+- Detects `IR_OP_COPY` instructions (`نسخ`) and builds an alias map (`%مX` → source value).
+- Canonicalizes copy chains (e.g. `%م٣ = نسخ %م٢`, `%م٢ = نسخ %م١`) so `%م٣` is rewritten to `%م١`.
+- Rewrites operands in:
+  - normal instruction operands
+  - `نداء` call arguments
+  - `فاي` phi incoming values
+- Removes `نسخ` instructions after propagation.
+
+**Testing:** See [`tests/ir_copyprop_test.c`](tests/ir_copyprop_test.c:1).
 
 ---
 

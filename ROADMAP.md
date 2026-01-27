@@ -110,12 +110,12 @@
 - [x] **Fold comparisons** — `قارن أكبر ص٦٤ ١٠، ٥` → `صواب`.
 - [x] **Replace instruction** — Remove op, use constant result.
 
-#### v0.3.1.3: Dead Code Elimination (حذف_الميت)
+#### v0.3.1.3: Dead Code Elimination (حذف_الميت) ✅ COMPLETED (2026-01-27)
 
-- [ ] **Mark used values** — Walk from terminators backward.
-- [ ] **Identify dead instructions** — Result never used.
-- [ ] **Remove dead instructions** — Delete from block.
-- [ ] **Remove unreachable blocks** — No predecessors (except entry).
+- [x] **Mark used values** — Walk from terminators backward.
+- [x] **Identify dead instructions** — Result never used.
+- [x] **Remove dead instructions** — Delete from block.
+- [x] **Remove unreachable blocks** — No predecessors (except entry).
 
 #### v0.3.1.4: Copy Propagation (نشر_النسخ)
 

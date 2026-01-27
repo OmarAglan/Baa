@@ -7,6 +7,28 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ---
 
 ## [Unreleased]
+
+## [0.3.1.3] - 2026-01-27
+
+### Added
+- **IR dead code elimination pass (حذف_الميت)** — new optimization pass for Baa IR:
+  - Removes dead SSA instructions whose destination register is unused (for instructions with no side effects).
+  - Removes unreachable basic blocks (not reachable from function entry).
+  - Conservative correctness: `نداء` (calls), `خزن` (stores), and terminators are always kept.
+  - Pass entry point: [`src/ir_dce.c`](src/ir_dce.c), API header: [`src/ir_dce.h`](src/ir_dce.h).
+- **Tests:** Added [`tests/ir_dce_test.c`](tests/ir_dce_test.c) for pass verification.
+
+### Changed
+- **Build system:** Added `src/ir_dce.c` to [`CMakeLists.txt`](CMakeLists.txt).
+
+### Technical Details
+- DCE is function-local and safe for the current IR model (virtual registers scoped per function).
+- Unreachable-block removal rebuilds CFG edges using the analysis utilities before/after pruning.
+- Phi nodes are pruned of incoming edges from removed predecessor blocks to avoid dangling references.
+
+### Testing
+- [`tests/ir_dce_test.c`](tests/ir_dce_test.c): Verifies dead-instruction removal, cascade behavior, unreachable-block elimination, and conservative side-effect preservation.
+
 ## [0.3.1.2] - 2026-01-22
 
 ### Added

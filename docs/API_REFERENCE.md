@@ -1,8 +1,8 @@
 # Baa Internal API Reference
 
-> **Version:** 0.3.1.1 | [← User Guide](USER_GUIDE.md) | [Internals →](INTERNALS.md)
+> **Version:** 0.3.1.3 | [← User Guide](USER_GUIDE.md) | [Internals →](INTERNALS.md)
 
-This document details the C functions, enumerations, and structures defined in `src/baa.h`, `src/ir.h`, `src/ir_builder.h`, `src/ir_lower.h`, `src/ir_analysis.h`, and `src/ir_pass.h`.
+This document details the C functions, enumerations, and structures defined in `src/baa.h`, `src/ir.h`, `src/ir_builder.h`, `src/ir_lower.h`, `src/ir_analysis.h`, `src/ir_pass.h`, and `src/ir_dce.h`.
 
 ---
 
@@ -1246,6 +1246,35 @@ extern IRPass IR_PASS_CONSTFOLD;
 ```
 
 Descriptor for the constant folding pass, usable with the IR optimizer pipeline.
+
+---
+
+### 7.2. Dead Code Elimination (حذف_الميت)
+
+#### `ir_dce_run`
+
+```c
+bool ir_dce_run(IRModule* module)
+```
+
+Runs dead code elimination on the given IR module. Removes:
+
+- Dead SSA instructions whose destination register is never used (only for instructions with no side effects)
+- Unreachable basic blocks (not reachable from the function entry)
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `module`  | `IRModule*` | The IR module to optimize |
+
+**Returns:** `true` if the module was modified, `false` otherwise.
+
+#### `IR_PASS_DCE`
+
+```c
+extern IRPass IR_PASS_DCE;
+```
+
+Descriptor for the dead code elimination pass, usable with the IR optimizer pipeline.
 
 ---
 

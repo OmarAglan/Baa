@@ -1,6 +1,6 @@
 # Baa Compiler Internals
 
-> **Version:** 0.3.1.2 | [← Language Spec](LANGUAGE.md) | [API Reference →](API_REFERENCE.md)
+> **Version:** 0.3.1.3 | [← Language Spec](LANGUAGE.md) | [API Reference →](API_REFERENCE.md)
 
 **Target Architecture:** x86-64 (AMD64)
 **Target OS:** Windows (MinGW-w64 Toolchain)
@@ -19,6 +19,7 @@ This document details the internal architecture, data structures, and algorithms
 - [Semantic Analysis](#5-semantic-analysis)
 - [Intermediate Representation](#6-intermediate-representation)
 - [IR Constant Folding Pass](#615-ir-constant-folding-pass)
+- [IR Dead Code Elimination Pass](#616-ir-dead-code-elimination-pass)
 - [Code Generation](#7-code-generation)
 - [Global Data Section](#8-global-data-section)
 - [Naming & Entry Point](#9-naming--entry-point)
@@ -784,6 +785,36 @@ The IR constant folding pass optimizes Baa IR by evaluating arithmetic and compa
 5. Pass is function-local; virtual registers are scoped per function.
 
 **Testing:** See [tests/ir_constfold_test.c](tests/ir_constfold_test.c).
+
+**API:** See [docs/API_REFERENCE.md](API_REFERENCE.md) for function signatures.
+
+---
+
+### 6.16. IR Dead Code Elimination Pass (حذف_الميت) — v0.3.1.3
+
+The IR dead code elimination pass removes useless IR after lowering/other optimizations:
+
+- **Dead SSA instructions:** any instruction that produces a destination register which is never used, and has no side effects.
+- **Unreachable blocks:** any basic block not reachable from the function entry block.
+
+**File:** [`src/ir_dce.c`](src/ir_dce.c)
+
+**Entry Point:** [`ir_dce_run()`](src/ir_dce.c:300)
+
+**Pass Descriptor:** [`IR_PASS_DCE`](src/ir_dce.c:29)
+
+**Conservative correctness rules:**
+
+- `نداء` (calls) are treated as side-effecting and are not removed even if the result is unused.
+- `خزن` (stores) are not removed.
+- Terminators (`قفز`, `قفز_شرط`, `رجوع`) are never removed.
+
+**CFG hygiene:**
+
+- Unreachable-block removal uses [`ir_func_rebuild_preds()`](src/ir_analysis.c:132) before/after pruning.
+- Phi nodes are pruned of incoming edges from removed predecessor blocks to avoid dangling references.
+
+**Testing:** See [`tests/ir_dce_test.c`](tests/ir_dce_test.c:1).
 
 **API:** See [docs/API_REFERENCE.md](API_REFERENCE.md) for function signatures.
 

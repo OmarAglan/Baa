@@ -1,56 +1,56 @@
 <div dir="rtl">
 
 <div align="center">
-<img width="260" height="260" alt="Baa Logo" src="resources/Logo.png" />
+<img width="260" height="260" alt="شعار باء" src="resources/Logo.png" />
 
 
 ![Version](https://img.shields.io/badge/version-0.2.9-blue.svg)
 ![Platform](https://img.shields.io/badge/platform-Windows-lightgrey.svg)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
 
-**The first Arabic-syntax compiled systems programming language**
+**أول لغة برمجة نُظُم مُصرَّفة (Compiled) بصياغة عربية**
 
-*Write native Windows applications using Arabic keywords, numerals, and punctuation*
+*اكتب تطبيقات ويندوز أصلية باستخدام كلمات مفتاحية وأرقام وعلامات ترقيم عربية*
 
 </div>
 
 ---
 
-## ✨ Features
+## ✨ المزايا
 
-| Feature | Description |
+| الميزة | الوصف |
 |---------|-------------|
-| 🖥️ **Native Compilation** | Compiles to x86-64 Assembly → Native Windows Executables |
-| 🌍 **Full Arabic Syntax** | Arabic keywords, numerals (٠-٩), and punctuation (`.` `؛`) |
-| 🧩 **Modular Code** | `#تضمين` (Include), multi-file compilation, `.baahd` headers |
-| 🔧 **Preprocessor** | `#تعريف` (Define), `#إذا_عرف` (Ifdef), `#الغاء_تعريف` (Undefine) |
-| ⚡ **Functions** | Define and call functions with parameters and return values |
-| 📦 **Arrays** | Fixed-size stack arrays (`صحيح قائمة[١٠]`) |
-| 🔄 **Control Flow** | `إذا`/`وإلا` (If/Else), `طالما` (While), `لكل` (For) |
-| 🎯 **Advanced Control** | `اختر` (Switch), `حالة` (Case), `افتراضي` (Default), `توقف` (Break), `استمر` (Continue) |
-| ➕ **Full Operators** | Arithmetic, comparison, and logical operators with short-circuit evaluation |
-| 📝 **Text Support** | String (`"..."`) and character (`'...'`) literals |
-| ❓ **Boolean Logic** | `منطقي` type with `صواب` (True) and `خطأ` (False) |
-| ⌨️ **User Input** | `اقرأ` (Read) statement for integer input |
-| ✅ **Type Safety** | Static type checking (v0.2.4+) with semantic analysis |
-| 🔄 **Self-Updating** | Built-in updater (`baa update`) |
+| 🖥️ **تصريف/ترجمة أصلية (Native Compilation)** | تُصرِّف الشيفرة إلى Assembly لمعمارية x86-64 ← ثم تُنتج ملفات تنفيذية أصلية على Windows |
+| 🌍 **صياغة عربية كاملة** | كلمات مفتاحية عربية، وأرقام (٠-٩)، وعلامات ترقيم (`.` `؛`) |
+| 🧩 **شيفرة معيارية** | `#تضمين` (Include)، تصريف متعدد الملفات، وملفات ترويسة `.baahd` |
+| 🔧 **المعالج القبلي (Preprocessor)** | `#تعريف` (Define)، `#إذا_عرف` (Ifdef)، `#الغاء_تعريف` (Undefine) |
+| ⚡ **الدوال** | تعريف الدوال واستدعاؤها مع معاملات (Parameters) وقيم إرجاع (Return Values) |
+| 📦 **المصفوفات** | مصفوفات ثابتة الحجم على المكدّس (Stack) مثل: (`صحيح قائمة[١٠]`) |
+| 🔄 **تدفّق التحكّم** | `إذا`/`وإلا` (If/Else)، `طالما` (While)، `لكل` (For) |
+| 🎯 **تحكّم متقدّم** | `اختر` (Switch)، `حالة` (Case)، `افتراضي` (Default)، `توقف` (Break)، `استمر` (Continue) |
+| ➕ **المعاملات كاملة** | معاملات حسابية ومقارنة ومنطقية مع تقييم قصير (Short-circuit) |
+| 📝 **دعم النصوص** | ثوابت السلاسل النصية (`"..."`) وثوابت المحارف (`'...'`) |
+| ❓ **منطق بولياني** | النوع `منطقي` مع `صواب` (True) و`خطأ` (False) |
+| ⌨️ **إدخال المستخدم** | العبارة `اقرأ` (Read) لقراءة عدد صحيح من المستخدم |
+| ✅ **سلامة الأنواع (Type Safety)** | تدقيق ثابت للأنواع (ابتداءً من v0.2.4+) مع تحليل دلالي (Semantic Analysis) |
+| 🔄 **تحديث ذاتي** | مُحدِّث مدمج (`baa update`) |
 
 ---
 
-## 🧩 Compatibility
+## 🧩 التوافقية
 
-| Item | Supported | Notes |
+| العنصر | مدعوم | ملاحظات |
 |------|-----------|------|
-| OS | Windows (x86-64) | Toolchain expects MinGW-w64 GCC |
-| Toolchain | CMake 3.10+, MinGW-w64 GCC | `gcc` must be available in `PATH` |
-| Source encoding | UTF-8 | Arabic text requires UTF-8 files |
-| Terminal | Windows Terminal / PowerShell | Enable UTF-8 if output looks garbled |
+| نظام التشغيل | Windows (x86-64) | تفترض سلسلة الأدوات (Toolchain) وجود MinGW-w64 GCC |
+| سلسلة الأدوات | CMake 3.10+، MinGW-w64 GCC | يجب أن يكون `gcc` متاحاً ضمن `PATH` |
+| ترميز ملفات المصدر | UTF-8 | يتطلب النص العربي ملفات بترميز UTF-8 |
+| الطرفية | Windows Terminal / PowerShell | فعِّل UTF-8 إذا ظهر الإخراج بصورة غير سليمة |
 
-## 🚀 Quick Start
+## 🚀 البدء السريع
 
-### 1. Build the Compiler
+### 1) بناء المُصرِّف
 
-**Prerequisites:** Windows, PowerShell, [CMake](https://cmake.org/) 3.10+, [MinGW-w64](https://www.mingw-w64.org/) with GCC
+**المتطلبات:** Windows، PowerShell،  CMake 3.10+،  MinGW-w64 مع GCC
 
 ```powershell
 git clone https://github.com/OmarAglan/Baa.git
@@ -60,9 +60,9 @@ cmake ..
 cmake --build .
 ```
 
-### 2. Write Your First Program
+### 2) اكتب برنامجك الأول
 
-Create `hello.baa` (⚠️ **IMPORTANT:** Save as **UTF-8** encoding):
+أنشئ ملف `hello.baa` (⚠️ **مهم:** احفظ الملف بترميز **UTF-8**):
 
 ```baa
 صحيح الرئيسية() {
@@ -71,34 +71,35 @@ Create `hello.baa` (⚠️ **IMPORTANT:** Save as **UTF-8** encoding):
 }
 ```
 
-### 3. Compile & Run
+### 3) صرِّف وشغِّل
 
 ```powershell
-# Compile
+# التصريف (Compile)
 .\baa.exe ..\hello.baa
 
-# Run
+# التشغيل (Run)
 .\out.exe
 ```
-**Output:** `مرحباً بالعالم!`
+
+**المخرجات:** `مرحباً بالعالم!`
 
 ---
 
-## 📖 Example: Array Sum
+## 📖 مثال: جمع عناصر مصفوفة
 
 ```baa
 // حساب مجموع مصفوفة
 صحيح الرئيسية() {
-    // Declare array of 5 integers
+    // التصريح بمصفوفة من ٥ أعداد صحيحة
     صحيح قائمة[٥].
     صحيح مجموع = ٠.
 
-    // Fill array with values 0, 10, 20, 30, 40
+    // ملء المصفوفة بالقيم: 0، 10، 20، 30، 40
     لكل (صحيح س = ٠؛ س < ٥؛ س++) {
         قائمة[س] = س * ١٠.
     }
 
-    // Sum all values
+    // جمع جميع القيم
     لكل (صحيح س = ٠؛ س < ٥؛ س++) {
         مجموع = مجموع + قائمة[س].
     }
@@ -109,64 +110,65 @@ Create `hello.baa` (⚠️ **IMPORTANT:** Save as **UTF-8** encoding):
     إرجع ٠.
 }
 ```
-**Output:** `المجموع هو: 100` (0 + 10 + 20 + 30 + 40)
+
+**المخرجات:** `المجموع هو: 100` (0 + 10 + 20 + 30 + 40)
 
 ---
 
-## 📚 Documentation
+## 📚 التوثيق
 
-| Document | Description |
+| المستند | الوصف |
 |----------|-------------|
-| [User Guide](docs/USER_GUIDE.md) | Getting started and basic usage |
-| [Arabic Book](docs/BAA_BOOK_AR.md) | Definitive Arabic learning + reference (draft) |
-| [Language Specification](docs/LANGUAGE.md) | Complete syntax and features reference |
-| [Compiler Internals](docs/INTERNALS.md) | Architecture and implementation details |
-| [API Reference](docs/API_REFERENCE.md) | Internal C API documentation |
-| [Roadmap](ROADMAP.md) | Future development plans |
-| [Changelog](CHANGELOG.md) | Version history |
+| [دليل المستخدم](docs/USER_GUIDE.md) | البدء والاستخدام الأساسي |
+| [الكتاب العربي](docs/BAA_BOOK_AR.md) | تعلّم/مرجع عربي شامل (مسودة) |
+| [مواصفة اللغة](docs/LANGUAGE.md) | مرجع كامل للصياغة والمزايا |
+| [البنية الداخلية للمُصرِّف](docs/INTERNALS.md) | المعمارية وتفاصيل التنفيذ |
+| [مرجع واجهة API](docs/API_REFERENCE.md) | توثيق واجهة C الداخلية |
+| [خارطة الطريق](ROADMAP.md) | خطط التطوير المستقبلية |
+| [سجل التغييرات](CHANGELOG.md) | تاريخ الإصدارات |
 
 ---
 
-## 🛠️ Building from Source
+## 🛠️ البناء من الشيفرة المصدرية
 
-### Prerequisites
+### المتطلبات
 
 - **CMake** 3.10+
-- **MinGW-w64** with GCC
+- **MinGW-w64** مع GCC
 - **PowerShell** (Windows)
-- **Git** (for cloning)
+- **Git** (لاستنساخ المستودع)
 
-### Build Steps
+### خطوات البناء
 
 ```powershell
-# Clone the repository
+# استنساخ المستودع
 git clone https://github.com/OmarAglan/Baa.git
 cd Baa
 
-# Create build directory
+# إنشاء مجلد البناء
 mkdir build
 cd build
 
-# Generate and build
+# التوليد ثم البناء
 cmake ..
 cmake --build .
 
-# The compiler is now at: build/baa.exe
+# أصبح المُصرّف الآن في: build/baa.exe
 ```
 
-### Running Tests
+### تشغيل الاختبارات
 
 ```powershell
-# Generate test.baa
+# توليد ملف test.baa
 gcc ..\make_test.c -o make_test.exe
 .\make_test.exe
 
-# Compile and run
+# تصريف وتشغيل
 .\baa.exe .\test.baa -o test.exe
 .\test.exe
 ```
 
-**Expected Output:**
+**المخرجات المتوقعة:**
 ```
 1
 0
@@ -175,9 +177,9 @@ gcc ..\make_test.c -o make_test.exe
 
 ---
 
-## ✅ Verification (Suggested)
+## ✅ التحقّق (مقترح)
 
-To verify documentation examples against the implementation:
+للتحقق من أمثلة التوثيق مقابل التنفيذ:
 
 ```powershell
 cmake -S . -B build
@@ -186,7 +188,7 @@ cmake --build build
 .\build\baa.exe --version
 ```
 
-For a quick end-to-end sanity check:
+ولفحص سريع طرف-إلى-طرف (End-to-End):
 
 ```powershell
 gcc .\make_test.c -o .\build\make_test.exe

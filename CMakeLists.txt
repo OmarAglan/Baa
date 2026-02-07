@@ -18,6 +18,8 @@ set(SOURCES
     src/ir_lower.c    # AST -> IR lowering (v0.3.0.3)
     src/ir_pass.c     # IR optimizer pass interface (v0.3.1.1)
     src/ir_optimizer.c # IR optimization pipeline (v0.3.1.6)
+    src/isel.c        # Instruction selection (v0.3.2.1)
+    src/regalloc.c    # Register allocation (v0.3.2.2)
     src/lexer.c
     src/main.c
     src/parser.c

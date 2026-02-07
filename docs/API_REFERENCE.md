@@ -1,8 +1,8 @@
 # Baa Internal API Reference
 
-> **Version:** 0.3.1.6 | [← User Guide](USER_GUIDE.md) | [Internals →](INTERNALS.md)
+> **Version:** 0.3.2.1 | [← User Guide](USER_GUIDE.md) | [Internals →](INTERNALS.md)
 
-This document details the C functions, enumerations, and structures defined in `src/baa.h`, `src/ir.h`, `src/ir_builder.h`, `src/ir_lower.h`, `src/ir_analysis.h`, `src/ir_pass.h`, `src/ir_dce.h`, `src/ir_copyprop.h`, `src/ir_cse.h`, and `src/ir_optimizer.h`.
+This document details the C functions, enumerations, and structures defined in `src/baa.h`, `src/ir.h`, `src/ir_builder.h`, `src/ir_lower.h`, `src/ir_analysis.h`, `src/ir_pass.h`, `src/ir_dce.h`, `src/ir_copyprop.h`, `src/ir_cse.h`, `src/ir_optimizer.h`, and `src/isel.h`.
 
 ---
 
@@ -15,11 +15,12 @@ This document details the C functions, enumerations, and structures defined in `
 - [IR Builder Module](#5-ir-builder-module)
 - [IR Lowering Module](#6-ir-lowering-module)
 - [IR Optimization Passes](#7-ir-optimization-passes)
-- [Codegen Module](#8-codegen-module)
-- [Diagnostic System](#9-diagnostic-system)
-- [Symbol Table](#10-symbol-table)
-- [Updater](#11-updater)
-- [Data Structures](#12-data-structures)
+- [Instruction Selection Module](#8-instruction-selection-module-v0321)
+- [Codegen Module](#9-codegen-module)
+- [Diagnostic System](#10-diagnostic-system)
+- [Symbol Table](#11-symbol-table)
+- [Updater](#12-updater)
+- [Data Structures](#13-data-structures)
 
 ---
 
@@ -1391,7 +1392,300 @@ Returns the string representation of an optimization level ("O0", "O1", "O2").
 
 ---
 
-## 8. Codegen Module
+## 8. Instruction Selection Module (v0.3.2.1)
+
+The Instruction Selection module (`src/isel.h`, `src/isel.c`) converts IR to abstract machine instructions for x86-64.
+
+### 8.1. Operand Constructors
+
+#### `mach_op_vreg`
+
+```c
+MachineOperand mach_op_vreg(int vreg, int bits)
+```
+
+Creates a virtual register operand.
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `vreg` | `int` | Virtual register number |
+| `bits` | `int` | Operand size in bits (8, 16, 32, 64) |
+
+---
+
+#### `mach_op_imm`
+
+```c
+MachineOperand mach_op_imm(int64_t imm, int bits)
+```
+
+Creates an immediate value operand.
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `imm` | `int64_t` | Immediate value |
+| `bits` | `int` | Operand size in bits |
+
+---
+
+#### `mach_op_mem`
+
+```c
+MachineOperand mach_op_mem(int base_vreg, int32_t offset, int bits)
+```
+
+Creates a memory operand `[base + offset]`.
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `base_vreg` | `int` | Base register number |
+| `offset` | `int32_t` | Byte offset from base |
+| `bits` | `int` | Access size in bits |
+
+---
+
+#### `mach_op_label`
+
+```c
+MachineOperand mach_op_label(int label_id)
+```
+
+Creates a block label operand (for jumps).
+
+---
+
+#### `mach_op_global`
+
+```c
+MachineOperand mach_op_global(const char* name)
+```
+
+Creates a global variable reference operand.
+
+---
+
+#### `mach_op_func`
+
+```c
+MachineOperand mach_op_func(const char* name)
+```
+
+Creates a function reference operand (for calls).
+
+---
+
+#### `mach_op_none`
+
+```c
+MachineOperand mach_op_none(void)
+```
+
+Creates an empty (no-operand) operand.
+
+---
+
+### 8.2. Instruction Construction
+
+#### `mach_inst_new`
+
+```c
+MachineInst* mach_inst_new(MachineOp op, MachineOperand dst,
+                           MachineOperand src1, MachineOperand src2)
+```
+
+Creates a new machine instruction.
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `op` | `MachineOp` | x86-64 opcode (e.g., `MACH_ADD`) |
+| `dst` | `MachineOperand` | Destination operand |
+| `src1` | `MachineOperand` | First source operand |
+| `src2` | `MachineOperand` | Second source operand (use `mach_op_none()` if unused) |
+
+**Returns:** New `MachineInst*` (caller owns).
+
+---
+
+#### `mach_inst_free`
+
+```c
+void mach_inst_free(MachineInst* inst)
+```
+
+Frees a machine instruction and its comment string.
+
+---
+
+### 8.3. Block Construction
+
+#### `mach_block_new`
+
+```c
+MachineBlock* mach_block_new(const char* label, int id)
+```
+
+Creates a new machine block.
+
+---
+
+#### `mach_block_append`
+
+```c
+void mach_block_append(MachineBlock* block, MachineInst* inst)
+```
+
+Appends an instruction to the end of a block's doubly-linked list.
+
+---
+
+#### `mach_block_free`
+
+```c
+void mach_block_free(MachineBlock* block)
+```
+
+Frees a block and all its instructions.
+
+---
+
+### 8.4. Function Construction
+
+#### `mach_func_new`
+
+```c
+MachineFunc* mach_func_new(const char* name)
+```
+
+Creates a new machine function.
+
+---
+
+#### `mach_func_alloc_vreg`
+
+```c
+int mach_func_alloc_vreg(MachineFunc* func)
+```
+
+Allocates the next available virtual register number.
+
+**Returns:** New virtual register number.
+
+---
+
+#### `mach_func_add_block`
+
+```c
+void mach_func_add_block(MachineFunc* func, MachineBlock* block)
+```
+
+Adds a block to a function (sets as entry if first block).
+
+---
+
+#### `mach_func_free`
+
+```c
+void mach_func_free(MachineFunc* func)
+```
+
+Frees a function and all its blocks.
+
+---
+
+### 8.5. Module Construction
+
+#### `mach_module_new`
+
+```c
+MachineModule* mach_module_new(const char* name)
+```
+
+Creates a new machine module.
+
+---
+
+#### `mach_module_add_func`
+
+```c
+void mach_module_add_func(MachineModule* module, MachineFunc* func)
+```
+
+Adds a function to a module.
+
+---
+
+#### `mach_module_free`
+
+```c
+void mach_module_free(MachineModule* module)
+```
+
+Frees a module and all its functions. Does NOT free referenced IR globals/strings.
+
+---
+
+### 8.6. Instruction Selection Entry Point
+
+#### `isel_run`
+
+```c
+MachineModule* isel_run(IRModule* ir_module)
+```
+
+Converts an entire IR module to machine representation.
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `ir_module` | `IRModule*` | Source IR module (after optimization) |
+
+**Returns:** New `MachineModule*` (caller owns; free with `mach_module_free()`), or `NULL` on failure.
+
+**Behavior:**
+
+1. Creates a `MachineModule` and walks all IR functions
+2. For each IR function, creates a `MachineFunc` with matching blocks
+3. For each IR instruction, emits one or more `MachineInst` nodes using pattern matching
+4. Inlines immediate values where x86-64 permits
+5. Uses Windows x64 ABI conventions for calls/returns
+
+---
+
+### 8.7. Print Functions
+
+#### `mach_op_to_string`
+
+```c
+const char* mach_op_to_string(MachineOp op)
+```
+
+Returns the string name of a machine opcode (e.g., `"ADD"`, `"MOV"`).
+
+---
+
+#### `mach_operand_print`
+
+```c
+void mach_operand_print(MachineOperand* op, FILE* out)
+```
+
+Prints a single operand (e.g., `%v5`, `$42`, `[%v-1 - 8]`, `@main`).
+
+---
+
+#### `mach_inst_print` / `mach_block_print` / `mach_func_print` / `mach_module_print`
+
+```c
+void mach_inst_print(MachineInst* inst, FILE* out);
+void mach_block_print(MachineBlock* block, FILE* out);
+void mach_func_print(MachineFunc* func, FILE* out);
+void mach_module_print(MachineModule* module, FILE* out);
+```
+
+Hierarchical print functions for debugging machine IR output.
+
+---
+
+## 9. Codegen Module
 
 Handles x86-64 assembly generation.
 

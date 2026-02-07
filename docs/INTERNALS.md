@@ -1,6 +1,6 @@
 # Baa Compiler Internals
 
-> **Version:** 0.3.1.6 | [← Language Spec](LANGUAGE.md) | [API Reference →](API_REFERENCE.md)
+> **Version:** 0.3.2.1 | [← Language Spec](LANGUAGE.md) | [API Reference →](API_REFERENCE.md)
 
 **Target Architecture:** x86-64 (AMD64)
 **Target OS:** Windows (MinGW-w64 Toolchain)
@@ -22,6 +22,7 @@ This document details the internal architecture, data structures, and algorithms
 - [IR Dead Code Elimination Pass](#616-ir-dead-code-elimination-pass)
 - [IR Copy Propagation Pass](#617-ir-copy-propagation-pass)
 - [IR Common Subexpression Elimination Pass](#618-ir-common-subexpression-elimination-pass)
+- [Instruction Selection](#619-instruction-selection-v0321)
 - [Code Generation](#7-code-generation)
 - [Global Data Section](#8-global-data-section)
 - [Naming & Entry Point](#9-naming--entry-point)
@@ -877,6 +878,87 @@ The IR common subexpression elimination (CSE) pass detects duplicate computation
 **Testing:** See [`tests/ir_cse_test.c`](tests/ir_cse_test.c).
 
 **API:** See [docs/API_REFERENCE.md](API_REFERENCE.md) for function signatures.
+
+---
+
+### 6.19. Instruction Selection (اختيار_التعليمات) — v0.3.2.1
+
+The instruction selection pass converts Baa IR (SSA form) into an abstract machine representation (`MachineModule`) that closely mirrors x86-64 instructions while keeping virtual registers. Physical register assignment is deferred to the register allocation pass (v0.3.2.2).
+
+**Files:** [`src/isel.h`](src/isel.h), [`src/isel.c`](src/isel.c)
+
+**Entry Point:** [`isel_run()`](src/isel.c) — takes an `IRModule*`, returns a `MachineModule*`.
+
+#### 6.19.1. Architecture Overview
+
+```
+IRModule ──→ isel_run() ──→ MachineModule
+  IRFunc        │              MachineFunc
+  IRBlock       │              MachineBlock
+  IRInst        │              MachineInst (1:N expansion)
+                ▼
+         ISelCtx (internal context)
+         - current function/block
+         - vreg counter
+         - stack size tracking
+```
+
+Each IR instruction is lowered to one or more `MachineInst` nodes. The expansion ratio is typically 1:1 to 1:4 depending on the IR opcode (e.g., `IR_OP_DIV` expands to MOV + CQO + IDIV).
+
+#### 6.19.2. Key Data Structures
+
+| Structure | Description |
+|-----------|-------------|
+| `MachineOp` | Enum of ~30 x86-64 opcodes: ADD, SUB, IMUL, IDIV, NEG, CQO, MOV, LEA, LOAD, STORE, CMP, TEST, SETcc (6 variants), MOVZX, AND, OR, NOT, XOR, JMP, JE, JNE, CALL, RET, PUSH, POP, NOP, LABEL, COMMENT |
+| `MachineOperandKind` | NONE, VREG, IMM, MEM, LABEL, GLOBAL, FUNC |
+| `MachineOperand` | Union: vreg number, immediate value, memory (base+offset), label id, global/func name |
+| `MachineInst` | Doubly-linked list node: op + dst/src1/src2 operands + ir_reg + comment |
+| `MachineBlock` | Label + instruction list + successors + linked-list next |
+| `MachineFunc` | Name + block list + vreg counter + stack_size + param_count |
+| `MachineModule` | Function list + globals (ref from IR) + strings (ref from IR) |
+
+#### 6.19.3. Instruction Lowering Patterns
+
+| IR Opcode | Machine Pattern | Notes |
+|-----------|-----------------|-------|
+| `IR_OP_ADD` / `IR_OP_SUB` / `IR_OP_MUL` | `MOV dst, lhs; OP dst, rhs` | Two-address form. Immediates inlined as src2 |
+| `IR_OP_DIV` / `IR_OP_MOD` | `MOV RAX, lhs; CQO; IDIV rhs` | If rhs is immediate, temp vreg is allocated for MOV |
+| `IR_OP_NEG` | `MOV dst, src; NEG dst` | Two-instruction pattern |
+| `IR_OP_ALLOCA` | `LEA dst, [RBP - offset]` | Stack offset tracked in `ISelCtx.stack_size` |
+| `IR_OP_LOAD` | `LOAD dst, [ptr]` or `LOAD dst, @global` | Global variables use MACH_OP_GLOBAL operand |
+| `IR_OP_STORE` | `STORE [ptr], src` | Immediate values can be stored directly to memory |
+| `IR_OP_CMP` | `CMP lhs, rhs; SETcc tmp; MOVZX dst, tmp` | SETcc selected by predicate (EQ/NE/GT/LT/GE/LE). If LHS is immediate, temp vreg is used |
+| `IR_OP_AND` / `IR_OP_OR` | `MOV dst, lhs; OP dst, rhs` | Same two-address form as arithmetic |
+| `IR_OP_NOT` | `MOV dst, src; XOR dst, 1` | Logical NOT (boolean inversion) |
+| `IR_OP_BR` | `JMP label` | Unconditional jump |
+| `IR_OP_BR_COND` | `TEST cond, cond; JNE true_label; JMP false_label` | Three-instruction pattern |
+| `IR_OP_RET` | `MOV RAX, val; RET` | Uses special vreg -2 (= RAX) |
+| `IR_OP_CALL` | `MOV param_regs, args...; CALL @func; MOV dst, RAX` | Windows x64 ABI: RCX/RDX/R8/R9 (vregs -10..-13) |
+| `IR_OP_PHI` | `NOP` | Placeholder; copy insertion deferred to register allocation |
+| `IR_OP_CAST` | `MOVZX dst, src` (zero-extend) or `MOV dst, src` (same/larger size) | Size-dependent |
+
+#### 6.19.4. Special Virtual Register Conventions
+
+The instruction selector uses negative vreg numbers to represent physical register constraints that will be resolved during register allocation:
+
+| Vreg | Physical Register | Purpose |
+|------|-------------------|---------|
+| -1 | RBP | Memory base for stack accesses |
+| -2 | RAX | Return value register |
+| -10 | RCX | 1st function argument (Windows x64) |
+| -11 | RDX | 2nd function argument (Windows x64) |
+| -12 | R8 | 3rd function argument (Windows x64) |
+| -13 | R9 | 4th function argument (Windows x64) |
+
+#### 6.19.5. Design Decisions
+
+1. **Virtual registers preserved:** ISel keeps IR virtual register numbers intact. Physical register mapping is entirely deferred to v0.3.2.2 (register allocation).
+2. **Immediate inlining:** Constants are embedded as `MACH_OP_IMM` wherever x86-64 encoding permits. Where not allowed (CMP first operand, IDIV divisor), a temp vreg + MOV is emitted.
+3. **Phi nodes as NOPs:** Phi instructions become NOP placeholders. Actual copy insertion into predecessor blocks is deferred to SSA destruction during register allocation.
+4. **MachineModule references IR data:** Global variables and string tables are referenced (not copied) from the IR module. Memory is freed by the IR module.
+5. **Stack size tracking:** Each `IR_OP_ALLOCA` increments the function's `stack_size` by 8 bytes. The LEA instruction uses the accumulated offset.
+
+**Testing:** See [`tests/isel_test.c`](tests/isel_test.c) — 8 test suites, 56 assertions.
 
 ---
 

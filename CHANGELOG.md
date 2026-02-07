@@ -8,6 +8,31 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.3.2.1] - 2026-02-07
+
+### Added
+- **Instruction selection (اختيار التعليمات)** — IR → Machine IR lowering for x86-64:
+  - `MachineOp` enum with 30+ x86-64 opcodes: ADD, SUB, IMUL, IDIV, NEG, CQO, MOV, LEA, LOAD, STORE, CMP, TEST, SETcc, MOVZX, AND, OR, NOT, XOR, JMP, JE, JNE, CALL, RET, PUSH, POP, NOP, LABEL, COMMENT.
+  - `MachineOperand` with kinds: VREG, IMM, MEM (base+offset), LABEL, GLOBAL, FUNC.
+  - `MachineInst`, `MachineBlock`, `MachineFunc`, `MachineModule` data structures (doubly-linked lists).
+  - Instruction selection patterns:
+    - Binary ops (add/sub/mul): `mov dst, lhs; op dst, rhs` with immediate inlining.
+    - Division: `mov tmp, divisor; mov dst, dividend; cqo; idiv tmp` (temp reg for immediate divisor).
+    - Comparison: `cmp lhs, rhs; setCC dst8; movzx dst64, dst8` (temp reg for immediate LHS).
+    - Alloca: `lea dst, [rbp - offset]` with stack size tracking.
+    - Load/Store: `mov dst, [ptr]` / `mov [ptr], val` (immediate-to-memory optimization).
+    - Conditional branch: `test cond, cond; jne true_label; jmp false_label`.
+    - Call: Windows x64 ABI — args in vregs -10..-13 (RCX/RDX/R8/R9), push for 5+.
+    - Return: `mov %ret, val; ret` (vreg -2 = RAX placeholder).
+    - Phi: NOP placeholder (deferred to register allocation).
+    - Cast: MOVZX for widening, MOV for same-size/narrowing.
+  - Full print system for Machine IR debugging.
+  - Entry point: [`isel_run()`](src/isel.c:987), header: [`src/isel.h`](src/isel.h).
+- **Tests:** Added [`tests/isel_test.c`](tests/isel_test.c) — 8 test suites, 56 assertions covering all instruction patterns.
+
+### Changed
+- **Build system:** Added `src/isel.c` to [`CMakeLists.txt`](CMakeLists.txt).
+
 ## [0.3.1.6] - 2026-02-07
 
 ### Added

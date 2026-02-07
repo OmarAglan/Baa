@@ -140,12 +140,12 @@
 
 ### v0.3.2: The Backend (Target Independence) 🎯
 
-#### v0.3.2.1: Instruction Selection
+#### v0.3.2.1: Instruction Selection ✅ COMPLETED (2026-02-07)
 
-- [ ] **Define `MachineInst`** — Abstract machine instruction.
-- [ ] **IR to Machine mapping** — `جمع` → `ADD`, `حمل` → `MOV`, etc.
-- [ ] **Pattern matching** — Select optimal instruction sequences.
-- [ ] **Handle immediates** — Inline constants where possible.
+- [x] **Define `MachineInst`** — Abstract machine instruction.
+- [x] **IR to Machine mapping** — `جمع` → `ADD`, `حمل` → `MOV`, etc.
+- [x] **Pattern matching** — Select optimal instruction sequences.
+- [x] **Handle immediates** — Inline constants where possible.
 
 #### v0.3.2.2: Register Allocation
 

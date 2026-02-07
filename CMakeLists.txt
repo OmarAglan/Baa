@@ -17,6 +17,7 @@ set(SOURCES
     src/ir_cse.c      # IR CSE (حذف_المكرر) (v0.3.1.5)
     src/ir_lower.c    # AST -> IR lowering (v0.3.0.3)
     src/ir_pass.c     # IR optimizer pass interface (v0.3.1.1)
+    src/ir_optimizer.c # IR optimization pipeline (v0.3.1.6)
     src/lexer.c
     src/main.c
     src/parser.c

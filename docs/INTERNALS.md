@@ -1,6 +1,6 @@
 # Baa Compiler Internals
 
-> **Version:** 0.3.1.3 | [← Language Spec](LANGUAGE.md) | [API Reference →](API_REFERENCE.md)
+> **Version:** 0.3.1.6 | [← Language Spec](LANGUAGE.md) | [API Reference →](API_REFERENCE.md)
 
 **Target Architecture:** x86-64 (AMD64)
 **Target OS:** Windows (MinGW-w64 Toolchain)
@@ -21,6 +21,7 @@ This document details the internal architecture, data structures, and algorithms
 - [IR Constant Folding Pass](#615-ir-constant-folding-pass)
 - [IR Dead Code Elimination Pass](#616-ir-dead-code-elimination-pass)
 - [IR Copy Propagation Pass](#617-ir-copy-propagation-pass)
+- [IR Common Subexpression Elimination Pass](#618-ir-common-subexpression-elimination-pass)
 - [Code Generation](#7-code-generation)
 - [Global Data Section](#8-global-data-section)
 - [Naming & Entry Point](#9-naming--entry-point)
@@ -843,6 +844,39 @@ The IR copy propagation pass removes redundant SSA copy chains by replacing uses
 - Removes `نسخ` instructions after propagation.
 
 **Testing:** See [`tests/ir_copyprop_test.c`](tests/ir_copyprop_test.c:1).
+
+---
+
+### 6.18. IR Common Subexpression Elimination Pass (حذف_المكرر) — v0.3.1.5
+
+The IR common subexpression elimination (CSE) pass detects duplicate computations with identical opcode and operands, replacing subsequent uses with the first computed result.
+
+**File:** [`src/ir_cse.c`](src/ir_cse.c)
+
+**Entry Point:** [`ir_cse_run()`](src/ir_cse.c)
+
+**Pass Descriptor:** [`IR_PASS_CSE`](src/ir_cse.c)
+
+**Algorithm:**
+
+1. For each function and block, hash each pure expression (opcode + operand signatures).
+2. If a duplicate hash is found, replace all uses of the duplicate instruction's destination register with the original result.
+3. Remove redundant instructions after propagation.
+
+**Eligible Operations (pure, no side effects):**
+
+- Arithmetic: جمع (add), طرح (sub), ضرب (mul), قسم (div), باقي (mod)
+- Comparisons: قارن (compare)
+- Logical: و (and), أو (or), نفي (not)
+
+**NOT Eligible (side effects or non-deterministic):**
+
+- Memory: حجز (alloca), حمل (load), خزن (store)
+- Control: نداء (call), فاي (phi), terminators (branches/returns)
+
+**Testing:** See [`tests/ir_cse_test.c`](tests/ir_cse_test.c).
+
+**API:** See [docs/API_REFERENCE.md](API_REFERENCE.md) for function signatures.
 
 ---
 

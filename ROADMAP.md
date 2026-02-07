@@ -129,12 +129,12 @@
 - [x] **Detect duplicates** — Same op + same operands.
 - [x] **Replace with existing result** — Reuse previous computation.
 
-#### v0.3.1.6: Optimization Pipeline
+#### v0.3.1.6: Optimization Pipeline ✅ COMPLETED (2026-02-07)
 
-- [ ] **Pass ordering** — Define optimal pass sequence.
-- [ ] **Iteration** — Run passes until no changes.
-- [ ] **`-O0`, `-O1`, `-O2` flags** — Control optimization level.
-- [ ] **`--dump-ir-opt`** — Print IR after optimization.
+- [x] **Pass ordering** — Define optimal pass sequence (constfold → copyprop → CSE → DCE).
+- [x] **Iteration** — Run passes until no changes (fixpoint, max 10 iterations).
+- [x] **`-O0`, `-O1`, `-O2` flags** — Control optimization level.
+- [x] **`--dump-ir-opt`** — Print IR after optimization.
 
 ---
 

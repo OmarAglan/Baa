@@ -6,6 +6,7 @@
 
 #include "baa.h"
 #include "ir_lower.h"
+#include "ir_optimizer.h"
 #include <time.h>
 
 #ifdef _WIN32
@@ -27,6 +28,8 @@ typedef struct {
     bool show_timings;      // -v: عرض وقت الترجمة
     bool dump_ir;           // --dump-ir: طباعة IR بعد التحليل الدلالي
     bool emit_ir;           // --emit-ir: كتابة IR إلى ملف .ir بجانب المصدر
+    bool dump_ir_opt;       // --dump-ir-opt: طباعة IR بعد التحسين
+    OptLevel opt_level;     // -O0, -O1, -O2: مستوى التحسين
     double start_time;      // وقت بدء الترجمة
 } CompilerConfig;
 
@@ -165,6 +168,10 @@ void print_help() {
     printf("  -v           Enable verbose output with timing\n");
     printf("  --dump-ir    Dump Baa IR (Arabic) to stdout after analysis\n");
     printf("  --emit-ir    Write Baa IR (Arabic) to <input>.ir after analysis\n");
+    printf("  --dump-ir-opt  Dump Baa IR (Arabic) after optimization\n");
+    printf("  -O0            Disable optimization\n");
+    printf("  -O1            Basic optimization (default)\n");
+    printf("  -O2            Full optimization (+ CSE)\n");
     printf("  --help, -h   Show this help message\n");
     printf("  --version    Show version info\n");
     printf("\nWarning Options:\n");
@@ -199,6 +206,7 @@ void print_version() {
 int main(int argc, char** argv) {
     CompilerConfig config = {0};
     config.output_file = NULL;
+    config.opt_level = OPT_LEVEL_1;  // Default optimization level
 
     char* input_files[32];  // دعم حتى 32 ملف مصدر
     int input_count = 0;
@@ -237,6 +245,18 @@ int main(int argc, char** argv) {
             }
             else if (strcmp(arg, "--emit-ir") == 0) {
                 config.emit_ir = true;
+            }
+            else if (strcmp(arg, "--dump-ir-opt") == 0) {
+                config.dump_ir_opt = true;
+            }
+            else if (strcmp(arg, "-O0") == 0) {
+                config.opt_level = OPT_LEVEL_0;
+            }
+            else if (strcmp(arg, "-O1") == 0) {
+                config.opt_level = OPT_LEVEL_1;
+            }
+            else if (strcmp(arg, "-O2") == 0) {
+                config.opt_level = OPT_LEVEL_2;
             }
             else if (strcmp(arg, "-o") == 0) {
                 if (i + 1 < argc) config.output_file = argv[++i];
@@ -342,6 +362,18 @@ int main(int argc, char** argv) {
             if (config.verbose) printf("[INFO] Writing IR (--emit-ir): %s\n", ir_file);
             ir_module_dump(ir_module, ir_file, 1);
             free(ir_file);
+        }
+
+        // 3.6. مرحلة التحسين (v0.3.1.6): Optimization Pipeline
+        if (config.opt_level > OPT_LEVEL_0) {
+            if (config.verbose) printf("[INFO] Running optimizer (-%s)...\n", ir_optimizer_level_name(config.opt_level));
+            ir_optimizer_run(ir_module, config.opt_level);
+        }
+
+        // طباعة IR بعد التحسين (اختياري) --dump-ir-opt
+        if (config.dump_ir_opt) {
+            if (config.verbose) printf("[INFO] Dumping optimized IR (--dump-ir-opt)...\n");
+            ir_module_print(ir_module, stdout, 1);
         }
 
         // حالياً: ما زال توليد التجميع يعتمد على AST (تكامل IR→codegen سيأتي لاحقاً).

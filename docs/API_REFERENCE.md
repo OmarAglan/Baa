@@ -1,8 +1,8 @@
 # Baa Internal API Reference
 
-> **Version:** 0.3.1.3 | [← User Guide](USER_GUIDE.md) | [Internals →](INTERNALS.md)
+> **Version:** 0.3.1.6 | [← User Guide](USER_GUIDE.md) | [Internals →](INTERNALS.md)
 
-This document details the C functions, enumerations, and structures defined in `src/baa.h`, `src/ir.h`, `src/ir_builder.h`, `src/ir_lower.h`, `src/ir_analysis.h`, `src/ir_pass.h`, and `src/ir_dce.h`.
+This document details the C functions, enumerations, and structures defined in `src/baa.h`, `src/ir.h`, `src/ir_builder.h`, `src/ir_lower.h`, `src/ir_analysis.h`, `src/ir_pass.h`, `src/ir_dce.h`, `src/ir_copyprop.h`, `src/ir_cse.h`, and `src/ir_optimizer.h`.
 
 ---
 
@@ -1304,7 +1304,94 @@ Descriptor for the copy propagation pass, usable with the IR optimizer pipeline.
 
 ---
 
-## 7. Codegen Module
+### 7.4. Common Subexpression Elimination (حذف_المكرر)
+
+#### `ir_cse_run`
+
+```c
+bool ir_cse_run(IRModule* module)
+```
+
+Runs common subexpression elimination on the given IR module. Detects duplicate expressions (same opcode + same operands), replaces uses of duplicates with the original result, and removes redundant instructions.
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `module`  | `IRModule*` | The IR module to optimize |
+
+**Returns:** `true` if the module was modified, `false` otherwise.
+
+**Eligible Operations:**
+
+- Arithmetic: جمع، طرح، ضرب، قسم، باقي
+- Comparisons: قارن
+- Logical: و، أو، نفي
+
+**NOT Eligible (side effects):**
+
+- Memory: حجز، حمل، خزن
+- Control: نداء، فاي، terminators
+
+#### `IR_PASS_CSE`
+
+```c
+extern IRPass IR_PASS_CSE;
+```
+
+Descriptor for the common subexpression elimination pass, usable with the IR optimizer pipeline.
+
+---
+
+### 7.5. Optimization Pipeline (v0.3.1.6)
+
+#### `OptLevel`
+
+```c
+typedef enum {
+    OPT_LEVEL_0 = 0,  // No optimization (debug mode)
+    OPT_LEVEL_1 = 1,  // Basic optimizations (default)
+    OPT_LEVEL_2 = 2   // Full optimizations
+} OptLevel;
+```
+
+Optimization level enum controlling which passes are run:
+- **O0:** No optimization (for debugging).
+- **O1:** Basic optimizations (constfold, copyprop, dce).
+- **O2:** Full optimizations (+ CSE, fixpoint iteration).
+
+#### `ir_optimizer_run`
+
+```c
+bool ir_optimizer_run(IRModule* module, OptLevel level)
+```
+
+Runs the optimization pipeline on the given IR module.
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `module`  | `IRModule*` | The IR module to optimize |
+| `level`   | `OptLevel` | Optimization level (O0, O1, O2) |
+
+**Returns:** `true` if any optimization was performed, `false` otherwise.
+
+**Pass ordering:**
+1. Constant Folding (طي_الثوابت)
+2. Copy Propagation (نشر_النسخ)
+3. CSE (حذف_المكرر) — O2 only
+4. Dead Code Elimination (حذف_الميت)
+
+**Fixpoint iteration:** Passes repeat until no changes (max 10 iterations).
+
+#### `ir_optimizer_level_name`
+
+```c
+const char* ir_optimizer_level_name(OptLevel level)
+```
+
+Returns the string representation of an optimization level ("O0", "O1", "O2").
+
+---
+
+## 8. Codegen Module
 
 Handles x86-64 assembly generation.
 
@@ -1336,7 +1423,7 @@ Recursively generates assembly code from AST.
 
 ---
 
-## 8. Diagnostic System
+## 9. Diagnostic System
 
 Centralized diagnostic system for compiler errors and warnings (v0.2.8+).
 
@@ -1435,7 +1522,7 @@ extern WarningConfig g_warning_config;
 
 ---
 
-## 9. Symbol Table
+## 10. Symbol Table
 
 Manages variable scope and resolution.
 
@@ -1473,7 +1560,7 @@ typedef struct {
 
 ---
 
-## 10. Updater
+## 11. Updater
 
 ### `run_updater`
 
@@ -1491,7 +1578,7 @@ Runs the built-in updater.
 
 ---
 
-## 11. Data Structures
+## 12. Data Structures
 
 ### 11.1. Preprocessor Structures
 

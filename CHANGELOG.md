@@ -8,6 +8,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.3.1.6] - 2026-02-07
+
+### Added
+- **IR optimization pipeline** — unified pass orchestration:
+  - Ordered pass execution: ConstFold → CopyProp → CSE → DCE.
+  - Fixpoint iteration: runs passes until no changes (max 10 iterations).
+  - CLI flags: `-O0` (no optimization), `-O1` (basic, default), `-O2` (full + CSE).
+  - `--dump-ir-opt` flag: prints IR after optimization.
+  - Entry point: [`src/ir_optimizer.c`](src/ir_optimizer.c).
+
 ## [0.3.1.5] - 2026-02-07
 
 ### Added

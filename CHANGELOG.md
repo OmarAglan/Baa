@@ -8,6 +8,30 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.3.2.2] - 2026-02-07
+
+### Added
+- **Register allocation (تخصيص السجلات)** — virtual register to physical register mapping for x86-64:
+  - `PhysReg` enum — 16 x86-64 physical registers (RAX through R15, RSP/RBP always reserved).
+  - `LiveInterval` struct — per-vreg live range with start/end positions, assigned physical register, spill info.
+  - `BlockLiveness` struct — per-block def/use/live-in/live-out bitsets (uint64_t arrays).
+  - `RegAllocCtx` struct — full allocation context: instruction numbering, liveness, intervals, vreg-to-phys mapping, spill tracking.
+  - Liveness analysis pipeline:
+    - `regalloc_number_insts()` — sequential instruction numbering with inst_map.
+    - `regalloc_compute_def_use()` — per-block def/use bitset computation (handles two-address form).
+    - `regalloc_compute_liveness()` — iterative dataflow to fixpoint (live_out = union of successors' live_in).
+    - `regalloc_build_intervals()` — constructs live intervals from liveness sets.
+  - Linear scan register allocation:
+    - Allocation order: caller-saved first (R10, R11), then general (RSI, RDI), then callee-saved (RBX, R12-R15), then ABI regs (RAX, RCX, RDX, R8, R9).
+    - Spill on register pressure: evicts longest-lived interval to stack.
+    - Special vreg resolution: vreg -1→RBP, -2→RAX, -10→RCX, -11→RDX, -12→R8, -13→R9.
+  - Operand rewrite: replaces all VREG operands with physical register numbers; spilled vregs become MEM `[RBP+offset]`.
+  - Entry point: [`regalloc_run()`](src/regalloc.c), header: [`src/regalloc.h`](src/regalloc.h).
+- **Tests:** Added [`tests/regalloc_test.c`](tests/regalloc_test.c) — 8 test suites, 51 assertions covering allocation, liveness, spilling, register pressure, and division constraints.
+
+### Changed
+- **Build system:** Added `src/regalloc.c` to [`CMakeLists.txt`](CMakeLists.txt).
+
 ## [0.3.2.1] - 2026-02-07
 
 ### Added

@@ -1,6 +1,6 @@
 # Baa Compiler Internals
 
-> **Version:** 0.3.2.1 | [← Language Spec](LANGUAGE.md) | [API Reference →](API_REFERENCE.md)
+> **Version:** 0.3.2.2 | [← Language Spec](LANGUAGE.md) | [API Reference →](API_REFERENCE.md)
 
 **Target Architecture:** x86-64 (AMD64)
 **Target OS:** Windows (MinGW-w64 Toolchain)
@@ -23,6 +23,7 @@ This document details the internal architecture, data structures, and algorithms
 - [IR Copy Propagation Pass](#617-ir-copy-propagation-pass)
 - [IR Common Subexpression Elimination Pass](#618-ir-common-subexpression-elimination-pass)
 - [Instruction Selection](#619-instruction-selection-v0321)
+- [Register Allocation](#620-register-allocation-تخصيص_السجلات--v0322)
 - [Code Generation](#7-code-generation)
 - [Global Data Section](#8-global-data-section)
 - [Naming & Entry Point](#9-naming--entry-point)
@@ -959,6 +960,89 @@ The instruction selector uses negative vreg numbers to represent physical regist
 5. **Stack size tracking:** Each `IR_OP_ALLOCA` increments the function's `stack_size` by 8 bytes. The LEA instruction uses the accumulated offset.
 
 **Testing:** See [`tests/isel_test.c`](tests/isel_test.c) — 8 test suites, 56 assertions.
+
+---
+
+### 6.20. Register Allocation (تخصيص_السجلات) — v0.3.2.2
+
+The register allocator transforms virtual register references in machine instructions into physical x86-64 registers. It uses the **Linear Scan** algorithm for simplicity and fast compilation.
+
+**Source:** [`src/regalloc.h`](../src/regalloc.h) / [`src/regalloc.c`](../src/regalloc.c)
+
+#### 6.20.1. Architecture Overview
+
+```
+MachineModule (vregs)
+    │
+    ├── 1. Number Instructions    ← Sequential numbering for position tracking
+    ├── 2. Compute def/use        ← Per-block def/use bitsets
+    ├── 3. Liveness Analysis      ← Iterative dataflow → live-in/live-out
+    ├── 4. Build Live Intervals   ← vreg → [start, end] ranges
+    ├── 5. Linear Scan            ← Assign physical registers, spill on pressure
+    ├── 6. Insert Spill Code      ← Handle spilled vregs
+    └── 7. Rewrite Operands       ← Replace VREG → physical reg / MEM
+    │
+    ▼
+MachineModule (physical regs)
+```
+
+#### 6.20.2. Key Data Structures
+
+| Structure | Purpose |
+|-----------|---------|
+| `PhysReg` | Enum of 16 x86-64 physical registers (RAX=0 through R15=15) |
+| `LiveInterval` | Per-vreg range: `{vreg, start, end, phys_reg, spilled, spill_offset}` |
+| `BlockLiveness` | Per-block bitsets: `{def, use, live_in, live_out}` as `uint64_t*` arrays |
+| `RegAllocCtx` | Full context: function, inst_map, block liveness, intervals, vreg→phys mapping, spill tracking |
+
+#### 6.20.3. Allocation Order
+
+Registers are allocated in a specific priority order to minimize callee-save overhead:
+
+1. **Caller-saved temporaries:** R10, R11 (free to use, no save/restore)
+2. **General purpose:** RSI, RDI (caller-saved on Windows x64)
+3. **Callee-saved:** RBX, R12, R13, R14, R15 (require save/restore in prologue/epilogue)
+4. **ABI-reserved:** RAX, RCX, RDX, R8, R9 (return value / argument registers, allocated last)
+
+**Always reserved:** RSP (stack pointer), RBP (frame pointer) — never allocated.
+
+#### 6.20.4. Special Virtual Register Conventions
+
+ISel emits negative vregs for ABI-fixed locations. The register allocator resolves these during rewrite:
+
+| Virtual Reg | Physical Reg | Purpose |
+|-------------|-------------|---------|
+| `-1` | RBP | Frame pointer (memory base) |
+| `-2` | RAX | Return value |
+| `-10` | RCX | 1st argument (Windows x64) |
+| `-11` | RDX | 2nd argument (Windows x64) |
+| `-12` | R8 | 3rd argument (Windows x64) |
+| `-13` | R9 | 4th argument (Windows x64) |
+
+#### 6.20.5. Liveness Analysis
+
+The liveness analysis uses iterative dataflow on bitsets:
+
+1. **def/use computation:** Walk each block's instructions. For each instruction, if a vreg is used before being defined in the block, it goes into `use`. If defined, it goes into `def`. Two-address form (e.g., `add dst, dst, src`) records `dst` as both use and def.
+
+2. **Dataflow iteration:** Iterate in reverse block order until fixpoint (max 100 iterations):
+   - `live_out[B] = union(live_in[S])` for all successors S of B
+   - `live_in[B] = use[B] union (live_out[B] - def[B])`
+
+3. **Interval construction:** Walk instructions sequentially, extending intervals for vregs in live_in/live_out sets at block boundaries.
+
+#### 6.20.6. Spilling
+
+When register pressure exceeds available registers, the allocator spills the longest-lived interval (comparing current candidate vs active intervals). Spilled vregs are assigned stack offsets relative to RBP. During rewrite, spilled VREG operands are converted to MEM operands `[RBP + offset]`, leveraging x86-64's ability to have one memory operand per instruction.
+
+#### 6.20.7. Design Decisions
+
+1. **Linear scan over graph coloring:** Chosen for simplicity and O(n log n) compilation speed. Sufficient for the current optimization level.
+2. **Spill via rewrite (not explicit loads/stores):** Spilled vregs become `[RBP+offset]` MEM operands directly, avoiding extra load/store instruction insertion. Works because x86-64 allows one memory operand per instruction.
+3. **RSP/RBP always reserved:** Frame pointer is always maintained for simple stack access. No frame pointer omission.
+4. **Callee-saved tracking:** `RegAllocCtx.callee_saved_used[]` tracks which callee-saved registers are allocated, informing prologue/epilogue generation in the code emission phase.
+
+**Testing:** See [`tests/regalloc_test.c`](tests/regalloc_test.c) — 8 test suites, 51 assertions.
 
 ---
 

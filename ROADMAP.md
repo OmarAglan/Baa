@@ -147,12 +147,12 @@
 - [x] **Pattern matching** — Select optimal instruction sequences.
 - [x] **Handle immediates** — Inline constants where possible.
 
-#### v0.3.2.2: Register Allocation
+#### v0.3.2.2: Register Allocation ✅ COMPLETED (2026-02-07)
 
-- [ ] **Liveness analysis** — Compute live ranges for each virtual register.
-- [ ] **Linear scan allocator** — Simple, fast allocation algorithm.
-- [ ] **Spilling** — Handle register pressure by spilling to stack.
-- [ ] **Map to x64 registers** — RAX, RBX, RCX, RDX, R8-R15.
+- [x] **Liveness analysis** — Compute live ranges for each virtual register.
+- [x] **Linear scan allocator** — Simple, fast allocation algorithm.
+- [x] **Spilling** — Handle register pressure by spilling to stack.
+- [x] **Map to x64 registers** — RAX, RBX, RCX, RDX, R8-R15.
 
 #### v0.3.2.3: Code Emission
 

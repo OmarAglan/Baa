@@ -1,8 +1,8 @@
 # Baa Internal API Reference
 
-> **Version:** 0.3.2.1 | [← User Guide](USER_GUIDE.md) | [Internals →](INTERNALS.md)
+> **Version:** 0.3.2.2 | [← User Guide](USER_GUIDE.md) | [Internals →](INTERNALS.md)
 
-This document details the C functions, enumerations, and structures defined in `src/baa.h`, `src/ir.h`, `src/ir_builder.h`, `src/ir_lower.h`, `src/ir_analysis.h`, `src/ir_pass.h`, `src/ir_dce.h`, `src/ir_copyprop.h`, `src/ir_cse.h`, `src/ir_optimizer.h`, and `src/isel.h`.
+This document details the C functions, enumerations, and structures defined in `src/baa.h`, `src/ir.h`, `src/ir_builder.h`, `src/ir_lower.h`, `src/ir_analysis.h`, `src/ir_pass.h`, `src/ir_dce.h`, `src/ir_copyprop.h`, `src/ir_cse.h`, `src/ir_optimizer.h`, `src/isel.h`, and `src/regalloc.h`.
 
 ---
 
@@ -16,11 +16,12 @@ This document details the C functions, enumerations, and structures defined in `
 - [IR Lowering Module](#6-ir-lowering-module)
 - [IR Optimization Passes](#7-ir-optimization-passes)
 - [Instruction Selection Module](#8-instruction-selection-module-v0321)
-- [Codegen Module](#9-codegen-module)
-- [Diagnostic System](#10-diagnostic-system)
-- [Symbol Table](#11-symbol-table)
-- [Updater](#12-updater)
-- [Data Structures](#13-data-structures)
+- [Register Allocation Module](#9-register-allocation-module-v0322)
+- [Codegen Module](#10-codegen-module)
+- [Diagnostic System](#11-diagnostic-system)
+- [Symbol Table](#12-symbol-table)
+- [Updater](#13-updater)
+- [Data Structures](#14-data-structures)
 
 ---
 
@@ -1685,7 +1686,141 @@ Hierarchical print functions for debugging machine IR output.
 
 ---
 
-## 9. Codegen Module
+## 9. Register Allocation Module (v0.3.2.2)
+
+Maps virtual registers from instruction selection to physical x86-64 registers using linear scan allocation.
+
+**Header:** [`src/regalloc.h`](../src/regalloc.h) | **Implementation:** [`src/regalloc.c`](../src/regalloc.c)
+
+### 9.1. Enumerations
+
+#### `PhysReg`
+
+```c
+typedef enum {
+    PHYS_RAX = 0,  PHYS_RCX = 1,  PHYS_RDX = 2,  PHYS_RBX = 3,
+    PHYS_RSP = 4,  PHYS_RBP = 5,  PHYS_RSI = 6,  PHYS_RDI = 7,
+    PHYS_R8  = 8,  PHYS_R9  = 9,  PHYS_R10 = 10, PHYS_R11 = 11,
+    PHYS_R12 = 12, PHYS_R13 = 13, PHYS_R14 = 14, PHYS_R15 = 15,
+    PHYS_REG_COUNT = 16,
+    PHYS_NONE = -1
+} PhysReg;
+```
+
+x86-64 physical register numbering. RSP and RBP are always reserved and never allocated.
+
+### 9.2. Data Structures
+
+#### `LiveInterval`
+
+```c
+typedef struct LiveInterval {
+    int vreg;           // Virtual register number
+    int start;          // Start position (first def)
+    int end;            // End position (last use)
+    PhysReg phys_reg;   // Assigned physical register (PHYS_NONE if spilled)
+    bool spilled;       // Whether spilled to stack
+    int spill_offset;   // Stack offset relative to RBP
+} LiveInterval;
+```
+
+Represents the live range of a virtual register from its definition to its last use.
+
+#### `BlockLiveness`
+
+```c
+typedef struct BlockLiveness {
+    int block_id;
+    uint64_t* def;      // Registers defined in this block
+    uint64_t* use;      // Registers used before definition in this block
+    uint64_t* live_in;  // Registers live at block entry
+    uint64_t* live_out; // Registers live at block exit
+} BlockLiveness;
+```
+
+Per-block liveness bitsets used in iterative dataflow analysis.
+
+#### `RegAllocCtx`
+
+```c
+typedef struct RegAllocCtx {
+    MachineFunc* func;
+    int total_insts;
+    MachineInst** inst_map;
+    BlockLiveness* block_live;
+    int block_count;
+    LiveInterval* intervals;
+    int interval_count;
+    int interval_capacity;
+    int bitset_words;
+    int max_vreg;
+    PhysReg* vreg_to_phys;
+    bool* vreg_spilled;
+    int* vreg_spill_offset;
+    int next_spill_offset;
+    int spill_count;
+    bool callee_saved_used[PHYS_REG_COUNT];
+} RegAllocCtx;
+```
+
+Main context for register allocation of a single function. Holds all intermediate and final allocation state.
+
+### 9.3. Entry Points
+
+#### `regalloc_run`
+
+```c
+bool regalloc_run(MachineModule* module);
+```
+
+Runs register allocation on all functions in a machine module. Returns `true` on success.
+
+#### `regalloc_func`
+
+```c
+bool regalloc_func(MachineFunc* func);
+```
+
+Runs the full register allocation pipeline on a single function:
+1. Number instructions
+2. Compute def/use
+3. Compute liveness (iterative dataflow)
+4. Build live intervals
+5. Linear scan allocation
+6. Insert spill code
+7. Rewrite operands
+
+### 9.4. Liveness Analysis API
+
+| Function | Signature | Description |
+|----------|-----------|-------------|
+| `regalloc_ctx_new` | `RegAllocCtx* regalloc_ctx_new(MachineFunc*)` | Create allocation context for a function |
+| `regalloc_ctx_free` | `void regalloc_ctx_free(RegAllocCtx*)` | Free allocation context and all bitsets |
+| `regalloc_number_insts` | `void regalloc_number_insts(RegAllocCtx*)` | Sequential instruction numbering, builds inst_map |
+| `regalloc_compute_def_use` | `void regalloc_compute_def_use(RegAllocCtx*)` | Compute per-block def/use bitsets |
+| `regalloc_compute_liveness` | `void regalloc_compute_liveness(RegAllocCtx*)` | Iterative dataflow to fixpoint (max 100 iterations) |
+| `regalloc_build_intervals` | `void regalloc_build_intervals(RegAllocCtx*)` | Build live intervals from liveness sets |
+
+### 9.5. Allocation API
+
+| Function | Signature | Description |
+|----------|-----------|-------------|
+| `regalloc_linear_scan` | `void regalloc_linear_scan(RegAllocCtx*)` | Linear scan allocation with spill on pressure |
+| `regalloc_insert_spill_code` | `void regalloc_insert_spill_code(RegAllocCtx*)` | Handle spilled vregs (implicit via rewrite) |
+| `regalloc_rewrite` | `void regalloc_rewrite(RegAllocCtx*)` | Replace all VREG operands with physical regs |
+
+### 9.6. Utility Functions
+
+| Function | Signature | Description |
+|----------|-----------|-------------|
+| `phys_reg_name` | `const char* phys_reg_name(PhysReg)` | Get register name string ("rax", "rcx", ...) |
+| `phys_reg_is_callee_saved` | `bool phys_reg_is_callee_saved(PhysReg)` | Check if register is callee-saved |
+| `regalloc_print_intervals` | `void regalloc_print_intervals(RegAllocCtx*, FILE*)` | Print live intervals for debugging |
+| `regalloc_print_allocation` | `void regalloc_print_allocation(RegAllocCtx*, FILE*)` | Print vreg-to-physical-reg mapping |
+
+---
+
+## 10. Codegen Module
 
 Handles x86-64 assembly generation.
 
@@ -1717,11 +1852,11 @@ Recursively generates assembly code from AST.
 
 ---
 
-## 9. Diagnostic System
+## 11. Diagnostic System
 
 Centralized diagnostic system for compiler errors and warnings (v0.2.8+).
 
-### 8.1. Error Reporting
+### 11.1. Error Reporting
 
 #### `error_init`
 

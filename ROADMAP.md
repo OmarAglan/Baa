@@ -123,11 +123,11 @@
 - [x] **Replace uses** — Substitute original for copy in operands / call args / phi entries.
 - [x] **Remove redundant copies** — Delete `نسخ` instruction after propagation.
 
-#### v0.3.1.5: Common Subexpression Elimination (حذف_المكرر)
+#### v0.3.1.5: Common Subexpression Elimination (حذف_المكرر) ✅ COMPLETED (2026-02-07)
 
-- [ ] **Hash expressions** — Create signature for each operation.
-- [ ] **Detect duplicates** — Same op + same operands.
-- [ ] **Replace with existing result** — Reuse previous computation.
+- [x] **Hash expressions** — Create signature for each operation.
+- [x] **Detect duplicates** — Same op + same operands.
+- [x] **Replace with existing result** — Reuse previous computation.
 
 #### v0.3.1.6: Optimization Pipeline
 

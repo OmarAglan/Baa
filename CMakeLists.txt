@@ -14,6 +14,7 @@ set(SOURCES
     src/ir_constfold.c # IR constant folding (v0.3.1.2)
     src/ir_dce.c      # IR dead code elimination (حذف_الميت) (v0.3.1.3)
     src/ir_copyprop.c # IR copy propagation (نشر_النسخ) (v0.3.1.4)
+    src/ir_cse.c      # IR CSE (حذف_المكرر) (v0.3.1.5)
     src/ir_lower.c    # AST -> IR lowering (v0.3.0.3)
     src/ir_pass.c     # IR optimizer pass interface (v0.3.1.1)
     src/lexer.c

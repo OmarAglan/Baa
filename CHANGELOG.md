@@ -8,6 +8,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.3.1.5] - 2026-02-07
+
+### Added
+- **IR common subexpression elimination pass (حذف_المكرر)** — new optimization pass for Baa IR:
+  - Hashes expressions (opcode + operand signatures) to detect duplicates.
+  - Replaces uses of duplicate expressions with the original result register.
+  - Removes redundant instructions after propagation.
+  - Eligible operations: arithmetic, comparisons, logical (pure operations only).
+  - Pass entry point: [`src/ir_cse.c`](src/ir_cse.c), API header: [`src/ir_cse.h`](src/ir_cse.h).
+- **Tests:** Added [`tests/ir_cse_test.c`](tests/ir_cse_test.c) for pass verification.
+
+### Changed
+- **Build system:** Added `src/ir_cse.c` to [`CMakeLists.txt`](CMakeLists.txt).
+
 ## [0.3.1.4] - 2026-01-27
 
 ### Added

@@ -164,9 +164,17 @@
 #### v0.3.2.4: Backend Integration
 
 - [x] **Replace old codegen** — IR → Backend → Assembly.
-- [ ] **Verify output** — Compare with old codegen results.
-- [ ] **Performance testing** — Ensure no regression.
+- [x] **Verify output** — Compare with old codegen results.
+- [x] **Performance testing** — Ensure no regression.
 - [x] **Remove legacy codegen** — Retire legacy AST backend from the build (stop compiling `codegen.c`).
+
+#### 0.3.2.4-setup: Installer & GCC Bundling ✅ COMPLETED (2026-02-08)
+
+- [x] **Bundle MinGW-w64 GCC** — Ship GCC toolchain in `gcc/` subfolder inside the installer.
+- [x] **Auto-detect bundled GCC** — `resolve_gcc_path()` in `main.c` finds `gcc.exe` relative to `baa.exe`.
+- [x] **Update installer (setup.iss)** — Add `gcc\*` files, dual PATH entries, post-install GCC verification.
+- [x] **GCC bundle script** — `scripts/prepare_gcc_bundle.ps1` downloads and prepares the minimal toolchain.
+- [x] **Sync version metadata** — `baa.rc` and `setup.iss` updated to `0.3.2.4`, publisher to "Omar Aglan".
 
 ---
 

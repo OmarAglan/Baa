@@ -1,4 +1,6 @@
 /build
 /.agent
-setup.iss
 Output/baa_setup.exe
+mingw64.7z
+/gcc
+/mingw64_tmp

@@ -270,6 +270,16 @@ typedef struct {
     IRBlock* ir_block;          // كتلة IR الحالية
 } ISelCtx;
 
+/**
+ * @brief تصريح مسبق لمُصدّر التعليمات داخل اختيار التعليمات.
+ *
+ * نحتاج هذا لأن [`isel_lower_value()`](src/isel.c:299) قد يولّد تعليمات (مثل LEA)
+ * أثناء خفض بعض القيم (مثل السلاسل النصية)، بينما تعريف الدالة يأتي لاحقاً.
+ */
+static MachineInst* isel_emit(ISelCtx* ctx, MachineOp op,
+                              MachineOperand dst, MachineOperand src1,
+                              MachineOperand src2);
+
 // ============================================================================
 // دوال مساعدة لاختيار التعليمات
 // ============================================================================
@@ -321,11 +331,26 @@ static MachineOperand isel_lower_value(ISelCtx* ctx, IRValue* val) {
             return mach_op_none();
 
         case IR_VAL_CONST_STR:
-            // النصوص تُعالج كمعاملات عامة مع معرف خاص
+            // النصوص في IR تمثل "مؤشر" إلى جدول النصوص (.Lstr_N)
+            // لذا نحتاج تحميل "العنوان" باستخدام LEA، وليس تحميل 8 بايت من محتوى السلسلة.
             {
+                if (!ctx || !ctx->mfunc || !ctx->mblock) {
+                    // احتياطي: في حال عدم توفر السياق (لا يُفترض أن يحدث)
+                    char label_buf[64];
+                    snprintf(label_buf, sizeof(label_buf), ".Lstr_%d", val->data.const_str.id);
+                    return mach_op_global(label_buf);
+                }
+                
+                int tmp = mach_func_alloc_vreg(ctx->mfunc);
+                MachineOperand dst = mach_op_vreg(tmp, 64);
+                
                 char label_buf[64];
                 snprintf(label_buf, sizeof(label_buf), ".Lstr_%d", val->data.const_str.id);
-                return mach_op_global(label_buf);
+                MachineOperand src = mach_op_global(label_buf);
+                
+                // tmp = &.Lstr_N
+                isel_emit(ctx, MACH_LEA, dst, src, mach_op_none());
+                return dst;
             }
 
         default:

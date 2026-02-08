@@ -8,6 +8,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.3.2.4] - 2026-02-08
+
+### Changed
+- **Backend integration (تكامل الخلفية)** — The default compilation pipeline is now fully IR-based end-to-end:
+  - AST → IR Lowering → Optimizer → Instruction Selection → Register Allocation → Code Emission → Assembly.
+  - Driver implementation: [`main()`](src/main.c:209).
+- **Build system:** Retired legacy AST-based backend from the build (stopped compiling [`src/codegen.c`](src/codegen.c:1)).
+- **Version:** Updated compiler version string via [`BAA_VERSION`](src/baa.h:18).
+- **Docs:** Updated pipeline documentation and API notes in [`docs/INTERNALS.md`](docs/INTERNALS.md:1) and [`docs/API_REFERENCE.md`](docs/API_REFERENCE.md:1).
+
 ## [0.3.2.3] - 2026-02-08
 
 ### Added

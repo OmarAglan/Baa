@@ -1,6 +1,6 @@
 # Baa Internal API Reference
 
-> **Version:** 0.3.2.2 | [← User Guide](USER_GUIDE.md) | [Internals →](INTERNALS.md)
+> **Version:** 0.3.2.4 | [← User Guide](USER_GUIDE.md) | [Internals →](INTERNALS.md)
 
 This document details the C functions, enumerations, and structures defined in `src/baa.h`, `src/ir.h`, `src/ir_builder.h`, `src/ir_lower.h`, `src/ir_analysis.h`, `src/ir_pass.h`, `src/ir_dce.h`, `src/ir_copyprop.h`, `src/ir_cse.h`, `src/ir_optimizer.h`, `src/isel.h`, and `src/regalloc.h`.
 
@@ -2012,9 +2012,10 @@ Translates Arabic function names to C runtime equivalents.
 
 ---
 
-## 11. Legacy Codegen Module (Deprecated)
+## 11. Legacy AST Codegen (Removed from Build)
 
-**Note:** The legacy AST-based codegen (`codegen.c`) is deprecated and will be removed in v0.3.2.4 after backend integration is complete.
+**Note:** The legacy AST-based codegen in [`src/codegen.c`](src/codegen.c:1) is retained for historical reference, but it is **no longer compiled** as of v0.3.2.4.
+The active backend pipeline is: AST → IR → Optimizer → [`isel_run()`](src/isel.h:417) → [`regalloc_run()`](src/regalloc.h:1) → [`emit_module()`](src/emit.h:45) → Assembly.
 
 ### `codegen`
 

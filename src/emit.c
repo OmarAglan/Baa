@@ -34,28 +34,38 @@
  * مرتبة حسب ترقيم PhysReg (0=RAX, 1=RCX, ..., 15=R15).
  */
 static const char* reg64_names[PHYS_REG_COUNT] = {
-    "%%rax", "%%rcx", "%%rdx", "%%rbx", "%%rsp", "%%rbp",
-    "%%rsi", "%%rdi", "%%r8",  "%%r9",  "%%r10", "%%r11",
-    "%%r12", "%%r13", "%%r14", "%%r15"
+    "%rax", "%rcx", "%rdx", "%rbx", "%rsp", "%rbp",
+    "%rsi", "%rdi", "%r8",  "%r9",  "%r10", "%r11",
+    "%r12", "%r13", "%r14", "%r15"
 };
 
 /**
  * @brief أسماء السجلات 32-بت بصيغة AT&T.
  */
 static const char* reg32_names[PHYS_REG_COUNT] = {
-    "%%eax", "%%ecx", "%%edx", "%%ebx", "%%esp", "%%ebp",
-    "%%esi", "%%edi", "%%r8d",  "%%r9d",  "%%r10d", "%%r11d",
-    "%%r12d", "%%r13d", "%%r14d", "%%r15d"
+    "%eax", "%ecx", "%edx", "%ebx", "%esp", "%ebp",
+    "%esi", "%edi", "%r8d",  "%r9d",  "%r10d", "%r11d",
+    "%r12d", "%r13d", "%r14d", "%r15d"
 };
 
 /**
  * @brief أسماء السجلات 8-بت بصيغة AT&T (الجزء السفلي).
  */
 static const char* reg8_names[PHYS_REG_COUNT] = {
-    "%%al",  "%%cl",  "%%dl",  "%%bl",  "%%spl", "%%bpl",
-    "%%sil", "%%dil", "%%r8b",  "%%r9b",  "%%r10b", "%%r11b",
-    "%%r12b", "%%r13b", "%%r14b", "%%r15b"
+    "%al",  "%cl",  "%dl",  "%bl",  "%spl", "%bpl",
+    "%sil", "%dil", "%r8b",  "%r9b",  "%r10b", "%r11b",
+    "%r12b", "%r13b", "%r14b", "%r15b"
 };
+
+/**
+ * @brief معرفات داخلية لتفادي تعارض تسميات الكتل بين الدوال.
+ *
+ * في GAS، التسميات المحلية مثل .LBB_0 تكون على مستوى الملف كله،
+ * لذا قد تتعارض بين دوال مختلفة إذا كانت أرقام الكتل تبدأ من الصفر
+ * داخل كل دالة. الحل: إضافة بادئة رقمية لكل دالة أثناء الإصدار.
+ */
+static int g_emit_next_func_uid = 0;
+static int g_emit_current_func_uid = 0;
 
 // ============================================================================
 // دوال مساعدة للحصول على اسم السجل (Register Name Helpers)
@@ -68,7 +78,7 @@ static const char* reg8_names[PHYS_REG_COUNT] = {
  * @return سلسلة اسم السجل بصيغة AT&T.
  */
 static const char* reg_name_for_bits(int reg, int bits) {
-    if (reg < 0 || reg >= PHYS_REG_COUNT) return "%%rax"; // احتياطي
+    if (reg < 0 || reg >= PHYS_REG_COUNT) return "%rax"; // احتياطي
     switch (bits) {
         case 8:  return reg8_names[reg];
         case 32: return reg32_names[reg];
@@ -139,7 +149,7 @@ static void emit_operand(MachineOperand* op, FILE* out) {
             {
                 int base = op->data.mem.base_vreg;
                 int32_t offset = op->data.mem.offset;
-                const char* base_name = "%%rbp"; // افتراضي
+                const char* base_name = "%rbp"; // افتراضي
 
                 if (base >= 0 && base < PHYS_REG_COUNT) {
                     base_name = reg64_names[base];
@@ -154,7 +164,7 @@ static void emit_operand(MachineOperand* op, FILE* out) {
             break;
 
         case MACH_OP_LABEL:
-            fprintf(out, ".LBB_%d", op->data.label_id);
+            fprintf(out, ".LBB_%d_%d", g_emit_current_func_uid, op->data.label_id);
             break;
 
         case MACH_OP_GLOBAL:
@@ -289,11 +299,10 @@ static bool is_mem_operand(MachineOperand* op) {
  * @brief تحديد لاحقة الحجم لتعليمة بناءً على معاملاتها.
  */
 static char infer_suffix(MachineInst* inst) {
-    // التحقق من dst أولاً، ثم src1
-    if (inst->dst.kind == MACH_OP_VREG && inst->dst.size_bits > 0)
-        return size_suffix(inst->dst.size_bits);
-    if (inst->src1.kind == MACH_OP_VREG && inst->src1.size_bits > 0)
-        return size_suffix(inst->src1.size_bits);
+    // نستخدم أول معامل يحدد الحجم (dst ثم src1 ثم src2)
+    if (inst->dst.size_bits > 0) return size_suffix(inst->dst.size_bits);
+    if (inst->src1.size_bits > 0) return size_suffix(inst->src1.size_bits);
+    if (inst->src2.size_bits > 0) return size_suffix(inst->src2.size_bits);
     return 'q'; // افتراضي 64-بت
 }
 
@@ -305,7 +314,7 @@ void emit_inst(MachineInst* inst, MachineFunc* func, FILE* out) {
         // تسمية كتلة (Block Label)
         // ================================================================
         case MACH_LABEL:
-            fprintf(out, ".LBB_%d:\n", inst->dst.data.label_id);
+            fprintf(out, ".LBB_%d_%d:\n", g_emit_current_func_uid, inst->dst.data.label_id);
             break;
 
         // ================================================================
@@ -465,7 +474,7 @@ void emit_inst(MachineInst* inst, MachineFunc* func, FILE* out) {
         // ================================================================
         case MACH_CMP:
             // AT&T: cmp src2, src1 (يقارن src1 مع src2)
-            fprintf(out, "    cmpq ");
+            fprintf(out, "    cmp%c ", infer_suffix(inst));
             emit_operand(&inst->src2, out);
             fprintf(out, ", ");
             emit_operand(&inst->src1, out);
@@ -474,7 +483,7 @@ void emit_inst(MachineInst* inst, MachineFunc* func, FILE* out) {
 
         case MACH_TEST:
             // AT&T: test src2, src1
-            fprintf(out, "    testq ");
+            fprintf(out, "    test%c ", infer_suffix(inst));
             emit_operand(&inst->src2, out);
             fprintf(out, ", ");
             emit_operand(&inst->src1, out);
@@ -748,6 +757,9 @@ bool emit_func(MachineFunc* func, FILE* out) {
     // تخطي النماذج الأولية
     if (func->is_prototype) return true;
 
+    // تعيين بادئة فريدة لتسميات الكتل داخل هذه الدالة
+    g_emit_current_func_uid = g_emit_next_func_uid++;
+
     // تحديد اسم الدالة (تحويل الرئيسية → main)
     const char* func_name = func->name;
     bool is_main = false;
@@ -806,6 +818,10 @@ bool emit_func(MachineFunc* func, FILE* out) {
 
 bool emit_module(MachineModule* module, FILE* out) {
     if (!module || !out) return false;
+
+    // إعادة تعيين بادئات الدوال لضمان حتمية أسماء التسميات داخل كل ملف .s
+    g_emit_next_func_uid = 0;
+    g_emit_current_func_uid = 0;
 
     // 1. قسم البيانات الثابتة (صيغ الطباعة)
     emit_rdata_section(out);

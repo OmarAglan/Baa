@@ -649,6 +649,8 @@ Node* parse_statement() {
             init->data.var_decl.type = dt;
             init->data.var_decl.expression = expr;
             init->data.var_decl.is_global = false;
+            init->data.var_decl.is_const = false; // متغير حلقة for ليس ثابتاً افتراضياً
+            init->next = NULL;
         } else {
             if (parser.current.type == TOKEN_IDENTIFIER && parser.next.type == TOKEN_ASSIGN) {
                 char* name = strdup(parser.current.value);
@@ -867,6 +869,7 @@ Node* parse_declaration() {
                     param->data.var_decl.type = param_dt;
                     param->data.var_decl.expression = NULL;
                     param->data.var_decl.is_global = false;
+                    param->data.var_decl.is_const = false; // المعاملات ليست ثوابت افتراضياً
                     param->next = NULL;
                     if (head_param == NULL) { head_param = param; tail_param = param; }
                     else { tail_param->next = param; tail_param = param; }

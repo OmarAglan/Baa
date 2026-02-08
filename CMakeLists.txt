@@ -6,7 +6,6 @@ set(CMAKE_C_STANDARD 11)
 # List of source files
 set(SOURCES
     src/analysis.c    # Semantic Analysis module
-    src/codegen.c
     src/error.c
     src/ir.c          # Intermediate Representation (Phase 3)
     src/ir_analysis.c # IR analysis (CFG + dominance) (v0.3.1.1)

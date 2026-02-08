@@ -1,6 +1,6 @@
 # Baa Compiler Internals
 
-> **Version:** 0.3.2.2 | [← Language Spec](LANGUAGE.md) | [API Reference →](API_REFERENCE.md)
+> **Version:** 0.3.2.4 | [← Language Spec](LANGUAGE.md) | [API Reference →](API_REFERENCE.md)
 
 **Target Architecture:** x86-64 (AMD64)
 **Target OS:** Windows (MinGW-w64 Toolchain)
@@ -60,11 +60,11 @@ flowchart LR
 | **2. Analysis** | AST | Valid AST | `analysis.c` | **Semantic Pass**: Checks types, scopes, and resolves symbols. |
 | **3. IR Lowering** | AST | IR | `ir_lower.c` (v0.3.0.3+) + `ir_builder.c` | Converts AST expressions/statements to SSA-form Intermediate Representation using the IR Builder. |
 | **4. Optimization** | IR | Optimized IR | [`src/ir_analysis.c`](src/ir_analysis.c:1) + [`src/ir_pass.h`](src/ir_pass.h:1) (v0.3.1.1+) | Analysis infrastructure (CFG validation, predecessors, dominance) + future optimization passes. |
-| **5. Backend** | IR | `.s` Assembly | `codegen.c` | Generates x86-64 assembly code (AT&T syntax). |
+| **5. Backend** | IR | `.s` Assembly | `isel.c`, `regalloc.c`, `emit.c` | Lowers IR to machine instructions, allocates registers, and emits x86-64 AT&T assembly. |
 | **6. Assemble** | `.s` Assembly | `.o` Object | `gcc -c` | Invokes external assembler. |
 | **7. Link** | `.o` Object | `.exe` Executable | `gcc` | Links with C Runtime. |
 
-> **Note (v0.3.0.7):** IR lowering is now integrated into the main driver pipeline (AST → IR is built after semantic analysis). Assembly generation still uses the legacy AST→assembly backend; IR→backend integration comes later.
+> **Note (v0.3.2.4):** The compiler now uses the full IR-based backend pipeline end-to-end: AST → IR → Optimizer → ISel → RegAlloc → Emit → Assembly. The legacy AST-based backend has been retired from the build.
 
 ### 1.1.1. Component Map
 
@@ -75,14 +75,15 @@ flowchart TB
     Parser --> Analyzer["Semantic Analysis\nsrc/analysis.c"]
     Analyzer --> Lower["IR Lowering\nsrc/ir_lower.c (v0.3.0.3+)"]
     Lower --> IR["IR Module\nsrc/ir.c (v0.3.0+)"]
-    IR --> Codegen["Code Generator\nsrc/codegen.c"]
-    Codegen --> GCC["External Toolchain\nMinGW-w64 gcc"]
+    IR --> Backend["Backend\nsrc/isel.c + src/regalloc.c + src/emit.c"]
+    Backend --> GCC["External Toolchain\nMinGW-w64 gcc"]
 
     Driver --> Diagnostics["Diagnostics\nsrc/error.c"]
     Driver --> Updater["Updater\nsrc/updater.c (Windows-only)"]
     
     style Lower fill:#fff3e0
     style IR fill:#fff3e0
+    style Backend fill:#fff3e0
 ```
 
 ### 1.2. The Driver (CLI)
@@ -1221,7 +1222,9 @@ The emitter translates Arabic function names to their C runtime equivalents:
 
 ---
 
-## 7. Code Generation
+## 7. Legacy AST Codegen (Removed from Build)
+
+> **تنبيه:** هذا القسم تاريخي ويصف المسار القديم (AST → Assembly) الموجود في [`src/codegen.c`](src/codegen.c:1) والذي تم إيقاف بنائه في v0.3.2.4. المسار الحالي موثّق في الأقسام 6.19–6.21.
 
 ### 7.1. Loop Control & Branching
 

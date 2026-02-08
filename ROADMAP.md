@@ -163,10 +163,10 @@
 
 #### v0.3.2.4: Backend Integration
 
-- [ ] **Replace old codegen** — IR → Backend → Assembly.
+- [x] **Replace old codegen** — IR → Backend → Assembly.
 - [ ] **Verify output** — Compare with old codegen results.
 - [ ] **Performance testing** — Ensure no regression.
-- [ ] **Remove legacy codegen** — Delete `codegen.c` direct AST translation.
+- [x] **Remove legacy codegen** — Retire legacy AST backend from the build (stop compiling `codegen.c`).
 
 ---
 

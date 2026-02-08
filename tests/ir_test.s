@@ -4,7 +4,7 @@ fmt_str: .asciz "%s\n"
 fmt_scan_int: .asciz "%d"
 
 .data
-حد: .quad 3
+حد: .quad 5
 
 .text
 
@@ -39,55 +39,55 @@ main:
     mov %r12, -96(%rbp)
     mov %r13, -104(%rbp)
 .LBB_1_0:
-    leaq -8(%rbp), %r10
-    movq $10, (%r10)
-    leaq -16(%rbp), %r11
-    movq $20, (%r11)
-    leaq -24(%rbp), %rsi
-    movq $0, (%rsi)
-    movq (%r10), %rdi
-    movq (%r11), %rbx
-    cmpq %rbx, %rdi
-    setl %dil
-    movzbq %dil, %rdi
-    testb %dil, %dil
+    leaq -8(%rbp), %rsi
+    movq $10, (%rsi)
+    leaq -16(%rbp), %rdi
+    movq $20, (%rdi)
+    leaq -24(%rbp), %r10
+    movq $0, (%r10)
+    movq (%rsi), %r11
+    movq (%rdi), %rbx
+    cmpq %rbx, %r11
+    setl %r11b
+    movzbq %r11b, %r11
+    testb %r11b, %r11b
     jne .LBB_1_1
     jmp .LBB_1_3
 .LBB_1_1:
-    movq (%r10), %rdi
-    movq %rdi, %rbx
+    movq (%rsi), %r11
+    movq %r11, %rbx
     addq $1, %rbx
-    movq %rbx, (%r10)
+    movq %rbx, (%rsi)
     jmp .LBB_1_2
 .LBB_1_2:
     jmp .LBB_1_4
 .LBB_1_3:
-    movq (%r10), %rdi
-    movq %rdi, %rbx
+    movq (%rsi), %r11
+    movq %r11, %rbx
     subq $1, %rbx
-    movq %rbx, (%r10)
+    movq %rbx, (%rsi)
     jmp .LBB_1_2
 .LBB_1_4:
-    movq (%rsi), %rdi
+    movq (%r10), %r11
     movq حد(%rip), %rbx
-    cmpq %rbx, %rdi
-    setl %dil
-    movzbq %dil, %rdi
-    testb %dil, %dil
+    cmpq %rbx, %r11
+    setl %r11b
+    movzbq %r11b, %r11
+    testb %r11b, %r11b
     jne .LBB_1_5
     jmp .LBB_1_6
 .LBB_1_5:
-    movq (%rsi), %rdi
-    movq %rdi, %rbx
+    movq (%r10), %r11
+    movq %r11, %rbx
     addq $1, %rbx
-    movq %rbx, (%rsi)
+    movq %rbx, (%r10)
     jmp .LBB_1_4
 .LBB_1_6:
-    leaq -32(%rbp), %rdi
-    movq $0, (%rdi)
+    leaq -32(%rbp), %r11
+    movq $0, (%r11)
     jmp .LBB_1_7
 .LBB_1_7:
-    movq (%rdi), %rbx
+    movq (%r11), %rbx
     cmpq $3, %rbx
     setl %bl
     movzbq %bl, %rbx
@@ -95,31 +95,31 @@ main:
     jne .LBB_1_8
     jmp .LBB_1_10
 .LBB_1_8:
-    movq (%r10), %rbx
-    movq (%rdi), %r12
+    movq (%rsi), %rbx
+    movq (%r11), %r12
     movq %rbx, %r13
     addq %r12, %r13
-    movq %r13, (%r10)
+    movq %r13, (%rsi)
     jmp .LBB_1_9
 .LBB_1_9:
-    movq (%rdi), %rbx
+    movq (%r11), %rbx
     movq %rbx, %r12
     addq $1, %r12
-    movq %r12, (%rdi)
+    movq %r12, (%r11)
     jmp .LBB_1_7
 .LBB_1_10:
-    movq (%rsi), %rdi
-    cmpq $0, %rdi
-    sete %sil
-    movzbq %sil, %rsi
-    testb %sil, %sil
+    movq (%r10), %rbx
+    cmpq $0, %rbx
+    sete %r10b
+    movzbq %r10b, %r10
+    testb %r10b, %r10b
     jne .LBB_1_12
     jmp .LBB_1_15
 .LBB_1_11:
-    movq (%r10), %rsi
-    movq (%r11), %rbx
-    movq %rsi, %rcx
-    movq %rbx, %rdx
+    movq (%rsi), %r10
+    movq (%rdi), %r11
+    movq %r10, %rcx
+    movq %r11, %rdx
     sub $32, %rsp
     movq %rcx, 0(%rsp)
     movq %rdx, 8(%rsp)
@@ -127,12 +127,12 @@ main:
     movq %r9, 24(%rsp)
     call جمع_اثنين
     add $32, %rsp
-    movq %rax, %rsi
-    movq %rsi, (%r11)
-    movq (%r11), %rsi
-    leaq .Lstr_0(%rip), %rbx
-    movq %rbx, %rcx
-    movq %rsi, %rdx
+    movq %rax, %r10
+    movq %r10, (%rdi)
+    movq (%rdi), %r10
+    leaq .Lstr_0(%rip), %r11
+    movq %r11, %rcx
+    movq %r10, %rdx
     sub $32, %rsp
     movq %rcx, 0(%rsp)
     movq %rdx, 8(%rsp)
@@ -140,8 +140,8 @@ main:
     movq %r9, 24(%rsp)
     call printf
     add $32, %rsp
-    movq (%r11), %rsi
-    movq %rsi, %rax
+    movq (%rdi), %r10
+    movq %r10, %rax
     mov -104(%rbp), %r13
     mov -96(%rbp), %r12
     mov -88(%rbp), %rdi
@@ -150,25 +150,25 @@ main:
     leave
     ret
 .LBB_1_12:
-    movq (%r10), %r11
-    movq %r11, %rsi
-    addq $1, %rsi
-    movq %rsi, (%r10)
+    movq (%rsi), %r10
+    movq %r10, %r11
+    addq $1, %r11
+    movq %r11, (%rsi)
     jmp .LBB_1_11
 .LBB_1_13:
-    movq (%r10), %r11
-    movq %r11, %rsi
-    addq $3, %rsi
-    movq %rsi, (%r10)
+    movq (%rsi), %r10
+    movq %r10, %r11
+    addq $3, %r11
+    movq %r11, (%rsi)
     jmp .LBB_1_11
 .LBB_1_14:
-    movq (%r10), %r11
-    movq %r11, %rsi
-    addq $9, %rsi
-    movq %rsi, (%r10)
+    movq (%rsi), %r10
+    movq %r10, %r11
+    addq $9, %r11
+    movq %r11, (%rsi)
     jmp .LBB_1_11
 .LBB_1_15:
-    cmpq $3, %rdi
+    cmpq $3, %rbx
     sete %r10b
     movzbq %r10b, %r10
     testb %r10b, %r10b

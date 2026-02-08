@@ -8,6 +8,33 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.3.2.4-LINK-FIX2] - 2026-02-08
+
+### Changed
+- **Register allocator refactor (إعادة هيكلة مخصص السجلات)** — Major cleanup and restructuring of [`src/regalloc.c`](src/regalloc.c):
+  - Consistent brace style and spacing throughout, stronger NULL checks, clearer bitset helpers.
+  - Extracted `interval_crosses_call()` as a standalone static helper (replaced invalid C++ nested function syntax with proper C11).
+  - Improved call-aware spill decisions: intervals crossing CALL sites now prefer callee-saved registers to avoid incorrect clobbers; spill heuristic skips freeing caller-saved registers when a cross-call interval needs allocation.
+  - Minor adjustments to allocation order handling and active interval management.
+- **Tests:** Updated `ir_test.baa` constant from `٣` to `5`; regenerated corresponding `.s`/`.o` test artifacts.
+
+## [0.3.2.4-LINK-FIX] - 2026-02-08
+
+### Added
+- **Windows x64 call ABI compliance (توافق ABI لاستدعاءات Win64)** in [`src/emit.c`](src/emit.c):
+  - Shadow space (32 bytes) is now allocated before every CALL and argument home slots are written (`movq %rcx/rdx/r8/r9` → `0/8/16/24(%rsp)`), required by variadic/library callees such as `printf` and `scanf`.
+- **Safe string emission (تهريب النصوص)** in [`src/emit.c`](src/emit.c):
+  - New `emit_gas_escaped_string()` helper properly escapes quotes, backslashes, control characters, and non-printable bytes when emitting `.asciz` directives; prevents broken assembly output from string literals containing special characters.
+- **Explicit format-string lowering (خفض صيغة الطباعة/القراءة)** in [`src/ir_lower.c`](src/ir_lower.c):
+  - `lower_print()` now selects `"%d\n"` or `"%s\n"` based on value type and emits `printf(fmt, value)` with two arguments.
+  - `lower_read()` now emits `scanf("%d", &var)` with an explicit format string argument.
+- **Call-aware register allocation (تخصيص السجلات مع إدراك الاستدعاءات)** in [`src/regalloc.c`](src/regalloc.c):
+  - Added `phys_reg_is_caller_saved()` helper (RAX, RCX, RDX, R8, R9, R10, R11).
+  - Linear scan now builds a call-position table from the instruction map, reserves ABI registers (RAX, RCX, RDX, R8, R9) from general allocation, and steers intervals that cross CALL sites toward callee-saved registers.
+
+### Changed
+- **Tests:** Updated generated assembly/object artifacts to reflect the new ABI shadow-store and string table changes.
+
 ## [0.3.2.4] - 2026-02-08
 
 ### Changed

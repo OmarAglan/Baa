@@ -121,13 +121,23 @@ main:
     movq %rsi, %rcx
     movq %rbx, %rdx
     sub $32, %rsp
+    movq %rcx, 0(%rsp)
+    movq %rdx, 8(%rsp)
+    movq %r8, 16(%rsp)
+    movq %r9, 24(%rsp)
     call جمع_اثنين
     add $32, %rsp
     movq %rax, %rsi
     movq %rsi, (%r11)
     movq (%r11), %rsi
-    movq %rsi, %rcx
+    leaq .Lstr_0(%rip), %rbx
+    movq %rbx, %rcx
+    movq %rsi, %rdx
     sub $32, %rsp
+    movq %rcx, 0(%rsp)
+    movq %rdx, 8(%rsp)
+    movq %r8, 16(%rsp)
+    movq %r9, 24(%rsp)
     call printf
     add $32, %rsp
     movq (%r11), %rsi
@@ -164,3 +174,6 @@ main:
     testb %r10b, %r10b
     jne .LBB_1_13
     jmp .LBB_1_14
+
+.section .rdata,"dr"
+.Lstr_0: .asciz "%d\n"

@@ -426,11 +426,22 @@ static void lower_return(IRLowerCtx* ctx, Node* stmt) {
 static void lower_print(IRLowerCtx* ctx, Node* stmt) {
     if (!ctx || !ctx->builder || !stmt) return;
 
-    IRValue* arg = lower_expr(ctx, stmt->data.print_stmt.expression);
-    IRValue* args[1] = { arg };
+    IRValue* value = lower_expr(ctx, stmt->data.print_stmt.expression);
 
-    // Builtin: اطبع(value)
-    ir_builder_emit_call_void(ctx->builder, "اطبع", args, 1);
+    // اختيار صيغة الطباعة بناءً على نوع القيمة
+    // ملاحظة: حالياً نستخدم %d للأعداد والمنطقي (توافقاً مع المسار القديم)، و %s للنصوص.
+    const char* fmt = "%d\n";
+    if (value && value->type && value->type->kind == IR_TYPE_PTR &&
+        value->type->data.pointee == IR_TYPE_I8_T) {
+        fmt = "%s\n";
+    }
+
+    IRValue* fmt_val = ir_builder_const_string(ctx->builder, fmt);
+
+    IRValue* args[2] = { fmt_val, value };
+
+    // Builtin: اطبع(value) → printf(fmt, value)
+    ir_builder_emit_call_void(ctx->builder, "اطبع", args, 2);
 }
 
 static void lower_read(IRLowerCtx* ctx, Node* stmt) {
@@ -443,11 +454,14 @@ static void lower_read(IRLowerCtx* ctx, Node* stmt) {
         return;
     }
 
+    // scanf("%d", &var)
+    IRValue* fmt_val = ir_builder_const_string(ctx->builder, "%d");
     IRValue* ptr = ir_value_reg(b->ptr_reg, NULL);
-    IRValue* args[1] = { ptr };
 
-    // Builtin: اقرأ(ptr)
-    ir_builder_emit_call_void(ctx->builder, "اقرأ", args, 1);
+    IRValue* args[2] = { fmt_val, ptr };
+
+    // Builtin: اقرأ(ptr) → scanf(fmt, ptr)
+    ir_builder_emit_call_void(ctx->builder, "اقرأ", args, 2);
 }
 
 static IRValue* lower_condition_i1(IRLowerCtx* ctx, Node* cond_expr) {

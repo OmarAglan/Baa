@@ -46,6 +46,28 @@ bool phys_reg_is_callee_saved(PhysReg reg) {
     }
 }
 
+/**
+ * @brief هل السجل من نوع caller-saved حسب Windows x64 ABI؟
+ *
+ * هذا مهم لأن استدعاءات الدوال (CALL) قد تُدمّر هذه السجلات،
+ * لذا لا يجوز الاحتفاظ بقيم "حية" عبر CALL داخلها.
+ */
+static bool phys_reg_is_caller_saved(PhysReg reg) {
+    // caller-saved: RAX, RCX, RDX, R8, R9, R10, R11
+    switch (reg) {
+        case PHYS_RAX:
+        case PHYS_RCX:
+        case PHYS_RDX:
+        case PHYS_R8:
+        case PHYS_R9:
+        case PHYS_R10:
+        case PHYS_R11:
+            return true;
+        default:
+            return false;
+    }
+}
+
 // ============================================================================
 // ترتيب تفضيل السجلات للتخصيص
 // ============================================================================
@@ -543,6 +565,21 @@ void regalloc_linear_scan(RegAllocCtx* ctx) {
     if (!active) return;
     int active_count = 0;
 
+    // بناء قائمة مواقع CALL (حسب ترتيب inst_map)
+    int* call_pos = NULL;
+    int call_count = 0;
+    if (ctx->inst_map && ctx->total_insts > 0) {
+        call_pos = malloc((size_t)ctx->total_insts * sizeof(int));
+        if (call_pos) {
+            for (int p = 0; p < ctx->total_insts; p++) {
+                MachineInst* inst = ctx->inst_map[p];
+                if (inst && inst->op == MACH_CALL) {
+                    call_pos[call_count++] = p;
+                }
+            }
+        }
+    }
+
     // مصفوفة تتبع توفر السجلات الفيزيائية
     bool reg_free[PHYS_REG_COUNT];
     for (int i = 0; i < PHYS_REG_COUNT; i++) reg_free[i] = true;
@@ -551,9 +588,32 @@ void regalloc_linear_scan(RegAllocCtx* ctx) {
     reg_free[PHYS_RSP] = false;
     reg_free[PHYS_RBP] = false;
 
+    // سجلات ABI الثابتة لا نخصصها لفترات عادية:
+    // - RAX: قيمة الإرجاع
+    // - RCX/RDX/R8/R9: معاملات الاستدعاء
+    // لأننا نستخدم vregs سالبة لفرض هذه السجلات، ولا بد ألا تتعارض
+    // مع تخصيص السجلات العادي.
+    reg_free[PHYS_RAX] = false;
+    reg_free[PHYS_RCX] = false;
+    reg_free[PHYS_RDX] = false;
+    reg_free[PHYS_R8]  = false;
+    reg_free[PHYS_R9]  = false;
+
+    // دالة مساعدة: هل الفترة تعبر CALL؟
+    // (أي أن لها استخداماً بعد CALL وتعريفاً قبله)
+    auto bool interval_crosses_call(const LiveInterval* li) -> bool {
+        if (!li || !call_pos || call_count == 0) return false;
+        for (int c = 0; c < call_count; c++) {
+            int p = call_pos[c];
+            if (li->start < p && li->end > p) return true;
+        }
+        return false;
+    }
+
     // المسح الخطي
     for (int i = 0; i < ctx->interval_count; i++) {
         LiveInterval* cur = &ctx->intervals[i];
+        bool cur_crosses_call = interval_crosses_call(cur);
 
         // 1. انتهاء الفترات النشطة التي انتهت قبل نقطة بداية الفترة الحالية
         int new_active_count = 0;
@@ -575,6 +635,13 @@ void regalloc_linear_scan(RegAllocCtx* ctx) {
         // البحث عن سجل متاح بترتيب الأفضلية
         for (int k = 0; k < alloc_order_count; k++) {
             PhysReg r = alloc_order[k];
+
+            // إذا كانت الفترة تعبر CALL، يجب أن تكون في سجل callee-saved
+            // حتى لا تُدمّر قيمتها أثناء الاستدعاء.
+            if (cur_crosses_call && phys_reg_is_caller_saved(r)) {
+                continue;
+            }
+
             if (reg_free[r]) {
                 assigned = r;
                 reg_free[r] = false;
@@ -615,6 +682,13 @@ void regalloc_linear_scan(RegAllocCtx* ctx) {
 
             for (int j = 0; j < active_count; j++) {
                 LiveInterval* act = &ctx->intervals[active[j].interval_idx];
+
+                // إذا كانت الفترة الحالية تعبر CALL، نحتاج تحرير سجل callee-saved فقط.
+                // تحرير سجل caller-saved (مثل r10/r11) لن يحل المشكلة.
+                if (cur_crosses_call && phys_reg_is_caller_saved(active[j].reg)) {
+                    continue;
+                }
+
                 if (act->end > longest_end) {
                     longest_end = act->end;
                     spill_idx = active[j].interval_idx;
@@ -700,6 +774,7 @@ void regalloc_linear_scan(RegAllocCtx* ctx) {
     // تحديث حجم المكدس
     ctx->func->stack_size = ctx->next_spill_offset;
 
+    free(call_pos);
     free(active);
 }
 

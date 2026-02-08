@@ -604,8 +604,14 @@ void emit_inst(MachineInst* inst, MachineFunc* func, FILE* out) {
         // استدعاء دالة (CALL)
         // ================================================================
         case MACH_CALL:
-            // حجز shadow space قبل الاستدعاء
+            // حجز shadow space قبل الاستدعاء (Windows x64 ABI)
+            // ملاحظة مهمة: لبعض الدوال المتغيرة (مثل printf/scanf) تعتمد المكتبة على "home space"
+            // لقراءة المعاملات، لذا نكتب RCX/RDX/R8/R9 إلى هذا الحيز قبل call.
             fprintf(out, "    sub $32, %%rsp\n");
+            fprintf(out, "    movq %%rcx, 0(%%rsp)\n");
+            fprintf(out, "    movq %%rdx, 8(%%rsp)\n");
+            fprintf(out, "    movq %%r8, 16(%%rsp)\n");
+            fprintf(out, "    movq %%r9, 24(%%rsp)\n");
             fprintf(out, "    call ");
             emit_operand(&inst->src1, out);
             fprintf(out, "\n");
@@ -686,6 +692,38 @@ static void emit_data_section(MachineModule* module, FILE* out) {
 }
 
 /**
+ * @brief تهريب سلسلة نصية لتكون صالحة داخل ".asciz" في GAS.
+ *
+ * GAS يدعم تهريب C داخل السلاسل النصية (مثل \n و \t).
+ * نحن نحتاج تهريب المحارف التي قد تكسر ملف التجميع:
+ * - علامة الاقتباس "
+ * - الشرطة العكسية \
+ * - أسطر جديدة/تبويب/عودة عربة
+ * - المحارف غير القابلة للطباعة (نستخدم \xHH)
+ */
+static void emit_gas_escaped_string(FILE* out, const char* s) {
+    if (!out || !s) return;
+
+    for (const unsigned char* p = (const unsigned char*)s; *p; p++) {
+        unsigned char c = *p;
+        switch (c) {
+            case '\"': fputs("\\\"", out); break;
+            case '\\': fputs("\\\\", out); break;
+            case '\n': fputs("\\n", out); break;
+            case '\t': fputs("\\t", out); break;
+            case '\r': fputs("\\r", out); break;
+            default:
+                if (c < 0x20 || c == 0x7F) {
+                    fprintf(out, "\\x%02X", (unsigned)c);
+                } else {
+                    fputc((int)c, out);
+                }
+                break;
+        }
+    }
+}
+
+/**
  * @brief إصدار جدول النصوص (String Table).
  */
 static void emit_string_table(MachineModule* module, FILE* out) {
@@ -694,9 +732,11 @@ static void emit_string_table(MachineModule* module, FILE* out) {
     fprintf(out, "\n.section .rdata,\"dr\"\n");
 
     for (IRStringEntry* s = module->strings; s; s = s->next) {
-        if (s->content) {
-            fprintf(out, ".Lstr_%d: .asciz \"%s\"\n", s->id, s->content);
-        }
+        if (!s->content) continue;
+
+        fprintf(out, ".Lstr_%d: .asciz \"", s->id);
+        emit_gas_escaped_string(out, s->content);
+        fprintf(out, "\"\n");
     }
 }
 

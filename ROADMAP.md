@@ -154,12 +154,12 @@
 - [x] **Spilling** — Handle register pressure by spilling to stack.
 - [x] **Map to x64 registers** — RAX, RBX, RCX, RDX, R8-R15.
 
-#### v0.3.2.3: Code Emission
+#### v0.3.2.3: Code Emission ✅ COMPLETED (2026-02-08)
 
-- [ ] **Emit function prologue** — Stack setup, callee-saved registers.
-- [ ] **Emit instructions** — Generate AT&T syntax assembly.
-- [ ] **Emit function epilogue** — Stack teardown, return.
-- [ ] **Emit data section** — Global variables and string literals.
+- [x] **Emit function prologue** — Stack setup, callee-saved registers.
+- [x] **Emit instructions** — Generate AT&T syntax assembly.
+- [x] **Emit function epilogue** — Stack teardown, return.
+- [x] **Emit data section** — Global variables and string literals.
 
 #### v0.3.2.4: Backend Integration
 

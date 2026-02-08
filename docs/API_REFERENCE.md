@@ -1820,9 +1820,201 @@ Runs the full register allocation pipeline on a single function:
 
 ---
 
-## 10. Codegen Module
+## 10. Code Emission Module (v0.3.2.3)
 
-Handles x86-64 assembly generation.
+The Code Emission module (`src/emit.h`, `src/emit.c`) converts machine IR (after register allocation) to x86-64 AT&T assembly.
+
+### 10.1. Entry Points
+
+#### `emit_module`
+
+```c
+bool emit_module(MachineModule* module, FILE* out)
+```
+
+Top-level entry point for emitting a complete assembly file.
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `module` | `MachineModule*` | Machine module with physical registers |
+| `out` | `FILE*` | Output file handle for assembly |
+
+**Returns:** `true` on success, `false` on failure.
+
+**Behavior:**
+
+1. Emits `.rdata` section with format strings (fmt_int, fmt_str, fmt_scan_int)
+2. Emits `.data` section with global variables and initializers
+3. Emits `.text` section with all functions
+4. Emits string table with `.Lstr_N` labels
+
+---
+
+#### `emit_func`
+
+```c
+bool emit_func(MachineFunc* func, FILE* out)
+```
+
+Emits a single function with prologue and epilogue.
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `func` | `MachineFunc*` | Function to emit |
+| `out` | `FILE*` | Output file handle |
+
+**Returns:** `true` on success, `false` on failure.
+
+**Behavior:**
+
+1. Emits function label (translates Arabic names: الرئيسية → main)
+2. Emits prologue (stack setup, callee-saved preservation)
+3. Emits all instructions in all blocks
+4. Emits epilogue (callee-saved restoration, stack teardown)
+
+---
+
+#### `emit_inst`
+
+```c
+void emit_inst(MachineInst* inst, FILE* out)
+```
+
+Translates a single machine instruction to AT&T assembly.
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `inst` | `MachineInst*` | Instruction to emit |
+| `out` | `FILE*` | Output file handle |
+
+**Supported Operations:**
+
+- Data movement: MOV, LEA, LOAD, STORE
+- Arithmetic: ADD, SUB, IMUL, NEG, CQO, IDIV
+- Comparison: CMP, TEST, SETcc (6 variants), MOVZX
+- Logical: AND, OR, NOT, XOR
+- Control flow: JMP, JE, JNE, CALL, RET
+- Stack: PUSH, POP
+
+---
+
+### 10.2. Prologue/Epilogue Generation
+
+#### `emit_prologue`
+
+```c
+static void emit_prologue(MachineFunc* func, FILE* out, bool* callee_saved_used)
+```
+
+Emits function prologue with stack setup and callee-saved register preservation.
+
+**Generated Code:**
+
+```asm
+push %rbp
+mov %rsp, %rbp
+sub $N, %rsp           # N = stack_size + shadow_space + callee_saved (16-byte aligned)
+mov %rbx, -8(%rbp)     # Save callee-saved registers (if used)
+mov %r12, -16(%rbp)
+...
+```
+
+---
+
+#### `emit_epilogue`
+
+```c
+static void emit_epilogue(MachineFunc* func, FILE* out, bool* callee_saved_used)
+```
+
+Emits function epilogue with callee-saved register restoration and stack teardown.
+
+**Generated Code:**
+
+```asm
+mov -16(%rbp), %r12    # Restore callee-saved registers (reverse order)
+mov -8(%rbp), %rbx
+leave                  # mov %rbp, %rsp; pop %rbp
+ret
+```
+
+---
+
+### 10.3. Utility Functions
+
+#### `phys_reg_name_att`
+
+```c
+const char* phys_reg_name_att(PhysReg reg, int size_bits)
+```
+
+Returns AT&T register name with size suffix.
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `reg` | `PhysReg` | Physical register enum |
+| `size_bits` | `int` | Size in bits (8, 16, 32, 64) |
+
+**Returns:** Register name string (e.g., `"%rax"`, `"%eax"`, `"%ax"`, `"%al"`).
+
+---
+
+#### `size_suffix`
+
+```c
+static char size_suffix(int bits)
+```
+
+Returns AT&T size suffix for instruction.
+
+| Bits | Suffix | Example |
+|------|--------|---------|
+| 64 | `q` | `movq` |
+| 32 | `l` | `movl` |
+| 16 | `w` | `movw` |
+| 8 | `b` | `movb` |
+
+---
+
+#### `translate_func_name`
+
+```c
+static const char* translate_func_name(const char* name)
+```
+
+Translates Arabic function names to C runtime equivalents.
+
+| Baa Name | Translated Name |
+|----------|-----------------|
+| `الرئيسية` | `main` |
+| `اطبع` | `printf` |
+| `اقرأ` | `scanf` |
+
+---
+
+### 10.4. Design Notes
+
+**AT&T Syntax:**
+- Operand order: `source, destination` (opposite of Intel)
+- Register prefix: `%` (e.g., `%rax`)
+- Immediate prefix: `$` (e.g., `$10`)
+- Size suffixes: `q` (64-bit), `l` (32-bit), `w` (16-bit), `b` (8-bit)
+
+**Windows x64 ABI:**
+- Shadow space: 32 bytes allocated before each call
+- Stack alignment: 16-byte alignment after prologue
+- Calling convention: RCX, RDX, R8, R9 for first 4 args; RAX for return value
+
+**Optimizations:**
+- Redundant move elimination: skips `mov %reg, %reg`
+- Callee-saved detection: only preserves registers actually used
+- Shadow space management: automatic allocation/deallocation around calls
+
+---
+
+## 11. Legacy Codegen Module (Deprecated)
+
+**Note:** The legacy AST-based codegen (`codegen.c`) is deprecated and will be removed in v0.3.2.4 after backend integration is complete.
 
 ### `codegen`
 
@@ -1830,7 +2022,7 @@ Handles x86-64 assembly generation.
 void codegen(Node* node, FILE* file)
 ```
 
-Recursively generates assembly code from AST.
+Recursively generates assembly code from AST (legacy path).
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
@@ -1852,7 +2044,7 @@ Recursively generates assembly code from AST.
 
 ---
 
-## 11. Diagnostic System
+## 12. Diagnostic System
 
 Centralized diagnostic system for compiler errors and warnings (v0.2.8+).
 

@@ -7,6 +7,9 @@
 #include "baa.h"
 #include "ir_lower.h"
 #include "ir_optimizer.h"
+#include "isel.h"
+#include "regalloc.h"
+#include "emit.h"
 #include <time.h>
 
 #ifdef _WIN32
@@ -376,20 +379,55 @@ int main(int argc, char** argv) {
             ir_module_print(ir_module, stdout, 1);
         }
 
-        // حالياً: ما زال توليد التجميع يعتمد على AST (تكامل IR→codegen سيأتي لاحقاً).
-        ir_module_free(ir_module);
+        // 4. اختيار التعليمات (Instruction Selection) (v0.3.2.1)
+        if (config.verbose) printf("[INFO] Running instruction selection...\n");
+        MachineModule* mach_module = isel_run(ir_module);
+        if (!mach_module) {
+            fprintf(stderr, "Aborting %s: instruction selection failed.\n", current_input);
+            ir_module_free(ir_module);
+            free(source);
+            return 1;
+        }
 
-        // 4. توليد كود التجميع (Codegen)
+        // 5. تخصيص السجلات (Register Allocation) (v0.3.2.2)
+        if (config.verbose) printf("[INFO] Running register allocation...\n");
+        if (!regalloc_run(mach_module)) {
+            fprintf(stderr, "Aborting %s: register allocation failed.\n", current_input);
+            mach_module_free(mach_module);
+            ir_module_free(ir_module);
+            free(source);
+            return 1;
+        }
+
+        // 6. إصدار كود التجميع (Code Emission) (v0.3.2.3)
         char* asm_file;
         if (config.assembly_only && input_count == 1 && config.output_file) asm_file = config.output_file;
         else asm_file = change_extension(current_input, ".s");
-        
+
         FILE* f_asm = fopen(asm_file, "w");
-        if (!f_asm) { printf("Error: Could not write assembly file '%s'\n", asm_file); return 1; }
-        codegen(ast, f_asm);
+        if (!f_asm) {
+            printf("Error: Could not write assembly file '%s'\n", asm_file);
+            mach_module_free(mach_module);
+            ir_module_free(ir_module);
+            free(source);
+            return 1;
+        }
+
+        if (config.verbose) printf("[INFO] Emitting assembly: %s\n", asm_file);
+        if (!emit_module(mach_module, f_asm)) {
+            fprintf(stderr, "Aborting %s: code emission failed.\n", current_input);
+            fclose(f_asm);
+            mach_module_free(mach_module);
+            ir_module_free(ir_module);
+            free(source);
+            return 1;
+        }
         fclose(f_asm);
-        
-        free(source); // لم نعد بحاجة للمصدر
+
+        // تحرير الموارد
+        mach_module_free(mach_module);
+        ir_module_free(ir_module);
+        free(source);
 
         if (config.assembly_only) {
             if (config.verbose) printf("[INFO] Generated assembly: %s\n", asm_file);

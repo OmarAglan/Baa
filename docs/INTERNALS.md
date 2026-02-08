@@ -1046,6 +1046,181 @@ When register pressure exceeds available registers, the allocator spills the lon
 
 ---
 
+### 6.21. Code Emission (إصدار كود التجميع) — v0.3.2.3
+
+The code emission pass is the final backend stage that converts machine IR (after register allocation) into x86-64 assembly text in AT&T syntax, compatible with GAS (GNU Assembler) on Windows.
+
+**Source:** [`src/emit.h`](../src/emit.h) / [`src/emit.c`](../src/emit.c)
+
+#### 6.21.1. Architecture Overview
+
+```
+MachineModule (physical regs)
+    │
+    ├── 1. Emit .rdata section    ← Format strings (fmt_int, fmt_str, fmt_scan_int)
+    ├── 2. Emit .data section     ← Global variables with initializers
+    ├── 3. Emit .text section     ← Functions:
+    │   ├── Function prologue     ← Stack setup + callee-saved preservation
+    │   ├── Instruction emission  ← Translate each MachineInst to AT&T
+    │   └── Function epilogue     ← Callee-saved restoration + return
+    └── 4. Emit string table      ← .Lstr_N labels for string literals
+    │
+    ▼
+Assembly file (.s)
+```
+
+#### 6.21.2. AT&T Syntax Conventions
+
+| Aspect | AT&T Syntax | Intel Syntax (for comparison) |
+|--------|-------------|-------------------------------|
+| **Register prefix** | `%rax`, `%rcx` | `rax`, `rcx` |
+| **Immediate prefix** | `$10` | `10` |
+| **Operand order** | `mov source, dest` | `mov dest, source` |
+| **Size suffix** | `movq` (64-bit), `movl` (32-bit), `movb` (8-bit) | `mov qword`, `mov dword`, `mov byte` |
+| **Memory addressing** | `offset(%base)` | `[base + offset]` |
+
+#### 6.21.3. Function Prologue Generation
+
+The prologue sets up the stack frame and preserves callee-saved registers:
+
+```asm
+push %rbp              # Save old frame pointer
+mov %rsp, %rbp         # Set up new frame pointer
+sub $N, %rsp           # Allocate stack space (N = local + shadow + callee-save, 16-byte aligned)
+mov %rbx, -8(%rbp)     # Save callee-saved registers (if used)
+mov %r12, -16(%rbp)
+...
+```
+
+**Stack frame layout:**
+
+```
+High addresses
+    ┌─────────────────┐
+    │  Return address │ ← pushed by CALL
+    ├─────────────────┤
+    │  Old RBP        │ ← pushed by prologue
+    ├─────────────────┤ ← RBP points here
+    │  Local vars     │ (func->stack_size bytes)
+    ├─────────────────┤
+    │  Shadow space   │ (32 bytes for Windows x64)
+    ├─────────────────┤
+    │  Callee-saved   │ (RBX, R12-R15 if used)
+    ├─────────────────┤ ← RSP points here (16-byte aligned)
+Low addresses
+```
+
+**Callee-saved register detection:**
+
+The emitter scans all instructions in the function to determine which callee-saved registers (RBX, RSI, RDI, R12-R15) are used as destinations. Only used registers are preserved in the prologue and restored in the epilogue.
+
+#### 6.21.4. Function Epilogue Generation
+
+The epilogue restores callee-saved registers and tears down the stack frame:
+
+```asm
+mov -16(%rbp), %r12    # Restore callee-saved registers (reverse order)
+mov -8(%rbp), %rbx
+leave                  # Equivalent to: mov %rbp, %rsp; pop %rbp
+ret                    # Return to caller
+```
+
+#### 6.21.5. Instruction Emission
+
+Each `MachineInst` is translated to one or more AT&T assembly instructions:
+
+| Machine Op | AT&T Output | Notes |
+|------------|-------------|-------|
+| `MACH_MOV` | `movq %src, %dst` | Skips redundant `mov %reg, %reg` |
+| `MACH_ADD` | `addq %src2, %dst` | Two-address form (dst = dst + src2) |
+| `MACH_SUB` | `subq %src2, %dst` | Two-address form |
+| `MACH_IMUL` | `imulq %src2, %dst` | Two-address form |
+| `MACH_NEG` | `negq %dst` | Unary negation |
+| `MACH_CQO` | `cqo` | Sign-extend RAX into RDX:RAX |
+| `MACH_IDIV` | `idivq %src1` | Signed division (RDX:RAX / src1) |
+| `MACH_LEA` | `leaq offset(%base), %dst` | Load effective address |
+| `MACH_LOAD` | `movq offset(%base), %dst` | Load from memory |
+| `MACH_STORE` | `movq %src, offset(%base)` | Store to memory |
+| `MACH_CMP` | `cmpq %src2, %src1` | Compare (sets flags) |
+| `MACH_TEST` | `testq %src2, %src1` | Bitwise AND (sets flags) |
+| `MACH_SETcc` | `sete %dst8` | Set byte if condition (6 variants: E, NE, G, L, GE, LE) |
+| `MACH_MOVZX` | `movzbq %src8, %dst64` | Zero-extend byte to qword |
+| `MACH_AND` | `andq %src2, %dst` | Bitwise AND |
+| `MACH_OR` | `orq %src2, %dst` | Bitwise OR |
+| `MACH_NOT` | `notq %dst` | Bitwise NOT |
+| `MACH_XOR` | `xorq %src2, %dst` | Bitwise XOR |
+| `MACH_JMP` | `jmp .LBB_N` | Unconditional jump |
+| `MACH_JE` | `je .LBB_N` | Jump if equal |
+| `MACH_JNE` | `jne .LBB_N` | Jump if not equal |
+| `MACH_CALL` | `sub $32, %rsp; call func; add $32, %rsp` | Shadow space allocation |
+| `MACH_RET` | (triggers epilogue emission) | Return handled by epilogue |
+| `MACH_PUSH` | `pushq %src` | Push to stack |
+| `MACH_POP` | `popq %dst` | Pop from stack |
+| `MACH_LABEL` | `.LBB_N:` | Block label |
+| `MACH_NOP` | (skipped) | No operation |
+
+#### 6.21.6. Data Section Emission
+
+**Format strings (.rdata):**
+
+```asm
+.section .rdata,"dr"
+fmt_int: .asciz "%d\n"
+fmt_str: .asciz "%s\n"
+fmt_scan_int: .asciz "%d"
+```
+
+**Global variables (.data):**
+
+```asm
+.data
+global_var: .quad 42           # Integer initializer
+global_str: .quad .Lstr_0      # String pointer initializer
+```
+
+**String table (.rdata):**
+
+```asm
+.section .rdata,"dr"
+.Lstr_0: .asciz "مرحباً"
+.Lstr_1: .asciz "العالم"
+```
+
+#### 6.21.7. Function Name Translation
+
+The emitter translates Arabic function names to their C runtime equivalents:
+
+| Baa Name | Assembly Name | Purpose |
+|----------|---------------|---------|
+| `الرئيسية` | `main` | Program entry point |
+| `اطبع` | `printf` | Print function |
+| `اقرأ` | `scanf` | Input function |
+
+#### 6.21.8. Windows x64 ABI Compliance
+
+- **Shadow space:** 32 bytes allocated before each `call` instruction
+- **Stack alignment:** 16-byte alignment maintained after prologue
+- **RIP-relative addressing:** Globals accessed via `name(%rip)` for position-independent code
+- **Calling convention:** First 4 arguments in RCX, RDX, R8, R9; return value in RAX
+
+#### 6.21.9. Design Decisions
+
+1. **AT&T syntax:** Chosen for compatibility with GAS (GNU Assembler) which is the default on MinGW-w64.
+2. **Redundant move elimination:** The emitter skips `mov %reg, %reg` instructions that may result from register allocation.
+3. **Callee-saved detection:** Scans all instructions to determine which registers need preservation, minimizing prologue/epilogue overhead.
+4. **Shadow space management:** Automatically allocates and deallocates 32 bytes around each call instruction.
+5. **Size suffix inference:** Determines instruction size suffix (q/l/w/b) from operand size_bits field.
+
+**Entry Points:**
+
+- [`emit_module()`](src/emit.c) — Top-level entry point for complete assembly file
+- [`emit_func()`](src/emit.c) — Emits single function with prologue/epilogue
+- [`emit_inst()`](src/emit.c) — Translates individual machine instruction
+
+**Testing:** Integration testing via full compilation pipeline (no standalone unit tests yet).
+
+---
+
 ## 7. Code Generation
 
 ### 7.1. Loop Control & Branching

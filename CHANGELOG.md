@@ -8,6 +8,51 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.3.2.3] - 2026-02-08
+
+### Added
+- **Code emission (إصدار كود التجميع)** — Final backend stage converting machine IR to x86-64 AT&T assembly:
+  - `emit_module()` — Top-level entry point for emitting complete assembly file.
+  - `emit_func()` — Emits single function with prologue/epilogue.
+  - `emit_inst()` — Translates individual machine instructions to AT&T syntax.
+  - Function prologue generation:
+    - Stack frame setup (`push %rbp; mov %rsp, %rbp`)
+    - Local stack allocation with 16-byte alignment
+    - Callee-saved register preservation (RBX, RSI, RDI, R12-R15)
+  - Function epilogue generation:
+    - Callee-saved register restoration
+    - Stack frame teardown (`leave; ret`)
+  - Instruction emission for all machine opcodes:
+    - Data movement: MOV, LEA, LOAD, STORE
+    - Arithmetic: ADD, SUB, IMUL, NEG, CQO, IDIV
+    - Comparison: CMP, TEST, SETcc (6 variants), MOVZX
+    - Logical: AND, OR, NOT, XOR
+    - Control flow: JMP, JE, JNE, CALL, RET
+    - Stack: PUSH, POP
+  - Data section emission:
+    - `.rdata` section: format strings (fmt_int, fmt_str, fmt_scan_int)
+    - `.data` section: global variables with initializers
+    - String table: `.Lstr_N` labels for string literals
+  - Windows x64 ABI compliance:
+    - Shadow space allocation (32 bytes) before calls
+    - RIP-relative addressing for globals
+    - Function name translation (الرئيسية → main, اطبع → printf, اقرأ → scanf)
+  - Entry point: [`emit_module()`](src/emit.c), header: [`src/emit.h`](src/emit.h).
+
+### Changed
+- **Build system:** Added `src/emit.c` to [`CMakeLists.txt`](CMakeLists.txt).
+- **Driver pipeline:** Integrated code emission into main compilation flow in [`src/main.c`](src/main.c):
+  - Pipeline now: IR → Optimizer → Instruction Selection → Register Allocation → **Code Emission** → Assembly file
+  - Replaced legacy AST-based codegen with new IR-based backend
+
+### Technical Details
+- AT&T syntax: operand order is `source, destination` (opposite of Intel syntax)
+- Register naming: `%rax`, `%rcx`, etc. with `%` prefix
+- Size suffixes: `q` (64-bit), `l` (32-bit), `w` (16-bit), `b` (8-bit)
+- Callee-saved register detection: scans all instructions to determine which registers need preservation
+- Stack alignment: ensures 16-byte alignment after prologue for Windows x64 ABI
+- Redundant move elimination: skips `mov %reg, %reg` instructions
+
 ## [0.3.2.2] - 2026-02-07
 
 ### Added

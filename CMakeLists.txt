@@ -20,6 +20,7 @@ set(SOURCES
     src/ir_optimizer.c # IR optimization pipeline (v0.3.1.6)
     src/isel.c        # Instruction selection (v0.3.2.1)
     src/regalloc.c    # Register allocation (v0.3.2.2)
+    src/emit.c        # Code emission (v0.3.2.3)
     src/lexer.c
     src/main.c
     src/parser.c

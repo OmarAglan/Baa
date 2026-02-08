@@ -1,5 +1,7 @@
 # Baa User Guide
 
+> **Version:** 0.3.2.4 | [← README](../README.md) | [Language Spec →](LANGUAGE.md)
+
 Welcome to Baa (باء)! This guide will help you write your first Arabic computer program and use the Baa compiler toolchain.
 
 ---
@@ -392,4 +394,4 @@ Use `منطقي` variables to store true (`صواب`) or false (`خطأ`) values
 
 ---
 
-*Next: [Language Specification →](LANGUAGE.md)*
+*[← README](../README.md) | [Language Specification →](LANGUAGE.md)*

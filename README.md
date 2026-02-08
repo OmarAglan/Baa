@@ -4,7 +4,7 @@
 <img width="260" height="260" alt="شعار باء" src="resources/Logo.png" />
 
 
-![Version](https://img.shields.io/badge/version-0.2.9-blue.svg)
+![Version](https://img.shields.io/badge/version-0.3.2.4-blue.svg)
 ![Platform](https://img.shields.io/badge/platform-Windows-lightgrey.svg)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
 

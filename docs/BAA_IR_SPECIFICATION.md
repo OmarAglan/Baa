@@ -1,6 +1,6 @@
 # Baa IR Specification
 
-> **Version:** 0.3.0 | [← Internals](INTERNALS.md) | [Language Spec →](LANGUAGE.md)
+> **Version:** 0.3.2.4 | [← Compiler Internals](INTERNALS.md) | [API Reference →](API_REFERENCE.md)
 
 This document specifies the Intermediate Representation (IR) for the Baa compiler. The IR uses Arabic naming conventions throughout, creating a culturally authentic yet technically robust design.
 
@@ -493,4 +493,4 @@ baa --dump-ir source.baa
 
 ---
 
-*[← Internals](INTERNALS.md) | [Language Spec →](LANGUAGE.md)*
+*[← Compiler Internals](INTERNALS.md) | [API Reference →](API_REFERENCE.md)]*

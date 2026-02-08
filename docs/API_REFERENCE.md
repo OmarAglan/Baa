@@ -1,6 +1,6 @@
 # Baa Internal API Reference
 
-> **Version:** 0.3.2.4 | [← User Guide](USER_GUIDE.md) | [Internals →](INTERNALS.md)
+> **Version:** 0.3.2.4 | [← Compiler Internals](INTERNALS.md) | [IR Specification →](BAA_IR_SPECIFICATION.md)
 
 This document details the C functions, enumerations, and structures defined in `src/baa.h`, `src/ir.h`, `src/ir_builder.h`, `src/ir_lower.h`, `src/ir_analysis.h`, `src/ir_pass.h`, `src/ir_dce.h`, `src/ir_copyprop.h`, `src/ir_cse.h`, `src/ir_optimizer.h`, `src/isel.h`, and `src/regalloc.h`.
 
@@ -2448,4 +2448,4 @@ typedef enum {
 
 ---
 
-*[← User Guide](USER_GUIDE.md) | [Internals →](INTERNALS.md)*
+*[← Compiler Internals](INTERNALS.md) | [IR Specification →](BAA_IR_SPECIFICATION.md)*

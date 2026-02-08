@@ -8,6 +8,27 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.3.2.4-IR-FIX] - 2026-02-08
+
+### Fixed
+
+- **ISel logical operator size mismatch (إصلاح حجم العمليات المنطقية)** in [`src/isel.c`](src/isel.c):
+  - Boolean comparison results (i1) produced 8-bit vregs, but `andq`/`orq` require 64-bit operands — caused assembler error `%r10b not allowed with andq`.
+  - `isel_lower_logical()` now forces 64-bit operand size and widens any small vreg operands before emitting AND/OR/NOT machine instructions.
+- **Function parameter ABI copies missing (إصلاح نسخ معاملات الدوال)** in [`src/isel.c`](src/isel.c):
+  - Callee functions never copied ABI registers (RCX, RDX, R8, R9) to their parameter vregs — all function arguments read as garbage.
+  - `isel_lower_func()` now prepends MOV instructions at the entry block to copy from ABI physical registers to parameter virtual registers.
+- **IDIV RAX constraint violation (إصلاح قيد RAX في القسمة)** in [`src/isel.c`](src/isel.c):
+  - Integer division used an arbitrary vreg for the dividend, but x86 `IDIV` requires the dividend in RAX — caused wrong results (e.g., 30/12 → 30 instead of 2).
+  - `isel_lower_div()` now explicitly moves the dividend to RAX (vreg -2), performs CQO + IDIV, then moves the quotient from RAX to the destination vreg.
+
+### Added
+
+- **Comprehensive backend test (اختبار الخلفية الشامل)** — [`tests/backend_test.baa`](tests/backend_test.baa):
+  - 27 test functions covering 63 assertions across all supported language features.
+  - Tests: arithmetic (+, -, *, /), unary negation, all 6 comparisons, logical AND/OR, local/global variables, constants, if/else/elseif, while/for loops, break/continue, switch/case/default, function calls (0–4 args), recursion (factorial, fibonacci), nested calls, print, edge cases.
+  - All 63 tests PASS with exit code 0.
+
 ## [0.3.2.4-setup] - 2026-02-08
 
 ### Added

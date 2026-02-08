@@ -89,19 +89,25 @@ begin
 end;
 
 procedure CurStepChanged(CurStep: TSetupStep);
+var
+  Msg: string;
 begin
   if CurStep = ssPostInstall then
   begin
     if GccBundlePresent then
-      MsgBox('Baa Compiler installed successfully!' #13#13
-             'A bundled GCC toolchain has been installed to:' #13
-             ExpandConstant('{app}\gcc') #13#13
-             'Please restart your terminal for the PATH changes to take effect.',
-             mbInformation, MB_OK)
+    begin
+      Msg := 'Baa Compiler installed successfully!' + #13#13
+             + 'A bundled GCC toolchain has been installed to:' + #13
+             + ExpandConstant('{app}\gcc') + #13#13
+             + 'Please restart your terminal for the PATH changes to take effect.';
+      MsgBox(Msg, mbInformation, MB_OK);
+    end
     else
-      MsgBox('Baa Compiler installed, but the GCC toolchain was NOT found!' #13#13
-             'The compiler requires MinGW-w64 GCC to assemble and link programs.' #13
-             'Please install MinGW-w64 manually and ensure gcc.exe is on your PATH.',
-             mbError, MB_OK);
+    begin
+      Msg := 'Baa Compiler installed, but the GCC toolchain was NOT found!' + #13#13
+             + 'The compiler requires MinGW-w64 GCC to assemble and link programs.' + #13
+             + 'Please install MinGW-w64 manually and ensure gcc.exe is on your PATH.';
+      MsgBox(Msg, mbError, MB_OK);
+    end;
   end;
 end;

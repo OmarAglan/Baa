@@ -207,12 +207,12 @@
 - [x] **Rename variables** — SSA renaming pass with reaching definitions.
 - [x] **Connect Phi operands** — Link values from predecessor blocks.
 
-#### v0.3.2.5.3: SSA Validation
+#### v0.3.2.5.3: SSA Validation ✅ COMPLETED (2026-02-09)
 
-- [ ] **Verify SSA properties** — Each register defined exactly once.
-- [ ] **Check dominance** — Definition dominates all uses.
-- [ ] **Validate Phi nodes** — One operand per predecessor.
-- [ ] **`--verify-ssa` flag** — Debug option to run SSA checks.
+- [x] **Verify SSA properties** — Each register defined exactly once.
+- [x] **Check dominance** — Definition dominates all uses.
+- [x] **Validate Phi nodes** — One operand per predecessor.
+- [x] **`--verify-ssa` flag** — Debug option to run SSA checks.
 
 ---
 

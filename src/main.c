@@ -1,13 +1,14 @@
 /**
  * @file main.c
  * @brief نقطة الدخول ومحرك سطر الأوامر (CLI Driver).
- * @version 0.3.2.5.2
+ * @version 0.3.2.5.3
  */
 
 #include "baa.h"
 #include "ir_lower.h"
 #include "ir_optimizer.h"
 #include "ir_outssa.h"
+#include "ir_verify_ssa.h"
 #include "isel.h"
 #include "regalloc.h"
 #include "emit.h"
@@ -34,6 +35,7 @@ typedef struct
     bool dump_ir;       // --dump-ir: طباعة IR بعد التحليل الدلالي
     bool emit_ir;       // --emit-ir: كتابة IR إلى ملف .ir بجانب المصدر
     bool dump_ir_opt;   // --dump-ir-opt: طباعة IR بعد التحسين
+    bool verify_ssa;    // --verify-ssa: التحقق من صحة SSA (بعد Mem2Reg وقبل OutSSA)
     OptLevel opt_level; // -O0, -O1, -O2: مستوى التحسين
     double start_time;  // وقت بدء الترجمة
 } CompilerConfig;
@@ -253,6 +255,7 @@ void print_help()
     printf("  --dump-ir    Dump Baa IR (Arabic) to stdout after analysis\n");
     printf("  --emit-ir    Write Baa IR (Arabic) to <input>.ir after analysis\n");
     printf("  --dump-ir-opt  Dump Baa IR (Arabic) after optimization\n");
+    printf("  --verify-ssa   Verify SSA invariants after Mem2Reg (requires -O1/-O2)\n");
     printf("  -O0            Disable optimization\n");
     printf("  -O1            Basic optimization (default)\n");
     printf("  -O2            Full optimization (+ CSE)\n");
@@ -347,6 +350,10 @@ int main(int argc, char **argv)
             else if (strcmp(arg, "--dump-ir-opt") == 0)
             {
                 config.dump_ir_opt = true;
+            }
+            else if (strcmp(arg, "--verify-ssa") == 0)
+            {
+                config.verify_ssa = true;
             }
             else if (strcmp(arg, "-O0") == 0)
             {
@@ -512,6 +519,29 @@ int main(int argc, char **argv)
             if (config.verbose)
                 printf("[INFO] Dumping optimized IR (--dump-ir-opt)...\n");
             ir_module_print(ir_module, stdout, 1);
+        }
+
+        // 3.6.25. التحقق من SSA (v0.3.2.5.3): بعد Mem2Reg وقبل الخروج من SSA
+        if (config.verify_ssa)
+        {
+            if (config.opt_level == OPT_LEVEL_0)
+            {
+                fprintf(stderr, "خطأ: --verify-ssa يتطلب -O1 أو -O2 لأن SSA يُبنى عبر Mem2Reg داخل المُحسِّن.\n");
+                ir_module_free(ir_module);
+                free(source);
+                return 1;
+            }
+
+            if (config.verbose)
+                printf("[INFO] Verifying SSA (--verify-ssa)...\n");
+
+            if (!ir_module_verify_ssa(ir_module, stderr))
+            {
+                fprintf(stderr, "فشل التحقق من SSA.\n");
+                ir_module_free(ir_module);
+                free(source);
+                return 1;
+            }
         }
 
         // 3.6.5. الخروج من SSA (v0.3.2.5.2): إزالة فاي قبل الخلفية

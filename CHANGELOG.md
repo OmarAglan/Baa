@@ -8,6 +8,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.3.2.5.3] - 2026-02-09
+
+### Added
+
+- **SSA verification (التحقق من SSA)** — validates SSA invariants after Mem2Reg and before Out-of-SSA:
+  - New module: [`src/ir_verify_ssa.c`](src/ir_verify_ssa.c:1), header: [`src/ir_verify_ssa.h`](src/ir_verify_ssa.h:1).
+  - New driver flag: `--verify-ssa` (requires `-O1`/`-O2`), integrated in [`src/main.c`](src/main.c:1).
+  - Unit test: [`tests/ir_verify_ssa_test.c`](tests/ir_verify_ssa_test.c:1).
+
 ## [0.3.2.5.2] - 2026-02-09
 
 ### Added

@@ -1,6 +1,6 @@
 # Baa Internal API Reference
 
-> **Version:** 0.3.2.5.2 | [← Compiler Internals](INTERNALS.md) | [IR Specification →](BAA_IR_SPECIFICATION.md)
+> **Version:** 0.3.2.5.3 | [← Compiler Internals](INTERNALS.md) | [IR Specification →](BAA_IR_SPECIFICATION.md)
 
 This document details the C functions, enumerations, and structures defined in `src/baa.h`, `src/ir.h`, `src/ir_builder.h`, `src/ir_lower.h`, `src/ir_analysis.h`, `src/ir_pass.h`, `src/ir_mem2reg.h`, `src/ir_outssa.h`, `src/ir_dce.h`, `src/ir_copyprop.h`, `src/ir_cse.h`, `src/ir_optimizer.h`, `src/isel.h`, and `src/regalloc.h`.
 
@@ -1266,6 +1266,42 @@ Eliminates `فاي` (IR_OP_PHI) before the backend by inserting edge copies and 
 | `module`  | `IRModule*` | The IR module to rewrite out of SSA |
 
 **Returns:** `true` if the module was modified, `false` otherwise.
+
+---
+
+### 7.1.6. SSA Verification (التحقق من SSA)
+
+#### `ir_func_verify_ssa`
+
+```c
+bool ir_func_verify_ssa(IRFunc* func, FILE* out)
+```
+
+Validates SSA invariants for a single IR function. Intended to run **after Mem2Reg** and **before** the Out-of-SSA rewrite.
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `func`    | `IRFunc*` | Target function |
+| `out`     | `FILE*` | Diagnostics output (typically `stderr`) |
+
+**Returns:** `true` if SSA is valid; `false` otherwise.
+
+#### `ir_module_verify_ssa`
+
+```c
+bool ir_module_verify_ssa(IRModule* module, FILE* out)
+```
+
+Validates SSA invariants for all (non-prototype) functions in a module.
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `module`  | `IRModule*` | Target IR module |
+| `out`     | `FILE*` | Diagnostics output (typically `stderr`) |
+
+**Returns:** `true` if all functions are valid; `false` otherwise.
+
+**Driver flag:** `--verify-ssa` runs this check after optimization and before Out-of-SSA, and requires `-O1`/`-O2`.
 
 ---
 

@@ -1,6 +1,6 @@
 # Baa Compiler Internals
 
-> **Version:** 0.3.2.5.2 | [← Language Spec](LANGUAGE.md) | [API Reference →](API_REFERENCE.md)
+> **Version:** 0.3.2.5.3 | [← Language Spec](LANGUAGE.md) | [API Reference →](API_REFERENCE.md)
 
 **Target Architecture:** x86-64 (AMD64)
 **Target OS:** Windows (MinGW-w64 Toolchain)
@@ -20,6 +20,7 @@ This document details the internal architecture, data structures, and algorithms
 - [Intermediate Representation](#6-intermediate-representation)
 - [IR Mem2Reg Pass](#6145-ir-mem2reg-pass-ترقية_الذاكرة_إلى_سجلات--v03252)
 - [IR Out-of-SSA Pass](#6146-ir-out-of-ssa-pass-الخروج_من_ssa--v03252)
+- [IR SSA Verification](#6147-ir-ssa-verification-التحقق_من_ssa--v03253)
 - [IR Constant Folding Pass](#615-ir-constant-folding-pass)
 - [IR Dead Code Elimination Pass](#616-ir-dead-code-elimination-pass)
 - [IR Copy Propagation Pass](#617-ir-copy-propagation-pass)
@@ -802,6 +803,22 @@ Out-of-SSA eliminates `فاي` before the backend by inserting copies on CFG edg
 **Entry Point:** [`ir_outssa_run()`](src/ir_outssa.c:1)
 
 **Driver integration:** Executed in [`src/main.c`](src/main.c:1) before `isel_run()` to ensure no `IR_OP_PHI` reaches ISel/RegAlloc/Emit.
+
+---
+
+### 6.14.7. IR SSA Verification (التحقق_من_SSA) — v0.3.2.5.3
+
+SSA verification is an analysis step that validates IR invariants **after Mem2Reg** and **before Out-of-SSA**:
+
+- **Single definition:** each virtual register is defined exactly once (SSA property), including function parameter registers.
+- **Dominance:** every use is dominated by the register’s definition (with edge semantics for `فاي`).
+- **Phi correctness (`فاي`):** exactly one incoming value per predecessor block, no duplicates, and no non-predecessor entries.
+
+This verifier is exposed via the CLI flag:
+
+- `--verify-ssa` — aborts compilation with diagnostics on the first violations (capped), and **requires `-O1`/`-O2`** because Mem2Reg runs in the optimizer pipeline.
+
+**Files:** [`src/ir_verify_ssa.c`](src/ir_verify_ssa.c:1), header: [`src/ir_verify_ssa.h`](src/ir_verify_ssa.h:1)
 
 ---
 

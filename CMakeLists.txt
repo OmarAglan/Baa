@@ -10,6 +10,7 @@ set(SOURCES
     src/ir.c          # Intermediate Representation (Phase 3)
     src/ir_analysis.c # IR analysis (CFG + dominance) (v0.3.1.1)
     src/ir_builder.c  # IR Builder pattern API (v0.3.0.2)
+    src/ir_verify_ssa.c # IR SSA verification (التحقق من SSA) (v0.3.2.5.3)
     src/ir_mem2reg.c  # IR Mem2Reg (إدراج فاي + SSA Renaming) (v0.3.2.5.2)
     src/ir_outssa.c   # IR Out-of-SSA (إزالة فاي قبل الخلفية) (v0.3.2.5.2)
     src/ir_constfold.c # IR constant folding (v0.3.1.2)

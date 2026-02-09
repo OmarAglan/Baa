@@ -223,6 +223,9 @@
 - [ ] **Arena allocator for IR** — Fast allocation, bulk deallocation.
 - [ ] **IR cloning** — Deep copy of functions/blocks.
 - [ ] **IR destruction** — Clean up all IR memory.
+- [ ] **Def-use chains for SSA regs** — Build and maintain use lists to make IR passes fast and safe (avoid whole-function rescans).
+- [ ] **Instruction numbering / stable IDs** — Deterministic per-function instruction IDs for analyses, debugging, and regression tests.
+- [ ] **IR mutation helpers** — Central utilities to insert/remove instructions and update CFG metadata (pred/succ/dominance caches) consistently.
 
 #### v0.3.2.6.2: Debug Information
 
@@ -242,6 +245,19 @@
 - [ ] **Extend live intervals to loop ends** — Ensure variables used inside loops have their intervals extended to cover the entire loop body including back-edges.
 - [ ] **Add block-level scoping in semantic analyzer** — Currently function-level only; for-loop variables cannot be redeclared in the same function, requiring unique names.
 - [ ] **Stress test with high register pressure** — Validate fix with functions containing 8+ live variables across multiple nested loops.
+
+#### v0.3.2.6.5: IR Verification & Canonicalization (تحقق_الـIR_وتوحيده)
+
+- [ ] **IR well-formedness verifier (`--verify-ir`)** — Validate operand counts, type consistency, terminator rules, phi placement, and call signatures (separate from `--verify-ssa`).
+- [ ] **Verifier gate in optimizer (debug)** — Optional mode to run `--verify-ir`/`--verify-ssa` after each pass iteration to catch pass bugs early.
+- [ ] **Canonicalization pass** — Normalize commutative operands, constant placement, and comparison canonical forms to make CSE/DCE/constfold more effective.
+- [ ] **CFG simplification pass** — Merge trivial blocks, remove redundant branches, and provide a reusable critical-edge splitting utility for IR passes.
+
+#### v0.3.2.6.6: IR Semantics & Data Layout (دلالات_الـIR_وتخطيط_البيانات)
+
+- [ ] **Define IR arithmetic semantics** — Document and enforce overflow behavior (recommended: two’s-complement wrap), and clarify `i1` truthiness and `div/mod` rules for negatives.
+- [ ] **Data layout helpers** — Add size/alignment queries per `IRType` (incl. pointer size) as the foundation for future `Target` abstraction and correct aggregate lowering.
+- [ ] **Memory model contract** — Specify and verify rules for `حجز/حمل/خزن` (typed pointers, aliasing assumptions, and what is/ isn’t legal for optimization).
 
 ---
 

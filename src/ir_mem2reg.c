@@ -1,34 +1,34 @@
 /**
  * @file ir_mem2reg.c
- * @brief تمريرة ترقية الذاكرة إلى سجلات (Mem2Reg) — خط أساس (v0.3.2.5.1).
- * @version 0.3.2.5.1
+ * @brief تمريرة ترقية الذاكرة إلى سجلات (Mem2Reg) — إدراج فاي + إعادة تسمية SSA (v0.3.2.5.2).
+ * @version 0.3.2.5.2
  *
- * هذه التمريرة هي خطوة أولى بسيطة لبناء SSA الحقيقي لاحقاً.
+ * هذه التمريرة تنفّذ Mem2Reg بالطريقة القياسية:
+ * - حساب المسيطرات وحدود السيطرة.
+ * - إدراج عقد `فاي` عند نقاط الدمج.
+ * - إعادة التسمية في SSA لإزالة `حمل/خزن` وتحويلها إلى قيم SSA.
  *
- * القيود (مقصودة لتبسيط السلامة):
- * - نُرقّي فقط `حجز` (alloca) الذي:
- *   1) كل استعمالاته داخل نفس الكتلة الأساسية.
- *   2) لا يهرب المؤشر: لا يُمرَّر إلى `نداء` ولا يُستخدم كقيمة داخل `فاي`
- *      ولا يظهر كقيمة مخزّنة (أي لا يُخزَّن المؤشر نفسه).
- *   3) كل `حمل` يأتي بعد `خزن` سابق داخل نفس الكتلة (منع القراءة غير المهيّأة).
- *
- * التحويل:
- * - حذف كل تعليمات `خزن` المرتبطة بهذا المؤشر.
- * - تحويل كل `حمل` إلى `نسخ` من آخر قيمة تم تخزينها.
- * - حذف `حجز` نفسه بعد إزالة الاستعمالات.
+ * قيود السلامة (الصحة أولاً):
+ * - نُرقّي فقط `alloca` الذي لا يهرب مؤشّره:
+ *   - لا يُمرَّر المؤشر إلى `نداء` ولا يُستخدم داخل `فاي`.
+ *   - لا يُخزَّن المؤشر نفسه كقيمة.
+ * - كتلة تعريف المؤشر (الكتلة التي تحتوي `حجز`) تسيطر على كل الاستعمالات
+ *   دون استثناء.
+ * - يوجد خزن تهيئة داخل نفس كتلة `حجز` قبل أي `حمل` لنفس المؤشر.
  *
  * ملاحظة ملكية الذاكرة:
- * - لا نُعيد استعمال نفس مؤشر IRValue بين تعليمات مختلفة لتجنب double-free.
- *   لذلك نقوم بعمل clone للقيم عند إعادة الكتابة.
+ * - لا نُعيد استعمال نفس مؤشر IRValue بين تعليمات مختلفة لتجنب التحرير المزدوج.
+ *   لذلك نقوم بعمل نسخ للقيم عند إعادة الكتابة.
  */
 
 #include "ir_mem2reg.h"
+#include "ir_analysis.h"
 
 #include <stdlib.h>
 #include <string.h>
 
 // -----------------------------------------------------------------------------
-// IRPass integration
+// دمج IRPass
 // -----------------------------------------------------------------------------
 
 IRPass IR_PASS_MEM2REG = {
@@ -37,15 +37,31 @@ IRPass IR_PASS_MEM2REG = {
 };
 
 // -----------------------------------------------------------------------------
-// Helpers: تصنيف القيم + النسخ الآمن
+// مساعدات: بنية المتغير المرقّى + النسخ الآمن
 // -----------------------------------------------------------------------------
 
-static int ir_value_is_reg(IRValue* v) {
-    return v && v->kind == IR_VAL_REG;
-}
+typedef struct {
+    int ptr_reg;
+    IRType* pointee;
+    IRInst* alloca_inst;
+    IRBlock* alloca_block;
+
+    IRInst** phi_in_block; // [max_block_id]
+
+    IRValue** stack;
+    int stack_size;
+    int stack_cap;
+} Mem2RegVar;
 
 static int ir_value_is_reg_num(IRValue* v, int reg_num) {
-    return ir_value_is_reg(v) && v->data.reg_num == reg_num;
+    return v && v->kind == IR_VAL_REG && v->data.reg_num == reg_num;
+}
+
+static IRType* ir_alloca_pointee_type(IRInst* alloca_inst) {
+    if (!alloca_inst) return NULL;
+    if (!alloca_inst->type) return NULL;
+    if (alloca_inst->type->kind != IR_TYPE_PTR) return NULL;
+    return alloca_inst->type->data.pointee;
 }
 
 static IRValue* ir_value_clone_with_type(IRValue* v, IRType* override_type) {
@@ -64,7 +80,6 @@ static IRValue* ir_value_clone_with_type(IRValue* v, IRType* override_type) {
             return ir_value_reg(v->data.reg_num, t);
 
         case IR_VAL_GLOBAL:
-            // ir_value_global() يبني نوع مؤشر من نوع pointee
             if (v->type && v->type->kind == IR_TYPE_PTR) {
                 return ir_value_global(v->data.global_name, v->type->data.pointee);
             }
@@ -82,8 +97,33 @@ static IRValue* ir_value_clone_with_type(IRValue* v, IRType* override_type) {
     }
 }
 
+static int ir_func_max_block_id_local(IRFunc* func) {
+    int max_id = -1;
+    if (!func) return 0;
+
+    for (IRBlock* b = func->blocks; b; b = b->next) {
+        if (b->id > max_id) max_id = b->id;
+    }
+
+    return max_id + 1;
+}
+
+static int ir_block_dominates(IRBlock* dom, IRBlock* node) {
+    if (!dom || !node) return 0;
+    if (dom == node) return 1;
+    if (!node->idom) return 0;
+
+    IRBlock* cur = node;
+    while (cur && cur != cur->idom) {
+        if (cur == dom) return 1;
+        cur = cur->idom;
+    }
+
+    return (cur == dom) ? 1 : 0;
+}
+
 // -----------------------------------------------------------------------------
-// Helpers: التعامل مع قائمة التعليمات في الكتل
+// مساعدات: إدراج/حذف تعليمات داخل الكتل
 // -----------------------------------------------------------------------------
 
 static void ir_block_remove_inst(IRBlock* block, IRInst* inst) {
@@ -102,41 +142,82 @@ static void ir_block_remove_inst(IRBlock* block, IRInst* inst) {
     ir_inst_free(inst);
 }
 
+static void ir_block_insert_before(IRBlock* block, IRInst* before, IRInst* inst) {
+    if (!block || !inst) return;
+
+    if (!before) {
+        ir_block_append(block, inst);
+        return;
+    }
+
+    inst->next = before;
+    inst->prev = before->prev;
+
+    if (before->prev) before->prev->next = inst;
+    else block->first = inst;
+
+    before->prev = inst;
+    block->inst_count++;
+}
+
+static void ir_block_insert_phi(IRBlock* block, IRInst* phi) {
+    if (!block || !phi) return;
+
+    IRInst* pos = block->first;
+    while (pos && pos->op == IR_OP_PHI) {
+        pos = pos->next;
+    }
+
+    ir_block_insert_before(block, pos, phi);
+}
+
 // -----------------------------------------------------------------------------
-// Helpers: فحص استعمالات المؤشر (عدم الهروب) + التحقق من نفس الكتلة
+// مساعدات: فحص استعمالات المؤشر (عدم الهروب) + تحقق الأنواع
 // -----------------------------------------------------------------------------
+
+static int ir_inst_has_ptr_reg_use(IRInst* inst, int ptr_reg) {
+    if (!inst) return 0;
+
+    for (int i = 0; i < inst->operand_count; i++) {
+        if (ir_value_is_reg_num(inst->operands[i], ptr_reg)) return 1;
+    }
+
+    if (inst->op == IR_OP_CALL && inst->call_args) {
+        for (int i = 0; i < inst->call_arg_count; i++) {
+            if (ir_value_is_reg_num(inst->call_args[i], ptr_reg)) return 1;
+        }
+    }
+
+    if (inst->op == IR_OP_PHI) {
+        for (IRPhiEntry* e = inst->phi_entries; e; e = e->next) {
+            if (ir_value_is_reg_num(e->value, ptr_reg)) return 1;
+        }
+    }
+
+    return 0;
+}
 
 static int ir_inst_ptr_use_is_allowed(IRInst* inst, int ptr_reg) {
     if (!inst) return 0;
 
-    // 1) استعمالات operands العادية
     for (int i = 0; i < inst->operand_count; i++) {
         if (!ir_value_is_reg_num(inst->operands[i], ptr_reg)) continue;
 
-        // مسموح فقط في:
-        // - حمل: operand[0] = ptr
-        // - خزن: operand[1] = ptr  (وليس operand[0])
         if (inst->op == IR_OP_LOAD) {
             return (i == 0);
         }
 
         if (inst->op == IR_OP_STORE) {
-            // operand[1] هو المؤشر، operand[0] هي القيمة المخزّنة
             if (i != 1) return 0;
-
-            // لا نسمح بتخزين المؤشر نفسه (escape)
             if (inst->operand_count >= 1 && ir_value_is_reg_num(inst->operands[0], ptr_reg)) {
                 return 0;
             }
-
             return 1;
         }
 
-        // أي استعمال آخر يعتبر هروباً/غير مسموح.
         return 0;
     }
 
-    // 2) استعمالات معاملات النداء
     if (inst->op == IR_OP_CALL && inst->call_args) {
         for (int i = 0; i < inst->call_arg_count; i++) {
             if (ir_value_is_reg_num(inst->call_args[i], ptr_reg)) {
@@ -145,7 +226,6 @@ static int ir_inst_ptr_use_is_allowed(IRInst* inst, int ptr_reg) {
         }
     }
 
-    // 3) استعمالات فاي
     if (inst->op == IR_OP_PHI) {
         for (IRPhiEntry* e = inst->phi_entries; e; e = e->next) {
             if (ir_value_is_reg_num(e->value, ptr_reg)) {
@@ -157,165 +237,21 @@ static int ir_inst_ptr_use_is_allowed(IRInst* inst, int ptr_reg) {
     return 1;
 }
 
-static int ir_block_contains_reg_use_outside_load_store(IRBlock* block, int ptr_reg) {
-    if (!block) return 0;
-
-    for (IRInst* inst = block->first; inst; inst = inst->next) {
-        if (!ir_inst_ptr_use_is_allowed(inst, ptr_reg)) {
-            // نحتاج لمعرفة هل يوجد استعمال فعلي للمؤشر داخل هذه التعليمة.
-            // إذا التعليمة لا تحتوي المؤشر أصلاً، فـ ir_inst_ptr_use_is_allowed ستعيد 1.
-            // إذن الوصول هنا يعني أن المؤشر استُعمل بشكل غير مسموح.
-            return 1;
-        }
-    }
-
-    return 0;
-}
-
-static int ir_func_reg_used_outside_block(IRFunc* func, IRBlock* def_block, int ptr_reg) {
-    if (!func || !def_block) return 1;
-
-    for (IRBlock* b = func->blocks; b; b = b->next) {
-        if (b == def_block) continue;
-
-        for (IRInst* inst = b->first; inst; inst = inst->next) {
-            // operands
-            for (int i = 0; i < inst->operand_count; i++) {
-                if (ir_value_is_reg_num(inst->operands[i], ptr_reg)) {
-                    return 1;
-                }
-            }
-
-            // call args
-            if (inst->op == IR_OP_CALL && inst->call_args) {
-                for (int i = 0; i < inst->call_arg_count; i++) {
-                    if (ir_value_is_reg_num(inst->call_args[i], ptr_reg)) {
-                        return 1;
-                    }
-                }
-            }
-
-            // phi entries
-            if (inst->op == IR_OP_PHI) {
-                for (IRPhiEntry* e = inst->phi_entries; e; e = e->next) {
-                    if (ir_value_is_reg_num(e->value, ptr_reg)) {
-                        return 1;
-                    }
-                }
-            }
-        }
-    }
-
-    return 0;
-}
-
-static IRType* ir_alloca_pointee_type(IRInst* alloca_inst) {
-    if (!alloca_inst) return NULL;
-    if (!alloca_inst->type) return NULL;
-    if (alloca_inst->type->kind != IR_TYPE_PTR) return NULL;
-    return alloca_inst->type->data.pointee;
-}
-
-// -----------------------------------------------------------------------------
-// Core: ترقية alloca واحدة داخل كتلة واحدة
-// -----------------------------------------------------------------------------
-
-static int ir_mem2reg_can_promote_alloca(IRFunc* func, IRBlock* block, IRInst* alloca_inst) {
-    if (!func || !block || !alloca_inst) return 0;
-    if (alloca_inst->op != IR_OP_ALLOCA) return 0;
-    if (alloca_inst->dest < 0) return 0;
-
-    int ptr_reg = alloca_inst->dest;
-
-    // شرط: الاستعمالات يجب أن تكون داخل نفس الكتلة فقط
-    if (ir_func_reg_used_outside_block(func, block, ptr_reg)) {
-        return 0;
-    }
-
-    // شرط: لا استعمالات غير مسموحة داخل نفس الكتلة
-    if (ir_block_contains_reg_use_outside_load_store(block, ptr_reg)) {
-        return 0;
-    }
-
-    // شرط: كل حمل يأتي بعد خزن سابق + تحقق من الأنواع
-    IRType* pointee = ir_alloca_pointee_type(alloca_inst);
-    if (!pointee) return 0;
+static int ir_alloca_has_init_store_in_block(IRBlock* block, IRInst* alloca_inst,
+                                             int ptr_reg, IRType* pointee) {
+    if (!block || !alloca_inst || !pointee) return 0;
 
     int seen_store = 0;
-
     for (IRInst* inst = alloca_inst->next; inst; inst = inst->next) {
-        if (inst->op == IR_OP_STORE) {
-            if (inst->operand_count < 2) continue;
-            if (!ir_value_is_reg_num(inst->operands[1], ptr_reg)) continue;
-
-            IRValue* stored_val = inst->operands[0];
-            if (!stored_val || !stored_val->type) return 0;
-
-            // يجب أن يكون نوع القيمة المخزنة مطابقاً لنوع المتغير
-            if (!ir_types_equal(stored_val->type, pointee)) return 0;
-
-            seen_store = 1;
-            continue;
-        }
-
-        if (inst->op == IR_OP_LOAD) {
-            if (inst->operand_count < 1) continue;
-            if (!ir_value_is_reg_num(inst->operands[0], ptr_reg)) continue;
-
-            // لا نسمح بقراءة قبل أي كتابة
-            if (!seen_store) return 0;
-
-            // يجب أن يطابق نوع الحمل نوع المتغير
-            if (!inst->type || !ir_types_equal(inst->type, pointee)) return 0;
-
-            continue;
-        }
-    }
-
-    // بدون أي استعمالات لا داعي للترقية
-    if (!seen_store) {
-        return 0;
-    }
-
-    return 1;
-}
-
-static int ir_mem2reg_promote_alloca(IRBlock* block, IRInst* alloca_inst) {
-    if (!block || !alloca_inst) return 0;
-    if (alloca_inst->op != IR_OP_ALLOCA) return 0;
-    if (alloca_inst->dest < 0) return 0;
-
-    int ptr_reg = alloca_inst->dest;
-
-    // آخر قيمة تم تخزينها (مملوكة للتمريره)
-    IRValue* last_stored = NULL;
-
-    // 1) إعادة كتابة الكتلة: حذف الخزن + تحويل الحمل إلى نسخ
-    IRInst* inst = alloca_inst->next;
-    while (inst) {
-        IRInst* next = inst->next;
-
         if (inst->op == IR_OP_STORE &&
             inst->operand_count >= 2 &&
             ir_value_is_reg_num(inst->operands[1], ptr_reg)) {
 
-            // تحديث آخر قيمة مخزّنة
             IRValue* stored_val = inst->operands[0];
+            if (!stored_val || !stored_val->type) return 0;
+            if (!ir_types_equal(stored_val->type, pointee)) return 0;
 
-            IRValue* clone = ir_value_clone_with_type(stored_val, stored_val ? stored_val->type : NULL);
-            if (!clone) {
-                if (last_stored) ir_value_free(last_stored);
-                return 0;
-            }
-
-            if (last_stored) {
-                ir_value_free(last_stored);
-            }
-            last_stored = clone;
-
-            // حذف تعليمة الخزن
-            ir_block_remove_inst(block, inst);
-            inst = next;
+            seen_store = 1;
             continue;
         }
 
@@ -323,78 +259,511 @@ static int ir_mem2reg_promote_alloca(IRBlock* block, IRInst* alloca_inst) {
             inst->operand_count >= 1 &&
             ir_value_is_reg_num(inst->operands[0], ptr_reg)) {
 
-            if (!last_stored) {
-                // هذا لا يجب أن يحدث إذا كان التحقق صحيحاً
-                return 0;
+            if (!seen_store) return 0;
+        }
+    }
+
+    return seen_store ? 1 : 0;
+}
+
+static int ir_mem2reg_can_promote_alloca(IRFunc* func, IRBlock* alloca_block, IRInst* alloca_inst) {
+    if (!func || !alloca_block || !alloca_inst) return 0;
+    if (alloca_inst->op != IR_OP_ALLOCA) return 0;
+    if (alloca_inst->dest < 0) return 0;
+
+    int ptr_reg = alloca_inst->dest;
+    IRType* pointee = ir_alloca_pointee_type(alloca_inst);
+    if (!pointee) return 0;
+
+    if (!ir_alloca_has_init_store_in_block(alloca_block, alloca_inst, ptr_reg, pointee)) {
+        return 0;
+    }
+
+    for (IRBlock* b = func->blocks; b; b = b->next) {
+        for (IRInst* inst = b->first; inst; inst = inst->next) {
+            if (!ir_inst_has_ptr_reg_use(inst, ptr_reg)) continue;
+
+            if (!ir_inst_ptr_use_is_allowed(inst, ptr_reg)) return 0;
+            if (!ir_block_dominates(alloca_block, b)) return 0;
+
+            if (inst->op == IR_OP_STORE &&
+                inst->operand_count >= 2 &&
+                ir_value_is_reg_num(inst->operands[1], ptr_reg)) {
+
+                IRValue* stored_val = inst->operands[0];
+                if (!stored_val || !stored_val->type) return 0;
+                if (!ir_types_equal(stored_val->type, pointee)) return 0;
             }
 
-            // تحويل الحمل إلى نسخ:
-            // %dest = نسخ <type> <last_stored>
-            IRValue* src = ir_value_clone_with_type(last_stored, inst->type);
-            if (!src) {
-                if (last_stored) ir_value_free(last_stored);
-                return 0;
-            }
+            if (inst->op == IR_OP_LOAD &&
+                inst->operand_count >= 1 &&
+                ir_value_is_reg_num(inst->operands[0], ptr_reg)) {
 
-            // تحرير المعامل القديم (المؤشر)
-            for (int i = 0; i < inst->operand_count; i++) {
-                if (inst->operands[i]) {
-                    ir_value_free(inst->operands[i]);
-                    inst->operands[i] = NULL;
+                if (!inst->type || !ir_types_equal(inst->type, pointee)) return 0;
+            }
+        }
+    }
+
+    return 1;
+}
+
+// -----------------------------------------------------------------------------
+// مكدس إعادة التسمية في SSA
+// -----------------------------------------------------------------------------
+
+static void mem2reg_stack_free_to(Mem2RegVar* v, int new_size) {
+    if (!v) return;
+    if (new_size < 0) new_size = 0;
+
+    while (v->stack_size > new_size) {
+        IRValue* top = v->stack[v->stack_size - 1];
+        v->stack[v->stack_size - 1] = NULL;
+        v->stack_size--;
+        if (top) ir_value_free(top);
+    }
+}
+
+static int mem2reg_stack_push(Mem2RegVar* v, IRValue* val) {
+    if (!v || !val) return 0;
+
+    if (v->stack_size >= v->stack_cap) {
+        int new_cap = (v->stack_cap == 0) ? 8 : v->stack_cap * 2;
+        IRValue** new_arr = (IRValue**)realloc(v->stack, (size_t)new_cap * sizeof(IRValue*));
+        if (!new_arr) return 0;
+        v->stack = new_arr;
+        v->stack_cap = new_cap;
+    }
+
+    v->stack[v->stack_size++] = val;
+    return 1;
+}
+
+static IRValue* mem2reg_stack_top(Mem2RegVar* v) {
+    if (!v || v->stack_size <= 0) return NULL;
+    return v->stack[v->stack_size - 1];
+}
+
+// -----------------------------------------------------------------------------
+// إدراج فاي
+// -----------------------------------------------------------------------------
+
+static void mem2reg_collect_def_blocks(IRFunc* func, int ptr_reg,
+                                       unsigned char* is_def, int max_id,
+                                       int** out_ids, int* out_count) {
+    if (!func || !is_def || max_id <= 0 || !out_ids || !out_count) return;
+
+    int* ids = (int*)malloc((size_t)max_id * sizeof(int));
+    if (!ids) return;
+    int count = 0;
+
+    for (IRBlock* b = func->blocks; b; b = b->next) {
+        if (b->id < 0 || b->id >= max_id) continue;
+
+        for (IRInst* inst = b->first; inst; inst = inst->next) {
+            if (inst->op != IR_OP_STORE) continue;
+            if (inst->operand_count < 2) continue;
+            if (!ir_value_is_reg_num(inst->operands[1], ptr_reg)) continue;
+
+            if (!is_def[b->id]) {
+                is_def[b->id] = 1;
+                ids[count++] = b->id;
+            }
+        }
+    }
+
+    *out_ids = ids;
+    *out_count = count;
+}
+
+static void mem2reg_insert_phis_for_var(IRFunc* func, IRBlock** block_by_id,
+                                        Mem2RegVar* v,
+                                        unsigned char* is_def, int* def_ids, int def_count,
+                                        int max_id) {
+    if (!func || !block_by_id || !v || !is_def || !def_ids || def_count <= 0 || max_id <= 0) return;
+
+    unsigned char* in_work = (unsigned char*)calloc((size_t)max_id, sizeof(unsigned char));
+    int* work = (int*)malloc((size_t)max_id * sizeof(int));
+    if (!in_work || !work) {
+        if (in_work) free(in_work);
+        if (work) free(work);
+        return;
+    }
+
+    int head = 0;
+    int tail = 0;
+
+    for (int i = 0; i < def_count; i++) {
+        int id = def_ids[i];
+        if (id < 0 || id >= max_id) continue;
+        work[tail++] = id;
+        in_work[id] = 1;
+    }
+
+    while (head < tail) {
+        int x_id = work[head++];
+        if (x_id < 0 || x_id >= max_id) continue;
+
+        IRBlock* x = block_by_id[x_id];
+        if (!x) continue;
+
+        for (int i = 0; i < x->dom_frontier_count; i++) {
+            IRBlock* y = x->dom_frontier[i];
+            if (!y) continue;
+            if (y->id < 0 || y->id >= max_id) continue;
+
+            if (!v->phi_in_block[y->id]) {
+                int dest = ir_func_alloc_reg(func);
+                IRInst* phi = ir_inst_phi(v->pointee, dest);
+                if (!phi) continue;
+
+                ir_block_insert_phi(y, phi);
+                v->phi_in_block[y->id] = phi;
+
+                if (!is_def[y->id] && !in_work[y->id]) {
+                    work[tail++] = y->id;
+                    in_work[y->id] = 1;
                 }
             }
+        }
+    }
 
-            inst->op = IR_OP_COPY;
-            inst->operand_count = 1;
-            inst->operands[0] = src;
+    free(in_work);
+    free(work);
+}
 
-            // حقول أخرى غير مستخدمة هنا (phi/call)
-            inst->phi_entries = NULL;
-            inst->call_target = NULL;
-            inst->call_args = NULL;
-            inst->call_arg_count = 0;
+// -----------------------------------------------------------------------------
+// إعادة التسمية في SSA
+// -----------------------------------------------------------------------------
 
-            inst = next;
-            continue;
+typedef struct {
+    IRFunc* func;
+    IRBlock** block_by_id;
+    Mem2RegVar* vars;
+    int var_count;
+    int* ptr_reg_to_var;
+    int ptr_map_size;
+    int* child_head;
+    int* child_next;
+    int max_id;
+    int changed;
+} Mem2RegRenameCtx;
+
+static void mem2reg_rename_block(Mem2RegRenameCtx* ctx, IRBlock* block) {
+    if (!ctx || !block) return;
+    if (block->id < 0 || block->id >= ctx->max_id) return;
+
+    int* saved = (int*)malloc((size_t)ctx->var_count * sizeof(int));
+    if (!saved) return;
+
+    for (int i = 0; i < ctx->var_count; i++) {
+        saved[i] = ctx->vars[i].stack_size;
+    }
+
+    // فاي في هذه الكتلة تُعتبر تعريفاً للقيمة الحالية
+    for (int i = 0; i < ctx->var_count; i++) {
+        IRInst* phi = ctx->vars[i].phi_in_block[block->id];
+        if (!phi) continue;
+
+        IRValue* phi_val = ir_value_reg(phi->dest, phi->type ? phi->type : ctx->vars[i].pointee);
+        if (phi_val) (void)mem2reg_stack_push(&ctx->vars[i], phi_val);
+    }
+
+    // إعادة كتابة الحمل/الخزن
+    IRInst* inst = block->first;
+    while (inst) {
+        IRInst* next = inst->next;
+
+        if (inst->op == IR_OP_STORE &&
+            inst->operand_count >= 2 &&
+            inst->operands[1] &&
+            inst->operands[1]->kind == IR_VAL_REG) {
+
+            int ptr_reg = inst->operands[1]->data.reg_num;
+            if (ptr_reg >= 0 && ptr_reg < ctx->ptr_map_size) {
+                int vi = ctx->ptr_reg_to_var[ptr_reg];
+                if (vi >= 0 && vi < ctx->var_count) {
+                    Mem2RegVar* v = &ctx->vars[vi];
+
+                    IRValue* stored_val = inst->operands[0];
+                    IRValue* clone = ir_value_clone_with_type(stored_val, v->pointee);
+                    if (clone) (void)mem2reg_stack_push(v, clone);
+
+                    ir_block_remove_inst(block, inst);
+                    ctx->changed = 1;
+                    inst = next;
+                    continue;
+                }
+            }
+        }
+
+        if (inst->op == IR_OP_LOAD &&
+            inst->operand_count >= 1 &&
+            inst->operands[0] &&
+            inst->operands[0]->kind == IR_VAL_REG) {
+
+            int ptr_reg = inst->operands[0]->data.reg_num;
+            if (ptr_reg >= 0 && ptr_reg < ctx->ptr_map_size) {
+                int vi = ctx->ptr_reg_to_var[ptr_reg];
+                if (vi >= 0 && vi < ctx->var_count) {
+                    Mem2RegVar* v = &ctx->vars[vi];
+
+                    IRValue* cur = mem2reg_stack_top(v);
+                    if (!cur) {
+                        inst = next;
+                        continue;
+                    }
+
+                    IRValue* src = ir_value_clone_with_type(cur, inst->type ? inst->type : v->pointee);
+                    if (!src) {
+                        inst = next;
+                        continue;
+                    }
+
+                    for (int i = 0; i < inst->operand_count; i++) {
+                        if (inst->operands[i]) {
+                            ir_value_free(inst->operands[i]);
+                            inst->operands[i] = NULL;
+                        }
+                    }
+
+                    inst->op = IR_OP_COPY;
+                    inst->operand_count = 1;
+                    inst->operands[0] = src;
+                    inst->phi_entries = NULL;
+                    inst->call_target = NULL;
+                    inst->call_args = NULL;
+                    inst->call_arg_count = 0;
+
+                    ctx->changed = 1;
+                    inst = next;
+                    continue;
+                }
+            }
         }
 
         inst = next;
     }
 
-    // 2) حذف alloca نفسه (بعد إزالة الاستعمالات)
-    ir_block_remove_inst(block, alloca_inst);
+    // تعبئة معاملات فاي في الخلفاء
+    for (int s = 0; s < block->succ_count; s++) {
+        IRBlock* succ = block->succs[s];
+        if (!succ) continue;
+        if (succ->id < 0 || succ->id >= ctx->max_id) continue;
 
-    if (last_stored) ir_value_free(last_stored);
-    return 1;
+        for (int i = 0; i < ctx->var_count; i++) {
+            IRInst* phi = ctx->vars[i].phi_in_block[succ->id];
+            if (!phi) continue;
+
+            IRValue* cur = mem2reg_stack_top(&ctx->vars[i]);
+            if (!cur) {
+                IRValue* zero = ir_value_const_int(0, phi->type ? phi->type : ctx->vars[i].pointee);
+                if (zero) {
+                    ir_inst_phi_add(phi, zero, block);
+                    ctx->changed = 1;
+                }
+                continue;
+            }
+
+            IRValue* clone = ir_value_clone_with_type(cur, phi->type ? phi->type : ctx->vars[i].pointee);
+            if (!clone) continue;
+            ir_inst_phi_add(phi, clone, block);
+            ctx->changed = 1;
+        }
+    }
+
+    // زيارة الأبناء في شجرة المسيطر
+    for (int child_id = ctx->child_head[block->id];
+         child_id != -1;
+         child_id = ctx->child_next[child_id]) {
+
+        if (child_id < 0 || child_id >= ctx->max_id) continue;
+        IRBlock* child = ctx->block_by_id[child_id];
+        if (child) mem2reg_rename_block(ctx, child);
+    }
+
+    // استرجاع المكدسات
+    for (int i = 0; i < ctx->var_count; i++) {
+        mem2reg_stack_free_to(&ctx->vars[i], saved[i]);
+    }
+
+    free(saved);
 }
+
+// -----------------------------------------------------------------------------
+// النواة: Mem2Reg لكل دالة
+// -----------------------------------------------------------------------------
 
 static int ir_mem2reg_func(IRFunc* func) {
     if (!func || func->is_prototype) return 0;
+    if (!func->entry) return 0;
+
+    // حساب dominators/DF + إعادة بناء preds/succs
+    ir_func_compute_dominators(func);
+
+    int max_id = ir_func_max_block_id_local(func);
+    if (max_id <= 0) return 0;
+
+    IRBlock** block_by_id = (IRBlock**)calloc((size_t)max_id, sizeof(IRBlock*));
+    if (!block_by_id) return 0;
+
+    for (IRBlock* b = func->blocks; b; b = b->next) {
+        if (b->id >= 0 && b->id < max_id) {
+            block_by_id[b->id] = b;
+        }
+    }
+
+    // جمع allocas القابلة للترقية
+    Mem2RegVar* vars = NULL;
+    int var_count = 0;
+    int var_cap = 0;
+
+    for (IRBlock* b = func->blocks; b; b = b->next) {
+        for (IRInst* inst = b->first; inst; inst = inst->next) {
+            if (inst->op != IR_OP_ALLOCA) continue;
+            if (inst->dest < 0) continue;
+            if (!ir_mem2reg_can_promote_alloca(func, b, inst)) continue;
+
+            IRType* pointee = ir_alloca_pointee_type(inst);
+            if (!pointee) continue;
+
+            if (var_count >= var_cap) {
+                int new_cap = (var_cap == 0) ? 8 : var_cap * 2;
+                Mem2RegVar* new_arr = (Mem2RegVar*)realloc(vars, (size_t)new_cap * sizeof(Mem2RegVar));
+                if (!new_arr) break;
+                vars = new_arr;
+                var_cap = new_cap;
+            }
+
+            Mem2RegVar* v = &vars[var_count++];
+            memset(v, 0, sizeof(*v));
+            v->ptr_reg = inst->dest;
+            v->pointee = pointee;
+            v->alloca_inst = inst;
+            v->alloca_block = b;
+            v->phi_in_block = (IRInst**)calloc((size_t)max_id, sizeof(IRInst*));
+        }
+    }
+
+    if (var_count == 0) {
+        free(block_by_id);
+        free(vars);
+        return 0;
+    }
+
+    // خريطة ptr_reg -> var index (قبل إدراج فاي)
+    int ptr_map_size = func->next_reg;
+    if (ptr_map_size < 1) ptr_map_size = 1;
+
+    int* ptr_reg_to_var = (int*)malloc((size_t)ptr_map_size * sizeof(int));
+    if (!ptr_reg_to_var) {
+        for (int i = 0; i < var_count; i++) {
+            free(vars[i].phi_in_block);
+        }
+        free(vars);
+        free(block_by_id);
+        return 0;
+    }
+    for (int i = 0; i < ptr_map_size; i++) ptr_reg_to_var[i] = -1;
+    for (int i = 0; i < var_count; i++) {
+        int r = vars[i].ptr_reg;
+        if (r >= 0 && r < ptr_map_size) ptr_reg_to_var[r] = i;
+    }
 
     int changed = 0;
 
+    // إدراج فاي
+    for (int i = 0; i < var_count; i++) {
+        unsigned char* is_def = (unsigned char*)calloc((size_t)max_id, sizeof(unsigned char));
+        if (!is_def) continue;
+
+        int* def_ids = NULL;
+        int def_count = 0;
+        mem2reg_collect_def_blocks(func, vars[i].ptr_reg, is_def, max_id, &def_ids, &def_count);
+
+        if (def_ids && def_count > 0) {
+            mem2reg_insert_phis_for_var(func, block_by_id, &vars[i], is_def, def_ids, def_count, max_id);
+            changed = 1;
+        }
+
+        free(def_ids);
+        free(is_def);
+    }
+
+    // بناء شجرة المسيطر: child_next[b->id] و child_head[parent]
+    int* child_head = (int*)malloc((size_t)max_id * sizeof(int));
+    int* child_next = (int*)malloc((size_t)max_id * sizeof(int));
+    if (!child_head || !child_next) {
+        if (child_head) free(child_head);
+        if (child_next) free(child_next);
+        free(ptr_reg_to_var);
+        for (int i = 0; i < var_count; i++) {
+            free(vars[i].phi_in_block);
+            mem2reg_stack_free_to(&vars[i], 0);
+            free(vars[i].stack);
+        }
+        free(vars);
+        free(block_by_id);
+        return changed;
+    }
+
+    for (int i = 0; i < max_id; i++) {
+        child_head[i] = -1;
+        child_next[i] = -1;
+    }
+
     for (IRBlock* b = func->blocks; b; b = b->next) {
-        IRInst* inst = b->first;
-        while (inst) {
-            IRInst* next = inst->next;
+        if (!b->idom) continue;
+        if (b == func->entry) continue;
+        if (b->id < 0 || b->id >= max_id) continue;
+        if (b->idom->id < 0 || b->idom->id >= max_id) continue;
 
-            if (inst->op == IR_OP_ALLOCA && inst->dest >= 0) {
-                if (ir_mem2reg_can_promote_alloca(func, b, inst)) {
-                    if (ir_mem2reg_promote_alloca(b, inst)) {
-                        changed = 1;
-                    }
-                }
-            }
+        int parent = b->idom->id;
+        child_next[b->id] = child_head[parent];
+        child_head[parent] = b->id;
+    }
 
-            inst = next;
+    // إعادة التسمية في SSA
+    Mem2RegRenameCtx rctx = {0};
+    rctx.func = func;
+    rctx.block_by_id = block_by_id;
+    rctx.vars = vars;
+    rctx.var_count = var_count;
+    rctx.ptr_reg_to_var = ptr_reg_to_var;
+    rctx.ptr_map_size = ptr_map_size;
+    rctx.child_head = child_head;
+    rctx.child_next = child_next;
+    rctx.max_id = max_id;
+    rctx.changed = 0;
+
+    mem2reg_rename_block(&rctx, func->entry);
+    if (rctx.changed) changed = 1;
+
+    // حذف allocas المرقّاة
+    for (int i = 0; i < var_count; i++) {
+        if (vars[i].alloca_block && vars[i].alloca_inst) {
+            ir_block_remove_inst(vars[i].alloca_block, vars[i].alloca_inst);
+            changed = 1;
         }
     }
+
+    // Cleanup
+    free(child_head);
+    free(child_next);
+    free(ptr_reg_to_var);
+
+    for (int i = 0; i < var_count; i++) {
+        free(vars[i].phi_in_block);
+        mem2reg_stack_free_to(&vars[i], 0);
+        free(vars[i].stack);
+    }
+    free(vars);
+    free(block_by_id);
 
     return changed;
 }
 
 // -----------------------------------------------------------------------------
-// Public API
+// الواجهة العامة
 // -----------------------------------------------------------------------------
 
 bool ir_mem2reg_run(IRModule* module) {

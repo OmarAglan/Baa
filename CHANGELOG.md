@@ -8,7 +8,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
-## [0.3.2.5.1] - 2026-02-10
+## [0.3.2.5.2] - 2026-02-09
+
+### Added
+
+- **Canonical Mem2Reg (ترقية الذاكرة إلى سجلات) with Phi insertion + SSA renaming** — upgrades `ir_mem2reg_run()` to insert `فاي` at dominance frontiers and rewrite `حمل/خزن` into SSA values across blocks:
+  - Updated pass: [`ir_mem2reg_run()`](src/ir_mem2reg.c:1).
+  - New tests: [`tests/ir_mem2reg_phi_test.c`](tests/ir_mem2reg_phi_test.c:1).
+- **Out-of-SSA pass (الخروج من SSA)** — removes `فاي` before backend by inserting edge copies and splitting critical edges:
+  - New pass: [`ir_outssa_run()`](src/ir_outssa.c:1).
+  - Wired in driver before ISel in [`src/main.c`](src/main.c:1).
+  - Unit test: [`tests/ir_outssa_test.c`](tests/ir_outssa_test.c:1).
+
+## [0.3.2.5.1] - 2026-02-09
 
 ### Added
 

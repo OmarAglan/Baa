@@ -1,8 +1,8 @@
 # Baa Internal API Reference
 
-> **Version:** 0.3.2.4 | [← Compiler Internals](INTERNALS.md) | [IR Specification →](BAA_IR_SPECIFICATION.md)
+> **Version:** 0.3.2.5.2 | [← Compiler Internals](INTERNALS.md) | [IR Specification →](BAA_IR_SPECIFICATION.md)
 
-This document details the C functions, enumerations, and structures defined in `src/baa.h`, `src/ir.h`, `src/ir_builder.h`, `src/ir_lower.h`, `src/ir_analysis.h`, `src/ir_pass.h`, `src/ir_mem2reg.h`, `src/ir_dce.h`, `src/ir_copyprop.h`, `src/ir_cse.h`, `src/ir_optimizer.h`, `src/isel.h`, and `src/regalloc.h`.
+This document details the C functions, enumerations, and structures defined in `src/baa.h`, `src/ir.h`, `src/ir_builder.h`, `src/ir_lower.h`, `src/ir_analysis.h`, `src/ir_pass.h`, `src/ir_mem2reg.h`, `src/ir_outssa.h`, `src/ir_dce.h`, `src/ir_copyprop.h`, `src/ir_cse.h`, `src/ir_optimizer.h`, `src/isel.h`, and `src/regalloc.h`.
 
 ---
 
@@ -1233,7 +1233,7 @@ Lowers a linked list of statements (e.g., the statements list inside `NODE_BLOCK
 bool ir_mem2reg_run(IRModule* module)
 ```
 
-Runs a baseline Mem2Reg pass on the given IR module. Promotes a safe subset of `حجز` (alloca) by rewriting local `حمل`/`خزن` into SSA `نسخ` within a single basic block (no pointer escape).
+Runs the canonical Mem2Reg pass on the given IR module. Inserts `فاي` (phi) nodes using dominance frontiers and performs SSA renaming to rewrite `حمل/خزن` into SSA values across basic blocks (with safety-first restrictions such as “no pointer escape” and “alloca block dominates all uses”).
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
@@ -1248,6 +1248,24 @@ extern IRPass IR_PASS_MEM2REG;
 ```
 
 Descriptor for the Mem2Reg pass, usable with the IR optimizer pipeline.
+
+---
+
+### 7.1.5. Out-of-SSA (الخروج من SSA)
+
+#### `ir_outssa_run`
+
+```c
+bool ir_outssa_run(IRModule* module)
+```
+
+Eliminates `فاي` (IR_OP_PHI) before the backend by inserting edge copies and splitting critical edges when needed. This ensures no `phi` reaches ISel/RegAlloc/Emit.
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `module`  | `IRModule*` | The IR module to rewrite out of SSA |
+
+**Returns:** `true` if the module was modified, `false` otherwise.
 
 ---
 
@@ -1402,11 +1420,13 @@ Runs the optimization pipeline on the given IR module.
 **Returns:** `true` if any optimization was performed, `false` otherwise.
 
 **Pass ordering:**
-0. Mem2Reg (ترقية الذاكرة إلى سجلات) — baseline
+0. Mem2Reg (ترقية الذاكرة إلى سجلات) — phi insertion + SSA renaming
 1. Constant Folding (طي_الثوابت)
 2. Copy Propagation (نشر_النسخ)
 3. CSE (حذف_المكرر) — O2 only
 4. Dead Code Elimination (حذف_الميت)
+
+**Note:** Out-of-SSA (`ir_outssa_run()`) is executed by the driver before ISel, not as part of the optimizer fixpoint loop.
 
 **Fixpoint iteration:** Passes repeat until no changes (max 10 iterations).
 

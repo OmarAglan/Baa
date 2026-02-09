@@ -1,11 +1,11 @@
 /**
  * @file ir_mem2reg_test.c
- * @brief اختبارات تمريرة Mem2Reg (ترقية الذاكرة إلى سجلات) — خط أساس (v0.3.2.5.1).
+ * @brief اختبارات تمريرة Mem2Reg (ترقية الذاكرة إلى سجلات) — SSA (v0.3.2.5.2).
  *
  * نتحقق من:
- * - ترقية `حجز/خزن/حمل` داخل نفس الكتلة إلى استعمال سجلات عبر `نسخ`.
- * - حذف تعليمات `خزن` و `حجز` للـ alloca المرقّى.
- * - المحافظة: إذا استُخدم المؤشر عبر أكثر من كتلة، لا تتم الترقية.
+ * - ترقية `حجز/خزن/حمل` إلى استعمال سجلات عبر `نسخ` (حتى عبر كتل متعددة عند وجود dominance).
+ * - حذف تعليمات `خزن` و `حجز` للـ alloca المُرقّى.
+ * - المحافظة: إذا هرب المؤشر (تم تمريره لـ نداء)، لا تتم الترقية.
  */
 
 #include <stdio.h>
@@ -68,7 +68,7 @@ int main(void) {
     IRBlock* bb2 = ir_builder_create_block(b, "كتلة_٢");
 
     // -------------------------------------------------------------------------
-    // حالة إيجابية: alloca داخل نفس الكتلة (يجب أن تتم ترقيته)
+    // حالة إيجابية (١): alloca داخل نفس الكتلة (يجب أن تتم ترقيته)
     // -------------------------------------------------------------------------
     ir_builder_set_insert_point(b, entry);
 
@@ -111,7 +111,7 @@ int main(void) {
     );
 
     // -------------------------------------------------------------------------
-    // حالة سلبية/محافظة: alloca يُستخدم عبر كتل متعددة (لا تتم ترقيته)
+    // حالة إيجابية (٢): alloca يُستخدم عبر كتل متعددة (يجب أن تتم ترقيته)
     // -------------------------------------------------------------------------
     int r_ptr2 = ir_builder_emit_alloca(b, IR_TYPE_I64_T);
 
@@ -120,6 +120,27 @@ int main(void) {
         ir_value_const_int(11, IR_TYPE_I64_T),
         ir_value_reg(r_ptr2, ir_type_ptr(IR_TYPE_I64_T))
     );
+
+    // -------------------------------------------------------------------------
+    // حالة سلبية/محافظة: هروب المؤشر عبر نداء (لا تتم الترقية)
+    // -------------------------------------------------------------------------
+    int r_ptr3 = ir_builder_emit_alloca(b, IR_TYPE_I64_T);
+    ir_builder_emit_store(
+        b,
+        ir_value_const_int(7, IR_TYPE_I64_T),
+        ir_value_reg(r_ptr3, ir_type_ptr(IR_TYPE_I64_T))
+    );
+
+    IRValue* args1[1];
+    args1[0] = ir_value_reg(r_ptr3, ir_type_ptr(IR_TYPE_I64_T));
+    ir_builder_emit_call_void(b, "اطبع", args1, 1);
+
+    int r_y = ir_builder_emit_load(
+        b,
+        IR_TYPE_I64_T,
+        ir_value_reg(r_ptr3, ir_type_ptr(IR_TYPE_I64_T))
+    );
+    (void)r_y;
 
     // انتقال إلى كتلة ثانية تستخدم المؤشر
     ir_builder_emit_br(b, bb2);
@@ -132,8 +153,6 @@ int main(void) {
         ir_value_reg(r_ptr2, ir_type_ptr(IR_TYPE_I64_T))
     );
 
-    // رجوع %c (من المسار الأول) غير ممكن هنا لأننا في كتلة ثانية،
-    // لذلك نستخدم %x لتثبيت صحة CFG.
     ir_builder_emit_ret(b, ir_value_reg(r_x, IR_TYPE_I64_T));
 
     // -------------------------------------------------------------------------
@@ -142,7 +161,7 @@ int main(void) {
     int changed = ir_mem2reg_run(module) ? 1 : 0;
 
     int ok = 1;
-    ok &= require(changed == 1, "mem2reg should report changed (it should promote r_ptr)");
+    ok &= require(changed == 1, "mem2reg should report changed (it should promote r_ptr/r_ptr2)");
 
     // -------------------------------------------------------------------------
     // تحقق: المسار الأول تمت ترقيته
@@ -180,19 +199,32 @@ int main(void) {
     }
 
     // -------------------------------------------------------------------------
-    // تحقق: المسار الثاني لم تتم ترقيته (محافظة)
+    // تحقق: المسار الثاني تمت ترقيته (عبر كتل متعددة)
     // -------------------------------------------------------------------------
-    ok &= require(find_inst_by_dest(entry, r_ptr2) != NULL, "entry: non-promotable alloca should remain");
-    IRInst* p2_inst = find_inst_by_dest(entry, r_ptr2);
-    if (p2_inst) {
-        ok &= require(p2_inst->op == IR_OP_ALLOCA, "entry: non-promotable inst should still be alloca");
-    }
+    ok &= require(find_inst_by_dest(entry, r_ptr2) == NULL, "entry: cross-block alloca should be removed");
+    ok &= require(!block_has_store_to_ptr_reg(entry, r_ptr2), "entry: stores to cross-block promoted alloca should be removed");
 
-    // الحمل في كتلة ثانية يجب أن يبقى حمل وليس نسخ
+    // الحمل في كتلة ثانية يجب أن يصبح نسخ من ١١
     IRInst* x_inst = find_inst_by_dest(bb2, r_x);
     ok &= require(x_inst != NULL, "bb2: r_x inst should exist");
     if (x_inst) {
-        ok &= require(x_inst->op == IR_OP_LOAD, "bb2: cross-block load should remain IR_OP_LOAD");
+        ok &= require(x_inst->op == IR_OP_COPY, "bb2: cross-block load should become IR_OP_COPY");
+        ok &= require(x_inst->operand_count == 1, "bb2: copy should have 1 operand");
+        ok &= require(x_inst->operands[0] && x_inst->operands[0]->kind == IR_VAL_CONST_INT, "bb2: copy src should be const");
+        if (x_inst->operands[0]) {
+            ok &= require(x_inst->operands[0]->data.const_int == 11, "bb2: copy src const should be 11");
+        }
+    }
+
+    // -------------------------------------------------------------------------
+    // تحقق: المسار الثالث لم تتم ترقيته (هروب المؤشر)
+    // -------------------------------------------------------------------------
+    ok &= require(find_inst_by_dest(entry, r_ptr3) != NULL, "entry: escaping alloca should remain");
+    ok &= require(block_has_store_to_ptr_reg(entry, r_ptr3), "entry: store to escaping alloca should remain");
+    IRInst* y_inst = find_inst_by_dest(entry, r_y);
+    ok &= require(y_inst != NULL, "entry: r_y inst should exist");
+    if (y_inst) {
+        ok &= require(y_inst->op == IR_OP_LOAD, "entry: load from escaping alloca should remain IR_OP_LOAD");
     }
 
     ir_builder_free(b);

@@ -42,8 +42,8 @@ const char* ir_optimizer_level_name(OptLevel level) {
 static bool optimizer_iteration(IRModule* module, OptLevel level) {
     bool changed = false;
 
-    // Pass 0: Mem2Reg (ترقية الذاكرة إلى سجلات) — baseline
-    // Promotes simple single-block allocas by rewriting load/store into SSA copies.
+    // Pass 0: Mem2Reg (ترقية الذاكرة إلى سجلات) — SSA (فاي + إعادة تسمية)
+    // يُحوِّل المتغيرات المحلية من alloca/load/store إلى SSA مع إدراج فاي عند الدمج.
     changed |= ir_mem2reg_run(module);
 
     // Pass 1: Constant Folding (طي_الثوابت)

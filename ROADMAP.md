@@ -200,12 +200,12 @@
 - [x] **Replace loads/stores** — Convert to direct register use.
 - [x] **Remove dead allocas** — Delete promoted `حجز` instructions.
 
-#### v0.3.2.5.2: Phi Node Insertion
+#### v0.3.2.5.2: Phi Node Insertion ✅ COMPLETED (2026-02-09)
 
-- [ ] **Compute dominance frontiers** — Where Phi nodes are needed.
-- [ ] **Insert Phi placeholders** — Add `فاي` at join points.
-- [ ] **Rename variables** — SSA renaming pass with reaching definitions.
-- [ ] **Connect Phi operands** — Link values from predecessor blocks.
+- [x] **Compute dominance frontiers** — Where Phi nodes are needed.
+- [x] **Insert Phi placeholders** — Add `فاي` at join points.
+- [x] **Rename variables** — SSA renaming pass with reaching definitions.
+- [x] **Connect Phi operands** — Link values from predecessor blocks.
 
 #### v0.3.2.5.3: SSA Validation
 

@@ -1,14 +1,14 @@
 /**
  * @file ir_optimizer.h
- * @brief IR optimization pipeline (v0.3.1.6).
+ * @brief خط أنابيب تحسين IR (v0.3.2.5.2).
  *
- * Provides a unified interface for running IR optimization passes in
- * the correct order with fixpoint iteration until no further changes.
+ * يوفر واجهة موحدة لتشغيل تمريرات تحسين IR بالترتيب الصحيح
+ * مع تكرار حتى نقطة التثبيت (fixpoint) دون تغييرات إضافية.
  *
- * Optimization Levels:
- * - O0: No optimization (for debugging)
- * - O1: Basic optimizations (mem2reg, constfold, copyprop, dce)
- * - O2: Full optimizations (+ CSE, fixpoint iteration)
+ * مستويات التحسين:
+ * - O0: بدون تحسين (للتصحيح)
+ * - O1: تحسينات أساسية (mem2reg, constfold, copyprop, dce)
+ * - O2: تحسينات كاملة (+ CSE, تكرار حتى نقطة التثبيت)
  */
 
 #ifndef BAA_IR_OPTIMIZER_H
@@ -22,37 +22,37 @@ extern "C" {
 #endif
 
 /**
- * @brief Optimization levels for the compiler.
+ * @brief مستويات التحسين في المترجم.
  */
 typedef enum {
-    OPT_LEVEL_0 = 0,  /**< No optimization (debug mode) */
-    OPT_LEVEL_1 = 1,  /**< Basic optimizations (default) */
-    OPT_LEVEL_2 = 2   /**< Full optimizations */
+    OPT_LEVEL_0 = 0,  /**< بدون تحسين (وضع التصحيح) */
+    OPT_LEVEL_1 = 1,  /**< تحسينات أساسية (الافتراضي) */
+    OPT_LEVEL_2 = 2   /**< تحسينات كاملة */
 } OptLevel;
 
 /**
- * @brief Run the optimization pipeline on an IR module.
+ * @brief تشغيل خط أنابيب التحسين على وحدة IR.
  *
- * Pass ordering (O1+):
- * 0. Mem2Reg (ترقية الذاكرة إلى سجلات) — baseline
+ * ترتيب التمريرات (O1+):
+ * 0. Mem2Reg (ترقية الذاكرة إلى سجلات) — SSA كامل
  * 1. Constant Folding (طي_الثوابت)
  * 2. Copy Propagation (نشر_النسخ)
- * 3. CSE (حذف_المكرر) — O2 only
+ * 3. CSE (حذف_المكرر) — فقط في O2
  * 4. Dead Code Elimination (حذف_الميت)
  *
- * The pipeline iterates until no pass makes changes (fixpoint)
- * or a maximum iteration count is reached.
+ * يكرر الخط حتى لا تُحدث أي تمريرة تغييرات (نقطة التثبيت)
+ * أو الوصول لحد أقصى من التكرار.
  *
- * @param module The IR module to optimize.
- * @param level  Optimization level (OPT_LEVEL_0, OPT_LEVEL_1, OPT_LEVEL_2).
- * @return true if any optimization was performed; false otherwise.
+ * @param module وحدة IR المراد تحسينها.
+ * @param level  مستوى التحسين (OPT_LEVEL_0, OPT_LEVEL_1, OPT_LEVEL_2).
+ * @return true إذا حدث أي تحسين؛ false خلاف ذلك.
  */
 bool ir_optimizer_run(IRModule* module, OptLevel level);
 
 /**
- * @brief Get the name of an optimization level.
- * @param level The optimization level.
- * @return String representation (e.g., "O0", "O1", "O2").
+ * @brief الحصول على اسم مستوى التحسين.
+ * @param level مستوى التحسين.
+ * @return تمثيل نصي (مثل "O0", "O1", "O2").
  */
 const char* ir_optimizer_level_name(OptLevel level);
 

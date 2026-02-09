@@ -1,6 +1,6 @@
 # Baa Compiler Internals
 
-> **Version:** 0.3.2.4 | [← Language Spec](LANGUAGE.md) | [API Reference →](API_REFERENCE.md)
+> **Version:** 0.3.2.5.2 | [← Language Spec](LANGUAGE.md) | [API Reference →](API_REFERENCE.md)
 
 **Target Architecture:** x86-64 (AMD64)
 **Target OS:** Windows (MinGW-w64 Toolchain)
@@ -18,7 +18,8 @@ This document details the internal architecture, data structures, and algorithms
 - [Abstract Syntax Tree](#4-abstract-syntax-tree)
 - [Semantic Analysis](#5-semantic-analysis)
 - [Intermediate Representation](#6-intermediate-representation)
-- [IR Mem2Reg Pass](#6145-ir-mem2reg-pass-ترقية_الذاكرة_إلى_سجلات--v03251)
+- [IR Mem2Reg Pass](#6145-ir-mem2reg-pass-ترقية_الذاكرة_إلى_سجلات--v03252)
+- [IR Out-of-SSA Pass](#6146-ir-out-of-ssa-pass-الخروج_من_ssa--v03252)
 - [IR Constant Folding Pass](#615-ir-constant-folding-pass)
 - [IR Dead Code Elimination Pass](#616-ir-dead-code-elimination-pass)
 - [IR Copy Propagation Pass](#617-ir-copy-propagation-pass)
@@ -767,9 +768,13 @@ The IR analysis layer provides foundational compiler analyses required by the up
 
 ---
 
-### 6.14.5. IR Mem2Reg Pass (ترقية_الذاكرة_إلى_سجلات) — v0.3.2.5.1
+### 6.14.5. IR Mem2Reg Pass (ترقية_الذاكرة_إلى_سجلات) — v0.3.2.5.2
 
-Baseline Mem2Reg is a correctness-first SSA step that promotes a safe subset of local variables represented by `حجز`/`خزن`/`حمل` into direct SSA register use.
+Canonical Mem2Reg is a correctness-first SSA construction step that promotes a safe subset of local variables represented by `حجز`/`خزن`/`حمل` into SSA values:
+
+- Computes dominance + dominance frontiers (via `ir_func_compute_dominators()`).
+- Inserts `فاي` nodes at join points.
+- Performs SSA renaming to rewrite `حمل/خزن` into SSA register values (usually `نسخ`).
 
 **File:** [`src/ir_mem2reg.c`](src/ir_mem2reg.c:1)
 
@@ -777,12 +782,26 @@ Baseline Mem2Reg is a correctness-first SSA step that promotes a safe subset of 
 
 **Pass Descriptor:** [`IR_PASS_MEM2REG`](src/ir_mem2reg.c:1) (used with the optimizer pipeline).
 
-**Constraints (baseline):**
-- Single basic block only
-- No pointer escape (not passed to `نداء`, not used in `فاي`, not stored as a value)
-- No load-before-store (prevents uninitialized reads)
+**Constraints (correctness-first):**
+- No pointer escape (not passed to `نداء`, not used inside `فاي`, not stored as a value)
+- Alloca block must dominate all uses (ensures SSA correctness)
+- Must have an initializing store inside the alloca block before any load (prevents uninitialized reads)
 
 **Pipeline position:** Run first in the optimizer (before constfold/copyprop/CSE/DCE) via [`ir_optimizer_run()`](src/ir_optimizer.c:73).
+
+---
+
+### 6.14.6. IR Out-of-SSA Pass (الخروج_من_SSA) — v0.3.2.5.2
+
+Out-of-SSA eliminates `فاي` before the backend by inserting copies on CFG edges. When a predecessor has multiple successors (critical edge), the pass splits the edge to create an insertion block:
+
+`P -> B` becomes `P -> E -> B`
+
+**File:** [`src/ir_outssa.c`](src/ir_outssa.c:1)
+
+**Entry Point:** [`ir_outssa_run()`](src/ir_outssa.c:1)
+
+**Driver integration:** Executed in [`src/main.c`](src/main.c:1) before `isel_run()` to ensure no `IR_OP_PHI` reaches ISel/RegAlloc/Emit.
 
 ---
 

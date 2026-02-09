@@ -1,6 +1,6 @@
 # Baa IR Specification
 
-> **Version:** 0.3.2.4 | [← Compiler Internals](INTERNALS.md) | [API Reference →](API_REFERENCE.md)
+> **Version:** 0.3.2.5.2 | [← Compiler Internals](INTERNALS.md) | [API Reference →](API_REFERENCE.md)
 
 This document specifies the Intermediate Representation (IR) for the Baa compiler. The IR uses Arabic naming conventions throughout, creating a culturally authentic yet technically robust design.
 
@@ -91,6 +91,8 @@ Phi nodes merge values at control flow join points:
 ```
 
 The `فاي` instruction selects a value based on which predecessor block was executed.
+
+**Note:** Phi nodes are an IR-level SSA construct. Before instruction selection, the compiler runs an Out-of-SSA rewrite that removes `فاي` by inserting edge copies (so the backend does not need to implement `phi` directly).
 
 ### 3.3 Memory Model
 

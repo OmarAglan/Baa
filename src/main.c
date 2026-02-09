@@ -1,12 +1,13 @@
 /**
  * @file main.c
  * @brief نقطة الدخول ومحرك سطر الأوامر (CLI Driver).
- * @version 0.3.2.4
+ * @version 0.3.2.5.2
  */
 
 #include "baa.h"
 #include "ir_lower.h"
 #include "ir_optimizer.h"
+#include "ir_outssa.h"
 #include "isel.h"
 #include "regalloc.h"
 #include "emit.h"
@@ -512,6 +513,10 @@ int main(int argc, char **argv)
                 printf("[INFO] Dumping optimized IR (--dump-ir-opt)...\n");
             ir_module_print(ir_module, stdout, 1);
         }
+
+        // 3.6.5. الخروج من SSA (v0.3.2.5.2): إزالة فاي قبل الخلفية
+        // هذه الخطوة ضرورية لأن الخلفية الحالية لا تُنفّذ IR_OP_PHI فعلياً.
+        (void)ir_outssa_run(ir_module);
 
         // 4. اختيار التعليمات (Instruction Selection) (v0.3.2.1)
         if (config.verbose)

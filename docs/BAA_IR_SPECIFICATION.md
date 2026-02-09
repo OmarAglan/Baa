@@ -292,6 +292,7 @@ Becomes:
 
 | Pass | Arabic | Description |
 |------|--------|-------------|
+| Mem2Reg | `ترقية_الذاكرة_إلى_سجلات` | Promote simple allocas to direct SSA register use |
 | Constant Fold | `طي_الثوابت` | Evaluate constants at compile time |
 | Dead Code | `حذف_الميت` | Remove unreachable code |
 | Copy Propagation | `نشر_النسخ` | Replace copies with original |
@@ -300,11 +301,12 @@ Becomes:
 ### 7.3 Pass Order
 
 1. `تحليل_السيطرة` - Build dominator tree
-2. `طي_الثوابت` - Fold constant expressions
-3. `نشر_النسخ` - Propagate copies
-4. `حذف_المكرر` - Eliminate common subexpressions
-5. `حذف_الميت` - Remove dead code
-6. `تحليل_الحياة` - Compute liveness for register allocation
+2. `ترقية_الذاكرة_إلى_سجلات` - Promote simple allocas (Mem2Reg baseline)
+3. `طي_الثوابت` - Fold constant expressions
+4. `نشر_النسخ` - Propagate copies
+5. `حذف_المكرر` - Eliminate common subexpressions
+6. `حذف_الميت` - Remove dead code
+7. `تحليل_الحياة` - Compute liveness for register allocation
 
 ---
 

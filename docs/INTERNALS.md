@@ -18,6 +18,7 @@ This document details the internal architecture, data structures, and algorithms
 - [Abstract Syntax Tree](#4-abstract-syntax-tree)
 - [Semantic Analysis](#5-semantic-analysis)
 - [Intermediate Representation](#6-intermediate-representation)
+- [IR Mem2Reg Pass](#6145-ir-mem2reg-pass-ترقية_الذاكرة_إلى_سجلات--v03251)
 - [IR Constant Folding Pass](#615-ir-constant-folding-pass)
 - [IR Dead Code Elimination Pass](#616-ir-dead-code-elimination-pass)
 - [IR Copy Propagation Pass](#617-ir-copy-propagation-pass)
@@ -763,6 +764,25 @@ The IR analysis layer provides foundational compiler analyses required by the up
   - [`ir_module_compute_dominators()`](src/ir_analysis.h:82)
 
 > Implementation lives in [`src/ir_analysis.c`](src/ir_analysis.c:1).
+
+---
+
+### 6.14.5. IR Mem2Reg Pass (ترقية_الذاكرة_إلى_سجلات) — v0.3.2.5.1
+
+Baseline Mem2Reg is a correctness-first SSA step that promotes a safe subset of local variables represented by `حجز`/`خزن`/`حمل` into direct SSA register use.
+
+**File:** [`src/ir_mem2reg.c`](src/ir_mem2reg.c:1)
+
+**Entry Point:** [`ir_mem2reg_run()`](src/ir_mem2reg.c:1)
+
+**Pass Descriptor:** [`IR_PASS_MEM2REG`](src/ir_mem2reg.c:1) (used with the optimizer pipeline).
+
+**Constraints (baseline):**
+- Single basic block only
+- No pointer escape (not passed to `نداء`, not used in `فاي`, not stored as a value)
+- No load-before-store (prevents uninitialized reads)
+
+**Pipeline position:** Run first in the optimizer (before constfold/copyprop/CSE/DCE) via [`ir_optimizer_run()`](src/ir_optimizer.c:73).
 
 ---
 

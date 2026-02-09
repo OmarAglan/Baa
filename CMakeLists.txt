@@ -10,6 +10,7 @@ set(SOURCES
     src/ir.c          # Intermediate Representation (Phase 3)
     src/ir_analysis.c # IR analysis (CFG + dominance) (v0.3.1.1)
     src/ir_builder.c  # IR Builder pattern API (v0.3.0.2)
+    src/ir_mem2reg.c  # IR Mem2Reg baseline (ترقية الذاكرة إلى سجلات) (v0.3.2.5.1)
     src/ir_constfold.c # IR constant folding (v0.3.1.2)
     src/ir_dce.c      # IR dead code elimination (حذف_الميت) (v0.3.1.3)
     src/ir_copyprop.c # IR copy propagation (نشر_النسخ) (v0.3.1.4)

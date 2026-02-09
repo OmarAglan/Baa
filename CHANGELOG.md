@@ -8,6 +8,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.3.2.5.1] - 2026-02-10
+
+### Added
+
+- **Baseline Mem2Reg pass (ترقية الذاكرة إلى سجلات)** — promotes simple single-block allocas by rewriting `حمل`/`خزن` into SSA `نسخ`:
+  - New pass: [`ir_mem2reg_run()`](src/ir_mem2reg.c:1), descriptor: [`IR_PASS_MEM2REG`](src/ir_mem2reg.c:1).
+  - Integrated into optimizer pipeline before constfold/copyprop/CSE/DCE in [`ir_optimizer_run()`](src/ir_optimizer.c:73).
+  - Unit test: [`tests/ir_mem2reg_test.c`](tests/ir_mem2reg_test.c:1).
+
 ## [0.3.2.4-IR-FIX] - 2026-02-08
 
 ### Fixed

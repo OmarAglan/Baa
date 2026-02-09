@@ -7,8 +7,8 @@
  *
  * Optimization Levels:
  * - O0: No optimization (for debugging)
- * - O1: Basic optimizations (constfold, copyprop, dce)
- * - O2: Full optimizations (+ CSE, iteration)
+ * - O1: Basic optimizations (mem2reg, constfold, copyprop, dce)
+ * - O2: Full optimizations (+ CSE, fixpoint iteration)
  */
 
 #ifndef BAA_IR_OPTIMIZER_H
@@ -34,6 +34,7 @@ typedef enum {
  * @brief Run the optimization pipeline on an IR module.
  *
  * Pass ordering (O1+):
+ * 0. Mem2Reg (ترقية الذاكرة إلى سجلات) — baseline
  * 1. Constant Folding (طي_الثوابت)
  * 2. Copy Propagation (نشر_النسخ)
  * 3. CSE (حذف_المكرر) — O2 only

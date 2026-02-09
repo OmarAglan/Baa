@@ -187,11 +187,18 @@
 
 ### v0.3.2.5: SSA Construction 🔄
 
-#### v0.3.2.5.1: Memory to Register Promotion
+**Strategy (Canonical SSA / الطريقة القياسية لـ SSA):**
+- **Mem2Reg (ترقية الذاكرة إلى سجلات)** بأسلوب Cytron/LLVM القياسي:
+  - حساب **المسيطرات (Dominators)** و **حدود السيطرة (Dominance Frontiers)**
+  - إدراج عقد **فاي (Phi)** عند نقاط الدمج (join points)
+  - **إعادة التسمية (SSA Renaming)** لبناء تعريفات واصلة (reaching definitions)
+- هذا الأسلوب هو الأساس طويل المدى لتحسينات متقدمة لاحقاً مثل: GVN/CSE و LICM و PRE وغيرها.
 
-- [ ] **Identify promotable allocas** — Single-block allocas with no escaping.
-- [ ] **Replace loads/stores** — Convert to direct register use.
-- [ ] **Remove dead allocas** — Delete promoted `حجز` instructions.
+#### v0.3.2.5.1: Memory to Register Promotion ✅ COMPLETED (2026-02-09)
+
+- [x] **Identify promotable allocas** — Single-block allocas with no escaping (correctness-first baseline; design stays compatible with full Mem2Reg).
+- [x] **Replace loads/stores** — Convert to direct register use.
+- [x] **Remove dead allocas** — Delete promoted `حجز` instructions.
 
 #### v0.3.2.5.2: Phi Node Insertion
 

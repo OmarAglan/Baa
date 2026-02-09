@@ -2,7 +2,7 @@
 
 > **Version:** 0.3.2.4 | [← Compiler Internals](INTERNALS.md) | [IR Specification →](BAA_IR_SPECIFICATION.md)
 
-This document details the C functions, enumerations, and structures defined in `src/baa.h`, `src/ir.h`, `src/ir_builder.h`, `src/ir_lower.h`, `src/ir_analysis.h`, `src/ir_pass.h`, `src/ir_dce.h`, `src/ir_copyprop.h`, `src/ir_cse.h`, `src/ir_optimizer.h`, `src/isel.h`, and `src/regalloc.h`.
+This document details the C functions, enumerations, and structures defined in `src/baa.h`, `src/ir.h`, `src/ir_builder.h`, `src/ir_lower.h`, `src/ir_analysis.h`, `src/ir_pass.h`, `src/ir_mem2reg.h`, `src/ir_dce.h`, `src/ir_copyprop.h`, `src/ir_cse.h`, `src/ir_optimizer.h`, `src/isel.h`, and `src/regalloc.h`.
 
 ---
 
@@ -1225,7 +1225,33 @@ Lowers a linked list of statements (e.g., the statements list inside `NODE_BLOCK
 
 ## 7. IR Optimization Passes
 
-### 7.1. Constant Folding (طي_الثوابت)
+### 7.1. Mem2Reg (ترقية الذاكرة إلى سجلات)
+
+#### `ir_mem2reg_run`
+
+```c
+bool ir_mem2reg_run(IRModule* module)
+```
+
+Runs a baseline Mem2Reg pass on the given IR module. Promotes a safe subset of `حجز` (alloca) by rewriting local `حمل`/`خزن` into SSA `نسخ` within a single basic block (no pointer escape).
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `module`  | `IRModule*` | The IR module to optimize |
+
+**Returns:** `true` if the module was modified, `false` otherwise.
+
+#### `IR_PASS_MEM2REG`
+
+```c
+extern IRPass IR_PASS_MEM2REG;
+```
+
+Descriptor for the Mem2Reg pass, usable with the IR optimizer pipeline.
+
+---
+
+### 7.2. Constant Folding (طي_الثوابت)
 
 #### `ir_constfold_run`
 
@@ -1251,7 +1277,7 @@ Descriptor for the constant folding pass, usable with the IR optimizer pipeline.
 
 ---
 
-### 7.2. Dead Code Elimination (حذف_الميت)
+### 7.3. Dead Code Elimination (حذف_الميت)
 
 #### `ir_dce_run`
 
@@ -1280,7 +1306,7 @@ Descriptor for the dead code elimination pass, usable with the IR optimizer pipe
 
 ---
 
-### 7.3. Copy Propagation (نشر_النسخ)
+### 7.4. Copy Propagation (نشر_النسخ)
 
 #### `ir_copyprop_run`
 
@@ -1306,7 +1332,7 @@ Descriptor for the copy propagation pass, usable with the IR optimizer pipeline.
 
 ---
 
-### 7.4. Common Subexpression Elimination (حذف_المكرر)
+### 7.5. Common Subexpression Elimination (حذف_المكرر)
 
 #### `ir_cse_run`
 
@@ -1343,7 +1369,7 @@ Descriptor for the common subexpression elimination pass, usable with the IR opt
 
 ---
 
-### 7.5. Optimization Pipeline (v0.3.1.6)
+### 7.6. Optimization Pipeline (v0.3.1.6)
 
 #### `OptLevel`
 
@@ -1357,7 +1383,7 @@ typedef enum {
 
 Optimization level enum controlling which passes are run:
 - **O0:** No optimization (for debugging).
-- **O1:** Basic optimizations (constfold, copyprop, dce).
+- **O1:** Basic optimizations (mem2reg, constfold, copyprop, dce).
 - **O2:** Full optimizations (+ CSE, fixpoint iteration).
 
 #### `ir_optimizer_run`
@@ -1376,6 +1402,7 @@ Runs the optimization pipeline on the given IR module.
 **Returns:** `true` if any optimization was performed, `false` otherwise.
 
 **Pass ordering:**
+0. Mem2Reg (ترقية الذاكرة إلى سجلات) — baseline
 1. Constant Folding (طي_الثوابت)
 2. Copy Propagation (نشر_النسخ)
 3. CSE (حذف_المكرر) — O2 only

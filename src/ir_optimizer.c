@@ -9,6 +9,7 @@
  */
 
 #include "ir_optimizer.h"
+#include "ir_mem2reg.h"
 #include "ir_constfold.h"
 #include "ir_copyprop.h"
 #include "ir_cse.h"
@@ -40,6 +41,10 @@ const char* ir_optimizer_level_name(OptLevel level) {
  */
 static bool optimizer_iteration(IRModule* module, OptLevel level) {
     bool changed = false;
+
+    // Pass 0: Mem2Reg (ترقية الذاكرة إلى سجلات) — baseline
+    // Promotes simple single-block allocas by rewriting load/store into SSA copies.
+    changed |= ir_mem2reg_run(module);
 
     // Pass 1: Constant Folding (طي_الثوابت)
     // Folds arithmetic with constant operands

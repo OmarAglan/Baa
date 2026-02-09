@@ -133,6 +133,75 @@ Baa is statically typed. All variables must be declared with their type.
 | `نص` | `char*` | String pointer (Reference) | `نص اسم = "باء".` |
 | `منطقي` | `bool` (stored as int) | Boolean value (`صواب`/`خطأ`, stored as 1/0) | `منطقي ب = صواب.` |
 
+### 3.2. Integer Sizes (أحجام الأعداد الصحيحة) [Scheduled v0.3.5.5]
+
+Baa supports explicit integer sizes for systems programming:
+
+| Type | Description | Range (Approx) |
+|------|-------------|----------------|
+| `ص٨` | Signed 8-bit | -128 to 127 |
+| `ص١٦` | Signed 16-bit | -32,768 to 32,767 |
+| `ص٣٢` | Signed 32-bit | -2 Billion to +2 Billion |
+| `ص٦٤` | Signed 64-bit | Large (Default `صحيح`) |
+| `ط٨` | Unsigned 8-bit | 0 to 255 |
+| `ط١٦` | Unsigned 16-bit | 0 to 65,535 |
+| `ط٣٢` | Unsigned 32-bit | 0 to 4 Billion |
+| `ط٦٤` | Unsigned 64-bit | Huge (Default `طبيعي`) |
+
+### 3.3. Type Aliases (أسماء الأنواع البديلة) [Scheduled v0.3.6.5]
+
+Create custom names for existing types using `نوع`.
+
+**Syntax:** `نوع <new_name> = <existing_type>.`
+
+```baa
+نوع معرف = ط٦٤.
+نوع كود = ص٣٢.
+
+معرف ر = ١٠٠.
+كود خ = -١.
+```
+
+### 3.4. Union Types (الاتحادات) [Scheduled v0.3.4.5]
+
+Unions allow different data types to share the same memory location.
+
+**Syntax:**
+```baa
+اتحاد بيانات {
+    صحيح رقم.
+    نص نص_قيمة.
+}
+
+اتحاد بيانات د.
+د:رقم = ١٠.
+```
+
+### 3.5. Static Local Variables (متغيرات ساكنة) [Scheduled v0.3.7.5]
+
+Variables inside a function that persist across calls.
+
+**Syntax:** `ساكن <type> <name> = <value>.`
+
+```baa
+صحيح عداد() {
+    ساكن صحيح ع = ٠.
+    ع = ع + ١.
+    إرجع ع.
+}
+```
+
+### 3.6. Type Casting (تحويل الأنواع) [Scheduled v0.3.10.5]
+
+Explicitly convert between types using `كـ` (As).
+
+**Syntax:** `كـ<type>(expression)`
+
+```baa
+صحيح س = ٦٥.
+حرف ح = كـ<حرف>(س).
+```
+
 **Character literals:** Baa supports character literals like `'أ'`, but there is currently no dedicated `حرف` type keyword; character literals behave like integers in expressions and code generation.
 
 ### 3.2. Scalar Variables
@@ -285,6 +354,46 @@ Every program **must** have a main function:
 ```
 
 **Important:** The entry point **must** be named `الرئيسية` (ar-ra'īsīyah). It is exported as `main` in the generated assembly.
+
+**Command Line Arguments [Scheduled v0.3.12.5]:**
+The main function can optionally accept arguments:
+
+```baa
+صحيح الرئيسية(صحيح عدد، نص[] معاملات) {
+    إذا (عدد > ١) {
+        اطبع معاملات[١].
+    }
+    إرجع ٠.
+}
+```
+
+### 5.6. Function Pointers (مؤشرات الدوال) [Scheduled v0.3.10.6]
+
+Pass functions as values.
+
+**Syntax:** `دالة(types) -> return_type`
+
+```baa
+نوع عملية = دالة(صحيح، صحيح) -> صحيح.
+
+صحيح جمع(صحيح أ، صحيح ب) { إرجع أ + ب. }
+
+صحيح الرئيسية() {
+    عملية ع = جمع.
+    اطبع ع(١، ٢).
+    إرجع ٠.
+}
+```
+
+### 5.7. Variadic Functions (دوال متغيرة المعاملات) [Scheduled v0.4.0.5]
+
+Functions that accept any number of arguments using `...`.
+
+```baa
+عدم سجل(نص رسالة، ...) {
+    // Implementation
+}
+```
 
 ### 5.5. Recursion (التكرار)
 
@@ -543,6 +652,20 @@ From highest to lowest:
 8. `||` — Logical OR
 
 **Note:** Use parentheses `()` to override precedence when needed.
+
+---
+
+## 10. Inline Assembly (المجمع المدمج) [Scheduled v0.4.0.6]
+
+Embed raw assembly code directly.
+
+**Syntax:** `مجمع { strings }`
+
+```baa
+مجمع {
+    "nop"
+}
+```
 
 ---
 

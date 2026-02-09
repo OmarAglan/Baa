@@ -369,6 +369,44 @@
 - [ ] **Struct Declaration** – Group related data into composite types.
 - [ ] **Member Access** – Use `:` (colon) operator for accessing members.
 
+### v0.3.4.5: Union Types (الاتحادات) 🔀
+**Goal:** Memory-efficient variant types for parsers and data structures.
+
+#### Features
+- [ ] **Union Declaration**:
+  ```baa
+  اتحاد قيمة {
+      صحيح رقم.
+      عشري عدد.
+      نص نص_قيمة.
+      منطقي منطق.
+  }
+  ```
+
+- [ ] **Union Usage**:
+  ```baa
+  اتحاد قيمة ق.
+  ق:رقم = ٤٢.        // All members share same memory
+  ق:عدد = ٣.١٤.      // Overwrites previous value
+  ```
+
+- [ ] **Tagged Union Pattern** (manual):
+  ```baa
+  تعداد نوع_قيمة { رقم، عدد، نص_ق }
+  
+  هيكل قيمة_موسومة {
+      تعداد نوع_قيمة نوع.
+      اتحاد قيمة بيانات.
+  }
+  ```
+
+#### Implementation Tasks
+- [ ] **Token**: Add `TOKEN_UNION` for `اتحاد` keyword.
+- [ ] **Parser**: Parse union declaration similar to struct.
+- [ ] **Semantic**: All members start at offset 0.
+- [ ] **Memory Layout**: Size = max member size, align = max member align.
+- [ ] **Codegen**: Generate union access code.
+
 **Complete Example:**
 
 ```baa
@@ -460,6 +498,53 @@
 - String operations: `طول_نص()`, `دمج_نص()`, `قارن_نص()`
 - String indexing: `اسم[٠]` returns `حرف`
 
+### v0.3.5.5: Integer Type Sizes 🔢
+**Goal:** Support different integer sizes for precise memory control and C interop.
+
+#### Features
+- [ ] **Signed Integer Types**:
+  ```baa
+  ص٨ بايت_موقع = -١٢٨.        // int8_t:  -128 to 127
+  ص١٦ قصير = -٣٢٠٠٠.          // int16_t: -32768 to 32767
+  ص٣٢ عادي = -٢٠٠٠٠٠٠٠٠٠.     // int32_t
+  ص٦٤ طويل = ٩٠٠٠٠٠٠٠٠٠٠٠٠.   // int64_t (current صحيح)
+  ```
+
+- [ ] **Unsigned Integer Types**:
+  ```baa
+  ط٨ بايت = ٢٥٥.               // uint8_t:  0 to 255
+  ط١٦ قصير = ٦٥٠٠٠.            // uint16_t: 0 to 65535
+  ط٣٢ عادي = ٤٠٠٠٠٠٠٠٠٠.       // uint32_t
+  ط٦٤ طويل = ١٨٠٠٠٠٠٠٠٠٠٠٠٠٠٠٠٠٠٠. // uint64_t
+  ```
+
+- [ ] **Type Aliases**:
+  ```baa
+  // Built-in aliases
+  صحيح   = ص٦٤    // Default signed integer
+  طبيعي  = ط٦٤    // Default unsigned integer  
+  بايت   = ط٨     // Byte type
+  حجم    = ط٦٤    // Size type (like size_t)
+  ```
+
+- [ ] **IR Type Support**:
+  ```
+  // Already have in IR:
+  ص٦٤، ص٣٢، ص٨، ص١
+  
+  // Add unsigned:
+  ط٦٤، ط٣٢، ط١٦، ط٨
+  ```
+
+#### Implementation Tasks
+- [ ] **Lexer**: Tokenize `ص٨`, `ص١٦`, `ص٣٢`, `ص٦٤`, `ط٨`, `ط١٦`, `ط٣٢`, `ط٦٤`.
+- [ ] **Type System**: Add size and signedness to integer types.
+- [ ] **IR**: Already supports `ص٦٤`, `ص٣٢`, `ص٨` - add unsigned variants.
+- [ ] **Semantic**: Warn on implicit narrowing conversions.
+- [ ] **Semantic**: Handle signed/unsigned comparison warnings.
+- [ ] **Codegen**: Generate correct-sized mov/add/etc instructions.
+- [ ] **Codegen**: Handle sign-extension vs zero-extension.
+
 ---
 
 ### v0.3.6: Low-Level Operations 🔧
@@ -516,6 +601,31 @@
 - [ ] **Codegen**: Generate bitwise assembly instructions.
 - [ ] **Codegen**: Calculate sizes for `حجم` operator.
 
+### v0.3.6.5: Type Aliases (أسماء الأنواع البديلة) 🏷️
+**Goal:** Create custom type names for readability and abstraction.
+
+#### Features
+- [ ] **Simple Type Alias**:
+  ```baa
+  نوع معرف = ط٦٤.
+  نوع نتيجة = ص٣٢.
+  
+  معرف رقم_المستخدم = ١٢٣٤٥.
+  نتيجة كود_خطأ = -١.
+  ```
+
+- [ ] **Pointer Type Alias**:
+  ```baa
+  نوع نص_ثابت = ثابت حرف*.
+  نوع مؤشر_بايت = ط٨*.
+  ```
+
+#### Implementation Tasks
+- [ ] **Token**: Add `TOKEN_TYPE_ALIAS` for `نوع` keyword.
+- [ ] **Parser**: Parse `نوع <name> = <type>.`
+- [ ] **Semantic**: Resolve type aliases during type checking.
+- [ ] **Symbol Table**: Store type aliases separately from variables.
+
 ---
 
 ### v0.3.7: System Improvements 🔧
@@ -538,6 +648,27 @@
 - [ ] Optimize symbol table lookups (consider hash table).
 - [ ] Add more comprehensive error recovery.
 - [ ] Improve codegen output readability (comments in assembly).
+
+### v0.3.7.5: Static Local Variables (متغيرات ساكنة محلية) 📌
+**Goal:** Variables that persist between function calls.
+
+#### Features
+- [ ] **Static Local Syntax**:
+  ```baa
+  صحيح عداد() {
+      ساكن صحيح ع = ٠.  // Initialized once, persists
+      ع = ع + ١.
+      إرجع ع.
+  }
+  
+  // First call returns 1, second returns 2, etc.
+  ```
+
+#### Implementation Tasks
+- [ ] **Token**: Add `TOKEN_STATIC` for `ساكن` keyword.
+- [ ] **Semantic**: Static locals go in .data section, not stack.
+- [ ] **Codegen**: Generate unique global label for static locals.
+- [ ] **Codegen**: Initialize in .data section.
 
 ---
 
@@ -693,6 +824,93 @@
 - [ ] **Codegen**: Generate LEA for address-of.
 - [ ] **Codegen**: Generate proper load/store for dereference.
 
+### v0.3.10.5: Type Casting (تحويل الأنواع) 🔄
+**Goal:** Explicit type conversions for low-level programming.
+
+#### Features
+- [ ] **Cast Syntax**:
+  ```baa
+  صحيح س = ٦٥.
+  حرف ح = كـ<حرف>(س).
+  ```
+
+- [ ] **Numeric Casts**:
+  ```baa
+  ص٣٢ صغير = كـ<ص٣٢>(قيمة_كبيرة).  // Truncation
+  ص٦٤ كبير = كـ<ص٦٤>(قيمة_صغيرة).  // Sign extension
+  ط٦٤ بدون = كـ<ط٦٤>(موقع).        // Signed to unsigned
+  ```
+
+- [ ] **Pointer Casts**:
+  ```baa
+  ط٨* بايتات = كـ<ط٨*>(مؤشر_هيكل).  // Reinterpret
+  عدم* عام = كـ<عدم*>(أي_مؤشر).     // To void pointer
+  هيكل س* محدد = كـ<هيكل س*>(عام). // From void pointer
+  ```
+
+#### Implementation Tasks
+- [ ] **Lexer**: Tokenize `كـ` keyword and `<>` for type parameter.
+- [ ] **Parser**: Parse `كـ<type>(expr)` form.
+- [ ] **Semantic**: Validate cast safety, warn on dangerous casts.
+- [ ] **Codegen**: Generate appropriate conversion instructions.
+
+### v0.3.10.6: Function Pointers (مؤشرات الدوال) 📍
+**Goal:** First-class function references for callbacks and dispatch tables.
+
+#### Features
+- [ ] **Function Pointer Type**:
+  ```baa
+  // Pointer to function taking two صحيح, returning صحيح
+  نوع دالة_ثنائية = دالة(صحيح، صحيح) -> صحيح.
+  
+  // Or inline
+  دالة(صحيح، صحيح) -> صحيح مؤشر_دالة.
+  ```
+
+- [ ] **Assign Function to Pointer**:
+  ```baa
+  صحيح جمع(صحيح أ، صحيح ب) { إرجع أ + ب. }
+  صحيح ضرب(صحيح أ، صحيح ب) { إرجع أ * ب. }
+  
+  دالة_ثنائية عملية = جمع.   // Points to جمع
+  عملية = ضرب.               // Now points to ضرب
+  ```
+
+- [ ] **Call Through Pointer**:
+  ```baa
+  صحيح نتيجة = عملية(١٠، ٢٠).  // Calls ضرب(10, 20) = 200
+  ```
+
+- [ ] **Function Pointer as Parameter**:
+  ```baa
+  صحيح طبق(صحيح[] قائمة، صحيح حجم، دالة_ثنائية د) {
+      صحيح نتيجة = قائمة[٠].
+      لكل (صحيح ع = ١؛ ع < حجم؛ ع++) {
+          نتيجة = د(نتيجة، قائمة[ع]).
+      }
+      إرجع نتيجة.
+  }
+  
+  // Usage
+  صحيح مجموع = طبق(أرقام، ١٠، جمع).
+  ```
+
+- [ ] **Null Function Pointer**:
+  ```baa
+  دالة_ثنائية فارغ = عدم.
+  إذا (فارغ != عدم) {
+      فارغ(١، ٢).
+  }
+  ```
+
+#### Implementation Tasks
+- [ ] **Parser**: Parse function type syntax `دالة(...) -> نوع`.
+- [ ] **Type System**: Add `TYPE_FUNCTION_POINTER` with signature.
+- [ ] **Semantic**: Type-check function pointer assignments.
+- [ ] **Semantic**: Validate call through pointer matches signature.
+- [ ] **Codegen**: Generate indirect call instructions.
+- [ ] **IR**: Add function pointer type to IR.
+
 ---
 
 ### v0.3.11: Dynamic Memory 🧠
@@ -795,6 +1013,37 @@
 - [ ] **Error Handling**: Return error codes for failed operations.
 - [ ] **Codegen**: Generate calls to file functions.
 
+### v0.3.12.5: Command Line Arguments (معاملات سطر الأوامر) 🖥️
+**Goal:** Access program arguments - essential for compiler self-hosting.
+
+#### Features
+- [ ] **Main with Arguments**:
+  ```baa
+  صحيح الرئيسية(صحيح عدد، نص[] معاملات) {
+      // عدد = argument count (like argc)
+      // معاملات = argument array (like argv)
+      
+      إذا (عدد < ٢) {
+          اطبع "الاستخدام: برنامج <ملف>".
+          إرجع ١.
+      }
+      
+      نص اسم_البرنامج = معاملات[٠].
+      نص ملف_إدخال = معاملات[١].
+      
+      اطبع "تجميع: ".
+      اطبع ملف_إدخال.
+      
+      إرجع ٠.
+  }
+  ```
+
+#### Implementation Tasks
+- [ ] **Parser**: Allow parameters in `الرئيسية` function.
+- [ ] **Semantic**: Validate main signature matches expected pattern.
+- [ ] **Codegen**: Link with proper C runtime entry point.
+- [ ] **Codegen (Full Independence)**: Custom _start that sets up argc/argv.
+
 ---
 
 ## 📚 Phase 4: Standard Library & Polish (v0.4.x)
@@ -815,6 +1064,78 @@
 
   ```baa
   نص رسالة = نسق("النتيجة: %d", قيمة).
+  ```
+
+### v0.4.0.5: Variadic Functions (دوال متغيرة المعاملات) 📊
+**Goal:** Functions accepting variable number of arguments.
+
+#### Features
+- [ ] **Variadic Declaration**:
+  ```baa
+  عدم اطبع_منسق(نص تنسيق، ...) {
+      // Implementation using variadic access
+  }
+  ```
+
+- [ ] **Variadic Access Macros/Functions**:
+  ```baa
+  عدم اطبع_أرقام(صحيح عدد، ...) {
+      قائمة_معاملات معاملات.
+      بدء_معاملات(معاملات، عدد).
+      
+      لكل (صحيح ع = ٠؛ ع < عدد؛ ع++) {
+          صحيح قيمة = معامل_تالي(معاملات، صحيح).
+          اطبع قيمة.
+      }
+      
+      نهاية_معاملات(معاملات).
+  }
+  
+  // Usage
+  اطبع_أرقام(٣، ١٠، ٢٠، ٣٠).
+  ```
+
+#### Implementation Tasks
+- [ ] **Lexer**: Tokenize `...` (ellipsis).
+- [ ] **Parser**: Parse variadic function declarations.
+- [ ] **Type System**: Handle variadic function types.
+- [ ] **Codegen (Windows x64)**: Follow Windows variadic ABI.
+- [ ] **Codegen (Linux x64)**: Follow SystemV variadic ABI (register save area).
+- [ ] **Built-ins**: Implement `بدء_معاملات`, `معامل_تالي`, `نهاية_معاملات`.
+
+### v0.4.0.6: Inline Assembly (المجمع المدمج) 🔧
+**Goal:** Embed assembly code for low-level operations.
+
+#### Features
+- [ ] **Basic Inline Assembly**:
+  ```baa
+  مجمع {
+      "nop"
+  }
+  ```
+
+- [ ] **With Outputs and Inputs**:
+  ```baa
+  صحيح قراءة_عداد() {
+      ط٣٢ منخفض.
+      ط٣٢ مرتفع.
+      مجمع {
+          "rdtsc"
+          : "=a" (منخفض)، "=d" (مرتفع)
+      }
+      إرجع (كـ<ص٦٤>(مرتفع) << ٣٢) | كـ<ص٦٤>(منخفض).
+  }
+  ```
+
+#### Implementation Tasks
+- [ ] **Token**: Add `TOKEN_ASM` for `مجمع` keyword.
+- [ ] **Parser**: Parse inline assembly blocks.
+- [ ] **Codegen**: Emit assembly directly with proper constraints.
+- [ ] **Semantic**: Validate constraint syntax.
+
+#### Deferred to v3.0
+- Full constraint support (memory, register classes)
+- Clobber lists
   ```
 
 - [ ] **Formatted Input**:

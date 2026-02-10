@@ -36,10 +36,6 @@ IRPass IR_PASS_DCE = {
 // Helpers
 // -----------------------------------------------------------------------------
 
-static int ir_is_terminator_op(IROp op) {
-    return op == IR_OP_BR || op == IR_OP_BR_COND || op == IR_OP_RET;
-}
-
 static int ir_inst_has_side_effects(IRInst* inst) {
     if (!inst) return 1;
 

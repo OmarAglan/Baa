@@ -166,16 +166,6 @@ static int ir_func_replace_reg_uses(IRFunc* func, int reg_num, IRType* folded_ty
     return changed;
 }
 
-static int ir_module_replace_reg_uses(IRModule* module, int reg_num, IRType* folded_type, int64_t folded_value) {
-    if (!module) return 0;
-
-    int changed = 0;
-    for (IRFunc* f = module->funcs; f; f = f->next) {
-        changed |= ir_func_replace_reg_uses(f, reg_num, folded_type, folded_value);
-    }
-    return changed;
-}
-
 // -----------------------------------------------------------------------------
 // Folding logic
 // -----------------------------------------------------------------------------

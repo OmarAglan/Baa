@@ -8,6 +8,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.3.2.6.0] - 2026-02-09
+
+### Changed
+
+- **Codebase soldering (مرحلة تلحيم القاعدة)** — hardening + hygiene without adding new language/IR features:
+  - CMake two-tier warnings (`-Wall -Wextra -Wformat=2 -Wshadow`) with optional `-Werror` toggle.
+  - Safer driver command construction (bounded appends instead of `sprintf/strcpy/strcat`).
+  - Symbol-table name overflow guards in semantic analysis.
+  - Updater version parsing hardened to support multi-part versions (up to 5 segments) + safer path building.
+  - Parser integer parsing switched from `atoi` to checked `strtoll`.
+
 ## [0.3.2.5.3] - 2026-02-09
 
 ### Added

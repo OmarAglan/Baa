@@ -34,10 +34,6 @@ IRPass IR_PASS_COPYPROP = {
 // Helpers: value classification / cloning
 // -----------------------------------------------------------------------------
 
-static int ir_value_is_reg(IRValue* v) {
-    return v && v->kind == IR_VAL_REG;
-}
-
 static IRValue* ir_value_clone_with_type(IRValue* v, IRType* override_type) {
     if (!v) return NULL;
 

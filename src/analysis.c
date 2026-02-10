@@ -68,6 +68,18 @@ static void reset_analysis() {
  */
 static void add_symbol(const char* name, ScopeType scope, DataType type, bool is_const,
                        int decl_line, int decl_col, const char* decl_file) {
+    if (!name) {
+        semantic_error("اسم الرمز فارغ.");
+        return;
+    }
+
+    size_t name_len = strlen(name);
+    size_t name_cap = sizeof(global_symbols[0].name);
+    if (name_len >= name_cap) {
+        semantic_error("اسم الرمز طويل جداً: '%s' (الحد الأقصى %zu حرفاً).", name, name_cap - 1);
+        return;
+    }
+
     if (scope == SCOPE_GLOBAL) {
         // التحقق من التكرار
         for (int i = 0; i < global_count; i++) {
@@ -78,7 +90,7 @@ static void add_symbol(const char* name, ScopeType scope, DataType type, bool is
         }
         if (global_count >= 100) { semantic_error("Too many global variables."); return; }
         
-        strcpy(global_symbols[global_count].name, name);
+        memcpy(global_symbols[global_count].name, name, name_len + 1);
         global_symbols[global_count].scope = SCOPE_GLOBAL;
         global_symbols[global_count].type = type;
         global_symbols[global_count].is_const = is_const;
@@ -106,7 +118,7 @@ static void add_symbol(const char* name, ScopeType scope, DataType type, bool is
             }
         }
 
-        strcpy(local_symbols[local_count].name, name);
+        memcpy(local_symbols[local_count].name, name, name_len + 1);
         local_symbols[local_count].scope = SCOPE_LOCAL;
         local_symbols[local_count].type = type;
         local_symbols[local_count].is_const = is_const;

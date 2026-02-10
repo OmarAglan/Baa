@@ -289,13 +289,6 @@ static void emit_epilogue(MachineFunc* func, FILE* out,
 // ============================================================================
 
 /**
- * @brief هل المعامل من نوع ذاكرة؟
- */
-static bool is_mem_operand(MachineOperand* op) {
-    return op && (op->kind == MACH_OP_MEM || op->kind == MACH_OP_GLOBAL);
-}
-
-/**
  * @brief تحديد لاحقة الحجم لتعليمة بناءً على معاملاتها.
  */
 static char infer_suffix(MachineInst* inst) {
@@ -308,6 +301,7 @@ static char infer_suffix(MachineInst* inst) {
 
 void emit_inst(MachineInst* inst, MachineFunc* func, FILE* out) {
     if (!inst || !out) return;
+    (void)func;
 
     switch (inst->op) {
         // ================================================================

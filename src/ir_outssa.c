@@ -75,15 +75,6 @@ static IRBlock* ir_block_from_value(IRValue* v) {
     return v->data.block;
 }
 
-static int ir_func_max_block_id_local(IRFunc* func) {
-    int max_id = -1;
-    if (!func) return 0;
-    for (IRBlock* b = func->blocks; b; b = b->next) {
-        if (b->id > max_id) max_id = b->id;
-    }
-    return max_id + 1;
-}
-
 static IRValue* ir_value_clone_with_type_local(IRValue* v, IRType* override_type) {
     if (!v) return NULL;
 

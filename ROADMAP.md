@@ -218,6 +218,16 @@
 
 ### v0.3.2.6: IR Stabilization & Polish 🧹
 
+#### v0.3.2.6.0: Codebase Soldering (مرحلة_تلحيم_القاعدة) ✅ COMPLETED (2026-02-09)
+
+- [x] **Enable compiler warnings (two-tier)** — Default warnings on; optional `-Werror` hardening toggle.
+- [x] **Fix unsafe string building in driver** — Replace `sprintf/strcpy/strcat` command construction with bounded appends and overflow checks.
+- [x] **Fix symbol-table name overflow** — Guard `Symbol.name[32]` writes; reject/diagnose identifiers that exceed the limit.
+- [x] **Harden updater version parsing** — Support multi-part versions like `0.3.2.5.3`; replace `sprintf` with `snprintf`; check parse results.
+- [x] **Audit `strncpy` usage** — Ensure explicit NUL-termination and bounds safety in lexer and helpers.
+- [x] **Replace `atoi` with checked parsing** — Use `strtoll` + validation for integer literals and array sizes; produce safe diagnostics.
+- [x] **Warning clean build** — Zero warnings under default warning set; `-Werror` build passes.
+
 #### v0.3.2.6.1: IR Memory Management
 
 - [ ] **Arena allocator for IR** — Fast allocation, bulk deallocation.

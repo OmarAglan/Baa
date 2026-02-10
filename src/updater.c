@@ -8,11 +8,12 @@
 #include <windows.h>
 #include <urlmon.h>
 #include <wininet.h>
+#include <ctype.h>
 
-// ---------------------------------------------------------
-// ⚠️ TODO: Change these URLs to your GitHub Pages path
-// Example: "https://username.github.io/baa/version.txt"
-// ---------------------------------------------------------
+// -----------------------------------------------------------------------------
+// ملاحظة: روابط التحديث (يمكن تعديلها لتناسب مسار النشر الخاص بك)
+// مثال: "https://username.github.io/baa/version.txt"
+// -----------------------------------------------------------------------------
 #define UPDATE_URL_VERSION "https://omardev.engineer/baaInstaller/version.txt"
 #define UPDATE_URL_SETUP   "https://omardev.engineer/baaInstaller/baa_setup.exe"
 
@@ -24,6 +25,51 @@
  * @brief قراءة الإصدار من الخادم.
  * @return 1 إذا وجد تحديث، 0 إذا لم يوجد.
  */
+static int parse_version_parts_5(const char* s, int out_parts[5]) {
+    if (!s || !out_parts) return 0;
+
+    for (int i = 0; i < 5; i++) out_parts[i] = 0;
+
+    const char* p = s;
+    while (*p && isspace((unsigned char)*p)) p++;
+    if (!*p) return 0;
+
+    for (int part = 0; part < 5; part++) {
+        if (!isdigit((unsigned char)*p)) {
+            // لا نقبل نصاً بلا أرقام كبداية، ونرفض أي محرف غير رقمي داخل الإصدار.
+            if (part == 0) return 0;
+            return (*p == '\0') ? 1 : 0;
+        }
+
+        char* end = NULL;
+        long v = strtol(p, &end, 10);
+        if (end == p) return 0;
+        if (v < 0) return 0;
+        if (v > 1000000L) return 0;
+
+        out_parts[part] = (int)v;
+        p = end;
+
+        if (*p == '.') {
+            p++;
+            if (!*p) return 0;
+            continue;
+        }
+        break;
+    }
+
+    while (*p && isspace((unsigned char)*p)) p++;
+    return *p == '\0';
+}
+
+static int compare_version_parts_5(const int a[5], const int b[5]) {
+    for (int i = 0; i < 5; i++) {
+        if (a[i] < b[i]) return -1;
+        if (a[i] > b[i]) return 1;
+    }
+    return 0;
+}
+
 int check_for_updates() {
     IStream* stream;
     char buffer[128];
@@ -56,18 +102,20 @@ int check_for_updates() {
     printf("[Update] Latest version: %s\n", buffer);
     printf("[Update] Current version: %s\n", BAA_VERSION);
 
-    // 4. مقارنة الإصدارات (مقارنة دلالية بسيطة)
-    // نفترض الصيغة: X.Y.Z
-    int v1_maj, v1_min, v1_patch;
-    int v2_maj, v2_min, v2_patch;
+    // 4. مقارنة الإصدارات (مقارنة قوية تدعم حتى 5 أجزاء: X.Y.Z.A.B)
+    int remote_v[5];
+    int local_v[5];
 
-    sscanf(buffer, "%d.%d.%d", &v1_maj, &v1_min, &v1_patch); // Remote
-    sscanf(BAA_VERSION, "%d.%d.%d", &v2_maj, &v2_min, &v2_patch); // Local
-    
-    bool update_needed = false;
-    if (v1_maj > v2_maj) update_needed = true;
-    else if (v1_maj == v2_maj && v1_min > v2_min) update_needed = true;
-    else if (v1_maj == v2_maj && v1_min == v2_min && v1_patch > v2_patch) update_needed = true;
+    if (!parse_version_parts_5(buffer, remote_v)) {
+        printf("[Error] Failed to parse remote version string.\n");
+        return 0; // افتراضي آمن
+    }
+    if (!parse_version_parts_5(BAA_VERSION, local_v)) {
+        printf("[Error] Failed to parse local version string.\n");
+        return 0; // افتراضي آمن
+    }
+
+    bool update_needed = compare_version_parts_5(remote_v, local_v) > 0;
 
     if (update_needed) {
         printf("[Update] New version available!\n");
@@ -87,7 +135,11 @@ void perform_update() {
 
     // الحصول على مسار المجلد المؤقت
     GetTempPathA(MAX_PATH, tempPath);
-    sprintf(setupPath, "%sbaa_setup.exe", tempPath);
+    int n = snprintf(setupPath, MAX_PATH, "%sbaa_setup.exe", tempPath);
+    if (n < 0 || n >= MAX_PATH) {
+        printf("[Error] Failed to build installer path.\n");
+        return;
+    }
 
     printf("[Update] Downloading installer to: %s\n", setupPath);
 

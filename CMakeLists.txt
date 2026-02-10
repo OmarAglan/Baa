@@ -3,6 +3,10 @@ project(baa VERSION 0.3.0 LANGUAGES C)
 
 set(CMAKE_C_STANDARD 11)
 
+# Build options
+option(BAA_ENABLE_WARNINGS "Enable compiler warnings for Baa" ON)
+option(BAA_WARNINGS_AS_ERRORS "Treat warnings as errors for hardening builds" OFF)
+
 # List of source files
 set(SOURCES
     src/analysis.c    # Semantic Analysis module
@@ -36,6 +40,16 @@ endif()
 
 # Windows executable extension
 add_executable(baa ${SOURCES})
+
+# Warnings / hardening flags (two-tier)
+if(BAA_ENABLE_WARNINGS)
+    if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
+        target_compile_options(baa PRIVATE -Wall -Wextra -Wformat=2 -Wshadow)
+        if(BAA_WARNINGS_AS_ERRORS)
+            target_compile_options(baa PRIVATE -Werror)
+        endif()
+    endif()
+endif()
 
 # Link Windows libraries for Updater (WinINet, UrlMon)
 if(WIN32)

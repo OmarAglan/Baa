@@ -185,7 +185,7 @@ static void cse_table_free(CSEEntry** table) {
 // Helpers: replace register uses in instruction
 // -----------------------------------------------------------------------------
 
-static int cse_replace_reg_uses(IRInst* inst, int old_reg, int new_reg, IRType* type) {
+static int cse_replace_reg_uses(IRInst* inst, int old_reg, int new_reg) {
     int replaced = 0;
     
     // Replace in operands
@@ -301,7 +301,7 @@ static int ir_cse_func(IRFunc* func) {
         for (IRInst* inst = b->first; inst; inst = inst->next) {
             for (int r = 0; r < max_reg; r++) {
                 if (replacements[r] >= 0) {
-                    cse_replace_reg_uses(inst, r, replacements[r], inst->type);
+                    cse_replace_reg_uses(inst, r, replacements[r]);
                 }
             }
         }

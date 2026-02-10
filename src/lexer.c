@@ -35,9 +35,6 @@ void lexer_init(Lexer* l, char* src, const char* filename) {
 /**
  * @brief دالة مساعدة لتقديم المؤشر وتحديث السطر والعمود.
  */
-/**
- * @brief دالة مساعدة لتقديم المؤشر وتحديث السطر والعمود.
- */
 void advance_pos(Lexer* l) {
     if (*l->state.cur_char == '\n') {
         l->state.line++;
@@ -71,7 +68,12 @@ int is_arabic_digit(const char* c) {
 // Helper to peek current char
 char peek(Lexer* l) { return *l->state.cur_char; }
 // Helper to peek next char
-char peek_next(Lexer* l) { return *(l->state.cur_char + 1); }
+char peek_next(Lexer* l) {
+    if (!l) return '\0';
+    if (!l->state.cur_char) return '\0';
+    if (*l->state.cur_char == '\0') return '\0';
+    return *(l->state.cur_char + 1);
+}
 
 /**
  * @brief إضافة تعريف ماكرو جديد.
@@ -433,10 +435,20 @@ Token lexer_next_token(Lexer* l) {
         while (1) {
             char* c = l->state.cur_char;
             if (isdigit((unsigned char)*c)) { 
-                buffer[buf_idx++] = *c; 
+                if (buf_idx >= (int)sizeof(buffer) - 1) {
+                    printf("Lexer Error: Integer literal too long at %s:%d:%d\n",
+                           l->state.filename, l->state.line, l->state.col);
+                    exit(1);
+                }
+                buffer[buf_idx++] = *c;
                 advance_pos(l); 
             } 
             else if (is_arabic_digit(c)) {
+                if (buf_idx >= (int)sizeof(buffer) - 1) {
+                    printf("Lexer Error: Integer literal too long at %s:%d:%d\n",
+                           l->state.filename, l->state.line, l->state.col);
+                    exit(1);
+                }
                 buffer[buf_idx++] = ((unsigned char)c[1] - 0xA0) + '0';
                 l->state.cur_char += 2; l->state.col += 2;
             } else { break; }

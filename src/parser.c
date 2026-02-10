@@ -5,6 +5,8 @@
  */
 
 #include "baa.h"
+#include <errno.h>
+#include <limits.h>
 
 // كائن المحلل القواعدي الذي يدير الحالة الحالية والوحدة القادمة
 Parser parser;
@@ -35,6 +37,37 @@ void init_parser(Lexer* l) {
     advance(); // Load first token into parser.next (current is garbage initially)
     parser.current = parser.next; // Sync
     advance(); // Load next token
+}
+
+/**
+ * @brief تحليل رقم صحيح من وحدة TOKEN_INT مع التحقق من النطاق.
+ * @return true عند النجاح، false عند الفشل (مع تسجيل خطأ).
+ */
+static bool parse_int_token_checked(Token tok, int* out_value) {
+    if (!out_value) return false;
+    *out_value = 0;
+
+    if (!tok.value) {
+        error_report(tok, "رقم غير صالح.");
+        return false;
+    }
+
+    errno = 0;
+    char* end = NULL;
+    long long v = strtoll(tok.value, &end, 10);
+
+    if (errno != 0 || end == tok.value || (end && *end != '\0')) {
+        error_report(tok, "رقم غير صالح.");
+        return false;
+    }
+
+    if (v < INT_MIN || v > INT_MAX) {
+        error_report(tok, "الرقم خارج النطاق المدعوم حالياً.");
+        return false;
+    }
+
+    *out_value = (int)v;
+    return true;
 }
 
 /**
@@ -126,7 +159,9 @@ Node* parse_primary() {
     if (parser.current.type == TOKEN_INT) {
         node = malloc(sizeof(Node));
         node->type = NODE_INT;
-        node->data.integer.value = atoi(parser.current.value);
+        int v = 0;
+        (void)parse_int_token_checked(parser.current, &v);
+        node->data.integer.value = v;
         node->next = NULL;
         eat(TOKEN_INT);
     }
@@ -718,7 +753,12 @@ Node* parse_statement() {
             eat(TOKEN_LBRACKET);
             int size = 0;
             if (parser.current.type == TOKEN_INT) {
-                size = atoi(parser.current.value);
+                int v = 0;
+                if (parse_int_token_checked(parser.current, &v) && v >= 0) {
+                    size = v;
+                } else if (v < 0) {
+                    error_report(parser.current, "حجم المصفوفة يجب أن يكون عدداً غير سالب.");
+                }
                 eat(TOKEN_INT);
             } else {
                 error_report(parser.current, "Array size must be integer.");

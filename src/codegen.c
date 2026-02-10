@@ -74,7 +74,8 @@ static int get_current_break_label() {
  * @brief إضافة متغير عام لجدول الرموز.
  */
 static void add_global(const char* name, DataType type) {
-    strcpy(global_symbols[global_count].name, name);
+    // حماية بسيطة: لا نسمح بأسماء أطول من سعة المخزن لتفادي تجاوز الذاكرة
+    snprintf(global_symbols[global_count].name, sizeof(global_symbols[global_count].name), "%s", name);
     global_symbols[global_count].scope = SCOPE_GLOBAL;
     global_symbols[global_count].type = type;
     global_symbols[global_count].offset = 0;
@@ -97,7 +98,8 @@ static void add_local(const char* name, int size, DataType type) {
     // 2. تحديث مؤشر المكدس لحجز المساحة كاملة (المكدس ينمو للأسفل)
     current_stack_offset -= (size * 8);
     
-    strcpy(local_symbols[local_count].name, name);
+    // حماية بسيطة: لا نسمح بأسماء أطول من سعة المخزن لتفادي تجاوز الذاكرة
+    snprintf(local_symbols[local_count].name, sizeof(local_symbols[local_count].name), "%s", name);
     local_symbols[local_count].scope = SCOPE_LOCAL;
     local_symbols[local_count].type = type;
     local_symbols[local_count].offset = symbol_offset;

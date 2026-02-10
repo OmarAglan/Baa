@@ -13,11 +13,58 @@
 #include "regalloc.h"
 #include "emit.h"
 #include <time.h>
+#include <stdarg.h>
 
 #ifdef _WIN32
 #include <windows.h>
 #else
 #include <sys/time.h>
+#endif
+
+#ifndef MAX_PATH
+#define MAX_PATH 4096
+#endif
+
+#ifdef _WIN32
+#define BAA_PATH_SUFFIX_GCC_BIN "\\gcc\\bin\\gcc.exe"
+#define BAA_PATH_SUFFIX_GCC_BIN_DEV "\\..\\gcc\\bin\\gcc.exe"
+
+/**
+ * @brief بناء مسار (base + suffix) داخل مخزن مع ضمان عدم تجاوز السعة.
+ * @return true عند النجاح، false عند تجاوز السعة.
+ */
+static bool path_build_suffix(char* out, size_t out_cap, const char* base, const char* suffix)
+{
+    if (!out || out_cap == 0 || !base || !suffix) return false;
+
+    size_t base_len = strlen(base);
+    size_t suffix_len = strlen(suffix);
+
+    if (base_len >= out_cap) return false;
+    if (suffix_len > out_cap - 1 - base_len) return false;
+
+    memcpy(out, base, base_len);
+    memcpy(out + base_len, suffix, suffix_len + 1);
+    return true;
+}
+
+/**
+ * @brief وضع اقتباس مزدوج حول مسار داخل مخزن ( "path" ) مع ضمان السعة.
+ * @return true عند النجاح، false عند تجاوز السعة.
+ */
+static bool path_quote(char* out, size_t out_cap, const char* path)
+{
+    if (!out || out_cap == 0 || !path) return false;
+
+    size_t path_len = strlen(path);
+    if (path_len + 2 + 1 > out_cap) return false;
+
+    out[0] = '"';
+    memcpy(out + 1, path, path_len);
+    out[1 + path_len] = '"';
+    out[1 + path_len + 1] = '\0';
+    return true;
+}
 #endif
 
 // ============================================================================
@@ -39,6 +86,53 @@ typedef struct
     OptLevel opt_level; // -O0, -O1, -O2: مستوى التحسين
     double start_time;  // وقت بدء الترجمة
 } CompilerConfig;
+
+// ============================================================================
+// بناء الأوامر بأمان (Safe Command Builder)
+// ============================================================================
+
+/**
+ * @brief إلحاق نص إلى مخزن أمر مع التحقق من السعة.
+ * @return true عند النجاح، false عند تجاوز السعة.
+ */
+static bool cmd_append(char* buf, size_t cap, size_t* len_io, const char* s)
+{
+    if (!buf || cap == 0 || !len_io || !s) return false;
+
+    size_t len = *len_io;
+    size_t slen = strlen(s);
+    if (len >= cap) return false;
+    if (slen > cap - 1 - len) return false;
+
+    memcpy(buf + len, s, slen);
+    len += slen;
+    buf[len] = '\0';
+    *len_io = len;
+    return true;
+}
+
+/**
+ * @brief إلحاق نص مُنسّق إلى مخزن أمر مع التحقق من السعة.
+ * @return true عند النجاح، false عند تجاوز السعة أو خطأ تنسيق.
+ */
+static bool cmd_appendf(char* buf, size_t cap, size_t* len_io, const char* fmt, ...)
+{
+    if (!buf || cap == 0 || !len_io || !fmt) return false;
+
+    size_t len = *len_io;
+    if (len >= cap) return false;
+
+    va_list args;
+    va_start(args, fmt);
+    int written = vsnprintf(buf + len, cap - len, fmt, args);
+    va_end(args);
+
+    if (written < 0) return false;
+    if ((size_t)written >= cap - len) return false;
+
+    *len_io = len + (size_t)written;
+    return true;
+}
 
 // ============================================================================
 // دوال قياس الوقت (Timing Functions)
@@ -96,6 +190,11 @@ char *read_file(const char *path)
  */
 char *change_extension(const char *filename, const char *new_ext)
 {
+    if (!filename || !new_ext) {
+        fprintf(stderr, "خطأ: change_extension استلم مُدخلات فارغة (NULL)\n");
+        exit(1);
+    }
+
     char *dot = strrchr(filename, '.');
     if (!dot || dot == filename)
         return strdup(new_ext + (dot == filename)); // Fallback
@@ -103,8 +202,13 @@ char *change_extension(const char *filename, const char *new_ext)
     size_t base_len = dot - filename;
     size_t ext_len = strlen(new_ext);
     char *new_name = malloc(base_len + ext_len + 1);
-    strncpy(new_name, filename, base_len);
-    strcpy(new_name + base_len, new_ext);
+    if (!new_name) {
+        fprintf(stderr, "Error: Memory allocation failed\n");
+        exit(1);
+    }
+
+    memcpy(new_name, filename, base_len);
+    memcpy(new_name + base_len, new_ext, ext_len + 1);
     return new_name;
 }
 
@@ -133,8 +237,8 @@ static void resolve_gcc_path(void)
 {
 #ifdef _WIN32
     char exe_path[MAX_PATH];
-    DWORD len = GetModuleFileNameA(NULL, exe_path, MAX_PATH);
-    if (len == 0 || len >= MAX_PATH)
+    DWORD len = GetModuleFileNameA(NULL, exe_path, (DWORD)sizeof(exe_path));
+    if (len == 0 || len >= (DWORD)sizeof(exe_path))
         return;
 
     // إزالة اسم الملف التنفيذي (الحصول على المجلد)
@@ -145,18 +249,18 @@ static void resolve_gcc_path(void)
 
     // المسار 1: <baa_dir>\gcc\bin\gcc.exe
     char candidate[MAX_PATH];
-    snprintf(candidate, MAX_PATH, "%s\\gcc\\bin\\gcc.exe", exe_path);
-    if (GetFileAttributesA(candidate) != INVALID_FILE_ATTRIBUTES)
+    if (path_build_suffix(candidate, sizeof(candidate), exe_path, BAA_PATH_SUFFIX_GCC_BIN) &&
+        GetFileAttributesA(candidate) != INVALID_FILE_ATTRIBUTES)
     {
-        snprintf(g_gcc_path, MAX_PATH, "\"%s\"", candidate);
+        (void)path_quote(g_gcc_path, sizeof(g_gcc_path), candidate);
         return;
     }
 
     // المسار 2: <baa_dir>\..\gcc\bin\gcc.exe (هيكل التطوير)
-    snprintf(candidate, MAX_PATH, "%s\\..\\gcc\\bin\\gcc.exe", exe_path);
-    if (GetFileAttributesA(candidate) != INVALID_FILE_ATTRIBUTES)
+    if (path_build_suffix(candidate, sizeof(candidate), exe_path, BAA_PATH_SUFFIX_GCC_BIN_DEV) &&
+        GetFileAttributesA(candidate) != INVALID_FILE_ATTRIBUTES)
     {
-        snprintf(g_gcc_path, MAX_PATH, "\"%s\"", candidate);
+        (void)path_quote(g_gcc_path, sizeof(g_gcc_path), candidate);
         return;
     }
 #endif
@@ -622,7 +726,17 @@ int main(int argc, char **argv)
             obj_file = change_extension(current_input, ".o");
 
         char cmd_assemble[1024];
-        sprintf(cmd_assemble, "%s -c %s -o %s", get_gcc_command(), asm_file, obj_file);
+        {
+            size_t cmd_len = 0;
+            cmd_assemble[0] = '\0';
+
+            if (!cmd_appendf(cmd_assemble, sizeof(cmd_assemble), &cmd_len,
+                             "%s -c %s -o %s", get_gcc_command(), asm_file, obj_file))
+            {
+                fprintf(stderr, "خطأ: أمر التجميع طويل جداً (تجاوز السعة).\n");
+                return 1;
+            }
+        }
 
         if (config.verbose)
             printf("[CMD] %s\n", cmd_assemble);
@@ -654,14 +768,31 @@ int main(int argc, char **argv)
         printf("\n[INFO] Linking %d object files...\n", obj_count);
 
     char cmd_link[4096];
-    strcpy(cmd_link, get_gcc_command());
-    for (int i = 0; i < obj_count; i++)
     {
-        strcat(cmd_link, " ");
-        strcat(cmd_link, obj_files_to_link[i]);
+        size_t cmd_len = 0;
+        cmd_link[0] = '\0';
+
+        if (!cmd_append(cmd_link, sizeof(cmd_link), &cmd_len, get_gcc_command()))
+        {
+            fprintf(stderr, "خطأ: أمر الربط طويل جداً (تجاوز السعة).\n");
+            return 1;
+        }
+
+        for (int i = 0; i < obj_count; i++)
+        {
+            if (!cmd_appendf(cmd_link, sizeof(cmd_link), &cmd_len, " %s", obj_files_to_link[i]))
+            {
+                fprintf(stderr, "خطأ: أمر الربط طويل جداً (تجاوز السعة).\n");
+                return 1;
+            }
+        }
+
+        if (!cmd_appendf(cmd_link, sizeof(cmd_link), &cmd_len, " -o %s", config.output_file))
+        {
+            fprintf(stderr, "خطأ: أمر الربط طويل جداً (تجاوز السعة).\n");
+            return 1;
+        }
     }
-    strcat(cmd_link, " -o ");
-    strcat(cmd_link, config.output_file);
 
     if (config.verbose)
         printf("[CMD] %s\n", cmd_link);

@@ -145,16 +145,6 @@ static bool bitset_test(const uint64_t *set, int bit)
 }
 
 /**
- * @brief حذف بت من مجموعة بتات.
- */
-static void bitset_clear(uint64_t *set, int bit)
-{
-    if (bit < 0)
-        return;
-    set[bit / 64] &= ~(1ULL << (bit % 64));
-}
-
-/**
  * @brief اتحاد مجموعتين: dst = dst | src
  * @return صحيح إذا تغيرت dst.
  */
@@ -318,14 +308,6 @@ static bool is_normal_vreg(MachineOperand *op)
 }
 
 /**
- * @brief هل المعامل سجل افتراضي (بما في ذلك الخاص)؟
- */
-static bool is_any_vreg(MachineOperand *op)
-{
-    return op && op->kind == MACH_OP_VREG;
-}
-
-/**
  * @brief استخلاص رقم السجل الافتراضي من معامل ذاكرة.
  *
  * معاملات الذاكرة [base + offset] تحتوي على سجل قاعدة.
@@ -344,7 +326,7 @@ static int mem_base_vreg(MachineOperand *op)
 /**
  * @brief تسجيل الاستخدام: إذا لم يُعرَّف بعد في هذه الكتلة، أضفه لـ use.
  */
-static void record_use(BlockLiveness *bl, int vreg, int max_vreg, int words)
+static void record_use(BlockLiveness *bl, int vreg, int max_vreg)
 {
     if (vreg < 0 || vreg >= max_vreg)
         return;
@@ -357,7 +339,7 @@ static void record_use(BlockLiveness *bl, int vreg, int max_vreg, int words)
 /**
  * @brief تسجيل التعريف.
  */
-static void record_def(BlockLiveness *bl, int vreg, int max_vreg, int words)
+static void record_def(BlockLiveness *bl, int vreg, int max_vreg)
 {
     if (vreg < 0 || vreg >= max_vreg)
         return;
@@ -396,15 +378,15 @@ void regalloc_compute_def_use(RegAllocCtx *ctx)
             // تسجيل الاستخدامات أولاً (قبل التعريف في نفس التعليمة)
             // src1
             if (is_normal_vreg(&inst->src1))
-                record_use(bl, inst->src1.data.vreg, max_v, words);
+                record_use(bl, inst->src1.data.vreg, max_v);
             if (inst->src1.kind == MACH_OP_MEM && mem_base_vreg(&inst->src1) >= 0)
-                record_use(bl, mem_base_vreg(&inst->src1), max_v, words);
+                record_use(bl, mem_base_vreg(&inst->src1), max_v);
 
             // src2
             if (is_normal_vreg(&inst->src2))
-                record_use(bl, inst->src2.data.vreg, max_v, words);
+                record_use(bl, inst->src2.data.vreg, max_v);
             if (inst->src2.kind == MACH_OP_MEM && mem_base_vreg(&inst->src2) >= 0)
-                record_use(bl, mem_base_vreg(&inst->src2), max_v, words);
+                record_use(bl, mem_base_vreg(&inst->src2), max_v);
 
             // dst كمصدر (في two-address: op dst, dst, src → dst مستخدم)
             // حالة خاصة: تعليمات مثل add dst, dst, src تستخدم dst كمصدر
@@ -417,17 +399,17 @@ void regalloc_compute_def_use(RegAllocCtx *ctx)
                     inst->src1.kind == MACH_OP_VREG &&
                     inst->dst.data.vreg == inst->src1.data.vreg)
                 {
-                    record_use(bl, inst->dst.data.vreg, max_v, words);
+                    record_use(bl, inst->dst.data.vreg, max_v);
                 }
             }
 
             // dst كمعامل ذاكرة (للتخزين: store [dst], src)
             if (inst->dst.kind == MACH_OP_MEM && mem_base_vreg(&inst->dst) >= 0)
-                record_use(bl, mem_base_vreg(&inst->dst), max_v, words);
+                record_use(bl, mem_base_vreg(&inst->dst), max_v);
 
             // تسجيل التعريف
             if (is_normal_vreg(&inst->dst))
-                record_def(bl, inst->dst.data.vreg, max_v, words);
+                record_def(bl, inst->dst.data.vreg, max_v);
         }
 
         bi++;

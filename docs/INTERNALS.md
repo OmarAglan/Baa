@@ -1,6 +1,6 @@
 # Baa Compiler Internals
 
-> **Version:** 0.3.2.5.3 | [← Language Spec](LANGUAGE.md) | [API Reference →](API_REFERENCE.md)
+> **Version:** 0.3.2.6.1 | [← Language Spec](LANGUAGE.md) | [API Reference →](API_REFERENCE.md)
 
 **Target Architecture:** x86-64 (AMD64)
 **Target OS:** Windows (MinGW-w64 Toolchain)
@@ -460,6 +460,8 @@ The parser performs constant folding on arithmetic expressions. If both operands
 ## 6. Intermediate Representation (v0.3.0+)
 
 The IR Module (`src/ir.h`, `src/ir.c`) provides an Arabic-first Intermediate Representation using SSA (Static Single Assignment) form.
+
+**Memory management (v0.3.2.6.1):** IR objects are now allocated from a module-owned arena (`src/ir_arena.c`) and freed in bulk by `ir_module_free()`. IR passes should treat IR nodes as module-owned and avoid per-node frees.
 
 ### 6.1. Design Philosophy
 

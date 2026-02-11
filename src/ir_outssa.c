@@ -20,49 +20,16 @@
 #include "ir_outssa.h"
 
 #include "ir_analysis.h"
+#include "ir_mutate.h"
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 // -----------------------------------------------------------------------------
-// مساعدات: التعامل مع قائمة التعليمات
+// ملاحظة:
+// نستخدم مساعدات التعديل المشتركة من ir_mutate.c لضمان parent/id للتعليمات.
 // -----------------------------------------------------------------------------
-
-static void ir_block_insert_before(IRBlock* block, IRInst* before, IRInst* inst) {
-    if (!block || !inst) return;
-
-    if (!before) {
-        // إدراج في نهاية الكتلة
-        ir_block_append(block, inst);
-        return;
-    }
-
-    inst->next = before;
-    inst->prev = before->prev;
-
-    if (before->prev) before->prev->next = inst;
-    else block->first = inst;
-
-    before->prev = inst;
-    block->inst_count++;
-}
-
-static void ir_block_remove_inst_local(IRBlock* block, IRInst* inst) {
-    if (!block || !inst) return;
-
-    if (inst->prev) inst->prev->next = inst->next;
-    else block->first = inst->next;
-
-    if (inst->next) inst->next->prev = inst->prev;
-    else block->last = inst->prev;
-
-    inst->prev = NULL;
-    inst->next = NULL;
-
-    if (block->inst_count > 0) block->inst_count--;
-    ir_inst_free(inst);
-}
 
 static int ir_is_terminator(const IRInst* inst) {
     if (!inst) return 0;
@@ -407,7 +374,7 @@ static int ir_outssa_func(IRFunc* func) {
         IRInst* inst = b->first;
         while (inst && inst->op == IR_OP_PHI) {
             IRInst* next = inst->next;
-            ir_block_remove_inst_local(b, inst);
+            ir_block_remove_inst(b, inst);
             inst = next;
             changed = 1;
         }
@@ -428,6 +395,9 @@ static int ir_outssa_func(IRFunc* func) {
 
 bool ir_outssa_run(IRModule* module) {
     if (!module) return false;
+
+    // ضمان أن أي نسخ/قيم جديدة تُخصَّص ضمن ساحة هذه الوحدة.
+    ir_module_set_current(module);
 
     int changed = 0;
     for (IRFunc* f = module->funcs; f; f = f->next) {

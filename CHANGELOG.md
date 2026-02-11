@@ -8,6 +8,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.3.2.6.1] - 2026-02-11
+
+### Added
+
+- **IR arena allocator + bulk destruction (ساحة IR + تدمير دفعي)** — IR objects (types/values/insts/blocks/functions/globals/strings) are now allocated from a module-owned arena and released in one shot by `ir_module_free()`.
+- **IR cloning** — deep clone support for IR functions (`src/ir_clone.c` / `src/ir_clone.h`).
+- **Def-use chains for SSA regs** — build Def-Use caches to enable fast register use replacement without whole-function rescans (`src/ir_defuse.c` / `src/ir_defuse.h`).
+- **IR mutation helpers** — new utilities in `src/ir_mutate.c` / `src/ir_mutate.h` to insert/remove instructions consistently while keeping block instruction counts correct.
+- **Stable instruction IDs** — IR instructions now carry a per-function deterministic `id` assigned on insertion.
+
+### Changed
+
+- IR passes now set the active IR module context (`ir_module_set_current()`) so any newly created IR nodes are allocated in the correct arena.
+
 ## [0.3.2.6.0] - 2026-02-09
 
 ### Changed

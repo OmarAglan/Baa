@@ -65,18 +65,16 @@ void ir_lower_bind_local(IRLowerCtx* ctx, const char* name, int ptr_reg, IRType*
 // Expression/Statement lowering helpers
 // ============================================================================
 
-static IRType* get_i8_ptr_type(void) {
-    static IRType* cached = NULL;
-    if (!cached) {
-        cached = ir_type_ptr(IR_TYPE_I8_T);
-    }
-    return cached;
+static IRType* get_i8_ptr_type(IRModule* module) {
+    if (!module) return ir_type_ptr(IR_TYPE_I8_T);
+    ir_module_set_current(module);
+    return ir_type_ptr(IR_TYPE_I8_T);
 }
 
-static IRType* ir_type_from_datatype(DataType t) {
+static IRType* ir_type_from_datatype(IRModule* module, DataType t) {
     switch (t) {
         case TYPE_BOOL:   return IR_TYPE_I1_T;
-        case TYPE_STRING: return get_i8_ptr_type();
+        case TYPE_STRING: return get_i8_ptr_type(module);
         case TYPE_INT:
         default:          return IR_TYPE_I64_T;
     }
@@ -358,7 +356,8 @@ static void lower_var_decl(IRLowerCtx* ctx, Node* stmt) {
         return;
     }
 
-    IRType* value_type = ir_type_from_datatype(stmt->data.var_decl.type);
+    IRType* value_type = ir_type_from_datatype(ctx && ctx->builder ? ctx->builder->module : NULL,
+                                               stmt->data.var_decl.type);
 
     // %ptr = حجز <value_type>
     int ptr_reg = ir_builder_emit_alloca(ctx->builder, value_type);
@@ -882,7 +881,7 @@ IRModule* ir_lower_program(Node* program, const char* module_name) {
     for (Node* decl = program->data.program.declarations; decl; decl = decl->next) {
         // Globals
         if (decl->type == NODE_VAR_DECL && decl->data.var_decl.is_global) {
-            IRType* gtype = ir_type_from_datatype(decl->data.var_decl.type);
+            IRType* gtype = ir_type_from_datatype(module, decl->data.var_decl.type);
             IRValue* init = ir_lower_global_init_value(builder, decl->data.var_decl.expression, gtype);
 
             (void)ir_builder_create_global_init(builder, decl->data.var_decl.name, gtype, init,
@@ -892,7 +891,7 @@ IRModule* ir_lower_program(Node* program, const char* module_name) {
 
         // Functions
         if (decl->type == NODE_FUNC_DEF) {
-            IRType* ret_type = ir_type_from_datatype(decl->data.func_def.return_type);
+            IRType* ret_type = ir_type_from_datatype(module, decl->data.func_def.return_type);
             IRFunc* func = ir_builder_create_func(builder, decl->data.func_def.name, ret_type);
             if (!func) continue;
 
@@ -903,7 +902,7 @@ IRModule* ir_lower_program(Node* program, const char* module_name) {
                 // Still add parameters for signature printing.
                 for (Node* p = decl->data.func_def.params; p; p = p->next) {
                     if (p->type != NODE_VAR_DECL) continue;
-                    IRType* ptype = ir_type_from_datatype(p->data.var_decl.type);
+                    IRType* ptype = ir_type_from_datatype(module, p->data.var_decl.type);
                     (void)ir_builder_add_param(builder, p->data.var_decl.name, ptype);
                 }
                 continue;
@@ -920,7 +919,7 @@ IRModule* ir_lower_program(Node* program, const char* module_name) {
             for (Node* p = decl->data.func_def.params; p; p = p->next) {
                 if (p->type != NODE_VAR_DECL) continue;
 
-                IRType* ptype = ir_type_from_datatype(p->data.var_decl.type);
+                IRType* ptype = ir_type_from_datatype(module, p->data.var_decl.type);
                 const char* pname = p->data.var_decl.name ? p->data.var_decl.name : NULL;
 
                 int preg = ir_builder_add_param(builder, pname, ptype);

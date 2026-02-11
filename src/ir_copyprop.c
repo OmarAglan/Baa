@@ -16,6 +16,9 @@
 
 #include "ir_copyprop.h"
 
+#include "ir_defuse.h"
+#include "ir_mutate.h"
+
 #include <stdlib.h>
 #include <string.h>
 
@@ -108,24 +111,9 @@ static int ir_try_replace_value_slot(IRValue** slot, IRValue** aliases, int max_
 }
 
 // -----------------------------------------------------------------------------
-// Helpers: instruction list manipulation
+// ملاحظة:
+// حذف التعليمات يتم عبر ir_block_remove_inst() من ir_mutate.c (unlink فقط).
 // -----------------------------------------------------------------------------
-
-static void ir_block_remove_inst(IRBlock* block, IRInst* inst) {
-    if (!block || !inst) return;
-
-    if (inst->prev) inst->prev->next = inst->next;
-    else block->first = inst->next;
-
-    if (inst->next) inst->next->prev = inst->prev;
-    else block->last = inst->prev;
-
-    inst->prev = NULL;
-    inst->next = NULL;
-
-    if (block->inst_count > 0) block->inst_count--;
-    ir_inst_free(inst);
-}
 
 // -----------------------------------------------------------------------------
 // Core: per-function copy propagation
@@ -192,24 +180,45 @@ static int ir_copyprop_func(IRFunc* func) {
     }
 
     // 3) Replace all uses in the function.
-    for (IRBlock* b = func->blocks; b; b = b->next) {
-        for (IRInst* inst = b->first; inst; inst = inst->next) {
-            // Normal operands
-            for (int i = 0; i < inst->operand_count; i++) {
-                changed |= ir_try_replace_value_slot(&inst->operands[i], aliases, max_reg);
-            }
+    // نستخدم Def-Use لتجنب مسح الدالة بالكامل إن أمكن.
+    IRDefUse* du = ir_func_get_defuse(func, true);
+    if (du) {
+        for (int r = 0; r < max_reg && r < du->max_reg; r++) {
+            if (!aliases[r]) continue;
 
-            // Call args
-            if (inst->op == IR_OP_CALL && inst->call_args) {
-                for (int i = 0; i < inst->call_arg_count; i++) {
-                    changed |= ir_try_replace_value_slot(&inst->call_args[i], aliases, max_reg);
+            for (IRUse* u = du->uses_by_reg[r]; u; u = u->next) {
+                if (!u->slot || !*u->slot) continue;
+
+                IRValue* cur = *u->slot;
+                if (!cur || cur->kind != IR_VAL_REG) continue;
+                if (cur->data.reg_num != r) continue;
+
+                IRValue* repl = aliases[r];
+                IRValue* new_val = ir_value_clone_with_type(repl, cur->type ? cur->type : repl->type);
+                if (!new_val) continue;
+
+                *u->slot = new_val;
+                changed = 1;
+            }
+        }
+    } else {
+        // احتياطي: مسح كامل.
+        for (IRBlock* b = func->blocks; b; b = b->next) {
+            for (IRInst* inst = b->first; inst; inst = inst->next) {
+                for (int i = 0; i < inst->operand_count; i++) {
+                    changed |= ir_try_replace_value_slot(&inst->operands[i], aliases, max_reg);
                 }
-            }
 
-            // Phi entries
-            if (inst->op == IR_OP_PHI) {
-                for (IRPhiEntry* e = inst->phi_entries; e; e = e->next) {
-                    changed |= ir_try_replace_value_slot(&e->value, aliases, max_reg);
+                if (inst->op == IR_OP_CALL && inst->call_args) {
+                    for (int i = 0; i < inst->call_arg_count; i++) {
+                        changed |= ir_try_replace_value_slot(&inst->call_args[i], aliases, max_reg);
+                    }
+                }
+
+                if (inst->op == IR_OP_PHI) {
+                    for (IRPhiEntry* e = inst->phi_entries; e; e = e->next) {
+                        changed |= ir_try_replace_value_slot(&e->value, aliases, max_reg);
+                    }
                 }
             }
         }
@@ -244,6 +253,11 @@ static int ir_copyprop_func(IRFunc* func) {
     free(aliases);
     free(alias_types);
 
+    if (changed) {
+        // الاستبدالات تمت عبر تعديل مؤشرات الخانات مباشرة؛ نبطل Def-Use لضمان إعادة بناء لاحقة صحيحة.
+        ir_func_invalidate_defuse(func);
+    }
+
     return changed;
 }
 
@@ -253,6 +267,9 @@ static int ir_copyprop_func(IRFunc* func) {
 
 bool ir_copyprop_run(IRModule* module) {
     if (!module) return false;
+
+    // ضمان أن أي قيم جديدة تُخصَّص ضمن ساحة هذه الوحدة.
+    ir_module_set_current(module);
 
     int changed = 0;
     for (IRFunc* f = module->funcs; f; f = f->next) {

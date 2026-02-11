@@ -72,6 +72,9 @@ static bool optimizer_iteration(IRModule* module, OptLevel level) {
  */
 bool ir_optimizer_run(IRModule* module, OptLevel level) {
     if (!module) return false;
+
+    // ضمان تخصيصات IR داخل تمريرات المُحسِّن ضمن ساحة هذه الوحدة.
+    ir_module_set_current(module);
     
     // O0: No optimization
     if (level == OPT_LEVEL_0) {

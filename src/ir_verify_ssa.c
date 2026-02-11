@@ -518,6 +518,9 @@ bool ir_func_verify_ssa(IRFunc* func, FILE* out) {
 bool ir_module_verify_ssa(IRModule* module, FILE* out) {
     if (!module) return false;
 
+    // المتحقق قد ينشئ بنى مساعدة؛ اجعل السياق مضبوطاً.
+    ir_module_set_current(module);
+
     int ok = 1;
     for (IRFunc* f = module->funcs; f; f = f->next) {
         if (!ir_func_verify_ssa(f, out)) {

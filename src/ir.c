@@ -11,7 +11,48 @@
 #include <stdlib.h>
 #include <string.h>
 #include "ir.h"
+#include "ir_mutate.h"
+#include "ir_defuse.h"
 #include "baa.h"  // For error functions
+
+// ============================================================================
+// سياق الوحدة الحالية (للساحة)
+// ============================================================================
+
+static IRModule* g_ir_current_module = NULL;
+
+void ir_module_set_current(IRModule* module) {
+    g_ir_current_module = module;
+}
+
+IRModule* ir_module_get_current(void) {
+    return g_ir_current_module;
+}
+
+static IRArena* ir_cur_arena(void) {
+    if (!g_ir_current_module) {
+        return NULL;
+    }
+    return &g_ir_current_module->arena;
+}
+
+static void* ir_alloc(size_t size, size_t align) {
+    IRArena* a = ir_cur_arena();
+    if (!a) {
+        fprintf(stderr, "خطأ: محاولة تخصيص IR بدون وحدة حالية (Arena غير مهيئة)\n");
+        return NULL;
+    }
+    return ir_arena_alloc(a, size, align);
+}
+
+static char* ir_strdup(const char* s) {
+    IRArena* a = ir_cur_arena();
+    if (!a) {
+        fprintf(stderr, "خطأ: محاولة نسخ نص IR بدون وحدة حالية (Arena غير مهيئة)\n");
+        return NULL;
+    }
+    return ir_arena_strdup(a, s);
+}
 
 // ============================================================================
 // Predefined Type Instances (Singletons)
@@ -248,13 +289,21 @@ const char* ir_type_to_english(IRType* type) {
  * Create a pointer type
  */
 IRType* ir_type_ptr(IRType* pointee) {
-    IRType* type = (IRType*)malloc(sizeof(IRType));
+    if (g_ir_current_module && pointee == IR_TYPE_I8_T && g_ir_current_module->cached_i8_ptr_type) {
+        return g_ir_current_module->cached_i8_ptr_type;
+    }
+
+    IRType* type = (IRType*)ir_alloc(sizeof(IRType), _Alignof(IRType));
     if (!type) {
         fprintf(stderr, "خطأ: فشل تخصيص نوع مؤشر\n");
         return NULL;
     }
     type->kind = IR_TYPE_PTR;
     type->data.pointee = pointee;
+
+    if (g_ir_current_module && pointee == IR_TYPE_I8_T && !g_ir_current_module->cached_i8_ptr_type) {
+        g_ir_current_module->cached_i8_ptr_type = type;
+    }
     return type;
 }
 
@@ -262,7 +311,7 @@ IRType* ir_type_ptr(IRType* pointee) {
  * Create an array type
  */
 IRType* ir_type_array(IRType* element, int count) {
-    IRType* type = (IRType*)malloc(sizeof(IRType));
+    IRType* type = (IRType*)ir_alloc(sizeof(IRType), _Alignof(IRType));
     if (!type) {
         fprintf(stderr, "خطأ: فشل تخصيص نوع مصفوفة\n");
         return NULL;
@@ -277,14 +326,21 @@ IRType* ir_type_array(IRType* element, int count) {
  * Create a function type
  */
 IRType* ir_type_func(IRType* ret, IRType** params, int param_count) {
-    IRType* type = (IRType*)malloc(sizeof(IRType));
+    IRType* type = (IRType*)ir_alloc(sizeof(IRType), _Alignof(IRType));
     if (!type) {
         fprintf(stderr, "خطأ: فشل تخصيص نوع دالة\n");
         return NULL;
     }
     type->kind = IR_TYPE_FUNC;
     type->data.func.ret = ret;
-    type->data.func.params = params;
+    if (params && param_count > 0) {
+        IRType** arr = (IRType**)ir_alloc((size_t)param_count * sizeof(IRType*), _Alignof(IRType*));
+        if (!arr) return NULL;
+        for (int i = 0; i < param_count; i++) arr[i] = params[i];
+        type->data.func.params = arr;
+    } else {
+        type->data.func.params = NULL;
+    }
     type->data.func.param_count = param_count;
     return type;
 }
@@ -293,18 +349,8 @@ IRType* ir_type_func(IRType* ret, IRType** params, int param_count) {
  * Free a dynamically allocated type
  */
 void ir_type_free(IRType* type) {
-    if (!type) return;
-    // Don't free singleton types
-    if (type == IR_TYPE_VOID_T || type == IR_TYPE_I1_T ||
-        type == IR_TYPE_I8_T || type == IR_TYPE_I16_T ||
-        type == IR_TYPE_I32_T || type == IR_TYPE_I64_T) {
-        return;
-    }
-    // For function types, free the params array
-    if (type->kind == IR_TYPE_FUNC && type->data.func.params) {
-        free(type->data.func.params);
-    }
-    free(type);
+    (void)type;
+    // تُدار الذاكرة عبر الساحة (Arena): لا تحرير فردي للأنواع.
 }
 
 /**
@@ -363,7 +409,7 @@ int ir_type_bits(IRType* type) {
  * Create a register value
  */
 IRValue* ir_value_reg(int reg_num, IRType* type) {
-    IRValue* val = (IRValue*)malloc(sizeof(IRValue));
+    IRValue* val = (IRValue*)ir_alloc(sizeof(IRValue), _Alignof(IRValue));
     if (!val) return NULL;
     val->kind = IR_VAL_REG;
     val->type = type;
@@ -375,7 +421,7 @@ IRValue* ir_value_reg(int reg_num, IRType* type) {
  * Create an integer constant value
  */
 IRValue* ir_value_const_int(int64_t value, IRType* type) {
-    IRValue* val = (IRValue*)malloc(sizeof(IRValue));
+    IRValue* val = (IRValue*)ir_alloc(sizeof(IRValue), _Alignof(IRValue));
     if (!val) return NULL;
     val->kind = IR_VAL_CONST_INT;
     val->type = type ? type : IR_TYPE_I64_T;
@@ -387,11 +433,11 @@ IRValue* ir_value_const_int(int64_t value, IRType* type) {
  * Create a string constant value
  */
 IRValue* ir_value_const_str(const char* str, int id) {
-    IRValue* val = (IRValue*)malloc(sizeof(IRValue));
+    IRValue* val = (IRValue*)ir_alloc(sizeof(IRValue), _Alignof(IRValue));
     if (!val) return NULL;
     val->kind = IR_VAL_CONST_STR;
     val->type = ir_type_ptr(IR_TYPE_I8_T);
-    val->data.const_str.data = str ? strdup(str) : NULL;
+    val->data.const_str.data = str ? ir_strdup(str) : NULL;
     val->data.const_str.id = id;
     return val;
 }
@@ -400,7 +446,7 @@ IRValue* ir_value_const_str(const char* str, int id) {
  * Create a block reference value
  */
 IRValue* ir_value_block(IRBlock* block) {
-    IRValue* val = (IRValue*)malloc(sizeof(IRValue));
+    IRValue* val = (IRValue*)ir_alloc(sizeof(IRValue), _Alignof(IRValue));
     if (!val) return NULL;
     val->kind = IR_VAL_BLOCK;
     val->type = NULL;  // Blocks don't have a type
@@ -412,11 +458,11 @@ IRValue* ir_value_block(IRBlock* block) {
  * Create a global variable reference value
  */
 IRValue* ir_value_global(const char* name, IRType* type) {
-    IRValue* val = (IRValue*)malloc(sizeof(IRValue));
+    IRValue* val = (IRValue*)ir_alloc(sizeof(IRValue), _Alignof(IRValue));
     if (!val) return NULL;
     val->kind = IR_VAL_GLOBAL;
     val->type = type ? ir_type_ptr(type) : NULL;
-    val->data.global_name = name ? strdup(name) : NULL;
+    val->data.global_name = name ? ir_strdup(name) : NULL;
     return val;
 }
 
@@ -424,11 +470,11 @@ IRValue* ir_value_global(const char* name, IRType* type) {
  * Create a function reference value
  */
 IRValue* ir_value_func_ref(const char* name, IRType* type) {
-    IRValue* val = (IRValue*)malloc(sizeof(IRValue));
+    IRValue* val = (IRValue*)ir_alloc(sizeof(IRValue), _Alignof(IRValue));
     if (!val) return NULL;
     val->kind = IR_VAL_FUNC;
     val->type = type;
-    val->data.global_name = name ? strdup(name) : NULL;
+    val->data.global_name = name ? ir_strdup(name) : NULL;
     return val;
 }
 
@@ -436,18 +482,8 @@ IRValue* ir_value_func_ref(const char* name, IRType* type) {
  * Free a value
  */
 void ir_value_free(IRValue* val) {
-    if (!val) return;
-    if (val->kind == IR_VAL_CONST_STR && val->data.const_str.data) {
-        free(val->data.const_str.data);
-    }
-    if ((val->kind == IR_VAL_GLOBAL || val->kind == IR_VAL_FUNC) && 
-        val->data.global_name) {
-        free(val->data.global_name);
-    }
-    if (val->type && val->kind == IR_VAL_GLOBAL) {
-        ir_type_free(val->type);
-    }
-    free(val);
+    (void)val;
+    // تُدار الذاكرة عبر الساحة (Arena): لا تحرير فردي للقيم.
 }
 
 // ============================================================================
@@ -458,11 +494,12 @@ void ir_value_free(IRValue* val) {
  * Create a new instruction
  */
 IRInst* ir_inst_new(IROp op, IRType* type, int dest) {
-    IRInst* inst = (IRInst*)malloc(sizeof(IRInst));
+    IRInst* inst = (IRInst*)ir_alloc(sizeof(IRInst), _Alignof(IRInst));
     if (!inst) return NULL;
     
     inst->op = op;
     inst->type = type;
+    inst->id = -1;
     inst->dest = dest;
     inst->operand_count = 0;
     for (int i = 0; i < 4; i++) {
@@ -476,6 +513,8 @@ IRInst* ir_inst_new(IROp op, IRType* type, int dest) {
     inst->src_file = NULL;
     inst->src_line = 0;
     inst->src_col = 0;
+
+    inst->parent = NULL;
     inst->prev = NULL;
     inst->next = NULL;
     
@@ -492,6 +531,11 @@ void ir_inst_add_operand(IRInst* inst, IRValue* operand) {
         return;
     }
     inst->operands[inst->operand_count++] = operand;
+
+    // أي تغيير في المعاملات يُبطل كاش Def-Use.
+    if (inst->parent && inst->parent->parent) {
+        ir_func_invalidate_defuse(inst->parent->parent);
+    }
 }
 
 /**
@@ -610,13 +654,15 @@ IRInst* ir_inst_call(const char* target, IRType* ret_type, int dest,
     IRInst* inst = ir_inst_new(IR_OP_CALL, ret_type, dest);
     if (!inst) return NULL;
     
-    inst->call_target = target ? strdup(target) : NULL;
+    inst->call_target = target ? ir_strdup(target) : NULL;
     inst->call_arg_count = arg_count;
     
     // Copy arguments
     if (arg_count > 0 && args) {
-        inst->call_args = (IRValue**)malloc(arg_count * sizeof(IRValue*));
-        if (inst->call_args) {
+        inst->call_args = (IRValue**)ir_alloc((size_t)arg_count * sizeof(IRValue*), _Alignof(IRValue*));
+        if (!inst->call_args) {
+            inst->call_arg_count = 0;
+        } else {
             for (int i = 0; i < arg_count; i++) {
                 inst->call_args[i] = args[i];
             }
@@ -642,47 +688,26 @@ IRInst* ir_inst_phi(IRType* type, int dest) {
 void ir_inst_phi_add(IRInst* phi, IRValue* value, IRBlock* block) {
     if (!phi || phi->op != IR_OP_PHI || !value || !block) return;
     
-    IRPhiEntry* entry = (IRPhiEntry*)malloc(sizeof(IRPhiEntry));
+    IRPhiEntry* entry = (IRPhiEntry*)ir_alloc(sizeof(IRPhiEntry), _Alignof(IRPhiEntry));
     if (!entry) return;
     
     entry->value = value;
     entry->block = block;
     entry->next = phi->phi_entries;
     phi->phi_entries = entry;
+
+    // إضافة مدخل فاي تغيّر الاستعمالات.
+    if (phi->parent && phi->parent->parent) {
+        ir_func_invalidate_defuse(phi->parent->parent);
+    }
 }
 
 /**
  * Free an instruction
  */
 void ir_inst_free(IRInst* inst) {
-    if (!inst) return;
-    
-    // Free operands
-    for (int i = 0; i < inst->operand_count; i++) {
-        ir_value_free(inst->operands[i]);
-    }
-    
-    // Free phi entries
-    IRPhiEntry* phi = inst->phi_entries;
-    while (phi) {
-        IRPhiEntry* next = phi->next;
-        ir_value_free(phi->value);
-        free(phi);
-        phi = next;
-    }
-    
-    // Free call data
-    if (inst->call_target) {
-        free(inst->call_target);
-    }
-    if (inst->call_args) {
-        for (int i = 0; i < inst->call_arg_count; i++) {
-            ir_value_free(inst->call_args[i]);
-        }
-        free(inst->call_args);
-    }
-    
-    free(inst);
+    (void)inst;
+    // تُدار الذاكرة عبر الساحة (Arena): لا تحرير فردي للتعليمات.
 }
 
 // ============================================================================
@@ -693,11 +718,12 @@ void ir_inst_free(IRInst* inst) {
  * Create a new basic block
  */
 IRBlock* ir_block_new(const char* label, int id) {
-    IRBlock* block = (IRBlock*)malloc(sizeof(IRBlock));
+    IRBlock* block = (IRBlock*)ir_alloc(sizeof(IRBlock), _Alignof(IRBlock));
     if (!block) return NULL;
     
-    block->label = label ? strdup(label) : NULL;
+    block->label = label ? ir_strdup(label) : NULL;
     block->id = id;
+    block->parent = NULL;
     block->first = NULL;
     block->last = NULL;
     block->inst_count = 0;
@@ -720,6 +746,15 @@ IRBlock* ir_block_new(const char* label, int id) {
  */
 void ir_block_append(IRBlock* block, IRInst* inst) {
     if (!block || !inst) return;
+
+    if (block->parent) {
+        ir_func_invalidate_defuse(block->parent);
+    }
+
+    inst->parent = block;
+    if (inst->id < 0 && block->parent) {
+        inst->id = block->parent->next_inst_id++;
+    }
     
     inst->prev = block->last;
     inst->next = NULL;
@@ -773,32 +808,8 @@ int ir_block_is_terminated(IRBlock* block) {
  * Free a basic block and its instructions
  */
 void ir_block_free(IRBlock* block) {
-    if (!block) return;
-    
-    // Free all instructions
-    IRInst* inst = block->first;
-    while (inst) {
-        IRInst* next = inst->next;
-        ir_inst_free(inst);
-        inst = next;
-    }
-    
-    // Free predecessors array
-    if (block->preds) {
-        free(block->preds);
-    }
-    
-    // Free dominance frontier
-    if (block->dom_frontier) {
-        free(block->dom_frontier);
-    }
-    
-    // Free label
-    if (block->label) {
-        free(block->label);
-    }
-    
-    free(block);
+    (void)block;
+    // تُدار الذاكرة عبر الساحة (Arena): لا تحرير فردي للكتل.
 }
 
 // ============================================================================
@@ -809,10 +820,10 @@ void ir_block_free(IRBlock* block) {
  * Create a new function
  */
 IRFunc* ir_func_new(const char* name, IRType* ret_type) {
-    IRFunc* func = (IRFunc*)malloc(sizeof(IRFunc));
+    IRFunc* func = (IRFunc*)ir_alloc(sizeof(IRFunc), _Alignof(IRFunc));
     if (!func) return NULL;
     
-    func->name = name ? strdup(name) : NULL;
+    func->name = name ? ir_strdup(name) : NULL;
     func->ret_type = ret_type ? ret_type : IR_TYPE_VOID_T;
     func->params = NULL;
     func->param_count = 0;
@@ -820,6 +831,9 @@ IRFunc* ir_func_new(const char* name, IRType* ret_type) {
     func->blocks = NULL;
     func->block_count = 0;
     func->next_reg = 0;
+    func->next_inst_id = 0;
+    func->ir_epoch = 1;
+    func->def_use = NULL;
     func->next_block_id = 0;
     func->is_prototype = false;
     func->next = NULL;
@@ -848,6 +862,8 @@ int ir_func_alloc_block_id(IRFunc* func) {
  */
 void ir_func_add_block(IRFunc* func, IRBlock* block) {
     if (!func || !block) return;
+
+    block->parent = func;
     
     if (!func->blocks) {
         func->blocks = block;
@@ -882,50 +898,28 @@ IRBlock* ir_func_new_block(IRFunc* func, const char* label) {
  */
 void ir_func_add_param(IRFunc* func, const char* name, IRType* type) {
     if (!func) return;
-    
-    // Create new param array
-    IRParam* new_params = (IRParam*)realloc(func->params, 
-                                            (func->param_count + 1) * sizeof(IRParam));
+
+    // توسيع مصفوفة المعاملات داخل الساحة (Arena) عبر نسخ إلى مصفوفة جديدة.
+    int new_count = func->param_count + 1;
+    IRParam* new_params = (IRParam*)ir_alloc((size_t)new_count * sizeof(IRParam), _Alignof(IRParam));
     if (!new_params) return;
+    for (int i = 0; i < func->param_count; i++) {
+        new_params[i] = func->params[i];
+    }
     func->params = new_params;
-    
-    // Add parameter
-    func->params[func->param_count].name = name ? strdup(name) : NULL;
+
+    func->params[func->param_count].name = name ? ir_strdup(name) : NULL;
     func->params[func->param_count].type = type;
     func->params[func->param_count].reg = ir_func_alloc_reg(func);
-    func->param_count++;
+    func->param_count = new_count;
 }
 
 /**
  * Free a function and all its blocks
  */
 void ir_func_free(IRFunc* func) {
-    if (!func) return;
-    
-    // Free all blocks
-    IRBlock* block = func->blocks;
-    while (block) {
-        IRBlock* next = block->next;
-        ir_block_free(block);
-        block = next;
-    }
-    
-    // Free parameters
-    for (int i = 0; i < func->param_count; i++) {
-        if (func->params[i].name) {
-            free(func->params[i].name);
-        }
-    }
-    if (func->params) {
-        free(func->params);
-    }
-    
-    // Free name
-    if (func->name) {
-        free(func->name);
-    }
-    
-    free(func);
+    (void)func;
+    // تُدار الذاكرة عبر الساحة (Arena): لا تحرير فردي للدوال.
 }
 
 // ============================================================================
@@ -936,10 +930,10 @@ void ir_func_free(IRFunc* func) {
  * Create a new global variable
  */
 IRGlobal* ir_global_new(const char* name, IRType* type, int is_const) {
-    IRGlobal* global = (IRGlobal*)malloc(sizeof(IRGlobal));
+    IRGlobal* global = (IRGlobal*)ir_alloc(sizeof(IRGlobal), _Alignof(IRGlobal));
     if (!global) return NULL;
     
-    global->name = name ? strdup(name) : NULL;
+    global->name = name ? ir_strdup(name) : NULL;
     global->type = type;
     global->init = NULL;
     global->is_const = is_const ? true : false;
@@ -960,15 +954,8 @@ void ir_global_set_init(IRGlobal* global, IRValue* init) {
  * Free a global variable
  */
 void ir_global_free(IRGlobal* global) {
-    if (!global) return;
-    
-    if (global->init) {
-        ir_value_free(global->init);
-    }
-    if (global->name) {
-        free(global->name);
-    }
-    free(global);
+    (void)global;
+    // تُدار الذاكرة عبر الساحة (Arena): لا تحرير فردي للعوام.
 }
 
 // ============================================================================
@@ -981,8 +968,13 @@ void ir_global_free(IRGlobal* global) {
 IRModule* ir_module_new(const char* name) {
     IRModule* module = (IRModule*)malloc(sizeof(IRModule));
     if (!module) return NULL;
-    
-    module->name = name ? strdup(name) : NULL;
+
+    // تهيئة الساحة أولاً ثم اجعل هذه الوحدة هي الوحدة الحالية.
+    ir_arena_init(&module->arena, 0);
+    module->cached_i8_ptr_type = NULL;
+    ir_module_set_current(module);
+
+    module->name = name ? ir_strdup(name) : NULL;
     module->globals = NULL;
     module->global_count = 0;
     module->funcs = NULL;
@@ -1034,6 +1026,9 @@ void ir_module_add_global(IRModule* module, IRGlobal* global) {
  */
 int ir_module_add_string(IRModule* module, const char* str) {
     if (!module || !str) return -1;
+
+    // اجعل الوحدة الحالية صحيحة قبل أي تخصيص.
+    ir_module_set_current(module);
     
     // Check if string already exists
     IRStringEntry* entry = module->strings;
@@ -1045,11 +1040,11 @@ int ir_module_add_string(IRModule* module, const char* str) {
     }
     
     // Create new entry
-    IRStringEntry* new_entry = (IRStringEntry*)malloc(sizeof(IRStringEntry));
+    IRStringEntry* new_entry = (IRStringEntry*)ir_alloc(sizeof(IRStringEntry), _Alignof(IRStringEntry));
     if (!new_entry) return -1;
     
     new_entry->id = module->string_count++;
-    new_entry->content = strdup(str);
+    new_entry->content = ir_strdup(str);
     new_entry->next = module->strings;
     module->strings = new_entry;
     
@@ -1109,37 +1104,26 @@ const char* ir_module_get_string(IRModule* module, int id) {
  */
 void ir_module_free(IRModule* module) {
     if (!module) return;
-    
-    // Free functions
-    IRFunc* func = module->funcs;
-    while (func) {
-        IRFunc* next = func->next;
-        ir_func_free(func);
-        func = next;
+
+    // تحرير ما تبقى من كاشات التحليل التي تم تخصيصها بالـ heap.
+    // (الكتل/التعليمات/القيم نفسها داخل الساحة.)
+    for (IRFunc* f = module->funcs; f; f = f->next) {
+        if (f->def_use) {
+            ir_defuse_free(f->def_use);
+            f->def_use = NULL;
+        }
+        for (IRBlock* b = f->blocks; b; b = b->next) {
+            ir_block_free_analysis_caches(b);
+        }
     }
-    
-    // Free globals
-    IRGlobal* global = module->globals;
-    while (global) {
-        IRGlobal* next = global->next;
-        ir_global_free(global);
-        global = next;
+
+    // تدمير الساحة ثم تحرير هيكل الوحدة.
+    ir_arena_destroy(&module->arena);
+
+    if (g_ir_current_module == module) {
+        g_ir_current_module = NULL;
     }
-    
-    // Free string table
-    IRStringEntry* str = module->strings;
-    while (str) {
-        IRStringEntry* next = str->next;
-        if (str->content) free(str->content);
-        free(str);
-        str = next;
-    }
-    
-    // Free name
-    if (module->name) {
-        free(module->name);
-    }
-    
+
     free(module);
 }
 

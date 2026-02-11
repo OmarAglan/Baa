@@ -17,6 +17,9 @@
 
 #include "ir_cse.h"
 
+#include "ir_mutate.h"
+#include "ir_defuse.h"
+
 #include <stdlib.h>
 #include <string.h>
 
@@ -223,24 +226,9 @@ static int cse_replace_reg_uses(IRInst* inst, int old_reg, int new_reg) {
 }
 
 // -----------------------------------------------------------------------------
-// Helpers: remove instruction from block
+// ملاحظة:
+// حذف التعليمات يتم عبر ir_block_remove_inst() من ir_mutate.c (unlink فقط).
 // -----------------------------------------------------------------------------
-
-static void ir_block_remove_inst(IRBlock* block, IRInst* inst) {
-    if (!block || !inst) return;
-
-    if (inst->prev) inst->prev->next = inst->next;
-    else block->first = inst->next;
-
-    if (inst->next) inst->next->prev = inst->prev;
-    else block->last = inst->prev;
-
-    inst->prev = NULL;
-    inst->next = NULL;
-
-    if (block->inst_count > 0) block->inst_count--;
-    ir_inst_free(inst);
-}
 
 // -----------------------------------------------------------------------------
 // Core: per-function CSE
@@ -325,6 +313,11 @@ static int ir_cse_func(IRFunc* func) {
     // Cleanup
     free(replacements);
     cse_table_free(table);
+
+    if (changed) {
+        // التمريرة قد تُغيّر سجلات داخل IRValue بدون إعادة تخصيص؛ لذا نبطل Def-Use صراحة.
+        ir_func_invalidate_defuse(func);
+    }
     
     return changed;
 }
@@ -335,6 +328,9 @@ static int ir_cse_func(IRFunc* func) {
 
 bool ir_cse_run(IRModule* module) {
     if (!module) return false;
+
+    // ضمان أن أي قيم جديدة تُخصَّص ضمن ساحة هذه الوحدة.
+    ir_module_set_current(module);
 
     int changed = 0;
     for (IRFunc* f = module->funcs; f; f = f->next) {

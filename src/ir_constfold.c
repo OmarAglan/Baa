@@ -15,6 +15,9 @@
 
 #include "ir_constfold.h"
 
+#include "ir_defuse.h"
+#include "ir_mutate.h"
+
 #include <stdint.h>
 #include <stdlib.h>
 
@@ -80,24 +83,9 @@ static IRValue* new_const_for_type(int64_t v, IRType* t) {
 }
 
 // -----------------------------------------------------------------------------
-// Helpers: instruction list manipulation
+// ملاحظة:
+// حذف التعليمات يتم عبر ir_block_remove_inst() من ir_mutate.c (unlink فقط).
 // -----------------------------------------------------------------------------
-
-static void ir_block_remove_inst(IRBlock* block, IRInst* inst) {
-    if (!block || !inst) return;
-
-    if (inst->prev) inst->prev->next = inst->next;
-    else block->first = inst->next;
-
-    if (inst->next) inst->next->prev = inst->prev;
-    else block->last = inst->prev;
-
-    inst->prev = NULL;
-    inst->next = NULL;
-
-    if (block->inst_count > 0) block->inst_count--;
-    ir_inst_free(inst);
-}
 
 // -----------------------------------------------------------------------------
 // Helpers: replace register uses
@@ -163,6 +151,27 @@ static int ir_func_replace_reg_uses(IRFunc* func, int reg_num, IRType* folded_ty
     for (IRBlock* b = func->blocks; b; b = b->next) {
         changed |= ir_block_replace_reg_uses(b, reg_num, folded_type, folded_value);
     }
+    return changed;
+}
+
+static int ir_func_replace_reg_uses_defuse(IRDefUse* du,
+                                          int reg_num, IRType* folded_type, int64_t folded_value) {
+    if (!du) return 0;
+    if (reg_num < 0 || reg_num >= du->max_reg) return 0;
+
+    int changed = 0;
+    for (IRUse* u = du->uses_by_reg[reg_num]; u; u = u->next) {
+        if (!u->slot || !*u->slot) continue;
+
+        IRValue* cur = *u->slot;
+        if (!cur || cur->kind != IR_VAL_REG) continue;
+        if (cur->data.reg_num != reg_num) continue;
+
+        IRType* t = cur->type ? cur->type : folded_type;
+        *u->slot = new_const_for_type(folded_value, t);
+        changed = 1;
+    }
+
     return changed;
 }
 
@@ -259,6 +268,9 @@ static int ir_constfold_func(IRFunc* func) {
 
     int changed = 0;
 
+    // بناء Def-Use مرة واحدة لتسريع استبدال الاستعمالات.
+    IRDefUse* du = ir_func_get_defuse(func, true);
+
     for (IRBlock* b = func->blocks; b; b = b->next) {
         IRInst* inst = b->first;
         while (inst) {
@@ -272,7 +284,11 @@ static int ir_constfold_func(IRFunc* func) {
                 // Replace uses across the whole module? We'll do function-local replacement here
                 // (module-wide wrapper will call per-function, but replacing within the function is enough
                 // because virtual regs are function-scoped in this IR).
-                changed |= ir_func_replace_reg_uses(func, folded_reg, folded_type, folded_value);
+                if (du) {
+                    changed |= ir_func_replace_reg_uses_defuse(du, folded_reg, folded_type, folded_value);
+                } else {
+                    changed |= ir_func_replace_reg_uses(func, folded_reg, folded_type, folded_value);
+                }
 
                 // Remove the folded instruction itself.
                 ir_block_remove_inst(b, inst);
@@ -288,6 +304,9 @@ static int ir_constfold_func(IRFunc* func) {
 
 bool ir_constfold_run(IRModule* module) {
     if (!module) return false;
+
+    // ضمان أن أي قيم/أنواع جديدة تُخصَّص ضمن ساحة هذه الوحدة.
+    ir_module_set_current(module);
 
     int changed = 0;
     for (IRFunc* f = module->funcs; f; f = f->next) {

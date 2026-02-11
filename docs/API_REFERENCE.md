@@ -1,8 +1,8 @@
 # Baa Internal API Reference
 
-> **Version:** 0.3.2.5.3 | [← Compiler Internals](INTERNALS.md) | [IR Specification →](BAA_IR_SPECIFICATION.md)
+> **Version:** 0.3.2.6.1 | [← Compiler Internals](INTERNALS.md) | [IR Specification →](BAA_IR_SPECIFICATION.md)
 
-This document details the C functions, enumerations, and structures defined in `src/baa.h`, `src/ir.h`, `src/ir_builder.h`, `src/ir_lower.h`, `src/ir_analysis.h`, `src/ir_pass.h`, `src/ir_mem2reg.h`, `src/ir_outssa.h`, `src/ir_dce.h`, `src/ir_copyprop.h`, `src/ir_cse.h`, `src/ir_optimizer.h`, `src/isel.h`, and `src/regalloc.h`.
+This document details the C functions, enumerations, and structures defined in `src/baa.h`, `src/ir.h`, `src/ir_arena.h`, `src/ir_mutate.h`, `src/ir_defuse.h`, `src/ir_clone.h`, `src/ir_builder.h`, `src/ir_lower.h`, `src/ir_analysis.h`, `src/ir_pass.h`, `src/ir_mem2reg.h`, `src/ir_outssa.h`, `src/ir_dce.h`, `src/ir_copyprop.h`, `src/ir_cse.h`, `src/ir_optimizer.h`, `src/isel.h`, and `src/regalloc.h`.
 
 ---
 
@@ -159,6 +159,8 @@ Runs the semantic pass on the AST.
 ## 4. IR Module (v0.3.0+)
 
 The IR Module (`src/ir.h`, `src/ir.c`) provides Baa's Arabic-first Intermediate Representation.
+
+**Memory management (v0.3.2.6.1):** IR objects are allocated from a module-owned arena (`src/ir_arena.c`). Treat the IR as **module-owned** and release everything with `ir_module_free()`. The legacy `*_free` functions remain for compatibility but do not perform per-object frees under the arena model.
 
 ### 4.1. Type Construction
 
@@ -484,6 +486,129 @@ int ir_module_add_string(IRModule* module, const char* str)
 Adds a string to the string table.
 
 **Returns:** String ID for referencing in IR.
+
+---
+
+#### `ir_module_free`
+
+```c
+void ir_module_free(IRModule* module)
+```
+
+Frees an IR module and all IR objects owned by it.
+
+**Note (v0.3.2.6.1):** This is a bulk free backed by the IR arena.
+
+---
+
+#### `ir_module_set_current` / `ir_module_get_current`
+
+```c
+void ir_module_set_current(IRModule* module);
+IRModule* ir_module_get_current(void);
+```
+
+Sets/gets the active IR module context used by IR allocation helpers. IR passes call this to ensure newly created IR nodes are allocated into the correct module arena.
+
+---
+
+### 4.5.1. IR Mutation Helpers (v0.3.2.6.1)
+
+These helpers provide consistent instruction list manipulation for IR passes.
+
+#### `ir_block_insert_before`
+
+```c
+void ir_block_insert_before(IRBlock* block, IRInst* before, IRInst* inst);
+```
+
+Inserts `inst` before `before` in `block` (or appends if `before == NULL`).
+
+---
+
+#### `ir_block_remove_inst`
+
+```c
+void ir_block_remove_inst(IRBlock* block, IRInst* inst);
+```
+
+Unlinks `inst` from `block` and updates block bookkeeping.
+
+---
+
+#### `ir_block_insert_phi`
+
+```c
+void ir_block_insert_phi(IRBlock* block, IRInst* phi);
+```
+
+Inserts a `فاي` (phi) instruction at the start of the block after any existing phi nodes.
+
+---
+
+#### `ir_block_free_analysis_caches`
+
+```c
+void ir_block_free_analysis_caches(IRBlock* block);
+```
+
+Frees heap-allocated analysis caches stored in an `IRBlock` (preds/dom_frontier) without freeing the IR block itself.
+
+---
+
+### 4.5.2. Def-Use Chains (v0.3.2.6.1)
+
+Def-Use is an analysis cache that maps SSA registers to their definitions and use sites.
+
+#### `ir_defuse_build`
+
+```c
+IRDefUse* ir_defuse_build(IRFunc* func);
+```
+
+Builds Def-Use chains for a function.
+
+---
+
+#### `ir_defuse_free`
+
+```c
+void ir_defuse_free(IRDefUse* du);
+```
+
+Frees a Def-Use cache.
+
+---
+
+#### `ir_func_get_defuse`
+
+```c
+IRDefUse* ir_func_get_defuse(IRFunc* func, bool rebuild);
+```
+
+Returns a cached Def-Use for `func` (rebuilds if requested or stale).
+
+---
+
+#### `ir_func_invalidate_defuse`
+
+```c
+void ir_func_invalidate_defuse(IRFunc* func);
+```
+
+Invalidates Def-Use by bumping the function epoch; callers rebuild via `ir_func_get_defuse()`.
+
+---
+
+### 4.5.3. IR Cloning (v0.3.2.6.1)
+
+#### `ir_func_clone`
+
+```c
+IRFunc* ir_func_clone(IRModule* module, IRFunc* src, const char* new_name);
+```
+
+Deep-clones an IR function (blocks, instructions, phi entries, call args) into `module`.
 
 ---
 

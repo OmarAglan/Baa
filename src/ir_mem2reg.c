@@ -23,6 +23,7 @@
 
 #include "ir_mem2reg.h"
 #include "ir_analysis.h"
+#include "ir_mutate.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -123,53 +124,12 @@ static int ir_block_dominates(IRBlock* dom, IRBlock* node) {
 }
 
 // -----------------------------------------------------------------------------
-// مساعدات: إدراج/حذف تعليمات داخل الكتل
+// ملاحظة:
+// نستخدم مساعدات التعديل المشتركة من ir_mutate.c لضمان:
+// - تعيين parent/id للتعليمات المُدرجة
+// - تحديث inst_count بشكل موحّد
+// - عدم تحرير كائنات IR الفردية (Arena)
 // -----------------------------------------------------------------------------
-
-static void ir_block_remove_inst(IRBlock* block, IRInst* inst) {
-    if (!block || !inst) return;
-
-    if (inst->prev) inst->prev->next = inst->next;
-    else block->first = inst->next;
-
-    if (inst->next) inst->next->prev = inst->prev;
-    else block->last = inst->prev;
-
-    inst->prev = NULL;
-    inst->next = NULL;
-
-    if (block->inst_count > 0) block->inst_count--;
-    ir_inst_free(inst);
-}
-
-static void ir_block_insert_before(IRBlock* block, IRInst* before, IRInst* inst) {
-    if (!block || !inst) return;
-
-    if (!before) {
-        ir_block_append(block, inst);
-        return;
-    }
-
-    inst->next = before;
-    inst->prev = before->prev;
-
-    if (before->prev) before->prev->next = inst;
-    else block->first = inst;
-
-    before->prev = inst;
-    block->inst_count++;
-}
-
-static void ir_block_insert_phi(IRBlock* block, IRInst* phi) {
-    if (!block || !phi) return;
-
-    IRInst* pos = block->first;
-    while (pos && pos->op == IR_OP_PHI) {
-        pos = pos->next;
-    }
-
-    ir_block_insert_before(block, pos, phi);
-}
 
 // -----------------------------------------------------------------------------
 // مساعدات: فحص استعمالات المؤشر (عدم الهروب) + تحقق الأنواع
@@ -768,6 +728,9 @@ static int ir_mem2reg_func(IRFunc* func) {
 
 bool ir_mem2reg_run(IRModule* module) {
     if (!module) return false;
+
+    // ضمان أن أي قيم/فاي جديدة تُخصَّص ضمن ساحة هذه الوحدة.
+    ir_module_set_current(module);
 
     int changed = 0;
     for (IRFunc* f = module->funcs; f; f = f->next) {

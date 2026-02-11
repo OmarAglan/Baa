@@ -14,6 +14,7 @@
 
 #include "ir_dce.h"
 #include "ir_analysis.h"
+#include "ir_mutate.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -63,21 +64,7 @@ static int ir_inst_is_removable_dead(IRInst* inst, const int* uses, int max_reg)
     return 1;
 }
 
-static void ir_block_remove_inst(IRBlock* block, IRInst* inst) {
-    if (!block || !inst) return;
-
-    if (inst->prev) inst->prev->next = inst->next;
-    else block->first = inst->next;
-
-    if (inst->next) inst->next->prev = inst->prev;
-    else block->last = inst->prev;
-
-    inst->prev = NULL;
-    inst->next = NULL;
-
-    if (block->inst_count > 0) block->inst_count--;
-    ir_inst_free(inst);
-}
+// ملاحظة: نستخدم ir_block_remove_inst() من ir_mutate.c.
 
 static int ir_func_max_block_id(IRFunc* func) {
     if (!func) return 0;
@@ -143,8 +130,8 @@ static void ir_phi_prune_unreachable_entries_in_block(IRBlock* block, const unsi
             }
 
             *link = e->next;
-            if (e->value) ir_value_free(e->value);
-            free(e);
+            // ذاكرة IR مُدارة عبر الساحة (Arena)، لا نُحرِّر العقدة/القيمة هنا.
+            e->value = NULL;
         }
     }
 }
@@ -195,7 +182,8 @@ static int ir_func_remove_unreachable_blocks(IRFunc* func) {
         b->next = NULL;
 
         if (func->block_count > 0) func->block_count--;
-        ir_block_free(b);
+        // حرّر فقط كاشات التحليل التي تخصّص بالـ heap.
+        ir_block_free_analysis_caches(b);
 
         changed = 1;
     }
@@ -429,6 +417,9 @@ static int ir_func_dce_instructions(IRFunc* func) {
 
 bool ir_dce_run(IRModule* module) {
     if (!module) return false;
+
+    // ضمان أن أي قيم/تعليمات جديدة (إن وُجدت) تُخصَّص ضمن ساحة هذه الوحدة.
+    ir_module_set_current(module);
 
     int changed = 0;
 

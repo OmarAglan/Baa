@@ -16,6 +16,9 @@
 // ============================================================================
 
 IRBuilder* ir_builder_new(IRModule* module) {
+    // ضمان أن تخصيصات IR التالية تذهب لساحة هذه الوحدة.
+    ir_module_set_current(module);
+
     IRBuilder* builder = (IRBuilder*)malloc(sizeof(IRBuilder));
     if (!builder) {
         fprintf(stderr, "خطأ: فشل تخصيص باني النواة\n");
@@ -42,6 +45,7 @@ void ir_builder_free(IRBuilder* builder) {
 
 void ir_builder_set_module(IRBuilder* builder, IRModule* module) {
     if (!builder) return;
+    ir_module_set_current(module);
     builder->module = module;
 }
 

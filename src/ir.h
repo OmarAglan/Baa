@@ -16,6 +16,11 @@
 #include <stdint.h>
 #include <stdio.h>
 
+#include "ir_arena.h"
+
+// إعلان مسبق لتجنب دورات تضمين بين ir.h و ir_defuse.h
+typedef struct IRDefUse IRDefUse;
+
 // ============================================================================
 // IR Opcodes (أكواد العمليات)
 // ============================================================================
@@ -129,6 +134,7 @@ typedef enum {
  * For arrays, `element` is the element type and `count` is the size.
  */
 typedef struct IRType {
+    // ملاحظة: هذه البنية تُخصَّص داخل ساحة IR (Arena) وتُحرَّر دفعة واحدة.
     IRTypeKind kind;
     union {
         struct IRType* pointee;     // For IR_TYPE_PTR
@@ -167,6 +173,7 @@ typedef enum {
  * @brief Represents a value/operand in IR instructions.
  */
 typedef struct IRValue {
+    // ملاحظة: هذه البنية تُخصَّص داخل ساحة IR (Arena) وتُحرَّر دفعة واحدة.
     IRValueKind kind;
     IRType* type;
     union {
@@ -190,6 +197,7 @@ typedef struct IRValue {
  * @brief A single entry in a Phi node: [value, predecessor_block]
  */
 typedef struct IRPhiEntry {
+    // ملاحظة: هذه البنية تُخصَّص داخل ساحة IR (Arena) وتُحرَّر دفعة واحدة.
     IRValue* value;
     struct IRBlock* block;
     struct IRPhiEntry* next;
@@ -202,8 +210,12 @@ typedef struct IRPhiEntry {
  * Instructions are stored as a doubly-linked list within a basic block.
  */
 typedef struct IRInst {
+    // ملاحظة: هذه البنية تُخصَّص داخل ساحة IR (Arena) وتُحرَّر دفعة واحدة.
     IROp op;                    // Opcode
     IRType* type;               // Result type (or void for stores/branches)
+
+    // معرّف ثابت للتعليمة داخل الدالة (للتشخيص/الاختبارات)
+    int id;
     
     // Destination register (for instructions that produce a value)
     int dest;                   // -1 if no destination
@@ -227,6 +239,9 @@ typedef struct IRInst {
     const char* src_file;
     int src_line;
     int src_col;
+
+    // الأب (الكتلة التي تحتوي التعليمة)
+    struct IRBlock* parent;
     
     // Linked list within block
     struct IRInst* prev;
@@ -247,8 +262,12 @@ typedef struct IRInst {
  * - A single terminating instruction (branch or return)
  */
 typedef struct IRBlock {
+    // ملاحظة: هذه البنية تُخصَّص داخل ساحة IR (Arena) وتُحرَّر دفعة واحدة.
     char* label;                // Block label (Arabic name like "بداية")
     int id;                     // Numeric ID for internal use
+
+    // الأب (الدالة التي تحتوي الكتلة)
+    struct IRFunc* parent;
     
     // Instructions (doubly-linked list)
     IRInst* first;
@@ -291,6 +310,7 @@ typedef struct IRParam {
  * @brief Represents a function in the IR.
  */
 typedef struct IRFunc {
+    // ملاحظة: هذه البنية تُخصَّص داخل ساحة IR (Arena) وتُحرَّر دفعة واحدة.
     char* name;                 // Function name
     IRType* ret_type;           // Return type
     
@@ -305,6 +325,15 @@ typedef struct IRFunc {
     
     // Virtual register counter
     int next_reg;               // Next available %م<n>
+
+    // عدّاد معرفات التعليمات
+    int next_inst_id;
+
+    // عدّاد تغييرات IR داخل الدالة (لتبطل التحليلات مثل Def-Use)
+    uint32_t ir_epoch;
+
+    // كاش Def-Use (تحليل) — يُخصّص على heap ويُعاد بناؤه عند التغييرات.
+    IRDefUse* def_use;
     
     // Block ID counter
     int next_block_id;
@@ -325,6 +354,7 @@ typedef struct IRFunc {
  * @brief Represents a global variable.
  */
 typedef struct IRGlobal {
+    // ملاحظة: هذه البنية تُخصَّص داخل ساحة IR (Arena) وتُحرَّر دفعة واحدة.
     char* name;                 // Variable name
     IRType* type;               // Variable type
     IRValue* init;              // Initial value (or NULL)
@@ -337,6 +367,7 @@ typedef struct IRGlobal {
  * @brief Represents a string literal in the string table.
  */
 typedef struct IRStringEntry {
+    // ملاحظة: هذه البنية تُخصَّص داخل ساحة IR (Arena) وتُحرَّر دفعة واحدة.
     char* content;              // String content (UTF-8)
     int id;                     // Unique ID (.Lstr_<id>)
     struct IRStringEntry* next;
@@ -347,7 +378,14 @@ typedef struct IRStringEntry {
  * @brief Represents a complete IR module (translation unit).
  */
 typedef struct IRModule {
+    // ملاحظة: هذه البنية تُخصَّص بـ malloc وتحتوي على ساحة IR.
     char* name;                 // Module name (source file)
+
+    // ساحة ذاكرة IR: كل كائنات IR تُخصَّص منها.
+    IRArena arena;
+
+    // كاش داخلي لأنواع شائعة لكل وحدة
+    IRType* cached_i8_ptr_type;
     
     // Global variables
     IRGlobal* globals;
@@ -361,6 +399,13 @@ typedef struct IRModule {
     IRStringEntry* strings;
     int string_count;
 } IRModule;
+
+// ============================================================================
+// سياق الساحة (Arena) للوحدة الحالية
+// ============================================================================
+
+void ir_module_set_current(IRModule* module);
+IRModule* ir_module_get_current(void);
 
 // ============================================================================
 // Predefined Types (أنواع محددة مسبقاً)

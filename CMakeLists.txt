@@ -12,6 +12,10 @@ set(SOURCES
     src/analysis.c    # Semantic Analysis module
     src/error.c
     src/ir.c          # Intermediate Representation (Phase 3)
+    src/ir_arena.c    # IR arena allocator (v0.3.2.6.1)
+    src/ir_mutate.c   # IR mutation helpers (v0.3.2.6.1)
+    src/ir_defuse.c   # IR def-use chains (v0.3.2.6.1)
+    src/ir_clone.c    # IR cloning (v0.3.2.6.1)
     src/ir_analysis.c # IR analysis (CFG + dominance) (v0.3.1.1)
     src/ir_builder.c  # IR Builder pattern API (v0.3.0.2)
     src/ir_verify_ssa.c # IR SSA verification (التحقق من SSA) (v0.3.2.5.3)

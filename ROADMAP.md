@@ -230,12 +230,14 @@
 
 #### v0.3.2.6.1: IR Memory Management
 
-- [ ] **Arena allocator for IR** — Fast allocation, bulk deallocation.
-- [ ] **IR cloning** — Deep copy of functions/blocks.
-- [ ] **IR destruction** — Clean up all IR memory.
-- [ ] **Def-use chains for SSA regs** — Build and maintain use lists to make IR passes fast and safe (avoid whole-function rescans).
-- [ ] **Instruction numbering / stable IDs** — Deterministic per-function instruction IDs for analyses, debugging, and regression tests.
-- [ ] **IR mutation helpers** — Central utilities to insert/remove instructions and update CFG metadata (pred/succ/dominance caches) consistently.
+✅ COMPLETED (2026-02-11)
+
+- [x] **Arena allocator for IR** — Fast allocation, bulk deallocation.
+- [x] **IR cloning** — Deep copy of functions/blocks.
+- [x] **IR destruction** — Clean up all IR memory.
+- [x] **Def-use chains for SSA regs** — Build and maintain use lists to make IR passes fast and safe (avoid whole-function rescans).
+- [x] **Instruction numbering / stable IDs** — Deterministic per-function instruction IDs for analyses, debugging, and regression tests.
+- [x] **IR mutation helpers** — Central utilities to insert/remove instructions and update CFG metadata (pred/succ/dominance caches) consistently.
 
 #### v0.3.2.6.2: Debug Information
 

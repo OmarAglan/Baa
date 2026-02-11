@@ -17,9 +17,11 @@
 #define UPDATE_URL_VERSION "https://omardev.engineer/baaInstaller/version.txt"
 #define UPDATE_URL_SETUP   "https://omardev.engineer/baaInstaller/baa_setup.exe"
 
-// ربط مكتبة urlmon و wininet
+// ربط مكتبة urlmon و wininet (خاص بـ MSVC). في MinGW يتم الربط عبر CMake.
+#if defined(_MSC_VER)
 #pragma comment(lib, "urlmon.lib")
 #pragma comment(lib, "wininet.lib")
+#endif
 
 /**
  * @brief قراءة الإصدار من الخادم.

@@ -90,6 +90,14 @@ static int check_all_vregs_physical(MachineFunc* func, int original_max_vreg) {
     return 1;
 }
 
+static MachineBlock* find_mblock_by_id(MachineFunc* func, int id) {
+    if (!func) return NULL;
+    for (MachineBlock* b = func->blocks; b; b = b->next) {
+        if (b->id == id) return b;
+    }
+    return NULL;
+}
+
 // ============================================================================
 // اختبار ١: تخصيص بسيط (عدد قليل من السجلات)
 // ============================================================================
@@ -250,6 +258,22 @@ static int test_multiblock_allocation(void) {
     ok &= require(mmod != NULL, "isel_run يجب أن يُرجع وحدة");
 
     if (mmod) {
+        // قبل تخصيص السجلات: يجب أن يكون CFG الآلي مربوطاً (succs غير NULL)
+        if (mmod->funcs) {
+            MachineFunc* mf = mmod->funcs;
+            MachineBlock* b0 = find_mblock_by_id(mf, 0);
+            MachineBlock* b1 = find_mblock_by_id(mf, 1);
+            MachineBlock* b2 = find_mblock_by_id(mf, 2);
+            ok &= require(b0 != NULL && b1 != NULL && b2 != NULL,
+                          "يجب أن تُنشأ كتل الآلة بالمعرّفات 0/1/2");
+            if (b0) {
+                ok &= require(b0->succ_count == 2,
+                              "كتلة الدخول يجب أن تملك خلفاء اثنين");
+                ok &= require(b0->succs[0] != NULL && b0->succs[1] != NULL,
+                              "يجب أن تكون succs[] غير NULL لكتلة الدخول");
+            }
+        }
+
         bool result = regalloc_run(mmod);
         ok &= require(result, "regalloc_run يجب أن ينجح");
 

@@ -447,6 +447,32 @@ void emit_inst(MachineInst* inst, MachineFunc* func, FILE* out) {
             if (inst->dst.kind == MACH_OP_NONE) break;
             if (inst->src1.kind == MACH_OP_NONE) break;
 
+            // معالجة حالة ذاكرة ← ذاكرة (غير صالحة مباشرة في x86-64)
+            // نستخدم %rax كسجل مؤقت لأنه محجوز عادةً ولا نخصصه للفترات العادية.
+            if (inst->dst.kind == MACH_OP_MEM && inst->src1.kind == MACH_OP_MEM) {
+                int bits = inst->dst.size_bits;
+                if (bits <= 0) bits = inst->src1.size_bits;
+                if (bits <= 0) bits = 64;
+
+                MachineOperand tmp = {0};
+                tmp.kind = MACH_OP_VREG;
+                tmp.size_bits = bits;
+                tmp.data.vreg = PHYS_RAX;
+
+                fprintf(out, "    mov%c ", infer_suffix(inst));
+                emit_operand(&inst->src1, out);
+                fprintf(out, ", ");
+                emit_operand(&tmp, out);
+                fprintf(out, "\n");
+
+                fprintf(out, "    mov%c ", infer_suffix(inst));
+                emit_operand(&tmp, out);
+                fprintf(out, ", ");
+                emit_operand(&inst->dst, out);
+                fprintf(out, "\n");
+                break;
+            }
+
             // التحقق من عدم وجود mov بين نفس السجل
             if (inst->dst.kind == MACH_OP_VREG &&
                 inst->src1.kind == MACH_OP_VREG &&

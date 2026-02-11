@@ -256,11 +256,11 @@
 - [x] **Round-trip testing** — Write → Read → Compare.
 
 #### v0.3.2.6.4: Register Allocator Liveness Fix (إصلاح حيوية مخصص السجلات)
-
-- [ ] **Fix liveness across loop back-edges** — Linear scan liveness analysis does not correctly propagate live ranges across loop back-edges when many variables are simultaneously live, causing register clobbering and segfaults.
-- [ ] **Extend live intervals to loop ends** — Ensure variables used inside loops have their intervals extended to cover the entire loop body including back-edges.
+ 
+- [x] **Fix liveness across loop back-edges** — Linear scan liveness analysis does not correctly propagate live ranges across loop back-edges when many variables are simultaneously live, causing register clobbering and segfaults.
+- [x] **Extend live intervals to loop ends** — Ensure variables used inside loops have their intervals extended to cover the entire loop body including back-edges.
 - [ ] **Add block-level scoping in semantic analyzer** — Currently function-level only; for-loop variables cannot be redeclared in the same function, requiring unique names.
-- [ ] **Stress test with high register pressure** — Validate fix with functions containing 8+ live variables across multiple nested loops.
+- [x] **Stress test with high register pressure** — Validate fix with functions containing 8+ live variables across multiple nested loops.
 
 #### v0.3.2.6.5: IR Verification & Canonicalization (تحقق_الـIR_وتوحيده)
 

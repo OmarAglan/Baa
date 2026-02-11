@@ -8,6 +8,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+### Fixed
+
+- **Register allocation liveness across loops** — Machine CFG successors are now linked during ISel so liveness propagates across loop back-edges correctly.
+- **Assembly emission for spilled copies** — `mov` memory-to-memory is now lowered via `%rax` scratch during emission to avoid invalid `movq mem, mem`.
+
+### Testing
+
+- Added regalloc stress integration test: [`tests/backend_regalloc_stress.baa`](tests/backend_regalloc_stress.baa)
+
 ## [0.3.2.6.3] - 2026-02-11
 
 ### Added

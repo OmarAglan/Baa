@@ -1207,6 +1207,64 @@ static MachineFunc *isel_lower_func(ISelCtx *ctx, IRFunc *ir_func)
     }
 
     // ──────────────────────────────────────────────────────────────────────
+    // ربط CFG: خلفاء الكتل الآلية (MachineBlock.succs)
+    //
+    // ملاحظة مهمة (v0.3.2.6.4): تحليل الحيوية في regalloc يعتمد على succs[]
+    // لحساب live_out عبر الحواف، بما فيها حواف الرجوع في الحلقات (back-edges).
+    // كان لدينا سابقاً succ_count فقط بدون ربط succs، مما يجعل liveness عبر
+    // الحلقات خاطئاً تحت ضغط سجلات عالٍ.
+    // ──────────────────────────────────────────────────────────────────────
+    {
+        int max_id = -1;
+        for (IRBlock *b = ir_func->blocks; b; b = b->next)
+        {
+            if (b->id > max_id)
+                max_id = b->id;
+        }
+
+        if (max_id >= 0)
+        {
+            MachineBlock **by_id = (MachineBlock **)calloc((size_t)(max_id + 1), sizeof(MachineBlock *));
+            if (by_id)
+            {
+                for (MachineBlock *mb = mfunc->blocks; mb; mb = mb->next)
+                {
+                    if (mb->id >= 0 && mb->id <= max_id)
+                        by_id[mb->id] = mb;
+                }
+
+                for (IRBlock *ib = ir_func->blocks; ib; ib = ib->next)
+                {
+                    if (ib->id < 0 || ib->id > max_id)
+                        continue;
+                    MachineBlock *mb = by_id[ib->id];
+                    if (!mb)
+                        continue;
+
+                    mb->succ_count = 0;
+                    mb->succs[0] = NULL;
+                    mb->succs[1] = NULL;
+
+                    for (int s = 0; s < ib->succ_count && s < 2; s++)
+                    {
+                        IRBlock *succ = ib->succs[s];
+                        if (!succ)
+                            continue;
+                        if (succ->id < 0 || succ->id > max_id)
+                            continue;
+                        MachineBlock *msucc = by_id[succ->id];
+                        if (!msucc)
+                            continue;
+                        mb->succs[mb->succ_count++] = msucc;
+                    }
+                }
+
+                free(by_id);
+            }
+        }
+    }
+
+    // ──────────────────────────────────────────────────────────────────────
     // نسخ معاملات الدالة من سجلات ABI إلى سجلات المعاملات الافتراضية
     // Windows x64 ABI: RCX, RDX, R8, R9 → param vreg 0, 1, 2, 3
     // ──────────────────────────────────────────────────────────────────────

@@ -67,6 +67,118 @@ static const char* reg8_names[PHYS_REG_COUNT] = {
 static int g_emit_next_func_uid = 0;
 static int g_emit_current_func_uid = 0;
 
+// هل إصدار معلومات الديبغ مفعل؟
+static bool g_emit_debug_info = false;
+
+typedef struct {
+    const char** files;
+    int file_count;
+    int file_cap;
+
+    int last_file_id;
+    int last_line;
+    int last_col;
+
+    const char* last_dbg_name;
+} EmitDebugState;
+
+static EmitDebugState g_emit_dbg = {0};
+
+static void emit_debug_reset(void) {
+    if (g_emit_dbg.files) {
+        free(g_emit_dbg.files);
+        g_emit_dbg.files = NULL;
+    }
+    g_emit_dbg.file_count = 0;
+    g_emit_dbg.file_cap = 0;
+    g_emit_dbg.last_file_id = -1;
+    g_emit_dbg.last_line = -1;
+    g_emit_dbg.last_col = -1;
+    g_emit_dbg.last_dbg_name = NULL;
+}
+
+static void emit_debug_escape_path(FILE* out, const char* s) {
+    if (!out || !s) return;
+
+    for (const char* p = s; *p; p++) {
+        unsigned char c = (unsigned char)*p;
+        if (c == '\\' || c == '"') {
+            fputc('\\', out);
+            fputc((int)c, out);
+        } else if (c == '\n') {
+            fputs("\\n", out);
+        } else if (c == '\r') {
+            fputs("\\r", out);
+        } else if (c == '\t') {
+            fputs("\\t", out);
+        } else {
+            fputc((int)c, out);
+        }
+    }
+}
+
+static int emit_debug_get_file_id(FILE* out, const char* filename) {
+    if (!out || !filename) return -1;
+
+    for (int i = 0; i < g_emit_dbg.file_count; i++) {
+        const char* cur = g_emit_dbg.files[i];
+        if (cur && strcmp(cur, filename) == 0) {
+            return i + 1; // .file ids are 1-based
+        }
+    }
+
+    if (g_emit_dbg.file_count >= g_emit_dbg.file_cap) {
+        int new_cap = (g_emit_dbg.file_cap == 0) ? 8 : g_emit_dbg.file_cap * 2;
+        const char** new_arr = (const char**)realloc(g_emit_dbg.files, (size_t)new_cap * sizeof(const char*));
+        if (!new_arr) return -1;
+        g_emit_dbg.files = new_arr;
+        g_emit_dbg.file_cap = new_cap;
+    }
+
+    int id = g_emit_dbg.file_count + 1;
+    g_emit_dbg.files[g_emit_dbg.file_count++] = filename;
+
+    // إصدار .file مرة واحدة لكل ملف
+    fprintf(out, "    .file %d \"", id);
+    emit_debug_escape_path(out, filename);
+    fprintf(out, "\"\n");
+
+    return id;
+}
+
+static void emit_debug_loc(FILE* out, const MachineInst* inst) {
+    if (!g_emit_debug_info) return;
+    if (!out || !inst) return;
+    if (!inst->src_file || inst->src_line <= 0) return;
+
+    int file_id = emit_debug_get_file_id(out, inst->src_file);
+    if (file_id <= 0) return;
+
+    int line = inst->src_line;
+    int col = inst->src_col;
+    if (col <= 0) col = 1;
+
+    if (file_id != g_emit_dbg.last_file_id ||
+        line != g_emit_dbg.last_line ||
+        col != g_emit_dbg.last_col) {
+        fprintf(out, "    .loc %d %d %d\n", file_id, line, col);
+        g_emit_dbg.last_file_id = file_id;
+        g_emit_dbg.last_line = line;
+        g_emit_dbg.last_col = col;
+    }
+
+    if (inst->dbg_name) {
+        int changed = 1;
+        if (g_emit_dbg.last_dbg_name && strcmp(g_emit_dbg.last_dbg_name, inst->dbg_name) == 0) {
+            changed = 0;
+        }
+        if (changed) {
+            fprintf(out, "    # متغير: %s\n", inst->dbg_name);
+            g_emit_dbg.last_dbg_name = inst->dbg_name;
+        }
+    }
+}
+
 // ============================================================================
 // دوال مساعدة للحصول على اسم السجل (Register Name Helpers)
 // ============================================================================
@@ -816,6 +928,9 @@ bool emit_func(MachineFunc* func, FILE* out) {
     // إصدار تعليمات الجسم
     for (MachineBlock* block = func->blocks; block; block = block->next) {
         for (MachineInst* inst = block->first; inst; inst = inst->next) {
+            if (inst->op != MACH_LABEL && inst->op != MACH_COMMENT) {
+                emit_debug_loc(out, inst);
+            }
             if (inst->op == MACH_RET) {
                 // عند الرجوع: إصدار قيمة الإرجاع الافتراضية إذا كانت main
                 // ثم إصدار الخاتمة
@@ -850,8 +965,11 @@ bool emit_func(MachineFunc* func, FILE* out) {
 // إصدار وحدة كاملة (Module Emission)
 // ============================================================================
 
-bool emit_module(MachineModule* module, FILE* out) {
+bool emit_module(MachineModule* module, FILE* out, bool debug_info) {
     if (!module || !out) return false;
+
+    g_emit_debug_info = debug_info ? true : false;
+    emit_debug_reset();
 
     // إعادة تعيين بادئات الدوال لضمان حتمية أسماء التسميات داخل كل ملف .s
     g_emit_next_func_uid = 0;
@@ -874,6 +992,8 @@ bool emit_module(MachineModule* module, FILE* out) {
 
     // 4. جدول النصوص
     emit_string_table(module, out);
+
+    emit_debug_reset();
 
     return true;
 }

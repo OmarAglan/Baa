@@ -240,6 +240,9 @@ typedef struct IRInst {
     int src_line;
     int src_col;
 
+    // اسم رمز/متغير اختياري للتتبع (للديبغ)
+    const char* dbg_name;
+
     // الأب (الكتلة التي تحتوي التعليمة)
     struct IRBlock* parent;
     
@@ -485,6 +488,7 @@ void ir_value_free(IRValue* val);
 IRInst* ir_inst_new(IROp op, IRType* type, int dest);
 void ir_inst_add_operand(IRInst* inst, IRValue* operand);
 void ir_inst_set_loc(IRInst* inst, const char* file, int line, int col);
+void ir_inst_set_dbg_name(IRInst* inst, const char* name);
 IRInst* ir_inst_binary(IROp op, IRType* type, int dest, IRValue* lhs, IRValue* rhs);
 IRInst* ir_inst_unary(IROp op, IRType* type, int dest, IRValue* operand);
 IRInst* ir_inst_cmp(IRCmpPred pred, int dest, IRValue* lhs, IRValue* rhs);

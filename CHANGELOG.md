@@ -8,6 +8,30 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.3.2.6.3] - 2026-02-11
+
+### Added
+
+- **IR text serialization (write/read)** — new machine-readable IR writer + reader:
+  - Writer: [`ir_text_write_module()`](src/ir_text.c:1) / [`ir_text_dump_module()`](src/ir_text.c:1)
+  - Reader: [`ir_text_read_module_file()`](src/ir_text.c:1)
+  - Header: [`src/ir_text.h`](src/ir_text.h)
+
+### Testing
+
+- Added round-trip unit test: [`tests/ir_serialize_test.c`](tests/ir_serialize_test.c)
+
+## [0.3.2.6.2] - 2026-02-11
+
+### Added
+
+- **Debug information pipeline (`--debug-info`)** — propagates source locations from tokens → AST → IR → MachineInst and emits GAS `.file`/`.loc` directives in assembly.
+- **Variable name preservation (lightweight)** — preserves a best-effort `dbg_name` for variable-related IR instructions and emits readable `# متغير: ...` breadcrumbs in assembly when debug info is enabled.
+
+### Changed
+
+- Driver passes `-g` to the toolchain when `--debug-info` is enabled.
+
 ## [0.3.2.6.1] - 2026-02-11
 
 ### Added

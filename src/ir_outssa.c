@@ -114,6 +114,12 @@ typedef struct {
     int dest_reg;
     IRType* type;
     IRValue* src;   // قد يُستبدل بمؤقت أثناء حل الدورات
+
+    // معلومات ديبغ من عقدة فاي الأصلية
+    const char* dbg_name;
+    const char* src_file;
+    int src_line;
+    int src_col;
 } EdgeCopy;
 
 static int edge_copy_dest_is_used_as_source(const EdgeCopy* copies, const unsigned char* done,
@@ -132,7 +138,9 @@ static int edge_copy_dest_is_used_as_source(const EdgeCopy* copies, const unsign
 }
 
 static void ir_emit_edge_copy(IRBlock* insert_block, IRInst* before,
-                              int dest_reg, IRType* type, IRValue* src) {
+                              int dest_reg, IRType* type, IRValue* src,
+                              const char* dbg_name,
+                              const char* src_file, int src_line, int src_col) {
     if (!insert_block || !type || !src) return;
 
     IRValue* clone = ir_value_clone_with_type_local(src, type);
@@ -142,6 +150,13 @@ static void ir_emit_edge_copy(IRBlock* insert_block, IRInst* before,
     if (!copy) {
         ir_value_free(clone);
         return;
+    }
+
+    if (src_file && src_line > 0) {
+        ir_inst_set_loc(copy, src_file, src_line, src_col);
+    }
+    if (dbg_name) {
+        ir_inst_set_dbg_name(copy, dbg_name);
     }
 
     if (before) {
@@ -180,7 +195,10 @@ static void ir_emit_parallel_copies(IRFunc* func, IRBlock* insert_block, IRInst*
             }
 
             if (!edge_copy_dest_is_used_as_source(copies, done, copy_count, copies[i].dest_reg)) {
-                ir_emit_edge_copy(insert_block, before, copies[i].dest_reg, copies[i].type, src);
+                ir_emit_edge_copy(insert_block, before,
+                                  copies[i].dest_reg, copies[i].type, src,
+                                  copies[i].dbg_name,
+                                  copies[i].src_file, copies[i].src_line, copies[i].src_col);
                 done[i] = 1;
                 remaining--;
                 progress = 1;
@@ -208,7 +226,10 @@ static void ir_emit_parallel_copies(IRFunc* func, IRBlock* insert_block, IRInst*
         IRValue* cycle_dest_val = ir_value_reg(cycle_dest, t);
         if (!cycle_dest_val) break;
 
-        ir_emit_edge_copy(insert_block, before, temp_reg, t, cycle_dest_val);
+        ir_emit_edge_copy(insert_block, before,
+                          temp_reg, t, cycle_dest_val,
+                          copies[pick].dbg_name,
+                          copies[pick].src_file, copies[pick].src_line, copies[pick].src_col);
         ir_value_free(cycle_dest_val);
 
         IRValue* temp_val = ir_value_reg(temp_reg, t);
@@ -335,6 +356,12 @@ static int ir_outssa_func(IRFunc* func) {
                 copies[i].dest_reg = phi->dest;
                 copies[i].type = t;
                 copies[i].src = ir_phi_incoming_value(phi, pred, t);
+
+                // حافظ على معلومات الديبغ من الفاي.
+                copies[i].dbg_name = phi->dbg_name;
+                copies[i].src_file = phi->src_file;
+                copies[i].src_line = phi->src_line;
+                copies[i].src_col = phi->src_col;
             }
 
             // اختيار مكان الإدراج

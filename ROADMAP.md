@@ -241,15 +241,19 @@
 
 #### v0.3.2.6.2: Debug Information
 
-- [ ] **Source location tracking** — Map IR instructions to source lines.
-- [ ] **Variable name preservation** — Keep original names for debugging.
-- [ ] **`--debug-info` flag** — Emit debug metadata in assembly.
+✅ COMPLETED (2026-02-11)
+ 
+- [x] **Source location tracking** — Map IR instructions to source lines.
+- [x] **Variable name preservation** — Keep original names for debugging.
+- [x] **`--debug-info` flag** — Emit debug metadata in assembly.
 
 #### v0.3.2.6.3: IR Serialization
 
-- [ ] **Text IR writer** — Output canonical IR text format.
-- [ ] **Text IR reader** — Parse IR text back to data structures.
-- [ ] **Round-trip testing** — Write → Read → Compare.
+✅ COMPLETED (2026-02-11)
+
+- [x] **Text IR writer** — Output canonical IR text format.
+- [x] **Text IR reader** — Parse IR text back to data structures.
+- [x] **Round-trip testing** — Write → Read → Compare.
 
 #### v0.3.2.6.4: Register Allocator Liveness Fix (إصلاح حيوية مخصص السجلات)
 

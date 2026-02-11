@@ -42,7 +42,7 @@ extern "C" {
  * @param out ملف الخرج للكتابة.
  * @return صحيح عند النجاح، خطأ عند الفشل.
  */
-bool emit_module(MachineModule* module, FILE* out);
+bool emit_module(MachineModule* module, FILE* out, bool debug_info);
 
 /**
  * @brief إصدار كود تجميع لدالة واحدة.

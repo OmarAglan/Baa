@@ -65,6 +65,30 @@ void ir_lower_bind_local(IRLowerCtx* ctx, const char* name, int ptr_reg, IRType*
 // Expression/Statement lowering helpers
 // ============================================================================
 
+static void ir_lower_set_loc(IRBuilder* builder, const Node* node) {
+    if (!builder) return;
+
+    if (!node || !node->filename || node->line <= 0) {
+        ir_builder_clear_loc(builder);
+        return;
+    }
+
+    ir_builder_set_loc(builder, node->filename, node->line, node->col);
+}
+
+static void ir_lower_tag_last_inst(IRBuilder* builder, IROp expected_op, int expected_dest,
+                                   const char* dbg_name) {
+    if (!builder || !builder->insert_block) return;
+    if (!dbg_name) return;
+
+    IRInst* last = builder->insert_block->last;
+    if (!last) return;
+    if (last->op != expected_op) return;
+    if (expected_dest >= 0 && last->dest != expected_dest) return;
+
+    ir_inst_set_dbg_name(last, dbg_name);
+}
+
 static IRType* get_i8_ptr_type(IRModule* module) {
     if (!module) return ir_type_ptr(IR_TYPE_I8_T);
     ir_module_set_current(module);
@@ -209,6 +233,9 @@ IRValue* lower_expr(IRLowerCtx* ctx, Node* expr) {
         return ir_builder_const_i64(0);
     }
 
+    // تعيين موقع المصدر لهذه العقدة قبل توليد أي تعليمات.
+    ir_lower_set_loc(ctx->builder, expr);
+
     switch (expr->type) {
         // -----------------------------------------------------------------
         // v0.3.0.3 required nodes
@@ -227,6 +254,7 @@ IRValue* lower_expr(IRLowerCtx* ctx, Node* expr) {
                 // Use a typeless pointer operand to avoid leaking dynamically allocated pointer types.
                 IRValue* ptr = ir_value_reg(b->ptr_reg, NULL);
                 int loaded = ir_builder_emit_load(ctx->builder, value_type, ptr);
+                ir_lower_tag_last_inst(ctx->builder, IR_OP_LOAD, loaded, name);
                 return ir_value_reg(loaded, value_type);
             }
 
@@ -239,6 +267,7 @@ IRValue* lower_expr(IRLowerCtx* ctx, Node* expr) {
                 // Globals are addressable; load from @name
                 IRValue* gptr = ir_value_global(name, g->type);
                 int loaded = ir_builder_emit_load(ctx->builder, g->type, gptr);
+                ir_lower_tag_last_inst(ctx->builder, IR_OP_LOAD, loaded, name);
                 return ir_value_reg(loaded, g->type);
             }
 
@@ -349,6 +378,8 @@ IRValue* lower_expr(IRLowerCtx* ctx, Node* expr) {
 static void lower_var_decl(IRLowerCtx* ctx, Node* stmt) {
     if (!ctx || !ctx->builder || !stmt) return;
 
+    ir_lower_set_loc(ctx->builder, stmt);
+
     // Ignore global declarations here (globals are lowered at module scope later).
     if (stmt->data.var_decl.is_global) {
         fprintf(stderr, "IR Lower Warning: global var decl '%s' ignored in statement lowering\n",
@@ -361,6 +392,9 @@ static void lower_var_decl(IRLowerCtx* ctx, Node* stmt) {
 
     // %ptr = حجز <value_type>
     int ptr_reg = ir_builder_emit_alloca(ctx->builder, value_type);
+
+    // ربط اسم المتغير بتعليمة الحجز للتتبع.
+    ir_lower_tag_last_inst(ctx->builder, IR_OP_ALLOCA, ptr_reg, stmt->data.var_decl.name);
 
     // Bind name -> ptr reg so NODE_VAR_REF can emit حمل.
     ir_lower_bind_local(ctx, stmt->data.var_decl.name, ptr_reg, value_type);
@@ -376,11 +410,17 @@ static void lower_var_decl(IRLowerCtx* ctx, Node* stmt) {
 
     // خزن <init>, %ptr
     IRValue* ptr = ir_value_reg(ptr_reg, NULL); // typeless pointer operand
+
+    // نعيد الموقع إلى تصريح المتغير كي تُنسب عملية الخزن لسطر التصريح.
+    ir_lower_set_loc(ctx->builder, stmt);
     ir_builder_emit_store(ctx->builder, init, ptr);
+    ir_lower_tag_last_inst(ctx->builder, IR_OP_STORE, -1, stmt->data.var_decl.name);
 }
 
 static void lower_assign(IRLowerCtx* ctx, Node* stmt) {
     if (!ctx || !ctx->builder || !stmt) return;
+
+    ir_lower_set_loc(ctx->builder, stmt);
 
     const char* name = stmt->data.assign_stmt.name;
 
@@ -393,7 +433,9 @@ static void lower_assign(IRLowerCtx* ctx, Node* stmt) {
         // خزن <rhs>, %ptr
         (void)value_type; // reserved for future casts/type checks
         IRValue* ptr = ir_value_reg(b->ptr_reg, NULL);
+        ir_lower_set_loc(ctx->builder, stmt);
         ir_builder_emit_store(ctx->builder, rhs, ptr);
+        ir_lower_tag_last_inst(ctx->builder, IR_OP_STORE, -1, name);
         return;
     }
 
@@ -405,7 +447,9 @@ static void lower_assign(IRLowerCtx* ctx, Node* stmt) {
     if (g) {
         IRValue* rhs = lower_expr(ctx, stmt->data.assign_stmt.expression);
         IRValue* gptr = ir_value_global(name, g->type);
+        ir_lower_set_loc(ctx->builder, stmt);
         ir_builder_emit_store(ctx->builder, rhs, gptr);
+        ir_lower_tag_last_inst(ctx->builder, IR_OP_STORE, -1, name);
         return;
     }
 
@@ -765,6 +809,9 @@ void lower_stmt_list(IRLowerCtx* ctx, Node* first_stmt) {
 void lower_stmt(IRLowerCtx* ctx, Node* stmt) {
     if (!ctx || !ctx->builder || !stmt) return;
 
+    // افتراضي: اربط أي تعليمات صادرة من هذه الجملة بموقعها.
+    ir_lower_set_loc(ctx->builder, stmt);
+
     switch (stmt->type) {
         case NODE_BLOCK:
             lower_stmt_list(ctx, stmt->data.block.statements);
@@ -821,6 +868,9 @@ void lower_stmt(IRLowerCtx* ctx, Node* stmt) {
             memset(&temp, 0, sizeof(temp));
             temp.type = NODE_CALL_EXPR;
             temp.data.call = stmt->data.call;
+            temp.filename = stmt->filename;
+            temp.line = stmt->line;
+            temp.col = stmt->col;
             (void)lower_expr(ctx, &temp);
             return;
         }
@@ -925,12 +975,18 @@ IRModule* ir_lower_program(Node* program, const char* module_name) {
                 int preg = ir_builder_add_param(builder, pname, ptype);
 
                 if (pname) {
+                    // اربط تعليمات تهيئة معامل الدالة بموقعه في المصدر.
+                    ir_lower_set_loc(builder, p);
+
                     int ptr_reg = ir_builder_emit_alloca(builder, ptype);
+                    ir_lower_tag_last_inst(builder, IR_OP_ALLOCA, ptr_reg, pname);
                     ir_lower_bind_local(&ctx, pname, ptr_reg, ptype);
 
                     IRValue* val = ir_value_reg(preg, ptype);   // %معامل<n>
                     IRValue* ptr = ir_value_reg(ptr_reg, NULL); // typeless pointer
+                    ir_lower_set_loc(builder, p);
                     ir_builder_emit_store(builder, val, ptr);
+                    ir_lower_tag_last_inst(builder, IR_OP_STORE, -1, pname);
                 }
             }
 

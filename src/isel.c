@@ -99,6 +99,11 @@ MachineInst *mach_inst_new(MachineOp op, MachineOperand dst,
     inst->src2 = src2;
     inst->ir_reg = -1;
     inst->comment = NULL;
+    inst->src_file = NULL;
+    inst->src_line = 0;
+    inst->src_col = 0;
+    inst->ir_inst_id = -1;
+    inst->dbg_name = NULL;
     inst->prev = NULL;
     inst->next = NULL;
     return inst;
@@ -317,6 +322,9 @@ typedef struct
     IRModule *ir_module; // وحدة IR المصدر
     IRFunc *ir_func;     // دالة IR الحالية
     IRBlock *ir_block;   // كتلة IR الحالية
+
+    // تعليمة IR الحالية (لنسخ معلومات الديبغ إلى MachineInst)
+    IRInst *ir_inst;
 } ISelCtx;
 
 /**
@@ -431,6 +439,16 @@ static MachineInst *isel_emit(ISelCtx *ctx, MachineOp op,
     MachineInst *inst = mach_inst_new(op, dst, src1, src2);
     if (!inst)
         return NULL;
+
+    // نسخ معلومات الديبغ من تعليمة IR الحالية (إن وُجدت)
+    if (ctx && ctx->ir_inst) {
+        inst->src_file = ctx->ir_inst->src_file;
+        inst->src_line = ctx->ir_inst->src_line;
+        inst->src_col = ctx->ir_inst->src_col;
+        inst->ir_inst_id = ctx->ir_inst->id;
+        inst->dbg_name = ctx->ir_inst->dbg_name;
+    }
+
     mach_block_append(ctx->mblock, inst);
     return inst;
 }
@@ -1136,8 +1154,11 @@ static MachineBlock *isel_lower_block(ISelCtx *ctx, IRBlock *ir_block)
     // خفض كل تعليمة في الكتلة
     for (IRInst *inst = ir_block->first; inst; inst = inst->next)
     {
+        ctx->ir_inst = inst;
         isel_lower_inst(ctx, inst);
     }
+
+    ctx->ir_inst = NULL;
 
     // نسخ معلومات الخلفاء
     mblock->succ_count = ir_block->succ_count;

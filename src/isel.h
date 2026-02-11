@@ -155,6 +155,13 @@ typedef struct MachineInst {
     int ir_reg;                 // سجل IR الأصلي (للربط مع IR)
     const char* comment;        // تعليق اختياري (لسهولة القراءة)
 
+    // معلومات الديبغ (Debug Info)
+    const char* src_file;
+    int src_line;
+    int src_col;
+    int ir_inst_id;             // معرّف تعليمة IR (إن وُجد)
+    const char* dbg_name;       // اسم متغير/رمز اختياري
+
     // القائمة المترابطة المزدوجة
     struct MachineInst* prev;
     struct MachineInst* next;

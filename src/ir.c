@@ -513,6 +513,7 @@ IRInst* ir_inst_new(IROp op, IRType* type, int dest) {
     inst->src_file = NULL;
     inst->src_line = 0;
     inst->src_col = 0;
+    inst->dbg_name = NULL;
 
     inst->parent = NULL;
     inst->prev = NULL;
@@ -546,6 +547,11 @@ void ir_inst_set_loc(IRInst* inst, const char* file, int line, int col) {
     inst->src_file = file;
     inst->src_line = line;
     inst->src_col = col;
+}
+
+void ir_inst_set_dbg_name(IRInst* inst, const char* name) {
+    if (!inst) return;
+    inst->dbg_name = name;
 }
 
 /**

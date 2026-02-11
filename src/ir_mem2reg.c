@@ -47,6 +47,9 @@ typedef struct {
     IRInst* alloca_inst;
     IRBlock* alloca_block;
 
+    // اسم المتغير المرتبط بهذا alloca (للتتبع بعد Mem2Reg)
+    const char* dbg_name;
+
     IRInst** phi_in_block; // [max_block_id]
 
     IRValue** stack;
@@ -376,6 +379,14 @@ static void mem2reg_insert_phis_for_var(IRFunc* func, IRBlock** block_by_id,
                 IRInst* phi = ir_inst_phi(v->pointee, dest);
                 if (!phi) continue;
 
+                // ربط الفاي بموقع/اسم المتغير الأصلي (إن وُجد).
+                if (v->alloca_inst) {
+                    ir_inst_set_loc(phi, v->alloca_inst->src_file, v->alloca_inst->src_line, v->alloca_inst->src_col);
+                }
+                if (v->dbg_name) {
+                    ir_inst_set_dbg_name(phi, v->dbg_name);
+                }
+
                 ir_block_insert_phi(y, phi);
                 v->phi_in_block[y->id] = phi;
 
@@ -494,6 +505,10 @@ static void mem2reg_rename_block(Mem2RegRenameCtx* ctx, IRBlock* block) {
                     inst->call_args = NULL;
                     inst->call_arg_count = 0;
 
+                     if (v->dbg_name) {
+                         ir_inst_set_dbg_name(inst, v->dbg_name);
+                     }
+
                     ctx->changed = 1;
                     inst = next;
                     continue;
@@ -600,6 +615,7 @@ static int ir_mem2reg_func(IRFunc* func) {
             v->pointee = pointee;
             v->alloca_inst = inst;
             v->alloca_block = b;
+            v->dbg_name = inst->dbg_name;
             v->phi_in_block = (IRInst**)calloc((size_t)max_id, sizeof(IRInst*));
         }
     }

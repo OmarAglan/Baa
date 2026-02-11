@@ -53,6 +53,7 @@ static void ir_clone_inst_common(IRInst* dst, IRInst* src) {
     dst->src_file = src->src_file;
     dst->src_line = src->src_line;
     dst->src_col = src->src_col;
+    dst->dbg_name = src->dbg_name;
     dst->id = src->id;
 }
 

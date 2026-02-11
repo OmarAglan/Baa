@@ -1,8 +1,8 @@
 # Baa Internal API Reference
 
-> **Version:** 0.3.2.6.1 | [← Compiler Internals](INTERNALS.md) | [IR Specification →](BAA_IR_SPECIFICATION.md)
+> **Version:** 0.3.2.6.3 | [← Compiler Internals](INTERNALS.md) | [IR Specification →](BAA_IR_SPECIFICATION.md)
 
-This document details the C functions, enumerations, and structures defined in `src/baa.h`, `src/ir.h`, `src/ir_arena.h`, `src/ir_mutate.h`, `src/ir_defuse.h`, `src/ir_clone.h`, `src/ir_builder.h`, `src/ir_lower.h`, `src/ir_analysis.h`, `src/ir_pass.h`, `src/ir_mem2reg.h`, `src/ir_outssa.h`, `src/ir_dce.h`, `src/ir_copyprop.h`, `src/ir_cse.h`, `src/ir_optimizer.h`, `src/isel.h`, and `src/regalloc.h`.
+This document details the C functions, enumerations, and structures defined in `src/baa.h`, `src/ir.h`, `src/ir_arena.h`, `src/ir_mutate.h`, `src/ir_defuse.h`, `src/ir_clone.h`, `src/ir_text.h`, `src/ir_builder.h`, `src/ir_lower.h`, `src/ir_analysis.h`, `src/ir_pass.h`, `src/ir_mem2reg.h`, `src/ir_outssa.h`, `src/ir_dce.h`, `src/ir_copyprop.h`, `src/ir_cse.h`, `src/ir_optimizer.h`, `src/isel.h`, and `src/regalloc.h`.
 
 ---
 
@@ -637,6 +637,43 @@ void ir_module_dump(IRModule* module, const char* filename, int use_arabic)
 ```
 
 Convenience wrapper that opens a file and prints the module.
+
+---
+
+### 4.7. IR Text Serialization (v0.3.2.6.3)
+
+The IR text serialization module (`src/ir_text.h`, `src/ir_text.c`) provides a **machine-readable** IR format designed for round-trip testing:
+
+- Write IR module to a stable text form.
+- Read the text form back into an `IRModule`.
+
+#### `ir_text_write_module`
+
+```c
+int ir_text_write_module(IRModule* module, FILE* out)
+```
+
+Writes a canonical IR text form to `out`.
+
+---
+
+#### `ir_text_dump_module`
+
+```c
+int ir_text_dump_module(IRModule* module, const char* filename)
+```
+
+Convenience wrapper that opens `filename` and writes the canonical IR text.
+
+---
+
+#### `ir_text_read_module_file`
+
+```c
+IRModule* ir_text_read_module_file(const char* filename)
+```
+
+Reads an IR module from the canonical IR text format.
 
 ---
 
@@ -2037,7 +2074,7 @@ The Code Emission module (`src/emit.h`, `src/emit.c`) converts machine IR (after
 #### `emit_module`
 
 ```c
-bool emit_module(MachineModule* module, FILE* out)
+bool emit_module(MachineModule* module, FILE* out, bool debug_info)
 ```
 
 Top-level entry point for emitting a complete assembly file.
@@ -2046,6 +2083,7 @@ Top-level entry point for emitting a complete assembly file.
 |-----------|------|-------------|
 | `module` | `MachineModule*` | Machine module with physical registers |
 | `out` | `FILE*` | Output file handle for assembly |
+| `debug_info` | `bool` | Emit `.file`/`.loc` directives and debug breadcrumbs |
 
 **Returns:** `true` on success, `false` on failure.
 
@@ -2055,6 +2093,8 @@ Top-level entry point for emitting a complete assembly file.
 2. Emits `.data` section with global variables and initializers
 3. Emits `.text` section with all functions
 4. Emits string table with `.Lstr_N` labels
+
+**Driver flag:** `--debug-info` enables this mode and also passes `-g` to the GCC toolchain.
 
 ---
 

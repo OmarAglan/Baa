@@ -83,6 +83,7 @@ typedef struct
     bool emit_ir;       // --emit-ir: كتابة IR إلى ملف .ir بجانب المصدر
     bool dump_ir_opt;   // --dump-ir-opt: طباعة IR بعد التحسين
     bool verify_ssa;    // --verify-ssa: التحقق من صحة SSA (بعد Mem2Reg وقبل OutSSA)
+    bool debug_info;    // --debug-info: إصدار معلومات ديبغ (سطر/ملف) داخل ملف .s
     OptLevel opt_level; // -O0, -O1, -O2: مستوى التحسين
     double start_time;  // وقت بدء الترجمة
 } CompilerConfig;
@@ -360,6 +361,7 @@ void print_help()
     printf("  --emit-ir    Write Baa IR (Arabic) to <input>.ir after analysis\n");
     printf("  --dump-ir-opt  Dump Baa IR (Arabic) after optimization\n");
     printf("  --verify-ssa   Verify SSA invariants after Mem2Reg (requires -O1/-O2)\n");
+    printf("  --debug-info   Emit debug line info (.file/.loc) and pass -g to toolchain\n");
     printf("  -O0            Disable optimization\n");
     printf("  -O1            Basic optimization (default)\n");
     printf("  -O2            Full optimization (+ CSE)\n");
@@ -458,6 +460,10 @@ int main(int argc, char **argv)
             else if (strcmp(arg, "--verify-ssa") == 0)
             {
                 config.verify_ssa = true;
+            }
+            else if (strcmp(arg, "--debug-info") == 0)
+            {
+                config.debug_info = true;
             }
             else if (strcmp(arg, "-O0") == 0)
             {
@@ -695,7 +701,7 @@ int main(int argc, char **argv)
 
         if (config.verbose)
             printf("[INFO] Emitting assembly: %s\n", asm_file);
-        if (!emit_module(mach_module, f_asm))
+        if (!emit_module(mach_module, f_asm, config.debug_info))
         {
             fprintf(stderr, "Aborting %s: code emission failed.\n", current_input);
             fclose(f_asm);
@@ -731,7 +737,10 @@ int main(int argc, char **argv)
             cmd_assemble[0] = '\0';
 
             if (!cmd_appendf(cmd_assemble, sizeof(cmd_assemble), &cmd_len,
-                             "%s -c %s -o %s", get_gcc_command(), asm_file, obj_file))
+                             "%s%s -c %s -o %s",
+                             get_gcc_command(),
+                             config.debug_info ? " -g" : "",
+                             asm_file, obj_file))
             {
                 fprintf(stderr, "خطأ: أمر التجميع طويل جداً (تجاوز السعة).\n");
                 return 1;
@@ -776,6 +785,15 @@ int main(int argc, char **argv)
         {
             fprintf(stderr, "خطأ: أمر الربط طويل جداً (تجاوز السعة).\n");
             return 1;
+        }
+
+        if (config.debug_info)
+        {
+            if (!cmd_append(cmd_link, sizeof(cmd_link), &cmd_len, " -g"))
+            {
+                fprintf(stderr, "خطأ: أمر الربط طويل جداً (تجاوز السعة).\n");
+                return 1;
+            }
         }
 
         for (int i = 0; i < obj_count; i++)

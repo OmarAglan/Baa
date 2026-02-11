@@ -15,7 +15,7 @@
 #include <stdarg.h>
 
 // معلومات الإصدار
-#define BAA_VERSION "0.3.2.5.3"
+#define BAA_VERSION "0.3.2.6.3"
 #define BAA_BUILD_DATE __DATE__
 
 // ============================================================================
@@ -343,6 +343,11 @@ struct Node;
 typedef struct Node {
     NodeType type;      // نوع العقدة
     struct Node* next;  // مؤشر للعقدة التالية (في القوائم المرتبطة للجمل/التصريحات)
+
+    // معلومات الموقع في المصدر (للديبغ)
+    const char* filename;
+    int line;
+    int col;
 
     union {
         // البرنامج: قائمة الدوال والمتغيرات العامة

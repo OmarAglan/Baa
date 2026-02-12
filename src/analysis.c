@@ -25,6 +25,10 @@ static int global_count = 0;
 static Symbol local_symbols[100];
 static int local_count = 0;
 
+// مكدس النطاقات المحلية: نخزن قيمة local_count عند دخول نطاق جديد.
+static int scope_stack[64];
+static int scope_depth = 0;
+
 static bool has_error = false;
 static bool inside_loop = false;
 static bool inside_switch = false;
@@ -58,9 +62,40 @@ static void semantic_error(const char* message, ...) {
 static void reset_analysis() {
     global_count = 0;
     local_count = 0;
+    scope_depth = 0;
     has_error = false;
     inside_loop = false;
     inside_switch = false;
+}
+
+// ============================================================================
+// إدارة النطاقات المحلية (Local Scope Management)
+// ============================================================================
+
+static void check_unused_local_variables_range(int start, int end);
+
+static int current_scope_start(void) {
+    if (scope_depth <= 0) return 0;
+    return scope_stack[scope_depth - 1];
+}
+
+static void scope_push(void) {
+    if (scope_depth >= (int)(sizeof(scope_stack) / sizeof(scope_stack[0]))) {
+        semantic_error("Too many nested scopes.");
+        return;
+    }
+    scope_stack[scope_depth++] = local_count;
+}
+
+static void scope_pop(void) {
+    if (scope_depth <= 0) return;
+    int start = scope_stack[--scope_depth];
+
+    // تحذيرات المتغيرات غير المستخدمة لهذا النطاق فقط
+    check_unused_local_variables_range(start, local_count);
+
+    // إخراج رموز النطاق من الجدول (منطقيًا)
+    local_count = start;
 }
 
 /**
@@ -100,20 +135,30 @@ static void add_symbol(const char* name, ScopeType scope, DataType type, bool is
         global_symbols[global_count].decl_file = decl_file;
         global_count++;
     } else {
-        // التحقق من التكرار محلياً
-        for (int i = 0; i < local_count; i++) {
+        // التحقق من التكرار داخل النطاق الحالي فقط
+        int start = current_scope_start();
+        for (int i = start; i < local_count; i++) {
             if (strcmp(local_symbols[i].name, name) == 0) {
                 semantic_error("Redefinition of local variable '%s'.", name);
                 return;
             }
         }
         if (local_count >= 100) { semantic_error("Too many local variables."); return; }
-        
+
         // تحذير إذا كان المتغير المحلي يحجب متغيراً عاماً
         for (int i = 0; i < global_count; i++) {
             if (strcmp(global_symbols[i].name, name) == 0) {
                 warning_report(WARN_SHADOW_VARIABLE, decl_file, decl_line, decl_col,
                     "Local variable '%s' shadows global variable.", name);
+                break;
+            }
+        }
+
+        // تحذير إذا كان المتغير المحلي يحجب متغيراً محلياً خارجياً
+        for (int i = 0; i < start; i++) {
+            if (strcmp(local_symbols[i].name, name) == 0) {
+                warning_report(WARN_SHADOW_VARIABLE, decl_file, decl_line, decl_col,
+                    "Local variable '%s' shadows outer local variable.", name);
                 break;
             }
         }
@@ -135,8 +180,8 @@ static void add_symbol(const char* name, ScopeType scope, DataType type, bool is
  * @param mark_used إذا كان true، يتم تعليم المتغير كمستخدم.
  */
 static Symbol* lookup(const char* name, bool mark_used) {
-    // البحث في المحلي أولاً
-    for (int i = 0; i < local_count; i++) {
+    // البحث في المحلي أولاً (من الأحدث للأقدم لدعم النطاقات المتداخلة)
+    for (int i = local_count - 1; i >= 0; i--) {
         if (strcmp(local_symbols[i].name, name) == 0) {
             if (mark_used) local_symbols[i].is_used = true;
             return &local_symbols[i];
@@ -155,8 +200,12 @@ static Symbol* lookup(const char* name, bool mark_used) {
 /**
  * @brief التحقق من المتغيرات غير المستخدمة في النطاق المحلي.
  */
-static void check_unused_local_variables(void) {
-    for (int i = 0; i < local_count; i++) {
+static void check_unused_local_variables_range(int start, int end) {
+    if (start < 0) start = 0;
+    if (end < start) end = start;
+    if (end > local_count) end = local_count;
+
+    for (int i = start; i < end; i++) {
         if (!local_symbols[i].is_used) {
             warning_report(WARN_UNUSED_VARIABLE,
                 local_symbols[i].decl_file,
@@ -167,6 +216,8 @@ static void check_unused_local_variables(void) {
         }
     }
 }
+
+// ملاحظة: تحذيرات غير المستخدم تُطلق عبر scope_pop() لكل نطاق.
 
 /**
  * @brief التحقق من المتغيرات العامة غير المستخدمة.
@@ -383,14 +434,11 @@ static void analyze_node(Node* node) {
         }
 
         case NODE_FUNC_DEF: {
-            // التحقق من المتغيرات المحلية غير المستخدمة في الدالة السابقة
-            if (local_count > 0) {
-                check_unused_local_variables();
-            }
-            
-            // الدخول في نطاق دالة جديدة (تصفير المحلي)
+            // الدخول في نطاق دالة جديدة (تصفير المحلي + إنشاء نطاق)
             local_count = 0;
-            
+            scope_depth = 0;
+            scope_push();
+
             // إضافة المعاملات كمتغيرات محلية (المعاملات ليست ثوابت افتراضياً)
             Node* param = node->data.func_def.params;
             while (param) {
@@ -408,15 +456,17 @@ static void analyze_node(Node* node) {
             if (!node->data.func_def.is_prototype) {
                 analyze_node(node->data.func_def.body);
             }
-            
-            // التحقق من المتغيرات غير المستخدمة في هذه الدالة
-            check_unused_local_variables();
+
+            // خروج نطاق الدالة (يشمل تحذيرات غير المستخدم)
+            scope_pop();
             break;
         }
 
         case NODE_BLOCK: {
-            // تحليل الجمل مع اكتشاف الكود الميت
+            // دخول/خروج نطاق كتلة
+            scope_push();
             analyze_statements_with_dead_code_check(node->data.block.statements, "return/break");
+            scope_pop();
             break;
         }
 
@@ -442,9 +492,16 @@ static void analyze_node(Node* node) {
             if (condType != TYPE_INT && condType != TYPE_BOOL) {
                 semantic_error("'if' condition must be an integer/boolean.");
             }
+
+            // كل فرع يعتبر نطاقاً مستقلاً حتى بدون أقواس
+            scope_push();
             analyze_node(node->data.if_stmt.then_branch);
+            scope_pop();
+
             if (node->data.if_stmt.else_branch) {
+                scope_push();
                 analyze_node(node->data.if_stmt.else_branch);
+                scope_pop();
             }
             break;
         }
@@ -456,14 +513,19 @@ static void analyze_node(Node* node) {
             }
             bool prev_loop = inside_loop;
             inside_loop = true;
+
+            scope_push();
             analyze_node(node->data.while_stmt.body);
+            scope_pop();
+
             inside_loop = prev_loop;
             break;
         }
 
         case NODE_FOR: {
-            // For Loop Scope is tricky without nested scopes in symbol table.
-            // For now, we treat init variables as function-local (like C89/Baa current implementation).
+            // نطاق حلقة for يشمل init/cond/incr/body لمنع تسرب متغيرات init خارج الحلقة.
+            scope_push();
+
             if (node->data.for_stmt.init) analyze_node(node->data.for_stmt.init);
             if (node->data.for_stmt.condition) {
                 DataType condType = infer_type(node->data.for_stmt.condition);
@@ -472,11 +534,13 @@ static void analyze_node(Node* node) {
                 }
             }
             if (node->data.for_stmt.increment) analyze_node(node->data.for_stmt.increment);
-            
+
             bool prev_loop = inside_loop;
             inside_loop = true;
             analyze_node(node->data.for_stmt.body);
             inside_loop = prev_loop;
+
+            scope_pop();
             break;
         }
 
@@ -486,6 +550,9 @@ static void analyze_node(Node* node) {
             }
             bool prev_switch = inside_switch;
             inside_switch = true;
+
+            // نطاق switch
+            scope_push();
             
             Node* current_case = node->data.switch_stmt.cases;
             while (current_case) {
@@ -494,9 +561,14 @@ static void analyze_node(Node* node) {
                         semantic_error("'case' value must be an integer constant.");
                     }
                 }
-                analyze_node(current_case->data.case_stmt.body);
+                // جسم الحالة عبارة عن قائمة جمل
+                scope_push();
+                analyze_statements_with_dead_code_check(current_case->data.case_stmt.body, "return/break");
+                scope_pop();
                 current_case = current_case->next;
             }
+
+            scope_pop();
             
             inside_switch = prev_switch;
             break;

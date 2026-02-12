@@ -8,14 +8,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.3.2.6.4] - 2026-02-12
+
 ### Fixed
 
 - **Register allocation liveness across loops** — Machine CFG successors are now linked during ISel so liveness propagates across loop back-edges correctly.
 - **Assembly emission for spilled copies** — `mov` memory-to-memory is now lowered via `%rax` scratch during emission to avoid invalid `movq mem, mem`.
+- **Block-level scoping in semantic analysis** — local symbols are now scoped to blocks/branches/loops so for-init variables and inner-block declarations don't leak into the whole function.
 
 ### Testing
 
 - Added regalloc stress integration test: [`tests/backend_regalloc_stress.baa`](tests/backend_regalloc_stress.baa)
+- Added semantic scoping integration test: [`tests/backend_scope_test.baa`](tests/backend_scope_test.baa)
 
 ## [0.3.2.6.3] - 2026-02-11
 

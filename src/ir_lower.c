@@ -22,12 +22,40 @@
 
 static IRLowerBinding* find_local(IRLowerCtx* ctx, const char* name) {
     if (!ctx || !name) return NULL;
-    for (int i = 0; i < ctx->local_count; i++) {
+    // البحث من الأحدث للأقدم لدعم النطاقات المتداخلة.
+    for (int i = ctx->local_count - 1; i >= 0; i--) {
         if (ctx->locals[i].name && strcmp(ctx->locals[i].name, name) == 0) {
             return &ctx->locals[i];
         }
     }
     return NULL;
+}
+
+static int ir_lower_current_scope_start(IRLowerCtx* ctx) {
+    if (!ctx) return 0;
+    if (ctx->scope_depth <= 0) return 0;
+    return ctx->scope_stack[ctx->scope_depth - 1];
+}
+
+static void ir_lower_scope_push(IRLowerCtx* ctx) {
+    if (!ctx) return;
+    if (ctx->scope_depth >= (int)(sizeof(ctx->scope_stack) / sizeof(ctx->scope_stack[0]))) {
+        fprintf(stderr, "IR Lower Error: scope stack overflow\n");
+        return;
+    }
+    ctx->scope_stack[ctx->scope_depth++] = ctx->local_count;
+}
+
+static void ir_lower_scope_pop(IRLowerCtx* ctx) {
+    if (!ctx) return;
+    if (ctx->scope_depth <= 0) {
+        fprintf(stderr, "IR Lower Error: scope stack underflow\n");
+        return;
+    }
+    int start = ctx->scope_stack[--ctx->scope_depth];
+    if (start < 0) start = 0;
+    if (start > ctx->local_count) start = ctx->local_count;
+    ctx->local_count = start;
 }
 
 void ir_lower_ctx_init(IRLowerCtx* ctx, IRBuilder* builder) {
@@ -38,16 +66,20 @@ void ir_lower_ctx_init(IRLowerCtx* ctx, IRBuilder* builder) {
     // v0.3.0.5 control-flow lowering state
     ctx->label_counter = 0;
     ctx->cf_depth = 0;
+    ctx->scope_depth = 0;
 }
 
 void ir_lower_bind_local(IRLowerCtx* ctx, const char* name, int ptr_reg, IRType* value_type) {
     if (!ctx || !name) return;
 
-    IRLowerBinding* existing = find_local(ctx, name);
-    if (existing) {
-        existing->ptr_reg = ptr_reg;
-        existing->value_type = value_type;
-        return;
+    // ابحث فقط داخل النطاق الحالي: إن وجد، حدّث الربط.
+    int start = ir_lower_current_scope_start(ctx);
+    for (int i = ctx->local_count - 1; i >= start; i--) {
+        if (ctx->locals[i].name && strcmp(ctx->locals[i].name, name) == 0) {
+            ctx->locals[i].ptr_reg = ptr_reg;
+            ctx->locals[i].value_type = value_type;
+            return;
+        }
     }
 
     if (ctx->local_count >= (int)(sizeof(ctx->locals) / sizeof(ctx->locals[0]))) {
@@ -535,7 +567,9 @@ static void lower_if_stmt(IRLowerCtx* ctx, Node* stmt) {
 
     // then
     ir_builder_set_insert_point(ctx->builder, then_bb);
+    ir_lower_scope_push(ctx);
     lower_stmt(ctx, stmt->data.if_stmt.then_branch);
+    ir_lower_scope_pop(ctx);
     if (!ir_builder_is_block_terminated(ctx->builder)) {
         ir_builder_emit_br(ctx->builder, merge_bb);
     }
@@ -543,7 +577,9 @@ static void lower_if_stmt(IRLowerCtx* ctx, Node* stmt) {
     // else
     if (else_bb) {
         ir_builder_set_insert_point(ctx->builder, else_bb);
+        ir_lower_scope_push(ctx);
         lower_stmt(ctx, stmt->data.if_stmt.else_branch);
+        ir_lower_scope_pop(ctx);
         if (!ir_builder_is_block_terminated(ctx->builder)) {
             ir_builder_emit_br(ctx->builder, merge_bb);
         }
@@ -573,10 +609,12 @@ static void lower_while_stmt(IRLowerCtx* ctx, Node* stmt) {
     // body
     cf_push(ctx, exit_bb, header_bb); // break -> exit, continue -> header
     ir_builder_set_insert_point(ctx->builder, body_bb);
+    ir_lower_scope_push(ctx);
     lower_stmt(ctx, stmt->data.while_stmt.body);
     if (!ir_builder_is_block_terminated(ctx->builder)) {
         ir_builder_emit_br(ctx->builder, header_bb);
     }
+    ir_lower_scope_pop(ctx);
     cf_pop(ctx);
 
     // continue after loop
@@ -585,6 +623,9 @@ static void lower_while_stmt(IRLowerCtx* ctx, Node* stmt) {
 
 static void lower_for_stmt(IRLowerCtx* ctx, Node* stmt) {
     if (!ctx || !ctx->builder || !stmt) return;
+
+    // نطاق حلقة for: يمنع تسرب متغيرات init خارج الحلقة.
+    ir_lower_scope_push(ctx);
 
     // Init runs in the current block
     if (stmt->data.for_stmt.init) {
@@ -638,6 +679,8 @@ static void lower_for_stmt(IRLowerCtx* ctx, Node* stmt) {
     }
 
     ir_builder_set_insert_point(ctx->builder, exit_bb);
+
+    ir_lower_scope_pop(ctx);
 }
 
 static void lower_break_stmt(IRLowerCtx* ctx) {
@@ -778,7 +821,9 @@ static void lower_switch_stmt(IRLowerCtx* ctx, Node* stmt) {
         Node* case_node = case_nodes[i];
 
         ir_builder_set_insert_point(ctx->builder, bb);
+        ir_lower_scope_push(ctx);
         lower_stmt_list(ctx, case_node->data.case_stmt.body);
+        ir_lower_scope_pop(ctx);
 
         if (!ir_builder_is_block_terminated(ctx->builder)) {
             IRBlock* next_bb = (i + 1 < case_count) ? case_blocks[i + 1] : end_bb;
@@ -814,7 +859,9 @@ void lower_stmt(IRLowerCtx* ctx, Node* stmt) {
 
     switch (stmt->type) {
         case NODE_BLOCK:
+            ir_lower_scope_push(ctx);
             lower_stmt_list(ctx, stmt->data.block.statements);
+            ir_lower_scope_pop(ctx);
             return;
 
         case NODE_VAR_DECL:
@@ -965,6 +1012,9 @@ IRModule* ir_lower_program(Node* program, const char* module_name) {
             IRLowerCtx ctx;
             ir_lower_ctx_init(&ctx, builder);
 
+            // نطاق الدالة: المعاملات + جسم الدالة
+            ir_lower_scope_push(&ctx);
+
             // Parameters: add params, then spill into allocas so existing lowering can treat them like locals.
             for (Node* p = decl->data.func_def.params; p; p = p->next) {
                 if (p->type != NODE_VAR_DECL) continue;
@@ -994,6 +1044,9 @@ IRModule* ir_lower_program(Node* program, const char* module_name) {
             if (decl->data.func_def.body) {
                 lower_stmt(&ctx, decl->data.func_def.body);
             }
+
+            // خروج نطاق الدالة
+            ir_lower_scope_pop(&ctx);
         }
     }
 

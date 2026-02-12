@@ -39,6 +39,10 @@ typedef struct IRLowerCtx {
     IRLowerBinding locals[256];
     int local_count;
 
+    // مكدس نطاقات المتغيرات المحلية (Local Scopes)
+    int scope_stack[64];
+    int scope_depth;
+
     // Label generator for CFG lowering (unique suffixes for Arabic labels).
     int label_counter;
 

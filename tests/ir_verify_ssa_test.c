@@ -18,6 +18,7 @@
 #include "../src/ir_lower.h"
 #include "../src/ir_optimizer.h"
 #include "../src/ir_verify_ssa.h"
+#include "../src/ir_verify_ir.h"
 
 // -----------------------------------------------------------------------------
 // تنفيذ اختباري لـ read_file() لأننا لا نربط src/main.c ضمن اختبارات C
@@ -162,6 +163,7 @@ int main(void) {
 
     if (module) {
         (void)ir_optimizer_run(module, OPT_LEVEL_1);
+        ok &= require(ir_module_verify_ir(module, stderr), "فشل التحقق من سلامة IR لمسار صحيح");
         ok &= require(ir_module_verify_ssa(module, stderr), "فشل التحقق من SSA لمسار صحيح");
         ir_module_free(module);
     }

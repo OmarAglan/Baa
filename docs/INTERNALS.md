@@ -1,6 +1,6 @@
 # Baa Compiler Internals
 
-> **Version:** 0.3.2.6.4 | [← Language Spec](LANGUAGE.md) | [API Reference →](API_REFERENCE.md)
+> **Version:** 0.3.2.6.5 | [← Language Spec](LANGUAGE.md) | [API Reference →](API_REFERENCE.md)
 
 **Target Architecture:** x86-64 (AMD64)
 **Target OS:** Windows (MinGW-w64 Toolchain)
@@ -21,6 +21,9 @@ This document details the internal architecture, data structures, and algorithms
 - [IR Mem2Reg Pass](#6145-ir-mem2reg-pass-ترقية_الذاكرة_إلى_سجلات--v03252)
 - [IR Out-of-SSA Pass](#6146-ir-out-of-ssa-pass-الخروج_من_ssa--v03252)
 - [IR SSA Verification](#6147-ir-ssa-verification-التحقق_من_ssa--v03253)
+- [IR Well-Formedness Verification](#6148-ir-well-formedness-verification-التحقق_من_سلامة_الـir--v03265)
+- [IR Canonicalization Pass](#6149-ir-canonicalization-pass-توحيد_الـir--v03265)
+- [IR CFG Simplification Pass](#61410-ir-cfg-simplification-pass-تبسيط_cfg--v03265)
 - [IR Constant Folding Pass](#615-ir-constant-folding-pass)
 - [IR Dead Code Elimination Pass](#616-ir-dead-code-elimination-pass)
 - [IR Copy Propagation Pass](#617-ir-copy-propagation-pass)
@@ -103,6 +106,10 @@ The driver in `main.c` (v0.2.0+) supports multi-file compilation and various mod
 | `-v` | **Verbose** | - | Prints commands and compilation time; keeps intermediate `.s` files. |
 | `--dump-ir` | **IR Dump** | stdout | Prints Baa IR (Arabic) after semantic analysis (v0.3.0.6+). |
 | `--emit-ir` | **IR Emit** | `<input>.ir` | Writes Baa IR (Arabic) to a `.ir` file after semantic analysis (v0.3.0.7). |
+| `--dump-ir-opt` | **Optimized IR Dump** | stdout | Prints Baa IR (Arabic) after optimization (v0.3.2.6.5). |
+| `--verify-ir` | **IR Verification** | stderr | Verifies IR well-formedness (operands/types/terminators/phi/calls) after optimization and before Out-of-SSA/backend (v0.3.2.6.5). |
+| `--verify-ssa` | **SSA Verification** | stderr | Verifies SSA invariants after Mem2Reg and before Out-of-SSA (**requires `-O1`/`-O2`**) (v0.3.2.5.3). |
+| `--verify-gate` | **Verifier Gate (Debug)** | stderr | Runs `--verify-ir`/`--verify-ssa` after each optimizer iteration (**requires `-O1`/`-O2`**) (v0.3.2.6.5). |
 | `--version` | **Version Info** | stdout | Displays compiler version and build date. |
 | `--help`, `-h` | **Help** | stdout | Shows usage information. |
 | `update` | **Self-Update** | - | Downloads and installs the latest version. |
@@ -825,6 +832,57 @@ This verifier is exposed via the CLI flag:
 **Files:** [`src/ir_verify_ssa.c`](src/ir_verify_ssa.c:1), header: [`src/ir_verify_ssa.h`](src/ir_verify_ssa.h:1)
 
 ---
+
+### 6.14.8. IR Well-Formedness Verification (التحقق_من_سلامة_الـIR) — v0.3.2.6.5
+
+IR well-formedness verification validates general IR invariants that should hold regardless of SSA state:
+
+- Operand counts and required fields per instruction
+- Type consistency between instruction results and operands
+- Terminator placement (must end blocks; no instructions after terminators)
+- Phi placement and incoming-edge shape (after rebuilding predecessors)
+- Intra-module call signature checks when the callee exists in the same IR module
+
+This verifier is exposed via the CLI flag:
+
+- `--verify-ir` — aborts compilation with diagnostics on the first violations (capped).
+
+**Files:** [`src/ir_verify_ir.c`](src/ir_verify_ir.c:1), header: [`src/ir_verify_ir.h`](src/ir_verify_ir.h:1)
+
+**Pipeline position:** Executed after optimization and before Out-of-SSA/backend in [`src/main.c`](src/main.c:1).
+
+---
+
+### 6.14.9. IR Canonicalization Pass (توحيد_الـIR) — v0.3.2.6.5
+
+Canonicalization normalizes instruction forms to increase matchability for later optimizations (CSE/DCE/constfold):
+
+- Commutative ops: constant placement and deterministic operand ordering
+- Comparisons: swap operands and predicate when the constant is on the left
+
+**File:** [`src/ir_canon.c`](src/ir_canon.c:1)
+
+**Entry Point:** [`ir_canon_run()`](src/ir_canon.c:1)
+
+**Pass Descriptor:** `IR_PASS_CANON` (used with the optimizer pipeline).
+
+---
+
+### 6.14.10. IR CFG Simplification Pass (تبسيط_CFG) — v0.3.2.6.5
+
+CFG simplification reduces unnecessary control-flow structure:
+
+- `قفز_شرط cond, X, X` becomes `قفز X`
+- Removes trivial `قفز`-only blocks conservatively, avoiding unsafe phi interactions
+- Provides a reusable critical-edge splitting helper for IR passes
+
+**File:** [`src/ir_cfg_simplify.c`](src/ir_cfg_simplify.c:1)
+
+**Entry Point:** [`ir_cfg_simplify_run()`](src/ir_cfg_simplify.c:1)
+
+**Helper:** [`ir_cfg_split_critical_edge()`](src/ir_cfg_simplify.c:1)
+
+**Pass Descriptor:** `IR_PASS_CFG_SIMPLIFY` (used with the optimizer pipeline).
 
 ### 6.15. IR Constant Folding Pass (طي_الثوابت) — v0.3.1.2
 

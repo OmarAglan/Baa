@@ -6,8 +6,8 @@ IDI_ICON1 ICON "../resources/icon.ico"
 
 // 2. Version Information
 VS_VERSION_INFO VERSIONINFO
-FILEVERSION     0,3,2,5
-PRODUCTVERSION  0,3,2,5
+    FILEVERSION     0,3,2,6
+    PRODUCTVERSION  0,3,2,6
 FILEFLAGSMASK   0x3fL
 #ifdef _DEBUG
 FILEFLAGS       0x1L
@@ -24,12 +24,12 @@ BEGIN
         BEGIN
             VALUE "CompanyName",      "Omar Aglan"
             VALUE "FileDescription",  "Baa Compiler (باء)"
-            VALUE "FileVersion",      "0.3.2.5.3"
+            VALUE "FileVersion",      "0.3.2.6.5"
             VALUE "InternalName",     "baa"
             VALUE "LegalCopyright",   "Copyright (C) 2026"
             VALUE "OriginalFilename", "baa.exe"
             VALUE "ProductName",      "Baa Programming Language"
-            VALUE "ProductVersion",   "0.3.2.5.3"
+            VALUE "ProductVersion",   "0.3.2.6.5"
         END
     END
     BLOCK "VarFileInfo"

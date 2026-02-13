@@ -1,8 +1,8 @@
 # Baa Internal API Reference
 
-> **Version:** 0.3.2.6.4 | [← Compiler Internals](INTERNALS.md) | [IR Specification →](BAA_IR_SPECIFICATION.md)
+> **Version:** 0.3.2.6.5 | [← Compiler Internals](INTERNALS.md) | [IR Specification →](BAA_IR_SPECIFICATION.md)
 
-This document details the C functions, enumerations, and structures defined in `src/baa.h`, `src/ir.h`, `src/ir_arena.h`, `src/ir_mutate.h`, `src/ir_defuse.h`, `src/ir_clone.h`, `src/ir_text.h`, `src/ir_builder.h`, `src/ir_lower.h`, `src/ir_analysis.h`, `src/ir_pass.h`, `src/ir_mem2reg.h`, `src/ir_outssa.h`, `src/ir_dce.h`, `src/ir_copyprop.h`, `src/ir_cse.h`, `src/ir_optimizer.h`, `src/isel.h`, and `src/regalloc.h`.
+This document details the C functions, enumerations, and structures defined in `src/baa.h`, `src/ir.h`, `src/ir_arena.h`, `src/ir_mutate.h`, `src/ir_defuse.h`, `src/ir_clone.h`, `src/ir_text.h`, `src/ir_builder.h`, `src/ir_lower.h`, `src/ir_analysis.h`, `src/ir_pass.h`, `src/ir_mem2reg.h`, `src/ir_outssa.h`, `src/ir_verify_ssa.h`, `src/ir_verify_ir.h`, `src/ir_canon.h`, `src/ir_cfg_simplify.h`, `src/ir_dce.h`, `src/ir_copyprop.h`, `src/ir_cse.h`, `src/ir_optimizer.h`, `src/isel.h`, and `src/regalloc.h`.
 
 ---
 
@@ -1464,6 +1464,113 @@ Validates SSA invariants for all (non-prototype) functions in a module.
 **Returns:** `true` if all functions are valid; `false` otherwise.
 
 **Driver flag:** `--verify-ssa` runs this check after optimization and before Out-of-SSA, and requires `-O1`/`-O2`.
+
+---
+
+### 7.1.7. IR Well-Formedness Verification (التحقق من سلامة الـ IR) — v0.3.2.6.5
+
+#### `ir_func_verify_ir`
+
+```c
+bool ir_func_verify_ir(IRFunc* func, FILE* out)
+```
+
+Validates general IR invariants for a single IR function (non SSA-specific): operand counts, type consistency, terminator rules, phi placement/incoming shape, and basic call structure.
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `func`    | `IRFunc*` | Target function |
+| `out`     | `FILE*` | Diagnostics output (typically `stderr`) |
+
+**Returns:** `true` if IR is well-formed; `false` otherwise.
+
+#### `ir_module_verify_ir`
+
+```c
+bool ir_module_verify_ir(IRModule* module, FILE* out)
+```
+
+Validates general IR invariants for all (non-prototype) functions in a module. When the callee exists inside the same module, the verifier also checks call arity/types against the callee signature.
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `module`  | `IRModule*` | Target IR module |
+| `out`     | `FILE*` | Diagnostics output (typically `stderr`) |
+
+**Returns:** `true` if all functions are valid; `false` otherwise.
+
+**Driver flags:**
+
+- `--verify-ir` runs this check after optimization and before Out-of-SSA.
+- `--verify-gate` runs IR/SSA verification after each optimizer iteration (**requires `-O1`/`-O2`**).
+
+---
+
+### 7.1.8. Canonicalization (توحيد_الـ IR) — v0.3.2.6.5
+
+#### `ir_canon_run`
+
+```c
+bool ir_canon_run(IRModule* module)
+```
+
+Normalizes commutative operand ordering, constant placement, and comparison forms to improve optimization effectiveness.
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `module`  | `IRModule*` | Target IR module |
+
+**Returns:** `true` if the module was modified, `false` otherwise.
+
+#### `IR_PASS_CANON`
+
+```c
+extern IRPass IR_PASS_CANON;
+```
+
+Descriptor for the canonicalization pass, usable with the IR optimizer pipeline.
+
+---
+
+### 7.1.9. CFG Simplification (تبسيط_CFG) — v0.3.2.6.5
+
+#### `ir_cfg_simplify_run`
+
+```c
+bool ir_cfg_simplify_run(IRModule* module)
+```
+
+Simplifies the IR control-flow graph by removing redundant branches and merging trivial blocks conservatively.
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `module`  | `IRModule*` | Target IR module |
+
+**Returns:** `true` if the module was modified, `false` otherwise.
+
+#### `ir_cfg_split_critical_edge`
+
+```c
+IRBlock* ir_cfg_split_critical_edge(IRFunc* func, IRBlock* pred, IRBlock* succ)
+```
+
+Splits a critical edge `pred -> succ` by inserting a new block when needed (pred has multiple successors and succ has multiple predecessors). Returns the inserted block, or `succ` if the edge is not critical.
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `func` | `IRFunc*` | Target function |
+| `pred` | `IRBlock*` | Predecessor block |
+| `succ` | `IRBlock*` | Successor block |
+
+**Returns:** new split block, or `succ` if no split was required, or `NULL` on failure.
+
+#### `IR_PASS_CFG_SIMPLIFY`
+
+```c
+extern IRPass IR_PASS_CFG_SIMPLIFY;
+```
+
+Descriptor for the CFG simplification pass, usable with the IR optimizer pipeline.
 
 ---
 

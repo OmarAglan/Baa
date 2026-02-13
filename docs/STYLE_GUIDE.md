@@ -1,6 +1,6 @@
 # Baa Documentation Style Guide
 
-> **Version:** 0.3.2.4 | **Last Updated:** 2026-02-08
+> **Version:** 0.3.2.6.5 | **Last Updated:** 2026-02-13
 
 This guide establishes standards for all Baa project documentation to ensure consistency, professionalism, and clarity across all documents.
 

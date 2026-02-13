@@ -8,6 +8,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.3.2.6.5] - 2026-02-13
+
+### Added
+
+- **IR well-formedness verification (`--verify-ir`)** — validates operand counts, type consistency, terminator rules, phi placement, and intra-module call signatures.
+- **Verifier gate (`--verify-gate`)** — debug mode to run IR/SSA verification after each optimizer iteration to catch pass bugs early (**requires `-O1`/`-O2`**).
+- **Canonicalization pass** — normalizes commutative operand ordering, constant placement, and comparison forms to improve downstream optimizations.
+- **CFG simplification pass** — removes redundant conditional branches, merges trivial blocks (conservatively around phi), and exposes a reusable critical-edge splitting helper.
+
+### Testing
+
+- Added IR verifier + canonicalization + CFG simplify unit test: [`tests/ir_verify_ir_test.c`](tests/ir_verify_ir_test.c)
+
 ## [0.3.2.6.4] - 2026-02-12
 
 ### Fixed

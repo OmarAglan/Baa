@@ -45,9 +45,22 @@ typedef enum {
  *
  * @param module وحدة IR المراد تحسينها.
  * @param level  مستوى التحسين (OPT_LEVEL_0, OPT_LEVEL_1, OPT_LEVEL_2).
- * @return true إذا حدث أي تحسين؛ false خلاف ذلك.
+ * @return true عند النجاح؛ false عند فشل بوابة التحقق (إن كانت مفعّلة) أو خطأ داخلي.
  */
 bool ir_optimizer_run(IRModule* module, OptLevel level);
+
+/**
+ * @brief تفعيل/تعطيل بوابة التحقق داخل المُحسِّن (Debug Gate).
+ *
+ * عند التفعيل، يقوم المُحسِّن بتشغيل:
+ * - `ir_module_verify_ir()` (سلامة/تشكيل IR)
+ * - `ir_module_verify_ssa()` (صحة SSA بعد Mem2Reg)
+ *
+ * بعد كل دورة تمريرات (iteration). هذا مفيد لاكتشاف أخطاء تمريرات التحسين مبكراً.
+ *
+ * @param enabled 1 للتفعيل، 0 للتعطيل.
+ */
+void ir_optimizer_set_verify_gate(int enabled);
 
 /**
  * @brief الحصول على اسم مستوى التحسين.

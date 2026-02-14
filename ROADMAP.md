@@ -279,6 +279,12 @@
 - [ ] **Data layout helpers** — Add size/alignment queries per `IRType` (incl. pointer size) as the foundation for future `Target` abstraction and correct aggregate lowering.
 - [ ] **Memory model contract** — Specify and verify rules for `حجز/حمل/خزن` (typed pointers, aliasing assumptions, and what is/ isn’t legal for optimization).
 
+#### v0.3.2.6.7: SSA Verification Fix in Switch (إصلاح التحقق من SSA في جملة اختر)
+
+✅ COMPLETED (2026-02-14)
+
+- [x] **Fix SSA verification failure** — Resolved dominance issue in CSE pass for `switch` statements with `default` cases.
+
 ---
 
 ### v0.3.2.7: Advanced Optimizations 🚀

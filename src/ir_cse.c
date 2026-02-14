@@ -19,6 +19,7 @@
 
 #include "ir_mutate.h"
 #include "ir_defuse.h"
+#include "ir_analysis.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -49,6 +50,7 @@ typedef struct CSEEntry {
     int64_t operand_vals[4];    // Operand signatures (reg num or const value)
     int operand_kinds[4];       // IR_VAL_REG or IR_VAL_CONST_INT etc.
     int result_reg;             // Register holding the result
+    IRBlock* def_block;         // Block where the expression is defined
     struct CSEEntry* next;      // Chain for collisions
 } CSEEntry;
 
@@ -138,10 +140,29 @@ static int cse_entries_match(CSEEntry* a, CSEEntry* b) {
 }
 
 // -----------------------------------------------------------------------------
+// Helpers: Domination check
+// -----------------------------------------------------------------------------
+
+static int cse_block_dominates(IRBlock* a, IRBlock* b) {
+    if (!a || !b) return 0;
+    if (a == b) return 1;
+    
+    // Walk up idom tree from b
+    IRBlock* runner = b->idom;
+    while (runner) {
+        if (runner == a) return 1;
+        if (runner == runner->idom) break; // Reached entry/root
+        runner = runner->idom;
+    }
+    
+    return 0;
+}
+
+// -----------------------------------------------------------------------------
 // Helpers: find or insert expression in hash table
 // -----------------------------------------------------------------------------
 
-static int cse_lookup_or_insert(CSEEntry** table, CSEEntry* query, int* found_reg) {
+static int cse_lookup_or_insert(CSEEntry** table, CSEEntry* query, int* found_reg, IRBlock* current_block) {
     unsigned int h = cse_hash(query->op, query->cmp_pred, 
                               query->operand_vals, query->operand_kinds, 
                               query->operand_count);
@@ -149,8 +170,11 @@ static int cse_lookup_or_insert(CSEEntry** table, CSEEntry* query, int* found_re
     // Search chain
     for (CSEEntry* e = table[h]; e; e = e->next) {
         if (cse_entries_match(e, query)) {
-            *found_reg = e->result_reg;
-            return 1; // Found existing
+            // Check if the defining block dominates the current block
+            if (cse_block_dominates(e->def_block, current_block)) {
+                *found_reg = e->result_reg;
+                return 1; // Found valid existing definition
+            }
         }
     }
     
@@ -159,6 +183,7 @@ static int cse_lookup_or_insert(CSEEntry** table, CSEEntry* query, int* found_re
     if (!new_entry) return 0;
     
     *new_entry = *query;
+    new_entry->def_block = current_block; // Track definition block
     new_entry->next = table[h];
     table[h] = new_entry;
     
@@ -238,6 +263,9 @@ static int ir_cse_func(IRFunc* func) {
     if (!func || func->is_prototype) return 0;
     if (!func->entry) return 0;
     
+    // Compute dominators first (required for dominance check)
+    ir_func_compute_dominators(func);
+    
     // Allocate hash table
     CSEEntry** table = (CSEEntry**)calloc(CSE_HASH_SIZE, sizeof(CSEEntry*));
     if (!table) return 0;
@@ -268,15 +296,16 @@ static int ir_cse_func(IRFunc* func) {
             query.cmp_pred = inst->cmp_pred;
             query.operand_count = inst->operand_count;
             query.result_reg = inst->dest;
+            query.def_block = b; // definition block
             
             for (int i = 0; i < inst->operand_count && i < 4; i++) {
                 query.operand_vals[i] = ir_value_signature(inst->operands[i], 
                                                            &query.operand_kinds[i]);
             }
             
-            // Lookup or insert
+            // Lookup or insert (with dominance check)
             int existing_reg;
-            if (cse_lookup_or_insert(table, &query, &existing_reg)) {
+            if (cse_lookup_or_insert(table, &query, &existing_reg, b)) {
                 // Found duplicate! Mark for replacement
                 replacements[inst->dest] = existing_reg;
                 changed = 1;

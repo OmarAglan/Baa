@@ -8,6 +8,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.3.2.6.7] - 2026-02-14
+
+### Fixed
+
+- **SSA verification failure in switch statements** — Fixed a bug where CSE replacement did not respect dominance, causing "value not dominated by definition" errors when optimizing `switch` with `default` cases.
+  - Added dominance check to `ir_cse.c` before replacing expressions.
+
 ## [0.3.2.6.5] - 2026-02-13
 
 ### Added

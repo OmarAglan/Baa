@@ -15,6 +15,26 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - **SSA verification failure in switch statements** — Fixed a bug where CSE replacement did not respect dominance, causing "value not dominated by definition" errors when optimizing `switch` with `default` cases.
   - Added dominance check to `ir_cse.c` before replacing expressions.
 
+## [0.3.2.6.6] - 2026-02-14
+
+### Added
+
+- **IR Data Layout Module (`src/ir_data_layout.h/c`)** — Implements type size and alignment queries for `Target` abstraction (currently Windows x86-64).
+  - `ir_type_size_bytes()`, `ir_type_alignment()`, `ir_type_store_size()`.
+  - Type predicates: `ir_type_is_integer()`, `ir_type_is_pointer()`.
+
+### Changed
+
+- **Hardened Arithmetic Semantics** — Formalized IR behavior to eliminate undefined behavior in C backend:
+  - **Two's complement wrap**: Overflow/underflow is now strictly defined as wrapping.
+  - **Safe Division**: `INT64_MIN / -1` wraps to `INT64_MIN` (cpu-safe).
+  - **Safe Modulo**: `INT64_MIN % -1` results in `0`.
+  - **Use of `uint64_t` internally** to guarantee C standard compliance for signed operations.
+
+### Testing
+
+- Added **Data Layout Unit Test** (`tests/ir_data_layout_test.c`) verifying all type sizes, alignments, and arithmetic edge cases (44/44 pass).
+
 ## [0.3.2.6.5] - 2026-02-13
 
 ### Added

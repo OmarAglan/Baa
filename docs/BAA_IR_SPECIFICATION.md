@@ -63,6 +63,24 @@ AST → [Baa IR] → Optimizations → Backend Codegen → x86-64 Assembly
 - Pointers are 64-bit on x86-64 target
 - `ص١` (boolean) is zero-extended to larger integers
 
+### 2.4 Data Layout (Target: Windows x64)
+
+The IR enforces a specific data layout to allow consistent lowering:
+
+| Type | Size (Bytes) | Alignment (Bytes) | Store Size (Bytes) |
+|------|--------------|-------------------|--------------------|
+| `i1` | 1 | 1 | 1 |
+| `i8` | 1 | 1 | 1 |
+| `i16` | 2 | 2 | 2 |
+| `i32` | 4 | 4 | 4 |
+| `i64` | 8 | 8 | 8 |
+| `ptr` | 8 | 8 | 8 |
+
+**Memory Model Contract:**
+- **Typed Pointers:** Memory operations (`load`, `store`) must respect the pointer's element type.
+- **Aliasing:** Conservative. Any `store` to memory may alias any `load` unless provenance can be strictly proven (no TBAA yet).
+- **Addressing:** Flat 64-bit address space.
+
 ---
 
 ## 3. SSA Form
@@ -123,6 +141,12 @@ Stack allocations create addressable memory:
 | `div` | `قسم` | `%r = قسم <type> %a، %b` | Signed division |
 | `mod` | `باقي` | `%r = باقي <type> %a، %b` | Modulo |
 | `neg` | `سالب` | `%r = سالب <type> %a` | Negation |
+
+**Arithmetic Semantics (Strict):**
+- **Overflow:** Standard **Two's Complement Wrap**. `INT_MAX + 1` → `INT_MIN`. No undefined behavior.
+- **Division/Modulo by Zero:** Undefined in IR (backend may trap).
+- **Signed Division Edge Case:** `INT64_MIN / -1` wraps to `INT64_MIN` (does not trap).
+- **Signed Modulo Edge Case:** `INT64_MIN % -1` yields `0`.
 
 ### 4.2 Memory Instructions
 

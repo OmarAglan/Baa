@@ -24,6 +24,7 @@ This document details the internal architecture, data structures, and algorithms
 - [IR Well-Formedness Verification](#6148-ir-well-formedness-verification-التحقق_من_سلامة_الـir--v03265)
 - [IR Canonicalization Pass](#6149-ir-canonicalization-pass-توحيد_الـir--v03265)
 - [IR CFG Simplification Pass](#61410-ir-cfg-simplification-pass-تبسيط_cfg--v03265)
+- [IR Data Layout Module](#61411-ir-data-layout-module-نموذج_تخطيط_البيانات--v03266)
 - [IR Constant Folding Pass](#615-ir-constant-folding-pass)
 - [IR Dead Code Elimination Pass](#616-ir-dead-code-elimination-pass)
 - [IR Copy Propagation Pass](#617-ir-copy-propagation-pass)
@@ -883,6 +884,24 @@ CFG simplification reduces unnecessary control-flow structure:
 **Helper:** [`ir_cfg_split_critical_edge()`](src/ir_cfg_simplify.c:1)
 
 **Pass Descriptor:** `IR_PASS_CFG_SIMPLIFY` (used with the optimizer pipeline).
+
+### 6.14.11. IR Data Layout Module (نموذج_تخطيط_البيانات) — v0.3.2.6.6
+
+The Data Layout module provides a central source of truth for target-specific type information (size, alignment, store size). Currently hardcoded for **Windows x86-64**, but designed to support multiple backends in the future.
+
+**File:** [`src/ir_data_layout.c`](src/ir_data_layout.c:1) / [`src/ir_data_layout.h`](src/ir_data_layout.h:1)
+
+**Key API:**
+- `ir_type_size_bytes(dl, type)`: Returns size in bytes (e.g., `i32` → 4).
+- `ir_type_alignment(dl, type)`: Returns required alignment (e.g., `i32` → 4).
+- `ir_type_store_size(dl, type)`: Returns memory size for storage.
+
+**Arithmetic Contract (v0.3.2.6.6):**
+- **Overflow:** Two's complement wrap (no undefined behavior).
+- **Safe Division:** `INT64_MIN / -1` → `INT64_MIN` (no trap).
+- **Safe Modulo:** `INT64_MIN % -1` → `0` (no trap).
+
+---
 
 ### 6.15. IR Constant Folding Pass (طي_الثوابت) — v0.3.1.2
 

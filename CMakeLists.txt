@@ -15,6 +15,7 @@ set(SOURCES
     src/ir_arena.c    # IR arena allocator (v0.3.2.6.1)
     src/ir_mutate.c   # IR mutation helpers (v0.3.2.6.1)
     src/ir_defuse.c   # IR def-use chains (v0.3.2.6.1)
+    src/ir_data_layout.c # IR data layout queries (v0.3.2.6.6)
     src/ir_clone.c    # IR cloning (v0.3.2.6.1)
     src/ir_text.c     # IR text serialization (v0.3.2.6.3)
     src/ir_analysis.c # IR analysis (CFG + dominance) (v0.3.1.1)

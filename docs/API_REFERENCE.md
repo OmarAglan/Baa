@@ -879,6 +879,88 @@ Runs a pass (NULL-safe). Returns `true` if the pass changed the module.
 
 ---
 
+### 4.11. IR Data Layout Module (v0.3.2.6.6)
+
+The Data Layout module (`src/ir_data_layout.h`, `src/ir_data_layout.c`) provides target-specific type information.
+
+#### `IRDataLayout` struct
+
+```c
+typedef struct IRDataLayout {
+    // Basic types
+    uint8_t i1_size;    // 1
+    uint8_t i8_size;    // 1
+    uint8_t i16_size;   // 2
+    uint8_t i32_size;   // 4
+    uint8_t i64_size;   // 8
+    
+    // Pointers
+    uint8_t ptr_size;   // 8 (x64)
+    uint8_t ptr_align;  // 8 (x64)
+    
+    // Alignments
+    uint8_t i1_align;   // 1
+    uint8_t i8_align;   // 1
+    uint8_t i16_align;  // 2
+    uint8_t i32_align;  // 4
+    uint8_t i64_align;  // 8
+} IRDataLayout;
+
+extern const IRDataLayout IR_DATA_LAYOUT_WIN_X64;
+```
+
+---
+
+#### `ir_type_size_bytes`
+
+```c
+int ir_type_size_bytes(const IRDataLayout* dl, IRType* type);
+```
+
+Returns the size of a type in bytes (including padding for aggregates).
+- `dl`: Layout descriptor (pass `NULL` for default Win-x64).
+- `type`: The type to query.
+
+---
+
+#### `ir_type_alignment`
+
+```c
+int ir_type_alignment(const IRDataLayout* dl, IRType* type);
+```
+
+Returns the required alignment for a type in bytes.
+
+---
+
+#### `ir_type_store_size`
+
+```c
+int ir_type_store_size(const IRDataLayout* dl, IRType* type);
+```
+
+Returns the number of bytes written to memory (same as size for now).
+
+---
+
+#### `ir_type_is_integer`
+
+```c
+int ir_type_is_integer(IRType* type);
+```
+
+Returns 1 if the type is `i1`, `i8`, `i16`, `i32`, or `i64`. Returns 0 for pointers/void/arrays.
+
+---
+
+#### `ir_type_is_pointer`
+
+```c
+int ir_type_is_pointer(IRType* type);
+```
+
+Returns 1 if the type is `ptr`.
+
 ## 5. IR Builder Module (v0.3.0.2+)
 
 The IR Builder Module (`src/ir_builder.h`, `src/ir_builder.c`) provides a convenient builder pattern API for constructing IR.

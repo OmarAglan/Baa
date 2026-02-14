@@ -1,16 +1,25 @@
 /**
  * @file ir_constfold.c
- * @brief IR constant folding pass (طي_الثوابت).
- * @version 0.3.1.2
+ * @brief مرور طي الثوابت (طي_الثوابت) — v0.3.2.6.6.
+ * @version 0.3.2.6.6
  *
- * Folds:
- * - Arithmetic: جمع/طرح/ضرب/قسم/باقي when both operands are immediate constants
- * - Comparisons: قارن <pred> when both operands are immediate constants
+ * يطوي:
+ * - الحساب: جمع/طرح/ضرب/قسم/باقي عندما يكون كلا المعاملين ثوابت فورية.
+ * - المقارنات: قارن <محمول> عندما يكون كلا المعاملين ثوابت فورية.
  *
- * Implementation notes:
- * - This IR currently models constants via IR_VAL_CONST_INT only (int64_t payload).
- * - We replace uses of a folded destination register with a new immediate constant IRValue.
- * - Then we delete the folded instruction from its basic block.
+ * دلالات الحساب (v0.3.2.6.6):
+ * ─────────────────────────────
+ * • الطفحان: التفاف مكمل الاثنين (two's-complement wrap).
+ * • القسمة/الباقي: اقتطاع نحو الصفر (truncation toward zero).
+ *   - INT64_MIN / -1 = INT64_MIN (التفاف آمن، ليس سلوكاً غير محدد).
+ *   - INT64_MIN % -1 = 0.
+ * • المقارنات: دائماً بإشارة (signed) للأنواع الصحيحة.
+ * • ص١ (i1): أي قيمة غير صفرية → 1، صفر → 0.
+ *
+ * ملاحظات التنفيذ:
+ * - الـ IR حالياً يمثل الثوابت بـ IR_VAL_CONST_INT فقط (حمولة int64_t).
+ * - نستبدل استعمالات سجل الوجهة المطوي بقيمة ثابتة جديدة.
+ * - ثم نحذف التعليمة المطوية من كتلتها الأساسية.
  */
 
 #include "ir_constfold.h"
@@ -31,7 +40,7 @@ IRPass IR_PASS_CONSTFOLD = {
 };
 
 // -----------------------------------------------------------------------------
-// Helpers: integer semantics
+// مساعدات: دلالات الأعداد الصحيحة (Integer Semantics)
 // -----------------------------------------------------------------------------
 
 static int is_int_type(IRType* t) {
@@ -179,22 +188,60 @@ static int ir_func_replace_reg_uses_defuse(IRDefUse* du,
 // Folding logic
 // -----------------------------------------------------------------------------
 
+/**
+ * @brief طي عملية حسابية ثنائية على ثوابت.
+ *
+ * دلالات الحساب (v0.3.2.6.6):
+ * • الطفحان: التفاف مكمل الاثنين — العمليات تُنفَّذ على uint64_t ثم
+ *   يُعاد تفسيرها كـ int64_t (سلوك محدد في C).
+ * • القسمة/الباقي على صفر: لا يُطوى (يُرجع 0).
+ * • حالة خاصة: INT64_MIN / -1 يُرجع INT64_MIN (التفاف آمن).
+ * • حالة خاصة: INT64_MIN % -1 يُرجع 0.
+ *
+ * @param op كود العملية (جمع/طرح/ضرب/قسم/باقي).
+ * @param type نوع النتيجة (يُستعمل لاحقاً بعد الاقتطاع).
+ * @param lhs المعامل الأيسر.
+ * @param rhs المعامل الأيمن.
+ * @param[out] out مؤشر لتخزين النتيجة.
+ * @return 1 عند نجاح الطي، 0 عند الفشل.
+ */
 static int try_fold_arith(IROp op, IRType* type, int64_t lhs, int64_t rhs, int64_t* out) {
     if (!out) return 0;
 
-    // For now, use signed 64-bit arithmetic then truncate/sign-extend to result type.
-    // Avoid folding division/mod by zero.
+    // حساب بمكمل الاثنين: نُحوّل إلى uint64_t لتجنب السلوك غير المحدد
+    // في C عند طفحان الأعداد المُعلَّمة (signed overflow).
+    uint64_t ul = (uint64_t)lhs;
+    uint64_t ur = (uint64_t)rhs;
+
     switch (op) {
-        case IR_OP_ADD: *out = lhs + rhs; return 1;
-        case IR_OP_SUB: *out = lhs - rhs; return 1;
-        case IR_OP_MUL: *out = lhs * rhs; return 1;
+        case IR_OP_ADD:
+            *out = (int64_t)(ul + ur);
+            return 1;
+        case IR_OP_SUB:
+            *out = (int64_t)(ul - ur);
+            return 1;
+        case IR_OP_MUL:
+            *out = (int64_t)(ul * ur);
+            return 1;
         case IR_OP_DIV:
             if (rhs == 0) return 0;
-            *out = lhs / rhs;
+            // حالة خاصة: INT64_MIN / -1 — في C هذا سلوك غير محدد.
+            // في Baa IR: نتيجة الالتفاف = INT64_MIN.
+            if (lhs == INT64_MIN && rhs == -1) {
+                *out = INT64_MIN;
+                return 1;
+            }
+            *out = lhs / rhs;   // اقتطاع نحو الصفر (C11 §6.5.5)
             return 1;
         case IR_OP_MOD:
             if (rhs == 0) return 0;
-            *out = lhs % rhs;
+            // حالة خاصة: INT64_MIN % -1 — في C هذا سلوك غير محدد.
+            // في Baa IR: النتيجة = 0 (لأن INT64_MIN / -1 = INT64_MIN بالالتفاف).
+            if (lhs == INT64_MIN && rhs == -1) {
+                *out = 0;
+                return 1;
+            }
+            *out = lhs % rhs;   // اقتطاع نحو الصفر
             return 1;
         default:
             (void)type;
@@ -202,6 +249,17 @@ static int try_fold_arith(IROp op, IRType* type, int64_t lhs, int64_t rhs, int64
     }
 }
 
+/**
+ * @brief تقييم مقارنة ثوابت.
+ *
+ * المقارنات دائماً بإشارة (signed) — هذا عقد الـ IR (v0.3.2.6.6).
+ * لا توجد مقارنات بدون إشارة في IR باء حالياً.
+ *
+ * @param pred المحمول (يساوي/لا_يساوي/أكبر/أصغر/أكبر_أو_يساوي/أصغر_أو_يساوي).
+ * @param lhs المعامل الأيسر.
+ * @param rhs المعامل الأيمن.
+ * @return 1 إذا تحققت المقارنة، 0 غير ذلك.
+ */
 static int eval_cmp(IRCmpPred pred, int64_t lhs, int64_t rhs) {
     switch (pred) {
         case IR_CMP_EQ: return lhs == rhs;

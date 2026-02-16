@@ -8,6 +8,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+### Added
+
+- **IR loop detection (natural loops)** — new analysis module that finds natural loops via back edges (dominance): `src/ir_loop.c`, `src/ir_loop.h`.
+- Added loop analysis unit test: `tests/ir_loop_test.c`.
+
 ## [0.3.2.6.7] - 2026-02-14
 
 ### Fixed

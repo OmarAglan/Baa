@@ -135,14 +135,6 @@ static int ir_value_is_block(IRValue* v) {
     return v && v->kind == IR_VAL_BLOCK && v->data.block != NULL;
 }
 
-static int ir_value_is_reg(IRValue* v) {
-    return v && v->kind == IR_VAL_REG;
-}
-
-static int ir_value_is_const_int(IRValue* v) {
-    return v && v->kind == IR_VAL_CONST_INT;
-}
-
 static int ir_value_is_ptr_value(IRValue* v) {
     if (!v) return 0;
     if (!v->type) return 0;

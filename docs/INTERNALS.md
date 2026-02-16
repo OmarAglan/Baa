@@ -777,6 +777,8 @@ The IR analysis layer provides foundational compiler analyses required by the up
   - [`ir_func_compute_dominators()`](src/ir_analysis.h:77)
   - [`ir_module_compute_dominators()`](src/ir_analysis.h:82)
 
+- **Loop detection (v0.3.2.7.1):** natural loop discovery via back edges using dominance (`src/ir_loop.c`, `src/ir_loop.h`).
+
 > Implementation lives in [`src/ir_analysis.c`](src/ir_analysis.c:1).
 
 ---

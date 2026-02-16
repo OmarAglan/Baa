@@ -2,7 +2,7 @@
 
 > **Version:** 0.3.2.6.5 | [← Compiler Internals](INTERNALS.md) | [IR Specification →](BAA_IR_SPECIFICATION.md)
 
-This document details the C functions, enumerations, and structures defined in `src/baa.h`, `src/ir.h`, `src/ir_arena.h`, `src/ir_mutate.h`, `src/ir_defuse.h`, `src/ir_clone.h`, `src/ir_text.h`, `src/ir_builder.h`, `src/ir_lower.h`, `src/ir_analysis.h`, `src/ir_pass.h`, `src/ir_mem2reg.h`, `src/ir_outssa.h`, `src/ir_verify_ssa.h`, `src/ir_verify_ir.h`, `src/ir_canon.h`, `src/ir_cfg_simplify.h`, `src/ir_dce.h`, `src/ir_copyprop.h`, `src/ir_cse.h`, `src/ir_optimizer.h`, `src/isel.h`, and `src/regalloc.h`.
+This document details the C functions, enumerations, and structures defined in `src/baa.h`, `src/ir.h`, `src/ir_arena.h`, `src/ir_mutate.h`, `src/ir_defuse.h`, `src/ir_clone.h`, `src/ir_text.h`, `src/ir_loop.h`, `src/ir_builder.h`, `src/ir_lower.h`, `src/ir_analysis.h`, `src/ir_pass.h`, `src/ir_mem2reg.h`, `src/ir_outssa.h`, `src/ir_verify_ssa.h`, `src/ir_verify_ir.h`, `src/ir_canon.h`, `src/ir_cfg_simplify.h`, `src/ir_dce.h`, `src/ir_copyprop.h`, `src/ir_cse.h`, `src/ir_optimizer.h`, `src/isel.h`, and `src/regalloc.h`.
 
 ---
 
@@ -674,6 +674,60 @@ IRModule* ir_text_read_module_file(const char* filename)
 ```
 
 Reads an IR module from the canonical IR text format.
+
+---
+
+### 4.8. IR Loop Detection (v0.3.2.7.1)
+
+The loop analysis module (`src/ir_loop.h`, `src/ir_loop.c`) discovers **natural loops** in the IR control-flow graph using **back edges** and dominance.
+
+#### `ir_loop_analyze_func`
+
+```c
+IRLoopInfo* ir_loop_analyze_func(IRFunc* func)
+```
+
+Returns an `IRLoopInfo*` for `func` (caller frees via `ir_loop_info_free`).
+
+---
+
+#### `ir_loop_info_free`
+
+```c
+void ir_loop_info_free(IRLoopInfo* info)
+```
+
+Frees loop analysis results.
+
+---
+
+#### `ir_loop_info_count`
+
+```c
+int ir_loop_info_count(IRLoopInfo* info)
+```
+
+Returns number of detected loops.
+
+---
+
+#### `ir_loop_info_get`
+
+```c
+IRLoop* ir_loop_info_get(IRLoopInfo* info, int index)
+```
+
+Returns loop at `index`.
+
+---
+
+#### `ir_loop_contains`
+
+```c
+bool ir_loop_contains(IRLoop* loop, IRBlock* block)
+```
+
+Checks whether `block` is in `loop`.
 
 ---
 

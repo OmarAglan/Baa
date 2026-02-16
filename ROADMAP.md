@@ -291,7 +291,7 @@
 
 #### v0.3.2.7.1: Loop Optimizations
 
-- [ ] **Loop detection** — Identify natural loops via back edges.
+- [x] **Loop detection** — Identify natural loops via back edges.
 - [ ] **Loop invariant code motion** — Hoist constant computations.
 - [ ] **Strength reduction** — Replace expensive ops (mul → shift).
 - [ ] **Loop unrolling** — Optional with `-funroll-loops`.

@@ -321,7 +321,9 @@ static int ir_inline_clone_block_body(IRFunc* caller,
                                                         caller);
                     if (!rv) return 0;
 
-                IRValue* ptrv = ir_value_reg(ret_slot_reg, ir_type_ptr(ret_type));
+                IRType* ret_ptr_type = ir_type_ptr(ret_type);
+                if (!ret_ptr_type) return 0;
+                IRValue* ptrv = ir_value_reg(ret_slot_reg, ret_ptr_type);
                 IRInst* st = ir_inst_store(rv, ptrv);
                 if (!st) return 0;
                 ir_inst_set_loc(st, inst->src_file, inst->src_line, inst->src_col);
@@ -437,8 +439,13 @@ static int ir_inline_expand_site(IRInlineSite* site) {
     if (callee->param_count != call->call_arg_count) return 0;
 
     // إنشاء كتلة استمرار (continuation) ونقل ما بعد call إليها.
-    IRBlock* cont = ir_func_new_block(caller, "inline_cont");
+    // ملاحظة: يجب أن يكون اسم الكتلة فريداً لأن الطباعة/التصحيح يعتمد على labels.
+    int cont_id = ir_func_alloc_block_id(caller);
+    char cont_label[64];
+    snprintf(cont_label, sizeof(cont_label), "inline_cont_%d", cont_id);
+    IRBlock* cont = ir_block_new(cont_label, cont_id);
     if (!cont) return 0;
+    ir_func_add_block(caller, cont);
 
     if (call->next) {
         ir_inline_move_after(call_bb, call->next, cont);
@@ -508,7 +515,11 @@ static int ir_inline_expand_site(IRInlineSite* site) {
     for (IRBlock* b = callee->blocks; b; b = b->next) {
         int id = ir_func_alloc_block_id(caller);
         char label[128];
-        snprintf(label, sizeof(label), "inl_%s_%d", callee->name ? callee->name : "fn", b->id);
+        // اجعل label فريداً حتى لو تم تضمين نفس الدالة أكثر من مرة.
+        snprintf(label, sizeof(label), "inl_%s_%d_%d",
+                 callee->name ? callee->name : "fn",
+                 b->id,
+                 id);
         IRBlock* nb = ir_block_new(label, id);
         if (!nb) { free(bm); free(reg_map); return 0; }
         ir_func_add_block(caller, nb);
@@ -549,9 +560,21 @@ static int ir_inline_expand_site(IRInlineSite* site) {
             return 0;
         }
 
-        IRValue* ptrv = ir_value_reg(ret_slot_reg, ir_type_ptr(ret_type));
+        IRType* ret_ptr_type = ir_type_ptr(ret_type);
+        if (!ret_ptr_type) {
+            free(bm);
+            free(old_reg_types);
+            free(reg_map);
+            return 0;
+        }
+        IRValue* ptrv = ir_value_reg(ret_slot_reg, ret_ptr_type);
         IRInst* ld = ir_inst_load(ret_type, call_dest, ptrv);
-        if (!ld) { free(bm); free(reg_map); return 0; }
+        if (!ld) {
+            free(bm);
+            free(old_reg_types);
+            free(reg_map);
+            return 0;
+        }
         ir_block_insert_before(cont, cont->first, ld);
     }
 
@@ -567,6 +590,9 @@ static int ir_inline_expand_site(IRInlineSite* site) {
 
 bool ir_inline_run(IRModule* module) {
     if (!module) return false;
+
+    // ضمان تهيئة سياق الساحة قبل أي إنشاء لأنواع/قيم جديدة داخل التضمين.
+    ir_module_set_current(module);
 
     // التضمين يُنفذ قبل Mem2Reg. إذا كانت هناك فاي، نتجاوز لتجنب إعادة التضمين.
     if (ir_inline_module_has_any_phi(module)) {

@@ -283,8 +283,8 @@ IRValue* lower_expr(IRLowerCtx* ctx, Node* expr) {
             if (b) {
                 IRType* value_type = b->value_type ? b->value_type : IR_TYPE_I64_T;
 
-                // Use a typeless pointer operand to avoid leaking dynamically allocated pointer types.
-                IRValue* ptr = ir_value_reg(b->ptr_reg, NULL);
+                IRType* ptr_type = ir_type_ptr(value_type ? value_type : IR_TYPE_I64_T);
+                IRValue* ptr = ir_value_reg(b->ptr_reg, ptr_type);
                 int loaded = ir_builder_emit_load(ctx->builder, value_type, ptr);
                 ir_lower_tag_last_inst(ctx->builder, IR_OP_LOAD, loaded, name);
                 return ir_value_reg(loaded, value_type);
@@ -441,7 +441,8 @@ static void lower_var_decl(IRLowerCtx* ctx, Node* stmt) {
     }
 
     // خزن <init>, %ptr
-    IRValue* ptr = ir_value_reg(ptr_reg, NULL); // typeless pointer operand
+    IRType* ptr_type = ir_type_ptr(value_type ? value_type : IR_TYPE_I64_T);
+    IRValue* ptr = ir_value_reg(ptr_reg, ptr_type);
 
     // نعيد الموقع إلى تصريح المتغير كي تُنسب عملية الخزن لسطر التصريح.
     ir_lower_set_loc(ctx->builder, stmt);
@@ -464,7 +465,8 @@ static void lower_assign(IRLowerCtx* ctx, Node* stmt) {
 
         // خزن <rhs>, %ptr
         (void)value_type; // reserved for future casts/type checks
-        IRValue* ptr = ir_value_reg(b->ptr_reg, NULL);
+        IRType* ptr_type = ir_type_ptr(value_type ? value_type : IR_TYPE_I64_T);
+        IRValue* ptr = ir_value_reg(b->ptr_reg, ptr_type);
         ir_lower_set_loc(ctx->builder, stmt);
         ir_builder_emit_store(ctx->builder, rhs, ptr);
         ir_lower_tag_last_inst(ctx->builder, IR_OP_STORE, -1, name);
@@ -531,7 +533,8 @@ static void lower_read(IRLowerCtx* ctx, Node* stmt) {
 
     // scanf("%d", &var)
     IRValue* fmt_val = ir_builder_const_string(ctx->builder, "%d");
-    IRValue* ptr = ir_value_reg(b->ptr_reg, NULL);
+    IRType* ptr_type = ir_type_ptr((b->value_type) ? b->value_type : IR_TYPE_I64_T);
+    IRValue* ptr = ir_value_reg(b->ptr_reg, ptr_type);
 
     IRValue* args[2] = { fmt_val, ptr };
 
@@ -1033,7 +1036,8 @@ IRModule* ir_lower_program(Node* program, const char* module_name) {
                     ir_lower_bind_local(&ctx, pname, ptr_reg, ptype);
 
                     IRValue* val = ir_value_reg(preg, ptype);   // %معامل<n>
-                    IRValue* ptr = ir_value_reg(ptr_reg, NULL); // typeless pointer
+                    IRType* ptr_type = ir_type_ptr(ptype ? ptype : IR_TYPE_I64_T);
+                    IRValue* ptr = ir_value_reg(ptr_reg, ptr_type);
                     ir_lower_set_loc(builder, p);
                     ir_builder_emit_store(builder, val, ptr);
                     ir_lower_tag_last_inst(builder, IR_OP_STORE, -1, pname);

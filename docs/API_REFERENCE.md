@@ -2,7 +2,7 @@
 
 > **Version:** 0.3.2.6.5 | [← Compiler Internals](INTERNALS.md) | [IR Specification →](BAA_IR_SPECIFICATION.md)
 
-This document details the C functions, enumerations, and structures defined in `src/baa.h`, `src/ir.h`, `src/ir_arena.h`, `src/ir_mutate.h`, `src/ir_defuse.h`, `src/ir_clone.h`, `src/ir_text.h`, `src/ir_loop.h`, `src/ir_builder.h`, `src/ir_lower.h`, `src/ir_analysis.h`, `src/ir_pass.h`, `src/ir_mem2reg.h`, `src/ir_outssa.h`, `src/ir_verify_ssa.h`, `src/ir_verify_ir.h`, `src/ir_canon.h`, `src/ir_cfg_simplify.h`, `src/ir_dce.h`, `src/ir_copyprop.h`, `src/ir_cse.h`, `src/ir_optimizer.h`, `src/isel.h`, and `src/regalloc.h`.
+This document details the C functions, enumerations, and structures defined in `src/baa.h`, `src/ir.h`, `src/ir_arena.h`, `src/ir_mutate.h`, `src/ir_defuse.h`, `src/ir_clone.h`, `src/ir_text.h`, `src/ir_loop.h`, `src/ir_licm.h`, `src/ir_builder.h`, `src/ir_lower.h`, `src/ir_analysis.h`, `src/ir_pass.h`, `src/ir_mem2reg.h`, `src/ir_outssa.h`, `src/ir_verify_ssa.h`, `src/ir_verify_ir.h`, `src/ir_canon.h`, `src/ir_cfg_simplify.h`, `src/ir_dce.h`, `src/ir_copyprop.h`, `src/ir_cse.h`, `src/ir_optimizer.h`, `src/isel.h`, and `src/regalloc.h`.
 
 ---
 
@@ -1707,6 +1707,32 @@ extern IRPass IR_PASS_CFG_SIMPLIFY;
 ```
 
 Descriptor for the CFG simplification pass, usable with the IR optimizer pipeline.
+
+---
+
+### 7.1.10. LICM (Loop Invariant Code Motion) — v0.3.2.7.1
+
+#### `ir_licm_run`
+
+```c
+bool ir_licm_run(IRModule* module)
+```
+
+Conservatively hoists pure, non-trapping loop-invariant instructions to loop preheaders (requires a unique preheader).
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `module`  | `IRModule*` | Target IR module |
+
+**Returns:** `true` if the module was modified, `false` otherwise.
+
+#### `IR_PASS_LICM`
+
+```c
+extern IRPass IR_PASS_LICM;
+```
+
+Descriptor for the LICM pass.
 
 ---
 

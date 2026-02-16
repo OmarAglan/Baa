@@ -606,6 +606,32 @@ void emit_inst(MachineInst* inst, MachineFunc* func, FILE* out) {
         // ================================================================
         case MACH_CMP:
             // AT&T: cmp src2, src1 (يقارن src1 مع src2)
+            // cmp لا يدعم ذاكرة-إلى-ذاكرة. إذا كان الطرفان ذاكرة/رمزاً عالمياً، استخدم %rax مؤقتاً.
+            if ((inst->src1.kind == MACH_OP_MEM || inst->src1.kind == MACH_OP_GLOBAL) &&
+                (inst->src2.kind == MACH_OP_MEM || inst->src2.kind == MACH_OP_GLOBAL)) {
+                int bits = inst->src1.size_bits;
+                if (bits <= 0) bits = inst->src2.size_bits;
+                if (bits <= 0) bits = 64;
+
+                MachineOperand tmp = {0};
+                tmp.kind = MACH_OP_VREG;
+                tmp.size_bits = bits;
+                tmp.data.vreg = PHYS_RAX;
+
+                fprintf(out, "    mov%c ", infer_suffix(inst));
+                emit_operand(&inst->src2, out);
+                fprintf(out, ", ");
+                emit_operand(&tmp, out);
+                fprintf(out, "\n");
+
+                fprintf(out, "    cmp%c ", infer_suffix(inst));
+                emit_operand(&tmp, out);
+                fprintf(out, ", ");
+                emit_operand(&inst->src1, out);
+                fprintf(out, "\n");
+                break;
+            }
+
             fprintf(out, "    cmp%c ", infer_suffix(inst));
             emit_operand(&inst->src2, out);
             fprintf(out, ", ");
@@ -615,6 +641,32 @@ void emit_inst(MachineInst* inst, MachineFunc* func, FILE* out) {
 
         case MACH_TEST:
             // AT&T: test src2, src1
+            // test لا يدعم ذاكرة-إلى-ذاكرة.
+            if ((inst->src1.kind == MACH_OP_MEM || inst->src1.kind == MACH_OP_GLOBAL) &&
+                (inst->src2.kind == MACH_OP_MEM || inst->src2.kind == MACH_OP_GLOBAL)) {
+                int bits = inst->src1.size_bits;
+                if (bits <= 0) bits = inst->src2.size_bits;
+                if (bits <= 0) bits = 64;
+
+                MachineOperand tmp = {0};
+                tmp.kind = MACH_OP_VREG;
+                tmp.size_bits = bits;
+                tmp.data.vreg = PHYS_RAX;
+
+                fprintf(out, "    mov%c ", infer_suffix(inst));
+                emit_operand(&inst->src2, out);
+                fprintf(out, ", ");
+                emit_operand(&tmp, out);
+                fprintf(out, "\n");
+
+                fprintf(out, "    test%c ", infer_suffix(inst));
+                emit_operand(&tmp, out);
+                fprintf(out, ", ");
+                emit_operand(&inst->src1, out);
+                fprintf(out, "\n");
+                break;
+            }
+
             fprintf(out, "    test%c ", infer_suffix(inst));
             emit_operand(&inst->src2, out);
             fprintf(out, ", ");

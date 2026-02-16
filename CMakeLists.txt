@@ -19,6 +19,7 @@ set(SOURCES
     src/ir_clone.c    # IR cloning (v0.3.2.6.1)
     src/ir_text.c     # IR text serialization (v0.3.2.6.3)
     src/ir_loop.c     # IR loop detection (v0.3.2.7.1)
+    src/ir_licm.c     # IR loop invariant code motion (v0.3.2.7.1)
     src/ir_analysis.c # IR analysis (CFG + dominance) (v0.3.1.1)
     src/ir_builder.c  # IR Builder pattern API (v0.3.0.2)
     src/ir_verify_ssa.c # IR SSA verification (التحقق من SSA) (v0.3.2.5.3)

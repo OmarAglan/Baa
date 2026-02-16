@@ -11,6 +11,7 @@
 #include "ir_optimizer.h"
 #include "ir_mem2reg.h"
 #include "ir_canon.h"
+#include "ir_licm.h"
 #include "ir_constfold.h"
 #include "ir_copyprop.h"
 #include "ir_cse.h"
@@ -78,6 +79,10 @@ static bool optimizer_iteration(IRModule* module,
     // Pass 5: CFG simplification (تبسيط_CFG)
     // دمج كتل تافهة + إزالة أفرع زائدة لتحسين IR
     changed |= ir_cfg_simplify_run(module);
+
+    // Pass 6: LICM (حركة التعليمات غير المتغيرة)
+    // نقل التعليمات النقية غير المتغيرة في الحلقات إلى preheader
+    changed |= ir_licm_run(module);
 
     // بوابة التحقق (Debug Gate): بعد كل دورة تمريرات
     if (verify_gate) {

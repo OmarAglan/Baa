@@ -779,6 +779,8 @@ The IR analysis layer provides foundational compiler analyses required by the up
 
 - **Loop detection (v0.3.2.7.1):** natural loop discovery via back edges using dominance (`src/ir_loop.c`, `src/ir_loop.h`).
 
+- **LICM (v0.3.2.7.1):** conservative hoisting of pure loop-invariant computations to preheaders (`src/ir_licm.c`, `src/ir_licm.h`).
+
 > Implementation lives in [`src/ir_analysis.c`](src/ir_analysis.c:1).
 
 ---

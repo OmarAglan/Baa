@@ -1,6 +1,6 @@
 # Baa Compiler Internals
 
-> **Version:** 0.3.2.7.1 | [← Language Spec](LANGUAGE.md) | [API Reference →](API_REFERENCE.md)
+> **Version:** 0.3.2.7.2 | [← Language Spec](LANGUAGE.md) | [API Reference →](API_REFERENCE.md)
 
 **Target Architecture:** x86-64 (AMD64)
 **Target OS:** Windows (MinGW-w64 Toolchain)
@@ -785,6 +785,8 @@ The IR analysis layer provides foundational compiler analyses required by the up
 - **Strength reduction (v0.3.2.7.1):** instruction selection reduces `ضرب` by power-of-two constants inside loops to `shl`.
 
 - **Loop unrolling (v0.3.2.7.1):** optional conservative full unroll for small constant trip-count loops (after Out-of-SSA) (`src/ir_unroll.c`, `src/ir_unroll.h`).
+
+- **Inlining (v0.3.2.7.2):** conservative inliner at `-O2` for small internal functions with a single call site (`src/ir_inline.c`, `src/ir_inline.h`).
 
 > Implementation lives in [`src/ir_analysis.c`](src/ir_analysis.c:1).
 

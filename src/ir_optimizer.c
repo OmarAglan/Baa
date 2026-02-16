@@ -9,6 +9,7 @@
  */
 
 #include "ir_optimizer.h"
+#include "ir_inline.h"
 #include "ir_mem2reg.h"
 #include "ir_canon.h"
 #include "ir_licm.h"
@@ -123,6 +124,11 @@ bool ir_optimizer_run(IRModule* module, OptLevel level) {
     // O0: No optimization (نجاح بدون تغييرات)
     if (level == OPT_LEVEL_0) {
         return true;
+    }
+
+    // v0.3.2.7.2: التضمين (Inlining) — O2 فقط، قبل Mem2Reg.
+    if (level >= OPT_LEVEL_2) {
+        (void)ir_inline_run(module);
     }
 
     int iteration = 0;

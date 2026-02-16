@@ -300,9 +300,11 @@
 
 #### v0.3.2.7.2: Inlining
 
-- [ ] **Inline heuristics** — Small functions, single call site.
-- [ ] **Inline expansion** — Copy function body to call site.
-- [ ] **Post-inline cleanup** — Re-run optimization passes.
+✅ COMPLETED (2026-02-16)
+
+- [x] **Inline heuristics** — Small functions, single call site.
+- [x] **Inline expansion** — Copy function body to call site.
+- [x] **Post-inline cleanup** — Re-run optimization passes.
 
 #### v0.3.2.7.3: Tail Call Optimization
 

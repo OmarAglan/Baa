@@ -1,6 +1,6 @@
 # Baa IR Specification
 
-> **Version:** 0.3.2.7.1 | [← Compiler Internals](INTERNALS.md) | [API Reference →](API_REFERENCE.md)
+> **Version:** 0.3.2.7.2 | [← Compiler Internals](INTERNALS.md) | [API Reference →](API_REFERENCE.md)
 
 This document specifies the Intermediate Representation (IR) for the Baa compiler. The IR uses Arabic naming conventions throughout, creating a culturally authentic yet technically robust design.
 
@@ -333,14 +333,15 @@ Becomes:
 
 **Optimizer pipeline (O1/O2):**
 
-1. `ترقية_الذاكرة_إلى_سجلات` - Promote safe allocas to SSA (Mem2Reg)
-2. `توحيد_الـIR` - Canonicalize operand ordering/forms
-3. `طي_الثوابت` - Fold constant expressions
-4. `نشر_النسخ` - Propagate copies
-5. `حذف_المكرر` - Eliminate common subexpressions (O2)
-6. `حذف_الميت` - Remove dead code + unreachable blocks
-7. `تبسيط_CFG` - Simplify CFG (merge trivial blocks, remove redundant branches)
-8. `LICM` - Hoist pure loop-invariant computations to preheaders (v0.3.2.7.1)
+1. `تضمين` - Inline small internal functions with a single call site (O2) (v0.3.2.7.2)
+2. `ترقية_الذاكرة_إلى_سجلات` - Promote safe allocas to SSA (Mem2Reg)
+3. `توحيد_الـIR` - Canonicalize operand ordering/forms
+4. `طي_الثوابت` - Fold constant expressions
+5. `نشر_النسخ` - Propagate copies
+6. `حذف_المكرر` - Eliminate common subexpressions (O2)
+7. `حذف_الميت` - Remove dead code + unreachable blocks
+8. `تبسيط_CFG` - Simplify CFG (merge trivial blocks, remove redundant branches)
+9. `LICM` - Hoist pure loop-invariant computations to preheaders (v0.3.2.7.1)
 
 **After optimization:**
 

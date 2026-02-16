@@ -550,6 +550,28 @@ void emit_inst(MachineInst* inst, MachineFunc* func, FILE* out) {
         // تحميل العنوان الفعّال (LEA)
         // ================================================================
         case MACH_LEA:
+            // AT&T: lea src, dst  (dst يجب أن يكون سجلاً)
+            // إذا كانت الوجهة ذاكرة بسبب التسريب، نستخدم %rax مؤقتاً ثم نخزن.
+            if (inst->dst.kind == MACH_OP_MEM || inst->dst.kind == MACH_OP_GLOBAL) {
+                MachineOperand tmp = {0};
+                tmp.kind = MACH_OP_VREG;
+                tmp.size_bits = 64;
+                tmp.data.vreg = PHYS_RAX;
+
+                fprintf(out, "    leaq ");
+                emit_operand(&inst->src1, out);
+                fprintf(out, ", ");
+                emit_operand(&tmp, out);
+                fprintf(out, "\n");
+
+                fprintf(out, "    movq ");
+                emit_operand(&tmp, out);
+                fprintf(out, ", ");
+                emit_operand(&inst->dst, out);
+                fprintf(out, "\n");
+                break;
+            }
+
             fprintf(out, "    leaq ");
             emit_operand(&inst->src1, out);
             fprintf(out, ", ");

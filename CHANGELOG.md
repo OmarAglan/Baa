@@ -8,6 +8,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.3.2.7.2] - 2026-02-16
+
+### Added
+
+- **IR inlining (v0.3.2.7.2)** — inlines small internal functions with a single call site at `-O2` before Mem2Reg.
+  - Implementation: `src/ir_inline.c`, `src/ir_inline.h`
+  - Tests: `tests/ir_inline_test.c`, `tests/backend_inline_test.baa`
+
+### Changed
+
+- `-O2` optimizer now runs inlining before Mem2Reg; existing passes act as post-inline cleanup.
+
 ## [0.3.2.7.1] - 2026-02-16
 
 ### Added

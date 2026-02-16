@@ -14,6 +14,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Added loop analysis unit test: `tests/ir_loop_test.c`.
 - **IR LICM (loop-invariant code motion)** — conservative hoisting of pure, non-trapping loop-invariant instructions to loop preheaders: `src/ir_licm.c`, `src/ir_licm.h`.
 - Added LICM unit test: `tests/ir_licm_test.c`.
+- **Strength reduction (mul -> shl inside loops)** — instruction selection lowers `ضرب` by power-of-two constants inside loops to `shl`.
 
 ### Fixed
 

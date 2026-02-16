@@ -167,6 +167,74 @@ static int test_binop(void) {
 }
 
 // ============================================================================
+// اختبار ١.٥: تقليل القوة داخل الحلقات (Strength Reduction)
+// ============================================================================
+
+static int test_strength_reduction_mul_pow2_in_loop(void) {
+    fprintf(stderr, "--- اختبار ١.٥: تقليل القوة (mul pow2 داخل حلقة) ---\n");
+
+    IRModule* module = ir_module_new("strength_reduce_test");
+    IRBuilder* b = ir_builder_new(module);
+    IRFunc* f = ir_builder_create_func(b, "test_sr", IR_TYPE_I64_T);
+
+    IRBlock* entry = ir_builder_create_block(b, "entry");
+    IRBlock* header = ir_builder_create_block(b, "loop_header");
+    IRBlock* body = ir_builder_create_block(b, "loop_body");
+    IRBlock* exitb = ir_builder_create_block(b, "exit");
+
+    // entry
+    ir_builder_set_insert_point(b, entry);
+    int r_x = ir_builder_emit_add(b, IR_TYPE_I64_T,
+                                 ir_value_const_int(5, IR_TYPE_I64_T),
+                                 ir_value_const_int(6, IR_TYPE_I64_T));
+    ir_builder_emit_br(b, header);
+
+    // header: شرط شكلي
+    ir_builder_set_insert_point(b, header);
+    int r_c = ir_builder_emit_cmp(b, IR_CMP_NE,
+                                 ir_value_const_int(1, IR_TYPE_I64_T),
+                                 ir_value_const_int(0, IR_TYPE_I64_T));
+    ir_builder_emit_br_cond(b, ir_value_reg(r_c, IR_TYPE_I1_T), body, exitb);
+
+    // body: mul by 8 (pow2) داخل الحلقة
+    ir_builder_set_insert_point(b, body);
+    int r_mul = ir_builder_emit_mul(b, IR_TYPE_I64_T,
+                                   ir_value_reg(r_x, IR_TYPE_I64_T),
+                                   ir_value_const_int(8, IR_TYPE_I64_T));
+    ir_builder_emit_br(b, header);
+
+    // exit
+    ir_builder_set_insert_point(b, exitb);
+    ir_builder_emit_ret(b, ir_value_reg(r_mul, IR_TYPE_I64_T));
+
+    MachineModule* mmod = isel_run(module);
+    int ok = 1;
+    ok &= require(mmod != NULL, "isel_run يجب أن يُرجع وحدة غير فارغة");
+    ok &= require(mmod->func_count == 1, "يجب أن تكون هناك دالة واحدة");
+
+    MachineFunc* mf = mmod ? mmod->funcs : NULL;
+    ok &= require(mf != NULL, "يجب أن تكون هناك MachineFunc");
+
+    // ابحث عن SHL داخل أي كتلة.
+    int found_shl = 0;
+    for (MachineBlock* blk = mf ? mf->blocks : NULL; blk; blk = blk->next) {
+        MachineInst* shl = find_mach_inst_by_ir_reg(blk, MACH_SHL, r_mul);
+        if (shl) {
+            found_shl = 1;
+            ok &= require(shl->src2.kind == MACH_OP_IMM, "SHL يجب أن يستخدم immediate");
+            ok &= require(shl->src2.data.imm == 3, "SHL count يجب أن يكون 3 (8=2^3)");
+            break;
+        }
+    }
+    ok &= require(found_shl, "يجب أن يتحول mul by 8 داخل الحلقة إلى SHL");
+
+    if (mmod) mach_module_free(mmod);
+    ir_builder_free(b);
+    ir_module_free(module);
+    return ok;
+}
+
+// ============================================================================
 // اختبار ٢: القسمة والباقي
 // ============================================================================
 
@@ -645,6 +713,9 @@ int main(void) {
     int ok = 1;
 
     ok &= test_binop();
+    fprintf(stderr, "\n");
+
+    ok &= test_strength_reduction_mul_pow2_in_loop();
     fprintf(stderr, "\n");
 
     ok &= test_division();

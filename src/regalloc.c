@@ -391,7 +391,7 @@ void regalloc_compute_def_use(RegAllocCtx *ctx)
             // dst كمصدر (في two-address: op dst, dst, src → dst مستخدم)
             // حالة خاصة: تعليمات مثل add dst, dst, src تستخدم dst كمصدر
             if (inst->op == MACH_ADD || inst->op == MACH_SUB ||
-                inst->op == MACH_IMUL || inst->op == MACH_AND ||
+                inst->op == MACH_IMUL || inst->op == MACH_SHL || inst->op == MACH_AND ||
                 inst->op == MACH_OR || inst->op == MACH_NEG ||
                 inst->op == MACH_NOT)
             {

@@ -781,6 +781,8 @@ The IR analysis layer provides foundational compiler analyses required by the up
 
 - **LICM (v0.3.2.7.1):** conservative hoisting of pure loop-invariant computations to preheaders (`src/ir_licm.c`, `src/ir_licm.h`).
 
+- **Strength reduction (v0.3.2.7.1):** instruction selection reduces `ضرب` by power-of-two constants inside loops to `shl`.
+
 > Implementation lives in [`src/ir_analysis.c`](src/ir_analysis.c:1).
 
 ---

@@ -40,6 +40,7 @@ typedef enum {
     MACH_ADD,       // add dst, src
     MACH_SUB,       // sub dst, src
     MACH_IMUL,      // imul dst, src
+    MACH_SHL,       // shl dst, imm (إزاحة لليسار)
     MACH_IDIV,      // idiv src (يقسم RDX:RAX على src)
     MACH_NEG,       // neg dst (سالب)
     MACH_CQO,       // cqo - توسيع الإشارة RAX → RDX:RAX (لعملية القسمة)

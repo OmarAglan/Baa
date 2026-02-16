@@ -517,6 +517,15 @@ void emit_inst(MachineInst* inst, MachineFunc* func, FILE* out) {
             fprintf(out, "\n");
             break;
 
+        case MACH_SHL:
+            // AT&T: shl $imm, dst
+            fprintf(out, "    shl%c ", infer_suffix(inst));
+            emit_operand(&inst->src2, out);
+            fprintf(out, ", ");
+            emit_operand(&inst->dst, out);
+            fprintf(out, "\n");
+            break;
+
         case MACH_NEG:
             fprintf(out, "    negq ");
             emit_operand(&inst->dst, out);

@@ -12,6 +12,8 @@
  */
 
 #include "isel.h"
+
+#include "ir_loop.h"
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
@@ -325,17 +327,114 @@ typedef struct
 
     // تعليمة IR الحالية (لنسخ معلومات الديبغ إلى MachineInst)
     IRInst *ir_inst;
+
+    // معلومات الحلقات (للتحسينات داخل الحلقات مثل تقليل القوة)
+    IRLoopInfo *loop_info;
 } ISelCtx;
 
-/**
- * @brief تصريح مسبق لمُصدّر التعليمات داخل اختيار التعليمات.
- *
- * نحتاج هذا لأن [`isel_lower_value()`](src/isel.c:299) قد يولّد تعليمات (مثل LEA)
- * أثناء خفض بعض القيم (مثل السلاسل النصية)، بينما تعريف الدالة يأتي لاحقاً.
- */
+// -----------------------------------------------------------------------------
+// تصريحات مسبقة (Forward Declarations)
+// -----------------------------------------------------------------------------
+
 static MachineInst *isel_emit(ISelCtx *ctx, MachineOp op,
                               MachineOperand dst, MachineOperand src1,
                               MachineOperand src2);
+
+static int isel_type_bits(IRType *type);
+static MachineOperand isel_lower_value(ISelCtx *ctx, IRValue *val);
+static void isel_lower_binop(ISelCtx *ctx, IRInst *inst, MachineOp mop);
+
+static int isel_block_in_any_loop(ISelCtx *ctx)
+{
+    if (!ctx || !ctx->loop_info || !ctx->ir_block)
+        return 0;
+
+    int n = ir_loop_info_count(ctx->loop_info);
+    for (int i = 0; i < n; i++)
+    {
+        IRLoop *L = ir_loop_info_get(ctx->loop_info, i);
+        if (L && ir_loop_contains(L, ctx->ir_block))
+            return 1;
+    }
+    return 0;
+}
+
+static int isel_is_pow2_i64(int64_t v, int *out_shift)
+{
+    if (out_shift)
+        *out_shift = 0;
+
+    if (v <= 0)
+        return 0;
+    if ((v & (v - 1)) != 0)
+        return 0;
+
+    int sh = 0;
+    while (v > 1)
+    {
+        v >>= 1;
+        sh++;
+        if (sh > 63)
+            return 0;
+    }
+
+    if (out_shift)
+        *out_shift = sh;
+    return 1;
+}
+
+static void isel_lower_mul_strength_reduce(ISelCtx *ctx, IRInst *inst)
+{
+    if (!inst || inst->operand_count < 2)
+        return;
+
+    // نطبق تقليل القوة داخل الحلقات فقط (v0.3.2.7.1).
+    if (!isel_block_in_any_loop(ctx))
+    {
+        isel_lower_binop(ctx, inst, MACH_IMUL);
+        return;
+    }
+
+    IRValue *a = inst->operands[0];
+    IRValue *b = inst->operands[1];
+    if (!a || !b)
+    {
+        isel_lower_binop(ctx, inst, MACH_IMUL);
+        return;
+    }
+
+    // نبحث عن ثابت قوة-٢.
+    IRValue *var = NULL;
+    int shift = 0;
+    if (b->kind == IR_VAL_CONST_INT && isel_is_pow2_i64(b->data.const_int, &shift))
+    {
+        var = a;
+    }
+    else if (a->kind == IR_VAL_CONST_INT && isel_is_pow2_i64(a->data.const_int, &shift))
+    {
+        var = b;
+    }
+
+    // إذا لم يكن هناك ثابت مناسب: استخدم imul.
+    if (!var || shift <= 0)
+    {
+        isel_lower_binop(ctx, inst, MACH_IMUL);
+        return;
+    }
+
+    int bits = isel_type_bits(inst->type);
+    MachineOperand dst = mach_op_vreg(inst->dest, bits);
+    MachineOperand src = isel_lower_value(ctx, var);
+    MachineOperand sh = mach_op_imm((int64_t)shift, 8);
+
+    // mov dst, var
+    isel_emit(ctx, MACH_MOV, dst, src, mach_op_none());
+
+    // shl dst, $shift
+    MachineInst *mi = isel_emit(ctx, MACH_SHL, dst, dst, sh);
+    if (mi)
+        mi->ir_reg = inst->dest;
+}
 
 // ============================================================================
 // دوال مساعدة لاختيار التعليمات
@@ -1048,7 +1147,7 @@ static void isel_lower_inst(ISelCtx *ctx, IRInst *inst)
         isel_lower_binop(ctx, inst, MACH_SUB);
         break;
     case IR_OP_MUL:
-        isel_lower_binop(ctx, inst, MACH_IMUL);
+        isel_lower_mul_strength_reduce(ctx, inst);
         break;
     case IR_OP_DIV:
         isel_lower_div(ctx, inst, false);
@@ -1196,6 +1295,9 @@ static MachineFunc *isel_lower_func(ISelCtx *ctx, IRFunc *ir_func)
     if (ir_func->is_prototype)
         return mfunc;
 
+    // تحليل الحلقات لاستخدامه في تحسينات داخل isel.
+    ctx->loop_info = ir_loop_analyze_func(ir_func);
+
     // خفض كل كتلة
     for (IRBlock *block = ir_func->blocks; block; block = block->next)
     {
@@ -1204,6 +1306,12 @@ static MachineFunc *isel_lower_func(ISelCtx *ctx, IRFunc *ir_func)
         {
             mach_func_add_block(mfunc, mblock);
         }
+    }
+
+    if (ctx->loop_info)
+    {
+        ir_loop_info_free(ctx->loop_info);
+        ctx->loop_info = NULL;
     }
 
     // ──────────────────────────────────────────────────────────────────────
@@ -1364,6 +1472,8 @@ const char *mach_op_to_string(MachineOp op)
         return "sub";
     case MACH_IMUL:
         return "imul";
+    case MACH_SHL:
+        return "shl";
     case MACH_IDIV:
         return "idiv";
     case MACH_NEG:

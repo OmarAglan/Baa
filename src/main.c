@@ -8,6 +8,7 @@
 #include "ir_lower.h"
 #include "ir_optimizer.h"
 #include "ir_outssa.h"
+#include "ir_unroll.h"
 #include "ir_verify_ssa.h"
 #include "ir_verify_ir.h"
 #include "isel.h"
@@ -87,6 +88,7 @@ typedef struct
     bool verify_ssa;    // --verify-ssa: التحقق من صحة SSA (بعد Mem2Reg وقبل OutSSA)
     bool verify_gate;   // --verify-gate: تشغيل verify-ir/verify-ssa بعد كل دورة تمريرات داخل المُحسِّن (debug)
     bool debug_info;    // --debug-info: إصدار معلومات ديبغ (سطر/ملف) داخل ملف .s
+    bool funroll_loops; // -funroll-loops: فك الحلقات بعد Out-of-SSA (تحسين اختياري)
     OptLevel opt_level; // -O0, -O1, -O2: مستوى التحسين
     double start_time;  // وقت بدء الترجمة
 } CompilerConfig;
@@ -370,6 +372,7 @@ void print_help()
     printf("  -O0            Disable optimization\n");
     printf("  -O1            Basic optimization (default)\n");
     printf("  -O2            Full optimization (+ CSE)\n");
+    printf("  -funroll-loops  Unroll small constant-count loops (after Out-of-SSA)\n");
     printf("  --help, -h   Show this help message\n");
     printf("  --version    Show version info\n");
     printf("\nWarning Options:\n");
@@ -407,6 +410,7 @@ int main(int argc, char **argv)
     CompilerConfig config = {0};
     config.output_file = NULL;
     config.opt_level = OPT_LEVEL_1; // Default optimization level
+    config.funroll_loops = false;
 
     char *input_files[32]; // دعم حتى 32 ملف مصدر
     int input_count = 0;
@@ -486,10 +490,14 @@ int main(int argc, char **argv)
             {
                 config.opt_level = OPT_LEVEL_1;
             }
-            else if (strcmp(arg, "-O2") == 0)
-            {
-                config.opt_level = OPT_LEVEL_2;
-            }
+        else if (strcmp(arg, "-O2") == 0)
+        {
+            config.opt_level = OPT_LEVEL_2;
+        }
+        else if (strcmp(arg, "-funroll-loops") == 0)
+        {
+            config.funroll_loops = true;
+        }
             else if (strcmp(arg, "-o") == 0)
             {
                 if (i + 1 < argc)
@@ -711,6 +719,29 @@ int main(int argc, char **argv)
         // 3.6.5. الخروج من SSA (v0.3.2.5.2): إزالة فاي قبل الخلفية
         // هذه الخطوة ضرورية لأن الخلفية الحالية لا تُنفّذ IR_OP_PHI فعلياً.
         (void)ir_outssa_run(ir_module);
+
+        // 3.6.5.1. فك الحلقات (v0.3.2.7.1) — اختياري
+        // نطبقه بعد Out-of-SSA لأن القيم الحلقية تصبح صريحة عبر نسخ على الحواف.
+        if (config.funroll_loops)
+        {
+            if (config.verbose)
+                printf("[INFO] Unrolling loops (-funroll-loops)...\n");
+            (void)ir_unroll_run(ir_module, 8);
+
+            // إن كان --verify-ir مفعلاً، أعد التحقق لأننا عدّلنا الـ IR بعد مرحلة التحقق الأصلية.
+            if (config.verify_ir)
+            {
+                if (config.verbose)
+                    printf("[INFO] Re-verifying IR after unrolling (--verify-ir)...\n");
+                if (!ir_module_verify_ir(ir_module, stderr))
+                {
+                    fprintf(stderr, "فشل التحقق من سلامة الـ IR بعد فك الحلقات.\n");
+                    ir_module_free(ir_module);
+                    free(source);
+                    return 1;
+                }
+            }
+        }
 
         // 4. اختيار التعليمات (Instruction Selection) (v0.3.2.1)
         if (config.verbose)

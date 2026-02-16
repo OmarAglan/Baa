@@ -1,6 +1,6 @@
 # Baa IR Specification
 
-> **Version:** 0.3.2.6.5 | [← Compiler Internals](INTERNALS.md) | [API Reference →](API_REFERENCE.md)
+> **Version:** 0.3.2.7.1 | [← Compiler Internals](INTERNALS.md) | [API Reference →](API_REFERENCE.md)
 
 This document specifies the Intermediate Representation (IR) for the Baa compiler. The IR uses Arabic naming conventions throughout, creating a culturally authentic yet technically robust design.
 
@@ -331,13 +331,21 @@ Becomes:
 
 ### 7.3 Pass Order
 
-1. `تحليل_السيطرة` - Build dominator tree
-2. `ترقية_الذاكرة_إلى_سجلات` - Promote simple allocas (Mem2Reg baseline)
+**Optimizer pipeline (O1/O2):**
+
+1. `ترقية_الذاكرة_إلى_سجلات` - Promote safe allocas to SSA (Mem2Reg)
+2. `توحيد_الـIR` - Canonicalize operand ordering/forms
 3. `طي_الثوابت` - Fold constant expressions
 4. `نشر_النسخ` - Propagate copies
-5. `حذف_المكرر` - Eliminate common subexpressions
-6. `حذف_الميت` - Remove dead code
-7. `تحليل_الحياة` - Compute liveness for register allocation
+5. `حذف_المكرر` - Eliminate common subexpressions (O2)
+6. `حذف_الميت` - Remove dead code + unreachable blocks
+7. `تبسيط_CFG` - Simplify CFG (merge trivial blocks, remove redundant branches)
+8. `LICM` - Hoist pure loop-invariant computations to preheaders (v0.3.2.7.1)
+
+**After optimization:**
+
+- `الخروج_من_SSA` - Out-of-SSA edge copies (required before backend)
+- Optional `-funroll-loops` - conservative full unroll of small constant-trip loops (after Out-of-SSA)
 
 ---
 

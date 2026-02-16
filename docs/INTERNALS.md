@@ -1,6 +1,6 @@
 # Baa Compiler Internals
 
-> **Version:** 0.3.2.6.5 | [← Language Spec](LANGUAGE.md) | [API Reference →](API_REFERENCE.md)
+> **Version:** 0.3.2.7.1 | [← Language Spec](LANGUAGE.md) | [API Reference →](API_REFERENCE.md)
 
 **Target Architecture:** x86-64 (AMD64)
 **Target OS:** Windows (MinGW-w64 Toolchain)
@@ -111,6 +111,7 @@ The driver in `main.c` (v0.2.0+) supports multi-file compilation and various mod
 | `--verify-ir` | **IR Verification** | stderr | Verifies IR well-formedness (operands/types/terminators/phi/calls) after optimization and before Out-of-SSA/backend (v0.3.2.6.5). |
 | `--verify-ssa` | **SSA Verification** | stderr | Verifies SSA invariants after Mem2Reg and before Out-of-SSA (**requires `-O1`/`-O2`**) (v0.3.2.5.3). |
 | `--verify-gate` | **Verifier Gate (Debug)** | stderr | Runs `--verify-ir`/`--verify-ssa` after each optimizer iteration (**requires `-O1`/`-O2`**) (v0.3.2.6.5). |
+| `-funroll-loops` | **Loop Unrolling (Opt-in)** | - | Conservatively fully-unrolls small constant-trip-count loops after Out-of-SSA (v0.3.2.7.1). |
 | `--version` | **Version Info** | stdout | Displays compiler version and build date. |
 | `--help`, `-h` | **Help** | stdout | Shows usage information. |
 | `update` | **Self-Update** | - | Downloads and installs the latest version. |
@@ -782,6 +783,8 @@ The IR analysis layer provides foundational compiler analyses required by the up
 - **LICM (v0.3.2.7.1):** conservative hoisting of pure loop-invariant computations to preheaders (`src/ir_licm.c`, `src/ir_licm.h`).
 
 - **Strength reduction (v0.3.2.7.1):** instruction selection reduces `ضرب` by power-of-two constants inside loops to `shl`.
+
+- **Loop unrolling (v0.3.2.7.1):** optional conservative full unroll for small constant trip-count loops (after Out-of-SSA) (`src/ir_unroll.c`, `src/ir_unroll.h`).
 
 > Implementation lives in [`src/ir_analysis.c`](src/ir_analysis.c:1).
 

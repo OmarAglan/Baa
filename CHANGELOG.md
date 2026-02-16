@@ -8,13 +8,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.3.2.7.1] - 2026-02-16
+
 ### Added
 
-- **IR loop detection (natural loops)** — new analysis module that finds natural loops via back edges (dominance): `src/ir_loop.c`, `src/ir_loop.h`.
+- **Loop optimizations (v0.3.2.7.1)**
+  - **Loop detection (natural loops)** — back-edge detection via dominance + natural loop set construction: `src/ir_loop.c`, `src/ir_loop.h`.
+  - **LICM** — conservative hoisting of pure, non-trapping loop-invariant instructions to preheaders: `src/ir_licm.c`, `src/ir_licm.h`.
+  - **Strength reduction** — instruction selection reduces `ضرب` by power-of-two constants inside loops to `shl`.
+  - **Loop unrolling (optional)** — `-funroll-loops` performs conservative full unrolling after Out-of-SSA: `src/ir_unroll.c`, `src/ir_unroll.h`.
+
+### Testing
+
 - Added loop analysis unit test: `tests/ir_loop_test.c`.
-- **IR LICM (loop-invariant code motion)** — conservative hoisting of pure, non-trapping loop-invariant instructions to loop preheaders: `src/ir_licm.c`, `src/ir_licm.h`.
 - Added LICM unit test: `tests/ir_licm_test.c`.
-- **Strength reduction (mul -> shl inside loops)** — instruction selection lowers `ضرب` by power-of-two constants inside loops to `shl`.
+- Added unroll unit test: `tests/ir_unroll_test.c`.
 
 ### Fixed
 

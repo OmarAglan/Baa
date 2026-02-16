@@ -1,6 +1,6 @@
 # Baa User Guide
 
-> **Version:** 0.3.2.6.5 | [← README](../README.md) | [Language Spec →](LANGUAGE.md)
+> **Version:** 0.3.2.7.1 | [← README](../README.md) | [Language Spec →](LANGUAGE.md)
 
 Welcome to Baa (باء)! This guide will help you write your first Arabic computer program and use the Baa compiler toolchain.
 
@@ -124,6 +124,7 @@ The Baa compiler `baa.exe` is a full-featured command-line tool (since v0.2.0).
 | `--verify-ir` | Verify IR well-formedness (operands/types/terminators/phi/calls). | `.\baa.exe --verify-ir -O2 main.baa` |
 | `--verify-ssa` | Verify SSA invariants after Mem2Reg and before Out-of-SSA (**requires `-O1`/`-O2`**). | `.\baa.exe --verify-ssa -O2 main.baa` |
 | `--verify-gate` | Debug: run `--verify-ir`/`--verify-ssa` after each optimizer iteration (**requires `-O1`/`-O2`**). | `.\baa.exe --verify-gate -O2 main.baa` |
+| `-funroll-loops` | Unroll small constant-count loops (conservative). | `.\baa.exe -funroll-loops -O2 main.baa` |
 
 ### Output Naming Rules (v0.2.9)
 

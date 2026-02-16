@@ -396,6 +396,45 @@ static void emit_epilogue(MachineFunc* func, FILE* out,
     fprintf(out, "    ret\n");
 }
 
+/**
+ * @brief إصدار نداء_ذيلي (Tail Call) كقفز بعد تفكيك إطار الدالة.
+ *
+ * الفكرة:
+ * - نفك إطار الدالة الحالية (استعادة callee-saved ثم leave)
+ * - نكتب معاملات السجلات إلى shadow space الخاص بالمستدعي
+ * - نقفز إلى الدالة الهدف بدون push عنوان رجوع جديد
+ *
+ * بهذه الطريقة، عندما تُنفّذ الدالة الهدف `ret` ستعود مباشرةً
+ * إلى مستدعي الدالة الحالية (إعادة استخدام إطار المكدس).
+ */
+static void emit_tailjmp(MachineFunc* func, MachineInst* inst, FILE* out,
+                         PhysReg* callee_regs, int callee_count) {
+    if (!func || !inst || !out) return;
+
+    int local_size = func->stack_size;
+
+    // استعادة السجلات المحفوظة (callee-saved) بترتيب عكسي
+    for (int i = callee_count - 1; i >= 0; i--) {
+        int save_offset = -(local_size + 32 + (i + 1) * 8);
+        fprintf(out, "    mov %d(%%rbp), %s\n",
+                save_offset, reg64_names[callee_regs[i]]);
+    }
+
+    // تفكيك إطار الدالة: بعد leave يصبح RSP على عنوان الرجوع
+    fprintf(out, "    leave\n");
+
+    // Windows x64 ABI (varargs): كتابة معاملات السجلات في home/shadow space
+    // عند نقطة دخول الدالة الهدف، shadow يبدأ عند 8(%rsp) لأن 0(%rsp) هو return address.
+    fprintf(out, "    movq %%rcx, 8(%%rsp)\n");
+    fprintf(out, "    movq %%rdx, 16(%%rsp)\n");
+    fprintf(out, "    movq %%r8, 24(%%rsp)\n");
+    fprintf(out, "    movq %%r9, 32(%%rsp)\n");
+
+    fprintf(out, "    jmp ");
+    emit_operand(&inst->src1, out);
+    fprintf(out, "\n");
+}
+
 // ============================================================================
 // إصدار التعليمات (Instruction Emission)
 // ============================================================================
@@ -1044,6 +1083,9 @@ bool emit_func(MachineFunc* func, FILE* out) {
                 // عند الرجوع: إصدار قيمة الإرجاع الافتراضية إذا كانت main
                 // ثم إصدار الخاتمة
                 emit_epilogue(func, out, callee_regs, callee_count);
+            } else if (inst->op == MACH_TAILJMP) {
+                // نداء_ذيلي: تفكيك الإطار ثم قفز إلى الهدف
+                emit_tailjmp(func, inst, out, callee_regs, callee_count);
             } else {
                 emit_inst(inst, func, out);
             }
@@ -1056,7 +1098,7 @@ bool emit_func(MachineFunc* func, FILE* out) {
         bool has_ret = false;
         for (MachineBlock* block = func->blocks; block; block = block->next) {
             for (MachineInst* inst = block->first; inst; inst = inst->next) {
-                if (inst->op == MACH_RET) has_ret = true;
+                if (inst->op == MACH_RET || inst->op == MACH_TAILJMP) has_ret = true;
             }
         }
         if (!has_ret) {

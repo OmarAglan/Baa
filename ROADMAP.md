@@ -308,9 +308,10 @@
 
 #### v0.3.2.7.3: Tail Call Optimization
 
-- [ ] **Detect tail calls** — Call immediately before return.
-- [ ] **Convert to jump** — Replace call+ret with jump.
-- [ ] **Stack reuse** — Reuse caller's stack frame.
+- [ ] **Detect tail calls** — `call` immediately followed by `ret` (بدون تعليمات بينهما).
+- [ ] **Convert to jump** — Replace call+ret with a tail jump (no new return address).
+- [ ] **Stack reuse** — Reuse caller's stack frame + caller shadow space (Windows x64 ABI).
+- [ ] **Limitation (for v0.3.2.7.3)** — initial implementation supports only <= 4 arguments (register args); stack-args tail calls are scheduled in v0.3.2.8.5.
 
 ---
 
@@ -341,6 +342,21 @@
 - [ ] **Linux syscall wrappers** — Or libc linking.
 - [ ] **GCC/Clang backend for Linux** — For Linux assembly.
 - [ ] **Cross-compilation** — `--target=x86_64-linux` from Windows.
+
+#### v0.3.2.8.5: Windows x64 Stack Args + Full Tail Calls
+
+- [ ] **Proper stack-arg calling** — replace `push`-based args with correct Windows x64 stack argument placement + alignment.
+- [ ] **Tail calls beyond 4 args** — enable TCO when stack args are present (correct stack layout + cleanup).
+- [ ] **Varargs correctness** — ensure varargs calls/tailcalls home args correctly and match CRT expectations.
+
+#### v0.3.2.8.6: Aggressive IR & Optimizations (GCC/MSVC-like)
+
+*Goal: Move from conservative passes to compiler-grade optimizations closer to GCC/MSVC behavior (where feasible for this project).* 
+
+- [ ] **IR semantics hardening** — precise UB rules, aliasing model, and memory effects to unlock aggressive transforms.
+- [ ] **Analysis infrastructure** — value numbering, memory SSA / alias analysis, better loop analyses.
+- [ ] **Non-conservative optimizations** — stronger LICM, GVN, PRE, SROA, inlining heuristics, vectorization groundwork.
+- [ ] **Optimization pipeline tuning** — real pass ordering + profitability heuristics + compile-time constraints.
 
 ---
 

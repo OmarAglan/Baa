@@ -330,6 +330,9 @@ typedef struct
 
     // معلومات الحلقات (للتحسينات داخل الحلقات مثل تقليل القوة)
     IRLoopInfo *loop_info;
+
+    // تفعيل تحسين النداء_الذيلي (Tail Call Optimization)
+    bool enable_tco;
 } ISelCtx;
 
 // -----------------------------------------------------------------------------
@@ -1045,6 +1048,70 @@ static void isel_lower_call(ISelCtx *ctx, IRInst *inst)
     }
 }
 
+// -----------------------------------------------------------------------------
+// تحسين النداء_الذيلي (Tail Call Optimization) — v0.3.2.7.3
+// -----------------------------------------------------------------------------
+
+static int isel_is_tailcall_pair(ISelCtx *ctx, IRInst *call, IRInst *ret)
+{
+    if (!ctx || !ctx->enable_tco)
+        return 0;
+    if (!call || !ret)
+        return 0;
+    if (call->op != IR_OP_CALL)
+        return 0;
+    if (ret->op != IR_OP_RET)
+        return 0;
+    if (!call->call_target)
+        return 0;
+
+    // حالياً: ندعم فقط ٤ معاملات أو أقل (كلها في سجلات ABI).
+    if (call->call_arg_count > 4)
+        return 0;
+
+    // 1) رجوع فراغ: يجب أن يكون النداء أيضاً بلا قيمة.
+    if (ret->operand_count == 0 || !ret->operands[0])
+    {
+        if (call->dest >= 0 && call->type && call->type->kind != IR_TYPE_VOID)
+            return 0;
+        return 1;
+    }
+
+    // 2) رجوع بقيمة: يجب أن يرجع نفس سجل نتيجة النداء.
+    if (call->dest < 0)
+        return 0;
+    if (ret->operand_count < 1 || !ret->operands[0])
+        return 0;
+    if (ret->operands[0]->kind != IR_VAL_REG)
+        return 0;
+    if (ret->operands[0]->data.reg_num != call->dest)
+        return 0;
+
+    return 1;
+}
+
+static void isel_lower_tailcall(ISelCtx *ctx, IRInst *call)
+{
+    if (!ctx || !call)
+        return;
+
+    // تحضير معاملات ABI (نفس مسار CALL لكن بدون call/ret/mov من RAX).
+    for (int i = 0; i < call->call_arg_count && i < 4; i++)
+    {
+        MachineOperand arg = isel_lower_value(ctx, call->call_args[i]);
+        int bits = 64;
+        if (call->call_args[i] && call->call_args[i]->type)
+            bits = isel_type_bits(call->call_args[i]->type);
+
+        MachineOperand param_reg = mach_op_vreg(-(10 + i), bits);
+        isel_emit(ctx, MACH_MOV, param_reg, arg, mach_op_none());
+    }
+
+    MachineOperand target = mach_op_func(call->call_target);
+    isel_emit_comment(ctx, MACH_TAILJMP, mach_op_none(), target, mach_op_none(),
+                      "// نداء_ذيلي: قفز إلى الدالة الهدف");
+}
+
 /**
  * @brief خفض عملية النسخ (copy).
  *
@@ -1251,10 +1318,25 @@ static MachineBlock *isel_lower_block(ISelCtx *ctx, IRBlock *ir_block)
     }
 
     // خفض كل تعليمة في الكتلة
-    for (IRInst *inst = ir_block->first; inst; inst = inst->next)
+    IRInst *inst = ir_block->first;
+    while (inst)
     {
         ctx->ir_inst = inst;
+
+        // نمط النداء_الذيلي: CALL ثم RET مباشرة.
+        if (inst->op == IR_OP_CALL)
+        {
+            IRInst *next = inst->next;
+            if (next && isel_is_tailcall_pair(ctx, inst, next))
+            {
+                isel_lower_tailcall(ctx, inst);
+                inst = next->next; // تخطَّ RET
+                continue;
+            }
+        }
+
         isel_lower_inst(ctx, inst);
+        inst = inst->next;
     }
 
     ctx->ir_inst = NULL;
@@ -1426,7 +1508,7 @@ static MachineFunc *isel_lower_func(ISelCtx *ctx, IRFunc *ir_func)
 // نقطة الدخول الرئيسية لاختيار التعليمات
 // ============================================================================
 
-MachineModule *isel_run(IRModule *ir_module)
+MachineModule *isel_run_ex(IRModule *ir_module, bool enable_tco)
 {
     if (!ir_module)
         return NULL;
@@ -1444,6 +1526,7 @@ MachineModule *isel_run(IRModule *ir_module)
     ISelCtx ctx = {0};
     ctx.mmod = mmod;
     ctx.ir_module = ir_module;
+    ctx.enable_tco = enable_tco;
 
     // خفض كل دالة
     for (IRFunc *func = ir_module->funcs; func; func = func->next)
@@ -1456,6 +1539,11 @@ MachineModule *isel_run(IRModule *ir_module)
     }
 
     return mmod;
+}
+
+MachineModule *isel_run(IRModule *ir_module)
+{
+    return isel_run_ex(ir_module, false);
 }
 
 // ============================================================================
@@ -1522,6 +1610,8 @@ const char *mach_op_to_string(MachineOp op)
         return "jne";
     case MACH_CALL:
         return "call";
+    case MACH_TAILJMP:
+        return "tailjmp";
     case MACH_RET:
         return "ret";
     case MACH_PUSH:

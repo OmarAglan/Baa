@@ -81,6 +81,7 @@ typedef enum {
     MACH_JE,        // je label  (قفز إذا يساوي)
     MACH_JNE,       // jne label (قفز إذا لا يساوي)
     MACH_CALL,      // call target (استدعاء دالة)
+    MACH_TAILJMP,   // tail jmp target (قفز_ذيلي لاستدعاء بدون رجوع)
     MACH_RET,       // ret (رجوع من دالة)
 
     // --------------------------------------------------------------------
@@ -423,6 +424,14 @@ void mach_module_free(MachineModule* module);
  * @return وحدة آلية جديدة، أو NULL عند الفشل.
  */
 MachineModule* isel_run(IRModule* ir_module);
+
+/**
+ * @brief نسخة موسعة من isel_run مع خيارات إضافية.
+ * @param ir_module وحدة IR المصدر (بعد التحسين).
+ * @param enable_tco تفعيل تحسين النداء_الذيلي (Tail Call Optimization).
+ * @return وحدة آلية جديدة، أو NULL عند الفشل.
+ */
+MachineModule* isel_run_ex(IRModule* ir_module, bool enable_tco);
 
 // ============================================================================
 // طباعة تمثيل الآلة (للتنقيح)

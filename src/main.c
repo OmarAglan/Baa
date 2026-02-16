@@ -746,7 +746,8 @@ int main(int argc, char **argv)
         // 4. اختيار التعليمات (Instruction Selection) (v0.3.2.1)
         if (config.verbose)
             printf("[INFO] Running instruction selection...\n");
-        MachineModule *mach_module = isel_run(ir_module);
+        bool enable_tco = (config.opt_level >= OPT_LEVEL_2);
+        MachineModule *mach_module = isel_run_ex(ir_module, enable_tco);
         if (!mach_module)
         {
             fprintf(stderr, "Aborting %s: instruction selection failed.\n", current_input);

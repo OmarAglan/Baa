@@ -8,6 +8,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+### Added
+
+- **Tail call optimization (v0.3.2.7.3)** — at `-O2`, recognizes `call` immediately followed by `ret` (<= 4 args) and lowers it to a tail jump to reuse the caller stack frame.
+  - Tests: `tests/backend_tailcall_test.baa`, `tests/isel_tailcall_test.c`
+
 ## [0.3.2.7.2] - 2026-02-16
 
 ### Added
@@ -19,6 +24,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ### Changed
 
 - `-O2` optimizer now runs inlining before Mem2Reg; existing passes act as post-inline cleanup.
+
+### Fixed
+
+- **IR lowering typed pointer operands** — local load/store pointer operands now carry pointer types, preventing `--verify-ir` failures when Mem2Reg cannot promote the slot (exposed by inlining).
+- **Inliner unique block labels** — inlined continuation/cloned blocks now use unique labels to avoid duplicate-label collisions in IR dumps and backend lowering.
 
 ## [0.3.2.7.1] - 2026-02-16
 

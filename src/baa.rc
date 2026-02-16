@@ -24,12 +24,12 @@ BEGIN
         BEGIN
             VALUE "CompanyName",      "Omar Aglan"
             VALUE "FileDescription",  "Baa Compiler (باء)"
-            VALUE "FileVersion",      "0.3.2.7.2"
+            VALUE "FileVersion",      "0.3.2.7.3"
             VALUE "InternalName",     "baa"
             VALUE "LegalCopyright",   "Copyright (C) 2026"
             VALUE "OriginalFilename", "baa.exe"
             VALUE "ProductName",      "Baa Programming Language"
-            VALUE "ProductVersion",   "0.3.2.7.2"
+            VALUE "ProductVersion",   "0.3.2.7.3"
         END
     END
     BLOCK "VarFileInfo"

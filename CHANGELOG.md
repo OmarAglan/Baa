@@ -8,6 +8,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.3.2.7.3] - 2026-02-17
+
 ### Added
 
 - **Tail call optimization (v0.3.2.7.3)** — at `-O2`, recognizes `call` immediately followed by `ret` (<= 4 args) and lowers it to a tail jump to reuse the caller stack frame.

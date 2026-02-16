@@ -15,7 +15,7 @@
 #include <stdarg.h>
 
 // معلومات الإصدار
-#define BAA_VERSION "0.3.2.7.2"
+#define BAA_VERSION "0.3.2.7.3"
 #define BAA_BUILD_DATE __DATE__
 
 // ============================================================================

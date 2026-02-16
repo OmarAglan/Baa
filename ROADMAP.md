@@ -308,10 +308,12 @@
 
 #### v0.3.2.7.3: Tail Call Optimization
 
-- [ ] **Detect tail calls** — `call` immediately followed by `ret` (بدون تعليمات بينهما).
-- [ ] **Convert to jump** — Replace call+ret with a tail jump (no new return address).
-- [ ] **Stack reuse** — Reuse caller's stack frame + caller shadow space (Windows x64 ABI).
-- [ ] **Limitation (for v0.3.2.7.3)** — initial implementation supports only <= 4 arguments (register args); stack-args tail calls are scheduled in v0.3.2.8.5.
+✅ COMPLETED (2026-02-17)
+
+- [x] **Detect tail calls** — `call` immediately followed by `ret` (بدون تعليمات بينهما).
+- [x] **Convert to jump** — Replace call+ret with a tail jump (no new return address).
+- [x] **Stack reuse** — Reuse caller's stack frame + caller shadow space (Windows x64 ABI).
+- [x] **Limitation (for v0.3.2.7.3)** — initial implementation supports only <= 4 arguments (register args); stack-args tail calls are scheduled in v0.3.2.8.5.
 
 ---
 

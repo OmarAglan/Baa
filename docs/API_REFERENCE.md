@@ -1,6 +1,6 @@
 # Baa Internal API Reference
 
-> **Version:** 0.3.2.7.2 | [← Compiler Internals](INTERNALS.md) | [IR Specification →](BAA_IR_SPECIFICATION.md)
+> **Version:** 0.3.2.7.3 | [← Compiler Internals](INTERNALS.md) | [IR Specification →](BAA_IR_SPECIFICATION.md)
 
 This document details the C functions, enumerations, and structures defined in `src/baa.h`, `src/ir.h`, `src/ir_arena.h`, `src/ir_mutate.h`, `src/ir_defuse.h`, `src/ir_clone.h`, `src/ir_text.h`, `src/ir_loop.h`, `src/ir_licm.h`, `src/ir_unroll.h`, `src/ir_inline.h`, `src/ir_builder.h`, `src/ir_lower.h`, `src/ir_analysis.h`, `src/ir_pass.h`, `src/ir_mem2reg.h`, `src/ir_outssa.h`, `src/ir_verify_ssa.h`, `src/ir_verify_ir.h`, `src/ir_canon.h`, `src/ir_cfg_simplify.h`, `src/ir_dce.h`, `src/ir_copyprop.h`, `src/ir_cse.h`, `src/ir_optimizer.h`, `src/isel.h`, and `src/regalloc.h`.
 
@@ -2171,6 +2171,7 @@ Frees a module and all its functions. Does NOT free referenced IR globals/string
 
 ```c
 MachineModule* isel_run(IRModule* ir_module)
+MachineModule* isel_run_ex(IRModule* ir_module, bool enable_tco)
 ```
 
 Converts an entire IR module to machine representation.
@@ -2178,6 +2179,7 @@ Converts an entire IR module to machine representation.
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | `ir_module` | `IRModule*` | Source IR module (after optimization) |
+| `enable_tco` | `bool` | Enable tail call optimization in ISel (used by `-O2`) |
 
 **Returns:** New `MachineModule*` (caller owns; free with `mach_module_free()`), or `NULL` on failure.
 
@@ -2558,7 +2560,7 @@ Translates Arabic function names to C runtime equivalents.
 ## 11. Legacy AST Codegen (Removed from Build)
 
 **Note:** The legacy AST-based codegen in [`src/codegen.c`](src/codegen.c:1) is retained for historical reference, but it is **no longer compiled** as of v0.3.2.4.
-The active backend pipeline is: AST → IR → Optimizer → [`isel_run()`](src/isel.h:417) → [`regalloc_run()`](src/regalloc.h:1) → [`emit_module()`](src/emit.h:45) → Assembly.
+The active backend pipeline is: AST → IR → Optimizer → [`isel_run_ex()`](src/isel.h) → [`regalloc_run()`](src/regalloc.h) → [`emit_module()`](src/emit.h) → Assembly.
 
 ### `codegen`
 

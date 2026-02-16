@@ -1,6 +1,6 @@
 # Baa Compiler Internals
 
-> **Version:** 0.3.2.7.2 | [← Language Spec](LANGUAGE.md) | [API Reference →](API_REFERENCE.md)
+> **Version:** 0.3.2.7.3 | [← Language Spec](LANGUAGE.md) | [API Reference →](API_REFERENCE.md)
 
 **Target Architecture:** x86-64 (AMD64)
 **Target OS:** Windows (MinGW-w64 Toolchain)
@@ -825,7 +825,7 @@ Out-of-SSA eliminates `فاي` before the backend by inserting copies on CFG edg
 
 **Entry Point:** [`ir_outssa_run()`](src/ir_outssa.c:1)
 
-**Driver integration:** Executed in [`src/main.c`](src/main.c:1) before `isel_run()` to ensure no `IR_OP_PHI` reaches ISel/RegAlloc/Emit.
+**Driver integration:** Executed in [`src/main.c`](src/main.c:1) before `isel_run_ex()` to ensure no `IR_OP_PHI` reaches ISel/RegAlloc/Emit.
 
 ---
 
@@ -1037,12 +1037,12 @@ The instruction selection pass converts Baa IR (SSA form) into an abstract machi
 
 **Files:** [`src/isel.h`](src/isel.h), [`src/isel.c`](src/isel.c)
 
-**Entry Point:** [`isel_run()`](src/isel.c) — takes an `IRModule*`, returns a `MachineModule*`.
+**Entry Point:** [`isel_run_ex()`](src/isel.c) — takes an `IRModule*` and options (مثل تفعيل TCO)، returns a `MachineModule*`.
 
 #### 6.19.1. Architecture Overview
 
 ```
-IRModule ──→ isel_run() ──→ MachineModule
+IRModule ──→ isel_run_ex() ──→ MachineModule
   IRFunc        │              MachineFunc
   IRBlock       │              MachineBlock
   IRInst        │              MachineInst (1:N expansion)
@@ -1059,7 +1059,7 @@ Each IR instruction is lowered to one or more `MachineInst` nodes. The expansion
 
 | Structure | Description |
 |-----------|-------------|
-| `MachineOp` | Enum of ~30 x86-64 opcodes: ADD, SUB, IMUL, IDIV, NEG, CQO, MOV, LEA, LOAD, STORE, CMP, TEST, SETcc (6 variants), MOVZX, AND, OR, NOT, XOR, JMP, JE, JNE, CALL, RET, PUSH, POP, NOP, LABEL, COMMENT |
+| `MachineOp` | Enum of x86-64 opcodes: ADD, SUB, IMUL, SHL, IDIV, NEG, CQO, MOV, LEA, LOAD, STORE, CMP, TEST, SETcc (6 variants), MOVZX, AND, OR, NOT, XOR, JMP, JE, JNE, CALL, TAILJMP, RET, PUSH, POP, NOP, LABEL, COMMENT |
 | `MachineOperandKind` | NONE, VREG, IMM, MEM, LABEL, GLOBAL, FUNC |
 | `MachineOperand` | Union: vreg number, immediate value, memory (base+offset), label id, global/func name |
 | `MachineInst` | Doubly-linked list node: op + dst/src1/src2 operands + ir_reg + comment |
@@ -1084,6 +1084,7 @@ Each IR instruction is lowered to one or more `MachineInst` nodes. The expansion
 | `IR_OP_BR_COND` | `TEST cond, cond; JNE true_label; JMP false_label` | Three-instruction pattern |
 | `IR_OP_RET` | `MOV RAX, val; RET` | Uses special vreg -2 (= RAX) |
 | `IR_OP_CALL` | `MOV param_regs, args...; CALL @func; MOV dst, RAX` | Windows x64 ABI: RCX/RDX/R8/R9 (vregs -10..-13) |
+| `IR_OP_CALL` + `IR_OP_RET` (tail) | `MOV param_regs, args...; TAILJMP @func` | v0.3.2.7.3: مفعل فقط عند `-O2` وبشكل محافظ (<= 4 معاملات) |
 | `IR_OP_PHI` | `NOP` | Placeholder; copy insertion deferred to register allocation |
 | `IR_OP_CAST` | `MOVZX dst, src` (zero-extend) or `MOV dst, src` (same/larger size) | Size-dependent |
 
@@ -1302,6 +1303,7 @@ Each `MachineInst` is translated to one or more AT&T assembly instructions:
 | `MACH_JE` | `je .LBB_N` | Jump if equal |
 | `MACH_JNE` | `jne .LBB_N` | Jump if not equal |
 | `MACH_CALL` | `sub $32, %rsp; call func; add $32, %rsp` | Shadow space allocation |
+| `MACH_TAILJMP` | `restore callee-saved; leave; home args; jmp func` | Tail call optimization (no new return address) |
 | `MACH_RET` | (triggers epilogue emission) | Return handled by epilogue |
 | `MACH_PUSH` | `pushq %src` | Push to stack |
 | `MACH_POP` | `popq %dst` | Pop from stack |

@@ -1,6 +1,6 @@
 # Baa Compiler Internals
 
-> **Version:** 0.3.2.8.5 | [← Language Spec](LANGUAGE.md) | [API Reference →](API_REFERENCE.md)
+> **Version:** 0.3.2.8.6 | [← Language Spec](LANGUAGE.md) | [API Reference →](API_REFERENCE.md)
 
 **Target Architecture:** x86-64 (AMD64)
 **Target OS:** Windows (MinGW-w64 Toolchain)
@@ -809,7 +809,7 @@ Canonical Mem2Reg is a correctness-first SSA construction step that promotes a s
 **Constraints (correctness-first):**
 - No pointer escape (not passed to `نداء`, not used inside `فاي`, not stored as a value)
 - Alloca block must dominate all uses (ensures SSA correctness)
-- Must have an initializing store inside the alloca block before any load (prevents uninitialized reads)
+- Must be definitely initialized before any load on all paths (must-def initialization). The initializing `خزن` may be in a different block as long as every path to a `حمل` has a prior store.
 
 **Pipeline position:** Run first in the optimizer (before constfold/copyprop/CSE/DCE) via [`ir_optimizer_run()`](src/ir_optimizer.c:73).
 
@@ -877,6 +877,34 @@ Canonicalization normalizes instruction forms to increase matchability for later
 **Entry Point:** [`ir_canon_run()`](src/ir_canon.c:1)
 
 **Pass Descriptor:** `IR_PASS_CANON` (used with the optimizer pipeline).
+
+---
+
+### 6.14.9.1. IR InstCombine Pass (دمج_التعليمات) — v0.3.2.8.6
+
+InstCombine performs fast, local instruction simplifications to improve later passes (SCCP/constfold/copyprop/DCE). It rewrites eligible instructions into `نسخ` (`IR_OP_COPY`) or constants rather than deleting SSA definitions directly.
+
+**File:** [`src/ir_instcombine.c`](src/ir_instcombine.c:1)
+
+**Entry Point:** `ir_instcombine_run()`
+
+**Testing:** `tests/ir_instcombine_test.c`
+
+---
+
+### 6.14.9.2. IR SCCP Pass (نشر_الثوابت_المتناثر) — v0.3.2.8.6
+
+SCCP (Sparse Conditional Constant Propagation) combines reachability with SSA constant propagation:
+
+- Tracks reachable blocks and feasible edges.
+- Propagates integer constants through SSA.
+- Folds `قفز_شرط` (`IR_OP_BR_COND`) into `قفز` (`IR_OP_BR`) when the condition becomes constant.
+
+**File:** [`src/ir_sccp.c`](src/ir_sccp.c:1)
+
+**Entry Point:** `ir_sccp_run()`
+
+**Testing:** `tests/ir_sccp_test.c`
 
 ---
 
@@ -995,6 +1023,20 @@ The IR copy propagation pass removes redundant SSA copy chains by replacing uses
 - Removes `نسخ` instructions after propagation.
 
 **Testing:** See [`tests/ir_copyprop_test.c`](tests/ir_copyprop_test.c:1).
+
+---
+
+### 6.17.1. IR GVN Pass (ترقيم_القيم) — v0.3.2.8.6
+
+GVN (Global Value Numbering) removes redundant pure expressions across dominator scopes, even when they use different SSA registers due to copies.
+
+**File:** `src/ir_gvn.c`
+
+**Entry Point:** `ir_gvn_run()`
+
+**Pipeline position:** enabled at `-O2` after copy propagation and before CSE.
+
+**Testing:** `tests/ir_gvn_test.c`
 
 ---
 

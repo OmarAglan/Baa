@@ -14,7 +14,7 @@
  *   - لا يُخزَّن المؤشر نفسه كقيمة.
  * - كتلة تعريف المؤشر (الكتلة التي تحتوي `حجز`) تسيطر على كل الاستعمالات
  *   دون استثناء.
- * - يوجد خزن تهيئة داخل نفس كتلة `حجز` قبل أي `حمل` لنفس المؤشر.
+ * - نضمن أن كل `حمل` يرى `خزن` سابقاً على كل المسارات (تحليل must-def).
  *
  * ملاحظة ملكية الذاكرة:
  * - لا نُعيد استعمال نفس مؤشر IRValue بين تعليمات مختلفة لتجنب التحرير المزدوج.
@@ -200,33 +200,137 @@ static int ir_inst_ptr_use_is_allowed(IRInst* inst, int ptr_reg) {
     return 1;
 }
 
-static int ir_alloca_has_init_store_in_block(IRBlock* block, IRInst* alloca_inst,
-                                             int ptr_reg, IRType* pointee) {
-    if (!block || !alloca_inst || !pointee) return 0;
+typedef struct {
+    unsigned char has_store;
+    unsigned char load_before_store;
+} Mem2RegInitInfo;
 
-    int seen_store = 0;
-    for (IRInst* inst = alloca_inst->next; inst; inst = inst->next) {
-        if (inst->op == IR_OP_STORE &&
-            inst->operand_count >= 2 &&
-            ir_value_is_reg_num(inst->operands[1], ptr_reg)) {
+static int ir_alloca_loads_are_definitely_initialized(IRFunc* func,
+                                                      IRBlock* alloca_block,
+                                                      int ptr_reg,
+                                                      IRType* pointee) {
+    if (!func || !alloca_block || ptr_reg < 0 || !pointee) return 0;
 
-            IRValue* stored_val = inst->operands[0];
-            if (!stored_val || !stored_val->type) return 0;
-            if (!ir_types_equal(stored_val->type, pointee)) return 0;
+    // ملاحظة: هذه الدالة تُستدعى من Mem2Reg بعد حساب dominators.
+    // لذلك نعتمد على أن CFG (pred/succ) حديث كي لا نمسح idom/DF هنا.
 
-            seen_store = 1;
-            continue;
-        }
+    int max_id = -1;
+    for (IRBlock* b = func->blocks; b; b = b->next) {
+        if (b->id > max_id) max_id = b->id;
+    }
+    int nblocks = max_id + 1;
+    if (nblocks <= 0) return 0;
 
-        if (inst->op == IR_OP_LOAD &&
-            inst->operand_count >= 1 &&
-            ir_value_is_reg_num(inst->operands[0], ptr_reg)) {
+    Mem2RegInitInfo* info = (Mem2RegInitInfo*)calloc((size_t)nblocks, sizeof(Mem2RegInitInfo));
+    unsigned char* inited_in = (unsigned char*)calloc((size_t)nblocks, 1);
+    unsigned char* inited_out = (unsigned char*)calloc((size_t)nblocks, 1);
+    if (!info || !inited_in || !inited_out) {
+        free(info);
+        free(inited_in);
+        free(inited_out);
+        return 0;
+    }
 
-            if (!seen_store) return 0;
+    // مسح داخل الكتل لتحديد: هل يوجد خزن؟ وهل يوجد حمل قبل أول خزن؟
+    for (IRBlock* b = func->blocks; b; b = b->next) {
+        if (!b) continue;
+        if (b->id < 0 || b->id >= nblocks) continue;
+
+        unsigned char seen_store = 0;
+        for (IRInst* inst = b->first; inst; inst = inst->next) {
+            if (!inst) continue;
+
+            if (inst->op == IR_OP_STORE &&
+                inst->operand_count >= 2 &&
+                ir_value_is_reg_num(inst->operands[1], ptr_reg)) {
+
+                IRValue* stored_val = inst->operands[0];
+                if (!stored_val || !stored_val->type) {
+                    free(info); free(inited_in); free(inited_out);
+                    return 0;
+                }
+                if (!ir_types_equal(stored_val->type, pointee)) {
+                    free(info); free(inited_in); free(inited_out);
+                    return 0;
+                }
+
+                info[b->id].has_store = 1;
+                seen_store = 1;
+                continue;
+            }
+
+            if (inst->op == IR_OP_LOAD &&
+                inst->operand_count >= 1 &&
+                ir_value_is_reg_num(inst->operands[0], ptr_reg)) {
+
+                if (!seen_store) {
+                    info[b->id].load_before_store = 1;
+                }
+            }
         }
     }
 
-    return seen_store ? 1 : 0;
+    // تحليل must-def: OUT = IN OR has_store, IN = AND(OUT[preds])
+    // entry يبدأ غير مهيأ.
+    for (int iter = 0; iter < 128; iter++) {
+        int changed = 0;
+
+        for (IRBlock* b = func->blocks; b; b = b->next) {
+            if (!b) continue;
+            if (b->id < 0 || b->id >= nblocks) continue;
+
+            unsigned char in = 0;
+            if (b == func->entry) {
+                in = 0;
+            } else if (b->pred_count <= 0) {
+                in = 0;
+            } else {
+                in = 1;
+                for (int p = 0; p < b->pred_count; p++) {
+                    IRBlock* pred = b->preds[p];
+                    if (!pred || pred->id < 0 || pred->id >= nblocks) {
+                        in = 0;
+                        break;
+                    }
+                    if (!inited_out[pred->id]) {
+                        in = 0;
+                        break;
+                    }
+                }
+            }
+
+            if (inited_in[b->id] != in) {
+                inited_in[b->id] = in;
+                changed = 1;
+            }
+
+            unsigned char out = (in || info[b->id].has_store) ? 1 : 0;
+            if (inited_out[b->id] != out) {
+                inited_out[b->id] = out;
+                changed = 1;
+            }
+        }
+
+        if (!changed) break;
+    }
+
+    // تحقق: أي حمل قبل خزن في كتلة يتطلب IN==1
+    for (IRBlock* b = func->blocks; b; b = b->next) {
+        if (!b) continue;
+        if (b->id < 0 || b->id >= nblocks) continue;
+
+        if (info[b->id].load_before_store && !inited_in[b->id]) {
+            free(info);
+            free(inited_in);
+            free(inited_out);
+            return 0;
+        }
+    }
+
+    free(info);
+    free(inited_in);
+    free(inited_out);
+    return 1;
 }
 
 static int ir_mem2reg_can_promote_alloca(IRFunc* func, IRBlock* alloca_block, IRInst* alloca_inst) {
@@ -238,7 +342,7 @@ static int ir_mem2reg_can_promote_alloca(IRFunc* func, IRBlock* alloca_block, IR
     IRType* pointee = ir_alloca_pointee_type(alloca_inst);
     if (!pointee) return 0;
 
-    if (!ir_alloca_has_init_store_in_block(alloca_block, alloca_inst, ptr_reg, pointee)) {
+    if (!ir_alloca_loads_are_definitely_initialized(func, alloca_block, ptr_reg, pointee)) {
         return 0;
     }
 

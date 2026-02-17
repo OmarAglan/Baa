@@ -1,6 +1,6 @@
 # Baa Internal API Reference
 
-> **Version:** 0.3.2.8.5 | [← Compiler Internals](INTERNALS.md) | [IR Specification →](BAA_IR_SPECIFICATION.md)
+> **Version:** 0.3.2.8.6 | [← Compiler Internals](INTERNALS.md) | [IR Specification →](BAA_IR_SPECIFICATION.md)
 
 This document details the C functions, enumerations, and structures defined in `src/baa.h`, `src/ir.h`, `src/ir_arena.h`, `src/ir_mutate.h`, `src/ir_defuse.h`, `src/ir_clone.h`, `src/ir_text.h`, `src/ir_loop.h`, `src/ir_licm.h`, `src/ir_unroll.h`, `src/ir_inline.h`, `src/ir_builder.h`, `src/ir_lower.h`, `src/ir_analysis.h`, `src/ir_pass.h`, `src/ir_mem2reg.h`, `src/ir_outssa.h`, `src/ir_verify_ssa.h`, `src/ir_verify_ir.h`, `src/ir_canon.h`, `src/ir_cfg_simplify.h`, `src/ir_dce.h`, `src/ir_copyprop.h`, `src/ir_cse.h`, `src/ir_optimizer.h`, `src/target.h`, `src/isel.h`, `src/regalloc.h`, and `src/emit.h`.
 
@@ -1759,6 +1759,84 @@ bool ir_inline_run(IRModule* module)
 ```
 
 Conservatively inlines small internal functions with a single call site at `-O2`. The inliner runs before Mem2Reg; post-inline cleanup is handled by the existing optimizer pipeline.
+
+---
+
+### 7.1.12. InstCombine (دمج_التعليمات) — v0.3.2.8.6
+
+#### `ir_instcombine_run`
+
+```c
+bool ir_instcombine_run(IRModule* module)
+```
+
+Runs local instruction combining/simplification on the given IR module. Rewrites eligible instructions into `IR_OP_COPY` and constants to improve later passes.
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `module`  | `IRModule*` | The IR module to optimize |
+
+**Returns:** `true` if the module was modified, `false` otherwise.
+
+#### `IR_PASS_INSTCOMBINE`
+
+```c
+extern IRPass IR_PASS_INSTCOMBINE;
+```
+
+Descriptor for the InstCombine pass.
+
+---
+
+### 7.1.13. SCCP (نشر_الثوابت_المتناثر) — v0.3.2.8.6
+
+#### `ir_sccp_run`
+
+```c
+bool ir_sccp_run(IRModule* module)
+```
+
+Runs sparse conditional constant propagation (SCCP) on the given IR module. Propagates integer constants through SSA, tracks reachability, and can fold `IR_OP_BR_COND` into `IR_OP_BR`.
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `module`  | `IRModule*` | The IR module to optimize |
+
+**Returns:** `true` if the module was modified, `false` otherwise.
+
+#### `IR_PASS_SCCP`
+
+```c
+extern IRPass IR_PASS_SCCP;
+```
+
+Descriptor for the SCCP pass.
+
+---
+
+### 7.1.14. GVN (ترقيم_القيم) — v0.3.2.8.6
+
+#### `ir_gvn_run`
+
+```c
+bool ir_gvn_run(IRModule* module)
+```
+
+Runs global value numbering (GVN) on the given IR module. Removes redundant pure expressions across dominator scopes.
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `module`  | `IRModule*` | The IR module to optimize |
+
+**Returns:** `true` if the module was modified, `false` otherwise.
+
+#### `IR_PASS_GVN`
+
+```c
+extern IRPass IR_PASS_GVN;
+```
+
+Descriptor for the GVN pass.
 
 ---
 

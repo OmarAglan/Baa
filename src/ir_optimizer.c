@@ -14,6 +14,9 @@
 #include "ir_canon.h"
 #include "ir_licm.h"
 #include "ir_constfold.h"
+#include "ir_instcombine.h"
+#include "ir_sccp.h"
+#include "ir_gvn.h"
 #include "ir_copyprop.h"
 #include "ir_cse.h"
 #include "ir_dce.h"
@@ -59,6 +62,14 @@ static bool optimizer_iteration(IRModule* module,
     // توحيد شكل التعليمات لزيادة فعالية CSE/ConstFold/DCE
     changed |= ir_canon_run(module);
 
+    // Pass 0.6: InstCombine (دمج_التعليمات)
+    // تبسيطات محلية سريعة قبل نشر الثوابت.
+    changed |= ir_instcombine_run(module);
+
+    // Pass 0.7: SCCP (نشر_الثوابت_المتناثر)
+    // نشر الثوابت + تبسيط CFG بناءً على الوصول.
+    changed |= ir_sccp_run(module);
+
     // Pass 1: Constant Folding (طي_الثوابت)
     // Folds arithmetic with constant operands
     changed |= ir_constfold_run(module);
@@ -66,6 +77,12 @@ static bool optimizer_iteration(IRModule* module,
     // Pass 2: Copy Propagation (نشر_النسخ)
     // Removes redundant copies, simplifies register uses
     changed |= ir_copyprop_run(module);
+
+    // Pass 2.5: GVN (ترقيم_القيم) — O2 only
+    // يزيل تعابير متكررة حتى لو اختلفت أرقام السجلات بسبب النسخ.
+    if (level >= OPT_LEVEL_2) {
+        changed |= ir_gvn_run(module);
+    }
 
     // Pass 3: Common Subexpression Elimination (حذف_المكرر) — O2 only
     // Eliminates duplicate expressions

@@ -1,6 +1,6 @@
 # Baa User Guide
 
-> **Version:** 0.3.2.8.5 | [← README](../README.md) | [Language Spec →](LANGUAGE.md)
+> **Version:** 0.3.2.8.6 | [← README](../README.md) | [Language Spec →](LANGUAGE.md)
 
 Welcome to Baa (باء)! This guide will help you write your first Arabic computer program and use the Baa compiler toolchain.
 
@@ -164,7 +164,7 @@ The Baa compiler is a full-featured command-line tool (since v0.2.0):
 - `-o <file>` is only applied for `-S` / `-c` when compiling a single input file.
 - `update` must be used alone: `.\baa.exe update`
 
-### Current Limitations (v0.3.2.8.5)
+### Current Limitations (v0.3.2.8.6)
 
 - Stack-argument calling is implemented for integer/pointer-like values. Floating-point/SIMD arguments are not modeled yet.
 

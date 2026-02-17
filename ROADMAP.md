@@ -365,12 +365,15 @@
 
 #### v0.3.2.8.6: Aggressive IR & Optimizations (GCC/MSVC-like)
 
-*Goal: Move from conservative passes to compiler-grade optimizations closer to GCC/MSVC behavior (where feasible for this project).* 
+✅ COMPLETED (2026-02-17)
 
-- [ ] **IR semantics hardening** — precise UB rules, aliasing model, and memory effects to unlock aggressive transforms.
-- [ ] **Analysis infrastructure** — value numbering, memory SSA / alias analysis, better loop analyses.
-- [ ] **Non-conservative optimizations** — stronger LICM, GVN, PRE, SROA, inlining heuristics, vectorization groundwork.
-- [ ] **Optimization pipeline tuning** — real pass ordering + profitability heuristics + compile-time constraints.
+*Goal: move toward compiler-grade IR optimizations in pragmatic steps.*
+
+- [x] **InstCombine** — local simplification patterns (canonical `COPY` rewrites).
+- [x] **SCCP** — sparse conditional constant propagation + `br_cond` folding.
+- [x] **GVN** — dominator-scoped global value numbering for pure expressions.
+- [x] **Mem2Reg promotability unlock** — must-def initialization analysis (instead of “init store must be in alloca block”).
+- [x] **Pipeline wiring** — run InstCombine+SCCP early; GVN at `-O2` before CSE.
 
 ---
 

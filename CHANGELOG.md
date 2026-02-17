@@ -8,6 +8,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.3.2.8.6] - 2026-02-17
+
+### Added
+
+- **Aggressive IR optimizations (v0.3.2.8.6)**
+  - **InstCombine** — local algebraic/cmp simplifications to `COPY`/const: `src/ir_instcombine.c` (tests: `tests/ir_instcombine_test.c`).
+  - **SCCP** — sparse conditional constant propagation + `br_cond` folding: `src/ir_sccp.c` (tests: `tests/ir_sccp_test.c`).
+  - **GVN** — dominator-scoped global value numbering to remove redundant pure expressions: `src/ir_gvn.c` (tests: `tests/ir_gvn_test.c`).
+
+### Changed
+
+- **Optimizer pipeline ordering** — `InstCombine` + `SCCP` now run early (after `Canon`) and `GVN` runs at `-O2` (before `CSE`).
+- **Mem2Reg promotability** — replaced the “init store must be in the alloca block” rule with a must-def initialization check across the CFG (test: `tests/ir_mem2reg_promote_test.c`).
+
 ## [0.3.2.8.5] - 2026-02-17
 
 ### Added

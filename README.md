@@ -4,7 +4,7 @@
 <img width="260" height="260" alt="شعار باء" src="resources/Logo.png" />
 
 
-![Version](https://img.shields.io/badge/version-0.3.2.8.4-blue.svg)
+![Version](https://img.shields.io/badge/version-0.3.2.8.5-blue.svg)
 ![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux-lightgrey.svg)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
 
@@ -113,9 +113,9 @@ baa --target=x86_64-linux   البرنامج.baa
 
 - عند اختلاف الهدف عن نظام المضيف، يدعم المُصرّف حالياً **-S فقط** (توليد Assembly). التجميع/الربط العابر للأهداف مؤجل.
 
-### القيود الحالية (v0.3.2.8.2)
+### القيود الحالية (v0.3.2.8.5)
 
-- **نداءات الدوال:** مدعومة حالياً فقط ضمن معاملات السجلات (Windows: حتى ٤ معاملات، Linux/SysV: حتى ٦ معاملات). معاملات المكدس مؤجلة إلى v0.3.2.8.5.
+- ما زال تمرير معاملات الفاصلة العائمة/SIMD غير ممثل بالكامل. تمرير معاملات الأعداد الصحيحة/المؤشرات عبر السجلات والمكدس يعمل.
 
 ### خيارات نموذج الكود (v0.3.2.8.3)
 

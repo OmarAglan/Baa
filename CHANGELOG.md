@@ -8,6 +8,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.3.2.8.5] - 2026-02-17
+
+### Added
+
+- **Windows + SysV stack arguments (v0.3.2.8.5)** — calls now support arguments beyond the register-arg limit on both targets.
+  - Outgoing call frames are built in ISel (shadow/home space on Windows; stack args on both).
+  - Stack-passed parameters are loaded at function entry.
+  - Tail calls now support stack arguments conservatively when the current function’s incoming stack-arg area is large enough.
+  - Tests: `tests/backend_stackargs_test.baa` (8 args), updated `tests/backend_tailcall_test.baa`.
+
+### Fixed
+
+- **Emitter load/store spill correctness** — `MACH_LOAD`/`MACH_STORE` now avoid illegal mem-to-mem forms after spilling by using a scratch register.
+
 ## [0.3.2.8.4] - 2026-02-17
 
 ### Added

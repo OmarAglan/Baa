@@ -1,6 +1,6 @@
 # Baa Compiler Internals
 
-> **Version:** 0.3.2.8.4 | [← Language Spec](LANGUAGE.md) | [API Reference →](API_REFERENCE.md)
+> **Version:** 0.3.2.8.5 | [← Language Spec](LANGUAGE.md) | [API Reference →](API_REFERENCE.md)
 
 **Target Architecture:** x86-64 (AMD64)
 **Target OS:** Windows (MinGW-w64 Toolchain)
@@ -1085,7 +1085,7 @@ Each IR instruction is lowered to one or more `MachineInst` nodes. The expansion
 | `IR_OP_BR` | `JMP label` | Unconditional jump |
 | `IR_OP_BR_COND` | `TEST cond, cond; JNE true_label; JMP false_label` | Three-instruction pattern |
 | `IR_OP_RET` | `MOV RAX, val; RET` | Uses special vreg -2 (= RAX) |
-| `IR_OP_CALL` | `MOV param_regs, args...; CALL @func; MOV dst, RAX` | Target ABI: Windows (4 regs) / SysV (6 regs). v0.3.2.8.2+ rejects stack args for now |
+| `IR_OP_CALL` | `MOV param_regs, args...; (setup stack args); CALL @func; MOV dst, RAX` | Target ABI: Windows (shadow + stack args) / SysV (stack args) |
 | `IR_OP_CALL` + `IR_OP_RET` (tail) | `MOV param_regs, args...; TAILJMP @func` | v0.3.2.7.3: مفعل فقط عند `-O2` وبشكل محافظ (register args only) |
 | `IR_OP_PHI` | `NOP` | Placeholder; copy insertion deferred to register allocation |
 | `IR_OP_CAST` | `MOVZX dst, src` (zero-extend) or `MOV dst, src` (same/larger size) | Size-dependent |
@@ -1098,6 +1098,7 @@ The instruction selector uses negative vreg numbers to represent physical regist
 |------|-------------------|---------|
 | -1 | RBP | Memory base for stack accesses |
 | -2 | RAX | Return value register |
+| -3 | RSP | Stack pointer base for outgoing call frames |
 | -10.. | ABI arg regs | Function arguments (target-dependent). Windows: -10..-13 → RCX/RDX/R8/R9. SysV: -10..-15 → RDI/RSI/RDX/RCX/R8/R9 |
 
 #### 6.19.5. Design Decisions

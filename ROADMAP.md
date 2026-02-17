@@ -357,9 +357,11 @@
 
 #### v0.3.2.8.5: Windows x64 Stack Args + Full Tail Calls
 
-- [ ] **Proper stack-arg calling** — replace `push`-based args with correct Windows x64 stack argument placement + alignment.
-- [ ] **Tail calls beyond 4 args** — enable TCO when stack args are present (correct stack layout + cleanup).
-- [ ] **Varargs correctness** — ensure varargs calls/tailcalls home args correctly and match CRT expectations.
+✅ COMPLETED (2026-02-17)
+
+- [x] **Proper stack-arg calling** — outgoing call frames support stack args on Windows x64 and SysV AMD64.
+- [x] **Tail calls beyond reg-args** — enable TCO with stack args conservatively (requires enough incoming stack-arg area).
+- [x] **Varargs home space (Windows)** — home/register args are written into shadow space before calls.
 
 #### v0.3.2.8.6: Aggressive IR & Optimizations (GCC/MSVC-like)
 

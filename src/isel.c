@@ -18,7 +18,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
-#include <stdarg.h>
 
 // ============================================================================
 // بناء المعاملات (Operand Construction)
@@ -350,6 +349,12 @@ static const BaaCallingConv *isel_cc_or_default(ISelCtx *ctx)
     return baa_target_builtin_windows_x86_64()->cc;
 }
 
+static int isel_abi_sp_vreg(void)
+{
+    // اتفاقية ثابتة في Machine IR: vreg -3 -> RSP
+    return -3;
+}
+
 static int isel_abi_arg_vreg(const BaaCallingConv *cc, int i)
 {
     int base = (cc) ? cc->abi_arg_vreg0 : -10;
@@ -361,27 +366,6 @@ static int isel_abi_ret_vreg(const BaaCallingConv *cc)
     return (cc) ? cc->abi_ret_vreg : -2;
 }
 
-static void isel_report_error(ISelCtx *ctx, IRInst *inst, const char *fmt, ...)
-{
-    if (!ctx || ctx->had_error)
-        return;
-
-    ctx->had_error = true;
-
-    if (inst && inst->src_file)
-    {
-        fprintf(stderr, "%s:%d:%d: ", inst->src_file, inst->src_line, inst->src_col);
-    }
-
-    fprintf(stderr, "خطأ (الخلفية): ");
-
-    va_list ap;
-    va_start(ap, fmt);
-    vfprintf(stderr, fmt, ap);
-    va_end(ap);
-
-    fprintf(stderr, "\n");
-}
 
 // -----------------------------------------------------------------------------
 // تصريحات مسبقة (Forward Declarations)
@@ -1062,14 +1046,24 @@ static void isel_lower_call(ISelCtx *ctx, IRInst *inst)
     const BaaCallingConv *cc = isel_cc_or_default(ctx);
     int max_reg_args = (cc && cc->int_arg_reg_count > 0) ? cc->int_arg_reg_count : 4;
 
-    // v0.3.2.8.2: معاملات المكدس غير مدعومة بعد (ستُنفذ في v0.3.2.8.5)
+    int stack_arg_count = 0;
     if (inst->call_arg_count > max_reg_args)
+        stack_arg_count = inst->call_arg_count - max_reg_args;
+
+    int shadow = (cc) ? cc->shadow_space_bytes : 0;
+    int align = (cc && cc->stack_align_bytes > 0) ? cc->stack_align_bytes : 16;
+
+    int call_frame = shadow + stack_arg_count * 8;
+    int call_frame_aligned = call_frame;
+    if (align > 0 && call_frame_aligned % align != 0)
+        call_frame_aligned = ((call_frame_aligned / align) + 1) * align;
+
+    // حجز إطار النداء (outgoing call frame)
+    if (call_frame_aligned > 0)
     {
-        isel_report_error(ctx, inst,
-                          "عدد معاملات النداء (%d) أكبر من المدعوم حالياً (%d) لهذا الهدف. معاملات المكدس ستُضاف في v0.3.2.8.5.",
-                          inst->call_arg_count,
-                          max_reg_args);
-        return;
+        MachineOperand sp = mach_op_vreg(isel_abi_sp_vreg(), 64);
+        MachineOperand imm = mach_op_imm(call_frame_aligned, 64);
+        isel_emit_comment(ctx, MACH_SUB, sp, sp, imm, "// حجز إطار نداء");
     }
 
     // تحضير المعاملات (نضعها في سجلات مرقمة خاصة)
@@ -1087,9 +1081,51 @@ static void isel_lower_call(ISelCtx *ctx, IRInst *inst)
         isel_emit(ctx, MACH_MOV, param_reg, arg, mach_op_none());
     }
 
+    // Windows x64: تعبئة home/shadow space لمعاملات السجلات (مهم للـ varargs مثل printf/scanf)
+    if (cc && cc->home_reg_args_on_call && shadow >= 32)
+    {
+        int n_home = inst->call_arg_count < max_reg_args ? inst->call_arg_count : max_reg_args;
+        if (n_home > 4) n_home = 4;
+        for (int i = 0; i < n_home; i++)
+        {
+            MachineOperand src = mach_op_vreg(isel_abi_arg_vreg(cc, i), 64);
+            MachineOperand mem = mach_op_mem(isel_abi_sp_vreg(), (int32_t)(i * 8), 64);
+            isel_emit(ctx, MACH_STORE, mem, src, mach_op_none());
+        }
+    }
+
+    // معاملات المكدس (stack args): تُكتب إلى إطار النداء
+    for (int i = max_reg_args; i < inst->call_arg_count; i++)
+    {
+        int slot = i - max_reg_args;
+        int32_t off = (int32_t)(shadow + slot * 8);
+        MachineOperand mem = mach_op_mem(isel_abi_sp_vreg(), off, 64);
+
+        MachineOperand arg = isel_lower_value(ctx, inst->call_args[i]);
+
+        // تجنب mem->mem غير القانوني إذا كان arg ذاكرة/عالمي
+        if (arg.kind == MACH_OP_MEM || arg.kind == MACH_OP_GLOBAL)
+        {
+            int tmp_v = mach_func_alloc_vreg(ctx->mfunc);
+            MachineOperand tmp = mach_op_vreg(tmp_v, 64);
+            isel_emit(ctx, MACH_MOV, tmp, arg, mach_op_none());
+            arg = tmp;
+        }
+
+        isel_emit(ctx, MACH_STORE, mem, arg, mach_op_none());
+    }
+
     // استدعاء الدالة
     MachineOperand target = mach_op_func(inst->call_target);
     isel_emit(ctx, MACH_CALL, mach_op_none(), target, mach_op_none());
+
+    // تحرير إطار النداء
+    if (call_frame_aligned > 0)
+    {
+        MachineOperand sp = mach_op_vreg(isel_abi_sp_vreg(), 64);
+        MachineOperand imm = mach_op_imm(call_frame_aligned, 64);
+        isel_emit_comment(ctx, MACH_ADD, sp, sp, imm, "// تحرير إطار نداء");
+    }
 
     // نقل القيمة المرجعة (إذا وجدت)
     if (inst->dest >= 0 && inst->type && inst->type->kind != IR_TYPE_VOID)
@@ -1121,12 +1157,7 @@ static int isel_is_tailcall_pair(ISelCtx *ctx, IRInst *call, IRInst *ret)
     if (!call->call_target)
         return 0;
 
-    const BaaCallingConv *cc = isel_cc_or_default(ctx);
-    int max_reg_args = (cc && cc->int_arg_reg_count > 0) ? cc->int_arg_reg_count : 4;
-
-    // حالياً: ندعم فقط معاملات السجلات (بدون معاملات مكدس).
-    if (call->call_arg_count > max_reg_args)
-        return 0;
+    // النداء_الذيلي مع معاملات مكدس قد يكون ممكناً، لكن سيتم التحقق منه في مرحلة الخفض.
 
     // 1) رجوع فراغ: يجب أن يكون النداء أيضاً بلا قيمة.
     if (ret->operand_count == 0 || !ret->operands[0])
@@ -1149,18 +1180,25 @@ static int isel_is_tailcall_pair(ISelCtx *ctx, IRInst *call, IRInst *ret)
     return 1;
 }
 
-static void isel_lower_tailcall(ISelCtx *ctx, IRInst *call)
+static bool isel_lower_tailcall(ISelCtx *ctx, IRInst *call)
 {
     if (!ctx || !call)
-        return;
+        return false;
 
     const BaaCallingConv *cc = isel_cc_or_default(ctx);
     int max_reg_args = (cc && cc->int_arg_reg_count > 0) ? cc->int_arg_reg_count : 4;
+
+    int out_stack = 0;
     if (call->call_arg_count > max_reg_args)
-    {
-        // لا نُطبّق TCO إذا كانت هناك معاملات مكدس.
-        return;
-    }
+        out_stack = call->call_arg_count - max_reg_args;
+
+    int in_stack = 0;
+    if (ctx->ir_func && ctx->ir_func->param_count > max_reg_args)
+        in_stack = ctx->ir_func->param_count - max_reg_args;
+
+    // لا نُطبّق TCO إذا كانت معاملات المكدس المطلوبة أكبر مما وفره المستدعي لنا.
+    if (out_stack > in_stack)
+        return false;
 
     // تحضير معاملات ABI (نفس مسار CALL لكن بدون call/ret/mov من RAX).
     for (int i = 0; i < call->call_arg_count && i < max_reg_args; i++)
@@ -1174,9 +1212,35 @@ static void isel_lower_tailcall(ISelCtx *ctx, IRInst *call)
         isel_emit(ctx, MACH_MOV, param_reg, arg, mach_op_none());
     }
 
+    // معاملات المكدس للنداء_الذيلي: نكتبها في منطقة معاملات الدالة الحالية فوق return address.
+    // هذا آمن فقط إذا كانت دالتنا نفسها تتلقى نفس/أكثر عدد معاملات مكدس.
+    if (out_stack > 0)
+    {
+        int shadow = (cc) ? cc->shadow_space_bytes : 0;
+        for (int i = max_reg_args; i < call->call_arg_count; i++)
+        {
+            int slot = i - max_reg_args;
+            int32_t off = (int32_t)(16 + shadow + slot * 8);
+            MachineOperand mem = mach_op_mem(-1, off, 64); // base -1 => RBP
+
+            MachineOperand arg = isel_lower_value(ctx, call->call_args[i]);
+            if (arg.kind == MACH_OP_MEM || arg.kind == MACH_OP_GLOBAL)
+            {
+                int tmp_v = mach_func_alloc_vreg(ctx->mfunc);
+                MachineOperand tmp = mach_op_vreg(tmp_v, 64);
+                isel_emit(ctx, MACH_MOV, tmp, arg, mach_op_none());
+                arg = tmp;
+            }
+
+            isel_emit(ctx, MACH_STORE, mem, arg, mach_op_none());
+        }
+    }
+
     MachineOperand target = mach_op_func(call->call_target);
     isel_emit_comment(ctx, MACH_TAILJMP, mach_op_none(), target, mach_op_none(),
                       "// نداء_ذيلي: قفز إلى الدالة الهدف");
+
+    return true;
 }
 
 /**
@@ -1396,9 +1460,11 @@ static MachineBlock *isel_lower_block(ISelCtx *ctx, IRBlock *ir_block)
             IRInst *next = inst->next;
             if (next && isel_is_tailcall_pair(ctx, inst, next))
             {
-                isel_lower_tailcall(ctx, inst);
-                inst = next->next; // تخطَّ RET
-                continue;
+                if (isel_lower_tailcall(ctx, inst))
+                {
+                    inst = next->next; // تخطَّ RET
+                    continue;
+                }
             }
         }
 
@@ -1535,11 +1601,27 @@ static MachineFunc *isel_lower_func(ISelCtx *ctx, IRFunc *ir_func)
         MachineInst *param_first = NULL;
         MachineInst *param_last = NULL;
 
-        for (int i = 0; i < max_reg_params; i++)
+        for (int i = 0; i < ir_func->param_count; i++)
         {
-            MachineOperand abi_reg = mach_op_vreg(isel_abi_arg_vreg(cc, i), 64);
+            MachineInst *mi = NULL;
             MachineOperand param_dst = mach_op_vreg(ir_func->params[i].reg, 64);
-            MachineInst *mi = mach_inst_new(MACH_MOV, param_dst, abi_reg, mach_op_none());
+
+            if (i < max_reg_params)
+            {
+                MachineOperand abi_reg = mach_op_vreg(isel_abi_arg_vreg(cc, i), 64);
+                mi = mach_inst_new(MACH_MOV, param_dst, abi_reg, mach_op_none());
+            }
+            else
+            {
+                // معاملات المكدس: تُقرأ من مساحة المستدعي فوق return address.
+                // ملاحظة: على Windows توجد shadow space (32) بين home slots ومعاملات المكدس.
+                int shadow = (cc) ? cc->shadow_space_bytes : 0;
+                int slot = i - max_reg_params;
+                int32_t off = (int32_t)(16 + shadow + slot * 8);
+                MachineOperand mem = mach_op_mem(-1, off, 64);
+                mi = mach_inst_new(MACH_LOAD, param_dst, mem, mach_op_none());
+            }
+
             if (!mi)
                 continue;
 

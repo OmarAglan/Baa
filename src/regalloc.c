@@ -937,6 +937,8 @@ static PhysReg resolve_special_vreg(int vreg)
     {
     case -1:
         return PHYS_RBP;
+    case -3:
+        return PHYS_RSP;
     default:
         return PHYS_NONE;
     }

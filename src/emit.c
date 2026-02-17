@@ -735,53 +735,79 @@ void emit_inst(MachineInst* inst, MachineFunc* func, FILE* out) {
         // تحميل من الذاكرة (LOAD)
         // ================================================================
         case MACH_LOAD:
-            // تحميل من [ptr] أو من متغير عام
-            if (inst->src1.kind == MACH_OP_MEM) {
+        {
+            // LOAD هو mov من مصدر إلى وجهة. قد تتحول الوجهة إلى ذاكرة بعد التسريب.
+            bool src_mem = (inst->src1.kind == MACH_OP_MEM || inst->src1.kind == MACH_OP_GLOBAL);
+            bool dst_mem = (inst->dst.kind == MACH_OP_MEM || inst->dst.kind == MACH_OP_GLOBAL);
+
+            if (src_mem && dst_mem)
+            {
+                // تجنب mem->mem: استخدم %rax كمؤقت (RAX غير مخصص لفترات عادية).
+                MachineOperand tmp = {0};
+                tmp.kind = MACH_OP_VREG;
+                tmp.size_bits = 64;
+                tmp.data.vreg = PHYS_RAX;
+
                 fprintf(out, "    movq ");
                 emit_operand(&inst->src1, out);
                 fprintf(out, ", ");
-                emit_operand(&inst->dst, out);
+                emit_operand(&tmp, out);
                 fprintf(out, "\n");
-            } else if (inst->src1.kind == MACH_OP_GLOBAL) {
+
                 fprintf(out, "    movq ");
-                emit_operand(&inst->src1, out);
+                emit_operand(&tmp, out);
                 fprintf(out, ", ");
                 emit_operand(&inst->dst, out);
                 fprintf(out, "\n");
-            } else {
-                // حالة احتياطية: mov من سجل (لا ينبغي أن تحدث عادةً)
+            }
+            else
+            {
                 fprintf(out, "    movq ");
                 emit_operand(&inst->src1, out);
                 fprintf(out, ", ");
                 emit_operand(&inst->dst, out);
                 fprintf(out, "\n");
             }
+        }
             break;
 
         // ================================================================
         // تخزين في الذاكرة (STORE)
         // ================================================================
         case MACH_STORE:
-            // تخزين: mov src1, [dst]
-            if (inst->dst.kind == MACH_OP_MEM) {
+        {
+            // STORE هو mov src1 -> dst. بعد التسريب قد يصبح src1 ذاكرة.
+            bool src_mem = (inst->src1.kind == MACH_OP_MEM || inst->src1.kind == MACH_OP_GLOBAL);
+            bool dst_mem = (inst->dst.kind == MACH_OP_MEM || inst->dst.kind == MACH_OP_GLOBAL);
+
+            if (src_mem && dst_mem)
+            {
+                MachineOperand tmp = {0};
+                tmp.kind = MACH_OP_VREG;
+                tmp.size_bits = 64;
+                tmp.data.vreg = PHYS_RAX;
+
                 fprintf(out, "    movq ");
                 emit_operand(&inst->src1, out);
                 fprintf(out, ", ");
-                emit_operand(&inst->dst, out);
+                emit_operand(&tmp, out);
                 fprintf(out, "\n");
-            } else if (inst->dst.kind == MACH_OP_GLOBAL) {
+
                 fprintf(out, "    movq ");
-                emit_operand(&inst->src1, out);
+                emit_operand(&tmp, out);
                 fprintf(out, ", ");
                 emit_operand(&inst->dst, out);
                 fprintf(out, "\n");
-            } else {
+            }
+            else
+            {
                 fprintf(out, "    movq ");
                 emit_operand(&inst->src1, out);
                 fprintf(out, ", ");
                 emit_operand(&inst->dst, out);
                 fprintf(out, "\n");
             }
+        }
             break;
 
         // ================================================================
@@ -973,37 +999,18 @@ void emit_inst(MachineInst* inst, MachineFunc* func, FILE* out) {
         case MACH_CALL:
         {
             const BaaCallingConv* cc = emit_cc_or_default();
-            int shadow = emit_shadow_bytes();
 
-            if (shadow > 0)
+            // SystemV AMD64 varargs rule: AL = number of XMM regs used (here 0).
+            // (نطبقها بشكل محافظ على كل النداءات على ELF)
+            if (cc && cc->sysv_set_al_zero_on_call)
             {
-                // Windows x64 ABI: حجز shadow space قبل الاستدعاء.
-                // ملاحظة: للدوال المتغيرة (printf/scanf) تعتمد المكتبة على home space.
-                fprintf(out, "    sub $%d, %%rsp\n", shadow);
-                if (cc && cc->home_reg_args_on_call && shadow >= 32)
-                {
-                    fprintf(out, "    movq %%rcx, 0(%%rsp)\n");
-                    fprintf(out, "    movq %%rdx, 8(%%rsp)\n");
-                    fprintf(out, "    movq %%r8, 16(%%rsp)\n");
-                    fprintf(out, "    movq %%r9, 24(%%rsp)\n");
-                }
-                fprintf(out, "    call ");
-                emit_operand(&inst->src1, out);
-                fprintf(out, "\n");
-                fprintf(out, "    add $%d, %%rsp\n", shadow);
+                fprintf(out, "    xorl %%eax, %%eax\n");
             }
-            else
-            {
-                // SystemV AMD64: لا shadow space.
-                // للنداءات المتغيرة، يجب ضبط AL بعدد سجلات XMM المستخدمة (هنا 0).
-                if (cc && cc->sysv_set_al_zero_on_call)
-                {
-                    fprintf(out, "    xorl %%eax, %%eax\n");
-                }
-                fprintf(out, "    call ");
-                emit_operand(&inst->src1, out);
-                fprintf(out, "\n");
-            }
+
+            // ملاحظة (v0.3.2.8.5): إدارة إطار النداء (shadow/stack args) أصبحت في ISel.
+            fprintf(out, "    call ");
+            emit_operand(&inst->src1, out);
+            fprintf(out, "\n");
         }
             break;
 

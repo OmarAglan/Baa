@@ -14,6 +14,7 @@ mingw64.7z
 
 # نواتج القياس/البنشمارك
 /.bench_out
-/\.baa_test_out_*
+/.baa_test_out_*
+/tests/corpus_v2x_docs
 /bench/results/*.json
 /bench/results/*.csv

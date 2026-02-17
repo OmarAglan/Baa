@@ -17,6 +17,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
   - Driver flags: `--backend=ir|legacy` and `--compare-backends` (build+run both and compare runtime output).
   - Regression runner: `tests/regress.py` (runs `tests/test.py` on all hosts; runs compare corpus on Windows).
   - Compare corpus: `tests/corpus_compare/*.baa` (self-checking; exit 0 on PASS).
+  - Docs-derived v0.2.x corpus: `scripts/extract_docs_corpus.py` + `tests/corpus_v2x_docs/**/*.baa`.
+  - Negative tests: `tests/neg/*.baa` with `// EXPECT:` markers validated by `tests/regress.py`.
 
 ## [0.3.2.9.2] - 2026-02-17
 

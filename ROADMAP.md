@@ -394,12 +394,12 @@
 - [x] **Memory usage profiling** — Track peak RSS on Linux via `/usr/bin/time -v` and IR arena stats via `--time-phases`.
 - [x] **Benchmark suite** — Collection of representative programs (`bench/*.baa`).
 
-#### v0.3.2.9.3: Regression Testing
+#### v0.3.2.9.3: Regression Testing ✅ COMPLETED (2026-02-17)
 
 - [x] **Output comparison** — Old codegen vs IR-based codegen.
-- [ ] **Test all v0.2.x programs** — Ensure backward compatibility.
-- [ ] **Edge case testing** — Complex control flow, nested loops, recursion.
-- [ ] **Error case testing** — Verify error messages unchanged.
+- [x] **Test all v0.2.x programs** — Ensure backward compatibility.
+- [x] **Edge case testing** — Complex control flow, nested loops, recursion.
+- [x] **Error case testing** — Verify error messages unchanged.
 
 #### v0.3.2.9.4: Documentation & Cleanup
 

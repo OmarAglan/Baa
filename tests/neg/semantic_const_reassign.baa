@@ -1,0 +1,7 @@
+// EXPECT: [Semantic Error]
+// EXPECT: Cannot reassign constant
+صحيح الرئيسية() {
+    ثابت صحيح س = 1.
+    س = 2.
+    إرجع 0.
+}

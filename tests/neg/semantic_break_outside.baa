@@ -1,0 +1,6 @@
+// EXPECT: [Semantic Error]
+// EXPECT: 'break' used outside
+صحيح الرئيسية() {
+    توقف.
+    إرجع 0.
+}

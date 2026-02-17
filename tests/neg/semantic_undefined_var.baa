@@ -1,0 +1,6 @@
+// EXPECT: [Semantic Error]
+// EXPECT: Undefined variable
+صحيح الرئيسية() {
+    س = 1.
+    إرجع 0.
+}

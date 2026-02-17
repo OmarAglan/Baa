@@ -1,6 +1,6 @@
 # Baa Internal API Reference
 
-> **Version:** 0.3.2.8.2 | [← Compiler Internals](INTERNALS.md) | [IR Specification →](BAA_IR_SPECIFICATION.md)
+> **Version:** 0.3.2.8.3 | [← Compiler Internals](INTERNALS.md) | [IR Specification →](BAA_IR_SPECIFICATION.md)
 
 This document details the C functions, enumerations, and structures defined in `src/baa.h`, `src/ir.h`, `src/ir_arena.h`, `src/ir_mutate.h`, `src/ir_defuse.h`, `src/ir_clone.h`, `src/ir_text.h`, `src/ir_loop.h`, `src/ir_licm.h`, `src/ir_unroll.h`, `src/ir_inline.h`, `src/ir_builder.h`, `src/ir_lower.h`, `src/ir_analysis.h`, `src/ir_pass.h`, `src/ir_mem2reg.h`, `src/ir_outssa.h`, `src/ir_verify_ssa.h`, `src/ir_verify_ir.h`, `src/ir_canon.h`, `src/ir_cfg_simplify.h`, `src/ir_dce.h`, `src/ir_copyprop.h`, `src/ir_cse.h`, `src/ir_optimizer.h`, `src/target.h`, `src/isel.h`, `src/regalloc.h`, and `src/emit.h`.
 
@@ -2375,6 +2375,7 @@ The Code Emission module (`src/emit.h`, `src/emit.c`) converts machine IR (after
 ```c
 bool emit_module(MachineModule* module, FILE* out, bool debug_info)
 bool emit_module_ex(MachineModule* module, FILE* out, bool debug_info, const BaaTarget* target)
+bool emit_module_ex2(MachineModule* module, FILE* out, bool debug_info, const BaaTarget* target, BaaCodegenOptions opts)
 ```
 
 Top-level entry point for emitting a complete assembly file.
@@ -2385,6 +2386,7 @@ Top-level entry point for emitting a complete assembly file.
 | `out` | `FILE*` | Output file handle for assembly |
 | `debug_info` | `bool` | Emit `.file`/`.loc` directives and debug breadcrumbs |
 | `target` | `BaaTarget*` | Target descriptor (COFF/ELF + ABI); NULL defaults to Windows x64 |
+| `opts` | `BaaCodegenOptions` | Code model options (PIC/PIE/stack protector) |
 
 **Returns:** `true` on success, `false` on failure.
 
@@ -2426,7 +2428,7 @@ Emits a single function with prologue and epilogue.
 #### `emit_inst`
 
 ```c
-void emit_inst(MachineInst* inst, FILE* out)
+void emit_inst(MachineInst* inst, MachineFunc* func, FILE* out)
 ```
 
 Translates a single machine instruction to AT&T assembly.
@@ -2434,6 +2436,7 @@ Translates a single machine instruction to AT&T assembly.
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | `inst` | `MachineInst*` | Instruction to emit |
+| `func` | `MachineFunc*` | Owning function (context) |
 | `out` | `FILE*` | Output file handle |
 
 **Supported Operations:**

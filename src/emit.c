@@ -64,6 +64,7 @@ static const char* reg8_names[PHYS_REG_COUNT] = {
  */
 static int g_emit_next_func_uid = 0;
 static int g_emit_current_func_uid = 0;
+static int g_emit_sp_seq = 0;
 
 // هل إصدار معلومات الديبغ مفعل؟
 static bool g_emit_debug_info = false;
@@ -71,12 +72,65 @@ static bool g_emit_debug_info = false;
 // الهدف واتفاقية الاستدعاء الحالية (تُملأ عبر emit_module_ex)
 static const BaaTarget* g_emit_target = NULL;
 static const BaaCallingConv* g_emit_cc = NULL;
+static BaaCodegenOptions g_emit_opts;
 
 static const BaaCallingConv* emit_cc_or_default(void)
 {
     if (g_emit_cc)
         return g_emit_cc;
     return baa_target_builtin_windows_x86_64()->cc;
+}
+
+// إعلان مسبق لأن بعض دوال حماية المكدس تستخدمه
+static int emit_shadow_bytes(void);
+
+static bool emit_stack_protector_enabled_for_func(MachineFunc* func)
+{
+    if (!func) return false;
+    if (!g_emit_target || g_emit_target->obj_format != BAA_OBJFORMAT_ELF) return false;
+
+    if (g_emit_opts.stack_protector == BAA_STACKPROT_ALL) return true;
+    if (g_emit_opts.stack_protector == BAA_STACKPROT_ON) return func->stack_size > 0;
+    return false;
+}
+
+static int emit_stack_protector_size(MachineFunc* func)
+{
+    return emit_stack_protector_enabled_for_func(func) ? 8 : 0;
+}
+
+static int emit_stack_protector_offset(MachineFunc* func)
+{
+    // نضع الكناري مباشرةً بعد مساحة locals/shadow وقبل حفظ callee-saved.
+    int local_size = func ? func->stack_size : 0;
+    int shadow = emit_shadow_bytes();
+    return -(local_size + shadow + 8);
+}
+
+static void emit_stack_protector_prologue(MachineFunc* func, FILE* out)
+{
+    if (!emit_stack_protector_enabled_for_func(func) || !out) return;
+
+    // نستخدم r11 كمؤقت حتى لا نخرب سجلات معاملات ABI عند دخول الدالة.
+    int off = emit_stack_protector_offset(func);
+    fprintf(out, "    movq %%fs:40, %%r11\n");
+    fprintf(out, "    movq %%r11, %d(%%rbp)\n", off);
+}
+
+static void emit_stack_protector_epilogue(MachineFunc* func, FILE* out, int ok_label_id)
+{
+    if (!emit_stack_protector_enabled_for_func(func) || !out) return;
+
+    int off = emit_stack_protector_offset(func);
+
+    // نستخدم r10/r11 لتفادي تخريب RAX (قيمة الإرجاع) وسجلات المعاملات.
+    fprintf(out, "    movq %d(%%rbp), %%r11\n", off);
+    fprintf(out, "    movq %%fs:40, %%r10\n");
+    fprintf(out, "    xorq %%r10, %%r11\n");
+    fprintf(out, "    je .L__sp_ok_%d_%d\n", g_emit_current_func_uid, ok_label_id);
+    fprintf(out, "    call __stack_chk_fail\n");
+    fprintf(out, "    .byte 0x0f, 0x0b\n");
+    fprintf(out, ".L__sp_ok_%d_%d:\n", g_emit_current_func_uid, ok_label_id);
 }
 
 static int emit_shadow_bytes(void)
@@ -391,7 +445,8 @@ static void emit_prologue(MachineFunc* func, FILE* out,
     // إجمالي الحجم المطلوب (بعد push rbp)
     // المكدس بعد push rbp: RSP ناقص 8 (لـ rbp المحفوظ)
     int shadow = emit_shadow_bytes();
-    int total_frame = local_size + shadow + callee_save_size;
+    int canary_size = emit_stack_protector_size(func);
+    int total_frame = local_size + shadow + canary_size + callee_save_size;
 
     // محاذاة إلى قيمة الهدف (عادة 16 بايت)
     // بعد push rbp، RSP = aligned - 8
@@ -405,9 +460,12 @@ static void emit_prologue(MachineFunc* func, FILE* out,
         fprintf(out, "    sub $%d, %%rsp\n", total_frame);
     }
 
+    // تهيئة كناري حماية المكدس (إن كان مفعلاً)
+    emit_stack_protector_prologue(func, out);
+
     // حفظ السجلات المحفوظة (callee-saved)
     for (int i = 0; i < callee_count; i++) {
-        int save_offset = -(local_size + shadow + (i + 1) * 8);
+        int save_offset = -(local_size + shadow + canary_size + (i + 1) * 8);
         fprintf(out, "    mov %s, %d(%%rbp)\n",
                 reg64_names[callee_regs[i]], save_offset);
     }
@@ -427,10 +485,13 @@ static void emit_epilogue(MachineFunc* func, FILE* out,
                            PhysReg* callee_regs, int callee_count) {
     int local_size = func->stack_size;
     int shadow = emit_shadow_bytes();
+    int canary_size = emit_stack_protector_size(func);
+    // تحقق كناري حماية المكدس قبل تفكيك الإطار
+    emit_stack_protector_epilogue(func, out, g_emit_sp_seq++);
 
     // استعادة السجلات المحفوظة (callee-saved) بترتيب عكسي
     for (int i = callee_count - 1; i >= 0; i--) {
-        int save_offset = -(local_size + shadow + (i + 1) * 8);
+        int save_offset = -(local_size + shadow + canary_size + (i + 1) * 8);
         fprintf(out, "    mov %d(%%rbp), %s\n",
                 save_offset, reg64_names[callee_regs[i]]);
     }
@@ -458,10 +519,13 @@ static void emit_tailjmp(MachineFunc* func, MachineInst* inst, FILE* out,
     int local_size = func->stack_size;
     int shadow = emit_shadow_bytes();
     const BaaCallingConv* cc = emit_cc_or_default();
+    int canary_size = emit_stack_protector_size(func);
+    // تحقق كناري حماية المكدس قبل الخروج من الدالة (حتى في النداء_الذيلي)
+    emit_stack_protector_epilogue(func, out, g_emit_sp_seq++);
 
     // استعادة السجلات المحفوظة (callee-saved) بترتيب عكسي
     for (int i = callee_count - 1; i >= 0; i--) {
-        int save_offset = -(local_size + shadow + (i + 1) * 8);
+        int save_offset = -(local_size + shadow + canary_size + (i + 1) * 8);
         fprintf(out, "    mov %d(%%rbp), %s\n",
                 save_offset, reg64_names[callee_regs[i]]);
     }
@@ -1125,6 +1189,7 @@ bool emit_func(MachineFunc* func, FILE* out) {
 
     // تعيين بادئة فريدة لتسميات الكتل داخل هذه الدالة
     g_emit_current_func_uid = g_emit_next_func_uid++;
+    g_emit_sp_seq = 0;
 
     // تحديد اسم الدالة (تحويل الرئيسية → main)
     const char* func_name = func->name;
@@ -1188,11 +1253,13 @@ bool emit_func(MachineFunc* func, FILE* out) {
 // إصدار وحدة كاملة (Module Emission)
 // ============================================================================
 
-bool emit_module_ex(MachineModule* module, FILE* out, bool debug_info, const BaaTarget* target) {
+bool emit_module_ex2(MachineModule* module, FILE* out, bool debug_info,
+                     const BaaTarget* target, BaaCodegenOptions opts) {
     if (!module || !out) return false;
 
     g_emit_target = target ? target : baa_target_builtin_windows_x86_64();
     g_emit_cc = (g_emit_target && g_emit_target->cc) ? g_emit_target->cc : baa_target_builtin_windows_x86_64()->cc;
+    g_emit_opts = opts;
 
     g_emit_debug_info = debug_info ? true : false;
     emit_debug_reset();
@@ -1228,6 +1295,10 @@ bool emit_module_ex(MachineModule* module, FILE* out, bool debug_info, const Baa
     emit_debug_reset();
 
     return true;
+}
+
+bool emit_module_ex(MachineModule* module, FILE* out, bool debug_info, const BaaTarget* target) {
+    return emit_module_ex2(module, out, debug_info, target, baa_codegen_options_default());
 }
 
 bool emit_module(MachineModule* module, FILE* out, bool debug_info) {

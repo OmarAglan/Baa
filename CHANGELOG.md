@@ -8,6 +8,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.3.2.8.3] - 2026-02-17
+
+### Added
+
+- **Code model options (v0.3.2.8.3)**
+  - Flags: `-fPIC`, `-fPIE` (Linux/ELF), `-mcmodel=small` (only supported model)
+  - Stack protection on ELF: `-fstack-protector`, `-fstack-protector-all`, `-fno-stack-protector`
+  - Test: `tests/emit_stack_protector_test.c`
+
+### Fixed
+
+- **Stack protector label collisions** — canary epilogues now use unique labels for functions with multiple returns.
+
 ## [0.3.2.8.2] - 2026-02-17
 
 ### Added

@@ -339,9 +339,11 @@
 
 #### v0.3.2.8.3: Code Model Options
 
-- [ ] **Small code model** — All code/data within 2GB (default).
-- [ ] **PIC support** — Position independent code flag.
-- [ ] **Stack protection** — Optional stack canaries.
+✅ COMPLETED (2026-02-17)
+
+- [x] **Small code model** — Default (only supported model in v0.3.2.8.3).
+- [x] **PIC/PIE flags** — `-fPIC`/`-fPIE` (Linux/ELF; initial support).
+- [x] **Stack protection** — stack canaries on ELF via `-fstack-protector*`.
 
 #### v0.3.2.8.4: Linux x86-64 Target 🐧
 

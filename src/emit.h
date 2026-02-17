@@ -24,6 +24,8 @@
 #include "isel.h"
 #include "regalloc.h"
 
+#include "code_model.h"
+
 typedef struct BaaTarget BaaTarget;
 
 #ifdef __cplusplus
@@ -60,6 +62,12 @@ bool emit_module(MachineModule* module, FILE* out, bool debug_info);
  * @param target الهدف (يحدد الأقسام/ABI).
  */
 bool emit_module_ex(MachineModule* module, FILE* out, bool debug_info, const BaaTarget* target);
+
+/**
+ * @brief نسخة موسعة لدعم خيارات نموذج الكود.
+ */
+bool emit_module_ex2(MachineModule* module, FILE* out, bool debug_info,
+                     const BaaTarget* target, BaaCodegenOptions opts);
 
 /**
  * @brief إصدار كود تجميع لدالة واحدة.

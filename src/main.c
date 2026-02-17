@@ -15,6 +15,7 @@
 #include "regalloc.h"
 #include "emit.h"
 #include "target.h"
+#include "code_model.h"
 #include <time.h>
 #include <stdarg.h>
 
@@ -92,6 +93,7 @@ typedef struct
     bool funroll_loops; // -funroll-loops: فك الحلقات بعد Out-of-SSA (تحسين اختياري)
     OptLevel opt_level; // -O0, -O1, -O2: مستوى التحسين
     const BaaTarget* target; // --target=...: الهدف الحالي
+    BaaCodegenOptions codegen_opts; // v0.3.2.8.3
     double start_time;  // وقت بدء الترجمة
 } CompilerConfig;
 
@@ -376,6 +378,14 @@ void print_help()
     printf("  -O2            Full optimization (+ CSE)\n");
     printf("  -funroll-loops  Unroll small constant-count loops (after Out-of-SSA)\n");
     printf("  --target=<t>    Target: x86_64-windows | x86_64-linux\n");
+    printf("  -fPIC           Emit PIC-friendly code (ELF/Linux)\n");
+    printf("  -fPIE           Build as PIE (ELF/Linux; adds -pie at link)\n");
+    printf("  -fno-pic        Disable PIC\n");
+    printf("  -fno-pie        Disable PIE\n");
+    printf("  -mcmodel=small  Code model (only small supported)\n");
+    printf("  -fstack-protector       Enable stack canary (ELF/Linux)\n");
+    printf("  -fstack-protector-all   Enable canary for all functions (ELF/Linux)\n");
+    printf("  -fno-stack-protector    Disable stack canary\n");
     printf("  --help, -h   Show this help message\n");
     printf("  --version    Show version info\n");
     printf("\nWarning Options:\n");
@@ -415,6 +425,7 @@ int main(int argc, char **argv)
     config.opt_level = OPT_LEVEL_1; // Default optimization level
     config.funroll_loops = false;
     config.target = baa_target_host_default();
+    config.codegen_opts = baa_codegen_options_default();
 
     char *input_files[32]; // دعم حتى 32 ملف مصدر
     int input_count = 0;
@@ -496,6 +507,48 @@ int main(int argc, char **argv)
                     return 1;
                 }
                 config.target = parsed;
+            }
+            else if (strcmp(arg, "-fPIC") == 0)
+            {
+                config.codegen_opts.pic = true;
+            }
+            else if (strcmp(arg, "-fPIE") == 0)
+            {
+                config.codegen_opts.pie = true;
+                config.codegen_opts.pic = true;
+            }
+            else if (strcmp(arg, "-fno-pic") == 0)
+            {
+                config.codegen_opts.pic = false;
+            }
+            else if (strcmp(arg, "-fno-pie") == 0)
+            {
+                config.codegen_opts.pie = false;
+            }
+            else if (strcmp(arg, "-fstack-protector") == 0)
+            {
+                config.codegen_opts.stack_protector = BAA_STACKPROT_ON;
+            }
+            else if (strcmp(arg, "-fstack-protector-all") == 0)
+            {
+                config.codegen_opts.stack_protector = BAA_STACKPROT_ALL;
+            }
+            else if (strcmp(arg, "-fno-stack-protector") == 0)
+            {
+                config.codegen_opts.stack_protector = BAA_STACKPROT_OFF;
+            }
+            else if (strncmp(arg, "-mcmodel=", 9) == 0)
+            {
+                const char *m = arg + 9;
+                if (strcmp(m, "small") == 0)
+                {
+                    config.codegen_opts.code_model = BAA_CODEMODEL_SMALL;
+                }
+                else
+                {
+                    printf("Error: Unsupported code model '%s' (only small is supported)\n", m);
+                    return 1;
+                }
             }
             else if (strcmp(arg, "-O0") == 0)
             {
@@ -812,7 +865,22 @@ int main(int argc, char **argv)
 
         if (config.verbose)
             printf("[INFO] Emitting assembly: %s\n", asm_file);
-        if (!emit_module_ex(mach_module, f_asm, config.debug_info, config.target))
+
+        // v0.3.2.8.3: حماية المكدس حالياً مدعومة فقط على ELF/Linux
+        if (config.codegen_opts.stack_protector != BAA_STACKPROT_OFF)
+        {
+            if (!config.target || config.target->obj_format != BAA_OBJFORMAT_ELF)
+            {
+                fprintf(stderr, "خطأ: -fstack-protector مدعوم حالياً فقط لهدف ELF/Linux.\n");
+                fclose(f_asm);
+                mach_module_free(mach_module);
+                ir_module_free(ir_module);
+                free(source);
+                return 1;
+            }
+        }
+
+        if (!emit_module_ex2(mach_module, f_asm, config.debug_info, config.target, config.codegen_opts))
         {
             fprintf(stderr, "Aborting %s: code emission failed.\n", current_input);
             fclose(f_asm);
@@ -904,6 +972,19 @@ int main(int argc, char **argv)
             {
                 fprintf(stderr, "خطأ: أمر الربط طويل جداً (تجاوز السعة).\n");
                 return 1;
+            }
+        }
+
+        // v0.3.2.8.3: PIE على ELF/Linux
+        if (config.codegen_opts.pie)
+        {
+            if (config.target && config.target->obj_format == BAA_OBJFORMAT_ELF)
+            {
+                if (!cmd_append(cmd_link, sizeof(cmd_link), &cmd_len, " -pie"))
+                {
+                    fprintf(stderr, "خطأ: أمر الربط طويل جداً (تجاوز السعة).\n");
+                    return 1;
+                }
             }
         }
 

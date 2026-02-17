@@ -1,6 +1,6 @@
 # Baa Documentation Style Guide
 
-> **Version:** 0.3.2.8.2 | **Last Updated:** 2026-02-17
+> **Version:** 0.3.2.8.3 | **Last Updated:** 2026-02-17
 
 This guide establishes standards for all Baa project documentation to ensure consistency, professionalism, and clarity across all documents.
 
@@ -69,7 +69,7 @@ Use the following hierarchy consistently:
 
 ### 2.1 Current Version
 
-The current version is **0.3.2.8.2**. All documents must display this version in their header.
+The current version is **0.3.2.8.3**. All documents must display this version in their header.
 
 ### 2.2 Version Update Rule
 
@@ -354,7 +354,7 @@ flowchart LR
 
 Before submitting documentation changes:
 
-- [ ] Version number is 0.3.2.8.2 in header
+- [ ] Version number is 0.3.2.8.3 in header
 - [ ] Document follows standard header/footer format
 - [ ] Table of Contents is present and accurate
 - [ ] Navigation links work and follow format

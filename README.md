@@ -4,13 +4,13 @@
 <img width="260" height="260" alt="شعار باء" src="resources/Logo.png" />
 
 
-![Version](https://img.shields.io/badge/version-0.3.2.8.2-blue.svg)
+![Version](https://img.shields.io/badge/version-0.3.2.8.3-blue.svg)
 ![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux-lightgrey.svg)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
 
 **أول لغة برمجة نُظُم مُصرَّفة (Compiled) بصياغة عربية**
 
-*اكتب تطبيقات ويندوز أصلية باستخدام كلمات مفتاحية وأرقام وعلامات ترقيم عربية*
+*اكتب تطبيقات أصلية على Windows و Linux باستخدام كلمات مفتاحية وأرقام وعلامات ترقيم عربية*
 
 </div>
 
@@ -20,7 +20,8 @@
 
 | الميزة | الوصف |
 |---------|-------------|
-| 🖥️ **تصريف/ترجمة أصلية (Native Compilation)** | تُصرِّف الشيفرة إلى Assembly لمعمارية x86-64 ← ثم تُنتج ملفات تنفيذية أصلية على Windows |
+| 🖥️ **تصريف/ترجمة أصلية (Native Compilation)** | تُصرِّف الشيفرة إلى Assembly لمعمارية x86-64 ← ثم تُنتج ملفات تنفيذية أصلية (Windows: PE/COFF، Linux: ELF) |
+| 🌐 **متعدد الأهداف (Multi-Target)** | دعم أولي لهدفين: `x86_64-windows` (COFF) و `x86_64-linux` (ELF) مع خيار `--target` |
 | 🌍 **صياغة عربية كاملة** | كلمات مفتاحية عربية، وأرقام (٠-٩)، وعلامات ترقيم (`.` `؛`) |
 | 🧩 **شيفرة معيارية** | `#تضمين` (Include)، تصريف متعدد الملفات، وملفات ترويسة `.baahd` |
 | 🔧 **المعالج القبلي (Preprocessor)** | `#تعريف` (Define)، `#إذا_عرف` (Ifdef)، `#الغاء_تعريف` (Undefine) |
@@ -107,6 +108,15 @@ cmake --build build
 baa --target=x86_64-windows البرنامج.baa
 baa --target=x86_64-linux   البرنامج.baa
 ```
+
+### القيود الحالية (v0.3.2.8.2)
+
+- **نداءات الدوال:** مدعومة حالياً فقط ضمن معاملات السجلات (Windows: حتى ٤ معاملات، Linux/SysV: حتى ٦ معاملات). معاملات المكدس مؤجلة إلى v0.3.2.8.5.
+
+### خيارات نموذج الكود (v0.3.2.8.3)
+
+- `-fPIC` / `-fPIE` (Linux/ELF): خيارات أولية لـ PIC/PIE (حالياً التأثير الأساسي هو وضع الربط PIE عند `-fPIE`).
+- `-fstack-protector` / `-fstack-protector-all` (Linux/ELF): إضافة كناري حماية المكدس.
 
 **المخرجات:** `مرحباً بالعالم!`
 

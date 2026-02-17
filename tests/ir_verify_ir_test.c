@@ -121,6 +121,37 @@ static IRModule* build_bad_module_store_type_mismatch(void) {
     return m;
 }
 
+static IRModule* build_bad_module_cross_func_branch(void) {
+    IRModule* m = ir_module_new("verify_ir_bad_crossfunc_br");
+    if (!m) return NULL;
+
+    IRFunc* f1 = ir_func_new("دالة_أ", IR_TYPE_I64_T);
+    IRFunc* f2 = ir_func_new("دالة_ب", IR_TYPE_I64_T);
+    if (!f1 || !f2) {
+        ir_module_free(m);
+        return NULL;
+    }
+
+    IRBlock* a = ir_func_new_block(f1, "بداية");
+    IRBlock* b = ir_func_new_block(f2, "بداية");
+    if (!a || !b) {
+        ir_module_free(m);
+        return NULL;
+    }
+
+    // f2: ret 0
+    IRInst* ret_b = ir_inst_ret(ir_value_const_int(0, IR_TYPE_I64_T));
+    if (ret_b) ir_block_append(b, ret_b);
+
+    // f1: br إلى كتلة داخل دالة أخرى (CFG عابر للدوال) — يجب أن يفشل verify-ir.
+    IRInst* br_cross = ir_inst_br(b);
+    if (br_cross) ir_block_append(a, br_cross);
+
+    ir_module_add_func(m, f1);
+    ir_module_add_func(m, f2);
+    return m;
+}
+
 static int test_verify_ir(void) {
     int ok = 1;
 
@@ -136,6 +167,13 @@ static int test_verify_ir(void) {
     if (bad) {
         ok &= require(!ir_module_verify_ir(bad, stderr), "verify-ir should reject bad store type mismatch");
         ir_module_free(bad);
+    }
+
+    IRModule* bad2 = build_bad_module_cross_func_branch();
+    ok &= require(bad2 != NULL, "build_bad_module_cross_func_branch failed");
+    if (bad2) {
+        ok &= require(!ir_module_verify_ir(bad2, stderr), "verify-ir should reject cross-function branch targets");
+        ir_module_free(bad2);
     }
 
     return ok;

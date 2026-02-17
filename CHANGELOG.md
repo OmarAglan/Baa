@@ -8,6 +8,23 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.3.2.9.1] - 2026-02-17
+
+### Added
+
+- **Comprehensive IR verification (v0.3.2.9.1)**
+  - `--verify` — runs `--verify-ir` + `--verify-ssa` together (requires `-O1`/`-O2`).
+  - Test runner: `tests/test.py` compiles + runs all `tests/*.baa` under `-O2 --verify`.
+  - New verifier regression: `tests/ir_verify_ir_test.c` rejects cross-function branch targets.
+
+### Changed
+
+- **SSA verifier CFG hygiene** — `ir_func_verify_ssa()` now rebuilds `succ/pred` before dominance/SSA checks to avoid stale CFG metadata.
+
+### Fixed
+
+- **CFG integrity enforcement** — IR verifier now rejects cross-function block references (`br`/`br_cond`/`phi`) before CFG rebuild, preventing illegal CFG mutation across functions.
+
 ## [0.3.2.8.6] - 2026-02-17
 
 ### Added

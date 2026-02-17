@@ -1,7 +1,7 @@
 /**
  * @file baa.h
  * @brief ملف الرأس الرئيسي الذي يعرف هياكل البيانات لمحوسب لغة "باء" (Baa Compiler).
- * @version 0.3.2.8.6
+ * @version 0.3.2.9.1
  */
 
 #ifndef BAA_H
@@ -15,7 +15,7 @@
 #include <stdarg.h>
 
 // معلومات الإصدار
-#define BAA_VERSION "0.3.2.8.6"
+#define BAA_VERSION "0.3.2.9.1"
 #define BAA_BUILD_DATE __DATE__
 
 // ============================================================================

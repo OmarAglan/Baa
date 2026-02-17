@@ -400,6 +400,7 @@ void print_help()
     printf("  --dump-ir    Dump Baa IR (Arabic) to stdout after analysis\n");
     printf("  --emit-ir    Write Baa IR (Arabic) to <input>.ir after analysis\n");
     printf("  --dump-ir-opt  Dump Baa IR (Arabic) after optimization\n");
+    printf("  --verify       Run all verifiers (--verify-ir + --verify-ssa; requires -O1/-O2)\n");
     printf("  --verify-ir    Verify IR well-formedness (operands/types/terminators/phi/calls)\n");
     printf("  --verify-ssa   Verify SSA invariants after Mem2Reg (requires -O1/-O2)\n");
     printf("  --verify-gate  Debug: run verify-ir/verify-ssa after each optimizer iteration\n");
@@ -511,6 +512,11 @@ int main(int argc, char **argv)
             else if (strcmp(arg, "--dump-ir-opt") == 0)
             {
                 config.dump_ir_opt = true;
+            }
+            else if (strcmp(arg, "--verify") == 0)
+            {
+                config.verify_ir = true;
+                config.verify_ssa = true;
             }
             else if (strcmp(arg, "--verify-ir") == 0)
             {

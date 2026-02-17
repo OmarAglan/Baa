@@ -135,6 +135,15 @@ static int ir_value_is_block(IRValue* v) {
     return v && v->kind == IR_VAL_BLOCK && v->data.block != NULL;
 }
 
+static int ir_block_is_in_func(const IRBlock* b, const IRFunc* func) {
+    return b && func && b->parent == func;
+}
+
+static int ir_value_is_block_in_func(IRValue* v, const IRFunc* func) {
+    if (!ir_value_is_block(v)) return 0;
+    return ir_block_is_in_func(v->data.block, func);
+}
+
 static int ir_value_is_ptr_value(IRValue* v) {
     if (!v) return 0;
     if (!v->type) return 0;
@@ -156,6 +165,87 @@ static int ir_inst_dest_in_range(const IRInst* inst, const IRFunc* func) {
 
 static int ir_is_terminator_op(IROp op) {
     return op == IR_OP_BR || op == IR_OP_BR_COND || op == IR_OP_RET;
+}
+
+// ============================================================================
+// تحقق مراجع الكتل قبل rebuild_preds (حماية من CFG عابر للدوال)
+// ============================================================================
+
+static int ir_verify_block_refs_safe(IRVerifyDiag* diag,
+                                     const IRModule* module,
+                                     const IRFunc* func) {
+    int ok = 1;
+    if (!diag || !func) return 0;
+
+    for (const IRBlock* b = func->blocks; b; b = b->next) {
+        for (const IRInst* inst = b->first; inst; inst = inst->next) {
+            if (!inst) continue;
+
+            if (inst->op == IR_OP_BR) {
+                IRValue* t = (inst->operand_count >= 1) ? inst->operands[0] : NULL;
+                if (t && t->kind == IR_VAL_BLOCK) {
+                    if (!t->data.block) {
+                        ir_report(diag, module, func, b, inst, "تعليمة `قفز`: هدف كتلة فارغ (NULL).");
+                        ok = 0;
+                    } else if (!ir_block_is_in_func(t->data.block, func)) {
+                        ir_report(diag, module, func, b, inst,
+                                  "تعليمة `قفز`: الهدف يشير إلى كتلة خارج الدالة (CFG عابر للدوال غير مسموح).");
+                        ok = 0;
+                    }
+                }
+                continue;
+            }
+
+            if (inst->op == IR_OP_BR_COND) {
+                IRValue* t1 = (inst->operand_count >= 2) ? inst->operands[1] : NULL;
+                IRValue* t2 = (inst->operand_count >= 3) ? inst->operands[2] : NULL;
+
+                if (t1 && t1->kind == IR_VAL_BLOCK) {
+                    if (!t1->data.block) {
+                        ir_report(diag, module, func, b, inst,
+                                  "تعليمة `قفز_شرط`: هدف_صواب كتلة فارغ (NULL).");
+                        ok = 0;
+                    } else if (!ir_block_is_in_func(t1->data.block, func)) {
+                        ir_report(diag, module, func, b, inst,
+                                  "تعليمة `قفز_شرط`: هدف_صواب يشير إلى كتلة خارج الدالة (غير مسموح).");
+                        ok = 0;
+                    }
+                }
+
+                if (t2 && t2->kind == IR_VAL_BLOCK) {
+                    if (!t2->data.block) {
+                        ir_report(diag, module, func, b, inst,
+                                  "تعليمة `قفز_شرط`: هدف_خطأ كتلة فارغ (NULL).");
+                        ok = 0;
+                    } else if (!ir_block_is_in_func(t2->data.block, func)) {
+                        ir_report(diag, module, func, b, inst,
+                                  "تعليمة `قفز_شرط`: هدف_خطأ يشير إلى كتلة خارج الدالة (غير مسموح).");
+                        ok = 0;
+                    }
+                }
+                continue;
+            }
+
+            if (inst->op == IR_OP_PHI) {
+                for (const IRPhiEntry* e = inst->phi_entries; e; e = e->next) {
+                    if (!e->block) {
+                        ir_report(diag, module, func, b, inst,
+                                  "تعليمة `فاي`: كتلة سابقة فارغة (NULL).");
+                        ok = 0;
+                        continue;
+                    }
+                    if (!ir_block_is_in_func(e->block, func)) {
+                        ir_report(diag, module, func, b, inst,
+                                  "تعليمة `فاي`: كتلة سابقة خارج الدالة (غير مسموح).");
+                        ok = 0;
+                    }
+                }
+                continue;
+            }
+        }
+    }
+
+    return ok;
 }
 
 // ============================================================================
@@ -266,6 +356,12 @@ static void ir_verify_phi(IRVerifyDiag* diag,
 
         if (!e->block || !e->value) {
             ir_report(diag, module, func, block, phi, "مدخل `فاي` غير صالح (كتلة/قيمة فارغة).");
+            continue;
+        }
+
+        if (e->block->parent != func) {
+            ir_report(diag, module, func, block, phi,
+                      "مدخل `فاي` يشير إلى كتلة خارج الدالة (غير مسموح).");
             continue;
         }
 
@@ -595,6 +691,9 @@ static void ir_verify_inst(IRVerifyDiag* diag,
 
             if (!ir_value_is_block(inst->operands[0])) {
                 ir_report(diag, module, func, block, inst, "تعليمة `قفز` يجب أن تشير إلى كتلة.");
+            } else if (!ir_value_is_block_in_func(inst->operands[0], func)) {
+                ir_report(diag, module, func, block, inst,
+                          "تعليمة `قفز`: الهدف يشير إلى كتلة خارج الدالة (غير مسموح).");
             }
             break;
         }
@@ -613,6 +712,15 @@ static void ir_verify_inst(IRVerifyDiag* diag,
 
             if (!ir_value_is_block(inst->operands[1]) || !ir_value_is_block(inst->operands[2])) {
                 ir_report(diag, module, func, block, inst, "تعليمة `قفز_شرط`: أهداف القفز يجب أن تكون كتل.");
+            } else {
+                if (!ir_value_is_block_in_func(inst->operands[1], func)) {
+                    ir_report(diag, module, func, block, inst,
+                              "تعليمة `قفز_شرط`: هدف_صواب يشير إلى كتلة خارج الدالة (غير مسموح).");
+                }
+                if (!ir_value_is_block_in_func(inst->operands[2], func)) {
+                    ir_report(diag, module, func, block, inst,
+                              "تعليمة `قفز_شرط`: هدف_خطأ يشير إلى كتلة خارج الدالة (غير مسموح).");
+                }
             }
             break;
         }
@@ -817,6 +925,11 @@ static bool ir_verify_func_internal(IRModule* module_for_diag,
     if (!func->entry) {
         ir_report(&diag, module_for_diag, func, NULL, NULL,
                   "الدالة تحتوي جسماً بدون كتلة دخول (entry).");
+        return false;
+    }
+
+    // تحقق مبكر: لا تسمح بمراجع كتل خارج هذه الدالة (حماية قبل rebuild_preds).
+    if (!ir_verify_block_refs_safe(&diag, module_for_diag, func)) {
         return false;
     }
 

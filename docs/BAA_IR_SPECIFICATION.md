@@ -1,6 +1,6 @@
 # Baa IR Specification
 
-> **Version:** 0.3.2.8.6 | [← Compiler Internals](INTERNALS.md) | [API Reference →](API_REFERENCE.md)
+> **Version:** 0.3.2.9.1 | [← Compiler Internals](INTERNALS.md) | [API Reference →](API_REFERENCE.md)
 
 This document specifies the Intermediate Representation (IR) for the Baa compiler. The IR uses Arabic naming conventions throughout, creating a culturally authentic yet technically robust design.
 
@@ -116,6 +116,7 @@ The `فاي` instruction selects a value based on which predecessor block was ex
 
 - **SSA verifier (v0.3.2.5.3):** The compiler provides `--verify-ssa` to validate SSA invariants after Mem2Reg and before Out-of-SSA (single-definition, dominance, and phi incoming-edge correctness).
 - **IR well-formedness verifier (v0.3.2.6.5):** The compiler provides `--verify-ir` to validate general IR invariants (operand counts, type consistency, terminator rules, phi placement, and intra-module call signature checks).
+- **All verifiers (v0.3.2.9.1):** The compiler provides `--verify` to run `--verify-ir` + `--verify-ssa` together (requires `-O1`/`-O2`).
 
 ### 3.3 Memory Model
 

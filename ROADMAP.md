@@ -379,13 +379,13 @@
 
 ### v0.3.2.9: IR Verification & Benchmarking ✅
 
-#### v0.3.2.9.1: Comprehensive IR Verification
+#### v0.3.2.9.1: Comprehensive IR Verification ✅ COMPLETED (2026-02-17)
 
-- [ ] **Well-formedness checks** — All functions have entry blocks.
-- [ ] **Type consistency** — Operand types match instruction requirements.
-- [ ] **CFG integrity** — All branches point to valid blocks.
-- [ ] **SSA verification** — Run `--verify-ssa` on all test programs.
-- [ ] **`baa --verify` mode** — Run all verification passes.
+- [x] **Well-formedness checks** — All functions have entry blocks.
+- [x] **Type consistency** — Operand types match instruction requirements.
+- [x] **CFG integrity** — All branches point to valid blocks.
+- [x] **SSA verification** — Run `--verify-ssa` on all test programs.
+- [x] **`baa --verify` mode** — Run all verification passes.
 
 #### v0.3.2.9.2: Performance Benchmarking
 

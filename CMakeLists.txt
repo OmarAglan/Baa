@@ -6,6 +6,7 @@ set(CMAKE_C_STANDARD 11)
 # Build options
 option(BAA_ENABLE_WARNINGS "Enable compiler warnings for Baa" ON)
 option(BAA_WARNINGS_AS_ERRORS "Treat warnings as errors for hardening builds" OFF)
+option(BAA_ENABLE_LEGACY_CODEGEN "Enable legacy AST-based backend (Windows-only)" OFF)
 
 # List of source files
 set(SOURCES
@@ -48,6 +49,12 @@ set(SOURCES
     src/main.c
     src/parser.c
 )
+
+# Legacy AST-based backend (Windows-only; used for regression comparisons)
+if(WIN32 AND BAA_ENABLE_LEGACY_CODEGEN)
+    list(APPEND SOURCES src/codegen.c)
+    add_compile_definitions(BAA_ENABLE_LEGACY_CODEGEN=1)
+endif()
 
 # Add resource file for Windows (Icon & Version Info)
 if(WIN32)

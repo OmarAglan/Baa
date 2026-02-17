@@ -51,7 +51,7 @@ def main() -> int:
     failures: list[str] = []
 
     exe_ext = ".exe" if os.name == "nt" else ""
-    out_dir = Path(".baa_test_out")
+    out_dir = Path(f".baa_test_out_{os.getpid()}")
     if out_dir.exists():
         shutil.rmtree(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)

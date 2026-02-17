@@ -1,6 +1,6 @@
 # Baa Compiler Internals
 
-> **Version:** 0.3.2.9.2 | [← Language Spec](LANGUAGE.md) | [API Reference →](API_REFERENCE.md)
+> **Version:** 0.3.2.9.3 | [← Language Spec](LANGUAGE.md) | [API Reference →](API_REFERENCE.md)
 
 **Target Architecture:** x86-64 (AMD64)
 **Target OS:** Windows (MinGW-w64 Toolchain)
@@ -71,7 +71,8 @@ flowchart LR
 | **6. Assemble** | `.s` Assembly | `.o` Object | `gcc -c` | Invokes external assembler. |
 | **7. Link** | `.o` Object | `.exe` Executable | `gcc` | Links with C Runtime. |
 
-> **Note (v0.3.2.4):** The compiler now uses the full IR-based backend pipeline end-to-end: AST → IR → Optimizer → ISel → RegAlloc → Emit → Assembly. The legacy AST-based backend has been retired from the build.
+> **Note (v0.3.2.4+):** The compiler uses the full IR-based backend pipeline end-to-end: AST → IR → Optimizer → ISel → RegAlloc → Emit → Assembly.
+> The legacy AST-based backend is **disabled by default** and can be enabled on Windows for regression comparisons only (CMake: `-DBAA_ENABLE_LEGACY_CODEGEN=ON`).
 
 ### 1.1.1. Component Map
 
@@ -113,6 +114,8 @@ The driver in `main.c` (v0.2.0+) supports multi-file compilation and various mod
 | `--verify-ssa` | **SSA Verification** | stderr | Verifies SSA invariants after Mem2Reg and before Out-of-SSA (**requires `-O1`/`-O2`**) (v0.3.2.5.3). |
 | `--verify-gate` | **Verifier Gate (Debug)** | stderr | Runs `--verify-ir`/`--verify-ssa` after each optimizer iteration (**requires `-O1`/`-O2`**) (v0.3.2.6.5). |
 | `--time-phases` | **Phase Timings** | stderr | Prints per-phase timing and IR arena memory stats (`[TIME]`/`[MEM]`) (v0.3.2.9.2). |
+| `--backend=<b>` | **Backend Select** | - | Selects backend: `ir` (default) or `legacy` (Windows-only; requires build with `-DBAA_ENABLE_LEGACY_CODEGEN=ON`) (v0.3.2.9.3). |
+| `--compare-backends` | **Compare Backends** | stderr | Windows-only: builds + runs both `ir` and `legacy` backends and diffs runtime output (requires legacy-enabled build) (v0.3.2.9.3). |
 | `-funroll-loops` | **Loop Unrolling (Opt-in)** | - | Conservatively fully-unrolls small constant-trip-count loops after Out-of-SSA (v0.3.2.7.1). |
 | `--version` | **Version Info** | stdout | Displays compiler version and build date. |
 | `--help`, `-h` | **Help** | stdout | Shows usage information. |
@@ -147,6 +150,21 @@ Notes:
 
 - The runner uses repo-relative paths to avoid toolchain quoting issues when the repo path contains spaces.
 - `--time-phases` prints `[TIME]`/`[MEM]` lines to stderr for machine parsing.
+
+### 1.3.2. Regression Testing (v0.3.2.9.3)
+
+- Runner: `tests/regress.py`
+- On all hosts: runs `tests/test.py`.
+- On Windows (legacy-enabled build): runs `tests/corpus_compare/*.baa` via `--compare-backends`.
+
+Windows build (legacy backend enabled):
+
+```
+cmake -B build -G "MinGW Makefiles" -DBAA_ENABLE_LEGACY_CODEGEN=ON
+cmake --build build
+
+python tests\regress.py
+```
 
 The compiler uses a centralized **Diagnostic Module** (`src/error.c`) to handle errors and warnings.
 

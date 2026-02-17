@@ -8,6 +8,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.3.2.9.3] - 2026-02-17
+
+### Added
+
+- **Regression testing (v0.3.2.9.3)**
+  - Optional legacy backend (Windows-only): build with `-DBAA_ENABLE_LEGACY_CODEGEN=ON`.
+  - Driver flags: `--backend=ir|legacy` and `--compare-backends` (build+run both and compare runtime output).
+  - Regression runner: `tests/regress.py` (runs `tests/test.py` on all hosts; runs compare corpus on Windows).
+  - Compare corpus: `tests/corpus_compare/*.baa` (self-checking; exit 0 on PASS).
+
 ## [0.3.2.9.2] - 2026-02-17
 
 ### Added

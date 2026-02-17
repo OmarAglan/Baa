@@ -396,7 +396,7 @@
 
 #### v0.3.2.9.3: Regression Testing
 
-- [ ] **Output comparison** — Old codegen vs IR-based codegen.
+- [x] **Output comparison** — Old codegen vs IR-based codegen.
 - [ ] **Test all v0.2.x programs** — Ensure backward compatibility.
 - [ ] **Edge case testing** — Complex control flow, nested loops, recursion.
 - [ ] **Error case testing** — Verify error messages unchanged.

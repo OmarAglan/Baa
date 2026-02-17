@@ -1,7 +1,7 @@
 /**
  * @file main.c
  * @brief نقطة الدخول ومحرك سطر الأوامر (CLI Driver).
- * @version 0.3.2.9.2
+ * @version 0.3.2.9.3
  */
 
 #include "baa.h"
@@ -18,6 +18,11 @@
 #include "code_model.h"
 #include <time.h>
 #include <stdarg.h>
+
+#if defined(_WIN32) && defined(BAA_ENABLE_LEGACY_CODEGEN)
+// إعلان الخلفية القديمة (AST->ASM) عند تفعيلها في CMake.
+void codegen(Node* node, FILE* file);
+#endif
 
 #ifdef _WIN32
 #include <windows.h>
@@ -75,6 +80,12 @@ static bool path_quote(char* out, size_t out_cap, const char* path)
 // إعدادات المترجم (Compiler Configuration)
 // ============================================================================
 
+typedef enum
+{
+    BAA_BACKEND_IR = 0,
+    BAA_BACKEND_LEGACY = 1,
+} BaaBackendKind;
+
 typedef struct
 {
     char *input_file;   // ملف المصدر (.baa)
@@ -90,11 +101,13 @@ typedef struct
     bool verify_ssa;    // --verify-ssa: التحقق من صحة SSA (بعد Mem2Reg وقبل OutSSA)
     bool verify_gate;   // --verify-gate: تشغيل verify-ir/verify-ssa بعد كل دورة تمريرات داخل المُحسِّن (debug)
     bool time_phases;   // --time-phases: قياس وطمأنة أزمنة مراحل المُصرّف
+    bool compare_backends; // --compare-backends: مقارنة الخلفية القديمة مقابل خلفية IR (Windows-only)
     bool debug_info;    // --debug-info: إصدار معلومات ديبغ (سطر/ملف) داخل ملف .s
     bool funroll_loops; // -funroll-loops: فك الحلقات بعد Out-of-SSA (تحسين اختياري)
     OptLevel opt_level; // -O0, -O1, -O2: مستوى التحسين
     const BaaTarget* target; // --target=...: الهدف الحالي
     BaaCodegenOptions codegen_opts; // v0.3.2.8.3
+    BaaBackendKind backend; // --backend=ir|legacy: اختيار مسار الخلفية
     double start_time;  // وقت بدء الترجمة
 } CompilerConfig;
 
@@ -344,6 +357,293 @@ static const char *get_gcc_command(void)
 // IR Integration (v0.3.0.7)
 // ============================================================================
 
+#if defined(_WIN32)
+// ============================================================================
+// مقارنة الخلفيات (Regression: legacy vs IR) — Windows-only
+// ============================================================================
+
+static bool win_get_self_exe_path(char* out, size_t out_cap)
+{
+    if (!out || out_cap == 0) return false;
+    DWORD n = GetModuleFileNameA(NULL, out, (DWORD)out_cap);
+    if (n == 0 || n >= (DWORD)out_cap) return false;
+    out[n] = '\0';
+    return true;
+}
+
+static bool win_make_temp_path(char* out, size_t out_cap, const char* prefix, const char* ext)
+{
+    if (!out || out_cap == 0 || !prefix || !ext) return false;
+
+    char tmp_dir[MAX_PATH];
+    DWORD n = GetTempPathA((DWORD)sizeof(tmp_dir), tmp_dir);
+    if (n == 0 || n >= (DWORD)sizeof(tmp_dir)) return false;
+
+    char tmp_file[MAX_PATH];
+    UINT u = GetTempFileNameA(tmp_dir, prefix, 0, tmp_file);
+    if (u == 0) return false;
+
+    // GetTempFileNameA ينشئ الملف فعلياً؛ نحذفه ونستخدم الاسم كأساس.
+    (void)DeleteFileA(tmp_file);
+
+    // استبدال الامتداد.
+    char* dot = strrchr(tmp_file, '.');
+    if (!dot)
+    {
+        size_t need = strlen(tmp_file) + strlen(ext) + 1;
+        if (need > out_cap) return false;
+        (void)snprintf(out, out_cap, "%s%s", tmp_file, ext);
+        return true;
+    }
+
+    size_t base_len = (size_t)(dot - tmp_file);
+    size_t ext_len = strlen(ext);
+    if (base_len + ext_len + 1 > out_cap) return false;
+    memcpy(out, tmp_file, base_len);
+    memcpy(out + base_len, ext, ext_len + 1);
+    return true;
+}
+
+static const char* opt_level_to_flag(OptLevel lvl)
+{
+    switch (lvl)
+    {
+        case OPT_LEVEL_0: return "O0";
+        case OPT_LEVEL_1: return "O1";
+        case OPT_LEVEL_2: return "O2";
+        default: return "O1";
+    }
+}
+
+static int file_read_all(const char* path, char** out_buf, size_t* out_len)
+{
+    if (!out_buf || !out_len) return 0;
+    *out_buf = NULL;
+    *out_len = 0;
+
+    FILE* f = fopen(path, "rb");
+    if (!f) return 0;
+    if (fseek(f, 0, SEEK_END) != 0) { fclose(f); return 0; }
+    long n = ftell(f);
+    if (n < 0) { fclose(f); return 0; }
+    if (fseek(f, 0, SEEK_SET) != 0) { fclose(f); return 0; }
+
+    char* b = (char*)malloc((size_t)n + 1);
+    if (!b) { fclose(f); return 0; }
+
+    size_t got = fread(b, 1, (size_t)n, f);
+    fclose(f);
+    b[got] = '\0';
+    *out_buf = b;
+    *out_len = got;
+    return 1;
+}
+
+static void report_first_diff(const char* a, size_t a_len, const char* b, size_t b_len)
+{
+    size_t n = (a_len < b_len) ? a_len : b_len;
+    size_t i = 0;
+    for (; i < n; i++)
+    {
+        if (a[i] != b[i]) break;
+    }
+
+    fprintf(stderr, "اختلاف في المخرجات عند الموضع %zu.\n", i);
+    fprintf(stderr, "ملاحظة: قد يكون اختلاف CRLF/LF إذا كانت البيئة غير متسقة.\n");
+}
+
+static int run_compare_backends(const CompilerConfig* config, const char* input_file)
+{
+    if (!config || !input_file) return 1;
+
+#if !defined(BAA_ENABLE_LEGACY_CODEGEN)
+    fprintf(stderr,
+            "خطأ: وضع --compare-backends يتطلب بناء المترجم مع الخلفية القديمة.\n"
+            "أعد تهيئة CMake مع -DBAA_ENABLE_LEGACY_CODEGEN=ON.\n");
+    return 1;
+#else
+    if (!config->target || config->target->kind != BAA_TARGET_X86_64_WINDOWS)
+    {
+        fprintf(stderr, "خطأ: --compare-backends مدعوم فقط لهدف x86_64-windows.\n");
+        return 1;
+    }
+
+    // قيود المقارنة: ملف واحد، بناء نهائي، بدون خصائص IR الخاصة.
+    if (config->assembly_only || config->compile_only)
+    {
+        fprintf(stderr, "خطأ: --compare-backends يتطلب بناء وربط نهائي (بدون -S/-c).\n");
+        return 1;
+    }
+    if (config->dump_ir || config->emit_ir || config->dump_ir_opt || config->verify_ir || config->verify_ssa || config->verify_gate)
+    {
+        fprintf(stderr, "خطأ: --compare-backends لا يعمل مع أوضاع IR/التحقق (dump/verify).\n");
+        return 1;
+    }
+    if (config->funroll_loops)
+    {
+        fprintf(stderr, "خطأ: --compare-backends لا يعمل مع -funroll-loops (الخلفية القديمة لا تدعم ذلك).\n");
+        return 1;
+    }
+
+    char self_path[MAX_PATH];
+    if (!win_get_self_exe_path(self_path, sizeof(self_path)))
+    {
+        fprintf(stderr, "خطأ: فشل تحديد مسار المترجم الحالي.\n");
+        return 1;
+    }
+
+    char ir_exe[MAX_PATH];
+    char legacy_exe[MAX_PATH];
+    char ir_out[MAX_PATH];
+    char legacy_out[MAX_PATH];
+    if (!win_make_temp_path(ir_exe, sizeof(ir_exe), "baa", ".exe") ||
+        !win_make_temp_path(legacy_exe, sizeof(legacy_exe), "baa", ".exe") ||
+        !win_make_temp_path(ir_out, sizeof(ir_out), "baa", ".txt") ||
+        !win_make_temp_path(legacy_out, sizeof(legacy_out), "baa", ".txt"))
+    {
+        fprintf(stderr, "خطأ: فشل إنشاء مسارات مؤقتة للمقارنة.\n");
+        return 1;
+    }
+
+    char q_self[MAX_PATH * 2];
+    char q_input[MAX_PATH * 2];
+    char q_ir_exe[MAX_PATH * 2];
+    char q_legacy_exe[MAX_PATH * 2];
+    char q_ir_out[MAX_PATH * 2];
+    char q_legacy_out[MAX_PATH * 2];
+
+    if (!path_quote(q_self, sizeof(q_self), self_path) ||
+        !path_quote(q_input, sizeof(q_input), input_file) ||
+        !path_quote(q_ir_exe, sizeof(q_ir_exe), ir_exe) ||
+        !path_quote(q_legacy_exe, sizeof(q_legacy_exe), legacy_exe) ||
+        !path_quote(q_ir_out, sizeof(q_ir_out), ir_out) ||
+        !path_quote(q_legacy_out, sizeof(q_legacy_out), legacy_out))
+    {
+        fprintf(stderr, "خطأ: فشل اقتباس المسارات.\n");
+        return 1;
+    }
+
+    const char* opt = opt_level_to_flag(config->opt_level);
+    const char* tgt = config->target->name ? config->target->name : "x86_64-windows";
+
+    char cmd_ir[4096];
+    char cmd_legacy[4096];
+    {
+        size_t len = 0;
+        cmd_ir[0] = '\0';
+        if (!cmd_appendf(cmd_ir, sizeof(cmd_ir), &len,
+                         "%s -%s --target=%s --backend=ir %s -o %s",
+                         q_self, opt, tgt, q_input, q_ir_exe))
+        {
+            fprintf(stderr, "خطأ: أمر المقارنة (IR) طويل جداً.\n");
+            return 1;
+        }
+    }
+    {
+        size_t len = 0;
+        cmd_legacy[0] = '\0';
+        if (!cmd_appendf(cmd_legacy, sizeof(cmd_legacy), &len,
+                         "%s -%s --target=%s --backend=legacy %s -o %s",
+                         q_self, opt, tgt, q_input, q_legacy_exe))
+        {
+            fprintf(stderr, "خطأ: أمر المقارنة (legacy) طويل جداً.\n");
+            return 1;
+        }
+    }
+
+    if (config->verbose)
+    {
+        printf("[CMD] %s\n", cmd_ir);
+        printf("[CMD] %s\n", cmd_legacy);
+    }
+
+    if (system(cmd_ir) != 0)
+    {
+        fprintf(stderr, "فشل بناء نسخة IR أثناء المقارنة.\n");
+        return 1;
+    }
+    if (system(cmd_legacy) != 0)
+    {
+        fprintf(stderr, "فشل بناء نسخة legacy أثناء المقارنة.\n");
+        return 1;
+    }
+
+    char run_ir[4096];
+    char run_legacy[4096];
+    {
+        size_t len = 0;
+        run_ir[0] = '\0';
+        if (!cmd_appendf(run_ir, sizeof(run_ir), &len, "%s > %s 2>&1", q_ir_exe, q_ir_out))
+        {
+            fprintf(stderr, "خطأ: أمر التشغيل (IR) طويل جداً.\n");
+            return 1;
+        }
+    }
+    {
+        size_t len = 0;
+        run_legacy[0] = '\0';
+        if (!cmd_appendf(run_legacy, sizeof(run_legacy), &len, "%s > %s 2>&1", q_legacy_exe, q_legacy_out))
+        {
+            fprintf(stderr, "خطأ: أمر التشغيل (legacy) طويل جداً.\n");
+            return 1;
+        }
+    }
+
+    int rc_ir = system(run_ir);
+    int rc_legacy = system(run_legacy);
+
+    // حسب توصية المشروع: حتى لو تطابقت المخرجات، الفشل غير الصفري يجب أن يُفشل المقارنة.
+    if (rc_ir != 0 || rc_legacy != 0)
+    {
+        fprintf(stderr, "فشل تشغيل البرامج أثناء المقارنة (ir=%d, legacy=%d).\n", rc_ir, rc_legacy);
+        return 1;
+    }
+
+    char* a = NULL;
+    char* b = NULL;
+    size_t a_len = 0, b_len = 0;
+    if (!file_read_all(ir_out, &a, &a_len) || !file_read_all(legacy_out, &b, &b_len))
+    {
+        fprintf(stderr, "خطأ: فشل قراءة مخرجات المقارنة.\n");
+        free(a);
+        free(b);
+        return 1;
+    }
+
+    int ok = (a_len == b_len) && (memcmp(a, b, a_len) == 0);
+    if (!ok)
+    {
+        fprintf(stderr, "فشل: مخرجات الخلفيتين غير متطابقة.\n");
+        report_first_diff(a, a_len, b, b_len);
+    }
+
+    free(a);
+    free(b);
+
+    // إن طلب المستخدم -o، انسخ نسخة IR كـ "ناتج" افتراضي بعد نجاح المقارنة.
+    if (ok && config->output_file)
+    {
+        if (!CopyFileA(ir_exe, config->output_file, FALSE))
+        {
+            fprintf(stderr, "تحذير: فشل نسخ ناتج IR إلى -o (%s).\n", config->output_file);
+        }
+    }
+
+    (void)DeleteFileA(ir_exe);
+    (void)DeleteFileA(legacy_exe);
+    (void)DeleteFileA(ir_out);
+    (void)DeleteFileA(legacy_out);
+
+    if (ok)
+    {
+        if (config->verbose) printf("[INFO] compare-backends: PASS\n");
+        return 0;
+    }
+    return 1;
+#endif
+}
+#endif // _WIN32
+
 /**
  * @brief تحليل علم تحذير (-W...).
  * @return true إذا تم التعرف على العلم.
@@ -435,6 +735,8 @@ void print_help()
     printf("  -O2            Full optimization (+ CSE)\n");
     printf("  -funroll-loops  Unroll small constant-count loops (after Out-of-SSA)\n");
     printf("  --target=<t>    Target: x86_64-windows | x86_64-linux\n");
+    printf("  --backend=<b>   Backend: ir | legacy (legacy is Windows-only)\n");
+    printf("  --compare-backends  Windows-only: build+run both backends and compare output\n");
     printf("  -fPIC           Emit PIC-friendly code (ELF/Linux)\n");
     printf("  -fPIE           Build as PIE (ELF/Linux; adds -pie at link)\n");
     printf("  -fno-pic        Disable PIC\n");
@@ -483,6 +785,7 @@ int main(int argc, char **argv)
     config.funroll_loops = false;
     config.target = baa_target_host_default();
     config.codegen_opts = baa_codegen_options_default();
+    config.backend = BAA_BACKEND_IR;
 
     char *input_files[32]; // دعم حتى 32 ملف مصدر
     int input_count = 0;
@@ -558,6 +861,34 @@ int main(int argc, char **argv)
             else if (strcmp(arg, "--time-phases") == 0)
             {
                 config.time_phases = true;
+            }
+            else if (strncmp(arg, "--backend=", 10) == 0)
+            {
+                const char* b = arg + 10;
+                if (strcmp(b, "ir") == 0)
+                {
+                    config.backend = BAA_BACKEND_IR;
+                }
+                else if (strcmp(b, "legacy") == 0)
+                {
+#if !defined(_WIN32) || !defined(BAA_ENABLE_LEGACY_CODEGEN)
+                    fprintf(stderr,
+                            "خطأ: الخلفية القديمة (legacy) غير مفعلة في هذا البناء.\n"
+                            "ملاحظة (Windows): أعد تهيئة CMake مع -DBAA_ENABLE_LEGACY_CODEGEN=ON.\n");
+                    return 1;
+#else
+                    config.backend = BAA_BACKEND_LEGACY;
+#endif
+                }
+                else
+                {
+                    fprintf(stderr, "خطأ: قيمة --backend غير معروفة: %s\n", b);
+                    return 1;
+                }
+            }
+            else if (strcmp(arg, "--compare-backends") == 0)
+            {
+                config.compare_backends = true;
             }
             else if (strcmp(arg, "--debug-info") == 0)
             {
@@ -688,7 +1019,7 @@ int main(int argc, char **argv)
     }
 
     // تحديد اسم الملف المخرج الافتراضي
-    if (!config.output_file)
+    if (!config.output_file && !config.compare_backends)
     {
         if (config.assembly_only)
             config.output_file = NULL; // سيتم تحديده لكل ملف
@@ -725,6 +1056,47 @@ int main(int argc, char **argv)
                     "خطأ: الهدف '%s' لا يطابق نظام المضيف لمرحلة التجميع/الربط.\n"
                     "ملاحظة: استخدم -S لتوليد ملف .s فقط. الدعم الكامل لـ cross-target مؤجل.\n",
                     config.target->name ? config.target->name : "<unknown>");
+            return 1;
+        }
+    }
+
+    // مقارنة الخلفيات (Windows-only)
+    if (config.compare_backends)
+    {
+#ifdef _WIN32
+        if (input_count != 1)
+        {
+            fprintf(stderr, "خطأ: --compare-backends يتطلب ملف مصدر واحد فقط.\n");
+            return 1;
+        }
+        return run_compare_backends(&config, input_files[0]);
+#else
+        fprintf(stderr, "خطأ: --compare-backends مدعوم فقط على Windows.\n");
+        return 1;
+#endif
+    }
+
+    // قيود الخلفية القديمة
+    if (config.backend == BAA_BACKEND_LEGACY)
+    {
+        if (input_count != 1)
+        {
+            fprintf(stderr, "خطأ: الخلفية القديمة (legacy) تدعم ملفاً واحداً فقط (لتفادي تعارضات الأقسام/الرموز).\n");
+            return 1;
+        }
+        if (!config.target || config.target->kind != BAA_TARGET_X86_64_WINDOWS)
+        {
+            fprintf(stderr, "خطأ: الخلفية القديمة (legacy) مدعومة فقط لهدف x86_64-windows.\n");
+            return 1;
+        }
+        if (config.dump_ir || config.emit_ir || config.dump_ir_opt || config.verify_ir || config.verify_ssa || config.verify_gate)
+        {
+            fprintf(stderr, "خطأ: الخلفية القديمة (legacy) لا تدعم أوضاع IR/التحقق (dump/verify).\n");
+            return 1;
+        }
+        if (config.funroll_loops)
+        {
+            fprintf(stderr, "خطأ: -funroll-loops غير مدعوم على الخلفية القديمة (legacy).\n");
             return 1;
         }
     }
@@ -778,6 +1150,97 @@ int main(int argc, char **argv)
             fprintf(stderr, "Aborting %s: warnings treated as errors (-Werror).\n", current_input);
             free(source);
             return 1;
+        }
+
+        // ====================================================================
+        // الخلفية القديمة (AST -> ASM) — Windows-only
+        // ====================================================================
+        if (config.backend == BAA_BACKEND_LEGACY)
+        {
+#if defined(_WIN32) && defined(BAA_ENABLE_LEGACY_CODEGEN)
+            char *asm_file;
+            if (config.assembly_only && input_count == 1 && config.output_file)
+                asm_file = config.output_file;
+            else
+                asm_file = change_extension(current_input, ".s");
+
+            FILE *f_asm = fopen(asm_file, "w");
+            if (!f_asm)
+            {
+                printf("Error: Could not write assembly file '%s'\n", asm_file);
+                free(source);
+                return 1;
+            }
+
+            if (config.verbose)
+                printf("[INFO] Running legacy codegen (AST->ASM)...\n");
+
+            if (config.time_phases) t0 = get_time_seconds();
+            codegen(ast, f_asm);
+            if (config.time_phases) phase_times.emit_s += (get_time_seconds() - t0);
+            fclose(f_asm);
+
+            free(source);
+
+            if (config.assembly_only)
+            {
+                if (config.verbose)
+                    printf("[INFO] Generated assembly: %s\n", asm_file);
+                if (config.time_phases) phase_times.total_s += (get_time_seconds() - file_t0);
+                continue;
+            }
+
+            // التجميع (Assembly)
+            char *obj_file;
+            if (config.compile_only && input_count == 1 && config.output_file)
+                obj_file = config.output_file;
+            else
+                obj_file = change_extension(current_input, ".o");
+
+            char cmd_assemble[1024];
+            {
+                size_t cmd_len = 0;
+                cmd_assemble[0] = '\0';
+
+                if (!cmd_appendf(cmd_assemble, sizeof(cmd_assemble), &cmd_len,
+                                 "%s%s -c %s -o %s",
+                                 get_gcc_command(),
+                                 config.debug_info ? " -g" : "",
+                                 asm_file, obj_file))
+                {
+                    fprintf(stderr, "خطأ: أمر التجميع طويل جداً (تجاوز السعة).\n");
+                    return 1;
+                }
+            }
+
+            if (config.verbose)
+                printf("[CMD] %s\n", cmd_assemble);
+            double asm_t0 = 0.0;
+            if (config.time_phases) asm_t0 = get_time_seconds();
+            if (system(cmd_assemble) != 0)
+            {
+                printf("Error: Assembler failed for %s\n", current_input);
+                return 1;
+            }
+            if (config.time_phases) phase_times.assemble_s += (get_time_seconds() - asm_t0);
+
+            // تنظيف ملف التجميع المؤقت إذا لم يكن مطلوباً
+            if (!config.assembly_only && !config.verbose)
+            {
+                remove(asm_file);
+                if (asm_file != config.output_file)
+                    free(asm_file);
+            }
+
+            obj_files_to_link[obj_count++] = obj_file;
+
+            if (config.time_phases) phase_times.total_s += (get_time_seconds() - file_t0);
+            continue;
+#else
+            fprintf(stderr, "خطأ: الخلفية القديمة (legacy) غير متاحة في هذا البناء.\n");
+            free(source);
+            return 1;
+#endif
         }
 
         // 3.5. مرحلة IR (v0.3.0.7): AST → IR

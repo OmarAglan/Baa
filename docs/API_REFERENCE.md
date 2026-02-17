@@ -1958,7 +1958,7 @@ Descriptor for the common subexpression elimination pass, usable with the IR opt
 
 ---
 
-### 7.6. Optimization Pipeline (v0.3.1.6)
+### 7.6. Optimization Pipeline (v0.3.1.6, updated v0.3.2.8.6)
 
 #### `OptLevel`
 
@@ -1972,8 +1972,8 @@ typedef enum {
 
 Optimization level enum controlling which passes are run:
 - **O0:** No optimization (for debugging).
-- **O1:** Basic optimizations (mem2reg, constfold, copyprop, dce).
-- **O2:** Full optimizations (+ CSE, fixpoint iteration).
+- **O1:** Basic optimizations (Mem2Reg, Canon, InstCombine, SCCP, constfold, copyprop, DCE, CFG simplify, LICM).
+- **O2:** Full optimizations (+ inlining, GVN, CSE, fixpoint iteration).
 
 #### `ir_optimizer_run`
 
@@ -1988,14 +1988,21 @@ Runs the optimization pipeline on the given IR module.
 | `module`  | `IRModule*` | The IR module to optimize |
 | `level`   | `OptLevel` | Optimization level (O0, O1, O2) |
 
-**Returns:** `true` if any optimization was performed, `false` otherwise.
+**Returns:** `true` on success, `false` only on optimizer/verification failure.
 
 **Pass ordering:**
-0. Mem2Reg (ترقية الذاكرة إلى سجلات) — phi insertion + SSA renaming
-1. Constant Folding (طي_الثوابت)
-2. Copy Propagation (نشر_النسخ)
-3. CSE (حذف_المكرر) — O2 only
-4. Dead Code Elimination (حذف_الميت)
+0. (O2) Inlining (تضمين الدوال) — runs once before the fixpoint loop
+1. Mem2Reg (ترقية الذاكرة إلى سجلات) — phi insertion + SSA renaming
+2. Canonicalization (توحيد_الـIR)
+3. InstCombine (دمج_التعليمات)
+4. SCCP (نشر_الثوابت_المتناثر)
+5. Constant Folding (طي_الثوابت)
+6. Copy Propagation (نشر_النسخ)
+7. (O2) GVN (ترقيم_القيم)
+8. (O2) CSE (حذف_المكرر)
+9. Dead Code Elimination (حذف_الميت)
+10. CFG Simplification (تبسيط_CFG)
+11. LICM (حركة التعليمات غير المتغيرة)
 
 **Note:** Out-of-SSA (`ir_outssa_run()`) is executed by the driver before ISel, not as part of the optimizer fixpoint loop.
 

@@ -811,7 +811,7 @@ Canonical Mem2Reg is a correctness-first SSA construction step that promotes a s
 - Alloca block must dominate all uses (ensures SSA correctness)
 - Must be definitely initialized before any load on all paths (must-def initialization). The initializing `خزن` may be in a different block as long as every path to a `حمل` has a prior store.
 
-**Pipeline position:** Run first in the optimizer (before constfold/copyprop/CSE/DCE) via [`ir_optimizer_run()`](src/ir_optimizer.c:73).
+**Pipeline position:** Runs first inside each optimizer iteration (before Canon/InstCombine/SCCP/ConstFold/CopyProp/etc.) via [`ir_optimizer_run()`](src/ir_optimizer.c:73).
 
 ---
 
@@ -1191,10 +1191,10 @@ MachineModule (physical regs)
 
 Registers are allocated in a specific priority order to minimize callee-save overhead:
 
-1. **Caller-saved temporaries:** R10, R11 (free to use, no save/restore)
+1. **Caller-saved temporaries:** R10 (free to use, no save/restore). R11 is reserved as a scratch register for spill/base fixups.
 2. **General purpose:** RSI, RDI (caller-saved on Windows x64)
 3. **Callee-saved:** RBX, R12, R13, R14, R15 (require save/restore in prologue/epilogue)
-4. **ABI-reserved:** RAX, RCX, RDX, R8, R9 (return value / argument registers, allocated last)
+4. **ABI-reserved:** RCX, RDX, R8, R9 (argument registers, allocated last). RAX is reserved for return value and backend scratch sequences.
 
 **Always reserved:** RSP (stack pointer), RBP (frame pointer) — never allocated.
 
@@ -1206,6 +1206,7 @@ ISel emits negative vregs for ABI-fixed locations. The register allocator resolv
 |-------------|-------------|---------|
 | `-1` | RBP | Frame pointer (memory base) |
 | `-2` | RAX | Return value |
+| `-4` | R11 | Scratch register for spilled memory bases |
 | `-10` | RCX | 1st argument (Windows x64) |
 | `-11` | RDX | 2nd argument (Windows x64) |
 | `-12` | R8 | 3rd argument (Windows x64) |
@@ -1225,12 +1226,12 @@ The liveness analysis uses iterative dataflow on bitsets:
 
 #### 6.20.6. Spilling
 
-When register pressure exceeds available registers, the allocator spills the longest-lived interval (comparing current candidate vs active intervals). Spilled vregs are assigned stack offsets relative to RBP. During rewrite, spilled VREG operands are converted to MEM operands `[RBP + offset]`, leveraging x86-64's ability to have one memory operand per instruction.
+When register pressure exceeds available registers, the allocator spills the longest-lived interval (comparing current candidate vs active intervals). Spilled vregs are assigned stack offsets relative to RBP. During rewrite, spilled VREG operands are converted to MEM operands `[RBP + offset]`, leveraging x86-64's ability to have one memory operand per instruction. **Exception:** if a spilled vreg is used as the *base* of a memory operand (e.g. `MACH_LOAD`/`MACH_STORE` through a spilled pointer), the allocator reloads the pointer base into a reserved scratch register (R11) immediately before the instruction.
 
 #### 6.20.7. Design Decisions
 
 1. **Linear scan over graph coloring:** Chosen for simplicity and O(n log n) compilation speed. Sufficient for the current optimization level.
-2. **Spill via rewrite (not explicit loads/stores):** Spilled vregs become `[RBP+offset]` MEM operands directly, avoiding extra load/store instruction insertion. Works because x86-64 allows one memory operand per instruction.
+2. **Spill via rewrite (not explicit loads/stores):** Spilled vregs become `[RBP+offset]` MEM operands directly, avoiding extra load/store insertion. Works because x86-64 allows one memory operand per instruction. **Exception:** spilled pointer bases used in `MACH_OP_MEM.base_vreg` are reloaded into R11 before `MACH_LOAD`/`MACH_STORE`.
 3. **RSP/RBP always reserved:** Frame pointer is always maintained for simple stack access. No frame pointer omission.
 4. **Callee-saved tracking:** `RegAllocCtx.callee_saved_used[]` tracks which callee-saved registers are allocated, informing prologue/epilogue generation in the code emission phase.
 

@@ -323,25 +323,35 @@ Becomes:
 
 | Pass | Arabic | Description |
 |------|--------|-------------|
+| Canonicalize | `توحيد_الـIR` | Normalize instruction forms for better matching in later passes |
+| InstCombine | `دمج_التعليمات` | Fast local simplifications (rewrite to copies/constants) |
+| SCCP | `نشر_الثوابت_المتناثر` | Sparse conditional constant propagation + conditional branch folding |
+| Inlining | `تضمين` | Inline small internal functions (O2) |
 | Mem2Reg | `ترقية_الذاكرة_إلى_سجلات` | Promote simple allocas to direct SSA register use |
 | Constant Fold | `طي_الثوابت` | Evaluate constants at compile time |
-| Dead Code | `حذف_الميت` | Remove unreachable code |
 | Copy Propagation | `نشر_النسخ` | Replace copies with original |
+| GVN | `ترقيم_القيم` | Remove redundant pure expressions across dominator scopes |
 | Common Subexpr | `حذف_المكرر` | Eliminate redundant computations |
+| Dead Code | `حذف_الميت` | Remove dead instructions + unreachable blocks |
+| CFG Simplify | `تبسيط_CFG` | Merge trivial blocks, remove redundant branches |
+| LICM | `LICM` | Hoist pure loop-invariant computations to preheaders |
 
 ### 7.3 Pass Order
 
 **Optimizer pipeline (O1/O2):**
 
-1. `تضمين` - Inline small internal functions with a single call site (O2) (v0.3.2.7.2)
-2. `ترقية_الذاكرة_إلى_سجلات` - Promote safe allocas to SSA (Mem2Reg)
-3. `توحيد_الـIR` - Canonicalize operand ordering/forms
-4. `طي_الثوابت` - Fold constant expressions
-5. `نشر_النسخ` - Propagate copies
-6. `حذف_المكرر` - Eliminate common subexpressions (O2)
-7. `حذف_الميت` - Remove dead code + unreachable blocks
-8. `تبسيط_CFG` - Simplify CFG (merge trivial blocks, remove redundant branches)
-9. `LICM` - Hoist pure loop-invariant computations to preheaders (v0.3.2.7.1)
+0. `تضمين` - Inline small internal functions with a single call site (O2) (v0.3.2.7.2)
+1. `ترقية_الذاكرة_إلى_سجلات` - Promote safe allocas to SSA (Mem2Reg)
+2. `توحيد_الـIR` - Canonicalize operand ordering/forms
+3. `دمج_التعليمات` - Fast local simplifications (v0.3.2.8.6)
+4. `نشر_الثوابت_المتناثر` - SCCP: constant propagation + reachability-based CFG folding (v0.3.2.8.6)
+5. `طي_الثوابت` - Fold constant expressions
+6. `نشر_النسخ` - Propagate copies
+7. `ترقيم_القيم` - GVN: eliminate redundant pure expressions (O2) (v0.3.2.8.6)
+8. `حذف_المكرر` - Eliminate common subexpressions (O2)
+9. `حذف_الميت` - Remove dead code + unreachable blocks
+10. `تبسيط_CFG` - Simplify CFG (merge trivial blocks, remove redundant branches)
+11. `LICM` - Hoist pure loop-invariant computations to preheaders (v0.3.2.7.1)
 
 **After optimization:**
 

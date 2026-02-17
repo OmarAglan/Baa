@@ -22,6 +22,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - **Optimizer pipeline ordering** — `InstCombine` + `SCCP` now run early (after `Canon`) and `GVN` runs at `-O2` (before `CSE`).
 - **Mem2Reg promotability** — replaced the “init store must be in the alloca block” rule with a must-def initialization check across the CFG (test: `tests/ir_mem2reg_promote_test.c`).
 
+### Fixed
+
+- **RegAlloc spilled pointer bases** — when a pointer vreg is spilled and later used as the base of a memory operand, the allocator now reloads it into a reserved scratch register before `MACH_LOAD`/`MACH_STORE`, preventing invalid addressing and runtime crashes (covers `tests/backend_regalloc_stress.baa`).
+
 ## [0.3.2.8.5] - 2026-02-17
 
 ### Added

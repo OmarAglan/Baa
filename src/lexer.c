@@ -150,7 +150,7 @@ Token lexer_next_token(Lexer* l) {
                  
                  size_t len = l->state.cur_char - dir_start;
                  char* directive = malloc(len + 1);
-                 strncpy(directive, dir_start, len);
+                 if (len) memcpy(directive, dir_start, len);
                  directive[len] = '\0';
                  
                  // 1. #تضمين (Include)
@@ -166,7 +166,7 @@ Token lexer_next_token(Lexer* l) {
                      while (peek(l) != '"' && peek(l) != '\0') advance_pos(l);
                      size_t path_len = l->state.cur_char - path_start;
                      char* path = malloc(path_len + 1);
-                     strncpy(path, path_start, path_len);
+                     if (path_len) memcpy(path, path_start, path_len);
                      path[path_len] = '\0';
                      advance_pos(l); // skip "
 
@@ -199,7 +199,7 @@ Token lexer_next_token(Lexer* l) {
                      while (!isspace(peek(l)) && peek(l) != '\0') advance_pos(l);
                      size_t name_len = l->state.cur_char - name_start;
                      char* name = malloc(name_len + 1);
-                     strncpy(name, name_start, name_len);
+                     if (name_len) memcpy(name, name_start, name_len);
                      name[name_len] = '\0';
 
                      // قراءة القيمة (باقي السطر)
@@ -208,7 +208,7 @@ Token lexer_next_token(Lexer* l) {
                      while (peek(l) != '\n' && peek(l) != '\0' && peek(l) != '\r') advance_pos(l); // لنهاية السطر
                      size_t val_len = l->state.cur_char - val_start;
                      char* val = malloc(val_len + 1);
-                     strncpy(val, val_start, val_len);
+                     if (val_len) memcpy(val, val_start, val_len);
                      val[val_len] = '\0';
 
                      // تنظيف القيمة من المسافات الزائدة في النهاية
@@ -228,7 +228,7 @@ Token lexer_next_token(Lexer* l) {
                      while (!isspace(peek(l)) && peek(l) != '\0') advance_pos(l);
                      size_t name_len = l->state.cur_char - name_start;
                      char* name = malloc(name_len + 1);
-                     strncpy(name, name_start, name_len);
+                     if (name_len) memcpy(name, name_start, name_len);
                      name[name_len] = '\0';
 
                      bool defined = (get_macro_value(l, name) != NULL);
@@ -263,7 +263,7 @@ Token lexer_next_token(Lexer* l) {
                      while (!isspace(peek(l)) && peek(l) != '\0') advance_pos(l);
                      size_t name_len = l->state.cur_char - name_start;
                      char* name = malloc(name_len + 1);
-                     strncpy(name, name_start, name_len);
+                     if (name_len) memcpy(name, name_start, name_len);
                      name[name_len] = '\0';
 
                      remove_macro(l, name);
@@ -322,7 +322,7 @@ Token lexer_next_token(Lexer* l) {
         }
         size_t len = l->state.cur_char - start;
         char* str = malloc(len + 1);
-        strncpy(str, start, len);
+        if (len) memcpy(str, start, len);
         str[len] = '\0';
         advance_pos(l); // تخطي " النهاية
         token.type = TOKEN_STRING;
@@ -471,7 +471,7 @@ Token lexer_next_token(Lexer* l) {
         
         size_t len = l->state.cur_char - start;
         char* word = malloc(len + 1);
-        strncpy(word, start, len);
+        if (len) memcpy(word, start, len);
         word[len] = '\0';
 
         // 1. Check for Macro substitution
@@ -484,7 +484,7 @@ Token lexer_next_token(Lexer* l) {
                 size_t vlen = strlen(macro_val);
                 if (vlen >= 2) {
                     char* val = malloc(vlen - 1);
-                    strncpy(val, macro_val + 1, vlen - 2);
+                    if (vlen > 2) memcpy(val, macro_val + 1, vlen - 2);
                     val[vlen - 2] = '\0';
                     token.value = val;
                 } else {

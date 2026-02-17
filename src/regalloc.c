@@ -65,6 +65,10 @@ static const BaaCallingConv* regalloc_cc_or_default(const BaaTarget* target)
     return baa_target_builtin_windows_x86_64()->cc;
 }
 
+// سجل خدش محجوز: يُستخدم لإعادة تحميل مؤشرات مسرّبة عند استخدامها كقاعدة في معاملات الذاكرة.
+// يجب ألا يُخصص هذا السجل لأي vreg عادي (انظر alloc_order).
+#define REGALLOC_VREG_SCRATCH_BASE (-4)
+
 static bool reg_is_caller_saved_cc(const BaaCallingConv* cc, PhysReg reg)
 {
     if (!cc) return false;
@@ -92,7 +96,8 @@ static bool reg_is_callee_saved_cc(const BaaCallingConv* cc, PhysReg reg)
 static const PhysReg alloc_order[] = {
     // سجلات مؤقتة (caller-saved) أولاً
     PHYS_R10,
-    PHYS_R11,
+    // ملاحظة: نحتفظ بـ R11 كسجل خدش (scratch) لتصحيح حالات التسريب
+    // عندما يكون سجل القاعدة في معاملات الذاكرة مسرّباً.
     // سجلات عامة
     PHYS_RSI,
     PHYS_RDI,
@@ -103,7 +108,6 @@ static const PhysReg alloc_order[] = {
     PHYS_R14,
     PHYS_R15,
     // سجلات ABI (نتجنبها لأنها قد تتعارض مع معاملات الدوال)
-    PHYS_RAX,
     PHYS_RCX,
     PHYS_RDX,
     PHYS_R8,
@@ -929,6 +933,7 @@ void regalloc_linear_scan(RegAllocCtx *ctx)
  * الاتفاقيات:
  *   vreg -1  → RBP (مؤشر الإطار)
  *   vreg -2  → (افتراضي) سجل الإرجاع (عادة RAX)
+ *   vreg -4  → R11 (سجل خدش محجوز لتصحيح تسريب قاعدة الذاكرة)
  *   vreg -10.. → سجلات معاملات ABI حسب الهدف (يُحل عبر calling convention)
  */
 static PhysReg resolve_special_vreg(int vreg)
@@ -939,6 +944,8 @@ static PhysReg resolve_special_vreg(int vreg)
         return PHYS_RBP;
     case -3:
         return PHYS_RSP;
+    case -4:
+        return PHYS_R11;
     default:
         return PHYS_NONE;
     }
@@ -1071,6 +1078,52 @@ void regalloc_rewrite(RegAllocCtx *ctx)
 // إدراج كود التسريب (Spill Code Insertion)
 // ============================================================================
 
+static void mach_block_insert_before_local(MachineBlock* block, MachineInst* pos, MachineInst* inst)
+{
+    if (!block || !pos || !inst) return;
+
+    inst->next = pos;
+    inst->prev = pos->prev;
+
+    if (pos->prev) pos->prev->next = inst;
+    else block->first = inst;
+
+    pos->prev = inst;
+    block->inst_count++;
+}
+
+static void regalloc_fix_mem_base_operand(RegAllocCtx* ctx,
+                                          MachineBlock* block,
+                                          MachineInst* pos,
+                                          MachineOperand* op,
+                                          int* io_used_scratch)
+{
+    if (!ctx || !block || !pos || !op) return;
+    if (op->kind != MACH_OP_MEM) return;
+
+    int base = op->data.mem.base_vreg;
+    if (base < 0) return;
+    if (base >= ctx->max_vreg) return;
+    if (!ctx->vreg_spilled[base]) return;
+
+    // إذا استخدمنا سجل الخدش مسبقاً في نفس التعليمة، لا يمكننا معالجة قاعدة ثانية.
+    if (io_used_scratch && *io_used_scratch) return;
+
+    int32_t spill_off = (int32_t)ctx->vreg_spill_offset[base];
+
+    // reload: %r11 = [rbp + spill_off]
+    MachineOperand dst = mach_op_vreg(REGALLOC_VREG_SCRATCH_BASE, 64);
+    MachineOperand src = mach_op_mem(-1, spill_off, 64);
+    MachineInst* reload = mach_inst_new(MACH_LOAD, dst, src, mach_op_none());
+    if (!reload) return;
+    reload->comment = "// إعادة تحميل مؤشر مسرّب";
+
+    mach_block_insert_before_local(block, pos, reload);
+    op->data.mem.base_vreg = REGALLOC_VREG_SCRATCH_BASE;
+
+    if (io_used_scratch) *io_used_scratch = 1;
+}
+
 void regalloc_insert_spill_code(RegAllocCtx *ctx)
 {
     if (!ctx || !ctx->func || ctx->spill_count == 0)
@@ -1087,8 +1140,16 @@ void regalloc_insert_spill_code(RegAllocCtx *ctx)
     // الحالات التي تحتاج معالجة خاصة (معاملان ذاكرة) ستُعالج
     // في مرحلة إصدار الكود (v0.3.2.3) بإدراج سجل مؤقت.
 
-    // حالياً: إعادة الكتابة كافية لأن تحويل VREG → MEM يعمل مباشرة.
-    // التسريب الفعلي يحدث ضمنياً عبر إعادة الكتابة.
+    for (MachineBlock *block = ctx->func->blocks; block; block = block->next)
+    {
+        for (MachineInst *inst = block->first; inst; inst = inst->next)
+        {
+            int used_scratch = 0;
+            regalloc_fix_mem_base_operand(ctx, block, inst, &inst->dst, &used_scratch);
+            regalloc_fix_mem_base_operand(ctx, block, inst, &inst->src1, &used_scratch);
+            regalloc_fix_mem_base_operand(ctx, block, inst, &inst->src2, &used_scratch);
+        }
+    }
 }
 
 // ============================================================================

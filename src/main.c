@@ -165,6 +165,15 @@ static double get_time_seconds(void)
 #endif
 }
 
+static BaaObjectFormat host_object_format(void)
+{
+#ifdef _WIN32
+    return BAA_OBJFORMAT_COFF;
+#else
+    return BAA_OBJFORMAT_ELF;
+#endif
+}
+
 // ============================================================================
 // دالات مساعدة (Helper Functions)
 // ============================================================================
@@ -645,6 +654,21 @@ int main(int argc, char **argv)
     // قائمة ملفات الكائنات للربط
     char *obj_files_to_link[32];
     int obj_count = 0;
+
+    // v0.3.2.8.4: لا ندعم حالياً الربط/التجميع العابر للأهداف (cross-link/cross-assemble).
+    // - نسمح بـ -S لتوليد assembly فقط لأي هدف.
+    // - أما -c أو الربط النهائي فيتطلبان أن يطابق الهدف نظام المضيف.
+    if (!config.assembly_only)
+    {
+        if (config.target && config.target->obj_format != host_object_format())
+        {
+            fprintf(stderr,
+                    "خطأ: الهدف '%s' لا يطابق نظام المضيف لمرحلة التجميع/الربط.\n"
+                    "ملاحظة: استخدم -S لتوليد ملف .s فقط. الدعم الكامل لـ cross-target مؤجل.\n",
+                    config.target->name ? config.target->name : "<unknown>");
+            return 1;
+        }
+    }
 
     // --- حلقة المعالجة لكل ملف ---
     for (int i = 0; i < input_count; i++)

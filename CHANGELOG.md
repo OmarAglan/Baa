@@ -8,6 +8,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.3.2.8.4] - 2026-02-17
+
+### Added
+
+- **Linux x86-64 target (v0.3.2.8.4)**
+  - Native Linux build of the compiler (`baa`) with CMake + GCC/Clang.
+  - ELF output support: `.rodata`/`.data`/`.text` + `.note.GNU-stack`.
+  - SystemV AMD64 ABI support for register arguments (up to 6).
+  - Links using host `gcc` for now.
+
+### Changed
+
+- **No cross-link/cross-assemble yet** — when the selected `--target` does not match the host object format, compilation is allowed only with `-S` (assembly output). Linking/`-c` cross-target is deferred.
+
 ## [0.3.2.8.3] - 2026-02-17
 
 ### Added

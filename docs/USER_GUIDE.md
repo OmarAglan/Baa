@@ -1,6 +1,6 @@
 # Baa User Guide
 
-> **Version:** 0.3.2.8.3 | [← README](../README.md) | [Language Spec →](LANGUAGE.md)
+> **Version:** 0.3.2.8.4 | [← README](../README.md) | [Language Spec →](LANGUAGE.md)
 
 Welcome to Baa (باء)! This guide will help you write your first Arabic computer program and use the Baa compiler toolchain.
 
@@ -167,6 +167,10 @@ The Baa compiler is a full-featured command-line tool (since v0.2.0):
 ### Current Limitations (v0.3.2.8.2+)
 
 - Function calls currently support **register arguments only** (Windows: up to 4 args, Linux/SysV: up to 6 args). Calls requiring stack arguments are rejected for now (planned in v0.3.2.8.5).
+
+### Cross-Target Notes (v0.3.2.8.4)
+
+- If the selected `--target` does not match the host toolchain/object format, the compiler currently supports **assembly-only** mode (`-S`) only. Cross-target `-c` and linking are deferred.
 
 ### Warning Flags (v0.2.8+)
 

@@ -347,11 +347,13 @@
 
 #### v0.3.2.8.4: Linux x86-64 Target 🐧
 
-- [ ] **Native Linux build of compiler** — build `baa` on Linux with GCC/Clang + CMake.
-- [ ] **SystemV AMD64 ABI implementation** — different calling convention from Windows.
-- [ ] **ELF output support** — `.rodata`/`.data`/`.text` directives compatible with ELF GAS.
-- [ ] **Link with host gcc (for now)** — produce ELF executables via host toolchain; later reduce/remove GCC dependency.
-- [ ] **Cross-compilation (later)** — optional `--target=x86_64-linux` from Windows once a cross toolchain story exists.
+✅ COMPLETED (2026-02-17)
+
+- [x] **Native Linux build of compiler** — build `baa` on Linux with GCC/Clang + CMake.
+- [x] **SystemV AMD64 ABI implementation** — different calling convention from Windows.
+- [x] **ELF output support** — `.rodata`/`.data`/`.text` directives compatible with ELF GAS.
+- [x] **Link with host gcc (for now)** — produce ELF executables via host toolchain; later reduce/remove GCC dependency.
+- [x] **Cross-compilation (later)** — optional `--target=x86_64-linux` from Windows once a cross toolchain story exists.
 
 #### v0.3.2.8.5: Windows x64 Stack Args + Full Tail Calls
 

@@ -1,6 +1,6 @@
 # Baa Internal API Reference
 
-> **Version:** 0.3.2.9.1 | [← Compiler Internals](INTERNALS.md) | [IR Specification →](BAA_IR_SPECIFICATION.md)
+> **Version:** 0.3.2.9.2 | [← Compiler Internals](INTERNALS.md) | [IR Specification →](BAA_IR_SPECIFICATION.md)
 
 This document details the C functions, enumerations, and structures defined in `src/baa.h`, `src/ir.h`, `src/ir_arena.h`, `src/ir_mutate.h`, `src/ir_defuse.h`, `src/ir_clone.h`, `src/ir_text.h`, `src/ir_loop.h`, `src/ir_licm.h`, `src/ir_unroll.h`, `src/ir_inline.h`, `src/ir_builder.h`, `src/ir_lower.h`, `src/ir_analysis.h`, `src/ir_pass.h`, `src/ir_mem2reg.h`, `src/ir_outssa.h`, `src/ir_verify_ssa.h`, `src/ir_verify_ir.h`, `src/ir_canon.h`, `src/ir_cfg_simplify.h`, `src/ir_dce.h`, `src/ir_copyprop.h`, `src/ir_cse.h`, `src/ir_optimizer.h`, `src/target.h`, `src/isel.h`, `src/regalloc.h`, and `src/emit.h`.
 
@@ -161,6 +161,18 @@ Runs the semantic pass on the AST.
 The IR Module (`src/ir.h`, `src/ir.c`) provides Baa's Arabic-first Intermediate Representation.
 
 **Memory management (v0.3.2.6.1):** IR objects are allocated from a module-owned arena (`src/ir_arena.c`). Treat the IR as **module-owned** and release everything with `ir_module_free()`. The legacy `*_free` functions remain for compatibility but do not perform per-object frees under the arena model.
+
+**Arena stats (v0.3.2.9.2):** you can query arena usage for profiling:
+
+```c
+typedef struct IRArenaStats {
+    size_t chunks;
+    size_t used_bytes;
+    size_t cap_bytes;
+} IRArenaStats;
+
+void ir_arena_get_stats(const IRArena* arena, IRArenaStats* out_stats);
+```
 
 ### 4.1. Type Construction
 

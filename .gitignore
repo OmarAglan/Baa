@@ -11,3 +11,8 @@ mingw64.7z
 *.s
 *.exe
 /build-linux
+
+# نواتج القياس/البنشمارك
+/.bench_out
+/bench/results/*.json
+/bench/results/*.csv

@@ -1,6 +1,6 @@
 # Baa Compiler Internals
 
-> **Version:** 0.3.2.9.1 | [← Language Spec](LANGUAGE.md) | [API Reference →](API_REFERENCE.md)
+> **Version:** 0.3.2.9.2 | [← Language Spec](LANGUAGE.md) | [API Reference →](API_REFERENCE.md)
 
 **Target Architecture:** x86-64 (AMD64)
 **Target OS:** Windows (MinGW-w64 Toolchain)
@@ -112,12 +112,41 @@ The driver in `main.c` (v0.2.0+) supports multi-file compilation and various mod
 | `--verify-ir` | **IR Verification** | stderr | Verifies IR well-formedness (operands/types/terminators/phi/calls) after optimization and before Out-of-SSA/backend (v0.3.2.6.5). |
 | `--verify-ssa` | **SSA Verification** | stderr | Verifies SSA invariants after Mem2Reg and before Out-of-SSA (**requires `-O1`/`-O2`**) (v0.3.2.5.3). |
 | `--verify-gate` | **Verifier Gate (Debug)** | stderr | Runs `--verify-ir`/`--verify-ssa` after each optimizer iteration (**requires `-O1`/`-O2`**) (v0.3.2.6.5). |
+| `--time-phases` | **Phase Timings** | stderr | Prints per-phase timing and IR arena memory stats (`[TIME]`/`[MEM]`) (v0.3.2.9.2). |
 | `-funroll-loops` | **Loop Unrolling (Opt-in)** | - | Conservatively fully-unrolls small constant-trip-count loops after Out-of-SSA (v0.3.2.7.1). |
 | `--version` | **Version Info** | stdout | Displays compiler version and build date. |
 | `--help`, `-h` | **Help** | stdout | Shows usage information. |
 | `update` | **Self-Update** | - | Downloads and installs the latest version. |
 
 ### 1.3. Diagnostic Engine
+
+### 1.3.1. Benchmarking (v0.3.2.9.2)
+
+The repository includes a small benchmark suite under `bench/` and a runner script:
+
+- Runner: `scripts/bench.py`
+- Bench programs: `bench/runtime_*.baa` (compile+run) and `bench/compile_*.baa` (compile-time/memory)
+
+Examples:
+
+```
+# Run all benchmarks (compile + runtime)
+python3 scripts/bench.py --mode all
+
+# Compile-only benchmark (compiler only, no assembler/linker)
+python3 scripts/bench.py --mode compile_s --opt O2
+
+# Memory profiling on Linux (uses /usr/bin/time -v)
+python3 scripts/bench.py --mode mem --opt O2
+
+# Include verifier and per-phase stats
+python3 scripts/bench.py --mode compile_s --opt O2 --verify --time-phases
+```
+
+Notes:
+
+- The runner uses repo-relative paths to avoid toolchain quoting issues when the repo path contains spaces.
+- `--time-phases` prints `[TIME]`/`[MEM]` lines to stderr for machine parsing.
 
 The compiler uses a centralized **Diagnostic Module** (`src/error.c`) to handle errors and warnings.
 

@@ -40,6 +40,20 @@ void ir_arena_destroy(IRArena* arena) {
     arena->head = NULL;
 }
 
+void ir_arena_get_stats(const IRArena* arena, IRArenaStats* out_stats) {
+    if (!out_stats) return;
+    out_stats->chunks = 0;
+    out_stats->used_bytes = 0;
+    out_stats->cap_bytes = 0;
+
+    if (!arena) return;
+    for (const IRArenaChunk* c = arena->head; c; c = c->next) {
+        out_stats->chunks++;
+        out_stats->used_bytes += c->used;
+        out_stats->cap_bytes += c->cap;
+    }
+}
+
 void* ir_arena_alloc(IRArena* arena, size_t size, size_t align) {
     if (!arena) return NULL;
     if (size == 0) size = 1;

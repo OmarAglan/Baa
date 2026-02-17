@@ -1,7 +1,7 @@
 /**
  * @file main.c
  * @brief نقطة الدخول ومحرك سطر الأوامر (CLI Driver).
- * @version 0.3.2.6.5
+ * @version 0.3.2.9.2
  */
 
 #include "baa.h"
@@ -89,6 +89,7 @@ typedef struct
     bool verify_ir;     // --verify-ir: التحقق من سلامة/تشكيل الـ IR (well-formedness)
     bool verify_ssa;    // --verify-ssa: التحقق من صحة SSA (بعد Mem2Reg وقبل OutSSA)
     bool verify_gate;   // --verify-gate: تشغيل verify-ir/verify-ssa بعد كل دورة تمريرات داخل المُحسِّن (debug)
+    bool time_phases;   // --time-phases: قياس وطمأنة أزمنة مراحل المُصرّف
     bool debug_info;    // --debug-info: إصدار معلومات ديبغ (سطر/ملف) داخل ملف .s
     bool funroll_loops; // -funroll-loops: فك الحلقات بعد Out-of-SSA (تحسين اختياري)
     OptLevel opt_level; // -O0, -O1, -O2: مستوى التحسين
@@ -96,6 +97,29 @@ typedef struct
     BaaCodegenOptions codegen_opts; // v0.3.2.8.3
     double start_time;  // وقت بدء الترجمة
 } CompilerConfig;
+
+typedef struct
+{
+    double read_file_s;
+    double parse_s;
+    double analyze_s;
+    double lower_ir_s;
+    double optimize_s;
+    double verify_ir_s;
+    double verify_ssa_s;
+    double outssa_s;
+    double unroll_s;
+    double isel_s;
+    double regalloc_s;
+    double emit_s;
+    double assemble_s;
+    double link_s;
+    double total_s;
+
+    size_t ir_arena_used_max;
+    size_t ir_arena_cap_max;
+    size_t ir_arena_chunks_max;
+} CompilerPhaseTimes;
 
 // ============================================================================
 // بناء الأوامر بأمان (Safe Command Builder)
@@ -404,6 +428,7 @@ void print_help()
     printf("  --verify-ir    Verify IR well-formedness (operands/types/terminators/phi/calls)\n");
     printf("  --verify-ssa   Verify SSA invariants after Mem2Reg (requires -O1/-O2)\n");
     printf("  --verify-gate  Debug: run verify-ir/verify-ssa after each optimizer iteration\n");
+    printf("  --time-phases  Print per-phase timing/memory stats\n");
     printf("  --debug-info   Emit debug line info (.file/.loc) and pass -g to toolchain\n");
     printf("  -O0            Disable optimization\n");
     printf("  -O1            Basic optimization (default)\n");
@@ -529,6 +554,10 @@ int main(int argc, char **argv)
             else if (strcmp(arg, "--verify-gate") == 0)
             {
                 config.verify_gate = true;
+            }
+            else if (strcmp(arg, "--time-phases") == 0)
+            {
+                config.time_phases = true;
             }
             else if (strcmp(arg, "--debug-info") == 0)
             {
@@ -683,6 +712,8 @@ int main(int argc, char **argv)
     char *obj_files_to_link[32];
     int obj_count = 0;
 
+    CompilerPhaseTimes phase_times = {0};
+
     // v0.3.2.8.4: لا ندعم حالياً الربط/التجميع العابر للأهداف (cross-link/cross-assemble).
     // - نسمح بـ -S لتوليد assembly فقط لأي هدف.
     // - أما -c أو الربط النهائي فيتطلبان أن يطابق الهدف نظام المضيف.
@@ -703,16 +734,24 @@ int main(int argc, char **argv)
     {
         char *current_input = input_files[i];
 
+        double file_t0 = 0.0;
+        if (config.time_phases) file_t0 = get_time_seconds();
+
         if (config.verbose)
             printf("\n[INFO] Processing %s (%d/%d)...\n", current_input, i + 1, input_count);
 
         // 1. قراءة الملف
+        double t0 = 0.0;
+        if (config.time_phases) t0 = get_time_seconds();
         char *source = read_file(current_input);
+        if (config.time_phases) phase_times.read_file_s += (get_time_seconds() - t0);
 
         // 2. التحليل اللفظي والقواعدي
+        if (config.time_phases) t0 = get_time_seconds();
         Lexer lexer;
         lexer_init(&lexer, source, current_input);
         Node *ast = parse(&lexer);
+        if (config.time_phases) phase_times.parse_s += (get_time_seconds() - t0);
 
         if (error_has_occurred())
         {
@@ -724,12 +763,14 @@ int main(int argc, char **argv)
         // 3. التحليل الدلالي
         if (config.verbose)
             printf("[INFO] Running semantic analysis...\n");
+        if (config.time_phases) t0 = get_time_seconds();
         if (!analyze(ast))
         {
             fprintf(stderr, "Aborting %s due to semantic errors.\n", current_input);
             free(source);
             return 1;
         }
+        if (config.time_phases) phase_times.analyze_s += (get_time_seconds() - t0);
 
         // التحقق من التحذيرات كأخطاء
         if (g_warning_config.warnings_as_errors && warning_has_occurred())
@@ -740,7 +781,9 @@ int main(int argc, char **argv)
         }
 
         // 3.5. مرحلة IR (v0.3.0.7): AST → IR
+        if (config.time_phases) t0 = get_time_seconds();
         IRModule *ir_module = ir_lower_program(ast, current_input);
+        if (config.time_phases) phase_times.lower_ir_s += (get_time_seconds() - t0);
         if (!ir_module)
         {
             fprintf(stderr, "Aborting %s: internal IR lowering failure.\n", current_input);
@@ -780,6 +823,8 @@ int main(int argc, char **argv)
             if (config.verbose)
                 printf("[INFO] Running optimizer (-%s)...\n", ir_optimizer_level_name(config.opt_level));
 
+            if (config.time_phases) t0 = get_time_seconds();
+
             if (config.verify_gate) {
                 ir_optimizer_set_verify_gate(1);
             }
@@ -794,6 +839,8 @@ int main(int argc, char **argv)
                 free(source);
                 return 1;
             }
+
+            if (config.time_phases) phase_times.optimize_s += (get_time_seconds() - t0);
 
             if (config.verify_gate) {
                 ir_optimizer_set_verify_gate(0);
@@ -814,6 +861,8 @@ int main(int argc, char **argv)
             if (config.verbose)
                 printf("[INFO] Verifying IR well-formedness (--verify-ir)...\n");
 
+            if (config.time_phases) t0 = get_time_seconds();
+
             if (!ir_module_verify_ir(ir_module, stderr))
             {
                 fprintf(stderr, "فشل التحقق من سلامة الـ IR.\n");
@@ -821,6 +870,8 @@ int main(int argc, char **argv)
                 free(source);
                 return 1;
             }
+
+            if (config.time_phases) phase_times.verify_ir_s += (get_time_seconds() - t0);
         }
 
         // 3.6.25. التحقق من SSA (v0.3.2.5.3): بعد Mem2Reg وقبل الخروج من SSA
@@ -837,6 +888,7 @@ int main(int argc, char **argv)
             if (config.verbose)
                 printf("[INFO] Verifying SSA (--verify-ssa)...\n");
 
+            if (config.time_phases) t0 = get_time_seconds();
             if (!ir_module_verify_ssa(ir_module, stderr))
             {
                 fprintf(stderr, "فشل التحقق من SSA.\n");
@@ -844,11 +896,15 @@ int main(int argc, char **argv)
                 free(source);
                 return 1;
             }
+
+            if (config.time_phases) phase_times.verify_ssa_s += (get_time_seconds() - t0);
         }
 
         // 3.6.5. الخروج من SSA (v0.3.2.5.2): إزالة فاي قبل الخلفية
         // هذه الخطوة ضرورية لأن الخلفية الحالية لا تُنفّذ IR_OP_PHI فعلياً.
+        if (config.time_phases) t0 = get_time_seconds();
         (void)ir_outssa_run(ir_module);
+        if (config.time_phases) phase_times.outssa_s += (get_time_seconds() - t0);
 
         // 3.6.5.1. فك الحلقات (v0.3.2.7.1) — اختياري
         // نطبقه بعد Out-of-SSA لأن القيم الحلقية تصبح صريحة عبر نسخ على الحواف.
@@ -856,7 +912,9 @@ int main(int argc, char **argv)
         {
             if (config.verbose)
                 printf("[INFO] Unrolling loops (-funroll-loops)...\n");
+            if (config.time_phases) t0 = get_time_seconds();
             (void)ir_unroll_run(ir_module, 8);
+            if (config.time_phases) phase_times.unroll_s += (get_time_seconds() - t0);
 
             // إن كان --verify-ir مفعلاً، أعد التحقق لأننا عدّلنا الـ IR بعد مرحلة التحقق الأصلية.
             if (config.verify_ir)
@@ -877,7 +935,9 @@ int main(int argc, char **argv)
         if (config.verbose)
             printf("[INFO] Running instruction selection...\n");
         bool enable_tco = (config.opt_level >= OPT_LEVEL_2);
+        if (config.time_phases) t0 = get_time_seconds();
         MachineModule *mach_module = isel_run_ex(ir_module, enable_tco, config.target);
+        if (config.time_phases) phase_times.isel_s += (get_time_seconds() - t0);
         if (!mach_module)
         {
             fprintf(stderr, "Aborting %s: instruction selection failed.\n", current_input);
@@ -889,6 +949,7 @@ int main(int argc, char **argv)
         // 5. تخصيص السجلات (Register Allocation) (v0.3.2.2)
         if (config.verbose)
             printf("[INFO] Running register allocation...\n");
+        if (config.time_phases) t0 = get_time_seconds();
         if (!regalloc_run_ex(mach_module, config.target))
         {
             fprintf(stderr, "Aborting %s: register allocation failed.\n", current_input);
@@ -897,6 +958,7 @@ int main(int argc, char **argv)
             free(source);
             return 1;
         }
+        if (config.time_phases) phase_times.regalloc_s += (get_time_seconds() - t0);
 
         // 6. إصدار كود التجميع (Code Emission) (v0.3.2.3)
         char *asm_file;
@@ -932,6 +994,7 @@ int main(int argc, char **argv)
             }
         }
 
+        if (config.time_phases) t0 = get_time_seconds();
         if (!emit_module_ex2(mach_module, f_asm, config.debug_info, config.target, config.codegen_opts))
         {
             fprintf(stderr, "Aborting %s: code emission failed.\n", current_input);
@@ -941,12 +1004,25 @@ int main(int argc, char **argv)
             free(source);
             return 1;
         }
+        if (config.time_phases) phase_times.emit_s += (get_time_seconds() - t0);
         fclose(f_asm);
 
         // تحرير الموارد
         mach_module_free(mach_module);
+
+        if (config.time_phases)
+        {
+            IRArenaStats s = {0};
+            ir_arena_get_stats(&ir_module->arena, &s);
+            if (s.used_bytes > phase_times.ir_arena_used_max) phase_times.ir_arena_used_max = s.used_bytes;
+            if (s.cap_bytes > phase_times.ir_arena_cap_max) phase_times.ir_arena_cap_max = s.cap_bytes;
+            if (s.chunks > phase_times.ir_arena_chunks_max) phase_times.ir_arena_chunks_max = s.chunks;
+        }
+
         ir_module_free(ir_module);
         free(source);
+
+        if (config.time_phases) phase_times.total_s += (get_time_seconds() - file_t0);
 
         if (config.assembly_only)
         {
@@ -980,11 +1056,14 @@ int main(int argc, char **argv)
 
         if (config.verbose)
             printf("[CMD] %s\n", cmd_assemble);
+        double asm_t0 = 0.0;
+        if (config.time_phases) asm_t0 = get_time_seconds();
         if (system(cmd_assemble) != 0)
         {
             printf("Error: Assembler failed for %s\n", current_input);
             return 1;
         }
+        if (config.time_phases) phase_times.assemble_s += (get_time_seconds() - asm_t0);
 
         // تنظيف ملف التجميع المؤقت إذا لم يكن مطلوباً
         if (!config.assembly_only && !config.verbose)
@@ -1000,6 +1079,32 @@ int main(int argc, char **argv)
     // إذا طلب المستخدم -S أو -c، نتوقف هنا
     if (config.assembly_only || config.compile_only)
     {
+        if (config.time_phases)
+        {
+            double total = get_time_seconds() - config.start_time;
+            fprintf(stderr,
+                    "[TIME] read=%.6f parse=%.6f analyze=%.6f lower=%.6f opt=%.6f verify_ir=%.6f verify_ssa=%.6f outssa=%.6f unroll=%.6f isel=%.6f regalloc=%.6f emit=%.6f assemble=%.6f link=%.6f total=%.6f\n",
+                    phase_times.read_file_s,
+                    phase_times.parse_s,
+                    phase_times.analyze_s,
+                    phase_times.lower_ir_s,
+                    phase_times.optimize_s,
+                    phase_times.verify_ir_s,
+                    phase_times.verify_ssa_s,
+                    phase_times.outssa_s,
+                    phase_times.unroll_s,
+                    phase_times.isel_s,
+                    phase_times.regalloc_s,
+                    phase_times.emit_s,
+                    phase_times.assemble_s,
+                    phase_times.link_s,
+                    total);
+            fprintf(stderr,
+                    "[MEM] ir_arena_used_max=%zu ir_arena_cap_max=%zu ir_arena_chunks_max=%zu\n",
+                    phase_times.ir_arena_used_max,
+                    phase_times.ir_arena_cap_max,
+                    phase_times.ir_arena_chunks_max);
+        }
         return 0;
     }
 
@@ -1058,11 +1163,14 @@ int main(int argc, char **argv)
 
     if (config.verbose)
         printf("[CMD] %s\n", cmd_link);
+    double link_t0 = 0.0;
+    if (config.time_phases) link_t0 = get_time_seconds();
     if (system(cmd_link) != 0)
     {
         printf("Error: Linker failed.\n");
         return 1;
     }
+    if (config.time_phases) phase_times.link_s += (get_time_seconds() - link_t0);
 
     // تنظيف ملفات الكائنات المؤقتة
     if (!config.verbose)
@@ -1087,6 +1195,33 @@ int main(int argc, char **argv)
         double elapsed = get_time_seconds() - config.start_time;
         printf("[INFO] Build successful: %s\n", config.output_file);
         printf("[INFO] Compilation time: %.3f seconds\n", elapsed);
+    }
+
+    if (config.time_phases)
+    {
+        double total = get_time_seconds() - config.start_time;
+        fprintf(stderr,
+                "[TIME] read=%.6f parse=%.6f analyze=%.6f lower=%.6f opt=%.6f verify_ir=%.6f verify_ssa=%.6f outssa=%.6f unroll=%.6f isel=%.6f regalloc=%.6f emit=%.6f assemble=%.6f link=%.6f total=%.6f\n",
+                phase_times.read_file_s,
+                phase_times.parse_s,
+                phase_times.analyze_s,
+                phase_times.lower_ir_s,
+                phase_times.optimize_s,
+                phase_times.verify_ir_s,
+                phase_times.verify_ssa_s,
+                phase_times.outssa_s,
+                phase_times.unroll_s,
+                phase_times.isel_s,
+                phase_times.regalloc_s,
+                phase_times.emit_s,
+                phase_times.assemble_s,
+                phase_times.link_s,
+                total);
+        fprintf(stderr,
+                "[MEM] ir_arena_used_max=%zu ir_arena_cap_max=%zu ir_arena_chunks_max=%zu\n",
+                phase_times.ir_arena_used_max,
+                phase_times.ir_arena_cap_max,
+                phase_times.ir_arena_chunks_max);
     }
 
     return 0;

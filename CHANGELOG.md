@@ -8,6 +8,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.3.2.9.2] - 2026-02-17
+
+### Added
+
+- **Performance benchmarking (v0.3.2.9.2)**
+  - Benchmark suite: `bench/compile_*.baa` + `bench/runtime_*.baa`.
+  - Benchmark runner: `scripts/bench.py` (compile-only, end-to-end, runtime, and Linux memory mode).
+  - Driver flag: `--time-phases` prints per-phase timings and IR arena memory stats (`[TIME]`/`[MEM]`).
+
 ## [0.3.2.9.1] - 2026-02-17
 
 ### Added

@@ -387,12 +387,12 @@
 - [x] **SSA verification** — Run `--verify-ssa` on all test programs.
 - [x] **`baa --verify` mode** — Run all verification passes.
 
-#### v0.3.2.9.2: Performance Benchmarking
+#### v0.3.2.9.2: Performance Benchmarking ✅ COMPLETED (2026-02-17)
 
-- [ ] **Compile-time benchmark** — Compare old vs new codegen speed.
-- [ ] **Runtime benchmark** — Compare generated code performance.
-- [ ] **Memory usage profiling** — Track peak memory during compilation.
-- [ ] **Benchmark suite** — Collection of representative programs.
+- [x] **Compile-time benchmark** — Compare compiler-only (`-S`) and end-to-end compile wall time.
+- [x] **Runtime benchmark** — Run deterministic `bench/runtime_*.baa` programs.
+- [x] **Memory usage profiling** — Track peak RSS on Linux via `/usr/bin/time -v` and IR arena stats via `--time-phases`.
+- [x] **Benchmark suite** — Collection of representative programs (`bench/*.baa`).
 
 #### v0.3.2.9.3: Regression Testing
 

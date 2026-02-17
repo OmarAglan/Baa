@@ -330,10 +330,12 @@
 
 #### v0.3.2.8.2: Calling Convention Abstraction
 
-- [ ] **Define `CallingConv` struct** — arg regs order/count, return regs, caller/callee-saved sets.
-- [ ] **Stack rules** — alignment at call sites, stack-arg placement policy, varargs rules.
-- [ ] **Windows x64 ABI** — RCX/RDX/R8/R9 + 32-byte shadow/home space.
-- [ ] **SystemV AMD64 ABI** — RDI/RSI/RDX/RCX/R8/R9, no shadow space, set `AL=0` for varargs calls.
+✅ COMPLETED (2026-02-17)
+
+- [x] **Define `CallingConv` struct** — arg regs order/count, return regs, caller/callee-saved masks.
+- [x] **Stack rules** — stack alignment + varargs rules are modeled; stack-arg placement is deferred (backend rejects stack args for now).
+- [x] **Windows x64 ABI** — RCX/RDX/R8/R9 + 32-byte shadow/home space.
+- [x] **SystemV AMD64 ABI** — RDI/RSI/RDX/RCX/R8/R9, no shadow space, sets `AL=0` for calls (conservative).
 
 #### v0.3.2.8.3: Code Model Options
 

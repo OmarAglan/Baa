@@ -928,7 +928,7 @@ void regalloc_linear_scan(RegAllocCtx *ctx)
  *
  * الاتفاقيات:
  *   vreg -1  → RBP (مؤشر الإطار)
- *   vreg -2  → RAX (القيمة المرجعة)
+ *   vreg -2  → (افتراضي) سجل الإرجاع (عادة RAX)
  *   vreg -10.. → سجلات معاملات ABI حسب الهدف (يُحل عبر calling convention)
  */
 static PhysReg resolve_special_vreg(int vreg)
@@ -937,8 +937,6 @@ static PhysReg resolve_special_vreg(int vreg)
     {
     case -1:
         return PHYS_RBP;
-    case -2:
-        return PHYS_RAX;
     default:
         return PHYS_NONE;
     }
@@ -950,15 +948,31 @@ static PhysReg resolve_special_vreg_with_cc(int vreg, const BaaCallingConv* cc)
     if (fixed != PHYS_NONE)
         return fixed;
 
-    // معاملات ABI: arg i = -(10+i)
-    if (vreg <= -10 && vreg >= -32)
+    // سجل الإرجاع (عادة vreg -2)
+    if (cc && vreg == cc->abi_ret_vreg)
     {
-        int i = -(vreg + 10);
-        if (cc && i >= 0 && i < cc->int_arg_reg_count)
+        if (cc->ret_phys_reg >= 0 && cc->ret_phys_reg < PHYS_REG_COUNT)
+            return (PhysReg)cc->ret_phys_reg;
+    }
+
+    // توافق خلفي: -2 -> RAX
+    if (vreg == -2)
+        return PHYS_RAX;
+
+    // معاملات ABI: arg i -> (abi_arg_vreg0 - i)
+    if (cc)
+    {
+        int base = cc->abi_arg_vreg0;
+        // نطاق حماية بسيط لتفادي أرقام سالبة بعيدة
+        if (vreg <= base && vreg >= base - 32)
         {
-            int pr = cc->int_arg_phys_regs[i];
-            if (pr >= 0 && pr < PHYS_REG_COUNT)
-                return (PhysReg)pr;
+            int i = base - vreg;
+            if (i >= 0 && i < cc->int_arg_reg_count)
+            {
+                int pr = cc->int_arg_phys_regs[i];
+                if (pr >= 0 && pr < PHYS_REG_COUNT)
+                    return (PhysReg)pr;
+            }
         }
     }
     return PHYS_NONE;

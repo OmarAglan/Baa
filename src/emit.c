@@ -3,20 +3,17 @@
  * @brief إصدار كود التجميع - تحويل تمثيل الآلة إلى نص تجميع AT&T (v0.3.2.3)
  *
  * يحوّل وحدة آلية (MachineModule) بعد تخصيص السجلات إلى ملف تجميع
- * x86-64 بصيغة AT&T متوافق مع GAS (GNU Assembler) على Windows.
+ * x86-64 بصيغة AT&T متوافق مع GAS (GNU Assembler).
  *
  * الخرج يتضمن:
- * - قسم .rdata: صيغ الطباعة (fmt_int, fmt_str, fmt_scan_int)
+ * - قسم rodata: صيغ الطباعة (COFF: .rdata / ELF: .rodata)
  * - قسم .data: المتغيرات العامة
  * - قسم .text: الدوال مع prologue/epilogue
  * - جدول النصوص: سلاسل نصية ثابتة (.Lstr_N)
  *
- * اتفاقية Windows x64 ABI:
- * - المعاملات: RCX, RDX, R8, R9 (أول 4)، ثم المكدس
- * - القيمة المرجعة: RAX
- * - Shadow space: 32 بايت قبل كل استدعاء
- * - السجلات المحفوظة (callee-saved): RBX, RBP, RDI, RSI, R12-R15
- * - محاذاة المكدس: 16 بايت
+ * الهدف/اتفاقية الاستدعاء (v0.3.2.8+):
+ * - Windows x64: shadow space (32) و RCX/RDX/R8/R9
+ * - SystemV AMD64 (Linux): لا shadow space و RDI/RSI/RDX/RCX/R8/R9
  */
 
 #include "emit.h"
@@ -86,6 +83,12 @@ static int emit_shadow_bytes(void)
 {
     const BaaCallingConv* cc = emit_cc_or_default();
     return cc ? cc->shadow_space_bytes : 32;
+}
+
+static int emit_stack_align_bytes(void)
+{
+    const BaaCallingConv* cc = emit_cc_or_default();
+    return (cc && cc->stack_align_bytes > 0) ? cc->stack_align_bytes : 16;
 }
 
 static void emit_rodata_section(FILE* out)
@@ -390,11 +393,12 @@ static void emit_prologue(MachineFunc* func, FILE* out,
     int shadow = emit_shadow_bytes();
     int total_frame = local_size + shadow + callee_save_size;
 
-    // محاذاة إلى 16 بايت
+    // محاذاة إلى قيمة الهدف (عادة 16 بايت)
     // بعد push rbp، RSP = aligned - 8
-    // نحتاج sub ليجعل RSP محاذى لـ 16
-    if (total_frame % 16 != 0) {
-        total_frame = ((total_frame / 16) + 1) * 16;
+    // نحتاج sub ليجعل RSP محاذى عند نقاط الاستدعاء.
+    int align = emit_stack_align_bytes();
+    if (align > 0 && (total_frame % align) != 0) {
+        total_frame = ((total_frame / align) + 1) * align;
     }
 
     if (total_frame > 0) {

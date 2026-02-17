@@ -8,6 +8,23 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.3.2.8.2] - 2026-02-17
+
+### Added
+
+- **Calling convention abstraction (v0.3.2.8.2)**
+  - Explicit `BaaCallingConv` contract: caller/callee-saved masks, stack alignment, ABI special-vreg mapping (`abi_arg_vreg0`, `abi_ret_vreg`).
+  - ABI-aware lowering/alloc/emission entry points are now used end-to-end for `--target`.
+  - Tests: `tests/backend_sysv_6args_test.baa`, `tests/isel_callargs_reject_test.c`
+
+### Changed
+
+- **No stack arguments yet** — backend rejects calls that exceed the register-arg count for the selected target (deferred to v0.3.2.8.5).
+
+### Fixed
+
+- **TCO max-args check** — tail-call detection now respects the selected target register-arg count (Windows=4, SysV=6).
+
 ## [0.3.2.8.1] - 2026-02-17
 
 ### Added

@@ -1,6 +1,6 @@
 # Baa IR Specification
 
-> **Version:** 0.3.2.8.1 | [← Compiler Internals](INTERNALS.md) | [API Reference →](API_REFERENCE.md)
+> **Version:** 0.3.2.8.2 | [← Compiler Internals](INTERNALS.md) | [API Reference →](API_REFERENCE.md)
 
 This document specifies the Intermediate Representation (IR) for the Baa compiler. The IR uses Arabic naming conventions throughout, creating a culturally authentic yet technically robust design.
 
@@ -63,9 +63,9 @@ AST → [Baa IR] → Optimizations → Backend Codegen → x86-64 Assembly
 - Pointers are 64-bit on x86-64 target
 - `ص١` (boolean) is zero-extended to larger integers
 
-### 2.4 Data Layout (Target: Windows x64)
+### 2.4 Data Layout (Target: x86-64)
 
-The IR enforces a specific data layout to allow consistent lowering:
+The IR enforces a specific data layout to allow consistent lowering. On x86-64, this is the same for Windows and Linux targets:
 
 | Type | Size (Bytes) | Alignment (Bytes) | Store Size (Bytes) |
 |------|--------------|-------------------|--------------------|

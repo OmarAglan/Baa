@@ -6,7 +6,7 @@
  * يدعم:
  * - تضمين القيم الفورية (immediates) في التعليمات مباشرة
  * - اختيار أنماط التعليمات المثلى لكل عملية IR
- * - التعامل مع اتفاقية استدعاء Windows x64 ABI
+ * - التعامل مع اتفاقية الاستدعاء عبر هدف (Windows x64 / SystemV AMD64)
  * - القسمة باستخدام CQO + IDIV
  * - المقارنات باستخدام CMP + SETcc + MOVZX
  */
@@ -18,6 +18,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
+#include <stdarg.h>
 
 // ============================================================================
 // بناء المعاملات (Operand Construction)
@@ -337,6 +338,9 @@ typedef struct
 
     // الهدف الحالي (Windows x64 / SysV ...)
     const BaaTarget *target;
+
+    // حالة فشل داخل الخلفية (مثلاً: معاملات مكدس غير مدعومة بعد)
+    bool had_error;
 } ISelCtx;
 
 static const BaaCallingConv *isel_cc_or_default(ISelCtx *ctx)
@@ -344,6 +348,39 @@ static const BaaCallingConv *isel_cc_or_default(ISelCtx *ctx)
     if (ctx && ctx->target && ctx->target->cc)
         return ctx->target->cc;
     return baa_target_builtin_windows_x86_64()->cc;
+}
+
+static int isel_abi_arg_vreg(const BaaCallingConv *cc, int i)
+{
+    int base = (cc) ? cc->abi_arg_vreg0 : -10;
+    return base - i;
+}
+
+static int isel_abi_ret_vreg(const BaaCallingConv *cc)
+{
+    return (cc) ? cc->abi_ret_vreg : -2;
+}
+
+static void isel_report_error(ISelCtx *ctx, IRInst *inst, const char *fmt, ...)
+{
+    if (!ctx || ctx->had_error)
+        return;
+
+    ctx->had_error = true;
+
+    if (inst && inst->src_file)
+    {
+        fprintf(stderr, "%s:%d:%d: ", inst->src_file, inst->src_line, inst->src_col);
+    }
+
+    fprintf(stderr, "خطأ (الخلفية): ");
+
+    va_list ap;
+    va_start(ap, fmt);
+    vfprintf(stderr, fmt, ap);
+    va_end(ap);
+
+    fprintf(stderr, "\n");
 }
 
 // -----------------------------------------------------------------------------
@@ -987,12 +1024,14 @@ static void isel_lower_ret(ISelCtx *ctx, IRInst *inst)
     if (!inst)
         return;
 
+    const BaaCallingConv *cc = isel_cc_or_default(ctx);
+
     if (inst->operand_count > 0 && inst->operands[0])
     {
         MachineOperand val = isel_lower_value(ctx, inst->operands[0]);
         // نضع القيمة المرجعة في سجل خاص (سيصبح RAX في تخصيص السجلات)
-        // نستخدم vreg -2 كمؤشر لسجل القيمة المرجعة
-        MachineOperand ret_reg = mach_op_vreg(-2, isel_type_bits(inst->operands[0]->type));
+        // نستخدم سجلاً خاصاً للقيمة المرجعة (افتراضياً: vreg -2 → RAX)
+        MachineOperand ret_reg = mach_op_vreg(isel_abi_ret_vreg(cc), isel_type_bits(inst->operands[0]->type));
         isel_emit_comment(ctx, MACH_MOV, ret_reg, val, mach_op_none(),
                           "// قيمة الإرجاع → RAX");
     }
@@ -1023,6 +1062,16 @@ static void isel_lower_call(ISelCtx *ctx, IRInst *inst)
     const BaaCallingConv *cc = isel_cc_or_default(ctx);
     int max_reg_args = (cc && cc->int_arg_reg_count > 0) ? cc->int_arg_reg_count : 4;
 
+    // v0.3.2.8.2: معاملات المكدس غير مدعومة بعد (ستُنفذ في v0.3.2.8.5)
+    if (inst->call_arg_count > max_reg_args)
+    {
+        isel_report_error(ctx, inst,
+                          "عدد معاملات النداء (%d) أكبر من المدعوم حالياً (%d) لهذا الهدف. معاملات المكدس ستُضاف في v0.3.2.8.5.",
+                          inst->call_arg_count,
+                          max_reg_args);
+        return;
+    }
+
     // تحضير المعاملات (نضعها في سجلات مرقمة خاصة)
     // سجلات ABI ستُخصص لاحقاً حسب الهدف.
     for (int i = 0; i < inst->call_arg_count && i < max_reg_args; i++)
@@ -1034,15 +1083,8 @@ static void isel_lower_call(ISelCtx *ctx, IRInst *inst)
 
         // سجل المعامل: نستخدم أرقام سالبة خاصة (-10..)
         // سيتم حلها إلى سجلات ABI الفعلية حسب الهدف.
-        MachineOperand param_reg = mach_op_vreg(-(10 + i), bits);
+        MachineOperand param_reg = mach_op_vreg(isel_abi_arg_vreg(cc, i), bits);
         isel_emit(ctx, MACH_MOV, param_reg, arg, mach_op_none());
-    }
-
-    // المعاملات الإضافية على المكدس (من اليمين لليسار)
-    for (int i = inst->call_arg_count - 1; i >= max_reg_args; i--)
-    {
-        MachineOperand arg = isel_lower_value(ctx, inst->call_args[i]);
-        isel_emit(ctx, MACH_PUSH, mach_op_none(), arg, mach_op_none());
     }
 
     // استدعاء الدالة
@@ -1054,7 +1096,7 @@ static void isel_lower_call(ISelCtx *ctx, IRInst *inst)
     {
         int bits = isel_type_bits(inst->type);
         MachineOperand dst = mach_op_vreg(inst->dest, bits);
-        MachineOperand ret_reg = mach_op_vreg(-2, bits); // RAX
+        MachineOperand ret_reg = mach_op_vreg(isel_abi_ret_vreg(cc), bits);
         MachineInst *mi = isel_emit_comment(ctx, MACH_MOV, dst, ret_reg, mach_op_none(),
                                             "// القيمة المرجعة من RAX");
         if (mi)
@@ -1079,8 +1121,11 @@ static int isel_is_tailcall_pair(ISelCtx *ctx, IRInst *call, IRInst *ret)
     if (!call->call_target)
         return 0;
 
-    // حالياً: ندعم فقط ٤ معاملات أو أقل (كلها في سجلات ABI).
-    if (call->call_arg_count > 4)
+    const BaaCallingConv *cc = isel_cc_or_default(ctx);
+    int max_reg_args = (cc && cc->int_arg_reg_count > 0) ? cc->int_arg_reg_count : 4;
+
+    // حالياً: ندعم فقط معاملات السجلات (بدون معاملات مكدس).
+    if (call->call_arg_count > max_reg_args)
         return 0;
 
     // 1) رجوع فراغ: يجب أن يكون النداء أيضاً بلا قيمة.
@@ -1125,7 +1170,7 @@ static void isel_lower_tailcall(ISelCtx *ctx, IRInst *call)
         if (call->call_args[i] && call->call_args[i]->type)
             bits = isel_type_bits(call->call_args[i]->type);
 
-        MachineOperand param_reg = mach_op_vreg(-(10 + i), bits);
+        MachineOperand param_reg = mach_op_vreg(isel_abi_arg_vreg(cc, i), bits);
         isel_emit(ctx, MACH_MOV, param_reg, arg, mach_op_none());
     }
 
@@ -1492,7 +1537,7 @@ static MachineFunc *isel_lower_func(ISelCtx *ctx, IRFunc *ir_func)
 
         for (int i = 0; i < max_reg_params; i++)
         {
-            MachineOperand abi_reg = mach_op_vreg(-(10 + i), 64);
+            MachineOperand abi_reg = mach_op_vreg(isel_abi_arg_vreg(cc, i), 64);
             MachineOperand param_dst = mach_op_vreg(ir_func->params[i].reg, 64);
             MachineInst *mi = mach_inst_new(MACH_MOV, param_dst, abi_reg, mach_op_none());
             if (!mi)
@@ -1561,6 +1606,12 @@ MachineModule *isel_run_ex(IRModule *ir_module, bool enable_tco, const BaaTarget
         {
             mach_module_add_func(mmod, mfunc);
         }
+    }
+
+    if (ctx.had_error)
+    {
+        mach_module_free(mmod);
+        return NULL;
     }
 
     return mmod;

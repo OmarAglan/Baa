@@ -38,15 +38,15 @@ extern "C" {
  */
 typedef enum {
     PHYS_RAX = 0,   // سجل المراكم / القيمة المرجعة
-    PHYS_RCX = 1,   // المعامل الأول (Windows x64 ABI)
-    PHYS_RDX = 2,   // المعامل الثاني / باقي القسمة
+    PHYS_RCX = 1,   // سجل عام / ضمن سجلات معاملات ABI حسب الهدف
+    PHYS_RDX = 2,   // سجل عام / باقي القسمة
     PHYS_RBX = 3,   // سجل محفوظ (callee-saved)
     PHYS_RSP = 4,   // مؤشر المكدس (محجوز)
     PHYS_RBP = 5,   // مؤشر الإطار (محجوز)
     PHYS_RSI = 6,   // سجل عام
     PHYS_RDI = 7,   // سجل عام
-    PHYS_R8  = 8,   // المعامل الثالث (Windows x64 ABI)
-    PHYS_R9  = 9,   // المعامل الرابع (Windows x64 ABI)
+    PHYS_R8  = 8,   // سجل عام / ضمن سجلات معاملات ABI حسب الهدف
+    PHYS_R9  = 9,   // سجل عام / ضمن سجلات معاملات ABI حسب الهدف
     PHYS_R10 = 10,  // سجل مؤقت (caller-saved)
     PHYS_R11 = 11,  // سجل مؤقت (caller-saved)
     PHYS_R12 = 12,  // سجل محفوظ (callee-saved)
@@ -82,7 +82,7 @@ bool phys_reg_is_callee_saved(PhysReg reg);
  *
  * لكن بعض السجلات لها استخدامات خاصة:
  * - RAX: القيمة المرجعة + حاصل القسمة
- * - RCX, RDX, R8, R9: معاملات الدالة (Windows x64 ABI)
+ * - بعض السجلات قد تُحجز كـ ABI arg regs حسب الهدف (Windows أو SysV)
  * - RDX: باقي القسمة
  *
  * السجلات المتاحة بحرية: RBX, RSI, RDI, R10-R15 = 8 سجلات

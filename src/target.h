@@ -52,6 +52,13 @@ typedef struct BaaCallingConv {
     unsigned int callee_saved_mask;   // bitmask over PhysReg
     unsigned int caller_saved_mask;   // bitmask over PhysReg
 
+    int stack_align_bytes;            // محاذاة المكدس عند نقاط الاستدعاء (عادة 16)
+
+    // تمثيل سجلات معاملات ABI داخل Machine IR كسجلات افتراضية سالبة
+    // arg i -> (abi_arg_vreg0 - i)
+    int abi_arg_vreg0;                // افتراضي: -10
+    int abi_ret_vreg;                 // افتراضي: -2 (RAX)
+
     int shadow_space_bytes;           // Windows: 32, SysV: 0
     bool home_reg_args_on_call;       // Windows varargs: true, SysV: false
     bool sysv_set_al_zero_on_call;    // SysV varargs rule: true

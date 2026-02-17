@@ -42,7 +42,7 @@ def _find_baa() -> Path:
 
 
 def main() -> int:
-    baa = _find_baa()
+    baa_real = _find_baa()
     baa_files = sorted(TESTS_DIR.glob("*.baa"))
     if not baa_files:
         print("No .baa tests found.")
@@ -55,6 +55,18 @@ def main() -> int:
     if out_dir.exists():
         shutil.rmtree(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
+
+    # Avoid "Text file busy" if a rebuild replaces the compiler while tests run.
+    baa = baa_real
+    try:
+        baa_copy = out_dir / (baa_real.name + ".copy")
+        shutil.copy2(baa_real, baa_copy)
+        if os.name != "nt":
+            st = baa_copy.stat()
+            baa_copy.chmod(st.st_mode | 0o111)
+        baa = baa_copy
+    except Exception:
+        baa = baa_real
 
     try:
         for src in baa_files:

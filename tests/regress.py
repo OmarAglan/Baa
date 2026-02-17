@@ -81,7 +81,7 @@ def main() -> int:
                 src_rel = src.relative_to(ROOT)
                 out = out_dir / f"{src.stem}{exe_ext}"
                 # Use repo-relative paths to avoid space-in-path toolchain issues.
-                cmd = [str(baa), "-O1", "--verify", "--backend=ir", str(src_rel), "-o", str(out)]
+                cmd = [str(baa), "-O1", "--verify", str(src_rel), "-o", str(out)]
                 p = subprocess.run(
                     cmd,
                     cwd=str(ROOT),
@@ -141,20 +141,7 @@ def main() -> int:
 
         print("regress: WARN (no tests/corpus_v2x_docs/**/*.baa)")
 
-    # 2) Windows-only: legacy-vs-IR output comparisons
-    if os.name == "nt":
-        corpus = sorted((TESTS_DIR / "corpus_compare").glob("*.baa"))
-        if not corpus:
-            print("regress: WARN (no tests/corpus_compare/*.baa)")
-        else:
-            for src in corpus:
-                src_rel = src.relative_to(ROOT)
-                rc = _run([str(baa), "-O1", "--compare-backends", str(src_rel)], cwd=ROOT)
-                if rc != 0:
-                    print(f"regress: FAIL (compare-backends): {src.name}")
-                    return rc
-
-    # 3) Negative tests: error-message anchors
+     # 2) Negative tests: error-message anchors
     neg = sorted((TESTS_DIR / "neg").glob("*.baa"))
     if neg:
         for src in neg:
@@ -165,7 +152,7 @@ def main() -> int:
             with tempfile.TemporaryDirectory(prefix="baa_regress_neg_") as td:
                 dummy = Path(td) / f"neg_out{exe_ext}"
                 p = subprocess.run(
-                    [str(baa), "-O1", "--backend=ir", str(src_rel), "-o", str(dummy)],
+                     [str(baa), "-O1", str(src_rel), "-o", str(dummy)],
                     cwd=str(ROOT),
                     text=True,
                     capture_output=True,

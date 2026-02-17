@@ -1,6 +1,6 @@
 /**
  * @file ir_lower.c
- * @brief AST to IR lowering (IR Lowering) - Expressions + Statements + Control Flow
+ * @brief خفض AST إلى IR (التعبيرات + الجمل + تدفق التحكم).
  * @version 0.3.0.5
  *
  * Implements lowering from validated AST into Baa IR using IRBuilder.

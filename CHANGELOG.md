@@ -8,15 +8,36 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.3.2.9.4] - 2026-02-17
+
+### Added
+
+- **Documentation & cleanup (v0.3.2.9.4)**
+  - IR contributor guide: `docs/IR_DEVELOPER_GUIDE.md`.
+  - Code review checklist: `docs/CODE_REVIEW_CHECKLIST.md`.
+
+- **Driver refactor modules (v0.3.2.9.4)**
+  - CLI parsing + help/version: `src/driver_cli.c`, `src/driver_cli.h`.
+  - Per-file compile pipeline: `src/driver_pipeline.c`, `src/driver_pipeline.h`.
+  - Toolchain runner (GCC resolve/assemble/link): `src/driver_toolchain.c`, `src/driver_toolchain.h`.
+  - Timing helper: `src/driver_time.c`, `src/driver_time.h`.
+  - Shared file reader used by the lexer include system: `src/read_file.c`.
+
+### Changed
+
+- **Driver sanity pass** — split the monolithic driver into focused modules (CLI/toolchain/pipeline), removed fixed-size input/argv limits, and centralized `--time-phases` printing.
+- **Semantic diagnostics** — semantic analysis now reports errors via `error_report(...)` with `file:line:col` + source caret context.
+
+- **Repo hygiene** — enforce LF line endings via `.gitattributes` to eliminate CRLF/LF diff churn.
+
+- **Cleanup** — removed deprecated legacy AST codegen paths and backend-compare mode.
+
 ## [0.3.2.9.3] - 2026-02-17
 
 ### Added
 
 - **Regression testing (v0.3.2.9.3)**
-  - Optional legacy backend (Windows-only): build with `-DBAA_ENABLE_LEGACY_CODEGEN=ON`.
-  - Driver flags: `--backend=ir|legacy` and `--compare-backends` (build+run both and compare runtime output).
-  - Regression runner: `tests/regress.py` (runs `tests/test.py` on all hosts; runs compare corpus on Windows).
-  - Compare corpus: `tests/corpus_compare/*.baa` (self-checking; exit 0 on PASS).
+  - Regression runner: `tests/regress.py` (runs `tests/test.py` on all hosts).
   - Docs-derived v0.2.x corpus: `scripts/extract_docs_corpus.py` + `tests/corpus_v2x_docs/**/*.baa`.
   - Negative tests: `tests/neg/*.baa` with `// EXPECT:` markers validated by `tests/regress.py`.
 
@@ -392,7 +413,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - **Backend integration (تكامل الخلفية)** — The default compilation pipeline is now fully IR-based end-to-end:
   - AST → IR Lowering → Optimizer → Instruction Selection → Register Allocation → Code Emission → Assembly.
   - Driver implementation: [`main()`](src/main.c:209).
-- **Build system:** Retired legacy AST-based backend from the build (stopped compiling [`src/codegen.c`](src/codegen.c:1)).
+- **Build system:** Retired legacy AST-based backend from the build.
 - **Version:** Updated compiler version string via [`BAA_VERSION`](src/baa.h:18).
 - **Docs:** Updated pipeline documentation and API notes in [`docs/INTERNALS.md`](docs/INTERNALS.md:1) and [`docs/API_REFERENCE.md`](docs/API_REFERENCE.md:1).
 
@@ -616,7 +637,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 - **IR phase integrated into the driver pipeline** — the compiler now builds IR for each translation unit after semantic analysis.
   - New program-level lowering entry point: [`ir_lower_program()`](src/ir_lower.c:855) declared in [`src/ir_lower.h`](src/ir_lower.h:104).
-  - Driver now runs: Parse → Analyze → **Lower IR** → (current) AST→Assembly codegen (IR→backend is still pending) in [`src/main.c`](src/main.c:325).
+  - Driver now runs: Parse → Analyze → **Lower IR** (IR→backend integration was still pending at the time) in [`src/main.c`](src/main.c:325).
 
 - **`--emit-ir` CLI flag** — writes Arabic IR to `<input>.ir` next to the source file using [`ir_module_dump()`](src/ir.c:1693).
   - Implemented in [`src/main.c`](src/main.c:158).
@@ -875,7 +896,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ### Fixed
 
 - **Codegen State Leak** – Fixed critical bug where symbol tables, label counters, and loop stacks were not reset between compilation units.
-- Added `reset_codegen()` function called at start of each `NODE_PROGRAM` in `codegen.c`.
+- Fixed state leakage between compilation units in the old backend.
 - Prevents symbol collisions and invalid assembly when compiling multiple files.
 
 ### Technical Details
@@ -919,16 +940,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
   - **Type Checking**: Strictly enforces `TYPE_INT` vs `TYPE_STRING` compatibility.
   - **Scope Validation**: Tracks global vs local variable declarations.
   - **Control Flow Validation**: Ensures `break`/`continue` only used in valid contexts.
-- **Shared Symbol Definitions** — Moved `Symbol` and `ScopeType` to `src/baa.h` to allow sharing between Analysis and Codegen modules.
+- **Shared Symbol Definitions** — Moved `Symbol` and `ScopeType` to `src/baa.h` to allow sharing between Analysis and later compilation stages.
 
 ### Changed
 
 - **Compiler Pipeline** — Updated `src/main.c` to invoke the analyzer after parsing. Compilation now aborts immediately if semantic errors are found.
-- **Code Generator** — Refactored `src/codegen.c` to rely on the shared symbol definitions.
+- **Code Generator** — Refactored the (then-current) backend to rely on the shared symbol definitions.
 
 ### Technical Details
 
-- Analyzer maintains separate symbol tables from codegen (isolation).
+- Analyzer maintains separate symbol tables from later stages (isolation).
 - Type inference implemented for all expression types.
 - Nested scope tracking (global/local only - no block-level yet).
 
@@ -1037,7 +1058,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ### Fixed
 
 - **Stack Alignment** — Enforced 16-byte stack alignment in generated x64 assembly to prevent crashes during external API calls and deep recursion.
-- **Register Names** — Fixed double-percent typo in register names in `codegen.c`.
+- **Register Names** — Fixed double-percent typo in register names in assembly output.
 
 ---
 
@@ -1063,7 +1084,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ### Changed
 
 - Updated `اطبع` to support printing strings via `%s`
-- Implemented string table generation in codegen
+- Implemented string table generation
 
 ---
 
@@ -1123,7 +1144,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Changed
 
-- Implemented label generation and conditional jumps in codegen
+- Implemented label generation and conditional jumps in assembly generation
 - Comprehensive documentation update (Internals & API)
 
 ---

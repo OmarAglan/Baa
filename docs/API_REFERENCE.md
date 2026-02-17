@@ -1,6 +1,6 @@
 # Baa Internal API Reference
 
-> **Version:** 0.3.2.9.3 | [← Compiler Internals](INTERNALS.md) | [IR Specification →](BAA_IR_SPECIFICATION.md)
+> **Version:** 0.3.2.9.4 | [← Compiler Internals](INTERNALS.md) | [IR Specification →](BAA_IR_SPECIFICATION.md)
 
 This document details the C functions, enumerations, and structures defined in `src/baa.h`, `src/ir.h`, `src/ir_arena.h`, `src/ir_mutate.h`, `src/ir_defuse.h`, `src/ir_clone.h`, `src/ir_text.h`, `src/ir_loop.h`, `src/ir_licm.h`, `src/ir_unroll.h`, `src/ir_inline.h`, `src/ir_builder.h`, `src/ir_lower.h`, `src/ir_analysis.h`, `src/ir_pass.h`, `src/ir_mem2reg.h`, `src/ir_outssa.h`, `src/ir_verify_ssa.h`, `src/ir_verify_ir.h`, `src/ir_canon.h`, `src/ir_cfg_simplify.h`, `src/ir_dce.h`, `src/ir_copyprop.h`, `src/ir_cse.h`, `src/ir_optimizer.h`, `src/target.h`, `src/isel.h`, `src/regalloc.h`, and `src/emit.h`.
 
@@ -17,7 +17,7 @@ This document details the C functions, enumerations, and structures defined in `
 - [IR Optimization Passes](#7-ir-optimization-passes)
 - [Instruction Selection Module](#8-instruction-selection-module-v0321)
 - [Register Allocation Module](#9-register-allocation-module-v0322)
-- [Codegen Module](#10-codegen-module)
+- [Code Emission Module](#10-code-emission-module-v0323)
 - [Diagnostic System](#11-diagnostic-system)
 - [Symbol Table](#12-symbol-table)
 - [Updater](#13-updater)
@@ -2661,39 +2661,6 @@ Translates Arabic function names to C runtime equivalents.
 
 ---
 
-## 11. Legacy AST Codegen (Removed from Build)
-
-**Note:** The legacy AST-based codegen in [`src/codegen.c`](src/codegen.c:1) is retained for historical reference, but it is **no longer compiled** as of v0.3.2.4.
-The active backend pipeline is: AST → IR → Optimizer → [`isel_run_ex()`](src/isel.h) → [`regalloc_run_ex()`](src/regalloc.h) → [`emit_module_ex()`](src/emit.h) → Assembly.
-
-### `codegen`
-
-```c
-void codegen(Node* node, FILE* file)
-```
-
-Recursively generates assembly code from AST (legacy path).
-
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `node` | `Node*` | AST node to process (start with root) |
-| `file` | `FILE*` | Open file handle for output (`out.s`) |
-
-**Generated Sections (Legacy path):**
-
-- `.data` — Global variables
-- `.rdata` — String literals (Windows COFF, legacy path)
-- `.text` — Function bodies
-
-**Assembly Features (Legacy path):**
-
-- Windows x64 ABI compliant stack frames
-- Short-circuit evaluation for `&&` and `||`
-- Indexed addressing for array access
-- Label-based control flow for loops
-
----
-
 ## 12. Diagnostic System
 
 Centralized diagnostic system for compiler errors and warnings (v0.2.8+).
@@ -2827,7 +2794,7 @@ typedef struct {
 | `decl_col` | `int` | Column number where symbol was declared (v0.2.8+) |
 | `decl_file` | `const char*` | Filename where symbol was declared (v0.2.8+) |
 
-> **Note**: Symbol table management functions (`add_local`, `lookup`, etc.) are implemented as static helper functions within `analysis.c` and `codegen.c` independently. In v0.2.4+, the `Symbol` struct definition is shared via `baa.h` to enable semantic analysis before code generation.
+> **Note**: Symbol table management functions are implemented as static helper functions within `analysis.c`. The `Symbol` struct definition is shared via `baa.h` to support semantic analysis.
 
 ---
 

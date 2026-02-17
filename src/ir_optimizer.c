@@ -1,11 +1,11 @@
 /**
  * @file ir_optimizer.c
- * @brief IR optimization pipeline implementation (v0.3.1.6).
+ * @brief تنفيذ خط أنابيب تحسين IR (v0.3.1.6).
  *
- * Implements the unified optimization pipeline with:
- * - Pass ordering (constfold → copyprop → CSE → DCE)
- * - Fixpoint iteration until no changes
- * - Optimization level control
+ * يطبق خط التحسين الموحد مع:
+ * - ترتيب التمريرات
+ * - تكرار حتى نقطة التثبيت (Fixpoint)
+ * - التحكم بمستوى التحسين (-O0/-O1/-O2)
  */
 
 #include "ir_optimizer.h"
@@ -26,11 +26,11 @@
 
 #include <stdio.h>
 
-/** Maximum iterations to prevent infinite loops */
+/** الحد الأقصى للتكرارات لتفادي حلقات لا نهائية */
 #define MAX_ITERATIONS 10
 
 /**
- * @brief Get the name of an optimization level.
+ * @brief الحصول على اسم مستوى التحسين.
  */
 const char* ir_optimizer_level_name(OptLevel level) {
     switch (level) {
@@ -42,11 +42,11 @@ const char* ir_optimizer_level_name(OptLevel level) {
 }
 
 /**
- * @brief Run a single iteration of the optimization pipeline.
+ * @brief تشغيل دورة واحدة من خط التحسين.
  *
- * @param module The IR module to optimize.
- * @param level  Optimization level.
- * @return true if any pass made changes; false otherwise.
+ * @param module وحدة IR المراد تحسينها.
+ * @param level  مستوى التحسين.
+ * @return true إذا أحدثت أي تمريرة تغييرات، false خلاف ذلك.
  */
 static bool optimizer_iteration(IRModule* module,
                                 OptLevel level,
@@ -54,51 +54,51 @@ static bool optimizer_iteration(IRModule* module,
                                 FILE* verify_out) {
     bool changed = false;
 
-    // Pass 0: Mem2Reg (ترقية الذاكرة إلى سجلات) — SSA (فاي + إعادة تسمية)
+    // تمريرة 0: Mem2Reg (ترقية الذاكرة إلى سجلات) — SSA (فاي + إعادة تسمية)
     // يُحوِّل المتغيرات المحلية من alloca/load/store إلى SSA مع إدراج فاي عند الدمج.
     changed |= ir_mem2reg_run(module);
 
-    // Pass 0.5: Canonicalization (توحيد_الـIR)
+    // تمريرة 0.5: Canonicalization (توحيد_الـIR)
     // توحيد شكل التعليمات لزيادة فعالية CSE/ConstFold/DCE
     changed |= ir_canon_run(module);
 
-    // Pass 0.6: InstCombine (دمج_التعليمات)
+    // تمريرة 0.6: InstCombine (دمج_التعليمات)
     // تبسيطات محلية سريعة قبل نشر الثوابت.
     changed |= ir_instcombine_run(module);
 
-    // Pass 0.7: SCCP (نشر_الثوابت_المتناثر)
+    // تمريرة 0.7: SCCP (نشر_الثوابت_المتناثر)
     // نشر الثوابت + تبسيط CFG بناءً على الوصول.
     changed |= ir_sccp_run(module);
 
-    // Pass 1: Constant Folding (طي_الثوابت)
-    // Folds arithmetic with constant operands
+    // تمريرة 1: Constant Folding (طي_الثوابت)
+    // تطوي العمليات الحسابية عندما تكون المعاملات ثوابت
     changed |= ir_constfold_run(module);
 
-    // Pass 2: Copy Propagation (نشر_النسخ)
-    // Removes redundant copies, simplifies register uses
+    // تمريرة 2: Copy Propagation (نشر_النسخ)
+    // تزيل نسخاً زائدة وتبسّط استعمالات السجلات
     changed |= ir_copyprop_run(module);
 
-    // Pass 2.5: GVN (ترقيم_القيم) — O2 only
+    // تمريرة 2.5: GVN (ترقيم_القيم) — فقط في O2
     // يزيل تعابير متكررة حتى لو اختلفت أرقام السجلات بسبب النسخ.
     if (level >= OPT_LEVEL_2) {
         changed |= ir_gvn_run(module);
     }
 
-    // Pass 3: Common Subexpression Elimination (حذف_المكرر) — O2 only
-    // Eliminates duplicate expressions
+    // تمريرة 3: CSE (حذف_المكرر) — فقط في O2
+    // تزيل التعابير المكررة
     if (level >= OPT_LEVEL_2) {
         changed |= ir_cse_run(module);
     }
 
-    // Pass 4: Dead Code Elimination (حذف_الميت)
-    // Removes unused instructions and unreachable blocks
+    // تمريرة 4: DCE (حذف_الميت)
+    // تزيل التعليمات غير المستخدمة والكتل غير القابلة للوصول
     changed |= ir_dce_run(module);
 
-    // Pass 5: CFG simplification (تبسيط_CFG)
+    // تمريرة 5: تبسيط CFG (تبسيط_CFG)
     // دمج كتل تافهة + إزالة أفرع زائدة لتحسين IR
     changed |= ir_cfg_simplify_run(module);
 
-    // Pass 6: LICM (حركة التعليمات غير المتغيرة)
+    // تمريرة 6: LICM (حركة التعليمات غير المتغيرة)
     // نقل التعليمات النقية غير المتغيرة في الحلقات إلى preheader
     changed |= ir_licm_run(module);
 
@@ -124,7 +124,7 @@ static bool optimizer_iteration(IRModule* module,
 }
 
 /**
- * @brief Run the optimization pipeline on an IR module.
+ * @brief تشغيل خط التحسين على وحدة IR.
  */
 static int g_ir_optimizer_verify_gate = 0;
 
@@ -138,7 +138,7 @@ bool ir_optimizer_run(IRModule* module, OptLevel level) {
     // ضمان تخصيصات IR داخل تمريرات المُحسِّن ضمن ساحة هذه الوحدة.
     ir_module_set_current(module);
 
-    // O0: No optimization (نجاح بدون تغييرات)
+    // O0: بدون تحسين (نجاح بدون تغييرات)
     if (level == OPT_LEVEL_0) {
         return true;
     }
@@ -150,7 +150,7 @@ bool ir_optimizer_run(IRModule* module, OptLevel level) {
 
     int iteration = 0;
 
-    // Fixpoint iteration: run passes until no changes
+    // تكرار حتى نقطة التثبيت: تشغيل التمريرات حتى عدم وجود تغييرات
     while (iteration < MAX_ITERATIONS) {
         bool changed = optimizer_iteration(module, level, g_ir_optimizer_verify_gate, stderr);
 
@@ -166,7 +166,7 @@ bool ir_optimizer_run(IRModule* module, OptLevel level) {
         }
 
         if (!changed) {
-            // Fixpoint reached — no pass made changes
+            // تم الوصول لنقطة التثبيت — لم تُحدث أي تمريرة تغييرات
             break;
         }
 

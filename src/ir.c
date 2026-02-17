@@ -1,10 +1,10 @@
 /**
  * @file ir.c
- * @brief Baa IR (نواة باء) - Implementation
+ * @brief تنفيذ IR (نواة باء).
  * @version 0.3.0.1
  * 
- * Implementation of Baa's Arabic-first Intermediate Representation.
- * Provides helper functions for IR construction, printing, and memory management.
+ * تنفيذ التمثيل الوسيط (IR) العربي-أولاً.
+ * يوفر دوال مساعدة لبناء الـ IR وطباعته وإدارة الذاكرة.
  */
 
 #include <stdio.h>
@@ -13,7 +13,7 @@
 #include "ir.h"
 #include "ir_mutate.h"
 #include "ir_defuse.h"
-#include "baa.h"  // For error functions
+#include "baa.h"  // لاستخدام دوال الأخطاء
 
 // ============================================================================
 // سياق الوحدة الحالية (للساحة)
@@ -55,7 +55,7 @@ static char* ir_strdup(const char* s) {
 }
 
 // ============================================================================
-// Predefined Type Instances (Singletons)
+// أنواع IR المعرّفة مسبقاً
 // ============================================================================
 
 static IRType ir_type_void_instance   = { .kind = IR_TYPE_VOID };
@@ -65,7 +65,7 @@ static IRType ir_type_i16_instance    = { .kind = IR_TYPE_I16 };
 static IRType ir_type_i32_instance    = { .kind = IR_TYPE_I32 };
 static IRType ir_type_i64_instance    = { .kind = IR_TYPE_I64 };
 
-// Global type accessors
+// مؤشرات عامة للأنواع الأساسية
 IRType* IR_TYPE_VOID_T  = &ir_type_void_instance;
 IRType* IR_TYPE_I1_T    = &ir_type_i1_instance;
 IRType* IR_TYPE_I8_T    = &ir_type_i8_instance;
@@ -74,22 +74,22 @@ IRType* IR_TYPE_I32_T   = &ir_type_i32_instance;
 IRType* IR_TYPE_I64_T   = &ir_type_i64_instance;
 
 // ============================================================================
-// Arabic Numeral Conversion
+// تحويل الأرقام إلى أرقام هندية عربية
 // ============================================================================
 
 /**
- * Arabic-Indic numerals (٠١٢٣٤٥٦٧٨٩)
- * Each digit is 2 bytes in UTF-8: 0xD9 0x80-0x89
+ * @brief الأرقام الهندية العربية (٠١٢٣٤٥٦٧٨٩)
+ * @note كل رقم يستهلك بايتين في UTF-8.
  */
 static const char* arabic_digits[] = {
     "٠", "١", "٢", "٣", "٤", "٥", "٦", "٧", "٨", "٩"
 };
 
 /**
- * Convert an integer to Arabic-Indic numerals
- * @param n The number to convert
- * @param buf Output buffer (must be large enough, at least 32 bytes)
- * @return Pointer to buf
+ * @brief تحويل عدد صحيح إلى أرقام هندية عربية.
+ * @param n العدد.
+ * @param buf مخزن الخرج (يفضل أن يكون واسعاً بما يكفي).
+ * @return مؤشر إلى buf.
  */
 char* int_to_arabic_numerals(int n, char* buf) {
     if (n == 0) {
@@ -103,25 +103,25 @@ char* int_to_arabic_numerals(int n, char* buf) {
         n = -n;
     }
     
-    // Build digits in reverse order
+    // بناء الأرقام بترتيب عكسي
     char temp[64];
     int pos = 0;
     
     while (n > 0) {
         int digit = n % 10;
-        // Copy the Arabic digit (each is 2 bytes UTF-8)
+        // نسخ الرقم (بايتان UTF-8)
         temp[pos++] = arabic_digits[digit][0];
         temp[pos++] = arabic_digits[digit][1];
         n /= 10;
     }
     
-    // Reverse the digits into buf
+    // عكس الترتيب إلى buf
     int buf_pos = 0;
     if (is_negative) {
         buf[buf_pos++] = '-';
     }
     
-    // Arabic digits are 2 bytes each, reverse in pairs
+    // الأرقام بايتان لكل رقم، نعكس على شكل أزواج
     for (int i = pos - 2; i >= 0; i -= 2) {
         buf[buf_pos++] = temp[i];
         buf[buf_pos++] = temp[i + 1];
@@ -132,57 +132,57 @@ char* int_to_arabic_numerals(int n, char* buf) {
 }
 
 // ============================================================================
-// Arabic Name Conversions
+// تحويل أسماء الـ IR
 // ============================================================================
 
 /**
- * Convert IR opcode to Arabic name
+ * @brief تحويل opcode إلى اسم عربي.
  */
 const char* ir_op_to_arabic(IROp op) {
     switch (op) {
-        // Arithmetic
-        case IR_OP_ADD:     return "جمع";      // Add
-        case IR_OP_SUB:     return "طرح";      // Subtract
-        case IR_OP_MUL:     return "ضرب";      // Multiply
-        case IR_OP_DIV:     return "قسم";      // Divide
-        case IR_OP_MOD:     return "باقي";     // Modulo
-        case IR_OP_NEG:     return "سالب";     // Negate
+        // حسابي
+        case IR_OP_ADD:     return "جمع";
+        case IR_OP_SUB:     return "طرح";
+        case IR_OP_MUL:     return "ضرب";
+        case IR_OP_DIV:     return "قسم";
+        case IR_OP_MOD:     return "باقي";
+        case IR_OP_NEG:     return "سالب";
         
-        // Memory
-        case IR_OP_ALLOCA:  return "حجز";      // Stack allocation
-        case IR_OP_LOAD:    return "حمل";      // Load
-        case IR_OP_STORE:   return "خزن";      // Store
+        // ذاكرة
+        case IR_OP_ALLOCA:  return "حجز";
+        case IR_OP_LOAD:    return "حمل";
+        case IR_OP_STORE:   return "خزن";
         
-        // Comparison
-        case IR_OP_CMP:     return "قارن";     // Compare
+        // مقارنة
+        case IR_OP_CMP:     return "قارن";
         
-        // Logical
-        case IR_OP_AND:     return "و";        // Bitwise AND
-        case IR_OP_OR:      return "أو";       // Bitwise OR
-        case IR_OP_NOT:     return "نفي";      // Bitwise NOT
+        // منطقي/بتّي
+        case IR_OP_AND:     return "و";
+        case IR_OP_OR:      return "أو";
+        case IR_OP_NOT:     return "نفي";
         
-        // Control Flow
-        case IR_OP_BR:      return "قفز";      // Branch (unconditional)
-        case IR_OP_BR_COND: return "قفز_شرط";  // Branch (conditional)
-        case IR_OP_RET:     return "رجوع";     // Return
-        case IR_OP_CALL:    return "نداء";     // Function call
+        // تدفق التحكم
+        case IR_OP_BR:      return "قفز";
+        case IR_OP_BR_COND: return "قفز_شرط";
+        case IR_OP_RET:     return "رجوع";
+        case IR_OP_CALL:    return "نداء";
         
         // SSA
-        case IR_OP_PHI:     return "فاي";      // Phi node
-        case IR_OP_COPY:    return "نسخ";      // Copy/Move
+        case IR_OP_PHI:     return "فاي";
+        case IR_OP_COPY:    return "نسخ";
         
-        // Type Conversion
-        case IR_OP_CAST:    return "تحويل";    // Type cast
+        // تحويل نوع
+        case IR_OP_CAST:    return "تحويل";
         
-        // Misc
-        case IR_OP_NOP:     return "لاعمل";    // No operation
+        // متفرقات
+        case IR_OP_NOP:     return "لاعمل";
         
-        default:            return "مجهول";    // Unknown
+        default:            return "مجهول";
     }
 }
 
 /**
- * Convert IR opcode to English name (for debugging/compatibility)
+ * @brief تحويل opcode إلى اسم إنجليزي (للتنقيح/التوافق).
  */
 const char* ir_op_to_english(IROp op) {
     switch (op) {
@@ -212,16 +212,16 @@ const char* ir_op_to_english(IROp op) {
 }
 
 /**
- * Convert comparison predicate to Arabic name
+ * @brief تحويل شرط المقارنة إلى اسم عربي.
  */
 const char* ir_cmp_pred_to_arabic(IRCmpPred pred) {
     switch (pred) {
-        case IR_CMP_EQ:  return "يساوي";           // Equal
-        case IR_CMP_NE:  return "لا_يساوي";        // Not Equal
-        case IR_CMP_GT:  return "أكبر";            // Greater Than
-        case IR_CMP_LT:  return "أصغر";            // Less Than
-        case IR_CMP_GE:  return "أكبر_أو_يساوي";   // Greater or Equal
-        case IR_CMP_LE:  return "أصغر_أو_يساوي";   // Less or Equal
+        case IR_CMP_EQ:  return "يساوي";
+        case IR_CMP_NE:  return "لا_يساوي";
+        case IR_CMP_GT:  return "أكبر";
+        case IR_CMP_LT:  return "أصغر";
+        case IR_CMP_GE:  return "أكبر_أو_يساوي";
+        case IR_CMP_LE:  return "أصغر_أو_يساوي";
         default:         return "مجهول";
     }
 }

@@ -1,12 +1,12 @@
 /**
  * @file ir_analysis.c
- * @brief IR analysis infrastructure (CFG + dominance) for the Baa compiler.
+ * @brief بنية تحليل IR (CFG + Dominance) لمُصرّف باء.
  * @version 0.3.1.1
  *
- * Implements:
- *  - CFG validation (basic block terminators)
- *  - Predecessor list rebuilding from terminators
- *  - Dominator tree (immediate dominators) + dominance frontier
+ * ينفذ:
+ *  - التحقق من CFG (منهيات الكتل)
+ *  - إعادة بناء قائمة السوابق (preds) من المنهيات
+ *  - شجرة السيطرة (idom) + حدود السيطرة (dominance frontier)
  */
 
 #include "ir_analysis.h"
@@ -15,7 +15,7 @@
 #include <string.h>
 
 // ============================================================================
-// Small helpers
+// مساعدات صغيرة
 // ============================================================================
 
 static int ir_is_terminator_op(IROp op) {
@@ -59,7 +59,7 @@ static IRBlock* ir_block_from_block_value(IRValue* v) {
 }
 
 // ============================================================================
-// CFG Validation
+// التحقق من CFG
 // ============================================================================
 
 bool ir_func_validate_cfg(IRFunc* func) {
@@ -67,13 +67,13 @@ bool ir_func_validate_cfg(IRFunc* func) {
     if (func->is_prototype) return true;
 
     if (!func->entry) {
-        // Function with body must have entry block.
+        // الدالة ذات الجسم يجب أن تملك كتلة دخول.
         return false;
     }
 
     for (IRBlock* b = func->blocks; b; b = b->next) {
         if (!b->last) {
-            // Empty blocks are invalid (no terminator).
+            // الكتل الفارغة غير صالحة (لا منهي).
             return false;
         }
 
@@ -81,7 +81,7 @@ bool ir_func_validate_cfg(IRFunc* func) {
             return false;
         }
 
-        // Validate terminator operands.
+        // التحقق من معاملات المنهي.
         IRInst* term = b->last;
         switch (term->op) {
             case IR_OP_BR: {
@@ -94,7 +94,7 @@ bool ir_func_validate_cfg(IRFunc* func) {
             case IR_OP_BR_COND: {
                 if (term->operand_count < 3) return false;
 
-                // Operand 0: condition (should be i1, but allow NULL type for now)
+                // المعامل 0: الشرط (يفضل i1، لكن نسمح بنوع NULL حالياً)
                 if (!term->operands[0]) return false;
 
                 IRBlock* if_true = ir_block_from_block_value(term->operands[1]);
@@ -104,7 +104,7 @@ bool ir_func_validate_cfg(IRFunc* func) {
             }
 
             case IR_OP_RET:
-                // RET may have 0 operands (void) or 1 operand.
+                // رجوع قد يملك 0 معاملات (void) أو 1 معامل.
                 if (term->operand_count > 1) return false;
                 break;
 

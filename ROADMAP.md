@@ -166,7 +166,7 @@
 - [x] **Replace old codegen** — IR → Backend → Assembly.
 - [x] **Verify output** — Compare with old codegen results.
 - [x] **Performance testing** — Ensure no regression.
-- [x] **Remove legacy codegen** — Retire legacy AST backend from the build (stop compiling `codegen.c`).
+- [x] **Remove legacy codegen** — Retire the legacy AST backend from the build.
 
 #### 0.3.2.4-IR-FIX: ISel Bug Fixes & Backend Testing ✅ COMPLETED (2026-02-08)
 
@@ -396,17 +396,21 @@
 
 #### v0.3.2.9.3: Regression Testing ✅ COMPLETED (2026-02-17)
 
-- [x] **Output comparison** — Old codegen vs IR-based codegen.
+- [x] **Output comparison** — Compare IR-based output against a reference corpus.
 - [x] **Test all v0.2.x programs** — Ensure backward compatibility.
 - [x] **Edge case testing** — Complex control flow, nested loops, recursion.
 - [x] **Error case testing** — Verify error messages unchanged.
 
-#### v0.3.2.9.4: Documentation & Cleanup
+#### v0.3.2.9.4: Documentation & Cleanup ← CURRENT
 
-- [ ] **Update INTERNALS.md** — Document new IR pipeline.
-- [ ] **IR Developer Guide** — How to add new IR instructions.
-- [ ] **Remove deprecated code** — Clean up old codegen paths.
-- [ ] **Code review checklist** — Ensure code quality standards.
+- [x] **Update INTERNALS.md** — Document new IR pipeline.
+- [x] **IR Developer Guide** — How to add new IR instructions.
+- [x] **Driver split** — Extract CLI parsing, toolchain execution, and per-file compile pipeline into dedicated `src/driver_*.c/.h` modules.
+- [x] **Driver link safety** — Remove fixed-size `argv_link` construction; build link argv dynamically based on object count.
+- [x] **Shared file reader** — Provide `read_file()` as a shared module (`src/read_file.c`) for the lexer include system.
+- [x] **Line ending normalization** — Add `.gitattributes` to keep the repo LF-normalized and reduce diff churn.
+- [x] **Remove deprecated code** — Remove legacy AST-based codegen paths and backend-compare mode.
+- [x] **Code review checklist** — Ensure code quality standards.
 
 ---
 
@@ -733,7 +737,7 @@
 - [ ] Better handling of UTF-8 edge cases in lexer.
 - [ ] Optimize symbol table lookups (consider hash table).
 - [ ] Add more comprehensive error recovery.
-- [ ] Improve codegen output readability (comments in assembly).
+- [ ] Improve assembly output readability (comments in assembly).
 
 ### v0.3.7.5: Static Local Variables (متغيرات ساكنة محلية) 📌
 **Goal:** Variables that persist between function calls.
@@ -1323,7 +1327,6 @@
 
 ### v0.9.5: Rewrite Code Generator ⚙️
 
-- [ ] **Port `codegen.c` → `codegen.baa`** — Assembly generation in Baa.
 - [ ] **Handle all targets** — Windows x64, Linux x64.
 - [ ] **Test generated assembly** — Compare with C version.
 
@@ -1605,7 +1608,7 @@ fi
 - [x] **Pass Separation** — Completely separate Parsing from Code Generation.
   - `parse()` returns a raw AST.
   - `analyze()` walks the AST to check types and resolve symbols.
-  - `codegen()` takes a validated AST.
+  - The backend pipeline consumes a validated AST.
 - [x] **Symbol Resolution** — Check for undefined variables before code generation starts.
 - [x] **Scope Analysis** — Implement scope stack to properly handle nested blocks and variable shadowing.
 - [x] **Type Checking** — Validate assignments (int = string now fails during semantic analysis).

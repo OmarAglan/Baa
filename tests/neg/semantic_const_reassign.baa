@@ -1,4 +1,5 @@
-// EXPECT: [Semantic Error]
+// EXPECT: [Error]
+// EXPECT: خطأ دلالي
 // EXPECT: Cannot reassign constant
 صحيح الرئيسية() {
     ثابت صحيح س = 1.

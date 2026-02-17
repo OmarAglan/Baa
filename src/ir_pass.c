@@ -1,6 +1,6 @@
 /**
  * @file ir_pass.c
- * @brief IR pass interface (optimizer infrastructure).
+ * @brief واجهة تمريرات IR (بنية المُحسِّن).
  * @version 0.3.1.1
  */
 

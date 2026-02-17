@@ -1,4 +1,5 @@
-// EXPECT: [Semantic Error]
+// EXPECT: [Error]
+// EXPECT: خطأ دلالي
 // EXPECT: 'break' used outside
 صحيح الرئيسية() {
     توقف.

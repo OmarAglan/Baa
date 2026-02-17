@@ -1,6 +1,6 @@
 /**
  * @file ir_copyprop.c
- * @brief IR copy propagation pass (نشر_النسخ).
+ * @brief تمريرة نشر_النسخ (Copy Propagation) للـ IR.
  * @version 0.3.1.4
  *
  * هدف التمريرة:

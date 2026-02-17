@@ -1,0 +1,19 @@
+* text=auto eol=lf
+
+*.c text eol=lf
+*.h text eol=lf
+*.md text eol=lf
+*.py text eol=lf
+*.txt text eol=lf
+*.cmake text eol=lf
+*.baa text eol=lf
+*.baahd text eol=lf
+
+# Binary files
+*.ico binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.pdf binary
+*.zip binary

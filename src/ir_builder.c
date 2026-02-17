@@ -1,6 +1,6 @@
 /**
  * @file ir_builder.c
- * @brief Baa IR Builder - Implementation
+ * @brief تنفيذ باني IR (IR Builder).
  * @version 0.3.0
  * 
  * Implementation of the builder pattern API for IR construction.

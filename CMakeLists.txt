@@ -6,12 +6,12 @@ set(CMAKE_C_STANDARD 11)
 # Build options
 option(BAA_ENABLE_WARNINGS "Enable compiler warnings for Baa" ON)
 option(BAA_WARNINGS_AS_ERRORS "Treat warnings as errors for hardening builds" OFF)
-option(BAA_ENABLE_LEGACY_CODEGEN "Enable legacy AST-based backend (Windows-only)" OFF)
 
 # List of source files
 set(SOURCES
     src/analysis.c    # Semantic Analysis module
     src/error.c
+    src/read_file.c
     src/ir.c          # Intermediate Representation (Phase 3)
     src/ir_arena.c    # IR arena allocator (v0.3.2.6.1)
     src/ir_mutate.c   # IR mutation helpers (v0.3.2.6.1)
@@ -27,6 +27,7 @@ set(SOURCES
     src/ir_builder.c  # IR Builder pattern API (v0.3.0.2)
     src/ir_verify_ssa.c # IR SSA verification (التحقق من SSA) (v0.3.2.5.3)
     src/ir_verify_ir.c  # IR well-formedness verification (--verify-ir) (v0.3.2.6.5)
+    src/ir_verify_common.c # IR/SSA shared verification helpers (v0.3.2.9.4)
     src/ir_canon.c      # IR canonicalization (v0.3.2.6.5)
     src/ir_cfg_simplify.c # IR CFG simplification (v0.3.2.6.5)
     src/ir_mem2reg.c  # IR Mem2Reg (إدراج فاي + SSA Renaming) (v0.3.2.5.2)
@@ -48,13 +49,12 @@ set(SOURCES
     src/lexer.c
     src/main.c
     src/parser.c
+    src/process.c
+    src/driver_cli.c
+    src/driver_time.c
+    src/driver_toolchain.c
+    src/driver_pipeline.c
 )
-
-# Legacy AST-based backend (Windows-only; used for regression comparisons)
-if(WIN32 AND BAA_ENABLE_LEGACY_CODEGEN)
-    list(APPEND SOURCES src/codegen.c)
-    add_compile_definitions(BAA_ENABLE_LEGACY_CODEGEN=1)
-endif()
 
 # Add resource file for Windows (Icon & Version Info)
 if(WIN32)

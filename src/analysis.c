@@ -7,7 +7,7 @@
  *          - التحقق من الثوابت (Const Checking)
  *          - اكتشاف المتغيرات غير المستخدمة (Unused Variables)
  *          - اكتشاف الكود الميت (Dead Code)
- * @version 0.2.9
+ * @version 0.3.2.9.4
  */
 
 #include "baa.h"
@@ -16,17 +16,20 @@
 // جداول الرموز (Symbol Tables)
 // ============================================================================
 
-// نستخدم نفس الهيكلية البسيطة المستخدمة سابقاً في codegen لضمان التوافق
-// في المستقبل، سيتم استبدال هذا بجداول تجزئة (Hash Maps) لدعم النطاقات المتداخلة بشكل أفضل
+// نستخدم نفس الهيكلية البسيطة المستخدمة سابقاً لضمان التوافق.
+// في المستقبل، يمكن استبدالها بجداول تجزئة لدعم نطاقات أعمق بشكل أفضل.
 
-static Symbol global_symbols[100];
+#define ANALYSIS_MAX_SYMBOLS 100
+#define ANALYSIS_MAX_SCOPES  64
+
+static Symbol global_symbols[ANALYSIS_MAX_SYMBOLS];
 static int global_count = 0;
 
-static Symbol local_symbols[100];
+static Symbol local_symbols[ANALYSIS_MAX_SYMBOLS];
 static int local_count = 0;
 
 // مكدس النطاقات المحلية: نخزن قيمة local_count عند دخول نطاق جديد.
-static int scope_stack[64];
+static int scope_stack[ANALYSIS_MAX_SCOPES];
 static int scope_depth = 0;
 
 static bool has_error = false;
@@ -40,20 +43,53 @@ static const char* current_filename = NULL;
 // دوال مساعدة (Helper Functions)
 // ============================================================================
 
+static Token semantic_make_token(const char* filename, int line, int col)
+{
+    Token t;
+    memset(&t, 0, sizeof(t));
+    t.type = TOKEN_INVALID;
+    t.value = NULL;
+    t.filename = filename ? filename : (current_filename ? current_filename : "unknown");
+    t.line = (line > 0) ? line : 1;
+    t.col = (col > 0) ? col : 1;
+    return t;
+}
+
 /**
- * @brief الإبلاغ عن خطأ دلالي.
- * @note نستخدم وحدة (Token) فارغة لأن العقد لا تحتوي حالياً على معلومات السطر.
+ * @brief الإبلاغ عن خطأ دلالي بمعلومات موقع.
  */
-static void semantic_error(const char* message, ...) {
+static void semantic_error(Node* node, const char* message, ...)
+{
     has_error = true;
-    fprintf(stderr, "[Semantic Error] ");
-    
+
+    Token tok = semantic_make_token(
+        node ? node->filename : NULL,
+        node ? node->line : 1,
+        node ? node->col : 1
+    );
+
+    char buf[1024];
     va_list args;
     va_start(args, message);
-    vfprintf(stderr, message, args);
+    (void)vsnprintf(buf, sizeof(buf), message, args);
     va_end(args);
-    
-    fprintf(stderr, "\n");
+
+    error_report(tok, "خطأ دلالي: %s", buf);
+}
+
+static void semantic_error_loc(const char* filename, int line, int col, const char* message, ...)
+{
+    has_error = true;
+
+    Token tok = semantic_make_token(filename, line, col);
+
+    char buf[1024];
+    va_list args;
+    va_start(args, message);
+    (void)vsnprintf(buf, sizeof(buf), message, args);
+    va_end(args);
+
+    error_report(tok, "خطأ دلالي: %s", buf);
 }
 
 /**
@@ -81,7 +117,7 @@ static int current_scope_start(void) {
 
 static void scope_push(void) {
     if (scope_depth >= (int)(sizeof(scope_stack) / sizeof(scope_stack[0]))) {
-        semantic_error("Too many nested scopes.");
+        semantic_error(NULL, "Too many nested scopes.");
         return;
     }
     scope_stack[scope_depth++] = local_count;
@@ -104,14 +140,16 @@ static void scope_pop(void) {
 static void add_symbol(const char* name, ScopeType scope, DataType type, bool is_const,
                        int decl_line, int decl_col, const char* decl_file) {
     if (!name) {
-        semantic_error("اسم الرمز فارغ.");
+        semantic_error_loc(decl_file, decl_line, decl_col, "اسم الرمز فارغ.");
         return;
     }
 
     size_t name_len = strlen(name);
     size_t name_cap = sizeof(global_symbols[0].name);
     if (name_len >= name_cap) {
-        semantic_error("اسم الرمز طويل جداً: '%s' (الحد الأقصى %zu حرفاً).", name, name_cap - 1);
+        semantic_error_loc(decl_file, decl_line, decl_col,
+                           "اسم الرمز طويل جداً: '%s' (الحد الأقصى %zu حرفاً).",
+                           name, name_cap - 1);
         return;
     }
 
@@ -119,11 +157,15 @@ static void add_symbol(const char* name, ScopeType scope, DataType type, bool is
         // التحقق من التكرار
         for (int i = 0; i < global_count; i++) {
             if (strcmp(global_symbols[i].name, name) == 0) {
-                semantic_error("Redefinition of global variable '%s'.", name);
+                semantic_error_loc(decl_file, decl_line, decl_col,
+                                   "Redefinition of global variable '%s'.", name);
                 return;
             }
         }
-        if (global_count >= 100) { semantic_error("Too many global variables."); return; }
+        if (global_count >= ANALYSIS_MAX_SYMBOLS) {
+            semantic_error_loc(decl_file, decl_line, decl_col, "Too many global variables.");
+            return;
+        }
         
         memcpy(global_symbols[global_count].name, name, name_len + 1);
         global_symbols[global_count].scope = SCOPE_GLOBAL;
@@ -139,11 +181,15 @@ static void add_symbol(const char* name, ScopeType scope, DataType type, bool is
         int start = current_scope_start();
         for (int i = start; i < local_count; i++) {
             if (strcmp(local_symbols[i].name, name) == 0) {
-                semantic_error("Redefinition of local variable '%s'.", name);
+                semantic_error_loc(decl_file, decl_line, decl_col,
+                                   "Redefinition of local variable '%s'.", name);
                 return;
             }
         }
-        if (local_count >= 100) { semantic_error("Too many local variables."); return; }
+        if (local_count >= ANALYSIS_MAX_SYMBOLS) {
+            semantic_error_loc(decl_file, decl_line, decl_col, "Too many local variables.");
+            return;
+        }
 
         // تحذير إذا كان المتغير المحلي يحجب متغيراً عاماً
         for (int i = 0; i < global_count; i++) {
@@ -275,7 +321,7 @@ static DataType infer_type(Node* node) {
         case NODE_VAR_REF: {
             Symbol* sym = lookup(node->data.var_ref.name, true); // تعليم كمستخدم
             if (!sym) {
-                semantic_error("Undefined variable '%s'.", node->data.var_ref.name);
+                semantic_error(node, "Undefined variable '%s'.", node->data.var_ref.name);
                 return TYPE_INT; // استرداد الخطأ
             }
             return sym->type;
@@ -285,11 +331,11 @@ static DataType infer_type(Node* node) {
             // حالياً المصفوفات تدعم الأعداد الصحيحة فقط
             Symbol* sym = lookup(node->data.array_op.name, true); // تعليم كمستخدم
             if (!sym) {
-                semantic_error("Undefined array '%s'.", node->data.array_op.name);
+                semantic_error(node, "Undefined array '%s'.", node->data.array_op.name);
             }
             // تحقق من أن الفهرس رقمي
             if (infer_type(node->data.array_op.index) != TYPE_INT) {
-                semantic_error("Array index must be an integer.");
+                semantic_error(node->data.array_op.index, "Array index must be an integer.");
             }
             return TYPE_INT;
         }
@@ -297,6 +343,13 @@ static DataType infer_type(Node* node) {
         case NODE_CALL_EXPR:
             // في الوقت الحالي نفترض أن جميع الدوال تعيد صحيح (INT)
             // TODO: دعم دوال ترجع نصوصاً عند تحديث تعريف الدوال
+            {
+                Node* arg = node->data.call.args;
+                while (arg) {
+                    (void)infer_type(arg);
+                    arg = arg->next;
+                }
+            }
             return TYPE_INT;
 
         case NODE_BIN_OP: {
@@ -307,7 +360,7 @@ static DataType infer_type(Node* node) {
             OpType op = node->data.bin_op.op;
             if (op == OP_ADD || op == OP_SUB || op == OP_MUL || op == OP_DIV || op == OP_MOD) {
                 if (left != TYPE_INT || right != TYPE_INT) {
-                    semantic_error("Arithmetic operations require INTEGER operands.");
+                    semantic_error(node, "Arithmetic operations require INTEGER operands.");
                 }
                 return TYPE_INT;
             }
@@ -315,7 +368,7 @@ static DataType infer_type(Node* node) {
             // عمليات المقارنة تتطلب أنواعاً متوافقة وتعيد منطقي
             if (op == OP_EQ || op == OP_NEQ || op == OP_LT || op == OP_GT || op == OP_LTE || op == OP_GTE) {
                 if (left != right) {
-                    semantic_error("Comparison operations require matching types.");
+                    semantic_error(node, "Comparison operations require matching types.");
                 }
                 return TYPE_BOOL;
             }
@@ -324,7 +377,7 @@ static DataType infer_type(Node* node) {
             if (op == OP_AND || op == OP_OR) {
                 // نقبل INT أو BOOL لأن C تعامل القيم غير الصفرية كـ true
                 if ((left != TYPE_INT && left != TYPE_BOOL) || (right != TYPE_INT && right != TYPE_BOOL)) {
-                    semantic_error("Logical operations require INTEGER or BOOLEAN operands.");
+                    semantic_error(node, "Logical operations require INTEGER or BOOLEAN operands.");
                 }
                 return TYPE_BOOL;
             }
@@ -335,7 +388,7 @@ static DataType infer_type(Node* node) {
         case NODE_UNARY_OP:
         case NODE_POSTFIX_OP: {
             if (infer_type(node->data.unary_op.operand) != TYPE_INT) {
-                semantic_error("Unary operations require INTEGER operand.");
+                semantic_error(node, "Unary operations require INTEGER operand.");
             }
             return TYPE_INT;
         }
@@ -378,8 +431,7 @@ static void analyze_statements_with_dead_code_check(Node* statements, const char
         
         if (is_terminating_statement(stmt)) {
             found_terminator = true;
-            // TODO: الحصول على رقم السطر الفعلي من العقدة
-            terminator_line = 0; // سيظهر كسطر 0 مؤقتاً
+            terminator_line = (stmt->line > 0) ? stmt->line : 1;
         }
         
         stmt = stmt->next;
@@ -413,7 +465,7 @@ static void analyze_node(Node* node) {
                                   (exprType == TYPE_INT && declType == TYPE_BOOL);
                 
                 if (!compatible) {
-                    semantic_error("Type mismatch in declaration of '%s'. Expected %s but got %s.",
+                    semantic_error(node, "Type mismatch in declaration of '%s'. Expected %s but got %s.",
                         node->data.var_decl.name,
                         datatype_to_str(declType),
                         datatype_to_str(exprType));
@@ -421,15 +473,14 @@ static void analyze_node(Node* node) {
             }
             // 2. التحقق من أن الثوابت لها قيم ابتدائية
             if (node->data.var_decl.is_const && !node->data.var_decl.expression) {
-                semantic_error("Constant '%s' must be initialized.", node->data.var_decl.name);
+                semantic_error(node, "Constant '%s' must be initialized.", node->data.var_decl.name);
             }
             // 3. إضافة الرمز (مع معلومات الموقع للتحذيرات)
-            // TODO: الحصول على رقم السطر الفعلي من العقدة
             add_symbol(node->data.var_decl.name,
                        node->data.var_decl.is_global ? SCOPE_GLOBAL : SCOPE_LOCAL,
                        node->data.var_decl.type,
                        node->data.var_decl.is_const,
-                       1, 1, current_filename); // مؤقتاً: سطر 1، عمود 1
+                       node->line, node->col, node->filename ? node->filename : current_filename);
             break;
         }
 
@@ -445,7 +496,7 @@ static void analyze_node(Node* node) {
                 if (param->type == NODE_VAR_DECL) {
                     // المعاملات تُعتبر "مستخدمة" ضمنياً (لتجنب تحذيرات خاطئة)
                     add_symbol(param->data.var_decl.name, SCOPE_LOCAL, param->data.var_decl.type, false,
-                               1, 1, current_filename);
+                               param->line, param->col, param->filename ? param->filename : current_filename);
                     // تعليم المعامل كمستخدم مباشرة
                     local_symbols[local_count - 1].is_used = true;
                 }
@@ -473,15 +524,15 @@ static void analyze_node(Node* node) {
         case NODE_ASSIGN: {
             Symbol* sym = lookup(node->data.assign_stmt.name, true); // تعليم كمستخدم
             if (!sym) {
-                semantic_error("Assignment to undefined variable '%s'.", node->data.assign_stmt.name);
+                semantic_error(node, "Assignment to undefined variable '%s'.", node->data.assign_stmt.name);
             } else {
                 // التحقق من الثوابت: لا يمكن إعادة تعيين قيمة ثابت
                 if (sym->is_const) {
-                    semantic_error("Cannot reassign constant '%s'.", node->data.assign_stmt.name);
+                    semantic_error(node, "Cannot reassign constant '%s'.", node->data.assign_stmt.name);
                 }
                 DataType exprType = infer_type(node->data.assign_stmt.expression);
                 if (exprType != sym->type) {
-                    semantic_error("Type mismatch in assignment to '%s'.", node->data.assign_stmt.name);
+                    semantic_error(node, "Type mismatch in assignment to '%s'.", node->data.assign_stmt.name);
                 }
             }
             break;
@@ -490,7 +541,7 @@ static void analyze_node(Node* node) {
         case NODE_IF: {
             DataType condType = infer_type(node->data.if_stmt.condition);
             if (condType != TYPE_INT && condType != TYPE_BOOL) {
-                semantic_error("'if' condition must be an integer/boolean.");
+                semantic_error(node->data.if_stmt.condition, "'if' condition must be an integer/boolean.");
             }
 
             // كل فرع يعتبر نطاقاً مستقلاً حتى بدون أقواس
@@ -509,7 +560,7 @@ static void analyze_node(Node* node) {
         case NODE_WHILE: {
             DataType condType = infer_type(node->data.while_stmt.condition);
             if (condType != TYPE_INT && condType != TYPE_BOOL) {
-                semantic_error("'while' condition must be an integer/boolean.");
+                semantic_error(node->data.while_stmt.condition, "'while' condition must be an integer/boolean.");
             }
             bool prev_loop = inside_loop;
             inside_loop = true;
@@ -530,7 +581,7 @@ static void analyze_node(Node* node) {
             if (node->data.for_stmt.condition) {
                 DataType condType = infer_type(node->data.for_stmt.condition);
                 if (condType != TYPE_INT && condType != TYPE_BOOL) {
-                    semantic_error("'for' condition must be an integer/boolean.");
+                    semantic_error(node->data.for_stmt.condition, "'for' condition must be an integer/boolean.");
                 }
             }
             if (node->data.for_stmt.increment) analyze_node(node->data.for_stmt.increment);
@@ -546,7 +597,7 @@ static void analyze_node(Node* node) {
 
         case NODE_SWITCH: {
             if (infer_type(node->data.switch_stmt.expression) != TYPE_INT) {
-                semantic_error("'switch' expression must be an integer.");
+                semantic_error(node->data.switch_stmt.expression, "'switch' expression must be an integer.");
             }
             bool prev_switch = inside_switch;
             inside_switch = true;
@@ -558,7 +609,7 @@ static void analyze_node(Node* node) {
             while (current_case) {
                 if (!current_case->data.case_stmt.is_default) {
                     if (infer_type(current_case->data.case_stmt.value) != TYPE_INT) {
-                        semantic_error("'case' value must be an integer constant.");
+                        semantic_error(current_case->data.case_stmt.value, "'case' value must be an integer constant.");
                     }
                 }
                 // جسم الحالة عبارة عن قائمة جمل
@@ -576,18 +627,18 @@ static void analyze_node(Node* node) {
 
         case NODE_BREAK:
             if (!inside_loop && !inside_switch) {
-                semantic_error("'break' used outside of loop or switch.");
+                semantic_error(node, "'break' used outside of loop or switch.");
             }
             break;
 
         case NODE_CONTINUE:
             if (!inside_loop) {
-                semantic_error("'continue' used outside of loop.");
+                semantic_error(node, "'continue' used outside of loop.");
             }
             break;
 
         case NODE_RETURN:
-            // TODO: Check against function return type
+            // TODO: التحقق من تطابق نوع الإرجاع مع نوع الدالة
             if (node->data.return_stmt.expression) {
                 infer_type(node->data.return_stmt.expression);
             }
@@ -601,44 +652,50 @@ static void analyze_node(Node* node) {
             // التحقق من أن المتغير معرف وقابل للتعديل
             Symbol* sym = lookup(node->data.read_stmt.var_name, true);
             if (!sym) {
-                semantic_error("Reading into undefined variable '%s'.", node->data.read_stmt.var_name);
+                semantic_error(node, "Reading into undefined variable '%s'.", node->data.read_stmt.var_name);
             } else {
                 if (sym->is_const) {
-                    semantic_error("Cannot read into constant variable '%s'.", node->data.read_stmt.var_name);
+                    semantic_error(node, "Cannot read into constant variable '%s'.", node->data.read_stmt.var_name);
                 }
                 // حالياً نقبل القراءة فقط في المتغيرات الصحيحة
                 if (sym->type != TYPE_INT) {
-                    semantic_error("'اقرأ' currently only supports INTEGER variables.");
+                    semantic_error(node, "'اقرأ' currently only supports INTEGER variables.");
                 }
             }
             break;
         }
             
         case NODE_CALL_STMT:
-            // استنتاج النوع للتحقق من وجود الدالة
-            infer_type((Node*)&node->data.call); // Hack cast to access call data in infer_type
+            // استنتاج نوع الوسائط لضمان فحص الأنواع داخلها
+            {
+                Node* arg = node->data.call.args;
+                while (arg) {
+                    (void)infer_type(arg);
+                    arg = arg->next;
+                }
+            }
             break;
 
         case NODE_ARRAY_DECL:
             add_symbol(node->data.array_decl.name, SCOPE_LOCAL, TYPE_INT, node->data.array_decl.is_const,
-                       1, 1, current_filename);
+                       node->line, node->col, node->filename ? node->filename : current_filename);
             break;
 
         case NODE_ARRAY_ASSIGN: {
             Symbol* sym = lookup(node->data.array_op.name, true); // تعليم كمستخدم
             if (!sym) {
-                semantic_error("Assignment to undefined array '%s'.", node->data.array_op.name);
+                semantic_error(node, "Assignment to undefined array '%s'.", node->data.array_op.name);
             } else {
                 // التحقق من الثوابت: لا يمكن تعديل عناصر مصفوفة ثابتة
                 if (sym->is_const) {
-                    semantic_error("Cannot modify constant array '%s'.", node->data.array_op.name);
+                    semantic_error(node, "Cannot modify constant array '%s'.", node->data.array_op.name);
                 }
             }
             if (infer_type(node->data.array_op.index) != TYPE_INT) {
-                semantic_error("Array index must be integer.");
+                semantic_error(node->data.array_op.index, "Array index must be integer.");
             }
             if (infer_type(node->data.array_op.value) != TYPE_INT) {
-                semantic_error("Array value must be integer (Strings not supported in arrays yet).");
+                semantic_error(node->data.array_op.value, "Array value must be integer (Strings not supported in arrays yet).");
             }
             break;
         }
@@ -656,8 +713,12 @@ static void analyze_node(Node* node) {
 bool analyze(Node* program) {
     reset_analysis();
     
-    // تعيين اسم الملف الحالي (مؤقتاً نستخدم "source")
-    current_filename = "source";
+    // تعيين اسم الملف الحالي (للتحذيرات)
+    if (program && program->filename) {
+        current_filename = program->filename;
+    } else {
+        current_filename = "source";
+    }
     
     analyze_node(program);
     return !has_error;

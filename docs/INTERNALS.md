@@ -1,6 +1,6 @@
 # Baa Compiler Internals
 
-> **Version:** 0.3.2.9.3 | [← Language Spec](LANGUAGE.md) | [API Reference →](API_REFERENCE.md)
+> **Version:** 0.3.2.9.4 | [← Language Spec](LANGUAGE.md) | [API Reference →](API_REFERENCE.md)
 
 **Target Architecture:** x86-64 (AMD64)
 **Target OS:** Windows (MinGW-w64 Toolchain)
@@ -34,6 +34,8 @@ This document details the internal architecture, data structures, and algorithms
 - [Code Generation](#7-code-generation)
 - [Global Data Section](#8-global-data-section)
 - [Naming & Entry Point](#9-naming--entry-point)
+- [IR Developer Guide](IR_DEVELOPER_GUIDE.md)
+- [Code Review Checklist](CODE_REVIEW_CHECKLIST.md)
 
 ---
 
@@ -72,7 +74,6 @@ flowchart LR
 | **7. Link** | `.o` Object | `.exe` Executable | `gcc` | Links with C Runtime. |
 
 > **Note (v0.3.2.4+):** The compiler uses the full IR-based backend pipeline end-to-end: AST → IR → Optimizer → ISel → RegAlloc → Emit → Assembly.
-> The legacy AST-based backend is **disabled by default** and can be enabled on Windows for regression comparisons only (CMake: `-DBAA_ENABLE_LEGACY_CODEGEN=ON`).
 
 ### 1.1.1. Component Map
 
@@ -103,7 +104,7 @@ The driver in `main.c` (v0.2.0+) supports multi-file compilation and various mod
 | (Default) | **Compile & Link** | `.exe` | Runs full pipeline. Deletes intermediate `.s` and `.o` files. |
 | `-o <file>` | **Custom Output** | `.exe` | Sets the linked output filename (default: `out.exe`). |
 | (Multiple Files) | **Multi-File Build** | `.exe` | Compiles each `.baa` to `.o` and links them. |
-| `-S`, `-s` | **Assembly Only** | `.s` | Stops after codegen. Writes `<input>.s` (or `-o` when a single input file is used). |
+| `-S`, `-s` | **Assembly Only** | `.s` | Stops after code emission. Writes `<input>.s` (or `-o` when a single input file is used). |
 | `-c` | **Compile Only** | `.o` | Stops after assembling. Writes `<input>.o` (or `-o` when a single input file is used). |
 | `-v` | **Verbose** | - | Prints commands and compilation time; keeps intermediate `.s` files. |
 | `--dump-ir` | **IR Dump** | stdout | Prints Baa IR (Arabic) after semantic analysis (v0.3.0.6+). |
@@ -114,8 +115,6 @@ The driver in `main.c` (v0.2.0+) supports multi-file compilation and various mod
 | `--verify-ssa` | **SSA Verification** | stderr | Verifies SSA invariants after Mem2Reg and before Out-of-SSA (**requires `-O1`/`-O2`**) (v0.3.2.5.3). |
 | `--verify-gate` | **Verifier Gate (Debug)** | stderr | Runs `--verify-ir`/`--verify-ssa` after each optimizer iteration (**requires `-O1`/`-O2`**) (v0.3.2.6.5). |
 | `--time-phases` | **Phase Timings** | stderr | Prints per-phase timing and IR arena memory stats (`[TIME]`/`[MEM]`) (v0.3.2.9.2). |
-| `--backend=<b>` | **Backend Select** | - | Selects backend: `ir` (default) or `legacy` (Windows-only; requires build with `-DBAA_ENABLE_LEGACY_CODEGEN=ON`) (v0.3.2.9.3). |
-| `--compare-backends` | **Compare Backends** | stderr | Windows-only: builds + runs both `ir` and `legacy` backends and diffs runtime output (requires legacy-enabled build) (v0.3.2.9.3). |
 | `-funroll-loops` | **Loop Unrolling (Opt-in)** | - | Conservatively fully-unrolls small constant-trip-count loops after Out-of-SSA (v0.3.2.7.1). |
 | `--version` | **Version Info** | stdout | Displays compiler version and build date. |
 | `--help`, `-h` | **Help** | stdout | Shows usage information. |
@@ -157,18 +156,20 @@ Notes:
 - On all hosts: runs `tests/test.py`.
 - On all hosts: runs docs-derived v0.2.x corpus (auto-generated) under `tests/corpus_v2x_docs/`.
 - On all hosts: runs negative diagnostics tests under `tests/neg/` (anchor matching via `// EXPECT:`).
-- On Windows (legacy-enabled build): runs `tests/corpus_compare/*.baa` via `--compare-backends`.
+- On Windows: same as other hosts.
 
-Windows build (legacy backend enabled):
+Windows build:
 
 ```
-cmake -B build -G "MinGW Makefiles" -DBAA_ENABLE_LEGACY_CODEGEN=ON
+cmake -B build -G "MinGW Makefiles"
 cmake --build build
 
 python tests\regress.py
 ```
 
 The compiler uses a centralized **Diagnostic Module** (`src/error.c`) to handle errors and warnings.
+
+Note (v0.3.2.9.4): semantic analysis errors now use `error_report(...)` as well, so semantic diagnostics include `file:line:col` and source context like parser errors.
 
 **Error Features:**
 
@@ -479,7 +480,7 @@ When a local variable is declared with the same name as a global variable, a `WA
 
 ### 5.4. Isolation Note
 
-Since v0.2.4, `analysis.c` and `codegen.c` **maintain separate symbol tables** for isolation. The `Symbol` struct definition is shared via `baa.h`, but each module manages its own table. This ensures validation logic is independent from generation logic.
+Since v0.2.4, `analysis.c` maintains its own **symbol table** for isolation. This ensures validation logic is independent from the backend pipeline.
 
 **Future improvement:** Unify symbol tables into a shared context object passed between phases.
 
@@ -1464,69 +1465,6 @@ This backend is being refactored to support multiple ABIs via `BaaTarget` (`src/
 - [`emit_inst()`](src/emit.c) — Translates individual machine instruction
 
 **Testing:** Integration testing via full compilation pipeline (no standalone unit tests yet).
-
----
-
-## 7. Legacy AST Codegen (Removed from Build)
-
-> **تنبيه:** هذا القسم تاريخي ويصف المسار القديم (AST → Assembly) الموجود في [`src/codegen.c`](src/codegen.c:1) والذي تم إيقاف بنائه في v0.3.2.4. المسار الحالي موثّق في الأقسام 6.19–6.21.
-
-### 7.1. Loop Control & Branching
-
-To support nested loops and switches, the code generator maintains stacks:
-
-- **Loop Continue Stack** (`loop_continue_stack`): Stores labels for `continue` statements.
-- **Loop Break Stack** (`loop_break_stack`): Stores labels for `break` statements.
-- **Loop Depth Counter** (`loop_depth`): Tracks nesting level.
-
-**Special Case - Switch Statements:**
-
-- Switch accepts `break` but not `continue` (unless nested in a loop).
-- When entering a switch, the continue label is inherited from the enclosing loop (if any).
-- The break label points to the end of the switch.
-
-**Switch Code Generation Logic:**
-
-1. **Pass 1 - Comparisons**: Generate jump instructions for all case values.
-   - Store case label IDs in an array for Pass 2.
-   - If no match, jump to default (if exists) or end.
-2. **Pass 2 - Bodies**: Generate code for each case body.
-   - Uses the stored label IDs from Pass 1.
-   - Natural fallthrough between cases (C-style).
-3. **End Label**: All breaks jump here.
-
-**State Management:**
-
-```c
-// Reset state for each compilation unit
-static void reset_codegen() {
-    global_count = 0;
-    local_count = 0;
-    current_stack_offset = 0;
-    label_counter = 0;
-    loop_depth = 0;
-}
-```
-
-**Critical:** `reset_codegen()` is called at the start of each file compilation to prevent state leakage between translation units.
-
-### 7.2. ABI Compliance (Windows x64 + SystemV AMD64)
-
-| Requirement | Windows x64 | SystemV AMD64 (Linux) |
-|-------------|------------|------------------------|
-| **Register Args** | RCX, RDX, R8, R9 (first 4) | RDI, RSI, RDX, RCX, R8, R9 (first 6) |
-| **Stack Alignment** | 16-byte aligned at call sites | 16-byte aligned at call sites |
-| **Shadow/Home Space** | 32 bytes required | none |
-| **Return Value** | RAX | RAX |
-| **Caller-saved** | RAX, RCX, RDX, R8-R11 | RAX, RCX, RDX, RSI, RDI, R8-R11 |
-| **Callee-saved** | RBX, RBP, RDI, RSI, R12-R15 | RBX, RBP, R12-R15 |
-
-### 7.3. Printing
-
-The `اطبع` statement uses the symbol type to determine the format string:
-
-- If `TYPE_INT` → call `printf("%d\n")`
-- If `TYPE_STRING` → call `printf("%s\n")`
 
 ---
 

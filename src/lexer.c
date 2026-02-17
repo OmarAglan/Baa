@@ -65,9 +65,9 @@ int is_arabic_digit(const char* c) {
 /**
  * @brief استخراج الوحدة اللفظية التالية.
  */
-// Helper to peek current char
+// مساعد: إرجاع المحرف الحالي دون تحريك المؤشر
 char peek(Lexer* l) { return *l->state.cur_char; }
-// Helper to peek next char
+// مساعد: إرجاع المحرف التالي دون تحريك المؤشر
 char peek_next(Lexer* l) {
     if (!l) return '\0';
     if (!l->state.cur_char) return '\0';
@@ -423,9 +423,8 @@ Token lexer_next_token(Lexer* l) {
     }
 
     // معالجة الأرقام
-    // if (isdigit(*current) || is_arabic_digit(current)) ...
-    // Note: is_arabic_digit expects char*, so we pass current. Check bounds?
-    // current is safe pointer.
+    // ملاحظة: is_arabic_digit تتوقع مؤشر char*، لذا نمرر current.
+    // ملاحظة: current هنا مؤشر آمن ضمن المصدر الحالي.
     
     if (isdigit((unsigned char)*current) || is_arabic_digit(current)) {
         token.type = TOKEN_INT;
@@ -462,7 +461,7 @@ Token lexer_next_token(Lexer* l) {
         char* start = l->state.cur_char;
         while (!isspace(peek(l)) && peek(l) != '\0' && 
                strchr(".+-,=:(){}[]!<>*/%&|\"'", peek(l)) == NULL) {
-            // Check arabic semicolon
+            // تحقق من الفاصلة المنقوطة العربية (؛)
             if ((unsigned char)*l->state.cur_char == 0xD8 && (unsigned char)*(l->state.cur_char+1) == 0x9B) {
                 break;
             }
@@ -474,7 +473,7 @@ Token lexer_next_token(Lexer* l) {
         if (len) memcpy(word, start, len);
         word[len] = '\0';
 
-        // 1. Check for Macro substitution
+        // 1. التحقق من استبدال الماكرو
         char* macro_val = get_macro_value(l, word);
         if (macro_val != NULL) {
             // استبدال الرمز بقيمة الماكرو
@@ -549,7 +548,7 @@ const char* token_type_to_str(BaaTokenType type) {
         case TOKEN_CHAR: return "CHAR";
         case TOKEN_IDENTIFIER: return "IDENTIFIER";
         
-        // Keywords
+        // كلمات مفتاحية
         case TOKEN_KEYWORD_INT: return "صحيح";
         case TOKEN_KEYWORD_STRING: return "نص";
         case TOKEN_KEYWORD_BOOL: return "منطقي";
@@ -569,7 +568,7 @@ const char* token_type_to_str(BaaTokenType type) {
         case TOKEN_TRUE: return "صواب";
         case TOKEN_FALSE: return "خطأ";
         
-        // Symbols
+        // رموز
         case TOKEN_ASSIGN: return "=";
         case TOKEN_DOT: return ".";
         case TOKEN_COMMA: return ",";

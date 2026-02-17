@@ -1,6 +1,6 @@
 /**
  * @file ir_cse.c
- * @brief IR common subexpression elimination pass (حذف_المكرر).
+ * @brief تمريرة حذف_المكرر (CSE) للـ IR.
  * @version 0.3.1.5
  *
  * هدف التمريرة:

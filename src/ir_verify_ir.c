@@ -18,6 +18,7 @@
 #include "ir_verify_ir.h"
 
 #include "ir_analysis.h"
+#include "ir_verify_common.h"
 
 #include <stdarg.h>
 #include <stdlib.h>
@@ -167,85 +168,23 @@ static int ir_is_terminator_op(IROp op) {
     return op == IR_OP_BR || op == IR_OP_BR_COND || op == IR_OP_RET;
 }
 
-// ============================================================================
-// تحقق مراجع الكتل قبل rebuild_preds (حماية من CFG عابر للدوال)
-// ============================================================================
+typedef struct
+{
+    IRVerifyDiag* diag;
+    const IRModule* module;
+    const IRFunc* func;
+} IRVerifyCommonCtx;
 
-static int ir_verify_block_refs_safe(IRVerifyDiag* diag,
-                                     const IRModule* module,
-                                     const IRFunc* func) {
-    int ok = 1;
-    if (!diag || !func) return 0;
-
-    for (const IRBlock* b = func->blocks; b; b = b->next) {
-        for (const IRInst* inst = b->first; inst; inst = inst->next) {
-            if (!inst) continue;
-
-            if (inst->op == IR_OP_BR) {
-                IRValue* t = (inst->operand_count >= 1) ? inst->operands[0] : NULL;
-                if (t && t->kind == IR_VAL_BLOCK) {
-                    if (!t->data.block) {
-                        ir_report(diag, module, func, b, inst, "تعليمة `قفز`: هدف كتلة فارغ (NULL).");
-                        ok = 0;
-                    } else if (!ir_block_is_in_func(t->data.block, func)) {
-                        ir_report(diag, module, func, b, inst,
-                                  "تعليمة `قفز`: الهدف يشير إلى كتلة خارج الدالة (CFG عابر للدوال غير مسموح).");
-                        ok = 0;
-                    }
-                }
-                continue;
-            }
-
-            if (inst->op == IR_OP_BR_COND) {
-                IRValue* t1 = (inst->operand_count >= 2) ? inst->operands[1] : NULL;
-                IRValue* t2 = (inst->operand_count >= 3) ? inst->operands[2] : NULL;
-
-                if (t1 && t1->kind == IR_VAL_BLOCK) {
-                    if (!t1->data.block) {
-                        ir_report(diag, module, func, b, inst,
-                                  "تعليمة `قفز_شرط`: هدف_صواب كتلة فارغ (NULL).");
-                        ok = 0;
-                    } else if (!ir_block_is_in_func(t1->data.block, func)) {
-                        ir_report(diag, module, func, b, inst,
-                                  "تعليمة `قفز_شرط`: هدف_صواب يشير إلى كتلة خارج الدالة (غير مسموح).");
-                        ok = 0;
-                    }
-                }
-
-                if (t2 && t2->kind == IR_VAL_BLOCK) {
-                    if (!t2->data.block) {
-                        ir_report(diag, module, func, b, inst,
-                                  "تعليمة `قفز_شرط`: هدف_خطأ كتلة فارغ (NULL).");
-                        ok = 0;
-                    } else if (!ir_block_is_in_func(t2->data.block, func)) {
-                        ir_report(diag, module, func, b, inst,
-                                  "تعليمة `قفز_شرط`: هدف_خطأ يشير إلى كتلة خارج الدالة (غير مسموح).");
-                        ok = 0;
-                    }
-                }
-                continue;
-            }
-
-            if (inst->op == IR_OP_PHI) {
-                for (const IRPhiEntry* e = inst->phi_entries; e; e = e->next) {
-                    if (!e->block) {
-                        ir_report(diag, module, func, b, inst,
-                                  "تعليمة `فاي`: كتلة سابقة فارغة (NULL).");
-                        ok = 0;
-                        continue;
-                    }
-                    if (!ir_block_is_in_func(e->block, func)) {
-                        ir_report(diag, module, func, b, inst,
-                                  "تعليمة `فاي`: كتلة سابقة خارج الدالة (غير مسموح).");
-                        ok = 0;
-                    }
-                }
-                continue;
-            }
-        }
-    }
-
-    return ok;
+static void ir_verify_common_report(void* ctx,
+                                    const IRFunc* func,
+                                    const IRBlock* block,
+                                    const IRInst* inst,
+                                    const char* msg)
+{
+    (void)func;
+    IRVerifyCommonCtx* c = (IRVerifyCommonCtx*)ctx;
+    if (!c || !c->diag) return;
+    ir_report(c->diag, c->module, c->func, block, inst, "%s", msg ? msg : "");
 }
 
 // ============================================================================
@@ -929,9 +868,12 @@ static bool ir_verify_func_internal(IRModule* module_for_diag,
     }
 
     // تحقق مبكر: لا تسمح بمراجع كتل خارج هذه الدالة (حماية قبل rebuild_preds).
-    if (!ir_verify_block_refs_safe(&diag, module_for_diag, func)) {
+    IRVerifyCommonCtx cctx;
+    cctx.diag = &diag;
+    cctx.module = module_for_diag;
+    cctx.func = func;
+    if (!ir_verify_func_block_refs_safe(func, ir_verify_common_report, &cctx))
         return false;
-    }
 
     // إعادة بناء succ/pred لضمان أن pred_count دقيق لفحص `فاي` و CFG.
     ir_func_rebuild_preds(func);

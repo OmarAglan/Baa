@@ -1,6 +1,6 @@
 /**
  * @file ir_dce.c
- * @brief IR dead code elimination pass (حذف_الميت).
+ * @brief تمريرة حذف_الميت (DCE) للـ IR.
  * @version 0.3.1.3
  *
  * Removes:

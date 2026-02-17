@@ -41,7 +41,7 @@ const char *phys_reg_name(PhysReg reg)
 
 bool phys_reg_is_callee_saved(PhysReg reg)
 {
-    // Windows x64 ABI: RBX, RBP, RDI, RSI, RSP, R12-R15 هي callee-saved
+    // Windows x64 ABI: السجلات المحفوظة عبر النداء: RBX/RBP/RSI/RDI/R12-R15
     switch (reg)
     {
     case PHYS_RBX:

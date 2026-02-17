@@ -12,6 +12,7 @@
 #include "ir_verify_ssa.h"
 
 #include "ir_analysis.h"
+#include "ir_verify_common.h"
 
 #include <stdarg.h>
 #include <stdlib.h>
@@ -109,87 +110,20 @@ static void* ssa_safe_calloc(size_t n, size_t size) {
     return calloc(n, size);
 }
 
-// ============================================================================
-// تحقق مراجع الكتل قبل rebuild_preds (حماية من CFG عابر للدوال)
-// ============================================================================
+typedef struct
+{
+    SSAVerifyDiag* diag;
+} SSAVerifyCommonCtx;
 
-static int ssa_block_is_in_func(const IRBlock* b, const IRFunc* func) {
-    return b && func && b->parent == func;
-}
-
-static int ssa_verify_block_refs_safe(SSAVerifyDiag* diag, const IRFunc* func) {
-    int ok = 1;
-    if (!diag || !func) return 0;
-
-    for (const IRBlock* b = func->blocks; b; b = b->next) {
-        for (const IRInst* inst = b->first; inst; inst = inst->next) {
-            if (!inst) continue;
-
-            if (inst->op == IR_OP_BR) {
-                IRValue* t = (inst->operand_count >= 1) ? inst->operands[0] : NULL;
-                if (t && t->kind == IR_VAL_BLOCK) {
-                    if (!t->data.block) {
-                        ssa_report(diag, func, b, inst, "تعليمة `قفز`: هدف كتلة فارغ (NULL)." );
-                        ok = 0;
-                    } else if (!ssa_block_is_in_func(t->data.block, func)) {
-                        ssa_report(diag, func, b, inst,
-                                   "تعليمة `قفز`: الهدف يشير إلى كتلة خارج الدالة (غير مسموح)." );
-                        ok = 0;
-                    }
-                }
-                continue;
-            }
-
-            if (inst->op == IR_OP_BR_COND) {
-                IRValue* t1 = (inst->operand_count >= 2) ? inst->operands[1] : NULL;
-                IRValue* t2 = (inst->operand_count >= 3) ? inst->operands[2] : NULL;
-
-                if (t1 && t1->kind == IR_VAL_BLOCK) {
-                    if (!t1->data.block) {
-                        ssa_report(diag, func, b, inst,
-                                   "تعليمة `قفز_شرط`: هدف_صواب كتلة فارغ (NULL)." );
-                        ok = 0;
-                    } else if (!ssa_block_is_in_func(t1->data.block, func)) {
-                        ssa_report(diag, func, b, inst,
-                                   "تعليمة `قفز_شرط`: هدف_صواب يشير إلى كتلة خارج الدالة (غير مسموح)." );
-                        ok = 0;
-                    }
-                }
-
-                if (t2 && t2->kind == IR_VAL_BLOCK) {
-                    if (!t2->data.block) {
-                        ssa_report(diag, func, b, inst,
-                                   "تعليمة `قفز_شرط`: هدف_خطأ كتلة فارغ (NULL)." );
-                        ok = 0;
-                    } else if (!ssa_block_is_in_func(t2->data.block, func)) {
-                        ssa_report(diag, func, b, inst,
-                                   "تعليمة `قفز_شرط`: هدف_خطأ يشير إلى كتلة خارج الدالة (غير مسموح)." );
-                        ok = 0;
-                    }
-                }
-                continue;
-            }
-
-            if (inst->op == IR_OP_PHI) {
-                for (const IRPhiEntry* e = inst->phi_entries; e; e = e->next) {
-                    if (!e->block) {
-                        ssa_report(diag, func, b, inst,
-                                   "تعليمة `فاي`: كتلة سابقة فارغة (NULL)." );
-                        ok = 0;
-                        continue;
-                    }
-                    if (!ssa_block_is_in_func(e->block, func)) {
-                        ssa_report(diag, func, b, inst,
-                                   "تعليمة `فاي`: كتلة سابقة خارج الدالة (غير مسموح)." );
-                        ok = 0;
-                    }
-                }
-                continue;
-            }
-        }
-    }
-
-    return ok;
+static void ssa_verify_common_report(void* ctx,
+                                     const IRFunc* func,
+                                     const IRBlock* block,
+                                     const IRInst* inst,
+                                     const char* msg)
+{
+    SSAVerifyCommonCtx* c = (SSAVerifyCommonCtx*)ctx;
+    if (!c || !c->diag) return;
+    ssa_report(c->diag, func, block, inst, "%s", msg ? msg : "");
 }
 
 // ============================================================================
@@ -452,9 +386,10 @@ bool ir_func_verify_ssa(IRFunc* func, FILE* out) {
     }
 
     // تحقق مبكر: لا تسمح بمراجع كتل خارج هذه الدالة (حماية قبل rebuild_preds).
-    if (!ssa_verify_block_refs_safe(&diag, func)) {
+    SSAVerifyCommonCtx cctx;
+    cctx.diag = &diag;
+    if (!ir_verify_func_block_refs_safe(func, ssa_verify_common_report, &cctx))
         return false;
-    }
 
     // تأكد من أن succ/pred محدثة قبل dominance/SSA checks.
     ir_func_rebuild_preds(func);

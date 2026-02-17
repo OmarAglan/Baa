@@ -16,5 +16,6 @@ mingw64.7z
 /.bench_out
 /.baa_test_out_*
 /tests/corpus_v2x_docs
+/tests/corpus_docs
 /bench/results/*.json
 /bench/results/*.csv

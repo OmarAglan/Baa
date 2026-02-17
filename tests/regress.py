@@ -12,6 +12,9 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 TESTS_DIR = ROOT / "tests"
 
+CORPUS_COMPILE_TIMEOUT_S = 20.0
+CORPUS_RUN_TIMEOUT_S = 2.0
+
 
 def _run(cmd: list[str], cwd: Path) -> int:
     p = subprocess.run(cmd, cwd=str(cwd))
@@ -68,7 +71,8 @@ def main() -> int:
         return rc
 
     # 1.5) Docs-derived v0.2.x corpus (compile+run with IR backend)
-    corpus_v2x = sorted((TESTS_DIR / "corpus_v2x_docs").glob("**/*.baa"))
+    corpus_root = TESTS_DIR / "corpus_v2x_docs"
+    corpus_v2x = sorted(corpus_root.glob("**/*.baa"))
     if corpus_v2x:
         exe_ext = ".exe" if os.name == "nt" else ""
         with tempfile.TemporaryDirectory(prefix="baa_regress_corpus_") as td:
@@ -78,17 +82,63 @@ def main() -> int:
                 out = out_dir / f"{src.stem}{exe_ext}"
                 # Use repo-relative paths to avoid space-in-path toolchain issues.
                 cmd = [str(baa), "-O1", "--verify", "--backend=ir", str(src_rel), "-o", str(out)]
-                p = subprocess.run(cmd, cwd=str(ROOT), text=True, capture_output=True)
+                p = subprocess.run(
+                    cmd,
+                    cwd=str(ROOT),
+                    text=True,
+                    capture_output=True,
+                    timeout=CORPUS_COMPILE_TIMEOUT_S,
+                )
                 if p.returncode != 0:
                     print(f"regress: FAIL (corpus_v2x compile): {src_rel}")
+                    sys.stderr.write(p.stdout)
                     sys.stderr.write(p.stderr)
                     return int(p.returncode)
 
-                r = subprocess.run([str(out)], cwd=str(ROOT), text=True, capture_output=True)
+                r = subprocess.run(
+                    [str(out)],
+                    cwd=str(ROOT),
+                    text=True,
+                    capture_output=True,
+                    timeout=CORPUS_RUN_TIMEOUT_S,
+                )
                 if r.returncode != 0:
                     print(f"regress: FAIL (corpus_v2x run exit={r.returncode}): {src_rel}")
                     return int(r.returncode)
     else:
+        # Auto-generate from git tags if missing.
+        extractor = ROOT / "scripts" / "extract_docs_corpus.py"
+        if extractor.exists():
+            rc2 = _run(
+                [
+                    sys.executable,
+                    str(extractor),
+                    "--git-ref-pattern",
+                    "0.2.*",
+                    "--out-dir",
+                    str(corpus_root.relative_to(ROOT)),
+                    "--opt",
+                    "O1",
+                    "--verify",
+                    "--run",
+                    "--max",
+                    "80",
+                    "--compile-timeout",
+                    str(CORPUS_COMPILE_TIMEOUT_S),
+                    "--run-timeout",
+                    str(CORPUS_RUN_TIMEOUT_S),
+                ],
+                cwd=ROOT,
+            )
+            if rc2 != 0:
+                print("regress: FAIL (corpus_v2x generate)")
+                return rc2
+            corpus_v2x = sorted(corpus_root.glob("**/*.baa"))
+            if not corpus_v2x:
+                print("regress: FAIL (corpus_v2x empty after generate)")
+                return 1
+            return main()
+
         print("regress: WARN (no tests/corpus_v2x_docs/**/*.baa)")
 
     # 2) Windows-only: legacy-vs-IR output comparisons
@@ -119,6 +169,7 @@ def main() -> int:
                     cwd=str(ROOT),
                     text=True,
                     capture_output=True,
+                    timeout=CORPUS_COMPILE_TIMEOUT_S,
                 )
             if p.returncode == 0:
                 print(f"regress: FAIL (neg should fail): {src_rel}")

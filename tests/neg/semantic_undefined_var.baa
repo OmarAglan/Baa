@@ -1,5 +1,5 @@
 // EXPECT: [Semantic Error]
-// EXPECT: Undefined variable
+// EXPECT: Assignment to undefined variable
 صحيح الرئيسية() {
     س = 1.
     إرجع 0.

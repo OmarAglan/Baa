@@ -155,6 +155,8 @@ Notes:
 
 - Runner: `tests/regress.py`
 - On all hosts: runs `tests/test.py`.
+- On all hosts: runs docs-derived v0.2.x corpus (auto-generated) under `tests/corpus_v2x_docs/`.
+- On all hosts: runs negative diagnostics tests under `tests/neg/` (anchor matching via `// EXPECT:`).
 - On Windows (legacy-enabled build): runs `tests/corpus_compare/*.baa` via `--compare-backends`.
 
 Windows build (legacy backend enabled):

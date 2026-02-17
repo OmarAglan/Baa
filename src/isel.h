@@ -18,6 +18,8 @@
 #include <stdint.h>
 #include "ir.h"
 
+typedef struct BaaTarget BaaTarget;
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -431,7 +433,7 @@ MachineModule* isel_run(IRModule* ir_module);
  * @param enable_tco تفعيل تحسين النداء_الذيلي (Tail Call Optimization).
  * @return وحدة آلية جديدة، أو NULL عند الفشل.
  */
-MachineModule* isel_run_ex(IRModule* ir_module, bool enable_tco);
+MachineModule* isel_run_ex(IRModule* ir_module, bool enable_tco, const BaaTarget* target);
 
 // ============================================================================
 // طباعة تمثيل الآلة (للتنقيح)

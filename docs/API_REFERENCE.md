@@ -1,8 +1,8 @@
 # Baa Internal API Reference
 
-> **Version:** 0.3.2.7.3 | [← Compiler Internals](INTERNALS.md) | [IR Specification →](BAA_IR_SPECIFICATION.md)
+> **Version:** 0.3.2.8.1 | [← Compiler Internals](INTERNALS.md) | [IR Specification →](BAA_IR_SPECIFICATION.md)
 
-This document details the C functions, enumerations, and structures defined in `src/baa.h`, `src/ir.h`, `src/ir_arena.h`, `src/ir_mutate.h`, `src/ir_defuse.h`, `src/ir_clone.h`, `src/ir_text.h`, `src/ir_loop.h`, `src/ir_licm.h`, `src/ir_unroll.h`, `src/ir_inline.h`, `src/ir_builder.h`, `src/ir_lower.h`, `src/ir_analysis.h`, `src/ir_pass.h`, `src/ir_mem2reg.h`, `src/ir_outssa.h`, `src/ir_verify_ssa.h`, `src/ir_verify_ir.h`, `src/ir_canon.h`, `src/ir_cfg_simplify.h`, `src/ir_dce.h`, `src/ir_copyprop.h`, `src/ir_cse.h`, `src/ir_optimizer.h`, `src/isel.h`, and `src/regalloc.h`.
+This document details the C functions, enumerations, and structures defined in `src/baa.h`, `src/ir.h`, `src/ir_arena.h`, `src/ir_mutate.h`, `src/ir_defuse.h`, `src/ir_clone.h`, `src/ir_text.h`, `src/ir_loop.h`, `src/ir_licm.h`, `src/ir_unroll.h`, `src/ir_inline.h`, `src/ir_builder.h`, `src/ir_lower.h`, `src/ir_analysis.h`, `src/ir_pass.h`, `src/ir_mem2reg.h`, `src/ir_outssa.h`, `src/ir_verify_ssa.h`, `src/ir_verify_ir.h`, `src/ir_canon.h`, `src/ir_cfg_simplify.h`, `src/ir_dce.h`, `src/ir_copyprop.h`, `src/ir_cse.h`, `src/ir_optimizer.h`, `src/target.h`, `src/isel.h`, `src/regalloc.h`, and `src/emit.h`.
 
 ---
 
@@ -2171,7 +2171,7 @@ Frees a module and all its functions. Does NOT free referenced IR globals/string
 
 ```c
 MachineModule* isel_run(IRModule* ir_module)
-MachineModule* isel_run_ex(IRModule* ir_module, bool enable_tco)
+MachineModule* isel_run_ex(IRModule* ir_module, bool enable_tco, const BaaTarget* target)
 ```
 
 Converts an entire IR module to machine representation.
@@ -2180,6 +2180,7 @@ Converts an entire IR module to machine representation.
 |-----------|------|-------------|
 | `ir_module` | `IRModule*` | Source IR module (after optimization) |
 | `enable_tco` | `bool` | Enable tail call optimization in ISel (used by `-O2`) |
+| `target` | `BaaTarget*` | Target descriptor (ABI + object format); NULL defaults to Windows x64 |
 
 **Returns:** New `MachineModule*` (caller owns; free with `mach_module_free()`), or `NULL` on failure.
 
@@ -2189,7 +2190,7 @@ Converts an entire IR module to machine representation.
 2. For each IR function, creates a `MachineFunc` with matching blocks
 3. For each IR instruction, emits one or more `MachineInst` nodes using pattern matching
 4. Inlines immediate values where x86-64 permits
-5. Uses Windows x64 ABI conventions for calls/returns
+5. Uses the selected target calling convention for calls/returns (Windows x64 or SystemV AMD64)
 
 ---
 
@@ -2313,6 +2314,7 @@ Main context for register allocation of a single function. Holds all intermediat
 
 ```c
 bool regalloc_run(MachineModule* module);
+bool regalloc_run_ex(MachineModule* module, const BaaTarget* target);
 ```
 
 Runs register allocation on all functions in a machine module. Returns `true` on success.
@@ -2372,6 +2374,7 @@ The Code Emission module (`src/emit.h`, `src/emit.c`) converts machine IR (after
 
 ```c
 bool emit_module(MachineModule* module, FILE* out, bool debug_info)
+bool emit_module_ex(MachineModule* module, FILE* out, bool debug_info, const BaaTarget* target)
 ```
 
 Top-level entry point for emitting a complete assembly file.
@@ -2381,15 +2384,16 @@ Top-level entry point for emitting a complete assembly file.
 | `module` | `MachineModule*` | Machine module with physical registers |
 | `out` | `FILE*` | Output file handle for assembly |
 | `debug_info` | `bool` | Emit `.file`/`.loc` directives and debug breadcrumbs |
+| `target` | `BaaTarget*` | Target descriptor (COFF/ELF + ABI); NULL defaults to Windows x64 |
 
 **Returns:** `true` on success, `false` on failure.
 
 **Behavior:**
 
-1. Emits `.rdata` section with format strings (fmt_int, fmt_str, fmt_scan_int)
+1. Emits read-only data section with format strings (COFF: `.rdata`, ELF: `.rodata`)
 2. Emits `.data` section with global variables and initializers
 3. Emits `.text` section with all functions
-4. Emits string table with `.Lstr_N` labels
+4. Emits string table with `.Lstr_N` labels into read-only data section (COFF/ELF)
 
 **Driver flag:** `--debug-info` enables this mode and also passes `-g` to the GCC toolchain.
 
@@ -2545,22 +2549,22 @@ Translates Arabic function names to C runtime equivalents.
 - Immediate prefix: `$` (e.g., `$10`)
 - Size suffixes: `q` (64-bit), `l` (32-bit), `w` (16-bit), `b` (8-bit)
 
-**Windows x64 ABI:**
-- Shadow space: 32 bytes allocated before each call
-- Stack alignment: 16-byte alignment after prologue
-- Calling convention: RCX, RDX, R8, R9 for first 4 args; RAX for return value
+**ABI (Target-dependent):**
+
+- **Windows x64:** shadow space (32 bytes) around calls; args in RCX/RDX/R8/R9; return in RAX.
+- **SystemV AMD64 (Linux):** no shadow space; args in RDI/RSI/RDX/RCX/R8/R9; return in RAX; varargs require `AL=0` when no XMM args.
 
 **Optimizations:**
 - Redundant move elimination: skips `mov %reg, %reg`
 - Callee-saved detection: only preserves registers actually used
-- Shadow space management: automatic allocation/deallocation around calls
+- Call frame management: target-dependent (shadow space on Windows, SysV call sequence on ELF)
 
 ---
 
 ## 11. Legacy AST Codegen (Removed from Build)
 
 **Note:** The legacy AST-based codegen in [`src/codegen.c`](src/codegen.c:1) is retained for historical reference, but it is **no longer compiled** as of v0.3.2.4.
-The active backend pipeline is: AST → IR → Optimizer → [`isel_run_ex()`](src/isel.h) → [`regalloc_run()`](src/regalloc.h) → [`emit_module()`](src/emit.h) → Assembly.
+The active backend pipeline is: AST → IR → Optimizer → [`isel_run_ex()`](src/isel.h) → [`regalloc_run_ex()`](src/regalloc.h) → [`emit_module_ex()`](src/emit.h) → Assembly.
 
 ### `codegen`
 
@@ -2575,13 +2579,13 @@ Recursively generates assembly code from AST (legacy path).
 | `node` | `Node*` | AST node to process (start with root) |
 | `file` | `FILE*` | Open file handle for output (`out.s`) |
 
-**Generated Sections:**
+**Generated Sections (Legacy path):**
 
 - `.data` — Global variables
-- `.rdata` — String literals
+- `.rdata` — String literals (Windows COFF, legacy path)
 - `.text` — Function bodies
 
-**Assembly Features:**
+**Assembly Features (Legacy path):**
 
 - Windows x64 ABI compliant stack frames
 - Short-circuit evaluation for `&&` and `||`
@@ -2737,10 +2741,11 @@ void run_updater(void);
 
 Runs the built-in updater.
 
-**Notes (v0.2.9):**
+**Notes:**
 
-- Implemented in [updater.c](file:///D:/My%20Dev%20Life/Software%20Dev/Baa/src/updater.c).
-- Windows-only implementation (links against `urlmon` and `wininet` on Windows builds).
+- Implemented in `src/updater.c` on Windows builds.
+- Windows-only implementation (links against `urlmon` and `wininet`).
+- Non-Windows builds provide a stub implementation in `src/updater_stub.c`.
 - Invoked from the CLI as `baa update` (must be the only argument).
 
 ---

@@ -19,6 +19,9 @@
 #include <stdint.h>
 #include "isel.h"
 
+typedef struct BaaTarget BaaTarget;
+typedef struct BaaCallingConv BaaCallingConv;
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -140,6 +143,9 @@ typedef struct BlockLiveness {
 typedef struct RegAllocCtx {
     MachineFunc* func;          // الدالة الآلية المعالَجة
 
+    // اتفاقية الاستدعاء الفعّالة (للتمييز بين Windows x64 و SysV)
+    const BaaCallingConv* cc;
+
     // ترقيم التعليمات
     int total_insts;            // عدد التعليمات الإجمالي
     MachineInst** inst_map;     // خريطة رقم → تعليمة
@@ -189,6 +195,14 @@ typedef struct RegAllocCtx {
  * @return صحيح عند النجاح، خطأ عند الفشل.
  */
 bool regalloc_run(MachineModule* module);
+
+/**
+ * @brief نسخة موسعة من regalloc_run مع خيارات هدف.
+ * @param module الوحدة الآلية (تُعدّل في المكان).
+ * @param target الهدف الحالي (يحدد caller/callee-saved وسجلات المعاملات).
+ * @return صحيح عند النجاح.
+ */
+bool regalloc_run_ex(MachineModule* module, const BaaTarget* target);
 
 /**
  * @brief تشغيل تخصيص السجلات على دالة واحدة.

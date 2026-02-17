@@ -321,15 +321,19 @@
 
 #### v0.3.2.8.1: Target Abstraction
 
-- [ ] **Define `Target` interface** — Register info, calling convention.
-- [ ] **x86-64 Windows target** — Current implementation as first target.
-- [ ] **Target selection** — `--target=x86_64-windows` flag.
+✅ COMPLETED (2026-02-17)
+
+- [x] **Define `Target` interface** — OS/object-format, data layout, calling convention, asm directives.
+- [x] **x86-64 Windows target** — Keep current behavior as the first concrete target.
+- [x] **Host default target** — Windows host defaults to `x86_64-windows`, Linux host defaults to `x86_64-linux`.
+- [x] **Target selection** — `--target=x86_64-windows|x86_64-linux` flag.
 
 #### v0.3.2.8.2: Calling Convention Abstraction
 
-- [ ] **Define `CallingConv` struct** — Arg registers, return register.
-- [ ] **Windows x64 ABI** — Current convention as default.
-- [ ] **SystemV AMD64 ABI** — Linux/macOS convention.
+- [ ] **Define `CallingConv` struct** — arg regs order/count, return regs, caller/callee-saved sets.
+- [ ] **Stack rules** — alignment at call sites, stack-arg placement policy, varargs rules.
+- [ ] **Windows x64 ABI** — RCX/RDX/R8/R9 + 32-byte shadow/home space.
+- [ ] **SystemV AMD64 ABI** — RDI/RSI/RDX/RCX/R8/R9, no shadow space, set `AL=0` for varargs calls.
 
 #### v0.3.2.8.3: Code Model Options
 
@@ -339,11 +343,11 @@
 
 #### v0.3.2.8.4: Linux x86-64 Target 🐧
 
-- [ ] **SystemV AMD64 ABI implementation** — Different calling convention.
-- [ ] **ELF output support** — Instead of PE/COFF.
-- [ ] **Linux syscall wrappers** — Or libc linking.
-- [ ] **GCC/Clang backend for Linux** — For Linux assembly.
-- [ ] **Cross-compilation** — `--target=x86_64-linux` from Windows.
+- [ ] **Native Linux build of compiler** — build `baa` on Linux with GCC/Clang + CMake.
+- [ ] **SystemV AMD64 ABI implementation** — different calling convention from Windows.
+- [ ] **ELF output support** — `.rodata`/`.data`/`.text` directives compatible with ELF GAS.
+- [ ] **Link with host gcc (for now)** — produce ELF executables via host toolchain; later reduce/remove GCC dependency.
+- [ ] **Cross-compilation (later)** — optional `--target=x86_64-linux` from Windows once a cross toolchain story exists.
 
 #### v0.3.2.8.5: Windows x64 Stack Args + Full Tail Calls
 

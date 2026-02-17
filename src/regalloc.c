@@ -12,6 +12,8 @@
  */
 
 #include "regalloc.h"
+
+#include "target.h"
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
@@ -56,28 +58,25 @@ bool phys_reg_is_callee_saved(PhysReg reg)
     }
 }
 
-/**
- * @brief هل السجل من نوع caller-saved حسب Windows x64 ABI؟
- *
- * هذا مهم لأن استدعاءات الدوال (CALL) قد تُدمّر هذه السجلات،
- * لذا لا يجوز الاحتفاظ بقيم "حية" عبر CALL داخلها.
- */
-static bool phys_reg_is_caller_saved(PhysReg reg)
+static const BaaCallingConv* regalloc_cc_or_default(const BaaTarget* target)
 {
-    // caller-saved: RAX, RCX, RDX, R8, R9, R10, R11
-    switch (reg)
-    {
-    case PHYS_RAX:
-    case PHYS_RCX:
-    case PHYS_RDX:
-    case PHYS_R8:
-    case PHYS_R9:
-    case PHYS_R10:
-    case PHYS_R11:
-        return true;
-    default:
-        return false;
-    }
+    if (target && target->cc)
+        return target->cc;
+    return baa_target_builtin_windows_x86_64()->cc;
+}
+
+static bool reg_is_caller_saved_cc(const BaaCallingConv* cc, PhysReg reg)
+{
+    if (!cc) return false;
+    if (reg < 0 || reg >= PHYS_REG_COUNT) return false;
+    return (cc->caller_saved_mask & (1u << (unsigned)reg)) != 0u;
+}
+
+static bool reg_is_callee_saved_cc(const BaaCallingConv* cc, PhysReg reg)
+{
+    if (!cc) return false;
+    if (reg < 0 || reg >= PHYS_REG_COUNT) return false;
+    return (cc->callee_saved_mask & (1u << (unsigned)reg)) != 0u;
 }
 
 // ============================================================================
@@ -194,6 +193,7 @@ RegAllocCtx *regalloc_ctx_new(MachineFunc *func)
         return NULL;
 
     ctx->func = func;
+    ctx->cc = NULL;
 
     // حساب أعلى رقم سجل افتراضي
     ctx->max_vreg = func->next_vreg;
@@ -703,15 +703,21 @@ void regalloc_linear_scan(RegAllocCtx *ctx)
     reg_free[PHYS_RBP] = false;
 
     // سجلات ABI الثابتة لا نخصصها لفترات عادية:
-    // - RAX: قيمة الإرجاع
-    // - RCX/RDX/R8/R9: معاملات الاستدعاء
-    // لأننا نستخدم vregs سالبة لفرض هذه السجلات، ولا بد ألا تتعارض
-    // مع تخصيص السجلات العادي.
-    reg_free[PHYS_RAX] = false;
-    reg_free[PHYS_RCX] = false;
-    reg_free[PHYS_RDX] = false;
-    reg_free[PHYS_R8] = false;
-    reg_free[PHYS_R9] = false;
+    // - سجل الإرجاع
+    // - سجلات معاملات الاستدعاء
+    // لأننا نستخدم vregs سالبة لفرض هذه السجلات.
+    const BaaCallingConv* cc = ctx && ctx->cc ? ctx->cc : baa_target_builtin_windows_x86_64()->cc;
+    if (cc)
+    {
+        if (cc->ret_phys_reg >= 0 && cc->ret_phys_reg < PHYS_REG_COUNT)
+            reg_free[cc->ret_phys_reg] = false;
+        for (int i = 0; i < cc->int_arg_reg_count; i++)
+        {
+            int r = cc->int_arg_phys_regs[i];
+            if (r >= 0 && r < PHYS_REG_COUNT)
+                reg_free[r] = false;
+        }
+    }
 
     // المسح الخطي
     for (int i = 0; i < ctx->interval_count; i++)
@@ -747,7 +753,7 @@ void regalloc_linear_scan(RegAllocCtx *ctx)
 
             // إذا كانت الفترة تعبر CALL، يجب أن تكون في سجل callee-saved
             // حتى لا تُدمّر قيمتها أثناء الاستدعاء.
-            if (cur_crosses_call && phys_reg_is_caller_saved(r))
+            if (cur_crosses_call && reg_is_caller_saved_cc(cc, r))
             {
                 continue;
             }
@@ -767,7 +773,7 @@ void regalloc_linear_scan(RegAllocCtx *ctx)
             cur->spilled = false;
 
             // تسجيل استخدام سجل callee-saved
-            if (phys_reg_is_callee_saved(assigned))
+            if (reg_is_callee_saved_cc(cc, assigned))
             {
                 ctx->callee_saved_used[assigned] = true;
             }
@@ -804,7 +810,7 @@ void regalloc_linear_scan(RegAllocCtx *ctx)
 
                 // إذا كانت الفترة الحالية تعبر CALL، نحتاج تحرير سجل callee-saved فقط.
                 // تحرير سجل caller-saved (مثل r10/r11) لن يحل المشكلة.
-                if (cur_crosses_call && phys_reg_is_caller_saved(active[j].reg))
+                if (cur_crosses_call && reg_is_caller_saved_cc(cc, active[j].reg))
                 {
                     continue;
                 }
@@ -860,7 +866,7 @@ void regalloc_linear_scan(RegAllocCtx *ctx)
                 cur->phys_reg = freed_reg;
                 cur->spilled = false;
 
-                if (phys_reg_is_callee_saved(freed_reg))
+                if (reg_is_callee_saved_cc(cc, freed_reg))
                 {
                     ctx->callee_saved_used[freed_reg] = true;
                 }
@@ -923,10 +929,7 @@ void regalloc_linear_scan(RegAllocCtx *ctx)
  * الاتفاقيات:
  *   vreg -1  → RBP (مؤشر الإطار)
  *   vreg -2  → RAX (القيمة المرجعة)
- *   vreg -10 → RCX (المعامل الأول)
- *   vreg -11 → RDX (المعامل الثاني)
- *   vreg -12 → R8  (المعامل الثالث)
- *   vreg -13 → R9  (المعامل الرابع)
+ *   vreg -10.. → سجلات معاملات ABI حسب الهدف (يُحل عبر calling convention)
  */
 static PhysReg resolve_special_vreg(int vreg)
 {
@@ -936,17 +939,29 @@ static PhysReg resolve_special_vreg(int vreg)
         return PHYS_RBP;
     case -2:
         return PHYS_RAX;
-    case -10:
-        return PHYS_RCX;
-    case -11:
-        return PHYS_RDX;
-    case -12:
-        return PHYS_R8;
-    case -13:
-        return PHYS_R9;
     default:
         return PHYS_NONE;
     }
+}
+
+static PhysReg resolve_special_vreg_with_cc(int vreg, const BaaCallingConv* cc)
+{
+    PhysReg fixed = resolve_special_vreg(vreg);
+    if (fixed != PHYS_NONE)
+        return fixed;
+
+    // معاملات ABI: arg i = -(10+i)
+    if (vreg <= -10 && vreg >= -32)
+    {
+        int i = -(vreg + 10);
+        if (cc && i >= 0 && i < cc->int_arg_reg_count)
+        {
+            int pr = cc->int_arg_phys_regs[i];
+            if (pr >= 0 && pr < PHYS_REG_COUNT)
+                return (PhysReg)pr;
+        }
+    }
+    return PHYS_NONE;
 }
 
 // ============================================================================
@@ -971,7 +986,7 @@ static void rewrite_operand(RegAllocCtx *ctx, MachineOperand *op)
         // السجلات الخاصة (السالبة)
         if (vreg < 0)
         {
-            PhysReg phys = resolve_special_vreg(vreg);
+            PhysReg phys = resolve_special_vreg_with_cc(vreg, ctx ? ctx->cc : NULL);
             if (phys != PHYS_NONE)
             {
                 op->data.vreg = phys;
@@ -1004,7 +1019,7 @@ static void rewrite_operand(RegAllocCtx *ctx, MachineOperand *op)
         int base = op->data.mem.base_vreg;
         if (base < 0)
         {
-            PhysReg phys = resolve_special_vreg(base);
+            PhysReg phys = resolve_special_vreg_with_cc(base, ctx ? ctx->cc : NULL);
             if (phys != PHYS_NONE)
             {
                 op->data.mem.base_vreg = phys;
@@ -1064,7 +1079,7 @@ void regalloc_insert_spill_code(RegAllocCtx *ctx)
 // تشغيل تخصيص السجلات لدالة واحدة
 // ============================================================================
 
-bool regalloc_func(MachineFunc *func)
+static bool regalloc_func_ex(MachineFunc *func, const BaaCallingConv* cc)
 {
     if (!func || func->is_prototype)
         return true;
@@ -1075,6 +1090,8 @@ bool regalloc_func(MachineFunc *func)
     RegAllocCtx *ctx = regalloc_ctx_new(func);
     if (!ctx)
         return false;
+
+    ctx->cc = cc;
 
     // 1. ترقيم التعليمات
     regalloc_number_insts(ctx);
@@ -1103,24 +1120,36 @@ bool regalloc_func(MachineFunc *func)
     return true;
 }
 
+bool regalloc_func(MachineFunc *func)
+{
+    return regalloc_func_ex(func, baa_target_builtin_windows_x86_64()->cc);
+}
+
 // ============================================================================
 // تشغيل تخصيص السجلات على وحدة كاملة
 // ============================================================================
 
-bool regalloc_run(MachineModule *module)
+bool regalloc_run_ex(MachineModule *module, const BaaTarget* target)
 {
     if (!module)
         return false;
 
+    const BaaCallingConv* cc = regalloc_cc_or_default(target);
+
     for (MachineFunc *func = module->funcs; func; func = func->next)
     {
-        if (!regalloc_func(func))
+        if (!regalloc_func_ex(func, cc))
         {
             return false;
         }
     }
 
     return true;
+}
+
+bool regalloc_run(MachineModule *module)
+{
+    return regalloc_run_ex(module, baa_target_builtin_windows_x86_64());
 }
 
 // ============================================================================

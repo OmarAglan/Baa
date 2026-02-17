@@ -40,15 +40,18 @@ set(SOURCES
     src/isel.c        # Instruction selection (v0.3.2.1)
     src/regalloc.c    # Register allocation (v0.3.2.2)
     src/emit.c        # Code emission (v0.3.2.3)
+    src/target.c      # Target abstraction (v0.3.2.8.1)
     src/lexer.c
     src/main.c
     src/parser.c
-    src/updater.c
 )
 
 # Add resource file for Windows (Icon & Version Info)
 if(WIN32)
     list(APPEND SOURCES src/baa.rc)
+    list(APPEND SOURCES src/updater.c)
+else()
+    list(APPEND SOURCES src/updater_stub.c)
 endif()
 
 # Windows executable extension

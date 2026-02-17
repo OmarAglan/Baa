@@ -10,3 +10,4 @@ mingw64.7z
 *.obj
 *.s
 *.exe
+/build-linux

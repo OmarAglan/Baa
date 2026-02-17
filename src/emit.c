@@ -20,6 +20,7 @@
  */
 
 #include "emit.h"
+#include "target.h"
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
@@ -69,6 +70,44 @@ static int g_emit_current_func_uid = 0;
 
 // هل إصدار معلومات الديبغ مفعل؟
 static bool g_emit_debug_info = false;
+
+// الهدف واتفاقية الاستدعاء الحالية (تُملأ عبر emit_module_ex)
+static const BaaTarget* g_emit_target = NULL;
+static const BaaCallingConv* g_emit_cc = NULL;
+
+static const BaaCallingConv* emit_cc_or_default(void)
+{
+    if (g_emit_cc)
+        return g_emit_cc;
+    return baa_target_builtin_windows_x86_64()->cc;
+}
+
+static int emit_shadow_bytes(void)
+{
+    const BaaCallingConv* cc = emit_cc_or_default();
+    return cc ? cc->shadow_space_bytes : 32;
+}
+
+static void emit_rodata_section(FILE* out)
+{
+    if (!out) return;
+    if (g_emit_target && g_emit_target->obj_format == BAA_OBJFORMAT_ELF)
+    {
+        fprintf(out, ".section .rodata\n");
+    }
+    else
+    {
+        fprintf(out, ".section .rdata,\"dr\"\n");
+    }
+}
+
+static bool emit_reg_is_callee_saved(PhysReg r)
+{
+    const BaaCallingConv* cc = emit_cc_or_default();
+    if (!cc) return false;
+    if (r < 0 || r >= PHYS_REG_COUNT) return false;
+    return (cc->callee_saved_mask & (1u << (unsigned)r)) != 0u;
+}
 
 typedef struct {
     const char** files;
@@ -341,15 +380,15 @@ static void emit_prologue(MachineFunc* func, FILE* out,
     fprintf(out, "    mov %%rsp, %%rbp\n");
 
     // حساب حجم المكدس الإجمالي:
-    // حجم محلي (func->stack_size) + shadow space (32) + حفظ callee-saved
+    // حجم محلي (func->stack_size) + shadow space (حسب الهدف) + حفظ callee-saved
     // مع محاذاة 16 بايت
     int local_size = func->stack_size;
     int callee_save_size = callee_count * 8;
 
     // إجمالي الحجم المطلوب (بعد push rbp)
     // المكدس بعد push rbp: RSP ناقص 8 (لـ rbp المحفوظ)
-    // نحتاج: local + shadow(32) + callee_save + محاذاة
-    int total_frame = local_size + 32 + callee_save_size;
+    int shadow = emit_shadow_bytes();
+    int total_frame = local_size + shadow + callee_save_size;
 
     // محاذاة إلى 16 بايت
     // بعد push rbp، RSP = aligned - 8
@@ -364,7 +403,7 @@ static void emit_prologue(MachineFunc* func, FILE* out,
 
     // حفظ السجلات المحفوظة (callee-saved)
     for (int i = 0; i < callee_count; i++) {
-        int save_offset = -(local_size + 32 + (i + 1) * 8);
+        int save_offset = -(local_size + shadow + (i + 1) * 8);
         fprintf(out, "    mov %s, %d(%%rbp)\n",
                 reg64_names[callee_regs[i]], save_offset);
     }
@@ -383,10 +422,11 @@ static void emit_prologue(MachineFunc* func, FILE* out,
 static void emit_epilogue(MachineFunc* func, FILE* out,
                            PhysReg* callee_regs, int callee_count) {
     int local_size = func->stack_size;
+    int shadow = emit_shadow_bytes();
 
     // استعادة السجلات المحفوظة (callee-saved) بترتيب عكسي
     for (int i = callee_count - 1; i >= 0; i--) {
-        int save_offset = -(local_size + 32 + (i + 1) * 8);
+        int save_offset = -(local_size + shadow + (i + 1) * 8);
         fprintf(out, "    mov %d(%%rbp), %s\n",
                 save_offset, reg64_names[callee_regs[i]]);
     }
@@ -412,10 +452,12 @@ static void emit_tailjmp(MachineFunc* func, MachineInst* inst, FILE* out,
     if (!func || !inst || !out) return;
 
     int local_size = func->stack_size;
+    int shadow = emit_shadow_bytes();
+    const BaaCallingConv* cc = emit_cc_or_default();
 
     // استعادة السجلات المحفوظة (callee-saved) بترتيب عكسي
     for (int i = callee_count - 1; i >= 0; i--) {
-        int save_offset = -(local_size + 32 + (i + 1) * 8);
+        int save_offset = -(local_size + shadow + (i + 1) * 8);
         fprintf(out, "    mov %d(%%rbp), %s\n",
                 save_offset, reg64_names[callee_regs[i]]);
     }
@@ -425,10 +467,13 @@ static void emit_tailjmp(MachineFunc* func, MachineInst* inst, FILE* out,
 
     // Windows x64 ABI (varargs): كتابة معاملات السجلات في home/shadow space
     // عند نقطة دخول الدالة الهدف، shadow يبدأ عند 8(%rsp) لأن 0(%rsp) هو return address.
-    fprintf(out, "    movq %%rcx, 8(%%rsp)\n");
-    fprintf(out, "    movq %%rdx, 16(%%rsp)\n");
-    fprintf(out, "    movq %%r8, 24(%%rsp)\n");
-    fprintf(out, "    movq %%r9, 32(%%rsp)\n");
+    if (cc && cc->home_reg_args_on_call && shadow >= 32)
+    {
+        fprintf(out, "    movq %%rcx, 8(%%rsp)\n");
+        fprintf(out, "    movq %%rdx, 16(%%rsp)\n");
+        fprintf(out, "    movq %%r8, 24(%%rsp)\n");
+        fprintf(out, "    movq %%r9, 32(%%rsp)\n");
+    }
 
     fprintf(out, "    jmp ");
     emit_operand(&inst->src1, out);
@@ -858,18 +903,40 @@ void emit_inst(MachineInst* inst, MachineFunc* func, FILE* out) {
         // استدعاء دالة (CALL)
         // ================================================================
         case MACH_CALL:
-            // حجز shadow space قبل الاستدعاء (Windows x64 ABI)
-            // ملاحظة مهمة: لبعض الدوال المتغيرة (مثل printf/scanf) تعتمد المكتبة على "home space"
-            // لقراءة المعاملات، لذا نكتب RCX/RDX/R8/R9 إلى هذا الحيز قبل call.
-            fprintf(out, "    sub $32, %%rsp\n");
-            fprintf(out, "    movq %%rcx, 0(%%rsp)\n");
-            fprintf(out, "    movq %%rdx, 8(%%rsp)\n");
-            fprintf(out, "    movq %%r8, 16(%%rsp)\n");
-            fprintf(out, "    movq %%r9, 24(%%rsp)\n");
-            fprintf(out, "    call ");
-            emit_operand(&inst->src1, out);
-            fprintf(out, "\n");
-            fprintf(out, "    add $32, %%rsp\n");
+        {
+            const BaaCallingConv* cc = emit_cc_or_default();
+            int shadow = emit_shadow_bytes();
+
+            if (shadow > 0)
+            {
+                // Windows x64 ABI: حجز shadow space قبل الاستدعاء.
+                // ملاحظة: للدوال المتغيرة (printf/scanf) تعتمد المكتبة على home space.
+                fprintf(out, "    sub $%d, %%rsp\n", shadow);
+                if (cc && cc->home_reg_args_on_call && shadow >= 32)
+                {
+                    fprintf(out, "    movq %%rcx, 0(%%rsp)\n");
+                    fprintf(out, "    movq %%rdx, 8(%%rsp)\n");
+                    fprintf(out, "    movq %%r8, 16(%%rsp)\n");
+                    fprintf(out, "    movq %%r9, 24(%%rsp)\n");
+                }
+                fprintf(out, "    call ");
+                emit_operand(&inst->src1, out);
+                fprintf(out, "\n");
+                fprintf(out, "    add $%d, %%rsp\n", shadow);
+            }
+            else
+            {
+                // SystemV AMD64: لا shadow space.
+                // للنداءات المتغيرة، يجب ضبط AL بعدد سجلات XMM المستخدمة (هنا 0).
+                if (cc && cc->sysv_set_al_zero_on_call)
+                {
+                    fprintf(out, "    xorl %%eax, %%eax\n");
+                }
+                fprintf(out, "    call ");
+                emit_operand(&inst->src1, out);
+                fprintf(out, "\n");
+            }
+        }
             break;
 
         // ================================================================
@@ -910,7 +977,7 @@ void emit_inst(MachineInst* inst, MachineFunc* func, FILE* out) {
  * @brief إصدار قسم البيانات الثابتة (صيغ الطباعة والقراءة).
  */
 static void emit_rdata_section(FILE* out) {
-    fprintf(out, ".section .rdata,\"dr\"\n");
+    emit_rodata_section(out);
     fprintf(out, "fmt_int: .asciz \"%%d\\n\"\n");
     fprintf(out, "fmt_str: .asciz \"%%s\\n\"\n");
     fprintf(out, "fmt_scan_int: .asciz \"%%d\"\n");
@@ -983,7 +1050,8 @@ static void emit_gas_escaped_string(FILE* out, const char* s) {
 static void emit_string_table(MachineModule* module, FILE* out) {
     if (!module || module->string_count == 0) return;
 
-    fprintf(out, "\n.section .rdata,\"dr\"\n");
+    fprintf(out, "\n");
+    emit_rodata_section(out);
 
     for (IRStringEntry* s = module->strings; s; s = s->next) {
         if (!s->content) continue;
@@ -1006,7 +1074,7 @@ static void emit_string_table(MachineModule* module, FILE* out) {
  */
 static int collect_callee_saved(MachineFunc* func, PhysReg* regs_out) {
     // السجلات المحفوظة التي قد نحتاج لحفظها
-    // RBX, RSI, RDI, R12-R15 (لا نحفظ RBP لأنه يُحفظ في المقدمة)
+    // RBX, RSI, RDI, R12-R15 (نرشحها حسب الهدف؛ لا نحفظ RBP لأنه يُحفظ في المقدمة)
     static const PhysReg candidates[] = {
         PHYS_RBX, PHYS_RSI, PHYS_RDI,
         PHYS_R12, PHYS_R13, PHYS_R14, PHYS_R15
@@ -1037,7 +1105,7 @@ static int collect_callee_saved(MachineFunc* func, PhysReg* regs_out) {
 
     int count = 0;
     for (int i = 0; i < candidate_count; i++) {
-        if (used[candidates[i]]) {
+        if (used[candidates[i]] && emit_reg_is_callee_saved(candidates[i])) {
             regs_out[count++] = candidates[i];
         }
     }
@@ -1116,8 +1184,11 @@ bool emit_func(MachineFunc* func, FILE* out) {
 // إصدار وحدة كاملة (Module Emission)
 // ============================================================================
 
-bool emit_module(MachineModule* module, FILE* out, bool debug_info) {
+bool emit_module_ex(MachineModule* module, FILE* out, bool debug_info, const BaaTarget* target) {
     if (!module || !out) return false;
+
+    g_emit_target = target ? target : baa_target_builtin_windows_x86_64();
+    g_emit_cc = (g_emit_target && g_emit_target->cc) ? g_emit_target->cc : baa_target_builtin_windows_x86_64()->cc;
 
     g_emit_debug_info = debug_info ? true : false;
     emit_debug_reset();
@@ -1144,7 +1215,17 @@ bool emit_module(MachineModule* module, FILE* out, bool debug_info) {
     // 4. جدول النصوص
     emit_string_table(module, out);
 
+    // 5. وسم "لا مكدس تنفيذي" على ELF لتفادي تحذيرات ld
+    if (g_emit_target && g_emit_target->obj_format == BAA_OBJFORMAT_ELF)
+    {
+        fprintf(out, "\n.section .note.GNU-stack,\"\",@progbits\n");
+    }
+
     emit_debug_reset();
 
     return true;
+}
+
+bool emit_module(MachineModule* module, FILE* out, bool debug_info) {
+    return emit_module_ex(module, out, debug_info, baa_target_builtin_windows_x86_64());
 }

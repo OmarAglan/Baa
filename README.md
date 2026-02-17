@@ -4,8 +4,8 @@
 <img width="260" height="260" alt="شعار باء" src="resources/Logo.png" />
 
 
-![Version](https://img.shields.io/badge/version-0.3.2.7.3-blue.svg)
-![Platform](https://img.shields.io/badge/platform-Windows-lightgrey.svg)
+![Version](https://img.shields.io/badge/version-0.3.2.8.1-blue.svg)
+![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux-lightgrey.svg)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
 
 **أول لغة برمجة نُظُم مُصرَّفة (Compiled) بصياغة عربية**
@@ -33,7 +33,7 @@
 | ❓ **منطق بولياني** | النوع `منطقي` مع `صواب` (True) و`خطأ` (False) |
 | ⌨️ **إدخال المستخدم** | العبارة `اقرأ` (Read) لقراءة عدد صحيح من المستخدم |
 | ✅ **سلامة الأنواع (Type Safety)** | تدقيق ثابت للأنواع (ابتداءً من v0.2.4+) مع تحليل دلالي (Semantic Analysis) |
-| 🔄 **تحديث ذاتي** | مُحدِّث مدمج (`baa update`) |
+| 🔄 **تحديث ذاتي** | مُحدِّث مدمج (`baa update`) — *Windows فقط حالياً* |
 
 ---
 
@@ -41,8 +41,8 @@
 
 | العنصر | مدعوم | ملاحظات |
 |------|-----------|------|
-| نظام التشغيل | Windows (x86-64) | تفترض سلسلة الأدوات (Toolchain) وجود MinGW-w64 GCC |
-| سلسلة الأدوات | CMake 3.10+، MinGW-w64 GCC | يجب أن يكون `gcc` متاحاً ضمن `PATH` |
+| نظام التشغيل | Windows (x86-64) + Linux (x86-64) | على Linux يتم إنتاج ELF والربط باستخدام GCC المضيف حالياً |
+| سلسلة الأدوات | Windows: CMake 3.10+ + MinGW-w64 GCC  /  Linux: CMake 3.10+ + GCC/Clang | على Windows نستخدم MinGW، وعلى Linux نستخدم GCC/Clang المضيف |
 | ترميز ملفات المصدر | UTF-8 | يتطلب النص العربي ملفات بترميز UTF-8 |
 | الطرفية | Windows Terminal / PowerShell | فعِّل UTF-8 إذا ظهر الإخراج بصورة غير سليمة |
 
@@ -50,7 +50,7 @@
 
 ### 1) بناء المُصرِّف
 
-**المتطلبات:** Windows، PowerShell،  CMake 3.10+،  MinGW-w64 مع GCC
+**Windows (MinGW):**
 
 ```powershell
 git clone https://github.com/OmarAglan/Baa.git
@@ -58,6 +58,16 @@ cd Baa
 mkdir build && cd build
 cmake ..
 cmake --build .
+```
+
+**Linux (GCC/Clang):**
+
+```bash
+git clone https://github.com/OmarAglan/Baa.git
+cd Baa
+cmake -B build -DCMAKE_BUILD_TYPE=Release
+cmake --build build
+./build/baa --version
 ```
 
 ### 2) اكتب برنامجك الأول
@@ -79,6 +89,23 @@ cmake --build .
 
 # التشغيل (Run)
 .\out.exe
+```
+
+```bash
+# التصريف (Compile)
+./baa ../hello.baa
+
+# التشغيل (Run)
+./out
+```
+
+### 4) اختيار الهدف (Multi-Target)
+
+افتراضياً يختار المُصرِّف هدف النظام المضيف. يمكنك تحديده صراحةً:
+
+```bash
+baa --target=x86_64-windows البرنامج.baa
+baa --target=x86_64-linux   البرنامج.baa
 ```
 
 **المخرجات:** `مرحباً بالعالم!`

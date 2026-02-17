@@ -8,6 +8,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.3.2.8.1] - 2026-02-17
+
+### Added
+
+- **Multi-target groundwork (v0.3.2.8.1)**
+  - Target descriptor + calling convention model: `src/target.c`, `src/target.h`
+  - CLI target selection: `--target=x86_64-windows|x86_64-linux`
+  - Target-aware backend entry points: `isel_run_ex(..., target)`, `regalloc_run_ex(..., target)`, `emit_module_ex(..., target)`
+  - Native Linux build support (compiler builds as `baa` and links with host `gcc`)
+  - Non-Windows updater stub: `src/updater_stub.c`
+
+### Fixed
+
+- **ELF executable-stack warning** — emitter now outputs `.note.GNU-stack` section when emitting ELF.
+
 ## [0.3.2.7.3] - 2026-02-17
 
 ### Added

@@ -85,7 +85,7 @@ int main(void)
 
     ir_builder_free(b);
 
-    MachineModule *mmod = isel_run_ex(m, true);
+    MachineModule *mmod = isel_run_ex(m, true, NULL);
     ok &= require(mmod != NULL, "isel_run_ex failed");
     MachineFunc *caller = find_func(mmod, "caller");
     ok &= require(caller != NULL, "missing lowered function 'caller'");

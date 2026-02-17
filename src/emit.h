@@ -18,6 +18,8 @@
 #include "isel.h"
 #include "regalloc.h"
 
+typedef struct BaaTarget BaaTarget;
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -43,6 +45,15 @@ extern "C" {
  * @return صحيح عند النجاح، خطأ عند الفشل.
  */
 bool emit_module(MachineModule* module, FILE* out, bool debug_info);
+
+/**
+ * @brief نسخة موسعة من emit_module مع دعم هدف.
+ * @param module الوحدة الآلية.
+ * @param out ملف الخرج.
+ * @param debug_info تفعيل معلومات الديبغ.
+ * @param target الهدف (يحدد الأقسام/ABI).
+ */
+bool emit_module_ex(MachineModule* module, FILE* out, bool debug_info, const BaaTarget* target);
 
 /**
  * @brief إصدار كود تجميع لدالة واحدة.

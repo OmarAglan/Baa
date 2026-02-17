@@ -14,6 +14,7 @@
 #include "isel.h"
 
 #include "ir_loop.h"
+#include "target.h"
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
@@ -333,7 +334,17 @@ typedef struct
 
     // تفعيل تحسين النداء_الذيلي (Tail Call Optimization)
     bool enable_tco;
+
+    // الهدف الحالي (Windows x64 / SysV ...)
+    const BaaTarget *target;
 } ISelCtx;
+
+static const BaaCallingConv *isel_cc_or_default(ISelCtx *ctx)
+{
+    if (ctx && ctx->target && ctx->target->cc)
+        return ctx->target->cc;
+    return baa_target_builtin_windows_x86_64()->cc;
+}
 
 // -----------------------------------------------------------------------------
 // تصريحات مسبقة (Forward Declarations)
@@ -1009,23 +1020,26 @@ static void isel_lower_call(ISelCtx *ctx, IRInst *inst)
     if (!inst)
         return;
 
+    const BaaCallingConv *cc = isel_cc_or_default(ctx);
+    int max_reg_args = (cc && cc->int_arg_reg_count > 0) ? cc->int_arg_reg_count : 4;
+
     // تحضير المعاملات (نضعها في سجلات مرقمة خاصة)
-    // سجلات ABI ستُخصص لاحقاً في v0.3.2.2
-    for (int i = 0; i < inst->call_arg_count && i < 4; i++)
+    // سجلات ABI ستُخصص لاحقاً حسب الهدف.
+    for (int i = 0; i < inst->call_arg_count && i < max_reg_args; i++)
     {
         MachineOperand arg = isel_lower_value(ctx, inst->call_args[i]);
         int bits = 64;
         if (inst->call_args[i] && inst->call_args[i]->type)
             bits = isel_type_bits(inst->call_args[i]->type);
 
-        // سجل المعامل: نستخدم أرقام سالبة خاصة (-10, -11, -12, -13)
-        // لتمثيل RCX, RDX, R8, R9 (سيُحل لاحقاً)
+        // سجل المعامل: نستخدم أرقام سالبة خاصة (-10..)
+        // سيتم حلها إلى سجلات ABI الفعلية حسب الهدف.
         MachineOperand param_reg = mach_op_vreg(-(10 + i), bits);
         isel_emit(ctx, MACH_MOV, param_reg, arg, mach_op_none());
     }
 
     // المعاملات الإضافية على المكدس (من اليمين لليسار)
-    for (int i = inst->call_arg_count - 1; i >= 4; i--)
+    for (int i = inst->call_arg_count - 1; i >= max_reg_args; i--)
     {
         MachineOperand arg = isel_lower_value(ctx, inst->call_args[i]);
         isel_emit(ctx, MACH_PUSH, mach_op_none(), arg, mach_op_none());
@@ -1095,8 +1109,16 @@ static void isel_lower_tailcall(ISelCtx *ctx, IRInst *call)
     if (!ctx || !call)
         return;
 
+    const BaaCallingConv *cc = isel_cc_or_default(ctx);
+    int max_reg_args = (cc && cc->int_arg_reg_count > 0) ? cc->int_arg_reg_count : 4;
+    if (call->call_arg_count > max_reg_args)
+    {
+        // لا نُطبّق TCO إذا كانت هناك معاملات مكدس.
+        return;
+    }
+
     // تحضير معاملات ABI (نفس مسار CALL لكن بدون call/ret/mov من RAX).
-    for (int i = 0; i < call->call_arg_count && i < 4; i++)
+    for (int i = 0; i < call->call_arg_count && i < max_reg_args; i++)
     {
         MachineOperand arg = isel_lower_value(ctx, call->call_args[i]);
         int bits = 64;
@@ -1456,12 +1478,14 @@ static MachineFunc *isel_lower_func(ISelCtx *ctx, IRFunc *ir_func)
 
     // ──────────────────────────────────────────────────────────────────────
     // نسخ معاملات الدالة من سجلات ABI إلى سجلات المعاملات الافتراضية
-    // Windows x64 ABI: RCX, RDX, R8, R9 → param vreg 0, 1, 2, 3
     // ──────────────────────────────────────────────────────────────────────
     if (ir_func->param_count > 0 && mfunc->entry)
     {
         // نُنشئ تعليمات النسخ ونحشرها في بداية كتلة الدخول
-        int max_reg_params = ir_func->param_count < 4 ? ir_func->param_count : 4;
+        const BaaCallingConv *cc = isel_cc_or_default(ctx);
+        int max_reg_params = (cc && cc->int_arg_reg_count > 0) ? cc->int_arg_reg_count : 4;
+        if (ir_func->param_count < max_reg_params)
+            max_reg_params = ir_func->param_count;
         // نبني سلسلة التعليمات المؤقتة
         MachineInst *param_first = NULL;
         MachineInst *param_last = NULL;
@@ -1508,7 +1532,7 @@ static MachineFunc *isel_lower_func(ISelCtx *ctx, IRFunc *ir_func)
 // نقطة الدخول الرئيسية لاختيار التعليمات
 // ============================================================================
 
-MachineModule *isel_run_ex(IRModule *ir_module, bool enable_tco)
+MachineModule *isel_run_ex(IRModule *ir_module, bool enable_tco, const BaaTarget* target)
 {
     if (!ir_module)
         return NULL;
@@ -1527,6 +1551,7 @@ MachineModule *isel_run_ex(IRModule *ir_module, bool enable_tco)
     ctx.mmod = mmod;
     ctx.ir_module = ir_module;
     ctx.enable_tco = enable_tco;
+    ctx.target = target ? target : baa_target_builtin_windows_x86_64();
 
     // خفض كل دالة
     for (IRFunc *func = ir_module->funcs; func; func = func->next)
@@ -1543,7 +1568,7 @@ MachineModule *isel_run_ex(IRModule *ir_module, bool enable_tco)
 
 MachineModule *isel_run(IRModule *ir_module)
 {
-    return isel_run_ex(ir_module, false);
+    return isel_run_ex(ir_module, false, baa_target_builtin_windows_x86_64());
 }
 
 // ============================================================================

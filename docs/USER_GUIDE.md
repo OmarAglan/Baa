@@ -1,6 +1,6 @@
 # Baa User Guide
 
-> **Version:** 0.3.2.7.3 | [← README](../README.md) | [Language Spec →](LANGUAGE.md)
+> **Version:** 0.3.2.8.1 | [← README](../README.md) | [Language Spec →](LANGUAGE.md)
 
 Welcome to Baa (باء)! This guide will help you write your first Arabic computer program and use the Baa compiler toolchain.
 
@@ -20,18 +20,22 @@ Welcome to Baa (باء)! This guide will help you write your first Arabic comput
 
 Currently, you must build Baa from source.
 
-### Platform Support (v0.2.9)
+### Platform Support
 
-- **Supported:** Windows (x86-64) with MinGW-w64 toolchain
-- **Not supported:** Linux/macOS (the compiler and updater are currently Windows-first)
+- **Supported:** Windows (x86-64) and Linux (x86-64)
+- **macOS:** Not supported yet
 
 ### Prerequisites
 
 - **CMake** 3.10 or higher
-- **MinGW-w64** (GCC compiler)
-- **PowerShell** (Windows)
+- **GCC/Clang** toolchain
 
-### Build Steps
+Windows-only:
+
+- **MinGW-w64** (GCC compiler)
+- **PowerShell**
+
+### Build Steps (Windows)
 
 ```powershell
 # Clone the repository
@@ -45,7 +49,21 @@ cmake ..
 cmake --build .
 ```
 
-After building, you will have `baa.exe` in your `build` directory.
+After building:
+
+- **Windows:** you will have `baa.exe` in your `build` directory.
+- **Linux:** you will have `baa` in your `build` directory.
+
+### Build Steps (Linux)
+
+```bash
+git clone https://github.com/OmarAglan/Baa.git
+cd Baa
+
+cmake -B build -DCMAKE_BUILD_TYPE=Release
+cmake --build build
+./build/baa --version
+```
 
 ### Optional: Add `baa.exe` to PATH
 
@@ -94,16 +112,23 @@ Create a file named `hello.baa` using any text editor. **Important:** Save the f
 
 ## 3. Command Line Interface
 
-The Baa compiler `baa.exe` is a full-featured command-line tool (since v0.2.0).
+The Baa compiler is a full-featured command-line tool (since v0.2.0):
+
+- Windows: `baa.exe`
+- Linux: `baa`
 
 ### Basic Compilation and Execution
 
 ```powershell
-# Compile and link to default output (out.exe)
+# Windows: default output is out.exe
 .\baa.exe hello.baa
-
-# Run the program
 .\out.exe
+```
+
+```bash
+# Linux: default output is out
+./baa hello.baa
+./out
 ```
 
 ### Command-Line Flags
@@ -111,13 +136,14 @@ The Baa compiler `baa.exe` is a full-featured command-line tool (since v0.2.0).
 | Flag | Description | Example |
 |------|-------------|---------|
 | `<input.baa>` | Source file(s) to compile. | `.\baa.exe main.baa lib.baa` |
-| `update` | **Self Update.** Checks the server for the latest version and updates Baa. | `.\baa.exe update` |
+| `update` | **Self Update.** Windows-only currently. | `.\baa.exe update` |
 | `-o <file>` | Specify the output filename (e.g., `myapp.exe`, `mylib.o`, `output.s`). | `.\baa.exe main.baa -o myapp.exe` |
 | `-S`, `-s` | **Compile only to Assembly.** Produces `.s` file, does not invoke assembler/linker. | `.\baa.exe -S main.baa` (creates `main.s`) |
 | `-c` | **Compile and Assemble.** Produces object file (`.o`), does not link. | `.\baa.exe -c main.baa` (creates `main.o`) |
 | `-v` | Enable verbose output (shows all compilation steps with timing). | `.\baa.exe -v main.baa` |
 | `--help`, `-h` | Display help message and usage. | `.\baa.exe --help` |
 | `--version` | Display compiler version. | `.\baa.exe --version` |
+| `--target=<t>` | Select backend target (`x86_64-windows` or `x86_64-linux`). | `.\baa.exe --target=x86_64-linux main.baa` |
 | `--dump-ir` | Print Baa IR (Arabic) after semantic analysis. | `.\baa.exe --dump-ir main.baa` |
 | `--emit-ir` | Write Baa IR (Arabic) to `<input>.ir` after semantic analysis. | `.\baa.exe --emit-ir main.baa` |
 | `--dump-ir-opt` | Print optimized Baa IR (Arabic) after the optimizer. | `.\baa.exe --dump-ir-opt -O2 main.baa` |
@@ -129,7 +155,7 @@ The Baa compiler `baa.exe` is a full-featured command-line tool (since v0.2.0).
 
 ### Output Naming Rules (v0.2.9)
 
-- Default output executable is `out.exe` (when linking).
+- Default output executable is `out.exe` on Windows, and `out` on Linux (when linking).
 - With `-S` or `-c`, output defaults to `<input>.s` / `<input>.o`.
 - `-o <file>` is only applied for `-S` / `-c` when compiling a single input file.
 - `update` must be used alone: `.\baa.exe update`

@@ -1,6 +1,6 @@
 # Baa Compiler Internals
 
-> **Version:** 0.3.2.7.3 | [← Language Spec](LANGUAGE.md) | [API Reference →](API_REFERENCE.md)
+> **Version:** 0.3.2.8.1 | [← Language Spec](LANGUAGE.md) | [API Reference →](API_REFERENCE.md)
 
 **Target Architecture:** x86-64 (AMD64)
 **Target OS:** Windows (MinGW-w64 Toolchain)
@@ -444,7 +444,7 @@ The analyzer walks the AST recursively. It maintains a **Symbol Table** stack to
 | Type | C Type | Size | Notes |
 |------|--------|------|-------|
 | `صحيح` | `int64_t` | 8 bytes | Signed integer |
-| `نص` | `char*` | 8 bytes | Pointer to .rdata string |
+| `نص` | `char*` | 8 bytes | Pointer to read-only string (.rdata/.rodata) |
 | `منطقي` | `bool` (stored as int) | 8 bytes | Stored as 0/1 in 8-byte slots |
 
 **I/O note (v0.2.9):** The current backend emits `printf("%d\\n", ...)` and `scanf("%d", ...)`, so printed/read integers are effectively 32-bit even though storage uses 8 bytes.
@@ -1037,7 +1037,9 @@ The instruction selection pass converts Baa IR (SSA form) into an abstract machi
 
 **Files:** [`src/isel.h`](src/isel.h), [`src/isel.c`](src/isel.c)
 
-**Entry Point:** [`isel_run_ex()`](src/isel.c) — takes an `IRModule*` and options (مثل تفعيل TCO)، returns a `MachineModule*`.
+**Entry Point:** [`isel_run_ex()`](src/isel.c) — takes an `IRModule*` plus a `BaaTarget` to select ABI/object-format behavior.
+
+**Multi-target note (v0.3.2.8.1):** The backend is being refactored to accept a `BaaTarget` descriptor (`src/target.h`) so the same IR can be lowered for Windows x64 (COFF) or Linux x86-64 (ELF). The driver exposes this via `--target=...`.
 
 #### 6.19.1. Architecture Overview
 
@@ -1207,7 +1209,7 @@ The code emission pass is the final backend stage that converts machine IR (afte
 ```
 MachineModule (physical regs)
     │
-    ├── 1. Emit .rdata section    ← Format strings (fmt_int, fmt_str, fmt_scan_int)
+    ├── 1. Emit rodata section    ← Format strings (COFF: .rdata, ELF: .rodata)
     ├── 2. Emit .data section     ← Global variables with initializers
     ├── 3. Emit .text section     ← Functions:
     │   ├── Function prologue     ← Stack setup + callee-saved preservation
@@ -1312,10 +1314,11 @@ Each `MachineInst` is translated to one or more AT&T assembly instructions:
 
 #### 6.21.6. Data Section Emission
 
-**Format strings (.rdata):**
+**Format strings (rodata):**
 
 ```asm
-.section .rdata,"dr"
+.section .rdata,"dr"  # COFF (Windows)
+.section .rodata       # ELF (Linux)
 fmt_int: .asciz "%d\n"
 fmt_str: .asciz "%s\n"
 fmt_scan_int: .asciz "%d"
@@ -1329,10 +1332,11 @@ global_var: .quad 42           # Integer initializer
 global_str: .quad .Lstr_0      # String pointer initializer
 ```
 
-**String table (.rdata):**
+**String table (rodata):**
 
 ```asm
-.section .rdata,"dr"
+.section .rdata,"dr"  # COFF (Windows)
+.section .rodata       # ELF (Linux)
 .Lstr_0: .asciz "مرحباً"
 .Lstr_1: .asciz "العالم"
 ```
@@ -1347,19 +1351,19 @@ The emitter translates Arabic function names to their C runtime equivalents:
 | `اطبع` | `printf` | Print function |
 | `اقرأ` | `scanf` | Input function |
 
-#### 6.21.8. Windows x64 ABI Compliance
+#### 6.21.8. ABI Compliance (Windows x64 + SystemV AMD64)
 
-- **Shadow space:** 32 bytes allocated before each `call` instruction
-- **Stack alignment:** 16-byte alignment maintained after prologue
-- **RIP-relative addressing:** Globals accessed via `name(%rip)` for position-independent code
-- **Calling convention:** First 4 arguments in RCX, RDX, R8, R9; return value in RAX
+This backend is being refactored to support multiple ABIs via `BaaTarget` (`src/target.h`).
+
+- **Windows x64 ABI:** shadow space (32 bytes) around calls; first 4 args in RCX/RDX/R8/R9; return in RAX.
+- **SystemV AMD64 (Linux):** no shadow space; first 6 args in RDI/RSI/RDX/RCX/R8/R9; return in RAX; varargs require `AL=0` when no XMM args.
 
 #### 6.21.9. Design Decisions
 
 1. **AT&T syntax:** Chosen for compatibility with GAS (GNU Assembler) which is the default on MinGW-w64.
 2. **Redundant move elimination:** The emitter skips `mov %reg, %reg` instructions that may result from register allocation.
 3. **Callee-saved detection:** Scans all instructions to determine which registers need preservation, minimizing prologue/epilogue overhead.
-4. **Shadow space management:** Automatically allocates and deallocates 32 bytes around each call instruction.
+4. **Call frame management:** Allocates shadow space on Windows; emits SysV call sequence on ELF targets.
 5. **Size suffix inference:** Determines instruction size suffix (q/l/w/b) from operand size_bits field.
 
 **Entry Points:**
@@ -1415,16 +1419,16 @@ static void reset_codegen() {
 
 **Critical:** `reset_codegen()` is called at the start of each file compilation to prevent state leakage between translation units.
 
-### 7.2. Windows x64 ABI Compliance
+### 7.2. ABI Compliance (Windows x64 + SystemV AMD64)
 
-| Requirement | Implementation |
-|-------------|----------------|
-| **Register Args** | RCX, RDX, R8, R9 for first 4 params |
-| **Stack Alignment** | 16-byte aligned before `call` (Size 272) |
-| **Shadow Space** | 32 bytes reserved above parameters for callee |
-| **Return Value** | RAX |
-| **Caller-saved** | RAX, RCX, RDX, R8-R11 |
-| **Callee-saved** | RBX, RBP, RDI, RSI, R12-R15 |
+| Requirement | Windows x64 | SystemV AMD64 (Linux) |
+|-------------|------------|------------------------|
+| **Register Args** | RCX, RDX, R8, R9 (first 4) | RDI, RSI, RDX, RCX, R8, R9 (first 6) |
+| **Stack Alignment** | 16-byte aligned at call sites | 16-byte aligned at call sites |
+| **Shadow/Home Space** | 32 bytes required | none |
+| **Return Value** | RAX | RAX |
+| **Caller-saved** | RAX, RCX, RDX, R8-R11 | RAX, RCX, RDX, RSI, RDI, R8-R11 |
+| **Callee-saved** | RBX, RBP, RDI, RSI, R12-R15 | RBX, RBP, R12-R15 |
 
 ### 7.3. Printing
 
@@ -1440,7 +1444,7 @@ The `اطبع` statement uses the symbol type to determine the format string:
 | Section | Contents |
 |---------|----------|
 | `.data` | Global variables (mutable) |
-| `.rdata` | String literals (read-only) |
+| `.rdata` / `.rodata` | String literals (read-only) |
 | `.text` | Executable code |
 
 ### String Table
@@ -1448,7 +1452,17 @@ The `اطبع` statement uses the symbol type to determine the format string:
 Strings are collected during parsing and emitted with unique labels:
 
 ```asm
+# COFF (Windows)
 .section .rdata,"dr"
+.LC0:
+    .asciz "مرحباً"
+.LC1:
+    .asciz "العالم"
+```
+
+```asm
+# ELF (Linux)
+.section .rodata
 .LC0:
     .asciz "مرحباً"
 .LC1:
@@ -1464,7 +1478,7 @@ Strings are collected during parsing and emitted with unique labels:
 | **Entry Point** | `الرئيسية` → exported as `main` |
 | **Name Mangling** | None - functions use their Arabic UTF-8 names as assembly labels |
 | **Special Case** | `الرئيسية` is explicitly exported as `main` using `.globl main` |
-| **External Calls** | C runtime (`printf`, etc.) via `@PLT` |
+| **External Calls** | C runtime (`printf`, etc.) via toolchain symbol resolution |
 
 ---
 

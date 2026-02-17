@@ -14,6 +14,7 @@
 #include "isel.h"
 #include "regalloc.h"
 #include "emit.h"
+#include "target.h"
 #include <time.h>
 #include <stdarg.h>
 
@@ -90,6 +91,7 @@ typedef struct
     bool debug_info;    // --debug-info: إصدار معلومات ديبغ (سطر/ملف) داخل ملف .s
     bool funroll_loops; // -funroll-loops: فك الحلقات بعد Out-of-SSA (تحسين اختياري)
     OptLevel opt_level; // -O0, -O1, -O2: مستوى التحسين
+    const BaaTarget* target; // --target=...: الهدف الحالي
     double start_time;  // وقت بدء الترجمة
 } CompilerConfig;
 
@@ -373,6 +375,7 @@ void print_help()
     printf("  -O1            Basic optimization (default)\n");
     printf("  -O2            Full optimization (+ CSE)\n");
     printf("  -funroll-loops  Unroll small constant-count loops (after Out-of-SSA)\n");
+    printf("  --target=<t>    Target: x86_64-windows | x86_64-linux\n");
     printf("  --help, -h   Show this help message\n");
     printf("  --version    Show version info\n");
     printf("\nWarning Options:\n");
@@ -411,6 +414,7 @@ int main(int argc, char **argv)
     config.output_file = NULL;
     config.opt_level = OPT_LEVEL_1; // Default optimization level
     config.funroll_loops = false;
+    config.target = baa_target_host_default();
 
     char *input_files[32]; // دعم حتى 32 ملف مصدر
     int input_count = 0;
@@ -481,6 +485,17 @@ int main(int argc, char **argv)
             else if (strcmp(arg, "--debug-info") == 0)
             {
                 config.debug_info = true;
+            }
+            else if (strncmp(arg, "--target=", 9) == 0)
+            {
+                const char *t = arg + 9;
+                const BaaTarget *parsed = baa_target_parse(t);
+                if (!parsed)
+                {
+                    printf("Error: Unknown target '%s'\n", t);
+                    return 1;
+                }
+                config.target = parsed;
             }
             else if (strcmp(arg, "-O0") == 0)
             {
@@ -561,7 +576,17 @@ int main(int argc, char **argv)
         else if (config.compile_only)
             config.output_file = NULL; // سيتم تحديده لكل ملف
         else
-            config.output_file = strdup("out.exe");
+        {
+            const char *ext = (config.target && config.target->default_exe_ext) ? config.target->default_exe_ext : ".exe";
+            size_t n = strlen("out") + strlen(ext) + 1;
+            config.output_file = (char *)malloc(n);
+            if (!config.output_file)
+            {
+                fprintf(stderr, "خطأ: نفدت الذاكرة.\n");
+                return 1;
+            }
+            (void)snprintf(config.output_file, n, "out%s", ext);
+        }
     }
 
     // قائمة ملفات الكائنات للربط
@@ -747,7 +772,7 @@ int main(int argc, char **argv)
         if (config.verbose)
             printf("[INFO] Running instruction selection...\n");
         bool enable_tco = (config.opt_level >= OPT_LEVEL_2);
-        MachineModule *mach_module = isel_run_ex(ir_module, enable_tco);
+        MachineModule *mach_module = isel_run_ex(ir_module, enable_tco, config.target);
         if (!mach_module)
         {
             fprintf(stderr, "Aborting %s: instruction selection failed.\n", current_input);
@@ -759,7 +784,7 @@ int main(int argc, char **argv)
         // 5. تخصيص السجلات (Register Allocation) (v0.3.2.2)
         if (config.verbose)
             printf("[INFO] Running register allocation...\n");
-        if (!regalloc_run(mach_module))
+        if (!regalloc_run_ex(mach_module, config.target))
         {
             fprintf(stderr, "Aborting %s: register allocation failed.\n", current_input);
             mach_module_free(mach_module);
@@ -787,7 +812,7 @@ int main(int argc, char **argv)
 
         if (config.verbose)
             printf("[INFO] Emitting assembly: %s\n", asm_file);
-        if (!emit_module(mach_module, f_asm, config.debug_info))
+        if (!emit_module_ex(mach_module, f_asm, config.debug_info, config.target))
         {
             fprintf(stderr, "Aborting %s: code emission failed.\n", current_input);
             fclose(f_asm);

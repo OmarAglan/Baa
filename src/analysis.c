@@ -21,12 +21,28 @@
 
 #define ANALYSIS_MAX_SYMBOLS 100
 #define ANALYSIS_MAX_SCOPES  64
+#define ANALYSIS_MAX_FUNCS   128
+#define ANALYSIS_MAX_FUNC_PARAMS 32
 
 static Symbol global_symbols[ANALYSIS_MAX_SYMBOLS];
 static int global_count = 0;
 
 static Symbol local_symbols[ANALYSIS_MAX_SYMBOLS];
 static int local_count = 0;
+
+typedef struct {
+    char* name;         // مملوك (strdup) ويتم تحريره في reset_analysis()
+    DataType return_type;
+    DataType* param_types; // مملوك (malloc) ويتم تحريره في reset_analysis()
+    int param_count;
+    bool is_defined;
+    const char* decl_file;
+    int decl_line;
+    int decl_col;
+} FuncSymbol;
+
+static FuncSymbol func_symbols[ANALYSIS_MAX_FUNCS];
+static int func_count = 0;
 
 // مكدس النطاقات المحلية: نخزن قيمة local_count عند دخول نطاق جديد.
 static int scope_stack[ANALYSIS_MAX_SCOPES];
@@ -38,6 +54,9 @@ static bool inside_switch = false;
 
 // معلومات الملف الحالي (للتحذيرات)
 static const char* current_filename = NULL;
+
+static bool in_function = false;
+static DataType current_func_return_type = TYPE_INT;
 
 // ============================================================================
 // دوال مساعدة (Helper Functions)
@@ -99,9 +118,110 @@ static void reset_analysis() {
     global_count = 0;
     local_count = 0;
     scope_depth = 0;
+    for (int i = 0; i < func_count; i++) {
+        free(func_symbols[i].name);
+        func_symbols[i].name = NULL;
+        free(func_symbols[i].param_types);
+        func_symbols[i].param_types = NULL;
+        func_symbols[i].param_count = 0;
+        func_symbols[i].is_defined = false;
+    }
+    func_count = 0;
     has_error = false;
     inside_loop = false;
     inside_switch = false;
+    in_function = false;
+    current_func_return_type = TYPE_INT;
+}
+
+static FuncSymbol* func_lookup(const char* name)
+{
+    if (!name) return NULL;
+    for (int i = 0; i < func_count; i++) {
+        if (func_symbols[i].name && strcmp(func_symbols[i].name, name) == 0) {
+            return &func_symbols[i];
+        }
+    }
+    return NULL;
+}
+
+static int func_signature_matches(const FuncSymbol* a, DataType ret_type,
+                                 const DataType* params, int param_count)
+{
+    if (!a) return 0;
+    if (a->return_type != ret_type) return 0;
+    if (a->param_count != param_count) return 0;
+    for (int i = 0; i < param_count; i++) {
+        if (!a->param_types || a->param_types[i] != params[i]) return 0;
+    }
+    return 1;
+}
+
+static void func_register(Node* node)
+{
+    if (!node || node->type != NODE_FUNC_DEF) return;
+    const char* name = node->data.func_def.name;
+    if (!name) {
+        semantic_error(node, "اسم الدالة فارغ.");
+        return;
+    }
+
+    DataType params_local[ANALYSIS_MAX_FUNC_PARAMS];
+    int param_count = 0;
+    for (Node* p = node->data.func_def.params; p; p = p->next) {
+        if (p->type != NODE_VAR_DECL) continue;
+        if (param_count >= ANALYSIS_MAX_FUNC_PARAMS) {
+            semantic_error(p, "عدد معاملات الدالة كبير جداً (الحد %d).", ANALYSIS_MAX_FUNC_PARAMS);
+            return;
+        }
+        params_local[param_count++] = p->data.var_decl.type;
+    }
+
+    FuncSymbol* existing = func_lookup(name);
+    if (existing) {
+        if (!func_signature_matches(existing, node->data.func_def.return_type, params_local, param_count)) {
+            semantic_error(node, "تعارض في توقيع الدالة '%s'.", name);
+            return;
+        }
+        if (!node->data.func_def.is_prototype) {
+            if (existing->is_defined) {
+                semantic_error(node, "إعادة تعريف الدالة '%s'.", name);
+                return;
+            }
+            existing->is_defined = true;
+        }
+        return;
+    }
+
+    if (func_count >= ANALYSIS_MAX_FUNCS) {
+        semantic_error(node, "عدد الدوال كبير جداً.");
+        return;
+    }
+
+    FuncSymbol* fs = &func_symbols[func_count++];
+    memset(fs, 0, sizeof(*fs));
+    fs->name = strdup(name);
+    if (!fs->name) {
+        semantic_error(node, "نفدت الذاكرة أثناء تسجيل اسم الدالة.");
+        return;
+    }
+    fs->return_type = node->data.func_def.return_type;
+    fs->param_count = param_count;
+    fs->decl_file = node->filename ? node->filename : current_filename;
+    fs->decl_line = node->line;
+    fs->decl_col = node->col;
+    fs->is_defined = node->data.func_def.is_prototype ? false : true;
+
+    if (param_count > 0) {
+        fs->param_types = (DataType*)malloc((size_t)param_count * sizeof(DataType));
+        if (!fs->param_types) {
+            semantic_error(node, "نفدت الذاكرة أثناء تسجيل توقيع الدالة.");
+            return;
+        }
+        for (int i = 0; i < param_count; i++) {
+            fs->param_types[i] = params_local[i];
+        }
+    }
 }
 
 // ============================================================================
@@ -300,6 +420,14 @@ static const char* datatype_to_str(DataType type) {
     }
 }
 
+static bool types_compatible(DataType got, DataType expected)
+{
+    if (got == expected) return true;
+    if (got == TYPE_BOOL && expected == TYPE_INT) return true;
+    if (got == TYPE_INT && expected == TYPE_BOOL) return true;
+    return false;
+}
+
 /**
  * @brief استنتاج نوع التعبير.
  * @return DataType نوع التعبير الناتج.
@@ -328,29 +456,40 @@ static DataType infer_type(Node* node) {
         }
 
         case NODE_ARRAY_ACCESS: {
-            // حالياً المصفوفات تدعم الأعداد الصحيحة فقط
-            Symbol* sym = lookup(node->data.array_op.name, true); // تعليم كمستخدم
-            if (!sym) {
-                semantic_error(node, "Undefined array '%s'.", node->data.array_op.name);
-            }
-            // تحقق من أن الفهرس رقمي
-            if (infer_type(node->data.array_op.index) != TYPE_INT) {
-                semantic_error(node->data.array_op.index, "Array index must be an integer.");
-            }
+            semantic_error(node, "المصفوفات غير مدعومة حالياً في مسار IR.");
             return TYPE_INT;
         }
 
         case NODE_CALL_EXPR:
-            // في الوقت الحالي نفترض أن جميع الدوال تعيد صحيح (INT)
-            // TODO: دعم دوال ترجع نصوصاً عند تحديث تعريف الدوال
-            {
+        {
+            const char* fname = node->data.call.name;
+            FuncSymbol* fs = func_lookup(fname);
+            if (!fs) {
+                semantic_error(node, "استدعاء دالة غير معرّفة '%s'.", fname ? fname : "???");
+                // ما زلنا نستنتج أنواع الوسائط لاكتشاف أخطاء أخرى.
                 Node* arg = node->data.call.args;
-                while (arg) {
-                    (void)infer_type(arg);
-                    arg = arg->next;
-                }
+                while (arg) { (void)infer_type(arg); arg = arg->next; }
+                return TYPE_INT;
             }
-            return TYPE_INT;
+
+            // تحقق عدد وأنواع المعاملات
+            int i = 0;
+            Node* arg = node->data.call.args;
+            while (arg) {
+                DataType at = infer_type(arg);
+                if (i < fs->param_count) {
+                    if (!types_compatible(at, fs->param_types[i])) {
+                        semantic_error(arg, "نوع المعامل %d في '%s' غير متوافق.", i + 1, fs->name);
+                    }
+                }
+                i++;
+                arg = arg->next;
+            }
+            if (i != fs->param_count) {
+                semantic_error(node, "عدد معاملات '%s' غير صحيح (المتوقع %d).", fs->name, fs->param_count);
+            }
+            return fs->return_type;
+        }
 
         case NODE_BIN_OP: {
             DataType left = infer_type(node->data.bin_op.left);
@@ -443,6 +582,15 @@ static void analyze_node(Node* node) {
 
     switch (node->type) {
         case NODE_PROGRAM: {
+            // تسجيل تواقيع الدوال أولاً لدعم الاستدعاء قبل التعريف
+            Node* decl0 = node->data.program.declarations;
+            while (decl0) {
+                if (decl0->type == NODE_FUNC_DEF) {
+                    func_register(decl0);
+                }
+                decl0 = decl0->next;
+            }
+
             Node* decl = node->data.program.declarations;
             while (decl) {
                 analyze_node(decl);
@@ -490,6 +638,11 @@ static void analyze_node(Node* node) {
             scope_depth = 0;
             scope_push();
 
+            bool prev_in_func = in_function;
+            DataType prev_ret = current_func_return_type;
+            in_function = true;
+            current_func_return_type = node->data.func_def.return_type;
+
             // إضافة المعاملات كمتغيرات محلية (المعاملات ليست ثوابت افتراضياً)
             Node* param = node->data.func_def.params;
             while (param) {
@@ -510,6 +663,9 @@ static void analyze_node(Node* node) {
 
             // خروج نطاق الدالة (يشمل تحذيرات غير المستخدم)
             scope_pop();
+
+            in_function = prev_in_func;
+            current_func_return_type = prev_ret;
             break;
         }
 
@@ -531,7 +687,7 @@ static void analyze_node(Node* node) {
                     semantic_error(node, "Cannot reassign constant '%s'.", node->data.assign_stmt.name);
                 }
                 DataType exprType = infer_type(node->data.assign_stmt.expression);
-                if (exprType != sym->type) {
+                if (!types_compatible(exprType, sym->type)) {
                     semantic_error(node, "Type mismatch in assignment to '%s'.", node->data.assign_stmt.name);
                 }
             }
@@ -638,9 +794,11 @@ static void analyze_node(Node* node) {
             break;
 
         case NODE_RETURN:
-            // TODO: التحقق من تطابق نوع الإرجاع مع نوع الدالة
             if (node->data.return_stmt.expression) {
-                infer_type(node->data.return_stmt.expression);
+                DataType rt = infer_type(node->data.return_stmt.expression);
+                if (in_function && !types_compatible(rt, current_func_return_type)) {
+                    semantic_error(node, "نوع الإرجاع غير متوافق مع نوع الدالة.");
+                }
             }
             break;
 
@@ -666,37 +824,41 @@ static void analyze_node(Node* node) {
         }
             
         case NODE_CALL_STMT:
-            // استنتاج نوع الوسائط لضمان فحص الأنواع داخلها
-            {
+        {
+            // تحقق استدعاء دالة كجملة
+            const char* fname = node->data.call.name;
+            FuncSymbol* fs = func_lookup(fname);
+            if (!fs) {
+                semantic_error(node, "استدعاء دالة غير معرّفة '%s'.", fname ? fname : "???");
                 Node* arg = node->data.call.args;
-                while (arg) {
-                    (void)infer_type(arg);
-                    arg = arg->next;
+                while (arg) { (void)infer_type(arg); arg = arg->next; }
+                break;
+            }
+
+            int i = 0;
+            Node* arg = node->data.call.args;
+            while (arg) {
+                DataType at = infer_type(arg);
+                if (i < fs->param_count) {
+                    if (!types_compatible(at, fs->param_types[i])) {
+                        semantic_error(arg, "نوع المعامل %d في '%s' غير متوافق.", i + 1, fs->name);
+                    }
                 }
+                i++;
+                arg = arg->next;
+            }
+            if (i != fs->param_count) {
+                semantic_error(node, "عدد معاملات '%s' غير صحيح (المتوقع %d).", fs->name, fs->param_count);
             }
             break;
+        }
 
         case NODE_ARRAY_DECL:
-            add_symbol(node->data.array_decl.name, SCOPE_LOCAL, TYPE_INT, node->data.array_decl.is_const,
-                       node->line, node->col, node->filename ? node->filename : current_filename);
+            semantic_error(node, "المصفوفات غير مدعومة حالياً في مسار IR.");
             break;
 
         case NODE_ARRAY_ASSIGN: {
-            Symbol* sym = lookup(node->data.array_op.name, true); // تعليم كمستخدم
-            if (!sym) {
-                semantic_error(node, "Assignment to undefined array '%s'.", node->data.array_op.name);
-            } else {
-                // التحقق من الثوابت: لا يمكن تعديل عناصر مصفوفة ثابتة
-                if (sym->is_const) {
-                    semantic_error(node, "Cannot modify constant array '%s'.", node->data.array_op.name);
-                }
-            }
-            if (infer_type(node->data.array_op.index) != TYPE_INT) {
-                semantic_error(node->data.array_op.index, "Array index must be integer.");
-            }
-            if (infer_type(node->data.array_op.value) != TYPE_INT) {
-                semantic_error(node->data.array_op.value, "Array value must be integer (Strings not supported in arrays yet).");
-            }
+            semantic_error(node, "المصفوفات غير مدعومة حالياً في مسار IR.");
             break;
         }
 

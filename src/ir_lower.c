@@ -153,6 +153,7 @@ static IRType* ir_type_from_datatype(IRModule* module, DataType t) {
     switch (t) {
         case TYPE_BOOL:   return IR_TYPE_I1_T;
         case TYPE_STRING: return get_i8_ptr_type(module);
+        case TYPE_ENUM:   return IR_TYPE_I64_T;
         case TYPE_INT:
         default:          return IR_TYPE_I64_T;
     }
@@ -486,6 +487,62 @@ IRValue* lower_expr(IRLowerCtx* ctx, Node* expr) {
         case NODE_STRING:
             return ir_builder_const_string(ctx->builder, expr->data.string_lit.value);
 
+        case NODE_MEMBER_ACCESS: {
+            // ملاحظة: التحليل الدلالي يملأ معلومات الوصول (root/offset/type).
+            if (expr->data.member_access.is_enum_value) {
+                return ir_value_const_int(expr->data.member_access.enum_value, IR_TYPE_I64_T);
+            }
+
+            if (!expr->data.member_access.is_struct_member || !expr->data.member_access.root_var) {
+                ir_lower_report_error(ctx, expr, "وصول عضو غير صالح في مسار IR.");
+                return ir_builder_const_i64(0);
+            }
+
+            if (expr->data.member_access.member_type == TYPE_STRUCT) {
+                ir_lower_report_error(ctx, expr, "قراءة عضو هيكل من نوع هيكل كقيمة غير مدعومة.");
+                return ir_builder_const_i64(0);
+            }
+
+            IRModule* m = ctx->builder->module;
+            if (m) ir_module_set_current(m);
+
+            IRType* ptr_i8_t = ir_type_ptr(IR_TYPE_I8_T);
+            IRValue* base_ptr = NULL;
+
+            if (expr->data.member_access.root_is_global) {
+                base_ptr = ir_value_global(expr->data.member_access.root_var, IR_TYPE_I8_T);
+            } else {
+                IRLowerBinding* b = find_local(ctx, expr->data.member_access.root_var);
+                if (!b || !b->value_type) {
+                    ir_lower_report_error(ctx, expr, "هيكل محلي غير معروف '%s'.",
+                                          expr->data.member_access.root_var);
+                    return ir_builder_const_i64(0);
+                }
+                IRValue* arr_ptr = ir_value_reg(b->ptr_reg, ir_type_ptr(b->value_type));
+                int c = ir_builder_emit_cast(ctx->builder, arr_ptr, ptr_i8_t);
+                base_ptr = ir_value_reg(c, ptr_i8_t);
+            }
+
+            IRValue* idx = ir_value_const_int((int64_t)expr->data.member_access.member_offset, IR_TYPE_I64_T);
+            int ep = ir_builder_emit_ptr_offset(ctx->builder, ptr_i8_t, base_ptr, idx);
+            IRValue* byte_ptr = ir_value_reg(ep, ptr_i8_t);
+
+            IRType* field_val_t = NULL;
+            switch (expr->data.member_access.member_type) {
+                case TYPE_BOOL: field_val_t = IR_TYPE_I1_T; break;
+                case TYPE_STRING: field_val_t = get_i8_ptr_type(m); break;
+                case TYPE_ENUM:
+                case TYPE_INT:
+                default: field_val_t = IR_TYPE_I64_T; break;
+            }
+
+            IRType* field_ptr_t = ir_type_ptr(field_val_t);
+            int fp = ir_builder_emit_cast(ctx->builder, byte_ptr, field_ptr_t);
+            IRValue* field_ptr = ir_value_reg(fp, field_ptr_t);
+            int r = ir_builder_emit_load(ctx->builder, field_val_t, field_ptr);
+            return ir_value_reg(r, field_val_t);
+        }
+
         default:
             ir_lower_report_error(ctx, expr, "عقدة تعبير غير مدعومة (%d).", (int)expr->type);
             return ir_builder_const_i64(0);
@@ -578,6 +635,21 @@ static void lower_var_decl(IRLowerCtx* ctx, Node* stmt) {
     if (stmt->data.var_decl.is_global) {
         fprintf(stderr, "IR Lower Warning: global var decl '%s' ignored in statement lowering\n",
                 stmt->data.var_decl.name ? stmt->data.var_decl.name : "???");
+        return;
+    }
+
+    // هيكل محلي: نخزّنه ككتلة بايتات (array<i8, N>) على المكدس.
+    if (stmt->data.var_decl.type == TYPE_STRUCT) {
+        int n = stmt->data.var_decl.struct_size;
+        if (n <= 0) {
+            ir_lower_report_error(ctx, stmt, "حجم الهيكل غير صالح أثناء خفض IR.");
+            return;
+        }
+
+        IRType* bytes_t = ir_type_array(IR_TYPE_I8_T, n);
+        int ptr_reg = ir_builder_emit_alloca(ctx->builder, bytes_t);
+        ir_lower_tag_last_inst(ctx->builder, IR_OP_ALLOCA, ptr_reg, stmt->data.var_decl.name);
+        ir_lower_bind_local(ctx, stmt->data.var_decl.name, ptr_reg, bytes_t);
         return;
     }
 
@@ -684,6 +756,74 @@ static void lower_array_assign(IRLowerCtx* ctx, Node* stmt) {
     }
 
     ir_builder_emit_store(ctx->builder, val, elem_ptr);
+}
+
+static void lower_member_assign(IRLowerCtx* ctx, Node* stmt) {
+    if (!ctx || !ctx->builder || !stmt) return;
+
+    Node* target = stmt->data.member_assign.target;
+    Node* value = stmt->data.member_assign.value;
+    if (!target || target->type != NODE_MEMBER_ACCESS) {
+        ir_lower_report_error(ctx, stmt, "هدف إسناد العضو غير صالح.");
+        (void)lower_expr(ctx, value);
+        return;
+    }
+
+    if (!target->data.member_access.is_struct_member || !target->data.member_access.root_var) {
+        ir_lower_report_error(ctx, stmt, "إسناد عضو يتطلب عضواً هيكلياً محلولاً دلالياً.");
+        (void)lower_expr(ctx, value);
+        return;
+    }
+
+    if (target->data.member_access.member_type == TYPE_STRUCT) {
+        ir_lower_report_error(ctx, stmt, "إسناد عضو من نوع هيكل غير مدعوم حالياً.");
+        (void)lower_expr(ctx, value);
+        return;
+    }
+
+    IRModule* m = ctx->builder->module;
+    if (m) ir_module_set_current(m);
+
+    IRType* ptr_i8_t = ir_type_ptr(IR_TYPE_I8_T);
+    IRValue* base_ptr = NULL;
+
+    if (target->data.member_access.root_is_global) {
+        base_ptr = ir_value_global(target->data.member_access.root_var, IR_TYPE_I8_T);
+    } else {
+        IRLowerBinding* b = find_local(ctx, target->data.member_access.root_var);
+        if (!b || !b->value_type) {
+            ir_lower_report_error(ctx, stmt, "هيكل محلي غير معروف '%s'.", target->data.member_access.root_var);
+            (void)lower_expr(ctx, value);
+            return;
+        }
+        IRValue* arr_ptr = ir_value_reg(b->ptr_reg, ir_type_ptr(b->value_type));
+        int c = ir_builder_emit_cast(ctx->builder, arr_ptr, ptr_i8_t);
+        base_ptr = ir_value_reg(c, ptr_i8_t);
+    }
+
+    IRValue* idx = ir_value_const_int((int64_t)target->data.member_access.member_offset, IR_TYPE_I64_T);
+    int ep = ir_builder_emit_ptr_offset(ctx->builder, ptr_i8_t, base_ptr, idx);
+    IRValue* byte_ptr = ir_value_reg(ep, ptr_i8_t);
+
+    IRType* field_val_t = NULL;
+    switch (target->data.member_access.member_type) {
+        case TYPE_BOOL: field_val_t = IR_TYPE_I1_T; break;
+        case TYPE_STRING: field_val_t = get_i8_ptr_type(m); break;
+        case TYPE_ENUM:
+        case TYPE_INT:
+        default: field_val_t = IR_TYPE_I64_T; break;
+    }
+    IRType* field_ptr_t = ir_type_ptr(field_val_t);
+    int fp = ir_builder_emit_cast(ctx->builder, byte_ptr, field_ptr_t);
+    IRValue* field_ptr = ir_value_reg(fp, field_ptr_t);
+
+    IRValue* rhs = lower_expr(ctx, value);
+    if (rhs && rhs->type && !ir_types_equal(rhs->type, field_val_t)) {
+        int cv = ir_builder_emit_cast(ctx->builder, rhs, field_val_t);
+        rhs = ir_value_reg(cv, field_val_t);
+    }
+
+    ir_builder_emit_store(ctx->builder, rhs, field_ptr);
 }
 
 static void lower_assign(IRLowerCtx* ctx, Node* stmt) {
@@ -1115,6 +1255,10 @@ void lower_stmt(IRLowerCtx* ctx, Node* stmt) {
             lower_assign(ctx, stmt);
             return;
 
+        case NODE_MEMBER_ASSIGN:
+            lower_member_assign(ctx, stmt);
+            return;
+
         case NODE_ARRAY_ASSIGN:
             lower_array_assign(ctx, stmt);
             return;
@@ -1292,6 +1436,13 @@ static IRValue* ir_lower_global_init_value(IRBuilder* builder, Node* expr, IRTyp
             // Adds to module string table and returns pointer value.
             return ir_builder_const_string(builder, expr->data.string_lit.value);
 
+        case NODE_MEMBER_ACCESS:
+            if (expr->data.member_access.is_enum_value) {
+                return ir_value_const_int(expr->data.member_access.enum_value,
+                                          expected_type ? expected_type : IR_TYPE_I64_T);
+            }
+            return ir_value_const_int(0, expected_type ? expected_type : IR_TYPE_I64_T);
+
         case NODE_UNARY_OP:
         case NODE_BIN_OP:
         {
@@ -1368,6 +1519,19 @@ IRModule* ir_lower_program(Node* program, const char* module_name) {
 
         // Globals
         if (decl->type == NODE_VAR_DECL && decl->data.var_decl.is_global) {
+            if (decl->data.var_decl.type == TYPE_STRUCT) {
+                int n = decl->data.var_decl.struct_size;
+                if (n <= 0) {
+                    fprintf(stderr, "IR Lower Error: global struct '%s' has invalid size\n",
+                            decl->data.var_decl.name ? decl->data.var_decl.name : "???");
+                    continue;
+                }
+                IRType* bytes_t = ir_type_array(IR_TYPE_I8_T, n);
+                (void)ir_builder_create_global(builder, decl->data.var_decl.name, bytes_t,
+                                               decl->data.var_decl.is_const ? 1 : 0);
+                continue;
+            }
+
             IRType* gtype = ir_type_from_datatype(module, decl->data.var_decl.type);
             IRValue* init = ir_lower_global_init_value(builder, decl->data.var_decl.expression, gtype);
 

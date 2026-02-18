@@ -1,7 +1,7 @@
 /**
  * @file ir_verify_common.h
  * @brief أدوات مشتركة للتحقق من الـ IR/SSA (تجنب تكرار منطق التحقق).
- * @version 0.3.3
+ * @version 0.3.4
  */
 
 #ifndef BAA_IR_VERIFY_COMMON_H

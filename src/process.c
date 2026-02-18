@@ -1,7 +1,7 @@
 /**
  * @file process.c
  * @brief تشغيل عمليات خارجية (بديل system()) مع دعم إعادة توجيه المخرجات.
- * @version 0.3.3
+ * @version 0.3.4
  */
 
 #include "process.h"

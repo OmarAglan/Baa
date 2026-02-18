@@ -1,7 +1,7 @@
 /**
  * @file main.c
  * @brief نقطة الدخول ومحرك سطر الأوامر (CLI Driver).
- * @version 0.3.3
+ * @version 0.3.4
  */
 
 #include "baa.h"

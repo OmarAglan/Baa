@@ -8,6 +8,23 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.3.4] - 2026-02-18
+
+### Added
+
+- **Enumerations (تعداد)** — enum type definitions with auto-assigned integer values and qualified access `Enum:Member`.
+- **Structures (هيكل)** — struct type definitions with nested struct fields and enum fields.
+- **Member access and assignment (`:`)** — read/write struct fields via `<var>:<field>` and nested access `<var>:<field>:<subfield>`.
+- **Linux packaging** — CPack-based `TGZ` + `DEB` artifacts (see `scripts/package_linux.sh`).
+
+### Changed
+
+- **Type system** — adds `TYPE_ENUM` and `TYPE_STRUCT` to support compound types.
+
+### Fixed
+
+- **Switch parsing** — prevents `case <value>:` from being mis-tokenized as member access when `:` is enabled in expressions.
+
 ## [0.3.3] - 2026-02-18
 
 ### Added

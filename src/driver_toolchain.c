@@ -1,7 +1,7 @@
 /**
  * @file driver_toolchain.c
  * @brief تشغيل أدوات التجميع/الربط واكتشاف GCC المضمّن.
- * @version 0.3.3
+ * @version 0.3.4
  */
 
 #include "driver_toolchain.h"

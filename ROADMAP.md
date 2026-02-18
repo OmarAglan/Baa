@@ -1,7 +1,7 @@
 # Baa Roadmap (Updated)
 
 > Track the development progress of the Baa programming language.
-> **Current Status:** Phase 3.5 - Language Completeness (v0.3.3)
+> **Current Status:** Phase 3.5 - Language Completeness (v0.3.4)
 
 ---
 
@@ -449,15 +449,15 @@
 
 ---
 
-### v0.3.4: Enumerations & Structures 🏗️
+### v0.3.4: Enumerations & Structures 🏗️ ✅ COMPLETED (2026-02-18)
 
 **Goal:** Add compound types for better code organization and type safety.
 
 #### Features
 
-- [ ] **Enum Declaration** – Named integer constants with type safety.
-- [ ] **Struct Declaration** – Group related data into composite types.
-- [ ] **Member Access** – Use `:` (colon) operator for accessing members.
+- [x] **Enum Declaration** – Named integer constants with type safety.
+- [x] **Struct Declaration** – Group related data into composite types (supports nested structs + enum fields).
+- [x] **Member Access** – Use `:` (colon) operator for accessing members.
 
 ### v0.3.4.5: Union Types (الاتحادات) 🔀
 **Goal:** Memory-efficient variant types for parsers and data structures.
@@ -537,24 +537,24 @@
 
 **Enumerations:**
 
-- [ ] **Token**: Add `TOKEN_ENUM` for `تعداد` keyword.
-- [ ] **Parser**: Parse enum declaration: `تعداد <name> { <members> }`.
-- [ ] **Parser**: Support Arabic comma `،` between enum members.
-- [ ] **Semantic**: Auto-assign integer values (0, 1, 2...).
-- [ ] **Semantic**: Enum values accessible via `<enum_name>:<value_name>`.
-- [ ] **Type System**: Add `TYPE_ENUM` to `DataType`.
+- [x] **Token**: Add `TOKEN_ENUM` for `تعداد` keyword.
+- [x] **Parser**: Parse enum declaration: `تعداد <name> { <members> }`.
+- [x] **Parser**: Support Arabic comma `،` between enum members.
+- [x] **Semantic**: Auto-assign integer values (0, 1, 2...).
+- [x] **Semantic**: Enum values accessible via `<enum_name>:<value_name>`.
+- [x] **Type System**: Add `TYPE_ENUM` to `DataType`.
 
 **Structures:**
 
-- [ ] **Token**: Add `TOKEN_STRUCT` for `هيكل` keyword.
-- [ ] **Token**: Add `TOKEN_COLON` for `:` (already exists, verify usage).
-- [ ] **Parser**: Parse struct declaration: `هيكل <name> { <fields> }`.
-- [ ] **Parser**: Parse struct instantiation: `هيكل <name> <var>.`
-- [ ] **Parser**: Parse member access: `<var>:<member>`.
-- [ ] **Semantic**: Track struct definitions in symbol table.
-- [ ] **Semantic**: Validate member access against struct definition.
-- [ ] **Memory Layout**: Calculate field offsets with padding/alignment.
-- [ ] **Codegen**: Emit struct definitions and member access code.
+- [x] **Token**: Add `TOKEN_STRUCT` for `هيكل` keyword.
+- [x] **Token**: Add `TOKEN_COLON` for `:` (already exists, verify usage).
+- [x] **Parser**: Parse struct declaration: `هيكل <name> { <fields> }`.
+- [x] **Parser**: Parse struct instantiation: `هيكل <name> <var>.`
+- [x] **Parser**: Parse member access: `<var>:<member>`.
+- [x] **Semantic**: Track struct definitions in symbol table.
+- [x] **Semantic**: Validate member access against struct definition.
+- [x] **Memory Layout**: Calculate field offsets with padding/alignment (supports nested structs).
+- [x] **Codegen**: Emit struct storage + member access code.
 
 ---
 

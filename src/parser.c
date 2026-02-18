@@ -114,7 +114,8 @@ void eat(BaaTokenType type) {
  * @brief التحقق مما إذا كانت الوحدة الحالية تمثل نوع بيانات (صحيح أو نص أو منطقي).
  */
 bool is_type_keyword(BaaTokenType type) {
-    return (type == TOKEN_KEYWORD_INT || type == TOKEN_KEYWORD_STRING || type == TOKEN_KEYWORD_BOOL);
+    return (type == TOKEN_KEYWORD_INT || type == TOKEN_KEYWORD_STRING || type == TOKEN_KEYWORD_BOOL ||
+            type == TOKEN_ENUM || type == TOKEN_STRUCT);
 }
 
 /**
@@ -124,6 +125,53 @@ DataType token_to_datatype(BaaTokenType type) {
     if (type == TOKEN_KEYWORD_STRING) return TYPE_STRING;
     if (type == TOKEN_KEYWORD_BOOL) return TYPE_BOOL;
     return TYPE_INT;
+}
+
+// ============================================================================
+// تحليل نوع (TypeSpec) بما في ذلك تعداد/هيكل (v0.3.4)
+// ============================================================================
+
+/**
+ * @brief تحليل مواصفة نوع: نوع بدائي أو تعداد/هيكل.
+ *
+ * الصيغ المدعومة:
+ * - صحيح | نص | منطقي
+ * - تعداد <اسم>
+ * - هيكل <اسم>
+ */
+static bool parse_type_spec(DataType* out_type, char** out_type_name) {
+    if (out_type) *out_type = TYPE_INT;
+    if (out_type_name) *out_type_name = NULL;
+
+    if (parser.current.type == TOKEN_KEYWORD_INT ||
+        parser.current.type == TOKEN_KEYWORD_STRING ||
+        parser.current.type == TOKEN_KEYWORD_BOOL) {
+        DataType dt = token_to_datatype(parser.current.type);
+        eat(parser.current.type);
+        if (out_type) *out_type = dt;
+        return true;
+    }
+
+    if (parser.current.type == TOKEN_ENUM || parser.current.type == TOKEN_STRUCT) {
+        bool is_enum = (parser.current.type == TOKEN_ENUM);
+        eat(parser.current.type);
+
+        if (parser.current.type != TOKEN_IDENTIFIER) {
+            error_report(parser.current, "Expected identifier after type keyword.");
+            return false;
+        }
+
+        char* tn = strdup(parser.current.value);
+        eat(TOKEN_IDENTIFIER);
+
+        if (out_type) *out_type = is_enum ? TYPE_ENUM : TYPE_STRUCT;
+        if (out_type_name) *out_type_name = tn;
+        else free(tn);
+
+        return true;
+    }
+
+    return false;
 }
 
 /**
@@ -144,6 +192,8 @@ void synchronize() {
             case TOKEN_KEYWORD_INT:
             case TOKEN_KEYWORD_STRING:
             case TOKEN_KEYWORD_BOOL:
+            case TOKEN_ENUM:
+            case TOKEN_STRUCT:
             case TOKEN_CONST:
             case TOKEN_IF:
             case TOKEN_WHILE:
@@ -274,6 +324,26 @@ Node* parse_primary() {
             parser.panic_mode = true;
         }
         return NULL;
+    }
+
+    // الوصول للأعضاء/القيم المؤهلة: <expr>:<member> (يمكن تكراره للتعشيش)
+    while (node && parser.current.type == TOKEN_COLON) {
+        Token tok_colon = parser.current;
+        eat(TOKEN_COLON);
+
+        if (parser.current.type != TOKEN_IDENTIFIER) {
+            error_report(parser.current, "Expected member name after ':' .");
+            break;
+        }
+
+        char* member = strdup(parser.current.value);
+        eat(TOKEN_IDENTIFIER);
+
+        Node* ma = ast_node_new(NODE_MEMBER_ACCESS, tok_colon);
+        if (!ma) return NULL;
+        ma->data.member_access.base = node;
+        ma->data.member_access.member = member;
+        node = ma;
     }
 
     // التحقق من العمليات اللاحقة (Postfix Operators: ++, --)
@@ -518,7 +588,29 @@ Node* parse_case() {
         node->data.case_stmt.value = NULL;
     } else {
         eat(TOKEN_CASE);
-        node->data.case_stmt.value = parse_primary();
+        // قيمة case يجب أن تكون ثابتاً بسيطاً (رقم/حرف) ولا يجب أن تستهلك ':' كعامل وصول للأعضاء.
+        if (parser.current.type == TOKEN_INT) {
+            Token tok = parser.current;
+            Node* v = ast_node_new(NODE_INT, tok);
+            if (!v) return NULL;
+            int n = 0;
+            (void)parse_int_token_checked(parser.current, &n);
+            v->data.integer.value = n;
+            eat(TOKEN_INT);
+            node->data.case_stmt.value = v;
+        }
+        else if (parser.current.type == TOKEN_CHAR) {
+            Token tok = parser.current;
+            Node* v = ast_node_new(NODE_CHAR, tok);
+            if (!v) return NULL;
+            v->data.char_lit.value = (int)parser.current.value[0];
+            eat(TOKEN_CHAR);
+            node->data.case_stmt.value = v;
+        }
+        else {
+            error_report(parser.current, "Expected integer/char literal in 'case'.");
+            node->data.case_stmt.value = NULL;
+        }
         eat(TOKEN_COLON);
         node->data.case_stmt.is_default = false;
     }
@@ -756,20 +848,43 @@ Node* parse_statement() {
         Node* init = NULL;
         if (is_type_keyword(parser.current.type)) {
             Token tok_type = parser.current;
-            DataType dt = token_to_datatype(parser.current.type);
-            eat(parser.current.type);
+            DataType dt = TYPE_INT;
+            char* type_name = NULL;
+            (void)tok_type;
+
+            if (!parse_type_spec(&dt, &type_name)) {
+                error_report(parser.current, "Expected type for for-loop init.");
+                synchronize();
+                return NULL;
+            }
+
+            if (dt == TYPE_STRUCT) {
+                error_report(parser.current, "تعريف الهيكل داخل تهيئة for غير مدعوم حالياً.");
+                free(type_name);
+            }
 
             Token tok_name = parser.current;
+            if (parser.current.type != TOKEN_IDENTIFIER) {
+                error_report(parser.current, "Expected identifier in for-loop init.");
+                free(type_name);
+                synchronize();
+                return NULL;
+            }
             char* name = strdup(parser.current.value);
             eat(TOKEN_IDENTIFIER);
+
+            if (parser.current.type != TOKEN_ASSIGN) {
+                error_report(parser.current, "Expected '=' in for-loop init.");
+            }
             eat(TOKEN_ASSIGN);
             Node* expr = parse_expression();
             eat(TOKEN_SEMICOLON);
 
-            init = ast_node_new(NODE_VAR_DECL, (tok_name.type == TOKEN_IDENTIFIER) ? tok_name : tok_type);
-            if (!init) return NULL;
+            init = ast_node_new(NODE_VAR_DECL, tok_name);
+            if (!init) { free(type_name); return NULL; }
             init->data.var_decl.name = name;
             init->data.var_decl.type = dt;
+            init->data.var_decl.type_name = type_name;
             init->data.var_decl.expression = expr;
             init->data.var_decl.is_global = false;
             init->data.var_decl.is_const = false;
@@ -839,10 +954,23 @@ Node* parse_statement() {
 
     if (is_type_keyword(parser.current.type)) {
         Token tok_type = parser.current;
-        DataType dt = token_to_datatype(parser.current.type);
-        eat(parser.current.type);
+        DataType dt = TYPE_INT;
+        char* type_name = NULL;
+        (void)tok_type;
+
+        if (!parse_type_spec(&dt, &type_name)) {
+            error_report(parser.current, "Expected type.");
+            synchronize();
+            return NULL;
+        }
 
         Token tok_name = parser.current;
+        if (parser.current.type != TOKEN_IDENTIFIER) {
+            error_report(parser.current, "Expected identifier after type.");
+            free(type_name);
+            synchronize();
+            return NULL;
+        }
         char* name = strdup(parser.current.value);
         eat(TOKEN_IDENTIFIER);
 
@@ -884,6 +1012,24 @@ Node* parse_statement() {
             return stmt;
         }
 
+        // تعريف هيكل (محلي): هيكل <T> <name>.
+        if (dt == TYPE_STRUCT) {
+            if (is_const) {
+                error_report(tok_const, "لا يمكن تعريف هيكل ثابت بدون تهيئة (غير مدعوم حالياً).");
+            }
+            eat(TOKEN_DOT);
+
+            Node* stmt = ast_node_new(NODE_VAR_DECL, tok_name);
+            if (!stmt) { free(type_name); return NULL; }
+            stmt->data.var_decl.name = name;
+            stmt->data.var_decl.type = dt;
+            stmt->data.var_decl.type_name = type_name;
+            stmt->data.var_decl.expression = NULL;
+            stmt->data.var_decl.is_global = false;
+            stmt->data.var_decl.is_const = is_const;
+            return stmt;
+        }
+
         if (is_const && parser.current.type != TOKEN_ASSIGN) {
             error_report(parser.current, "Constant must be initialized.");
         }
@@ -893,19 +1039,33 @@ Node* parse_statement() {
         eat(TOKEN_DOT);
 
         Node* stmt = ast_node_new(NODE_VAR_DECL, tok_name);
-        if (!stmt) return NULL;
+        if (!stmt) { free(type_name); return NULL; }
         stmt->data.var_decl.name = name;
         stmt->data.var_decl.type = dt;
+        stmt->data.var_decl.type_name = type_name;
         stmt->data.var_decl.expression = expr;
         stmt->data.var_decl.is_global = false;
         stmt->data.var_decl.is_const = is_const;
-        (void)tok_type;
         (void)tok_const;
         return stmt;
     }
 
     if (parser.current.type == TOKEN_IDENTIFIER) {
         Token tok_name = parser.current;
+
+        // إسناد إلى عضو: س:حقل = ... .
+        if (parser.next.type == TOKEN_COLON) {
+            Node* target = parse_expression();
+            eat(TOKEN_ASSIGN);
+            Node* value = parse_expression();
+            eat(TOKEN_DOT);
+
+            Node* stmt = ast_node_new(NODE_MEMBER_ASSIGN, tok_name);
+            if (!stmt) return NULL;
+            stmt->data.member_assign.target = target;
+            stmt->data.member_assign.value = value;
+            return stmt;
+        }
 
         if (parser.next.type == TOKEN_LBRACKET) {
             char* name = strdup(parser.current.value);
@@ -987,38 +1147,171 @@ Node* parse_declaration() {
 
     if (is_type_keyword(parser.current.type)) {
         Token tok_type = parser.current;
-        DataType dt = token_to_datatype(parser.current.type);
-        eat(parser.current.type);
-        
-        char* name = NULL;
-        Token tok_name = parser.current;
-        if (parser.current.type == TOKEN_IDENTIFIER) {
-            name = strdup(parser.current.value);
-            eat(TOKEN_IDENTIFIER);
-        } else {
-            error_report(parser.current, "Expected identifier after type.");
+        DataType dt = TYPE_INT;
+        char* type_name = NULL;
+        (void)tok_type;
+
+        if (!parse_type_spec(&dt, &type_name)) {
+            error_report(parser.current, "Expected type.");
             synchronize();
             return NULL;
         }
 
+        // تعريف تعداد/هيكل: تعداد <name> { ... }  |  هيكل <name> { ... }
+        if ((dt == TYPE_ENUM || dt == TYPE_STRUCT) && parser.current.type == TOKEN_LBRACE) {
+            if (is_const) {
+                error_report(parser.current, "Type declarations cannot be const.");
+            }
+
+            Token tok_name = tok_type;
+            if (dt == TYPE_ENUM) {
+                eat(TOKEN_LBRACE);
+
+                Node* head = NULL;
+                Node* tail = NULL;
+
+                if (parser.current.type != TOKEN_RBRACE) {
+                    while (1) {
+                        if (parser.current.type != TOKEN_IDENTIFIER) {
+                            error_report(parser.current, "Expected enum member name.");
+                            break;
+                        }
+                        Token tok_mem = parser.current;
+                        char* mem_name = strdup(parser.current.value);
+                        eat(TOKEN_IDENTIFIER);
+
+                        Node* mem = ast_node_new(NODE_ENUM_MEMBER, tok_mem);
+                        if (!mem) return NULL;
+                        mem->data.enum_member.name = mem_name;
+                        mem->data.enum_member.value = 0;
+                        mem->data.enum_member.has_value = false;
+
+                        if (!head) { head = mem; tail = mem; }
+                        else { tail->next = mem; tail = mem; }
+
+                        if (parser.current.type == TOKEN_COMMA) {
+                            eat(TOKEN_COMMA);
+                            if (parser.current.type == TOKEN_RBRACE) break; // trailing comma
+                            continue;
+                        }
+                        break;
+                    }
+                }
+
+                eat(TOKEN_RBRACE);
+
+                Node* en = ast_node_new(NODE_ENUM_DECL, tok_name);
+                if (!en) return NULL;
+                en->data.enum_decl.name = type_name;
+                en->data.enum_decl.members = head;
+                return en;
+            }
+
+            // struct
+            eat(TOKEN_LBRACE);
+            Node* head_f = NULL;
+            Node* tail_f = NULL;
+            while (parser.current.type != TOKEN_RBRACE && parser.current.type != TOKEN_EOF) {
+                bool field_const = false;
+                Token tok_field_const = {0};
+                if (parser.current.type == TOKEN_CONST) {
+                    field_const = true;
+                    tok_field_const = parser.current;
+                    eat(TOKEN_CONST);
+                }
+
+                DataType fdt = TYPE_INT;
+                char* ftype_name = NULL;
+                if (!parse_type_spec(&fdt, &ftype_name)) {
+                    error_report(parser.current, "Expected field type inside struct.");
+                    free(ftype_name);
+                    synchronize();
+                    break;
+                }
+
+                if (parser.current.type != TOKEN_IDENTIFIER) {
+                    error_report(parser.current, "Expected field name inside struct.");
+                    free(ftype_name);
+                    synchronize();
+                    break;
+                }
+
+                Token tok_field_name = parser.current;
+                char* fname = strdup(parser.current.value);
+                eat(TOKEN_IDENTIFIER);
+
+                if (parser.current.type == TOKEN_LBRACKET) {
+                    error_report(parser.current, "Array fields inside structs are not supported yet.");
+                    free(ftype_name);
+                    synchronize();
+                    break;
+                }
+
+                eat(TOKEN_DOT);
+
+                Node* field = ast_node_new(NODE_VAR_DECL, tok_field_name);
+                if (!field) return NULL;
+                field->data.var_decl.name = fname;
+                field->data.var_decl.type = fdt;
+                field->data.var_decl.type_name = ftype_name;
+                field->data.var_decl.expression = NULL;
+                field->data.var_decl.is_global = false;
+                field->data.var_decl.is_const = field_const;
+                (void)tok_field_const;
+
+                if (!head_f) { head_f = field; tail_f = field; }
+                else { tail_f->next = field; tail_f = field; }
+            }
+            eat(TOKEN_RBRACE);
+
+            Node* st = ast_node_new(NODE_STRUCT_DECL, tok_name);
+            if (!st) return NULL;
+            st->data.struct_decl.name = type_name;
+            st->data.struct_decl.fields = head_f;
+            return st;
+        }
+
+        // متغير/دالة: نحتاج اسم الرمز بعد نوعه
+        Token tok_name = parser.current;
+        if (parser.current.type != TOKEN_IDENTIFIER) {
+            error_report(parser.current, "Expected identifier after type.");
+            free(type_name);
+            synchronize();
+            return NULL;
+        }
+
+        char* name = strdup(parser.current.value);
+        eat(TOKEN_IDENTIFIER);
+
+        // دالة: نسمح فقط بأنواع بدائية حالياً
         if (parser.current.type == TOKEN_LPAREN) {
-            // الدوال لا يمكن أن تكون ثوابت
+            if (dt == TYPE_ENUM || dt == TYPE_STRUCT) {
+                error_report(parser.current, "User-defined return types are not supported in function signatures yet.");
+                free(type_name);
+                free(name);
+                synchronize();
+                return NULL;
+            }
             if (is_const) {
                 error_report(parser.current, "Functions cannot be declared as const.");
             }
+
             eat(TOKEN_LPAREN);
             Node* head_param = NULL;
             Node* tail_param = NULL;
             if (parser.current.type != TOKEN_RPAREN) {
                 while (1) {
-                    if (!is_type_keyword(parser.current.type)) { 
-                        error_report(parser.current, "Expected type for parameter."); 
+                    // معاملات الدالة: أنواع بدائية فقط حالياً
+                    if (!(parser.current.type == TOKEN_KEYWORD_INT ||
+                          parser.current.type == TOKEN_KEYWORD_STRING ||
+                          parser.current.type == TOKEN_KEYWORD_BOOL)) {
+                        error_report(parser.current, "Expected primitive type for parameter.");
                     }
 
                     Token tok_param_type = parser.current;
                     DataType param_dt = token_to_datatype(parser.current.type);
                     eat(parser.current.type);
-                    
+
                     char* pname = NULL;
                     Token tok_param_name = tok_param_type;
                     if (parser.current.type == TOKEN_IDENTIFIER) {
@@ -1031,19 +1324,19 @@ Node* parse_declaration() {
                     if (!param) return NULL;
                     param->data.var_decl.name = pname;
                     param->data.var_decl.type = param_dt;
+                    param->data.var_decl.type_name = NULL;
                     param->data.var_decl.expression = NULL;
                     param->data.var_decl.is_global = false;
-                    param->data.var_decl.is_const = false; // المعاملات ليست ثوابت افتراضياً
+                    param->data.var_decl.is_const = false;
                     if (head_param == NULL) { head_param = param; tail_param = param; }
                     else { tail_param->next = param; tail_param = param; }
-                    
+
                     if (parser.current.type == TOKEN_COMMA) eat(TOKEN_COMMA);
                     else break;
                 }
             }
             eat(TOKEN_RPAREN);
 
-            // التحقق مما إذا كان نموذجاً أولياً (ينتهي بنقطة) أو تعريفاً كاملاً (ينتهي بكتلة)
             Node* body = NULL;
             bool is_proto = false;
 
@@ -1062,73 +1355,101 @@ Node* parse_declaration() {
             func->data.func_def.params = head_param;
             func->data.func_def.body = body;
             func->data.func_def.is_prototype = is_proto;
+            free(type_name);
             return func;
         }
-        else {
-            // تعريف مصفوفة عامة: صحيح س[٥] = { ... }.
-            if (parser.current.type == TOKEN_LBRACKET) {
-                if (dt != TYPE_INT) {
-                    error_report(parser.current, "Only int arrays are supported.");
-                    exit(1);
-                }
 
-                eat(TOKEN_LBRACKET);
-                int size = 0;
-                if (parser.current.type == TOKEN_INT) {
-                    int v = 0;
-                    if (parse_int_token_checked(parser.current, &v) && v >= 0) {
-                        size = v;
-                    } else if (v < 0) {
-                        error_report(parser.current, "حجم المصفوفة يجب أن يكون عدداً غير سالب.");
-                    }
-                    eat(TOKEN_INT);
-                } else {
-                    error_report(parser.current, "Array size must be integer.");
-                }
-                eat(TOKEN_RBRACKET);
-
-                int init_count = 0;
-                bool has_init = false;
-                Node* init_vals = parse_array_initializer_list(&init_count, &has_init);
-
-                // الثوابت العامة يجب أن يكون لها تهيئة صريحة
-                if (is_const && !has_init) {
-                    error_report(parser.current, "Constant must be initialized.");
-                }
-
-                eat(TOKEN_DOT);
-
-                Node* arr = ast_node_new(NODE_ARRAY_DECL, tok_name);
-                if (!arr) return NULL;
-                arr->data.array_decl.name = name;
-                arr->data.array_decl.size = size;
-                arr->data.array_decl.is_global = true;
-                arr->data.array_decl.is_const = is_const;
-                arr->data.array_decl.has_init = has_init;
-                arr->data.array_decl.init_values = init_vals;
-                arr->data.array_decl.init_count = init_count;
-                (void)tok_type;
-                return arr;
+        // تعريف مصفوفة عامة (صحيح فقط)
+        if (parser.current.type == TOKEN_LBRACKET) {
+            if (dt != TYPE_INT) {
+                error_report(parser.current, "Only int arrays are supported.");
+                free(type_name);
+                free(name);
+                exit(1);
             }
 
-            // الثوابت العامة يجب أن يكون لها قيمة ابتدائية
-            if (is_const && parser.current.type != TOKEN_ASSIGN) {
+            eat(TOKEN_LBRACKET);
+            int size = 0;
+            if (parser.current.type == TOKEN_INT) {
+                int v = 0;
+                if (parse_int_token_checked(parser.current, &v) && v >= 0) {
+                    size = v;
+                } else if (v < 0) {
+                    error_report(parser.current, "حجم المصفوفة يجب أن يكون عدداً غير سالب.");
+                }
+                eat(TOKEN_INT);
+            } else {
+                error_report(parser.current, "Array size must be integer.");
+            }
+            eat(TOKEN_RBRACKET);
+
+            int init_count = 0;
+            bool has_init = false;
+            Node* init_vals = parse_array_initializer_list(&init_count, &has_init);
+
+            if (is_const && !has_init) {
                 error_report(parser.current, "Constant must be initialized.");
             }
 
-            Node* expr = NULL;
-            if (parser.current.type == TOKEN_ASSIGN) { eat(TOKEN_ASSIGN); expr = parse_expression(); }
             eat(TOKEN_DOT);
+
+            Node* arr = ast_node_new(NODE_ARRAY_DECL, tok_name);
+            if (!arr) return NULL;
+            arr->data.array_decl.name = name;
+            arr->data.array_decl.size = size;
+            arr->data.array_decl.is_global = true;
+            arr->data.array_decl.is_const = is_const;
+            arr->data.array_decl.has_init = has_init;
+            arr->data.array_decl.init_values = init_vals;
+            arr->data.array_decl.init_count = init_count;
+            free(type_name);
+            return arr;
+        }
+
+        // متغير عام
+        if (dt == TYPE_STRUCT) {
+            if (is_const) {
+                error_report(parser.current, "لا يمكن تعريف هيكل ثابت بدون تهيئة (غير مدعوم حالياً).");
+            }
+            if (parser.current.type == TOKEN_ASSIGN) {
+                error_report(parser.current, "تهيئة الهياكل العامة بالصيغة '=' غير مدعومة حالياً.");
+                eat(TOKEN_ASSIGN);
+                (void)parse_expression();
+            }
+            eat(TOKEN_DOT);
+
             Node* var = ast_node_new(NODE_VAR_DECL, tok_name);
             if (!var) return NULL;
             var->data.var_decl.name = name;
             var->data.var_decl.type = dt;
-            var->data.var_decl.expression = expr;
+            var->data.var_decl.type_name = type_name;
+            var->data.var_decl.expression = NULL;
             var->data.var_decl.is_global = true;
             var->data.var_decl.is_const = is_const;
-            (void)tok_type;
             return var;
         }
+
+        // ثوابت عامة يجب أن تُهيّأ
+        if (is_const && parser.current.type != TOKEN_ASSIGN) {
+            error_report(parser.current, "Constant must be initialized.");
+        }
+
+        Node* expr = NULL;
+        if (parser.current.type == TOKEN_ASSIGN) {
+            eat(TOKEN_ASSIGN);
+            expr = parse_expression();
+        }
+        eat(TOKEN_DOT);
+
+        Node* var = ast_node_new(NODE_VAR_DECL, tok_name);
+        if (!var) { free(type_name); return NULL; }
+        var->data.var_decl.name = name;
+        var->data.var_decl.type = dt;
+        var->data.var_decl.type_name = type_name;
+        var->data.var_decl.expression = expr;
+        var->data.var_decl.is_global = true;
+        var->data.var_decl.is_const = is_const;
+        return var;
     }
     
     error_report(parser.current, "Expected declaration (function or global variable).");

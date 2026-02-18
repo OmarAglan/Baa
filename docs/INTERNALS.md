@@ -1,6 +1,6 @@
 # Baa Compiler Internals
 
-> **Version:** 0.3.3 | [← Language Spec](LANGUAGE.md) | [API Reference →](API_REFERENCE.md)
+> **Version:** 0.3.4 | [← Language Spec](LANGUAGE.md) | [API Reference →](API_REFERENCE.md)
 
 **Target Architecture:** x86-64 (AMD64)
 **Target OS:** Windows (MinGW-w64 Toolchain)
@@ -307,28 +307,39 @@ The Parser (`src/parser.c`) builds the AST using Recursive Descent with 1-token 
 
 ```bnf
 Program       ::= Declaration* EOF
-Declaration   ::= FuncDecl | GlobalVarDecl | GlobalArrayDecl
+Declaration   ::= FuncDecl | GlobalVarDecl | GlobalArrayDecl | EnumDecl | StructDecl
 
 FuncDecl      ::= Type ID "(" ParamList ")" Block
                 | Type ID "(" ParamList ")" "."    // Prototype (v0.2.5+)
-GlobalVarDecl ::= ConstMod? Type ID ("=" Expr)? "."
+GlobalVarDecl ::= ConstMod? TypeSpec ID ("=" Expr)? "."
 GlobalArrayDecl ::= ConstMod? "صحيح" ID "[" INT "]" ArrayInit? "."   // v0.3.3+
+EnumDecl      ::= "تعداد" ID "{" EnumMembers? "}"                    // v0.3.4+
+StructDecl    ::= "هيكل" ID "{" FieldDecl* "}"                      // v0.3.4+
 
 ConstMod      ::= "ثابت"                           // NEW in v0.2.7
+TypeSpec      ::= Type | EnumType | StructType
 Type          ::= "صحيح" | "نص" | "منطقي"          // Updated in v0.2.9
+EnumType      ::= "تعداد" ID
+StructType    ::= "هيكل" ID
 
 Block         ::= "{" Statement* "}"
-Statement     ::= VarDecl | ArrayDecl | Assign | ArrayAssign
+Statement     ::= VarDecl | ArrayDecl | Assign | ArrayAssign | MemberAssign
                 | If | Switch | While | For | Return | Print | Read | CallStmt
                 | Break | Continue
 
-VarDecl       ::= ConstMod? Type ID "=" Expr "."   // Local declarations require an initializer
+VarDecl       ::= ConstMod? TypeSpec ID ("=" Expr)? "."   // initializer required إلا للهيكل
 ArrayDecl     ::= ConstMod? "صحيح" ID "[" INT "]" ArrayInit? "."  // v0.3.3+
+
+EnumMembers   ::= ID (COMMA ID)* COMMA?
+FieldDecl     ::= ConstMod? TypeSpec ID "."
 
 ArrayInit     ::= "=" "{" (Expr (COMMA Expr)* COMMA?)? "}"
 COMMA         ::= "," | "،"
 Assign        ::= ID "=" Expr "."
 ArrayAssign   ::= ID "[" Expr "]" "=" Expr "."
+MemberAssign  ::= MemberAccess "=" Expr "."
+
+MemberAccess  ::= Primary ":" ID (":" ID)*
 
 If            ::= "إذا" "(" Expr ")" Block ("وإلا" (Block | If))?
 Switch        ::= "اختر" "(" Expr ")" "{" Case* Default? "}"

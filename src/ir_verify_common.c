@@ -1,7 +1,7 @@
 /**
  * @file ir_verify_common.c
  * @brief تنفيذ أدوات مشتركة للتحقق من الـ IR/SSA.
- * @version 0.3.3
+ * @version 0.3.4
  */
 
 #include "ir_verify_common.h"

@@ -1,7 +1,7 @@
 /**
  * @file driver_cli.c
  * @brief تحليل معاملات سطر الأوامر وطباعة المساعدة/الإصدار.
- * @version 0.3.3
+ * @version 0.3.4
  */
 
 #include "driver_cli.h"

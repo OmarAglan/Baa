@@ -15,7 +15,7 @@
 #include <stdarg.h>
 
 // معلومات الإصدار
-#define BAA_VERSION "0.3.3"
+#define BAA_VERSION "0.3.4"
 #define BAA_BUILD_DATE __DATE__
 
 // ============================================================================
@@ -52,6 +52,10 @@ typedef enum {
     TOKEN_DEFAULT,      // افتراضي
     TOKEN_TRUE,         // صواب
     TOKEN_FALSE,        // خطأ
+
+    // أنواع مركبة (v0.3.4)
+    TOKEN_ENUM,         // تعداد
+    TOKEN_STRUCT,       // هيكل
     
     // الرموز (Symbols)
     TOKEN_ASSIGN,       // =
@@ -274,6 +278,11 @@ typedef enum {
     NODE_PROGRAM,       // البرنامج: يحتوي على قائمة التصريحات
     NODE_FUNC_DEF,      // تعريف دالة
     NODE_VAR_DECL,      // تعريف متغير (عام أو محلي)
+
+    // تعريفات الأنواع المركبة (v0.3.4)
+    NODE_ENUM_DECL,     // تعريف تعداد: تعداد لون { ... }
+    NODE_STRUCT_DECL,   // تعريف هيكل: هيكل سيارة { ... }
+    NODE_ENUM_MEMBER,   // عنصر تعداد داخل تعريفه
     
     // الجمل البرمجية (Statements)
     NODE_BLOCK,         // نطاق { ... } وكتلة الدالة
@@ -294,6 +303,10 @@ typedef enum {
     NODE_ARRAY_DECL,    // تعريف مصفوفة: صحيح س[5].
     NODE_ARRAY_ASSIGN,  // تعيين عنصر مصفوفة: س[0] = 1.
     NODE_ARRAY_ACCESS,  // قراءة عنصر مصفوفة: س[0]
+
+    // الوصول للأعضاء/المؤهلات (v0.3.4)
+    NODE_MEMBER_ACCESS, // <expr>:<member> (عضو هيكل أو قيمة تعداد)
+    NODE_MEMBER_ASSIGN, // <member_access> = <expr>.
     
     // التعبيرات (Expressions)
     NODE_BIN_OP,        // العمليات الثنائية (+، -، *، /)
@@ -314,7 +327,9 @@ typedef enum {
 typedef enum {
     TYPE_INT,           // صحيح (int64)
     TYPE_STRING,        // نص (char*)
-    TYPE_BOOL           // منطقي (bool - stored as int 0/1)
+    TYPE_BOOL,          // منطقي (bool - stored as byte)
+    TYPE_ENUM,          // تعداد (يُخزن كـ int64)
+    TYPE_STRUCT         // هيكل (ليس قيمة من الدرجة الأولى)
 } DataType;
 
 /**
@@ -377,10 +392,58 @@ typedef struct Node {
         struct {
             char* name;              // اسم المتغير
             DataType type;           // نوع البيانات (صحيح أو نص)
+            char* type_name;          // اسم النوع عند TYPE_ENUM/TYPE_STRUCT
+            int struct_size;          // حجم الهيكل بالبايت عند TYPE_STRUCT (يُملأ دلالياً)
+            int struct_align;         // محاذاة الهيكل عند TYPE_STRUCT (يُملأ دلالياً)
             struct Node* expression; // القيمة الابتدائية (اختياري)
             bool is_global;          // هل هو متغير عام؟
             bool is_const;           // هل هو ثابت (immutable)؟
         } var_decl;
+
+        // تعريف تعداد
+        struct {
+            char* name;              // اسم التعداد
+            struct Node* members;    // قائمة NODE_ENUM_MEMBER
+        } enum_decl;
+
+        // عنصر تعداد
+        struct {
+            char* name;              // اسم العضو
+            int64_t value;           // القيمة (يُملأ في التحليل الدلالي)
+            bool has_value;          // هل تم ضبط value؟
+        } enum_member;
+
+        // تعريف هيكل
+        struct {
+            char* name;              // اسم الهيكل
+            struct Node* fields;     // قائمة حقول (NODE_VAR_DECL) بدون تهيئة
+        } struct_decl;
+
+        // الوصول إلى عضو هيكل أو قيمة تعداد
+        struct {
+            struct Node* base;       // التعبير الأساسي
+            char* member;            // اسم العضو
+
+            // نتائج التحليل الدلالي:
+            bool is_enum_value;      // هل هذا تعبير قيمة تعداد؟ (Enum:Member)
+            char* enum_name;         // اسم التعداد عند is_enum_value
+            int64_t enum_value;      // قيمة العضو
+
+            bool is_struct_member;   // هل هذا عضو هيكل؟
+            char* root_var;          // اسم المتغير الجذري للهيكل
+            bool root_is_global;     // هل الجذر عام؟
+            char* root_struct;       // اسم نوع الهيكل للجذر
+            int member_offset;       // الإزاحة بالبايت من بداية الهيكل
+            DataType member_type;    // نوع الحقل النهائي
+            char* member_type_name;  // اسم النوع عند TYPE_ENUM/TYPE_STRUCT
+            bool member_is_const;    // هل المسار/الحقل النهائي ثابت (لا يمكن الكتابة)؟
+        } member_access;
+
+        // إسناد إلى عضو: <base>:<member> = <expr>.
+        struct {
+            struct Node* target;     // NODE_MEMBER_ACCESS
+            struct Node* value;      // RHS expression
+        } member_assign;
 
         // تعريف مصفوفة
         struct {
@@ -496,6 +559,7 @@ typedef struct {
     char name[32];     // اسم الرمز
     ScopeType scope;   // النطاق (عام أو محلي)
     DataType type;     // نوع البيانات (للمتغير: نوعه، للمصفوفة: نوع العنصر)
+    char type_name[32]; // اسم النوع عند TYPE_ENUM/TYPE_STRUCT (فارغ لغير ذلك)
     bool is_array;     // هل الرمز مصفوفة؟
     int array_size;    // حجم المصفوفة (ثابت حالياً) إذا كانت is_array=true
     int offset;        // الإزاحة في المكدس أو العنوان

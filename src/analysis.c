@@ -7,7 +7,7 @@
  *          - التحقق من الثوابت (Const Checking)
  *          - اكتشاف المتغيرات غير المستخدمة (Unused Variables)
  *          - اكتشاف الكود الميت (Dead Code)
- * @version 0.3.3
+ * @version 0.3.4
  */
 
 #include "baa.h"
@@ -25,6 +25,47 @@
 #define ANALYSIS_MAX_SCOPES  64
 #define ANALYSIS_MAX_FUNCS   128
 #define ANALYSIS_MAX_FUNC_PARAMS 32
+
+// أنواع مركبة (v0.3.4)
+#define ANALYSIS_MAX_ENUMS   128
+#define ANALYSIS_MAX_STRUCTS 128
+#define ANALYSIS_MAX_ENUM_MEMBERS 128
+#define ANALYSIS_MAX_STRUCT_FIELDS 128
+
+typedef struct {
+    char* name; // مملوك (strdup)
+    int member_count;
+    struct {
+        char* name;   // مملوك (strdup)
+        int64_t value;
+    } members[ANALYSIS_MAX_ENUM_MEMBERS];
+} EnumDef;
+
+typedef struct {
+    char* name;       // مملوك (strdup)
+    DataType type;
+    char* type_name;  // مملوك (strdup) عند TYPE_ENUM/TYPE_STRUCT
+    bool is_const;
+    int offset;
+    int size;
+    int align;
+} StructFieldDef;
+
+typedef struct {
+    char* name; // مملوك (strdup)
+    int field_count;
+    StructFieldDef fields[ANALYSIS_MAX_STRUCT_FIELDS];
+    int size;
+    int align;
+    bool layout_done;
+    bool layout_in_progress;
+} StructDef;
+
+static EnumDef enum_defs[ANALYSIS_MAX_ENUMS];
+static int enum_count = 0;
+
+static StructDef struct_defs[ANALYSIS_MAX_STRUCTS];
+static int struct_count = 0;
 
 static Symbol global_symbols[ANALYSIS_MAX_SYMBOLS];
 static int global_count = 0;
@@ -129,6 +170,35 @@ static void reset_analysis() {
         func_symbols[i].is_defined = false;
     }
     func_count = 0;
+
+    // تحرير تعريفات التعداد/الهياكل
+    for (int i = 0; i < enum_count; i++) {
+        free(enum_defs[i].name);
+        enum_defs[i].name = NULL;
+        for (int j = 0; j < enum_defs[i].member_count; j++) {
+            free(enum_defs[i].members[j].name);
+            enum_defs[i].members[j].name = NULL;
+        }
+        enum_defs[i].member_count = 0;
+    }
+    enum_count = 0;
+
+    for (int i = 0; i < struct_count; i++) {
+        free(struct_defs[i].name);
+        struct_defs[i].name = NULL;
+        for (int j = 0; j < struct_defs[i].field_count; j++) {
+            free(struct_defs[i].fields[j].name);
+            struct_defs[i].fields[j].name = NULL;
+            free(struct_defs[i].fields[j].type_name);
+            struct_defs[i].fields[j].type_name = NULL;
+        }
+        struct_defs[i].field_count = 0;
+        struct_defs[i].size = 0;
+        struct_defs[i].align = 0;
+        struct_defs[i].layout_done = false;
+        struct_defs[i].layout_in_progress = false;
+    }
+    struct_count = 0;
     has_error = false;
     inside_loop = false;
     inside_switch = false;
@@ -262,6 +332,7 @@ static void scope_pop(void) {
 static void add_symbol(const char* name,
                        ScopeType scope,
                        DataType type,
+                       const char* type_name,
                        bool is_const,
                        bool is_array,
                        int array_size,
@@ -299,6 +370,14 @@ static void add_symbol(const char* name,
         memcpy(global_symbols[global_count].name, name, name_len + 1);
         global_symbols[global_count].scope = SCOPE_GLOBAL;
         global_symbols[global_count].type = type;
+        global_symbols[global_count].type_name[0] = '\0';
+        if (type_name && type_name[0]) {
+            size_t tn_len = strlen(type_name);
+            size_t tn_cap = sizeof(global_symbols[global_count].type_name);
+            if (tn_len < tn_cap) {
+                memcpy(global_symbols[global_count].type_name, type_name, tn_len + 1);
+            }
+        }
         global_symbols[global_count].is_array = is_array;
         global_symbols[global_count].array_size = is_array ? array_size : 0;
         global_symbols[global_count].is_const = is_const;
@@ -343,6 +422,14 @@ static void add_symbol(const char* name,
         memcpy(local_symbols[local_count].name, name, name_len + 1);
         local_symbols[local_count].scope = SCOPE_LOCAL;
         local_symbols[local_count].type = type;
+        local_symbols[local_count].type_name[0] = '\0';
+        if (type_name && type_name[0]) {
+            size_t tn_len = strlen(type_name);
+            size_t tn_cap = sizeof(local_symbols[local_count].type_name);
+            if (tn_len < tn_cap) {
+                memcpy(local_symbols[local_count].type_name, type_name, tn_len + 1);
+            }
+        }
         local_symbols[local_count].is_array = is_array;
         local_symbols[local_count].array_size = is_array ? array_size : 0;
         local_symbols[local_count].is_const = is_const;
@@ -374,6 +461,340 @@ static Symbol* lookup(const char* name, bool mark_used) {
         }
     }
     return NULL;
+}
+
+// ============================================================================
+// تعداد/هيكل (v0.3.4): جداول تعريف الأنواع + تخطيط الذاكرة
+// ============================================================================
+
+static EnumDef* enum_lookup_def(const char* name)
+{
+    if (!name) return NULL;
+    for (int i = 0; i < enum_count; i++) {
+        if (enum_defs[i].name && strcmp(enum_defs[i].name, name) == 0) return &enum_defs[i];
+    }
+    return NULL;
+}
+
+static StructDef* struct_lookup_def(const char* name)
+{
+    if (!name) return NULL;
+    for (int i = 0; i < struct_count; i++) {
+        if (struct_defs[i].name && strcmp(struct_defs[i].name, name) == 0) return &struct_defs[i];
+    }
+    return NULL;
+}
+
+static int align_up_i32(int v, int a)
+{
+    if (a <= 0) return v;
+    int r = v % a;
+    if (r == 0) return v;
+    return v + (a - r);
+}
+
+static int type_size_align(DataType t, const char* type_name, int* out_align);
+
+static StructFieldDef* struct_field_lookup(StructDef* sd, const char* field_name)
+{
+    if (!sd || !field_name) return NULL;
+    for (int i = 0; i < sd->field_count; i++) {
+        if (sd->fields[i].name && strcmp(sd->fields[i].name, field_name) == 0) {
+            return &sd->fields[i];
+        }
+    }
+    return NULL;
+}
+
+static int struct_compute_layout(StructDef* sd)
+{
+    if (!sd) return 0;
+    if (sd->layout_done) return 1;
+    if (sd->layout_in_progress) {
+        semantic_error_loc(current_filename, 1, 1,
+                           "تعريف هيكل تراجعي/دائري غير مدعوم حالياً (cycle) في '%s'.",
+                           sd->name ? sd->name : "???");
+        return 0;
+    }
+
+    sd->layout_in_progress = true;
+
+    int off = 0;
+    int max_align = 1;
+
+    for (int i = 0; i < sd->field_count; i++) {
+        StructFieldDef* f = &sd->fields[i];
+        int falign = 1;
+        int fsize = type_size_align(f->type, f->type_name, &falign);
+        if (fsize < 0) fsize = 0;
+        if (falign < 1) falign = 1;
+
+        off = align_up_i32(off, falign);
+        f->offset = off;
+        f->size = fsize;
+        f->align = falign;
+        off += fsize;
+
+        if (falign > max_align) max_align = falign;
+    }
+
+    sd->align = max_align;
+    sd->size = align_up_i32(off, max_align);
+
+    sd->layout_in_progress = false;
+    sd->layout_done = true;
+    return 1;
+}
+
+static int type_size_align(DataType t, const char* type_name, int* out_align)
+{
+    if (out_align) *out_align = 1;
+    switch (t) {
+        case TYPE_BOOL:
+            if (out_align) *out_align = 1;
+            return 1;
+        case TYPE_INT:
+        case TYPE_ENUM:
+            if (out_align) *out_align = 8;
+            return 8;
+        case TYPE_STRING:
+            if (out_align) *out_align = 8;
+            return 8;
+        case TYPE_STRUCT: {
+            StructDef* sd = struct_lookup_def(type_name);
+            if (!sd) {
+                semantic_error_loc(current_filename, 1, 1,
+                                   "هيكل غير معرّف '%s'.", type_name ? type_name : "???");
+                return 0;
+            }
+            (void)struct_compute_layout(sd);
+            if (out_align) *out_align = (sd->align > 0) ? sd->align : 1;
+            return (sd->size > 0) ? sd->size : 0;
+        }
+        default:
+            return 0;
+    }
+}
+
+static const char* expr_enum_name(Node* expr)
+{
+    if (!expr) return NULL;
+    if (expr->type == NODE_VAR_REF) {
+        Symbol* sym = lookup(expr->data.var_ref.name, false);
+        if (sym && sym->type == TYPE_ENUM && sym->type_name[0]) return sym->type_name;
+    }
+    if (expr->type == NODE_MEMBER_ACCESS) {
+        if (expr->data.member_access.is_enum_value) {
+            return expr->data.member_access.enum_name;
+        }
+        if (expr->data.member_access.is_struct_member && expr->data.member_access.member_type == TYPE_ENUM) {
+            return expr->data.member_access.member_type_name;
+        }
+    }
+    return NULL;
+}
+
+static void resolve_member_access(Node* node)
+{
+    if (!node || node->type != NODE_MEMBER_ACCESS) return;
+    if (node->data.member_access.is_enum_value || node->data.member_access.is_struct_member) return;
+
+    Node* base = node->data.member_access.base;
+    const char* member = node->data.member_access.member;
+    if (!base || !member) return;
+
+    // 1) محاولة تفسيرها كقيمة تعداد: <EnumName>:<Member>
+    if (base->type == NODE_VAR_REF) {
+        const char* base_name = base->data.var_ref.name;
+        Symbol* sym = lookup(base_name, false);
+        EnumDef* ed = enum_lookup_def(base_name);
+        if (!sym && ed) {
+            for (int i = 0; i < ed->member_count; i++) {
+                if (ed->members[i].name && strcmp(ed->members[i].name, member) == 0) {
+                    node->data.member_access.is_enum_value = true;
+                    node->data.member_access.enum_name = strdup(base_name);
+                    node->data.member_access.enum_value = ed->members[i].value;
+                    return;
+                }
+            }
+            semantic_error(node, "عضو تعداد غير معرّف '%s:%s'.", base_name ? base_name : "???", member);
+            return;
+        }
+    }
+
+    // 2) وصول عضو هيكل
+    const char* root_var = NULL;
+    bool root_is_global = false;
+    const char* cur_struct = NULL;
+    int base_off = 0;
+    bool base_const = false;
+
+    if (base->type == NODE_VAR_REF) {
+        Symbol* sym = lookup(base->data.var_ref.name, true);
+        if (!sym) {
+            semantic_error(node, "متغير غير معرّف '%s'.", base->data.var_ref.name ? base->data.var_ref.name : "???");
+            return;
+        }
+        if (sym->type != TYPE_STRUCT) {
+            semantic_error(node, "'%s' ليس هيكلاً.", sym->name);
+            return;
+        }
+        root_var = sym->name;
+        root_is_global = (sym->scope == SCOPE_GLOBAL);
+        cur_struct = sym->type_name[0] ? sym->type_name : NULL;
+        base_off = 0;
+        base_const = sym->is_const;
+    } else if (base->type == NODE_MEMBER_ACCESS) {
+        resolve_member_access(base);
+        if (!base->data.member_access.is_struct_member || base->data.member_access.member_type != TYPE_STRUCT) {
+            semantic_error(node, "لا يمكن تطبيق ':' على تعبير غير هيكلي.");
+            return;
+        }
+        root_var = base->data.member_access.root_var;
+        root_is_global = base->data.member_access.root_is_global;
+        cur_struct = base->data.member_access.member_type_name;
+        base_off = base->data.member_access.member_offset;
+        base_const = base->data.member_access.member_is_const;
+    } else {
+        semantic_error(node, "الوصول للأعضاء يتطلب متغيراً أو وصولاً سابقاً لعضو.");
+        return;
+    }
+
+    if (!cur_struct) {
+        semantic_error(node, "نوع الهيكل غير معروف أثناء تحليل الوصول للأعضاء.");
+        return;
+    }
+
+    StructDef* sd = struct_lookup_def(cur_struct);
+    if (!sd) {
+        semantic_error(node, "هيكل غير معرّف '%s'.", cur_struct);
+        return;
+    }
+    (void)struct_compute_layout(sd);
+    StructFieldDef* f = struct_field_lookup(sd, member);
+    if (!f) {
+        semantic_error(node, "عضو هيكل غير معرّف '%s:%s'.", cur_struct, member);
+        return;
+    }
+
+    node->data.member_access.is_struct_member = true;
+    node->data.member_access.root_var = root_var ? strdup(root_var) : NULL;
+    node->data.member_access.root_is_global = root_is_global;
+    node->data.member_access.root_struct = strdup(cur_struct);
+    node->data.member_access.member_offset = base_off + f->offset;
+    node->data.member_access.member_type = f->type;
+    node->data.member_access.member_type_name = f->type_name ? strdup(f->type_name) : NULL;
+    node->data.member_access.member_is_const = base_const || f->is_const;
+}
+
+static void enum_register_decl(Node* node)
+{
+    if (!node || node->type != NODE_ENUM_DECL) return;
+    const char* name = node->data.enum_decl.name;
+    if (!name) {
+        semantic_error(node, "اسم التعداد فارغ.");
+        return;
+    }
+
+    if (enum_lookup_def(name) || struct_lookup_def(name)) {
+        semantic_error(node, "تعريف نوع مكرر '%s'.", name);
+        return;
+    }
+
+    if (enum_count >= ANALYSIS_MAX_ENUMS) {
+        semantic_error(node, "عدد التعدادات كبير جداً (الحد %d).", ANALYSIS_MAX_ENUMS);
+        return;
+    }
+
+    EnumDef* ed = &enum_defs[enum_count++];
+    memset(ed, 0, sizeof(*ed));
+    ed->name = strdup(name);
+
+    int64_t next = 0;
+    for (Node* m = node->data.enum_decl.members; m; m = m->next) {
+        if (m->type != NODE_ENUM_MEMBER) continue;
+        if (!m->data.enum_member.name) continue;
+
+        // تحقق من التكرار داخل التعداد
+        for (int i = 0; i < ed->member_count; i++) {
+            if (ed->members[i].name && strcmp(ed->members[i].name, m->data.enum_member.name) == 0) {
+                semantic_error(m, "عضو تعداد مكرر '%s:%s'.", name, m->data.enum_member.name);
+                return;
+            }
+        }
+
+        if (ed->member_count >= ANALYSIS_MAX_ENUM_MEMBERS) {
+            semantic_error(m, "عدد عناصر التعداد كبير جداً (الحد %d).", ANALYSIS_MAX_ENUM_MEMBERS);
+            return;
+        }
+
+        ed->members[ed->member_count].name = strdup(m->data.enum_member.name);
+        ed->members[ed->member_count].value = next;
+        ed->member_count++;
+
+        m->data.enum_member.value = next;
+        m->data.enum_member.has_value = true;
+        next++;
+    }
+
+    if (ed->member_count <= 0) {
+        semantic_error(node, "التعداد '%s' يجب أن يحتوي على عنصر واحد على الأقل.", name);
+    }
+}
+
+static void struct_register_decl(Node* node)
+{
+    if (!node || node->type != NODE_STRUCT_DECL) return;
+    const char* name = node->data.struct_decl.name;
+    if (!name) {
+        semantic_error(node, "اسم الهيكل فارغ.");
+        return;
+    }
+
+    if (enum_lookup_def(name) || struct_lookup_def(name)) {
+        semantic_error(node, "تعريف نوع مكرر '%s'.", name);
+        return;
+    }
+
+    if (struct_count >= ANALYSIS_MAX_STRUCTS) {
+        semantic_error(node, "عدد الهياكل كبير جداً (الحد %d).", ANALYSIS_MAX_STRUCTS);
+        return;
+    }
+
+    StructDef* sd = &struct_defs[struct_count++];
+    memset(sd, 0, sizeof(*sd));
+    sd->name = strdup(name);
+    sd->layout_done = false;
+    sd->layout_in_progress = false;
+
+    for (Node* f = node->data.struct_decl.fields; f; f = f->next) {
+        if (f->type != NODE_VAR_DECL) continue;
+        if (!f->data.var_decl.name) continue;
+
+        if (sd->field_count >= ANALYSIS_MAX_STRUCT_FIELDS) {
+            semantic_error(f, "عدد حقول الهيكل '%s' كبير جداً (الحد %d).", name, ANALYSIS_MAX_STRUCT_FIELDS);
+            return;
+        }
+
+        // تحقق من تكرار أسماء الحقول
+        for (int i = 0; i < sd->field_count; i++) {
+            if (sd->fields[i].name && strcmp(sd->fields[i].name, f->data.var_decl.name) == 0) {
+                semantic_error(f, "حقل مكرر داخل الهيكل '%s': '%s'.", name, f->data.var_decl.name);
+                return;
+            }
+        }
+
+        StructFieldDef* out = &sd->fields[sd->field_count++];
+        memset(out, 0, sizeof(*out));
+        out->name = strdup(f->data.var_decl.name);
+        out->type = f->data.var_decl.type;
+        out->type_name = f->data.var_decl.type_name ? strdup(f->data.var_decl.type_name) : NULL;
+        out->is_const = f->data.var_decl.is_const;
+    }
+
+    if (sd->field_count <= 0) {
+        semantic_error(node, "الهيكل '%s' يجب أن يحتوي على حقل واحد على الأقل.", name);
+    }
 }
 
 /**
@@ -429,6 +850,8 @@ static const char* datatype_to_str(DataType type) {
         case TYPE_INT: return "INTEGER";
         case TYPE_STRING: return "STRING";
         case TYPE_BOOL: return "BOOLEAN";
+        case TYPE_ENUM: return "ENUM";
+        case TYPE_STRUCT: return "STRUCT";
         default: return "UNKNOWN";
     }
 }
@@ -439,6 +862,22 @@ static bool types_compatible(DataType got, DataType expected)
     if (got == TYPE_BOOL && expected == TYPE_INT) return true;
     if (got == TYPE_INT && expected == TYPE_BOOL) return true;
     return false;
+}
+
+static bool types_compatible_named(DataType got, const char* got_name,
+                                  DataType expected, const char* expected_name)
+{
+    if (expected == TYPE_ENUM) {
+        if (got != TYPE_ENUM) return false;
+        if (!got_name || !expected_name) return false;
+        return strcmp(got_name, expected_name) == 0;
+    }
+    if (expected == TYPE_STRUCT) {
+        if (got != TYPE_STRUCT) return false;
+        if (!got_name || !expected_name) return false;
+        return strcmp(got_name, expected_name) == 0;
+    }
+    return types_compatible(got, expected);
 }
 
 // ============================================================================
@@ -574,7 +1013,26 @@ static DataType infer_type(Node* node) {
                 semantic_error(node, "لا يمكن استخدام المصفوفة '%s' بدون فهرس.", node->data.var_ref.name);
                 return sym->type;
             }
+            if (sym->type == TYPE_STRUCT) {
+                semantic_error(node, "لا يمكن استخدام الهيكل '%s' كقيمة مباشرة (استخدم ':' للوصول لعضو).", sym->name);
+                return TYPE_STRUCT;
+            }
             return sym->type;
+        }
+
+        case NODE_MEMBER_ACCESS: {
+            resolve_member_access(node);
+            if (node->data.member_access.is_enum_value) {
+                return TYPE_ENUM;
+            }
+            if (node->data.member_access.is_struct_member) {
+                if (node->data.member_access.member_type == TYPE_STRUCT) {
+                    semantic_error(node, "لا يمكن استخدام عضو هيكل من نوع هيكل كقيمة (استخدم ':' للتعشيش).");
+                }
+                return node->data.member_access.member_type;
+            }
+            semantic_error(node, "وصول عضو غير صالح.");
+            return TYPE_INT;
         }
 
         case NODE_ARRAY_ACCESS: {
@@ -654,6 +1112,14 @@ static DataType infer_type(Node* node) {
             if (op == OP_EQ || op == OP_NEQ || op == OP_LT || op == OP_GT || op == OP_LTE || op == OP_GTE) {
                 if (left != right) {
                     semantic_error(node, "Comparison operations require matching types.");
+                } else if (left == TYPE_ENUM) {
+                    const char* ln = expr_enum_name(node->data.bin_op.left);
+                    const char* rn = expr_enum_name(node->data.bin_op.right);
+                    if (!ln || !rn || strcmp(ln, rn) != 0) {
+                        semantic_error(node, "لا يمكن مقارنة قيم تعداد من أنواع مختلفة.");
+                    }
+                } else if (left == TYPE_STRUCT) {
+                    semantic_error(node, "لا يمكن مقارنة الهياكل.");
                 }
                 return TYPE_BOOL;
             }
@@ -728,7 +1194,23 @@ static void analyze_node(Node* node) {
 
     switch (node->type) {
         case NODE_PROGRAM: {
-            // تسجيل تواقيع الدوال أولاً لدعم الاستدعاء قبل التعريف
+            // 0) تسجيل تعريفات الأنواع (تعداد/هيكل) أولاً
+            Node* td = node->data.program.declarations;
+            while (td) {
+                if (td->type == NODE_ENUM_DECL) {
+                    enum_register_decl(td);
+                } else if (td->type == NODE_STRUCT_DECL) {
+                    struct_register_decl(td);
+                }
+                td = td->next;
+            }
+
+            // حساب تخطيط الذاكرة للهياكل مبكراً لالتقاط الأخطاء بسرعة
+            for (int i = 0; i < struct_count; i++) {
+                (void)struct_compute_layout(&struct_defs[i]);
+            }
+
+            // 1) تسجيل تواقيع الدوال أولاً لدعم الاستدعاء قبل التعريف
             Node* decl0 = node->data.program.declarations;
             while (decl0) {
                 if (decl0->type == NODE_FUNC_DEF) {
@@ -748,36 +1230,76 @@ static void analyze_node(Node* node) {
         }
 
         case NODE_VAR_DECL: {
-            // 1. التحقق من نوع التعبير المخصص (إن وجد)
-            if (node->data.var_decl.expression) {
-                DataType exprType = infer_type(node->data.var_decl.expression);
-                DataType declType = node->data.var_decl.type;
-                
-                // السماح بتعيين BOOL إلى INT والعكس (التوافق الضمني)
-                bool compatible = (exprType == declType) ||
-                                  (exprType == TYPE_BOOL && declType == TYPE_INT) ||
-                                  (exprType == TYPE_INT && declType == TYPE_BOOL);
-                
-                if (!compatible) {
-                    semantic_error(node, "Type mismatch in declaration of '%s'. Expected %s but got %s.",
-                        node->data.var_decl.name,
-                        datatype_to_str(declType),
-                        datatype_to_str(exprType));
+            DataType declType = node->data.var_decl.type;
+            const char* declTypeName = node->data.var_decl.type_name;
+
+            // 1) تحقق الأنواع المركبة
+            if (declType == TYPE_ENUM) {
+                if (!declTypeName || !enum_lookup_def(declTypeName)) {
+                    semantic_error(node, "تعداد غير معرّف '%s'.", declTypeName ? declTypeName : "???");
+                }
+
+                if (node->data.var_decl.expression) {
+                    DataType exprType = infer_type(node->data.var_decl.expression);
+                    const char* en = expr_enum_name(node->data.var_decl.expression);
+                    if (!types_compatible_named(exprType, en, TYPE_ENUM, declTypeName)) {
+                        semantic_error(node,
+                                       "عدم تطابق نوع التعداد في تهيئة '%s'.", node->data.var_decl.name);
+                    }
+                } else {
+                    // الثوابت يجب أن تُهيّأ
+                    if (!node->data.var_decl.is_global || node->data.var_decl.is_const) {
+                        semantic_error(node, "متغير التعداد '%s' يجب أن يُهيّأ.", node->data.var_decl.name);
+                    }
                 }
             }
-            // 2. التحقق من أن الثوابت لها قيم ابتدائية
-            if (node->data.var_decl.is_const && !node->data.var_decl.expression) {
-                semantic_error(node, "Constant '%s' must be initialized.", node->data.var_decl.name);
+            else if (declType == TYPE_STRUCT) {
+                if (!declTypeName) {
+                    semantic_error(node, "اسم نوع الهيكل مفقود.");
+                }
+                StructDef* sd = struct_lookup_def(declTypeName);
+                if (!sd) {
+                    semantic_error(node, "هيكل غير معرّف '%s'.", declTypeName ? declTypeName : "???");
+                } else {
+                    (void)struct_compute_layout(sd);
+                    node->data.var_decl.struct_size = sd->size;
+                    node->data.var_decl.struct_align = sd->align;
+                }
+
+                if (node->data.var_decl.expression) {
+                    semantic_error(node, "تهيئة الهيكل بهذه الصيغة غير مدعومة حالياً.");
+                }
+                if (node->data.var_decl.is_const) {
+                    semantic_error(node, "لا يمكن تعريف هيكل ثابت بدون تهيئة (غير مدعوم حالياً).");
+                }
             }
-            // 3. إضافة الرمز (مع معلومات الموقع للتحذيرات)
-             add_symbol(node->data.var_decl.name,
-                        node->data.var_decl.is_global ? SCOPE_GLOBAL : SCOPE_LOCAL,
-                        node->data.var_decl.type,
-                        node->data.var_decl.is_const,
-                        false,
-                        0,
-                        node->line, node->col, node->filename ? node->filename : current_filename);
-             break;
+            else {
+                // 2) الأنواع البدائية
+                if (node->data.var_decl.expression) {
+                    DataType exprType = infer_type(node->data.var_decl.expression);
+                    if (!types_compatible(exprType, declType)) {
+                        semantic_error(node,
+                                      "Type mismatch in declaration of '%s'. Expected %s but got %s.",
+                                      node->data.var_decl.name,
+                                      datatype_to_str(declType),
+                                      datatype_to_str(exprType));
+                    }
+                }
+                if (node->data.var_decl.is_const && !node->data.var_decl.expression) {
+                    semantic_error(node, "Constant '%s' must be initialized.", node->data.var_decl.name);
+                }
+            }
+
+            // 3) إضافة الرمز (مع معلومات الموقع للتحذيرات)
+            add_symbol(node->data.var_decl.name,
+                       node->data.var_decl.is_global ? SCOPE_GLOBAL : SCOPE_LOCAL,
+                       declType,
+                       declTypeName,
+                       node->data.var_decl.is_const,
+                       false,
+                       0,
+                       node->line, node->col, node->filename ? node->filename : current_filename);
+            break;
          }
 
         case NODE_FUNC_DEF: {
@@ -796,7 +1318,7 @@ static void analyze_node(Node* node) {
             while (param) {
                  if (param->type == NODE_VAR_DECL) {
                      // المعاملات تُعتبر "مستخدمة" ضمنياً (لتجنب تحذيرات خاطئة)
-                    add_symbol(param->data.var_decl.name, SCOPE_LOCAL, param->data.var_decl.type, false,
+                    add_symbol(param->data.var_decl.name, SCOPE_LOCAL, param->data.var_decl.type, NULL, false,
                                false, 0,
                                param->line, param->col, param->filename ? param->filename : current_filename);
                      // تعليم المعامل كمستخدم مباشرة
@@ -834,14 +1356,77 @@ static void analyze_node(Node* node) {
                 if (sym->is_array) {
                     semantic_error(node, "لا يمكن تعيين قيمة للمصفوفة '%s' مباشرة (استخدم الفهرسة).", sym->name);
                 }
+                if (sym->type == TYPE_STRUCT) {
+                    semantic_error(node, "لا يمكن إسناد قيمة إلى هيكل '%s' مباشرة.", sym->name);
+                }
                 // التحقق من الثوابت: لا يمكن إعادة تعيين قيمة ثابت
                 if (sym->is_const) {
                     semantic_error(node, "Cannot reassign constant '%s'.", node->data.assign_stmt.name);
                 }
                 DataType exprType = infer_type(node->data.assign_stmt.expression);
-                if (!types_compatible(exprType, sym->type)) {
+                if (sym->type == TYPE_ENUM) {
+                    const char* en = expr_enum_name(node->data.assign_stmt.expression);
+                    if (!types_compatible_named(exprType, en, TYPE_ENUM, sym->type_name)) {
+                        semantic_error(node, "عدم تطابق نوع التعداد في الإسناد إلى '%s'.", node->data.assign_stmt.name);
+                    }
+                } else if (!types_compatible(exprType, sym->type)) {
                     semantic_error(node, "Type mismatch in assignment to '%s'.", node->data.assign_stmt.name);
                 }
+            }
+            break;
+        }
+
+        case NODE_MEMBER_ASSIGN: {
+            Node* target = node->data.member_assign.target;
+            Node* value = node->data.member_assign.value;
+
+            if (!target || target->type != NODE_MEMBER_ACCESS) {
+                semantic_error(node, "الهدف في إسناد العضو غير صالح.");
+                (void)infer_type(value);
+                break;
+            }
+
+            resolve_member_access(target);
+
+            if (target->data.member_access.is_enum_value) {
+                semantic_error(node, "لا يمكن الإسناد إلى قيمة تعداد.");
+                (void)infer_type(value);
+                break;
+            }
+            if (!target->data.member_access.is_struct_member) {
+                semantic_error(node, "إسناد عضو يتطلب هيكلاً.");
+                (void)infer_type(value);
+                break;
+            }
+            if (target->data.member_access.member_type == TYPE_STRUCT) {
+                semantic_error(node, "إسناد عضو من نوع هيكل غير مدعوم حالياً.");
+                (void)infer_type(value);
+                break;
+            }
+
+            if (target->data.member_access.member_is_const) {
+                semantic_error(node, "لا يمكن تعديل عضو ثابت داخل الهيكل.");
+            }
+
+            // تحقق ثابتية الهيكل الجذري
+            Symbol* root = NULL;
+            if (target->data.member_access.root_var) {
+                root = lookup(target->data.member_access.root_var, true);
+            }
+            if (root && root->is_const) {
+                semantic_error(node, "لا يمكن تعديل هيكل ثابت '%s'.", root->name);
+            }
+
+            DataType got = infer_type(value);
+            DataType expected = target->data.member_access.member_type;
+            if (expected == TYPE_ENUM) {
+                const char* en = expr_enum_name(value);
+                const char* expn = target->data.member_access.member_type_name;
+                if (!types_compatible_named(got, en, TYPE_ENUM, expn)) {
+                    semantic_error(node, "عدم تطابق نوع التعداد في إسناد العضو.");
+                }
+            } else if (!types_compatible(got, expected)) {
+                semantic_error(node, "عدم تطابق النوع في إسناد العضو.");
             }
             break;
         }
@@ -1021,6 +1606,7 @@ static void analyze_node(Node* node) {
             add_symbol(node->data.array_decl.name,
                        node->data.array_decl.is_global ? SCOPE_GLOBAL : SCOPE_LOCAL,
                        TYPE_INT,
+                       NULL,
                        node->data.array_decl.is_const,
                        true,
                        node->data.array_decl.size,

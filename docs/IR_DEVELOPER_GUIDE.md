@@ -1,6 +1,6 @@
 # IR Developer Guide
 
-> **Version:** 0.3.3 | [← Internals](INTERNALS.md) | [IR Specification →](BAA_IR_SPECIFICATION.md)
+> **Version:** 0.3.4 | [← Internals](INTERNALS.md) | [IR Specification →](BAA_IR_SPECIFICATION.md)
 
 This guide is for contributors working on the Baa IR and mid-end.
 

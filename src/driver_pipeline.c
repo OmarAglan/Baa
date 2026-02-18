@@ -1,7 +1,7 @@
 /**
  * @file driver_pipeline.c
  * @brief تنفيذ خط أنابيب الترجمة لكل ملف مصدر.
- * @version 0.3.2.9.4
+ * @version 0.3.3
  */
 
 #include "driver_pipeline.h"

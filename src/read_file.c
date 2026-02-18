@@ -1,7 +1,7 @@
 /**
  * @file read_file.c
  * @brief قراءة ملف بالكامل إلى الذاكرة.
- * @version 0.3.2.9.4
+ * @version 0.3.3
  */
 
 #include "baa.h"

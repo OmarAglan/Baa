@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.10)
-project(baa VERSION 0.3.0 LANGUAGES C)
+project(baa VERSION 0.3.3 LANGUAGES C)
 
 set(CMAKE_C_STANDARD 11)
 
@@ -66,6 +66,51 @@ endif()
 
 # Windows executable extension
 add_executable(baa ${SOURCES})
+
+# ============================================================================
+# Install Rules (Linux packaging)
+# ============================================================================
+
+include(GNUInstallDirs)
+
+install(TARGETS baa
+    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+)
+
+install(DIRECTORY docs
+    DESTINATION ${CMAKE_INSTALL_DATADIR}/baa
+)
+
+install(DIRECTORY resources
+    DESTINATION ${CMAKE_INSTALL_DATADIR}/baa
+)
+
+install(FILES README.md CHANGELOG.md ROADMAP.md
+    DESTINATION ${CMAKE_INSTALL_DATADIR}/baa
+)
+
+# ============================================================================
+# CPack (TGZ + DEB)
+# ============================================================================
+
+set(CPACK_PACKAGE_NAME "baa")
+set(CPACK_PACKAGE_VENDOR "Omar Aglan")
+set(CPACK_PACKAGE_CONTACT "Omar Aglan")
+set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Baa Compiler (باء)")
+set(CPACK_PACKAGE_VERSION ${PROJECT_VERSION})
+set(CPACK_PACKAGE_FILE_NAME "baa-${PROJECT_VERSION}-${CMAKE_SYSTEM_NAME}-${CMAKE_SYSTEM_PROCESSOR}")
+
+if(UNIX AND NOT APPLE)
+    set(CPACK_GENERATOR "TGZ;DEB")
+    # DEB packages should install into /usr (not /usr/local).
+    set(CPACK_PACKAGING_INSTALL_PREFIX "/usr")
+    set(CPACK_DEBIAN_PACKAGE_MAINTAINER "Omar Aglan")
+    set(CPACK_DEBIAN_PACKAGE_SECTION "devel")
+    set(CPACK_DEBIAN_PACKAGE_PRIORITY "optional")
+    set(CPACK_DEBIAN_PACKAGE_SHLIBDEPS ON)
+endif()
+
+include(CPack)
 
 # Warnings / hardening flags (two-tier)
 if(BAA_ENABLE_WARNINGS)

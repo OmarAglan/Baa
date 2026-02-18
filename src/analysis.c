@@ -7,7 +7,7 @@
  *          - التحقق من الثوابت (Const Checking)
  *          - اكتشاف المتغيرات غير المستخدمة (Unused Variables)
  *          - اكتشاف الكود الميت (Dead Code)
- * @version 0.3.2.9.4
+ * @version 0.3.3
  */
 
 #include "baa.h"

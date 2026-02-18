@@ -1,7 +1,7 @@
 /**
  * @file driver_pipeline.h
  * @brief تنفيذ خط أنابيب الترجمة لكل ملف مصدر.
- * @version 0.3.2.9.4
+ * @version 0.3.3
  */
 
 #ifndef BAA_DRIVER_PIPELINE_H

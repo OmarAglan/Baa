@@ -1,6 +1,6 @@
 # Baa User Guide
 
-> **Version:** 0.3.2.9.4 | [← README](../README.md) | [Language Spec →](LANGUAGE.md)
+> **Version:** 0.3.3 | [← README](../README.md) | [Language Spec →](LANGUAGE.md)
 
 Welcome to Baa (باء)! This guide will help you write your first Arabic computer program and use the Baa compiler toolchain.
 
@@ -125,6 +125,40 @@ The Baa compiler is a full-featured command-line tool (since v0.2.0):
 .\out.exe
 ```
 
+---
+
+## 6. Linux Packaging (TGZ + DEB) (v0.3.3)
+
+You can generate Linux installer artifacts from a Linux build:
+
+```bash
+cmake -B build-linux -DCMAKE_BUILD_TYPE=Release
+cmake --build build-linux -j
+
+# Generate TGZ + DEB in build-linux/
+(cd build-linux && cpack -G TGZ)
+(cd build-linux && cpack -G DEB)
+```
+
+Or run the helper script:
+
+```bash
+bash scripts/package_linux.sh
+```
+
+Install (DEB):
+
+```bash
+sudo dpkg -i build-linux/baa-0.3.3-Linux-x86_64.deb
+```
+
+Install (TGZ):
+
+```bash
+tar -xzf build-linux/baa-0.3.3-Linux-x86_64.tar.gz
+sudo cp -a usr/* /usr/
+```
+
 ```bash
 # Linux: default output is out
 ./baa hello.baa
@@ -165,7 +199,7 @@ The Baa compiler is a full-featured command-line tool (since v0.2.0):
 - `-o <file>` is only applied for `-S` / `-c` when compiling a single input file.
 - `update` must be used alone: `.\baa.exe update`
 
-### Current Limitations (v0.3.2.9.4)
+### Current Limitations (v0.3.3)
 
 - Stack-argument calling is implemented for integer/pointer-like values. Floating-point/SIMD arguments are not modeled yet.
 
@@ -450,3 +484,4 @@ Use `منطقي` variables to store true (`صواب`) or false (`خطأ`) values
 ---
 
 *[← README](../README.md) | [Language Specification →](LANGUAGE.md)*
+../README.md) | [Language Specification →](LANGUAGE.md)*

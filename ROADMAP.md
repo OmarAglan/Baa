@@ -18,13 +18,13 @@
 
 ---
 
-## ⚙️ Phase 3: The Intermediate Representation (v0.3.x) ← CURRENT
+## ⚙️ Phase 3: The Intermediate Representation (v0.3.x)
 
 *Goal: Decouple the language from x86 Assembly to enable optimizations and multiple backends.*
 
 > **Design Document:** See [BAA_IR_SPECIFICATION.md](docs/BAA_IR_SPECIFICATION.md) for full IR specification.
 
-### v0.3.0: IR Foundation 🏗️ ← IN PROGRESS
+### v0.3.0: IR Foundation 🏗️
 
 #### v0.3.0.1: IR Data Structures ✅ COMPLETED (2026-01-15)
 
@@ -401,7 +401,7 @@
 - [x] **Edge case testing** — Complex control flow, nested loops, recursion.
 - [x] **Error case testing** — Verify error messages unchanged.
 
-#### v0.3.2.9.4: Documentation & Cleanup ← CURRENT
+#### v0.3.2.9.4: Documentation & Cleanup
 
 - [x] **Update INTERNALS.md** — Document new IR pipeline.
 - [x] **IR Developer Guide** — How to add new IR instructions.

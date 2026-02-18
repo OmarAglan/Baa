@@ -139,7 +139,15 @@ typedef struct {
     // حالة المعالج القبلي (Preprocessor State)
     Macro macros[100];    // جدول الماكروهات (حد أقصى 100)
     int macro_count;      // عدد الماكروهات المعرفة
-    bool skipping;        // هل نحن في وضع التخطي؟ (بسبب #إذا_عرف)
+    bool skipping;        // هل نحن في وضع التخطي؟ (مُشتق من مكدس الشروط)
+
+    // مكدس الشروط (#إذا_عرف/#وإلا/#نهاية) لدعم التعشيش بشكل صحيح
+    struct {
+        unsigned char parent_active;
+        unsigned char cond_true;
+        unsigned char in_else;
+    } if_stack[32];
+    int if_depth;
 } Lexer;
 
 /**

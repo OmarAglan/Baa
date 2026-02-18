@@ -38,10 +38,17 @@ static char *change_extension_alloc(const char *filename, const char *new_ext)
     }
 
     char *dot = strrchr(filename, '.');
+    size_t base_len = 0;
     if (!dot || dot == filename)
-        return strdup(new_ext + (dot == filename));
+    {
+        // لا يوجد امتداد (أو ملف مخفي يبدأ بنقطة) → اعتبر الاسم كاملاً كقاعدة
+        base_len = strlen(filename);
+    }
+    else
+    {
+        base_len = (size_t)(dot - filename);
+    }
 
-    size_t base_len = (size_t)(dot - filename);
     size_t ext_len = strlen(new_ext);
     char *new_name = (char *)malloc(base_len + ext_len + 1);
     if (!new_name)

@@ -17,6 +17,7 @@ void lexer_init(Lexer* l, char* src, const char* filename) {
     l->stack_depth = 0;
     l->macro_count = 0;
     l->skipping = false;
+    l->if_depth = 0;
     
     // تهيئة الحالة الحالية
     l->state.source = src;
@@ -30,6 +31,24 @@ void lexer_init(Lexer* l, char* src, const char* filename) {
     if (len >= 3 && (unsigned char)src[0] == 0xEF && (unsigned char)src[1] == 0xBB && (unsigned char)src[2] == 0xBF) {
         l->state.cur_char += 3;
     }
+}
+
+static bool pp_active(const Lexer* l)
+{
+    if (!l) return true;
+    if (l->if_depth <= 0) return true;
+    const int i = l->if_depth - 1;
+    const unsigned char parent_active = l->if_stack[i].parent_active;
+    const unsigned char cond_true = l->if_stack[i].cond_true;
+    const unsigned char in_else = l->if_stack[i].in_else;
+    if (!parent_active) return false;
+    return in_else ? (!cond_true) : (cond_true != 0);
+}
+
+static void pp_recompute_skipping(Lexer* l)
+{
+    if (!l) return;
+    l->skipping = pp_active(l) ? false : true;
 }
 
 /**
@@ -232,10 +251,18 @@ Token lexer_next_token(Lexer* l) {
                      name[name_len] = '\0';
 
                      bool defined = (get_macro_value(l, name) != NULL);
-                     // إذا كنا نتخطى أصلاً، نستمر في التخطي
-                     if (!l->skipping) {
-                         l->skipping = !defined;
+
+                     if (l->if_depth >= (int)(sizeof(l->if_stack) / sizeof(l->if_stack[0]))) {
+                         printf("Preprocessor Error: Too many nested conditionals.\n");
+                         exit(1);
                      }
+
+                     bool parent = pp_active(l);
+                     l->if_stack[l->if_depth].parent_active = parent ? 1 : 0;
+                     l->if_stack[l->if_depth].cond_true = (parent && defined) ? 1 : 0;
+                     l->if_stack[l->if_depth].in_else = 0;
+                     l->if_depth++;
+                     pp_recompute_skipping(l);
                      
                      free(name);
                      free(directive);
@@ -243,13 +270,28 @@ Token lexer_next_token(Lexer* l) {
                  }
                  // 4. #وإلا (Else)
                  else if (strcmp(directive, "وإلا") == 0) {
-                     l->skipping = !l->skipping;
+                     if (l->if_depth <= 0) {
+                         printf("Preprocessor Error: #وإلا without matching #إذا_عرف\n");
+                         exit(1);
+                     }
+                     int i = l->if_depth - 1;
+                     if (l->if_stack[i].in_else) {
+                         printf("Preprocessor Error: duplicate #وإلا\n");
+                         exit(1);
+                     }
+                     l->if_stack[i].in_else = 1;
+                     pp_recompute_skipping(l);
                      free(directive);
                      continue;
                  }
                  // 5. #نهاية (End)
                  else if (strcmp(directive, "نهاية") == 0) {
-                     l->skipping = false;
+                     if (l->if_depth <= 0) {
+                         printf("Preprocessor Error: #نهاية without matching #إذا_عرف\n");
+                         exit(1);
+                     }
+                     l->if_depth--;
+                     pp_recompute_skipping(l);
                      free(directive);
                      continue;
                  }

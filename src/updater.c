@@ -8,7 +8,10 @@
 #include <windows.h>
 #include <urlmon.h>
 #include <wininet.h>
+#include <wintrust.h>
+#include <softpub.h>
 #include <ctype.h>
+#include <stdio.h>
 
 // -----------------------------------------------------------------------------
 // ملاحظة: روابط التحديث (يمكن تعديلها لتناسب مسار النشر الخاص بك)
@@ -21,7 +24,44 @@
 #if defined(_MSC_VER)
 #pragma comment(lib, "urlmon.lib")
 #pragma comment(lib, "wininet.lib")
+#pragma comment(lib, "wintrust.lib")
+#pragma comment(lib, "crypt32.lib")
 #endif
+
+static int verify_installer_signature(const char* path)
+{
+    if (!path || !path[0]) return 0;
+
+    wchar_t wpath[MAX_PATH];
+    int wlen = MultiByteToWideChar(CP_UTF8, 0, path, -1, wpath, MAX_PATH);
+    if (wlen <= 0 || wlen >= MAX_PATH) {
+        wlen = MultiByteToWideChar(CP_ACP, 0, path, -1, wpath, MAX_PATH);
+    }
+    if (wlen <= 0) return 0;
+
+    WINTRUST_FILE_INFO fi;
+    memset(&fi, 0, sizeof(fi));
+    fi.cbStruct = sizeof(fi);
+    fi.pcwszFilePath = wpath;
+
+    WINTRUST_DATA wd;
+    memset(&wd, 0, sizeof(wd));
+    wd.cbStruct = sizeof(wd);
+    wd.dwUIChoice = WTD_UI_NONE;
+    wd.fdwRevocationChecks = WTD_REVOKE_NONE;
+    wd.dwUnionChoice = WTD_CHOICE_FILE;
+    wd.pFile = &fi;
+    wd.dwStateAction = WTD_STATEACTION_VERIFY;
+    wd.dwProvFlags = WTD_SAFER_FLAG;
+
+    GUID action = WINTRUST_ACTION_GENERIC_VERIFY_V2;
+    LONG st = WinVerifyTrust(NULL, &action, &wd);
+
+    wd.dwStateAction = WTD_STATEACTION_CLOSE;
+    (void)WinVerifyTrust(NULL, &action, &wd);
+
+    return st == ERROR_SUCCESS;
+}
 
 /**
  * @brief قراءة الإصدار من الخادم.
@@ -137,9 +177,22 @@ void perform_update() {
 
     // الحصول على مسار المجلد المؤقت
     GetTempPathA(MAX_PATH, tempPath);
-    int n = snprintf(setupPath, MAX_PATH, "%sbaa_setup.exe", tempPath);
-    if (n < 0 || n >= MAX_PATH) {
-        printf("[Error] Failed to build installer path.\n");
+
+    // اختيار اسم ملف فريد لتجنب التصادم/الاستبدال.
+    DWORD pid = GetCurrentProcessId();
+    int ok_path = 0;
+    for (int i = 0; i < 100; i++) {
+        int n = snprintf(setupPath, MAX_PATH, "%sbaa_setup_%lu_%d.exe",
+                         tempPath, (unsigned long)pid, i);
+        if (n < 0 || n >= MAX_PATH) continue;
+        DWORD attr = GetFileAttributesA(setupPath);
+        if (attr == INVALID_FILE_ATTRIBUTES) {
+            ok_path = 1;
+            break;
+        }
+    }
+    if (!ok_path) {
+        printf("[Error] Failed to build a unique installer path.\n");
         return;
     }
 
@@ -150,11 +203,24 @@ void perform_update() {
     HRESULT hr = URLDownloadToFileA(NULL, UPDATE_URL_SETUP, setupPath, 0, NULL);
     
     if (hr == S_OK) {
-        printf("[Update] Download complete. Starting installer...\n");
+        printf("[Update] Download complete.\n");
+
+        // تحقق من توقيع المثبت قبل تشغيله (يجب أن يكون Authenticode صالحاً).
+        if (!verify_installer_signature(setupPath)) {
+            printf("[Error] Refusing to run unsigned/invalid installer.\n");
+            (void)DeleteFileA(setupPath);
+            return;
+        }
+
+        printf("[Update] Starting installer...\n");
         
         // تشغيل المثبت
         // SW_SHOW يعرض نافذة التثبيت
-        ShellExecuteA(NULL, "open", setupPath, NULL, NULL, SW_SHOW);
+        HINSTANCE h = ShellExecuteA(NULL, "open", setupPath, NULL, NULL, SW_SHOW);
+        if ((INT_PTR)h <= 32) {
+            printf("[Error] Failed to launch installer.\n");
+            return;
+        }
         
         // إغلاق البرنامج الحالي ليتمكن المثبت من استبدال الملفات
         exit(0);
@@ -168,7 +234,7 @@ void perform_update() {
  */
 void run_updater() {
     if (check_for_updates()) {
-        printf("Do you want to update? (y/n): ");
+        printf("هل تريد التحديث؟ (y/n): ");
         char response = getchar();
         // تنظيف مدخلات لوحة المفاتيح
         while ((getchar()) != '\n'); 

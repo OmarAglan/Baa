@@ -75,8 +75,12 @@ def main() -> int:
     corpus_v2x = sorted(corpus_root.glob("**/*.baa"))
     if corpus_v2x:
         exe_ext = ".exe" if os.name == "nt" else ""
-        with tempfile.TemporaryDirectory(prefix="baa_regress_corpus_") as td:
-            out_dir = Path(td)
+        out_dir = ROOT / f".baa_regress_corpus_out_{os.getpid()}"
+        if out_dir.exists():
+            import shutil
+            shutil.rmtree(out_dir, ignore_errors=True)
+        out_dir.mkdir(parents=True, exist_ok=True)
+        try:
             for src in corpus_v2x:
                 src_rel = src.relative_to(ROOT)
                 out = out_dir / f"{src.stem}{exe_ext}"
@@ -105,6 +109,9 @@ def main() -> int:
                 if r.returncode != 0:
                     print(f"regress: FAIL (corpus_v2x run exit={r.returncode}): {src_rel}")
                     return int(r.returncode)
+        finally:
+            import shutil
+            shutil.rmtree(out_dir, ignore_errors=True)
     else:
         # Auto-generate from git tags if missing.
         extractor = ROOT / "scripts" / "extract_docs_corpus.py"
@@ -149,15 +156,23 @@ def main() -> int:
             markers = _expected_markers(src)
             # Use a unique dummy output to avoid collisions.
             exe_ext = ".exe" if os.name == "nt" else ""
-            with tempfile.TemporaryDirectory(prefix="baa_regress_neg_") as td:
-                dummy = Path(td) / f"neg_out{exe_ext}"
+            out_dir = ROOT / f".baa_regress_neg_out_{os.getpid()}"
+            if out_dir.exists():
+                import shutil
+                shutil.rmtree(out_dir, ignore_errors=True)
+            out_dir.mkdir(parents=True, exist_ok=True)
+            try:
+                dummy = out_dir / f"neg_out{exe_ext}"
                 p = subprocess.run(
-                     [str(baa), "-O1", str(src_rel), "-o", str(dummy)],
+                    [str(baa), "-O1", str(src_rel), "-o", str(dummy)],
                     cwd=str(ROOT),
                     text=True,
                     capture_output=True,
                     timeout=CORPUS_COMPILE_TIMEOUT_S,
                 )
+            finally:
+                import shutil
+                shutil.rmtree(out_dir, ignore_errors=True)
             if p.returncode == 0:
                 print(f"regress: FAIL (neg should fail): {src_rel}")
                 return 1

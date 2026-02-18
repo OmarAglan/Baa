@@ -17,6 +17,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <limits.h>
+
 // ============================================================================
 // Locals table helpers
 // ============================================================================
@@ -333,26 +335,53 @@ IRValue* lower_expr(IRLowerCtx* ctx, Node* expr) {
 
         case NODE_ARRAY_ACCESS: {
             const char* name = expr->data.array_op.name;
+            IRType* arr_t = NULL;
+            IRValue* base_ptr = NULL;
+
             IRLowerBinding* b = find_local(ctx, name);
-            if (!b) {
-                ir_lower_report_error(ctx, expr, "مصفوفة غير معرّفة '%s'.", name ? name : "???");
-                (void)lower_expr(ctx, expr->data.array_op.index);
-                return ir_builder_const_i64(0);
-            }
-            if (!b->value_type || b->value_type->kind != IR_TYPE_ARRAY) {
-                ir_lower_report_error(ctx, expr, "'%s' ليس مصفوفة في مسار IR.", name ? name : "???");
-                (void)lower_expr(ctx, expr->data.array_op.index);
-                return ir_builder_const_i64(0);
+            if (b) {
+                if (!b->value_type || b->value_type->kind != IR_TYPE_ARRAY) {
+                    ir_lower_report_error(ctx, expr, "'%s' ليس مصفوفة في مسار IR.", name ? name : "???");
+                    (void)lower_expr(ctx, expr->data.array_op.index);
+                    return ir_builder_const_i64(0);
+                }
+                arr_t = b->value_type;
+                IRValue* arr_ptr = ir_value_reg(b->ptr_reg, ir_type_ptr(arr_t));
+
+                IRType* elem_t0 = arr_t->data.array.element ? arr_t->data.array.element : IR_TYPE_I64_T;
+                IRType* elem_ptr_t0 = ir_type_ptr(elem_t0);
+
+                // base: ptr(array) -> cast -> ptr(elem)
+                int base_reg = ir_builder_emit_cast(ctx->builder, arr_ptr, elem_ptr_t0);
+                base_ptr = ir_value_reg(base_reg, elem_ptr_t0);
+            } else {
+                // مصفوفة عامة: نأخذ عنوانها عبر @name ونُعاملها كمؤشر إلى المصفوفة.
+                IRGlobal* g = NULL;
+                if (ctx->builder && ctx->builder->module && name) {
+                    g = ir_module_find_global(ctx->builder->module, name);
+                }
+                if (!g || !g->type || g->type->kind != IR_TYPE_ARRAY) {
+                    ir_lower_report_error(ctx, expr, "مصفوفة غير معرّفة '%s'.", name ? name : "???");
+                    (void)lower_expr(ctx, expr->data.array_op.index);
+                    return ir_builder_const_i64(0);
+                }
+                arr_t = g->type;
+
+                // مهم: لا نستخدم cast على global لأن MOV سيقرأ القيمة من الذاكرة.
+                // نُعامل @name مباشرةً كمؤشر إلى العنصر الأول (مثل C: array decays to pointer).
+                IRType* elem_t0 = arr_t->data.array.element ? arr_t->data.array.element : IR_TYPE_I64_T;
+                base_ptr = ir_value_global(name, elem_t0);
             }
 
-            IRType* elem_t = b->value_type->data.array.element ? b->value_type->data.array.element : IR_TYPE_I64_T;
-            IRType* arr_ptr_t = ir_type_ptr(b->value_type);
+            IRType* elem_t = arr_t->data.array.element ? arr_t->data.array.element : IR_TYPE_I64_T;
             IRType* elem_ptr_t = ir_type_ptr(elem_t);
 
-            // base: %ptr(array) -> cast -> %ptr(elem)
-            IRValue* arr_ptr = ir_value_reg(b->ptr_reg, arr_ptr_t);
-            int base_reg = ir_builder_emit_cast(ctx->builder, arr_ptr, elem_ptr_t);
-            IRValue* base_ptr = ir_value_reg(base_reg, elem_ptr_t);
+            // تأكد من أن base_ptr نوعه ptr(elem)
+            if (!base_ptr) {
+                ir_lower_report_error(ctx, expr, "فشل بناء عنوان عنصر المصفوفة '%s'.", name ? name : "???");
+                (void)lower_expr(ctx, expr->data.array_op.index);
+                return ir_builder_const_i64(0);
+            }
 
             IRValue* idx = lower_expr(ctx, expr->data.array_op.index);
             if (idx && idx->type && idx->type->kind != IR_TYPE_I64) {
@@ -472,8 +501,10 @@ static void lower_array_decl(IRLowerCtx* ctx, Node* stmt) {
 
     ir_lower_set_loc(ctx->builder, stmt);
 
+    // التصريحات العامة تُخفض على مستوى الوحدة داخل ir_lower_program().
     if (stmt->data.array_decl.is_global) {
-        ir_lower_report_error(ctx, stmt, "المصفوفات العامة غير مدعومة حالياً.");
+        fprintf(stderr, "IR Lower Warning: global array decl '%s' ignored in statement lowering\n",
+                stmt->data.array_decl.name ? stmt->data.array_decl.name : "???");
         return;
     }
     if (stmt->data.array_decl.size <= 0) {
@@ -491,6 +522,51 @@ static void lower_array_decl(IRLowerCtx* ctx, Node* stmt) {
     ir_lower_tag_last_inst(ctx->builder, IR_OP_ALLOCA, ptr_reg, stmt->data.array_decl.name);
 
     ir_lower_bind_local(ctx, stmt->data.array_decl.name, ptr_reg, arr_t);
+
+    // تهيئة المصفوفة كما في C:
+    // - إذا وُجدت قائمة تهيئة (حتى `{}`)، نُهيّئ العناصر المحددة ثم نملأ الباقي بأصفار.
+    if (!stmt->data.array_decl.has_init) {
+        return;
+    }
+
+    IRType* arr_ptr_t = ir_type_ptr(arr_t);
+    IRType* elem_ptr_t = ir_type_ptr(elem_t);
+    IRValue* arr_ptr = ir_value_reg(ptr_reg, arr_ptr_t);
+
+    // base: cast ptr(array) -> ptr(elem)
+    int base_reg = ir_builder_emit_cast(ctx->builder, arr_ptr, elem_ptr_t);
+    IRValue* base_ptr = ir_value_reg(base_reg, elem_ptr_t);
+
+    int i = 0;
+    Node* v = stmt->data.array_decl.init_values;
+    while (v && i < stmt->data.array_decl.size) {
+        // اربط موقع التوليد بموقع عنصر التهيئة.
+        ir_lower_set_loc(ctx->builder, v);
+
+        IRValue* idx = ir_value_const_int((int64_t)i, IR_TYPE_I64_T);
+        int ep = ir_builder_emit_ptr_offset(ctx->builder, elem_ptr_t, base_ptr, idx);
+        IRValue* elem_ptr = ir_value_reg(ep, elem_ptr_t);
+
+        IRValue* val = lower_expr(ctx, v);
+        if (val && val->type && !ir_types_equal(val->type, elem_t)) {
+            int cv = ir_builder_emit_cast(ctx->builder, val, elem_t);
+            val = ir_value_reg(cv, elem_t);
+        }
+
+        ir_builder_emit_store(ctx->builder, val, elem_ptr);
+        i++;
+        v = v->next;
+    }
+
+    // تعبئة الباقي بأصفار
+    for (; i < stmt->data.array_decl.size; i++) {
+        ir_lower_set_loc(ctx->builder, stmt);
+        IRValue* idx = ir_value_const_int((int64_t)i, IR_TYPE_I64_T);
+        int ep = ir_builder_emit_ptr_offset(ctx->builder, elem_ptr_t, base_ptr, idx);
+        IRValue* elem_ptr = ir_value_reg(ep, elem_ptr_t);
+        IRValue* z = ir_value_const_int(0, elem_t);
+        ir_builder_emit_store(ctx->builder, z, elem_ptr);
+    }
 }
 
 static void lower_var_decl(IRLowerCtx* ctx, Node* stmt) {
@@ -542,28 +618,55 @@ static void lower_array_assign(IRLowerCtx* ctx, Node* stmt) {
     ir_lower_set_loc(ctx->builder, stmt);
 
     const char* name = stmt->data.array_op.name;
+    IRType* arr_t = NULL;
+    IRValue* arr_ptr = NULL;
+    bool is_global_arr = false;
+
     IRLowerBinding* b = find_local(ctx, name);
-    if (!b) {
-        ir_lower_report_error(ctx, stmt, "تعيين إلى مصفوفة غير معرّفة '%s'.", name ? name : "???");
-        (void)lower_expr(ctx, stmt->data.array_op.index);
-        (void)lower_expr(ctx, stmt->data.array_op.value);
-        return;
+    if (b) {
+        if (!b->value_type || b->value_type->kind != IR_TYPE_ARRAY) {
+            ir_lower_report_error(ctx, stmt, "'%s' ليس مصفوفة في مسار IR.", name ? name : "???");
+            (void)lower_expr(ctx, stmt->data.array_op.index);
+            (void)lower_expr(ctx, stmt->data.array_op.value);
+            return;
+        }
+        arr_t = b->value_type;
+        arr_ptr = ir_value_reg(b->ptr_reg, ir_type_ptr(arr_t));
+    } else {
+        // مصفوفة عامة
+        IRGlobal* g = NULL;
+        if (ctx->builder && ctx->builder->module && name) {
+            g = ir_module_find_global(ctx->builder->module, name);
+        }
+        if (!g || !g->type || g->type->kind != IR_TYPE_ARRAY) {
+            ir_lower_report_error(ctx, stmt, "تعيين إلى مصفوفة غير معرّفة '%s'.", name ? name : "???");
+            (void)lower_expr(ctx, stmt->data.array_op.index);
+            (void)lower_expr(ctx, stmt->data.array_op.value);
+            return;
+        }
+        arr_t = g->type;
+        // مهم: لا نستخدم cast على global لأن MOV سيقرأ القيمة من الذاكرة.
+        // سنستخدم @name مباشرةً كقاعدة ptr(elem) لاحقاً.
+        is_global_arr = true;
     }
 
-    if (!b->value_type || b->value_type->kind != IR_TYPE_ARRAY) {
-        ir_lower_report_error(ctx, stmt, "'%s' ليس مصفوفة في مسار IR.", name ? name : "???");
-        (void)lower_expr(ctx, stmt->data.array_op.index);
-        (void)lower_expr(ctx, stmt->data.array_op.value);
-        return;
-    }
-
-    IRType* elem_t = b->value_type->data.array.element ? b->value_type->data.array.element : IR_TYPE_I64_T;
-    IRType* arr_ptr_t = ir_type_ptr(b->value_type);
+    IRType* elem_t = arr_t->data.array.element ? arr_t->data.array.element : IR_TYPE_I64_T;
     IRType* elem_ptr_t = ir_type_ptr(elem_t);
 
-    IRValue* arr_ptr = ir_value_reg(b->ptr_reg, arr_ptr_t);
-    int base_reg = ir_builder_emit_cast(ctx->builder, arr_ptr, elem_ptr_t);
-    IRValue* base_ptr = ir_value_reg(base_reg, elem_ptr_t);
+    IRValue* base_ptr = NULL;
+    if (is_global_arr) {
+        base_ptr = ir_value_global(name, elem_t);
+    } else {
+        int base_reg = ir_builder_emit_cast(ctx->builder, arr_ptr, elem_ptr_t);
+        base_ptr = ir_value_reg(base_reg, elem_ptr_t);
+    }
+
+    if (!base_ptr) {
+        ir_lower_report_error(ctx, stmt, "فشل بناء عنوان عنصر المصفوفة '%s'.", name ? name : "???");
+        (void)lower_expr(ctx, stmt->data.array_op.index);
+        (void)lower_expr(ctx, stmt->data.array_op.value);
+        return;
+    }
 
     IRValue* idx = lower_expr(ctx, stmt->data.array_op.index);
     if (idx && idx->type && idx->type->kind != IR_TYPE_I64) {
@@ -1076,6 +1179,95 @@ void lower_stmt(IRLowerCtx* ctx, Node* stmt) {
 // Program lowering (v0.3.0.7)
 // ============================================================================
 
+static uint64_t ir_lower_u64_add_wrap(uint64_t a, uint64_t b) { return a + b; }
+static uint64_t ir_lower_u64_sub_wrap(uint64_t a, uint64_t b) { return a - b; }
+static uint64_t ir_lower_u64_mul_wrap(uint64_t a, uint64_t b) { return a * b; }
+
+/**
+ * @brief تقييم تعبير ثابت للأعداد الصحيحة لاستخدامه في تهيئة العوام.
+ *
+ * الهدف هنا هو دعم تهيئة العوام بقيم قابلة للإصدار في .data (مثل C):
+ * - يسمح بعمليات حسابية بسيطة وتعبيرات مقارنة/منطقية تنتج 0/1.
+ * - يطبق التفاف 2's complement لتفادي UB في C عند تجاوز المدى.
+ */
+static int ir_lower_eval_const_i64(Node* expr, int64_t* out_value) {
+    if (!out_value) return 0;
+    *out_value = 0;
+    if (!expr) return 1;
+
+    switch (expr->type) {
+        case NODE_INT:
+            *out_value = (int64_t)expr->data.integer.value;
+            return 1;
+        case NODE_BOOL:
+            *out_value = expr->data.bool_lit.value ? 1 : 0;
+            return 1;
+        case NODE_CHAR:
+            *out_value = (int64_t)expr->data.char_lit.value;
+            return 1;
+
+        case NODE_UNARY_OP:
+        {
+            int64_t v = 0;
+            if (!ir_lower_eval_const_i64(expr->data.unary_op.operand, &v)) return 0;
+
+            if (expr->data.unary_op.op == UOP_NEG) {
+                uint64_t uv = (uint64_t)v;
+                *out_value = (int64_t)ir_lower_u64_sub_wrap(0u, uv);
+                return 1;
+            }
+            if (expr->data.unary_op.op == UOP_NOT) {
+                *out_value = (v == 0) ? 1 : 0;
+                return 1;
+            }
+            return 0;
+        }
+
+        case NODE_BIN_OP:
+        {
+            int64_t a = 0;
+            int64_t b = 0;
+            if (!ir_lower_eval_const_i64(expr->data.bin_op.left, &a)) return 0;
+            if (!ir_lower_eval_const_i64(expr->data.bin_op.right, &b)) return 0;
+
+            uint64_t ua = (uint64_t)a;
+            uint64_t ub = (uint64_t)b;
+
+            switch (expr->data.bin_op.op) {
+                case OP_ADD: *out_value = (int64_t)ir_lower_u64_add_wrap(ua, ub); return 1;
+                case OP_SUB: *out_value = (int64_t)ir_lower_u64_sub_wrap(ua, ub); return 1;
+                case OP_MUL: *out_value = (int64_t)ir_lower_u64_mul_wrap(ua, ub); return 1;
+
+                case OP_DIV:
+                    if (b == 0) return 0;
+                    if (a == INT64_MIN && b == -1) { *out_value = INT64_MIN; return 1; }
+                    *out_value = a / b;
+                    return 1;
+                case OP_MOD:
+                    if (b == 0) return 0;
+                    if (a == INT64_MIN && b == -1) { *out_value = 0; return 1; }
+                    *out_value = a % b;
+                    return 1;
+
+                case OP_EQ:  *out_value = (a == b) ? 1 : 0; return 1;
+                case OP_NEQ: *out_value = (a != b) ? 1 : 0; return 1;
+                case OP_LT:  *out_value = (a <  b) ? 1 : 0; return 1;
+                case OP_GT:  *out_value = (a >  b) ? 1 : 0; return 1;
+                case OP_LTE: *out_value = (a <= b) ? 1 : 0; return 1;
+                case OP_GTE: *out_value = (a >= b) ? 1 : 0; return 1;
+
+                case OP_AND: *out_value = ((a != 0) && (b != 0)) ? 1 : 0; return 1;
+                case OP_OR:  *out_value = ((a != 0) || (b != 0)) ? 1 : 0; return 1;
+                default:
+                    return 0;
+            }
+        }
+
+        default:
+            return 0;
+    }
+}
+
 static IRValue* ir_lower_global_init_value(IRBuilder* builder, Node* expr, IRType* expected_type) {
     if (!builder) return NULL;
 
@@ -1100,6 +1292,17 @@ static IRValue* ir_lower_global_init_value(IRBuilder* builder, Node* expr, IRTyp
             // Adds to module string table and returns pointer value.
             return ir_builder_const_string(builder, expr->data.string_lit.value);
 
+        case NODE_UNARY_OP:
+        case NODE_BIN_OP:
+        {
+            int64_t v = 0;
+            if (ir_lower_eval_const_i64(expr, &v)) {
+                return ir_value_const_int(v, expected_type ? expected_type : IR_TYPE_I64_T);
+            }
+            // Non-constant global initializers are not supported yet; fall back to zero.
+            return ir_value_const_int(0, expected_type ? expected_type : IR_TYPE_I64_T);
+        }
+
         default:
             // Non-constant global initializers are not supported yet; fall back to zero.
             return ir_value_const_int(0, expected_type ? expected_type : IR_TYPE_I64_T);
@@ -1120,6 +1323,49 @@ IRModule* ir_lower_program(Node* program, const char* module_name) {
 
     // Walk top-level declarations: globals + functions
     for (Node* decl = program->data.program.declarations; decl; decl = decl->next) {
+        // Global arrays
+        if (decl->type == NODE_ARRAY_DECL && decl->data.array_decl.is_global) {
+            if (!decl->data.array_decl.name) continue;
+
+            IRType* elem_t = IR_TYPE_I64_T;
+            IRType* arr_t = ir_type_array(elem_t, decl->data.array_decl.size);
+
+            IRGlobal* g = ir_builder_create_global(builder, decl->data.array_decl.name, arr_t,
+                                                   decl->data.array_decl.is_const ? 1 : 0);
+            if (!g) continue;
+
+            g->has_init_list = decl->data.array_decl.has_init ? true : false;
+
+            if (decl->data.array_decl.has_init) {
+                int n = decl->data.array_decl.init_count;
+                if (n < 0) n = 0;
+                if (decl->data.array_decl.size > 0 && n > decl->data.array_decl.size) {
+                    n = decl->data.array_decl.size;
+                }
+
+                // نخزن فقط العناصر المعطاة؛ الباقي يُعتبر صفراً كما في C.
+                IRValue** elems = NULL;
+                if (n > 0) {
+                    elems = (IRValue**)ir_arena_calloc(&module->arena, (size_t)n, sizeof(IRValue*), _Alignof(IRValue*));
+                    if (!elems) {
+                        ir_builder_free(builder);
+                        ir_module_free(module);
+                        return NULL;
+                    }
+                }
+
+                int i = 0;
+                for (Node* v = decl->data.array_decl.init_values; v && i < n; v = v->next, i++) {
+                    elems[i] = ir_lower_global_init_value(builder, v, elem_t);
+                }
+
+                g->init_elems = elems;
+                g->init_elem_count = n;
+            }
+
+            continue;
+        }
+
         // Globals
         if (decl->type == NODE_VAR_DECL && decl->data.var_decl.is_global) {
             IRType* gtype = ir_type_from_datatype(module, decl->data.var_decl.type);

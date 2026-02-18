@@ -1061,6 +1061,29 @@ static void emit_rdata_section(FILE* out) {
 /**
  * @brief إصدار قسم المتغيرات العامة.
  */
+static const char* emit_data_dir_for_type(IRType* t, int* out_size_bytes) {
+    if (out_size_bytes) *out_size_bytes = 8;
+    if (!t) return ".quad";
+
+    switch (t->kind) {
+        case IR_TYPE_I1:
+        case IR_TYPE_I8:
+            if (out_size_bytes) *out_size_bytes = 1;
+            return ".byte";
+        case IR_TYPE_I16:
+            if (out_size_bytes) *out_size_bytes = 2;
+            return ".word";
+        case IR_TYPE_I32:
+            if (out_size_bytes) *out_size_bytes = 4;
+            return ".long";
+        case IR_TYPE_I64:
+        case IR_TYPE_PTR:
+        default:
+            if (out_size_bytes) *out_size_bytes = 8;
+            return ".quad";
+    }
+}
+
 static void emit_data_section(MachineModule* module, FILE* out) {
     if (!module || module->global_count == 0) return;
 
@@ -1068,6 +1091,48 @@ static void emit_data_section(MachineModule* module, FILE* out) {
 
     for (IRGlobal* g = module->globals; g; g = g->next) {
         if (!g->name) continue;
+
+        // مصفوفة عامة
+        if (g->type && g->type->kind == IR_TYPE_ARRAY) {
+            IRType* elem_t = g->type->data.array.element;
+            int count = g->type->data.array.count;
+            int elem_size = 8;
+            const char* dir = emit_data_dir_for_type(elem_t, &elem_size);
+            if (count < 0) count = 0;
+
+            // إن كانت التهيئة كلها أصفار، نستخدم .zero لتقليل حجم النص.
+            int all_zero = 1;
+            if (g->init_elems) {
+                for (int i = 0; i < g->init_elem_count; i++) {
+                    IRValue* v = g->init_elems[i];
+                    if (!v) continue;
+                    if (v->kind == IR_VAL_CONST_INT) {
+                        if (v->data.const_int != 0) { all_zero = 0; break; }
+                    } else {
+                        all_zero = 0;
+                        break;
+                    }
+                }
+            }
+
+            if (all_zero) {
+                int total = count * elem_size;
+                if (total < 0) total = 0;
+                fprintf(out, "%s: .zero %d\n", g->name, total);
+            } else {
+                fprintf(out, "%s:\n", g->name);
+                for (int i = 0; i < count; i++) {
+                    int64_t v = 0;
+                    if (g->init_elems && i < g->init_elem_count && g->init_elems[i]) {
+                        IRValue* iv = g->init_elems[i];
+                        if (iv->kind == IR_VAL_CONST_INT) v = iv->data.const_int;
+                    }
+                    fprintf(out, "    %s %lld\n", dir, (long long)v);
+                }
+            }
+
+            continue;
+        }
 
         // إصدار القيمة الابتدائية
         if (g->init) {

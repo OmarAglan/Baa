@@ -1016,6 +1016,61 @@ static void ir_verify_globals(IRVerifyDiag* diag, IRModule* module) {
                       ir_safe_str(g->name));
         }
 
+        // مصفوفة عامة: تحقق من قائمة التهيئة
+        if (g->type->kind == IR_TYPE_ARRAY) {
+            IRType* elem_t = g->type->data.array.element;
+            int count = g->type->data.array.count;
+
+            if (g->init) {
+                ir_report(diag, module, NULL, NULL, NULL,
+                          "متغير عام @%s من نوع مصفوفة لا يجب أن يملك init مفرداً.",
+                          ir_safe_str(g->name));
+            }
+
+            if (count < 0) {
+                ir_report(diag, module, NULL, NULL, NULL,
+                          "متغير عام @%s لديه حجم مصفوفة غير صالح.",
+                          ir_safe_str(g->name));
+            }
+
+            if (g->init_elem_count < 0 || (count >= 0 && g->init_elem_count > count)) {
+                ir_report(diag, module, NULL, NULL, NULL,
+                          "تهيئة مصفوفة عامة @%s بعدد عناصر غير صالح (init=%d, size=%d).",
+                          ir_safe_str(g->name), g->init_elem_count, count);
+            }
+
+            for (int i = 0; i < g->init_elem_count; i++) {
+                IRValue* v = g->init_elems ? g->init_elems[i] : NULL;
+                if (!v) {
+                    ir_report(diag, module, NULL, NULL, NULL,
+                              "تهيئة مصفوفة عامة @%s تحتوي على عنصر NULL عند %d.",
+                              ir_safe_str(g->name), i);
+                    continue;
+                }
+                if (elem_t && v->type && !ir_types_equal(elem_t, v->type)) {
+                    ir_report(diag, module, NULL, NULL, NULL,
+                              "تهيئة مصفوفة عامة @%s بعنصر نوعه لا يطابق (elem=%s, init=%s).",
+                              ir_safe_str(g->name),
+                              ir_type_to_arabic(elem_t),
+                              ir_type_to_arabic(v->type));
+                }
+
+                // قيود: إن كان العنصر عدداً صحيحاً، يجب أن يكون ثابتاً.
+                if (elem_t && (elem_t->kind == IR_TYPE_I1 || elem_t->kind == IR_TYPE_I8 ||
+                              elem_t->kind == IR_TYPE_I16 || elem_t->kind == IR_TYPE_I32 ||
+                              elem_t->kind == IR_TYPE_I64))
+                {
+                    if (v->kind != IR_VAL_CONST_INT) {
+                        ir_report(diag, module, NULL, NULL, NULL,
+                                  "تهيئة مصفوفة عامة @%s يجب أن تكون ثوابت عددية.",
+                                  ir_safe_str(g->name));
+                    }
+                }
+            }
+
+            continue;
+        }
+
         if (g->init && g->init->type && !ir_types_equal(g->type, g->init->type)) {
             // ملاحظة: في IR الحالي، global->type هو "نوع القيمة" وليس نوع المؤشر.
             ir_report(diag, module, NULL, NULL, NULL,

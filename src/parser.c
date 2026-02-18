@@ -595,6 +595,61 @@ Node* parse_block() {
     return block;
 }
 
+// ============================================================================
+// تهيئة المصفوفات (Array Initializer Lists)
+// ============================================================================
+
+/**
+ * @brief تحليل قائمة تهيئة مصفوفة بالشكل: = { expr, expr, ... }
+ *
+ * عند وجود '=' نعتبر أن التهيئة موجودة حتى لو كانت القائمة فارغة `{}`.
+ *
+ * @param out_count عدد عناصر التهيئة الفعلية
+ * @param out_has_init هل تم العثور على '=' (تهيئة صريحة)
+ * @return رأس قائمة العقد (قد تكون NULL عند `{}` أو عند عدم وجود تهيئة)
+ */
+static Node* parse_array_initializer_list(int* out_count, bool* out_has_init) {
+    if (out_count) *out_count = 0;
+    if (out_has_init) *out_has_init = false;
+
+    if (parser.current.type != TOKEN_ASSIGN) {
+        return NULL;
+    }
+
+    if (out_has_init) *out_has_init = true;
+    eat(TOKEN_ASSIGN);
+    eat(TOKEN_LBRACE);
+
+    Node* head = NULL;
+    Node* tail = NULL;
+    int count = 0;
+
+    if (parser.current.type != TOKEN_RBRACE) {
+        while (1) {
+            Node* expr = parse_expression();
+            if (!expr) break;
+
+            expr->next = NULL;
+            if (!head) { head = expr; tail = expr; }
+            else { tail->next = expr; tail = expr; }
+            count++;
+
+            if (parser.current.type == TOKEN_COMMA) {
+                eat(TOKEN_COMMA);
+                // السماح بفاصلة أخيرة قبل '}' كما في C.
+                if (parser.current.type == TOKEN_RBRACE) break;
+                continue;
+            }
+            break;
+        }
+    }
+
+    eat(TOKEN_RBRACE);
+
+    if (out_count) *out_count = count;
+    return head;
+}
+
 Node* parse_statement() {
     if (parser.current.type == TOKEN_LBRACE) return parse_block();
 
@@ -810,6 +865,11 @@ Node* parse_statement() {
                 error_report(parser.current, "Array size must be integer.");
             }
             eat(TOKEN_RBRACKET);
+
+            int init_count = 0;
+            bool has_init = false;
+            Node* init_vals = parse_array_initializer_list(&init_count, &has_init);
+
             eat(TOKEN_DOT);
 
             Node* stmt = ast_node_new(NODE_ARRAY_DECL, tok_name);
@@ -818,6 +878,9 @@ Node* parse_statement() {
             stmt->data.array_decl.size = size;
             stmt->data.array_decl.is_global = false;
             stmt->data.array_decl.is_const = is_const;
+            stmt->data.array_decl.has_init = has_init;
+            stmt->data.array_decl.init_values = init_vals;
+            stmt->data.array_decl.init_count = init_count;
             return stmt;
         }
 
@@ -1002,6 +1065,52 @@ Node* parse_declaration() {
             return func;
         }
         else {
+            // تعريف مصفوفة عامة: صحيح س[٥] = { ... }.
+            if (parser.current.type == TOKEN_LBRACKET) {
+                if (dt != TYPE_INT) {
+                    error_report(parser.current, "Only int arrays are supported.");
+                    exit(1);
+                }
+
+                eat(TOKEN_LBRACKET);
+                int size = 0;
+                if (parser.current.type == TOKEN_INT) {
+                    int v = 0;
+                    if (parse_int_token_checked(parser.current, &v) && v >= 0) {
+                        size = v;
+                    } else if (v < 0) {
+                        error_report(parser.current, "حجم المصفوفة يجب أن يكون عدداً غير سالب.");
+                    }
+                    eat(TOKEN_INT);
+                } else {
+                    error_report(parser.current, "Array size must be integer.");
+                }
+                eat(TOKEN_RBRACKET);
+
+                int init_count = 0;
+                bool has_init = false;
+                Node* init_vals = parse_array_initializer_list(&init_count, &has_init);
+
+                // الثوابت العامة يجب أن يكون لها تهيئة صريحة
+                if (is_const && !has_init) {
+                    error_report(parser.current, "Constant must be initialized.");
+                }
+
+                eat(TOKEN_DOT);
+
+                Node* arr = ast_node_new(NODE_ARRAY_DECL, tok_name);
+                if (!arr) return NULL;
+                arr->data.array_decl.name = name;
+                arr->data.array_decl.size = size;
+                arr->data.array_decl.is_global = true;
+                arr->data.array_decl.is_const = is_const;
+                arr->data.array_decl.has_init = has_init;
+                arr->data.array_decl.init_values = init_vals;
+                arr->data.array_decl.init_count = init_count;
+                (void)tok_type;
+                return arr;
+            }
+
             // الثوابت العامة يجب أن يكون لها قيمة ابتدائية
             if (is_const && parser.current.type != TOKEN_ASSIGN) {
                 error_report(parser.current, "Constant must be initialized.");

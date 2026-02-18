@@ -1,7 +1,7 @@
 /**
  * @file baa.h
  * @brief ملف الرأس الرئيسي الذي يعرف هياكل البيانات لمحوسب لغة "باء" (Baa Compiler).
- * @version 0.3.2.9.4
+ * @version 0.3.3
  */
 
 #ifndef BAA_H
@@ -15,7 +15,7 @@
 #include <stdarg.h>
 
 // معلومات الإصدار
-#define BAA_VERSION "0.3.2.9.4"
+#define BAA_VERSION "0.3.3"
 #define BAA_BUILD_DATE __DATE__
 
 // ============================================================================
@@ -388,6 +388,10 @@ typedef struct Node {
             int size;       // حجم المصفوفة (ثابت حالياً)
             bool is_global; // هل هي عامة؟ (المحلي فقط مدعوم حالياً)
             bool is_const;  // هل هي ثابتة (immutable)؟
+            // تهيئة المصفوفة: عند وجود '=' نعتبر التهيئة موجودة حتى لو كانت القائمة فارغة `{}`.
+            bool has_init;
+            struct Node* init_values; // قائمة قيم التهيئة (قد تكون NULL عند `{}`)
+            int init_count;           // عدد قيم التهيئة الفعلية (قد يكون أقل من size)
         } array_decl;
 
         // عمليات المصفوفات - للتعيين والقراءة

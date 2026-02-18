@@ -12,6 +12,8 @@
 
 #include "baa.h"
 
+#include <limits.h>
+
 // ============================================================================
 // جداول الرموز (Symbol Tables)
 // ============================================================================
@@ -437,6 +439,111 @@ static bool types_compatible(DataType got, DataType expected)
     if (got == TYPE_BOOL && expected == TYPE_INT) return true;
     if (got == TYPE_INT && expected == TYPE_BOOL) return true;
     return false;
+}
+
+// ============================================================================
+// تقييم تعبير ثابت للأعداد (لتهيئة العوام)
+// ============================================================================
+
+static uint64_t u64_add_wrap(uint64_t a, uint64_t b) { return a + b; }
+static uint64_t u64_sub_wrap(uint64_t a, uint64_t b) { return a - b; }
+static uint64_t u64_mul_wrap(uint64_t a, uint64_t b) { return a * b; }
+
+/**
+ * @brief محاولة تقييم تعبير كـ ثابت عدد صحيح (int64) بأسلوب C (مع التفاف 2's complement).
+ *
+ * هذا يُستخدم لفرض أن تهيئة المصفوفات/المتغيرات العامة قابلة للإصدار في قسم .data.
+ */
+static bool eval_const_int_expr(Node* expr, int64_t* out_value)
+{
+    if (!out_value) return false;
+    *out_value = 0;
+    if (!expr) return true;
+
+    switch (expr->type)
+    {
+        case NODE_INT:
+            *out_value = (int64_t)expr->data.integer.value;
+            return true;
+
+        case NODE_BOOL:
+            *out_value = expr->data.bool_lit.value ? 1 : 0;
+            return true;
+
+        case NODE_CHAR:
+            *out_value = (int64_t)expr->data.char_lit.value;
+            return true;
+
+        case NODE_UNARY_OP:
+        case NODE_POSTFIX_OP:
+        {
+            // postfix ++/-- ليست تعبيراً ثابتاً صالحاً في التهيئة العامة.
+            if (expr->type == NODE_POSTFIX_OP) return false;
+
+            int64_t v = 0;
+            if (!eval_const_int_expr(expr->data.unary_op.operand, &v)) return false;
+
+            if (expr->data.unary_op.op == UOP_NEG)
+            {
+                uint64_t uv = (uint64_t)v;
+                *out_value = (int64_t)u64_sub_wrap(0u, uv);
+                return true;
+            }
+            if (expr->data.unary_op.op == UOP_NOT)
+            {
+                *out_value = (v == 0) ? 1 : 0;
+                return true;
+            }
+
+            return false;
+        }
+
+        case NODE_BIN_OP:
+        {
+            int64_t a = 0;
+            int64_t b = 0;
+            if (!eval_const_int_expr(expr->data.bin_op.left, &a)) return false;
+            if (!eval_const_int_expr(expr->data.bin_op.right, &b)) return false;
+
+            uint64_t ua = (uint64_t)a;
+            uint64_t ub = (uint64_t)b;
+
+            switch (expr->data.bin_op.op)
+            {
+                case OP_ADD: *out_value = (int64_t)u64_add_wrap(ua, ub); return true;
+                case OP_SUB: *out_value = (int64_t)u64_sub_wrap(ua, ub); return true;
+                case OP_MUL: *out_value = (int64_t)u64_mul_wrap(ua, ub); return true;
+
+                case OP_DIV:
+                    if (b == 0) return false;
+                    if (a == INT64_MIN && b == -1) { *out_value = INT64_MIN; return true; }
+                    *out_value = a / b;
+                    return true;
+
+                case OP_MOD:
+                    if (b == 0) return false;
+                    if (a == INT64_MIN && b == -1) { *out_value = 0; return true; }
+                    *out_value = a % b;
+                    return true;
+
+                case OP_EQ:  *out_value = (a == b) ? 1 : 0; return true;
+                case OP_NEQ: *out_value = (a != b) ? 1 : 0; return true;
+                case OP_LT:  *out_value = (a <  b) ? 1 : 0; return true;
+                case OP_GT:  *out_value = (a >  b) ? 1 : 0; return true;
+                case OP_LTE: *out_value = (a <= b) ? 1 : 0; return true;
+                case OP_GTE: *out_value = (a >= b) ? 1 : 0; return true;
+
+                case OP_AND: *out_value = ((a != 0) && (b != 0)) ? 1 : 0; return true;
+                case OP_OR:  *out_value = ((a != 0) || (b != 0)) ? 1 : 0; return true;
+
+                default:
+                    return false;
+            }
+        }
+
+        default:
+            return false;
+    }
 }
 
 /**
@@ -899,18 +1006,20 @@ static void analyze_node(Node* node) {
         }
 
         case NODE_ARRAY_DECL: {
-            if (node->data.array_decl.is_global) {
-                semantic_error(node, "المصفوفات العامة غير مدعومة حالياً.");
-                break;
-            }
             if (node->data.array_decl.size <= 0) {
                 semantic_error(node, "حجم المصفوفة غير صالح.");
                 break;
             }
 
+            // الثابت يجب أن يُهيّأ صراحةً (حتى `{}` مقبول ويعني أصفار).
+            if (node->data.array_decl.is_const && !node->data.array_decl.has_init) {
+                semantic_error(node, "Constant array '%s' must be initialized.",
+                               node->data.array_decl.name ? node->data.array_decl.name : "???");
+            }
+
             // حالياً المصفوفات مدعومة فقط لنوع صحيح (حسب الصياغة: صحيح س[5].)
             add_symbol(node->data.array_decl.name,
-                       SCOPE_LOCAL,
+                       node->data.array_decl.is_global ? SCOPE_GLOBAL : SCOPE_LOCAL,
                        TYPE_INT,
                        node->data.array_decl.is_const,
                        true,
@@ -918,6 +1027,39 @@ static void analyze_node(Node* node) {
                        node->line,
                        node->col,
                        node->filename ? node->filename : current_filename);
+
+            // التحقق من قائمة التهيئة: تسمح بالتهيئة الجزئية كما في C.
+            if (node->data.array_decl.has_init) {
+                int n = node->data.array_decl.init_count;
+                int cap = node->data.array_decl.size;
+                if (n < 0) n = 0;
+                if (n > cap) {
+                    semantic_error(node, "عدد عناصر تهيئة المصفوفة '%s' (%d) أكبر من الحجم (%d).",
+                                   node->data.array_decl.name ? node->data.array_decl.name : "???",
+                                   n, cap);
+                }
+
+                int idx0 = 0;
+                for (Node* v = node->data.array_decl.init_values; v; v = v->next) {
+                    DataType vt = infer_type(v);
+                    if (!types_compatible(vt, TYPE_INT)) {
+                        semantic_error(v, "نوع عنصر التهيئة %d للمصفوفة '%s' غير متوافق.",
+                                       idx0 + 1,
+                                       node->data.array_decl.name ? node->data.array_decl.name : "???");
+                    }
+
+                    if (node->data.array_decl.is_global) {
+                        int64_t c = 0;
+                        if (!eval_const_int_expr(v, &c)) {
+                            semantic_error(v,
+                                           "تهيئة المصفوفة العامة '%s' يجب أن تكون تعبيراً ثابتاً.",
+                                           node->data.array_decl.name ? node->data.array_decl.name : "???");
+                        }
+                    }
+
+                    idx0++;
+                }
+            }
             break;
         }
 

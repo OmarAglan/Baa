@@ -8,6 +8,24 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.3.3] - 2026-02-18
+
+### Added
+
+- **Array initialization (v0.3.3)** — supports initializer lists for fixed-size `صحيح` arrays:
+  - Syntax: `صحيح قائمة[٥] = {١، ٢، ٣}.` (accepts Arabic comma `،` and ASCII comma `,`).
+  - C-style semantics: partial initialization is allowed and the remaining elements are zero-filled; `{}` zero-initializes the whole array.
+  - Global `صحيح` arrays are now supported (emitted in `.data` with correct zero-fill).
+
+### Changed
+
+- **Lexer delimiter support** — Arabic comma `،` is now tokenized as `TOKEN_COMMA` and treated like `,` across parsing.
+- **IR globals** — global array initializers are represented and serialized as initializer lists, and the emitter can output array data.
+
+### Fixed
+
+- **Global array element addressing** — avoids mis-lowering global array bases through `cast` (which would read memory instead of taking the address), preventing runtime crashes.
+
 ## [0.3.2.9.4] - 2026-02-17
 
 ### Added

@@ -1,6 +1,6 @@
 # Baa Compiler Internals
 
-> **Version:** 0.3.2.9.4 | [← Language Spec](LANGUAGE.md) | [API Reference →](API_REFERENCE.md)
+> **Version:** 0.3.3 | [← Language Spec](LANGUAGE.md) | [API Reference →](API_REFERENCE.md)
 
 **Target Architecture:** x86-64 (AMD64)
 **Target OS:** Windows (MinGW-w64 Toolchain)
@@ -307,11 +307,12 @@ The Parser (`src/parser.c`) builds the AST using Recursive Descent with 1-token 
 
 ```bnf
 Program       ::= Declaration* EOF
-Declaration   ::= FuncDecl | GlobalVarDecl
+Declaration   ::= FuncDecl | GlobalVarDecl | GlobalArrayDecl
 
 FuncDecl      ::= Type ID "(" ParamList ")" Block
                 | Type ID "(" ParamList ")" "."    // Prototype (v0.2.5+)
 GlobalVarDecl ::= ConstMod? Type ID ("=" Expr)? "."
+GlobalArrayDecl ::= ConstMod? "صحيح" ID "[" INT "]" ArrayInit? "."   // v0.3.3+
 
 ConstMod      ::= "ثابت"                           // NEW in v0.2.7
 Type          ::= "صحيح" | "نص" | "منطقي"          // Updated in v0.2.9
@@ -322,7 +323,10 @@ Statement     ::= VarDecl | ArrayDecl | Assign | ArrayAssign
                 | Break | Continue
 
 VarDecl       ::= ConstMod? Type ID "=" Expr "."   // Local declarations require an initializer
-ArrayDecl     ::= ConstMod? "صحيح" ID "[" INT "]" "."  // Updated in v0.2.7
+ArrayDecl     ::= ConstMod? "صحيح" ID "[" INT "]" ArrayInit? "."  // v0.3.3+
+
+ArrayInit     ::= "=" "{" (Expr (COMMA Expr)* COMMA?)? "}"
+COMMA         ::= "," | "،"
 Assign        ::= ID "=" Expr "."
 ArrayAssign   ::= ID "[" Expr "]" "=" Expr "."
 

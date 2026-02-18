@@ -361,7 +361,13 @@ typedef struct IRGlobal {
     // ملاحظة: هذه البنية تُخصَّص داخل ساحة IR (Arena) وتُحرَّر دفعة واحدة.
     char* name;                 // Variable name
     IRType* type;               // Variable type
-    IRValue* init;              // Initial value (or NULL)
+    // تهيئة عامة:
+    // - للأنواع غير المصفوفة: init يحمل قيمة واحدة.
+    // - للمصفوفات: init_elems يحمل قائمة (قد تكون جزئية) ويتم تعبئة الباقي بأصفار كما في C.
+    IRValue* init;              // Initial scalar value (or NULL)
+    IRValue** init_elems;       // Array initializer elements (or NULL)
+    int init_elem_count;        // Number of provided initializer elements
+    bool has_init_list;         // هل وُجدت '=' في المصدر (حتى لو كانت القائمة فارغة)
     bool is_const;              // Is this a constant?
     struct IRGlobal* next;
 } IRGlobal;

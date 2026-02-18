@@ -1,6 +1,6 @@
 # Baa IR Specification
 
-> **Version:** 0.3.2.9.4 | [← Compiler Internals](INTERNALS.md) | [API Reference →](API_REFERENCE.md)
+> **Version:** 0.3.3 | [← Compiler Internals](INTERNALS.md) | [API Reference →](API_REFERENCE.md)
 
 This document specifies the Intermediate Representation (IR) for the Baa compiler. The IR uses Arabic naming conventions throughout, creating a culturally authentic yet technically robust design.
 
@@ -250,6 +250,9 @@ Example:
 ```
 عام @اسم_المتغير = ص٦٤ ١٠٠
 عام @نص_ترحيب = نص "مرحباً"
+
+// مصفوفة عامة (تهيئة جزئية؛ الباقي أصفار مثل C)
+عام @قائمة = مصفوفة[ص٦٤، ٥] {١، ٢، ٣}
 ```
 
 ---
@@ -466,7 +469,10 @@ Becomes:
 
 ```bnf
 module      ::= (global | function)*
-global      ::= "عام" "@" ident "=" type value
+global      ::= "عام" "@" ident "=" type global_init
+global_init ::= value
+             | "zeroinit"
+             | "{" (value ("," value)* ","?)? "}"
 function    ::= "دالة" "@" ident "(" params ")" "->" type "{" block+ "}"
 params      ::= (type "%" ident ("،" type "%" ident)*)?
 block       ::= label ":" instruction+

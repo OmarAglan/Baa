@@ -1,7 +1,7 @@
 # Baa Roadmap (Updated)
 
 > Track the development progress of the Baa programming language.
-> **Current Status:** Phase 3 - Intermediate Representation (v0.3.0)
+> **Current Status:** Phase 3.5 - Language Completeness (v0.3.3)
 
 ---
 
@@ -418,13 +418,13 @@
 
 *Goal: Add essential features to make Baa practical for real-world programs and ready for self-hosting.*
 
-### v0.3.3: Array Initialization 📊
+### v0.3.3: Array Initialization 📊 ✅ COMPLETED (2026-02-18)
 
 **Goal:** Enable direct initialization of arrays with values.
 
 #### Features
 
-- [ ] **Array Literal Syntax** – Initialize arrays with comma-separated values using `{` `}`.
+- [x] **Array Literal Syntax** – Initialize arrays with comma-separated values using `{` `}` (supports partial init + zero-fill like C).
   
 **Syntax:**
 
@@ -437,10 +437,10 @@
 
 #### Implementation Tasks
 
-- [ ] **Parser**: Handle `{` `}` initializer list after array declaration.
-- [ ] **Parser**: Support both Arabic comma `،` (U+060C) and regular comma `,` as separators.
-- [ ] **Semantic Analysis**: Verify initializer count matches array size.
-- [ ] **Codegen**: Generate sequential assignments in `.data` section (for globals) or stack initialization (for locals).
+- [x] **Parser**: Handle `{` `}` initializer list after array declaration.
+- [x] **Parser**: Support both Arabic comma `،` (U+060C) and regular comma `,` as separators.
+- [x] **Semantic Analysis**: Allow partial init (`count <= size`) and zero-fill the remainder; reject overflow.
+- [x] **Codegen**: Emit `.data` initializers for globals and runtime stores for locals (including zero-fill).
 
 #### Deferred to v0.3.8
 

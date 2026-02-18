@@ -962,6 +962,9 @@ IRGlobal* ir_global_new(const char* name, IRType* type, int is_const) {
     global->name = name ? ir_strdup(name) : NULL;
     global->type = type;
     global->init = NULL;
+    global->init_elems = NULL;
+    global->init_elem_count = 0;
+    global->has_init_list = false;
     global->is_const = is_const ? true : false;
     global->next = NULL;
     
@@ -1636,15 +1639,38 @@ void ir_global_print(IRGlobal* global, FILE* out, int use_arabic) {
 
     fputs(global->name ? global->name : "???", out);
 
-    if (global->init) {
-        fputs(" = ", out);
-        ir_type_print(global->type, out, use_arabic);
-        fputc(' ', out);
-        ir_value_print_ex(global->init, out, use_arabic);
+    fputs(" = ", out);
+    ir_type_print(global->type, out, use_arabic);
+    fputc(' ', out);
+
+    if (global->type && global->type->kind == IR_TYPE_ARRAY) {
+        IRType* elem_t = global->type->data.array.element;
+        int count = global->type->data.array.count;
+        const char* sep = ir_print_sep(use_arabic);
+
+        fputc('{', out);
+        for (int i = 0; i < count; i++) {
+            if (i > 0) fputs(sep, out);
+
+            IRValue* v = NULL;
+            if (global->init_elems && i < global->init_elem_count) {
+                v = global->init_elems[i];
+            }
+
+            if (v) {
+                ir_value_print_ex(v, out, use_arabic);
+            } else {
+                (void)elem_t;
+                ir_print_int64(out, 0, use_arabic);
+            }
+        }
+        fputc('}', out);
     } else {
-        fputs(" = ", out);
-        ir_type_print(global->type, out, use_arabic);
-        fputs(use_arabic ? " ٠" : " 0", out);
+        if (global->init) {
+            ir_value_print_ex(global->init, out, use_arabic);
+        } else {
+            fputs(use_arabic ? "٠" : "0", out);
+        }
     }
 
     fputc('\n', out);

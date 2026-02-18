@@ -395,6 +395,14 @@ Token lexer_next_token(Lexer* l) {
         return token;
     }
 
+    // معالجة الفاصلة العربية (،)
+    if ((unsigned char)*current == 0xD8 && (unsigned char)*(l->state.cur_char + 1) == 0x8C) {
+        token.type = TOKEN_COMMA;
+        l->state.cur_char += 2;
+        l->state.col += 2;
+        return token;
+    }
+
     // معالجة الرموز والعمليات
     if (*current == '.') { token.type = TOKEN_DOT; advance_pos(l); return token; }
     if (*current == ',') { token.type = TOKEN_COMMA; advance_pos(l); return token; }
@@ -505,6 +513,10 @@ Token lexer_next_token(Lexer* l) {
                strchr(".+-,=:(){}[]!<>*/%&|\"'", peek(l)) == NULL) {
             // تحقق من الفاصلة المنقوطة العربية (؛)
             if ((unsigned char)*l->state.cur_char == 0xD8 && (unsigned char)*(l->state.cur_char+1) == 0x9B) {
+                break;
+            }
+            // تحقق من الفاصلة العربية (،)
+            if ((unsigned char)*l->state.cur_char == 0xD8 && (unsigned char)*(l->state.cur_char + 1) == 0x8C) {
                 break;
             }
             advance_pos(l);

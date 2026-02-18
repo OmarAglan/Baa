@@ -491,10 +491,27 @@ static void ir_text_write_global(FILE* out, IRGlobal* g) {
     fputs(" = ", out);
     ir_text_write_type(out, g->type);
     fputc(' ', out);
-    if (g->init) {
-        ir_text_write_value(out, g->init);
+
+    if (g->type && g->type->kind == IR_TYPE_ARRAY) {
+        // للمصفوفات: قائمة تهيئة جزئية {v0, v1, ...} أو zeroinit.
+        if (g->init_elem_count <= 0) {
+            fputs("zeroinit", out);
+        } else {
+            fputc('{', out);
+            for (int i = 0; i < g->init_elem_count; i++) {
+                if (i > 0) fputs(", ", out);
+                IRValue* v = g->init_elems ? g->init_elems[i] : NULL;
+                if (v) ir_text_write_value(out, v);
+                else fputs("0", out);
+            }
+            fputc('}', out);
+        }
     } else {
-        fputs("0", out);
+        if (g->init) {
+            ir_text_write_value(out, g->init);
+        } else {
+            fputs("0", out);
+        }
     }
     fputc('\n', out);
 }
@@ -1171,14 +1188,95 @@ IRModule* ir_text_read_module_file(const char* filename) {
             if (!ir_text_match(&p, "=")) { free(name); ok = 0; free(line); break; }
             IRType* t = ir_text_parse_type_rec(&p);
             if (!t) { free(name); ok = 0; free(line); break; }
-            IRValue* init = ir_text_parse_value(module, NULL, NULL, &p, t);
-            if (!init) { free(name); ok = 0; free(line); break; }
 
-            IRGlobal* g = ir_global_new(name, t, is_const);
-            free(name);
-            if (!g) { ok = 0; free(line); break; }
-            ir_global_set_init(g, init);
-            ir_module_add_global(module, g);
+            if (t->kind == IR_TYPE_ARRAY)
+            {
+                IRType* elem_t = t->data.array.element;
+
+                ir_text_skip_ws(&p);
+                int has_list = 0;
+                IRValue** tmp = NULL;
+                int tmp_count = 0;
+                int tmp_cap = 0;
+
+                if (ir_text_match(&p, "zeroinit"))
+                {
+                    has_list = 0;
+                }
+                else if (ir_text_match(&p, "{"))
+                {
+                    has_list = 1;
+                    ir_text_skip_ws(&p);
+
+                    if (!ir_text_match(&p, "}"))
+                    {
+                        for (;;)
+                        {
+                            IRValue* v = ir_text_parse_value(module, NULL, NULL, &p, elem_t);
+                            if (!v) { ok = 0; break; }
+
+                            if (tmp_count >= tmp_cap)
+                            {
+                                int new_cap = (tmp_cap == 0) ? 8 : (tmp_cap * 2);
+                                IRValue** new_tmp = (IRValue**)realloc(tmp, (size_t)new_cap * sizeof(IRValue*));
+                                if (!new_tmp) { ok = 0; break; }
+                                tmp = new_tmp;
+                                tmp_cap = new_cap;
+                            }
+                            tmp[tmp_count++] = v;
+
+                            ir_text_skip_ws(&p);
+                            if (ir_text_match(&p, "}")) break;
+                            if (!ir_text_match(&p, ",")) { ok = 0; break; }
+                            ir_text_skip_ws(&p);
+                            // السماح بفاصلة أخيرة قبل '}'
+                            if (ir_text_match(&p, "}")) break;
+                        }
+                    }
+                }
+                else
+                {
+                    ok = 0;
+                }
+
+                IRGlobal* g = NULL;
+                if (ok)
+                {
+                    g = ir_global_new(name, t, is_const);
+                }
+                free(name);
+                if (!ok || !g) { free(tmp); ok = 0; free(line); break; }
+
+                g->has_init_list = has_list ? true : false;
+                if (tmp_count > 0)
+                {
+                    IRValue** elems = (IRValue**)ir_arena_calloc(&module->arena, (size_t)tmp_count,
+                                                               sizeof(IRValue*), _Alignof(IRValue*));
+                    if (!elems) {
+                        free(tmp);
+                        ok = 0;
+                        free(line);
+                        break;
+                    }
+                    for (int i = 0; i < tmp_count; i++) elems[i] = tmp[i];
+                    g->init_elems = elems;
+                    g->init_elem_count = tmp_count;
+                }
+                free(tmp);
+
+                ir_module_add_global(module, g);
+            }
+            else
+            {
+                IRValue* init = ir_text_parse_value(module, NULL, NULL, &p, t);
+                if (!init) { free(name); ok = 0; free(line); break; }
+
+                IRGlobal* g = ir_global_new(name, t, is_const);
+                free(name);
+                if (!g) { ok = 0; free(line); break; }
+                ir_global_set_init(g, init);
+                ir_module_add_global(module, g);
+            }
 
             free(line);
             continue;

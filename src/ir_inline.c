@@ -136,7 +136,6 @@ static IRValue* ir_inline_clone_value(IRValue* v,
                                       IRType** old_reg_types, int old_reg_types_len,
                                       IRFunc* caller) {
     if (!v) return NULL;
-    (void)caller;
 
     switch (v->kind) {
         case IR_VAL_CONST_INT:
@@ -151,8 +150,19 @@ static IRValue* ir_inline_clone_value(IRValue* v,
             return ir_value_block(nb);
         }
         case IR_VAL_REG: {
-            int nr = ir_inline_map_reg(reg_map, reg_map_len, v->data.reg_num);
-            if (nr < 0) return NULL;
+            if (!reg_map || reg_map_len <= 0 || v->data.reg_num < 0 || v->data.reg_num >= reg_map_len) {
+                return NULL;
+            }
+
+            int nr = reg_map[v->data.reg_num];
+            if (nr < 0) {
+                // قد يحدث استعمال سجل قبل تعريفه عند استنساخ الكتل بترتيب القائمة.
+                // لذلك ننشئ الربط عند أول استعمال لضمان نجاح التضمين.
+                if (!caller) return NULL;
+                nr = ir_func_alloc_reg(caller);
+                reg_map[v->data.reg_num] = nr;
+            }
+
             IRType* t = v->type;
             if (!t && old_reg_types && v->data.reg_num >= 0 && v->data.reg_num < old_reg_types_len) {
                 t = old_reg_types[v->data.reg_num];

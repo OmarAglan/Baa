@@ -594,6 +594,52 @@ static void ir_verify_inst(IRVerifyDiag* diag,
         }
 
         // --------------------------------------------------------------------
+        // ptr.offset: dest + 2 operands (base_ptr, index_int), result ptr
+        // --------------------------------------------------------------------
+        case IR_OP_PTR_OFFSET: {
+            ir_verify_inst_dest_rules(diag, module, func, block, inst, 1);
+            ir_verify_inst_operands_present(diag, module, func, block, inst, 2);
+
+            if (!inst->type || inst->type->kind != IR_TYPE_PTR || !inst->type->data.pointee) {
+                ir_report(diag, module, func, block, inst,
+                          "تعليمة `إزاحة_مؤشر` يجب أن تنتج نوع مؤشر صالح.");
+                break;
+            }
+
+            IRValue* base = (inst->operand_count >= 1) ? inst->operands[0] : NULL;
+            IRValue* idx  = (inst->operand_count >= 2) ? inst->operands[1] : NULL;
+
+            if (!base || !ir_value_is_ptr_value(base)) {
+                ir_report(diag, module, func, block, inst,
+                          "تعليمة `إزاحة_مؤشر`: المعامل الأول يجب أن يكون مؤشراً.");
+                break;
+            }
+
+            if (base->type && inst->type && !ir_types_equal(base->type, inst->type)) {
+                ir_report(diag, module, func, block, inst,
+                          "تعليمة `إزاحة_مؤشر`: نوع base لا يطابق نوع النتيجة (base=%s, res=%s).",
+                          ir_type_to_arabic(base->type),
+                          ir_type_to_arabic(inst->type));
+            }
+
+            if (!idx || !idx->type || !ir_type_is_int(idx->type)) {
+                ir_report(diag, module, func, block, inst,
+                          "تعليمة `إزاحة_مؤشر`: المعامل الثاني (index) يجب أن يكون عدداً صحيحاً.");
+            }
+
+            if (base && !ir_value_reg_in_range(base, func)) {
+                ir_report(diag, module, func, block, inst,
+                          "تعليمة `إزاحة_مؤشر`: base سجل خارج نطاق الدالة.");
+            }
+            if (idx && !ir_value_reg_in_range(idx, func)) {
+                ir_report(diag, module, func, block, inst,
+                          "تعليمة `إزاحة_مؤشر`: index سجل خارج نطاق الدالة.");
+            }
+
+            break;
+        }
+
+        // --------------------------------------------------------------------
         // cmp: dest + 2 operands, result i1, operands same int type
         // --------------------------------------------------------------------
         case IR_OP_CMP: {

@@ -262,6 +262,15 @@ void ir_builder_emit_store(IRBuilder* builder, IRValue* value, IRValue* ptr) {
     emit_inst(builder, inst);
 }
 
+int ir_builder_emit_ptr_offset(IRBuilder* builder, IRType* ptr_type, IRValue* base, IRValue* index) {
+    if (!builder || !builder->current_func) return -1;
+
+    int dest = ir_builder_alloc_reg(builder);
+    IRInst* inst = ir_inst_ptr_offset(ptr_type, dest, base, index);
+    emit_inst(builder, inst);
+    return dest;
+}
+
 // ============================================================================
 // Comparison Instructions
 // ============================================================================

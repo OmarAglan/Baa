@@ -257,8 +257,15 @@ static void scope_pop(void) {
 /**
  * @brief إضافة رمز إلى النطاق الحالي.
  */
-static void add_symbol(const char* name, ScopeType scope, DataType type, bool is_const,
-                       int decl_line, int decl_col, const char* decl_file) {
+static void add_symbol(const char* name,
+                       ScopeType scope,
+                       DataType type,
+                       bool is_const,
+                       bool is_array,
+                       int array_size,
+                       int decl_line,
+                       int decl_col,
+                       const char* decl_file) {
     if (!name) {
         semantic_error_loc(decl_file, decl_line, decl_col, "اسم الرمز فارغ.");
         return;
@@ -290,6 +297,8 @@ static void add_symbol(const char* name, ScopeType scope, DataType type, bool is
         memcpy(global_symbols[global_count].name, name, name_len + 1);
         global_symbols[global_count].scope = SCOPE_GLOBAL;
         global_symbols[global_count].type = type;
+        global_symbols[global_count].is_array = is_array;
+        global_symbols[global_count].array_size = is_array ? array_size : 0;
         global_symbols[global_count].is_const = is_const;
         global_symbols[global_count].is_used = false;
         global_symbols[global_count].decl_line = decl_line;
@@ -332,6 +341,8 @@ static void add_symbol(const char* name, ScopeType scope, DataType type, bool is
         memcpy(local_symbols[local_count].name, name, name_len + 1);
         local_symbols[local_count].scope = SCOPE_LOCAL;
         local_symbols[local_count].type = type;
+        local_symbols[local_count].is_array = is_array;
+        local_symbols[local_count].array_size = is_array ? array_size : 0;
         local_symbols[local_count].is_const = is_const;
         local_symbols[local_count].is_used = false;
         local_symbols[local_count].decl_line = decl_line;
@@ -452,12 +463,40 @@ static DataType infer_type(Node* node) {
                 semantic_error(node, "Undefined variable '%s'.", node->data.var_ref.name);
                 return TYPE_INT; // استرداد الخطأ
             }
+            if (sym->is_array) {
+                semantic_error(node, "لا يمكن استخدام المصفوفة '%s' بدون فهرس.", node->data.var_ref.name);
+                return sym->type;
+            }
             return sym->type;
         }
 
         case NODE_ARRAY_ACCESS: {
-            semantic_error(node, "المصفوفات غير مدعومة حالياً في مسار IR.");
-            return TYPE_INT;
+            Symbol* sym = lookup(node->data.array_op.name, true);
+            if (!sym) {
+                semantic_error(node, "مصفوفة غير معرّفة '%s'.", node->data.array_op.name ? node->data.array_op.name : "???");
+                (void)infer_type(node->data.array_op.index);
+                return TYPE_INT;
+            }
+            if (!sym->is_array) {
+                semantic_error(node, "'%s' ليس مصفوفة.", sym->name);
+                (void)infer_type(node->data.array_op.index);
+                return sym->type;
+            }
+
+            DataType it = infer_type(node->data.array_op.index);
+            if (it != TYPE_INT) {
+                semantic_error(node->data.array_op.index, "فهرس المصفوفة يجب أن يكون صحيحاً.");
+            }
+
+            // تحقق ثابت على الحدود إذا كان الفهرس ثابتاً
+            if (node->data.array_op.index && node->data.array_op.index->type == NODE_INT) {
+                int64_t idx = (int64_t)node->data.array_op.index->data.integer.value;
+                if (idx < 0 || (sym->array_size > 0 && idx >= sym->array_size)) {
+                    semantic_error(node, "فهرس خارج الحدود للمصفوفة '%s' (الحجم %d).", sym->name, sym->array_size);
+                }
+            }
+
+            return sym->type; // نوع العنصر
         }
 
         case NODE_CALL_EXPR:
@@ -624,13 +663,15 @@ static void analyze_node(Node* node) {
                 semantic_error(node, "Constant '%s' must be initialized.", node->data.var_decl.name);
             }
             // 3. إضافة الرمز (مع معلومات الموقع للتحذيرات)
-            add_symbol(node->data.var_decl.name,
-                       node->data.var_decl.is_global ? SCOPE_GLOBAL : SCOPE_LOCAL,
-                       node->data.var_decl.type,
-                       node->data.var_decl.is_const,
-                       node->line, node->col, node->filename ? node->filename : current_filename);
-            break;
-        }
+             add_symbol(node->data.var_decl.name,
+                        node->data.var_decl.is_global ? SCOPE_GLOBAL : SCOPE_LOCAL,
+                        node->data.var_decl.type,
+                        node->data.var_decl.is_const,
+                        false,
+                        0,
+                        node->line, node->col, node->filename ? node->filename : current_filename);
+             break;
+         }
 
         case NODE_FUNC_DEF: {
             // الدخول في نطاق دالة جديدة (تصفير المحلي + إنشاء نطاق)
@@ -646,13 +687,14 @@ static void analyze_node(Node* node) {
             // إضافة المعاملات كمتغيرات محلية (المعاملات ليست ثوابت افتراضياً)
             Node* param = node->data.func_def.params;
             while (param) {
-                if (param->type == NODE_VAR_DECL) {
-                    // المعاملات تُعتبر "مستخدمة" ضمنياً (لتجنب تحذيرات خاطئة)
+                 if (param->type == NODE_VAR_DECL) {
+                     // المعاملات تُعتبر "مستخدمة" ضمنياً (لتجنب تحذيرات خاطئة)
                     add_symbol(param->data.var_decl.name, SCOPE_LOCAL, param->data.var_decl.type, false,
+                               false, 0,
                                param->line, param->col, param->filename ? param->filename : current_filename);
-                    // تعليم المعامل كمستخدم مباشرة
-                    local_symbols[local_count - 1].is_used = true;
-                }
+                     // تعليم المعامل كمستخدم مباشرة
+                     local_symbols[local_count - 1].is_used = true;
+                 }
                 param = param->next;
             }
 
@@ -682,6 +724,9 @@ static void analyze_node(Node* node) {
             if (!sym) {
                 semantic_error(node, "Assignment to undefined variable '%s'.", node->data.assign_stmt.name);
             } else {
+                if (sym->is_array) {
+                    semantic_error(node, "لا يمكن تعيين قيمة للمصفوفة '%s' مباشرة (استخدم الفهرسة).", sym->name);
+                }
                 // التحقق من الثوابت: لا يمكن إعادة تعيين قيمة ثابت
                 if (sym->is_const) {
                     semantic_error(node, "Cannot reassign constant '%s'.", node->data.assign_stmt.name);
@@ -853,12 +898,63 @@ static void analyze_node(Node* node) {
             break;
         }
 
-        case NODE_ARRAY_DECL:
-            semantic_error(node, "المصفوفات غير مدعومة حالياً في مسار IR.");
+        case NODE_ARRAY_DECL: {
+            if (node->data.array_decl.is_global) {
+                semantic_error(node, "المصفوفات العامة غير مدعومة حالياً.");
+                break;
+            }
+            if (node->data.array_decl.size <= 0) {
+                semantic_error(node, "حجم المصفوفة غير صالح.");
+                break;
+            }
+
+            // حالياً المصفوفات مدعومة فقط لنوع صحيح (حسب الصياغة: صحيح س[5].)
+            add_symbol(node->data.array_decl.name,
+                       SCOPE_LOCAL,
+                       TYPE_INT,
+                       node->data.array_decl.is_const,
+                       true,
+                       node->data.array_decl.size,
+                       node->line,
+                       node->col,
+                       node->filename ? node->filename : current_filename);
             break;
+        }
 
         case NODE_ARRAY_ASSIGN: {
-            semantic_error(node, "المصفوفات غير مدعومة حالياً في مسار IR.");
+            Symbol* sym = lookup(node->data.array_op.name, true);
+            if (!sym) {
+                semantic_error(node, "تعيين إلى مصفوفة غير معرّفة '%s'.", node->data.array_op.name ? node->data.array_op.name : "???");
+                (void)infer_type(node->data.array_op.index);
+                (void)infer_type(node->data.array_op.value);
+                break;
+            }
+            if (!sym->is_array) {
+                semantic_error(node, "'%s' ليس مصفوفة.", sym->name);
+                (void)infer_type(node->data.array_op.index);
+                (void)infer_type(node->data.array_op.value);
+                break;
+            }
+            if (sym->is_const) {
+                semantic_error(node, "لا يمكن تعديل مصفوفة ثابتة '%s'.", sym->name);
+            }
+
+            DataType it = infer_type(node->data.array_op.index);
+            if (it != TYPE_INT) {
+                semantic_error(node->data.array_op.index, "فهرس المصفوفة يجب أن يكون صحيحاً.");
+            }
+
+            DataType vt = infer_type(node->data.array_op.value);
+            if (!types_compatible(vt, sym->type)) {
+                semantic_error(node, "نوع القيمة في تعيين '%s' غير متوافق.", sym->name);
+            }
+
+            if (node->data.array_op.index && node->data.array_op.index->type == NODE_INT) {
+                int64_t idx = (int64_t)node->data.array_op.index->data.integer.value;
+                if (idx < 0 || (sym->array_size > 0 && idx >= sym->array_size)) {
+                    semantic_error(node, "فهرس خارج الحدود للمصفوفة '%s' (الحجم %d).", sym->name, sym->array_size);
+                }
+            }
             break;
         }
 

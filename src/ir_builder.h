@@ -266,6 +266,13 @@ int ir_builder_emit_load(IRBuilder* builder, IRType* type, IRValue* ptr);
  */
 void ir_builder_emit_store(IRBuilder* builder, IRValue* value, IRValue* ptr);
 
+/**
+ * @brief إصدار تعليمة إزاحة_مؤشر: %dest = إزاحة_مؤشر <ptr_type> base, index
+ *
+ * ملاحظة: `index` هو فهرس عناصر ويُضرب ضمنياً في حجم pointee.
+ */
+int ir_builder_emit_ptr_offset(IRBuilder* builder, IRType* ptr_type, IRValue* base, IRValue* index);
+
 // ============================================================================
 // Comparison Instructions (عمليات المقارنة)
 // ============================================================================

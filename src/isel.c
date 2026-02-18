@@ -730,12 +730,27 @@ static void isel_lower_alloca(ISelCtx *ctx, IRInst *inst)
     if (!inst)
         return;
 
-    int bits = isel_type_bits(inst->type);
-    int alloc_size = (bits + 7) / 8; // حجم التخصيص بالبايت
-    if (alloc_size < 8)
-        alloc_size = 8; // محاذاة 8 بايت كحد أدنى
+    const IRDataLayout *dl = (ctx && ctx->target) ? ctx->target->data_layout : NULL;
 
-    ctx->mfunc->stack_size += alloc_size;
+    // تعليمة alloca تنتج مؤشراً إلى نوع pointee، لذلك حجم التخصيص يعتمد على pointee وليس على حجم المؤشر.
+    IRType *pointee = NULL;
+    if (inst->type && inst->type->kind == IR_TYPE_PTR)
+        pointee = inst->type->data.pointee;
+    if (!pointee)
+        pointee = IR_TYPE_I64_T;
+
+    int alloc_size = ir_type_store_size(dl, pointee);
+    int align = ir_type_alignment(dl, pointee);
+
+    // تبسيط: نضمن 8 بايت كحد أدنى للتوافق مع معظم أنماط الحمل/الخزن الحالية.
+    if (alloc_size < 8) alloc_size = 8;
+    if (align < 8) align = 8;
+
+    // محاذاة تصاعدية: offset النهائي يجب أن يحقق محاذاة النوع.
+    int s = ctx->mfunc->stack_size + alloc_size;
+    int rem = (align > 0) ? (s % align) : 0;
+    if (rem != 0) s += (align - rem);
+    ctx->mfunc->stack_size = s;
 
     MachineOperand dst = mach_op_vreg(inst->dest, 64); // المؤشر دائماً 64 بت
     MachineOperand mem = mach_op_mem(-1, -(int32_t)ctx->mfunc->stack_size, 64);
@@ -1265,6 +1280,97 @@ static void isel_lower_copy(ISelCtx *ctx, IRInst *inst)
 }
 
 /**
+ * @brief خفض تعليمة إزاحة_مؤشر (ptr.offset).
+ *
+ * النمط: %dst = إزاحة_مؤشر ptr<T> base, index
+ *
+ * حيث index هو فهرس عناصر ويُضرب ضمنياً في حجم T.
+ */
+static void isel_lower_ptr_offset(ISelCtx *ctx, IRInst *inst)
+{
+    if (!ctx || !ctx->mfunc || !inst || inst->operand_count < 2)
+        return;
+
+    const IRDataLayout *dl = (ctx->target) ? ctx->target->data_layout : NULL;
+
+    IRType *elem_t = NULL;
+    if (inst->type && inst->type->kind == IR_TYPE_PTR)
+        elem_t = inst->type->data.pointee;
+
+    int elem_size = ir_type_store_size(dl, elem_t ? elem_t : IR_TYPE_I8_T);
+    if (elem_size <= 0) elem_size = 1;
+
+    // base: يجب أن يكون عنواناً في سجل
+    MachineOperand base = isel_lower_value(ctx, inst->operands[0]);
+    if (base.kind == MACH_OP_GLOBAL)
+    {
+        int tmp = mach_func_alloc_vreg(ctx->mfunc);
+        MachineOperand tmp_op = mach_op_vreg(tmp, 64);
+        isel_emit(ctx, MACH_LEA, tmp_op, base, mach_op_none());
+        base = tmp_op;
+    }
+    else if (base.kind != MACH_OP_VREG)
+    {
+        int tmp = mach_func_alloc_vreg(ctx->mfunc);
+        MachineOperand tmp_op = mach_op_vreg(tmp, 64);
+        isel_emit(ctx, MACH_MOV, tmp_op, base, mach_op_none());
+        base = tmp_op;
+    }
+
+    // index: قد يكون فوري/سجل/ذاكرة -> نضمن تمثيله كقيمة 64 بت
+    MachineOperand idx = isel_lower_value(ctx, inst->operands[1]);
+
+    MachineOperand scaled = idx;
+
+    if (idx.kind == MACH_OP_IMM)
+    {
+        int64_t v = idx.data.imm;
+        int64_t s = v * (int64_t)elem_size;
+        scaled = mach_op_imm(s, 64);
+    }
+    else
+    {
+        // ننسخ index إلى سجل ثم نُطبّق التحجيم عليه
+        if (idx.kind != MACH_OP_VREG)
+        {
+            int t = mach_func_alloc_vreg(ctx->mfunc);
+            MachineOperand t_op = mach_op_vreg(t, 64);
+            isel_emit(ctx, MACH_MOV, t_op, idx, mach_op_none());
+            idx = t_op;
+        }
+
+        if (elem_size != 1)
+        {
+            int t = mach_func_alloc_vreg(ctx->mfunc);
+            MachineOperand t_op = mach_op_vreg(t, 64);
+            isel_emit(ctx, MACH_MOV, t_op, idx, mach_op_none());
+
+            int sh = 0;
+            if (isel_is_pow2_i64((int64_t)elem_size, &sh) && sh > 0)
+            {
+                isel_emit(ctx, MACH_SHL, t_op, t_op, mach_op_imm((int64_t)sh, 8));
+            }
+            else
+            {
+                isel_emit(ctx, MACH_IMUL, t_op, t_op, mach_op_imm((int64_t)elem_size, 64));
+            }
+
+            scaled = t_op;
+        }
+        else
+        {
+            scaled = idx;
+        }
+    }
+
+    MachineOperand dst = mach_op_vreg(inst->dest, 64);
+    isel_emit(ctx, MACH_MOV, dst, base, mach_op_none());
+    MachineInst *mi = isel_emit(ctx, MACH_ADD, dst, dst, scaled);
+    if (mi)
+        mi->ir_reg = inst->dest;
+}
+
+/**
  * @brief خفض عقدة فاي (phi).
  *
  * عقد فاي تُحل عادةً أثناء خروج SSA أو تخصيص السجلات.
@@ -1367,6 +1473,9 @@ static void isel_lower_inst(ISelCtx *ctx, IRInst *inst)
         break;
     case IR_OP_STORE:
         isel_lower_store(ctx, inst);
+        break;
+    case IR_OP_PTR_OFFSET:
+        isel_lower_ptr_offset(ctx, inst);
         break;
 
     // عملية المقارنة

@@ -301,6 +301,10 @@ IRValue* lower_expr(IRLowerCtx* ctx, Node* expr) {
             // 1) Local variable (stack slot)
             IRLowerBinding* b = find_local(ctx, name);
             if (b) {
+                if (b->value_type && b->value_type->kind == IR_TYPE_ARRAY) {
+                    ir_lower_report_error(ctx, expr, "لا يمكن استخدام المصفوفة '%s' بدون فهرس.", name ? name : "???");
+                    return ir_builder_const_i64(0);
+                }
                 IRType* value_type = b->value_type ? b->value_type : IR_TYPE_I64_T;
 
                 IRType* ptr_type = ir_type_ptr(value_type ? value_type : IR_TYPE_I64_T);
@@ -325,6 +329,43 @@ IRValue* lower_expr(IRLowerCtx* ctx, Node* expr) {
 
             ir_lower_report_error(ctx, expr, "متغير غير معروف '%s'.", name ? name : "???");
             return ir_builder_const_i64(0);
+        }
+
+        case NODE_ARRAY_ACCESS: {
+            const char* name = expr->data.array_op.name;
+            IRLowerBinding* b = find_local(ctx, name);
+            if (!b) {
+                ir_lower_report_error(ctx, expr, "مصفوفة غير معرّفة '%s'.", name ? name : "???");
+                (void)lower_expr(ctx, expr->data.array_op.index);
+                return ir_builder_const_i64(0);
+            }
+            if (!b->value_type || b->value_type->kind != IR_TYPE_ARRAY) {
+                ir_lower_report_error(ctx, expr, "'%s' ليس مصفوفة في مسار IR.", name ? name : "???");
+                (void)lower_expr(ctx, expr->data.array_op.index);
+                return ir_builder_const_i64(0);
+            }
+
+            IRType* elem_t = b->value_type->data.array.element ? b->value_type->data.array.element : IR_TYPE_I64_T;
+            IRType* arr_ptr_t = ir_type_ptr(b->value_type);
+            IRType* elem_ptr_t = ir_type_ptr(elem_t);
+
+            // base: %ptr(array) -> cast -> %ptr(elem)
+            IRValue* arr_ptr = ir_value_reg(b->ptr_reg, arr_ptr_t);
+            int base_reg = ir_builder_emit_cast(ctx->builder, arr_ptr, elem_ptr_t);
+            IRValue* base_ptr = ir_value_reg(base_reg, elem_ptr_t);
+
+            IRValue* idx = lower_expr(ctx, expr->data.array_op.index);
+            if (idx && idx->type && idx->type->kind != IR_TYPE_I64) {
+                int idx64 = ir_builder_emit_cast(ctx->builder, idx, IR_TYPE_I64_T);
+                idx = ir_value_reg(idx64, IR_TYPE_I64_T);
+            }
+
+            int ep = ir_builder_emit_ptr_offset(ctx->builder, elem_ptr_t, base_ptr, idx);
+            IRValue* elem_ptr = ir_value_reg(ep, elem_ptr_t);
+
+            int loaded = ir_builder_emit_load(ctx->builder, elem_t, elem_ptr);
+            ir_lower_tag_last_inst(ctx->builder, IR_OP_LOAD, loaded, name);
+            return ir_value_reg(loaded, elem_t);
         }
 
         case NODE_BIN_OP: {
@@ -426,6 +467,32 @@ IRValue* lower_expr(IRLowerCtx* ctx, Node* expr) {
 // Statement lowering (v0.3.0.4)
 // ============================================================================
 
+static void lower_array_decl(IRLowerCtx* ctx, Node* stmt) {
+    if (!ctx || !ctx->builder || !stmt) return;
+
+    ir_lower_set_loc(ctx->builder, stmt);
+
+    if (stmt->data.array_decl.is_global) {
+        ir_lower_report_error(ctx, stmt, "المصفوفات العامة غير مدعومة حالياً.");
+        return;
+    }
+    if (stmt->data.array_decl.size <= 0) {
+        ir_lower_report_error(ctx, stmt, "حجم المصفوفة غير صالح.");
+        return;
+    }
+
+    IRModule* m = ctx->builder->module;
+    if (m) ir_module_set_current(m);
+
+    IRType* elem_t = IR_TYPE_I64_T;
+    IRType* arr_t = ir_type_array(elem_t, stmt->data.array_decl.size);
+
+    int ptr_reg = ir_builder_emit_alloca(ctx->builder, arr_t);
+    ir_lower_tag_last_inst(ctx->builder, IR_OP_ALLOCA, ptr_reg, stmt->data.array_decl.name);
+
+    ir_lower_bind_local(ctx, stmt->data.array_decl.name, ptr_reg, arr_t);
+}
+
 static void lower_var_decl(IRLowerCtx* ctx, Node* stmt) {
     if (!ctx || !ctx->builder || !stmt) return;
 
@@ -467,6 +534,53 @@ static void lower_var_decl(IRLowerCtx* ctx, Node* stmt) {
     ir_lower_set_loc(ctx->builder, stmt);
     ir_builder_emit_store(ctx->builder, init, ptr);
     ir_lower_tag_last_inst(ctx->builder, IR_OP_STORE, -1, stmt->data.var_decl.name);
+}
+
+static void lower_array_assign(IRLowerCtx* ctx, Node* stmt) {
+    if (!ctx || !ctx->builder || !stmt) return;
+
+    ir_lower_set_loc(ctx->builder, stmt);
+
+    const char* name = stmt->data.array_op.name;
+    IRLowerBinding* b = find_local(ctx, name);
+    if (!b) {
+        ir_lower_report_error(ctx, stmt, "تعيين إلى مصفوفة غير معرّفة '%s'.", name ? name : "???");
+        (void)lower_expr(ctx, stmt->data.array_op.index);
+        (void)lower_expr(ctx, stmt->data.array_op.value);
+        return;
+    }
+
+    if (!b->value_type || b->value_type->kind != IR_TYPE_ARRAY) {
+        ir_lower_report_error(ctx, stmt, "'%s' ليس مصفوفة في مسار IR.", name ? name : "???");
+        (void)lower_expr(ctx, stmt->data.array_op.index);
+        (void)lower_expr(ctx, stmt->data.array_op.value);
+        return;
+    }
+
+    IRType* elem_t = b->value_type->data.array.element ? b->value_type->data.array.element : IR_TYPE_I64_T;
+    IRType* arr_ptr_t = ir_type_ptr(b->value_type);
+    IRType* elem_ptr_t = ir_type_ptr(elem_t);
+
+    IRValue* arr_ptr = ir_value_reg(b->ptr_reg, arr_ptr_t);
+    int base_reg = ir_builder_emit_cast(ctx->builder, arr_ptr, elem_ptr_t);
+    IRValue* base_ptr = ir_value_reg(base_reg, elem_ptr_t);
+
+    IRValue* idx = lower_expr(ctx, stmt->data.array_op.index);
+    if (idx && idx->type && idx->type->kind != IR_TYPE_I64) {
+        int idx64 = ir_builder_emit_cast(ctx->builder, idx, IR_TYPE_I64_T);
+        idx = ir_value_reg(idx64, IR_TYPE_I64_T);
+    }
+
+    int ep = ir_builder_emit_ptr_offset(ctx->builder, elem_ptr_t, base_ptr, idx);
+    IRValue* elem_ptr = ir_value_reg(ep, elem_ptr_t);
+
+    IRValue* val = lower_expr(ctx, stmt->data.array_op.value);
+    if (val && val->type && !ir_types_equal(val->type, elem_t)) {
+        int cv = ir_builder_emit_cast(ctx->builder, val, elem_t);
+        val = ir_value_reg(cv, elem_t);
+    }
+
+    ir_builder_emit_store(ctx->builder, val, elem_ptr);
 }
 
 static void lower_assign(IRLowerCtx* ctx, Node* stmt) {
@@ -890,8 +1004,16 @@ void lower_stmt(IRLowerCtx* ctx, Node* stmt) {
             lower_var_decl(ctx, stmt);
             return;
 
+        case NODE_ARRAY_DECL:
+            lower_array_decl(ctx, stmt);
+            return;
+
         case NODE_ASSIGN:
             lower_assign(ctx, stmt);
+            return;
+
+        case NODE_ARRAY_ASSIGN:
+            lower_array_assign(ctx, stmt);
             return;
 
         case NODE_RETURN:

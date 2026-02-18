@@ -491,7 +491,9 @@ typedef enum {
 typedef struct {
     char name[32];     // اسم الرمز
     ScopeType scope;   // النطاق (عام أو محلي)
-    DataType type;     // نوع البيانات (صحيح أو نص)
+    DataType type;     // نوع البيانات (للمتغير: نوعه، للمصفوفة: نوع العنصر)
+    bool is_array;     // هل الرمز مصفوفة؟
+    int array_size;    // حجم المصفوفة (ثابت حالياً) إذا كانت is_array=true
     int offset;        // الإزاحة في المكدس أو العنوان
     bool is_const;     // هل هو ثابت (immutable)؟
     bool is_used;      // هل تم استخدام هذا المتغير؟ (للتحذيرات)

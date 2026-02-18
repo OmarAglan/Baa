@@ -152,6 +152,7 @@ const char* ir_op_to_arabic(IROp op) {
         case IR_OP_ALLOCA:  return "حجز";
         case IR_OP_LOAD:    return "حمل";
         case IR_OP_STORE:   return "خزن";
+        case IR_OP_PTR_OFFSET: return "إزاحة_مؤشر";
         
         // مقارنة
         case IR_OP_CMP:     return "قارن";
@@ -195,6 +196,7 @@ const char* ir_op_to_english(IROp op) {
         case IR_OP_ALLOCA:  return "alloca";
         case IR_OP_LOAD:    return "load";
         case IR_OP_STORE:   return "store";
+        case IR_OP_PTR_OFFSET: return "ptr.offset";
         case IR_OP_CMP:     return "cmp";
         case IR_OP_AND:     return "and";
         case IR_OP_OR:      return "or";
@@ -614,6 +616,24 @@ IRInst* ir_inst_store(IRValue* value, IRValue* ptr) {
     if (!inst) return NULL;
     ir_inst_add_operand(inst, value);
     ir_inst_add_operand(inst, ptr);
+    return inst;
+}
+
+/**
+ * @brief إنشاء تعليمة إزاحة مؤشر.
+ *
+ * الصيغة:
+ *   %dst = إزاحة_مؤشر <ptr_type> base, index
+ *
+ * الدلالة:
+ * - base والنتيجة لهما نفس نوع المؤشر.
+ * - index فهرس عناصر (وليس بايتات) ويُضرب ضمنياً في حجم pointee.
+ */
+IRInst* ir_inst_ptr_offset(IRType* ptr_type, int dest, IRValue* base, IRValue* index) {
+    IRInst* inst = ir_inst_new(IR_OP_PTR_OFFSET, ptr_type, dest);
+    if (!inst) return NULL;
+    ir_inst_add_operand(inst, base);
+    ir_inst_add_operand(inst, index);
     return inst;
 }
 

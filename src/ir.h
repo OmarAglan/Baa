@@ -48,6 +48,7 @@ typedef enum {
     IR_OP_ALLOCA,   // حجز - Stack allocation
     IR_OP_LOAD,     // حمل - Load from memory
     IR_OP_STORE,    // خزن - Store to memory
+    IR_OP_PTR_OFFSET, // إزاحة_مؤشر - Pointer offset: base + index * sizeof(pointee)
     
     // --------------------------------------------------------------------
     // Comparison Operations (عمليات المقارنة)
@@ -495,6 +496,7 @@ IRInst* ir_inst_cmp(IRCmpPred pred, int dest, IRValue* lhs, IRValue* rhs);
 IRInst* ir_inst_alloca(IRType* type, int dest);
 IRInst* ir_inst_load(IRType* type, int dest, IRValue* ptr);
 IRInst* ir_inst_store(IRValue* value, IRValue* ptr);
+IRInst* ir_inst_ptr_offset(IRType* ptr_type, int dest, IRValue* base, IRValue* index);
 IRInst* ir_inst_br(IRBlock* target);
 IRInst* ir_inst_br_cond(IRValue* cond, IRBlock* if_true, IRBlock* if_false);
 IRInst* ir_inst_ret(IRValue* value);

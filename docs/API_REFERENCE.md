@@ -293,6 +293,23 @@ Creates a comparison instruction.
 
 ---
 
+#### `ir_inst_alloca`
+
+```c
+IRInst* ir_inst_alloca(IRType* type, int dest)
+```
+
+Creates a stack allocation instruction.
+
+Emits: `%dest = حجز type`
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `type` | `IRType*` | Type to allocate (result is a pointer to this type) |
+| `dest` | `int` | Destination register (pointer) |
+
+---
+
 #### `ir_inst_load`
 
 ```c
@@ -321,6 +338,27 @@ Creates a memory store instruction. No destination register.
 |-----------|------|-------------|
 | `value` | `IRValue*` | Value to store |
 | `ptr` | `IRValue*` | Pointer to store to |
+
+---
+
+#### `ir_inst_ptr_offset`
+
+```c
+IRInst* ir_inst_ptr_offset(IRType* ptr_type, int dest, IRValue* base, IRValue* index)
+```
+
+Creates a pointer offset instruction (used for array indexing).
+
+Emits: `%dest = إزاحة_مؤشر ptr_type base, index`
+
+**Semantics:** `index` is an element index scaled by `sizeof(pointee)` (target data layout).
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `ptr_type` | `IRType*` | Result pointer type (must match `base` type) |
+| `dest` | `int` | Destination register |
+| `base` | `IRValue*` | Base pointer |
+| `index` | `IRValue*` | Element index (integer) |
 
 ---
 
@@ -1230,6 +1268,18 @@ void ir_builder_emit_store(IRBuilder* builder, IRValue* value, IRValue* ptr)
 Emits: `خزن value, ptr`
 
 **Note:** Store has no result register.
+
+---
+
+#### `ir_builder_emit_ptr_offset`
+
+```c
+int ir_builder_emit_ptr_offset(IRBuilder* builder, IRType* ptr_type, IRValue* base, IRValue* index)
+```
+
+Emits: `%dest = إزاحة_مؤشر ptr_type base, index`
+
+**Note:** `index` is an element index scaled by `sizeof(pointee)` (target data layout).
 
 ---
 
@@ -2772,7 +2822,9 @@ Moved to `baa.h` for shared use between Analysis and Codegen.
 typedef struct {
     char name[32];         // Variable name
     ScopeType scope;       // SCOPE_GLOBAL or SCOPE_LOCAL
-    DataType type;         // TYPE_INT or TYPE_STRING
+    DataType type;         // Variable type (or element type for arrays)
+    bool is_array;         // True for array declarations (v0.3.2.9.4)
+    int array_size;        // Fixed array size if is_array (v0.3.2.9.4)
     int offset;            // Stack offset or memory address
     bool is_const;         // Immutability flag (v0.2.7+)
     bool is_used;          // Usage tracking for warnings (v0.2.8+)
@@ -2786,7 +2838,9 @@ typedef struct {
 |-------|------|-------------|
 | `name` | `char[32]` | Variable identifier (Arabic UTF-8) |
 | `scope` | `ScopeType` | `SCOPE_GLOBAL` or `SCOPE_LOCAL` |
-| `type` | `DataType` | `TYPE_INT` or `TYPE_STRING` |
+| `type` | `DataType` | Variable type (or array element type) |
+| `is_array` | `bool` | `true` if this symbol is an array |
+| `array_size` | `int` | Fixed array size (only meaningful when `is_array=true`) |
 | `offset` | `int` | Stack offset (local) or memory address (global) |
 | `is_const` | `bool` | `true` if declared with `ثابت` (v0.2.7+) |
 | `is_used` | `bool` | `true` if variable is referenced (v0.2.8+) |
@@ -2811,7 +2865,8 @@ Runs the built-in updater.
 **Notes:**
 
 - Implemented in `src/updater.c` on Windows builds.
-- Windows-only implementation (links against `urlmon` and `wininet`).
+- Windows-only implementation (links against `urlmon`, `wininet`, `wintrust`, and `crypt32`).
+- Verifies the downloaded installer using Authenticode signature validation before execution.
 - Non-Windows builds provide a stub implementation in `src/updater_stub.c`.
 - Invoked from the CLI as `baa update` (must be the only argument).
 

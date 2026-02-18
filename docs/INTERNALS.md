@@ -580,6 +580,7 @@ IRInst
 | **Memory** | `IR_OP_ALLOCA` | حجز | Stack allocation |
 | | `IR_OP_LOAD` | حمل | Load from memory |
 | | `IR_OP_STORE` | خزن | Store to memory |
+| | `IR_OP_PTR_OFFSET` | إزاحة_مؤشر | Pointer offset: base + index * sizeof(pointee) |
 | **Comparison** | `IR_OP_CMP` | قارن | Compare with predicate |
 | **Logical** | `IR_OP_AND` | و | Bitwise AND |
 | | `IR_OP_OR` | أو | Bitwise OR |
@@ -1172,6 +1173,7 @@ Each IR instruction is lowered to one or more `MachineInst` nodes. The expansion
 | `IR_OP_ALLOCA` | `LEA dst, [RBP - offset]` | Stack offset tracked in `ISelCtx.stack_size` |
 | `IR_OP_LOAD` | `LOAD dst, [ptr]` or `LOAD dst, @global` | Global variables use MACH_OP_GLOBAL operand |
 | `IR_OP_STORE` | `STORE [ptr], src` | Immediate values can be stored directly to memory |
+| `IR_OP_PTR_OFFSET` | `MOV dst, base; (scale index); ADD dst, index_scaled` | Used for array indexing: computes element address using data layout element size |
 | `IR_OP_CMP` | `CMP lhs, rhs; SETcc tmp; MOVZX dst, tmp` | SETcc selected by predicate (EQ/NE/GT/LT/GE/LE). If LHS is immediate, temp vreg is used |
 | `IR_OP_AND` / `IR_OP_OR` | `MOV dst, lhs; OP dst, rhs` | Same two-address form as arithmetic |
 | `IR_OP_NOT` | `MOV dst, src; XOR dst, 1` | Logical NOT (boolean inversion) |
@@ -1192,6 +1194,8 @@ The instruction selector uses negative vreg numbers to represent physical regist
 | -1 | RBP | Memory base for stack accesses |
 | -2 | RAX | Return value register |
 | -3 | RSP | Stack pointer base for outgoing call frames |
+| -4 | R11 | Reserved scratch register (spill-base fixups, mem-to-mem avoidance) |
+| -5 | RDX | Remainder register for `idiv` / backend fixed constraint |
 | -10.. | ABI arg regs | Function arguments (target-dependent). Windows: -10..-13 → RCX/RDX/R8/R9. SysV: -10..-15 → RDI/RSI/RDX/RCX/R8/R9 |
 
 #### 6.19.5. Design Decisions
@@ -1200,7 +1204,7 @@ The instruction selector uses negative vreg numbers to represent physical regist
 2. **Immediate inlining:** Constants are embedded as `MACH_OP_IMM` wherever x86-64 encoding permits. Where not allowed (CMP first operand, IDIV divisor), a temp vreg + MOV is emitted.
 3. **Phi nodes as NOPs:** Phi instructions become NOP placeholders. Actual copy insertion into predecessor blocks is deferred to SSA destruction during register allocation.
 4. **MachineModule references IR data:** Global variables and string tables are referenced (not copied) from the IR module. Memory is freed by the IR module.
-5. **Stack size tracking:** Each `IR_OP_ALLOCA` increments the function's `stack_size` by 8 bytes. The LEA instruction uses the accumulated offset.
+5. **Stack size tracking:** Each `IR_OP_ALLOCA` increases `stack_size` by the **store size** of the allocated pointee type (rounded up to its alignment via the target data layout). The LEA instruction uses the accumulated offset.
 
 **Testing:** See [`tests/isel_test.c`](tests/isel_test.c) — 8 test suites, 56 assertions.
 

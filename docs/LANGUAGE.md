@@ -218,9 +218,15 @@ Explicitly convert between types using `كـ` (As).
 رسالة = "وداعاً".
 ```
 
-### 3.3. Arrays
+### 3.3. Arrays (المصفوفات)
 
-Fixed-size arrays allocated on the stack.
+مصفوفات ثابتة الحجم تُحجز على المكدس.
+
+**قيود حالية:**
+- مدعومة محلياً داخل الدوال (المصفوفات العامة غير مدعومة حالياً).
+- مدعومة لنوع `صحيح` فقط حالياً.
+- المصفوفة ليست قيمة من الدرجة الأولى: لا يمكن إسنادها إلى متغير، ولا تمريرها كمعامل مباشرة.
+- عناصر المصفوفة غير مهيّأة افتراضياً؛ لا تقرأ عنصراً قبل كتابته.
 
 **Syntax:** `صحيح <identifier>[<size>].`
 
@@ -269,9 +275,11 @@ Use the `ثابت` keyword before the type to declare a constant.
 }
 ```
 
-### 4.2. Constant Arrays
+### 4.2. Constant Arrays (مصفوفات ثابتة)
 
-Arrays can also be declared as constants to prevent modification of their elements.
+يمكن التصريح بمصفوفة على أنها `ثابت` لمنع تعديل عناصرها.
+
+**ملاحظة مهمة:** لا توجد صيغة تهيئة للمصفوفات حالياً، لذلك عناصر المصفوفة تكون غير مهيّأة. وبما أن المصفوفة الثابتة لا يمكن تعديلها، فإن هذا الاستخدام غير عملي حالياً وسيُستكمل لاحقاً بدعم التهيئة.
 
 **Syntax:** `ثابت صحيح <identifier>[<size>].`
 
@@ -289,7 +297,7 @@ Arrays can also be declared as constants to prevent modification of their elemen
 
 | Rule | Description |
 |------|-------------|
-| **Must be initialized** | Constants require an initial value at declaration |
+| **Must be initialized (scalars)** | Scalar constants require an initial value at declaration |
 | **Cannot be reassigned** | Attempting to reassign produces a semantic error |
 | **Array elements immutable** | Elements of constant arrays cannot be modified |
 | **Functions cannot be const** | The `ثابت` keyword applies only to variables |

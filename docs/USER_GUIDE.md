@@ -1,6 +1,6 @@
 # Baa User Guide
 
-> **Version:** 0.3.2.8.6 | [← README](../README.md) | [Language Spec →](LANGUAGE.md)
+> **Version:** 0.3.2.9.4 | [← README](../README.md) | [Language Spec →](LANGUAGE.md)
 
 Welcome to Baa (باء)! This guide will help you write your first Arabic computer program and use the Baa compiler toolchain.
 
@@ -147,6 +147,7 @@ The Baa compiler is a full-featured command-line tool (since v0.2.0):
 | `--dump-ir` | Print Baa IR (Arabic) after semantic analysis. | `.\baa.exe --dump-ir main.baa` |
 | `--emit-ir` | Write Baa IR (Arabic) to `<input>.ir` after semantic analysis. | `.\baa.exe --emit-ir main.baa` |
 | `--dump-ir-opt` | Print optimized Baa IR (Arabic) after the optimizer. | `.\baa.exe --dump-ir-opt -O2 main.baa` |
+| `--verify` | Run all verifiers (`--verify-ir` + `--verify-ssa`; **requires `-O1`/`-O2`**). | `.\baa.exe --verify -O2 main.baa` |
 | `--verify-ir` | Verify IR well-formedness (operands/types/terminators/phi/calls). | `.\baa.exe --verify-ir -O2 main.baa` |
 | `--verify-ssa` | Verify SSA invariants after Mem2Reg and before Out-of-SSA (**requires `-O1`/`-O2`**). | `.\baa.exe --verify-ssa -O2 main.baa` |
 | `--verify-gate` | Debug: run `--verify-ir`/`--verify-ssa` after each optimizer iteration (**requires `-O1`/`-O2`**). | `.\baa.exe --verify-gate -O2 main.baa` |
@@ -164,9 +165,17 @@ The Baa compiler is a full-featured command-line tool (since v0.2.0):
 - `-o <file>` is only applied for `-S` / `-c` when compiling a single input file.
 - `update` must be used alone: `.\baa.exe update`
 
-### Current Limitations (v0.3.2.8.6)
+### Current Limitations (v0.3.2.9.4)
 
 - Stack-argument calling is implemented for integer/pointer-like values. Floating-point/SIMD arguments are not modeled yet.
+
+### Running Tests (v0.3.2.9.3+)
+
+From the repo root:
+
+```powershell
+python .\tests\regress.py
+```
 
 ### Cross-Target Notes (v0.3.2.8.4)
 

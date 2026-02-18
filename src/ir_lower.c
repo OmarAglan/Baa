@@ -12,6 +12,7 @@
 
 #include "ir_lower.h"
 
+#include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -31,6 +32,24 @@ static IRLowerBinding* find_local(IRLowerCtx* ctx, const char* name) {
     return NULL;
 }
 
+static void ir_lower_report_error(IRLowerCtx* ctx, const Node* node, const char* fmt, ...)
+{
+    if (ctx) ctx->had_error = 1;
+
+    const char* file = (node && node->filename) ? node->filename : "<غير_معروف>";
+    int line = (node && node->line > 0) ? node->line : 1;
+    int col = (node && node->col > 0) ? node->col : 1;
+
+    fprintf(stderr, "خطأ (تحويل IR): %s:%d:%d: ", file, line, col);
+
+    va_list args;
+    va_start(args, fmt);
+    vfprintf(stderr, fmt, args);
+    va_end(args);
+
+    fputc('\n', stderr);
+}
+
 static int ir_lower_current_scope_start(IRLowerCtx* ctx) {
     if (!ctx) return 0;
     if (ctx->scope_depth <= 0) return 0;
@@ -40,7 +59,7 @@ static int ir_lower_current_scope_start(IRLowerCtx* ctx) {
 static void ir_lower_scope_push(IRLowerCtx* ctx) {
     if (!ctx) return;
     if (ctx->scope_depth >= (int)(sizeof(ctx->scope_stack) / sizeof(ctx->scope_stack[0]))) {
-        fprintf(stderr, "IR Lower Error: scope stack overflow\n");
+        ir_lower_report_error(ctx, NULL, "تجاوز حد مكدس النطاقات.");
         return;
     }
     ctx->scope_stack[ctx->scope_depth++] = ctx->local_count;
@@ -49,7 +68,7 @@ static void ir_lower_scope_push(IRLowerCtx* ctx) {
 static void ir_lower_scope_pop(IRLowerCtx* ctx) {
     if (!ctx) return;
     if (ctx->scope_depth <= 0) {
-        fprintf(stderr, "IR Lower Error: scope stack underflow\n");
+        ir_lower_report_error(ctx, NULL, "نقص في مكدس النطاقات.");
         return;
     }
     int start = ctx->scope_stack[--ctx->scope_depth];
@@ -62,6 +81,7 @@ void ir_lower_ctx_init(IRLowerCtx* ctx, IRBuilder* builder) {
     if (!ctx) return;
     memset(ctx, 0, sizeof(*ctx));
     ctx->builder = builder;
+    ctx->had_error = 0;
 
     // v0.3.0.5 control-flow lowering state
     ctx->label_counter = 0;
@@ -83,7 +103,7 @@ void ir_lower_bind_local(IRLowerCtx* ctx, const char* name, int ptr_reg, IRType*
     }
 
     if (ctx->local_count >= (int)(sizeof(ctx->locals) / sizeof(ctx->locals[0]))) {
-        fprintf(stderr, "IR Lower Error: locals table overflow while binding '%s'\n", name);
+        ir_lower_report_error(ctx, NULL, "تجاوز حد جدول المتغيرات المحلية أثناء ربط '%s'.", name);
         return;
     }
 
@@ -156,7 +176,7 @@ static IRBlock* cf_create_block(IRLowerCtx* ctx, const char* base_label) {
 static void cf_push(IRLowerCtx* ctx, IRBlock* break_target, IRBlock* continue_target) {
     if (!ctx) return;
     if (ctx->cf_depth >= (int)(sizeof(ctx->break_targets) / sizeof(ctx->break_targets[0]))) {
-        fprintf(stderr, "IR Lower Error: control-flow stack overflow\n");
+        ir_lower_report_error(ctx, NULL, "تجاوز حد مكدس التحكم (break/continue).");
         return;
     }
     ctx->break_targets[ctx->cf_depth] = break_target;
@@ -167,7 +187,7 @@ static void cf_push(IRLowerCtx* ctx, IRBlock* break_target, IRBlock* continue_ta
 static void cf_pop(IRLowerCtx* ctx) {
     if (!ctx) return;
     if (ctx->cf_depth <= 0) {
-        fprintf(stderr, "IR Lower Error: control-flow stack underflow\n");
+        ir_lower_report_error(ctx, NULL, "نقص في مكدس التحكم (break/continue).");
         return;
     }
     ctx->cf_depth--;
@@ -233,7 +253,7 @@ static IRValue* lower_call_expr(IRLowerCtx* ctx, Node* expr) {
     if (arg_count > 0) {
         args = (IRValue**)malloc(sizeof(IRValue*) * (size_t)arg_count);
         if (!args) {
-            fprintf(stderr, "IR Lower Error: failed to allocate call args array\n");
+            ir_lower_report_error(ctx, expr, "فشل تخصيص معاملات النداء.");
             return ir_builder_const_i64(0);
         }
     }
@@ -303,8 +323,7 @@ IRValue* lower_expr(IRLowerCtx* ctx, Node* expr) {
                 return ir_value_reg(loaded, g->type);
             }
 
-            fprintf(stderr, "IR Lower Error: unresolved variable '%s' (no local/global binding)\n",
-                    name ? name : "???");
+            ir_lower_report_error(ctx, expr, "متغير غير معروف '%s'.", name ? name : "???");
             return ir_builder_const_i64(0);
         }
 
@@ -326,7 +345,7 @@ IRValue* lower_expr(IRLowerCtx* ctx, Node* expr) {
                     case IR_OP_DIV: dest = ir_builder_emit_div(ctx->builder, type, lhs, rhs); break;
                     case IR_OP_MOD: dest = ir_builder_emit_mod(ctx->builder, type, lhs, rhs); break;
                     default:
-                        fprintf(stderr, "IR Lower Error: unsupported arithmetic op\n");
+                        ir_lower_report_error(ctx, expr, "عملية حسابية غير مدعومة.");
                         return ir_builder_const_i64(0);
                 }
 
@@ -356,7 +375,7 @@ IRValue* lower_expr(IRLowerCtx* ctx, Node* expr) {
                 return ir_value_reg(dest, IR_TYPE_I1_T);
             }
 
-            fprintf(stderr, "IR Lower Error: unsupported NODE_BIN_OP kind\n");
+            ir_lower_report_error(ctx, expr, "عملية ثنائية غير مدعومة.");
             return ir_builder_const_i64(0);
         }
 
@@ -377,7 +396,7 @@ IRValue* lower_expr(IRLowerCtx* ctx, Node* expr) {
             }
 
             // ++ / -- in expression form will be addressed later (statement lowering / lvalues).
-            fprintf(stderr, "IR Lower Error: unsupported unary op (%d)\n", (int)op);
+            ir_lower_report_error(ctx, expr, "عملية أحادية غير مدعومة (%d).", (int)op);
             return ir_builder_const_i64(0);
         }
 
@@ -398,7 +417,7 @@ IRValue* lower_expr(IRLowerCtx* ctx, Node* expr) {
             return ir_builder_const_string(ctx->builder, expr->data.string_lit.value);
 
         default:
-            fprintf(stderr, "IR Lower Error: unsupported expr node type (%d)\n", (int)expr->type);
+            ir_lower_report_error(ctx, expr, "عقدة تعبير غير مدعومة (%d).", (int)expr->type);
             return ir_builder_const_i64(0);
     }
 }
@@ -487,7 +506,7 @@ static void lower_assign(IRLowerCtx* ctx, Node* stmt) {
         return;
     }
 
-    fprintf(stderr, "IR Lower Error: assignment to unknown variable '%s'\n", name ? name : "???");
+    ir_lower_report_error(ctx, stmt, "تعيين إلى متغير غير معروف '%s'.", name ? name : "???");
 }
 
 static void lower_return(IRLowerCtx* ctx, Node* stmt) {
@@ -526,8 +545,8 @@ static void lower_read(IRLowerCtx* ctx, Node* stmt) {
 
     IRLowerBinding* b = find_local(ctx, stmt->data.read_stmt.var_name);
     if (!b) {
-        fprintf(stderr, "IR Lower Error: read into unknown local '%s'\n",
-                stmt->data.read_stmt.var_name ? stmt->data.read_stmt.var_name : "???");
+        ir_lower_report_error(ctx, stmt, "قراءة إلى متغير غير معروف '%s'.",
+                              stmt->data.read_stmt.var_name ? stmt->data.read_stmt.var_name : "???");
         return;
     }
 
@@ -690,7 +709,7 @@ static void lower_break_stmt(IRLowerCtx* ctx) {
     if (!ctx || !ctx->builder) return;
     IRBlock* target = cf_current_break(ctx);
     if (!target) {
-        fprintf(stderr, "IR Lower Error: 'break' used outside of loop/switch\n");
+        ir_lower_report_error(ctx, NULL, "استعمال 'break' خارج حلقة/اختر.");
         return;
     }
     if (!ir_builder_is_block_terminated(ctx->builder)) {
@@ -702,7 +721,7 @@ static void lower_continue_stmt(IRLowerCtx* ctx) {
     if (!ctx || !ctx->builder) return;
     IRBlock* target = cf_current_continue(ctx);
     if (!target) {
-        fprintf(stderr, "IR Lower Error: 'continue' used outside of loop\n");
+        ir_lower_report_error(ctx, NULL, "استعمال 'continue' خارج حلقة.");
         return;
     }
     if (!ir_builder_is_block_terminated(ctx->builder)) {
@@ -926,7 +945,7 @@ void lower_stmt(IRLowerCtx* ctx, Node* stmt) {
         }
 
         default:
-            fprintf(stderr, "IR Lower Error: unsupported stmt node type (%d)\n", (int)stmt->type);
+            ir_lower_report_error(ctx, stmt, "عقدة جملة غير مدعومة (%d).", (int)stmt->type);
             return;
     }
 }
@@ -1051,6 +1070,12 @@ IRModule* ir_lower_program(Node* program, const char* module_name) {
 
             // خروج نطاق الدالة
             ir_lower_scope_pop(&ctx);
+
+            if (ctx.had_error) {
+                ir_builder_free(builder);
+                ir_module_free(module);
+                return NULL;
+            }
         }
     }
 

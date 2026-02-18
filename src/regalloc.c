@@ -934,6 +934,7 @@ void regalloc_linear_scan(RegAllocCtx *ctx)
  *   vreg -1  → RBP (مؤشر الإطار)
  *   vreg -2  → (افتراضي) سجل الإرجاع (عادة RAX)
  *   vreg -4  → R11 (سجل خدش محجوز لتصحيح تسريب قاعدة الذاكرة)
+ *   vreg -5  → RDX (سجل الباقي/المعامل الثاني لبعض التعليمات)
  *   vreg -10.. → سجلات معاملات ABI حسب الهدف (يُحل عبر calling convention)
  */
 static PhysReg resolve_special_vreg(int vreg)
@@ -946,6 +947,8 @@ static PhysReg resolve_special_vreg(int vreg)
         return PHYS_RSP;
     case -4:
         return PHYS_R11;
+    case -5:
+        return PHYS_RDX;
     default:
         return PHYS_NONE;
     }

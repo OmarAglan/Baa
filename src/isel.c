@@ -672,6 +672,7 @@ static void isel_lower_div(ISelCtx *ctx, IRInst *inst, bool is_mod)
     // القسمة تتطلب RAX:RDX ضمنياً
     // نستخدم vreg -2 (RAX) لنقل المقسوم ثم نسخ النتيجة
     MachineOperand rax = mach_op_vreg(-2, 64);
+    MachineOperand rdx = mach_op_vreg(-5, 64);
 
     // نقل المقسوم إلى RAX
     isel_emit_comment(ctx, MACH_MOV, rax, lhs, mach_op_none(),
@@ -684,14 +685,14 @@ static void isel_lower_div(ISelCtx *ctx, IRInst *inst, bool is_mod)
     isel_emit_comment(ctx, MACH_IDIV, rax, divisor, mach_op_none(),
                       is_mod ? "// باقي القسمة في RDX" : "// حاصل القسمة في RAX");
 
-    // نسخ النتيجة من RAX إلى سجل الوجهة
-    MachineInst *mi = isel_emit_comment(ctx, MACH_MOV, dst, rax, mach_op_none(),
-                                        "// نسخ نتيجة القسمة");
+    // نسخ النتيجة إلى سجل الوجهة
+    // - القسمة: النتيجة في RAX
+    // - الباقي: النتيجة في RDX
+    MachineOperand result = is_mod ? rdx : rax;
+    MachineInst *mi = isel_emit_comment(ctx, MACH_MOV, dst, result, mach_op_none(),
+                                        is_mod ? "// نسخ نتيجة الباقي" : "// نسخ نتيجة القسمة");
     if (mi)
         mi->ir_reg = inst->dest;
-
-    // ملاحظة: لعملية الباقي (MOD)، الناتج الفعلي يكون في RDX
-    // هذا سيُعالج في إصدار مستقبلي
 }
 
 /**

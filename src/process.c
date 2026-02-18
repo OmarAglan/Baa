@@ -141,10 +141,12 @@ static bool win_run_createprocess(const char* const* argv,
     if (!win_build_cmdline(cmdline, sizeof(cmdline), argv))
         return false;
 
+    BOOL inherit = (stdout_path || stderr_path) ? TRUE : FALSE;
+
     SECURITY_ATTRIBUTES sa;
     memset(&sa, 0, sizeof(sa));
     sa.nLength = sizeof(sa);
-    sa.bInheritHandle = TRUE;
+    sa.bInheritHandle = inherit;
 
     HANDLE h_out = NULL;
     HANDLE h_err = NULL;
@@ -153,13 +155,13 @@ static bool win_run_createprocess(const char* const* argv,
     if (stdout_path && stderr_path && strcmp(stdout_path, stderr_path) == 0)
         same_file = true;
 
-    if (stdout_path)
+    if (inherit && stdout_path)
     {
         h_out = CreateFileA(stdout_path, GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE,
                             &sa, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
         if (h_out == INVALID_HANDLE_VALUE) return false;
     }
-    if (stderr_path)
+    if (inherit && stderr_path)
     {
         if (same_file)
         {
@@ -183,7 +185,7 @@ static bool win_run_createprocess(const char* const* argv,
     memset(&pi, 0, sizeof(pi));
     si.cb = sizeof(si);
 
-    if (stdout_path || stderr_path)
+    if (inherit)
     {
         si.dwFlags |= STARTF_USESTDHANDLES;
         si.hStdInput = GetStdHandle(STD_INPUT_HANDLE);
@@ -191,12 +193,17 @@ static bool win_run_createprocess(const char* const* argv,
         si.hStdError = stderr_path ? h_err : GetStdHandle(STD_ERROR_HANDLE);
     }
 
+    const char* app = NULL;
+    if (win_is_path(argv[0])) {
+        app = argv[0];
+    }
+
     BOOL ok = CreateProcessA(
-        NULL,
+        app,
         cmdline,
         NULL,
         NULL,
-        TRUE,
+        inherit,
         0,
         NULL,
         cwd,
@@ -224,20 +231,7 @@ static bool win_run_createprocess(const char* const* argv,
 
 bool baa_process_run(const char* const* argv, const char* cwd, BaaProcessResult* out_result)
 {
-    (void)cwd;
-    result_init(out_result);
-    if (!argv || !argv[0]) return false;
-
-    // بدون إعادة توجيه: نستعمل spawn (أبسط).
-    int rc;
-    if (win_is_path(argv[0]))
-        rc = _spawnv(_P_WAIT, argv[0], (const char* const*)argv);
-    else
-        rc = _spawnvp(_P_WAIT, argv[0], (const char* const*)argv);
-
-    if (rc == -1) return false;
-    if (out_result) { out_result->started = true; out_result->exit_code = rc; }
-    return true;
+    return win_run_createprocess(argv, cwd, NULL, NULL, out_result);
 }
 
 bool baa_process_run_redirect(const char* const* argv,

@@ -25,11 +25,16 @@ def _find_baa() -> Path:
         if p.exists():
             return p
 
-    candidates = [
-        ROOT / "build-linux" / "baa",
-        ROOT / "build" / "baa.exe",
-        ROOT / "build" / "baa",
-    ]
+    if os.name == "nt":
+        candidates = [
+            ROOT / "build" / "baa.exe",
+            ROOT / "build" / "baa",
+        ]
+    else:
+        candidates = [
+            ROOT / "build-linux" / "baa",
+            ROOT / "build" / "baa",
+        ]
 
     for c in candidates:
         if c.exists():
@@ -59,7 +64,10 @@ def main() -> int:
     # Avoid "Text file busy" if a rebuild replaces the compiler while tests run.
     baa = baa_real
     try:
-        baa_copy = out_dir / (baa_real.name + ".copy")
+        if os.name == "nt":
+            baa_copy = out_dir / "baa_test_copy.exe"
+        else:
+            baa_copy = out_dir / (baa_real.name + ".copy")
         shutil.copy2(baa_real, baa_copy)
         if os.name != "nt":
             st = baa_copy.stat()

@@ -50,6 +50,8 @@ typedef struct IRLowerCtx {
     struct IRBlock* break_targets[64];
     struct IRBlock* continue_targets[64];
     int cf_depth;
+
+    int had_error;
 } IRLowerCtx;
 
 /**

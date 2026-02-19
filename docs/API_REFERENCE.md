@@ -2823,6 +2823,7 @@ typedef struct {
     char name[32];         // Variable name
     ScopeType scope;       // SCOPE_GLOBAL or SCOPE_LOCAL
     DataType type;         // Variable type (or element type for arrays)
+    char type_name[32];    // Name for TYPE_ENUM/TYPE_STRUCT/TYPE_UNION (empty otherwise)
     bool is_array;         // True for array declarations (v0.3.2.9.4)
     int array_size;        // Fixed array size if is_array (v0.3.2.9.4)
     int offset;            // Stack offset or memory address
@@ -2839,6 +2840,7 @@ typedef struct {
 | `name` | `char[32]` | Variable identifier (Arabic UTF-8) |
 | `scope` | `ScopeType` | `SCOPE_GLOBAL` or `SCOPE_LOCAL` |
 | `type` | `DataType` | Variable type (or array element type) |
+| `type_name` | `char[32]` | Type name when `type` is `TYPE_ENUM`/`TYPE_STRUCT`/`TYPE_UNION` |
 | `is_array` | `bool` | `true` if this symbol is an array |
 | `array_size` | `int` | Fixed array size (only meaningful when `is_array=true`) |
 | `offset` | `int` | Stack offset (local) or memory address (global) |
@@ -2849,6 +2851,21 @@ typedef struct {
 | `decl_file` | `const char*` | Filename where symbol was declared (v0.2.8+) |
 
 > **Note**: Symbol table management functions are implemented as static helper functions within `analysis.c`. The `Symbol` struct definition is shared via `baa.h` to support semantic analysis.
+
+### DataType Enum
+
+Compound types are tracked by `DataType` + an optional `type_name`.
+
+```c
+typedef enum {
+    TYPE_INT,
+    TYPE_STRING,
+    TYPE_BOOL,
+    TYPE_ENUM,
+    TYPE_STRUCT,
+    TYPE_UNION
+} DataType;
+```
 
 ---
 
@@ -2952,6 +2969,10 @@ typedef enum {
     TOKEN_TRUE,
     TOKEN_FALSE,
 
+    TOKEN_ENUM,
+    TOKEN_STRUCT,
+    TOKEN_UNION,
+
     TOKEN_ASSIGN,
     TOKEN_DOT,
     TOKEN_COMMA,
@@ -3015,7 +3036,10 @@ typedef struct Node {
         struct {
             char* name;
             DataType type;
-            struct Node* expression; // Required for locals, optional for globals
+            char* type_name;         // Used for TYPE_ENUM/TYPE_STRUCT/TYPE_UNION
+            int struct_size;         // For TYPE_STRUCT/TYPE_UNION storage (bytes)
+            int struct_align;        // For TYPE_STRUCT/TYPE_UNION storage (bytes)
+            struct Node* expression; // Scalars: required for locals, optional for globals
             bool is_global;
             bool is_const;
         } var_decl;
@@ -3025,7 +3049,26 @@ typedef struct Node {
             int size;
             bool is_global;
             bool is_const;
+            bool has_init;
+            struct Node* init_values;
+            int init_count;
         } array_decl;
+
+        struct { char* name; struct Node* members; } enum_decl;
+        struct { char* name; int64_t value; bool has_value; } enum_member;
+        struct { char* name; struct Node* fields; } struct_decl;
+        struct { char* name; struct Node* fields; } union_decl;
+
+        struct {
+            struct Node* base;
+            char* member;
+            // semantic-filled resolution fields exist in code; omitted here for brevity.
+        } member_access;
+
+        struct {
+            struct Node* target; // NODE_MEMBER_ACCESS
+            struct Node* value;
+        } member_assign;
 
         struct {
             char* name;
@@ -3105,6 +3148,12 @@ typedef enum {
     NODE_ARRAY_DECL,
     NODE_ARRAY_ASSIGN,
     NODE_ARRAY_ACCESS,
+    NODE_ENUM_DECL,
+    NODE_STRUCT_DECL,
+    NODE_UNION_DECL,
+    NODE_ENUM_MEMBER,
+    NODE_MEMBER_ACCESS,
+    NODE_MEMBER_ASSIGN,
     NODE_PRINT,
     NODE_BIN_OP,
     NODE_UNARY_OP,
@@ -3121,4 +3170,3 @@ typedef enum {
 ---
 
 *[← Compiler Internals](INTERNALS.md) | [IR Specification →](BAA_IR_SPECIFICATION.md)*
-SPECIFICATION.md)*

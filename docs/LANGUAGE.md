@@ -131,78 +131,7 @@ Baa is statically typed. All variables must be declared with their type.
 |----------|--------------|-------------|---------|
 | `صحيح` | `int64_t` (stored) | Integer value (stored as 8 bytes) | `صحيح س = ٥.` |
 | `نص` | `char*` | String pointer (Reference) | `نص اسم = "باء".` |
-| `منطقي` | `bool` (stored as int) | Boolean value (`صواب`/`خطأ`, stored as 1/0) | `منطقي ب = صواب.` |
-
-### 3.2. Integer Sizes (أحجام الأعداد الصحيحة) [Scheduled v0.3.5.5]
-
-Baa supports explicit integer sizes for systems programming:
-
-| Type | Description | Range (Approx) |
-|------|-------------|----------------|
-| `ص٨` | Signed 8-bit | -128 to 127 |
-| `ص١٦` | Signed 16-bit | -32,768 to 32,767 |
-| `ص٣٢` | Signed 32-bit | -2 Billion to +2 Billion |
-| `ص٦٤` | Signed 64-bit | Large (Default `صحيح`) |
-| `ط٨` | Unsigned 8-bit | 0 to 255 |
-| `ط١٦` | Unsigned 16-bit | 0 to 65,535 |
-| `ط٣٢` | Unsigned 32-bit | 0 to 4 Billion |
-| `ط٦٤` | Unsigned 64-bit | Huge (Default `طبيعي`) |
-
-### 3.3. Type Aliases (أسماء الأنواع البديلة) [Scheduled v0.3.6.5]
-
-Create custom names for existing types using `نوع`.
-
-**Syntax:** `نوع <new_name> = <existing_type>.`
-
-```baa
-نوع معرف = ط٦٤.
-نوع كود = ص٣٢.
-
-معرف ر = ١٠٠.
-كود خ = -١.
-```
-
-### 3.4. Union Types (الاتحادات) [Scheduled v0.3.4.5]
-
-Unions allow different data types to share the same memory location.
-
-**Syntax:**
-```baa
-اتحاد بيانات {
-    صحيح رقم.
-    نص نص_قيمة.
-}
-
-اتحاد بيانات د.
-د:رقم = ١٠.
-```
-
-### 3.5. Static Local Variables (متغيرات ساكنة) [Scheduled v0.3.7.5]
-
-Variables inside a function that persist across calls.
-
-**Syntax:** `ساكن <type> <name> = <value>.`
-
-```baa
-صحيح عداد() {
-    ساكن صحيح ع = ٠.
-    ع = ع + ١.
-    إرجع ع.
-}
-```
-
-### 3.6. Type Casting (تحويل الأنواع) [Scheduled v0.3.10.5]
-
-Explicitly convert between types using `كـ` (As).
-
-**Syntax:** `كـ<type>(expression)`
-
-```baa
-صحيح س = ٦٥.
-حرف ح = كـ<حرف>(س).
-```
-
-**Character literals:** Baa supports character literals like `'أ'`, but there is currently no dedicated `حرف` type keyword; character literals behave like integers in expressions and code generation.
+| `منطقي` | `bool` (stored as byte) | Boolean value (`صواب`/`خطأ`) | `منطقي ب = صواب.` |
 
 ### 3.2. Scalar Variables
 
@@ -385,6 +314,60 @@ Explicitly convert between types using `كـ` (As).
     اتحاد قيمة بيانات.
 }
 ```
+
+---
+
+### 3.7. Planned Types & Features (Future)
+
+هذه الأقسام تُوثّق ميزات مخطط لها ولم تُنفّذ بعد.
+
+#### 3.7.1. Integer Sizes (أحجام الأعداد الصحيحة) [Scheduled v0.3.5.5]
+
+| Type | Description | Range (Approx) |
+|------|-------------|----------------|
+| `ص٨` | Signed 8-bit | -128 to 127 |
+| `ص١٦` | Signed 16-bit | -32,768 to 32,767 |
+| `ص٣٢` | Signed 32-bit | -2 Billion to +2 Billion |
+| `ص٦٤` | Signed 64-bit | Large (Default `صحيح`) |
+| `ط٨` | Unsigned 8-bit | 0 to 255 |
+| `ط١٦` | Unsigned 16-bit | 0 to 65,535 |
+| `ط٣٢` | Unsigned 32-bit | 0 to 4 Billion |
+| `ط٦٤` | Unsigned 64-bit | Huge (Default `طبيعي`) |
+
+#### 3.7.2. Type Aliases (أسماء الأنواع البديلة) [Scheduled v0.3.6.5]
+
+**Syntax:** `نوع <new_name> = <existing_type>.`
+
+```baa
+نوع معرف = ط٦٤.
+نوع كود = ص٣٢.
+
+معرف ر = ١٠٠.
+كود خ = -١.
+```
+
+#### 3.7.3. Static Local Variables (متغيرات ساكنة) [Scheduled v0.3.7.5]
+
+**Syntax:** `ساكن <type> <name> = <value>.`
+
+```baa
+صحيح عداد() {
+    ساكن صحيح ع = ٠.
+    ع = ع + ١.
+    إرجع ع.
+}
+```
+
+#### 3.7.4. Type Casting (تحويل الأنواع) [Scheduled v0.3.10.5]
+
+**Syntax:** `كـ<type>(expression)`
+
+```baa
+صحيح س = ٦٥.
+حرف ح = كـ<حرف>(س).
+```
+
+ملاحظة: توجد ثوابت محارف مثل `'أ'`، لكن نوع `حرف` ككلمة مفتاحية ما زال مخططاً.
 
 
 ## 4. Constants (الثوابت)

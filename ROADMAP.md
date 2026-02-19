@@ -477,13 +477,13 @@
   ```baa
   اتحاد قيمة ق.
   ق:رقم = ٤٢.        // All members share same memory
-  ق:عدد = ٣.١٤.      // Overwrites previous value
+  ق:نص_قيمة = "مرحبا". // Overwrites previous value
   ```
 
 - [x] **Tagged Union Pattern** (manual):
   ```baa
-  تعداد نوع_قيمة { رقم، عدد، نص_ق }
-  
+  تعداد نوع_قيمة { رقم، نص_ق }
+   
   هيكل قيمة_موسومة {
       تعداد نوع_قيمة نوع.
       اتحاد قيمة بيانات.
@@ -558,14 +558,18 @@
 
 ---
 
-### v0.3.5: Character Type 📝
+### v0.3.5: Character Type 📝 (يشمل `عشري` المؤجل)
 
 **Goal:** Add proper character type to align with C conventions.
+
+ملاحظة: `عشري` مؤجل إلى v0.3.5 (تم نقله من أمثلة الاتحادات v0.3.4.5).
 
 #### Features
 
 - [ ] **Character Type (`حرف`)** – Proper 1-byte character type (like C's `char`).
 - [ ] **String-Char Relationship** – Strings (`نص`) become arrays of characters (`حرف[]`).
+
+- [ ] **Float Type (`عشري`)** – *Deferred from v0.3.4.5* (basic type + literals; full FP pipeline remains later).
 
 **Syntax:**
 
@@ -1246,6 +1250,8 @@
 ### v0.4.2: Floating Point Support 🔢
 
 **Goal:** Add decimal number support.
+
+ملاحظة: إدخال نوع `عشري` نفسه مؤجل إلى v0.3.5؛ هذا القسم يركّز على إكمال خط الفاصلة العائمة بالكامل (عمليات/قواعد/مكتبة).
 
 - [ ] **Float Type (`عشري`)**:
 

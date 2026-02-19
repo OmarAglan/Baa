@@ -61,11 +61,24 @@ typedef struct {
     bool layout_in_progress;
 } StructDef;
 
+typedef struct {
+    char* name; // مملوك (strdup)
+    int field_count;
+    StructFieldDef fields[ANALYSIS_MAX_STRUCT_FIELDS];
+    int size;
+    int align;
+    bool layout_done;
+    bool layout_in_progress;
+} UnionDef;
+
 static EnumDef enum_defs[ANALYSIS_MAX_ENUMS];
 static int enum_count = 0;
 
 static StructDef struct_defs[ANALYSIS_MAX_STRUCTS];
 static int struct_count = 0;
+
+static UnionDef union_defs[ANALYSIS_MAX_STRUCTS];
+static int union_count = 0;
 
 static Symbol global_symbols[ANALYSIS_MAX_SYMBOLS];
 static int global_count = 0;
@@ -199,6 +212,23 @@ static void reset_analysis() {
         struct_defs[i].layout_in_progress = false;
     }
     struct_count = 0;
+
+    for (int i = 0; i < union_count; i++) {
+        free(union_defs[i].name);
+        union_defs[i].name = NULL;
+        for (int j = 0; j < union_defs[i].field_count; j++) {
+            free(union_defs[i].fields[j].name);
+            union_defs[i].fields[j].name = NULL;
+            free(union_defs[i].fields[j].type_name);
+            union_defs[i].fields[j].type_name = NULL;
+        }
+        union_defs[i].field_count = 0;
+        union_defs[i].size = 0;
+        union_defs[i].align = 0;
+        union_defs[i].layout_done = false;
+        union_defs[i].layout_in_progress = false;
+    }
+    union_count = 0;
     has_error = false;
     inside_loop = false;
     inside_switch = false;
@@ -485,6 +515,15 @@ static StructDef* struct_lookup_def(const char* name)
     return NULL;
 }
 
+static UnionDef* union_lookup_def(const char* name)
+{
+    if (!name) return NULL;
+    for (int i = 0; i < union_count; i++) {
+        if (union_defs[i].name && strcmp(union_defs[i].name, name) == 0) return &union_defs[i];
+    }
+    return NULL;
+}
+
 static int align_up_i32(int v, int a)
 {
     if (a <= 0) return v;
@@ -501,6 +540,17 @@ static StructFieldDef* struct_field_lookup(StructDef* sd, const char* field_name
     for (int i = 0; i < sd->field_count; i++) {
         if (sd->fields[i].name && strcmp(sd->fields[i].name, field_name) == 0) {
             return &sd->fields[i];
+        }
+    }
+    return NULL;
+}
+
+static StructFieldDef* union_field_lookup(UnionDef* ud, const char* field_name)
+{
+    if (!ud || !field_name) return NULL;
+    for (int i = 0; i < ud->field_count; i++) {
+        if (ud->fields[i].name && strcmp(ud->fields[i].name, field_name) == 0) {
+            return &ud->fields[i];
         }
     }
     return NULL;
@@ -546,6 +596,46 @@ static int struct_compute_layout(StructDef* sd)
     return 1;
 }
 
+static int union_compute_layout(UnionDef* ud)
+{
+    if (!ud) return 0;
+    if (ud->layout_done) return 1;
+    if (ud->layout_in_progress) {
+        semantic_error_loc(current_filename, 1, 1,
+                           "تعريف اتحاد تراجعي/دائري غير مدعوم حالياً (cycle) في '%s'.",
+                           ud->name ? ud->name : "???");
+        return 0;
+    }
+
+    ud->layout_in_progress = true;
+
+    int max_align = 1;
+    int max_size = 0;
+
+    for (int i = 0; i < ud->field_count; i++) {
+        StructFieldDef* f = &ud->fields[i];
+        int falign = 1;
+        int fsize = type_size_align(f->type, f->type_name, &falign);
+        if (fsize < 0) fsize = 0;
+        if (falign < 1) falign = 1;
+
+        // كل حقول الاتحاد تبدأ من 0
+        f->offset = 0;
+        f->size = fsize;
+        f->align = falign;
+
+        if (falign > max_align) max_align = falign;
+        if (fsize > max_size) max_size = fsize;
+    }
+
+    ud->align = max_align;
+    ud->size = align_up_i32(max_size, max_align);
+
+    ud->layout_in_progress = false;
+    ud->layout_done = true;
+    return 1;
+}
+
 static int type_size_align(DataType t, const char* type_name, int* out_align)
 {
     if (out_align) *out_align = 1;
@@ -570,6 +660,17 @@ static int type_size_align(DataType t, const char* type_name, int* out_align)
             (void)struct_compute_layout(sd);
             if (out_align) *out_align = (sd->align > 0) ? sd->align : 1;
             return (sd->size > 0) ? sd->size : 0;
+        }
+        case TYPE_UNION: {
+            UnionDef* ud = union_lookup_def(type_name);
+            if (!ud) {
+                semantic_error_loc(current_filename, 1, 1,
+                                   "اتحاد غير معرّف '%s'.", type_name ? type_name : "???");
+                return 0;
+            }
+            (void)union_compute_layout(ud);
+            if (out_align) *out_align = (ud->align > 0) ? ud->align : 1;
+            return (ud->size > 0) ? ud->size : 0;
         }
         default:
             return 0;
@@ -622,10 +723,11 @@ static void resolve_member_access(Node* node)
         }
     }
 
-    // 2) وصول عضو هيكل
+    // 2) وصول عضو هيكل/اتحاد
     const char* root_var = NULL;
     bool root_is_global = false;
     const char* cur_struct = NULL;
+    DataType cur_kind = TYPE_STRUCT;
     int base_off = 0;
     bool base_const = false;
 
@@ -635,24 +737,27 @@ static void resolve_member_access(Node* node)
             semantic_error(node, "متغير غير معرّف '%s'.", base->data.var_ref.name ? base->data.var_ref.name : "???");
             return;
         }
-        if (sym->type != TYPE_STRUCT) {
-            semantic_error(node, "'%s' ليس هيكلاً.", sym->name);
+        if (sym->type != TYPE_STRUCT && sym->type != TYPE_UNION) {
+            semantic_error(node, "'%s' ليس هيكلاً/اتحاداً.", sym->name);
             return;
         }
         root_var = sym->name;
         root_is_global = (sym->scope == SCOPE_GLOBAL);
         cur_struct = sym->type_name[0] ? sym->type_name : NULL;
+        cur_kind = sym->type;
         base_off = 0;
         base_const = sym->is_const;
     } else if (base->type == NODE_MEMBER_ACCESS) {
         resolve_member_access(base);
-        if (!base->data.member_access.is_struct_member || base->data.member_access.member_type != TYPE_STRUCT) {
+        if (!base->data.member_access.is_struct_member ||
+            (base->data.member_access.member_type != TYPE_STRUCT && base->data.member_access.member_type != TYPE_UNION)) {
             semantic_error(node, "لا يمكن تطبيق ':' على تعبير غير هيكلي.");
             return;
         }
         root_var = base->data.member_access.root_var;
         root_is_global = base->data.member_access.root_is_global;
         cur_struct = base->data.member_access.member_type_name;
+        cur_kind = base->data.member_access.member_type;
         base_off = base->data.member_access.member_offset;
         base_const = base->data.member_access.member_is_const;
     } else {
@@ -665,15 +770,26 @@ static void resolve_member_access(Node* node)
         return;
     }
 
-    StructDef* sd = struct_lookup_def(cur_struct);
-    if (!sd) {
-        semantic_error(node, "هيكل غير معرّف '%s'.", cur_struct);
-        return;
+    StructFieldDef* f = NULL;
+    if (cur_kind == TYPE_STRUCT) {
+        StructDef* sd = struct_lookup_def(cur_struct);
+        if (!sd) {
+            semantic_error(node, "هيكل غير معرّف '%s'.", cur_struct);
+            return;
+        }
+        (void)struct_compute_layout(sd);
+        f = struct_field_lookup(sd, member);
+    } else {
+        UnionDef* ud = union_lookup_def(cur_struct);
+        if (!ud) {
+            semantic_error(node, "اتحاد غير معرّف '%s'.", cur_struct);
+            return;
+        }
+        (void)union_compute_layout(ud);
+        f = union_field_lookup(ud, member);
     }
-    (void)struct_compute_layout(sd);
-    StructFieldDef* f = struct_field_lookup(sd, member);
     if (!f) {
-        semantic_error(node, "عضو هيكل غير معرّف '%s:%s'.", cur_struct, member);
+        semantic_error(node, "عضو غير معرّف '%s:%s'.", cur_struct, member);
         return;
     }
 
@@ -797,6 +913,62 @@ static void struct_register_decl(Node* node)
     }
 }
 
+static void union_register_decl(Node* node)
+{
+    if (!node || node->type != NODE_UNION_DECL) return;
+    const char* name = node->data.union_decl.name;
+    if (!name) {
+        semantic_error(node, "اسم الاتحاد فارغ.");
+        return;
+    }
+
+    if (enum_lookup_def(name) || struct_lookup_def(name) || union_lookup_def(name)) {
+        semantic_error(node, "تعريف نوع مكرر '%s'.", name);
+        return;
+    }
+
+    if (union_count >= ANALYSIS_MAX_STRUCTS) {
+        semantic_error(node, "عدد الاتحادات كبير جداً (الحد %d).", ANALYSIS_MAX_STRUCTS);
+        return;
+    }
+
+    UnionDef* ud = &union_defs[union_count++];
+    memset(ud, 0, sizeof(*ud));
+    ud->name = strdup(name);
+    ud->layout_done = false;
+    ud->layout_in_progress = false;
+
+    for (Node* f = node->data.union_decl.fields; f; f = f->next) {
+        if (f->type != NODE_VAR_DECL) continue;
+        if (!f->data.var_decl.name) continue;
+
+        if (ud->field_count >= ANALYSIS_MAX_STRUCT_FIELDS) {
+            semantic_error(f, "عدد حقول الاتحاد '%s' كبير جداً (الحد %d).", name, ANALYSIS_MAX_STRUCT_FIELDS);
+            return;
+        }
+
+        // تحقق من تكرار أسماء الحقول
+        for (int i = 0; i < ud->field_count; i++) {
+            if (ud->fields[i].name && strcmp(ud->fields[i].name, f->data.var_decl.name) == 0) {
+                semantic_error(f, "حقل مكرر داخل الاتحاد '%s': '%s'.", name, f->data.var_decl.name);
+                return;
+            }
+        }
+
+        StructFieldDef* out = &ud->fields[ud->field_count++];
+        memset(out, 0, sizeof(*out));
+        out->name = strdup(f->data.var_decl.name);
+        out->type = f->data.var_decl.type;
+        out->type_name = f->data.var_decl.type_name ? strdup(f->data.var_decl.type_name) : NULL;
+        out->is_const = f->data.var_decl.is_const;
+        out->offset = 0;
+    }
+
+    if (ud->field_count <= 0) {
+        semantic_error(node, "الاتحاد '%s' يجب أن يحتوي على حقل واحد على الأقل.", name);
+    }
+}
+
 /**
  * @brief التحقق من المتغيرات غير المستخدمة في النطاق المحلي.
  */
@@ -852,6 +1024,7 @@ static const char* datatype_to_str(DataType type) {
         case TYPE_BOOL: return "BOOLEAN";
         case TYPE_ENUM: return "ENUM";
         case TYPE_STRUCT: return "STRUCT";
+        case TYPE_UNION: return "UNION";
         default: return "UNKNOWN";
     }
 }
@@ -874,6 +1047,11 @@ static bool types_compatible_named(DataType got, const char* got_name,
     }
     if (expected == TYPE_STRUCT) {
         if (got != TYPE_STRUCT) return false;
+        if (!got_name || !expected_name) return false;
+        return strcmp(got_name, expected_name) == 0;
+    }
+    if (expected == TYPE_UNION) {
+        if (got != TYPE_UNION) return false;
         if (!got_name || !expected_name) return false;
         return strcmp(got_name, expected_name) == 0;
     }
@@ -1013,9 +1191,9 @@ static DataType infer_type(Node* node) {
                 semantic_error(node, "لا يمكن استخدام المصفوفة '%s' بدون فهرس.", node->data.var_ref.name);
                 return sym->type;
             }
-            if (sym->type == TYPE_STRUCT) {
-                semantic_error(node, "لا يمكن استخدام الهيكل '%s' كقيمة مباشرة (استخدم ':' للوصول لعضو).", sym->name);
-                return TYPE_STRUCT;
+            if (sym->type == TYPE_STRUCT || sym->type == TYPE_UNION) {
+                semantic_error(node, "لا يمكن استخدام النوع المركب '%s' كقيمة مباشرة (استخدم ':' للوصول لعضو).", sym->name);
+                return sym->type;
             }
             return sym->type;
         }
@@ -1026,8 +1204,9 @@ static DataType infer_type(Node* node) {
                 return TYPE_ENUM;
             }
             if (node->data.member_access.is_struct_member) {
-                if (node->data.member_access.member_type == TYPE_STRUCT) {
-                    semantic_error(node, "لا يمكن استخدام عضو هيكل من نوع هيكل كقيمة (استخدم ':' للتعشيش).");
+                if (node->data.member_access.member_type == TYPE_STRUCT ||
+                    node->data.member_access.member_type == TYPE_UNION) {
+                    semantic_error(node, "لا يمكن استخدام عضو مركب كقيمة (استخدم ':' للتعشيش).");
                 }
                 return node->data.member_access.member_type;
             }
@@ -1201,13 +1380,19 @@ static void analyze_node(Node* node) {
                     enum_register_decl(td);
                 } else if (td->type == NODE_STRUCT_DECL) {
                     struct_register_decl(td);
+                } else if (td->type == NODE_UNION_DECL) {
+                    union_register_decl(td);
                 }
                 td = td->next;
             }
 
-            // حساب تخطيط الذاكرة للهياكل مبكراً لالتقاط الأخطاء بسرعة
+            // حساب تخطيط الذاكرة للهياكل/الاتحادات مبكراً لالتقاط الأخطاء بسرعة
             for (int i = 0; i < struct_count; i++) {
                 (void)struct_compute_layout(&struct_defs[i]);
+            }
+
+            for (int i = 0; i < union_count; i++) {
+                (void)union_compute_layout(&union_defs[i]);
             }
 
             // 1) تسجيل تواقيع الدوال أولاً لدعم الاستدعاء قبل التعريف
@@ -1253,24 +1438,35 @@ static void analyze_node(Node* node) {
                     }
                 }
             }
-            else if (declType == TYPE_STRUCT) {
+            else if (declType == TYPE_STRUCT || declType == TYPE_UNION) {
                 if (!declTypeName) {
-                    semantic_error(node, "اسم نوع الهيكل مفقود.");
+                    semantic_error(node, "اسم نوع مركب مفقود.");
                 }
-                StructDef* sd = struct_lookup_def(declTypeName);
-                if (!sd) {
-                    semantic_error(node, "هيكل غير معرّف '%s'.", declTypeName ? declTypeName : "???");
+                if (declType == TYPE_STRUCT) {
+                    StructDef* sd = struct_lookup_def(declTypeName);
+                    if (!sd) {
+                        semantic_error(node, "هيكل غير معرّف '%s'.", declTypeName ? declTypeName : "???");
+                    } else {
+                        (void)struct_compute_layout(sd);
+                        node->data.var_decl.struct_size = sd->size;
+                        node->data.var_decl.struct_align = sd->align;
+                    }
                 } else {
-                    (void)struct_compute_layout(sd);
-                    node->data.var_decl.struct_size = sd->size;
-                    node->data.var_decl.struct_align = sd->align;
+                    UnionDef* ud = union_lookup_def(declTypeName);
+                    if (!ud) {
+                        semantic_error(node, "اتحاد غير معرّف '%s'.", declTypeName ? declTypeName : "???");
+                    } else {
+                        (void)union_compute_layout(ud);
+                        node->data.var_decl.struct_size = ud->size;
+                        node->data.var_decl.struct_align = ud->align;
+                    }
                 }
 
                 if (node->data.var_decl.expression) {
-                    semantic_error(node, "تهيئة الهيكل بهذه الصيغة غير مدعومة حالياً.");
+                    semantic_error(node, "تهيئة النوع المركب بهذه الصيغة غير مدعومة حالياً.");
                 }
                 if (node->data.var_decl.is_const) {
-                    semantic_error(node, "لا يمكن تعريف هيكل ثابت بدون تهيئة (غير مدعوم حالياً).");
+                    semantic_error(node, "لا يمكن تعريف نوع مركب ثابت بدون تهيئة (غير مدعوم حالياً).");
                 }
             }
             else {

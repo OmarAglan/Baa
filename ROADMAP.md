@@ -1,7 +1,7 @@
 # Baa Roadmap (Updated)
 
 > Track the development progress of the Baa programming language.
-> **Current Status:** Phase 3.5 - Language Completeness (v0.3.4)
+> **Current Status:** Phase 3.5 - Language Completeness (v0.3.4.5)
 
 ---
 
@@ -459,28 +459,28 @@
 - [x] **Struct Declaration** – Group related data into composite types (supports nested structs + enum fields).
 - [x] **Member Access** – Use `:` (colon) operator for accessing members.
 
-### v0.3.4.5: Union Types (الاتحادات) 🔀
+### v0.3.4.5: Union Types (الاتحادات) 🔀 ✅ COMPLETED (2026-02-19)
 **Goal:** Memory-efficient variant types for parsers and data structures.
 
 #### Features
-- [ ] **Union Declaration**:
+- [x] **Union Declaration**:
   ```baa
   اتحاد قيمة {
       صحيح رقم.
-      عشري عدد.
+      // ملاحظة: `عشري` مؤجل إلى v0.3.5.
       نص نص_قيمة.
       منطقي منطق.
   }
   ```
 
-- [ ] **Union Usage**:
+- [x] **Union Usage**:
   ```baa
   اتحاد قيمة ق.
   ق:رقم = ٤٢.        // All members share same memory
   ق:عدد = ٣.١٤.      // Overwrites previous value
   ```
 
-- [ ] **Tagged Union Pattern** (manual):
+- [x] **Tagged Union Pattern** (manual):
   ```baa
   تعداد نوع_قيمة { رقم، عدد، نص_ق }
   
@@ -491,11 +491,11 @@
   ```
 
 #### Implementation Tasks
-- [ ] **Token**: Add `TOKEN_UNION` for `اتحاد` keyword.
-- [ ] **Parser**: Parse union declaration similar to struct.
-- [ ] **Semantic**: All members start at offset 0.
-- [ ] **Memory Layout**: Size = max member size, align = max member align.
-- [ ] **Codegen**: Generate union access code.
+- [x] **Token**: Add `TOKEN_UNION` for `اتحاد` keyword.
+- [x] **Parser**: Parse union declaration similar to struct.
+- [x] **Semantic**: All members start at offset 0.
+- [x] **Memory Layout**: Size = max member size, align = max member align.
+- [x] **Codegen**: Generate union storage + member access code.
 
 **Complete Example:**
 
@@ -1797,3 +1797,4 @@ fi
 ---
 
 *For detailed changes, see the [Changelog](CHANGELOG.md)*
+iled changes, see the [Changelog](CHANGELOG.md)*

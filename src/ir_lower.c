@@ -498,7 +498,8 @@ IRValue* lower_expr(IRLowerCtx* ctx, Node* expr) {
                 return ir_builder_const_i64(0);
             }
 
-            if (expr->data.member_access.member_type == TYPE_STRUCT) {
+            if (expr->data.member_access.member_type == TYPE_STRUCT ||
+                expr->data.member_access.member_type == TYPE_UNION) {
                 ir_lower_report_error(ctx, expr, "قراءة عضو هيكل من نوع هيكل كقيمة غير مدعومة.");
                 return ir_builder_const_i64(0);
             }
@@ -638,8 +639,8 @@ static void lower_var_decl(IRLowerCtx* ctx, Node* stmt) {
         return;
     }
 
-    // هيكل محلي: نخزّنه ككتلة بايتات (array<i8, N>) على المكدس.
-    if (stmt->data.var_decl.type == TYPE_STRUCT) {
+    // نوع مركب محلي (هيكل/اتحاد): نخزّنه ككتلة بايتات (array<i8, N>) على المكدس.
+    if (stmt->data.var_decl.type == TYPE_STRUCT || stmt->data.var_decl.type == TYPE_UNION) {
         int n = stmt->data.var_decl.struct_size;
         if (n <= 0) {
             ir_lower_report_error(ctx, stmt, "حجم الهيكل غير صالح أثناء خفض IR.");
@@ -775,7 +776,8 @@ static void lower_member_assign(IRLowerCtx* ctx, Node* stmt) {
         return;
     }
 
-    if (target->data.member_access.member_type == TYPE_STRUCT) {
+    if (target->data.member_access.member_type == TYPE_STRUCT ||
+        target->data.member_access.member_type == TYPE_UNION) {
         ir_lower_report_error(ctx, stmt, "إسناد عضو من نوع هيكل غير مدعوم حالياً.");
         (void)lower_expr(ctx, value);
         return;
@@ -1519,7 +1521,7 @@ IRModule* ir_lower_program(Node* program, const char* module_name) {
 
         // Globals
         if (decl->type == NODE_VAR_DECL && decl->data.var_decl.is_global) {
-            if (decl->data.var_decl.type == TYPE_STRUCT) {
+            if (decl->data.var_decl.type == TYPE_STRUCT || decl->data.var_decl.type == TYPE_UNION) {
                 int n = decl->data.var_decl.struct_size;
                 if (n <= 0) {
                     fprintf(stderr, "IR Lower Error: global struct '%s' has invalid size\n",

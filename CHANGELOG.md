@@ -8,6 +8,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.3.4.5] - 2026-02-19
+
+### Added
+
+- **Union types (اتحاد)** — union declarations, nested unions, and member access via `:` with all members at offset 0.
+- **Tagged union pattern** — can be expressed manually using `تعداد` + `هيكل` + `اتحاد`.
+
+### Changed
+
+- **Optimizer inliner** — fixes register mapping on first-use to keep CFG valid under `-O2 --verify` for functions with out-of-order block lists.
+
 ## [0.3.4] - 2026-02-18
 
 ### Added

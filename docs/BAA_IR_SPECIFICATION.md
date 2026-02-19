@@ -1,6 +1,6 @@
 # Baa IR Specification
 
-> **Version:** 0.3.4 | [← Compiler Internals](INTERNALS.md) | [API Reference →](API_REFERENCE.md)
+> **Version:** 0.3.4.5 | [← Compiler Internals](INTERNALS.md) | [API Reference →](API_REFERENCE.md)
 
 This document specifies the Intermediate Representation (IR) for the Baa compiler. The IR uses Arabic naming conventions throughout, creating a culturally authentic yet technically robust design.
 
@@ -274,6 +274,7 @@ Example:
 | `NODE_RETURN` | `رجوع` instruction |
 | `NODE_ENUM_DECL` | Compile-time type table (no direct IR) |
 | `NODE_STRUCT_DECL` | Compile-time layout table (no direct IR) |
+| `NODE_UNION_DECL` | Compile-time layout table (no direct IR; all members offset 0) |
 | `NODE_MEMBER_ACCESS` | Byte-based `إزاحة_مؤشر` on `ptr<i8>` + `حمل/خزن` |
 | `NODE_MEMBER_ASSIGN` | Byte-based `إزاحة_مؤشر` on `ptr<i8>` + `خزن` |
 

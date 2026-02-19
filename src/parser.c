@@ -115,7 +115,7 @@ void eat(BaaTokenType type) {
  */
 bool is_type_keyword(BaaTokenType type) {
     return (type == TOKEN_KEYWORD_INT || type == TOKEN_KEYWORD_STRING || type == TOKEN_KEYWORD_BOOL ||
-            type == TOKEN_ENUM || type == TOKEN_STRUCT);
+            type == TOKEN_ENUM || type == TOKEN_STRUCT || type == TOKEN_UNION);
 }
 
 /**
@@ -152,8 +152,9 @@ static bool parse_type_spec(DataType* out_type, char** out_type_name) {
         return true;
     }
 
-    if (parser.current.type == TOKEN_ENUM || parser.current.type == TOKEN_STRUCT) {
+    if (parser.current.type == TOKEN_ENUM || parser.current.type == TOKEN_STRUCT || parser.current.type == TOKEN_UNION) {
         bool is_enum = (parser.current.type == TOKEN_ENUM);
+        bool is_union = (parser.current.type == TOKEN_UNION);
         eat(parser.current.type);
 
         if (parser.current.type != TOKEN_IDENTIFIER) {
@@ -164,7 +165,7 @@ static bool parse_type_spec(DataType* out_type, char** out_type_name) {
         char* tn = strdup(parser.current.value);
         eat(TOKEN_IDENTIFIER);
 
-        if (out_type) *out_type = is_enum ? TYPE_ENUM : TYPE_STRUCT;
+        if (out_type) *out_type = is_enum ? TYPE_ENUM : (is_union ? TYPE_UNION : TYPE_STRUCT);
         if (out_type_name) *out_type_name = tn;
         else free(tn);
 
@@ -194,6 +195,7 @@ void synchronize() {
             case TOKEN_KEYWORD_BOOL:
             case TOKEN_ENUM:
             case TOKEN_STRUCT:
+            case TOKEN_UNION:
             case TOKEN_CONST:
             case TOKEN_IF:
             case TOKEN_WHILE:
@@ -1013,9 +1015,9 @@ Node* parse_statement() {
         }
 
         // تعريف هيكل (محلي): هيكل <T> <name>.
-        if (dt == TYPE_STRUCT) {
+        if (dt == TYPE_STRUCT || dt == TYPE_UNION) {
             if (is_const) {
-                error_report(tok_const, "لا يمكن تعريف هيكل ثابت بدون تهيئة (غير مدعوم حالياً).");
+                error_report(tok_const, "لا يمكن تعريف نوع مركب ثابت بدون تهيئة (غير مدعوم حالياً).");
             }
             eat(TOKEN_DOT);
 
@@ -1157,8 +1159,8 @@ Node* parse_declaration() {
             return NULL;
         }
 
-        // تعريف تعداد/هيكل: تعداد <name> { ... }  |  هيكل <name> { ... }
-        if ((dt == TYPE_ENUM || dt == TYPE_STRUCT) && parser.current.type == TOKEN_LBRACE) {
+        // تعريف تعداد/هيكل/اتحاد: تعداد <name> { ... }  |  هيكل <name> { ... } | اتحاد <name> { ... }
+        if ((dt == TYPE_ENUM || dt == TYPE_STRUCT || dt == TYPE_UNION) && parser.current.type == TOKEN_LBRACE) {
             if (is_const) {
                 error_report(parser.current, "Type declarations cannot be const.");
             }
@@ -1207,7 +1209,7 @@ Node* parse_declaration() {
                 return en;
             }
 
-            // struct
+            // struct / union
             eat(TOKEN_LBRACE);
             Node* head_f = NULL;
             Node* tail_f = NULL;
@@ -1254,6 +1256,8 @@ Node* parse_declaration() {
                 field->data.var_decl.name = fname;
                 field->data.var_decl.type = fdt;
                 field->data.var_decl.type_name = ftype_name;
+                field->data.var_decl.struct_size = 0;
+                field->data.var_decl.struct_align = 0;
                 field->data.var_decl.expression = NULL;
                 field->data.var_decl.is_global = false;
                 field->data.var_decl.is_const = field_const;
@@ -1264,11 +1268,19 @@ Node* parse_declaration() {
             }
             eat(TOKEN_RBRACE);
 
-            Node* st = ast_node_new(NODE_STRUCT_DECL, tok_name);
-            if (!st) return NULL;
-            st->data.struct_decl.name = type_name;
-            st->data.struct_decl.fields = head_f;
-            return st;
+            if (dt == TYPE_STRUCT) {
+                Node* st = ast_node_new(NODE_STRUCT_DECL, tok_name);
+                if (!st) return NULL;
+                st->data.struct_decl.name = type_name;
+                st->data.struct_decl.fields = head_f;
+                return st;
+            }
+
+            Node* un = ast_node_new(NODE_UNION_DECL, tok_name);
+            if (!un) return NULL;
+            un->data.union_decl.name = type_name;
+            un->data.union_decl.fields = head_f;
+            return un;
         }
 
         // متغير/دالة: نحتاج اسم الرمز بعد نوعه
@@ -1285,13 +1297,13 @@ Node* parse_declaration() {
 
         // دالة: نسمح فقط بأنواع بدائية حالياً
         if (parser.current.type == TOKEN_LPAREN) {
-            if (dt == TYPE_ENUM || dt == TYPE_STRUCT) {
-                error_report(parser.current, "User-defined return types are not supported in function signatures yet.");
-                free(type_name);
-                free(name);
-                synchronize();
-                return NULL;
-            }
+                if (dt == TYPE_ENUM || dt == TYPE_STRUCT || dt == TYPE_UNION) {
+                    error_report(parser.current, "User-defined return types are not supported in function signatures yet.");
+                    free(type_name);
+                    free(name);
+                    synchronize();
+                    return NULL;
+                }
             if (is_const) {
                 error_report(parser.current, "Functions cannot be declared as const.");
             }
@@ -1407,12 +1419,12 @@ Node* parse_declaration() {
         }
 
         // متغير عام
-        if (dt == TYPE_STRUCT) {
+        if (dt == TYPE_STRUCT || dt == TYPE_UNION) {
             if (is_const) {
-                error_report(parser.current, "لا يمكن تعريف هيكل ثابت بدون تهيئة (غير مدعوم حالياً).");
+                error_report(parser.current, "لا يمكن تعريف نوع مركب ثابت بدون تهيئة (غير مدعوم حالياً).");
             }
             if (parser.current.type == TOKEN_ASSIGN) {
-                error_report(parser.current, "تهيئة الهياكل العامة بالصيغة '=' غير مدعومة حالياً.");
+                error_report(parser.current, "تهيئة الأنواع المركبة العامة بالصيغة '=' غير مدعومة حالياً.");
                 eat(TOKEN_ASSIGN);
                 (void)parse_expression();
             }

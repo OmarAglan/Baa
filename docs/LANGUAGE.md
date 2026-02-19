@@ -1,6 +1,6 @@
 # Baa Language Specification
 
-> **Version:** 0.3.4 | [← User Guide](USER_GUIDE.md) | [Compiler Internals →](INTERNALS.md)
+> **Version:** 0.3.4.5 | [← User Guide](USER_GUIDE.md) | [Compiler Internals →](INTERNALS.md)
 
 Baa (باء) is a compiled systems programming language using Arabic syntax. It compiles directly to native machine code via Assembly/GCC on Windows.
 
@@ -337,6 +337,54 @@ Explicitly convert between types using `كـ` (As).
 
 - لا يمكن استخدام الهيكل كقيمة من الدرجة الأولى (لا يوجد إسناد/تمرير/إرجاع بالنسخ).
 - تهيئة الهيكل عند التعريف (`=`) غير مدعومة حالياً؛ يتم تعيين الحقول عبر `:`.
+
+---
+
+### 3.6. Union Types (الاتحادات)
+
+الاتحاد (`اتحاد`) نوع مركب يُشارك فيه جميع الأعضاء نفس الذاكرة. جميع الأعضاء تبدأ من إزاحة 0.
+
+**تعريف اتحاد:**
+
+```baa
+اتحاد قيمة {
+    صحيح رقم.
+    نص نص_قيمة.
+    منطقي منطق.
+}
+```
+
+**تعريف متغير اتحاد واستخدامه:**
+
+```baa
+صحيح الرئيسية() {
+    اتحاد قيمة ق.
+    ق:رقم = ٤٢.
+    اطبع ق:رقم.
+
+    // الكتابة إلى عضو آخر تكتب فوق نفس الذاكرة.
+    ق:نص_قيمة = "مرحبا".
+    اطبع ق:نص_قيمة.
+
+    إرجع ٠.
+}
+```
+
+**نمط اتحاد موسوم (Tagged Union) يدوياً:**
+
+```baa
+تعداد نوع_قيمة { رقم، نص_ق }
+
+اتحاد قيمة {
+    صحيح رقم.
+    نص نص_قيمة.
+}
+
+هيكل قيمة_موسومة {
+    تعداد نوع_قيمة نوع.
+    اتحاد قيمة بيانات.
+}
+```
 
 
 ## 4. Constants (الثوابت)

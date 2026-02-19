@@ -577,6 +577,7 @@ Token lexer_next_token(Lexer* l) {
         else if (strcmp(word, "خطأ") == 0) token.type = TOKEN_FALSE;
         else if (strcmp(word, "تعداد") == 0) token.type = TOKEN_ENUM;
         else if (strcmp(word, "هيكل") == 0) token.type = TOKEN_STRUCT;
+        else if (strcmp(word, "اتحاد") == 0) token.type = TOKEN_UNION;
         else {
             token.type = TOKEN_IDENTIFIER;
             token.value = word;
@@ -625,6 +626,7 @@ const char* token_type_to_str(BaaTokenType type) {
         case TOKEN_FALSE: return "خطأ";
         case TOKEN_ENUM: return "تعداد";
         case TOKEN_STRUCT: return "هيكل";
+        case TOKEN_UNION: return "اتحاد";
         
         // رموز
         case TOKEN_ASSIGN: return "=";

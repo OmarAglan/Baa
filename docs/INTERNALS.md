@@ -1,6 +1,6 @@
 # Baa Compiler Internals
 
-> **Version:** 0.3.4 | [← Language Spec](LANGUAGE.md) | [API Reference →](API_REFERENCE.md)
+> **Version:** 0.3.4.5 | [← Language Spec](LANGUAGE.md) | [API Reference →](API_REFERENCE.md)
 
 **Target Architecture:** x86-64 (AMD64)
 **Target OS:** Windows (MinGW-w64 Toolchain)
@@ -307,7 +307,7 @@ The Parser (`src/parser.c`) builds the AST using Recursive Descent with 1-token 
 
 ```bnf
 Program       ::= Declaration* EOF
-Declaration   ::= FuncDecl | GlobalVarDecl | GlobalArrayDecl | EnumDecl | StructDecl
+Declaration   ::= FuncDecl | GlobalVarDecl | GlobalArrayDecl | EnumDecl | StructDecl | UnionDecl
 
 FuncDecl      ::= Type ID "(" ParamList ")" Block
                 | Type ID "(" ParamList ")" "."    // Prototype (v0.2.5+)
@@ -315,12 +315,14 @@ GlobalVarDecl ::= ConstMod? TypeSpec ID ("=" Expr)? "."
 GlobalArrayDecl ::= ConstMod? "صحيح" ID "[" INT "]" ArrayInit? "."   // v0.3.3+
 EnumDecl      ::= "تعداد" ID "{" EnumMembers? "}"                    // v0.3.4+
 StructDecl    ::= "هيكل" ID "{" FieldDecl* "}"                      // v0.3.4+
+UnionDecl     ::= "اتحاد" ID "{" FieldDecl* "}"                     // v0.3.4.5+
 
 ConstMod      ::= "ثابت"                           // NEW in v0.2.7
-TypeSpec      ::= Type | EnumType | StructType
+TypeSpec      ::= Type | EnumType | StructType | UnionType
 Type          ::= "صحيح" | "نص" | "منطقي"          // Updated in v0.2.9
 EnumType      ::= "تعداد" ID
 StructType    ::= "هيكل" ID
+UnionType     ::= "اتحاد" ID
 
 Block         ::= "{" Statement* "}"
 Statement     ::= VarDecl | ArrayDecl | Assign | ArrayAssign | MemberAssign

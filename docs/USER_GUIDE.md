@@ -1,6 +1,6 @@
 # Baa User Guide
 
-> **Version:** 0.3.4 | [← README](../README.md) | [Language Spec →](LANGUAGE.md)
+> **Version:** 0.3.4.5 | [← README](../README.md) | [Language Spec →](LANGUAGE.md)
 
 Welcome to Baa (باء)! This guide will help you write your first Arabic computer program and use the Baa compiler toolchain.
 
@@ -13,7 +13,7 @@ Welcome to Baa (باء)! This guide will help you write your first Arabic comput
 - [Command Line Interface](#3-command-line-interface)
 - [Common Patterns](#4-common-patterns)
 - [Troubleshooting](#5-troubleshooting)
-- [Linux Packaging (TGZ + DEB)](#6-linux-packaging-tgz--deb-v034)
+- [Linux Packaging (TGZ + DEB)](#6-linux-packaging-tgz--deb-v0345)
 
 ---
 
@@ -128,7 +128,7 @@ The Baa compiler is a full-featured command-line tool (since v0.2.0):
 
 ---
 
-## 6. Linux Packaging (TGZ + DEB) (v0.3.4)
+## 6. Linux Packaging (TGZ + DEB) (v0.3.4.5)
 
 You can generate Linux installer artifacts from a Linux build:
 
@@ -150,13 +150,13 @@ bash scripts/package_linux.sh
 Install (DEB):
 
 ```bash
-sudo dpkg -i build-linux/baa-0.3.4-Linux-x86_64.deb
+sudo dpkg -i build-linux/baa-0.3.4.5-Linux-x86_64.deb
 ```
 
 Install (TGZ):
 
 ```bash
-tar -xzf build-linux/baa-0.3.4-Linux-x86_64.tar.gz
+tar -xzf build-linux/baa-0.3.4.5-Linux-x86_64.tar.gz
 sudo cp -a usr/* /usr/
 ```
 
@@ -200,7 +200,7 @@ sudo cp -a usr/* /usr/
 - `-o <file>` is only applied for `-S` / `-c` when compiling a single input file.
 - `update` must be used alone: `.\baa.exe update`
 
-### Current Limitations (v0.3.4)
+### Current Limitations (v0.3.4.5)
 
 - Stack-argument calling is implemented for integer/pointer-like values. Floating-point/SIMD arguments are not modeled yet.
 

@@ -15,7 +15,7 @@
 #include <stdarg.h>
 
 // معلومات الإصدار
-#define BAA_VERSION "0.3.4"
+#define BAA_VERSION "0.3.4.5"
 #define BAA_BUILD_DATE __DATE__
 
 // ============================================================================
@@ -56,6 +56,7 @@ typedef enum {
     // أنواع مركبة (v0.3.4)
     TOKEN_ENUM,         // تعداد
     TOKEN_STRUCT,       // هيكل
+    TOKEN_UNION,        // اتحاد
     
     // الرموز (Symbols)
     TOKEN_ASSIGN,       // =
@@ -283,6 +284,7 @@ typedef enum {
     NODE_ENUM_DECL,     // تعريف تعداد: تعداد لون { ... }
     NODE_STRUCT_DECL,   // تعريف هيكل: هيكل سيارة { ... }
     NODE_ENUM_MEMBER,   // عنصر تعداد داخل تعريفه
+    NODE_UNION_DECL,    // تعريف اتحاد: اتحاد قيمة { ... }
     
     // الجمل البرمجية (Statements)
     NODE_BLOCK,         // نطاق { ... } وكتلة الدالة
@@ -329,7 +331,8 @@ typedef enum {
     TYPE_STRING,        // نص (char*)
     TYPE_BOOL,          // منطقي (bool - stored as byte)
     TYPE_ENUM,          // تعداد (يُخزن كـ int64)
-    TYPE_STRUCT         // هيكل (ليس قيمة من الدرجة الأولى)
+    TYPE_STRUCT,        // هيكل (ليس قيمة من الدرجة الأولى)
+    TYPE_UNION          // اتحاد (ليس قيمة من الدرجة الأولى)
 } DataType;
 
 /**
@@ -418,6 +421,12 @@ typedef struct Node {
             char* name;              // اسم الهيكل
             struct Node* fields;     // قائمة حقول (NODE_VAR_DECL) بدون تهيئة
         } struct_decl;
+
+        // تعريف اتحاد
+        struct {
+            char* name;              // اسم الاتحاد
+            struct Node* fields;     // قائمة حقول (NODE_VAR_DECL) بدون تهيئة
+        } union_decl;
 
         // الوصول إلى عضو هيكل أو قيمة تعداد
         struct {

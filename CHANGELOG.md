@@ -8,6 +8,24 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.3.5] - 2026-02-20
+
+### Added
+
+- **Character type (`حرف`)** — a distinct scalar type for Unicode code points (UTF-8 source literals).
+- **UTF-8 char literals** — `'أ'` and other multi-byte UTF-8 characters are now accepted as a single char literal.
+
+### Changed
+
+- **Print lowering** — `اطبع <حرف>.` prints the character as UTF-8 (not a numeric code).
+- **Type checking** — `حرف` is compatible with `صحيح` for assignments/comparisons (C-like integer promotion behavior).
+
+### Fixed
+
+- **Backend emission** — `MACH_LOAD`/`MACH_STORE` now use size-correct `mov` suffixes (enables byte/word/dword loads/stores).
+- **Zero-extension emission** — `MACH_MOVZX` now emits the correct instruction form for 32→64 (uses `movl`), preventing assembler errors.
+- **Global data emission** — scalar globals use `.byte/.word/.long/.quad` based on IR type (not always `.quad`).
+
 ## [0.3.4.5] - 2026-02-19
 
 ### Added

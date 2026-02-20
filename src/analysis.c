@@ -1022,6 +1022,7 @@ static const char* datatype_to_str(DataType type) {
         case TYPE_INT: return "INTEGER";
         case TYPE_STRING: return "STRING";
         case TYPE_BOOL: return "BOOLEAN";
+        case TYPE_CHAR: return "CHAR";
         case TYPE_ENUM: return "ENUM";
         case TYPE_STRUCT: return "STRUCT";
         case TYPE_UNION: return "UNION";
@@ -1034,6 +1035,8 @@ static bool types_compatible(DataType got, DataType expected)
     if (got == expected) return true;
     if (got == TYPE_BOOL && expected == TYPE_INT) return true;
     if (got == TYPE_INT && expected == TYPE_BOOL) return true;
+    if (got == TYPE_CHAR && expected == TYPE_INT) return true;
+    if (got == TYPE_INT && expected == TYPE_CHAR) return true;
     return false;
 }
 
@@ -1172,8 +1175,10 @@ static DataType infer_type(Node* node) {
 
     switch (node->type) {
         case NODE_INT:
-        case NODE_CHAR:
             return TYPE_INT;
+
+        case NODE_CHAR:
+            return TYPE_CHAR;
         
         case NODE_STRING:
             return TYPE_STRING;
@@ -1281,7 +1286,7 @@ static DataType infer_type(Node* node) {
             // العمليات الحسابية تتطلب أعداداً صحيحة
             OpType op = node->data.bin_op.op;
             if (op == OP_ADD || op == OP_SUB || op == OP_MUL || op == OP_DIV || op == OP_MOD) {
-                if (left != TYPE_INT || right != TYPE_INT) {
+                if (!types_compatible(left, TYPE_INT) || !types_compatible(right, TYPE_INT)) {
                     semantic_error(node, "Arithmetic operations require INTEGER operands.");
                 }
                 return TYPE_INT;
@@ -1290,7 +1295,11 @@ static DataType infer_type(Node* node) {
             // عمليات المقارنة تتطلب أنواعاً متوافقة وتعيد منطقي
             if (op == OP_EQ || op == OP_NEQ || op == OP_LT || op == OP_GT || op == OP_LTE || op == OP_GTE) {
                 if (left != right) {
-                    semantic_error(node, "Comparison operations require matching types.");
+                    // سماح C-like: مقارنة حرف مع صحيح.
+                    if (!((types_compatible(left, TYPE_INT) && types_compatible(right, TYPE_INT)) ||
+                          (left == TYPE_ENUM && right == TYPE_ENUM))) {
+                        semantic_error(node, "Comparison operations require matching types.");
+                    }
                 } else if (left == TYPE_ENUM) {
                     const char* ln = expr_enum_name(node->data.bin_op.left);
                     const char* rn = expr_enum_name(node->data.bin_op.right);
@@ -1317,7 +1326,7 @@ static DataType infer_type(Node* node) {
 
         case NODE_UNARY_OP:
         case NODE_POSTFIX_OP: {
-            if (infer_type(node->data.unary_op.operand) != TYPE_INT) {
+            if (!types_compatible(infer_type(node->data.unary_op.operand), TYPE_INT)) {
                 semantic_error(node, "Unary operations require INTEGER operand.");
             }
             return TYPE_INT;
@@ -1629,7 +1638,7 @@ static void analyze_node(Node* node) {
 
         case NODE_IF: {
             DataType condType = infer_type(node->data.if_stmt.condition);
-            if (condType != TYPE_INT && condType != TYPE_BOOL) {
+            if (condType != TYPE_INT && condType != TYPE_BOOL && condType != TYPE_CHAR) {
                 semantic_error(node->data.if_stmt.condition, "'if' condition must be an integer/boolean.");
             }
 
@@ -1648,7 +1657,7 @@ static void analyze_node(Node* node) {
 
         case NODE_WHILE: {
             DataType condType = infer_type(node->data.while_stmt.condition);
-            if (condType != TYPE_INT && condType != TYPE_BOOL) {
+            if (condType != TYPE_INT && condType != TYPE_BOOL && condType != TYPE_CHAR) {
                 semantic_error(node->data.while_stmt.condition, "'while' condition must be an integer/boolean.");
             }
             bool prev_loop = inside_loop;
@@ -1669,7 +1678,7 @@ static void analyze_node(Node* node) {
             if (node->data.for_stmt.init) analyze_node(node->data.for_stmt.init);
             if (node->data.for_stmt.condition) {
                 DataType condType = infer_type(node->data.for_stmt.condition);
-                if (condType != TYPE_INT && condType != TYPE_BOOL) {
+                if (condType != TYPE_INT && condType != TYPE_BOOL && condType != TYPE_CHAR) {
                     semantic_error(node->data.for_stmt.condition, "'for' condition must be an integer/boolean.");
                 }
             }
@@ -1685,7 +1694,8 @@ static void analyze_node(Node* node) {
         }
 
         case NODE_SWITCH: {
-            if (infer_type(node->data.switch_stmt.expression) != TYPE_INT) {
+            DataType st = infer_type(node->data.switch_stmt.expression);
+            if (st != TYPE_INT && st != TYPE_CHAR) {
                 semantic_error(node->data.switch_stmt.expression, "'switch' expression must be an integer.");
             }
             bool prev_switch = inside_switch;
@@ -1697,7 +1707,8 @@ static void analyze_node(Node* node) {
             Node* current_case = node->data.switch_stmt.cases;
             while (current_case) {
                 if (!current_case->data.case_stmt.is_default) {
-                    if (infer_type(current_case->data.case_stmt.value) != TYPE_INT) {
+                    DataType ct = infer_type(current_case->data.case_stmt.value);
+                    if (ct != TYPE_INT && ct != TYPE_CHAR) {
                         semantic_error(current_case->data.case_stmt.value, "'case' value must be an integer constant.");
                     }
                 }

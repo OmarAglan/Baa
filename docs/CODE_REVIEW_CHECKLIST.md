@@ -1,6 +1,6 @@
 # Code Review Checklist
 
-> **Version:** 0.3.4.5 | [← Internals](INTERNALS.md)
+> **Version:** 0.3.5 | [← Internals](INTERNALS.md)
 
 Use this checklist for any change that touches compiler correctness, IR, or Windows x64 backend behavior.
 

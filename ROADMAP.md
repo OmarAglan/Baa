@@ -1,7 +1,7 @@
 # Baa Roadmap (Updated)
 
 > Track the development progress of the Baa programming language.
-> **Current Status:** Phase 3.5 - Language Completeness (v0.3.4.5)
+> **Current Status:** Phase 3.5 - Language Completeness (v0.3.5)
 
 ---
 
@@ -560,13 +560,13 @@
 
 ### v0.3.5: Character Type 📝 (يشمل `عشري` المؤجل)
 
-**Goal:** Add proper character type to align with C conventions.
+**Goal:** Add a proper character type with UTF-8 source support.
 
 ملاحظة: `عشري` مؤجل إلى v0.3.5 (تم نقله من أمثلة الاتحادات v0.3.4.5).
 
 #### Features
 
-- [ ] **Character Type (`حرف`)** – Proper 1-byte character type (like C's `char`).
+- [x] **Character Type (`حرف`)** – Unicode code point scalar type; char literals accept a single UTF-8 character.
 - [ ] **String-Char Relationship** – Strings (`نص`) become arrays of characters (`حرف[]`).
 
 - [ ] **Float Type (`عشري`)** – *Deferred from v0.3.4.5* (basic type + literals; full FP pipeline remains later).
@@ -581,11 +581,11 @@
 #### Implementation Tasks
 
 - [ ] **Token**: Already have `TOKEN_CHAR` for literals.
-- [ ] **Token**: Add `TOKEN_KEYWORD_CHAR` for `حرف` type keyword.
-- [ ] **Type System**: Add `TYPE_CHAR` to `DataType` enum.
-- [ ] **Semantic**: Distinguish between `char` and `int` (currently chars are ints).
-- [ ] **Codegen**: Generate 1-byte storage for `حرف` (currently 8-byte).
-- [ ] **String Representation**: Update internal string handling to use `char*`.
+- [x] **Token**: Add `TOKEN_KEYWORD_CHAR` for `حرف` type keyword.
+- [x] **Type System**: Add `TYPE_CHAR` to `DataType` enum.
+- [x] **Semantic**: Distinguish between `char` and `int`.
+- [x] **Codegen**: Store `حرف` as `i32` (Unicode code point) and support UTF-8 printing.
+- [ ] **String Representation**: Update internal string handling to use `حرف[]`.
 
 #### Deferred to v0.3.9
 

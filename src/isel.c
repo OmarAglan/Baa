@@ -1420,7 +1420,9 @@ static void isel_lower_cast(ISelCtx *ctx, IRInst *inst)
     }
     else
     {
-        // نسخ مباشر (نفس الحجم أو تقليص)
+        // نسخ مباشر (نفس الحجم أو تقليص). عند التقليص، يجب أن يكون src بنفس حجم dst.
+        if (src_bits > dst_bits && dst_bits > 0)
+            src.size_bits = dst_bits;
         MachineInst *mi = isel_emit(ctx, MACH_MOV, dst, src, mach_op_none());
         if (mi)
             mi->ir_reg = inst->dest;

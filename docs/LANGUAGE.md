@@ -1,6 +1,6 @@
 # Baa Language Specification
 
-> **Version:** 0.3.4.5 | [← User Guide](USER_GUIDE.md) | [Compiler Internals →](INTERNALS.md)
+> **Version:** 0.3.5 | [← User Guide](USER_GUIDE.md) | [Compiler Internals →](INTERNALS.md)
 
 Baa (باء) is a compiled systems programming language using Arabic syntax. It compiles directly to native machine code via Assembly/GCC on Windows.
 
@@ -132,6 +132,7 @@ Baa is statically typed. All variables must be declared with their type.
 | `صحيح` | `int64_t` (stored) | Integer value (stored as 8 bytes) | `صحيح س = ٥.` |
 | `نص` | `char*` | String pointer (Reference) | `نص اسم = "باء".` |
 | `منطقي` | `bool` (stored as byte) | Boolean value (`صواب`/`خطأ`) | `منطقي ب = صواب.` |
+| `حرف` | `uint32_t` (logical) | Unicode code point (char literal accepts one UTF-8 character) | `حرف ح = 'أ'.` |
 
 ### 3.2. Scalar Variables
 
@@ -367,7 +368,7 @@ Baa is statically typed. All variables must be declared with their type.
 حرف ح = كـ<حرف>(س).
 ```
 
-ملاحظة: توجد ثوابت محارف مثل `'أ'`، لكن نوع `حرف` ككلمة مفتاحية ما زال مخططاً.
+ملاحظة: نوع `حرف` متاح، لكن صيغة التحويل `كـ<...>(...)` ما زالت مخططاً ولم تُنفّذ بعد.
 
 
 ## 4. Constants (الثوابت)

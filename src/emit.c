@@ -740,21 +740,25 @@ void emit_inst(MachineInst* inst, MachineFunc* func, FILE* out) {
             bool src_mem = (inst->src1.kind == MACH_OP_MEM || inst->src1.kind == MACH_OP_GLOBAL);
             bool dst_mem = (inst->dst.kind == MACH_OP_MEM || inst->dst.kind == MACH_OP_GLOBAL);
 
+            int bits = inst->dst.size_bits;
+            if (bits <= 0) bits = inst->src1.size_bits;
+            if (bits <= 0) bits = 64;
+
             if (src_mem && dst_mem)
             {
                 // تجنب mem->mem: استخدم %rax كمؤقت (RAX غير مخصص لفترات عادية).
                 MachineOperand tmp = {0};
                 tmp.kind = MACH_OP_VREG;
-                tmp.size_bits = 64;
+                tmp.size_bits = bits;
                 tmp.data.vreg = PHYS_RAX;
 
-                fprintf(out, "    movq ");
+                fprintf(out, "    mov%c ", size_suffix(bits));
                 emit_operand(&inst->src1, out);
                 fprintf(out, ", ");
                 emit_operand(&tmp, out);
                 fprintf(out, "\n");
 
-                fprintf(out, "    movq ");
+                fprintf(out, "    mov%c ", size_suffix(bits));
                 emit_operand(&tmp, out);
                 fprintf(out, ", ");
                 emit_operand(&inst->dst, out);
@@ -762,7 +766,7 @@ void emit_inst(MachineInst* inst, MachineFunc* func, FILE* out) {
             }
             else
             {
-                fprintf(out, "    movq ");
+                fprintf(out, "    mov%c ", size_suffix(bits));
                 emit_operand(&inst->src1, out);
                 fprintf(out, ", ");
                 emit_operand(&inst->dst, out);
@@ -780,20 +784,24 @@ void emit_inst(MachineInst* inst, MachineFunc* func, FILE* out) {
             bool src_mem = (inst->src1.kind == MACH_OP_MEM || inst->src1.kind == MACH_OP_GLOBAL);
             bool dst_mem = (inst->dst.kind == MACH_OP_MEM || inst->dst.kind == MACH_OP_GLOBAL);
 
+            int bits = inst->src1.size_bits;
+            if (bits <= 0) bits = inst->dst.size_bits;
+            if (bits <= 0) bits = 64;
+
             if (src_mem && dst_mem)
             {
                 MachineOperand tmp = {0};
                 tmp.kind = MACH_OP_VREG;
-                tmp.size_bits = 64;
+                tmp.size_bits = bits;
                 tmp.data.vreg = PHYS_RAX;
 
-                fprintf(out, "    movq ");
+                fprintf(out, "    mov%c ", size_suffix(bits));
                 emit_operand(&inst->src1, out);
                 fprintf(out, ", ");
                 emit_operand(&tmp, out);
                 fprintf(out, "\n");
 
-                fprintf(out, "    movq ");
+                fprintf(out, "    mov%c ", size_suffix(bits));
                 emit_operand(&tmp, out);
                 fprintf(out, ", ");
                 emit_operand(&inst->dst, out);
@@ -801,7 +809,7 @@ void emit_inst(MachineInst* inst, MachineFunc* func, FILE* out) {
             }
             else
             {
-                fprintf(out, "    movq ");
+                fprintf(out, "    mov%c ", size_suffix(bits));
                 emit_operand(&inst->src1, out);
                 fprintf(out, ", ");
                 emit_operand(&inst->dst, out);
@@ -926,17 +934,64 @@ void emit_inst(MachineInst* inst, MachineFunc* func, FILE* out) {
         // توسيع بالأصفار (MOVZX)
         // ================================================================
         case MACH_MOVZX:
-            // movzbq src8, dst64
-            fprintf(out, "    movzbq ");
-            emit_operand(&inst->src1, out);
-            fprintf(out, ", ");
-            // الوجهة دائماً 64-بت لـ movzbq
+        {
+            int sb = inst->src1.size_bits;
+            int db = inst->dst.size_bits;
+            if (sb <= 0) sb = 8;
+            if (sb == 1) sb = 8;
+            if (db <= 0) db = 64;
+
+            // 32->64: movl يصفّر تلقائياً عند الكتابة إلى سجل 32 بت.
+            if (sb == 32 && db == 64)
             {
-                MachineOperand dst64 = inst->dst;
-                dst64.size_bits = 64;
-                emit_operand(&dst64, out);
+                MachineOperand src = inst->src1;
+                MachineOperand dst = inst->dst;
+                src.size_bits = 32;
+                dst.size_bits = 32;
+                fprintf(out, "    movl ");
+                emit_operand(&src, out);
+                fprintf(out, ", ");
+                emit_operand(&dst, out);
+                fprintf(out, "\n");
+                break;
             }
+
+            const char* mnem = NULL;
+            if (sb == 8 && db == 16) mnem = "movzbw";
+            else if (sb == 8 && db == 32) mnem = "movzbl";
+            else if (sb == 8 && db == 64) mnem = "movzbq";
+            else if (sb == 16 && db == 32) mnem = "movzwl";
+            else if (sb == 16 && db == 64) mnem = "movzwq";
+            else if (sb == 32 && db == 32) mnem = "movl";
+            else if (sb == 16 && db == 16) mnem = "movw";
+            else if (sb == 8 && db == 8) mnem = "movb";
+
+            if (!mnem)
+            {
+                // احتياطي: استخدم mov حسب حجم الوجهة.
+                fprintf(out, "    mov%c ", size_suffix(db));
+                MachineOperand src = inst->src1;
+                MachineOperand dst = inst->dst;
+                src.size_bits = db;
+                dst.size_bits = db;
+                emit_operand(&src, out);
+                fprintf(out, ", ");
+                emit_operand(&dst, out);
+                fprintf(out, "\n");
+                break;
+            }
+
+            MachineOperand src = inst->src1;
+            MachineOperand dst = inst->dst;
+            src.size_bits = sb;
+            dst.size_bits = db;
+
+            fprintf(out, "    %s ", mnem);
+            emit_operand(&src, out);
+            fprintf(out, ", ");
+            emit_operand(&dst, out);
             fprintf(out, "\n");
+        }
             break;
 
         // ================================================================
@@ -1136,18 +1191,23 @@ static void emit_data_section(MachineModule* module, FILE* out) {
 
         // إصدار القيمة الابتدائية
         if (g->init) {
+            int sz = 8;
+            const char* dir = emit_data_dir_for_type(g->type, &sz);
+
             if (g->init->kind == IR_VAL_CONST_INT) {
-                fprintf(out, "%s: .quad %lld\n", g->name,
+                fprintf(out, "%s: %s %lld\n", g->name, dir,
                         (long long)g->init->data.const_int);
             } else if (g->init->kind == IR_VAL_CONST_STR) {
                 // نص: تخزين مؤشر لسلسلة في جدول النصوص
                 fprintf(out, "%s: .quad .Lstr_%d\n", g->name,
                         g->init->data.const_str.id);
             } else {
-                fprintf(out, "%s: .quad 0\n", g->name);
+                fprintf(out, "%s: %s 0\n", g->name, dir);
             }
         } else {
-            fprintf(out, "%s: .quad 0\n", g->name);
+            int sz = 8;
+            const char* dir = emit_data_dir_for_type(g->type, &sz);
+            fprintf(out, "%s: %s 0\n", g->name, dir);
         }
     }
 }

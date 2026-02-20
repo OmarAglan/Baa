@@ -15,7 +15,7 @@
 #include <stdarg.h>
 
 // معلومات الإصدار
-#define BAA_VERSION "0.3.4.5"
+#define BAA_VERSION "0.3.5"
 #define BAA_BUILD_DATE __DATE__
 
 // ============================================================================
@@ -37,6 +37,7 @@ typedef enum {
     TOKEN_KEYWORD_INT,  // صحيح
     TOKEN_KEYWORD_STRING, // نص
     TOKEN_KEYWORD_BOOL, // منطقي
+    TOKEN_KEYWORD_CHAR, // حرف
     TOKEN_CONST,        // ثابت
     TOKEN_RETURN,       // إرجع
     TOKEN_PRINT,        // اطبع
@@ -330,6 +331,7 @@ typedef enum {
     TYPE_INT,           // صحيح (int64)
     TYPE_STRING,        // نص (char*)
     TYPE_BOOL,          // منطقي (bool - stored as byte)
+    TYPE_CHAR,          // حرف (Unicode code point)
     TYPE_ENUM,          // تعداد (يُخزن كـ int64)
     TYPE_STRUCT,        // هيكل (ليس قيمة من الدرجة الأولى)
     TYPE_UNION          // اتحاد (ليس قيمة من الدرجة الأولى)

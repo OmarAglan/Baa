@@ -153,10 +153,27 @@ static IRType* ir_type_from_datatype(IRModule* module, DataType t) {
     switch (t) {
         case TYPE_BOOL:   return IR_TYPE_I1_T;
         case TYPE_STRING: return get_i8_ptr_type(module);
+        case TYPE_CHAR:   return IR_TYPE_I32_T;
         case TYPE_ENUM:   return IR_TYPE_I64_T;
         case TYPE_INT:
         default:          return IR_TYPE_I64_T;
     }
+}
+
+static IRValue* ensure_i64(IRLowerCtx* ctx, IRValue* v)
+{
+    if (!ctx || !ctx->builder || !v) return ir_value_const_int(0, IR_TYPE_I64_T);
+    if (v->type && v->type->kind == IR_TYPE_I64) return v;
+    int r = ir_builder_emit_cast(ctx->builder, v, IR_TYPE_I64_T);
+    return ir_value_reg(r, IR_TYPE_I64_T);
+}
+
+static IRValue* cast_to(IRLowerCtx* ctx, IRValue* v, IRType* to)
+{
+    if (!ctx || !ctx->builder || !v || !to) return v;
+    if (v->type && ir_types_equal(v->type, to)) return v;
+    int r = ir_builder_emit_cast(ctx->builder, v, to);
+    return ir_value_reg(r, to);
 }
 
 // ============================================================================
@@ -403,8 +420,8 @@ IRValue* lower_expr(IRLowerCtx* ctx, Node* expr) {
 
             // Arithmetic
             if (op == OP_ADD || op == OP_SUB || op == OP_MUL || op == OP_DIV || op == OP_MOD) {
-                IRValue* lhs = lower_expr(ctx, expr->data.bin_op.left);
-                IRValue* rhs = lower_expr(ctx, expr->data.bin_op.right);
+                IRValue* lhs = ensure_i64(ctx, lower_expr(ctx, expr->data.bin_op.left));
+                IRValue* rhs = ensure_i64(ctx, lower_expr(ctx, expr->data.bin_op.right));
 
                 IRType* type = IR_TYPE_I64_T;
                 int dest = -1;
@@ -425,8 +442,16 @@ IRValue* lower_expr(IRLowerCtx* ctx, Node* expr) {
 
             // Comparison
             if (op == OP_EQ || op == OP_NEQ || op == OP_LT || op == OP_GT || op == OP_LTE || op == OP_GTE) {
-                IRValue* lhs = lower_expr(ctx, expr->data.bin_op.left);
-                IRValue* rhs = lower_expr(ctx, expr->data.bin_op.right);
+                IRValue* lhs0 = lower_expr(ctx, expr->data.bin_op.left);
+                IRValue* rhs0 = lower_expr(ctx, expr->data.bin_op.right);
+                IRValue* lhs = lhs0;
+                IRValue* rhs = rhs0;
+
+                // وحّد النوع عند المقارنة لتجنب i32 vs i64.
+                if (!lhs || !rhs || !lhs->type || !rhs->type || !ir_types_equal(lhs->type, rhs->type)) {
+                    lhs = ensure_i64(ctx, lhs0);
+                    rhs = ensure_i64(ctx, rhs0);
+                }
 
                 IRCmpPred pred = ir_cmp_to_pred(op);
                 int dest = ir_builder_emit_cmp(ctx->builder, pred, lhs, rhs);
@@ -454,7 +479,7 @@ IRValue* lower_expr(IRLowerCtx* ctx, Node* expr) {
             UnaryOpType op = expr->data.unary_op.op;
 
             if (op == UOP_NEG) {
-                IRValue* operand = lower_expr(ctx, expr->data.unary_op.operand);
+                IRValue* operand = ensure_i64(ctx, lower_expr(ctx, expr->data.unary_op.operand));
                 int dest = ir_builder_emit_neg(ctx->builder, IR_TYPE_I64_T, operand);
                 return ir_value_reg(dest, IR_TYPE_I64_T);
             }
@@ -481,8 +506,7 @@ IRValue* lower_expr(IRLowerCtx* ctx, Node* expr) {
             return ir_value_const_int(expr->data.bool_lit.value ? 1 : 0, IR_TYPE_I1_T);
 
         case NODE_CHAR:
-            // Keep as i64 for now (matches current frontend treatment); backend can truncate later.
-            return ir_value_const_int((int64_t)expr->data.char_lit.value, IR_TYPE_I64_T);
+            return ir_value_const_int((int64_t)expr->data.char_lit.value, IR_TYPE_I32_T);
 
         case NODE_STRING:
             return ir_builder_const_string(ctx->builder, expr->data.string_lit.value);
@@ -531,6 +555,7 @@ IRValue* lower_expr(IRLowerCtx* ctx, Node* expr) {
             IRType* field_val_t = NULL;
             switch (expr->data.member_access.member_type) {
                 case TYPE_BOOL: field_val_t = IR_TYPE_I1_T; break;
+                case TYPE_CHAR: field_val_t = IR_TYPE_I32_T; break;
                 case TYPE_STRING: field_val_t = get_i8_ptr_type(m); break;
                 case TYPE_ENUM:
                 case TYPE_INT:
@@ -675,6 +700,10 @@ static void lower_var_decl(IRLowerCtx* ctx, Node* stmt) {
         init = ir_value_const_int(0, value_type);
     }
 
+    if (init && init->type && value_type && !ir_types_equal(init->type, value_type)) {
+        init = cast_to(ctx, init, value_type);
+    }
+
     // خزن <init>, %ptr
     IRType* ptr_type = ir_type_ptr(value_type ? value_type : IR_TYPE_I64_T);
     IRValue* ptr = ir_value_reg(ptr_reg, ptr_type);
@@ -810,6 +839,7 @@ static void lower_member_assign(IRLowerCtx* ctx, Node* stmt) {
     IRType* field_val_t = NULL;
     switch (target->data.member_access.member_type) {
         case TYPE_BOOL: field_val_t = IR_TYPE_I1_T; break;
+        case TYPE_CHAR: field_val_t = IR_TYPE_I32_T; break;
         case TYPE_STRING: field_val_t = get_i8_ptr_type(m); break;
         case TYPE_ENUM:
         case TYPE_INT:
@@ -841,6 +871,10 @@ static void lower_assign(IRLowerCtx* ctx, Node* stmt) {
 
         IRValue* rhs = lower_expr(ctx, stmt->data.assign_stmt.expression);
 
+        if (rhs && rhs->type && value_type && !ir_types_equal(rhs->type, value_type)) {
+            rhs = cast_to(ctx, rhs, value_type);
+        }
+
         // خزن <rhs>, %ptr
         (void)value_type; // reserved for future casts/type checks
         IRType* ptr_type = ir_type_ptr(value_type ? value_type : IR_TYPE_I64_T);
@@ -858,6 +892,11 @@ static void lower_assign(IRLowerCtx* ctx, Node* stmt) {
     }
     if (g) {
         IRValue* rhs = lower_expr(ctx, stmt->data.assign_stmt.expression);
+
+        if (rhs && rhs->type && g->type && !ir_types_equal(rhs->type, g->type)) {
+            rhs = cast_to(ctx, rhs, g->type);
+        }
+
         IRValue* gptr = ir_value_global(name, g->type);
         ir_lower_set_loc(ctx->builder, stmt);
         ir_builder_emit_store(ctx->builder, rhs, gptr);
@@ -878,10 +917,261 @@ static void lower_return(IRLowerCtx* ctx, Node* stmt) {
     ir_builder_emit_ret(ctx->builder, value);
 }
 
+static void lower_print_char_utf8(IRLowerCtx* ctx, Node* stmt, IRValue* cp32)
+{
+    if (!ctx || !ctx->builder || !cp32) return;
+
+    IRBuilder* b = ctx->builder;
+    IRModule* m = b->module;
+    if (m) ir_module_set_current(m);
+
+    IRType* buf_arr_t = ir_type_array(IR_TYPE_I8_T, 5);
+    int buf_ptr_reg = ir_builder_emit_alloca(b, buf_arr_t);
+    IRValue* buf_ptr = ir_value_reg(buf_ptr_reg, ir_type_ptr(buf_arr_t));
+
+    IRType* i8_ptr_t = ir_type_ptr(IR_TYPE_I8_T);
+    int base_reg = ir_builder_emit_cast(b, buf_ptr, i8_ptr_t);
+    IRValue* base_ptr = ir_value_reg(base_reg, i8_ptr_t);
+
+    IRValue* cp = ensure_i64(ctx, cp32);
+
+    IRBlock* bad_bb = cf_create_block(ctx, "اطبع_حرف_غير_صالح");
+    IRBlock* check1_bb = cf_create_block(ctx, "اطبع_حرف_فحص1");
+    IRBlock* one_bb = cf_create_block(ctx, "اطبع_حرف_1");
+    IRBlock* check2_bb = cf_create_block(ctx, "اطبع_حرف_فحص2");
+    IRBlock* two_bb = cf_create_block(ctx, "اطبع_حرف_2");
+    IRBlock* check3_bb = cf_create_block(ctx, "اطبع_حرف_فحص3");
+    IRBlock* three_bb = cf_create_block(ctx, "اطبع_حرف_3");
+    IRBlock* four_bb = cf_create_block(ctx, "اطبع_حرف_4");
+    IRBlock* do_bb = cf_create_block(ctx, "اطبع_حرف_اطبع");
+    IRBlock* cont_bb = cf_create_block(ctx, "اطبع_حرف_تابع");
+
+    // bad = (cp > 0x10FFFF) || (0xD800 <= cp <= 0xDFFF)
+    IRValue* max_cp = ir_value_const_int(0x10FFFF, IR_TYPE_I64_T);
+    IRValue* sur_lo = ir_value_const_int(0xD800, IR_TYPE_I64_T);
+    IRValue* sur_hi = ir_value_const_int(0xDFFF, IR_TYPE_I64_T);
+
+    int gt_max_r = ir_builder_emit_cmp_gt(b, cp, max_cp);
+    IRValue* gt_max = ir_value_reg(gt_max_r, IR_TYPE_I1_T);
+
+    int ge_sur_r = ir_builder_emit_cmp_ge(b, cp, sur_lo);
+    IRValue* ge_sur = ir_value_reg(ge_sur_r, IR_TYPE_I1_T);
+    int le_sur_r = ir_builder_emit_cmp_le(b, cp, sur_hi);
+    IRValue* le_sur = ir_value_reg(le_sur_r, IR_TYPE_I1_T);
+    int is_sur_r = ir_builder_emit_and(b, IR_TYPE_I1_T, ge_sur, le_sur);
+    IRValue* is_sur = ir_value_reg(is_sur_r, IR_TYPE_I1_T);
+
+    int bad_r = ir_builder_emit_or(b, IR_TYPE_I1_T, gt_max, is_sur);
+    IRValue* bad = ir_value_reg(bad_r, IR_TYPE_I1_T);
+
+    if (!ir_builder_is_block_terminated(b)) {
+        ir_builder_emit_br_cond(b, bad, bad_bb, check1_bb);
+    }
+
+    // bad → U+FFFD (EF BF BD)
+    ir_builder_set_insert_point(b, bad_bb);
+    if (stmt) ir_lower_set_loc(b, stmt);
+    {
+        IRValue* idx0 = ir_value_const_int(0, IR_TYPE_I64_T);
+        IRValue* idx1 = ir_value_const_int(1, IR_TYPE_I64_T);
+        IRValue* idx2 = ir_value_const_int(2, IR_TYPE_I64_T);
+        IRValue* idx3 = ir_value_const_int(3, IR_TYPE_I64_T);
+        IRValue* z = ir_value_const_int(0, IR_TYPE_I8_T);
+
+        int p0r = ir_builder_emit_ptr_offset(b, i8_ptr_t, base_ptr, idx0);
+        int p1r = ir_builder_emit_ptr_offset(b, i8_ptr_t, base_ptr, idx1);
+        int p2r = ir_builder_emit_ptr_offset(b, i8_ptr_t, base_ptr, idx2);
+        int p3r = ir_builder_emit_ptr_offset(b, i8_ptr_t, base_ptr, idx3);
+
+        ir_builder_emit_store(b, ir_value_const_int(0xEF, IR_TYPE_I8_T), ir_value_reg(p0r, i8_ptr_t));
+        ir_builder_emit_store(b, ir_value_const_int(0xBF, IR_TYPE_I8_T), ir_value_reg(p1r, i8_ptr_t));
+        ir_builder_emit_store(b, ir_value_const_int(0xBD, IR_TYPE_I8_T), ir_value_reg(p2r, i8_ptr_t));
+        ir_builder_emit_store(b, z, ir_value_reg(p3r, i8_ptr_t));
+    }
+    if (!ir_builder_is_block_terminated(b)) ir_builder_emit_br(b, do_bb);
+
+    // check1
+    ir_builder_set_insert_point(b, check1_bb);
+    {
+        int le1_r = ir_builder_emit_cmp_le(b, cp, ir_value_const_int(0x7F, IR_TYPE_I64_T));
+        IRValue* le1 = ir_value_reg(le1_r, IR_TYPE_I1_T);
+        if (!ir_builder_is_block_terminated(b)) ir_builder_emit_br_cond(b, le1, one_bb, check2_bb);
+    }
+
+    // one byte
+    ir_builder_set_insert_point(b, one_bb);
+    {
+        IRValue* b0 = cast_to(ctx, cp, IR_TYPE_I8_T);
+        IRValue* z = ir_value_const_int(0, IR_TYPE_I8_T);
+        IRValue* idx0 = ir_value_const_int(0, IR_TYPE_I64_T);
+        IRValue* idx1 = ir_value_const_int(1, IR_TYPE_I64_T);
+        int p0r = ir_builder_emit_ptr_offset(b, i8_ptr_t, base_ptr, idx0);
+        int p1r = ir_builder_emit_ptr_offset(b, i8_ptr_t, base_ptr, idx1);
+        ir_builder_emit_store(b, b0, ir_value_reg(p0r, i8_ptr_t));
+        ir_builder_emit_store(b, z, ir_value_reg(p1r, i8_ptr_t));
+    }
+    if (!ir_builder_is_block_terminated(b)) ir_builder_emit_br(b, do_bb);
+
+    // check2
+    ir_builder_set_insert_point(b, check2_bb);
+    {
+        int le2_r = ir_builder_emit_cmp_le(b, cp, ir_value_const_int(0x7FF, IR_TYPE_I64_T));
+        IRValue* le2 = ir_value_reg(le2_r, IR_TYPE_I1_T);
+        if (!ir_builder_is_block_terminated(b)) ir_builder_emit_br_cond(b, le2, two_bb, check3_bb);
+    }
+
+    // two bytes
+    ir_builder_set_insert_point(b, two_bb);
+    {
+        IRValue* sixty4 = ir_value_const_int(64, IR_TYPE_I64_T);
+        int q_r = ir_builder_emit_div(b, IR_TYPE_I64_T, cp, sixty4);
+        int r_r = ir_builder_emit_mod(b, IR_TYPE_I64_T, cp, sixty4);
+        IRValue* q = ir_value_reg(q_r, IR_TYPE_I64_T);
+        IRValue* r = ir_value_reg(r_r, IR_TYPE_I64_T);
+
+        int b0r = ir_builder_emit_add(b, IR_TYPE_I64_T, ir_value_const_int(0xC0, IR_TYPE_I64_T), q);
+        int b1r = ir_builder_emit_add(b, IR_TYPE_I64_T, ir_value_const_int(0x80, IR_TYPE_I64_T), r);
+        IRValue* b0 = cast_to(ctx, ir_value_reg(b0r, IR_TYPE_I64_T), IR_TYPE_I8_T);
+        IRValue* b1 = cast_to(ctx, ir_value_reg(b1r, IR_TYPE_I64_T), IR_TYPE_I8_T);
+
+        IRValue* z = ir_value_const_int(0, IR_TYPE_I8_T);
+        IRValue* idx0 = ir_value_const_int(0, IR_TYPE_I64_T);
+        IRValue* idx1 = ir_value_const_int(1, IR_TYPE_I64_T);
+        IRValue* idx2 = ir_value_const_int(2, IR_TYPE_I64_T);
+        int p0r = ir_builder_emit_ptr_offset(b, i8_ptr_t, base_ptr, idx0);
+        int p1r = ir_builder_emit_ptr_offset(b, i8_ptr_t, base_ptr, idx1);
+        int p2r = ir_builder_emit_ptr_offset(b, i8_ptr_t, base_ptr, idx2);
+        ir_builder_emit_store(b, b0, ir_value_reg(p0r, i8_ptr_t));
+        ir_builder_emit_store(b, b1, ir_value_reg(p1r, i8_ptr_t));
+        ir_builder_emit_store(b, z, ir_value_reg(p2r, i8_ptr_t));
+    }
+    if (!ir_builder_is_block_terminated(b)) ir_builder_emit_br(b, do_bb);
+
+    // check3
+    ir_builder_set_insert_point(b, check3_bb);
+    {
+        int le3_r = ir_builder_emit_cmp_le(b, cp, ir_value_const_int(0xFFFF, IR_TYPE_I64_T));
+        IRValue* le3 = ir_value_reg(le3_r, IR_TYPE_I1_T);
+        if (!ir_builder_is_block_terminated(b)) ir_builder_emit_br_cond(b, le3, three_bb, four_bb);
+    }
+
+    // three bytes
+    ir_builder_set_insert_point(b, three_bb);
+    {
+        IRValue* d4096 = ir_value_const_int(4096, IR_TYPE_I64_T);
+        IRValue* d64 = ir_value_const_int(64, IR_TYPE_I64_T);
+
+        int q1_r = ir_builder_emit_div(b, IR_TYPE_I64_T, cp, d4096);
+        IRValue* q1 = ir_value_reg(q1_r, IR_TYPE_I64_T);
+
+        int q2_r = ir_builder_emit_div(b, IR_TYPE_I64_T, cp, d64);
+        IRValue* q2 = ir_value_reg(q2_r, IR_TYPE_I64_T);
+        int q2m_r = ir_builder_emit_mod(b, IR_TYPE_I64_T, q2, ir_value_const_int(64, IR_TYPE_I64_T));
+        IRValue* q2m = ir_value_reg(q2m_r, IR_TYPE_I64_T);
+
+        int r_r = ir_builder_emit_mod(b, IR_TYPE_I64_T, cp, d64);
+        IRValue* r = ir_value_reg(r_r, IR_TYPE_I64_T);
+
+        int b0r = ir_builder_emit_add(b, IR_TYPE_I64_T, ir_value_const_int(0xE0, IR_TYPE_I64_T), q1);
+        int b1r = ir_builder_emit_add(b, IR_TYPE_I64_T, ir_value_const_int(0x80, IR_TYPE_I64_T), q2m);
+        int b2r = ir_builder_emit_add(b, IR_TYPE_I64_T, ir_value_const_int(0x80, IR_TYPE_I64_T), r);
+
+        IRValue* b0 = cast_to(ctx, ir_value_reg(b0r, IR_TYPE_I64_T), IR_TYPE_I8_T);
+        IRValue* b1 = cast_to(ctx, ir_value_reg(b1r, IR_TYPE_I64_T), IR_TYPE_I8_T);
+        IRValue* b2 = cast_to(ctx, ir_value_reg(b2r, IR_TYPE_I64_T), IR_TYPE_I8_T);
+
+        IRValue* z = ir_value_const_int(0, IR_TYPE_I8_T);
+        IRValue* idx0 = ir_value_const_int(0, IR_TYPE_I64_T);
+        IRValue* idx1 = ir_value_const_int(1, IR_TYPE_I64_T);
+        IRValue* idx2 = ir_value_const_int(2, IR_TYPE_I64_T);
+        IRValue* idx3 = ir_value_const_int(3, IR_TYPE_I64_T);
+        int p0r = ir_builder_emit_ptr_offset(b, i8_ptr_t, base_ptr, idx0);
+        int p1r = ir_builder_emit_ptr_offset(b, i8_ptr_t, base_ptr, idx1);
+        int p2r = ir_builder_emit_ptr_offset(b, i8_ptr_t, base_ptr, idx2);
+        int p3r = ir_builder_emit_ptr_offset(b, i8_ptr_t, base_ptr, idx3);
+        ir_builder_emit_store(b, b0, ir_value_reg(p0r, i8_ptr_t));
+        ir_builder_emit_store(b, b1, ir_value_reg(p1r, i8_ptr_t));
+        ir_builder_emit_store(b, b2, ir_value_reg(p2r, i8_ptr_t));
+        ir_builder_emit_store(b, z, ir_value_reg(p3r, i8_ptr_t));
+    }
+    if (!ir_builder_is_block_terminated(b)) ir_builder_emit_br(b, do_bb);
+
+    // four bytes
+    ir_builder_set_insert_point(b, four_bb);
+    {
+        IRValue* d262144 = ir_value_const_int(262144, IR_TYPE_I64_T);
+        IRValue* d4096 = ir_value_const_int(4096, IR_TYPE_I64_T);
+        IRValue* d64 = ir_value_const_int(64, IR_TYPE_I64_T);
+
+        int q1_r = ir_builder_emit_div(b, IR_TYPE_I64_T, cp, d262144);
+        IRValue* q1 = ir_value_reg(q1_r, IR_TYPE_I64_T);
+
+        int q2_r = ir_builder_emit_div(b, IR_TYPE_I64_T, cp, d4096);
+        IRValue* q2 = ir_value_reg(q2_r, IR_TYPE_I64_T);
+        int q2m_r = ir_builder_emit_mod(b, IR_TYPE_I64_T, q2, ir_value_const_int(64, IR_TYPE_I64_T));
+        IRValue* q2m = ir_value_reg(q2m_r, IR_TYPE_I64_T);
+
+        int q3_r = ir_builder_emit_div(b, IR_TYPE_I64_T, cp, d64);
+        IRValue* q3 = ir_value_reg(q3_r, IR_TYPE_I64_T);
+        int q3m_r = ir_builder_emit_mod(b, IR_TYPE_I64_T, q3, ir_value_const_int(64, IR_TYPE_I64_T));
+        IRValue* q3m = ir_value_reg(q3m_r, IR_TYPE_I64_T);
+
+        int r_r = ir_builder_emit_mod(b, IR_TYPE_I64_T, cp, d64);
+        IRValue* r = ir_value_reg(r_r, IR_TYPE_I64_T);
+
+        int b0r = ir_builder_emit_add(b, IR_TYPE_I64_T, ir_value_const_int(0xF0, IR_TYPE_I64_T), q1);
+        int b1r = ir_builder_emit_add(b, IR_TYPE_I64_T, ir_value_const_int(0x80, IR_TYPE_I64_T), q2m);
+        int b2r = ir_builder_emit_add(b, IR_TYPE_I64_T, ir_value_const_int(0x80, IR_TYPE_I64_T), q3m);
+        int b3r = ir_builder_emit_add(b, IR_TYPE_I64_T, ir_value_const_int(0x80, IR_TYPE_I64_T), r);
+
+        IRValue* b0 = cast_to(ctx, ir_value_reg(b0r, IR_TYPE_I64_T), IR_TYPE_I8_T);
+        IRValue* b1 = cast_to(ctx, ir_value_reg(b1r, IR_TYPE_I64_T), IR_TYPE_I8_T);
+        IRValue* b2 = cast_to(ctx, ir_value_reg(b2r, IR_TYPE_I64_T), IR_TYPE_I8_T);
+        IRValue* b3 = cast_to(ctx, ir_value_reg(b3r, IR_TYPE_I64_T), IR_TYPE_I8_T);
+
+        IRValue* z = ir_value_const_int(0, IR_TYPE_I8_T);
+        IRValue* idx0 = ir_value_const_int(0, IR_TYPE_I64_T);
+        IRValue* idx1 = ir_value_const_int(1, IR_TYPE_I64_T);
+        IRValue* idx2 = ir_value_const_int(2, IR_TYPE_I64_T);
+        IRValue* idx3 = ir_value_const_int(3, IR_TYPE_I64_T);
+        IRValue* idx4 = ir_value_const_int(4, IR_TYPE_I64_T);
+        int p0r = ir_builder_emit_ptr_offset(b, i8_ptr_t, base_ptr, idx0);
+        int p1r = ir_builder_emit_ptr_offset(b, i8_ptr_t, base_ptr, idx1);
+        int p2r = ir_builder_emit_ptr_offset(b, i8_ptr_t, base_ptr, idx2);
+        int p3r = ir_builder_emit_ptr_offset(b, i8_ptr_t, base_ptr, idx3);
+        int p4r = ir_builder_emit_ptr_offset(b, i8_ptr_t, base_ptr, idx4);
+        ir_builder_emit_store(b, b0, ir_value_reg(p0r, i8_ptr_t));
+        ir_builder_emit_store(b, b1, ir_value_reg(p1r, i8_ptr_t));
+        ir_builder_emit_store(b, b2, ir_value_reg(p2r, i8_ptr_t));
+        ir_builder_emit_store(b, b3, ir_value_reg(p3r, i8_ptr_t));
+        ir_builder_emit_store(b, z, ir_value_reg(p4r, i8_ptr_t));
+    }
+    if (!ir_builder_is_block_terminated(b)) ir_builder_emit_br(b, do_bb);
+
+    // do print
+    ir_builder_set_insert_point(b, do_bb);
+    if (stmt) ir_lower_set_loc(b, stmt);
+    {
+        IRValue* fmt_val = ir_builder_const_string(b, "%s\n");
+        IRValue* args[2] = { fmt_val, base_ptr };
+        ir_builder_emit_call_void(b, "اطبع", args, 2);
+    }
+    if (!ir_builder_is_block_terminated(b)) ir_builder_emit_br(b, cont_bb);
+
+    // continue
+    ir_builder_set_insert_point(b, cont_bb);
+}
+
 static void lower_print(IRLowerCtx* ctx, Node* stmt) {
     if (!ctx || !ctx->builder || !stmt) return;
 
     IRValue* value = lower_expr(ctx, stmt->data.print_stmt.expression);
+
+    // طباعة حرف UTF-8: نُحوّل نقطة-الكود إلى بايتات UTF-8 ثم نطبعها كنص.
+    if (value && value->type && value->type->kind == IR_TYPE_I32) {
+        lower_print_char_utf8(ctx, stmt, value);
+        return;
+    }
 
     // اختيار صيغة الطباعة بناءً على نوع القيمة
     // ملاحظة: حالياً نستخدم %d للأعداد والمنطقي (توافقاً مع المسار القديم)، و %s للنصوص.
@@ -889,6 +1179,11 @@ static void lower_print(IRLowerCtx* ctx, Node* stmt) {
     if (value && value->type && value->type->kind == IR_TYPE_PTR &&
         value->type->data.pointee == IR_TYPE_I8_T) {
         fmt = "%s\n";
+    }
+
+    // printf varargs: للأمان، وسّع الأعداد الأصغر إلى i64.
+    if (value && value->type && value->type->kind != IR_TYPE_PTR && value->type->kind != IR_TYPE_I64) {
+        value = ensure_i64(ctx, value);
     }
 
     IRValue* fmt_val = ir_builder_const_string(ctx->builder, fmt);
@@ -1432,7 +1727,7 @@ static IRValue* ir_lower_global_init_value(IRBuilder* builder, Node* expr, IRTyp
 
         case NODE_CHAR:
             return ir_value_const_int((int64_t)expr->data.char_lit.value,
-                                      expected_type ? expected_type : IR_TYPE_I64_T);
+                                      expected_type ? expected_type : IR_TYPE_I32_T);
 
         case NODE_STRING:
             // Adds to module string table and returns pointer value.

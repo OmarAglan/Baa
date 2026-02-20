@@ -7,6 +7,28 @@
 #include "baa.h"
 #include <ctype.h>
 
+static int utf8_expected_len(unsigned char b0)
+{
+    if ((b0 & 0x80u) == 0x00u) return 1;
+    if ((b0 & 0xE0u) == 0xC0u) return 2;
+    if ((b0 & 0xF0u) == 0xE0u) return 3;
+    if ((b0 & 0xF8u) == 0xF0u) return 4;
+    return 0;
+}
+
+static int is_utf8_cont_byte(unsigned char b)
+{
+    return ((b & 0xC0u) == 0x80u);
+}
+
+static int lex_hex_digit(unsigned char c)
+{
+    if (c >= '0' && c <= '9') return (int)(c - '0');
+    if (c >= 'a' && c <= 'f') return 10 + (int)(c - 'a');
+    if (c >= 'A' && c <= 'F') return 10 + (int)(c - 'A');
+    return -1;
+}
+
 // قراءة ملف (من main.c، يجب أن تكون متاحة للجميع الآن)
 char* read_file(const char* path);
 
@@ -375,15 +397,99 @@ Token lexer_next_token(Lexer* l) {
     // --- معالجة الحروف ('...') ---
     if (*current == '\'') {
         advance_pos(l);
-        char c = *l->state.cur_char;
-        advance_pos(l);
-        if (*l->state.cur_char != '\'') { 
-            printf("Lexer Error: Expected ' at %s:%d:%d\n", l->state.filename, l->state.line, l->state.col); 
-            exit(1); 
+
+        unsigned char bytes[4];
+        int blen = 0;
+
+        if (peek(l) == '\\')
+        {
+            // تسلسلات الهروب (على نمط C)
+            advance_pos(l);
+            unsigned char esc0 = (unsigned char)peek(l);
+            if (esc0 == '\0') {
+                printf("Lexer Error: Unterminated char literal at %s:%d:%d\n",
+                       l->state.filename, l->state.line, l->state.col);
+                exit(1);
+            }
+
+            if (esc0 == 'n') { bytes[0] = '\n'; blen = 1; advance_pos(l); }
+            else if (esc0 == 't') { bytes[0] = '\t'; blen = 1; advance_pos(l); }
+            else if (esc0 == 'r') { bytes[0] = '\r'; blen = 1; advance_pos(l); }
+            else if (esc0 == '\\') { bytes[0] = '\\'; blen = 1; advance_pos(l); }
+            else if (esc0 == '\'') { bytes[0] = '\''; blen = 1; advance_pos(l); }
+            else if (esc0 == '"') { bytes[0] = '"'; blen = 1; advance_pos(l); }
+            else if (esc0 == '0') { bytes[0] = 0; blen = 1; advance_pos(l); }
+            else if ((unsigned char)l->state.cur_char[0] == 0xD9 &&
+                     (unsigned char)l->state.cur_char[1] == 0xA0) {
+                // دعم \٠ كـ محرف NULL
+                bytes[0] = 0; blen = 1;
+                l->state.cur_char += 2;
+                l->state.col += 2;
+            }
+            else if (esc0 == 'x')
+            {
+                // \xHH (بايت واحد)
+                advance_pos(l);
+                int h1 = lex_hex_digit((unsigned char)peek(l));
+                if (h1 < 0) { printf("Lexer Error: Invalid hex escape at %s:%d:%d\n", l->state.filename, l->state.line, l->state.col); exit(1); }
+                advance_pos(l);
+                int h2 = lex_hex_digit((unsigned char)peek(l));
+                if (h2 < 0) { printf("Lexer Error: Invalid hex escape at %s:%d:%d\n", l->state.filename, l->state.line, l->state.col); exit(1); }
+                advance_pos(l);
+                bytes[0] = (unsigned char)((h1 << 4) | h2);
+                blen = 1;
+            }
+            else
+            {
+                printf("Lexer Error: Unknown escape sequence in char literal at %s:%d:%d\n",
+                       l->state.filename, l->state.line, l->state.col);
+                exit(1);
+            }
+        }
+        else
+        {
+            unsigned char b0 = (unsigned char)peek(l);
+            int len = utf8_expected_len(b0);
+            if (len <= 0)
+            {
+                printf("Lexer Error: Invalid UTF-8 start byte in char literal at %s:%d:%d\n",
+                       l->state.filename, l->state.line, l->state.col);
+                exit(1);
+            }
+            for (int i = 0; i < len; i++)
+            {
+                unsigned char bi = (unsigned char)l->state.cur_char[i];
+                if (bi == 0)
+                {
+                    printf("Lexer Error: Unterminated char literal at %s:%d:%d\n",
+                           l->state.filename, l->state.line, l->state.col);
+                    exit(1);
+                }
+                if (i > 0 && !is_utf8_cont_byte(bi))
+                {
+                    printf("Lexer Error: Invalid UTF-8 sequence in char literal at %s:%d:%d\n",
+                           l->state.filename, l->state.line, l->state.col);
+                    exit(1);
+                }
+                bytes[i] = bi;
+            }
+            blen = len;
+            for (int i = 0; i < len; i++) advance_pos(l);
+        }
+
+        if (peek(l) != '\'')
+        {
+            printf("Lexer Error: Expected closing ' for char literal at %s:%d:%d\n",
+                   l->state.filename, l->state.line, l->state.col);
+            exit(1);
         }
         advance_pos(l);
+
         token.type = TOKEN_CHAR;
-        char* val = malloc(2); val[0] = c; val[1] = '\0';
+        char* val = malloc((size_t)blen + 1);
+        if (!val) { printf("Lexer Error: Out of memory\n"); exit(1); }
+        if (blen) memcpy(val, bytes, (size_t)blen);
+        val[blen] = '\0';
         token.value = val;
         return token;
     }
@@ -563,6 +669,7 @@ Token lexer_next_token(Lexer* l) {
         else if (strcmp(word, "صحيح") == 0) token.type = TOKEN_KEYWORD_INT;
         else if (strcmp(word, "نص") == 0) token.type = TOKEN_KEYWORD_STRING;
         else if (strcmp(word, "منطقي") == 0) token.type = TOKEN_KEYWORD_BOOL;
+        else if (strcmp(word, "حرف") == 0) token.type = TOKEN_KEYWORD_CHAR;
         else if (strcmp(word, "ثابت") == 0) token.type = TOKEN_CONST;
         else if (strcmp(word, "إذا") == 0) token.type = TOKEN_IF;
         else if (strcmp(word, "وإلا") == 0) token.type = TOKEN_ELSE;
@@ -609,6 +716,7 @@ const char* token_type_to_str(BaaTokenType type) {
         case TOKEN_KEYWORD_INT: return "صحيح";
         case TOKEN_KEYWORD_STRING: return "نص";
         case TOKEN_KEYWORD_BOOL: return "منطقي";
+        case TOKEN_KEYWORD_CHAR: return "حرف";
         case TOKEN_CONST: return "ثابت";
         case TOKEN_RETURN: return "إرجع";
         case TOKEN_PRINT: return "اطبع";

@@ -115,6 +115,7 @@ void eat(BaaTokenType type) {
  */
 bool is_type_keyword(BaaTokenType type) {
     return (type == TOKEN_KEYWORD_INT || type == TOKEN_KEYWORD_STRING || type == TOKEN_KEYWORD_BOOL ||
+            type == TOKEN_KEYWORD_CHAR ||
             type == TOKEN_ENUM || type == TOKEN_STRUCT || type == TOKEN_UNION);
 }
 
@@ -124,7 +125,51 @@ bool is_type_keyword(BaaTokenType type) {
 DataType token_to_datatype(BaaTokenType type) {
     if (type == TOKEN_KEYWORD_STRING) return TYPE_STRING;
     if (type == TOKEN_KEYWORD_BOOL) return TYPE_BOOL;
+    if (type == TOKEN_KEYWORD_CHAR) return TYPE_CHAR;
     return TYPE_INT;
+}
+
+static bool utf8_decode_one(const char* s, uint32_t* out_cp)
+{
+    if (out_cp) *out_cp = 0;
+    if (!s || !*s) return false;
+
+    const unsigned char b0 = (unsigned char)s[0];
+    if ((b0 & 0x80u) == 0x00u) {
+        if (out_cp) *out_cp = (uint32_t)b0;
+        return true;
+    }
+    if ((b0 & 0xE0u) == 0xC0u) {
+        const unsigned char b1 = (unsigned char)s[1];
+        if ((b1 & 0xC0u) != 0x80u) return false;
+        uint32_t cp = ((uint32_t)(b0 & 0x1Fu) << 6) | (uint32_t)(b1 & 0x3Fu);
+        if (cp < 0x80u) return false; // overlong
+        if (out_cp) *out_cp = cp;
+        return s[2] == '\0';
+    }
+    if ((b0 & 0xF0u) == 0xE0u) {
+        const unsigned char b1 = (unsigned char)s[1];
+        const unsigned char b2 = (unsigned char)s[2];
+        if (((b1 & 0xC0u) != 0x80u) || ((b2 & 0xC0u) != 0x80u)) return false;
+        uint32_t cp = ((uint32_t)(b0 & 0x0Fu) << 12) | ((uint32_t)(b1 & 0x3Fu) << 6) | (uint32_t)(b2 & 0x3Fu);
+        if (cp < 0x800u) return false; // overlong
+        if (cp >= 0xD800u && cp <= 0xDFFFu) return false; // surrogate
+        if (out_cp) *out_cp = cp;
+        return s[3] == '\0';
+    }
+    if ((b0 & 0xF8u) == 0xF0u) {
+        const unsigned char b1 = (unsigned char)s[1];
+        const unsigned char b2 = (unsigned char)s[2];
+        const unsigned char b3 = (unsigned char)s[3];
+        if (((b1 & 0xC0u) != 0x80u) || ((b2 & 0xC0u) != 0x80u) || ((b3 & 0xC0u) != 0x80u)) return false;
+        uint32_t cp = ((uint32_t)(b0 & 0x07u) << 18) | ((uint32_t)(b1 & 0x3Fu) << 12) |
+                      ((uint32_t)(b2 & 0x3Fu) << 6) | (uint32_t)(b3 & 0x3Fu);
+        if (cp < 0x10000u) return false; // overlong
+        if (cp > 0x10FFFFu) return false;
+        if (out_cp) *out_cp = cp;
+        return s[4] == '\0';
+    }
+    return false;
 }
 
 // ============================================================================
@@ -145,7 +190,8 @@ static bool parse_type_spec(DataType* out_type, char** out_type_name) {
 
     if (parser.current.type == TOKEN_KEYWORD_INT ||
         parser.current.type == TOKEN_KEYWORD_STRING ||
-        parser.current.type == TOKEN_KEYWORD_BOOL) {
+        parser.current.type == TOKEN_KEYWORD_BOOL ||
+        parser.current.type == TOKEN_KEYWORD_CHAR) {
         DataType dt = token_to_datatype(parser.current.type);
         eat(parser.current.type);
         if (out_type) *out_type = dt;
@@ -193,6 +239,7 @@ void synchronize() {
             case TOKEN_KEYWORD_INT:
             case TOKEN_KEYWORD_STRING:
             case TOKEN_KEYWORD_BOOL:
+            case TOKEN_KEYWORD_CHAR:
             case TOKEN_ENUM:
             case TOKEN_STRUCT:
             case TOKEN_UNION:
@@ -248,7 +295,12 @@ Node* parse_primary() {
         Token tok = parser.current;
         node = ast_node_new(NODE_CHAR, tok);
         if (!node) return NULL;
-        node->data.char_lit.value = (int)parser.current.value[0];
+        uint32_t cp = 0;
+        if (!utf8_decode_one(parser.current.value, &cp)) {
+            error_report(parser.current, "Invalid UTF-8 char literal.");
+            cp = (uint32_t)'?';
+        }
+        node->data.char_lit.value = (int)cp;
         eat(TOKEN_CHAR);
     }
     else if (parser.current.type == TOKEN_TRUE) {
@@ -605,7 +657,12 @@ Node* parse_case() {
             Token tok = parser.current;
             Node* v = ast_node_new(NODE_CHAR, tok);
             if (!v) return NULL;
-            v->data.char_lit.value = (int)parser.current.value[0];
+            uint32_t cp = 0;
+            if (!utf8_decode_one(parser.current.value, &cp)) {
+                error_report(parser.current, "Invalid UTF-8 char literal.");
+                cp = (uint32_t)'?';
+            }
+            v->data.char_lit.value = (int)cp;
             eat(TOKEN_CHAR);
             node->data.case_stmt.value = v;
         }

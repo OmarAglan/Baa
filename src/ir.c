@@ -64,6 +64,8 @@ static IRType ir_type_i8_instance     = { .kind = IR_TYPE_I8 };
 static IRType ir_type_i16_instance    = { .kind = IR_TYPE_I16 };
 static IRType ir_type_i32_instance    = { .kind = IR_TYPE_I32 };
 static IRType ir_type_i64_instance    = { .kind = IR_TYPE_I64 };
+static IRType ir_type_char_instance   = { .kind = IR_TYPE_CHAR };
+static IRType ir_type_f64_instance    = { .kind = IR_TYPE_F64 };
 
 // مؤشرات عامة للأنواع الأساسية
 IRType* IR_TYPE_VOID_T  = &ir_type_void_instance;
@@ -72,6 +74,8 @@ IRType* IR_TYPE_I8_T    = &ir_type_i8_instance;
 IRType* IR_TYPE_I16_T   = &ir_type_i16_instance;
 IRType* IR_TYPE_I32_T   = &ir_type_i32_instance;
 IRType* IR_TYPE_I64_T   = &ir_type_i64_instance;
+IRType* IR_TYPE_CHAR_T  = &ir_type_char_instance;
+IRType* IR_TYPE_F64_T   = &ir_type_f64_instance;
 
 // ============================================================================
 // تحويل الأرقام إلى أرقام هندية عربية
@@ -256,6 +260,8 @@ const char* ir_type_to_arabic(IRType* type) {
         case IR_TYPE_I16:    return "ص١٦";      // 16-bit
         case IR_TYPE_I32:    return "ص٣٢";      // 32-bit
         case IR_TYPE_I64:    return "ص٦٤";      // 64-bit
+        case IR_TYPE_CHAR:   return "حرف";      // Baa char
+        case IR_TYPE_F64:    return "ع٦٤";      // 64-bit float
         case IR_TYPE_PTR:    return "مؤشر";     // Pointer
         case IR_TYPE_ARRAY:  return "مصفوفة";   // Array
         case IR_TYPE_FUNC:   return "دالة";     // Function
@@ -276,6 +282,8 @@ const char* ir_type_to_english(IRType* type) {
         case IR_TYPE_I16:    return "i16";
         case IR_TYPE_I32:    return "i32";
         case IR_TYPE_I64:    return "i64";
+        case IR_TYPE_CHAR:   return "char";
+        case IR_TYPE_F64:    return "f64";
         case IR_TYPE_PTR:    return "ptr";
         case IR_TYPE_ARRAY:  return "array";
         case IR_TYPE_FUNC:   return "func";
@@ -395,6 +403,8 @@ int ir_type_bits(IRType* type) {
         case IR_TYPE_I16:   return 16;
         case IR_TYPE_I32:   return 32;
         case IR_TYPE_I64:   return 64;
+        case IR_TYPE_CHAR:  return 64;
+        case IR_TYPE_F64:   return 64;
         case IR_TYPE_PTR:   return 64;  // 64-bit pointers
         case IR_TYPE_ARRAY:
             return type->data.array.count * ir_type_bits(type->data.array.element);
@@ -439,6 +449,16 @@ IRValue* ir_value_const_str(const char* str, int id) {
     if (!val) return NULL;
     val->kind = IR_VAL_CONST_STR;
     val->type = ir_type_ptr(IR_TYPE_I8_T);
+    val->data.const_str.data = str ? ir_strdup(str) : NULL;
+    val->data.const_str.id = id;
+    return val;
+}
+
+IRValue* ir_value_baa_str(const char* str, int id) {
+    IRValue* val = (IRValue*)ir_alloc(sizeof(IRValue), _Alignof(IRValue));
+    if (!val) return NULL;
+    val->kind = IR_VAL_BAA_STR;
+    val->type = ir_type_ptr(IR_TYPE_CHAR_T);
     val->data.const_str.data = str ? ir_strdup(str) : NULL;
     val->data.const_str.id = id;
     return val;
@@ -1010,7 +1030,10 @@ IRModule* ir_module_new(const char* name) {
     module->func_count = 0;
     module->strings = NULL;
     module->string_count = 0;
-    
+
+    module->baa_strings = NULL;
+    module->baa_string_count = 0;
+     
     return module;
 }
 
@@ -1324,6 +1347,15 @@ static void ir_value_print_ex(IRValue* val, FILE* out, int use_arabic) {
                 fputs(int_to_arabic_numerals(val->data.const_str.id, num_buf), out);
             } else {
                 fprintf(out, "@str%d", val->data.const_str.id);
+            }
+            return;
+
+        case IR_VAL_BAA_STR:
+            if (use_arabic) {
+                fputs("@نص_باء", out);
+                fputs(int_to_arabic_numerals(val->data.const_str.id, num_buf), out);
+            } else {
+                fprintf(out, "@bs%d", val->data.const_str.id);
             }
             return;
 
@@ -1674,6 +1706,43 @@ void ir_global_print(IRGlobal* global, FILE* out, int use_arabic) {
     }
 
     fputc('\n', out);
+}
+
+const char* ir_module_get_baa_string(IRModule* module, int id) {
+    if (!module) return NULL;
+
+    IRBaaStringEntry* entry = module->baa_strings;
+    while (entry) {
+        if (entry->id == id) {
+            return entry->content;
+        }
+        entry = entry->next;
+    }
+    return NULL;
+}
+
+int ir_module_add_baa_string(IRModule* module, const char* str) {
+    if (!module || !str) return -1;
+
+    ir_module_set_current(module);
+
+    IRBaaStringEntry* entry = module->baa_strings;
+    while (entry) {
+        if (entry->content && strcmp(entry->content, str) == 0) {
+            return entry->id;
+        }
+        entry = entry->next;
+    }
+
+    IRBaaStringEntry* new_entry = (IRBaaStringEntry*)ir_alloc(sizeof(IRBaaStringEntry), _Alignof(IRBaaStringEntry));
+    if (!new_entry) return -1;
+
+    new_entry->id = module->baa_string_count++;
+    new_entry->content = ir_strdup(str);
+    new_entry->next = module->baa_strings;
+    module->baa_strings = new_entry;
+
+    return new_entry->id;
 }
 
 /**

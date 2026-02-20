@@ -20,6 +20,9 @@ static IRValue* ir_clone_value(IRValue* v, IRBlock** block_map, int map_cap) {
         case IR_VAL_CONST_STR:
             return ir_value_const_str(v->data.const_str.data, v->data.const_str.id);
 
+        case IR_VAL_BAA_STR:
+            return ir_value_baa_str(v->data.const_str.data, v->data.const_str.id);
+
         case IR_VAL_REG:
             return ir_value_reg(v->data.reg_num, v->type);
 

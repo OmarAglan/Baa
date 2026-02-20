@@ -271,6 +271,8 @@ MachineModule *mach_module_new(const char *name)
     module->global_count = 0;
     module->strings = NULL;
     module->string_count = 0;
+    module->baa_strings = NULL;
+    module->baa_string_count = 0;
     return module;
 }
 
@@ -494,6 +496,10 @@ static int isel_type_bits(IRType *type)
         return 32;
     case IR_TYPE_I64:
         return 64;
+    case IR_TYPE_CHAR:
+        return 64;
+    case IR_TYPE_F64:
+        return 64;
     case IR_TYPE_PTR:
         return 64;
     default:
@@ -554,6 +560,27 @@ static MachineOperand isel_lower_value(ISelCtx *ctx, IRValue *val)
             MachineOperand src = mach_op_global(label_buf);
 
             // tmp = &.Lstr_N
+            isel_emit(ctx, MACH_LEA, dst, src, mach_op_none());
+            return dst;
+        }
+
+    case IR_VAL_BAA_STR:
+        // النصوص من نوع باء تمثل "مؤشر" إلى جدول نصوص باء (.Lbs_N)
+        {
+            if (!ctx || !ctx->mfunc || !ctx->mblock)
+            {
+                char label_buf[64];
+                snprintf(label_buf, sizeof(label_buf), ".Lbs_%d", val->data.const_str.id);
+                return mach_op_global(label_buf);
+            }
+
+            int tmp = mach_func_alloc_vreg(ctx->mfunc);
+            MachineOperand dst = mach_op_vreg(tmp, 64);
+
+            char label_buf[64];
+            snprintf(label_buf, sizeof(label_buf), ".Lbs_%d", val->data.const_str.id);
+            MachineOperand src = mach_op_global(label_buf);
+
             isel_emit(ctx, MACH_LEA, dst, src, mach_op_none());
             return dst;
         }
@@ -820,15 +847,23 @@ static void isel_lower_store(ISelCtx *ctx, IRInst *inst)
     if (inst->operands[0] && inst->operands[0]->type)
         bits = isel_type_bits(inst->operands[0]->type);
 
-    // إذا كانت القيمة فورية، نحتاج لنقلها لسجل أولاً
-    // (لا يمكن تخزين فوري مباشرة في بعض الحالات)
+    // إذا كانت القيمة فورية، يمكن لـ x86-64 تخزين imm32 مباشرة في الذاكرة.
+    // أما imm64 الكامل فلا يمكن تخزينه مباشرة إلى الذاكرة: نحتاج سجل وسيط.
     MachineOperand store_val = val;
     if (val.kind == MACH_OP_IMM && ptr.kind == MACH_OP_VREG)
     {
-        // يمكن لـ x86-64 تخزين فوري مباشرة في الذاكرة
-        MachineOperand mem = mach_op_mem(ptr.data.vreg, 0, bits);
-        isel_emit(ctx, MACH_STORE, mem, store_val, mach_op_none());
-        return;
+        bool fits_imm32 = (val.data.imm >= INT32_MIN && val.data.imm <= INT32_MAX);
+        if (!(bits == 64 && !fits_imm32))
+        {
+            MachineOperand mem = mach_op_mem(ptr.data.vreg, 0, bits);
+            isel_emit(ctx, MACH_STORE, mem, store_val, mach_op_none());
+            return;
+        }
+
+        int tmp = mach_func_alloc_vreg(ctx->mfunc);
+        MachineOperand tmp_op = mach_op_vreg(tmp, 64);
+        isel_emit(ctx, MACH_MOV, tmp_op, val, mach_op_none());
+        store_val = tmp_op;
     }
 
     if (ptr.kind == MACH_OP_VREG)
@@ -1785,6 +1820,8 @@ MachineModule *isel_run_ex(IRModule *ir_module, bool enable_tco, const BaaTarget
     mmod->global_count = ir_module->global_count;
     mmod->strings = ir_module->strings;
     mmod->string_count = ir_module->string_count;
+    mmod->baa_strings = ir_module->baa_strings;
+    mmod->baa_string_count = ir_module->baa_string_count;
 
     ISelCtx ctx = {0};
     ctx.mmod = mmod;

@@ -489,6 +489,13 @@ IRValue* ir_builder_const_string(IRBuilder* builder, const char* str) {
     return ir_value_const_str(str, id);
 }
 
+IRValue* ir_builder_const_baa_string(IRBuilder* builder, const char* str) {
+    if (!builder || !builder->module || !str) return NULL;
+
+    int id = ir_module_add_baa_string(builder->module, str);
+    return ir_value_baa_str(str, id);
+}
+
 // ============================================================================
 // Global Variables
 // ============================================================================

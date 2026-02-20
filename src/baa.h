@@ -29,6 +29,7 @@
 typedef enum {
     TOKEN_EOF,          // نهاية الملف
     TOKEN_INT,          // رقم صحيح: 123
+    TOKEN_FLOAT,        // رقم عشري: 3.14
     TOKEN_STRING,       // نص: "مرحباً"
     TOKEN_CHAR,         // حرف: 'أ'
     TOKEN_IDENTIFIER,   // معرف: اسم متغير أو دالة (س، ص، الرئيسية)
@@ -38,6 +39,7 @@ typedef enum {
     TOKEN_KEYWORD_STRING, // نص
     TOKEN_KEYWORD_BOOL, // منطقي
     TOKEN_KEYWORD_CHAR, // حرف
+    TOKEN_KEYWORD_FLOAT, // عشري
     TOKEN_CONST,        // ثابت
     TOKEN_RETURN,       // إرجع
     TOKEN_PRINT,        // اطبع
@@ -316,6 +318,7 @@ typedef enum {
     NODE_UNARY_OP,      // العمليات الأحادية (!، -)
     NODE_POSTFIX_OP,    // العمليات اللاحقة (++، --)
     NODE_INT,           // قيمة عددية صحيحة
+    NODE_FLOAT,         // قيمة عددية عشرية
     NODE_STRING,        // قيمة نصية
     NODE_CHAR,          // قيمة حرفية
     NODE_BOOL,          // قيمة منطقية (صواب/خطأ)
@@ -329,9 +332,10 @@ typedef enum {
  */
 typedef enum {
     TYPE_INT,           // صحيح (int64)
-    TYPE_STRING,        // نص (char*)
+    TYPE_STRING,        // نص (حرف[])
     TYPE_BOOL,          // منطقي (bool - stored as byte)
-    TYPE_CHAR,          // حرف (Unicode code point)
+    TYPE_CHAR,          // حرف (UTF-8 sequence)
+    TYPE_FLOAT,         // عشري (float64)
     TYPE_ENUM,          // تعداد (يُخزن كـ int64)
     TYPE_STRUCT,        // هيكل (ليس قيمة من الدرجة الأولى)
     TYPE_UNION          // اتحاد (ليس قيمة من الدرجة الأولى)
@@ -517,6 +521,7 @@ typedef struct Node {
 
         // التعبيرات الأساسية والعمليات
         struct { int value; } integer;
+        struct { double value; uint64_t bits; } float_lit;
         struct { char* value; int id; } string_lit;
         struct { int value; } char_lit;
         struct { bool value; } bool_lit;             // قيمة منطقية

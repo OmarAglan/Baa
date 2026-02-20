@@ -79,6 +79,9 @@ static IRValue* ic_clone_value_with_type(IRValue* v, IRType* override_type)
         case IR_VAL_CONST_STR:
             return ir_value_const_str(v->data.const_str.data, v->data.const_str.id);
 
+        case IR_VAL_BAA_STR:
+            return ir_value_baa_str(v->data.const_str.data, v->data.const_str.id);
+
         case IR_VAL_REG:
             return ir_value_reg(v->data.reg_num, t);
 

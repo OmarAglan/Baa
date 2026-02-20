@@ -116,6 +116,7 @@ void eat(BaaTokenType type) {
 bool is_type_keyword(BaaTokenType type) {
     return (type == TOKEN_KEYWORD_INT || type == TOKEN_KEYWORD_STRING || type == TOKEN_KEYWORD_BOOL ||
             type == TOKEN_KEYWORD_CHAR ||
+            type == TOKEN_KEYWORD_FLOAT ||
             type == TOKEN_ENUM || type == TOKEN_STRUCT || type == TOKEN_UNION);
 }
 
@@ -126,7 +127,20 @@ DataType token_to_datatype(BaaTokenType type) {
     if (type == TOKEN_KEYWORD_STRING) return TYPE_STRING;
     if (type == TOKEN_KEYWORD_BOOL) return TYPE_BOOL;
     if (type == TOKEN_KEYWORD_CHAR) return TYPE_CHAR;
+    if (type == TOKEN_KEYWORD_FLOAT) return TYPE_FLOAT;
     return TYPE_INT;
+}
+
+static bool parse_float_token_checked(Token tok, double* out)
+{
+    if (out) *out = 0.0;
+    if (tok.type != TOKEN_FLOAT || !tok.value) return false;
+
+    char* endp = NULL;
+    double v = strtod(tok.value, &endp);
+    if (!endp || endp == tok.value || *endp != '\0') return false;
+    if (out) *out = v;
+    return true;
 }
 
 static bool utf8_decode_one(const char* s, uint32_t* out_cp)
@@ -191,7 +205,8 @@ static bool parse_type_spec(DataType* out_type, char** out_type_name) {
     if (parser.current.type == TOKEN_KEYWORD_INT ||
         parser.current.type == TOKEN_KEYWORD_STRING ||
         parser.current.type == TOKEN_KEYWORD_BOOL ||
-        parser.current.type == TOKEN_KEYWORD_CHAR) {
+        parser.current.type == TOKEN_KEYWORD_CHAR ||
+        parser.current.type == TOKEN_KEYWORD_FLOAT) {
         DataType dt = token_to_datatype(parser.current.type);
         eat(parser.current.type);
         if (out_type) *out_type = dt;
@@ -240,6 +255,7 @@ void synchronize() {
             case TOKEN_KEYWORD_STRING:
             case TOKEN_KEYWORD_BOOL:
             case TOKEN_KEYWORD_CHAR:
+            case TOKEN_KEYWORD_FLOAT:
             case TOKEN_ENUM:
             case TOKEN_STRUCT:
             case TOKEN_UNION:
@@ -282,6 +298,20 @@ Node* parse_primary() {
         (void)parse_int_token_checked(parser.current, &v);
         node->data.integer.value = v;
         eat(TOKEN_INT);
+    }
+    else if (parser.current.type == TOKEN_FLOAT) {
+        Token tok = parser.current;
+        node = ast_node_new(NODE_FLOAT, tok);
+        if (!node) return NULL;
+        double v = 0.0;
+        if (!parse_float_token_checked(parser.current, &v)) {
+            error_report(parser.current, "Invalid float literal.");
+        }
+        node->data.float_lit.value = v;
+        uint64_t bits = 0;
+        memcpy(&bits, &v, sizeof(bits));
+        node->data.float_lit.bits = bits;
+        eat(TOKEN_FLOAT);
     }
     else if (parser.current.type == TOKEN_STRING) {
         Token tok = parser.current;

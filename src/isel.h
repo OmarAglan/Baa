@@ -250,6 +250,10 @@ typedef struct MachineModule {
     // جدول النصوص (مرجع من IR)
     IRStringEntry* strings;
     int string_count;
+
+    // جدول نصوص باء (مرجع من IR)
+    IRBaaStringEntry* baa_strings;
+    int baa_string_count;
 } MachineModule;
 
 // ============================================================================

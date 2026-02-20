@@ -1132,6 +1132,8 @@ static const char* emit_data_dir_for_type(IRType* t, int* out_size_bytes) {
             if (out_size_bytes) *out_size_bytes = 4;
             return ".long";
         case IR_TYPE_I64:
+        case IR_TYPE_CHAR:
+        case IR_TYPE_F64:
         case IR_TYPE_PTR:
         default:
             if (out_size_bytes) *out_size_bytes = 8;
@@ -1198,8 +1200,12 @@ static void emit_data_section(MachineModule* module, FILE* out) {
                 fprintf(out, "%s: %s %lld\n", g->name, dir,
                         (long long)g->init->data.const_int);
             } else if (g->init->kind == IR_VAL_CONST_STR) {
-                // نص: تخزين مؤشر لسلسلة في جدول النصوص
+                // C-String: تخزين مؤشر لسلسلة في جدول النصوص
                 fprintf(out, "%s: .quad .Lstr_%d\n", g->name,
+                        g->init->data.const_str.id);
+            } else if (g->init->kind == IR_VAL_BAA_STR) {
+                // نص باء: تخزين مؤشر لسلسلة حرف[] في جدول نصوص باء
+                fprintf(out, "%s: .quad .Lbs_%d\n", g->name,
                         g->init->data.const_str.id);
             } else {
                 fprintf(out, "%s: %s 0\n", g->name, dir);
@@ -1259,6 +1265,70 @@ static void emit_string_table(MachineModule* module, FILE* out) {
         fprintf(out, ".Lstr_%d: .asciz \"", s->id);
         emit_gas_escaped_string(out, s->content);
         fprintf(out, "\"\n");
+    }
+}
+
+static void emit_baa_string_table(MachineModule* module, FILE* out) {
+    if (!module || module->baa_string_count == 0) return;
+
+    fprintf(out, "\n");
+    emit_rodata_section(out);
+
+    for (IRBaaStringEntry* s = module->baa_strings; s; s = s->next) {
+        if (!s->content) continue;
+
+        // محاذاة 8 بايت لأن العناصر .quad
+        fprintf(out, "    .p2align 3\n");
+        fprintf(out, ".Lbs_%d:\n", s->id);
+
+        const unsigned char* p = (const unsigned char*)s->content;
+        while (*p) {
+            unsigned char b0 = p[0];
+            int len = 0;
+            if ((b0 & 0x80u) == 0x00u) len = 1;
+            else if ((b0 & 0xE0u) == 0xC0u) len = 2;
+            else if ((b0 & 0xF0u) == 0xE0u) len = 3;
+            else if ((b0 & 0xF8u) == 0xF0u) len = 4;
+            else len = 0;
+
+            unsigned char bytes[4] = {0, 0, 0, 0};
+
+            bool ok = true;
+            if (len <= 0) {
+                ok = false;
+            } else {
+                for (int i = 0; i < len; i++) {
+                    unsigned char bi = p[i];
+                    if (bi == 0) { ok = false; break; }
+                    if (i > 0 && ((bi & 0xC0u) != 0x80u)) { ok = false; break; }
+                    bytes[i] = bi;
+                }
+            }
+
+            if (!ok) {
+                // U+FFFD (EF BF BD)
+                bytes[0] = 0xEF;
+                bytes[1] = 0xBF;
+                bytes[2] = 0xBD;
+                bytes[3] = 0x00;
+                len = 3;
+                // تقدم بايتاً واحداً لتجنب تعليق الحلقة
+                p++;
+            } else {
+                p += (size_t)len;
+            }
+
+            uint64_t bytes_field = (uint64_t)bytes[0] |
+                                   ((uint64_t)bytes[1] << 8) |
+                                   ((uint64_t)bytes[2] << 16) |
+                                   ((uint64_t)bytes[3] << 24);
+            uint64_t packed = bytes_field | ((uint64_t)(unsigned)len << 32);
+
+            fprintf(out, "    .quad %llu\n", (unsigned long long)packed);
+        }
+
+        // النهاية: حرف بطول 0
+        fprintf(out, "    .quad 0\n");
     }
 }
 
@@ -1417,6 +1487,7 @@ bool emit_module_ex2(MachineModule* module, FILE* out, bool debug_info,
 
     // 4. جدول النصوص
     emit_string_table(module, out);
+    emit_baa_string_table(module, out);
 
     // 5. وسم "لا مكدس تنفيذي" على ELF لتفادي تحذيرات ld
     if (g_emit_target && g_emit_target->obj_format == BAA_OBJFORMAT_ELF)

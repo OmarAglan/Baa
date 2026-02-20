@@ -487,6 +487,7 @@ IRValue* ir_builder_const_bool(int value);
  * @return IRValue for the string pointer.
  */
 IRValue* ir_builder_const_string(IRBuilder* builder, const char* str);
+IRValue* ir_builder_const_baa_string(IRBuilder* builder, const char* str);
 
 // ============================================================================
 // Global Variables

@@ -143,26 +143,374 @@ static void ir_lower_tag_last_inst(IRBuilder* builder, IROp expected_op, int exp
     ir_inst_set_dbg_name(last, dbg_name);
 }
 
-static IRType* get_i8_ptr_type(IRModule* module) {
-    if (!module) return ir_type_ptr(IR_TYPE_I8_T);
+// forward decls
+static IRValue* ensure_i64(IRLowerCtx* ctx, IRValue* v);
+static IRValue* cast_to(IRLowerCtx* ctx, IRValue* v, IRType* to);
+
+static IRType* get_char_ptr_type(IRModule* module) {
+    if (!module) return ir_type_ptr(IR_TYPE_CHAR_T);
     ir_module_set_current(module);
-    return ir_type_ptr(IR_TYPE_I8_T);
+    return ir_type_ptr(IR_TYPE_CHAR_T);
+}
+
+static uint64_t pack_utf8_codepoint(uint32_t cp)
+{
+    // U+FFFD replacement
+    const uint32_t repl = 0xFFFDu;
+    if (cp > 0x10FFFFu || (cp >= 0xD800u && cp <= 0xDFFFu)) {
+        cp = repl;
+    }
+
+    unsigned char b[4] = {0, 0, 0, 0};
+    unsigned len = 0;
+
+    if (cp <= 0x7Fu) {
+        b[0] = (unsigned char)cp;
+        len = 1;
+    } else if (cp <= 0x7FFu) {
+        b[0] = (unsigned char)(0xC0u | ((cp >> 6) & 0x1Fu));
+        b[1] = (unsigned char)(0x80u | (cp & 0x3Fu));
+        len = 2;
+    } else if (cp <= 0xFFFFu) {
+        b[0] = (unsigned char)(0xE0u | ((cp >> 12) & 0x0Fu));
+        b[1] = (unsigned char)(0x80u | ((cp >> 6) & 0x3Fu));
+        b[2] = (unsigned char)(0x80u | (cp & 0x3Fu));
+        len = 3;
+    } else {
+        b[0] = (unsigned char)(0xF0u | ((cp >> 18) & 0x07u));
+        b[1] = (unsigned char)(0x80u | ((cp >> 12) & 0x3Fu));
+        b[2] = (unsigned char)(0x80u | ((cp >> 6) & 0x3Fu));
+        b[3] = (unsigned char)(0x80u | (cp & 0x3Fu));
+        len = 4;
+    }
+
+    uint64_t bytes_field = (uint64_t)b[0] |
+                           ((uint64_t)b[1] << 8) |
+                           ((uint64_t)b[2] << 16) |
+                           ((uint64_t)b[3] << 24);
+    return bytes_field | ((uint64_t)len << 32);
 }
 
 static IRType* ir_type_from_datatype(IRModule* module, DataType t) {
     switch (t) {
         case TYPE_BOOL:   return IR_TYPE_I1_T;
-        case TYPE_STRING: return get_i8_ptr_type(module);
-        case TYPE_CHAR:   return IR_TYPE_I32_T;
+        case TYPE_STRING: return get_char_ptr_type(module);
+        case TYPE_CHAR:   return IR_TYPE_CHAR_T;
+        case TYPE_FLOAT:  return IR_TYPE_F64_T;
         case TYPE_ENUM:   return IR_TYPE_I64_T;
         case TYPE_INT:
         default:          return IR_TYPE_I64_T;
     }
 }
 
+static IRValue* cast_i1_to_i64(IRLowerCtx* ctx, IRValue* v)
+{
+    if (!ctx || !ctx->builder || !v) return ir_value_const_int(0, IR_TYPE_I64_T);
+    if (v->type && v->type->kind == IR_TYPE_I64) return v;
+    int r = ir_builder_emit_cast(ctx->builder, v, IR_TYPE_I64_T);
+    return ir_value_reg(r, IR_TYPE_I64_T);
+}
+
+static IRValue* lower_char_decode_to_i64(IRLowerCtx* ctx, IRValue* ch)
+{
+    if (!ctx || !ctx->builder || !ch) return ir_value_const_int(0, IR_TYPE_I64_T);
+
+    // packed: i64(value) = bytes(32-bit) + len * 2^32
+    IRValue* packed = ch;
+    if (!packed->type || packed->type->kind != IR_TYPE_I64) {
+        int pr = ir_builder_emit_cast(ctx->builder, ch, IR_TYPE_I64_T);
+        packed = ir_value_reg(pr, IR_TYPE_I64_T);
+    }
+
+    IRValue* c_2p32 = ir_value_const_int(4294967296LL, IR_TYPE_I64_T);
+    int len_r = ir_builder_emit_div(ctx->builder, IR_TYPE_I64_T, packed, c_2p32);
+    IRValue* len = ir_value_reg(len_r, IR_TYPE_I64_T);
+
+    int bytes_r = ir_builder_emit_mod(ctx->builder, IR_TYPE_I64_T, packed, c_2p32);
+    IRValue* bytes = ir_value_reg(bytes_r, IR_TYPE_I64_T);
+
+    IRValue* c256 = ir_value_const_int(256, IR_TYPE_I64_T);
+
+    int b0_r = ir_builder_emit_mod(ctx->builder, IR_TYPE_I64_T, bytes, c256);
+    IRValue* b0 = ir_value_reg(b0_r, IR_TYPE_I64_T);
+    int t1_r = ir_builder_emit_div(ctx->builder, IR_TYPE_I64_T, bytes, c256);
+    IRValue* t1 = ir_value_reg(t1_r, IR_TYPE_I64_T);
+    int b1_r = ir_builder_emit_mod(ctx->builder, IR_TYPE_I64_T, t1, c256);
+    IRValue* b1 = ir_value_reg(b1_r, IR_TYPE_I64_T);
+    int t2_r = ir_builder_emit_div(ctx->builder, IR_TYPE_I64_T, t1, c256);
+    IRValue* t2 = ir_value_reg(t2_r, IR_TYPE_I64_T);
+    int b2_r = ir_builder_emit_mod(ctx->builder, IR_TYPE_I64_T, t2, c256);
+    IRValue* b2 = ir_value_reg(b2_r, IR_TYPE_I64_T);
+    int t3_r = ir_builder_emit_div(ctx->builder, IR_TYPE_I64_T, t2, c256);
+    IRValue* t3 = ir_value_reg(t3_r, IR_TYPE_I64_T);
+    int b3_r = ir_builder_emit_mod(ctx->builder, IR_TYPE_I64_T, t3, c256);
+    IRValue* b3 = ir_value_reg(b3_r, IR_TYPE_I64_T);
+
+    // flags f1..f4
+    IRValue* one = ir_value_const_int(1, IR_TYPE_I64_T);
+    IRValue* two = ir_value_const_int(2, IR_TYPE_I64_T);
+    IRValue* three = ir_value_const_int(3, IR_TYPE_I64_T);
+    IRValue* four = ir_value_const_int(4, IR_TYPE_I64_T);
+
+    int f1b = ir_builder_emit_cmp_eq(ctx->builder, len, one);
+    int f2b = ir_builder_emit_cmp_eq(ctx->builder, len, two);
+    int f3b = ir_builder_emit_cmp_eq(ctx->builder, len, three);
+    int f4b = ir_builder_emit_cmp_eq(ctx->builder, len, four);
+
+    IRValue* f1 = cast_i1_to_i64(ctx, ir_value_reg(f1b, IR_TYPE_I1_T));
+    IRValue* f2 = cast_i1_to_i64(ctx, ir_value_reg(f2b, IR_TYPE_I1_T));
+    IRValue* f3 = cast_i1_to_i64(ctx, ir_value_reg(f3b, IR_TYPE_I1_T));
+    IRValue* f4 = cast_i1_to_i64(ctx, ir_value_reg(f4b, IR_TYPE_I1_T));
+
+    // cp1 = b0
+    IRValue* cp1 = b0;
+
+    // cp2 = (b0-0xC0)*64 + (b1-0x80)
+    int a0_r = ir_builder_emit_sub(ctx->builder, IR_TYPE_I64_T, b0, ir_value_const_int(0xC0, IR_TYPE_I64_T));
+    IRValue* a0 = ir_value_reg(a0_r, IR_TYPE_I64_T);
+    int a0s_r = ir_builder_emit_mul(ctx->builder, IR_TYPE_I64_T, a0, ir_value_const_int(64, IR_TYPE_I64_T));
+    IRValue* a0s = ir_value_reg(a0s_r, IR_TYPE_I64_T);
+    int a1_r = ir_builder_emit_sub(ctx->builder, IR_TYPE_I64_T, b1, ir_value_const_int(0x80, IR_TYPE_I64_T));
+    IRValue* a1 = ir_value_reg(a1_r, IR_TYPE_I64_T);
+    int cp2_r = ir_builder_emit_add(ctx->builder, IR_TYPE_I64_T, a0s, a1);
+    IRValue* cp2 = ir_value_reg(cp2_r, IR_TYPE_I64_T);
+
+    // cp3 = (b0-0xE0)*4096 + (b1-0x80)*64 + (b2-0x80)
+    int b0m_r = ir_builder_emit_sub(ctx->builder, IR_TYPE_I64_T, b0, ir_value_const_int(0xE0, IR_TYPE_I64_T));
+    IRValue* b0m = ir_value_reg(b0m_r, IR_TYPE_I64_T);
+    int b0s_r = ir_builder_emit_mul(ctx->builder, IR_TYPE_I64_T, b0m, ir_value_const_int(4096, IR_TYPE_I64_T));
+    IRValue* b0s = ir_value_reg(b0s_r, IR_TYPE_I64_T);
+    int b1m_r = ir_builder_emit_sub(ctx->builder, IR_TYPE_I64_T, b1, ir_value_const_int(0x80, IR_TYPE_I64_T));
+    IRValue* b1m = ir_value_reg(b1m_r, IR_TYPE_I64_T);
+    int b1s_r = ir_builder_emit_mul(ctx->builder, IR_TYPE_I64_T, b1m, ir_value_const_int(64, IR_TYPE_I64_T));
+    IRValue* b1s = ir_value_reg(b1s_r, IR_TYPE_I64_T);
+    int b2m_r = ir_builder_emit_sub(ctx->builder, IR_TYPE_I64_T, b2, ir_value_const_int(0x80, IR_TYPE_I64_T));
+    IRValue* b2m = ir_value_reg(b2m_r, IR_TYPE_I64_T);
+    int t3a_r = ir_builder_emit_add(ctx->builder, IR_TYPE_I64_T, b0s, b1s);
+    IRValue* t3a = ir_value_reg(t3a_r, IR_TYPE_I64_T);
+    int cp3_r = ir_builder_emit_add(ctx->builder, IR_TYPE_I64_T, t3a, b2m);
+    IRValue* cp3 = ir_value_reg(cp3_r, IR_TYPE_I64_T);
+
+    // cp4 = (b0-0xF0)*262144 + (b1-0x80)*4096 + (b2-0x80)*64 + (b3-0x80)
+    int c0m_r = ir_builder_emit_sub(ctx->builder, IR_TYPE_I64_T, b0, ir_value_const_int(0xF0, IR_TYPE_I64_T));
+    IRValue* c0m = ir_value_reg(c0m_r, IR_TYPE_I64_T);
+    int c0s_r = ir_builder_emit_mul(ctx->builder, IR_TYPE_I64_T, c0m, ir_value_const_int(262144, IR_TYPE_I64_T));
+    IRValue* c0s = ir_value_reg(c0s_r, IR_TYPE_I64_T);
+    int c1m_r = ir_builder_emit_sub(ctx->builder, IR_TYPE_I64_T, b1, ir_value_const_int(0x80, IR_TYPE_I64_T));
+    IRValue* c1m = ir_value_reg(c1m_r, IR_TYPE_I64_T);
+    int c1s_r = ir_builder_emit_mul(ctx->builder, IR_TYPE_I64_T, c1m, ir_value_const_int(4096, IR_TYPE_I64_T));
+    IRValue* c1s = ir_value_reg(c1s_r, IR_TYPE_I64_T);
+    int c2m_r = ir_builder_emit_sub(ctx->builder, IR_TYPE_I64_T, b2, ir_value_const_int(0x80, IR_TYPE_I64_T));
+    IRValue* c2m = ir_value_reg(c2m_r, IR_TYPE_I64_T);
+    int c2s_r = ir_builder_emit_mul(ctx->builder, IR_TYPE_I64_T, c2m, ir_value_const_int(64, IR_TYPE_I64_T));
+    IRValue* c2s = ir_value_reg(c2s_r, IR_TYPE_I64_T);
+    int c3m_r = ir_builder_emit_sub(ctx->builder, IR_TYPE_I64_T, b3, ir_value_const_int(0x80, IR_TYPE_I64_T));
+    IRValue* c3m = ir_value_reg(c3m_r, IR_TYPE_I64_T);
+    int t4a_r = ir_builder_emit_add(ctx->builder, IR_TYPE_I64_T, c0s, c1s);
+    IRValue* t4a = ir_value_reg(t4a_r, IR_TYPE_I64_T);
+    int t4b_r = ir_builder_emit_add(ctx->builder, IR_TYPE_I64_T, t4a, c2s);
+    IRValue* t4b = ir_value_reg(t4b_r, IR_TYPE_I64_T);
+    int cp4_r = ir_builder_emit_add(ctx->builder, IR_TYPE_I64_T, t4b, c3m);
+    IRValue* cp4 = ir_value_reg(cp4_r, IR_TYPE_I64_T);
+
+    // select by flags: cp = cp1*f1 + cp2*f2 + cp3*f3 + cp4*f4
+    int cp1m_r = ir_builder_emit_mul(ctx->builder, IR_TYPE_I64_T, cp1, f1);
+    int cp2m_r = ir_builder_emit_mul(ctx->builder, IR_TYPE_I64_T, cp2, f2);
+    int cp3m_r = ir_builder_emit_mul(ctx->builder, IR_TYPE_I64_T, cp3, f3);
+    int cp4m_r = ir_builder_emit_mul(ctx->builder, IR_TYPE_I64_T, cp4, f4);
+    IRValue* cp1m = ir_value_reg(cp1m_r, IR_TYPE_I64_T);
+    IRValue* cp2m = ir_value_reg(cp2m_r, IR_TYPE_I64_T);
+    IRValue* cp3m = ir_value_reg(cp3m_r, IR_TYPE_I64_T);
+    IRValue* cp4m = ir_value_reg(cp4m_r, IR_TYPE_I64_T);
+    int s12_r = ir_builder_emit_add(ctx->builder, IR_TYPE_I64_T, cp1m, cp2m);
+    IRValue* s12 = ir_value_reg(s12_r, IR_TYPE_I64_T);
+    int s34_r = ir_builder_emit_add(ctx->builder, IR_TYPE_I64_T, cp3m, cp4m);
+    IRValue* s34 = ir_value_reg(s34_r, IR_TYPE_I64_T);
+    int cp_r = ir_builder_emit_add(ctx->builder, IR_TYPE_I64_T, s12, s34);
+    return ir_value_reg(cp_r, IR_TYPE_I64_T);
+}
+
+static IRValue* lower_codepoint_encode_to_char(IRLowerCtx* ctx, IRValue* cp_in)
+{
+    if (!ctx || !ctx->builder || !cp_in) return ir_value_const_int(0, IR_TYPE_CHAR_T);
+
+    IRValue* cp = ensure_i64(ctx, cp_in);
+
+    // invalid = (cp > 0x10FFFF) || (0xD800 <= cp <= 0xDFFF)
+    int gtmax_b = ir_builder_emit_cmp_gt(ctx->builder, cp, ir_value_const_int(0x10FFFF, IR_TYPE_I64_T));
+    IRValue* gtmax = ir_value_reg(gtmax_b, IR_TYPE_I1_T);
+    int ge_b = ir_builder_emit_cmp_ge(ctx->builder, cp, ir_value_const_int(0xD800, IR_TYPE_I64_T));
+    IRValue* ge = ir_value_reg(ge_b, IR_TYPE_I1_T);
+    int le_b = ir_builder_emit_cmp_le(ctx->builder, cp, ir_value_const_int(0xDFFF, IR_TYPE_I64_T));
+    IRValue* le = ir_value_reg(le_b, IR_TYPE_I1_T);
+    int sur_b = ir_builder_emit_and(ctx->builder, IR_TYPE_I1_T, ge, le);
+    IRValue* sur = ir_value_reg(sur_b, IR_TYPE_I1_T);
+    int inv_b = ir_builder_emit_or(ctx->builder, IR_TYPE_I1_T, gtmax, sur);
+    IRValue* inv = ir_value_reg(inv_b, IR_TYPE_I1_T);
+    IRValue* inv64 = cast_i1_to_i64(ctx, inv);
+
+    // cp = cp + inv*(0xFFFD - cp)
+    int dcp_r = ir_builder_emit_sub(ctx->builder, IR_TYPE_I64_T, ir_value_const_int(0xFFFD, IR_TYPE_I64_T), cp);
+    IRValue* dcp = ir_value_reg(dcp_r, IR_TYPE_I64_T);
+    int adj_r = ir_builder_emit_mul(ctx->builder, IR_TYPE_I64_T, inv64, dcp);
+    IRValue* adj = ir_value_reg(adj_r, IR_TYPE_I64_T);
+    int cpv_r = ir_builder_emit_add(ctx->builder, IR_TYPE_I64_T, cp, adj);
+    IRValue* cpv = ir_value_reg(cpv_r, IR_TYPE_I64_T);
+
+    // len = 1 + (cpv > 0x7F) + (cpv > 0x7FF) + (cpv > 0xFFFF)
+    int g1_b = ir_builder_emit_cmp_gt(ctx->builder, cpv, ir_value_const_int(0x7F, IR_TYPE_I64_T));
+    int g2_b = ir_builder_emit_cmp_gt(ctx->builder, cpv, ir_value_const_int(0x7FF, IR_TYPE_I64_T));
+    int g3_b = ir_builder_emit_cmp_gt(ctx->builder, cpv, ir_value_const_int(0xFFFF, IR_TYPE_I64_T));
+    IRValue* g1 = cast_i1_to_i64(ctx, ir_value_reg(g1_b, IR_TYPE_I1_T));
+    IRValue* g2 = cast_i1_to_i64(ctx, ir_value_reg(g2_b, IR_TYPE_I1_T));
+    IRValue* g3 = cast_i1_to_i64(ctx, ir_value_reg(g3_b, IR_TYPE_I1_T));
+    int tlen1_r = ir_builder_emit_add(ctx->builder, IR_TYPE_I64_T, ir_value_const_int(1, IR_TYPE_I64_T), g1);
+    IRValue* tlen1 = ir_value_reg(tlen1_r, IR_TYPE_I64_T);
+    int tlen2_r = ir_builder_emit_add(ctx->builder, IR_TYPE_I64_T, tlen1, g2);
+    IRValue* tlen2 = ir_value_reg(tlen2_r, IR_TYPE_I64_T);
+    int len_r = ir_builder_emit_add(ctx->builder, IR_TYPE_I64_T, tlen2, g3);
+    IRValue* len = ir_value_reg(len_r, IR_TYPE_I64_T);
+
+    // if invalid, force len = 3
+    int dlen_r = ir_builder_emit_sub(ctx->builder, IR_TYPE_I64_T, ir_value_const_int(3, IR_TYPE_I64_T), len);
+    IRValue* dlen = ir_value_reg(dlen_r, IR_TYPE_I64_T);
+    int ladj_r = ir_builder_emit_mul(ctx->builder, IR_TYPE_I64_T, inv64, dlen);
+    IRValue* ladj = ir_value_reg(ladj_r, IR_TYPE_I64_T);
+    int lenv_r = ir_builder_emit_add(ctx->builder, IR_TYPE_I64_T, len, ladj);
+    IRValue* lenv = ir_value_reg(lenv_r, IR_TYPE_I64_T);
+
+    // flags for lenv
+    int f1b = ir_builder_emit_cmp_eq(ctx->builder, lenv, ir_value_const_int(1, IR_TYPE_I64_T));
+    int f2b = ir_builder_emit_cmp_eq(ctx->builder, lenv, ir_value_const_int(2, IR_TYPE_I64_T));
+    int f3b = ir_builder_emit_cmp_eq(ctx->builder, lenv, ir_value_const_int(3, IR_TYPE_I64_T));
+    int f4b = ir_builder_emit_cmp_eq(ctx->builder, lenv, ir_value_const_int(4, IR_TYPE_I64_T));
+    IRValue* f1 = cast_i1_to_i64(ctx, ir_value_reg(f1b, IR_TYPE_I1_T));
+    IRValue* f2 = cast_i1_to_i64(ctx, ir_value_reg(f2b, IR_TYPE_I1_T));
+    IRValue* f3 = cast_i1_to_i64(ctx, ir_value_reg(f3b, IR_TYPE_I1_T));
+    IRValue* f4 = cast_i1_to_i64(ctx, ir_value_reg(f4b, IR_TYPE_I1_T));
+
+    // compute bytes for each length
+    IRValue* d64 = ir_value_const_int(64, IR_TYPE_I64_T);
+    IRValue* d4096 = ir_value_const_int(4096, IR_TYPE_I64_T);
+    IRValue* d262144 = ir_value_const_int(262144, IR_TYPE_I64_T);
+
+    // len1
+    IRValue* b0_1 = cpv;
+    IRValue* b1_1 = ir_value_const_int(0, IR_TYPE_I64_T);
+    IRValue* b2_1 = ir_value_const_int(0, IR_TYPE_I64_T);
+    IRValue* b3_1 = ir_value_const_int(0, IR_TYPE_I64_T);
+
+    // len2
+    int q2_r = ir_builder_emit_div(ctx->builder, IR_TYPE_I64_T, cpv, d64);
+    int r2_r = ir_builder_emit_mod(ctx->builder, IR_TYPE_I64_T, cpv, d64);
+    IRValue* q2 = ir_value_reg(q2_r, IR_TYPE_I64_T);
+    IRValue* r2 = ir_value_reg(r2_r, IR_TYPE_I64_T);
+    int b0_2r = ir_builder_emit_add(ctx->builder, IR_TYPE_I64_T, ir_value_const_int(0xC0, IR_TYPE_I64_T), q2);
+    int b1_2r = ir_builder_emit_add(ctx->builder, IR_TYPE_I64_T, ir_value_const_int(0x80, IR_TYPE_I64_T), r2);
+    IRValue* b0_2 = ir_value_reg(b0_2r, IR_TYPE_I64_T);
+    IRValue* b1_2 = ir_value_reg(b1_2r, IR_TYPE_I64_T);
+    IRValue* b2_2 = ir_value_const_int(0, IR_TYPE_I64_T);
+    IRValue* b3_2 = ir_value_const_int(0, IR_TYPE_I64_T);
+
+    // len3
+    int q31_r = ir_builder_emit_div(ctx->builder, IR_TYPE_I64_T, cpv, d4096);
+    IRValue* q31 = ir_value_reg(q31_r, IR_TYPE_I64_T);
+    int q32_r = ir_builder_emit_div(ctx->builder, IR_TYPE_I64_T, cpv, d64);
+    IRValue* q32 = ir_value_reg(q32_r, IR_TYPE_I64_T);
+    int q32m_r = ir_builder_emit_mod(ctx->builder, IR_TYPE_I64_T, q32, d64);
+    IRValue* q32m = ir_value_reg(q32m_r, IR_TYPE_I64_T);
+    int r3_r = ir_builder_emit_mod(ctx->builder, IR_TYPE_I64_T, cpv, d64);
+    IRValue* r3 = ir_value_reg(r3_r, IR_TYPE_I64_T);
+    int b0_3r = ir_builder_emit_add(ctx->builder, IR_TYPE_I64_T, ir_value_const_int(0xE0, IR_TYPE_I64_T), q31);
+    int b1_3r = ir_builder_emit_add(ctx->builder, IR_TYPE_I64_T, ir_value_const_int(0x80, IR_TYPE_I64_T), q32m);
+    int b2_3r = ir_builder_emit_add(ctx->builder, IR_TYPE_I64_T, ir_value_const_int(0x80, IR_TYPE_I64_T), r3);
+    IRValue* b0_3 = ir_value_reg(b0_3r, IR_TYPE_I64_T);
+    IRValue* b1_3 = ir_value_reg(b1_3r, IR_TYPE_I64_T);
+    IRValue* b2_3 = ir_value_reg(b2_3r, IR_TYPE_I64_T);
+    IRValue* b3_3 = ir_value_const_int(0, IR_TYPE_I64_T);
+
+    // len4
+    int q41_r = ir_builder_emit_div(ctx->builder, IR_TYPE_I64_T, cpv, d262144);
+    IRValue* q41 = ir_value_reg(q41_r, IR_TYPE_I64_T);
+    int q42_r = ir_builder_emit_div(ctx->builder, IR_TYPE_I64_T, cpv, d4096);
+    IRValue* q42 = ir_value_reg(q42_r, IR_TYPE_I64_T);
+    int q42m_r = ir_builder_emit_mod(ctx->builder, IR_TYPE_I64_T, q42, d64);
+    IRValue* q42m = ir_value_reg(q42m_r, IR_TYPE_I64_T);
+    int q43_r = ir_builder_emit_div(ctx->builder, IR_TYPE_I64_T, cpv, d64);
+    IRValue* q43 = ir_value_reg(q43_r, IR_TYPE_I64_T);
+    int q43m_r = ir_builder_emit_mod(ctx->builder, IR_TYPE_I64_T, q43, d64);
+    IRValue* q43m = ir_value_reg(q43m_r, IR_TYPE_I64_T);
+    int r4_r = ir_builder_emit_mod(ctx->builder, IR_TYPE_I64_T, cpv, d64);
+    IRValue* r4 = ir_value_reg(r4_r, IR_TYPE_I64_T);
+    int b0_4r = ir_builder_emit_add(ctx->builder, IR_TYPE_I64_T, ir_value_const_int(0xF0, IR_TYPE_I64_T), q41);
+    int b1_4r = ir_builder_emit_add(ctx->builder, IR_TYPE_I64_T, ir_value_const_int(0x80, IR_TYPE_I64_T), q42m);
+    int b2_4r = ir_builder_emit_add(ctx->builder, IR_TYPE_I64_T, ir_value_const_int(0x80, IR_TYPE_I64_T), q43m);
+    int b3_4r = ir_builder_emit_add(ctx->builder, IR_TYPE_I64_T, ir_value_const_int(0x80, IR_TYPE_I64_T), r4);
+    IRValue* b0_4 = ir_value_reg(b0_4r, IR_TYPE_I64_T);
+    IRValue* b1_4 = ir_value_reg(b1_4r, IR_TYPE_I64_T);
+    IRValue* b2_4 = ir_value_reg(b2_4r, IR_TYPE_I64_T);
+    IRValue* b3_4 = ir_value_reg(b3_4r, IR_TYPE_I64_T);
+
+    // select bytes by flags
+    IRValue* b0s1 = ir_value_reg(ir_builder_emit_mul(ctx->builder, IR_TYPE_I64_T, b0_1, f1), IR_TYPE_I64_T);
+    IRValue* b0s2 = ir_value_reg(ir_builder_emit_mul(ctx->builder, IR_TYPE_I64_T, b0_2, f2), IR_TYPE_I64_T);
+    IRValue* b0s3 = ir_value_reg(ir_builder_emit_mul(ctx->builder, IR_TYPE_I64_T, b0_3, f3), IR_TYPE_I64_T);
+    IRValue* b0s4 = ir_value_reg(ir_builder_emit_mul(ctx->builder, IR_TYPE_I64_T, b0_4, f4), IR_TYPE_I64_T);
+    IRValue* b1s1v = ir_value_reg(ir_builder_emit_mul(ctx->builder, IR_TYPE_I64_T, b1_1, f1), IR_TYPE_I64_T);
+    IRValue* b1s2v = ir_value_reg(ir_builder_emit_mul(ctx->builder, IR_TYPE_I64_T, b1_2, f2), IR_TYPE_I64_T);
+    IRValue* b1s3v = ir_value_reg(ir_builder_emit_mul(ctx->builder, IR_TYPE_I64_T, b1_3, f3), IR_TYPE_I64_T);
+    IRValue* b1s4v = ir_value_reg(ir_builder_emit_mul(ctx->builder, IR_TYPE_I64_T, b1_4, f4), IR_TYPE_I64_T);
+    IRValue* b2s1v = ir_value_reg(ir_builder_emit_mul(ctx->builder, IR_TYPE_I64_T, b2_1, f1), IR_TYPE_I64_T);
+    IRValue* b2s2v = ir_value_reg(ir_builder_emit_mul(ctx->builder, IR_TYPE_I64_T, b2_2, f2), IR_TYPE_I64_T);
+    IRValue* b2s3v = ir_value_reg(ir_builder_emit_mul(ctx->builder, IR_TYPE_I64_T, b2_3, f3), IR_TYPE_I64_T);
+    IRValue* b2s4v = ir_value_reg(ir_builder_emit_mul(ctx->builder, IR_TYPE_I64_T, b2_4, f4), IR_TYPE_I64_T);
+    IRValue* b3s1v = ir_value_reg(ir_builder_emit_mul(ctx->builder, IR_TYPE_I64_T, b3_1, f1), IR_TYPE_I64_T);
+    IRValue* b3s2v = ir_value_reg(ir_builder_emit_mul(ctx->builder, IR_TYPE_I64_T, b3_2, f2), IR_TYPE_I64_T);
+    IRValue* b3s3v = ir_value_reg(ir_builder_emit_mul(ctx->builder, IR_TYPE_I64_T, b3_3, f3), IR_TYPE_I64_T);
+    IRValue* b3s4v = ir_value_reg(ir_builder_emit_mul(ctx->builder, IR_TYPE_I64_T, b3_4, f4), IR_TYPE_I64_T);
+
+    IRValue* b0 = ir_value_reg(ir_builder_emit_add(ctx->builder, IR_TYPE_I64_T,
+                                                  ir_value_reg(ir_builder_emit_add(ctx->builder, IR_TYPE_I64_T, b0s1, b0s2), IR_TYPE_I64_T),
+                                                  ir_value_reg(ir_builder_emit_add(ctx->builder, IR_TYPE_I64_T, b0s3, b0s4), IR_TYPE_I64_T)), IR_TYPE_I64_T);
+    IRValue* b1 = ir_value_reg(ir_builder_emit_add(ctx->builder, IR_TYPE_I64_T,
+                                                  ir_value_reg(ir_builder_emit_add(ctx->builder, IR_TYPE_I64_T, b1s1v, b1s2v), IR_TYPE_I64_T),
+                                                  ir_value_reg(ir_builder_emit_add(ctx->builder, IR_TYPE_I64_T, b1s3v, b1s4v), IR_TYPE_I64_T)), IR_TYPE_I64_T);
+    IRValue* b2 = ir_value_reg(ir_builder_emit_add(ctx->builder, IR_TYPE_I64_T,
+                                                  ir_value_reg(ir_builder_emit_add(ctx->builder, IR_TYPE_I64_T, b2s1v, b2s2v), IR_TYPE_I64_T),
+                                                  ir_value_reg(ir_builder_emit_add(ctx->builder, IR_TYPE_I64_T, b2s3v, b2s4v), IR_TYPE_I64_T)), IR_TYPE_I64_T);
+    IRValue* b3 = ir_value_reg(ir_builder_emit_add(ctx->builder, IR_TYPE_I64_T,
+                                                  ir_value_reg(ir_builder_emit_add(ctx->builder, IR_TYPE_I64_T, b3s1v, b3s2v), IR_TYPE_I64_T),
+                                                  ir_value_reg(ir_builder_emit_add(ctx->builder, IR_TYPE_I64_T, b3s3v, b3s4v), IR_TYPE_I64_T)), IR_TYPE_I64_T);
+
+    // bytes_field = b0 + b1*256 + b2*65536 + b3*16777216
+    int b1s_r = ir_builder_emit_mul(ctx->builder, IR_TYPE_I64_T, b1, ir_value_const_int(256, IR_TYPE_I64_T));
+    int b2s_r = ir_builder_emit_mul(ctx->builder, IR_TYPE_I64_T, b2, ir_value_const_int(65536, IR_TYPE_I64_T));
+    int b3s_r = ir_builder_emit_mul(ctx->builder, IR_TYPE_I64_T, b3, ir_value_const_int(16777216, IR_TYPE_I64_T));
+    IRValue* b1s = ir_value_reg(b1s_r, IR_TYPE_I64_T);
+    IRValue* b2s = ir_value_reg(b2s_r, IR_TYPE_I64_T);
+    IRValue* b3s = ir_value_reg(b3s_r, IR_TYPE_I64_T);
+    int tbf_r = ir_builder_emit_add(ctx->builder, IR_TYPE_I64_T, b0, b1s);
+    IRValue* tbf = ir_value_reg(tbf_r, IR_TYPE_I64_T);
+    int tbf2_r = ir_builder_emit_add(ctx->builder, IR_TYPE_I64_T, tbf, b2s);
+    IRValue* tbf2 = ir_value_reg(tbf2_r, IR_TYPE_I64_T);
+    int bytesf_r = ir_builder_emit_add(ctx->builder, IR_TYPE_I64_T, tbf2, b3s);
+    IRValue* bytesf = ir_value_reg(bytesf_r, IR_TYPE_I64_T);
+
+    int len_shift_r = ir_builder_emit_mul(ctx->builder, IR_TYPE_I64_T, lenv, ir_value_const_int(4294967296LL, IR_TYPE_I64_T));
+    IRValue* lsh = ir_value_reg(len_shift_r, IR_TYPE_I64_T);
+    int packed_r = ir_builder_emit_add(ctx->builder, IR_TYPE_I64_T, bytesf, lsh);
+    IRValue* packedv = ir_value_reg(packed_r, IR_TYPE_I64_T);
+
+    int cr = ir_builder_emit_cast(ctx->builder, packedv, IR_TYPE_CHAR_T);
+    return ir_value_reg(cr, IR_TYPE_CHAR_T);
+}
+
 static IRValue* ensure_i64(IRLowerCtx* ctx, IRValue* v)
 {
     if (!ctx || !ctx->builder || !v) return ir_value_const_int(0, IR_TYPE_I64_T);
+    if (v->type && v->type->kind == IR_TYPE_CHAR) {
+        return lower_char_decode_to_i64(ctx, v);
+    }
     if (v->type && v->type->kind == IR_TYPE_I64) return v;
     int r = ir_builder_emit_cast(ctx->builder, v, IR_TYPE_I64_T);
     return ir_value_reg(r, IR_TYPE_I64_T);
@@ -172,6 +520,22 @@ static IRValue* cast_to(IRLowerCtx* ctx, IRValue* v, IRType* to)
 {
     if (!ctx || !ctx->builder || !v || !to) return v;
     if (v->type && ir_types_equal(v->type, to)) return v;
+
+    if (to->kind == IR_TYPE_I64 && v->type && v->type->kind == IR_TYPE_CHAR) {
+        return lower_char_decode_to_i64(ctx, v);
+    }
+    if (to->kind == IR_TYPE_CHAR) {
+        // نعتبر التحويل إلى حرف على أنه ترميز UTF-8 من نقطة-كود (i64).
+        if (v->type && v->type->kind == IR_TYPE_I64) {
+            return lower_codepoint_encode_to_char(ctx, v);
+        }
+        // دعم: i32 -> حرف
+        if (v->type && v->type->kind == IR_TYPE_I32) {
+            IRValue* cp64 = ensure_i64(ctx, v);
+            return lower_codepoint_encode_to_char(ctx, cp64);
+        }
+    }
+
     int r = ir_builder_emit_cast(ctx->builder, v, to);
     return ir_value_reg(r, to);
 }
@@ -505,11 +869,17 @@ IRValue* lower_expr(IRLowerCtx* ctx, Node* expr) {
         case NODE_BOOL:
             return ir_value_const_int(expr->data.bool_lit.value ? 1 : 0, IR_TYPE_I1_T);
 
+        case NODE_FLOAT:
+            return ir_value_const_int((int64_t)expr->data.float_lit.bits, IR_TYPE_F64_T);
+
         case NODE_CHAR:
-            return ir_value_const_int((int64_t)expr->data.char_lit.value, IR_TYPE_I32_T);
+        {
+            uint64_t packed = pack_utf8_codepoint((uint32_t)expr->data.char_lit.value);
+            return ir_value_const_int((int64_t)packed, IR_TYPE_CHAR_T);
+        }
 
         case NODE_STRING:
-            return ir_builder_const_string(ctx->builder, expr->data.string_lit.value);
+            return ir_builder_const_baa_string(ctx->builder, expr->data.string_lit.value);
 
         case NODE_MEMBER_ACCESS: {
             // ملاحظة: التحليل الدلالي يملأ معلومات الوصول (root/offset/type).
@@ -556,7 +926,7 @@ IRValue* lower_expr(IRLowerCtx* ctx, Node* expr) {
             switch (expr->data.member_access.member_type) {
                 case TYPE_BOOL: field_val_t = IR_TYPE_I1_T; break;
                 case TYPE_CHAR: field_val_t = IR_TYPE_I32_T; break;
-                case TYPE_STRING: field_val_t = get_i8_ptr_type(m); break;
+                case TYPE_STRING: field_val_t = get_char_ptr_type(m); break;
                 case TYPE_ENUM:
                 case TYPE_INT:
                 default: field_val_t = IR_TYPE_I64_T; break;
@@ -840,7 +1210,7 @@ static void lower_member_assign(IRLowerCtx* ctx, Node* stmt) {
     switch (target->data.member_access.member_type) {
         case TYPE_BOOL: field_val_t = IR_TYPE_I1_T; break;
         case TYPE_CHAR: field_val_t = IR_TYPE_I32_T; break;
-        case TYPE_STRING: field_val_t = get_i8_ptr_type(m); break;
+        case TYPE_STRING: field_val_t = get_char_ptr_type(m); break;
         case TYPE_ENUM:
         case TYPE_INT:
         default: field_val_t = IR_TYPE_I64_T; break;
@@ -917,9 +1287,26 @@ static void lower_return(IRLowerCtx* ctx, Node* stmt) {
     ir_builder_emit_ret(ctx->builder, value);
 }
 
-static void lower_print_char_utf8(IRLowerCtx* ctx, Node* stmt, IRValue* cp32)
+static void lower_printf_cstr(IRLowerCtx* ctx, Node* stmt, const char* fmt, IRValue* arg)
 {
-    if (!ctx || !ctx->builder || !cp32) return;
+    if (!ctx || !ctx->builder || !fmt) return;
+    if (stmt) ir_lower_set_loc(ctx->builder, stmt);
+
+    IRValue* fmt_val = ir_builder_const_string(ctx->builder, fmt);
+
+    if (!arg) {
+        IRValue* args1[1] = { fmt_val };
+        ir_builder_emit_call_void(ctx->builder, "اطبع", args1, 1);
+        return;
+    }
+
+    IRValue* args2[2] = { fmt_val, arg };
+    ir_builder_emit_call_void(ctx->builder, "اطبع", args2, 2);
+}
+
+static void lower_print_char_packed(IRLowerCtx* ctx, Node* stmt, IRValue* ch, const char* fmt)
+{
+    if (!ctx || !ctx->builder || !ch || !fmt) return;
 
     IRBuilder* b = ctx->builder;
     IRModule* m = b->module;
@@ -933,233 +1320,118 @@ static void lower_print_char_utf8(IRLowerCtx* ctx, Node* stmt, IRValue* cp32)
     int base_reg = ir_builder_emit_cast(b, buf_ptr, i8_ptr_t);
     IRValue* base_ptr = ir_value_reg(base_reg, i8_ptr_t);
 
-    IRValue* cp = ensure_i64(ctx, cp32);
+    // packed i64 = bytes + len*2^32
+    int pr = ir_builder_emit_cast(b, ch, IR_TYPE_I64_T);
+    IRValue* packed = ir_value_reg(pr, IR_TYPE_I64_T);
 
-    IRBlock* bad_bb = cf_create_block(ctx, "اطبع_حرف_غير_صالح");
-    IRBlock* check1_bb = cf_create_block(ctx, "اطبع_حرف_فحص1");
-    IRBlock* one_bb = cf_create_block(ctx, "اطبع_حرف_1");
-    IRBlock* check2_bb = cf_create_block(ctx, "اطبع_حرف_فحص2");
-    IRBlock* two_bb = cf_create_block(ctx, "اطبع_حرف_2");
-    IRBlock* check3_bb = cf_create_block(ctx, "اطبع_حرف_فحص3");
-    IRBlock* three_bb = cf_create_block(ctx, "اطبع_حرف_3");
-    IRBlock* four_bb = cf_create_block(ctx, "اطبع_حرف_4");
-    IRBlock* do_bb = cf_create_block(ctx, "اطبع_حرف_اطبع");
-    IRBlock* cont_bb = cf_create_block(ctx, "اطبع_حرف_تابع");
+    IRValue* c_2p32 = ir_value_const_int(4294967296LL, IR_TYPE_I64_T);
+    int len_r = ir_builder_emit_div(b, IR_TYPE_I64_T, packed, c_2p32);
+    IRValue* len = ir_value_reg(len_r, IR_TYPE_I64_T);
 
-    // bad = (cp > 0x10FFFF) || (0xD800 <= cp <= 0xDFFF)
-    IRValue* max_cp = ir_value_const_int(0x10FFFF, IR_TYPE_I64_T);
-    IRValue* sur_lo = ir_value_const_int(0xD800, IR_TYPE_I64_T);
-    IRValue* sur_hi = ir_value_const_int(0xDFFF, IR_TYPE_I64_T);
+    int bytes_r = ir_builder_emit_mod(b, IR_TYPE_I64_T, packed, c_2p32);
+    IRValue* bytes = ir_value_reg(bytes_r, IR_TYPE_I64_T);
 
-    int gt_max_r = ir_builder_emit_cmp_gt(b, cp, max_cp);
-    IRValue* gt_max = ir_value_reg(gt_max_r, IR_TYPE_I1_T);
+    IRValue* c256 = ir_value_const_int(256, IR_TYPE_I64_T);
 
-    int ge_sur_r = ir_builder_emit_cmp_ge(b, cp, sur_lo);
-    IRValue* ge_sur = ir_value_reg(ge_sur_r, IR_TYPE_I1_T);
-    int le_sur_r = ir_builder_emit_cmp_le(b, cp, sur_hi);
-    IRValue* le_sur = ir_value_reg(le_sur_r, IR_TYPE_I1_T);
-    int is_sur_r = ir_builder_emit_and(b, IR_TYPE_I1_T, ge_sur, le_sur);
-    IRValue* is_sur = ir_value_reg(is_sur_r, IR_TYPE_I1_T);
+    int b0_r = ir_builder_emit_mod(b, IR_TYPE_I64_T, bytes, c256);
+    IRValue* b0 = ir_value_reg(b0_r, IR_TYPE_I64_T);
+    int t1_r = ir_builder_emit_div(b, IR_TYPE_I64_T, bytes, c256);
+    IRValue* t1 = ir_value_reg(t1_r, IR_TYPE_I64_T);
+    int b1_r = ir_builder_emit_mod(b, IR_TYPE_I64_T, t1, c256);
+    IRValue* b1 = ir_value_reg(b1_r, IR_TYPE_I64_T);
+    int t2_r = ir_builder_emit_div(b, IR_TYPE_I64_T, t1, c256);
+    IRValue* t2 = ir_value_reg(t2_r, IR_TYPE_I64_T);
+    int b2_r = ir_builder_emit_mod(b, IR_TYPE_I64_T, t2, c256);
+    IRValue* b2 = ir_value_reg(b2_r, IR_TYPE_I64_T);
+    int t3_r = ir_builder_emit_div(b, IR_TYPE_I64_T, t2, c256);
+    IRValue* t3 = ir_value_reg(t3_r, IR_TYPE_I64_T);
+    int b3_r = ir_builder_emit_mod(b, IR_TYPE_I64_T, t3, c256);
+    IRValue* b3 = ir_value_reg(b3_r, IR_TYPE_I64_T);
 
-    int bad_r = ir_builder_emit_or(b, IR_TYPE_I1_T, gt_max, is_sur);
-    IRValue* bad = ir_value_reg(bad_r, IR_TYPE_I1_T);
+    IRValue* idx0 = ir_value_const_int(0, IR_TYPE_I64_T);
+    IRValue* idx1 = ir_value_const_int(1, IR_TYPE_I64_T);
+    IRValue* idx2 = ir_value_const_int(2, IR_TYPE_I64_T);
+    IRValue* idx3 = ir_value_const_int(3, IR_TYPE_I64_T);
+    IRValue* idx4 = ir_value_const_int(4, IR_TYPE_I64_T);
 
-    if (!ir_builder_is_block_terminated(b)) {
-        ir_builder_emit_br_cond(b, bad, bad_bb, check1_bb);
+    int p0r = ir_builder_emit_ptr_offset(b, i8_ptr_t, base_ptr, idx0);
+    int p1r = ir_builder_emit_ptr_offset(b, i8_ptr_t, base_ptr, idx1);
+    int p2r = ir_builder_emit_ptr_offset(b, i8_ptr_t, base_ptr, idx2);
+    int p3r = ir_builder_emit_ptr_offset(b, i8_ptr_t, base_ptr, idx3);
+    int p4r = ir_builder_emit_ptr_offset(b, i8_ptr_t, base_ptr, idx4);
+
+    ir_builder_emit_store(b, cast_to(ctx, b0, IR_TYPE_I8_T), ir_value_reg(p0r, i8_ptr_t));
+    ir_builder_emit_store(b, cast_to(ctx, b1, IR_TYPE_I8_T), ir_value_reg(p1r, i8_ptr_t));
+    ir_builder_emit_store(b, cast_to(ctx, b2, IR_TYPE_I8_T), ir_value_reg(p2r, i8_ptr_t));
+    ir_builder_emit_store(b, cast_to(ctx, b3, IR_TYPE_I8_T), ir_value_reg(p3r, i8_ptr_t));
+    ir_builder_emit_store(b, ir_value_const_int(0, IR_TYPE_I8_T), ir_value_reg(p4r, i8_ptr_t));
+
+    // NUL at buf[len]
+    int pend = ir_builder_emit_ptr_offset(b, i8_ptr_t, base_ptr, len);
+    ir_builder_emit_store(b, ir_value_const_int(0, IR_TYPE_I8_T), ir_value_reg(pend, i8_ptr_t));
+
+    lower_printf_cstr(ctx, stmt, fmt, base_ptr);
+}
+
+static void lower_print_baa_string(IRLowerCtx* ctx, Node* stmt, IRValue* str_ptr)
+{
+    if (!ctx || !ctx->builder || !str_ptr) return;
+
+    IRBuilder* b = ctx->builder;
+    IRModule* m = b->module;
+    if (m) ir_module_set_current(m);
+
+    IRType* char_ptr_t = ir_type_ptr(IR_TYPE_CHAR_T);
+    IRValue* base = str_ptr;
+    if (!base->type || base->type->kind != IR_TYPE_PTR) {
+        int cr = ir_builder_emit_cast(b, base, char_ptr_t);
+        base = ir_value_reg(cr, char_ptr_t);
     }
 
-    // bad → U+FFFD (EF BF BD)
-    ir_builder_set_insert_point(b, bad_bb);
-    if (stmt) ir_lower_set_loc(b, stmt);
-    {
-        IRValue* idx0 = ir_value_const_int(0, IR_TYPE_I64_T);
-        IRValue* idx1 = ir_value_const_int(1, IR_TYPE_I64_T);
-        IRValue* idx2 = ir_value_const_int(2, IR_TYPE_I64_T);
-        IRValue* idx3 = ir_value_const_int(3, IR_TYPE_I64_T);
-        IRValue* z = ir_value_const_int(0, IR_TYPE_I8_T);
+    // idx_ptr = alloca i64
+    int idx_ptr_reg = ir_builder_emit_alloca(b, IR_TYPE_I64_T);
+    IRType* idx_ptr_t = ir_type_ptr(IR_TYPE_I64_T);
+    IRValue* idx_ptr = ir_value_reg(idx_ptr_reg, idx_ptr_t);
+    ir_builder_emit_store(b, ir_value_const_int(0, IR_TYPE_I64_T), idx_ptr);
 
-        int p0r = ir_builder_emit_ptr_offset(b, i8_ptr_t, base_ptr, idx0);
-        int p1r = ir_builder_emit_ptr_offset(b, i8_ptr_t, base_ptr, idx1);
-        int p2r = ir_builder_emit_ptr_offset(b, i8_ptr_t, base_ptr, idx2);
-        int p3r = ir_builder_emit_ptr_offset(b, i8_ptr_t, base_ptr, idx3);
+    IRBlock* head = cf_create_block(ctx, "اطبع_نص_حلقة");
+    IRBlock* body = cf_create_block(ctx, "اطبع_نص_جسم");
+    IRBlock* done = cf_create_block(ctx, "اطبع_نص_نهاية");
 
-        ir_builder_emit_store(b, ir_value_const_int(0xEF, IR_TYPE_I8_T), ir_value_reg(p0r, i8_ptr_t));
-        ir_builder_emit_store(b, ir_value_const_int(0xBF, IR_TYPE_I8_T), ir_value_reg(p1r, i8_ptr_t));
-        ir_builder_emit_store(b, ir_value_const_int(0xBD, IR_TYPE_I8_T), ir_value_reg(p2r, i8_ptr_t));
-        ir_builder_emit_store(b, z, ir_value_reg(p3r, i8_ptr_t));
-    }
-    if (!ir_builder_is_block_terminated(b)) ir_builder_emit_br(b, do_bb);
+    if (!ir_builder_is_block_terminated(b))
+        ir_builder_emit_br(b, head);
 
-    // check1
-    ir_builder_set_insert_point(b, check1_bb);
-    {
-        int le1_r = ir_builder_emit_cmp_le(b, cp, ir_value_const_int(0x7F, IR_TYPE_I64_T));
-        IRValue* le1 = ir_value_reg(le1_r, IR_TYPE_I1_T);
-        if (!ir_builder_is_block_terminated(b)) ir_builder_emit_br_cond(b, le1, one_bb, check2_bb);
-    }
+    // head
+    ir_builder_set_insert_point(b, head);
+    int idx_r = ir_builder_emit_load(b, IR_TYPE_I64_T, idx_ptr);
+    IRValue* idx = ir_value_reg(idx_r, IR_TYPE_I64_T);
 
-    // one byte
-    ir_builder_set_insert_point(b, one_bb);
-    {
-        IRValue* b0 = cast_to(ctx, cp, IR_TYPE_I8_T);
-        IRValue* z = ir_value_const_int(0, IR_TYPE_I8_T);
-        IRValue* idx0 = ir_value_const_int(0, IR_TYPE_I64_T);
-        IRValue* idx1 = ir_value_const_int(1, IR_TYPE_I64_T);
-        int p0r = ir_builder_emit_ptr_offset(b, i8_ptr_t, base_ptr, idx0);
-        int p1r = ir_builder_emit_ptr_offset(b, i8_ptr_t, base_ptr, idx1);
-        ir_builder_emit_store(b, b0, ir_value_reg(p0r, i8_ptr_t));
-        ir_builder_emit_store(b, z, ir_value_reg(p1r, i8_ptr_t));
-    }
-    if (!ir_builder_is_block_terminated(b)) ir_builder_emit_br(b, do_bb);
+    int ep = ir_builder_emit_ptr_offset(b, char_ptr_t, base, idx);
+    IRValue* elem_ptr = ir_value_reg(ep, char_ptr_t);
+    int ch_r = ir_builder_emit_load(b, IR_TYPE_CHAR_T, elem_ptr);
+    IRValue* ch = ir_value_reg(ch_r, IR_TYPE_CHAR_T);
 
-    // check2
-    ir_builder_set_insert_point(b, check2_bb);
-    {
-        int le2_r = ir_builder_emit_cmp_le(b, cp, ir_value_const_int(0x7FF, IR_TYPE_I64_T));
-        IRValue* le2 = ir_value_reg(le2_r, IR_TYPE_I1_T);
-        if (!ir_builder_is_block_terminated(b)) ir_builder_emit_br_cond(b, le2, two_bb, check3_bb);
-    }
+    int chi_r = ir_builder_emit_cast(b, ch, IR_TYPE_I64_T);
+    IRValue* chi = ir_value_reg(chi_r, IR_TYPE_I64_T);
+    int is_end_r = ir_builder_emit_cmp_eq(b, chi, ir_value_const_int(0, IR_TYPE_I64_T));
+    IRValue* is_end = ir_value_reg(is_end_r, IR_TYPE_I1_T);
 
-    // two bytes
-    ir_builder_set_insert_point(b, two_bb);
-    {
-        IRValue* sixty4 = ir_value_const_int(64, IR_TYPE_I64_T);
-        int q_r = ir_builder_emit_div(b, IR_TYPE_I64_T, cp, sixty4);
-        int r_r = ir_builder_emit_mod(b, IR_TYPE_I64_T, cp, sixty4);
-        IRValue* q = ir_value_reg(q_r, IR_TYPE_I64_T);
-        IRValue* r = ir_value_reg(r_r, IR_TYPE_I64_T);
+    if (!ir_builder_is_block_terminated(b))
+        ir_builder_emit_br_cond(b, is_end, done, body);
 
-        int b0r = ir_builder_emit_add(b, IR_TYPE_I64_T, ir_value_const_int(0xC0, IR_TYPE_I64_T), q);
-        int b1r = ir_builder_emit_add(b, IR_TYPE_I64_T, ir_value_const_int(0x80, IR_TYPE_I64_T), r);
-        IRValue* b0 = cast_to(ctx, ir_value_reg(b0r, IR_TYPE_I64_T), IR_TYPE_I8_T);
-        IRValue* b1 = cast_to(ctx, ir_value_reg(b1r, IR_TYPE_I64_T), IR_TYPE_I8_T);
+    // body
+    ir_builder_set_insert_point(b, body);
+    lower_print_char_packed(ctx, stmt, ch, "%s");
 
-        IRValue* z = ir_value_const_int(0, IR_TYPE_I8_T);
-        IRValue* idx0 = ir_value_const_int(0, IR_TYPE_I64_T);
-        IRValue* idx1 = ir_value_const_int(1, IR_TYPE_I64_T);
-        IRValue* idx2 = ir_value_const_int(2, IR_TYPE_I64_T);
-        int p0r = ir_builder_emit_ptr_offset(b, i8_ptr_t, base_ptr, idx0);
-        int p1r = ir_builder_emit_ptr_offset(b, i8_ptr_t, base_ptr, idx1);
-        int p2r = ir_builder_emit_ptr_offset(b, i8_ptr_t, base_ptr, idx2);
-        ir_builder_emit_store(b, b0, ir_value_reg(p0r, i8_ptr_t));
-        ir_builder_emit_store(b, b1, ir_value_reg(p1r, i8_ptr_t));
-        ir_builder_emit_store(b, z, ir_value_reg(p2r, i8_ptr_t));
-    }
-    if (!ir_builder_is_block_terminated(b)) ir_builder_emit_br(b, do_bb);
+    int inc_r = ir_builder_emit_add(b, IR_TYPE_I64_T, idx, ir_value_const_int(1, IR_TYPE_I64_T));
+    IRValue* inc = ir_value_reg(inc_r, IR_TYPE_I64_T);
+    ir_builder_emit_store(b, inc, idx_ptr);
+    if (!ir_builder_is_block_terminated(b))
+        ir_builder_emit_br(b, head);
 
-    // check3
-    ir_builder_set_insert_point(b, check3_bb);
-    {
-        int le3_r = ir_builder_emit_cmp_le(b, cp, ir_value_const_int(0xFFFF, IR_TYPE_I64_T));
-        IRValue* le3 = ir_value_reg(le3_r, IR_TYPE_I1_T);
-        if (!ir_builder_is_block_terminated(b)) ir_builder_emit_br_cond(b, le3, three_bb, four_bb);
-    }
-
-    // three bytes
-    ir_builder_set_insert_point(b, three_bb);
-    {
-        IRValue* d4096 = ir_value_const_int(4096, IR_TYPE_I64_T);
-        IRValue* d64 = ir_value_const_int(64, IR_TYPE_I64_T);
-
-        int q1_r = ir_builder_emit_div(b, IR_TYPE_I64_T, cp, d4096);
-        IRValue* q1 = ir_value_reg(q1_r, IR_TYPE_I64_T);
-
-        int q2_r = ir_builder_emit_div(b, IR_TYPE_I64_T, cp, d64);
-        IRValue* q2 = ir_value_reg(q2_r, IR_TYPE_I64_T);
-        int q2m_r = ir_builder_emit_mod(b, IR_TYPE_I64_T, q2, ir_value_const_int(64, IR_TYPE_I64_T));
-        IRValue* q2m = ir_value_reg(q2m_r, IR_TYPE_I64_T);
-
-        int r_r = ir_builder_emit_mod(b, IR_TYPE_I64_T, cp, d64);
-        IRValue* r = ir_value_reg(r_r, IR_TYPE_I64_T);
-
-        int b0r = ir_builder_emit_add(b, IR_TYPE_I64_T, ir_value_const_int(0xE0, IR_TYPE_I64_T), q1);
-        int b1r = ir_builder_emit_add(b, IR_TYPE_I64_T, ir_value_const_int(0x80, IR_TYPE_I64_T), q2m);
-        int b2r = ir_builder_emit_add(b, IR_TYPE_I64_T, ir_value_const_int(0x80, IR_TYPE_I64_T), r);
-
-        IRValue* b0 = cast_to(ctx, ir_value_reg(b0r, IR_TYPE_I64_T), IR_TYPE_I8_T);
-        IRValue* b1 = cast_to(ctx, ir_value_reg(b1r, IR_TYPE_I64_T), IR_TYPE_I8_T);
-        IRValue* b2 = cast_to(ctx, ir_value_reg(b2r, IR_TYPE_I64_T), IR_TYPE_I8_T);
-
-        IRValue* z = ir_value_const_int(0, IR_TYPE_I8_T);
-        IRValue* idx0 = ir_value_const_int(0, IR_TYPE_I64_T);
-        IRValue* idx1 = ir_value_const_int(1, IR_TYPE_I64_T);
-        IRValue* idx2 = ir_value_const_int(2, IR_TYPE_I64_T);
-        IRValue* idx3 = ir_value_const_int(3, IR_TYPE_I64_T);
-        int p0r = ir_builder_emit_ptr_offset(b, i8_ptr_t, base_ptr, idx0);
-        int p1r = ir_builder_emit_ptr_offset(b, i8_ptr_t, base_ptr, idx1);
-        int p2r = ir_builder_emit_ptr_offset(b, i8_ptr_t, base_ptr, idx2);
-        int p3r = ir_builder_emit_ptr_offset(b, i8_ptr_t, base_ptr, idx3);
-        ir_builder_emit_store(b, b0, ir_value_reg(p0r, i8_ptr_t));
-        ir_builder_emit_store(b, b1, ir_value_reg(p1r, i8_ptr_t));
-        ir_builder_emit_store(b, b2, ir_value_reg(p2r, i8_ptr_t));
-        ir_builder_emit_store(b, z, ir_value_reg(p3r, i8_ptr_t));
-    }
-    if (!ir_builder_is_block_terminated(b)) ir_builder_emit_br(b, do_bb);
-
-    // four bytes
-    ir_builder_set_insert_point(b, four_bb);
-    {
-        IRValue* d262144 = ir_value_const_int(262144, IR_TYPE_I64_T);
-        IRValue* d4096 = ir_value_const_int(4096, IR_TYPE_I64_T);
-        IRValue* d64 = ir_value_const_int(64, IR_TYPE_I64_T);
-
-        int q1_r = ir_builder_emit_div(b, IR_TYPE_I64_T, cp, d262144);
-        IRValue* q1 = ir_value_reg(q1_r, IR_TYPE_I64_T);
-
-        int q2_r = ir_builder_emit_div(b, IR_TYPE_I64_T, cp, d4096);
-        IRValue* q2 = ir_value_reg(q2_r, IR_TYPE_I64_T);
-        int q2m_r = ir_builder_emit_mod(b, IR_TYPE_I64_T, q2, ir_value_const_int(64, IR_TYPE_I64_T));
-        IRValue* q2m = ir_value_reg(q2m_r, IR_TYPE_I64_T);
-
-        int q3_r = ir_builder_emit_div(b, IR_TYPE_I64_T, cp, d64);
-        IRValue* q3 = ir_value_reg(q3_r, IR_TYPE_I64_T);
-        int q3m_r = ir_builder_emit_mod(b, IR_TYPE_I64_T, q3, ir_value_const_int(64, IR_TYPE_I64_T));
-        IRValue* q3m = ir_value_reg(q3m_r, IR_TYPE_I64_T);
-
-        int r_r = ir_builder_emit_mod(b, IR_TYPE_I64_T, cp, d64);
-        IRValue* r = ir_value_reg(r_r, IR_TYPE_I64_T);
-
-        int b0r = ir_builder_emit_add(b, IR_TYPE_I64_T, ir_value_const_int(0xF0, IR_TYPE_I64_T), q1);
-        int b1r = ir_builder_emit_add(b, IR_TYPE_I64_T, ir_value_const_int(0x80, IR_TYPE_I64_T), q2m);
-        int b2r = ir_builder_emit_add(b, IR_TYPE_I64_T, ir_value_const_int(0x80, IR_TYPE_I64_T), q3m);
-        int b3r = ir_builder_emit_add(b, IR_TYPE_I64_T, ir_value_const_int(0x80, IR_TYPE_I64_T), r);
-
-        IRValue* b0 = cast_to(ctx, ir_value_reg(b0r, IR_TYPE_I64_T), IR_TYPE_I8_T);
-        IRValue* b1 = cast_to(ctx, ir_value_reg(b1r, IR_TYPE_I64_T), IR_TYPE_I8_T);
-        IRValue* b2 = cast_to(ctx, ir_value_reg(b2r, IR_TYPE_I64_T), IR_TYPE_I8_T);
-        IRValue* b3 = cast_to(ctx, ir_value_reg(b3r, IR_TYPE_I64_T), IR_TYPE_I8_T);
-
-        IRValue* z = ir_value_const_int(0, IR_TYPE_I8_T);
-        IRValue* idx0 = ir_value_const_int(0, IR_TYPE_I64_T);
-        IRValue* idx1 = ir_value_const_int(1, IR_TYPE_I64_T);
-        IRValue* idx2 = ir_value_const_int(2, IR_TYPE_I64_T);
-        IRValue* idx3 = ir_value_const_int(3, IR_TYPE_I64_T);
-        IRValue* idx4 = ir_value_const_int(4, IR_TYPE_I64_T);
-        int p0r = ir_builder_emit_ptr_offset(b, i8_ptr_t, base_ptr, idx0);
-        int p1r = ir_builder_emit_ptr_offset(b, i8_ptr_t, base_ptr, idx1);
-        int p2r = ir_builder_emit_ptr_offset(b, i8_ptr_t, base_ptr, idx2);
-        int p3r = ir_builder_emit_ptr_offset(b, i8_ptr_t, base_ptr, idx3);
-        int p4r = ir_builder_emit_ptr_offset(b, i8_ptr_t, base_ptr, idx4);
-        ir_builder_emit_store(b, b0, ir_value_reg(p0r, i8_ptr_t));
-        ir_builder_emit_store(b, b1, ir_value_reg(p1r, i8_ptr_t));
-        ir_builder_emit_store(b, b2, ir_value_reg(p2r, i8_ptr_t));
-        ir_builder_emit_store(b, b3, ir_value_reg(p3r, i8_ptr_t));
-        ir_builder_emit_store(b, z, ir_value_reg(p4r, i8_ptr_t));
-    }
-    if (!ir_builder_is_block_terminated(b)) ir_builder_emit_br(b, do_bb);
-
-    // do print
-    ir_builder_set_insert_point(b, do_bb);
-    if (stmt) ir_lower_set_loc(b, stmt);
-    {
-        IRValue* fmt_val = ir_builder_const_string(b, "%s\n");
-        IRValue* args[2] = { fmt_val, base_ptr };
-        ir_builder_emit_call_void(b, "اطبع", args, 2);
-    }
-    if (!ir_builder_is_block_terminated(b)) ir_builder_emit_br(b, cont_bb);
-
-    // continue
-    ir_builder_set_insert_point(b, cont_bb);
+    // done
+    ir_builder_set_insert_point(b, done);
+    lower_printf_cstr(ctx, stmt, "\n", NULL);
 }
 
 static void lower_print(IRLowerCtx* ctx, Node* stmt) {
@@ -1167,31 +1439,20 @@ static void lower_print(IRLowerCtx* ctx, Node* stmt) {
 
     IRValue* value = lower_expr(ctx, stmt->data.print_stmt.expression);
 
-    // طباعة حرف UTF-8: نُحوّل نقطة-الكود إلى بايتات UTF-8 ثم نطبعها كنص.
-    if (value && value->type && value->type->kind == IR_TYPE_I32) {
-        lower_print_char_utf8(ctx, stmt, value);
+    if (value && value->type && value->type->kind == IR_TYPE_CHAR) {
+        lower_print_char_packed(ctx, stmt, value, "%s\n");
         return;
     }
 
-    // اختيار صيغة الطباعة بناءً على نوع القيمة
-    // ملاحظة: حالياً نستخدم %d للأعداد والمنطقي (توافقاً مع المسار القديم)، و %s للنصوص.
-    const char* fmt = "%d\n";
     if (value && value->type && value->type->kind == IR_TYPE_PTR &&
-        value->type->data.pointee == IR_TYPE_I8_T) {
-        fmt = "%s\n";
+        value->type->data.pointee && value->type->data.pointee->kind == IR_TYPE_CHAR) {
+        lower_print_baa_string(ctx, stmt, value);
+        return;
     }
 
-    // printf varargs: للأمان، وسّع الأعداد الأصغر إلى i64.
-    if (value && value->type && value->type->kind != IR_TYPE_PTR && value->type->kind != IR_TYPE_I64) {
-        value = ensure_i64(ctx, value);
-    }
-
-    IRValue* fmt_val = ir_builder_const_string(ctx->builder, fmt);
-
-    IRValue* args[2] = { fmt_val, value };
-
-    // Builtin: اطبع(value) → printf(fmt, value)
-    ir_builder_emit_call_void(ctx->builder, "اطبع", args, 2);
+    // افتراضي: طباعة كعدد صحيح.
+    IRValue* v64 = value ? ensure_i64(ctx, value) : ir_value_const_int(0, IR_TYPE_I64_T);
+    lower_printf_cstr(ctx, stmt, "%d\n", v64);
 }
 
 static void lower_read(IRLowerCtx* ctx, Node* stmt) {
@@ -1725,13 +1986,21 @@ static IRValue* ir_lower_global_init_value(IRBuilder* builder, Node* expr, IRTyp
             return ir_value_const_int(expr->data.bool_lit.value ? 1 : 0,
                                       expected_type ? expected_type : IR_TYPE_I1_T);
 
+        case NODE_FLOAT:
+            return ir_value_const_int((int64_t)expr->data.float_lit.bits,
+                                      expected_type ? expected_type : IR_TYPE_F64_T);
+
         case NODE_CHAR:
+            if (expected_type && expected_type->kind == IR_TYPE_CHAR) {
+                uint64_t packed = pack_utf8_codepoint((uint32_t)expr->data.char_lit.value);
+                return ir_value_const_int((int64_t)packed, IR_TYPE_CHAR_T);
+            }
             return ir_value_const_int((int64_t)expr->data.char_lit.value,
-                                      expected_type ? expected_type : IR_TYPE_I32_T);
+                                      expected_type ? expected_type : IR_TYPE_I64_T);
 
         case NODE_STRING:
             // Adds to module string table and returns pointer value.
-            return ir_builder_const_string(builder, expr->data.string_lit.value);
+            return ir_builder_const_baa_string(builder, expr->data.string_lit.value);
 
         case NODE_MEMBER_ACCESS:
             if (expr->data.member_access.is_enum_value) {

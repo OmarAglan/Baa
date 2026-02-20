@@ -45,7 +45,7 @@ static int ir_licm_value_is_invariant(IRValue* v, const IRLoop* loop, const IRDe
     if (!v) return 0;
     if (!loop || !du) return 0;
 
-    if (v->kind == IR_VAL_CONST_INT || v->kind == IR_VAL_CONST_STR) {
+    if (v->kind == IR_VAL_CONST_INT || v->kind == IR_VAL_CONST_STR || v->kind == IR_VAL_BAA_STR) {
         return 1;
     }
 

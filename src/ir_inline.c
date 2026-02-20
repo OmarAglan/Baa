@@ -140,6 +140,7 @@ static IRValue* ir_inline_clone_value(IRValue* v,
     switch (v->kind) {
         case IR_VAL_CONST_INT:
         case IR_VAL_CONST_STR:
+        case IR_VAL_BAA_STR:
             return v;
         case IR_VAL_GLOBAL:
         case IR_VAL_FUNC:

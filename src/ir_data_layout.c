@@ -82,6 +82,10 @@ int ir_type_size_bytes(const IRDataLayout* dl, const IRType* type) {
             return 4;
         case IR_TYPE_I64:
             return 8;
+        case IR_TYPE_CHAR:
+            return 8;
+        case IR_TYPE_F64:
+            return 8;
         case IR_TYPE_PTR:
             return d->pointer_size_bytes;
         case IR_TYPE_ARRAY:
@@ -126,6 +130,10 @@ int ir_type_alignment(const IRDataLayout* dl, const IRType* type) {
         case IR_TYPE_I32:
             return d->i32_align_bytes;
         case IR_TYPE_I64:
+            return d->i64_align_bytes;
+        case IR_TYPE_CHAR:
+            return d->i64_align_bytes;
+        case IR_TYPE_F64:
             return d->i64_align_bytes;
         case IR_TYPE_PTR:
             return d->pointer_align_bytes;
@@ -178,6 +186,7 @@ int ir_type_is_integer(const IRType* type) {
         case IR_TYPE_I16:
         case IR_TYPE_I32:
         case IR_TYPE_I64:
+        case IR_TYPE_CHAR:
             return 1;
         default:
             return 0;

@@ -187,6 +187,8 @@ static void ir_text_write_type(FILE* out, IRType* type) {
         case IR_TYPE_I16:  fputs("i16", out); return;
         case IR_TYPE_I32:  fputs("i32", out); return;
         case IR_TYPE_I64:  fputs("i64", out); return;
+        case IR_TYPE_CHAR: fputs("char", out); return;
+        case IR_TYPE_F64:  fputs("f64", out); return;
         case IR_TYPE_PTR:
             fputs("ptr<", out);
             ir_text_write_type(out, type->data.pointee);
@@ -231,6 +233,9 @@ static void ir_text_write_value(FILE* out, IRValue* val) {
             return;
         case IR_VAL_CONST_STR:
             fprintf(out, "@.str%d", val->data.const_str.id);
+            return;
+        case IR_VAL_BAA_STR:
+            fprintf(out, "@.bs%d", val->data.const_str.id);
             return;
         case IR_VAL_BLOCK:
             if (val->data.block) fprintf(out, "%%block%d", val->data.block->id);
@@ -654,6 +659,8 @@ static IRType* ir_text_parse_primitive_type(const char* tok) {
     if (strcmp(tok, "i16") == 0) return IR_TYPE_I16_T;
     if (strcmp(tok, "i32") == 0) return IR_TYPE_I32_T;
     if (strcmp(tok, "i64") == 0) return IR_TYPE_I64_T;
+    if (strcmp(tok, "char") == 0) return IR_TYPE_CHAR_T;
+    if (strcmp(tok, "f64") == 0) return IR_TYPE_F64_T;
     return NULL;
 }
 
@@ -762,6 +769,14 @@ static IRValue* ir_text_parse_value(IRModule* module, IRFunc* func, IRTextBlockM
         if (!ir_text_parse_int32(p, &id)) return NULL;
         const char* s = module ? ir_module_get_string(module, id) : NULL;
         return ir_value_const_str(s, id);
+    }
+
+    // سلسلة باء: @.bsN
+    if (ir_text_match(p, "@.bs")) {
+        int id = 0;
+        if (!ir_text_parse_int32(p, &id)) return NULL;
+        const char* s = module ? ir_module_get_baa_string(module, id) : NULL;
+        return ir_value_baa_str(s, id);
     }
 
     // مرجع global/function: @name

@@ -1023,6 +1023,7 @@ static const char* datatype_to_str(DataType type) {
         case TYPE_STRING: return "STRING";
         case TYPE_BOOL: return "BOOLEAN";
         case TYPE_CHAR: return "CHAR";
+        case TYPE_FLOAT: return "FLOAT";
         case TYPE_ENUM: return "ENUM";
         case TYPE_STRUCT: return "STRUCT";
         case TYPE_UNION: return "UNION";
@@ -1177,6 +1178,9 @@ static DataType infer_type(Node* node) {
         case NODE_INT:
             return TYPE_INT;
 
+        case NODE_FLOAT:
+            return TYPE_FLOAT;
+
         case NODE_CHAR:
             return TYPE_CHAR;
         
@@ -1260,11 +1264,18 @@ static DataType infer_type(Node* node) {
                 return TYPE_INT;
             }
 
+            if (fs->return_type == TYPE_FLOAT) {
+                semantic_error(node, "استدعاء دالة تُرجع 'عشري' غير مدعوم حالياً.");
+            }
+
             // تحقق عدد وأنواع المعاملات
             int i = 0;
             Node* arg = node->data.call.args;
             while (arg) {
                 DataType at = infer_type(arg);
+                if (at == TYPE_FLOAT) {
+                    semantic_error(arg, "تمرير 'عشري' إلى دالة غير مدعوم حالياً.");
+                }
                 if (i < fs->param_count) {
                     if (!types_compatible(at, fs->param_types[i])) {
                         semantic_error(arg, "نوع المعامل %d في '%s' غير متوافق.", i + 1, fs->name);
@@ -1286,6 +1297,9 @@ static DataType infer_type(Node* node) {
             // العمليات الحسابية تتطلب أعداداً صحيحة
             OpType op = node->data.bin_op.op;
             if (op == OP_ADD || op == OP_SUB || op == OP_MUL || op == OP_DIV || op == OP_MOD) {
+                if (left == TYPE_FLOAT || right == TYPE_FLOAT) {
+                    semantic_error(node, "عمليات العشري غير مدعومة حالياً.");
+                }
                 if (!types_compatible(left, TYPE_INT) || !types_compatible(right, TYPE_INT)) {
                     semantic_error(node, "Arithmetic operations require INTEGER operands.");
                 }
@@ -1294,6 +1308,9 @@ static DataType infer_type(Node* node) {
             
             // عمليات المقارنة تتطلب أنواعاً متوافقة وتعيد منطقي
             if (op == OP_EQ || op == OP_NEQ || op == OP_LT || op == OP_GT || op == OP_LTE || op == OP_GTE) {
+                if (left == TYPE_FLOAT || right == TYPE_FLOAT) {
+                    semantic_error(node, "مقارنات العشري غير مدعومة حالياً.");
+                }
                 if (left != right) {
                     // سماح C-like: مقارنة حرف مع صحيح.
                     if (!((types_compatible(left, TYPE_INT) && types_compatible(right, TYPE_INT)) ||
@@ -1326,7 +1343,11 @@ static DataType infer_type(Node* node) {
 
         case NODE_UNARY_OP:
         case NODE_POSTFIX_OP: {
-            if (!types_compatible(infer_type(node->data.unary_op.operand), TYPE_INT)) {
+            DataType ot = infer_type(node->data.unary_op.operand);
+            if (ot == TYPE_FLOAT) {
+                semantic_error(node, "عمليات العشري غير مدعومة حالياً.");
+            }
+            if (!types_compatible(ot, TYPE_INT)) {
                 semantic_error(node, "Unary operations require INTEGER operand.");
             }
             return TYPE_INT;
@@ -1518,14 +1539,21 @@ static void analyze_node(Node* node) {
             in_function = true;
             current_func_return_type = node->data.func_def.return_type;
 
+            if (current_func_return_type == TYPE_FLOAT) {
+                semantic_error(node, "نوع الإرجاع 'عشري' غير مدعوم حالياً في ABI.");
+            }
+
             // إضافة المعاملات كمتغيرات محلية (المعاملات ليست ثوابت افتراضياً)
             Node* param = node->data.func_def.params;
             while (param) {
                  if (param->type == NODE_VAR_DECL) {
-                     // المعاملات تُعتبر "مستخدمة" ضمنياً (لتجنب تحذيرات خاطئة)
-                    add_symbol(param->data.var_decl.name, SCOPE_LOCAL, param->data.var_decl.type, NULL, false,
-                               false, 0,
-                               param->line, param->col, param->filename ? param->filename : current_filename);
+                     if (param->data.var_decl.type == TYPE_FLOAT) {
+                         semantic_error(param, "المعامل من نوع 'عشري' غير مدعوم حالياً في ABI.");
+                     }
+                      // المعاملات تُعتبر "مستخدمة" ضمنياً (لتجنب تحذيرات خاطئة)
+                     add_symbol(param->data.var_decl.name, SCOPE_LOCAL, param->data.var_decl.type, NULL, false,
+                                false, 0,
+                                param->line, param->col, param->filename ? param->filename : current_filename);
                      // تعليم المعامل كمستخدم مباشرة
                      local_symbols[local_count - 1].is_used = true;
                  }
@@ -1747,8 +1775,13 @@ static void analyze_node(Node* node) {
             break;
 
         case NODE_PRINT:
-            infer_type(node->data.print_stmt.expression);
+        {
+            DataType pt = infer_type(node->data.print_stmt.expression);
+            if (pt == TYPE_FLOAT) {
+                semantic_error(node, "'اطبع' لا يدعم 'عشري' حالياً.");
+            }
             break;
+        }
         
         case NODE_READ: {
             // التحقق من أن المتغير معرف وقابل للتعديل
@@ -1783,6 +1816,9 @@ static void analyze_node(Node* node) {
             Node* arg = node->data.call.args;
             while (arg) {
                 DataType at = infer_type(arg);
+                if (at == TYPE_FLOAT) {
+                    semantic_error(arg, "تمرير 'عشري' إلى دالة غير مدعوم حالياً.");
+                }
                 if (i < fs->param_count) {
                     if (!types_compatible(at, fs->param_types[i])) {
                         semantic_error(arg, "نوع المعامل %d في '%s' غير متوافق.", i + 1, fs->name);

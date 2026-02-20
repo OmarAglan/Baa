@@ -121,6 +121,8 @@ typedef enum {
     IR_TYPE_I16,    // ص١٦ - 16-bit integer
     IR_TYPE_I32,    // ص٣٢ - 32-bit integer
     IR_TYPE_I64,    // ص٦٤ - 64-bit integer (primary)
+    IR_TYPE_CHAR,   // حرف - UTF-8 character (packed)
+    IR_TYPE_F64,    // ع٦٤ - 64-bit floating point (storage only for now)
     IR_TYPE_PTR,    // مؤشر - Pointer type
     IR_TYPE_ARRAY,  // مصفوفة - Array type
     IR_TYPE_FUNC,   // دالة - Function type
@@ -163,6 +165,7 @@ typedef enum {
     IR_VAL_NONE,        // No value (void)
     IR_VAL_CONST_INT,   // Constant integer
     IR_VAL_CONST_STR,   // Constant string (pointer to .rdata)
+    IR_VAL_BAA_STR,     // Baa string (pointer to .rodata UTF-8 chars array)
     IR_VAL_REG,         // Virtual register (%م<n>)
     IR_VAL_GLOBAL,      // Global variable (@name)
     IR_VAL_FUNC,        // Function reference (@name)
@@ -384,6 +387,17 @@ typedef struct IRStringEntry {
 } IRStringEntry;
 
 /**
+ * @struct IRBaaStringEntry
+ * @brief سلسلة نصية ثابتة ممثلة كمصفوفة من `حرف`.
+ */
+typedef struct IRBaaStringEntry {
+    // ملاحظة: هذه البنية تُخصَّص داخل ساحة IR (Arena) وتُحرَّر دفعة واحدة.
+    char* content;              // String content (UTF-8)
+    int id;                     // Unique ID (.Lbs_<id>)
+    struct IRBaaStringEntry* next;
+} IRBaaStringEntry;
+
+/**
  * @struct IRModule
  * @brief Represents a complete IR module (translation unit).
  */
@@ -408,6 +422,10 @@ typedef struct IRModule {
     // String table
     IRStringEntry* strings;
     int string_count;
+
+    // Baa string table (as حرف[])
+    IRBaaStringEntry* baa_strings;
+    int baa_string_count;
 } IRModule;
 
 // ============================================================================
@@ -427,6 +445,8 @@ extern IRType* IR_TYPE_I8_T;
 extern IRType* IR_TYPE_I16_T;
 extern IRType* IR_TYPE_I32_T;
 extern IRType* IR_TYPE_I64_T;
+extern IRType* IR_TYPE_CHAR_T;
+extern IRType* IR_TYPE_F64_T;
 
 // ============================================================================
 // Arabic Opcode Names (for printing)
@@ -483,6 +503,7 @@ int ir_type_bits(IRType* type);
 IRValue* ir_value_reg(int reg_num, IRType* type);
 IRValue* ir_value_const_int(int64_t value, IRType* type);
 IRValue* ir_value_const_str(const char* str, int id);
+IRValue* ir_value_baa_str(const char* str, int id);
 IRValue* ir_value_block(IRBlock* block);
 IRValue* ir_value_global(const char* name, IRType* type);
 IRValue* ir_value_func_ref(const char* name, IRType* type);
@@ -551,9 +572,11 @@ IRModule* ir_module_new(const char* name);
 void ir_module_add_func(IRModule* module, IRFunc* func);
 void ir_module_add_global(IRModule* module, IRGlobal* global);
 int ir_module_add_string(IRModule* module, const char* str);
+int ir_module_add_baa_string(IRModule* module, const char* str);
 IRFunc* ir_module_find_func(IRModule* module, const char* name);
 IRGlobal* ir_module_find_global(IRModule* module, const char* name);
 const char* ir_module_get_string(IRModule* module, int id);
+const char* ir_module_get_baa_string(IRModule* module, int id);
 void ir_module_free(IRModule* module);
 
 // ============================================================================

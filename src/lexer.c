@@ -608,6 +608,45 @@ Token lexer_next_token(Lexer* l) {
                 l->state.cur_char += 2; l->state.col += 2;
             } else { break; }
         }
+
+        // رقم عشري: جزء كسري بعد '.' متبوعاً برقم
+        if (peek(l) == '.' && (isdigit((unsigned char)peek_next(l)) || is_arabic_digit(l->state.cur_char + 1)))
+        {
+            if (buf_idx >= (int)sizeof(buffer) - 1) {
+                printf("Lexer Error: Float literal too long at %s:%d:%d\n",
+                       l->state.filename, l->state.line, l->state.col);
+                exit(1);
+            }
+            buffer[buf_idx++] = '.';
+            advance_pos(l); // تخطي '.'
+
+            while (1) {
+                char* c = l->state.cur_char;
+                if (isdigit((unsigned char)*c)) {
+                    if (buf_idx >= (int)sizeof(buffer) - 1) {
+                        printf("Lexer Error: Float literal too long at %s:%d:%d\n",
+                               l->state.filename, l->state.line, l->state.col);
+                        exit(1);
+                    }
+                    buffer[buf_idx++] = *c;
+                    advance_pos(l);
+                }
+                else if (is_arabic_digit(c)) {
+                    if (buf_idx >= (int)sizeof(buffer) - 1) {
+                        printf("Lexer Error: Float literal too long at %s:%d:%d\n",
+                               l->state.filename, l->state.line, l->state.col);
+                        exit(1);
+                    }
+                    buffer[buf_idx++] = ((unsigned char)c[1] - 0xA0) + '0';
+                    l->state.cur_char += 2; l->state.col += 2;
+                } else { break; }
+            }
+
+            token.type = TOKEN_FLOAT;
+            token.value = strdup(buffer);
+            return token;
+        }
+
         token.value = strdup(buffer);
         return token;
     }
@@ -670,6 +709,7 @@ Token lexer_next_token(Lexer* l) {
         else if (strcmp(word, "نص") == 0) token.type = TOKEN_KEYWORD_STRING;
         else if (strcmp(word, "منطقي") == 0) token.type = TOKEN_KEYWORD_BOOL;
         else if (strcmp(word, "حرف") == 0) token.type = TOKEN_KEYWORD_CHAR;
+        else if (strcmp(word, "عشري") == 0) token.type = TOKEN_KEYWORD_FLOAT;
         else if (strcmp(word, "ثابت") == 0) token.type = TOKEN_CONST;
         else if (strcmp(word, "إذا") == 0) token.type = TOKEN_IF;
         else if (strcmp(word, "وإلا") == 0) token.type = TOKEN_ELSE;
@@ -708,6 +748,7 @@ const char* token_type_to_str(BaaTokenType type) {
     switch (type) {
         case TOKEN_EOF: return "EOF";
         case TOKEN_INT: return "INTEGER";
+        case TOKEN_FLOAT: return "FLOAT";
         case TOKEN_STRING: return "STRING";
         case TOKEN_CHAR: return "CHAR";
         case TOKEN_IDENTIFIER: return "IDENTIFIER";
@@ -717,6 +758,7 @@ const char* token_type_to_str(BaaTokenType type) {
         case TOKEN_KEYWORD_STRING: return "نص";
         case TOKEN_KEYWORD_BOOL: return "منطقي";
         case TOKEN_KEYWORD_CHAR: return "حرف";
+        case TOKEN_KEYWORD_FLOAT: return "عشري";
         case TOKEN_CONST: return "ثابت";
         case TOKEN_RETURN: return "إرجع";
         case TOKEN_PRINT: return "اطبع";

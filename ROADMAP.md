@@ -566,10 +566,10 @@
 
 #### Features
 
-- [x] **Character Type (`حرف`)** – Unicode code point scalar type; char literals accept a single UTF-8 character.
-- [ ] **String-Char Relationship** – Strings (`نص`) become arrays of characters (`حرف[]`).
+- [x] **Character Type (`حرف`)** – UTF-8 character value (variable-length, 1..4 bytes) stored as a packed scalar.
+- [x] **String-Char Relationship** – Strings (`نص`) are represented as arrays of `حرف` (`حرف[]`) with indexing (`اسم[٠]`).
 
-- [ ] **Float Type (`عشري`)** – *Deferred from v0.3.4.5* (basic type + literals; full FP pipeline remains later).
+- [x] **Float Type (`عشري`)** – *Deferred from v0.3.4.5* (basic type + literals + storage; full FP ops/ABI later).
 
 **Syntax:**
 
@@ -580,17 +580,16 @@
 
 #### Implementation Tasks
 
-- [ ] **Token**: Already have `TOKEN_CHAR` for literals.
+- [x] **Token**: Already have `TOKEN_CHAR` for literals.
 - [x] **Token**: Add `TOKEN_KEYWORD_CHAR` for `حرف` type keyword.
 - [x] **Type System**: Add `TYPE_CHAR` to `DataType` enum.
 - [x] **Semantic**: Distinguish between `char` and `int`.
-- [x] **Codegen**: Store `حرف` as `i32` (Unicode code point) and support UTF-8 printing.
-- [ ] **String Representation**: Update internal string handling to use `حرف[]`.
+- [x] **Codegen**: Store `حرف` as packed `i64` (bytes + length) and support UTF-8 printing.
+- [x] **String Representation**: Update internal string handling to use `حرف[]`.
 
 #### Deferred to v0.3.9
 
 - String operations: `طول_نص()`, `دمج_نص()`, `قارن_نص()`
-- String indexing: `اسم[٠]` returns `حرف`
 
 ### v0.3.5.5: Integer Type Sizes 🔢
 **Goal:** Support different integer sizes for precise memory control and C interop.
@@ -638,6 +637,26 @@
 - [ ] **Semantic**: Handle signed/unsigned comparison warnings.
 - [ ] **Codegen**: Generate correct-sized mov/add/etc instructions.
 - [ ] **Codegen**: Handle sign-extension vs zero-extension.
+
+---
+
+### v0.3.5.5: Floating Point Enhancements (`عشري`) 🔢
+
+**Goal:** Move `عشري` from “storage-only” to usable arithmetic/compare/print.
+
+#### Features
+
+- [ ] **Arithmetic**: `+ - * /` on `عشري`.
+- [ ] **Comparisons**: `== != < > <= >=` on `عشري`.
+- [ ] **Printing**: `اطبع` supports `عشري` (e.g. via `printf("%f\n", ...)`).
+
+#### Implementation Tasks
+
+- [ ] **IR**: Add float ops (or extend existing ops to accept `f64`) + verifier rules.
+- [ ] **ISel**: Select SSE/AVX scalar instructions for `f64` (`addsd/subsd/mulsd/divsd`) and float compares.
+- [ ] **ABI (Windows + SystemV)**: Pass/return `عشري` in XMM registers; handle stack spills + varargs rules.
+- [ ] **Emitter**: Emit correct mnemonics/suffixes for XMM ops and moves.
+- [ ] **Runtime/Print**: Ensure `printf` calling convention is correct for `double` on both targets.
 
 ---
 

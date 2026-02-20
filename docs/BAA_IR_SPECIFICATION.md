@@ -46,6 +46,8 @@ AST → [Baa IR] → Optimizations → Backend Codegen → x86-64 Assembly
 | `i32` | `ص٣٢` | 4 bytes | 32-bit signed integer |
 | `i16` | `ص١٦` | 2 bytes | 16-bit signed integer |
 | `i8` | `ص٨` | 1 byte | 8-bit signed integer / char |
+| `char` | `حرف` | 8 bytes | Packed UTF-8 character (bytes+len) |
+| `f64` | `ع٦٤` | 8 bytes | 64-bit float storage (ops/ABI deferred) |
 | `i1` | `ص١` | 1 bit | Boolean |
 | `void` | `فراغ` | 0 | No value |
 
@@ -74,6 +76,8 @@ The IR enforces a specific data layout to allow consistent lowering. On x86-64, 
 | `i16` | 2 | 2 | 2 |
 | `i32` | 4 | 4 | 4 |
 | `i64` | 8 | 8 | 8 |
+| `char` | 8 | 8 | 8 |
+| `f64` | 8 | 8 | 8 |
 | `ptr` | 8 | 8 | 8 |
 
 **Memory Model Contract:**
@@ -249,11 +253,16 @@ Example:
 
 ```
 عام @اسم_المتغير = ص٦٤ ١٠٠
-عام @نص_ترحيب = نص "مرحباً"
+عام @نص_ترحيب = نص "مرحباً"   // نص يُخزن كمؤشر إلى مصفوفة حرف[] ثابتة
 
 // مصفوفة عامة (تهيئة جزئية؛ الباقي أصفار مثل C)
 عام @قائمة = مصفوفة[ص٦٤، ٥] {١، ٢، ٣}
 ```
+
+ملاحظة (v0.3.5): السلاسل النصية في IR لها جدولان:
+
+- `.Lstr_N`: سلاسل C (`i8*`) لاستخدامها مع `printf/scanf` (مثل صيغ الطباعة).
+- `.Lbs_N`: سلاسل باء (`حرف[]`) كقائمة محارف UTF-8 مع مُنهٍ صفري.
 
 ---
 

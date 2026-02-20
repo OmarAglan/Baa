@@ -895,6 +895,8 @@ extern IRType* IR_TYPE_I8_T;     // ص٨
 extern IRType* IR_TYPE_I16_T;    // ص١٦
 extern IRType* IR_TYPE_I32_T;    // ص٣٢
 extern IRType* IR_TYPE_I64_T;    // ص٦٤
+extern IRType* IR_TYPE_CHAR_T;   // حرف
+extern IRType* IR_TYPE_F64_T;    // ع٦٤
 ```
 
 ---
@@ -1430,6 +1432,7 @@ IRValue* ir_builder_const_i64(int64_t value);      // i64 constant
 IRValue* ir_builder_const_i32(int32_t value);      // i32 constant
 IRValue* ir_builder_const_bool(int value);         // i1 constant
 IRValue* ir_builder_const_string(IRBuilder* builder, const char* str);  // String constant
+IRValue* ir_builder_const_baa_string(IRBuilder* builder, const char* str);  // Baa string (حرف[])
 ```
 
 ---
@@ -2862,6 +2865,7 @@ typedef enum {
     TYPE_STRING,
     TYPE_BOOL,
     TYPE_CHAR,
+    TYPE_FLOAT,
     TYPE_ENUM,
     TYPE_STRUCT,
     TYPE_UNION
@@ -2947,6 +2951,7 @@ typedef struct {
 typedef enum {
     TOKEN_EOF,
     TOKEN_INT,
+    TOKEN_FLOAT,
     TOKEN_STRING,
     TOKEN_CHAR,
     TOKEN_IDENTIFIER,
@@ -2955,6 +2960,7 @@ typedef enum {
     TOKEN_KEYWORD_STRING,
     TOKEN_KEYWORD_BOOL,
     TOKEN_KEYWORD_CHAR,
+    TOKEN_KEYWORD_FLOAT,
     TOKEN_CONST,
     TOKEN_RETURN,
     TOKEN_PRINT,
@@ -3161,6 +3167,7 @@ typedef enum {
     NODE_UNARY_OP,
     NODE_POSTFIX_OP,
     NODE_INT,
+    NODE_FLOAT,
     NODE_STRING,
     NODE_CHAR,
     NODE_BOOL,

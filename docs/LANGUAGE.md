@@ -130,9 +130,10 @@ Baa is statically typed. All variables must be declared with their type.
 | Baa Type | C Equivalent | Description | Example |
 |----------|--------------|-------------|---------|
 | `صحيح` | `int64_t` (stored) | Integer value (stored as 8 bytes) | `صحيح س = ٥.` |
-| `نص` | `char*` | String pointer (Reference) | `نص اسم = "باء".` |
+| `نص` | `حرف*` (logical) | Null-terminated string of `حرف` (`حرف[]`) | `نص اسم = "باء".` |
 | `منطقي` | `bool` (stored as byte) | Boolean value (`صواب`/`خطأ`) | `منطقي ب = صواب.` |
-| `حرف` | `uint32_t` (logical) | Unicode code point (char literal accepts one UTF-8 character) | `حرف ح = 'أ'.` |
+| `حرف` | `uint64_t` (packed) | One UTF-8 character (1..4 bytes) | `حرف ح = 'أ'.` |
+| `عشري` | `double` (storage only) | 64-bit float storage (ops/ABI deferred) | `عشري باي = ٣.١٤.` |
 
 ### 3.2. Scalar Variables
 
@@ -143,9 +144,42 @@ Baa is statically typed. All variables must be declared with their type.
 صحيح س = ٥٠.
 س = ١٠٠.
 
-// String (Pointer to text)
+// String (حرف[])
 نص رسالة = "مرحباً".
 رسالة = "وداعاً".
+```
+
+### 3.2.1. Characters (`حرف`) and Strings (`نص`)
+
+- `حرف` يمثل **محرف UTF-8 واحد** (1..4 بايت) مثل `'أ'`.
+- `نص` يمثل **سلسلة محارف** من نوع `حرف[]` منتهية بمحرف صفر (`'\0'`).
+- فهرسة النص تُعيد `حرف`:
+
+```baa
+صحيح الرئيسية() {
+    نص س = "أب".
+    حرف ح٠ = س[٠].
+    حرف ح١ = س[١].
+
+    اطبع س.
+    اطبع ح٠.
+    اطبع ح١.
+    إرجع ٠.
+}
+```
+
+**قيود حالية:**
+
+- لا يوجد تحقق حدود تلقائي لفهرسة النص.
+- تعديل عناصر `نص` غير مدعوم حالياً.
+
+### 3.2.2. Floating Point (`عشري`) (Storage-Only)
+
+النوع `عشري` متاح كثوابت ومتغيرات وتعيين/نسخ، لكنه **لا يدعم** العمليات الحسابية/المقارنات/الطباعة بعد.
+
+```baa
+عشري باي = ٣.١٤.
+عشري نصف = -٠.٥.
 ```
 
 ### 3.3. Arrays (المصفوفات)
@@ -155,6 +189,7 @@ Baa is statically typed. All variables must be declared with their type.
 **قيود حالية:**
 - مدعومة محلياً وعمومياً (مصفوفات عامة ثابتة الحجم).
 - مدعومة لنوع `صحيح` فقط حالياً.
+- `نص` ليس مصفوفة عامة؛ لكنه يُفهرس كـ `حرف[]` (انظر قسم النصوص).
 - المصفوفة ليست قيمة من الدرجة الأولى: لا يمكن إسنادها إلى متغير، ولا تمريرها كمعامل مباشرة.
 - إن لم تُهيّأ مصفوفة محلية، عناصرها غير مهيّأة افتراضياً؛ لا تقرأ عنصراً قبل كتابته.
 - عند استخدام تهيئة `{...}`، يسمح بالتهيئة الجزئية وتُملأ بقية العناصر بأصفار (مثل C).
@@ -322,7 +357,15 @@ Baa is statically typed. All variables must be declared with their type.
 
 هذه الأقسام تُوثّق ميزات مخطط لها ولم تُنفّذ بعد.
 
-#### 3.7.1. Integer Sizes (أحجام الأعداد الصحيحة) [Scheduled v0.3.5.5]
+#### 3.7.1. Floating Point Enhancements (`عشري`) [Scheduled v0.3.5.5]
+
+النوع `عشري` موجود حالياً كثوابت/تخزين فقط. يُخطط في v0.3.5.5 لإضافة:
+
+- عمليات `+ - * /`
+- مقارنات `== != < > <= >=`
+- `اطبع` لـ `عشري` مع توافق ABI (XMM) على ويندوز/لينكس
+
+#### 3.7.2. Integer Sizes (أحجام الأعداد الصحيحة) [Scheduled v0.3.5.5]
 
 | Type | Description | Range (Approx) |
 |------|-------------|----------------|
@@ -335,7 +378,7 @@ Baa is statically typed. All variables must be declared with their type.
 | `ط٣٢` | Unsigned 32-bit | 0 to 4 Billion |
 | `ط٦٤` | Unsigned 64-bit | Huge (Default `طبيعي`) |
 
-#### 3.7.2. Type Aliases (أسماء الأنواع البديلة) [Scheduled v0.3.6.5]
+#### 3.7.3. Type Aliases (أسماء الأنواع البديلة) [Scheduled v0.3.6.5]
 
 **Syntax:** `نوع <new_name> = <existing_type>.`
 
@@ -347,7 +390,7 @@ Baa is statically typed. All variables must be declared with their type.
 كود خ = -١.
 ```
 
-#### 3.7.3. Static Local Variables (متغيرات ساكنة) [Scheduled v0.3.7.5]
+#### 3.7.4. Static Local Variables (متغيرات ساكنة) [Scheduled v0.3.7.5]
 
 **Syntax:** `ساكن <type> <name> = <value>.`
 
@@ -359,7 +402,7 @@ Baa is statically typed. All variables must be declared with their type.
 }
 ```
 
-#### 3.7.4. Type Casting (تحويل الأنواع) [Scheduled v0.3.10.5]
+#### 3.7.5. Type Casting (تحويل الأنواع) [Scheduled v0.3.10.5]
 
 **Syntax:** `كـ<type>(expression)`
 

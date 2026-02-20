@@ -1442,16 +1442,27 @@ fmt_scan_int: .asciz "%d"
 ```asm
 .data
 global_var: .quad 42           # Integer initializer
-global_str: .quad .Lstr_0      # String pointer initializer
+global_str: .quad .Lbs_0       # Baa string pointer initializer (ptr<char>)
 ```
 
-**String table (rodata):**
+**String tables (rodata):**
 
 ```asm
 .section .rdata,"dr"  # COFF (Windows)
 .section .rodata       # ELF (Linux)
-.Lstr_0: .asciz "مرحباً"
-.Lstr_1: .asciz "العالم"
+
+# C strings (i8*) for printf/scanf formats, etc.
+.Lstr_0: .asciz "%d\n"
+.Lstr_1: .asciz "%s\n"
+
+# Baa strings (char[]) as packed .quad entries, null-terminated.
+.Lbs_0:
+    .quad <packed 'م'>
+    .quad <packed 'ر'>
+    .quad <packed 'ح'>
+    .quad <packed 'ب'>
+    .quad <packed 'ا'>
+    .quad 0
 ```
 
 #### 6.21.7. Function Name Translation

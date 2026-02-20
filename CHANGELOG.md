@@ -12,18 +12,22 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Added
 
-- **Character type (`حرف`)** — a distinct scalar type for Unicode code points (UTF-8 source literals).
-- **UTF-8 char literals** — `'أ'` and other multi-byte UTF-8 characters are now accepted as a single char literal.
+- **Character type (`حرف`)** — a distinct scalar type representing a single UTF-8 character (1..4 bytes) with a packed internal representation.
+- **UTF-8 char literals** — `'أ'` and other multi-byte UTF-8 characters are accepted as a single char literal.
+- **String-char relationship** — `نص` is represented as a null-terminated `حرف[]` and supports indexing with `اسم[٠]`.
+- **Float type (`عشري`) (storage-only)** — decimal literals and `عشري` variables are supported as 64-bit storage; FP ops/ABI remain deferred.
 
 ### Changed
 
 - **Print lowering** — `اطبع <حرف>.` prints the character as UTF-8 (not a numeric code).
 - **Type checking** — `حرف` is compatible with `صحيح` for assignments/comparisons (C-like integer promotion behavior).
+- **String literals** — string literals lower to a `حرف[]` constant table (not a C `char*`).
 
 ### Fixed
 
 - **Backend emission** — `MACH_LOAD`/`MACH_STORE` now use size-correct `mov` suffixes (enables byte/word/dword loads/stores).
 - **Zero-extension emission** — `MACH_MOVZX` now emits the correct instruction form for 32→64 (uses `movl`), preventing assembler errors.
+- **MOVZX spilling** — `MACH_MOVZX` now handles spilled (memory) destinations by extending into a temp register then storing.
 - **Global data emission** — scalar globals use `.byte/.word/.long/.quad` based on IR type (not always `.quad`).
 
 ## [0.3.4.5] - 2026-02-19

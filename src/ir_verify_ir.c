@@ -108,6 +108,7 @@ static int ir_type_is_int(IRType* t) {
         case IR_TYPE_I16:
         case IR_TYPE_I32:
         case IR_TYPE_I64:
+        case IR_TYPE_CHAR:
             return 1;
         default:
             return 0;
@@ -864,7 +865,15 @@ static void ir_verify_inst(IRVerifyDiag* diag,
                 int from_ptr = ir_type_is_ptr(v->type);
                 int to_ptr = ir_type_is_ptr(inst->type);
 
-                if (!((from_int && to_int) || (from_ptr && to_ptr) || (v->type->kind == IR_TYPE_I1 && to_int))) {
+                int from_f64 = (v->type->kind == IR_TYPE_F64);
+                int to_f64 = (inst->type->kind == IR_TYPE_F64);
+                int from_i64 = (v->type->kind == IR_TYPE_I64);
+                int to_i64 = (inst->type->kind == IR_TYPE_I64);
+
+                // سماح bitcast: f64 <-> i64 (تخزين/تحميل فقط حالياً).
+                int ok_bitcast_f64 = (from_f64 && to_i64) || (from_i64 && to_f64) || (from_f64 && to_f64);
+
+                if (!((from_int && to_int) || (from_ptr && to_ptr) || (v->type->kind == IR_TYPE_I1 && to_int) || ok_bitcast_f64)) {
                     ir_report(diag, module, func, block, inst,
                               "تعليمة `تحويل`: تحويل غير مدعوم/غير واضح (from=%s, to=%s).",
                               ir_type_to_arabic(v->type),

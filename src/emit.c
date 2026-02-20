@@ -941,6 +941,80 @@ void emit_inst(MachineInst* inst, MachineFunc* func, FILE* out) {
             if (sb == 1) sb = 8;
             if (db <= 0) db = 64;
 
+            bool dst_mem = (inst->dst.kind == MACH_OP_MEM || inst->dst.kind == MACH_OP_GLOBAL);
+
+            // إذا كانت الوجهة ذاكرة، لا يمكن لـ MOVZX الكتابة إليها مباشرة.
+            // نُوسّع إلى سجل مؤقت ثم نخزّن.
+            if (dst_mem)
+            {
+                MachineOperand tmp = {0};
+                tmp.kind = MACH_OP_VREG;
+                tmp.size_bits = db;
+                tmp.data.vreg = PHYS_RAX;
+
+                // استعمل المسار العادي لكن بوجهة tmp.
+                MachineOperand saved_dst = inst->dst;
+                MachineOperand dst2 = tmp;
+                MachineOperand src2 = inst->src1;
+                src2.size_bits = sb;
+                dst2.size_bits = db;
+
+                // 32->64: movl إلى %eax يصفّر %rax.
+                if (sb == 32 && db == 64)
+                {
+                    MachineOperand s32 = src2;
+                    MachineOperand d32 = dst2;
+                    s32.size_bits = 32;
+                    d32.size_bits = 32;
+                    fprintf(out, "    movl ");
+                    emit_operand(&s32, out);
+                    fprintf(out, ", ");
+                    emit_operand(&d32, out);
+                    fprintf(out, "\n");
+                }
+                else
+                {
+                    const char* mnem = NULL;
+                    if (sb == 8 && db == 16) mnem = "movzbw";
+                    else if (sb == 8 && db == 32) mnem = "movzbl";
+                    else if (sb == 8 && db == 64) mnem = "movzbq";
+                    else if (sb == 16 && db == 32) mnem = "movzwl";
+                    else if (sb == 16 && db == 64) mnem = "movzwq";
+                    else if (sb == 32 && db == 32) mnem = "movl";
+                    else if (sb == 16 && db == 16) mnem = "movw";
+                    else if (sb == 8 && db == 8) mnem = "movb";
+
+                    if (!mnem)
+                    {
+                        fprintf(out, "    mov%c ", size_suffix(db));
+                        MachineOperand ss = inst->src1;
+                        MachineOperand dd = dst2;
+                        ss.size_bits = db;
+                        dd.size_bits = db;
+                        emit_operand(&ss, out);
+                        fprintf(out, ", ");
+                        emit_operand(&dd, out);
+                        fprintf(out, "\n");
+                    }
+                    else
+                    {
+                        fprintf(out, "    %s ", mnem);
+                        emit_operand(&src2, out);
+                        fprintf(out, ", ");
+                        emit_operand(&dst2, out);
+                        fprintf(out, "\n");
+                    }
+                }
+
+                // store tmp -> dst
+                fprintf(out, "    mov%c ", size_suffix(db));
+                emit_operand(&tmp, out);
+                fprintf(out, ", ");
+                emit_operand(&saved_dst, out);
+                fprintf(out, "\n");
+                break;
+            }
+
             // 32->64: movl يصفّر تلقائياً عند الكتابة إلى سجل 32 بت.
             if (sb == 32 && db == 64)
             {

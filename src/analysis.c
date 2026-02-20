@@ -1231,6 +1231,15 @@ static DataType infer_type(Node* node) {
                 return TYPE_INT;
             }
             if (!sym->is_array) {
+                // السماح بفهرسة النص على أنه حرف[] (v0.3.5)
+                if (sym->type == TYPE_STRING) {
+                    DataType it = infer_type(node->data.array_op.index);
+                    if (it != TYPE_INT) {
+                        semantic_error(node->data.array_op.index, "فهرس النص يجب أن يكون صحيحاً.");
+                    }
+                    return TYPE_CHAR;
+                }
+
                 semantic_error(node, "'%s' ليس مصفوفة.", sym->name);
                 (void)infer_type(node->data.array_op.index);
                 return sym->type;
@@ -1345,8 +1354,14 @@ static DataType infer_type(Node* node) {
         case NODE_POSTFIX_OP: {
             DataType ot = infer_type(node->data.unary_op.operand);
             if (ot == TYPE_FLOAT) {
+                if (node->data.unary_op.op == UOP_NEG) {
+                    // السماح بسالب عشري كحالة دنيا (بدون عمليات عشري أخرى).
+                    return TYPE_FLOAT;
+                }
                 semantic_error(node, "عمليات العشري غير مدعومة حالياً.");
+                return TYPE_FLOAT;
             }
+
             if (!types_compatible(ot, TYPE_INT)) {
                 semantic_error(node, "Unary operations require INTEGER operand.");
             }
@@ -1901,6 +1916,12 @@ static void analyze_node(Node* node) {
                 break;
             }
             if (!sym->is_array) {
+                if (sym->type == TYPE_STRING) {
+                    semantic_error(node, "لا يمكن تعديل عناصر النص '%s' حالياً.", sym->name);
+                    (void)infer_type(node->data.array_op.index);
+                    (void)infer_type(node->data.array_op.value);
+                    break;
+                }
                 semantic_error(node, "'%s' ليس مصفوفة.", sym->name);
                 (void)infer_type(node->data.array_op.index);
                 (void)infer_type(node->data.array_op.value);

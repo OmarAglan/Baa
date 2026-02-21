@@ -1,8 +1,8 @@
 # Baa Language Specification
 
-> **Version:** 0.3.5 | [← User Guide](USER_GUIDE.md) | [Compiler Internals →](INTERNALS.md)
+> **Version:** 0.3.5.5 | [← User Guide](USER_GUIDE.md) | [Compiler Internals →](INTERNALS.md)
 
-Baa (باء) is a compiled systems programming language using Arabic syntax. It compiles directly to native machine code via Assembly/GCC on Windows.
+Baa (باء) is a compiled systems programming language using Arabic syntax. It compiles to native code via Assembly + host GCC/Clang on Windows and Linux.
 
 ---
 
@@ -129,11 +129,19 @@ Baa is statically typed. All variables must be declared with their type.
 
 | Baa Type | C Equivalent | Description | Example |
 |----------|--------------|-------------|---------|
-| `صحيح` | `int64_t` (stored) | Integer value (stored as 8 bytes) | `صحيح س = ٥.` |
+| `صحيح` | `int64_t` | Signed 64-bit integer (alias for `ص٦٤`) | `صحيح س = ٥.` |
+| `ص٨` | `int8_t` | Signed 8-bit integer | `ص٨ س = -٥.` |
+| `ص١٦` | `int16_t` | Signed 16-bit integer | `ص١٦ س = -٣٠٠.` |
+| `ص٣٢` | `int32_t` | Signed 32-bit integer | `ص٣٢ س = -٢٠٠٠٠٠٠٠٠٠.` |
+| `ص٦٤` | `int64_t` | Signed 64-bit integer | `ص٦٤ س = ٩٠٠٠٠٠٠٠٠٠٠٠٠.` |
+| `ط٨` | `uint8_t` | Unsigned 8-bit integer | `ط٨ س = ٢٥٠.` |
+| `ط١٦` | `uint16_t` | Unsigned 16-bit integer | `ط١٦ س = ٦٠٠٠٠.` |
+| `ط٣٢` | `uint32_t` | Unsigned 32-bit integer | `ط٣٢ س = ٤٠٠٠٠٠٠٠٠٠.` |
+| `ط٦٤` | `uint64_t` | Unsigned 64-bit integer | `ط٦٤ س = ١.` |
 | `نص` | `حرف*` (logical) | Null-terminated string of `حرف` (`حرف[]`) | `نص اسم = "باء".` |
 | `منطقي` | `bool` (stored as byte) | Boolean value (`صواب`/`خطأ`) | `منطقي ب = صواب.` |
 | `حرف` | `uint64_t` (packed) | One UTF-8 character (1..4 bytes) | `حرف ح = 'أ'.` |
-| `عشري` | `double` (storage only) | 64-bit float storage (ops/ABI deferred) | `عشري باي = ٣.١٤.` |
+| `عشري` | `double` | 64-bit floating point (f64) | `عشري باي = ٣.١٤.` |
 
 ### 3.2. Scalar Variables
 
@@ -173,13 +181,37 @@ Baa is statically typed. All variables must be declared with their type.
 - لا يوجد تحقق حدود تلقائي لفهرسة النص.
 - تعديل عناصر `نص` غير مدعوم حالياً.
 
-### 3.2.2. Floating Point (`عشري`) (Storage-Only)
+### 3.2.2. Integer Sizes (أحجام الأعداد الصحيحة)
 
-النوع `عشري` متاح كثوابت ومتغيرات وتعيين/نسخ، لكنه **لا يدعم** العمليات الحسابية/المقارنات/الطباعة بعد.
+إضافة إلى `صحيح` (الافتراضي)، تدعم باء أحجاماً محددة للأعداد الصحيحة:
+
+| النوع | الوصف |
+|------|-------|
+| `ص٨/ص١٦/ص٣٢/ص٦٤` | أعداد موقعة |
+| `ط٨/ط١٦/ط٣٢/ط٦٤` | أعداد غير موقعة |
+
+**ملاحظات دلالية:**
+
+- الترقيات والتحويلات الحسابية تتبع نمط C (integer promotions + usual arithmetic conversions).
+- الثوابت العشرية بدون لاحقة تُعامل كـ `ص٣٢` إذا كانت ضمن المدى، وإلا كـ `صحيح/ص٦٤`.
+
+### 3.2.3. Floating Point (`عشري`)
+
+النوع `عشري` هو `f64` ويدعم:
+
+- العمليات `+ - * /`
+- المقارنات `== != < > <= >=`
+- الطباعة عبر `اطبع`
 
 ```baa
-عشري باي = ٣.١٤.
-عشري نصف = -٠.٥.
+صحيح الرئيسية() {
+    عشري أ = ١.٢٥.
+    عشري ب = ٢.٥.
+    عشري ج = أ + ب.
+    اطبع ج.
+    إذا (ج >= ٣.٧٥) { اطبع "صحيح". }
+    إرجع ٠.
+}
 ```
 
 ### 3.3. Arrays (المصفوفات)
@@ -355,36 +387,9 @@ Baa is statically typed. All variables must be declared with their type.
 
 ### 3.7. Planned Types & Features (Future)
 
-هذه الأقسام كانت مخططاً لها تاريخياً. بعض البنود تم تنفيذها فعلاً، والباقي ما زال مستقبلياً.
+هذه الأقسام تُوثّق ميزات مخطط لها ولم تُنفّذ بعد.
 
-#### 3.7.1. Floating Point Enhancements (`عشري`) [Implemented v0.3.5.5]
-
-النوع `عشري` (f64) يدعم الآن:
-
-- عمليات `+ - * /`
-- مقارنات `== != < > <= >=`
-- `اطبع` لـ `عشري`
-- توافق ABI على لينكس (SysV AMD64) وويندوز x64 (تمرير/إرجاع عبر XMM، ومعالجة varargs على SysV)
-
-#### 3.7.2. Integer Sizes (أحجام الأعداد الصحيحة) [Implemented v0.3.5.5]
-
-| Type | Description | Range (Approx) |
-|------|-------------|----------------|
-| `ص٨` | Signed 8-bit | -128 to 127 |
-| `ص١٦` | Signed 16-bit | -32,768 to 32,767 |
-| `ص٣٢` | Signed 32-bit | -2 Billion to +2 Billion |
-| `ص٦٤` | Signed 64-bit | Large (Default `صحيح`) |
-| `ط٨` | Unsigned 8-bit | 0 to 255 |
-| `ط١٦` | Unsigned 16-bit | 0 to 65,535 |
-| `ط٣٢` | Unsigned 32-bit | 0 to 4 Billion |
-| `ط٦٤` | Unsigned 64-bit | Huge (Default `طبيعي`) |
-
-ملاحظات مهمة:
-
-- الترقيات والتحويلات الحسابية تتبع نمط C (integer promotions + usual arithmetic conversions).
-- الثوابت العشرية بدون لاحقة تُعامل كـ `ص٣٢` إذا كانت ضمن المدى، وإلا كـ `صحيح/ص٦٤`.
-
-#### 3.7.3. Type Aliases (أسماء الأنواع البديلة) [Scheduled v0.3.6.5]
+#### 3.7.1. Type Aliases (أسماء الأنواع البديلة) [Scheduled v0.3.6.5]
 
 **Syntax:** `نوع <new_name> = <existing_type>.`
 
@@ -396,7 +401,7 @@ Baa is statically typed. All variables must be declared with their type.
 كود خ = -١.
 ```
 
-#### 3.7.4. Static Local Variables (متغيرات ساكنة) [Scheduled v0.3.7.5]
+#### 3.7.2. Static Local Variables (متغيرات ساكنة) [Scheduled v0.3.7.5]
 
 **Syntax:** `ساكن <type> <name> = <value>.`
 
@@ -408,7 +413,7 @@ Baa is statically typed. All variables must be declared with their type.
 }
 ```
 
-#### 3.7.5. Type Casting (تحويل الأنواع) [Scheduled v0.3.10.5]
+#### 3.7.3. Type Casting (تحويل الأنواع) [Scheduled v0.3.10.5]
 
 **Syntax:** `كـ<type>(expression)`
 

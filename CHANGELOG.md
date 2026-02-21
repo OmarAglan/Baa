@@ -13,6 +13,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ### Added
 
 - **Sized integers** — `ص٨/ص١٦/ص٣٢/ص٦٤` and `ط٨/ط١٦/ط٣٢/ط٦٤` with C-like integer promotions and usual arithmetic conversions.
+- **Integer literals** — unsuffixed decimal integer literals default to `ص٣٢` when the value fits, otherwise `صحيح/ص٦٤`.
 - **Unsigned correctness** — correct signed/unsigned comparisons, casts, and `div/mod` semantics across IR, optimizer, and backend.
 - **Float (`عشري`) enhancements** — `+ - * /`, comparisons, and `اطبع` (f64) with working SysV AMD64 + Windows x64 ABI lowering (XMM regs + SysV varargs AL).
 

@@ -1,6 +1,6 @@
 # Baa IR Specification
 
-> **Version:** 0.3.5 | [← Compiler Internals](INTERNALS.md) | [API Reference →](API_REFERENCE.md)
+> **Version:** 0.3.5.5 | [← Compiler Internals](INTERNALS.md) | [API Reference →](API_REFERENCE.md)
 
 This document specifies the Intermediate Representation (IR) for the Baa compiler. The IR uses Arabic naming conventions throughout, creating a culturally authentic yet technically robust design.
 
@@ -45,9 +45,13 @@ AST → [Baa IR] → Optimizations → Backend Codegen → x86-64 Assembly
 | `i64` | `ص٦٤` | 8 bytes | 64-bit signed integer |
 | `i32` | `ص٣٢` | 4 bytes | 32-bit signed integer |
 | `i16` | `ص١٦` | 2 bytes | 16-bit signed integer |
-| `i8` | `ص٨` | 1 byte | 8-bit signed integer / char |
+| `i8` | `ص٨` | 1 byte | 8-bit signed integer |
+| `u64` | `ط٦٤` | 8 bytes | 64-bit unsigned integer |
+| `u32` | `ط٣٢` | 4 bytes | 32-bit unsigned integer |
+| `u16` | `ط١٦` | 2 bytes | 16-bit unsigned integer |
+| `u8` | `ط٨` | 1 byte | 8-bit unsigned integer |
 | `char` | `حرف` | 8 bytes | Packed UTF-8 character (bytes+len) |
-| `f64` | `ع٦٤` | 8 bytes | 64-bit float storage (ops/ABI deferred) |
+| `f64` | `ع٦٤` | 8 bytes | 64-bit float (supports arithmetic/compare/ABI lowering) |
 | `i1` | `ص١` | 1 bit | Boolean |
 | `void` | `فراغ` | 0 | No value |
 
@@ -76,6 +80,7 @@ The IR enforces a specific data layout to allow consistent lowering. On x86-64, 
 | `i16` | 2 | 2 | 2 |
 | `i32` | 4 | 4 | 4 |
 | `i64` | 8 | 8 | 8 |
+| `u8/u16/u32/u64` | 1/2/4/8 | 1/2/4/8 | 1/2/4/8 |
 | `char` | 8 | 8 | 8 |
 | `f64` | 8 | 8 | 8 |
 | `ptr` | 8 | 8 | 8 |

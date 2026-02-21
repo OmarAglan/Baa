@@ -1,10 +1,10 @@
 # Baa Compiler Internals
 
-> **Version:** 0.3.5 | [← Language Spec](LANGUAGE.md) | [API Reference →](API_REFERENCE.md)
+> **Version:** 0.3.5.5 | [← Language Spec](LANGUAGE.md) | [API Reference →](API_REFERENCE.md)
 
 **Target Architecture:** x86-64 (AMD64)
-**Target OS:** Windows (MinGW-w64 Toolchain)
-**Calling Convention:** Microsoft x64 ABI
+**Targets:** Windows x64 (COFF/PE) + Linux x86-64 (ELF)
+**Calling Conventions:** Microsoft x64 ABI (Windows) + SystemV AMD64 ABI (Linux)
 
 This document details the internal architecture, data structures, and algorithms used in the Baa compiler.
 

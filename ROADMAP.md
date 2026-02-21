@@ -1,7 +1,7 @@
 # Baa Roadmap (Updated)
 
 > Track the development progress of the Baa programming language.
-> **Current Status:** Phase 3.5 - Language Completeness (v0.3.5)
+> **Current Status:** Phase 3.5 - Language Completeness (v0.3.5.5)
 
 ---
 
@@ -11,7 +11,7 @@
 
 - [ ] **Write the Arabic "Baa Book"** — book-length guide in Arabic with exercises.
 - [ ] **Define terminology glossary** — consistent Arabic technical vocabulary.
-- [ ] **Create example suite** — verified, idiomatic examples that compile with v0.2.9.
+- [ ] **Create example suite** — verified, idiomatic examples that compile with v0.3.5.5.
 - [ ] **Add exercises and challenges** — per chapter, with expected outputs.
 - [ ] **Add debugging and performance chapters** — common pitfalls, diagnostics, optimization notes.
 - [ ] **Native technical review** — review by Arabic-speaking engineers before release.
@@ -467,7 +467,6 @@
   ```baa
   اتحاد قيمة {
       صحيح رقم.
-      // ملاحظة: `عشري` مؤجل إلى v0.3.5.
       نص نص_قيمة.
       منطقي منطق.
   }
@@ -558,18 +557,18 @@
 
 ---
 
-### v0.3.5: Character Type 📝 (يشمل `عشري` المؤجل)
+### v0.3.5: Character Type 📝 (يشمل تقديم `عشري`)
 
 **Goal:** Add a proper character type with UTF-8 source support.
 
-ملاحظة: `عشري` مؤجل إلى v0.3.5 (تم نقله من أمثلة الاتحادات v0.3.4.5).
+ملاحظة: نوع `عشري` قُدِّم في v0.3.5 كثوابت/تخزين، واكتمل في v0.3.5.5 (عمليات + ABI).
 
 #### Features
 
 - [x] **Character Type (`حرف`)** – UTF-8 character value (variable-length, 1..4 bytes) stored as a packed scalar.
 - [x] **String-Char Relationship** – Strings (`نص`) are represented as arrays of `حرف` (`حرف[]`) with indexing (`اسم[٠]`).
 
-- [x] **Float Type (`عشري`)** – *Deferred from v0.3.4.5* (basic type + literals + storage; full FP ops/ABI later).
+- [x] **Float Type (`عشري`)** – *Deferred from v0.3.4.5* (introduced as a basic type + literals in v0.3.5; completed in v0.3.5.5 with ops/ABI).
 
 **Syntax:**
 
@@ -591,65 +590,48 @@
 
 - String operations: `طول_نص()`, `دمج_نص()`, `قارن_نص()`
 
-### v0.3.5.5: Integer Type Sizes 🔢
-**Goal:** Support different integer sizes for precise memory control and C interop.
+### v0.3.5.5: Numeric Types (Sized Integers + `عشري`)
+
+**Goal:** Make numeric types practical for systems programming: sized integers + usable `عشري` (f64).
 
 #### Features
-- [x] **Signed Integer Types**:
+
+- [x] **Sized Integer Types**:
   ```baa
   ص٨ بايت_موقع = -١٢٨.        // int8_t:  -128 to 127
   ص١٦ قصير = -٣٢٠٠٠.          // int16_t: -32768 to 32767
   ص٣٢ عادي = -٢٠٠٠٠٠٠٠٠٠.     // int32_t
   ص٦٤ طويل = ٩٠٠٠٠٠٠٠٠٠٠٠٠.   // int64_t (current صحيح)
+
+  ط٨ بايت = ٢٥٥.               // uint8_t
+  ط١٦ قصير٢ = ٦٥٠٠٠.            // uint16_t
+  ط٣٢ عادي٢ = ٤٠٠٠٠٠٠٠٠٠.       // uint32_t
+  ط٦٤ طويل٢ = ١٨٠٠٠٠٠٠٠٠٠٠٠٠٠٠٠٠٠٠. // uint64_t
   ```
 
-- [x] **Unsigned Integer Types**:
-  ```baa
-  ط٨ بايت = ٢٥٥.               // uint8_t:  0 to 255
-  ط١٦ قصير = ٦٥٠٠٠.            // uint16_t: 0 to 65535
-  ط٣٢ عادي = ٤٠٠٠٠٠٠٠٠٠.       // uint32_t
-  ط٦٤ طويل = ١٨٠٠٠٠٠٠٠٠٠٠٠٠٠٠٠٠٠٠. // uint64_t
-  ```
+- [x] **C-like semantics**:
+  - integer promotions + usual arithmetic conversions
+  - correct signed/unsigned comparisons
+  - correct `div/mod` semantics for signed vs unsigned
 
-- [ ] **Type Aliases** (Deferred)
+- [x] **`عشري` usability**:
+  - arithmetic `+ - * /`
+  - comparisons `== != < > <= >=`
+  - `اطبع` supports `عشري`
+  - ABI lowering on SysV AMD64 + Windows x64 (XMM regs + SysV varargs rules)
 
-- [x] **IR Type Support**:
-  ```
-  // Already have in IR:
-  ص٦٤، ص٣٢، ص٨، ص١
-  
-  // Add unsigned:
-  ط٦٤، ط٣٢، ط١٦، ط٨
-  ```
+- [ ] **Type aliases** (Deferred)
 
 #### Implementation Tasks
+
 - [x] **Lexer**: Tokenize `ص٨`, `ص١٦`, `ص٣٢`, `ص٦٤`, `ط٨`, `ط١٦`, `ط٣٢`, `ط٦٤`.
 - [x] **Type System**: Add size and signedness to integer types.
-- [x] **IR**: Add unsigned variants and propagate types through IR/optimizer/backend.
+- [x] **IR**: Add unsigned variants and allow `f64` ops + verifier updates.
+- [x] **Optimizer**: Ensure integer/float correctness (avoid invalid float folds; unsigned-aware folds).
+- [x] **ISel/Emitter**: Generate correct-sized integer ops and scalar SSE2 for `f64`.
+- [x] **ABI (Windows + SystemV)**: Pass/return `عشري` in XMM registers; handle SysV varargs rules.
 - [ ] **Semantic**: Warn on implicit narrowing conversions.
 - [ ] **Semantic**: Handle signed/unsigned comparison warnings.
-- [x] **Codegen**: Generate correct-sized mov/add/etc instructions.
-- [x] **Codegen**: Handle sign-extension vs zero-extension.
-
----
-
-### v0.3.5.5: Floating Point Enhancements (`عشري`) 🔢
-
-**Goal:** Move `عشري` from “storage-only” to usable arithmetic/compare/print.
-
-#### Features
-
-- [x] **Arithmetic**: `+ - * /` on `عشري`.
-- [x] **Comparisons**: `== != < > <= >=` on `عشري`.
-- [x] **Printing**: `اطبع` supports `عشري`.
-
-#### Implementation Tasks
-
-- [x] **IR**: Extend existing ops to accept `f64` + verifier rules.
-- [x] **ISel**: Select scalar SSE instructions for `f64` (`addsd/subsd/mulsd/divsd`) and float compares.
-- [x] **ABI (Windows + SystemV)**: Pass/return `عشري` in XMM registers; handle varargs rules.
-- [x] **Emitter**: Emit XMM operands and SSE mnemonics.
-- [x] **Runtime/Print**: Ensure `printf` calling convention is correct for `double` on both targets.
 
 ---
 
@@ -1259,21 +1241,13 @@
 - [ ] **System Module** — Environment variables, command execution.
 - [ ] **Time Module** — Date/time operations.
 
-### v0.4.2: Floating Point Support 🔢
+### v0.4.2: Floating Point Extensions
 
-**Goal:** Add decimal number support.
+**Goal:** Extend floating point beyond the core `عشري` (completed in v0.3.5.5).
 
-ملاحظة: إدخال نوع `عشري` نفسه مؤجل إلى v0.3.5؛ هذا القسم يركّز على إكمال خط الفاصلة العائمة بالكامل (عمليات/قواعد/مكتبة).
-
-- [ ] **Float Type (`عشري`)**:
-
-  ```baa
-  عشري باي = ٣.١٤١٥٩.
-  عشري نصف = ٠.٥.
-  ```
-
-- [ ] **Float Operations** – Arithmetic, comparison, math functions.
-- [ ] **Type Conversion** – `صحيح_إلى_عشري()`, `عشري_إلى_صحيح()`.
+- [ ] **Math functions** — `جذر_تربيعي()`, `أس()`, `جيب()`, ...
+- [ ] **Formatting** — better float printing options (precision, scientific).
+- [ ] **Additional float types** — `عشري٣٢` (f32) / others if needed.
 
 ### v0.4.3: Error Handling 🛡️
 

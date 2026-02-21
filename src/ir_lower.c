@@ -638,35 +638,99 @@ static IRCmpPred ir_cmp_to_pred(OpType op, bool is_unsigned) {
     }
 }
 
-static DataType lower_int_promote_datatype(DataType t)
+static bool lower_datatype_is_unsigned_int(DataType t)
 {
-    switch (t) {
-        case TYPE_U64:
-            return TYPE_U64;
-        case TYPE_INT:
-            return TYPE_INT;
+    return t == TYPE_U8 || t == TYPE_U16 || t == TYPE_U32 || t == TYPE_U64;
+}
+
+static int lower_datatype_int_rank(DataType t)
+{
+    switch (t)
+    {
         case TYPE_I8:
-        case TYPE_I16:
-        case TYPE_I32:
         case TYPE_U8:
+        case TYPE_I16:
         case TYPE_U16:
+        case TYPE_I32:
         case TYPE_U32:
         case TYPE_BOOL:
         case TYPE_CHAR:
         case TYPE_ENUM:
-            return TYPE_INT;
+            return 32;
+        case TYPE_INT:
+        case TYPE_U64:
+            return 64;
+        default:
+            return 0;
+    }
+}
+
+static DataType lower_int_promote_datatype(DataType t)
+{
+    switch (t)
+    {
+        case TYPE_BOOL:
+        case TYPE_CHAR:
+        case TYPE_ENUM:
+        case TYPE_I8:
+        case TYPE_U8:
+        case TYPE_I16:
+        case TYPE_U16:
+            return TYPE_I32;
+        case TYPE_I32:
+        case TYPE_U32:
+        case TYPE_INT:
+        case TYPE_U64:
+            return t;
         default:
             return t;
     }
 }
 
-static IRType* lower_common_int_type(IRModule* module, DataType a, DataType b)
+static DataType lower_unsigned_for_rank(int rank)
+{
+    return (rank >= 64) ? TYPE_U64 : TYPE_U32;
+}
+
+static DataType lower_usual_arith_datatype(DataType a, DataType b)
 {
     DataType pa = lower_int_promote_datatype(a);
     DataType pb = lower_int_promote_datatype(b);
-    if (pa == TYPE_U64 || pb == TYPE_U64) return IR_TYPE_U64_T;
-    (void)module;
-    return IR_TYPE_I64_T;
+
+    if (pa == pb)
+        return pa;
+
+    int ra = lower_datatype_int_rank(pa);
+    int rb = lower_datatype_int_rank(pb);
+    if (ra == 0 || rb == 0)
+        return TYPE_INT;
+
+    bool ua = lower_datatype_is_unsigned_int(pa);
+    bool ub = lower_datatype_is_unsigned_int(pb);
+    if (ua == ub)
+        return (ra >= rb) ? pa : pb;
+
+    DataType u = ua ? pa : pb;
+    DataType s = ua ? pb : pa;
+    int ru = ua ? ra : rb;
+    int rs = ua ? rb : ra;
+
+    if (ru > rs)
+        return u;
+
+    if (rs > ru)
+        return s;
+
+    return lower_unsigned_for_rank(rs);
+}
+
+static IRType* lower_common_int_type(IRModule* module, DataType a, DataType b)
+{
+    DataType ct = lower_usual_arith_datatype(a, b);
+    IRType* irt = ir_type_from_datatype(module, ct);
+    if (!irt)
+        return IR_TYPE_I64_T;
+    return irt;
 }
 
 static IRValue* lower_call_expr(IRLowerCtx* ctx, Node* expr) {
@@ -1630,11 +1694,11 @@ static void lower_print(IRLowerCtx* ctx, Node* stmt) {
         return;
     }
 
-    // افتراضي: طباعة كعدد صحيح 64-بت.
+    // افتراضي: طباعة عدد صحيح.
+    // الأنواع غير الموقّعة تُطبع كـ unsigned عبر تحويلها إلى ط٦٤.
     DataType dt = (stmt->data.print_stmt.expression) ? stmt->data.print_stmt.expression->inferred_type : TYPE_INT;
-    DataType promo = lower_int_promote_datatype(dt);
-
-    if (promo == TYPE_U64) {
+    if (dt == TYPE_U8 || dt == TYPE_U16 || dt == TYPE_U32 || dt == TYPE_U64)
+    {
         IRValue* vu = value ? cast_to(ctx, value, IR_TYPE_U64_T) : ir_value_const_int(0, IR_TYPE_U64_T);
         lower_printf_cstr(ctx, stmt, "%llu\n", vu);
         return;

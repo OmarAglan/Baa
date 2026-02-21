@@ -1060,21 +1060,109 @@ static bool datatype_is_intlike(DataType t)
     return datatype_is_int(t) || t == TYPE_BOOL || t == TYPE_CHAR || t == TYPE_ENUM;
 }
 
-// ترقية الأعداد الصحيحة (Integer promotions) بأسلوب C مع اعتبار أن "صحيح" هو 64-بت.
-static DataType datatype_int_promote(DataType t)
+static bool datatype_is_unsigned_int(DataType t)
 {
-    if (t == TYPE_U64) return TYPE_U64;
-    if (t == TYPE_INT) return TYPE_INT;
-    if (datatype_is_intlike(t)) return TYPE_INT;
-    return t;
+    return t == TYPE_U8 || t == TYPE_U16 || t == TYPE_U32 || t == TYPE_U64;
 }
 
+static int datatype_int_rank(DataType t)
+{
+    // ترتيب بسيط على نمط C: 32-بت ثم 64-بت.
+    // نعتبر "صحيح" (TYPE_INT) هو ص٦٤.
+    switch (t)
+    {
+        case TYPE_I8:
+        case TYPE_U8:
+        case TYPE_I16:
+        case TYPE_U16:
+        case TYPE_I32:
+        case TYPE_U32:
+        case TYPE_BOOL:
+        case TYPE_CHAR:
+        case TYPE_ENUM:
+            return 32;
+
+        case TYPE_INT:
+        case TYPE_U64:
+            return 64;
+
+        default:
+            return 0;
+    }
+}
+
+// ترقية الأعداد الصحيحة (Integer promotions) على نمط C.
+// نُرقّي الأنواع الأصغر من 32-بت (ومنطقي/حرف/تعداد) إلى ص٣٢.
+static DataType datatype_int_promote(DataType t)
+{
+    switch (t)
+    {
+        case TYPE_BOOL:
+        case TYPE_CHAR:
+        case TYPE_ENUM:
+        case TYPE_I8:
+        case TYPE_U8:
+        case TYPE_I16:
+        case TYPE_U16:
+            return TYPE_I32;
+
+        case TYPE_I32:
+        case TYPE_U32:
+        case TYPE_INT:
+        case TYPE_U64:
+            return t;
+
+        default:
+            return t;
+    }
+}
+
+static DataType datatype_unsigned_for_rank(int rank)
+{
+    return (rank >= 64) ? TYPE_U64 : TYPE_U32;
+}
+
+// التحويلات الحسابية المعتادة (Usual arithmetic conversions) على نمط C.
 static DataType datatype_usual_arith(DataType a, DataType b)
 {
     DataType pa = datatype_int_promote(a);
     DataType pb = datatype_int_promote(b);
-    if (pa == TYPE_U64 || pb == TYPE_U64) return TYPE_U64;
-    return TYPE_INT;
+
+    if (pa == pb)
+        return pa;
+
+    // في هذه المرحلة نتعامل فقط مع أنواع عددية صحيحة (بما فيها u/s).
+    int ra = datatype_int_rank(pa);
+    int rb = datatype_int_rank(pb);
+    if (ra == 0 || rb == 0)
+        return TYPE_INT;
+
+    bool ua = datatype_is_unsigned_int(pa);
+    bool ub = datatype_is_unsigned_int(pb);
+
+    // نفس الإشارة: اختر الأكبر رتبة.
+    if (ua == ub)
+        return (ra >= rb) ? pa : pb;
+
+    // مختلفا الإشارة: طبق قواعد C.
+    DataType u = ua ? pa : pb;
+    DataType s = ua ? pb : pa;
+    int ru = ua ? ra : rb;
+    int rs = ua ? rb : ra;
+
+    if (ru > rs)
+        return u;
+
+    if (ru < rs)
+    {
+        // إذا كانت رتبة الموقّع أكبر وكان عرضه أكبر، يمكنه تمثيل كل قيم غير الموقّع.
+        // (نستخدم معياراً بسيطاً: bits(s) > bits(u) => قابل للتمثيل).
+        if (rs > ru)
+            return s;
+    }
+
+    // وإلا: حوّل إلى غير موقّع من رتبة الموقّع.
+    return datatype_unsigned_for_rank(rs);
 }
 
 static bool types_compatible(DataType got, DataType expected)

@@ -389,6 +389,7 @@ static MachineInst *isel_emit(ISelCtx *ctx, MachineOp op,
 
 static int isel_type_bits(IRType *type);
 static MachineOperand isel_lower_value(ISelCtx *ctx, IRValue *val);
+static MachineOperand isel_extend_to_gpr64(ISelCtx *ctx, MachineOperand src, IRType *src_type);
 static void isel_lower_binop(ISelCtx *ctx, IRInst *inst, MachineOp mop);
 
 static int isel_block_in_any_loop(ISelCtx *ctx)
@@ -696,19 +697,17 @@ static void isel_lower_div(ISelCtx *ctx, IRInst *inst, bool is_mod)
 
     int bits = isel_type_bits(inst->type);
     MachineOperand dst = mach_op_vreg(inst->dest, bits);
-    MachineOperand lhs = isel_lower_value(ctx, inst->operands[0]);
-    MachineOperand rhs = isel_lower_value(ctx, inst->operands[1]);
 
-    // إذا كان القاسم قيمة فورية، ننقله إلى سجل مؤقت
-    // لأن idiv لا يقبل قيمة فورية مباشرة
-    MachineOperand divisor = rhs;
-    if (rhs.kind == MACH_OP_IMM)
-    {
-        int tmp = mach_func_alloc_vreg(ctx->mfunc);
-        MachineOperand tmp_op = mach_op_vreg(tmp, bits);
-        isel_emit(ctx, MACH_MOV, tmp_op, rhs, mach_op_none());
-        divisor = tmp_op;
-    }
+    IRType *lhs_t = (inst->operands[0] ? inst->operands[0]->type : inst->type);
+    IRType *rhs_t = (inst->operands[1] ? inst->operands[1]->type : inst->type);
+
+    MachineOperand lhs0 = isel_lower_value(ctx, inst->operands[0]);
+    MachineOperand rhs0 = isel_lower_value(ctx, inst->operands[1]);
+
+    // نُجري القسمة دائماً بعرض 64-بت (idivq/divq) لتبسيط الدعم.
+    // ثم نقتطع النتيجة عند النسخ إلى الوجهة إذا كانت أصغر (32-بت مثلاً).
+    MachineOperand lhs = isel_extend_to_gpr64(ctx, lhs0, lhs_t);
+    MachineOperand divisor = isel_extend_to_gpr64(ctx, rhs0, rhs_t);
 
     // القسمة تتطلب RAX:RDX ضمنياً
     // نستخدم vreg -2 (RAX) لنقل المقسوم ثم نسخ النتيجة
@@ -756,9 +755,9 @@ static void isel_lower_div(ISelCtx *ctx, IRInst *inst, bool is_mod)
     // نسخ النتيجة إلى سجل الوجهة
     // - القسمة: النتيجة في RAX
     // - الباقي: النتيجة في RDX
-    MachineOperand result = is_mod ? rdx : rax;
+    MachineOperand result = is_mod ? mach_op_vreg(-5, bits) : mach_op_vreg(-2, bits);
     MachineInst *mi = isel_emit_comment(ctx, MACH_MOV, dst, result, mach_op_none(),
-                                        is_mod ? "// نسخ نتيجة الباقي" : "// نسخ نتيجة القسمة");
+                                         is_mod ? "// نسخ نتيجة الباقي" : "// نسخ نتيجة القسمة");
     if (mi)
         mi->ir_reg = inst->dest;
 }

@@ -526,26 +526,71 @@ Node* parse_multiplicative() {
         if (!right) return NULL;
 
         // **Constant Folding Optimization**
+        // ملاحظة: يجب أن تتطابق مع قواعد ترقيم الثوابت (ص٣٢ إذا كانت ضمن المدى، وإلا ص٦٤).
+        // لذلك نُنفّذ الطي على 32-بت عندما يكون الطرفان ضمن مدى ص٣٢، وإلا على 64-بت.
         if (left->type == NODE_INT && right->type == NODE_INT) {
+            int64_t a = left->data.integer.value;
+            int64_t b = right->data.integer.value;
             int64_t result = 0;
-            if (op == OP_MUL) {
-                result = left->data.integer.value * right->data.integer.value;
-            } else if (op == OP_DIV) {
-                if (right->data.integer.value == 0) { 
-                    error_report(parser.current, "Division by zero.");
-                    result = 0; 
-                } else {
-                    result = left->data.integer.value / right->data.integer.value;
+            bool i32_mode = parser_int_literal_is_i32(a) && parser_int_literal_is_i32(b);
+
+            if (i32_mode) {
+                int32_t sa = (int32_t)a;
+                int32_t sb = (int32_t)b;
+                uint32_t ua = (uint32_t)sa;
+                uint32_t ub = (uint32_t)sb;
+
+                if (op == OP_MUL) {
+                    uint32_t ur = (uint32_t)((uint64_t)ua * (uint64_t)ub);
+                    result = parser_sign_extend_u32(ur);
+                } else if (op == OP_DIV) {
+                    if (sb == 0) {
+                        error_report(parser.current, "Division by zero.");
+                        result = 0;
+                    } else if (sa == INT32_MIN && sb == -1) {
+                        // التفاف آمن (بدون UB)
+                        result = (int64_t)INT32_MIN;
+                    } else {
+                        result = (int64_t)(sa / sb);
+                    }
+                } else if (op == OP_MOD) {
+                    if (sb == 0) {
+                        error_report(parser.current, "Modulo by zero.");
+                        result = 0;
+                    } else if (sa == INT32_MIN && sb == -1) {
+                        result = 0;
+                    } else {
+                        result = (int64_t)(sa % sb);
+                    }
                 }
-            } else if (op == OP_MOD) {
-                if (right->data.integer.value == 0) { 
-                    error_report(parser.current, "Modulo by zero.");
-                    result = 0;
-                } else {
-                    result = left->data.integer.value % right->data.integer.value;
+            } else {
+                // 64-بت مع التفاف مكمل الاثنين (تجنب UB في C عند تجاوز signed).
+                uint64_t ua = (uint64_t)a;
+                uint64_t ub = (uint64_t)b;
+
+                if (op == OP_MUL) {
+                    result = (int64_t)(ua * ub);
+                } else if (op == OP_DIV) {
+                    if (b == 0) {
+                        error_report(parser.current, "Division by zero.");
+                        result = 0;
+                    } else if (a == INT64_MIN && b == -1) {
+                        result = INT64_MIN;
+                    } else {
+                        result = a / b;
+                    }
+                } else if (op == OP_MOD) {
+                    if (b == 0) {
+                        error_report(parser.current, "Modulo by zero.");
+                        result = 0;
+                    } else if (a == INT64_MIN && b == -1) {
+                        result = 0;
+                    } else {
+                        result = a % b;
+                    }
                 }
             }
-            
+
             left->data.integer.value = result;
             free(right);
             continue;
@@ -574,13 +619,24 @@ Node* parse_additive() {
         if (!right) return NULL;
 
         // **Constant Folding Optimization**
+        // مطابق لقواعد ترقيم الثوابت: i32 داخل المدى، وإلا i64.
         if (left->type == NODE_INT && right->type == NODE_INT) {
+            int64_t a = left->data.integer.value;
+            int64_t b = right->data.integer.value;
             int64_t result = 0;
-            if (op == OP_ADD) {
-                result = left->data.integer.value + right->data.integer.value;
+            bool i32_mode = parser_int_literal_is_i32(a) && parser_int_literal_is_i32(b);
+
+            if (i32_mode) {
+                uint32_t ua = (uint32_t)(int32_t)a;
+                uint32_t ub = (uint32_t)(int32_t)b;
+                uint32_t ur = (op == OP_ADD) ? (ua + ub) : (ua - ub);
+                result = parser_sign_extend_u32(ur);
             } else {
-                result = left->data.integer.value - right->data.integer.value;
+                uint64_t ua = (uint64_t)a;
+                uint64_t ub = (uint64_t)b;
+                result = (op == OP_ADD) ? (int64_t)(ua + ub) : (int64_t)(ua - ub);
             }
+
             left->data.integer.value = result;
             free(right);
             continue;

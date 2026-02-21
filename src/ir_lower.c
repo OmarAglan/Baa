@@ -2242,6 +2242,25 @@ static int ir_lower_eval_const_i64(Node* expr, int64_t* out_value) {
     }
 }
 
+static int64_t ir_lower_trunc_const_to_type(int64_t v, IRType* t)
+{
+    if (!t) return v;
+    if (t->kind == IR_TYPE_I1) return v ? 1 : 0;
+
+    int bits = ir_type_bits(t);
+    if (bits <= 0 || bits >= 64) return v;
+
+    uint64_t mask = (1ULL << (unsigned)bits) - 1ULL;
+    uint64_t u = ((uint64_t)v) & mask;
+
+    if (t->kind == IR_TYPE_U8 || t->kind == IR_TYPE_U16 || t->kind == IR_TYPE_U32)
+        return (int64_t)u;
+
+    uint64_t sign_bit = 1ULL << (unsigned)(bits - 1);
+    if (u & sign_bit) u |= ~mask;
+    return (int64_t)u;
+}
+
 static IRValue* ir_lower_global_init_value(IRBuilder* builder, Node* expr, IRType* expected_type) {
     if (!builder) return NULL;
 
@@ -2251,12 +2270,20 @@ static IRValue* ir_lower_global_init_value(IRBuilder* builder, Node* expr, IRTyp
 
     switch (expr->type) {
         case NODE_INT:
-            return ir_value_const_int((int64_t)expr->data.integer.value,
-                                      expected_type ? expected_type : IR_TYPE_I64_T);
+        {
+            IRType* t = expected_type ? expected_type : IR_TYPE_I64_T;
+            int64_t v = (int64_t)expr->data.integer.value;
+            v = ir_lower_trunc_const_to_type(v, t);
+            return ir_value_const_int(v, t);
+        }
 
         case NODE_BOOL:
-            return ir_value_const_int(expr->data.bool_lit.value ? 1 : 0,
-                                      expected_type ? expected_type : IR_TYPE_I1_T);
+        {
+            IRType* t = expected_type ? expected_type : IR_TYPE_I1_T;
+            int64_t v = expr->data.bool_lit.value ? 1 : 0;
+            v = ir_lower_trunc_const_to_type(v, t);
+            return ir_value_const_int(v, t);
+        }
 
         case NODE_FLOAT:
             return ir_value_const_int((int64_t)expr->data.float_lit.bits,
@@ -2267,8 +2294,12 @@ static IRValue* ir_lower_global_init_value(IRBuilder* builder, Node* expr, IRTyp
                 uint64_t packed = pack_utf8_codepoint((uint32_t)expr->data.char_lit.value);
                 return ir_value_const_int((int64_t)packed, IR_TYPE_CHAR_T);
             }
-            return ir_value_const_int((int64_t)expr->data.char_lit.value,
-                                      expected_type ? expected_type : IR_TYPE_I64_T);
+            {
+                IRType* t = expected_type ? expected_type : IR_TYPE_I64_T;
+                int64_t v = (int64_t)expr->data.char_lit.value;
+                v = ir_lower_trunc_const_to_type(v, t);
+                return ir_value_const_int(v, t);
+            }
 
         case NODE_STRING:
             // Adds to module string table and returns pointer value.
@@ -2286,24 +2317,8 @@ static IRValue* ir_lower_global_init_value(IRBuilder* builder, Node* expr, IRTyp
         {
             int64_t v = 0;
             if (ir_lower_eval_const_i64(expr, &v)) {
-                // قم بالاقتطاع/التوسيع حسب نوع الوجهة لأن مُقيِّم الثابت يعمل على i64.
                 IRType* t = expected_type ? expected_type : IR_TYPE_I64_T;
-                if (t && (t->kind == IR_TYPE_I1)) {
-                    v = v ? 1 : 0;
-                } else if (t) {
-                    int bits = ir_type_bits(t);
-                    if (bits > 0 && bits < 64) {
-                        uint64_t mask = (1ULL << (unsigned)bits) - 1ULL;
-                        uint64_t u = ((uint64_t)v) & mask;
-                        if (t->kind == IR_TYPE_U8 || t->kind == IR_TYPE_U16 || t->kind == IR_TYPE_U32) {
-                            v = (int64_t)u;
-                        } else {
-                            uint64_t sign_bit = 1ULL << (unsigned)(bits - 1);
-                            if (u & sign_bit) u |= ~mask;
-                            v = (int64_t)u;
-                        }
-                    }
-                }
+                v = ir_lower_trunc_const_to_type(v, t);
                 return ir_value_const_int(v, t);
             }
             // Non-constant global initializers are not supported yet; fall back to zero.

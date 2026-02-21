@@ -595,7 +595,7 @@
 **Goal:** Support different integer sizes for precise memory control and C interop.
 
 #### Features
-- [ ] **Signed Integer Types**:
+- [x] **Signed Integer Types**:
   ```baa
   ص٨ بايت_موقع = -١٢٨.        // int8_t:  -128 to 127
   ص١٦ قصير = -٣٢٠٠٠.          // int16_t: -32768 to 32767
@@ -603,7 +603,7 @@
   ص٦٤ طويل = ٩٠٠٠٠٠٠٠٠٠٠٠٠.   // int64_t (current صحيح)
   ```
 
-- [ ] **Unsigned Integer Types**:
+- [x] **Unsigned Integer Types**:
   ```baa
   ط٨ بايت = ٢٥٥.               // uint8_t:  0 to 255
   ط١٦ قصير = ٦٥٠٠٠.            // uint16_t: 0 to 65535
@@ -611,16 +611,9 @@
   ط٦٤ طويل = ١٨٠٠٠٠٠٠٠٠٠٠٠٠٠٠٠٠٠٠. // uint64_t
   ```
 
-- [ ] **Type Aliases**:
-  ```baa
-  // Built-in aliases
-  صحيح   = ص٦٤    // Default signed integer
-  طبيعي  = ط٦٤    // Default unsigned integer  
-  بايت   = ط٨     // Byte type
-  حجم    = ط٦٤    // Size type (like size_t)
-  ```
+- [ ] **Type Aliases** (Deferred)
 
-- [ ] **IR Type Support**:
+- [x] **IR Type Support**:
   ```
   // Already have in IR:
   ص٦٤، ص٣٢، ص٨، ص١
@@ -630,13 +623,13 @@
   ```
 
 #### Implementation Tasks
-- [ ] **Lexer**: Tokenize `ص٨`, `ص١٦`, `ص٣٢`, `ص٦٤`, `ط٨`, `ط١٦`, `ط٣٢`, `ط٦٤`.
-- [ ] **Type System**: Add size and signedness to integer types.
-- [ ] **IR**: Already supports `ص٦٤`, `ص٣٢`, `ص٨` - add unsigned variants.
+- [x] **Lexer**: Tokenize `ص٨`, `ص١٦`, `ص٣٢`, `ص٦٤`, `ط٨`, `ط١٦`, `ط٣٢`, `ط٦٤`.
+- [x] **Type System**: Add size and signedness to integer types.
+- [x] **IR**: Add unsigned variants and propagate types through IR/optimizer/backend.
 - [ ] **Semantic**: Warn on implicit narrowing conversions.
 - [ ] **Semantic**: Handle signed/unsigned comparison warnings.
-- [ ] **Codegen**: Generate correct-sized mov/add/etc instructions.
-- [ ] **Codegen**: Handle sign-extension vs zero-extension.
+- [x] **Codegen**: Generate correct-sized mov/add/etc instructions.
+- [x] **Codegen**: Handle sign-extension vs zero-extension.
 
 ---
 
@@ -646,17 +639,17 @@
 
 #### Features
 
-- [ ] **Arithmetic**: `+ - * /` on `عشري`.
-- [ ] **Comparisons**: `== != < > <= >=` on `عشري`.
-- [ ] **Printing**: `اطبع` supports `عشري` (e.g. via `printf("%f\n", ...)`).
+- [x] **Arithmetic**: `+ - * /` on `عشري`.
+- [x] **Comparisons**: `== != < > <= >=` on `عشري`.
+- [x] **Printing**: `اطبع` supports `عشري`.
 
 #### Implementation Tasks
 
-- [ ] **IR**: Add float ops (or extend existing ops to accept `f64`) + verifier rules.
-- [ ] **ISel**: Select SSE/AVX scalar instructions for `f64` (`addsd/subsd/mulsd/divsd`) and float compares.
-- [ ] **ABI (Windows + SystemV)**: Pass/return `عشري` in XMM registers; handle stack spills + varargs rules.
-- [ ] **Emitter**: Emit correct mnemonics/suffixes for XMM ops and moves.
-- [ ] **Runtime/Print**: Ensure `printf` calling convention is correct for `double` on both targets.
+- [x] **IR**: Extend existing ops to accept `f64` + verifier rules.
+- [x] **ISel**: Select scalar SSE instructions for `f64` (`addsd/subsd/mulsd/divsd`) and float compares.
+- [x] **ABI (Windows + SystemV)**: Pass/return `عشري` in XMM registers; handle varargs rules.
+- [x] **Emitter**: Emit XMM operands and SSE mnemonics.
+- [x] **Runtime/Print**: Ensure `printf` calling convention is correct for `double` on both targets.
 
 ---
 

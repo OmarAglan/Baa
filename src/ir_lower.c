@@ -2286,7 +2286,25 @@ static IRValue* ir_lower_global_init_value(IRBuilder* builder, Node* expr, IRTyp
         {
             int64_t v = 0;
             if (ir_lower_eval_const_i64(expr, &v)) {
-                return ir_value_const_int(v, expected_type ? expected_type : IR_TYPE_I64_T);
+                // قم بالاقتطاع/التوسيع حسب نوع الوجهة لأن مُقيِّم الثابت يعمل على i64.
+                IRType* t = expected_type ? expected_type : IR_TYPE_I64_T;
+                if (t && (t->kind == IR_TYPE_I1)) {
+                    v = v ? 1 : 0;
+                } else if (t) {
+                    int bits = ir_type_bits(t);
+                    if (bits > 0 && bits < 64) {
+                        uint64_t mask = (1ULL << (unsigned)bits) - 1ULL;
+                        uint64_t u = ((uint64_t)v) & mask;
+                        if (t->kind == IR_TYPE_U8 || t->kind == IR_TYPE_U16 || t->kind == IR_TYPE_U32) {
+                            v = (int64_t)u;
+                        } else {
+                            uint64_t sign_bit = 1ULL << (unsigned)(bits - 1);
+                            if (u & sign_bit) u |= ~mask;
+                            v = (int64_t)u;
+                        }
+                    }
+                }
+                return ir_value_const_int(v, t);
             }
             // Non-constant global initializers are not supported yet; fall back to zero.
             return ir_value_const_int(0, expected_type ? expected_type : IR_TYPE_I64_T);

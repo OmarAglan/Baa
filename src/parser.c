@@ -11,6 +11,19 @@
 // كائن المحلل القواعدي الذي يدير الحالة الحالية والوحدة القادمة
 Parser parser;
 
+static bool parser_int_literal_is_i32(int64_t v)
+{
+    return v >= INT32_MIN && v <= INT32_MAX;
+}
+
+static int64_t parser_sign_extend_u32(uint32_t u)
+{
+    int64_t v = (int64_t)u;
+    if (u & 0x80000000u)
+        v -= 0x100000000LL;
+    return v;
+}
+
 // --- دالات مساعدة ---
 
 /**

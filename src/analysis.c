@@ -1316,7 +1316,14 @@ static DataType infer_type_internal(Node* node) {
 
     switch (node->type) {
         case NODE_INT:
+        {
+            // قاعدة نمط C للأعداد العشرية بدون لاحقة:
+            // إذا كانت ضمن مدى 32-بت موقّع → اعتبرها ص٣٢، وإلا اعتبرها صحيح/ص٦٤.
+            int64_t v = (int64_t)node->data.integer.value;
+            if (v >= INT32_MIN && v <= INT32_MAX)
+                return TYPE_I32;
             return TYPE_INT;
+        }
 
         case NODE_FLOAT:
             return TYPE_FLOAT;

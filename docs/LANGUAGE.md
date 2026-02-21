@@ -355,17 +355,18 @@ Baa is statically typed. All variables must be declared with their type.
 
 ### 3.7. Planned Types & Features (Future)
 
-هذه الأقسام تُوثّق ميزات مخطط لها ولم تُنفّذ بعد.
+هذه الأقسام كانت مخططاً لها تاريخياً. بعض البنود تم تنفيذها فعلاً، والباقي ما زال مستقبلياً.
 
-#### 3.7.1. Floating Point Enhancements (`عشري`) [Scheduled v0.3.5.5]
+#### 3.7.1. Floating Point Enhancements (`عشري`) [Implemented v0.3.5.5]
 
-النوع `عشري` موجود حالياً كثوابت/تخزين فقط. يُخطط في v0.3.5.5 لإضافة:
+النوع `عشري` (f64) يدعم الآن:
 
 - عمليات `+ - * /`
 - مقارنات `== != < > <= >=`
-- `اطبع` لـ `عشري` مع توافق ABI (XMM) على ويندوز/لينكس
+- `اطبع` لـ `عشري`
+- توافق ABI على لينكس (SysV AMD64) وويندوز x64 (تمرير/إرجاع عبر XMM، ومعالجة varargs على SysV)
 
-#### 3.7.2. Integer Sizes (أحجام الأعداد الصحيحة) [Scheduled v0.3.5.5]
+#### 3.7.2. Integer Sizes (أحجام الأعداد الصحيحة) [Implemented v0.3.5.5]
 
 | Type | Description | Range (Approx) |
 |------|-------------|----------------|
@@ -377,6 +378,11 @@ Baa is statically typed. All variables must be declared with their type.
 | `ط١٦` | Unsigned 16-bit | 0 to 65,535 |
 | `ط٣٢` | Unsigned 32-bit | 0 to 4 Billion |
 | `ط٦٤` | Unsigned 64-bit | Huge (Default `طبيعي`) |
+
+ملاحظات مهمة:
+
+- الترقيات والتحويلات الحسابية تتبع نمط C (integer promotions + usual arithmetic conversions).
+- الثوابت العشرية بدون لاحقة تُعامل كـ `ص٣٢` إذا كانت ضمن المدى، وإلا كـ `صحيح/ص٦٤`.
 
 #### 3.7.3. Type Aliases (أسماء الأنواع البديلة) [Scheduled v0.3.6.5]
 

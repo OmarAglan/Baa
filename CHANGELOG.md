@@ -8,6 +8,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.3.5.5] - 2026-02-21
+
+### Added
+
+- **Sized integers** — `ص٨/ص١٦/ص٣٢/ص٦٤` and `ط٨/ط١٦/ط٣٢/ط٦٤` with C-like integer promotions and usual arithmetic conversions.
+- **Unsigned correctness** — correct signed/unsigned comparisons, casts, and `div/mod` semantics across IR, optimizer, and backend.
+- **Float (`عشري`) enhancements** — `+ - * /`, comparisons, and `اطبع` (f64) with working SysV AMD64 + Windows x64 ABI lowering (XMM regs + SysV varargs AL).
+
+### Fixed
+
+- **NaN comparisons** — optimizer no longer folds `cmp x,x` for `f64` (NaN breaks reflexive equality).
+- **Global initializers** — typed integer globals are truncated/extended to their declared width during IR lowering.
+
 ## [0.3.5] - 2026-02-20
 
 ### Added

@@ -16,7 +16,8 @@ Baa (باء) is a compiled systems programming language using Arabic syntax. It 
 - [Input / Output](#6-input--output)
 - [Control Flow](#7-control-flow)
 - [Operators](#8-operators)
-- [Complete Example](#9-complete-example)
+- [Inline Assembly](#9-inline-assembly)
+- [Complete Example](#10-complete-example)
 
 ---
 
@@ -552,6 +553,20 @@ The main function can optionally accept arguments:
 }
 ```
 
+### 5.5. Recursion (التكرار)
+
+Functions can call themselves (recursion), provided there is a base case to terminate the loop.
+
+```baa
+// حساب متتالية فيبوناتشي
+صحيح فيبوناتشي(صحيح ن) {
+    إذا (ن <= ١) {
+        إرجع ن.
+    }
+    إرجع فيبوناتشي(ن - ١) + فيبوناتشي(ن - ٢).
+}
+```
+
 ### 5.6. Function Pointers (مؤشرات الدوال) [Scheduled v0.3.10.6]
 
 Pass functions as values.
@@ -577,20 +592,6 @@ Functions that accept any number of arguments using `...`.
 ```baa
 عدم سجل(نص رسالة، ...) {
     // Implementation
-}
-```
-
-### 5.5. Recursion (التكرار)
-
-Functions can call themselves (recursion), provided there is a base case to terminate the loop.
-
-```baa
-// حساب متتالية فيبوناتشي
-صحيح فيبوناتشي(صحيح ن) {
-    إذا (ن <= ١) {
-        إرجع ن.
-    }
-    إرجع فيبوناتشي(ن - ١) + فيبوناتشي(ن - ٢).
 }
 ```
 
@@ -841,7 +842,7 @@ From highest to lowest:
 
 ---
 
-## 10. Inline Assembly (المجمع المدمج) [Scheduled v0.4.0.6]
+## 9. Inline Assembly (المجمع المدمج) [Scheduled v0.4.0.6]
 
 Embed raw assembly code directly.
 
@@ -855,7 +856,7 @@ Embed raw assembly code directly.
 
 ---
 
-## 9. Complete Example
+## 10. Complete Example
 
 ```baa
 // استخدام الثوابت والماكرو

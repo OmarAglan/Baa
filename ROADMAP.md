@@ -9,7 +9,7 @@
 
 *Goal: Produce a Kernighan & Ritchie–style first book for Baa, in Arabic, serving as the definitive learning + reference resource.*
 
-- [ ] **Write the Arabic "Baa Book"** — book-length guide in Arabic with exercises.
+- [~] **Write the Arabic "Baa Book"** — book-length guide in Arabic with exercises. — draft exists in `docs/BAA_BOOK_AR.md`
 - [ ] **Define terminology glossary** — consistent Arabic technical vocabulary.
 - [ ] **Create example suite** — verified, idiomatic examples that compile with v0.3.5.5.
 - [ ] **Add exercises and challenges** — per chapter, with expected outputs.

@@ -706,6 +706,14 @@ Token lexer_next_token(Lexer* l) {
         else if (strcmp(word, "اطبع") == 0) token.type = TOKEN_PRINT;
         else if (strcmp(word, "اقرأ") == 0) token.type = TOKEN_READ;
         else if (strcmp(word, "صحيح") == 0) token.type = TOKEN_KEYWORD_INT;
+        else if (strcmp(word, "ص٨") == 0) token.type = TOKEN_KEYWORD_I8;
+        else if (strcmp(word, "ص١٦") == 0) token.type = TOKEN_KEYWORD_I16;
+        else if (strcmp(word, "ص٣٢") == 0) token.type = TOKEN_KEYWORD_I32;
+        else if (strcmp(word, "ص٦٤") == 0) token.type = TOKEN_KEYWORD_I64;
+        else if (strcmp(word, "ط٨") == 0) token.type = TOKEN_KEYWORD_U8;
+        else if (strcmp(word, "ط١٦") == 0) token.type = TOKEN_KEYWORD_U16;
+        else if (strcmp(word, "ط٣٢") == 0) token.type = TOKEN_KEYWORD_U32;
+        else if (strcmp(word, "ط٦٤") == 0) token.type = TOKEN_KEYWORD_U64;
         else if (strcmp(word, "نص") == 0) token.type = TOKEN_KEYWORD_STRING;
         else if (strcmp(word, "منطقي") == 0) token.type = TOKEN_KEYWORD_BOOL;
         else if (strcmp(word, "حرف") == 0) token.type = TOKEN_KEYWORD_CHAR;
@@ -755,6 +763,14 @@ const char* token_type_to_str(BaaTokenType type) {
         
         // كلمات مفتاحية
         case TOKEN_KEYWORD_INT: return "صحيح";
+        case TOKEN_KEYWORD_I8: return "ص٨";
+        case TOKEN_KEYWORD_I16: return "ص١٦";
+        case TOKEN_KEYWORD_I32: return "ص٣٢";
+        case TOKEN_KEYWORD_I64: return "ص٦٤";
+        case TOKEN_KEYWORD_U8: return "ط٨";
+        case TOKEN_KEYWORD_U16: return "ط١٦";
+        case TOKEN_KEYWORD_U32: return "ط٣٢";
+        case TOKEN_KEYWORD_U64: return "ط٦٤";
         case TOKEN_KEYWORD_STRING: return "نص";
         case TOKEN_KEYWORD_BOOL: return "منطقي";
         case TOKEN_KEYWORD_CHAR: return "حرف";

@@ -64,6 +64,10 @@ static IRType ir_type_i8_instance     = { .kind = IR_TYPE_I8 };
 static IRType ir_type_i16_instance    = { .kind = IR_TYPE_I16 };
 static IRType ir_type_i32_instance    = { .kind = IR_TYPE_I32 };
 static IRType ir_type_i64_instance    = { .kind = IR_TYPE_I64 };
+static IRType ir_type_u8_instance     = { .kind = IR_TYPE_U8 };
+static IRType ir_type_u16_instance    = { .kind = IR_TYPE_U16 };
+static IRType ir_type_u32_instance    = { .kind = IR_TYPE_U32 };
+static IRType ir_type_u64_instance    = { .kind = IR_TYPE_U64 };
 static IRType ir_type_char_instance   = { .kind = IR_TYPE_CHAR };
 static IRType ir_type_f64_instance    = { .kind = IR_TYPE_F64 };
 
@@ -74,6 +78,10 @@ IRType* IR_TYPE_I8_T    = &ir_type_i8_instance;
 IRType* IR_TYPE_I16_T   = &ir_type_i16_instance;
 IRType* IR_TYPE_I32_T   = &ir_type_i32_instance;
 IRType* IR_TYPE_I64_T   = &ir_type_i64_instance;
+IRType* IR_TYPE_U8_T    = &ir_type_u8_instance;
+IRType* IR_TYPE_U16_T   = &ir_type_u16_instance;
+IRType* IR_TYPE_U32_T   = &ir_type_u32_instance;
+IRType* IR_TYPE_U64_T   = &ir_type_u64_instance;
 IRType* IR_TYPE_CHAR_T  = &ir_type_char_instance;
 IRType* IR_TYPE_F64_T   = &ir_type_f64_instance;
 
@@ -228,6 +236,10 @@ const char* ir_cmp_pred_to_arabic(IRCmpPred pred) {
         case IR_CMP_LT:  return "أصغر";
         case IR_CMP_GE:  return "أكبر_أو_يساوي";
         case IR_CMP_LE:  return "أصغر_أو_يساوي";
+        case IR_CMP_UGT: return "أكبر";
+        case IR_CMP_ULT: return "أصغر";
+        case IR_CMP_UGE: return "أكبر_أو_يساوي";
+        case IR_CMP_ULE: return "أصغر_أو_يساوي";
         default:         return "مجهول";
     }
 }
@@ -243,6 +255,10 @@ const char* ir_cmp_pred_to_english(IRCmpPred pred) {
         case IR_CMP_LT:  return "slt";
         case IR_CMP_GE:  return "sge";
         case IR_CMP_LE:  return "sle";
+        case IR_CMP_UGT: return "ugt";
+        case IR_CMP_ULT: return "ult";
+        case IR_CMP_UGE: return "uge";
+        case IR_CMP_ULE: return "ule";
         default:         return "unknown";
     }
 }
@@ -260,6 +276,10 @@ const char* ir_type_to_arabic(IRType* type) {
         case IR_TYPE_I16:    return "ص١٦";      // 16-bit
         case IR_TYPE_I32:    return "ص٣٢";      // 32-bit
         case IR_TYPE_I64:    return "ص٦٤";      // 64-bit
+        case IR_TYPE_U8:     return "ط٨";       // u8
+        case IR_TYPE_U16:    return "ط١٦";      // u16
+        case IR_TYPE_U32:    return "ط٣٢";      // u32
+        case IR_TYPE_U64:    return "ط٦٤";      // u64
         case IR_TYPE_CHAR:   return "حرف";      // Baa char
         case IR_TYPE_F64:    return "ع٦٤";      // 64-bit float
         case IR_TYPE_PTR:    return "مؤشر";     // Pointer
@@ -282,6 +302,10 @@ const char* ir_type_to_english(IRType* type) {
         case IR_TYPE_I16:    return "i16";
         case IR_TYPE_I32:    return "i32";
         case IR_TYPE_I64:    return "i64";
+        case IR_TYPE_U8:     return "u8";
+        case IR_TYPE_U16:    return "u16";
+        case IR_TYPE_U32:    return "u32";
+        case IR_TYPE_U64:    return "u64";
         case IR_TYPE_CHAR:   return "char";
         case IR_TYPE_F64:    return "f64";
         case IR_TYPE_PTR:    return "ptr";
@@ -403,6 +427,10 @@ int ir_type_bits(IRType* type) {
         case IR_TYPE_I16:   return 16;
         case IR_TYPE_I32:   return 32;
         case IR_TYPE_I64:   return 64;
+        case IR_TYPE_U8:    return 8;
+        case IR_TYPE_U16:   return 16;
+        case IR_TYPE_U32:   return 32;
+        case IR_TYPE_U64:   return 64;
         case IR_TYPE_CHAR:  return 64;
         case IR_TYPE_F64:   return 64;
         case IR_TYPE_PTR:   return 64;  // 64-bit pointers

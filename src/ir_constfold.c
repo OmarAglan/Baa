@@ -13,7 +13,7 @@
  * • القسمة/الباقي: اقتطاع نحو الصفر (truncation toward zero).
  *   - INT64_MIN / -1 = INT64_MIN (التفاف آمن، ليس سلوكاً غير محدد).
  *   - INT64_MIN % -1 = 0.
- * • المقارنات: دائماً بإشارة (signed) للأنواع الصحيحة.
+ * • المقارنات: تتبع المحمول (signed/unsigned) حسب IRCmpPred.
  * • ص١ (i1): أي قيمة غير صفرية → 1، صفر → 0.
  *
  * ملاحظات التنفيذ:
@@ -49,10 +49,20 @@ static int is_int_type(IRType* t) {
            t->kind == IR_TYPE_I8 ||
            t->kind == IR_TYPE_I16 ||
            t->kind == IR_TYPE_I32 ||
-           t->kind == IR_TYPE_I64;
+           t->kind == IR_TYPE_I64 ||
+           t->kind == IR_TYPE_U8 ||
+           t->kind == IR_TYPE_U16 ||
+           t->kind == IR_TYPE_U32 ||
+           t->kind == IR_TYPE_U64;
 }
 
-static int64_t trunc_sext_to_type(int64_t v, IRType* t) {
+static int ir_type_is_unsigned(IRType* t)
+{
+    if (!t) return 0;
+    return t->kind == IR_TYPE_U8 || t->kind == IR_TYPE_U16 || t->kind == IR_TYPE_U32 || t->kind == IR_TYPE_U64;
+}
+
+static int64_t trunc_wrap_to_type(int64_t v, IRType* t) {
     if (!t) return v;
     if (!is_int_type(t)) return v;
 
@@ -65,9 +75,13 @@ static int64_t trunc_sext_to_type(int64_t v, IRType* t) {
     int bits = ir_type_bits(t);
     if (bits <= 0 || bits >= 64) return v;
 
-    // Mask to width, then sign-extend.
+    // Mask to width, then sign/zero-extend.
     uint64_t mask = (1ULL << (unsigned)bits) - 1ULL;
     uint64_t u = ((uint64_t)v) & mask;
+
+    if (ir_type_is_unsigned(t)) {
+        return (int64_t)u;
+    }
 
     uint64_t sign_bit = 1ULL << (unsigned)(bits - 1);
     if (u & sign_bit) {
@@ -87,7 +101,7 @@ static int is_reg(IRValue* v) {
 
 static IRValue* new_const_for_type(int64_t v, IRType* t) {
     // Preserve IR's type (esp. i1 for comparisons)
-    int64_t folded = trunc_sext_to_type(v, t);
+    int64_t folded = trunc_wrap_to_type(v, t);
     return ir_value_const_int(folded, t);
 }
 
@@ -212,6 +226,7 @@ static int try_fold_arith(IROp op, IRType* type, int64_t lhs, int64_t rhs, int64
     // في C عند طفحان الأعداد المُعلَّمة (signed overflow).
     uint64_t ul = (uint64_t)lhs;
     uint64_t ur = (uint64_t)rhs;
+    bool is_unsigned = ir_type_is_unsigned(type);
 
     switch (op) {
         case IR_OP_ADD:
@@ -225,6 +240,10 @@ static int try_fold_arith(IROp op, IRType* type, int64_t lhs, int64_t rhs, int64
             return 1;
         case IR_OP_DIV:
             if (rhs == 0) return 0;
+            if (is_unsigned) {
+                *out = (int64_t)(ul / ur);
+                return 1;
+            }
             // حالة خاصة: INT64_MIN / -1 — في C هذا سلوك غير محدد.
             // في Baa IR: نتيجة الالتفاف = INT64_MIN.
             if (lhs == INT64_MIN && rhs == -1) {
@@ -235,6 +254,10 @@ static int try_fold_arith(IROp op, IRType* type, int64_t lhs, int64_t rhs, int64
             return 1;
         case IR_OP_MOD:
             if (rhs == 0) return 0;
+            if (is_unsigned) {
+                *out = (int64_t)(ul % ur);
+                return 1;
+            }
             // حالة خاصة: INT64_MIN % -1 — في C هذا سلوك غير محدد.
             // في Baa IR: النتيجة = 0 (لأن INT64_MIN / -1 = INT64_MIN بالالتفاف).
             if (lhs == INT64_MIN && rhs == -1) {
@@ -252,8 +275,9 @@ static int try_fold_arith(IROp op, IRType* type, int64_t lhs, int64_t rhs, int64
 /**
  * @brief تقييم مقارنة ثوابت.
  *
- * المقارنات دائماً بإشارة (signed) — هذا عقد الـ IR (v0.3.2.6.6).
- * لا توجد مقارنات بدون إشارة في IR باء حالياً.
+ * المقارنات تتبع المحمول:
+ * - sgt/slt/sge/sle => signed
+ * - ugt/ult/uge/ule => unsigned
  *
  * @param pred المحمول (يساوي/لا_يساوي/أكبر/أصغر/أكبر_أو_يساوي/أصغر_أو_يساوي).
  * @param lhs المعامل الأيسر.
@@ -261,6 +285,8 @@ static int try_fold_arith(IROp op, IRType* type, int64_t lhs, int64_t rhs, int64
  * @return 1 إذا تحققت المقارنة، 0 غير ذلك.
  */
 static int eval_cmp(IRCmpPred pred, int64_t lhs, int64_t rhs) {
+    uint64_t ul = (uint64_t)lhs;
+    uint64_t ur = (uint64_t)rhs;
     switch (pred) {
         case IR_CMP_EQ: return lhs == rhs;
         case IR_CMP_NE: return lhs != rhs;
@@ -268,6 +294,10 @@ static int eval_cmp(IRCmpPred pred, int64_t lhs, int64_t rhs) {
         case IR_CMP_LT: return lhs < rhs;
         case IR_CMP_GE: return lhs >= rhs;
         case IR_CMP_LE: return lhs <= rhs;
+        case IR_CMP_UGT: return ul > ur;
+        case IR_CMP_ULT: return ul < ur;
+        case IR_CMP_UGE: return ul >= ur;
+        case IR_CMP_ULE: return ul <= ur;
         default:        return 0;
     }
 }
@@ -294,7 +324,7 @@ static int ir_try_fold_inst(IRInst* inst, int* out_reg, IRType** out_type, int64
             int64_t v = 0;
             if (!try_fold_arith(inst->op, result_type, a->data.const_int, b->data.const_int, &v)) return 0;
 
-            v = trunc_sext_to_type(v, result_type);
+            v = trunc_wrap_to_type(v, result_type);
 
             *out_reg = inst->dest;
             *out_type = result_type;

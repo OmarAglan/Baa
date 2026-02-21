@@ -86,6 +86,15 @@ MachineOperand mach_op_func(const char *name)
     return op;
 }
 
+MachineOperand mach_op_xmm(int xmm)
+{
+    MachineOperand op = {0};
+    op.kind = MACH_OP_XMM;
+    op.size_bits = 64;
+    op.data.xmm = xmm;
+    return op;
+}
+
 // ============================================================================
 // بناء التعليمات (Instruction Construction)
 // ============================================================================
@@ -107,6 +116,7 @@ MachineInst *mach_inst_new(MachineOp op, MachineOperand dst,
     inst->src_col = 0;
     inst->ir_inst_id = -1;
     inst->dbg_name = NULL;
+    inst->sysv_al = -1;
     inst->prev = NULL;
     inst->next = NULL;
     return inst;
@@ -489,12 +499,16 @@ static int isel_type_bits(IRType *type)
     case IR_TYPE_I1:
         return 8; // نستخدم بايت كامل للمنطقي
     case IR_TYPE_I8:
+    case IR_TYPE_U8:
         return 8;
     case IR_TYPE_I16:
+    case IR_TYPE_U16:
         return 16;
     case IR_TYPE_I32:
+    case IR_TYPE_U32:
         return 32;
     case IR_TYPE_I64:
+    case IR_TYPE_U64:
         return 64;
     case IR_TYPE_CHAR:
         return 64;
@@ -705,12 +719,39 @@ static void isel_lower_div(ISelCtx *ctx, IRInst *inst, bool is_mod)
     isel_emit_comment(ctx, MACH_MOV, rax, lhs, mach_op_none(),
                       is_mod ? "// باقي: تحضير المقسوم في RAX" : "// قسمة: تحضير المقسوم في RAX");
 
-    // توسيع الإشارة RAX → RDX:RAX
-    isel_emit(ctx, MACH_CQO, mach_op_none(), rax, mach_op_none());
+    bool is_unsigned = false;
+    if (inst->type)
+    {
+        switch (inst->type->kind)
+        {
+        case IR_TYPE_U8:
+        case IR_TYPE_U16:
+        case IR_TYPE_U32:
+        case IR_TYPE_U64:
+            is_unsigned = true;
+            break;
+        default:
+            break;
+        }
+    }
 
-    // القسمة: idivq divisor → حاصل القسمة في RAX، الباقي في RDX
-    isel_emit_comment(ctx, MACH_IDIV, rax, divisor, mach_op_none(),
-                      is_mod ? "// باقي القسمة في RDX" : "// حاصل القسمة في RAX");
+    if (is_unsigned)
+    {
+        // div: RDX:RAX يجب أن يكون بدون إشارة → صفّر RDX.
+        isel_emit_comment(ctx, MACH_XOR, rdx, rdx, rdx,
+                          "// قسمة بدون إشارة: تصفير RDX");
+        isel_emit_comment(ctx, MACH_DIV, rax, divisor, mach_op_none(),
+                          is_mod ? "// باقي القسمة في RDX (unsigned)" : "// حاصل القسمة في RAX (unsigned)");
+    }
+    else
+    {
+        // توسيع الإشارة RAX → RDX:RAX
+        isel_emit(ctx, MACH_CQO, mach_op_none(), rax, mach_op_none());
+
+        // القسمة: idivq divisor → حاصل القسمة في RAX، الباقي في RDX
+        isel_emit_comment(ctx, MACH_IDIV, rax, divisor, mach_op_none(),
+                          is_mod ? "// باقي القسمة في RDX" : "// حاصل القسمة في RAX");
+    }
 
     // نسخ النتيجة إلى سجل الوجهة
     // - القسمة: النتيجة في RAX
@@ -718,6 +759,192 @@ static void isel_lower_div(ISelCtx *ctx, IRInst *inst, bool is_mod)
     MachineOperand result = is_mod ? rdx : rax;
     MachineInst *mi = isel_emit_comment(ctx, MACH_MOV, dst, result, mach_op_none(),
                                         is_mod ? "// نسخ نتيجة الباقي" : "// نسخ نتيجة القسمة");
+    if (mi)
+        mi->ir_reg = inst->dest;
+}
+
+static int isel_irtype_is_f64(IRType *t)
+{
+    return t && t->kind == IR_TYPE_F64;
+}
+
+static int isel_irtype_is_signed_int(IRType *t)
+{
+    if (!t) return 0;
+    return t->kind == IR_TYPE_I8 || t->kind == IR_TYPE_I16 || t->kind == IR_TYPE_I32 || t->kind == IR_TYPE_I64 ||
+           t->kind == IR_TYPE_CHAR || t->kind == IR_TYPE_I1;
+}
+
+static MachineOperand isel_materialize_imm_to_gpr64(ISelCtx *ctx, MachineOperand op)
+{
+    if (!ctx || !ctx->mfunc)
+        return op;
+    if (op.kind != MACH_OP_IMM)
+        return op;
+
+    int tmp = mach_func_alloc_vreg(ctx->mfunc);
+    MachineOperand tmp_op = mach_op_vreg(tmp, 64);
+    MachineOperand imm = op;
+    imm.size_bits = 64;
+    isel_emit(ctx, MACH_MOV, tmp_op, imm, mach_op_none());
+    return tmp_op;
+}
+
+static MachineOperand isel_extend_to_gpr64(ISelCtx *ctx, MachineOperand src, IRType *src_type)
+{
+    if (!ctx || !ctx->mfunc)
+        return src;
+
+    if (src.kind == MACH_OP_IMM)
+        return isel_materialize_imm_to_gpr64(ctx, src);
+
+    int sb = src.size_bits;
+    if (sb <= 0) sb = 64;
+    if (sb >= 64)
+    {
+        if (src.kind == MACH_OP_VREG) src.size_bits = 64;
+        return src;
+    }
+
+    int tmp = mach_func_alloc_vreg(ctx->mfunc);
+    MachineOperand dst = mach_op_vreg(tmp, 64);
+    MachineOp mop = isel_irtype_is_signed_int(src_type) ? MACH_MOVSX : MACH_MOVZX;
+
+    // src يحتفظ بحجمه الأصلي.
+    isel_emit(ctx, mop, dst, src, mach_op_none());
+    return dst;
+}
+
+static void isel_lower_fbinop(ISelCtx *ctx, IRInst *inst, MachineOp mop)
+{
+    if (!inst || inst->operand_count < 2)
+        return;
+
+    MachineOperand dst_gpr = mach_op_vreg(inst->dest, 64);
+    MachineOperand lhs0 = isel_lower_value(ctx, inst->operands[0]);
+    MachineOperand rhs0 = isel_lower_value(ctx, inst->operands[1]);
+
+    lhs0 = isel_materialize_imm_to_gpr64(ctx, lhs0);
+    rhs0 = isel_materialize_imm_to_gpr64(ctx, rhs0);
+
+    MachineOperand xmm0 = mach_op_xmm(0);
+    MachineOperand xmm1 = mach_op_xmm(1);
+
+    isel_emit(ctx, MACH_MOV, xmm0, lhs0, mach_op_none());
+    isel_emit(ctx, MACH_MOV, xmm1, rhs0, mach_op_none());
+
+    isel_emit(ctx, mop, xmm0, xmm0, xmm1);
+
+    MachineInst *mi = isel_emit(ctx, MACH_MOV, dst_gpr, xmm0, mach_op_none());
+    if (mi)
+        mi->ir_reg = inst->dest;
+}
+
+static void isel_lower_fneg(ISelCtx *ctx, IRInst *inst)
+{
+    if (!inst || inst->operand_count < 1)
+        return;
+
+    MachineOperand dst_gpr = mach_op_vreg(inst->dest, 64);
+    MachineOperand src0 = isel_lower_value(ctx, inst->operands[0]);
+    src0 = isel_materialize_imm_to_gpr64(ctx, src0);
+
+    MachineOperand xmm0 = mach_op_xmm(0);
+    MachineOperand xmm1 = mach_op_xmm(1);
+
+    isel_emit(ctx, MACH_MOV, xmm0, src0, mach_op_none());
+
+    // signmask = 0x8000..00
+    int tmp = mach_func_alloc_vreg(ctx->mfunc);
+    MachineOperand mask_gpr = mach_op_vreg(tmp, 64);
+    isel_emit(ctx, MACH_MOV, mask_gpr, mach_op_imm((int64_t)0x8000000000000000ULL, 64), mach_op_none());
+    isel_emit(ctx, MACH_MOV, xmm1, mask_gpr, mach_op_none());
+
+    isel_emit(ctx, MACH_XORPD, xmm0, xmm0, xmm1);
+
+    MachineInst *mi = isel_emit(ctx, MACH_MOV, dst_gpr, xmm0, mach_op_none());
+    if (mi)
+        mi->ir_reg = inst->dest;
+}
+
+static void isel_lower_fcmp(ISelCtx *ctx, IRInst *inst)
+{
+    if (!inst || inst->operand_count < 2)
+        return;
+
+    MachineOperand lhs0 = isel_lower_value(ctx, inst->operands[0]);
+    MachineOperand rhs0 = isel_lower_value(ctx, inst->operands[1]);
+    lhs0 = isel_materialize_imm_to_gpr64(ctx, lhs0);
+    rhs0 = isel_materialize_imm_to_gpr64(ctx, rhs0);
+
+    MachineOperand xmm0 = mach_op_xmm(0);
+    MachineOperand xmm1 = mach_op_xmm(1);
+    isel_emit(ctx, MACH_MOV, xmm0, lhs0, mach_op_none());
+    isel_emit(ctx, MACH_MOV, xmm1, rhs0, mach_op_none());
+
+    // ucomisd xmm1, xmm0
+    isel_emit(ctx, MACH_UCOMISD, mach_op_none(), xmm0, xmm1);
+
+    MachineOperand dst8 = mach_op_vreg(inst->dest, 8);
+
+    // اختيار setcc؛ مع معالجة unordered عند الحاجة.
+    switch (inst->cmp_pred)
+    {
+    case IR_CMP_EQ:
+        isel_emit(ctx, MACH_SETE, dst8, mach_op_none(), mach_op_none());
+        {
+            int t = mach_func_alloc_vreg(ctx->mfunc);
+            MachineOperand t8 = mach_op_vreg(t, 8);
+            isel_emit(ctx, MACH_SETNP, t8, mach_op_none(), mach_op_none());
+            isel_emit(ctx, MACH_AND, dst8, dst8, t8);
+        }
+        break;
+
+    case IR_CMP_NE:
+        isel_emit(ctx, MACH_SETNE, dst8, mach_op_none(), mach_op_none());
+        {
+            int t = mach_func_alloc_vreg(ctx->mfunc);
+            MachineOperand t8 = mach_op_vreg(t, 8);
+            isel_emit(ctx, MACH_SETP, t8, mach_op_none(), mach_op_none());
+            isel_emit(ctx, MACH_OR, dst8, dst8, t8);
+        }
+        break;
+
+    case IR_CMP_LT:
+        isel_emit(ctx, MACH_SETB, dst8, mach_op_none(), mach_op_none());
+        {
+            int t = mach_func_alloc_vreg(ctx->mfunc);
+            MachineOperand t8 = mach_op_vreg(t, 8);
+            isel_emit(ctx, MACH_SETNP, t8, mach_op_none(), mach_op_none());
+            isel_emit(ctx, MACH_AND, dst8, dst8, t8);
+        }
+        break;
+
+    case IR_CMP_LE:
+        isel_emit(ctx, MACH_SETBE, dst8, mach_op_none(), mach_op_none());
+        {
+            int t = mach_func_alloc_vreg(ctx->mfunc);
+            MachineOperand t8 = mach_op_vreg(t, 8);
+            isel_emit(ctx, MACH_SETNP, t8, mach_op_none(), mach_op_none());
+            isel_emit(ctx, MACH_AND, dst8, dst8, t8);
+        }
+        break;
+
+    case IR_CMP_GT:
+        isel_emit(ctx, MACH_SETA, dst8, mach_op_none(), mach_op_none());
+        break;
+
+    case IR_CMP_GE:
+        isel_emit(ctx, MACH_SETAE, dst8, mach_op_none(), mach_op_none());
+        break;
+
+    default:
+        isel_emit(ctx, MACH_SETE, dst8, mach_op_none(), mach_op_none());
+        break;
+    }
+
+    MachineOperand dst64 = mach_op_vreg(inst->dest, 64);
+    MachineInst *mi = isel_emit(ctx, MACH_MOVZX, dst64, dst8, mach_op_none());
     if (mi)
         mi->ir_reg = inst->dest;
 }
@@ -897,6 +1124,13 @@ static void isel_lower_cmp(ISelCtx *ctx, IRInst *inst)
     if (!inst || inst->operand_count < 2)
         return;
 
+    // عشري: ucomisd + setcc
+    if (inst->operands[0] && inst->operands[0]->type && inst->operands[0]->type->kind == IR_TYPE_F64)
+    {
+        isel_lower_fcmp(ctx, inst);
+        return;
+    }
+
     int bits = isel_type_bits(inst->operands[0] ? inst->operands[0]->type : NULL);
     MachineOperand lhs = isel_lower_value(ctx, inst->operands[0]);
     MachineOperand rhs = isel_lower_value(ctx, inst->operands[1]);
@@ -935,6 +1169,18 @@ static void isel_lower_cmp(ISelCtx *ctx, IRInst *inst)
         break;
     case IR_CMP_LE:
         setcc = MACH_SETLE;
+        break;
+    case IR_CMP_UGT:
+        setcc = MACH_SETA;
+        break;
+    case IR_CMP_ULT:
+        setcc = MACH_SETB;
+        break;
+    case IR_CMP_UGE:
+        setcc = MACH_SETAE;
+        break;
+    case IR_CMP_ULE:
+        setcc = MACH_SETBE;
         break;
     default:
         setcc = MACH_SETE;
@@ -1063,12 +1309,24 @@ static void isel_lower_ret(ISelCtx *ctx, IRInst *inst)
 
     if (inst->operand_count > 0 && inst->operands[0])
     {
+        IRType *rt = inst->operands[0] ? inst->operands[0]->type : NULL;
         MachineOperand val = isel_lower_value(ctx, inst->operands[0]);
-        // نضع القيمة المرجعة في سجل خاص (سيصبح RAX في تخصيص السجلات)
-        // نستخدم سجلاً خاصاً للقيمة المرجعة (افتراضياً: vreg -2 → RAX)
-        MachineOperand ret_reg = mach_op_vreg(isel_abi_ret_vreg(cc), isel_type_bits(inst->operands[0]->type));
-        isel_emit_comment(ctx, MACH_MOV, ret_reg, val, mach_op_none(),
-                          "// قيمة الإرجاع → RAX");
+
+        if (rt && rt->kind == IR_TYPE_F64)
+        {
+            // القيمة المرجعة العشرية → XMM0
+            val = isel_materialize_imm_to_gpr64(ctx, val);
+            MachineOperand xmm0 = mach_op_xmm(0);
+            isel_emit_comment(ctx, MACH_MOV, xmm0, val, mach_op_none(),
+                              "// قيمة الإرجاع → XMM0");
+        }
+        else
+        {
+            // نضع القيمة المرجعة في سجل خاص (سيصبح RAX في تخصيص السجلات)
+            MachineOperand ret_reg = mach_op_vreg(isel_abi_ret_vreg(cc), isel_type_bits(rt));
+            isel_emit_comment(ctx, MACH_MOV, ret_reg, val, mach_op_none(),
+                              "// قيمة الإرجاع → RAX");
+        }
     }
 
     isel_emit(ctx, MACH_RET, mach_op_none(), mach_op_none(), mach_op_none());
@@ -1095,21 +1353,72 @@ static void isel_lower_call(ISelCtx *ctx, IRInst *inst)
         return;
 
     const BaaCallingConv *cc = isel_cc_or_default(ctx);
-    int max_reg_args = (cc && cc->int_arg_reg_count > 0) ? cc->int_arg_reg_count : 4;
+    bool is_win = (ctx && ctx->target && ctx->target->kind == BAA_TARGET_X86_64_WINDOWS);
 
-    int stack_arg_count = 0;
-    if (inst->call_arg_count > max_reg_args)
-        stack_arg_count = inst->call_arg_count - max_reg_args;
+    int gpr_max = (cc && cc->int_arg_reg_count > 0) ? cc->int_arg_reg_count : 4;
+    int xmm_max = is_win ? 4 : 8;
+
+    typedef enum { ARG_GPR, ARG_XMM, ARG_STACK } ArgLocKind;
+    typedef struct { ArgLocKind kind; int idx; } ArgLoc;
+
+    int n = inst->call_arg_count;
+    ArgLoc *locs = NULL;
+    if (n > 0)
+    {
+        locs = (ArgLoc *)calloc((size_t)n, sizeof(ArgLoc));
+        if (!locs) return;
+    }
+
+    int gpr_i = 0;
+    int xmm_i = 0;
+    int stack_i = 0;
+
+    for (int i = 0; i < n; i++)
+    {
+        IRType *at = (inst->call_args && inst->call_args[i]) ? inst->call_args[i]->type : NULL;
+        bool is_f64 = (at && at->kind == IR_TYPE_F64);
+
+        if (is_win)
+        {
+            if (i < 4)
+            {
+                if (is_f64)
+                    locs[i] = (ArgLoc){ARG_XMM, i};
+                else
+                    locs[i] = (ArgLoc){ARG_GPR, i};
+            }
+            else
+            {
+                locs[i] = (ArgLoc){ARG_STACK, stack_i++};
+            }
+        }
+        else
+        {
+            if (is_f64)
+            {
+                if (xmm_i < xmm_max)
+                    locs[i] = (ArgLoc){ARG_XMM, xmm_i++};
+                else
+                    locs[i] = (ArgLoc){ARG_STACK, stack_i++};
+            }
+            else
+            {
+                if (gpr_i < gpr_max)
+                    locs[i] = (ArgLoc){ARG_GPR, gpr_i++};
+                else
+                    locs[i] = (ArgLoc){ARG_STACK, stack_i++};
+            }
+        }
+    }
 
     int shadow = (cc) ? cc->shadow_space_bytes : 0;
     int align = (cc && cc->stack_align_bytes > 0) ? cc->stack_align_bytes : 16;
 
-    int call_frame = shadow + stack_arg_count * 8;
+    int call_frame = shadow + stack_i * 8;
     int call_frame_aligned = call_frame;
     if (align > 0 && call_frame_aligned % align != 0)
         call_frame_aligned = ((call_frame_aligned / align) + 1) * align;
 
-    // حجز إطار النداء (outgoing call frame)
     if (call_frame_aligned > 0)
     {
         MachineOperand sp = mach_op_vreg(isel_abi_sp_vreg(), 64);
@@ -1117,44 +1426,60 @@ static void isel_lower_call(ISelCtx *ctx, IRInst *inst)
         isel_emit_comment(ctx, MACH_SUB, sp, sp, imm, "// حجز إطار نداء");
     }
 
-    // تحضير المعاملات (نضعها في سجلات مرقمة خاصة)
-    // سجلات ABI ستُخصص لاحقاً حسب الهدف.
-    for (int i = 0; i < inst->call_arg_count && i < max_reg_args; i++)
+    // 1) معاملات السجلات
+    for (int i = 0; i < n; i++)
     {
         MachineOperand arg = isel_lower_value(ctx, inst->call_args[i]);
-        int bits = 64;
-        if (inst->call_args[i] && inst->call_args[i]->type)
-            bits = isel_type_bits(inst->call_args[i]->type);
+        IRType *at = (inst->call_args && inst->call_args[i]) ? inst->call_args[i]->type : NULL;
+        bool is_f64 = (at && at->kind == IR_TYPE_F64);
 
-        // سجل المعامل: نستخدم أرقام سالبة خاصة (-10..)
-        // سيتم حلها إلى سجلات ABI الفعلية حسب الهدف.
-        MachineOperand param_reg = mach_op_vreg(isel_abi_arg_vreg(cc, i), bits);
-        isel_emit(ctx, MACH_MOV, param_reg, arg, mach_op_none());
-    }
-
-    // Windows x64: تعبئة home/shadow space لمعاملات السجلات (مهم للـ varargs مثل printf/scanf)
-    if (cc && cc->home_reg_args_on_call && shadow >= 32)
-    {
-        int n_home = inst->call_arg_count < max_reg_args ? inst->call_arg_count : max_reg_args;
-        if (n_home > 4) n_home = 4;
-        for (int i = 0; i < n_home; i++)
+        if (locs[i].kind == ARG_GPR)
         {
-            MachineOperand src = mach_op_vreg(isel_abi_arg_vreg(cc, i), 64);
-            MachineOperand mem = mach_op_mem(isel_abi_sp_vreg(), (int32_t)(i * 8), 64);
-            isel_emit(ctx, MACH_STORE, mem, src, mach_op_none());
+            int bits = at ? isel_type_bits(at) : 64;
+            MachineOperand param_reg = mach_op_vreg(isel_abi_arg_vreg(cc, locs[i].idx), bits);
+            isel_emit(ctx, MACH_MOV, param_reg, arg, mach_op_none());
+        }
+        else if (locs[i].kind == ARG_XMM)
+        {
+            (void)is_f64;
+            arg = isel_materialize_imm_to_gpr64(ctx, arg);
+            MachineOperand xmm = mach_op_xmm(locs[i].idx);
+            isel_emit(ctx, MACH_MOV, xmm, arg, mach_op_none());
         }
     }
 
-    // معاملات المكدس (stack args): تُكتب إلى إطار النداء
-    for (int i = max_reg_args; i < inst->call_arg_count; i++)
+    // 2) Windows: home/shadow space لمعاملات السجلات (بما فيها XMM)
+    if (cc && cc->home_reg_args_on_call && shadow >= 32)
     {
-        int slot = i - max_reg_args;
-        int32_t off = (int32_t)(shadow + slot * 8);
+        int n_home = (n < 4) ? n : 4;
+        for (int i = 0; i < n_home; i++)
+        {
+            MachineOperand mem = mach_op_mem(isel_abi_sp_vreg(), (int32_t)(i * 8), 64);
+            if (locs[i].kind == ARG_XMM)
+            {
+                MachineOperand src = mach_op_xmm(i);
+                isel_emit(ctx, MACH_STORE, mem, src, mach_op_none());
+            }
+            else
+            {
+                MachineOperand src = mach_op_vreg(isel_abi_arg_vreg(cc, i), 64);
+                isel_emit(ctx, MACH_STORE, mem, src, mach_op_none());
+            }
+        }
+    }
+
+    // 3) معاملات المكدس
+    for (int i = 0; i < n; i++)
+    {
+        if (locs[i].kind != ARG_STACK)
+            continue;
+
+        int32_t off = (int32_t)(shadow + locs[i].idx * 8);
         MachineOperand mem = mach_op_mem(isel_abi_sp_vreg(), off, 64);
 
         MachineOperand arg = isel_lower_value(ctx, inst->call_args[i]);
+        arg = isel_materialize_imm_to_gpr64(ctx, arg);
 
-        // تجنب mem->mem غير القانوني إذا كان arg ذاكرة/عالمي
         if (arg.kind == MACH_OP_MEM || arg.kind == MACH_OP_GLOBAL)
         {
             int tmp_v = mach_func_alloc_vreg(ctx->mfunc);
@@ -1166,9 +1491,14 @@ static void isel_lower_call(ISelCtx *ctx, IRInst *inst)
         isel_emit(ctx, MACH_STORE, mem, arg, mach_op_none());
     }
 
-    // استدعاء الدالة
+    // استدعاء
     MachineOperand target = mach_op_func(inst->call_target);
-    isel_emit(ctx, MACH_CALL, mach_op_none(), target, mach_op_none());
+    MachineInst *calli = isel_emit(ctx, MACH_CALL, mach_op_none(), target, mach_op_none());
+    if (calli)
+    {
+        // SysV varargs rule: عدد سجلات XMM المستخدمة.
+        calli->sysv_al = is_win ? -1 : xmm_i;
+    }
 
     // تحرير إطار النداء
     if (call_frame_aligned > 0)
@@ -1178,17 +1508,29 @@ static void isel_lower_call(ISelCtx *ctx, IRInst *inst)
         isel_emit_comment(ctx, MACH_ADD, sp, sp, imm, "// تحرير إطار نداء");
     }
 
-    // نقل القيمة المرجعة (إذا وجدت)
+    // نقل القيمة المرجعة
     if (inst->dest >= 0 && inst->type && inst->type->kind != IR_TYPE_VOID)
     {
-        int bits = isel_type_bits(inst->type);
-        MachineOperand dst = mach_op_vreg(inst->dest, bits);
-        MachineOperand ret_reg = mach_op_vreg(isel_abi_ret_vreg(cc), bits);
-        MachineInst *mi = isel_emit_comment(ctx, MACH_MOV, dst, ret_reg, mach_op_none(),
-                                            "// القيمة المرجعة من RAX");
-        if (mi)
-            mi->ir_reg = inst->dest;
+        if (inst->type->kind == IR_TYPE_F64)
+        {
+            MachineOperand dst = mach_op_vreg(inst->dest, 64);
+            MachineOperand xmm0 = mach_op_xmm(0);
+            MachineInst *mi = isel_emit_comment(ctx, MACH_MOV, dst, xmm0, mach_op_none(),
+                                                "// القيمة المرجعة من XMM0");
+            if (mi) mi->ir_reg = inst->dest;
+        }
+        else
+        {
+            int bits = isel_type_bits(inst->type);
+            MachineOperand dst = mach_op_vreg(inst->dest, bits);
+            MachineOperand ret_reg = mach_op_vreg(isel_abi_ret_vreg(cc), bits);
+            MachineInst *mi = isel_emit_comment(ctx, MACH_MOV, dst, ret_reg, mach_op_none(),
+                                                "// القيمة المرجعة من RAX");
+            if (mi) mi->ir_reg = inst->dest;
+        }
     }
+
+    free(locs);
 }
 
 // -----------------------------------------------------------------------------
@@ -1440,27 +1782,87 @@ static void isel_lower_cast(ISelCtx *ctx, IRInst *inst)
     if (!inst || inst->operand_count < 1)
         return;
 
-    int dst_bits = isel_type_bits(inst->type);
-    MachineOperand dst = mach_op_vreg(inst->dest, dst_bits);
-    MachineOperand src = isel_lower_value(ctx, inst->operands[0]);
+    IRType *dst_t = inst->type;
+    IRType *src_t = (inst->operands[0]) ? inst->operands[0]->type : NULL;
 
-    int src_bits = src.size_bits;
-
-    if (src_bits < dst_bits && src_bits > 0)
+    // عشري <-> عشري: نسخ بتات.
+    if (isel_irtype_is_f64(dst_t) && isel_irtype_is_f64(src_t))
     {
-        // توسيع بالأصفار
-        MachineInst *mi = isel_emit(ctx, MACH_MOVZX, dst, src, mach_op_none());
-        if (mi)
-            mi->ir_reg = inst->dest;
-    }
-    else
-    {
-        // نسخ مباشر (نفس الحجم أو تقليص). عند التقليص، يجب أن يكون src بنفس حجم dst.
-        if (src_bits > dst_bits && dst_bits > 0)
-            src.size_bits = dst_bits;
+        MachineOperand dst = mach_op_vreg(inst->dest, 64);
+        MachineOperand src = isel_lower_value(ctx, inst->operands[0]);
+        src = isel_materialize_imm_to_gpr64(ctx, src);
         MachineInst *mi = isel_emit(ctx, MACH_MOV, dst, src, mach_op_none());
-        if (mi)
-            mi->ir_reg = inst->dest;
+        if (mi) mi->ir_reg = inst->dest;
+        return;
+    }
+
+    // int -> عشري
+    if (isel_irtype_is_f64(dst_t) && !isel_irtype_is_f64(src_t))
+    {
+        MachineOperand src = isel_lower_value(ctx, inst->operands[0]);
+        src = isel_extend_to_gpr64(ctx, src, src_t);
+
+        MachineOperand xmm0 = mach_op_xmm(0);
+        isel_emit(ctx, MACH_CVTSI2SD, xmm0, src, mach_op_none());
+
+        MachineOperand dst = mach_op_vreg(inst->dest, 64);
+        MachineInst *mi = isel_emit(ctx, MACH_MOV, dst, xmm0, mach_op_none());
+        if (mi) mi->ir_reg = inst->dest;
+        return;
+    }
+
+    // عشري -> int
+    if (!isel_irtype_is_f64(dst_t) && isel_irtype_is_f64(src_t))
+    {
+        int dst_bits = isel_type_bits(dst_t);
+        MachineOperand dst = mach_op_vreg(inst->dest, dst_bits);
+
+        MachineOperand src_bits = isel_lower_value(ctx, inst->operands[0]);
+        src_bits = isel_materialize_imm_to_gpr64(ctx, src_bits);
+
+        MachineOperand xmm0 = mach_op_xmm(0);
+        isel_emit(ctx, MACH_MOV, xmm0, src_bits, mach_op_none());
+
+        int tmp = mach_func_alloc_vreg(ctx->mfunc);
+        MachineOperand tmp64 = mach_op_vreg(tmp, 64);
+        isel_emit(ctx, MACH_CVTTSD2SI, tmp64, xmm0, mach_op_none());
+
+        // اقتطاع إلى الحجم النهائي إن كان أصغر.
+        MachineOperand src = tmp64;
+        if (dst_bits > 0 && dst_bits < 64)
+            src.size_bits = dst_bits;
+
+        MachineInst *mi = isel_emit(ctx, MACH_MOV, dst, src, mach_op_none());
+        if (mi) mi->ir_reg = inst->dest;
+        return;
+    }
+
+    // تحويلات الأعداد الصحيحة (sign/zero extend + trunc)
+    {
+        int dst_bits = isel_type_bits(dst_t);
+        MachineOperand dst = mach_op_vreg(inst->dest, dst_bits);
+        MachineOperand src = isel_lower_value(ctx, inst->operands[0]);
+
+        int src_bits = src.size_bits;
+
+        if (src_bits < dst_bits && src_bits > 0)
+        {
+            // توسيع: بالأصفار للأنواع unsigned/i1، وبالإشارة للأنواع signed.
+            bool zext = true;
+            if (isel_irtype_is_signed_int(src_t))
+                zext = false;
+            MachineOp mop = zext ? MACH_MOVZX : MACH_MOVSX;
+            MachineInst *mi = isel_emit(ctx, mop, dst, src, mach_op_none());
+            if (mi) mi->ir_reg = inst->dest;
+        }
+        else
+        {
+            // نسخ مباشر (نفس الحجم أو تقليص). عند التقليص، نحدد حجم المصدر.
+            if (src_bits > dst_bits && dst_bits > 0)
+                src.size_bits = dst_bits;
+            MachineInst *mi = isel_emit(ctx, MACH_MOV, dst, src, mach_op_none());
+            if (mi) mi->ir_reg = inst->dest;
+        }
     }
 }
 
@@ -1483,22 +1885,27 @@ static void isel_lower_inst(ISelCtx *ctx, IRInst *inst)
     {
     // عمليات حسابية
     case IR_OP_ADD:
-        isel_lower_binop(ctx, inst, MACH_ADD);
+        if (isel_irtype_is_f64(inst->type)) isel_lower_fbinop(ctx, inst, MACH_ADDSD);
+        else isel_lower_binop(ctx, inst, MACH_ADD);
         break;
     case IR_OP_SUB:
-        isel_lower_binop(ctx, inst, MACH_SUB);
+        if (isel_irtype_is_f64(inst->type)) isel_lower_fbinop(ctx, inst, MACH_SUBSD);
+        else isel_lower_binop(ctx, inst, MACH_SUB);
         break;
     case IR_OP_MUL:
-        isel_lower_mul_strength_reduce(ctx, inst);
+        if (isel_irtype_is_f64(inst->type)) isel_lower_fbinop(ctx, inst, MACH_MULSD);
+        else isel_lower_mul_strength_reduce(ctx, inst);
         break;
     case IR_OP_DIV:
-        isel_lower_div(ctx, inst, false);
+        if (isel_irtype_is_f64(inst->type)) isel_lower_fbinop(ctx, inst, MACH_DIVSD);
+        else isel_lower_div(ctx, inst, false);
         break;
     case IR_OP_MOD:
         isel_lower_div(ctx, inst, true);
         break;
     case IR_OP_NEG:
-        isel_lower_neg(ctx, inst);
+        if (isel_irtype_is_f64(inst->type)) isel_lower_fneg(ctx, inst);
+        else isel_lower_neg(ctx, inst);
         break;
 
     // عمليات الذاكرة
@@ -1741,9 +2148,56 @@ static MachineFunc *isel_lower_func(ISelCtx *ctx, IRFunc *ir_func)
     {
         // نُنشئ تعليمات النسخ ونحشرها في بداية كتلة الدخول
         const BaaCallingConv *cc = isel_cc_or_default(ctx);
-        int max_reg_params = (cc && cc->int_arg_reg_count > 0) ? cc->int_arg_reg_count : 4;
-        if (ir_func->param_count < max_reg_params)
-            max_reg_params = ir_func->param_count;
+        bool is_win = (ctx && ctx->target && ctx->target->kind == BAA_TARGET_X86_64_WINDOWS);
+        int gpr_max = (cc && cc->int_arg_reg_count > 0) ? cc->int_arg_reg_count : 4;
+        int xmm_max = is_win ? 4 : 8;
+
+        typedef enum { IN_GPR, IN_XMM, IN_STACK } InLocKind;
+        typedef struct { InLocKind kind; int idx; } InLoc;
+
+        InLoc *locs = (InLoc *)calloc((size_t)ir_func->param_count, sizeof(InLoc));
+        if (!locs)
+            return mfunc;
+
+        int gpr_i = 0;
+        int xmm_i = 0;
+        int stack_i = 0;
+
+        for (int i = 0; i < ir_func->param_count; i++)
+        {
+            IRType *pt = ir_func->params ? ir_func->params[i].type : NULL;
+            bool is_f64 = (pt && pt->kind == IR_TYPE_F64);
+
+            if (is_win)
+            {
+                if (i < 4)
+                {
+                    locs[i] = (InLoc){is_f64 ? IN_XMM : IN_GPR, i};
+                }
+                else
+                {
+                    locs[i] = (InLoc){IN_STACK, stack_i++};
+                }
+            }
+            else
+            {
+                if (is_f64)
+                {
+                    if (xmm_i < xmm_max)
+                        locs[i] = (InLoc){IN_XMM, xmm_i++};
+                    else
+                        locs[i] = (InLoc){IN_STACK, stack_i++};
+                }
+                else
+                {
+                    if (gpr_i < gpr_max)
+                        locs[i] = (InLoc){IN_GPR, gpr_i++};
+                    else
+                        locs[i] = (InLoc){IN_STACK, stack_i++};
+                }
+            }
+        }
+
         // نبني سلسلة التعليمات المؤقتة
         MachineInst *param_first = NULL;
         MachineInst *param_last = NULL;
@@ -1751,20 +2205,26 @@ static MachineFunc *isel_lower_func(ISelCtx *ctx, IRFunc *ir_func)
         for (int i = 0; i < ir_func->param_count; i++)
         {
             MachineInst *mi = NULL;
+            IRType *pt = ir_func->params ? ir_func->params[i].type : NULL;
             MachineOperand param_dst = mach_op_vreg(ir_func->params[i].reg, 64);
 
-            if (i < max_reg_params)
+            if (locs[i].kind == IN_GPR)
             {
-                MachineOperand abi_reg = mach_op_vreg(isel_abi_arg_vreg(cc, i), 64);
+                MachineOperand abi_reg = mach_op_vreg(isel_abi_arg_vreg(cc, locs[i].idx), 64);
                 mi = mach_inst_new(MACH_MOV, param_dst, abi_reg, mach_op_none());
+            }
+            else if (locs[i].kind == IN_XMM)
+            {
+                (void)pt;
+                MachineOperand xmm = mach_op_xmm(locs[i].idx);
+                mi = mach_inst_new(MACH_MOV, param_dst, xmm, mach_op_none());
             }
             else
             {
                 // معاملات المكدس: تُقرأ من مساحة المستدعي فوق return address.
                 // ملاحظة: على Windows توجد shadow space (32) بين home slots ومعاملات المكدس.
                 int shadow = (cc) ? cc->shadow_space_bytes : 0;
-                int slot = i - max_reg_params;
-                int32_t off = (int32_t)(16 + shadow + slot * 8);
+                int32_t off = (int32_t)(16 + shadow + locs[i].idx * 8);
                 MachineOperand mem = mach_op_mem(-1, off, 64);
                 mi = mach_inst_new(MACH_LOAD, param_dst, mem, mach_op_none());
             }
@@ -1797,6 +2257,8 @@ static MachineFunc *isel_lower_func(ISelCtx *ctx, IRFunc *ir_func)
             mfunc->entry->first = param_first;
             mfunc->entry->last = param_last;
         }
+
+        free(locs);
     }
 
     return mfunc;
@@ -1871,10 +2333,28 @@ const char *mach_op_to_string(MachineOp op)
         return "shl";
     case MACH_IDIV:
         return "idiv";
+    case MACH_DIV:
+        return "div";
     case MACH_NEG:
         return "neg";
     case MACH_CQO:
         return "cqo";
+    case MACH_ADDSD:
+        return "addsd";
+    case MACH_SUBSD:
+        return "subsd";
+    case MACH_MULSD:
+        return "mulsd";
+    case MACH_DIVSD:
+        return "divsd";
+    case MACH_UCOMISD:
+        return "ucomisd";
+    case MACH_XORPD:
+        return "xorpd";
+    case MACH_CVTSI2SD:
+        return "cvtsi2sd";
+    case MACH_CVTTSD2SI:
+        return "cvttsd2si";
     case MACH_MOV:
         return "mov";
     case MACH_LEA:
@@ -1899,8 +2379,22 @@ const char *mach_op_to_string(MachineOp op)
         return "setge";
     case MACH_SETLE:
         return "setle";
+    case MACH_SETA:
+        return "seta";
+    case MACH_SETB:
+        return "setb";
+    case MACH_SETAE:
+        return "setae";
+    case MACH_SETBE:
+        return "setbe";
+    case MACH_SETP:
+        return "setp";
+    case MACH_SETNP:
+        return "setnp";
     case MACH_MOVZX:
         return "movzx";
+    case MACH_MOVSX:
+        return "movsx";
     case MACH_AND:
         return "and";
     case MACH_OR:
@@ -1986,6 +2480,9 @@ void mach_operand_print(MachineOperand *op, FILE *out)
         break;
     case MACH_OP_FUNC:
         fprintf(out, "@%s", op->data.name ? op->data.name : "???");
+        break;
+    case MACH_OP_XMM:
+        fprintf(out, "%%xmm%d", op->data.xmm);
         break;
     }
 }

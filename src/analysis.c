@@ -1019,7 +1019,14 @@ static void analyze_node(Node* node);
  */
 static const char* datatype_to_str(DataType type) {
     switch (type) {
-        case TYPE_INT: return "INTEGER";
+        case TYPE_INT: return "I64";
+        case TYPE_I8: return "I8";
+        case TYPE_I16: return "I16";
+        case TYPE_I32: return "I32";
+        case TYPE_U8: return "U8";
+        case TYPE_U16: return "U16";
+        case TYPE_U32: return "U32";
+        case TYPE_U64: return "U64";
         case TYPE_STRING: return "STRING";
         case TYPE_BOOL: return "BOOLEAN";
         case TYPE_CHAR: return "CHAR";
@@ -1031,13 +1038,55 @@ static const char* datatype_to_str(DataType type) {
     }
 }
 
+static bool datatype_is_int(DataType t)
+{
+    switch (t) {
+        case TYPE_INT:
+        case TYPE_I8:
+        case TYPE_I16:
+        case TYPE_I32:
+        case TYPE_U8:
+        case TYPE_U16:
+        case TYPE_U32:
+        case TYPE_U64:
+            return true;
+        default:
+            return false;
+    }
+}
+
+static bool datatype_is_intlike(DataType t)
+{
+    return datatype_is_int(t) || t == TYPE_BOOL || t == TYPE_CHAR || t == TYPE_ENUM;
+}
+
+// ترقية الأعداد الصحيحة (Integer promotions) بأسلوب C مع اعتبار أن "صحيح" هو 64-بت.
+static DataType datatype_int_promote(DataType t)
+{
+    if (t == TYPE_U64) return TYPE_U64;
+    if (t == TYPE_INT) return TYPE_INT;
+    if (datatype_is_intlike(t)) return TYPE_INT;
+    return t;
+}
+
+static DataType datatype_usual_arith(DataType a, DataType b)
+{
+    DataType pa = datatype_int_promote(a);
+    DataType pb = datatype_int_promote(b);
+    if (pa == TYPE_U64 || pb == TYPE_U64) return TYPE_U64;
+    return TYPE_INT;
+}
+
 static bool types_compatible(DataType got, DataType expected)
 {
     if (got == expected) return true;
-    if (got == TYPE_BOOL && expected == TYPE_INT) return true;
-    if (got == TYPE_INT && expected == TYPE_BOOL) return true;
-    if (got == TYPE_CHAR && expected == TYPE_INT) return true;
-    if (got == TYPE_INT && expected == TYPE_CHAR) return true;
+
+    // تحويلات C-like بين الأنواع العددية.
+    if (datatype_is_int(expected) && (datatype_is_int(got) || got == TYPE_BOOL || got == TYPE_CHAR)) return true;
+    if (expected == TYPE_BOOL && (datatype_is_int(got) || got == TYPE_BOOL || got == TYPE_CHAR)) return true;
+    if (expected == TYPE_CHAR && (datatype_is_int(got) || got == TYPE_BOOL)) return true;
+    if (datatype_is_int(expected) && got == TYPE_FLOAT) return true;
+    if (expected == TYPE_FLOAT && (datatype_is_int(got) || got == TYPE_BOOL || got == TYPE_CHAR)) return true;
     return false;
 }
 
@@ -1171,7 +1220,10 @@ static bool eval_const_int_expr(Node* expr, int64_t* out_value)
  * @brief استنتاج نوع التعبير.
  * @return DataType نوع التعبير الناتج.
  */
-static DataType infer_type(Node* node) {
+static DataType infer_type(Node* node);
+static DataType infer_type_internal(Node* node);
+
+static DataType infer_type_internal(Node* node) {
     if (!node) return TYPE_INT; // افتراضي لتجنب الانهيار
 
     switch (node->type) {
@@ -1234,7 +1286,7 @@ static DataType infer_type(Node* node) {
                 // السماح بفهرسة النص على أنه حرف[] (v0.3.5)
                 if (sym->type == TYPE_STRING) {
                     DataType it = infer_type(node->data.array_op.index);
-                    if (it != TYPE_INT) {
+                    if (!types_compatible(it, TYPE_INT) || it == TYPE_FLOAT) {
                         semantic_error(node->data.array_op.index, "فهرس النص يجب أن يكون صحيحاً.");
                     }
                     return TYPE_CHAR;
@@ -1246,7 +1298,7 @@ static DataType infer_type(Node* node) {
             }
 
             DataType it = infer_type(node->data.array_op.index);
-            if (it != TYPE_INT) {
+            if (!types_compatible(it, TYPE_INT) || it == TYPE_FLOAT) {
                 semantic_error(node->data.array_op.index, "فهرس المصفوفة يجب أن يكون صحيحاً.");
             }
 
@@ -1272,19 +1324,11 @@ static DataType infer_type(Node* node) {
                 while (arg) { (void)infer_type(arg); arg = arg->next; }
                 return TYPE_INT;
             }
-
-            if (fs->return_type == TYPE_FLOAT) {
-                semantic_error(node, "استدعاء دالة تُرجع 'عشري' غير مدعوم حالياً.");
-            }
-
             // تحقق عدد وأنواع المعاملات
             int i = 0;
             Node* arg = node->data.call.args;
             while (arg) {
                 DataType at = infer_type(arg);
-                if (at == TYPE_FLOAT) {
-                    semantic_error(arg, "تمرير 'عشري' إلى دالة غير مدعوم حالياً.");
-                }
                 if (i < fs->param_count) {
                     if (!types_compatible(at, fs->param_types[i])) {
                         semantic_error(arg, "نوع المعامل %d في '%s' غير متوافق.", i + 1, fs->name);
@@ -1306,23 +1350,36 @@ static DataType infer_type(Node* node) {
             // العمليات الحسابية تتطلب أعداداً صحيحة
             OpType op = node->data.bin_op.op;
             if (op == OP_ADD || op == OP_SUB || op == OP_MUL || op == OP_DIV || op == OP_MOD) {
-                if (left == TYPE_FLOAT || right == TYPE_FLOAT) {
-                    semantic_error(node, "عمليات العشري غير مدعومة حالياً.");
+                if (op == OP_MOD && (left == TYPE_FLOAT || right == TYPE_FLOAT)) {
+                    semantic_error(node, "عملية باقي غير مدعومة على 'عشري'.");
                 }
-                if (!types_compatible(left, TYPE_INT) || !types_compatible(right, TYPE_INT)) {
+
+                // إذا كان أحد الطرفين عشرياً → النتيجة عشري (بعد تحويل الطرف الآخر).
+                if (left == TYPE_FLOAT || right == TYPE_FLOAT) {
+                    if (!((datatype_is_intlike(left) || left == TYPE_FLOAT) && (datatype_is_intlike(right) || right == TYPE_FLOAT))) {
+                        semantic_error(node, "عمليات العشري تتطلب معاملات عددية.");
+                    }
+                    return TYPE_FLOAT;
+                }
+
+                if (!datatype_is_intlike(left) || !datatype_is_intlike(right)) {
                     semantic_error(node, "Arithmetic operations require INTEGER operands.");
                 }
-                return TYPE_INT;
+                return datatype_usual_arith(left, right);
             }
             
             // عمليات المقارنة تتطلب أنواعاً متوافقة وتعيد منطقي
             if (op == OP_EQ || op == OP_NEQ || op == OP_LT || op == OP_GT || op == OP_LTE || op == OP_GTE) {
+                // مقارنة العشري: نسمح بمقارنة عشري مع عدد (يحوّل العدد إلى عشري).
                 if (left == TYPE_FLOAT || right == TYPE_FLOAT) {
-                    semantic_error(node, "مقارنات العشري غير مدعومة حالياً.");
+                    if (!((datatype_is_intlike(left) || left == TYPE_FLOAT) && (datatype_is_intlike(right) || right == TYPE_FLOAT))) {
+                        semantic_error(node, "مقارنات العشري تتطلب معاملات عددية.");
+                    }
+                    return TYPE_BOOL;
                 }
                 if (left != right) {
                     // سماح C-like: مقارنة حرف مع صحيح.
-                    if (!((types_compatible(left, TYPE_INT) && types_compatible(right, TYPE_INT)) ||
+                    if (!((datatype_is_intlike(left) && datatype_is_intlike(right)) ||
                           (left == TYPE_ENUM && right == TYPE_ENUM))) {
                         semantic_error(node, "Comparison operations require matching types.");
                     }
@@ -1341,7 +1398,8 @@ static DataType infer_type(Node* node) {
             // العمليات المنطقية (AND/OR) تتطلب منطقي أو صحيح وتعيد منطقي
             if (op == OP_AND || op == OP_OR) {
                 // نقبل INT أو BOOL لأن C تعامل القيم غير الصفرية كـ true
-                if ((left != TYPE_INT && left != TYPE_BOOL) || (right != TYPE_INT && right != TYPE_BOOL)) {
+                if ((!datatype_is_intlike(left) && left != TYPE_BOOL && left != TYPE_FLOAT) ||
+                    (!datatype_is_intlike(right) && right != TYPE_BOOL && right != TYPE_FLOAT)) {
                     semantic_error(node, "Logical operations require INTEGER or BOOLEAN operands.");
                 }
                 return TYPE_BOOL;
@@ -1362,15 +1420,27 @@ static DataType infer_type(Node* node) {
                 return TYPE_FLOAT;
             }
 
-            if (!types_compatible(ot, TYPE_INT)) {
+            if (!datatype_is_intlike(ot)) {
                 semantic_error(node, "Unary operations require INTEGER operand.");
             }
-            return TYPE_INT;
+            // -x يتبع ترقيات الأعداد الصحيحة (قد يصبح ط٦٤).
+            if (node->data.unary_op.op == UOP_NEG) {
+                return datatype_int_promote(ot);
+            }
+            return ot;
         }
 
         default:
             return TYPE_INT;
     }
+}
+
+static DataType infer_type(Node* node)
+{
+    if (!node) return TYPE_INT;
+    DataType t = infer_type_internal(node);
+    node->inferred_type = t;
+    return t;
 }
 
 /**
@@ -1681,7 +1751,7 @@ static void analyze_node(Node* node) {
 
         case NODE_IF: {
             DataType condType = infer_type(node->data.if_stmt.condition);
-            if (condType != TYPE_INT && condType != TYPE_BOOL && condType != TYPE_CHAR) {
+            if (!datatype_is_intlike(condType)) {
                 semantic_error(node->data.if_stmt.condition, "'if' condition must be an integer/boolean.");
             }
 
@@ -1700,7 +1770,7 @@ static void analyze_node(Node* node) {
 
         case NODE_WHILE: {
             DataType condType = infer_type(node->data.while_stmt.condition);
-            if (condType != TYPE_INT && condType != TYPE_BOOL && condType != TYPE_CHAR) {
+            if (!datatype_is_intlike(condType)) {
                 semantic_error(node->data.while_stmt.condition, "'while' condition must be an integer/boolean.");
             }
             bool prev_loop = inside_loop;
@@ -1721,7 +1791,7 @@ static void analyze_node(Node* node) {
             if (node->data.for_stmt.init) analyze_node(node->data.for_stmt.init);
             if (node->data.for_stmt.condition) {
                 DataType condType = infer_type(node->data.for_stmt.condition);
-                if (condType != TYPE_INT && condType != TYPE_BOOL && condType != TYPE_CHAR) {
+                if (!datatype_is_intlike(condType)) {
                     semantic_error(node->data.for_stmt.condition, "'for' condition must be an integer/boolean.");
                 }
             }
@@ -1738,7 +1808,7 @@ static void analyze_node(Node* node) {
 
         case NODE_SWITCH: {
             DataType st = infer_type(node->data.switch_stmt.expression);
-            if (st != TYPE_INT && st != TYPE_CHAR) {
+            if (!datatype_is_intlike(st)) {
                 semantic_error(node->data.switch_stmt.expression, "'switch' expression must be an integer.");
             }
             bool prev_switch = inside_switch;
@@ -1751,7 +1821,7 @@ static void analyze_node(Node* node) {
             while (current_case) {
                 if (!current_case->data.case_stmt.is_default) {
                     DataType ct = infer_type(current_case->data.case_stmt.value);
-                    if (ct != TYPE_INT && ct != TYPE_CHAR) {
+                    if (!datatype_is_intlike(ct)) {
                         semantic_error(current_case->data.case_stmt.value, "'case' value must be an integer constant.");
                     }
                 }
@@ -1792,9 +1862,7 @@ static void analyze_node(Node* node) {
         case NODE_PRINT:
         {
             DataType pt = infer_type(node->data.print_stmt.expression);
-            if (pt == TYPE_FLOAT) {
-                semantic_error(node, "'اطبع' لا يدعم 'عشري' حالياً.");
-            }
+            (void)pt;
             break;
         }
         
@@ -1807,9 +1875,9 @@ static void analyze_node(Node* node) {
                 if (sym->is_const) {
                     semantic_error(node, "Cannot read into constant variable '%s'.", node->data.read_stmt.var_name);
                 }
-                // حالياً نقبل القراءة فقط في المتغيرات الصحيحة
-                if (sym->type != TYPE_INT) {
-                    semantic_error(node, "'اقرأ' currently only supports INTEGER variables.");
+                // نقبل القراءة في الأنواع الصحيحة (بما فيها الأحجام المختلفة).
+                if (!datatype_is_int(sym->type)) {
+                    semantic_error(node, "'اقرأ' currently only supports integer variables.");
                 }
             }
             break;
@@ -1831,9 +1899,6 @@ static void analyze_node(Node* node) {
             Node* arg = node->data.call.args;
             while (arg) {
                 DataType at = infer_type(arg);
-                if (at == TYPE_FLOAT) {
-                    semantic_error(arg, "تمرير 'عشري' إلى دالة غير مدعوم حالياً.");
-                }
                 if (i < fs->param_count) {
                     if (!types_compatible(at, fs->param_types[i])) {
                         semantic_error(arg, "نوع المعامل %d في '%s' غير متوافق.", i + 1, fs->name);
@@ -1932,7 +1997,7 @@ static void analyze_node(Node* node) {
             }
 
             DataType it = infer_type(node->data.array_op.index);
-            if (it != TYPE_INT) {
+            if (!types_compatible(it, TYPE_INT) || it == TYPE_FLOAT) {
                 semantic_error(node->data.array_op.index, "فهرس المصفوفة يجب أن يكون صحيحاً.");
             }
 

@@ -53,6 +53,10 @@ static int64_t ic_trunc_to_type(int64_t v, IRType* t)
 
     uint64_t mask = (1ULL << (unsigned)bits) - 1ULL;
     uint64_t u = ((uint64_t)v) & mask;
+
+    if (t->kind == IR_TYPE_U8 || t->kind == IR_TYPE_U16 || t->kind == IR_TYPE_U32 || t->kind == IR_TYPE_U64)
+        return (int64_t)u;
+
     uint64_t sign_bit = 1ULL << (unsigned)(bits - 1);
     if (u & sign_bit)
         u |= ~mask;
@@ -192,6 +196,10 @@ static int ic_simplify_arith(IRInst* inst)
     if (!inst || inst->operand_count < 1)
         return 0;
 
+    // تجنب تبسيطات العشري (NaN/-0 قد تكسر بعض أنماط x+0/x*0).
+    if (inst->type && inst->type->kind == IR_TYPE_F64)
+        return 0;
+
     IRValue* a = inst->operand_count >= 1 ? inst->operands[0] : NULL;
     IRValue* b = inst->operand_count >= 2 ? inst->operands[1] : NULL;
 
@@ -291,6 +299,10 @@ static int ic_simplify_arith(IRInst* inst)
                     case IR_CMP_LT: res = 0; break;
                     case IR_CMP_GE: res = 1; break;
                     case IR_CMP_LE: res = 1; break;
+                    case IR_CMP_UGT: res = 0; break;
+                    case IR_CMP_ULT: res = 0; break;
+                    case IR_CMP_UGE: res = 1; break;
+                    case IR_CMP_ULE: res = 1; break;
                     default: return 0;
                 }
 
@@ -311,6 +323,10 @@ static int ic_simplify_arith(IRInst* inst)
                     case IR_CMP_LT: res = 0; break;
                     case IR_CMP_GE: res = 1; break;
                     case IR_CMP_LE: res = 1; break;
+                    case IR_CMP_UGT: res = 0; break;
+                    case IR_CMP_ULT: res = 0; break;
+                    case IR_CMP_UGE: res = 1; break;
+                    case IR_CMP_ULE: res = 1; break;
                     default: return 0;
                 }
 

@@ -80,6 +80,33 @@ static int sccp_update(SCCPVal* dst, SCCPVal v)
     return 0;
 }
 
+static int sccp_type_is_unsigned(IRType* t)
+{
+    if (!t) return 0;
+    return t->kind == IR_TYPE_U8 || t->kind == IR_TYPE_U16 || t->kind == IR_TYPE_U32 || t->kind == IR_TYPE_U64;
+}
+
+static int sccp_type_is_intlike(IRType* t)
+{
+    if (!t) return 0;
+    switch (t->kind)
+    {
+        case IR_TYPE_I1:
+        case IR_TYPE_I8:
+        case IR_TYPE_I16:
+        case IR_TYPE_I32:
+        case IR_TYPE_I64:
+        case IR_TYPE_U8:
+        case IR_TYPE_U16:
+        case IR_TYPE_U32:
+        case IR_TYPE_U64:
+        case IR_TYPE_CHAR:
+            return 1;
+        default:
+            return 0;
+    }
+}
+
 static int64_t sccp_trunc_to_type(int64_t v, IRType* t)
 {
     if (!t) return v;
@@ -90,6 +117,10 @@ static int64_t sccp_trunc_to_type(int64_t v, IRType* t)
 
     uint64_t mask = (1ULL << (unsigned)bits) - 1ULL;
     uint64_t u = ((uint64_t)v) & mask;
+
+    if (sccp_type_is_unsigned(t))
+        return (int64_t)u;
+
     uint64_t sign = 1ULL << (unsigned)(bits - 1);
     if (u & sign) u |= ~mask;
     return (int64_t)u;
@@ -191,12 +222,14 @@ static int sccp_pred_edge_feasible_to(IRBlock* pred, IRBlock* succ, const SCCPEd
 // Eval
 // -----------------------------------------------------------------------------
 
-static int sccp_try_fold_arith(IROp op, int64_t lhs, int64_t rhs, int64_t* out)
+static int sccp_try_fold_arith(IROp op, IRType* type, int64_t lhs, int64_t rhs, int64_t* out)
 {
     if (!out) return 0;
 
     uint64_t ul = (uint64_t)lhs;
     uint64_t ur = (uint64_t)rhs;
+
+    bool is_unsigned = sccp_type_is_unsigned(type);
 
     switch (op)
     {
@@ -207,12 +240,22 @@ static int sccp_try_fold_arith(IROp op, int64_t lhs, int64_t rhs, int64_t* out)
 
         case IR_OP_DIV:
             if (rhs == 0) return 0;
+            if (is_unsigned)
+            {
+                *out = (int64_t)(ul / ur);
+                return 1;
+            }
             if (lhs == INT64_MIN && rhs == -1) { *out = INT64_MIN; return 1; }
             *out = lhs / rhs;
             return 1;
 
         case IR_OP_MOD:
             if (rhs == 0) return 0;
+            if (is_unsigned)
+            {
+                *out = (int64_t)(ul % ur);
+                return 1;
+            }
             if (lhs == INT64_MIN && rhs == -1) { *out = 0; return 1; }
             *out = lhs % rhs;
             return 1;
@@ -260,13 +303,14 @@ static SCCPVal sccp_eval_inst(IRInst* inst, SCCPVal* regs, int max_reg, const SC
         case IR_OP_MOD:
         {
             if (inst->operand_count < 2) return (SCCPVal){SCCP_OVER, 0};
+            if (!sccp_type_is_intlike(inst->type)) return (SCCPVal){SCCP_OVER, 0};
             SCCPVal a = sccp_val_of_value(inst->operands[0], regs, max_reg);
             SCCPVal b = sccp_val_of_value(inst->operands[1], regs, max_reg);
             if (a.kind == SCCP_OVER || b.kind == SCCP_OVER) return (SCCPVal){SCCP_OVER, 0};
             if (a.kind != SCCP_CONST || b.kind != SCCP_CONST) return (SCCPVal){SCCP_UNDEF, 0};
 
             int64_t out = 0;
-            if (!sccp_try_fold_arith(inst->op, a.c, b.c, &out)) return (SCCPVal){SCCP_OVER, 0};
+            if (!sccp_try_fold_arith(inst->op, inst->type, a.c, b.c, &out)) return (SCCPVal){SCCP_OVER, 0};
             out = sccp_trunc_to_type(out, inst->type);
             return (SCCPVal){SCCP_CONST, out};
         }
@@ -274,11 +318,12 @@ static SCCPVal sccp_eval_inst(IRInst* inst, SCCPVal* regs, int max_reg, const SC
         case IR_OP_NEG:
         {
             if (inst->operand_count < 1) return (SCCPVal){SCCP_OVER, 0};
+            if (!sccp_type_is_intlike(inst->type)) return (SCCPVal){SCCP_OVER, 0};
             SCCPVal a = sccp_val_of_value(inst->operands[0], regs, max_reg);
             if (a.kind == SCCP_OVER) return (SCCPVal){SCCP_OVER, 0};
             if (a.kind != SCCP_CONST) return (SCCPVal){SCCP_UNDEF, 0};
             int64_t out = 0;
-            if (!sccp_try_fold_arith(IR_OP_NEG, a.c, 0, &out)) return (SCCPVal){SCCP_OVER, 0};
+            if (!sccp_try_fold_arith(IR_OP_NEG, inst->type, a.c, 0, &out)) return (SCCPVal){SCCP_OVER, 0};
             out = sccp_trunc_to_type(out, inst->type);
             return (SCCPVal){SCCP_CONST, out};
         }
@@ -287,6 +332,7 @@ static SCCPVal sccp_eval_inst(IRInst* inst, SCCPVal* regs, int max_reg, const SC
         case IR_OP_OR:
         {
             if (inst->operand_count < 2) return (SCCPVal){SCCP_OVER, 0};
+            if (!sccp_type_is_intlike(inst->type)) return (SCCPVal){SCCP_OVER, 0};
             SCCPVal a = sccp_val_of_value(inst->operands[0], regs, max_reg);
             SCCPVal b = sccp_val_of_value(inst->operands[1], regs, max_reg);
             if (a.kind == SCCP_OVER || b.kind == SCCP_OVER) return (SCCPVal){SCCP_OVER, 0};
@@ -300,6 +346,7 @@ static SCCPVal sccp_eval_inst(IRInst* inst, SCCPVal* regs, int max_reg, const SC
         {
             // في IR الحالي، NOT يستخدم كـ "نفي منطقي" لـ i1.
             if (inst->operand_count < 1) return (SCCPVal){SCCP_OVER, 0};
+            if (!sccp_type_is_intlike(inst->type)) return (SCCPVal){SCCP_OVER, 0};
             SCCPVal a = sccp_val_of_value(inst->operands[0], regs, max_reg);
             if (a.kind == SCCP_OVER) return (SCCPVal){SCCP_OVER, 0};
             if (a.kind != SCCP_CONST) return (SCCPVal){SCCP_UNDEF, 0};
@@ -311,9 +358,13 @@ static SCCPVal sccp_eval_inst(IRInst* inst, SCCPVal* regs, int max_reg, const SC
         case IR_OP_CAST:
         {
             if (inst->operand_count < 1) return (SCCPVal){SCCP_OVER, 0};
+            // لا نقيّم تحويلات العشري/العدد (float<->int) هنا لتجنب دلالات غير صحيحة.
+            if (inst->type && inst->type->kind == IR_TYPE_F64) return (SCCPVal){SCCP_OVER, 0};
             SCCPVal a = sccp_val_of_value(inst->operands[0], regs, max_reg);
             if (a.kind == SCCP_OVER) return (SCCPVal){SCCP_OVER, 0};
             if (a.kind != SCCP_CONST) return (SCCPVal){SCCP_UNDEF, 0};
+            if (inst->operands[0] && inst->operands[0]->type && inst->operands[0]->type->kind == IR_TYPE_F64)
+                return (SCCPVal){SCCP_OVER, 0};
             int64_t out = sccp_trunc_to_type(a.c, inst->type);
             return (SCCPVal){SCCP_CONST, out};
         }
@@ -326,7 +377,12 @@ static SCCPVal sccp_eval_inst(IRInst* inst, SCCPVal* regs, int max_reg, const SC
             if (a.kind == SCCP_OVER || b.kind == SCCP_OVER) return (SCCPVal){SCCP_OVER, 0};
             if (a.kind != SCCP_CONST || b.kind != SCCP_CONST) return (SCCPVal){SCCP_UNDEF, 0};
 
+            if (inst->operands[0] && inst->operands[0]->type && inst->operands[0]->type->kind == IR_TYPE_F64)
+                return (SCCPVal){SCCP_OVER, 0};
+
             int64_t res = 0;
+            uint64_t ua = (uint64_t)a.c;
+            uint64_t ub = (uint64_t)b.c;
             switch (inst->cmp_pred)
             {
                 case IR_CMP_EQ: res = (a.c == b.c); break;
@@ -335,6 +391,10 @@ static SCCPVal sccp_eval_inst(IRInst* inst, SCCPVal* regs, int max_reg, const SC
                 case IR_CMP_LT: res = (a.c <  b.c); break;
                 case IR_CMP_GE: res = (a.c >= b.c); break;
                 case IR_CMP_LE: res = (a.c <= b.c); break;
+                case IR_CMP_UGT: res = (ua >  ub); break;
+                case IR_CMP_ULT: res = (ua <  ub); break;
+                case IR_CMP_UGE: res = (ua >= ub); break;
+                case IR_CMP_ULE: res = (ua <= ub); break;
                 default: return (SCCPVal){SCCP_OVER, 0};
             }
 

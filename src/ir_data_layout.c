@@ -75,12 +75,16 @@ int ir_type_size_bytes(const IRDataLayout* dl, const IRType* type) {
         case IR_TYPE_I1:
             return d->i1_store_size_bytes;  // 1 بايت للتخزين
         case IR_TYPE_I8:
+        case IR_TYPE_U8:
             return 1;
         case IR_TYPE_I16:
+        case IR_TYPE_U16:
             return 2;
         case IR_TYPE_I32:
+        case IR_TYPE_U32:
             return 4;
         case IR_TYPE_I64:
+        case IR_TYPE_U64:
             return 8;
         case IR_TYPE_CHAR:
             return 8;
@@ -124,12 +128,16 @@ int ir_type_alignment(const IRDataLayout* dl, const IRType* type) {
         case IR_TYPE_I1:
             return 1;
         case IR_TYPE_I8:
+        case IR_TYPE_U8:
             return d->i8_align_bytes;
         case IR_TYPE_I16:
+        case IR_TYPE_U16:
             return d->i16_align_bytes;
         case IR_TYPE_I32:
+        case IR_TYPE_U32:
             return d->i32_align_bytes;
         case IR_TYPE_I64:
+        case IR_TYPE_U64:
             return d->i64_align_bytes;
         case IR_TYPE_CHAR:
             return d->i64_align_bytes;
@@ -186,6 +194,10 @@ int ir_type_is_integer(const IRType* type) {
         case IR_TYPE_I16:
         case IR_TYPE_I32:
         case IR_TYPE_I64:
+        case IR_TYPE_U8:
+        case IR_TYPE_U16:
+        case IR_TYPE_U32:
+        case IR_TYPE_U64:
         case IR_TYPE_CHAR:
             return 1;
         default:

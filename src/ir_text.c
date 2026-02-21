@@ -187,6 +187,10 @@ static void ir_text_write_type(FILE* out, IRType* type) {
         case IR_TYPE_I16:  fputs("i16", out); return;
         case IR_TYPE_I32:  fputs("i32", out); return;
         case IR_TYPE_I64:  fputs("i64", out); return;
+        case IR_TYPE_U8:   fputs("u8", out); return;
+        case IR_TYPE_U16:  fputs("u16", out); return;
+        case IR_TYPE_U32:  fputs("u32", out); return;
+        case IR_TYPE_U64:  fputs("u64", out); return;
         case IR_TYPE_CHAR: fputs("char", out); return;
         case IR_TYPE_F64:  fputs("f64", out); return;
         case IR_TYPE_PTR:
@@ -260,6 +264,10 @@ static const char* ir_text_cmp_pred_name(IRCmpPred pred) {
         case IR_CMP_LT: return "slt";
         case IR_CMP_GE: return "sge";
         case IR_CMP_LE: return "sle";
+        case IR_CMP_UGT: return "ugt";
+        case IR_CMP_ULT: return "ult";
+        case IR_CMP_UGE: return "uge";
+        case IR_CMP_ULE: return "ule";
         default: return "unknown";
     }
 }
@@ -646,6 +654,10 @@ static IRCmpPred ir_text_parse_pred(const char* s) {
     if (strcmp(s, "slt") == 0) return IR_CMP_LT;
     if (strcmp(s, "sge") == 0) return IR_CMP_GE;
     if (strcmp(s, "sle") == 0) return IR_CMP_LE;
+    if (strcmp(s, "ugt") == 0) return IR_CMP_UGT;
+    if (strcmp(s, "ult") == 0) return IR_CMP_ULT;
+    if (strcmp(s, "uge") == 0) return IR_CMP_UGE;
+    if (strcmp(s, "ule") == 0) return IR_CMP_ULE;
     return IR_CMP_EQ;
 }
 
@@ -659,6 +671,10 @@ static IRType* ir_text_parse_primitive_type(const char* tok) {
     if (strcmp(tok, "i16") == 0) return IR_TYPE_I16_T;
     if (strcmp(tok, "i32") == 0) return IR_TYPE_I32_T;
     if (strcmp(tok, "i64") == 0) return IR_TYPE_I64_T;
+    if (strcmp(tok, "u8") == 0) return IR_TYPE_U8_T;
+    if (strcmp(tok, "u16") == 0) return IR_TYPE_U16_T;
+    if (strcmp(tok, "u32") == 0) return IR_TYPE_U32_T;
+    if (strcmp(tok, "u64") == 0) return IR_TYPE_U64_T;
     if (strcmp(tok, "char") == 0) return IR_TYPE_CHAR_T;
     if (strcmp(tok, "f64") == 0) return IR_TYPE_F64_T;
     return NULL;

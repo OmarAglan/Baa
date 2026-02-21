@@ -44,8 +44,21 @@ typedef enum {
     MACH_IMUL,      // imul dst, src
     MACH_SHL,       // shl dst, imm (إزاحة لليسار)
     MACH_IDIV,      // idiv src (يقسم RDX:RAX على src)
+    MACH_DIV,       // div src  (يقسم RDX:RAX على src بدون إشارة)
     MACH_NEG,       // neg dst (سالب)
     MACH_CQO,       // cqo - توسيع الإشارة RAX → RDX:RAX (لعملية القسمة)
+
+    // --------------------------------------------------------------------
+    // عمليات العشري (SSE2 f64)
+    // --------------------------------------------------------------------
+    MACH_ADDSD,     // addsd dst, src
+    MACH_SUBSD,     // subsd dst, src
+    MACH_MULSD,     // mulsd dst, src
+    MACH_DIVSD,     // divsd dst, src
+    MACH_UCOMISD,   // ucomisd op1, op2 (يضبط الأعلام)
+    MACH_XORPD,     // xorpd dst, src
+    MACH_CVTSI2SD,  // cvtsi2sd dst(xmm), src(int)
+    MACH_CVTTSD2SI, // cvttsd2si dst(int), src(xmm)
 
     // --------------------------------------------------------------------
     // عمليات نقل البيانات (Data Movement)
@@ -66,7 +79,14 @@ typedef enum {
     MACH_SETL,      // setl dst  (أصغر - signed)
     MACH_SETGE,     // setge dst (أكبر أو يساوي)
     MACH_SETLE,     // setle dst (أصغر أو يساوي)
+    MACH_SETA,      // seta dst  (أكبر - unsigned)
+    MACH_SETB,      // setb dst  (أصغر - unsigned)
+    MACH_SETAE,     // setae dst (أكبر أو يساوي - unsigned)
+    MACH_SETBE,     // setbe dst (أصغر أو يساوي - unsigned)
+    MACH_SETP,      // setp dst  (unordered/parity)
+    MACH_SETNP,     // setnp dst (ordered/not parity)
     MACH_MOVZX,     // movzx dst, src (توسيع بالأصفار)
+    MACH_MOVSX,     // movsx dst, src (توسيع بالإشارة)
 
     // --------------------------------------------------------------------
     // عمليات منطقية (Logical)
@@ -118,6 +138,7 @@ typedef enum {
     MACH_OP_LABEL,      // تسمية كتلة (للقفز)
     MACH_OP_GLOBAL,     // متغير عام (@name)
     MACH_OP_FUNC,       // مرجع دالة (@name)
+    MACH_OP_XMM,        // سجل XMM (%%xmm<n>)
 } MachineOperandKind;
 
 /**
@@ -136,6 +157,7 @@ typedef struct MachineOperand {
         } mem;
         int label_id;           // معرف الكتلة (MACH_OP_LABEL)
         char* name;             // اسم المتغير/الدالة (MACH_OP_GLOBAL, MACH_OP_FUNC)
+        int xmm;                // رقم سجل XMM (MACH_OP_XMM)
     } data;
 } MachineOperand;
 
@@ -165,6 +187,10 @@ typedef struct MachineInst {
     int src_col;
     int ir_inst_id;             // معرّف تعليمة IR (إن وُجد)
     const char* dbg_name;       // اسم متغير/رمز اختياري
+
+    // SystemV AMD64 varargs: AL = عدد سجلات XMM المستخدمة لتمرير المعاملات.
+    // -1 => لا يُطلب إعداد AL صراحةً (الافتراضي 0).
+    int sysv_al;
 
     // القائمة المترابطة المزدوجة
     struct MachineInst* prev;
@@ -267,6 +293,11 @@ typedef struct MachineModule {
  * @return معامل آلة.
  */
 MachineOperand mach_op_vreg(int vreg, int bits);
+
+/**
+ * @brief إنشاء معامل سجل XMM.
+ */
+MachineOperand mach_op_xmm(int xmm);
 
 /**
  * @brief إنشاء معامل قيمة فورية.

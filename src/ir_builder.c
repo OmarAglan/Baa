@@ -308,6 +308,22 @@ int ir_builder_emit_cmp_le(IRBuilder* builder, IRValue* lhs, IRValue* rhs) {
     return ir_builder_emit_cmp(builder, IR_CMP_LE, lhs, rhs);
 }
 
+int ir_builder_emit_cmp_ugt(IRBuilder* builder, IRValue* lhs, IRValue* rhs) {
+    return ir_builder_emit_cmp(builder, IR_CMP_UGT, lhs, rhs);
+}
+
+int ir_builder_emit_cmp_ult(IRBuilder* builder, IRValue* lhs, IRValue* rhs) {
+    return ir_builder_emit_cmp(builder, IR_CMP_ULT, lhs, rhs);
+}
+
+int ir_builder_emit_cmp_uge(IRBuilder* builder, IRValue* lhs, IRValue* rhs) {
+    return ir_builder_emit_cmp(builder, IR_CMP_UGE, lhs, rhs);
+}
+
+int ir_builder_emit_cmp_ule(IRBuilder* builder, IRValue* lhs, IRValue* rhs) {
+    return ir_builder_emit_cmp(builder, IR_CMP_ULE, lhs, rhs);
+}
+
 // ============================================================================
 // Logical Instructions
 // ============================================================================

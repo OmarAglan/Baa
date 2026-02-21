@@ -47,6 +47,15 @@ static const char* reg32_names[PHYS_REG_COUNT] = {
 };
 
 /**
+ * @brief أسماء السجلات 16-بت بصيغة AT&T.
+ */
+static const char* reg16_names[PHYS_REG_COUNT] = {
+    "%ax",  "%cx",  "%dx",  "%bx",  "%sp",  "%bp",
+    "%si",  "%di",  "%r8w", "%r9w", "%r10w", "%r11w",
+    "%r12w", "%r13w", "%r14w", "%r15w"
+};
+
+/**
  * @brief أسماء السجلات 8-بت بصيغة AT&T (الجزء السفلي).
  */
 static const char* reg8_names[PHYS_REG_COUNT] = {
@@ -289,6 +298,7 @@ static const char* reg_name_for_bits(int reg, int bits) {
     if (reg < 0 || reg >= PHYS_REG_COUNT) return "%rax"; // احتياطي
     switch (bits) {
         case 8:  return reg8_names[reg];
+        case 16: return reg16_names[reg];
         case 32: return reg32_names[reg];
         default: return reg64_names[reg];  // 64-بت افتراضي
     }
@@ -408,6 +418,10 @@ static void emit_operand(MachineOperand* op, FILE* out) {
                     fprintf(out, "%s", op->data.name);
                 }
             }
+            break;
+
+        case MACH_OP_XMM:
+            fprintf(out, "%%xmm%d", op->data.xmm);
             break;
     }
 }
@@ -646,7 +660,7 @@ void emit_inst(MachineInst* inst, MachineFunc* func, FILE* out) {
         case MACH_ADD:
             // AT&T: add src, dst (dst = dst + src)
             // src2 هو المعامل الفعلي للإضافة
-            fprintf(out, "    addq ");
+            fprintf(out, "    add%c ", infer_suffix(inst));
             emit_operand(&inst->src2, out);
             fprintf(out, ", ");
             emit_operand(&inst->dst, out);
@@ -654,7 +668,7 @@ void emit_inst(MachineInst* inst, MachineFunc* func, FILE* out) {
             break;
 
         case MACH_SUB:
-            fprintf(out, "    subq ");
+            fprintf(out, "    sub%c ", infer_suffix(inst));
             emit_operand(&inst->src2, out);
             fprintf(out, ", ");
             emit_operand(&inst->dst, out);
@@ -662,7 +676,7 @@ void emit_inst(MachineInst* inst, MachineFunc* func, FILE* out) {
             break;
 
         case MACH_IMUL:
-            fprintf(out, "    imulq ");
+            fprintf(out, "    imul%c ", infer_suffix(inst));
             emit_operand(&inst->src2, out);
             fprintf(out, ", ");
             emit_operand(&inst->dst, out);
@@ -679,7 +693,7 @@ void emit_inst(MachineInst* inst, MachineFunc* func, FILE* out) {
             break;
 
         case MACH_NEG:
-            fprintf(out, "    negq ");
+            fprintf(out, "    neg%c ", infer_suffix(inst));
             emit_operand(&inst->dst, out);
             fprintf(out, "\n");
             break;
@@ -695,6 +709,83 @@ void emit_inst(MachineInst* inst, MachineFunc* func, FILE* out) {
             // AT&T: idiv src (يقسم RDX:RAX على src)
             fprintf(out, "    idivq ");
             emit_operand(&inst->src1, out);
+            fprintf(out, "\n");
+            break;
+
+        case MACH_DIV:
+            // AT&T: div src (يقسم RDX:RAX على src بدون إشارة)
+            fprintf(out, "    divq ");
+            emit_operand(&inst->src1, out);
+            fprintf(out, "\n");
+            break;
+
+        // ================================================================
+        // عمليات العشري (SSE2 f64)
+        // ================================================================
+        case MACH_ADDSD:
+            fprintf(out, "    addsd ");
+            emit_operand(&inst->src2, out);
+            fprintf(out, ", ");
+            emit_operand(&inst->dst, out);
+            fprintf(out, "\n");
+            break;
+
+        case MACH_SUBSD:
+            fprintf(out, "    subsd ");
+            emit_operand(&inst->src2, out);
+            fprintf(out, ", ");
+            emit_operand(&inst->dst, out);
+            fprintf(out, "\n");
+            break;
+
+        case MACH_MULSD:
+            fprintf(out, "    mulsd ");
+            emit_operand(&inst->src2, out);
+            fprintf(out, ", ");
+            emit_operand(&inst->dst, out);
+            fprintf(out, "\n");
+            break;
+
+        case MACH_DIVSD:
+            fprintf(out, "    divsd ");
+            emit_operand(&inst->src2, out);
+            fprintf(out, ", ");
+            emit_operand(&inst->dst, out);
+            fprintf(out, "\n");
+            break;
+
+        case MACH_UCOMISD:
+            // AT&T: ucomisd src, dst
+            fprintf(out, "    ucomisd ");
+            emit_operand(&inst->src2, out);
+            fprintf(out, ", ");
+            emit_operand(&inst->src1, out);
+            fprintf(out, "\n");
+            break;
+
+        case MACH_XORPD:
+            fprintf(out, "    xorpd ");
+            emit_operand(&inst->src2, out);
+            fprintf(out, ", ");
+            emit_operand(&inst->dst, out);
+            fprintf(out, "\n");
+            break;
+
+        case MACH_CVTSI2SD:
+            // AT&T: cvtsi2sd src(int), dst(xmm)
+            fprintf(out, "    cvtsi2sd ");
+            emit_operand(&inst->src1, out);
+            fprintf(out, ", ");
+            emit_operand(&inst->dst, out);
+            fprintf(out, "\n");
+            break;
+
+        case MACH_CVTTSD2SI:
+            // AT&T: cvttsd2si src(xmm), dst(int)
+            fprintf(out, "    cvttsd2si ");
+            emit_operand(&inst->src1, out);
+            fprintf(out, ", ");
+            emit_operand(&inst->dst, out);
             fprintf(out, "\n");
             break;
 
@@ -930,6 +1021,42 @@ void emit_inst(MachineInst* inst, MachineFunc* func, FILE* out) {
             fprintf(out, "\n");
             break;
 
+        case MACH_SETA:
+            fprintf(out, "    seta ");
+            emit_operand(&inst->dst, out);
+            fprintf(out, "\n");
+            break;
+
+        case MACH_SETB:
+            fprintf(out, "    setb ");
+            emit_operand(&inst->dst, out);
+            fprintf(out, "\n");
+            break;
+
+        case MACH_SETAE:
+            fprintf(out, "    setae ");
+            emit_operand(&inst->dst, out);
+            fprintf(out, "\n");
+            break;
+
+        case MACH_SETBE:
+            fprintf(out, "    setbe ");
+            emit_operand(&inst->dst, out);
+            fprintf(out, "\n");
+            break;
+
+        case MACH_SETP:
+            fprintf(out, "    setp ");
+            emit_operand(&inst->dst, out);
+            fprintf(out, "\n");
+            break;
+
+        case MACH_SETNP:
+            fprintf(out, "    setnp ");
+            emit_operand(&inst->dst, out);
+            fprintf(out, "\n");
+            break;
+
         // ================================================================
         // توسيع بالأصفار (MOVZX)
         // ================================================================
@@ -1069,10 +1196,113 @@ void emit_inst(MachineInst* inst, MachineFunc* func, FILE* out) {
             break;
 
         // ================================================================
+        // توسيع بالإشارة (MOVSX)
+        // ================================================================
+        case MACH_MOVSX:
+        {
+            int sb = inst->src1.size_bits;
+            int db = inst->dst.size_bits;
+            if (sb <= 0) sb = 8;
+            if (sb == 1) sb = 8;
+            if (db <= 0) db = 64;
+
+            bool dst_mem = (inst->dst.kind == MACH_OP_MEM || inst->dst.kind == MACH_OP_GLOBAL);
+            if (dst_mem)
+            {
+                MachineOperand tmp = {0};
+                tmp.kind = MACH_OP_VREG;
+                tmp.size_bits = db;
+                tmp.data.vreg = PHYS_RAX;
+
+                MachineOperand saved_dst = inst->dst;
+                MachineOperand dst2 = tmp;
+                MachineOperand src2 = inst->src1;
+                src2.size_bits = sb;
+                dst2.size_bits = db;
+
+                const char* mnem = NULL;
+                if (sb == 8 && db == 16) mnem = "movsbw";
+                else if (sb == 8 && db == 32) mnem = "movsbl";
+                else if (sb == 8 && db == 64) mnem = "movsbq";
+                else if (sb == 16 && db == 32) mnem = "movswl";
+                else if (sb == 16 && db == 64) mnem = "movswq";
+                else if (sb == 32 && db == 64) mnem = "movslq";
+                else if (sb == 32 && db == 32) mnem = "movl";
+                else if (sb == 16 && db == 16) mnem = "movw";
+                else if (sb == 8 && db == 8) mnem = "movb";
+
+                if (!mnem)
+                {
+                    fprintf(out, "    mov%c ", size_suffix(db));
+                    MachineOperand ss = inst->src1;
+                    MachineOperand dd = dst2;
+                    ss.size_bits = db;
+                    dd.size_bits = db;
+                    emit_operand(&ss, out);
+                    fprintf(out, ", ");
+                    emit_operand(&dd, out);
+                    fprintf(out, "\n");
+                }
+                else
+                {
+                    fprintf(out, "    %s ", mnem);
+                    emit_operand(&src2, out);
+                    fprintf(out, ", ");
+                    emit_operand(&dst2, out);
+                    fprintf(out, "\n");
+                }
+
+                fprintf(out, "    mov%c ", size_suffix(db));
+                emit_operand(&tmp, out);
+                fprintf(out, ", ");
+                emit_operand(&saved_dst, out);
+                fprintf(out, "\n");
+                break;
+            }
+
+            const char* mnem = NULL;
+            if (sb == 8 && db == 16) mnem = "movsbw";
+            else if (sb == 8 && db == 32) mnem = "movsbl";
+            else if (sb == 8 && db == 64) mnem = "movsbq";
+            else if (sb == 16 && db == 32) mnem = "movswl";
+            else if (sb == 16 && db == 64) mnem = "movswq";
+            else if (sb == 32 && db == 64) mnem = "movslq";
+            else if (sb == 32 && db == 32) mnem = "movl";
+            else if (sb == 16 && db == 16) mnem = "movw";
+            else if (sb == 8 && db == 8) mnem = "movb";
+
+            if (!mnem)
+            {
+                fprintf(out, "    mov%c ", size_suffix(db));
+                MachineOperand src = inst->src1;
+                MachineOperand dst = inst->dst;
+                src.size_bits = db;
+                dst.size_bits = db;
+                emit_operand(&src, out);
+                fprintf(out, ", ");
+                emit_operand(&dst, out);
+                fprintf(out, "\n");
+                break;
+            }
+
+            MachineOperand src = inst->src1;
+            MachineOperand dst = inst->dst;
+            src.size_bits = sb;
+            dst.size_bits = db;
+
+            fprintf(out, "    %s ", mnem);
+            emit_operand(&src, out);
+            fprintf(out, ", ");
+            emit_operand(&dst, out);
+            fprintf(out, "\n");
+        }
+            break;
+
+        // ================================================================
         // عمليات منطقية (Logical)
         // ================================================================
         case MACH_AND:
-            fprintf(out, "    andq ");
+            fprintf(out, "    and%c ", infer_suffix(inst));
             emit_operand(&inst->src2, out);
             fprintf(out, ", ");
             emit_operand(&inst->dst, out);
@@ -1080,7 +1310,7 @@ void emit_inst(MachineInst* inst, MachineFunc* func, FILE* out) {
             break;
 
         case MACH_OR:
-            fprintf(out, "    orq ");
+            fprintf(out, "    or%c ", infer_suffix(inst));
             emit_operand(&inst->src2, out);
             fprintf(out, ", ");
             emit_operand(&inst->dst, out);
@@ -1088,13 +1318,13 @@ void emit_inst(MachineInst* inst, MachineFunc* func, FILE* out) {
             break;
 
         case MACH_NOT:
-            fprintf(out, "    notq ");
+            fprintf(out, "    not%c ", infer_suffix(inst));
             emit_operand(&inst->dst, out);
             fprintf(out, "\n");
             break;
 
         case MACH_XOR:
-            fprintf(out, "    xorq ");
+            fprintf(out, "    xor%c ", infer_suffix(inst));
             emit_operand(&inst->src2, out);
             fprintf(out, ", ");
             emit_operand(&inst->dst, out);
@@ -1133,7 +1363,13 @@ void emit_inst(MachineInst* inst, MachineFunc* func, FILE* out) {
             // (نطبقها بشكل محافظ على كل النداءات على ELF)
             if (cc && cc->sysv_set_al_zero_on_call)
             {
-                fprintf(out, "    xorl %%eax, %%eax\n");
+                int al = inst->sysv_al;
+                if (al < 0) al = 0;
+                if (al == 0) {
+                    fprintf(out, "    xorl %%eax, %%eax\n");
+                } else {
+                    fprintf(out, "    movl $%d, %%eax\n", al);
+                }
             }
 
             // ملاحظة (v0.3.2.8.5): إدارة إطار النداء (shadow/stack args) أصبحت في ISel.
@@ -1182,9 +1418,9 @@ void emit_inst(MachineInst* inst, MachineFunc* func, FILE* out) {
  */
 static void emit_rdata_section(FILE* out) {
     emit_rodata_section(out);
-    fprintf(out, "fmt_int: .asciz \"%%d\\n\"\n");
+    fprintf(out, "fmt_int: .asciz \"%%lld\\n\"\n");
     fprintf(out, "fmt_str: .asciz \"%%s\\n\"\n");
-    fprintf(out, "fmt_scan_int: .asciz \"%%d\"\n");
+    fprintf(out, "fmt_scan_int: .asciz \"%%lld\"\n");
 }
 
 /**
@@ -1197,15 +1433,19 @@ static const char* emit_data_dir_for_type(IRType* t, int* out_size_bytes) {
     switch (t->kind) {
         case IR_TYPE_I1:
         case IR_TYPE_I8:
+        case IR_TYPE_U8:
             if (out_size_bytes) *out_size_bytes = 1;
             return ".byte";
         case IR_TYPE_I16:
+        case IR_TYPE_U16:
             if (out_size_bytes) *out_size_bytes = 2;
             return ".word";
         case IR_TYPE_I32:
+        case IR_TYPE_U32:
             if (out_size_bytes) *out_size_bytes = 4;
             return ".long";
         case IR_TYPE_I64:
+        case IR_TYPE_U64:
         case IR_TYPE_CHAR:
         case IR_TYPE_F64:
         case IR_TYPE_PTR:

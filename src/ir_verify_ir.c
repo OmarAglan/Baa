@@ -108,6 +108,10 @@ static int ir_type_is_int(IRType* t) {
         case IR_TYPE_I16:
         case IR_TYPE_I32:
         case IR_TYPE_I64:
+        case IR_TYPE_U8:
+        case IR_TYPE_U16:
+        case IR_TYPE_U32:
+        case IR_TYPE_U64:
         case IR_TYPE_CHAR:
             return 1;
         default:
@@ -471,9 +475,21 @@ static void ir_verify_inst(IRVerifyDiag* diag,
                 break;
             }
 
-            if (!ir_type_is_int(inst->type)) {
-                ir_report(diag, module, func, block, inst, "تعليمة ثنائية تتوقع نوعاً عددياً (integer).");
-                break;
+            bool is_float = (inst->type && inst->type->kind == IR_TYPE_F64);
+            bool is_int = ir_type_is_int(inst->type);
+
+            // AND/OR/MOD: أعداد صحيحة فقط.
+            if (inst->op == IR_OP_AND || inst->op == IR_OP_OR || inst->op == IR_OP_MOD) {
+                if (!is_int) {
+                    ir_report(diag, module, func, block, inst, "تعليمة ثنائية تتوقع نوعاً صحيحاً.");
+                    break;
+                }
+            } else {
+                // ADD/SUB/MUL/DIV: صحيح أو عشري.
+                if (!(is_int || is_float)) {
+                    ir_report(diag, module, func, block, inst, "تعليمة ثنائية تتوقع نوعاً عددياً (صحيح/عشري).");
+                    break;
+                }
             }
 
             if (inst->operands[0]) ir_verify_value_type_eq(diag, module, func, block, inst, inst->type, inst->operands[0], "lhs");
@@ -654,16 +670,30 @@ static void ir_verify_inst(IRVerifyDiag* diag,
             IRValue* a = (inst->operand_count >= 1) ? inst->operands[0] : NULL;
             IRValue* b = (inst->operand_count >= 2) ? inst->operands[1] : NULL;
 
-            if (!a || !a->type || !ir_type_is_int(a->type)) {
+            bool a_int = (a && a->type) ? ir_type_is_int(a->type) : 0;
+            bool b_int = (b && b->type) ? ir_type_is_int(b->type) : 0;
+            bool a_f64 = (a && a->type && a->type->kind == IR_TYPE_F64);
+            bool b_f64 = (b && b->type && b->type->kind == IR_TYPE_F64);
+
+            if (!a || !a->type || !(a_int || a_f64)) {
                 ir_report(diag, module, func, block, inst, "تعليمة `قارن`: المعامل الأول ليس نوعاً عددياً.");
                 break;
             }
-            if (!b || !b->type || !ir_type_is_int(b->type)) {
+            if (!b || !b->type || !(b_int || b_f64)) {
                 ir_report(diag, module, func, block, inst, "تعليمة `قارن`: المعامل الثاني ليس نوعاً عددياً.");
                 break;
             }
             if (!ir_types_equal(a->type, b->type)) {
                 ir_report(diag, module, func, block, inst, "تعليمة `قارن`: نوعا المعاملين غير متطابقين.");
+            }
+
+            // قيود المحمول على العشري: لا نسمح بمقارنات unsigned.
+            if (a_f64 || b_f64) {
+                if (inst->cmp_pred == IR_CMP_UGT || inst->cmp_pred == IR_CMP_ULT ||
+                    inst->cmp_pred == IR_CMP_UGE || inst->cmp_pred == IR_CMP_ULE)
+                {
+                    ir_report(diag, module, func, block, inst, "تعليمة `قارن`: محمول unsigned غير صالح على 'عشري'.");
+                }
             }
             break;
         }
@@ -867,13 +897,11 @@ static void ir_verify_inst(IRVerifyDiag* diag,
 
                 int from_f64 = (v->type->kind == IR_TYPE_F64);
                 int to_f64 = (inst->type->kind == IR_TYPE_F64);
-                int from_i64 = (v->type->kind == IR_TYPE_I64);
-                int to_i64 = (inst->type->kind == IR_TYPE_I64);
 
-                // سماح bitcast: f64 <-> i64 (تخزين/تحميل فقط حالياً).
-                int ok_bitcast_f64 = (from_f64 && to_i64) || (from_i64 && to_f64) || (from_f64 && to_f64);
+                // سماح: int <-> f64 كتحويل عددي.
+                int ok_num_f64 = (from_int && to_f64) || (from_f64 && to_int) || (from_f64 && to_f64);
 
-                if (!((from_int && to_int) || (from_ptr && to_ptr) || (v->type->kind == IR_TYPE_I1 && to_int) || ok_bitcast_f64)) {
+                if (!((from_int && to_int) || (from_ptr && to_ptr) || (v->type->kind == IR_TYPE_I1 && to_int) || ok_num_f64)) {
                     ir_report(diag, module, func, block, inst,
                               "تعليمة `تحويل`: تحويل غير مدعوم/غير واضح (from=%s, to=%s).",
                               ir_type_to_arabic(v->type),
@@ -1067,7 +1095,9 @@ static void ir_verify_globals(IRVerifyDiag* diag, IRModule* module) {
                 // قيود: إن كان العنصر عدداً صحيحاً، يجب أن يكون ثابتاً.
                 if (elem_t && (elem_t->kind == IR_TYPE_I1 || elem_t->kind == IR_TYPE_I8 ||
                               elem_t->kind == IR_TYPE_I16 || elem_t->kind == IR_TYPE_I32 ||
-                              elem_t->kind == IR_TYPE_I64))
+                              elem_t->kind == IR_TYPE_I64 ||
+                              elem_t->kind == IR_TYPE_U8 || elem_t->kind == IR_TYPE_U16 ||
+                              elem_t->kind == IR_TYPE_U32 || elem_t->kind == IR_TYPE_U64))
                 {
                     if (v->kind != IR_VAL_CONST_INT) {
                         ir_report(diag, module, NULL, NULL, NULL,

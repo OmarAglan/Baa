@@ -194,6 +194,13 @@ static uint64_t pack_utf8_codepoint(uint32_t cp)
 static IRType* ir_type_from_datatype(IRModule* module, DataType t) {
     switch (t) {
         case TYPE_BOOL:   return IR_TYPE_I1_T;
+        case TYPE_I8:     return IR_TYPE_I8_T;
+        case TYPE_I16:    return IR_TYPE_I16_T;
+        case TYPE_I32:    return IR_TYPE_I32_T;
+        case TYPE_U8:     return IR_TYPE_U8_T;
+        case TYPE_U16:    return IR_TYPE_U16_T;
+        case TYPE_U32:    return IR_TYPE_U32_T;
+        case TYPE_U64:    return IR_TYPE_U64_T;
         case TYPE_STRING: return get_char_ptr_type(module);
         case TYPE_CHAR:   return IR_TYPE_CHAR_T;
         case TYPE_FLOAT:  return IR_TYPE_F64_T;
@@ -521,8 +528,13 @@ static IRValue* cast_to(IRLowerCtx* ctx, IRValue* v, IRType* to)
     if (!ctx || !ctx->builder || !v || !to) return v;
     if (v->type && ir_types_equal(v->type, to)) return v;
 
-    if (to->kind == IR_TYPE_I64 && v->type && v->type->kind == IR_TYPE_CHAR) {
-        return lower_char_decode_to_i64(ctx, v);
+    if (v->type && v->type->kind == IR_TYPE_CHAR && to->kind != IR_TYPE_CHAR)
+    {
+        // فك الترميز إلى i64 ثم التحويل إلى الوجهة المطلوبة.
+        IRValue* cp64 = lower_char_decode_to_i64(ctx, v);
+        if (to->kind == IR_TYPE_I64) return cp64;
+        int r = ir_builder_emit_cast(ctx->builder, cp64, to);
+        return ir_value_reg(r, to);
     }
     if (to->kind == IR_TYPE_CHAR) {
         // نعتبر التحويل إلى حرف على أنه ترميز UTF-8 من نقطة-كود (i64).
@@ -538,31 +550,6 @@ static IRValue* cast_to(IRLowerCtx* ctx, IRValue* v, IRType* to)
 
     int r = ir_builder_emit_cast(ctx->builder, v, to);
     return ir_value_reg(r, to);
-}
-
-static IRValue* ir_xor_i64(IRLowerCtx* ctx, IRValue* a, IRValue* b)
-{
-    if (!ctx || !ctx->builder || !a || !b) return ir_value_const_int(0, IR_TYPE_I64_T);
-
-    IRValue* aa = a;
-    IRValue* bb = b;
-    if (!aa->type || aa->type->kind != IR_TYPE_I64) {
-        int ar = ir_builder_emit_cast(ctx->builder, aa, IR_TYPE_I64_T);
-        aa = ir_value_reg(ar, IR_TYPE_I64_T);
-    }
-    if (!bb->type || bb->type->kind != IR_TYPE_I64) {
-        int br = ir_builder_emit_cast(ctx->builder, bb, IR_TYPE_I64_T);
-        bb = ir_value_reg(br, IR_TYPE_I64_T);
-    }
-
-    int t1 = ir_builder_emit_or(ctx->builder, IR_TYPE_I64_T, aa, bb);
-    int t2 = ir_builder_emit_and(ctx->builder, IR_TYPE_I64_T, aa, bb);
-    IRValue* vt2 = ir_value_reg(t2, IR_TYPE_I64_T);
-    int t3 = ir_builder_emit_not(ctx->builder, IR_TYPE_I64_T, vt2);
-    IRValue* vt3 = ir_value_reg(t3, IR_TYPE_I64_T);
-    IRValue* vt1 = ir_value_reg(t1, IR_TYPE_I64_T);
-    int t4 = ir_builder_emit_and(ctx->builder, IR_TYPE_I64_T, vt1, vt3);
-    return ir_value_reg(t4, IR_TYPE_I64_T);
 }
 
 // ============================================================================
@@ -639,20 +626,68 @@ static IROp ir_binop_to_irop(OpType op) {
     }
 }
 
-static IRCmpPred ir_cmp_to_pred(OpType op) {
+static IRCmpPred ir_cmp_to_pred(OpType op, bool is_unsigned) {
     switch (op) {
         case OP_EQ:  return IR_CMP_EQ;
         case OP_NEQ: return IR_CMP_NE;
-        case OP_GT:  return IR_CMP_GT;
-        case OP_LT:  return IR_CMP_LT;
-        case OP_GTE: return IR_CMP_GE;
-        case OP_LTE: return IR_CMP_LE;
+        case OP_GT:  return is_unsigned ? IR_CMP_UGT : IR_CMP_GT;
+        case OP_LT:  return is_unsigned ? IR_CMP_ULT : IR_CMP_LT;
+        case OP_GTE: return is_unsigned ? IR_CMP_UGE : IR_CMP_GE;
+        case OP_LTE: return is_unsigned ? IR_CMP_ULE : IR_CMP_LE;
         default:     return IR_CMP_EQ;
     }
 }
 
+static DataType lower_int_promote_datatype(DataType t)
+{
+    switch (t) {
+        case TYPE_U64:
+            return TYPE_U64;
+        case TYPE_INT:
+            return TYPE_INT;
+        case TYPE_I8:
+        case TYPE_I16:
+        case TYPE_I32:
+        case TYPE_U8:
+        case TYPE_U16:
+        case TYPE_U32:
+        case TYPE_BOOL:
+        case TYPE_CHAR:
+        case TYPE_ENUM:
+            return TYPE_INT;
+        default:
+            return t;
+    }
+}
+
+static IRType* lower_common_int_type(IRModule* module, DataType a, DataType b)
+{
+    DataType pa = lower_int_promote_datatype(a);
+    DataType pb = lower_int_promote_datatype(b);
+    if (pa == TYPE_U64 || pb == TYPE_U64) return IR_TYPE_U64_T;
+    (void)module;
+    return IR_TYPE_I64_T;
+}
+
 static IRValue* lower_call_expr(IRLowerCtx* ctx, Node* expr) {
     if (!ctx || !ctx->builder || !expr) return ir_builder_const_i64(0);
+
+    IRModule* m = ctx->builder->module;
+    if (m) ir_module_set_current(m);
+
+    // حاول العثور على توقيع الدالة داخل وحدة IR (لمواءمة أنواع المعاملات/الإرجاع).
+    IRFunc* callee = NULL;
+    if (m && expr->data.call.name) {
+        callee = ir_module_find_func(m, expr->data.call.name);
+    }
+
+    IRType* ret_type = NULL;
+    if (callee && callee->ret_type) {
+        ret_type = callee->ret_type;
+    } else {
+        ret_type = ir_type_from_datatype(m, expr->inferred_type);
+    }
+    if (!ret_type) ret_type = IR_TYPE_I64_T;
 
     // Count args
     int arg_count = 0;
@@ -669,11 +704,14 @@ static IRValue* lower_call_expr(IRLowerCtx* ctx, Node* expr) {
 
     int i = 0;
     for (Node* a = expr->data.call.args; a; a = a->next) {
-        args[i++] = lower_expr(ctx, a);
+        IRValue* av = lower_expr(ctx, a);
+        if (callee && i < callee->param_count && callee->params && callee->params[i].type) {
+            av = cast_to(ctx, av, callee->params[i].type);
+        }
+        args[i++] = av;
     }
 
-    // For now (matching current semantic assumptions), calls return i64.
-    int dest = ir_builder_emit_call(ctx->builder, expr->data.call.name, IR_TYPE_I64_T, args, arg_count);
+    int dest = ir_builder_emit_call(ctx->builder, expr->data.call.name, ret_type, args, arg_count);
 
     if (args) free(args);
 
@@ -682,7 +720,7 @@ static IRValue* lower_call_expr(IRLowerCtx* ctx, Node* expr) {
         return ir_builder_const_i64(0);
     }
 
-    return ir_value_reg(dest, IR_TYPE_I64_T);
+    return ir_value_reg(dest, ret_type);
 }
 
 // ============================================================================
@@ -851,10 +889,41 @@ IRValue* lower_expr(IRLowerCtx* ctx, Node* expr) {
 
             // Arithmetic
             if (op == OP_ADD || op == OP_SUB || op == OP_MUL || op == OP_DIV || op == OP_MOD) {
-                IRValue* lhs = ensure_i64(ctx, lower_expr(ctx, expr->data.bin_op.left));
-                IRValue* rhs = ensure_i64(ctx, lower_expr(ctx, expr->data.bin_op.right));
+                // عشري
+                if (expr->inferred_type == TYPE_FLOAT) {
+                    IRValue* lhs0 = lower_expr(ctx, expr->data.bin_op.left);
+                    IRValue* rhs0 = lower_expr(ctx, expr->data.bin_op.right);
+                    IRValue* lhs = cast_to(ctx, lhs0, IR_TYPE_F64_T);
+                    IRValue* rhs = cast_to(ctx, rhs0, IR_TYPE_F64_T);
 
-                IRType* type = IR_TYPE_I64_T;
+                    IRType* type = IR_TYPE_F64_T;
+                    int dest = -1;
+
+                    switch (ir_binop_to_irop(op)) {
+                        case IR_OP_ADD: dest = ir_builder_emit_add(ctx->builder, type, lhs, rhs); break;
+                        case IR_OP_SUB: dest = ir_builder_emit_sub(ctx->builder, type, lhs, rhs); break;
+                        case IR_OP_MUL: dest = ir_builder_emit_mul(ctx->builder, type, lhs, rhs); break;
+                        case IR_OP_DIV: dest = ir_builder_emit_div(ctx->builder, type, lhs, rhs); break;
+                        case IR_OP_MOD:
+                            ir_lower_report_error(ctx, expr, "عملية باقي غير مدعومة على 'عشري'.");
+                            return ir_value_const_int(0, IR_TYPE_F64_T);
+                        default:
+                            ir_lower_report_error(ctx, expr, "عملية حسابية غير مدعومة.");
+                            return ir_value_const_int(0, IR_TYPE_F64_T);
+                    }
+
+                    return ir_value_reg(dest, type);
+                }
+
+                IRValue* lhs0 = lower_expr(ctx, expr->data.bin_op.left);
+                IRValue* rhs0 = lower_expr(ctx, expr->data.bin_op.right);
+
+                DataType lt = expr->data.bin_op.left ? expr->data.bin_op.left->inferred_type : TYPE_INT;
+                DataType rt = expr->data.bin_op.right ? expr->data.bin_op.right->inferred_type : TYPE_INT;
+
+                IRType* type = lower_common_int_type(ctx->builder ? ctx->builder->module : NULL, lt, rt);
+                IRValue* lhs = cast_to(ctx, lhs0, type);
+                IRValue* rhs = cast_to(ctx, rhs0, type);
                 int dest = -1;
 
                 switch (ir_binop_to_irop(op)) {
@@ -878,6 +947,15 @@ IRValue* lower_expr(IRLowerCtx* ctx, Node* expr) {
                 IRValue* lhs = lhs0;
                 IRValue* rhs = rhs0;
 
+                DataType lt = expr->data.bin_op.left ? expr->data.bin_op.left->inferred_type : TYPE_INT;
+                DataType rt = expr->data.bin_op.right ? expr->data.bin_op.right->inferred_type : TYPE_INT;
+                IRType* ct = NULL;
+                if (lt == TYPE_FLOAT || rt == TYPE_FLOAT) {
+                    ct = IR_TYPE_F64_T;
+                } else {
+                    ct = lower_common_int_type(ctx->builder ? ctx->builder->module : NULL, lt, rt);
+                }
+
                 // ترتيب الحروف يعتمد على نقطة-الكود، لا على تمثيل البايتات المعبأ.
                 if (lhs0 && rhs0 && lhs0->type && rhs0->type &&
                     lhs0->type->kind == IR_TYPE_CHAR && rhs0->type->kind == IR_TYPE_CHAR &&
@@ -885,15 +963,18 @@ IRValue* lower_expr(IRLowerCtx* ctx, Node* expr) {
                 {
                     lhs = ensure_i64(ctx, lhs0);
                     rhs = ensure_i64(ctx, rhs0);
+                    ct = IR_TYPE_I64_T;
                 }
 
-                // وحّد النوع عند المقارنة لتجنب i32 vs i64.
-                if (!lhs || !rhs || !lhs->type || !rhs->type || !ir_types_equal(lhs->type, rhs->type)) {
-                    lhs = ensure_i64(ctx, lhs0);
-                    rhs = ensure_i64(ctx, rhs0);
-                }
+                // طبّق الترقيات/التحويلات C-like قبل المقارنة.
+                lhs = cast_to(ctx, lhs, ct);
+                rhs = cast_to(ctx, rhs, ct);
 
-                IRCmpPred pred = ir_cmp_to_pred(op);
+                bool is_unsigned = false;
+                if (ct && (ct->kind == IR_TYPE_U8 || ct->kind == IR_TYPE_U16 || ct->kind == IR_TYPE_U32 || ct->kind == IR_TYPE_U64))
+                    is_unsigned = true;
+
+                IRCmpPred pred = ir_cmp_to_pred(op, is_unsigned);
                 int dest = ir_builder_emit_cmp(ctx->builder, pred, lhs, rhs);
                 return ir_value_reg(dest, IR_TYPE_I1_T);
             }
@@ -920,18 +1001,18 @@ IRValue* lower_expr(IRLowerCtx* ctx, Node* expr) {
 
             if (op == UOP_NEG) {
                 IRValue* operand0 = lower_expr(ctx, expr->data.unary_op.operand);
-                if (operand0 && operand0->type && operand0->type->kind == IR_TYPE_F64) {
-                    int b = ir_builder_emit_cast(ctx->builder, operand0, IR_TYPE_I64_T);
-                    IRValue* bits = ir_value_reg(b, IR_TYPE_I64_T);
-                    IRValue* mask = ir_value_const_int((int64_t)0x8000000000000000ULL, IR_TYPE_I64_T);
-                    IRValue* flipped = ir_xor_i64(ctx, bits, mask);
-                    int r = ir_builder_emit_cast(ctx->builder, flipped, IR_TYPE_F64_T);
-                    return ir_value_reg(r, IR_TYPE_F64_T);
+                DataType dt = expr->inferred_type;
+                if (dt == TYPE_FLOAT) {
+                    IRValue* operand = cast_to(ctx, operand0, IR_TYPE_F64_T);
+                    int dest = ir_builder_emit_neg(ctx->builder, IR_TYPE_F64_T, operand);
+                    return ir_value_reg(dest, IR_TYPE_F64_T);
                 }
 
-                IRValue* operand = ensure_i64(ctx, operand0);
-                int dest = ir_builder_emit_neg(ctx->builder, IR_TYPE_I64_T, operand);
-                return ir_value_reg(dest, IR_TYPE_I64_T);
+                IRType* t = ir_type_from_datatype(ctx->builder ? ctx->builder->module : NULL, dt);
+                if (!t) t = IR_TYPE_I64_T;
+                IRValue* operand = cast_to(ctx, operand0, t);
+                int dest = ir_builder_emit_neg(ctx->builder, t, operand);
+                return ir_value_reg(dest, t);
             }
 
             if (op == UOP_NOT) {
@@ -1370,6 +1451,11 @@ static void lower_return(IRLowerCtx* ctx, Node* stmt) {
     if (stmt->data.return_stmt.expression) {
         value = lower_expr(ctx, stmt->data.return_stmt.expression);
     }
+
+    IRFunc* f = ir_builder_get_func(ctx->builder);
+    if (f && f->ret_type && value && value->type && !ir_types_equal(f->ret_type, value->type)) {
+        value = cast_to(ctx, value, f->ret_type);
+    }
     ir_builder_emit_ret(ctx->builder, value);
 }
 
@@ -1536,9 +1622,26 @@ static void lower_print(IRLowerCtx* ctx, Node* stmt) {
         return;
     }
 
-    // افتراضي: طباعة كعدد صحيح.
+    // عشري
+    if (stmt->data.print_stmt.expression && stmt->data.print_stmt.expression->inferred_type == TYPE_FLOAT)
+    {
+        IRValue* vf = value ? cast_to(ctx, value, IR_TYPE_F64_T) : ir_value_const_int(0, IR_TYPE_F64_T);
+        lower_printf_cstr(ctx, stmt, "%g\n", vf);
+        return;
+    }
+
+    // افتراضي: طباعة كعدد صحيح 64-بت.
+    DataType dt = (stmt->data.print_stmt.expression) ? stmt->data.print_stmt.expression->inferred_type : TYPE_INT;
+    DataType promo = lower_int_promote_datatype(dt);
+
+    if (promo == TYPE_U64) {
+        IRValue* vu = value ? cast_to(ctx, value, IR_TYPE_U64_T) : ir_value_const_int(0, IR_TYPE_U64_T);
+        lower_printf_cstr(ctx, stmt, "%llu\n", vu);
+        return;
+    }
+
     IRValue* v64 = value ? ensure_i64(ctx, value) : ir_value_const_int(0, IR_TYPE_I64_T);
-    lower_printf_cstr(ctx, stmt, "%d\n", v64);
+    lower_printf_cstr(ctx, stmt, "%lld\n", v64);
 }
 
 static void lower_read(IRLowerCtx* ctx, Node* stmt) {
@@ -1551,15 +1654,34 @@ static void lower_read(IRLowerCtx* ctx, Node* stmt) {
         return;
     }
 
-    // scanf("%d", &var)
-    IRValue* fmt_val = ir_builder_const_string(ctx->builder, "%d");
-    IRType* ptr_type = ir_type_ptr((b->value_type) ? b->value_type : IR_TYPE_I64_T);
+    IRType* vt = (b->value_type) ? b->value_type : IR_TYPE_I64_T;
+    IRType* ptr_type = ir_type_ptr(vt);
     IRValue* ptr = ir_value_reg(b->ptr_reg, ptr_type);
 
-    IRValue* args[2] = { fmt_val, ptr };
+    // i64/u64 يمكن القراءة مباشرة إلى المتغير. للأحجام الأصغر نقرأ إلى مؤقت i64 ثم نقتطع.
+    if (vt && (vt->kind == IR_TYPE_I64 || vt->kind == IR_TYPE_U64))
+    {
+        const char* fmt = (vt->kind == IR_TYPE_U64) ? "%llu" : "%lld";
+        IRValue* fmt_val = ir_builder_const_string(ctx->builder, fmt);
+        IRValue* args[2] = { fmt_val, ptr };
+        ir_builder_emit_call_void(ctx->builder, "اقرأ", args, 2);
+        return;
+    }
 
-    // Builtin: اقرأ(ptr) → scanf(fmt, ptr)
+    // tmp_ptr = alloca i64
+    int tmp_ptr_reg = ir_builder_emit_alloca(ctx->builder, IR_TYPE_I64_T);
+    IRType* tmp_ptr_t = ir_type_ptr(IR_TYPE_I64_T);
+    IRValue* tmp_ptr = ir_value_reg(tmp_ptr_reg, tmp_ptr_t);
+    ir_builder_emit_store(ctx->builder, ir_value_const_int(0, IR_TYPE_I64_T), tmp_ptr);
+
+    IRValue* fmt_val = ir_builder_const_string(ctx->builder, "%lld");
+    IRValue* args[2] = { fmt_val, tmp_ptr };
     ir_builder_emit_call_void(ctx->builder, "اقرأ", args, 2);
+
+    int tmp_r = ir_builder_emit_load(ctx->builder, IR_TYPE_I64_T, tmp_ptr);
+    IRValue* tmp_v = ir_value_reg(tmp_r, IR_TYPE_I64_T);
+    IRValue* cv = cast_to(ctx, tmp_v, vt);
+    ir_builder_emit_store(ctx->builder, cv, ptr);
 }
 
 static IRValue* lower_condition_i1(IRLowerCtx* ctx, Node* cond_expr) {
@@ -2124,6 +2246,36 @@ IRModule* ir_lower_program(Node* program, const char* module_name) {
         return NULL;
     }
 
+    // -----------------------------------------------------------------
+    // 0) إنشاء تواقيع الدوال أولاً (يدعم الاستدعاء قبل التعريف)
+    // -----------------------------------------------------------------
+    for (Node* decl0 = program->data.program.declarations; decl0; decl0 = decl0->next) {
+        if (decl0->type != NODE_FUNC_DEF) continue;
+        if (!decl0->data.func_def.name) continue;
+
+        IRFunc* existing = ir_module_find_func(module, decl0->data.func_def.name);
+        if (existing) {
+            if (!decl0->data.func_def.is_prototype) {
+                existing->is_prototype = false;
+            }
+            continue;
+        }
+
+        IRType* ret_type = ir_type_from_datatype(module, decl0->data.func_def.return_type);
+        IRFunc* f0 = ir_builder_create_func(builder, decl0->data.func_def.name, ret_type);
+        if (!f0) continue;
+        f0->is_prototype = decl0->data.func_def.is_prototype;
+
+        for (Node* p = decl0->data.func_def.params; p; p = p->next) {
+            if (p->type != NODE_VAR_DECL) continue;
+            IRType* ptype = ir_type_from_datatype(module, p->data.var_decl.type);
+            (void)ir_builder_add_param(builder, p->data.var_decl.name, ptype);
+        }
+    }
+
+    // لا نريد ترك current_func على آخر توقيع.
+    ir_builder_set_func(builder, NULL);
+
     // Walk top-level declarations: globals + functions
     for (Node* decl = program->data.program.declarations; decl; decl = decl->next) {
         // Global arrays
@@ -2194,22 +2346,27 @@ IRModule* ir_lower_program(Node* program, const char* module_name) {
 
         // Functions
         if (decl->type == NODE_FUNC_DEF) {
-            IRType* ret_type = ir_type_from_datatype(module, decl->data.func_def.return_type);
-            IRFunc* func = ir_builder_create_func(builder, decl->data.func_def.name, ret_type);
-            if (!func) continue;
+            if (!decl->data.func_def.name) continue;
 
-            func->is_prototype = decl->data.func_def.is_prototype;
-
-            // Prototypes don't have a body or blocks.
-            if (func->is_prototype) {
-                // Still add parameters for signature printing.
+            IRFunc* func = ir_module_find_func(module, decl->data.func_def.name);
+            if (!func) {
+                IRType* ret_type = ir_type_from_datatype(module, decl->data.func_def.return_type);
+                func = ir_builder_create_func(builder, decl->data.func_def.name, ret_type);
+                if (!func) continue;
+                func->is_prototype = decl->data.func_def.is_prototype;
                 for (Node* p = decl->data.func_def.params; p; p = p->next) {
                     if (p->type != NODE_VAR_DECL) continue;
                     IRType* ptype = ir_type_from_datatype(module, p->data.var_decl.type);
                     (void)ir_builder_add_param(builder, p->data.var_decl.name, ptype);
                 }
+            }
+
+            // Prototypes don't have a body or blocks.
+            if (decl->data.func_def.is_prototype || func->is_prototype) {
                 continue;
             }
+
+            ir_builder_set_func(builder, func);
 
             // Entry block
             IRBlock* entry = ir_builder_create_block(builder, "بداية");
@@ -2221,30 +2378,33 @@ IRModule* ir_lower_program(Node* program, const char* module_name) {
             // نطاق الدالة: المعاملات + جسم الدالة
             ir_lower_scope_push(&ctx);
 
-            // Parameters: add params, then spill into allocas so existing lowering can treat them like locals.
+            // Parameters: spill into allocas so existing lowering can treat them like locals.
+            int pi = 0;
             for (Node* p = decl->data.func_def.params; p; p = p->next) {
                 if (p->type != NODE_VAR_DECL) continue;
 
-                IRType* ptype = ir_type_from_datatype(module, p->data.var_decl.type);
                 const char* pname = p->data.var_decl.name ? p->data.var_decl.name : NULL;
+                if (!pname) { pi++; continue; }
+                if (pi < 0 || pi >= func->param_count) { pi++; continue; }
 
-                int preg = ir_builder_add_param(builder, pname, ptype);
+                IRType* ptype = func->params[pi].type;
+                int preg = func->params[pi].reg;
 
-                if (pname) {
-                    // اربط تعليمات تهيئة معامل الدالة بموقعه في المصدر.
-                    ir_lower_set_loc(builder, p);
+                // اربط تعليمات تهيئة معامل الدالة بموقعه في المصدر.
+                ir_lower_set_loc(builder, p);
 
-                    int ptr_reg = ir_builder_emit_alloca(builder, ptype);
-                    ir_lower_tag_last_inst(builder, IR_OP_ALLOCA, ptr_reg, pname);
-                    ir_lower_bind_local(&ctx, pname, ptr_reg, ptype);
+                int ptr_reg = ir_builder_emit_alloca(builder, ptype);
+                ir_lower_tag_last_inst(builder, IR_OP_ALLOCA, ptr_reg, pname);
+                ir_lower_bind_local(&ctx, pname, ptr_reg, ptype);
 
-                    IRValue* val = ir_value_reg(preg, ptype);   // %معامل<n>
-                    IRType* ptr_type = ir_type_ptr(ptype ? ptype : IR_TYPE_I64_T);
-                    IRValue* ptr = ir_value_reg(ptr_reg, ptr_type);
-                    ir_lower_set_loc(builder, p);
-                    ir_builder_emit_store(builder, val, ptr);
-                    ir_lower_tag_last_inst(builder, IR_OP_STORE, -1, pname);
-                }
+                IRValue* val = ir_value_reg(preg, ptype);
+                IRType* ptr_type = ir_type_ptr(ptype ? ptype : IR_TYPE_I64_T);
+                IRValue* ptr = ir_value_reg(ptr_reg, ptr_type);
+                ir_lower_set_loc(builder, p);
+                ir_builder_emit_store(builder, val, ptr);
+                ir_lower_tag_last_inst(builder, IR_OP_STORE, -1, pname);
+
+                pi++;
             }
 
             // Lower function body (NODE_BLOCK)

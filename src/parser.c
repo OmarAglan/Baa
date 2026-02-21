@@ -43,7 +43,7 @@ void init_parser(Lexer* l) {
  * @brief تحليل رقم صحيح من وحدة TOKEN_INT مع التحقق من النطاق.
  * @return true عند النجاح، false عند الفشل (مع تسجيل خطأ).
  */
-static bool parse_int_token_checked(Token tok, int* out_value) {
+static bool parse_int_token_checked(Token tok, int64_t* out_value) {
     if (!out_value) return false;
     *out_value = 0;
 
@@ -61,14 +61,10 @@ static bool parse_int_token_checked(Token tok, int* out_value) {
         return false;
     }
 
-    if (v < INT_MIN || v > INT_MAX) {
-        error_report(tok, "الرقم خارج النطاق المدعوم حالياً.");
-        return false;
-    }
-
-    *out_value = (int)v;
+    *out_value = (int64_t)v;
     return true;
 }
+
 
 // ============================================================================
 // مساعدات إنشاء عقد AST مع معلومات الموقع (Debug Locations)
@@ -114,7 +110,10 @@ void eat(BaaTokenType type) {
  * @brief التحقق مما إذا كانت الوحدة الحالية تمثل نوع بيانات (صحيح أو نص أو منطقي).
  */
 bool is_type_keyword(BaaTokenType type) {
-    return (type == TOKEN_KEYWORD_INT || type == TOKEN_KEYWORD_STRING || type == TOKEN_KEYWORD_BOOL ||
+    return (type == TOKEN_KEYWORD_INT ||
+            type == TOKEN_KEYWORD_I8 || type == TOKEN_KEYWORD_I16 || type == TOKEN_KEYWORD_I32 || type == TOKEN_KEYWORD_I64 ||
+            type == TOKEN_KEYWORD_U8 || type == TOKEN_KEYWORD_U16 || type == TOKEN_KEYWORD_U32 || type == TOKEN_KEYWORD_U64 ||
+            type == TOKEN_KEYWORD_STRING || type == TOKEN_KEYWORD_BOOL ||
             type == TOKEN_KEYWORD_CHAR ||
             type == TOKEN_KEYWORD_FLOAT ||
             type == TOKEN_ENUM || type == TOKEN_STRUCT || type == TOKEN_UNION);
@@ -124,6 +123,14 @@ bool is_type_keyword(BaaTokenType type) {
  * @brief تحويل وحدة النوع إلى قيمة DataType.
  */
 DataType token_to_datatype(BaaTokenType type) {
+    if (type == TOKEN_KEYWORD_I8) return TYPE_I8;
+    if (type == TOKEN_KEYWORD_I16) return TYPE_I16;
+    if (type == TOKEN_KEYWORD_I32) return TYPE_I32;
+    if (type == TOKEN_KEYWORD_I64) return TYPE_INT;
+    if (type == TOKEN_KEYWORD_U8) return TYPE_U8;
+    if (type == TOKEN_KEYWORD_U16) return TYPE_U16;
+    if (type == TOKEN_KEYWORD_U32) return TYPE_U32;
+    if (type == TOKEN_KEYWORD_U64) return TYPE_U64;
     if (type == TOKEN_KEYWORD_STRING) return TYPE_STRING;
     if (type == TOKEN_KEYWORD_BOOL) return TYPE_BOOL;
     if (type == TOKEN_KEYWORD_CHAR) return TYPE_CHAR;
@@ -203,6 +210,14 @@ static bool parse_type_spec(DataType* out_type, char** out_type_name) {
     if (out_type_name) *out_type_name = NULL;
 
     if (parser.current.type == TOKEN_KEYWORD_INT ||
+        parser.current.type == TOKEN_KEYWORD_I8 ||
+        parser.current.type == TOKEN_KEYWORD_I16 ||
+        parser.current.type == TOKEN_KEYWORD_I32 ||
+        parser.current.type == TOKEN_KEYWORD_I64 ||
+        parser.current.type == TOKEN_KEYWORD_U8 ||
+        parser.current.type == TOKEN_KEYWORD_U16 ||
+        parser.current.type == TOKEN_KEYWORD_U32 ||
+        parser.current.type == TOKEN_KEYWORD_U64 ||
         parser.current.type == TOKEN_KEYWORD_STRING ||
         parser.current.type == TOKEN_KEYWORD_BOOL ||
         parser.current.type == TOKEN_KEYWORD_CHAR ||
@@ -252,6 +267,14 @@ void synchronize() {
         // إذا وجدنا كلمة مفتاحية تبدأ جملة جديدة
         switch (parser.current.type) {
             case TOKEN_KEYWORD_INT:
+            case TOKEN_KEYWORD_I8:
+            case TOKEN_KEYWORD_I16:
+            case TOKEN_KEYWORD_I32:
+            case TOKEN_KEYWORD_I64:
+            case TOKEN_KEYWORD_U8:
+            case TOKEN_KEYWORD_U16:
+            case TOKEN_KEYWORD_U32:
+            case TOKEN_KEYWORD_U64:
             case TOKEN_KEYWORD_STRING:
             case TOKEN_KEYWORD_BOOL:
             case TOKEN_KEYWORD_CHAR:
@@ -294,7 +317,7 @@ Node* parse_primary() {
         Token tok = parser.current;
         node = ast_node_new(NODE_INT, tok);
         if (!node) return NULL;
-        int v = 0;
+        int64_t v = 0;
         (void)parse_int_token_checked(parser.current, &v);
         node->data.integer.value = v;
         eat(TOKEN_INT);
@@ -491,7 +514,7 @@ Node* parse_multiplicative() {
 
         // **Constant Folding Optimization**
         if (left->type == NODE_INT && right->type == NODE_INT) {
-            int result = 0;
+            int64_t result = 0;
             if (op == OP_MUL) {
                 result = left->data.integer.value * right->data.integer.value;
             } else if (op == OP_DIV) {
@@ -539,7 +562,7 @@ Node* parse_additive() {
 
         // **Constant Folding Optimization**
         if (left->type == NODE_INT && right->type == NODE_INT) {
-            int result = 0;
+            int64_t result = 0;
             if (op == OP_ADD) {
                 result = left->data.integer.value + right->data.integer.value;
             } else {
@@ -677,7 +700,7 @@ Node* parse_case() {
             Token tok = parser.current;
             Node* v = ast_node_new(NODE_INT, tok);
             if (!v) return NULL;
-            int n = 0;
+            int64_t n = 0;
             (void)parse_int_token_checked(parser.current, &n);
             v->data.integer.value = n;
             eat(TOKEN_INT);
@@ -1071,9 +1094,13 @@ Node* parse_statement() {
             eat(TOKEN_LBRACKET);
             int size = 0;
             if (parser.current.type == TOKEN_INT) {
-                int v = 0;
+                int64_t v = 0;
                 if (parse_int_token_checked(parser.current, &v) && v >= 0) {
-                    size = v;
+                    if (v > INT_MAX) {
+                        error_report(parser.current, "حجم المصفوفة كبير جداً.");
+                    } else {
+                        size = (int)v;
+                    }
                 } else if (v < 0) {
                     error_report(parser.current, "حجم المصفوفة يجب أن يكون عدداً غير سالب.");
                 }
@@ -1470,9 +1497,13 @@ Node* parse_declaration() {
             eat(TOKEN_LBRACKET);
             int size = 0;
             if (parser.current.type == TOKEN_INT) {
-                int v = 0;
+                int64_t v = 0;
                 if (parse_int_token_checked(parser.current, &v) && v >= 0) {
-                    size = v;
+                    if (v > INT_MAX) {
+                        error_report(parser.current, "حجم المصفوفة كبير جداً.");
+                    } else {
+                        size = (int)v;
+                    }
                 } else if (v < 0) {
                     error_report(parser.current, "حجم المصفوفة يجب أن يكون عدداً غير سالب.");
                 }

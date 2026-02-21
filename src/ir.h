@@ -104,6 +104,12 @@ typedef enum {
     IR_CMP_LT,      // أصغر - Less than (signed)
     IR_CMP_GE,      // أكبر_أو_يساوي - Greater or equal (signed)
     IR_CMP_LE,      // أصغر_أو_يساوي - Less or equal (signed)
+
+    // مقارنات بدون إشارة (unsigned)
+    IR_CMP_UGT,     // أكبر - Greater than (unsigned)
+    IR_CMP_ULT,     // أصغر - Less than (unsigned)
+    IR_CMP_UGE,     // أكبر_أو_يساوي - Greater or equal (unsigned)
+    IR_CMP_ULE,     // أصغر_أو_يساوي - Less or equal (unsigned)
 } IRCmpPred;
 
 // ============================================================================
@@ -121,6 +127,10 @@ typedef enum {
     IR_TYPE_I16,    // ص١٦ - 16-bit integer
     IR_TYPE_I32,    // ص٣٢ - 32-bit integer
     IR_TYPE_I64,    // ص٦٤ - 64-bit integer (primary)
+    IR_TYPE_U8,     // ط٨ - 8-bit unsigned integer
+    IR_TYPE_U16,    // ط١٦ - 16-bit unsigned integer
+    IR_TYPE_U32,    // ط٣٢ - 32-bit unsigned integer
+    IR_TYPE_U64,    // ط٦٤ - 64-bit unsigned integer
     IR_TYPE_CHAR,   // حرف - UTF-8 character (packed)
     IR_TYPE_F64,    // ع٦٤ - 64-bit floating point (storage only for now)
     IR_TYPE_PTR,    // مؤشر - Pointer type
@@ -445,6 +455,10 @@ extern IRType* IR_TYPE_I8_T;
 extern IRType* IR_TYPE_I16_T;
 extern IRType* IR_TYPE_I32_T;
 extern IRType* IR_TYPE_I64_T;
+extern IRType* IR_TYPE_U8_T;
+extern IRType* IR_TYPE_U16_T;
+extern IRType* IR_TYPE_U32_T;
+extern IRType* IR_TYPE_U64_T;
 extern IRType* IR_TYPE_CHAR_T;
 extern IRType* IR_TYPE_F64_T;
 

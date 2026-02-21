@@ -317,6 +317,12 @@ int ir_builder_emit_cmp_ge(IRBuilder* builder, IRValue* lhs, IRValue* rhs);
  */
 int ir_builder_emit_cmp_le(IRBuilder* builder, IRValue* lhs, IRValue* rhs);
 
+// مقارنات بدون إشارة (unsigned)
+int ir_builder_emit_cmp_ugt(IRBuilder* builder, IRValue* lhs, IRValue* rhs);
+int ir_builder_emit_cmp_ult(IRBuilder* builder, IRValue* lhs, IRValue* rhs);
+int ir_builder_emit_cmp_uge(IRBuilder* builder, IRValue* lhs, IRValue* rhs);
+int ir_builder_emit_cmp_ule(IRBuilder* builder, IRValue* lhs, IRValue* rhs);
+
 // ============================================================================
 // Logical Instructions (العمليات المنطقية)
 // ============================================================================

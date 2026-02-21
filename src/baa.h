@@ -36,6 +36,14 @@ typedef enum {
     
     // الكلمات المفتاحية (Keywords)
     TOKEN_KEYWORD_INT,  // صحيح
+    TOKEN_KEYWORD_I8,   // ص٨
+    TOKEN_KEYWORD_I16,  // ص١٦
+    TOKEN_KEYWORD_I32,  // ص٣٢
+    TOKEN_KEYWORD_I64,  // ص٦٤
+    TOKEN_KEYWORD_U8,   // ط٨
+    TOKEN_KEYWORD_U16,  // ط١٦
+    TOKEN_KEYWORD_U32,  // ط٣٢
+    TOKEN_KEYWORD_U64,  // ط٦٤
     TOKEN_KEYWORD_STRING, // نص
     TOKEN_KEYWORD_BOOL, // منطقي
     TOKEN_KEYWORD_CHAR, // حرف
@@ -331,7 +339,17 @@ typedef enum {
  * @brief أنواع البيانات المدعومة في اللغة.
  */
 typedef enum {
-    TYPE_INT,           // صحيح (int64)
+    TYPE_INT,           // صحيح / ص٦٤ (int64)
+
+    // أحجام الأعداد الصحيحة (v0.3.5.5)
+    TYPE_I8,            // ص٨
+    TYPE_I16,           // ص١٦
+    TYPE_I32,           // ص٣٢
+    TYPE_U8,            // ط٨
+    TYPE_U16,           // ط١٦
+    TYPE_U32,           // ط٣٢
+    TYPE_U64,           // ط٦٤
+
     TYPE_STRING,        // نص (حرف[])
     TYPE_BOOL,          // منطقي (bool - stored as byte)
     TYPE_CHAR,          // حرف (UTF-8 sequence)
@@ -380,6 +398,10 @@ typedef struct Node {
     const char* filename;
     int line;
     int col;
+
+    // النوع المُستنتَج أثناء التحليل الدلالي للتعبيرات.
+    // يُستخدم في خفض IR لتحديد حجم/إشارة العمليات.
+    DataType inferred_type;
 
     union {
         // البرنامج: قائمة الدوال والمتغيرات العامة
@@ -520,7 +542,7 @@ typedef struct Node {
         } case_stmt;
 
         // التعبيرات الأساسية والعمليات
-        struct { int value; } integer;
+        struct { int64_t value; } integer;
         struct { double value; uint64_t bits; } float_lit;
         struct { char* value; int id; } string_lit;
         struct { int value; } char_lit;

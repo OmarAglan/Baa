@@ -288,6 +288,14 @@ static int ic_simplify_arith(IRInst* inst)
             if (!a || !b) return 0;
             if (a->kind != b->kind) return 0;
 
+            // العشري (f64): لا يجوز تبسيط cmp x,x لأن NaN يكسر قواعد المساواة.
+            // مثال: (NaN == NaN) خطأ، و (NaN != NaN) صحيح.
+            if ((a->type && a->type->kind == IR_TYPE_F64) ||
+                (b->type && b->type->kind == IR_TYPE_F64))
+            {
+                return 0;
+            }
+
             if (a->kind == IR_VAL_REG && a->data.reg_num == b->data.reg_num)
             {
                 int64_t res = 0;

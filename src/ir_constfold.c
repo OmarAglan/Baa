@@ -338,6 +338,12 @@ static int ir_try_fold_inst(IRInst* inst, int* out_reg, IRType** out_type, int64
             IRValue* b = inst->operands[1];
             if (!is_const_int(a) || !is_const_int(b)) return 0;
 
+            // العشري (f64) مخزن كثوابت int (بت-نمط)، لكن المقارنة ليست مقارنة بتّية.
+            // تجنب الطي هنا حتى نضيف دلالات IEEE-754 بشكل صحيح.
+            if ((a->type && a->type->kind == IR_TYPE_F64) ||
+                (b->type && b->type->kind == IR_TYPE_F64))
+                return 0;
+
             int cmp = eval_cmp(inst->cmp_pred, a->data.const_int, b->data.const_int);
 
             *out_reg = inst->dest;

@@ -2,23 +2,26 @@
 
 > **Version:** 0.3.5.5 | [← README](../README.md) | [Language Spec →](LANGUAGE.md)
 
+
 Welcome to Baa (باء)! This guide will help you write your first Arabic computer program and use the Baa compiler toolchain.
 
 ---
 
 ## Table of Contents
 
-- [Installation](#1-installation)
-- [Your First Program](#2-your-first-program)
-- [Command Line Interface](#3-command-line-interface)
-- [Common Patterns](#4-common-patterns)
-- [Troubleshooting](#5-troubleshooting)
-- [Linux Packaging (TGZ + DEB)](#6-linux-packaging-tgz--deb-v0345)
+- [1. Installation](#1-installation)
+- [2. Your First Program](#2-your-first-program)
+- [3. Command Line Interface](#3-command-line-interface)
+- [4. Linux Packaging (TGZ + DEB)](#4-linux-packaging-tgz--deb)
+- [5. File Types](#5-file-types)
+- [6. Deployment Notes](#6-deployment-notes)
+- [7. Organizing Code (Multi-File Projects)](#7-organizing-code-multi-file-projects)
+- [8. Common Patterns](#8-common-patterns)
+- [9. Troubleshooting](#9-troubleshooting)
 
 ---
 
 ## 1. Installation
-
 Currently, you must build Baa from source.
 
 ### Platform Support
@@ -128,7 +131,7 @@ The Baa compiler is a full-featured command-line tool (since v0.2.0):
 
 ---
 
-## 6. Linux Packaging (TGZ + DEB) (v0.3.5.5)
+## 4. Linux Packaging (TGZ + DEB) (v0.3.5.5)
 
 You can generate Linux installer artifacts from a Linux build:
 
@@ -193,7 +196,7 @@ sudo cp -a usr/* /usr/
 | `-fstack-protector-all` | Enable canary for all functions (Linux/ELF). | `./baa -fstack-protector-all main.baa` |
 | *(Inlining at -O2)* | Small internal functions with a single call site may be inlined automatically at `-O2`. | `.\baa.exe -O2 main.baa` |
 
-### Output Naming Rules (v0.2.9)
+### Output Naming Rules
 
 - Default output executable is `out.exe` on Windows, and `out` on Linux (when linking).
 - With `-S` or `-c`, output defaults to `<input>.s` / `<input>.o`.
@@ -277,7 +280,7 @@ You can control the compilation stages if needed:
 
 ---
 
-## 4. File Types
+## 5. File Types
 
 | Extension | Type | Description | Example |
 |-----------|------|-------------|---------|
@@ -289,7 +292,7 @@ You can control the compilation stages if needed:
 
 **Note:** Header files (`.baahd`) are included using `#تضمين` directive and contain only declarations (prototypes), not implementations.
 
-## 4. Deployment Notes
+## 6. Deployment Notes
 
 Baa’s compiler driver invokes `gcc` to assemble and link output binaries, so deployment typically requires:
 
@@ -300,7 +303,7 @@ If you distribute `baa.exe` to another Windows machine, ensure the MinGW-w64 too
 
 ---
 
-## 5. Organizing Code (Multi-File Projects)
+## 7. Organizing Code (Multi-File Projects)
 
 As your program grows, you should split it into multiple files.
 
@@ -346,7 +349,7 @@ Use header files for function prototypes and shared declarations.
 
 ---
 
-## 6. Common Patterns
+## 8. Common Patterns
 
 ### Variables and Constants
 
@@ -448,7 +451,7 @@ Use `منطقي` variables to store true (`صواب`) or false (`خطأ`) values
 
 ---
 
-## 5. Troubleshooting
+## 9. Troubleshooting
 
 ### Common Errors
 
@@ -472,7 +475,7 @@ Use `منطقي` variables to store true (`صواب`) or false (`خطأ`) values
 | `[-Wdead-code] Unreachable code after 'return/break' statement.` | Dead code after terminator | Remove code after `إرجع`/`توقف`/`استمر` |
 | `[-Wshadow-variable] Local variable 'x' shadows global variable.` | Variable shadowing | Rename the local variable |
 
-**Note:** Some warnings may currently show line number `0` due to missing AST line tracking in semantic analysis.
+**Note:** Semantic analysis generates precise line and column numbers.
 
 > **Note:** Warnings are non-fatal by default. Use `-Werror` to treat them as errors.
 

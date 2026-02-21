@@ -515,7 +515,7 @@ The analyzer walks the AST recursively. It maintains a **Symbol Table** stack to
 | `نص` | `char*` | 8 bytes | Pointer to read-only string (.rdata/.rodata) |
 | `منطقي` | `bool` (stored as int) | 8 bytes | Stored as 0/1 in 8-byte slots |
 
-**I/O note (v0.2.9):** The current backend emits `printf("%d\\n", ...)` and `scanf("%d", ...)`, so printed/read integers are effectively 32-bit even though storage uses 8 bytes.
+**I/O note:** The current backend dynamically resolves format strings (`%lld`, `%llu`, `%g\n`) for integers and floats, supporting full 64-bit and unsigned emission. Strings (`نص`) and Characters (`حرف`) are handled with a custom UTF-8 emission loop or packed format.
 
 ---
 

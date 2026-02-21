@@ -604,11 +604,12 @@ Functions can call themselves (recursion), provided there is a base case to term
 
 Prints a value followed by a newline.
 
-**Current implementation notes (v0.2.9):**
+**Current implementation notes:**
 
-- `صحيح` and `منطقي` values are printed using C `printf("%d\n", ...)` (so output is effectively 32-bit).
-- `نص` values are printed using `printf("%s\n", ...)`.
-- Character literals like `'أ'` are treated as integer values during code generation and print as their numeric code.
+- Integer variables (`صحيح`, `ص٨`, `ط٦٤`, etc.) are dynamically printed as 64-bit values (`%lld` or `%llu`) based on their signed/unsigned type.
+- Float variables (`عشري`) are printed using `%g\n`.
+- String variables (`نص`) are printed using a character iteration loop to correctly emit Baa `حرف` arrays until a null terminator.
+- Character literals or variables (`حرف`) correctly print as packed UTF-8 sequences.
 
 ```baa
 اطبع "مرحباً بالعالم".    // طباعة نص
@@ -624,11 +625,11 @@ Prints a value followed by a newline.
 
 **Syntax:** `اقرأ <variable>.`
 
-Reads an integer from standard input and stores it in the specified variable.
+Reads an input from standard input and stores it in the specified variable.
 
-**Current implementation notes (v0.2.9):**
+**Current implementation notes:**
 
-- Input uses C `scanf("%d", ...)` and is intended for `صحيح` variables.
+- Input natively supports all signed and unsigned integer sizes up to 64-bit. It resolves the appropriate `scanf` format (e.g., `%lld`, `%llu`) based on the target variable's type, reading into a 64-bit temporary if necessary before truncation.
 
 ```baa
 صحيح العمر = ٠.

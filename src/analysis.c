@@ -1624,17 +1624,10 @@ static void analyze_node(Node* node) {
             in_function = true;
             current_func_return_type = node->data.func_def.return_type;
 
-            if (current_func_return_type == TYPE_FLOAT) {
-                semantic_error(node, "نوع الإرجاع 'عشري' غير مدعوم حالياً في ABI.");
-            }
-
             // إضافة المعاملات كمتغيرات محلية (المعاملات ليست ثوابت افتراضياً)
             Node* param = node->data.func_def.params;
             while (param) {
                  if (param->type == NODE_VAR_DECL) {
-                     if (param->data.var_decl.type == TYPE_FLOAT) {
-                         semantic_error(param, "المعامل من نوع 'عشري' غير مدعوم حالياً في ABI.");
-                     }
                       // المعاملات تُعتبر "مستخدمة" ضمنياً (لتجنب تحذيرات خاطئة)
                      add_symbol(param->data.var_decl.name, SCOPE_LOCAL, param->data.var_decl.type, NULL, false,
                                 false, 0,

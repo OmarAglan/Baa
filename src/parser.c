@@ -1427,16 +1427,21 @@ Node* parse_declaration() {
             Node* tail_param = NULL;
             if (parser.current.type != TOKEN_RPAREN) {
                 while (1) {
-                    // معاملات الدالة: أنواع بدائية فقط حالياً
-                    if (!(parser.current.type == TOKEN_KEYWORD_INT ||
-                          parser.current.type == TOKEN_KEYWORD_STRING ||
-                          parser.current.type == TOKEN_KEYWORD_BOOL)) {
-                        error_report(parser.current, "Expected primitive type for parameter.");
-                    }
-
+                    // معاملات الدالة: نسمح بالأنواع البدائية العددية/النص/منطقي/حرف.
                     Token tok_param_type = parser.current;
-                    DataType param_dt = token_to_datatype(parser.current.type);
-                    eat(parser.current.type);
+                    DataType param_dt = TYPE_INT;
+                    char* param_tn = NULL;
+                    if (!parse_type_spec(&param_dt, &param_tn)) {
+                        error_report(parser.current, "Expected type for parameter.");
+                        synchronize();
+                        return NULL;
+                    }
+                    if (param_dt == TYPE_ENUM || param_dt == TYPE_STRUCT || param_dt == TYPE_UNION) {
+                        error_report(tok_param_type, "User-defined parameter types are not supported in function signatures yet.");
+                        if (param_tn) free(param_tn);
+                        param_tn = NULL;
+                        param_dt = TYPE_INT;
+                    }
 
                     char* pname = NULL;
                     Token tok_param_name = tok_param_type;
@@ -1450,7 +1455,7 @@ Node* parse_declaration() {
                     if (!param) return NULL;
                     param->data.var_decl.name = pname;
                     param->data.var_decl.type = param_dt;
-                    param->data.var_decl.type_name = NULL;
+                    param->data.var_decl.type_name = param_tn;
                     param->data.var_decl.expression = NULL;
                     param->data.var_decl.is_global = false;
                     param->data.var_decl.is_const = false;

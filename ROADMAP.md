@@ -620,8 +620,6 @@
   - `اطبع` supports `عشري`
   - ABI lowering on SysV AMD64 + Windows x64 (XMM regs + SysV varargs rules)
 
-- [ ] **Type aliases** (Deferred)
-
 #### Implementation Tasks
 
 - [x] **Lexer**: Tokenize `ص٨`, `ص١٦`, `ص٣٢`, `ص٦٤`, `ط٨`, `ط١٦`, `ط٣٢`, `ط٦٤`.
@@ -672,8 +670,8 @@
 - [ ] **Escape Sequences**:
 
   ```baa
-  نص سطر = "سطر١\nسطر٢".     // Newline
-  نص جدول = "عمود١\tعمود٢".  // Tab
+  نص سطر = "سطر١\س سطر٢".     // Newline (/س)
+  نص جدول = "عمود١\ت عمود٢".  // Tab (/ت)
   نص مسار = "C:\\ملفات".     // Backslash
   حرف صفر = '\٠'.            // Null character
   ```
@@ -689,11 +687,11 @@
 - [ ] **Codegen**: Generate bitwise assembly instructions.
 - [ ] **Codegen**: Calculate sizes for `حجم` operator.
 
-### v0.3.6.5: Type Aliases (أسماء الأنواع البديلة) 🏷️
+### v0.3.6.5: Type Aliases (أسماء الأنواع البديلة) 🏷️ ✅ COMPLETED (2026-02-23)
 **Goal:** Create custom type names for readability and abstraction.
 
 #### Features
-- [ ] **Simple Type Alias**:
+- [x] **Simple Type Alias**:
   ```baa
   نوع معرف = ط٦٤.
   نوع نتيجة = ص٣٢.
@@ -707,12 +705,13 @@
   نوع نص_ثابت = ثابت حرف*.
   نوع مؤشر_بايت = ط٨*.
   ```
+  *(Deferred — requires pointer type grammar from v0.3.10.)*
 
 #### Implementation Tasks
-- [ ] **Token**: Add `TOKEN_TYPE_ALIAS` for `نوع` keyword.
-- [ ] **Parser**: Parse `نوع <name> = <type>.`
-- [ ] **Semantic**: Resolve type aliases during type checking.
-- [ ] **Symbol Table**: Store type aliases separately from variables.
+- [x] **Token/AST plumbing**: Added `TOKEN_TYPE_ALIAS`/`NODE_TYPE_ALIAS` support in shared structures.
+- [x] **Parser**: Parse `نوع <name> = <type>.` at top-level with C-like declare-before-use semantics.
+- [x] **Semantic**: Resolve aliases during type checking and validate alias targets (`enum/struct/union`).
+- [x] **Symbol Table**: Store type aliases separately and enforce strict name-collision diagnostics.
 
 ---
 

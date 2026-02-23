@@ -31,6 +31,7 @@
 #define ANALYSIS_MAX_STRUCTS 128
 #define ANALYSIS_MAX_ENUM_MEMBERS 128
 #define ANALYSIS_MAX_STRUCT_FIELDS 128
+#define ANALYSIS_MAX_TYPE_ALIASES 256
 
 typedef struct {
     char* name; // مملوك (strdup)
@@ -71,6 +72,12 @@ typedef struct {
     bool layout_in_progress;
 } UnionDef;
 
+typedef struct {
+    char* name;              // مملوك (strdup)
+    DataType target_type;    // النوع الهدف بعد فك الاسم البديل
+    char* target_type_name;  // مملوك (strdup) عند TYPE_ENUM/TYPE_STRUCT/TYPE_UNION
+} TypeAliasDef;
+
 static EnumDef enum_defs[ANALYSIS_MAX_ENUMS];
 static int enum_count = 0;
 
@@ -79,6 +86,9 @@ static int struct_count = 0;
 
 static UnionDef union_defs[ANALYSIS_MAX_STRUCTS];
 static int union_count = 0;
+
+static TypeAliasDef type_alias_defs[ANALYSIS_MAX_TYPE_ALIASES];
+static int type_alias_count = 0;
 
 static Symbol global_symbols[ANALYSIS_MAX_SYMBOLS];
 static int global_count = 0;
@@ -229,6 +239,16 @@ static void reset_analysis() {
         union_defs[i].layout_in_progress = false;
     }
     union_count = 0;
+
+    for (int i = 0; i < type_alias_count; i++) {
+        free(type_alias_defs[i].name);
+        type_alias_defs[i].name = NULL;
+        free(type_alias_defs[i].target_type_name);
+        type_alias_defs[i].target_type_name = NULL;
+        type_alias_defs[i].target_type = TYPE_INT;
+    }
+    type_alias_count = 0;
+
     has_error = false;
     inside_loop = false;
     inside_switch = false;
@@ -259,12 +279,28 @@ static int func_signature_matches(const FuncSymbol* a, DataType ret_type,
     return 1;
 }
 
+static TypeAliasDef* type_alias_lookup_def(const char* name)
+{
+    if (!name) return NULL;
+    for (int i = 0; i < type_alias_count; i++) {
+        if (type_alias_defs[i].name && strcmp(type_alias_defs[i].name, name) == 0) {
+            return &type_alias_defs[i];
+        }
+    }
+    return NULL;
+}
+
 static void func_register(Node* node)
 {
     if (!node || node->type != NODE_FUNC_DEF) return;
     const char* name = node->data.func_def.name;
     if (!name) {
         semantic_error(node, "اسم الدالة فارغ.");
+        return;
+    }
+
+    if (type_alias_lookup_def(name)) {
+        semantic_error(node, "اسم الدالة '%s' متصادم مع اسم نوع بديل.", name);
         return;
     }
 
@@ -371,6 +407,12 @@ static void add_symbol(const char* name,
                        const char* decl_file) {
     if (!name) {
         semantic_error_loc(decl_file, decl_line, decl_col, "اسم الرمز فارغ.");
+        return;
+    }
+
+    if (type_alias_lookup_def(name)) {
+        semantic_error_loc(decl_file, decl_line, decl_col,
+                           "اسم الرمز '%s' متصادم مع اسم نوع بديل.", name);
         return;
     }
 
@@ -812,7 +854,8 @@ static void enum_register_decl(Node* node)
         return;
     }
 
-    if (enum_lookup_def(name) || struct_lookup_def(name)) {
+    if (enum_lookup_def(name) || struct_lookup_def(name) || union_lookup_def(name) ||
+        type_alias_lookup_def(name)) {
         semantic_error(node, "تعريف نوع مكرر '%s'.", name);
         return;
     }
@@ -867,7 +910,8 @@ static void struct_register_decl(Node* node)
         return;
     }
 
-    if (enum_lookup_def(name) || struct_lookup_def(name)) {
+    if (enum_lookup_def(name) || struct_lookup_def(name) || union_lookup_def(name) ||
+        type_alias_lookup_def(name)) {
         semantic_error(node, "تعريف نوع مكرر '%s'.", name);
         return;
     }
@@ -922,7 +966,8 @@ static void union_register_decl(Node* node)
         return;
     }
 
-    if (enum_lookup_def(name) || struct_lookup_def(name) || union_lookup_def(name)) {
+    if (enum_lookup_def(name) || struct_lookup_def(name) || union_lookup_def(name) ||
+        type_alias_lookup_def(name)) {
         semantic_error(node, "تعريف نوع مكرر '%s'.", name);
         return;
     }
@@ -966,6 +1011,72 @@ static void union_register_decl(Node* node)
 
     if (ud->field_count <= 0) {
         semantic_error(node, "الاتحاد '%s' يجب أن يحتوي على حقل واحد على الأقل.", name);
+    }
+}
+
+static void type_alias_register_decl(Node* node)
+{
+    if (!node || node->type != NODE_TYPE_ALIAS) return;
+
+    const char* name = node->data.type_alias.name;
+    if (!name) {
+        semantic_error(node, "اسم النوع البديل فارغ.");
+        return;
+    }
+
+    if (type_alias_lookup_def(name) || enum_lookup_def(name) ||
+        struct_lookup_def(name) || union_lookup_def(name)) {
+        semantic_error(node, "تعريف اسم نوع بديل مكرر '%s'.", name);
+        return;
+    }
+
+    DataType target_type = node->data.type_alias.target_type;
+    const char* target_type_name = node->data.type_alias.target_type_name;
+
+    if (target_type == TYPE_ENUM) {
+        if (!target_type_name || !enum_lookup_def(target_type_name)) {
+            semantic_error(node, "نوع هدف غير معروف في الاسم البديل '%s' (تعداد '%s').",
+                           name, target_type_name ? target_type_name : "???");
+            return;
+        }
+    } else if (target_type == TYPE_STRUCT) {
+        if (!target_type_name || !struct_lookup_def(target_type_name)) {
+            semantic_error(node, "نوع هدف غير معروف في الاسم البديل '%s' (هيكل '%s').",
+                           name, target_type_name ? target_type_name : "???");
+            return;
+        }
+    } else if (target_type == TYPE_UNION) {
+        if (!target_type_name || !union_lookup_def(target_type_name)) {
+            semantic_error(node, "نوع هدف غير معروف في الاسم البديل '%s' (اتحاد '%s').",
+                           name, target_type_name ? target_type_name : "???");
+            return;
+        }
+    }
+
+    if (type_alias_count >= ANALYSIS_MAX_TYPE_ALIASES) {
+        semantic_error(node, "عدد أسماء الأنواع البديلة كبير جداً (الحد %d).",
+                       ANALYSIS_MAX_TYPE_ALIASES);
+        return;
+    }
+
+    TypeAliasDef* out = &type_alias_defs[type_alias_count++];
+    memset(out, 0, sizeof(*out));
+    out->name = strdup(name);
+    if (!out->name) {
+        type_alias_count--;
+        semantic_error(node, "نفدت الذاكرة أثناء تسجيل الاسم البديل '%s'.", name);
+        return;
+    }
+    out->target_type = target_type;
+    if (target_type_name) {
+        out->target_type_name = strdup(target_type_name);
+        if (!out->target_type_name) {
+            free(out->name);
+            out->name = NULL;
+            type_alias_count--;
+            semantic_error(node, "نفدت الذاكرة أثناء تسجيل هدف الاسم البديل '%s'.", name);
+            return;
+        }
     }
 }
 
@@ -1605,6 +1716,15 @@ static void analyze_node(Node* node) {
                 (void)union_compute_layout(&union_defs[i]);
             }
 
+            // 0.5) تسجيل أسماء الأنواع البديلة (نوع) بعد تعريفات الأنواع المركبة
+            Node* ta = node->data.program.declarations;
+            while (ta) {
+                if (ta->type == NODE_TYPE_ALIAS) {
+                    type_alias_register_decl(ta);
+                }
+                ta = ta->next;
+            }
+
             // 1) تسجيل تواقيع الدوال أولاً لدعم الاستدعاء قبل التعريف
             Node* decl0 = node->data.program.declarations;
             while (decl0) {
@@ -1707,6 +1827,10 @@ static void analyze_node(Node* node) {
                        node->line, node->col, node->filename ? node->filename : current_filename);
             break;
          }
+
+        case NODE_TYPE_ALIAS:
+            // تم تسجيل أسماء الأنواع البديلة في مرحلة NODE_PROGRAM.
+            break;
 
         case NODE_FUNC_DEF: {
             // الدخول في نطاق دالة جديدة (تصفير المحلي + إنشاء نطاق)

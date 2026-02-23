@@ -48,6 +48,7 @@ typedef enum {
     TOKEN_KEYWORD_BOOL, // منطقي
     TOKEN_KEYWORD_CHAR, // حرف
     TOKEN_KEYWORD_FLOAT, // عشري
+    TOKEN_TYPE_ALIAS,   // نوع
     TOKEN_CONST,        // ثابت
     TOKEN_RETURN,       // إرجع
     TOKEN_PRINT,        // اطبع
@@ -290,6 +291,7 @@ typedef enum {
     NODE_PROGRAM,       // البرنامج: يحتوي على قائمة التصريحات
     NODE_FUNC_DEF,      // تعريف دالة
     NODE_VAR_DECL,      // تعريف متغير (عام أو محلي)
+    NODE_TYPE_ALIAS,    // تعريف اسم نوع بديل: نوع معرف = ط٦٤.
 
     // تعريفات الأنواع المركبة (v0.3.4)
     NODE_ENUM_DECL,     // تعريف تعداد: تعداد لون { ... }
@@ -430,6 +432,13 @@ typedef struct Node {
             bool is_global;          // هل هو متغير عام؟
             bool is_const;           // هل هو ثابت (immutable)؟
         } var_decl;
+
+        // تعريف اسم نوع بديل
+        struct {
+            char* name;              // اسم النوع البديل
+            DataType target_type;    // النوع الهدف بعد فك الاسم البديل
+            char* target_type_name;  // اسم النوع عند TYPE_ENUM/TYPE_STRUCT/TYPE_UNION
+        } type_alias;
 
         // تعريف تعداد
         struct {

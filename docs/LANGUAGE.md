@@ -386,11 +386,11 @@ Baa is statically typed. All variables must be declared with their type.
 
 ---
 
-### 3.7. Planned Types & Features (Future)
+### 3.7. Additional Types & Planned Features
 
-هذه الأقسام تُوثّق ميزات مخطط لها ولم تُنفّذ بعد.
+هذا القسم يجمع ميزات إضافية: المنفّذ حالياً والمخطط لاحقاً.
 
-#### 3.7.1. Type Aliases (أسماء الأنواع البديلة) [Scheduled v0.3.6.5]
+#### 3.7.1. Type Aliases (أسماء الأنواع البديلة) [Implemented v0.3.6.5]
 
 **Syntax:** `نوع <new_name> = <existing_type>.`
 
@@ -401,6 +401,14 @@ Baa is statically typed. All variables must be declared with their type.
 معرف ر = ١٠٠.
 كود خ = -١.
 ```
+
+**Current rules (v0.3.6.5):**
+
+- `نوع` declarations are **global-only** (top-level).
+- Alias must be declared **before** usage (C-like behavior).
+- Alias targets in this milestone are existing implemented types (primitive + `تعداد`/`هيكل`/`اتحاد`).
+- `نوع` is parsed contextually in declarations, so existing member/identifier usages مثل `س:نوع` remain valid.
+- Pointer/function-type aliases are deferred to later pointer/function-type milestones.
 
 #### 3.7.2. Static Local Variables (متغيرات ساكنة) [Scheduled v0.3.7.5]
 

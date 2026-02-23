@@ -105,6 +105,7 @@ Entry point for the parsing phase.
 
 - Initializes internal `Parser` state with 2-token lookahead (current + next)
 - Parses list of declarations (global variables or functions)
+- Parses global type aliases: `نوع <name> = <type>.` (v0.3.6.5)
 - Implements operator precedence climbing for expressions
 - Builds linked-list AST structure
 
@@ -144,6 +145,7 @@ Runs the semantic pass on the AST.
 - **Scope Validation**: Tracks global vs local scope and prevents redefinitions.
 - **Constant Checking** (v0.2.7+): Prevents reassignment of `ثابت` variables.
 - **Control Flow Validation**: Ensures `break`/`continue` are only used within loops/switches.
+- **Type Alias Validation** (v0.3.6.5): Registers/validates `نوع` aliases and enforces strict collision checks with symbols/functions.
 - Traverses the entire tree.
 - Reports errors using `error_report`.
 - Does not modify the AST, only validates it.
@@ -2961,6 +2963,7 @@ typedef enum {
     TOKEN_KEYWORD_BOOL,
     TOKEN_KEYWORD_CHAR,
     TOKEN_KEYWORD_FLOAT,
+    TOKEN_TYPE_ALIAS,
     TOKEN_CONST,
     TOKEN_RETURN,
     TOKEN_PRINT,
@@ -3054,6 +3057,12 @@ typedef struct Node {
 
         struct {
             char* name;
+            DataType target_type;
+            char* target_type_name;  // Used for TYPE_ENUM/TYPE_STRUCT/TYPE_UNION targets
+        } type_alias;
+
+        struct {
+            char* name;
             int size;
             bool is_global;
             bool is_const;
@@ -3140,6 +3149,7 @@ typedef enum {
     // Top-level
     NODE_PROGRAM,
     NODE_FUNC_DEF,
+    NODE_TYPE_ALIAS,
     NODE_BLOCK,
     NODE_VAR_DECL,
     NODE_IF,

@@ -11,6 +11,78 @@
 // كائن المحلل القواعدي الذي يدير الحالة الحالية والوحدة القادمة
 Parser parser;
 
+#define PARSER_MAX_TYPE_ALIASES 256
+
+typedef struct {
+    char* name;
+    DataType target_type;
+    char* target_type_name;
+} ParserTypeAlias;
+
+static ParserTypeAlias parser_type_aliases[PARSER_MAX_TYPE_ALIASES];
+static int parser_type_alias_count = 0;
+
+static void parser_type_alias_reset(void)
+{
+    for (int i = 0; i < parser_type_alias_count; i++) {
+        free(parser_type_aliases[i].name);
+        parser_type_aliases[i].name = NULL;
+        free(parser_type_aliases[i].target_type_name);
+        parser_type_aliases[i].target_type_name = NULL;
+        parser_type_aliases[i].target_type = TYPE_INT;
+    }
+    parser_type_alias_count = 0;
+}
+
+static const ParserTypeAlias* parser_type_alias_lookup(const char* name)
+{
+    if (!name) return NULL;
+    for (int i = 0; i < parser_type_alias_count; i++) {
+        if (parser_type_aliases[i].name && strcmp(parser_type_aliases[i].name, name) == 0) {
+            return &parser_type_aliases[i];
+        }
+    }
+    return NULL;
+}
+
+static bool parser_type_alias_register(Token tok, const char* alias_name,
+                                       DataType target_type, const char* target_type_name)
+{
+    if (!alias_name) return false;
+
+    if (parser_type_alias_lookup(alias_name)) {
+        return false;
+    }
+
+    if (parser_type_alias_count >= PARSER_MAX_TYPE_ALIASES) {
+        error_report(tok, "عدد أسماء الأنواع البديلة كبير جداً (الحد %d).", PARSER_MAX_TYPE_ALIASES);
+        return false;
+    }
+
+    ParserTypeAlias* slot = &parser_type_aliases[parser_type_alias_count];
+    memset(slot, 0, sizeof(*slot));
+
+    slot->name = strdup(alias_name);
+    if (!slot->name) {
+        error_report(tok, "نفدت الذاكرة أثناء تسجيل اسم النوع البديل.");
+        return false;
+    }
+
+    slot->target_type = target_type;
+    if (target_type_name && target_type_name[0]) {
+        slot->target_type_name = strdup(target_type_name);
+        if (!slot->target_type_name) {
+            free(slot->name);
+            slot->name = NULL;
+            error_report(tok, "نفدت الذاكرة أثناء تسجيل مرجع النوع البديل.");
+            return false;
+        }
+    }
+
+    parser_type_alias_count++;
+    return true;
+}
+
 static bool parser_int_literal_is_i32(int64_t v)
 {
     return v >= INT32_MIN && v <= INT32_MAX;
@@ -47,6 +119,7 @@ void init_parser(Lexer* l) {
     parser.lexer = l;
     parser.panic_mode = false;
     parser.had_error = false;
+    parser_type_alias_reset();
     advance(); // Load first token into parser.next (current is garbage initially)
     parser.current = parser.next; // Sync
     advance(); // Load next token
@@ -130,6 +203,25 @@ bool is_type_keyword(BaaTokenType type) {
             type == TOKEN_KEYWORD_CHAR ||
             type == TOKEN_KEYWORD_FLOAT ||
             type == TOKEN_ENUM || type == TOKEN_STRUCT || type == TOKEN_UNION);
+}
+
+static bool parser_current_starts_type(void)
+{
+    if (is_type_keyword(parser.current.type)) return true;
+    if (parser.current.type == TOKEN_IDENTIFIER &&
+        parser.current.value &&
+        parser_type_alias_lookup(parser.current.value)) {
+        return true;
+    }
+    return false;
+}
+
+static bool parser_current_is_type_alias_keyword(void)
+{
+    if (parser.current.type == TOKEN_TYPE_ALIAS) return true;
+    return parser.current.type == TOKEN_IDENTIFIER &&
+           parser.current.value &&
+           strcmp(parser.current.value, "نوع") == 0;
 }
 
 /**
@@ -261,6 +353,23 @@ static bool parse_type_spec(DataType* out_type, char** out_type_name) {
         return true;
     }
 
+    if (parser.current.type == TOKEN_IDENTIFIER && parser.current.value) {
+        const ParserTypeAlias* alias = parser_type_alias_lookup(parser.current.value);
+        if (!alias) return false;
+
+        if (out_type) *out_type = alias->target_type;
+        if (out_type_name && alias->target_type_name) {
+            *out_type_name = strdup(alias->target_type_name);
+            if (!*out_type_name) {
+                error_report(parser.current, "نفدت الذاكرة أثناء نسخ النوع البديل.");
+                return false;
+            }
+        }
+
+        eat(TOKEN_IDENTIFIER);
+        return true;
+    }
+
     return false;
 }
 
@@ -274,6 +383,14 @@ void synchronize() {
         // إذا وجدنا فاصلة منقوطة، فغالباً انتهت الجملة السابقة
         if (parser.current.type == TOKEN_SEMICOLON || parser.current.type == TOKEN_DOT) {
             advance();
+            return;
+        }
+        if (parser_current_is_type_alias_keyword() && parser.next.type == TOKEN_IDENTIFIER) {
+            return;
+        }
+        if (parser.current.type == TOKEN_IDENTIFIER &&
+            parser.current.value &&
+            parser_type_alias_lookup(parser.current.value)) {
             return;
         }
 
@@ -292,6 +409,7 @@ void synchronize() {
             case TOKEN_KEYWORD_BOOL:
             case TOKEN_KEYWORD_CHAR:
             case TOKEN_KEYWORD_FLOAT:
+            case TOKEN_TYPE_ALIAS:
             case TOKEN_ENUM:
             case TOKEN_STRUCT:
             case TOKEN_UNION:
@@ -923,8 +1041,77 @@ static Node* parse_array_initializer_list(int* out_count, bool* out_has_init) {
     return head;
 }
 
+/**
+ * @brief تحليل تعريف اسم نوع بديل على المستوى العام.
+ *
+ * الصيغة:
+ * نوع <اسم> = <نوع_موجود>.
+ */
+static Node* parse_type_alias_declaration(bool register_alias)
+{
+    if (!parser_current_is_type_alias_keyword()) {
+        error_report(parser.current, "متوقع 'نوع' في بداية تعريف الاسم البديل.");
+        synchronize();
+        return NULL;
+    }
+
+    Token tok_kw = parser.current;
+    eat(parser.current.type);
+
+    if (parser.current.type != TOKEN_IDENTIFIER) {
+        error_report(parser.current, "متوقع اسم بعد 'نوع'.");
+        synchronize();
+        return NULL;
+    }
+
+    Token tok_name = parser.current;
+    char* alias_name = strdup(parser.current.value);
+    eat(TOKEN_IDENTIFIER);
+
+    if (!alias_name) {
+        error_report(tok_name, "نفدت الذاكرة أثناء نسخ اسم النوع البديل.");
+        synchronize();
+        return NULL;
+    }
+
+    eat(TOKEN_ASSIGN);
+
+    DataType target_type = TYPE_INT;
+    char* target_type_name = NULL;
+    if (!parse_type_spec(&target_type, &target_type_name)) {
+        error_report(parser.current, "متوقع نوع معروف بعد '=' في تعريف الاسم البديل.");
+        free(alias_name);
+        free(target_type_name);
+        synchronize();
+        return NULL;
+    }
+
+    eat(TOKEN_DOT);
+
+    Node* alias = ast_node_new(NODE_TYPE_ALIAS, tok_name);
+    if (!alias) {
+        free(alias_name);
+        free(target_type_name);
+        return NULL;
+    }
+
+    alias->data.type_alias.name = alias_name;
+    alias->data.type_alias.target_type = target_type;
+    alias->data.type_alias.target_type_name = target_type_name;
+
+    if (register_alias) {
+        (void)parser_type_alias_register(tok_kw, alias_name, target_type, target_type_name);
+    }
+    return alias;
+}
+
 Node* parse_statement() {
     if (parser.current.type == TOKEN_LBRACE) return parse_block();
+
+    if (parser_current_is_type_alias_keyword() && parser.next.type == TOKEN_IDENTIFIER) {
+        error_report(parser.current, "تعريف 'نوع' مسموح فقط على المستوى العام.");
+        return parse_type_alias_declaration(false);
+    }
 
     if (parser.current.type == TOKEN_SWITCH) {
         return parse_switch();
@@ -1027,7 +1214,7 @@ Node* parse_statement() {
         eat(TOKEN_LPAREN);
 
         Node* init = NULL;
-        if (is_type_keyword(parser.current.type)) {
+        if (parser_current_starts_type()) {
             Token tok_type = parser.current;
             DataType dt = TYPE_INT;
             char* type_name = NULL;
@@ -1133,7 +1320,7 @@ Node* parse_statement() {
         eat(TOKEN_CONST);
     }
 
-    if (is_type_keyword(parser.current.type)) {
+    if (parser_current_starts_type()) {
         Token tok_type = parser.current;
         DataType dt = TYPE_INT;
         char* type_name = NULL;
@@ -1323,14 +1510,23 @@ Node* parse_statement() {
 }
 
 Node* parse_declaration() {
+    if (parser_current_is_type_alias_keyword() && parser.next.type == TOKEN_IDENTIFIER) {
+        return parse_type_alias_declaration(true);
+    }
+
     // التحقق من وجود كلمة ثابت (const) للتصريحات العامة
     bool is_const = false;
     if (parser.current.type == TOKEN_CONST) {
         is_const = true;
         eat(TOKEN_CONST);
+
+        if (parser_current_is_type_alias_keyword() && parser.next.type == TOKEN_IDENTIFIER) {
+            error_report(parser.current, "تعريف اسم النوع البديل لا يقبل 'ثابت'.");
+            return parse_type_alias_declaration(false);
+        }
     }
 
-    if (is_type_keyword(parser.current.type)) {
+    if (parser_current_starts_type()) {
         Token tok_type = parser.current;
         DataType dt = TYPE_INT;
         char* type_name = NULL;

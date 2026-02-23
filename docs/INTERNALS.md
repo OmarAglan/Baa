@@ -307,7 +307,7 @@ The Parser (`src/parser.c`) builds the AST using Recursive Descent with 1-token 
 
 ```bnf
 Program       ::= Declaration* EOF
-Declaration   ::= FuncDecl | GlobalVarDecl | GlobalArrayDecl | EnumDecl | StructDecl | UnionDecl
+Declaration   ::= FuncDecl | GlobalVarDecl | GlobalArrayDecl | EnumDecl | StructDecl | UnionDecl | TypeAliasDecl
 
 FuncDecl      ::= Type ID "(" ParamList ")" Block
                 | Type ID "(" ParamList ")" "."    // Prototype (v0.2.5+)
@@ -316,13 +316,15 @@ GlobalArrayDecl ::= ConstMod? "صحيح" ID "[" INT "]" ArrayInit? "."   // v0.3
 EnumDecl      ::= "تعداد" ID "{" EnumMembers? "}"                    // v0.3.4+
 StructDecl    ::= "هيكل" ID "{" FieldDecl* "}"                      // v0.3.4+
 UnionDecl     ::= "اتحاد" ID "{" FieldDecl* "}"                     // v0.3.4.5+
+TypeAliasDecl ::= "نوع" ID "=" TypeSpec "."                         // v0.3.6.5+
 
 ConstMod      ::= "ثابت"                           // NEW in v0.2.7
-TypeSpec      ::= Type | EnumType | StructType | UnionType
+TypeSpec      ::= Type | EnumType | StructType | UnionType | AliasType
 Type          ::= "صحيح" | "نص" | "منطقي"          // Updated in v0.2.9
 EnumType      ::= "تعداد" ID
 StructType    ::= "هيكل" ID
 UnionType     ::= "اتحاد" ID
+AliasType     ::= ID                                    // Resolved via parser alias registry
 
 Block         ::= "{" Statement* "}"
 Statement     ::= VarDecl | ArrayDecl | Assign | ArrayAssign | MemberAssign
@@ -392,6 +394,11 @@ The parser uses `synchronize()` to recover from errors.
 4. Parser continues parsing `صحيح ص = ٢٠.`.
 5. At the end, compiler exits with status 1 if any errors were found.
 
+**Type alias parsing note (v0.3.6.5):**
+
+- `نوع` is handled as a **contextual keyword** in parser declarations.
+- This preserves existing identifier/member usages like `س:نوع` while still supporting `نوع اسم = ...` at top-level.
+
 ---
 
 ## 4. Abstract Syntax Tree
@@ -402,7 +409,7 @@ The AST uses a tagged union structure for type-safe node representation.
 
 | Category | Node Types |
 |----------|------------|
-| **Structure** | `NODE_PROGRAM`, `NODE_FUNC_DEF`, `NODE_BLOCK` |
+| **Structure** | `NODE_PROGRAM`, `NODE_FUNC_DEF`, `NODE_BLOCK`, `NODE_TYPE_ALIAS` |
 | **Variables** | `NODE_VAR_DECL`, `NODE_ASSIGN`, `NODE_VAR_REF` |
 | **Array Decls** | `NODE_ARRAY_DECL`, `NODE_ARRAY_ACCESS`, `NODE_ARRAY_ASSIGN` |
 | **Control Flow** | `NODE_IF`, `NODE_WHILE`, `NODE_FOR`, `NODE_RETURN` |
@@ -437,6 +444,7 @@ The Semantic Analyzer (`src/analysis.c`) performs a static check on the AST befo
 6. **Function Validation**: Checks function prototypes and definitions match.
 7. **Usage Tracking** (v0.2.8+): Tracks variable usage for unused variable warnings.
 8. **Dead Code Detection** (v0.2.8+): Detects unreachable code after `return`/`break`.
+9. **Type Alias Validation** (v0.3.6.5): Registers aliases, validates alias targets, and enforces strict alias/symbol name collision diagnostics.
 
 ### 5.2. Constant Checking (v0.2.7+)
 

@@ -775,6 +775,7 @@ const char* token_type_to_str(BaaTokenType type) {
         case TOKEN_KEYWORD_BOOL: return "منطقي";
         case TOKEN_KEYWORD_CHAR: return "حرف";
         case TOKEN_KEYWORD_FLOAT: return "عشري";
+        case TOKEN_TYPE_ALIAS: return "نوع";
         case TOKEN_CONST: return "ثابت";
         case TOKEN_RETURN: return "إرجع";
         case TOKEN_PRINT: return "اطبع";

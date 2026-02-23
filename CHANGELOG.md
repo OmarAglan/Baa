@@ -8,6 +8,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+### Added
+
+- **Type aliases (`نوع`) (v0.3.6.5)** — global type aliases are now supported with C-like "declare before use" behavior:
+  - Syntax: `نوع <name> = <existing_type>.`
+  - Supported targets in this milestone: existing implemented types (primitive + `تعداد`/`هيكل`/`اتحاد`).
+  - Alias chaining is supported when prior aliases are already declared.
+- **Type-alias diagnostics** — strict collision checks between alias names and symbols/functions, with dedicated semantic errors.
+- **Coverage** — new integration and negative tests for type aliases:
+  - `tests/backend_type_alias_test.baa`
+  - `tests/neg/type_alias_*.baa`
+
+### Changed
+
+- **`نوع` handling is contextual in the parser** — `نوع` can still appear as an identifier/member name in expressions (e.g. `س:نوع`), while being recognized as alias declaration syntax at top-level declarations.
+
 ## [0.3.5.5] - 2026-02-21
 
 ### Added

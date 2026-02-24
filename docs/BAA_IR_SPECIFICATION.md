@@ -1,6 +1,6 @@
 # Baa IR Specification
 
-> **Version:** 0.3.5.5 | [← Compiler Internals](INTERNALS.md) | [API Reference →](API_REFERENCE.md)
+> **Version:** 0.3.6 | [← Compiler Internals](INTERNALS.md) | [API Reference →](API_REFERENCE.md)
 
 This document specifies the Intermediate Representation (IR) for the Baa compiler. The IR uses Arabic naming conventions throughout, creating a culturally authentic yet technically robust design.
 
@@ -189,7 +189,10 @@ Stack allocations create addressable memory:
 |--------|--------|--------|-------------|
 | `and` | `و` | `%r = و <type> %a، %b` | Bitwise AND |
 | `or` | `أو` | `%r = أو <type> %a، %b` | Bitwise OR |
+| `xor` | `أو_حصري` | `%r = أو_حصري <type> %a، %b` | Bitwise XOR |
 | `not` | `نفي` | `%r = نفي <type> %a` | Bitwise NOT |
+| `shl` | `ازاحة_يسار` | `%r = ازاحة_يسار <type> %a، %b` | Shift left |
+| `shr` | `ازاحة_يمين` | `%r = ازاحة_يمين <type> %a، %b` | Shift right (signed/unsigned-aware) |
 
 ### 4.5 Control Flow Instructions
 
@@ -286,6 +289,7 @@ Example:
 | `NODE_FUNC_DEF` | `دالة` declaration |
 | `NODE_CALL_EXPR` | `نداء` instruction |
 | `NODE_RETURN` | `رجوع` instruction |
+| `NODE_SIZEOF` | compile-time immediate `ص٦٤` constant |
 | `NODE_ENUM_DECL` | Compile-time type table (no direct IR) |
 | `NODE_STRUCT_DECL` | Compile-time layout table (no direct IR) |
 | `NODE_UNION_DECL` | Compile-time layout table (no direct IR; all members offset 0) |

@@ -338,9 +338,24 @@ int ir_builder_emit_and(IRBuilder* builder, IRType* type, IRValue* lhs, IRValue*
 int ir_builder_emit_or(IRBuilder* builder, IRType* type, IRValue* lhs, IRValue* rhs);
 
 /**
+ * @brief Emit bitwise XOR: %dest = أو_حصري type lhs, rhs
+ */
+int ir_builder_emit_xor(IRBuilder* builder, IRType* type, IRValue* lhs, IRValue* rhs);
+
+/**
  * @brief Emit bitwise NOT: %dest = نفي type operand
  */
 int ir_builder_emit_not(IRBuilder* builder, IRType* type, IRValue* operand);
+
+/**
+ * @brief Emit shift-left: %dest = ازاحة_يسار type lhs, rhs
+ */
+int ir_builder_emit_shl(IRBuilder* builder, IRType* type, IRValue* lhs, IRValue* rhs);
+
+/**
+ * @brief Emit shift-right: %dest = ازاحة_يمين type lhs, rhs
+ */
+int ir_builder_emit_shr(IRBuilder* builder, IRType* type, IRValue* lhs, IRValue* rhs);
 
 // ============================================================================
 // Control Flow Instructions (عمليات التحكم)

@@ -466,7 +466,10 @@ static void ir_verify_inst(IRVerifyDiag* diag,
         case IR_OP_DIV:
         case IR_OP_MOD:
         case IR_OP_AND:
-        case IR_OP_OR: {
+        case IR_OP_OR:
+        case IR_OP_XOR:
+        case IR_OP_SHL:
+        case IR_OP_SHR: {
             ir_verify_inst_dest_rules(diag, module, func, block, inst, 1);
             ir_verify_inst_operands_present(diag, module, func, block, inst, 2);
 
@@ -478,8 +481,9 @@ static void ir_verify_inst(IRVerifyDiag* diag,
             bool is_float = (inst->type && inst->type->kind == IR_TYPE_F64);
             bool is_int = ir_type_is_int(inst->type);
 
-            // AND/OR/MOD: أعداد صحيحة فقط.
-            if (inst->op == IR_OP_AND || inst->op == IR_OP_OR || inst->op == IR_OP_MOD) {
+            // العمليات البتية/الإزاحة/باقي القسمة: أعداد صحيحة فقط.
+            if (inst->op == IR_OP_AND || inst->op == IR_OP_OR || inst->op == IR_OP_XOR ||
+                inst->op == IR_OP_SHL || inst->op == IR_OP_SHR || inst->op == IR_OP_MOD) {
                 if (!is_int) {
                     ir_report(diag, module, func, block, inst, "تعليمة ثنائية تتوقع نوعاً صحيحاً.");
                     break;

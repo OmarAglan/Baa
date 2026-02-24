@@ -692,6 +692,24 @@ void emit_inst(MachineInst* inst, MachineFunc* func, FILE* out) {
             fprintf(out, "\n");
             break;
 
+        case MACH_SHR:
+            // AT&T: shr $imm|%cl, dst
+            fprintf(out, "    shr%c ", infer_suffix(inst));
+            emit_operand(&inst->src2, out);
+            fprintf(out, ", ");
+            emit_operand(&inst->dst, out);
+            fprintf(out, "\n");
+            break;
+
+        case MACH_SAR:
+            // AT&T: sar $imm|%cl, dst
+            fprintf(out, "    sar%c ", infer_suffix(inst));
+            emit_operand(&inst->src2, out);
+            fprintf(out, ", ");
+            emit_operand(&inst->dst, out);
+            fprintf(out, "\n");
+            break;
+
         case MACH_NEG:
             fprintf(out, "    neg%c ", infer_suffix(inst));
             emit_operand(&inst->dst, out);

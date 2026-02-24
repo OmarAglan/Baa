@@ -391,6 +391,7 @@ static int isel_type_bits(IRType *type);
 static MachineOperand isel_lower_value(ISelCtx *ctx, IRValue *val);
 static MachineOperand isel_extend_to_gpr64(ISelCtx *ctx, MachineOperand src, IRType *src_type);
 static void isel_lower_binop(ISelCtx *ctx, IRInst *inst, MachineOp mop);
+static void isel_lower_shift(ISelCtx *ctx, IRInst *inst, MachineOp mop);
 
 static int isel_block_in_any_loop(ISelCtx *ctx)
 {
@@ -762,6 +763,50 @@ static void isel_lower_div(ISelCtx *ctx, IRInst *inst, bool is_mod)
         mi->ir_reg = inst->dest;
 }
 
+/**
+ * @brief خفض عمليات الإزاحة (shl/shr/sar).
+ *
+ * قيود x86-64:
+ * - عدد الإزاحة إما قيمة فورية 8-بت أو السجل CL.
+ */
+static void isel_lower_shift(ISelCtx *ctx, IRInst *inst, MachineOp mop)
+{
+    if (!inst || inst->operand_count < 2)
+        return;
+
+    int bits = isel_type_bits(inst->type);
+    MachineOperand dst = mach_op_vreg(inst->dest, bits);
+    MachineOperand lhs = isel_lower_value(ctx, inst->operands[0]);
+    MachineOperand rhs = isel_lower_value(ctx, inst->operands[1]);
+
+    // نقل القيمة المزاحة إلى الوجهة
+    isel_emit(ctx, MACH_MOV, dst, lhs, mach_op_none());
+
+    MachineOperand sh = rhs;
+    if (rhs.kind == MACH_OP_IMM)
+    {
+        // x86 يستخدم imm8 لعدد الإزاحة
+        sh = rhs;
+        sh.size_bits = 8;
+    }
+    else
+    {
+        // عدد الإزاحة غير الفوري يجب أن يكون في CL (RCX منخفض 8-بت)
+        // vreg -6 محجوز لمطابقة RCX في مرحلة regalloc.
+        MachineOperand rcx = mach_op_vreg(-6, 64);
+        MachineOperand rhs64 = rhs;
+        if (rhs64.kind == MACH_OP_VREG || rhs64.kind == MACH_OP_MEM) {
+            rhs64.size_bits = 64;
+        }
+        isel_emit(ctx, MACH_MOV, rcx, rhs64, mach_op_none());
+        sh = mach_op_vreg(-6, 8); // %cl
+    }
+
+    MachineInst *mi = isel_emit(ctx, mop, dst, dst, sh);
+    if (mi)
+        mi->ir_reg = inst->dest;
+}
+
 static int isel_irtype_is_f64(IRType *t)
 {
     return t && t->kind == IR_TYPE_F64;
@@ -772,6 +817,12 @@ static int isel_irtype_is_signed_int(IRType *t)
     if (!t) return 0;
     return t->kind == IR_TYPE_I8 || t->kind == IR_TYPE_I16 || t->kind == IR_TYPE_I32 || t->kind == IR_TYPE_I64 ||
            t->kind == IR_TYPE_CHAR || t->kind == IR_TYPE_I1;
+}
+
+static int isel_irtype_is_unsigned_int(IRType *t)
+{
+    if (!t) return 0;
+    return t->kind == IR_TYPE_U8 || t->kind == IR_TYPE_U16 || t->kind == IR_TYPE_U32 || t->kind == IR_TYPE_U64;
 }
 
 static MachineOperand isel_materialize_imm_to_gpr64(ISelCtx *ctx, MachineOperand op)
@@ -1205,8 +1256,8 @@ static void isel_lower_logical(ISelCtx *ctx, IRInst *inst)
     if (!inst)
         return;
 
-    // العمليات المنطقية تستخدم ٦٤ بت دائماً لتتوافق مع andq/orq/notq في الإصدار
-    int bits = 64;
+    // العمليات البتية تستخدم عرض النوع الناتج.
+    int bits = isel_type_bits(inst->type);
     MachineOperand dst = mach_op_vreg(inst->dest, bits);
 
     if (inst->op == IR_OP_NOT)
@@ -1216,8 +1267,8 @@ static void isel_lower_logical(ISelCtx *ctx, IRInst *inst)
             return;
         MachineOperand src = isel_lower_value(ctx, inst->operands[0]);
         // ضمان ٦٤ بت للمعامل (بعد التوسيع بالأصفار من المقارنات)
-        if (src.kind == MACH_OP_VREG && src.size_bits < 64)
-            src.size_bits = 64;
+        if (src.kind == MACH_OP_VREG && src.size_bits < bits)
+            src.size_bits = bits;
         isel_emit(ctx, MACH_MOV, dst, src, mach_op_none());
         MachineInst *mi = isel_emit(ctx, MACH_NOT, dst, dst, mach_op_none());
         if (mi)
@@ -1230,12 +1281,14 @@ static void isel_lower_logical(ISelCtx *ctx, IRInst *inst)
             return;
         MachineOperand lhs = isel_lower_value(ctx, inst->operands[0]);
         MachineOperand rhs = isel_lower_value(ctx, inst->operands[1]);
-        // ضمان ٦٤ بت للمعاملات (بعد التوسيع بالأصفار من المقارنات)
-        if (lhs.kind == MACH_OP_VREG && lhs.size_bits < 64)
-            lhs.size_bits = 64;
-        if (rhs.kind == MACH_OP_VREG && rhs.size_bits < 64)
-            rhs.size_bits = 64;
-        MachineOp mop = (inst->op == IR_OP_AND) ? MACH_AND : MACH_OR;
+        // ضمان عرض النوع للمعاملات.
+        if (lhs.kind == MACH_OP_VREG && lhs.size_bits < bits)
+            lhs.size_bits = bits;
+        if (rhs.kind == MACH_OP_VREG && rhs.size_bits < bits)
+            rhs.size_bits = bits;
+        MachineOp mop = MACH_OR;
+        if (inst->op == IR_OP_AND) mop = MACH_AND;
+        else if (inst->op == IR_OP_XOR) mop = MACH_XOR;
         isel_emit(ctx, MACH_MOV, dst, lhs, mach_op_none());
         MachineInst *mi = isel_emit(ctx, mop, dst, dst, rhs);
         if (mi)
@@ -1895,6 +1948,13 @@ static void isel_lower_inst(ISelCtx *ctx, IRInst *inst)
         if (isel_irtype_is_f64(inst->type)) isel_lower_fbinop(ctx, inst, MACH_MULSD);
         else isel_lower_mul_strength_reduce(ctx, inst);
         break;
+    case IR_OP_SHL:
+        isel_lower_shift(ctx, inst, MACH_SHL);
+        break;
+    case IR_OP_SHR:
+        isel_lower_shift(ctx, inst,
+                         isel_irtype_is_unsigned_int(inst->type) ? MACH_SHR : MACH_SAR);
+        break;
     case IR_OP_DIV:
         if (isel_irtype_is_f64(inst->type)) isel_lower_fbinop(ctx, inst, MACH_DIVSD);
         else isel_lower_div(ctx, inst, false);
@@ -1929,6 +1989,7 @@ static void isel_lower_inst(ISelCtx *ctx, IRInst *inst)
     // عمليات منطقية
     case IR_OP_AND:
     case IR_OP_OR:
+    case IR_OP_XOR:
     case IR_OP_NOT:
         isel_lower_logical(ctx, inst);
         break;
@@ -2330,6 +2391,10 @@ const char *mach_op_to_string(MachineOp op)
         return "imul";
     case MACH_SHL:
         return "shl";
+    case MACH_SHR:
+        return "shr";
+    case MACH_SAR:
+        return "sar";
     case MACH_IDIV:
         return "idiv";
     case MACH_DIV:
@@ -2442,6 +2507,10 @@ void mach_operand_print(MachineOperand *op, FILE *out)
         if (op->data.vreg == -2)
         {
             fprintf(out, "%%ret");
+        }
+        else if (op->data.vreg == -6)
+        {
+            fprintf(out, "%%rcx");
         }
         else if (op->data.vreg <= -10 && op->data.vreg >= -13)
         {

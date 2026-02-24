@@ -346,11 +346,38 @@ int ir_builder_emit_or(IRBuilder* builder, IRType* type, IRValue* lhs, IRValue* 
     return dest;
 }
 
+int ir_builder_emit_xor(IRBuilder* builder, IRType* type, IRValue* lhs, IRValue* rhs) {
+    if (!builder || !builder->current_func) return -1;
+
+    int dest = ir_builder_alloc_reg(builder);
+    IRInst* inst = ir_inst_binary(IR_OP_XOR, type, dest, lhs, rhs);
+    emit_inst(builder, inst);
+    return dest;
+}
+
 int ir_builder_emit_not(IRBuilder* builder, IRType* type, IRValue* operand) {
     if (!builder || !builder->current_func) return -1;
     
     int dest = ir_builder_alloc_reg(builder);
     IRInst* inst = ir_inst_unary(IR_OP_NOT, type, dest, operand);
+    emit_inst(builder, inst);
+    return dest;
+}
+
+int ir_builder_emit_shl(IRBuilder* builder, IRType* type, IRValue* lhs, IRValue* rhs) {
+    if (!builder || !builder->current_func) return -1;
+
+    int dest = ir_builder_alloc_reg(builder);
+    IRInst* inst = ir_inst_binary(IR_OP_SHL, type, dest, lhs, rhs);
+    emit_inst(builder, inst);
+    return dest;
+}
+
+int ir_builder_emit_shr(IRBuilder* builder, IRType* type, IRValue* lhs, IRValue* rhs) {
+    if (!builder || !builder->current_func) return -1;
+
+    int dest = ir_builder_alloc_reg(builder);
+    IRInst* inst = ir_inst_binary(IR_OP_SHR, type, dest, lhs, rhs);
     emit_inst(builder, inst);
     return dest;
 }

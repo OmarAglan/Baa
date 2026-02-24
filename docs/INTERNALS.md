@@ -1,6 +1,6 @@
 # Baa Compiler Internals
 
-> **Version:** 0.3.5.5 | [← Language Spec](LANGUAGE.md) | [API Reference →](API_REFERENCE.md)
+> **Version:** 0.3.6 | [← Language Spec](LANGUAGE.md) | [API Reference →](API_REFERENCE.md)
 
 **Target Architecture:** x86-64 (AMD64)
 **Targets:** Windows x64 (COFF/PE) + Linux x86-64 (ELF)
@@ -288,9 +288,9 @@ When `#تضمين "file"` is encountered:
 ### 2.4. Token Types
 
 ```
-Keywords:    صحيح, نص, منطقي, ثابت, إذا, وإلا, طالما, لكل, اختر, حالة, افتراضي, اطبع, اقرأ, إرجع, توقف, استمر
+Keywords:    صحيح, ص٨, ص١٦, ص٣٢, ص٦٤, ط٨, ط١٦, ط٣٢, ط٦٤, عشري, حرف, نص, منطقي, عدم, حجم, نوع, ثابت, إذا, وإلا, طالما, لكل, اختر, حالة, افتراضي, اطبع, اقرأ, إرجع, توقف, استمر, تعداد, هيكل, اتحاد
 Literals:    INTEGER, STRING, CHAR, TRUE, FALSE
-Operators:   + - * / % ++ -- ! && ||
+Operators:   + - * / % ++ -- ! ~ && || & | ^ << >>
 Comparison:  == != < > <= >=
 Delimiters:  ( ) { } [ ] , . : ؛
 Special:     IDENTIFIER, EOF
@@ -321,7 +321,9 @@ TypeAliasDecl ::= "نوع" ID "=" TypeSpec "."                         // v0.3.6
 
 ConstMod      ::= "ثابت"                           // NEW in v0.2.7
 TypeSpec      ::= Type | EnumType | StructType | UnionType | AliasType
-Type          ::= "صحيح" | "نص" | "منطقي"          // Updated in v0.2.9
+Type          ::= "صحيح" | "ص٨" | "ص١٦" | "ص٣٢" | "ص٦٤"
+                | "ط٨" | "ط١٦" | "ط٣٢" | "ط٦٤"
+                | "عشري" | "حرف" | "نص" | "منطقي" | "عدم"
 EnumType      ::= "تعداد" ID
 StructType    ::= "هيكل" ID
 UnionType     ::= "اتحاد" ID
@@ -355,7 +357,7 @@ While         ::= "طالما" "(" Expr ")" Block
 For           ::= "لكل" "(" Init? "؛" Expr? "؛" Update? ")" Block
 Break         ::= "توقف" "."
 Continue      ::= "استمر" "."
-Return        ::= "إرجع" Expr "."
+Return        ::= "إرجع" Expr? "."
 Print         ::= "اطبع" Expr "."
 Read          ::= "اقرأ" ID "."
 ```
@@ -366,14 +368,18 @@ Implemented via precedence climbing:
 
 ```
 Logical OR   ::= Logical AND { "||" Logical AND }
-Logical AND  ::= Equality { "&&" Equality }
+Logical AND  ::= Bitwise OR { "&&" Bitwise OR }
+Bitwise OR   ::= Bitwise XOR { "|" Bitwise XOR }
+Bitwise XOR  ::= Bitwise AND { "^" Bitwise AND }
+Bitwise AND  ::= Equality { "&" Equality }
 Equality     ::= Relational { ("==" | "!=") Relational }
-Relational   ::= Additive { ("<" | ">" | "<=" | ">=") Additive }
+Relational   ::= Shift { ("<" | ">" | "<=" | ">=") Shift }
+Shift        ::= Additive { ("<<" | ">>") Additive }
 Additive     ::= Multiplicative { ("+" | "-") Multiplicative }
 Multiplicative ::= Unary { ("*" | "/" | "%") Unary }
-Unary        ::= ("!" | "-" | "++" | "--") Unary | Postfix
+Unary        ::= ("!" | "~" | "-" | "++" | "--") Unary | Postfix
 Postfix      ::= Primary { "++" | "--" }
-Primary      ::= INT | STRING | CHAR | ID | ArrayAccess | Call | "(" Expr ")"
+Primary      ::= INT | STRING | CHAR | ID | ArrayAccess | Call | "حجم" "(" (TypeSpec | Expr) ")" | "(" Expr ")"
 ```
 
 ---
@@ -523,6 +529,16 @@ The check is constant-aware: if the source expression is a compile-time constant
 
 The analyzer emits `WARN_SIGNED_UNSIGNED_COMPARE` for comparison operators (`==`, `!=`, `<`, `>`, `<=`, `>=`) when the integer-promotion result mixes signed and unsigned domains.
 
+#### Low-Level Semantic Checks (v0.3.6)
+
+- Bitwise operators (`&`, `|`, `^`, `~`, `<<`, `>>`) are restricted to integer-like types.
+- Shift-count literals are range-checked (`0..63`) during semantic analysis.
+- `NODE_SIZEOF` is resolved to a compile-time integer value when size information is known.
+- `عدم` (void) rules are enforced:
+  - no variable declarations of type `عدم` (local/global),
+  - no function parameters of type `عدم`,
+  - return shape must match function type (`إرجع.` only in `عدم` functions, value required in non-void).
+
 ### 5.4. Isolation Note
 
 Since v0.2.4, `analysis.c` maintains its own **symbol table** for isolation. This ensures validation logic is independent from the backend pipeline.
@@ -629,7 +645,10 @@ IRInst
 | **Comparison** | `IR_OP_CMP` | قارن | Compare with predicate |
 | **Logical** | `IR_OP_AND` | و | Bitwise AND |
 | | `IR_OP_OR` | أو | Bitwise OR |
+| | `IR_OP_XOR` | أو_حصري | Bitwise XOR |
 | | `IR_OP_NOT` | نفي | Bitwise NOT |
+| | `IR_OP_SHL` | ازاحة_يسار | Shift left |
+| | `IR_OP_SHR` | ازاحة_يمين | Shift right (signed/unsigned-aware) |
 | **Control** | `IR_OP_BR` | قفز | Unconditional branch |
 | | `IR_OP_BR_COND` | قفز_شرط | Conditional branch |
 | | `IR_OP_RET` | رجوع | Return |

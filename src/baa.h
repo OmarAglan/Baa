@@ -1,7 +1,7 @@
 /**
  * @file baa.h
  * @brief ملف الرأس الرئيسي الذي يعرف هياكل البيانات لمحوسب لغة "باء" (Baa Compiler).
- * @version 0.3.5.5
+ * @version 0.3.6
  */
 
 #ifndef BAA_H
@@ -15,7 +15,7 @@
 #include <stdarg.h>
 
 // معلومات الإصدار
-#define BAA_VERSION "0.3.5.5"
+#define BAA_VERSION "0.3.6"
 #define BAA_BUILD_DATE __DATE__
 
 // ============================================================================
@@ -48,6 +48,8 @@ typedef enum {
     TOKEN_KEYWORD_BOOL, // منطقي
     TOKEN_KEYWORD_CHAR, // حرف
     TOKEN_KEYWORD_FLOAT, // عشري
+    TOKEN_KEYWORD_VOID, // عدم
+    TOKEN_SIZEOF,       // حجم
     TOKEN_TYPE_ALIAS,   // نوع
     TOKEN_CONST,        // ثابت
     TOKEN_RETURN,       // إرجع
@@ -96,6 +98,12 @@ typedef enum {
     TOKEN_AND,          // &&
     TOKEN_OR,           // ||
     TOKEN_NOT,          // !
+    TOKEN_AMP,          // &
+    TOKEN_PIPE,         // |
+    TOKEN_CARET,        // ^
+    TOKEN_TILDE,        // ~
+    TOKEN_SHL,          // <<
+    TOKEN_SHR,          // >>
     
     // التجميع (Grouping)
     TOKEN_LPAREN,       // (
@@ -334,6 +342,7 @@ typedef enum {
     NODE_STRING,        // قيمة نصية
     NODE_CHAR,          // قيمة حرفية
     NODE_BOOL,          // قيمة منطقية (صواب/خطأ)
+    NODE_SIZEOF,        // حجم(type) أو حجم(expr)
     NODE_VAR_REF,       // إشارة لمتغير
     NODE_CALL_EXPR      // تعبير استدعاء دالة
 } NodeType;
@@ -358,6 +367,7 @@ typedef enum {
     TYPE_BOOL,          // منطقي (bool - stored as byte)
     TYPE_CHAR,          // حرف (UTF-8 sequence)
     TYPE_FLOAT,         // عشري (float64)
+    TYPE_VOID,          // عدم (void)
     TYPE_ENUM,          // تعداد (يُخزن كـ int64)
     TYPE_STRUCT,        // هيكل (ليس قيمة من الدرجة الأولى)
     TYPE_UNION          // اتحاد (ليس قيمة من الدرجة الأولى)
@@ -370,6 +380,8 @@ typedef enum {
 typedef enum { 
     // عمليات حسابية
     OP_ADD, OP_SUB, OP_MUL, OP_DIV, OP_MOD,
+    // عمليات بتية (Bitwise)
+    OP_BIT_AND, OP_BIT_OR, OP_BIT_XOR, OP_SHL, OP_SHR,
     // عمليات مقارنة
     OP_EQ, OP_NEQ, OP_LT, OP_GT, OP_LTE, OP_GTE,
     // عمليات منطقية
@@ -383,6 +395,7 @@ typedef enum {
 typedef enum {
     UOP_NEG, // السالب (-)
     UOP_NOT, // النفي (!)
+    UOP_BIT_NOT, // النفي البتي (~)
     UOP_INC, // الزيادة (++)
     UOP_DEC  // النقصان (--)
 } UnaryOpType;
@@ -558,6 +571,14 @@ typedef struct Node {
         struct { char* value; int id; } string_lit;
         struct { int value; } char_lit;
         struct { bool value; } bool_lit;             // قيمة منطقية
+        struct {
+            bool has_type_form;    // true => حجم(type)، false => حجم(expr)
+            DataType target_type;  // عند has_type_form=true
+            char* target_type_name; // اسم النوع عند enum/struct/union
+            struct Node* expression; // عند has_type_form=false
+            int64_t size_bytes;    // قيمة الحجم المحسوبة دلالياً
+            bool size_known;       // هل تم حساب الحجم؟
+        } sizeof_expr;
 
         struct { char* name; } var_ref;
         struct { struct Node* left; struct Node* right; OpType op; } bin_op;

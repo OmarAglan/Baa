@@ -204,6 +204,7 @@ static IRType* ir_type_from_datatype(IRModule* module, DataType t) {
         case TYPE_STRING: return get_char_ptr_type(module);
         case TYPE_CHAR:   return IR_TYPE_CHAR_T;
         case TYPE_FLOAT:  return IR_TYPE_F64_T;
+        case TYPE_VOID:   return IR_TYPE_VOID_T;
         case TYPE_ENUM:   return IR_TYPE_I64_T;
         case TYPE_INT:
         default:          return IR_TYPE_I64_T;
@@ -622,6 +623,11 @@ static IROp ir_binop_to_irop(OpType op) {
         case OP_MUL: return IR_OP_MUL;
         case OP_DIV: return IR_OP_DIV;
         case OP_MOD: return IR_OP_MOD;
+        case OP_BIT_AND: return IR_OP_AND;
+        case OP_BIT_OR:  return IR_OP_OR;
+        case OP_BIT_XOR: return IR_OP_XOR;
+        case OP_SHL:     return IR_OP_SHL;
+        case OP_SHR:     return IR_OP_SHR;
         default:     return IR_OP_NOP;
     }
 }
@@ -1004,6 +1010,54 @@ IRValue* lower_expr(IRLowerCtx* ctx, Node* expr) {
                 return ir_value_reg(dest, type);
             }
 
+            // Bitwise / Shift
+            if (op == OP_BIT_AND || op == OP_BIT_OR || op == OP_BIT_XOR ||
+                op == OP_SHL || op == OP_SHR) {
+                IRValue* lhs0 = lower_expr(ctx, expr->data.bin_op.left);
+                IRValue* rhs0 = lower_expr(ctx, expr->data.bin_op.right);
+
+                DataType lt = expr->data.bin_op.left ? expr->data.bin_op.left->inferred_type : TYPE_INT;
+                DataType rt = expr->data.bin_op.right ? expr->data.bin_op.right->inferred_type : TYPE_INT;
+
+                IRType* type = NULL;
+                if (op == OP_SHL || op == OP_SHR) {
+                    DataType left_promoted = lower_int_promote_datatype(lt);
+                    type = ir_type_from_datatype(ctx->builder ? ctx->builder->module : NULL, left_promoted);
+                } else {
+                    type = lower_common_int_type(ctx->builder ? ctx->builder->module : NULL, lt, rt);
+                }
+                if (!type) {
+                    type = IR_TYPE_I64_T;
+                }
+
+                IRValue* lhs = cast_to(ctx, lhs0, type);
+                IRValue* rhs = cast_to(ctx, rhs0, type);
+                int dest = -1;
+
+                switch (op) {
+                    case OP_BIT_AND:
+                        dest = ir_builder_emit_and(ctx->builder, type, lhs, rhs);
+                        break;
+                    case OP_BIT_OR:
+                        dest = ir_builder_emit_or(ctx->builder, type, lhs, rhs);
+                        break;
+                    case OP_BIT_XOR:
+                        dest = ir_builder_emit_xor(ctx->builder, type, lhs, rhs);
+                        break;
+                    case OP_SHL:
+                        dest = ir_builder_emit_shl(ctx->builder, type, lhs, rhs);
+                        break;
+                    case OP_SHR:
+                        dest = ir_builder_emit_shr(ctx->builder, type, lhs, rhs);
+                        break;
+                    default:
+                        ir_lower_report_error(ctx, expr, "عملية بتية غير مدعومة.");
+                        return ir_builder_const_i64(0);
+                }
+
+                return ir_value_reg(dest, type);
+            }
+
             // Comparison
             if (op == OP_EQ || op == OP_NEQ || op == OP_LT || op == OP_GT || op == OP_LTE || op == OP_GTE) {
                 IRValue* lhs0 = lower_expr(ctx, expr->data.bin_op.left);
@@ -1080,10 +1134,23 @@ IRValue* lower_expr(IRLowerCtx* ctx, Node* expr) {
             }
 
             if (op == UOP_NOT) {
-                // Logical NOT: ensure operand is i1 then emit نفي.
+                // نفي منطقي: !(x) == (x == 0)
                 IRValue* operand = lower_to_bool(ctx, lower_expr(ctx, expr->data.unary_op.operand));
-                int dest = ir_builder_emit_not(ctx->builder, IR_TYPE_I1_T, operand);
+                IRValue* zero = ir_value_const_int(0, IR_TYPE_I1_T);
+                int dest = ir_builder_emit_cmp_eq(ctx->builder, operand, zero);
                 return ir_value_reg(dest, IR_TYPE_I1_T);
+            }
+
+            if (op == UOP_BIT_NOT) {
+                IRValue* operand0 = lower_expr(ctx, expr->data.unary_op.operand);
+                DataType dt = expr->inferred_type;
+                IRType* t = ir_type_from_datatype(ctx->builder ? ctx->builder->module : NULL, dt);
+                if (!t || t->kind == IR_TYPE_VOID) {
+                    t = IR_TYPE_I64_T;
+                }
+                IRValue* operand = cast_to(ctx, operand0, t);
+                int dest = ir_builder_emit_not(ctx->builder, t, operand);
+                return ir_value_reg(dest, t);
             }
 
             // ++ / -- in expression form will be addressed later (statement lowering / lvalues).
@@ -1111,6 +1178,13 @@ IRValue* lower_expr(IRLowerCtx* ctx, Node* expr) {
 
         case NODE_STRING:
             return ir_builder_const_baa_string(ctx->builder, expr->data.string_lit.value);
+
+        case NODE_SIZEOF:
+            if (!expr->data.sizeof_expr.size_known) {
+                ir_lower_report_error(ctx, expr, "فشل حساب 'حجم' أثناء التحليل الدلالي.");
+                return ir_value_const_int(0, IR_TYPE_I64_T);
+            }
+            return ir_value_const_int(expr->data.sizeof_expr.size_bytes, IR_TYPE_I64_T);
 
         case NODE_MEMBER_ACCESS: {
             // ملاحظة: التحليل الدلالي يملأ معلومات الوصول (root/offset/type).
@@ -2507,6 +2581,19 @@ IRModule* ir_lower_program(Node* program, const char* module_name) {
             // Lower function body (NODE_BLOCK)
             if (decl->data.func_def.body) {
                 lower_stmt(&ctx, decl->data.func_def.body);
+            }
+
+            // إذا وصلنا لنهاية الكتلة الحالية بدون منهي، نُغلق الدالة بشكل صريح.
+            if (!ir_builder_is_block_terminated(builder)) {
+                if (func->ret_type && func->ret_type->kind == IR_TYPE_VOID) {
+                    ir_builder_emit_ret_void(builder);
+                } else {
+                    ir_lower_report_error(&ctx, decl,
+                                          "الدالة '%s' قد تصل إلى النهاية بدون قيمة إرجاع.",
+                                          decl->data.func_def.name ? decl->data.func_def.name : "???");
+                    IRType* rt = func->ret_type ? func->ret_type : IR_TYPE_I64_T;
+                    ir_builder_emit_ret(builder, ir_value_const_int(0, rt));
+                }
             }
 
             // خروج نطاق الدالة

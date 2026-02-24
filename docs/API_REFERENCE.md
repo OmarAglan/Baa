@@ -1,6 +1,6 @@
 # Baa Internal API Reference
 
-> **Version:** 0.3.5.5 | [← Compiler Internals](INTERNALS.md) | [IR Specification →](BAA_IR_SPECIFICATION.md)
+> **Version:** 0.3.6 | [← Compiler Internals](INTERNALS.md) | [IR Specification →](BAA_IR_SPECIFICATION.md)
 
 This document details the C functions, enumerations, and structures defined in `src/baa.h`, `src/ir.h`, `src/ir_arena.h`, `src/ir_mutate.h`, `src/ir_defuse.h`, `src/ir_clone.h`, `src/ir_text.h`, `src/ir_loop.h`, `src/ir_licm.h`, `src/ir_unroll.h`, `src/ir_inline.h`, `src/ir_builder.h`, `src/ir_lower.h`, `src/ir_analysis.h`, `src/ir_pass.h`, `src/ir_mem2reg.h`, `src/ir_outssa.h`, `src/ir_verify_ssa.h`, `src/ir_verify_ir.h`, `src/ir_canon.h`, `src/ir_cfg_simplify.h`, `src/ir_dce.h`, `src/ir_copyprop.h`, `src/ir_cse.h`, `src/ir_optimizer.h`, `src/target.h`, `src/isel.h`, `src/regalloc.h`, and `src/emit.h`.
 
@@ -106,6 +106,7 @@ Entry point for the parsing phase.
 - Initializes internal `Parser` state with 2-token lookahead (current + next)
 - Parses list of declarations (global variables or functions)
 - Parses global type aliases: `نوع <name> = <type>.` (v0.3.6.5)
+- Parses low-level expressions/operators: `&`, `|`, `^`, `~`, `<<`, `>>`, and `حجم(type|expr)` (v0.3.6)
 - Implements operator precedence climbing for expressions
 - Builds linked-list AST structure
 
@@ -146,6 +147,7 @@ Runs the semantic pass on the AST.
 - **Constant Checking** (v0.2.7+): Prevents reassignment of `ثابت` variables.
 - **Control Flow Validation**: Ensures `break`/`continue` are only used within loops/switches.
 - **Type Alias Validation** (v0.3.6.5): Registers/validates `نوع` aliases and enforces strict collision checks with symbols/functions.
+- **Low-Level Validation** (v0.3.6): integer-only bitwise checks, `حجم(...)` compile-time sizing checks, and `عدم` return/declaration constraints.
 - Traverses the entire tree.
 - Reports errors using `error_report`.
 - Does not modify the AST, only validates it.
@@ -1239,6 +1241,36 @@ Emits: `%dest = قسم type lhs, rhs`
 
 ---
 
+#### `ir_builder_emit_and` / `ir_builder_emit_or` / `ir_builder_emit_xor`
+
+```c
+int ir_builder_emit_and(IRBuilder* builder, IRType* type, IRValue* lhs, IRValue* rhs)
+int ir_builder_emit_or(IRBuilder* builder, IRType* type, IRValue* lhs, IRValue* rhs)
+int ir_builder_emit_xor(IRBuilder* builder, IRType* type, IRValue* lhs, IRValue* rhs)
+```
+
+Emit bitwise binary operations:
+- `%dest = و type lhs, rhs`
+- `%dest = أو type lhs, rhs`
+- `%dest = أو_حصري type lhs, rhs`
+
+---
+
+#### `ir_builder_emit_not` / `ir_builder_emit_shl` / `ir_builder_emit_shr`
+
+```c
+int ir_builder_emit_not(IRBuilder* builder, IRType* type, IRValue* operand)
+int ir_builder_emit_shl(IRBuilder* builder, IRType* type, IRValue* lhs, IRValue* rhs)
+int ir_builder_emit_shr(IRBuilder* builder, IRType* type, IRValue* lhs, IRValue* rhs)
+```
+
+Emit unary/shift low-level operations:
+- `%dest = نفي type operand`
+- `%dest = ازاحة_يسار type lhs, rhs`
+- `%dest = ازاحة_يمين type lhs, rhs`
+
+---
+
 ### 5.6. Emit Functions - Memory
 
 #### `ir_builder_emit_alloca`
@@ -1540,8 +1572,9 @@ Currently supports:
 
 - `NODE_INT` → immediate constant
 - `NODE_VAR_REF` → `حمل` (load)
-- `NODE_BIN_OP` → arithmetic (`جمع`/`طرح`/`ضرب`/`قسم`/`باقي`), comparisons (`قارن`), and boolean ops (`و`/`أو`)
-- `NODE_UNARY_OP` → `سالب` and boolean `نفي`
+- `NODE_BIN_OP` → arithmetic (`جمع`/`طرح`/`ضرب`/`قسم`/`باقي`), comparisons (`قارن`), and bitwise/shift ops (`و`/`أو`/`أو_حصري`/`ازاحة_يسار`/`ازاحة_يمين`)
+- `NODE_UNARY_OP` → `سالب`, bitwise `نفي` (`~`), and logical-not lowering via compare-to-zero
+- `NODE_SIZEOF` → compile-time constant size (`ص٦٤`)
 - `NODE_CALL_EXPR` → `نداء`
 
 ---

@@ -1,6 +1,6 @@
 # Baa Language Specification
 
-> **Version:** 0.3.5.5 | [← User Guide](USER_GUIDE.md) | [Compiler Internals →](INTERNALS.md)
+> **Version:** 0.3.6 | [← User Guide](USER_GUIDE.md) | [Compiler Internals →](INTERNALS.md)
 
 Baa (باء) is a compiled systems programming language using Arabic syntax. It compiles to native code via Assembly + host GCC/Clang on Windows and Linux.
 
@@ -162,6 +162,13 @@ Baa is statically typed. All variables must be declared with their type.
 
 - `حرف` يمثل **محرف UTF-8 واحد** (1..4 بايت) مثل `'أ'`.
 - `نص` يمثل **سلسلة محارف** من نوع `حرف[]` منتهية بمحرف صفر (`'\0'`).
+- تسلسلات الهروب المدعومة في النصوص/المحارف (v0.3.6):
+  - `\س` سطر جديد (LF)
+  - `\ت` جدولة (TAB)
+  - `\٠` محرف صفر
+  - `\\` شرطة مائلة عكسية
+  - `\"` اقتباس مزدوج داخل النص
+  - `\'` اقتباس مفرد داخل المحرف
 - فهرسة النص تُعيد `حرف`:
 
 ```baa
@@ -835,18 +842,48 @@ Multi-way branching based on integer or character values.
 }
 ```
 
-### 8.4. Operator Precedence
+### 8.4. Bitwise & Shift (v0.3.6)
+
+| Operator | Description | Example |
+|----------|-------------|---------|
+| `&` | Bitwise AND | `٥ & ٣` → `١` |
+| `\|` | Bitwise OR | `٥ \| ٣` → `٧` |
+| `^` | Bitwise XOR | `٥ ^ ٣` → `٦` |
+| `~` | Bitwise NOT | `~٥` → `-٦` |
+| `<<` | Shift left | `١ << ٤` → `١٦` |
+| `>>` | Shift right | `١٦ >> ٢` → `٤` |
+
+**ملاحظات:**
+- هذه العمليات تعمل على الأنواع الصحيحة فقط.
+- الإزاحة اليمنى تعتمد على نوع المعامل الأيسر (حسابية للموقّع، منطقية لغير الموقّع).
+
+### 8.5. Size Query Operator `حجم` (v0.3.6)
+
+`حجم(...)` يعيد حجم النوع/التعبير بالبايت كثابت وقت ترجمة.
+
+```baa
+صحيح أ = حجم(صحيح).
+صحيح ب = حجم(حرف).
+صحيح ج = حجم(قائمة).
+```
+
+### 8.6. Operator Precedence
 
 From highest to lowest:
 
 1. `()` — Parentheses
-2. `!`, `-` (unary), `++`, `--` — Unary operators
-3. `*`, `/`, `%` — Multiplication, Division, Modulo
-4. `+`, `-` — Addition, Subtraction
-5. `<`, `>`, `<=`, `>=` — Relational
-6. `==`, `!=` — Equality
-7. `&&` — Logical AND
-8. `||` — Logical OR
+2. `حجم(...)` — Size query
+3. `!`, `~`, `-` (unary), `++`, `--` — Unary operators
+4. `*`, `/`, `%` — Multiplication, Division, Modulo
+5. `+`, `-` — Addition, Subtraction
+6. `<<`, `>>` — Bit shifts
+7. `<`, `>`, `<=`, `>=` — Relational
+8. `==`, `!=` — Equality
+9. `&` — Bitwise AND
+10. `^` — Bitwise XOR
+11. `|` — Bitwise OR
+12. `&&` — Logical AND
+13. `||` — Logical OR
 
 **Note:** Use parentheses `()` to override precedence when needed.
 

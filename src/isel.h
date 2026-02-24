@@ -43,6 +43,8 @@ typedef enum {
     MACH_SUB,       // sub dst, src
     MACH_IMUL,      // imul dst, src
     MACH_SHL,       // shl dst, imm (إزاحة لليسار)
+    MACH_SHR,       // shr dst, imm/CL (إزاحة يمين منطقية)
+    MACH_SAR,       // sar dst, imm/CL (إزاحة يمين حسابية)
     MACH_IDIV,      // idiv src (يقسم RDX:RAX على src)
     MACH_DIV,       // div src  (يقسم RDX:RAX على src بدون إشارة)
     MACH_NEG,       // neg dst (سالب)

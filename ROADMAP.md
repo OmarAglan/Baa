@@ -1,7 +1,7 @@
 # Baa Roadmap (Updated)
 
 > Track the development progress of the Baa programming language.
-> **Current Status:** Phase 3.5 - Language Completeness (v0.3.5.5)
+> **Current Status:** Phase 3.6 - Low-Level Operations (v0.3.6)
 
 ---
 
@@ -11,7 +11,7 @@
 
 - [~] **Write the Arabic "Baa Book"** — book-length guide in Arabic with exercises. — draft exists in `docs/BAA_BOOK_AR.md`
 - [ ] **Define terminology glossary** — consistent Arabic technical vocabulary.
-- [ ] **Create example suite** — verified, idiomatic examples that compile with v0.3.5.5.
+- [ ] **Create example suite** — verified, idiomatic examples that compile with v0.3.6.
 - [ ] **Add exercises and challenges** — per chapter, with expected outputs.
 - [ ] **Add debugging and performance chapters** — common pitfalls, diagnostics, optimization notes.
 - [ ] **Native technical review** — review by Arabic-speaking engineers before release.
@@ -633,13 +633,13 @@
 
 ---
 
-### v0.3.6: Low-Level Operations 🔧
+### v0.3.6: Low-Level Operations 🔧 ✅ COMPLETED (2026-02-24)
 
 **Goal:** Add bitwise operations and low-level features needed for systems programming.
 
 #### Features
 
-- [ ] **Bitwise Operators**:
+- [x] **Bitwise Operators**:
 
   ```baa
   صحيح أ = ٥ & ٣.      // AND: 5 & 3 = 1
@@ -650,7 +650,7 @@
   صحيح و = ١٦ >> ٢.    // Right shift: 16 >> 2 = 4
   ```
 
-- [ ] **Sizeof Operator**:
+- [x] **Sizeof Operator**:
 
   ```baa
   صحيح حجم_صحيح = حجم(صحيح).    // Returns 8
@@ -658,7 +658,7 @@
   صحيح حجم_مصفوفة = حجم(قائمة). // Returns array size in bytes
   ```
 
-- [ ] **Void Type**:
+- [x] **Void Type**:
 
   ```baa
   عدم اطبع_رسالة() {
@@ -667,7 +667,7 @@
   }
   ```
 
-- [ ] **Escape Sequences**:
+- [x] **Escape Sequences**:
 
   ```baa
   نص سطر = "سطر١\س سطر٢".     // Newline (/س)
@@ -678,14 +678,14 @@
 
 #### Implementation Tasks
 
-- [ ] **Lexer**: Tokenize `&`, `|`, `^`, `~`, `<<`, `>>`.
-- [ ] **Parser**: Add bitwise operators with correct precedence.
-- [ ] **Parser**: Parse `حجم(type)` and `حجم(expr)` expressions.
-- [ ] **Lexer**: Add `عدم` keyword for void type.
-- [ ] **Lexer**: Handle escape sequences in string/char literals.
-- [ ] **Semantic**: Type check bitwise operations (integers only).
-- [ ] **Codegen**: Generate bitwise assembly instructions.
-- [ ] **Codegen**: Calculate sizes for `حجم` operator.
+- [x] **Lexer**: Tokenize `&`, `|`, `^`, `~`, `<<`, `>>`.
+- [x] **Parser**: Add bitwise operators with correct precedence.
+- [x] **Parser**: Parse `حجم(type)` and `حجم(expr)` expressions.
+- [x] **Lexer**: Add `عدم` keyword for void type.
+- [x] **Lexer**: Handle escape sequences in string/char literals.
+- [x] **Semantic**: Type check bitwise operations (integers only).
+- [x] **Codegen**: Generate bitwise assembly instructions.
+- [x] **Codegen**: Calculate sizes for `حجم` operator.
 
 ### v0.3.6.5: Type Aliases (أسماء الأنواع البديلة) 🏷️ ✅ COMPLETED (2026-02-23)
 **Goal:** Create custom type names for readability and abstraction.

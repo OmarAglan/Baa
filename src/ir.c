@@ -172,7 +172,10 @@ const char* ir_op_to_arabic(IROp op) {
         // منطقي/بتّي
         case IR_OP_AND:     return "و";
         case IR_OP_OR:      return "أو";
+        case IR_OP_XOR:     return "أو_حصري";
         case IR_OP_NOT:     return "نفي";
+        case IR_OP_SHL:     return "ازاحة_يسار";
+        case IR_OP_SHR:     return "ازاحة_يمين";
         
         // تدفق التحكم
         case IR_OP_BR:      return "قفز";
@@ -212,7 +215,10 @@ const char* ir_op_to_english(IROp op) {
         case IR_OP_CMP:     return "cmp";
         case IR_OP_AND:     return "and";
         case IR_OP_OR:      return "or";
+        case IR_OP_XOR:     return "xor";
         case IR_OP_NOT:     return "not";
+        case IR_OP_SHL:     return "shl";
+        case IR_OP_SHR:     return "shr";
         case IR_OP_BR:      return "br";
         case IR_OP_BR_COND: return "br.cond";
         case IR_OP_RET:     return "ret";

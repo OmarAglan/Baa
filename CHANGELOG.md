@@ -33,6 +33,38 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - **`نوع` handling is contextual in the parser** — `نوع` can still appear as an identifier/member name in expressions (e.g. `س:نوع`), while being recognized as alias declaration syntax at top-level declarations.
 - **Negative test runner** — `tests/regress.py` now accepts per-test compile flags via `// FLAGS:` markers (used for warning-as-error diagnostics tests).
 
+## [0.3.6] - 2026-02-24
+
+### Added
+
+- **Low-level bitwise operators** — frontend/IR/backend support for `&`, `|`, `^`, `~`, `<<`, `>>` across semantic analysis, IR lowering, ISel, regalloc, and emission.
+- **`حجم(...)` operator (`sizeof`)** — supports both forms:
+  - `حجم(type)` for compile-time type size queries.
+  - `حجم(expr)` for expression/type-based size queries when size is semantically known.
+- **`عدم` (void) semantic checks**:
+  - reject variable declarations of type `عدم` (local/global).
+  - reject `عدم` as parameter type.
+  - enforce return-shape correctness (`return` with/without value by function return type).
+- **IR opcode coverage for low-level ops**:
+  - `IR_OP_XOR`, `IR_OP_SHL`, `IR_OP_SHR` + verifier/text/canonicalization support.
+- **Integration and negative tests** for low-level semantics:
+  - `tests/backend_low_level_ops_test.baa`
+  - `tests/neg/semantic_bitwise_non_integer.baa`
+  - `tests/neg/semantic_sizeof_void.baa`
+  - `tests/neg/semantic_void_var_decl.baa`
+  - `tests/neg/semantic_void_return_value.baa`
+  - `tests/neg/semantic_nonvoid_empty_return.baa`
+
+### Changed
+
+- **Parser precedence fix** — logical-AND operands now parse from bitwise-or precedence tier (prevents precedence regressions between logical and bitwise operators).
+- **Logical unary NOT lowering** — `!` now lowers as compare-to-zero (boolean), while `~` remains bitwise NOT.
+
+### Fixed
+
+- **SCCP fold semantics** — `IR_OP_NOT` constant folding now matches bitwise semantics (`~x`) instead of logical negation.
+- **SCCP low-level support** — added constant evaluation for `IR_OP_XOR`, `IR_OP_SHL`, and `IR_OP_SHR` (signed/unsigned-aware right shift behavior).
+
 ## [0.3.5.5] - 2026-02-21
 
 ### Added

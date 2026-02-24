@@ -1142,6 +1142,7 @@ static const char* datatype_to_str(DataType type) {
         case TYPE_BOOL: return "BOOLEAN";
         case TYPE_CHAR: return "CHAR";
         case TYPE_FLOAT: return "FLOAT";
+        case TYPE_VOID: return "VOID";
         case TYPE_ENUM: return "ENUM";
         case TYPE_STRUCT: return "STRUCT";
         case TYPE_UNION: return "UNION";
@@ -1279,6 +1280,7 @@ static DataType datatype_usual_arith(DataType a, DataType b)
 static bool types_compatible(DataType got, DataType expected)
 {
     if (got == expected) return true;
+    if (got == TYPE_VOID || expected == TYPE_VOID) return false;
 
     // تحويلات C-like بين الأنواع العددية.
     if (datatype_is_int(expected) && (datatype_is_int(got) || got == TYPE_BOOL || got == TYPE_CHAR)) return true;
@@ -1363,6 +1365,11 @@ static bool eval_const_int_expr(Node* expr, int64_t* out_value)
                 *out_value = (v == 0) ? 1 : 0;
                 return true;
             }
+            if (expr->data.unary_op.op == UOP_BIT_NOT)
+            {
+                *out_value = (int64_t)(~(uint64_t)v);
+                return true;
+            }
 
             return false;
         }
@@ -1404,6 +1411,17 @@ static bool eval_const_int_expr(Node* expr, int64_t* out_value)
 
                 case OP_AND: *out_value = ((a != 0) && (b != 0)) ? 1 : 0; return true;
                 case OP_OR:  *out_value = ((a != 0) || (b != 0)) ? 1 : 0; return true;
+                case OP_BIT_AND: *out_value = (int64_t)(ua & ub); return true;
+                case OP_BIT_OR:  *out_value = (int64_t)(ua | ub); return true;
+                case OP_BIT_XOR: *out_value = (int64_t)(ua ^ ub); return true;
+                case OP_SHL:
+                    if (b < 0 || b >= 64) return false;
+                    *out_value = (int64_t)(ua << (unsigned)b);
+                    return true;
+                case OP_SHR:
+                    if (b < 0 || b >= 64) return false;
+                    *out_value = (a >> (unsigned)b);
+                    return true;
 
                 default:
                     return false;
@@ -1654,11 +1672,100 @@ static void maybe_warn_signed_unsigned_compare(DataType left_type, DataType righ
                    "مقارنة بين نوع موقّع وغير موقّع قد تعطي نتائج غير متوقعة.");
 }
 
+static DataType infer_type(Node* node);
+
+static bool datatype_size_bytes(DataType type, const char* type_name, int64_t* out_size)
+{
+    if (!out_size) return false;
+    *out_size = 0;
+
+    switch (type) {
+        case TYPE_BOOL:
+        case TYPE_I8:
+        case TYPE_U8:
+            *out_size = 1;
+            return true;
+        case TYPE_I16:
+        case TYPE_U16:
+            *out_size = 2;
+            return true;
+        case TYPE_I32:
+        case TYPE_U32:
+            *out_size = 4;
+            return true;
+        case TYPE_INT:
+        case TYPE_U64:
+        case TYPE_STRING:
+        case TYPE_CHAR:
+        case TYPE_FLOAT:
+        case TYPE_ENUM:
+            *out_size = 8;
+            return true;
+
+        case TYPE_STRUCT: {
+            if (!type_name) return false;
+            StructDef* sd = struct_lookup_def(type_name);
+            if (!sd) return false;
+            (void)struct_compute_layout(sd);
+            *out_size = (int64_t)sd->size;
+            return true;
+        }
+        case TYPE_UNION: {
+            if (!type_name) return false;
+            UnionDef* ud = union_lookup_def(type_name);
+            if (!ud) return false;
+            (void)union_compute_layout(ud);
+            *out_size = (int64_t)ud->size;
+            return true;
+        }
+
+        case TYPE_VOID:
+        default:
+            return false;
+    }
+}
+
+static bool sizeof_expr_bytes(Node* expr, int64_t* out_size)
+{
+    if (!expr || !out_size) return false;
+
+    if (expr->type == NODE_VAR_REF && expr->data.var_ref.name) {
+        Symbol* sym = lookup(expr->data.var_ref.name, false);
+        if (!sym) return false;
+
+        if (sym->is_array) {
+            int64_t elem_size = 0;
+            if (!datatype_size_bytes(sym->type, sym->type_name[0] ? sym->type_name : NULL, &elem_size)) {
+                return false;
+            }
+            *out_size = elem_size * (int64_t)sym->array_size;
+            return true;
+        }
+
+        return datatype_size_bytes(sym->type, sym->type_name[0] ? sym->type_name : NULL, out_size);
+    }
+
+    if (expr->type == NODE_MEMBER_ACCESS) {
+        resolve_member_access(expr);
+        if (expr->data.member_access.is_struct_member) {
+            return datatype_size_bytes(expr->data.member_access.member_type,
+                                       expr->data.member_access.member_type_name,
+                                       out_size);
+        }
+        if (expr->data.member_access.is_enum_value) {
+            *out_size = 8;
+            return true;
+        }
+    }
+
+    DataType t = infer_type(expr);
+    return datatype_size_bytes(t, NULL, out_size);
+}
+
 /**
  * @brief استنتاج نوع التعبير.
  * @return DataType نوع التعبير الناتج.
  */
-static DataType infer_type(Node* node);
 static DataType infer_type_internal(Node* node);
 
 static DataType infer_type_internal(Node* node) {
@@ -1686,6 +1793,35 @@ static DataType infer_type_internal(Node* node) {
         
         case NODE_BOOL:
             return TYPE_BOOL;
+
+        case NODE_SIZEOF: {
+            int64_t size = 0;
+            bool ok = false;
+
+            if (node->data.sizeof_expr.has_type_form) {
+                ok = datatype_size_bytes(node->data.sizeof_expr.target_type,
+                                         node->data.sizeof_expr.target_type_name,
+                                         &size);
+            } else {
+                if (!node->data.sizeof_expr.expression) {
+                    semantic_error(node, "تعبير 'حجم' يتطلب نوعاً أو تعبيراً صالحاً.");
+                    ok = false;
+                } else {
+                    ok = sizeof_expr_bytes(node->data.sizeof_expr.expression, &size);
+                }
+            }
+
+            if (!ok) {
+                semantic_error(node, "لا يمكن حساب 'حجم' لهذا التعبير/النوع.");
+                node->data.sizeof_expr.size_known = false;
+                node->data.sizeof_expr.size_bytes = 0;
+            } else {
+                node->data.sizeof_expr.size_known = true;
+                node->data.sizeof_expr.size_bytes = size;
+            }
+
+            return TYPE_INT;
+        }
             
         case NODE_VAR_REF: {
             Symbol* sym = lookup(node->data.var_ref.name, true); // تعليم كمستخدم
@@ -1814,6 +1950,29 @@ static DataType infer_type_internal(Node* node) {
                 }
                 return datatype_usual_arith(left, right);
             }
+
+            // العمليات البتية والإزاحة
+            if (op == OP_BIT_AND || op == OP_BIT_OR || op == OP_BIT_XOR ||
+                op == OP_SHL || op == OP_SHR) {
+                if (!datatype_is_intlike(left) || !datatype_is_intlike(right)) {
+                    semantic_error(node, "العمليات البتية تتطلب معاملات عددية صحيحة.");
+                    return TYPE_INT;
+                }
+
+                if ((op == OP_SHL || op == OP_SHR) &&
+                    node->data.bin_op.right &&
+                    node->data.bin_op.right->type == NODE_INT) {
+                    int64_t sh = node->data.bin_op.right->data.integer.value;
+                    if (sh < 0 || sh >= 64) {
+                        semantic_error(node->data.bin_op.right, "قيمة الإزاحة يجب أن تكون بين ٠ و ٦٣.");
+                    }
+                }
+
+                if (op == OP_SHL || op == OP_SHR) {
+                    return datatype_int_promote(left);
+                }
+                return datatype_usual_arith(left, right);
+            }
             
             // عمليات المقارنة تتطلب أنواعاً متوافقة وتعيد منطقي
             if (op == OP_EQ || op == OP_NEQ || op == OP_LT || op == OP_GT || op == OP_LTE || op == OP_GTE) {
@@ -1871,9 +2030,12 @@ static DataType infer_type_internal(Node* node) {
             if (!datatype_is_intlike(ot)) {
                 semantic_error(node, "Unary operations require INTEGER operand.");
             }
-            // -x يتبع ترقيات الأعداد الصحيحة (قد يصبح ط٦٤).
-            if (node->data.unary_op.op == UOP_NEG) {
+            // -x و ~x يتبعان ترقيات الأعداد الصحيحة (قد يصبحان أوسع).
+            if (node->data.unary_op.op == UOP_NEG || node->data.unary_op.op == UOP_BIT_NOT) {
                 return datatype_int_promote(ot);
+            }
+            if (node->data.unary_op.op == UOP_NOT) {
+                return TYPE_BOOL;
             }
             return ot;
         }
@@ -1990,6 +2152,17 @@ static void analyze_node(Node* node) {
             DataType declType = node->data.var_decl.type;
             const char* declTypeName = node->data.var_decl.type_name;
 
+            if (declType == TYPE_VOID) {
+                semantic_error(node,
+                               node->data.var_decl.is_global
+                                   ? "لا يمكن تعريف متغير عام من نوع 'عدم'."
+                                   : "لا يمكن تعريف متغير من نوع 'عدم'.");
+                if (node->data.var_decl.expression) {
+                    (void)infer_type(node->data.var_decl.expression);
+                }
+                break;
+            }
+
             // 1) تحقق الأنواع المركبة
             if (declType == TYPE_ENUM) {
                 if (!declTypeName || !enum_lookup_def(declTypeName)) {
@@ -2091,12 +2264,21 @@ static void analyze_node(Node* node) {
             Node* param = node->data.func_def.params;
             while (param) {
                  if (param->type == NODE_VAR_DECL) {
+                    if (param->data.var_decl.type == TYPE_VOID) {
+                        semantic_error(param, "لا يمكن استخدام 'عدم' كنوع معامل.");
+                        param = param->next;
+                        continue;
+                    }
                       // المعاملات تُعتبر "مستخدمة" ضمنياً (لتجنب تحذيرات خاطئة)
-                     add_symbol(param->data.var_decl.name, SCOPE_LOCAL, param->data.var_decl.type, NULL, false,
+                     add_symbol(param->data.var_decl.name, SCOPE_LOCAL,
+                                param->data.var_decl.type, param->data.var_decl.type_name,
+                                false,
                                 false, 0,
                                 param->line, param->col, param->filename ? param->filename : current_filename);
                      // تعليم المعامل كمستخدم مباشرة
-                     local_symbols[local_count - 1].is_used = true;
+                     if (local_count > 0) {
+                         local_symbols[local_count - 1].is_used = true;
+                     }
                  }
                 param = param->next;
             }
@@ -2311,11 +2493,32 @@ static void analyze_node(Node* node) {
             break;
 
         case NODE_RETURN:
-            if (node->data.return_stmt.expression) {
+            if (!in_function) {
+                semantic_error(node, "جملة 'إرجع' خارج دالة.");
+                if (node->data.return_stmt.expression) {
+                    (void)infer_type(node->data.return_stmt.expression);
+                }
+                break;
+            }
+
+            if (current_func_return_type == TYPE_VOID) {
+                if (node->data.return_stmt.expression) {
+                    (void)infer_type(node->data.return_stmt.expression);
+                    semantic_error(node, "الدالة من نوع 'عدم' لا تعيد قيمة.");
+                }
+                break;
+            }
+
+            if (!node->data.return_stmt.expression) {
+                semantic_error(node, "الدالة غير 'عدم' يجب أن تعيد قيمة.");
+                break;
+            }
+
+            {
                 DataType rt = infer_type(node->data.return_stmt.expression);
-                if (in_function && !types_compatible(rt, current_func_return_type)) {
+                if (!types_compatible(rt, current_func_return_type)) {
                     semantic_error(node, "نوع الإرجاع غير متوافق مع نوع الدالة.");
-                } else if (in_function) {
+                } else {
                     maybe_warn_implicit_narrowing(rt, current_func_return_type, node->data.return_stmt.expression);
                 }
             }

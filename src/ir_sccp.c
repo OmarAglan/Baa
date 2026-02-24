@@ -330,6 +330,7 @@ static SCCPVal sccp_eval_inst(IRInst* inst, SCCPVal* regs, int max_reg, const SC
 
         case IR_OP_AND:
         case IR_OP_OR:
+        case IR_OP_XOR:
         {
             if (inst->operand_count < 2) return (SCCPVal){SCCP_OVER, 0};
             if (!sccp_type_is_intlike(inst->type)) return (SCCPVal){SCCP_OVER, 0};
@@ -337,20 +338,49 @@ static SCCPVal sccp_eval_inst(IRInst* inst, SCCPVal* regs, int max_reg, const SC
             SCCPVal b = sccp_val_of_value(inst->operands[1], regs, max_reg);
             if (a.kind == SCCP_OVER || b.kind == SCCP_OVER) return (SCCPVal){SCCP_OVER, 0};
             if (a.kind != SCCP_CONST || b.kind != SCCP_CONST) return (SCCPVal){SCCP_UNDEF, 0};
-            int64_t out = (inst->op == IR_OP_AND) ? (a.c & b.c) : (a.c | b.c);
+            int64_t out = 0;
+            if (inst->op == IR_OP_AND) out = (a.c & b.c);
+            else if (inst->op == IR_OP_OR) out = (a.c | b.c);
+            else out = (a.c ^ b.c);
             out = sccp_trunc_to_type(out, inst->type);
             return (SCCPVal){SCCP_CONST, out};
         }
 
         case IR_OP_NOT:
         {
-            // في IR الحالي، NOT يستخدم كـ "نفي منطقي" لـ i1.
             if (inst->operand_count < 1) return (SCCPVal){SCCP_OVER, 0};
             if (!sccp_type_is_intlike(inst->type)) return (SCCPVal){SCCP_OVER, 0};
             SCCPVal a = sccp_val_of_value(inst->operands[0], regs, max_reg);
             if (a.kind == SCCP_OVER) return (SCCPVal){SCCP_OVER, 0};
             if (a.kind != SCCP_CONST) return (SCCPVal){SCCP_UNDEF, 0};
-            int64_t out = a.c ? 0 : 1;
+            int64_t out = ~a.c;
+            out = sccp_trunc_to_type(out, inst->type);
+            return (SCCPVal){SCCP_CONST, out};
+        }
+
+        case IR_OP_SHL:
+        case IR_OP_SHR:
+        {
+            if (inst->operand_count < 2) return (SCCPVal){SCCP_OVER, 0};
+            if (!sccp_type_is_intlike(inst->type)) return (SCCPVal){SCCP_OVER, 0};
+            SCCPVal a = sccp_val_of_value(inst->operands[0], regs, max_reg);
+            SCCPVal b = sccp_val_of_value(inst->operands[1], regs, max_reg);
+            if (a.kind == SCCP_OVER || b.kind == SCCP_OVER) return (SCCPVal){SCCP_OVER, 0};
+            if (a.kind != SCCP_CONST || b.kind != SCCP_CONST) return (SCCPVal){SCCP_UNDEF, 0};
+
+            if (b.c < 0 || b.c >= 64) return (SCCPVal){SCCP_OVER, 0};
+            unsigned sh = (unsigned)b.c;
+
+            int64_t out = 0;
+            if (inst->op == IR_OP_SHL) {
+                out = (int64_t)(((uint64_t)a.c) << sh);
+            } else {
+                if (sccp_type_is_unsigned(inst->type)) {
+                    out = (int64_t)(((uint64_t)a.c) >> sh);
+                } else {
+                    out = (a.c >> sh);
+                }
+            }
             out = sccp_trunc_to_type(out, inst->type);
             return (SCCPVal){SCCP_CONST, out};
         }

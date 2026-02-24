@@ -634,7 +634,10 @@ static IROp ir_text_parse_op(const char* op) {
     if (strcmp(op, "cmp") == 0) return IR_OP_CMP;
     if (strcmp(op, "and") == 0) return IR_OP_AND;
     if (strcmp(op, "or") == 0) return IR_OP_OR;
+    if (strcmp(op, "xor") == 0) return IR_OP_XOR;
     if (strcmp(op, "not") == 0) return IR_OP_NOT;
+    if (strcmp(op, "shl") == 0) return IR_OP_SHL;
+    if (strcmp(op, "shr") == 0) return IR_OP_SHR;
     if (strcmp(op, "br") == 0) return IR_OP_BR;
     if (strcmp(op, "br.cond") == 0) return IR_OP_BR_COND;
     if (strcmp(op, "ret") == 0) return IR_OP_RET;

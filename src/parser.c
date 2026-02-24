@@ -201,6 +201,7 @@ bool is_type_keyword(BaaTokenType type) {
             type == TOKEN_KEYWORD_U8 || type == TOKEN_KEYWORD_U16 || type == TOKEN_KEYWORD_U32 || type == TOKEN_KEYWORD_U64 ||
             type == TOKEN_KEYWORD_STRING || type == TOKEN_KEYWORD_BOOL ||
             type == TOKEN_KEYWORD_CHAR ||
+            type == TOKEN_KEYWORD_VOID ||
             type == TOKEN_KEYWORD_FLOAT ||
             type == TOKEN_ENUM || type == TOKEN_STRUCT || type == TOKEN_UNION);
 }
@@ -240,6 +241,7 @@ DataType token_to_datatype(BaaTokenType type) {
     if (type == TOKEN_KEYWORD_BOOL) return TYPE_BOOL;
     if (type == TOKEN_KEYWORD_CHAR) return TYPE_CHAR;
     if (type == TOKEN_KEYWORD_FLOAT) return TYPE_FLOAT;
+    if (type == TOKEN_KEYWORD_VOID) return TYPE_VOID;
     return TYPE_INT;
 }
 
@@ -326,6 +328,7 @@ static bool parse_type_spec(DataType* out_type, char** out_type_name) {
         parser.current.type == TOKEN_KEYWORD_STRING ||
         parser.current.type == TOKEN_KEYWORD_BOOL ||
         parser.current.type == TOKEN_KEYWORD_CHAR ||
+        parser.current.type == TOKEN_KEYWORD_VOID ||
         parser.current.type == TOKEN_KEYWORD_FLOAT) {
         DataType dt = token_to_datatype(parser.current.type);
         eat(parser.current.type);
@@ -408,6 +411,7 @@ void synchronize() {
             case TOKEN_KEYWORD_STRING:
             case TOKEN_KEYWORD_BOOL:
             case TOKEN_KEYWORD_CHAR:
+            case TOKEN_KEYWORD_VOID:
             case TOKEN_KEYWORD_FLOAT:
             case TOKEN_TYPE_ALIAS:
             case TOKEN_ENUM:
@@ -423,6 +427,7 @@ void synchronize() {
             case TOKEN_SWITCH:
             case TOKEN_BREAK:
             case TOKEN_CONTINUE:
+            case TOKEN_SIZEOF:
                 return;
             default:
                 ;
@@ -437,6 +442,10 @@ Node* parse_expression();
 Node* parse_statement();
 Node* parse_block();
 Node* parse_primary();
+Node* parse_shift();
+Node* parse_bitwise_and();
+Node* parse_bitwise_xor();
+Node* parse_bitwise_or();
 
 // --- تحليل التعبيرات (حسب مستويات الأولوية) ---
 
@@ -500,6 +509,39 @@ Node* parse_primary() {
         if (!node) return NULL;
         node->data.bool_lit.value = false;
         eat(TOKEN_FALSE);
+    }
+    else if (parser.current.type == TOKEN_SIZEOF) {
+        Token tok = parser.current;
+        eat(TOKEN_SIZEOF);
+        eat(TOKEN_LPAREN);
+
+        node = ast_node_new(NODE_SIZEOF, tok);
+        if (!node) return NULL;
+        node->data.sizeof_expr.has_type_form = false;
+        node->data.sizeof_expr.target_type = TYPE_INT;
+        node->data.sizeof_expr.target_type_name = NULL;
+        node->data.sizeof_expr.expression = NULL;
+        node->data.sizeof_expr.size_bytes = 0;
+        node->data.sizeof_expr.size_known = false;
+
+        if (parser_current_starts_type()) {
+            DataType dt = TYPE_INT;
+            char* tn = NULL;
+            if (!parse_type_spec(&dt, &tn)) {
+                error_report(parser.current, "Expected type or expression inside 'حجم(...)'.");
+                free(tn);
+            } else {
+                node->data.sizeof_expr.has_type_form = true;
+                node->data.sizeof_expr.target_type = dt;
+                node->data.sizeof_expr.target_type_name = tn;
+            }
+        } else {
+            Node* expr = parse_expression();
+            node->data.sizeof_expr.has_type_form = false;
+            node->data.sizeof_expr.expression = expr;
+        }
+
+        eat(TOKEN_RPAREN);
     }
     else if (parser.current.type == TOKEN_IDENTIFIER) {
         Token tok_ident = parser.current;
@@ -600,9 +642,10 @@ Node* parse_primary() {
     return node;
 }
 
-// المستوى 1.5: العمليات الأحادية والبادئة (!, -, ++, --)
+// المستوى 1.5: العمليات الأحادية والبادئة (!, ~, -, ++, --)
 Node* parse_unary() {
     if (parser.current.type == TOKEN_MINUS || parser.current.type == TOKEN_NOT ||
+        parser.current.type == TOKEN_TILDE ||
         parser.current.type == TOKEN_INC || parser.current.type == TOKEN_DEC) {
 
         Token tok_op = parser.current;
@@ -610,6 +653,7 @@ Node* parse_unary() {
         UnaryOpType op;
         if (parser.current.type == TOKEN_MINUS) op = UOP_NEG;
         else if (parser.current.type == TOKEN_NOT) op = UOP_NOT;
+        else if (parser.current.type == TOKEN_TILDE) op = UOP_BIT_NOT;
         else if (parser.current.type == TOKEN_INC) op = UOP_INC;
         else op = UOP_DEC;
 
@@ -770,9 +814,32 @@ Node* parse_additive() {
     return left;
 }
 
-// المستوى 4: عمليات المقارنة العلائقية
-Node* parse_relational() {
+// المستوى 4: عمليات الإزاحة البتية (<<، >>)
+Node* parse_shift() {
     Node* left = parse_additive();
+    if (!left) return NULL;
+
+    while (parser.current.type == TOKEN_SHL || parser.current.type == TOKEN_SHR) {
+        Token tok_op = parser.current;
+        OpType op = (parser.current.type == TOKEN_SHL) ? OP_SHL : OP_SHR;
+        eat(parser.current.type);
+        Node* right = parse_additive();
+        if (!right) return NULL;
+
+        Node* new_node = ast_node_new(NODE_BIN_OP, tok_op);
+        if (!new_node) return NULL;
+        new_node->data.bin_op.left = left;
+        new_node->data.bin_op.right = right;
+        new_node->data.bin_op.op = op;
+        left = new_node;
+    }
+
+    return left;
+}
+
+// المستوى 5: عمليات المقارنة العلائقية
+Node* parse_relational() {
+    Node* left = parse_shift();
     if (!left) return NULL;
 
     while (parser.current.type == TOKEN_LT || parser.current.type == TOKEN_GT ||
@@ -784,7 +851,7 @@ Node* parse_relational() {
         else if (parser.current.type == TOKEN_LTE) op = OP_LTE;
         else op = OP_GTE;
         eat(parser.current.type);
-        Node* right = parse_additive();
+        Node* right = parse_shift();
         if (!right) return NULL;
 
         Node* new_node = ast_node_new(NODE_BIN_OP, tok_op);
@@ -797,7 +864,7 @@ Node* parse_relational() {
     return left;
 }
 
-// المستوى 5: عمليات التساوي
+// المستوى 6: عمليات التساوي
 Node* parse_equality() {
     Node* left = parse_relational();
     if (!left) return NULL;
@@ -819,15 +886,78 @@ Node* parse_equality() {
     return left;
 }
 
-// المستوى 6: العملية المنطقية "و" (&&)
-Node* parse_logical_and() {
+// المستوى 7: العملية البتية AND (&)
+Node* parse_bitwise_and() {
     Node* left = parse_equality();
+    if (!left) return NULL;
+
+    while (parser.current.type == TOKEN_AMP) {
+        Token tok_op = parser.current;
+        eat(TOKEN_AMP);
+        Node* right = parse_equality();
+        if (!right) return NULL;
+
+        Node* new_node = ast_node_new(NODE_BIN_OP, tok_op);
+        if (!new_node) return NULL;
+        new_node->data.bin_op.left = left;
+        new_node->data.bin_op.right = right;
+        new_node->data.bin_op.op = OP_BIT_AND;
+        left = new_node;
+    }
+    return left;
+}
+
+// المستوى 8: العملية البتية XOR (^)
+Node* parse_bitwise_xor() {
+    Node* left = parse_bitwise_and();
+    if (!left) return NULL;
+
+    while (parser.current.type == TOKEN_CARET) {
+        Token tok_op = parser.current;
+        eat(TOKEN_CARET);
+        Node* right = parse_bitwise_and();
+        if (!right) return NULL;
+
+        Node* new_node = ast_node_new(NODE_BIN_OP, tok_op);
+        if (!new_node) return NULL;
+        new_node->data.bin_op.left = left;
+        new_node->data.bin_op.right = right;
+        new_node->data.bin_op.op = OP_BIT_XOR;
+        left = new_node;
+    }
+    return left;
+}
+
+// المستوى 9: العملية البتية OR (|)
+Node* parse_bitwise_or() {
+    Node* left = parse_bitwise_xor();
+    if (!left) return NULL;
+
+    while (parser.current.type == TOKEN_PIPE) {
+        Token tok_op = parser.current;
+        eat(TOKEN_PIPE);
+        Node* right = parse_bitwise_xor();
+        if (!right) return NULL;
+
+        Node* new_node = ast_node_new(NODE_BIN_OP, tok_op);
+        if (!new_node) return NULL;
+        new_node->data.bin_op.left = left;
+        new_node->data.bin_op.right = right;
+        new_node->data.bin_op.op = OP_BIT_OR;
+        left = new_node;
+    }
+    return left;
+}
+
+// المستوى 10: العملية المنطقية "و" (&&)
+Node* parse_logical_and() {
+    Node* left = parse_bitwise_or();
     if (!left) return NULL;
 
     while (parser.current.type == TOKEN_AND) {
         Token tok_op = parser.current;
         eat(TOKEN_AND);
-        Node* right = parse_equality();
+        Node* right = parse_bitwise_or();
         if (!right) return NULL;
 
         Node* new_node = ast_node_new(NODE_BIN_OP, tok_op);
@@ -840,7 +970,7 @@ Node* parse_logical_and() {
     return left;
 }
 
-// المستوى 7: العملية المنطقية "أو" (||)
+// المستوى 11: العملية المنطقية "أو" (||)
 Node* parse_logical_or() {
     Node* left = parse_logical_and();
     if (!left) return NULL;
@@ -1122,7 +1252,11 @@ Node* parse_statement() {
         eat(TOKEN_RETURN);
         Node* stmt = ast_node_new(NODE_RETURN, tok);
         if (!stmt) return NULL;
-        stmt->data.return_stmt.expression = parse_expression();
+        if (parser.current.type == TOKEN_DOT) {
+            stmt->data.return_stmt.expression = NULL;
+        } else {
+            stmt->data.return_stmt.expression = parse_expression();
+        }
         eat(TOKEN_DOT);
         return stmt;
     }
@@ -1341,6 +1475,10 @@ Node* parse_statement() {
         }
         char* name = strdup(parser.current.value);
         eat(TOKEN_IDENTIFIER);
+
+        if (dt == TYPE_VOID) {
+            error_report(tok_type, "لا يمكن تعريف متغير من نوع 'عدم'.");
+        }
 
         if (parser.current.type == TOKEN_LBRACKET) {
             if (dt != TYPE_INT) {
@@ -1674,6 +1812,10 @@ Node* parse_declaration() {
         char* name = strdup(parser.current.value);
         eat(TOKEN_IDENTIFIER);
 
+        if (dt == TYPE_VOID && parser.current.type != TOKEN_LPAREN) {
+            error_report(tok_type, "لا يمكن تعريف متغير عام من نوع 'عدم'.");
+        }
+
         // دالة: نسمح فقط بأنواع بدائية حالياً
         if (parser.current.type == TOKEN_LPAREN) {
                 if (dt == TYPE_ENUM || dt == TYPE_STRUCT || dt == TYPE_UNION) {
@@ -1703,6 +1845,11 @@ Node* parse_declaration() {
                     }
                     if (param_dt == TYPE_ENUM || param_dt == TYPE_STRUCT || param_dt == TYPE_UNION) {
                         error_report(tok_param_type, "User-defined parameter types are not supported in function signatures yet.");
+                        if (param_tn) free(param_tn);
+                        param_tn = NULL;
+                        param_dt = TYPE_INT;
+                    } else if (param_dt == TYPE_VOID) {
+                        error_report(tok_param_type, "لا يمكن استخدام 'عدم' كنوع معامل.");
                         if (param_tn) free(param_tn);
                         param_tn = NULL;
                         param_dt = TYPE_INT;

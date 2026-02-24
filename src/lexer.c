@@ -21,12 +21,59 @@ static int is_utf8_cont_byte(unsigned char b)
     return ((b & 0xC0u) == 0x80u);
 }
 
-static int lex_hex_digit(unsigned char c)
+static bool lex_decode_arabic_escape(Lexer* l, unsigned char* out_byte)
 {
-    if (c >= '0' && c <= '9') return (int)(c - '0');
-    if (c >= 'a' && c <= 'f') return 10 + (int)(c - 'a');
-    if (c >= 'A' && c <= 'F') return 10 + (int)(c - 'A');
-    return -1;
+    if (!l || !out_byte) return false;
+
+    const unsigned char b0 = (unsigned char)l->state.cur_char[0];
+    const unsigned char b1 = (unsigned char)l->state.cur_char[1];
+
+    // \س => سطر جديد (LF)
+    if (b0 == 0xD8 && b1 == 0xB3) {
+        *out_byte = (unsigned char)'\n';
+        l->state.cur_char += 2;
+        l->state.col += 2;
+        return true;
+    }
+    // \ت => Tab
+    if (b0 == 0xD8 && b1 == 0xAA) {
+        *out_byte = (unsigned char)'\t';
+        l->state.cur_char += 2;
+        l->state.col += 2;
+        return true;
+    }
+    // \ر => Carriage Return
+    if (b0 == 0xD8 && b1 == 0xB1) {
+        *out_byte = (unsigned char)'\r';
+        l->state.cur_char += 2;
+        l->state.col += 2;
+        return true;
+    }
+    // \٠ => NULL
+    if (b0 == 0xD9 && b1 == 0xA0) {
+        *out_byte = 0;
+        l->state.cur_char += 2;
+        l->state.col += 2;
+        return true;
+    }
+
+    return false;
+}
+
+static bool lex_append_byte(char** buf, size_t* len, size_t* cap, unsigned char byte)
+{
+    if (!buf || !len || !cap || !*buf) return false;
+
+    if (*len + 1 >= *cap) {
+        size_t new_cap = (*cap < 32) ? 32 : (*cap * 2);
+        char* new_buf = (char*)realloc(*buf, new_cap);
+        if (!new_buf) return false;
+        *buf = new_buf;
+        *cap = new_cap;
+    }
+
+    (*buf)[(*len)++] = (char)byte;
+    return true;
 }
 
 // قراءة ملف (من main.c، يجب أن تكون متاحة للجميع الآن)
@@ -376,18 +423,64 @@ Token lexer_next_token(Lexer* l) {
     // --- معالجة النصوص ("...") ---
     if (*current == '"') {
         advance_pos(l); // تخطي " البداية
-        char* start = l->state.cur_char;
+
+        size_t cap = 32;
+        size_t len = 0;
+        char* str = (char*)malloc(cap);
+        if (!str) {
+            printf("Lexer Error: Out of memory at %s:%d:%d\n", l->state.filename, l->state.line, l->state.col);
+            exit(1);
+        }
+
         while (peek(l) != '"' && peek(l) != '\0') {
+            if (peek(l) == '\\') {
+                advance_pos(l); // تخطي '\'
+                if (peek(l) == '\0') {
+                    free(str);
+                    printf("Lexer Error: Unterminated string escape at %s:%d:%d\n", l->state.filename, l->state.line, l->state.col);
+                    exit(1);
+                }
+
+                unsigned char out = 0;
+                if (peek(l) == '\\') { out = (unsigned char)'\\'; advance_pos(l); }
+                else if (peek(l) == '"') { out = (unsigned char)'"'; advance_pos(l); }
+                else if (peek(l) == '\'') { out = (unsigned char)'\''; advance_pos(l); }
+                else if (lex_decode_arabic_escape(l, &out)) { /* done */ }
+                else {
+                    free(str);
+                    printf("Lexer Error: Unsupported escape sequence in string at %s:%d:%d\n",
+                           l->state.filename, l->state.line, l->state.col);
+                    exit(1);
+                }
+
+                if (!lex_append_byte(&str, &len, &cap, out)) {
+                    free(str);
+                    printf("Lexer Error: Out of memory at %s:%d:%d\n", l->state.filename, l->state.line, l->state.col);
+                    exit(1);
+                }
+                continue;
+            }
+
+            if (!lex_append_byte(&str, &len, &cap, (unsigned char)peek(l))) {
+                free(str);
+                printf("Lexer Error: Out of memory at %s:%d:%d\n", l->state.filename, l->state.line, l->state.col);
+                exit(1);
+            }
             advance_pos(l);
         }
-        if (peek(l) == '\0') { 
-            printf("Lexer Error: Unterminated string at %s:%d:%d\n", l->state.filename, l->state.line, l->state.col); 
-            exit(1); 
+
+        if (peek(l) == '\0') {
+            free(str);
+            printf("Lexer Error: Unterminated string at %s:%d:%d\n", l->state.filename, l->state.line, l->state.col);
+            exit(1);
         }
-        size_t len = l->state.cur_char - start;
-        char* str = malloc(len + 1);
-        if (len) memcpy(str, start, len);
-        str[len] = '\0';
+
+        if (!lex_append_byte(&str, &len, &cap, 0)) {
+            free(str);
+            printf("Lexer Error: Out of memory at %s:%d:%d\n", l->state.filename, l->state.line, l->state.col);
+            exit(1);
+        }
+
         advance_pos(l); // تخطي " النهاية
         token.type = TOKEN_STRING;
         token.value = str;
@@ -403,7 +496,7 @@ Token lexer_next_token(Lexer* l) {
 
         if (peek(l) == '\\')
         {
-            // تسلسلات الهروب (على نمط C)
+            // تسلسلات الهروب (عربية + بنيوية)
             advance_pos(l);
             unsigned char esc0 = (unsigned char)peek(l);
             if (esc0 == '\0') {
@@ -412,33 +505,10 @@ Token lexer_next_token(Lexer* l) {
                 exit(1);
             }
 
-            if (esc0 == 'n') { bytes[0] = '\n'; blen = 1; advance_pos(l); }
-            else if (esc0 == 't') { bytes[0] = '\t'; blen = 1; advance_pos(l); }
-            else if (esc0 == 'r') { bytes[0] = '\r'; blen = 1; advance_pos(l); }
-            else if (esc0 == '\\') { bytes[0] = '\\'; blen = 1; advance_pos(l); }
+            if (esc0 == '\\') { bytes[0] = '\\'; blen = 1; advance_pos(l); }
             else if (esc0 == '\'') { bytes[0] = '\''; blen = 1; advance_pos(l); }
             else if (esc0 == '"') { bytes[0] = '"'; blen = 1; advance_pos(l); }
-            else if (esc0 == '0') { bytes[0] = 0; blen = 1; advance_pos(l); }
-            else if ((unsigned char)l->state.cur_char[0] == 0xD9 &&
-                     (unsigned char)l->state.cur_char[1] == 0xA0) {
-                // دعم \٠ كـ محرف NULL
-                bytes[0] = 0; blen = 1;
-                l->state.cur_char += 2;
-                l->state.col += 2;
-            }
-            else if (esc0 == 'x')
-            {
-                // \xHH (بايت واحد)
-                advance_pos(l);
-                int h1 = lex_hex_digit((unsigned char)peek(l));
-                if (h1 < 0) { printf("Lexer Error: Invalid hex escape at %s:%d:%d\n", l->state.filename, l->state.line, l->state.col); exit(1); }
-                advance_pos(l);
-                int h2 = lex_hex_digit((unsigned char)peek(l));
-                if (h2 < 0) { printf("Lexer Error: Invalid hex escape at %s:%d:%d\n", l->state.filename, l->state.line, l->state.col); exit(1); }
-                advance_pos(l);
-                bytes[0] = (unsigned char)((h1 << 4) | h2);
-                blen = 1;
-            }
+            else if (lex_decode_arabic_escape(l, &bytes[0])) { blen = 1; }
             else
             {
                 printf("Lexer Error: Unknown escape sequence in char literal at %s:%d:%d\n",
@@ -540,16 +610,24 @@ Token lexer_next_token(Lexer* l) {
     if (*current == '[') { token.type = TOKEN_LBRACKET; advance_pos(l); return token; }
     if (*current == ']') { token.type = TOKEN_RBRACKET; advance_pos(l); return token; }
 
-    // معالجة العمليات المنطقية (&&، ||، !)
+    // معالجة العمليات المنطقية/البتية (&&، ||، !، &، |، ^، ~)
     if (*current == '&') {
         if (*(l->state.cur_char+1) == '&') {
             token.type = TOKEN_AND; l->state.cur_char += 2; l->state.col += 2; return token;
         }
+        token.type = TOKEN_AMP; advance_pos(l); return token;
     }
     if (*current == '|') {
         if (*(l->state.cur_char+1) == '|') {
             token.type = TOKEN_OR; l->state.cur_char += 2; l->state.col += 2; return token;
         }
+        token.type = TOKEN_PIPE; advance_pos(l); return token;
+    }
+    if (*current == '^') {
+        token.type = TOKEN_CARET; advance_pos(l); return token;
+    }
+    if (*current == '~') {
+        token.type = TOKEN_TILDE; advance_pos(l); return token;
     }
     if (*current == '!') {
         if (*(l->state.cur_char+1) == '=') {
@@ -566,12 +644,18 @@ Token lexer_next_token(Lexer* l) {
         token.type = TOKEN_ASSIGN; advance_pos(l); return token; 
     }
     if (*current == '<') {
+        if (*(l->state.cur_char+1) == '<') {
+            token.type = TOKEN_SHL; l->state.cur_char += 2; l->state.col += 2; return token;
+        }
         if (*(l->state.cur_char+1) == '=') {
             token.type = TOKEN_LTE; l->state.cur_char += 2; l->state.col += 2; return token;
         }
         token.type = TOKEN_LT; advance_pos(l); return token;
     }
     if (*current == '>') {
+        if (*(l->state.cur_char+1) == '>') {
+            token.type = TOKEN_SHR; l->state.cur_char += 2; l->state.col += 2; return token;
+        }
         if (*(l->state.cur_char+1) == '=') {
             token.type = TOKEN_GTE; l->state.cur_char += 2; l->state.col += 2; return token;
         }
@@ -655,7 +739,7 @@ Token lexer_next_token(Lexer* l) {
     if (is_arabic_start_byte(*current)) {
         char* start = l->state.cur_char;
         while (!isspace(peek(l)) && peek(l) != '\0' && 
-               strchr(".+-,=:(){}[]!<>*/%&|\"'", peek(l)) == NULL) {
+               strchr(".+-,=:(){}[]!<>*/%&|^~\"'", peek(l)) == NULL) {
             // تحقق من الفاصلة المنقوطة العربية (؛)
             if ((unsigned char)*l->state.cur_char == 0xD8 && (unsigned char)*(l->state.cur_char+1) == 0x9B) {
                 break;
@@ -718,6 +802,8 @@ Token lexer_next_token(Lexer* l) {
         else if (strcmp(word, "منطقي") == 0) token.type = TOKEN_KEYWORD_BOOL;
         else if (strcmp(word, "حرف") == 0) token.type = TOKEN_KEYWORD_CHAR;
         else if (strcmp(word, "عشري") == 0) token.type = TOKEN_KEYWORD_FLOAT;
+        else if (strcmp(word, "عدم") == 0) token.type = TOKEN_KEYWORD_VOID;
+        else if (strcmp(word, "حجم") == 0) token.type = TOKEN_SIZEOF;
         else if (strcmp(word, "ثابت") == 0) token.type = TOKEN_CONST;
         else if (strcmp(word, "إذا") == 0) token.type = TOKEN_IF;
         else if (strcmp(word, "وإلا") == 0) token.type = TOKEN_ELSE;
@@ -775,6 +861,8 @@ const char* token_type_to_str(BaaTokenType type) {
         case TOKEN_KEYWORD_BOOL: return "منطقي";
         case TOKEN_KEYWORD_CHAR: return "حرف";
         case TOKEN_KEYWORD_FLOAT: return "عشري";
+        case TOKEN_KEYWORD_VOID: return "عدم";
+        case TOKEN_SIZEOF: return "حجم";
         case TOKEN_TYPE_ALIAS: return "نوع";
         case TOKEN_CONST: return "ثابت";
         case TOKEN_RETURN: return "إرجع";
@@ -817,6 +905,12 @@ const char* token_type_to_str(BaaTokenType type) {
         case TOKEN_AND: return "&&";
         case TOKEN_OR: return "||";
         case TOKEN_NOT: return "!";
+        case TOKEN_AMP: return "&";
+        case TOKEN_PIPE: return "|";
+        case TOKEN_CARET: return "^";
+        case TOKEN_TILDE: return "~";
+        case TOKEN_SHL: return "<<";
+        case TOKEN_SHR: return ">>";
         case TOKEN_LPAREN: return "(";
         case TOKEN_RPAREN: return ")";
         case TOKEN_LBRACE: return "{";

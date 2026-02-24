@@ -60,7 +60,10 @@ typedef enum {
     // --------------------------------------------------------------------
     IR_OP_AND,      // و - Bitwise AND
     IR_OP_OR,       // أو - Bitwise OR
+    IR_OP_XOR,      // أو_حصري - Bitwise XOR
     IR_OP_NOT,      // نفي - Bitwise NOT
+    IR_OP_SHL,      // ازاحة_يسار - Shift left
+    IR_OP_SHR,      // ازاحة_يمين - Shift right (arith/logical حسب النوع)
     
     // --------------------------------------------------------------------
     // Control Flow Operations (عمليات التحكم)

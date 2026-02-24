@@ -49,6 +49,7 @@ static int ir_op_is_commutative(IROp op) {
         case IR_OP_MUL:
         case IR_OP_AND:
         case IR_OP_OR:
+        case IR_OP_XOR:
             return 1;
         default:
             return 0;

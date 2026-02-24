@@ -198,6 +198,8 @@ typedef enum {
     WARN_DEAD_CODE,          // كود بعد إرجع أو توقف
     WARN_IMPLICIT_RETURN,    // دالة بدون إرجع صريح
     WARN_SHADOW_VARIABLE,    // متغير محلي يحجب متغير عام
+    WARN_IMPLICIT_NARROWING, // تحويل ضمني قد يسبب فقدان بيانات
+    WARN_SIGNED_UNSIGNED_COMPARE, // مقارنة بين موقّع وغير موقّع
     WARN_COUNT               // عدد التحذيرات (للتكرار)
 } WarningType;
 

@@ -76,6 +76,34 @@ static bool parse_warning_flag(const char *flag)
         return true;
     }
 
+    // -Wimplicit-narrowing: تفعيل تحذير التحويل الضمني المضيّق
+    if (strcmp(flag, "-Wimplicit-narrowing") == 0)
+    {
+        g_warning_config.enabled[WARN_IMPLICIT_NARROWING] = true;
+        return true;
+    }
+
+    // -Wno-implicit-narrowing: تعطيل تحذير التحويل الضمني المضيّق
+    if (strcmp(flag, "-Wno-implicit-narrowing") == 0)
+    {
+        g_warning_config.enabled[WARN_IMPLICIT_NARROWING] = false;
+        return true;
+    }
+
+    // -Wsigned-unsigned-compare: تفعيل تحذير مقارنة الموقّع بغير الموقّع
+    if (strcmp(flag, "-Wsigned-unsigned-compare") == 0)
+    {
+        g_warning_config.enabled[WARN_SIGNED_UNSIGNED_COMPARE] = true;
+        return true;
+    }
+
+    // -Wno-signed-unsigned-compare: تعطيل تحذير مقارنة الموقّع بغير الموقّع
+    if (strcmp(flag, "-Wno-signed-unsigned-compare") == 0)
+    {
+        g_warning_config.enabled[WARN_SIGNED_UNSIGNED_COMPARE] = false;
+        return true;
+    }
+
     return false;
 }
 
@@ -117,6 +145,8 @@ void driver_print_help(void)
     printf("  -Werror            Treat warnings as errors\n");
     printf("  -Wunused-variable  Warn about unused variables\n");
     printf("  -Wdead-code        Warn about unreachable code\n");
+    printf("  -Wimplicit-narrowing  Warn on potentially lossy implicit numeric conversions\n");
+    printf("  -Wsigned-unsigned-compare  Warn on signed/unsigned mixed comparisons\n");
     printf("  -Wno-<warning>     Disable specific warning\n");
     printf("  -Wcolor            Force colored output\n");
     printf("  -Wno-color         Disable colored output\n");

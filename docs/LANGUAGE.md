@@ -195,6 +195,8 @@ Baa is statically typed. All variables must be declared with their type.
 
 - الترقيات والتحويلات الحسابية تتبع نمط C (integer promotions + usual arithmetic conversions).
 - الثوابت العشرية بدون لاحقة تُعامل كـ `ص٣٢` إذا كانت ضمن المدى، وإلا كـ `صحيح/ص٦٤`.
+- تحذير `-Wimplicit-narrowing` ينبه على التحويلات الضمنية التي قد تفقد بيانات (مثل `ص٣٢` إلى `ص٨`).
+- تحذير `-Wsigned-unsigned-compare` ينبه على المقارنات المختلطة بين الأنواع الموقعة وغير الموقعة بعد الترقيات.
 
 ### 3.2.3. Floating Point (`عشري`)
 

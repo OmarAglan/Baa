@@ -155,7 +155,7 @@ Notes:
 - Runner: `tests/regress.py`
 - On all hosts: runs `tests/test.py`.
 - On all hosts: runs docs-derived v0.2.x corpus (auto-generated) under `tests/corpus_v2x_docs/`.
-- On all hosts: runs negative diagnostics tests under `tests/neg/` (anchor matching via `// EXPECT:`).
+- On all hosts: runs negative diagnostics tests under `tests/neg/` (anchor matching via `// EXPECT:` and optional per-test compile flags via `// FLAGS:`).
 - On Windows: same as other hosts.
 
 Windows build:
@@ -189,6 +189,7 @@ Note (v0.3.2.9.4): semantic analysis errors now use `error_report(...)` as well,
 - **Warning Names**: Each warning shows its type in brackets: `[-Wunused-variable]`.
 - **Configurable**: Enable with `-Wall` or specific `-W<type>` flags.
 - **Errors Mode**: Use `-Werror` to treat warnings as fatal errors.
+- **Numeric Diagnostics (v0.3.5.5)**: `-Wimplicit-narrowing` and `-Wsigned-unsigned-compare`.
 
 **ANSI Color Support:**
 
@@ -502,6 +503,25 @@ static void analyze_statements_with_dead_code_check(Node* statements, const char
 #### Variable Shadowing
 
 When a local variable is declared with the same name as a global variable, a `WARN_SHADOW_VARIABLE` warning is generated.
+
+#### Implicit Narrowing Conversions (v0.3.5.5)
+
+The analyzer emits `WARN_IMPLICIT_NARROWING` when an implicit numeric conversion may lose information.
+
+Covered conversion sites:
+
+- Variable declaration initializers
+- Assignments
+- Return expressions
+- Function-call arguments
+- Array element assignments
+- Struct/union member assignments
+
+The check is constant-aware: if the source expression is a compile-time constant that is provably representable in the destination type, the warning is suppressed.
+
+#### Signed/Unsigned Mixed Comparisons (v0.3.5.5)
+
+The analyzer emits `WARN_SIGNED_UNSIGNED_COMPARE` for comparison operators (`==`, `!=`, `<`, `>`, `<=`, `>=`) when the integer-promotion result mixes signed and unsigned domains.
 
 ### 5.4. Isolation Note
 

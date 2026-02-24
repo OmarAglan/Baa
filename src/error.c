@@ -76,6 +76,8 @@ static const char* warning_type_name(WarningType type) {
         case WARN_DEAD_CODE:       return "dead-code";
         case WARN_IMPLICIT_RETURN: return "implicit-return";
         case WARN_SHADOW_VARIABLE: return "shadow-variable";
+        case WARN_IMPLICIT_NARROWING: return "implicit-narrowing";
+        case WARN_SIGNED_UNSIGNED_COMPARE: return "signed-unsigned-compare";
         default:                   return "unknown";
     }
 }

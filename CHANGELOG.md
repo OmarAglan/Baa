@@ -8,6 +8,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.3.6.5] - 2026-02-24
+
 ### Added
 
 - **Type aliases (`نوع`) (v0.3.6.5)** — global type aliases are now supported with C-like "declare before use" behavior:
@@ -15,13 +17,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
   - Supported targets in this milestone: existing implemented types (primitive + `تعداد`/`هيكل`/`اتحاد`).
   - Alias chaining is supported when prior aliases are already declared.
 - **Type-alias diagnostics** — strict collision checks between alias names and symbols/functions, with dedicated semantic errors.
+- **Numeric semantic diagnostics completion (v0.3.5.5)**:
+  - `-Wimplicit-narrowing` for potentially lossy implicit numeric conversions (declarations, assignments, returns, call arguments, member/array assignments).
+  - `-Wsigned-unsigned-compare` for mixed signed/unsigned comparisons after integer promotions.
 - **Coverage** — new integration and negative tests for type aliases:
   - `tests/backend_type_alias_test.baa`
   - `tests/neg/type_alias_*.baa`
+- **Warning regression coverage** — new negative diagnostics tests:
+  - `tests/neg/semantic_warn_implicit_narrowing_decl.baa`
+  - `tests/neg/semantic_warn_implicit_narrowing_return.baa`
+  - `tests/neg/semantic_warn_signed_unsigned_compare.baa`
 
 ### Changed
 
 - **`نوع` handling is contextual in the parser** — `نوع` can still appear as an identifier/member name in expressions (e.g. `س:نوع`), while being recognized as alias declaration syntax at top-level declarations.
+- **Negative test runner** — `tests/regress.py` now accepts per-test compile flags via `// FLAGS:` markers (used for warning-as-error diagnostics tests).
 
 ## [0.3.5.5] - 2026-02-21
 

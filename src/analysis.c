@@ -1415,6 +1415,245 @@ static bool eval_const_int_expr(Node* expr, int64_t* out_value)
     }
 }
 
+static bool datatype_is_numeric_scalar(DataType t)
+{
+    return datatype_is_intlike(t) || t == TYPE_FLOAT;
+}
+
+static bool datatype_signed_unsigned_compare_after_promotion(DataType left, DataType right)
+{
+    DataType pl = datatype_int_promote(left);
+    DataType pr = datatype_int_promote(right);
+    if (!datatype_is_int(pl) || !datatype_is_int(pr)) {
+        return false;
+    }
+    return datatype_is_unsigned_int(pl) != datatype_is_unsigned_int(pr);
+}
+
+static bool datatype_int_info(DataType t, int* out_bits, bool* out_unsigned)
+{
+    if (!out_bits || !out_unsigned) return false;
+
+    switch (t) {
+        case TYPE_BOOL:
+            *out_bits = 1;
+            *out_unsigned = true;
+            return true;
+        case TYPE_I8:
+            *out_bits = 8;
+            *out_unsigned = false;
+            return true;
+        case TYPE_U8:
+            *out_bits = 8;
+            *out_unsigned = true;
+            return true;
+        case TYPE_I16:
+            *out_bits = 16;
+            *out_unsigned = false;
+            return true;
+        case TYPE_U16:
+            *out_bits = 16;
+            *out_unsigned = true;
+            return true;
+        case TYPE_I32:
+            *out_bits = 32;
+            *out_unsigned = false;
+            return true;
+        case TYPE_U32:
+            *out_bits = 32;
+            *out_unsigned = true;
+            return true;
+        case TYPE_INT:
+            *out_bits = 64;
+            *out_unsigned = false;
+            return true;
+        case TYPE_U64:
+            *out_bits = 64;
+            *out_unsigned = true;
+            return true;
+        case TYPE_CHAR:
+            *out_bits = 64;
+            *out_unsigned = true;
+            return true;
+        case TYPE_ENUM:
+            *out_bits = 64;
+            *out_unsigned = false;
+            return true;
+        default:
+            return false;
+    }
+}
+
+static bool int64_fits_in_datatype(int64_t value, DataType dst_type)
+{
+    int bits = 0;
+    bool is_unsigned = false;
+    if (!datatype_int_info(dst_type, &bits, &is_unsigned)) {
+        return false;
+    }
+
+    if (is_unsigned) {
+        if (value < 0) {
+            return false;
+        }
+        if (bits >= 64) {
+            return true;
+        }
+        uint64_t max_value = (1ULL << (unsigned)bits) - 1ULL;
+        return (uint64_t)value <= max_value;
+    }
+
+    if (bits >= 64) {
+        return true;
+    }
+
+    int64_t min_value = -(1LL << (unsigned)(bits - 1));
+    int64_t max_value = (1LL << (unsigned)(bits - 1)) - 1LL;
+    return value >= min_value && value <= max_value;
+}
+
+static bool eval_const_float_expr(Node* expr, double* out_value)
+{
+    if (!expr || !out_value) return false;
+
+    switch (expr->type)
+    {
+        case NODE_FLOAT:
+            *out_value = expr->data.float_lit.value;
+            return true;
+
+        case NODE_UNARY_OP:
+            if (expr->data.unary_op.op == UOP_NEG) {
+                double v = 0.0;
+                if (!eval_const_float_expr(expr->data.unary_op.operand, &v)) return false;
+                *out_value = -v;
+                return true;
+            }
+            return false;
+
+        default:
+            return false;
+    }
+}
+
+static bool float_const_is_exact_int64(double value, int64_t* out_value)
+{
+    if (!out_value) return false;
+    if (value < (double)INT64_MIN || value > (double)INT64_MAX) {
+        return false;
+    }
+
+    int64_t iv = (int64_t)value;
+    if ((double)iv != value) {
+        return false;
+    }
+
+    *out_value = iv;
+    return true;
+}
+
+static bool implicit_conversion_may_lose_data(DataType src_type, DataType dst_type, Node* expr)
+{
+    if (src_type == dst_type) return false;
+    if (!datatype_is_numeric_scalar(src_type) || !datatype_is_numeric_scalar(dst_type)) return false;
+
+    if (src_type == TYPE_FLOAT && dst_type == TYPE_FLOAT) return false;
+
+    if (src_type == TYPE_FLOAT) {
+        if (!datatype_is_intlike(dst_type)) {
+            return false;
+        }
+
+        double fv = 0.0;
+        int64_t iv = 0;
+        if (eval_const_float_expr(expr, &fv) &&
+            float_const_is_exact_int64(fv, &iv) &&
+            int64_fits_in_datatype(iv, dst_type)) {
+            return false;
+        }
+
+        return true;
+    }
+
+    if (dst_type == TYPE_FLOAT) {
+        int src_bits = 0;
+        bool src_unsigned = false;
+        if (!datatype_int_info(src_type, &src_bits, &src_unsigned)) {
+            return false;
+        }
+
+        if (src_bits <= 53) {
+            return false;
+        }
+
+        int64_t iv = 0;
+        if (eval_const_int_expr(expr, &iv)) {
+            const int64_t exact_limit = 9007199254740992LL; // 2^53
+            if (iv >= -exact_limit && iv <= exact_limit) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    int src_bits = 0;
+    int dst_bits = 0;
+    bool src_unsigned = false;
+    bool dst_unsigned = false;
+
+    if (!datatype_int_info(src_type, &src_bits, &src_unsigned) ||
+        !datatype_int_info(dst_type, &dst_bits, &dst_unsigned)) {
+        return false;
+    }
+
+    bool may_lose = false;
+    if (src_unsigned == dst_unsigned) {
+        may_lose = dst_bits < src_bits;
+    } else if (src_unsigned && !dst_unsigned) {
+        may_lose = dst_bits <= src_bits;
+    } else {
+        may_lose = true;
+    }
+
+    if (!may_lose) {
+        return false;
+    }
+
+    int64_t iv = 0;
+    if (eval_const_int_expr(expr, &iv) && int64_fits_in_datatype(iv, dst_type)) {
+        return false;
+    }
+
+    return true;
+}
+
+static void maybe_warn_implicit_narrowing(DataType src_type, DataType dst_type, Node* expr)
+{
+    if (!expr) return;
+    if (!implicit_conversion_may_lose_data(src_type, dst_type, expr)) return;
+
+    warning_report(WARN_IMPLICIT_NARROWING,
+                   expr->filename ? expr->filename : current_filename,
+                   (expr->line > 0) ? expr->line : 1,
+                   (expr->col > 0) ? expr->col : 1,
+                   "تحويل ضمني قد يسبب فقدان بيانات من %s إلى %s.",
+                   datatype_to_str(src_type),
+                   datatype_to_str(dst_type));
+}
+
+static void maybe_warn_signed_unsigned_compare(DataType left_type, DataType right_type, Node* expr)
+{
+    if (!expr) return;
+    if (!datatype_signed_unsigned_compare_after_promotion(left_type, right_type)) return;
+
+    warning_report(WARN_SIGNED_UNSIGNED_COMPARE,
+                   expr->filename ? expr->filename : current_filename,
+                   (expr->line > 0) ? expr->line : 1,
+                   (expr->col > 0) ? expr->col : 1,
+                   "مقارنة بين نوع موقّع وغير موقّع قد تعطي نتائج غير متوقعة.");
+}
+
 /**
  * @brief استنتاج نوع التعبير.
  * @return DataType نوع التعبير الناتج.
@@ -1538,6 +1777,8 @@ static DataType infer_type_internal(Node* node) {
                 if (i < fs->param_count) {
                     if (!types_compatible(at, fs->param_types[i])) {
                         semantic_error(arg, "نوع المعامل %d في '%s' غير متوافق.", i + 1, fs->name);
+                    } else {
+                        maybe_warn_implicit_narrowing(at, fs->param_types[i], arg);
                     }
                 }
                 i++;
@@ -1583,6 +1824,7 @@ static DataType infer_type_internal(Node* node) {
                     }
                     return TYPE_BOOL;
                 }
+                maybe_warn_signed_unsigned_compare(left, right, node);
                 if (left != right) {
                     // سماح C-like: مقارنة حرف مع صحيح.
                     if (!((datatype_is_intlike(left) && datatype_is_intlike(right)) ||
@@ -1809,6 +2051,8 @@ static void analyze_node(Node* node) {
                                       node->data.var_decl.name,
                                       datatype_to_str(declType),
                                       datatype_to_str(exprType));
+                    } else {
+                        maybe_warn_implicit_narrowing(exprType, declType, node->data.var_decl.expression);
                     }
                 }
                 if (node->data.var_decl.is_const && !node->data.var_decl.expression) {
@@ -1901,6 +2145,8 @@ static void analyze_node(Node* node) {
                     }
                 } else if (!types_compatible(exprType, sym->type)) {
                     semantic_error(node, "Type mismatch in assignment to '%s'.", node->data.assign_stmt.name);
+                } else {
+                    maybe_warn_implicit_narrowing(exprType, sym->type, node->data.assign_stmt.expression);
                 }
             }
             break;
@@ -1957,6 +2203,8 @@ static void analyze_node(Node* node) {
                 }
             } else if (!types_compatible(got, expected)) {
                 semantic_error(node, "عدم تطابق النوع في إسناد العضو.");
+            } else {
+                maybe_warn_implicit_narrowing(got, expected, value);
             }
             break;
         }
@@ -2067,6 +2315,8 @@ static void analyze_node(Node* node) {
                 DataType rt = infer_type(node->data.return_stmt.expression);
                 if (in_function && !types_compatible(rt, current_func_return_type)) {
                     semantic_error(node, "نوع الإرجاع غير متوافق مع نوع الدالة.");
+                } else if (in_function) {
+                    maybe_warn_implicit_narrowing(rt, current_func_return_type, node->data.return_stmt.expression);
                 }
             }
             break;
@@ -2114,6 +2364,8 @@ static void analyze_node(Node* node) {
                 if (i < fs->param_count) {
                     if (!types_compatible(at, fs->param_types[i])) {
                         semantic_error(arg, "نوع المعامل %d في '%s' غير متوافق.", i + 1, fs->name);
+                    } else {
+                        maybe_warn_implicit_narrowing(at, fs->param_types[i], arg);
                     }
                 }
                 i++;
@@ -2216,6 +2468,8 @@ static void analyze_node(Node* node) {
             DataType vt = infer_type(node->data.array_op.value);
             if (!types_compatible(vt, sym->type)) {
                 semantic_error(node, "نوع القيمة في تعيين '%s' غير متوافق.", sym->name);
+            } else {
+                maybe_warn_implicit_narrowing(vt, sym->type, node->data.array_op.value);
             }
 
             if (node->data.array_op.index && node->data.array_op.index->type == NODE_INT) {

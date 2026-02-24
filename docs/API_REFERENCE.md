@@ -2777,6 +2777,7 @@ Reports a warning with source location and warning type.
 - **Colored output** (yellow) when terminal supports ANSI codes
 - Shows warning name in brackets: `[-Wunused-variable]`
 - With `-Werror`, warnings are displayed as errors (red)
+- Supports numeric diagnostics flags: `-Wimplicit-narrowing`, `-Wsigned-unsigned-compare`
 
 ### 8.3. Warning Types
 
@@ -2786,6 +2787,8 @@ typedef enum {
     WARN_DEAD_CODE,          // Unreachable code after return/break
     WARN_IMPLICIT_RETURN,    // Function without explicit return (future)
     WARN_SHADOW_VARIABLE,    // Local variable shadows global
+    WARN_IMPLICIT_NARROWING, // Potentially lossy implicit numeric conversion
+    WARN_SIGNED_UNSIGNED_COMPARE, // Mixed signed/unsigned comparison
     WARN_COUNT               // Total count (for iteration)
 } WarningType;
 ```

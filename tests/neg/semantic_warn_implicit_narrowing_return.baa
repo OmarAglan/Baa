@@ -1,0 +1,11 @@
+// FLAGS: -Wall -Werror
+// EXPECT: [Error]
+// EXPECT: [-Wimplicit-narrowing]
+// EXPECT: تحويل ضمني قد يسبب فقدان بيانات
+ص٨ رجوع_صغير() {
+    إرجع ١٠٠٠.
+}
+
+صحيح الرئيسية() {
+    إرجع رجوع_صغير().
+}

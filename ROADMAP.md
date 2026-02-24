@@ -590,7 +590,7 @@
 
 - String operations: `طول_نص()`, `دمج_نص()`, `قارن_نص()`
 
-### v0.3.5.5: Numeric Types (Sized Integers + `عشري`)
+### v0.3.5.5: Numeric Types (Sized Integers + `عشري`) ✅ COMPLETED (2026-02-24)
 
 **Goal:** Make numeric types practical for systems programming: sized integers + usable `عشري` (f64).
 
@@ -628,8 +628,8 @@
 - [x] **Optimizer**: Ensure integer/float correctness (avoid invalid float folds; unsigned-aware folds).
 - [x] **ISel/Emitter**: Generate correct-sized integer ops and scalar SSE2 for `f64`.
 - [x] **ABI (Windows + SystemV)**: Pass/return `عشري` in XMM registers; handle SysV varargs rules.
-- [ ] **Semantic**: Warn on implicit narrowing conversions.
-- [ ] **Semantic**: Handle signed/unsigned comparison warnings.
+- [x] **Semantic**: Warn on implicit narrowing conversions.
+- [x] **Semantic**: Handle signed/unsigned comparison warnings.
 
 ---
 

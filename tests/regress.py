@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import shlex
 import subprocess
 import sys
 import tempfile
@@ -59,6 +60,20 @@ def _expected_markers(src: Path) -> list[str]:
     except Exception:
         return []
     return markers
+
+
+def _flags_markers(src: Path) -> list[str]:
+    flags: list[str] = []
+    try:
+        for line in src.read_text(encoding="utf-8", errors="replace").splitlines():
+            s = line.strip()
+            if s.startswith("// FLAGS:"):
+                raw = s.split(":", 1)[1].strip()
+                if raw:
+                    flags.extend(shlex.split(raw))
+    except Exception:
+        return []
+    return flags
 
 
 def main() -> int:
@@ -154,6 +169,7 @@ def main() -> int:
         for src in neg:
             src_rel = src.relative_to(ROOT)
             markers = _expected_markers(src)
+            flags = _flags_markers(src)
             # Use a unique dummy output to avoid collisions.
             exe_ext = ".exe" if os.name == "nt" else ""
             out_dir = ROOT / f".baa_regress_neg_out_{os.getpid()}"
@@ -164,7 +180,7 @@ def main() -> int:
             try:
                 dummy = out_dir / f"neg_out{exe_ext}"
                 p = subprocess.run(
-                    [str(baa), "-O1", str(src_rel), "-o", str(dummy)],
+                    [str(baa), "-O1", *flags, str(src_rel), "-o", str(dummy)],
                     cwd=str(ROOT),
                     text=True,
                     capture_output=True,

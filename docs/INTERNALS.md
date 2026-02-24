@@ -68,7 +68,7 @@ flowchart LR
 | **1. Frontend** | `.baa` Source | AST | `lexer.c`, `parser.c` | Tokenizes, handles macros, and builds the syntax tree. |
 | **2. Analysis** | AST | Valid AST | `analysis.c` | **Semantic Pass**: Checks types, scopes, and resolves symbols. |
 | **3. IR Lowering** | AST | IR | `ir_lower.c` (v0.3.0.3+) + `ir_builder.c` | Converts AST expressions/statements to SSA-form Intermediate Representation using the IR Builder. |
-| **4. Optimization** | IR | Optimized IR | [`src/ir_analysis.c`](src/ir_analysis.c:1) + [`src/ir_pass.h`](src/ir_pass.h:1) (v0.3.1.1+) | Analysis infrastructure (CFG validation, predecessors, dominance) + future optimization passes. |
+| **4. Optimization** | IR | Optimized IR | [`src/ir_analysis.c`](../src/ir_analysis.c:1) + [`src/ir_pass.h`](../src/ir_pass.h:1) (v0.3.1.1+) | Analysis infrastructure (CFG validation, predecessors, dominance) + future optimization passes. |
 | **5. Backend** | IR | `.s` Assembly | `isel.c`, `regalloc.c`, `emit.c` | Lowers IR to machine instructions, allocates registers, and emits x86-64 AT&T assembly. |
 | **6. Assemble** | `.s` Assembly | `.o` Object | `gcc -c` | Invokes external assembler. |
 | **7. Link** | `.o` Object | `.exe` Executable | `gcc` | Links with C Runtime. |
@@ -107,6 +107,8 @@ The driver in `main.c` (v0.2.0+) supports multi-file compilation and various mod
 | `-S`, `-s` | **Assembly Only** | `.s` | Stops after code emission. Writes `<input>.s` (or `-o` when a single input file is used). |
 | `-c` | **Compile Only** | `.o` | Stops after assembling. Writes `<input>.o` (or `-o` when a single input file is used). |
 | `-v` | **Verbose** | - | Prints commands and compilation time; keeps intermediate `.s` files. |
+| `--debug-info` | **Debug Info** | `.s/.o/.exe` | Emits source `.file/.loc` info and passes `-g` to toolchain. |
+| `-O0` / `-O1` / `-O2` | **Optimization Level** | - | Selects optimizer aggressiveness (`-O1` is default). |
 | `--dump-ir` | **IR Dump** | stdout | Prints Baa IR (Arabic) after semantic analysis (v0.3.0.6+). |
 | `--emit-ir` | **IR Emit** | `<input>.ir` | Writes Baa IR (Arabic) to a `.ir` file after semantic analysis (v0.3.0.7). |
 | `--dump-ir-opt` | **Optimized IR Dump** | stdout | Prints Baa IR (Arabic) after optimization (v0.3.2.6.5). |
@@ -115,6 +117,11 @@ The driver in `main.c` (v0.2.0+) supports multi-file compilation and various mod
 | `--verify-ssa` | **SSA Verification** | stderr | Verifies SSA invariants after Mem2Reg and before Out-of-SSA (**requires `-O1`/`-O2`**) (v0.3.2.5.3). |
 | `--verify-gate` | **Verifier Gate (Debug)** | stderr | Runs `--verify-ir`/`--verify-ssa` after each optimizer iteration (**requires `-O1`/`-O2`**) (v0.3.2.6.5). |
 | `--time-phases` | **Phase Timings** | stderr | Prints per-phase timing and IR arena memory stats (`[TIME]`/`[MEM]`) (v0.3.2.9.2). |
+| `--target=<t>` | **Target Select** | `.s/.o/.exe` | Selects backend target: `x86_64-windows` or `x86_64-linux`. |
+| `-fPIC` / `-fPIE` | **Code Model (ELF)** | `.s/.o/.exe` | Enables PIC/PIE-friendly emission on Linux/ELF. |
+| `-fno-pic` / `-fno-pie` | **Disable PIC/PIE** | `.s/.o/.exe` | Disables PIC/PIE modes. |
+| `-mcmodel=small` | **Code Model** | `.s/.o/.exe` | Uses small code model (only supported model). |
+| `-fstack-protector` / `-fstack-protector-all` / `-fno-stack-protector` | **Stack Protector (ELF)** | `.s/.o/.exe` | Controls stack-canary emission on Linux/ELF. |
 | `-funroll-loops` | **Loop Unrolling (Opt-in)** | - | Conservatively fully-unrolls small constant-trip-count loops after Out-of-SSA (v0.3.2.7.1). |
 | `--version` | **Version Info** | stdout | Displays compiler version and build date. |
 | `--help`, `-h` | **Help** | stdout | Shows usage information. |
@@ -857,15 +864,15 @@ For full specification, see [BAA_IR_SPECIFICATION.md](BAA_IR_SPECIFICATION.md).
 
 The IR printer provides a canonical, Arabic-first text format for debugging and tooling.
 
-- Core printer entry point: [`ir_module_print()`](src/ir.c:1641)
-- Instruction formatting: [`ir_inst_print()`](src/ir.c:1355)
-- Values / registers / immediates: [`ir_value_print()`](src/ir.c:1348)
-- Arabic-Indic numerals for registers: [`int_to_arabic_numerals()`](src/ir.c:53)
+- Core printer entry point: [`ir_module_print()`](../src/ir.c:1641)
+- Instruction formatting: [`ir_inst_print()`](../src/ir.c:1355)
+- Values / registers / immediates: [`ir_value_print()`](../src/ir.c:1348)
+- Arabic-Indic numerals for registers: [`int_to_arabic_numerals()`](../src/ir.c:53)
 
-The driver exposes the printer via the CLI flag `--dump-ir` implemented in [`src/main.c`](src/main.c:1). This flag:
+The driver exposes the printer via the CLI flag `--dump-ir` implemented in [`src/main.c`](../src/main.c:1). This flag:
 
 1. Parses + analyzes the source as usual.
-2. Builds an IR module using [`IRBuilder`](src/ir_builder.h:43) and lowers AST statements using [`lower_stmt()`](src/ir_lower.c:725).
+2. Builds an IR module using [`IRBuilder`](../src/ir_builder.h:43) and lowers AST statements using [`lower_stmt()`](../src/ir_lower.c:725).
 3. Prints IR to stdout.
 
 > **Note:** This is currently a debug path for inspection only. The main compilation pipeline still generates assembly directly from AST (full IR pipeline integration is scheduled for v0.3.0.7).
@@ -883,16 +890,16 @@ build\baa.exe --dump-ir program.baa
 The IR analysis layer provides foundational compiler analyses required by the upcoming optimizer pipeline:
 
 - **CFG validation**: ensure each block has a terminator (`قفز` / `قفز_شرط` / `رجوع`)
-  - [`ir_func_validate_cfg()`](src/ir_analysis.h:36)
-  - [`ir_module_validate_cfg()`](src/ir_analysis.h:42)
+  - [`ir_func_validate_cfg()`](../src/ir_analysis.h:36)
+  - [`ir_module_validate_cfg()`](../src/ir_analysis.h:42)
 
 - **Predecessor rebuilding**: recompute `preds[]` and `succs[]` from terminator instructions (useful after IR edits)
-  - [`ir_func_rebuild_preds()`](src/ir_analysis.h:56)
-  - [`ir_module_rebuild_preds()`](src/ir_analysis.h:61)
+  - [`ir_func_rebuild_preds()`](../src/ir_analysis.h:56)
+  - [`ir_module_rebuild_preds()`](../src/ir_analysis.h:61)
 
 - **Dominator tree + dominance frontier**: compute `idom` for each block and build dominance frontier sets
-  - [`ir_func_compute_dominators()`](src/ir_analysis.h:77)
-  - [`ir_module_compute_dominators()`](src/ir_analysis.h:82)
+  - [`ir_func_compute_dominators()`](../src/ir_analysis.h:77)
+  - [`ir_module_compute_dominators()`](../src/ir_analysis.h:82)
 
 - **Loop detection (v0.3.2.7.1):** natural loop discovery via back edges using dominance (`src/ir_loop.c`, `src/ir_loop.h`).
 
@@ -904,7 +911,7 @@ The IR analysis layer provides foundational compiler analyses required by the up
 
 - **Inlining (v0.3.2.7.2):** conservative inliner at `-O2` for small internal functions with a single call site (`src/ir_inline.c`, `src/ir_inline.h`).
 
-> Implementation lives in [`src/ir_analysis.c`](src/ir_analysis.c:1).
+> Implementation lives in [`src/ir_analysis.c`](../src/ir_analysis.c:1).
 
 ---
 
@@ -916,18 +923,18 @@ Canonical Mem2Reg is a correctness-first SSA construction step that promotes a s
 - Inserts `فاي` nodes at join points.
 - Performs SSA renaming to rewrite `حمل/خزن` into SSA register values (usually `نسخ`).
 
-**File:** [`src/ir_mem2reg.c`](src/ir_mem2reg.c:1)
+**File:** [`src/ir_mem2reg.c`](../src/ir_mem2reg.c:1)
 
-**Entry Point:** [`ir_mem2reg_run()`](src/ir_mem2reg.c:1)
+**Entry Point:** [`ir_mem2reg_run()`](../src/ir_mem2reg.c:1)
 
-**Pass Descriptor:** [`IR_PASS_MEM2REG`](src/ir_mem2reg.c:1) (used with the optimizer pipeline).
+**Pass Descriptor:** [`IR_PASS_MEM2REG`](../src/ir_mem2reg.c:1) (used with the optimizer pipeline).
 
 **Constraints (correctness-first):**
 - No pointer escape (not passed to `نداء`, not used inside `فاي`, not stored as a value)
 - Alloca block must dominate all uses (ensures SSA correctness)
 - Must be definitely initialized before any load on all paths (must-def initialization). The initializing `خزن` may be in a different block as long as every path to a `حمل` has a prior store.
 
-**Pipeline position:** Runs first inside each optimizer iteration (before Canon/InstCombine/SCCP/ConstFold/CopyProp/etc.) via [`ir_optimizer_run()`](src/ir_optimizer.c:73).
+**Pipeline position:** Runs first inside each optimizer iteration (before Canon/InstCombine/SCCP/ConstFold/CopyProp/etc.) via [`ir_optimizer_run()`](../src/ir_optimizer.c:73).
 
 ---
 
@@ -937,11 +944,11 @@ Out-of-SSA eliminates `فاي` before the backend by inserting copies on CFG edg
 
 `P -> B` becomes `P -> E -> B`
 
-**File:** [`src/ir_outssa.c`](src/ir_outssa.c:1)
+**File:** [`src/ir_outssa.c`](../src/ir_outssa.c:1)
 
-**Entry Point:** [`ir_outssa_run()`](src/ir_outssa.c:1)
+**Entry Point:** [`ir_outssa_run()`](../src/ir_outssa.c:1)
 
-**Driver integration:** Executed in [`src/main.c`](src/main.c:1) before `isel_run_ex()` to ensure no `IR_OP_PHI` reaches ISel/RegAlloc/Emit.
+**Driver integration:** Executed in [`src/main.c`](../src/main.c:1) before `isel_run_ex()` to ensure no `IR_OP_PHI` reaches ISel/RegAlloc/Emit.
 
 ---
 
@@ -957,7 +964,7 @@ This verifier is exposed via the CLI flag:
 
 - `--verify-ssa` — aborts compilation with diagnostics on the first violations (capped), and **requires `-O1`/`-O2`** because Mem2Reg runs in the optimizer pipeline.
 
-**Files:** [`src/ir_verify_ssa.c`](src/ir_verify_ssa.c:1), header: [`src/ir_verify_ssa.h`](src/ir_verify_ssa.h:1)
+**Files:** [`src/ir_verify_ssa.c`](../src/ir_verify_ssa.c:1), header: [`src/ir_verify_ssa.h`](../src/ir_verify_ssa.h:1)
 
 ---
 
@@ -975,9 +982,9 @@ This verifier is exposed via the CLI flag:
 
 - `--verify-ir` — aborts compilation with diagnostics on the first violations (capped).
 
-**Files:** [`src/ir_verify_ir.c`](src/ir_verify_ir.c:1), header: [`src/ir_verify_ir.h`](src/ir_verify_ir.h:1)
+**Files:** [`src/ir_verify_ir.c`](../src/ir_verify_ir.c:1), header: [`src/ir_verify_ir.h`](../src/ir_verify_ir.h:1)
 
-**Pipeline position:** Executed after optimization and before Out-of-SSA/backend in [`src/main.c`](src/main.c:1).
+**Pipeline position:** Executed after optimization and before Out-of-SSA/backend in [`src/main.c`](../src/main.c:1).
 
 ---
 
@@ -988,9 +995,9 @@ Canonicalization normalizes instruction forms to increase matchability for later
 - Commutative ops: constant placement and deterministic operand ordering
 - Comparisons: swap operands and predicate when the constant is on the left
 
-**File:** [`src/ir_canon.c`](src/ir_canon.c:1)
+**File:** [`src/ir_canon.c`](../src/ir_canon.c:1)
 
-**Entry Point:** [`ir_canon_run()`](src/ir_canon.c:1)
+**Entry Point:** [`ir_canon_run()`](../src/ir_canon.c:1)
 
 **Pass Descriptor:** `IR_PASS_CANON` (used with the optimizer pipeline).
 
@@ -1000,7 +1007,7 @@ Canonicalization normalizes instruction forms to increase matchability for later
 
 InstCombine performs fast, local instruction simplifications to improve later passes (SCCP/constfold/copyprop/DCE). It rewrites eligible instructions into `نسخ` (`IR_OP_COPY`) or constants rather than deleting SSA definitions directly.
 
-**File:** [`src/ir_instcombine.c`](src/ir_instcombine.c:1)
+**File:** [`src/ir_instcombine.c`](../src/ir_instcombine.c:1)
 
 **Entry Point:** `ir_instcombine_run()`
 
@@ -1016,7 +1023,7 @@ SCCP (Sparse Conditional Constant Propagation) combines reachability with SSA co
 - Propagates integer constants through SSA.
 - Folds `قفز_شرط` (`IR_OP_BR_COND`) into `قفز` (`IR_OP_BR`) when the condition becomes constant.
 
-**File:** [`src/ir_sccp.c`](src/ir_sccp.c:1)
+**File:** [`src/ir_sccp.c`](../src/ir_sccp.c:1)
 
 **Entry Point:** `ir_sccp_run()`
 
@@ -1032,11 +1039,11 @@ CFG simplification reduces unnecessary control-flow structure:
 - Removes trivial `قفز`-only blocks conservatively, avoiding unsafe phi interactions
 - Provides a reusable critical-edge splitting helper for IR passes
 
-**File:** [`src/ir_cfg_simplify.c`](src/ir_cfg_simplify.c:1)
+**File:** [`src/ir_cfg_simplify.c`](../src/ir_cfg_simplify.c:1)
 
-**Entry Point:** [`ir_cfg_simplify_run()`](src/ir_cfg_simplify.c:1)
+**Entry Point:** [`ir_cfg_simplify_run()`](../src/ir_cfg_simplify.c:1)
 
-**Helper:** [`ir_cfg_split_critical_edge()`](src/ir_cfg_simplify.c:1)
+**Helper:** [`ir_cfg_split_critical_edge()`](../src/ir_cfg_simplify.c:1)
 
 **Pass Descriptor:** `IR_PASS_CFG_SIMPLIFY` (used with the optimizer pipeline).
 
@@ -1044,7 +1051,7 @@ CFG simplification reduces unnecessary control-flow structure:
 
 The Data Layout module provides a central source of truth for target-specific type information (size, alignment, store size). Currently hardcoded for **Windows x86-64**, but designed to support multiple backends in the future.
 
-**File:** [`src/ir_data_layout.c`](src/ir_data_layout.c:1) / [`src/ir_data_layout.h`](src/ir_data_layout.h:1)
+**File:** [`src/ir_data_layout.c`](../src/ir_data_layout.c:1) / [`src/ir_data_layout.h`](../src/ir_data_layout.h:1)
 
 **Key API:**
 - `ir_type_size_bytes(dl, type)`: Returns size in bytes (e.g., `i32` → 4).
@@ -1062,11 +1069,11 @@ The Data Layout module provides a central source of truth for target-specific ty
 
 The IR constant folding pass optimizes Baa IR by evaluating arithmetic and comparison instructions at compile time when both operands are immediate constants. It replaces all uses of the folded register with the constant value and removes the instruction from its block.
 
-**File:** [src/ir_constfold.c](src/ir_constfold.c)
+**File:** [src/ir_constfold.c](../src/ir_constfold.c)
 
-**Entry Point:** [`ir_constfold_run()`](src/ir_constfold.c)
+**Entry Point:** [`ir_constfold_run()`](../src/ir_constfold.c)
 
-**Pass Descriptor:** [`IR_PASS_CONSTFOLD`](src/ir_constfold.c) (used with the optimizer pipeline).
+**Pass Descriptor:** [`IR_PASS_CONSTFOLD`](../src/ir_constfold.c) (used with the optimizer pipeline).
 
 **Supported Operations:**
 
@@ -1081,7 +1088,7 @@ The IR constant folding pass optimizes Baa IR by evaluating arithmetic and compa
 4. Removes the folded instruction from its block.
 5. Pass is function-local; virtual registers are scoped per function.
 
-**Testing:** See [tests/ir_constfold_test.c](tests/ir_constfold_test.c).
+**Testing:** See [tests/ir_constfold_test.c](../tests/ir_constfold_test.c).
 
 **API:** See [docs/API_REFERENCE.md](API_REFERENCE.md) for function signatures.
 
@@ -1094,11 +1101,11 @@ The IR dead code elimination pass removes useless IR after lowering/other optimi
 - **Dead SSA instructions:** any instruction that produces a destination register which is never used, and has no side effects.
 - **Unreachable blocks:** any basic block not reachable from the function entry block.
 
-**File:** [`src/ir_dce.c`](src/ir_dce.c)
+**File:** [`src/ir_dce.c`](../src/ir_dce.c)
 
-**Entry Point:** [`ir_dce_run()`](src/ir_dce.c:300)
+**Entry Point:** [`ir_dce_run()`](../src/ir_dce.c:300)
 
-**Pass Descriptor:** [`IR_PASS_DCE`](src/ir_dce.c:29)
+**Pass Descriptor:** [`IR_PASS_DCE`](../src/ir_dce.c:29)
 
 **Conservative correctness rules:**
 
@@ -1108,10 +1115,10 @@ The IR dead code elimination pass removes useless IR after lowering/other optimi
 
 **CFG hygiene:**
 
-- Unreachable-block removal uses [`ir_func_rebuild_preds()`](src/ir_analysis.c:132) before/after pruning.
+- Unreachable-block removal uses [`ir_func_rebuild_preds()`](../src/ir_analysis.c:132) before/after pruning.
 - Phi nodes are pruned of incoming edges from removed predecessor blocks to avoid dangling references.
 
-**Testing:** See [`tests/ir_dce_test.c`](tests/ir_dce_test.c:1).
+**Testing:** See [`tests/ir_dce_test.c`](../tests/ir_dce_test.c:1).
 
 **API:** See [docs/API_REFERENCE.md](API_REFERENCE.md) for function signatures.
 
@@ -1121,11 +1128,11 @@ The IR dead code elimination pass removes useless IR after lowering/other optimi
 
 The IR copy propagation pass removes redundant SSA copy chains by replacing uses of registers defined by `نسخ` (`IR_OP_COPY`) with their original source values. This simplifies the IR and improves the effectiveness of later passes (like common subexpression elimination and dead code elimination).
 
-**File:** [`src/ir_copyprop.c`](src/ir_copyprop.c:1)
+**File:** [`src/ir_copyprop.c`](../src/ir_copyprop.c:1)
 
-**Entry Point:** [`ir_copyprop_run()`](src/ir_copyprop.c:1)
+**Entry Point:** [`ir_copyprop_run()`](../src/ir_copyprop.c:1)
 
-**Pass Descriptor:** [`IR_PASS_COPYPROP`](src/ir_copyprop.c:1)
+**Pass Descriptor:** [`IR_PASS_COPYPROP`](../src/ir_copyprop.c:1)
 
 **Scope:** Function-local (virtual registers are scoped per function in the current IR).
 
@@ -1138,7 +1145,7 @@ The IR copy propagation pass removes redundant SSA copy chains by replacing uses
   - `فاي` phi incoming values
 - Removes `نسخ` instructions after propagation.
 
-**Testing:** See [`tests/ir_copyprop_test.c`](tests/ir_copyprop_test.c:1).
+**Testing:** See [`tests/ir_copyprop_test.c`](../tests/ir_copyprop_test.c:1).
 
 ---
 
@@ -1160,11 +1167,11 @@ GVN (Global Value Numbering) removes redundant pure expressions across dominator
 
 The IR common subexpression elimination (CSE) pass detects duplicate computations with identical opcode and operands, replacing subsequent uses with the first computed result.
 
-**File:** [`src/ir_cse.c`](src/ir_cse.c)
+**File:** [`src/ir_cse.c`](../src/ir_cse.c)
 
-**Entry Point:** [`ir_cse_run()`](src/ir_cse.c)
+**Entry Point:** [`ir_cse_run()`](../src/ir_cse.c)
 
-**Pass Descriptor:** [`IR_PASS_CSE`](src/ir_cse.c)
+**Pass Descriptor:** [`IR_PASS_CSE`](../src/ir_cse.c)
 
 **Algorithm:**
 
@@ -1183,7 +1190,7 @@ The IR common subexpression elimination (CSE) pass detects duplicate computation
 - Memory: حجز (alloca), حمل (load), خزن (store)
 - Control: نداء (call), فاي (phi), terminators (branches/returns)
 
-**Testing:** See [`tests/ir_cse_test.c`](tests/ir_cse_test.c).
+**Testing:** See [`tests/ir_cse_test.c`](../tests/ir_cse_test.c).
 
 **API:** See [docs/API_REFERENCE.md](API_REFERENCE.md) for function signatures.
 
@@ -1193,9 +1200,9 @@ The IR common subexpression elimination (CSE) pass detects duplicate computation
 
 The instruction selection pass converts Baa IR (SSA form) into an abstract machine representation (`MachineModule`) that closely mirrors x86-64 instructions while keeping virtual registers. Physical register assignment is deferred to the register allocation pass (v0.3.2.2).
 
-**Files:** [`src/isel.h`](src/isel.h), [`src/isel.c`](src/isel.c)
+**Files:** [`src/isel.h`](../src/isel.h), [`src/isel.c`](../src/isel.c)
 
-**Entry Point:** [`isel_run_ex()`](src/isel.c) — takes an `IRModule*` plus a `BaaTarget` to select ABI/object-format behavior.
+**Entry Point:** [`isel_run_ex()`](../src/isel.c) — takes an `IRModule*` plus a `BaaTarget` to select ABI/object-format behavior.
 
 **Multi-target note (v0.3.2.8.1):** The backend is being refactored to accept a `BaaTarget` descriptor (`src/target.h`) so the same IR can be lowered for Windows x64 (COFF) or Linux x86-64 (ELF). The driver exposes this via `--target=...`.
 
@@ -1219,7 +1226,7 @@ Each IR instruction is lowered to one or more `MachineInst` nodes. The expansion
 
 | Structure | Description |
 |-----------|-------------|
-| `MachineOp` | Enum of x86-64 opcodes: ADD, SUB, IMUL, SHL, IDIV, NEG, CQO, MOV, LEA, LOAD, STORE, CMP, TEST, SETcc (6 variants), MOVZX, AND, OR, NOT, XOR, JMP, JE, JNE, CALL, TAILJMP, RET, PUSH, POP, NOP, LABEL, COMMENT |
+| `MachineOp` | Enum of x86-64 opcodes: ADD, SUB, IMUL, SHL, SHR, SAR, IDIV, NEG, CQO, MOV, LEA, LOAD, STORE, CMP, TEST, SETcc (6 variants), MOVZX, AND, OR, NOT, XOR, JMP, JE, JNE, CALL, TAILJMP, RET, PUSH, POP, NOP, LABEL, COMMENT |
 | `MachineOperandKind` | NONE, VREG, IMM, MEM, LABEL, GLOBAL, FUNC |
 | `MachineOperand` | Union: vreg number, immediate value, memory (base+offset), label id, global/func name |
 | `MachineInst` | Doubly-linked list node: op + dst/src1/src2 operands + ir_reg + comment |
@@ -1239,8 +1246,10 @@ Each IR instruction is lowered to one or more `MachineInst` nodes. The expansion
 | `IR_OP_STORE` | `STORE [ptr], src` | Immediate values can be stored directly to memory |
 | `IR_OP_PTR_OFFSET` | `MOV dst, base; (scale index); ADD dst, index_scaled` | Used for array indexing: computes element address using data layout element size |
 | `IR_OP_CMP` | `CMP lhs, rhs; SETcc tmp; MOVZX dst, tmp` | SETcc selected by predicate (EQ/NE/GT/LT/GE/LE). If LHS is immediate, temp vreg is used |
-| `IR_OP_AND` / `IR_OP_OR` | `MOV dst, lhs; OP dst, rhs` | Same two-address form as arithmetic |
-| `IR_OP_NOT` | `MOV dst, src; XOR dst, 1` | Logical NOT (boolean inversion) |
+| `IR_OP_AND` / `IR_OP_OR` / `IR_OP_XOR` | `MOV dst, lhs; OP dst, rhs` | Same two-address form as arithmetic |
+| `IR_OP_SHL` | `MOV dst, lhs; SHL dst, rhs` | If rhs is non-immediate, count is moved to RCX/CL |
+| `IR_OP_SHR` | `MOV dst, lhs; SHR/SAR dst, rhs` | `SHR` for unsigned types, `SAR` for signed types |
+| `IR_OP_NOT` | `MOV dst, src; NOT dst` | Bitwise NOT |
 | `IR_OP_BR` | `JMP label` | Unconditional jump |
 | `IR_OP_BR_COND` | `TEST cond, cond; JNE true_label; JMP false_label` | Three-instruction pattern |
 | `IR_OP_RET` | `MOV RAX, val; RET` | Uses special vreg -2 (= RAX) |
@@ -1260,6 +1269,7 @@ The instruction selector uses negative vreg numbers to represent physical regist
 | -3 | RSP | Stack pointer base for outgoing call frames |
 | -4 | R11 | Reserved scratch register (spill-base fixups, mem-to-mem avoidance) |
 | -5 | RDX | Remainder register for `idiv` / backend fixed constraint |
+| -6 | RCX | Shift count register (`cl`) for variable shifts |
 | -10.. | ABI arg regs | Function arguments (target-dependent). Windows: -10..-13 → RCX/RDX/R8/R9. SysV: -10..-15 → RDI/RSI/RDX/RCX/R8/R9 |
 
 #### 6.19.5. Design Decisions
@@ -1270,7 +1280,7 @@ The instruction selector uses negative vreg numbers to represent physical regist
 4. **MachineModule references IR data:** Global variables and string tables are referenced (not copied) from the IR module. Memory is freed by the IR module.
 5. **Stack size tracking:** Each `IR_OP_ALLOCA` increases `stack_size` by the **store size** of the allocated pointee type (rounded up to its alignment via the target data layout). The LEA instruction uses the accumulated offset.
 
-**Testing:** See [`tests/isel_test.c`](tests/isel_test.c) — 8 test suites, 56 assertions.
+**Testing:** See [`tests/isel_test.c`](../tests/isel_test.c) — 8 test suites, 56 assertions.
 
 ---
 
@@ -1354,7 +1364,7 @@ When register pressure exceeds available registers, the allocator spills the lon
 3. **RSP/RBP always reserved:** Frame pointer is always maintained for simple stack access. No frame pointer omission.
 4. **Callee-saved tracking:** `RegAllocCtx.callee_saved_used[]` tracks which callee-saved registers are allocated, informing prologue/epilogue generation in the code emission phase.
 
-**Testing:** See [`tests/regalloc_test.c`](tests/regalloc_test.c) — 8 test suites, 51 assertions.
+**Testing:** See [`tests/regalloc_test.c`](../tests/regalloc_test.c) — 8 test suites, 51 assertions.
 
 ---
 
@@ -1539,9 +1549,9 @@ This backend is being refactored to support multiple ABIs via `BaaTarget` (`src/
 
 **Entry Points:**
 
-- [`emit_module()`](src/emit.c) — Top-level entry point for complete assembly file
-- [`emit_func()`](src/emit.c) — Emits single function with prologue/epilogue
-- [`emit_inst()`](src/emit.c) — Translates individual machine instruction
+- [`emit_module()`](../src/emit.c) — Top-level entry point for complete assembly file
+- [`emit_func()`](../src/emit.c) — Emits single function with prologue/epilogue
+- [`emit_inst()`](../src/emit.c) — Translates individual machine instruction
 
 **Testing:** Integration testing via full compilation pipeline (no standalone unit tests yet).
 
@@ -1591,3 +1601,4 @@ Strings are collected during parsing and emitted with unique labels:
 ---
 
 *[← Language Spec](LANGUAGE.md) | [API Reference →](API_REFERENCE.md)*
+

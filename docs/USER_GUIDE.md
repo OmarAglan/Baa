@@ -1,6 +1,6 @@
 # Baa User Guide
 
-> **Version:** 0.3.5.5 | [← README](../README.md) | [Language Spec →](LANGUAGE.md)
+> **Version:** 0.3.6 | [← README](../README.md) | [Language Spec →](LANGUAGE.md)
 
 
 Welcome to Baa (باء)! This guide will help you write your first Arabic computer program and use the Baa compiler toolchain.
@@ -47,10 +47,8 @@ git clone https://github.com/OmarAglan/Baa.git
 cd Baa
 
 # Build
-mkdir build
-cd build
-cmake ..
-cmake --build .
+cmake -B build -G "MinGW Makefiles"
+cmake --build build
 ```
 
 After building:
@@ -129,9 +127,15 @@ The Baa compiler is a full-featured command-line tool (since v0.2.0):
 .\out.exe
 ```
 
+```bash
+# Linux: default output is out
+./baa hello.baa
+./out
+```
+
 ---
 
-## 4. Linux Packaging (TGZ + DEB) (v0.3.5.5)
+## 4. Linux Packaging (TGZ + DEB) (v0.3.6)
 
 You can generate Linux installer artifacts from a Linux build:
 
@@ -153,20 +157,14 @@ bash scripts/package_linux.sh
 Install (DEB):
 
 ```bash
-sudo dpkg -i build-linux/baa-0.3.5.5-Linux-x86_64.deb
+sudo dpkg -i build-linux/baa-*-Linux-x86_64.deb
 ```
 
 Install (TGZ):
 
 ```bash
-tar -xzf build-linux/baa-0.3.5.5-Linux-x86_64.tar.gz
+tar -xzf build-linux/baa-*-Linux-x86_64.tar.gz
 sudo cp -a usr/* /usr/
-```
-
-```bash
-# Linux: default output is out
-./baa hello.baa
-./out
 ```
 
 ### Command-Line Flags
@@ -179,8 +177,11 @@ sudo cp -a usr/* /usr/
 | `-S`, `-s` | **Compile only to Assembly.** Produces `.s` file, does not invoke assembler/linker. | `.\baa.exe -S main.baa` (creates `main.s`) |
 | `-c` | **Compile and Assemble.** Produces object file (`.o`), does not link. | `.\baa.exe -c main.baa` (creates `main.o`) |
 | `-v` | Enable verbose output (shows all compilation steps with timing). | `.\baa.exe -v main.baa` |
+| `--time-phases` | Print per-phase timing and memory statistics. | `.\baa.exe --time-phases -O2 main.baa` |
+| `--debug-info` | Emit debug line info and pass `-g` to toolchain. | `.\baa.exe --debug-info main.baa` |
 | `--help`, `-h` | Display help message and usage. | `.\baa.exe --help` |
 | `--version` | Display compiler version. | `.\baa.exe --version` |
+| `-O0` / `-O1` / `-O2` | Optimization levels (default: `-O1`). | `.\baa.exe -O2 main.baa` |
 | `--target=<t>` | Select backend target (`x86_64-windows` or `x86_64-linux`). | `.\baa.exe --target=x86_64-linux main.baa` |
 | `--dump-ir` | Print Baa IR (Arabic) after semantic analysis. | `.\baa.exe --dump-ir main.baa` |
 | `--emit-ir` | Write Baa IR (Arabic) to `<input>.ir` after semantic analysis. | `.\baa.exe --emit-ir main.baa` |
@@ -192,8 +193,11 @@ sudo cp -a usr/* /usr/
 | `-funroll-loops` | Unroll small constant-count loops (conservative). | `.\baa.exe -funroll-loops -O2 main.baa` |
 | `-fPIC` | PIC-friendly emission (Linux/ELF). | `./baa -fPIC main.baa` |
 | `-fPIE` | PIE build (Linux/ELF; adds `-pie` at link). | `./baa -fPIE main.baa` |
+| `-fno-pic` / `-fno-pie` | Disable PIC/PIE modes. | `./baa -fno-pie main.baa` |
+| `-mcmodel=small` | Select code model (only `small` is supported). | `./baa -mcmodel=small main.baa` |
 | `-fstack-protector` | Enable stack canary (Linux/ELF). | `./baa -fstack-protector main.baa` |
 | `-fstack-protector-all` | Enable canary for all functions (Linux/ELF). | `./baa -fstack-protector-all main.baa` |
+| `-fno-stack-protector` | Disable stack canary. | `./baa -fno-stack-protector main.baa` |
 | *(Inlining at -O2)* | Small internal functions with a single call site may be inlined automatically at `-O2`. | `.\baa.exe -O2 main.baa` |
 
 ### Output Naming Rules
@@ -203,7 +207,7 @@ sudo cp -a usr/* /usr/
 - `-o <file>` is only applied for `-S` / `-c` when compiling a single input file.
 - `update` must be used alone: `.\baa.exe update`
 
-### Current Limitations (v0.3.5.5)
+### Current Limitations (v0.3.6)
 
 - SIMD and non-`عشري` floating types are not supported yet.
 
@@ -227,6 +231,8 @@ python .\tests\regress.py
 | `-Werror` | Treat warnings as errors (compilation fails). | `.\baa.exe -Wall -Werror main.baa` |
 | `-Wunused-variable` | Warn about unused variables. | `.\baa.exe -Wunused-variable main.baa` |
 | `-Wdead-code` | Warn about unreachable code after `إرجع`/`توقف`. | `.\baa.exe -Wdead-code main.baa` |
+| `-Wimplicit-narrowing` | Warn on potentially lossy implicit numeric conversions. | `.\baa.exe -Wimplicit-narrowing main.baa` |
+| `-Wsigned-unsigned-compare` | Warn on mixed signed/unsigned comparisons. | `.\baa.exe -Wsigned-unsigned-compare main.baa` |
 | `-Wno-<warning>` | Disable a specific warning. | `.\baa.exe -Wall -Wno-unused-variable main.baa` |
 | `-Wcolor` | Force colored output. | `.\baa.exe -Wall -Wcolor main.baa` |
 | `-Wno-color` | Disable colored output. | `.\baa.exe -Wall -Wno-color main.baa` |
@@ -446,6 +452,25 @@ Use `منطقي` variables to store true (`صواب`) or false (`خطأ`) values
     }
     
     إرجع ٠.
+}
+```
+
+### Low-Level Operations (v0.3.6)
+
+Bitwise operators, shifts, `حجم(...)`, and `عدم` are available for systems-level code.
+
+```baa
+عدم اطبع_رسالة() {
+    اطبع "مرحباً".
+    إرجع.
+}
+
+صحيح الرئيسية() {
+    صحيح أ = ٥ & ٣.
+    صحيح ب = ١ << ٤.
+    صحيح ج = حجم(صحيح).
+    اطبع_رسالة().
+    إرجع أ + ب + ج.
 }
 ```
 

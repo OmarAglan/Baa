@@ -1,6 +1,6 @@
 # IR Developer Guide
 
-> **Version:** 0.3.7 | [← Internals](INTERNALS.md) | [IR Specification →](BAA_IR_SPECIFICATION.md)
+> **Version:** 0.3.8 | [← Internals](INTERNALS.md) | [IR Specification →](BAA_IR_SPECIFICATION.md)
 
 This guide is for contributors working on the Baa IR and mid-end.
 
@@ -24,8 +24,8 @@ This guide is for contributors working on the Baa IR and mid-end.
    - ISel (`src/isel.c`) mapping IR -> Machine IR
    - Emit (`src/emit.c`) if needed
 7) Add tests:
-   - C unit test under `tests/ir_*_test.c` for the new invariant
-   - Integration `.baa` test if user-visible
+   - Integration `.baa` coverage under `tests/integration/` for user-visible behavior
+   - Negative test under `tests/neg/` if the change adds/changes diagnostics
 8) Update docs: `docs/BAA_IR_SPECIFICATION.md`.
 
 ## Adding / Modifying an Optimization Pass

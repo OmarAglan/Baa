@@ -6,7 +6,6 @@ import os
 import shlex
 import subprocess
 import sys
-import tempfile
 from pathlib import Path
 
 
@@ -76,10 +75,29 @@ def _flags_markers(src: Path) -> list[str]:
     return flags
 
 
+def _run_markers(src: Path) -> set[str]:
+    markers: set[str] = set()
+    try:
+        for line in src.read_text(encoding="utf-8", errors="replace").splitlines():
+            s = line.strip()
+            if not s.startswith("// RUN:"):
+                continue
+            raw = s.split(":", 1)[1].strip()
+            if not raw:
+                continue
+            for part in raw.replace(",", " ").split():
+                v = part.strip().lower()
+                if v:
+                    markers.add(v)
+    except Exception:
+        return set()
+    return markers
+
+
 def main() -> int:
     baa = _find_baa()
 
-    # 1) Always run IR integration tests (host)
+    # 1) Always run integration suite first (host)
     rc = _run([sys.executable, str(TESTS_DIR / "test.py")], cwd=ROOT)
     if rc != 0:
         print("regress: FAIL (tests/test.py)")
@@ -170,6 +188,10 @@ def main() -> int:
             src_rel = src.relative_to(ROOT)
             markers = _expected_markers(src)
             flags = _flags_markers(src)
+            run_markers = _run_markers(src)
+            if "skip" in run_markers:
+                continue
+            expect_fail = "expect-pass" not in run_markers
             # Use a unique dummy output to avoid collisions.
             exe_ext = ".exe" if os.name == "nt" else ""
             out_dir = ROOT / f".baa_regress_neg_out_{os.getpid()}"
@@ -189,13 +211,18 @@ def main() -> int:
             finally:
                 import shutil
                 shutil.rmtree(out_dir, ignore_errors=True)
-            if p.returncode == 0:
-                print(f"regress: FAIL (neg should fail): {src_rel}")
-                return 1
-            se = p.stderr or ""
-            for m in markers:
-                if m and m not in se:
-                    print(f"regress: FAIL (neg missing marker '{m}'): {src_rel}")
+            if expect_fail:
+                if p.returncode == 0:
+                    print(f"regress: FAIL (neg should fail): {src_rel}")
+                    return 1
+                se = p.stderr or ""
+                for m in markers:
+                    if m and m not in se:
+                        print(f"regress: FAIL (neg missing marker '{m}'): {src_rel}")
+                        return 1
+            else:
+                if p.returncode != 0:
+                    print(f"regress: FAIL (neg marked expect-pass): {src_rel}")
                     return 1
     else:
         print("regress: WARN (no tests/neg/*.baa)")

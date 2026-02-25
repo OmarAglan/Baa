@@ -8,6 +8,52 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+### Changed
+
+- **Test framework cleanup** — reorganized integration tests under:
+  - `tests/integration/backend/*.baa`
+  - `tests/integration/ir/*.baa`
+- **Baa-only QA flow** — `scripts/qa_run.py --mode full` now runs integration + regression + verify smoke + multi-file smoke (removed legacy C-unit stage).
+- **README test documentation** — synchronized test commands and directory layout with the new organized framework.
+
+### Removed
+
+- **Legacy C-unit test framework** — removed standalone `tests/*.c` unit tests from the active repository test suite.
+- **Tracked generated IR artifact** — removed `tests/ir_test.ir` from versioned test inputs.
+
+## [0.3.8] - 2026-02-25
+
+### Added
+
+- **Unified QA runner** — added `scripts/qa_run.py` with tiered modes:
+  - `--mode quick`: integration smoke (`tests/test.py`)
+  - `--mode full`: integration + regression + selected C unit tests + verify smoke + multi-file smoke
+  - `--mode stress`: full mode + `tests/stress/*.baa` + seeded fuzz-lite
+- **Stress test suite**:
+  - `tests/stress/stress_deep_scopes.baa`
+  - `tests/stress/stress_symbol_volume.baa`
+  - `tests/stress/stress_utf8_identifiers.baa`
+- **Multi-file regression fixtures**:
+  - `tests/fixtures/multifile_counter_main.baa`
+  - `tests/fixtures/multifile_counter_lib.baa`
+- **New negative diagnostics coverage**:
+  - `tests/neg/lexer_bad_escape_in_string.baa`
+  - `tests/neg/lexer_bad_escape_in_char.baa`
+  - `tests/neg/parser_decl_qualifier_missing_type.baa`
+- **CI/CD workflows**:
+  - `.github/workflows/ci.yml` (Windows + Linux staged gates: build -> quick -> full)
+  - `.github/workflows/stress-nightly.yml` (nightly Linux stress)
+
+### Changed
+
+- **Test metadata contract** — `tests/test.py` and `tests/regress.py` now support `// RUN:` markers (e.g., `expect-pass`, `expect-fail`, `runtime`, `compile-only`, `skip`).
+- **Integration runner flexibility** — `tests/test.py` now honors per-test `// FLAGS:` and runtime intent through `// RUN:`.
+- **Regression runner semantics** — `tests/regress.py` now honors `// RUN:` in negative tests while preserving `// EXPECT:` marker checks for expected-fail cases.
+
+### Fixed
+
+- **QA stability for stress fuzzing** — fuzz-lite templates were constrained to bounded-failure patterns to prevent parser-hang style cases during nightly QA.
+
 ## [0.3.7.5] - 2026-02-25
 
 ### Added

@@ -5,17 +5,90 @@ from __future__ import annotations
 import os
 import subprocess
 import shutil
-import tempfile
 from pathlib import Path
+import shlex
 
 
 ROOT = Path(__file__).resolve().parents[1]
 TESTS_DIR = ROOT / "tests"
+INTEGRATION_DIR = TESTS_DIR / "integration"
 
 
 def _run(cmd: list[str], cwd: Path | None = None) -> int:
     p = subprocess.run(cmd, cwd=str(cwd) if cwd else None)
     return int(p.returncode)
+
+
+def _flags_markers(src: Path) -> list[str]:
+    flags: list[str] = []
+    try:
+        for line in src.read_text(encoding="utf-8", errors="replace").splitlines():
+            s = line.strip()
+            if s.startswith("// FLAGS:"):
+                raw = s.split(":", 1)[1].strip()
+                if raw:
+                    flags.extend(shlex.split(raw))
+    except Exception:
+        return []
+    return flags
+
+
+def _run_markers(src: Path) -> set[str]:
+    markers: set[str] = set()
+    try:
+        for line in src.read_text(encoding="utf-8", errors="replace").splitlines():
+            s = line.strip()
+            if not s.startswith("// RUN:"):
+                continue
+            raw = s.split(":", 1)[1].strip()
+            if not raw:
+                continue
+            for part in raw.replace(",", " ").split():
+                v = part.strip().lower()
+                if v:
+                    markers.add(v)
+    except Exception:
+        return set()
+    return markers
+
+
+def _default_run_markers(src: Path) -> set[str]:
+    markers: set[str] = {"expect-pass"}
+    try:
+        src.relative_to(INTEGRATION_DIR / "backend")
+        is_backend_test = True
+    except ValueError:
+        is_backend_test = False
+
+    if is_backend_test:
+        markers.add("runtime")
+    else:
+        markers.add("compile-only")
+    return markers
+
+
+def _safe_name(s: str) -> str:
+    out = []
+    for ch in s:
+        if ch.isalnum() or ch in ("_", "-", "."):
+            out.append(ch)
+        else:
+            out.append("_")
+    return "".join(out)
+
+
+def _resolve_run_markers(src: Path) -> set[str]:
+    markers = _run_markers(src)
+    if not markers:
+        markers = _default_run_markers(src)
+
+    if "runtime" in markers and "compile-only" in markers:
+        markers.remove("compile-only")
+    if "expect-fail" in markers:
+        markers.discard("expect-pass")
+    if "expect-pass" not in markers and "expect-fail" not in markers:
+        markers.add("expect-pass")
+    return markers
 
 
 def _find_baa() -> Path:
@@ -48,9 +121,9 @@ def _find_baa() -> Path:
 
 def main() -> int:
     baa_real = _find_baa()
-    baa_files = sorted(TESTS_DIR.glob("*.baa"))
+    baa_files = sorted(INTEGRATION_DIR.rglob("*.baa"))
     if not baa_files:
-        print("No .baa tests found.")
+        print(f"No .baa tests found under {INTEGRATION_DIR}.")
         return 1
 
     failures: list[str] = []
@@ -78,21 +151,31 @@ def main() -> int:
 
     try:
         for src in baa_files:
+            run_markers = _resolve_run_markers(src)
+            if "skip" in run_markers:
+                continue
+
             # IMPORTANT: use repo-relative paths to avoid space-splitting bugs
             # in toolchain command strings when the repo root contains spaces.
             src_rel = src.relative_to(ROOT)
-            out = out_dir / f"{src.stem}{exe_ext}"
+            out_stem = _safe_name(str(src.relative_to(INTEGRATION_DIR).with_suffix("")))
+            out = out_dir / f"{out_stem}{exe_ext}"
+            flags = _flags_markers(src)
 
             # -O2 is required because --verify runs SSA verification (Mem2Reg) via the optimizer.
-            rc = _run([str(baa), "-O2", "--verify", str(src_rel), "-o", str(out)], cwd=ROOT)
+            rc = _run([str(baa), "-O2", "--verify", *flags, str(src_rel), "-o", str(out)], cwd=ROOT)
+            if "expect-fail" in run_markers:
+                if rc == 0:
+                    failures.append(f"compile should fail but passed: {src.name}")
+                continue
             if rc != 0:
                 failures.append(f"compile/verify failed: {src.name}")
                 continue
 
-            # Only execute runtime integration tests that are designed to return 0 on PASS.
-            if not src.stem.startswith("backend_"):
+            if "runtime" not in run_markers:
                 continue
 
+            # Runtime tests are expected to return 0 on PASS.
             rc = _run([str(out)], cwd=ROOT)
             if rc != 0:
                 failures.append(f"run failed (exit={rc}): {src.name}")

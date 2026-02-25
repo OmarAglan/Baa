@@ -7,7 +7,7 @@
 // - التأكد من أن الظلّ (shadowing) يعمل بشكل صحيح (الأقرب يغلب).
 //
 // التشغيل:
-//   build\baa.exe tests\backend_scope_test.baa -o build\backend_scope_test.exe -v
+//   build\baa.exe tests\integration\backend\backend_scope_test.baa -o build\backend_scope_test.exe -v
 //   build\backend_scope_test.exe
 //   echo %ERRORLEVEL%  (يجب أن يكون 0)
 // ============================================================================

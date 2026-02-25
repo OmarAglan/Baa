@@ -19,3 +19,13 @@ mingw64.7z
 /tests/corpus_docs
 /bench/results/*.json
 /bench/results/*.csv
+
+# نواتج QA المحلية
+/.baa_qa_logs/
+/.baa_*_out_*
+/qa-summary-*.json
+/qa_summary*.json
+
+# Python cache
+__pycache__/
+*.pyc

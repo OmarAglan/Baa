@@ -40,23 +40,37 @@ No dedicated linter. Treat a warning-free build as the lint signal.
 
 ## Running Tests
 
-There is no formal test runner. Tests are:
-- Integration `.baa` programs in `tests/*.baa` (compiled with `baa`, then executed).
-- Standalone C unit tests in `tests/*.c` (hand-rolled `require()`; exit 0 on PASS).
+Primary QA runner:
+
+```bash
+python scripts/qa_run.py --mode quick
+python scripts/qa_run.py --mode full
+python scripts/qa_run.py --mode stress
+```
+
+Tests are:
+- Integration `.baa` programs in `tests/integration/**/*.baa` (compiled with `baa`, then executed).
+- Negative diagnostics tests in `tests/neg/*.baa` (expected-fail marker based).
+- Stress programs in `tests/stress/*.baa` (used in `--mode stress`).
+
+Test file metadata (where applicable):
+- `// RUN:` execution contract (`expect-pass`, `expect-fail`, `runtime`, `compile-only`, `skip`)
+- `// EXPECT:` required diagnostic substring(s) for expected-fail tests
+- `// FLAGS:` extra compiler flags for that test
 
 ### Run A Single Integration Test
 
 Windows:
 
 ```powershell
-build\baa.exe -O2 --verify-ir --verify-ssa tests\backend_test.baa -o build\backend_test.exe
+build\baa.exe -O2 --verify-ir --verify-ssa tests\integration\backend\backend_test.baa -o build\backend_test.exe
 build\backend_test.exe
 ```
 
 Linux:
 
 ```bash
-./build-linux/baa -O2 --verify-ir --verify-ssa tests/backend_test.baa -o build-linux/backend_test
+./build-linux/baa -O2 --verify-ir --verify-ssa tests/integration/backend/backend_test.baa -o build-linux/backend_test
 ./build-linux/backend_test
 ```
 
@@ -65,31 +79,7 @@ Target selection:
 - Cross-target: only `-S` (assembly) is supported for now.
 
 ```bash
-./build-linux/baa --target=x86_64-windows -S tests/backend_test.baa -o build-linux/out_win.s
-```
-
-### Run A Single C Unit Test
-
-Pattern (compile + run from repo root):
-
-```bash
-gcc -g -std=gnu11 -o build/<test>.exe tests/<test>.c <needed src/*.c>
-./build/<test>.exe
-```
-
-Examples:
-
-```bash
-gcc -g -std=gnu11 -o build/ir_cse_test.exe tests/ir_cse_test.c \
-  src/ir.c src/ir_arena.c src/ir_analysis.c src/ir_defuse.c src/ir_mutate.c \
-  src/ir_pass.c src/ir_cse.c src/ir_verify_ir.c
-./build/ir_cse_test.exe
-```
-
-```bash
-gcc -g -std=gnu11 -o build/emit_stack_protector_test.exe tests/emit_stack_protector_test.c \
-  src/emit.c src/target.c src/ir_data_layout.c
-./build/emit_stack_protector_test.exe
+./build-linux/baa --target=x86_64-windows -S tests/integration/backend/backend_test.baa -o build-linux/out_win.s
 ```
 
 ## Useful Compiler Flags

@@ -1,7 +1,7 @@
 # Baa Roadmap (Updated)
 
 > Track the development progress of the Baa programming language.
-> **Current Status:** Phase 3.8 - Testing & Quality Assurance (v0.3.8)
+> **Current Status:** Phase 3.9 - Advanced Arrays & String Operations (v0.3.9)
 
 ---
 
@@ -173,7 +173,7 @@
 - [x] **Fix ISel logical op size mismatch** — `isel_lower_logical()` forced 64-bit operand size; widened 8-bit boolean vregs to prevent assembler errors.
 - [x] **Fix function parameter ABI copies** — `isel_lower_func()` prepends MOV from RCX/RDX/R8/R9 to parameter vregs at entry block.
 - [x] **Fix IDIV RAX constraint** — `isel_lower_div()` explicitly routes dividend through RAX (vreg -2) for correct division results.
-- [x] **Comprehensive backend test** — `tests/backend_test.baa`: 27 functions, 63 assertions, all PASS.
+- [x] **Comprehensive backend test** — `tests/integration/backend/backend_test.baa`: 27 functions, 63 assertions, all PASS.
 
 #### 0.3.2.4-setup: Installer & GCC Bundling ✅ COMPLETED (2026-02-08)
 
@@ -759,34 +759,34 @@
 
 ---
 
-### v0.3.8: Testing & Quality Assurance ✅
+### v0.3.8: Testing & Quality Assurance ✅ COMPLETED (2026-02-25)
 
 **Goal:** Establish robust testing infrastructure and fix accumulated issues.
 
 #### Test System
 
-- [ ] **Test Framework** – Create automated test runner.
+- [x] **Test Framework** – Create automated test runner.
   - Script to compile and run `.baa` test files.
   - Compare actual output vs expected output.
   - Report pass/fail with clear diagnostics.
 
-- [ ] **Test Categories**:
-  - [ ] **Lexer Tests** – Token generation, UTF-8 handling, preprocessor.
-  - [ ] **Parser Tests** – Syntax validation, error recovery.
-  - [ ] **Semantic Tests** – Type checking, scope validation.
-  - [ ] **Codegen Tests** – Correct assembly output, execution results.
-  - [ ] **Integration Tests** – Full programs with expected output.
+- [x] **Test Categories**:
+  - [x] **Lexer Tests** – Token generation, UTF-8 handling, preprocessor.
+  - [x] **Parser Tests** – Syntax validation, error recovery.
+  - [x] **Semantic Tests** – Type checking, scope validation.
+  - [x] **Codegen Tests** – Correct assembly output, execution results.
+  - [x] **Integration Tests** – Full programs with expected output.
 
-- [ ] **Test Coverage**:
-  - [ ] All language features (v0.0.1 - v0.3.7).
-  - [ ] Edge cases and corner cases.
-  - [ ] Error conditions (syntax errors, type mismatches, etc.).
-  - [ ] Multi-file compilation scenarios.
-  - [ ] Preprocessor directive combinations.
+- [x] **Test Coverage**:
+  - [x] All language features (v0.0.1 - v0.3.7).
+  - [x] Edge cases and corner cases.
+  - [x] Error conditions (syntax errors, type mismatches, etc.).
+  - [x] Multi-file compilation scenarios.
+  - [x] Preprocessor directive combinations.
 
 #### CI/CD Setup
 
-- [ ] **GitHub Actions workflow**:
+- [x] **GitHub Actions workflow**:
 
   ```yaml
   name: Baa CI
@@ -804,10 +804,10 @@
 
 #### Bug Fixes & Refinements
 
-- [ ] **Known Issues** – Fix all open bugs from previous versions.
-- [ ] **Regression Testing** – Ensure new features don't break old code.
-- [ ] **Stress Testing** – Test with large files, deep nesting, many symbols.
-- [ ] **Arabic Text Edge Cases** – Test various Arabic Unicode scenarios.
+- [x] **Known Issues** – Fix all open bugs from previous versions.
+- [x] **Regression Testing** – Ensure new features don't break old code.
+- [x] **Stress Testing** – Test with large files, deep nesting, many symbols.
+- [x] **Arabic Text Edge Cases** – Test various Arabic Unicode scenarios.
 
 ---
 

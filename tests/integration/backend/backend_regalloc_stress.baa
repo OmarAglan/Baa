@@ -6,7 +6,7 @@
 // - تضمين نداء دالة داخل الحلقة لضمان التعامل الصحيح مع caller-saved.
 //
 // التشغيل:
-//   build\baa.exe tests\backend_regalloc_stress.baa -o build\backend_regalloc_stress.exe -v
+//   build\baa.exe tests\integration\backend\backend_regalloc_stress.baa -o build\backend_regalloc_stress.exe -v
 //   build\backend_regalloc_stress.exe
 //   echo %ERRORLEVEL%  (يجب أن يكون 0)
 // ============================================================================

@@ -1,6 +1,6 @@
 # Code Review Checklist
 
-> **Version:** 0.3.7 | [← Internals](INTERNALS.md)
+> **Version:** 0.3.8 | [← Internals](INTERNALS.md)
 
 Use this checklist for any change that touches compiler correctness, IR, or Windows x64 backend behavior.
 
@@ -31,7 +31,7 @@ Use this checklist for any change that touches compiler correctness, IR, or Wind
 ## Tests
 
 - Add at least one test that fails before the change and passes after.
-- `python3 tests/regress.py` passes.
+- `python3 scripts/qa_run.py --mode full` passes.
 
 ## Docs
 

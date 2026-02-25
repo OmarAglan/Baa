@@ -1,0 +1,32 @@
+name: Baa Nightly Stress
+
+on:
+  schedule:
+    - cron: "0 2 * * *"
+  workflow_dispatch:
+
+jobs:
+  stress-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Configure (Linux)
+        run: cmake -B build-linux -DCMAKE_BUILD_TYPE=Release
+      - name: Build
+        run: cmake --build build-linux -j
+      - name: QA Stress
+        run: python3 scripts/qa_run.py --mode stress --summary-json qa-summary-stress-linux.json
+      - name: Upload Stress Artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: qa-stress-linux-artifacts
+          if-no-files-found: ignore
+          path: |
+            .baa_qa_logs/**
+            qa-summary-stress-linux.json
+            build-linux/**/*.s
+            build-linux/**/*.ir

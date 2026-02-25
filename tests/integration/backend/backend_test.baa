@@ -7,7 +7,7 @@
 // الدالة الرئيسية تجمع الأخطاء وتُرجع العدد الكلّي (٠ = نجاح).
 //
 // التشغيل:
-//   build\baa.exe tests\backend_test.baa -o build\backend_test.exe -v
+//   build\baa.exe tests\integration\backend\backend_test.baa -o build\backend_test.exe -v
 //   build\backend_test.exe
 //   echo %ERRORLEVEL%     (يجب أن يكون 0)
 // ============================================================================
@@ -16,7 +16,7 @@
 // المعالج القبلي (Preprocessor)
 // ────────────────────────────────────────────────────────────────────────────
 
-#تضمين "tests/backend_test_inc.baahd"
+#تضمين "tests/fixtures/backend_test_inc.baahd"
 
 #تعريف ماكرو_تجربة 42
 

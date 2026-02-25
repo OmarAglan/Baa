@@ -1,6 +1,6 @@
 # Baa Documentation Sync Protocol
 
-> **Version:** 0.3.7 | [← Style Guide](STYLE_GUIDE.md) | [Compiler Internals →](INTERNALS.md)
+> **Version:** 0.3.8 | [← Style Guide](STYLE_GUIDE.md) | [Compiler Internals →](INTERNALS.md)
 
 This protocol defines how documentation is kept strictly aligned with compiler reality.
 
@@ -11,7 +11,7 @@ This protocol defines how documentation is kept strictly aligned with compiler r
 When documentation and implementation differ, use this priority:
 
 1. Compiler runtime behavior (`build/baa --help`, `--version`, compile/run results)
-2. Passing regression/integration tests (`tests/regress.py`, `tests/*.baa`, `tests/*.c`)
+2. Passing QA/integration tests (`scripts/qa_run.py --mode full`, `tests/integration/**/*.baa`, `tests/neg/*.baa`, `tests/stress/*.baa`)
 3. Current source code (`src/*.c`, `src/*.h`)
 4. Release metadata (`CHANGELOG.md`, `ROADMAP.md`)
 5. Explanatory docs (`docs/*.md`, `README.md`)
@@ -40,7 +40,7 @@ Before considering docs synchronized:
 ```powershell
 build\baa.exe --version
 build\baa.exe --help
-python tests\regress.py
+python scripts\qa_run.py --mode full
 ```
 
 Then verify:

@@ -1,6 +1,6 @@
 # Baa User Guide
 
-> **Version:** 0.3.7 | [← README](../README.md) | [Language Spec →](LANGUAGE.md)
+> **Version:** 0.3.8 | [← README](../README.md) | [Language Spec →](LANGUAGE.md)
 
 
 Welcome to Baa (باء)! This guide will help you write your first Arabic computer program and use the Baa compiler toolchain.
@@ -209,15 +209,22 @@ sudo cp -a usr/* /usr/
 - `-o <file>` is only applied for `-S` / `-c` when compiling a single input file.
 - `update` must be used alone: `.\baa.exe update`
 
-### Current Limitations (v0.3.7)
+### Current Limitations (v0.3.8)
 
 - SIMD and non-`عشري` floating types are not supported yet.
 
-### Running Tests (v0.3.2.9.3+)
+### Running Tests (v0.3.8+)
 
 From the repo root:
 
 ```powershell
+# Recommended quick path
+python .\scripts\qa_run.py --mode quick
+
+# Recommended full QA gate
+python .\scripts\qa_run.py --mode full
+
+# Optional legacy runner
 python .\tests\regress.py
 ```
 

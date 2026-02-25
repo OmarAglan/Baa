@@ -6,7 +6,7 @@
 // - التحقق من صحة النتيجة عند التشغيل.
 //
 // التشغيل:
-//   build\baa.exe -O2 tests\backend_inline_test.baa -o build\backend_inline_test.exe -v
+//   build\baa.exe -O2 tests\integration\backend\backend_inline_test.baa -o build\backend_inline_test.exe -v
 //   build\backend_inline_test.exe
 // ============================================================================
 

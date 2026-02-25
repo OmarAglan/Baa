@@ -1,6 +1,6 @@
 # Baa Internal API Reference
 
-> **Version:** 0.3.7.5 | [← Compiler Internals](INTERNALS.md) | [IR Specification →](BAA_IR_SPECIFICATION.md)
+> **Version:** 0.3.8 | [← Compiler Internals](INTERNALS.md) | [IR Specification →](BAA_IR_SPECIFICATION.md)
 
 This document details the C functions, enumerations, and structures defined in `src/baa.h`, `src/ir.h`, `src/ir_arena.h`, `src/ir_mutate.h`, `src/ir_defuse.h`, `src/ir_clone.h`, `src/ir_text.h`, `src/ir_loop.h`, `src/ir_licm.h`, `src/ir_unroll.h`, `src/ir_inline.h`, `src/ir_builder.h`, `src/ir_lower.h`, `src/ir_analysis.h`, `src/ir_pass.h`, `src/ir_mem2reg.h`, `src/ir_outssa.h`, `src/ir_verify_ssa.h`, `src/ir_verify_ir.h`, `src/ir_canon.h`, `src/ir_cfg_simplify.h`, `src/ir_dce.h`, `src/ir_copyprop.h`, `src/ir_cse.h`, `src/ir_optimizer.h`, `src/target.h`, `src/isel.h`, `src/regalloc.h`, and `src/emit.h`.
 
@@ -8,6 +8,7 @@ This document details the C functions, enumerations, and structures defined in `
 
 ## Table of Contents
 
+- [QA Tooling](#0-qa-tooling-v038)
 - [Lexer Module](#1-lexer-module)
 - [Parser Module](#2-parser-module)
 - [Semantic Analysis](#3-semantic-analysis)
@@ -22,6 +23,44 @@ This document details the C functions, enumerations, and structures defined in `
 - [Symbol Table](#12-symbol-table)
 - [Updater](#13-updater)
 - [Data Structures](#14-data-structures)
+
+---
+
+## 0. QA Tooling (v0.3.8)
+
+### `scripts/qa_run.py`
+
+Unified QA entrypoint used by CI and local validation.
+
+```bash
+python scripts/qa_run.py --mode quick
+python scripts/qa_run.py --mode full
+python scripts/qa_run.py --mode stress
+```
+
+| Flag | Description |
+|------|-------------|
+| `--mode quick` | Integration smoke (`tests/integration/**/*.baa` via `tests/test.py`) |
+| `--mode full` | Quick + regression + verify smoke + multi-file smoke |
+| `--mode stress` | Full + stress suite (`tests/stress/*.baa`) + seeded fuzz-lite |
+| `--summary-json <path>` | Writes machine-readable QA summary JSON |
+| `--fuzz-cases <N>` | Number of fuzz-lite cases in stress mode |
+| `--seed <N>` | RNG seed for deterministic fuzz-lite generation |
+
+### Test Metadata Contract
+
+Supported in test files:
+
+- `// RUN:` execution behavior
+  - `expect-pass`
+  - `expect-fail`
+  - `runtime`
+  - `compile-only`
+  - `skip`
+- `// EXPECT:` negative diagnostic anchor(s)
+- `// FLAGS:` per-test compiler flags
+
+`tests/test.py` and `tests/regress.py` both recognize these markers.
 
 ---
 

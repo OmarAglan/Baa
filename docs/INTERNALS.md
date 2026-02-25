@@ -1,6 +1,6 @@
 # Baa Compiler Internals
 
-> **Version:** 0.3.7.5 | [← Language Spec](LANGUAGE.md) | [API Reference →](API_REFERENCE.md)
+> **Version:** 0.3.8 | [← Language Spec](LANGUAGE.md) | [API Reference →](API_REFERENCE.md)
 
 **Target Architecture:** x86-64 (AMD64)
 **Targets:** Windows x64 (COFF/PE) + Linux x86-64 (ELF)
@@ -158,13 +158,21 @@ Notes:
 - The runner uses repo-relative paths to avoid toolchain quoting issues when the repo path contains spaces.
 - `--time-phases` prints `[TIME]`/`[MEM]` lines to stderr for machine parsing.
 
-### 1.3.2. Regression Testing (v0.3.2.9.3)
+### 1.3.2. Regression Testing (v0.3.8)
 
-- Runner: `tests/regress.py`
-- On all hosts: runs `tests/test.py`.
-- On all hosts: runs docs-derived v0.2.x corpus (auto-generated) under `tests/corpus_v2x_docs/`.
-- On all hosts: runs negative diagnostics tests under `tests/neg/` (anchor matching via `// EXPECT:` and optional per-test compile flags via `// FLAGS:`).
-- On Windows: same as other hosts.
+- Primary runner: `scripts/qa_run.py`
+  - `--mode quick`: integration smoke (`tests/integration/**/*.baa` via `tests/test.py`)
+  - `--mode full`: integration + regression + verify smoke + multi-file smoke
+  - `--mode stress`: full + `tests/stress/*.baa` + seeded fuzz-lite (timeout-guarded)
+- Legacy runners remain valid:
+  - `tests/test.py` (integration)
+  - `tests/regress.py` (integration + corpus + negatives)
+- On all hosts: docs-derived v0.2.x corpus runs under `tests/corpus_v2x_docs/`.
+- On all hosts: negative diagnostics tests under `tests/neg/` use:
+  - `// EXPECT:` message anchors
+  - `// FLAGS:` per-test compile flags
+  - `// RUN:` execution contract (`expect-pass`, `expect-fail`, `runtime`, `compile-only`, `skip`)
+- Stress programs live under `tests/stress/`.
 
 Windows build:
 
@@ -172,7 +180,16 @@ Windows build:
 cmake -B build -G "MinGW Makefiles"
 cmake --build build
 
-python tests\regress.py
+python scripts\qa_run.py --mode full
+```
+
+Linux build:
+
+```
+cmake -B build-linux -DCMAKE_BUILD_TYPE=Release
+cmake --build build-linux -j
+
+python3 scripts/qa_run.py --mode full
 ```
 
 The compiler uses a centralized **Diagnostic Module** (`src/error.c`) to handle errors and warnings.
@@ -1018,7 +1035,7 @@ InstCombine performs fast, local instruction simplifications to improve later pa
 
 **Entry Point:** `ir_instcombine_run()`
 
-**Testing:** `tests/ir_instcombine_test.c`
+**Testing:** Integration validation via `scripts/qa_run.py --mode full` and `--mode stress`.
 
 ---
 
@@ -1034,7 +1051,7 @@ SCCP (Sparse Conditional Constant Propagation) combines reachability with SSA co
 
 **Entry Point:** `ir_sccp_run()`
 
-**Testing:** `tests/ir_sccp_test.c`
+**Testing:** Integration validation via `scripts/qa_run.py --mode full` and `--mode stress`.
 
 ---
 
@@ -1095,7 +1112,7 @@ The IR constant folding pass optimizes Baa IR by evaluating arithmetic and compa
 4. Removes the folded instruction from its block.
 5. Pass is function-local; virtual registers are scoped per function.
 
-**Testing:** See [tests/ir_constfold_test.c](../tests/ir_constfold_test.c).
+**Testing:** Covered by integration corpus and optimizer-enabled smoke in `scripts/qa_run.py --mode full`.
 
 **API:** See [docs/API_REFERENCE.md](API_REFERENCE.md) for function signatures.
 
@@ -1125,7 +1142,7 @@ The IR dead code elimination pass removes useless IR after lowering/other optimi
 - Unreachable-block removal uses [`ir_func_rebuild_preds()`](../src/ir_analysis.c:132) before/after pruning.
 - Phi nodes are pruned of incoming edges from removed predecessor blocks to avoid dangling references.
 
-**Testing:** See [`tests/ir_dce_test.c`](../tests/ir_dce_test.c:1).
+**Testing:** Covered by integration corpus and optimizer-enabled smoke in `scripts/qa_run.py --mode full`.
 
 **API:** See [docs/API_REFERENCE.md](API_REFERENCE.md) for function signatures.
 
@@ -1152,7 +1169,7 @@ The IR copy propagation pass removes redundant SSA copy chains by replacing uses
   - `فاي` phi incoming values
 - Removes `نسخ` instructions after propagation.
 
-**Testing:** See [`tests/ir_copyprop_test.c`](../tests/ir_copyprop_test.c:1).
+**Testing:** Covered by integration corpus and optimizer-enabled smoke in `scripts/qa_run.py --mode full`.
 
 ---
 
@@ -1166,7 +1183,7 @@ GVN (Global Value Numbering) removes redundant pure expressions across dominator
 
 **Pipeline position:** enabled at `-O2` after copy propagation and before CSE.
 
-**Testing:** `tests/ir_gvn_test.c`
+**Testing:** Covered by integration corpus and optimizer-enabled smoke in `scripts/qa_run.py --mode full`.
 
 ---
 
@@ -1197,7 +1214,7 @@ The IR common subexpression elimination (CSE) pass detects duplicate computation
 - Memory: حجز (alloca), حمل (load), خزن (store)
 - Control: نداء (call), فاي (phi), terminators (branches/returns)
 
-**Testing:** See [`tests/ir_cse_test.c`](../tests/ir_cse_test.c).
+**Testing:** Covered by integration corpus and optimizer-enabled smoke in `scripts/qa_run.py --mode full`.
 
 **API:** See [docs/API_REFERENCE.md](API_REFERENCE.md) for function signatures.
 
@@ -1287,7 +1304,7 @@ The instruction selector uses negative vreg numbers to represent physical regist
 4. **MachineModule references IR data:** Global variables and string tables are referenced (not copied) from the IR module. Memory is freed by the IR module.
 5. **Stack size tracking:** Each `IR_OP_ALLOCA` increases `stack_size` by the **store size** of the allocated pointee type (rounded up to its alignment via the target data layout). The LEA instruction uses the accumulated offset.
 
-**Testing:** See [`tests/isel_test.c`](../tests/isel_test.c) — 8 test suites, 56 assertions.
+**Testing:** Backend behavior is validated by integration runtime tests under `tests/integration/backend/`.
 
 ---
 
@@ -1371,7 +1388,7 @@ When register pressure exceeds available registers, the allocator spills the lon
 3. **RSP/RBP always reserved:** Frame pointer is always maintained for simple stack access. No frame pointer omission.
 4. **Callee-saved tracking:** `RegAllocCtx.callee_saved_used[]` tracks which callee-saved registers are allocated, informing prologue/epilogue generation in the code emission phase.
 
-**Testing:** See [`tests/regalloc_test.c`](../tests/regalloc_test.c) — 8 test suites, 51 assertions.
+**Testing:** Register allocation behavior is validated by integration runtime tests under `tests/integration/backend/`.
 
 ---
 

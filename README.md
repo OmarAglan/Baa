@@ -231,24 +231,37 @@ cmake --build build
 ### تشغيل الاختبارات
 
 ```powershell
-# تشغيل مجموعة اختبارات الانحدار (المقترح)
+# المسار الموصى به (تشغيل سريع)
+python .\scripts\qa_run.py --mode quick
+
+# المسار الموصى به (تحقق كامل)
+python .\scripts\qa_run.py --mode full
+
+# مسار الضغط
+python .\scripts\qa_run.py --mode stress
+
+# (اختياري) المشغّل القديم لاختبارات الانحدار
 python .\tests\regress.py
 
-# اختبار سريع بسيط (برنامج صغير)
-# توليد ملف test.baa
-gcc .\make_test.c -o make_test.exe
-.\make_test.exe
-
-# تصريف وتشغيل
-.\build\baa.exe .\test.baa -o test.exe
-.\test.exe
+# تشغيل اختبار تكاملي واحد (مثال)
+.\build\baa.exe -O2 --verify .\tests\integration\backend\backend_test.baa -o .\build\backend_test.exe
+.\build\backend_test.exe
 ```
 
-**المخرجات المتوقعة:**
-```
-1
-0
-0
+### تنظيم إطار الاختبارات
+
+```text
+tests/
+├── integration/
+│   ├── backend/   # اختبارات تكامل وتجميع/تشغيل
+│   └── ir/        # اختبارات تكامل خاصة بـ IR من منظور المستخدم
+├── neg/           # اختبارات تشخيص فشل متوقع
+├── stress/        # اختبارات الضغط
+├── fixtures/      # ملفات مساعدة للاختبارات (headers/includes/multi-file)
+├── corpus_docs/   # عينات من التوثيق
+├── corpus_v2x_docs/
+├── test.py        # مشغل التكامل
+└── regress.py     # مشغل الانحدار
 ```
 
 ---

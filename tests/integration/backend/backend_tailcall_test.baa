@@ -6,7 +6,7 @@
 //   مما يمنع انفجار المكدس في العودية العميقة.
 //
 // التشغيل:
-//   build\baa.exe -O2 tests\backend_tailcall_test.baa -o build\backend_tailcall_test.exe -v
+//   build\baa.exe -O2 tests\integration\backend\backend_tailcall_test.baa -o build\backend_tailcall_test.exe -v
 //   build\backend_tailcall_test.exe
 // ============================================================================
 

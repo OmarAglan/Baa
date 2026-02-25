@@ -1,7 +1,7 @@
 # Baa Roadmap (Updated)
 
 > Track the development progress of the Baa programming language.
-> **Current Status:** Phase 3.7.5 - Static Local Variables (v0.3.7.5)
+> **Current Status:** Phase 3.8 - Testing & Quality Assurance (v0.3.8)
 
 ---
 
@@ -736,11 +736,11 @@
 - [x] Add more comprehensive error recovery.
 - [x] Improve assembly output readability (comments in assembly).
 
-### v0.3.7.5: Static Local Variables (متغيرات ساكنة محلية) 📌
+### v0.3.7.5: Static Local Variables (متغيرات ساكنة محلية) ✅ COMPLETED (2026-02-25)
 **Goal:** Variables that persist between function calls.
 
 #### Features
-- [ ] **Static Local Syntax**:
+- [x] **Static Local Syntax**:
   ```baa
   صحيح عداد() {
       ساكن صحيح ع = ٠.  // Initialized once, persists
@@ -752,10 +752,10 @@
   ```
 
 #### Implementation Tasks
-- [ ] **Token**: Add `TOKEN_STATIC` for `ساكن` keyword.
-- [ ] **Semantic**: Static locals go in .data section, not stack.
-- [ ] **Codegen**: Generate unique global label for static locals.
-- [ ] **Codegen**: Initialize in .data section.
+- [x] **Token**: Add `TOKEN_STATIC` for `ساكن` keyword.
+- [x] **Semantic**: Static locals go in .data section, not stack.
+- [x] **Codegen**: Generate unique global label for static locals.
+- [x] **Codegen**: Initialize in .data section.
 
 ---
 

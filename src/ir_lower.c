@@ -89,6 +89,8 @@ void ir_lower_ctx_init(IRLowerCtx* ctx, IRBuilder* builder) {
     ctx->label_counter = 0;
     ctx->cf_depth = 0;
     ctx->scope_depth = 0;
+    ctx->current_func_name = NULL;
+    ctx->static_local_counter = 0;
 }
 
 void ir_lower_bind_local(IRLowerCtx* ctx, const char* name, int ptr_reg, IRType* value_type) {
@@ -100,6 +102,8 @@ void ir_lower_bind_local(IRLowerCtx* ctx, const char* name, int ptr_reg, IRType*
         if (ctx->locals[i].name && strcmp(ctx->locals[i].name, name) == 0) {
             ctx->locals[i].ptr_reg = ptr_reg;
             ctx->locals[i].value_type = value_type;
+            ctx->locals[i].global_name = NULL;
+            ctx->locals[i].is_static_storage = false;
             return;
         }
     }
@@ -112,6 +116,36 @@ void ir_lower_bind_local(IRLowerCtx* ctx, const char* name, int ptr_reg, IRType*
     ctx->locals[ctx->local_count].name = name;
     ctx->locals[ctx->local_count].ptr_reg = ptr_reg;
     ctx->locals[ctx->local_count].value_type = value_type;
+    ctx->locals[ctx->local_count].global_name = NULL;
+    ctx->locals[ctx->local_count].is_static_storage = false;
+    ctx->local_count++;
+}
+
+void ir_lower_bind_local_static(IRLowerCtx* ctx, const char* name,
+                                const char* global_name, IRType* value_type) {
+    if (!ctx || !name || !global_name) return;
+
+    int start = ir_lower_current_scope_start(ctx);
+    for (int i = ctx->local_count - 1; i >= start; i--) {
+        if (ctx->locals[i].name && strcmp(ctx->locals[i].name, name) == 0) {
+            ctx->locals[i].ptr_reg = -1;
+            ctx->locals[i].value_type = value_type;
+            ctx->locals[i].global_name = global_name;
+            ctx->locals[i].is_static_storage = true;
+            return;
+        }
+    }
+
+    if (ctx->local_count >= (int)(sizeof(ctx->locals) / sizeof(ctx->locals[0]))) {
+        ir_lower_report_error(ctx, NULL, "تجاوز حد جدول المتغيرات المحلية أثناء ربط '%s'.", name);
+        return;
+    }
+
+    ctx->locals[ctx->local_count].name = name;
+    ctx->locals[ctx->local_count].ptr_reg = -1;
+    ctx->locals[ctx->local_count].value_type = value_type;
+    ctx->locals[ctx->local_count].global_name = global_name;
+    ctx->locals[ctx->local_count].is_static_storage = true;
     ctx->local_count++;
 }
 
@@ -146,11 +180,44 @@ static void ir_lower_tag_last_inst(IRBuilder* builder, IROp expected_op, int exp
 // forward decls
 static IRValue* ensure_i64(IRLowerCtx* ctx, IRValue* v);
 static IRValue* cast_to(IRLowerCtx* ctx, IRValue* v, IRType* to);
+static IRValue* ir_lower_global_init_value(IRBuilder* builder, Node* expr, IRType* expected_type);
 
 static IRType* get_char_ptr_type(IRModule* module) {
     if (!module) return ir_type_ptr(IR_TYPE_CHAR_T);
     ir_module_set_current(module);
     return ir_type_ptr(IR_TYPE_CHAR_T);
+}
+
+static const char* ir_lower_binding_storage_name(const IRLowerBinding* b)
+{
+    if (!b) return NULL;
+    if (b->is_static_storage && b->global_name) return b->global_name;
+    return b->name;
+}
+
+static char* ir_lower_make_static_label(IRLowerCtx* ctx, const char* local_name)
+{
+    if (!ctx || !ctx->builder || !ctx->builder->module) return NULL;
+
+    IRModule* m = ctx->builder->module;
+    const char* func_name = ctx->current_func_name ? ctx->current_func_name : "func";
+    const char* name = local_name ? local_name : "var";
+    int id = ctx->static_local_counter++;
+
+    int n = snprintf(NULL, 0, "__baa_static_%s_%s_%d", func_name, name, id);
+    if (n <= 0) {
+        ir_lower_report_error(ctx, NULL, "فشل توليد اسم متغير ساكن.");
+        return NULL;
+    }
+
+    char* out = (char*)ir_arena_alloc(&m->arena, (size_t)n + 1, _Alignof(char));
+    if (!out) {
+        ir_lower_report_error(ctx, NULL, "فشل تخصيص اسم متغير ساكن.");
+        return NULL;
+    }
+
+    (void)snprintf(out, (size_t)n + 1, "__baa_static_%s_%s_%d", func_name, name, id);
+    return out;
 }
 
 static uint64_t pack_utf8_codepoint(uint32_t cp)
@@ -818,16 +885,22 @@ IRValue* lower_expr(IRLowerCtx* ctx, Node* expr) {
             // 1) Local variable (stack slot)
             IRLowerBinding* b = find_local(ctx, name);
             if (b) {
+                const char* storage_name = ir_lower_binding_storage_name(b);
                 if (b->value_type && b->value_type->kind == IR_TYPE_ARRAY) {
                     ir_lower_report_error(ctx, expr, "لا يمكن استخدام المصفوفة '%s' بدون فهرس.", name ? name : "???");
                     return ir_builder_const_i64(0);
                 }
                 IRType* value_type = b->value_type ? b->value_type : IR_TYPE_I64_T;
 
-                IRType* ptr_type = ir_type_ptr(value_type ? value_type : IR_TYPE_I64_T);
-                IRValue* ptr = ir_value_reg(b->ptr_reg, ptr_type);
+                IRValue* ptr = NULL;
+                if (b->is_static_storage) {
+                    ptr = ir_value_global(storage_name, value_type);
+                } else {
+                    IRType* ptr_type = ir_type_ptr(value_type ? value_type : IR_TYPE_I64_T);
+                    ptr = ir_value_reg(b->ptr_reg, ptr_type);
+                }
                 int loaded = ir_builder_emit_load(ctx->builder, value_type, ptr);
-                ir_lower_tag_last_inst(ctx->builder, IR_OP_LOAD, loaded, name);
+                ir_lower_tag_last_inst(ctx->builder, IR_OP_LOAD, loaded, storage_name);
                 return ir_value_reg(loaded, value_type);
             }
 
@@ -855,15 +928,23 @@ IRValue* lower_expr(IRLowerCtx* ctx, Node* expr) {
 
             IRLowerBinding* b = find_local(ctx, name);
             if (b) {
+                const char* storage_name = ir_lower_binding_storage_name(b);
                 // نص: الاسم يشير إلى قيمة ptr<char> مخزنة في alloca
                 if (b->value_type && b->value_type->kind == IR_TYPE_PTR &&
                     b->value_type->data.pointee && b->value_type->data.pointee->kind == IR_TYPE_CHAR)
                 {
                     IRType* str_t = b->value_type;
-                    IRType* ptr_to_str_t = ir_type_ptr(str_t);
-                    IRValue* slot = ir_value_reg(b->ptr_reg, ptr_to_str_t);
-                    int loaded = ir_builder_emit_load(ctx->builder, str_t, slot);
-                    IRValue* str_ptr = ir_value_reg(loaded, str_t);
+                    IRValue* str_ptr = NULL;
+                    if (b->is_static_storage) {
+                        IRValue* gptr = ir_value_global(storage_name, str_t);
+                        int loaded = ir_builder_emit_load(ctx->builder, str_t, gptr);
+                        str_ptr = ir_value_reg(loaded, str_t);
+                    } else {
+                        IRType* ptr_to_str_t = ir_type_ptr(str_t);
+                        IRValue* slot = ir_value_reg(b->ptr_reg, ptr_to_str_t);
+                        int loaded = ir_builder_emit_load(ctx->builder, str_t, slot);
+                        str_ptr = ir_value_reg(loaded, str_t);
+                    }
 
                     IRValue* idx0 = lower_expr(ctx, expr->data.array_op.index);
                     IRValue* idx = ensure_i64(ctx, idx0);
@@ -880,14 +961,18 @@ IRValue* lower_expr(IRLowerCtx* ctx, Node* expr) {
                     return ir_builder_const_i64(0);
                 }
                 arr_t = b->value_type;
-                IRValue* arr_ptr = ir_value_reg(b->ptr_reg, ir_type_ptr(arr_t));
 
                 IRType* elem_t0 = arr_t->data.array.element ? arr_t->data.array.element : IR_TYPE_I64_T;
-                IRType* elem_ptr_t0 = ir_type_ptr(elem_t0);
+                if (b->is_static_storage) {
+                    base_ptr = ir_value_global(storage_name, elem_t0);
+                } else {
+                    IRValue* arr_ptr = ir_value_reg(b->ptr_reg, ir_type_ptr(arr_t));
+                    IRType* elem_ptr_t0 = ir_type_ptr(elem_t0);
 
-                // base: ptr(array) -> cast -> ptr(elem)
-                int base_reg = ir_builder_emit_cast(ctx->builder, arr_ptr, elem_ptr_t0);
-                base_ptr = ir_value_reg(base_reg, elem_ptr_t0);
+                    // base: ptr(array) -> cast -> ptr(elem)
+                    int base_reg = ir_builder_emit_cast(ctx->builder, arr_ptr, elem_ptr_t0);
+                    base_ptr = ir_value_reg(base_reg, elem_ptr_t0);
+                }
             } else {
                 // مصفوفة عامة: نأخذ عنوانها عبر @name ونُعاملها كمؤشر إلى المصفوفة.
                 IRGlobal* g = NULL;
@@ -1218,9 +1303,13 @@ IRValue* lower_expr(IRLowerCtx* ctx, Node* expr) {
                                           expr->data.member_access.root_var);
                     return ir_builder_const_i64(0);
                 }
-                IRValue* arr_ptr = ir_value_reg(b->ptr_reg, ir_type_ptr(b->value_type));
-                int c = ir_builder_emit_cast(ctx->builder, arr_ptr, ptr_i8_t);
-                base_ptr = ir_value_reg(c, ptr_i8_t);
+                if (b->is_static_storage) {
+                    base_ptr = ir_value_global(ir_lower_binding_storage_name(b), IR_TYPE_I8_T);
+                } else {
+                    IRValue* arr_ptr = ir_value_reg(b->ptr_reg, ir_type_ptr(b->value_type));
+                    int c = ir_builder_emit_cast(ctx->builder, arr_ptr, ptr_i8_t);
+                    base_ptr = ir_value_reg(c, ptr_i8_t);
+                }
             }
 
             IRValue* idx = ir_value_const_int((int64_t)expr->data.member_access.member_offset, IR_TYPE_I64_T);
@@ -1267,6 +1356,59 @@ static void lower_array_decl(IRLowerCtx* ctx, Node* stmt) {
     }
     if (stmt->data.array_decl.size <= 0) {
         ir_lower_report_error(ctx, stmt, "حجم المصفوفة غير صالح.");
+        return;
+    }
+
+    if (stmt->data.array_decl.is_static) {
+        IRModule* m = ctx->builder->module;
+        if (!m) {
+            ir_lower_report_error(ctx, stmt, "وحدة IR غير متاحة لتعريف مصفوفة ساكنة.");
+            return;
+        }
+        ir_module_set_current(m);
+
+        IRType* elem_t = IR_TYPE_I64_T;
+        IRType* arr_t = ir_type_array(elem_t, stmt->data.array_decl.size);
+        char* gname = ir_lower_make_static_label(ctx, stmt->data.array_decl.name);
+        if (!gname) return;
+
+        IRGlobal* g = ir_builder_create_global(ctx->builder, gname, arr_t,
+                                               stmt->data.array_decl.is_const ? 1 : 0);
+        if (!g) {
+            ir_lower_report_error(ctx, stmt, "فشل إنشاء مصفوفة ساكنة '%s'.",
+                                  stmt->data.array_decl.name ? stmt->data.array_decl.name : "???");
+            return;
+        }
+        g->is_internal = true;
+        g->has_init_list = stmt->data.array_decl.has_init ? true : false;
+
+        if (stmt->data.array_decl.has_init) {
+            int n = stmt->data.array_decl.init_count;
+            if (n < 0) n = 0;
+            if (stmt->data.array_decl.size > 0 && n > stmt->data.array_decl.size) {
+                n = stmt->data.array_decl.size;
+            }
+
+            IRValue** elems = NULL;
+            if (n > 0) {
+                elems = (IRValue**)ir_arena_calloc(&m->arena, (size_t)n, sizeof(IRValue*), _Alignof(IRValue*));
+                if (!elems) {
+                    ir_lower_report_error(ctx, stmt, "فشل تخصيص مهيئات مصفوفة ساكنة '%s'.",
+                                          stmt->data.array_decl.name ? stmt->data.array_decl.name : "???");
+                    return;
+                }
+            }
+
+            int i = 0;
+            for (Node* v = stmt->data.array_decl.init_values; v && i < n; v = v->next, i++) {
+                elems[i] = ir_lower_global_init_value(ctx->builder, v, elem_t);
+            }
+
+            g->init_elems = elems;
+            g->init_elem_count = n;
+        }
+
+        ir_lower_bind_local_static(ctx, stmt->data.array_decl.name, gname, arr_t);
         return;
     }
 
@@ -1339,6 +1481,57 @@ static void lower_var_decl(IRLowerCtx* ctx, Node* stmt) {
         return;
     }
 
+    if (stmt->data.var_decl.is_static) {
+        IRModule* m = ctx->builder->module;
+        if (!m) {
+            ir_lower_report_error(ctx, stmt, "وحدة IR غير متاحة لتعريف متغير ساكن.");
+            return;
+        }
+        ir_module_set_current(m);
+
+        char* gname = ir_lower_make_static_label(ctx, stmt->data.var_decl.name);
+        if (!gname) return;
+
+        if (stmt->data.var_decl.type == TYPE_STRUCT || stmt->data.var_decl.type == TYPE_UNION) {
+            int n = stmt->data.var_decl.struct_size;
+            if (n <= 0) {
+                ir_lower_report_error(ctx, stmt, "حجم الهيكل غير صالح أثناء خفض IR.");
+                return;
+            }
+
+            IRType* bytes_t = ir_type_array(IR_TYPE_I8_T, n);
+            IRGlobal* g = ir_builder_create_global(ctx->builder, gname, bytes_t,
+                                                   stmt->data.var_decl.is_const ? 1 : 0);
+            if (!g) {
+                ir_lower_report_error(ctx, stmt, "فشل إنشاء متغير ساكن '%s'.",
+                                      stmt->data.var_decl.name ? stmt->data.var_decl.name : "???");
+                return;
+            }
+            g->is_internal = true;
+            ir_lower_bind_local_static(ctx, stmt->data.var_decl.name, gname, bytes_t);
+            return;
+        }
+
+        IRType* value_type = ir_type_from_datatype(m, stmt->data.var_decl.type);
+        IRValue* init = NULL;
+        if (stmt->data.var_decl.expression) {
+            init = ir_lower_global_init_value(ctx->builder, stmt->data.var_decl.expression, value_type);
+        } else {
+            init = ir_value_const_int(0, value_type);
+        }
+
+        IRGlobal* g = ir_builder_create_global_init(ctx->builder, gname, value_type, init,
+                                                    stmt->data.var_decl.is_const ? 1 : 0);
+        if (!g) {
+            ir_lower_report_error(ctx, stmt, "فشل إنشاء متغير ساكن '%s'.",
+                                  stmt->data.var_decl.name ? stmt->data.var_decl.name : "???");
+            return;
+        }
+        g->is_internal = true;
+        ir_lower_bind_local_static(ctx, stmt->data.var_decl.name, gname, value_type);
+        return;
+    }
+
     // نوع مركب محلي (هيكل/اتحاد): نخزّنه ككتلة بايتات (array<i8, N>) على المكدس.
     if (stmt->data.var_decl.type == TYPE_STRUCT || stmt->data.var_decl.type == TYPE_UNION) {
         int n = stmt->data.var_decl.struct_size;
@@ -1395,12 +1588,14 @@ static void lower_array_assign(IRLowerCtx* ctx, Node* stmt) {
     ir_lower_set_loc(ctx->builder, stmt);
 
     const char* name = stmt->data.array_op.name;
+    const char* storage_name = name;
     IRType* arr_t = NULL;
     IRValue* arr_ptr = NULL;
     bool is_global_arr = false;
 
     IRLowerBinding* b = find_local(ctx, name);
     if (b) {
+        storage_name = ir_lower_binding_storage_name(b);
         if (!b->value_type || b->value_type->kind != IR_TYPE_ARRAY) {
             ir_lower_report_error(ctx, stmt, "'%s' ليس مصفوفة في مسار IR.", name ? name : "???");
             (void)lower_expr(ctx, stmt->data.array_op.index);
@@ -1408,7 +1603,11 @@ static void lower_array_assign(IRLowerCtx* ctx, Node* stmt) {
             return;
         }
         arr_t = b->value_type;
-        arr_ptr = ir_value_reg(b->ptr_reg, ir_type_ptr(arr_t));
+        if (b->is_static_storage) {
+            is_global_arr = true;
+        } else {
+            arr_ptr = ir_value_reg(b->ptr_reg, ir_type_ptr(arr_t));
+        }
     } else {
         // مصفوفة عامة
         IRGlobal* g = NULL;
@@ -1432,7 +1631,7 @@ static void lower_array_assign(IRLowerCtx* ctx, Node* stmt) {
 
     IRValue* base_ptr = NULL;
     if (is_global_arr) {
-        base_ptr = ir_value_global(name, elem_t);
+        base_ptr = ir_value_global(storage_name, elem_t);
     } else {
         int base_reg = ir_builder_emit_cast(ctx->builder, arr_ptr, elem_ptr_t);
         base_ptr = ir_value_reg(base_reg, elem_ptr_t);
@@ -1502,9 +1701,13 @@ static void lower_member_assign(IRLowerCtx* ctx, Node* stmt) {
             (void)lower_expr(ctx, value);
             return;
         }
-        IRValue* arr_ptr = ir_value_reg(b->ptr_reg, ir_type_ptr(b->value_type));
-        int c = ir_builder_emit_cast(ctx->builder, arr_ptr, ptr_i8_t);
-        base_ptr = ir_value_reg(c, ptr_i8_t);
+        if (b->is_static_storage) {
+            base_ptr = ir_value_global(ir_lower_binding_storage_name(b), IR_TYPE_I8_T);
+        } else {
+            IRValue* arr_ptr = ir_value_reg(b->ptr_reg, ir_type_ptr(b->value_type));
+            int c = ir_builder_emit_cast(ctx->builder, arr_ptr, ptr_i8_t);
+            base_ptr = ir_value_reg(c, ptr_i8_t);
+        }
     }
 
     IRValue* idx = ir_value_const_int((int64_t)target->data.member_access.member_offset, IR_TYPE_I64_T);
@@ -1542,6 +1745,7 @@ static void lower_assign(IRLowerCtx* ctx, Node* stmt) {
 
     IRLowerBinding* b = find_local(ctx, name);
     if (b) {
+        const char* storage_name = ir_lower_binding_storage_name(b);
         IRType* value_type = b->value_type ? b->value_type : IR_TYPE_I64_T;
 
         IRValue* rhs = lower_expr(ctx, stmt->data.assign_stmt.expression);
@@ -1552,11 +1756,16 @@ static void lower_assign(IRLowerCtx* ctx, Node* stmt) {
 
         // خزن <rhs>, %ptr
         (void)value_type; // reserved for future casts/type checks
-        IRType* ptr_type = ir_type_ptr(value_type ? value_type : IR_TYPE_I64_T);
-        IRValue* ptr = ir_value_reg(b->ptr_reg, ptr_type);
+        IRValue* ptr = NULL;
+        if (b->is_static_storage) {
+            ptr = ir_value_global(storage_name, value_type);
+        } else {
+            IRType* ptr_type = ir_type_ptr(value_type ? value_type : IR_TYPE_I64_T);
+            ptr = ir_value_reg(b->ptr_reg, ptr_type);
+        }
         ir_lower_set_loc(ctx->builder, stmt);
         ir_builder_emit_store(ctx->builder, rhs, ptr);
-        ir_lower_tag_last_inst(ctx->builder, IR_OP_STORE, -1, name);
+        ir_lower_tag_last_inst(ctx->builder, IR_OP_STORE, -1, storage_name);
         return;
     }
 
@@ -2459,6 +2668,7 @@ IRModule* ir_lower_program(Node* program, const char* module_name) {
             IRGlobal* g = ir_builder_create_global(builder, decl->data.array_decl.name, arr_t,
                                                    decl->data.array_decl.is_const ? 1 : 0);
             if (!g) continue;
+            g->is_internal = decl->data.array_decl.is_static ? true : false;
 
             g->has_init_list = decl->data.array_decl.has_init ? true : false;
 
@@ -2502,16 +2712,22 @@ IRModule* ir_lower_program(Node* program, const char* module_name) {
                     continue;
                 }
                 IRType* bytes_t = ir_type_array(IR_TYPE_I8_T, n);
-                (void)ir_builder_create_global(builder, decl->data.var_decl.name, bytes_t,
-                                               decl->data.var_decl.is_const ? 1 : 0);
+                IRGlobal* g = ir_builder_create_global(builder, decl->data.var_decl.name, bytes_t,
+                                                       decl->data.var_decl.is_const ? 1 : 0);
+                if (g) {
+                    g->is_internal = decl->data.var_decl.is_static ? true : false;
+                }
                 continue;
             }
 
             IRType* gtype = ir_type_from_datatype(module, decl->data.var_decl.type);
             IRValue* init = ir_lower_global_init_value(builder, decl->data.var_decl.expression, gtype);
 
-            (void)ir_builder_create_global_init(builder, decl->data.var_decl.name, gtype, init,
-                                                decl->data.var_decl.is_const ? 1 : 0);
+            IRGlobal* g = ir_builder_create_global_init(builder, decl->data.var_decl.name, gtype, init,
+                                                        decl->data.var_decl.is_const ? 1 : 0);
+            if (g) {
+                g->is_internal = decl->data.var_decl.is_static ? true : false;
+            }
             continue;
         }
 
@@ -2545,6 +2761,8 @@ IRModule* ir_lower_program(Node* program, const char* module_name) {
 
             IRLowerCtx ctx;
             ir_lower_ctx_init(&ctx, builder);
+            ctx.current_func_name = decl->data.func_def.name;
+            ctx.static_local_counter = 0;
 
             // نطاق الدالة: المعاملات + جسم الدالة
             ir_lower_scope_push(&ctx);

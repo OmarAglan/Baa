@@ -1,6 +1,6 @@
 # Baa Language Specification
 
-> **Version:** 0.3.7 | [← User Guide](USER_GUIDE.md) | [Compiler Internals →](INTERNALS.md)
+> **Version:** 0.3.7.5 | [← User Guide](USER_GUIDE.md) | [Compiler Internals →](INTERNALS.md)
 
 Baa (باء) is a compiled systems programming language using Arabic syntax. It compiles to native code via Assembly + host GCC/Clang on Windows and Linux.
 
@@ -226,14 +226,15 @@ Baa is statically typed. All variables must be declared with their type.
 
 ### 3.3. Arrays (المصفوفات)
 
-مصفوفات ثابتة الحجم. المصفوفات المحلية تُحجز على المكدس، والمصفوفات العامة تُصدر في قسم البيانات.
+مصفوفات ثابتة الحجم. المصفوفات المحلية التلقائية تُحجز على المكدس، بينما المصفوفات ذات التخزين الساكن (`ساكن` أو عامة) تُصدر في قسم البيانات.
 
 **قيود حالية:**
 - مدعومة محلياً وعمومياً (مصفوفات عامة ثابتة الحجم).
 - مدعومة لنوع `صحيح` فقط حالياً.
 - `نص` ليس مصفوفة عامة؛ لكنه يُفهرس كـ `حرف[]` (انظر قسم النصوص).
 - المصفوفة ليست قيمة من الدرجة الأولى: لا يمكن إسنادها إلى متغير، ولا تمريرها كمعامل مباشرة.
-- إن لم تُهيّأ مصفوفة محلية، عناصرها غير مهيّأة افتراضياً؛ لا تقرأ عنصراً قبل كتابته.
+- إن لم تُهيّأ مصفوفة محلية تلقائية، عناصرها غير مهيّأة افتراضياً؛ لا تقرأ عنصراً قبل كتابته.
+- المصفوفات ذات التخزين الساكن (محلية `ساكن` أو عامة) تُصفّر تلقائياً عند غياب التهيئة.
 - عند استخدام تهيئة `{...}`، يسمح بالتهيئة الجزئية وتُملأ بقية العناصر بأصفار (مثل C).
 - المصفوفات العامة تُعامل كـ zero-initialized عند عدم وجود تهيئة.
 
@@ -419,17 +420,29 @@ Baa is statically typed. All variables must be declared with their type.
 - `نوع` is parsed contextually in declarations, so existing member/identifier usages مثل `س:نوع` remain valid.
 - Pointer/function-type aliases are deferred to later pointer/function-type milestones.
 
-#### 3.7.2. Static Local Variables (متغيرات ساكنة) [Scheduled v0.3.7.5]
+#### 3.7.2. Static Storage with `ساكن` (تخزين ساكن) [Implemented v0.3.7.5]
 
-**Syntax:** `ساكن <type> <name> = <value>.`
+**Syntax:**
+
+- `ساكن <type> <name>.`
+- `ساكن <type> <name> = <value>.`
+- مع الثوابت: `ثابت ساكن ...` أو `ساكن ثابت ...`
 
 ```baa
 صحيح عداد() {
-    ساكن صحيح ع = ٠.
+    ساكن صحيح ع.
     ع = ع + ١.
     إرجع ع.
 }
 ```
+
+**Current rules (v0.3.7.5):**
+
+- `ساكن` مدعوم للمتغيرات والمصفوفات العامة والمحلية.
+- المتغير المحلي `ساكن` يُهيّأ مرة واحدة فقط وتبقى قيمته بين نداءات الدالة.
+- التهيئة غير الثابتة وقت الترجمة مرفوضة للتخزين الساكن.
+- إن غابت التهيئة، القيمة الافتراضية هي الصفر (مثل C للتخزين الساكن).
+- لا يُسمح حالياً بتطبيق `ساكن` على تعريف الدوال.
 
 #### 3.7.3. Type Casting (تحويل الأنواع) [Scheduled v0.3.10.5]
 
@@ -474,7 +487,7 @@ Use the `ثابت` keyword before the type to declare a constant.
 
 يمكن التصريح بمصفوفة على أنها `ثابت` لمنع تعديل عناصرها.
 
-**ملاحظة:** المصفوفات الثابتة يجب أن تكون مُهيّأة (مثل ثوابت C).
+**ملاحظة:** المصفوفات الثابتة التلقائية يجب أن تكون مُهيّأة. أمّا المصفوفات الثابتة ذات التخزين الساكن (عامة أو `ساكن`) فيمكن تركها بلا تهيئة وتُصفّر افتراضياً.
 
 **Syntax:** `ثابت صحيح <identifier>[<size>] = { <values> }.`
 
@@ -492,7 +505,7 @@ Use the `ثابت` keyword before the type to declare a constant.
 
 | Rule | Description |
 |------|-------------|
-| **Must be initialized (scalars)** | Scalar constants require an initial value at declaration |
+| **Must be initialized (automatic scalars)** | Scalar constants في التخزين التلقائي (غير `ساكن` وغير عامة) تتطلب قيمة ابتدائية |
 | **Cannot be reassigned** | Attempting to reassign produces a semantic error |
 | **Array elements immutable** | Elements of constant arrays cannot be modified |
 | **Functions cannot be const** | The `ثابت` keyword applies only to variables |

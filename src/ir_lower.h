@@ -27,8 +27,10 @@ extern "C" {
 
 typedef struct IRLowerBinding {
     const char* name;     // Variable name (UTF-8)
-    int ptr_reg;          // Register that holds the pointer (result of حجز/alloca)
+    int ptr_reg;          // سجل المؤشر للمحلي المكدسي (result of alloca) أو -1 للساكن
     IRType* value_type;   // Type of the value stored at ptr_reg (e.g., ص٦٤)
+    const char* global_name; // اسم الرمز العام عند التخزين الساكن
+    bool is_static_storage;  // هل الربط مُمثل بتخزين ساكن عبر رمز عام
 } IRLowerBinding;
 
 typedef struct IRLowerCtx {
@@ -45,6 +47,10 @@ typedef struct IRLowerCtx {
 
     // Label generator for CFG lowering (unique suffixes for Arabic labels).
     int label_counter;
+
+    // توليد أسماء فريدة للمتغيرات المحلية الساكنة.
+    const char* current_func_name;
+    int static_local_counter;
 
     // Control-flow context stacks (for break/continue).
     struct IRBlock* break_targets[64];
@@ -66,6 +72,12 @@ void ir_lower_ctx_init(IRLowerCtx* ctx, IRBuilder* builder);
  * `حجز` for `NODE_VAR_DECL` so that `NODE_VAR_REF` can emit `حمل`.
  */
 void ir_lower_bind_local(IRLowerCtx* ctx, const char* name, int ptr_reg, IRType* value_type);
+
+/**
+ * @brief ربط اسم محلي بتخزين ساكن ممثل برمز عام.
+ */
+void ir_lower_bind_local_static(IRLowerCtx* ctx, const char* name,
+                                const char* global_name, IRType* value_type);
 
 // ============================================================================
 // Expression lowering (v0.3.0.3)

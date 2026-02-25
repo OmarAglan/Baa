@@ -1020,6 +1020,7 @@ IRGlobal* ir_global_new(const char* name, IRType* type, int is_const) {
     global->init_elem_count = 0;
     global->has_init_list = false;
     global->is_const = is_const ? true : false;
+    global->is_internal = false;
     global->next = NULL;
     
     return global;

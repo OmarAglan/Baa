@@ -498,6 +498,7 @@ static void ir_text_write_func(FILE* out, IRFunc* func) {
 static void ir_text_write_global(FILE* out, IRGlobal* g) {
     if (!out || !g) return;
 
+    if (g->is_internal) fputs("internal ", out);
     if (g->is_const) fputs("const ", out);
     fputs("global @", out);
     fputs(g->name ? g->name : "???", out);
@@ -1207,8 +1208,15 @@ IRModule* ir_text_read_module_file(const char* filename) {
         }
 
         // global
-        if (strncmp(p, "const global ", 13) == 0 || strncmp(p, "global ", 7) == 0) {
+        if (strncmp(p, "const global ", 13) == 0 ||
+            strncmp(p, "global ", 7) == 0 ||
+            strncmp(p, "internal ", 9) == 0) {
+            int is_internal = 0;
             int is_const = 0;
+            if (ir_text_match(&p, "internal")) {
+                is_internal = 1;
+                ir_text_skip_ws(&p);
+            }
             if (ir_text_match(&p, "const")) {
                 is_const = 1;
                 ir_text_skip_ws(&p);
@@ -1280,6 +1288,7 @@ IRModule* ir_text_read_module_file(const char* filename) {
                 }
                 free(name);
                 if (!ok || !g) { free(tmp); ok = 0; free(line); break; }
+                g->is_internal = is_internal ? true : false;
 
                 g->has_init_list = has_list ? true : false;
                 if (tmp_count > 0)
@@ -1308,6 +1317,7 @@ IRModule* ir_text_read_module_file(const char* filename) {
                 IRGlobal* g = ir_global_new(name, t, is_const);
                 free(name);
                 if (!g) { ok = 0; free(line); break; }
+                g->is_internal = is_internal ? true : false;
                 ir_global_set_init(g, init);
                 ir_module_add_global(module, g);
             }

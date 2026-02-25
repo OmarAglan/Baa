@@ -1,6 +1,6 @@
 # Baa Compiler Internals
 
-> **Version:** 0.3.7 | [← Language Spec](LANGUAGE.md) | [API Reference →](API_REFERENCE.md)
+> **Version:** 0.3.7.5 | [← Language Spec](LANGUAGE.md) | [API Reference →](API_REFERENCE.md)
 
 **Target Architecture:** x86-64 (AMD64)
 **Targets:** Windows x64 (COFF/PE) + Linux x86-64 (ELF)
@@ -186,7 +186,7 @@ Note (v0.3.2.9.4): semantic analysis errors now use `error_report(...)` as well,
 - **Colored Output**: Errors displayed in red (ANSI) when terminal supports it (v0.2.8+).
 - **Panic Mode Recovery (v0.3.7)**: When a syntax error is found, the parser does not exit immediately. It reports the error, enters panic mode, then synchronizes by context:
     1. **Statement mode**: sync on `.`, `}` and statement starters.
-    2. **Declaration mode**: sync on declaration starters (`صحيح`, `نص`, `هيكل`, `اتحاد`, ...).
+    2. **Declaration mode**: sync on declaration starters (`صحيح`, `نص`, `هيكل`, `اتحاد`, `ثابت`, `ساكن`, ...).
     3. **Switch mode**: sync on `حالة`, `افتراضي`, `}` and statement terminators.
     4. Parsing resumes after the nearest valid anchor to reduce cascading diagnostics.
 
@@ -297,7 +297,7 @@ When `#تضمين "file"` is encountered:
 ### 2.4. Token Types
 
 ```
-Keywords:    صحيح, ص٨, ص١٦, ص٣٢, ص٦٤, ط٨, ط١٦, ط٣٢, ط٦٤, عشري, حرف, نص, منطقي, عدم, حجم, نوع, ثابت, إذا, وإلا, طالما, لكل, اختر, حالة, افتراضي, اطبع, اقرأ, إرجع, توقف, استمر, تعداد, هيكل, اتحاد
+Keywords:    صحيح, ص٨, ص١٦, ص٣٢, ص٦٤, ط٨, ط١٦, ط٣٢, ط٦٤, عشري, حرف, نص, منطقي, عدم, حجم, نوع, ثابت, ساكن, إذا, وإلا, طالما, لكل, اختر, حالة, افتراضي, اطبع, اقرأ, إرجع, توقف, استمر, تعداد, هيكل, اتحاد
 Literals:    INTEGER, STRING, CHAR, TRUE, FALSE
 Operators:   + - * / % ++ -- ! ~ && || & | ^ << >>
 Comparison:  == != < > <= >=
@@ -305,7 +305,7 @@ Delimiters:  ( ) { } [ ] , . : ؛
 Special:     IDENTIFIER, EOF
 ```
 
-> **Note:** `ثابت` (const) was added in v0.2.7 for immutable variable declarations.
+> **Note:** `ثابت` (const) was added in v0.2.7. `ساكن` (static storage) was added in v0.3.7.5.
 
 ---
 
@@ -321,14 +321,15 @@ Declaration   ::= FuncDecl | GlobalVarDecl | GlobalArrayDecl | EnumDecl | Struct
 
 FuncDecl      ::= Type ID "(" ParamList ")" Block
                 | Type ID "(" ParamList ")" "."    // Prototype (v0.2.5+)
-GlobalVarDecl ::= ConstMod? TypeSpec ID ("=" Expr)? "."
-GlobalArrayDecl ::= ConstMod? "صحيح" ID "[" INT "]" ArrayInit? "."   // v0.3.3+
+GlobalVarDecl ::= DeclMods TypeSpec ID ("=" Expr)? "."
+GlobalArrayDecl ::= DeclMods "صحيح" ID "[" INT "]" ArrayInit? "."   // v0.3.3+
 EnumDecl      ::= "تعداد" ID "{" EnumMembers? "}"                    // v0.3.4+
 StructDecl    ::= "هيكل" ID "{" FieldDecl* "}"                      // v0.3.4+
 UnionDecl     ::= "اتحاد" ID "{" FieldDecl* "}"                     // v0.3.4.5+
 TypeAliasDecl ::= "نوع" ID "=" TypeSpec "."                         // v0.3.6.5+
 
-ConstMod      ::= "ثابت"                           // NEW in v0.2.7
+DeclMod       ::= "ثابت" | "ساكن"
+DeclMods      ::= DeclMod*
 TypeSpec      ::= Type | EnumType | StructType | UnionType | AliasType
 Type          ::= "صحيح" | "ص٨" | "ص١٦" | "ص٣٢" | "ص٦٤"
                 | "ط٨" | "ط١٦" | "ط٣٢" | "ط٦٤"
@@ -343,11 +344,11 @@ Statement     ::= VarDecl | ArrayDecl | Assign | ArrayAssign | MemberAssign
                 | If | Switch | While | For | Return | Print | Read | CallStmt
                 | Break | Continue
 
-VarDecl       ::= ConstMod? TypeSpec ID ("=" Expr)? "."   // initializer required إلا للهيكل
-ArrayDecl     ::= ConstMod? "صحيح" ID "[" INT "]" ArrayInit? "."  // v0.3.3+
+VarDecl       ::= DeclMods TypeSpec ID ("=" Expr)? "."   // initializer optional للتخزين الساكن
+ArrayDecl     ::= DeclMods "صحيح" ID "[" INT "]" ArrayInit? "."  // v0.3.3+
 
 EnumMembers   ::= ID (COMMA ID)* COMMA?
-FieldDecl     ::= ConstMod? TypeSpec ID "."
+FieldDecl     ::= "ثابت"? TypeSpec ID "."
 
 ArrayInit     ::= "=" "{" (Expr (COMMA Expr)* COMMA?)? "}"
 COMMA         ::= "," | "،"
@@ -456,21 +457,23 @@ The Semantic Analyzer (`src/analysis.c`) performs a static check on the AST befo
 2. **Type Checking**: Enforces `TYPE_INT`, `TYPE_STRING`, and `TYPE_BOOL` compatibility.
 3. **Scope Validation**: Manages visibility rules.
 4. **Constant Checking** (v0.2.7+): Prevents reassignment of immutable variables.
-5. **Control Flow Validation**: Ensures `break` and `continue` are used only within loops/switches.
-6. **Function Validation**: Checks function prototypes and definitions match.
-7. **Usage Tracking** (v0.2.8+): Tracks variable usage for unused variable warnings.
-8. **Dead Code Detection** (v0.2.8+): Detects unreachable code after `return`/`break`.
-9. **Type Alias Validation** (v0.3.6.5): Registers aliases, validates alias targets, and enforces strict alias/symbol name collision diagnostics.
+5. **Static Storage Rules** (v0.3.7.5): Validates `ساكن` declarations and enforces compile-time initializers for static-storage objects.
+6. **Control Flow Validation**: Ensures `break` and `continue` are used only within loops/switches.
+7. **Function Validation**: Checks function prototypes and definitions match.
+8. **Usage Tracking** (v0.2.8+): Tracks variable usage for unused variable warnings.
+9. **Dead Code Detection** (v0.2.8+): Detects unreachable code after `return`/`break`.
+10. **Type Alias Validation** (v0.3.6.5): Registers aliases, validates alias targets, and enforces strict alias/symbol name collision diagnostics.
 
 ### 5.2. Constant Checking (v0.2.7+)
 
-The analyzer tracks the `is_const` flag for each symbol and enforces immutability:
+The analyzer tracks `is_const` / `is_static` and enforces immutability + static-storage constraints:
 
 | Error Condition | Error Message |
 |-----------------|---------------|
-| Reassigning a constant | `Cannot reassign constant '<name>'` |
-| Modifying constant array element | `Cannot modify constant array '<name>'` |
-| Constant without initializer | `Constant '<name>' must be initialized` |
+| Reassigning a constant | Arabic semantic error for modifying `ثابت` |
+| Modifying constant array element | Arabic semantic error for constant array mutation |
+| Automatic constant without initializer | Arabic semantic error (`الثابت ... يجب تهيئته`) |
+| Static-storage non-constant initializer | Arabic semantic error for non-constant static initializer |
 
 ### 5.3. Warning Generation (v0.2.8+)
 
@@ -1505,6 +1508,12 @@ fmt_scan_int: .asciz "%d"
 global_var: .quad 42           # Integer initializer
 global_str: .quad .Lbs_0       # Baa string pointer initializer (ptr<char>)
 ```
+
+**Linkage note (v0.3.7.5):**
+
+- Globals lowered from `ساكن` use internal linkage.
+- ELF emission prints `.local <symbol>` for internal globals.
+- Non-internal globals are exported with `.globl <symbol>`.
 
 **String tables (rodata):**
 

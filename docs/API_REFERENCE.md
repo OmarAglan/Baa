@@ -1,6 +1,6 @@
 # Baa Internal API Reference
 
-> **Version:** 0.3.7 | [← Compiler Internals](INTERNALS.md) | [IR Specification →](BAA_IR_SPECIFICATION.md)
+> **Version:** 0.3.7.5 | [← Compiler Internals](INTERNALS.md) | [IR Specification →](BAA_IR_SPECIFICATION.md)
 
 This document details the C functions, enumerations, and structures defined in `src/baa.h`, `src/ir.h`, `src/ir_arena.h`, `src/ir_mutate.h`, `src/ir_defuse.h`, `src/ir_clone.h`, `src/ir_text.h`, `src/ir_loop.h`, `src/ir_licm.h`, `src/ir_unroll.h`, `src/ir_inline.h`, `src/ir_builder.h`, `src/ir_lower.h`, `src/ir_analysis.h`, `src/ir_pass.h`, `src/ir_mem2reg.h`, `src/ir_outssa.h`, `src/ir_verify_ssa.h`, `src/ir_verify_ir.h`, `src/ir_canon.h`, `src/ir_cfg_simplify.h`, `src/ir_dce.h`, `src/ir_copyprop.h`, `src/ir_cse.h`, `src/ir_optimizer.h`, `src/target.h`, `src/isel.h`, `src/regalloc.h`, and `src/emit.h`.
 
@@ -107,6 +107,7 @@ Entry point for the parsing phase.
 - Initializes internal `Parser` state with 2-token lookahead (current + next)
 - Parses list of declarations (global variables or functions)
 - Parses global type aliases: `نوع <name> = <type>.` (v0.3.6.5)
+- Parses declaration qualifiers `ثابت` / `ساكن` in any order for variable/array declarations (v0.3.7.5)
 - Parses low-level expressions/operators: `&`, `|`, `^`, `~`, `<<`, `>>`, and `حجم(type|expr)` (v0.3.6)
 - Implements operator precedence climbing for expressions
 - Uses context-aware panic recovery modes (statement/declaration/switch) to continue after syntax errors (v0.3.7)
@@ -125,7 +126,7 @@ Node* ast = parse(&lexer);
 
 ## 3. Semantic Analysis
 
-Handles type checking, symbol resolution, and **constant validation**.
+Handles type checking, symbol resolution, **constant validation**, and **static-storage validation**.
 
 ### `analyze`
 
@@ -147,6 +148,7 @@ Runs the semantic pass on the AST.
 - **Symbol Resolution**: Verifies variables are declared before use.
 - **Scope Validation**: Tracks global vs local scope and prevents redefinitions.
 - **Constant Checking** (v0.2.7+): Prevents reassignment of `ثابت` variables.
+- **Static Storage Rules** (v0.3.7.5): Enforces compile-time initializer constraints for static-storage declarations.
 - **Control Flow Validation**: Ensures `break`/`continue` are only used within loops/switches.
 - **Type Alias Validation** (v0.3.6.5): Registers/validates `نوع` aliases and enforces strict collision checks with symbols/functions.
 - **Low-Level Validation** (v0.3.6): integer-only bitwise checks, `حجم(...)` compile-time sizing checks, and `عدم` return/declaration constraints.
@@ -157,9 +159,10 @@ Runs the semantic pass on the AST.
 
 **Constant Validation Rules:**
 
-- Constants must be initialized at declaration time.
+- Automatic-storage constants must be initialized at declaration time.
 - Reassigning a constant produces an Arabic semantic diagnostic for reassigning `ثابت`.
 - Modifying constant array elements produces an Arabic semantic diagnostic for modifying a constant array.
+- Static-storage declarations (global or `ساكن`) require compile-time-constant initializers when provided.
 
 ---
 
@@ -1563,7 +1566,17 @@ Binds a local variable name to its `حجز` pointer register. This enables `NODE
 
 ---
 
-### 6.4. `lower_expr`
+### 6.4. `ir_lower_bind_local_static`
+
+```c
+void ir_lower_bind_local_static(IRLowerCtx* ctx, const char* name, const char* global_name, IRType* value_type);
+```
+
+Binds a local name to static storage represented by an internal global symbol.
+
+---
+
+### 6.5. `lower_expr`
 
 ```c
 IRValue* lower_expr(IRLowerCtx* ctx, Node* expr);
@@ -1582,7 +1595,7 @@ Currently supports:
 
 ---
 
-### 6.5. `lower_stmt`
+### 6.6. `lower_stmt`
 
 ```c
 void lower_stmt(IRLowerCtx* ctx, Node* stmt);
@@ -2872,6 +2885,7 @@ typedef struct {
     int array_size;        // Fixed array size if is_array (v0.3.2.9.4)
     int offset;            // Stack offset or memory address
     bool is_const;         // Immutability flag (v0.2.7+)
+    bool is_static;        // Static storage duration flag (v0.3.7.5)
     bool is_used;          // Usage tracking for warnings (v0.2.8+)
     int decl_line;         // Declaration line (v0.2.8+)
     int decl_col;          // Declaration column (v0.2.8+)
@@ -2889,6 +2903,7 @@ typedef struct {
 | `array_size` | `int` | Fixed array size (only meaningful when `is_array=true`) |
 | `offset` | `int` | Stack offset (local) or memory address (global) |
 | `is_const` | `bool` | `true` if declared with `ثابت` (v0.2.7+) |
+| `is_static` | `bool` | `true` if declared with `ساكن` (v0.3.7.5) |
 | `is_used` | `bool` | `true` if variable is referenced (v0.2.8+) |
 | `decl_line` | `int` | Line number where symbol was declared (v0.2.8+) |
 | `decl_col` | `int` | Column number where symbol was declared (v0.2.8+) |
@@ -3004,6 +3019,7 @@ typedef enum {
     TOKEN_KEYWORD_FLOAT,
     TOKEN_TYPE_ALIAS,
     TOKEN_CONST,
+    TOKEN_STATIC,
     TOKEN_RETURN,
     TOKEN_PRINT,
     TOKEN_READ,
@@ -3089,9 +3105,10 @@ typedef struct Node {
             char* type_name;         // Used for TYPE_ENUM/TYPE_STRUCT/TYPE_UNION
             int struct_size;         // For TYPE_STRUCT/TYPE_UNION storage (bytes)
             int struct_align;        // For TYPE_STRUCT/TYPE_UNION storage (bytes)
-            struct Node* expression; // Scalars: required for locals, optional for globals
+            struct Node* expression; // Scalars: required for automatic locals, optional for static/global
             bool is_global;
             bool is_const;
+            bool is_static;
         } var_decl;
 
         struct {
@@ -3105,6 +3122,7 @@ typedef struct Node {
             int size;
             bool is_global;
             bool is_const;
+            bool is_static;
             bool has_init;
             struct Node* init_values;
             int init_count;

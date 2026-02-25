@@ -1495,6 +1495,14 @@ static void emit_data_section(MachineModule* module, FILE* out) {
     for (IRGlobal* g = module->globals; g; g = g->next) {
         if (!g->name) continue;
 
+        if (g->is_internal) {
+            if (g_emit_target && g_emit_target->obj_format == BAA_OBJFORMAT_ELF) {
+                fprintf(out, ".local %s\n", g->name);
+            }
+        } else {
+            fprintf(out, ".globl %s\n", g->name);
+        }
+
         // مصفوفة عامة
         if (g->type && g->type->kind == IR_TYPE_ARRAY) {
             IRType* elem_t = g->type->data.array.element;

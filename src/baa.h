@@ -52,6 +52,7 @@ typedef enum {
     TOKEN_SIZEOF,       // حجم
     TOKEN_TYPE_ALIAS,   // نوع
     TOKEN_CONST,        // ثابت
+    TOKEN_STATIC,       // ساكن
     TOKEN_RETURN,       // إرجع
     TOKEN_PRINT,        // اطبع
     TOKEN_READ,         // اقرأ
@@ -451,6 +452,7 @@ typedef struct Node {
             struct Node* expression; // القيمة الابتدائية (اختياري)
             bool is_global;          // هل هو متغير عام؟
             bool is_const;           // هل هو ثابت (immutable)؟
+            bool is_static;          // هل مدة تخزينه ساكنة؟
         } var_decl;
 
         // تعريف اسم نوع بديل
@@ -517,6 +519,7 @@ typedef struct Node {
             int size;       // حجم المصفوفة (ثابت حالياً)
             bool is_global; // هل هي عامة؟ (المحلي فقط مدعوم حالياً)
             bool is_const;  // هل هي ثابتة (immutable)؟
+            bool is_static; // هل مدة تخزينها ساكنة؟
             // تهيئة المصفوفة: عند وجود '=' نعتبر التهيئة موجودة حتى لو كانت القائمة فارغة `{}`.
             bool has_init;
             struct Node* init_values; // قائمة قيم التهيئة (قد تكون NULL عند `{}`)
@@ -639,6 +642,7 @@ typedef struct {
     int array_size;    // حجم المصفوفة (ثابت حالياً) إذا كانت is_array=true
     int offset;        // الإزاحة في المكدس أو العنوان
     bool is_const;     // هل هو ثابت (immutable)؟
+    bool is_static;    // هل التخزين ساكن؟
     bool is_used;      // هل تم استخدام هذا المتغير؟ (للتحذيرات)
     int decl_line;     // سطر التعريف (للتحذيرات)
     int decl_col;      // عمود التعريف (للتحذيرات)

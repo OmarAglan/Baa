@@ -1,6 +1,6 @@
 # Baa IR Specification
 
-> **Version:** 0.3.7 | [← Compiler Internals](INTERNALS.md) | [API Reference →](API_REFERENCE.md)
+> **Version:** 0.3.7.5 | [← Compiler Internals](INTERNALS.md) | [API Reference →](API_REFERENCE.md)
 
 This document specifies the Intermediate Representation (IR) for the Baa compiler. The IR uses Arabic naming conventions throughout, creating a culturally authentic yet technically robust design.
 
@@ -262,6 +262,7 @@ Example:
 ```
 عام @اسم_المتغير = ص٦٤ ١٠٠
 عام @نص_ترحيب = نص "مرحباً"   // نص يُخزن كمؤشر إلى مصفوفة حرف[] ثابتة
+internal global @عداد_داخلي = ص٦٤ ٠ // ربط داخلي (v0.3.7.5)
 
 // مصفوفة عامة (تهيئة جزئية؛ الباقي أصفار مثل C)
 عام @قائمة = مصفوفة[ص٦٤، ٥] {١، ٢، ٣}
@@ -281,7 +282,7 @@ Example:
 | AST Node | IR Output |
 |----------|-----------|
 | `NODE_INT` | Immediate value |
-| `NODE_VAR_REF` | `حمل` from allocated memory |
+| `NODE_VAR_REF` | `حمل` from local allocation or static/global backing symbol |
 | `NODE_BIN_OP` | Arithmetic instruction |
 | `NODE_ASSIGN` | `خزن` instruction |
 | `NODE_IF` | `قفز_شرط` with two blocks |
@@ -298,7 +299,7 @@ Example:
 
 ### 6.2 Variable Handling
 
-Local variables are lowered to stack allocations:
+Local variables are lowered to stack allocations (automatic storage):
 
 ```baa
 صحيح س = ١٠.
@@ -309,6 +310,12 @@ Becomes:
 ```
 %م٠ = حجز ص٦٤
 خزن ص٦٤ ١٠، %م٠
+```
+
+Static locals (`ساكن`) are lowered as internal globals:
+
+```
+internal global @__baa_static_<func>_<name>_<id> = ص٦٤ ٠
 ```
 
 ### 6.3 Control Flow Lowering
@@ -492,7 +499,7 @@ Becomes:
 
 ```bnf
 module      ::= (global | function)*
-global      ::= "عام" "@" ident "=" type global_init
+global      ::= ("internal")? ("const")? "global" "@" ident "=" type global_init
 global_init ::= value
              | "zeroinit"
              | "{" (value ("," value)* ","?)? "}"

@@ -225,6 +225,49 @@ static bool parser_current_is_type_alias_keyword(void)
            strcmp(parser.current.value, "نوع") == 0;
 }
 
+static bool parser_is_decl_qualifier(BaaTokenType type)
+{
+    return type == TOKEN_CONST || type == TOKEN_STATIC;
+}
+
+typedef struct {
+    bool is_const;
+    bool is_static;
+    Token tok_const;
+    Token tok_static;
+} ParserDeclQualifiers;
+
+static void parser_parse_decl_qualifiers(ParserDeclQualifiers* out_q)
+{
+    if (!out_q) return;
+
+    memset(out_q, 0, sizeof(*out_q));
+
+    while (parser_is_decl_qualifier(parser.current.type)) {
+        if (parser.current.type == TOKEN_CONST) {
+            if (out_q->is_const) {
+                error_report(parser.current, "تكرار 'ثابت' غير مسموح.");
+            } else {
+                out_q->is_const = true;
+                out_q->tok_const = parser.current;
+            }
+            eat(TOKEN_CONST);
+            continue;
+        }
+
+        if (parser.current.type == TOKEN_STATIC) {
+            if (out_q->is_static) {
+                error_report(parser.current, "تكرار 'ساكن' غير مسموح.");
+            } else {
+                out_q->is_static = true;
+                out_q->tok_static = parser.current;
+            }
+            eat(TOKEN_STATIC);
+            continue;
+        }
+    }
+}
+
 /**
  * @brief تحويل وحدة النوع إلى قيمة DataType.
  */
@@ -386,14 +429,14 @@ static bool parser_current_starts_declaration_anchor(void)
 {
     if (parser_current_is_type_alias_keyword() && parser.next.type == TOKEN_IDENTIFIER) return true;
     if (parser_current_starts_type()) return true;
-    return parser.current.type == TOKEN_CONST;
+    return parser.current.type == TOKEN_CONST || parser.current.type == TOKEN_STATIC;
 }
 
 static bool parser_current_starts_statement_anchor(void)
 {
     if (parser_current_starts_type()) return true;
     if (parser_current_is_type_alias_keyword()) return true;
-    if (parser.current.type == TOKEN_CONST) return true;
+    if (parser.current.type == TOKEN_CONST || parser.current.type == TOKEN_STATIC) return true;
     if (parser.current.type == TOKEN_IDENTIFIER) return true;
 
     switch (parser.current.type) {
@@ -1365,7 +1408,16 @@ Node* parse_statement() {
         eat(TOKEN_LPAREN);
 
         Node* init = NULL;
-        if (parser_current_starts_type()) {
+        if (parser_is_decl_qualifier(parser.current.type) || parser_current_starts_type()) {
+            ParserDeclQualifiers init_q;
+            parser_parse_decl_qualifiers(&init_q);
+
+            if (!parser_current_starts_type()) {
+                error_report(parser.current, "متوقع نوع في تهيئة حلقة 'لكل'.");
+                synchronize_mode(PARSER_SYNC_STATEMENT);
+                return NULL;
+            }
+
             Token tok_type = parser.current;
             DataType dt = TYPE_INT;
             char* type_name = NULL;
@@ -1377,9 +1429,8 @@ Node* parse_statement() {
                 return NULL;
             }
 
-            if (dt == TYPE_STRUCT) {
+            if (dt == TYPE_STRUCT || dt == TYPE_UNION) {
                 error_report(parser.current, "تعريف الهيكل داخل تهيئة 'لكل' غير مدعوم حالياً.");
-                free(type_name);
             }
 
             Token tok_name = parser.current;
@@ -1392,11 +1443,19 @@ Node* parse_statement() {
             char* name = strdup(parser.current.value);
             eat(TOKEN_IDENTIFIER);
 
-            if (parser.current.type != TOKEN_ASSIGN) {
-                error_report(parser.current, "متوقع '=' في تهيئة حلقة 'لكل'.");
+            if (init_q.is_const && !init_q.is_static && parser.current.type != TOKEN_ASSIGN) {
+                error_report(parser.current, "الثابت يجب تهيئته.");
             }
-            eat(TOKEN_ASSIGN);
-            Node* expr = parse_expression();
+
+            Node* expr = NULL;
+            if (parser.current.type == TOKEN_ASSIGN) {
+                eat(TOKEN_ASSIGN);
+                expr = parse_expression();
+            } else if (!init_q.is_static) {
+                error_report(parser.current, "متوقع '=' في تهيئة حلقة 'لكل'.");
+                eat(TOKEN_ASSIGN);
+                expr = parse_expression();
+            }
             eat(TOKEN_SEMICOLON);
 
             init = ast_node_new(NODE_VAR_DECL, tok_name);
@@ -1406,7 +1465,8 @@ Node* parse_statement() {
             init->data.var_decl.type_name = type_name;
             init->data.var_decl.expression = expr;
             init->data.var_decl.is_global = false;
-            init->data.var_decl.is_const = false;
+            init->data.var_decl.is_const = init_q.is_const;
+            init->data.var_decl.is_static = init_q.is_static;
         } else {
             if (parser.current.type == TOKEN_IDENTIFIER && parser.next.type == TOKEN_ASSIGN) {
                 Token tok_name = parser.current;
@@ -1462,16 +1522,31 @@ Node* parse_statement() {
         return stmt;
     }
 
-    // التحقق من وجود كلمة ثابت (const)
-    bool is_const = false;
-    Token tok_const = {0};
-    if (parser.current.type == TOKEN_CONST) {
-        is_const = true;
-        tok_const = parser.current;
-        eat(TOKEN_CONST);
+    ParserDeclQualifiers decl_q;
+    bool has_decl_qual = parser_is_decl_qualifier(parser.current.type);
+    if (has_decl_qual) {
+        parser_parse_decl_qualifiers(&decl_q);
+    } else {
+        memset(&decl_q, 0, sizeof(decl_q));
     }
 
-    if (parser_current_starts_type()) {
+    if (parser_current_is_type_alias_keyword() && parser.next.type == TOKEN_IDENTIFIER) {
+        if (decl_q.is_const || decl_q.is_static) {
+            error_report(parser.current, "تعريف اسم النوع البديل لا يقبل 'ثابت' أو 'ساكن'.");
+        }
+        error_report(parser.current, "تعريف 'نوع' مسموح فقط على المستوى العام.");
+        return parse_type_alias_declaration(false);
+    }
+
+    if (has_decl_qual || parser_current_starts_type()) {
+        if (!parser_current_starts_type()) {
+            error_report(parser.current, "متوقع نوع بعد واصفات التعريف.");
+            synchronize_mode(PARSER_SYNC_STATEMENT);
+            return NULL;
+        }
+
+        bool is_const = decl_q.is_const;
+        bool is_static = decl_q.is_static;
         Token tok_type = parser.current;
         DataType dt = TYPE_INT;
         char* type_name = NULL;
@@ -1536,6 +1611,7 @@ Node* parse_statement() {
             stmt->data.array_decl.size = size;
             stmt->data.array_decl.is_global = false;
             stmt->data.array_decl.is_const = is_const;
+            stmt->data.array_decl.is_static = is_static;
             stmt->data.array_decl.has_init = has_init;
             stmt->data.array_decl.init_values = init_vals;
             stmt->data.array_decl.init_count = init_count;
@@ -1545,7 +1621,7 @@ Node* parse_statement() {
         // تعريف هيكل (محلي): هيكل <T> <name>.
         if (dt == TYPE_STRUCT || dt == TYPE_UNION) {
             if (is_const) {
-                error_report(tok_const, "لا يمكن تعريف نوع مركب ثابت بدون تهيئة (غير مدعوم حالياً).");
+                error_report(decl_q.tok_const, "لا يمكن تعريف نوع مركب ثابت بدون تهيئة (غير مدعوم حالياً).");
             }
             eat(TOKEN_DOT);
 
@@ -1557,15 +1633,22 @@ Node* parse_statement() {
             stmt->data.var_decl.expression = NULL;
             stmt->data.var_decl.is_global = false;
             stmt->data.var_decl.is_const = is_const;
+            stmt->data.var_decl.is_static = is_static;
             return stmt;
         }
 
-        if (is_const && parser.current.type != TOKEN_ASSIGN) {
+        if (is_const && !is_static && parser.current.type != TOKEN_ASSIGN) {
             error_report(parser.current, "الثابت يجب تهيئته.");
         }
 
-        eat(TOKEN_ASSIGN);
-        Node* expr = parse_expression();
+        Node* expr = NULL;
+        if (parser.current.type == TOKEN_ASSIGN) {
+            eat(TOKEN_ASSIGN);
+            expr = parse_expression();
+        } else if (!is_static) {
+            eat(TOKEN_ASSIGN);
+            expr = parse_expression();
+        }
         eat(TOKEN_DOT);
 
         Node* stmt = ast_node_new(NODE_VAR_DECL, tok_name);
@@ -1576,7 +1659,7 @@ Node* parse_statement() {
         stmt->data.var_decl.expression = expr;
         stmt->data.var_decl.is_global = false;
         stmt->data.var_decl.is_const = is_const;
-        (void)tok_const;
+        stmt->data.var_decl.is_static = is_static;
         return stmt;
     }
 
@@ -1671,21 +1754,19 @@ Node* parse_statement() {
 }
 
 Node* parse_declaration() {
+    ParserDeclQualifiers decl_q;
+    parser_parse_decl_qualifiers(&decl_q);
+
     if (parser_current_is_type_alias_keyword() && parser.next.type == TOKEN_IDENTIFIER) {
+        if (decl_q.is_const || decl_q.is_static) {
+            error_report(parser.current, "تعريف اسم النوع البديل لا يقبل 'ثابت' أو 'ساكن'.");
+            return parse_type_alias_declaration(false);
+        }
         return parse_type_alias_declaration(true);
     }
 
-    // التحقق من وجود كلمة ثابت (const) للتصريحات العامة
-    bool is_const = false;
-    if (parser.current.type == TOKEN_CONST) {
-        is_const = true;
-        eat(TOKEN_CONST);
-
-        if (parser_current_is_type_alias_keyword() && parser.next.type == TOKEN_IDENTIFIER) {
-            error_report(parser.current, "تعريف اسم النوع البديل لا يقبل 'ثابت'.");
-            return parse_type_alias_declaration(false);
-        }
-    }
+    bool is_const = decl_q.is_const;
+    bool is_static = decl_q.is_static;
 
     if (parser_current_starts_type()) {
         Token tok_type = parser.current;
@@ -1701,8 +1782,8 @@ Node* parse_declaration() {
 
         // تعريف تعداد/هيكل/اتحاد: تعداد <name> { ... }  |  هيكل <name> { ... } | اتحاد <name> { ... }
         if ((dt == TYPE_ENUM || dt == TYPE_STRUCT || dt == TYPE_UNION) && parser.current.type == TOKEN_LBRACE) {
-            if (is_const) {
-                error_report(parser.current, "لا يمكن وسم تعريف نوع بـ 'ثابت'.");
+            if (is_const || is_static) {
+                error_report(parser.current, "لا يمكن وسم تعريف نوع بـ 'ثابت' أو 'ساكن'.");
             }
 
             Token tok_name = tok_type;
@@ -1848,8 +1929,8 @@ Node* parse_declaration() {
                     synchronize_mode(PARSER_SYNC_DECLARATION);
                     return NULL;
                 }
-            if (is_const) {
-                error_report(parser.current, "لا يمكن تعريف الدوال بوسم 'ثابت'.");
+            if (is_const || is_static) {
+                error_report(parser.current, "لا يمكن تعريف الدوال بوسم 'ثابت' أو 'ساكن'.");
             }
 
             eat(TOKEN_LPAREN);
@@ -1958,10 +2039,6 @@ Node* parse_declaration() {
             bool has_init = false;
             Node* init_vals = parse_array_initializer_list(&init_count, &has_init);
 
-            if (is_const && !has_init) {
-                error_report(parser.current, "الثابت يجب تهيئته.");
-            }
-
             eat(TOKEN_DOT);
 
             Node* arr = ast_node_new(NODE_ARRAY_DECL, tok_name);
@@ -1970,6 +2047,7 @@ Node* parse_declaration() {
             arr->data.array_decl.size = size;
             arr->data.array_decl.is_global = true;
             arr->data.array_decl.is_const = is_const;
+            arr->data.array_decl.is_static = is_static;
             arr->data.array_decl.has_init = has_init;
             arr->data.array_decl.init_values = init_vals;
             arr->data.array_decl.init_count = init_count;
@@ -1997,12 +2075,8 @@ Node* parse_declaration() {
             var->data.var_decl.expression = NULL;
             var->data.var_decl.is_global = true;
             var->data.var_decl.is_const = is_const;
+            var->data.var_decl.is_static = is_static;
             return var;
-        }
-
-        // ثوابت عامة يجب أن تُهيّأ
-        if (is_const && parser.current.type != TOKEN_ASSIGN) {
-            error_report(parser.current, "الثابت يجب تهيئته.");
         }
 
         Node* expr = NULL;
@@ -2020,6 +2094,7 @@ Node* parse_declaration() {
         var->data.var_decl.expression = expr;
         var->data.var_decl.is_global = true;
         var->data.var_decl.is_const = is_const;
+        var->data.var_decl.is_static = is_static;
         return var;
     }
     

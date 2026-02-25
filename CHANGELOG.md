@@ -8,6 +8,29 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.3.7.5] - 2026-02-25
+
+### Added
+
+- **`ساكن` keyword support** — added `TOKEN_STATIC` with parser support for declaration qualifiers in both orders: `ثابت ساكن` and `ساكن ثابت`.
+- **Static local storage lowering** — local `ساكن` variables/arrays now lower to internal IR globals with unique labels (`__baa_static_<func>_<name>_<id>`), preserving values across calls.
+- **IR global linkage metadata** — added `IRGlobal.is_internal` and IR text support for `internal` globals.
+- **Coverage for static storage**:
+  - Integration test: `tests/backend_static_storage_test.baa`
+  - Negative tests: `tests/neg/semantic_static_local_nonconst_init.baa`, `tests/neg/parser_static_function_unsupported.baa`
+
+### Changed
+
+- **Semantic constant-initializer rules** — static-storage objects (global or `ساكن` local) now require compile-time-constant initializers when provided.
+- **Const initialization policy** — `ثابت` with static storage no longer requires explicit initializer and defaults to zero (C-like static storage semantics).
+- **Emitter linkage directives** — globals with internal linkage are no longer emitted as global exports; ELF output now emits `.local` for internal symbols.
+- **IR text grammar** — accepts and emits `internal const global` / `internal global` forms.
+- **Regression expectation update** — `tests/neg/semantic_global_array_nonconst_init.baa` marker updated to the static-storage diagnostic wording.
+
+### Fixed
+
+- **Static local memory model** — assignments/loads/member and array accesses now correctly address static-backed locals through global-symbol storage instead of stack allocas.
+
 ## [0.3.7] - 2026-02-25
 
 ### Added

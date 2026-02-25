@@ -385,6 +385,7 @@ typedef struct IRGlobal {
     int init_elem_count;        // Number of provided initializer elements
     bool has_init_list;         // هل وُجدت '=' في المصدر (حتى لو كانت القائمة فارغة)
     bool is_const;              // Is this a constant?
+    bool is_internal;           // هل الربط داخلي على مستوى الملف؟
     struct IRGlobal* next;
 } IRGlobal;
 

@@ -504,6 +504,7 @@ static void add_symbol(const char* name,
                        DataType type,
                        const char* type_name,
                        bool is_const,
+                       bool is_static,
                        bool is_array,
                        int array_size,
                        int decl_line,
@@ -555,6 +556,7 @@ static void add_symbol(const char* name,
         global_symbols[global_count].is_array = is_array;
         global_symbols[global_count].array_size = is_array ? array_size : 0;
         global_symbols[global_count].is_const = is_const;
+        global_symbols[global_count].is_static = is_static;
         global_symbols[global_count].is_used = false;
         global_symbols[global_count].decl_line = decl_line;
         global_symbols[global_count].decl_col = decl_col;
@@ -600,6 +602,7 @@ static void add_symbol(const char* name,
         local_symbols[local_count].is_array = is_array;
         local_symbols[local_count].array_size = is_array ? array_size : 0;
         local_symbols[local_count].is_const = is_const;
+        local_symbols[local_count].is_static = is_static;
         local_symbols[local_count].is_used = false;
         local_symbols[local_count].decl_line = decl_line;
         local_symbols[local_count].decl_col = decl_col;
@@ -1430,6 +1433,13 @@ static bool eval_const_int_expr(Node* expr, int64_t* out_value)
             *out_value = (int64_t)expr->data.char_lit.value;
             return true;
 
+        case NODE_MEMBER_ACCESS:
+            if (expr->data.member_access.is_enum_value) {
+                *out_value = expr->data.member_access.enum_value;
+                return true;
+            }
+            return false;
+
         case NODE_UNARY_OP:
         case NODE_POSTFIX_OP:
         {
@@ -1637,6 +1647,33 @@ static bool eval_const_float_expr(Node* expr, double* out_value)
         default:
             return false;
     }
+}
+
+/**
+ * @brief التحقق من صلاحية مُهيّئ تخزين ساكن كتعريف ثابت وقت الترجمة.
+ */
+static bool static_storage_initializer_is_const(Node* expr, DataType decl_type)
+{
+    if (!expr) return true;
+
+    if (decl_type == TYPE_STRING) {
+        return expr->type == NODE_STRING;
+    }
+
+    if (decl_type == TYPE_FLOAT) {
+        double fv = 0.0;
+        if (eval_const_float_expr(expr, &fv)) return true;
+
+        int64_t iv = 0;
+        return eval_const_int_expr(expr, &iv);
+    }
+
+    if (decl_type == TYPE_STRUCT || decl_type == TYPE_UNION || decl_type == TYPE_VOID) {
+        return false;
+    }
+
+    int64_t iv = 0;
+    return eval_const_int_expr(expr, &iv);
 }
 
 static bool float_const_is_exact_int64(double value, int64_t* out_value)
@@ -2236,6 +2273,7 @@ static void analyze_node(Node* node) {
         case NODE_VAR_DECL: {
             DataType declType = node->data.var_decl.type;
             const char* declTypeName = node->data.var_decl.type_name;
+            bool has_static_storage = node->data.var_decl.is_global || node->data.var_decl.is_static;
 
             if (declType == TYPE_VOID) {
                 semantic_error(node,
@@ -2261,9 +2299,13 @@ static void analyze_node(Node* node) {
                         semantic_error(node,
                                        "عدم تطابق نوع التعداد في تهيئة '%s'.", node->data.var_decl.name);
                     }
+                    if (has_static_storage &&
+                        !static_storage_initializer_is_const(node->data.var_decl.expression, declType)) {
+                        semantic_error(node, "تهيئة المتغير الساكن '%s' يجب أن تكون ثابتة وقت الترجمة.",
+                                       node->data.var_decl.name ? node->data.var_decl.name : "???");
+                    }
                 } else {
-                    // الثوابت يجب أن تُهيّأ
-                    if (!node->data.var_decl.is_global || node->data.var_decl.is_const) {
+                    if (!has_static_storage) {
                         semantic_error(node, "متغير التعداد '%s' يجب أن يُهيّأ.", node->data.var_decl.name);
                     }
                 }
@@ -2312,8 +2354,15 @@ static void analyze_node(Node* node) {
                     } else {
                         maybe_warn_implicit_narrowing(exprType, declType, node->data.var_decl.expression);
                     }
+                    if (has_static_storage &&
+                        !static_storage_initializer_is_const(node->data.var_decl.expression, declType)) {
+                        semantic_error(node, "تهيئة المتغير الساكن '%s' يجب أن تكون ثابتة وقت الترجمة.",
+                                       node->data.var_decl.name ? node->data.var_decl.name : "???");
+                    }
                 }
-                if (node->data.var_decl.is_const && !node->data.var_decl.expression) {
+                if (node->data.var_decl.is_const &&
+                    !has_static_storage &&
+                    !node->data.var_decl.expression) {
                     semantic_error(node, "الثابت '%s' يجب تهيئته.", node->data.var_decl.name);
                 }
             }
@@ -2324,6 +2373,7 @@ static void analyze_node(Node* node) {
                        declType,
                        declTypeName,
                        node->data.var_decl.is_const,
+                       node->data.var_decl.is_static,
                        false,
                        0,
                        node->line, node->col, node->filename ? node->filename : current_filename);
@@ -2359,6 +2409,7 @@ static void analyze_node(Node* node) {
                       // المعاملات تُعتبر "مستخدمة" ضمنياً (لتجنب تحذيرات خاطئة)
                      add_symbol(param->data.var_decl.name, SCOPE_LOCAL,
                                 param->data.var_decl.type, param->data.var_decl.type_name,
+                                false,
                                 false,
                                 false, 0,
                                 param->line, param->col, param->filename ? param->filename : current_filename);
@@ -2672,9 +2723,10 @@ static void analyze_node(Node* node) {
                 semantic_error(node, "حجم المصفوفة غير صالح.");
                 break;
             }
+            bool has_static_storage = node->data.array_decl.is_global || node->data.array_decl.is_static;
 
             // الثابت يجب أن يُهيّأ صراحةً (حتى `{}` مقبول ويعني أصفار).
-            if (node->data.array_decl.is_const && !node->data.array_decl.has_init) {
+            if (node->data.array_decl.is_const && !has_static_storage && !node->data.array_decl.has_init) {
                 semantic_error(node, "المصفوفة الثابتة '%s' يجب تهيئتها.",
                                node->data.array_decl.name ? node->data.array_decl.name : "???");
             }
@@ -2685,6 +2737,7 @@ static void analyze_node(Node* node) {
                        TYPE_INT,
                        NULL,
                        node->data.array_decl.is_const,
+                       node->data.array_decl.is_static,
                        true,
                        node->data.array_decl.size,
                        node->line,
@@ -2711,11 +2764,11 @@ static void analyze_node(Node* node) {
                                        node->data.array_decl.name ? node->data.array_decl.name : "???");
                     }
 
-                    if (node->data.array_decl.is_global) {
+                    if (has_static_storage) {
                         int64_t c = 0;
                         if (!eval_const_int_expr(v, &c)) {
                             semantic_error(v,
-                                           "تهيئة المصفوفة العامة '%s' يجب أن تكون تعبيراً ثابتاً.",
+                                           "تهيئة المصفوفة الساكنة '%s' يجب أن تكون تعبيراً ثابتاً.",
                                            node->data.array_decl.name ? node->data.array_decl.name : "???");
                         }
                     }

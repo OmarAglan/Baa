@@ -1,6 +1,6 @@
 // EXPECT: [Error]
 // EXPECT: خطأ دلالي
-// EXPECT: Cannot reassign constant
+// EXPECT: لا يمكن إعادة إسناد الثابت
 صحيح الرئيسية() {
     ثابت صحيح س = 1.
     س = 2.

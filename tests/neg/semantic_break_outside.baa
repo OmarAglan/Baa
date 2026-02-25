@@ -1,6 +1,6 @@
 // EXPECT: [Error]
 // EXPECT: خطأ دلالي
-// EXPECT: 'break' used outside
+// EXPECT: تم استخدام 'توقف' خارج
 صحيح الرئيسية() {
     توقف.
     إرجع 0.

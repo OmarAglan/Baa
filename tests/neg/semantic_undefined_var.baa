@@ -1,6 +1,6 @@
 // EXPECT: [Error]
 // EXPECT: خطأ دلالي
-// EXPECT: Assignment to undefined variable
+// EXPECT: إسناد إلى متغير غير معرّف
 صحيح الرئيسية() {
     س = 1.
     إرجع 0.

@@ -21,6 +21,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
+#include <stdarg.h>
 
 // ============================================================================
 // أسماء السجلات بصيغة AT&T (Register Names - AT&T Syntax)
@@ -77,11 +78,28 @@ static int g_emit_sp_seq = 0;
 
 // هل إصدار معلومات الديبغ مفعل؟
 static bool g_emit_debug_info = false;
+// هل إصدار تعليقات تجميع وصفية مفعل؟
+static bool g_emit_asm_comments = false;
 
 // الهدف واتفاقية الاستدعاء الحالية (تُملأ عبر emit_module_ex)
 static const BaaTarget* g_emit_target = NULL;
 static const BaaCallingConv* g_emit_cc = NULL;
 static BaaCodegenOptions g_emit_opts;
+
+/**
+ * @brief طباعة تعليق إلى ملف التجميع عند تفعيل --asm-comments.
+ */
+static void emit_comment(FILE* out, const char* fmt, ...)
+{
+    if (!g_emit_asm_comments || !out || !fmt) return;
+
+    fprintf(out, "    # ");
+    va_list args;
+    va_start(args, fmt);
+    vfprintf(out, fmt, args);
+    va_end(args);
+    fprintf(out, "\n");
+}
 
 static const BaaCallingConv* emit_cc_or_default(void)
 {
@@ -446,6 +464,7 @@ static void emit_operand(MachineOperand* op, FILE* out) {
  */
 static void emit_prologue(MachineFunc* func, FILE* out,
                            PhysReg* callee_regs, int callee_count) {
+    emit_comment(out, "بداية prologue");
     // حفظ إطار المكدس
     fprintf(out, "    push %%rbp\n");
     fprintf(out, "    mov %%rsp, %%rbp\n");
@@ -472,6 +491,7 @@ static void emit_prologue(MachineFunc* func, FILE* out,
 
     if (total_frame > 0) {
         fprintf(out, "    sub $%d, %%rsp\n", total_frame);
+        emit_comment(out, "حجز إطار مكدس بحجم %d بايت", total_frame);
     }
 
     // تهيئة كناري حماية المكدس (إن كان مفعلاً)
@@ -482,6 +502,7 @@ static void emit_prologue(MachineFunc* func, FILE* out,
         int save_offset = -(local_size + shadow + canary_size + (i + 1) * 8);
         fprintf(out, "    mov %s, %d(%%rbp)\n",
                 reg64_names[callee_regs[i]], save_offset);
+        emit_comment(out, "حفظ سجل callee-saved: %s", reg64_names[callee_regs[i]]);
     }
 }
 
@@ -497,6 +518,7 @@ static void emit_prologue(MachineFunc* func, FILE* out,
  */
 static void emit_epilogue(MachineFunc* func, FILE* out,
                            PhysReg* callee_regs, int callee_count) {
+    emit_comment(out, "بداية epilogue");
     int local_size = func->stack_size;
     int shadow = emit_shadow_bytes();
     int canary_size = emit_stack_protector_size(func);
@@ -508,11 +530,13 @@ static void emit_epilogue(MachineFunc* func, FILE* out,
         int save_offset = -(local_size + shadow + canary_size + (i + 1) * 8);
         fprintf(out, "    mov %d(%%rbp), %s\n",
                 save_offset, reg64_names[callee_regs[i]]);
+        emit_comment(out, "استرجاع سجل callee-saved: %s", reg64_names[callee_regs[i]]);
     }
 
     // استعادة المكدس والرجوع
     fprintf(out, "    leave\n");
     fprintf(out, "    ret\n");
+    emit_comment(out, "نهاية epilogue");
 }
 
 /**
@@ -586,6 +610,7 @@ void emit_inst(MachineInst* inst, MachineFunc* func, FILE* out) {
         // تسمية كتلة (Block Label)
         // ================================================================
         case MACH_LABEL:
+            emit_comment(out, "بداية كتلة: %d", inst->dst.data.label_id);
             fprintf(out, ".LBB_%d_%d:\n", g_emit_current_func_uid, inst->dst.data.label_id);
             break;
 
@@ -1736,6 +1761,7 @@ bool emit_func(MachineFunc* func, FILE* out) {
     // إصدار تعريف الرمز العام
     fprintf(out, "\n.globl %s\n", func_name);
     fprintf(out, "%s:\n", func_name);
+    emit_comment(out, "دالة: %s", func_name);
 
     // جمع السجلات المحفوظة المستخدمة
     PhysReg callee_regs[16];
@@ -1796,6 +1822,7 @@ bool emit_module_ex2(MachineModule* module, FILE* out, bool debug_info,
     g_emit_opts = opts;
 
     g_emit_debug_info = debug_info ? true : false;
+    g_emit_asm_comments = opts.asm_comments ? true : false;
     emit_debug_reset();
 
     // إعادة تعيين بادئات الدوال لضمان حتمية أسماء التسميات داخل كل ملف .s

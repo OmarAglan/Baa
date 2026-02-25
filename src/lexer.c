@@ -6,15 +6,7 @@
 
 #include "baa.h"
 #include <ctype.h>
-
-static int utf8_expected_len(unsigned char b0)
-{
-    if ((b0 & 0x80u) == 0x00u) return 1;
-    if ((b0 & 0xE0u) == 0xC0u) return 2;
-    if ((b0 & 0xF0u) == 0xE0u) return 3;
-    if ((b0 & 0xF8u) == 0xF0u) return 4;
-    return 0;
-}
+#include <stdarg.h>
 
 static int is_utf8_cont_byte(unsigned char b)
 {
@@ -74,6 +66,94 @@ static bool lex_append_byte(char** buf, size_t* len, size_t* cap, unsigned char 
 
     (*buf)[(*len)++] = (char)byte;
     return true;
+}
+
+/**
+ * @brief إنشاء Token لموقع محدد داخل المحلل اللفظي.
+ */
+static Token lex_make_token_at(const Lexer* l, int line, int col)
+{
+    Token t;
+    memset(&t, 0, sizeof(t));
+    t.type = TOKEN_INVALID;
+    t.filename = (l && l->state.filename) ? l->state.filename : "unknown";
+    t.line = (line > 0) ? line : 1;
+    t.col = (col > 0) ? col : 1;
+    return t;
+}
+
+static void lex_fatal(Lexer* l, const char* fmt, ...)
+{
+    int line = (l ? l->state.line : 1);
+    int col = (l ? l->state.col : 1);
+
+    char msg[512];
+    va_list args;
+    va_start(args, fmt);
+    (void)vsnprintf(msg, sizeof(msg), fmt, args);
+    va_end(args);
+
+    error_report(lex_make_token_at(l, line, col), "%s", msg);
+    exit(1);
+}
+
+/**
+ * @brief التحقق من صحة تسلسل UTF-8 بدءاً من `s`.
+ *
+ * عند النجاح:
+ * - تُخزّن طول التسلسل في out_len (1..4)
+ * - تُرجع true
+ */
+static bool lex_utf8_validate_at(const char* s, int* out_len)
+{
+    if (out_len) *out_len = 0;
+    if (!s || !*s) return false;
+
+    const unsigned char b0 = (unsigned char)s[0];
+    if ((b0 & 0x80u) == 0x00u) {
+        if (out_len) *out_len = 1;
+        return true;
+    }
+
+    if ((b0 & 0xE0u) == 0xC0u) {
+        const unsigned char b1 = (unsigned char)s[1];
+        if (b1 == 0 || !is_utf8_cont_byte(b1)) return false;
+        uint32_t cp = ((uint32_t)(b0 & 0x1Fu) << 6) | (uint32_t)(b1 & 0x3Fu);
+        if (cp < 0x80u) return false; // overlong
+        if (out_len) *out_len = 2;
+        return true;
+    }
+
+    if ((b0 & 0xF0u) == 0xE0u) {
+        const unsigned char b1 = (unsigned char)s[1];
+        const unsigned char b2 = (unsigned char)s[2];
+        if (b1 == 0 || b2 == 0) return false;
+        if (!is_utf8_cont_byte(b1) || !is_utf8_cont_byte(b2)) return false;
+        uint32_t cp = ((uint32_t)(b0 & 0x0Fu) << 12) |
+                      ((uint32_t)(b1 & 0x3Fu) << 6) |
+                      (uint32_t)(b2 & 0x3Fu);
+        if (cp < 0x800u) return false; // overlong
+        if (cp >= 0xD800u && cp <= 0xDFFFu) return false; // surrogate
+        if (out_len) *out_len = 3;
+        return true;
+    }
+
+    if ((b0 & 0xF8u) == 0xF0u) {
+        const unsigned char b1 = (unsigned char)s[1];
+        const unsigned char b2 = (unsigned char)s[2];
+        const unsigned char b3 = (unsigned char)s[3];
+        if (b1 == 0 || b2 == 0 || b3 == 0) return false;
+        if (!is_utf8_cont_byte(b1) || !is_utf8_cont_byte(b2) || !is_utf8_cont_byte(b3)) return false;
+        uint32_t cp = ((uint32_t)(b0 & 0x07u) << 18) |
+                      ((uint32_t)(b1 & 0x3Fu) << 12) |
+                      ((uint32_t)(b2 & 0x3Fu) << 6) |
+                      (uint32_t)(b3 & 0x3Fu);
+        if (cp < 0x10000u || cp > 0x10FFFFu) return false;
+        if (out_len) *out_len = 4;
+        return true;
+    }
+
+    return false;
 }
 
 // قراءة ملف (من main.c، يجب أن تكون متاحة للجميع الآن)
@@ -168,11 +248,13 @@ char peek_next(Lexer* l) {
  */
 void add_macro(Lexer* l, char* name, char* value) {
     if (l->macro_count >= 100) {
-        printf("Preprocessor Error: Too many macros defined (Max 100).\n");
-        exit(1);
+        lex_fatal(l, "خطأ قبلي: عدد تعريفات الماكرو تجاوز الحد الأقصى (100).");
     }
     l->macros[l->macro_count].name = strdup(name);
     l->macros[l->macro_count].value = strdup(value);
+    if (!l->macros[l->macro_count].name || !l->macros[l->macro_count].value) {
+        lex_fatal(l, "خطأ قبلي: نفدت الذاكرة أثناء إضافة ماكرو.");
+    }
     l->macro_count++;
 }
 
@@ -238,6 +320,9 @@ Token lexer_next_token(Lexer* l) {
                  
                  size_t len = l->state.cur_char - dir_start;
                  char* directive = malloc(len + 1);
+                 if (!directive) {
+                     lex_fatal(l, "خطأ قبلي: نفدت الذاكرة أثناء قراءة التوجيه.");
+                 }
                  if (len) memcpy(directive, dir_start, len);
                  directive[len] = '\0';
                  
@@ -247,29 +332,39 @@ Token lexer_next_token(Lexer* l) {
 
                      while (peek(l) != '\0' && isspace(peek(l))) advance_pos(l);
                      if (peek(l) != '"') {
-                         printf("Preprocessor Error: Expected filename string after #تضمين\n"); exit(1);
+                         lex_fatal(l, "خطأ قبلي: متوقع اسم ملف نصي بعد #تضمين.");
                      }
                      advance_pos(l); // skip "
                      char* path_start = l->state.cur_char;
                      while (peek(l) != '"' && peek(l) != '\0') advance_pos(l);
                      size_t path_len = l->state.cur_char - path_start;
                      char* path = malloc(path_len + 1);
+                     if (!path) {
+                         free(directive);
+                         lex_fatal(l, "خطأ قبلي: نفدت الذاكرة أثناء قراءة مسار #تضمين.");
+                     }
                      if (path_len) memcpy(path, path_start, path_len);
                      path[path_len] = '\0';
                      advance_pos(l); // skip "
 
                      char* new_src = read_file(path);
                      if (!new_src) {
-                         printf("Preprocessor Error: Could not include file '%s'\n", path);
-                         exit(1);
+                         lex_fatal(l, "خطأ قبلي: تعذر تضمين الملف '%s'.", path);
                      }
                      
-                     if (l->stack_depth >= 10) { printf("Preprocessor Error: Max include depth.\n"); exit(1); }
+                     if (l->stack_depth >= 10) {
+                         lex_fatal(l, "خطأ قبلي: تم تجاوز عمق التضمين الأقصى (10).");
+                     }
                      l->stack[l->stack_depth++] = l->state;
                      
                      l->state.source = new_src;
                      l->state.cur_char = new_src;
                      l->state.filename = strdup(path);
+                     if (!l->state.filename) {
+                         free(directive);
+                         free(path);
+                         lex_fatal(l, "خطأ قبلي: نفدت الذاكرة أثناء حفظ اسم ملف التضمين.");
+                     }
                      l->state.line = 1;
                      l->state.col = 1;
                      
@@ -287,6 +382,10 @@ Token lexer_next_token(Lexer* l) {
                      while (!isspace(peek(l)) && peek(l) != '\0') advance_pos(l);
                      size_t name_len = l->state.cur_char - name_start;
                      char* name = malloc(name_len + 1);
+                     if (!name) {
+                         free(directive);
+                         lex_fatal(l, "خطأ قبلي: نفدت الذاكرة أثناء قراءة اسم ماكرو.");
+                     }
                      if (name_len) memcpy(name, name_start, name_len);
                      name[name_len] = '\0';
 
@@ -296,6 +395,11 @@ Token lexer_next_token(Lexer* l) {
                      while (peek(l) != '\n' && peek(l) != '\0' && peek(l) != '\r') advance_pos(l); // لنهاية السطر
                      size_t val_len = l->state.cur_char - val_start;
                      char* val = malloc(val_len + 1);
+                     if (!val) {
+                         free(name);
+                         free(directive);
+                         lex_fatal(l, "خطأ قبلي: نفدت الذاكرة أثناء قراءة قيمة ماكرو.");
+                     }
                      if (val_len) memcpy(val, val_start, val_len);
                      val[val_len] = '\0';
 
@@ -316,14 +420,19 @@ Token lexer_next_token(Lexer* l) {
                      while (!isspace(peek(l)) && peek(l) != '\0') advance_pos(l);
                      size_t name_len = l->state.cur_char - name_start;
                      char* name = malloc(name_len + 1);
+                     if (!name) {
+                         free(directive);
+                         lex_fatal(l, "خطأ قبلي: نفدت الذاكرة أثناء قراءة اسم #إذا_عرف.");
+                     }
                      if (name_len) memcpy(name, name_start, name_len);
                      name[name_len] = '\0';
 
                      bool defined = (get_macro_value(l, name) != NULL);
 
                      if (l->if_depth >= (int)(sizeof(l->if_stack) / sizeof(l->if_stack[0]))) {
-                         printf("Preprocessor Error: Too many nested conditionals.\n");
-                         exit(1);
+                         free(name);
+                         free(directive);
+                         lex_fatal(l, "خطأ قبلي: تجاوزت الشروط المتداخلة الحد الأقصى.");
                      }
 
                      bool parent = pp_active(l);
@@ -340,13 +449,13 @@ Token lexer_next_token(Lexer* l) {
                  // 4. #وإلا (Else)
                  else if (strcmp(directive, "وإلا") == 0) {
                      if (l->if_depth <= 0) {
-                         printf("Preprocessor Error: #وإلا without matching #إذا_عرف\n");
-                         exit(1);
+                         free(directive);
+                         lex_fatal(l, "خطأ قبلي: #وإلا بدون #إذا_عرف مطابق.");
                      }
                      int i = l->if_depth - 1;
                      if (l->if_stack[i].in_else) {
-                         printf("Preprocessor Error: duplicate #وإلا\n");
-                         exit(1);
+                         free(directive);
+                         lex_fatal(l, "خطأ قبلي: تكرار #وإلا داخل نفس الكتلة.");
                      }
                      l->if_stack[i].in_else = 1;
                      pp_recompute_skipping(l);
@@ -356,8 +465,8 @@ Token lexer_next_token(Lexer* l) {
                  // 5. #نهاية (End)
                  else if (strcmp(directive, "نهاية") == 0) {
                      if (l->if_depth <= 0) {
-                         printf("Preprocessor Error: #نهاية without matching #إذا_عرف\n");
-                         exit(1);
+                         free(directive);
+                         lex_fatal(l, "خطأ قبلي: #نهاية بدون #إذا_عرف مطابق.");
                      }
                      l->if_depth--;
                      pp_recompute_skipping(l);
@@ -374,6 +483,10 @@ Token lexer_next_token(Lexer* l) {
                      while (!isspace(peek(l)) && peek(l) != '\0') advance_pos(l);
                      size_t name_len = l->state.cur_char - name_start;
                      char* name = malloc(name_len + 1);
+                     if (!name) {
+                         free(directive);
+                         lex_fatal(l, "خطأ قبلي: نفدت الذاكرة أثناء قراءة اسم #الغاء_تعريف.");
+                     }
                      if (name_len) memcpy(name, name_start, name_len);
                      name[name_len] = '\0';
 
@@ -384,9 +497,8 @@ Token lexer_next_token(Lexer* l) {
                  }
                  
                  free(directive);
-            }
-             printf("Preprocessor Error: Unknown directive at %s:%d\n", l->state.filename, l->state.line);
-             exit(1);
+             }
+             lex_fatal(l, "خطأ قبلي: توجيه غير معروف.");
         }
 
         // إذا كنا في وضع التخطي، نتجاهل كل شيء حتى نجد #
@@ -428,8 +540,7 @@ Token lexer_next_token(Lexer* l) {
         size_t len = 0;
         char* str = (char*)malloc(cap);
         if (!str) {
-            printf("Lexer Error: Out of memory at %s:%d:%d\n", l->state.filename, l->state.line, l->state.col);
-            exit(1);
+            lex_fatal(l, "خطأ لفظي: نفدت الذاكرة أثناء قراءة النص.");
         }
 
         while (peek(l) != '"' && peek(l) != '\0') {
@@ -437,8 +548,7 @@ Token lexer_next_token(Lexer* l) {
                 advance_pos(l); // تخطي '\'
                 if (peek(l) == '\0') {
                     free(str);
-                    printf("Lexer Error: Unterminated string escape at %s:%d:%d\n", l->state.filename, l->state.line, l->state.col);
-                    exit(1);
+                    lex_fatal(l, "خطأ لفظي: تسلسل هروب غير مكتمل داخل النص.");
                 }
 
                 unsigned char out = 0;
@@ -448,37 +558,48 @@ Token lexer_next_token(Lexer* l) {
                 else if (lex_decode_arabic_escape(l, &out)) { /* done */ }
                 else {
                     free(str);
-                    printf("Lexer Error: Unsupported escape sequence in string at %s:%d:%d\n",
-                           l->state.filename, l->state.line, l->state.col);
-                    exit(1);
+                    lex_fatal(l, "خطأ لفظي: تسلسل هروب غير مدعوم داخل النص.");
                 }
 
                 if (!lex_append_byte(&str, &len, &cap, out)) {
                     free(str);
-                    printf("Lexer Error: Out of memory at %s:%d:%d\n", l->state.filename, l->state.line, l->state.col);
-                    exit(1);
+                    lex_fatal(l, "خطأ لفظي: نفدت الذاكرة أثناء بناء النص.");
                 }
                 continue;
             }
 
-            if (!lex_append_byte(&str, &len, &cap, (unsigned char)peek(l))) {
+            unsigned char b0 = (unsigned char)peek(l);
+            if (b0 >= 0x80u) {
+                int ulen = 0;
+                if (!lex_utf8_validate_at(l->state.cur_char, &ulen)) {
+                    free(str);
+                    lex_fatal(l, "خطأ لفظي: تسلسل UTF-8 غير صالح داخل النص.");
+                }
+                for (int i = 0; i < ulen; i++) {
+                    if (!lex_append_byte(&str, &len, &cap, (unsigned char)*l->state.cur_char)) {
+                        free(str);
+                        lex_fatal(l, "خطأ لفظي: نفدت الذاكرة أثناء بناء النص.");
+                    }
+                    advance_pos(l);
+                }
+                continue;
+            }
+
+            if (!lex_append_byte(&str, &len, &cap, b0)) {
                 free(str);
-                printf("Lexer Error: Out of memory at %s:%d:%d\n", l->state.filename, l->state.line, l->state.col);
-                exit(1);
+                lex_fatal(l, "خطأ لفظي: نفدت الذاكرة أثناء بناء النص.");
             }
             advance_pos(l);
         }
 
         if (peek(l) == '\0') {
             free(str);
-            printf("Lexer Error: Unterminated string at %s:%d:%d\n", l->state.filename, l->state.line, l->state.col);
-            exit(1);
+            lex_fatal(l, "خطأ لفظي: النص غير مُغلق.");
         }
 
         if (!lex_append_byte(&str, &len, &cap, 0)) {
             free(str);
-            printf("Lexer Error: Out of memory at %s:%d:%d\n", l->state.filename, l->state.line, l->state.col);
-            exit(1);
+            lex_fatal(l, "خطأ لفظي: نفدت الذاكرة أثناء إنهاء النص.");
         }
 
         advance_pos(l); // تخطي " النهاية
@@ -500,9 +621,7 @@ Token lexer_next_token(Lexer* l) {
             advance_pos(l);
             unsigned char esc0 = (unsigned char)peek(l);
             if (esc0 == '\0') {
-                printf("Lexer Error: Unterminated char literal at %s:%d:%d\n",
-                       l->state.filename, l->state.line, l->state.col);
-                exit(1);
+                lex_fatal(l, "خطأ لفظي: الحرف الحرفي غير مُغلق.");
             }
 
             if (esc0 == '\\') { bytes[0] = '\\'; blen = 1; advance_pos(l); }
@@ -511,53 +630,31 @@ Token lexer_next_token(Lexer* l) {
             else if (lex_decode_arabic_escape(l, &bytes[0])) { blen = 1; }
             else
             {
-                printf("Lexer Error: Unknown escape sequence in char literal at %s:%d:%d\n",
-                       l->state.filename, l->state.line, l->state.col);
-                exit(1);
+                lex_fatal(l, "خطأ لفظي: تسلسل هروب غير معروف داخل الحرف الحرفي.");
             }
         }
         else
         {
-            unsigned char b0 = (unsigned char)peek(l);
-            int len = utf8_expected_len(b0);
-            if (len <= 0)
-            {
-                printf("Lexer Error: Invalid UTF-8 start byte in char literal at %s:%d:%d\n",
-                       l->state.filename, l->state.line, l->state.col);
-                exit(1);
+            int ulen = 0;
+            if (!lex_utf8_validate_at(l->state.cur_char, &ulen)) {
+                lex_fatal(l, "خطأ لفظي: UTF-8 غير صالح داخل الحرف الحرفي.");
             }
-            for (int i = 0; i < len; i++)
-            {
-                unsigned char bi = (unsigned char)l->state.cur_char[i];
-                if (bi == 0)
-                {
-                    printf("Lexer Error: Unterminated char literal at %s:%d:%d\n",
-                           l->state.filename, l->state.line, l->state.col);
-                    exit(1);
-                }
-                if (i > 0 && !is_utf8_cont_byte(bi))
-                {
-                    printf("Lexer Error: Invalid UTF-8 sequence in char literal at %s:%d:%d\n",
-                           l->state.filename, l->state.line, l->state.col);
-                    exit(1);
-                }
-                bytes[i] = bi;
+            for (int i = 0; i < ulen; i++) {
+                bytes[i] = (unsigned char)*l->state.cur_char;
+                advance_pos(l);
             }
-            blen = len;
-            for (int i = 0; i < len; i++) advance_pos(l);
+            blen = ulen;
         }
 
         if (peek(l) != '\'')
         {
-            printf("Lexer Error: Expected closing ' for char literal at %s:%d:%d\n",
-                   l->state.filename, l->state.line, l->state.col);
-            exit(1);
+            lex_fatal(l, "خطأ لفظي: متوقع إغلاق الحرف الحرفي بعلامة ' .");
         }
         advance_pos(l);
 
         token.type = TOKEN_CHAR;
         char* val = malloc((size_t)blen + 1);
-        if (!val) { printf("Lexer Error: Out of memory\n"); exit(1); }
+        if (!val) { lex_fatal(l, "خطأ لفظي: نفدت الذاكرة أثناء إنشاء الحرف الحرفي."); }
         if (blen) memcpy(val, bytes, (size_t)blen);
         val[blen] = '\0';
         token.value = val;
@@ -675,18 +772,14 @@ Token lexer_next_token(Lexer* l) {
             char* c = l->state.cur_char;
             if (isdigit((unsigned char)*c)) { 
                 if (buf_idx >= (int)sizeof(buffer) - 1) {
-                    printf("Lexer Error: Integer literal too long at %s:%d:%d\n",
-                           l->state.filename, l->state.line, l->state.col);
-                    exit(1);
+                    lex_fatal(l, "خطأ لفظي: العدد الصحيح أطول من الحد المسموح.");
                 }
                 buffer[buf_idx++] = *c;
                 advance_pos(l); 
             } 
             else if (is_arabic_digit(c)) {
                 if (buf_idx >= (int)sizeof(buffer) - 1) {
-                    printf("Lexer Error: Integer literal too long at %s:%d:%d\n",
-                           l->state.filename, l->state.line, l->state.col);
-                    exit(1);
+                    lex_fatal(l, "خطأ لفظي: العدد الصحيح أطول من الحد المسموح.");
                 }
                 buffer[buf_idx++] = ((unsigned char)c[1] - 0xA0) + '0';
                 l->state.cur_char += 2; l->state.col += 2;
@@ -697,9 +790,7 @@ Token lexer_next_token(Lexer* l) {
         if (peek(l) == '.' && (isdigit((unsigned char)peek_next(l)) || is_arabic_digit(l->state.cur_char + 1)))
         {
             if (buf_idx >= (int)sizeof(buffer) - 1) {
-                printf("Lexer Error: Float literal too long at %s:%d:%d\n",
-                       l->state.filename, l->state.line, l->state.col);
-                exit(1);
+                lex_fatal(l, "خطأ لفظي: العدد العشري أطول من الحد المسموح.");
             }
             buffer[buf_idx++] = '.';
             advance_pos(l); // تخطي '.'
@@ -708,18 +799,14 @@ Token lexer_next_token(Lexer* l) {
                 char* c = l->state.cur_char;
                 if (isdigit((unsigned char)*c)) {
                     if (buf_idx >= (int)sizeof(buffer) - 1) {
-                        printf("Lexer Error: Float literal too long at %s:%d:%d\n",
-                               l->state.filename, l->state.line, l->state.col);
-                        exit(1);
+                        lex_fatal(l, "خطأ لفظي: العدد العشري أطول من الحد المسموح.");
                     }
                     buffer[buf_idx++] = *c;
                     advance_pos(l);
                 }
                 else if (is_arabic_digit(c)) {
                     if (buf_idx >= (int)sizeof(buffer) - 1) {
-                        printf("Lexer Error: Float literal too long at %s:%d:%d\n",
-                               l->state.filename, l->state.line, l->state.col);
-                        exit(1);
+                        lex_fatal(l, "خطأ لفظي: العدد العشري أطول من الحد المسموح.");
                     }
                     buffer[buf_idx++] = ((unsigned char)c[1] - 0xA0) + '0';
                     l->state.cur_char += 2; l->state.col += 2;
@@ -748,11 +835,25 @@ Token lexer_next_token(Lexer* l) {
             if ((unsigned char)*l->state.cur_char == 0xD8 && (unsigned char)*(l->state.cur_char + 1) == 0x8C) {
                 break;
             }
-            advance_pos(l);
+            unsigned char b0 = (unsigned char)*l->state.cur_char;
+            if (b0 >= 0x80u) {
+                int ulen = 0;
+                if (!lex_utf8_validate_at(l->state.cur_char, &ulen)) {
+                    lex_fatal(l, "خطأ لفظي: UTF-8 غير صالح داخل المعرّف.");
+                }
+                for (int i = 0; i < ulen; i++) {
+                    advance_pos(l);
+                }
+            } else {
+                advance_pos(l);
+            }
         }
         
         size_t len = l->state.cur_char - start;
         char* word = malloc(len + 1);
+        if (!word) {
+            lex_fatal(l, "خطأ لفظي: نفدت الذاكرة أثناء نسخ المعرّف.");
+        }
         if (len) memcpy(word, start, len);
         word[len] = '\0';
 
@@ -766,20 +867,36 @@ Token lexer_next_token(Lexer* l) {
                 size_t vlen = strlen(macro_val);
                 if (vlen >= 2) {
                     char* val = malloc(vlen - 1);
+                    if (!val) {
+                        free(word);
+                        lex_fatal(l, "خطأ لفظي: نفدت الذاكرة أثناء نسخ قيمة الماكرو.");
+                    }
                     if (vlen > 2) memcpy(val, macro_val + 1, vlen - 2);
                     val[vlen - 2] = '\0';
                     token.value = val;
                 } else {
                     token.value = strdup("");
+                    if (!token.value) {
+                        free(word);
+                        lex_fatal(l, "خطأ لفظي: نفدت الذاكرة أثناء نسخ قيمة الماكرو.");
+                    }
                 }
             } 
             else if (isdigit((unsigned char)macro_val[0]) || is_arabic_digit(macro_val)) {
                 token.type = TOKEN_INT;
                 token.value = strdup(macro_val);
+                if (!token.value) {
+                    free(word);
+                    lex_fatal(l, "خطأ لفظي: نفدت الذاكرة أثناء نسخ قيمة الماكرو.");
+                }
             }
             else {
                 token.type = TOKEN_IDENTIFIER;
                 token.value = strdup(macro_val);
+                if (!token.value) {
+                    free(word);
+                    lex_fatal(l, "خطأ لفظي: نفدت الذاكرة أثناء نسخ قيمة الماكرو.");
+                }
             }
             free(word);
             return token;
@@ -830,8 +947,7 @@ Token lexer_next_token(Lexer* l) {
 
     // إذا وصلنا لهنا، فهذا يعني وجود محرف غير معروف
     token.type = TOKEN_INVALID;
-    printf("Lexer Error: Unknown byte 0x%02X at %s:%d:%d\n", (unsigned char)*current, l->state.filename, l->state.line, l->state.col);
-    exit(1);
+    lex_fatal(l, "خطأ لفظي: بايت غير معروف 0x%02X.", (unsigned char)*current);
     return token;
 }
 
@@ -840,12 +956,12 @@ Token lexer_next_token(Lexer* l) {
  */
 const char* token_type_to_str(BaaTokenType type) {
     switch (type) {
-        case TOKEN_EOF: return "EOF";
-        case TOKEN_INT: return "INTEGER";
-        case TOKEN_FLOAT: return "FLOAT";
-        case TOKEN_STRING: return "STRING";
-        case TOKEN_CHAR: return "CHAR";
-        case TOKEN_IDENTIFIER: return "IDENTIFIER";
+        case TOKEN_EOF: return "نهاية_الملف";
+        case TOKEN_INT: return "عدد_صحيح";
+        case TOKEN_FLOAT: return "عدد_عشري";
+        case TOKEN_STRING: return "نص";
+        case TOKEN_CHAR: return "حرف";
+        case TOKEN_IDENTIFIER: return "معرّف";
         
         // كلمات مفتاحية
         case TOKEN_KEYWORD_INT: return "صحيح";

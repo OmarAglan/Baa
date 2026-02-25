@@ -1,6 +1,6 @@
 # Baa Compiler Internals
 
-> **Version:** 0.3.6 | [← Language Spec](LANGUAGE.md) | [API Reference →](API_REFERENCE.md)
+> **Version:** 0.3.7 | [← Language Spec](LANGUAGE.md) | [API Reference →](API_REFERENCE.md)
 
 **Target Architecture:** x86-64 (AMD64)
 **Targets:** Windows x64 (COFF/PE) + Linux x86-64 (ELF)
@@ -108,6 +108,7 @@ The driver in `main.c` (v0.2.0+) supports multi-file compilation and various mod
 | `-c` | **Compile Only** | `.o` | Stops after assembling. Writes `<input>.o` (or `-o` when a single input file is used). |
 | `-v` | **Verbose** | - | Prints commands and compilation time; keeps intermediate `.s` files. |
 | `--debug-info` | **Debug Info** | `.s/.o/.exe` | Emits source `.file/.loc` info and passes `-g` to toolchain. |
+| `--asm-comments` | **Assembly Comments** | `.s` | Emits explanatory comments in generated assembly (prologue/epilogue/blocks). |
 | `-O0` / `-O1` / `-O2` | **Optimization Level** | - | Selects optimizer aggressiveness (`-O1` is default). |
 | `--dump-ir` | **IR Dump** | stdout | Prints Baa IR (Arabic) after semantic analysis (v0.3.0.6+). |
 | `--emit-ir` | **IR Emit** | `<input>.ir` | Writes Baa IR (Arabic) to a `.ir` file after semantic analysis (v0.3.0.7). |
@@ -183,11 +184,11 @@ Note (v0.3.2.9.4): semantic analysis errors now use `error_report(...)` as well,
 - **Source Context**: Prints the actual line of code where the error occurred.
 - **Pointers**: Uses `^` to point exactly to the offending token.
 - **Colored Output**: Errors displayed in red (ANSI) when terminal supports it (v0.2.8+).
-- **Panic Mode Recovery**: When a syntax error is found, the parser does not exit immediately. Instead, it enters "Panic Mode":
-    1. It reports the error.
-    2. It skips tokens forward until it finds a **Synchronization Point**.
-    3. **Synchronization Points**: Semicolon `.`, Right Brace `}`, or Keywords (`صحيح`, `إذا`, etc.).
-    4. Parsing resumes to find subsequent errors.
+- **Panic Mode Recovery (v0.3.7)**: When a syntax error is found, the parser does not exit immediately. It reports the error, enters panic mode, then synchronizes by context:
+    1. **Statement mode**: sync on `.`, `}` and statement starters.
+    2. **Declaration mode**: sync on declaration starters (`صحيح`, `نص`, `هيكل`, `اتحاد`, ...).
+    3. **Switch mode**: sync on `حالة`, `افتراضي`, `}` and statement terminators.
+    4. Parsing resumes after the nearest valid anchor to reduce cascading diagnostics.
 
 **Warning Features (v0.2.8+):**
 
@@ -288,6 +289,7 @@ When `#تضمين "file"` is encountered:
 | Feature | Description |
 |---------|-------------|
 | **UTF-8 Handling** | Full Unicode support for Arabic text |
+| **Strict UTF-8 Validation (v0.3.7)** | Rejects invalid UTF-8 sequences in identifiers and string/char literals |
 | **BOM Detection** | Skips `0xEF 0xBB 0xBF` if present |
 | **Arabic Numerals** | Normalizes `٠`-`٩` → `0`-`9` |
 | **Arabic Punctuation** | Handles `؛` (semicolon) `0xD8 0x9B` |
@@ -309,7 +311,7 @@ Special:     IDENTIFIER, EOF
 
 ## 3. Syntactic Analysis
 
-The Parser (`src/parser.c`) builds the AST using Recursive Descent with 1-token lookahead.
+The Parser (`src/parser.c`) builds the AST using Recursive Descent with 2-token lookahead.
 
 ### 3.1. Grammar (BNF)
 
@@ -549,6 +551,8 @@ The analyzer emits `WARN_SIGNED_UNSIGNED_COMPARE` for comparison operators (`==`
 ### 5.4. Isolation Note
 
 Since v0.2.4, `analysis.c` maintains its own **symbol table** for isolation. This ensures validation logic is independent from the backend pipeline.
+
+In v0.3.7, semantic lookups were optimized using hash-indexed chains for local/global symbol lookup while preserving deterministic semantics and existing symbol ownership.
 
 **Future improvement:** Unify symbol tables into a shared context object passed between phases.
 
@@ -875,7 +879,7 @@ The driver exposes the printer via the CLI flag `--dump-ir` implemented in [`src
 2. Builds an IR module using [`IRBuilder`](../src/ir_builder.h:43) and lowers AST statements using [`lower_stmt()`](../src/ir_lower.c:725).
 3. Prints IR to stdout.
 
-> **Note:** This is currently a debug path for inspection only. The main compilation pipeline still generates assembly directly from AST (full IR pipeline integration is scheduled for v0.3.0.7).
+> **Note:** `--dump-ir` is a debug/inspection output mode. The default compilation pipeline is fully IR-based: AST → IR → Optimizer → ISel → RegAlloc → Emit.
 
 **Example invocation:**
 

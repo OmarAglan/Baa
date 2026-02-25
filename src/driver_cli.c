@@ -125,6 +125,7 @@ void driver_print_help(void)
     printf("  --verify-gate  Debug: run verify-ir/verify-ssa after each optimizer iteration\n");
     printf("  --time-phases  Print per-phase timing/memory stats\n");
     printf("  --debug-info   Emit debug line info (.file/.loc) and pass -g to toolchain\n");
+    printf("  --asm-comments  Emit explanatory comments in generated assembly\n");
     printf("  -O0            Disable optimization\n");
     printf("  -O1            Basic optimization (default)\n");
     printf("  -O2            Full optimization (+ CSE)\n");
@@ -231,6 +232,8 @@ bool driver_parse_cli(int argc, char **argv, CompilerConfig *config, DriverParse
                 config->time_phases = true;
             else if (strcmp(arg, "--debug-info") == 0)
                 config->debug_info = true;
+            else if (strcmp(arg, "--asm-comments") == 0)
+                config->codegen_opts.asm_comments = true;
             else if (strncmp(arg, "--target=", 9) == 0)
             {
                 const char *t = arg + 9;

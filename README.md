@@ -4,7 +4,7 @@
 <img width="260" height="260" alt="شعار باء" src="resources/Logo.png" />
 
 
-![الإصدار](https://img.shields.io/badge/%D8%A7%D9%84%D8%A5%D8%B5%D8%AF%D8%A7%D8%B1-0.3.6-blue.svg)
+![الإصدار](https://img.shields.io/badge/%D8%A7%D9%84%D8%A5%D8%B5%D8%AF%D8%A7%D8%B1-0.3.7-blue.svg)
 ![المنصة](https://img.shields.io/badge/%D8%A7%D9%84%D9%85%D9%86%D8%B5%D8%A9-%D9%88%D9%8A%D9%86%D8%AF%D9%88%D8%B2%20%7C%20%D9%84%D9%8A%D9%86%D9%83%D8%B3-lightgrey.svg)
 ![الرخصة](https://img.shields.io/badge/%D8%A7%D9%84%D8%B1%D8%AE%D8%B5%D8%A9-MIT-green.svg)
 
@@ -89,7 +89,7 @@ cmake --build build
 
 ```powershell
 # التصريف
-.\baa.exe ..\hello.baa
+.\build\baa.exe .\hello.baa
 
 # التشغيل
 .\out.exe
@@ -97,7 +97,7 @@ cmake --build build
 
 ```bash
 # التصريف
-./baa ../hello.baa
+./build/baa ./hello.baa
 
 # التشغيل
 ./out
@@ -116,7 +116,7 @@ baa --target=x86_64-linux   البرنامج.baa
 
 - عند اختلاف الهدف عن نظام المضيف، يدعم المُصرّف حالياً **-S فقط** (توليد ملف تجميع). التجميع/الربط العابر للأهداف مؤجل.
 
-### القيود الحالية (0.3.6)
+### القيود الحالية (0.3.7)
 
 - نوع `عشري` (f64) مدعوم للحساب/المقارنة/الطباعة، لكن SIMD وأنواع الفاصلة العائمة الأخرى غير مدعومة حالياً.
 
@@ -199,6 +199,7 @@ baa --target=x86_64-linux   البرنامج.baa
 | [مواصفة اللغة](docs/LANGUAGE.md) | مرجع كامل للصياغة والمزايا |
 | [البنية الداخلية للمُصرِّف](docs/INTERNALS.md) | المعمارية وتفاصيل التنفيذ |
 | [مرجع واجهة البرمجة](docs/API_REFERENCE.md) | توثيق الواجهة الداخلية للمُصرِّف |
+| [بروتوكول مزامنة التوثيق](docs/DOC_SYNC_PROTOCOL.md) | آلية خطوة-بخطوة لضمان تطابق التوثيق مع سلوك المُصرِّف |
 | [خارطة الطريق](ROADMAP.md) | خطط التطوير المستقبلية |
 | [سجل التغييرات](CHANGELOG.md) | تاريخ الإصدارات |
 
@@ -220,13 +221,9 @@ baa --target=x86_64-linux   البرنامج.baa
 git clone https://github.com/OmarAglan/Baa.git
 cd Baa
 
-# إنشاء مجلد البناء
-mkdir build
-cd build
-
-# التوليد ثم البناء
-cmake ..
-cmake --build .
+# التوليد ثم البناء (من جذر المشروع)
+cmake -B build -G "MinGW Makefiles"
+cmake --build build
 
 # أصبح المُصرّف الآن في: build/baa.exe
 ```
@@ -239,11 +236,11 @@ python .\tests\regress.py
 
 # اختبار سريع بسيط (برنامج صغير)
 # توليد ملف test.baa
-gcc ..\make_test.c -o make_test.exe
+gcc .\make_test.c -o make_test.exe
 .\make_test.exe
 
 # تصريف وتشغيل
-.\baa.exe .\test.baa -o test.exe
+.\build\baa.exe .\test.baa -o test.exe
 .\test.exe
 ```
 

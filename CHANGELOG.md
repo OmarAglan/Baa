@@ -8,6 +8,26 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.3.7] - 2026-02-25
+
+### Added
+
+- **Assembly readability flag** — added `--asm-comments` to emit explanatory Arabic comments in generated assembly (function entry, block labels, prologue/epilogue details).
+- **Parser recovery modes** — added context-aware synchronization modes for statement/declaration/switch parsing to reduce cascading syntax diagnostics.
+- **Lexer UTF-8 validator** — added strict UTF-8 sequence validation for string literals, character literals, and identifiers.
+- **Semantic lookup acceleration** — added hash-indexed lookup paths for local/global symbol resolution in `analysis.c` while preserving deterministic behavior.
+
+### Changed
+
+- **Diagnostics normalization** — parser and lexer diagnostics were migrated toward centralized `error_report(...)` style behavior with Arabic-first messaging.
+- **Parser initialization order** — parsing now initializes diagnostic source context before consuming initial tokens.
+- **Negative diagnostics coverage** — updated affected negative tests under `tests/neg/` to match normalized semantic/parser diagnostic text.
+
+### Fixed
+
+- **Parser hard-abort paths** — replaced parser `exit(1)` array-type mismatch aborts with recoverable diagnostics and synchronization.
+- **UTF-8 literal edge handling** — corrected multi-byte UTF-8 copy/advance flow in literal lexing paths and reject invalid sequences consistently.
+
 ## [0.3.6.5] - 2026-02-24
 
 ### Added

@@ -1,6 +1,6 @@
 # Baa Internal API Reference
 
-> **Version:** 0.3.6 | [← Compiler Internals](INTERNALS.md) | [IR Specification →](BAA_IR_SPECIFICATION.md)
+> **Version:** 0.3.7 | [← Compiler Internals](INTERNALS.md) | [IR Specification →](BAA_IR_SPECIFICATION.md)
 
 This document details the C functions, enumerations, and structures defined in `src/baa.h`, `src/ir.h`, `src/ir_arena.h`, `src/ir_mutate.h`, `src/ir_defuse.h`, `src/ir_clone.h`, `src/ir_text.h`, `src/ir_loop.h`, `src/ir_licm.h`, `src/ir_unroll.h`, `src/ir_inline.h`, `src/ir_builder.h`, `src/ir_lower.h`, `src/ir_analysis.h`, `src/ir_pass.h`, `src/ir_mem2reg.h`, `src/ir_outssa.h`, `src/ir_verify_ssa.h`, `src/ir_verify_ir.h`, `src/ir_canon.h`, `src/ir_cfg_simplify.h`, `src/ir_dce.h`, `src/ir_copyprop.h`, `src/ir_cse.h`, `src/ir_optimizer.h`, `src/target.h`, `src/isel.h`, `src/regalloc.h`, and `src/emit.h`.
 
@@ -80,6 +80,7 @@ Consumes input and returns the next valid token. **Handles preprocessor directiv
 - Identifies keywords, literals, and operators.
 - Handles Arabic semicolon `؛`.
 - Normalizes Arabic-Indic digits (`٠`-`٩`).
+- Validates UTF-8 sequences in identifiers and literals (v0.3.7) and reports lexical errors through centralized diagnostics.
 
 ---
 
@@ -108,6 +109,7 @@ Entry point for the parsing phase.
 - Parses global type aliases: `نوع <name> = <type>.` (v0.3.6.5)
 - Parses low-level expressions/operators: `&`, `|`, `^`, `~`, `<<`, `>>`, and `حجم(type|expr)` (v0.3.6)
 - Implements operator precedence climbing for expressions
+- Uses context-aware panic recovery modes (statement/declaration/switch) to continue after syntax errors (v0.3.7)
 - Builds linked-list AST structure
 
 **Example:**
@@ -148,6 +150,7 @@ Runs the semantic pass on the AST.
 - **Control Flow Validation**: Ensures `break`/`continue` are only used within loops/switches.
 - **Type Alias Validation** (v0.3.6.5): Registers/validates `نوع` aliases and enforces strict collision checks with symbols/functions.
 - **Low-Level Validation** (v0.3.6): integer-only bitwise checks, `حجم(...)` compile-time sizing checks, and `عدم` return/declaration constraints.
+- **Lookup Acceleration** (v0.3.7): Uses hash-indexed symbol lookup paths for local/global symbol resolution.
 - Traverses the entire tree.
 - Reports errors using `error_report`.
 - Does not modify the AST, only validates it.
@@ -155,8 +158,8 @@ Runs the semantic pass on the AST.
 **Constant Validation Rules:**
 
 - Constants must be initialized at declaration time.
-- Reassigning a constant produces: `Cannot reassign constant '<name>'`.
-- Modifying constant array elements produces: `Cannot modify constant array '<name>'`.
+- Reassigning a constant produces an Arabic semantic diagnostic for reassigning `ثابت`.
+- Modifying constant array elements produces an Arabic semantic diagnostic for modifying a constant array.
 
 ---
 
@@ -1513,8 +1516,8 @@ The IR Lowering module lowers validated AST nodes into Baa IR using the IR Build
 
 Files:
 
-- [`src/ir_lower.h`](src/ir_lower.h)
-- [`src/ir_lower.c`](src/ir_lower.c)
+- [`src/ir_lower.h`](../src/ir_lower.h)
+- [`src/ir_lower.c`](../src/ir_lower.c)
 
 ### 6.1. `IRLowerCtx`
 
@@ -2571,7 +2574,7 @@ Top-level entry point for emitting a complete assembly file.
 | `out` | `FILE*` | Output file handle for assembly |
 | `debug_info` | `bool` | Emit `.file`/`.loc` directives and debug breadcrumbs |
 | `target` | `BaaTarget*` | Target descriptor (COFF/ELF + ABI); NULL defaults to Windows x64 |
-| `opts` | `BaaCodegenOptions` | Code model options (PIC/PIE/stack protector) |
+| `opts` | `BaaCodegenOptions` | Code model options (PIC/PIE/stack protector) + `asm_comments` for `--asm-comments` |
 
 **Returns:** `true` on success, `false` on failure.
 
@@ -2582,7 +2585,7 @@ Top-level entry point for emitting a complete assembly file.
 3. Emits `.text` section with all functions
 4. Emits string table with `.Lstr_N` labels into read-only data section (COFF/ELF)
 
-**Driver flag:** `--debug-info` enables this mode and also passes `-g` to the GCC toolchain.
+**Driver flags:** `--debug-info` enables debug directives and `--asm-comments` enables explanatory assembly comments.
 
 ---
 

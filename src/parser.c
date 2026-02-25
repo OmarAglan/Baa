@@ -1,4 +1,4 @@
-/**
+﻿/**
  * @file parser.c
  * @brief يقوم بتحليل الوحدات اللفظية وبناء شجرة الإعراب المجردة (AST) باستخدام طريقة الانحدار العودي (Recursive Descent).
  * @version 0.2.9 (Input & UX Polish)
@@ -108,7 +108,7 @@ void advance() {
         parser.next = lexer_next_token(parser.lexer);
         if (parser.next.type != TOKEN_INVALID) break;
         // إذا وجدنا وحدة غير صالحة، نبلغ عن الخطأ ونستمر في البحث
-        error_report(parser.next, "Found invalid token.");
+        error_report(parser.next, "وحدة لفظية غير صالحة.");
     }
 }
 
@@ -189,7 +189,7 @@ void eat(BaaTokenType type) {
     // وإلا اعرض نوعها كنص
     const char* found_text = parser.current.value ? parser.current.value : token_type_to_str(parser.current.type);
     
-    error_report(parser.current, "Expected '%s' but found '%s'", token_type_to_str(type), found_text);
+    error_report(parser.current, "متوقع '%s' لكن وُجد '%s'.", token_type_to_str(type), found_text);
 }
 
 /**
@@ -342,7 +342,7 @@ static bool parse_type_spec(DataType* out_type, char** out_type_name) {
         eat(parser.current.type);
 
         if (parser.current.type != TOKEN_IDENTIFIER) {
-            error_report(parser.current, "Expected identifier after type keyword.");
+            error_report(parser.current, "متوقع اسم معرّف بعد كلمة النوع.");
             return false;
         }
 
@@ -376,10 +376,48 @@ static bool parse_type_spec(DataType* out_type, char** out_type_name) {
     return false;
 }
 
+typedef enum {
+    PARSER_SYNC_STATEMENT = 0,
+    PARSER_SYNC_DECLARATION = 1,
+    PARSER_SYNC_SWITCH = 2
+} ParserSyncMode;
+
+static bool parser_current_starts_declaration_anchor(void)
+{
+    if (parser_current_is_type_alias_keyword() && parser.next.type == TOKEN_IDENTIFIER) return true;
+    if (parser_current_starts_type()) return true;
+    return parser.current.type == TOKEN_CONST;
+}
+
+static bool parser_current_starts_statement_anchor(void)
+{
+    if (parser_current_starts_type()) return true;
+    if (parser_current_is_type_alias_keyword()) return true;
+    if (parser.current.type == TOKEN_CONST) return true;
+    if (parser.current.type == TOKEN_IDENTIFIER) return true;
+
+    switch (parser.current.type) {
+        case TOKEN_LBRACE:
+        case TOKEN_IF:
+        case TOKEN_WHILE:
+        case TOKEN_FOR:
+        case TOKEN_PRINT:
+        case TOKEN_READ:
+        case TOKEN_RETURN:
+        case TOKEN_SWITCH:
+        case TOKEN_BREAK:
+        case TOKEN_CONTINUE:
+            return true;
+        default:
+            return false;
+    }
+}
+
 /**
- * @brief محاولة التعافي من الخطأ بالقفز إلى بداية الجملة التالية.
+ * @brief محاولة التعافي من الخطأ حسب سياق التحليل.
  */
-void synchronize() {
+static void synchronize_mode(ParserSyncMode mode)
+{
     parser.panic_mode = false;
 
     while (parser.current.type != TOKEN_EOF) {
@@ -388,53 +426,32 @@ void synchronize() {
             advance();
             return;
         }
-        if (parser_current_is_type_alias_keyword() && parser.next.type == TOKEN_IDENTIFIER) {
-            return;
-        }
-        if (parser.current.type == TOKEN_IDENTIFIER &&
-            parser.current.value &&
-            parser_type_alias_lookup(parser.current.value)) {
-            return;
-        }
 
-        // إذا وجدنا كلمة مفتاحية تبدأ جملة جديدة
-        switch (parser.current.type) {
-            case TOKEN_KEYWORD_INT:
-            case TOKEN_KEYWORD_I8:
-            case TOKEN_KEYWORD_I16:
-            case TOKEN_KEYWORD_I32:
-            case TOKEN_KEYWORD_I64:
-            case TOKEN_KEYWORD_U8:
-            case TOKEN_KEYWORD_U16:
-            case TOKEN_KEYWORD_U32:
-            case TOKEN_KEYWORD_U64:
-            case TOKEN_KEYWORD_STRING:
-            case TOKEN_KEYWORD_BOOL:
-            case TOKEN_KEYWORD_CHAR:
-            case TOKEN_KEYWORD_VOID:
-            case TOKEN_KEYWORD_FLOAT:
-            case TOKEN_TYPE_ALIAS:
-            case TOKEN_ENUM:
-            case TOKEN_STRUCT:
-            case TOKEN_UNION:
-            case TOKEN_CONST:
-            case TOKEN_IF:
-            case TOKEN_WHILE:
-            case TOKEN_FOR:
-            case TOKEN_PRINT:
-            case TOKEN_READ:
-            case TOKEN_RETURN:
-            case TOKEN_SWITCH:
-            case TOKEN_BREAK:
-            case TOKEN_CONTINUE:
-            case TOKEN_SIZEOF:
+        if (mode == PARSER_SYNC_SWITCH) {
+            if (parser.current.type == TOKEN_CASE ||
+                parser.current.type == TOKEN_DEFAULT ||
+                parser.current.type == TOKEN_RBRACE) {
                 return;
-            default:
-                ;
+            }
+        } else if (mode == PARSER_SYNC_DECLARATION) {
+            if (parser_current_starts_declaration_anchor() || parser.current.type == TOKEN_RBRACE) {
+                return;
+            }
+        } else {
+            if (parser_current_starts_statement_anchor() || parser.current.type == TOKEN_RBRACE) {
+                return;
+            }
         }
 
         advance();
     }
+}
+
+/**
+ * @brief محاولة التعافي من الخطأ بالقفز إلى بداية الجملة التالية.
+ */
+void synchronize() {
+    synchronize_mode(PARSER_SYNC_STATEMENT);
 }
 
 // --- تصريحات مسبقة ---
@@ -468,7 +485,7 @@ Node* parse_primary() {
         if (!node) return NULL;
         double v = 0.0;
         if (!parse_float_token_checked(parser.current, &v)) {
-            error_report(parser.current, "Invalid float literal.");
+            error_report(parser.current, "صيغة العدد العشري غير صالحة.");
         }
         node->data.float_lit.value = v;
         uint64_t bits = 0;
@@ -490,7 +507,7 @@ Node* parse_primary() {
         if (!node) return NULL;
         uint32_t cp = 0;
         if (!utf8_decode_one(parser.current.value, &cp)) {
-            error_report(parser.current, "Invalid UTF-8 char literal.");
+            error_report(parser.current, "حرف UTF-8 غير صالح.");
             cp = (uint32_t)'?';
         }
         node->data.char_lit.value = (int)cp;
@@ -528,7 +545,7 @@ Node* parse_primary() {
             DataType dt = TYPE_INT;
             char* tn = NULL;
             if (!parse_type_spec(&dt, &tn)) {
-                error_report(parser.current, "Expected type or expression inside 'حجم(...)'.");
+                error_report(parser.current, "متوقع نوع أو تعبير داخل 'حجم(...)'.");
                 free(tn);
             } else {
                 node->data.sizeof_expr.has_type_form = true;
@@ -558,7 +575,7 @@ Node* parse_primary() {
             if (parser.current.type != TOKEN_RPAREN) {
                 while (1) {
                     Node* arg = parse_expression();
-                    if (!arg) break; // Error recovery
+                    if (!arg) break; // تعافٍ من الخطأ
                     arg->next = NULL;
                     if (head_arg == NULL) { head_arg = arg; tail_arg = arg; }
                     else { tail_arg->next = arg; tail_arg = arg; }
@@ -600,7 +617,7 @@ Node* parse_primary() {
     }
     else {
         if (!parser.panic_mode) {
-            error_report(parser.current, "Expected expression.");
+            error_report(parser.current, "متوقع تعبير.");
             parser.panic_mode = true;
         }
         return NULL;
@@ -612,7 +629,7 @@ Node* parse_primary() {
         eat(TOKEN_COLON);
 
         if (parser.current.type != TOKEN_IDENTIFIER) {
-            error_report(parser.current, "Expected member name after ':' .");
+            error_report(parser.current, "متوقع اسم عضو بعد ':'.");
             break;
         }
 
@@ -707,7 +724,7 @@ Node* parse_multiplicative() {
                     result = parser_sign_extend_u32(ur);
                 } else if (op == OP_DIV) {
                     if (sb == 0) {
-                        error_report(parser.current, "Division by zero.");
+                        error_report(parser.current, "قسمة على صفر.");
                         result = 0;
                     } else if (sa == INT32_MIN && sb == -1) {
                         // التفاف آمن (بدون UB)
@@ -717,7 +734,7 @@ Node* parse_multiplicative() {
                     }
                 } else if (op == OP_MOD) {
                     if (sb == 0) {
-                        error_report(parser.current, "Modulo by zero.");
+                        error_report(parser.current, "باقي قسمة على صفر.");
                         result = 0;
                     } else if (sa == INT32_MIN && sb == -1) {
                         result = 0;
@@ -734,7 +751,7 @@ Node* parse_multiplicative() {
                     result = (int64_t)(ua * ub);
                 } else if (op == OP_DIV) {
                     if (b == 0) {
-                        error_report(parser.current, "Division by zero.");
+                        error_report(parser.current, "قسمة على صفر.");
                         result = 0;
                     } else if (a == INT64_MIN && b == -1) {
                         result = INT64_MIN;
@@ -743,7 +760,7 @@ Node* parse_multiplicative() {
                     }
                 } else if (op == OP_MOD) {
                     if (b == 0) {
-                        error_report(parser.current, "Modulo by zero.");
+                        error_report(parser.current, "باقي قسمة على صفر.");
                         result = 0;
                     } else if (a == INT64_MIN && b == -1) {
                         result = 0;
@@ -1029,7 +1046,7 @@ Node* parse_case() {
             if (!v) return NULL;
             uint32_t cp = 0;
             if (!utf8_decode_one(parser.current.value, &cp)) {
-                error_report(parser.current, "Invalid UTF-8 char literal.");
+                error_report(parser.current, "حرف UTF-8 غير صالح.");
                 cp = (uint32_t)'?';
             }
             v->data.char_lit.value = (int)cp;
@@ -1037,7 +1054,7 @@ Node* parse_case() {
             node->data.case_stmt.value = v;
         }
         else {
-            error_report(parser.current, "Expected integer/char literal in 'case'.");
+            error_report(parser.current, "متوقع ثابت عددي أو حرفي بعد 'حالة'.");
             node->data.case_stmt.value = NULL;
         }
         eat(TOKEN_COLON);
@@ -1057,7 +1074,7 @@ Node* parse_case() {
             if (head_stmt == NULL) { head_stmt = stmt; tail_stmt = stmt; }
             else { tail_stmt->next = stmt; tail_stmt = stmt; }
         } else {
-            synchronize(); // Panic recovery inside switch
+            synchronize_mode(PARSER_SYNC_SWITCH); // تعافٍ داخل جملة اختر
         }
     }
 
@@ -1082,8 +1099,8 @@ Node* parse_switch() {
             if (head_case == NULL) { head_case = case_node; tail_case = case_node; }
             else { tail_case->next = case_node; tail_case = case_node; }
         } else {
-            error_report(parser.current, "Expected 'case' or 'default' inside switch.");
-            synchronize();
+            error_report(parser.current, "متوقع 'حالة' أو 'افتراضي' داخل 'اختر'.");
+            synchronize_mode(PARSER_SYNC_SWITCH);
         }
     }
     eat(TOKEN_RBRACE);
@@ -1106,7 +1123,7 @@ Node* parse_block() {
             if (head == NULL) { head = stmt; tail = stmt; } 
             else { tail->next = stmt; tail = stmt; }
         } else {
-            synchronize();
+            synchronize_mode(PARSER_SYNC_STATEMENT);
         }
     }
     eat(TOKEN_RBRACE);
@@ -1181,7 +1198,7 @@ static Node* parse_type_alias_declaration(bool register_alias)
 {
     if (!parser_current_is_type_alias_keyword()) {
         error_report(parser.current, "متوقع 'نوع' في بداية تعريف الاسم البديل.");
-        synchronize();
+        synchronize_mode(PARSER_SYNC_DECLARATION);
         return NULL;
     }
 
@@ -1190,7 +1207,7 @@ static Node* parse_type_alias_declaration(bool register_alias)
 
     if (parser.current.type != TOKEN_IDENTIFIER) {
         error_report(parser.current, "متوقع اسم بعد 'نوع'.");
-        synchronize();
+        synchronize_mode(PARSER_SYNC_DECLARATION);
         return NULL;
     }
 
@@ -1200,7 +1217,7 @@ static Node* parse_type_alias_declaration(bool register_alias)
 
     if (!alias_name) {
         error_report(tok_name, "نفدت الذاكرة أثناء نسخ اسم النوع البديل.");
-        synchronize();
+        synchronize_mode(PARSER_SYNC_DECLARATION);
         return NULL;
     }
 
@@ -1212,7 +1229,7 @@ static Node* parse_type_alias_declaration(bool register_alias)
         error_report(parser.current, "متوقع نوع معروف بعد '=' في تعريف الاسم البديل.");
         free(alias_name);
         free(target_type_name);
-        synchronize();
+        synchronize_mode(PARSER_SYNC_DECLARATION);
         return NULL;
     }
 
@@ -1292,7 +1309,7 @@ Node* parse_statement() {
         eat(TOKEN_READ);
 
         if (parser.current.type != TOKEN_IDENTIFIER) {
-            error_report(parser.current, "Expected variable name after 'اقرأ'.");
+            error_report(parser.current, "متوقع اسم متغير بعد 'اقرأ'.");
             return NULL;
         }
 
@@ -1355,28 +1372,28 @@ Node* parse_statement() {
             (void)tok_type;
 
             if (!parse_type_spec(&dt, &type_name)) {
-                error_report(parser.current, "Expected type for for-loop init.");
-                synchronize();
+                error_report(parser.current, "متوقع نوع في تهيئة حلقة 'لكل'.");
+                synchronize_mode(PARSER_SYNC_STATEMENT);
                 return NULL;
             }
 
             if (dt == TYPE_STRUCT) {
-                error_report(parser.current, "تعريف الهيكل داخل تهيئة for غير مدعوم حالياً.");
+                error_report(parser.current, "تعريف الهيكل داخل تهيئة 'لكل' غير مدعوم حالياً.");
                 free(type_name);
             }
 
             Token tok_name = parser.current;
             if (parser.current.type != TOKEN_IDENTIFIER) {
-                error_report(parser.current, "Expected identifier in for-loop init.");
+                error_report(parser.current, "متوقع اسم معرّف في تهيئة حلقة 'لكل'.");
                 free(type_name);
-                synchronize();
+                synchronize_mode(PARSER_SYNC_STATEMENT);
                 return NULL;
             }
             char* name = strdup(parser.current.value);
             eat(TOKEN_IDENTIFIER);
 
             if (parser.current.type != TOKEN_ASSIGN) {
-                error_report(parser.current, "Expected '=' in for-loop init.");
+                error_report(parser.current, "متوقع '=' في تهيئة حلقة 'لكل'.");
             }
             eat(TOKEN_ASSIGN);
             Node* expr = parse_expression();
@@ -1461,16 +1478,16 @@ Node* parse_statement() {
         (void)tok_type;
 
         if (!parse_type_spec(&dt, &type_name)) {
-            error_report(parser.current, "Expected type.");
-            synchronize();
+            error_report(parser.current, "متوقع نوع.");
+            synchronize_mode(PARSER_SYNC_STATEMENT);
             return NULL;
         }
 
         Token tok_name = parser.current;
         if (parser.current.type != TOKEN_IDENTIFIER) {
-            error_report(parser.current, "Expected identifier after type.");
+            error_report(parser.current, "متوقع اسم معرّف بعد النوع.");
             free(type_name);
-            synchronize();
+            synchronize_mode(PARSER_SYNC_STATEMENT);
             return NULL;
         }
         char* name = strdup(parser.current.value);
@@ -1482,8 +1499,11 @@ Node* parse_statement() {
 
         if (parser.current.type == TOKEN_LBRACKET) {
             if (dt != TYPE_INT) {
-                error_report(parser.current, "Only int arrays are supported.");
-                exit(1);
+                error_report(parser.current, "المصفوفات مدعومة فقط للأنواع الصحيحة حالياً.");
+                free(type_name);
+                free(name);
+                synchronize_mode(PARSER_SYNC_STATEMENT);
+                return NULL;
             }
             eat(TOKEN_LBRACKET);
             int size = 0;
@@ -1500,7 +1520,7 @@ Node* parse_statement() {
                 }
                 eat(TOKEN_INT);
             } else {
-                error_report(parser.current, "Array size must be integer.");
+                error_report(parser.current, "حجم المصفوفة يجب أن يكون عدداً صحيحاً.");
             }
             eat(TOKEN_RBRACKET);
 
@@ -1541,7 +1561,7 @@ Node* parse_statement() {
         }
 
         if (is_const && parser.current.type != TOKEN_ASSIGN) {
-            error_report(parser.current, "Constant must be initialized.");
+            error_report(parser.current, "الثابت يجب تهيئته.");
         }
 
         eat(TOKEN_ASSIGN);
@@ -1643,7 +1663,10 @@ Node* parse_statement() {
         }
     }
 
-    error_report(parser.current, "Unexpected token or statement.");
+    if (!parser.panic_mode) {
+        error_report(parser.current, "وحدة أو جملة غير متوقعة.");
+        parser.panic_mode = true;
+    }
     return NULL;
 }
 
@@ -1671,15 +1694,15 @@ Node* parse_declaration() {
         (void)tok_type;
 
         if (!parse_type_spec(&dt, &type_name)) {
-            error_report(parser.current, "Expected type.");
-            synchronize();
+            error_report(parser.current, "متوقع نوع.");
+            synchronize_mode(PARSER_SYNC_DECLARATION);
             return NULL;
         }
 
         // تعريف تعداد/هيكل/اتحاد: تعداد <name> { ... }  |  هيكل <name> { ... } | اتحاد <name> { ... }
         if ((dt == TYPE_ENUM || dt == TYPE_STRUCT || dt == TYPE_UNION) && parser.current.type == TOKEN_LBRACE) {
             if (is_const) {
-                error_report(parser.current, "Type declarations cannot be const.");
+                error_report(parser.current, "لا يمكن وسم تعريف نوع بـ 'ثابت'.");
             }
 
             Token tok_name = tok_type;
@@ -1692,7 +1715,7 @@ Node* parse_declaration() {
                 if (parser.current.type != TOKEN_RBRACE) {
                     while (1) {
                         if (parser.current.type != TOKEN_IDENTIFIER) {
-                            error_report(parser.current, "Expected enum member name.");
+                            error_report(parser.current, "متوقع اسم عنصر تعداد.");
                             break;
                         }
                         Token tok_mem = parser.current;
@@ -1710,7 +1733,7 @@ Node* parse_declaration() {
 
                         if (parser.current.type == TOKEN_COMMA) {
                             eat(TOKEN_COMMA);
-                            if (parser.current.type == TOKEN_RBRACE) break; // trailing comma
+                            if (parser.current.type == TOKEN_RBRACE) break; // السماح بفاصلة أخيرة
                             continue;
                         }
                         break;
@@ -1742,16 +1765,16 @@ Node* parse_declaration() {
                 DataType fdt = TYPE_INT;
                 char* ftype_name = NULL;
                 if (!parse_type_spec(&fdt, &ftype_name)) {
-                    error_report(parser.current, "Expected field type inside struct.");
+                    error_report(parser.current, "متوقع نوع حقل داخل الهيكل/الاتحاد.");
                     free(ftype_name);
-                    synchronize();
+                    synchronize_mode(PARSER_SYNC_DECLARATION);
                     break;
                 }
 
                 if (parser.current.type != TOKEN_IDENTIFIER) {
-                    error_report(parser.current, "Expected field name inside struct.");
+                    error_report(parser.current, "متوقع اسم حقل داخل الهيكل/الاتحاد.");
                     free(ftype_name);
-                    synchronize();
+                    synchronize_mode(PARSER_SYNC_DECLARATION);
                     break;
                 }
 
@@ -1760,9 +1783,9 @@ Node* parse_declaration() {
                 eat(TOKEN_IDENTIFIER);
 
                 if (parser.current.type == TOKEN_LBRACKET) {
-                    error_report(parser.current, "Array fields inside structs are not supported yet.");
+                    error_report(parser.current, "حقول المصفوفات داخل الهيكل/الاتحاد غير مدعومة بعد.");
                     free(ftype_name);
-                    synchronize();
+                    synchronize_mode(PARSER_SYNC_DECLARATION);
                     break;
                 }
 
@@ -1803,9 +1826,9 @@ Node* parse_declaration() {
         // متغير/دالة: نحتاج اسم الرمز بعد نوعه
         Token tok_name = parser.current;
         if (parser.current.type != TOKEN_IDENTIFIER) {
-            error_report(parser.current, "Expected identifier after type.");
+            error_report(parser.current, "متوقع اسم معرّف بعد النوع.");
             free(type_name);
-            synchronize();
+            synchronize_mode(PARSER_SYNC_DECLARATION);
             return NULL;
         }
 
@@ -1819,14 +1842,14 @@ Node* parse_declaration() {
         // دالة: نسمح فقط بأنواع بدائية حالياً
         if (parser.current.type == TOKEN_LPAREN) {
                 if (dt == TYPE_ENUM || dt == TYPE_STRUCT || dt == TYPE_UNION) {
-                    error_report(parser.current, "User-defined return types are not supported in function signatures yet.");
+                    error_report(parser.current, "أنواع الإرجاع المعرفة من المستخدم غير مدعومة بعد في تواقيع الدوال.");
                     free(type_name);
                     free(name);
-                    synchronize();
+                    synchronize_mode(PARSER_SYNC_DECLARATION);
                     return NULL;
                 }
             if (is_const) {
-                error_report(parser.current, "Functions cannot be declared as const.");
+                error_report(parser.current, "لا يمكن تعريف الدوال بوسم 'ثابت'.");
             }
 
             eat(TOKEN_LPAREN);
@@ -1839,12 +1862,12 @@ Node* parse_declaration() {
                     DataType param_dt = TYPE_INT;
                     char* param_tn = NULL;
                     if (!parse_type_spec(&param_dt, &param_tn)) {
-                        error_report(parser.current, "Expected type for parameter.");
-                        synchronize();
+                        error_report(parser.current, "متوقع نوع للمعامل.");
+                        synchronize_mode(PARSER_SYNC_DECLARATION);
                         return NULL;
                     }
                     if (param_dt == TYPE_ENUM || param_dt == TYPE_STRUCT || param_dt == TYPE_UNION) {
-                        error_report(tok_param_type, "User-defined parameter types are not supported in function signatures yet.");
+                        error_report(tok_param_type, "أنواع المعاملات المعرفة من المستخدم غير مدعومة بعد في تواقيع الدوال.");
                         if (param_tn) free(param_tn);
                         param_tn = NULL;
                         param_dt = TYPE_INT;
@@ -1905,10 +1928,11 @@ Node* parse_declaration() {
         // تعريف مصفوفة عامة (صحيح فقط)
         if (parser.current.type == TOKEN_LBRACKET) {
             if (dt != TYPE_INT) {
-                error_report(parser.current, "Only int arrays are supported.");
+                error_report(parser.current, "المصفوفات مدعومة فقط للأنواع الصحيحة حالياً.");
                 free(type_name);
                 free(name);
-                exit(1);
+                synchronize_mode(PARSER_SYNC_DECLARATION);
+                return NULL;
             }
 
             eat(TOKEN_LBRACKET);
@@ -1926,7 +1950,7 @@ Node* parse_declaration() {
                 }
                 eat(TOKEN_INT);
             } else {
-                error_report(parser.current, "Array size must be integer.");
+                error_report(parser.current, "حجم المصفوفة يجب أن يكون عدداً صحيحاً.");
             }
             eat(TOKEN_RBRACKET);
 
@@ -1935,7 +1959,7 @@ Node* parse_declaration() {
             Node* init_vals = parse_array_initializer_list(&init_count, &has_init);
 
             if (is_const && !has_init) {
-                error_report(parser.current, "Constant must be initialized.");
+                error_report(parser.current, "الثابت يجب تهيئته.");
             }
 
             eat(TOKEN_DOT);
@@ -1978,7 +2002,7 @@ Node* parse_declaration() {
 
         // ثوابت عامة يجب أن تُهيّأ
         if (is_const && parser.current.type != TOKEN_ASSIGN) {
-            error_report(parser.current, "Constant must be initialized.");
+            error_report(parser.current, "الثابت يجب تهيئته.");
         }
 
         Node* expr = NULL;
@@ -1999,16 +2023,18 @@ Node* parse_declaration() {
         return var;
     }
     
-    error_report(parser.current, "Expected declaration (function or global variable).");
-    synchronize();
+    if (!parser.panic_mode) {
+        error_report(parser.current, "متوقع تصريح (دالة أو متغير عام).");
+        parser.panic_mode = true;
+    }
+    synchronize_mode(PARSER_SYNC_DECLARATION);
     return NULL;
 }
 
 Node* parse(Lexer* l) {
-    init_parser(l);
-    
     // تهيئة نظام الأخطاء بمؤشر المصدر للطباعة
     error_init(l->state.source);
+    init_parser(l);
 
     Node* head = NULL;
     Node* tail = NULL;
@@ -2018,7 +2044,7 @@ Node* parse(Lexer* l) {
             if (head == NULL) { head = decl; tail = decl; }
             else { tail->next = decl; tail = decl; }
         }
-        // If decl is NULL, synchronize() was likely called inside parse_declaration
+        // عندما تكون decl فارغة، فالتعافي غالباً تم داخل parse_declaration
     }
     Token tok_program = {0};
     tok_program.filename = l ? l->state.filename : NULL;
@@ -2030,3 +2056,4 @@ Node* parse(Lexer* l) {
     program->data.program.declarations = head;
     return program;
 }
+

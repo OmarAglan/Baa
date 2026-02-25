@@ -25,6 +25,7 @@
 #define ANALYSIS_MAX_SCOPES  64
 #define ANALYSIS_MAX_FUNCS   128
 #define ANALYSIS_MAX_FUNC_PARAMS 32
+#define ANALYSIS_SYMBOL_HASH_BUCKETS 257
 
 // أنواع مركبة (v0.3.4)
 #define ANALYSIS_MAX_ENUMS   128
@@ -92,9 +93,13 @@ static int type_alias_count = 0;
 
 static Symbol global_symbols[ANALYSIS_MAX_SYMBOLS];
 static int global_count = 0;
+static int global_symbol_hash_head[ANALYSIS_SYMBOL_HASH_BUCKETS];
+static int global_symbol_hash_next[ANALYSIS_MAX_SYMBOLS];
 
 static Symbol local_symbols[ANALYSIS_MAX_SYMBOLS];
 static int local_count = 0;
+static int local_symbol_hash_head[ANALYSIS_SYMBOL_HASH_BUCKETS];
+static int local_symbol_hash_next[ANALYSIS_MAX_SYMBOLS];
 
 typedef struct {
     char* name;         // مملوك (strdup) ويتم تحريره في reset_analysis()
@@ -134,7 +139,7 @@ static Token semantic_make_token(const char* filename, int line, int col)
     memset(&t, 0, sizeof(t));
     t.type = TOKEN_INVALID;
     t.value = NULL;
-    t.filename = filename ? filename : (current_filename ? current_filename : "unknown");
+    t.filename = filename ? filename : (current_filename ? current_filename : "غير_معروف");
     t.line = (line > 0) ? line : 1;
     t.col = (col > 0) ? col : 1;
     return t;
@@ -178,12 +183,110 @@ static void semantic_error_loc(const char* filename, int line, int col, const ch
 }
 
 /**
+ * @brief دالة تجزئة بسيطة لأسماء الرموز (FNV-1a 32-bit).
+ */
+static unsigned int symbol_hash_name(const char* name)
+{
+    if (!name) return 0u;
+    unsigned int h = 2166136261u;
+    const unsigned char* p = (const unsigned char*)name;
+    while (*p) {
+        h ^= (unsigned int)(*p++);
+        h *= 16777619u;
+    }
+    return h;
+}
+
+static void symbol_hash_reset_heads(int* heads, int count)
+{
+    if (!heads || count <= 0) return;
+    for (int i = 0; i < count; i++) heads[i] = -1;
+}
+
+static void symbol_hash_reset_next(int* next_arr, int count)
+{
+    if (!next_arr || count <= 0) return;
+    for (int i = 0; i < count; i++) next_arr[i] = -1;
+}
+
+static void symbol_hash_insert(const Symbol* symbols,
+                               int* heads,
+                               int* next_arr,
+                               int idx)
+{
+    if (!symbols || !heads || !next_arr || idx < 0) return;
+    const unsigned int h = symbol_hash_name(symbols[idx].name) % (unsigned int)ANALYSIS_SYMBOL_HASH_BUCKETS;
+    next_arr[idx] = heads[h];
+    heads[h] = idx;
+}
+
+static Symbol* global_lookup_by_name(const char* name)
+{
+    if (!name) return NULL;
+    const unsigned int h = symbol_hash_name(name) % (unsigned int)ANALYSIS_SYMBOL_HASH_BUCKETS;
+    for (int i = global_symbol_hash_head[h]; i >= 0; i = global_symbol_hash_next[i]) {
+        if (strcmp(global_symbols[i].name, name) == 0) return &global_symbols[i];
+    }
+    return NULL;
+}
+
+static Symbol* local_lookup_latest_by_name(const char* name)
+{
+    if (!name) return NULL;
+    const unsigned int h = symbol_hash_name(name) % (unsigned int)ANALYSIS_SYMBOL_HASH_BUCKETS;
+    for (int i = local_symbol_hash_head[h]; i >= 0; i = local_symbol_hash_next[i]) {
+        if (strcmp(local_symbols[i].name, name) == 0) return &local_symbols[i];
+    }
+    return NULL;
+}
+
+static int local_lookup_in_scope(const char* name, int start, int end_exclusive)
+{
+    if (!name) return -1;
+    if (start < 0) start = 0;
+    if (end_exclusive < start) end_exclusive = start;
+    const unsigned int h = symbol_hash_name(name) % (unsigned int)ANALYSIS_SYMBOL_HASH_BUCKETS;
+    for (int i = local_symbol_hash_head[h]; i >= 0; i = local_symbol_hash_next[i]) {
+        if (i >= start && i < end_exclusive && strcmp(local_symbols[i].name, name) == 0) {
+            return i;
+        }
+    }
+    return -1;
+}
+
+static int local_lookup_before_scope(const char* name, int before_index)
+{
+    if (!name) return -1;
+    if (before_index <= 0) return -1;
+    const unsigned int h = symbol_hash_name(name) % (unsigned int)ANALYSIS_SYMBOL_HASH_BUCKETS;
+    for (int i = local_symbol_hash_head[h]; i >= 0; i = local_symbol_hash_next[i]) {
+        if (i < before_index && strcmp(local_symbols[i].name, name) == 0) {
+            return i;
+        }
+    }
+    return -1;
+}
+
+static void local_symbol_hash_rebuild(void)
+{
+    symbol_hash_reset_heads(local_symbol_hash_head, ANALYSIS_SYMBOL_HASH_BUCKETS);
+    symbol_hash_reset_next(local_symbol_hash_next, ANALYSIS_MAX_SYMBOLS);
+    for (int i = 0; i < local_count; i++) {
+        symbol_hash_insert(local_symbols, local_symbol_hash_head, local_symbol_hash_next, i);
+    }
+}
+
+/**
  * @brief إعادة تعيين جداول الرموز.
  */
 static void reset_analysis() {
     global_count = 0;
     local_count = 0;
     scope_depth = 0;
+    symbol_hash_reset_heads(global_symbol_hash_head, ANALYSIS_SYMBOL_HASH_BUCKETS);
+    symbol_hash_reset_next(global_symbol_hash_next, ANALYSIS_MAX_SYMBOLS);
+    symbol_hash_reset_heads(local_symbol_hash_head, ANALYSIS_SYMBOL_HASH_BUCKETS);
+    symbol_hash_reset_next(local_symbol_hash_next, ANALYSIS_MAX_SYMBOLS);
     for (int i = 0; i < func_count; i++) {
         free(func_symbols[i].name);
         func_symbols[i].name = NULL;
@@ -375,7 +478,7 @@ static int current_scope_start(void) {
 
 static void scope_push(void) {
     if (scope_depth >= (int)(sizeof(scope_stack) / sizeof(scope_stack[0]))) {
-        semantic_error(NULL, "Too many nested scopes.");
+        semantic_error(NULL, "عدد النطاقات المتداخلة كبير جداً.");
         return;
     }
     scope_stack[scope_depth++] = local_count;
@@ -390,6 +493,7 @@ static void scope_pop(void) {
 
     // إخراج رموز النطاق من الجدول (منطقيًا)
     local_count = start;
+    local_symbol_hash_rebuild();
 }
 
 /**
@@ -427,15 +531,13 @@ static void add_symbol(const char* name,
 
     if (scope == SCOPE_GLOBAL) {
         // التحقق من التكرار
-        for (int i = 0; i < global_count; i++) {
-            if (strcmp(global_symbols[i].name, name) == 0) {
-                semantic_error_loc(decl_file, decl_line, decl_col,
-                                   "Redefinition of global variable '%s'.", name);
-                return;
-            }
+        if (global_lookup_by_name(name)) {
+            semantic_error_loc(decl_file, decl_line, decl_col,
+                               "إعادة تعريف المتغير العام '%s'.", name);
+            return;
         }
         if (global_count >= ANALYSIS_MAX_SYMBOLS) {
-            semantic_error_loc(decl_file, decl_line, decl_col, "Too many global variables.");
+            semantic_error_loc(decl_file, decl_line, decl_col, "عدد المتغيرات العامة كبير جداً.");
             return;
         }
         
@@ -457,38 +559,31 @@ static void add_symbol(const char* name,
         global_symbols[global_count].decl_line = decl_line;
         global_symbols[global_count].decl_col = decl_col;
         global_symbols[global_count].decl_file = decl_file;
+        symbol_hash_insert(global_symbols, global_symbol_hash_head, global_symbol_hash_next, global_count);
         global_count++;
     } else {
         // التحقق من التكرار داخل النطاق الحالي فقط
         int start = current_scope_start();
-        for (int i = start; i < local_count; i++) {
-            if (strcmp(local_symbols[i].name, name) == 0) {
-                semantic_error_loc(decl_file, decl_line, decl_col,
-                                   "Redefinition of local variable '%s'.", name);
-                return;
-            }
+        if (local_lookup_in_scope(name, start, local_count) >= 0) {
+            semantic_error_loc(decl_file, decl_line, decl_col,
+                               "إعادة تعريف المتغير المحلي '%s'.", name);
+            return;
         }
         if (local_count >= ANALYSIS_MAX_SYMBOLS) {
-            semantic_error_loc(decl_file, decl_line, decl_col, "Too many local variables.");
+            semantic_error_loc(decl_file, decl_line, decl_col, "عدد المتغيرات المحلية كبير جداً.");
             return;
         }
 
         // تحذير إذا كان المتغير المحلي يحجب متغيراً عاماً
-        for (int i = 0; i < global_count; i++) {
-            if (strcmp(global_symbols[i].name, name) == 0) {
-                warning_report(WARN_SHADOW_VARIABLE, decl_file, decl_line, decl_col,
-                    "Local variable '%s' shadows global variable.", name);
-                break;
-            }
+        if (global_lookup_by_name(name)) {
+            warning_report(WARN_SHADOW_VARIABLE, decl_file, decl_line, decl_col,
+                "المتغير المحلي '%s' يحجب متغيراً عاماً.", name);
         }
 
         // تحذير إذا كان المتغير المحلي يحجب متغيراً محلياً خارجياً
-        for (int i = 0; i < start; i++) {
-            if (strcmp(local_symbols[i].name, name) == 0) {
-                warning_report(WARN_SHADOW_VARIABLE, decl_file, decl_line, decl_col,
-                    "Local variable '%s' shadows outer local variable.", name);
-                break;
-            }
+        if (local_lookup_before_scope(name, start) >= 0) {
+            warning_report(WARN_SHADOW_VARIABLE, decl_file, decl_line, decl_col,
+                "المتغير المحلي '%s' يحجب متغيراً محلياً من نطاق خارجي.", name);
         }
 
         memcpy(local_symbols[local_count].name, name, name_len + 1);
@@ -509,6 +604,7 @@ static void add_symbol(const char* name,
         local_symbols[local_count].decl_line = decl_line;
         local_symbols[local_count].decl_col = decl_col;
         local_symbols[local_count].decl_file = decl_file;
+        symbol_hash_insert(local_symbols, local_symbol_hash_head, local_symbol_hash_next, local_count);
         local_count++;
     }
 }
@@ -518,21 +614,10 @@ static void add_symbol(const char* name,
  * @param mark_used إذا كان true، يتم تعليم المتغير كمستخدم.
  */
 static Symbol* lookup(const char* name, bool mark_used) {
-    // البحث في المحلي أولاً (من الأحدث للأقدم لدعم النطاقات المتداخلة)
-    for (int i = local_count - 1; i >= 0; i--) {
-        if (strcmp(local_symbols[i].name, name) == 0) {
-            if (mark_used) local_symbols[i].is_used = true;
-            return &local_symbols[i];
-        }
-    }
-    // البحث في العام
-    for (int i = 0; i < global_count; i++) {
-        if (strcmp(global_symbols[i].name, name) == 0) {
-            if (mark_used) global_symbols[i].is_used = true;
-            return &global_symbols[i];
-        }
-    }
-    return NULL;
+    Symbol* s = local_lookup_latest_by_name(name);
+    if (!s) s = global_lookup_by_name(name);
+    if (s && mark_used) s->is_used = true;
+    return s;
 }
 
 // ============================================================================
@@ -1826,7 +1911,7 @@ static DataType infer_type_internal(Node* node) {
         case NODE_VAR_REF: {
             Symbol* sym = lookup(node->data.var_ref.name, true); // تعليم كمستخدم
             if (!sym) {
-                semantic_error(node, "Undefined variable '%s'.", node->data.var_ref.name);
+                semantic_error(node, "متغير غير معرّف '%s'.", node->data.var_ref.name);
                 return TYPE_INT; // استرداد الخطأ
             }
             if (sym->is_array) {
@@ -1946,7 +2031,7 @@ static DataType infer_type_internal(Node* node) {
                 }
 
                 if (!datatype_is_intlike(left) || !datatype_is_intlike(right)) {
-                    semantic_error(node, "Arithmetic operations require INTEGER operands.");
+                    semantic_error(node, "العمليات الحسابية تتطلب معاملات صحيحة.");
                 }
                 return datatype_usual_arith(left, right);
             }
@@ -1988,7 +2073,7 @@ static DataType infer_type_internal(Node* node) {
                     // سماح C-like: مقارنة حرف مع صحيح.
                     if (!((datatype_is_intlike(left) && datatype_is_intlike(right)) ||
                           (left == TYPE_ENUM && right == TYPE_ENUM))) {
-                        semantic_error(node, "Comparison operations require matching types.");
+                        semantic_error(node, "عمليات المقارنة تتطلب تطابق نوعي المعاملات.");
                     }
                 } else if (left == TYPE_ENUM) {
                     const char* ln = expr_enum_name(node->data.bin_op.left);
@@ -2007,7 +2092,7 @@ static DataType infer_type_internal(Node* node) {
                 // نقبل INT أو BOOL لأن C تعامل القيم غير الصفرية كـ true
                 if ((!datatype_is_intlike(left) && left != TYPE_BOOL && left != TYPE_FLOAT) ||
                     (!datatype_is_intlike(right) && right != TYPE_BOOL && right != TYPE_FLOAT)) {
-                    semantic_error(node, "Logical operations require INTEGER or BOOLEAN operands.");
+                    semantic_error(node, "العمليات المنطقية تتطلب معاملات صحيحة أو منطقية.");
                 }
                 return TYPE_BOOL;
             }
@@ -2220,7 +2305,7 @@ static void analyze_node(Node* node) {
                     DataType exprType = infer_type(node->data.var_decl.expression);
                     if (!types_compatible(exprType, declType)) {
                         semantic_error(node,
-                                      "Type mismatch in declaration of '%s'. Expected %s but got %s.",
+                                      "عدم تطابق النوع في تعريف '%s' (المتوقع %s لكن وُجد %s).",
                                       node->data.var_decl.name,
                                       datatype_to_str(declType),
                                       datatype_to_str(exprType));
@@ -2229,7 +2314,7 @@ static void analyze_node(Node* node) {
                     }
                 }
                 if (node->data.var_decl.is_const && !node->data.var_decl.expression) {
-                    semantic_error(node, "Constant '%s' must be initialized.", node->data.var_decl.name);
+                    semantic_error(node, "الثابت '%s' يجب تهيئته.", node->data.var_decl.name);
                 }
             }
 
@@ -2252,6 +2337,8 @@ static void analyze_node(Node* node) {
         case NODE_FUNC_DEF: {
             // الدخول في نطاق دالة جديدة (تصفير المحلي + إنشاء نطاق)
             local_count = 0;
+            symbol_hash_reset_heads(local_symbol_hash_head, ANALYSIS_SYMBOL_HASH_BUCKETS);
+            symbol_hash_reset_next(local_symbol_hash_next, ANALYSIS_MAX_SYMBOLS);
             scope_depth = 0;
             scope_push();
 
@@ -2307,7 +2394,7 @@ static void analyze_node(Node* node) {
         case NODE_ASSIGN: {
             Symbol* sym = lookup(node->data.assign_stmt.name, true); // تعليم كمستخدم
             if (!sym) {
-                semantic_error(node, "Assignment to undefined variable '%s'.", node->data.assign_stmt.name);
+                semantic_error(node, "إسناد إلى متغير غير معرّف '%s'.", node->data.assign_stmt.name);
             } else {
                 if (sym->is_array) {
                     semantic_error(node, "لا يمكن تعيين قيمة للمصفوفة '%s' مباشرة (استخدم الفهرسة).", sym->name);
@@ -2317,7 +2404,7 @@ static void analyze_node(Node* node) {
                 }
                 // التحقق من الثوابت: لا يمكن إعادة تعيين قيمة ثابت
                 if (sym->is_const) {
-                    semantic_error(node, "Cannot reassign constant '%s'.", node->data.assign_stmt.name);
+                    semantic_error(node, "لا يمكن إعادة إسناد الثابت '%s'.", node->data.assign_stmt.name);
                 }
                 DataType exprType = infer_type(node->data.assign_stmt.expression);
                 if (sym->type == TYPE_ENUM) {
@@ -2326,7 +2413,7 @@ static void analyze_node(Node* node) {
                         semantic_error(node, "عدم تطابق نوع التعداد في الإسناد إلى '%s'.", node->data.assign_stmt.name);
                     }
                 } else if (!types_compatible(exprType, sym->type)) {
-                    semantic_error(node, "Type mismatch in assignment to '%s'.", node->data.assign_stmt.name);
+                    semantic_error(node, "عدم تطابق النوع في الإسناد إلى '%s'.", node->data.assign_stmt.name);
                 } else {
                     maybe_warn_implicit_narrowing(exprType, sym->type, node->data.assign_stmt.expression);
                 }
@@ -2394,7 +2481,7 @@ static void analyze_node(Node* node) {
         case NODE_IF: {
             DataType condType = infer_type(node->data.if_stmt.condition);
             if (!datatype_is_intlike(condType)) {
-                semantic_error(node->data.if_stmt.condition, "'if' condition must be an integer/boolean.");
+                semantic_error(node->data.if_stmt.condition, "شرط 'إذا' يجب أن يكون عدداً صحيحاً أو منطقياً.");
             }
 
             // كل فرع يعتبر نطاقاً مستقلاً حتى بدون أقواس
@@ -2413,7 +2500,7 @@ static void analyze_node(Node* node) {
         case NODE_WHILE: {
             DataType condType = infer_type(node->data.while_stmt.condition);
             if (!datatype_is_intlike(condType)) {
-                semantic_error(node->data.while_stmt.condition, "'while' condition must be an integer/boolean.");
+                semantic_error(node->data.while_stmt.condition, "شرط 'طالما' يجب أن يكون عدداً صحيحاً أو منطقياً.");
             }
             bool prev_loop = inside_loop;
             inside_loop = true;
@@ -2434,7 +2521,7 @@ static void analyze_node(Node* node) {
             if (node->data.for_stmt.condition) {
                 DataType condType = infer_type(node->data.for_stmt.condition);
                 if (!datatype_is_intlike(condType)) {
-                    semantic_error(node->data.for_stmt.condition, "'for' condition must be an integer/boolean.");
+                    semantic_error(node->data.for_stmt.condition, "شرط 'لكل' يجب أن يكون عدداً صحيحاً أو منطقياً.");
                 }
             }
             if (node->data.for_stmt.increment) analyze_node(node->data.for_stmt.increment);
@@ -2451,7 +2538,7 @@ static void analyze_node(Node* node) {
         case NODE_SWITCH: {
             DataType st = infer_type(node->data.switch_stmt.expression);
             if (!datatype_is_intlike(st)) {
-                semantic_error(node->data.switch_stmt.expression, "'switch' expression must be an integer.");
+                semantic_error(node->data.switch_stmt.expression, "تعبير 'اختر' يجب أن يكون عدداً صحيحاً.");
             }
             bool prev_switch = inside_switch;
             inside_switch = true;
@@ -2464,7 +2551,7 @@ static void analyze_node(Node* node) {
                 if (!current_case->data.case_stmt.is_default) {
                     DataType ct = infer_type(current_case->data.case_stmt.value);
                     if (!datatype_is_intlike(ct)) {
-                        semantic_error(current_case->data.case_stmt.value, "'case' value must be an integer constant.");
+                        semantic_error(current_case->data.case_stmt.value, "قيمة 'حالة' يجب أن تكون ثابتاً صحيحاً.");
                     }
                 }
                 // جسم الحالة عبارة عن قائمة جمل
@@ -2482,13 +2569,13 @@ static void analyze_node(Node* node) {
 
         case NODE_BREAK:
             if (!inside_loop && !inside_switch) {
-                semantic_error(node, "'break' used outside of loop or switch.");
+                semantic_error(node, "تم استخدام 'توقف' خارج حلقة أو 'اختر'.");
             }
             break;
 
         case NODE_CONTINUE:
             if (!inside_loop) {
-                semantic_error(node, "'continue' used outside of loop.");
+                semantic_error(node, "تم استخدام 'استمر' خارج حلقة.");
             }
             break;
 
@@ -2535,14 +2622,14 @@ static void analyze_node(Node* node) {
             // التحقق من أن المتغير معرف وقابل للتعديل
             Symbol* sym = lookup(node->data.read_stmt.var_name, true);
             if (!sym) {
-                semantic_error(node, "Reading into undefined variable '%s'.", node->data.read_stmt.var_name);
+                semantic_error(node, "القراءة إلى متغير غير معرّف '%s'.", node->data.read_stmt.var_name);
             } else {
                 if (sym->is_const) {
-                    semantic_error(node, "Cannot read into constant variable '%s'.", node->data.read_stmt.var_name);
+                    semantic_error(node, "لا يمكن القراءة إلى متغير ثابت '%s'.", node->data.read_stmt.var_name);
                 }
                 // نقبل القراءة في الأنواع الصحيحة (بما فيها الأحجام المختلفة).
                 if (!datatype_is_int(sym->type)) {
-                    semantic_error(node, "'اقرأ' currently only supports integer variables.");
+                    semantic_error(node, "'اقرأ' يدعم حالياً المتغيرات الصحيحة فقط.");
                 }
             }
             break;
@@ -2588,7 +2675,7 @@ static void analyze_node(Node* node) {
 
             // الثابت يجب أن يُهيّأ صراحةً (حتى `{}` مقبول ويعني أصفار).
             if (node->data.array_decl.is_const && !node->data.array_decl.has_init) {
-                semantic_error(node, "Constant array '%s' must be initialized.",
+                semantic_error(node, "المصفوفة الثابتة '%s' يجب تهيئتها.",
                                node->data.array_decl.name ? node->data.array_decl.name : "???");
             }
 
@@ -2701,7 +2788,7 @@ bool analyze(Node* program) {
     if (program && program->filename) {
         current_filename = program->filename;
     } else {
-        current_filename = "source";
+        current_filename = "المصدر";
     }
     
     analyze_node(program);

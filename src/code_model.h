@@ -39,6 +39,7 @@ typedef struct {
     bool pic; // -fPIC
     bool pie; // -fPIE / link -pie
     BaaStackProtectorMode stack_protector;
+    bool asm_comments; // --asm-comments
 } BaaCodegenOptions;
 
 static inline BaaCodegenOptions baa_codegen_options_default(void)
@@ -48,6 +49,7 @@ static inline BaaCodegenOptions baa_codegen_options_default(void)
     o.pic = false;
     o.pie = false;
     o.stack_protector = BAA_STACKPROT_OFF;
+    o.asm_comments = false;
     return o;
 }
 

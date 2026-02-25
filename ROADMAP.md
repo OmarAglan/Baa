@@ -1,7 +1,7 @@
 # Baa Roadmap (Updated)
 
 > Track the development progress of the Baa programming language.
-> **Current Status:** Phase 3.6 - Low-Level Operations (v0.3.6)
+> **Current Status:** Phase 3.7.5 - Static Local Variables (v0.3.7.5)
 
 ---
 
@@ -11,7 +11,7 @@
 
 - [~] **Write the Arabic "Baa Book"** — book-length guide in Arabic with exercises. — draft exists in `docs/BAA_BOOK_AR.md`
 - [ ] **Define terminology glossary** — consistent Arabic technical vocabulary.
-- [ ] **Create example suite** — verified, idiomatic examples that compile with v0.3.6.
+- [ ] **Create example suite** — verified, idiomatic examples that compile with v0.3.7.
 - [ ] **Add exercises and challenges** — per chapter, with expected outputs.
 - [ ] **Add debugging and performance chapters** — common pitfalls, diagnostics, optimization notes.
 - [ ] **Native technical review** — review by Arabic-speaking engineers before release.
@@ -715,26 +715,26 @@
 
 ---
 
-### v0.3.7: System Improvements 🔧
+### v0.3.7: System Improvements 🔧 ✅ COMPLETED (2026-02-25)
 
 **Goal:** Refine and enhance existing compiler systems.
 
 #### Focus Areas
 
-- [ ] **Error Messages** – Improve clarity and helpfulness of diagnostic messages.
-- [ ] **Code Quality** – Refactor complex functions, improve code organization.
-- [ ] **Memory Management** – Fix memory leaks, improve buffer handling.
-- [ ] **Performance** – Profile and optimize slow compilation paths.
-- [ ] **Documentation** – Update all docs to reflect v0.3.3-0.3.6 changes.
-- [ ] **Edge Cases** – Fix known bugs and handle corner cases.
+- [x] **Error Messages** – Improve clarity and helpfulness of diagnostic messages.
+- [x] **Code Quality** – Refactor complex functions, improve code organization.
+- [x] **Memory Management** – Fix memory leaks, improve buffer handling.
+- [x] **Performance** – Profile and optimize slow compilation paths.
+- [x] **Documentation** – Update all docs to reflect v0.3.3-0.3.7 changes.
+- [x] **Edge Cases** – Fix known bugs and handle corner cases.
 
 #### Specific Improvements
 
-- [ ] Improve panic mode recovery in parser.
-- [ ] Better handling of UTF-8 edge cases in lexer.
-- [ ] Optimize symbol table lookups (consider hash table).
-- [ ] Add more comprehensive error recovery.
-- [ ] Improve assembly output readability (comments in assembly).
+- [x] Improve panic mode recovery in parser.
+- [x] Better handling of UTF-8 edge cases in lexer.
+- [x] Optimize symbol table lookups (consider hash table).
+- [x] Add more comprehensive error recovery.
+- [x] Improve assembly output readability (comments in assembly).
 
 ### v0.3.7.5: Static Local Variables (متغيرات ساكنة محلية) 📌
 **Goal:** Variables that persist between function calls.

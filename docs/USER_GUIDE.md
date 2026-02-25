@@ -1,6 +1,6 @@
 # Baa User Guide
 
-> **Version:** 0.3.6 | [← README](../README.md) | [Language Spec →](LANGUAGE.md)
+> **Version:** 0.3.7 | [← README](../README.md) | [Language Spec →](LANGUAGE.md)
 
 
 Welcome to Baa (باء)! This guide will help you write your first Arabic computer program and use the Baa compiler toolchain.
@@ -118,18 +118,19 @@ The Baa compiler is a full-featured command-line tool (since v0.2.0):
 
 - Windows: `baa.exe`
 - Linux: `baa`
+- In examples below, use `baa`/`baa.exe` if it's on `PATH`; otherwise use `build\baa.exe` (Windows) or `./build/baa` (Linux).
 
 ### Basic Compilation and Execution
 
 ```powershell
 # Windows: default output is out.exe
-.\baa.exe hello.baa
+.\build\baa.exe hello.baa
 .\out.exe
 ```
 
 ```bash
 # Linux: default output is out
-./baa hello.baa
+./build/baa hello.baa
 ./out
 ```
 
@@ -179,6 +180,7 @@ sudo cp -a usr/* /usr/
 | `-v` | Enable verbose output (shows all compilation steps with timing). | `.\baa.exe -v main.baa` |
 | `--time-phases` | Print per-phase timing and memory statistics. | `.\baa.exe --time-phases -O2 main.baa` |
 | `--debug-info` | Emit debug line info and pass `-g` to toolchain. | `.\baa.exe --debug-info main.baa` |
+| `--asm-comments` | Emit explanatory comments in generated assembly (`-S`). | `.\baa.exe -S --asm-comments main.baa` |
 | `--help`, `-h` | Display help message and usage. | `.\baa.exe --help` |
 | `--version` | Display compiler version. | `.\baa.exe --version` |
 | `-O0` / `-O1` / `-O2` | Optimization levels (default: `-O1`). | `.\baa.exe -O2 main.baa` |
@@ -207,7 +209,7 @@ sudo cp -a usr/* /usr/
 - `-o <file>` is only applied for `-S` / `-c` when compiling a single input file.
 - `update` must be used alone: `.\baa.exe update`
 
-### Current Limitations (v0.3.6)
+### Current Limitations (v0.3.7)
 
 - SIMD and non-`عشري` floating types are not supported yet.
 
@@ -237,7 +239,7 @@ python .\tests\regress.py
 | `-Wcolor` | Force colored output. | `.\baa.exe -Wall -Wcolor main.baa` |
 | `-Wno-color` | Disable colored output. | `.\baa.exe -Wall -Wno-color main.baa` |
 
-**Note:** The compiler currently exposes flags for `unused-variable` and `dead-code`. The shadowing warning exists, but is only enabled via `-Wall` (there is no dedicated `-Wshadow-variable` flag yet).
+**Note:** Dedicated flags are available for `unused-variable`, `dead-code`, `implicit-narrowing`, and `signed-unsigned-compare`. `shadow-variable` is available through `-Wall` (no dedicated `-Wshadow-variable` switch yet).
 
 ### Compilation Workflow
 
@@ -482,12 +484,12 @@ Bitwise operators, shifts, `حجم(...)`, and `عدم` are available for systems
 
 | Error | Cause | Solution |
 |-------|-------|----------|
-| `Lexer Error: Unknown byte 0x..` | Unsupported character/byte in source | Ensure the file is UTF-8 and only uses supported punctuation and operators |
-| `Lexer Error: Unterminated string ...` | Missing closing `"` | Close the string literal before the statement terminator `.` |
+| `خطأ لفظي: ...` | Unsupported byte, malformed UTF-8, or malformed literal | Ensure the file is UTF-8 and literals are closed correctly |
+| `خطأ نحوي: ...` | Missing token (`.`/`}`/`)`), or malformed statement/declaration | Fix the reported token location; parser recovery may report multiple related errors |
 | `[Error] <file>:<line>:<col>: ...` | Syntax error (parser) | Check for missing `.` at statement end, missing `}`, or unmatched parentheses |
-| `[Semantic Error] Assignment to undefined variable '...'` | Variable used before declaration | Declare variables before using them |
-| `[Semantic Error] Type mismatch in assignment to '...'` | Assigning wrong type | Do not assign `نص` to `صحيح` (or vice versa) |
-| `[Semantic Error] Cannot reassign constant '...'` | Modifying a constant | Constants declared with `ثابت` cannot be changed after initialization |
+| `[Semantic Error] ... متغير غير معرّف ...` | Variable used before declaration | Declare variables before using them |
+| `[Semantic Error] ... عدم تطابق أنواع ...` | Assigning wrong type | Keep assignment/call/return types compatible |
+| `[Semantic Error] ... ثابت ...` | Modifying a constant | Constants declared with `ثابت` cannot be changed after initialization |
 | `Aborting <file> due to syntax errors.` | Parser reported one or more errors | Fix reported `[Error]` diagnostics and recompile |
 | `Aborting <file> due to semantic errors.` | Analyzer reported one or more errors | Fix reported `[Semantic Error]` messages and recompile |
 
@@ -513,4 +515,3 @@ Bitwise operators, shifts, `حجم(...)`, and `عدم` are available for systems
 ---
 
 *[← README](../README.md) | [Language Specification →](LANGUAGE.md)*
-../README.md) | [Language Specification →](LANGUAGE.md)*

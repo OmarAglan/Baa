@@ -1,6 +1,6 @@
 # Baa IR Specification
 
-> **Version:** 0.3.8 | [← Compiler Internals](INTERNALS.md) | [API Reference →](API_REFERENCE.md)
+> **Version:** 0.3.9 (in progress) | [← Compiler Internals](INTERNALS.md) | [API Reference →](API_REFERENCE.md)
 
 This document specifies the Intermediate Representation (IR) for the Baa compiler. The IR uses Arabic naming conventions throughout, creating a culturally authentic yet technically robust design.
 
@@ -266,6 +266,9 @@ internal global @عداد_داخلي = ص٦٤ ٠ // ربط داخلي (v0.3.7.5)
 
 // مصفوفة عامة (تهيئة جزئية؛ الباقي أصفار مثل C)
 عام @قائمة = مصفوفة[ص٦٤، ٥] {١، ٢، ٣}
+
+// مصفوفة مؤشرات نصية عامة
+عام @أسماء = مصفوفة[مؤشر[ص٨]، ٢] {"علي"، "منى"}
 ```
 
 ملاحظة (v0.3.5): السلاسل النصية في IR لها جدولان:
@@ -296,6 +299,9 @@ internal global @عداد_داخلي = ص٦٤ ٠ // ربط داخلي (v0.3.7.5)
 | `NODE_UNION_DECL` | Compile-time layout table (no direct IR; all members offset 0) |
 | `NODE_MEMBER_ACCESS` | Byte-based `إزاحة_مؤشر` on `ptr<i8>` + `حمل/خزن` |
 | `NODE_MEMBER_ASSIGN` | Byte-based `إزاحة_مؤشر` on `ptr<i8>` + `خزن` |
+| `NODE_ARRAY_DECL` | Stack/global array allocation + optional initializer lowering |
+| `NODE_ARRAY_ACCESS` | Row-major linearized index → `إزاحة_مؤشر` + `حمل` |
+| `NODE_ARRAY_ASSIGN` | Row-major linearized index → `إزاحة_مؤشر` + `خزن` |
 
 ### 6.2 Variable Handling
 
@@ -317,6 +323,14 @@ Static locals (`ساكن`) are lowered as internal globals:
 ```
 internal global @__baa_static_<func>_<name>_<id> = ص٦٤ ٠
 ```
+
+### 6.2.1 Multi-Dimensional Array Lowering (v0.3.9)
+
+- Multi-dimensional AST indexing (`a[i][j]...[k]`) is flattened to a single linear index using row-major order:
+  - `linear = (((i * dim1) + j) * dim2 + ...) + k`
+- The linear index feeds `IR_OP_PTR_OFFSET` to compute the target element address.
+- Rank/dimension validity is a semantic-phase contract; IR lowering assumes validated shape metadata.
+- Optional debug-mode lowering may emit runtime bounds guard paths before computing the element address.
 
 ### 6.3 Control Flow Lowering
 

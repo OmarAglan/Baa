@@ -515,21 +515,31 @@ typedef struct Node {
 
         // تعريف مصفوفة
         struct {
-            char* name;     // اسم المصفوفة
-            int size;       // حجم المصفوفة (ثابت حالياً)
-            bool is_global; // هل هي عامة؟ (المحلي فقط مدعوم حالياً)
-            bool is_const;  // هل هي ثابتة (immutable)؟
-            bool is_static; // هل مدة تخزينها ساكنة؟
+            char* name;            // اسم المصفوفة
+            DataType element_type; // نوع عنصر المصفوفة
+            char* element_type_name; // اسم النوع عند عنصر TYPE_ENUM/TYPE_STRUCT/TYPE_UNION
+            int element_struct_size;  // حجم عنصر الهيكل/الاتحاد (يُملأ دلالياً)
+            int element_struct_align; // محاذاة عنصر الهيكل/الاتحاد (يُملأ دلالياً)
+
+            // أبعاد المصفوفة الثابتة (مثال: [3][4] => dims={3,4}, dim_count=2)
+            int* dims;             // مملوك للعقدة
+            int dim_count;         // عدد الأبعاد
+            int64_t total_elems;   // حاصل ضرب الأبعاد
+
+            bool is_global;        // هل هي عامة؟
+            bool is_const;         // هل هي ثابتة (immutable)؟
+            bool is_static;        // هل مدة تخزينها ساكنة؟
             // تهيئة المصفوفة: عند وجود '=' نعتبر التهيئة موجودة حتى لو كانت القائمة فارغة `{}`.
             bool has_init;
             struct Node* init_values; // قائمة قيم التهيئة (قد تكون NULL عند `{}`)
-            int init_count;           // عدد قيم التهيئة الفعلية (قد يكون أقل من size)
+            int init_count;           // عدد قيم التهيئة الفعلية (قد يكون أقل من total_elems)
         } array_decl;
 
         // عمليات المصفوفات - للتعيين والقراءة
         struct {
             char* name;          // اسم المصفوفة
-            struct Node* index;  // الفهرس (Index)
+            struct Node* indices; // قائمة الفهارس (قد تمثل a[i][j] ...)
+            int index_count;      // عدد الفهارس
             struct Node* value;  // القيمة (للتعيين فقط، NULL للقراءة)
         } array_op;
 
@@ -639,7 +649,9 @@ typedef struct {
     DataType type;     // نوع البيانات (للمتغير: نوعه، للمصفوفة: نوع العنصر)
     char type_name[32]; // اسم النوع عند TYPE_ENUM/TYPE_STRUCT (فارغ لغير ذلك)
     bool is_array;     // هل الرمز مصفوفة؟
-    int array_size;    // حجم المصفوفة (ثابت حالياً) إذا كانت is_array=true
+    int array_rank;    // عدد الأبعاد
+    int64_t array_total_elems; // حاصل ضرب الأبعاد
+    int* array_dims;   // أبعاد المصفوفة (مملوك لجدول الرموز)
     int offset;        // الإزاحة في المكدس أو العنوان
     bool is_const;     // هل هو ثابت (immutable)؟
     bool is_static;    // هل التخزين ساكن؟

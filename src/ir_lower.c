@@ -91,6 +91,8 @@ void ir_lower_ctx_init(IRLowerCtx* ctx, IRBuilder* builder) {
     ctx->scope_depth = 0;
     ctx->current_func_name = NULL;
     ctx->static_local_counter = 0;
+    ctx->enable_bounds_checks = false;
+    ctx->program_root = NULL;
 }
 
 void ir_lower_bind_local(IRLowerCtx* ctx, const char* name, int ptr_reg, IRType* value_type) {
@@ -104,6 +106,11 @@ void ir_lower_bind_local(IRLowerCtx* ctx, const char* name, int ptr_reg, IRType*
             ctx->locals[i].value_type = value_type;
             ctx->locals[i].global_name = NULL;
             ctx->locals[i].is_static_storage = false;
+            ctx->locals[i].is_array = false;
+            ctx->locals[i].array_rank = 0;
+            ctx->locals[i].array_dims = NULL;
+            ctx->locals[i].array_elem_type = TYPE_INT;
+            ctx->locals[i].array_elem_type_name = NULL;
             return;
         }
     }
@@ -118,6 +125,11 @@ void ir_lower_bind_local(IRLowerCtx* ctx, const char* name, int ptr_reg, IRType*
     ctx->locals[ctx->local_count].value_type = value_type;
     ctx->locals[ctx->local_count].global_name = NULL;
     ctx->locals[ctx->local_count].is_static_storage = false;
+    ctx->locals[ctx->local_count].is_array = false;
+    ctx->locals[ctx->local_count].array_rank = 0;
+    ctx->locals[ctx->local_count].array_dims = NULL;
+    ctx->locals[ctx->local_count].array_elem_type = TYPE_INT;
+    ctx->locals[ctx->local_count].array_elem_type_name = NULL;
     ctx->local_count++;
 }
 
@@ -132,6 +144,11 @@ void ir_lower_bind_local_static(IRLowerCtx* ctx, const char* name,
             ctx->locals[i].value_type = value_type;
             ctx->locals[i].global_name = global_name;
             ctx->locals[i].is_static_storage = true;
+            ctx->locals[i].is_array = false;
+            ctx->locals[i].array_rank = 0;
+            ctx->locals[i].array_dims = NULL;
+            ctx->locals[i].array_elem_type = TYPE_INT;
+            ctx->locals[i].array_elem_type_name = NULL;
             return;
         }
     }
@@ -146,7 +163,32 @@ void ir_lower_bind_local_static(IRLowerCtx* ctx, const char* name,
     ctx->locals[ctx->local_count].value_type = value_type;
     ctx->locals[ctx->local_count].global_name = global_name;
     ctx->locals[ctx->local_count].is_static_storage = true;
+    ctx->locals[ctx->local_count].is_array = false;
+    ctx->locals[ctx->local_count].array_rank = 0;
+    ctx->locals[ctx->local_count].array_dims = NULL;
+    ctx->locals[ctx->local_count].array_elem_type = TYPE_INT;
+    ctx->locals[ctx->local_count].array_elem_type_name = NULL;
     ctx->local_count++;
+}
+
+static void ir_lower_set_local_array_meta(IRLowerCtx* ctx,
+                                          const char* name,
+                                          int array_rank,
+                                          const int* array_dims,
+                                          DataType elem_type,
+                                          const char* elem_type_name)
+{
+    if (!ctx || !name) return;
+    for (int i = ctx->local_count - 1; i >= 0; i--) {
+        if (ctx->locals[i].name && strcmp(ctx->locals[i].name, name) == 0) {
+            ctx->locals[i].is_array = true;
+            ctx->locals[i].array_rank = array_rank;
+            ctx->locals[i].array_dims = array_dims;
+            ctx->locals[i].array_elem_type = elem_type;
+            ctx->locals[i].array_elem_type_name = elem_type_name;
+            return;
+        }
+    }
 }
 
 // ============================================================================
@@ -667,6 +709,132 @@ static IRBlock* cf_current_continue(IRLowerCtx* ctx) {
     return ctx->continue_targets[ctx->cf_depth - 1];
 }
 
+static int ir_lower_index_count(Node* indices)
+{
+    int n = 0;
+    for (Node* p = indices; p; p = p->next) n++;
+    return n;
+}
+
+static Node* ir_lower_nth_index(Node* indices, int n)
+{
+    if (n < 0) return NULL;
+    int i = 0;
+    for (Node* p = indices; p; p = p->next, i++) {
+        if (i == n) return p;
+    }
+    return NULL;
+}
+
+static Node* ir_lower_find_global_array_decl(IRLowerCtx* ctx, const char* name)
+{
+    if (!ctx || !ctx->program_root || !name) return NULL;
+    if (ctx->program_root->type != NODE_PROGRAM) return NULL;
+
+    for (Node* d = ctx->program_root->data.program.declarations; d; d = d->next) {
+        if (d->type != NODE_ARRAY_DECL) continue;
+        if (!d->data.array_decl.is_global) continue;
+        if (!d->data.array_decl.name) continue;
+        if (strcmp(d->data.array_decl.name, name) == 0) {
+            return d;
+        }
+    }
+    return NULL;
+}
+
+static void ir_lower_emit_abort_path(IRLowerCtx* ctx)
+{
+    if (!ctx || !ctx->builder) return;
+
+    ir_builder_emit_call_void(ctx->builder, "abort", NULL, 0);
+
+    IRFunc* f = ctx->builder->current_func;
+    if (!f || !f->ret_type || f->ret_type->kind == IR_TYPE_VOID) {
+        ir_builder_emit_ret_void(ctx->builder);
+    } else {
+        IRValue* z = ir_value_const_int(0, f->ret_type);
+        ir_builder_emit_ret(ctx->builder, z);
+    }
+}
+
+static void ir_lower_emit_debug_bounds_check(IRLowerCtx* ctx, const Node* site, IRValue* idx, int dim)
+{
+    if (!ctx || !ctx->builder || !idx || !ctx->enable_bounds_checks) return;
+    if (dim <= 0) return;
+
+    IRValue* i64_idx = ensure_i64(ctx, idx);
+    IRValue* zero = ir_value_const_int(0, IR_TYPE_I64_T);
+    IRValue* dimv = ir_value_const_int((int64_t)dim, IR_TYPE_I64_T);
+
+    int ge = ir_builder_emit_cmp_ge(ctx->builder, i64_idx, zero);
+    int lt = ir_builder_emit_cmp_lt(ctx->builder, i64_idx, dimv);
+    IRValue* ge_v = ir_value_reg(ge, IR_TYPE_I1_T);
+    IRValue* lt_v = ir_value_reg(lt, IR_TYPE_I1_T);
+    int okb = ir_builder_emit_and(ctx->builder, IR_TYPE_I1_T, ge_v, lt_v);
+    IRValue* ok = ir_value_reg(okb, IR_TYPE_I1_T);
+
+    IRBlock* pass = cf_create_block(ctx, "حدود_سليم");
+    IRBlock* fail = cf_create_block(ctx, "حدود_فشل");
+    if (!pass || !fail) return;
+
+    ir_builder_emit_br_cond(ctx->builder, ok, pass, fail);
+
+    ir_builder_set_insert_point(ctx->builder, fail);
+    ir_lower_set_loc(ctx->builder, site);
+    ir_lower_emit_abort_path(ctx);
+
+    ir_builder_set_insert_point(ctx->builder, pass);
+    ir_lower_set_loc(ctx->builder, site);
+}
+
+static IRValue* ir_lower_build_linear_index(IRLowerCtx* ctx,
+                                            const Node* site,
+                                            Node* indices,
+                                            int index_count,
+                                            const int* dims,
+                                            int rank)
+{
+    if (!ctx || !ctx->builder) return ir_value_const_int(0, IR_TYPE_I64_T);
+    if (!indices) return ir_value_const_int(0, IR_TYPE_I64_T);
+
+    int effective_count = index_count > 0 ? index_count : ir_lower_index_count(indices);
+    if (effective_count <= 0) return ir_value_const_int(0, IR_TYPE_I64_T);
+
+    IRValue* linear = NULL;
+    int i = 0;
+    for (Node* idx_node = indices; idx_node && i < effective_count; idx_node = idx_node->next, i++) {
+        IRValue* idx0 = lower_expr(ctx, idx_node);
+        IRValue* idx = ensure_i64(ctx, idx0);
+
+        if (dims && i < rank) {
+            ir_lower_emit_debug_bounds_check(ctx, site, idx, dims[i]);
+        }
+
+        if (!linear) {
+            linear = idx;
+            continue;
+        }
+
+        int dim = (dims && i < rank) ? dims[i] : 0;
+        if (dim > 0) {
+            int mr = ir_builder_emit_mul(ctx->builder, IR_TYPE_I64_T, linear,
+                                         ir_value_const_int((int64_t)dim, IR_TYPE_I64_T));
+            linear = ir_value_reg(mr, IR_TYPE_I64_T);
+        }
+
+        int ar = ir_builder_emit_add(ctx->builder, IR_TYPE_I64_T, linear, idx);
+        linear = ir_value_reg(ar, IR_TYPE_I64_T);
+    }
+
+    if (rank > 0 && effective_count != rank) {
+        ir_lower_report_error(ctx, site,
+                              "عدد فهارس المصفوفة غير صحيح أثناء خفض IR (expected=%d, got=%d).",
+                              rank, effective_count);
+    }
+
+    return linear ? linear : ir_value_const_int(0, IR_TYPE_I64_T);
+}
+
 static IRValue* lower_to_bool(IRLowerCtx* ctx, IRValue* value) {
     if (!ctx || !ctx->builder || !value) return ir_value_const_int(0, IR_TYPE_I1_T);
 
@@ -923,16 +1091,24 @@ IRValue* lower_expr(IRLowerCtx* ctx, Node* expr) {
 
         case NODE_ARRAY_ACCESS: {
             const char* name = expr->data.array_op.name;
-            IRType* arr_t = NULL;
-            IRValue* base_ptr = NULL;
+            int index_count = expr->data.array_op.index_count;
+            if (index_count <= 0) index_count = ir_lower_index_count(expr->data.array_op.indices);
 
             IRLowerBinding* b = find_local(ctx, name);
             if (b) {
                 const char* storage_name = ir_lower_binding_storage_name(b);
-                // نص: الاسم يشير إلى قيمة ptr<char> مخزنة في alloca
-                if (b->value_type && b->value_type->kind == IR_TYPE_PTR &&
+
+                // نص: الاسم يشير إلى قيمة ptr<char> مخزنة في alloca/رمز ساكن.
+                if (!b->is_array &&
+                    b->value_type && b->value_type->kind == IR_TYPE_PTR &&
                     b->value_type->data.pointee && b->value_type->data.pointee->kind == IR_TYPE_CHAR)
                 {
+                    Node* idx_node = expr->data.array_op.indices;
+                    if (!idx_node) {
+                        ir_lower_report_error(ctx, expr, "فهرس النص '%s' مفقود.", name ? name : "???");
+                        return ir_builder_const_i64(0);
+                    }
+
                     IRType* str_t = b->value_type;
                     IRValue* str_ptr = NULL;
                     if (b->is_static_storage) {
@@ -946,93 +1122,178 @@ IRValue* lower_expr(IRLowerCtx* ctx, Node* expr) {
                         str_ptr = ir_value_reg(loaded, str_t);
                     }
 
-                    IRValue* idx0 = lower_expr(ctx, expr->data.array_op.index);
-                    IRValue* idx = ensure_i64(ctx, idx0);
-
+                    IRValue* idx = ensure_i64(ctx, lower_expr(ctx, idx_node));
                     int ep = ir_builder_emit_ptr_offset(ctx->builder, str_t, str_ptr, idx);
                     IRValue* elem_ptr = ir_value_reg(ep, str_t);
                     int ch = ir_builder_emit_load(ctx->builder, IR_TYPE_CHAR_T, elem_ptr);
                     return ir_value_reg(ch, IR_TYPE_CHAR_T);
                 }
 
-                if (!b->value_type || b->value_type->kind != IR_TYPE_ARRAY) {
+                if (!b->is_array || !b->value_type || b->value_type->kind != IR_TYPE_ARRAY) {
                     ir_lower_report_error(ctx, expr, "'%s' ليس مصفوفة في مسار IR.", name ? name : "???");
-                    (void)lower_expr(ctx, expr->data.array_op.index);
+                    for (Node* idx = expr->data.array_op.indices; idx; idx = idx->next) {
+                        (void)lower_expr(ctx, idx);
+                    }
                     return ir_builder_const_i64(0);
                 }
-                arr_t = b->value_type;
 
-                IRType* elem_t0 = arr_t->data.array.element ? arr_t->data.array.element : IR_TYPE_I64_T;
+                bool elem_is_agg = (b->array_elem_type == TYPE_STRUCT || b->array_elem_type == TYPE_UNION);
+                IRType* elem_t = elem_is_agg
+                    ? IR_TYPE_I8_T
+                    : (b->value_type->data.array.element ? b->value_type->data.array.element : IR_TYPE_I64_T);
+                IRType* elem_ptr_t = ir_type_ptr(elem_t);
+                bool elem_is_string = (!elem_is_agg &&
+                                       elem_t && elem_t->kind == IR_TYPE_PTR &&
+                                       elem_t->data.pointee &&
+                                       elem_t->data.pointee->kind == IR_TYPE_CHAR);
+
+                IRValue* base_ptr = NULL;
                 if (b->is_static_storage) {
-                    base_ptr = ir_value_global(storage_name, elem_t0);
+                    base_ptr = ir_value_global(storage_name, elem_t);
                 } else {
-                    IRValue* arr_ptr = ir_value_reg(b->ptr_reg, ir_type_ptr(arr_t));
-                    IRType* elem_ptr_t0 = ir_type_ptr(elem_t0);
+                    IRValue* arr_ptr = ir_value_reg(b->ptr_reg, ir_type_ptr(b->value_type));
+                    int base_reg = ir_builder_emit_cast(ctx->builder, arr_ptr, elem_ptr_t);
+                    base_ptr = ir_value_reg(base_reg, elem_ptr_t);
+                }
 
-                    // base: ptr(array) -> cast -> ptr(elem)
-                    int base_reg = ir_builder_emit_cast(ctx->builder, arr_ptr, elem_ptr_t0);
-                    base_ptr = ir_value_reg(base_reg, elem_ptr_t0);
-                }
-            } else {
-                // مصفوفة عامة: نأخذ عنوانها عبر @name ونُعاملها كمؤشر إلى المصفوفة.
-                IRGlobal* g = NULL;
-                if (ctx->builder && ctx->builder->module && name) {
-                    g = ir_module_find_global(ctx->builder->module, name);
-                }
-                if (!g || !g->type) {
-                    ir_lower_report_error(ctx, expr, "مصفوفة/نص غير معرّف '%s'.", name ? name : "???");
-                    (void)lower_expr(ctx, expr->data.array_op.index);
+                if (!base_ptr) {
+                    ir_lower_report_error(ctx, expr, "فشل بناء عنوان عنصر المصفوفة '%s'.", name ? name : "???");
+                    for (Node* idx = expr->data.array_op.indices; idx; idx = idx->next) {
+                        (void)lower_expr(ctx, idx);
+                    }
                     return ir_builder_const_i64(0);
                 }
 
-                // نص عام: global يحمل ptr<char>، لذا نحمّله أولاً ثم نفهرسه.
-                if (g->type->kind == IR_TYPE_PTR && g->type->data.pointee &&
-                    g->type->data.pointee->kind == IR_TYPE_CHAR)
-                {
-                    IRValue* gptr = ir_value_global(name, g->type);
-                    int loaded = ir_builder_emit_load(ctx->builder, g->type, gptr);
-                    IRValue* str_ptr = ir_value_reg(loaded, g->type);
+                if (elem_is_string && b->array_rank > 0 && index_count == b->array_rank + 1) {
+                    IRValue* outer_linear = ir_lower_build_linear_index(ctx, expr,
+                                                                        expr->data.array_op.indices,
+                                                                        b->array_rank,
+                                                                        b->array_dims,
+                                                                        b->array_rank);
+                    int ep_outer = ir_builder_emit_ptr_offset(ctx->builder, elem_ptr_t, base_ptr, outer_linear);
+                    IRValue* outer_ptr = ir_value_reg(ep_outer, elem_ptr_t);
+                    int ld_str = ir_builder_emit_load(ctx->builder, elem_t, outer_ptr);
+                    IRValue* str_ptr = ir_value_reg(ld_str, elem_t);
 
-                    IRValue* idx0 = lower_expr(ctx, expr->data.array_op.index);
-                    IRValue* idx = ensure_i64(ctx, idx0);
-
-                    int ep = ir_builder_emit_ptr_offset(ctx->builder, g->type, str_ptr, idx);
-                    IRValue* elem_ptr = ir_value_reg(ep, g->type);
-                    int ch = ir_builder_emit_load(ctx->builder, IR_TYPE_CHAR_T, elem_ptr);
+                    Node* inner_node = ir_lower_nth_index(expr->data.array_op.indices, b->array_rank);
+                    IRValue* inner_idx = ensure_i64(ctx, lower_expr(ctx, inner_node));
+                    int ep_inner = ir_builder_emit_ptr_offset(ctx->builder, elem_t, str_ptr, inner_idx);
+                    IRValue* ch_ptr = ir_value_reg(ep_inner, elem_t);
+                    int ch = ir_builder_emit_load(ctx->builder, IR_TYPE_CHAR_T, ch_ptr);
                     return ir_value_reg(ch, IR_TYPE_CHAR_T);
                 }
 
-                if (g->type->kind != IR_TYPE_ARRAY) {
-                    ir_lower_report_error(ctx, expr, "'%s' ليس مصفوفة.", name ? name : "???");
-                    (void)lower_expr(ctx, expr->data.array_op.index);
+                IRValue* linear = ir_lower_build_linear_index(ctx, expr,
+                                                              expr->data.array_op.indices,
+                                                              index_count,
+                                                              b->array_dims,
+                                                              b->array_rank);
+                int ep = ir_builder_emit_ptr_offset(ctx->builder, elem_ptr_t, base_ptr, linear);
+                IRValue* elem_ptr = ir_value_reg(ep, elem_ptr_t);
+
+                if (elem_is_agg) {
+                    ir_lower_report_error(ctx, expr, "استخدام عنصر مصفوفة مركبة كقيمة غير مدعوم.");
                     return ir_builder_const_i64(0);
                 }
-                arr_t = g->type;
 
-                // مهم: لا نستخدم cast على global لأن MOV سيقرأ القيمة من الذاكرة.
-                // نُعامل @name مباشرةً كمؤشر إلى العنصر الأول (مثل C: array decays to pointer).
-                IRType* elem_t0 = arr_t->data.array.element ? arr_t->data.array.element : IR_TYPE_I64_T;
-                base_ptr = ir_value_global(name, elem_t0);
+                int loaded = ir_builder_emit_load(ctx->builder, elem_t, elem_ptr);
+                ir_lower_tag_last_inst(ctx->builder, IR_OP_LOAD, loaded, name);
+                return ir_value_reg(loaded, elem_t);
             }
 
-            IRType* elem_t = arr_t->data.array.element ? arr_t->data.array.element : IR_TYPE_I64_T;
-            IRType* elem_ptr_t = ir_type_ptr(elem_t);
-
-            // تأكد من أن base_ptr نوعه ptr(elem)
-            if (!base_ptr) {
-                ir_lower_report_error(ctx, expr, "فشل بناء عنوان عنصر المصفوفة '%s'.", name ? name : "???");
-                (void)lower_expr(ctx, expr->data.array_op.index);
+            IRGlobal* g = NULL;
+            if (ctx->builder && ctx->builder->module && name) {
+                g = ir_module_find_global(ctx->builder->module, name);
+            }
+            if (!g || !g->type) {
+                ir_lower_report_error(ctx, expr, "مصفوفة/نص غير معرّف '%s'.", name ? name : "???");
+                for (Node* idx = expr->data.array_op.indices; idx; idx = idx->next) {
+                    (void)lower_expr(ctx, idx);
+                }
                 return ir_builder_const_i64(0);
             }
 
-            IRValue* idx = lower_expr(ctx, expr->data.array_op.index);
-            if (idx && idx->type && idx->type->kind != IR_TYPE_I64) {
-                int idx64 = ir_builder_emit_cast(ctx->builder, idx, IR_TYPE_I64_T);
-                idx = ir_value_reg(idx64, IR_TYPE_I64_T);
+            // نص عام: global يحمل ptr<char>، لذا نحمّله أولاً ثم نفهرسه.
+            if (g->type->kind == IR_TYPE_PTR && g->type->data.pointee &&
+                g->type->data.pointee->kind == IR_TYPE_CHAR)
+            {
+                Node* idx_node = expr->data.array_op.indices;
+                if (!idx_node) {
+                    ir_lower_report_error(ctx, expr, "فهرس النص '%s' مفقود.", name ? name : "???");
+                    return ir_builder_const_i64(0);
+                }
+
+                IRValue* gptr = ir_value_global(name, g->type);
+                int loaded = ir_builder_emit_load(ctx->builder, g->type, gptr);
+                IRValue* str_ptr = ir_value_reg(loaded, g->type);
+
+                IRValue* idx = ensure_i64(ctx, lower_expr(ctx, idx_node));
+                int ep = ir_builder_emit_ptr_offset(ctx->builder, g->type, str_ptr, idx);
+                IRValue* elem_ptr = ir_value_reg(ep, g->type);
+                int ch = ir_builder_emit_load(ctx->builder, IR_TYPE_CHAR_T, elem_ptr);
+                return ir_value_reg(ch, IR_TYPE_CHAR_T);
             }
 
-            int ep = ir_builder_emit_ptr_offset(ctx->builder, elem_ptr_t, base_ptr, idx);
+            if (g->type->kind != IR_TYPE_ARRAY) {
+                ir_lower_report_error(ctx, expr, "'%s' ليس مصفوفة.", name ? name : "???");
+                for (Node* idx = expr->data.array_op.indices; idx; idx = idx->next) {
+                    (void)lower_expr(ctx, idx);
+                }
+                return ir_builder_const_i64(0);
+            }
+
+            Node* gdecl = ir_lower_find_global_array_decl(ctx, name);
+            int rank = 1;
+            const int* dims = NULL;
+            DataType elem_dt = TYPE_INT;
+            if (gdecl && gdecl->type == NODE_ARRAY_DECL) {
+                rank = gdecl->data.array_decl.dim_count > 0 ? gdecl->data.array_decl.dim_count : 1;
+                dims = gdecl->data.array_decl.dims;
+                elem_dt = gdecl->data.array_decl.element_type;
+            }
+
+            bool elem_is_agg = (elem_dt == TYPE_STRUCT || elem_dt == TYPE_UNION);
+            IRType* elem_t = elem_is_agg
+                ? IR_TYPE_I8_T
+                : (g->type->data.array.element ? g->type->data.array.element : IR_TYPE_I64_T);
+            IRType* elem_ptr_t = ir_type_ptr(elem_t);
+            bool elem_is_string = (!elem_is_agg &&
+                                   elem_t && elem_t->kind == IR_TYPE_PTR &&
+                                   elem_t->data.pointee &&
+                                   elem_t->data.pointee->kind == IR_TYPE_CHAR);
+            IRValue* base_ptr = ir_value_global(name, elem_t);
+
+            if (elem_is_string && rank > 0 && index_count == rank + 1) {
+                IRValue* outer_linear = ir_lower_build_linear_index(ctx, expr,
+                                                                    expr->data.array_op.indices,
+                                                                    rank,
+                                                                    dims,
+                                                                    rank);
+                int ep_outer = ir_builder_emit_ptr_offset(ctx->builder, elem_ptr_t, base_ptr, outer_linear);
+                IRValue* outer_ptr = ir_value_reg(ep_outer, elem_ptr_t);
+                int ld_str = ir_builder_emit_load(ctx->builder, elem_t, outer_ptr);
+                IRValue* str_ptr = ir_value_reg(ld_str, elem_t);
+
+                Node* inner_node = ir_lower_nth_index(expr->data.array_op.indices, rank);
+                IRValue* inner_idx = ensure_i64(ctx, lower_expr(ctx, inner_node));
+                int ep_inner = ir_builder_emit_ptr_offset(ctx->builder, elem_t, str_ptr, inner_idx);
+                IRValue* ch_ptr = ir_value_reg(ep_inner, elem_t);
+                int ch = ir_builder_emit_load(ctx->builder, IR_TYPE_CHAR_T, ch_ptr);
+                return ir_value_reg(ch, IR_TYPE_CHAR_T);
+            }
+
+            IRValue* linear = ir_lower_build_linear_index(ctx, expr,
+                                                          expr->data.array_op.indices,
+                                                          index_count,
+                                                          dims,
+                                                          rank);
+            int ep = ir_builder_emit_ptr_offset(ctx->builder, elem_ptr_t, base_ptr, linear);
             IRValue* elem_ptr = ir_value_reg(ep, elem_ptr_t);
+
+            if (elem_is_agg) {
+                ir_lower_report_error(ctx, expr, "استخدام عنصر مصفوفة مركبة كقيمة غير مدعوم.");
+                return ir_builder_const_i64(0);
+            }
 
             int loaded = ir_builder_emit_load(ctx->builder, elem_t, elem_ptr);
             ir_lower_tag_last_inst(ctx->builder, IR_OP_LOAD, loaded, name);
@@ -1316,15 +1577,8 @@ IRValue* lower_expr(IRLowerCtx* ctx, Node* expr) {
             int ep = ir_builder_emit_ptr_offset(ctx->builder, ptr_i8_t, base_ptr, idx);
             IRValue* byte_ptr = ir_value_reg(ep, ptr_i8_t);
 
-            IRType* field_val_t = NULL;
-            switch (expr->data.member_access.member_type) {
-                case TYPE_BOOL: field_val_t = IR_TYPE_I1_T; break;
-                case TYPE_CHAR: field_val_t = IR_TYPE_I32_T; break;
-                case TYPE_STRING: field_val_t = get_char_ptr_type(m); break;
-                case TYPE_ENUM:
-                case TYPE_INT:
-                default: field_val_t = IR_TYPE_I64_T; break;
-            }
+            IRType* field_val_t = ir_type_from_datatype(m, expr->data.member_access.member_type);
+            if (!field_val_t || field_val_t->kind == IR_TYPE_VOID) field_val_t = IR_TYPE_I64_T;
 
             IRType* field_ptr_t = ir_type_ptr(field_val_t);
             int fp = ir_builder_emit_cast(ctx->builder, byte_ptr, field_ptr_t);
@@ -1354,21 +1608,54 @@ static void lower_array_decl(IRLowerCtx* ctx, Node* stmt) {
                 stmt->data.array_decl.name ? stmt->data.array_decl.name : "???");
         return;
     }
-    if (stmt->data.array_decl.size <= 0) {
+    if (stmt->data.array_decl.total_elems <= 0 || stmt->data.array_decl.total_elems > INT_MAX) {
         ir_lower_report_error(ctx, stmt, "حجم المصفوفة غير صالح.");
         return;
     }
 
+    const int total_count = (int)stmt->data.array_decl.total_elems;
+    DataType elem_dt = stmt->data.array_decl.element_type;
+    const char* elem_type_name = stmt->data.array_decl.element_type_name;
+    bool elem_is_agg = (elem_dt == TYPE_STRUCT || elem_dt == TYPE_UNION);
+
+    IRModule* m = ctx->builder->module;
+    if (m) ir_module_set_current(m);
+
+    IRType* elem_t = NULL;
+    IRType* arr_t = NULL;
+    int elem_size_bytes = 0;
+
+    if (elem_is_agg) {
+        elem_size_bytes = stmt->data.array_decl.element_struct_size;
+        if (elem_size_bytes <= 0) {
+            ir_lower_report_error(ctx, stmt, "حجم عنصر المصفوفة المركبة غير صالح.");
+            return;
+        }
+        int64_t total_bytes64 = stmt->data.array_decl.total_elems * (int64_t)elem_size_bytes;
+        if (total_bytes64 <= 0 || total_bytes64 > INT_MAX) {
+            ir_lower_report_error(ctx, stmt, "حجم تخزين المصفوفة المركبة كبير جداً.");
+            return;
+        }
+        elem_t = IR_TYPE_I8_T;
+        arr_t = ir_type_array(IR_TYPE_I8_T, (int)total_bytes64);
+    } else {
+        elem_t = ir_type_from_datatype(m, elem_dt);
+        if (!elem_t || elem_t->kind == IR_TYPE_VOID) elem_t = IR_TYPE_I64_T;
+        arr_t = ir_type_array(elem_t, total_count);
+    }
+
+    if (!arr_t) {
+        ir_lower_report_error(ctx, stmt, "فشل إنشاء نوع مصفوفة أثناء خفض IR.");
+        return;
+    }
+
     if (stmt->data.array_decl.is_static) {
-        IRModule* m = ctx->builder->module;
         if (!m) {
             ir_lower_report_error(ctx, stmt, "وحدة IR غير متاحة لتعريف مصفوفة ساكنة.");
             return;
         }
         ir_module_set_current(m);
 
-        IRType* elem_t = IR_TYPE_I64_T;
-        IRType* arr_t = ir_type_array(elem_t, stmt->data.array_decl.size);
         char* gname = ir_lower_make_static_label(ctx, stmt->data.array_decl.name);
         if (!gname) return;
 
@@ -1382,11 +1669,11 @@ static void lower_array_decl(IRLowerCtx* ctx, Node* stmt) {
         g->is_internal = true;
         g->has_init_list = stmt->data.array_decl.has_init ? true : false;
 
-        if (stmt->data.array_decl.has_init) {
+        if (stmt->data.array_decl.has_init && !elem_is_agg) {
             int n = stmt->data.array_decl.init_count;
             if (n < 0) n = 0;
-            if (stmt->data.array_decl.size > 0 && n > stmt->data.array_decl.size) {
-                n = stmt->data.array_decl.size;
+            if (n > total_count) {
+                n = total_count;
             }
 
             IRValue** elems = NULL;
@@ -1406,26 +1693,40 @@ static void lower_array_decl(IRLowerCtx* ctx, Node* stmt) {
 
             g->init_elems = elems;
             g->init_elem_count = n;
+        } else if (stmt->data.array_decl.has_init && elem_is_agg && stmt->data.array_decl.init_count > 0) {
+            ir_lower_report_error(ctx, stmt, "تهيئة مصفوفات الأنواع المركبة غير مدعومة حالياً في خفض IR.");
         }
 
         ir_lower_bind_local_static(ctx, stmt->data.array_decl.name, gname, arr_t);
+        ir_lower_set_local_array_meta(ctx,
+                                      stmt->data.array_decl.name,
+                                      stmt->data.array_decl.dim_count,
+                                      stmt->data.array_decl.dims,
+                                      elem_dt,
+                                      elem_type_name);
         return;
     }
-
-    IRModule* m = ctx->builder->module;
-    if (m) ir_module_set_current(m);
-
-    IRType* elem_t = IR_TYPE_I64_T;
-    IRType* arr_t = ir_type_array(elem_t, stmt->data.array_decl.size);
 
     int ptr_reg = ir_builder_emit_alloca(ctx->builder, arr_t);
     ir_lower_tag_last_inst(ctx->builder, IR_OP_ALLOCA, ptr_reg, stmt->data.array_decl.name);
 
     ir_lower_bind_local(ctx, stmt->data.array_decl.name, ptr_reg, arr_t);
+    ir_lower_set_local_array_meta(ctx,
+                                  stmt->data.array_decl.name,
+                                  stmt->data.array_decl.dim_count,
+                                  stmt->data.array_decl.dims,
+                                  elem_dt,
+                                  elem_type_name);
 
     // تهيئة المصفوفة كما في C:
     // - إذا وُجدت قائمة تهيئة (حتى `{}`)، نُهيّئ العناصر المحددة ثم نملأ الباقي بأصفار.
     if (!stmt->data.array_decl.has_init) {
+        return;
+    }
+    if (elem_is_agg) {
+        if (stmt->data.array_decl.init_count > 0) {
+            ir_lower_report_error(ctx, stmt, "تهيئة مصفوفات الأنواع المركبة غير مدعومة حالياً في خفض IR.");
+        }
         return;
     }
 
@@ -1439,7 +1740,7 @@ static void lower_array_decl(IRLowerCtx* ctx, Node* stmt) {
 
     int i = 0;
     Node* v = stmt->data.array_decl.init_values;
-    while (v && i < stmt->data.array_decl.size) {
+    while (v && i < total_count) {
         // اربط موقع التوليد بموقع عنصر التهيئة.
         ir_lower_set_loc(ctx->builder, v);
 
@@ -1459,7 +1760,7 @@ static void lower_array_decl(IRLowerCtx* ctx, Node* stmt) {
     }
 
     // تعبئة الباقي بأصفار
-    for (; i < stmt->data.array_decl.size; i++) {
+    for (; i < total_count; i++) {
         ir_lower_set_loc(ctx->builder, stmt);
         IRValue* idx = ir_value_const_int((int64_t)i, IR_TYPE_I64_T);
         int ep = ir_builder_emit_ptr_offset(ctx->builder, elem_ptr_t, base_ptr, idx);
@@ -1588,69 +1889,110 @@ static void lower_array_assign(IRLowerCtx* ctx, Node* stmt) {
     ir_lower_set_loc(ctx->builder, stmt);
 
     const char* name = stmt->data.array_op.name;
-    const char* storage_name = name;
-    IRType* arr_t = NULL;
-    IRValue* arr_ptr = NULL;
-    bool is_global_arr = false;
+    int index_count = stmt->data.array_op.index_count;
+    if (index_count <= 0) index_count = ir_lower_index_count(stmt->data.array_op.indices);
 
     IRLowerBinding* b = find_local(ctx, name);
     if (b) {
-        storage_name = ir_lower_binding_storage_name(b);
-        if (!b->value_type || b->value_type->kind != IR_TYPE_ARRAY) {
+        const char* storage_name = ir_lower_binding_storage_name(b);
+        if (!b->is_array || !b->value_type || b->value_type->kind != IR_TYPE_ARRAY) {
             ir_lower_report_error(ctx, stmt, "'%s' ليس مصفوفة في مسار IR.", name ? name : "???");
-            (void)lower_expr(ctx, stmt->data.array_op.index);
+            for (Node* idx = stmt->data.array_op.indices; idx; idx = idx->next) {
+                (void)lower_expr(ctx, idx);
+            }
             (void)lower_expr(ctx, stmt->data.array_op.value);
             return;
         }
-        arr_t = b->value_type;
+        if (b->array_elem_type == TYPE_STRUCT || b->array_elem_type == TYPE_UNION) {
+            ir_lower_report_error(ctx, stmt, "تعيين عنصر مصفوفة مركبة غير مدعوم حالياً.");
+            for (Node* idx = stmt->data.array_op.indices; idx; idx = idx->next) {
+                (void)lower_expr(ctx, idx);
+            }
+            (void)lower_expr(ctx, stmt->data.array_op.value);
+            return;
+        }
+
+        IRType* elem_t = b->value_type->data.array.element ? b->value_type->data.array.element : IR_TYPE_I64_T;
+        IRType* elem_ptr_t = ir_type_ptr(elem_t);
+
+        IRValue* base_ptr = NULL;
         if (b->is_static_storage) {
-            is_global_arr = true;
+            base_ptr = ir_value_global(storage_name, elem_t);
         } else {
-            arr_ptr = ir_value_reg(b->ptr_reg, ir_type_ptr(arr_t));
+            IRValue* arr_ptr = ir_value_reg(b->ptr_reg, ir_type_ptr(b->value_type));
+            int base_reg = ir_builder_emit_cast(ctx->builder, arr_ptr, elem_ptr_t);
+            base_ptr = ir_value_reg(base_reg, elem_ptr_t);
         }
-    } else {
-        // مصفوفة عامة
-        IRGlobal* g = NULL;
-        if (ctx->builder && ctx->builder->module && name) {
-            g = ir_module_find_global(ctx->builder->module, name);
-        }
-        if (!g || !g->type || g->type->kind != IR_TYPE_ARRAY) {
-            ir_lower_report_error(ctx, stmt, "تعيين إلى مصفوفة غير معرّفة '%s'.", name ? name : "???");
-            (void)lower_expr(ctx, stmt->data.array_op.index);
+
+        if (!base_ptr) {
+            ir_lower_report_error(ctx, stmt, "فشل بناء عنوان عنصر المصفوفة '%s'.", name ? name : "???");
+            for (Node* idx = stmt->data.array_op.indices; idx; idx = idx->next) {
+                (void)lower_expr(ctx, idx);
+            }
             (void)lower_expr(ctx, stmt->data.array_op.value);
             return;
         }
-        arr_t = g->type;
-        // مهم: لا نستخدم cast على global لأن MOV سيقرأ القيمة من الذاكرة.
-        // سنستخدم @name مباشرةً كقاعدة ptr(elem) لاحقاً.
-        is_global_arr = true;
+
+        IRValue* linear = ir_lower_build_linear_index(ctx, stmt,
+                                                      stmt->data.array_op.indices,
+                                                      index_count,
+                                                      b->array_dims,
+                                                      b->array_rank);
+        int ep = ir_builder_emit_ptr_offset(ctx->builder, elem_ptr_t, base_ptr, linear);
+        IRValue* elem_ptr = ir_value_reg(ep, elem_ptr_t);
+
+        IRValue* val = lower_expr(ctx, stmt->data.array_op.value);
+        if (val && val->type && !ir_types_equal(val->type, elem_t)) {
+            int cv = ir_builder_emit_cast(ctx->builder, val, elem_t);
+            val = ir_value_reg(cv, elem_t);
+        }
+
+        ir_builder_emit_store(ctx->builder, val, elem_ptr);
+        return;
     }
 
-    IRType* elem_t = arr_t->data.array.element ? arr_t->data.array.element : IR_TYPE_I64_T;
-    IRType* elem_ptr_t = ir_type_ptr(elem_t);
-
-    IRValue* base_ptr = NULL;
-    if (is_global_arr) {
-        base_ptr = ir_value_global(storage_name, elem_t);
-    } else {
-        int base_reg = ir_builder_emit_cast(ctx->builder, arr_ptr, elem_ptr_t);
-        base_ptr = ir_value_reg(base_reg, elem_ptr_t);
+    // مصفوفة عامة
+    IRGlobal* g = NULL;
+    if (ctx->builder && ctx->builder->module && name) {
+        g = ir_module_find_global(ctx->builder->module, name);
     }
-
-    if (!base_ptr) {
-        ir_lower_report_error(ctx, stmt, "فشل بناء عنوان عنصر المصفوفة '%s'.", name ? name : "???");
-        (void)lower_expr(ctx, stmt->data.array_op.index);
+    if (!g || !g->type || g->type->kind != IR_TYPE_ARRAY) {
+        ir_lower_report_error(ctx, stmt, "تعيين إلى مصفوفة غير معرّفة '%s'.", name ? name : "???");
+        for (Node* idx = stmt->data.array_op.indices; idx; idx = idx->next) {
+            (void)lower_expr(ctx, idx);
+        }
         (void)lower_expr(ctx, stmt->data.array_op.value);
         return;
     }
 
-    IRValue* idx = lower_expr(ctx, stmt->data.array_op.index);
-    if (idx && idx->type && idx->type->kind != IR_TYPE_I64) {
-        int idx64 = ir_builder_emit_cast(ctx->builder, idx, IR_TYPE_I64_T);
-        idx = ir_value_reg(idx64, IR_TYPE_I64_T);
+    Node* gdecl = ir_lower_find_global_array_decl(ctx, name);
+    int rank = 1;
+    const int* dims = NULL;
+    DataType elem_dt = TYPE_INT;
+    if (gdecl && gdecl->type == NODE_ARRAY_DECL) {
+        rank = gdecl->data.array_decl.dim_count > 0 ? gdecl->data.array_decl.dim_count : 1;
+        dims = gdecl->data.array_decl.dims;
+        elem_dt = gdecl->data.array_decl.element_type;
+    }
+    if (elem_dt == TYPE_STRUCT || elem_dt == TYPE_UNION) {
+        ir_lower_report_error(ctx, stmt, "تعيين عنصر مصفوفة مركبة غير مدعوم حالياً.");
+        for (Node* idx = stmt->data.array_op.indices; idx; idx = idx->next) {
+            (void)lower_expr(ctx, idx);
+        }
+        (void)lower_expr(ctx, stmt->data.array_op.value);
+        return;
     }
 
-    int ep = ir_builder_emit_ptr_offset(ctx->builder, elem_ptr_t, base_ptr, idx);
+    IRType* elem_t = g->type->data.array.element ? g->type->data.array.element : IR_TYPE_I64_T;
+    IRType* elem_ptr_t = ir_type_ptr(elem_t);
+    IRValue* base_ptr = ir_value_global(name, elem_t);
+
+    IRValue* linear = ir_lower_build_linear_index(ctx, stmt,
+                                                  stmt->data.array_op.indices,
+                                                  index_count,
+                                                  dims,
+                                                  rank);
+    int ep = ir_builder_emit_ptr_offset(ctx->builder, elem_ptr_t, base_ptr, linear);
     IRValue* elem_ptr = ir_value_reg(ep, elem_ptr_t);
 
     IRValue* val = lower_expr(ctx, stmt->data.array_op.value);
@@ -1714,15 +2056,8 @@ static void lower_member_assign(IRLowerCtx* ctx, Node* stmt) {
     int ep = ir_builder_emit_ptr_offset(ctx->builder, ptr_i8_t, base_ptr, idx);
     IRValue* byte_ptr = ir_value_reg(ep, ptr_i8_t);
 
-    IRType* field_val_t = NULL;
-    switch (target->data.member_access.member_type) {
-        case TYPE_BOOL: field_val_t = IR_TYPE_I1_T; break;
-        case TYPE_CHAR: field_val_t = IR_TYPE_I32_T; break;
-        case TYPE_STRING: field_val_t = get_char_ptr_type(m); break;
-        case TYPE_ENUM:
-        case TYPE_INT:
-        default: field_val_t = IR_TYPE_I64_T; break;
-    }
+    IRType* field_val_t = ir_type_from_datatype(m, target->data.member_access.member_type);
+    if (!field_val_t || field_val_t->kind == IR_TYPE_VOID) field_val_t = IR_TYPE_I64_T;
     IRType* field_ptr_t = ir_type_ptr(field_val_t);
     int fp = ir_builder_emit_cast(ctx->builder, byte_ptr, field_ptr_t);
     IRValue* field_ptr = ir_value_reg(fp, field_ptr_t);
@@ -2614,7 +2949,7 @@ static IRValue* ir_lower_global_init_value(IRBuilder* builder, Node* expr, IRTyp
     }
 }
 
-IRModule* ir_lower_program(Node* program, const char* module_name) {
+IRModule* ir_lower_program(Node* program, const char* module_name, bool enable_bounds_checks) {
     if (!program || program->type != NODE_PROGRAM) return NULL;
 
     IRModule* module = ir_module_new(module_name ? module_name : "module");
@@ -2662,8 +2997,40 @@ IRModule* ir_lower_program(Node* program, const char* module_name) {
         if (decl->type == NODE_ARRAY_DECL && decl->data.array_decl.is_global) {
             if (!decl->data.array_decl.name) continue;
 
-            IRType* elem_t = IR_TYPE_I64_T;
-            IRType* arr_t = ir_type_array(elem_t, decl->data.array_decl.size);
+            if (decl->data.array_decl.total_elems <= 0 || decl->data.array_decl.total_elems > INT_MAX) {
+                fprintf(stderr, "IR Lower Error: global array '%s' has invalid total size\n",
+                        decl->data.array_decl.name ? decl->data.array_decl.name : "???");
+                continue;
+            }
+
+            int total_count = (int)decl->data.array_decl.total_elems;
+            DataType elem_dt = decl->data.array_decl.element_type;
+            bool elem_is_agg = (elem_dt == TYPE_STRUCT || elem_dt == TYPE_UNION);
+
+            IRType* elem_t = NULL;
+            IRType* arr_t = NULL;
+
+            if (elem_is_agg) {
+                int elem_size = decl->data.array_decl.element_struct_size;
+                if (elem_size <= 0) {
+                    fprintf(stderr, "IR Lower Error: global array '%s' has invalid aggregate element size\n",
+                            decl->data.array_decl.name ? decl->data.array_decl.name : "???");
+                    continue;
+                }
+                int64_t total_bytes64 = decl->data.array_decl.total_elems * (int64_t)elem_size;
+                if (total_bytes64 <= 0 || total_bytes64 > INT_MAX) {
+                    fprintf(stderr, "IR Lower Error: global array '%s' is too large\n",
+                            decl->data.array_decl.name ? decl->data.array_decl.name : "???");
+                    continue;
+                }
+                elem_t = IR_TYPE_I8_T;
+                arr_t = ir_type_array(IR_TYPE_I8_T, (int)total_bytes64);
+            } else {
+                elem_t = ir_type_from_datatype(module, elem_dt);
+                if (!elem_t || elem_t->kind == IR_TYPE_VOID) elem_t = IR_TYPE_I64_T;
+                arr_t = ir_type_array(elem_t, total_count);
+            }
+            if (!arr_t) continue;
 
             IRGlobal* g = ir_builder_create_global(builder, decl->data.array_decl.name, arr_t,
                                                    decl->data.array_decl.is_const ? 1 : 0);
@@ -2672,11 +3039,11 @@ IRModule* ir_lower_program(Node* program, const char* module_name) {
 
             g->has_init_list = decl->data.array_decl.has_init ? true : false;
 
-            if (decl->data.array_decl.has_init) {
+            if (decl->data.array_decl.has_init && !elem_is_agg) {
                 int n = decl->data.array_decl.init_count;
                 if (n < 0) n = 0;
-                if (decl->data.array_decl.size > 0 && n > decl->data.array_decl.size) {
-                    n = decl->data.array_decl.size;
+                if (n > total_count) {
+                    n = total_count;
                 }
 
                 // نخزن فقط العناصر المعطاة؛ الباقي يُعتبر صفراً كما في C.
@@ -2697,6 +3064,9 @@ IRModule* ir_lower_program(Node* program, const char* module_name) {
 
                 g->init_elems = elems;
                 g->init_elem_count = n;
+            } else if (decl->data.array_decl.has_init && elem_is_agg && decl->data.array_decl.init_count > 0) {
+                fprintf(stderr, "IR Lower Error: aggregate array initializer not supported for '%s'\n",
+                        decl->data.array_decl.name ? decl->data.array_decl.name : "???");
             }
 
             continue;
@@ -2763,6 +3133,8 @@ IRModule* ir_lower_program(Node* program, const char* module_name) {
             ir_lower_ctx_init(&ctx, builder);
             ctx.current_func_name = decl->data.func_def.name;
             ctx.static_local_counter = 0;
+            ctx.enable_bounds_checks = enable_bounds_checks;
+            ctx.program_root = program;
 
             // نطاق الدالة: المعاملات + جسم الدالة
             ir_lower_scope_push(&ctx);

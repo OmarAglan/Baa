@@ -1,6 +1,6 @@
 # Baa Compiler Internals
 
-> **Version:** 0.3.8 | [← Language Spec](LANGUAGE.md) | [API Reference →](API_REFERENCE.md)
+> **Version:** 0.3.9 (in progress) | [← Language Spec](LANGUAGE.md) | [API Reference →](API_REFERENCE.md)
 
 **Target Architecture:** x86-64 (AMD64)
 **Targets:** Windows x64 (COFF/PE) + Linux x86-64 (ELF)
@@ -471,7 +471,7 @@ The Semantic Analyzer (`src/analysis.c`) performs a static check on the AST befo
 ### 5.1. Responsibilities
 
 1. **Symbol Resolution**: Verifies variables are declared before use.
-2. **Type Checking**: Enforces `TYPE_INT`, `TYPE_STRING`, and `TYPE_BOOL` compatibility.
+2. **Type Checking**: Enforces compatibility across primitive/sized numeric types, `نص`/`حرف`/`منطقي`/`عشري`, and compound types (`تعداد`/`هيكل`/`اتحاد`) including array elements.
 3. **Scope Validation**: Manages visibility rules.
 4. **Constant Checking** (v0.2.7+): Prevents reassignment of immutable variables.
 5. **Static Storage Rules** (v0.3.7.5): Validates `ساكن` declarations and enforces compile-time initializers for static-storage objects.
@@ -480,6 +480,7 @@ The Semantic Analyzer (`src/analysis.c`) performs a static check on the AST befo
 8. **Usage Tracking** (v0.2.8+): Tracks variable usage for unused variable warnings.
 9. **Dead Code Detection** (v0.2.8+): Detects unreachable code after `return`/`break`.
 10. **Type Alias Validation** (v0.3.6.5): Registers aliases, validates alias targets, and enforces strict alias/symbol name collision diagnostics.
+11. **Array Shape Validation** (v0.3.9): Tracks array rank/dimensions in symbols, validates index-count match, and performs compile-time out-of-bounds checks for constant indices.
 
 ### 5.2. Constant Checking (v0.2.7+)
 
@@ -844,8 +845,9 @@ Expression lowering lives in `src/ir_lower.h` and `src/ir_lower.c` and is built 
 
 Key concepts:
 
-- `IRLowerCtx`: Lowering context (builder + simple local bindings table).
+- `IRLowerCtx`: Lowering context (builder + local bindings + control-flow stacks + debug bounds-check toggle).
 - `ir_lower_bind_local()`: Bind a variable name to its `حجز` pointer register. *(Statement lowering will populate this in v0.3.0.4.)*
+- Local bindings now carry array metadata (rank/dimensions/element type) to support multi-dimensional indexing.
 - `lower_expr()`: Lower AST expressions into IR operands (`IRValue*`) and emits IR instructions via the builder.
 
 Currently lowered expressions:
@@ -855,6 +857,7 @@ Currently lowered expressions:
 - `NODE_BIN_OP` (arithmetic, comparisons, logical ops)
 - `NODE_UNARY_OP` (neg/not)
 - `NODE_CALL_EXPR` (calls via `نداء`)
+- `NODE_ARRAY_ACCESS` (multi-index row-major address computation via `IR_OP_PTR_OFFSET`)
 
 ### 6.11. AST → IR Lowering (Statements, v0.3.0.4+)
 
@@ -865,6 +868,8 @@ Statement lowering is implemented in the same module and currently supports:
 - `NODE_RETURN`: emit `رجوع`
 - `NODE_PRINT`: emit `نداء @اطبع(...)` (builtin call)
 - `NODE_READ`: emit `نداء @اقرأ(%ptr)` (builtin call)
+- `NODE_ARRAY_DECL` / `NODE_ARRAY_ASSIGN` (including multi-dimensional index chains)
+- `NODE_MEMBER_ASSIGN` on indexed array elements (constant-index path for aggregate arrays)
 
 ### 6.12. AST → IR Lowering (Control Flow, v0.3.0.5+)
 

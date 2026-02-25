@@ -31,6 +31,11 @@ typedef struct IRLowerBinding {
     IRType* value_type;   // Type of the value stored at ptr_reg (e.g., ص٦٤)
     const char* global_name; // اسم الرمز العام عند التخزين الساكن
     bool is_static_storage;  // هل الربط مُمثل بتخزين ساكن عبر رمز عام
+    bool is_array;           // هل الربط يمثل مصفوفة؟
+    int array_rank;          // عدد أبعاد المصفوفة
+    const int* array_dims;   // أبعاد المصفوفة (مرجع إلى AST)
+    DataType array_elem_type; // نوع عنصر المصفوفة
+    const char* array_elem_type_name; // اسم نوع عنصر المصفوفة عند الأنواع المركبة
 } IRLowerBinding;
 
 typedef struct IRLowerCtx {
@@ -58,6 +63,8 @@ typedef struct IRLowerCtx {
     int cf_depth;
 
     int had_error;
+    bool enable_bounds_checks; // تفعيل فحص الحدود وقت التشغيل (امتداد debug)
+    Node* program_root;        // مرجع AST للبحث عن تعريفات عامة (metadata)
 } IRLowerCtx;
 
 /**
@@ -119,7 +126,7 @@ void lower_stmt_list(IRLowerCtx* ctx, Node* first_stmt);
  * @param module_name Optional module name (usually filename).
  * @return Newly allocated IRModule (caller owns; free with ir_module_free()).
  */
-IRModule* ir_lower_program(Node* program, const char* module_name);
+IRModule* ir_lower_program(Node* program, const char* module_name, bool enable_bounds_checks);
 
 #ifdef __cplusplus
 }

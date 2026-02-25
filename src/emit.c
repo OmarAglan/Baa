@@ -1519,6 +1519,9 @@ static void emit_data_section(MachineModule* module, FILE* out) {
                     if (!v) continue;
                     if (v->kind == IR_VAL_CONST_INT) {
                         if (v->data.const_int != 0) { all_zero = 0; break; }
+                    } else if (v->kind == IR_VAL_CONST_STR || v->kind == IR_VAL_BAA_STR) {
+                        all_zero = 0;
+                        break;
                     } else {
                         all_zero = 0;
                         break;
@@ -1533,12 +1536,22 @@ static void emit_data_section(MachineModule* module, FILE* out) {
             } else {
                 fprintf(out, "%s:\n", g->name);
                 for (int i = 0; i < count; i++) {
-                    int64_t v = 0;
                     if (g->init_elems && i < g->init_elem_count && g->init_elems[i]) {
                         IRValue* iv = g->init_elems[i];
-                        if (iv->kind == IR_VAL_CONST_INT) v = iv->data.const_int;
+                        if (iv->kind == IR_VAL_CONST_INT) {
+                            fprintf(out, "    %s %lld\n", dir, (long long)iv->data.const_int);
+                            continue;
+                        }
+                        if (iv->kind == IR_VAL_CONST_STR && elem_t && elem_t->kind == IR_TYPE_PTR) {
+                            fprintf(out, "    .quad .Lstr_%d\n", iv->data.const_str.id);
+                            continue;
+                        }
+                        if (iv->kind == IR_VAL_BAA_STR && elem_t && elem_t->kind == IR_TYPE_PTR) {
+                            fprintf(out, "    .quad .Lbs_%d\n", iv->data.const_str.id);
+                            continue;
+                        }
                     }
-                    fprintf(out, "    %s %lld\n", dir, (long long)v);
+                    fprintf(out, "    %s 0\n", dir);
                 }
             }
 

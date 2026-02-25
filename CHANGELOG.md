@@ -6,7 +6,30 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ---
 
-## [Unreleased]
+## [0.3.9] - 2026-02-25
+
+### Added
+
+- **Multi-dimensional arrays (`v0.3.9` in progress)** — parser, semantic analysis, and IR lowering now support fixed-size multi-dimensional declarations and index chains (row-major linearization) for local/global/static storage.
+- **Optional debug bounds checks for array indices** — IR lowering can emit runtime bounds-guard paths in debug-oriented lowering mode.
+- **Array coverage expansion tests**:
+  - `tests/integration/backend/backend_multidim_array_test.baa`
+  - `tests/neg/semantic_array_rank_mismatch.baa`
+
+### Changed
+
+- **Array AST/Symbol metadata** — array nodes/symbols now track rank + per-dimension sizes + total element count instead of a single fixed size.
+- **Array type support** — fixed-size arrays are no longer restricted to `صحيح`; declarations now carry element-type metadata and validate compound element layouts.
+- **IR lowering API** — `ir_lower_program` now accepts `enable_bounds_checks` to control optional debug bounds instrumentation:
+  - `IRModule* ir_lower_program(Node* program, const char* module_name, bool enable_bounds_checks);`
+
+### Fixed
+
+- **Array index rank diagnostics** — semantic analysis now reports index-count mismatch against declared array rank (e.g., wrong number of `[]` indices).
+- **Global pointer-array emission** — emitter now correctly serializes string pointer initializers in global arrays (`.quad .Lstr_N` / `.quad .Lbs_N` as applicable).
+- **Indexed struct-member array access path** — constant-index member access on array elements (e.g., `مصفوفة_هيكل[i]:حقل`) now resolves to the correct byte offset in semantic analysis.
+
+## [0.3.8.1] - 2026-02-25
 
 ### Changed
 

@@ -276,10 +276,28 @@ static void local_symbol_hash_rebuild(void)
     }
 }
 
+static void symbol_release_array_dims(Symbol* sym)
+{
+    if (!sym) return;
+    if (sym->array_dims) {
+        free(sym->array_dims);
+        sym->array_dims = NULL;
+    }
+    sym->array_rank = 0;
+    sym->array_total_elems = 0;
+}
+
 /**
  * @brief إعادة تعيين جداول الرموز.
  */
 static void reset_analysis() {
+    for (int i = 0; i < global_count; i++) {
+        symbol_release_array_dims(&global_symbols[i]);
+    }
+    for (int i = 0; i < local_count; i++) {
+        symbol_release_array_dims(&local_symbols[i]);
+    }
+
     global_count = 0;
     local_count = 0;
     scope_depth = 0;
@@ -491,6 +509,10 @@ static void scope_pop(void) {
     // تحذيرات المتغيرات غير المستخدمة لهذا النطاق فقط
     check_unused_local_variables_range(start, local_count);
 
+    for (int i = start; i < local_count; i++) {
+        symbol_release_array_dims(&local_symbols[i]);
+    }
+
     // إخراج رموز النطاق من الجدول (منطقيًا)
     local_count = start;
     local_symbol_hash_rebuild();
@@ -506,7 +528,9 @@ static void add_symbol(const char* name,
                        bool is_const,
                        bool is_static,
                        bool is_array,
-                       int array_size,
+                       int array_rank,
+                       const int* array_dims,
+                       int64_t array_total_elems,
                        int decl_line,
                        int decl_col,
                        const char* decl_file) {
@@ -554,7 +578,21 @@ static void add_symbol(const char* name,
             }
         }
         global_symbols[global_count].is_array = is_array;
-        global_symbols[global_count].array_size = is_array ? array_size : 0;
+        global_symbols[global_count].array_rank = 0;
+        global_symbols[global_count].array_total_elems = 0;
+        global_symbols[global_count].array_dims = NULL;
+        if (is_array && array_rank > 0 && array_dims) {
+            int* dims_copy = (int*)malloc((size_t)array_rank * sizeof(int));
+            if (!dims_copy) {
+                semantic_error_loc(decl_file, decl_line, decl_col,
+                                   "نفدت الذاكرة أثناء نسخ أبعاد المصفوفة.");
+                return;
+            }
+            for (int i = 0; i < array_rank; i++) dims_copy[i] = array_dims[i];
+            global_symbols[global_count].array_dims = dims_copy;
+            global_symbols[global_count].array_rank = array_rank;
+            global_symbols[global_count].array_total_elems = array_total_elems;
+        }
         global_symbols[global_count].is_const = is_const;
         global_symbols[global_count].is_static = is_static;
         global_symbols[global_count].is_used = false;
@@ -600,7 +638,21 @@ static void add_symbol(const char* name,
             }
         }
         local_symbols[local_count].is_array = is_array;
-        local_symbols[local_count].array_size = is_array ? array_size : 0;
+        local_symbols[local_count].array_rank = 0;
+        local_symbols[local_count].array_total_elems = 0;
+        local_symbols[local_count].array_dims = NULL;
+        if (is_array && array_rank > 0 && array_dims) {
+            int* dims_copy = (int*)malloc((size_t)array_rank * sizeof(int));
+            if (!dims_copy) {
+                semantic_error_loc(decl_file, decl_line, decl_col,
+                                   "نفدت الذاكرة أثناء نسخ أبعاد المصفوفة.");
+                return;
+            }
+            for (int i = 0; i < array_rank; i++) dims_copy[i] = array_dims[i];
+            local_symbols[local_count].array_dims = dims_copy;
+            local_symbols[local_count].array_rank = array_rank;
+            local_symbols[local_count].array_total_elems = array_total_elems;
+        }
         local_symbols[local_count].is_const = is_const;
         local_symbols[local_count].is_static = is_static;
         local_symbols[local_count].is_used = false;
@@ -621,6 +673,67 @@ static Symbol* lookup(const char* name, bool mark_used) {
     if (!s) s = global_lookup_by_name(name);
     if (s && mark_used) s->is_used = true;
     return s;
+}
+
+static DataType infer_type(Node* node);
+static bool types_compatible(DataType got, DataType expected);
+
+static int node_list_count(Node* head)
+{
+    int n = 0;
+    for (Node* p = head; p; p = p->next) n++;
+    return n;
+}
+
+static int analyze_indices_type_and_bounds(Symbol* sym, Node* access_node, Node* indices, int expected_rank)
+{
+    if (!sym || !access_node) return 0;
+
+    int seen = 0;
+    for (Node* idx_node = indices; idx_node; idx_node = idx_node->next, seen++) {
+        DataType it = infer_type(idx_node);
+        if (!types_compatible(it, TYPE_INT) || it == TYPE_FLOAT) {
+            semantic_error(idx_node, "فهرس المصفوفة يجب أن يكون صحيحاً.");
+        }
+
+        if (idx_node->type == NODE_INT && sym->array_dims && seen < sym->array_rank) {
+            int64_t idx = (int64_t)idx_node->data.integer.value;
+            int dim = sym->array_dims[seen];
+            if (idx < 0 || (dim > 0 && idx >= dim)) {
+                semantic_error(access_node,
+                               "فهرس خارج الحدود للمصفوفة '%s' في البعد %d (الحجم %d).",
+                               sym->name, seen + 1, dim);
+            }
+        }
+    }
+
+    if (seen != expected_rank) {
+        semantic_error(access_node,
+                       "عدد الفهارس للمصفوفة '%s' غير صحيح (المتوقع %d، المعطى %d).",
+                       sym->name, expected_rank, seen);
+    }
+
+    return seen;
+}
+
+static bool symbol_const_linear_index(Symbol* sym, Node* indices, int expected_rank, int64_t* out_linear)
+{
+    if (!sym || !indices || !out_linear) return false;
+    if (!sym->array_dims || sym->array_rank <= 0 || expected_rank <= 0) return false;
+
+    int64_t linear = 0;
+    int seen = 0;
+    for (Node* idx_node = indices; idx_node && seen < expected_rank; idx_node = idx_node->next, seen++) {
+        if (idx_node->type != NODE_INT) return false;
+        int64_t idx = (int64_t)idx_node->data.integer.value;
+        int dim = sym->array_dims[seen];
+        if (idx < 0 || dim <= 0 || idx >= dim) return false;
+        linear = linear * (int64_t)dim + idx;
+    }
+
+    if (seen != expected_rank) return false;
+    *out_linear = linear;
+    return true;
 }
 
 // ============================================================================
@@ -867,6 +980,10 @@ static void resolve_member_access(Node* node)
             semantic_error(node, "متغير غير معرّف '%s'.", base->data.var_ref.name ? base->data.var_ref.name : "???");
             return;
         }
+        if (sym->is_array) {
+            semantic_error(node, "الوصول إلى عضو مصفوفة يتطلب فهرسة أولاً.");
+            return;
+        }
         if (sym->type != TYPE_STRUCT && sym->type != TYPE_UNION) {
             semantic_error(node, "'%s' ليس هيكلاً/اتحاداً.", sym->name);
             return;
@@ -876,6 +993,54 @@ static void resolve_member_access(Node* node)
         cur_struct = sym->type_name[0] ? sym->type_name : NULL;
         cur_kind = sym->type;
         base_off = 0;
+        base_const = sym->is_const;
+    } else if (base->type == NODE_ARRAY_ACCESS) {
+        Symbol* sym = lookup(base->data.array_op.name, true);
+        if (!sym) {
+            semantic_error(node, "مصفوفة غير معرّفة '%s'.",
+                           base->data.array_op.name ? base->data.array_op.name : "???");
+            return;
+        }
+        if (!sym->is_array) {
+            semantic_error(node, "'%s' ليس مصفوفة.", sym->name);
+            return;
+        }
+        if (sym->type != TYPE_STRUCT && sym->type != TYPE_UNION) {
+            semantic_error(node, "الوصول إلى عضو يتطلب أن يكون عنصر المصفوفة هيكلاً/اتحاداً.");
+            return;
+        }
+
+        int expected = (sym->array_rank > 0) ? sym->array_rank : 1;
+        int supplied = base->data.array_op.index_count;
+        if (supplied <= 0) supplied = node_list_count(base->data.array_op.indices);
+        (void)analyze_indices_type_and_bounds(sym, base, base->data.array_op.indices, expected);
+        if (supplied != expected) {
+            return;
+        }
+
+        int64_t linear = 0;
+        if (!symbol_const_linear_index(sym, base->data.array_op.indices, expected, &linear)) {
+            semantic_error(base, "الوصول إلى عضو عنصر مصفوفة مركبة يتطلب فهارس ثابتة حالياً.");
+            return;
+        }
+
+        int elem_size = type_size_align(sym->type, sym->type_name[0] ? sym->type_name : NULL, NULL);
+        if (elem_size <= 0) {
+            semantic_error(base, "حجم عنصر المصفوفة غير صالح.");
+            return;
+        }
+
+        int64_t off64 = linear * (int64_t)elem_size;
+        if (off64 < 0 || off64 > INT_MAX) {
+            semantic_error(base, "إزاحة عضو المصفوفة كبيرة جداً.");
+            return;
+        }
+
+        root_var = sym->name;
+        root_is_global = (sym->scope == SCOPE_GLOBAL);
+        cur_struct = sym->type_name[0] ? sym->type_name : NULL;
+        cur_kind = sym->type;
+        base_off = (int)off64;
         base_const = sym->is_const;
     } else if (base->type == NODE_MEMBER_ACCESS) {
         resolve_member_access(base);
@@ -1860,7 +2025,7 @@ static bool sizeof_expr_bytes(Node* expr, int64_t* out_size)
             if (!datatype_size_bytes(sym->type, sym->type_name[0] ? sym->type_name : NULL, &elem_size)) {
                 return false;
             }
-            *out_size = elem_size * (int64_t)sym->array_size;
+            *out_size = elem_size * sym->array_total_elems;
             return true;
         }
 
@@ -1982,36 +2147,66 @@ static DataType infer_type_internal(Node* node) {
             Symbol* sym = lookup(node->data.array_op.name, true);
             if (!sym) {
                 semantic_error(node, "مصفوفة غير معرّفة '%s'.", node->data.array_op.name ? node->data.array_op.name : "???");
-                (void)infer_type(node->data.array_op.index);
+                for (Node* idx = node->data.array_op.indices; idx; idx = idx->next) {
+                    (void)infer_type(idx);
+                }
                 return TYPE_INT;
             }
+
+            int supplied = node->data.array_op.index_count;
+            if (supplied <= 0) supplied = node_list_count(node->data.array_op.indices);
+
             if (!sym->is_array) {
                 // السماح بفهرسة النص على أنه حرف[] (v0.3.5)
                 if (sym->type == TYPE_STRING) {
-                    DataType it = infer_type(node->data.array_op.index);
-                    if (!types_compatible(it, TYPE_INT) || it == TYPE_FLOAT) {
-                        semantic_error(node->data.array_op.index, "فهرس النص يجب أن يكون صحيحاً.");
+                    if (supplied != 1) {
+                        semantic_error(node, "فهرسة النص '%s' تتطلب فهرساً واحداً.", sym->name);
+                    }
+                    for (Node* idx = node->data.array_op.indices; idx; idx = idx->next) {
+                        DataType it = infer_type(idx);
+                        if (!types_compatible(it, TYPE_INT) || it == TYPE_FLOAT) {
+                            semantic_error(idx, "فهرس النص يجب أن يكون صحيحاً.");
+                        }
                     }
                     return TYPE_CHAR;
                 }
 
                 semantic_error(node, "'%s' ليس مصفوفة.", sym->name);
-                (void)infer_type(node->data.array_op.index);
+                for (Node* idx = node->data.array_op.indices; idx; idx = idx->next) {
+                    (void)infer_type(idx);
+                }
                 return sym->type;
             }
 
-            DataType it = infer_type(node->data.array_op.index);
-            if (!types_compatible(it, TYPE_INT) || it == TYPE_FLOAT) {
-                semantic_error(node->data.array_op.index, "فهرس المصفوفة يجب أن يكون صحيحاً.");
-            }
-
-            // تحقق ثابت على الحدود إذا كان الفهرس ثابتاً
-            if (node->data.array_op.index && node->data.array_op.index->type == NODE_INT) {
-                int64_t idx = (int64_t)node->data.array_op.index->data.integer.value;
-                if (idx < 0 || (sym->array_size > 0 && idx >= sym->array_size)) {
-                    semantic_error(node, "فهرس خارج الحدود للمصفوفة '%s' (الحجم %d).", sym->name, sym->array_size);
+            int expected = (sym->array_rank > 0) ? sym->array_rank : 1;
+            if (sym->type == TYPE_STRING && supplied == expected + 1) {
+                Node* idx = node->data.array_op.indices;
+                for (int i = 0; i < expected && idx; i++, idx = idx->next) {
+                    DataType it = infer_type(idx);
+                    if (!types_compatible(it, TYPE_INT) || it == TYPE_FLOAT) {
+                        semantic_error(idx, "فهرس المصفوفة يجب أن يكون صحيحاً.");
+                    }
+                    if (idx->type == NODE_INT && sym->array_dims && i < sym->array_rank) {
+                        int64_t iv = (int64_t)idx->data.integer.value;
+                        int dim = sym->array_dims[i];
+                        if (iv < 0 || (dim > 0 && iv >= dim)) {
+                            semantic_error(node,
+                                           "فهرس خارج الحدود للمصفوفة '%s' في البعد %d (الحجم %d).",
+                                           sym->name, i + 1, dim);
+                        }
+                    }
                 }
+                if (!idx) {
+                    semantic_error(node, "فهرس النص داخل مصفوفة النصوص مفقود.");
+                    return TYPE_CHAR;
+                }
+                DataType sit = infer_type(idx);
+                if (!types_compatible(sit, TYPE_INT) || sit == TYPE_FLOAT) {
+                    semantic_error(idx, "فهرس النص يجب أن يكون صحيحاً.");
+                }
+                return TYPE_CHAR;
             }
+            (void)analyze_indices_type_and_bounds(sym, node, node->data.array_op.indices, expected);
 
             return sym->type; // نوع العنصر
         }
@@ -2376,6 +2571,8 @@ static void analyze_node(Node* node) {
                        node->data.var_decl.is_static,
                        false,
                        0,
+                       NULL,
+                       0,
                        node->line, node->col, node->filename ? node->filename : current_filename);
             break;
          }
@@ -2411,7 +2608,7 @@ static void analyze_node(Node* node) {
                                 param->data.var_decl.type, param->data.var_decl.type_name,
                                 false,
                                 false,
-                                false, 0,
+                                false, 0, NULL, 0,
                                 param->line, param->col, param->filename ? param->filename : current_filename);
                      // تعليم المعامل كمستخدم مباشرة
                      if (local_count > 0) {
@@ -2719,11 +2916,51 @@ static void analyze_node(Node* node) {
         }
 
         case NODE_ARRAY_DECL: {
-            if (node->data.array_decl.size <= 0) {
+            if (node->data.array_decl.dim_count <= 0 ||
+                !node->data.array_decl.dims ||
+                node->data.array_decl.total_elems <= 0) {
                 semantic_error(node, "حجم المصفوفة غير صالح.");
                 break;
             }
+            for (int i = 0; i < node->data.array_decl.dim_count; i++) {
+                if (node->data.array_decl.dims[i] <= 0) {
+                    semantic_error(node, "البعد %d للمصفوفة غير صالح.", i + 1);
+                }
+            }
+
             bool has_static_storage = node->data.array_decl.is_global || node->data.array_decl.is_static;
+            DataType elem_type = node->data.array_decl.element_type;
+            const char* elem_type_name = node->data.array_decl.element_type_name;
+
+            if (elem_type == TYPE_VOID) {
+                semantic_error(node, "لا يمكن تعريف مصفوفة من نوع 'عدم'.");
+            }
+            if (elem_type == TYPE_ENUM) {
+                if (!elem_type_name || !enum_lookup_def(elem_type_name)) {
+                    semantic_error(node, "تعداد عنصر المصفوفة غير معرّف '%s'.",
+                                   elem_type_name ? elem_type_name : "???");
+                }
+            } else if (elem_type == TYPE_STRUCT) {
+                StructDef* sd = elem_type_name ? struct_lookup_def(elem_type_name) : NULL;
+                if (!sd) {
+                    semantic_error(node, "هيكل عنصر المصفوفة غير معرّف '%s'.",
+                                   elem_type_name ? elem_type_name : "???");
+                } else {
+                    (void)struct_compute_layout(sd);
+                    node->data.array_decl.element_struct_size = sd->size;
+                    node->data.array_decl.element_struct_align = sd->align;
+                }
+            } else if (elem_type == TYPE_UNION) {
+                UnionDef* ud = elem_type_name ? union_lookup_def(elem_type_name) : NULL;
+                if (!ud) {
+                    semantic_error(node, "اتحاد عنصر المصفوفة غير معرّف '%s'.",
+                                   elem_type_name ? elem_type_name : "???");
+                } else {
+                    (void)union_compute_layout(ud);
+                    node->data.array_decl.element_struct_size = ud->size;
+                    node->data.array_decl.element_struct_align = ud->align;
+                }
+            }
 
             // الثابت يجب أن يُهيّأ صراحةً (حتى `{}` مقبول ويعني أصفار).
             if (node->data.array_decl.is_const && !has_static_storage && !node->data.array_decl.has_init) {
@@ -2731,15 +2968,16 @@ static void analyze_node(Node* node) {
                                node->data.array_decl.name ? node->data.array_decl.name : "???");
             }
 
-            // حالياً المصفوفات مدعومة فقط لنوع صحيح (حسب الصياغة: صحيح س[5].)
             add_symbol(node->data.array_decl.name,
                        node->data.array_decl.is_global ? SCOPE_GLOBAL : SCOPE_LOCAL,
-                       TYPE_INT,
-                       NULL,
+                       elem_type,
+                       elem_type_name,
                        node->data.array_decl.is_const,
                        node->data.array_decl.is_static,
                        true,
-                       node->data.array_decl.size,
+                       node->data.array_decl.dim_count,
+                       node->data.array_decl.dims,
+                       node->data.array_decl.total_elems,
                        node->line,
                        node->col,
                        node->filename ? node->filename : current_filename);
@@ -2747,7 +2985,8 @@ static void analyze_node(Node* node) {
             // التحقق من قائمة التهيئة: تسمح بالتهيئة الجزئية كما في C.
             if (node->data.array_decl.has_init) {
                 int n = node->data.array_decl.init_count;
-                int cap = node->data.array_decl.size;
+                int64_t cap64 = node->data.array_decl.total_elems;
+                int cap = (cap64 > (int64_t)INT_MAX) ? INT_MAX : (int)cap64;
                 if (n < 0) n = 0;
                 if (n > cap) {
                     semantic_error(node, "عدد عناصر تهيئة المصفوفة '%s' (%d) أكبر من الحجم (%d).",
@@ -2758,15 +2997,16 @@ static void analyze_node(Node* node) {
                 int idx0 = 0;
                 for (Node* v = node->data.array_decl.init_values; v; v = v->next) {
                     DataType vt = infer_type(v);
-                    if (!types_compatible(vt, TYPE_INT)) {
+                    if (!types_compatible(vt, elem_type)) {
                         semantic_error(v, "نوع عنصر التهيئة %d للمصفوفة '%s' غير متوافق.",
                                        idx0 + 1,
                                        node->data.array_decl.name ? node->data.array_decl.name : "???");
+                    } else {
+                        maybe_warn_implicit_narrowing(vt, elem_type, v);
                     }
 
                     if (has_static_storage) {
-                        int64_t c = 0;
-                        if (!eval_const_int_expr(v, &c)) {
+                        if (!static_storage_initializer_is_const(v, elem_type)) {
                             semantic_error(v,
                                            "تهيئة المصفوفة الساكنة '%s' يجب أن تكون تعبيراً ثابتاً.",
                                            node->data.array_decl.name ? node->data.array_decl.name : "???");
@@ -2783,19 +3023,29 @@ static void analyze_node(Node* node) {
             Symbol* sym = lookup(node->data.array_op.name, true);
             if (!sym) {
                 semantic_error(node, "تعيين إلى مصفوفة غير معرّفة '%s'.", node->data.array_op.name ? node->data.array_op.name : "???");
-                (void)infer_type(node->data.array_op.index);
+                for (Node* idx = node->data.array_op.indices; idx; idx = idx->next) {
+                    (void)infer_type(idx);
+                }
                 (void)infer_type(node->data.array_op.value);
                 break;
             }
+
+            int supplied = node->data.array_op.index_count;
+            if (supplied <= 0) supplied = node_list_count(node->data.array_op.indices);
+
             if (!sym->is_array) {
                 if (sym->type == TYPE_STRING) {
                     semantic_error(node, "لا يمكن تعديل عناصر النص '%s' حالياً.", sym->name);
-                    (void)infer_type(node->data.array_op.index);
+                    for (Node* idx = node->data.array_op.indices; idx; idx = idx->next) {
+                        (void)infer_type(idx);
+                    }
                     (void)infer_type(node->data.array_op.value);
                     break;
                 }
                 semantic_error(node, "'%s' ليس مصفوفة.", sym->name);
-                (void)infer_type(node->data.array_op.index);
+                for (Node* idx = node->data.array_op.indices; idx; idx = idx->next) {
+                    (void)infer_type(idx);
+                }
                 (void)infer_type(node->data.array_op.value);
                 break;
             }
@@ -2803,23 +3053,14 @@ static void analyze_node(Node* node) {
                 semantic_error(node, "لا يمكن تعديل مصفوفة ثابتة '%s'.", sym->name);
             }
 
-            DataType it = infer_type(node->data.array_op.index);
-            if (!types_compatible(it, TYPE_INT) || it == TYPE_FLOAT) {
-                semantic_error(node->data.array_op.index, "فهرس المصفوفة يجب أن يكون صحيحاً.");
-            }
+            int expected = (sym->array_rank > 0) ? sym->array_rank : 1;
+            (void)analyze_indices_type_and_bounds(sym, node, node->data.array_op.indices, expected);
 
             DataType vt = infer_type(node->data.array_op.value);
             if (!types_compatible(vt, sym->type)) {
                 semantic_error(node, "نوع القيمة في تعيين '%s' غير متوافق.", sym->name);
             } else {
                 maybe_warn_implicit_narrowing(vt, sym->type, node->data.array_op.value);
-            }
-
-            if (node->data.array_op.index && node->data.array_op.index->type == NODE_INT) {
-                int64_t idx = (int64_t)node->data.array_op.index->data.integer.value;
-                if (idx < 0 || (sym->array_size > 0 && idx >= sym->array_size)) {
-                    semantic_error(node, "فهرس خارج الحدود للمصفوفة '%s' (الحجم %d).", sym->name, sym->array_size);
-                }
             }
             break;
         }

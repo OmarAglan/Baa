@@ -1,6 +1,6 @@
 # Baa Internal API Reference
 
-> **Version:** 0.3.8 | [← Compiler Internals](INTERNALS.md) | [IR Specification →](BAA_IR_SPECIFICATION.md)
+> **Version:** 0.3.9 (in progress) | [← Compiler Internals](INTERNALS.md) | [IR Specification →](BAA_IR_SPECIFICATION.md)
 
 This document details the C functions, enumerations, and structures defined in `src/baa.h`, `src/ir.h`, `src/ir_arena.h`, `src/ir_mutate.h`, `src/ir_defuse.h`, `src/ir_clone.h`, `src/ir_text.h`, `src/ir_loop.h`, `src/ir_licm.h`, `src/ir_unroll.h`, `src/ir_inline.h`, `src/ir_builder.h`, `src/ir_lower.h`, `src/ir_analysis.h`, `src/ir_pass.h`, `src/ir_mem2reg.h`, `src/ir_outssa.h`, `src/ir_verify_ssa.h`, `src/ir_verify_ir.h`, `src/ir_canon.h`, `src/ir_cfg_simplify.h`, `src/ir_dce.h`, `src/ir_copyprop.h`, `src/ir_cse.h`, `src/ir_optimizer.h`, `src/target.h`, `src/isel.h`, `src/regalloc.h`, and `src/emit.h`.
 
@@ -1564,24 +1564,48 @@ Files:
 ### 6.1. `IRLowerCtx`
 
 ```c
+typedef struct IRLowerBinding {
+    const char* name;
+    int ptr_reg;
+    IRType* value_type;
+    const char* global_name;
+    bool is_static_storage;
+    bool is_array;
+    int array_rank;
+    const int* array_dims;
+    DataType array_elem_type;
+    const char* array_elem_type_name;
+} IRLowerBinding;
+
 typedef struct IRLowerCtx {
     IRBuilder* builder;
 
     IRLowerBinding locals[256];
     int local_count;
 
+    int scope_stack[64];
+    int scope_depth;
+
     int label_counter;
+    const char* current_func_name;
+    int static_local_counter;
 
     struct IRBlock* break_targets[64];
     struct IRBlock* continue_targets[64];
     int cf_depth;
+
+    int had_error;
+    bool enable_bounds_checks;
+    Node* program_root;
 } IRLowerCtx;
 ```
 
 A small context object used during lowering:
 
 - Holds the active `IRBuilder` insertion point
-- Tracks local variable bindings (name → pointer register)
+- Tracks local/static variable bindings (including array rank/dim metadata)
+- Tracks scope/control-flow stacks during lowering
+- Carries optional debug bounds-check mode + root AST metadata lookup context
 
 ---
 
@@ -1658,7 +1682,7 @@ Supported statements (v0.3.0.5):
 ### 6.7. `ir_lower_program` (v0.3.0.7)
 
 ```c
-IRModule* ir_lower_program(Node* program, const char* module_name);
+IRModule* ir_lower_program(Node* program, const char* module_name, bool enable_bounds_checks);
 ```
 
 Top-level entry point for the driver: converts a validated `NODE_PROGRAM` AST into a fully-populated `IRModule`.
@@ -1667,6 +1691,7 @@ Top-level entry point for the driver: converts a validated `NODE_PROGRAM` AST in
 |-----------|------|-------------|
 | `program` | `Node*` | Root AST node (must be `NODE_PROGRAM`) |
 | `module_name` | `const char*` | Optional module name (usually filename) |
+| `enable_bounds_checks` | `bool` | Enables optional runtime bounds-check lowering paths for array accesses (debug-oriented mode) |
 
 **Returns:** Newly allocated `IRModule` (caller owns; free with `ir_module_free()`).
 
@@ -1676,7 +1701,8 @@ Top-level entry point for the driver: converts a validated `NODE_PROGRAM` AST in
 2. Walks top-level declarations:
    - Global variables (`NODE_VAR_DECL` with `is_global`) → `ir_builder_create_global_init()`
    - Functions (`NODE_FUNC_DEF`) → `ir_builder_create_func()` + parameter spilling + `lower_stmt()`
-3. Returns the fully-lowered module
+3. Propagates lowering options/metadata through `IRLowerCtx` (including optional array bounds checks)
+4. Returns the fully-lowered module
 
 ---
 
@@ -2633,7 +2659,7 @@ Top-level entry point for emitting a complete assembly file.
 **Behavior:**
 
 1. Emits read-only data section with format strings (COFF: `.rdata`, ELF: `.rodata`)
-2. Emits `.data` section with global variables and initializers (including fixed-size `صحيح` global arrays with partial init + zero-fill, and compound storage for `هيكل`/`اتحاد`)
+2. Emits `.data` section with global variables and initializers (including fixed-size typed global arrays with partial init + zero-fill, plus pointer-array string label initializers and compound storage for `هيكل`/`اتحاد`)
 3. Emits `.text` section with all functions
 4. Emits string table with `.Lstr_N` labels into read-only data section (COFF/ELF)
 
@@ -2921,7 +2947,9 @@ typedef struct {
     DataType type;         // Variable type (or element type for arrays)
     char type_name[32];    // Name for TYPE_ENUM/TYPE_STRUCT/TYPE_UNION (empty otherwise)
     bool is_array;         // True for array declarations (v0.3.2.9.4)
-    int array_size;        // Fixed array size if is_array (v0.3.2.9.4)
+    int array_rank;        // Number of array dimensions
+    int64_t array_total_elems; // Product of dimensions
+    int* array_dims;       // Per-dimension sizes (owned by symbol table)
     int offset;            // Stack offset or memory address
     bool is_const;         // Immutability flag (v0.2.7+)
     bool is_static;        // Static storage duration flag (v0.3.7.5)
@@ -2939,7 +2967,9 @@ typedef struct {
 | `type` | `DataType` | Variable type (or array element type) |
 | `type_name` | `char[32]` | Type name when `type` is `TYPE_ENUM`/`TYPE_STRUCT`/`TYPE_UNION` |
 | `is_array` | `bool` | `true` if this symbol is an array |
-| `array_size` | `int` | Fixed array size (only meaningful when `is_array=true`) |
+| `array_rank` | `int` | Number of dimensions for array symbols |
+| `array_total_elems` | `int64_t` | Product of all dimension sizes |
+| `array_dims` | `int*` | Owned dimension array (`rank` entries) |
 | `offset` | `int` | Stack offset (local) or memory address (global) |
 | `is_const` | `bool` | `true` if declared with `ثابت` (v0.2.7+) |
 | `is_static` | `bool` | `true` if declared with `ساكن` (v0.3.7.5) |
@@ -3158,7 +3188,13 @@ typedef struct Node {
 
         struct {
             char* name;
-            int size;
+            DataType element_type;
+            char* element_type_name;
+            int element_struct_size;
+            int element_struct_align;
+            int* dims;
+            int dim_count;
+            int64_t total_elems;
             bool is_global;
             bool is_const;
             bool is_static;
@@ -3185,7 +3221,8 @@ typedef struct Node {
 
         struct {
             char* name;
-            struct Node* index;
+            struct Node* indices;
+            int index_count;
             struct Node* value; // NULL for read
         } array_op;
 

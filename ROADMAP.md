@@ -442,9 +442,9 @@
 - [x] **Semantic Analysis**: Allow partial init (`count <= size`) and zero-fill the remainder; reject overflow.
 - [x] **Codegen**: Emit `.data` initializers for globals and runtime stores for locals (including zero-fill).
 
-#### Deferred to v0.3.8
+#### Deferred to v0.3.9
 
-- Multi-dimensional arrays: `صحيح مصفوفة[٣][٤].`
+- [x] Multi-dimensional arrays: `صحيح مصفوفة[٣][٤].` ✅ COMPLETED (2026-02-25)
 - Array length operator: `صحيح طول = حجم(قائمة).`
 
 ---
@@ -817,7 +817,7 @@
 
 #### Array Features
 
-- [ ] **Multi-dimensional Arrays**:
+- [x] **Multi-dimensional Arrays** ✅ COMPLETED (2026-02-25):
 
   ```baa
   صحيح مصفوفة[٣][٤].
@@ -832,23 +832,23 @@
   صحيح الطول = حجم(قائمة) / حجم(صحيح).  // Returns 10
   ```
 
-- [ ] **Array Bounds Checking** (Optional debug mode):
-  - Runtime checks with `-g` flag.
-  - Panic on out-of-bounds access.
+- [x] **Array Bounds Checking** (Optional debug mode) ✅ COMPLETED (2026-02-25):
+  - Runtime checks in debug-oriented lowering mode (`--debug-info` path).
+  - Abort path on out-of-bounds access.
 
 #### String Operations
 
 - [ ] **String Length**: `صحيح الطول = طول_نص(اسم).`
 - [ ] **String Concatenation**: `نص كامل = دمج_نص(اسم, " علي").`
 - [ ] **String Comparison**: `صحيح نتيجة = قارن_نص(اسم, "محمد").`
-- [ ] **String Indexing** (read-only): `حرف أول = اسم[٠].`
+- [x] **String Indexing** (read-only) ✅ COMPLETED (2026-02-25): `حرف أول = اسم[٠].`
 - [ ] **String Copy**: `نص نسخة = نسخ_نص(اسم).`
 
 #### Implementation
 
-- [ ] **Parser**: Parse multi-dimensional array declarations and access.
-- [ ] **Semantic**: Track array dimensions in symbol table.
-- [ ] **Codegen**: Calculate offsets for multi-dimensional arrays (row-major order).
+- [x] **Parser**: Parse multi-dimensional array declarations and access.
+- [x] **Semantic**: Track array dimensions in symbol table.
+- [x] **Codegen**: Calculate offsets for multi-dimensional arrays (row-major order).
 - [ ] **Standard Library**: Create `baalib.baa` with string functions.
 - [ ] **UTF-8 Aware**: Ensure functions handle multi-byte Arabic characters correctly.
 

@@ -507,6 +507,145 @@ Node* parse_bitwise_and();
 Node* parse_bitwise_xor();
 Node* parse_bitwise_or();
 
+/**
+ * @brief إضافة عنصر إلى نهاية قائمة عقد أحادية الربط.
+ */
+static void parser_list_append(Node** head, Node** tail, Node* item)
+{
+    if (!item) return;
+    item->next = NULL;
+    if (!*head) {
+        *head = item;
+        *tail = item;
+    } else {
+        (*tail)->next = item;
+        *tail = item;
+    }
+}
+
+/**
+ * @brief تحليل سلسلة فهارس بالشكل: [expr][expr]...
+ */
+static Node* parse_array_indices(int* out_count)
+{
+    if (out_count) *out_count = 0;
+
+    Node* head = NULL;
+    Node* tail = NULL;
+    int count = 0;
+
+    while (parser.current.type == TOKEN_LBRACKET) {
+        eat(TOKEN_LBRACKET);
+        Node* index = parse_expression();
+        eat(TOKEN_RBRACKET);
+
+        if (index) {
+            parser_list_append(&head, &tail, index);
+            count++;
+        }
+    }
+
+    if (out_count) *out_count = count;
+    return head;
+}
+
+static bool parser_mul_i64_checked(int64_t a, int64_t b, int64_t* out)
+{
+    if (!out) return false;
+    *out = 0;
+    if (a == 0 || b == 0) {
+        *out = 0;
+        return true;
+    }
+    if (a > INT64_MAX / b) return false;
+    *out = a * b;
+    return true;
+}
+
+/**
+ * @brief تحليل أبعاد مصفوفة ثابتة: [N][M]...
+ */
+static bool parse_array_dimensions(int** out_dims, int* out_rank, int64_t* out_total)
+{
+    if (out_dims) *out_dims = NULL;
+    if (out_rank) *out_rank = 0;
+    if (out_total) *out_total = 0;
+
+    int cap = 4;
+    int rank = 0;
+    int* dims = NULL;
+    int64_t total = 1;
+
+    while (parser.current.type == TOKEN_LBRACKET) {
+        eat(TOKEN_LBRACKET);
+
+        int dim = 0;
+        if (parser.current.type == TOKEN_INT) {
+            int64_t v = 0;
+            if (parse_int_token_checked(parser.current, &v)) {
+                if (v <= 0) {
+                    error_report(parser.current, "حجم البعد يجب أن يكون عدداً موجباً.");
+                } else if (v > INT_MAX) {
+                    error_report(parser.current, "حجم البعد كبير جداً.");
+                } else {
+                    dim = (int)v;
+                }
+            } else {
+                error_report(parser.current, "حجم البعد يجب أن يكون عدداً صحيحاً.");
+            }
+            eat(TOKEN_INT);
+        } else {
+            error_report(parser.current, "متوقع حجم بعد مصفوفة ثابت.");
+        }
+
+        eat(TOKEN_RBRACKET);
+
+        if (rank >= cap) {
+            int new_cap = cap * 2;
+            int* new_dims = (int*)realloc(dims, (size_t)new_cap * sizeof(int));
+            if (!new_dims) {
+                free(dims);
+                error_report(parser.current, "نفدت الذاكرة أثناء تحليل أبعاد المصفوفة.");
+                return false;
+            }
+            dims = new_dims;
+            cap = new_cap;
+        }
+        if (!dims) {
+            dims = (int*)malloc((size_t)cap * sizeof(int));
+            if (!dims) {
+                error_report(parser.current, "نفدت الذاكرة أثناء تحليل أبعاد المصفوفة.");
+                return false;
+            }
+        }
+
+        dims[rank++] = dim;
+
+        if (dim > 0) {
+            int64_t nt = 0;
+            if (!parser_mul_i64_checked(total, (int64_t)dim, &nt)) {
+                error_report(parser.current, "حجم المصفوفة الكلي كبير جداً.");
+                total = 0;
+            } else {
+                total = nt;
+            }
+        } else {
+            total = 0;
+        }
+    }
+
+    if (rank == 0) {
+        free(dims);
+        return false;
+    }
+
+    if (out_dims) *out_dims = dims;
+    else free(dims);
+    if (out_rank) *out_rank = rank;
+    if (out_total) *out_total = total;
+    return true;
+}
+
 // --- تحليل التعبيرات (حسب مستويات الأولوية) ---
 
 // المستوى 1: التعبيرات الأساسية واللاحقة (Postfix)
@@ -634,16 +773,16 @@ Node* parse_primary() {
             node->data.call.name = name;
             node->data.call.args = head_arg;
         }
-        // الوصول لمصفوفة: اسم[فهرس]
+        // الوصول لمصفوفة: اسم[فهرس][فهرس]...
         else if (parser.current.type == TOKEN_LBRACKET) {
-            eat(TOKEN_LBRACKET);
-            Node* index = parse_expression();
-            eat(TOKEN_RBRACKET);
+            int index_count = 0;
+            Node* indices = parse_array_indices(&index_count);
 
             node = ast_node_new(NODE_ARRAY_ACCESS, tok_ident);
             if (!node) return NULL;
             node->data.array_op.name = name;
-            node->data.array_op.index = index;
+            node->data.array_op.indices = indices;
+            node->data.array_op.index_count = index_count;
             node->data.array_op.value = NULL;
         }
         // متغير عادي
@@ -1181,7 +1320,53 @@ Node* parse_block() {
 // ============================================================================
 
 /**
- * @brief تحليل قائمة تهيئة مصفوفة بالشكل: = { expr, expr, ... }
+ * @brief تحليل عنصر واحد داخل تهيئة المصفوفة (قيمة أو كتلة متداخلة).
+ */
+static void parse_array_initializer_item(Node** head, Node** tail, int* count);
+
+/**
+ * @brief تحليل كتلة تهيئة مصفوفة بالشكل: { ... } مع دعم التعشيش.
+ */
+static void parse_array_initializer_group(Node** head, Node** tail, int* count)
+{
+    eat(TOKEN_LBRACE);
+
+    if (parser.current.type != TOKEN_RBRACE) {
+        while (1) {
+            parse_array_initializer_item(head, tail, count);
+
+            if (parser.current.type == TOKEN_COMMA) {
+                eat(TOKEN_COMMA);
+                // السماح بفاصلة أخيرة قبل '}' كما في C.
+                if (parser.current.type == TOKEN_RBRACE) break;
+                continue;
+            }
+            break;
+        }
+    }
+
+    eat(TOKEN_RBRACE);
+}
+
+/**
+ * @brief تحليل عنصر واحد داخل تهيئة المصفوفة (قيمة أو كتلة متداخلة).
+ */
+static void parse_array_initializer_item(Node** head, Node** tail, int* count)
+{
+    if (parser.current.type == TOKEN_LBRACE) {
+        parse_array_initializer_group(head, tail, count);
+        return;
+    }
+
+    Node* expr = parse_expression();
+    if (!expr) return;
+
+    parser_list_append(head, tail, expr);
+    if (count) (*count)++;
+}
+
+/**
+ * @brief تحليل قائمة تهيئة مصفوفة بالشكل: = { expr, { ... }, ... }
  *
  * عند وجود '=' نعتبر أن التهيئة موجودة حتى لو كانت القائمة فارغة `{}`.
  *
@@ -1199,33 +1384,17 @@ static Node* parse_array_initializer_list(int* out_count, bool* out_has_init) {
 
     if (out_has_init) *out_has_init = true;
     eat(TOKEN_ASSIGN);
-    eat(TOKEN_LBRACE);
 
     Node* head = NULL;
     Node* tail = NULL;
     int count = 0;
 
-    if (parser.current.type != TOKEN_RBRACE) {
-        while (1) {
-            Node* expr = parse_expression();
-            if (!expr) break;
-
-            expr->next = NULL;
-            if (!head) { head = expr; tail = expr; }
-            else { tail->next = expr; tail = expr; }
-            count++;
-
-            if (parser.current.type == TOKEN_COMMA) {
-                eat(TOKEN_COMMA);
-                // السماح بفاصلة أخيرة قبل '}' كما في C.
-                if (parser.current.type == TOKEN_RBRACE) break;
-                continue;
-            }
-            break;
-        }
+    if (parser.current.type != TOKEN_LBRACE) {
+        error_report(parser.current, "متوقع '{' بعد '=' في تهيئة المصفوفة.");
+        return NULL;
     }
 
-    eat(TOKEN_RBRACE);
+    parse_array_initializer_group(&head, &tail, &count);
 
     if (out_count) *out_count = count;
     return head;
@@ -1573,31 +1742,15 @@ Node* parse_statement() {
         }
 
         if (parser.current.type == TOKEN_LBRACKET) {
-            if (dt != TYPE_INT) {
-                error_report(parser.current, "المصفوفات مدعومة فقط للأنواع الصحيحة حالياً.");
+            int* dims = NULL;
+            int dim_count = 0;
+            int64_t total_elems = 0;
+            if (!parse_array_dimensions(&dims, &dim_count, &total_elems)) {
                 free(type_name);
                 free(name);
                 synchronize_mode(PARSER_SYNC_STATEMENT);
                 return NULL;
             }
-            eat(TOKEN_LBRACKET);
-            int size = 0;
-            if (parser.current.type == TOKEN_INT) {
-                int64_t v = 0;
-                if (parse_int_token_checked(parser.current, &v) && v >= 0) {
-                    if (v > INT_MAX) {
-                        error_report(parser.current, "حجم المصفوفة كبير جداً.");
-                    } else {
-                        size = (int)v;
-                    }
-                } else if (v < 0) {
-                    error_report(parser.current, "حجم المصفوفة يجب أن يكون عدداً غير سالب.");
-                }
-                eat(TOKEN_INT);
-            } else {
-                error_report(parser.current, "حجم المصفوفة يجب أن يكون عدداً صحيحاً.");
-            }
-            eat(TOKEN_RBRACKET);
 
             int init_count = 0;
             bool has_init = false;
@@ -1606,9 +1759,20 @@ Node* parse_statement() {
             eat(TOKEN_DOT);
 
             Node* stmt = ast_node_new(NODE_ARRAY_DECL, tok_name);
-            if (!stmt) return NULL;
+            if (!stmt) {
+                free(dims);
+                free(type_name);
+                free(name);
+                return NULL;
+            }
             stmt->data.array_decl.name = name;
-            stmt->data.array_decl.size = size;
+            stmt->data.array_decl.element_type = dt;
+            stmt->data.array_decl.element_type_name = type_name;
+            stmt->data.array_decl.element_struct_size = 0;
+            stmt->data.array_decl.element_struct_align = 0;
+            stmt->data.array_decl.dims = dims;
+            stmt->data.array_decl.dim_count = dim_count;
+            stmt->data.array_decl.total_elems = total_elems;
             stmt->data.array_decl.is_global = false;
             stmt->data.array_decl.is_const = is_const;
             stmt->data.array_decl.is_static = is_static;
@@ -1683,9 +1847,45 @@ Node* parse_statement() {
         if (parser.next.type == TOKEN_LBRACKET) {
             char* name = strdup(parser.current.value);
             eat(TOKEN_IDENTIFIER);
-            eat(TOKEN_LBRACKET);
-            Node* index = parse_expression();
-            eat(TOKEN_RBRACKET);
+            int index_count = 0;
+            Node* indices = parse_array_indices(&index_count);
+
+            // إسناد إلى عضو عنصر مصفوفة: س[0]:حقل = ...
+            if (parser.current.type == TOKEN_COLON) {
+                Node* target = ast_node_new(NODE_ARRAY_ACCESS, tok_name);
+                if (!target) return NULL;
+                target->data.array_op.name = name;
+                target->data.array_op.indices = indices;
+                target->data.array_op.index_count = index_count;
+                target->data.array_op.value = NULL;
+
+                while (parser.current.type == TOKEN_COLON) {
+                    Token tok_colon = parser.current;
+                    eat(TOKEN_COLON);
+                    if (parser.current.type != TOKEN_IDENTIFIER) {
+                        error_report(parser.current, "متوقع اسم عضو بعد ':'.");
+                        break;
+                    }
+                    char* member = strdup(parser.current.value);
+                    eat(TOKEN_IDENTIFIER);
+
+                    Node* ma = ast_node_new(NODE_MEMBER_ACCESS, tok_colon);
+                    if (!ma) return NULL;
+                    ma->data.member_access.base = target;
+                    ma->data.member_access.member = member;
+                    target = ma;
+                }
+
+                eat(TOKEN_ASSIGN);
+                Node* value = parse_expression();
+                eat(TOKEN_DOT);
+
+                Node* stmt = ast_node_new(NODE_MEMBER_ASSIGN, tok_name);
+                if (!stmt) return NULL;
+                stmt->data.member_assign.target = target;
+                stmt->data.member_assign.value = value;
+                return stmt;
+            }
 
             if (parser.current.type == TOKEN_ASSIGN) {
                 eat(TOKEN_ASSIGN);
@@ -1695,7 +1895,8 @@ Node* parse_statement() {
                 Node* stmt = ast_node_new(NODE_ARRAY_ASSIGN, tok_name);
                 if (!stmt) return NULL;
                 stmt->data.array_op.name = name;
-                stmt->data.array_op.index = index;
+                stmt->data.array_op.indices = indices;
+                stmt->data.array_op.index_count = index_count;
                 stmt->data.array_op.value = value;
                 return stmt;
             } else if (parser.current.type == TOKEN_INC || parser.current.type == TOKEN_DEC) {
@@ -1703,7 +1904,8 @@ Node* parse_statement() {
                 Node* access = ast_node_new(NODE_ARRAY_ACCESS, tok_name);
                 if (!access) return NULL;
                 access->data.array_op.name = name;
-                access->data.array_op.index = index;
+                access->data.array_op.indices = indices;
+                access->data.array_op.index_count = index_count;
                 access->data.array_op.value = NULL;
 
                 Token tok_op = parser.current;
@@ -2006,34 +2208,17 @@ Node* parse_declaration() {
             return func;
         }
 
-        // تعريف مصفوفة عامة (صحيح فقط)
+        // تعريف مصفوفة عامة ثابتة الأبعاد
         if (parser.current.type == TOKEN_LBRACKET) {
-            if (dt != TYPE_INT) {
-                error_report(parser.current, "المصفوفات مدعومة فقط للأنواع الصحيحة حالياً.");
+            int* dims = NULL;
+            int dim_count = 0;
+            int64_t total_elems = 0;
+            if (!parse_array_dimensions(&dims, &dim_count, &total_elems)) {
                 free(type_name);
                 free(name);
                 synchronize_mode(PARSER_SYNC_DECLARATION);
                 return NULL;
             }
-
-            eat(TOKEN_LBRACKET);
-            int size = 0;
-            if (parser.current.type == TOKEN_INT) {
-                int64_t v = 0;
-                if (parse_int_token_checked(parser.current, &v) && v >= 0) {
-                    if (v > INT_MAX) {
-                        error_report(parser.current, "حجم المصفوفة كبير جداً.");
-                    } else {
-                        size = (int)v;
-                    }
-                } else if (v < 0) {
-                    error_report(parser.current, "حجم المصفوفة يجب أن يكون عدداً غير سالب.");
-                }
-                eat(TOKEN_INT);
-            } else {
-                error_report(parser.current, "حجم المصفوفة يجب أن يكون عدداً صحيحاً.");
-            }
-            eat(TOKEN_RBRACKET);
 
             int init_count = 0;
             bool has_init = false;
@@ -2042,16 +2227,26 @@ Node* parse_declaration() {
             eat(TOKEN_DOT);
 
             Node* arr = ast_node_new(NODE_ARRAY_DECL, tok_name);
-            if (!arr) return NULL;
+            if (!arr) {
+                free(dims);
+                free(type_name);
+                free(name);
+                return NULL;
+            }
             arr->data.array_decl.name = name;
-            arr->data.array_decl.size = size;
+            arr->data.array_decl.element_type = dt;
+            arr->data.array_decl.element_type_name = type_name;
+            arr->data.array_decl.element_struct_size = 0;
+            arr->data.array_decl.element_struct_align = 0;
+            arr->data.array_decl.dims = dims;
+            arr->data.array_decl.dim_count = dim_count;
+            arr->data.array_decl.total_elems = total_elems;
             arr->data.array_decl.is_global = true;
             arr->data.array_decl.is_const = is_const;
             arr->data.array_decl.is_static = is_static;
             arr->data.array_decl.has_init = has_init;
             arr->data.array_decl.init_values = init_vals;
             arr->data.array_decl.init_count = init_count;
-            free(type_name);
             return arr;
         }
 

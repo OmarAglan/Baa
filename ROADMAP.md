@@ -1,7 +1,7 @@
 # Baa Roadmap (Updated)
 
 > Track the development progress of the Baa programming language.
-> **Current Status:** Phase 3.10 - Pointers & References (v0.3.10)
+> **Current Status:** Phase 3.10.5 - Type Casting (v0.3.10.5)
 
 ---
 
@@ -860,7 +860,7 @@
 
 #### Features
 
-- [ ] **Pointer Type Declaration**:
+- [x] **Pointer Type Declaration** ✅ COMPLETED (2026-02-25):
 
   ```baa
   صحيح* مؤشر.           // Pointer to integer
@@ -868,21 +868,21 @@
   هيكل سيارة* س_مؤشر.   // Pointer to struct
   ```
 
-- [ ] **Address-of Operator** (`&`):
+- [x] **Address-of Operator** (`&`) ✅ COMPLETED (2026-02-25):
 
   ```baa
   صحيح س = ١٠.
   صحيح* م = &س.         // م points to س
   ```
 
-- [ ] **Dereference Operator** (`*`):
+- [x] **Dereference Operator** (`*`) ✅ COMPLETED (2026-02-25):
 
   ```baa
   صحيح قيمة = *م.       // قيمة = 10
   *م = ٢٠.              // س now equals 20
   ```
 
-- [ ] **Null Pointer**:
+- [x] **Null Pointer** ✅ COMPLETED (2026-02-25):
 
   ```baa
   صحيح* م = عدم.        // Null pointer
@@ -891,7 +891,7 @@
   }
   ```
 
-- [ ] **Pointer Arithmetic**:
+- [x] **Pointer Arithmetic** ✅ COMPLETED (2026-02-25):
 
   ```baa
   صحيح قائمة[٥] = {١، ٢، ٣، ٤، ٥}.
@@ -902,14 +902,11 @@
 
 #### Implementation Tasks
 
-- [ ] **Lexer**: Handle `*` in type context vs multiplication.
-- [ ] **Parser**: Parse pointer type declarations.
-- [ ] **Parser**: Parse address-of (`&`) and dereference (`*`) expressions.
-- [ ] **Type System**: Add `TYPE_POINTER` with base type tracking.
-- [ ] **Semantic**: Validate pointer operations (can't dereference non-pointer).
-- [ ] **Semantic**: Type check pointer arithmetic.
-- [ ] **Codegen**: Generate LEA for address-of.
-- [ ] **Codegen**: Generate proper load/store for dereference.
+- [x] **Lexer/Parser integration**: Handle `*` في سياق النوع/فك الإشارة والضرب و`&` كـ bitwise/address-of.
+- [x] **Parser**: Parse pointer declarations + `عدم` كمؤشر فارغ + جملة `*ptr = value.`.
+- [x] **Type System**: Add `TYPE_POINTER` with base type tracking in AST/symbol metadata.
+- [x] **Semantic**: Validate pointer operations (dereference/address-of/null/pointer compare/arithmetic).
+- [x] **Codegen**: Lower address-of/dereference/pointer assignment and pointer arithmetic safely.
 
 ### v0.3.10.5: Type Casting (تحويل الأنواع) 🔄
 **Goal:** Explicit type conversions for low-level programming.

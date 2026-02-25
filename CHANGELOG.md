@@ -6,6 +6,29 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ---
 
+## [0.3.10] - 2026-02-25
+
+### Added
+
+- **Pointer core support (v0.3.10)** across parser, semantic analysis, and IR lowering:
+  - Pointer type declarations using suffix stars (e.g. `صحيح*`, `هيكل نوع*`, alias-based pointers).
+  - Address-of operator `&` and dereference operator `*` in expression context.
+  - Dereference assignment statement form: `*ptr = expr.`
+  - Null pointer literal via `عدم` in expression context.
+  - Core pointer arithmetic/comparison validation (`pointer +/- int`, pointer comparisons).
+- **AST/Symbol pointer metadata plumbing** for declarations, aliases, members, arrays, inferred expression types, and function signatures.
+- **Pointer test coverage**:
+  - `tests/integration/backend/backend_pointer_core_test.baa`
+  - `tests/neg/semantic_deref_non_pointer.baa`
+  - `tests/neg/semantic_addr_of_non_lvalue.baa`
+  - `tests/neg/semantic_pointer_arith_non_integer.baa`
+  - `tests/neg/semantic_pointer_compare_invalid.baa`
+
+### Changed
+
+- **`عدم` contextual parsing**: remains a type keyword in type position and is now also accepted as a null-pointer literal in expression position.
+- **IR lowering type mapping**: `TYPE_POINTER` now lowers to IR pointer types and participates in pointer-aware unary/binary lowering paths.
+
 ## [0.3.9] - 2026-02-25
 
 ### Added

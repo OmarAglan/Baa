@@ -17,6 +17,9 @@ typedef struct {
     char* name;
     DataType target_type;
     char* target_type_name;
+    DataType target_ptr_base_type;
+    char* target_ptr_base_type_name;
+    int target_ptr_depth;
 } ParserTypeAlias;
 
 static ParserTypeAlias parser_type_aliases[PARSER_MAX_TYPE_ALIASES];
@@ -29,7 +32,11 @@ static void parser_type_alias_reset(void)
         parser_type_aliases[i].name = NULL;
         free(parser_type_aliases[i].target_type_name);
         parser_type_aliases[i].target_type_name = NULL;
+        free(parser_type_aliases[i].target_ptr_base_type_name);
+        parser_type_aliases[i].target_ptr_base_type_name = NULL;
         parser_type_aliases[i].target_type = TYPE_INT;
+        parser_type_aliases[i].target_ptr_base_type = TYPE_INT;
+        parser_type_aliases[i].target_ptr_depth = 0;
     }
     parser_type_alias_count = 0;
 }
@@ -46,7 +53,10 @@ static const ParserTypeAlias* parser_type_alias_lookup(const char* name)
 }
 
 static bool parser_type_alias_register(Token tok, const char* alias_name,
-                                       DataType target_type, const char* target_type_name)
+                                       DataType target_type, const char* target_type_name,
+                                       DataType target_ptr_base_type,
+                                       const char* target_ptr_base_type_name,
+                                       int target_ptr_depth)
 {
     if (!alias_name) return false;
 
@@ -69,12 +79,27 @@ static bool parser_type_alias_register(Token tok, const char* alias_name,
     }
 
     slot->target_type = target_type;
+    slot->target_ptr_base_type = target_ptr_base_type;
+    slot->target_ptr_depth = target_ptr_depth;
+
     if (target_type_name && target_type_name[0]) {
         slot->target_type_name = strdup(target_type_name);
         if (!slot->target_type_name) {
             free(slot->name);
             slot->name = NULL;
             error_report(tok, "نفدت الذاكرة أثناء تسجيل مرجع النوع البديل.");
+            return false;
+        }
+    }
+
+    if (target_ptr_base_type_name && target_ptr_base_type_name[0]) {
+        slot->target_ptr_base_type_name = strdup(target_ptr_base_type_name);
+        if (!slot->target_ptr_base_type_name) {
+            free(slot->target_type_name);
+            slot->target_type_name = NULL;
+            free(slot->name);
+            slot->name = NULL;
+            error_report(tok, "نفدت الذاكرة أثناء تسجيل أساس مؤشر النوع البديل.");
             return false;
         }
     }
@@ -355,9 +380,21 @@ static bool utf8_decode_one(const char* s, uint32_t* out_cp)
  * - تعداد <اسم>
  * - هيكل <اسم>
  */
-static bool parse_type_spec(DataType* out_type, char** out_type_name) {
+static bool parse_type_spec(DataType* out_type, char** out_type_name,
+                            DataType* out_ptr_base_type, char** out_ptr_base_type_name,
+                            int* out_ptr_depth) {
     if (out_type) *out_type = TYPE_INT;
     if (out_type_name) *out_type_name = NULL;
+    if (out_ptr_base_type) *out_ptr_base_type = TYPE_INT;
+    if (out_ptr_base_type_name) *out_ptr_base_type_name = NULL;
+    if (out_ptr_depth) *out_ptr_depth = 0;
+
+    DataType dt = TYPE_INT;
+    char* tn = NULL;
+    DataType ptr_base_type = TYPE_INT;
+    char* ptr_base_name = NULL;
+    int ptr_depth = 0;
+    bool parsed = false;
 
     if (parser.current.type == TOKEN_KEYWORD_INT ||
         parser.current.type == TOKEN_KEYWORD_I8 ||
@@ -373,13 +410,12 @@ static bool parse_type_spec(DataType* out_type, char** out_type_name) {
         parser.current.type == TOKEN_KEYWORD_CHAR ||
         parser.current.type == TOKEN_KEYWORD_VOID ||
         parser.current.type == TOKEN_KEYWORD_FLOAT) {
-        DataType dt = token_to_datatype(parser.current.type);
+        dt = token_to_datatype(parser.current.type);
         eat(parser.current.type);
-        if (out_type) *out_type = dt;
-        return true;
+        parsed = true;
     }
 
-    if (parser.current.type == TOKEN_ENUM || parser.current.type == TOKEN_STRUCT || parser.current.type == TOKEN_UNION) {
+    else if (parser.current.type == TOKEN_ENUM || parser.current.type == TOKEN_STRUCT || parser.current.type == TOKEN_UNION) {
         bool is_enum = (parser.current.type == TOKEN_ENUM);
         bool is_union = (parser.current.type == TOKEN_UNION);
         eat(parser.current.type);
@@ -389,34 +425,107 @@ static bool parse_type_spec(DataType* out_type, char** out_type_name) {
             return false;
         }
 
-        char* tn = strdup(parser.current.value);
+        tn = strdup(parser.current.value);
         eat(TOKEN_IDENTIFIER);
 
-        if (out_type) *out_type = is_enum ? TYPE_ENUM : (is_union ? TYPE_UNION : TYPE_STRUCT);
-        if (out_type_name) *out_type_name = tn;
-        else free(tn);
-
-        return true;
+        dt = is_enum ? TYPE_ENUM : (is_union ? TYPE_UNION : TYPE_STRUCT);
+        parsed = true;
     }
 
-    if (parser.current.type == TOKEN_IDENTIFIER && parser.current.value) {
+    else if (parser.current.type == TOKEN_IDENTIFIER && parser.current.value) {
         const ParserTypeAlias* alias = parser_type_alias_lookup(parser.current.value);
         if (!alias) return false;
 
-        if (out_type) *out_type = alias->target_type;
-        if (out_type_name && alias->target_type_name) {
-            *out_type_name = strdup(alias->target_type_name);
-            if (!*out_type_name) {
+        dt = alias->target_type;
+        ptr_base_type = alias->target_ptr_base_type;
+        ptr_depth = alias->target_ptr_depth;
+
+        if (alias->target_type_name) {
+            tn = strdup(alias->target_type_name);
+            if (!tn) {
                 error_report(parser.current, "نفدت الذاكرة أثناء نسخ النوع البديل.");
                 return false;
             }
         }
 
+        if (alias->target_ptr_base_type_name) {
+            ptr_base_name = strdup(alias->target_ptr_base_type_name);
+            if (!ptr_base_name) {
+                free(tn);
+                error_report(parser.current, "نفدت الذاكرة أثناء نسخ أساس مؤشر النوع البديل.");
+                return false;
+            }
+        }
+
         eat(TOKEN_IDENTIFIER);
-        return true;
+        parsed = true;
     }
 
-    return false;
+    if (!parsed) return false;
+
+    int suffix_ptr_depth = 0;
+    while (parser.current.type == TOKEN_STAR) {
+        eat(TOKEN_STAR);
+        suffix_ptr_depth++;
+    }
+
+    if (suffix_ptr_depth > 0) {
+        if (dt == TYPE_POINTER) {
+            ptr_depth += suffix_ptr_depth;
+        } else {
+            ptr_base_type = dt;
+            ptr_depth = suffix_ptr_depth;
+
+            if ((ptr_base_type == TYPE_ENUM || ptr_base_type == TYPE_STRUCT || ptr_base_type == TYPE_UNION) &&
+                tn && !ptr_base_name) {
+                ptr_base_name = strdup(tn);
+                if (!ptr_base_name) {
+                    free(tn);
+                    error_report(parser.current, "نفدت الذاكرة أثناء نسخ اسم أساس المؤشر.");
+                    return false;
+                }
+            }
+        }
+
+        dt = TYPE_POINTER;
+    }
+
+    if (dt == TYPE_POINTER && ptr_depth <= 0) {
+        // حماية احترازية لحالات alias pointer.
+        ptr_depth = 1;
+    }
+
+    if (dt != TYPE_POINTER) {
+        ptr_base_type = TYPE_INT;
+        free(ptr_base_name);
+        ptr_base_name = NULL;
+    }
+
+    if (out_type) {
+        *out_type = dt;
+    }
+
+    if (out_type_name) {
+        *out_type_name = tn;
+    } else {
+        free(tn);
+    }
+
+    if (out_ptr_base_type) {
+        *out_ptr_base_type = ptr_base_type;
+    }
+
+    if (out_ptr_base_type_name) {
+        *out_ptr_base_type_name = ptr_base_name;
+    } else {
+        free(ptr_base_name);
+    }
+
+    if (out_ptr_depth) {
+        *out_ptr_depth = ptr_depth;
+    }
+
+    return true;
 }
 
 typedef enum {
@@ -709,6 +818,12 @@ Node* parse_primary() {
         node->data.bool_lit.value = false;
         eat(TOKEN_FALSE);
     }
+    else if (parser.current.type == TOKEN_KEYWORD_VOID) {
+        Token tok = parser.current;
+        node = ast_node_new(NODE_NULL, tok);
+        if (!node) return NULL;
+        eat(TOKEN_KEYWORD_VOID);
+    }
     else if (parser.current.type == TOKEN_SIZEOF) {
         Token tok = parser.current;
         eat(TOKEN_SIZEOF);
@@ -726,13 +841,18 @@ Node* parse_primary() {
         if (parser_current_starts_type()) {
             DataType dt = TYPE_INT;
             char* tn = NULL;
-            if (!parse_type_spec(&dt, &tn)) {
+            DataType ptr_base = TYPE_INT;
+            char* ptr_base_name = NULL;
+            int ptr_depth = 0;
+            if (!parse_type_spec(&dt, &tn, &ptr_base, &ptr_base_name, &ptr_depth)) {
                 error_report(parser.current, "متوقع نوع أو تعبير داخل 'حجم(...)'.");
                 free(tn);
+                free(ptr_base_name);
             } else {
                 node->data.sizeof_expr.has_type_form = true;
                 node->data.sizeof_expr.target_type = dt;
                 node->data.sizeof_expr.target_type_name = tn;
+                free(ptr_base_name);
             }
         } else {
             Node* expr = parse_expression();
@@ -844,7 +964,8 @@ Node* parse_primary() {
 // المستوى 1.5: العمليات الأحادية والبادئة (!, ~, -, ++, --)
 Node* parse_unary() {
     if (parser.current.type == TOKEN_MINUS || parser.current.type == TOKEN_NOT ||
-        parser.current.type == TOKEN_TILDE ||
+        parser.current.type == TOKEN_TILDE || parser.current.type == TOKEN_AMP ||
+        parser.current.type == TOKEN_STAR ||
         parser.current.type == TOKEN_INC || parser.current.type == TOKEN_DEC) {
 
         Token tok_op = parser.current;
@@ -853,6 +974,8 @@ Node* parse_unary() {
         if (parser.current.type == TOKEN_MINUS) op = UOP_NEG;
         else if (parser.current.type == TOKEN_NOT) op = UOP_NOT;
         else if (parser.current.type == TOKEN_TILDE) op = UOP_BIT_NOT;
+        else if (parser.current.type == TOKEN_AMP) op = UOP_ADDR;
+        else if (parser.current.type == TOKEN_STAR) op = UOP_DEREF;
         else if (parser.current.type == TOKEN_INC) op = UOP_INC;
         else op = UOP_DEC;
 
@@ -1437,10 +1560,16 @@ static Node* parse_type_alias_declaration(bool register_alias)
 
     DataType target_type = TYPE_INT;
     char* target_type_name = NULL;
-    if (!parse_type_spec(&target_type, &target_type_name)) {
+    DataType target_ptr_base_type = TYPE_INT;
+    char* target_ptr_base_type_name = NULL;
+    int target_ptr_depth = 0;
+    if (!parse_type_spec(&target_type, &target_type_name,
+                         &target_ptr_base_type, &target_ptr_base_type_name,
+                         &target_ptr_depth)) {
         error_report(parser.current, "متوقع نوع معروف بعد '=' في تعريف الاسم البديل.");
         free(alias_name);
         free(target_type_name);
+        free(target_ptr_base_type_name);
         synchronize_mode(PARSER_SYNC_DECLARATION);
         return NULL;
     }
@@ -1451,15 +1580,22 @@ static Node* parse_type_alias_declaration(bool register_alias)
     if (!alias) {
         free(alias_name);
         free(target_type_name);
+        free(target_ptr_base_type_name);
         return NULL;
     }
 
     alias->data.type_alias.name = alias_name;
     alias->data.type_alias.target_type = target_type;
     alias->data.type_alias.target_type_name = target_type_name;
+    alias->data.type_alias.target_ptr_base_type = target_ptr_base_type;
+    alias->data.type_alias.target_ptr_base_type_name = target_ptr_base_type_name;
+    alias->data.type_alias.target_ptr_depth = target_ptr_depth;
 
     if (register_alias) {
-        (void)parser_type_alias_register(tok_kw, alias_name, target_type, target_type_name);
+        (void)parser_type_alias_register(tok_kw, alias_name,
+                                         target_type, target_type_name,
+                                         target_ptr_base_type, target_ptr_base_type_name,
+                                         target_ptr_depth);
     }
     return alias;
 }
@@ -1590,9 +1726,14 @@ Node* parse_statement() {
             Token tok_type = parser.current;
             DataType dt = TYPE_INT;
             char* type_name = NULL;
+            DataType ptr_base_type = TYPE_INT;
+            char* ptr_base_type_name = NULL;
+            int ptr_depth = 0;
             (void)tok_type;
 
-            if (!parse_type_spec(&dt, &type_name)) {
+            if (!parse_type_spec(&dt, &type_name,
+                                 &ptr_base_type, &ptr_base_type_name,
+                                 &ptr_depth)) {
                 error_report(parser.current, "متوقع نوع في تهيئة حلقة 'لكل'.");
                 synchronize_mode(PARSER_SYNC_STATEMENT);
                 return NULL;
@@ -1606,6 +1747,7 @@ Node* parse_statement() {
             if (parser.current.type != TOKEN_IDENTIFIER) {
                 error_report(parser.current, "متوقع اسم معرّف في تهيئة حلقة 'لكل'.");
                 free(type_name);
+                free(ptr_base_type_name);
                 synchronize_mode(PARSER_SYNC_STATEMENT);
                 return NULL;
             }
@@ -1632,6 +1774,9 @@ Node* parse_statement() {
             init->data.var_decl.name = name;
             init->data.var_decl.type = dt;
             init->data.var_decl.type_name = type_name;
+            init->data.var_decl.ptr_base_type = ptr_base_type;
+            init->data.var_decl.ptr_base_type_name = ptr_base_type_name;
+            init->data.var_decl.ptr_depth = ptr_depth;
             init->data.var_decl.expression = expr;
             init->data.var_decl.is_global = false;
             init->data.var_decl.is_const = init_q.is_const;
@@ -1719,9 +1864,14 @@ Node* parse_statement() {
         Token tok_type = parser.current;
         DataType dt = TYPE_INT;
         char* type_name = NULL;
+        DataType ptr_base_type = TYPE_INT;
+        char* ptr_base_type_name = NULL;
+        int ptr_depth = 0;
         (void)tok_type;
 
-        if (!parse_type_spec(&dt, &type_name)) {
+        if (!parse_type_spec(&dt, &type_name,
+                             &ptr_base_type, &ptr_base_type_name,
+                             &ptr_depth)) {
             error_report(parser.current, "متوقع نوع.");
             synchronize_mode(PARSER_SYNC_STATEMENT);
             return NULL;
@@ -1731,6 +1881,7 @@ Node* parse_statement() {
         if (parser.current.type != TOKEN_IDENTIFIER) {
             error_report(parser.current, "متوقع اسم معرّف بعد النوع.");
             free(type_name);
+            free(ptr_base_type_name);
             synchronize_mode(PARSER_SYNC_STATEMENT);
             return NULL;
         }
@@ -1747,6 +1898,7 @@ Node* parse_statement() {
             int64_t total_elems = 0;
             if (!parse_array_dimensions(&dims, &dim_count, &total_elems)) {
                 free(type_name);
+                free(ptr_base_type_name);
                 free(name);
                 synchronize_mode(PARSER_SYNC_STATEMENT);
                 return NULL;
@@ -1768,6 +1920,9 @@ Node* parse_statement() {
             stmt->data.array_decl.name = name;
             stmt->data.array_decl.element_type = dt;
             stmt->data.array_decl.element_type_name = type_name;
+            stmt->data.array_decl.element_ptr_base_type = ptr_base_type;
+            stmt->data.array_decl.element_ptr_base_type_name = ptr_base_type_name;
+            stmt->data.array_decl.element_ptr_depth = ptr_depth;
             stmt->data.array_decl.element_struct_size = 0;
             stmt->data.array_decl.element_struct_align = 0;
             stmt->data.array_decl.dims = dims;
@@ -1794,6 +1949,9 @@ Node* parse_statement() {
             stmt->data.var_decl.name = name;
             stmt->data.var_decl.type = dt;
             stmt->data.var_decl.type_name = type_name;
+            stmt->data.var_decl.ptr_base_type = ptr_base_type;
+            stmt->data.var_decl.ptr_base_type_name = ptr_base_type_name;
+            stmt->data.var_decl.ptr_depth = ptr_depth;
             stmt->data.var_decl.expression = NULL;
             stmt->data.var_decl.is_global = false;
             stmt->data.var_decl.is_const = is_const;
@@ -1820,11 +1978,34 @@ Node* parse_statement() {
         stmt->data.var_decl.name = name;
         stmt->data.var_decl.type = dt;
         stmt->data.var_decl.type_name = type_name;
+        stmt->data.var_decl.ptr_base_type = ptr_base_type;
+        stmt->data.var_decl.ptr_base_type_name = ptr_base_type_name;
+        stmt->data.var_decl.ptr_depth = ptr_depth;
         stmt->data.var_decl.expression = expr;
         stmt->data.var_decl.is_global = false;
         stmt->data.var_decl.is_const = is_const;
         stmt->data.var_decl.is_static = is_static;
         return stmt;
+    }
+
+    if (parser.current.type == TOKEN_STAR) {
+        Token tok_star = parser.current;
+        Node* target = parse_unary();
+        if (target && target->type == NODE_UNARY_OP && target->data.unary_op.op == UOP_DEREF &&
+            parser.current.type == TOKEN_ASSIGN) {
+            eat(TOKEN_ASSIGN);
+            Node* value = parse_expression();
+            eat(TOKEN_DOT);
+
+            Node* stmt = ast_node_new(NODE_DEREF_ASSIGN, tok_star);
+            if (!stmt) return NULL;
+            stmt->data.deref_assign.target = target;
+            stmt->data.deref_assign.value = value;
+            return stmt;
+        }
+
+        eat(TOKEN_DOT);
+        return target;
     }
 
     if (parser.current.type == TOKEN_IDENTIFIER) {
@@ -1974,9 +2155,14 @@ Node* parse_declaration() {
         Token tok_type = parser.current;
         DataType dt = TYPE_INT;
         char* type_name = NULL;
+        DataType ptr_base_type = TYPE_INT;
+        char* ptr_base_type_name = NULL;
+        int ptr_depth = 0;
         (void)tok_type;
 
-        if (!parse_type_spec(&dt, &type_name)) {
+        if (!parse_type_spec(&dt, &type_name,
+                             &ptr_base_type, &ptr_base_type_name,
+                             &ptr_depth)) {
             error_report(parser.current, "متوقع نوع.");
             synchronize_mode(PARSER_SYNC_DECLARATION);
             return NULL;
@@ -2047,9 +2233,15 @@ Node* parse_declaration() {
 
                 DataType fdt = TYPE_INT;
                 char* ftype_name = NULL;
-                if (!parse_type_spec(&fdt, &ftype_name)) {
+                DataType fptr_base_type = TYPE_INT;
+                char* fptr_base_type_name = NULL;
+                int fptr_depth = 0;
+                if (!parse_type_spec(&fdt, &ftype_name,
+                                     &fptr_base_type, &fptr_base_type_name,
+                                     &fptr_depth)) {
                     error_report(parser.current, "متوقع نوع حقل داخل الهيكل/الاتحاد.");
                     free(ftype_name);
+                    free(fptr_base_type_name);
                     synchronize_mode(PARSER_SYNC_DECLARATION);
                     break;
                 }
@@ -2057,6 +2249,7 @@ Node* parse_declaration() {
                 if (parser.current.type != TOKEN_IDENTIFIER) {
                     error_report(parser.current, "متوقع اسم حقل داخل الهيكل/الاتحاد.");
                     free(ftype_name);
+                    free(fptr_base_type_name);
                     synchronize_mode(PARSER_SYNC_DECLARATION);
                     break;
                 }
@@ -2068,6 +2261,7 @@ Node* parse_declaration() {
                 if (parser.current.type == TOKEN_LBRACKET) {
                     error_report(parser.current, "حقول المصفوفات داخل الهيكل/الاتحاد غير مدعومة بعد.");
                     free(ftype_name);
+                    free(fptr_base_type_name);
                     synchronize_mode(PARSER_SYNC_DECLARATION);
                     break;
                 }
@@ -2079,6 +2273,9 @@ Node* parse_declaration() {
                 field->data.var_decl.name = fname;
                 field->data.var_decl.type = fdt;
                 field->data.var_decl.type_name = ftype_name;
+                field->data.var_decl.ptr_base_type = fptr_base_type;
+                field->data.var_decl.ptr_base_type_name = fptr_base_type_name;
+                field->data.var_decl.ptr_depth = fptr_depth;
                 field->data.var_decl.struct_size = 0;
                 field->data.var_decl.struct_align = 0;
                 field->data.var_decl.expression = NULL;
@@ -2111,6 +2308,7 @@ Node* parse_declaration() {
         if (parser.current.type != TOKEN_IDENTIFIER) {
             error_report(parser.current, "متوقع اسم معرّف بعد النوع.");
             free(type_name);
+            free(ptr_base_type_name);
             synchronize_mode(PARSER_SYNC_DECLARATION);
             return NULL;
         }
@@ -2127,6 +2325,7 @@ Node* parse_declaration() {
                 if (dt == TYPE_ENUM || dt == TYPE_STRUCT || dt == TYPE_UNION) {
                     error_report(parser.current, "أنواع الإرجاع المعرفة من المستخدم غير مدعومة بعد في تواقيع الدوال.");
                     free(type_name);
+                    free(ptr_base_type_name);
                     free(name);
                     synchronize_mode(PARSER_SYNC_DECLARATION);
                     return NULL;
@@ -2144,7 +2343,12 @@ Node* parse_declaration() {
                     Token tok_param_type = parser.current;
                     DataType param_dt = TYPE_INT;
                     char* param_tn = NULL;
-                    if (!parse_type_spec(&param_dt, &param_tn)) {
+                    DataType param_ptr_base_type = TYPE_INT;
+                    char* param_ptr_base_type_name = NULL;
+                    int param_ptr_depth = 0;
+                    if (!parse_type_spec(&param_dt, &param_tn,
+                                         &param_ptr_base_type, &param_ptr_base_type_name,
+                                         &param_ptr_depth)) {
                         error_report(parser.current, "متوقع نوع للمعامل.");
                         synchronize_mode(PARSER_SYNC_DECLARATION);
                         return NULL;
@@ -2152,11 +2356,13 @@ Node* parse_declaration() {
                     if (param_dt == TYPE_ENUM || param_dt == TYPE_STRUCT || param_dt == TYPE_UNION) {
                         error_report(tok_param_type, "أنواع المعاملات المعرفة من المستخدم غير مدعومة بعد في تواقيع الدوال.");
                         if (param_tn) free(param_tn);
+                        if (param_ptr_base_type_name) free(param_ptr_base_type_name);
                         param_tn = NULL;
                         param_dt = TYPE_INT;
                     } else if (param_dt == TYPE_VOID) {
                         error_report(tok_param_type, "لا يمكن استخدام 'عدم' كنوع معامل.");
                         if (param_tn) free(param_tn);
+                        if (param_ptr_base_type_name) free(param_ptr_base_type_name);
                         param_tn = NULL;
                         param_dt = TYPE_INT;
                     }
@@ -2174,6 +2380,9 @@ Node* parse_declaration() {
                     param->data.var_decl.name = pname;
                     param->data.var_decl.type = param_dt;
                     param->data.var_decl.type_name = param_tn;
+                    param->data.var_decl.ptr_base_type = param_ptr_base_type;
+                    param->data.var_decl.ptr_base_type_name = param_ptr_base_type_name;
+                    param->data.var_decl.ptr_depth = param_ptr_depth;
                     param->data.var_decl.expression = NULL;
                     param->data.var_decl.is_global = false;
                     param->data.var_decl.is_const = false;
@@ -2201,6 +2410,9 @@ Node* parse_declaration() {
             if (!func) return NULL;
             func->data.func_def.name = name;
             func->data.func_def.return_type = dt;
+            func->data.func_def.return_ptr_base_type = ptr_base_type;
+            func->data.func_def.return_ptr_base_type_name = ptr_base_type_name;
+            func->data.func_def.return_ptr_depth = ptr_depth;
             func->data.func_def.params = head_param;
             func->data.func_def.body = body;
             func->data.func_def.is_prototype = is_proto;
@@ -2215,6 +2427,7 @@ Node* parse_declaration() {
             int64_t total_elems = 0;
             if (!parse_array_dimensions(&dims, &dim_count, &total_elems)) {
                 free(type_name);
+                free(ptr_base_type_name);
                 free(name);
                 synchronize_mode(PARSER_SYNC_DECLARATION);
                 return NULL;
@@ -2236,6 +2449,9 @@ Node* parse_declaration() {
             arr->data.array_decl.name = name;
             arr->data.array_decl.element_type = dt;
             arr->data.array_decl.element_type_name = type_name;
+            arr->data.array_decl.element_ptr_base_type = ptr_base_type;
+            arr->data.array_decl.element_ptr_base_type_name = ptr_base_type_name;
+            arr->data.array_decl.element_ptr_depth = ptr_depth;
             arr->data.array_decl.element_struct_size = 0;
             arr->data.array_decl.element_struct_align = 0;
             arr->data.array_decl.dims = dims;
@@ -2267,6 +2483,9 @@ Node* parse_declaration() {
             var->data.var_decl.name = name;
             var->data.var_decl.type = dt;
             var->data.var_decl.type_name = type_name;
+            var->data.var_decl.ptr_base_type = ptr_base_type;
+            var->data.var_decl.ptr_base_type_name = ptr_base_type_name;
+            var->data.var_decl.ptr_depth = ptr_depth;
             var->data.var_decl.expression = NULL;
             var->data.var_decl.is_global = true;
             var->data.var_decl.is_const = is_const;
@@ -2286,6 +2505,9 @@ Node* parse_declaration() {
         var->data.var_decl.name = name;
         var->data.var_decl.type = dt;
         var->data.var_decl.type_name = type_name;
+        var->data.var_decl.ptr_base_type = ptr_base_type;
+        var->data.var_decl.ptr_base_type_name = ptr_base_type_name;
+        var->data.var_decl.ptr_depth = ptr_depth;
         var->data.var_decl.expression = expr;
         var->data.var_decl.is_global = true;
         var->data.var_decl.is_const = is_const;

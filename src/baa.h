@@ -338,6 +338,7 @@ typedef enum {
     // الوصول للأعضاء/المؤهلات (v0.3.4)
     NODE_MEMBER_ACCESS, // <expr>:<member> (عضو هيكل أو قيمة تعداد)
     NODE_MEMBER_ASSIGN, // <member_access> = <expr>.
+    NODE_DEREF_ASSIGN,  // *ptr = <expr>.
     
     // التعبيرات (Expressions)
     NODE_BIN_OP,        // العمليات الثنائية (+، -، *، /)
@@ -348,6 +349,7 @@ typedef enum {
     NODE_STRING,        // قيمة نصية
     NODE_CHAR,          // قيمة حرفية
     NODE_BOOL,          // قيمة منطقية (صواب/خطأ)
+    NODE_NULL,          // مؤشر فارغ (عدم في سياق التعبير)
     NODE_SIZEOF,        // حجم(type) أو حجم(expr)
     NODE_VAR_REF,       // إشارة لمتغير
     NODE_CALL_EXPR      // تعبير استدعاء دالة
@@ -370,6 +372,7 @@ typedef enum {
     TYPE_U64,           // ط٦٤
 
     TYPE_STRING,        // نص (حرف[])
+    TYPE_POINTER,       // مؤشر عام
     TYPE_BOOL,          // منطقي (bool - stored as byte)
     TYPE_CHAR,          // حرف (UTF-8 sequence)
     TYPE_FLOAT,         // عشري (float64)
@@ -402,6 +405,8 @@ typedef enum {
     UOP_NEG, // السالب (-)
     UOP_NOT, // النفي (!)
     UOP_BIT_NOT, // النفي البتي (~)
+    UOP_ADDR, // أخذ العنوان (&)
+    UOP_DEREF, // فك الإشارة (*)
     UOP_INC, // الزيادة (++)
     UOP_DEC  // النقصان (--)
 } UnaryOpType;
@@ -425,6 +430,9 @@ typedef struct Node {
     // النوع المُستنتَج أثناء التحليل الدلالي للتعبيرات.
     // يُستخدم في خفض IR لتحديد حجم/إشارة العمليات.
     DataType inferred_type;
+    DataType inferred_ptr_base_type;   // نوع أساس المؤشر عند inferred_type == TYPE_POINTER
+    char* inferred_ptr_base_type_name; // اسم النوع المركب لأساس المؤشر عند الحاجة
+    int inferred_ptr_depth;            // عمق المؤشر عند inferred_type == TYPE_POINTER
 
     union {
         // البرنامج: قائمة الدوال والمتغيرات العامة
@@ -437,6 +445,9 @@ typedef struct Node {
         struct { 
             char* name;          // اسم الدالة
             DataType return_type; // نوع الإرجاع
+            DataType return_ptr_base_type;   // نوع أساس المؤشر لنوع الإرجاع إن كان مؤشراً
+            char* return_ptr_base_type_name; // اسم النوع المركب لأساس المؤشر
+            int return_ptr_depth;            // عمق المؤشر لنوع الإرجاع
             struct Node* params; // قائمة المعاملات (متغيرات)
             struct Node* body;   // جسم الدالة (كتلة) - NULL if prototype
             bool is_prototype;   // هل هو نموذج أولي؟ (بدون جسم)
@@ -447,6 +458,9 @@ typedef struct Node {
             char* name;              // اسم المتغير
             DataType type;           // نوع البيانات (صحيح أو نص)
             char* type_name;          // اسم النوع عند TYPE_ENUM/TYPE_STRUCT
+            DataType ptr_base_type;   // نوع أساس المؤشر عند type == TYPE_POINTER
+            char* ptr_base_type_name; // اسم النوع المركب لأساس المؤشر
+            int ptr_depth;            // عمق المؤشر عند type == TYPE_POINTER
             int struct_size;          // حجم الهيكل بالبايت عند TYPE_STRUCT (يُملأ دلالياً)
             int struct_align;         // محاذاة الهيكل عند TYPE_STRUCT (يُملأ دلالياً)
             struct Node* expression; // القيمة الابتدائية (اختياري)
@@ -460,6 +474,9 @@ typedef struct Node {
             char* name;              // اسم النوع البديل
             DataType target_type;    // النوع الهدف بعد فك الاسم البديل
             char* target_type_name;  // اسم النوع عند TYPE_ENUM/TYPE_STRUCT/TYPE_UNION
+            DataType target_ptr_base_type;   // نوع أساس المؤشر للنوع الهدف عندما يكون target_type == TYPE_POINTER
+            char* target_ptr_base_type_name; // اسم النوع المركب لأساس المؤشر
+            int target_ptr_depth;            // عمق المؤشر للنوع الهدف عندما يكون target_type == TYPE_POINTER
         } type_alias;
 
         // تعريف تعداد
@@ -504,6 +521,9 @@ typedef struct Node {
             int member_offset;       // الإزاحة بالبايت من بداية الهيكل
             DataType member_type;    // نوع الحقل النهائي
             char* member_type_name;  // اسم النوع عند TYPE_ENUM/TYPE_STRUCT
+            DataType member_ptr_base_type;   // نوع أساس المؤشر إذا كان الحقل مؤشراً
+            char* member_ptr_base_type_name; // اسم النوع المركب لأساس المؤشر
+            int member_ptr_depth;            // عمق المؤشر إذا كان الحقل مؤشراً
             bool member_is_const;    // هل المسار/الحقل النهائي ثابت (لا يمكن الكتابة)؟
         } member_access;
 
@@ -513,11 +533,20 @@ typedef struct Node {
             struct Node* value;      // RHS expression
         } member_assign;
 
+        // إسناد عبر مؤشر: *ptr = value.
+        struct {
+            struct Node* target;     // NODE_UNARY_OP مع UOP_DEREF
+            struct Node* value;      // RHS expression
+        } deref_assign;
+
         // تعريف مصفوفة
         struct {
             char* name;            // اسم المصفوفة
             DataType element_type; // نوع عنصر المصفوفة
             char* element_type_name; // اسم النوع عند عنصر TYPE_ENUM/TYPE_STRUCT/TYPE_UNION
+            DataType element_ptr_base_type;   // نوع أساس مؤشر العنصر عندما يكون element_type == TYPE_POINTER
+            char* element_ptr_base_type_name; // اسم النوع المركب لأساس مؤشر العنصر
+            int element_ptr_depth;            // عمق مؤشر عنصر المصفوفة
             int element_struct_size;  // حجم عنصر الهيكل/الاتحاد (يُملأ دلالياً)
             int element_struct_align; // محاذاة عنصر الهيكل/الاتحاد (يُملأ دلالياً)
 
@@ -648,6 +677,9 @@ typedef struct {
     ScopeType scope;   // النطاق (عام أو محلي)
     DataType type;     // نوع البيانات (للمتغير: نوعه، للمصفوفة: نوع العنصر)
     char type_name[32]; // اسم النوع عند TYPE_ENUM/TYPE_STRUCT (فارغ لغير ذلك)
+    DataType ptr_base_type;      // نوع أساس المؤشر عندما type == TYPE_POINTER
+    char ptr_base_type_name[32]; // اسم النوع المركب لأساس المؤشر
+    int ptr_depth;               // عمق المؤشر عندما type == TYPE_POINTER
     bool is_array;     // هل الرمز مصفوفة؟
     int array_rank;    // عدد الأبعاد
     int64_t array_total_elems; // حاصل ضرب الأبعاد

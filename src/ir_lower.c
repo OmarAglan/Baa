@@ -311,6 +311,7 @@ static IRType* ir_type_from_datatype(IRModule* module, DataType t) {
         case TYPE_U32:    return IR_TYPE_U32_T;
         case TYPE_U64:    return IR_TYPE_U64_T;
         case TYPE_STRING: return get_char_ptr_type(module);
+        case TYPE_POINTER: return ir_type_ptr(IR_TYPE_I8_T);
         case TYPE_CHAR:   return IR_TYPE_CHAR_T;
         case TYPE_FLOAT:  return IR_TYPE_F64_T;
         case TYPE_VOID:   return IR_TYPE_VOID_T;
@@ -1484,6 +1485,79 @@ static IRValue* lower_call_expr(IRLowerCtx* ctx, Node* expr) {
     return ir_value_reg(dest, ret_type);
 }
 
+static IRValue* lower_lvalue_address(IRLowerCtx* ctx, Node* expr, IRType** out_pointee_type)
+{
+    if (out_pointee_type) *out_pointee_type = IR_TYPE_I64_T;
+    if (!ctx || !ctx->builder || !expr) return ir_value_const_int(0, ir_type_ptr(IR_TYPE_I64_T));
+
+    if (expr->type == NODE_VAR_REF) {
+        const char* name = expr->data.var_ref.name;
+        IRLowerBinding* b = find_local(ctx, name);
+        if (b) {
+            IRType* vt = b->value_type ? b->value_type : IR_TYPE_I64_T;
+            if (out_pointee_type) *out_pointee_type = vt;
+            if (b->is_static_storage) {
+                return ir_value_global(ir_lower_binding_storage_name(b), vt);
+            }
+            return ir_value_reg(b->ptr_reg, ir_type_ptr(vt));
+        }
+
+        IRGlobal* g = NULL;
+        if (ctx->builder && ctx->builder->module && name) {
+            g = ir_module_find_global(ctx->builder->module, name);
+        }
+        if (g && g->type) {
+            if (out_pointee_type) *out_pointee_type = g->type;
+            return ir_value_global(name, g->type);
+        }
+
+        ir_lower_report_error(ctx, expr, "لا يمكن أخذ عنوان متغير غير معروف '%s'.", name ? name : "???");
+        return ir_value_const_int(0, ir_type_ptr(IR_TYPE_I64_T));
+    }
+
+    if (expr->type == NODE_UNARY_OP && expr->data.unary_op.op == UOP_DEREF) {
+        IRValue* p = lower_expr(ctx, expr->data.unary_op.operand);
+        if (out_pointee_type) {
+            IRType* t = ir_type_from_datatype(ctx->builder->module, expr->inferred_type);
+            if (!t || t->kind == IR_TYPE_VOID) t = IR_TYPE_I64_T;
+            *out_pointee_type = t;
+        }
+        return p;
+    }
+
+    if (expr->type == NODE_MEMBER_ACCESS && expr->data.member_access.is_struct_member) {
+        IRType* ptr_i8_t = ir_type_ptr(IR_TYPE_I8_T);
+        IRValue* base_ptr = NULL;
+        if (expr->data.member_access.root_is_global) {
+            base_ptr = ir_value_global(expr->data.member_access.root_var, IR_TYPE_I8_T);
+        } else {
+            IRLowerBinding* b = find_local(ctx, expr->data.member_access.root_var);
+            if (!b || !b->value_type) {
+                ir_lower_report_error(ctx, expr, "هيكل محلي غير معروف '%s'.", expr->data.member_access.root_var);
+                return ir_value_const_int(0, ir_type_ptr(IR_TYPE_I64_T));
+            }
+            if (b->is_static_storage) {
+                base_ptr = ir_value_global(ir_lower_binding_storage_name(b), IR_TYPE_I8_T);
+            } else {
+                IRValue* arr_ptr = ir_value_reg(b->ptr_reg, ir_type_ptr(b->value_type));
+                int c = ir_builder_emit_cast(ctx->builder, arr_ptr, ptr_i8_t);
+                base_ptr = ir_value_reg(c, ptr_i8_t);
+            }
+        }
+        IRValue* idx = ir_value_const_int((int64_t)expr->data.member_access.member_offset, IR_TYPE_I64_T);
+        int ep = ir_builder_emit_ptr_offset(ctx->builder, ptr_i8_t, base_ptr, idx);
+        IRValue* byte_ptr = ir_value_reg(ep, ptr_i8_t);
+        IRType* ft = ir_type_from_datatype(ctx->builder->module, expr->data.member_access.member_type);
+        if (!ft || ft->kind == IR_TYPE_VOID) ft = IR_TYPE_I64_T;
+        if (out_pointee_type) *out_pointee_type = ft;
+        int fp = ir_builder_emit_cast(ctx->builder, byte_ptr, ir_type_ptr(ft));
+        return ir_value_reg(fp, ir_type_ptr(ft));
+    }
+
+    ir_lower_report_error(ctx, expr, "أخذ العنوان '&' لهذا التعبير غير مدعوم.");
+    return ir_value_const_int(0, ir_type_ptr(IR_TYPE_I64_T));
+}
+
 // ============================================================================
 // Expression lowering (v0.3.0.3)
 // ============================================================================
@@ -1761,6 +1835,37 @@ IRValue* lower_expr(IRLowerCtx* ctx, Node* expr) {
 
             // Arithmetic
             if (op == OP_ADD || op == OP_SUB || op == OP_MUL || op == OP_DIV || op == OP_MOD) {
+                if (expr->inferred_type == TYPE_POINTER) {
+                    IRValue* lhs0 = lower_expr(ctx, expr->data.bin_op.left);
+                    IRValue* rhs0 = lower_expr(ctx, expr->data.bin_op.right);
+
+                    bool left_ptr = expr->data.bin_op.left && expr->data.bin_op.left->inferred_type == TYPE_POINTER;
+                    IRValue* base_ptr = left_ptr ? lhs0 : rhs0;
+                    IRValue* delta_v = left_ptr ? rhs0 : lhs0;
+                    IRType* ptr_t = (base_ptr && base_ptr->type && base_ptr->type->kind == IR_TYPE_PTR)
+                        ? base_ptr->type
+                        : ir_type_ptr(IR_TYPE_I8_T);
+                    base_ptr = cast_to(ctx, base_ptr, ptr_t);
+                    IRValue* delta = ensure_i64(ctx, delta_v);
+                    if (op == OP_SUB) {
+                        int nr = ir_builder_emit_neg(ctx->builder, IR_TYPE_I64_T, delta);
+                        delta = ir_value_reg(nr, IR_TYPE_I64_T);
+                    }
+                    int pr = ir_builder_emit_ptr_offset(ctx->builder, ptr_t, base_ptr, delta);
+                    return ir_value_reg(pr, ptr_t);
+                }
+
+                if (op == OP_SUB &&
+                    expr->data.bin_op.left && expr->data.bin_op.right &&
+                    expr->data.bin_op.left->inferred_type == TYPE_POINTER &&
+                    expr->data.bin_op.right->inferred_type == TYPE_POINTER &&
+                    expr->inferred_type != TYPE_POINTER) {
+                    ir_lower_report_error(ctx, expr, "خفض طرح مؤشرين إلى عدد غير مدعوم حالياً.");
+                    (void)lower_expr(ctx, expr->data.bin_op.left);
+                    (void)lower_expr(ctx, expr->data.bin_op.right);
+                    return ir_builder_const_i64(0);
+                }
+
                 // عشري
                 if (expr->inferred_type == TYPE_FLOAT) {
                     IRValue* lhs0 = lower_expr(ctx, expr->data.bin_op.left);
@@ -1862,6 +1967,20 @@ IRValue* lower_expr(IRLowerCtx* ctx, Node* expr) {
 
             // Comparison
             if (op == OP_EQ || op == OP_NEQ || op == OP_LT || op == OP_GT || op == OP_LTE || op == OP_GTE) {
+                if (expr->data.bin_op.left && expr->data.bin_op.right &&
+                    (expr->data.bin_op.left->inferred_type == TYPE_POINTER || expr->data.bin_op.right->inferred_type == TYPE_POINTER)) {
+                    IRValue* lhs0 = lower_expr(ctx, expr->data.bin_op.left);
+                    IRValue* rhs0 = lower_expr(ctx, expr->data.bin_op.right);
+                    IRType* ptr_t = (lhs0 && lhs0->type && lhs0->type->kind == IR_TYPE_PTR)
+                        ? lhs0->type
+                        : ((rhs0 && rhs0->type && rhs0->type->kind == IR_TYPE_PTR) ? rhs0->type : ir_type_ptr(IR_TYPE_I8_T));
+                    IRValue* lhs = cast_to(ctx, lhs0, ptr_t);
+                    IRValue* rhs = cast_to(ctx, rhs0, ptr_t);
+                    IRCmpPred pred = ir_cmp_to_pred(op, false);
+                    int dest = ir_builder_emit_cmp(ctx->builder, pred, lhs, rhs);
+                    return ir_value_reg(dest, IR_TYPE_I1_T);
+                }
+
                 IRValue* lhs0 = lower_expr(ctx, expr->data.bin_op.left);
                 IRValue* rhs0 = lower_expr(ctx, expr->data.bin_op.right);
                 IRValue* lhs = lhs0;
@@ -1919,6 +2038,28 @@ IRValue* lower_expr(IRLowerCtx* ctx, Node* expr) {
         case NODE_UNARY_OP: {
             UnaryOpType op = expr->data.unary_op.op;
 
+            if (op == UOP_ADDR) {
+                IRType* pointee = IR_TYPE_I64_T;
+                IRValue* addr = lower_lvalue_address(ctx, expr->data.unary_op.operand, &pointee);
+                IRType* ptr_t = ir_type_ptr(pointee ? pointee : IR_TYPE_I64_T);
+                if (!addr->type || !ir_types_equal(addr->type, ptr_t)) {
+                    addr = cast_to(ctx, addr, ptr_t);
+                }
+                return addr;
+            }
+
+            if (op == UOP_DEREF) {
+                IRValue* p0 = lower_expr(ctx, expr->data.unary_op.operand);
+                IRType* target_t = ir_type_from_datatype(ctx->builder ? ctx->builder->module : NULL, expr->inferred_type);
+                if (!target_t || target_t->kind == IR_TYPE_VOID) {
+                    target_t = IR_TYPE_I64_T;
+                }
+                IRType* ptr_t = ir_type_ptr(target_t);
+                IRValue* p = cast_to(ctx, p0, ptr_t);
+                int lr = ir_builder_emit_load(ctx->builder, target_t, p);
+                return ir_value_reg(lr, target_t);
+            }
+
             if (op == UOP_NEG) {
                 IRValue* operand0 = lower_expr(ctx, expr->data.unary_op.operand);
                 DataType dt = expr->inferred_type;
@@ -1968,6 +2109,9 @@ IRValue* lower_expr(IRLowerCtx* ctx, Node* expr) {
         // -----------------------------------------------------------------
         case NODE_BOOL:
             return ir_value_const_int(expr->data.bool_lit.value ? 1 : 0, IR_TYPE_I1_T);
+
+        case NODE_NULL:
+            return ir_value_const_int(0, ir_type_ptr(IR_TYPE_I8_T));
 
         case NODE_FLOAT:
             return ir_value_const_int((int64_t)expr->data.float_lit.bits, IR_TYPE_F64_T);
@@ -2525,6 +2669,30 @@ static void lower_member_assign(IRLowerCtx* ctx, Node* stmt) {
     }
 
     ir_builder_emit_store(ctx->builder, rhs, field_ptr);
+}
+
+static void lower_deref_assign(IRLowerCtx* ctx, Node* stmt) {
+    if (!ctx || !ctx->builder || !stmt) return;
+    Node* target = stmt->data.deref_assign.target;
+    Node* value = stmt->data.deref_assign.value;
+    if (!target || target->type != NODE_UNARY_OP || target->data.unary_op.op != UOP_DEREF) {
+        ir_lower_report_error(ctx, stmt, "هدف الإسناد عبر المؤشر غير صالح.");
+        if (value) (void)lower_expr(ctx, value);
+        return;
+    }
+
+    IRValue* p0 = lower_expr(ctx, target->data.unary_op.operand);
+    IRType* value_t = ir_type_from_datatype(ctx->builder ? ctx->builder->module : NULL, target->inferred_type);
+    if (!value_t || value_t->kind == IR_TYPE_VOID) value_t = IR_TYPE_I64_T;
+    IRType* ptr_t = ir_type_ptr(value_t);
+    IRValue* ptr = cast_to(ctx, p0, ptr_t);
+
+    IRValue* rhs = lower_expr(ctx, value);
+    if (rhs && rhs->type && !ir_types_equal(rhs->type, value_t)) {
+        rhs = cast_to(ctx, rhs, value_t);
+    }
+
+    ir_builder_emit_store(ctx->builder, rhs, ptr);
 }
 
 static void lower_assign(IRLowerCtx* ctx, Node* stmt) {
@@ -3163,6 +3331,10 @@ void lower_stmt(IRLowerCtx* ctx, Node* stmt) {
             lower_member_assign(ctx, stmt);
             return;
 
+        case NODE_DEREF_ASSIGN:
+            lower_deref_assign(ctx, stmt);
+            return;
+
         case NODE_ARRAY_ASSIGN:
             lower_array_assign(ctx, stmt);
             return;
@@ -3378,6 +3550,9 @@ static IRValue* ir_lower_global_init_value(IRBuilder* builder, Node* expr, IRTyp
         case NODE_STRING:
             // Adds to module string table and returns pointer value.
             return ir_builder_const_baa_string(builder, expr->data.string_lit.value);
+
+        case NODE_NULL:
+            return ir_value_const_int(0, expected_type ? expected_type : ir_type_ptr(IR_TYPE_I8_T));
 
         case NODE_MEMBER_ACCESS:
             if (expr->data.member_access.is_enum_value) {

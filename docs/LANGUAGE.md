@@ -481,7 +481,25 @@ Baa is statically typed. All variables must be declared with their type.
 - إن غابت التهيئة، القيمة الافتراضية هي الصفر (مثل C للتخزين الساكن).
 - لا يُسمح حالياً بتطبيق `ساكن` على تعريف الدوال.
 
-#### 3.7.3. Type Casting (تحويل الأنواع) [Scheduled v0.3.10.5]
+#### 3.7.3. Pointers (المؤشرات) [Implemented v0.3.10]
+
+**Core syntax:**
+
+- تعريف نوع مؤشر: `صحيح* م.`
+- أخذ العنوان: `م = &س.`
+- فك الإشارة: `صحيح ق = *م.`
+- إسناد عبر المؤشر: `*م = ٢٠.`
+- المؤشر الفارغ: `صحيح* ف = عدم.`
+
+**Current rules (v0.3.10 core):**
+
+- دعم المؤشرات العامة مع تتبع نوع الأساس وعمق المؤشر في التحليل الدلالي.
+- عمليات المؤشرات المدعومة دلالياً: `pointer +/- int` و `pointer - pointer`.
+- المقارنة بين المؤشرات مدعومة عند توافق نوع المؤشر (مع السماح بـ `عدم` كمؤشر فارغ).
+- فك الإشارة يتطلب مؤشراً صالحاً، وأخذ العنوان يتطلب قيمة قابلة للإسناد.
+- التحويلات الصريحة `كـ<...>` ومؤشرات الدوال ما تزال خارج نطاق v0.3.10 core.
+
+#### 3.7.4. Type Casting (تحويل الأنواع) [Scheduled v0.3.10.5]
 
 **Syntax:** `كـ<type>(expression)`
 
@@ -859,6 +877,8 @@ Multi-way branching based on integer or character values.
 | `++` | Increment (postfix) | `س++` |
 | `--` | Decrement (postfix) | `س--` |
 | `-` | Negative (unary) | `-٥` |
+| `&` | Address-of (unary) | `&س` |
+| `*` | Dereference (unary) | `*م` |
 
 ### 8.2. Comparison
 
@@ -923,7 +943,7 @@ From highest to lowest:
 
 1. `()` — Parentheses
 2. `حجم(...)` — Size query
-3. `!`, `~`, `-` (unary), `++`, `--` — Unary operators
+3. `!`, `~`, `-` (unary), `&`, `*`, `++`, `--` — Unary operators
 4. `*`, `/`, `%` — Multiplication, Division, Modulo
 5. `+`, `-` — Addition, Subtraction
 6. `<<`, `>>` — Bit shifts

@@ -29,3 +29,4 @@ mingw64.7z
 # Python cache
 __pycache__/
 *.pyc
+/.cache

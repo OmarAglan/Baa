@@ -220,7 +220,15 @@ static int compile_one_ir(const CompilerConfig *config,
     }
 
     if (config->time_phases) t0 = driver_time_seconds();
-    (void)ir_outssa_run(ir_module);
+    bool outssa_changed = false;
+    if (!ir_outssa_run_ex(ir_module, &outssa_changed))
+    {
+        fprintf(stderr, "فشل تمريرة الخروج من SSA.\n");
+        ir_module_free(ir_module);
+        free(source);
+        return 1;
+    }
+    (void)outssa_changed;
     if (config->time_phases) phase_times->outssa_s += (driver_time_seconds() - t0);
 
     if (config->funroll_loops)

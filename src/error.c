@@ -39,6 +39,15 @@ static bool had_error = false;
 static bool had_warning = false;
 static int warning_count = 0;
 
+typedef struct {
+    char* filename;
+    char* source;
+} ErrorSourceEntry;
+
+static ErrorSourceEntry* g_error_sources = NULL;
+static int g_error_sources_count = 0;
+static int g_error_sources_cap = 0;
+
 // إعدادات التحذيرات العامة
 WarningConfig g_warning_config;
 
@@ -82,13 +91,80 @@ static const char* warning_type_name(WarningType type) {
     }
 }
 
+static void error_sources_clear(void) {
+    if (g_error_sources) {
+        for (int i = 0; i < g_error_sources_count; i++) {
+            free(g_error_sources[i].filename);
+            free(g_error_sources[i].source);
+            g_error_sources[i].filename = NULL;
+            g_error_sources[i].source = NULL;
+        }
+        free(g_error_sources);
+    }
+
+    g_error_sources = NULL;
+    g_error_sources_count = 0;
+    g_error_sources_cap = 0;
+}
+
+static const char* error_sources_lookup(const char* filename) {
+    if (!filename || !filename[0]) return current_source;
+
+    for (int i = 0; i < g_error_sources_count; i++) {
+        if (g_error_sources[i].filename &&
+            strcmp(g_error_sources[i].filename, filename) == 0) {
+            return g_error_sources[i].source;
+        }
+    }
+
+    return current_source;
+}
+
 // ============================================================================
 // تهيئة النظام (Initialization)
 // ============================================================================
 
 void error_init(const char* source) {
+    error_sources_clear();
     current_source = source;
     had_error = false;
+}
+
+void error_register_source(const char* filename, const char* source)
+{
+    if (!filename || !filename[0] || !source) return;
+
+    for (int i = 0; i < g_error_sources_count; i++) {
+        if (g_error_sources[i].filename &&
+            strcmp(g_error_sources[i].filename, filename) == 0) {
+            char* src_copy = strdup(source);
+            if (!src_copy) return;
+            free(g_error_sources[i].source);
+            g_error_sources[i].source = src_copy;
+            return;
+        }
+    }
+
+    if (g_error_sources_count >= g_error_sources_cap) {
+        int new_cap = (g_error_sources_cap == 0) ? 8 : g_error_sources_cap * 2;
+        ErrorSourceEntry* new_arr = (ErrorSourceEntry*)realloc(g_error_sources,
+            (size_t)new_cap * sizeof(ErrorSourceEntry));
+        if (!new_arr) return;
+        g_error_sources = new_arr;
+        g_error_sources_cap = new_cap;
+    }
+
+    char* name_copy = strdup(filename);
+    if (!name_copy) return;
+    char* src_copy = strdup(source);
+    if (!src_copy) {
+        free(name_copy);
+        return;
+    }
+
+    g_error_sources[g_error_sources_count].filename = name_copy;
+    g_error_sources[g_error_sources_count].source = src_copy;
+    g_error_sources_count++;
 }
 
 void warning_init(void) {
@@ -136,11 +212,13 @@ void warning_reset() {
 /**
  * @brief طباعة سطر الكود مع مؤشر.
  */
-static void print_source_line(int line, int col, bool use_color, const char* pointer_color) {
-    if (!current_source) return;
+static void print_source_line(const char* filename, int line, int col,
+                              bool use_color, const char* pointer_color) {
+    const char* src = error_sources_lookup(filename);
+    if (!src) return;
 
     // 1. البحث عن بداية السطر
-    const char* start = current_source;
+    const char* start = src;
     int current_line = 1;
     while (current_line < line && *start != '\0') {
         if (*start == '\n') current_line++;
@@ -204,7 +282,7 @@ void error_report(Token token, const char* message, ...) {
     fprintf(stderr, "\n");
 
     // طباعة سياق الكود
-    print_source_line(token.line, token.col, use_color, ANSI_BOLD_RED);
+    print_source_line(token.filename, token.line, token.col, use_color, ANSI_BOLD_RED);
     fprintf(stderr, "\n");
 }
 
@@ -259,6 +337,6 @@ void warning_report(WarningType type, const char* filename, int line, int col, c
 
     // طباعة سياق الكود
     const char* ptr_color = g_warning_config.warnings_as_errors ? ANSI_BOLD_RED : ANSI_BOLD_YELLOW;
-    print_source_line(line, col, use_color, ptr_color);
+    print_source_line(filename, line, col, use_color, ptr_color);
     fprintf(stderr, "\n");
 }

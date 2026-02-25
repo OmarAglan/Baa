@@ -1631,44 +1631,156 @@ static bool isel_lower_tailcall(ISelCtx *ctx, IRInst *call)
         return false;
 
     const BaaCallingConv *cc = isel_cc_or_default(ctx);
-    int max_reg_args = (cc && cc->int_arg_reg_count > 0) ? cc->int_arg_reg_count : 4;
+    bool is_win = (ctx && ctx->target && ctx->target->kind == BAA_TARGET_X86_64_WINDOWS);
+    int gpr_max = (cc && cc->int_arg_reg_count > 0) ? cc->int_arg_reg_count : 4;
+    int xmm_max = is_win ? 4 : 8;
 
-    int out_stack = 0;
-    if (call->call_arg_count > max_reg_args)
-        out_stack = call->call_arg_count - max_reg_args;
+    typedef enum { ARG_GPR, ARG_XMM, ARG_STACK } ArgLocKind;
+    typedef struct { ArgLocKind kind; int idx; } ArgLoc;
 
+    int n = call->call_arg_count;
+    ArgLoc *locs = NULL;
+    if (n > 0)
+    {
+        locs = (ArgLoc *)calloc((size_t)n, sizeof(ArgLoc));
+        if (!locs) return false;
+    }
+
+    int gpr_i = 0;
+    int xmm_i = 0;
+    int stack_i = 0;
+
+    for (int i = 0; i < n; i++)
+    {
+        IRType *at = (call->call_args && call->call_args[i]) ? call->call_args[i]->type : NULL;
+        bool is_f64 = (at && at->kind == IR_TYPE_F64);
+
+        if (is_win)
+        {
+            if (i < 4)
+                locs[i] = (ArgLoc){is_f64 ? ARG_XMM : ARG_GPR, i};
+            else
+                locs[i] = (ArgLoc){ARG_STACK, stack_i++};
+        }
+        else
+        {
+            if (is_f64)
+            {
+                if (xmm_i < xmm_max)
+                    locs[i] = (ArgLoc){ARG_XMM, xmm_i++};
+                else
+                    locs[i] = (ArgLoc){ARG_STACK, stack_i++};
+            }
+            else
+            {
+                if (gpr_i < gpr_max)
+                    locs[i] = (ArgLoc){ARG_GPR, gpr_i++};
+                else
+                    locs[i] = (ArgLoc){ARG_STACK, stack_i++};
+            }
+        }
+    }
+
+    int out_stack = stack_i;
     int in_stack = 0;
-    if (ctx->ir_func && ctx->ir_func->param_count > max_reg_args)
-        in_stack = ctx->ir_func->param_count - max_reg_args;
+    if (ctx->ir_func && ctx->ir_func->param_count > 0)
+    {
+        int in_gpr = 0;
+        int in_xmm = 0;
+        int in_stack_i = 0;
+
+        for (int i = 0; i < ctx->ir_func->param_count; i++)
+        {
+            IRType *pt = ctx->ir_func->params ? ctx->ir_func->params[i].type : NULL;
+            bool is_f64 = (pt && pt->kind == IR_TYPE_F64);
+
+            if (is_win)
+            {
+                if (i >= 4) in_stack_i++;
+            }
+            else
+            {
+                if (is_f64)
+                {
+                    if (in_xmm < xmm_max) in_xmm++;
+                    else in_stack_i++;
+                }
+                else
+                {
+                    if (in_gpr < gpr_max) in_gpr++;
+                    else in_stack_i++;
+                }
+            }
+        }
+
+        in_stack = in_stack_i;
+    }
 
     // لا نُطبّق TCO إذا كانت معاملات المكدس المطلوبة أكبر مما وفره المستدعي لنا.
     if (out_stack > in_stack)
+    {
+        free(locs);
         return false;
+    }
 
     // تحضير معاملات ABI (نفس مسار CALL لكن بدون call/ret/mov من RAX).
-    for (int i = 0; i < call->call_arg_count && i < max_reg_args; i++)
+    for (int i = 0; i < n; i++)
     {
         MachineOperand arg = isel_lower_value(ctx, call->call_args[i]);
-        int bits = 64;
-        if (call->call_args[i] && call->call_args[i]->type)
-            bits = isel_type_bits(call->call_args[i]->type);
+        IRType *at = (call->call_args && call->call_args[i]) ? call->call_args[i]->type : NULL;
 
-        MachineOperand param_reg = mach_op_vreg(isel_abi_arg_vreg(cc, i), bits);
-        isel_emit(ctx, MACH_MOV, param_reg, arg, mach_op_none());
+        if (locs[i].kind == ARG_GPR)
+        {
+            int bits = at ? isel_type_bits(at) : 64;
+            MachineOperand param_reg = mach_op_vreg(isel_abi_arg_vreg(cc, locs[i].idx), bits);
+            isel_emit(ctx, MACH_MOV, param_reg, arg, mach_op_none());
+        }
+        else if (locs[i].kind == ARG_XMM)
+        {
+            arg = isel_materialize_imm_to_gpr64(ctx, arg);
+            MachineOperand xmm = mach_op_xmm(locs[i].idx);
+            isel_emit(ctx, MACH_MOV, xmm, arg, mach_op_none());
+        }
+    }
+
+    int shadow = (cc) ? cc->shadow_space_bytes : 0;
+
+    // Windows: home/shadow space لمعاملات السجلات قبل leave.
+    // بعد leave تصبح هذه الخانات عند 8(%rsp).
+    if (cc && cc->home_reg_args_on_call && shadow >= 32)
+    {
+        int n_home = (n < 4) ? n : 4;
+        for (int i = 0; i < n_home; i++)
+        {
+            MachineOperand mem = mach_op_mem(-1, (int32_t)(16 + i * 8), 64);
+            if (locs[i].kind == ARG_XMM)
+            {
+                MachineOperand src = mach_op_xmm(locs[i].idx);
+                isel_emit(ctx, MACH_STORE, mem, src, mach_op_none());
+            }
+            else
+            {
+                MachineOperand src = mach_op_vreg(isel_abi_arg_vreg(cc, i), 64);
+                isel_emit(ctx, MACH_STORE, mem, src, mach_op_none());
+            }
+        }
     }
 
     // معاملات المكدس للنداء_الذيلي: نكتبها في منطقة معاملات الدالة الحالية فوق return address.
     // هذا آمن فقط إذا كانت دالتنا نفسها تتلقى نفس/أكثر عدد معاملات مكدس.
     if (out_stack > 0)
     {
-        int shadow = (cc) ? cc->shadow_space_bytes : 0;
-        for (int i = max_reg_args; i < call->call_arg_count; i++)
+        for (int i = 0; i < n; i++)
         {
-            int slot = i - max_reg_args;
-            int32_t off = (int32_t)(16 + shadow + slot * 8);
+            if (locs[i].kind != ARG_STACK)
+                continue;
+
+            int32_t off = (int32_t)(16 + shadow + locs[i].idx * 8);
             MachineOperand mem = mach_op_mem(-1, off, 64); // base -1 => RBP
 
             MachineOperand arg = isel_lower_value(ctx, call->call_args[i]);
+            arg = isel_materialize_imm_to_gpr64(ctx, arg);
+
             if (arg.kind == MACH_OP_MEM || arg.kind == MACH_OP_GLOBAL)
             {
                 int tmp_v = mach_func_alloc_vreg(ctx->mfunc);
@@ -1681,10 +1793,19 @@ static bool isel_lower_tailcall(ISelCtx *ctx, IRInst *call)
         }
     }
 
+    // SysV varargs rule: AL = عدد سجلات XMM المستخدمة.
+    if (cc && cc->sysv_set_al_zero_on_call)
+    {
+        MachineOperand eax = mach_op_vreg(isel_abi_ret_vreg(cc), 32);
+        MachineOperand imm = mach_op_imm((int64_t)xmm_i, 32);
+        isel_emit(ctx, MACH_MOV, eax, imm, mach_op_none());
+    }
+
     MachineOperand target = mach_op_func(call->call_target);
     isel_emit_comment(ctx, MACH_TAILJMP, mach_op_none(), target, mach_op_none(),
                       "// نداء_ذيلي: قفز إلى الدالة الهدف");
 
+    free(locs);
     return true;
 }
 

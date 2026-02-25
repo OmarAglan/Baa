@@ -28,8 +28,19 @@ extern "C" {
  *
  * @param module وحدة IR الهدف.
  * @return قيمة منطقية: 1 إذا تم تعديل الـ IR (إزالة فاي أو تقسيم حواف أو إدراج نسخ)، وإلا 0.
+ *
+ * @note في حالة فشل داخلي، تُعاد 0 أيضاً للحفاظ على توافق الواجهة القديمة.
  */
 bool ir_outssa_run(IRModule* module);
+
+/**
+ * @brief تشغيل تمريرة الخروج من SSA مع فصل نتيجة "النجاح" عن "هل تغير IR".
+ *
+ * @param module وحدة IR الهدف.
+ * @param out_changed مؤشر اختياري لاستلام حالة التغيير (1 تغيّر، 0 لم يتغيّر).
+ * @return true عند النجاح، false عند وجود فشل داخلي أو IR غير صالح.
+ */
+bool ir_outssa_run_ex(IRModule* module, bool* out_changed);
 
 #ifdef __cplusplus
 }

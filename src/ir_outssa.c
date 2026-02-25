@@ -140,19 +140,19 @@ static int edge_copy_dest_is_used_as_source(const EdgeCopy* copies, const unsign
     return 0;
 }
 
-static void ir_emit_edge_copy(IRBlock* insert_block, IRInst* before,
+static bool ir_emit_edge_copy(IRBlock* insert_block, IRInst* before,
                               int dest_reg, IRType* type, IRValue* src,
                               const char* dbg_name,
                               const char* src_file, int src_line, int src_col) {
-    if (!insert_block || !type || !src) return;
+    if (!insert_block || !type || !src) return false;
 
     IRValue* clone = ir_value_clone_with_type_local(src, type);
-    if (!clone) return;
+    if (!clone) return false;
 
     IRInst* copy = ir_inst_unary(IR_OP_COPY, type, dest_reg, clone);
     if (!copy) {
         ir_value_free(clone);
-        return;
+        return false;
     }
 
     if (src_file && src_line > 0) {
@@ -167,19 +167,22 @@ static void ir_emit_edge_copy(IRBlock* insert_block, IRInst* before,
     } else {
         ir_block_append(insert_block, copy);
     }
+
+    return true;
 }
 
-static void ir_emit_parallel_copies(IRFunc* func, IRBlock* insert_block, IRInst* before,
+static bool ir_emit_parallel_copies(IRFunc* func, IRBlock* insert_block, IRInst* before,
                                     EdgeCopy* copies, int copy_count) {
-    if (!func || !insert_block || !copies || copy_count <= 0) return;
+    if (!func || !insert_block || !copies || copy_count <= 0) return false;
 
     unsigned char* done = (unsigned char*)calloc((size_t)copy_count, sizeof(unsigned char));
-    if (!done) return;
+    if (!done) return false;
 
     // مؤقتات تم إنشاؤها لكسر الدورات
     IRValue** temps = NULL;
     int temp_count = 0;
     int temp_cap = 0;
+    bool ok = true;
 
     int remaining = copy_count;
     while (remaining > 0) {
@@ -198,10 +201,13 @@ static void ir_emit_parallel_copies(IRFunc* func, IRBlock* insert_block, IRInst*
             }
 
             if (!edge_copy_dest_is_used_as_source(copies, done, copy_count, copies[i].dest_reg)) {
-                ir_emit_edge_copy(insert_block, before,
-                                  copies[i].dest_reg, copies[i].type, src,
-                                  copies[i].dbg_name,
-                                  copies[i].src_file, copies[i].src_line, copies[i].src_col);
+                if (!ir_emit_edge_copy(insert_block, before,
+                                       copies[i].dest_reg, copies[i].type, src,
+                                       copies[i].dbg_name,
+                                       copies[i].src_file, copies[i].src_line, copies[i].src_col)) {
+                    ok = false;
+                    goto cleanup;
+                }
                 done[i] = 1;
                 remaining--;
                 progress = 1;
@@ -227,16 +233,26 @@ static void ir_emit_parallel_copies(IRFunc* func, IRBlock* insert_block, IRInst*
 
         // مؤقت = نسخ <type> %cycle_dest  (حفظ القيمة القديمة قبل الكتابة فوقها)
         IRValue* cycle_dest_val = ir_value_reg(cycle_dest, t);
-        if (!cycle_dest_val) break;
+        if (!cycle_dest_val) {
+            ok = false;
+            goto cleanup;
+        }
 
-        ir_emit_edge_copy(insert_block, before,
-                          temp_reg, t, cycle_dest_val,
-                          copies[pick].dbg_name,
-                          copies[pick].src_file, copies[pick].src_line, copies[pick].src_col);
+        if (!ir_emit_edge_copy(insert_block, before,
+                               temp_reg, t, cycle_dest_val,
+                               copies[pick].dbg_name,
+                               copies[pick].src_file, copies[pick].src_line, copies[pick].src_col)) {
+            ir_value_free(cycle_dest_val);
+            ok = false;
+            goto cleanup;
+        }
         ir_value_free(cycle_dest_val);
 
         IRValue* temp_val = ir_value_reg(temp_reg, t);
-        if (!temp_val) break;
+        if (!temp_val) {
+            ok = false;
+            goto cleanup;
+        }
 
         // سجل المؤقت ليتم تحريره لاحقاً
         if (temp_count >= temp_cap) {
@@ -244,7 +260,8 @@ static void ir_emit_parallel_copies(IRFunc* func, IRBlock* insert_block, IRInst*
             IRValue** new_arr = (IRValue**)realloc(temps, (size_t)new_cap * sizeof(IRValue*));
             if (!new_arr) {
                 ir_value_free(temp_val);
-                break;
+                ok = false;
+                goto cleanup;
             }
             temps = new_arr;
             temp_cap = new_cap;
@@ -261,11 +278,14 @@ static void ir_emit_parallel_copies(IRFunc* func, IRBlock* insert_block, IRInst*
         }
     }
 
+cleanup:
     for (int i = 0; i < temp_count; i++) {
         if (temps[i]) ir_value_free(temps[i]);
     }
     free(temps);
     free(done);
+
+    return ok;
 }
 
 // -----------------------------------------------------------------------------
@@ -281,9 +301,16 @@ static IRValue* ir_phi_incoming_value(IRInst* phi, IRBlock* pred, IRType* phi_ty
         }
     }
 
-    // غياب المدخل يعني IR غير مكتمل؛ نعود بصفر كقيمة افتراضية لتجنب الانهيار
-    if (phi_type) return ir_value_const_int(0, phi_type);
-    return ir_value_const_int(0, IR_TYPE_I64_T);
+    (void)phi_type;
+    return NULL;
+}
+
+static int ir_phi_has_incoming(IRInst* phi, IRBlock* pred) {
+    if (!phi || phi->op != IR_OP_PHI || !pred) return 0;
+    for (IRPhiEntry* e = phi->phi_entries; e; e = e->next) {
+        if (e->block == pred) return 1;
+    }
+    return 0;
 }
 
 static IRBlock* ir_outssa_split_edge(IRFunc* func, IRBlock* pred, IRBlock* succ) {
@@ -331,7 +358,10 @@ static int ir_outssa_func(IRFunc* func) {
             if (phi_count >= phi_cap) {
                 int new_cap = (phi_cap == 0) ? 4 : phi_cap * 2;
                 IRInst** new_arr = (IRInst**)realloc(phis, (size_t)new_cap * sizeof(IRInst*));
-                if (!new_arr) break;
+                if (!new_arr) {
+                    free(phis);
+                    return -1;
+                }
                 phis = new_arr;
                 phi_cap = new_cap;
             }
@@ -343,6 +373,24 @@ static int ir_outssa_func(IRFunc* func) {
             continue;
         }
 
+        // التحقق المسبق: يجب أن يملك كل فاي مدخلاً من كل سابق.
+        for (int p = 0; p < b->pred_count; p++) {
+            IRBlock* pred = b->preds[p];
+            if (!pred) continue;
+            for (int i = 0; i < phi_count; i++) {
+                IRInst* phi = phis[i];
+                if (!ir_phi_has_incoming(phi, pred)) {
+                    fprintf(stderr,
+                            "[outssa] خطأ: عقدة فاي %%%d في الدالة '%s' لا تحتوي مدخلاً من الكتلة السابقة #%d إلى الكتلة #%d.\n",
+                            phi->dest,
+                            func->name ? func->name : "<unknown>",
+                            pred->id, b->id);
+                    free(phis);
+                    return -1;
+                }
+            }
+        }
+
         // لكل سابق: أنشئ نسخ الحافة
         for (int p = 0; p < b->pred_count; p++) {
             IRBlock* pred = b->preds[p];
@@ -350,7 +398,10 @@ static int ir_outssa_func(IRFunc* func) {
             if (!pred->last || !ir_is_terminator(pred->last)) continue;
 
             EdgeCopy* copies = (EdgeCopy*)calloc((size_t)phi_count, sizeof(EdgeCopy));
-            if (!copies) continue;
+            if (!copies) {
+                free(phis);
+                return -1;
+            }
 
             for (int i = 0; i < phi_count; i++) {
                 IRInst* phi = phis[i];
@@ -359,6 +410,16 @@ static int ir_outssa_func(IRFunc* func) {
                 copies[i].dest_reg = phi->dest;
                 copies[i].type = t;
                 copies[i].src = ir_phi_incoming_value(phi, pred, t);
+                if (!copies[i].src) {
+                    fprintf(stderr,
+                            "[outssa] خطأ: عقدة فاي %%%d في الدالة '%s' تحتوي مدخلاً مفقوداً من الكتلة السابقة #%d.\n",
+                            phi->dest,
+                            func->name ? func->name : "<unknown>",
+                            pred->id);
+                    free(copies);
+                    free(phis);
+                    return -1;
+                }
 
                 // حافظ على معلومات الديبغ من الفاي.
                 copies[i].dbg_name = phi->dbg_name;
@@ -374,27 +435,37 @@ static int ir_outssa_func(IRFunc* func) {
             // إذا كان للسابق أكثر من تابع، نحتاج تقسيم الحافة
             if (pred->succ_count != 1) {
                 insert_block = ir_outssa_split_edge(func, pred, b);
-                if (insert_block) {
-                    // في كتلة التقسيم، نُدرج النسخ قبل تعليمة الإنهاء الخاصة بها
-                    before = insert_block->last;
+                if (!insert_block) {
+                    free(copies);
+                    free(phis);
+                    return -1;
                 }
+                // في كتلة التقسيم، نُدرج النسخ قبل تعليمة الإنهاء الخاصة بها
+                before = insert_block->last;
             }
 
-            if (insert_block) {
-                // في كتلة التقسيم الجديدة قد لا يكون هناك تعليمة إنهاء بعد (في حال فشل الإضافة)
-                if (before && !ir_is_terminator(before)) {
-                    before = NULL;
-                }
-
-                // إذا كانت كتلة تقسيم، نريد إدراج النسخ قبل القفز إلى b
-                ir_emit_parallel_copies(func, insert_block, before, copies, phi_count);
-                changed = 1;
+            // في كتلة التقسيم الجديدة قد لا يكون هناك تعليمة إنهاء بعد (في حال فشل الإضافة)
+            if (before && !ir_is_terminator(before)) {
+                before = NULL;
             }
+
+            // إذا كانت كتلة تقسيم، نريد إدراج النسخ قبل القفز إلى b
+            if (!ir_emit_parallel_copies(func, insert_block, before, copies, phi_count)) {
+                free(copies);
+                free(phis);
+                return -1;
+            }
+            changed = 1;
 
             // إذا كنا في كتلة تقسيم ولم يكن لديها تعليمة إنهاء (لسبب ما)، أضف قفزاً
             if (insert_block && insert_block != pred && !insert_block->last) {
                 IRInst* br = ir_inst_br(b);
-                if (br) ir_block_append(insert_block, br);
+                if (!br) {
+                    free(copies);
+                    free(phis);
+                    return -1;
+                }
+                ir_block_append(insert_block, br);
             }
 
             free(copies);
@@ -423,7 +494,8 @@ static int ir_outssa_func(IRFunc* func) {
 // الواجهة العامة
 // -----------------------------------------------------------------------------
 
-bool ir_outssa_run(IRModule* module) {
+bool ir_outssa_run_ex(IRModule* module, bool* out_changed) {
+    if (out_changed) *out_changed = false;
     if (!module) return false;
 
     // ضمان أن أي نسخ/قيم جديدة تُخصَّص ضمن ساحة هذه الوحدة.
@@ -431,8 +503,17 @@ bool ir_outssa_run(IRModule* module) {
 
     int changed = 0;
     for (IRFunc* f = module->funcs; f; f = f->next) {
-        changed |= ir_outssa_func(f);
+        int r = ir_outssa_func(f);
+        if (r < 0) return false;
+        changed |= r;
     }
 
-    return changed ? true : false;
+    if (out_changed) *out_changed = changed ? true : false;
+    return true;
+}
+
+bool ir_outssa_run(IRModule* module) {
+    bool changed = false;
+    if (!ir_outssa_run_ex(module, &changed)) return false;
+    return changed;
 }

@@ -159,6 +159,18 @@ static bool lex_utf8_validate_at(const char* s, int* out_len)
 // قراءة ملف (من main.c، يجب أن تكون متاحة للجميع الآن)
 char* read_file(const char* path);
 
+static void lex_skip_utf8_bom(LexerState* state)
+{
+    if (!state || !state->cur_char) return;
+
+    char* s = state->cur_char;
+    if ((unsigned char)s[0] == 0xEF &&
+        (unsigned char)s[1] == 0xBB &&
+        (unsigned char)s[2] == 0xBF) {
+        state->cur_char += 3;
+    }
+}
+
 /**
  * @brief تهيئة المحلل اللفظي بنص المصدر وتخطي الـ BOM إذا وجد.
  */
@@ -176,10 +188,9 @@ void lexer_init(Lexer* l, char* src, const char* filename) {
     l->state.cur_char = src;
 
     // تخطي علامة ترتيب البايت (BOM) لملفات UTF-8 إذا كانت موجودة
-    size_t len = strlen(src);
-    if (len >= 3 && (unsigned char)src[0] == 0xEF && (unsigned char)src[1] == 0xBB && (unsigned char)src[2] == 0xBF) {
-        l->state.cur_char += 3;
-    }
+    lex_skip_utf8_bom(&l->state);
+
+    error_register_source(filename, src);
 }
 
 static bool pp_active(const Lexer* l)
@@ -367,6 +378,8 @@ Token lexer_next_token(Lexer* l) {
                      }
                      l->state.line = 1;
                      l->state.col = 1;
+                     lex_skip_utf8_bom(&l->state);
+                     error_register_source(l->state.filename, new_src);
                      
                      free(directive);
                      free(path);
@@ -501,17 +514,16 @@ Token lexer_next_token(Lexer* l) {
              lex_fatal(l, "خطأ قبلي: توجيه غير معروف.");
         }
 
-        // إذا كنا في وضع التخطي، نتجاهل كل شيء حتى نجد #
-        if (l->skipping) {
-            advance_pos(l);
-            continue;
-        }
-
         // نهاية الملف EOF
         if (peek(l) == '\0') {
+            if (l->if_depth > 0 && l->stack_depth == 0) {
+                lex_fatal(l, "خطأ قبلي: نهاية الملف قبل إغلاق #إذا_عرف (مفقود #نهاية).");
+            }
+
             // إذا كنا داخل ملف مضمن، نعود للملف السابق (Pop)
             if (l->stack_depth > 0) {
                 free(l->state.source);
+                free((void*)l->state.filename);
                 l->state = l->stack[--l->stack_depth];
                 continue; 
             }
@@ -520,6 +532,12 @@ Token lexer_next_token(Lexer* l) {
             token.line = l->state.line;
             token.col = l->state.col;
             return token;
+        }
+
+        // إذا كنا في وضع التخطي، نتجاهل كل شيء حتى نجد #
+        if (l->skipping) {
+            advance_pos(l);
+            continue;
         }
 
         break; // وجدنا بداية رمز صالح ونحن لسن في وضع التخطي

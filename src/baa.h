@@ -233,6 +233,11 @@ extern WarningConfig g_warning_config;
 void error_init(const char* source);
 
 /**
+ * @brief تسجيل مصدر ملف لاستخدامه عند طباعة سياق الأخطاء/التحذيرات.
+ */
+void error_register_source(const char* filename, const char* source);
+
+/**
  * @brief تهيئة إعدادات التحذيرات الافتراضية.
  */
 void warning_init(void);

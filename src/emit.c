@@ -544,7 +544,7 @@ static void emit_epilogue(MachineFunc* func, FILE* out,
  *
  * الفكرة:
  * - نفك إطار الدالة الحالية (استعادة callee-saved ثم leave)
- * - نكتب معاملات السجلات إلى shadow space الخاص بالمستدعي
+ * - نقل/تحضير المعاملات يتم مسبقاً في ISel
  * - نقفز إلى الدالة الهدف بدون push عنوان رجوع جديد
  *
  * بهذه الطريقة، عندما تُنفّذ الدالة الهدف `ret` ستعود مباشرةً
@@ -556,7 +556,6 @@ static void emit_tailjmp(MachineFunc* func, MachineInst* inst, FILE* out,
 
     int local_size = func->stack_size;
     int shadow = emit_shadow_bytes();
-    const BaaCallingConv* cc = emit_cc_or_default();
     int canary_size = emit_stack_protector_size(func);
     // تحقق كناري حماية المكدس قبل الخروج من الدالة (حتى في النداء_الذيلي)
     emit_stack_protector_epilogue(func, out, g_emit_sp_seq++);
@@ -570,16 +569,6 @@ static void emit_tailjmp(MachineFunc* func, MachineInst* inst, FILE* out,
 
     // تفكيك إطار الدالة: بعد leave يصبح RSP على عنوان الرجوع
     fprintf(out, "    leave\n");
-
-    // Windows x64 ABI (varargs): كتابة معاملات السجلات في home/shadow space
-    // عند نقطة دخول الدالة الهدف، shadow يبدأ عند 8(%rsp) لأن 0(%rsp) هو return address.
-    if (cc && cc->home_reg_args_on_call && shadow >= 32)
-    {
-        fprintf(out, "    movq %%rcx, 8(%%rsp)\n");
-        fprintf(out, "    movq %%rdx, 16(%%rsp)\n");
-        fprintf(out, "    movq %%r8, 24(%%rsp)\n");
-        fprintf(out, "    movq %%r9, 32(%%rsp)\n");
-    }
 
     fprintf(out, "    jmp ");
     emit_operand(&inst->src1, out);

@@ -2034,6 +2034,7 @@ Node* parse_declaration() {
 Node* parse(Lexer* l) {
     // تهيئة نظام الأخطاء بمؤشر المصدر للطباعة
     error_init(l->state.source);
+    error_register_source(l->state.filename, l->state.source);
     init_parser(l);
 
     Node* head = NULL;

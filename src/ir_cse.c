@@ -49,6 +49,7 @@ typedef struct CSEEntry {
     int operand_count;
     int64_t operand_vals[4];    // Operand signatures (reg num or const value)
     int operand_kinds[4];       // IR_VAL_REG or IR_VAL_CONST_INT etc.
+    const char* operand_global_names[4]; // أسماء globals للمطابقة الحتمية
     int result_reg;             // Register holding the result
     IRBlock* def_block;         // Block where the expression is defined
     struct CSEEntry* next;      // Chain for collisions
@@ -85,7 +86,19 @@ static int ir_op_is_cse_eligible(IROp op) {
 // Helpers: compute operand signature
 // -----------------------------------------------------------------------------
 
-static int64_t ir_value_signature(IRValue* v, int* kind_out) {
+static uint64_t cse_hash_cstr(const char* s) {
+    // خوارزمية FNV-1a بقدرة 64-بت لتجزئة أسماء globals بشكل حتمي.
+    uint64_t h = 1469598103934665603ull;
+    if (!s) return h;
+    for (const unsigned char* p = (const unsigned char*)s; *p; ++p) {
+        h ^= (uint64_t)(*p);
+        h *= 1099511628211ull;
+    }
+    return h;
+}
+
+static int64_t ir_value_signature(IRValue* v, int* kind_out, const char** global_name_out) {
+    if (global_name_out) *global_name_out = NULL;
     if (!v) {
         *kind_out = IR_VAL_NONE;
         return 0;
@@ -99,8 +112,8 @@ static int64_t ir_value_signature(IRValue* v, int* kind_out) {
         case IR_VAL_REG:
             return (int64_t)v->data.reg_num;
         case IR_VAL_GLOBAL:
-            // Use pointer as signature (same string = same pointer typically)
-            return (int64_t)(uintptr_t)v->data.global_name;
+            if (global_name_out) *global_name_out = v->data.global_name;
+            return (int64_t)cse_hash_cstr(v->data.global_name);
         default:
             return 0;
     }
@@ -133,6 +146,16 @@ static int cse_entries_match(CSEEntry* a, CSEEntry* b) {
     
     for (int i = 0; i < a->operand_count; i++) {
         if (a->operand_kinds[i] != b->operand_kinds[i]) return 0;
+        if (a->operand_kinds[i] == IR_VAL_GLOBAL) {
+            const char* an = a->operand_global_names[i];
+            const char* bn = b->operand_global_names[i];
+            if (!an || !bn) {
+                if (an != bn) return 0;
+            } else if (strcmp(an, bn) != 0) {
+                return 0;
+            }
+            continue;
+        }
         if (a->operand_vals[i] != b->operand_vals[i]) return 0;
     }
     
@@ -300,7 +323,8 @@ static int ir_cse_func(IRFunc* func) {
             
             for (int i = 0; i < inst->operand_count && i < 4; i++) {
                 query.operand_vals[i] = ir_value_signature(inst->operands[i], 
-                                                           &query.operand_kinds[i]);
+                                                           &query.operand_kinds[i],
+                                                           &query.operand_global_names[i]);
             }
             
             // Lookup or insert (with dominance check)

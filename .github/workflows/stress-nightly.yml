@@ -18,6 +18,8 @@ jobs:
       - name: Build
         run: cmake --build build-linux -j
       - name: QA Stress
+        env:
+          PYTHONUTF8: "1"
         run: python3 scripts/qa_run.py --mode stress --summary-json qa-summary-stress-linux.json
       - name: Upload Stress Artifacts
         if: always()

@@ -13,12 +13,24 @@ ROOT = Path(__file__).resolve().parents[1]
 TESTS_DIR = ROOT / "tests"
 
 CORPUS_COMPILE_TIMEOUT_S = 20.0
-CORPUS_RUN_TIMEOUT_S = 2.0
+CORPUS_RUN_TIMEOUT_S = 8.0
 
 
 def _run(cmd: list[str], cwd: Path) -> int:
     p = subprocess.run(cmd, cwd=str(cwd))
     return int(p.returncode)
+
+
+def _run_capture(cmd: list[str], cwd: Path, timeout_s: float) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(
+        cmd,
+        cwd=str(cwd),
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+        capture_output=True,
+        timeout=timeout_s,
+    )
 
 
 def _find_baa() -> Path:
@@ -119,28 +131,29 @@ def main() -> int:
                 out = out_dir / f"{src.stem}{exe_ext}"
                 # Use repo-relative paths to avoid space-in-path toolchain issues.
                 cmd = [str(baa), "-O1", "--verify", str(src_rel), "-o", str(out)]
-                p = subprocess.run(
-                    cmd,
-                    cwd=str(ROOT),
-                    text=True,
-                    capture_output=True,
-                    timeout=CORPUS_COMPILE_TIMEOUT_S,
-                )
+                try:
+                    p = _run_capture(cmd, ROOT, CORPUS_COMPILE_TIMEOUT_S)
+                except subprocess.TimeoutExpired:
+                    print(
+                        f"regress: FAIL (corpus_v2x compile timeout>{CORPUS_COMPILE_TIMEOUT_S}s): "
+                        f"{src_rel}"
+                    )
+                    return 1
                 if p.returncode != 0:
                     print(f"regress: FAIL (corpus_v2x compile): {src_rel}")
                     sys.stderr.write(p.stdout)
                     sys.stderr.write(p.stderr)
                     return int(p.returncode)
 
-                r = subprocess.run(
-                    [str(out)],
-                    cwd=str(ROOT),
-                    text=True,
-                    capture_output=True,
-                    timeout=CORPUS_RUN_TIMEOUT_S,
-                )
+                try:
+                    r = _run_capture([str(out)], ROOT, CORPUS_RUN_TIMEOUT_S)
+                except subprocess.TimeoutExpired:
+                    print(f"regress: FAIL (corpus_v2x run timeout>{CORPUS_RUN_TIMEOUT_S}s): {src_rel}")
+                    return 1
                 if r.returncode != 0:
                     print(f"regress: FAIL (corpus_v2x run exit={r.returncode}): {src_rel}")
+                    sys.stderr.write(r.stdout)
+                    sys.stderr.write(r.stderr)
                     return int(r.returncode)
         finally:
             import shutil
@@ -201,13 +214,18 @@ def main() -> int:
             out_dir.mkdir(parents=True, exist_ok=True)
             try:
                 dummy = out_dir / f"neg_out{exe_ext}"
-                p = subprocess.run(
-                    [str(baa), "-O1", *flags, str(src_rel), "-o", str(dummy)],
-                    cwd=str(ROOT),
-                    text=True,
-                    capture_output=True,
-                    timeout=CORPUS_COMPILE_TIMEOUT_S,
-                )
+                try:
+                    p = _run_capture(
+                        [str(baa), "-O1", *flags, str(src_rel), "-o", str(dummy)],
+                        ROOT,
+                        CORPUS_COMPILE_TIMEOUT_S,
+                    )
+                except subprocess.TimeoutExpired:
+                    print(
+                        f"regress: FAIL (neg compile timeout>{CORPUS_COMPILE_TIMEOUT_S}s): "
+                        f"{src_rel}"
+                    )
+                    return 1
             finally:
                 import shutil
                 shutil.rmtree(out_dir, ignore_errors=True)

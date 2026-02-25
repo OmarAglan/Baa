@@ -49,6 +49,8 @@ jobs:
         run: cmake --build build
       - name: QA Quick
         shell: pwsh
+        env:
+          PYTHONUTF8: "1"
         run: python scripts/qa_run.py --mode quick --summary-json qa-summary-quick-windows.json
       - name: Upload QA artifacts on failure
         if: failure()
@@ -84,6 +86,8 @@ jobs:
         run: cmake --build build
       - name: QA Full
         shell: pwsh
+        env:
+          PYTHONUTF8: "1"
         run: python scripts/qa_run.py --mode full --summary-json qa-summary-full-windows.json
       - name: Upload QA artifacts on failure
         if: failure()
@@ -122,6 +126,8 @@ jobs:
       - name: Build
         run: cmake --build build-linux -j
       - name: QA Quick
+        env:
+          PYTHONUTF8: "1"
         run: python3 scripts/qa_run.py --mode quick --summary-json qa-summary-quick-linux.json
       - name: Upload QA artifacts on failure
         if: failure()
@@ -148,6 +154,8 @@ jobs:
       - name: Build
         run: cmake --build build-linux -j
       - name: QA Full
+        env:
+          PYTHONUTF8: "1"
         run: python3 scripts/qa_run.py --mode full --summary-json qa-summary-full-linux.json
       - name: Upload QA artifacts on failure
         if: failure()

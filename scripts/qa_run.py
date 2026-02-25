@@ -96,6 +96,8 @@ def _run_logged(
             cwd=str(cwd),
             env=env,
             text=True,
+            encoding="utf-8",
+            errors="replace",
             capture_output=True,
             timeout=timeout_s,
         )

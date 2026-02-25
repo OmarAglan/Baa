@@ -974,11 +974,467 @@ static IRType* lower_common_int_type(IRModule* module, DataType a, DataType b)
     return irt;
 }
 
+static void ir_lower_eval_call_args(IRLowerCtx* ctx, Node* args)
+{
+    for (Node* a = args; a; a = a->next) {
+        (void)lower_expr(ctx, a);
+    }
+}
+
+static IRValue* ir_lower_as_char_ptr(IRLowerCtx* ctx, IRValue* v)
+{
+    IRModule* m = (ctx && ctx->builder) ? ctx->builder->module : NULL;
+    if (m) ir_module_set_current(m);
+    IRType* char_ptr_t = get_char_ptr_type(m);
+    if (!v) return ir_value_const_int(0, char_ptr_t);
+    if (v->type && ir_types_equal(v->type, char_ptr_t)) return v;
+    int cr = ir_builder_emit_cast(ctx->builder, v, char_ptr_t);
+    return ir_value_reg(cr, char_ptr_t);
+}
+
+static IRValue* ir_lower_load_char_at(IRLowerCtx* ctx, IRValue* base, IRValue* idx)
+{
+    if (!ctx || !ctx->builder || !base || !idx) {
+        return ir_value_const_int(0, IR_TYPE_CHAR_T);
+    }
+    IRModule* m = ctx->builder->module;
+    if (m) ir_module_set_current(m);
+    IRType* char_ptr_t = get_char_ptr_type(m);
+    IRValue* i64_idx = ensure_i64(ctx, idx);
+    int ep = ir_builder_emit_ptr_offset(ctx->builder, char_ptr_t, base, i64_idx);
+    IRValue* elem_ptr = ir_value_reg(ep, char_ptr_t);
+    int lr = ir_builder_emit_load(ctx->builder, IR_TYPE_CHAR_T, elem_ptr);
+    return ir_value_reg(lr, IR_TYPE_CHAR_T);
+}
+
+static void ir_lower_store_char_at(IRLowerCtx* ctx, IRValue* base, IRValue* idx, IRValue* ch)
+{
+    if (!ctx || !ctx->builder || !base || !idx || !ch) return;
+    IRModule* m = ctx->builder->module;
+    if (m) ir_module_set_current(m);
+    IRType* char_ptr_t = get_char_ptr_type(m);
+    IRValue* i64_idx = ensure_i64(ctx, idx);
+    int ep = ir_builder_emit_ptr_offset(ctx->builder, char_ptr_t, base, i64_idx);
+    IRValue* elem_ptr = ir_value_reg(ep, char_ptr_t);
+    IRValue* v = cast_to(ctx, ch, IR_TYPE_CHAR_T);
+    ir_builder_emit_store(ctx->builder, v, elem_ptr);
+}
+
+static IRValue* ir_lower_builtin_strlen_from_value(IRLowerCtx* ctx, const Node* site, IRValue* str_in)
+{
+    if (!ctx || !ctx->builder) return ir_value_const_int(0, IR_TYPE_I64_T);
+
+    IRBuilder* b = ctx->builder;
+    IRModule* m = b->module;
+    if (m) ir_module_set_current(m);
+
+    IRType* char_ptr_t = get_char_ptr_type(m);
+    IRValue* base = ir_lower_as_char_ptr(ctx, str_in);
+    if (!base) base = ir_value_const_int(0, char_ptr_t);
+
+    int idx_ptr_reg = ir_builder_emit_alloca(b, IR_TYPE_I64_T);
+    IRType* idx_ptr_t = ir_type_ptr(IR_TYPE_I64_T);
+    IRValue* idx_ptr = ir_value_reg(idx_ptr_reg, idx_ptr_t);
+    ir_builder_emit_store(b, ir_value_const_int(0, IR_TYPE_I64_T), idx_ptr);
+
+    IRBlock* head = cf_create_block(ctx, "طول_نص_تحقق");
+    IRBlock* body = cf_create_block(ctx, "طول_نص_جسم");
+    IRBlock* done = cf_create_block(ctx, "طول_نص_نهاية");
+    if (!head || !body || !done) {
+        return ir_value_const_int(0, IR_TYPE_I64_T);
+    }
+
+    if (!ir_builder_is_block_terminated(b)) {
+        ir_builder_emit_br(b, head);
+    }
+
+    ir_builder_set_insert_point(b, head);
+    ir_lower_set_loc(b, site);
+    int idx_r = ir_builder_emit_load(b, IR_TYPE_I64_T, idx_ptr);
+    IRValue* idx = ir_value_reg(idx_r, IR_TYPE_I64_T);
+
+    IRValue* ch = ir_lower_load_char_at(ctx, base, idx);
+    IRValue* ch_i64 = ensure_i64(ctx, ch);
+    int is_end_r = ir_builder_emit_cmp_eq(b, ch_i64, ir_value_const_int(0, IR_TYPE_I64_T));
+    IRValue* is_end = ir_value_reg(is_end_r, IR_TYPE_I1_T);
+    ir_builder_emit_br_cond(b, is_end, done, body);
+
+    ir_builder_set_insert_point(b, body);
+    ir_lower_set_loc(b, site);
+    int inc_r = ir_builder_emit_add(b, IR_TYPE_I64_T, idx, ir_value_const_int(1, IR_TYPE_I64_T));
+    IRValue* inc = ir_value_reg(inc_r, IR_TYPE_I64_T);
+    ir_builder_emit_store(b, inc, idx_ptr);
+    ir_builder_emit_br(b, head);
+
+    ir_builder_set_insert_point(b, done);
+    ir_lower_set_loc(b, site);
+    int len_r = ir_builder_emit_load(b, IR_TYPE_I64_T, idx_ptr);
+    return ir_value_reg(len_r, IR_TYPE_I64_T);
+}
+
+static IRValue* ir_lower_builtin_strcmp_from_values(IRLowerCtx* ctx, const Node* site, IRValue* a_in, IRValue* b_in)
+{
+    if (!ctx || !ctx->builder) return ir_value_const_int(0, IR_TYPE_I64_T);
+
+    IRBuilder* b = ctx->builder;
+    IRModule* m = b->module;
+    if (m) ir_module_set_current(m);
+
+    IRValue* a = ir_lower_as_char_ptr(ctx, a_in);
+    IRValue* c = ir_lower_as_char_ptr(ctx, b_in);
+
+    int idx_ptr_reg = ir_builder_emit_alloca(b, IR_TYPE_I64_T);
+    IRType* idx_ptr_t = ir_type_ptr(IR_TYPE_I64_T);
+    IRValue* idx_ptr = ir_value_reg(idx_ptr_reg, idx_ptr_t);
+    ir_builder_emit_store(b, ir_value_const_int(0, IR_TYPE_I64_T), idx_ptr);
+
+    int res_ptr_reg = ir_builder_emit_alloca(b, IR_TYPE_I64_T);
+    IRValue* res_ptr = ir_value_reg(res_ptr_reg, idx_ptr_t);
+    ir_builder_emit_store(b, ir_value_const_int(0, IR_TYPE_I64_T), res_ptr);
+
+    IRBlock* head = cf_create_block(ctx, "قارن_نص_تحقق");
+    IRBlock* same = cf_create_block(ctx, "قارن_نص_متساوي");
+    IRBlock* diff = cf_create_block(ctx, "قارن_نص_مختلف");
+    IRBlock* step = cf_create_block(ctx, "قارن_نص_زيادة");
+    IRBlock* done = cf_create_block(ctx, "قارن_نص_نهاية");
+    if (!head || !same || !diff || !step || !done) {
+        return ir_value_const_int(0, IR_TYPE_I64_T);
+    }
+
+    if (!ir_builder_is_block_terminated(b)) {
+        ir_builder_emit_br(b, head);
+    }
+
+    ir_builder_set_insert_point(b, head);
+    ir_lower_set_loc(b, site);
+    int idx_r = ir_builder_emit_load(b, IR_TYPE_I64_T, idx_ptr);
+    IRValue* idx = ir_value_reg(idx_r, IR_TYPE_I64_T);
+
+    IRValue* ach = ir_lower_load_char_at(ctx, a, idx);
+    IRValue* bch = ir_lower_load_char_at(ctx, c, idx);
+    IRValue* ai = ensure_i64(ctx, ach);
+    IRValue* bi = ensure_i64(ctx, bch);
+
+    int eq_r = ir_builder_emit_cmp_eq(b, ai, bi);
+    IRValue* eq = ir_value_reg(eq_r, IR_TYPE_I1_T);
+    ir_builder_emit_br_cond(b, eq, same, diff);
+
+    ir_builder_set_insert_point(b, same);
+    ir_lower_set_loc(b, site);
+    int end_r = ir_builder_emit_cmp_eq(b, ai, ir_value_const_int(0, IR_TYPE_I64_T));
+    IRValue* is_end = ir_value_reg(end_r, IR_TYPE_I1_T);
+    ir_builder_emit_br_cond(b, is_end, done, step);
+
+    ir_builder_set_insert_point(b, step);
+    ir_lower_set_loc(b, site);
+    int inc_r = ir_builder_emit_add(b, IR_TYPE_I64_T, idx, ir_value_const_int(1, IR_TYPE_I64_T));
+    IRValue* inc = ir_value_reg(inc_r, IR_TYPE_I64_T);
+    ir_builder_emit_store(b, inc, idx_ptr);
+    ir_builder_emit_br(b, head);
+
+    ir_builder_set_insert_point(b, diff);
+    ir_lower_set_loc(b, site);
+    int delta_r = ir_builder_emit_sub(b, IR_TYPE_I64_T, ai, bi);
+    IRValue* delta = ir_value_reg(delta_r, IR_TYPE_I64_T);
+    ir_builder_emit_store(b, delta, res_ptr);
+    ir_builder_emit_br(b, done);
+
+    ir_builder_set_insert_point(b, done);
+    ir_lower_set_loc(b, site);
+    int out_r = ir_builder_emit_load(b, IR_TYPE_I64_T, res_ptr);
+    return ir_value_reg(out_r, IR_TYPE_I64_T);
+}
+
+static IRValue* ir_lower_builtin_copy_from_value(IRLowerCtx* ctx, const Node* site, IRValue* src_in)
+{
+    if (!ctx || !ctx->builder) {
+        return ir_value_const_int(0, get_char_ptr_type(NULL));
+    }
+
+    IRBuilder* b = ctx->builder;
+    IRModule* m = b->module;
+    if (m) ir_module_set_current(m);
+
+    IRType* char_ptr_t = get_char_ptr_type(m);
+    IRType* i8_ptr_t = ir_type_ptr(IR_TYPE_I8_T);
+    IRType* char_ptr_ptr_t = ir_type_ptr(char_ptr_t);
+
+    IRValue* src = ir_lower_as_char_ptr(ctx, src_in);
+    IRValue* len = ir_lower_builtin_strlen_from_value(ctx, site, src);
+
+    int plus1_r = ir_builder_emit_add(b, IR_TYPE_I64_T, len, ir_value_const_int(1, IR_TYPE_I64_T));
+    IRValue* total = ir_value_reg(plus1_r, IR_TYPE_I64_T);
+    int bytes_r = ir_builder_emit_mul(b, IR_TYPE_I64_T, total, ir_value_const_int(8, IR_TYPE_I64_T));
+    IRValue* bytes = ir_value_reg(bytes_r, IR_TYPE_I64_T);
+
+    IRValue* margs[1] = { bytes };
+    int raw_reg = ir_builder_emit_call(b, "malloc", i8_ptr_t, margs, 1);
+    if (raw_reg < 0) {
+        ir_lower_report_error(ctx, site, "فشل خفض نداء malloc.");
+        return ir_value_const_int(0, char_ptr_t);
+    }
+    IRValue* raw_ptr = ir_value_reg(raw_reg, i8_ptr_t);
+    int dst_cast_r = ir_builder_emit_cast(b, raw_ptr, char_ptr_t);
+    IRValue* dst = ir_value_reg(dst_cast_r, char_ptr_t);
+
+    int res_ptr_reg = ir_builder_emit_alloca(b, char_ptr_t);
+    IRValue* res_ptr = ir_value_reg(res_ptr_reg, char_ptr_ptr_t);
+    IRValue* null_char_ptr = ir_value_const_int(0, char_ptr_t);
+    ir_builder_emit_store(b, null_char_ptr, res_ptr);
+
+    int idx_ptr_reg = ir_builder_emit_alloca(b, IR_TYPE_I64_T);
+    IRType* i64_ptr_t = ir_type_ptr(IR_TYPE_I64_T);
+    IRValue* idx_ptr = ir_value_reg(idx_ptr_reg, i64_ptr_t);
+    ir_builder_emit_store(b, ir_value_const_int(0, IR_TYPE_I64_T), idx_ptr);
+
+    int is_null_r = ir_builder_emit_cmp_eq(b, dst, null_char_ptr);
+    IRValue* is_null = ir_value_reg(is_null_r, IR_TYPE_I1_T);
+
+    IRBlock* init = cf_create_block(ctx, "نسخ_نص_تهيئة");
+    IRBlock* head = cf_create_block(ctx, "نسخ_نص_تحقق");
+    IRBlock* body = cf_create_block(ctx, "نسخ_نص_جسم");
+    IRBlock* done = cf_create_block(ctx, "نسخ_نص_نهاية");
+    if (!init || !head || !body || !done) {
+        return ir_value_const_int(0, char_ptr_t);
+    }
+
+    if (!ir_builder_is_block_terminated(b)) {
+        ir_builder_emit_br_cond(b, is_null, done, init);
+    }
+
+    ir_builder_set_insert_point(b, init);
+    ir_lower_set_loc(b, site);
+    ir_builder_emit_store(b, dst, res_ptr);
+    ir_builder_emit_br(b, head);
+
+    ir_builder_set_insert_point(b, head);
+    ir_lower_set_loc(b, site);
+    int idx_r = ir_builder_emit_load(b, IR_TYPE_I64_T, idx_ptr);
+    IRValue* idx = ir_value_reg(idx_r, IR_TYPE_I64_T);
+    IRValue* ch = ir_lower_load_char_at(ctx, src, idx);
+    ir_lower_store_char_at(ctx, dst, idx, ch);
+    IRValue* chi = ensure_i64(ctx, ch);
+    int is_end_r = ir_builder_emit_cmp_eq(b, chi, ir_value_const_int(0, IR_TYPE_I64_T));
+    IRValue* is_end = ir_value_reg(is_end_r, IR_TYPE_I1_T);
+    ir_builder_emit_br_cond(b, is_end, done, body);
+
+    ir_builder_set_insert_point(b, body);
+    ir_lower_set_loc(b, site);
+    int inc_r = ir_builder_emit_add(b, IR_TYPE_I64_T, idx, ir_value_const_int(1, IR_TYPE_I64_T));
+    IRValue* inc = ir_value_reg(inc_r, IR_TYPE_I64_T);
+    ir_builder_emit_store(b, inc, idx_ptr);
+    ir_builder_emit_br(b, head);
+
+    ir_builder_set_insert_point(b, done);
+    ir_lower_set_loc(b, site);
+    int out_r = ir_builder_emit_load(b, char_ptr_t, res_ptr);
+    return ir_value_reg(out_r, char_ptr_t);
+}
+
+static IRValue* ir_lower_builtin_concat_from_values(IRLowerCtx* ctx, const Node* site, IRValue* a_in, IRValue* b_in)
+{
+    if (!ctx || !ctx->builder) {
+        return ir_value_const_int(0, get_char_ptr_type(NULL));
+    }
+
+    IRBuilder* b = ctx->builder;
+    IRModule* m = b->module;
+    if (m) ir_module_set_current(m);
+
+    IRType* char_ptr_t = get_char_ptr_type(m);
+    IRType* i8_ptr_t = ir_type_ptr(IR_TYPE_I8_T);
+    IRType* i64_ptr_t = ir_type_ptr(IR_TYPE_I64_T);
+    IRType* char_ptr_ptr_t = ir_type_ptr(char_ptr_t);
+
+    IRValue* a = ir_lower_as_char_ptr(ctx, a_in);
+    IRValue* c = ir_lower_as_char_ptr(ctx, b_in);
+
+    IRValue* len_a = ir_lower_builtin_strlen_from_value(ctx, site, a);
+    IRValue* len_b = ir_lower_builtin_strlen_from_value(ctx, site, c);
+
+    int sum_r = ir_builder_emit_add(b, IR_TYPE_I64_T, len_a, len_b);
+    IRValue* sum = ir_value_reg(sum_r, IR_TYPE_I64_T);
+    int total_r = ir_builder_emit_add(b, IR_TYPE_I64_T, sum, ir_value_const_int(1, IR_TYPE_I64_T));
+    IRValue* total = ir_value_reg(total_r, IR_TYPE_I64_T);
+    int bytes_r = ir_builder_emit_mul(b, IR_TYPE_I64_T, total, ir_value_const_int(8, IR_TYPE_I64_T));
+    IRValue* bytes = ir_value_reg(bytes_r, IR_TYPE_I64_T);
+
+    IRValue* margs[1] = { bytes };
+    int raw_reg = ir_builder_emit_call(b, "malloc", i8_ptr_t, margs, 1);
+    if (raw_reg < 0) {
+        ir_lower_report_error(ctx, site, "فشل خفض نداء malloc.");
+        return ir_value_const_int(0, char_ptr_t);
+    }
+    IRValue* raw_ptr = ir_value_reg(raw_reg, i8_ptr_t);
+    int dst_cast_r = ir_builder_emit_cast(b, raw_ptr, char_ptr_t);
+    IRValue* dst = ir_value_reg(dst_cast_r, char_ptr_t);
+
+    int res_ptr_reg = ir_builder_emit_alloca(b, char_ptr_t);
+    IRValue* res_ptr = ir_value_reg(res_ptr_reg, char_ptr_ptr_t);
+    IRValue* null_char_ptr = ir_value_const_int(0, char_ptr_t);
+    ir_builder_emit_store(b, null_char_ptr, res_ptr);
+
+    int idx_a_ptr_reg = ir_builder_emit_alloca(b, IR_TYPE_I64_T);
+    IRValue* idx_a_ptr = ir_value_reg(idx_a_ptr_reg, i64_ptr_t);
+    ir_builder_emit_store(b, ir_value_const_int(0, IR_TYPE_I64_T), idx_a_ptr);
+
+    int idx_b_ptr_reg = ir_builder_emit_alloca(b, IR_TYPE_I64_T);
+    IRValue* idx_b_ptr = ir_value_reg(idx_b_ptr_reg, i64_ptr_t);
+    ir_builder_emit_store(b, ir_value_const_int(0, IR_TYPE_I64_T), idx_b_ptr);
+
+    int is_null_r = ir_builder_emit_cmp_eq(b, dst, null_char_ptr);
+    IRValue* is_null = ir_value_reg(is_null_r, IR_TYPE_I1_T);
+
+    IRBlock* init = cf_create_block(ctx, "دمج_نص_تهيئة");
+    IRBlock* a_head = cf_create_block(ctx, "دمج_نص_أ_تحقق");
+    IRBlock* a_body = cf_create_block(ctx, "دمج_نص_أ_جسم");
+    IRBlock* a_done = cf_create_block(ctx, "دمج_نص_أ_نهاية");
+    IRBlock* b_head = cf_create_block(ctx, "دمج_نص_ب_تحقق");
+    IRBlock* b_body = cf_create_block(ctx, "دمج_نص_ب_جسم");
+    IRBlock* done = cf_create_block(ctx, "دمج_نص_نهاية");
+    if (!init || !a_head || !a_body || !a_done || !b_head || !b_body || !done) {
+        return ir_value_const_int(0, char_ptr_t);
+    }
+
+    if (!ir_builder_is_block_terminated(b)) {
+        ir_builder_emit_br_cond(b, is_null, done, init);
+    }
+
+    ir_builder_set_insert_point(b, init);
+    ir_lower_set_loc(b, site);
+    ir_builder_emit_store(b, dst, res_ptr);
+    ir_builder_emit_store(b, ir_value_const_int(0, IR_TYPE_I64_T), idx_a_ptr);
+    ir_builder_emit_store(b, ir_value_const_int(0, IR_TYPE_I64_T), idx_b_ptr);
+    ir_builder_emit_br(b, a_head);
+
+    ir_builder_set_insert_point(b, a_head);
+    ir_lower_set_loc(b, site);
+    int ia_r = ir_builder_emit_load(b, IR_TYPE_I64_T, idx_a_ptr);
+    IRValue* ia = ir_value_reg(ia_r, IR_TYPE_I64_T);
+    int cond_a_r = ir_builder_emit_cmp_lt(b, ia, len_a);
+    IRValue* cond_a = ir_value_reg(cond_a_r, IR_TYPE_I1_T);
+    ir_builder_emit_br_cond(b, cond_a, a_body, a_done);
+
+    ir_builder_set_insert_point(b, a_body);
+    ir_lower_set_loc(b, site);
+    IRValue* cha = ir_lower_load_char_at(ctx, a, ia);
+    ir_lower_store_char_at(ctx, dst, ia, cha);
+    int ia_inc_r = ir_builder_emit_add(b, IR_TYPE_I64_T, ia, ir_value_const_int(1, IR_TYPE_I64_T));
+    IRValue* ia_inc = ir_value_reg(ia_inc_r, IR_TYPE_I64_T);
+    ir_builder_emit_store(b, ia_inc, idx_a_ptr);
+    ir_builder_emit_br(b, a_head);
+
+    ir_builder_set_insert_point(b, a_done);
+    ir_lower_set_loc(b, site);
+    ir_builder_emit_store(b, ir_value_const_int(0, IR_TYPE_I64_T), idx_b_ptr);
+    ir_builder_emit_br(b, b_head);
+
+    ir_builder_set_insert_point(b, b_head);
+    ir_lower_set_loc(b, site);
+    int ib_r = ir_builder_emit_load(b, IR_TYPE_I64_T, idx_b_ptr);
+    IRValue* ib = ir_value_reg(ib_r, IR_TYPE_I64_T);
+    int dst_off_r = ir_builder_emit_add(b, IR_TYPE_I64_T, len_a, ib);
+    IRValue* dst_off = ir_value_reg(dst_off_r, IR_TYPE_I64_T);
+    IRValue* chb = ir_lower_load_char_at(ctx, c, ib);
+    ir_lower_store_char_at(ctx, dst, dst_off, chb);
+    IRValue* chb_i64 = ensure_i64(ctx, chb);
+    int end_b_r = ir_builder_emit_cmp_eq(b, chb_i64, ir_value_const_int(0, IR_TYPE_I64_T));
+    IRValue* end_b = ir_value_reg(end_b_r, IR_TYPE_I1_T);
+    ir_builder_emit_br_cond(b, end_b, done, b_body);
+
+    ir_builder_set_insert_point(b, b_body);
+    ir_lower_set_loc(b, site);
+    int ib_inc_r = ir_builder_emit_add(b, IR_TYPE_I64_T, ib, ir_value_const_int(1, IR_TYPE_I64_T));
+    IRValue* ib_inc = ir_value_reg(ib_inc_r, IR_TYPE_I64_T);
+    ir_builder_emit_store(b, ib_inc, idx_b_ptr);
+    ir_builder_emit_br(b, b_head);
+
+    ir_builder_set_insert_point(b, done);
+    ir_lower_set_loc(b, site);
+    int out_r = ir_builder_emit_load(b, char_ptr_t, res_ptr);
+    return ir_value_reg(out_r, char_ptr_t);
+}
+
+static IRValue* ir_lower_builtin_free_value(IRLowerCtx* ctx, const Node* site, IRValue* v)
+{
+    if (!ctx || !ctx->builder) return ir_builder_const_i64(0);
+    IRModule* m = ctx->builder->module;
+    if (m) ir_module_set_current(m);
+
+    IRType* i8_ptr_t = ir_type_ptr(IR_TYPE_I8_T);
+    IRValue* as_char_ptr = ir_lower_as_char_ptr(ctx, v);
+    IRValue* as_i8 = cast_to(ctx, as_char_ptr, i8_ptr_t);
+    IRValue* args[1] = { as_i8 };
+    ir_lower_set_loc(ctx->builder, site);
+    ir_builder_emit_call_void(ctx->builder, "free", args, 1);
+    return ir_builder_const_i64(0);
+}
+
 static IRValue* lower_call_expr(IRLowerCtx* ctx, Node* expr) {
     if (!ctx || !ctx->builder || !expr) return ir_builder_const_i64(0);
 
     IRModule* m = ctx->builder->module;
     if (m) ir_module_set_current(m);
+
+    // دوال السلاسل المدمجة في v0.3.9 (سلوك C-like مع أسماء عربية).
+    if (expr->data.call.name) {
+        const char* n = expr->data.call.name;
+        Node* a0 = expr->data.call.args;
+        Node* a1 = a0 ? a0->next : NULL;
+        Node* a2 = a1 ? a1->next : NULL;
+
+        if (strcmp(n, "طول_نص") == 0) {
+            if (!a0 || a1) {
+                ir_lower_report_error(ctx, expr, "استدعاء 'طول_نص' يتطلب وسيطاً واحداً.");
+                ir_lower_eval_call_args(ctx, expr->data.call.args);
+                return ir_builder_const_i64(0);
+            }
+            IRValue* sv = lower_expr(ctx, a0);
+            return ir_lower_builtin_strlen_from_value(ctx, expr, sv);
+        }
+
+        if (strcmp(n, "قارن_نص") == 0) {
+            if (!a0 || !a1 || a2) {
+                ir_lower_report_error(ctx, expr, "استدعاء 'قارن_نص' يتطلب وسيطين.");
+                ir_lower_eval_call_args(ctx, expr->data.call.args);
+                return ir_builder_const_i64(0);
+            }
+            IRValue* av = lower_expr(ctx, a0);
+            IRValue* bv = lower_expr(ctx, a1);
+            return ir_lower_builtin_strcmp_from_values(ctx, expr, av, bv);
+        }
+
+        if (strcmp(n, "نسخ_نص") == 0) {
+            if (!a0 || a1) {
+                ir_lower_report_error(ctx, expr, "استدعاء 'نسخ_نص' يتطلب وسيطاً واحداً.");
+                ir_lower_eval_call_args(ctx, expr->data.call.args);
+                return ir_value_const_int(0, get_char_ptr_type(m));
+            }
+            IRValue* sv = lower_expr(ctx, a0);
+            return ir_lower_builtin_copy_from_value(ctx, expr, sv);
+        }
+
+        if (strcmp(n, "دمج_نص") == 0) {
+            if (!a0 || !a1 || a2) {
+                ir_lower_report_error(ctx, expr, "استدعاء 'دمج_نص' يتطلب وسيطين.");
+                ir_lower_eval_call_args(ctx, expr->data.call.args);
+                return ir_value_const_int(0, get_char_ptr_type(m));
+            }
+            IRValue* av = lower_expr(ctx, a0);
+            IRValue* bv = lower_expr(ctx, a1);
+            return ir_lower_builtin_concat_from_values(ctx, expr, av, bv);
+        }
+
+        if (strcmp(n, "حرر_نص") == 0) {
+            if (!a0 || a1) {
+                ir_lower_report_error(ctx, expr, "استدعاء 'حرر_نص' يتطلب وسيطاً واحداً.");
+                ir_lower_eval_call_args(ctx, expr->data.call.args);
+                return ir_builder_const_i64(0);
+            }
+            IRValue* sv = lower_expr(ctx, a0);
+            return ir_lower_builtin_free_value(ctx, expr, sv);
+        }
+    }
 
     // حاول العثور على توقيع الدالة داخل وحدة IR (لمواءمة أنواع المعاملات/الإرجاع).
     IRFunc* callee = NULL;

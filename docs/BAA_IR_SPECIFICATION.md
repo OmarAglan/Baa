@@ -303,6 +303,9 @@ internal global @عداد_داخلي = ص٦٤ ٠ // ربط داخلي (v0.3.7.5)
 | `NODE_ARRAY_ACCESS` | Row-major linearized index → `إزاحة_مؤشر` + `حمل` |
 | `NODE_ARRAY_ASSIGN` | Row-major linearized index → `إزاحة_مؤشر` + `خزن` |
 
+ملاحظة (`v0.3.9`): استدعاءات السلاسل `طول_نص/قارن_نص/نسخ_نص/دمج_نص/حرر_نص`
+تُخفض داخلياً إلى حلقات/نداءات `malloc/free` حسب الحالة بدلاً من مجرد تمرير `call` خام.
+
 ### 6.2 Variable Handling
 
 Local variables are lowered to stack allocations (automatic storage):

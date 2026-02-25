@@ -858,6 +858,11 @@ Currently lowered expressions:
 - `NODE_UNARY_OP` (neg/not)
 - `NODE_CALL_EXPR` (calls via `نداء`)
 - `NODE_ARRAY_ACCESS` (multi-index row-major address computation via `IR_OP_PTR_OFFSET`)
+- Builtin string calls in `NODE_CALL_EXPR` (`v0.3.9`):
+  - `طول_نص`: loop until terminator and return length
+  - `قارن_نص`: lexicographic compare over Baa `حرف`
+  - `نسخ_نص` / `دمج_نص`: heap allocation عبر `malloc` + copy loops
+  - `حرر_نص`: تحرير الذاكرة عبر `free`
 
 ### 6.11. AST → IR Lowering (Statements, v0.3.0.4+)
 

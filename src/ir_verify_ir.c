@@ -661,7 +661,10 @@ static void ir_verify_inst(IRVerifyDiag* diag,
         }
 
         // --------------------------------------------------------------------
-        // cmp: dest + 2 operands, result i1, operands same int type
+        // cmp: dest + 2 operands, result i1.
+        // يدعم:
+        // - المقارنات العددية (int/f64) مع تطابق النوع.
+        // - مقارنة المؤشرات فقط مع (== أو !=) ومع تطابق النوع.
         // --------------------------------------------------------------------
         case IR_OP_CMP: {
             ir_verify_inst_dest_rules(diag, module, func, block, inst, 1);
@@ -678,6 +681,27 @@ static void ir_verify_inst(IRVerifyDiag* diag,
             bool b_int = (b && b->type) ? ir_type_is_int(b->type) : 0;
             bool a_f64 = (a && a->type && a->type->kind == IR_TYPE_F64);
             bool b_f64 = (b && b->type && b->type->kind == IR_TYPE_F64);
+            bool a_ptr = (a && a->type) ? ir_type_is_ptr(a->type) : 0;
+            bool b_ptr = (b && b->type) ? ir_type_is_ptr(b->type) : 0;
+
+            if (a_ptr || b_ptr) {
+                if (!a || !a->type || !a_ptr) {
+                    ir_report(diag, module, func, block, inst, "تعليمة `قارن`: المعامل الأول ليس مؤشراً صالحاً.");
+                    break;
+                }
+                if (!b || !b->type || !b_ptr) {
+                    ir_report(diag, module, func, block, inst, "تعليمة `قارن`: المعامل الثاني ليس مؤشراً صالحاً.");
+                    break;
+                }
+                if (!ir_types_equal(a->type, b->type)) {
+                    ir_report(diag, module, func, block, inst, "تعليمة `قارن`: نوعا المؤشرين غير متطابقين.");
+                }
+                if (!(inst->cmp_pred == IR_CMP_EQ || inst->cmp_pred == IR_CMP_NE)) {
+                    ir_report(diag, module, func, block, inst,
+                              "تعليمة `قارن`: مقارنة المؤشرات تدعم فقط (==) أو (!=).");
+                }
+                break;
+            }
 
             if (!a || !a->type || !(a_int || a_f64)) {
                 ir_report(diag, module, func, block, inst, "تعليمة `قارن`: المعامل الأول ليس نوعاً عددياً.");

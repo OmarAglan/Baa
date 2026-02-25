@@ -1961,6 +1961,63 @@ static void maybe_warn_signed_unsigned_compare(DataType left_type, DataType righ
 
 static DataType infer_type(Node* node);
 
+typedef struct {
+    const char* name;
+    DataType return_type;
+    int param_count;
+    DataType param_types[2];
+} BuiltinFuncSig;
+
+static const BuiltinFuncSig builtin_string_funcs[] = {
+    { "طول_نص", TYPE_INT,    1, { TYPE_STRING, TYPE_INT } },
+    { "قارن_نص", TYPE_INT,    2, { TYPE_STRING, TYPE_STRING } },
+    { "نسخ_نص", TYPE_STRING, 1, { TYPE_STRING, TYPE_INT } },
+    { "دمج_نص", TYPE_STRING, 2, { TYPE_STRING, TYPE_STRING } },
+    { "حرر_نص", TYPE_VOID,   1, { TYPE_STRING, TYPE_INT } },
+};
+
+static const BuiltinFuncSig* builtin_lookup_string_func(const char* name)
+{
+    if (!name) return NULL;
+    const int n = (int)(sizeof(builtin_string_funcs) / sizeof(builtin_string_funcs[0]));
+    for (int i = 0; i < n; i++) {
+        if (strcmp(name, builtin_string_funcs[i].name) == 0) {
+            return &builtin_string_funcs[i];
+        }
+    }
+    return NULL;
+}
+
+/**
+ * @brief التحقق من صحة استدعاء دوال السلاسل المدمجة في v0.3.9.
+ * @return true إذا كان الاسم دالة مدمجة (سواء مع أخطاء أو بدونها)، false إذا لم يكن مدمجاً.
+ */
+static bool builtin_check_string_call(Node* call_node, const char* fname, Node* args, DataType* out_return_type)
+{
+    const BuiltinFuncSig* sig = builtin_lookup_string_func(fname);
+    if (!sig) return false;
+
+    int i = 0;
+    for (Node* arg = args; arg; arg = arg->next, i++) {
+        DataType got = infer_type(arg);
+        if (i < sig->param_count) {
+            DataType expected = sig->param_types[i];
+            if (!types_compatible(got, expected)) {
+                semantic_error(arg, "نوع المعامل %d في '%s' غير متوافق.", i + 1, sig->name);
+            } else {
+                maybe_warn_implicit_narrowing(got, expected, arg);
+            }
+        }
+    }
+
+    if (i != sig->param_count) {
+        semantic_error(call_node, "عدد معاملات '%s' غير صحيح (المتوقع %d).", sig->name, sig->param_count);
+    }
+
+    if (out_return_type) *out_return_type = sig->return_type;
+    return true;
+}
+
 static bool datatype_size_bytes(DataType type, const char* type_name, int64_t* out_size)
 {
     if (!out_size) return false;
@@ -2216,6 +2273,10 @@ static DataType infer_type_internal(Node* node) {
             const char* fname = node->data.call.name;
             FuncSymbol* fs = func_lookup(fname);
             if (!fs) {
+                DataType built_ret = TYPE_INT;
+                if (builtin_check_string_call(node, fname, node->data.call.args, &built_ret)) {
+                    return built_ret;
+                }
                 semantic_error(node, "استدعاء دالة غير معرّفة '%s'.", fname ? fname : "???");
                 // ما زلنا نستنتج أنواع الوسائط لاكتشاف أخطاء أخرى.
                 Node* arg = node->data.call.args;
@@ -2889,6 +2950,10 @@ static void analyze_node(Node* node) {
             const char* fname = node->data.call.name;
             FuncSymbol* fs = func_lookup(fname);
             if (!fs) {
+                DataType built_ret = TYPE_VOID;
+                if (builtin_check_string_call(node, fname, node->data.call.args, &built_ret)) {
+                    break;
+                }
                 semantic_error(node, "استدعاء دالة غير معرّفة '%s'.", fname ? fname : "???");
                 Node* arg = node->data.call.args;
                 while (arg) { (void)infer_type(arg); arg = arg->next; }

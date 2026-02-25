@@ -1655,6 +1655,10 @@ Currently supports:
 - `NODE_UNARY_OP` → `سالب`, bitwise `نفي` (`~`), and logical-not lowering via compare-to-zero
 - `NODE_SIZEOF` → compile-time constant size (`ص٦٤`)
 - `NODE_CALL_EXPR` → `نداء`
+- Builtin string calls (`v0.3.9`) in `NODE_CALL_EXPR`:
+  - `طول_نص`, `قارن_نص`
+  - `نسخ_نص`, `دمج_نص` (heap-backed via `malloc`)
+  - `حرر_نص` (via `free`)
 
 ---
 

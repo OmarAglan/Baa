@@ -1,7 +1,7 @@
 # Baa Roadmap (Updated)
 
 > Track the development progress of the Baa programming language.
-> **Current Status:** Phase 3.9 - Advanced Arrays & String Operations (v0.3.9)
+> **Current Status:** Phase 3.10 - Pointers & References (v0.3.10)
 
 ---
 
@@ -445,7 +445,7 @@
 #### Deferred to v0.3.9
 
 - [x] Multi-dimensional arrays: `صحيح مصفوفة[٣][٤].` ✅ COMPLETED (2026-02-25)
-- Array length operator: `صحيح طول = حجم(قائمة).`
+- [x] Array length operator: `صحيح طول = حجم(قائمة) / حجم(صحيح).` ✅ COMPLETED (2026-02-25)
 
 ---
 
@@ -811,7 +811,7 @@
 
 ---
 
-### v0.3.9: Advanced Arrays & String Operations 📐
+### v0.3.9: Advanced Arrays & String Operations 📐 ✅ COMPLETED (2026-02-25)
 
 **Goal:** Complete array and string functionality.
 
@@ -825,7 +825,7 @@
   مصفوفة[١][٢] = ٢٠.
   ```
 
-- [ ] **Array Length Operator**:
+- [x] **Array Length Operator** ✅ COMPLETED (2026-02-25):
 
   ```baa
   صحيح قائمة[١٠].
@@ -838,19 +838,19 @@
 
 #### String Operations
 
-- [ ] **String Length**: `صحيح الطول = طول_نص(اسم).`
-- [ ] **String Concatenation**: `نص كامل = دمج_نص(اسم, " علي").`
-- [ ] **String Comparison**: `صحيح نتيجة = قارن_نص(اسم, "محمد").`
+- [x] **String Length** ✅ COMPLETED (2026-02-25): `صحيح الطول = طول_نص(اسم).`
+- [x] **String Concatenation** ✅ COMPLETED (2026-02-25): `نص كامل = دمج_نص(اسم, " علي").`
+- [x] **String Comparison** ✅ COMPLETED (2026-02-25): `صحيح نتيجة = قارن_نص(اسم, "محمد").`
 - [x] **String Indexing** (read-only) ✅ COMPLETED (2026-02-25): `حرف أول = اسم[٠].`
-- [ ] **String Copy**: `نص نسخة = نسخ_نص(اسم).`
+- [x] **String Copy** ✅ COMPLETED (2026-02-25): `نص نسخة = نسخ_نص(اسم).`
 
 #### Implementation
 
 - [x] **Parser**: Parse multi-dimensional array declarations and access.
 - [x] **Semantic**: Track array dimensions in symbol table.
 - [x] **Codegen**: Calculate offsets for multi-dimensional arrays (row-major order).
-- [ ] **Standard Library**: Create `baalib.baa` with string functions.
-- [ ] **UTF-8 Aware**: Ensure functions handle multi-byte Arabic characters correctly.
+- [x] **Standard Library**: Create `baalib.baa` with string functions.
+- [x] **UTF-8 Aware**: Ensure functions handle multi-byte Arabic characters correctly.
 
 ---
 

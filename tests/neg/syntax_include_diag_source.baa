@@ -1,0 +1,8 @@
+// EXPECT: tests/fixtures/neg/inc_bad_expr.baa
+// EXPECT: متوقع تعبير
+
+#تضمين "tests/fixtures/neg/inc_bad_expr.baa"
+
+صحيح الرئيسية() {
+    إرجع 0.
+}

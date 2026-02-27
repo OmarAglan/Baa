@@ -49,6 +49,7 @@ typedef enum {
     TOKEN_KEYWORD_CHAR, // حرف
     TOKEN_KEYWORD_FLOAT, // عشري
     TOKEN_KEYWORD_VOID, // عدم
+    TOKEN_CAST,         // كـ
     TOKEN_SIZEOF,       // حجم
     TOKEN_TYPE_ALIAS,   // نوع
     TOKEN_CONST,        // ثابت
@@ -350,6 +351,7 @@ typedef enum {
     NODE_CHAR,          // قيمة حرفية
     NODE_BOOL,          // قيمة منطقية (صواب/خطأ)
     NODE_NULL,          // مؤشر فارغ (عدم في سياق التعبير)
+    NODE_CAST,          // تحويل صريح: كـ<نوع>(تعبير)
     NODE_SIZEOF,        // حجم(type) أو حجم(expr)
     NODE_VAR_REF,       // إشارة لمتغير
     NODE_CALL_EXPR      // تعبير استدعاء دالة
@@ -626,6 +628,15 @@ typedef struct Node {
             int64_t size_bytes;    // قيمة الحجم المحسوبة دلالياً
             bool size_known;       // هل تم حساب الحجم؟
         } sizeof_expr;
+
+        struct {
+            DataType target_type;   // نوع الوجهة بعد التحويل
+            char* target_type_name; // اسم النوع المركب للوجهة عند الحاجة
+            DataType target_ptr_base_type;
+            char* target_ptr_base_type_name;
+            int target_ptr_depth;
+            struct Node* expression; // التعبير المصدر
+        } cast_expr;
 
         struct { char* name; } var_ref;
         struct { struct Node* left; struct Node* right; OpType op; } bin_op;

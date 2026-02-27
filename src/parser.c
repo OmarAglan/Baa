@@ -963,6 +963,44 @@ Node* parse_primary() {
 
 // المستوى 1.5: العمليات الأحادية والبادئة (!, ~, -, ++, --)
 Node* parse_unary() {
+    if (parser.current.type == TOKEN_CAST) {
+        Token tok_cast = parser.current;
+        eat(TOKEN_CAST);
+        eat(TOKEN_LT);
+
+        DataType target_type = TYPE_INT;
+        char* target_type_name = NULL;
+        DataType target_ptr_base_type = TYPE_INT;
+        char* target_ptr_base_type_name = NULL;
+        int target_ptr_depth = 0;
+
+        if (!parse_type_spec(&target_type, &target_type_name,
+                             &target_ptr_base_type, &target_ptr_base_type_name,
+                             &target_ptr_depth)) {
+            error_report(parser.current, "متوقع نوع صحيح داخل تحويل 'كـ<...>'.");
+        }
+
+        eat(TOKEN_GT);
+        eat(TOKEN_LPAREN);
+        Node* source_expr = parse_expression();
+        eat(TOKEN_RPAREN);
+
+        Node* node = ast_node_new(NODE_CAST, tok_cast);
+        if (!node) {
+            free(target_type_name);
+            free(target_ptr_base_type_name);
+            return NULL;
+        }
+
+        node->data.cast_expr.target_type = target_type;
+        node->data.cast_expr.target_type_name = target_type_name;
+        node->data.cast_expr.target_ptr_base_type = target_ptr_base_type;
+        node->data.cast_expr.target_ptr_base_type_name = target_ptr_base_type_name;
+        node->data.cast_expr.target_ptr_depth = target_ptr_depth;
+        node->data.cast_expr.expression = source_expr;
+        return node;
+    }
+
     if (parser.current.type == TOKEN_MINUS || parser.current.type == TOKEN_NOT ||
         parser.current.type == TOKEN_TILDE || parser.current.type == TOKEN_AMP ||
         parser.current.type == TOKEN_STAR ||

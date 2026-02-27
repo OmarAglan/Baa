@@ -6,6 +6,32 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ---
 
+## [0.3.10.5] - 2026-02-27
+
+### Added
+
+- **Explicit cast syntax (`كـ<...>(...)`)** end-to-end in parser/semantic/IR lowering.
+- **Cast AST/token plumbing**:
+  - `TOKEN_CAST` for keyword `كـ`.
+  - `NODE_CAST` with target-type metadata (including pointer base/depth).
+- **Semantic cast validation** for:
+  - numeric conversions (`int/float/char`),
+  - pointer-to-pointer casts,
+  - pointer-to-integer and integer-to-pointer casts,
+  - guarded diagnostics for unsupported targets (`عدم`, `هيكل`, `اتحاد`) and invalid source/target pairs.
+- **Pointer difference semantics (`pointer - pointer`)** returning element-distance (`صحيح`) for compatible pointer types.
+- **Coverage expansion for casts + pointer difference**:
+  - `tests/integration/backend/backend_cast_pointer_diff_test.baa`
+  - `tests/neg/semantic_cast_to_void_unsupported.baa`
+  - `tests/neg/semantic_cast_float_to_pointer_invalid.baa`
+  - `tests/neg/semantic_cast_pointer_to_float_invalid.baa`
+  - `tests/neg/semantic_pointer_diff_incompatible.baa`
+
+### Changed
+
+- **IR verifier cast rules** now accept pointer/integer cast forms alongside existing numeric conversions.
+- **Language docs/roadmap status** synchronized to mark v0.3.10.5 as implemented.
+
 ## [0.3.10] - 2026-02-25
 
 ### Added

@@ -1,7 +1,7 @@
 # Baa Roadmap (Updated)
 
 > Track the development progress of the Baa programming language.
-> **Current Status:** Phase 3.10.5 - Type Casting (v0.3.10.5)
+> **Current Status:** Phase 3.10.6 - Function Pointers (v0.3.10.6)
 
 ---
 
@@ -908,35 +908,42 @@
 - [x] **Semantic**: Validate pointer operations (dereference/address-of/null/pointer compare/arithmetic).
 - [x] **Codegen**: Lower address-of/dereference/pointer assignment and pointer arithmetic safely.
 
-### v0.3.10.5: Type Casting (تحويل الأنواع) 🔄
+### v0.3.10.5: Type Casting (تحويل الأنواع) 🔄 ✅ COMPLETED (2026-02-27)
 **Goal:** Explicit type conversions for low-level programming.
 
 #### Features
-- [ ] **Cast Syntax**:
+- [x] **Cast Syntax**:
   ```baa
   صحيح س = ٦٥.
   حرف ح = كـ<حرف>(س).
   ```
 
-- [ ] **Numeric Casts**:
+- [x] **Numeric Casts**:
   ```baa
   ص٣٢ صغير = كـ<ص٣٢>(قيمة_كبيرة).  // Truncation
   ص٦٤ كبير = كـ<ص٦٤>(قيمة_صغيرة).  // Sign extension
   ط٦٤ بدون = كـ<ط٦٤>(موقع).        // Signed to unsigned
   ```
 
-- [ ] **Pointer Casts**:
+- [x] **Pointer Casts**:
   ```baa
   ط٨* بايتات = كـ<ط٨*>(مؤشر_هيكل).  // Reinterpret
   عدم* عام = كـ<عدم*>(أي_مؤشر).     // To void pointer
   هيكل س* محدد = كـ<هيكل س*>(عام). // From void pointer
   ```
 
+- [x] **Pointer Difference (`pointer - pointer`)**:
+  ```baa
+  صحيح* أ = &قائمة[٠].
+  صحيح* ب = أ + ٣.
+  صحيح فرق = ب - أ. // = 3 (فرق عناصر)
+  ```
+
 #### Implementation Tasks
-- [ ] **Lexer**: Tokenize `كـ` keyword and `<>` for type parameter.
-- [ ] **Parser**: Parse `كـ<type>(expr)` form.
-- [ ] **Semantic**: Validate cast safety, warn on dangerous casts.
-- [ ] **Codegen**: Generate appropriate conversion instructions.
+- [x] **Lexer**: Tokenize `كـ` keyword and `<>` for type parameter.
+- [x] **Parser**: Parse `كـ<type>(expr)` form.
+- [x] **Semantic**: Validate cast safety, warn on dangerous casts.
+- [x] **Codegen**: Generate appropriate conversion instructions.
 
 ### v0.3.10.6: Function Pointers (مؤشرات الدوال) 📍
 **Goal:** First-class function references for callbacks and dispatch tables.

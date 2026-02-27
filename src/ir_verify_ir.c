@@ -916,7 +916,11 @@ static void ir_verify_inst(IRVerifyDiag* diag,
                 ir_report(diag, module, func, block, inst, "تعليمة `تحويل`: نوع المصدر فراغ غير صالح.");
             }
 
-            // قواعد تحويل محافظة: نسمح بتحويل عدد <-> عدد أو مؤشر <-> مؤشر أو ص١ -> عدد.
+            // قواعد تحويل محافظة: نسمح بتحويل:
+            // - عدد <-> عدد
+            // - مؤشر <-> مؤشر
+            // - مؤشر <-> عدد
+            // - ص١ -> عدد
             if (inst->type && v && v->type) {
                 int from_int = ir_type_is_int(v->type);
                 int to_int = ir_type_is_int(inst->type);
@@ -929,7 +933,12 @@ static void ir_verify_inst(IRVerifyDiag* diag,
                 // سماح: int <-> f64 كتحويل عددي.
                 int ok_num_f64 = (from_int && to_f64) || (from_f64 && to_int) || (from_f64 && to_f64);
 
-                if (!((from_int && to_int) || (from_ptr && to_ptr) || (v->type->kind == IR_TYPE_I1 && to_int) || ok_num_f64)) {
+                if (!((from_int && to_int) ||
+                      (from_ptr && to_ptr) ||
+                      (from_ptr && to_int) ||
+                      (from_int && to_ptr) ||
+                      (v->type->kind == IR_TYPE_I1 && to_int) ||
+                      ok_num_f64)) {
                     ir_report(diag, module, func, block, inst,
                               "تعليمة `تحويل`: تحويل غير مدعوم/غير واضح (from=%s, to=%s).",
                               ir_type_to_arabic(v->type),

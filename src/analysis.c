@@ -809,6 +809,16 @@ static bool ptr_type_compatible(DataType got_base, const char* got_name, int got
     return ptr_base_named_match(got_base, got_name, expected_base, expected_name);
 }
 
+static bool ptr_arith_allowed(DataType base_type, int depth)
+{
+    if (depth <= 0) return false;
+    if (depth > 1) return true;
+    if (base_type == TYPE_VOID || base_type == TYPE_STRUCT || base_type == TYPE_UNION) {
+        return false;
+    }
+    return true;
+}
+
 static int node_list_count(Node* head)
 {
     int n = 0;
@@ -1744,6 +1754,8 @@ static uint64_t u64_add_wrap(uint64_t a, uint64_t b) { return a + b; }
 static uint64_t u64_sub_wrap(uint64_t a, uint64_t b) { return a - b; }
 static uint64_t u64_mul_wrap(uint64_t a, uint64_t b) { return a * b; }
 
+static bool eval_const_float_expr(Node* expr, double* out_value);
+
 /**
  * @brief محاولة تقييم تعبير كـ ثابت عدد صحيح (int64) بأسلوب C (مع التفاف 2's complement).
  *
@@ -1857,6 +1869,26 @@ static bool eval_const_int_expr(Node* expr, int64_t* out_value)
                 default:
                     return false;
             }
+        }
+
+        case NODE_CAST:
+        {
+            if (!expr->data.cast_expr.expression) return false;
+
+            DataType target = expr->data.cast_expr.target_type;
+            int64_t iv = 0;
+            if (eval_const_int_expr(expr->data.cast_expr.expression, &iv)) {
+                *out_value = iv;
+                return target != TYPE_FLOAT && target != TYPE_STRUCT && target != TYPE_UNION && target != TYPE_VOID;
+            }
+
+            double fv = 0.0;
+            if (eval_const_float_expr(expr->data.cast_expr.expression, &fv)) {
+                *out_value = (int64_t)fv;
+                return target != TYPE_STRUCT && target != TYPE_UNION && target != TYPE_VOID;
+            }
+
+            return false;
         }
 
         default:
@@ -1977,6 +2009,22 @@ static bool eval_const_float_expr(Node* expr, double* out_value)
                 if (!eval_const_float_expr(expr->data.unary_op.operand, &v)) return false;
                 *out_value = -v;
                 return true;
+            }
+            return false;
+
+        case NODE_CAST:
+            if (!expr->data.cast_expr.expression) return false;
+            if (expr->data.cast_expr.target_type == TYPE_FLOAT) {
+                double fv = 0.0;
+                if (eval_const_float_expr(expr->data.cast_expr.expression, &fv)) {
+                    *out_value = fv;
+                    return true;
+                }
+                int64_t iv = 0;
+                if (eval_const_int_expr(expr->data.cast_expr.expression, &iv)) {
+                    *out_value = (double)iv;
+                    return true;
+                }
             }
             return false;
 
@@ -2492,7 +2540,18 @@ static DataType infer_type_internal(Node* node) {
             while (arg) {
                 DataType at = infer_type(arg);
                 if (i < fs->param_count) {
-                    if (!types_compatible(at, fs->param_types[i])) {
+                    if (fs->param_types[i] == TYPE_POINTER) {
+                        if (at != TYPE_POINTER ||
+                            !ptr_type_compatible(arg->inferred_ptr_base_type,
+                                                 arg->inferred_ptr_base_type_name,
+                                                 arg->inferred_ptr_depth,
+                                                 fs->param_ptr_base_types ? fs->param_ptr_base_types[i] : TYPE_INT,
+                                                 NULL,
+                                                 fs->param_ptr_depths ? fs->param_ptr_depths[i] : 0,
+                                                 true)) {
+                            semantic_error(arg, "نوع المعامل %d في '%s' غير متوافق.", i + 1, fs->name);
+                        }
+                    } else if (!types_compatible(at, fs->param_types[i])) {
                         semantic_error(arg, "نوع المعامل %d في '%s' غير متوافق.", i + 1, fs->name);
                     } else {
                         maybe_warn_implicit_narrowing(at, fs->param_types[i], arg);
@@ -2512,6 +2571,64 @@ static DataType infer_type_internal(Node* node) {
             return fs->return_type;
         }
 
+        case NODE_CAST: {
+            Node* src = node->data.cast_expr.expression;
+            DataType src_t = infer_type(src);
+            DataType dst_t = node->data.cast_expr.target_type;
+
+            if (dst_t == TYPE_VOID) {
+                semantic_error(node, "التحويل الصريح إلى 'عدم' غير مدعوم حالياً.");
+                node_clear_inferred_ptr(node);
+                return TYPE_VOID;
+            }
+
+            if (dst_t == TYPE_STRUCT || dst_t == TYPE_UNION) {
+                semantic_error(node, "التحويل الصريح إلى نوع مركب غير مدعوم حالياً.");
+                node_clear_inferred_ptr(node);
+                return dst_t;
+            }
+
+            if (dst_t == TYPE_POINTER) {
+                if (node->data.cast_expr.target_ptr_depth <= 0) {
+                    semantic_error(node, "نوع المؤشر الهدف في التحويل غير صالح.");
+                }
+
+                if ((node->data.cast_expr.target_ptr_base_type == TYPE_STRUCT &&
+                     (!node->data.cast_expr.target_ptr_base_type_name || !struct_lookup_def(node->data.cast_expr.target_ptr_base_type_name))) ||
+                    (node->data.cast_expr.target_ptr_base_type == TYPE_UNION &&
+                     (!node->data.cast_expr.target_ptr_base_type_name || !union_lookup_def(node->data.cast_expr.target_ptr_base_type_name))) ||
+                    (node->data.cast_expr.target_ptr_base_type == TYPE_ENUM &&
+                     (!node->data.cast_expr.target_ptr_base_type_name || !enum_lookup_def(node->data.cast_expr.target_ptr_base_type_name)))) {
+                    semantic_error(node, "أساس المؤشر الهدف في التحويل غير معرّف.");
+                }
+
+                if (!(src_t == TYPE_POINTER || datatype_is_intlike(src_t))) {
+                    semantic_error(node, "التحويل إلى مؤشر يتطلب مؤشراً أو عدداً صحيحاً.");
+                }
+
+                node_set_inferred_ptr(node,
+                                      node->data.cast_expr.target_ptr_base_type,
+                                      node->data.cast_expr.target_ptr_base_type_name,
+                                      node->data.cast_expr.target_ptr_depth);
+                return TYPE_POINTER;
+            }
+
+            if (src_t == TYPE_POINTER) {
+                if (!datatype_is_intlike(dst_t)) {
+                    semantic_error(node, "التحويل من مؤشر يدعم الأنواع الصحيحة فقط حالياً.");
+                }
+                node_clear_inferred_ptr(node);
+                return dst_t;
+            }
+
+            if (!(datatype_is_numeric_scalar(src_t) && datatype_is_numeric_scalar(dst_t))) {
+                semantic_error(node, "التحويل الصريح يدعم التحويلات العددية أو المؤشرية فقط.");
+            }
+
+            node_clear_inferred_ptr(node);
+            return dst_t;
+        }
+
         case NODE_BIN_OP: {
             DataType left = infer_type(node->data.bin_op.left);
             DataType right = infer_type(node->data.bin_op.right);
@@ -2524,6 +2641,9 @@ static DataType infer_type_internal(Node* node) {
                         ((left == TYPE_POINTER && datatype_is_intlike(right)) ||
                          (op == OP_ADD && right == TYPE_POINTER && datatype_is_intlike(left)))) {
                         Node* pnode = (left == TYPE_POINTER) ? node->data.bin_op.left : node->data.bin_op.right;
+                        if (!pnode || !ptr_arith_allowed(pnode->inferred_ptr_base_type, pnode->inferred_ptr_depth)) {
+                            semantic_error(node, "الحساب على هذا النوع من المؤشرات غير مدعوم حالياً.");
+                        }
                         node_set_inferred_ptr(node,
                                               pnode ? pnode->inferred_ptr_base_type : TYPE_INT,
                                               pnode ? pnode->inferred_ptr_base_type_name : NULL,
@@ -2531,7 +2651,23 @@ static DataType infer_type_internal(Node* node) {
                         return TYPE_POINTER;
                     }
                     if (op == OP_SUB && left == TYPE_POINTER && right == TYPE_POINTER) {
-                        semantic_error(node, "طرح مؤشرين إلى عدد غير مدعوم حالياً.");
+                        Node* lp = node->data.bin_op.left;
+                        Node* rp = node->data.bin_op.right;
+                        if (!lp || !rp || lp->inferred_ptr_depth <= 0 || rp->inferred_ptr_depth <= 0) {
+                            semantic_error(node, "طرح المؤشر الفارغ غير مدعوم.");
+                        } else if (!ptr_type_compatible(lp->inferred_ptr_base_type,
+                                                        lp->inferred_ptr_base_type_name,
+                                                        lp->inferred_ptr_depth,
+                                                        rp->inferred_ptr_base_type,
+                                                        rp->inferred_ptr_base_type_name,
+                                                        rp->inferred_ptr_depth,
+                                                        false)) {
+                            semantic_error(node, "طرح مؤشرين يتطلب توافق نوع المؤشر.");
+                        }
+                        if (!ptr_arith_allowed(lp ? lp->inferred_ptr_base_type : TYPE_INT,
+                                               lp ? lp->inferred_ptr_depth : 0)) {
+                            semantic_error(node, "الحساب على هذا النوع من المؤشرات غير مدعوم حالياً.");
+                        }
                         node_clear_inferred_ptr(node);
                         return TYPE_INT;
                     }
@@ -3382,7 +3518,18 @@ static void analyze_node(Node* node) {
             while (arg) {
                 DataType at = infer_type(arg);
                 if (i < fs->param_count) {
-                    if (!types_compatible(at, fs->param_types[i])) {
+                    if (fs->param_types[i] == TYPE_POINTER) {
+                        if (at != TYPE_POINTER ||
+                            !ptr_type_compatible(arg->inferred_ptr_base_type,
+                                                 arg->inferred_ptr_base_type_name,
+                                                 arg->inferred_ptr_depth,
+                                                 fs->param_ptr_base_types ? fs->param_ptr_base_types[i] : TYPE_INT,
+                                                 NULL,
+                                                 fs->param_ptr_depths ? fs->param_ptr_depths[i] : 0,
+                                                 true)) {
+                            semantic_error(arg, "نوع المعامل %d في '%s' غير متوافق.", i + 1, fs->name);
+                        }
+                    } else if (!types_compatible(at, fs->param_types[i])) {
                         semantic_error(arg, "نوع المعامل %d في '%s' غير متوافق.", i + 1, fs->name);
                     } else {
                         maybe_warn_implicit_narrowing(at, fs->param_types[i], arg);

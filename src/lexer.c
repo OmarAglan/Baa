@@ -938,6 +938,7 @@ Token lexer_next_token(Lexer* l) {
         else if (strcmp(word, "حرف") == 0) token.type = TOKEN_KEYWORD_CHAR;
         else if (strcmp(word, "عشري") == 0) token.type = TOKEN_KEYWORD_FLOAT;
         else if (strcmp(word, "عدم") == 0) token.type = TOKEN_KEYWORD_VOID;
+        else if (strcmp(word, "كـ") == 0) token.type = TOKEN_CAST;
         else if (strcmp(word, "حجم") == 0) token.type = TOKEN_SIZEOF;
         else if (strcmp(word, "ثابت") == 0) token.type = TOKEN_CONST;
         else if (strcmp(word, "ساكن") == 0) token.type = TOKEN_STATIC;
@@ -997,6 +998,7 @@ const char* token_type_to_str(BaaTokenType type) {
         case TOKEN_KEYWORD_CHAR: return "حرف";
         case TOKEN_KEYWORD_FLOAT: return "عشري";
         case TOKEN_KEYWORD_VOID: return "عدم";
+        case TOKEN_CAST: return "كـ";
         case TOKEN_SIZEOF: return "حجم";
         case TOKEN_TYPE_ALIAS: return "نوع";
         case TOKEN_CONST: return "ثابت";

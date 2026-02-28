@@ -16,7 +16,9 @@ This guide establishes standards for all Baa project documentation to ensure con
 - [6. Navigation and Cross-References](#6-navigation-and-cross-references)
 - [7. Tone and Voice](#7-tone-and-voice)
 - [8. C Coding Standards](#8-c-coding-standards)
-- [9. Mermaid Diagrams](#9-mermaid-diagrams)
+- [9. Baa Language Style](#9-baa-language-style)
+- [10. Test File Conventions](#10-test-file-conventions)
+- [11. Mermaid Diagrams](#11-mermaid-diagrams)
 
 ---
 
@@ -213,13 +215,6 @@ When referring to code elements:
 - Use Arabic-Indic numerals (٠-٩) in Baa code examples
 - Use Western numerals (0-9) in: version numbers, line numbers, technical specifications
 
-### 4.5. Naming Conventions (اتفاقيات التسمية)
-
-- **Functions/Variables**: Use snake_case with Arabic characters: `` `طول_نص` ``, `` `عدد_الكل` ``.
-- **Types/Structs**: Use single descriptive nouns: `` `نقطة` ``, `` `لون` ``.
-- **Member Access**: Use the colon separator consistently: `` `س:عضو` ``.
-- **Boolean naming**: Use names that imply a question or state: `` `هل_موجود` ``, `` `تم_الحفظ` ``.
-
 ---
 
 ## 5. Code Examples
@@ -238,12 +233,12 @@ All Baa code examples must:
 
 ```baa
 // مثال على دالة بسيطة
-صحيح جمع(صحيح أ, صحيح ب) {
+صحيح جمع(صحيح أ، صحيح ب) {
     إرجع أ + ب.
 }
 
 صحيح الرئيسية() {
-    صحيح نتيجة = جمع(١٠, ٢٠).
+    صحيح نتيجة = جمع(١٠، ٢٠).
     اطبع نتيجة.
     إرجع ٠.
 }
@@ -337,25 +332,6 @@ When writing in Arabic:
 - Include tashkeel (تشكيل) for clarity when needed
 - Use proper Arabic punctuation (، ؛)
 - Avoid colloquial expressions
-
----
-
-## 9. Mermaid Diagrams
-
-When using Mermaid diagrams (in INTERNALS.md):
-
-```markdown
-```mermaid
-flowchart LR
-    A["Input"] --> B["Process"]
-    B --> C["Output"]
-```
-```
-
-**Rules**:
-- Use double quotes for node labels with spaces
-- Keep diagrams simple and readable
-- Provide text alternative description
 
 ---
 
@@ -737,6 +713,224 @@ bool int_vector_push(IntVector* vec, int64_t value) {
 
 ---
 
+## 9. Baa Language Style
+
+This section documents the coding style for Baa language programs (`.baa` files).
+
+### 9.1 Arabic-First Programming
+
+Baa is an Arabic-first programming language. All code elements should use Arabic:
+
+- **Keywords**: Arabic (`صحيح`, `إرجع`, `إذا`)
+- **Identifiers**: Arabic names (`الرئيسية`, `جمع`, `متغير_محلي`)
+- **Comments**: Arabic (UTF-8)
+- **Numerals**: Arabic-Indic (٠-٩)
+
+### 9.2 Naming Conventions
+
+| Element | Convention | Example |
+|---------|------------|---------|
+| **Functions** | snake_case with Arabic | `حساب_المجموع`, `اطبع_النتيجة` |
+| **Variables** | snake_case with Arabic | `عدد_الطلاب`, `القيمة_العليا` |
+| **Types** | Single descriptive nouns | `نقطة`, `لون`, `سيارة` |
+| **Constants** | Descriptive with `ثابت` keyword | `الحد_الأقصى` |
+| **Boolean variables** | Question-like names | `هل_مكتمل`, `تم_الحفظ` |
+
+### 9.3 Code Structure
+
+**File Organization:**
+
+```baa
+// ============================================================================
+// وصف الملف
+// ============================================================================
+
+// ────────────────────────────────────────────────────────────────────────────
+// المعالج القبلي (Preprocessor)
+// ────────────────────────────────────────────────────────────────────────────
+#تضمين "ملف_التعريف.baahd"
+#تعريف الحد_الأقصى ١٠٠
+
+// ────────────────────────────────────────────────────────────────────────────
+// المتغيرات العامة
+// ────────────────────────────────────────────────────────────────────────────
+صحيح متغير_عام = ٠.
+
+// ────────────────────────────────────────────────────────────────────────────
+// أنواع مركبة
+// ────────────────────────────────────────────────────────────────────────────
+هيكل نقطة {
+    عشري س.
+    عشري ص.
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// الدوال
+// ────────────────────────────────────────────────────────────────────────────
+صحيح جمع(صحيح أ، صحيح ب) {
+    إرجع أ + ب.
+}
+
+صحيح الرئيسية() {
+    صحيح نتيجة = جمع(١٠، ٢٠).
+    إرجع ٠.
+}
+```
+
+### 9.4 Comments
+
+Use `//` for single-line comments. Use section separators for major divisions:
+
+```baa
+// تعليق على سطر واحد
+صحيح متغير = ١٠. // تعليق جانبي ( sparingly )
+```
+
+**Section Separators:**
+
+```baa
+// ============================================================================
+// عنوان القسم
+// ============================================================================
+
+// ────────────────────────────────────────────────────────────────────────────
+// عنوان فرعي
+// ────────────────────────────────────────────────────────────────────────────
+```
+
+### 9.5 Statements
+
+All statements end with a period (`.`):
+
+```baa
+صحيح متغير = ١٠.
+إذا (شرط) {
+    اطبع "نص".
+}
+إرجع ٠.
+```
+
+### 9.6 Indentation
+
+Use 4 spaces for indentation (consistent with C code):
+
+```baa
+صحيح مثال() {
+    صحيح س = ٠.
+    طالما (س < ١٠) {
+        إذا (س % ٢ == ٠) {
+            اطبع "زوجي".
+        }
+        س = س + ١.
+    }
+    إرجع ٠.
+}
+```
+
+---
+
+## 10. Test File Conventions
+
+This section documents the conventions for test files in the Baa project.
+
+### 10.1 Test Categories
+
+| Category | Location | Purpose |
+|----------|----------|---------|
+| **Integration Tests** | `tests/integration/**/*.baa` | End-to-end compiler tests |
+| **Negative Tests** | `tests/neg/*.baa` | Tests expecting compiler failure |
+| **Stress Tests** | `tests/stress/*.baa` | Performance/stress tests |
+| **Fixtures** | `tests/fixtures/` | Shared test includes |
+
+### 10.2 Test Metadata
+
+Test files use special comment markers for metadata:
+
+**RUN Contract:**
+```baa
+// RUN: expect-pass
+```
+
+Values:
+- `expect-pass` - Test should compile and run successfully (default)
+- `expect-fail` - Test should fail compilation
+- `runtime` - Runtime test
+- `compile-only` - Only compile, don't run
+- `skip` - Skip this test
+
+**EXPECT Marker (for negative tests):**
+```baa
+// RUN: expect-fail
+// EXPECT: semantic error
+// EXPECT: incompatible types
+```
+
+**FLAGS for extra compiler options:**
+```baa
+// FLAGS: -O2 --verify
+```
+
+### 10.3 Complete Test Example
+
+**Positive Test (backend test):**
+```baa
+// ============================================================================
+// اختبار جمع الأعداد في مصفوفة
+// ============================================================================
+
+صحيح جمع_المصفوفة(صحيح[] أرقام، صحيح العدد) {
+    صحيح المجموع = ٠.
+    صحيح س = ٠.
+    طالما (س < العدد) {
+        المجموع = المجموع + أرقام[س].
+        س = س + ١.
+    }
+    إرجع المجموع.
+}
+
+صحيح الرئيسية() {
+    صحيح أرقام[٥] = {١، ٢، ٣، ٤، ٥}.
+    صحيح النتيجة = جمع_المصفوفة(أرقام، ٥).
+    
+    // المجموع المتوقع: ١٥
+    إرجع (النتيجة == ١٥) ? ٠ : ١.
+}
+```
+
+**Negative Test (semantic error):**
+```baa
+// RUN: expect-fail
+// EXPECT: cannot assign to const variable
+
+ثابت صحيح الحد = ١٠.
+
+صحيح الرئيسية() {
+    الحد = ٢٠.  // خطأ: لا يمكن تعديل الثابت
+    إرجع ٠.
+}
+```
+
+---
+
+## 11. Mermaid Diagrams
+
+When using Mermaid diagrams (in INTERNALS.md):
+
+```markdown
+```mermaid
+flowchart LR
+    A["Input"] --> B["Process"]
+    B --> C["Output"]
+```
+```
+
+**Rules**:
+- Use double quotes for node labels with spaces
+- Keep diagrams simple and readable
+- Provide text alternative description
+
+---
+
 ## Quick Reference Checklist
 
 ### Documentation Changes
@@ -767,6 +961,22 @@ bool int_vector_push(IntVector* vec, int64_t value) {
 - [ ] Memory properly allocated and freed
 - [ ] Arena-owned objects not freed ad-hoc
 - [ ] Lines kept near 100 columns when practical
+
+### Baa Code Changes
+
+- [ ] Arabic identifiers used
+- [ ] Arabic-Indic numerals (٠-٩) used
+- [ ] Comments in Arabic
+- [ ] Proper section separators
+- [ ] 4-space indentation
+- [ ] Statements end with period (.)
+
+### Test File Changes
+
+- [ ] RUN contract specified if needed
+- [ ] EXPECT markers for negative tests
+- [ ] FLAGS specified for special options
+- [ ] Test is in correct directory
 
 ---
 

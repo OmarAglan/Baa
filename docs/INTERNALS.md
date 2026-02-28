@@ -239,37 +239,48 @@ The Lexer now supports **Nested Includes** via a state stack and **Macro Definit
 typedef struct {
     char* source;       // Full source code buffer (owned by this state)
     char* cur_char;     // Current reading pointer
-    const char* filename;
+    const char* filename; // اسم الملف الحالي
     int line;
     int col;
 } LexerState;
 
 // Definition (Macro)
 typedef struct {
-    char* name;
-    char* value;
+    char* name;  // اسم الماكرو
+    char* value; // القيمة الاستبدالية
 } Macro;
 
 // The main Lexer context
 typedef struct {
-    LexerState state;       // Current file state
-    LexerState stack[10];   // Stack for nested includes (max depth 10)
+    // الحالة الحالية
+    LexerState state;
+
+    // مكدس التضمين (Include Stack)
+    LexerState stack[10]; // أقصى عمق للتضمين: 10
     int stack_depth;
-    
-    // Preprocessor state
-    Macro macros[100];      // Table of definitions (max 100 macros)
-    int macro_count;
-    bool skipping;          // True if inside disabled #if block (derived from if_stack)
-    
-    // Conditional preprocessor stack (#إذا_عرف/#وإلا/#نهاية) for proper nesting
+
+    // حالة المعالج القبلي (Preprocessor State)
+    Macro macros[100];    // جدول الماكروهات (حد أقصى 100)
+    int macro_count;      // عدد الماكروهات المعرفة
+    bool skipping;        // هل نحن في وضع التخطي؟ (مُشتق من مكدس الشروط)
+
+    // مكدس الشروط (#إذا_عرف/#وإلا/#نهاية) لدعم التعشيش بشكل صحيح
     struct {
-        unsigned char parent_active;  // Was the parent block active?
-        unsigned char cond_true;      // Is the current condition true?
-        unsigned char in_else;        // Are we in the #وإلا branch?
-    } if_stack[32];           // Max 32 nested conditional levels
-    int if_depth;             // Current depth in if_stack
+        unsigned char parent_active;
+        unsigned char cond_true;
+        unsigned char in_else;
+    } if_stack[32];
+    int if_depth;
 } Lexer;
 ```
+
+**Lexer Limits:**
+
+| Limit | Value | Description |
+|-------|-------|-------------|
+| Max Include Depth | 10 | `stack[10]` - maximum nested `#تضمين` |
+| Max Macros | 100 | `macros[100]` - maximum `#تعريف` macros |
+| Max Conditional Nesting | 32 | `if_stack[32]` - maximum nested `#إذا_عرف` |
 
 ### 2.2. Preprocessor Logic
 
@@ -371,11 +382,39 @@ typedef struct {
 } Parser;
 ```
 
+**Parser Type Alias Registry:**
+
+The parser maintains its own type alias registry (separate from semantic analysis):
+
+```c
+#define PARSER_MAX_TYPE_ALIASES 256
+
+typedef struct {
+    char* name;
+    DataType target_type;
+    char* target_type_name;
+    DataType target_ptr_base_type;
+    char* target_ptr_base_type_name;
+    int target_ptr_depth;
+    FuncPtrSig* target_func_sig; // مملوك (قد يكون NULL)
+} ParserTypeAlias;
+```
+
 **Panic Mode Recovery (v0.3.7):**
 - When a syntax error is detected, `panic_mode` is set to true
 - The parser synchronizes on statement terminators (`.`, `}`) or declaration starters
 - This prevents cascading error messages from a single syntax error
 - After synchronization, normal parsing resumes
+
+**Synchronization Modes:**
+
+```c
+typedef enum {
+    PARSER_SYNC_STATEMENT = 0,    // Statement-level sync
+    PARSER_SYNC_DECLARATION = 1,  // Declaration-level sync
+    PARSER_SYNC_SWITCH = 2        // Switch-case sync
+} ParserSyncMode;
+```
 
 ### 3.1. Grammar (BNF)
 
@@ -634,13 +673,195 @@ The analyzer walks the AST recursively. It maintains a **Symbol Table** stack to
 - `print y` (where y is undeclared): Reports an undefined symbol error.
 - `x = 5` (where x is `const`): Reports a const reassignment error (v0.2.7+).
 
-### 5.5. DataType Enum
+### 5.5. Analysis Limits and Constants
 
-The AST uses the following type enumeration:
+The semantic analyzer uses the following constants (defined in `src/analysis.c`):
+
+| Constant | Value | Description |
+|----------|-------|-------------|
+| `ANALYSIS_MAX_SYMBOLS` | 100 | Maximum symbols per scope (global/local) |
+| `ANALYSIS_MAX_SCOPES` | 64 | Maximum nested scope depth |
+| `ANALYSIS_MAX_FUNCS` | 128 | Maximum function declarations |
+| `ANALYSIS_MAX_FUNC_PARAMS` | 32 | Maximum parameters per function |
+| `ANALYSIS_SYMBOL_HASH_BUCKETS` | 257 | Hash table buckets for symbol lookup |
+| `ANALYSIS_MAX_ENUMS` | 128 | Maximum enum definitions |
+| `ANALYSIS_MAX_STRUCTS` | 128 | Maximum struct definitions |
+| `ANALYSIS_MAX_UNIONS` | 128 | Maximum union definitions |
+| `ANALYSIS_MAX_ENUM_MEMBERS` | 128 | Maximum members per enum |
+| `ANALYSIS_MAX_STRUCT_FIELDS` | 128 | Maximum fields per struct/union |
+| `ANALYSIS_MAX_TYPE_ALIASES` | 256 | Maximum type alias definitions |
+
+### 5.6. Symbol Table Structures
+
+The semantic analyzer maintains several internal data structures for symbol management:
+
+#### Symbol (Variable Symbol)
+
+```c
+typedef struct {
+    char name[32];              // اسم الرمز (Symbol name)
+    ScopeType scope;            // النطاق (SCOPE_GLOBAL or SCOPE_LOCAL)
+    DataType type;              // نوع البيانات (للمتغير: نوعه، للمصفوفة: نوع العنصر)
+    char type_name[32];         // اسم النوع عند TYPE_ENUM/TYPE_STRUCT (فارغ لغير ذلك)
+    DataType ptr_base_type;     // نوع أساس المؤشر عندما type == TYPE_POINTER
+    char ptr_base_type_name[32];// اسم النوع المركب لأساس المؤشر
+    int ptr_depth;              // عمق المؤشر عندما type == TYPE_POINTER
+    FuncPtrSig* func_sig;       // توقيع مؤشر الدالة عندما type == TYPE_FUNC_PTR
+    bool is_array;              // هل الرمز مصفوفة؟
+    int array_rank;             // عدد الأبعاد
+    int64_t array_total_elems;  // حاصل ضرب الأبعاد
+    int* array_dims;            // أبعاد المصفوفة (مملوك لجدول الرموز)
+    int offset;                 // الإزاحة في المكدس أو العنوان
+    bool is_const;              // هل هو ثابت (immutable)؟
+    bool is_static;             // هل التخزين ساكن؟
+    bool is_used;               // هل تم استخدام هذا المتغير؟ (للتحذيرات)
+    int decl_line;              // سطر التعريف (للتحذيرات)
+    int decl_col;               // عمود التعريف (للتحذيرات)
+    const char* decl_file;      // ملف التعريف (للتحذيرات)
+} Symbol;
+```
+
+#### FuncSymbol (Function Symbol)
+
+```c
+typedef struct {
+    char* name;                     // اسم الدالة (مملوك strdup)
+    DataType return_type;           // نوع الإرجاع
+    DataType return_ptr_base_type;  // نوع أساس مؤشر الإرجاع
+    char* return_ptr_base_type_name;// اسم نوع أساس المؤشر (مملوك strdup)
+    int return_ptr_depth;           // عمق مؤشر الإرجاع
+    FuncPtrSig* return_func_sig;    // توقيع مؤشر دالة الإرجاع (مملوك clone)
+    DataType* param_types;          // أنواع المعاملات (مملوك malloc)
+    DataType* param_ptr_base_types; // أنواع أساس مؤشرات المعاملات
+    char** param_ptr_base_type_names;// أسماء أنواع أساس مؤشرات المعاملات
+    int* param_ptr_depths;          // أعماق مؤشرات المعاملات
+    FuncPtrSig** param_func_sigs;   // تواقيع مؤشرات دوال المعاملات
+    int param_count;                // عدد المعاملات
+    FuncPtrSig* ref_funcptr_sig;    // توقيع "مرجع الدالة" كقيمة (مملوك clone)
+    bool is_defined;                // هل تم تعريف الدالة (لها جسم)؟
+    const char* decl_file;          // ملف التعريف
+    int decl_line;                  // سطر التعريف
+    int decl_col;                   // عمود التعريف
+} FuncSymbol;
+```
+
+#### Function Pointer Signature (`FuncPtrSig`)
+
+```c
+typedef struct FuncPtrSig {
+    DataType return_type;
+    DataType return_ptr_base_type;
+    char* return_ptr_base_type_name;  // مملوك (قد يكون NULL)
+    int return_ptr_depth;
+    int param_count;
+    DataType* param_types;              // مملوك (malloc)
+    DataType* param_ptr_base_types;     // مملوك (malloc)
+    char** param_ptr_base_type_names;   // مملوك (malloc) وعناصره مملوكة (strdup)
+    int* param_ptr_depths;              // مملوك (malloc)
+} FuncPtrSig;
+```
+
+#### Compound Type Definitions
+
+**EnumDef (تعريف التعداد):**
+```c
+typedef struct {
+    char* name;  // مملوك (strdup)
+    int member_count;
+    struct {
+        char* name;   // مملوك (strdup)
+        int64_t value;
+    } members[ANALYSIS_MAX_ENUM_MEMBERS];
+} EnumDef;
+```
+
+**StructDef (تعريف الهيكل):**
+```c
+typedef struct {
+    char* name;  // مملوك (strdup)
+    int field_count;
+    StructFieldDef fields[ANALYSIS_MAX_STRUCT_FIELDS];
+    int size;
+    int align;
+    bool layout_done;
+    bool layout_in_progress;
+} StructDef;
+```
+
+**UnionDef (تعريف الاتحاد):**
+```c
+typedef struct {
+    char* name;  // مملوك (strdup)
+    int field_count;
+    StructFieldDef fields[ANALYSIS_MAX_STRUCT_FIELDS];
+    int size;
+    int align;
+    bool layout_done;
+    bool layout_in_progress;
+} UnionDef;
+```
+
+**StructFieldDef (تعريف حقل الهيكل/الاتحاد):**
+```c
+typedef struct {
+    char* name;       // مملوك (strdup)
+    DataType type;
+    char* type_name;  // مملوك (strdup) عند TYPE_ENUM/TYPE_STRUCT
+    DataType ptr_base_type;
+    char* ptr_base_type_name;
+    int ptr_depth;
+    bool is_const;
+    int offset;
+    int size;
+    int align;
+} StructFieldDef;
+```
+
+**TypeAliasDef (تعريف الاسم البديل للنوع):**
+```c
+typedef struct {
+    char* name;              // مملوك (strdup)
+    DataType target_type;    // النوع الهدف بعد فك الاسم البديل
+    char* target_type_name;  // مملوك (strdup) عند TYPE_ENUM/TYPE_STRUCT/TYPE_UNION
+    DataType target_ptr_base_type;
+    char* target_ptr_base_type_name;
+    int target_ptr_depth;
+    FuncPtrSig* target_func_sig; // مملوك (clone) عند TYPE_FUNC_PTR
+} TypeAliasDef;
+```
+
+#### Hash-Indexed Symbol Lookup (v0.3.7+)
+
+Semantic lookups use hash-indexed chains for O(1) average-case lookup:
+
+```c
+// جداول الرموز
+static Symbol global_symbols[ANALYSIS_MAX_SYMBOLS];
+static int global_count = 0;
+static int global_symbol_hash_head[ANALYSIS_SYMBOL_HASH_BUCKETS];
+static int global_symbol_hash_next[ANALYSIS_MAX_SYMBOLS];
+
+static Symbol local_symbols[ANALYSIS_MAX_SYMBOLS];
+static int local_count = 0;
+static int local_symbol_hash_head[ANALYSIS_SYMBOL_HASH_BUCKETS];
+static int local_symbol_hash_next[ANALYSIS_MAX_SYMBOLS];
+
+// مكدس النطاقات
+static int scope_stack[ANALYSIS_MAX_SCOPES];
+static int scope_depth = 0;
+```
+
+The hash function used is FNV-1a 32-bit for fast string hashing.
+
+### 5.7. DataType and Operation Enums
+
+The AST uses the following type enumeration (defined in `src/baa.h`):
 
 ```c
 typedef enum {
     TYPE_INT,           // صحيح / ص٦٤ (int64)
+
+    // أحجام الأعداد الصحيحة (v0.3.5.5)
     TYPE_I8,            // ص٨
     TYPE_I16,           // ص١٦
     TYPE_I32,           // ص٣٢
@@ -648,64 +869,50 @@ typedef enum {
     TYPE_U16,           // ط١٦
     TYPE_U32,           // ط٣٢
     TYPE_U64,           // ط٦٤
+
     TYPE_STRING,        // نص (حرف[])
     TYPE_POINTER,       // مؤشر عام
     TYPE_FUNC_PTR,      // مؤشر دالة: دالة(...) -> نوع
-    TYPE_BOOL,          // منطقي (bool)
+    TYPE_BOOL,          // منطقي (bool - stored as byte)
     TYPE_CHAR,          // حرف (UTF-8 sequence)
     TYPE_FLOAT,         // عشري (float64)
     TYPE_VOID,          // عدم (void)
-    TYPE_ENUM,          // تعداد (stored as int64)
-    TYPE_STRUCT,        // هيكل (not first-class)
-    TYPE_UNION          // اتحاد (not first-class)
+    TYPE_ENUM,          // تعداد (يُخزن كـ int64)
+    TYPE_STRUCT,        // هيكل (ليس قيمة من الدرجة الأولى)
+    TYPE_UNION          // اتحاد (ليس قيمة من الدرجة الأولى)
 } DataType;
 ```
 
-### 5.6. Symbol Table Structure
-
-The semantic analyzer maintains a symbol table with the following structure:
+**OpType Enum (Binary Operations):**
 
 ```c
-typedef struct {
-    char name[32];              // Symbol name
-    ScopeType scope;            // SCOPE_GLOBAL or SCOPE_LOCAL
-    DataType type;              // Variable/element data type
-    char type_name[32];         // Type name for enum/struct/union
-    DataType ptr_base_type;     // Base type when type == TYPE_POINTER
-    char ptr_base_type_name[32];// Base type name for pointer targets
-    int ptr_depth;              // Pointer depth for TYPE_POINTER
-    FuncPtrSig* func_sig;       // Function pointer signature for TYPE_FUNC_PTR
-    bool is_array;              // Is this symbol an array?
-    int array_rank;             // Number of dimensions (0 for scalars)
-    int64_t array_total_elems;  // Total elements (product of dimensions)
-    int* array_dims;            // Array dimensions (owned by symbol table)
-    int offset;                 // Stack offset or address
-    bool is_const;              // Is immutable?
-    bool is_static;             // Has static storage duration?
-    bool is_used;               // Usage tracking for warnings
-    int decl_line;              // Declaration line (for diagnostics)
-    int decl_col;               // Declaration column (for diagnostics)
-    const char* decl_file;      // Declaration file (for diagnostics)
-} Symbol;
+typedef enum { 
+    // عمليات حسابية
+    OP_ADD, OP_SUB, OP_MUL, OP_DIV, OP_MOD,
+    // عمليات بتية (Bitwise)
+    OP_BIT_AND, OP_BIT_OR, OP_BIT_XOR, OP_SHL, OP_SHR,
+    // عمليات مقارنة
+    OP_EQ, OP_NEQ, OP_LT, OP_GT, OP_LTE, OP_GTE,
+    // عمليات منطقية
+    OP_AND, OP_OR
+} OpType;
 ```
 
-**Function Pointer Signature (`FuncPtrSig`):**
+**UnaryOpType Enum:**
 
 ```c
-typedef struct FuncPtrSig {
-    DataType return_type;
-    DataType return_ptr_base_type;
-    char* return_ptr_base_type_name;
-    int return_ptr_depth;
-    int param_count;
-    DataType* param_types;
-    DataType* param_ptr_base_types;
-    char** param_ptr_base_type_names;
-    int* param_ptr_depths;
-} FuncPtrSig;
+typedef enum {
+    UOP_NEG,        // السالب (-)
+    UOP_NOT,        // النفي (!)
+    UOP_BIT_NOT,    // النفي البتي (~)
+    UOP_ADDR,       // أخذ العنوان (&)
+    UOP_DEREF,      // فك الإشارة (*)
+    UOP_INC,        // الزيادة (++)
+    UOP_DEC         // النقصان (--)
+} UnaryOpType;
 ```
 
-### 5.7. Memory Allocation
+### 5.8. Memory Allocation
 
 | Type | C Type | Size | Notes |
 |------|--------|------|-------|
@@ -717,7 +924,7 @@ typedef struct FuncPtrSig {
 
 ---
 
-### 5.8. Constant Folding (Optimization)
+### 5.9. Constant Folding (Optimization)
 
 The parser performs constant folding on arithmetic expressions. If both operands of a binary operation are integer literals, the compiler evaluates the result at compile-time.
 
@@ -752,9 +959,17 @@ Baa's IR is designed with three goals:
 
 ```
 IRModule
+├── name: char*             // Module name (source file)
+├── arena: IRArena          // IR memory arena (all IR objects allocated here)
+├── cached_i8_ptr_type: IRType*  // Common type cache
 ├── globals: IRGlobal*      // Global variables
+├── global_count: int
 ├── funcs: IRFunc*          // Functions
-└── strings: IRStringEntry* // String literal table
+├── func_count: int
+├── strings: IRStringEntry* // C string literal table
+├── string_count: int
+├── baa_strings: IRBaaStringEntry*  // Baa string table (حرف[])
+└── baa_string_count: int
 
 IRFunc
 ├── name: char*
@@ -764,10 +979,10 @@ IRFunc
 ├── blocks: IRBlock*        // Linked list of basic blocks
 ├── block_count: int        // Number of blocks
 ├── entry: IRBlock*         // Entry block pointer
-├── next_reg: int           // Virtual register counter
+├── next_reg: int           // Virtual register counter (next available %م<n>)
 ├── next_inst_id: int       // Instruction ID counter
 ├── ir_epoch: uint32_t      // IR change counter (invalidates analyses)
-├── def_use: IRDefUse*      // Def-Use analysis cache
+├── def_use: IRDefUse*      // Def-Use analysis cache (heap allocated)
 ├── next_block_id: int      // Block ID counter
 ├── is_prototype: bool      // Is this a declaration without body?
 └── next: IRFunc*           // Next function in module
@@ -775,9 +990,17 @@ IRFunc
 IRBlock
 ├── label: char*            // Arabic label (e.g., "بداية", "حلقة")
 ├── id: int
+├── parent: IRFunc*         // Function containing this block
 ├── first/last: IRInst*     // Instruction list
+├── inst_count: int
 ├── succs[2]: IRBlock*      // Successors (0-2 for br/br_cond)
+├── succ_count: int
 ├── preds: IRBlock**        // Predecessors (dynamic array)
+├── pred_count: int
+├── pred_capacity: int
+├── idom: IRBlock*          // Immediate dominator
+├── dom_frontier: IRBlock** // Dominance frontier
+├── dom_frontier_count: int
 └── next: IRBlock*          // Next block in function
 
 IRInst
@@ -801,6 +1024,70 @@ IRInst
 ├── prev: IRInst*           // Previous instruction in block
 └── next: IRInst*           // Next instruction in block
 ```
+
+### 6.2.1. IR Memory Management (IR Arena) — v0.3.2.6.1
+
+The IR system uses an **arena allocator** for efficient memory management. All IR objects (types, values, instructions, blocks, functions, globals) are allocated from the module-owned arena and freed in bulk when the module is destroyed.
+
+**Arena Structure:**
+
+```c
+typedef struct IRArenaChunk {
+    struct IRArenaChunk* next;
+    size_t used;
+    size_t cap;
+    unsigned char data[];  // Flexible array member
+} IRArenaChunk;
+
+typedef struct IRArena {
+    IRArenaChunk* head;
+    size_t default_chunk_size;
+} IRArena;
+
+typedef struct IRArenaStats {
+    size_t chunks;       // Number of allocated chunks
+    size_t used_bytes;   // Total used bytes
+    size_t cap_bytes;    // Total capacity
+} IRArenaStats;
+```
+
+**Key Functions:**
+
+```c
+void ir_arena_init(IRArena* arena, size_t default_chunk_size);
+void ir_arena_destroy(IRArena* arena);
+void* ir_arena_alloc(IRArena* arena, size_t size, size_t align);
+void* ir_arena_calloc(IRArena* arena, size_t count, size_t size, size_t align);
+char* ir_arena_strdup(IRArena* arena, const char* s);
+void ir_arena_get_stats(const IRArena* arena, IRArenaStats* out_stats);
+```
+
+**Important Notes:**
+- IR passes should treat IR nodes as module-owned and **avoid per-node frees**
+- Memory is freed in bulk by `ir_module_free()` via `ir_arena_destroy()`
+- The arena provides O(1) allocation with minimal overhead
+- All IR objects are annotated with: `ملاحظة: هذه البنية تُخصَّص داخل ساحة IR (Arena) وتُحرَّر دفعة واحدة.`
+
+**Usage Pattern:**
+```c
+IRModule* module = ir_module_new("program.baa");
+// All IR objects allocated via ir_module_get_current() use the arena
+IRFunc* func = ir_func_new("الرئيسية", ret_type);
+ir_module_add_func(module, func);
+// ... build IR ...
+ir_module_free(module);  // Bulk free all arena memory
+```
+
+### 6.2.2. IR Module Context
+
+The IR system maintains a thread-local context for the current module to simplify allocation:
+
+```c
+void ir_module_set_current(IRModule* module);
+IRModule* ir_module_get_current(void);
+```
+
+This allows IR construction functions to allocate from the correct arena without passing the module explicitly.
 
 **Indirect Call Support (v0.3.10.6):**
 
@@ -1505,10 +1792,84 @@ Each IR instruction is lowered to one or more `MachineInst` nodes. The expansion
 | `MachineOp` | Enum of x86-64 opcodes: ADD, SUB, IMUL, SHL, SHR, SAR, IDIV, DIV, NEG, CQO, ADDSD, SUBSD, MULSD, DIVSD, UCOMISD, XORPD, CVTSI2SD, CVTTSD2SI, MOV, LEA, LOAD, STORE, CMP, TEST, SETcc (E, NE, G, L, GE, LE, A, B, AE, BE, P, NP), MOVZX, MOVSX, AND, OR, NOT, XOR, JMP, JE, JNE, CALL, TAILJMP, RET, PUSH, POP, NOP, LABEL, COMMENT |
 | `MachineOperandKind` | NONE, VREG, IMM, MEM, LABEL, GLOBAL, FUNC, XMM |
 | `MachineOperand` | Union: vreg number, immediate value, memory (base+offset), label id, global/func name, xmm register |
-| `MachineInst` | Doubly-linked list node: op + dst/src1/src2 + ir_reg + comment + src_loc + sysv_al (for varargs) |
+| `MachineInst` | Doubly-linked list node: op + dst/src1/src2 + ir_reg + comment + src_loc + dbg_name + sysv_al (for varargs) |
 | `MachineBlock` | Label + instruction list + successors + linked-list next |
 | `MachineFunc` | Name + block list + vreg counter + stack_size + param_count |
 | `MachineModule` | Function list + globals (ref from IR) + strings (ref from IR) + baa_strings |
+
+**MachineInst Structure:**
+
+```c
+typedef struct MachineInst {
+    MachineOp op;               // كود العملية
+    MachineOperand dst;         // المعامل الوجهة
+    MachineOperand src1;        // المعامل المصدر الأول
+    MachineOperand src2;        // المعامل المصدر الثاني (اختياري)
+
+    // معلومات تعقب المصدر
+    int ir_reg;                 // سجل IR الأصلي (للربط مع IR)
+    const char* comment;        // تعليق اختياري (لسهولة القراءة)
+
+    // معلومات الديبغ (Debug Info)
+    const char* src_file;
+    int src_line;
+    int src_col;
+    int ir_inst_id;             // معرّف تعليمة IR (إن وُجد)
+    const char* dbg_name;       // اسم متغير/رمز اختياري
+
+    // SystemV AMD64 varargs: AL = عدد سجلات XMM المستخدمة لتمرير المعاملات.
+    // -1 => لا يُطلب إعداد AL صراحةً (الافتراضي 0).
+    int sysv_al;
+
+    // القائمة المترابطة المزدوجة
+    struct MachineInst* prev;
+    struct MachineInst* next;
+} MachineInst;
+```
+
+**MachineBlock Structure:**
+
+```c
+typedef struct MachineBlock {
+    char* label;                // اسم الكتلة
+    int id;                     // معرف الكتلة
+    MachineInst* first;         // أول تعليمة
+    MachineInst* last;          // آخر تعليمة
+    int inst_count;             // عدد التعليمات
+    struct MachineBlock* succs[2];  // الخلفاء (0-2)
+    int succ_count;
+    struct MachineBlock* next;  // الكتلة التالية في القائمة
+} MachineBlock;
+```
+
+**MachineFunc Structure:**
+
+```c
+typedef struct MachineFunc {
+    char* name;                 // اسم الدالة
+    MachineBlock* blocks;       // قائمة الكتل
+    int block_count;
+    int next_vreg;              // عداد السجلات الافتراضية
+    int stack_size;             // حجم المكدس المحلي
+    int param_count;            // عدد المعاملات
+    struct MachineFunc* next;   // الدالة التالية
+} MachineFunc;
+```
+
+**MachineModule Structure:**
+
+```c
+typedef struct MachineModule {
+    MachineFunc* funcs;         // قائمة الدوال
+    int func_count;
+    IRGlobal* globals;          // مرجع من IR (غير مملوك)
+    int global_count;
+    IRStringEntry* strings;     // مرجع من IR (غير مملوك)
+    int string_count;
+    IRBaaStringEntry* baa_strings;  // مرجع من IR (غير مملوك)
+    int baa_string_count;
+} MachineModule;
+```
 
 #### 6.19.3. Instruction Lowering Patterns
 
@@ -1643,6 +2004,92 @@ When register pressure exceeds available registers, the allocator spills the lon
 4. **Callee-saved tracking:** `RegAllocCtx.callee_saved_used[]` tracks which callee-saved registers are allocated, informing prologue/epilogue generation in the code emission phase.
 
 **Testing:** Register allocation behavior is validated by integration runtime tests under `tests/integration/backend/`.
+
+---
+
+### 6.20.8. Target Abstraction Layer (تجريد الهدف) — v0.3.2.8.1
+
+The backend uses a target abstraction layer (`src/target.h`, `src/target.c`) to separate OS/object-format/calling-convention assumptions from the rest of the backend (isel/regalloc/emit). This enables support for multiple targets.
+
+**Target Kinds:**
+
+```c
+typedef enum {
+    BAA_TARGET_X86_64_WINDOWS = 0,   // Windows x86-64 (COFF/PE)
+    BAA_TARGET_X86_64_LINUX   = 1,   // Linux x86-64 (ELF)
+} BaaTargetKind;
+
+typedef enum {
+    BAA_OBJFORMAT_COFF = 0,  // Windows PE/COFF
+    BAA_OBJFORMAT_ELF  = 1,  // Linux ELF
+} BaaObjectFormat;
+```
+
+**Calling Convention Descriptor:**
+
+```c
+typedef struct BaaCallingConv {
+    int int_arg_reg_count;            // عدد سجلات معاملات الأعداد الصحيحة
+    int int_arg_phys_regs[8];         // PhysReg values (from regalloc.h)
+
+    int ret_phys_reg;                 // PhysReg (عادةً RAX)
+
+    unsigned int callee_saved_mask;   // bitmask over PhysReg
+    unsigned int caller_saved_mask;   // bitmask over PhysReg
+
+    int stack_align_bytes;            // محاذاة المكدس عند نقاط الاستدعاء (عادة 16)
+
+    // تمثيل سجلات معاملات ABI داخل Machine IR كسجلات افتراضية سالبة
+    // arg i -> (abi_arg_vreg0 - i)
+    int abi_arg_vreg0;                // افتراضي: -10
+    int abi_ret_vreg;                 // افتراضي: -2 (RAX)
+
+    int shadow_space_bytes;           // Windows: 32, SysV: 0
+    bool home_reg_args_on_call;       // Windows varargs: true, SysV: false
+    bool sysv_set_al_zero_on_call;    // SysV varargs rule: true
+} BaaCallingConv;
+```
+
+**Target Descriptor:**
+
+```c
+typedef struct BaaTarget {
+    BaaTargetKind kind;
+    const char* name;                 // short name: x86_64-windows, x86_64-linux
+    const char* triple;               // future: full triple
+
+    BaaObjectFormat obj_format;
+    const IRDataLayout* data_layout;
+    const BaaCallingConv* cc;
+
+    const char* default_exe_ext;      // ".exe" on Windows, "" on Linux
+} BaaTarget;
+```
+
+**Target Selection:**
+
+```c
+const BaaTarget* baa_target_builtin_windows_x86_64(void);
+const BaaTarget* baa_target_builtin_linux_x86_64(void);
+const BaaTarget* baa_target_host_default(void);
+const BaaTarget* baa_target_parse(const char* s);  // "x86_64-windows" or "x86_64-linux"
+```
+
+**ABI Differences:**
+
+| Feature | Windows x64 | SystemV AMD64 (Linux) |
+|---------|-------------|----------------------|
+| Integer args | RCX, RDX, R8, R9 | RDI, RSI, RDX, RCX, R8, R9 |
+| Shadow space | 32 bytes | None |
+| Varargs | Home register args on stack | Set AL = number of XMM args |
+| Callee-saved | RBX, RBP, RDI, RSI, R12-R15 | RBX, RBP, R12-R15 |
+| Stack alignment | 16 bytes | 16 bytes |
+
+**Backend Integration:**
+
+- `isel_run_ex()` takes `const BaaTarget*` to select ABI/object-format behavior
+- `regalloc_run_ex()` accepts target for calling convention-aware allocation
+- `emit_module_ex()` uses target for code emission decisions (sections, symbols)
 
 ---
 

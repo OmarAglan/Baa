@@ -960,7 +960,7 @@ typedef struct IRFunc {
     uint32_t ir_epoch;
 
     // كاش Def-Use (تحليل) — يُخصّص على heap ويُعاد بناؤه عند التغييرات.
-    struct IRDefUse* def_use;
+    IRDefUse* def_use;
 
     // Block ID counter
     int next_block_id;

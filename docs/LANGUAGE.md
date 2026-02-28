@@ -32,7 +32,7 @@ A Baa program is a collection of **Global Variables** and **Functions**.
 | **Entry Point** | `الرئيسية` (Main) function |
 | **Statements** | End with period (`.`) |
 | **Comments** | Single-line with `//` |
-| **Keywords** | `صحيح`, `ص٨`, `ص١٦`, `ص٣٢`, `ص٦٤`, `ط٨`, `ط١٦`, `ط٣٢`, `ط٦٤`, `عشري`, `حرف`, `نص`, `منطقي`, `عدم`, `حجم`, `نوع`, `كـ`, `دالة`, `ثابت`, `ساكن`, `إذا`, `وإلا`, `طالما`, `لكل`, `اختر`, `حالة`, `افتراضي`, `اطبع`, `اقرأ`, `إرجع`, `توقف`, `استمر`, `تعداد`, `هيكل`, `اتحاد`, `صواب`, `خطأ` |
+| **Keywords** | `صحيح`, `ص٨`, `ص١٦`, `ص٣٢`, `ص٦٤`, `ط٨`, `ط١٦`, `ط٣٢`, `ط٦٤`, `عشري`, `حرف`, `نص`, `منطقي`, `عدم`, `حجم`, `نوع`, `دالة`, `ثابت`, `ساكن`, `إذا`, `وإلا`, `طالما`, `لكل`, `اختر`, `حالة`, `افتراضي`, `اطبع`, `اقرأ`, `إرجع`, `توقف`, `استمر`, `تعداد`, `هيكل`, `اتحاد`, `صواب`, `خطأ`, `كـ` |
 
 ### Minimal Program
 
@@ -160,7 +160,7 @@ Baa is statically typed. All variables must be declared with their type.
 | `حرف` | `uint64_t` (packed) | One UTF-8 character (1..4 bytes) | `'أ'` |
 | `عشري` | `double` | 64-bit floating point (f64) | `٣.١٤` |
 | `عدم` | `void` | Void type (no value) | `عدم فارغ()` |
-| `دالة` | `void*` (logical) | Function pointer type | `دالة(صحيح) -> صحيح` |
+| `دالة(...)` | function pointer | Function pointer type | `دالة(صحيح) -> صحيح` |
 
 ### 3.2. Scalar Variables
 
@@ -192,6 +192,7 @@ Baa is statically typed. All variables must be declared with their type.
 - تسلسلات الهروب المدعومة في النصوص/المحارف (v0.3.6):
   - `\س` سطر جديد (LF)
   - `\ت` جدولة (TAB)
+  - `\ر` إرجاع (Carriage Return)
   - `\٠` محرف صفر
   - `\\` شرطة مائلة عكسية
   - `\"` اقتباس مزدوج داخل النص
@@ -459,7 +460,17 @@ Baa is statically typed. All variables must be declared with their type.
 - Alias must be declared **before** usage (C-like behavior).
 - Alias targets in this milestone are existing implemented types (primitive + `تعداد`/`هيكل`/`اتحاد`).
 - `نوع` is parsed contextually in declarations, so existing member/identifier usages مثل `س:نوع` remain valid.
-- Pointer/function-type aliases are deferred to later pointer/function-type milestones.
+- Pointer/function-type aliases are supported via `نوع` with pointer and function syntax.
+
+**Type Alias with Pointers and Functions:**
+
+```baa
+// Pointer type alias
+نوع مؤشر_صحيح = صحيح*.
+
+// Function pointer type alias
+نوع عملية = دالة(صحيح، صحيح) -> صحيح.
+```
 
 #### 3.7.2. Static Storage with `ساكن` (تخزين ساكن) [Implemented v0.3.7.5]
 
@@ -624,7 +635,7 @@ Functions enable code reuse and modularity.
 
 ```baa
 // Function that adds two integers
-صحيح جمع(صحيح أ, صحيح ب) {
+صحيح جمع(صحيح أ، صحيح ب) {
     إرجع أ + ب.
 }
 
@@ -648,11 +659,11 @@ To use a function defined in another file (or later in the same file), you can d
 
 ```baa
 // Prototype declaration (notice the dot at the end)
-صحيح جمع(صحيح أ, صحيح ب).
+صحيح جمع(صحيح أ، صحيح ب).
 
 صحيح الرئيسية() {
     // Calls 'جمع' defined in another file
-    اطبع جمع(١٠, ٢٠).
+    اطبع جمع(١٠، ٢٠).
     إرجع ٠.
 }
 ```
@@ -662,7 +673,7 @@ To use a function defined in another file (or later in the same file), you can d
 **Syntax:** `<name>(<arguments>)`
 
 ```baa
-صحيح الناتج = جمع(١٠, ٢٠).   // الناتج = ٣٠
+صحيح الناتج = جمع(١٠، ٢٠).   // الناتج = ٣٠
 صحيح م = مربع(٥).            // م = ٢٥
 ```
 

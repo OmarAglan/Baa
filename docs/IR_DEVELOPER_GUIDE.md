@@ -229,36 +229,80 @@ Types:         فراغ، ص١، ص٨، ص١٦، ص٣٢، ص٦٤، ط٨، ط١٦
 
 ## Optimization Passes
 
-All passes follow the [`IRPass`](src/ir_pass.h) interface and are registered in [`src/ir_optimizer.c`](src/ir_optimizer.c).
+All passes follow the [`IRPass`](src/ir_pass.h) interface and are orchestrated by [`src/ir_optimizer.c`](src/ir_optimizer.c).
 
 ### Main Optimizer
 
 | File | Description |
 |------|-------------|
 | [`src/ir_optimizer.c`](src/ir_optimizer.c) | Fixed-point optimization pipeline and pass manager |
+| [`src/ir_optimizer.h`](src/ir_optimizer.h) | Optimization levels and public API |
+
+### Optimization Levels
+
+The [`OptLevel`](src/ir_optimizer.h:27) enum defines three optimization levels:
+
+```c
+typedef enum {
+    OPT_LEVEL_0 = 0,  // بدون تحسين (وضع التصحيح)
+    OPT_LEVEL_1 = 1,  // تحسينات أساسية
+    OPT_LEVEL_2 = 2   // تحسينات كاملة
+} OptLevel;
+```
+
+| Level | Description | Passes Enabled |
+|-------|-------------|----------------|
+| **O0** | No optimizations (debug mode) | None |
+| **O1** | Basic optimizations | Mem2Reg, Canonicalization, InstCombine, SCCP, ConstFold, CopyProp, DCE, CFG Simplify, LICM |
+| **O2** | Full optimizations | O1 + GVN, CSE, Inlining |
 
 ### Individual Passes
 
-| File | Pass (Arabic) | Description |
-|------|---------------|-------------|
-| [`src/ir_mem2reg.c`](src/ir_mem2reg.c) | **ترقية الذاكرة إلى سجلات** | Promotes stack allocations (`حجز`) to SSA registers using `فاي` insertion |
-| [`src/ir_constfold.c`](src/ir_constfold.c) | **طي_الثوابت** | Constant folding for arithmetic and comparisons |
-| [`src/ir_copyprop.c`](src/ir_copyprop.c) | **نشر_النسخ** | Copy propagation for `نسخ` instructions |
-| [`src/ir_cse.c`](src/ir_cse.c) | **حذف_المكرر** | Common subexpression elimination |
-| [`src/ir_dce.c`](src/ir_dce.c) | **حذف_الميت** | Dead code elimination (instructions and unreachable blocks) |
-| [`src/ir_gvn.c`](src/ir_gvn.c) | **ترقيم القيم العالمية** | Global Value Numbering |
-| [`src/ir_sccp.c`](src/ir_sccp.c) | **نشر الثوابت المتناثر** | Sparse Conditional Constant Propagation |
-| [`src/ir_instcombine.c`](src/ir_instcombine.c) | **دمج التعليمات** | Instruction combining and local simplifications |
-| [`src/ir_licm.c`](src/ir_licm.c) | **حركة التعليمات غير المتغيرة** | Loop Invariant Code Motion |
-| [`src/ir_unroll.c`](src/ir_unroll.c) | **فك الحلقات** | Conservative loop unrolling for small constant-trip loops |
-| [`src/ir_inline.c`](src/ir_inline.c) | **تضمين الدوال** | Function inlining for small single-call sites |
-| [`src/ir_cfg_simplify.c`](src/ir_cfg_simplify.c) | **تبسيط مخطط التدفق** | CFG simplification: merge trivial blocks, split critical edges |
+| File | Pass (Arabic) | Description | O1 | O2 |
+|------|---------------|-------------|----|----|
+| [`src/ir_inline.c`](src/ir_inline.c) | **تضمين الدوال** | Function inlining for small single-call sites | | ✓ |
+| [`src/ir_mem2reg.c`](src/ir_mem2reg.c) | **ترقية الذاكرة إلى سجلات** | Promotes stack allocations (`حجز`) to SSA registers using `فاي` insertion | ✓ | ✓ |
+| [`src/ir_canon.c`](src/ir_canon.c) | **توحيد الـ IR** | Canonicalizes instruction forms for CSE/ConstFold effectiveness | ✓ | ✓ |
+| [`src/ir_instcombine.c`](src/ir_instcombine.c) | **دمج التعليمات** | Instruction combining and local simplifications | ✓ | ✓ |
+| [`src/ir_sccp.c`](src/ir_sccp.c) | **نشر الثوابت المتناثر** | Sparse Conditional Constant Propagation | ✓ | ✓ |
+| [`src/ir_constfold.c`](src/ir_constfold.c) | **طي الثوابت** | Constant folding for arithmetic and comparisons | ✓ | ✓ |
+| [`src/ir_copyprop.c`](src/ir_copyprop.c) | **نشر النسخ** | Copy propagation for `نسخ` instructions | ✓ | ✓ |
+| [`src/ir_gvn.c`](src/ir_gvn.c) | **ترقيم القيم العالمية** | Global Value Numbering | | ✓ |
+| [`src/ir_cse.c`](src/ir_cse.c) | **حذف المكرر** | Common subexpression elimination | | ✓ |
+| [`src/ir_dce.c`](src/ir_dce.c) | **حذف الميت** | Dead code elimination (instructions and unreachable blocks) | ✓ | ✓ |
+| [`src/ir_cfg_simplify.c`](src/ir_cfg_simplify.c) | **تبسيط مخطط التدفق** | CFG simplification: merge trivial blocks, split critical edges | ✓ | ✓ |
+| [`src/ir_licm.c`](src/ir_licm.c) | **حركة التعليمات غير المتغيرة** | Loop Invariant Code Motion | ✓ | ✓ |
+| [`src/ir_unroll.c`](src/ir_unroll.c) | **فك الحلقات** | Conservative loop unrolling for small constant-trip loops | | ✓ |
 
-### Pass Levels
+### Pass Order (in [`ir_optimizer_run()`](src/ir_optimizer.c:135))
 
-- **O0**: No optimizations (debug mode)
-- **O1**: Basic optimizations (mem2reg, constfold, copyprop, dce)
-- **O2**: Full optimizations (+ CSE, GVN, SCCP, LICM, InstCombine, unrolling, inlining)
+The optimizer runs passes in a fixed-point loop (up to MAX_ITERATIONS=10 iterations):
+
+1. **Inlining** (O2 only, before Mem2Reg)
+2. **Mem2Reg** - Memory to registers promotion
+3. **Canonicalization** - Normalize instruction forms
+4. **InstCombine** - Local instruction simplifications
+5. **SCCP** - Sparse conditional constant propagation
+6. **ConstFold** - Arithmetic constant folding
+7. **CopyProp** - Copy propagation
+8. **GVN** (O2 only) - Global value numbering
+9. **CSE** (O2 only) - Common subexpression elimination
+10. **DCE** - Dead code elimination
+11. **CFG Simplify** - Control flow graph simplification
+12. **LICM** - Loop invariant code motion
+
+### Optimizer API
+
+```c
+// تشغيل خط أنابيب التحسين
+bool ir_optimizer_run(IRModule* module, OptLevel level);
+
+// تفعيل/تعطيل بوابة التحقق
+void ir_optimizer_set_verify_gate(int enabled);
+
+// الحصول على اسم مستوى التحسين
+const char* ir_optimizer_level_name(OptLevel level);
+```
 
 ---
 
@@ -373,120 +417,152 @@ ir_builder_free(builder);
 
 ### Builder Lifecycle
 
-- [`ir_builder_new()`](src/ir_builder.h:67) - Create a new IR builder
-- [`ir_builder_free()`](src/ir_builder.h:74) - Free an IR builder (does NOT free the module)
-- [`ir_builder_set_module()`](src/ir_builder.h:81) - Set the target module
+| Function | Signature | Description |
+|----------|-----------|-------------|
+| [`ir_builder_new()`](src/ir_builder.h:67) | `IRBuilder* ir_builder_new(IRModule* module)` | Create a new IR builder |
+| [`ir_builder_free()`](src/ir_builder.h:74) | `void ir_builder_free(IRBuilder* builder)` | Free an IR builder (does NOT free the module) |
+| [`ir_builder_set_module()`](src/ir_builder.h:81) | `void ir_builder_set_module(IRBuilder* builder, IRModule* module)` | Set the target module |
 
 ### Function Creation
 
-- [`ir_builder_create_func()`](src/ir_builder.h:94) - Create a new function and set it as current
-- [`ir_builder_add_param()`](src/ir_builder.h:103) - Add a parameter to the current function
-- [`ir_builder_set_func()`](src/ir_builder.h:110) - Set the current function
-- [`ir_builder_get_func()`](src/ir_builder.h:117) - Get the current function
+| Function | Signature | Description |
+|----------|-----------|-------------|
+| [`ir_builder_create_func()`](src/ir_builder.h:94) | `IRFunc* ir_builder_create_func(IRBuilder* builder, const char* name, IRType* ret_type)` | Create a new function and set it as current |
+| [`ir_builder_add_param()`](src/ir_builder.h:103) | `int ir_builder_add_param(IRBuilder* builder, const char* name, IRType* type)` | Add a parameter to the current function |
+| [`ir_builder_set_func()`](src/ir_builder.h:110) | `void ir_builder_set_func(IRBuilder* builder, IRFunc* func)` | Set the current function |
+| [`ir_builder_get_func()`](src/ir_builder.h:117) | `IRFunc* ir_builder_get_func(IRBuilder* builder)` | Get the current function |
 
 ### Block Creation & Navigation
 
-- [`ir_builder_create_block()`](src/ir_builder.h:129) - Create a new block in the current function
-- [`ir_builder_create_block_and_set()`](src/ir_builder.h:137) - Create a block and set it as insertion point
-- [`ir_builder_set_insert_point()`](src/ir_builder.h:144) - Set the insertion point
-- [`ir_builder_get_insert_block()`](src/ir_builder.h:151) - Get the current insertion block
-- [`ir_builder_is_block_terminated()`](src/ir_builder.h:158) - Check if the current block is terminated
+| Function | Signature | Description |
+|----------|-----------|-------------|
+| [`ir_builder_create_block()`](src/ir_builder.h:129) | `IRBlock* ir_builder_create_block(IRBuilder* builder, const char* label)` | Create a new block in the current function |
+| [`ir_builder_create_block_and_set()`](src/ir_builder.h:137) | `IRBlock* ir_builder_create_block_and_set(IRBuilder* builder, const char* label)` | Create a block and set it as insertion point |
+| [`ir_builder_set_insert_point()`](src/ir_builder.h:144) | `void ir_builder_set_insert_point(IRBuilder* builder, IRBlock* block)` | Set the insertion point |
+| [`ir_builder_get_insert_block()`](src/ir_builder.h:151) | `IRBlock* ir_builder_get_insert_block(IRBuilder* builder)` | Get the current insertion block |
+| [`ir_builder_is_block_terminated()`](src/ir_builder.h:158) | `int ir_builder_is_block_terminated(IRBuilder* builder)` | Check if the current block is terminated |
 
 ### Register Allocation
 
-- [`ir_builder_alloc_reg()`](src/ir_builder.h:169) - Allocate a new virtual register (%م<n>)
-- [`ir_builder_reg_value()`](src/ir_builder.h:178) - Create a register value for a given register number
+| Function | Signature | Description |
+|----------|-----------|-------------|
+| [`ir_builder_alloc_reg()`](src/ir_builder.h:169) | `int ir_builder_alloc_reg(IRBuilder* builder)` | Allocate a new virtual register (%م<n>) |
+| [`ir_builder_reg_value()`](src/ir_builder.h:178) | `IRValue* ir_builder_reg_value(IRBuilder* builder, int reg, IRType* type)` | Create a register value for a given register number |
 
 ### Source Location Tracking
 
-- [`ir_builder_set_loc()`](src/ir_builder.h:191) - Set source location for subsequent instructions
-- [`ir_builder_clear_loc()`](src/ir_builder.h:197) - Clear source location (for generated code)
+| Function | Signature | Description |
+|----------|-----------|-------------|
+| [`ir_builder_set_loc()`](src/ir_builder.h:191) | `void ir_builder_set_loc(IRBuilder* builder, const char* file, int line, int col)` | Set source location for subsequent instructions |
+| [`ir_builder_clear_loc()`](src/ir_builder.h:197) | `void ir_builder_clear_loc(IRBuilder* builder)` | Clear source location (for generated code) |
 
 ### Arithmetic Instructions (العمليات الحسابية)
 
-- [`ir_builder_emit_add()`](src/ir_builder.h:207) - جمع (Addition)
-- [`ir_builder_emit_sub()`](src/ir_builder.h:213) - طرح (Subtraction)
-- [`ir_builder_emit_mul()`](src/ir_builder.h:219) - ضرب (Multiplication)
-- [`ir_builder_emit_div()`](src/ir_builder.h:225) - قسم (Division)
-- [`ir_builder_emit_mod()`](src/ir_builder.h:231) - باقي (Modulo)
-- [`ir_builder_emit_neg()`](src/ir_builder.h:237) - سالب (Negation)
+| Function | Signature | Description |
+|----------|-----------|-------------|
+| [`ir_builder_emit_add()`](src/ir_builder.h:207) | `int ir_builder_emit_add(IRBuilder* builder, IRType* type, IRValue* lhs, IRValue* rhs)` | جمع (Addition) |
+| [`ir_builder_emit_sub()`](src/ir_builder.h:213) | `int ir_builder_emit_sub(IRBuilder* builder, IRType* type, IRValue* lhs, IRValue* rhs)` | طرح (Subtraction) |
+| [`ir_builder_emit_mul()`](src/ir_builder.h:219) | `int ir_builder_emit_mul(IRBuilder* builder, IRType* type, IRValue* lhs, IRValue* rhs)` | ضرب (Multiplication) |
+| [`ir_builder_emit_div()`](src/ir_builder.h:225) | `int ir_builder_emit_div(IRBuilder* builder, IRType* type, IRValue* lhs, IRValue* rhs)` | قسم (Division) |
+| [`ir_builder_emit_mod()`](src/ir_builder.h:231) | `int ir_builder_emit_mod(IRBuilder* builder, IRType* type, IRValue* lhs, IRValue* rhs)` | باقي (Modulo) |
+| [`ir_builder_emit_neg()`](src/ir_builder.h:237) | `int ir_builder_emit_neg(IRBuilder* builder, IRType* type, IRValue* operand)` | سالب (Negation) |
 
 ### Memory Instructions (عمليات الذاكرة)
 
-- [`ir_builder_emit_alloca()`](src/ir_builder.h:249) - حجز (Stack allocation)
-- [`ir_builder_emit_load()`](src/ir_builder.h:258) - حمل (Load from memory)
-- [`ir_builder_emit_store()`](src/ir_builder.h:267) - خزن (Store to memory)
-- [`ir_builder_emit_ptr_offset()`](src/ir_builder.h:274) - إزاحة_مؤشر (Pointer offset: base + index * sizeof(pointee))
+| Function | Signature | Description |
+|----------|-----------|-------------|
+| [`ir_builder_emit_alloca()`](src/ir_builder.h:249) | `int ir_builder_emit_alloca(IRBuilder* builder, IRType* type)` | حجز (Stack allocation) |
+| [`ir_builder_emit_load()`](src/ir_builder.h:258) | `int ir_builder_emit_load(IRBuilder* builder, IRType* type, IRValue* ptr)` | حمل (Load from memory) |
+| [`ir_builder_emit_store()`](src/ir_builder.h:267) | `void ir_builder_emit_store(IRBuilder* builder, IRValue* value, IRValue* ptr)` | خزن (Store to memory) |
+| [`ir_builder_emit_ptr_offset()`](src/ir_builder.h:274) | `int ir_builder_emit_ptr_offset(IRBuilder* builder, IRType* ptr_type, IRValue* base, IRValue* index)` | إزاحة_مؤشر (Pointer offset: base + index * sizeof(pointee)) |
 
 ### Comparison Instructions (عمليات المقارنة)
 
-- [`ir_builder_emit_cmp()`](src/ir_builder.h:288) - قارن (Compare with predicate)
-- [`ir_builder_emit_cmp_eq()`](src/ir_builder.h:293) - يساوي (Equal)
-- [`ir_builder_emit_cmp_ne()`](src/ir_builder.h:298) - لا_يساوي (Not equal)
-- [`ir_builder_emit_cmp_gt()`](src/ir_builder.h:303) - أكبر (Greater than, signed)
-- [`ir_builder_emit_cmp_lt()`](src/ir_builder.h:308) - أصغر (Less than, signed)
-- [`ir_builder_emit_cmp_ge()`](src/ir_builder.h:313) - أكبر_أو_يساوي (Greater or equal, signed)
-- [`ir_builder_emit_cmp_le()`](src/ir_builder.h:318) - أصغر_أو_يساوي (Less or equal, signed)
-- [`ir_builder_emit_cmp_ugt()`](src/ir_builder.h:321) - أكبر (Greater than, unsigned)
-- [`ir_builder_emit_cmp_ult()`](src/ir_builder.h:322) - أصغر (Less than, unsigned)
-- [`ir_builder_emit_cmp_uge()`](src/ir_builder.h:323) - أكبر_أو_يساوي (Greater or equal, unsigned)
-- [`ir_builder_emit_cmp_ule()`](src/ir_builder.h:324) - أصغر_أو_يساوي (Less or equal, unsigned)
+| Function | Signature | Description |
+|----------|-----------|-------------|
+| [`ir_builder_emit_cmp()`](src/ir_builder.h:288) | `int ir_builder_emit_cmp(IRBuilder* builder, IRCmpPred pred, IRValue* lhs, IRValue* rhs)` | قارن (Compare with predicate) |
+| [`ir_builder_emit_cmp_eq()`](src/ir_builder.h:293) | `int ir_builder_emit_cmp_eq(IRBuilder* builder, IRValue* lhs, IRValue* rhs)` | يساوي (Equal) |
+| [`ir_builder_emit_cmp_ne()`](src/ir_builder.h:298) | `int ir_builder_emit_cmp_ne(IRBuilder* builder, IRValue* lhs, IRValue* rhs)` | لا_يساوي (Not equal) |
+| [`ir_builder_emit_cmp_gt()`](src/ir_builder.h:303) | `int ir_builder_emit_cmp_gt(IRBuilder* builder, IRValue* lhs, IRValue* rhs)` | أكبر (Greater than, signed) |
+| [`ir_builder_emit_cmp_lt()`](src/ir_builder.h:308) | `int ir_builder_emit_cmp_lt(IRBuilder* builder, IRValue* lhs, IRValue* rhs)` | أصغر (Less than, signed) |
+| [`ir_builder_emit_cmp_ge()`](src/ir_builder.h:313) | `int ir_builder_emit_cmp_ge(IRBuilder* builder, IRValue* lhs, IRValue* rhs)` | أكبر_أو_يساوي (Greater or equal, signed) |
+| [`ir_builder_emit_cmp_le()`](src/ir_builder.h:318) | `int ir_builder_emit_cmp_le(IRBuilder* builder, IRValue* lhs, IRValue* rhs)` | أصغر_أو_يساوي (Less or equal, signed) |
+| [`ir_builder_emit_cmp_ugt()`](src/ir_builder.h:321) | `int ir_builder_emit_cmp_ugt(IRBuilder* builder, IRValue* lhs, IRValue* rhs)` | أكبر (Greater than, unsigned) |
+| [`ir_builder_emit_cmp_ult()`](src/ir_builder.h:322) | `int ir_builder_emit_cmp_ult(IRBuilder* builder, IRValue* lhs, IRValue* rhs)` | أصغر (Less than, unsigned) |
+| [`ir_builder_emit_cmp_uge()`](src/ir_builder.h:323) | `int ir_builder_emit_cmp_uge(IRBuilder* builder, IRValue* lhs, IRValue* rhs)` | أكبر_أو_يساوي (Greater or equal, unsigned) |
+| [`ir_builder_emit_cmp_ule()`](src/ir_builder.h:324) | `int ir_builder_emit_cmp_ule(IRBuilder* builder, IRValue* lhs, IRValue* rhs)` | أصغر_أو_يساوي (Less or equal, unsigned) |
 
 ### Logical Instructions (العمليات المنطقية)
 
-- [`ir_builder_emit_and()`](src/ir_builder.h:333) - و (Bitwise AND)
-- [`ir_builder_emit_or()`](src/ir_builder.h:338) - أو (Bitwise OR)
-- [`ir_builder_emit_xor()`](src/ir_builder.h:343) - أو_حصري (Bitwise XOR)
-- [`ir_builder_emit_not()`](src/ir_builder.h:348) - نفي (Bitwise NOT)
-- [`ir_builder_emit_shl()`](src/ir_builder.h:353) - ازاحة_يسار (Shift left)
-- [`ir_builder_emit_shr()`](src/ir_builder.h:358) - ازاحة_يمين (Shift right)
+| Function | Signature | Description |
+|----------|-----------|-------------|
+| [`ir_builder_emit_and()`](src/ir_builder.h:333) | `int ir_builder_emit_and(IRBuilder* builder, IRType* type, IRValue* lhs, IRValue* rhs)` | و (Bitwise AND) |
+| [`ir_builder_emit_or()`](src/ir_builder.h:338) | `int ir_builder_emit_or(IRBuilder* builder, IRType* type, IRValue* lhs, IRValue* rhs)` | أو (Bitwise OR) |
+| [`ir_builder_emit_xor()`](src/ir_builder.h:343) | `int ir_builder_emit_xor(IRBuilder* builder, IRType* type, IRValue* lhs, IRValue* rhs)` | أو_حصري (Bitwise XOR) |
+| [`ir_builder_emit_not()`](src/ir_builder.h:348) | `int ir_builder_emit_not(IRBuilder* builder, IRType* type, IRValue* operand)` | نفي (Bitwise NOT) |
+| [`ir_builder_emit_shl()`](src/ir_builder.h:353) | `int ir_builder_emit_shl(IRBuilder* builder, IRType* type, IRValue* lhs, IRValue* rhs)` | ازاحة_يسار (Shift left) |
+| [`ir_builder_emit_shr()`](src/ir_builder.h:358) | `int ir_builder_emit_shr(IRBuilder* builder, IRType* type, IRValue* lhs, IRValue* rhs)` | ازاحة_يمين (Shift right) |
 
 ### Control Flow Instructions (عمليات التحكم)
 
-- [`ir_builder_emit_br()`](src/ir_builder.h:369) - قفز (Unconditional branch)
-- [`ir_builder_emit_br_cond()`](src/ir_builder.h:378) - قفز_شرط (Conditional branch)
-- [`ir_builder_emit_ret()`](src/ir_builder.h:386) - رجوع (Return with value)
-- [`ir_builder_emit_ret_void()`](src/ir_builder.h:392) - رجوع (Void return)
-- [`ir_builder_emit_ret_int()`](src/ir_builder.h:399) - رجوع with integer constant
+| Function | Signature | Description |
+|----------|-----------|-------------|
+| [`ir_builder_emit_br()`](src/ir_builder.h:369) | `void ir_builder_emit_br(IRBuilder* builder, IRBlock* target)` | قفز (Unconditional branch) |
+| [`ir_builder_emit_br_cond()`](src/ir_builder.h:378) | `void ir_builder_emit_br_cond(IRBuilder* builder, IRValue* cond, IRBlock* if_true, IRBlock* if_false)` | قفز_شرط (Conditional branch) |
+| [`ir_builder_emit_ret()`](src/ir_builder.h:386) | `void ir_builder_emit_ret(IRBuilder* builder, IRValue* value)` | رجوع (Return with value) |
+| [`ir_builder_emit_ret_void()`](src/ir_builder.h:392) | `void ir_builder_emit_ret_void(IRBuilder* builder)` | رجوع (Void return) |
+| [`ir_builder_emit_ret_int()`](src/ir_builder.h:399) | `void ir_builder_emit_ret_int(IRBuilder* builder, int64_t value)` | رجوع with integer constant |
 
 ### Function Call Instructions (استدعاء الدوال)
 
-- [`ir_builder_emit_call()`](src/ir_builder.h:414) - نداء (Direct function call)
-- [`ir_builder_emit_call_indirect()`](src/ir_builder.h:426) - نداء غير مباشر (Indirect function call)
-- [`ir_builder_emit_call_void()`](src/ir_builder.h:436) - نداء فراغ (Void function call)
+| Function | Signature | Description |
+|----------|-----------|-------------|
+| [`ir_builder_emit_call()`](src/ir_builder.h:414) | `int ir_builder_emit_call(IRBuilder* builder, const char* target, IRType* ret_type, IRValue** args, int arg_count)` | نداء (Direct function call) |
+| [`ir_builder_emit_call_indirect()`](src/ir_builder.h:426) | `int ir_builder_emit_call_indirect(IRBuilder* builder, IRValue* callee, IRType* ret_type, IRValue** args, int arg_count)` | نداء غير مباشر (Indirect function call) |
+| [`ir_builder_emit_call_void()`](src/ir_builder.h:436) | `void ir_builder_emit_call_void(IRBuilder* builder, const char* target, IRValue** args, int arg_count)` | نداء فراغ (Void function call) |
 
 ### SSA Instructions (عمليات SSA)
 
-- [`ir_builder_emit_phi()`](src/ir_builder.h:450) - فاي (Phi node)
-- [`ir_builder_phi_add_incoming()`](src/ir_builder.h:459) - Add PHI incoming value
-- [`ir_builder_emit_copy()`](src/ir_builder.h:469) - نسخ (Copy instruction)
+| Function | Signature | Description |
+|----------|-----------|-------------|
+| [`ir_builder_emit_phi()`](src/ir_builder.h:450) | `int ir_builder_emit_phi(IRBuilder* builder, IRType* type)` | فاي (Phi node) |
+| [`ir_builder_phi_add_incoming()`](src/ir_builder.h:459) | `void ir_builder_phi_add_incoming(IRBuilder* builder, int phi_reg, IRValue* value, IRBlock* block)` | Add PHI incoming value |
+| [`ir_builder_emit_copy()`](src/ir_builder.h:469) | `int ir_builder_emit_copy(IRBuilder* builder, IRType* type, IRValue* source)` | نسخ (Copy instruction) |
 
 ### Type Conversion (تحويل الأنواع)
 
-- [`ir_builder_emit_cast()`](src/ir_builder.h:482) - تحويل (Type cast/conversion)
+| Function | Signature | Description |
+|----------|-----------|-------------|
+| [`ir_builder_emit_cast()`](src/ir_builder.h:482) | `int ir_builder_emit_cast(IRBuilder* builder, IRValue* value, IRType* to_type)` | تحويل (Type cast/conversion) |
 
 ### Constant Value Helpers
 
-- [`ir_builder_const_int()`](src/ir_builder.h:493) - Create an integer constant value
-- [`ir_builder_const_i64()`](src/ir_builder.h:500) - Create an i64 constant value
-- [`ir_builder_const_i32()`](src/ir_builder.h:507) - Create an i32 constant value
-- [`ir_builder_const_bool()`](src/ir_builder.h:514) - Create an i1 (boolean) constant value
-- [`ir_builder_const_string()`](src/ir_builder.h:522) - Create a string constant (adds to module string table)
-- [`ir_builder_const_baa_string()`](src/ir_builder.h:523) - Create a Baa string constant
+| Function | Signature | Description |
+|----------|-----------|-------------|
+| [`ir_builder_const_int()`](src/ir_builder.h:493) | `IRValue* ir_builder_const_int(int64_t value)` | Create an integer constant value |
+| [`ir_builder_const_i64()`](src/ir_builder.h:500) | `IRValue* ir_builder_const_i64(int64_t value)` | Create an i64 constant value |
+| [`ir_builder_const_i32()`](src/ir_builder.h:507) | `IRValue* ir_builder_const_i32(int32_t value)` | Create an i32 constant value |
+| [`ir_builder_const_bool()`](src/ir_builder.h:514) | `IRValue* ir_builder_const_bool(int value)` | Create an i1 (boolean) constant value |
+| [`ir_builder_const_string()`](src/ir_builder.h:522) | `IRValue* ir_builder_const_string(IRBuilder* builder, const char* str)` | Create a string constant (adds to module string table) |
+| [`ir_builder_const_baa_string()`](src/ir_builder.h:523) | `IRValue* ir_builder_const_baa_string(IRBuilder* builder, const char* str)` | Create a Baa string constant |
 
 ### Global Variables
 
-- [`ir_builder_create_global()`](src/ir_builder.h:537) - Create a global variable
-- [`ir_builder_create_global_init()`](src/ir_builder.h:549) - Create a global variable with an initializer
-- [`ir_builder_get_global()`](src/ir_builder.h:558) - Get a reference to a global variable
+| Function | Signature | Description |
+|----------|-----------|-------------|
+| [`ir_builder_create_global()`](src/ir_builder.h:537) | `IRGlobal* ir_builder_create_global(IRBuilder* builder, const char* name, IRType* type, int is_const)` | Create a global variable |
+| [`ir_builder_create_global_init()`](src/ir_builder.h:549) | `IRGlobal* ir_builder_create_global_init(IRBuilder* builder, const char* name, IRType* type, IRValue* init, int is_const)` | Create a global variable with an initializer |
+| [`ir_builder_get_global()`](src/ir_builder.h:558) | `IRValue* ir_builder_get_global(IRBuilder* builder, const char* name)` | Get a reference to a global variable |
 
 ### Control Flow Graph Helpers
 
 These high-level helpers create structured control flow:
 
-- [`ir_builder_create_if_then()`](src/ir_builder.h:573) - Create an if-then structure
-- [`ir_builder_create_if_else()`](src/ir_builder.h:588) - Create an if-then-else structure
-- [`ir_builder_create_while()`](src/ir_builder.h:604) - Create a while loop structure
+| Function | Signature | Description |
+|----------|-----------|-------------|
+| [`ir_builder_create_if_then()`](src/ir_builder.h:573) | `void ir_builder_create_if_then(IRBuilder* builder, IRValue* cond, const char* then_label, const char* merge_label, IRBlock** then_block, IRBlock** merge_block)` | Create an if-then structure |
+| [`ir_builder_create_if_else()`](src/ir_builder.h:588) | `void ir_builder_create_if_else(IRBuilder* builder, IRValue* cond, const char* then_label, const char* else_label, const char* merge_label, IRBlock** then_block, IRBlock** else_block, IRBlock** merge_block)` | Create an if-then-else structure |
+| [`ir_builder_create_while()`](src/ir_builder.h:604) | `void ir_builder_create_while(IRBuilder* builder, const char* header_label, const char* body_label, const char* exit_label, IRBlock** header_block, IRBlock** body_block, IRBlock** exit_block)` | Create a while loop structure |
 
 Example of structured control flow:
 
@@ -512,9 +588,11 @@ ir_builder_set_insert_point(builder, merge_block);
 
 ### Debugging & Statistics
 
-- [`ir_builder_get_inst_count()`](src/ir_builder.h:619) - Get number of instructions emitted
-- [`ir_builder_get_block_count()`](src/ir_builder.h:626) - Get number of blocks created
-- [`ir_builder_print_stats()`](src/ir_builder.h:632) - Print builder statistics to stderr
+| Function | Signature | Description |
+|----------|-----------|-------------|
+| [`ir_builder_get_inst_count()`](src/ir_builder.h:619) | `int ir_builder_get_inst_count(IRBuilder* builder)` | Get number of instructions emitted |
+| [`ir_builder_get_block_count()`](src/ir_builder.h:626) | `int ir_builder_get_block_count(IRBuilder* builder)` | Get number of blocks created |
+| [`ir_builder_print_stats()`](src/ir_builder.h:632) | `void ir_builder_print_stats(IRBuilder* builder)` | Print builder statistics to stderr |
 
 ---
 

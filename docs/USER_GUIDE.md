@@ -212,7 +212,8 @@ baa [options] <source.baa> [-o <output>]
 | `-fstack-protector` | Enable stack canary (Linux/ELF). | `./baa -fstack-protector main.baa` |
 | `-fstack-protector-all` | Enable canary for all functions (Linux/ELF). | `./baa -fstack-protector-all main.baa` |
 | `-fno-stack-protector` | Disable stack canary. | `./baa -fno-stack-protector main.baa` |
-| *(Inlining at -O2)* | Small internal functions with a single call site may be inlined automatically at `-O2`. | `.\baa.exe -O2 main.baa` |
+
+> **Note on Inlining:** At `-O2`, small internal functions with a single call site may be inlined automatically for better performance.
 
 ### Warning Flags (v0.2.8+)
 
@@ -221,10 +222,13 @@ baa [options] <source.baa> [-o <output>]
 | `-Wall` | Enable all warnings. | `.\baa.exe -Wall main.baa` |
 | `-Werror` | Treat warnings as errors (compilation fails). | `.\baa.exe -Wall -Werror main.baa` |
 | `-Wunused-variable` | Warn about unused variables. | `.\baa.exe -Wunused-variable main.baa` |
+| `-Wno-unused-variable` | Disable unused variable warnings. | `.\baa.exe -Wall -Wno-unused-variable main.baa` |
 | `-Wdead-code` | Warn about unreachable code after `إرجع`/`توقف`. | `.\baa.exe -Wdead-code main.baa` |
+| `-Wno-dead-code` | Disable dead code warnings. | `.\baa.exe -Wall -Wno-dead-code main.baa` |
 | `-Wimplicit-narrowing` | Warn on potentially lossy implicit numeric conversions. | `.\baa.exe -Wimplicit-narrowing main.baa` |
+| `-Wno-implicit-narrowing` | Disable implicit narrowing warnings. | `.\baa.exe -Wall -Wno-implicit-narrowing main.baa` |
 | `-Wsigned-unsigned-compare` | Warn on mixed signed/unsigned comparisons. | `.\baa.exe -Wsigned-unsigned-compare main.baa` |
-| `-Wno-<warning>` | Disable a specific warning. | `.\baa.exe -Wall -Wno-unused-variable main.baa` |
+| `-Wno-signed-unsigned-compare` | Disable signed/unsigned comparison warnings. | `.\baa.exe -Wall -Wno-signed-unsigned-compare main.baa` |
 | `-Wcolor` | Force colored output. | `.\baa.exe -Wall -Wcolor main.baa` |
 | `-Wno-color` | Disable colored output. | `.\baa.exe -Wall -Wno-color main.baa` |
 

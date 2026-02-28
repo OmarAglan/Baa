@@ -324,29 +324,50 @@ Represents a single IR instruction.
 
 ```c
 typedef struct IRInst {
+    // ملاحظة: هذه البنية تُخصَّص داخل ساحة IR (Arena) وتُحرَّر دفعة واحدة.
     IROp op;                    // Opcode
     IRType* type;               // Result type (or void for stores/branches)
-    int id;                     // Instruction ID for diagnostics/tests
-    int dest;                   // Destination register (-1 if no destination)
+
+    // معرّف ثابت للتعليمة داخل الدالة (للتشخيص/الاختبارات)
+    int id;
+
+    // Destination register (for instructions that produce a value)
+    int dest;                   // -1 if no destination
+
+    // Operands (meaning depends on opcode)
     IRValue* operands[4];       // Up to 4 operands
     int operand_count;
-    IRCmpPred cmp_pred;         // For comparison instructions
-    IRPhiEntry* phi_entries;    // Linked list of [value, block] pairs for phi
-    char* call_target;          // Function name for calls
-    IRValue* call_callee;       // Callee value for indirect calls (NULL for direct)
-    IRValue** call_args;        // Argument list for calls
+
+    // For comparison instructions
+    IRCmpPred cmp_pred;
+
+    // For Phi nodes
+    IRPhiEntry* phi_entries;    // Linked list of [value, block] pairs
+
+    // For calls
+    char* call_target;          // Function name
+    IRValue* call_callee;       // قيمة الهدف عند النداء غير المباشر (NULL في النداء المباشر)
+    IRValue** call_args;        // Argument list
     int call_arg_count;
-    const char* src_file;       // Source location (for debugging)
+
+    // Source location (for debugging)
+    const char* src_file;
     int src_line;
     int src_col;
-    const char* dbg_name;       // Optional symbol name for debugging
-    struct IRBlock* parent;     // Parent block
+
+    // اسم رمز/متغير اختياري للتتبع (للديبغ)
+    const char* dbg_name;
+
+    // الأب (الكتلة التي تحتوي التعليمة)
+    struct IRBlock* parent;
+
+    // Linked list within block
     struct IRInst* prev;
     struct IRInst* next;
 } IRInst;
 ```
 
-**Note:** Added `src_file`, `src_line`, `src_col`, and `dbg_name` fields for enhanced debugging support.
+**Note:** Includes Arabic comments from source for field documentation. Fields include `src_file`, `src_line`, `src_col`, and `dbg_name` for enhanced debugging support.
 
 **Memory management (v0.3.2.6.1):** IR objects are allocated from a module-owned arena (`src/ir_arena.c`). Treat the IR as **module-owned** and release everything with `ir_module_free()`. The legacy `*_free` functions remain for compatibility but do not perform per-object frees under the arena model.
 
@@ -1334,6 +1355,46 @@ Checks whether `block` is in `loop`.
 
 ---
 
+#### `ir_loop_header`
+
+```c
+IRBlock* ir_loop_header(IRLoop* loop)
+```
+
+Returns the loop header block.
+
+---
+
+#### `ir_loop_preheader`
+
+```c
+IRBlock* ir_loop_preheader(IRLoop* loop)
+```
+
+Returns the preheader block if one exists (may be NULL).
+
+---
+
+#### `ir_loop_block_count`
+
+```c
+int ir_loop_block_count(IRLoop* loop)
+```
+
+Returns the number of blocks in the loop.
+
+---
+
+#### `ir_loop_block_at`
+
+```c
+IRBlock* ir_loop_block_at(IRLoop* loop, int index)
+```
+
+Returns a block from within the loop at the given index.
+
+---
+
 ### 4.9. IR Loop Unrolling (v0.3.2.7.1)
 
 The loop unrolling utility (`src/ir_unroll.h`, `src/ir_unroll.c`) provides a **conservative** full-unroll for small constant trip-count loops. It is currently used by the driver via `-funroll-loops` **after** Out-of-SSA.
@@ -1863,6 +1924,24 @@ Creates a new function and sets it as current.
 
 ---
 
+#### `ir_builder_add_param`
+
+```c
+int ir_builder_add_param(IRBuilder* builder, const char* name, IRType* type)
+```
+
+Add a parameter to the current function.
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `builder` | `IRBuilder*` | The builder |
+| `name` | `const char*` | Parameter name |
+| `type` | `IRType*` | Parameter type |
+
+**Returns:** Register number assigned to the parameter.
+
+---
+
 #### `ir_builder_create_block`
 
 ```c
@@ -1875,6 +1954,21 @@ Creates a new block in the current function.
 |-----------|------|-------------|
 | `builder` | `IRBuilder*` | The builder |
 | `label` | `const char*` | Block label (Arabic, e.g., "بداية") |
+
+---
+
+#### `ir_builder_create_block_and_set`
+
+```c
+IRBlock* ir_builder_create_block_and_set(IRBuilder* builder, const char* label)
+```
+
+Create a new block and set it as insertion point.
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `builder` | `IRBuilder*` | The builder |
+| `label` | `const char*` | Block label |
 
 ---
 
@@ -1959,6 +2053,23 @@ IRValue* ir_builder_reg_value(IRBuilder* builder, int reg, IRType* type)
 ```
 
 Creates a register value for a given register number.
+
+---
+
+#### `ir_builder_set_loc`
+
+```c
+void ir_builder_set_loc(IRBuilder* builder, const char* file, int line, int col)
+```
+
+Sets source location for subsequent instructions.
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `builder` | `IRBuilder*` | The builder |
+| `file` | `const char*` | Source filename |
+| `line` | `int` | Line number |
+| `col` | `int` | Column number |
 
 ---
 
@@ -2627,6 +2738,23 @@ Eliminates `فاي` (IR_OP_PHI) before the backend by inserting edge copies and 
 
 ---
 
+#### `ir_outssa_run_ex`
+
+```c
+bool ir_outssa_run_ex(IRModule* module, bool* out_changed)
+```
+
+Run Out-of-SSA with separate success/changed indicators.
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `module` | `IRModule*` | The IR module to rewrite out of SSA |
+| `out_changed` | `bool*` | Optional pointer to receive change status (1 = changed, 0 = not changed) |
+
+**Returns:** `true` on success, `false` on internal failure or invalid IR.
+
+---
+
 ### 7.1.6. SSA Verification (التحقق من SSA)
 
 #### `ir_func_verify_ssa`
@@ -3053,6 +3181,20 @@ Runs the optimization pipeline on the given IR module.
 **Note:** Out-of-SSA (`ir_outssa_run()`) is executed by the driver before ISel, not as part of the optimizer fixpoint loop.
 
 **Fixpoint iteration:** Passes repeat until no changes (max 10 iterations).
+
+#### `ir_optimizer_set_verify_gate`
+
+```c
+void ir_optimizer_set_verify_gate(int enabled)
+```
+
+Enable/disable verification gate inside the optimizer. When enabled, runs `ir_module_verify_ir()` and `ir_module_verify_ssa()` after each optimizer iteration.
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `enabled` | `int` | 1 to enable, 0 to disable |
+
+---
 
 #### `ir_optimizer_level_name`
 
@@ -3712,6 +3854,23 @@ void error_init(const char* source)
 ```
 
 Initializes the error reporting system with the source code for context display.
+
+---
+
+#### `error_register_source`
+
+```c
+void error_register_source(const char* filename, const char* source)
+```
+
+Registers a source file for use when printing error/warning context.
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `filename` | `const char*` | The filename |
+| `source` | `const char*` | The source code content |
+
+---
 
 #### `error_report`
 

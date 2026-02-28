@@ -1,7 +1,6 @@
 # Baa User Guide
 
-> **Version:** 0.3.8 | [← README](../README.md) | [Language Spec →](LANGUAGE.md)
-
+> **Version:** 0.3.10.6 | [← README](../README.md) | [Language Spec →](LANGUAGE.md)
 
 Welcome to Baa (باء)! This guide will help you write your first Arabic computer program and use the Baa compiler toolchain.
 
@@ -385,73 +384,141 @@ Use header files for function prototypes and shared declarations.
 }
 ```
 
-### Loops
+### Strings and Standard Library (النصوص والمكتبة القياسية)
+
+To manipulate dynamically allocated strings, include the standard library header. Remember to free memory allocated by `دمج_نص` or `نسخ_نص`.
 
 ```baa
-صحيح الرئيسية() {
-    // طباعة الأرقام من ١ إلى ٥
-    لكل (صحيح س = ١؛ س <= ٥؛ س++) {
-        اطبع س.
-    }
-    إرجع ٠.
-}
-```
+#تضمين "stdlib/baalib.baahd"
 
-### Conditionals
-
-```baa
-// If-else statement
 صحيح الرئيسية() {
-    صحيح العمر = ١٨.
+    نص جزء١ = "مرحباً ".
+    نص جزء٢ = "باء!".
     
-    إذا (العمر >= ١٨) {
-        اطبع "أنت بالغ".
-    } وإلا {
-        اطبع "لست بالغاً".
-    }
+    // Concatenate strings (allocates memory)
+    نص رسالة = دمج_نص(جزء١، جزء٢).
+    اطبع رسالة.
+    
+    // Get string length
+    صحيح الطول = طول_نص(رسالة).
+    اطبع الطول. // يطبع ١١
+    
+    // Free allocated memory
+    حرر_نص(رسالة).
     
     إرجع ٠.
 }
 ```
 
-### Functions
+### Compound Types (الهياكل والتعداد)
+
+Group related data using `هيكل` (structs) and `تعداد` (enums). Use `:` to access members.
 
 ```baa
-صحيح مربع(صحيح س) {
-    إرجع س * س.
+تعداد حالة_النظام {
+    مغلق،
+    يعمل
+}
+
+هيكل خادم {
+    صحيح رقم.
+    تعداد حالة_النظام حالة.
 }
 
 صحيح الرئيسية() {
-    // Calculate square
-    صحيح نتيجة = مربع(٥).
-    اطبع نتيجة.  // يطبع ٢٥
+    هيكل خادم خ.
+    خ:رقم = ١٠٤.
+    خ:حالة = حالة_النظام:يعمل.
+    
+    إذا (خ:حالة == حالة_النظام:يعمل) {
+        اطبع "الخادم يعمل!".
+        اطبع خ:رقم.
+    }
+    
     إرجع ٠.
 }
 ```
 
-### Reading Input
+### Arrays and Length (المصفوفات المتقدمة)
 
-You can read integer input from the user using the `اقرأ` statement.
+Baa supports multi-dimensional arrays and compile-time length calculation using `حجم(...)`.
 
 ```baa
 صحيح الرئيسية() {
-    صحيح العمر = ٠.
-    اطبع "أدخل عمرك: ".
-    اقرأ العمر.
+    // 2D Array with initialization
+    صحيح جدول[٢][٣] = {
+        {١، ٢، ٣}،
+        {٤، ٥، ٦}
+    }.
     
-    إذا (العمر >= ١٨) {
-        اطبع "أنت بالغ.".
-    } وإلا {
-        اطبع "أنت قاصر.".
+    // Calculate total number of elements
+    صحيح الطول = حجم(جدول) / حجم(صحيح). // ٦
+    
+    اطبع جدول[١][٢]. // يطبع ٦
+    إرجع ٠.
+}
+```
+
+### Pointers and References (المؤشرات والمراجع)
+
+Use `&` to get the address of a variable, and `*` to dereference it. `عدم` represents a null pointer.
+
+```baa
+صحيح الرئيسية() {
+    صحيح س = ٤٢.
+    صحيح* مؤشر = &س.
+    
+    إذا (مؤشر != عدم) {
+        *مؤشر = ١٠٠. // يغير قيمة س إلى ١٠٠
     }
+    
+    اطبع س. // يطبع ١٠٠
+    إرجع ٠.
+}
+```
+
+### Type Casting (تحويل الأنواع)
+
+Use `كـ<النوع>(...)` for explicit conversions between numeric types or pointers.
+
+```baa
+صحيح الرئيسية() {
+    // Convert integer to character
+    صحيح رقم = ٦٥.
+    حرف ح = كـ<حرف>(رقم).
+    اطبع ح. // يطبع 'A'
+    
+    // Pointer arithmetic using casts
+    صحيح* م = عدم.
+    ط٦٤ عنوان = كـ<ط٦٤>(م).
+    عنوان = عنوان + ٨.
+    
+    إرجع ٠.
+}
+```
+
+### Function Pointers (مؤشرات الدوال)
+
+Pass functions as values or store them in variables using the `دالة(...) -> ...` type syntax.
+
+```baa
+صحيح ضرب(صحيح أ، صحيح ب) {
+    إرجع أ * ب.
+}
+
+صحيح الرئيسية() {
+    // Declare a function pointer variable
+    دالة(صحيح، صحيح) -> صحيح عملية = ضرب.
+    
+    // Call through the pointer
+    صحيح نتيجة = عملية(٥، ٤).
+    اطبع نتيجة. // يطبع ٢٠
+    
     إرجع ٠.
 }
 ```
 
 ### Boolean Logic
-
-Use `منطقي` variables to store true (`صواب`) or false (`خطأ`) values.
-
 ```baa
 صحيح الرئيسية() {
     منطقي جاهز = صواب.
@@ -464,8 +531,7 @@ Use `منطقي` variables to store true (`صواب`) or false (`خطأ`) values
 }
 ```
 
-### Low-Level Operations (v0.3.6)
-
+### Low-Level Operations
 Bitwise operators, shifts, `حجم(...)`, and `عدم` are available for systems-level code.
 
 ```baa
@@ -482,8 +548,6 @@ Bitwise operators, shifts, `حجم(...)`, and `عدم` are available for systems
     إرجع أ + ب + ج.
 }
 ```
-
----
 
 ## 9. Troubleshooting
 

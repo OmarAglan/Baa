@@ -8,16 +8,17 @@ Baa (باء) is a compiled systems programming language using Arabic syntax. It 
 
 ## Table of Contents
 
-- [Program Structure](#1-program-structure)
-- [Preprocessor](#2-preprocessor)
-- [Variables & Types](#3-variables--types)
-- [Constants](#4-constants)
-- [Functions](#5-functions)
-- [Input / Output](#6-input--output)
-- [Control Flow](#7-control-flow)
-- [Operators](#8-operators)
-- [Inline Assembly](#9-inline-assembly)
-- [Complete Example](#10-complete-example)
+- [1. Program Structure](#1-program-structure)
+- [2. Preprocessor](#2-preprocessor)
+- [3. Variables & Types](#3-variables--types)
+- [4. Constants](#4-constants)
+- [5. Functions](#5-functions)
+-[6. Input / Output](#6-input--output)
+- [7. Control Flow](#7-control-flow)
+- [8. Operators](#8-operators)
+- [9. Standard Library (stdlib)](#9-standard-library-stdlib)
+- [10. Inline Assembly](#10-inline-assembly)
+- [11. Complete Example](#11-complete-example)
 
 ---
 
@@ -188,29 +189,6 @@ Baa is statically typed. All variables must be declared with their type.
 
 - لا يوجد تحقق حدود تلقائي لفهرسة النص.
 - تعديل عناصر `نص` غير مدعوم حالياً.
-
-**دوال النص القياسية (v0.3.9):**
-
-- `صحيح طول_نص(نص س).` يعيد عدد محارف باء (وليس عدد البايتات الخام).
-- `صحيح قارن_نص(نص أ، نص ب).` يعيد:
-  - `٠` عند التساوي
-  - قيمة سالبة إذا `أ < ب`
-  - قيمة موجبة إذا `أ > ب`
-- `نص نسخ_نص(نص س).` يعيد نسخة heap جديدة.
-- `نص دمج_نص(نص أ، نص ب).` يعيد نصاً جديداً يساوي `أ` ثم `ب` (heap).
-- `عدم حرر_نص(نص س).` يحرر نصاً أُعيد من `نسخ_نص/دمج_نص`.
-
-```baa
-#تضمين "stdlib/baalib.baahd"
-
-صحيح الرئيسية() {
-    نص س = دمج_نص("مرح", "با").
-    صحيح ن = طول_نص(س).
-    اطبع ن.
-    حرر_نص(س).
-    إرجع ٠.
-}
-```
 
 ### 3.2.2. Integer Sizes (أحجام الأعداد الصحيحة)
 
@@ -891,6 +869,7 @@ Multi-way branching based on integer or character values.
 | `++` | Increment (postfix) | `س++` |
 | `--` | Decrement (postfix) | `س--` |
 | `-` | Negative (unary) | `-٥` |
+| `-` | Pointer Difference| `مؤشر٢ - مؤشر١` → `عدد العناصر` |
 | `&` | Address-of (unary) | `&س` |
 | `*` | Dereference (unary) | `*م` |
 
@@ -973,7 +952,47 @@ From highest to lowest:
 
 ---
 
-## 9. Inline Assembly (المجمع المدمج) [Scheduled v0.4.0.6]
+## 9. Standard Library (stdlib)
+
+Baa includes a minimal standard library. To use it, you must include its header file.
+
+**Syntax:** `#تضمين "stdlib/baalib.baahd"`
+
+### 9.1. String Operations (`نص`)
+
+Strings in Baa are UTF-8 arrays of `حرف` terminated by a null character. The standard library provides C-like string manipulation functions.
+
+| Function | Signature | Description |
+|----------|-----------|-------------|
+| **String Length** | `صحيح طول_نص(نص س)` | Returns the number of characters in the string. |
+| **String Compare** | `صحيح قارن_نص(نص أ، نص ب)` | Lexicographical comparison. Returns `0` if equal, `<0` if `أ < ب`, and `>0` if `أ > ب`. |
+| **String Copy** | `نص نسخ_نص(نص س)` | Allocates heap memory and returns a duplicate of the string. |
+| **String Concat** | `نص دمج_نص(نص أ، نص ب)` | Allocates heap memory and returns a new string concatenating `أ` and `ب`. |
+| **Free Memory** | `عدم حرر_نص(نص س)` | Frees heap memory allocated by `نسخ_نص` or `دمج_نص`. |
+
+**Important Memory Rule:** You must call `حرر_نص(...)` on any string returned by `نسخ_نص` or `دمج_نص` to avoid memory leaks.
+
+**Example:**
+```baa
+#تضمين "stdlib/baalib.baahd"
+
+صحيح الرئيسية() {
+    نص س١ = "أهلاً ".
+    نص س٢ = "بالعالم".
+    
+    نص كامل = دمج_نص(س١، س٢).
+    اطبع كامل.
+    
+    إذا (قارن_نص(كامل، "أهلاً بالعالم") == ٠) {
+        اطبع "النصوص متطابقة!".
+    }
+    
+    حرر_نص(كامل). // تحرير الذاكرة إلزامي
+    إرجع ٠.
+}
+```
+
+## 10. Inline Assembly (المجمع المدمج) [Scheduled v0.4.0.6]
 
 Embed raw assembly code directly.
 
@@ -987,7 +1006,7 @@ Embed raw assembly code directly.
 
 ---
 
-## 10. Complete Example
+## 11. Complete Example
 
 ```baa
 // استخدام الثوابت والماكرو

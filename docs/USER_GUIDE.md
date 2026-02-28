@@ -82,12 +82,12 @@ After building, you will have `baa.exe` in your `build` directory.
 git clone https://github.com/OmarAglan/Baa.git
 cd Baa
 
-cmake -B build -DCMAKE_BUILD_TYPE=Release
-cmake --build build
-./build/baa --version
+cmake -B build-linux -DCMAKE_BUILD_TYPE=Release
+cmake --build build-linux -j
+./build-linux/baa --version
 ```
 
-After building, you will have `baa` in your `build` directory.
+After building, you will have `baa` in your `build-linux` directory.
 
 ### Optional: Add `baa` to PATH
 
@@ -264,6 +264,13 @@ Or run the helper script:
 
 ```bash
 bash scripts/package_linux.sh
+```
+
+Build with strict warnings (quality gate):
+
+```bash
+cmake -B build-linux -DCMAKE_BUILD_TYPE=Release -DBAA_WARNINGS_AS_ERRORS=ON
+cmake --build build-linux -j
 ```
 
 Install (DEB):
@@ -752,8 +759,11 @@ python .\scripts\qa_run.py --mode full
 # Stress testing (full + stress suite + fuzz-lite)
 python .\scripts\qa_run.py --mode stress
 
-# Optional legacy runner
-python .\tests\regress.py
+# Direct integration test runner
+python tests/test.py
+
+# Regression test runner
+python tests/regress.py
 ```
 
 ### Test Organization
@@ -784,15 +794,27 @@ build\backend_test.exe
 ./build-linux/backend_test
 ```
 
+**Compile-only integration test:**
+
+```bash
+# Linux
+./build-linux/baa -O2 --verify tests/integration/ir/ir_test.baa -o build-linux/ir_test
+
+# Windows
+build\baa.exe -O2 --verify tests\integration\ir\ir_test.baa -o build\ir_test.exe
+```
+
 **Negative test (expect compiler failure):**
 
 ```powershell
 # Windows
 build\baa.exe -O1 tests\neg\semantic_deref_non_pointer.baa -o build\neg_tmp.exe
 # Should produce error about dereferencing non-pointer
+# Confirm stderr includes the test // EXPECT: marker text
 
 # Linux
 ./build-linux/baa -O1 tests/neg/semantic_deref_non_pointer.baa -o build-linux/neg_tmp
+# Confirm stderr includes the test // EXPECT: marker text
 ```
 
 ### Test Metadata Conventions

@@ -219,32 +219,64 @@ All IR instruction opcodes.
 
 ```c
 typedef enum {
-    IR_OP_ADD,      // جمع
-    IR_OP_SUB,      // طرح
-    IR_OP_MUL,      // ضرب
-    IR_OP_DIV,      // قسم
-    IR_OP_MOD,      // باقي
-    IR_OP_NEG,      // سالب
-    IR_OP_ALLOCA,   // حجز
-    IR_OP_LOAD,     // حمل
-    IR_OP_STORE,    // خزن
-    IR_OP_PTR_OFFSET, // إزاحة_مؤشر
-    IR_OP_CMP,      // قارن
-    IR_OP_AND,      // و
-    IR_OP_OR,       // أو
-    IR_OP_XOR,      // أو_حصري
-    IR_OP_NOT,      // نفي
-    IR_OP_SHL,      // ازاحة_يسار
-    IR_OP_SHR,      // ازاحة_يمين
-    IR_OP_BR,       // قفز
-    IR_OP_BR_COND,  // قفز_شرط
-    IR_OP_RET,      // رجوع
-    IR_OP_CALL,     // نداء
-    IR_OP_PHI,      // فاي
-    IR_OP_COPY,     // نسخ
-    IR_OP_CAST,     // تحويل
-    IR_OP_NOP,      // NOP
-    IR_OP_COUNT
+    // --------------------------------------------------------------------
+    // Arithmetic Operations (العمليات الحسابية)
+    // --------------------------------------------------------------------
+    IR_OP_ADD,      // جمع - Addition
+    IR_OP_SUB,      // طرح - Subtraction
+    IR_OP_MUL,      // ضرب - Multiplication
+    IR_OP_DIV,      // قسم - Signed division
+    IR_OP_MOD,      // باقي - Modulo (remainder)
+    IR_OP_NEG,      // سالب - Negation (unary minus)
+    
+    // --------------------------------------------------------------------
+    // Memory Operations (عمليات الذاكرة)
+    // --------------------------------------------------------------------
+    IR_OP_ALLOCA,   // حجز - Stack allocation
+    IR_OP_LOAD,     // حمل - Load from memory
+    IR_OP_STORE,    // خزن - Store to memory
+    IR_OP_PTR_OFFSET, // إزاحة_مؤشر - Pointer offset: base + index * sizeof(pointee)
+    
+    // --------------------------------------------------------------------
+    // Comparison Operations (عمليات المقارنة)
+    // --------------------------------------------------------------------
+    IR_OP_CMP,      // قارن - Compare (with predicate)
+    
+    // --------------------------------------------------------------------
+    // Logical Operations (العمليات المنطقية)
+    // --------------------------------------------------------------------
+    IR_OP_AND,      // و - Bitwise AND
+    IR_OP_OR,       // أو - Bitwise OR
+    IR_OP_XOR,      // أو_حصري - Bitwise XOR
+    IR_OP_NOT,      // نفي - Bitwise NOT
+    IR_OP_SHL,      // ازاحة_يسار - Shift left
+    IR_OP_SHR,      // ازاحة_يمين - Shift right (arith/logical حسب النوع)
+    
+    // --------------------------------------------------------------------
+    // Control Flow Operations (عمليات التحكم)
+    // --------------------------------------------------------------------
+    IR_OP_BR,       // قفز - Unconditional branch
+    IR_OP_BR_COND,  // قفز_شرط - Conditional branch
+    IR_OP_RET,      // رجوع - Return from function
+    IR_OP_CALL,     // نداء - Function call
+    
+    // --------------------------------------------------------------------
+    // SSA Operations (عمليات SSA)
+    // --------------------------------------------------------------------
+    IR_OP_PHI,      // فاي - Phi node for SSA
+    IR_OP_COPY,     // نسخ - Copy (for SSA construction)
+    
+    // --------------------------------------------------------------------
+    // Type Conversion (تحويل الأنواع)
+    // --------------------------------------------------------------------
+    IR_OP_CAST,     // تحويل - Type cast/conversion
+    
+    // --------------------------------------------------------------------
+    // Special Operations
+    // --------------------------------------------------------------------
+    IR_OP_NOP,      // No operation (placeholder)
+    
+    IR_OP_COUNT     // Total number of opcodes
 } IROp;
 ```
 
@@ -253,21 +285,21 @@ Kinds of IR types.
 
 ```c
 typedef enum {
-    IR_TYPE_VOID,   // فراغ
-    IR_TYPE_I1,     // ص١
-    IR_TYPE_I8,     // ص٨
-    IR_TYPE_I16,    // ص١٦
-    IR_TYPE_I32,    // ص٣٢
-    IR_TYPE_I64,    // ص٦٤
-    IR_TYPE_U8,     // ط٨
-    IR_TYPE_U16,    // ط١٦
-    IR_TYPE_U32,    // ط٣٢
-    IR_TYPE_U64,    // ط٦٤
-    IR_TYPE_CHAR,   // حرف
-    IR_TYPE_F64,    // ع٦٤
-    IR_TYPE_PTR,    // مؤشر
-    IR_TYPE_ARRAY,  // مصفوفة
-    IR_TYPE_FUNC,   // دالة
+    IR_TYPE_VOID,   // فراغ - Void (no value)
+    IR_TYPE_I1,     // ص١ - 1-bit integer (boolean)
+    IR_TYPE_I8,     // ص٨ - 8-bit integer (byte/char)
+    IR_TYPE_I16,    // ص١٦ - 16-bit integer
+    IR_TYPE_I32,    // ص٣٢ - 32-bit integer
+    IR_TYPE_I64,    // ص٦٤ - 64-bit integer (primary)
+    IR_TYPE_U8,     // ط٨ - 8-bit unsigned integer
+    IR_TYPE_U16,    // ط١٦ - 16-bit unsigned integer
+    IR_TYPE_U32,    // ط٣٢ - 32-bit unsigned integer
+    IR_TYPE_U64,    // ط٦٤ - 64-bit unsigned integer
+    IR_TYPE_CHAR,   // حرف - UTF-8 character (packed)
+    IR_TYPE_F64,    // ع٦٤ - 64-bit floating point (storage only for now)
+    IR_TYPE_PTR,    // مؤشر - Pointer type
+    IR_TYPE_ARRAY,  // مصفوفة - Array type
+    IR_TYPE_FUNC,   // دالة - Function type
 } IRTypeKind;
 ```
 
@@ -276,13 +308,13 @@ Discriminator for `IRValue`.
 
 ```c
 typedef enum {
-    IR_VAL_NONE,        // No value
+    IR_VAL_NONE,        // No value (void)
     IR_VAL_CONST_INT,   // Constant integer
-    IR_VAL_CONST_STR,   // Constant string
-    IR_VAL_BAA_STR,     // Baa string (array)
-    IR_VAL_REG,         // Virtual register
-    IR_VAL_GLOBAL,      // Global variable
-    IR_VAL_FUNC,        // Function reference
+    IR_VAL_CONST_STR,   // Constant string (pointer to .rdata)
+    IR_VAL_BAA_STR,     // Baa string (pointer to .rodata UTF-8 chars array)
+    IR_VAL_REG,         // Virtual register (%م<n>)
+    IR_VAL_GLOBAL,      // Global variable (@name)
+    IR_VAL_FUNC,        // Function reference (@name)
     IR_VAL_BLOCK,       // Basic block reference
 } IRValueKind;
 ```
@@ -1666,14 +1698,21 @@ Describes the calling convention for a target.
 
 ```c
 typedef struct BaaCallingConv {
-    int int_arg_reg_count;            // Number of integer argument registers
+    int int_arg_reg_count;            // عدد سجلات معاملات الأعداد الصحيحة
     int int_arg_phys_regs[8];         // PhysReg values (from regalloc.h)
-    int ret_phys_reg;                 // PhysReg (typically RAX)
-    unsigned int callee_saved_mask;   // Bitmask over PhysReg
-    unsigned int caller_saved_mask;   // Bitmask over PhysReg
-    int stack_align_bytes;            // Stack alignment at call sites (usually 16)
-    int abi_arg_vreg0;                // ABI argument vreg base (default: -10)
-    int abi_ret_vreg;                 // ABI return vreg (default: -2 for RAX)
+
+    int ret_phys_reg;                 // PhysReg (عادةً RAX)
+
+    unsigned int callee_saved_mask;   // bitmask over PhysReg
+    unsigned int caller_saved_mask;   // bitmask over PhysReg
+
+    int stack_align_bytes;            // محاذاة المكدس عند نقاط الاستدعاء (عادة 16)
+
+    // تمثيل سجلات معاملات ABI داخل Machine IR كسجلات افتراضية سالبة
+    // arg i -> (abi_arg_vreg0 - i)
+    int abi_arg_vreg0;                // افتراضي: -10
+    int abi_ret_vreg;                 // افتراضي: -2 (RAX)
+
     int shadow_space_bytes;           // Windows: 32, SysV: 0
     bool home_reg_args_on_call;       // Windows varargs: true, SysV: false
     bool sysv_set_al_zero_on_call;    // SysV varargs rule: true
@@ -1687,11 +1726,13 @@ Complete target descriptor.
 ```c
 typedef struct BaaTarget {
     BaaTargetKind kind;
-    const char* name;                 // Short name: x86_64-windows, x86_64-linux
-    const char* triple;               // Future: full triple
+    const char* name;                 // short name: x86_64-windows, x86_64-linux
+    const char* triple;               // future: full triple
+
     BaaObjectFormat obj_format;
     const IRDataLayout* data_layout;
     const BaaCallingConv* cc;
+
     const char* default_exe_ext;      // ".exe" on Windows, "" on Linux
 } BaaTarget;
 ```
@@ -3301,12 +3342,25 @@ Maps virtual registers from instruction selection to physical x86-64 registers u
 
 ```c
 typedef enum {
-    PHYS_RAX = 0,  PHYS_RCX = 1,  PHYS_RDX = 2,  PHYS_RBX = 3,
-    PHYS_RSP = 4,  PHYS_RBP = 5,  PHYS_RSI = 6,  PHYS_RDI = 7,
-    PHYS_R8  = 8,  PHYS_R9  = 9,  PHYS_R10 = 10, PHYS_R11 = 11,
-    PHYS_R12 = 12, PHYS_R13 = 13, PHYS_R14 = 14, PHYS_R15 = 15,
-    PHYS_REG_COUNT = 16,
-    PHYS_NONE = -1
+    PHYS_RAX = 0,   // سجل المراكم / القيمة المرجعة
+    PHYS_RCX = 1,   // سجل عام / ضمن سجلات معاملات ABI حسب الهدف
+    PHYS_RDX = 2,   // سجل عام / باقي القسمة
+    PHYS_RBX = 3,   // سجل محفوظ (callee-saved)
+    PHYS_RSP = 4,   // مؤشر المكدس (محجوز)
+    PHYS_RBP = 5,   // مؤشر الإطار (محجوز)
+    PHYS_RSI = 6,   // سجل عام
+    PHYS_RDI = 7,   // سجل عام
+    PHYS_R8  = 8,   // سجل عام / ضمن سجلات معاملات ABI حسب الهدف
+    PHYS_R9  = 9,   // سجل عام / ضمن سجلات معاملات ABI حسب الهدف
+    PHYS_R10 = 10,  // سجل مؤقت (caller-saved)
+    PHYS_R11 = 11,  // سجل مؤقت (caller-saved)
+    PHYS_R12 = 12,  // سجل محفوظ (callee-saved)
+    PHYS_R13 = 13,  // سجل محفوظ (callee-saved)
+    PHYS_R14 = 14,  // سجل محفوظ (callee-saved)
+    PHYS_R15 = 15,  // سجل محفوظ (callee-saved)
+
+    PHYS_REG_COUNT = 16,  // عدد السجلات الفيزيائية
+    PHYS_NONE = -1        // لا سجل مخصص
 } PhysReg;
 ```
 
@@ -3318,12 +3372,14 @@ x86-64 physical register numbering. RSP and RBP are always reserved and never al
 
 ```c
 typedef struct LiveInterval {
-    int vreg;           // Virtual register number
-    int start;          // Start position (first def)
-    int end;            // End position (last use)
-    PhysReg phys_reg;   // Assigned physical register (PHYS_NONE if spilled)
-    bool spilled;       // Whether spilled to stack
-    int spill_offset;   // Stack offset relative to RBP
+    int vreg;           // رقم السجل الافتراضي
+    int start;          // موقع البداية (أول تعريف)
+    int end;            // موقع النهاية (آخر استخدام)
+
+    // نتيجة التخصيص
+    PhysReg phys_reg;   // السجل الفيزيائي المخصص (PHYS_NONE إذا سُرّب)
+    bool spilled;       // هل تم تسريبه إلى المكدس؟
+    int spill_offset;   // إزاحة التسريب في المكدس (بالنسبة لـ RBP)
 } LiveInterval;
 ```
 
@@ -3333,11 +3389,13 @@ Represents the live range of a virtual register from its definition to its last 
 
 ```c
 typedef struct BlockLiveness {
-    int block_id;
-    uint64_t* def;      // Registers defined in this block
-    uint64_t* use;      // Registers used before definition in this block
-    uint64_t* live_in;  // Registers live at block entry
-    uint64_t* live_out; // Registers live at block exit
+    int block_id;       // معرف الكتلة
+
+    // مجموعات البتات (كل بت يمثل سجل افتراضي)
+    uint64_t* def;      // السجلات المعرّفة في هذه الكتلة
+    uint64_t* use;      // السجلات المستخدمة قبل تعريفها في هذه الكتلة
+    uint64_t* live_in;  // السجلات الحية عند دخول الكتلة
+    uint64_t* live_out; // السجلات الحية عند خروج الكتلة
 } BlockLiveness;
 ```
 
@@ -3347,22 +3405,38 @@ Per-block liveness bitsets used in iterative dataflow analysis.
 
 ```c
 typedef struct RegAllocCtx {
-    MachineFunc* func;
+    MachineFunc* func;          // الدالة الآلية المعالَجة
+
+    // اتفاقية الاستدعاء الفعّالة (للتمييز بين Windows x64 و SysV)
     const BaaCallingConv* cc;
-    int total_insts;
-    MachineInst** inst_map;
-    BlockLiveness* block_live;
-    int block_count;
-    LiveInterval* intervals;
-    int interval_count;
-    int interval_capacity;
-    int bitset_words;
-    int max_vreg;
-    PhysReg* vreg_to_phys;
-    bool* vreg_spilled;
-    int* vreg_spill_offset;
-    int next_spill_offset;
-    int spill_count;
+
+    // ترقيم التعليمات
+    int total_insts;            // عدد التعليمات الإجمالي
+    MachineInst** inst_map;     // خريطة رقم → تعليمة
+
+    // حيوية الكتل
+    BlockLiveness* block_live;  // مصفوفة حيوية لكل كتلة
+    int block_count;            // عدد الكتل
+
+    // فترات الحيوية
+    LiveInterval* intervals;    // مصفوفة فترات الحيوية
+    int interval_count;         // عدد الفترات
+    int interval_capacity;      // سعة المصفوفة
+
+    // حجم مصفوفات البتات (بعدد الكلمات uint64_t)
+    int bitset_words;           // عدد كلمات uint64_t في كل مجموعة بتات
+    int max_vreg;               // أعلى رقم سجل افتراضي + 1
+
+    // نتائج التخصيص
+    PhysReg* vreg_to_phys;      // خريطة vreg → سجل فيزيائي
+    bool* vreg_spilled;         // هل تم تسريب كل vreg؟
+    int* vreg_spill_offset;     // إزاحة التسريب لكل vreg
+
+    // معلومات التسريب
+    int next_spill_offset;      // الإزاحة التالية المتاحة للتسريب
+    int spill_count;            // عدد السجلات المسرّبة
+
+    // السجلات المحفوظة (callee-saved) المستخدمة
     bool callee_saved_used[PHYS_REG_COUNT];
 } RegAllocCtx;
 ```
@@ -3737,25 +3811,25 @@ Moved to `baa.h` for shared use between Analysis and Codegen.
 
 ```c
 typedef struct {
-    char name[32];         // Variable name
-    ScopeType scope;       // SCOPE_GLOBAL or SCOPE_LOCAL
-    DataType type;         // Variable type (or element type for arrays)
-    char type_name[32];    // Name for TYPE_ENUM/TYPE_STRUCT/TYPE_UNION (empty otherwise)
-    DataType ptr_base_type;      // Base type for pointers
-    char ptr_base_type_name[32]; // Name for struct/union/enum base type
-    int ptr_depth;               // Depth of pointer (0 if not a pointer)
-    FuncPtrSig* func_sig;        // Function pointer signature
-    bool is_array;         // True for array declarations
-    int array_rank;        // Number of array dimensions
-    int64_t array_total_elems; // Product of dimensions
-    int* array_dims;       // Per-dimension sizes (owned by symbol table)
-    int offset;            // Stack offset or memory address
-    bool is_const;         // Immutability flag
-    bool is_static;        // Static storage duration flag
-    bool is_used;          // Usage tracking for warnings
-    int decl_line;         // Declaration line
-    int decl_col;          // Declaration column
-    const char* decl_file; // Declaration file
+    char name[32];         // اسم الرمز
+    ScopeType scope;       // النطاق (عام أو محلي)
+    DataType type;         // نوع البيانات (للمتغير: نوعه، للمصفوفة: نوع العنصر)
+    char type_name[32];    // اسم النوع عند TYPE_ENUM/TYPE_STRUCT (فارغ لغير ذلك)
+    DataType ptr_base_type;      // نوع أساس المؤشر عندما type == TYPE_POINTER
+    char ptr_base_type_name[32]; // اسم النوع المركب لأساس المؤشر
+    int ptr_depth;               // عمق المؤشر عندما type == TYPE_POINTER
+    FuncPtrSig* func_sig;        // توقيع مؤشر الدالة عندما type == TYPE_FUNC_PTR
+    bool is_array;         // هل الرمز مصفوفة؟
+    int array_rank;        // عدد الأبعاد
+    int64_t array_total_elems; // حاصل ضرب الأبعاد
+    int* array_dims;       // أبعاد المصفوفة (مملوك لجدول الرموز)
+    int offset;            // الإزاحة في المكدس أو العنوان
+    bool is_const;         // هل هو ثابت (immutable)؟
+    bool is_static;        // هل التخزين ساكن؟
+    bool is_used;          // هل تم استخدام هذا المتغير؟ (للتحذيرات)
+    int decl_line;         // سطر التعريف (للتحذيرات)
+    int decl_col;          // عمود التعريف (للتحذيرات)
+    const char* decl_file; // ملف التعريف (للتحذيرات)
 } Symbol;
 ```
 
@@ -3790,6 +3864,8 @@ Compound types are tracked by `DataType` + an optional `type_name`.
 ```c
 typedef enum {
     TYPE_INT,           // صحيح / ص٦٤ (int64)
+
+    // أحجام الأعداد الصحيحة (v0.3.5.5)
     TYPE_I8,            // ص٨
     TYPE_I16,           // ص١٦
     TYPE_I32,           // ص٣٢
@@ -3797,6 +3873,7 @@ typedef enum {
     TYPE_U16,           // ط١٦
     TYPE_U32,           // ط٣٢
     TYPE_U64,           // ط٦٤
+
     TYPE_STRING,        // نص (حرف[])
     TYPE_POINTER,       // مؤشر عام
     TYPE_FUNC_PTR,      // مؤشر دالة: دالة(...) -> نوع
@@ -3812,14 +3889,14 @@ typedef enum {
 typedef struct FuncPtrSig {
     DataType return_type;
     DataType return_ptr_base_type;
-    char* return_ptr_base_type_name;
+    char* return_ptr_base_type_name; // مملوك (قد يكون NULL)
     int return_ptr_depth;
 
     int param_count;
-    DataType* param_types;
-    DataType* param_ptr_base_types;
-    char** param_ptr_base_type_names;
-    int* param_ptr_depths;
+    DataType* param_types;              // مملوك (malloc)
+    DataType* param_ptr_base_types;     // مملوك (malloc)
+    char** param_ptr_base_type_names;   // مملوك (malloc) وعناصره مملوكة (strdup) وقد تكون NULL
+    int* param_ptr_depths;              // مملوك (malloc)
 } FuncPtrSig;
 ```
 
@@ -4032,6 +4109,10 @@ typedef struct Node {
         struct {
             char* name;
             DataType return_type;
+            DataType return_ptr_base_type;
+            char* return_ptr_base_type_name;
+            int return_ptr_depth;
+            FuncPtrSig* return_func_sig;
             struct Node* params;
             struct Node* body;   // NULL if prototype
             bool is_prototype;
@@ -4041,6 +4122,10 @@ typedef struct Node {
             char* name;
             DataType type;
             char* type_name;         // Used for TYPE_ENUM/TYPE_STRUCT/TYPE_UNION
+            DataType ptr_base_type;
+            char* ptr_base_type_name;
+            int ptr_depth;
+            FuncPtrSig* func_sig;
             int struct_size;         // For TYPE_STRUCT/TYPE_UNION storage (bytes)
             int struct_align;        // For TYPE_STRUCT/TYPE_UNION storage (bytes)
             struct Node* expression; // Scalars: required for automatic locals, optional for static/global
@@ -4052,13 +4137,20 @@ typedef struct Node {
         struct {
             char* name;
             DataType target_type;
-            char* target_type_name;  // Used for TYPE_ENUM/TYPE_STRUCT/TYPE_UNION targets
+            char* target_type_name;
+            DataType target_ptr_base_type;
+            char* target_ptr_base_type_name;
+            int target_ptr_depth;
+            FuncPtrSig* target_func_sig;
         } type_alias;
 
         struct {
             char* name;
             DataType element_type;
             char* element_type_name;
+            DataType element_ptr_base_type;
+            char* element_ptr_base_type_name;
+            int element_ptr_depth;
             int element_struct_size;
             int element_struct_align;
             int* dims;
@@ -4148,15 +4240,57 @@ typedef struct Node {
 
 ```c
 typedef enum {
-    NODE_PROGRAM, NODE_FUNC_DEF, NODE_VAR_DECL, NODE_TYPE_ALIAS,
-    NODE_ENUM_DECL, NODE_STRUCT_DECL, NODE_ENUM_MEMBER, NODE_UNION_DECL,
-    NODE_BLOCK, NODE_RETURN, NODE_PRINT, NODE_IF, NODE_WHILE, NODE_FOR,
-    NODE_SWITCH, NODE_CASE, NODE_BREAK, NODE_CONTINUE, NODE_ASSIGN,
-    NODE_CALL_STMT, NODE_READ, NODE_ARRAY_DECL, NODE_ARRAY_ASSIGN,
-    NODE_ARRAY_ACCESS, NODE_MEMBER_ACCESS, NODE_MEMBER_ASSIGN,
-    NODE_DEREF_ASSIGN, NODE_BIN_OP, NODE_UNARY_OP, NODE_POSTFIX_OP,
-    NODE_INT, NODE_FLOAT, NODE_STRING, NODE_CHAR, NODE_BOOL,
-    NODE_NULL, NODE_CAST, NODE_SIZEOF, NODE_VAR_REF, NODE_CALL_EXPR
+    // المستوى الأعلى
+    NODE_PROGRAM,       // البرنامج: يحتوي على قائمة التصريحات
+    NODE_FUNC_DEF,      // تعريف دالة
+    NODE_VAR_DECL,      // تعريف متغير (عام أو محلي)
+    NODE_TYPE_ALIAS,    // تعريف اسم نوع بديل: نوع معرف = ط٦٤.
+
+    // تعريفات الأنواع المركبة (v0.3.4)
+    NODE_ENUM_DECL,     // تعريف تعداد: تعداد لون { ... }
+    NODE_STRUCT_DECL,   // تعريف هيكل: هيكل سيارة { ... }
+    NODE_ENUM_MEMBER,   // عنصر تعداد داخل تعريفه
+    NODE_UNION_DECL,    // تعريف اتحاد: اتحاد قيمة { ... }
+    
+    // الجمل البرمجية (Statements)
+    NODE_BLOCK,         // نطاق { ... } وكتلة الدالة
+    NODE_RETURN,        // جملة الإرجاع (إرجع)
+    NODE_PRINT,         // جملة الطباعة (اطبع)
+    NODE_IF,            // جملة الشرط (إذا)
+    NODE_WHILE,         // جملة التكرار (طالما)
+    NODE_FOR,           // جملة التكرار المحدد (لكل)
+    NODE_SWITCH,        // جملة الاختيار (اختر)
+    NODE_CASE,          // حالة الاختيار (حالة/افتراضي)
+    NODE_BREAK,         // جملة التوقف (توقف)
+    NODE_CONTINUE,      // جملة الاستمرار (استمر)
+    NODE_ASSIGN,        // جملة التعيين (س = 5)
+    NODE_CALL_STMT,     // استدعاء دالة كجملة
+    NODE_READ,          // جملة الإدخال (اقرأ)
+    
+    // المصفوفات
+    NODE_ARRAY_DECL,    // تعريف مصفوفة: صحيح س[5].
+    NODE_ARRAY_ASSIGN,  // تعيين عنصر مصفوفة: س[0] = 1.
+    NODE_ARRAY_ACCESS,  // قراءة عنصر مصفوفة: س[0]
+
+    // الوصول للأعضاء/المؤهلات (v0.3.4)
+    NODE_MEMBER_ACCESS, // <expr>:<member> (عضو هيكل أو قيمة تعداد)
+    NODE_MEMBER_ASSIGN, // <member_access> = <expr>.
+    NODE_DEREF_ASSIGN,  // *ptr = <expr>.
+    
+    // التعبيرات (Expressions)
+    NODE_BIN_OP,        // العمليات الثنائية (+، -، *، /)
+    NODE_UNARY_OP,      // العمليات الأحادية (!، -)
+    NODE_POSTFIX_OP,    // العمليات اللاحقة (++، --)
+    NODE_INT,           // قيمة عددية صحيحة
+    NODE_FLOAT,         // قيمة عددية عشرية
+    NODE_STRING,        // قيمة نصية
+    NODE_CHAR,          // قيمة حرفية
+    NODE_BOOL,          // قيمة منطقية (صواب/خطأ)
+    NODE_NULL,          // مؤشر فارغ (عدم في سياق التعبير)
+    NODE_CAST,          // تحويل صريح: كـ<نوع>(تعبير)
+    NODE_SIZEOF,        // حجم(type) أو حجم(expr)
+    NODE_VAR_REF,       // إشارة لمتغير
+    NODE_CALL_EXPR      // تعبير استدعاء دالة
 } NodeType;
 ```
 

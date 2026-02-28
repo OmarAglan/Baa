@@ -201,7 +201,7 @@ typedef enum {
     IR_OP_CAST,     // تحويل - Type cast/conversion
     
     // Special Operations
-    IR_OP_NOP,      // لاعمل - No operation
+    IR_OP_NOP,      // No operation (placeholder)
     
     IR_OP_COUNT     // Total number of opcodes
 } IROp;
@@ -249,12 +249,12 @@ typedef enum {
     IR_CMP_LT,      // أصغر - Less than (signed)
     IR_CMP_GE,      // أكبر_أو_يساوي - Greater or equal (signed)
     IR_CMP_LE,      // أصغر_أو_يساوي - Less or equal (signed)
-    
-    // Unsigned comparisons (بدون إشارة)
-    IR_CMP_UGT,     // أكبر_بدون_إشارة - Greater than (unsigned)
-    IR_CMP_ULT,     // أصغر_بدون_إشارة - Less than (unsigned)
-    IR_CMP_UGE,     // أكبر_أو_يساوي_بدون_إشارة - Greater or equal (unsigned)
-    IR_CMP_ULE,     // أصغر_أو_يساوي_بدون_إشارة - Less or equal (unsigned)
+
+    // مقارنات بدون إشارة (unsigned)
+    IR_CMP_UGT,     // أكبر - Greater than (unsigned)
+    IR_CMP_ULT,     // أصغر - Less than (unsigned)
+    IR_CMP_UGE,     // أكبر_أو_يساوي - Greater or equal (unsigned)
+    IR_CMP_ULE,     // أصغر_أو_يساوي - Less or equal (unsigned)
 } IRCmpPred;
 ```
 
@@ -268,10 +268,12 @@ typedef enum {
 | `lt` | `أصغر` | `IR_CMP_LT` | Less than (signed) |
 | `ge` | `أكبر_أو_يساوي` | `IR_CMP_GE` | Greater or equal (signed) |
 | `le` | `أصغر_أو_يساوي` | `IR_CMP_LE` | Less or equal (signed) |
-| `ugt` | `أكبر_بدون_إشارة` | `IR_CMP_UGT` | Greater than (unsigned) |
-| `ult` | `أصغر_بدون_إشارة` | `IR_CMP_ULT` | Less than (unsigned) |
-| `uge` | `أكبر_أو_يساوي_بدون_إشارة` | `IR_CMP_UGE` | Greater or equal (unsigned) |
-| `ule` | `أصغر_أو_يساوي_بدون_إشارة` | `IR_CMP_ULE` | Less or equal (unsigned) |
+| `ugt` | `أكبر` | `IR_CMP_UGT` | Greater than (unsigned) |
+| `ult` | `أصغر` | `IR_CMP_ULT` | Less than (unsigned) |
+| `uge` | `أكبر_أو_يساوي` | `IR_CMP_UGE` | Greater or equal (unsigned) |
+| `ule` | `أصغر_أو_يساوي` | `IR_CMP_ULE` | Less or equal (unsigned) |
+
+**Note:** The Arabic names are the same for signed and unsigned comparisons. The operand types determine whether the comparison is signed or unsigned.
 
 ### 4.5 Logical Instructions
 
@@ -310,7 +312,7 @@ typedef enum {
 
 | Opcode | Arabic | C Enum | Syntax | Description |
 |--------|--------|--------|--------|-------------|
-| `nop` | `لاعمل` | `IR_OP_NOP` | `لاعمل` | No operation |
+| `nop` | `لاعمل` | `IR_OP_NOP` | `لاعمل` | No operation (placeholder) |
 
 ---
 
@@ -660,22 +662,64 @@ The IR is represented in C using the following structures (see `src/ir.h` for au
 
 ```c
 typedef enum {
-    // Arithmetic
-    IR_OP_ADD, IR_OP_SUB, IR_OP_MUL, IR_OP_DIV, IR_OP_MOD, IR_OP_NEG,
-    // Memory
-    IR_OP_ALLOCA, IR_OP_LOAD, IR_OP_STORE, IR_OP_PTR_OFFSET,
-    // Comparison
-    IR_OP_CMP,
-    // Logical
-    IR_OP_AND, IR_OP_OR, IR_OP_XOR, IR_OP_NOT, IR_OP_SHL, IR_OP_SHR,
-    // Control Flow
-    IR_OP_BR, IR_OP_BR_COND, IR_OP_RET, IR_OP_CALL,
-    // SSA
-    IR_OP_PHI, IR_OP_COPY,
-    // Conversion
-    IR_OP_CAST, IR_OP_NOP,
-    // Count
-    IR_OP_COUNT
+    // --------------------------------------------------------------------
+    // Arithmetic Operations (العمليات الحسابية)
+    // --------------------------------------------------------------------
+    IR_OP_ADD,      // جمع - Addition
+    IR_OP_SUB,      // طرح - Subtraction
+    IR_OP_MUL,      // ضرب - Multiplication
+    IR_OP_DIV,      // قسم - Signed division
+    IR_OP_MOD,      // باقي - Modulo (remainder)
+    IR_OP_NEG,      // سالب - Negation (unary minus)
+
+    // --------------------------------------------------------------------
+    // Memory Operations (عمليات الذاكرة)
+    // --------------------------------------------------------------------
+    IR_OP_ALLOCA,   // حجز - Stack allocation
+    IR_OP_LOAD,     // حمل - Load from memory
+    IR_OP_STORE,    // خزن - Store to memory
+    IR_OP_PTR_OFFSET, // إزاحة_مؤشر - Pointer offset: base + index * sizeof(pointee)
+
+    // --------------------------------------------------------------------
+    // Comparison Operations (عمليات المقارنة)
+    // --------------------------------------------------------------------
+    IR_OP_CMP,      // قارن - Compare (with predicate)
+
+    // --------------------------------------------------------------------
+    // Logical Operations (العمليات المنطقية)
+    // --------------------------------------------------------------------
+    IR_OP_AND,      // و - Bitwise AND
+    IR_OP_OR,       // أو - Bitwise OR
+    IR_OP_XOR,      // أو_حصري - Bitwise XOR
+    IR_OP_NOT,      // نفي - Bitwise NOT
+    IR_OP_SHL,      // ازاحة_يسار - Shift left
+    IR_OP_SHR,      // ازاحة_يمين - Shift right (arith/logical حسب النوع)
+
+    // --------------------------------------------------------------------
+    // Control Flow Operations (عمليات التحكم)
+    // --------------------------------------------------------------------
+    IR_OP_BR,       // قفز - Unconditional branch
+    IR_OP_BR_COND,  // قفز_شرط - Conditional branch
+    IR_OP_RET,      // رجوع - Return from function
+    IR_OP_CALL,     // نداء - Function call
+
+    // --------------------------------------------------------------------
+    // SSA Operations (عمليات SSA)
+    // --------------------------------------------------------------------
+    IR_OP_PHI,      // فاي - Phi node for SSA
+    IR_OP_COPY,     // نسخ - Copy (for SSA construction)
+
+    // --------------------------------------------------------------------
+    // Type Conversion (تحويل الأنواع)
+    // --------------------------------------------------------------------
+    IR_OP_CAST,     // تحويل - Type cast/conversion
+
+    // --------------------------------------------------------------------
+    // Special Operations
+    // --------------------------------------------------------------------
+    IR_OP_NOP,      // No operation (placeholder)
+
+    IR_OP_COUNT     // Total number of opcodes
 } IROp;
 ```
 
@@ -683,8 +727,18 @@ typedef enum {
 
 ```c
 typedef enum {
-    IR_CMP_EQ, IR_CMP_NE, IR_CMP_GT, IR_CMP_LT, IR_CMP_GE, IR_CMP_LE,
-    IR_CMP_UGT, IR_CMP_ULT, IR_CMP_UGE, IR_CMP_ULE
+    IR_CMP_EQ,      // يساوي - Equal
+    IR_CMP_NE,      // لا_يساوي - Not equal
+    IR_CMP_GT,      // أكبر - Greater than (signed)
+    IR_CMP_LT,      // أصغر - Less than (signed)
+    IR_CMP_GE,      // أكبر_أو_يساوي - Greater or equal (signed)
+    IR_CMP_LE,      // أصغر_أو_يساوي - Less or equal (signed)
+
+    // مقارنات بدون إشارة (unsigned)
+    IR_CMP_UGT,     // أكبر - Greater than (unsigned)
+    IR_CMP_ULT,     // أصغر - Less than (unsigned)
+    IR_CMP_UGE,     // أكبر_أو_يساوي - Greater or equal (unsigned)
+    IR_CMP_ULE,     // أصغر_أو_يساوي - Less or equal (unsigned)
 } IRCmpPred;
 ```
 
@@ -692,21 +746,21 @@ typedef enum {
 
 ```c
 typedef enum {
-    IR_TYPE_VOID,   // فراغ
-    IR_TYPE_I1,     // ص١
-    IR_TYPE_I8,     // ص٨
-    IR_TYPE_I16,    // ص١٦
-    IR_TYPE_I32,    // ص٣٢
-    IR_TYPE_I64,    // ص٦٤
-    IR_TYPE_U8,     // ط٨
-    IR_TYPE_U16,    // ط١٦
-    IR_TYPE_U32,    // ط٣٢
-    IR_TYPE_U64,    // ط٦٤
-    IR_TYPE_CHAR,   // حرف
-    IR_TYPE_F64,    // ع٦٤
-    IR_TYPE_PTR,    // مؤشر
-    IR_TYPE_ARRAY,  // مصفوفة
-    IR_TYPE_FUNC,   // دالة
+    IR_TYPE_VOID,   // فراغ - Void (no value)
+    IR_TYPE_I1,     // ص١ - 1-bit integer (boolean)
+    IR_TYPE_I8,     // ص٨ - 8-bit integer (byte/char)
+    IR_TYPE_I16,    // ص١٦ - 16-bit integer
+    IR_TYPE_I32,    // ص٣٢ - 32-bit integer
+    IR_TYPE_I64,    // ص٦٤ - 64-bit integer (primary)
+    IR_TYPE_U8,     // ط٨ - 8-bit unsigned integer
+    IR_TYPE_U16,    // ط١٦ - 16-bit unsigned integer
+    IR_TYPE_U32,    // ط٣٢ - 32-bit unsigned integer
+    IR_TYPE_U64,    // ط٦٤ - 64-bit unsigned integer
+    IR_TYPE_CHAR,   // حرف - UTF-8 character (packed)
+    IR_TYPE_F64,    // ع٦٤ - 64-bit floating point (storage only for now)
+    IR_TYPE_PTR,    // مؤشر - Pointer type
+    IR_TYPE_ARRAY,  // مصفوفة - Array type
+    IR_TYPE_FUNC,   // دالة - Function type
 } IRTypeKind;
 ```
 
@@ -714,6 +768,7 @@ typedef enum {
 
 ```c
 typedef struct IRType {
+    // ملاحظة: هذه البنية تُخصَّص داخل ساحة IR (Arena) وتُحرَّر دفعة واحدة.
     IRTypeKind kind;
     union {
         struct IRType* pointee;     // For IR_TYPE_PTR
@@ -745,10 +800,43 @@ typedef enum {
 } IRValueKind;
 ```
 
+**Note:** `IR_VAL_BAA_STR` represents Baa language strings (arrays of `حرف`) stored in read-only data, distinct from C-style strings (`IR_VAL_CONST_STR`).
+
+#### Predefined Type Constants
+
+The following global type constants are available for common types:
+
+```c
+extern IRType* IR_TYPE_VOID_T;   // فراغ
+extern IRType* IR_TYPE_I1_T;     // ص١ (boolean)
+extern IRType* IR_TYPE_I8_T;     // ص٨
+extern IRType* IR_TYPE_I16_T;    // ص١٦
+extern IRType* IR_TYPE_I32_T;    // ص٣٢
+extern IRType* IR_TYPE_I64_T;    // ص٦٤
+extern IRType* IR_TYPE_U8_T;     // ط٨
+extern IRType* IR_TYPE_U16_T;    // ط١٦
+extern IRType* IR_TYPE_U32_T;    // ط٣٢
+extern IRType* IR_TYPE_U64_T;    // ط٦٤
+extern IRType* IR_TYPE_CHAR_T;   // حرف (UTF-8 character)
+extern IRType* IR_TYPE_F64_T;    // ع٦٤ (64-bit float)
+```
+
+#### IRPhiEntry Structure
+
+```c
+typedef struct IRPhiEntry {
+    // ملاحظة: هذه البنية تُخصَّص داخل ساحة IR (Arena) وتُحرَّر دفعة واحدة.
+    IRValue* value;
+    struct IRBlock* block;
+    struct IRPhiEntry* next;
+} IRPhiEntry;
+```
+
 #### IRValue Structure
 
 ```c
 typedef struct IRValue {
+    // ملاحظة: هذه البنية تُخصَّص داخل ساحة IR (Arena) وتُحرَّر دفعة واحدة.
     IRValueKind kind;
     IRType* type;
     union {
@@ -768,24 +856,45 @@ typedef struct IRValue {
 
 ```c
 typedef struct IRInst {
+    // ملاحظة: هذه البنية تُخصَّص داخل ساحة IR (Arena) وتُحرَّر دفعة واحدة.
     IROp op;                    // Opcode
     IRType* type;               // Result type (or void for stores/branches)
-    int id;                     // Instruction ID for diagnostics
-    int dest;                   // Destination register (-1 if none)
+
+    // معرّف ثابت للتعليمة داخل الدالة (للتشخيص/الاختبارات)
+    int id;
+
+    // Destination register (for instructions that produce a value)
+    int dest;                   // -1 if no destination
+
+    // Operands (meaning depends on opcode)
     IRValue* operands[4];       // Up to 4 operands
     int operand_count;
-    IRCmpPred cmp_pred;         // For comparison instructions
-    IRPhiEntry* phi_entries;    // Linked list for PHI nodes
-    char* call_target;          // Function name for direct calls
-    IRValue* call_callee;       // Callee value for indirect calls
-    IRValue** call_args;        // Argument list for calls
+
+    // For comparison instructions
+    IRCmpPred cmp_pred;
+
+    // For Phi nodes
+    IRPhiEntry* phi_entries;    // Linked list of [value, block] pairs
+
+    // For calls
+    char* call_target;          // Function name
+    IRValue* call_callee;       // قيمة الهدف عند النداء غير المباشر (NULL في النداء المباشر)
+    IRValue** call_args;        // Argument list
     int call_arg_count;
-    const char* src_file;       // Source location
+
+    // Source location (for debugging)
+    const char* src_file;
     int src_line;
     int src_col;
-    const char* dbg_name;       // Optional debug name
-    struct IRBlock* parent;     // Owning block
-    struct IRInst* prev;        // Linked list links
+
+    // اسم رمز/متغير اختياري للتتبع (للديبغ)
+    const char* dbg_name;
+
+    // الأب (الكتلة التي تحتوي التعليمة)
+    struct IRBlock* parent;
+
+    // Linked list within block
+    struct IRInst* prev;
     struct IRInst* next;
 } IRInst;
 ```
@@ -794,21 +903,33 @@ typedef struct IRInst {
 
 ```c
 typedef struct IRBlock {
-    char* label;                // Block label (Arabic name)
+    // ملاحظة: هذه البنية تُخصَّص داخل ساحة IR (Arena) وتُحرَّر دفعة واحدة.
+    char* label;                // Block label (Arabic name like "بداية")
     int id;                     // Numeric ID for internal use
-    struct IRFunc* parent;      // Owning function
-    IRInst* first;              // First instruction
-    IRInst* last;               // Last instruction
+
+    // الأب (الدالة التي تحتوي الكتلة)
+    struct IRFunc* parent;
+
+    // Instructions (doubly-linked list)
+    IRInst* first;
+    IRInst* last;
     int inst_count;
+
+    // Control flow graph edges
     struct IRBlock* succs[2];   // Successors (0-2 for br/br_cond)
     int succ_count;
+
     struct IRBlock** preds;     // Predecessors (dynamic array)
     int pred_count;
     int pred_capacity;
+
+    // For dominance analysis
     struct IRBlock* idom;       // Immediate dominator
     struct IRBlock** dom_frontier;
     int dom_frontier_count;
-    struct IRBlock* next;       // Linked list link
+
+    // Linked list of blocks in function
+    struct IRBlock* next;
 } IRBlock;
 ```
 
@@ -816,20 +937,39 @@ typedef struct IRBlock {
 
 ```c
 typedef struct IRFunc {
+    // ملاحظة: هذه البنية تُخصَّص داخل ساحة IR (Arena) وتُحرَّر دفعة واحدة.
     char* name;                 // Function name
     IRType* ret_type;           // Return type
-    IRParam* params;            // Parameters
+
+    // Parameters
+    IRParam* params;
     int param_count;
-    IRBlock* entry;             // Entry block
+
+    // Basic blocks (linked list)
+    IRBlock* entry;             // Entry block (first block)
     IRBlock* blocks;            // All blocks
     int block_count;
-    int next_reg;               // Next virtual register number
-    int next_inst_id;           // Next instruction ID
-    uint32_t ir_epoch;          // Change counter for caching
-    IRDefUse* def_use;          // Def-use analysis cache
-    int next_block_id;          // Next block ID
-    bool is_prototype;          // Declaration without body
-    struct IRFunc* next;        // Linked list link
+
+    // Virtual register counter
+    int next_reg;               // Next available %م<n>
+
+    // عدّاد معرفات التعليمات
+    int next_inst_id;
+
+    // عدّاد تغييرات IR داخل الدالة (لتبطل التحليلات مثل Def-Use)
+    uint32_t ir_epoch;
+
+    // كاش Def-Use (تحليل) — يُخصّص على heap ويُعاد بناؤه عند التغييرات.
+    struct IRDefUse* def_use;
+
+    // Block ID counter
+    int next_block_id;
+
+    // Is this a prototype (declaration without body)?
+    bool is_prototype;
+
+    // Linked list of functions in module
+    struct IRFunc* next;
 } IRFunc;
 ```
 
@@ -837,32 +977,81 @@ typedef struct IRFunc {
 
 ```c
 typedef struct IRGlobal {
+    // ملاحظة: هذه البنية تُخصَّص داخل ساحة IR (Arena) وتُحرَّر دفعة واحدة.
     char* name;                 // Variable name
     IRType* type;               // Variable type
+    // تهيئة عامة:
+    // - للأنواع غير المصفوفة: init يحمل قيمة واحدة.
+    // - للمصفوفات: init_elems يحمل قائمة (قد تكون جزئية) ويتم تعبئة الباقي بأصفار كما في C.
     IRValue* init;              // Initial scalar value (or NULL)
     IRValue** init_elems;       // Array initializer elements (or NULL)
-    int init_elem_count;        // Number of provided elements
-    bool has_init_list;         // Had '=' in source
-    bool is_const;              // Is constant
-    bool is_internal;           // Internal linkage
+    int init_elem_count;        // Number of provided initializer elements
+    bool has_init_list;         // هل وُجدت '=' في المصدر (حتى لو كانت القائمة فارغة)
+    bool is_const;              // Is this a constant?
+    bool is_internal;           // هل الربط داخلي على مستوى الملف؟
     struct IRGlobal* next;
 } IRGlobal;
+```
+
+#### IRParam Structure
+
+```c
+typedef struct IRParam {
+    char* name;                 // Parameter name
+    IRType* type;               // Parameter type
+    int reg;                    // Virtual register assigned (%معامل<n>)
+} IRParam;
+```
+
+#### IRStringEntry Structure
+
+```c
+typedef struct IRStringEntry {
+    // ملاحظة: هذه البنية تُخصَّص داخل ساحة IR (Arena) وتُحرَّر دفعة واحدة.
+    char* content;              // String content (UTF-8)
+    int id;                     // Unique ID (.Lstr_<id>)
+    struct IRStringEntry* next;
+} IRStringEntry;
+```
+
+#### IRBaaStringEntry Structure
+
+```c
+typedef struct IRBaaStringEntry {
+    // ملاحظة: هذه البنية تُخصَّص داخل ساحة IR (Arena) وتُحرَّر دفعة واحدة.
+    char* content;              // String content (UTF-8)
+    int id;                     // Unique ID (.Lbs_<id>)
+    struct IRBaaStringEntry* next;
+} IRBaaStringEntry;
 ```
 
 #### IRModule Structure
 
 ```c
 typedef struct IRModule {
+    // ملاحظة: هذه البنية تُخصَّص بـ malloc وتحتوي على ساحة IR.
     char* name;                 // Module name (source file)
-    IRArena arena;              // Memory arena for all IR objects
-    IRType* cached_i8_ptr_type; // Cache for i8* type
-    IRGlobal* globals;          // Global variables
+
+    // ساحة ذاكرة IR: كل كائنات IR تُخصَّص منها.
+    IRArena arena;
+
+    // كاش داخلي لأنواع شائعة لكل وحدة
+    IRType* cached_i8_ptr_type;
+
+    // Global variables
+    IRGlobal* globals;
     int global_count;
-    IRFunc* funcs;              // Functions
+
+    // Functions
+    IRFunc* funcs;
     int func_count;
-    IRStringEntry* strings;     // String table
+
+    // String table
+    IRStringEntry* strings;
     int string_count;
-    IRBaaStringEntry* baa_strings;  // Baa string table
+
+    // Baa string table (as حرف[])
+    IRBaaStringEntry* baa_strings;
     int baa_string_count;
 } IRModule;
 ```
@@ -922,6 +1111,12 @@ int ir_builder_emit_ptr_offset(IRBuilder* builder, IRType* ptr_type, IRValue* ba
 // Comparison emission
 int ir_builder_emit_cmp(IRBuilder* builder, IRCmpPred pred, IRValue* lhs, IRValue* rhs);
 
+// Unsigned comparison helpers
+int ir_builder_emit_cmp_ugt(IRBuilder* builder, IRValue* lhs, IRValue* rhs);
+int ir_builder_emit_cmp_ult(IRBuilder* builder, IRValue* lhs, IRValue* rhs);
+int ir_builder_emit_cmp_uge(IRBuilder* builder, IRValue* lhs, IRValue* rhs);
+int ir_builder_emit_cmp_ule(IRBuilder* builder, IRValue* lhs, IRValue* rhs);
+
 // Control flow emission
 void ir_builder_emit_br(IRBuilder* builder, IRBlock* target);
 void ir_builder_emit_br_cond(IRBuilder* builder, IRValue* cond, IRBlock* if_true, IRBlock* if_false);
@@ -941,6 +1136,44 @@ int ir_builder_emit_copy(IRBuilder* builder, IRType* type, IRValue* source);
 
 // Type conversion
 int ir_builder_emit_cast(IRBuilder* builder, IRValue* value, IRType* to_type);
+
+// Void return variants
+void ir_builder_emit_ret_void(IRBuilder* builder);
+void ir_builder_emit_ret_int(IRBuilder* builder, int64_t value);
+
+// Void function calls
+void ir_builder_emit_call_void(IRBuilder* builder, const char* target,
+                                IRValue** args, int arg_count);
+
+// Additional constant helpers
+IRValue* ir_builder_const_i32(int32_t value);
+IRValue* ir_builder_const_bool(int value);
+IRValue* ir_builder_const_baa_string(IRBuilder* builder, const char* str);
+
+// Global variable helpers
+IRGlobal* ir_builder_create_global_init(IRBuilder* builder, const char* name,
+                                         IRType* type, IRValue* init, int is_const);
+IRValue* ir_builder_get_global(IRBuilder* builder, const char* name);
+
+// Control flow structure helpers
+void ir_builder_create_if_then(IRBuilder* builder, IRValue* cond,
+                                const char* then_label, const char* merge_label,
+                                IRBlock** then_block, IRBlock** merge_block);
+void ir_builder_create_if_else(IRBuilder* builder, IRValue* cond,
+                                const char* then_label, const char* else_label,
+                                const char* merge_label,
+                                IRBlock** then_block, IRBlock** else_block,
+                                IRBlock** merge_block);
+void ir_builder_create_while(IRBuilder* builder,
+                              const char* header_label, const char* body_label,
+                              const char* exit_label,
+                              IRBlock** header_block, IRBlock** body_block,
+                              IRBlock** exit_block);
+
+// Statistics
+int ir_builder_get_inst_count(IRBuilder* builder);
+int ir_builder_get_block_count(IRBuilder* builder);
+void ir_builder_print_stats(IRBuilder* builder);
 ```
 
 ### 10.4 Register Naming Convention

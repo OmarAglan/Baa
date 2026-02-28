@@ -16,6 +16,7 @@ This guide establishes standards for all Baa project documentation to ensure con
 - [6. Navigation and Cross-References](#6-navigation-and-cross-references)
 - [7. Tone and Voice](#7-tone-and-voice)
 - [8. C Coding Standards](#8-c-coding-standards)
+- [9. Mermaid Diagrams](#9-mermaid-diagrams)
 
 ---
 
@@ -339,7 +340,7 @@ When writing in Arabic:
 
 ---
 
-## 8. Mermaid Diagrams
+## 9. Mermaid Diagrams
 
 When using Mermaid diagrams (in INTERNALS.md):
 
@@ -371,6 +372,8 @@ This section documents the coding standards for C source files in the Baa compil
 
 **All comments and documentation MUST be written in Arabic (UTF-8).** This is a strict requirement for the Baa codebase.
 
+**User-facing diagnostics** (error messages, warnings) MUST also be Arabic-first.
+
 **File Header Template:**
 
 ```c
@@ -397,12 +400,20 @@ This section documents the coding standards for C source files in the Baa compil
 
 ```c
 // تعليق على سطر واحد
-int x = 5; // تعليق جانبي ( sparingly used)
+int x = 5; // تعليق جانبي (sparingly used)
 
 /*
  * تعليق متعدد الأسطر
  * يستخدم للشرح المفصل
  */
+```
+
+**Include Block Comments:**
+
+```c
+// ============================================================================
+// تعريفات المحلل اللفظي (Lexer)
+// ============================================================================
 ```
 
 ### 8.3 Formatting
@@ -413,7 +424,7 @@ int x = 5; // تعليق جانبي ( sparingly used)
 | **Brace Style** | K&R style (opening brace on same line) |
 | **Line Length** | Keep lines near 100 columns when practical |
 | **Function Size** | Prefer small, focused helpers over very large functions |
-| **Section Separators** | Use `// ===...===` for major sections |
+| **Section Separators** | Use `// ===...===` for major sections (at least 60 characters wide) |
 
 **Example:**
 
@@ -445,10 +456,12 @@ Headers MUST be included in this order:
 2. **Project headers** - `"other_module.h"`
 3. **System headers** - `<stdio.h>`, `<stdlib.h>`, etc.
 
+Keep include blocks stable and minimal. Do not add unnecessary includes.
+
 **Example:**
 
 ```c
-#include "emit.h"           // 1. Own header
+#include "emit.h"           // 1. Own module header
 #include "target.h"         // 2. Project headers
 #include <stdlib.h>         // 3. System headers
 #include <string.h>
@@ -460,7 +473,7 @@ Headers MUST be included in this order:
 | Element | Convention | Example |
 |---------|------------|---------|
 | **Types/Structs** | PascalCase | `BaaTokenType`, `IRBuilder`, `MachineFunc` |
-| **Functions** | snake_case (module-prefixed) | `ir_builder_new()`, `emit_comment()` |
+| **Functions** | snake_case (often module-prefixed) | `ir_builder_new()`, `emit_comment()` |
 | **Local Variables** | snake_case | `builder`, `current_func`, `total_count` |
 | **Global Variables** | snake_case with `g_` prefix | `g_emit_target`, `g_warning_config` |
 | **Enums/Macros** | UPPER_SNAKE_CASE | `TOKEN_EOF`, `IR_OP_ADD`, `MACH_MOV` |
@@ -472,7 +485,7 @@ Headers MUST be included in this order:
 - Use **fixed-width integers** (`int64_t`, `uint32_t`, etc.) for width-sensitive logic
 - Use **`bool`** for predicates (from `<stdbool.h>`)
 - Be **explicit** about signed/unsigned behavior and casts
-- Keep pointer-type metadata consistent across parser/semantic/IR
+- **Keep pointer-type metadata consistent** across parser/semantic/IR layers
 
 **Example:**
 
@@ -489,8 +502,8 @@ int64_t offset = (int64_t)index * sizeof(element);
 
 **Principles:**
 
-1. **Validate pointers before dereference** with early returns
-2. **Don't silently swallow errors** - report them
+1. **Validate pointers before dereference** - prefer early returns for invalid states
+2. **Don't silently swallow errors** - report parser/semantic/IR errors
 3. **Use centralized diagnostics**: `error_report()`, `warning_report()`
 4. **Return NULL or false on failure** - let callers handle errors
 
@@ -531,6 +544,11 @@ IRBuilder* ir_builder_new(IRModule* module) {
 2. **Preserve existing ownership patterns** and cleanup flow
 3. **IR uses arena allocation** - avoid ad-hoc frees of arena-owned objects
 4. **Cleanup on failure** - free partially allocated resources on error paths
+
+**Memory Ownership Notes:**
+- IR core uses arena allocation; avoid ad-hoc frees of arena-owned objects
+- Free what you allocate in `malloc`, `strdup`, `realloc` paths
+- Preserve existing ownership patterns and cleanup flow
 
 **Memory Management Patterns:**
 

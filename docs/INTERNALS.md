@@ -257,9 +257,17 @@ typedef struct {
     int stack_depth;
     
     // Preprocessor state
-    Macro macros[100];      // Table of definitions
+    Macro macros[100];      // Table of definitions (max 100 macros)
     int macro_count;
-    bool skipping;          // True if inside disabled #if block
+    bool skipping;          // True if inside disabled #if block (derived from if_stack)
+    
+    // Conditional preprocessor stack (#إذا_عرف/#وإلا/#نهاية) for proper nesting
+    struct {
+        unsigned char parent_active;  // Was the parent block active?
+        unsigned char cond_true;      // Is the current condition true?
+        unsigned char in_else;        // Are we in the #وإلا branch?
+    } if_stack[32];           // Max 32 nested conditional levels
+    int if_depth;             // Current depth in if_stack
 } Lexer;
 ```
 
@@ -305,6 +313,23 @@ When `#تضمين "file"` is encountered:
 4. The lexer state is updated to point to the new file's content.
 5. When EOF is reached, the previous state is popped and restored.
 
+#### 2.2.5. Conditional Stack Implementation
+
+The preprocessor supports nested conditionals via `if_stack[32]`:
+
+| Field | Purpose |
+|-------|---------|
+| `parent_active` | Was the parent conditional block active? |
+| `cond_true` | Is the current condition (or branch) true? |
+| `in_else` | Are we currently in the `#وإلا` (else) branch? |
+
+**Nesting rules:**
+- Maximum 32 nested conditional levels
+- `#إذا_عرف` pushes a new level onto `if_stack`
+- `#وإلا` toggles `cond_true` within the current level
+- `#نهاية` pops the current level
+- `skipping` mode is computed from the stack state
+
 ### 2.3. Key Features
 
 | Feature | Description |
@@ -333,6 +358,24 @@ Special:     IDENTIFIER, EOF
 ## 3. Syntactic Analysis
 
 The Parser (`src/parser.c`) builds the AST using Recursive Descent with 2-token lookahead.
+
+### 3.0. Parser Structure
+
+```c
+typedef struct {
+    Lexer* lexer;       // Reference to the lexer for token stream
+    Token current;      // Current token (lookahead)
+    Token next;         // Next token (2-token lookahead)
+    bool panic_mode;    // وضع الذعر للتعافي من الأخطاء
+    bool had_error;     // هل حدث خطأ أثناء التحليل؟
+} Parser;
+```
+
+**Panic Mode Recovery (v0.3.7):**
+- When a syntax error is detected, `panic_mode` is set to true
+- The parser synchronizes on statement terminators (`.`, `}`) or declaration starters
+- This prevents cascading error messages from a single syntax error
+- After synchronization, normal parsing resumes
 
 ### 3.1. Grammar (BNF)
 
@@ -450,10 +493,11 @@ The AST uses a tagged union structure for type-safe node representation.
 | **Structure** | `NODE_PROGRAM`, `NODE_FUNC_DEF`, `NODE_BLOCK`, `NODE_TYPE_ALIAS` |
 | **Variables** | `NODE_VAR_DECL`, `NODE_ASSIGN`, `NODE_VAR_REF` |
 | **Array Decls** | `NODE_ARRAY_DECL`, `NODE_ARRAY_ACCESS`, `NODE_ARRAY_ASSIGN` |
+| **Member Access** | `NODE_MEMBER_ACCESS`, `NODE_MEMBER_ASSIGN`, `NODE_DEREF_ASSIGN` |
 | **Control Flow** | `NODE_IF`, `NODE_WHILE`, `NODE_FOR`, `NODE_RETURN` |
 | **Branching** | `NODE_SWITCH`, `NODE_CASE`, `NODE_BREAK`, `NODE_CONTINUE` |
 | **Expressions** | `NODE_BIN_OP`, `NODE_UNARY_OP`, `NODE_POSTFIX_OP`, `NODE_CALL_EXPR` |
-| **Literals** | `NODE_INT`, `NODE_STRING`, `NODE_CHAR`, `NODE_BOOL` |
+| **Literals** | `NODE_INT`, `NODE_STRING`, `NODE_CHAR`, `NODE_BOOL`, `NODE_NULL` |
 | **Calls & I/O** | `NODE_CALL_STMT`, `NODE_PRINT`, `NODE_READ` |
 
 ### 4.2. Node Structure
@@ -590,7 +634,78 @@ The analyzer walks the AST recursively. It maintains a **Symbol Table** stack to
 - `print y` (where y is undeclared): Reports an undefined symbol error.
 - `x = 5` (where x is `const`): Reports a const reassignment error (v0.2.7+).
 
-### 5.5. Memory Allocation
+### 5.5. DataType Enum
+
+The AST uses the following type enumeration:
+
+```c
+typedef enum {
+    TYPE_INT,           // صحيح / ص٦٤ (int64)
+    TYPE_I8,            // ص٨
+    TYPE_I16,           // ص١٦
+    TYPE_I32,           // ص٣٢
+    TYPE_U8,            // ط٨
+    TYPE_U16,           // ط١٦
+    TYPE_U32,           // ط٣٢
+    TYPE_U64,           // ط٦٤
+    TYPE_STRING,        // نص (حرف[])
+    TYPE_POINTER,       // مؤشر عام
+    TYPE_FUNC_PTR,      // مؤشر دالة: دالة(...) -> نوع
+    TYPE_BOOL,          // منطقي (bool)
+    TYPE_CHAR,          // حرف (UTF-8 sequence)
+    TYPE_FLOAT,         // عشري (float64)
+    TYPE_VOID,          // عدم (void)
+    TYPE_ENUM,          // تعداد (stored as int64)
+    TYPE_STRUCT,        // هيكل (not first-class)
+    TYPE_UNION          // اتحاد (not first-class)
+} DataType;
+```
+
+### 5.6. Symbol Table Structure
+
+The semantic analyzer maintains a symbol table with the following structure:
+
+```c
+typedef struct {
+    char name[32];              // Symbol name
+    ScopeType scope;            // SCOPE_GLOBAL or SCOPE_LOCAL
+    DataType type;              // Variable/element data type
+    char type_name[32];         // Type name for enum/struct/union
+    DataType ptr_base_type;     // Base type when type == TYPE_POINTER
+    char ptr_base_type_name[32];// Base type name for pointer targets
+    int ptr_depth;              // Pointer depth for TYPE_POINTER
+    FuncPtrSig* func_sig;       // Function pointer signature for TYPE_FUNC_PTR
+    bool is_array;              // Is this symbol an array?
+    int array_rank;             // Number of dimensions (0 for scalars)
+    int64_t array_total_elems;  // Total elements (product of dimensions)
+    int* array_dims;            // Array dimensions (owned by symbol table)
+    int offset;                 // Stack offset or address
+    bool is_const;              // Is immutable?
+    bool is_static;             // Has static storage duration?
+    bool is_used;               // Usage tracking for warnings
+    int decl_line;              // Declaration line (for diagnostics)
+    int decl_col;               // Declaration column (for diagnostics)
+    const char* decl_file;      // Declaration file (for diagnostics)
+} Symbol;
+```
+
+**Function Pointer Signature (`FuncPtrSig`):**
+
+```c
+typedef struct FuncPtrSig {
+    DataType return_type;
+    DataType return_ptr_base_type;
+    char* return_ptr_base_type_name;
+    int return_ptr_depth;
+    int param_count;
+    DataType* param_types;
+    DataType* param_ptr_base_types;
+    char** param_ptr_base_type_names;
+    int* param_ptr_depths;
+} FuncPtrSig;
+```
+
+### 5.7. Memory Allocation
 
 | Type | C Type | Size | Notes |
 |------|--------|------|-------|
@@ -602,7 +717,7 @@ The analyzer walks the AST recursively. It maintains a **Symbol Table** stack to
 
 ---
 
-### 5.6. Constant Folding (Optimization)
+### 5.8. Constant Folding (Optimization)
 
 The parser performs constant folding on arithmetic expressions. If both operands of a binary operation are integer literals, the compiler evaluates the result at compile-time.
 
@@ -617,7 +732,7 @@ The parser performs constant folding on arithmetic expressions. If both operands
 
 ---
 
-## 6. Intermediate Representation (v0.3.0+)
+## 6. Intermediate Representation (v0.3.10.6)
 
 The IR Module (`src/ir.h`, `src/ir.c`) provides an Arabic-first Intermediate Representation using SSA (Static Single Assignment) form.
 
@@ -645,9 +760,17 @@ IRFunc
 ├── name: char*
 ├── ret_type: IRType*
 ├── params: IRParam[]
+├── param_count: int        // Number of parameters
 ├── blocks: IRBlock*        // Linked list of basic blocks
+├── block_count: int        // Number of blocks
 ├── entry: IRBlock*         // Entry block pointer
-└── next_reg: int           // Virtual register counter
+├── next_reg: int           // Virtual register counter
+├── next_inst_id: int       // Instruction ID counter
+├── ir_epoch: uint32_t      // IR change counter (invalidates analyses)
+├── def_use: IRDefUse*      // Def-Use analysis cache
+├── next_block_id: int      // Block ID counter
+├── is_prototype: bool      // Is this a declaration without body?
+└── next: IRFunc*           // Next function in module
 
 IRBlock
 ├── label: char*            // Arabic label (e.g., "بداية", "حلقة")
@@ -660,16 +783,31 @@ IRBlock
 IRInst
 ├── op: IROp                // Opcode
 ├── type: IRType*           // Result type
+├── id: int                 // Instruction ID for diagnostics/tests
 ├── dest: int               // Destination register (-1 if none)
 ├── operands[4]: IRValue*   // Up to 4 operands
+├── operand_count: int      // Number of operands used
 ├── cmp_pred: IRCmpPred     // For comparison instructions
-├── phi_entries: IRPhiEntry* // For phi nodes
-├── call_target: const char* // Direct call target name (NULL for indirect)
-├── call_callee: IRValue*    // Indirect call callee value (NULL for direct)
-├── call_ret_type: IRType*   // Call return type
-├── call_args: IRValue**     // Call arguments
-└── call_arg_count: int      // Number of call arguments
+├── phi_entries: IRPhiEntry* // Linked list of [value, block] pairs
+├── call_target: char*      // Direct call target name (NULL for indirect)
+├── call_callee: IRValue*   // Indirect call callee value (NULL for direct)
+├── call_args: IRValue**    // Argument list
+├── call_arg_count: int     // Number of arguments
+├── src_file: const char*   // Source file (debug info)
+├── src_line: int           // Source line (debug info)
+├── src_col: int            // Source column (debug info)
+├── dbg_name: const char*   // Optional symbol name for debugging
+├── parent: IRBlock*        // Block containing this instruction
+├── prev: IRInst*           // Previous instruction in block
+└── next: IRInst*           // Next instruction in block
 ```
+
+**Indirect Call Support (v0.3.10.6):**
+
+For indirect function calls through function pointers:
+- `call_target` is NULL
+- `call_callee` contains the IRValue (register) holding the function pointer
+- ISel lowers this to `call *%reg` instead of `call @function`
 
 ### 6.3. IR Opcodes (Arabic)
 
@@ -1364,13 +1502,13 @@ Each IR instruction is lowered to one or more `MachineInst` nodes. The expansion
 
 | Structure | Description |
 |-----------|-------------|
-| `MachineOp` | Enum of x86-64 opcodes: ADD, SUB, IMUL, SHL, SHR, SAR, IDIV, NEG, CQO, MOV, LEA, LOAD, STORE, CMP, TEST, SETcc (6 variants), MOVZX, AND, OR, NOT, XOR, JMP, JE, JNE, CALL, TAILJMP, RET, PUSH, POP, NOP, LABEL, COMMENT |
-| `MachineOperandKind` | NONE, VREG, IMM, MEM, LABEL, GLOBAL, FUNC |
-| `MachineOperand` | Union: vreg number, immediate value, memory (base+offset), label id, global/func name |
-| `MachineInst` | Doubly-linked list node: op + dst/src1/src2 operands + ir_reg + comment |
+| `MachineOp` | Enum of x86-64 opcodes: ADD, SUB, IMUL, SHL, SHR, SAR, IDIV, DIV, NEG, CQO, ADDSD, SUBSD, MULSD, DIVSD, UCOMISD, XORPD, CVTSI2SD, CVTTSD2SI, MOV, LEA, LOAD, STORE, CMP, TEST, SETcc (E, NE, G, L, GE, LE, A, B, AE, BE, P, NP), MOVZX, MOVSX, AND, OR, NOT, XOR, JMP, JE, JNE, CALL, TAILJMP, RET, PUSH, POP, NOP, LABEL, COMMENT |
+| `MachineOperandKind` | NONE, VREG, IMM, MEM, LABEL, GLOBAL, FUNC, XMM |
+| `MachineOperand` | Union: vreg number, immediate value, memory (base+offset), label id, global/func name, xmm register |
+| `MachineInst` | Doubly-linked list node: op + dst/src1/src2 + ir_reg + comment + src_loc + sysv_al (for varargs) |
 | `MachineBlock` | Label + instruction list + successors + linked-list next |
 | `MachineFunc` | Name + block list + vreg counter + stack_size + param_count |
-| `MachineModule` | Function list + globals (ref from IR) + strings (ref from IR) |
+| `MachineModule` | Function list + globals (ref from IR) + strings (ref from IR) + baa_strings |
 
 #### 6.19.3. Instruction Lowering Patterns
 

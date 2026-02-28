@@ -772,6 +772,16 @@ static bool parse_type_spec_ex(DataType* out_type, char** out_type_name,
         dt = alias->target_type;
         ptr_base_type = alias->target_ptr_base_type;
         ptr_depth = alias->target_ptr_depth;
+
+        // منع الالتفاف على قيد "لا تواقيع أعلى رتبة" داخل دالة(…)->…:
+        // إذا كان هذا الاسم البديل يحل إلى نوع مؤشر دالة، فلا نسمح به عندما allow_func_ptr == false
+        // (أي أثناء تحليل معاملات/إرجاع توقيع مؤشر دالة آخر).
+        if (!allow_func_ptr && dt == TYPE_FUNC_PTR) {
+            error_report(parser.current,
+                         "غير مدعوم: استخدام نوع بديل لمؤشر دالة داخل توقيع مؤشر دالة (لا ندعم Higher-order).");
+            return false;
+        }
+
         if (alias->target_func_sig) {
             fsig = parser_funcsig_clone(alias->target_func_sig);
             if (!fsig) {

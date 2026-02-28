@@ -50,10 +50,10 @@ AST → [Baa IR] → Optimizations → Backend Codegen → x86-64 Assembly
 | `u32` | `ط٣٢` | 4 bytes | 32-bit unsigned integer |
 | `u16` | `ط١٦` | 2 bytes | 16-bit unsigned integer |
 | `u8` | `ط٨` | 1 byte | 8-bit unsigned integer |
-| `char` | `حرف` | 8 bytes | Packed UTF-8 character (bytes+len) |
-| `f64` | `ع٦٤` | 8 bytes | 64-bit float (supports arithmetic/compare/ABI lowering) |
+| `char` | `حرف` | 8 bytes | UTF-8 character (packed into i64) |
+| `f64` | `ع٦٤` | 8 bytes | 64-bit float |
 | `i1` | `ص١` | 1 bit | Boolean |
-| `void` | `فراغ` | 0 | No value |
+| `void` | `فراغ` | 0 | No value (void) |
 
 ### 2.2 Derived Types
 
@@ -573,36 +573,41 @@ The IR will be represented in C using (simplified illustration; see `src/ir.h` f
 
 ```c
 typedef enum {
-    IR_OP_ADD,    // جمع
-    IR_OP_SUB,    // طرح
-    IR_OP_MUL,    // ضرب
-    IR_OP_DIV,    // قسم
-    IR_OP_MOD,    // باقي
-    IR_OP_LOAD,   // حمل
-    IR_OP_STORE,  // خزن
-    IR_OP_ALLOCA, // حجز
-    IR_OP_CMP,    // قارن
-    IR_OP_BR,     // قفز
-    IR_OP_BR_COND,// قفز_شرط
-    IR_OP_RET,    // رجوع
-    IR_OP_CALL,   // نداء
-    IR_OP_PHI,    // فاي
-    // ...
+    IR_OP_ADD, IR_OP_SUB, IR_OP_MUL, IR_OP_DIV, IR_OP_MOD, IR_OP_NEG,
+    IR_OP_ALLOCA, IR_OP_LOAD, IR_OP_STORE, IR_OP_PTR_OFFSET,
+    IR_OP_CMP, IR_OP_AND, IR_OP_OR, IR_OP_XOR, IR_OP_NOT, IR_OP_SHL, IR_OP_SHR,
+    IR_OP_BR, IR_OP_BR_COND, IR_OP_RET, IR_OP_CALL,
+    IR_OP_PHI, IR_OP_COPY, IR_OP_CAST, IR_OP_NOP
 } IROp;
+
+typedef struct IRType {
+    IRTypeKind kind;
+    union {
+        struct IRType* pointee;
+        struct { struct IRType* element; int count; } array;
+        struct { struct IRType* ret; struct IRType** params; int param_count; } func;
+    } data;
+} IRType;
 
 typedef struct IRInst {
     IROp op;
     IRType* type;
-    int dest;               // %م<dest>
-    IRValue* operands[4];   // Operands (registers/immediates/refs)
-
-    // نداء (call): هدف مباشر أو غير مباشر (v0.3.10.6)
-    const char* call_target; // Direct: @name (NULL for indirect)
-    IRValue* call_callee;    // Indirect: value of type IR_TYPE_FUNC (NULL for direct)
-    IRType* call_ret_type;
+    int id;
+    int dest;                   // %م<dest>
+    IRValue* operands[4];       // Up to 4 operands
+    int operand_count;
+    IRCmpPred cmp_pred;
+    IRPhiEntry* phi_entries;
+    char* call_target;
+    IRValue* call_callee;       // For indirect calls
     IRValue** call_args;
     int call_arg_count;
-
+    const char* src_file;
+    int src_line;
+    int src_col;
+    const char* dbg_name;
+    struct IRBlock* parent;
+    struct IRInst* prev;
     struct IRInst* next;
 } IRInst;
 

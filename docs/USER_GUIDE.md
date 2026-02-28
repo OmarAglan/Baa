@@ -208,11 +208,11 @@ sudo cp -a usr/* /usr/
 - `-o <file>` is only applied for `-S` / `-c` when compiling a single input file.
 - `update` must be used alone: `.\baa.exe update`
 
-### Current Limitations (v0.3.8)
+### Current Limitations (v0.3.10.6)
 
 - SIMD and non-`عشري` floating types are not supported yet.
 
-### Running Tests (v0.3.8+)
+### Running Tests (v0.3.10.6+)
 
 From the repo root:
 

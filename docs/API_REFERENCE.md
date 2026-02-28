@@ -356,6 +356,24 @@ Creates an array type.
 
 ---
 
+#### `ir_type_func`
+
+```c
+IRType* ir_type_func(IRType* ret, IRType** params, int param_count)
+```
+
+Creates a function type.
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `ret` | `IRType*` | Return type |
+| `params` | `IRType**` | Array of parameter types |
+| `param_count` | `int` | Number of parameters |
+
+**Returns:** New `IRType*` with `kind = IR_TYPE_FUNC`.
+
+---
+
 ### 4.2. Value Construction
 
 #### `ir_value_reg`
@@ -485,6 +503,24 @@ Creates a memory store instruction. No destination register.
 |-----------|------|-------------|
 | `value` | `IRValue*` | Value to store |
 | `ptr` | `IRValue*` | Pointer to store to |
+
+---
+
+#### `ir_inst_cast`
+
+```c
+IRInst* ir_inst_cast(IRValue* value, IRType* to_type, int dest)
+```
+
+Creates a type cast instruction.
+
+Emits: `%dest = تحويل from_type to to_type value`
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `value` | `IRValue*` | Value to cast |
+| `to_type` | `IRType*` | Target type |
+| `dest` | `int` | Destination register |
 
 ---
 
@@ -1402,6 +1438,26 @@ Emits: `%dest = قسم type lhs, rhs`
 
 ---
 
+#### `ir_builder_emit_mod`
+
+```c
+int ir_builder_emit_mod(IRBuilder* builder, IRType* type, IRValue* lhs, IRValue* rhs)
+```
+
+Emits: `%dest = باقي type lhs, rhs`
+
+---
+
+#### `ir_builder_emit_neg`
+
+```c
+int ir_builder_emit_neg(IRBuilder* builder, IRType* type, IRValue* operand)
+```
+
+Emits: `%dest = سالب type operand`
+
+---
+
 #### `ir_builder_emit_and` / `ir_builder_emit_or` / `ir_builder_emit_xor`
 
 ```c
@@ -1589,7 +1645,21 @@ Emits: `نداء فراغ @target(args...)`
 
 ---
 
-### 5.10. Control Flow Helpers
+### 5.10. Emit Functions - Type Conversion
+
+#### `ir_builder_emit_cast`
+
+```c
+int ir_builder_emit_cast(IRBuilder* builder, IRValue* value, IRType* to_type)
+```
+
+Emits: `%dest = تحويل from_type to to_type value`
+
+**Returns:** Destination register number.
+
+---
+
+### 5.11. Control Flow Helpers
 
 #### `ir_builder_create_if_then`
 
@@ -1631,7 +1701,7 @@ Creates a while loop structure with header, body, and exit blocks.
 
 ---
 
-### 5.11. Constant Helpers
+### 5.12. Constant Helpers
 
 ```c
 IRValue* ir_builder_const_int(int64_t value);      // i64 constant
@@ -1644,7 +1714,7 @@ IRValue* ir_builder_const_baa_string(IRBuilder* builder, const char* str);  // B
 
 ---
 
-### 5.12. Example Usage
+### 5.13. Example Usage
 
 ```c
 // Create module and builder
@@ -2389,7 +2459,12 @@ typedef struct MachineInst {
     MachineOperand src2;
     int ir_reg;
     const char* comment;
-    int sysv_al;                // For SystemV varargs (AL setup)
+    const char* src_file;
+    int src_line;
+    int src_col;
+    int ir_inst_id;
+    const char* dbg_name;
+    int sysv_al;
     struct MachineInst* prev;
     struct MachineInst* next;
 } MachineInst;
@@ -2651,6 +2726,7 @@ Per-block liveness bitsets used in iterative dataflow analysis.
 ```c
 typedef struct RegAllocCtx {
     MachineFunc* func;
+    const BaaCallingConv* cc;
     int total_insts;
     MachineInst** inst_map;
     BlockLiveness* block_live;

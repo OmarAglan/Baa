@@ -711,11 +711,11 @@ IRInst
 | `IR_TYPE_U16` | ط١٦ | 16 | Unsigned short |
 | `IR_TYPE_U32` | ط٣٢ | 32 | Unsigned int |
 | `IR_TYPE_U64` | ط٦٤ | 64 | Unsigned long |
-| `IR_TYPE_CHAR` | حرف | 8 | UTF-8 char (packed) |
+| `IR_TYPE_CHAR` | حرف | 8 | UTF-8 char (packed into i64) |
 | `IR_TYPE_F64` | ع٦٤ | 64 | Float (double) |
 | `IR_TYPE_PTR` | مؤشر | 64 | Pointer |
 | `IR_TYPE_ARRAY` | مصفوفة | varies | Array |
-| `IR_TYPE_FUNC` | دالة | - | Function type |
+| `IR_TYPE_FUNC` | دالة | 64 | Function type (pointer) |
 
 **ملاحظة (v0.3.10.6):** قيم `IR_TYPE_FUNC` تُستخدم كمؤشرات دوال (قابلة للتخزين/التحميل/المقارنة EQ/NE مع `0`)،
 وتُخفض على x86-64 كقيمة 64-بت مثل المؤشر العادي.
@@ -832,6 +832,8 @@ int ir_builder_emit_mul(IRBuilder* builder, IRType* type, IRValue* lhs, IRValue*
 int ir_builder_emit_alloca(IRBuilder* builder, IRType* type);
 int ir_builder_emit_load(IRBuilder* builder, IRType* type, IRValue* ptr);
 void ir_builder_emit_store(IRBuilder* builder, IRValue* value, IRValue* ptr);
+int ir_builder_emit_ptr_offset(IRBuilder* builder, IRType* type, IRValue* base, IRValue* index);
+int ir_builder_emit_cast(IRBuilder* builder, IRType* from, IRValue* v, IRType* to);
 void ir_builder_emit_br(IRBuilder* builder, IRBlock* target);
 void ir_builder_emit_br_cond(IRBuilder* builder, IRValue* cond, IRBlock* if_true, IRBlock* if_false);
 void ir_builder_emit_ret(IRBuilder* builder, IRValue* value);
@@ -1315,7 +1317,7 @@ Each IR instruction is lowered to one or more `MachineInst` nodes. The expansion
 | `IR_OP_CALL` | `MOV param_regs, args...; (setup stack args); CALL @func/*reg; MOV dst, RAX` | Direct: `CALL @func`. Indirect: `CALL *reg` (callee value). ABI: Windows (shadow) / SysV (no shadow) |
 | `IR_OP_CALL` + `IR_OP_RET` (tail) | `MOV param_regs, args...; TAILJMP @func` | v0.3.2.7.3: مفعل فقط عند `-O2` وبشكل محافظ (register args only) |
 | `IR_OP_PHI` | `NOP` | Placeholder; copy insertion deferred to register allocation |
-| `IR_OP_CAST` | `MOVZX dst, src` (zero-extend) or `MOV dst, src` (same/larger size) | Size-dependent |
+| `IR_OP_CAST` | `MOV dst, src` (larger/same size) or `MOVZX/MOVSX dst, src` (smaller to larger) | Size and sign dependent conversion (`تحويل`) |
 
 #### 6.19.4. Special Virtual Register Conventions
 
@@ -1395,6 +1397,8 @@ ISel emits negative vregs for ABI-fixed locations. The register allocator resolv
 | `-1` | RBP | Frame pointer (memory base) |
 | `-2` | RAX | Return value |
 | `-4` | R11 | Scratch register for spilled memory bases |
+| `-5` | RDX | Remainder register (`idiv`) |
+| `-6` | RCX | Shift count register (`cl`) |
 | `-10` | RCX | 1st argument (Windows x64) |
 | `-11` | RDX | 2nd argument (Windows x64) |
 | `-12` | R8 | 3rd argument (Windows x64) |

@@ -2159,6 +2159,21 @@ IRValue* lower_expr(IRLowerCtx* ctx, Node* expr) {
                     (expr->data.bin_op.left->inferred_type == TYPE_FUNC_PTR || expr->data.bin_op.right->inferred_type == TYPE_FUNC_PTR)) {
                     IRValue* lhs0 = lower_expr(ctx, expr->data.bin_op.left);
                     IRValue* rhs0 = lower_expr(ctx, expr->data.bin_op.right);
+
+                    // توحيد ثابت "عدم" (0) ليأخذ نفس نوع مؤشر الدالة للطرف الآخر.
+                    // هذا يمنع فشل متحقق الـ IR عندما يحمل "عدم" توقيعاً افتراضياً مختلفاً.
+                    if (lhs0 && rhs0 && lhs0->type && rhs0->type) {
+                        if (lhs0->type->kind == IR_TYPE_FUNC && !ir_types_equal(lhs0->type, rhs0->type)) {
+                            if (rhs0->kind == IR_VAL_CONST_INT && rhs0->data.const_int == 0) {
+                                rhs0 = ir_value_const_int(0, lhs0->type);
+                            }
+                        } else if (rhs0->type->kind == IR_TYPE_FUNC && !ir_types_equal(lhs0->type, rhs0->type)) {
+                            if (lhs0->kind == IR_VAL_CONST_INT && lhs0->data.const_int == 0) {
+                                lhs0 = ir_value_const_int(0, rhs0->type);
+                            }
+                        }
+                    }
+
                     IRCmpPred pred = ir_cmp_to_pred(op, false);
                     int dest = ir_builder_emit_cmp(ctx->builder, pred, lhs0, rhs0);
                     return ir_value_reg(dest, IR_TYPE_I1_T);

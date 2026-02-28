@@ -165,6 +165,7 @@ Stack allocations create addressable memory:
 | `alloca` | `حجز` | `%r = حجز <type>` | Stack allocation |
 | `load` | `حمل` | `%r = حمل <type>، %ptr` | Load from memory |
 | `store` | `خزن` | `خزن <type> <val>، %ptr` | Store to memory |
+| `ptr_offset` | `إزاحة_مؤشر` | `%r = إزاحة_مؤشر <type> %base، %index` | GEP-like pointer arithmetic |
 
 ### 4.3 Comparison Instructions
 
@@ -178,10 +179,14 @@ Stack allocations create addressable memory:
 |-----------|--------|---------|
 | `eq` | `يساوي` | Equal |
 | `ne` | `لا_يساوي` | Not equal |
-| `gt` | `أكبر` | Greater than |
-| `lt` | `أصغر` | Less than |
-| `ge` | `أكبر_أو_يساوي` | Greater or equal |
-| `le` | `أصغر_أو_يساوي` | Less or equal |
+| `gt` | `أكبر` | Greater than (signed) |
+| `lt` | `أصغر` | Less than (signed) |
+| `ge` | `أكبر_أو_يساوي` | Greater or equal (signed) |
+| `le` | `أصغر_أو_يساوي` | Less or equal (signed) |
+| `ugt` | `أكبر_بدون_إشارة` | Greater than (unsigned) |
+| `ult` | `أصغر_بدون_إشارة` | Less than (unsigned) |
+| `uge` | `أكبر_أو_يساوي_بدون_إشارة` | Greater or equal (unsigned) |
+| `ule` | `أصغر_أو_يساوي_بدون_إشارة` | Less or equal (unsigned) |
 
 ### 4.4 Logical Instructions
 
@@ -214,6 +219,13 @@ Stack allocations create addressable memory:
 | Opcode | Arabic | Syntax | Description |
 |--------|--------|--------|-------------|
 | `cast` | `تحويل` | `%r = تحويل <from> %v إلى <to>` | Type conversion |
+
+### 4.8 Miscellaneous Instructions
+
+| Opcode | Arabic | Syntax | Description |
+|--------|--------|--------|-------------|
+| `copy` | `نسخ` | `%r = نسخ <type> %v` | Register-to-register copy |
+| `nop` | `NOP` | `NOP` | No operation |
 
 ---
 

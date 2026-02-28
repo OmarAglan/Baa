@@ -32,6 +32,7 @@ A Baa program is a collection of **Global Variables** and **Functions**.
 | **Entry Point** | `الرئيسية` (Main) function |
 | **Statements** | End with period (`.`) |
 | **Comments** | Single-line with `//` |
+| **Keywords** | `صحيح`, `ص٨`, `ص١٦`, `ص٣٢`, `ص٦٤`, `ط٨`, `ط١٦`, `ط٣٢`, `ط٦٤`, `عشري`, `حرف`, `نص`, `منطقي`, `عدم`, `حجم`, `نوع`, `كـ`, `دالة`, `ثابت`, `ساكن`, `إذا`, `وإلا`, `طالما`, `لكل`, `اختر`, `حالة`, `افتراضي`, `اطبع`, `اقرأ`, `إرجع`, `توقف`, `استمر`, `تعداد`, `هيكل`, `اتحاد` |
 
 ### Minimal Program
 
@@ -142,8 +143,9 @@ Baa is statically typed. All variables must be declared with their type.
 | `ط٦٤` | `uint64_t` | Unsigned 64-bit integer | `ط٦٤ س = ١.` |
 | `نص` | `حرف*` (logical) | Null-terminated string of `حرف` (`حرف[]`) | `نص اسم = "باء".` |
 | `منطقي` | `bool` (stored as byte) | Boolean value (`صواب`/`خطأ`) | `منطقي ب = صواب.` |
-| `حرف` | `uint64_t` (packed) | One UTF-8 character (1..4 bytes) | `حرف ح = 'أ'.` |
-| `عشري` | `double` | 64-bit floating point (f64) | `عشري باي = ٣.١٤.` |
+| `حرف` | `uint64_t` (packed) | One UTF-8 character (1..4 bytes) | `'أ'` |
+| `عشري` | `double` | 64-bit floating point (f64) | `٣.١٤` |
+| `دالة` | `void*` (logical) | Function pointer type | `دالة(صحيح) -> صحيح` |
 
 ### 3.2. Scalar Variables
 

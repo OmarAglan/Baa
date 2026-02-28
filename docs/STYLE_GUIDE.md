@@ -211,6 +211,13 @@ When referring to code elements:
 - Use Arabic-Indic numerals (٠-٩) in Baa code examples
 - Use Western numerals (0-9) in: version numbers, line numbers, technical specifications
 
+### 4.5. Naming Conventions (اتفاقيات التسمية)
+
+- **Functions/Variables**: Use snake_case with Arabic characters: `` `طول_نص` ``, `` `عدد_الكل` ``.
+- **Types/Structs**: Use single descriptive nouns: `` `نقطة` ``, `` `لون` ``.
+- **Member Access**: Use the colon separator consistently: `` `س:عضو` ``.
+- **Boolean naming**: Use names that imply a question or state: `` `هل_موجود` ``, `` `تم_الحفظ` ``.
+
 ---
 
 ## 5. Code Examples
@@ -354,7 +361,7 @@ flowchart LR
 
 Before submitting documentation changes:
 
-- [ ] Version number is 0.3.8 in header
+- [ ] Version number is 0.3.10.6 in header
 - [ ] Document follows standard header/footer format
 - [ ] Table of Contents is present and accurate
 - [ ] Navigation links work and follow format

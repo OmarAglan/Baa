@@ -209,6 +209,104 @@ Runs the semantic pass on the AST.
 
 The IR Module (`src/ir.h`, `src/ir.c`) provides Baa's Arabic-first Intermediate Representation.
 
+### 4.0. IR Data Structures and Enums (v0.3.0)
+
+#### `IROp` Enum
+All IR instruction opcodes.
+
+```c
+typedef enum {
+    IR_OP_ADD,      // جمع
+    IR_OP_SUB,      // طرح
+    IR_OP_MUL,      // ضرب
+    IR_OP_DIV,      // قسم
+    IR_OP_MOD,      // باقي
+    IR_OP_NEG,      // سالب
+    IR_OP_ALLOCA,   // حجز
+    IR_OP_LOAD,     // حمل
+    IR_OP_STORE,    // خزن
+    IR_OP_PTR_OFFSET, // إزاحة_مؤشر
+    IR_OP_CMP,      // قارن
+    IR_OP_AND,      // و
+    IR_OP_OR,       // أو
+    IR_OP_XOR,      // أو_حصري
+    IR_OP_NOT,      // نفي
+    IR_OP_SHL,      // ازاحة_يسار
+    IR_OP_SHR,      // ازاحة_يمين
+    IR_OP_BR,       // قفز
+    IR_OP_BR_COND,  // قفز_شرط
+    IR_OP_RET,      // رجوع
+    IR_OP_CALL,     // نداء
+    IR_OP_PHI,      // فاي
+    IR_OP_COPY,     // نسخ
+    IR_OP_CAST,     // تحويل
+    IR_OP_NOP,      // NOP
+    IR_OP_COUNT
+} IROp;
+```
+
+#### `IRTypeKind` Enum
+Kinds of IR types.
+
+```c
+typedef enum {
+    IR_TYPE_VOID,   // فراغ
+    IR_TYPE_I1,     // ص١
+    IR_TYPE_I8,     // ص٨
+    IR_TYPE_I16,    // ص١٦
+    IR_TYPE_I32,    // ص٣٢
+    IR_TYPE_I64,    // ص٦٤
+    IR_TYPE_U8,     // ط٨
+    IR_TYPE_U16,    // ط١٦
+    IR_TYPE_U32,    // ط٣٢
+    IR_TYPE_U64,    // ط٦٤
+    IR_TYPE_CHAR,   // حرف
+    IR_TYPE_F64,    // ع٦٤
+    IR_TYPE_PTR,    // مؤشر
+    IR_TYPE_ARRAY,  // مصفوفة
+    IR_TYPE_FUNC,   // دالة
+} IRTypeKind;
+```
+
+#### `IRValueKind` Enum
+Discriminator for `IRValue`.
+
+```c
+typedef enum {
+    IR_VAL_NONE,        // No value
+    IR_VAL_CONST_INT,   // Constant integer
+    IR_VAL_CONST_STR,   // Constant string
+    IR_VAL_BAA_STR,     // Baa string (array)
+    IR_VAL_REG,         // Virtual register
+    IR_VAL_GLOBAL,      // Global variable
+    IR_VAL_FUNC,        // Function reference
+    IR_VAL_BLOCK,       // Basic block reference
+} IRValueKind;
+```
+
+#### `IRInst` Struct
+Represents a single IR instruction.
+
+```c
+typedef struct IRInst {
+    IROp op;
+    IRType* type;
+    int id;
+    int dest;
+    IRValue* operands[4];
+    int operand_count;
+    IRCmpPred cmp_pred;
+    IRPhiEntry* phi_entries;
+    char* call_target;
+    IRValue* call_callee;
+    IRValue** call_args;
+    int call_arg_count;
+    struct IRBlock* parent;
+    struct IRInst* prev;
+    struct IRInst* next;
+} IRInst;
+```
+
 **Memory management (v0.3.2.6.1):** IR objects are allocated from a module-owned arena (`src/ir_arena.c`). Treat the IR as **module-owned** and release everything with `ir_module_free()`. The legacy `*_free` functions remain for compatibility but do not perform per-object frees under the arena model.
 
 **Arena stats (v0.3.2.9.2):** you can query arena usage for profiling:
@@ -2237,22 +2335,74 @@ Returns the string representation of an optimization level ("O0", "O1", "O2").
 
 The Instruction Selection module (`src/isel.h`, `src/isel.c`) converts IR to abstract machine instructions for x86-64.
 
-### 8.1. Operand Constructors
+### 8.0. Machine IR Structures (v0.3.2.1)
 
-#### `mach_op_vreg`
+#### `MachineOp` Enum
+Supported x86-64 machine opcodes.
 
 ```c
-MachineOperand mach_op_vreg(int vreg, int bits)
+typedef enum {
+    // Arithmetic
+    MACH_ADD, MACH_SUB, MACH_IMUL, MACH_SHL, MACH_SHR, MACH_SAR, MACH_IDIV, MACH_DIV, MACH_NEG, MACH_CQO,
+    // Floating Point (SSE2)
+    MACH_ADDSD, MACH_SUBSD, MACH_MULSD, MACH_DIVSD, MACH_UCOMISD, MACH_XORPD, MACH_CVTSI2SD, MACH_CVTTSD2SI,
+    // Data Movement
+    MACH_MOV, MACH_LEA, MACH_LOAD, MACH_STORE,
+    // Comparison & Flags
+    MACH_CMP, MACH_TEST, MACH_SETE, MACH_SETNE, MACH_SETG, MACH_SETL, MACH_SETGE, MACH_SETLE,
+    MACH_SETA, MACH_SETB, MACH_SETAE, MACH_SETBE, MACH_SETP, MACH_SETNP, MACH_MOVZX, MACH_MOVSX,
+    // Logical
+    MACH_AND, MACH_OR, MACH_NOT, MACH_XOR,
+    // Control Flow
+    MACH_JMP, MACH_JE, MACH_JNE, MACH_CALL, MACH_TAILJMP, MACH_RET,
+    // Stack
+    MACH_PUSH, MACH_POP,
+    // Special
+    MACH_NOP, MACH_LABEL, MACH_COMMENT
+} MachineOp;
 ```
 
-Creates a virtual register operand.
+#### `MachineOperand` Struct
 
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `vreg` | `int` | Virtual register number |
-| `bits` | `int` | Operand size in bits (8, 16, 32, 64) |
+```c
+typedef struct MachineOperand {
+    MachineOperandKind kind;
+    int size_bits;              
+    union {
+        int vreg;               // MACH_OP_VREG
+        int64_t imm;            // MACH_OP_IMM
+        struct { int base_vreg; int32_t offset; } mem; // MACH_OP_MEM
+        int label_id;           // MACH_OP_LABEL
+        char* name;             // MACH_OP_GLOBAL, MACH_OP_FUNC
+        int xmm;                // MACH_OP_XMM
+    } data;
+} MachineOperand;
+```
 
----
+#### `MachineInst` Struct
+
+```c
+typedef struct MachineInst {
+    MachineOp op;
+    MachineOperand dst;
+    MachineOperand src1;
+    MachineOperand src2;
+    int ir_reg;
+    const char* comment;
+    int sysv_al;                // For SystemV varargs (AL setup)
+    struct MachineInst* prev;
+    struct MachineInst* next;
+} MachineInst;
+```
+
+### 8.1. Operand Constructors
+
+#### `mach_op_vreg` / `mach_op_xmm`
+
+```c
+MachineOperand mach_op_vreg(int vreg, int bits);
+MachineOperand mach_op_xmm(int xmm);
+```
 
 #### `mach_op_imm`
 
@@ -2261,11 +2411,6 @@ MachineOperand mach_op_imm(int64_t imm, int bits)
 ```
 
 Creates an immediate value operand.
-
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `imm` | `int64_t` | Immediate value |
-| `bits` | `int` | Operand size in bits |
 
 ---
 
@@ -2277,41 +2422,15 @@ MachineOperand mach_op_mem(int base_vreg, int32_t offset, int bits)
 
 Creates a memory operand `[base + offset]`.
 
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `base_vreg` | `int` | Base register number |
-| `offset` | `int32_t` | Byte offset from base |
-| `bits` | `int` | Access size in bits |
-
 ---
 
-#### `mach_op_label`
+#### `mach_op_label` / `mach_op_global` / `mach_op_func`
 
 ```c
-MachineOperand mach_op_label(int label_id)
+MachineOperand mach_op_label(int label_id);
+MachineOperand mach_op_global(const char* name);
+MachineOperand mach_op_func(const char* name);
 ```
-
-Creates a block label operand (for jumps).
-
----
-
-#### `mach_op_global`
-
-```c
-MachineOperand mach_op_global(const char* name)
-```
-
-Creates a global variable reference operand.
-
----
-
-#### `mach_op_func`
-
-```c
-MachineOperand mach_op_func(const char* name)
-```
-
-Creates a function reference operand (for calls).
 
 ---
 
@@ -2320,8 +2439,6 @@ Creates a function reference operand (for calls).
 ```c
 MachineOperand mach_op_none(void)
 ```
-
-Creates an empty (no-operand) operand.
 
 ---
 
@@ -2334,70 +2451,16 @@ MachineInst* mach_inst_new(MachineOp op, MachineOperand dst,
                            MachineOperand src1, MachineOperand src2)
 ```
 
-Creates a new machine instruction.
-
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `op` | `MachineOp` | x86-64 opcode (e.g., `MACH_ADD`) |
-| `dst` | `MachineOperand` | Destination operand |
-| `src1` | `MachineOperand` | First source operand |
-| `src2` | `MachineOperand` | Second source operand (use `mach_op_none()` if unused) |
-
-**Returns:** New `MachineInst*` (caller owns).
-
 ---
 
-#### `mach_inst_free`
+### 8.4. Function & Module Construction
+
+#### `mach_func_new` / `mach_module_new`
 
 ```c
-void mach_inst_free(MachineInst* inst)
+MachineFunc* mach_func_new(const char* name);
+MachineModule* mach_module_new(const char* name);
 ```
-
-Frees a machine instruction and its comment string.
-
----
-
-### 8.3. Block Construction
-
-#### `mach_block_new`
-
-```c
-MachineBlock* mach_block_new(const char* label, int id)
-```
-
-Creates a new machine block.
-
----
-
-#### `mach_block_append`
-
-```c
-void mach_block_append(MachineBlock* block, MachineInst* inst)
-```
-
-Appends an instruction to the end of a block's doubly-linked list.
-
----
-
-#### `mach_block_free`
-
-```c
-void mach_block_free(MachineBlock* block)
-```
-
-Frees a block and all its instructions.
-
----
-
-### 8.4. Function Construction
-
-#### `mach_func_new`
-
-```c
-MachineFunc* mach_func_new(const char* name)
-```
-
-Creates a new machine function.
 
 ---
 
@@ -2980,17 +3043,21 @@ typedef struct {
     ScopeType scope;       // SCOPE_GLOBAL or SCOPE_LOCAL
     DataType type;         // Variable type (or element type for arrays)
     char type_name[32];    // Name for TYPE_ENUM/TYPE_STRUCT/TYPE_UNION (empty otherwise)
-    bool is_array;         // True for array declarations (v0.3.2.9.4)
+    DataType ptr_base_type;      // Base type for pointers
+    char ptr_base_type_name[32]; // Name for struct/union/enum base type
+    int ptr_depth;               // Depth of pointer (0 if not a pointer)
+    FuncPtrSig* func_sig;        // Function pointer signature
+    bool is_array;         // True for array declarations
     int array_rank;        // Number of array dimensions
     int64_t array_total_elems; // Product of dimensions
     int* array_dims;       // Per-dimension sizes (owned by symbol table)
     int offset;            // Stack offset or memory address
-    bool is_const;         // Immutability flag (v0.2.7+)
-    bool is_static;        // Static storage duration flag (v0.3.7.5)
-    bool is_used;          // Usage tracking for warnings (v0.2.8+)
-    int decl_line;         // Declaration line (v0.2.8+)
-    int decl_col;          // Declaration column (v0.2.8+)
-    const char* decl_file; // Declaration file (v0.2.8+)
+    bool is_const;         // Immutability flag
+    bool is_static;        // Static storage duration flag
+    bool is_used;          // Usage tracking for warnings
+    int decl_line;         // Declaration line
+    int decl_col;          // Declaration column
+    const char* decl_file; // Declaration file
 } Symbol;
 ```
 
@@ -3112,6 +3179,14 @@ typedef struct {
     Macro macros[100];      // Defined macros
     int macro_count;
     bool skipping;          // True if inside disabled #if block
+
+    // Condition Stack (#إذا_عرف/#وإلا/#نهاية)
+    struct {
+        unsigned char parent_active;
+        unsigned char cond_true;
+        unsigned char in_else;
+    } if_stack[32];
+    int if_depth;
 } Lexer;
 ```
 
@@ -3142,7 +3217,7 @@ typedef enum {
     TOKEN_CHAR,         // حرف: 'أ'
     TOKEN_IDENTIFIER,   // معرف: اسم متغير أو دالة (س، ص، الرئيسية)
     
-    // الكلمات المفتاحية (Keywords)
+    // Keywords (الكلمات المفتاحية)
     TOKEN_KEYWORD_INT,  // صحيح
     TOKEN_KEYWORD_I8,   // ص٨
     TOKEN_KEYWORD_I16,  // ص١٦
@@ -3177,44 +3252,53 @@ typedef enum {
     TOKEN_TRUE,         // صواب
     TOKEN_FALSE,        // خطأ
 
-    // أنواع مركبة (v0.3.4)
+    // Compound Types (أنواع مركبة)
     TOKEN_ENUM,         // تعداد
     TOKEN_STRUCT,       // هيكل
     TOKEN_UNION,        // اتحاد
     
-    // الرموز (Symbols)
+    // Symbols (الرموز)
     TOKEN_ASSIGN,       // =
     TOKEN_DOT,          // .
     TOKEN_COMMA,        // ,
     TOKEN_COLON,        // :
     TOKEN_SEMICOLON,    // ؛
-    // العمليات الحسابية والمنطقية...
-    TOKEN_PLUS,
-    TOKEN_MINUS,
-    TOKEN_STAR,
-    TOKEN_SLASH,
-    TOKEN_PERCENT,
-    TOKEN_INC,
-    TOKEN_DEC,
-
-    TOKEN_EQ,
-    TOKEN_NEQ,
-    TOKEN_LT,
-    TOKEN_GT,
-    TOKEN_LTE,
-    TOKEN_GTE,
-    TOKEN_AND,
-    TOKEN_OR,
-    TOKEN_NOT,
-
-    TOKEN_LPAREN,
-    TOKEN_RPAREN,
-    TOKEN_LBRACE,
-    TOKEN_RBRACE,
-    TOKEN_LBRACKET,
-    TOKEN_RBRACKET,
-
-    TOKEN_INVALID
+    
+    // Math (العمليات الحسابية)
+    TOKEN_PLUS,         // +
+    TOKEN_MINUS,        // -
+    TOKEN_STAR,         // *
+    TOKEN_SLASH,        // /
+    TOKEN_PERCENT,      // %
+    TOKEN_INC,          // ++
+    TOKEN_DEC,          // --
+    
+    // Logic / Relational (العمليات المنطقية والعلائقية)
+    TOKEN_EQ,           // ==
+    TOKEN_NEQ,          // !=
+    TOKEN_LT,           // <
+    TOKEN_GT,           // >
+    TOKEN_LTE,          // <=
+    TOKEN_GTE,          // >=
+    TOKEN_AND,          // &&
+    TOKEN_OR,           // ||
+    TOKEN_NOT,          // !
+    TOKEN_AMP,          // &
+    TOKEN_PIPE,         // |
+    TOKEN_CARET,        // ^
+    TOKEN_TILDE,        // ~
+    TOKEN_SHL,          // <<
+    TOKEN_SHR,          // >>
+    
+    // Grouping (التجميع)
+    TOKEN_LPAREN,       // (
+    TOKEN_RPAREN,       // )
+    TOKEN_LBRACE,       // {
+    TOKEN_RBRACE,       // }
+    TOKEN_LBRACKET,     // [
+    TOKEN_RBRACKET,     // ]
+    
+    TOKEN_INVALID       // وحدة غير صالحة
 } BaaTokenType;
 ```
 
@@ -3230,6 +3314,18 @@ The AST is a tagged union representing grammatical structure.
 typedef struct Node {
     NodeType type;
     struct Node* next;
+
+    // Source location info
+    const char* filename;
+    int line;
+    int col;
+
+    // Semantic analysis inferred types
+    DataType inferred_type;
+    DataType inferred_ptr_base_type;
+    char* inferred_ptr_base_type_name;
+    int inferred_ptr_depth;
+    FuncPtrSig* inferred_func_sig;
 
     union {
         struct { struct Node* declarations; } program;

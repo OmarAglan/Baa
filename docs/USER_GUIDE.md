@@ -439,6 +439,25 @@ Group related data using `هيكل` (structs) and `تعداد` (enums). Use `:` 
 }
 ```
 
+### Static Variables (المتغيرات الساكنة)
+
+Use `ساكن` to declare variables that persist between function calls.
+
+```baa
+صحيح عداد() {
+    ساكن صحيح ع = ٠.
+    ع = ع + ١.
+    إرجع ع.
+}
+
+صحيح الرئيسية() {
+    اطبع عداد(). // ١
+    اطبع عداد(). // ٢
+    إرجع ٠.
+}
+```
+```
+
 ### Arrays and Length (المصفوفات المتقدمة)
 
 Baa supports multi-dimensional arrays and compile-time length calculation using `حجم(...)`.

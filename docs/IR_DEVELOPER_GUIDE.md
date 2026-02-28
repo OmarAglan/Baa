@@ -39,7 +39,19 @@ Checklist:
 - Pass preserves SSA invariants (if it runs before Out-of-SSA).
 - Pass updates or rebuilds CFG metadata if it changes edges.
 
+## IR Infrastructure Modules
+
+| Module | Purpose |
+|--------|---------|
+| `src/ir_arena.c` | Chunk-based arena allocator for bulk free performance. |
+| `src/ir_verify_ir.c` | Verifies instruction well-formedness (counts/types/terminators). |
+| `src/ir_verify_ssa.c` | Verifies SSA invariants (dominance/single-def/phi). |
+| `src/ir_text.c` | Machine-readable text serialization and deserialization. |
+| `src/ir_loop.c` | Natural loop discovery using back-edges and dominators. |
+| `src/ir_unroll.c` | Conservative full unrolling for small constant-trip loops. |
+
 ## Debugging Workflow
 
 - Use `--dump-ir` / `--dump-ir-opt` and `--verify`.
 - Use `--time-phases` when diagnosing compile-time regressions.
+- Use `--trace-lexer` or `--trace-parser` for frontend issues.

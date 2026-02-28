@@ -68,7 +68,7 @@ flowchart LR
 | **1. Frontend** | `.baa` Source | AST | `lexer.c`, `parser.c` | Tokenizes, handles macros, and builds the syntax tree. |
 | **2. Analysis** | AST | Valid AST | `analysis.c` | **Semantic Pass**: Checks types, scopes, and resolves symbols. |
 | **3. IR Lowering** | AST | IR | `ir_lower.c` (v0.3.0.3+) + `ir_builder.c` | Converts AST expressions/statements to SSA-form Intermediate Representation using the IR Builder. |
-| **4. Optimization** | IR | Optimized IR | [`src/ir_analysis.c`](../src/ir_analysis.c:1) + [`src/ir_pass.h`](../src/ir_pass.h:1) (v0.3.1.1+) | Analysis infrastructure (CFG validation, predecessors, dominance) + future optimization passes. |
+| **4. Optimization** | IR | Optimized IR | `ir_optimizer.c`, `ir_mem2reg.c`, `ir_sccp.c`, `ir_gvn.c`, etc. | Full middle-end: Mem2Reg, GVN, SCCP, LICM, Inlining, InstCombine, CFGSimplify, DCE, CopyProp, CSE. |
 | **5. Backend** | IR | `.s` Assembly | `isel.c`, `regalloc.c`, `emit.c` | Lowers IR to machine instructions, allocates registers, and emits x86-64 AT&T assembly. |
 | **6. Assemble** | `.s` Assembly | `.o` Object | `gcc -c` | Invokes external assembler. |
 | **7. Link** | `.o` Object | `.exe` Executable | `gcc` | Links with C Runtime. |
@@ -694,6 +694,7 @@ IRInst
 | | `IR_OP_CALL` | نداء | Function call |
 | **SSA** | `IR_OP_PHI` | فاي | Phi node |
 | | `IR_OP_COPY` | نسخ | Copy value |
+| | `IR_OP_NOP` | NOP | No operation |
 | **Conversion** | `IR_OP_CAST` | تحويل | Type cast |
 
 ### 6.4. IR Types (Arabic)
@@ -702,10 +703,16 @@ IRInst
 |------|--------|------|-------------|
 | `IR_TYPE_VOID` | فراغ | 0 | No value |
 | `IR_TYPE_I1` | ص١ | 1 | Boolean |
-| `IR_TYPE_I8` | ص٨ | 8 | Byte/Char |
-| `IR_TYPE_I16` | ص١٦ | 16 | Short |
-| `IR_TYPE_I32` | ص٣٢ | 32 | Int |
-| `IR_TYPE_I64` | ص٦٤ | 64 | Long (primary) |
+| `IR_TYPE_I8` | ص٨ | 8 | Byte/Char (8-bit signed) |
+| `IR_TYPE_I16` | ص١٦ | 16 | Short (16-bit signed) |
+| `IR_TYPE_I32` | ص٣٢ | 32 | Int (32-bit signed) |
+| `IR_TYPE_I64` | ص٦٤ | 64 | Long (64-bit signed) |
+| `IR_TYPE_U8` | ط٨ | 8 | Unsigned byte |
+| `IR_TYPE_U16` | ط١٦ | 16 | Unsigned short |
+| `IR_TYPE_U32` | ط٣٢ | 32 | Unsigned int |
+| `IR_TYPE_U64` | ط٦٤ | 64 | Unsigned long |
+| `IR_TYPE_CHAR` | حرف | 8 | UTF-8 char (packed) |
+| `IR_TYPE_F64` | ع٦٤ | 64 | Float (double) |
 | `IR_TYPE_PTR` | مؤشر | 64 | Pointer |
 | `IR_TYPE_ARRAY` | مصفوفة | varies | Array |
 | `IR_TYPE_FUNC` | دالة | - | Function type |
@@ -719,10 +726,14 @@ IRInst
 |-----------|--------|-------------|
 | `IR_CMP_EQ` | يساوي | Equal |
 | `IR_CMP_NE` | لا_يساوي | Not Equal |
-| `IR_CMP_GT` | أكبر | Greater Than |
-| `IR_CMP_LT` | أصغر | Less Than |
-| `IR_CMP_GE` | أكبر_أو_يساوي | Greater or Equal |
-| `IR_CMP_LE` | أصغر_أو_يساوي | Less or Equal |
+| `IR_CMP_GT` | أكبر | Greater Than (signed) |
+| `IR_CMP_LT` | أصغر | Less Than (signed) |
+| `IR_CMP_GE` | أكبر_أو_يساوي | Greater or Equal (signed) |
+| `IR_CMP_LE` | أصغر_أو_يساوي | Less or Equal (signed) |
+| `IR_CMP_UGT` | أكبر_بدون_إشارة | Greater Than (unsigned) |
+| `IR_CMP_ULT` | أصغر_بدون_إشارة | Less Than (unsigned) |
+| `IR_CMP_UGE` | أكبر_أو_يساوي_بدون_إشارة | Greater or Equal (unsigned) |
+| `IR_CMP_ULE` | أصغر_أو_يساوي_بدون_إشارة | Less or Equal (unsigned) |
 
 ### 6.6. Virtual Registers
 

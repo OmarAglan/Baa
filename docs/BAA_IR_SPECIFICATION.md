@@ -16,6 +16,8 @@ This document specifies the Intermediate Representation (IR) for the Baa compile
 6. [Lowering from AST](#6-lowering-from-ast)
 7. [Optimization Passes](#7-optimization-passes)
 8. [Examples](#8-examples)
+9. [IR Text Format Grammar](#9-ir-text-format-grammar)
+10. [Implementation Notes](#10-implementation-notes)
 
 ---
 
@@ -40,28 +42,28 @@ AST → [Baa IR] → Optimizations → Backend Codegen → x86-64 Assembly
 
 ### 2.1 Primitive Types
 
-| Type | Arabic | Size | Description |
-|------|--------|------|-------------|
-| `i64` | `ص٦٤` | 8 bytes | 64-bit signed integer |
-| `i32` | `ص٣٢` | 4 bytes | 32-bit signed integer |
-| `i16` | `ص١٦` | 2 bytes | 16-bit signed integer |
-| `i8` | `ص٨` | 1 byte | 8-bit signed integer |
-| `u64` | `ط٦٤` | 8 bytes | 64-bit unsigned integer |
-| `u32` | `ط٣٢` | 4 bytes | 32-bit unsigned integer |
-| `u16` | `ط١٦` | 2 bytes | 16-bit unsigned integer |
-| `u8` | `ط٨` | 1 byte | 8-bit unsigned integer |
-| `char` | `حرف` | 8 bytes | UTF-8 character (packed into i64) |
-| `f64` | `ع٦٤` | 8 bytes | 64-bit float |
-| `i1` | `ص١` | 1 bit | Boolean |
-| `void` | `فراغ` | 0 | No value (void) |
+| Type | Arabic | C Enum | Size | Description |
+|------|--------|--------|------|-------------|
+| `i64` | `ص٦٤` | `IR_TYPE_I64` | 8 bytes | 64-bit signed integer |
+| `i32` | `ص٣٢` | `IR_TYPE_I32` | 4 bytes | 32-bit signed integer |
+| `i16` | `ص١٦` | `IR_TYPE_I16` | 2 bytes | 16-bit signed integer |
+| `i8` | `ص٨` | `IR_TYPE_I8` | 1 byte | 8-bit signed integer |
+| `i1` | `ص١` | `IR_TYPE_I1` | 1 bit | Boolean (stored as byte) |
+| `u64` | `ط٦٤` | `IR_TYPE_U64` | 8 bytes | 64-bit unsigned integer |
+| `u32` | `ط٣٢` | `IR_TYPE_U32` | 4 bytes | 32-bit unsigned integer |
+| `u16` | `ط١٦` | `IR_TYPE_U16` | 2 bytes | 16-bit unsigned integer |
+| `u8` | `ط٨` | `IR_TYPE_U8` | 1 byte | 8-bit unsigned integer |
+| `char` | `حرف` | `IR_TYPE_CHAR` | 8 bytes | UTF-8 character (packed into i64) |
+| `f64` | `ع٦٤` | `IR_TYPE_F64` | 8 bytes | 64-bit float |
+| `void` | `فراغ` | `IR_TYPE_VOID` | 0 | No value (void) |
 
 ### 2.2 Derived Types
 
-| Type | Arabic Syntax | Example |
-|------|---------------|---------|
-| Pointer | `مؤشر[<type>]` | `مؤشر[ص٦٤]` |
-| Array | `مصفوفة[<type>، <size>]` | `مصفوفة[ص٦٤، ١٠]` |
-| Function | `دالة(<args>) -> <ret>` | `دالة(ص٦٤، ص٦٤) -> ص٦٤` |
+| Type | Arabic Syntax | C Access | Example |
+|------|---------------|----------|---------|
+| Pointer | `مؤشر[<type>]` | `type->data.pointee` | `مؤشر[ص٦٤]` |
+| Array | `مصفوفة[<type>، <size>]` | `type->data.array` | `مصفوفة[ص٦٤، ١٠]` |
+| Function | `دالة(<args>) -> <ret>` | `type->data.func` | `دالة(ص٦٤، ص٦٤) -> ص٦٤` |
 
 ### 2.3 Type Compatibility
 
@@ -109,7 +111,22 @@ Virtual registers use the prefix `%م` (مؤقت = temporary):
 - Numbers use Arabic numerals: `%م٠`, `%م١`, `%م٢٣`
 - Function parameters: `%معامل٠`, `%معامل١`
 
-### 3.2 Phi Nodes
+### 3.2 Special Machine Virtual Registers
+
+The backend uses special negative register numbers for physical registers:
+
+| Register Number | Arabic Name | Physical Register | Purpose |
+|-----------------|-------------|-------------------|---------|
+| `-1` | `%إطار` | RBP | Frame pointer (base pointer) |
+| `-2` | `%عائد` | RAX | ABI return value register |
+| `-3` | `%مكدس` | RSP | Stack pointer |
+| `-10` | `%معامل٠` | RCX/RCX (Windows/Linux) | First integer argument |
+| `-11` | `%معامل١` | RDX/RDX | Second integer argument |
+| `-12` | `%معامل٢` | R8/RDI | Third integer argument |
+| `-13` | `%معامل٣` | R9/RSI | Fourth integer argument |
+| `-14` onwards | `%معامل٤+` | Stack/R10+ | Additional arguments |
+
+### 3.3 Phi Nodes
 
 Phi nodes merge values at control flow join points:
 
@@ -127,7 +144,7 @@ The `فاي` instruction selects a value based on which predecessor block was ex
 - **IR well-formedness verifier (v0.3.2.6.5):** The compiler provides `--verify-ir` to validate general IR invariants (operand counts, type consistency, terminator rules, phi placement, and intra-module call signature checks).
 - **All verifiers (v0.3.2.9.1):** The compiler provides `--verify` to run `--verify-ir` + `--verify-ssa` together (requires `-O1`/`-O2`).
 
-### 3.3 Memory Model
+### 3.4 Memory Model
 
 Stack allocations create addressable memory:
 
@@ -141,16 +158,65 @@ Stack allocations create addressable memory:
 
 ## 4. Instruction Set
 
-### 4.1 Arithmetic Instructions
+### 4.1 IROp Enum
 
-| Opcode | Arabic | Syntax | Description |
-|--------|--------|--------|-------------|
-| `add` | `جمع` | `%r = جمع <type> %a، %b` | Addition |
-| `sub` | `طرح` | `%r = طرح <type> %a، %b` | Subtraction |
-| `mul` | `ضرب` | `%r = ضرب <type> %a، %b` | Multiplication |
-| `div` | `قسم` | `%r = قسم <type> %a، %b` | Signed division |
-| `mod` | `باقي` | `%r = باقي <type> %a، %b` | Modulo |
-| `neg` | `سالب` | `%r = سالب <type> %a` | Negation |
+```c
+typedef enum {
+    // Arithmetic Operations (العمليات الحسابية)
+    IR_OP_ADD,      // جمع - Addition
+    IR_OP_SUB,      // طرح - Subtraction
+    IR_OP_MUL,      // ضرب - Multiplication
+    IR_OP_DIV,      // قسم - Signed division
+    IR_OP_MOD,      // باقي - Modulo (remainder)
+    IR_OP_NEG,      // سالب - Negation (unary minus)
+    
+    // Memory Operations (عمليات الذاكرة)
+    IR_OP_ALLOCA,   // حجز - Stack allocation
+    IR_OP_LOAD,     // حمل - Load from memory
+    IR_OP_STORE,    // خزن - Store to memory
+    IR_OP_PTR_OFFSET, // إزاحة_مؤشر - Pointer offset
+    
+    // Comparison Operations (عمليات المقارنة)
+    IR_OP_CMP,      // قارن - Compare (with predicate)
+    
+    // Logical Operations (العمليات المنطقية)
+    IR_OP_AND,      // و - Bitwise AND
+    IR_OP_OR,       // أو - Bitwise OR
+    IR_OP_XOR,      // أو_حصري - Bitwise XOR
+    IR_OP_NOT,      // نفي - Bitwise NOT
+    IR_OP_SHL,      // ازاحة_يسار - Shift left
+    IR_OP_SHR,      // ازاحة_يمين - Shift right
+    
+    // Control Flow Operations (عمليات التحكم)
+    IR_OP_BR,       // قفز - Unconditional branch
+    IR_OP_BR_COND,  // قفز_شرط - Conditional branch
+    IR_OP_RET,      // رجوع - Return from function
+    IR_OP_CALL,     // نداء - Function call
+    
+    // SSA Operations (عمليات SSA)
+    IR_OP_PHI,      // فاي - Phi node for SSA
+    IR_OP_COPY,     // نسخ - Copy (for SSA construction)
+    
+    // Type Conversion (تحويل الأنواع)
+    IR_OP_CAST,     // تحويل - Type cast/conversion
+    
+    // Special Operations
+    IR_OP_NOP,      // لاعمل - No operation
+    
+    IR_OP_COUNT     // Total number of opcodes
+} IROp;
+```
+
+### 4.2 Arithmetic Instructions
+
+| Opcode | Arabic | C Enum | Syntax | Description |
+|--------|--------|--------|--------|-------------|
+| `add` | `جمع` | `IR_OP_ADD` | `%r = جمع <type> %a، %b` | Addition |
+| `sub` | `طرح` | `IR_OP_SUB` | `%r = طرح <type> %a، %b` | Subtraction |
+| `mul` | `ضرب` | `IR_OP_MUL` | `%r = ضرب <type> %a، %b` | Multiplication |
+| `div` | `قسم` | `IR_OP_DIV` | `%r = قسم <type> %a، %b` | Signed division |
+| `mod` | `باقي` | `IR_OP_MOD` | `%r = باقي <type> %a، %b` | Modulo |
+| `neg` | `سالب` | `IR_OP_NEG` | `%r = سالب <type> %a` | Negation |
 
 **Arithmetic Semantics (Strict):**
 - **Overflow:** Standard **Two's Complement Wrap**. `INT_MAX + 1` → `INT_MIN`. No undefined behavior.
@@ -158,74 +224,93 @@ Stack allocations create addressable memory:
 - **Signed Division Edge Case:** `INT64_MIN / -1` wraps to `INT64_MIN` (does not trap).
 - **Signed Modulo Edge Case:** `INT64_MIN % -1` yields `0`.
 
-### 4.2 Memory Instructions
+### 4.3 Memory Instructions
 
-| Opcode | Arabic | Syntax | Description |
-|--------|--------|--------|-------------|
-| `alloca` | `حجز` | `%r = حجز <type>` | Stack allocation |
-| `load` | `حمل` | `%r = حمل <type>، %ptr` | Load from memory |
-| `store` | `خزن` | `خزن <type> <val>، %ptr` | Store to memory |
-| `ptr_offset` | `إزاحة_مؤشر` | `%r = إزاحة_مؤشر <type> %base، %index` | GEP-like pointer arithmetic |
+| Opcode | Arabic | C Enum | Syntax | Description |
+|--------|--------|--------|--------|-------------|
+| `alloca` | `حجز` | `IR_OP_ALLOCA` | `%r = حجز <type>` | Stack allocation |
+| `load` | `حمل` | `IR_OP_LOAD` | `%r = حمل <type>، %ptr` | Load from memory |
+| `store` | `خزن` | `IR_OP_STORE` | `خزن <type> <val>، %ptr` | Store to memory |
+| `ptr_offset` | `إزاحة_مؤشر` | `IR_OP_PTR_OFFSET` | `%r = إزاحة_مؤشر <type> %base، %index` | GEP-like pointer arithmetic |
 
-### 4.3 Comparison Instructions
+### 4.4 Comparison Instructions
 
-| Opcode | Arabic | Syntax | Description |
-|--------|--------|--------|-------------|
-| `cmp` | `قارن` | `%r = قارن <pred> <type> %a، %b` | Compare values |
+| Opcode | Arabic | C Enum | Syntax | Description |
+|--------|--------|--------|--------|-------------|
+| `cmp` | `قارن` | `IR_OP_CMP` | `%r = قارن <pred> <type> %a، %b` | Compare values |
+
+**IRCmpPred Enum (مقارنات):**
+
+```c
+typedef enum {
+    IR_CMP_EQ,      // يساوي - Equal
+    IR_CMP_NE,      // لا_يساوي - Not equal
+    IR_CMP_GT,      // أكبر - Greater than (signed)
+    IR_CMP_LT,      // أصغر - Less than (signed)
+    IR_CMP_GE,      // أكبر_أو_يساوي - Greater or equal (signed)
+    IR_CMP_LE,      // أصغر_أو_يساوي - Less or equal (signed)
+    
+    // Unsigned comparisons (بدون إشارة)
+    IR_CMP_UGT,     // أكبر_بدون_إشارة - Greater than (unsigned)
+    IR_CMP_ULT,     // أصغر_بدون_إشارة - Less than (unsigned)
+    IR_CMP_UGE,     // أكبر_أو_يساوي_بدون_إشارة - Greater or equal (unsigned)
+    IR_CMP_ULE,     // أصغر_أو_يساوي_بدون_إشارة - Less or equal (unsigned)
+} IRCmpPred;
+```
 
 **Predicates (مقارنات):**
 
-| Predicate | Arabic | Meaning |
-|-----------|--------|---------|
-| `eq` | `يساوي` | Equal |
-| `ne` | `لا_يساوي` | Not equal |
-| `gt` | `أكبر` | Greater than (signed) |
-| `lt` | `أصغر` | Less than (signed) |
-| `ge` | `أكبر_أو_يساوي` | Greater or equal (signed) |
-| `le` | `أصغر_أو_يساوي` | Less or equal (signed) |
-| `ugt` | `أكبر_بدون_إشارة` | Greater than (unsigned) |
-| `ult` | `أصغر_بدون_إشارة` | Less than (unsigned) |
-| `uge` | `أكبر_أو_يساوي_بدون_إشارة` | Greater or equal (unsigned) |
-| `ule` | `أصغر_أو_يساوي_بدون_إشارة` | Less or equal (unsigned) |
+| Predicate | Arabic | C Enum | Meaning |
+|-----------|--------|--------|---------|
+| `eq` | `يساوي` | `IR_CMP_EQ` | Equal |
+| `ne` | `لا_يساوي` | `IR_CMP_NE` | Not equal |
+| `gt` | `أكبر` | `IR_CMP_GT` | Greater than (signed) |
+| `lt` | `أصغر` | `IR_CMP_LT` | Less than (signed) |
+| `ge` | `أكبر_أو_يساوي` | `IR_CMP_GE` | Greater or equal (signed) |
+| `le` | `أصغر_أو_يساوي` | `IR_CMP_LE` | Less or equal (signed) |
+| `ugt` | `أكبر_بدون_إشارة` | `IR_CMP_UGT` | Greater than (unsigned) |
+| `ult` | `أصغر_بدون_إشارة` | `IR_CMP_ULT` | Less than (unsigned) |
+| `uge` | `أكبر_أو_يساوي_بدون_إشارة` | `IR_CMP_UGE` | Greater or equal (unsigned) |
+| `ule` | `أصغر_أو_يساوي_بدون_إشارة` | `IR_CMP_ULE` | Less or equal (unsigned) |
 
-### 4.4 Logical Instructions
+### 4.5 Logical Instructions
 
-| Opcode | Arabic | Syntax | Description |
-|--------|--------|--------|-------------|
-| `and` | `و` | `%r = و <type> %a، %b` | Bitwise AND |
-| `or` | `أو` | `%r = أو <type> %a، %b` | Bitwise OR |
-| `xor` | `أو_حصري` | `%r = أو_حصري <type> %a، %b` | Bitwise XOR |
-| `not` | `نفي` | `%r = نفي <type> %a` | Bitwise NOT |
-| `shl` | `ازاحة_يسار` | `%r = ازاحة_يسار <type> %a، %b` | Shift left |
-| `shr` | `ازاحة_يمين` | `%r = ازاحة_يمين <type> %a، %b` | Shift right (signed/unsigned-aware) |
+| Opcode | Arabic | C Enum | Syntax | Description |
+|--------|--------|--------|--------|-------------|
+| `and` | `و` | `IR_OP_AND` | `%r = و <type> %a، %b` | Bitwise AND |
+| `or` | `أو` | `IR_OP_OR` | `%r = أو <type> %a، %b` | Bitwise OR |
+| `xor` | `أو_حصري` | `IR_OP_XOR` | `%r = أو_حصري <type> %a، %b` | Bitwise XOR |
+| `not` | `نفي` | `IR_OP_NOT` | `%r = نفي <type> %a` | Bitwise NOT |
+| `shl` | `ازاحة_يسار` | `IR_OP_SHL` | `%r = ازاحة_يسار <type> %a، %b` | Shift left |
+| `shr` | `ازاحة_يمين` | `IR_OP_SHR` | `%r = ازاحة_يمين <type> %a، %b` | Shift right |
 
-### 4.5 Control Flow Instructions
+### 4.6 Control Flow Instructions
 
-| Opcode | Arabic | Syntax | Description |
-|--------|--------|--------|-------------|
-| `br` | `قفز` | `قفز %label` | Unconditional jump |
-| `br_cond` | `قفز_شرط` | `قفز_شرط %cond، %true، %false` | Conditional branch |
-| `ret` | `رجوع` | `رجوع <type> <val>` | Return from function |
-| `call` | `نداء` | `%r = نداء @name(<args>)` أو `%r = نداء <callee>(<args>)` | Function call (direct/indirect) |
+| Opcode | Arabic | C Enum | Syntax | Description |
+|--------|--------|--------|--------|-------------|
+| `br` | `قفز` | `IR_OP_BR` | `قفز %label` | Unconditional jump |
+| `br_cond` | `قفز_شرط` | `IR_OP_BR_COND` | `قفز_شرط %cond، %true، %false` | Conditional branch |
+| `ret` | `رجوع` | `IR_OP_RET` | `رجوع <type> <val>` | Return from function |
+| `call` | `نداء` | `IR_OP_CALL` | `%r = نداء @name(<args>)` | Function call |
 
-### 4.6 SSA Instructions
+### 4.7 SSA Instructions
 
-| Opcode | Arabic | Syntax | Description |
-|--------|--------|--------|-------------|
-| `phi` | `فاي` | `%r = فاي <type> [%v1، %b1]، [%v2، %b2]` | Phi node |
+| Opcode | Arabic | C Enum | Syntax | Description |
+|--------|--------|--------|--------|-------------|
+| `phi` | `فاي` | `IR_OP_PHI` | `%r = فاي <type> [%v1، %b1]، [%v2، %b2]` | Phi node |
+| `copy` | `نسخ` | `IR_OP_COPY` | `%r = نسخ <type> %v` | Register copy |
 
-### 4.7 Type Conversion
+### 4.8 Type Conversion
 
-| Opcode | Arabic | Syntax | Description |
-|--------|--------|--------|-------------|
-| `cast` | `تحويل` | `%r = تحويل <from> %v إلى <to>` | Type conversion |
+| Opcode | Arabic | C Enum | Syntax | Description |
+|--------|--------|--------|--------|-------------|
+| `cast` | `تحويل` | `IR_OP_CAST` | `%r = تحويل <from> %v إلى <to>` | Type conversion |
 
-### 4.8 Miscellaneous Instructions
+### 4.9 Miscellaneous Instructions
 
-| Opcode | Arabic | Syntax | Description |
-|--------|--------|--------|-------------|
-| `copy` | `نسخ` | `%r = نسخ <type> %v` | Register-to-register copy |
-| `nop` | `NOP` | `NOP` | No operation |
+| Opcode | Arabic | C Enum | Syntax | Description |
+|--------|--------|--------|--------|-------------|
+| `nop` | `لاعمل` | `IR_OP_NOP` | `لاعمل` | No operation |
 
 ---
 
@@ -569,72 +654,320 @@ array       ::= "مصفوفة" "[" type "،" number "]"
 
 ### 10.1 C Data Structures
 
-The IR will be represented in C using (simplified illustration; see `src/ir.h` for the authoritative definitions):
+The IR is represented in C using the following structures (see `src/ir.h` for authoritative definitions):
+
+#### IROp Enum
 
 ```c
 typedef enum {
+    // Arithmetic
     IR_OP_ADD, IR_OP_SUB, IR_OP_MUL, IR_OP_DIV, IR_OP_MOD, IR_OP_NEG,
+    // Memory
     IR_OP_ALLOCA, IR_OP_LOAD, IR_OP_STORE, IR_OP_PTR_OFFSET,
-    IR_OP_CMP, IR_OP_AND, IR_OP_OR, IR_OP_XOR, IR_OP_NOT, IR_OP_SHL, IR_OP_SHR,
+    // Comparison
+    IR_OP_CMP,
+    // Logical
+    IR_OP_AND, IR_OP_OR, IR_OP_XOR, IR_OP_NOT, IR_OP_SHL, IR_OP_SHR,
+    // Control Flow
     IR_OP_BR, IR_OP_BR_COND, IR_OP_RET, IR_OP_CALL,
-    IR_OP_PHI, IR_OP_COPY, IR_OP_CAST, IR_OP_NOP
+    // SSA
+    IR_OP_PHI, IR_OP_COPY,
+    // Conversion
+    IR_OP_CAST, IR_OP_NOP,
+    // Count
+    IR_OP_COUNT
 } IROp;
+```
 
+#### IRCmpPred Enum
+
+```c
+typedef enum {
+    IR_CMP_EQ, IR_CMP_NE, IR_CMP_GT, IR_CMP_LT, IR_CMP_GE, IR_CMP_LE,
+    IR_CMP_UGT, IR_CMP_ULT, IR_CMP_UGE, IR_CMP_ULE
+} IRCmpPred;
+```
+
+#### IRTypeKind Enum
+
+```c
+typedef enum {
+    IR_TYPE_VOID,   // فراغ
+    IR_TYPE_I1,     // ص١
+    IR_TYPE_I8,     // ص٨
+    IR_TYPE_I16,    // ص١٦
+    IR_TYPE_I32,    // ص٣٢
+    IR_TYPE_I64,    // ص٦٤
+    IR_TYPE_U8,     // ط٨
+    IR_TYPE_U16,    // ط١٦
+    IR_TYPE_U32,    // ط٣٢
+    IR_TYPE_U64,    // ط٦٤
+    IR_TYPE_CHAR,   // حرف
+    IR_TYPE_F64,    // ع٦٤
+    IR_TYPE_PTR,    // مؤشر
+    IR_TYPE_ARRAY,  // مصفوفة
+    IR_TYPE_FUNC,   // دالة
+} IRTypeKind;
+```
+
+#### IRType Structure
+
+```c
 typedef struct IRType {
     IRTypeKind kind;
     union {
-        struct IRType* pointee;
-        struct { struct IRType* element; int count; } array;
-        struct { struct IRType* ret; struct IRType** params; int param_count; } func;
+        struct IRType* pointee;     // For IR_TYPE_PTR
+        struct {
+            struct IRType* element; // For IR_TYPE_ARRAY
+            int count;
+        } array;
+        struct {
+            struct IRType* ret;     // For IR_TYPE_FUNC
+            struct IRType** params;
+            int param_count;
+        } func;
     } data;
 } IRType;
+```
 
-typedef struct IRInst {
-    IROp op;
+#### IRValueKind Enum
+
+```c
+typedef enum {
+    IR_VAL_NONE,        // No value (void)
+    IR_VAL_CONST_INT,   // Constant integer
+    IR_VAL_CONST_STR,   // Constant string (pointer to .rdata)
+    IR_VAL_BAA_STR,     // Baa string (pointer to .rodata UTF-8 chars array)
+    IR_VAL_REG,         // Virtual register (%م<n>)
+    IR_VAL_GLOBAL,      // Global variable (@name)
+    IR_VAL_FUNC,        // Function reference (@name)
+    IR_VAL_BLOCK,       // Basic block reference
+} IRValueKind;
+```
+
+#### IRValue Structure
+
+```c
+typedef struct IRValue {
+    IRValueKind kind;
     IRType* type;
-    int id;
-    int dest;                   // %م<dest>
+    union {
+        int64_t const_int;          // For IR_VAL_CONST_INT
+        struct {
+            char* data;             // For IR_VAL_CONST_STR
+            int id;                 // String table ID
+        } const_str;
+        int reg_num;                // For IR_VAL_REG (%م<reg_num>)
+        char* global_name;          // For IR_VAL_GLOBAL and IR_VAL_FUNC
+        struct IRBlock* block;      // For IR_VAL_BLOCK
+    } data;
+} IRValue;
+```
+
+#### IRInst Structure
+
+```c
+typedef struct IRInst {
+    IROp op;                    // Opcode
+    IRType* type;               // Result type (or void for stores/branches)
+    int id;                     // Instruction ID for diagnostics
+    int dest;                   // Destination register (-1 if none)
     IRValue* operands[4];       // Up to 4 operands
     int operand_count;
-    IRCmpPred cmp_pred;
-    IRPhiEntry* phi_entries;
-    char* call_target;
-    IRValue* call_callee;       // For indirect calls
-    IRValue** call_args;
+    IRCmpPred cmp_pred;         // For comparison instructions
+    IRPhiEntry* phi_entries;    // Linked list for PHI nodes
+    char* call_target;          // Function name for direct calls
+    IRValue* call_callee;       // Callee value for indirect calls
+    IRValue** call_args;        // Argument list for calls
     int call_arg_count;
-    const char* src_file;
+    const char* src_file;       // Source location
     int src_line;
     int src_col;
-    const char* dbg_name;
-    struct IRBlock* parent;
-    struct IRInst* prev;
+    const char* dbg_name;       // Optional debug name
+    struct IRBlock* parent;     // Owning block
+    struct IRInst* prev;        // Linked list links
     struct IRInst* next;
 } IRInst;
+```
 
+#### IRBlock Structure
+
+```c
 typedef struct IRBlock {
-    char* label;        // Arabic block name
-    IRInst* first;
-    IRInst* last;
-    struct IRBlock* succs[2];  // Successors
-    struct IRBlock* next;
+    char* label;                // Block label (Arabic name)
+    int id;                     // Numeric ID for internal use
+    struct IRFunc* parent;      // Owning function
+    IRInst* first;              // First instruction
+    IRInst* last;               // Last instruction
+    int inst_count;
+    struct IRBlock* succs[2];   // Successors (0-2 for br/br_cond)
+    int succ_count;
+    struct IRBlock** preds;     // Predecessors (dynamic array)
+    int pred_count;
+    int pred_capacity;
+    struct IRBlock* idom;       // Immediate dominator
+    struct IRBlock** dom_frontier;
+    int dom_frontier_count;
+    struct IRBlock* next;       // Linked list link
 } IRBlock;
+```
 
+#### IRFunc Structure
+
+```c
 typedef struct IRFunc {
-    char* name;
-    IRType ret_type;
-    IRBlock* entry;
-    int reg_count;      // Next available %م number
+    char* name;                 // Function name
+    IRType* ret_type;           // Return type
+    IRParam* params;            // Parameters
+    int param_count;
+    IRBlock* entry;             // Entry block
+    IRBlock* blocks;            // All blocks
+    int block_count;
+    int next_reg;               // Next virtual register number
+    int next_inst_id;           // Next instruction ID
+    uint32_t ir_epoch;          // Change counter for caching
+    IRDefUse* def_use;          // Def-use analysis cache
+    int next_block_id;          // Next block ID
+    bool is_prototype;          // Declaration without body
+    struct IRFunc* next;        // Linked list link
 } IRFunc;
 ```
 
-### 10.2 Printer Flag
+#### IRGlobal Structure
 
-The IR can be printed using `--dump-ir` flag:
-
-```bash
-baa --dump-ir source.baa
+```c
+typedef struct IRGlobal {
+    char* name;                 // Variable name
+    IRType* type;               // Variable type
+    IRValue* init;              // Initial scalar value (or NULL)
+    IRValue** init_elems;       // Array initializer elements (or NULL)
+    int init_elem_count;        // Number of provided elements
+    bool has_init_list;         // Had '=' in source
+    bool is_const;              // Is constant
+    bool is_internal;           // Internal linkage
+    struct IRGlobal* next;
+} IRGlobal;
 ```
 
----
+#### IRModule Structure
 
-*[← Compiler Internals](INTERNALS.md) | [API Reference →](API_REFERENCE.md)]*
+```c
+typedef struct IRModule {
+    char* name;                 // Module name (source file)
+    IRArena arena;              // Memory arena for all IR objects
+    IRType* cached_i8_ptr_type; // Cache for i8* type
+    IRGlobal* globals;          // Global variables
+    int global_count;
+    IRFunc* funcs;              // Functions
+    int func_count;
+    IRStringEntry* strings;     // String table
+    int string_count;
+    IRBaaStringEntry* baa_strings;  // Baa string table
+    int baa_string_count;
+} IRModule;
+```
+
+### 10.2 Arabic Name Conversion Functions
+
+The following functions convert IR constructs to Arabic names:
+
+```c
+// Get Arabic opcode name
+const char* ir_op_to_arabic(IROp op);
+
+// Get Arabic comparison predicate name
+const char* ir_cmp_pred_to_arabic(IRCmpPred pred);
+
+// Get Arabic type name
+const char* ir_type_to_arabic(IRType* type);
+
+// Convert integer to Arabic numerals (٠١٢٣٤٥٦٧٨٩)
+char* int_to_arabic_numerals(int n, char* buf);
+```
+
+### 10.3 IRBuilder API
+
+The IRBuilder provides a convenient API for constructing IR:
+
+```c
+// Lifecycle
+IRBuilder* ir_builder_new(IRModule* module);
+void ir_builder_free(IRBuilder* builder);
+
+// Function creation
+IRFunc* ir_builder_create_func(IRBuilder* builder, const char* name, IRType* ret_type);
+int ir_builder_add_param(IRBuilder* builder, const char* name, IRType* type);
+
+// Block creation
+IRBlock* ir_builder_create_block(IRBuilder* builder, const char* label);
+void ir_builder_set_insert_point(IRBuilder* builder, IRBlock* block);
+
+// Register allocation
+int ir_builder_alloc_reg(IRBuilder* builder);
+
+// Arithmetic emission
+int ir_builder_emit_add(IRBuilder* builder, IRType* type, IRValue* lhs, IRValue* rhs);
+int ir_builder_emit_sub(IRBuilder* builder, IRType* type, IRValue* lhs, IRValue* rhs);
+int ir_builder_emit_mul(IRBuilder* builder, IRType* type, IRValue* lhs, IRValue* rhs);
+int ir_builder_emit_div(IRBuilder* builder, IRType* type, IRValue* lhs, IRValue* rhs);
+int ir_builder_emit_mod(IRBuilder* builder, IRType* type, IRValue* lhs, IRValue* rhs);
+int ir_builder_emit_neg(IRBuilder* builder, IRType* type, IRValue* operand);
+
+// Memory emission
+int ir_builder_emit_alloca(IRBuilder* builder, IRType* type);
+int ir_builder_emit_load(IRBuilder* builder, IRType* type, IRValue* ptr);
+void ir_builder_emit_store(IRBuilder* builder, IRValue* value, IRValue* ptr);
+int ir_builder_emit_ptr_offset(IRBuilder* builder, IRType* ptr_type, IRValue* base, IRValue* index);
+
+// Comparison emission
+int ir_builder_emit_cmp(IRBuilder* builder, IRCmpPred pred, IRValue* lhs, IRValue* rhs);
+
+// Control flow emission
+void ir_builder_emit_br(IRBuilder* builder, IRBlock* target);
+void ir_builder_emit_br_cond(IRBuilder* builder, IRValue* cond, IRBlock* if_true, IRBlock* if_false);
+void ir_builder_emit_ret(IRBuilder* builder, IRValue* value);
+
+// Call emission
+int ir_builder_emit_call(IRBuilder* builder, const char* target, IRType* ret_type,
+                         IRValue** args, int arg_count);
+int ir_builder_emit_call_indirect(IRBuilder* builder, IRValue* callee, IRType* ret_type,
+                                  IRValue** args, int arg_count);
+
+// SSA emission
+int ir_builder_emit_phi(IRBuilder* builder, IRType* type);
+void ir_builder_phi_add_incoming(IRBuilder* builder, int phi_reg, 
+                                  IRValue* value, IRBlock* block);
+int ir_builder_emit_copy(IRBuilder* builder, IRType* type, IRValue* source);
+
+// Type conversion
+int ir_builder_emit_cast(IRBuilder* builder, IRValue* value, IRType* to_type);
+```
+
+### 10.4 Register Naming Convention
+
+The IR uses the following register naming conventions:
+
+| Register | Format | Example | Description |
+|----------|--------|---------|-------------|
+| Virtual | `%م<n>` | `%م٠`, `%م١٢` | SSA virtual registers |
+| Parameter | `%معامل<n>` | `%معامل٠` | Function parameters |
+| Special | `%إطار` (RBP) | `-1` | Frame pointer |
+| Special | `%عائد` (RAX) | `-2` | Return value register |
+| Special | `%مكدس` (RSP) | `-3` | Stack pointer |
+| Arguments | `%معامل<n>` | `-10`, `-11`, ... | Argument registers |
+
+**Note:** When printing IR with Arabic numerals, numbers use Arabic-Indic digits (٠١٢٣٤٥٦٧٨٩).
+
+### 10.5 Memory Management
+
+All IR objects are allocated from a memory arena (`IRArena`) associated with the module:
+
+- **Arena allocation:** All IR structures (types, values, instructions, blocks, functions) are allocated from the module's arena
+- **No individual frees:** Objects are not freed individually; the entire arena is freed when the module is destroyed
+- **Automatic cleanup:** Call `ir_module_free()` to release all memory associated with a module
+
+```c
+IRModule* module = ir_module_new("example.baa");
+// ... build IR ...
+ir_module_free(module);  // Frees all arena memory
+```

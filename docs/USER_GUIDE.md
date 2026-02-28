@@ -16,29 +16,47 @@ Welcome to Baa (باء)! This guide will help you write your first Arabic comput
 - [6. Deployment Notes](#6-deployment-notes)
 - [7. Organizing Code (Multi-File Projects)](#7-organizing-code-multi-file-projects)
 - [8. Common Patterns](#8-common-patterns)
-- [9. Troubleshooting](#9-troubleshooting)
+- [9. Testing and QA](#9-testing-and-qa)
+- [10. Troubleshooting](#10-troubleshooting)
 
 ---
 
 ## 1. Installation
-Currently, you must build Baa from source.
 
 ### Platform Support
 
 - **Supported:** Windows (x86-64) and Linux (x86-64)
 - **macOS:** Not supported yet
 
-### Prerequisites
+### Installation Methods
 
+#### Windows: Installer with GCC Bundle (Recommended)
+
+The easiest way to install Baa on Windows is using the installer which includes a GCC bundle:
+
+1. Download the latest `Baa-Setup.exe` from the [releases page](https://github.com/OmarAglan/Baa/releases)
+2. Run the installer and follow the prompts
+3. The installer will automatically:
+   - Install `baa.exe` to the selected directory
+   - Set up the bundled MinGW-w64 GCC toolchain
+   - Optionally add Baa to your system PATH
+
+After installation, open a new terminal and verify:
+
+```powershell
+baa --version
+```
+
+#### Windows: Build from Source
+
+If you prefer to build from source:
+
+**Prerequisites:**
 - **CMake** 3.10 or higher
-- **GCC/Clang** toolchain
-
-Windows-only:
-
 - **MinGW-w64** (GCC compiler)
 - **PowerShell**
 
-### Build Steps (Windows)
+**Build Steps:**
 
 ```powershell
 # Clone the repository
@@ -50,12 +68,15 @@ cmake -B build -G "MinGW Makefiles"
 cmake --build build
 ```
 
-After building:
+After building, you will have `baa.exe` in your `build` directory.
 
-- **Windows:** you will have `baa.exe` in your `build` directory.
-- **Linux:** you will have `baa` in your `build` directory.
+#### Linux: Build from Source
 
-### Build Steps (Linux)
+**Prerequisites:**
+- **CMake** 3.10 or higher
+- **GCC/Clang** toolchain
+
+**Build Steps:**
 
 ```bash
 git clone https://github.com/OmarAglan/Baa.git
@@ -66,9 +87,11 @@ cmake --build build
 ./build/baa --version
 ```
 
-### Optional: Add `baa.exe` to PATH
+After building, you will have `baa` in your `build` directory.
 
-From PowerShell (current user):
+### Optional: Add `baa` to PATH
+
+**Windows (PowerShell - current user):**
 
 ```powershell
 $baaDir = (Resolve-Path .\build).Path
@@ -76,9 +99,15 @@ $current = [Environment]::GetEnvironmentVariable("Path", "User")
 [Environment]::SetEnvironmentVariable("Path", "$current;$baaDir", "User")
 ```
 
+**Linux:**
+
+```bash
+sudo cp ./build/baa /usr/local/bin/
+```
+
 Open a new terminal and verify:
 
-```powershell
+```bash
 baa --version
 ```
 
@@ -109,6 +138,32 @@ Create a file named `hello.baa` using any text editor. **Important:** Save the f
 | `٠` | Arabic numeral zero |
 | `.` | Statement terminator (like `;` in C) |
 
+### Compile and Run
+
+**Windows:**
+
+```powershell
+# Using default output (out.exe)
+.\build\baa.exe hello.baa
+.\out.exe
+
+# Or specify output name
+.\build\baa.exe hello.baa -o hello.exe
+.\hello.exe
+```
+
+**Linux:**
+
+```bash
+# Using default output (out)
+./build/baa hello.baa
+./out
+
+# Or specify output name
+./build/baa hello.baa -o hello
+./hello
+```
+
 ---
 
 ## 3. Command Line Interface
@@ -119,52 +174,10 @@ The Baa compiler is a full-featured command-line tool (since v0.2.0):
 - Linux: `baa`
 - In examples below, use `baa`/`baa.exe` if it's on `PATH`; otherwise use `build\baa.exe` (Windows) or `./build/baa` (Linux).
 
-### Basic Compilation and Execution
-
-```powershell
-# Windows: default output is out.exe
-.\build\baa.exe hello.baa
-.\out.exe
-```
+### Basic Usage
 
 ```bash
-# Linux: default output is out
-./build/baa hello.baa
-./out
-```
-
----
-
-## 4. Linux Packaging (TGZ + DEB) (v0.3.6)
-
-You can generate Linux installer artifacts from a Linux build:
-
-```bash
-cmake -B build-linux -DCMAKE_BUILD_TYPE=Release
-cmake --build build-linux -j
-
-# Generate TGZ + DEB in build-linux/
-(cd build-linux && cpack -G TGZ)
-(cd build-linux && cpack -G DEB)
-```
-
-Or run the helper script:
-
-```bash
-bash scripts/package_linux.sh
-```
-
-Install (DEB):
-
-```bash
-sudo dpkg -i build-linux/baa-*-Linux-x86_64.deb
-```
-
-Install (TGZ):
-
-```bash
-tar -xzf build-linux/baa-*-Linux-x86_64.tar.gz
-sudo cp -a usr/* /usr/
+baa [options] <source.baa> [-o <output>]
 ```
 
 ### Command-Line Flags
@@ -201,36 +214,6 @@ sudo cp -a usr/* /usr/
 | `-fno-stack-protector` | Disable stack canary. | `./baa -fno-stack-protector main.baa` |
 | *(Inlining at -O2)* | Small internal functions with a single call site may be inlined automatically at `-O2`. | `.\baa.exe -O2 main.baa` |
 
-### Output Naming Rules
-
-- Default output executable is `out.exe` on Windows, and `out` on Linux (when linking).
-- With `-S` or `-c`, output defaults to `<input>.s` / `<input>.o`.
-- `-o <file>` is only applied for `-S` / `-c` when compiling a single input file.
-- `update` must be used alone: `.\baa.exe update`
-
-### Current Limitations (v0.3.10.6)
-
-- SIMD and non-`عشري` floating types are not supported yet.
-
-### Running Tests (v0.3.10.6+)
-
-From the repo root:
-
-```powershell
-# Recommended quick path
-python .\scripts\qa_run.py --mode quick
-
-# Recommended full QA gate
-python .\scripts\qa_run.py --mode full
-
-# Optional legacy runner
-python .\tests\regress.py
-```
-
-### Cross-Target Notes (v0.3.2.8.4)
-
-- If the selected `--target` does not match the host toolchain/object format, the compiler currently supports **assembly-only** mode (`-S`) only. Cross-target `-c` and linking are deferred.
-
 ### Warning Flags (v0.2.8+)
 
 | Flag | Description | Example |
@@ -246,6 +229,127 @@ python .\tests\regress.py
 | `-Wno-color` | Disable colored output. | `.\baa.exe -Wall -Wno-color main.baa` |
 
 **Note:** Dedicated flags are available for `unused-variable`, `dead-code`, `implicit-narrowing`, and `signed-unsigned-compare`. `shadow-variable` is available through `-Wall` (no dedicated `-Wshadow-variable` switch yet).
+
+### Output Naming Rules
+
+- Default output executable is `out.exe` on Windows, and `out` on Linux (when linking).
+- With `-S` or `-c`, output defaults to `<input>.s` / `<input>.o`.
+- `-o <file>` is only applied for `-S` / `-c` when compiling a single input file.
+- `update` must be used alone: `.\baa.exe update`
+
+### Cross-Target Notes (v0.3.2.8.4+)
+
+- If the selected `--target` does not match the host toolchain/object format, the compiler currently supports **assembly-only** mode (`-S`) only. Cross-target `-c` and linking are deferred.
+
+### Current Limitations (v0.3.10.6)
+
+- SIMD and non-`عشري` floating types are not supported yet.
+
+---
+
+## 4. Linux Packaging (TGZ + DEB) (v0.3.6)
+
+You can generate Linux installer artifacts from a Linux build:
+
+```bash
+cmake -B build-linux -DCMAKE_BUILD_TYPE=Release
+cmake --build build-linux -j
+
+# Generate TGZ + DEB in build-linux/
+(cd build-linux && cpack -G TGZ)
+(cd build-linux && cpack -G DEB)
+```
+
+Or run the helper script:
+
+```bash
+bash scripts/package_linux.sh
+```
+
+Install (DEB):
+
+```bash
+sudo dpkg -i build-linux/baa-*-Linux-x86_64.deb
+```
+
+Install (TGZ):
+
+```bash
+tar -xzf build-linux/baa-*-Linux-x86_64.tar.gz
+sudo cp -a usr/* /usr/
+```
+
+---
+
+## 5. File Types
+
+| Extension | Type | Description | Example |
+|-----------|------|-------------|---------|
+| `.baa` | Source File | Main Baa source code | `main.baa`, `lib.baa` |
+| `.baahd` | Header File | Function prototypes and declarations | `math.baahd` |
+| `.s` | Assembly | Generated assembly code (with `-S`) | `main.s` |
+| `.o` | Object File | Compiled binary object (with `-c`) | `main.o` |
+| `.exe` | Executable | Final linked program (Windows) | `out.exe` |
+| *(no ext)* | Executable | Final linked program (Linux) | `out` |
+
+**Note:** Header files (`.baahd`) are included using `#تضمين` directive and contain only declarations (prototypes), not implementations.
+
+---
+
+## 6. Deployment Notes
+
+Baa's compiler driver invokes `gcc` to assemble and link output binaries, so deployment typically requires:
+
+- `baa.exe`/`baa` available on the target machine (for example, on `PATH`)
+- MinGW-w64 `gcc` (Windows) or GCC/Clang (Linux) available on `PATH`
+
+If you distribute `baa.exe` to another Windows machine, ensure the MinGW-w64 toolchain is installed there as well (or use the installer with GCC bundle).
+
+---
+
+## 7. Organizing Code (Multi-File Projects)
+
+As your program grows, you should split it into multiple files.
+
+### Using Headers (`.baahd`)
+
+Use header files for function prototypes and shared declarations.
+
+**math.baahd** (Header):
+
+```baa
+// Function prototype (declaration only)
+صحيح جمع(صحيح أ، صحيح ب).
+```
+
+**math.baa** (Implementation):
+
+```baa
+// Actual function implementation
+صحيح جمع(صحيح أ، صحيح ب) {
+    إرجع أ + ب.
+}
+```
+
+**main.baa** (Main Program):
+
+```baa
+// Include the header
+#تضمين "math.baahd"
+
+صحيح الرئيسية() {
+    اطبع جمع(١٠، ٢٠).
+    إرجع ٠.
+}
+```
+
+**Compilation:**
+
+```powershell
+.\baa.exe main.baa math.baa -o myapp.exe
+```
+
+> **Note:** The `#تضمين` directive looks for files relative to the directory where you run the compiler.
 
 ### Compilation Workflow
 
@@ -294,75 +398,6 @@ You can control the compilation stages if needed:
 
 ---
 
-## 5. File Types
-
-| Extension | Type | Description | Example |
-|-----------|------|-------------|---------|
-| `.baa` | Source File | Main Baa source code | `main.baa`, `lib.baa` |
-| `.baahd` | Header File | Function prototypes and declarations | `math.baahd` |
-| `.s` | Assembly | Generated assembly code (with `-S`) | `main.s` |
-| `.o` | Object File | Compiled binary object (with `-c`) | `main.o` |
-| `.exe` | Executable | Final linked program | `out.exe` |
-
-**Note:** Header files (`.baahd`) are included using `#تضمين` directive and contain only declarations (prototypes), not implementations.
-
-## 6. Deployment Notes
-
-Baa’s compiler driver invokes `gcc` to assemble and link output binaries, so deployment typically requires:
-
-- `baa.exe` available on the target machine (for example, on `PATH`)
-- MinGW-w64 `gcc` available on `PATH`
-
-If you distribute `baa.exe` to another Windows machine, ensure the MinGW-w64 toolchain is installed there as well.
-
----
-
-## 7. Organizing Code (Multi-File Projects)
-
-As your program grows, you should split it into multiple files.
-
-### Using Headers (`.baahd`)
-
-Use header files for function prototypes and shared declarations.
-
-**math.baahd** (Header):
-
-```baa
-// Function prototype (declaration only)
-صحيح جمع(صحيح أ, صحيح ب).
-```
-
-**math.baa** (Implementation):
-
-```baa
-// Actual function implementation
-صحيح جمع(صحيح أ, صحيح ب) {
-    إرجع أ + ب.
-}
-```
-
-**main.baa** (Main Program):
-
-```baa
-// Include the header
-#تضمين "math.baahd"
-
-صحيح الرئيسية() {
-    اطبع جمع(١٠, ٢٠).
-    إرجع ٠.
-}
-```
-
-**Compilation:**
-
-```powershell
-.\baa.exe main.baa math.baa -o myapp.exe
-```
-
-> **Note:** The `#تضمين` directive looks for files relative to the directory where you run the compiler.
-
----
-
 ## 8. Common Patterns
 
 ### Variables and Constants
@@ -384,7 +419,71 @@ Use header files for function prototypes and shared declarations.
 }
 ```
 
-### Strings and Standard Library (النصوص والمكتبة القياسية)
+### Control Flow
+
+```baa
+صحيح الرئيسية() {
+    // If/Else
+    صحيح عمر = ٢٥.
+    إذا (عمر >= ١٨) {
+        اطبع "بالغ".
+    } وإلا {
+        اطبع "قاصر".
+    }
+    
+    // While loop
+    صحيح عداد = ٠.
+    طالما (عداد < ٥) {
+        اطبع عداد.
+        عداد = عداد + ١.
+    }
+    
+    // For loop
+    لكل (صحيح س = ٠؛ س < ٣؛ س = س + ١) {
+        اطبع س.
+    }
+    
+    // Switch
+    صحيح خيار = ٢.
+    اختر (خيار) {
+        حالة ١:
+            اطبع "واحد".
+            توقف.
+        حالة ٢:
+            اطبع "اثنان".
+            توقف.
+        افتراضي:
+            اطبع "آخر".
+    }
+    
+    إرجع ٠.
+}
+```
+
+### Arrays
+
+```baa
+صحيح الرئيسية() {
+    // 1D array
+    صحيح أرقام[٥] = {١، ٢، ٣، ٤، ٥}.
+    اطبع أرقام[٢].  // يطبع ٣
+    
+    // 2D array
+    صحيح مصفوفة[٢][٣] = {
+        {١، ٢، ٣}،
+        {٤، ٥، ٦}
+    }.
+    اطبع مصفوفة[١][٢].  // يطبع ٦
+    
+    // Calculate array length
+    صحيح الطول = حجم(أرقام) / حجم(صحيح).
+    اطبع الطول.  // يطبع ٥
+    
+    إرجع ٠.
+}
+```
+
+### Strings and Standard Library
 
 To manipulate dynamically allocated strings, include the standard library header. Remember to free memory allocated by `دمج_نص` or `نسخ_نص`.
 
@@ -410,14 +509,19 @@ To manipulate dynamically allocated strings, include the standard library header
 }
 ```
 
-### Compound Types (الهياكل والتعداد)
+### Compound Types (Structs, Enums, Unions)
 
-Group related data using `هيكل` (structs) and `تعداد` (enums). Use `:` to access members.
+Group related data using `هيكل` (structs), `تعداد` (enums), and `اتحاد` (unions). Use `:` to access members.
 
 ```baa
 تعداد حالة_النظام {
     مغلق،
     يعمل
+}
+
+اتحاد قيمة {
+    صحيح رقم.
+    نص نص_قيمة.
 }
 
 هيكل خادم {
@@ -439,7 +543,7 @@ Group related data using `هيكل` (structs) and `تعداد` (enums). Use `:` 
 }
 ```
 
-### Static Variables (المتغيرات الساكنة)
+### Static Variables
 
 Use `ساكن` to declare variables that persist between function calls.
 
@@ -456,29 +560,8 @@ Use `ساكن` to declare variables that persist between function calls.
     إرجع ٠.
 }
 ```
-```
 
-### Arrays and Length (المصفوفات المتقدمة)
-
-Baa supports multi-dimensional arrays and compile-time length calculation using `حجم(...)`.
-
-```baa
-صحيح الرئيسية() {
-    // 2D Array with initialization
-    صحيح جدول[٢][٣] = {
-        {١، ٢، ٣}،
-        {٤، ٥، ٦}
-    }.
-    
-    // Calculate total number of elements
-    صحيح الطول = حجم(جدول) / حجم(صحيح). // ٦
-    
-    اطبع جدول[١][٢]. // يطبع ٦
-    إرجع ٠.
-}
-```
-
-### Pointers and References (المؤشرات والمراجع)
+### Pointers and References
 
 Use `&` to get the address of a variable, and `*` to dereference it. `عدم` represents a null pointer.
 
@@ -491,12 +574,18 @@ Use `&` to get the address of a variable, and `*` to dereference it. `عدم` re
         *مؤشر = ١٠٠. // يغير قيمة س إلى ١٠٠
     }
     
+    // Pointer arithmetic
+    صحيح مصفوفة[٥] = {١٠، ٢٠، ٣٠، ٤٠، ٥٠}.
+    صحيح* م = &مصفوفة[٠].
+    م = م + ٢.  // Points to مصفوفة[٢]
+    اطبع *م.    // يطبع ٣٠
+    
     اطبع س. // يطبع ١٠٠
     إرجع ٠.
 }
 ```
 
-### Type Casting (تحويل الأنواع)
+### Type Casting
 
 Use `كـ<النوع>(...)` for explicit conversions between numeric types or pointers.
 
@@ -512,37 +601,67 @@ Use `كـ<النوع>(...)` for explicit conversions between numeric types or po
     ط٦٤ عنوان = كـ<ط٦٤>(م).
     عنوان = عنوان + ٨.
     
+    // Cast pointer to different type
+    صحيح* مؤشر_صحيح = &رقم.
+    ط٨* مؤشر_بايت = كـ<ط٨*>(مؤشر_صحيح).
+    
     إرجع ٠.
 }
 ```
 
-### Function Pointers (مؤشرات الدوال)
+### Function Pointers (v0.3.10.6)
 
 Pass functions as values or store them in variables using the `دالة(...) -> ...` type syntax.
 
 ```baa
+صحيح جمع(صحيح أ، صحيح ب) {
+    إرجع أ + ب.
+}
+
 صحيح ضرب(صحيح أ، صحيح ب) {
     إرجع أ * ب.
 }
 
+// Function that takes a function pointer as parameter
+صحيح طبق(دالة(صحيح، صحيح) -> صحيح ف، صحيح أ، صحيح ب) {
+    إرجع ف(أ، ب).
+}
+
 صحيح الرئيسية() {
     // Declare a function pointer variable
-    دالة(صحيح، صحيح) -> صحيح عملية = ضرب.
+    دالة(صحيح، صحيح) -> صحيح عملية = جمع.
     
     // Call through the pointer
     صحيح نتيجة = عملية(٥، ٤).
+    اطبع نتيجة. // يطبع ٩
+    
+    // Assign different function
+    عملية = ضرب.
+    نتيجة = عملية(٥، ٤).
     اطبع نتيجة. // يطبع ٢٠
+    
+    // Pass function pointer as argument
+    نتيجة = طبق(جمع، ١٠، ٢٠).
+    اطبع نتيجة. // يطبع ٣٠
+    
+    // Null function pointer
+    عملية = عدم.
+    إذا (عملية == عدم) {
+        اطبع "المؤشر فارغ".
+    }
     
     إرجع ٠.
 }
 ```
 
 ### Boolean Logic
+
 ```baa
 صحيح الرئيسية() {
     منطقي جاهز = صواب.
+    منطقي مغلق = خطأ.
     
-    إذا (جاهز) {
+    إذا (جاهز && !مغلق) {
         اطبع "النظام جاهز!".
     }
     
@@ -551,6 +670,7 @@ Pass functions as values or store them in variables using the `دالة(...) -> 
 ```
 
 ### Low-Level Operations
+
 Bitwise operators, shifts, `حجم(...)`, and `عدم` are available for systems-level code.
 
 ```baa
@@ -560,15 +680,132 @@ Bitwise operators, shifts, `حجم(...)`, and `عدم` are available for systems
 }
 
 صحيح الرئيسية() {
-    صحيح أ = ٥ & ٣.
-    صحيح ب = ١ << ٤.
-    صحيح ج = حجم(صحيح).
+    صحيح أ = ٥ & ٣.      // Bitwise AND: ١
+    صحيح ب = ١ << ٤.     // Left shift: ١٦
+    صحيح ج = ~٠.         // Bitwise NOT: -١
+    صحيح د = ٥ \| ٣.      // Bitwise OR: ٧
+    صحيح هـ = ٥ ^ ٣.      // Bitwise XOR: ٦
+    صحيح و = ١٦ >> ٢.    // Right shift: ٤
+    صحيح ح = حجم(صحيح).  // Size of integer
     اطبع_رسالة().
-    إرجع أ + ب + ج.
+    إرجع أ + ب + ح.
 }
 ```
 
-## 9. Troubleshooting
+### Integer Types with Specific Sizes
+
+Baa supports fixed-width integer types:
+
+```baa
+صحيح الرئيسية() {
+    // Signed integers
+    ص٨  صغير = ١٢٧.        // 8-bit signed
+    ص١٦ متوسط = ١٠٠٠٠.    // 16-bit signed
+    ص٣٢ كبير = ١٠٠٠٠٠٠.   // 32-bit signed
+    ص٦٤ ضخم = ١٠٠٠٠٠٠٠٠٠٠٠٠٠. // 64-bit signed
+    
+    // Unsigned integers
+    ط٨  طبيعي_صغير = ٢٥٥.       // 8-bit unsigned
+    ط١٦ طبيعي_متوسط = ٦٥٥٣٥.   // 16-bit unsigned
+    ط٣٢ طبيعي_كبير = ٤٠٠٠٠٠٠٠٠٠. // 32-bit unsigned
+    ط٦٤ طبيعي_ضخم = ١٠٠٠٠٠٠٠٠٠٠٠٠٠. // 64-bit unsigned
+    
+    // Regular صحيح is platform-dependent (usually 32-bit)
+    صحيح عادي = ١٠٠.
+    
+    إرجع ٠.
+}
+```
+
+### Reading User Input
+
+Use `اقرأ` to read integers from the user:
+
+```baa
+صحيح الرئيسية() {
+    اطبع "أدخل عمرك: ".
+    صحيح عمر.
+    اقرأ عمر.
+    اطبع "عمرك هو:".
+    اطبع عمر.
+    إرجع ٠.
+}
+```
+
+---
+
+## 9. Testing and QA
+
+Baa includes a comprehensive test suite to ensure compiler correctness.
+
+### Running Tests
+
+From the repo root:
+
+```powershell
+# Recommended quick path (integration tests only)
+python .\scripts\qa_run.py --mode quick
+
+# Recommended full QA gate (includes regression + negative tests)
+python .\scripts\qa_run.py --mode full
+
+# Stress testing (full + stress suite + fuzz-lite)
+python .\scripts\qa_run.py --mode stress
+
+# Optional legacy runner
+python .\tests\regress.py
+```
+
+### Test Organization
+
+```
+tests/
+├── integration/
+│   ├── backend/   # Integration tests that compile and run
+│   └── ir/        # IR-specific integration tests
+├── neg/           # Negative tests (expect compiler to fail)
+├── stress/        # Stress tests for performance
+├── fixtures/      # Helper files for tests
+├── test.py        # Integration test runner
+└── regress.py     # Regression test runner
+```
+
+### Running a Single Test (Manual)
+
+**Integration test:**
+
+```powershell
+# Windows
+build\baa.exe -O2 --verify tests\integration\backend\backend_test.baa -o build\backend_test.exe
+build\backend_test.exe
+
+# Linux
+./build-linux/baa -O2 --verify tests/integration/backend/backend_test.baa -o build-linux/backend_test
+./build-linux/backend_test
+```
+
+**Negative test (expect compiler failure):**
+
+```powershell
+# Windows
+build\baa.exe -O1 tests\neg\semantic_deref_non_pointer.baa -o build\neg_tmp.exe
+# Should produce error about dereferencing non-pointer
+
+# Linux
+./build-linux/baa -O1 tests/neg/semantic_deref_non_pointer.baa -o build-linux/neg_tmp
+```
+
+### Test Metadata Conventions
+
+Test files can include special comments:
+
+- `// RUN:` - Test contract: `expect-pass`, `expect-fail`, `runtime`, `compile-only`, `skip`
+- `// EXPECT:` - Required diagnostic substring(s) for negative tests
+- `// FLAGS:` - Extra compiler flags for that specific test file
+
+---
+
+## 10. Troubleshooting
 
 ### Common Errors
 

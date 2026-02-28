@@ -15,6 +15,7 @@ This guide establishes standards for all Baa project documentation to ensure con
 - [5. Code Examples](#5-code-examples)
 - [6. Navigation and Cross-References](#6-navigation-and-cross-references)
 - [7. Tone and Voice](#7-tone-and-voice)
+- [8. C Coding Standards](#8-c-coding-standards)
 
 ---
 
@@ -357,9 +358,370 @@ flowchart LR
 
 ---
 
+## 8. C Coding Standards
+
+This section documents the coding standards for C source files in the Baa compiler codebase (`src/*.c` and `src/*.h`).
+
+### 8.1 Language and Standard
+
+- **Language**: C11 with GNU extensions (`-std=gnu11`)
+- **Target platforms**: x86_64-windows (COFF), x86_64-linux (ELF)
+
+### 8.2 Arabic-First Comments (Critical)
+
+**All comments and documentation MUST be written in Arabic (UTF-8).** This is a strict requirement for the Baa codebase.
+
+**File Header Template:**
+
+```c
+/**
+ * @file filename.c
+ * @brief وصف مختصر للملف (Brief description in Arabic)
+ * @version 0.3.10.6
+ *
+ * وصف تفصيلي إضافي إذا لزم الأمر.
+ */
+```
+
+**Function Documentation:**
+
+```c
+/**
+ * @brief وصف مختصر للدالة.
+ * @param name وصف المعامل
+ * @return وصف القيمة المُرجعة
+ */
+```
+
+**Inline Comments:**
+
+```c
+// تعليق على سطر واحد
+int x = 5; // تعليق جانبي ( sparingly used)
+
+/*
+ * تعليق متعدد الأسطر
+ * يستخدم للشرح المفصل
+ */
+```
+
+### 8.3 Formatting
+
+| Aspect | Rule |
+|--------|------|
+| **Indentation** | 4 spaces, no tabs |
+| **Brace Style** | K&R style (opening brace on same line) |
+| **Line Length** | Keep lines near 100 columns when practical |
+| **Function Size** | Prefer small, focused helpers over very large functions |
+| **Section Separators** | Use `// ===...===` for major sections |
+
+**Example:**
+
+```c
+// ============================================================================
+// قسم المعالجة (Processing Section)
+// ============================================================================
+
+/**
+ * @brief حساب المجموع لمصفوفة من الأعداد.
+ */
+static int64_t calculate_sum(const int64_t* arr, size_t count) {
+    if (!arr || count == 0) return 0;
+
+    int64_t sum = 0;
+    for (size_t i = 0; i < count; i++) {
+        sum += arr[i];
+    }
+
+    return sum;
+}
+```
+
+### 8.4 Include Order
+
+Headers MUST be included in this order:
+
+1. **Own module header** (if present) - `"module.h"`
+2. **Project headers** - `"other_module.h"`
+3. **System headers** - `<stdio.h>`, `<stdlib.h>`, etc.
+
+**Example:**
+
+```c
+#include "emit.h"           // 1. Own header
+#include "target.h"         // 2. Project headers
+#include <stdlib.h>         // 3. System headers
+#include <string.h>
+#include <stdio.h>
+```
+
+### 8.5 Naming Conventions
+
+| Element | Convention | Example |
+|---------|------------|---------|
+| **Types/Structs** | PascalCase | `BaaTokenType`, `IRBuilder`, `MachineFunc` |
+| **Functions** | snake_case (module-prefixed) | `ir_builder_new()`, `emit_comment()` |
+| **Local Variables** | snake_case | `builder`, `current_func`, `total_count` |
+| **Global Variables** | snake_case with `g_` prefix | `g_emit_target`, `g_warning_config` |
+| **Enums/Macros** | UPPER_SNAKE_CASE | `TOKEN_EOF`, `IR_OP_ADD`, `MACH_MOV` |
+| **Static Functions** | snake_case | `calculate_offset()`, `emit_prologue()` |
+| **Filenames** | snake_case | `ir_builder.c`, `ir_builder.h` |
+
+### 8.6 Types and Conversions
+
+- Use **fixed-width integers** (`int64_t`, `uint32_t`, etc.) for width-sensitive logic
+- Use **`bool`** for predicates (from `<stdbool.h>`)
+- Be **explicit** about signed/unsigned behavior and casts
+- Keep pointer-type metadata consistent across parser/semantic/IR
+
+**Example:**
+
+```c
+// جيد - استخدام أنواع ذات عرض محدد
+uint32_t hash_value = calculate_hash(key);
+int64_t offset = (int64_t)index * sizeof(element);
+
+// تجنب - الاعتماد على int العادي للمنطق الحساس للعرض
+// int count;  // لا يُنصح به للمنطق الحساس للعرض
+```
+
+### 8.7 Error Handling
+
+**Principles:**
+
+1. **Validate pointers before dereference** with early returns
+2. **Don't silently swallow errors** - report them
+3. **Use centralized diagnostics**: `error_report()`, `warning_report()`
+4. **Return NULL or false on failure** - let callers handle errors
+
+**Error Reporting Functions:**
+
+```c
+// للأخطاء القاتلة - تتوقف عندها الترجمة
+void error_report(Token token, const char* message, ...);
+
+// للتحذيرات - تستمر الترجمة
+void warning_report(WarningType type, const char* filename, int line, int col,
+                    const char* message, ...);
+```
+
+**Pattern Example:**
+
+```c
+IRBuilder* ir_builder_new(IRModule* module) {
+    // التحقق من المؤشرات أولاً (Validate first)
+    if (!module) return NULL;
+
+    IRBuilder* builder = (IRBuilder*)malloc(sizeof(IRBuilder));
+    if (!builder) {
+        fprintf(stderr, "خطأ: فشل تخصيص باني النواة\n");
+        return NULL;
+    }
+
+    // ... تهيئة الباني ...
+    return builder;
+}
+```
+
+### 8.8 Memory Management
+
+**Principles:**
+
+1. **Free what you allocate** - `malloc`, `strdup`, `realloc` paths
+2. **Preserve existing ownership patterns** and cleanup flow
+3. **IR uses arena allocation** - avoid ad-hoc frees of arena-owned objects
+4. **Cleanup on failure** - free partially allocated resources on error paths
+
+**Memory Management Patterns:**
+
+```c
+// Pattern: allocate → check → use → free
+char* buffer = (char*)malloc(size);
+if (!buffer) {
+    error_report(tok, "نفدت الذاكرة.");
+    return NULL;
+}
+
+// استخدام المخزن المؤقت
+strcpy(buffer, data);
+
+// التحرير في نفس الدالة أو في دالة تنظيف مخصصة
+free(buffer);
+```
+
+**Arena Allocation (IR):**
+
+```c
+// للبيانات المملوكة من IR - استخدام ساحة التخصيص
+char* out = (char*)ir_arena_alloc(&module->arena, size, alignment);
+// لا تُحرر هذه البيانات يدوياً - تُحرر مع الوحدة
+```
+
+**Cleanup Function Pattern:**
+
+```c
+void parser_funcsig_free(FuncPtrSig* s) {
+    if (!s) return;  // التعامل مع NULL بأمان
+
+    // تحرير جميع الموارد المخصصة
+    for (int i = 0; i < s->param_count; i++) {
+        free(s->param_ptr_base_type_names[i]);
+    }
+    free(s->return_ptr_base_type_name);
+    free(s->param_types);
+    free(s);
+}
+```
+
+### 8.9 Backend Conventions
+
+**Assembly Syntax:**
+
+- Use **AT&T syntax** (GAS - GNU Assembler)
+- Special machine vregs have reserved negative values:
+
+| Value | Register | Description |
+|-------|----------|-------------|
+| `-1` | RBP | Frame pointer |
+| `-2` | RAX | ABI return register |
+| `-3` | RSP | Stack pointer |
+| `-10..` | ABI arg regs | Integer argument registers (target-dependent) |
+
+**Example AT&T Assembly Output:**
+
+```asm
+    # Prologue
+    pushq %rbp
+    movq %rsp, %rbp
+    subq $32, %rsp
+
+    # Load argument
+    movq %rdi, -8(%rbp)
+
+    # Return
+    movq -8(%rbp), %rax
+    leave
+    ret
+```
+
+### 8.10 Complete Example
+
+Here is a complete example demonstrating the coding standards:
+
+**Header File (`my_module.h`):**
+
+```c
+/**
+ * @file my_module.h
+ * @brief واجهة برمجية لمعالجة البيانات.
+ * @version 0.3.10.6
+ */
+
+#ifndef BAA_MY_MODULE_H
+#define BAA_MY_MODULE_H
+
+#include <stdbool.h>
+#include <stdint.h>
+#include "baa.h"
+
+typedef struct {
+    int64_t* data;
+    size_t count;
+    size_t capacity;
+} IntVector;
+
+/**
+ * @brief إنشاء متجه أعداد صحيحة جديد.
+ * @param initial_capacity السعة الابتدائية
+ * @return مؤشر للمتجر الجديد أو NULL عند الفشل
+ */
+IntVector* int_vector_new(size_t initial_capacity);
+
+/**
+ * @brief إضافة عنصر إلى المتجه.
+ * @param vec المتجر المستهدف
+ * @param value القيمة المراد إضافتها
+ * @return true عند النجاح، false عند الفشل
+ */
+bool int_vector_push(IntVector* vec, int64_t value);
+
+/**
+ * @brief تحرير موارد المتجر.
+ * @param vec المتجر المراد تحريره
+ */
+void int_vector_free(IntVector* vec);
+
+#endif // BAA_MY_MODULE_H
+```
+
+**Implementation File (`my_module.c`):**
+
+```c
+/**
+ * @file my_module.c
+ * @brief تنفيذ معالجة البيانات.
+ * @version 0.3.10.6
+ */
+
+#include "my_module.h"
+#include <stdlib.h>
+#include <string.h>
+
+// ============================================================================
+// الإنشاء والتدمير (Lifecycle)
+// ============================================================================
+
+IntVector* int_vector_new(size_t initial_capacity) {
+    if (initial_capacity == 0) initial_capacity = 4;
+
+    IntVector* vec = (IntVector*)malloc(sizeof(IntVector));
+    if (!vec) return NULL;
+
+    vec->data = (int64_t*)malloc(initial_capacity * sizeof(int64_t));
+    if (!vec->data) {
+        free(vec);
+        return NULL;
+    }
+
+    vec->count = 0;
+    vec->capacity = initial_capacity;
+    return vec;
+}
+
+void int_vector_free(IntVector* vec) {
+    if (!vec) return;
+
+    free(vec->data);
+    free(vec);
+}
+
+// ============================================================================
+// العمليات (Operations)
+// ============================================================================
+
+bool int_vector_push(IntVector* vec, int64_t value) {
+    if (!vec) return false;
+
+    // التحقق من الحاجة للتوسع
+    if (vec->count >= vec->capacity) {
+        size_t new_cap = vec->capacity * 2;
+        int64_t* new_data = (int64_t*)realloc(vec->data, new_cap * sizeof(int64_t));
+        if (!new_data) return false;
+
+        vec->data = new_data;
+        vec->capacity = new_cap;
+    }
+
+    vec->data[vec->count++] = value;
+    return true;
+}
+```
+
+---
+
 ## Quick Reference Checklist
 
-Before submitting documentation changes:
+### Documentation Changes
 
 - [ ] Version number is 0.3.10.6 in header
 - [ ] Document follows standard header/footer format
@@ -372,6 +734,21 @@ Before submitting documentation changes:
 - [ ] Line length is under 100 characters
 - [ ] Document ends with a single newline
 - [ ] Tone matches document type
+
+### C Code Changes
+
+- [ ] Comments and Doxygen blocks are in Arabic (UTF-8)
+- [ ] User-facing diagnostics are Arabic-first
+- [ ] 4-space indentation, no tabs
+- [ ] K&R brace style
+- [ ] Include order: own header → project headers → system headers
+- [ ] Naming conventions followed (PascalCase types, snake_case functions)
+- [ ] Fixed-width integers used for width-sensitive logic
+- [ ] Pointers validated before dereference
+- [ ] Errors reported via `error_report()` / `warning_report()`
+- [ ] Memory properly allocated and freed
+- [ ] Arena-owned objects not freed ad-hoc
+- [ ] Lines kept near 100 columns when practical
 
 ---
 

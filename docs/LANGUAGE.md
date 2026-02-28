@@ -13,7 +13,7 @@ Baa (باء) is a compiled systems programming language using Arabic syntax. It 
 - [3. Variables & Types](#3-variables--types)
 - [4. Constants](#4-constants)
 - [5. Functions](#5-functions)
--[6. Input / Output](#6-input--output)
+- [6. Input / Output](#6-input--output)
 - [7. Control Flow](#7-control-flow)
 - [8. Operators](#8-operators)
 - [9. Standard Library (stdlib)](#9-standard-library-stdlib)
@@ -32,7 +32,7 @@ A Baa program is a collection of **Global Variables** and **Functions**.
 | **Entry Point** | `الرئيسية` (Main) function |
 | **Statements** | End with period (`.`) |
 | **Comments** | Single-line with `//` |
-| **Keywords** | `صحيح`, `ص٨`, `ص١٦`, `ص٣٢`, `ص٦٤`, `ط٨`, `ط١٦`, `ط٣٢`, `ط٦٤`, `عشري`, `حرف`, `نص`, `منطقي`, `عدم`, `حجم`, `نوع`, `كـ`, `دالة`, `ثابت`, `ساكن`, `إذا`, `وإلا`, `طالما`, `لكل`, `اختر`, `حالة`, `افتراضي`, `اطبع`, `اقرأ`, `إرجع`, `توقف`, `استمر`, `تعداد`, `هيكل`, `اتحاد` |
+| **Keywords** | `صحيح`, `ص٨`, `ص١٦`, `ص٣٢`, `ص٦٤`, `ط٨`, `ط١٦`, `ط٣٢`, `ط٦٤`, `عشري`, `حرف`, `نص`, `منطقي`, `عدم`, `حجم`, `نوع`, `كـ`, `دالة`, `ثابت`, `ساكن`, `إذا`, `وإلا`, `طالما`, `لكل`, `اختر`, `حالة`, `افتراضي`, `اطبع`, `اقرأ`, `إرجع`, `توقف`, `استمر`, `تعداد`, `هيكل`, `اتحاد`, `صواب`, `خطأ` |
 
 ### Minimal Program
 
@@ -122,6 +122,20 @@ Remove a previously defined macro.
 // Now 'تصحيح' is undefined
 ```
 
+### 2.5. Error Directive (`#خطأ`)
+
+Generate a compile-time error with a custom message.
+
+**Syntax:** `#خطأ <message>`
+
+**Example:**
+
+```baa
+#إذا_عرف نظام_غير_مدعوم
+    #خطأ "هذا النظام غير مدعوم"
+#نهاية
+```
+
 ---
 
 ## 3. Variables & Types
@@ -145,6 +159,7 @@ Baa is statically typed. All variables must be declared with their type.
 | `منطقي` | `bool` (stored as byte) | Boolean value (`صواب`/`خطأ`) | `منطقي ب = صواب.` |
 | `حرف` | `uint64_t` (packed) | One UTF-8 character (1..4 bytes) | `'أ'` |
 | `عشري` | `double` | 64-bit floating point (f64) | `٣.١٤` |
+| `عدم` | `void` | Void type (no value) | `عدم فارغ()` |
 | `دالة` | `void*` (logical) | Function pointer type | `دالة(صحيح) -> صحيح` |
 
 ### 3.2. Scalar Variables
@@ -159,6 +174,15 @@ Baa is statically typed. All variables must be declared with their type.
 // String (حرف[])
 نص رسالة = "مرحباً".
 رسالة = "وداعاً".
+
+// Boolean
+منطقي نشط = صواب.
+نشط = خطأ.
+
+// Void (used for functions with no return)
+عدم فارغ() {
+    اطبع "لا قيمة إرجاع".
+}
 ```
 
 ### 3.2.1. Characters (`حرف`) and Strings (`نص`)
@@ -288,7 +312,7 @@ Baa is statically typed. All variables must be declared with their type.
 
 ### 3.4. Enumerations (التعداد)
 
-التعداد (`تعداد`) يعرّف مجموعة أسماء ثابتة تُخزَّن كأعداد صحيحة، مع **سلامة نوع** تمنع خلط تعدادين مختلفين.
+التعداد (`تعداد`) يعرّف مجموعة أسماء ثابتة تُخزَّن كأعداد صحيحة، مع **سلامة نوع** تمنع خلط تعدادين مختلفين.
 
 **Syntax:**
 
@@ -312,7 +336,7 @@ Baa is statically typed. All variables must be declared with their type.
 
 **ملاحظات:**
 
-- قيم العناصر تُعيَّن تلقائياً: 0, 1, 2...
+- قيم العناصر تُعيَّن تلقائياً: 0, 1, 2...
 - لا يمكن مقارنة/إسناد قيم تعداد من أنواع تعداد مختلفة.
 
 ---
@@ -413,7 +437,7 @@ Baa is statically typed. All variables must be declared with their type.
 
 ---
 
-### 3.7. Additional Types & Planned Features
+### 3.7. Additional Types & Features
 
 هذا القسم يجمع ميزات إضافية: المنفّذ حالياً والمخطط لاحقاً.
 
@@ -479,6 +503,28 @@ Baa is statically typed. All variables must be declared with their type.
 - فك الإشارة يتطلب مؤشراً صالحاً، وأخذ العنوان يتطلب قيمة قابلة للإسناد (L-value).
 - مؤشرات الدوال مدعومة عبر النوع `دالة(...) -> ...` (انظر 5.6).
 
+**Example:**
+
+```baa
+صحيح الرئيسية() {
+    صحيح س = ١٠.
+    صحيح* م = &س.
+    
+    اطبع *م.  // يطبع ١٠
+    
+    *م = ٢٠.
+    اطبع س.   // يطبع ٢٠
+    
+    // مؤشر فارغ
+    صحيح* م٢ = عدم.
+    إذا (م٢ == عدم) {
+        اطبع "المؤشر فارغ".
+    }
+    
+    إرجع ٠.
+}
+```
+
 #### 3.7.4. Type Casting (تحويل الأنواع) [Implemented v0.3.10.5]
 
 **Syntax:** `كـ<النوع>(التعبير)`
@@ -494,6 +540,23 @@ Baa is statically typed. All variables must be declared with their type.
 - تحويلات المؤشرات الصريحة: مدعومة بين `pointer <-> pointer` و `pointer <-> صحيح`.
 - التحويل الصريح إلى `عدم` أو الأنواع المركبة (`هيكل`/`اتحاد`) غير مدعوم حالياً.
 
+**Example:**
+
+```baa
+صحيح الرئيسية() {
+    // تحويل عددي
+    عشري ف = ٣.١٤.
+    صحيح س = كـ<صحيح>(ف).
+    
+    // تحويل مؤشر
+    صحيح* م = &س.
+    ط٦٤ عنوان = كـ<ط٦٤>(م).
+    
+    إرجع ٠.
+}
+```
+
+---
 
 ## 4. Constants (الثوابت)
 
@@ -569,6 +632,12 @@ Functions enable code reuse and modularity.
 صحيح مربع(صحيح س) {
     إرجع س * س.
 }
+
+// Void function (no return value)
+عدم اطبع_تحية(نص اسم) {
+    اطبع "مرحباً".
+    اطبع اسم.
+}
 ```
 
 ### 5.2. Function Prototypes (النماذج الأولية)
@@ -636,7 +705,7 @@ Functions can call themselves (recursion), provided there is a base case to term
 }
 ```
 
-#### 5.6. Function Pointers (مؤشرات الدوال) [Implemented v0.3.10.6]
+### 5.6. Function Pointers (مؤشرات الدوال) [Implemented v0.3.10.6]
 
 يوفر باء القدرة على تمرير الدوال كقيم باستخدام توقيع الدالة كنوع.
 
@@ -660,6 +729,25 @@ Functions can call themselves (recursion), provided there is a base case to term
 - النداء عبر المؤشر مدعوم بالصيغة `اسم_المتغير(المعاملات)`.
 - `عدم` يمثل مؤشراً فارغاً للدوال ويمكن مقارنته بـ `==` و `!=`.
 - التحويل الصريح (`كـ`) من/إلى مؤشر دالة غير مدعوم في هذا الإصدار.
+
+**Example with Callback:**
+
+```baa
+نوع معالج = دالة(صحيح) -> عدم.
+
+عدم طبق_معالج(صحيح قيمة، معالج م) {
+    م(قيمة).
+}
+
+عدم اطبع_ضعف(صحيح س) {
+    اطبع س * ٢.
+}
+
+صحيح الرئيسية() {
+    طبق_معالج(٥، اطبع_ضعف).
+    إرجع ٠.
+}
+```
 
 ### 5.7. Variadic Functions (دوال متغيرة المعاملات) [Scheduled v0.4.0.5]
 
@@ -919,7 +1007,28 @@ Multi-way branching based on integer or character values.
 - هذه العمليات تعمل على الأنواع الصحيحة فقط.
 - الإزاحة اليمنى تعتمد على نوع المعامل الأيسر (حسابية للموقّع، منطقية لغير الموقّع).
 
-### 8.5. Size Query Operator `حجم` (v0.3.6)
+### 8.5. Compound Assignment Operators
+
+| Operator | Description | Equivalent |
+|----------|-------------|------------|
+| `+=` | Add and assign | `س += ٥` → `س = س + ٥` |
+| `-=` | Subtract and assign | `س -= ٥` → `س = س - ٥` |
+| `*=` | Multiply and assign | `س *= ٥` → `س = س * ٥` |
+| `/=` | Divide and assign | `س /= ٥` → `س = س / ٥` |
+| `%=` | Modulo and assign | `س %= ٥` → `س = س % ٥` |
+
+**Example:**
+
+```baa
+صحيح س = ١٠.
+س += ٥.    // س = ١٥
+س -= ٣.    // س = ١٢
+س *= ٢.    // س = ٢٤
+س /= ٤.    // س = ٦
+س %= ٤.    // س = ٢
+```
+
+### 8.6. Size Query Operator `حجم` (v0.3.6)
 
 `حجم(...)` يعيد حجم النوع/التعبير بالبايت كثابت وقت ترجمة.
 
@@ -929,7 +1038,7 @@ Multi-way branching based on integer or character values.
 صحيح ج = حجم(قائمة).
 ```
 
-### 8.6. Operator Precedence
+### 8.7. Operator Precedence
 
 From highest to lowest:
 
@@ -946,6 +1055,7 @@ From highest to lowest:
 11. `|` — Bitwise OR
 12. `&&` — Logical AND
 13. `||` — Logical OR
+14. `=`, `+=`, `-=`, `*=`, `/=`, `%=` — Assignment
 
 **Note:** Use parentheses `()` to override precedence when needed.
 
@@ -991,6 +1101,8 @@ Strings in Baa are UTF-8 arrays of `حرف` terminated by a null character. The 
 }
 ```
 
+---
+
 ## 10. Inline Assembly (المجمع المدمج) [Scheduled v0.4.0.6]
 
 Embed raw assembly code directly.
@@ -1014,15 +1126,28 @@ Embed raw assembly code directly.
 // ثابت عام
 ثابت صحيح المعامل = ٢.
 
+// تعريف دالة
+صحيح جمع(صحيح أ، صحيح ب) {
+    إرجع أ + ب.
+}
+
+// نوع بديل لمؤشر دالة
+نوع عملية = دالة(صحيح، صحيح) -> صحيح.
+
 // Main function
 صحيح الرئيسية() {
     // ثابت محلي
     ثابت صحيح البداية = ١.
     
-    // طباعة الأرقام المضاعفة
+    // مؤشر دالة
+    عملية ع = جمع.
+    
+    // طباعة الأرقام المضاعفة باستخدام مؤشر الدالة
     لكل (صحيح س = البداية؛ س <= الحد_الأقصى؛ س++) {
-        اطبع س * المعامل.
+        صحيح ناتج = ع(س، المعامل).
+        اطبع ناتج.
     }
+    
     إرجع ٠.
 }
 ```

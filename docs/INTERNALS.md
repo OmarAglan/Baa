@@ -29,6 +29,10 @@ This document details the internal architecture, data structures, and algorithms
 - [IR Dead Code Elimination Pass](#616-ir-dead-code-elimination-pass)
 - [IR Copy Propagation Pass](#617-ir-copy-propagation-pass)
 - [IR Common Subexpression Elimination Pass](#618-ir-common-subexpression-elimination-pass)
+- [IR Global Value Numbering Pass](#6181-ir-global-value-numbering-pass)
+- [IR Loop Invariant Code Motion Pass](#6182-ir-loop-invariant-code-motion-pass)
+- [IR Inlining Pass](#6183-ir-inlining-pass)
+- [IR Loop Unrolling Pass](#6184-ir-loop-unrolling-pass)
 - [Instruction Selection](#619-instruction-selection-v0321)
 - [Register Allocation](#620-register-allocation-تخصيص_السجلات--v0322)
 - [Code Generation](#7-code-generation)
@@ -68,7 +72,7 @@ flowchart LR
 | **1. Frontend** | `.baa` Source | AST | `lexer.c`, `parser.c` | Tokenizes, handles macros, and builds the syntax tree. |
 | **2. Analysis** | AST | Valid AST | `analysis.c` | **Semantic Pass**: Checks types, scopes, and resolves symbols. |
 | **3. IR Lowering** | AST | IR | `ir_lower.c` (v0.3.0.3+) + `ir_builder.c` | Converts AST expressions/statements to SSA-form Intermediate Representation using the IR Builder. |
-| **4. Optimization** | IR | Optimized IR | `ir_optimizer.c`, `ir_mem2reg.c`, `ir_sccp.c`, `ir_gvn.c`, etc. | Full middle-end: Mem2Reg, GVN, SCCP, LICM, Inlining, InstCombine, CFGSimplify, DCE, CopyProp, CSE. |
+| **4. Optimization** | IR | Optimized IR | `ir_optimizer.c`, `ir_mem2reg.c`, `ir_sccp.c`, `ir_gvn.c`, etc. | Full middle-end: Inlining (O2), Mem2Reg, Canon, InstCombine, SCCP, ConstFold, CopyProp, GVN (O2), CSE (O2), DCE, CFGSimplify, LICM. |
 | **5. Backend** | IR | `.s` Assembly | `isel.c`, `regalloc.c`, `emit.c` | Lowers IR to machine instructions, allocates registers, and emits x86-64 AT&T assembly. |
 | **6. Assemble** | `.s` Assembly | `.o` Object | `gcc -c` | Invokes external assembler. |
 | **7. Link** | `.o` Object | `.exe` Executable | `gcc` | Links with C Runtime. |
@@ -483,7 +487,7 @@ The Semantic Analyzer (`src/analysis.c`) performs a static check on the AST befo
 11. **Array Shape Validation** (v0.3.9): Tracks array rank/dimensions in symbols, validates index-count match, and performs compile-time out-of-bounds checks for constant indices.
 12. **Pointer Semantics (v0.3.10)**: Validates pointer arithmetic, comparisons, dereference, and address-of constraints.
 13. **Type Casting (v0.3.10.5)**: Enforces rules for explicit scalar and pointer conversions.
-14. **Function Pointers (v0.3.10.6)**: Validates assignment and indirect calls matching exact signatures.
+14. **Function Pointers (v0.3.10.6)**: Validates assignment, comparison (EQ/NE only), and indirect calls matching exact signatures.
 
 ### 5.2. Constant Checking (v0.2.7+)
 
@@ -715,10 +719,10 @@ IRInst
 | `IR_TYPE_F64` | ع٦٤ | 64 | Float (double) |
 | `IR_TYPE_PTR` | مؤشر | 64 | Pointer |
 | `IR_TYPE_ARRAY` | مصفوفة | varies | Array |
-| `IR_TYPE_FUNC` | دالة | 64 | Function type (pointer) |
+| `IR_TYPE_FUNC` | دالة | 64 | Function pointer type (v0.3.10.6+) |
 
 **ملاحظة (v0.3.10.6):** قيم `IR_TYPE_FUNC` تُستخدم كمؤشرات دوال (قابلة للتخزين/التحميل/المقارنة EQ/NE مع `0`)،
-وتُخفض على x86-64 كقيمة 64-بت مثل المؤشر العادي.
+وتُخفض على x86-64 كقيمة 64-بت مثل المؤشر العادي. الدالة `ir_builder_emit_call_indirect()` تُستخدم للنداء غير المباشر.
 
 ### 6.5. Comparison Predicates
 
@@ -1210,20 +1214,6 @@ The IR copy propagation pass removes redundant SSA copy chains by replacing uses
 
 ---
 
-### 6.17.1. IR GVN Pass (ترقيم_القيم) — v0.3.2.8.6
-
-GVN (Global Value Numbering) removes redundant pure expressions across dominator scopes, even when they use different SSA registers due to copies.
-
-**File:** `src/ir_gvn.c`
-
-**Entry Point:** `ir_gvn_run()`
-
-**Pipeline position:** enabled at `-O2` after copy propagation and before CSE.
-
-**Testing:** Covered by integration corpus and optimizer-enabled smoke in `scripts/qa_run.py --mode full`.
-
----
-
 ### 6.18. IR Common Subexpression Elimination Pass (حذف_المكرر) — v0.3.1.5
 
 The IR common subexpression elimination (CSE) pass detects duplicate computations with identical opcode and operands, replacing subsequent uses with the first computed result.
@@ -1251,9 +1241,96 @@ The IR common subexpression elimination (CSE) pass detects duplicate computation
 - Memory: حجز (alloca), حمل (load), خزن (store)
 - Control: نداء (call), فاي (phi), terminators (branches/returns)
 
+**Pipeline position:** Enabled at `-O2` after GVN.
+
 **Testing:** Covered by integration corpus and optimizer-enabled smoke in `scripts/qa_run.py --mode full`.
 
 **API:** See [docs/API_REFERENCE.md](API_REFERENCE.md) for function signatures.
+
+---
+
+### 6.18.1. IR Global Value Numbering Pass (ترقيم_القيم_العالمية) — v0.3.2.8.6
+
+GVN (Global Value Numbering) removes redundant pure expressions across dominator scopes, even when they use different SSA registers due to copies. Unlike CSE which relies on exact opcode/operand matching, GVN assigns value numbers to expressions based on their semantic equivalence.
+
+**File:** `src/ir_gvn.c`
+
+**Entry Point:** `ir_gvn_run()`
+
+**Pass Descriptor:** `IR_PASS_GVN`
+
+**Algorithm:**
+
+1. Computes dominance tree for each function.
+2. Assigns value numbers to expressions based on opcode and operand value numbers.
+3. Detects equivalent expressions even when they use different SSA registers.
+4. Replaces redundant computations with the original value.
+
+**Pipeline position:** Enabled at `-O2` after copy propagation and before CSE.
+
+**Testing:** Covered by integration corpus and optimizer-enabled smoke in `scripts/qa_run.py --mode full`.
+
+---
+
+### 6.18.2. IR Loop Invariant Code Motion Pass (حركة_التعليمات_غير_المتغيرة) — v0.3.2.7.1
+
+LICM (Loop Invariant Code Motion) identifies pure instructions inside loops that depend only on values outside the loop and moves them to the loop preheader.
+
+**File:** `src/ir_licm.c`
+
+**Entry Point:** `ir_licm_run()`
+
+**Pass Descriptor:** `IR_PASS_LICM`
+
+**Safety Constraints:**
+
+- Does not move memory operations or calls.
+- Does not move division/remainder to avoid changing trap behavior when the loop is not entered.
+- Requires a single preheader for the loop header (otherwise skips that loop).
+
+**Pipeline position:** Runs in both `-O1` and `-O2` after CFG simplification.
+
+**Testing:** Covered by integration corpus and optimizer-enabled smoke in `scripts/qa_run.py --mode full`.
+
+---
+
+### 6.18.3. IR Inlining Pass (تضمين_الدوال) — v0.3.2.7.2
+
+The inlining pass expands function calls directly at their call sites, enabling further optimizations by exposing the function body to the optimizer.
+
+**File:** `src/ir_inline.c`
+
+**Entry Point:** `ir_inline_run()`
+
+**Algorithm:**
+
+- Conservatively inlines small internal functions with a single call site.
+- Applied before Mem2Reg (before SSA construction) to avoid phi complexity.
+- Relies on Mem2Reg + subsequent optimization passes for "cleanup after inlining".
+
+**Pipeline position:** Enabled at `-O2` only, runs before the main optimization loop.
+
+**Testing:** Covered by integration corpus and optimizer-enabled smoke in `scripts/qa_run.py --mode full`.
+
+---
+
+### 6.18.4. IR Loop Unrolling Pass (فك_الحلقات) — v0.3.2.7.1
+
+Loop unrolling replicates loop bodies to reduce loop overhead and enable further optimizations.
+
+**File:** `src/ir_unroll.c`
+
+**Entry Point:** `ir_unroll_run()`
+
+**Constraints:**
+
+- Only if the trip count is constant and small.
+- Only on natural loops with a single preheader.
+- Runs after Out-of-SSA because that makes loop values explicit through copies.
+
+**Pipeline position:** Enabled with `-funroll-loops` flag after Out-of-SSA.
+
+**Testing:** Covered by integration corpus and optimizer-enabled smoke in `scripts/qa_run.py --mode full`.
 
 ---
 

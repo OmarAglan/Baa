@@ -2,7 +2,7 @@
 
 > **Version:** 0.3.10.6 | [← Compiler Internals](INTERNALS.md) | [IR Specification →](BAA_IR_SPECIFICATION.md)
 
-This document details the C functions, enumerations, and structures defined in `src/baa.h`, `src/ir.h`, `src/ir_arena.h`, `src/ir_mutate.h`, `src/ir_defuse.h`, `src/ir_clone.h`, `src/ir_text.h`, `src/ir_loop.h`, `src/ir_licm.h`, `src/ir_unroll.h`, `src/ir_inline.h`, `src/ir_builder.h`, `src/ir_lower.h`, `src/ir_analysis.h`, `src/ir_pass.h`, `src/ir_mem2reg.h`, `src/ir_outssa.h`, `src/ir_verify_ssa.h`, `src/ir_verify_ir.h`, `src/ir_canon.h`, `src/ir_cfg_simplify.h`, `src/ir_dce.h`, `src/ir_copyprop.h`, `src/ir_cse.h`, `src/ir_optimizer.h`, `src/target.h`, `src/isel.h`, `src/regalloc.h`, and `src/emit.h`.
+This document details the C functions, enumerations, and structures defined in `src/baa.h`, `src/ir.h`, `src/ir_arena.h`, `src/ir_mutate.h`, `src/ir_defuse.h`, `src/ir_clone.h`, `src/ir_text.h`, `src/ir_loop.h`, `src/ir_licm.h`, `src/ir_unroll.h`, `src/ir_inline.h`, `src/ir_builder.h`, `src/ir_lower.h`, `src/ir_analysis.h`, `src/ir_pass.h`, `src/ir_mem2reg.h`, `src/ir_outssa.h`, `src/ir_verify_ssa.h`, `src/ir_verify_ir.h`, `src/ir_canon.h`, `src/ir_cfg_simplify.h`, `src/ir_dce.h`, `src/ir_copyprop.h`, `src/ir_cse.h`, `src/ir_optimizer.h`, `src/ir_data_layout.h`, `src/target.h`, `src/code_model.h`, `src/isel.h`, `src/regalloc.h`, and `src/emit.h`.
 
 ---
 
@@ -13,6 +13,9 @@ This document details the C functions, enumerations, and structures defined in `
 - [Parser Module](#2-parser-module)
 - [Semantic Analysis](#3-semantic-analysis)
 - [IR Module](#4-ir-module)
+  - [IR Data Layout](#411-ir-data-layout-module-v03266)
+  - [Target Abstraction](#412-target-abstraction-v03281)
+  - [Code Model](#413-code-model-v03283)
 - [IR Builder Module](#5-ir-builder-module)
 - [IR Lowering Module](#6-ir-lowering-module)
 - [IR Optimization Passes](#7-ir-optimization-passes)
@@ -289,23 +292,29 @@ Represents a single IR instruction.
 
 ```c
 typedef struct IRInst {
-    IROp op;
-    IRType* type;
-    int id;
-    int dest;
-    IRValue* operands[4];
+    IROp op;                    // Opcode
+    IRType* type;               // Result type (or void for stores/branches)
+    int id;                     // Instruction ID for diagnostics/tests
+    int dest;                   // Destination register (-1 if no destination)
+    IRValue* operands[4];       // Up to 4 operands
     int operand_count;
-    IRCmpPred cmp_pred;
-    IRPhiEntry* phi_entries;
-    char* call_target;
-    IRValue* call_callee;
-    IRValue** call_args;
+    IRCmpPred cmp_pred;         // For comparison instructions
+    IRPhiEntry* phi_entries;    // Linked list of [value, block] pairs for phi
+    char* call_target;          // Function name for calls
+    IRValue* call_callee;       // Callee value for indirect calls (NULL for direct)
+    IRValue** call_args;        // Argument list for calls
     int call_arg_count;
-    struct IRBlock* parent;
+    const char* src_file;       // Source location (for debugging)
+    int src_line;
+    int src_col;
+    const char* dbg_name;       // Optional symbol name for debugging
+    struct IRBlock* parent;     // Parent block
     struct IRInst* prev;
     struct IRInst* next;
 } IRInst;
 ```
+
+**Note:** Added `src_file`, `src_line`, `src_col`, and `dbg_name` fields for enhanced debugging support.
 
 **Memory management (v0.3.2.6.1):** IR objects are allocated from a module-owned arena (`src/ir_arena.c`). Treat the IR as **module-owned** and release everything with `ir_module_free()`. The legacy `*_free` functions remain for compatibility but do not perform per-object frees under the arena model.
 
@@ -320,6 +329,41 @@ typedef struct IRArenaStats {
 
 void ir_arena_get_stats(const IRArena* arena, IRArenaStats* out_stats);
 ```
+
+#### `IRParam` Struct
+Represents a function parameter.
+
+```c
+typedef struct IRParam {
+    char* name;                 // Parameter name
+    IRType* type;               // Parameter type
+    int reg;                    // Virtual register assigned (%معامل<n>)
+} IRParam;
+```
+
+#### `IRStringEntry` Struct
+Represents a string literal in the string table.
+
+```c
+typedef struct IRStringEntry {
+    char* content;              // String content (UTF-8)
+    int id;                     // Unique ID (.Lstr_<id>)
+    struct IRStringEntry* next;
+} IRStringEntry;
+```
+
+#### `IRBaaStringEntry` Struct
+Baa string constant represented as a `حرف[]` array.
+
+```c
+typedef struct IRBaaStringEntry {
+    char* content;              // String content (UTF-8)
+    int id;                     // Unique ID (.Lbs_<id>)
+    struct IRBaaStringEntry* next;
+} IRBaaStringEntry;
+```
+
+**Note:** These structures are allocated within the IR arena and are freed in bulk when the module is destroyed.
 
 ### 4.1. Type Construction
 
@@ -374,6 +418,26 @@ Creates a function type.
 
 ---
 
+#### `ir_types_equal`
+
+```c
+int ir_types_equal(IRType* a, IRType* b)
+```
+
+Returns 1 if two types are equal, 0 otherwise.
+
+---
+
+#### `ir_type_bits`
+
+```c
+int ir_type_bits(IRType* type)
+```
+
+Returns the size of a type in bits.
+
+---
+
 ### 4.2. Value Construction
 
 #### `ir_value_reg`
@@ -421,6 +485,51 @@ Creates a string constant reference.
 
 ---
 
+#### `ir_value_baa_str`
+
+```c
+IRValue* ir_value_baa_str(const char* str, int id)
+```
+
+Creates a Baa string constant (`حرف[]`).
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `str` | `const char*` | String content |
+| `id` | `int` | Baa string table ID |
+
+---
+
+#### `ir_value_block`
+
+```c
+IRValue* ir_value_block(IRBlock* block)
+```
+
+Creates a basic block reference value.
+
+---
+
+#### `ir_value_global`
+
+```c
+IRValue* ir_value_global(const char* name, IRType* type)
+```
+
+Creates a global variable reference value.
+
+---
+
+#### `ir_value_func_ref`
+
+```c
+IRValue* ir_value_func_ref(const char* name, IRType* type)
+```
+
+Creates a function reference value.
+
+---
+
 ### 4.3. Instruction Construction
 
 #### `ir_inst_binary`
@@ -438,6 +547,43 @@ Creates a binary operation (add, sub, mul, div, etc.).
 | `dest` | `int` | Destination register number |
 | `lhs` | `IRValue*` | Left operand |
 | `rhs` | `IRValue*` | Right operand |
+
+---
+
+#### `ir_inst_unary`
+
+```c
+IRInst* ir_inst_unary(IROp op, IRType* type, int dest, IRValue* operand)
+```
+
+Creates a unary operation (neg, not, etc.).
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `op` | `IROp` | Operation (e.g., `IR_OP_NEG`) |
+| `type` | `IRType*` | Result type |
+| `dest` | `int` | Destination register number |
+| `operand` | `IRValue*` | Operand |
+
+---
+
+#### `ir_inst_new`
+
+```c
+IRInst* ir_inst_new(IROp op, IRType* type, int dest)
+```
+
+Creates a new instruction with the given opcode, type, and destination.
+
+---
+
+#### `ir_inst_add_operand`
+
+```c
+void ir_inst_add_operand(IRInst* inst, IRValue* operand)
+```
+
+Adds an operand to an instruction.
 
 ---
 
@@ -642,6 +788,36 @@ Use `ir_inst_phi_add()` to add incoming values.
 
 ---
 
+#### `ir_inst_phi_add`
+
+```c
+void ir_inst_phi_add(IRInst* phi, IRValue* value, IRBlock* block)
+```
+
+Adds an incoming value to a phi node.
+
+---
+
+#### `ir_inst_set_loc`
+
+```c
+void ir_inst_set_loc(IRInst* inst, const char* file, int line, int col)
+```
+
+Sets source location for debugging.
+
+---
+
+#### `ir_inst_set_dbg_name`
+
+```c
+void ir_inst_set_dbg_name(IRInst* inst, const char* name)
+```
+
+Sets an optional symbol name for debugging.
+
+---
+
 ### 4.4. Block & Function Construction
 
 #### `ir_block_new`
@@ -666,6 +842,36 @@ void ir_block_append(IRBlock* block, IRInst* inst)
 ```
 
 Appends an instruction to a block.
+
+---
+
+#### `ir_block_add_pred`
+
+```c
+void ir_block_add_pred(IRBlock* block, IRBlock* pred)
+```
+
+Adds a predecessor block to the block's predecessor list.
+
+---
+
+#### `ir_block_add_succ`
+
+```c
+void ir_block_add_succ(IRBlock* block, IRBlock* succ)
+```
+
+Adds a successor block to the block's successor list.
+
+---
+
+#### `ir_block_is_terminated`
+
+```c
+int ir_block_is_terminated(IRBlock* block)
+```
+
+Returns 1 if the block has a terminator instruction, 0 otherwise.
 
 ---
 
@@ -706,6 +912,58 @@ Creates and adds a new block to a function.
 
 ---
 
+#### `ir_func_alloc_block_id`
+
+```c
+int ir_func_alloc_block_id(IRFunc* func)
+```
+
+Allocates a new block ID for the function.
+
+---
+
+#### `ir_func_add_block`
+
+```c
+void ir_func_add_block(IRFunc* func, IRBlock* block)
+```
+
+Adds an existing block to the function.
+
+---
+
+#### `ir_func_add_param`
+
+```c
+void ir_func_add_param(IRFunc* func, const char* name, IRType* type)
+```
+
+Adds a parameter to the function.
+
+---
+
+### 4.4.1. Global Variable Construction
+
+#### `ir_global_new`
+
+```c
+IRGlobal* ir_global_new(const char* name, IRType* type, int is_const)
+```
+
+Creates a new global variable.
+
+---
+
+#### `ir_global_set_init`
+
+```c
+void ir_global_set_init(IRGlobal* global, IRValue* init)
+```
+
+Sets the initializer for a global variable.
+
+---
+
 ### 4.5. Module Construction
 
 #### `ir_module_new`
@@ -728,6 +986,16 @@ Adds a function to the module.
 
 ---
 
+#### `ir_module_add_global`
+
+```c
+void ir_module_add_global(IRModule* module, IRGlobal* global)
+```
+
+Adds a global variable to the module.
+
+---
+
 #### `ir_module_add_string`
 
 ```c
@@ -737,6 +1005,58 @@ int ir_module_add_string(IRModule* module, const char* str)
 Adds a string to the string table.
 
 **Returns:** String ID for referencing in IR.
+
+---
+
+#### `ir_module_add_baa_string`
+
+```c
+int ir_module_add_baa_string(IRModule* module, const char* str)
+```
+
+Adds a Baa string (`حرف[]`) to the Baa string table.
+
+**Returns:** String ID for referencing in IR.
+
+---
+
+#### `ir_module_find_func`
+
+```c
+IRFunc* ir_module_find_func(IRModule* module, const char* name)
+```
+
+Finds a function by name in the module.
+
+---
+
+#### `ir_module_find_global`
+
+```c
+IRGlobal* ir_module_find_global(IRModule* module, const char* name)
+```
+
+Finds a global variable by name in the module.
+
+---
+
+#### `ir_module_get_string`
+
+```c
+const char* ir_module_get_string(IRModule* module, int id)
+```
+
+Retrieves a string from the string table by ID.
+
+---
+
+#### `ir_module_get_baa_string`
+
+```c
+const char* ir_module_get_baa_string(IRModule* module, int id)
+```
+
+Retrieves a Baa string from the Baa string table by ID.
 
 ---
 
@@ -1085,6 +1405,44 @@ Converts an integer to Arabic-Indic numerals.
 
 ---
 
+### 4.7.1. English Name Conversion (for debugging)
+
+#### `ir_op_to_english`
+
+```c
+const char* ir_op_to_english(IROp op)
+```
+
+Converts an opcode to its English name (for debugging).
+
+**Example:** `ir_op_to_english(IR_OP_ADD)` returns `"ADD"`.
+
+---
+
+#### `ir_cmp_pred_to_english`
+
+```c
+const char* ir_cmp_pred_to_english(IRCmpPred pred)
+```
+
+Converts a comparison predicate to its English name.
+
+**Example:** `ir_cmp_pred_to_english(IR_CMP_EQ)` returns `"EQ"`.
+
+---
+
+#### `ir_type_to_english`
+
+```c
+const char* ir_type_to_english(IRType* type)
+```
+
+Converts a type to its English representation.
+
+**Example:** `ir_type_to_english(IR_TYPE_I64_T)` returns `"i64"`.
+
+---
+
 ### 4.8. Predefined Types
 
 Global type singletons for convenience:
@@ -1096,9 +1454,15 @@ extern IRType* IR_TYPE_I8_T;     // ص٨
 extern IRType* IR_TYPE_I16_T;    // ص١٦
 extern IRType* IR_TYPE_I32_T;    // ص٣٢
 extern IRType* IR_TYPE_I64_T;    // ص٦٤
+extern IRType* IR_TYPE_U8_T;     // ط٨
+extern IRType* IR_TYPE_U16_T;    // ط١٦
+extern IRType* IR_TYPE_U32_T;    // ط٣٢
+extern IRType* IR_TYPE_U64_T;    // ط٦٤
 extern IRType* IR_TYPE_CHAR_T;   // حرف
 extern IRType* IR_TYPE_F64_T;    // ع٦٤
 ```
+
+**Note:** Added unsigned type constants (`U8_T` through `U64_T`) for complete type coverage.
 
 ---
 
@@ -1206,36 +1570,30 @@ The Data Layout module (`src/ir_data_layout.h`, `src/ir_data_layout.c`) provides
 
 #### `IRDataLayout` struct
 
+Data layout descriptor for target-specific type sizes and alignments.
+
 ```c
 typedef struct IRDataLayout {
-    // Basic types
-    uint8_t i1_size;    // 1
-    uint8_t i8_size;    // 1
-    uint8_t i16_size;   // 2
-    uint8_t i32_size;   // 4
-    uint8_t i64_size;   // 8
-    
-    // Pointers
-    uint8_t ptr_size;   // 8 (x64)
-    uint8_t ptr_align;  // 8 (x64)
-    
-    // Alignments
-    uint8_t i1_align;   // 1
-    uint8_t i8_align;   // 1
-    uint8_t i16_align;  // 2
-    uint8_t i32_align;  // 4
-    uint8_t i64_align;  // 8
+    int pointer_size_bytes;     // حجم المؤشر (e.g., 8 on x86-64)
+    int pointer_align_bytes;    // محاذاة المؤشر
+    int i1_store_size_bytes;    // حجم تخزين ص١ (always 1)
+    int i8_align_bytes;         // محاذاة ص٨
+    int i16_align_bytes;        // محاذاة ص١٦
+    int i32_align_bytes;        // محاذاة ص٣٢
+    int i64_align_bytes;        // محاذاة ص٦٤
 } IRDataLayout;
 
 extern const IRDataLayout IR_DATA_LAYOUT_WIN_X64;
 ```
+
+**Note:** The data layout uses `int` types and focuses on pointer properties and alignment values needed for code generation.
 
 ---
 
 #### `ir_type_size_bytes`
 
 ```c
-int ir_type_size_bytes(const IRDataLayout* dl, IRType* type);
+int ir_type_size_bytes(const IRDataLayout* dl, const IRType* type);
 ```
 
 Returns the size of a type in bytes (including padding for aggregates).
@@ -1247,7 +1605,7 @@ Returns the size of a type in bytes (including padding for aggregates).
 #### `ir_type_alignment`
 
 ```c
-int ir_type_alignment(const IRDataLayout* dl, IRType* type);
+int ir_type_alignment(const IRDataLayout* dl, const IRType* type);
 ```
 
 Returns the required alignment for a type in bytes.
@@ -1257,7 +1615,7 @@ Returns the required alignment for a type in bytes.
 #### `ir_type_store_size`
 
 ```c
-int ir_type_store_size(const IRDataLayout* dl, IRType* type);
+int ir_type_store_size(const IRDataLayout* dl, const IRType* type);
 ```
 
 Returns the number of bytes written to memory (same as size for now).
@@ -1267,7 +1625,7 @@ Returns the number of bytes written to memory (same as size for now).
 #### `ir_type_is_integer`
 
 ```c
-int ir_type_is_integer(IRType* type);
+int ir_type_is_integer(const IRType* type);
 ```
 
 Returns 1 if the type is `i1`, `i8`, `i16`, `i32`, or `i64`. Returns 0 for pointers/void/arrays.
@@ -1277,10 +1635,119 @@ Returns 1 if the type is `i1`, `i8`, `i16`, `i32`, or `i64`. Returns 0 for point
 #### `ir_type_is_pointer`
 
 ```c
-int ir_type_is_pointer(IRType* type);
+int ir_type_is_pointer(const IRType* type);
 ```
 
 Returns 1 if the type is `ptr`.
+
+---
+
+### 4.12. Target Abstraction (v0.3.2.8.1)
+
+The Target module (`src/target.h`, `src/target.c`) provides target-specific abstractions for OS, object format, and calling convention.
+
+#### Target Kinds and Object Formats
+
+```c
+typedef enum {
+    BAA_TARGET_X86_64_WINDOWS = 0,
+    BAA_TARGET_X86_64_LINUX   = 1,
+} BaaTargetKind;
+
+typedef enum {
+    BAA_OBJFORMAT_COFF = 0,
+    BAA_OBJFORMAT_ELF  = 1,
+} BaaObjectFormat;
+```
+
+#### `BaaCallingConv` Struct
+
+Describes the calling convention for a target.
+
+```c
+typedef struct BaaCallingConv {
+    int int_arg_reg_count;            // Number of integer argument registers
+    int int_arg_phys_regs[8];         // PhysReg values (from regalloc.h)
+    int ret_phys_reg;                 // PhysReg (typically RAX)
+    unsigned int callee_saved_mask;   // Bitmask over PhysReg
+    unsigned int caller_saved_mask;   // Bitmask over PhysReg
+    int stack_align_bytes;            // Stack alignment at call sites (usually 16)
+    int abi_arg_vreg0;                // ABI argument vreg base (default: -10)
+    int abi_ret_vreg;                 // ABI return vreg (default: -2 for RAX)
+    int shadow_space_bytes;           // Windows: 32, SysV: 0
+    bool home_reg_args_on_call;       // Windows varargs: true, SysV: false
+    bool sysv_set_al_zero_on_call;    // SysV varargs rule: true
+} BaaCallingConv;
+```
+
+#### `BaaTarget` Struct
+
+Complete target descriptor.
+
+```c
+typedef struct BaaTarget {
+    BaaTargetKind kind;
+    const char* name;                 // Short name: x86_64-windows, x86_64-linux
+    const char* triple;               // Future: full triple
+    BaaObjectFormat obj_format;
+    const IRDataLayout* data_layout;
+    const BaaCallingConv* cc;
+    const char* default_exe_ext;      // ".exe" on Windows, "" on Linux
+} BaaTarget;
+```
+
+#### Target Functions
+
+| Function | Signature | Description |
+|----------|-----------|-------------|
+| `baa_target_builtin_windows_x86_64` | `const BaaTarget* baa_target_builtin_windows_x86_64(void)` | Returns the built-in Windows x86-64 target |
+| `baa_target_builtin_linux_x86_64` | `const BaaTarget* baa_target_builtin_linux_x86_64(void)` | Returns the built-in Linux x86-64 target |
+| `baa_target_host_default` | `const BaaTarget* baa_target_host_default(void)` | Returns the default target for the host system |
+| `baa_target_parse` | `const BaaTarget* baa_target_parse(const char* s)` | Parses a target string ("x86_64-windows", "x86_64-linux") |
+
+---
+
+### 4.13. Code Model (v0.3.2.8.3)
+
+The Code Model module (`src/code_model.h`) defines code generation options.
+
+#### `BaaCodeModel` Enum
+
+```c
+typedef enum {
+    BAA_CODEMODEL_SMALL = 0,
+} BaaCodeModel;
+```
+
+#### `BaaStackProtectorMode` Enum
+
+```c
+typedef enum {
+    BAA_STACKPROT_OFF = 0,
+    BAA_STACKPROT_ON  = 1,
+    BAA_STACKPROT_ALL = 2,
+} BaaStackProtectorMode;
+```
+
+#### `BaaCodegenOptions` Struct
+
+```c
+typedef struct {
+    BaaCodeModel code_model;
+    bool pic;                 // -fPIC
+    bool pie;                 // -fPIE / link -pie
+    BaaStackProtectorMode stack_protector;
+    bool asm_comments;        // --asm-comments
+} BaaCodegenOptions;
+```
+
+#### `baa_codegen_options_default`
+
+```c
+static inline BaaCodegenOptions baa_codegen_options_default(void)
+```
+
+Returns default codegen options (small code model, no PIC/PIE, no stack protector).
 
 ## 5. IR Builder Module (v0.3.0.2+)
 
@@ -1380,6 +1847,56 @@ Sets the insertion point. All subsequent emit functions will append to this bloc
 
 ---
 
+#### `ir_builder_set_module`
+
+```c
+void ir_builder_set_module(IRBuilder* builder, IRModule* module)
+```
+
+Sets the target module for the builder.
+
+---
+
+#### `ir_builder_set_func`
+
+```c
+void ir_builder_set_func(IRBuilder* builder, IRFunc* func)
+```
+
+Sets the current function being built.
+
+---
+
+#### `ir_builder_get_func`
+
+```c
+IRFunc* ir_builder_get_func(IRBuilder* builder)
+```
+
+Gets the current function (or NULL).
+
+---
+
+#### `ir_builder_get_insert_block`
+
+```c
+IRBlock* ir_builder_get_insert_block(IRBuilder* builder)
+```
+
+Gets the current insertion block (or NULL).
+
+---
+
+#### `ir_builder_is_block_terminated`
+
+```c
+int ir_builder_is_block_terminated(IRBuilder* builder)
+```
+
+Returns 1 if the current block is terminated, 0 otherwise.
+
+---
+
 ### 5.4. Register Allocation
 
 #### `ir_builder_alloc_reg`
@@ -1391,6 +1908,26 @@ int ir_builder_alloc_reg(IRBuilder* builder)
 Allocates a new virtual register.
 
 **Returns:** New register number (`%م<n>`).
+
+---
+
+#### `ir_builder_reg_value`
+
+```c
+IRValue* ir_builder_reg_value(IRBuilder* builder, int reg, IRType* type)
+```
+
+Creates a register value for a given register number.
+
+---
+
+#### `ir_builder_clear_loc`
+
+```c
+void ir_builder_clear_loc(IRBuilder* builder)
+```
+
+Clears source location (for generated code).
 
 ---
 
@@ -1561,6 +2098,15 @@ int ir_builder_emit_cmp_ge(IRBuilder* builder, IRValue* lhs, IRValue* rhs);  // 
 int ir_builder_emit_cmp_le(IRBuilder* builder, IRValue* lhs, IRValue* rhs);  // أصغر_أو_يساوي
 ```
 
+#### Unsigned Comparison Functions
+
+```c
+int ir_builder_emit_cmp_ugt(IRBuilder* builder, IRValue* lhs, IRValue* rhs);  // أكبر (بدون إشارة)
+int ir_builder_emit_cmp_ult(IRBuilder* builder, IRValue* lhs, IRValue* rhs);  // أصغر (بدون إشارة)
+int ir_builder_emit_cmp_uge(IRBuilder* builder, IRValue* lhs, IRValue* rhs);  // أكبر_أو_يساوي (بدون إشارة)
+int ir_builder_emit_cmp_ule(IRBuilder* builder, IRValue* lhs, IRValue* rhs);  // أصغر_أو_يساوي (بدون إشارة)
+```
+
 ---
 
 ### 5.8. Emit Functions - Control Flow
@@ -1606,6 +2152,16 @@ void ir_builder_emit_ret_void(IRBuilder* builder)
 ```
 
 Emits: `رجوع` (void return)
+
+---
+
+#### `ir_builder_emit_ret_int`
+
+```c
+void ir_builder_emit_ret_int(IRBuilder* builder, int64_t value)
+```
+
+Emits: `رجوع value` with an integer constant.
 
 ---
 
@@ -1714,7 +2270,73 @@ IRValue* ir_builder_const_baa_string(IRBuilder* builder, const char* str);  // B
 
 ---
 
-### 5.13. Example Usage
+### 5.13. Global Variables
+
+#### `ir_builder_create_global`
+
+```c
+IRGlobal* ir_builder_create_global(IRBuilder* builder, const char* name,
+                                    IRType* type, int is_const);
+```
+
+Creates a global variable.
+
+---
+
+#### `ir_builder_create_global_init`
+
+```c
+IRGlobal* ir_builder_create_global_init(IRBuilder* builder, const char* name,
+                                         IRType* type, IRValue* init, int is_const);
+```
+
+Creates a global variable with an initializer.
+
+---
+
+#### `ir_builder_get_global`
+
+```c
+IRValue* ir_builder_get_global(IRBuilder* builder, const char* name);
+```
+
+Gets a reference to a global variable.
+
+---
+
+### 5.14. Statistics and Debugging
+
+#### `ir_builder_get_inst_count`
+
+```c
+int ir_builder_get_inst_count(IRBuilder* builder);
+```
+
+Returns the number of instructions emitted.
+
+---
+
+#### `ir_builder_get_block_count`
+
+```c
+int ir_builder_get_block_count(IRBuilder* builder);
+```
+
+Returns the number of blocks created.
+
+---
+
+#### `ir_builder_print_stats`
+
+```c
+void ir_builder_print_stats(IRBuilder* builder);
+```
+
+Prints builder statistics to stderr.
+
+---
+
+### 5.15. Example Usage
 
 ```c
 // Create module and builder

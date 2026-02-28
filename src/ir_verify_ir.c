@@ -683,22 +683,32 @@ static void ir_verify_inst(IRVerifyDiag* diag,
             bool b_f64 = (b && b->type && b->type->kind == IR_TYPE_F64);
             bool a_ptr = (a && a->type) ? ir_type_is_ptr(a->type) : 0;
             bool b_ptr = (b && b->type) ? ir_type_is_ptr(b->type) : 0;
+            bool a_fun = (a && a->type && a->type->kind == IR_TYPE_FUNC);
+            bool b_fun = (b && b->type && b->type->kind == IR_TYPE_FUNC);
 
-            if (a_ptr || b_ptr) {
-                if (!a || !a->type || !a_ptr) {
-                    ir_report(diag, module, func, block, inst, "تعليمة `قارن`: المعامل الأول ليس مؤشراً صالحاً.");
+            if (a_ptr || b_ptr || a_fun || b_fun) {
+                if (!a || !a->type) {
+                    ir_report(diag, module, func, block, inst, "تعليمة `قارن`: المعامل الأول بدون نوع.");
                     break;
                 }
-                if (!b || !b->type || !b_ptr) {
-                    ir_report(diag, module, func, block, inst, "تعليمة `قارن`: المعامل الثاني ليس مؤشراً صالحاً.");
+                if (!b || !b->type) {
+                    ir_report(diag, module, func, block, inst, "تعليمة `قارن`: المعامل الثاني بدون نوع.");
                     break;
                 }
+
+                // لا نخلط بين مؤشرات بيانات ومؤشرات دوال.
+                if (!((a_ptr && b_ptr) || (a_fun && b_fun))) {
+                    ir_report(diag, module, func, block, inst,
+                              "تعليمة `قارن`: مقارنة المؤشرات تتطلب نوعين متطابقين (مؤشر/مؤشر أو دالة/دالة).");
+                    break;
+                }
+
                 if (!ir_types_equal(a->type, b->type)) {
-                    ir_report(diag, module, func, block, inst, "تعليمة `قارن`: نوعا المؤشرين غير متطابقين.");
+                    ir_report(diag, module, func, block, inst, "تعليمة `قارن`: نوعا المعاملين غير متطابقين.");
                 }
                 if (!(inst->cmp_pred == IR_CMP_EQ || inst->cmp_pred == IR_CMP_NE)) {
                     ir_report(diag, module, func, block, inst,
-                              "تعليمة `قارن`: مقارنة المؤشرات تدعم فقط (==) أو (!=).");
+                              "تعليمة `قارن`: مقارنة المؤشرات/مؤشرات الدوال تدعم فقط (==) أو (!=).");
                 }
                 break;
             }
@@ -809,11 +819,28 @@ static void ir_verify_inst(IRVerifyDiag* diag,
         }
 
         // --------------------------------------------------------------------
-        // call: dest اختياري، call_target غير فارغ، call_args حسب call_arg_count
+        // call:
+        // - مباشر: call_target غير فارغ
+        // - غير مباشر: call_callee غير فارغ ونوعه IR_TYPE_FUNC
+        // call_args حسب call_arg_count
         // --------------------------------------------------------------------
         case IR_OP_CALL: {
-            if (!inst->call_target || !inst->call_target[0]) {
-                ir_report(diag, module, func, block, inst, "تعليمة `نداء`: اسم الهدف فارغ.");
+            if (inst->call_target && inst->call_callee) {
+                ir_report(diag, module, func, block, inst,
+                          "تعليمة `نداء`: لا يمكن تحديد call_target و call_callee معاً.");
+            }
+            if ((!inst->call_target || !inst->call_target[0]) && !inst->call_callee) {
+                ir_report(diag, module, func, block, inst, "تعليمة `نداء`: الهدف فارغ (لا مباشر ولا غير مباشر).");
+            }
+            if (inst->call_callee) {
+                if (!inst->call_callee->type || inst->call_callee->type->kind != IR_TYPE_FUNC) {
+                    ir_report(diag, module, func, block, inst,
+                              "تعليمة `نداء`: call_callee يجب أن يكون من نوع 'دالة'.");
+                }
+                if (!ir_value_reg_in_range(inst->call_callee, func)) {
+                    ir_report(diag, module, func, block, inst,
+                              "تعليمة `نداء`: call_callee سجل خارج نطاق الدالة.");
+                }
             }
 
             if (inst->call_arg_count < 0) {
@@ -858,16 +885,48 @@ static void ir_verify_inst(IRVerifyDiag* diag,
             }
 
             // تحقق توقيع الدالة إن أمكن (فقط على مستوى الوحدة).
-            if (verify_module_for_calls && inst->call_target) {
-                IRFunc* callee = ir_module_find_func((IRModule*)verify_module_for_calls, inst->call_target);
-                if (callee) {
-                    if (callee->param_count != inst->call_arg_count) {
+            if (verify_module_for_calls) {
+                if (inst->call_target) {
+                    IRFunc* callee = ir_module_find_func((IRModule*)verify_module_for_calls, inst->call_target);
+                    if (callee) {
+                        if (callee->param_count != inst->call_arg_count) {
+                            ir_report(diag, module, func, block, inst,
+                                      "تعليمة `نداء`: عدد المعاملات لا يطابق توقيع الدالة (%d vs %d).",
+                                      inst->call_arg_count, callee->param_count);
+                        } else {
+                            for (int i = 0; i < callee->param_count; i++) {
+                                IRType* pt = callee->params[i].type;
+                                IRValue* av = inst->call_args ? inst->call_args[i] : NULL;
+                                if (pt && av && av->type && !ir_types_equal(pt, av->type)) {
+                                    ir_report(diag, module, func, block, inst,
+                                              "تعليمة `نداء`: نوع المعامل %d لا يطابق (arg=%s, param=%s).",
+                                              i,
+                                              ir_type_to_arabic(av->type),
+                                              ir_type_to_arabic(pt));
+                                }
+                            }
+                        }
+
+                        // نوع الإرجاع.
+                        if (inst->dest >= 0) {
+                            if (callee->ret_type && inst->type && !ir_types_equal(callee->ret_type, inst->type)) {
+                                ir_report(diag, module, func, block, inst,
+                                          "تعليمة `نداء`: نوع الإرجاع لا يطابق توقيع الدالة (call=%s, callee=%s).",
+                                          ir_type_to_arabic(inst->type),
+                                          ir_type_to_arabic(callee->ret_type));
+                            }
+                        }
+                    }
+                } else if (inst->call_callee && inst->call_callee->type && inst->call_callee->type->kind == IR_TYPE_FUNC) {
+                    IRType* sig = inst->call_callee->type;
+                    int pc = sig->data.func.param_count;
+                    if (pc != inst->call_arg_count) {
                         ir_report(diag, module, func, block, inst,
-                                  "تعليمة `نداء`: عدد المعاملات لا يطابق توقيع الدالة (%d vs %d).",
-                                  inst->call_arg_count, callee->param_count);
+                                  "تعليمة `نداء`: عدد المعاملات لا يطابق توقيع الهدف (%d vs %d).",
+                                  inst->call_arg_count, pc);
                     } else {
-                        for (int i = 0; i < callee->param_count; i++) {
-                            IRType* pt = callee->params[i].type;
+                        for (int i = 0; i < pc; i++) {
+                            IRType* pt = sig->data.func.params ? sig->data.func.params[i] : NULL;
                             IRValue* av = inst->call_args ? inst->call_args[i] : NULL;
                             if (pt && av && av->type && !ir_types_equal(pt, av->type)) {
                                 ir_report(diag, module, func, block, inst,
@@ -879,13 +938,13 @@ static void ir_verify_inst(IRVerifyDiag* diag,
                         }
                     }
 
-                    // نوع الإرجاع.
                     if (inst->dest >= 0) {
-                        if (callee->ret_type && inst->type && !ir_types_equal(callee->ret_type, inst->type)) {
+                        IRType* rt = sig->data.func.ret;
+                        if (rt && inst->type && !ir_types_equal(rt, inst->type)) {
                             ir_report(diag, module, func, block, inst,
-                                      "تعليمة `نداء`: نوع الإرجاع لا يطابق توقيع الدالة (call=%s, callee=%s).",
+                                      "تعليمة `نداء`: نوع الإرجاع لا يطابق توقيع الهدف (call=%s, sig=%s).",
                                       ir_type_to_arabic(inst->type),
-                                      ir_type_to_arabic(callee->ret_type));
+                                      ir_type_to_arabic(rt));
                         }
                     }
                 }

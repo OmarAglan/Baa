@@ -1,6 +1,6 @@
 # Baa IR Specification
 
-> **Version:** 0.3.9 (in progress) | [← Compiler Internals](INTERNALS.md) | [API Reference →](API_REFERENCE.md)
+> **Version:** 0.3.10.6 | [← Compiler Internals](INTERNALS.md) | [API Reference →](API_REFERENCE.md)
 
 This document specifies the Intermediate Representation (IR) for the Baa compiler. The IR uses Arabic naming conventions throughout, creating a culturally authentic yet technically robust design.
 
@@ -201,7 +201,7 @@ Stack allocations create addressable memory:
 | `br` | `قفز` | `قفز %label` | Unconditional jump |
 | `br_cond` | `قفز_شرط` | `قفز_شرط %cond، %true، %false` | Conditional branch |
 | `ret` | `رجوع` | `رجوع <type> <val>` | Return from function |
-| `call` | `نداء` | `%r = نداء <func>(<args>)` | Function call |
+| `call` | `نداء` | `%r = نداء @name(<args>)` أو `%r = نداء <callee>(<args>)` | Function call (direct/indirect) |
 
 ### 4.6 SSA Instructions
 
@@ -538,13 +538,21 @@ pointer     ::= "مؤشر" "[" type "]"
 array       ::= "مصفوفة" "[" type "،" number "]"
 ```
 
+**Notes (v0.3.10.6):**
+
+- IR text `call` يدعم:
+  - نداء مباشر: `call <ret_type> @name(arg0, arg1, ...)`
+  - نداء غير مباشر: `call <ret_type> <callee>(arg0, arg1, ...)` حيث `callee` يمكن أن يكون:
+    - `%rN` قيمة من نوع `func(...) -> ...`
+    - أو `@name` مرجع دالة (بعد تحسين/نشر قد يظهر كقيمة مباشرة)
+
 ---
 
 ## 10. Implementation Notes
 
 ### 10.1 C Data Structures
 
-The IR will be represented in C using:
+The IR will be represented in C using (simplified illustration; see `src/ir.h` for the authoritative definitions):
 
 ```c
 typedef enum {
@@ -567,9 +575,17 @@ typedef enum {
 
 typedef struct IRInst {
     IROp op;
-    IRType type;
-    int dest;           // %م<dest>
-    int operands[4];    // Source registers or immediates
+    IRType* type;
+    int dest;               // %م<dest>
+    IRValue* operands[4];   // Operands (registers/immediates/refs)
+
+    // نداء (call): هدف مباشر أو غير مباشر (v0.3.10.6)
+    const char* call_target; // Direct: @name (NULL for indirect)
+    IRValue* call_callee;    // Indirect: value of type IR_TYPE_FUNC (NULL for direct)
+    IRType* call_ret_type;
+    IRValue** call_args;
+    int call_arg_count;
+
     struct IRInst* next;
 } IRInst;
 

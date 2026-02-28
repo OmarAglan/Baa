@@ -1406,6 +1406,10 @@ void emit_inst(MachineInst* inst, MachineFunc* func, FILE* out) {
 
             // ملاحظة (v0.3.2.8.5): إدارة إطار النداء (shadow/stack args) أصبحت في ISel.
             fprintf(out, "    call ");
+            // النداء غير المباشر في AT&T يتطلب نجمة: call *%reg أو call *mem.
+            if (inst->src1.kind != MACH_OP_FUNC) {
+                fputc('*', out);
+            }
             emit_operand(&inst->src1, out);
             fprintf(out, "\n");
         }
@@ -1522,6 +1526,9 @@ static void emit_data_section(MachineModule* module, FILE* out) {
                     } else if (v->kind == IR_VAL_CONST_STR || v->kind == IR_VAL_BAA_STR) {
                         all_zero = 0;
                         break;
+                    } else if (v->kind == IR_VAL_FUNC) {
+                        all_zero = 0;
+                        break;
                     } else {
                         all_zero = 0;
                         break;
@@ -1550,6 +1557,15 @@ static void emit_data_section(MachineModule* module, FILE* out) {
                             fprintf(out, "    .quad .Lbs_%d\n", iv->data.const_str.id);
                             continue;
                         }
+                        if (iv->kind == IR_VAL_FUNC && elem_t && elem_t->kind == IR_TYPE_FUNC) {
+                            MachineOperand mop = {0};
+                            mop.kind = MACH_OP_FUNC;
+                            mop.data.name = iv->data.global_name;
+                            fprintf(out, "    .quad ");
+                            emit_operand(&mop, out);
+                            fprintf(out, "\n");
+                            continue;
+                        }
                     }
                     fprintf(out, "    %s 0\n", dir);
                 }
@@ -1574,6 +1590,14 @@ static void emit_data_section(MachineModule* module, FILE* out) {
                 // نص باء: تخزين مؤشر لسلسلة حرف[] في جدول نصوص باء
                 fprintf(out, "%s: .quad .Lbs_%d\n", g->name,
                         g->init->data.const_str.id);
+            } else if (g->init->kind == IR_VAL_FUNC) {
+                // مؤشر دالة: تخزين عنوان الدالة كـ .quad <symbol>
+                MachineOperand mop = {0};
+                mop.kind = MACH_OP_FUNC;
+                mop.data.name = g->init->data.global_name;
+                fprintf(out, "%s: .quad ", g->name);
+                emit_operand(&mop, out);
+                fprintf(out, "\n");
             } else {
                 fprintf(out, "%s: %s 0\n", g->name, dir);
             }

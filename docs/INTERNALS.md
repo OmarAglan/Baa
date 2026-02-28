@@ -1,6 +1,6 @@
 # Baa Compiler Internals
 
-> **Version:** 0.3.9 (in progress) | [← Language Spec](LANGUAGE.md) | [API Reference →](API_REFERENCE.md)
+> **Version:** 0.3.10.6 | [← Language Spec](LANGUAGE.md) | [API Reference →](API_REFERENCE.md)
 
 **Target Architecture:** x86-64 (AMD64)
 **Targets:** Windows x64 (COFF/PE) + Linux x86-64 (ELF)
@@ -657,7 +657,11 @@ IRInst
 ├── operands[4]: IRValue*   // Up to 4 operands
 ├── cmp_pred: IRCmpPred     // For comparison instructions
 ├── phi_entries: IRPhiEntry* // For phi nodes
-└── call_*: ...             // For call instructions
+├── call_target: const char* // Direct call target name (NULL for indirect)
+├── call_callee: IRValue*    // Indirect call callee value (NULL for direct)
+├── call_ret_type: IRType*   // Call return type
+├── call_args: IRValue**     // Call arguments
+└── call_arg_count: int      // Number of call arguments
 ```
 
 ### 6.3. IR Opcodes (Arabic)
@@ -702,6 +706,9 @@ IRInst
 | `IR_TYPE_PTR` | مؤشر | 64 | Pointer |
 | `IR_TYPE_ARRAY` | مصفوفة | varies | Array |
 | `IR_TYPE_FUNC` | دالة | - | Function type |
+
+**ملاحظة (v0.3.10.6):** قيم `IR_TYPE_FUNC` تُستخدم كمؤشرات دوال (قابلة للتخزين/التحميل/المقارنة EQ/NE مع `0`)،
+وتُخفض على x86-64 كقيمة 64-بت مثل المؤشر العادي.
 
 ### 6.5. Comparison Predicates
 
@@ -779,6 +786,7 @@ IRInst* ir_inst_br(IRBlock* target);
 IRInst* ir_inst_br_cond(IRValue* cond, IRBlock* if_true, IRBlock* if_false);
 IRInst* ir_inst_ret(IRValue* value);
 IRInst* ir_inst_call(const char* target, IRType* ret_type, int dest, IRValue** args, int arg_count);
+IRInst* ir_inst_call_indirect(IRValue* callee, IRType* ret_type, int dest, IRValue** args, int arg_count);
 IRInst* ir_inst_phi(IRType* type, int dest);
 
 // Printing
@@ -814,6 +822,7 @@ void ir_builder_emit_br(IRBuilder* builder, IRBlock* target);
 void ir_builder_emit_br_cond(IRBuilder* builder, IRValue* cond, IRBlock* if_true, IRBlock* if_false);
 void ir_builder_emit_ret(IRBuilder* builder, IRValue* value);
 int ir_builder_emit_call(IRBuilder* builder, const char* target, IRType* ret_type, IRValue** args, int arg_count);
+int ir_builder_emit_call_indirect(IRBuilder* builder, IRValue* callee, IRType* ret_type, IRValue** args, int arg_count);
 
 // Control flow structure helpers
 void ir_builder_create_if_then(IRBuilder* builder, IRValue* cond,
@@ -1287,7 +1296,7 @@ Each IR instruction is lowered to one or more `MachineInst` nodes. The expansion
 | `IR_OP_BR` | `JMP label` | Unconditional jump |
 | `IR_OP_BR_COND` | `TEST cond, cond; JNE true_label; JMP false_label` | Three-instruction pattern |
 | `IR_OP_RET` | `MOV RAX, val; RET` | Uses special vreg -2 (= RAX) |
-| `IR_OP_CALL` | `MOV param_regs, args...; (setup stack args); CALL @func; MOV dst, RAX` | Target ABI: Windows (shadow + stack args) / SysV (stack args) |
+| `IR_OP_CALL` | `MOV param_regs, args...; (setup stack args); CALL @func/*reg; MOV dst, RAX` | Direct: `CALL @func`. Indirect: `CALL *reg` (callee value). ABI: Windows (shadow) / SysV (no shadow) |
 | `IR_OP_CALL` + `IR_OP_RET` (tail) | `MOV param_regs, args...; TAILJMP @func` | v0.3.2.7.3: مفعل فقط عند `-O2` وبشكل محافظ (register args only) |
 | `IR_OP_PHI` | `NOP` | Placeholder; copy insertion deferred to register allocation |
 | `IR_OP_CAST` | `MOVZX dst, src` (zero-extend) or `MOV dst, src` (same/larger size) | Size-dependent |
@@ -1508,7 +1517,7 @@ Each `MachineInst` is translated to one or more AT&T assembly instructions:
 | `MACH_JMP` | `jmp .LBB_N` | Unconditional jump |
 | `MACH_JE` | `je .LBB_N` | Jump if equal |
 | `MACH_JNE` | `jne .LBB_N` | Jump if not equal |
-| `MACH_CALL` | `sub $32, %rsp; call func; add $32, %rsp` | Shadow space allocation |
+| `MACH_CALL` | `sub $32, %rsp; call <sym>; add $32, %rsp` / `sub $32, %rsp; call *%reg; add $32, %rsp` | Direct/indirect call. Shadow space on Windows only |
 | `MACH_TAILJMP` | `restore callee-saved; leave; home args; jmp func` | Tail call optimization (no new return address) |
 | `MACH_RET` | (triggers epilogue emission) | Return handled by epilogue |
 | `MACH_PUSH` | `pushq %src` | Push to stack |
@@ -1534,6 +1543,7 @@ fmt_scan_int: .asciz "%d"
 .data
 global_var: .quad 42           # Integer initializer
 global_str: .quad .Lbs_0       # Baa string pointer initializer (ptr<char>)
+global_fp:  .quad جمع          # Function pointer initializer (func address)
 ```
 
 **Linkage note (v0.3.7.5):**

@@ -249,6 +249,7 @@ typedef struct IRInst {
     
     // For calls
     char* call_target;          // Function name
+    IRValue* call_callee;       // قيمة الهدف عند النداء غير المباشر (NULL في النداء المباشر)
     IRValue** call_args;        // Argument list
     int call_arg_count;
     
@@ -547,6 +548,8 @@ IRInst* ir_inst_br_cond(IRValue* cond, IRBlock* if_true, IRBlock* if_false);
 IRInst* ir_inst_ret(IRValue* value);
 IRInst* ir_inst_call(const char* target, IRType* ret_type, int dest,
                      IRValue** args, int arg_count);
+IRInst* ir_inst_call_indirect(IRValue* callee, IRType* ret_type, int dest,
+                              IRValue** args, int arg_count);
 IRInst* ir_inst_phi(IRType* type, int dest);
 void ir_inst_phi_add(IRInst* phi, IRValue* value, IRBlock* block);
 void ir_inst_free(IRInst* inst);

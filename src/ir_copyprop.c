@@ -212,9 +212,12 @@ static int ir_copyprop_func(IRFunc* func) {
                     changed |= ir_try_replace_value_slot(&inst->operands[i], aliases, max_reg);
                 }
 
-                if (inst->op == IR_OP_CALL && inst->call_args) {
-                    for (int i = 0; i < inst->call_arg_count; i++) {
-                        changed |= ir_try_replace_value_slot(&inst->call_args[i], aliases, max_reg);
+                if (inst->op == IR_OP_CALL) {
+                    changed |= ir_try_replace_value_slot(&inst->call_callee, aliases, max_reg);
+                    if (inst->call_args) {
+                        for (int i = 0; i < inst->call_arg_count; i++) {
+                            changed |= ir_try_replace_value_slot(&inst->call_args[i], aliases, max_reg);
+                        }
                     }
                 }
 

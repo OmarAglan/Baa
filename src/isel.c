@@ -518,9 +518,20 @@ static int isel_type_bits(IRType *type)
         return 64;
     case IR_TYPE_PTR:
         return 64;
+    case IR_TYPE_FUNC:
+        return 64;
     default:
         return 64;
     }
+}
+
+static const char* isel_translate_func_name(const char* name)
+{
+    if (!name) return name;
+    if (strcmp(name, "الرئيسية") == 0) return "main";
+    if (strcmp(name, "اطبع") == 0 || strcmp(name, "اطبع_صحيح") == 0) return "printf";
+    if (strcmp(name, "اقرأ") == 0 || strcmp(name, "اقرأ_صحيح") == 0) return "scanf";
+    return name;
 }
 
 /**
@@ -549,7 +560,20 @@ static MachineOperand isel_lower_value(ISelCtx *ctx, IRValue *val)
         return mach_op_global(val->data.global_name);
 
     case IR_VAL_FUNC:
-        return mach_op_func(val->data.global_name);
+        // مرجع دالة كقيمة: نُحوّله إلى عنوان في سجل عبر LEA (RIP-relative).
+        {
+            const char* nm = isel_translate_func_name(val->data.global_name);
+            if (!ctx || !ctx->mfunc || !ctx->mblock)
+            {
+                return mach_op_global(nm ? nm : "???");
+            }
+
+            int tmp = mach_func_alloc_vreg(ctx->mfunc);
+            MachineOperand dst = mach_op_vreg(tmp, 64);
+            MachineOperand src = mach_op_global(nm ? nm : "???");
+            isel_emit(ctx, MACH_LEA, dst, src, mach_op_none());
+            return dst;
+        }
 
     case IR_VAL_BLOCK:
         if (val->data.block)
@@ -1544,7 +1568,16 @@ static void isel_lower_call(ISelCtx *ctx, IRInst *inst)
     }
 
     // استدعاء
-    MachineOperand target = mach_op_func(inst->call_target);
+    MachineOperand target = mach_op_none();
+    if (inst->call_target) {
+        target = mach_op_func(inst->call_target);
+    } else if (inst->call_callee) {
+        target = isel_lower_value(ctx, inst->call_callee);
+        target = isel_materialize_imm_to_gpr64(ctx, target);
+    } else {
+        // احتياطي: لا هدف.
+        target = mach_op_func("???");
+    }
     MachineInst *calli = isel_emit(ctx, MACH_CALL, mach_op_none(), target, mach_op_none());
     if (calli)
     {

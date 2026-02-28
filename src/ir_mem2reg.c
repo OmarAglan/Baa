@@ -148,9 +148,12 @@ static int ir_inst_has_ptr_reg_use(IRInst* inst, int ptr_reg) {
         if (ir_value_is_reg_num(inst->operands[i], ptr_reg)) return 1;
     }
 
-    if (inst->op == IR_OP_CALL && inst->call_args) {
-        for (int i = 0; i < inst->call_arg_count; i++) {
-            if (ir_value_is_reg_num(inst->call_args[i], ptr_reg)) return 1;
+    if (inst->op == IR_OP_CALL) {
+        if (ir_value_is_reg_num(inst->call_callee, ptr_reg)) return 1;
+        if (inst->call_args) {
+            for (int i = 0; i < inst->call_arg_count; i++) {
+                if (ir_value_is_reg_num(inst->call_args[i], ptr_reg)) return 1;
+            }
         }
     }
 
@@ -184,10 +187,15 @@ static int ir_inst_ptr_use_is_allowed(IRInst* inst, int ptr_reg) {
         return 0;
     }
 
-    if (inst->op == IR_OP_CALL && inst->call_args) {
-        for (int i = 0; i < inst->call_arg_count; i++) {
-            if (ir_value_is_reg_num(inst->call_args[i], ptr_reg)) {
-                return 0;
+    if (inst->op == IR_OP_CALL) {
+        if (ir_value_is_reg_num(inst->call_callee, ptr_reg)) {
+            return 0;
+        }
+        if (inst->call_args) {
+            for (int i = 0; i < inst->call_arg_count; i++) {
+                if (ir_value_is_reg_num(inst->call_args[i], ptr_reg)) {
+                    return 0;
+                }
             }
         }
     }
@@ -609,6 +617,7 @@ static void mem2reg_rename_block(Mem2RegRenameCtx* ctx, IRBlock* block) {
                     inst->operands[0] = src;
                     inst->phi_entries = NULL;
                     inst->call_target = NULL;
+                    inst->call_callee = NULL;
                     inst->call_args = NULL;
                     inst->call_arg_count = 0;
 

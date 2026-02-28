@@ -220,6 +220,10 @@ static int ssa_scan_max_reg(const IRFunc* func) {
             }
 
             if (inst->op == IR_OP_CALL) {
+                if (inst->call_callee && inst->call_callee->kind == IR_VAL_REG &&
+                    inst->call_callee->data.reg_num > max_reg) {
+                    max_reg = inst->call_callee->data.reg_num;
+                }
                 for (int a = 0; a < inst->call_arg_count; a++) {
                     IRValue* v = inst->call_args ? inst->call_args[a] : NULL;
                     if (!v) continue;
@@ -518,6 +522,13 @@ bool ir_func_verify_ssa(IRFunc* func, FILE* out) {
             }
 
             if (inst->op == IR_OP_CALL) {
+                if (inst->call_callee && inst->call_callee->kind == IR_VAL_REG) {
+                    int reg_num = inst->call_callee->data.reg_num;
+                    if (reg_num >= 0 && (size_t)reg_num < reg_count) {
+                        ssa_check_reg_use_dom(&diag, func, b, inst, inst_index,
+                                              reg_num, def_block_by_reg, def_inst_index_by_reg, reachable);
+                    }
+                }
                 for (int a = 0; a < inst->call_arg_count; a++) {
                     IRValue* v = inst->call_args ? inst->call_args[a] : NULL;
                     if (!v) continue;

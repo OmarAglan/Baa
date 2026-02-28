@@ -34,11 +34,17 @@ static int ir_scan_max_reg(IRFunc* func) {
                 }
             }
 
-            if (inst->op == IR_OP_CALL && inst->call_args) {
-                for (int k = 0; k < inst->call_arg_count; k++) {
-                    IRValue* v = inst->call_args[k];
-                    if (v && v->kind == IR_VAL_REG) {
-                        max_reg = ir_max_i(max_reg, v->data.reg_num + 1);
+            if (inst->op == IR_OP_CALL) {
+                IRValue* cv = inst->call_callee;
+                if (cv && cv->kind == IR_VAL_REG) {
+                    max_reg = ir_max_i(max_reg, cv->data.reg_num + 1);
+                }
+                if (inst->call_args) {
+                    for (int k = 0; k < inst->call_arg_count; k++) {
+                        IRValue* v = inst->call_args[k];
+                        if (v && v->kind == IR_VAL_REG) {
+                            max_reg = ir_max_i(max_reg, v->data.reg_num + 1);
+                        }
                     }
                 }
             }
@@ -68,10 +74,14 @@ static int ir_count_reg_uses(IRFunc* func) {
                 if (v && v->kind == IR_VAL_REG) count++;
             }
 
-            if (inst->op == IR_OP_CALL && inst->call_args) {
-                for (int k = 0; k < inst->call_arg_count; k++) {
-                    IRValue* v = inst->call_args[k];
-                    if (v && v->kind == IR_VAL_REG) count++;
+            if (inst->op == IR_OP_CALL) {
+                IRValue* cv = inst->call_callee;
+                if (cv && cv->kind == IR_VAL_REG) count++;
+                if (inst->call_args) {
+                    for (int k = 0; k < inst->call_arg_count; k++) {
+                        IRValue* v = inst->call_args[k];
+                        if (v && v->kind == IR_VAL_REG) count++;
+                    }
                 }
             }
 
@@ -156,18 +166,31 @@ IRDefUse* ir_defuse_build(IRFunc* func) {
                 du->uses_by_reg[r] = u;
             }
 
-            if (inst->op == IR_OP_CALL && inst->call_args) {
-                for (int k = 0; k < inst->call_arg_count; k++) {
-                    IRValue* v = inst->call_args[k];
-                    if (!v || v->kind != IR_VAL_REG) continue;
+            if (inst->op == IR_OP_CALL) {
+                IRValue* cv = inst->call_callee;
+                if (cv && cv->kind == IR_VAL_REG) {
+                    int r = cv->data.reg_num;
+                    if (r >= 0 && r < du->max_reg) {
+                        IRUse* u = &du->uses_storage[idx++];
+                        u->slot = &inst->call_callee;
+                        u->next = du->uses_by_reg[r];
+                        du->uses_by_reg[r] = u;
+                    }
+                }
 
-                    int r = v->data.reg_num;
-                    if (r < 0 || r >= du->max_reg) continue;
+                if (inst->call_args) {
+                    for (int k = 0; k < inst->call_arg_count; k++) {
+                        IRValue* v = inst->call_args[k];
+                        if (!v || v->kind != IR_VAL_REG) continue;
 
-                    IRUse* u = &du->uses_storage[idx++];
-                    u->slot = &inst->call_args[k];
-                    u->next = du->uses_by_reg[r];
-                    du->uses_by_reg[r] = u;
+                        int r = v->data.reg_num;
+                        if (r < 0 || r >= du->max_reg) continue;
+
+                        IRUse* u = &du->uses_storage[idx++];
+                        u->slot = &inst->call_args[k];
+                        u->next = du->uses_by_reg[r];
+                        du->uses_by_reg[r] = u;
+                    }
                 }
             }
 

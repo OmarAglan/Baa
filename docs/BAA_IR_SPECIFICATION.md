@@ -542,7 +542,9 @@ array       ::= "مصفوفة" "[" type "،" number "]"
 
 - IR text `call` يدعم:
   - نداء مباشر: `call <ret_type> @name(arg0, arg1, ...)`
-  - نداء غير مباشر: `call <ret_type> %rN(arg0, arg1, ...)` حيث `%rN` قيمة من نوع `func(...) -> ...`
+  - نداء غير مباشر: `call <ret_type> <callee>(arg0, arg1, ...)` حيث `callee` يمكن أن يكون:
+    - `%rN` قيمة من نوع `func(...) -> ...`
+    - أو `@name` مرجع دالة (بعد تحسين/نشر قد يظهر كقيمة مباشرة)
 
 ---
 

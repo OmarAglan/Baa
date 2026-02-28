@@ -2860,24 +2860,9 @@ static DataType infer_type_internal(Node* node) {
         case NODE_CALL_EXPR:
         {
             const char* fname = node->data.call.name;
-            FuncSymbol* fs = func_lookup(fname);
-            if (!fs) {
-                DataType built_ret = TYPE_INT;
-                if (builtin_check_string_call(node, fname, node->data.call.args, &built_ret)) {
-                    node_clear_inferred_ptr(node);
-                    return built_ret;
-                }
-
-                // نداء غير مباشر عبر متغير من نوع مؤشر دالة.
-                Symbol* callee_sym = lookup(fname, true);
-                if (!callee_sym) {
-                    semantic_error(node, "استدعاء دالة غير معرّفة '%s'.", fname ? fname : "???");
-                    // ما زلنا نستنتج أنواع الوسائط لاكتشاف أخطاء أخرى.
-                    Node* arg = node->data.call.args;
-                    while (arg) { (void)infer_type(arg); arg = arg->next; }
-                    return TYPE_INT;
-                }
-
+            // 1) أعطِ أولوية للرموز في النطاق (متغيرات/معاملات) حتى تعمل الـ shadowing بشكل صحيح.
+            Symbol* callee_sym = lookup(fname, true);
+            if (callee_sym) {
                 if (callee_sym->is_array) {
                     semantic_error(node, "لا يمكن نداء المصفوفة '%s'.", callee_sym->name);
                     Node* arg = node->data.call.args;
@@ -2917,10 +2902,7 @@ static DataType infer_type_internal(Node* node) {
                                 !ptr_type_compatible(arg->inferred_ptr_base_type,
                                                      arg->inferred_ptr_base_type_name,
                                                      arg->inferred_ptr_depth,
-                                                     eb,
-                                                     en,
-                                                     ed,
-                                                     true)) {
+                                                     eb, en, ed, true)) {
                                 semantic_error(arg, "نوع المعامل %d في نداء '%s' غير متوافق.", i + 1, fname ? fname : "???");
                             }
                         } else if (exp == TYPE_FUNC_PTR) {
@@ -2952,6 +2934,22 @@ static DataType infer_type_internal(Node* node) {
                 }
 
                 return sig->return_type;
+            }
+
+            // 2) ثم نحل الدوال المعرفة (أو builtins) إذا لم يوجد رمز بنفس الاسم.
+            FuncSymbol* fs = func_lookup(fname);
+            if (!fs) {
+                DataType built_ret = TYPE_INT;
+                if (builtin_check_string_call(node, fname, node->data.call.args, &built_ret)) {
+                    node_clear_inferred_ptr(node);
+                    return built_ret;
+                }
+
+                semantic_error(node, "استدعاء دالة غير معرّفة '%s'.", fname ? fname : "???");
+                // ما زلنا نستنتج أنواع الوسائط لاكتشاف أخطاء أخرى.
+                Node* arg = node->data.call.args;
+                while (arg) { (void)infer_type(arg); arg = arg->next; }
+                return TYPE_INT;
             }
             // تحقق عدد وأنواع المعاملات
             int i = 0;
@@ -4021,15 +4019,18 @@ static void analyze_node(Node* node) {
         {
             // تحقق استدعاء دالة كجملة
             const char* fname = node->data.call.name;
-            FuncSymbol* fs = func_lookup(fname);
-            if (!fs) {
-                DataType built_ret = TYPE_VOID;
-                if (builtin_check_string_call(node, fname, node->data.call.args, &built_ret)) {
+            // 1) أعطِ أولوية للرموز في النطاق (متغيرات/معاملات) حتى تعمل الـ shadowing بشكل صحيح.
+            Symbol* callee_sym = lookup(fname, true);
+            if (callee_sym) {
+                if (callee_sym->is_array) {
+                    semantic_error(node, "لا يمكن نداء المصفوفة '%s'.", callee_sym->name);
+                    Node* arg = node->data.call.args;
+                    while (arg) { (void)infer_type(arg); arg = arg->next; }
                     break;
                 }
-                Symbol* callee_sym = lookup(fname, true);
-                if (!callee_sym || callee_sym->type != TYPE_FUNC_PTR) {
-                    semantic_error(node, "استدعاء دالة غير معرّفة '%s'.", fname ? fname : "???");
+
+                if (callee_sym->type != TYPE_FUNC_PTR) {
+                    semantic_error(node, "المعرف '%s' ليس دالة ولا مؤشر دالة قابل للنداء.", fname ? fname : "???");
                     Node* arg = node->data.call.args;
                     while (arg) { (void)infer_type(arg); arg = arg->next; }
                     break;
@@ -4077,7 +4078,19 @@ static void analyze_node(Node* node) {
                 if (i != sig->param_count) {
                     semantic_error(node, "عدد معاملات نداء '%s' غير صحيح (المتوقع %d).", fname ? fname : "???", sig->param_count);
                 }
+                break;
+            }
 
+            // 2) ثم نحل الدوال المعرفة (أو builtins) إذا لم يوجد رمز بنفس الاسم.
+            FuncSymbol* fs = func_lookup(fname);
+            if (!fs) {
+                DataType built_ret = TYPE_VOID;
+                if (builtin_check_string_call(node, fname, node->data.call.args, &built_ret)) {
+                    break;
+                }
+                semantic_error(node, "استدعاء دالة غير معرّفة '%s'.", fname ? fname : "???");
+                Node* arg = node->data.call.args;
+                while (arg) { (void)infer_type(arg); arg = arg->next; }
                 break;
             }
 

@@ -327,7 +327,9 @@ static void ir_text_write_inst(FILE* out, IRInst* inst) {
                 fputc('@', out);
                 fputs(inst->call_target, out);
             } else if (inst->call_callee) {
+                fputc('<', out);
                 ir_text_write_value(out, inst->call_callee);
+                fputc('>', out);
             } else {
                 fputs("???", out);
             }
@@ -600,7 +602,33 @@ typedef struct {
     IRBlock** blocks;
     int count;
     int cap;
+
+    // خريطة أنواع السجلات (%rN) داخل الدالة، لتفسير القيم التي لا تحمل نوعاً صريحاً في نص IR.
+    IRType** reg_types;
+    int reg_cap;
 } IRTextBlockMap;
+
+static IRType* ir_text_reg_type_get(IRTextBlockMap* map, int reg)
+{
+    if (!map || reg < 0 || reg >= map->reg_cap) return NULL;
+    return map->reg_types ? map->reg_types[reg] : NULL;
+}
+
+static int ir_text_reg_type_set(IRTextBlockMap* map, int reg, IRType* t)
+{
+    if (!map || reg < 0) return 0;
+    if (reg >= map->reg_cap) {
+        int new_cap = map->reg_cap == 0 ? 32 : map->reg_cap;
+        while (new_cap <= reg) new_cap *= 2;
+        IRType** nt = (IRType**)realloc(map->reg_types, (size_t)new_cap * sizeof(IRType*));
+        if (!nt) return 0;
+        for (int i = map->reg_cap; i < new_cap; i++) nt[i] = NULL;
+        map->reg_types = nt;
+        map->reg_cap = new_cap;
+    }
+    map->reg_types[reg] = t;
+    return 1;
+}
 
 static IRBlock* ir_text_get_or_create_block(IRFunc* func, IRTextBlockMap* map, int id) {
     if (!func || !map || id < 0) return NULL;
@@ -788,7 +816,9 @@ static IRValue* ir_text_parse_value(IRModule* module, IRFunc* func, IRTextBlockM
     if (**p == '-' || isdigit((unsigned char)**p)) {
         int64_t v = 0;
         if (!ir_text_parse_int64(p, &v)) return NULL;
-        return ir_value_const_int(v, expected_type);
+        // إذا لم يتوفر نوع متوقع، نفترض i64 لأن نص IR لا يحمل نوعاً للثوابت.
+        IRType* t = expected_type ? expected_type : IR_TYPE_I64_T;
+        return ir_value_const_int(v, t);
     }
 
     // سلسلة: @.strN
@@ -819,6 +849,34 @@ static IRValue* ir_text_parse_value(IRModule* module, IRFunc* func, IRTextBlockM
             return v;
         }
 
+        // إن لم يوجد نوع متوقع، نحاول التمييز من محتوى الوحدة:
+        // - إذا وجد global بنفس الاسم: نعامله كمرجع global.
+        // - وإلا إذا وجدت دالة بنفس الاسم: نعامله كمرجع دالة (مؤشر دالة) مع توقيع معروف.
+        if (!expected_type && module) {
+            IRGlobal* g = ir_module_find_global(module, name);
+            if (!g) {
+                IRFunc* fn = ir_module_find_func(module, name);
+                if (fn) {
+                    IRType* params_local[64];
+                    IRType** pp = NULL;
+                    int pc = fn->param_count;
+                    if (pc > 0) {
+                        if (pc <= (int)(sizeof(params_local) / sizeof(params_local[0]))) {
+                            for (int i = 0; i < pc; i++) params_local[i] = fn->params[i].type;
+                            pp = params_local;
+                        } else {
+                            free(name);
+                            return NULL;
+                        }
+                    }
+                    IRType* sig = ir_type_func(fn->ret_type, pp, pc);
+                    IRValue* v = ir_value_func_ref(name, sig);
+                    free(name);
+                    return v;
+                }
+            }
+        }
+
         IRType* base = NULL;
         if (expected_type && expected_type->kind == IR_TYPE_PTR) base = expected_type->data.pointee;
         IRValue* v = ir_value_global(name, base);
@@ -833,7 +891,8 @@ static IRValue* ir_text_parse_value(IRModule* module, IRFunc* func, IRTextBlockM
     int reg = -1;
     if (ir_text_parse_reg_token(tok, &reg)) {
         free(tok);
-        return ir_value_reg(reg, expected_type);
+        IRType* rt = expected_type ? expected_type : ir_text_reg_type_get(bmap, reg);
+        return ir_value_reg(reg, rt);
     }
 
     int bid = -1;
@@ -965,15 +1024,48 @@ static int ir_text_parse_instruction_line(IRModule* module, IRFunc* func, IRBloc
         bool is_direct = false;
         char* fn = NULL;
         IRValue* callee = NULL;
+        IRType* callee_sig = NULL;
 
+        // صيغة التسلسل:
+        // - مباشر: call <ret_type> @name(args)
+        // - غير مباشر (الموصى به): call <ret_type> <callee>(args)
+        // - غير مباشر (قديم): call <ret_type> %rN(args)
         if (ir_text_match(&p, "@")) {
             is_direct = true;
             fn = ir_text_parse_token(&p);
             if (!fn) return 0;
-        } else {
-            // نداء غير مباشر: نقرأ قيمة الهدف مباشرة (عادةً %rN).
+
+            // إن كانت الدالة موجودة في الوحدة، نستخدم توقيعها لتعيين أنواع الوسائط.
+            IRFunc* fnd = ir_module_find_func(module, fn);
+            if (fnd) {
+                IRType* params_local[64];
+                IRType** pp = NULL;
+                int pc = fnd->param_count;
+                if (pc > 0) {
+                    if (pc <= (int)(sizeof(params_local) / sizeof(params_local[0]))) {
+                        for (int i = 0; i < pc; i++) params_local[i] = fnd->params[i].type;
+                        pp = params_local;
+                    } else {
+                        free(fn);
+                        return 0;
+                    }
+                }
+                callee_sig = ir_type_func(fnd->ret_type, pp, pc);
+            }
+        } else if (ir_text_match(&p, "<")) {
             callee = ir_text_parse_value(module, func, bmap, &p, NULL);
             if (!callee) return 0;
+            ir_text_skip_ws(&p);
+            if (!ir_text_match(&p, ">")) return 0;
+        } else {
+            // قديم: بدون <> (عادةً %rN)
+            callee = ir_text_parse_value(module, func, bmap, &p, NULL);
+            if (!callee) return 0;
+        }
+
+        if (!is_direct) {
+            if (!callee->type || callee->type->kind != IR_TYPE_FUNC) return 0;
+            callee_sig = callee->type;
         }
 
         ir_text_skip_ws(&p);
@@ -986,7 +1078,12 @@ static int ir_text_parse_instruction_line(IRModule* module, IRFunc* func, IRBloc
         if (!ir_text_match(&p, ")")) {
             while (1) {
                 if (ac >= 128) { free(fn); return 0; }
-                IRValue* a = ir_text_parse_value(module, func, bmap, &p, NULL);
+                IRType* exp = NULL;
+                if (callee_sig && callee_sig->kind == IR_TYPE_FUNC) {
+                    int pc = callee_sig->data.func.param_count;
+                    if (ac < pc) exp = callee_sig->data.func.params[ac];
+                }
+                IRValue* a = ir_text_parse_value(module, func, bmap, &p, exp);
                 if (!a) { free(fn); return 0; }
                 args_local[ac++] = a;
 
@@ -1014,6 +1111,9 @@ static int ir_text_parse_instruction_line(IRModule* module, IRFunc* func, IRBloc
         if (!ir_text_parse_inst_attrs(&p, inst, func)) return 0;
         ir_block_append(block, inst);
         if (dest >= 0 && dest + 1 > func->next_reg) func->next_reg = dest + 1;
+        if (dest >= 0) {
+            if (!ir_text_reg_type_set(bmap, dest, inst->type)) return 0;
+        }
         return 1;
     }
 
@@ -1025,6 +1125,9 @@ static int ir_text_parse_instruction_line(IRModule* module, IRFunc* func, IRBloc
         if (!ir_text_parse_inst_attrs(&p, inst, func)) return 0;
         ir_block_append(block, inst);
         if (dest >= 0 && dest + 1 > func->next_reg) func->next_reg = dest + 1;
+        if (dest >= 0) {
+            if (!ir_text_reg_type_set(bmap, dest, inst->type)) return 0;
+        }
         return 1;
     }
 
@@ -1040,6 +1143,9 @@ static int ir_text_parse_instruction_line(IRModule* module, IRFunc* func, IRBloc
         if (!ir_text_parse_inst_attrs(&p, inst, func)) return 0;
         ir_block_append(block, inst);
         if (dest >= 0 && dest + 1 > func->next_reg) func->next_reg = dest + 1;
+        if (dest >= 0) {
+            if (!ir_text_reg_type_set(bmap, dest, inst->type)) return 0;
+        }
         return 1;
     }
 
@@ -1076,6 +1182,9 @@ static int ir_text_parse_instruction_line(IRModule* module, IRFunc* func, IRBloc
         if (!ir_text_parse_inst_attrs(&p, inst, func)) return 0;
         ir_block_append(block, inst);
         if (dest >= 0 && dest + 1 > func->next_reg) func->next_reg = dest + 1;
+        if (dest >= 0) {
+            if (!ir_text_reg_type_set(bmap, dest, inst->type)) return 0;
+        }
         return 1;
     }
 
@@ -1112,6 +1221,9 @@ static int ir_text_parse_instruction_line(IRModule* module, IRFunc* func, IRBloc
         if (!ir_text_parse_inst_attrs(&p, inst, func)) return 0;
         ir_block_append(block, inst);
         if (dest >= 0 && dest + 1 > func->next_reg) func->next_reg = dest + 1;
+        if (dest >= 0) {
+            if (!ir_text_reg_type_set(bmap, dest, inst->type)) return 0;
+        }
         return 1;
     }
 
@@ -1131,6 +1243,9 @@ static int ir_text_parse_instruction_line(IRModule* module, IRFunc* func, IRBloc
         if (!ir_text_parse_inst_attrs(&p, inst, func)) return 0;
         ir_block_append(block, inst);
         if (dest >= 0 && dest + 1 > func->next_reg) func->next_reg = dest + 1;
+        if (dest >= 0) {
+            if (!ir_text_reg_type_set(bmap, dest, inst->type)) return 0;
+        }
         return 1;
     }
 
@@ -1158,6 +1273,9 @@ static int ir_text_parse_instruction_line(IRModule* module, IRFunc* func, IRBloc
     if (!ir_text_parse_inst_attrs(&p, inst, func)) return 0;
     ir_block_append(block, inst);
     if (dest >= 0 && dest + 1 > func->next_reg) func->next_reg = dest + 1;
+    if (dest >= 0 && inst->type) {
+        if (!ir_text_reg_type_set(bmap, dest, inst->type)) return 0;
+    }
     return 1;
 }
 
@@ -1358,6 +1476,7 @@ IRModule* ir_text_read_module_file(const char* filename) {
         if (ir_text_match(&p, "func")) {
             // إعادة تهيئة سياق الكتل
             free(bmap.blocks);
+            free(bmap.reg_types);
             memset(&bmap, 0, sizeof(bmap));
             cur_block = NULL;
 
@@ -1388,6 +1507,7 @@ IRModule* ir_text_read_module_file(const char* filename) {
                     // ضبط رقم السجل كما ورد في النص (إن اختلف)
                     fn->params[fn->param_count - 1].reg = preg;
                     if (preg + 1 > fn->next_reg) fn->next_reg = preg + 1;
+                    if (!ir_text_reg_type_set(&bmap, preg, pt)) { ok = 0; break; }
 
                     ir_text_skip_ws(&p);
                     if (ir_text_match(&p, ")")) break;
@@ -1463,6 +1583,7 @@ IRModule* ir_text_read_module_file(const char* filename) {
     }
 
     free(bmap.blocks);
+    free(bmap.reg_types);
     fclose(in);
 
     if (!ok) {

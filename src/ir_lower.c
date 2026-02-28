@@ -1456,7 +1456,27 @@ static IRValue* lower_call_expr(IRLowerCtx* ctx, Node* expr) {
     if (m) ir_module_set_current(m);
 
     // دوال السلاسل المدمجة في v0.3.9 (سلوك C-like مع أسماء عربية).
+    bool allow_string_builtins = true;
     if (expr->data.call.name) {
+        const char* n0 = expr->data.call.name;
+        // إذا كان هناك رمز/تخزين يحمل نفس الاسم، يجب احترام shadowing وعدم تحويله إلى builtin.
+        if (find_local(ctx, n0)) {
+            allow_string_builtins = false;
+        }
+        if (m && ir_module_find_global(m, n0)) {
+            allow_string_builtins = false;
+        }
+        if (m) {
+            IRFunc* f0 = ir_module_find_func(m, n0);
+            // إذا كانت الدالة مجرد prototype (مثلاً من ترويسة stdlib)، نسمح للـ builtin أن يطغى عليها.
+            // أما إذا كانت لها جسم داخل الوحدة، فهذه دالة مستخدم ويجب احترامها.
+            if (f0 && !f0->is_prototype) {
+                allow_string_builtins = false;
+            }
+        }
+    }
+
+    if (allow_string_builtins && expr->data.call.name) {
         const char* n = expr->data.call.name;
         Node* a0 = expr->data.call.args;
         Node* a1 = a0 ? a0->next : NULL;
@@ -1520,11 +1540,7 @@ static IRValue* lower_call_expr(IRLowerCtx* ctx, Node* expr) {
     IRValue* callee_val = NULL;
     IRType* callee_sig = NULL; // IR_TYPE_FUNC عند النداء غير المباشر
 
-    if (m && expr->data.call.name) {
-        callee = ir_module_find_func(m, expr->data.call.name);
-    }
-
-    if (!callee && expr->data.call.name) {
+    if (expr->data.call.name) {
         const char* n = expr->data.call.name;
 
         // 1) متغير محلي من نوع دالة(...)->...
@@ -1553,6 +1569,11 @@ static IRValue* lower_call_expr(IRLowerCtx* ctx, Node* expr) {
                 callee_val = ir_value_reg(loaded, g->type);
                 callee_sig = g->type;
             }
+        }
+
+        // 3) إذا لم يكن هناك مؤشر دالة في النطاق/العوام، فاعتبره نداء مباشراً للدالة.
+        if (!callee_sig && m) {
+            callee = ir_module_find_func(m, n);
         }
     }
 

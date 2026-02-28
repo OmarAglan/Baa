@@ -33,6 +33,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - **IR lowering:** comparisons of function pointers against `عدم` now unify the IR operand types so `--verify-ir` does not fail on signature-mismatched zero constants.
 - **Semantic analysis / AST metadata:** `Node.inferred_func_sig` is now stored as a cloned (owned) signature instead of borrowing a local-scope symbol signature that can be freed at `scope_pop()`.
 - **Parser:** prevented aliases that resolve to a function-pointer type from being used inside another function-pointer signature (blocks unsupported higher-order signatures at parse time).
+- **IR text:** indirect calls are now printed/parsed as `call <ret> <callee>(...)` (with `callee` inside `<>`) to disambiguate from direct calls and to support round-tripping when the callee becomes a function value like `@name`.
+- **Semantic calls:** name resolution for `name(...)` now prefers scoped symbols (function-pointer variables) before global functions, so shadowed function-pointer calls behave correctly.
 
 ## [0.3.10.5] - 2026-02-27
 

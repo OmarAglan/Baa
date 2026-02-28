@@ -28,6 +28,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - **IR verifier + IR text format** now accept `call` with either a direct `@name` target or an indirect callee value.
 - **Global data emission** now supports function pointer initializers as `.quad <symbol>`.
 
+### Fixed
+
+- **IR lowering:** comparisons of function pointers against `عدم` now unify the IR operand types so `--verify-ir` does not fail on signature-mismatched zero constants.
+
 ## [0.3.10.5] - 2026-02-27
 
 ### Added

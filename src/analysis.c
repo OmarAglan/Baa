@@ -925,7 +925,11 @@ static void node_set_inferred_ptr(Node* node, DataType base_type, const char* ba
 {
     if (!node) return;
     // لا يمكن أن يكون التعبير "مؤشر" و"مؤشر دالة" في نفس الوقت.
-    node->inferred_func_sig = NULL;
+    if (node->inferred_func_sig) {
+        // ملاحظة: inferred_func_sig مملوك للعقدة (نسخة) ويجب تحريره عند استبداله.
+        funcsig_free(node->inferred_func_sig);
+        node->inferred_func_sig = NULL;
+    }
     node->inferred_ptr_base_type = base_type;
     if (node->inferred_ptr_base_type_name) {
         free(node->inferred_ptr_base_type_name);
@@ -948,7 +952,12 @@ static void node_set_inferred_funcptr(Node* node, FuncPtrSig* sig)
     if (!node) return;
     // تفريغ معلومات المؤشر العادي حتى لا تختلط الدلالات.
     node_set_inferred_ptr(node, TYPE_INT, NULL, 0);
-    node->inferred_func_sig = sig;
+    // مهم: لا نخزن مؤشراً مستعاراً هنا لأن تواقيع رموز النطاقات المحلية تُحرَّر عند scope_pop().
+    // لذلك نحتفظ بنسخة مملوكة للعقدة حتى تبقى صالحة أثناء خفض الـ IR.
+    node->inferred_func_sig = funcsig_clone(sig);
+    if (sig && !node->inferred_func_sig) {
+        semantic_error(node, "نفدت الذاكرة أثناء نسخ توقيع مؤشر الدالة داخل AST.");
+    }
 }
 
 static void funcsig_free(FuncPtrSig* s)

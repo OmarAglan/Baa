@@ -302,6 +302,11 @@ internal global @عداد_داخلي = ص٦٤ ٠ // ربط داخلي (v0.3.7.5)
 | `NODE_ARRAY_DECL` | Stack/global array allocation + optional initializer lowering |
 | `NODE_ARRAY_ACCESS` | Row-major linearized index → `إزاحة_مؤشر` + `حمل` |
 | `NODE_ARRAY_ASSIGN` | Row-major linearized index → `إزاحة_مؤشر` + `خزن` |
+| `NODE_NULL` | `IR_VAL_CONST_INT` (0) typed as pointer or func ptr |
+| `NODE_CAST` | `تحويل` instruction |
+| `NODE_UNARY_OP (ADDR)` | Returns underlying pointer register/global |
+| `NODE_UNARY_OP (DEREF)`| `حمل` from pointer |
+| `NODE_DEREF_ASSIGN` | `خزن` to pointer |
 
 ملاحظة (`v0.3.9`): استدعاءات السلاسل `طول_نص/قارن_نص/نسخ_نص/دمج_نص/حرر_نص`
 تُخفض داخلياً إلى حلقات/نداءات `malloc/free` حسب الحالة بدلاً من مجرد تمرير `call` خام.

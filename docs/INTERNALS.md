@@ -481,6 +481,9 @@ The Semantic Analyzer (`src/analysis.c`) performs a static check on the AST befo
 9. **Dead Code Detection** (v0.2.8+): Detects unreachable code after `return`/`break`.
 10. **Type Alias Validation** (v0.3.6.5): Registers aliases, validates alias targets, and enforces strict alias/symbol name collision diagnostics.
 11. **Array Shape Validation** (v0.3.9): Tracks array rank/dimensions in symbols, validates index-count match, and performs compile-time out-of-bounds checks for constant indices.
+12. **Pointer Semantics (v0.3.10)**: Validates pointer arithmetic, comparisons, dereference, and address-of constraints.
+13. **Type Casting (v0.3.10.5)**: Enforces rules for explicit scalar and pointer conversions.
+14. **Function Pointers (v0.3.10.6)**: Validates assignment and indirect calls matching exact signatures.
 
 ### 5.2. Constant Checking (v0.2.7+)
 
@@ -861,12 +864,13 @@ Key concepts:
 
 Currently lowered expressions:
 
-- `NODE_INT`, `NODE_STRING`, `NODE_CHAR`, `NODE_BOOL`
+- `NODE_INT`, `NODE_STRING`, `NODE_CHAR`, `NODE_BOOL`, `NODE_FLOAT`, `NODE_NULL`
 - `NODE_VAR_REF` (loads via `حمل`)
-- `NODE_BIN_OP` (arithmetic, comparisons, logical ops)
-- `NODE_UNARY_OP` (neg/not)
-- `NODE_CALL_EXPR` (calls via `نداء`)
-- `NODE_ARRAY_ACCESS` (multi-index row-major address computation via `IR_OP_PTR_OFFSET`)
+- `NODE_BIN_OP` (arithmetic, comparisons, logical ops, pointer difference)
+- `NODE_UNARY_OP` (`سالب`, bitwise `نفي`, `!`, `UOP_ADDR` via pointers, `UOP_DEREF` via load)
+- `NODE_SIZEOF` -> compile-time constant size
+- `NODE_CAST` -> `تحويل` (cast)
+- `NODE_CALL_EXPR` -> `نداء` (supports direct calls, and indirect calls via `IR_TYPE_FUNC` pointers)
 - Builtin string calls in `NODE_CALL_EXPR` (`v0.3.9`):
   - `طول_نص`: loop until terminator and return length
   - `قارن_نص`: lexicographic compare over Baa `حرف`
@@ -883,7 +887,8 @@ Statement lowering is implemented in the same module and currently supports:
 - `NODE_PRINT`: emit `نداء @اطبع(...)` (builtin call)
 - `NODE_READ`: emit `نداء @اقرأ(%ptr)` (builtin call)
 - `NODE_ARRAY_DECL` / `NODE_ARRAY_ASSIGN` (including multi-dimensional index chains)
-- `NODE_MEMBER_ASSIGN` on indexed array elements (constant-index path for aggregate arrays)
+- `NODE_MEMBER_ASSIGN` on indexed array elements and structs
+- `NODE_DEREF_ASSIGN`: store value through dereferenced pointer
 
 ### 6.12. AST → IR Lowering (Control Flow, v0.3.0.5+)
 

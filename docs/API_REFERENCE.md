@@ -3011,6 +3011,10 @@ typedef struct {
 | `decl_line` | `int` | Line number where symbol was declared (v0.2.8+) |
 | `decl_col` | `int` | Column number where symbol was declared (v0.2.8+) |
 | `decl_file` | `const char*` | Filename where symbol was declared (v0.2.8+) |
+| `ptr_base_type` | `DataType` | The base type for pointers |
+| `ptr_base_type_name` | `char[32]` | The name of the struct/union/enum base type |
+| `ptr_depth` | `int` | The depth of the pointer (0 if not a pointer) |
+| `func_sig` | `FuncPtrSig*` | The function pointer signature if type is TYPE_FUNC_PTR |
 
 > **Note**: Symbol table management functions are implemented as static helper functions within `analysis.c`. The `Symbol` struct definition is shared via `baa.h` to support semantic analysis.
 
@@ -3020,15 +3024,38 @@ Compound types are tracked by `DataType` + an optional `type_name`.
 
 ```c
 typedef enum {
-    TYPE_INT,
-    TYPE_STRING,
-    TYPE_BOOL,
-    TYPE_CHAR,
-    TYPE_FLOAT,
-    TYPE_ENUM,
-    TYPE_STRUCT,
-    TYPE_UNION
+    TYPE_INT,           // صحيح / ص٦٤ (int64)
+    TYPE_I8,            // ص٨
+    TYPE_I16,           // ص١٦
+    TYPE_I32,           // ص٣٢
+    TYPE_U8,            // ط٨
+    TYPE_U16,           // ط١٦
+    TYPE_U32,           // ط٣٢
+    TYPE_U64,           // ط٦٤
+    TYPE_STRING,        // نص (حرف[])
+    TYPE_POINTER,       // مؤشر عام
+    TYPE_FUNC_PTR,      // مؤشر دالة: دالة(...) -> نوع
+    TYPE_BOOL,          // منطقي (bool - stored as byte)
+    TYPE_CHAR,          // حرف (UTF-8 sequence)
+    TYPE_FLOAT,         // عشري (float64)
+    TYPE_VOID,          // عدم (void)
+    TYPE_ENUM,          // تعداد (يُخزن كـ int64)
+    TYPE_STRUCT,        // هيكل (ليس قيمة من الدرجة الأولى)
+    TYPE_UNION          // اتحاد (ليس قيمة من الدرجة الأولى)
 } DataType;
+
+typedef struct FuncPtrSig {
+    DataType return_type;
+    DataType return_ptr_base_type;
+    char* return_ptr_base_type_name;
+    int return_ptr_depth;
+
+    int param_count;
+    DataType* param_types;
+    DataType* param_ptr_base_types;
+    char** param_ptr_base_type_names;
+    int* param_ptr_depths;
+} FuncPtrSig;
 ```
 
 ---
@@ -3108,46 +3135,60 @@ typedef struct {
 
 ```c
 typedef enum {
-    TOKEN_EOF,
-    TOKEN_INT,
-    TOKEN_FLOAT,
-    TOKEN_STRING,
-    TOKEN_CHAR,
-    TOKEN_IDENTIFIER,
+    TOKEN_EOF,          // نهاية الملف
+    TOKEN_INT,          // رقم صحيح: 123
+    TOKEN_FLOAT,        // رقم عشري: 3.14
+    TOKEN_STRING,       // نص: "مرحباً"
+    TOKEN_CHAR,         // حرف: 'أ'
+    TOKEN_IDENTIFIER,   // معرف: اسم متغير أو دالة (س، ص، الرئيسية)
+    
+    // الكلمات المفتاحية (Keywords)
+    TOKEN_KEYWORD_INT,  // صحيح
+    TOKEN_KEYWORD_I8,   // ص٨
+    TOKEN_KEYWORD_I16,  // ص١٦
+    TOKEN_KEYWORD_I32,  // ص٣٢
+    TOKEN_KEYWORD_I64,  // ص٦٤
+    TOKEN_KEYWORD_U8,   // ط٨
+    TOKEN_KEYWORD_U16,  // ط١٦
+    TOKEN_KEYWORD_U32,  // ط٣٢
+    TOKEN_KEYWORD_U64,  // ط٦٤
+    TOKEN_KEYWORD_STRING, // نص
+    TOKEN_KEYWORD_BOOL, // منطقي
+    TOKEN_KEYWORD_CHAR, // حرف
+    TOKEN_KEYWORD_FLOAT, // عشري
+    TOKEN_KEYWORD_VOID, // عدم
+    TOKEN_CAST,         // كـ
+    TOKEN_SIZEOF,       // حجم
+    TOKEN_TYPE_ALIAS,   // نوع
+    TOKEN_CONST,        // ثابت
+    TOKEN_STATIC,       // ساكن
+    TOKEN_RETURN,       // إرجع
+    TOKEN_PRINT,        // اطبع
+    TOKEN_READ,         // اقرأ
+    TOKEN_IF,           // إذا
+    TOKEN_ELSE,         // وإلا
+    TOKEN_WHILE,        // طالما
+    TOKEN_FOR,          // لكل
+    TOKEN_BREAK,        // توقف
+    TOKEN_CONTINUE,     // استمر
+    TOKEN_SWITCH,       // اختر
+    TOKEN_CASE,         // حالة
+    TOKEN_DEFAULT,      // افتراضي
+    TOKEN_TRUE,         // صواب
+    TOKEN_FALSE,        // خطأ
 
-    TOKEN_KEYWORD_INT,
-    TOKEN_KEYWORD_STRING,
-    TOKEN_KEYWORD_BOOL,
-    TOKEN_KEYWORD_CHAR,
-    TOKEN_KEYWORD_FLOAT,
-    TOKEN_TYPE_ALIAS,
-    TOKEN_CONST,
-    TOKEN_STATIC,
-    TOKEN_RETURN,
-    TOKEN_PRINT,
-    TOKEN_READ,
-    TOKEN_IF,
-    TOKEN_ELSE,
-    TOKEN_WHILE,
-    TOKEN_FOR,
-    TOKEN_BREAK,
-    TOKEN_CONTINUE,
-    TOKEN_SWITCH,
-    TOKEN_CASE,
-    TOKEN_DEFAULT,
-    TOKEN_TRUE,
-    TOKEN_FALSE,
-
-    TOKEN_ENUM,
-    TOKEN_STRUCT,
-    TOKEN_UNION,
-
-    TOKEN_ASSIGN,
-    TOKEN_DOT,
-    TOKEN_COMMA,
-    TOKEN_COLON,
-    TOKEN_SEMICOLON,
-
+    // أنواع مركبة (v0.3.4)
+    TOKEN_ENUM,         // تعداد
+    TOKEN_STRUCT,       // هيكل
+    TOKEN_UNION,        // اتحاد
+    
+    // الرموز (Symbols)
+    TOKEN_ASSIGN,       // =
+    TOKEN_DOT,          // .
+    TOKEN_COMMA,        // ,
+    TOKEN_COLON,        // :
+    TOKEN_SEMICOLON,    // ؛
+    // العمليات الحسابية والمنطقية...
     TOKEN_PLUS,
     TOKEN_MINUS,
     TOKEN_STAR,
@@ -3313,43 +3354,15 @@ typedef struct Node {
 
 ```c
 typedef enum {
-    // Top-level
-    NODE_PROGRAM,
-    NODE_FUNC_DEF,
-    NODE_TYPE_ALIAS,
-    NODE_BLOCK,
-    NODE_VAR_DECL,
-    NODE_IF,
-    NODE_WHILE,
-    NODE_FOR,
-    NODE_RETURN,
-    NODE_SWITCH,
-    NODE_CASE,
-    NODE_BREAK,
-    NODE_CONTINUE,
-    NODE_ASSIGN,
-    NODE_CALL_STMT,
-    NODE_READ,
-    NODE_ARRAY_DECL,
-    NODE_ARRAY_ASSIGN,
-    NODE_ARRAY_ACCESS,
-    NODE_ENUM_DECL,
-    NODE_STRUCT_DECL,
-    NODE_UNION_DECL,
-    NODE_ENUM_MEMBER,
-    NODE_MEMBER_ACCESS,
-    NODE_MEMBER_ASSIGN,
-    NODE_PRINT,
-    NODE_BIN_OP,
-    NODE_UNARY_OP,
-    NODE_POSTFIX_OP,
-    NODE_INT,
-    NODE_FLOAT,
-    NODE_STRING,
-    NODE_CHAR,
-    NODE_BOOL,
-    NODE_VAR_REF,
-    NODE_CALL_EXPR
+    NODE_PROGRAM, NODE_FUNC_DEF, NODE_VAR_DECL, NODE_TYPE_ALIAS,
+    NODE_ENUM_DECL, NODE_STRUCT_DECL, NODE_ENUM_MEMBER, NODE_UNION_DECL,
+    NODE_BLOCK, NODE_RETURN, NODE_PRINT, NODE_IF, NODE_WHILE, NODE_FOR,
+    NODE_SWITCH, NODE_CASE, NODE_BREAK, NODE_CONTINUE, NODE_ASSIGN,
+    NODE_CALL_STMT, NODE_READ, NODE_ARRAY_DECL, NODE_ARRAY_ASSIGN,
+    NODE_ARRAY_ACCESS, NODE_MEMBER_ACCESS, NODE_MEMBER_ASSIGN,
+    NODE_DEREF_ASSIGN, NODE_BIN_OP, NODE_UNARY_OP, NODE_POSTFIX_OP,
+    NODE_INT, NODE_FLOAT, NODE_STRING, NODE_CHAR, NODE_BOOL,
+    NODE_NULL, NODE_CAST, NODE_SIZEOF, NODE_VAR_REF, NODE_CALL_EXPR
 } NodeType;
 ```
 

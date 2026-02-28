@@ -1,6 +1,6 @@
 # Baa Language Specification
 
-> **Version:** 0.3.9 (in progress) | [← User Guide](USER_GUIDE.md) | [Compiler Internals →](INTERNALS.md)
+> **Version:** 0.3.10.6 | [← User Guide](USER_GUIDE.md) | [Compiler Internals →](INTERNALS.md)
 
 Baa (باء) is a compiled systems programming language using Arabic syntax. It compiles to native code via Assembly + host GCC/Clang on Windows and Linux.
 
@@ -497,7 +497,7 @@ Baa is statically typed. All variables must be declared with their type.
 - عمليات المؤشرات المدعومة دلالياً: `pointer +/- int` و `pointer - pointer` (الطرح بين مؤشرين متوافقين يعيد فرق العناصر كنوع صحيح).
 - المقارنة بين المؤشرات مدعومة عند توافق نوع المؤشر (مع السماح بـ `عدم` كمؤشر فارغ).
 - فك الإشارة يتطلب مؤشراً صالحاً، وأخذ العنوان يتطلب قيمة قابلة للإسناد.
-- مؤشرات الدوال ما تزال خارج النطاق الحالي (مخططة لـ v0.3.10.6).
+- مؤشرات الدوال مدعومة عبر نوع `دالة(...) -> ...` (انظر 5.6).
 
 #### 3.7.4. Type Casting (تحويل الأنواع) [Implemented v0.3.10.5]
 
@@ -657,23 +657,32 @@ Functions can call themselves (recursion), provided there is a base case to term
 }
 ```
 
-### 5.6. Function Pointers (مؤشرات الدوال) [Scheduled v0.3.10.6]
+### 5.6. Function Pointers (مؤشرات الدوال) [Implemented v0.3.10.6]
 
 Pass functions as values.
 
 **Syntax:** `دالة(types) -> return_type`
 
 ```baa
-نوع عملية = دالة(صحيح، صحيح) -> صحيح.
+نوع عملية = دالة(صحيح, صحيح) -> صحيح.
 
-صحيح جمع(صحيح أ، صحيح ب) { إرجع أ + ب. }
+صحيح جمع(صحيح أ, صحيح ب) { إرجع أ + ب. }
 
 صحيح الرئيسية() {
     عملية ع = جمع.
-    اطبع ع(١، ٢).
+    اطبع ع(١, ٢).
     إرجع ٠.
 }
 ```
+
+**Current rules (v0.3.10.6):**
+
+- يمكن إسناد اسم دالة إلى متغير من نوع مؤشر دالة إذا تطابق التوقيع.
+- يمكن نداء مؤشر الدالة عندما يكون الهدف معرفاً (Identifier) في صيغة النداء: `ع(…)`.
+- `عدم` يمثل مؤشراً فارغاً ويمكن إسناده إلى مؤشر الدالة ومقارنته به.
+- مقارنة مؤشرات الدوال تدعم فقط `==` و`!=`.
+- التحويل الصريح (`كـ<...>(...)`) من/إلى مؤشر دالة غير مدعوم حالياً.
+- لا ندعم حالياً التواقيع الأعلى رتبة داخل توقيع مؤشر الدالة (Function pointer inside function pointer signature).
 
 ### 5.7. Variadic Functions (دوال متغيرة المعاملات) [Scheduled v0.4.0.5]
 

@@ -312,6 +312,7 @@ static IRType* ir_type_from_datatype(IRModule* module, DataType t) {
         case TYPE_U64:    return IR_TYPE_U64_T;
         case TYPE_STRING: return get_char_ptr_type(module);
         case TYPE_POINTER: return ir_type_ptr(IR_TYPE_I8_T);
+        case TYPE_FUNC_PTR: return ir_type_func(IR_TYPE_VOID_T, NULL, 0);
         case TYPE_CHAR:   return IR_TYPE_CHAR_T;
         case TYPE_FLOAT:  return IR_TYPE_F64_T;
         case TYPE_VOID:   return IR_TYPE_VOID_T;
@@ -319,6 +320,48 @@ static IRType* ir_type_from_datatype(IRModule* module, DataType t) {
         case TYPE_INT:
         default:          return IR_TYPE_I64_T;
     }
+}
+
+static IRType* ir_type_from_funcsig(IRModule* module, const FuncPtrSig* sig)
+{
+    if (!sig) {
+        return ir_type_func(IR_TYPE_VOID_T, NULL, 0);
+    }
+
+    IRType* ret_t = ir_type_from_datatype(module, sig->return_type);
+    if (!ret_t) ret_t = IR_TYPE_VOID_T;
+
+    int pc = sig->param_count;
+    if (pc < 0) pc = 0;
+
+    IRType* params_local[64];
+    IRType** params = NULL;
+    if (pc > 0) {
+        if (pc > (int)(sizeof(params_local) / sizeof(params_local[0]))) {
+            pc = (int)(sizeof(params_local) / sizeof(params_local[0]));
+        }
+        for (int i = 0; i < pc; i++) {
+            DataType pt = sig->param_types ? sig->param_types[i] : TYPE_INT;
+            // لا ندعم حالياً أنواع مؤشر دالة داخل توقيع مؤشر دالة.
+            if (pt == TYPE_FUNC_PTR) {
+                params_local[i] = ir_type_func(IR_TYPE_VOID_T, NULL, 0);
+            } else {
+                params_local[i] = ir_type_from_datatype(module, pt);
+            }
+            if (!params_local[i]) params_local[i] = IR_TYPE_I64_T;
+        }
+        params = params_local;
+    }
+
+    return ir_type_func(ret_t, params, pc);
+}
+
+static IRType* ir_type_from_datatype_ex(IRModule* module, DataType t, const FuncPtrSig* sig)
+{
+    if (t == TYPE_FUNC_PTR) {
+        return ir_type_from_funcsig(module, sig);
+    }
+    return ir_type_from_datatype(module, t);
 }
 
 static int64_t ir_lower_pointer_elem_size(const Node* ptr_expr)
@@ -1472,17 +1515,54 @@ static IRValue* lower_call_expr(IRLowerCtx* ctx, Node* expr) {
         }
     }
 
-    // حاول العثور على توقيع الدالة داخل وحدة IR (لمواءمة أنواع المعاملات/الإرجاع).
+    // حاول العثور على توقيع الدالة داخل وحدة IR (مباشر)، أو تفسير الاسم كـ مؤشر دالة (غير مباشر).
     IRFunc* callee = NULL;
+    IRValue* callee_val = NULL;
+    IRType* callee_sig = NULL; // IR_TYPE_FUNC عند النداء غير المباشر
+
     if (m && expr->data.call.name) {
         callee = ir_module_find_func(m, expr->data.call.name);
+    }
+
+    if (!callee && expr->data.call.name) {
+        const char* n = expr->data.call.name;
+
+        // 1) متغير محلي من نوع دالة(...)->...
+        IRLowerBinding* b = find_local(ctx, n);
+        if (b && b->value_type && b->value_type->kind == IR_TYPE_FUNC) {
+            const char* storage_name = ir_lower_binding_storage_name(b);
+            IRType* ft = b->value_type;
+            IRValue* ptr = NULL;
+            if (b->is_static_storage) {
+                ptr = ir_value_global(storage_name, ft);
+            } else {
+                IRType* ptr_type = ir_type_ptr(ft ? ft : IR_TYPE_I64_T);
+                ptr = ir_value_reg(b->ptr_reg, ptr_type);
+            }
+            int loaded = ir_builder_emit_load(ctx->builder, ft, ptr);
+            callee_val = ir_value_reg(loaded, ft);
+            callee_sig = ft;
+        }
+
+        // 2) متغير عام من نوع دالة(...)->...
+        if (!callee_sig && ctx->builder && ctx->builder->module) {
+            IRGlobal* g = ir_module_find_global(ctx->builder->module, n);
+            if (g && g->type && g->type->kind == IR_TYPE_FUNC) {
+                IRValue* gptr = ir_value_global(n, g->type);
+                int loaded = ir_builder_emit_load(ctx->builder, g->type, gptr);
+                callee_val = ir_value_reg(loaded, g->type);
+                callee_sig = g->type;
+            }
+        }
     }
 
     IRType* ret_type = NULL;
     if (callee && callee->ret_type) {
         ret_type = callee->ret_type;
+    } else if (callee_sig && callee_sig->kind == IR_TYPE_FUNC) {
+        ret_type = callee_sig->data.func.ret;
     } else {
-        ret_type = ir_type_from_datatype(m, expr->inferred_type);
+        ret_type = ir_type_from_datatype_ex(m, expr->inferred_type, expr->inferred_func_sig);
     }
     if (!ret_type) ret_type = IR_TYPE_I64_T;
 
@@ -1502,13 +1582,29 @@ static IRValue* lower_call_expr(IRLowerCtx* ctx, Node* expr) {
     int i = 0;
     for (Node* a = expr->data.call.args; a; a = a->next) {
         IRValue* av = lower_expr(ctx, a);
-        if (callee && i < callee->param_count && callee->params && callee->params[i].type) {
-            av = cast_to(ctx, av, callee->params[i].type);
+        IRType* exp_t = NULL;
+        if (callee && i < callee->param_count && callee->params) {
+            exp_t = callee->params[i].type;
+        } else if (callee_sig && callee_sig->kind == IR_TYPE_FUNC &&
+                   i < callee_sig->data.func.param_count && callee_sig->data.func.params) {
+            exp_t = callee_sig->data.func.params[i];
+        }
+        if (exp_t) {
+            av = cast_to(ctx, av, exp_t);
         }
         args[i++] = av;
     }
 
-    int dest = ir_builder_emit_call(ctx->builder, expr->data.call.name, ret_type, args, arg_count);
+    int dest = -1;
+    if (callee) {
+        dest = ir_builder_emit_call(ctx->builder, expr->data.call.name, ret_type, args, arg_count);
+    } else if (callee_val) {
+        dest = ir_builder_emit_call_indirect(ctx->builder, callee_val, ret_type, args, arg_count);
+    } else {
+        ir_lower_report_error(ctx, expr, "استدعاء غير صالح: '%s' ليس دالة ولا مؤشر دالة.",
+                              expr->data.call.name ? expr->data.call.name : "???");
+        dest = -1;
+    }
 
     if (args) free(args);
 
@@ -1648,6 +1744,27 @@ IRValue* lower_expr(IRLowerCtx* ctx, Node* expr) {
                 int loaded = ir_builder_emit_load(ctx->builder, g->type, gptr);
                 ir_lower_tag_last_inst(ctx->builder, IR_OP_LOAD, loaded, name);
                 return ir_value_reg(loaded, g->type);
+            }
+
+            // 3) Function reference (as a value)
+            IRFunc* f = NULL;
+            if (ctx->builder && ctx->builder->module && name) {
+                f = ir_module_find_func(ctx->builder->module, name);
+            }
+            if (f) {
+                IRType* pts_local[64];
+                IRType** pts = NULL;
+                int pc = f->param_count;
+                if (pc < 0) pc = 0;
+                if (pc > (int)(sizeof(pts_local) / sizeof(pts_local[0]))) {
+                    pc = (int)(sizeof(pts_local) / sizeof(pts_local[0]));
+                }
+                for (int i = 0; i < pc; i++) {
+                    pts_local[i] = (f->params && f->params[i].type) ? f->params[i].type : IR_TYPE_I64_T;
+                }
+                if (pc > 0) pts = pts_local;
+                IRType* ft = ir_type_func(f->ret_type ? f->ret_type : IR_TYPE_VOID_T, pts, pc);
+                return ir_value_func_ref(name, ft);
             }
 
             ir_lower_report_error(ctx, expr, "متغير غير معروف '%s'.", name ? name : "???");
@@ -2038,6 +2155,15 @@ IRValue* lower_expr(IRLowerCtx* ctx, Node* expr) {
                     return ir_value_reg(dest, IR_TYPE_I1_T);
                 }
 
+                if (expr->data.bin_op.left && expr->data.bin_op.right &&
+                    (expr->data.bin_op.left->inferred_type == TYPE_FUNC_PTR || expr->data.bin_op.right->inferred_type == TYPE_FUNC_PTR)) {
+                    IRValue* lhs0 = lower_expr(ctx, expr->data.bin_op.left);
+                    IRValue* rhs0 = lower_expr(ctx, expr->data.bin_op.right);
+                    IRCmpPred pred = ir_cmp_to_pred(op, false);
+                    int dest = ir_builder_emit_cmp(ctx->builder, pred, lhs0, rhs0);
+                    return ir_value_reg(dest, IR_TYPE_I1_T);
+                }
+
                 IRValue* lhs0 = lower_expr(ctx, expr->data.bin_op.left);
                 IRValue* rhs0 = lower_expr(ctx, expr->data.bin_op.right);
                 IRValue* lhs = lhs0;
@@ -2168,6 +2294,11 @@ IRValue* lower_expr(IRLowerCtx* ctx, Node* expr) {
             return ir_value_const_int(expr->data.bool_lit.value ? 1 : 0, IR_TYPE_I1_T);
 
         case NODE_NULL:
+            if (expr->inferred_type == TYPE_FUNC_PTR) {
+                IRType* ft = ir_type_from_funcsig(ctx->builder ? ctx->builder->module : NULL,
+                                                  expr->inferred_func_sig);
+                return ir_value_const_int(0, ft ? ft : ir_type_func(IR_TYPE_VOID_T, NULL, 0));
+            }
             return ir_value_const_int(0, ir_type_ptr(IR_TYPE_I8_T));
 
         case NODE_FLOAT:
@@ -2478,7 +2609,7 @@ static void lower_var_decl(IRLowerCtx* ctx, Node* stmt) {
             return;
         }
 
-        IRType* value_type = ir_type_from_datatype(m, stmt->data.var_decl.type);
+        IRType* value_type = ir_type_from_datatype_ex(m, stmt->data.var_decl.type, stmt->data.var_decl.func_sig);
         IRValue* init = NULL;
         if (stmt->data.var_decl.expression) {
             init = ir_lower_global_init_value(ctx->builder, stmt->data.var_decl.expression, value_type);
@@ -2513,8 +2644,9 @@ static void lower_var_decl(IRLowerCtx* ctx, Node* stmt) {
         return;
     }
 
-    IRType* value_type = ir_type_from_datatype(ctx && ctx->builder ? ctx->builder->module : NULL,
-                                               stmt->data.var_decl.type);
+    IRType* value_type = ir_type_from_datatype_ex(ctx && ctx->builder ? ctx->builder->module : NULL,
+                                                  stmt->data.var_decl.type,
+                                                  stmt->data.var_decl.func_sig);
 
     // %ptr = حجز <value_type>
     int ptr_reg = ir_builder_emit_alloca(ctx->builder, value_type);
@@ -3619,6 +3751,14 @@ static IRValue* ir_lower_global_init_value(IRBuilder* builder, Node* expr, IRTyp
         case NODE_NULL:
             return ir_value_const_int(0, expected_type ? expected_type : ir_type_ptr(IR_TYPE_I8_T));
 
+        case NODE_VAR_REF:
+            // تهيئة عامة لمؤشر دالة: اسم دالة يُخزن كعنوان ثابت.
+            if (expected_type && expected_type->kind == IR_TYPE_FUNC &&
+                expr->data.var_ref.name) {
+                return ir_value_func_ref(expr->data.var_ref.name, expected_type);
+            }
+            return ir_value_const_int(0, expected_type ? expected_type : IR_TYPE_I64_T);
+
         case NODE_MEMBER_ACCESS:
             if (expr->data.member_access.is_enum_value) {
                 return ir_value_const_int(expr->data.member_access.enum_value,
@@ -3677,14 +3817,18 @@ IRModule* ir_lower_program(Node* program, const char* module_name, bool enable_b
             continue;
         }
 
-        IRType* ret_type = ir_type_from_datatype(module, decl0->data.func_def.return_type);
+        IRType* ret_type = ir_type_from_datatype_ex(module,
+                                                     decl0->data.func_def.return_type,
+                                                     decl0->data.func_def.return_func_sig);
         IRFunc* f0 = ir_builder_create_func(builder, decl0->data.func_def.name, ret_type);
         if (!f0) continue;
         f0->is_prototype = decl0->data.func_def.is_prototype;
 
         for (Node* p = decl0->data.func_def.params; p; p = p->next) {
             if (p->type != NODE_VAR_DECL) continue;
-            IRType* ptype = ir_type_from_datatype(module, p->data.var_decl.type);
+            IRType* ptype = ir_type_from_datatype_ex(module,
+                                                     p->data.var_decl.type,
+                                                     p->data.var_decl.func_sig);
             (void)ir_builder_add_param(builder, p->data.var_decl.name, ptype);
         }
     }
@@ -3791,7 +3935,9 @@ IRModule* ir_lower_program(Node* program, const char* module_name, bool enable_b
                 continue;
             }
 
-            IRType* gtype = ir_type_from_datatype(module, decl->data.var_decl.type);
+            IRType* gtype = ir_type_from_datatype_ex(module,
+                                                     decl->data.var_decl.type,
+                                                     decl->data.var_decl.func_sig);
             IRValue* init = ir_lower_global_init_value(builder, decl->data.var_decl.expression, gtype);
 
             IRGlobal* g = ir_builder_create_global_init(builder, decl->data.var_decl.name, gtype, init,
@@ -3808,13 +3954,17 @@ IRModule* ir_lower_program(Node* program, const char* module_name, bool enable_b
 
             IRFunc* func = ir_module_find_func(module, decl->data.func_def.name);
             if (!func) {
-                IRType* ret_type = ir_type_from_datatype(module, decl->data.func_def.return_type);
+                IRType* ret_type = ir_type_from_datatype_ex(module,
+                                                            decl->data.func_def.return_type,
+                                                            decl->data.func_def.return_func_sig);
                 func = ir_builder_create_func(builder, decl->data.func_def.name, ret_type);
                 if (!func) continue;
                 func->is_prototype = decl->data.func_def.is_prototype;
                 for (Node* p = decl->data.func_def.params; p; p = p->next) {
                     if (p->type != NODE_VAR_DECL) continue;
-                    IRType* ptype = ir_type_from_datatype(module, p->data.var_decl.type);
+                    IRType* ptype = ir_type_from_datatype_ex(module,
+                                                             p->data.var_decl.type,
+                                                             p->data.var_decl.func_sig);
                     (void)ir_builder_add_param(builder, p->data.var_decl.name, ptype);
                 }
             }

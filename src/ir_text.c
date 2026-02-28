@@ -318,11 +318,19 @@ static void ir_text_write_inst(FILE* out, IRInst* inst) {
 
         case IR_OP_CALL: {
             fputc(' ', out);
-            // صيغة التسلسل: call <ret_type> @name(args)
+            // صيغة التسلسل:
+            // - مباشر: call <ret_type> @name(args)
+            // - غير مباشر: call <ret_type> <callee>(args)
             ir_text_write_type(out, inst->type);
             fputc(' ', out);
-            fputc('@', out);
-            fputs(inst->call_target ? inst->call_target : "???", out);
+            if (inst->call_target) {
+                fputc('@', out);
+                fputs(inst->call_target, out);
+            } else if (inst->call_callee) {
+                ir_text_write_value(out, inst->call_callee);
+            } else {
+                fputs("???", out);
+            }
             fputc('(', out);
             for (int i = 0; i < inst->call_arg_count; i++) {
                 if (i > 0) fputs(", ", out);
@@ -805,6 +813,12 @@ static IRValue* ir_text_parse_value(IRModule* module, IRFunc* func, IRTextBlockM
         char* name = ir_text_parse_token(p);
         if (!name) return NULL;
 
+        if (expected_type && expected_type->kind == IR_TYPE_FUNC) {
+            IRValue* v = ir_value_func_ref(name, expected_type);
+            free(name);
+            return v;
+        }
+
         IRType* base = NULL;
         if (expected_type && expected_type->kind == IR_TYPE_PTR) base = expected_type->data.pointee;
         IRValue* v = ir_value_global(name, base);
@@ -948,9 +962,19 @@ static int ir_text_parse_instruction_line(IRModule* module, IRFunc* func, IRBloc
         IRType* ret_t = ir_text_parse_type_rec(&p);
         if (!ret_t) return 0;
         ir_text_skip_ws(&p);
-        if (!ir_text_match(&p, "@")) return 0;
-        char* fn = ir_text_parse_token(&p);
-        if (!fn) return 0;
+        bool is_direct = false;
+        char* fn = NULL;
+        IRValue* callee = NULL;
+
+        if (ir_text_match(&p, "@")) {
+            is_direct = true;
+            fn = ir_text_parse_token(&p);
+            if (!fn) return 0;
+        } else {
+            // نداء غير مباشر: نقرأ قيمة الهدف مباشرة (عادةً %rN).
+            callee = ir_text_parse_value(module, func, bmap, &p, NULL);
+            if (!callee) return 0;
+        }
 
         ir_text_skip_ws(&p);
         if (!ir_text_match(&p, "(")) { free(fn); return 0; }
@@ -979,7 +1003,11 @@ static int ir_text_parse_instruction_line(IRModule* module, IRFunc* func, IRBloc
             for (int i = 0; i < ac; i++) args[i] = args_local[i];
         }
 
-        inst = ir_inst_call(fn, ret_t, dest, args, ac);
+        if (is_direct) {
+            inst = ir_inst_call(fn, ret_t, dest, args, ac);
+        } else {
+            inst = ir_inst_call_indirect(callee, ret_t, dest, args, ac);
+        }
         free(fn);
         free(args);
         if (!inst) return 0;

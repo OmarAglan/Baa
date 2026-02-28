@@ -83,6 +83,7 @@ typedef struct {
     DataType target_ptr_base_type;
     char* target_ptr_base_type_name;
     int target_ptr_depth;
+    FuncPtrSig* target_func_sig; // مملوك (clone) عند TYPE_FUNC_PTR
 } TypeAliasDef;
 
 static EnumDef enum_defs[ANALYSIS_MAX_ENUMS];
@@ -111,11 +112,18 @@ typedef struct {
     char* name;         // مملوك (strdup) ويتم تحريره في reset_analysis()
     DataType return_type;
     DataType return_ptr_base_type;
+    char* return_ptr_base_type_name; // مملوك (strdup) إن كان أساس المؤشر مسمى
     int return_ptr_depth;
+    FuncPtrSig* return_func_sig; // مملوك (clone) عند TYPE_FUNC_PTR
     DataType* param_types; // مملوك (malloc) ويتم تحريره في reset_analysis()
     DataType* param_ptr_base_types;
+    char** param_ptr_base_type_names; // مملوك (malloc+strdup) عند الحاجة
     int* param_ptr_depths;
+    FuncPtrSig** param_func_sigs; // مملوك (malloc+clone) عند TYPE_FUNC_PTR
     int param_count;
+    // توقيع "مرجع الدالة" عندما تُستخدم الدالة كقيمة (مؤشر دالة) — مملوك (clone).
+    // ملاحظة: لا يتم ملؤه إن كان التوقيع يتضمن معاملات/إرجاع من نوع TYPE_FUNC_PTR (Higher-order غير مدعوم حالياً).
+    FuncPtrSig* ref_funcptr_sig;
     bool is_defined;
     const char* decl_file;
     int decl_line;
@@ -139,11 +147,19 @@ static const char* current_filename = NULL;
 static bool in_function = false;
 static DataType current_func_return_type = TYPE_INT;
 static DataType current_func_return_ptr_base_type = TYPE_INT;
+static const char* current_func_return_ptr_base_type_name = NULL;
 static int current_func_return_ptr_depth = 0;
+static FuncPtrSig* current_func_return_func_sig = NULL;
 
 // ============================================================================
 // دوال مساعدة (Helper Functions)
 // ============================================================================
+
+static bool ptr_base_named_match(DataType a_type, const char* a_name,
+                                 DataType b_type, const char* b_name);
+static bool funcsig_equal(const FuncPtrSig* a, const FuncPtrSig* b);
+static void funcsig_free(FuncPtrSig* s);
+static FuncPtrSig* funcsig_clone(const FuncPtrSig* s);
 
 static Token semantic_make_token(const char* filename, int line, int col)
 {
@@ -291,6 +307,11 @@ static void local_symbol_hash_rebuild(void)
 static void symbol_release_array_dims(Symbol* sym)
 {
     if (!sym) return;
+    // تحرير ملكيات الرمز (غير مملوكة عبر arena).
+    if (sym->func_sig) {
+        funcsig_free(sym->func_sig);
+        sym->func_sig = NULL;
+    }
     if (sym->array_dims) {
         free(sym->array_dims);
         sym->array_dims = NULL;
@@ -320,12 +341,32 @@ static void reset_analysis() {
     for (int i = 0; i < func_count; i++) {
         free(func_symbols[i].name);
         func_symbols[i].name = NULL;
+        free(func_symbols[i].return_ptr_base_type_name);
+        func_symbols[i].return_ptr_base_type_name = NULL;
+        funcsig_free(func_symbols[i].return_func_sig);
+        func_symbols[i].return_func_sig = NULL;
+        funcsig_free(func_symbols[i].ref_funcptr_sig);
+        func_symbols[i].ref_funcptr_sig = NULL;
         free(func_symbols[i].param_types);
         func_symbols[i].param_types = NULL;
         free(func_symbols[i].param_ptr_base_types);
         func_symbols[i].param_ptr_base_types = NULL;
+        if (func_symbols[i].param_ptr_base_type_names) {
+            for (int k = 0; k < func_symbols[i].param_count; k++) {
+                free(func_symbols[i].param_ptr_base_type_names[k]);
+            }
+        }
+        free(func_symbols[i].param_ptr_base_type_names);
+        func_symbols[i].param_ptr_base_type_names = NULL;
         free(func_symbols[i].param_ptr_depths);
         func_symbols[i].param_ptr_depths = NULL;
+        if (func_symbols[i].param_func_sigs) {
+            for (int k = 0; k < func_symbols[i].param_count; k++) {
+                funcsig_free(func_symbols[i].param_func_sigs[k]);
+            }
+        }
+        free(func_symbols[i].param_func_sigs);
+        func_symbols[i].param_func_sigs = NULL;
         func_symbols[i].param_count = 0;
         func_symbols[i].is_defined = false;
     }
@@ -388,6 +429,8 @@ static void reset_analysis() {
         type_alias_defs[i].target_type_name = NULL;
         free(type_alias_defs[i].target_ptr_base_type_name);
         type_alias_defs[i].target_ptr_base_type_name = NULL;
+        funcsig_free(type_alias_defs[i].target_func_sig);
+        type_alias_defs[i].target_func_sig = NULL;
         type_alias_defs[i].target_type = TYPE_INT;
         type_alias_defs[i].target_ptr_base_type = TYPE_INT;
         type_alias_defs[i].target_ptr_depth = 0;
@@ -400,7 +443,9 @@ static void reset_analysis() {
     in_function = false;
     current_func_return_type = TYPE_INT;
     current_func_return_ptr_base_type = TYPE_INT;
+    current_func_return_ptr_base_type_name = NULL;
     current_func_return_ptr_depth = 0;
+    current_func_return_func_sig = NULL;
 }
 
 static FuncSymbol* func_lookup(const char* name)
@@ -414,36 +459,58 @@ static FuncSymbol* func_lookup(const char* name)
     return NULL;
 }
 
-static int func_signature_matches(const FuncSymbol* a, DataType ret_type,
-                                  const DataType* params, int param_count)
+static int func_signature_matches_decl(const FuncSymbol* a, const Node* node)
 {
-    if (!a) return 0;
-    if (a->return_type != ret_type) return 0;
-    if (a->param_count != param_count) return 0;
-    for (int i = 0; i < param_count; i++) {
-        if (!a->param_types || a->param_types[i] != params[i]) return 0;
-    }
-    return 1;
-}
+    if (!a || !node || node->type != NODE_FUNC_DEF) return 0;
 
-static int func_signature_matches_ptr(const FuncSymbol* a,
-                                      DataType ret_ptr_base_type,
-                                      int ret_ptr_depth,
-                                      const DataType* param_ptr_base_types,
-                                      const int* param_ptr_depths,
-                                      int param_count)
-{
-    if (!a) return 0;
-    if (a->return_ptr_base_type != ret_ptr_base_type) return 0;
-    if (a->return_ptr_depth != ret_ptr_depth) return 0;
-    if (a->param_count != param_count) return 0;
-    for (int i = 0; i < param_count; i++) {
-        DataType got_base = (param_ptr_base_types ? param_ptr_base_types[i] : TYPE_INT);
-        int got_depth = (param_ptr_depths ? param_ptr_depths[i] : 0);
-        DataType have_base = a->param_ptr_base_types ? a->param_ptr_base_types[i] : TYPE_INT;
-        int have_depth = a->param_ptr_depths ? a->param_ptr_depths[i] : 0;
-        if (have_base != got_base || have_depth != got_depth) return 0;
+    // نوع الإرجاع
+    if (a->return_type != node->data.func_def.return_type) return 0;
+
+    if (a->return_type == TYPE_POINTER) {
+        if (a->return_ptr_depth != node->data.func_def.return_ptr_depth) return 0;
+        if (!ptr_base_named_match(a->return_ptr_base_type, a->return_ptr_base_type_name,
+                                  node->data.func_def.return_ptr_base_type,
+                                  node->data.func_def.return_ptr_base_type_name)) {
+            return 0;
+        }
+    } else if (a->return_type == TYPE_FUNC_PTR) {
+        if (!funcsig_equal(a->return_func_sig, node->data.func_def.return_func_sig)) return 0;
     }
+
+    // المعاملات
+    int param_count = 0;
+    for (Node* p = node->data.func_def.params; p; p = p->next) {
+        if (p->type != NODE_VAR_DECL) continue;
+        param_count++;
+    }
+
+    if (a->param_count != param_count) return 0;
+
+    int i = 0;
+    for (Node* p = node->data.func_def.params; p; p = p->next) {
+        if (p->type != NODE_VAR_DECL) continue;
+        if (!a->param_types || a->param_types[i] != p->data.var_decl.type) return 0;
+
+        if (p->data.var_decl.type == TYPE_POINTER) {
+            DataType have_base = a->param_ptr_base_types ? a->param_ptr_base_types[i] : TYPE_INT;
+            int have_depth = a->param_ptr_depths ? a->param_ptr_depths[i] : 0;
+            const char* have_name = (a->param_ptr_base_type_names && a->param_ptr_base_type_names[i])
+                                        ? a->param_ptr_base_type_names[i]
+                                        : NULL;
+            if (have_depth != p->data.var_decl.ptr_depth) return 0;
+            if (!ptr_base_named_match(have_base, have_name,
+                                      p->data.var_decl.ptr_base_type,
+                                      p->data.var_decl.ptr_base_type_name)) {
+                return 0;
+            }
+        } else if (p->data.var_decl.type == TYPE_FUNC_PTR) {
+            FuncPtrSig* have = (a->param_func_sigs) ? a->param_func_sigs[i] : NULL;
+            if (!funcsig_equal(have, p->data.var_decl.func_sig)) return 0;
+        }
+
+        i++;
+    }
+
     return 1;
 }
 
@@ -474,7 +541,9 @@ static void func_register(Node* node)
 
     DataType params_local[ANALYSIS_MAX_FUNC_PARAMS];
     DataType param_ptr_base_types_local[ANALYSIS_MAX_FUNC_PARAMS];
+    const char* param_ptr_base_type_names_local[ANALYSIS_MAX_FUNC_PARAMS];
     int param_ptr_depths_local[ANALYSIS_MAX_FUNC_PARAMS];
+    FuncPtrSig* param_func_sigs_local[ANALYSIS_MAX_FUNC_PARAMS];
     int param_count = 0;
     for (Node* p = node->data.func_def.params; p; p = p->next) {
         if (p->type != NODE_VAR_DECL) continue;
@@ -482,20 +551,17 @@ static void func_register(Node* node)
             semantic_error(p, "عدد معاملات الدالة كبير جداً (الحد %d).", ANALYSIS_MAX_FUNC_PARAMS);
             return;
         }
-        params_local[param_count++] = p->data.var_decl.type;
-        param_ptr_base_types_local[param_count - 1] = p->data.var_decl.ptr_base_type;
-        param_ptr_depths_local[param_count - 1] = p->data.var_decl.ptr_depth;
+        params_local[param_count] = p->data.var_decl.type;
+        param_ptr_base_types_local[param_count] = p->data.var_decl.ptr_base_type;
+        param_ptr_base_type_names_local[param_count] = p->data.var_decl.ptr_base_type_name;
+        param_ptr_depths_local[param_count] = p->data.var_decl.ptr_depth;
+        param_func_sigs_local[param_count] = p->data.var_decl.func_sig;
+        param_count++;
     }
 
     FuncSymbol* existing = func_lookup(name);
     if (existing) {
-        if (!func_signature_matches(existing, node->data.func_def.return_type, params_local, param_count) ||
-            !func_signature_matches_ptr(existing,
-                                        node->data.func_def.return_ptr_base_type,
-                                        node->data.func_def.return_ptr_depth,
-                                        param_ptr_base_types_local,
-                                        param_ptr_depths_local,
-                                        param_count)) {
+        if (!func_signature_matches_decl(existing, node)) {
             semantic_error(node, "تعارض في توقيع الدالة '%s'.", name);
             return;
         }
@@ -524,21 +590,44 @@ static void func_register(Node* node)
     fs->return_type = node->data.func_def.return_type;
     fs->return_ptr_base_type = node->data.func_def.return_ptr_base_type;
     fs->return_ptr_depth = node->data.func_def.return_ptr_depth;
+    fs->return_ptr_base_type_name = NULL;
+    fs->return_func_sig = NULL;
+    fs->ref_funcptr_sig = NULL;
     fs->param_count = param_count;
     fs->decl_file = node->filename ? node->filename : current_filename;
     fs->decl_line = node->line;
     fs->decl_col = node->col;
     fs->is_defined = node->data.func_def.is_prototype ? false : true;
 
+    if (fs->return_type == TYPE_POINTER &&
+        node->data.func_def.return_ptr_base_type_name &&
+        node->data.func_def.return_ptr_base_type_name[0]) {
+        fs->return_ptr_base_type_name = strdup(node->data.func_def.return_ptr_base_type_name);
+        if (!fs->return_ptr_base_type_name) {
+            semantic_error(node, "نفدت الذاكرة أثناء تسجيل اسم أساس مؤشر الإرجاع للدالة '%s'.", name);
+            return;
+        }
+    }
+
+    if (fs->return_type == TYPE_FUNC_PTR) {
+        fs->return_func_sig = funcsig_clone(node->data.func_def.return_func_sig);
+        if (!fs->return_func_sig) {
+            semantic_error(node, "نفدت الذاكرة أثناء نسخ توقيع مؤشر الدالة كنوع إرجاع للدالة '%s'.", name);
+            return;
+        }
+    }
+
     if (param_count > 0) {
         fs->param_types = (DataType*)malloc((size_t)param_count * sizeof(DataType));
         fs->param_ptr_base_types = (DataType*)malloc((size_t)param_count * sizeof(DataType));
+        fs->param_ptr_base_type_names = (char**)calloc((size_t)param_count, sizeof(char*));
         fs->param_ptr_depths = (int*)malloc((size_t)param_count * sizeof(int));
+        fs->param_func_sigs = (FuncPtrSig**)calloc((size_t)param_count, sizeof(FuncPtrSig*));
         if (!fs->param_types) {
             semantic_error(node, "نفدت الذاكرة أثناء تسجيل توقيع الدالة.");
             return;
         }
-        if (!fs->param_ptr_base_types || !fs->param_ptr_depths) {
+        if (!fs->param_ptr_base_types || !fs->param_ptr_depths || !fs->param_ptr_base_type_names || !fs->param_func_sigs) {
             semantic_error(node, "نفدت الذاكرة أثناء تسجيل توقيع الدالة.");
             return;
         }
@@ -546,6 +635,51 @@ static void func_register(Node* node)
             fs->param_types[i] = params_local[i];
             fs->param_ptr_base_types[i] = param_ptr_base_types_local[i];
             fs->param_ptr_depths[i] = param_ptr_depths_local[i];
+            if (params_local[i] == TYPE_POINTER &&
+                param_ptr_base_type_names_local[i] &&
+                param_ptr_base_type_names_local[i][0]) {
+                fs->param_ptr_base_type_names[i] = strdup(param_ptr_base_type_names_local[i]);
+                if (!fs->param_ptr_base_type_names[i]) {
+                    semantic_error(node, "نفدت الذاكرة أثناء نسخ اسم أساس مؤشر معامل الدالة '%s'.", name);
+                    return;
+                }
+            }
+            if (params_local[i] == TYPE_FUNC_PTR) {
+                fs->param_func_sigs[i] = funcsig_clone(param_func_sigs_local[i]);
+                if (!fs->param_func_sigs[i]) {
+                    semantic_error(node, "نفدت الذاكرة أثناء نسخ توقيع مؤشر الدالة لمعامل في '%s'.", name);
+                    return;
+                }
+            }
+        }
+    }
+
+    // بناء توقيع "مرجع الدالة" بشكل محافظ (بدون Higher-order).
+    bool can_ref = true;
+    if (fs->return_type == TYPE_FUNC_PTR) can_ref = false;
+    for (int i = 0; i < fs->param_count; i++) {
+        if (fs->param_types && fs->param_types[i] == TYPE_FUNC_PTR) {
+            can_ref = false;
+            break;
+        }
+    }
+
+    if (can_ref) {
+        FuncPtrSig tmp;
+        memset(&tmp, 0, sizeof(tmp));
+        tmp.return_type = fs->return_type;
+        tmp.return_ptr_base_type = fs->return_ptr_base_type;
+        tmp.return_ptr_depth = fs->return_ptr_depth;
+        tmp.return_ptr_base_type_name = fs->return_ptr_base_type_name;
+        tmp.param_count = fs->param_count;
+        tmp.param_types = fs->param_types;
+        tmp.param_ptr_base_types = fs->param_ptr_base_types;
+        tmp.param_ptr_base_type_names = fs->param_ptr_base_type_names;
+        tmp.param_ptr_depths = fs->param_ptr_depths;
+        fs->ref_funcptr_sig = funcsig_clone(&tmp);
+        // فشل النسخ هنا غير قاتل، لكنه يمنع أخذ مرجع هذه الدالة كقيمة.
+        if (!fs->ref_funcptr_sig) {
+            semantic_error(node, "نفدت الذاكرة أثناء بناء توقيع مرجع الدالة '%s'.", name);
         }
     }
 }
@@ -595,6 +729,7 @@ static void add_symbol(const char* name,
                        DataType ptr_base_type,
                        const char* ptr_base_type_name,
                        int ptr_depth,
+                       const FuncPtrSig* func_sig,
                        bool is_const,
                        bool is_static,
                        bool is_array,
@@ -643,6 +778,7 @@ static void add_symbol(const char* name,
         global_symbols[global_count].ptr_base_type = ptr_base_type;
         global_symbols[global_count].ptr_base_type_name[0] = '\0';
         global_symbols[global_count].ptr_depth = ptr_depth;
+        global_symbols[global_count].func_sig = NULL;
         if (type_name && type_name[0]) {
             size_t tn_len = strlen(type_name);
             size_t tn_cap = sizeof(global_symbols[global_count].type_name);
@@ -655,6 +791,14 @@ static void add_symbol(const char* name,
             size_t pn_cap = sizeof(global_symbols[global_count].ptr_base_type_name);
             if (pn_len < pn_cap) {
                 memcpy(global_symbols[global_count].ptr_base_type_name, ptr_base_type_name, pn_len + 1);
+            }
+        }
+        if (type == TYPE_FUNC_PTR) {
+            global_symbols[global_count].func_sig = funcsig_clone(func_sig);
+            if (!global_symbols[global_count].func_sig) {
+                semantic_error_loc(decl_file, decl_line, decl_col,
+                                   "نفدت الذاكرة أثناء نسخ توقيع مؤشر الدالة للرمز '%s'.", name);
+                return;
             }
         }
         global_symbols[global_count].is_array = is_array;
@@ -713,6 +857,7 @@ static void add_symbol(const char* name,
         local_symbols[local_count].ptr_base_type = ptr_base_type;
         local_symbols[local_count].ptr_base_type_name[0] = '\0';
         local_symbols[local_count].ptr_depth = ptr_depth;
+        local_symbols[local_count].func_sig = NULL;
         if (type_name && type_name[0]) {
             size_t tn_len = strlen(type_name);
             size_t tn_cap = sizeof(local_symbols[local_count].type_name);
@@ -725,6 +870,14 @@ static void add_symbol(const char* name,
             size_t pn_cap = sizeof(local_symbols[local_count].ptr_base_type_name);
             if (pn_len < pn_cap) {
                 memcpy(local_symbols[local_count].ptr_base_type_name, ptr_base_type_name, pn_len + 1);
+            }
+        }
+        if (type == TYPE_FUNC_PTR) {
+            local_symbols[local_count].func_sig = funcsig_clone(func_sig);
+            if (!local_symbols[local_count].func_sig) {
+                semantic_error_loc(decl_file, decl_line, decl_col,
+                                   "نفدت الذاكرة أثناء نسخ توقيع مؤشر الدالة للرمز '%s'.", name);
+                return;
             }
         }
         local_symbols[local_count].is_array = is_array;
@@ -771,6 +924,8 @@ static bool types_compatible(DataType got, DataType expected);
 static void node_set_inferred_ptr(Node* node, DataType base_type, const char* base_type_name, int depth)
 {
     if (!node) return;
+    // لا يمكن أن يكون التعبير "مؤشر" و"مؤشر دالة" في نفس الوقت.
+    node->inferred_func_sig = NULL;
     node->inferred_ptr_base_type = base_type;
     if (node->inferred_ptr_base_type_name) {
         free(node->inferred_ptr_base_type_name);
@@ -786,6 +941,115 @@ static void node_clear_inferred_ptr(Node* node)
 {
     if (!node) return;
     node_set_inferred_ptr(node, TYPE_INT, NULL, 0);
+}
+
+static void node_set_inferred_funcptr(Node* node, FuncPtrSig* sig)
+{
+    if (!node) return;
+    // تفريغ معلومات المؤشر العادي حتى لا تختلط الدلالات.
+    node_set_inferred_ptr(node, TYPE_INT, NULL, 0);
+    node->inferred_func_sig = sig;
+}
+
+static void funcsig_free(FuncPtrSig* s)
+{
+    if (!s) return;
+    if (s->param_ptr_base_type_names) {
+        for (int i = 0; i < s->param_count; i++) {
+            free(s->param_ptr_base_type_names[i]);
+        }
+    }
+    free(s->return_ptr_base_type_name);
+    free(s->param_types);
+    free(s->param_ptr_base_types);
+    free(s->param_ptr_base_type_names);
+    free(s->param_ptr_depths);
+    free(s);
+}
+
+static FuncPtrSig* funcsig_clone(const FuncPtrSig* s)
+{
+    if (!s) return NULL;
+
+    FuncPtrSig* out = (FuncPtrSig*)calloc(1, sizeof(FuncPtrSig));
+    if (!out) return NULL;
+
+    out->return_type = s->return_type;
+    out->return_ptr_base_type = s->return_ptr_base_type;
+    out->return_ptr_depth = s->return_ptr_depth;
+    if (s->return_ptr_base_type_name) {
+        out->return_ptr_base_type_name = strdup(s->return_ptr_base_type_name);
+        if (!out->return_ptr_base_type_name) {
+            free(out);
+            return NULL;
+        }
+    }
+
+    out->param_count = s->param_count;
+    if (out->param_count > 0) {
+        size_t n = (size_t)out->param_count;
+        out->param_types = (DataType*)malloc(n * sizeof(DataType));
+        out->param_ptr_base_types = (DataType*)malloc(n * sizeof(DataType));
+        out->param_ptr_base_type_names = (char**)calloc(n, sizeof(char*));
+        out->param_ptr_depths = (int*)malloc(n * sizeof(int));
+        if (!out->param_types || !out->param_ptr_base_types || !out->param_ptr_base_type_names || !out->param_ptr_depths) {
+            funcsig_free(out);
+            return NULL;
+        }
+
+        for (int i = 0; i < out->param_count; i++) {
+            out->param_types[i] = s->param_types ? s->param_types[i] : TYPE_INT;
+            out->param_ptr_base_types[i] = s->param_ptr_base_types ? s->param_ptr_base_types[i] : TYPE_INT;
+            out->param_ptr_depths[i] = s->param_ptr_depths ? s->param_ptr_depths[i] : 0;
+            if (s->param_ptr_base_type_names && s->param_ptr_base_type_names[i]) {
+                out->param_ptr_base_type_names[i] = strdup(s->param_ptr_base_type_names[i]);
+                if (!out->param_ptr_base_type_names[i]) {
+                    funcsig_free(out);
+                    return NULL;
+                }
+            }
+        }
+    }
+
+    return out;
+}
+
+static bool ptr_base_named_match(DataType a_type, const char* a_name,
+                                 DataType b_type, const char* b_name);
+
+static bool funcsig_equal(const FuncPtrSig* a, const FuncPtrSig* b)
+{
+    if (a == b) return true;
+    if (!a || !b) return false;
+
+    if (a->return_type != b->return_type) return false;
+    if (a->return_type == TYPE_POINTER) {
+        if (a->return_ptr_depth != b->return_ptr_depth) return false;
+        if (!ptr_base_named_match(a->return_ptr_base_type, a->return_ptr_base_type_name,
+                                  b->return_ptr_base_type, b->return_ptr_base_type_name)) {
+            return false;
+        }
+    }
+
+    if (a->param_count != b->param_count) return false;
+    for (int i = 0; i < a->param_count; i++) {
+        DataType at = a->param_types ? a->param_types[i] : TYPE_INT;
+        DataType bt = b->param_types ? b->param_types[i] : TYPE_INT;
+        if (at != bt) return false;
+        if (at == TYPE_POINTER) {
+            int ad = a->param_ptr_depths ? a->param_ptr_depths[i] : 0;
+            int bd = b->param_ptr_depths ? b->param_ptr_depths[i] : 0;
+            if (ad != bd) return false;
+            DataType ab = a->param_ptr_base_types ? a->param_ptr_base_types[i] : TYPE_INT;
+            DataType bb = b->param_ptr_base_types ? b->param_ptr_base_types[i] : TYPE_INT;
+            const char* an = (a->param_ptr_base_type_names && a->param_ptr_base_type_names[i]) ? a->param_ptr_base_type_names[i] : NULL;
+            const char* bn = (b->param_ptr_base_type_names && b->param_ptr_base_type_names[i]) ? b->param_ptr_base_type_names[i] : NULL;
+            if (!ptr_base_named_match(ab, an, bb, bn)) return false;
+        }
+        // ملاحظة: لا ندعم (حالياً) أنواع دالة داخل توقيع مؤشر دالة (Higher-order).
+        if (at == TYPE_FUNC_PTR) return false;
+    }
+    return true;
 }
 
 static bool ptr_base_named_match(DataType a_type, const char* a_name,
@@ -1439,6 +1703,7 @@ static void type_alias_register_decl(Node* node)
     DataType target_ptr_base_type = node->data.type_alias.target_ptr_base_type;
     const char* target_ptr_base_type_name = node->data.type_alias.target_ptr_base_type_name;
     int target_ptr_depth = node->data.type_alias.target_ptr_depth;
+    FuncPtrSig* target_func_sig = node->data.type_alias.target_func_sig;
 
     if (target_type == TYPE_ENUM) {
         if (!target_type_name || !enum_lookup_def(target_type_name)) {
@@ -1469,6 +1734,25 @@ static void type_alias_register_decl(Node* node)
             semantic_error(node, "أساس المؤشر في الاسم البديل '%s' غير معرّف.", name);
             return;
         }
+    } else if (target_type == TYPE_FUNC_PTR) {
+        if (!target_func_sig) {
+            semantic_error(node, "توقيع مؤشر الدالة في الاسم البديل '%s' مفقود.", name);
+            return;
+        }
+        // لا ندعم حالياً مؤشرات دوال أعلى رتبة داخل التوقيع.
+        if (target_func_sig->return_type == TYPE_FUNC_PTR) {
+            semantic_error(node, "توقيع مؤشر الدالة في الاسم البديل '%s' يحتوي على إرجاع مؤشر دالة (غير مدعوم حالياً).",
+                           name);
+            return;
+        }
+        for (int i = 0; i < target_func_sig->param_count; i++) {
+            DataType pt = target_func_sig->param_types ? target_func_sig->param_types[i] : TYPE_INT;
+            if (pt == TYPE_FUNC_PTR) {
+                semantic_error(node, "توقيع مؤشر الدالة في الاسم البديل '%s' يحتوي على معامل مؤشر دالة (غير مدعوم حالياً).",
+                               name);
+                return;
+            }
+        }
     }
 
     if (type_alias_count >= ANALYSIS_MAX_TYPE_ALIASES) {
@@ -1488,6 +1772,7 @@ static void type_alias_register_decl(Node* node)
     out->target_type = target_type;
     out->target_ptr_base_type = target_ptr_base_type;
     out->target_ptr_depth = target_ptr_depth;
+    out->target_func_sig = NULL;
     if (target_type_name) {
         out->target_type_name = strdup(target_type_name);
         if (!out->target_type_name) {
@@ -1507,6 +1792,20 @@ static void type_alias_register_decl(Node* node)
             out->name = NULL;
             type_alias_count--;
             semantic_error(node, "نفدت الذاكرة أثناء تسجيل أساس مؤشر الاسم البديل '%s'.", name);
+            return;
+        }
+    }
+    if (target_type == TYPE_FUNC_PTR) {
+        out->target_func_sig = funcsig_clone(target_func_sig);
+        if (!out->target_func_sig) {
+            free(out->target_ptr_base_type_name);
+            out->target_ptr_base_type_name = NULL;
+            free(out->target_type_name);
+            out->target_type_name = NULL;
+            free(out->name);
+            out->name = NULL;
+            type_alias_count--;
+            semantic_error(node, "نفدت الذاكرة أثناء نسخ توقيع مؤشر الدالة في الاسم البديل '%s'.", name);
             return;
         }
     }
@@ -1572,6 +1871,7 @@ static const char* datatype_to_str(DataType type) {
         case TYPE_U64: return "U64";
         case TYPE_STRING: return "STRING";
         case TYPE_POINTER: return "POINTER";
+        case TYPE_FUNC_PTR: return "FUNC_PTR";
         case TYPE_BOOL: return "BOOLEAN";
         case TYPE_CHAR: return "CHAR";
         case TYPE_FLOAT: return "FLOAT";
@@ -1714,6 +2014,10 @@ static bool types_compatible(DataType got, DataType expected)
 {
     if (got == expected) return true;
     if (expected == TYPE_POINTER && got == TYPE_POINTER) return true;
+    if (expected == TYPE_FUNC_PTR || got == TYPE_FUNC_PTR) {
+        // مؤشرات الدوال لا تدعم تحويلات ضمنية رقمية؛ التوافق الفعلي (التوقيع) يُفحص في مواقع محددة.
+        return got == expected;
+    }
     if (got == TYPE_VOID || expected == TYPE_VOID) return false;
 
     // تحويلات C-like بين الأنواع العددية.
@@ -2040,6 +2344,17 @@ static bool static_storage_initializer_is_const(Node* expr, DataType decl_type)
 {
     if (!expr) return true;
 
+    if (decl_type == TYPE_FUNC_PTR) {
+        // نسمح بشكل محافظ بتهيئة ثابتة لمؤشر الدالة فقط من:
+        // - عدم (NULL)
+        // - اسم دالة (مرجع دالة) مثل: دالة(...) -> صحيح ف = جمع.
+        if (expr->type == NODE_NULL) return true;
+        if (expr->type == NODE_VAR_REF && expr->data.var_ref.name) {
+            return func_lookup(expr->data.var_ref.name) != NULL;
+        }
+        return false;
+    }
+
     if (decl_type == TYPE_STRING) {
         return expr->type == NODE_STRING;
     }
@@ -2260,6 +2575,7 @@ static bool datatype_size_bytes(DataType type, const char* type_name, int64_t* o
         case TYPE_U64:
         case TYPE_STRING:
         case TYPE_POINTER:
+        case TYPE_FUNC_PTR:
         case TYPE_CHAR:
         case TYPE_FLOAT:
         case TYPE_ENUM:
@@ -2394,6 +2710,18 @@ static DataType infer_type_internal(Node* node) {
         case NODE_VAR_REF: {
             Symbol* sym = lookup(node->data.var_ref.name, true); // تعليم كمستخدم
             if (!sym) {
+                // قد يكون الاسم اسم دالة مستخدمة كقيمة (مؤشر دالة).
+                FuncSymbol* fs = func_lookup(node->data.var_ref.name);
+                if (fs && fs->ref_funcptr_sig) {
+                    node_set_inferred_funcptr(node, fs->ref_funcptr_sig);
+                    return TYPE_FUNC_PTR;
+                }
+                if (fs && !fs->ref_funcptr_sig) {
+                    semantic_error(node,
+                                   "لا يمكن أخذ مرجع الدالة '%s' كمؤشر دالة حالياً (Higher-order غير مدعوم).",
+                                   node->data.var_ref.name ? node->data.var_ref.name : "???");
+                    return TYPE_FUNC_PTR;
+                }
                 semantic_error(node, "متغير غير معرّف '%s'.", node->data.var_ref.name);
                 return TYPE_INT; // استرداد الخطأ
             }
@@ -2410,6 +2738,8 @@ static DataType infer_type_internal(Node* node) {
                                       sym->ptr_base_type,
                                       sym->ptr_base_type_name[0] ? sym->ptr_base_type_name : NULL,
                                       sym->ptr_depth);
+            } else if (sym->type == TYPE_FUNC_PTR) {
+                node_set_inferred_funcptr(node, sym->func_sig);
             } else {
                 node_clear_inferred_ptr(node);
             }
@@ -2528,11 +2858,91 @@ static DataType infer_type_internal(Node* node) {
                     node_clear_inferred_ptr(node);
                     return built_ret;
                 }
-                semantic_error(node, "استدعاء دالة غير معرّفة '%s'.", fname ? fname : "???");
-                // ما زلنا نستنتج أنواع الوسائط لاكتشاف أخطاء أخرى.
+
+                // نداء غير مباشر عبر متغير من نوع مؤشر دالة.
+                Symbol* callee_sym = lookup(fname, true);
+                if (!callee_sym) {
+                    semantic_error(node, "استدعاء دالة غير معرّفة '%s'.", fname ? fname : "???");
+                    // ما زلنا نستنتج أنواع الوسائط لاكتشاف أخطاء أخرى.
+                    Node* arg = node->data.call.args;
+                    while (arg) { (void)infer_type(arg); arg = arg->next; }
+                    return TYPE_INT;
+                }
+
+                if (callee_sym->is_array) {
+                    semantic_error(node, "لا يمكن نداء المصفوفة '%s'.", callee_sym->name);
+                    Node* arg = node->data.call.args;
+                    while (arg) { (void)infer_type(arg); arg = arg->next; }
+                    return TYPE_INT;
+                }
+
+                if (callee_sym->type != TYPE_FUNC_PTR) {
+                    semantic_error(node, "المعرف '%s' ليس دالة ولا مؤشر دالة قابل للنداء.", fname ? fname : "???");
+                    Node* arg = node->data.call.args;
+                    while (arg) { (void)infer_type(arg); arg = arg->next; }
+                    return TYPE_INT;
+                }
+
+                FuncPtrSig* sig = callee_sym->func_sig;
+                if (!sig) {
+                    semantic_error(node, "توقيع مؤشر الدالة للرمز '%s' مفقود.", fname ? fname : "???");
+                    Node* arg = node->data.call.args;
+                    while (arg) { (void)infer_type(arg); arg = arg->next; }
+                    node_clear_inferred_ptr(node);
+                    return TYPE_INT;
+                }
+
+                int i = 0;
                 Node* arg = node->data.call.args;
-                while (arg) { (void)infer_type(arg); arg = arg->next; }
-                return TYPE_INT;
+                while (arg) {
+                    DataType at = infer_type(arg);
+                    if (i < sig->param_count) {
+                        DataType exp = sig->param_types ? sig->param_types[i] : TYPE_INT;
+                        if (exp == TYPE_POINTER) {
+                            DataType eb = sig->param_ptr_base_types ? sig->param_ptr_base_types[i] : TYPE_INT;
+                            int ed = sig->param_ptr_depths ? sig->param_ptr_depths[i] : 0;
+                            const char* en = (sig->param_ptr_base_type_names && sig->param_ptr_base_type_names[i])
+                                                 ? sig->param_ptr_base_type_names[i]
+                                                 : NULL;
+                            if (at != TYPE_POINTER ||
+                                !ptr_type_compatible(arg->inferred_ptr_base_type,
+                                                     arg->inferred_ptr_base_type_name,
+                                                     arg->inferred_ptr_depth,
+                                                     eb,
+                                                     en,
+                                                     ed,
+                                                     true)) {
+                                semantic_error(arg, "نوع المعامل %d في نداء '%s' غير متوافق.", i + 1, fname ? fname : "???");
+                            }
+                        } else if (exp == TYPE_FUNC_PTR) {
+                            semantic_error(arg, "Higher-order غير مدعوم: معامل %d في توقيع مؤشر الدالة هو مؤشر دالة.", i + 1);
+                        } else if (!types_compatible(at, exp)) {
+                            semantic_error(arg, "نوع المعامل %d في نداء '%s' غير متوافق.", i + 1, fname ? fname : "???");
+                        } else {
+                            maybe_warn_implicit_narrowing(at, exp, arg);
+                        }
+                    }
+                    i++;
+                    arg = arg->next;
+                }
+
+                if (i != sig->param_count) {
+                    semantic_error(node, "عدد معاملات نداء '%s' غير صحيح (المتوقع %d).", fname ? fname : "???", sig->param_count);
+                }
+
+                if (sig->return_type == TYPE_POINTER) {
+                    node_set_inferred_ptr(node,
+                                          sig->return_ptr_base_type,
+                                          sig->return_ptr_base_type_name,
+                                          sig->return_ptr_depth);
+                } else if (sig->return_type == TYPE_FUNC_PTR) {
+                    semantic_error(node, "Higher-order غير مدعوم: نوع الإرجاع في توقيع مؤشر الدالة هو مؤشر دالة.");
+                    node_clear_inferred_ptr(node);
+                } else {
+                    node_clear_inferred_ptr(node);
+                }
+
+                return sig->return_type;
             }
             // تحقق عدد وأنواع المعاملات
             int i = 0;
@@ -2546,10 +2956,21 @@ static DataType infer_type_internal(Node* node) {
                                                  arg->inferred_ptr_base_type_name,
                                                  arg->inferred_ptr_depth,
                                                  fs->param_ptr_base_types ? fs->param_ptr_base_types[i] : TYPE_INT,
-                                                 NULL,
+                                                 (fs->param_ptr_base_type_names && fs->param_ptr_base_type_names[i]) ? fs->param_ptr_base_type_names[i] : NULL,
                                                  fs->param_ptr_depths ? fs->param_ptr_depths[i] : 0,
                                                  true)) {
                             semantic_error(arg, "نوع المعامل %d في '%s' غير متوافق.", i + 1, fs->name);
+                        }
+                    } else if (fs->param_types[i] == TYPE_FUNC_PTR) {
+                        FuncPtrSig* expected_sig = (fs->param_func_sigs) ? fs->param_func_sigs[i] : NULL;
+                        if (!expected_sig) {
+                            semantic_error(arg, "توقيع مؤشر الدالة لمعامل %d في '%s' مفقود.", i + 1, fs->name);
+                        } else if (arg->type == NODE_NULL) {
+                            // سماح null لمؤشر الدالة: نُحدد نوعه كي يُخفض بشكل صحيح.
+                            arg->inferred_type = TYPE_FUNC_PTR;
+                            node_set_inferred_funcptr(arg, expected_sig);
+                        } else if (at != TYPE_FUNC_PTR || !funcsig_equal(arg->inferred_func_sig, expected_sig)) {
+                            semantic_error(arg, "نوع المعامل %d في '%s' غير متوافق (توقيع مؤشر دالة مختلف).", i + 1, fs->name);
                         }
                     } else if (!types_compatible(at, fs->param_types[i])) {
                         semantic_error(arg, "نوع المعامل %d في '%s' غير متوافق.", i + 1, fs->name);
@@ -2564,7 +2985,12 @@ static DataType infer_type_internal(Node* node) {
                 semantic_error(node, "عدد معاملات '%s' غير صحيح (المتوقع %d).", fs->name, fs->param_count);
             }
             if (fs->return_type == TYPE_POINTER) {
-                node_set_inferred_ptr(node, fs->return_ptr_base_type, NULL, fs->return_ptr_depth);
+                node_set_inferred_ptr(node,
+                                      fs->return_ptr_base_type,
+                                      fs->return_ptr_base_type_name,
+                                      fs->return_ptr_depth);
+            } else if (fs->return_type == TYPE_FUNC_PTR) {
+                node_set_inferred_funcptr(node, fs->return_func_sig);
             } else {
                 node_clear_inferred_ptr(node);
             }
@@ -2575,6 +3001,12 @@ static DataType infer_type_internal(Node* node) {
             Node* src = node->data.cast_expr.expression;
             DataType src_t = infer_type(src);
             DataType dst_t = node->data.cast_expr.target_type;
+
+            if (src_t == TYPE_FUNC_PTR || dst_t == TYPE_FUNC_PTR) {
+                semantic_error(node, "التحويل الصريح من/إلى مؤشر دالة غير مدعوم حالياً.");
+                node_clear_inferred_ptr(node);
+                return dst_t;
+            }
 
             if (dst_t == TYPE_VOID) {
                 semantic_error(node, "التحويل الصريح إلى 'عدم' غير مدعوم حالياً.");
@@ -2635,6 +3067,39 @@ static DataType infer_type_internal(Node* node) {
             
             // العمليات الحسابية تتطلب أعداداً صحيحة
             OpType op = node->data.bin_op.op;
+
+            // مقارنة مؤشرات الدوال (==/!=) فقط، مع السماح بالمقارنة مع عدم.
+            if (left == TYPE_FUNC_PTR || right == TYPE_FUNC_PTR) {
+                if (!(op == OP_EQ || op == OP_NEQ)) {
+                    semantic_error(node, "مقارنة مؤشرات الدوال تدعم فقط (==) أو (!=).");
+                }
+
+                Node* l = node->data.bin_op.left;
+                Node* r = node->data.bin_op.right;
+                bool l_null = (l && l->type == NODE_NULL);
+                bool r_null = (r && r->type == NODE_NULL);
+
+                if (l_null && right == TYPE_FUNC_PTR) {
+                    l->inferred_type = TYPE_FUNC_PTR;
+                    node_set_inferred_funcptr(l, r ? r->inferred_func_sig : NULL);
+                }
+                if (r_null && left == TYPE_FUNC_PTR) {
+                    r->inferred_type = TYPE_FUNC_PTR;
+                    node_set_inferred_funcptr(r, l ? l->inferred_func_sig : NULL);
+                }
+
+                if (!l_null && !r_null) {
+                    if (left != TYPE_FUNC_PTR || right != TYPE_FUNC_PTR) {
+                        semantic_error(node, "مقارنة مؤشر دالة تتطلب مؤشراً مقابلاً أو قيمة عدم.");
+                    } else if (!funcsig_equal(l ? l->inferred_func_sig : NULL, r ? r->inferred_func_sig : NULL)) {
+                        semantic_error(node, "مقارنة مؤشري دالة تتطلب تطابق التوقيع.");
+                    }
+                }
+
+                node_clear_inferred_ptr(node);
+                return TYPE_BOOL;
+            }
+
             if (op == OP_ADD || op == OP_SUB || op == OP_MUL || op == OP_DIV || op == OP_MOD) {
                 if (left == TYPE_POINTER || right == TYPE_POINTER) {
                     if ((op == OP_ADD || op == OP_SUB) &&
@@ -2883,7 +3348,7 @@ static DataType infer_type(Node* node)
     if (!node) return TYPE_INT;
     DataType t = infer_type_internal(node);
     node->inferred_type = t;
-    if (t != TYPE_POINTER) {
+    if (t != TYPE_POINTER && t != TYPE_FUNC_PTR) {
         node_clear_inferred_ptr(node);
     }
     return t;
@@ -3086,6 +3551,21 @@ static void analyze_node(Node* node) {
                             semantic_error(node, "عدم تطابق نوع المؤشر في تعريف '%s'.",
                                            node->data.var_decl.name ? node->data.var_decl.name : "???");
                         }
+                    } else if (declType == TYPE_FUNC_PTR) {
+                        FuncPtrSig* expected_sig = node->data.var_decl.func_sig;
+                        if (!expected_sig) {
+                            semantic_error(node, "توقيع مؤشر الدالة في تعريف '%s' مفقود.",
+                                           node->data.var_decl.name ? node->data.var_decl.name : "???");
+                        } else if (node->data.var_decl.expression->type == NODE_NULL) {
+                            // تثبيت نوع null كي يُخفض إلى IR_TYPE_FUNC بشكل صحيح.
+                            node->data.var_decl.expression->inferred_type = TYPE_FUNC_PTR;
+                            node_set_inferred_funcptr(node->data.var_decl.expression, expected_sig);
+                        } else if (exprType != TYPE_FUNC_PTR ||
+                                   !funcsig_equal(node->data.var_decl.expression->inferred_func_sig, expected_sig)) {
+                            semantic_error(node,
+                                           "عدم تطابق توقيع مؤشر الدالة في تعريف '%s'.",
+                                           node->data.var_decl.name ? node->data.var_decl.name : "???");
+                        }
                     } else if (!types_compatible(exprType, declType)) {
                         semantic_error(node,
                                       "عدم تطابق النوع في تعريف '%s' (المتوقع %s لكن وُجد %s).",
@@ -3116,6 +3596,7 @@ static void analyze_node(Node* node) {
                        node->data.var_decl.ptr_base_type,
                        node->data.var_decl.ptr_base_type_name,
                        node->data.var_decl.ptr_depth,
+                       node->data.var_decl.func_sig,
                        node->data.var_decl.is_const,
                        node->data.var_decl.is_static,
                        false,
@@ -3141,11 +3622,15 @@ static void analyze_node(Node* node) {
             bool prev_in_func = in_function;
             DataType prev_ret = current_func_return_type;
             DataType prev_ret_ptr_base = current_func_return_ptr_base_type;
+            const char* prev_ret_ptr_base_name = current_func_return_ptr_base_type_name;
             int prev_ret_ptr_depth = current_func_return_ptr_depth;
+            FuncPtrSig* prev_ret_func_sig = current_func_return_func_sig;
             in_function = true;
             current_func_return_type = node->data.func_def.return_type;
             current_func_return_ptr_base_type = node->data.func_def.return_ptr_base_type;
+            current_func_return_ptr_base_type_name = node->data.func_def.return_ptr_base_type_name;
             current_func_return_ptr_depth = node->data.func_def.return_ptr_depth;
+            current_func_return_func_sig = node->data.func_def.return_func_sig;
 
             // إضافة المعاملات كمتغيرات محلية (المعاملات ليست ثوابت افتراضياً)
             Node* param = node->data.func_def.params;
@@ -3165,6 +3650,7 @@ static void analyze_node(Node* node) {
                                 param->data.var_decl.ptr_base_type,
                                 param->data.var_decl.ptr_base_type_name,
                                 param->data.var_decl.ptr_depth,
+                                param->data.var_decl.func_sig,
                                 false,
                                 false,
                                 false, 0, NULL, 0,
@@ -3188,7 +3674,9 @@ static void analyze_node(Node* node) {
             in_function = prev_in_func;
             current_func_return_type = prev_ret;
             current_func_return_ptr_base_type = prev_ret_ptr_base;
+            current_func_return_ptr_base_type_name = prev_ret_ptr_base_name;
             current_func_return_ptr_depth = prev_ret_ptr_depth;
+            current_func_return_func_sig = prev_ret_func_sig;
             break;
         }
 
@@ -3230,6 +3718,18 @@ static void analyze_node(Node* node) {
                                              sym->ptr_depth,
                                              true)) {
                         semantic_error(node, "عدم تطابق نوع المؤشر في الإسناد إلى '%s'.", node->data.assign_stmt.name);
+                    }
+                } else if (sym->type == TYPE_FUNC_PTR) {
+                    FuncPtrSig* expected_sig = sym->func_sig;
+                    if (!expected_sig) {
+                        semantic_error(node, "توقيع مؤشر الدالة للرمز '%s' مفقود.", node->data.assign_stmt.name);
+                    } else if (node->data.assign_stmt.expression &&
+                               node->data.assign_stmt.expression->type == NODE_NULL) {
+                        node->data.assign_stmt.expression->inferred_type = TYPE_FUNC_PTR;
+                        node_set_inferred_funcptr(node->data.assign_stmt.expression, expected_sig);
+                    } else if (exprType != TYPE_FUNC_PTR ||
+                               !funcsig_equal(node->data.assign_stmt.expression->inferred_func_sig, expected_sig)) {
+                        semantic_error(node, "عدم تطابق توقيع مؤشر الدالة في الإسناد إلى '%s'.", node->data.assign_stmt.name);
                     }
                 } else if (!types_compatible(exprType, sym->type)) {
                     semantic_error(node, "عدم تطابق النوع في الإسناد إلى '%s'.", node->data.assign_stmt.name);
@@ -3460,10 +3960,21 @@ static void analyze_node(Node* node) {
                                              node->data.return_stmt.expression->inferred_ptr_base_type_name,
                                              node->data.return_stmt.expression->inferred_ptr_depth,
                                              current_func_return_ptr_base_type,
-                                             NULL,
+                                             current_func_return_ptr_base_type_name,
                                              current_func_return_ptr_depth,
                                              true)) {
                         semantic_error(node, "نوع الإرجاع غير متوافق مع نوع الدالة.");
+                    }
+                } else if (current_func_return_type == TYPE_FUNC_PTR) {
+                    FuncPtrSig* expected_sig = current_func_return_func_sig;
+                    if (!expected_sig) {
+                        semantic_error(node, "توقيع مؤشر الدالة كنوع إرجاع للدالة مفقود.");
+                    } else if (node->data.return_stmt.expression->type == NODE_NULL) {
+                        node->data.return_stmt.expression->inferred_type = TYPE_FUNC_PTR;
+                        node_set_inferred_funcptr(node->data.return_stmt.expression, expected_sig);
+                    } else if (rt != TYPE_FUNC_PTR ||
+                               !funcsig_equal(node->data.return_stmt.expression->inferred_func_sig, expected_sig)) {
+                        semantic_error(node, "نوع الإرجاع غير متوافق مع نوع الدالة (توقيع مؤشر دالة مختلف).");
                     }
                 } else if (!types_compatible(rt, current_func_return_type)) {
                     semantic_error(node, "نوع الإرجاع غير متوافق مع نوع الدالة.");
@@ -3507,9 +4018,57 @@ static void analyze_node(Node* node) {
                 if (builtin_check_string_call(node, fname, node->data.call.args, &built_ret)) {
                     break;
                 }
-                semantic_error(node, "استدعاء دالة غير معرّفة '%s'.", fname ? fname : "???");
+                Symbol* callee_sym = lookup(fname, true);
+                if (!callee_sym || callee_sym->type != TYPE_FUNC_PTR) {
+                    semantic_error(node, "استدعاء دالة غير معرّفة '%s'.", fname ? fname : "???");
+                    Node* arg = node->data.call.args;
+                    while (arg) { (void)infer_type(arg); arg = arg->next; }
+                    break;
+                }
+
+                FuncPtrSig* sig = callee_sym->func_sig;
+                if (!sig) {
+                    semantic_error(node, "توقيع مؤشر الدالة للرمز '%s' مفقود.", fname ? fname : "???");
+                    Node* arg = node->data.call.args;
+                    while (arg) { (void)infer_type(arg); arg = arg->next; }
+                    break;
+                }
+
+                int i = 0;
                 Node* arg = node->data.call.args;
-                while (arg) { (void)infer_type(arg); arg = arg->next; }
+                while (arg) {
+                    DataType at = infer_type(arg);
+                    if (i < sig->param_count) {
+                        DataType exp = sig->param_types ? sig->param_types[i] : TYPE_INT;
+                        if (exp == TYPE_POINTER) {
+                            DataType eb = sig->param_ptr_base_types ? sig->param_ptr_base_types[i] : TYPE_INT;
+                            int ed = sig->param_ptr_depths ? sig->param_ptr_depths[i] : 0;
+                            const char* en = (sig->param_ptr_base_type_names && sig->param_ptr_base_type_names[i])
+                                                 ? sig->param_ptr_base_type_names[i]
+                                                 : NULL;
+                            if (at != TYPE_POINTER ||
+                                !ptr_type_compatible(arg->inferred_ptr_base_type,
+                                                     arg->inferred_ptr_base_type_name,
+                                                     arg->inferred_ptr_depth,
+                                                     eb, en, ed, true)) {
+                                semantic_error(arg, "نوع المعامل %d في نداء '%s' غير متوافق.", i + 1, fname ? fname : "???");
+                            }
+                        } else if (exp == TYPE_FUNC_PTR) {
+                            semantic_error(arg, "Higher-order غير مدعوم: معامل %d في توقيع مؤشر الدالة هو مؤشر دالة.", i + 1);
+                        } else if (!types_compatible(at, exp)) {
+                            semantic_error(arg, "نوع المعامل %d في نداء '%s' غير متوافق.", i + 1, fname ? fname : "???");
+                        } else {
+                            maybe_warn_implicit_narrowing(at, exp, arg);
+                        }
+                    }
+                    i++;
+                    arg = arg->next;
+                }
+
+                if (i != sig->param_count) {
+                    semantic_error(node, "عدد معاملات نداء '%s' غير صحيح (المتوقع %d).", fname ? fname : "???", sig->param_count);
+                }
+
                 break;
             }
 
@@ -3524,10 +4083,20 @@ static void analyze_node(Node* node) {
                                                  arg->inferred_ptr_base_type_name,
                                                  arg->inferred_ptr_depth,
                                                  fs->param_ptr_base_types ? fs->param_ptr_base_types[i] : TYPE_INT,
-                                                 NULL,
+                                                 (fs->param_ptr_base_type_names && fs->param_ptr_base_type_names[i]) ? fs->param_ptr_base_type_names[i] : NULL,
                                                  fs->param_ptr_depths ? fs->param_ptr_depths[i] : 0,
                                                  true)) {
                             semantic_error(arg, "نوع المعامل %d في '%s' غير متوافق.", i + 1, fs->name);
+                        }
+                    } else if (fs->param_types[i] == TYPE_FUNC_PTR) {
+                        FuncPtrSig* expected_sig = (fs->param_func_sigs) ? fs->param_func_sigs[i] : NULL;
+                        if (!expected_sig) {
+                            semantic_error(arg, "توقيع مؤشر الدالة لمعامل %d في '%s' مفقود.", i + 1, fs->name);
+                        } else if (arg->type == NODE_NULL) {
+                            arg->inferred_type = TYPE_FUNC_PTR;
+                            node_set_inferred_funcptr(arg, expected_sig);
+                        } else if (at != TYPE_FUNC_PTR || !funcsig_equal(arg->inferred_func_sig, expected_sig)) {
+                            semantic_error(arg, "نوع المعامل %d في '%s' غير متوافق (توقيع مؤشر دالة مختلف).", i + 1, fs->name);
                         }
                     } else if (!types_compatible(at, fs->param_types[i])) {
                         semantic_error(arg, "نوع المعامل %d في '%s' غير متوافق.", i + 1, fs->name);
@@ -3616,6 +4185,7 @@ static void analyze_node(Node* node) {
                        node->data.array_decl.element_ptr_base_type,
                        node->data.array_decl.element_ptr_base_type_name,
                        node->data.array_decl.element_ptr_depth,
+                       NULL,
                        node->data.array_decl.is_const,
                        node->data.array_decl.is_static,
                        true,

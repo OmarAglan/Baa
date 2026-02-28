@@ -137,9 +137,14 @@ static int ir_inst_replace_reg_uses(IRInst* inst, int reg_num, IRType* folded_ty
     }
 
     // Call args
-    if (inst->op == IR_OP_CALL && inst->call_args) {
-        for (int i = 0; i < inst->call_arg_count; i++) {
-            changed |= ir_value_replace_reg_use(&inst->call_args[i], reg_num, folded_type, folded_value);
+    if (inst->op == IR_OP_CALL) {
+        if (inst->call_callee) {
+            changed |= ir_value_replace_reg_use(&inst->call_callee, reg_num, folded_type, folded_value);
+        }
+        if (inst->call_args) {
+            for (int i = 0; i < inst->call_arg_count; i++) {
+                changed |= ir_value_replace_reg_use(&inst->call_args[i], reg_num, folded_type, folded_value);
+            }
         }
     }
 

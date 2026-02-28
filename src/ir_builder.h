@@ -415,6 +415,18 @@ int ir_builder_emit_call(IRBuilder* builder, const char* target, IRType* ret_typ
                          IRValue** args, int arg_count);
 
 /**
+ * @brief Emit an indirect function call: %dest = نداء ret_type <callee>(args...)
+ * @param builder The builder.
+ * @param callee A value of type IR_TYPE_FUNC (function pointer).
+ * @param ret_type Return type.
+ * @param args Array of argument values.
+ * @param arg_count Number of arguments.
+ * @return Destination register number (-1 for void calls).
+ */
+int ir_builder_emit_call_indirect(IRBuilder* builder, IRValue* callee, IRType* ret_type,
+                                  IRValue** args, int arg_count);
+
+/**
  * @brief Emit a void function call: نداء فراغ @target(args...)
  * @param builder The builder.
  * @param target Function name.

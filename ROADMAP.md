@@ -1,7 +1,7 @@
 # Baa Roadmap (Updated)
 
 > Track the development progress of the Baa programming language.
-> **Current Status:** Phase 3.10.6 - Function Pointers (v0.3.10.6)
+> **Current Status:** Phase 3.10.6 - Function Pointers (v0.3.10.6) ✅ COMPLETED (2026-02-28)
 
 ---
 
@@ -949,7 +949,7 @@
 **Goal:** First-class function references for callbacks and dispatch tables.
 
 #### Features
-- [ ] **Function Pointer Type**:
+- [x] **Function Pointer Type**:
   ```baa
   // Pointer to function taking two صحيح, returning صحيح
   نوع دالة_ثنائية = دالة(صحيح، صحيح) -> صحيح.
@@ -958,7 +958,7 @@
   دالة(صحيح، صحيح) -> صحيح مؤشر_دالة.
   ```
 
-- [ ] **Assign Function to Pointer**:
+- [x] **Assign Function to Pointer**:
   ```baa
   صحيح جمع(صحيح أ، صحيح ب) { إرجع أ + ب. }
   صحيح ضرب(صحيح أ، صحيح ب) { إرجع أ * ب. }
@@ -967,12 +967,12 @@
   عملية = ضرب.               // Now points to ضرب
   ```
 
-- [ ] **Call Through Pointer**:
+- [x] **Call Through Pointer**:
   ```baa
   صحيح نتيجة = عملية(١٠، ٢٠).  // Calls ضرب(10, 20) = 200
   ```
 
-- [ ] **Function Pointer as Parameter**:
+- [x] **Function Pointer as Parameter**:
   ```baa
   صحيح طبق(صحيح[] قائمة، صحيح حجم، دالة_ثنائية د) {
       صحيح نتيجة = قائمة[٠].
@@ -986,7 +986,7 @@
   صحيح مجموع = طبق(أرقام، ١٠، جمع).
   ```
 
-- [ ] **Null Function Pointer**:
+- [x] **Null Function Pointer**:
   ```baa
   دالة_ثنائية فارغ = عدم.
   إذا (فارغ != عدم) {
@@ -995,12 +995,14 @@
   ```
 
 #### Implementation Tasks
-- [ ] **Parser**: Parse function type syntax `دالة(...) -> نوع`.
-- [ ] **Type System**: Add `TYPE_FUNCTION_POINTER` with signature.
-- [ ] **Semantic**: Type-check function pointer assignments.
-- [ ] **Semantic**: Validate call through pointer matches signature.
-- [ ] **Codegen**: Generate indirect call instructions.
-- [ ] **IR**: Add function pointer type to IR.
+- [x] **Parser**: Parse function type syntax `دالة(...) -> نوع`.
+- [x] **Type System**: Add function pointer type with signature plumbing.
+- [x] **Semantic**: Type-check function pointer assignments.
+- [x] **Semantic**: Validate call through pointer matches signature.
+- [x] **Codegen**: Generate indirect call instructions.
+- [x] **IR**: Add function pointer type to IR.
+
+✅ COMPLETED (2026-02-28)
 
 ---
 

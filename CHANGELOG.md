@@ -6,6 +6,28 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ---
 
+## [0.3.10.6] - 2026-02-28
+
+### Added
+
+- **Function pointers (`دالة(...) -> ...`)** end-to-end:
+  - variables and parameters of function-pointer type,
+  - assign function references to function-pointer variables,
+  - indirect call through a function pointer identifier (backend emits `call *...` in AT&T).
+- **IR support for indirect calls**:
+  - `IRInst.call_callee` for indirect targets,
+  - `ir_inst_call_indirect(...)` + `ir_builder_emit_call_indirect(...)`.
+- **Coverage for function pointers**:
+  - `tests/integration/backend/backend_func_ptr_test.baa`
+  - `tests/neg/semantic_funcptr_assign_mismatch.baa`
+  - `tests/neg/semantic_funcptr_call_non_funcptr.baa`
+  - `tests/neg/semantic_funcptr_compare_order_invalid.baa`
+
+### Changed
+
+- **IR verifier + IR text format** now accept `call` with either a direct `@name` target or an indirect callee value.
+- **Global data emission** now supports function pointer initializers as `.quad <symbol>`.
+
 ## [0.3.10.5] - 2026-02-27
 
 ### Added

@@ -218,9 +218,12 @@ static void ir_inst_count_uses(IRInst* inst, int* uses, int max_reg) {
         ir_count_use_from_value(inst->operands[i], uses, max_reg);
     }
 
-    if (inst->op == IR_OP_CALL && inst->call_args) {
-        for (int i = 0; i < inst->call_arg_count; i++) {
-            ir_count_use_from_value(inst->call_args[i], uses, max_reg);
+    if (inst->op == IR_OP_CALL) {
+        ir_count_use_from_value(inst->call_callee, uses, max_reg);
+        if (inst->call_args) {
+            for (int i = 0; i < inst->call_arg_count; i++) {
+                ir_count_use_from_value(inst->call_args[i], uses, max_reg);
+            }
         }
     }
 
@@ -242,12 +245,19 @@ static void ir_inst_decrement_operand_uses(IRInst* inst, int* uses, int max_reg)
         }
     }
 
-    if (inst->op == IR_OP_CALL && inst->call_args) {
-        for (int i = 0; i < inst->call_arg_count; i++) {
-            IRValue* v = inst->call_args[i];
-            if (v && v->kind == IR_VAL_REG) {
-                int r = v->data.reg_num;
-                if (r >= 0 && r < max_reg && uses[r] > 0) uses[r]--;
+    if (inst->op == IR_OP_CALL) {
+        IRValue* cv = inst->call_callee;
+        if (cv && cv->kind == IR_VAL_REG) {
+            int r = cv->data.reg_num;
+            if (r >= 0 && r < max_reg && uses[r] > 0) uses[r]--;
+        }
+        if (inst->call_args) {
+            for (int i = 0; i < inst->call_arg_count; i++) {
+                IRValue* v = inst->call_args[i];
+                if (v && v->kind == IR_VAL_REG) {
+                    int r = v->data.reg_num;
+                    if (r >= 0 && r < max_reg && uses[r] > 0) uses[r]--;
+                }
             }
         }
     }

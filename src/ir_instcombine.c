@@ -126,6 +126,7 @@ static void ic_rewrite_to_copy(IRInst* inst, IRValue* src)
 
     inst->phi_entries = NULL;
     inst->call_target = NULL;
+    inst->call_callee = NULL;
     inst->call_args = NULL;
     inst->call_arg_count = 0;
 }

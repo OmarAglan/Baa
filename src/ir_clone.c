@@ -137,6 +137,7 @@ IRFunc* ir_func_clone(IRModule* module, IRFunc* src, const char* new_name) {
             if (inst->op == IR_OP_CALL) {
                 ni->call_arg_count = inst->call_arg_count;
                 ni->call_target = inst->call_target ? ir_arena_strdup(&module->arena, inst->call_target) : NULL;
+                ni->call_callee = inst->call_callee ? ir_clone_value(inst->call_callee, block_map, map_cap) : NULL;
 
                 if (inst->call_arg_count > 0 && inst->call_args) {
                     ni->call_args = (IRValue**)ir_arena_alloc(&module->arena,

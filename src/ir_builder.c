@@ -447,6 +447,21 @@ int ir_builder_emit_call(IRBuilder* builder, const char* target, IRType* ret_typ
     return dest;
 }
 
+int ir_builder_emit_call_indirect(IRBuilder* builder, IRValue* callee, IRType* ret_type,
+                                  IRValue** args, int arg_count)
+{
+    if (!builder || !callee) return -1;
+
+    int dest = -1;
+    if (ret_type && ret_type->kind != IR_TYPE_VOID) {
+        dest = ir_builder_alloc_reg(builder);
+    }
+
+    IRInst* inst = ir_inst_call_indirect(callee, ret_type, dest, args, arg_count);
+    emit_inst(builder, inst);
+    return dest;
+}
+
 void ir_builder_emit_call_void(IRBuilder* builder, const char* target,
                                 IRValue** args, int arg_count) {
     ir_builder_emit_call(builder, target, IR_TYPE_VOID_T, args, arg_count);

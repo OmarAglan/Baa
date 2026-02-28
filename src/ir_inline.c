@@ -410,7 +410,18 @@ static int ir_inline_clone_block_body(IRFunc* caller,
                 args = args_local;
             }
 
-            clone = ir_inst_call(inst->call_target, inst->type, new_dest, args, ac);
+            if (inst->call_target) {
+                clone = ir_inst_call(inst->call_target, inst->type, new_dest, args, ac);
+            } else if (inst->call_callee) {
+                IRValue* callee = ir_inline_clone_value(inst->call_callee, bm, bm_count,
+                                                        reg_map, reg_map_len,
+                                                        old_reg_types, old_reg_types_len,
+                                                        caller);
+                if (!callee) return 0;
+                clone = ir_inst_call_indirect(callee, inst->type, new_dest, args, ac);
+            } else {
+                return 0;
+            }
         } else {
             clone = ir_inst_new(inst->op, inst->type, new_dest);
             if (clone) {

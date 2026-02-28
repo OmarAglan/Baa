@@ -248,13 +248,20 @@ static int cse_replace_reg_uses(IRInst* inst, int old_reg, int new_reg) {
         }
     }
     
-    // Replace in call args
-    if (inst->op == IR_OP_CALL && inst->call_args) {
-        for (int i = 0; i < inst->call_arg_count; i++) {
-            IRValue* v = inst->call_args[i];
-            if (v && v->kind == IR_VAL_REG && v->data.reg_num == old_reg) {
-                v->data.reg_num = new_reg;
-                replaced = 1;
+    // Replace in call target value (indirect) and args
+    if (inst->op == IR_OP_CALL) {
+        if (inst->call_callee && inst->call_callee->kind == IR_VAL_REG &&
+            inst->call_callee->data.reg_num == old_reg) {
+            inst->call_callee->data.reg_num = new_reg;
+            replaced = 1;
+        }
+        if (inst->call_args) {
+            for (int i = 0; i < inst->call_arg_count; i++) {
+                IRValue* v = inst->call_args[i];
+                if (v && v->kind == IR_VAL_REG && v->data.reg_num == old_reg) {
+                    v->data.reg_num = new_reg;
+                    replaced = 1;
+                }
             }
         }
     }

@@ -564,6 +564,7 @@ IRInst* ir_inst_new(IROp op, IRType* type, int dest) {
     inst->cmp_pred = IR_CMP_EQ;  // Default
     inst->phi_entries = NULL;
     inst->call_target = NULL;
+    inst->call_callee = NULL;
     inst->call_args = NULL;
     inst->call_arg_count = 0;
     inst->src_file = NULL;
@@ -735,6 +736,7 @@ IRInst* ir_inst_call(const char* target, IRType* ret_type, int dest,
     if (!inst) return NULL;
     
     inst->call_target = target ? ir_strdup(target) : NULL;
+    inst->call_callee = NULL;
     inst->call_arg_count = arg_count;
     
     // Copy arguments
@@ -749,6 +751,34 @@ IRInst* ir_inst_call(const char* target, IRType* ret_type, int dest,
         }
     }
     
+    return inst;
+}
+
+/**
+ * Create an indirect call instruction
+ */
+IRInst* ir_inst_call_indirect(IRValue* callee, IRType* ret_type, int dest,
+                              IRValue** args, int arg_count)
+{
+    IRInst* inst = ir_inst_new(IR_OP_CALL, ret_type, dest);
+    if (!inst) return NULL;
+
+    inst->call_target = NULL;
+    inst->call_callee = callee;
+    inst->call_arg_count = arg_count;
+
+    // Copy arguments
+    if (arg_count > 0 && args) {
+        inst->call_args = (IRValue**)ir_alloc((size_t)arg_count * sizeof(IRValue*), _Alignof(IRValue*));
+        if (!inst->call_args) {
+            inst->call_arg_count = 0;
+        } else {
+            for (int i = 0; i < arg_count; i++) {
+                inst->call_args[i] = args[i];
+            }
+        }
+    }
+
     return inst;
 }
 
@@ -1479,8 +1509,14 @@ void ir_inst_print(IRInst* inst, FILE* out, int use_arabic) {
 
         case IR_OP_CALL:
             fputc(' ', out);
-            fputc('@', out);
-            fputs(inst->call_target ? inst->call_target : "???", out);
+            if (inst->call_target) {
+                fputc('@', out);
+                fputs(inst->call_target, out);
+            } else if (inst->call_callee) {
+                ir_value_print_ex(inst->call_callee, out, use_arabic);
+            } else {
+                fputs("???", out);
+            }
             fputc('(', out);
             for (int i = 0; i < inst->call_arg_count; i++) {
                 if (i > 0) fputs(sep, out);

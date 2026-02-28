@@ -336,6 +336,7 @@ static IRInst* ir_clone_inst_for_unroll(IRInst* inst) {
     // calls
     if (inst->op == IR_OP_CALL) {
         c->call_target = inst->call_target;
+        c->call_callee = inst->call_callee;
         c->call_arg_count = inst->call_arg_count;
         // مشاركة مصفوفة الوسائط آمنة هنا لأننا لا نُعدّل call_args في هذه التمريرة.
         c->call_args = inst->call_args;

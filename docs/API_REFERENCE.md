@@ -1,6 +1,6 @@
 # Baa Internal API Reference
 
-> **Version:** 0.3.9 (in progress) | [← Compiler Internals](INTERNALS.md) | [IR Specification →](BAA_IR_SPECIFICATION.md)
+> **Version:** 0.3.10.6 | [← Compiler Internals](INTERNALS.md) | [IR Specification →](BAA_IR_SPECIFICATION.md)
 
 This document details the C functions, enumerations, and structures defined in `src/baa.h`, `src/ir.h`, `src/ir_arena.h`, `src/ir_mutate.h`, `src/ir_defuse.h`, `src/ir_clone.h`, `src/ir_text.h`, `src/ir_loop.h`, `src/ir_licm.h`, `src/ir_unroll.h`, `src/ir_inline.h`, `src/ir_builder.h`, `src/ir_lower.h`, `src/ir_analysis.h`, `src/ir_pass.h`, `src/ir_mem2reg.h`, `src/ir_outssa.h`, `src/ir_verify_ssa.h`, `src/ir_verify_ir.h`, `src/ir_canon.h`, `src/ir_cfg_simplify.h`, `src/ir_dce.h`, `src/ir_copyprop.h`, `src/ir_cse.h`, `src/ir_optimizer.h`, `src/target.h`, `src/isel.h`, `src/regalloc.h`, and `src/emit.h`.
 
@@ -466,6 +466,24 @@ Creates a function call.
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | `target` | `const char*` | Function name |
+| `ret_type` | `IRType*` | Return type |
+| `dest` | `int` | Destination register (-1 for void) |
+| `args` | `IRValue**` | Array of argument values |
+| `arg_count` | `int` | Number of arguments |
+
+---
+
+#### `ir_inst_call_indirect`
+
+```c
+IRInst* ir_inst_call_indirect(IRValue* callee, IRType* ret_type, int dest, IRValue** args, int arg_count)
+```
+
+Creates an **indirect** function call through a callee value of type `IR_TYPE_FUNC`.
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `callee` | `IRValue*` | Callee value (must be `IR_TYPE_FUNC`) |
 | `ret_type` | `IRType*` | Return type |
 | `dest` | `int` | Destination register (-1 for void) |
 | `args` | `IRValue**` | Array of argument values |
@@ -1446,6 +1464,18 @@ int ir_builder_emit_call(IRBuilder* builder, const char* target, IRType* ret_typ
 ```
 
 Emits: `%dest = نداء ret_type @target(args...)`
+
+**Returns:** Destination register (-1 for void calls).
+
+---
+
+#### `ir_builder_emit_call_indirect`
+
+```c
+int ir_builder_emit_call_indirect(IRBuilder* builder, IRValue* callee, IRType* ret_type, IRValue** args, int arg_count)
+```
+
+Emits: `%dest = نداء ret_type <callee>(args...)` (indirect call through a value of type `IR_TYPE_FUNC`)
 
 **Returns:** Destination register (-1 for void calls).
 

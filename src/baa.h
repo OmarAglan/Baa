@@ -1,7 +1,7 @@
 /**
  * @file baa.h
  * @brief ملف الرأس الرئيسي الذي يعرف هياكل البيانات لمحوسب لغة "باء" (Baa Compiler).
- * @version 0.3.7
+ * @version 0.3.10.6
  */
 
 #ifndef BAA_H
@@ -15,7 +15,7 @@
 #include <stdarg.h>
 
 // معلومات الإصدار
-#define BAA_VERSION "0.3.7"
+#define BAA_VERSION "0.3.10.6"
 #define BAA_BUILD_DATE __DATE__
 
 // ============================================================================
@@ -375,6 +375,7 @@ typedef enum {
 
     TYPE_STRING,        // نص (حرف[])
     TYPE_POINTER,       // مؤشر عام
+    TYPE_FUNC_PTR,      // مؤشر دالة: دالة(...) -> نوع
     TYPE_BOOL,          // منطقي (bool - stored as byte)
     TYPE_CHAR,          // حرف (UTF-8 sequence)
     TYPE_FLOAT,         // عشري (float64)
@@ -383,6 +384,26 @@ typedef enum {
     TYPE_STRUCT,        // هيكل (ليس قيمة من الدرجة الأولى)
     TYPE_UNION          // اتحاد (ليس قيمة من الدرجة الأولى)
 } DataType;
+
+/**
+ * @struct FuncPtrSig
+ * @brief توقيع مؤشر الدالة: أنواع المعاملات ونوع الإرجاع (مع معلومات المؤشرات).
+ *
+ * ملاحظة: تُستخدم هذه البنية لتمثيل نوع `دالة(...) -> ...` داخل AST
+ * وجدول الرموز والتحليل الدلالي.
+ */
+typedef struct FuncPtrSig {
+    DataType return_type;
+    DataType return_ptr_base_type;
+    char* return_ptr_base_type_name; // مملوك (قد يكون NULL)
+    int return_ptr_depth;
+
+    int param_count;
+    DataType* param_types;              // مملوك (malloc)
+    DataType* param_ptr_base_types;     // مملوك (malloc)
+    char** param_ptr_base_type_names;   // مملوك (malloc) وعناصره مملوكة (strdup) وقد تكون NULL
+    int* param_ptr_depths;              // مملوك (malloc)
+} FuncPtrSig;
 
 /**
  * @enum OpType
@@ -435,6 +456,7 @@ typedef struct Node {
     DataType inferred_ptr_base_type;   // نوع أساس المؤشر عند inferred_type == TYPE_POINTER
     char* inferred_ptr_base_type_name; // اسم النوع المركب لأساس المؤشر عند الحاجة
     int inferred_ptr_depth;            // عمق المؤشر عند inferred_type == TYPE_POINTER
+    FuncPtrSig* inferred_func_sig;     // توقيع مؤشر الدالة عند inferred_type == TYPE_FUNC_PTR
 
     union {
         // البرنامج: قائمة الدوال والمتغيرات العامة
@@ -450,6 +472,7 @@ typedef struct Node {
             DataType return_ptr_base_type;   // نوع أساس المؤشر لنوع الإرجاع إن كان مؤشراً
             char* return_ptr_base_type_name; // اسم النوع المركب لأساس المؤشر
             int return_ptr_depth;            // عمق المؤشر لنوع الإرجاع
+            FuncPtrSig* return_func_sig;     // توقيع مؤشر الدالة عند return_type == TYPE_FUNC_PTR
             struct Node* params; // قائمة المعاملات (متغيرات)
             struct Node* body;   // جسم الدالة (كتلة) - NULL if prototype
             bool is_prototype;   // هل هو نموذج أولي؟ (بدون جسم)
@@ -463,6 +486,7 @@ typedef struct Node {
             DataType ptr_base_type;   // نوع أساس المؤشر عند type == TYPE_POINTER
             char* ptr_base_type_name; // اسم النوع المركب لأساس المؤشر
             int ptr_depth;            // عمق المؤشر عند type == TYPE_POINTER
+            FuncPtrSig* func_sig;     // توقيع مؤشر الدالة عند type == TYPE_FUNC_PTR
             int struct_size;          // حجم الهيكل بالبايت عند TYPE_STRUCT (يُملأ دلالياً)
             int struct_align;         // محاذاة الهيكل عند TYPE_STRUCT (يُملأ دلالياً)
             struct Node* expression; // القيمة الابتدائية (اختياري)
@@ -479,6 +503,7 @@ typedef struct Node {
             DataType target_ptr_base_type;   // نوع أساس المؤشر للنوع الهدف عندما يكون target_type == TYPE_POINTER
             char* target_ptr_base_type_name; // اسم النوع المركب لأساس المؤشر
             int target_ptr_depth;            // عمق المؤشر للنوع الهدف عندما يكون target_type == TYPE_POINTER
+            FuncPtrSig* target_func_sig;     // توقيع مؤشر الدالة عندما يكون target_type == TYPE_FUNC_PTR
         } type_alias;
 
         // تعريف تعداد
@@ -691,6 +716,7 @@ typedef struct {
     DataType ptr_base_type;      // نوع أساس المؤشر عندما type == TYPE_POINTER
     char ptr_base_type_name[32]; // اسم النوع المركب لأساس المؤشر
     int ptr_depth;               // عمق المؤشر عندما type == TYPE_POINTER
+    FuncPtrSig* func_sig;        // توقيع مؤشر الدالة عندما type == TYPE_FUNC_PTR
     bool is_array;     // هل الرمز مصفوفة؟
     int array_rank;    // عدد الأبعاد
     int64_t array_total_elems; // حاصل ضرب الأبعاد

@@ -1,6 +1,6 @@
 # Baa User Guide
 
-> **Version:** 0.3.10.6 | [← README](../README.md) | [Language Spec →](LANGUAGE.md)
+> **Version:** 0.3.11.0 | [← README](../README.md) | [Language Spec →](LANGUAGE.md)
 
 Welcome to Baa (باء)! This guide will help you write your first Arabic computer program and use the Baa compiler toolchain.
 
@@ -516,6 +516,37 @@ To manipulate dynamically allocated strings, include the standard library header
     // Free allocated memory
     حرر_نص(رسالة).
     
+    إرجع ٠.
+}
+```
+
+### Dynamic Memory (الذاكرة الديناميكية)
+
+Use the v0.3.11 memory APIs for heap allocation and raw memory operations:
+
+- `حجز_ذاكرة` / `تحرير_ذاكرة`
+- `إعادة_حجز` (realloc)
+- `نسخ_ذاكرة` / `تعيين_ذاكرة`
+
+```baa
+#تضمين "stdlib/baalib.baahd"
+
+صحيح الرئيسية() {
+    صحيح عدد = ٤.
+    صحيح* أرقام = حجز_ذاكرة(عدد * حجم(صحيح)).
+    إذا (أرقام == عدم) { إرجع ١. }
+
+    تعيين_ذاكرة(أرقام، ٠، عدد * حجم(صحيح)).
+    *(أرقام + ٠) = ١٠.
+    *(أرقام + ١) = ٢٠.
+
+    // نمط إعادة_حجز الآمن: لا تفقد المؤشر الأصلي إذا فشلت العملية.
+    صحيح* مؤقت = إعادة_حجز(أرقام، ٨ * حجم(صحيح)).
+    إذا (مؤقت != عدم) {
+        أرقام = مؤقت.
+    }
+
+    تحرير_ذاكرة(أرقام).
     إرجع ٠.
 }
 ```

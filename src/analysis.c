@@ -1077,6 +1077,14 @@ static bool ptr_type_compatible(DataType got_base, const char* got_name, int got
                                 bool allow_null)
 {
     if (allow_null && got_depth == 0) return true;
+
+    // قواعد void*: السماح بتحويل ضمني بين عدم* وأي مؤشر كائن (عمق >= 1).
+    // ملاحظة: هذا لا يجعل عدم** عاماً؛ العمق ما زال حساساً (لا يُسمح إلا لعدم* تحديداً).
+    if (got_depth > 0 && expected_depth > 0) {
+        if (got_base == TYPE_VOID && got_depth == 1) return true;
+        if (expected_base == TYPE_VOID && expected_depth == 1) return true;
+    }
+
     if (got_depth != expected_depth) return false;
     if (got_depth <= 0) return false;
     return ptr_base_named_match(got_base, got_name, expected_base, expected_name);
@@ -2561,6 +2569,80 @@ static bool builtin_check_string_call(Node* call_node, const char* fname, Node* 
     return true;
 }
 
+typedef struct {
+    const char* name;
+    DataType return_type;
+    int param_count;
+    DataType param_types[3];
+} BuiltinMemFuncSig;
+
+static const BuiltinMemFuncSig builtin_mem_funcs[] = {
+    { "حجز_ذاكرة",   TYPE_POINTER, 1, { TYPE_INT,     TYPE_INT, TYPE_INT } },
+    { "تحرير_ذاكرة", TYPE_VOID,    1, { TYPE_POINTER, TYPE_INT, TYPE_INT } },
+    { "إعادة_حجز",   TYPE_POINTER, 2, { TYPE_POINTER, TYPE_INT, TYPE_INT } },
+    { "نسخ_ذاكرة",   TYPE_POINTER, 3, { TYPE_POINTER, TYPE_POINTER, TYPE_INT } },
+    { "تعيين_ذاكرة", TYPE_POINTER, 3, { TYPE_POINTER, TYPE_INT, TYPE_INT } },
+};
+
+static const BuiltinMemFuncSig* builtin_lookup_mem_func(const char* name)
+{
+    if (!name) return NULL;
+    const int n = (int)(sizeof(builtin_mem_funcs) / sizeof(builtin_mem_funcs[0]));
+    for (int i = 0; i < n; i++) {
+        if (strcmp(name, builtin_mem_funcs[i].name) == 0) {
+            return &builtin_mem_funcs[i];
+        }
+    }
+    return NULL;
+}
+
+/**
+ * @brief التحقق من صحة استدعاء دوال الذاكرة المدمجة في v0.3.11.
+ * @return true إذا كان الاسم دالة مدمجة (سواء مع أخطاء أو بدونها)، false إذا لم يكن مدمجاً.
+ */
+static bool builtin_check_mem_call(Node* call_node, const char* fname, Node* args, DataType* out_return_type)
+{
+    const BuiltinMemFuncSig* sig = builtin_lookup_mem_func(fname);
+    if (!sig) return false;
+
+    int i = 0;
+    for (Node* arg = args; arg; arg = arg->next, i++) {
+        DataType got = infer_type(arg);
+        if (i < sig->param_count) {
+            DataType expected = sig->param_types[i];
+            if (expected == TYPE_POINTER) {
+                // جميع معاملات المؤشر هنا هي عدم* (void*)، ويُسمح بالتحويلات الضمنية وفق قواعد void*.
+                if (got != TYPE_POINTER ||
+                    !ptr_type_compatible(arg->inferred_ptr_base_type,
+                                         arg->inferred_ptr_base_type_name,
+                                         arg->inferred_ptr_depth,
+                                         TYPE_VOID, NULL, 1,
+                                         true)) {
+                    semantic_error(arg, "نوع المعامل %d في '%s' غير متوافق.", i + 1, sig->name);
+                }
+            } else if (!types_compatible(got, expected)) {
+                semantic_error(arg, "نوع المعامل %d في '%s' غير متوافق.", i + 1, sig->name);
+            } else {
+                maybe_warn_implicit_narrowing(got, expected, arg);
+            }
+        }
+    }
+
+    if (i != sig->param_count) {
+        semantic_error(call_node, "عدد معاملات '%s' غير صحيح (المتوقع %d).", sig->name, sig->param_count);
+    }
+
+    if (out_return_type) *out_return_type = sig->return_type;
+
+    if (sig->return_type == TYPE_POINTER) {
+        node_set_inferred_ptr(call_node, TYPE_VOID, NULL, 1);
+    } else {
+        node_clear_inferred_ptr(call_node);
+    }
+
+    return true;
+}
+
 static bool datatype_size_bytes(DataType type, const char* type_name, int64_t* out_size)
 {
     if (!out_size) return false;
@@ -2944,6 +3026,9 @@ static DataType infer_type_internal(Node* node) {
                     node_clear_inferred_ptr(node);
                     return built_ret;
                 }
+                if (builtin_check_mem_call(node, fname, node->data.call.args, &built_ret)) {
+                    return built_ret;
+                }
 
                 semantic_error(node, "استدعاء دالة غير معرّفة '%s'.", fname ? fname : "???");
                 // ما زلنا نستنتج أنواع الوسائط لاكتشاف أخطاء أخرى.
@@ -3266,7 +3351,9 @@ static DataType infer_type_internal(Node* node) {
                 Node* target = node->data.unary_op.operand;
                 if (!target ||
                     (target->type != NODE_VAR_REF &&
-                     target->type != NODE_MEMBER_ACCESS && target->type != NODE_UNARY_OP)) {
+                     target->type != NODE_MEMBER_ACCESS &&
+                     target->type != NODE_ARRAY_ACCESS &&
+                     target->type != NODE_UNARY_OP)) {
                     semantic_error(node, "أخذ العنوان '&' يتطلب قيمة قابلة للإسناد.");
                 }
 
@@ -4086,6 +4173,9 @@ static void analyze_node(Node* node) {
             if (!fs) {
                 DataType built_ret = TYPE_VOID;
                 if (builtin_check_string_call(node, fname, node->data.call.args, &built_ret)) {
+                    break;
+                }
+                if (builtin_check_mem_call(node, fname, node->data.call.args, &built_ret)) {
                     break;
                 }
                 semantic_error(node, "استدعاء دالة غير معرّفة '%s'.", fname ? fname : "???");

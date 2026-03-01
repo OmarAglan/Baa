@@ -1,6 +1,6 @@
 # Baa Language Specification
 
-> **Version:** 0.3.10.6 | [← User Guide](USER_GUIDE.md) | [Compiler Internals →](INTERNALS.md)
+> **Version:** 0.3.11.0 | [← User Guide](USER_GUIDE.md) | [Compiler Internals →](INTERNALS.md)
 
 Baa (باء) is a compiled systems programming language using Arabic syntax. It compiles to native code via Assembly + host GCC/Clang on Windows and Linux.
 
@@ -1108,6 +1108,37 @@ Strings in Baa are UTF-8 arrays of `حرف` terminated by a null character. The 
     }
     
     حرر_نص(كامل). // تحرير الذاكرة إلزامي
+    إرجع ٠.
+}
+```
+
+### 9.2. Dynamic Memory (الذاكرة الديناميكية) (v0.3.11)
+
+The standard library provides C-like dynamic memory APIs for low-level programming.
+
+| Function | Signature | Description |
+|----------|-----------|-------------|
+| **Allocate** | `عدم* حجز_ذاكرة(صحيح حجم)` | Allocates `حجم` bytes. Returns `عدم` on failure. |
+| **Free** | `عدم تحرير_ذاكرة(عدم* مؤشر)` | Frees memory allocated by `حجز_ذاكرة` / `إعادة_حجز`. |
+| **Reallocate** | `عدم* إعادة_حجز(عدم* مؤشر، صحيح حجم)` | Resizes an allocation. Returns `عدم` on failure (original pointer remains valid). |
+| **Copy Memory** | `عدم* نسخ_ذاكرة(عدم* وجهة، عدم* مصدر، صحيح حجم)` | Copies `حجم` bytes and returns `وجهة` (like `memcpy`). |
+| **Set Memory** | `عدم* تعيين_ذاكرة(عدم* مؤشر، صحيح قيمة، صحيح حجم)` | Sets `حجم` bytes to `قيمة` (low 8 bits) and returns `مؤشر` (like `memset`). |
+
+**void\* rule:** `عدم*` (void pointer) converts implicitly to/from any object pointer type (e.g. `صحيح*`), but `عدم**` is not a universal pointer.
+
+**Example:**
+```baa
+#تضمين "stdlib/baalib.baahd"
+
+صحيح الرئيسية() {
+    صحيح عدد = ١٠.
+    صحيح* قائمة = حجز_ذاكرة(عدد * حجم(صحيح)).
+    إذا (قائمة == عدم) { إرجع ١. }
+
+    تعيين_ذاكرة(قائمة، ٠، عدد * حجم(صحيح)).
+    *(قائمة + ٠) = ٤٢.
+
+    تحرير_ذاكرة(قائمة).
     إرجع ٠.
 }
 ```

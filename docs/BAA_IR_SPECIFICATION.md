@@ -1,6 +1,6 @@
 # Baa IR Specification
 
-> **Version:** 0.3.10.6 | [← Compiler Internals](INTERNALS.md) | [API Reference →](API_REFERENCE.md)
+> **Version:** 0.3.11.0 | [← Compiler Internals](INTERNALS.md) | [API Reference →](API_REFERENCE.md)
 
 This document specifies the Intermediate Representation (IR) for the Baa compiler. The IR uses Arabic naming conventions throughout, creating a culturally authentic yet technically robust design.
 
@@ -409,6 +409,9 @@ internal global @عداد_داخلي = ص٦٤ ٠ // ربط داخلي (v0.3.7.5)
 
 ملاحظة (`v0.3.9`): استدعاءات السلاسل `طول_نص/قارن_نص/نسخ_نص/دمج_نص/حرر_نص`
 تُخفض داخلياً إلى حلقات/نداءات `malloc/free` حسب الحالة بدلاً من مجرد تمرير `call` خام.
+
+ملاحظة (`v0.3.11`): استدعاءات الذاكرة `حجز_ذاكرة/تحرير_ذاكرة/إعادة_حجز/نسخ_ذاكرة/تعيين_ذاكرة`
+تُخفض داخلياً إلى `malloc/free/realloc/memcpy/memset` مع الحفاظ على قواعد الـ shadowing.
 
 ### 6.2 Variable Handling
 

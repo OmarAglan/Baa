@@ -6,6 +6,28 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ---
 
+## [0.3.11.0] - 2026-03-01
+
+### Added
+
+- **Dynamic memory APIs** (v0.3.11):
+  - `حجز_ذاكرة(حجم) -> عدم*` (malloc)
+  - `تحرير_ذاكرة(مؤشر) -> عدم` (free)
+  - `إعادة_حجز(مؤشر، حجم) -> عدم*` (realloc)
+  - `نسخ_ذاكرة(وجهة، مصدر، حجم) -> عدم*` (memcpy)
+  - `تعيين_ذاكرة(مؤشر، قيمة، حجم) -> عدم*` (memset)
+- **Test coverage for dynamic memory**:
+  - `tests/integration/backend/backend_dynamic_memory_test.baa`
+  - `tests/integration/backend/backend_dynamic_memory_noheader_test.baa`
+  - `tests/neg/semantic_malloc_bad_type.baa`
+  - `tests/neg/semantic_free_bad_type.baa`
+  - `tests/neg/semantic_voidpp_to_intp_invalid.baa`
+
+### Changed
+
+- **Pointer compatibility** now supports C-like implicit conversions between `عدم*` (void*) and any object pointer type (depth >= 1). `عدم**` is not treated as a universal pointer.
+- **IR lowering** recognizes the v0.3.11 memory APIs as builtins and lowers them directly to `malloc/free/realloc/memcpy/memset`, respecting shadowing rules.
+
 ## [0.3.10.6] - 2026-02-28
 
 ### Added

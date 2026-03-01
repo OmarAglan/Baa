@@ -1,6 +1,6 @@
 # Baa Compiler Internals
 
-> **Version:** 0.3.10.6 | [← Language Spec](LANGUAGE.md) | [API Reference →](API_REFERENCE.md)
+> **Version:** 0.3.11.0 | [← Language Spec](LANGUAGE.md) | [API Reference →](API_REFERENCE.md)
 
 **Target Architecture:** x86-64 (AMD64)
 **Targets:** Windows x64 (COFF/PE) + Linux x86-64 (ELF)
@@ -1318,6 +1318,12 @@ Currently lowered expressions:
   - `قارن_نص`: lexicographic compare over Baa `حرف`
   - `نسخ_نص` / `دمج_نص`: heap allocation عبر `malloc` + copy loops
   - `حرر_نص`: تحرير الذاكرة عبر `free`
+- Builtin dynamic memory calls in `NODE_CALL_EXPR` (`v0.3.11`):
+  - `حجز_ذاكرة`: lowers to `malloc`
+  - `تحرير_ذاكرة`: lowers to `free`
+  - `إعادة_حجز`: lowers to `realloc`
+  - `نسخ_ذاكرة`: lowers to `memcpy`
+  - `تعيين_ذاكرة`: lowers to `memset`
 
 ### 6.11. AST → IR Lowering (Statements, v0.3.0.4+)
 
@@ -2333,4 +2339,3 @@ Strings are collected during parsing and emitted with unique labels:
 ---
 
 *[← Language Spec](LANGUAGE.md) | [API Reference →](API_REFERENCE.md)*
-

@@ -1535,6 +1535,130 @@ static IRValue* lower_call_expr(IRLowerCtx* ctx, Node* expr) {
         }
     }
 
+    // دوال الذاكرة المدمجة في v0.3.11: حجز/تحرير/إعادة_حجز/نسخ_ذاكرة/تعيين_ذاكرة.
+    bool allow_mem_builtins = true;
+    if (expr->data.call.name) {
+        const char* n0 = expr->data.call.name;
+        // نفس قواعد الـ shadowing: متغير/تخزين بنفس الاسم يمنع تحويله إلى builtin.
+        if (find_local(ctx, n0)) {
+            allow_mem_builtins = false;
+        }
+        if (m && ir_module_find_global(m, n0)) {
+            allow_mem_builtins = false;
+        }
+        if (m) {
+            IRFunc* f0 = ir_module_find_func(m, n0);
+            // إذا كانت الدالة prototype فقط (مثلاً من stdlib)، نسمح للـ builtin.
+            if (f0 && !f0->is_prototype) {
+                allow_mem_builtins = false;
+            }
+        }
+    }
+
+    if (allow_mem_builtins && expr->data.call.name) {
+        const char* n = expr->data.call.name;
+        Node* a0 = expr->data.call.args;
+        Node* a1 = a0 ? a0->next : NULL;
+        Node* a2 = a1 ? a1->next : NULL;
+        IRType* i8_ptr_t = ir_type_ptr(IR_TYPE_I8_T);
+
+        if (strcmp(n, "حجز_ذاكرة") == 0) {
+            if (!a0 || a1) {
+                ir_lower_report_error(ctx, expr, "استدعاء 'حجز_ذاكرة' يتطلب وسيطاً واحداً.");
+                ir_lower_eval_call_args(ctx, expr->data.call.args);
+                return ir_value_const_int(0, i8_ptr_t);
+            }
+            IRValue* size_v = lower_expr(ctx, a0);
+            IRValue* size_i64 = ensure_i64(ctx, size_v);
+            IRValue* args[1] = { size_i64 };
+            ir_lower_set_loc(ctx->builder, expr);
+            int r = ir_builder_emit_call(ctx->builder, "malloc", i8_ptr_t, args, 1);
+            if (r < 0) {
+                ir_lower_report_error(ctx, expr, "فشل خفض نداء malloc.");
+                return ir_value_const_int(0, i8_ptr_t);
+            }
+            return ir_value_reg(r, i8_ptr_t);
+        }
+
+        if (strcmp(n, "تحرير_ذاكرة") == 0) {
+            if (!a0 || a1) {
+                ir_lower_report_error(ctx, expr, "استدعاء 'تحرير_ذاكرة' يتطلب وسيطاً واحداً.");
+                ir_lower_eval_call_args(ctx, expr->data.call.args);
+                return ir_builder_const_i64(0);
+            }
+            IRValue* pv = lower_expr(ctx, a0);
+            IRValue* p_i8 = cast_to(ctx, pv, i8_ptr_t);
+            IRValue* args[1] = { p_i8 };
+            ir_lower_set_loc(ctx->builder, expr);
+            ir_builder_emit_call_void(ctx->builder, "free", args, 1);
+            return ir_builder_const_i64(0);
+        }
+
+        if (strcmp(n, "إعادة_حجز") == 0) {
+            if (!a0 || !a1 || a2) {
+                ir_lower_report_error(ctx, expr, "استدعاء 'إعادة_حجز' يتطلب وسيطين.");
+                ir_lower_eval_call_args(ctx, expr->data.call.args);
+                return ir_value_const_int(0, i8_ptr_t);
+            }
+            IRValue* pv = lower_expr(ctx, a0);
+            IRValue* size_v = lower_expr(ctx, a1);
+            IRValue* p_i8 = cast_to(ctx, pv, i8_ptr_t);
+            IRValue* size_i64 = ensure_i64(ctx, size_v);
+            IRValue* args[2] = { p_i8, size_i64 };
+            ir_lower_set_loc(ctx->builder, expr);
+            int r = ir_builder_emit_call(ctx->builder, "realloc", i8_ptr_t, args, 2);
+            if (r < 0) {
+                ir_lower_report_error(ctx, expr, "فشل خفض نداء realloc.");
+                return ir_value_const_int(0, i8_ptr_t);
+            }
+            return ir_value_reg(r, i8_ptr_t);
+        }
+
+        if (strcmp(n, "نسخ_ذاكرة") == 0) {
+            if (!a0 || !a1 || !a2 || a2->next) {
+                ir_lower_report_error(ctx, expr, "استدعاء 'نسخ_ذاكرة' يتطلب ثلاثة وسائط.");
+                ir_lower_eval_call_args(ctx, expr->data.call.args);
+                return ir_value_const_int(0, i8_ptr_t);
+            }
+            IRValue* dv = lower_expr(ctx, a0);
+            IRValue* sv = lower_expr(ctx, a1);
+            IRValue* nv = lower_expr(ctx, a2);
+            IRValue* dst = cast_to(ctx, dv, i8_ptr_t);
+            IRValue* src = cast_to(ctx, sv, i8_ptr_t);
+            IRValue* n_i64 = ensure_i64(ctx, nv);
+            IRValue* args[3] = { dst, src, n_i64 };
+            ir_lower_set_loc(ctx->builder, expr);
+            int r = ir_builder_emit_call(ctx->builder, "memcpy", i8_ptr_t, args, 3);
+            if (r < 0) {
+                ir_lower_report_error(ctx, expr, "فشل خفض نداء memcpy.");
+                return ir_value_const_int(0, i8_ptr_t);
+            }
+            return ir_value_reg(r, i8_ptr_t);
+        }
+
+        if (strcmp(n, "تعيين_ذاكرة") == 0) {
+            if (!a0 || !a1 || !a2 || a2->next) {
+                ir_lower_report_error(ctx, expr, "استدعاء 'تعيين_ذاكرة' يتطلب ثلاثة وسائط.");
+                ir_lower_eval_call_args(ctx, expr->data.call.args);
+                return ir_value_const_int(0, i8_ptr_t);
+            }
+            IRValue* pv = lower_expr(ctx, a0);
+            IRValue* vv = lower_expr(ctx, a1);
+            IRValue* nv = lower_expr(ctx, a2);
+            IRValue* p_i8 = cast_to(ctx, pv, i8_ptr_t);
+            IRValue* v_i64 = ensure_i64(ctx, vv);
+            IRValue* n_i64 = ensure_i64(ctx, nv);
+            IRValue* args[3] = { p_i8, v_i64, n_i64 };
+            ir_lower_set_loc(ctx->builder, expr);
+            int r = ir_builder_emit_call(ctx->builder, "memset", i8_ptr_t, args, 3);
+            if (r < 0) {
+                ir_lower_report_error(ctx, expr, "فشل خفض نداء memset.");
+                return ir_value_const_int(0, i8_ptr_t);
+            }
+            return ir_value_reg(r, i8_ptr_t);
+        }
+    }
+
     // حاول العثور على توقيع الدالة داخل وحدة IR (مباشر)، أو تفسير الاسم كـ مؤشر دالة (غير مباشر).
     IRFunc* callee = NULL;
     IRValue* callee_val = NULL;
@@ -1704,6 +1828,87 @@ static IRValue* lower_lvalue_address(IRLowerCtx* ctx, Node* expr, IRType** out_p
         if (out_pointee_type) *out_pointee_type = ft;
         int fp = ir_builder_emit_cast(ctx->builder, byte_ptr, ir_type_ptr(ft));
         return ir_value_reg(fp, ir_type_ptr(ft));
+    }
+
+    if (expr->type == NODE_ARRAY_ACCESS) {
+        const char* name = expr->data.array_op.name;
+        int index_count = expr->data.array_op.index_count;
+        if (index_count <= 0) index_count = ir_lower_index_count(expr->data.array_op.indices);
+
+        IRLowerBinding* b = find_local(ctx, name);
+        if (b) {
+            const char* storage_name = ir_lower_binding_storage_name(b);
+
+            if (!b->is_array || !b->value_type || b->value_type->kind != IR_TYPE_ARRAY) {
+                ir_lower_report_error(ctx, expr, "'%s' ليس مصفوفة في مسار IR.", name ? name : "???");
+                for (Node* idx = expr->data.array_op.indices; idx; idx = idx->next) {
+                    (void)lower_expr(ctx, idx);
+                }
+                return ir_value_const_int(0, ir_type_ptr(IR_TYPE_I64_T));
+            }
+
+            bool elem_is_agg = (b->array_elem_type == TYPE_STRUCT || b->array_elem_type == TYPE_UNION);
+            IRType* elem_t = elem_is_agg
+                ? IR_TYPE_I8_T
+                : (b->value_type->data.array.element ? b->value_type->data.array.element : IR_TYPE_I64_T);
+            IRType* elem_ptr_t = ir_type_ptr(elem_t);
+
+            IRValue* base_ptr = NULL;
+            if (b->is_static_storage) {
+                base_ptr = ir_value_global(storage_name, elem_t);
+            } else {
+                IRValue* arr_ptr = ir_value_reg(b->ptr_reg, ir_type_ptr(b->value_type));
+                int base_reg = ir_builder_emit_cast(ctx->builder, arr_ptr, elem_ptr_t);
+                base_ptr = ir_value_reg(base_reg, elem_ptr_t);
+            }
+
+            IRValue* linear = ir_lower_build_linear_index(ctx, expr,
+                                                          expr->data.array_op.indices,
+                                                          index_count,
+                                                          b->array_dims,
+                                                          b->array_rank);
+            int ep = ir_builder_emit_ptr_offset(ctx->builder, elem_ptr_t, base_ptr, linear);
+            if (out_pointee_type) *out_pointee_type = elem_t;
+            return ir_value_reg(ep, elem_ptr_t);
+        }
+
+        IRGlobal* g = NULL;
+        if (ctx->builder && ctx->builder->module && name) {
+            g = ir_module_find_global(ctx->builder->module, name);
+        }
+        if (!g || !g->type || g->type->kind != IR_TYPE_ARRAY) {
+            ir_lower_report_error(ctx, expr, "'%s' ليس مصفوفة.", name ? name : "???");
+            for (Node* idx = expr->data.array_op.indices; idx; idx = idx->next) {
+                (void)lower_expr(ctx, idx);
+            }
+            return ir_value_const_int(0, ir_type_ptr(IR_TYPE_I64_T));
+        }
+
+        Node* gdecl = ir_lower_find_global_array_decl(ctx, name);
+        int rank = 1;
+        const int* dims = NULL;
+        DataType elem_dt = TYPE_INT;
+        if (gdecl && gdecl->type == NODE_ARRAY_DECL) {
+            rank = gdecl->data.array_decl.dim_count > 0 ? gdecl->data.array_decl.dim_count : 1;
+            dims = gdecl->data.array_decl.dims;
+            elem_dt = gdecl->data.array_decl.element_type;
+        }
+
+        bool elem_is_agg = (elem_dt == TYPE_STRUCT || elem_dt == TYPE_UNION);
+        IRType* elem_t = elem_is_agg
+            ? IR_TYPE_I8_T
+            : (g->type->data.array.element ? g->type->data.array.element : IR_TYPE_I64_T);
+        IRType* elem_ptr_t = ir_type_ptr(elem_t);
+        IRValue* base_ptr = ir_value_global(name, elem_t);
+
+        IRValue* linear = ir_lower_build_linear_index(ctx, expr,
+                                                      expr->data.array_op.indices,
+                                                      index_count,
+                                                      dims,
+                                                      rank);
+        int ep = ir_builder_emit_ptr_offset(ctx->builder, elem_ptr_t, base_ptr, linear);
+        if (out_pointee_type) *out_pointee_type = elem_t;
+        return ir_value_reg(ep, elem_ptr_t);
     }
 
     ir_lower_report_error(ctx, expr, "أخذ العنوان '&' لهذا التعبير غير مدعوم.");
@@ -2318,6 +2523,40 @@ IRValue* lower_expr(IRLowerCtx* ctx, Node* expr) {
             // ++ / -- in expression form will be addressed later (statement lowering / lvalues).
             ir_lower_report_error(ctx, expr, "عملية أحادية غير مدعومة (%d).", (int)op);
             return ir_builder_const_i64(0);
+        }
+
+        case NODE_POSTFIX_OP: {
+            UnaryOpType op = expr->data.unary_op.op;
+            if (op != UOP_INC && op != UOP_DEC) {
+                ir_lower_report_error(ctx, expr, "عملية لاحقة غير مدعومة (%d).", (int)op);
+                return ir_builder_const_i64(0);
+            }
+
+            IRType* pointee = IR_TYPE_I64_T;
+            IRValue* addr0 = lower_lvalue_address(ctx, expr->data.unary_op.operand, &pointee);
+            if (!pointee || pointee->kind == IR_TYPE_VOID) {
+                ir_lower_report_error(ctx, expr, "نوع العملية اللاحقة غير صالح.");
+                return ir_builder_const_i64(0);
+            }
+            if (pointee->kind == IR_TYPE_F64) {
+                ir_lower_report_error(ctx, expr, "الزيادة/النقصان للعشري غير مدعومة حالياً.");
+                return ir_builder_const_i64(0);
+            }
+
+            IRType* ptr_t = ir_type_ptr(pointee);
+            IRValue* addr = cast_to(ctx, addr0, ptr_t);
+
+            int old_r = ir_builder_emit_load(ctx->builder, pointee, addr);
+            IRValue* old_v = ir_value_reg(old_r, pointee);
+            IRValue* one = ir_value_const_int(1, pointee);
+
+            int new_r = -1;
+            if (op == UOP_INC) new_r = ir_builder_emit_add(ctx->builder, pointee, old_v, one);
+            else new_r = ir_builder_emit_sub(ctx->builder, pointee, old_v, one);
+
+            IRValue* new_v = ir_value_reg(new_r, pointee);
+            ir_builder_emit_store(ctx->builder, new_v, addr);
+            return old_v;
         }
 
         case NODE_CALL_EXPR:

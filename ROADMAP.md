@@ -1,7 +1,7 @@
 # Baa Roadmap (Updated)
 
 > Track the development progress of the Baa programming language.
-> **Current Status:** Phase 3.10.6 - Function Pointers (v0.3.10.6) ✅ COMPLETED (2026-02-28)
+> **Current Status:** Phase 3.11 - Dynamic Memory (v0.3.11.0) ✅ COMPLETED (2026-03-01)
 
 ---
 
@@ -1048,10 +1048,12 @@
 
 #### Implementation Tasks
 
-- [ ] **Runtime**: Link with C malloc/free or implement custom allocator.
-- [ ] **Built-in Functions**: Add `حجز_ذاكرة`, `تحرير_ذاكرة`, `إعادة_حجز`.
-- [ ] **Semantic**: Track allocated memory for warnings.
-- [ ] **Codegen**: Generate calls to allocation functions.
+- [x] **Runtime**: ربط مباشر مع libc (`malloc/free/realloc/memcpy/memset`).
+- [x] **Built-in Functions**: إضافة `حجز_ذاكرة`, `تحرير_ذاكرة`, `إعادة_حجز`, `نسخ_ذاكرة`, `تعيين_ذاكرة`.
+- [x] **Semantic**: دعم `عدم*` (void*) كـ مؤشّر عام (تحويلات ضمنية مع مؤشرات الكائنات).
+- [x] **Codegen**: خفض الدوال إلى استدعاءات C القياسية مع قواعد shadowing.
+
+✅ COMPLETED (2026-03-01)
 
 ---
 

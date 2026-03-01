@@ -1118,11 +1118,11 @@ The standard library provides C-like dynamic memory APIs for low-level programmi
 
 | Function | Signature | Description |
 |----------|-----------|-------------|
-| **Allocate** | `عدم* حجز_ذاكرة(صحيح حجم)` | Allocates `حجم` bytes. Returns `عدم` on failure. |
+| **Allocate** | `عدم* حجز_ذاكرة(صحيح عدد_بايتات)` | Allocates `عدد_بايتات` bytes. Returns `عدم` on failure. |
 | **Free** | `عدم تحرير_ذاكرة(عدم* مؤشر)` | Frees memory allocated by `حجز_ذاكرة` / `إعادة_حجز`. |
-| **Reallocate** | `عدم* إعادة_حجز(عدم* مؤشر، صحيح حجم)` | Resizes an allocation. Returns `عدم` on failure (original pointer remains valid). |
-| **Copy Memory** | `عدم* نسخ_ذاكرة(عدم* وجهة، عدم* مصدر، صحيح حجم)` | Copies `حجم` bytes and returns `وجهة` (like `memcpy`). |
-| **Set Memory** | `عدم* تعيين_ذاكرة(عدم* مؤشر، صحيح قيمة، صحيح حجم)` | Sets `حجم` bytes to `قيمة` (low 8 bits) and returns `مؤشر` (like `memset`). |
+| **Reallocate** | `عدم* إعادة_حجز(عدم* مؤشر، صحيح عدد_بايتات)` | Resizes an allocation. Returns `عدم` on failure (original pointer remains valid). |
+| **Copy Memory** | `عدم* نسخ_ذاكرة(عدم* وجهة، عدم* مصدر، صحيح عدد_بايتات)` | Copies `عدد_بايتات` bytes and returns `وجهة` (like `memcpy`). |
+| **Set Memory** | `عدم* تعيين_ذاكرة(عدم* مؤشر، صحيح قيمة، صحيح عدد_بايتات)` | Sets `عدد_بايتات` bytes to `قيمة` (low 8 bits) and returns `مؤشر` (like `memset`). |
 
 **void\* rule:** `عدم*` (void pointer) converts implicitly to/from any object pointer type (e.g. `صحيح*`), but `عدم**` is not a universal pointer.
 

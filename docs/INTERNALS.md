@@ -1310,6 +1310,7 @@ Currently lowered expressions:
 - `NODE_VAR_REF` (loads via `حمل`)
 - `NODE_BIN_OP` (arithmetic, comparisons, logical ops, pointer difference)
 - `NODE_UNARY_OP` (`سالب`, bitwise `نفي`, `!`, `UOP_ADDR` via pointers, `UOP_DEREF` via load)
+- `NODE_POSTFIX_OP` (`++`/`--` postfix via load + add/sub + store; expression result is the old value)
 - `NODE_SIZEOF` -> compile-time constant size
 - `NODE_CAST` -> `تحويل` (cast)
 - `NODE_CALL_EXPR` -> `نداء` (supports direct calls, and indirect calls via `IR_TYPE_FUNC` pointers)

@@ -227,6 +227,31 @@ static char* lex_join_paths(Lexer* l, const char* base, const char* leaf)
 }
 
 /**
+ * @brief استخراج مسار مجلد الملف الحالي (مع الفاصل الأخير).
+ */
+static char* lex_dirname_from_path(Lexer* l, const char* path)
+{
+    if (!l || !path || !path[0]) return NULL;
+
+    const char* sep_slash = strrchr(path, '/');
+    const char* sep_backslash = strrchr(path, '\\');
+    const char* sep = sep_slash;
+    if (!sep || (sep_backslash && sep_backslash > sep)) {
+        sep = sep_backslash;
+    }
+    if (!sep) return NULL;
+
+    size_t dir_len = (size_t)(sep - path) + 1u;
+    char* dir = (char*)malloc(dir_len + 1u);
+    if (!dir) {
+        lex_fatal(l, "خطأ قبلي: نفدت الذاكرة أثناء اشتقاق مجلد ملف التضمين.");
+    }
+    memcpy(dir, path, dir_len);
+    dir[dir_len] = '\0';
+    return dir;
+}
+
+/**
  * @brief محاولة قراءة ملف مرشح للتضمين.
  */
 static char* lex_try_read_include_candidate(Lexer* l, const char* candidate, char** out_resolved_path)
@@ -248,41 +273,79 @@ static char* lex_try_read_include_candidate(Lexer* l, const char* candidate, cha
  * @brief حل مسار #تضمين وقراءة الملف من أقرب مسار مدعوم.
  *
  * ترتيب البحث:
- * 1) كما كُتب في الكود.
- * 2) إن كان نسبياً: تحت BAA_HOME.
- * 3) إن كان اسماً مجرداً (بدون / أو \\): stdlib/ محلي، ثم BAA_STDLIB، ثم BAA_HOME/stdlib.
+ * 1) المسار النسبي من مجلد الملف الحالي (مثل C local include).
+ * 2) كما كُتب في الكود.
+ * 3) إن كان نسبياً: تحت BAA_HOME.
+ * 4) إن كان اسماً مجرداً (بدون / أو \\):
+ *    stdlib/ من مجلد الملف الحالي، ثم stdlib/ محلي، ثم BAA_STDLIB، ثم BAA_HOME/stdlib.
  */
 static char* lex_resolve_and_read_include(Lexer* l, const char* requested_path, char** out_resolved_path)
 {
     if (!l || !requested_path || !requested_path[0] || !out_resolved_path) return NULL;
     *out_resolved_path = NULL;
 
+    char* source_dir = lex_dirname_from_path(l, l->state.filename);
+    if (source_dir && !lex_path_is_absolute(requested_path)) {
+        char* source_rel_candidate = lex_join_paths(l, source_dir, requested_path);
+        char* source = lex_try_read_include_candidate(l, source_rel_candidate, out_resolved_path);
+        free(source_rel_candidate);
+        if (source) {
+            free(source_dir);
+            return source;
+        }
+    }
+
     char* source = lex_try_read_include_candidate(l, requested_path, out_resolved_path);
-    if (source) return source;
+    if (source) {
+        free(source_dir);
+        return source;
+    }
 
     const char* baa_home = getenv(LEX_ENV_BAA_HOME);
     if (!lex_path_is_absolute(requested_path) && baa_home && baa_home[0]) {
         char* home_candidate = lex_join_paths(l, baa_home, requested_path);
         source = lex_try_read_include_candidate(l, home_candidate, out_resolved_path);
         free(home_candidate);
-        if (source) return source;
+        if (source) {
+            free(source_dir);
+            return source;
+        }
     }
 
     if (lex_path_has_separator(requested_path)) {
+        free(source_dir);
         return NULL;
+    }
+
+    if (source_dir) {
+        char* source_stdlib = lex_join_paths(l, source_dir, LEX_STDLIB_DIR);
+        char* source_stdlib_candidate = lex_join_paths(l, source_stdlib, requested_path);
+        source = lex_try_read_include_candidate(l, source_stdlib_candidate, out_resolved_path);
+        free(source_stdlib_candidate);
+        free(source_stdlib);
+        if (source) {
+            free(source_dir);
+            return source;
+        }
     }
 
     char* cwd_stdlib = lex_join_paths(l, LEX_STDLIB_DIR, requested_path);
     source = lex_try_read_include_candidate(l, cwd_stdlib, out_resolved_path);
     free(cwd_stdlib);
-    if (source) return source;
+    if (source) {
+        free(source_dir);
+        return source;
+    }
 
     const char* baa_stdlib = getenv(LEX_ENV_BAA_STDLIB);
     if (baa_stdlib && baa_stdlib[0]) {
         char* stdlib_candidate = lex_join_paths(l, baa_stdlib, requested_path);
         source = lex_try_read_include_candidate(l, stdlib_candidate, out_resolved_path);
         free(stdlib_candidate);
-        if (source) return source;
+        if (source) {
+            free(source_dir);
+            return source;
+        }
     }
 
     if (baa_home && baa_home[0]) {
@@ -291,9 +354,13 @@ static char* lex_resolve_and_read_include(Lexer* l, const char* requested_path, 
         source = lex_try_read_include_candidate(l, home_stdlib_candidate, out_resolved_path);
         free(home_stdlib_candidate);
         free(home_stdlib);
-        if (source) return source;
+        if (source) {
+            free(source_dir);
+            return source;
+        }
     }
 
+    free(source_dir);
     return NULL;
 }
 
@@ -501,7 +568,8 @@ Token lexer_next_token(Lexer* l) {
                      if (!new_src || !resolved_include_path) {
                          lex_fatal(l,
                                    "خطأ قبلي: تعذر تضمين الملف '%s'. "
-                                   "المسارات المدعومة: المسار المباشر، stdlib/، BAA_STDLIB، BAA_HOME.",
+                                   "المسارات المدعومة: مسار الملف الحالي، المسار المباشر، "
+                                   "stdlib/، BAA_STDLIB، BAA_HOME.",
                                    path);
                      }
                       

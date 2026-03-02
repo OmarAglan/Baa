@@ -1,0 +1,10 @@
+// RUN: expect-pass runtime
+
+#تضمين "tests/fixtures/include_rel/outer.baahd"
+
+صحيح الرئيسية() {
+    إذا (قيمة_تضمين_نسبي() != ٤٢) {
+        إرجع ١.
+    }
+    إرجع ٠.
+}

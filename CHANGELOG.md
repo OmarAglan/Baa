@@ -29,7 +29,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - **Roadmap status**: marked v0.4.3 and v0.4.4 as completed and advanced current status to Phase 4.5 in progress.
 - **Preprocessor include resolution**:
   - `#تضمين "baalib.baahd"` is now supported directly (without requiring `stdlib/` prefix).
-  - Include search now checks: exact path, `BAA_HOME` (for relative paths), and for bare names `stdlib/`, `BAA_STDLIB`, `BAA_HOME/stdlib`.
+  - Include search now checks source-file-relative paths first, then exact path, then `BAA_HOME` (for relative paths), and for bare names also `<source_dir>/stdlib`, `stdlib/`, `BAA_STDLIB`, `BAA_HOME/stdlib`.
 
 ## [0.4.3.0] - 2026-03-02
 

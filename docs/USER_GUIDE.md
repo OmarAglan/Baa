@@ -361,7 +361,7 @@ Use header files for function prototypes and shared declarations.
 .\baa.exe main.baa math.baa -o myapp.exe
 ```
 
-> **Note:** `#تضمين` search order is: (1) exact path, (2) `{BAA_HOME}/<path>` for relative paths, and for bare names (e.g. `baalib.baahd`) it also tries `stdlib/`, `BAA_STDLIB`, then `{BAA_HOME}/stdlib`.
+> **Note:** `#تضمين` search order is: (1) current source-file directory, (2) exact path, (3) `{BAA_HOME}/<path>` for relative paths; and for bare names (e.g. `baalib.baahd`) it also tries `<source_dir>/stdlib/`, `stdlib/`, `BAA_STDLIB`, then `{BAA_HOME}/stdlib`.
 
 ### Compilation Workflow
 

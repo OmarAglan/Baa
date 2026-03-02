@@ -323,9 +323,10 @@ When `#تضمين "file"` is encountered:
 
 1. The filename is extracted from the quoted string.
 2. Include resolution tries, in order:
+   - source-file directory (`<source_dir>/<path>`),
    - exact path as written,
    - `{BAA_HOME}/<path>` (for relative paths),
-   - for bare names: `stdlib/<name>`, `{BAA_STDLIB}/<name>`, `{BAA_HOME}/stdlib/<name>`.
+   - for bare names: `<source_dir>/stdlib/<name>`, `stdlib/<name>`, `{BAA_STDLIB}/<name>`, `{BAA_HOME}/stdlib/<name>`.
 3. The selected file is read into memory.
 4. The current lexer state is pushed onto the include stack.
 5. The lexer state is updated to point to the new file's content.

@@ -159,6 +159,144 @@ static bool lex_utf8_validate_at(const char* s, int* out_len)
 // قراءة ملف (من main.c، يجب أن تكون متاحة للجميع الآن)
 char* read_file(const char* path);
 
+#define LEX_STDLIB_DIR "stdlib"
+#define LEX_ENV_BAA_STDLIB "BAA_STDLIB"
+#define LEX_ENV_BAA_HOME "BAA_HOME"
+
+/**
+ * @brief هل المسار يحتوي فواصل مجلدات؟
+ */
+static bool lex_path_has_separator(const char* path)
+{
+    if (!path) return false;
+    for (size_t i = 0; path[i] != '\0'; ++i) {
+        if (path[i] == '/' || path[i] == '\\') return true;
+    }
+    return false;
+}
+
+/**
+ * @brief هل المسار مطلق (Windows/Linux)؟
+ */
+static bool lex_path_is_absolute(const char* path)
+{
+    if (!path || !path[0]) return false;
+    if (path[0] == '/' || path[0] == '\\') return true;
+    if (isalpha((unsigned char)path[0]) && path[1] == ':') return true;
+    return false;
+}
+
+/**
+ * @brief نسخ نص على heap مع إنهاء NUL.
+ */
+static char* lex_strdup_heap(Lexer* l, const char* text)
+{
+    if (!l || !text) return NULL;
+    size_t n = strlen(text);
+    char* out = (char*)malloc(n + 1);
+    if (!out) {
+        lex_fatal(l, "خطأ قبلي: نفدت الذاكرة أثناء نسخ مسار التضمين.");
+    }
+    if (n) memcpy(out, text, n);
+    out[n] = '\0';
+    return out;
+}
+
+/**
+ * @brief دمج مسارين مع فاصل مناسب.
+ */
+static char* lex_join_paths(Lexer* l, const char* base, const char* leaf)
+{
+    if (!l || !base || !leaf || !base[0] || !leaf[0]) return NULL;
+    size_t base_len = strlen(base);
+    size_t leaf_len = strlen(leaf);
+    bool need_sep = (base[base_len - 1] != '/' && base[base_len - 1] != '\\');
+    size_t total = base_len + (need_sep ? 1u : 0u) + leaf_len + 1u;
+
+    char* out = (char*)malloc(total);
+    if (!out) {
+        lex_fatal(l, "خطأ قبلي: نفدت الذاكرة أثناء تركيب مسار التضمين.");
+    }
+
+    memcpy(out, base, base_len);
+    size_t pos = base_len;
+    if (need_sep) out[pos++] = '/';
+    memcpy(out + pos, leaf, leaf_len);
+    out[pos + leaf_len] = '\0';
+    return out;
+}
+
+/**
+ * @brief محاولة قراءة ملف مرشح للتضمين.
+ */
+static char* lex_try_read_include_candidate(Lexer* l, const char* candidate, char** out_resolved_path)
+{
+    if (!l || !candidate || !candidate[0] || !out_resolved_path) return NULL;
+
+    FILE* probe = fopen(candidate, "rb");
+    if (!probe) return NULL;
+    fclose(probe);
+
+    char* source = read_file(candidate);
+    if (!source) return NULL;
+
+    *out_resolved_path = lex_strdup_heap(l, candidate);
+    return source;
+}
+
+/**
+ * @brief حل مسار #تضمين وقراءة الملف من أقرب مسار مدعوم.
+ *
+ * ترتيب البحث:
+ * 1) كما كُتب في الكود.
+ * 2) إن كان نسبياً: تحت BAA_HOME.
+ * 3) إن كان اسماً مجرداً (بدون / أو \\): stdlib/ محلي، ثم BAA_STDLIB، ثم BAA_HOME/stdlib.
+ */
+static char* lex_resolve_and_read_include(Lexer* l, const char* requested_path, char** out_resolved_path)
+{
+    if (!l || !requested_path || !requested_path[0] || !out_resolved_path) return NULL;
+    *out_resolved_path = NULL;
+
+    char* source = lex_try_read_include_candidate(l, requested_path, out_resolved_path);
+    if (source) return source;
+
+    const char* baa_home = getenv(LEX_ENV_BAA_HOME);
+    if (!lex_path_is_absolute(requested_path) && baa_home && baa_home[0]) {
+        char* home_candidate = lex_join_paths(l, baa_home, requested_path);
+        source = lex_try_read_include_candidate(l, home_candidate, out_resolved_path);
+        free(home_candidate);
+        if (source) return source;
+    }
+
+    if (lex_path_has_separator(requested_path)) {
+        return NULL;
+    }
+
+    char* cwd_stdlib = lex_join_paths(l, LEX_STDLIB_DIR, requested_path);
+    source = lex_try_read_include_candidate(l, cwd_stdlib, out_resolved_path);
+    free(cwd_stdlib);
+    if (source) return source;
+
+    const char* baa_stdlib = getenv(LEX_ENV_BAA_STDLIB);
+    if (baa_stdlib && baa_stdlib[0]) {
+        char* stdlib_candidate = lex_join_paths(l, baa_stdlib, requested_path);
+        source = lex_try_read_include_candidate(l, stdlib_candidate, out_resolved_path);
+        free(stdlib_candidate);
+        if (source) return source;
+    }
+
+    if (baa_home && baa_home[0]) {
+        char* home_stdlib = lex_join_paths(l, baa_home, LEX_STDLIB_DIR);
+        char* home_stdlib_candidate = lex_join_paths(l, home_stdlib, requested_path);
+        source = lex_try_read_include_candidate(l, home_stdlib_candidate, out_resolved_path);
+        free(home_stdlib_candidate);
+        free(home_stdlib);
+        if (source) return source;
+    }
+
+    return NULL;
+}
+
 static void lex_skip_utf8_bom(LexerState* state)
 {
     if (!state || !state->cur_char) return;
@@ -358,28 +496,30 @@ Token lexer_next_token(Lexer* l) {
                      path[path_len] = '\0';
                      advance_pos(l); // skip "
 
-                     char* new_src = read_file(path);
-                     if (!new_src) {
-                         lex_fatal(l, "خطأ قبلي: تعذر تضمين الملف '%s'.", path);
+                     char* resolved_include_path = NULL;
+                     char* new_src = lex_resolve_and_read_include(l, path, &resolved_include_path);
+                     if (!new_src || !resolved_include_path) {
+                         lex_fatal(l,
+                                   "خطأ قبلي: تعذر تضمين الملف '%s'. "
+                                   "المسارات المدعومة: المسار المباشر، stdlib/، BAA_STDLIB، BAA_HOME.",
+                                   path);
                      }
-                     
-                     if (l->stack_depth >= 10) {
-                         lex_fatal(l, "خطأ قبلي: تم تجاوز عمق التضمين الأقصى (10).");
+                      
+                     size_t max_include_depth = sizeof(l->stack) / sizeof(l->stack[0]);
+                     if ((size_t)l->stack_depth >= max_include_depth) {
+                         free(new_src);
+                         free(resolved_include_path);
+                         lex_fatal(l, "خطأ قبلي: تم تجاوز عمق التضمين الأقصى (%zu).", max_include_depth);
                      }
                      l->stack[l->stack_depth++] = l->state;
-                     
+                      
                      l->state.source = new_src;
                      l->state.cur_char = new_src;
-                     l->state.filename = strdup(path);
-                     if (!l->state.filename) {
-                         free(directive);
-                         free(path);
-                         lex_fatal(l, "خطأ قبلي: نفدت الذاكرة أثناء حفظ اسم ملف التضمين.");
-                     }
+                     l->state.filename = resolved_include_path;
                      l->state.line = 1;
                      l->state.col = 1;
                      lex_skip_utf8_bom(&l->state);
-                     error_register_source(l->state.filename, new_src);
+                      error_register_source(l->state.filename, new_src);
                      
                      free(directive);
                      free(path);

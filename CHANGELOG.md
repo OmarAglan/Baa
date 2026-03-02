@@ -19,11 +19,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
   - `examples/math_and_format.baa`
   - `examples/error_handling_demo.baa`
   - `examples/file_copy_small.baa`
+- **Installer payload updates**:
+  - Windows installer now bundles `stdlib/` with the compiler package.
+  - Installer now sets `BAA_HOME` and `BAA_STDLIB` environment variables.
 
 ### Changed
 
 - **Documentation synchronization**: updated core references (`README.md`, `docs/LANGUAGE.md`, `docs/INTERNALS.md`, `docs/API_REFERENCE.md`, `docs/BAA_IR_SPECIFICATION.md`) to reflect v0.4.3/v0.4.4 behavior and versioning.
 - **Roadmap status**: marked v0.4.3 and v0.4.4 as completed and advanced current status to Phase 4.5 in progress.
+- **Preprocessor include resolution**:
+  - `#تضمين "baalib.baahd"` is now supported directly (without requiring `stdlib/` prefix).
+  - Include search now checks: exact path, `BAA_HOME` (for relative paths), and for bare names `stdlib/`, `BAA_STDLIB`, `BAA_HOME/stdlib`.
 
 ## [0.4.3.0] - 2026-03-02
 

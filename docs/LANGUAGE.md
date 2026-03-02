@@ -54,6 +54,12 @@ Include other files (headers) into the current file. This works like C's `#inclu
 
 **Syntax:** `#تضمين "file.baahd"`
 
+**Include search order:**
+
+1. The exact path as written.
+2. If relative and `BAA_HOME` is set: `{BAA_HOME}/<path>`.
+3. For bare names (e.g., `baalib.baahd`): `stdlib/<name>`, then `{BAA_STDLIB}/<name>`, then `{BAA_HOME}/stdlib/<name>`.
+
 **Example:**
 
 ```baa
@@ -1266,7 +1272,7 @@ From highest to lowest:
 
 Baa includes a minimal standard library. To use it, you must include its header file.
 
-**Syntax:** `#تضمين "stdlib/baalib.baahd"`
+**Syntax:** `#تضمين "baalib.baahd"` (also supported: `#تضمين "stdlib/baalib.baahd"`)
 
 ### 9.1. String Operations (`نص`)
 

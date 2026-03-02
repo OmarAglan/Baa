@@ -19,11 +19,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
   - `tests/integration/backend/backend_include_i_precedence_test.baa`
   - `tests/integration/backend/backend_include_i_path_with_spaces_test.baa`
   - `tests/integration/backend/backend_include_i_nested_source_relative_priority_test.baa`
+- **Installer UX and integration upgrades**:
+  - multi-language setup UI (English + Arabic),
+  - optional install tasks (`PATH`, `BAA_HOME`, `BAA_STDLIB`, desktop icon, file associations),
+  - bundled examples/roadmap in installer payload.
 
 ### Changed
 
 - **Version synchronization**: unified current project metadata/version headers to `0.4.4.1` across compiler macro, resource metadata, installer metadata, CMake project version, and docs headers.
 - **Include resolution order** now explicitly applies: source-file directory → direct path → `BAA_HOME` (relative) → user `-I` paths → bare-name fallbacks (`<source_dir>/stdlib`, `stdlib`, `BAA_STDLIB`, `BAA_HOME/stdlib`).
+- **Installer reliability**: path/environment updates now use normalized de-dup logic, broadcast `WM_SETTINGCHANGE`, and remove added entries during uninstall.
 
 ## [0.4.4.0] - 2026-03-02
 

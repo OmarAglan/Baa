@@ -39,7 +39,11 @@ The easiest way to install Baa on Windows is using the installer which includes 
 3. The installer will automatically:
    - Install `baa.exe` to the selected directory
    - Set up the bundled MinGW-w64 GCC toolchain
-   - Optionally add Baa to your system PATH
+   - Install stdlib + examples + docs
+   - Offer optional integration tasks:
+     - add `baa` and bundled GCC to `PATH`
+     - set `BAA_HOME` and `BAA_STDLIB`
+     - associate `.baa/.baahd` files
 
 After installation, open a new terminal and verify:
 

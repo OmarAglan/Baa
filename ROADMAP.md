@@ -1,7 +1,7 @@
 # Baa Roadmap (Updated)
 
 > Track the development progress of the Baa programming language.
-> **Current Status:** Phase 4.1 - Standard Library (v0.4.1) ✅ COMPLETED (2026-03-02)
+> **Current Status:** Phase 4.2 - Floating Point Extensions (v0.4.2) ✅ COMPLETED (2026-03-02)
 
 ---
 
@@ -1300,64 +1300,134 @@
 - [ ] **Example Programs** — Comprehensive example collection.
 - [ ] **Performance Optimization** — Profile and optimize compiler.
 
+## 🧱 Phase 4.5: Bootstrap Readiness (v0.5.x)
+
+*Goal: Prepare the codebase, toolchain, and language contracts for a low-risk self-hosting transition.*
+
+### v0.5.0: File & Component Organization 🗂️
+
+- [ ] **Define canonical component boundaries** — Frontend / Middle-End / Backend / Driver / Support.
+- [ ] **Set module-size policy** — target `<= 700` lines/file, hard cap `1000` lines for hand-written C modules.
+- [ ] **Split oversized modules first** — current hotspots: `ir_lower.c`, `analysis.c`, `parser.c`, `isel.c`, `emit.c`, `ir.c`, `ir_text.c`, `regalloc.c`, `ir_verify_ir.c`.
+- [ ] **Restructure source layout safely** — organize files by component with compatibility shims as needed.
+- [ ] **Add local module facades** — internal headers per component to reduce cross-module leakage.
+- [ ] **Update build graph** — keep `CMakeLists.txt` deterministic after moves/renames.
+- [ ] **Add size-regression guard** — CI check to block new oversized source files.
+- [ ] **Document ownership map** — module responsibilities + dependency rules.
+
+### v0.5.1: Language + ABI Freeze 🔒
+
+- [ ] **Freeze grammar surface** — avoid syntax churn before bootstrap.
+- [ ] **Freeze stdlib signatures** — lock callable contracts used by compiler-in-Baa.
+- [ ] **Freeze target ABI contracts** — Windows x64 + SystemV AMD64 invariants.
+- [ ] **Freeze IR invariants** — verifier-enforced guarantees documented.
+
+### v0.5.2: Module & Multi-File Hardening 📦
+
+- [ ] **Deterministic include/import resolution** — stable behavior across hosts.
+- [ ] **Cycle diagnostics** — clear Arabic diagnostics for dependency loops.
+- [ ] **Symbol visibility rules** — explicit cross-file linkage behavior.
+- [ ] **Header/API hygiene** — minimize implicit coupling.
+
+### v0.5.3: Build System Maturity ⚙️
+
+- [ ] **Incremental compilation model** — avoid full rebuilds on small edits.
+- [ ] **Dependency tracking** — reliable invalidation for headers/includes.
+- [ ] **Reproducible outputs** — stable artifacts for same inputs/toolchain.
+- [ ] **Build profile presets** — dev/debug/release/verify presets.
+
+### v0.5.4: Diagnostics & Recovery Quality 🩺
+
+- [ ] **Improve span accuracy** — tighter line/column ranges.
+- [ ] **Add actionable fix hints** — Arabic-first suggestions for common errors.
+- [ ] **Strengthen panic recovery** — fewer cascading diagnostics.
+- [ ] **Negative test expansion** — enforce diagnostic contracts.
+
+### v0.5.5: Runtime Safety Layer 🛡️
+
+- [ ] **Assertion runtime contract** — stable behavior in debug/release modes.
+- [ ] **Panic/error-code policy** — consistent fatal/non-fatal paths.
+- [ ] **Safety toggles** — explicit compile-time/runtime control flags.
+- [ ] **Document failure semantics** — deterministic exit/status behavior.
+
+### v0.5.6: Determinism & QA Gates ✅
+
+- [ ] **Cross-target parity suite** — Linux/Windows behavior consistency.
+- [ ] **Fuzz + stress expansion** — parser/semantic/IR robustness.
+- [ ] **IR/SSA regression locking** — snapshots + verifier gating.
+- [ ] **Release gate checklist** — mandatory pass criteria before Phase 5.
+
+### v0.5.7: Bootstrap Subset (Baa0) Definition 📐
+
+- [ ] **Define minimal subset** — features required to implement compiler slices in Baa.
+- [ ] **Ban unstable features in Baa0** — keep bootstrap surface conservative.
+- [ ] **Publish Baa0 compliance suite** — tests for subset guarantees.
+- [ ] **Document migration plan** — C modules to Baa equivalents by priority.
+
+### v0.5.8: Self-Hosting Pilot (Last Step Before Phase 5) 🧪
+
+- [ ] **Rewrite one compiler slice in Baa** — start with `lexer` (or smallest high-value slice).
+- [ ] **Mixed pipeline build** — C host compiler + Baa pilot module in one build.
+- [ ] **Behavioral equivalence checks** — output parity vs C implementation.
+- [ ] **Go/No-Go report for Phase 5** — readiness decision based on objective gates.
+
 ---
 
 ## 🚀 Phase 5: Self-Hosting (v1.0.0)
 
 *Goal: The ultimate proof of capability — Baa compiling itself.*
 
-### v0.9.0: Bootstrap Preparation 🔧
+### v0.9.0: Bootstrap Execution Baseline 🔧
 
-#### v0.9.0.1: Freeze C Compiler
+#### v0.9.0.1: Consume Phase 4.5 Artifacts
 
-- [ ] **Tag final C version** — `git tag v0.9-bootstrap-c`
-- [ ] **Document exact build steps** — GCC version, flags, environment.
-- [ ] **Archive C compiler binary** — Store `baa.exe` built from C.
-- [ ] **Create bootstrap documentation** — How to rebuild from scratch.
+- [ ] **Use frozen contracts from v0.5** — language/ABI/IR/Baa0 are inputs, not redefined in v0.9.
+- [ ] **Pin Stage-0 toolchain manifest** — inherit deterministic build inputs from v0.5 gates.
+- [ ] **Create bootstrap snapshot tag** — lock the handoff commit before Baa rewrites.
 
-#### v0.9.0.2: Self-Hosting Requirements Check
+#### v0.9.0.2: Mixed C+Baa Harness
 
-- [ ] **Feature audit** — Verify all compiler-needed features exist.
-- [ ] **Test complex programs** — Compile programs similar to compiler size.
-- [ ] **Memory stress test** — Handle large source files.
-- [ ] **Error recovery test** — Compiler handles malformed input gracefully.
+- [ ] **Enable mixed-unit builds** — compile/link `.c` and `.baa` compiler units together.
+- [ ] **Define bridge boundaries** — stable ABI/data-layout interfaces between C and Baa modules.
+- [ ] **Add parity harness** — module-level equivalence checks (tokens/AST/IR/asm as applicable).
 
 ### v0.9.1: Rewrite Lexer 📝
 
-- [ ] **Port `lexer.c` → `lexer.baa`** — Token generation in Baa.
-- [ ] **Compile with C-Baa** — Use C compiler to build.
-- [ ] **Test lexer output** — Compare tokens with C version.
-- [ ] **Fix any language gaps** — Add missing features discovered.
+- [ ] **Port lexer slice to Baa** — use split layout from v0.5 component organization.
+- [ ] **Build through mixed harness** — keep remaining compiler units in C.
+- [ ] **Token-stream parity tests** — compare lexer output against C baseline.
+- [ ] **No feature expansion in v0.9** — only correctness/portability fixes permitted.
 
 ### v0.9.2: Rewrite Parser 🌳
 
-- [ ] **Port `parser.c` → `parser.baa`** — AST construction in Baa.
-- [ ] **Compile with C-Baa** — Build using C compiler.
-- [ ] **Test AST output** — Compare trees with C version.
-- [ ] **Handle recursion depth** — Ensure stack is sufficient.
+- [ ] **Port parser slice to Baa** — AST construction with existing grammar contracts.
+- [ ] **Build through mixed harness** — C/Baa hybrid remains supported.
+- [ ] **AST + diagnostics parity tests** — match C baseline trees and key error anchors.
+- [ ] **Recursion/stack validation** — ensure depth safety on both targets.
 
 ### v0.9.3: Rewrite Semantic Analysis 🔍
 
-- [ ] **Port `analysis.c` → `analysis.baa`** — Type checking in Baa.
-- [ ] **Symbol table in Baa** — Rewrite symbol management.
-- [ ] **Test type errors** — Verify same errors as C version.
+- [ ] **Port semantic slice to Baa** — preserve existing type/ABI rules.
+- [ ] **Port symbol/scope tables** — with ownership semantics equivalent to C version.
+- [ ] **Negative-suite parity** — verify same diagnostics and failure points.
 
 ### v0.9.4: Rewrite IR 🔄
 
-- [ ] **Port `ir.c` → `ir.baa`** — IR generation in Baa.
-- [ ] **Port `ir_lower.c` → `ir_lower.baa`** — Lowering in Baa.
-- [ ] **Test IR output** — Compare with C version.
+- [ ] **Port IR core + lowering slices to Baa** — aligned with v0.5 split modules.
+- [ ] **IR verifier parity** — preserve well-formedness and SSA contracts.
+- [ ] **IR text parity tests** — compare canonical IR output vs C baseline.
 
 ### v0.9.5: Rewrite Code Generator ⚙️
 
-- [ ] **Handle all targets** — Windows x64, Linux x64.
-- [ ] **Test generated assembly** — Compare with C version.
+- [ ] **Port backend slices to Baa** — ISel/RegAlloc/Emit with unchanged ABI behavior.
+- [ ] **Target parity** — Windows x64 and Linux x64 assembly equivalence gates.
+- [ ] **Runtime parity** — integration tests must match C compiler behavior.
 
 ### v0.9.6: Rewrite Driver 🚗
 
-- [ ] **Port `main.c` → `main.baa`** — CLI and orchestration in Baa.
-- [ ] **Port `error.c` → `error.baa`** — Diagnostics in Baa.
-- [ ] **Full compiler in Baa** — All components ported.
+- [ ] **Port driver/diagnostics slices to Baa** — CLI orchestration + error reporting.
+- [ ] **Retire mixed mode** — switch default build to full-Baa compiler pipeline.
+- [ ] **Full compiler in Baa** — all core components ported and wired.
 
 ### v1.0.0: First Self-Compile 🏆
 

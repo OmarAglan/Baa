@@ -1,0 +1,11 @@
+// RUN: expect-pass runtime
+// FLAGS: -I tests/fixtures/include_i/prio_first -I tests/fixtures/include_i/prio_second
+
+#تضمين "prio_header.baahd"
+
+صحيح الرئيسية() {
+    إذا (قيمة_أفضلية_i() != ١٠١) {
+        إرجع ١.
+    }
+    إرجع ٠.
+}

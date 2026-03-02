@@ -187,6 +187,7 @@ baa [options] <source.baa> [-o <output>]
 | `<input.baa>` | Source file(s) to compile. | `.\baa.exe main.baa lib.baa` |
 | `update` | **Self Update.** Windows-only currently. | `.\baa.exe update` |
 | `-o <file>` | Specify the output filename (e.g., `myapp.exe`, `mylib.o`, `output.s`). | `.\baa.exe main.baa -o myapp.exe` |
+| `-I <dir>` / `-I<dir>` | Add include search directory for `#تضمين` (can be repeated; order preserved). | `.\baa.exe -I include -I third_party\hdr main.baa` |
 | `-S`, `-s` | **Compile only to Assembly.** Produces `.s` file, does not invoke assembler/linker. | `.\baa.exe -S main.baa` (creates `main.s`) |
 | `-c` | **Compile and Assemble.** Produces object file (`.o`), does not link. | `.\baa.exe -c main.baa` (creates `main.o`) |
 | `-v` | Enable verbose output (shows all compilation steps with timing). | `.\baa.exe -v main.baa` |
@@ -361,7 +362,7 @@ Use header files for function prototypes and shared declarations.
 .\baa.exe main.baa math.baa -o myapp.exe
 ```
 
-> **Note:** `#تضمين` search order is: (1) current source-file directory, (2) exact path, (3) `{BAA_HOME}/<path>` for relative paths; and for bare names (e.g. `baalib.baahd`) it also tries `<source_dir>/stdlib/`, `stdlib/`, `BAA_STDLIB`, then `{BAA_HOME}/stdlib`.
+> **Note:** `#تضمين` search order is: (1) current source-file directory, (2) exact path, (3) `{BAA_HOME}/<path>` for relative paths, (4) CLI `-I` paths in order; and for bare names (e.g. `baalib.baahd`) it also tries `<source_dir>/stdlib/`, `stdlib/`, `BAA_STDLIB`, then `{BAA_HOME}/stdlib`.
 
 ### Compilation Workflow
 

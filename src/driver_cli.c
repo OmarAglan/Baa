@@ -113,6 +113,8 @@ void driver_print_help(void)
     printf("Usage: baa [options] <files>...\n");
     printf("\nOptions:\n");
     printf("  -o <file>    Specify output filename\n");
+    printf("  -I <dir>     Add include search directory (can be repeated)\n");
+    printf("  -I<dir>      Add include search directory (compact form)\n");
     printf("  -S, -s       Compile to assembly only (.s)\n");
     printf("  -c           Compile to object file only (.o)\n");
     printf("  -v           Enable verbose output with timing\n");
@@ -171,8 +173,11 @@ void driver_parse_result_free(DriverParseResult *r)
 {
     if (!r) return;
     free(r->input_files);
+    free((void *)r->include_dirs);
     r->input_files = NULL;
     r->input_count = 0;
+    r->include_dirs = NULL;
+    r->include_dir_count = 0;
     r->cmd = DRIVER_CMD_COMPILE;
 }
 
@@ -196,8 +201,16 @@ bool driver_parse_cli(int argc, char **argv, CompilerConfig *config, DriverParse
         fprintf(stderr, "خطأ: نفدت الذاكرة.\n");
         return false;
     }
+    const char **include_dirs = (const char **)calloc((size_t)argc, sizeof(const char *));
+    if (!include_dirs)
+    {
+        fprintf(stderr, "خطأ: نفدت الذاكرة.\n");
+        free(inputs);
+        return false;
+    }
 
     int input_count = 0;
+    size_t include_dir_count = 0;
 
     for (int i = 1; i < argc; i++)
     {
@@ -245,6 +258,7 @@ bool driver_parse_cli(int argc, char **argv, CompilerConfig *config, DriverParse
                 {
                     fprintf(stderr, "Error: Unknown target '%s'\n", t);
                     free(inputs);
+                    free((void *)include_dirs);
                     return false;
                 }
                 config->target = parsed;
@@ -277,6 +291,7 @@ bool driver_parse_cli(int argc, char **argv, CompilerConfig *config, DriverParse
                             "Error: Unsupported code model '%s' (only small is supported)\n",
                             m);
                     free(inputs);
+                    free((void *)include_dirs);
                     return false;
                 }
             }
@@ -296,14 +311,42 @@ bool driver_parse_cli(int argc, char **argv, CompilerConfig *config, DriverParse
                 {
                     fprintf(stderr, "Error: -o requires a filename\n");
                     free(inputs);
+                    free((void *)include_dirs);
                     return false;
                 }
+            }
+            else if (strcmp(arg, "-I") == 0)
+            {
+                if (i + 1 >= argc || !argv[i + 1] || argv[i + 1][0] == '\0')
+                {
+                    fprintf(stderr, "Error: -I requires a directory path\n");
+                    free(inputs);
+                    free((void *)include_dirs);
+                    return false;
+                }
+                include_dirs[include_dir_count++] = argv[++i];
+            }
+            else if (strncmp(arg, "-I", 2) == 0)
+            {
+                const char *dir = arg + 2;
+                if (!dir[0])
+                {
+                    fprintf(stderr, "Error: -I requires a directory path\n");
+                    free(inputs);
+                    free((void *)include_dirs);
+                    return false;
+                }
+                include_dirs[include_dir_count++] = dir;
             }
             else if (strcmp(arg, "--help") == 0 || strcmp(arg, "-h") == 0)
             {
                 out->cmd = DRIVER_CMD_HELP;
                 out->input_files = inputs;
                 out->input_count = input_count;
+                out->include_dirs = include_dirs;
+                out->include_dir_count = include_dir_count;
+                config->include_dirs = include_dirs;
+                config->include_dir_count = include_dir_count;
                 return true;
             }
             else if (strcmp(arg, "--version") == 0)
@@ -311,6 +354,10 @@ bool driver_parse_cli(int argc, char **argv, CompilerConfig *config, DriverParse
                 out->cmd = DRIVER_CMD_VERSION;
                 out->input_files = inputs;
                 out->input_count = input_count;
+                out->include_dirs = include_dirs;
+                out->include_dir_count = include_dir_count;
+                config->include_dirs = include_dirs;
+                config->include_dir_count = include_dir_count;
                 return true;
             }
             else if (strncmp(arg, "-W", 2) == 0)
@@ -319,6 +366,7 @@ bool driver_parse_cli(int argc, char **argv, CompilerConfig *config, DriverParse
                 {
                     fprintf(stderr, "Error: Unknown warning flag '%s'\n", arg);
                     free(inputs);
+                    free((void *)include_dirs);
                     return false;
                 }
             }
@@ -326,6 +374,7 @@ bool driver_parse_cli(int argc, char **argv, CompilerConfig *config, DriverParse
             {
                 fprintf(stderr, "Error: Unknown flag '%s'\n", arg);
                 free(inputs);
+                free((void *)include_dirs);
                 return false;
             }
         }
@@ -338,5 +387,9 @@ bool driver_parse_cli(int argc, char **argv, CompilerConfig *config, DriverParse
     out->cmd = DRIVER_CMD_COMPILE;
     out->input_files = inputs;
     out->input_count = input_count;
+    out->include_dirs = include_dirs;
+    out->include_dir_count = include_dir_count;
+    config->include_dirs = include_dirs;
+    config->include_dir_count = include_dir_count;
     return true;
 }

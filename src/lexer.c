@@ -276,7 +276,8 @@ static char* lex_try_read_include_candidate(Lexer* l, const char* candidate, cha
  * 1) المسار النسبي من مجلد الملف الحالي (مثل C local include).
  * 2) كما كُتب في الكود.
  * 3) إن كان نسبياً: تحت BAA_HOME.
- * 4) إن كان اسماً مجرداً (بدون / أو \\):
+ * 4) مسارات -I من سطر الأوامر بالترتيب.
+ * 5) إن كان اسماً مجرداً (بدون / أو \\):
  *    stdlib/ من مجلد الملف الحالي، ثم stdlib/ محلي، ثم BAA_STDLIB، ثم BAA_HOME/stdlib.
  */
 static char* lex_resolve_and_read_include(Lexer* l, const char* requested_path, char** out_resolved_path)
@@ -309,6 +310,20 @@ static char* lex_resolve_and_read_include(Lexer* l, const char* requested_path, 
         if (source) {
             free(source_dir);
             return source;
+        }
+    }
+
+    if (!lex_path_is_absolute(requested_path) && l->include_dirs && l->include_dir_count > 0) {
+        for (size_t i = 0; i < l->include_dir_count; ++i) {
+            const char* include_dir = l->include_dirs[i];
+            if (!include_dir || !include_dir[0]) continue;
+            char* include_candidate = lex_join_paths(l, include_dir, requested_path);
+            source = lex_try_read_include_candidate(l, include_candidate, out_resolved_path);
+            free(include_candidate);
+            if (source) {
+                free(source_dir);
+                return source;
+            }
         }
     }
 
@@ -379,11 +394,17 @@ static void lex_skip_utf8_bom(LexerState* state)
 /**
  * @brief تهيئة المحلل اللفظي بنص المصدر وتخطي الـ BOM إذا وجد.
  */
-void lexer_init(Lexer* l, char* src, const char* filename) {
+void lexer_init(Lexer* l,
+                char* src,
+                const char* filename,
+                const char* const* include_dirs,
+                size_t include_dir_count) {
     l->stack_depth = 0;
     l->macro_count = 0;
     l->skipping = false;
     l->if_depth = 0;
+    l->include_dirs = include_dirs;
+    l->include_dir_count = include_dir_count;
     
     // تهيئة الحالة الحالية
     l->state.source = src;
@@ -569,7 +590,7 @@ Token lexer_next_token(Lexer* l) {
                          lex_fatal(l,
                                    "خطأ قبلي: تعذر تضمين الملف '%s'. "
                                    "المسارات المدعومة: مسار الملف الحالي، المسار المباشر، "
-                                   "stdlib/، BAA_STDLIB، BAA_HOME.",
+                                   "BAA_HOME، مسارات -I، stdlib/، BAA_STDLIB.",
                                    path);
                      }
                       

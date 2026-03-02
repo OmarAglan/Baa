@@ -22,6 +22,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - **Installer payload updates**:
   - Windows installer now bundles `stdlib/` with the compiler package.
   - Installer now sets `BAA_HOME` and `BAA_STDLIB` environment variables.
+- **CLI include path support**:
+  - Added `-I <dir>` and `-I<dir>` forms for header/include resolution.
+  - Multiple `-I` flags are supported with stable left-to-right precedence.
+- **New integration tests for include path resolution**:
+  - `tests/integration/backend/backend_include_i_space_form_test.baa`
+  - `tests/integration/backend/backend_include_i_compact_form_test.baa`
+  - `tests/integration/backend/backend_include_i_precedence_test.baa`
+  - `tests/integration/backend/backend_include_i_path_with_spaces_test.baa`
+  - `tests/integration/backend/backend_include_i_nested_source_relative_priority_test.baa`
 
 ### Changed
 
@@ -29,7 +38,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - **Roadmap status**: marked v0.4.3 and v0.4.4 as completed and advanced current status to Phase 4.5 in progress.
 - **Preprocessor include resolution**:
   - `#تضمين "baalib.baahd"` is now supported directly (without requiring `stdlib/` prefix).
-  - Include search now checks source-file-relative paths first, then exact path, then `BAA_HOME` (for relative paths), and for bare names also `<source_dir>/stdlib`, `stdlib/`, `BAA_STDLIB`, `BAA_HOME/stdlib`.
+  - Include search now checks source-file-relative paths first, then exact path, then `BAA_HOME` (for relative paths), then CLI `-I` paths, and for bare names also `<source_dir>/stdlib`, `stdlib/`, `BAA_STDLIB`, `BAA_HOME/stdlib`.
 
 ## [0.4.3.0] - 2026-03-02
 

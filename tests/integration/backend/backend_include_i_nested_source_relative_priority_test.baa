@@ -1,0 +1,11 @@
+// RUN: expect-pass runtime
+// FLAGS: -I tests/fixtures/include_i/nested_override -I tests/fixtures/include_i/nested_primary
+
+#تضمين "outer.baahd"
+
+صحيح الرئيسية() {
+    إذا (قيمة_تداخل_i() != ٤٢) {
+        إرجع ١.
+    }
+    إرجع ٠.
+}

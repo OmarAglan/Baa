@@ -165,7 +165,7 @@ static int compile_one_ir(const CompilerConfig *config,
 
     if (config->time_phases) t0 = driver_time_seconds();
     Lexer lexer;
-    lexer_init(&lexer, source, current_input);
+    lexer_init(&lexer, source, current_input, config->include_dirs, config->include_dir_count);
     Node *ast = parse(&lexer);
     if (config->time_phases) phase_times->parse_s += (driver_time_seconds() - t0);
 

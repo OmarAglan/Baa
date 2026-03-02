@@ -1,0 +1,11 @@
+// RUN: expect-pass runtime
+// FLAGS: -Itests/fixtures/include_i/compact
+
+#تضمين "compact_header.baahd"
+
+صحيح الرئيسية() {
+    إذا (قيمة_اختبار_i_مضغوط() != ١٢) {
+        إرجع ١.
+    }
+    إرجع ٠.
+}

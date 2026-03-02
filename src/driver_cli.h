@@ -24,6 +24,8 @@ typedef struct
     DriverCommand cmd;
     char **input_files; // مؤشرات إلى argv (لا تُملك)
     int input_count;
+    const char **include_dirs; // مسارات -I (مملوكة من Parser)
+    size_t include_dir_count;
 } DriverParseResult;
 
 /**

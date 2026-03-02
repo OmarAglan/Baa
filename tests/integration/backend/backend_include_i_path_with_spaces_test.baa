@@ -1,0 +1,11 @@
+// RUN: expect-pass runtime
+// FLAGS: -I "tests/fixtures/include i space"
+
+#تضمين "spaced_header.baahd"
+
+صحيح الرئيسية() {
+    إذا (قيمة_مسار_بمسافة() != ١٣) {
+        إرجع ١.
+    }
+    إرجع ٠.
+}

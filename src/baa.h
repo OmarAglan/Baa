@@ -162,6 +162,10 @@ typedef struct {
     // الحالة الحالية
     LexerState state;
 
+    // مسارات تضمين إضافية من سطر الأوامر (-I)
+    const char* const* include_dirs;
+    size_t include_dir_count;
+
     // مكدس التضمين (Include Stack)
     LexerState stack[10]; // أقصى عمق للتضمين: 10
     int stack_depth;
@@ -183,7 +187,11 @@ typedef struct {
 /**
  * @brief تهيئة المحلل اللفظي بنص المصدر وتخطي الـ BOM إذا وجد.
  */
-void lexer_init(Lexer* lexer, char* src, const char* filename);
+void lexer_init(Lexer* lexer,
+                char* src,
+                const char* filename,
+                const char* const* include_dirs,
+                size_t include_dir_count);
 
 // قراءة ملف بالكامل إلى ذاكرة
 char* read_file(const char* path);

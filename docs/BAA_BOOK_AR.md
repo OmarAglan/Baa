@@ -809,7 +809,7 @@ cmake --build build-linux -j
 ./app
 ```
 
-ملاحظة: `#تضمين` يبحث بالترتيب في: مسار الملف الحالي أولاً، ثم المسار كما كُتب، ثم `{BAA_HOME}/<path>` للمسارات النسبية. وللاسم المجرّد مثل `baalib.baahd` يحاول أيضاً `<source_dir>/stdlib` ثم `stdlib/` ثم `BAA_STDLIB` ثم `{BAA_HOME}/stdlib`.
+ملاحظة: `#تضمين` يبحث بالترتيب في: مسار الملف الحالي أولاً، ثم المسار كما كُتب، ثم `{BAA_HOME}/<path>` للمسارات النسبية، ثم مسارات `-I` بالترتيب. وللاسم المجرّد مثل `baalib.baahd` يحاول أيضاً `<source_dir>/stdlib` ثم `stdlib/` ثم `BAA_STDLIB` ثم `{BAA_HOME}/stdlib`.
 
 ---
 

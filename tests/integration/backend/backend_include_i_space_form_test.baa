@@ -1,0 +1,11 @@
+// RUN: expect-pass runtime
+// FLAGS: -I tests/fixtures/include_i/single_space
+
+#تضمين "single_space_header.baahd"
+
+صحيح الرئيسية() {
+    إذا (قيمة_اختبار_i_مسافة() != ١١) {
+        إرجع ١.
+    }
+    إرجع ٠.
+}

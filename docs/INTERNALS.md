@@ -326,6 +326,7 @@ When `#تضمين "file"` is encountered:
    - source-file directory (`<source_dir>/<path>`),
    - exact path as written,
    - `{BAA_HOME}/<path>` (for relative paths),
+   - CLI include paths from `-I` (in the user-provided order),
    - for bare names: `<source_dir>/stdlib/<name>`, `stdlib/<name>`, `{BAA_STDLIB}/<name>`, `{BAA_HOME}/stdlib/<name>`.
 3. The selected file is read into memory.
 4. The current lexer state is pushed onto the include stack.

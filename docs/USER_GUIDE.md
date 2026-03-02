@@ -197,6 +197,7 @@ baa [options] <source.baa> [-o <output>]
 | `--version` | Display compiler version. | `.\baa.exe --version` |
 | `-O0` / `-O1` / `-O2` | Optimization levels (default: `-O1`). | `.\baa.exe -O2 main.baa` |
 | `--target=<t>` | Select backend target (`x86_64-windows` or `x86_64-linux`). | `.\baa.exe --target=x86_64-linux main.baa` |
+| `--startup=custom` | Use custom entrypoint symbol `__baa_start` (via linker `-e`) while keeping CRT/libc initialization. | `.\baa.exe --startup=custom main.baa -o app.exe` |
 | `--dump-ir` | Print Baa IR (Arabic) after semantic analysis. | `.\baa.exe --dump-ir main.baa` |
 | `--emit-ir` | Write Baa IR (Arabic) to `<input>.ir` after semantic analysis. | `.\baa.exe --emit-ir main.baa` |
 | `--dump-ir-opt` | Print optimized Baa IR (Arabic) after the optimizer. | `.\baa.exe --dump-ir-opt -O2 main.baa` |

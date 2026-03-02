@@ -143,7 +143,8 @@ int driver_toolchain_link(const CompilerConfig *config,
     if (!config || !config->output_file) return 1;
     if (!obj_files || obj_count <= 0) return 1;
 
-    int argv_cap = obj_count + 8;
+    // مساحة إضافية للأعلام الاختيارية (debug/pie/startup) + -o + output + NULL
+    int argv_cap = obj_count + 12;
     const char **argv_link = (const char **)calloc((size_t)argv_cap, sizeof(char *));
     if (!argv_link)
     {
@@ -156,6 +157,8 @@ int driver_toolchain_link(const CompilerConfig *config,
     if (config->debug_info) argv_link[lk++] = "-g";
     if (config->codegen_opts.pie && config->target && config->target->obj_format == BAA_OBJFORMAT_ELF)
         argv_link[lk++] = "-pie";
+    if (config->custom_startup)
+        argv_link[lk++] = "-Wl,-e,__baa_start";
 
     for (int i = 0; i < obj_count; i++)
         argv_link[lk++] = obj_files[i];

@@ -1,0 +1,9 @@
+// RUN: compile-only
+// FLAGS: -S --target=x86_64-linux --startup=custom
+// EXPECT-ASM: __baa_start
+// EXPECT-ASM: __libc_start_main
+
+صحيح الرئيسية() {
+    إرجع ٠.
+}
+

@@ -28,6 +28,7 @@ typedef struct
     bool verify_gate;   // --verify-gate: بوابة تحقق داخل المُحسِّن
     bool time_phases;   // --time-phases: قياس أزمنة المراحل
     bool debug_info;    // --debug-info: إصدار معلومات ديبغ
+    bool custom_startup; // --startup=custom: استخدام نقطة دخول مخصصة (مع الحفاظ على CRT/libc)
     bool funroll_loops; // -funroll-loops
     OptLevel opt_level; // -O0/-O1/-O2
     const BaaTarget* target; // --target=...

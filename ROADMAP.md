@@ -1139,7 +1139,8 @@
 - [x] **Parser**: Allow parameters in `الرئيسية` function.
 - [x] **Semantic**: Validate main signature matches expected pattern.
 - [x] **Codegen**: Link with proper C runtime entry point.
-- [ ] **Codegen (Full Independence)**: Custom _start that sets up argc/argv.
+- [x] **Codegen (Opt-in)**: `--startup=custom` — custom entrypoint symbol (`__baa_start`) while keeping CRT/libc init.
+- [ ] **Codegen (Full Independence)**: True `_start` without CRT/libc (deferred to Phase 8).
 
 ✅ COMPLETED (2026-03-02)
 

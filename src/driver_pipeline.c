@@ -26,6 +26,87 @@
 #include <string.h>
 
 // ============================================================================
+// بدء تشغيل مخصص (custom startup)
+// ============================================================================
+
+#define BAA_CUSTOM_START_SYMBOL "__baa_start"
+
+/**
+ * @brief الحصول على كود assembly لتعريف نقطة دخول مخصصة.
+ *
+ * ملاحظة مهمة:
+ * - هذا الكود لا يلغي CRT/libc، بل يحافظ على التهيئة الصحيحة:
+ *   - Windows/COFF: يستدعي mainCRTStartup (CRT) ثم ExitProcess إن عاد.
+ *   - Linux/ELF: يستدعي __libc_start_main لضمان تهيئة libc.
+ */
+static const char* driver_custom_startup_asm(const BaaTarget* target)
+{
+    // GAS AT&T syntax
+    if (target && target->obj_format == BAA_OBJFORMAT_ELF) {
+        return
+            ".text\n"
+            ".globl " BAA_CUSTOM_START_SYMBOL "\n"
+            BAA_CUSTOM_START_SYMBOL ":\n"
+            "    movq %rsp, %r10\n"                // stack_end
+            "    movq (%rsp), %rsi\n"              // argc
+            "    leaq 8(%rsp), %rdx\n"             // argv
+            "    leaq main(%rip), %rdi\n"          // main
+            "    leaq __libc_csu_init(%rip), %rcx\n"
+            "    leaq __libc_csu_fini(%rip), %r8\n"
+            "    xorl %r9d, %r9d\n"                // fini = NULL
+            "    subq $8, %rsp\n"                  // محاذاة قبل push
+            "    pushq %r10\n"                     // 7th arg: stack_end
+            "    call __libc_start_main\n"
+            "    hlt\n";
+    }
+
+    // Windows/COFF (MinGW-w64)
+    return
+        ".text\n"
+        ".globl " BAA_CUSTOM_START_SYMBOL "\n"
+        BAA_CUSTOM_START_SYMBOL ":\n"
+        "    movq %rsp, %r11\n"
+        "    andq $15, %r11\n"                   // فحص المحاذاة (0 أو 8 غالباً)
+        "    subq $32, %rsp\n"                   // shadow space (Win x64 ABI)
+        "    cmpq $8, %r11\n"
+        "    jne 1f\n"
+        "    subq $8, %rsp\n"                    // ضمان أن %rsp%16==0 قبل call
+        "1:\n"
+        "    call mainCRTStartup\n"
+        "    movl %eax, %ecx\n"
+        "    call ExitProcess\n"
+        "    hlt\n";
+}
+
+/**
+ * @brief كتابة نص إلى ملف (استبدال محتواه).
+ */
+static int driver_write_text_file(const char* path, const char* text)
+{
+    if (!path || !text) return 1;
+    FILE* f = fopen(path, "wb");
+    if (!f) return 1;
+    size_t n = strlen(text);
+    size_t w = fwrite(text, 1, n, f);
+    fclose(f);
+    return (w == n) ? 0 : 1;
+}
+
+/**
+ * @brief إلحاق نص بنهاية ملف (append).
+ */
+static int driver_append_text_file(const char* path, const char* text)
+{
+    if (!path || !text) return 1;
+    FILE* f = fopen(path, "ab");
+    if (!f) return 1;
+    size_t n = strlen(text);
+    size_t w = fwrite(text, 1, n, f);
+    fclose(f);
+    return (w == n) ? 0 : 1;
+}
+
+// ============================================================================
 // أدوات ملفات بسيطة
 // ============================================================================
 
@@ -345,6 +426,17 @@ static int compile_one_ir(const CompilerConfig *config,
 
     if (config->assembly_only)
     {
+        // عند طلب -S مع --startup=custom وفي ملف واحد، نلحق كود `__baa_start` بنفس ملف assembly
+        // حتى يتمكن المستخدم من ربطه يدوياً أو فحصه (ويُستخدم أيضاً لاختبارات asm-only).
+        if (config->custom_startup && input_count == 1)
+        {
+            const char* stub = driver_custom_startup_asm(config->target);
+            if (stub && driver_append_text_file(asm_file, "\n\n") == 0)
+            {
+                (void)driver_append_text_file(asm_file, stub);
+            }
+        }
+
         if (config->verbose)
             printf("[INFO] Generated assembly: %s\n", asm_file);
         if (asm_file != config->output_file) free(asm_file);
@@ -386,7 +478,9 @@ int driver_compile_files(const CompilerConfig *config,
     if (!config || !input_files || input_count <= 0 || !phase_times) return 1;
 
     // عند -S لا نحتاج لإرجاع قائمة كائنات.
-    int cap = config->assembly_only ? 0 : input_count;
+    // عند --startup=custom + ربط نهائي: نضيف كائناً إضافياً لبدء التشغيل.
+    bool need_startup_obj = (!config->assembly_only && !config->compile_only && config->custom_startup);
+    int cap = config->assembly_only ? 0 : (input_count + (need_startup_obj ? 1 : 0));
     char **obj_files = NULL;
     int obj_count = 0;
     if (cap > 0)
@@ -418,6 +512,54 @@ int driver_compile_files(const CompilerConfig *config,
         {
             obj_files[obj_count++] = obj_file;
         }
+    }
+
+    // أضف كائن بدء التشغيل في نهاية قائمة الربط.
+    if (need_startup_obj)
+    {
+        const char* asm_path = ".baa_startup_tmp.s";
+        const char* obj_path = ".baa_startup_tmp.o";
+
+        const char* stub = driver_custom_startup_asm(config->target);
+        if (!stub)
+        {
+            fprintf(stderr, "خطأ: فشل توليد كود بدء التشغيل.\n");
+            driver_free_obj_files(obj_files, obj_count, config->output_file);
+            return 1;
+        }
+
+        if (driver_write_text_file(asm_path, stub) != 0)
+        {
+            fprintf(stderr, "خطأ: فشل كتابة ملف بدء التشغيل '%s'.\n", asm_path);
+            driver_free_obj_files(obj_files, obj_count, config->output_file);
+            return 1;
+        }
+
+        // نجمعه إلى كائن ثم نضيفه لقائمة الربط.
+        if (driver_toolchain_assemble_one(config, phase_times, asm_path, obj_path) != 0)
+        {
+            fprintf(stderr, "خطأ: فشل تجميع كود بدء التشغيل.\n");
+            if (!config->verbose) remove(asm_path);
+            driver_free_obj_files(obj_files, obj_count, config->output_file);
+            return 1;
+        }
+
+        if (!config->verbose)
+        {
+            remove(asm_path);
+        }
+
+        size_t n = strlen(obj_path);
+        char* obj_dup = (char*)malloc(n + 1);
+        if (!obj_dup)
+        {
+            fprintf(stderr, "خطأ: نفدت الذاكرة.\n");
+            if (!config->verbose) remove(obj_path);
+            driver_free_obj_files(obj_files, obj_count, config->output_file);
+            return 1;
+        }
+        memcpy(obj_dup, obj_path, n + 1);
+        obj_files[obj_count++] = obj_dup;
     }
 
     if (out_obj_files) *out_obj_files = obj_files;

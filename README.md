@@ -241,6 +241,7 @@ baa --target=x86_64-linux   البرنامج.baa
 | `-c` | توليد ملف كائن فقط (.o) |
 | `-o <file>` | تحديد اسم ملف المخرج |
 | `--target=x86_64-windows\|x86_64-linux` | تحديد الهدف |
+| `--startup=custom` | استخدام نقطة دخول مخصّصة (`__baa_start`) مع الحفاظ على تهيئة CRT/libc |
 | `--verify` | التحقق من صحة IR/SSA بعد التحسين |
 | `--verify-ir` | التحقق من صحة IR فقط |
 | `--verify-ssa` | التحقق من صحة SSA فقط |

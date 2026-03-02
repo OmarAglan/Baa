@@ -47,6 +47,20 @@ def _args_markers(src: Path) -> list[str]:
     return args
 
 
+def _expect_asm_markers(src: Path) -> list[str]:
+    needles: list[str] = []
+    try:
+        for line in src.read_text(encoding="utf-8", errors="replace").splitlines():
+            s = line.strip()
+            if s.startswith("// EXPECT-ASM:"):
+                raw = s.split(":", 1)[1].strip()
+                if raw:
+                    needles.append(raw)
+    except Exception:
+        return []
+    return needles
+
+
 def _run_markers(src: Path) -> set[str]:
     markers: set[str] = set()
     try:
@@ -173,8 +187,16 @@ def main() -> int:
             # in toolchain command strings when the repo root contains spaces.
             src_rel = src.relative_to(ROOT)
             out_stem = _safe_name(str(src.relative_to(INTEGRATION_DIR).with_suffix("")))
-            out = out_dir / f"{out_stem}{exe_ext}"
             flags = _flags_markers(src)
+            expect_asm = _expect_asm_markers(src)
+
+            # إذا كان لدينا EXPECT-ASM نُحوّل الاختبار إلى compile-only على ملف assembly.
+            if expect_asm:
+                out = out_dir / f"{out_stem}.s"
+                if "-S" not in flags and "-s" not in flags:
+                    flags = ["-S", *flags]
+            else:
+                out = out_dir / f"{out_stem}{exe_ext}"
 
             # -O2 is required because --verify runs SSA verification (Mem2Reg) via the optimizer.
             rc = _run([str(baa), "-O2", "--verify", *flags, str(src_rel), "-o", str(out)], cwd=ROOT)
@@ -184,6 +206,17 @@ def main() -> int:
                 continue
             if rc != 0:
                 failures.append(f"compile/verify failed: {src.name}")
+                continue
+
+            if expect_asm:
+                try:
+                    asm_text = out.read_text(encoding="utf-8", errors="replace")
+                except Exception:
+                    failures.append(f"could not read asm output: {src.name}")
+                    continue
+                missing = [n for n in expect_asm if n not in asm_text]
+                if missing:
+                    failures.append(f"asm missing {missing}: {src.name}")
                 continue
 
             if "runtime" not in run_markers:

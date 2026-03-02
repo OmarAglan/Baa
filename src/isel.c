@@ -18,6 +18,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
+#include <limits.h>
+
+#define ISEL_INLINE_ASM_PSEUDO_CALL "__baa_inline_asm_v0406"
 
 // ============================================================================
 // بناء المعاملات (Operand Construction)
@@ -1408,6 +1411,235 @@ static void isel_lower_ret(ISelCtx *ctx, IRInst *inst)
     isel_emit(ctx, MACH_RET, mach_op_none(), mach_op_none(), mach_op_none());
 }
 
+typedef struct
+{
+    int fixed_vreg;
+    int bits;
+    IRValue *addr;
+} InlineAsmOutputBinding;
+
+static void isel_inline_asm_error(ISelCtx *ctx, IRInst *inst, const char *message)
+{
+    if (ctx) ctx->had_error = true;
+    if (!message) message = "خطأ غير معروف في خفض 'مجمع'.";
+
+    if (inst && inst->src_file)
+    {
+        fprintf(stderr, "خطأ (ISel): %s:%d:%d: %s\n",
+                inst->src_file,
+                inst->src_line > 0 ? inst->src_line : 1,
+                inst->src_col > 0 ? inst->src_col : 1,
+                message);
+    }
+    else
+    {
+        fprintf(stderr, "خطأ (ISel): %s\n", message);
+    }
+}
+
+static bool isel_inline_asm_parse_count(IRValue *v, int *out_value)
+{
+    if (!out_value) return false;
+    *out_value = 0;
+    if (!v || v->kind != IR_VAL_CONST_INT) return false;
+    if (v->data.const_int < 0 || v->data.const_int > INT32_MAX) return false;
+    *out_value = (int)v->data.const_int;
+    return true;
+}
+
+static bool isel_inline_asm_parse_fixed_vreg(const char *constraint, bool is_output, int *out_vreg)
+{
+    if (!constraint || !out_vreg) return false;
+    *out_vreg = 0;
+
+    const char *p = constraint;
+    if (is_output)
+    {
+        if (p[0] != '=') return false;
+        p++;
+    }
+    else if (p[0] == '=')
+    {
+        return false;
+    }
+
+    if (p[0] == '\0' || p[1] != '\0') return false;
+
+    switch (p[0])
+    {
+    case 'a':
+        *out_vreg = -2; // RAX
+        return true;
+    case 'd':
+        *out_vreg = -5; // RDX
+        return true;
+    case 'c':
+        *out_vreg = -6; // RCX
+        return true;
+    default:
+        return false;
+    }
+}
+
+static int isel_inline_asm_output_bits(IRValue *addr)
+{
+    if (!addr || !addr->type || addr->type->kind != IR_TYPE_PTR || !addr->type->data.pointee)
+        return 64;
+    return isel_type_bits(addr->type->data.pointee);
+}
+
+static void isel_inline_asm_store_output(ISelCtx *ctx, IRInst *inst,
+                                         IRValue *addr_val, MachineOperand src, int bits)
+{
+    if (!ctx || !addr_val) return;
+    if (bits <= 0) bits = 64;
+    src.size_bits = bits;
+
+    MachineOperand addr = isel_lower_value(ctx, addr_val);
+    if (addr.kind == MACH_OP_VREG)
+    {
+        MachineOperand mem = mach_op_mem(addr.data.vreg, 0, bits);
+        isel_emit(ctx, MACH_STORE, mem, src, mach_op_none());
+        return;
+    }
+    if (addr.kind == MACH_OP_GLOBAL)
+    {
+        addr.size_bits = bits;
+        isel_emit(ctx, MACH_STORE, addr, src, mach_op_none());
+        return;
+    }
+    if (addr.kind == MACH_OP_MEM)
+    {
+        int tmp_v = mach_func_alloc_vreg(ctx->mfunc);
+        MachineOperand tmp = mach_op_vreg(tmp_v, 64);
+        isel_emit(ctx, MACH_MOV, tmp, addr, mach_op_none());
+        MachineOperand mem = mach_op_mem(tmp_v, 0, bits);
+        isel_emit(ctx, MACH_STORE, mem, src, mach_op_none());
+        return;
+    }
+
+    isel_inline_asm_error(ctx, inst, "تعذر خفض عنوان خرج 'مجمع'.");
+}
+
+static bool isel_lower_inline_asm_call(ISelCtx *ctx, IRInst *inst)
+{
+    if (!inst || !inst->call_target) return false;
+    if (strcmp(inst->call_target, ISEL_INLINE_ASM_PSEUDO_CALL) != 0) return false;
+
+    if (!inst->call_args || inst->call_arg_count < 3)
+    {
+        isel_inline_asm_error(ctx, inst, "بيانات 'مجمع' داخل IR غير مكتملة.");
+        return true;
+    }
+
+    int template_count = 0;
+    int output_count = 0;
+    int input_count = 0;
+    if (!isel_inline_asm_parse_count(inst->call_args[0], &template_count) ||
+        !isel_inline_asm_parse_count(inst->call_args[1], &output_count) ||
+        !isel_inline_asm_parse_count(inst->call_args[2], &input_count))
+    {
+        isel_inline_asm_error(ctx, inst, "ترويسة بيانات 'مجمع' غير صالحة.");
+        return true;
+    }
+
+    int expected = 3 + template_count + (output_count * 2) + (input_count * 2);
+    if (inst->call_arg_count != expected)
+    {
+        isel_inline_asm_error(ctx, inst, "عدد معاملات 'مجمع' في IR غير متطابق.");
+        return true;
+    }
+
+    InlineAsmOutputBinding *outputs = NULL;
+    if (output_count > 0)
+    {
+        outputs = (InlineAsmOutputBinding *)calloc((size_t)output_count, sizeof(InlineAsmOutputBinding));
+        if (!outputs)
+        {
+            isel_inline_asm_error(ctx, inst, "نفدت الذاكرة أثناء خفض مخارج 'مجمع'.");
+            return true;
+        }
+    }
+
+    int out_idx = 0;
+    int idx = 3 + template_count;
+    for (int i = 0; i < output_count; i++)
+    {
+        IRValue *constraint_val = inst->call_args[idx++];
+        IRValue *addr_val = inst->call_args[idx++];
+
+        if (!constraint_val || constraint_val->kind != IR_VAL_CONST_STR || !constraint_val->data.const_str.data)
+        {
+            isel_inline_asm_error(ctx, inst, "قيد خرج 'مجمع' يجب أن يكون نصاً ثابتاً.");
+            free(outputs);
+            return true;
+        }
+
+        int fixed_vreg = 0;
+        if (!isel_inline_asm_parse_fixed_vreg(constraint_val->data.const_str.data, true, &fixed_vreg))
+        {
+            isel_inline_asm_error(ctx, inst, "قيد خرج غير مدعوم في خفض 'مجمع'.");
+            free(outputs);
+            return true;
+        }
+
+        outputs[out_idx].fixed_vreg = fixed_vreg;
+        outputs[out_idx].bits = isel_inline_asm_output_bits(addr_val);
+        outputs[out_idx].addr = addr_val;
+        out_idx++;
+    }
+
+    for (int i = 0; i < input_count; i++)
+    {
+        IRValue *constraint_val = inst->call_args[idx++];
+        IRValue *value_val = inst->call_args[idx++];
+
+        if (!constraint_val || constraint_val->kind != IR_VAL_CONST_STR || !constraint_val->data.const_str.data)
+        {
+            isel_inline_asm_error(ctx, inst, "قيد إدخال 'مجمع' يجب أن يكون نصاً ثابتاً.");
+            free(outputs);
+            return true;
+        }
+
+        int fixed_vreg = 0;
+        if (!isel_inline_asm_parse_fixed_vreg(constraint_val->data.const_str.data, false, &fixed_vreg))
+        {
+            isel_inline_asm_error(ctx, inst, "قيد إدخال غير مدعوم في خفض 'مجمع'.");
+            free(outputs);
+            return true;
+        }
+
+        MachineOperand src = isel_lower_value(ctx, value_val);
+        int bits = isel_type_bits(value_val ? value_val->type : NULL);
+        if (bits <= 0) bits = 64;
+        MachineOperand dst = mach_op_vreg(fixed_vreg, bits);
+        isel_emit(ctx, MACH_MOV, dst, src, mach_op_none());
+    }
+
+    for (int i = 0; i < template_count; i++)
+    {
+        IRValue *tv = inst->call_args[3 + i];
+        if (!tv || tv->kind != IR_VAL_CONST_STR || !tv->data.const_str.data)
+        {
+            isel_inline_asm_error(ctx, inst, "سطر 'مجمع' في IR يجب أن يكون نصاً ثابتاً.");
+            free(outputs);
+            return true;
+        }
+
+        MachineInst *mi = isel_emit(ctx, MACH_INLINE_ASM, mach_op_none(), mach_op_none(), mach_op_none());
+        if (mi) mi->comment = tv->data.const_str.data;
+    }
+
+    for (int i = 0; i < output_count; i++)
+    {
+        MachineOperand src = mach_op_vreg(outputs[i].fixed_vreg, outputs[i].bits);
+        isel_inline_asm_store_output(ctx, inst, outputs[i].addr, src, outputs[i].bits);
+    }
+
+    free(outputs);
+    return true;
+}
+
 /**
  * @brief خفض عملية الاستدعاء.
  *
@@ -1426,6 +1658,9 @@ static void isel_lower_ret(ISelCtx *ctx, IRInst *inst)
 static void isel_lower_call(ISelCtx *ctx, IRInst *inst)
 {
     if (!inst)
+        return;
+
+    if (isel_lower_inline_asm_call(ctx, inst))
         return;
 
     const BaaCallingConv *cc = isel_cc_or_default(ctx);
@@ -2643,6 +2878,8 @@ const char *mach_op_to_string(MachineOp op)
         return "label";
     case MACH_COMMENT:
         return "comment";
+    case MACH_INLINE_ASM:
+        return "inline_asm";
     default:
         return "???";
     }
@@ -2728,6 +2965,13 @@ void mach_inst_print(MachineInst *inst, FILE *out)
     {
         if (inst->comment)
             fprintf(out, "    # %s\n", inst->comment);
+        return;
+    }
+
+    if (inst->op == MACH_INLINE_ASM)
+    {
+        if (inst->comment)
+            fprintf(out, "    %s\n", inst->comment);
         return;
     }
 

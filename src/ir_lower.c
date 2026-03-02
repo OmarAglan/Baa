@@ -27,6 +27,7 @@
 
 #define BAA_ENTRY_FUNC_NAME "الرئيسية"
 #define BAA_WRAPPED_USER_MAIN_NAME "__baa_user_main"
+#define BAA_INLINE_ASM_PSEUDO_CALL "__baa_inline_asm_v0406"
 
 // ============================================================================
 // Locals table helpers
@@ -7209,6 +7210,125 @@ static void lower_read(IRLowerCtx* ctx, Node* stmt) {
     ir_builder_emit_store(ctx->builder, cv, ptr);
 }
 
+static bool ir_lower_inline_asm_push_arg(IRLowerCtx* ctx, const Node* site,
+                                         IRValue*** args, int* count, int* cap,
+                                         IRValue* value)
+{
+    if (!args || !count || !cap) return false;
+    if (*count >= *cap) {
+        int new_cap = (*cap <= 0) ? 8 : (*cap * 2);
+        IRValue** grown = (IRValue**)realloc(*args, (size_t)new_cap * sizeof(IRValue*));
+        if (!grown) {
+            ir_lower_report_error(ctx, site, "نفدت الذاكرة أثناء خفض معاملات 'مجمع'.");
+            return false;
+        }
+        *args = grown;
+        *cap = new_cap;
+    }
+    (*args)[(*count)++] = value;
+    return true;
+}
+
+static int ir_lower_inline_asm_count_nodes(Node* list)
+{
+    int n = 0;
+    for (Node* it = list; it; it = it->next) n++;
+    return n;
+}
+
+static void lower_inline_asm_stmt(IRLowerCtx* ctx, Node* stmt)
+{
+    if (!ctx || !ctx->builder || !stmt) return;
+
+    int template_count = ir_lower_inline_asm_count_nodes(stmt->data.inline_asm.templates);
+    int output_count = ir_lower_inline_asm_count_nodes(stmt->data.inline_asm.outputs);
+    int input_count = ir_lower_inline_asm_count_nodes(stmt->data.inline_asm.inputs);
+
+    IRValue** args = NULL;
+    int arg_count = 0;
+    int arg_cap = 0;
+
+    if (!ir_lower_inline_asm_push_arg(ctx, stmt, &args, &arg_count, &arg_cap,
+                                      ir_value_const_int((int64_t)template_count, IR_TYPE_I64_T)) ||
+        !ir_lower_inline_asm_push_arg(ctx, stmt, &args, &arg_count, &arg_cap,
+                                      ir_value_const_int((int64_t)output_count, IR_TYPE_I64_T)) ||
+        !ir_lower_inline_asm_push_arg(ctx, stmt, &args, &arg_count, &arg_cap,
+                                      ir_value_const_int((int64_t)input_count, IR_TYPE_I64_T))) {
+        free(args);
+        return;
+    }
+
+    for (Node* t = stmt->data.inline_asm.templates; t; t = t->next) {
+        const char* s = NULL;
+        if (t->type == NODE_STRING && t->data.string_lit.value) {
+            s = t->data.string_lit.value;
+        } else {
+            ir_lower_report_error(ctx, t ? t : stmt, "سطر 'مجمع' يجب أن يكون نصاً ثابتاً.");
+            s = "";
+        }
+        IRValue* sv = ir_builder_const_string(ctx->builder, s);
+        if (!sv || !ir_lower_inline_asm_push_arg(ctx, stmt, &args, &arg_count, &arg_cap, sv)) {
+            free(args);
+            return;
+        }
+    }
+
+    for (Node* op = stmt->data.inline_asm.outputs; op; op = op->next) {
+        const char* cstr = (op->type == NODE_ASM_OPERAND && op->data.asm_operand.constraint)
+                               ? op->data.asm_operand.constraint
+                               : "";
+        IRValue* cv = ir_builder_const_string(ctx->builder, cstr);
+        if (!cv || !ir_lower_inline_asm_push_arg(ctx, stmt, &args, &arg_count, &arg_cap, cv)) {
+            free(args);
+            return;
+        }
+
+        IRType* pointee = IR_TYPE_I64_T;
+        IRValue* addr = NULL;
+        if (op->type == NODE_ASM_OPERAND && op->data.asm_operand.expression) {
+            addr = lower_lvalue_address(ctx, op->data.asm_operand.expression, &pointee);
+        } else {
+            ir_lower_report_error(ctx, op ? op : stmt, "خرج 'مجمع' غير صالح.");
+            addr = ir_value_const_int(0, ir_type_ptr(IR_TYPE_I64_T));
+            pointee = IR_TYPE_I64_T;
+        }
+        if (!addr || !addr->type || addr->type->kind != IR_TYPE_PTR) {
+            addr = cast_to(ctx, addr, ir_type_ptr(pointee ? pointee : IR_TYPE_I64_T));
+        }
+        if (!ir_lower_inline_asm_push_arg(ctx, stmt, &args, &arg_count, &arg_cap, addr)) {
+            free(args);
+            return;
+        }
+    }
+
+    for (Node* op = stmt->data.inline_asm.inputs; op; op = op->next) {
+        const char* cstr = (op->type == NODE_ASM_OPERAND && op->data.asm_operand.constraint)
+                               ? op->data.asm_operand.constraint
+                               : "";
+        IRValue* cv = ir_builder_const_string(ctx->builder, cstr);
+        if (!cv || !ir_lower_inline_asm_push_arg(ctx, stmt, &args, &arg_count, &arg_cap, cv)) {
+            free(args);
+            return;
+        }
+
+        IRValue* iv = NULL;
+        if (op->type == NODE_ASM_OPERAND && op->data.asm_operand.expression) {
+            iv = lower_expr(ctx, op->data.asm_operand.expression);
+        } else {
+            ir_lower_report_error(ctx, op ? op : stmt, "إدخال 'مجمع' غير صالح.");
+            iv = ir_builder_const_i64(0);
+        }
+        if (!ir_lower_inline_asm_push_arg(ctx, stmt, &args, &arg_count, &arg_cap, iv)) {
+            free(args);
+            return;
+        }
+    }
+
+    ir_lower_set_loc(ctx->builder, stmt);
+    ir_builder_emit_call_void(ctx->builder, BAA_INLINE_ASM_PSEUDO_CALL, args, arg_count);
+    free(args);
+}
+
 static IRValue* lower_condition_i1(IRLowerCtx* ctx, Node* cond_expr) {
     // Ensure the condition is i1 for br_cond.
     return lower_to_bool(ctx, lower_expr(ctx, cond_expr));
@@ -7568,6 +7688,10 @@ void lower_stmt(IRLowerCtx* ctx, Node* stmt) {
 
         case NODE_READ:
             lower_read(ctx, stmt);
+            return;
+
+        case NODE_INLINE_ASM:
+            lower_inline_asm_stmt(ctx, stmt);
             return;
 
         case NODE_IF:

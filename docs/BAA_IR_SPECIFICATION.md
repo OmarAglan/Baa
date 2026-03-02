@@ -406,12 +406,17 @@ internal global @عداد_داخلي = ص٦٤ ٠ // ربط داخلي (v0.3.7.5)
 | `NODE_UNARY_OP (ADDR)` | Returns underlying pointer register/global |
 | `NODE_UNARY_OP (DEREF)`| `حمل` from pointer |
 | `NODE_DEREF_ASSIGN` | `خزن` to pointer |
+| `NODE_INLINE_ASM` | Pseudo-call metadata packet (`نداء @__baa_inline_asm_v0406(...)`) consumed in ISel |
 
 ملاحظة (`v0.3.9`): استدعاءات السلاسل `طول_نص/قارن_نص/نسخ_نص/دمج_نص/حرر_نص`
 تُخفض داخلياً إلى حلقات/نداءات `malloc/free` حسب الحالة بدلاً من مجرد تمرير `call` خام.
 
 ملاحظة (`v0.3.11`): استدعاءات الذاكرة `حجز_ذاكرة/تحرير_ذاكرة/إعادة_حجز/نسخ_ذاكرة/تعيين_ذاكرة`
 تُخفض داخلياً إلى `malloc/free/realloc/memcpy/memset` مع الحفاظ على قواعد الـ shadowing.
+
+ملاحظة (`v0.4.0.6`): جملة `مجمع { ... }` لا تضيف opcode جديداً في IR حالياً؛
+تُشفّر كنداء مباشر خاص إلى `@__baa_inline_asm_v0406` مع معاملات وصفية
+(عدد الأسطر/المخارج/المدخلات + قيود + قيم)، ثم يُحوّلها ISel إلى أسطر تجميع خام.
 
 ### 6.2 Variable Handling
 

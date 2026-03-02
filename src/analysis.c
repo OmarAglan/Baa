@@ -2786,6 +2786,73 @@ static bool variadic_extra_arg_type_supported(DataType t)
     return true;
 }
 
+static bool inline_asm_constraint_supported(const char* constraint, bool is_output, char* out_reg_code)
+{
+    if (out_reg_code) *out_reg_code = '\0';
+    if (!constraint || !constraint[0]) return false;
+
+    const char* p = constraint;
+    if (is_output) {
+        if (p[0] != '=') return false;
+        p++;
+    } else if (p[0] == '=') {
+        return false;
+    }
+
+    if (p[0] == '\0' || p[1] != '\0') return false;
+
+    if (p[0] != 'a' && p[0] != 'c' && p[0] != 'd') {
+        return false;
+    }
+
+    if (out_reg_code) *out_reg_code = p[0];
+    return true;
+}
+
+static bool inline_asm_expr_is_lvalue(Node* expr)
+{
+    if (!expr) return false;
+    if (expr->type == NODE_VAR_REF) return true;
+    if (expr->type == NODE_MEMBER_ACCESS) return true;
+    if (expr->type == NODE_ARRAY_ACCESS) return true;
+    if (expr->type == NODE_UNARY_OP && expr->data.unary_op.op == UOP_DEREF) return true;
+    return false;
+}
+
+static void analyze_inline_asm_operands(Node* stmt, Node* list, bool is_output)
+{
+    for (Node* op = list; op; op = op->next) {
+        if (op->type != NODE_ASM_OPERAND) {
+            semantic_error(stmt, "تركيب جملة 'مجمع' غير صالح.");
+            continue;
+        }
+
+        const char* constraint = op->data.asm_operand.constraint;
+        if (!inline_asm_constraint_supported(constraint, is_output, NULL)) {
+            semantic_error(op,
+                           is_output
+                               ? "قيد خرج غير مدعوم في 'مجمع' (المتاح حالياً: =a، =c، =d)."
+                               : "قيد إدخال غير مدعوم في 'مجمع' (المتاح حالياً: a، c، d).");
+        }
+
+        Node* expr = op->data.asm_operand.expression;
+        if (!expr) {
+            semantic_error(op, "معامل 'مجمع' يتطلب تعبيراً بين القوسين.");
+            continue;
+        }
+
+        DataType t = infer_type(expr);
+
+        if (is_output && !inline_asm_expr_is_lvalue(expr)) {
+            semantic_error(expr, "خرج 'مجمع' يجب أن يكون قيمة قابلة للإسناد.");
+        }
+
+        if (!(datatype_is_intlike(t) || t == TYPE_POINTER)) {
+            semantic_error(expr, "معاملات 'مجمع' تدعم القيم الصحيحة أو المؤشرات فقط.");
+        }
+    }
+}
+
 static bool builtin_validate_variadic_cursor_arg(Node* arg, const char* fname)
 {
     if (!arg) {
@@ -4866,6 +4933,22 @@ static void analyze_node(Node* node) {
                     semantic_error(node, "'اقرأ' يدعم حالياً المتغيرات الصحيحة فقط.");
                 }
             }
+            break;
+        }
+
+        case NODE_INLINE_ASM: {
+            if (!node->data.inline_asm.templates) {
+                semantic_error(node, "جملة 'مجمع' تتطلب سطر تجميع واحداً على الأقل.");
+            }
+
+            for (Node* tpl = node->data.inline_asm.templates; tpl; tpl = tpl->next) {
+                if (tpl->type != NODE_STRING || !tpl->data.string_lit.value) {
+                    semantic_error(tpl ? tpl : node, "أسطر 'مجمع' يجب أن تكون نصوصاً ثابتة.");
+                }
+            }
+
+            analyze_inline_asm_operands(node, node->data.inline_asm.outputs, true);
+            analyze_inline_asm_operands(node, node->data.inline_asm.inputs, false);
             break;
         }
             

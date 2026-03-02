@@ -934,6 +934,7 @@ Token lexer_next_token(Lexer* l) {
         if (strcmp(word, "إرجع") == 0) token.type = TOKEN_RETURN;
         else if (strcmp(word, "اطبع") == 0) token.type = TOKEN_PRINT;
         else if (strcmp(word, "اقرأ") == 0) token.type = TOKEN_READ;
+        else if (strcmp(word, "مجمع") == 0) token.type = TOKEN_ASM;
         else if (strcmp(word, "صحيح") == 0) token.type = TOKEN_KEYWORD_INT;
         else if (strcmp(word, "ص٨") == 0) token.type = TOKEN_KEYWORD_I8;
         else if (strcmp(word, "ص١٦") == 0) token.type = TOKEN_KEYWORD_I16;
@@ -1016,6 +1017,7 @@ const char* token_type_to_str(BaaTokenType type) {
         case TOKEN_RETURN: return "إرجع";
         case TOKEN_PRINT: return "اطبع";
         case TOKEN_READ: return "اقرأ";
+        case TOKEN_ASM: return "مجمع";
         case TOKEN_IF: return "إذا";
         case TOKEN_ELSE: return "وإلا";
         case TOKEN_WHILE: return "طالما";

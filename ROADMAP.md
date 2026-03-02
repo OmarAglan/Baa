@@ -1223,18 +1223,18 @@
 
 ✅ COMPLETED (2026-03-02)
 
-### v0.4.0.6: Inline Assembly (المجمع المدمج) 🔧
+### v0.4.0.6: Inline Assembly (المجمع المدمج) ✅
 **Goal:** Embed assembly code for low-level operations.
 
 #### Features
-- [ ] **Basic Inline Assembly**:
+- [x] **Basic Inline Assembly**:
   ```baa
   مجمع {
       "nop"
   }
   ```
 
-- [ ] **With Outputs and Inputs**:
+- [x] **With Outputs and Inputs**:
   ```baa
   صحيح قراءة_عداد() {
       ط٣٢ منخفض.
@@ -1248,10 +1248,12 @@
   ```
 
 #### Implementation Tasks
-- [ ] **Token**: Add `TOKEN_ASM` for `مجمع` keyword.
-- [ ] **Parser**: Parse inline assembly blocks.
-- [ ] **Codegen**: Emit assembly directly with proper constraints.
-- [ ] **Semantic**: Validate constraint syntax.
+- [x] **Token**: Add `TOKEN_ASM` for `مجمع` keyword.
+- [x] **Parser**: Parse inline assembly blocks.
+- [x] **Codegen**: Emit assembly directly with proper constraints.
+- [x] **Semantic**: Validate constraint syntax.
+
+✅ COMPLETED (2026-03-02)
 
 #### Deferred to v3.0
 - Full constraint support (memory, register classes)

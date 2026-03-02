@@ -6,6 +6,31 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ---
 
+## [0.4.0.6] - 2026-03-02
+
+### Added
+
+- **Inline assembly statement** via keyword `مجمع`:
+  - basic block form: `مجمع { "nop" }`
+  - constrained operands form: `مجمع { "rdtsc" : "=a"(منخفض)، "=d"(مرتفع) }`
+- **Lexer/Parser support**:
+  - `TOKEN_ASM` for `مجمع`
+  - new AST nodes: `NODE_INLINE_ASM`, `NODE_ASM_OPERAND`
+- **Backend emission path** for inline assembly lines inside generated AT&T assembly.
+- **Test coverage for inline assembly**:
+  - `tests/integration/ir/ir_inline_asm_test.baa`
+  - `tests/neg/semantic_inline_asm_constraint_unsupported.baa`
+  - `tests/neg/semantic_inline_asm_output_not_lvalue.baa`
+
+### Changed
+
+- **IR→Backend lowering contract**: inline asm is lowered as a dedicated pseudo-call metadata packet and consumed in ISel to emit raw assembly lines with fixed-register operand moves.
+- **Register allocation call barriers** now treat inline asm emission points as call-like barriers to preserve correctness for caller-saved registers across `مجمع`.
+
+### Fixed
+
+- **Constraint validation diagnostics** now reject unsupported inline-asm constraints early in semantic analysis with explicit Arabic diagnostics.
+
 ## [0.4.0.5] - 2026-03-02
 
 ### Added

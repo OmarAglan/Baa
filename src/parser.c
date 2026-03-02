@@ -954,6 +954,7 @@ static bool parser_current_starts_statement_anchor(void)
         case TOKEN_FOR:
         case TOKEN_PRINT:
         case TOKEN_READ:
+        case TOKEN_ASM:
         case TOKEN_RETURN:
         case TOKEN_SWITCH:
         case TOKEN_BREAK:
@@ -1014,6 +1015,7 @@ Node* parse_shift();
 Node* parse_bitwise_and();
 Node* parse_bitwise_xor();
 Node* parse_bitwise_or();
+static Node* parse_inline_asm_statement(void);
 
 /**
  * @brief إضافة عنصر إلى نهاية قائمة عقد أحادية الربط.
@@ -2101,6 +2103,123 @@ static Node* parse_type_alias_declaration(bool register_alias)
     return alias;
 }
 
+static Node* parse_inline_asm_operand(bool is_output)
+{
+    if (parser.current.type != TOKEN_STRING) {
+        error_report(parser.current, "متوقع قيداً نصياً في جملة 'مجمع'.");
+        return NULL;
+    }
+
+    Token tok_constraint = parser.current;
+    char* constraint = parser.current.value ? strdup(parser.current.value) : strdup("");
+    eat(TOKEN_STRING);
+
+    eat(TOKEN_LPAREN);
+    Node* expr = parse_expression();
+    eat(TOKEN_RPAREN);
+
+    if (!constraint) {
+        error_report(tok_constraint, "نفدت الذاكرة أثناء نسخ قيد جملة 'مجمع'.");
+        return NULL;
+    }
+
+    Node* operand = ast_node_new(NODE_ASM_OPERAND, tok_constraint);
+    if (!operand) {
+        free(constraint);
+        return NULL;
+    }
+    operand->data.asm_operand.constraint = constraint;
+    operand->data.asm_operand.expression = expr;
+    operand->data.asm_operand.is_output = is_output;
+    return operand;
+}
+
+static Node* parse_inline_asm_operand_list(bool is_output)
+{
+    Node* head = NULL;
+    Node* tail = NULL;
+
+    while (parser.current.type != TOKEN_COLON &&
+           parser.current.type != TOKEN_RBRACE &&
+           parser.current.type != TOKEN_EOF) {
+        if (parser.current.type != TOKEN_STRING) {
+            error_report(parser.current, "متوقع قيداً نصياً في معاملات 'مجمع'.");
+            break;
+        }
+
+        Node* operand = parse_inline_asm_operand(is_output);
+        if (!operand) break;
+        parser_list_append(&head, &tail, operand);
+
+        if (parser.current.type == TOKEN_COMMA) {
+            eat(TOKEN_COMMA);
+            continue;
+        }
+        break;
+    }
+
+    return head;
+}
+
+static Node* parse_inline_asm_statement(void)
+{
+    Token tok_asm = parser.current;
+    eat(TOKEN_ASM);
+    eat(TOKEN_LBRACE);
+
+    Node* templates = NULL;
+    Node* templates_tail = NULL;
+    while (parser.current.type == TOKEN_STRING) {
+        Token tok_tpl = parser.current;
+        Node* tpl = ast_node_new(NODE_STRING, tok_tpl);
+        if (!tpl) return NULL;
+        tpl->data.string_lit.value = parser.current.value ? strdup(parser.current.value) : strdup("");
+        tpl->data.string_lit.id = -1;
+        eat(TOKEN_STRING);
+
+        if (!tpl->data.string_lit.value) {
+            error_report(tok_tpl, "نفدت الذاكرة أثناء نسخ سطر جملة 'مجمع'.");
+            return NULL;
+        }
+
+        parser_list_append(&templates, &templates_tail, tpl);
+
+        if (parser.current.type == TOKEN_COMMA) {
+            eat(TOKEN_COMMA);
+        }
+    }
+
+    if (!templates) {
+        error_report(parser.current, "جملة 'مجمع' تتطلب سطر تجميع نصياً واحداً على الأقل.");
+    }
+
+    Node* outputs = NULL;
+    Node* inputs = NULL;
+
+    if (parser.current.type == TOKEN_COLON) {
+        eat(TOKEN_COLON);
+        outputs = parse_inline_asm_operand_list(true);
+
+        if (parser.current.type == TOKEN_COLON) {
+            eat(TOKEN_COLON);
+            inputs = parse_inline_asm_operand_list(false);
+        }
+    }
+
+    eat(TOKEN_RBRACE);
+
+    if (parser.current.type == TOKEN_DOT) {
+        eat(TOKEN_DOT);
+    }
+
+    Node* stmt = ast_node_new(NODE_INLINE_ASM, tok_asm);
+    if (!stmt) return NULL;
+    stmt->data.inline_asm.templates = templates;
+    stmt->data.inline_asm.outputs = outputs;
+    stmt->data.inline_asm.inputs = inputs;
+    return stmt;
+}
+
 Node* parse_statement() {
     if (parser.current.type == TOKEN_LBRACE) return parse_block();
 
@@ -2111,6 +2230,10 @@ Node* parse_statement() {
 
     if (parser.current.type == TOKEN_SWITCH) {
         return parse_switch();
+    }
+
+    if (parser.current.type == TOKEN_ASM) {
+        return parse_inline_asm_statement();
     }
 
     if (parser.current.type == TOKEN_RETURN) {

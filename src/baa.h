@@ -57,6 +57,7 @@ typedef enum {
     TOKEN_RETURN,       // إرجع
     TOKEN_PRINT,        // اطبع
     TOKEN_READ,         // اقرأ
+    TOKEN_ASM,          // مجمع
     TOKEN_IF,           // إذا
     TOKEN_ELSE,         // وإلا
     TOKEN_WHILE,        // طالما
@@ -331,6 +332,8 @@ typedef enum {
     NODE_ASSIGN,        // جملة التعيين (س = 5)
     NODE_CALL_STMT,     // استدعاء دالة كجملة
     NODE_READ,          // جملة الإدخال (اقرأ)
+    NODE_INLINE_ASM,    // جملة تجميع مدمج: مجمع { ... }
+    NODE_ASM_OPERAND,   // عنصر معامل تجميع مدمج (قيد + تعبير)
     
     // المصفوفات
     NODE_ARRAY_DECL,    // تعريف مصفوفة: صحيح س[5].
@@ -607,6 +610,20 @@ typedef struct Node {
             char* name;         // اسم الدالة المستدعاة
             struct Node* args;  // قائمة الوسائط (تعبيرات)
         } call;
+
+        // تجميع مدمج: مجمع { "..." : "=a"(x) : "d"(y) }
+        struct {
+            struct Node* templates; // قائمة أسطر التجميع (NODE_STRING)
+            struct Node* outputs;   // قائمة معاملات الخرج (NODE_ASM_OPERAND)
+            struct Node* inputs;    // قائمة معاملات الإدخال (NODE_ASM_OPERAND)
+        } inline_asm;
+
+        // معامل تجميع مدمج
+        struct {
+            char* constraint;       // القيد النصي (مثل "=a" أو "d")
+            struct Node* expression; // التعبير المرتبط بالقيد
+            bool is_output;         // true للخرج، false للإدخال
+        } asm_operand;
 
         // جمل التحكم
         struct { 

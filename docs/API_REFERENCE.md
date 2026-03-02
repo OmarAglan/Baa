@@ -2653,6 +2653,7 @@ Supported statements (v0.3.0.5):
 - `NODE_PRINT`: `نداء @اطبع(...)`
 - `NODE_READ`: `نداء @اقرأ(%ptr)`
 - `NODE_CALL_STMT`: lowered through call expression path
+- `NODE_INLINE_ASM`: lowered to metadata pseudo-call consumed in ISel and emitted as raw assembly lines
 - `NODE_IF`, `NODE_WHILE`, `NODE_FOR`, `NODE_SWITCH`
 - `NODE_BREAK`, `NODE_CONTINUE`
 
@@ -4180,6 +4181,7 @@ typedef enum {
     TOKEN_RETURN,       // إرجع
     TOKEN_PRINT,        // اطبع
     TOKEN_READ,         // اقرأ
+    TOKEN_ASM,          // مجمع
     TOKEN_IF,           // إذا
     TOKEN_ELSE,         // وإلا
     TOKEN_WHILE,        // طالما
@@ -4433,6 +4435,8 @@ typedef enum {
     NODE_ASSIGN,        // جملة التعيين (س = 5)
     NODE_CALL_STMT,     // استدعاء دالة كجملة
     NODE_READ,          // جملة الإدخال (اقرأ)
+    NODE_INLINE_ASM,    // جملة تجميع مدمج: مجمع { ... }
+    NODE_ASM_OPERAND,   // عنصر معامل تجميع مدمج (قيد + تعبير)
     
     // المصفوفات
     NODE_ARRAY_DECL,    // تعريف مصفوفة: صحيح س[5].

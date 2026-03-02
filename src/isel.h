@@ -120,6 +120,7 @@ typedef enum {
     MACH_NOP,       // nop (لا عملية)
     MACH_LABEL,     // تسمية (ليست تعليمة حقيقية)
     MACH_COMMENT,   // تعليق (للتوثيق في الخرج)
+    MACH_INLINE_ASM, // سطر تجميع خام داخل الدالة
 
     MACH_OP_COUNT   // عدد أكواد العمليات
 } MachineOp;

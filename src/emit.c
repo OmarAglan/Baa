@@ -1567,6 +1567,12 @@ void emit_inst(MachineInst* inst, MachineFunc* func, FILE* out) {
             fprintf(out, "\n");
             break;
 
+        case MACH_INLINE_ASM:
+            if (inst->comment && inst->comment[0]) {
+                fprintf(out, "    %s\n", inst->comment);
+            }
+            break;
+
         // ================================================================
         // استدعاء دالة (CALL)
         // ================================================================

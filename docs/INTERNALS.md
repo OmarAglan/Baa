@@ -575,6 +575,7 @@ The Semantic Analyzer (`src/analysis.c`) performs a static check on the AST befo
 13. **Type Casting (v0.3.10.5)**: Enforces rules for explicit scalar and pointer conversions.
 14. **Function Pointers (v0.3.10.6)**: Validates assignment, comparison (EQ/NE only), and indirect calls matching exact signatures.
 15. **Variadic Functions (v0.4.0.5)**: Validates `...` signatures, variadic builtin usage (`بدء_معاملات/معامل_تالي/نهاية_معاملات`), and fixed/extra argument checks for variadic direct calls.
+16. **Inline Assembly (v0.4.0.6)**: Validates `مجمع { ... }` blocks, enforces fixed-register constraint subset (`=a/=c/=d`, `a/c/d`), checks output lvalue requirements, and restricts operand types to integer/pointer forms.
 
 ### 5.2. Constant Checking (v0.2.7+)
 
@@ -1917,7 +1918,7 @@ typedef struct MachineModule {
 | `IR_OP_BR` | `JMP label` | Unconditional jump |
 | `IR_OP_BR_COND` | `TEST cond, cond; JNE true_label; JMP false_label` | Three-instruction pattern |
 | `IR_OP_RET` | `MOV RAX, val; RET` | Uses special vreg -2 (= RAX) |
-| `IR_OP_CALL` | `MOV param_regs, args...; (setup stack args); CALL @func/*reg; MOV dst, RAX` | Direct: `CALL @func`. Indirect: `CALL *reg` (callee value). ABI: Windows (shadow) / SysV (no shadow). In v0.4.0.5 variadic Baa calls pass packed extras via hidden `__baa_va_base` pointer. |
+| `IR_OP_CALL` | `MOV param_regs, args...; (setup stack args); CALL @func/*reg; MOV dst, RAX` | Direct: `CALL @func`. Indirect: `CALL *reg` (callee value). ABI: Windows (shadow) / SysV (no shadow). In v0.4.0.5 variadic Baa calls pass packed extras via hidden `__baa_va_base` pointer. In v0.4.0.6 inline asm is lowered كـ pseudo-call (`__baa_inline_asm_v0406`) ويُحوّل في ISel إلى أسطر تجميع خام مع نقل مدخلات/مخرجات السجلات. |
 | `IR_OP_CALL` + `IR_OP_RET` (tail) | `MOV param_regs, args...; TAILJMP @func` | v0.3.2.7.3: مفعل فقط عند `-O2` وبشكل محافظ (register args only) |
 | `IR_OP_PHI` | `NOP` | Placeholder; copy insertion deferred to register allocation |
 | `IR_OP_CAST` | `MOV dst, src` (larger/same size) or `MOVZX/MOVSX dst, src` (smaller to larger) | Size and sign dependent conversion (`تحويل`) |

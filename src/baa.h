@@ -48,6 +48,7 @@ typedef enum {
     TOKEN_KEYWORD_BOOL, // منطقي
     TOKEN_KEYWORD_CHAR, // حرف
     TOKEN_KEYWORD_FLOAT, // عشري
+    TOKEN_KEYWORD_FLOAT32, // عشري٣٢
     TOKEN_KEYWORD_VOID, // عدم
     TOKEN_CAST,         // كـ
     TOKEN_SIZEOF,       // حجم

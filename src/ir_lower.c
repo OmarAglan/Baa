@@ -3104,6 +3104,7 @@ typedef enum {
     BAA_FMT_SPEC_STR,
     BAA_FMT_SPEC_CHAR,
     BAA_FMT_SPEC_F64,
+    BAA_FMT_SPEC_F64_SCI,
     BAA_FMT_SPEC_PTR,
 } BaaFmtSpecKind;
 
@@ -3291,6 +3292,9 @@ static bool baa_fmt_translate_ar(IRLowerCtx* ctx, const Node* site, const char* 
         } else if (cp == 0x0639u) { // ع
             spec.kind = BAA_FMT_SPEC_F64;
             if (!fmt_buf_append(&obuf, &olen, &ocap, is_input ? "lf" : "f")) goto oom;
+        } else if (cp == 0x0623u) { // أ (صيغة علمية)
+            spec.kind = BAA_FMT_SPEC_F64_SCI;
+            if (!fmt_buf_append(&obuf, &olen, &ocap, is_input ? "le" : "e")) goto oom;
         } else if (cp == 0x0645u) { // م
             spec.kind = BAA_FMT_SPEC_PTR;
             if (is_input) {
@@ -3981,6 +3985,60 @@ static IRValue* lower_call_expr(IRLowerCtx* ctx, Node* expr) {
             int r = ir_builder_emit_call(ctx->builder, "pow", IR_TYPE_F64_T, args, 2);
             if (r < 0) {
                 ir_lower_report_error(ctx, expr, "فشل خفض نداء pow.");
+                return ir_value_const_int(0, IR_TYPE_F64_T);
+            }
+            return ir_value_reg(r, IR_TYPE_F64_T);
+        }
+
+        if (strcmp(n, "جيب") == 0) {
+            if (!a0 || a1) {
+                ir_lower_report_error(ctx, expr, "استدعاء 'جيب' يتطلب وسيطاً واحداً.");
+                ir_lower_eval_call_args(ctx, expr->data.call.args);
+                return ir_value_const_int(0, IR_TYPE_F64_T);
+            }
+
+            IRValue* in_v = cast_to(ctx, lower_expr(ctx, a0), IR_TYPE_F64_T);
+            IRValue* args[1] = { in_v };
+            ir_lower_set_loc(ctx->builder, expr);
+            int r = ir_builder_emit_call(ctx->builder, "sin", IR_TYPE_F64_T, args, 1);
+            if (r < 0) {
+                ir_lower_report_error(ctx, expr, "فشل خفض نداء sin.");
+                return ir_value_const_int(0, IR_TYPE_F64_T);
+            }
+            return ir_value_reg(r, IR_TYPE_F64_T);
+        }
+
+        if (strcmp(n, "جيب_تمام") == 0) {
+            if (!a0 || a1) {
+                ir_lower_report_error(ctx, expr, "استدعاء 'جيب_تمام' يتطلب وسيطاً واحداً.");
+                ir_lower_eval_call_args(ctx, expr->data.call.args);
+                return ir_value_const_int(0, IR_TYPE_F64_T);
+            }
+
+            IRValue* in_v = cast_to(ctx, lower_expr(ctx, a0), IR_TYPE_F64_T);
+            IRValue* args[1] = { in_v };
+            ir_lower_set_loc(ctx->builder, expr);
+            int r = ir_builder_emit_call(ctx->builder, "cos", IR_TYPE_F64_T, args, 1);
+            if (r < 0) {
+                ir_lower_report_error(ctx, expr, "فشل خفض نداء cos.");
+                return ir_value_const_int(0, IR_TYPE_F64_T);
+            }
+            return ir_value_reg(r, IR_TYPE_F64_T);
+        }
+
+        if (strcmp(n, "ظل") == 0) {
+            if (!a0 || a1) {
+                ir_lower_report_error(ctx, expr, "استدعاء 'ظل' يتطلب وسيطاً واحداً.");
+                ir_lower_eval_call_args(ctx, expr->data.call.args);
+                return ir_value_const_int(0, IR_TYPE_F64_T);
+            }
+
+            IRValue* in_v = cast_to(ctx, lower_expr(ctx, a0), IR_TYPE_F64_T);
+            IRValue* args[1] = { in_v };
+            ir_lower_set_loc(ctx->builder, expr);
+            int r = ir_builder_emit_call(ctx->builder, "tan", IR_TYPE_F64_T, args, 1);
+            if (r < 0) {
+                ir_lower_report_error(ctx, expr, "فشل خفض نداء tan.");
                 return ir_value_const_int(0, IR_TYPE_F64_T);
             }
             return ir_value_reg(r, IR_TYPE_F64_T);
@@ -5130,6 +5188,7 @@ static IRValue* ir_lower_builtin_print_format_ar(IRLowerCtx* ctx, Node* call_exp
                 v = ir_lower_char_to_cstr_tmp(ctx, call_expr, v);
                 break;
             case BAA_FMT_SPEC_F64:
+            case BAA_FMT_SPEC_F64_SCI:
                 v = cast_to(ctx, v, IR_TYPE_F64_T);
                 break;
             case BAA_FMT_SPEC_U64:
@@ -5218,6 +5277,7 @@ static IRValue* ir_lower_builtin_format_string_ar(IRLowerCtx* ctx, Node* call_ex
                 v = ir_lower_char_to_cstr_tmp(ctx, call_expr, v);
                 break;
             case BAA_FMT_SPEC_F64:
+            case BAA_FMT_SPEC_F64_SCI:
                 v = cast_to(ctx, v, IR_TYPE_F64_T);
                 break;
             case BAA_FMT_SPEC_U64:
@@ -5545,6 +5605,7 @@ static IRValue* ir_lower_builtin_scan_format_ar(IRLowerCtx* ctx, Node* call_expr
                 call_args[1 + idx] = cast_to(ctx, v, ir_type_ptr(IR_TYPE_U64_T));
                 break;
             case BAA_FMT_SPEC_F64:
+            case BAA_FMT_SPEC_F64_SCI:
                 call_args[1 + idx] = cast_to(ctx, v, ir_type_ptr(IR_TYPE_F64_T));
                 break;
             default:

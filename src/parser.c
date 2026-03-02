@@ -323,6 +323,7 @@ bool is_type_keyword(BaaTokenType type) {
             type == TOKEN_KEYWORD_CHAR ||
             type == TOKEN_KEYWORD_VOID ||
             type == TOKEN_KEYWORD_FLOAT ||
+            type == TOKEN_KEYWORD_FLOAT32 ||
             type == TOKEN_ENUM || type == TOKEN_STRUCT || type == TOKEN_UNION);
 }
 
@@ -409,6 +410,7 @@ DataType token_to_datatype(BaaTokenType type) {
     if (type == TOKEN_KEYWORD_BOOL) return TYPE_BOOL;
     if (type == TOKEN_KEYWORD_CHAR) return TYPE_CHAR;
     if (type == TOKEN_KEYWORD_FLOAT) return TYPE_FLOAT;
+    if (type == TOKEN_KEYWORD_FLOAT32) return TYPE_FLOAT;
     if (type == TOKEN_KEYWORD_VOID) return TYPE_VOID;
     return TYPE_INT;
 }
@@ -761,7 +763,8 @@ static bool parse_type_spec_ex(DataType* out_type, char** out_type_name,
              parser.current.type == TOKEN_KEYWORD_BOOL ||
              parser.current.type == TOKEN_KEYWORD_CHAR ||
              parser.current.type == TOKEN_KEYWORD_VOID ||
-             parser.current.type == TOKEN_KEYWORD_FLOAT) {
+             parser.current.type == TOKEN_KEYWORD_FLOAT ||
+             parser.current.type == TOKEN_KEYWORD_FLOAT32) {
         dt = token_to_datatype(parser.current.type);
         eat(parser.current.type);
         parsed = true;

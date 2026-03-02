@@ -1,6 +1,6 @@
 # Baa Compiler Internals
 
-> **Version:** 0.4.1.0 | [← Language Spec](LANGUAGE.md) | [API Reference →](API_REFERENCE.md)
+> **Version:** 0.4.2.0 | [← Language Spec](LANGUAGE.md) | [API Reference →](API_REFERENCE.md)
 
 **Target Architecture:** x86-64 (AMD64)
 **Targets:** Windows x64 (COFF/PE) + Linux x86-64 (ELF)
@@ -357,7 +357,7 @@ The preprocessor supports nested conditionals via `if_stack[32]`:
 ### 2.4. Token Types
 
 ```
-Keywords:    صحيح, ص٨, ص١٦, ص٣٢, ص٦٤, ط٨, ط١٦, ط٣٢, ط٦٤, عشري, حرف, نص, منطقي, عدم, حجم, نوع, ثابت, ساكن, إذا, وإلا, طالما, لكل, اختر, حالة, افتراضي, اطبع, اقرأ, إرجع, توقف, استمر, تعداد, هيكل, اتحاد
+Keywords:    صحيح, ص٨, ص١٦, ص٣٢, ص٦٤, ط٨, ط١٦, ط٣٢, ط٦٤, عشري, عشري٣٢, حرف, نص, منطقي, عدم, حجم, نوع, ثابت, ساكن, إذا, وإلا, طالما, لكل, اختر, حالة, افتراضي, اطبع, اقرأ, إرجع, توقف, استمر, تعداد, هيكل, اتحاد
 Literals:    INTEGER, STRING, CHAR, TRUE, FALSE
 Operators:   + - * / % ++ -- ! ~ && || & | ^ << >>
 Comparison:  == != < > <= >=
@@ -439,7 +439,7 @@ DeclMods      ::= DeclMod*
 TypeSpec      ::= Type | EnumType | StructType | UnionType | AliasType
 Type          ::= "صحيح" | "ص٨" | "ص١٦" | "ص٣٢" | "ص٦٤"
                 | "ط٨" | "ط١٦" | "ط٣٢" | "ط٦٤"
-                | "عشري" | "حرف" | "نص" | "منطقي" | "عدم"
+                | "عشري" | "عشري٣٢" | "حرف" | "نص" | "منطقي" | "عدم"
 EnumType      ::= "تعداد" ID
 StructType    ::= "هيكل" ID
 UnionType     ::= "اتحاد" ID
@@ -576,7 +576,7 @@ The Semantic Analyzer (`src/analysis.c`) performs a static check on the AST befo
 14. **Function Pointers (v0.3.10.6)**: Validates assignment, comparison (EQ/NE only), and indirect calls matching exact signatures.
 15. **Variadic Functions (v0.4.0.5)**: Validates `...` signatures, variadic builtin usage (`بدء_معاملات/معامل_تالي/نهاية_معاملات`), and fixed/extra argument checks for variadic direct calls.
 16. **Inline Assembly (v0.4.0.6)**: Validates `مجمع { ... }` blocks, enforces fixed-register constraint subset (`=a/=c/=d`, `a/c/d`), checks output lvalue requirements, and restricts operand types to integer/pointer forms.
-17. **Standard Library Modules (v0.4.1)**: Validates Math/System/Time builtins (`جذر_تربيعي/أس/مطلق/عشوائي/متغير_بيئة/نفذ_أمر/وقت_حالي/وقت_كنص`) for arity and type compatibility.
+17. **Standard Library Modules + Float Extensions (v0.4.2)**: Validates Math/System/Time builtins (`جذر_تربيعي/أس/جيب/جيب_تمام/ظل/مطلق/عشوائي/متغير_بيئة/نفذ_أمر/وقت_حالي/وقت_كنص`), Arabic float format specs (`%ع/%أ`), and accepts `عشري٣٢` as a float keyword alias.
 
 ### 5.2. Constant Checking (v0.2.7+)
 
@@ -881,7 +881,7 @@ typedef enum {
     TYPE_FUNC_PTR,      // مؤشر دالة: دالة(...) -> نوع
     TYPE_BOOL,          // منطقي (bool - stored as byte)
     TYPE_CHAR,          // حرف (UTF-8 sequence)
-    TYPE_FLOAT,         // عشري (float64)
+    TYPE_FLOAT,         // عشري (float64) + عشري٣٢ (alias في v0.4.2)
     TYPE_VOID,          // عدم (void)
     TYPE_ENUM,          // تعداد (يُخزن كـ int64)
     TYPE_STRUCT,        // هيكل (ليس قيمة من الدرجة الأولى)
@@ -926,7 +926,7 @@ typedef enum {
 | `نص` | `char*` | 8 bytes | Pointer to read-only string (.rdata/.rodata) |
 | `منطقي` | `bool` (stored as int) | 8 bytes | Stored as 0/1 in 8-byte slots |
 
-**I/O note:** The current backend dynamically resolves format strings (`%lld`, `%llu`, `%g\n`) for integers and floats, supporting full 64-bit and unsigned emission. Strings (`نص`) and Characters (`حرف`) are handled with a custom UTF-8 emission loop or packed format.
+**I/O note:** The backend dynamically resolves format strings (`%lld`, `%llu`, `%g/%e`) for integers/floats (Arabic `%ع/%أ` → C `%f/%e` in formatted builtins). Strings (`نص`) and Characters (`حرف`) are handled with a custom UTF-8 emission loop or packed format.
 
 ---
 
@@ -1347,8 +1347,8 @@ Currently lowered expressions:
   - `بدء_معاملات`: initializes variadic cursor from hidden variadic base.
   - `معامل_تالي`: reads next packed argument slot as requested type and advances cursor.
   - `نهاية_معاملات`: clears variadic cursor.
-- Builtin standard-library module calls in `NODE_CALL_EXPR` (`v0.4.1`):
-  - Math: `جذر_تربيعي` -> `sqrt`, `أس` -> `pow`, `مطلق` -> `llabs`, `عشوائي` -> `rand`
+- Builtin standard-library module calls in `NODE_CALL_EXPR` (`v0.4.2`):
+  - Math: `جذر_تربيعي` -> `sqrt`, `أس` -> `pow`, `جيب` -> `sin`, `جيب_تمام` -> `cos`, `ظل` -> `tan`, `مطلق` -> `llabs`, `عشوائي` -> `rand`
   - System: `متغير_بيئة` -> `getenv` (+ C-string → Baa string conversion), `نفذ_أمر` -> `system`
   - Time: `وقت_حالي` -> `time`, `وقت_كنص` -> `ctime` (+ C-string → Baa string conversion)
 

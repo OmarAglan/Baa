@@ -233,9 +233,13 @@ Baa is statically typed. All variables must be declared with their type.
 - تحذير `-Wimplicit-narrowing` ينبه على التحويلات الضمنية التي قد تفقد بيانات (مثل `ص٣٢` إلى `ص٨`).
 - تحذير `-Wsigned-unsigned-compare` ينبه على المقارنات المختلطة بين الأنواع الموقعة وغير الموقعة بعد الترقيات.
 
-### 3.2.3. Floating Point (`عشري`)
+### 3.2.3. Floating Point (`عشري`, `عشري٣٢`)
 
-النوع `عشري` هو `f64` ويدعم:
+- النوع `عشري` هو `f64`.
+- النوع `عشري٣٢` (أُضيف في `v0.4.2`) هو **alias** نحوي/دلالي إلى `عشري` حالياً
+  (أي يخفض داخلياً كـ `f64` في هذا الإصدار للحفاظ على اتساق ABI).
+
+وكلاهما يدعم حالياً:
 
 - العمليات `+ - * /`
 - المقارنات `== != < > <= >=`
@@ -246,7 +250,9 @@ Baa is statically typed. All variables must be declared with their type.
     عشري أ = ١.٢٥.
     عشري ب = ٢.٥.
     عشري ج = أ + ب.
+    عشري٣٢ د = ٤.٠.
     اطبع ج.
+    اطبع د.
     إذا (ج >= ٣.٧٥) { اطبع "صحيح". }
     إرجع ٠.
 }
@@ -886,6 +892,7 @@ Reads an input from standard input and stores it in the specified variable.
 | `%ن` | نص (string) | `نص` (يسمح بـ `عدم` ويُطبع كـ `"عدم"` للأمان) | `نص*` مع عرض رقمي مثل `%10ن` |
 | `%ح` | حرف UTF-8 (محزّم) | `حرف` | غير مدعوم |
 | `%ع` | عدد عشري | `عشري` | `عشري*` |
+| `%أ` | عدد عشري بصيغة علمية | `عشري` | `عشري*` |
 | `%م` | مؤشر | `عدم*` أو أي مؤشر أو `نص` أو `دالة(...)` | غير مدعوم |
 
 #### 6.3.2. Examples
@@ -900,8 +907,11 @@ Reads an input from standard input and stores it in the specified variable.
     اطبع_منسق("الاسم: %ن، العمر: %ص\س", الاسم, العمر).
 
     نص رسالة = نسق("x=%س f=%.2ع", كـ<ط٦٤>(42), 3.5).
+    نص علمي = نسق("f=%.3أ", 1234.5).
     اطبع رسالة.
+    اطبع علمي.
     حرر_نص(رسالة).
+    حرر_نص(علمي).
 
     إرجع ٠.
 }
@@ -1323,12 +1333,15 @@ The standard library provides C-like dynamic memory APIs for low-level programmi
 }
 ```
 
-### 9.3. Math Module (الرياضيات) (v0.4.1)
+### 9.3. Math Module (الرياضيات) (v0.4.2)
 
 | Function | Signature | Description |
 |----------|-----------|-------------|
 | **Square Root** | `عشري جذر_تربيعي(عشري قيمة)` | Returns the square root of `قيمة`. |
 | **Power** | `عشري أس(عشري أساس، عشري قوة)` | Returns `أساس^قوة`. |
+| **Sine** | `عشري جيب(عشري زاوية)` | Returns `sin(زاوية)` where input is in radians. |
+| **Cosine** | `عشري جيب_تمام(عشري زاوية)` | Returns `cos(زاوية)` where input is in radians. |
+| **Tangent** | `عشري ظل(عشري زاوية)` | Returns `tan(زاوية)` where input is in radians. |
 | **Absolute Value** | `صحيح مطلق(صحيح قيمة)` | Returns absolute signed integer value. |
 | **Random** | `صحيح عشوائي()` | Returns a non-negative pseudo-random integer. |
 

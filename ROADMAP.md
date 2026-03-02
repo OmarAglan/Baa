@@ -1270,13 +1270,15 @@
 
 ✅ COMPLETED (2026-03-02)
 
-### v0.4.2: Floating Point Extensions
+### v0.4.2: Floating Point Extensions ✅
 
 **Goal:** Extend floating point beyond the core `عشري` (completed in v0.3.5.5).
 
-- [ ] **Math functions** — `جذر_تربيعي()`, `أس()`, `جيب()`, ...
-- [ ] **Formatting** — better float printing options (precision, scientific).
-- [ ] **Additional float types** — `عشري٣٢` (f32) / others if needed.
+- [x] **Math functions** — `جذر_تربيعي()`, `أس()`, `جيب()`, `جيب_تمام()`, `ظل()`.
+- [x] **Formatting** — better float printing options (precision + scientific `%أ`).
+- [x] **Additional float types** — `عشري٣٢` keyword (current lowering alias to `عشري`/f64 in v0.4.2).
+
+✅ COMPLETED (2026-03-02)
 
 ### v0.4.3: Error Handling 🛡️
 

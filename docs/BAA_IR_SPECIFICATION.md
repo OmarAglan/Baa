@@ -1,6 +1,6 @@
 # Baa IR Specification
 
-> **Version:** 0.4.0.0 | [← Compiler Internals](INTERNALS.md) | [API Reference →](API_REFERENCE.md)
+> **Version:** 0.4.2.0 | [← Compiler Internals](INTERNALS.md) | [API Reference →](API_REFERENCE.md)
 
 This document specifies the Intermediate Representation (IR) for the Baa compiler. The IR uses Arabic naming conventions throughout, creating a culturally authentic yet technically robust design.
 
@@ -70,6 +70,7 @@ AST → [Baa IR] → Optimizations → Backend Codegen → x86-64 Assembly
 - Integer types can be extended or truncated via `تحويل`
 - Pointers are 64-bit on x86-64 target
 - `ص١` (boolean) is zero-extended to larger integers
+- في `v0.4.2`: الكلمة المصدرية `عشري٣٢` تُقبل دلالياً لكنها تُخفض حالياً إلى `f64` (`ع٦٤`) في IR.
 
 ### 2.4 Data Layout (Target: x86-64)
 
@@ -418,10 +419,13 @@ internal global @عداد_داخلي = ص٦٤ ٠ // ربط داخلي (v0.3.7.5)
 تُشفّر كنداء مباشر خاص إلى `@__baa_inline_asm_v0406` مع معاملات وصفية
 (عدد الأسطر/المخارج/المدخلات + قيود + قيم)، ثم يُحوّلها ISel إلى أسطر تجميع خام.
 
-ملاحظة (`v0.4.1`): استدعاءات وحدات المكتبة القياسية
-`جذر_تربيعي/أس/مطلق/عشوائي/متغير_بيئة/نفذ_أمر/وقت_حالي/وقت_كنص`
+ملاحظة (`v0.4.2`): استدعاءات وحدات المكتبة القياسية
+`جذر_تربيعي/أس/جيب/جيب_تمام/ظل/مطلق/عشوائي/متغير_بيئة/نفذ_أمر/وقت_حالي/وقت_كنص`
 تُخفض داخلياً إلى نداءات libc/libm (مع تحويلات نص باء ↔ C-string عند الحاجة)
 بدلاً من تمرير `call` خام لدوال باء معرّفة في المصدر.
+
+ملاحظة (`v0.4.2`): في مسار التنسيق العربي المدمج، `%أ` (scientific float) يُترجم
+إلى `%e/%le` على مستوى نداءات libc (`printf`/`snprintf`/`scanf`).
 
 ### 6.2 Variable Handling
 

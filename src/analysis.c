@@ -2790,6 +2790,9 @@ typedef struct {
 static const BuiltinMathFuncSig builtin_math_funcs[] = {
     { "جذر_تربيعي", TYPE_FLOAT, 1, { TYPE_FLOAT, TYPE_INT } },
     { "أس",         TYPE_FLOAT, 2, { TYPE_FLOAT, TYPE_FLOAT } },
+    { "جيب",        TYPE_FLOAT, 1, { TYPE_FLOAT, TYPE_INT } },
+    { "جيب_تمام",   TYPE_FLOAT, 1, { TYPE_FLOAT, TYPE_INT } },
+    { "ظل",         TYPE_FLOAT, 1, { TYPE_FLOAT, TYPE_INT } },
     { "مطلق",       TYPE_INT,   1, { TYPE_INT,   TYPE_INT } },
     { "عشوائي",     TYPE_INT,   0, { TYPE_INT,   TYPE_INT } },
 };
@@ -3164,6 +3167,7 @@ typedef enum {
     BAA_FMT_SPEC_STR,
     BAA_FMT_SPEC_CHAR,
     BAA_FMT_SPEC_F64,
+    BAA_FMT_SPEC_F64_SCI,
     BAA_FMT_SPEC_PTR,
 } BaaFmtSpecKind;
 
@@ -3289,7 +3293,7 @@ static bool baa_fmt_parse_ar(Node* site, const char* fmt, bool is_input, BaaFmtP
         spec.width = width;
         spec.has_width = has_width;
 
-        // ص ط س ن ح ع م
+        // ص ط س ن ح ع أ م
         if (cp == 0x0635u) { // ص
             spec.kind = BAA_FMT_SPEC_I64;
         } else if (cp == 0x0637u) { // ط
@@ -3312,6 +3316,8 @@ static bool baa_fmt_parse_ar(Node* site, const char* fmt, bool is_input, BaaFmtP
             }
         } else if (cp == 0x0639u) { // ع
             spec.kind = BAA_FMT_SPEC_F64;
+        } else if (cp == 0x0623u) { // أ (صيغة علمية)
+            spec.kind = BAA_FMT_SPEC_F64_SCI;
         } else if (cp == 0x0645u) { // م
             spec.kind = BAA_FMT_SPEC_PTR;
             if (is_input) {
@@ -3435,10 +3441,10 @@ static bool builtin_check_format_call(Node* call_node, const char* fname, Node* 
                                          TYPE_U64, NULL, 1, true)) {
                     semantic_error(a, "نداء 'اقرأ_منسق': المعامل %d يجب أن يكون 'ط٦٤*' مع %%ط/%%س.", idx + 2);
                 }
-            } else if (k == BAA_FMT_SPEC_F64) {
+            } else if (k == BAA_FMT_SPEC_F64 || k == BAA_FMT_SPEC_F64_SCI) {
                 if (!ptr_type_compatible(a->inferred_ptr_base_type, a->inferred_ptr_base_type_name, a->inferred_ptr_depth,
                                          TYPE_FLOAT, NULL, 1, true)) {
-                    semantic_error(a, "نداء 'اقرأ_منسق': المعامل %d يجب أن يكون 'عشري*' مع %%ع.", idx + 2);
+                    semantic_error(a, "نداء 'اقرأ_منسق': المعامل %d يجب أن يكون 'عشري*' مع %%ع/%%أ.", idx + 2);
                 }
             } else if (k == BAA_FMT_SPEC_STR) {
                 if (!ptr_type_compatible(a->inferred_ptr_base_type, a->inferred_ptr_base_type_name, a->inferred_ptr_depth,
@@ -3462,10 +3468,10 @@ static bool builtin_check_format_call(Node* call_node, const char* fname, Node* 
             if (got != TYPE_CHAR) {
                 semantic_error(a, "نوع المعامل %d في '%s' يجب أن يكون 'حرف' مع %%ح.", idx + 2, fname);
             }
-        } else if (k == BAA_FMT_SPEC_F64) {
+        } else if (k == BAA_FMT_SPEC_F64 || k == BAA_FMT_SPEC_F64_SCI) {
             DataType got = infer_type(a);
             if (got != TYPE_FLOAT) {
-                semantic_error(a, "نوع المعامل %d في '%s' يجب أن يكون 'عشري' مع %%ع.", idx + 2, fname);
+                semantic_error(a, "نوع المعامل %d في '%s' يجب أن يكون 'عشري' مع %%ع/%%أ.", idx + 2, fname);
             }
         } else if (k == BAA_FMT_SPEC_PTR) {
             DataType got = infer_type_allow_null_string(a, TYPE_POINTER);

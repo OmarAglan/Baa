@@ -6,6 +6,30 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ---
 
+## [0.4.2.0] - 2026-03-02
+
+### Added
+
+- **Floating-point extensions (v0.4.2)**:
+  - Math builtins: `جيب(عشري)`, `جيب_تمام(عشري)`, `ظل(عشري)` (lowered to `sin/cos/tan`).
+  - Arabic scientific format specifier: `%أ` for `اطبع_منسق/نسق/اقرأ_منسق`.
+  - New type keyword: `عشري٣٢` (accepted by lexer/parser as a floating type alias).
+- **Stdlib header sync** in `stdlib/baalib.baahd` for the new trig APIs.
+- **New test coverage**:
+  - `tests/integration/backend/backend_float_extensions_v042_test.baa`
+  - `tests/neg/semantic_math_sin_bad_arity.baa`
+  - `tests/neg/semantic_format_scientific_bad_type.baa`
+
+### Changed
+
+- **Semantic format checking** now validates `%أ` exactly like `%ع` (float output/input contracts).
+- **IR lowering format translation** now maps `%أ` to C scientific formats (`%e` / `%le`).
+- **Frontend type parsing** now recognizes `عشري٣٢` in all type positions (declarations and signatures).
+
+### Fixed
+
+- **Arabic-format diagnostics** for float mismatches now mention both `%ع/%أ` to avoid ambiguous error hints.
+
 ## [0.4.1.0] - 2026-03-02
 
 ### Added

@@ -13,6 +13,7 @@
 #ifdef _WIN32
 #include <windows.h>
 #include <process.h>
+#include <wchar.h>
 #else
 #include <errno.h>
 #include <fcntl.h>
@@ -34,6 +35,29 @@ static bool win_is_path(const char* s)
 {
     if (!s) return false;
     return strchr(s, '\\') != NULL || strchr(s, '/') != NULL;
+}
+
+static wchar_t* win_utf8_to_wide_alloc(const char* text)
+{
+    if (!text) return NULL;
+
+    int need = MultiByteToWideChar(CP_UTF8, 0, text, -1, NULL, 0);
+    UINT code_page = CP_UTF8;
+    if (need <= 0) {
+        code_page = CP_ACP;
+        need = MultiByteToWideChar(code_page, 0, text, -1, NULL, 0);
+    }
+    if (need <= 0) return NULL;
+
+    wchar_t* out = (wchar_t*)calloc((size_t)need, sizeof(wchar_t));
+    if (!out) return NULL;
+
+    if (MultiByteToWideChar(code_page, 0, text, -1, out, need) <= 0) {
+        free(out);
+        return NULL;
+    }
+
+    return out;
 }
 
 static bool win_build_cmdline(char* out, size_t out_cap, const char* const* argv)
@@ -137,9 +161,21 @@ static bool win_run_createprocess(const char* const* argv,
     result_init(out_result);
     if (!argv || !argv[0]) return false;
 
-    char cmdline[8192];
-    if (!win_build_cmdline(cmdline, sizeof(cmdline), argv))
+    char cmdline_utf8[8192];
+    if (!win_build_cmdline(cmdline_utf8, sizeof(cmdline_utf8), argv))
         return false;
+
+    wchar_t* cmdline = win_utf8_to_wide_alloc(cmdline_utf8);
+    if (!cmdline) return false;
+
+    wchar_t* cwd_w = NULL;
+    if (cwd) {
+        cwd_w = win_utf8_to_wide_alloc(cwd);
+        if (!cwd_w) {
+            free(cmdline);
+            return false;
+        }
+    }
 
     BOOL inherit = (stdout_path || stderr_path) ? TRUE : FALSE;
 
@@ -151,15 +187,28 @@ static bool win_run_createprocess(const char* const* argv,
     HANDLE h_out = NULL;
     HANDLE h_err = NULL;
     bool same_file = false;
+    wchar_t* stdout_w = NULL;
+    wchar_t* stderr_w = NULL;
 
     if (stdout_path && stderr_path && strcmp(stdout_path, stderr_path) == 0)
         same_file = true;
 
     if (inherit && stdout_path)
     {
-        h_out = CreateFileA(stdout_path, GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE,
+        stdout_w = win_utf8_to_wide_alloc(stdout_path);
+        if (!stdout_w) {
+            free(cmdline);
+            free(cwd_w);
+            return false;
+        }
+        h_out = CreateFileW(stdout_w, GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE,
                             &sa, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
-        if (h_out == INVALID_HANDLE_VALUE) return false;
+        if (h_out == INVALID_HANDLE_VALUE) {
+            free(cmdline);
+            free(cwd_w);
+            free(stdout_w);
+            return false;
+        }
     }
     if (inherit && stderr_path)
     {
@@ -169,17 +218,29 @@ static bool win_run_createprocess(const char* const* argv,
         }
         else
         {
-            h_err = CreateFileA(stderr_path, GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE,
+            stderr_w = win_utf8_to_wide_alloc(stderr_path);
+            if (!stderr_w) {
+                if (h_out) CloseHandle(h_out);
+                free(cmdline);
+                free(cwd_w);
+                free(stdout_w);
+                return false;
+            }
+            h_err = CreateFileW(stderr_w, GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE,
                                 &sa, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
             if (h_err == INVALID_HANDLE_VALUE)
             {
                 if (h_out) CloseHandle(h_out);
+                free(cmdline);
+                free(cwd_w);
+                free(stdout_w);
+                free(stderr_w);
                 return false;
             }
         }
     }
 
-    STARTUPINFOA si;
+    STARTUPINFOW si;
     PROCESS_INFORMATION pi;
     memset(&si, 0, sizeof(si));
     memset(&pi, 0, sizeof(pi));
@@ -193,26 +254,40 @@ static bool win_run_createprocess(const char* const* argv,
         si.hStdError = stderr_path ? h_err : GetStdHandle(STD_ERROR_HANDLE);
     }
 
-    const char* app = NULL;
+    wchar_t* app_w = NULL;
     if (win_is_path(argv[0])) {
-        app = argv[0];
+        app_w = win_utf8_to_wide_alloc(argv[0]);
+        if (!app_w) {
+            if (h_out) CloseHandle(h_out);
+            if (h_err && h_err != h_out) CloseHandle(h_err);
+            free(cmdline);
+            free(cwd_w);
+            free(stdout_w);
+            free(stderr_w);
+            return false;
+        }
     }
 
-    BOOL ok = CreateProcessA(
-        app,
+    BOOL ok = CreateProcessW(
+        app_w,
         cmdline,
         NULL,
         NULL,
         inherit,
         0,
         NULL,
-        cwd,
+        cwd_w,
         &si,
         &pi
     );
 
     if (h_out) CloseHandle(h_out);
     if (h_err && h_err != h_out) CloseHandle(h_err);
+    free(app_w);
+    free(cmdline);
+    free(cwd_w);
+    free(stdout_w);
+    free(stderr_w);
 
     if (!ok) return false;
 

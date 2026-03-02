@@ -199,7 +199,7 @@ int main(int argc, char **argv)
     {
         for (int i = 0; i < obj_count; i++)
         {
-            remove(obj_files_to_link[i]);
+            (void)driver_toolchain_delete_file_utf8(obj_files_to_link[i]);
         }
     }
 

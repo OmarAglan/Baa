@@ -29,6 +29,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - **Version synchronization**: unified current project metadata/version headers to `0.4.4.1` across compiler macro, resource metadata, installer metadata, CMake project version, and docs headers.
 - **Include resolution order** now explicitly applies: source-file directory → direct path → `BAA_HOME` (relative) → user `-I` paths → bare-name fallbacks (`<source_dir>/stdlib`, `stdlib`, `BAA_STDLIB`, `BAA_HOME/stdlib`).
 - **Installer reliability**: path/environment updates now use normalized de-dup logic, broadcast `WM_SETTINGCHANGE`, and remove added entries during uninstall.
+- **Windows Unicode path hardening**:
+  - GCC/LD invocations now run through an ASCII staging directory, then copy outputs back to requested UTF-8 paths.
+  - Process launcher on Windows now uses wide Win32 APIs (`CreateProcessW`, `CreateFileW`) for UTF-8 path safety.
+  - Embedded GCC discovery now uses wide path APIs (`GetModuleFileNameW`, `GetFileAttributesW`) to avoid ANSI path truncation.
 
 ## [0.4.4.0] - 2026-03-02
 

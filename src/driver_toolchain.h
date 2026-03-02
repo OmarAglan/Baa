@@ -42,4 +42,14 @@ int driver_toolchain_link(const CompilerConfig *config,
                           const char **obj_files,
                           int obj_count);
 
+/**
+ * @brief نسخ ملف مع دعم مسارات UTF-8 على ويندوز.
+ */
+bool driver_toolchain_copy_file_utf8(const char* src_path, const char* dst_path);
+
+/**
+ * @brief حذف ملف مع دعم مسارات UTF-8 على ويندوز.
+ */
+bool driver_toolchain_delete_file_utf8(const char* path);
+
 #endif // BAA_DRIVER_TOOLCHAIN_H

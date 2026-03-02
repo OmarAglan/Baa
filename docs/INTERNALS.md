@@ -74,8 +74,8 @@ flowchart LR
 | **3. IR Lowering** | AST | IR | `ir_lower.c` (v0.3.0.3+) + `ir_builder.c` | Converts AST expressions/statements to SSA-form Intermediate Representation using the IR Builder. |
 | **4. Optimization** | IR | Optimized IR | `ir_optimizer.c`, `ir_mem2reg.c`, `ir_sccp.c`, `ir_gvn.c`, etc. | Full middle-end: Inlining (O2), Mem2Reg, Canon, InstCombine, SCCP, ConstFold, CopyProp, GVN (O2), CSE (O2), DCE, CFGSimplify, LICM. |
 | **5. Backend** | IR | `.s` Assembly | `isel.c`, `regalloc.c`, `emit.c` | Lowers IR to machine instructions, allocates registers, and emits x86-64 AT&T assembly. |
-| **6. Assemble** | `.s` Assembly | `.o` Object | `gcc -c` | Invokes external assembler. |
-| **7. Link** | `.o` Object | `.exe` Executable | `gcc` | Links with C Runtime. |
+| **6. Assemble** | `.s` Assembly | `.o` Object | `gcc -c` | Invokes external assembler. On Windows (v0.4.4.1), toolchain calls run via ASCII staging paths, then outputs are copied back to requested UTF-8 paths. |
+| **7. Link** | `.o` Object | `.exe` Executable | `gcc` | Links with C Runtime. On Windows (v0.4.4.1), link inputs/outputs are staged on ASCII paths for GCC compatibility. |
 
 > **Note (v0.3.2.4+):** The compiler uses the full IR-based backend pipeline end-to-end: AST → IR → Optimizer → ISel → RegAlloc → Emit → Assembly.
 

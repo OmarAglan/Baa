@@ -143,6 +143,26 @@ static char *change_extension_alloc(const char *filename, const char *new_ext)
     return new_name;
 }
 
+/**
+ * @brief إنشاء مسار مؤقت ASCII داخل مجلد العمل.
+ */
+static char* driver_make_ascii_temp_path(const char* prefix, const char* ext)
+{
+    static unsigned long temp_counter = 0;
+    if (!prefix || !ext) return NULL;
+
+    unsigned long id = ++temp_counter;
+    char tmp_name[256];
+    int n = snprintf(tmp_name, sizeof(tmp_name), ".baa_%s_%lu%s", prefix, id, ext);
+    if (n <= 0 || (size_t)n >= sizeof(tmp_name)) return NULL;
+
+    size_t need = (size_t)n + 1;
+    char* out = (char*)malloc(need);
+    if (!out) return NULL;
+    memcpy(out, tmp_name, need);
+    return out;
+}
+
 // ============================================================================
 // خط الأنابيب لكل ملف
 // ============================================================================
@@ -361,11 +381,24 @@ static int compile_one_ir(const CompilerConfig *config,
     }
     if (config->time_phases) phase_times->regalloc_s += (driver_time_seconds() - t0);
 
-    char *asm_file;
-    if (config->assembly_only && input_count == 1 && config->output_file)
-        asm_file = config->output_file;
-    else
-        asm_file = change_extension_alloc(current_input, ".s");
+    char* final_asm_output = NULL;
+    if (config->assembly_only)
+    {
+        if (input_count == 1 && config->output_file)
+            final_asm_output = config->output_file;
+        else
+            final_asm_output = change_extension_alloc(current_input, ".s");
+    }
+
+    char* asm_file = driver_make_ascii_temp_path("asm", ".s");
+    if (!asm_file)
+    {
+        fprintf(stderr, "خطأ: فشل إنشاء مسار مؤقت ASCII لملف التجميع.\n");
+        ir_module_free(ir_module);
+        free(source);
+        if (final_asm_output && final_asm_output != config->output_file) free(final_asm_output);
+        return 1;
+    }
 
     FILE *f_asm = fopen(asm_file, "w");
     if (!f_asm)
@@ -374,7 +407,8 @@ static int compile_one_ir(const CompilerConfig *config,
         mach_module_free(mach_module);
         ir_module_free(ir_module);
         free(source);
-        if (asm_file != config->output_file) free(asm_file);
+        free(asm_file);
+        if (final_asm_output && final_asm_output != config->output_file) free(final_asm_output);
         return 1;
     }
 
@@ -391,7 +425,8 @@ static int compile_one_ir(const CompilerConfig *config,
             mach_module_free(mach_module);
             ir_module_free(ir_module);
             free(source);
-            if (asm_file != config->output_file) free(asm_file);
+            free(asm_file);
+            if (final_asm_output && final_asm_output != config->output_file) free(final_asm_output);
             return 1;
         }
     }
@@ -404,7 +439,8 @@ static int compile_one_ir(const CompilerConfig *config,
         mach_module_free(mach_module);
         ir_module_free(ir_module);
         free(source);
-        if (asm_file != config->output_file) free(asm_file);
+        free(asm_file);
+        if (final_asm_output && final_asm_output != config->output_file) free(final_asm_output);
         return 1;
     }
     if (config->time_phases) phase_times->emit_s += (driver_time_seconds() - t0);
@@ -437,30 +473,65 @@ static int compile_one_ir(const CompilerConfig *config,
             }
         }
 
+        if (!final_asm_output) {
+            fprintf(stderr, "خطأ: مسار خرج التجميع غير صالح.\n");
+            free(asm_file);
+            return 1;
+        }
+
+        if (!driver_toolchain_copy_file_utf8(asm_file, final_asm_output))
+        {
+            fprintf(stderr, "خطأ: فشل نسخ ملف التجميع إلى المسار الهدف '%s'.\n", final_asm_output);
+            free(asm_file);
+            if (final_asm_output != config->output_file) free(final_asm_output);
+            return 1;
+        }
+
         if (config->verbose)
-            printf("[INFO] Generated assembly: %s\n", asm_file);
-        if (asm_file != config->output_file) free(asm_file);
+            printf("[INFO] Generated assembly: %s\n", final_asm_output);
+        if (!config->verbose)
+            (void)driver_toolchain_delete_file_utf8(asm_file);
+        free(asm_file);
+        if (final_asm_output != config->output_file) free(final_asm_output);
         return 0;
     }
 
     char *obj_file;
-    if (config->compile_only && input_count == 1 && config->output_file)
-        obj_file = config->output_file;
+    if (config->compile_only)
+    {
+        if (input_count == 1 && config->output_file)
+            obj_file = config->output_file;
+        else
+            obj_file = change_extension_alloc(current_input, ".o");
+    }
     else
-        obj_file = change_extension_alloc(current_input, ".o");
+    {
+        obj_file = driver_make_ascii_temp_path("obj", ".o");
+        if (!obj_file)
+        {
+            fprintf(stderr, "خطأ: فشل إنشاء مسار مؤقت ASCII لملف الكائن.\n");
+            if (!config->verbose) (void)driver_toolchain_delete_file_utf8(asm_file);
+            free(asm_file);
+            if (final_asm_output && final_asm_output != config->output_file) free(final_asm_output);
+            return 1;
+        }
+    }
 
     if (driver_toolchain_assemble_one(config, phase_times, asm_file, obj_file) != 0)
     {
-        if (asm_file != config->output_file) free(asm_file);
+        if (!config->verbose) (void)driver_toolchain_delete_file_utf8(asm_file);
+        free(asm_file);
         if (obj_file != config->output_file) free(obj_file);
+        if (final_asm_output && final_asm_output != config->output_file) free(final_asm_output);
         return 1;
     }
 
     if (!config->verbose)
     {
-        remove(asm_file);
+        (void)driver_toolchain_delete_file_utf8(asm_file);
     }
-    if (asm_file != config->output_file) free(asm_file);
+    free(asm_file);
+    if (final_asm_output && final_asm_output != config->output_file) free(final_asm_output);
 
     if (out_obj_file) *out_obj_file = obj_file;
     return 0;

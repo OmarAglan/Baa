@@ -2347,6 +2347,7 @@ Strings are collected during parsing and emitted with unique labels:
 | **Entry Point** | `الرئيسية` → exported as `main` |
 | **Name Mangling** | None - functions use their Arabic UTF-8 names as assembly labels |
 | **Special Case** | `الرئيسية` is explicitly exported as `main` using `.globl main` |
+| **Main with args (v0.3.12.5)** | If the user defines `صحيح الرئيسية(صحيح عدد، نص[] معاملات)`, the compiler lowers the user function as `__baa_user_main` and emits an ABI wrapper named `الرئيسية` (exported as `main`). The wrapper converts C `char** argv` into Baa `نص[]` (`حرف[]` packed UTF-8) before calling `__baa_user_main`. |
 | **External Calls** | C runtime (`printf`, etc.) via toolchain symbol resolution |
 
 ---

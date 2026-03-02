@@ -21,6 +21,13 @@
 #include <limits.h>
 
 // ============================================================================
+// ثوابت/أسماء خاصة بنقطة الدخول
+// ============================================================================
+
+#define BAA_ENTRY_FUNC_NAME "الرئيسية"
+#define BAA_WRAPPED_USER_MAIN_NAME "__baa_user_main"
+
+// ============================================================================
 // Locals table helpers
 // ============================================================================
 
@@ -57,6 +64,853 @@ static int ir_lower_current_scope_start(IRLowerCtx* ctx) {
     if (!ctx) return 0;
     if (ctx->scope_depth <= 0) return 0;
     return ctx->scope_stack[ctx->scope_depth - 1];
+}
+
+static bool ir_lower_ast_func_is_main_with_args(const Node* func_def)
+{
+    if (!func_def || func_def->type != NODE_FUNC_DEF) return false;
+    if (!func_def->data.func_def.name) return false;
+    if (strcmp(func_def->data.func_def.name, BAA_ENTRY_FUNC_NAME) != 0) return false;
+
+    // نتحقق من أن التوقيع هو: صحيح الرئيسية(صحيح، نص[])
+    // ملاحظة: `نص[]` داخل المعاملات تُحلل كسكر نحوي إلى `TYPE_POINTER` (base=TYPE_STRING, depth=1).
+    const Node* p0 = NULL;
+    const Node* p1 = NULL;
+    int pc = 0;
+    for (const Node* p = func_def->data.func_def.params; p; p = p->next) {
+        if (p->type != NODE_VAR_DECL) continue;
+        if (pc == 0) p0 = p;
+        if (pc == 1) p1 = p;
+        pc++;
+        if (pc > 2) break;
+    }
+
+    if (pc != 2 || !p0 || !p1) return false;
+
+    bool ok0 = (p0->data.var_decl.type == TYPE_INT);
+    bool ok1 = (p1->data.var_decl.type == TYPE_POINTER &&
+                p1->data.var_decl.ptr_base_type == TYPE_STRING &&
+                p1->data.var_decl.ptr_depth == 1);
+
+    return ok0 && ok1;
+}
+
+// ---------------------------------------------------------------------------
+// Forward declarations (لأن بعض الدوال المساعدة تُعرّف لاحقاً في هذا الملف)
+// ---------------------------------------------------------------------------
+
+static void ir_lower_set_loc(IRBuilder* builder, const Node* node);
+static IRType* get_char_ptr_type(IRModule* module);
+static IRValue* cast_to(IRLowerCtx* ctx, IRValue* v, IRType* to);
+static IRBlock* cf_create_block(IRLowerCtx* ctx, const char* base_label);
+static IRValue* cast_i1_to_i64(IRLowerCtx* ctx, IRValue* v);
+static uint64_t pack_utf8_codepoint(uint32_t cp);
+
+/**
+ * @brief تحويل C-string (char*) إلى نص باء (حرف[]) على heap.
+ *
+ * هذا التحويل يُستخدم خصيصاً لجسر ABI في `الرئيسية(عدد، معاملات)` حيث يمرر C Runtime
+ * `char** argv`، بينما تمثيل `نص` في باء هو مصفوفة `حرف` (i64) محزومة UTF-8.
+ *
+ * ملاحظة: لا نقوم بفك ترميز Unicode بالكامل، بل نقوم بحزم تسلسل UTF-8 (1..4 بايت)
+ * كما هو إلى صيغة `حرف` (bytes_field | (len<<32)). عند إدخال غير صالح نستبدل بـ U+FFFD.
+ */
+#if 0
+static IRValue* ir_lower_cstr_to_baa_string_alloc(IRLowerCtx* ctx, const Node* site, IRValue* cstr_in)
+{
+    if (!ctx || !ctx->builder) return ir_value_const_int(0, ir_type_ptr(IR_TYPE_CHAR_T));
+
+    IRBuilder* b = ctx->builder;
+    IRModule* m = b->module;
+    if (m) ir_module_set_current(m);
+
+    IRType* i8_ptr_t = ir_type_ptr(IR_TYPE_I8_T);
+    IRType* u8_ptr_t = ir_type_ptr(IR_TYPE_U8_T);
+    IRType* char_ptr_t = get_char_ptr_type(m);
+    IRType* char_ptr_ptr_t = ir_type_ptr(char_ptr_t);
+    IRType* i64_ptr_t = ir_type_ptr(IR_TYPE_I64_T);
+
+    IRValue* cstr = cast_to(ctx, cstr_in, i8_ptr_t);
+
+    // نتيجة قابلة للكتابة عبر تحكم التدفق (NULL -> NULL)
+    int res_ptr_reg = ir_builder_emit_alloca(b, char_ptr_t);
+    if (res_ptr_reg < 0) {
+        ir_lower_report_error(ctx, site, "فشل إنشاء alloca لنتيجة تحويل argv.");
+        return ir_value_const_int(0, char_ptr_t);
+    }
+    IRValue* res_ptr = ir_value_reg(res_ptr_reg, char_ptr_ptr_t);
+    ir_builder_emit_store(b, ir_value_const_int(0, char_ptr_t), res_ptr);
+
+    IRBlock* b_null = cf_create_block(ctx, "تحويل_argv_NULL");
+    IRBlock* b_work = cf_create_block(ctx, "تحويل_argv_عمل");
+    IRBlock* b_ret  = cf_create_block(ctx, "تحويل_argv_إرجاع");
+    if (!b_null || !b_work || !b_ret) {
+        return ir_value_const_int(0, char_ptr_t);
+    }
+
+    int is_null_r = ir_builder_emit_cmp_eq(b, cstr, ir_value_const_int(0, i8_ptr_t));
+    ir_builder_emit_br_cond(b, ir_value_reg(is_null_r, IR_TYPE_I1_T), b_null, b_work);
+
+    ir_builder_set_insert_point(b, b_null);
+    ir_lower_set_loc(b, site);
+    ir_builder_emit_br(b, b_ret);
+
+    ir_builder_set_insert_point(b, b_work);
+    ir_lower_set_loc(b, site);
+
+    // bytes_len = strlen(cstr)
+    IRValue* sargs[1] = { cast_to(ctx, cstr, i8_ptr_t) };
+    int bytes_len_r = ir_builder_emit_call(b, "strlen", IR_TYPE_I64_T, sargs, 1);
+    if (bytes_len_r < 0) {
+        ir_lower_report_error(ctx, site, "فشل خفض نداء strlen أثناء تحويل argv.");
+        ir_builder_emit_br(b, b_ret);
+    } else {
+        IRValue* bytes_len = ir_value_reg(bytes_len_r, IR_TYPE_I64_T);
+
+        // alloc_bytes = (bytes_len + 1) * 8
+        IRValue* one = ir_value_const_int(1, IR_TYPE_I64_T);
+        IRValue* two = ir_value_const_int(2, IR_TYPE_I64_T);
+        IRValue* three = ir_value_const_int(3, IR_TYPE_I64_T);
+        IRValue* four = ir_value_const_int(4, IR_TYPE_I64_T);
+        IRValue* eight = ir_value_const_int(8, IR_TYPE_I64_T);
+        IRValue* sh8 = ir_value_const_int(8, IR_TYPE_I64_T);
+        IRValue* sh16 = ir_value_const_int(16, IR_TYPE_I64_T);
+        IRValue* sh24 = ir_value_const_int(24, IR_TYPE_I64_T);
+        IRValue* sh32 = ir_value_const_int(32, IR_TYPE_I64_T);
+
+        int bl1_r = ir_builder_emit_add(b, IR_TYPE_I64_T, bytes_len, one);
+        IRValue* bl1 = ir_value_reg(bl1_r, IR_TYPE_I64_T);
+        int alloc_bytes_r = ir_builder_emit_mul(b, IR_TYPE_I64_T, bl1, eight);
+        IRValue* alloc_bytes = ir_value_reg(alloc_bytes_r, IR_TYPE_I64_T);
+
+        IRValue* margs[1] = { alloc_bytes };
+        int raw_ptr_r = ir_builder_emit_call(b, "malloc", i8_ptr_t, margs, 1);
+        if (raw_ptr_r < 0) {
+            ir_lower_report_error(ctx, site, "فشل خفض نداء malloc أثناء تحويل argv.");
+            ir_builder_emit_br(b, b_ret);
+        } else {
+            IRValue* raw_ptr = ir_value_reg(raw_ptr_r, i8_ptr_t);
+            IRValue* dst = ir_value_reg(ir_builder_emit_cast(b, raw_ptr, char_ptr_t), char_ptr_t);
+
+            // in_idx/out_idx
+            int in_idx_ptr_reg = ir_builder_emit_alloca(b, IR_TYPE_I64_T);
+            int out_idx_ptr_reg = ir_builder_emit_alloca(b, IR_TYPE_I64_T);
+            IRValue* in_idx_ptr = ir_value_reg(in_idx_ptr_reg, i64_ptr_t);
+            IRValue* out_idx_ptr = ir_value_reg(out_idx_ptr_reg, i64_ptr_t);
+            ir_builder_emit_store(b, ir_value_const_int(0, IR_TYPE_I64_T), in_idx_ptr);
+            ir_builder_emit_store(b, ir_value_const_int(0, IR_TYPE_I64_T), out_idx_ptr);
+
+            IRValue* cstr_u8 = ir_value_reg(ir_builder_emit_cast(b, cstr, u8_ptr_t), u8_ptr_t);
+
+            uint64_t repl_bits_u = pack_utf8_codepoint(0xFFFDu);
+            IRValue* repl_ch = ir_value_const_int((int64_t)repl_bits_u, IR_TYPE_CHAR_T);
+
+            IRBlock* head = cf_create_block(ctx, "تحويل_argv_تحقق");
+            IRBlock* disp = cf_create_block(ctx, "تحويل_argv_توزيع");
+            IRBlock* c1 = cf_create_block(ctx, "تحويل_argv_حالة1");
+            IRBlock* c2 = cf_create_block(ctx, "تحويل_argv_حالة2");
+            IRBlock* c3 = cf_create_block(ctx, "تحويل_argv_حالة3");
+            IRBlock* c4 = cf_create_block(ctx, "تحويل_argv_حالة4");
+            IRBlock* inv = cf_create_block(ctx, "تحويل_argv_غير_صالح");
+            IRBlock* done = cf_create_block(ctx, "تحويل_argv_انتهاء");
+            if (!head || !disp || !c1 || !c2 || !c3 || !c4 || !inv || !done) {
+                ir_lower_report_error(ctx, site, "فشل إنشاء كتل تحويل argv.");
+                ir_builder_emit_br(b, b_ret);
+            } else {
+                ir_builder_emit_br(b, head);
+
+                // head: اقرأ b0، إن كان NUL نُنهي
+                ir_builder_set_insert_point(b, head);
+                ir_lower_set_loc(b, site);
+                IRValue* in_idx = ir_value_reg(ir_builder_emit_load(b, IR_TYPE_I64_T, in_idx_ptr), IR_TYPE_I64_T);
+                IRValue* out_idx = ir_value_reg(ir_builder_emit_load(b, IR_TYPE_I64_T, out_idx_ptr), IR_TYPE_I64_T);
+
+                IRValue* b0p = ir_value_reg(ir_builder_emit_ptr_offset(b, u8_ptr_t, cstr_u8, in_idx), u8_ptr_t);
+                IRValue* b0 = ir_value_reg(ir_builder_emit_load(b, IR_TYPE_U8_T, b0p), IR_TYPE_U8_T);
+                int b0z_r = ir_builder_emit_cmp_eq(b, b0, ir_value_const_int(0, IR_TYPE_U8_T));
+                ir_builder_emit_br_cond(b, ir_value_reg(b0z_r, IR_TYPE_I1_T), done, disp);
+
+                // disp: حدد طول UTF-8 واذهب للحالة المناسبة
+                ir_builder_set_insert_point(b, disp);
+                ir_lower_set_loc(b, site);
+
+                IRValue* b0u = ir_value_reg(ir_builder_emit_and(b, IR_TYPE_I64_T,
+                                                               ir_value_reg(ir_builder_emit_cast(b, b0, IR_TYPE_I64_T), IR_TYPE_I64_T),
+                                                               ir_value_const_int(255, IR_TYPE_I64_T)),
+                                            IR_TYPE_I64_T);
+
+                IRValue* m80 = ir_value_reg(ir_builder_emit_and(b, IR_TYPE_I64_T, b0u, ir_value_const_int(0x80, IR_TYPE_I64_T)), IR_TYPE_I64_T);
+                IRValue* mE0 = ir_value_reg(ir_builder_emit_and(b, IR_TYPE_I64_T, b0u, ir_value_const_int(0xE0, IR_TYPE_I64_T)), IR_TYPE_I64_T);
+                IRValue* mF0 = ir_value_reg(ir_builder_emit_and(b, IR_TYPE_I64_T, b0u, ir_value_const_int(0xF0, IR_TYPE_I64_T)), IR_TYPE_I64_T);
+                IRValue* mF8 = ir_value_reg(ir_builder_emit_and(b, IR_TYPE_I64_T, b0u, ir_value_const_int(0xF8, IR_TYPE_I64_T)), IR_TYPE_I64_T);
+                IRValue* is1 = ir_value_reg(ir_builder_emit_cmp_eq(b, m80, ir_value_const_int(0, IR_TYPE_I64_T)), IR_TYPE_I1_T);
+                IRValue* is2 = ir_value_reg(ir_builder_emit_cmp_eq(b, mE0, ir_value_const_int(0xC0, IR_TYPE_I64_T)), IR_TYPE_I1_T);
+                IRValue* is3 = ir_value_reg(ir_builder_emit_cmp_eq(b, mF0, ir_value_const_int(0xE0, IR_TYPE_I64_T)), IR_TYPE_I1_T);
+                IRValue* is4 = ir_value_reg(ir_builder_emit_cmp_eq(b, mF8, ir_value_const_int(0xF0, IR_TYPE_I64_T)), IR_TYPE_I1_T);
+
+                IRValue* l1 = cast_i1_to_i64(ctx, is1);
+                IRValue* l2 = cast_i1_to_i64(ctx, is2);
+                IRValue* l3 = cast_i1_to_i64(ctx, is3);
+                IRValue* l4 = cast_i1_to_i64(ctx, is4);
+
+                IRValue* t2 = ir_value_reg(ir_builder_emit_mul(b, IR_TYPE_I64_T, l2, two), IR_TYPE_I64_T);
+                IRValue* t3 = ir_value_reg(ir_builder_emit_mul(b, IR_TYPE_I64_T, l3, three), IR_TYPE_I64_T);
+                IRValue* t4 = ir_value_reg(ir_builder_emit_mul(b, IR_TYPE_I64_T, l4, four), IR_TYPE_I64_T);
+
+                IRValue* len0 = ir_value_reg(ir_builder_emit_add(b, IR_TYPE_I64_T,
+                                                                 ir_value_reg(ir_builder_emit_add(b, IR_TYPE_I64_T, l1, t2), IR_TYPE_I64_T),
+                                                                 ir_value_reg(ir_builder_emit_add(b, IR_TYPE_I64_T, t3, t4), IR_TYPE_I64_T)),
+                                             IR_TYPE_I64_T);
+
+                int is1r = ir_builder_emit_cmp_eq(b, len0, one);
+                int is2r = ir_builder_emit_cmp_eq(b, len0, two);
+                int is3r = ir_builder_emit_cmp_eq(b, len0, three);
+                int is4r = ir_builder_emit_cmp_eq(b, len0, four);
+
+                ir_builder_emit_br_cond(b, ir_value_reg(is1r, IR_TYPE_I1_T), c1,
+                                        ir_value_reg(ir_builder_emit_or(b, IR_TYPE_I1_T,
+                                                                       ir_value_reg(is2r, IR_TYPE_I1_T),
+                                                                       ir_value_reg(ir_builder_emit_or(b, IR_TYPE_I1_T,
+                                                                                                      ir_value_reg(is3r, IR_TYPE_I1_T),
+                                                                                                      ir_value_reg(is4r, IR_TYPE_I1_T)),
+                                                                                   IR_TYPE_I1_T)),
+                                                     IR_TYPE_I1_T),
+                                        c2, inv);
+
+                // حالة1
+                ir_builder_set_insert_point(b, c1);
+                ir_lower_set_loc(b, site);
+                IRValue* outp1 = ir_value_reg(ir_builder_emit_ptr_offset(b, char_ptr_t, dst, out_idx), char_ptr_t);
+                IRValue* l1sh = ir_value_reg(ir_builder_emit_shl(b, IR_TYPE_I64_T, one, sh32), IR_TYPE_I64_T);
+                IRValue* packed1_i64 = ir_value_reg(ir_builder_emit_or(b, IR_TYPE_I64_T, b0u, l1sh), IR_TYPE_I64_T);
+                IRValue* packed1 = ir_value_reg(ir_builder_emit_cast(b, packed1_i64, IR_TYPE_CHAR_T), IR_TYPE_CHAR_T);
+                ir_builder_emit_store(b, packed1, outp1);
+                ir_builder_emit_store(b, ir_value_reg(ir_builder_emit_add(b, IR_TYPE_I64_T, out_idx, one), IR_TYPE_I64_T), out_idx_ptr);
+                ir_builder_emit_store(b, ir_value_reg(ir_builder_emit_add(b, IR_TYPE_I64_T, in_idx, one), IR_TYPE_I64_T), in_idx_ptr);
+                ir_builder_emit_br(b, head);
+
+                // حالة2
+                ir_builder_set_insert_point(b, c2);
+                ir_lower_set_loc(b, site);
+                ir_builder_emit_br_cond(b, ir_value_reg(is2r, IR_TYPE_I1_T), c2, c3);
+
+                // حزم/تحقق حالة2
+                IRBlock* c2pack = cf_create_block(ctx, "تحويل_argv_حالة2_حزم");
+                if (!c2pack) c2pack = inv;
+                ir_builder_set_insert_point(b, c2);
+                ir_lower_set_loc(b, site);
+                IRValue* in1 = ir_value_reg(ir_builder_emit_add(b, IR_TYPE_I64_T, in_idx, one), IR_TYPE_I64_T);
+                IRValue* b1p = ir_value_reg(ir_builder_emit_ptr_offset(b, u8_ptr_t, cstr_u8, in1), u8_ptr_t);
+                IRValue* b1 = ir_value_reg(ir_builder_emit_load(b, IR_TYPE_U8_T, b1p), IR_TYPE_U8_T);
+                IRValue* b1u = ir_value_reg(ir_builder_emit_and(b, IR_TYPE_I64_T,
+                                                                ir_value_reg(ir_builder_emit_cast(b, b1, IR_TYPE_I64_T), IR_TYPE_I64_T),
+                                                                ir_value_const_int(255, IR_TYPE_I64_T)),
+                                             IR_TYPE_I64_T);
+                IRValue* b1m = ir_value_reg(ir_builder_emit_and(b, IR_TYPE_I64_T, b1u, ir_value_const_int(0xC0, IR_TYPE_I64_T)), IR_TYPE_I64_T);
+                int b1ok = ir_builder_emit_cmp_eq(b, b1m, ir_value_const_int(0x80, IR_TYPE_I64_T));
+                int b1nz = ir_builder_emit_cmp_ne(b, b1u, ir_value_const_int(0, IR_TYPE_I64_T));
+                int ok2 = ir_builder_emit_and(b, IR_TYPE_I1_T, ir_value_reg(b1ok, IR_TYPE_I1_T), ir_value_reg(b1nz, IR_TYPE_I1_T));
+                ir_builder_emit_br_cond(b, ir_value_reg(ok2, IR_TYPE_I1_T), c2pack, inv);
+
+                ir_builder_set_insert_point(b, c2pack);
+                ir_lower_set_loc(b, site);
+                IRValue* b1sh = ir_value_reg(ir_builder_emit_shl(b, IR_TYPE_I64_T, b1u, sh8), IR_TYPE_I64_T);
+                IRValue* bytes2 = ir_value_reg(ir_builder_emit_or(b, IR_TYPE_I64_T, b0u, b1sh), IR_TYPE_I64_T);
+                IRValue* l2sh = ir_value_reg(ir_builder_emit_shl(b, IR_TYPE_I64_T, two, sh32), IR_TYPE_I64_T);
+                IRValue* packed2_i64 = ir_value_reg(ir_builder_emit_or(b, IR_TYPE_I64_T, bytes2, l2sh), IR_TYPE_I64_T);
+                IRValue* packed2 = ir_value_reg(ir_builder_emit_cast(b, packed2_i64, IR_TYPE_CHAR_T), IR_TYPE_CHAR_T);
+                IRValue* outp2 = ir_value_reg(ir_builder_emit_ptr_offset(b, char_ptr_t, dst, out_idx), char_ptr_t);
+                ir_builder_emit_store(b, packed2, outp2);
+                ir_builder_emit_store(b, ir_value_reg(ir_builder_emit_add(b, IR_TYPE_I64_T, out_idx, one), IR_TYPE_I64_T), out_idx_ptr);
+                ir_builder_emit_store(b, ir_value_reg(ir_builder_emit_add(b, IR_TYPE_I64_T, in_idx, two), IR_TYPE_I64_T), in_idx_ptr);
+                ir_builder_emit_br(b, head);
+
+                // حالة3
+                ir_builder_set_insert_point(b, c3);
+                ir_lower_set_loc(b, site);
+                ir_builder_emit_br_cond(b, ir_value_reg(is3r, IR_TYPE_I1_T), c3, c4);
+
+                IRBlock* c3pack = cf_create_block(ctx, "تحويل_argv_حالة3_حزم");
+                if (!c3pack) c3pack = inv;
+                ir_builder_set_insert_point(b, c3);
+                ir_lower_set_loc(b, site);
+                IRValue* in2 = ir_value_reg(ir_builder_emit_add(b, IR_TYPE_I64_T, in_idx, two), IR_TYPE_I64_T);
+                IRValue* b2p = ir_value_reg(ir_builder_emit_ptr_offset(b, u8_ptr_t, cstr_u8, in2), u8_ptr_t);
+                IRValue* b2 = ir_value_reg(ir_builder_emit_load(b, IR_TYPE_U8_T, b2p), IR_TYPE_U8_T);
+                IRValue* b2u = ir_value_reg(ir_builder_emit_and(b, IR_TYPE_I64_T,
+                                                                ir_value_reg(ir_builder_emit_cast(b, b2, IR_TYPE_I64_T), IR_TYPE_I64_T),
+                                                                ir_value_const_int(255, IR_TYPE_I64_T)),
+                                             IR_TYPE_I64_T);
+                IRValue* b2m = ir_value_reg(ir_builder_emit_and(b, IR_TYPE_I64_T, b2u, ir_value_const_int(0xC0, IR_TYPE_I64_T)), IR_TYPE_I64_T);
+                int b2ok = ir_builder_emit_cmp_eq(b, b2m, ir_value_const_int(0x80, IR_TYPE_I64_T));
+                int b2nz = ir_builder_emit_cmp_ne(b, b2u, ir_value_const_int(0, IR_TYPE_I64_T));
+                int ok3 = ir_builder_emit_and(b, IR_TYPE_I1_T, ir_value_reg(ok2, IR_TYPE_I1_T),
+                                              ir_value_reg(ir_builder_emit_and(b, IR_TYPE_I1_T,
+                                                                              ir_value_reg(b2ok, IR_TYPE_I1_T),
+                                                                              ir_value_reg(b2nz, IR_TYPE_I1_T)),
+                                                           IR_TYPE_I1_T));
+                ir_builder_emit_br_cond(b, ir_value_reg(ok3, IR_TYPE_I1_T), c3pack, inv);
+
+                ir_builder_set_insert_point(b, c3pack);
+                ir_lower_set_loc(b, site);
+                IRValue* b2sh = ir_value_reg(ir_builder_emit_shl(b, IR_TYPE_I64_T, b2u, sh16), IR_TYPE_I64_T);
+                IRValue* bytes3 = ir_value_reg(ir_builder_emit_or(b, IR_TYPE_I64_T, bytes2, b2sh), IR_TYPE_I64_T);
+                IRValue* l3sh = ir_value_reg(ir_builder_emit_shl(b, IR_TYPE_I64_T, three, sh32), IR_TYPE_I64_T);
+                IRValue* packed3_i64 = ir_value_reg(ir_builder_emit_or(b, IR_TYPE_I64_T, bytes3, l3sh), IR_TYPE_I64_T);
+                IRValue* packed3 = ir_value_reg(ir_builder_emit_cast(b, packed3_i64, IR_TYPE_CHAR_T), IR_TYPE_CHAR_T);
+                IRValue* outp3 = ir_value_reg(ir_builder_emit_ptr_offset(b, char_ptr_t, dst, out_idx), char_ptr_t);
+                ir_builder_emit_store(b, packed3, outp3);
+                ir_builder_emit_store(b, ir_value_reg(ir_builder_emit_add(b, IR_TYPE_I64_T, out_idx, one), IR_TYPE_I64_T), out_idx_ptr);
+                ir_builder_emit_store(b, ir_value_reg(ir_builder_emit_add(b, IR_TYPE_I64_T, in_idx, three), IR_TYPE_I64_T), in_idx_ptr);
+                ir_builder_emit_br(b, head);
+
+                // حالة4
+                ir_builder_set_insert_point(b, c4);
+                ir_lower_set_loc(b, site);
+                ir_builder_emit_br_cond(b, ir_value_reg(is4r, IR_TYPE_I1_T), c4, inv);
+
+                IRBlock* c4pack = cf_create_block(ctx, "تحويل_argv_حالة4_حزم");
+                if (!c4pack) c4pack = inv;
+                ir_builder_set_insert_point(b, c4);
+                ir_lower_set_loc(b, site);
+                IRValue* in3 = ir_value_reg(ir_builder_emit_add(b, IR_TYPE_I64_T, in_idx, three), IR_TYPE_I64_T);
+                IRValue* b3p = ir_value_reg(ir_builder_emit_ptr_offset(b, u8_ptr_t, cstr_u8, in3), u8_ptr_t);
+                IRValue* b3 = ir_value_reg(ir_builder_emit_load(b, IR_TYPE_U8_T, b3p), IR_TYPE_U8_T);
+                IRValue* b3u = ir_value_reg(ir_builder_emit_and(b, IR_TYPE_I64_T,
+                                                                ir_value_reg(ir_builder_emit_cast(b, b3, IR_TYPE_I64_T), IR_TYPE_I64_T),
+                                                                ir_value_const_int(255, IR_TYPE_I64_T)),
+                                             IR_TYPE_I64_T);
+                IRValue* b3m = ir_value_reg(ir_builder_emit_and(b, IR_TYPE_I64_T, b3u, ir_value_const_int(0xC0, IR_TYPE_I64_T)), IR_TYPE_I64_T);
+                int b3ok = ir_builder_emit_cmp_eq(b, b3m, ir_value_const_int(0x80, IR_TYPE_I64_T));
+                int b3nz = ir_builder_emit_cmp_ne(b, b3u, ir_value_const_int(0, IR_TYPE_I64_T));
+                int ok4 = ir_builder_emit_and(b, IR_TYPE_I1_T, ir_value_reg(ok3, IR_TYPE_I1_T),
+                                              ir_value_reg(ir_builder_emit_and(b, IR_TYPE_I1_T,
+                                                                              ir_value_reg(b3ok, IR_TYPE_I1_T),
+                                                                              ir_value_reg(b3nz, IR_TYPE_I1_T)),
+                                                           IR_TYPE_I1_T));
+                ir_builder_emit_br_cond(b, ir_value_reg(ok4, IR_TYPE_I1_T), c4pack, inv);
+
+                ir_builder_set_insert_point(b, c4pack);
+                ir_lower_set_loc(b, site);
+                IRValue* b3sh = ir_value_reg(ir_builder_emit_shl(b, IR_TYPE_I64_T, b3u, sh24), IR_TYPE_I64_T);
+                IRValue* bytes4 = ir_value_reg(ir_builder_emit_or(b, IR_TYPE_I64_T, bytes3, b3sh), IR_TYPE_I64_T);
+                IRValue* l4sh = ir_value_reg(ir_builder_emit_shl(b, IR_TYPE_I64_T, four, sh32), IR_TYPE_I64_T);
+                IRValue* packed4_i64 = ir_value_reg(ir_builder_emit_or(b, IR_TYPE_I64_T, bytes4, l4sh), IR_TYPE_I64_T);
+                IRValue* packed4 = ir_value_reg(ir_builder_emit_cast(b, packed4_i64, IR_TYPE_CHAR_T), IR_TYPE_CHAR_T);
+                IRValue* outp4 = ir_value_reg(ir_builder_emit_ptr_offset(b, char_ptr_t, dst, out_idx), char_ptr_t);
+                ir_builder_emit_store(b, packed4, outp4);
+                ir_builder_emit_store(b, ir_value_reg(ir_builder_emit_add(b, IR_TYPE_I64_T, out_idx, one), IR_TYPE_I64_T), out_idx_ptr);
+                ir_builder_emit_store(b, ir_value_reg(ir_builder_emit_add(b, IR_TYPE_I64_T, in_idx, four), IR_TYPE_I64_T), in_idx_ptr);
+                ir_builder_emit_br(b, head);
+
+                // غير صالح
+                ir_builder_set_insert_point(b, inv);
+                ir_lower_set_loc(b, site);
+                IRValue* outpinv = ir_value_reg(ir_builder_emit_ptr_offset(b, char_ptr_t, dst, out_idx), char_ptr_t);
+                ir_builder_emit_store(b, repl_ch, outpinv);
+                ir_builder_emit_store(b, ir_value_reg(ir_builder_emit_add(b, IR_TYPE_I64_T, out_idx, one), IR_TYPE_I64_T), out_idx_ptr);
+                ir_builder_emit_store(b, ir_value_reg(ir_builder_emit_add(b, IR_TYPE_I64_T, in_idx, one), IR_TYPE_I64_T), in_idx_ptr);
+                ir_builder_emit_br(b, head);
+
+                // done: ضع NULL-terminator واكتب النتيجة
+                ir_builder_set_insert_point(b, done);
+                ir_lower_set_loc(b, site);
+                IRValue* outpend = ir_value_reg(ir_builder_emit_ptr_offset(b, char_ptr_t, dst, out_idx), char_ptr_t);
+                ir_builder_emit_store(b, ir_value_const_int(0, IR_TYPE_CHAR_T), outpend);
+                ir_builder_emit_store(b, dst, res_ptr);
+                ir_builder_emit_br(b, b_ret);
+            }
+        }
+    }
+
+    ir_builder_set_insert_point(b, b_ret);
+    ir_lower_set_loc(b, site);
+    int r = ir_builder_emit_load(b, char_ptr_t, res_ptr);
+    return ir_value_reg(r, char_ptr_t);
+}
+#endif
+
+static IRValue* ir_lower_cstr_to_baa_string_alloc(IRLowerCtx* ctx, const Node* site, IRValue* cstr_in)
+{
+    if (!ctx || !ctx->builder) return ir_value_const_int(0, ir_type_ptr(IR_TYPE_CHAR_T));
+
+    IRBuilder* b = ctx->builder;
+    IRModule* m = b->module;
+    if (m) ir_module_set_current(m);
+
+    IRType* i8_ptr_t = ir_type_ptr(IR_TYPE_I8_T);
+    IRType* u8_ptr_t = ir_type_ptr(IR_TYPE_U8_T);
+    IRType* char_ptr_t = get_char_ptr_type(m);
+    IRType* char_ptr_ptr_t = ir_type_ptr(char_ptr_t);
+    IRType* i64_ptr_t = ir_type_ptr(IR_TYPE_I64_T);
+
+    IRValue* cstr = cast_to(ctx, cstr_in, i8_ptr_t);
+
+    // نُعيد NULL عند NULL (حتى لا نسقط في strlen/malloc).
+    int res_ptr_reg = ir_builder_emit_alloca(b, char_ptr_t);
+    if (res_ptr_reg < 0) {
+        ir_lower_report_error(ctx, site, "فشل إنشاء alloca لنتيجة تحويل argv.");
+        return ir_value_const_int(0, char_ptr_t);
+    }
+    IRValue* res_ptr = ir_value_reg(res_ptr_reg, char_ptr_ptr_t);
+    ir_builder_emit_store(b, ir_value_const_int(0, char_ptr_t), res_ptr);
+
+    IRBlock* b_null = cf_create_block(ctx, "تحويل_argv_NULL");
+    IRBlock* b_work = cf_create_block(ctx, "تحويل_argv_عمل");
+    IRBlock* b_ret  = cf_create_block(ctx, "تحويل_argv_إرجاع");
+    if (!b_null || !b_work || !b_ret) {
+        return ir_value_const_int(0, char_ptr_t);
+    }
+
+    int is_null_r = ir_builder_emit_cmp_eq(b, cstr, ir_value_const_int(0, i8_ptr_t));
+    ir_builder_emit_br_cond(b, ir_value_reg(is_null_r, IR_TYPE_I1_T), b_null, b_work);
+
+    ir_builder_set_insert_point(b, b_null);
+    ir_lower_set_loc(b, site);
+    ir_builder_emit_br(b, b_ret);
+
+    ir_builder_set_insert_point(b, b_work);
+    ir_lower_set_loc(b, site);
+
+    // bytes_len = strlen(cstr)
+    IRValue* sargs[1] = { cstr };
+    int bytes_len_r = ir_builder_emit_call(b, "strlen", IR_TYPE_I64_T, sargs, 1);
+    if (bytes_len_r < 0) {
+        ir_lower_report_error(ctx, site, "فشل خفض نداء strlen أثناء تحويل argv.");
+        ir_builder_emit_br(b, b_ret);
+    } else {
+        IRValue* bytes_len = ir_value_reg(bytes_len_r, IR_TYPE_I64_T);
+
+        IRValue* one = ir_value_const_int(1, IR_TYPE_I64_T);
+        IRValue* two = ir_value_const_int(2, IR_TYPE_I64_T);
+        IRValue* three = ir_value_const_int(3, IR_TYPE_I64_T);
+        IRValue* four = ir_value_const_int(4, IR_TYPE_I64_T);
+        IRValue* eight = ir_value_const_int(8, IR_TYPE_I64_T);
+
+        IRValue* sh8 = ir_value_const_int(8, IR_TYPE_I64_T);
+        IRValue* sh16 = ir_value_const_int(16, IR_TYPE_I64_T);
+        IRValue* sh24 = ir_value_const_int(24, IR_TYPE_I64_T);
+        IRValue* sh32 = ir_value_const_int(32, IR_TYPE_I64_T);
+
+        // alloc_bytes = (bytes_len + 1) * 8  (أقصى حد: كل بايت -> حرف واحد)
+        IRValue* bl1 = ir_value_reg(ir_builder_emit_add(b, IR_TYPE_I64_T, bytes_len, one), IR_TYPE_I64_T);
+        IRValue* alloc_bytes = ir_value_reg(ir_builder_emit_mul(b, IR_TYPE_I64_T, bl1, eight), IR_TYPE_I64_T);
+
+        IRValue* margs[1] = { alloc_bytes };
+        int raw_ptr_r = ir_builder_emit_call(b, "malloc", i8_ptr_t, margs, 1);
+        if (raw_ptr_r < 0) {
+            ir_lower_report_error(ctx, site, "فشل خفض نداء malloc أثناء تحويل argv.");
+            ir_builder_emit_br(b, b_ret);
+        } else {
+            IRValue* raw_ptr = ir_value_reg(raw_ptr_r, i8_ptr_t);
+            IRValue* dst = ir_value_reg(ir_builder_emit_cast(b, raw_ptr, char_ptr_t), char_ptr_t);
+
+            // مؤشرات الحلقة
+            IRValue* in_idx_ptr = ir_value_reg(ir_builder_emit_alloca(b, IR_TYPE_I64_T), i64_ptr_t);
+            IRValue* out_idx_ptr = ir_value_reg(ir_builder_emit_alloca(b, IR_TYPE_I64_T), i64_ptr_t);
+            ir_builder_emit_store(b, ir_value_const_int(0, IR_TYPE_I64_T), in_idx_ptr);
+            ir_builder_emit_store(b, ir_value_const_int(0, IR_TYPE_I64_T), out_idx_ptr);
+
+            // تخزين مؤقت للحالة الحالية (لتجنب مشاكل SSA مع تعدد الكتل)
+            IRValue* b0u_ptr = ir_value_reg(ir_builder_emit_alloca(b, IR_TYPE_I64_T), i64_ptr_t);
+            IRValue* len0_ptr = ir_value_reg(ir_builder_emit_alloca(b, IR_TYPE_I64_T), i64_ptr_t);
+            ir_builder_emit_store(b, ir_value_const_int(0, IR_TYPE_I64_T), b0u_ptr);
+            ir_builder_emit_store(b, ir_value_const_int(0, IR_TYPE_I64_T), len0_ptr);
+
+            IRValue* cstr_u8 = ir_value_reg(ir_builder_emit_cast(b, cstr, u8_ptr_t), u8_ptr_t);
+
+            uint64_t repl_bits_u = pack_utf8_codepoint(0xFFFDu);
+            IRValue* repl_ch = ir_value_const_int((int64_t)repl_bits_u, IR_TYPE_CHAR_T);
+
+            IRBlock* head = cf_create_block(ctx, "تحويل_argv_تحقق");
+            IRBlock* disp = cf_create_block(ctx, "تحويل_argv_توزيع");
+            IRBlock* d2 = cf_create_block(ctx, "تحويل_argv_د2");
+            IRBlock* d3 = cf_create_block(ctx, "تحويل_argv_د3");
+            IRBlock* d4 = cf_create_block(ctx, "تحويل_argv_د4");
+            IRBlock* c1 = cf_create_block(ctx, "تحويل_argv_حالة1");
+            IRBlock* c2b = cf_create_block(ctx, "تحويل_argv_حالة2");
+            IRBlock* c2pack = cf_create_block(ctx, "تحويل_argv_حالة2_حزم");
+            IRBlock* c3b = cf_create_block(ctx, "تحويل_argv_حالة3");
+            IRBlock* c3pack = cf_create_block(ctx, "تحويل_argv_حالة3_حزم");
+            IRBlock* c4b = cf_create_block(ctx, "تحويل_argv_حالة4");
+            IRBlock* c4pack = cf_create_block(ctx, "تحويل_argv_حالة4_حزم");
+            IRBlock* inv = cf_create_block(ctx, "تحويل_argv_غير_صالح");
+            IRBlock* done = cf_create_block(ctx, "تحويل_argv_انتهاء");
+
+            if (!head || !disp || !d2 || !d3 || !d4 || !c1 || !c2b || !c2pack ||
+                !c3b || !c3pack || !c4b || !c4pack || !inv || !done) {
+                ir_lower_report_error(ctx, site, "فشل إنشاء كتل تحويل argv.");
+                ir_builder_emit_br(b, b_ret);
+            } else {
+                ir_builder_emit_br(b, head);
+
+                // head: اقرأ البايت الأول؛ إن كان NUL انتهِ.
+                ir_builder_set_insert_point(b, head);
+                ir_lower_set_loc(b, site);
+                IRValue* in_idx = ir_value_reg(ir_builder_emit_load(b, IR_TYPE_I64_T, in_idx_ptr), IR_TYPE_I64_T);
+                IRValue* b0p = ir_value_reg(ir_builder_emit_ptr_offset(b, u8_ptr_t, cstr_u8, in_idx), u8_ptr_t);
+                IRValue* b0 = ir_value_reg(ir_builder_emit_load(b, IR_TYPE_U8_T, b0p), IR_TYPE_U8_T);
+                int b0z_r = ir_builder_emit_cmp_eq(b, b0, ir_value_const_int(0, IR_TYPE_U8_T));
+                ir_builder_emit_br_cond(b, ir_value_reg(b0z_r, IR_TYPE_I1_T), done, disp);
+
+                // disp: احسب len0 من البايت الأول (UTF-8) ثم وزّع.
+                ir_builder_set_insert_point(b, disp);
+                ir_lower_set_loc(b, site);
+                IRValue* b0u = ir_value_reg(ir_builder_emit_and(b, IR_TYPE_I64_T,
+                                                               ir_value_reg(ir_builder_emit_cast(b, b0, IR_TYPE_I64_T), IR_TYPE_I64_T),
+                                                               ir_value_const_int(255, IR_TYPE_I64_T)),
+                                            IR_TYPE_I64_T);
+
+                IRValue* m80 = ir_value_reg(ir_builder_emit_and(b, IR_TYPE_I64_T, b0u, ir_value_const_int(0x80, IR_TYPE_I64_T)), IR_TYPE_I64_T);
+                IRValue* mE0 = ir_value_reg(ir_builder_emit_and(b, IR_TYPE_I64_T, b0u, ir_value_const_int(0xE0, IR_TYPE_I64_T)), IR_TYPE_I64_T);
+                IRValue* mF0 = ir_value_reg(ir_builder_emit_and(b, IR_TYPE_I64_T, b0u, ir_value_const_int(0xF0, IR_TYPE_I64_T)), IR_TYPE_I64_T);
+                IRValue* mF8 = ir_value_reg(ir_builder_emit_and(b, IR_TYPE_I64_T, b0u, ir_value_const_int(0xF8, IR_TYPE_I64_T)), IR_TYPE_I64_T);
+
+                IRValue* is1 = ir_value_reg(ir_builder_emit_cmp_eq(b, m80, ir_value_const_int(0, IR_TYPE_I64_T)), IR_TYPE_I1_T);
+                IRValue* is2 = ir_value_reg(ir_builder_emit_cmp_eq(b, mE0, ir_value_const_int(0xC0, IR_TYPE_I64_T)), IR_TYPE_I1_T);
+                IRValue* is3 = ir_value_reg(ir_builder_emit_cmp_eq(b, mF0, ir_value_const_int(0xE0, IR_TYPE_I64_T)), IR_TYPE_I1_T);
+                IRValue* is4 = ir_value_reg(ir_builder_emit_cmp_eq(b, mF8, ir_value_const_int(0xF0, IR_TYPE_I64_T)), IR_TYPE_I1_T);
+
+                IRValue* l1 = cast_i1_to_i64(ctx, is1);
+                IRValue* l2 = cast_i1_to_i64(ctx, is2);
+                IRValue* l3 = cast_i1_to_i64(ctx, is3);
+                IRValue* l4 = cast_i1_to_i64(ctx, is4);
+
+                IRValue* t2v = ir_value_reg(ir_builder_emit_mul(b, IR_TYPE_I64_T, l2, two), IR_TYPE_I64_T);
+                IRValue* t3v = ir_value_reg(ir_builder_emit_mul(b, IR_TYPE_I64_T, l3, three), IR_TYPE_I64_T);
+                IRValue* t4v = ir_value_reg(ir_builder_emit_mul(b, IR_TYPE_I64_T, l4, four), IR_TYPE_I64_T);
+                IRValue* len0 = ir_value_reg(ir_builder_emit_add(b, IR_TYPE_I64_T,
+                                                                 ir_value_reg(ir_builder_emit_add(b, IR_TYPE_I64_T, l1, t2v), IR_TYPE_I64_T),
+                                                                 ir_value_reg(ir_builder_emit_add(b, IR_TYPE_I64_T, t3v, t4v), IR_TYPE_I64_T)),
+                                             IR_TYPE_I64_T);
+
+                ir_builder_emit_store(b, b0u, b0u_ptr);
+                ir_builder_emit_store(b, len0, len0_ptr);
+
+                int is1r = ir_builder_emit_cmp_eq(b, len0, one);
+                ir_builder_emit_br_cond(b, ir_value_reg(is1r, IR_TYPE_I1_T), c1, d2);
+
+                ir_builder_set_insert_point(b, d2);
+                ir_lower_set_loc(b, site);
+                int is2r = ir_builder_emit_cmp_eq(b, len0, two);
+                ir_builder_emit_br_cond(b, ir_value_reg(is2r, IR_TYPE_I1_T), c2b, d3);
+
+                ir_builder_set_insert_point(b, d3);
+                ir_lower_set_loc(b, site);
+                int is3r = ir_builder_emit_cmp_eq(b, len0, three);
+                ir_builder_emit_br_cond(b, ir_value_reg(is3r, IR_TYPE_I1_T), c3b, d4);
+
+                ir_builder_set_insert_point(b, d4);
+                ir_lower_set_loc(b, site);
+                int is4r = ir_builder_emit_cmp_eq(b, len0, four);
+                ir_builder_emit_br_cond(b, ir_value_reg(is4r, IR_TYPE_I1_T), c4b, inv);
+
+                // حالة1: بايت واحد.
+                ir_builder_set_insert_point(b, c1);
+                ir_lower_set_loc(b, site);
+                IRValue* out_idx = ir_value_reg(ir_builder_emit_load(b, IR_TYPE_I64_T, out_idx_ptr), IR_TYPE_I64_T);
+                IRValue* in_idx1 = ir_value_reg(ir_builder_emit_load(b, IR_TYPE_I64_T, in_idx_ptr), IR_TYPE_I64_T);
+                IRValue* b0u1 = ir_value_reg(ir_builder_emit_load(b, IR_TYPE_I64_T, b0u_ptr), IR_TYPE_I64_T);
+                IRValue* outp1 = ir_value_reg(ir_builder_emit_ptr_offset(b, char_ptr_t, dst, out_idx), char_ptr_t);
+                IRValue* l1sh = ir_value_reg(ir_builder_emit_shl(b, IR_TYPE_I64_T, one, sh32), IR_TYPE_I64_T);
+                IRValue* packed1_i64 = ir_value_reg(ir_builder_emit_or(b, IR_TYPE_I64_T, b0u1, l1sh), IR_TYPE_I64_T);
+                IRValue* packed1 = ir_value_reg(ir_builder_emit_cast(b, packed1_i64, IR_TYPE_CHAR_T), IR_TYPE_CHAR_T);
+                ir_builder_emit_store(b, packed1, outp1);
+                ir_builder_emit_store(b, ir_value_reg(ir_builder_emit_add(b, IR_TYPE_I64_T, out_idx, one), IR_TYPE_I64_T), out_idx_ptr);
+                ir_builder_emit_store(b, ir_value_reg(ir_builder_emit_add(b, IR_TYPE_I64_T, in_idx1, one), IR_TYPE_I64_T), in_idx_ptr);
+                ir_builder_emit_br(b, head);
+
+                // حالة2: بايتان (تحقق من استمرار واحد).
+                ir_builder_set_insert_point(b, c2b);
+                ir_lower_set_loc(b, site);
+                IRValue* out2 = ir_value_reg(ir_builder_emit_load(b, IR_TYPE_I64_T, out_idx_ptr), IR_TYPE_I64_T);
+                IRValue* in2 = ir_value_reg(ir_builder_emit_load(b, IR_TYPE_I64_T, in_idx_ptr), IR_TYPE_I64_T);
+                IRValue* b0u2 = ir_value_reg(ir_builder_emit_load(b, IR_TYPE_I64_T, b0u_ptr), IR_TYPE_I64_T);
+                IRValue* in2_1 = ir_value_reg(ir_builder_emit_add(b, IR_TYPE_I64_T, in2, one), IR_TYPE_I64_T);
+                IRValue* b1p = ir_value_reg(ir_builder_emit_ptr_offset(b, u8_ptr_t, cstr_u8, in2_1), u8_ptr_t);
+                IRValue* b1 = ir_value_reg(ir_builder_emit_load(b, IR_TYPE_U8_T, b1p), IR_TYPE_U8_T);
+                IRValue* b1u = ir_value_reg(ir_builder_emit_and(b, IR_TYPE_I64_T,
+                                                                ir_value_reg(ir_builder_emit_cast(b, b1, IR_TYPE_I64_T), IR_TYPE_I64_T),
+                                                                ir_value_const_int(255, IR_TYPE_I64_T)),
+                                             IR_TYPE_I64_T);
+                IRValue* b1m = ir_value_reg(ir_builder_emit_and(b, IR_TYPE_I64_T, b1u, ir_value_const_int(0xC0, IR_TYPE_I64_T)), IR_TYPE_I64_T);
+                int b1ok = ir_builder_emit_cmp_eq(b, b1m, ir_value_const_int(0x80, IR_TYPE_I64_T));
+                int b1nz = ir_builder_emit_cmp_ne(b, b1u, ir_value_const_int(0, IR_TYPE_I64_T));
+                int ok2 = ir_builder_emit_and(b, IR_TYPE_I1_T, ir_value_reg(b1ok, IR_TYPE_I1_T), ir_value_reg(b1nz, IR_TYPE_I1_T));
+                ir_builder_emit_br_cond(b, ir_value_reg(ok2, IR_TYPE_I1_T), c2pack, inv);
+
+                ir_builder_set_insert_point(b, c2pack);
+                ir_lower_set_loc(b, site);
+                IRValue* b1sh = ir_value_reg(ir_builder_emit_shl(b, IR_TYPE_I64_T, b1u, sh8), IR_TYPE_I64_T);
+                IRValue* bytes2 = ir_value_reg(ir_builder_emit_or(b, IR_TYPE_I64_T, b0u2, b1sh), IR_TYPE_I64_T);
+                IRValue* l2sh = ir_value_reg(ir_builder_emit_shl(b, IR_TYPE_I64_T, two, sh32), IR_TYPE_I64_T);
+                IRValue* packed2_i64 = ir_value_reg(ir_builder_emit_or(b, IR_TYPE_I64_T, bytes2, l2sh), IR_TYPE_I64_T);
+                IRValue* packed2 = ir_value_reg(ir_builder_emit_cast(b, packed2_i64, IR_TYPE_CHAR_T), IR_TYPE_CHAR_T);
+                IRValue* outp2 = ir_value_reg(ir_builder_emit_ptr_offset(b, char_ptr_t, dst, out2), char_ptr_t);
+                ir_builder_emit_store(b, packed2, outp2);
+                ir_builder_emit_store(b, ir_value_reg(ir_builder_emit_add(b, IR_TYPE_I64_T, out2, one), IR_TYPE_I64_T), out_idx_ptr);
+                ir_builder_emit_store(b, ir_value_reg(ir_builder_emit_add(b, IR_TYPE_I64_T, in2, two), IR_TYPE_I64_T), in_idx_ptr);
+                ir_builder_emit_br(b, head);
+
+                // حالة3: ثلاثة بايتات (تحقق من استمرارين).
+                ir_builder_set_insert_point(b, c3b);
+                ir_lower_set_loc(b, site);
+                IRValue* out3 = ir_value_reg(ir_builder_emit_load(b, IR_TYPE_I64_T, out_idx_ptr), IR_TYPE_I64_T);
+                IRValue* in3 = ir_value_reg(ir_builder_emit_load(b, IR_TYPE_I64_T, in_idx_ptr), IR_TYPE_I64_T);
+                IRValue* b0u3 = ir_value_reg(ir_builder_emit_load(b, IR_TYPE_I64_T, b0u_ptr), IR_TYPE_I64_T);
+                IRValue* in3_1 = ir_value_reg(ir_builder_emit_add(b, IR_TYPE_I64_T, in3, one), IR_TYPE_I64_T);
+                IRValue* in3_2 = ir_value_reg(ir_builder_emit_add(b, IR_TYPE_I64_T, in3, two), IR_TYPE_I64_T);
+                IRValue* b1p3 = ir_value_reg(ir_builder_emit_ptr_offset(b, u8_ptr_t, cstr_u8, in3_1), u8_ptr_t);
+                IRValue* b2p3 = ir_value_reg(ir_builder_emit_ptr_offset(b, u8_ptr_t, cstr_u8, in3_2), u8_ptr_t);
+                IRValue* b1_3 = ir_value_reg(ir_builder_emit_load(b, IR_TYPE_U8_T, b1p3), IR_TYPE_U8_T);
+                IRValue* b2_3 = ir_value_reg(ir_builder_emit_load(b, IR_TYPE_U8_T, b2p3), IR_TYPE_U8_T);
+                IRValue* b1u3 = ir_value_reg(ir_builder_emit_and(b, IR_TYPE_I64_T,
+                                                                 ir_value_reg(ir_builder_emit_cast(b, b1_3, IR_TYPE_I64_T), IR_TYPE_I64_T),
+                                                                 ir_value_const_int(255, IR_TYPE_I64_T)),
+                                              IR_TYPE_I64_T);
+                IRValue* b2u3 = ir_value_reg(ir_builder_emit_and(b, IR_TYPE_I64_T,
+                                                                 ir_value_reg(ir_builder_emit_cast(b, b2_3, IR_TYPE_I64_T), IR_TYPE_I64_T),
+                                                                 ir_value_const_int(255, IR_TYPE_I64_T)),
+                                              IR_TYPE_I64_T);
+                IRValue* b1m3 = ir_value_reg(ir_builder_emit_and(b, IR_TYPE_I64_T, b1u3, ir_value_const_int(0xC0, IR_TYPE_I64_T)), IR_TYPE_I64_T);
+                IRValue* b2m3 = ir_value_reg(ir_builder_emit_and(b, IR_TYPE_I64_T, b2u3, ir_value_const_int(0xC0, IR_TYPE_I64_T)), IR_TYPE_I64_T);
+                int b1ok3 = ir_builder_emit_cmp_eq(b, b1m3, ir_value_const_int(0x80, IR_TYPE_I64_T));
+                int b2ok3 = ir_builder_emit_cmp_eq(b, b2m3, ir_value_const_int(0x80, IR_TYPE_I64_T));
+                int b1nz3 = ir_builder_emit_cmp_ne(b, b1u3, ir_value_const_int(0, IR_TYPE_I64_T));
+                int b2nz3 = ir_builder_emit_cmp_ne(b, b2u3, ir_value_const_int(0, IR_TYPE_I64_T));
+                int ok3 = ir_builder_emit_and(b, IR_TYPE_I1_T,
+                                              ir_value_reg(ir_builder_emit_and(b, IR_TYPE_I1_T, ir_value_reg(b1ok3, IR_TYPE_I1_T), ir_value_reg(b2ok3, IR_TYPE_I1_T)), IR_TYPE_I1_T),
+                                              ir_value_reg(ir_builder_emit_and(b, IR_TYPE_I1_T, ir_value_reg(b1nz3, IR_TYPE_I1_T), ir_value_reg(b2nz3, IR_TYPE_I1_T)), IR_TYPE_I1_T));
+                ir_builder_emit_br_cond(b, ir_value_reg(ok3, IR_TYPE_I1_T), c3pack, inv);
+
+                ir_builder_set_insert_point(b, c3pack);
+                ir_lower_set_loc(b, site);
+                IRValue* b1sh3 = ir_value_reg(ir_builder_emit_shl(b, IR_TYPE_I64_T, b1u3, sh8), IR_TYPE_I64_T);
+                IRValue* b2sh3 = ir_value_reg(ir_builder_emit_shl(b, IR_TYPE_I64_T, b2u3, sh16), IR_TYPE_I64_T);
+                IRValue* bytes3 = ir_value_reg(ir_builder_emit_or(b, IR_TYPE_I64_T,
+                                                                  ir_value_reg(ir_builder_emit_or(b, IR_TYPE_I64_T, b0u3, b1sh3), IR_TYPE_I64_T),
+                                                                  b2sh3),
+                                               IR_TYPE_I64_T);
+                IRValue* l3sh = ir_value_reg(ir_builder_emit_shl(b, IR_TYPE_I64_T, three, sh32), IR_TYPE_I64_T);
+                IRValue* packed3_i64 = ir_value_reg(ir_builder_emit_or(b, IR_TYPE_I64_T, bytes3, l3sh), IR_TYPE_I64_T);
+                IRValue* packed3 = ir_value_reg(ir_builder_emit_cast(b, packed3_i64, IR_TYPE_CHAR_T), IR_TYPE_CHAR_T);
+                IRValue* outp3 = ir_value_reg(ir_builder_emit_ptr_offset(b, char_ptr_t, dst, out3), char_ptr_t);
+                ir_builder_emit_store(b, packed3, outp3);
+                ir_builder_emit_store(b, ir_value_reg(ir_builder_emit_add(b, IR_TYPE_I64_T, out3, one), IR_TYPE_I64_T), out_idx_ptr);
+                ir_builder_emit_store(b, ir_value_reg(ir_builder_emit_add(b, IR_TYPE_I64_T, in3, three), IR_TYPE_I64_T), in_idx_ptr);
+                ir_builder_emit_br(b, head);
+
+                // حالة4: أربعة بايتات (تحقق من 3 استمرار).
+                ir_builder_set_insert_point(b, c4b);
+                ir_lower_set_loc(b, site);
+                IRValue* out4 = ir_value_reg(ir_builder_emit_load(b, IR_TYPE_I64_T, out_idx_ptr), IR_TYPE_I64_T);
+                IRValue* in4 = ir_value_reg(ir_builder_emit_load(b, IR_TYPE_I64_T, in_idx_ptr), IR_TYPE_I64_T);
+                IRValue* b0u4 = ir_value_reg(ir_builder_emit_load(b, IR_TYPE_I64_T, b0u_ptr), IR_TYPE_I64_T);
+                IRValue* in4_1 = ir_value_reg(ir_builder_emit_add(b, IR_TYPE_I64_T, in4, one), IR_TYPE_I64_T);
+                IRValue* in4_2 = ir_value_reg(ir_builder_emit_add(b, IR_TYPE_I64_T, in4, two), IR_TYPE_I64_T);
+                IRValue* in4_3 = ir_value_reg(ir_builder_emit_add(b, IR_TYPE_I64_T, in4, three), IR_TYPE_I64_T);
+                IRValue* b1p4 = ir_value_reg(ir_builder_emit_ptr_offset(b, u8_ptr_t, cstr_u8, in4_1), u8_ptr_t);
+                IRValue* b2p4 = ir_value_reg(ir_builder_emit_ptr_offset(b, u8_ptr_t, cstr_u8, in4_2), u8_ptr_t);
+                IRValue* b3p4 = ir_value_reg(ir_builder_emit_ptr_offset(b, u8_ptr_t, cstr_u8, in4_3), u8_ptr_t);
+                IRValue* b1_4 = ir_value_reg(ir_builder_emit_load(b, IR_TYPE_U8_T, b1p4), IR_TYPE_U8_T);
+                IRValue* b2_4 = ir_value_reg(ir_builder_emit_load(b, IR_TYPE_U8_T, b2p4), IR_TYPE_U8_T);
+                IRValue* b3_4 = ir_value_reg(ir_builder_emit_load(b, IR_TYPE_U8_T, b3p4), IR_TYPE_U8_T);
+                IRValue* b1u4 = ir_value_reg(ir_builder_emit_and(b, IR_TYPE_I64_T,
+                                                                 ir_value_reg(ir_builder_emit_cast(b, b1_4, IR_TYPE_I64_T), IR_TYPE_I64_T),
+                                                                 ir_value_const_int(255, IR_TYPE_I64_T)),
+                                              IR_TYPE_I64_T);
+                IRValue* b2u4 = ir_value_reg(ir_builder_emit_and(b, IR_TYPE_I64_T,
+                                                                 ir_value_reg(ir_builder_emit_cast(b, b2_4, IR_TYPE_I64_T), IR_TYPE_I64_T),
+                                                                 ir_value_const_int(255, IR_TYPE_I64_T)),
+                                              IR_TYPE_I64_T);
+                IRValue* b3u4 = ir_value_reg(ir_builder_emit_and(b, IR_TYPE_I64_T,
+                                                                 ir_value_reg(ir_builder_emit_cast(b, b3_4, IR_TYPE_I64_T), IR_TYPE_I64_T),
+                                                                 ir_value_const_int(255, IR_TYPE_I64_T)),
+                                              IR_TYPE_I64_T);
+                IRValue* b1m4 = ir_value_reg(ir_builder_emit_and(b, IR_TYPE_I64_T, b1u4, ir_value_const_int(0xC0, IR_TYPE_I64_T)), IR_TYPE_I64_T);
+                IRValue* b2m4 = ir_value_reg(ir_builder_emit_and(b, IR_TYPE_I64_T, b2u4, ir_value_const_int(0xC0, IR_TYPE_I64_T)), IR_TYPE_I64_T);
+                IRValue* b3m4 = ir_value_reg(ir_builder_emit_and(b, IR_TYPE_I64_T, b3u4, ir_value_const_int(0xC0, IR_TYPE_I64_T)), IR_TYPE_I64_T);
+                int b1ok4 = ir_builder_emit_cmp_eq(b, b1m4, ir_value_const_int(0x80, IR_TYPE_I64_T));
+                int b2ok4 = ir_builder_emit_cmp_eq(b, b2m4, ir_value_const_int(0x80, IR_TYPE_I64_T));
+                int b3ok4 = ir_builder_emit_cmp_eq(b, b3m4, ir_value_const_int(0x80, IR_TYPE_I64_T));
+                int b1nz4 = ir_builder_emit_cmp_ne(b, b1u4, ir_value_const_int(0, IR_TYPE_I64_T));
+                int b2nz4 = ir_builder_emit_cmp_ne(b, b2u4, ir_value_const_int(0, IR_TYPE_I64_T));
+                int b3nz4 = ir_builder_emit_cmp_ne(b, b3u4, ir_value_const_int(0, IR_TYPE_I64_T));
+                int ok4 = ir_builder_emit_and(b, IR_TYPE_I1_T,
+                                              ir_value_reg(ir_builder_emit_and(b, IR_TYPE_I1_T,
+                                                                              ir_value_reg(ir_builder_emit_and(b, IR_TYPE_I1_T, ir_value_reg(b1ok4, IR_TYPE_I1_T), ir_value_reg(b2ok4, IR_TYPE_I1_T)), IR_TYPE_I1_T),
+                                                                              ir_value_reg(b3ok4, IR_TYPE_I1_T)),
+                                                           IR_TYPE_I1_T),
+                                              ir_value_reg(ir_builder_emit_and(b, IR_TYPE_I1_T,
+                                                                              ir_value_reg(ir_builder_emit_and(b, IR_TYPE_I1_T, ir_value_reg(b1nz4, IR_TYPE_I1_T), ir_value_reg(b2nz4, IR_TYPE_I1_T)), IR_TYPE_I1_T),
+                                                                              ir_value_reg(b3nz4, IR_TYPE_I1_T)),
+                                                           IR_TYPE_I1_T));
+                ir_builder_emit_br_cond(b, ir_value_reg(ok4, IR_TYPE_I1_T), c4pack, inv);
+
+                ir_builder_set_insert_point(b, c4pack);
+                ir_lower_set_loc(b, site);
+                IRValue* b1sh4 = ir_value_reg(ir_builder_emit_shl(b, IR_TYPE_I64_T, b1u4, sh8), IR_TYPE_I64_T);
+                IRValue* b2sh4 = ir_value_reg(ir_builder_emit_shl(b, IR_TYPE_I64_T, b2u4, sh16), IR_TYPE_I64_T);
+                IRValue* b3sh4 = ir_value_reg(ir_builder_emit_shl(b, IR_TYPE_I64_T, b3u4, sh24), IR_TYPE_I64_T);
+                IRValue* bytes4 = ir_value_reg(ir_builder_emit_or(b, IR_TYPE_I64_T,
+                                                                  ir_value_reg(ir_builder_emit_or(b, IR_TYPE_I64_T,
+                                                                                                  ir_value_reg(ir_builder_emit_or(b, IR_TYPE_I64_T, b0u4, b1sh4), IR_TYPE_I64_T),
+                                                                                                  b2sh4),
+                                                                               IR_TYPE_I64_T),
+                                                                  b3sh4),
+                                               IR_TYPE_I64_T);
+                IRValue* l4sh = ir_value_reg(ir_builder_emit_shl(b, IR_TYPE_I64_T, four, sh32), IR_TYPE_I64_T);
+                IRValue* packed4_i64 = ir_value_reg(ir_builder_emit_or(b, IR_TYPE_I64_T, bytes4, l4sh), IR_TYPE_I64_T);
+                IRValue* packed4 = ir_value_reg(ir_builder_emit_cast(b, packed4_i64, IR_TYPE_CHAR_T), IR_TYPE_CHAR_T);
+                IRValue* outp4 = ir_value_reg(ir_builder_emit_ptr_offset(b, char_ptr_t, dst, out4), char_ptr_t);
+                ir_builder_emit_store(b, packed4, outp4);
+                ir_builder_emit_store(b, ir_value_reg(ir_builder_emit_add(b, IR_TYPE_I64_T, out4, one), IR_TYPE_I64_T), out_idx_ptr);
+                ir_builder_emit_store(b, ir_value_reg(ir_builder_emit_add(b, IR_TYPE_I64_T, in4, four), IR_TYPE_I64_T), in_idx_ptr);
+                ir_builder_emit_br(b, head);
+
+                // inv: استبدال بـ U+FFFD واستهلاك بايت واحد.
+                ir_builder_set_insert_point(b, inv);
+                ir_lower_set_loc(b, site);
+                IRValue* outx = ir_value_reg(ir_builder_emit_load(b, IR_TYPE_I64_T, out_idx_ptr), IR_TYPE_I64_T);
+                IRValue* inx = ir_value_reg(ir_builder_emit_load(b, IR_TYPE_I64_T, in_idx_ptr), IR_TYPE_I64_T);
+                IRValue* outpx = ir_value_reg(ir_builder_emit_ptr_offset(b, char_ptr_t, dst, outx), char_ptr_t);
+                ir_builder_emit_store(b, repl_ch, outpx);
+                ir_builder_emit_store(b, ir_value_reg(ir_builder_emit_add(b, IR_TYPE_I64_T, outx, one), IR_TYPE_I64_T), out_idx_ptr);
+                ir_builder_emit_store(b, ir_value_reg(ir_builder_emit_add(b, IR_TYPE_I64_T, inx, one), IR_TYPE_I64_T), in_idx_ptr);
+                ir_builder_emit_br(b, head);
+
+                // done: ضع NULL-terminator واكتب النتيجة.
+                ir_builder_set_insert_point(b, done);
+                ir_lower_set_loc(b, site);
+                IRValue* outd = ir_value_reg(ir_builder_emit_load(b, IR_TYPE_I64_T, out_idx_ptr), IR_TYPE_I64_T);
+                IRValue* outpend = ir_value_reg(ir_builder_emit_ptr_offset(b, char_ptr_t, dst, outd), char_ptr_t);
+                ir_builder_emit_store(b, ir_value_const_int(0, IR_TYPE_CHAR_T), outpend);
+                ir_builder_emit_store(b, dst, res_ptr);
+                ir_builder_emit_br(b, b_ret);
+            }
+        }
+    }
+
+    ir_builder_set_insert_point(b, b_ret);
+    ir_lower_set_loc(b, site);
+    int r = ir_builder_emit_load(b, char_ptr_t, res_ptr);
+    return ir_value_reg(r, char_ptr_t);
+}
+
+static bool ir_lower_emit_main_args_wrapper(IRBuilder* builder,
+                                           Node* program_root,
+                                           const Node* site,
+                                           const BaaTarget* target)
+{
+    if (!builder || !builder->module) return false;
+
+    IRModule* m = builder->module;
+    ir_module_set_current(m);
+
+    // يجب أن تكون دالة المستخدم موجودة قبل إنشاء الغلاف.
+    IRFunc* user = ir_module_find_func(m, BAA_WRAPPED_USER_MAIN_NAME);
+    if (!user) {
+        fprintf(stderr, "خطأ (تحويل IR): لم يتم العثور على '%s' لإنشاء غلاف الرئيسية.\n", BAA_WRAPPED_USER_MAIN_NAME);
+        return false;
+    }
+
+    IRType* i8_ptr_t = ir_type_ptr(IR_TYPE_I8_T);
+    IRType* i8_pp_t = ir_type_ptr(i8_ptr_t);
+    IRType* char_ptr_t = get_char_ptr_type(m);
+    IRType* char_ptr_ptr_t = ir_type_ptr(char_ptr_t);
+
+    // إنشاء دالة الغلاف: اسمها في IR هو 'الرئيسية' وسيحوّلها backend إلى 'main'.
+    IRFunc* wrap = ir_builder_create_func(builder, BAA_ENTRY_FUNC_NAME, IR_TYPE_I64_T);
+    if (!wrap) {
+        fprintf(stderr, "خطأ (تحويل IR): فشل إنشاء دالة غلاف '%s'.\n", BAA_ENTRY_FUNC_NAME);
+        return false;
+    }
+    wrap->is_prototype = false;
+
+    // توقيع C ABI: (argc: i64, argv: i8**)
+    (void)ir_builder_add_param(builder, "عدد", IR_TYPE_I64_T);
+    (void)ir_builder_add_param(builder, "argv", i8_pp_t);
+
+    ir_builder_set_func(builder, wrap);
+
+    IRBlock* entry = ir_builder_create_block(builder, "بداية");
+    if (!entry) return false;
+    ir_builder_set_insert_point(builder, entry);
+
+    IRLowerCtx ctx;
+    ir_lower_ctx_init(&ctx, builder);
+    ctx.current_func_name = BAA_ENTRY_FUNC_NAME;
+    ctx.program_root = program_root;
+    ctx.target = target;
+
+    // القيم القادمة من C runtime
+    IRValue* argc_v = ir_value_reg(wrap->params[0].reg, IR_TYPE_I64_T);
+    IRValue* argv_v = ir_value_reg(wrap->params[1].reg, i8_pp_t);
+
+    // baa_argv: مصفوفة مؤشرات إلى نص باء (ptr<char>[])
+    IRValue* one = ir_value_const_int(1, IR_TYPE_I64_T);
+    IRValue* eight = ir_value_const_int(8, IR_TYPE_I64_T);
+    IRValue* argc_p1 = ir_value_reg(ir_builder_emit_add(builder, IR_TYPE_I64_T, argc_v, one), IR_TYPE_I64_T);
+    IRValue* alloc_bytes = ir_value_reg(ir_builder_emit_mul(builder, IR_TYPE_I64_T, argc_p1, eight), IR_TYPE_I64_T);
+
+    IRValue* margs[1] = { alloc_bytes };
+    int raw_arr_r = ir_builder_emit_call(builder, "malloc", i8_ptr_t, margs, 1);
+    if (raw_arr_r < 0) {
+        ir_lower_report_error(&ctx, site, "فشل خفض نداء malloc أثناء إنشاء argv لباء.");
+        return false;
+    }
+    IRValue* raw_arr = ir_value_reg(raw_arr_r, i8_ptr_t);
+    IRValue* baa_argv = ir_value_reg(ir_builder_emit_cast(builder, raw_arr, char_ptr_ptr_t), char_ptr_ptr_t);
+
+    // i = 0
+    IRValue* i_ptr = ir_value_reg(ir_builder_emit_alloca(builder, IR_TYPE_I64_T), ir_type_ptr(IR_TYPE_I64_T));
+    ir_builder_emit_store(builder, ir_value_const_int(0, IR_TYPE_I64_T), i_ptr);
+
+    IRBlock* head = cf_create_block(&ctx, "غلاف_الرئيسية_تحقق");
+    IRBlock* body = cf_create_block(&ctx, "غلاف_الرئيسية_جسم");
+    IRBlock* done = cf_create_block(&ctx, "غلاف_الرئيسية_نهاية");
+    if (!head || !body || !done) return false;
+
+    ir_builder_emit_br(builder, head);
+
+    // head: i < argc ?
+    ir_builder_set_insert_point(builder, head);
+    ir_lower_set_loc(builder, site);
+    IRValue* i_v = ir_value_reg(ir_builder_emit_load(builder, IR_TYPE_I64_T, i_ptr), IR_TYPE_I64_T);
+    int lt_r = ir_builder_emit_cmp_lt(builder, i_v, argc_v);
+    ir_builder_emit_br_cond(builder, ir_value_reg(lt_r, IR_TYPE_I1_T), body, done);
+
+    // body: cstr = argv[i] -> baa_str -> baa_argv[i]
+    ir_builder_set_insert_point(builder, body);
+    ir_lower_set_loc(builder, site);
+    IRValue* argv_i_addr = ir_value_reg(ir_builder_emit_ptr_offset(builder, i8_pp_t, argv_v, i_v), i8_pp_t);
+    IRValue* cstr = ir_value_reg(ir_builder_emit_load(builder, i8_ptr_t, argv_i_addr), i8_ptr_t);
+    IRValue* baa_str = ir_lower_cstr_to_baa_string_alloc(&ctx, site, cstr);
+
+    IRValue* baa_slot = ir_value_reg(ir_builder_emit_ptr_offset(builder, char_ptr_ptr_t, baa_argv, i_v), char_ptr_ptr_t);
+    ir_builder_emit_store(builder, baa_str, baa_slot);
+
+    IRValue* i_next = ir_value_reg(ir_builder_emit_add(builder, IR_TYPE_I64_T, i_v, one), IR_TYPE_I64_T);
+    ir_builder_emit_store(builder, i_next, i_ptr);
+    ir_builder_emit_br(builder, head);
+
+    // done: baa_argv[argc] = NULL; call user main; return
+    ir_builder_set_insert_point(builder, done);
+    ir_lower_set_loc(builder, site);
+    IRValue* end_slot = ir_value_reg(ir_builder_emit_ptr_offset(builder, char_ptr_ptr_t, baa_argv, argc_v), char_ptr_ptr_t);
+    ir_builder_emit_store(builder, ir_value_const_int(0, char_ptr_t), end_slot);
+
+    IRValue* baa_argv_void = ir_value_reg(ir_builder_emit_cast(builder, baa_argv, i8_ptr_t), i8_ptr_t);
+    IRValue* uargs[2] = { argc_v, baa_argv_void };
+    int rv = ir_builder_emit_call(builder, BAA_WRAPPED_USER_MAIN_NAME, IR_TYPE_I64_T, uargs, 2);
+    if (rv < 0) {
+        ir_lower_report_error(&ctx, site, "فشل خفض نداء '%s' من غلاف الرئيسية.", BAA_WRAPPED_USER_MAIN_NAME);
+        ir_builder_emit_ret_int(builder, 0);
+        return false;
+    }
+
+    ir_builder_emit_ret(builder, ir_value_reg(rv, IR_TYPE_I64_T));
+    return ctx.had_error ? false : true;
 }
 
 static void ir_lower_scope_push(IRLowerCtx* ctx) {
@@ -97,8 +951,10 @@ void ir_lower_ctx_init(IRLowerCtx* ctx, IRBuilder* builder) {
     ctx->target = NULL;
 }
 
-void ir_lower_bind_local(IRLowerCtx* ctx, const char* name, int ptr_reg, IRType* value_type) {
+void ir_lower_bind_local(IRLowerCtx* ctx, const char* name, int ptr_reg, IRType* value_type,
+                         DataType ptr_base_type, const char* ptr_base_type_name, int ptr_depth) {
     if (!ctx || !name) return;
+    bool is_ptr = (ptr_depth > 0);
 
     // ابحث فقط داخل النطاق الحالي: إن وجد، حدّث الربط.
     int start = ir_lower_current_scope_start(ctx);
@@ -108,6 +964,10 @@ void ir_lower_bind_local(IRLowerCtx* ctx, const char* name, int ptr_reg, IRType*
             ctx->locals[i].value_type = value_type;
             ctx->locals[i].global_name = NULL;
             ctx->locals[i].is_static_storage = false;
+            ctx->locals[i].is_pointer = is_ptr;
+            ctx->locals[i].ptr_base_type = is_ptr ? ptr_base_type : TYPE_INT;
+            ctx->locals[i].ptr_base_type_name = is_ptr ? ptr_base_type_name : NULL;
+            ctx->locals[i].ptr_depth = is_ptr ? ptr_depth : 0;
             ctx->locals[i].is_array = false;
             ctx->locals[i].array_rank = 0;
             ctx->locals[i].array_dims = NULL;
@@ -127,6 +987,10 @@ void ir_lower_bind_local(IRLowerCtx* ctx, const char* name, int ptr_reg, IRType*
     ctx->locals[ctx->local_count].value_type = value_type;
     ctx->locals[ctx->local_count].global_name = NULL;
     ctx->locals[ctx->local_count].is_static_storage = false;
+    ctx->locals[ctx->local_count].is_pointer = is_ptr;
+    ctx->locals[ctx->local_count].ptr_base_type = is_ptr ? ptr_base_type : TYPE_INT;
+    ctx->locals[ctx->local_count].ptr_base_type_name = is_ptr ? ptr_base_type_name : NULL;
+    ctx->locals[ctx->local_count].ptr_depth = is_ptr ? ptr_depth : 0;
     ctx->locals[ctx->local_count].is_array = false;
     ctx->locals[ctx->local_count].array_rank = 0;
     ctx->locals[ctx->local_count].array_dims = NULL;
@@ -136,8 +1000,10 @@ void ir_lower_bind_local(IRLowerCtx* ctx, const char* name, int ptr_reg, IRType*
 }
 
 void ir_lower_bind_local_static(IRLowerCtx* ctx, const char* name,
-                                const char* global_name, IRType* value_type) {
+                                const char* global_name, IRType* value_type,
+                                DataType ptr_base_type, const char* ptr_base_type_name, int ptr_depth) {
     if (!ctx || !name || !global_name) return;
+    bool is_ptr = (ptr_depth > 0);
 
     int start = ir_lower_current_scope_start(ctx);
     for (int i = ctx->local_count - 1; i >= start; i--) {
@@ -146,6 +1012,10 @@ void ir_lower_bind_local_static(IRLowerCtx* ctx, const char* name,
             ctx->locals[i].value_type = value_type;
             ctx->locals[i].global_name = global_name;
             ctx->locals[i].is_static_storage = true;
+            ctx->locals[i].is_pointer = is_ptr;
+            ctx->locals[i].ptr_base_type = is_ptr ? ptr_base_type : TYPE_INT;
+            ctx->locals[i].ptr_base_type_name = is_ptr ? ptr_base_type_name : NULL;
+            ctx->locals[i].ptr_depth = is_ptr ? ptr_depth : 0;
             ctx->locals[i].is_array = false;
             ctx->locals[i].array_rank = 0;
             ctx->locals[i].array_dims = NULL;
@@ -165,6 +1035,10 @@ void ir_lower_bind_local_static(IRLowerCtx* ctx, const char* name,
     ctx->locals[ctx->local_count].value_type = value_type;
     ctx->locals[ctx->local_count].global_name = global_name;
     ctx->locals[ctx->local_count].is_static_storage = true;
+    ctx->locals[ctx->local_count].is_pointer = is_ptr;
+    ctx->locals[ctx->local_count].ptr_base_type = is_ptr ? ptr_base_type : TYPE_INT;
+    ctx->locals[ctx->local_count].ptr_base_type_name = is_ptr ? ptr_base_type_name : NULL;
+    ctx->locals[ctx->local_count].ptr_depth = is_ptr ? ptr_depth : 0;
     ctx->locals[ctx->local_count].is_array = false;
     ctx->locals[ctx->local_count].array_rank = 0;
     ctx->locals[ctx->local_count].array_dims = NULL;
@@ -324,46 +1198,6 @@ static IRType* ir_type_from_datatype(IRModule* module, DataType t) {
     }
 }
 
-static IRType* ir_type_from_ptr_spec(IRModule* module, DataType base_type, const char* base_type_name, int depth)
-{
-    (void)base_type_name;
-    if (depth <= 0) {
-        return ir_type_ptr(IR_TYPE_I8_T);
-    }
-
-    IRType* pointee = NULL;
-    if (depth == 1) {
-        switch (base_type) {
-            case TYPE_BOOL:  pointee = IR_TYPE_I1_T; break;
-            case TYPE_I8:    pointee = IR_TYPE_I8_T; break;
-            case TYPE_I16:   pointee = IR_TYPE_I16_T; break;
-            case TYPE_I32:   pointee = IR_TYPE_I32_T; break;
-            case TYPE_U8:    pointee = IR_TYPE_U8_T; break;
-            case TYPE_U16:   pointee = IR_TYPE_U16_T; break;
-            case TYPE_U32:   pointee = IR_TYPE_U32_T; break;
-            case TYPE_U64:   pointee = IR_TYPE_U64_T; break;
-            case TYPE_ENUM:  pointee = IR_TYPE_I64_T; break;
-            case TYPE_INT:   pointee = IR_TYPE_I64_T; break;
-            case TYPE_CHAR:  pointee = IR_TYPE_CHAR_T; break;
-            case TYPE_FLOAT: pointee = IR_TYPE_F64_T; break;
-            case TYPE_STRING:
-                pointee = module ? get_char_ptr_type(module) : ir_type_ptr(IR_TYPE_CHAR_T);
-                break;
-            case TYPE_VOID:
-            case TYPE_STRUCT:
-            case TYPE_UNION:
-            default:
-                pointee = IR_TYPE_I8_T;
-                break;
-        }
-    } else {
-        pointee = ir_type_from_ptr_spec(module, base_type, base_type_name, depth - 1);
-    }
-
-    if (!pointee) pointee = IR_TYPE_I8_T;
-    return ir_type_ptr(pointee);
-}
-
 static IRType* ir_type_from_funcsig(IRModule* module, const FuncPtrSig* sig)
 {
     if (!sig) {
@@ -402,22 +1236,6 @@ static IRType* ir_type_from_datatype_ex(IRModule* module, DataType t, const Func
 {
     if (t == TYPE_FUNC_PTR) {
         return ir_type_from_funcsig(module, sig);
-    }
-    return ir_type_from_datatype(module, t);
-}
-
-static IRType* ir_type_from_typespec(IRModule* module,
-                                     DataType t,
-                                     const FuncPtrSig* sig,
-                                     DataType ptr_base_type,
-                                     const char* ptr_base_type_name,
-                                     int ptr_depth)
-{
-    if (t == TYPE_FUNC_PTR) {
-        return ir_type_from_funcsig(module, sig);
-    }
-    if (t == TYPE_POINTER) {
-        return ir_type_from_ptr_spec(module, ptr_base_type, ptr_base_type_name, ptr_depth);
     }
     return ir_type_from_datatype(module, t);
 }
@@ -873,6 +1691,22 @@ static Node* ir_lower_find_global_array_decl(IRLowerCtx* ctx, const char* name)
         if (!d->data.array_decl.is_global) continue;
         if (!d->data.array_decl.name) continue;
         if (strcmp(d->data.array_decl.name, name) == 0) {
+            return d;
+        }
+    }
+    return NULL;
+}
+
+static Node* ir_lower_find_global_var_decl(IRLowerCtx* ctx, const char* name)
+{
+    if (!ctx || !ctx->program_root || !name) return NULL;
+    if (ctx->program_root->type != NODE_PROGRAM) return NULL;
+
+    for (Node* d = ctx->program_root->data.program.declarations; d; d = d->next) {
+        if (d->type != NODE_VAR_DECL) continue;
+        if (!d->data.var_decl.is_global) continue;
+        if (!d->data.var_decl.name) continue;
+        if (strcmp(d->data.var_decl.name, name) == 0) {
             return d;
         }
     }
@@ -3250,60 +4084,146 @@ static IRValue* lower_call_expr(IRLowerCtx* ctx, Node* expr) {
     return ir_value_reg(dest, ret_type);
 }
 
+static int64_t ir_lower_pointer_elem_size_meta(DataType base, int depth)
+{
+    if (depth > 1) return 8;
+    if (depth <= 0) return 1;
+
+    switch (base) {
+        case TYPE_BOOL:
+        case TYPE_I8:
+        case TYPE_U8:
+            return 1;
+        case TYPE_I16:
+        case TYPE_U16:
+            return 2;
+        case TYPE_I32:
+        case TYPE_U32:
+            return 4;
+        case TYPE_INT:
+        case TYPE_U64:
+        case TYPE_CHAR:
+        case TYPE_FLOAT:
+        case TYPE_ENUM:
+        case TYPE_STRING:
+        case TYPE_POINTER:
+            return 8;
+        default:
+            return 1;
+    }
+}
+
 static IRValue* ir_lower_pointer_index_chain(IRLowerCtx* ctx,
                                              Node* site,
                                              IRValue* base_ptr_val,
-                                             IRType* base_ptr_type,
+                                             DataType base_type,
+                                             const char* base_type_name,
+                                             int depth,
                                              Node* indices,
                                              int index_count,
                                              bool return_address,
                                              IRType** out_pointee_type)
 {
+    (void)base_type_name;
+
     if (out_pointee_type) *out_pointee_type = IR_TYPE_I64_T;
-    if (!ctx || !ctx->builder || !base_ptr_val || !base_ptr_type || !indices) {
-        return ir_value_const_int(0, ir_type_ptr(IR_TYPE_I64_T));
+    if (!ctx || !ctx->builder || !base_ptr_val || !indices) {
+        return return_address ? ir_value_const_int(0, ir_type_ptr(IR_TYPE_I64_T)) : ir_builder_const_i64(0);
     }
 
-    if (index_count <= 0) {
-        index_count = ir_lower_index_count(indices);
-    }
-    if (index_count <= 0) {
+    int effective_count = index_count > 0 ? index_count : ir_lower_index_count(indices);
+    if (effective_count <= 0) {
         ir_lower_report_error(ctx, site, "فهرسة مؤشر بدون فهارس غير صالحة.");
         return return_address ? ir_value_const_int(0, ir_type_ptr(IR_TYPE_I64_T)) : ir_builder_const_i64(0);
     }
 
-    IRValue* cur_ptr_val = base_ptr_val;
-    IRType* cur_ptr_t = base_ptr_type;
+    IRModule* m = ctx->builder->module;
+    IRType* void_ptr_t = ir_type_ptr(IR_TYPE_I8_T);
+
+    DataType cur_base = base_type;
+    int cur_depth = depth;
+
+    IRValue* cur_ptr = cast_to(ctx, base_ptr_val, void_ptr_t);
     Node* idx_node = indices;
 
-    for (int i = 0; i < index_count && idx_node; i++, idx_node = idx_node->next) {
-        if (!cur_ptr_t || cur_ptr_t->kind != IR_TYPE_PTR || !cur_ptr_t->data.pointee) {
-            ir_lower_report_error(ctx, site, "نوع المؤشر غير صالح أثناء الفهرسة.");
+    for (int i = 0; i < effective_count && idx_node; i++, idx_node = idx_node->next) {
+        if (cur_depth <= 0) {
+            ir_lower_report_error(ctx, site, "عمق المؤشر غير صالح أثناء فهرسة المؤشر.");
             return return_address ? ir_value_const_int(0, ir_type_ptr(IR_TYPE_I64_T)) : ir_builder_const_i64(0);
         }
 
-        IRType* elem_t = cur_ptr_t->data.pointee;
-        IRValue* idx = ensure_i64(ctx, lower_expr(ctx, idx_node));
-        int ep = ir_builder_emit_ptr_offset(ctx->builder, cur_ptr_t, cur_ptr_val, idx);
-        IRValue* elem_addr = ir_value_reg(ep, cur_ptr_t);
+        IRValue* idx0 = ensure_i64(ctx, lower_expr(ctx, idx_node));
+        int64_t elem_size = ir_lower_pointer_elem_size_meta(cur_base, cur_depth);
+        IRValue* idx_bytes = idx0;
+        if (elem_size > 1) {
+            int mr = ir_builder_emit_mul(ctx->builder, IR_TYPE_I64_T, idx0,
+                                         ir_value_const_int(elem_size, IR_TYPE_I64_T));
+            idx_bytes = ir_value_reg(mr, IR_TYPE_I64_T);
+        }
 
-        if (i == index_count - 1) {
+        // نستخدم i8* حتى تكون الإزاحة "بالبايت" (delta bytes).
+        int ep = ir_builder_emit_ptr_offset(ctx->builder, void_ptr_t, cur_ptr, idx_bytes);
+        IRValue* elem_addr_i8 = ir_value_reg(ep, void_ptr_t);
+
+        bool is_last = (i == effective_count - 1);
+
+        if (is_last) {
+            IRType* elem_t = (cur_depth > 1) ? void_ptr_t : ir_type_from_datatype(m, cur_base);
+            IRType* ptr_to_elem_t = ir_type_ptr(elem_t);
+            int cp = ir_builder_emit_cast(ctx->builder, elem_addr_i8, ptr_to_elem_t);
+            IRValue* typed_addr = ir_value_reg(cp, ptr_to_elem_t);
             if (out_pointee_type) *out_pointee_type = elem_t;
             if (return_address) {
-                return elem_addr;
+                return typed_addr;
             }
-            int loaded = ir_builder_emit_load(ctx->builder, elem_t, elem_addr);
+            int loaded = ir_builder_emit_load(ctx->builder, elem_t, typed_addr);
             return ir_value_reg(loaded, elem_t);
         }
 
-        if (!elem_t || elem_t->kind != IR_TYPE_PTR) {
-            ir_lower_report_error(ctx, site, "فهرسة متعددة تتطلب مؤشراً عند الفهرس %d.", i + 1);
-            return return_address ? ir_value_const_int(0, ir_type_ptr(IR_TYPE_I64_T)) : ir_builder_const_i64(0);
+        // ليست آخر فهرسة: نحتاج قيمة قابلة للفهرسة لاحقاً
+        if (cur_depth > 1) {
+            // العنصر هو مؤشر (نحمّله كـ void* ثم نكمل على عمق أقل)
+            IRType* elem_t = void_ptr_t;
+            IRType* ptr_to_elem_t = ir_type_ptr(elem_t);
+            int cp = ir_builder_emit_cast(ctx->builder, elem_addr_i8, ptr_to_elem_t);
+            IRValue* typed_addr = ir_value_reg(cp, ptr_to_elem_t);
+            int loaded = ir_builder_emit_load(ctx->builder, elem_t, typed_addr);
+            cur_ptr = ir_value_reg(loaded, elem_t);
+            cur_ptr = cast_to(ctx, cur_ptr, void_ptr_t);
+            cur_depth--;
+            continue;
         }
 
-        int loaded_ptr = ir_builder_emit_load(ctx->builder, elem_t, elem_addr);
-        cur_ptr_val = ir_value_reg(loaded_ptr, elem_t);
-        cur_ptr_t = elem_t;
+        // cur_depth == 1: العنصر هو نوع الأساس مباشرة
+        if (cur_base == TYPE_STRING) {
+            // فهرسة ثانية على نص: str[j] → حرف
+            IRType* str_t = get_char_ptr_type(m);
+            IRType* ptr_to_str_t = ir_type_ptr(str_t);
+            int cp0 = ir_builder_emit_cast(ctx->builder, elem_addr_i8, ptr_to_str_t);
+            IRValue* str_slot = ir_value_reg(cp0, ptr_to_str_t);
+            int ld0 = ir_builder_emit_load(ctx->builder, str_t, str_slot);
+            IRValue* str_ptr = ir_value_reg(ld0, str_t);
+
+            int remaining = effective_count - i - 1;
+            if (remaining != 1 || !idx_node->next) {
+                ir_lower_report_error(ctx, site, "فهرسة متعددة غير مدعومة بعد الوصول إلى 'نص'.");
+                return return_address ? ir_value_const_int(0, ir_type_ptr(IR_TYPE_I64_T)) : ir_builder_const_i64(0);
+            }
+
+            Node* inner_node = idx_node->next;
+            IRValue* inner_idx = ensure_i64(ctx, lower_expr(ctx, inner_node));
+            int ep2 = ir_builder_emit_ptr_offset(ctx->builder, str_t, str_ptr, inner_idx);
+            IRValue* ch_addr = ir_value_reg(ep2, str_t);
+            if (out_pointee_type) *out_pointee_type = IR_TYPE_CHAR_T;
+            if (return_address) {
+                return ch_addr;
+            }
+            int ch = ir_builder_emit_load(ctx->builder, IR_TYPE_CHAR_T, ch_addr);
+            return ir_value_reg(ch, IR_TYPE_CHAR_T);
+        }
+
+        ir_lower_report_error(ctx, site, "فهرسة متعددة تتطلب مؤشراً/نصاً كعنصر وسيط.");
+        return return_address ? ir_value_const_int(0, ir_type_ptr(IR_TYPE_I64_T)) : ir_builder_const_i64(0);
     }
 
     ir_lower_report_error(ctx, site, "عدد الفهارس غير صالح أثناء فهرسة المؤشر.");
@@ -3389,7 +4309,7 @@ static IRValue* lower_lvalue_address(IRLowerCtx* ctx, Node* expr, IRType** out_p
             const char* storage_name = ir_lower_binding_storage_name(b);
 
             // فهرسة مؤشرات محلية: p[i] و p[i][j]...
-            if (!b->is_array && b->value_type && b->value_type->kind == IR_TYPE_PTR) {
+            if (b->is_pointer) {
                 IRType* ptr_t = b->value_type;
                 IRValue* ptr_val = NULL;
                 if (b->is_static_storage) {
@@ -3403,7 +4323,8 @@ static IRValue* lower_lvalue_address(IRLowerCtx* ctx, Node* expr, IRType** out_p
                     ptr_val = ir_value_reg(loaded, ptr_t);
                 }
 
-                return ir_lower_pointer_index_chain(ctx, expr, ptr_val, ptr_t,
+                return ir_lower_pointer_index_chain(ctx, expr, ptr_val,
+                                                    b->ptr_base_type, b->ptr_base_type_name, b->ptr_depth,
                                                     expr->data.array_op.indices, index_count,
                                                     true, out_pointee_type);
             }
@@ -3445,12 +4366,18 @@ static IRValue* lower_lvalue_address(IRLowerCtx* ctx, Node* expr, IRType** out_p
         if (ctx->builder && ctx->builder->module && name) {
             g = ir_module_find_global(ctx->builder->module, name);
         }
-        if (g && g->type && g->type->kind == IR_TYPE_PTR) {
-            // فهرسة مؤشرات عامة: نحمّل قيمة المؤشر أولاً من @name ثم نفهرسه.
+        Node* vdecl = ir_lower_find_global_var_decl(ctx, name);
+        if (vdecl && vdecl->type == NODE_VAR_DECL &&
+            vdecl->data.var_decl.type == TYPE_POINTER &&
+            g && g->type) {
+            // فهرسة مؤشرات عامة: نحمّل قيمة المؤشر أولاً من @name ثم نفهرسه بالميتا الدلالية.
             IRValue* gptr = ir_value_global(name, g->type);
             int loaded = ir_builder_emit_load(ctx->builder, g->type, gptr);
             IRValue* p = ir_value_reg(loaded, g->type);
-            return ir_lower_pointer_index_chain(ctx, expr, p, g->type,
+            return ir_lower_pointer_index_chain(ctx, expr, p,
+                                                vdecl->data.var_decl.ptr_base_type,
+                                                vdecl->data.var_decl.ptr_base_type_name,
+                                                vdecl->data.var_decl.ptr_depth,
                                                 expr->data.array_op.indices, index_count,
                                                 true, out_pointee_type);
         }
@@ -3615,8 +4542,8 @@ IRValue* lower_expr(IRLowerCtx* ctx, Node* expr) {
                     return ir_value_reg(ch, IR_TYPE_CHAR_T);
                 }
 
-                // مؤشرات عامة (غير النص): p[i] و p[i][j]...
-                if (!b->is_array && b->value_type && b->value_type->kind == IR_TYPE_PTR) {
+                // مؤشرات عامة: p[i] و p[i][j]...
+                if (b->is_pointer) {
                     if (!expr->data.array_op.indices) {
                         ir_lower_report_error(ctx, expr, "فهرس المؤشر '%s' مفقود.", name ? name : "???");
                         return ir_builder_const_i64(0);
@@ -3635,7 +4562,8 @@ IRValue* lower_expr(IRLowerCtx* ctx, Node* expr) {
                         ptr_val = ir_value_reg(loaded, ptr_t);
                     }
 
-                    return ir_lower_pointer_index_chain(ctx, expr, ptr_val, ptr_t,
+                    return ir_lower_pointer_index_chain(ctx, expr, ptr_val,
+                                                        b->ptr_base_type, b->ptr_base_type_name, b->ptr_depth,
                                                         expr->data.array_op.indices, index_count,
                                                         false, NULL);
                 }
@@ -3724,12 +4652,17 @@ IRValue* lower_expr(IRLowerCtx* ctx, Node* expr) {
                 return ir_builder_const_i64(0);
             }
 
-            // فهرسة مؤشرات عامة: نحمّل قيمة المؤشر أولاً من @name ثم نفهرسه.
-            if (g->type->kind == IR_TYPE_PTR) {
+            Node* vdecl = ir_lower_find_global_var_decl(ctx, name);
+            if (vdecl && vdecl->type == NODE_VAR_DECL &&
+                vdecl->data.var_decl.type == TYPE_POINTER &&
+                g && g->type) {
                 IRValue* gptr = ir_value_global(name, g->type);
                 int loaded = ir_builder_emit_load(ctx->builder, g->type, gptr);
                 IRValue* p = ir_value_reg(loaded, g->type);
-                return ir_lower_pointer_index_chain(ctx, expr, p, g->type,
+                return ir_lower_pointer_index_chain(ctx, expr, p,
+                                                    vdecl->data.var_decl.ptr_base_type,
+                                                    vdecl->data.var_decl.ptr_base_type_name,
+                                                    vdecl->data.var_decl.ptr_depth,
                                                     expr->data.array_op.indices, index_count,
                                                     false, NULL);
             }
@@ -4399,7 +5332,7 @@ static void lower_array_decl(IRLowerCtx* ctx, Node* stmt) {
             ir_lower_report_error(ctx, stmt, "تهيئة مصفوفات الأنواع المركبة غير مدعومة حالياً في خفض IR.");
         }
 
-        ir_lower_bind_local_static(ctx, stmt->data.array_decl.name, gname, arr_t);
+        ir_lower_bind_local_static(ctx, stmt->data.array_decl.name, gname, arr_t, TYPE_INT, NULL, 0);
         ir_lower_set_local_array_meta(ctx,
                                       stmt->data.array_decl.name,
                                       stmt->data.array_decl.dim_count,
@@ -4412,7 +5345,7 @@ static void lower_array_decl(IRLowerCtx* ctx, Node* stmt) {
     int ptr_reg = ir_builder_emit_alloca(ctx->builder, arr_t);
     ir_lower_tag_last_inst(ctx->builder, IR_OP_ALLOCA, ptr_reg, stmt->data.array_decl.name);
 
-    ir_lower_bind_local(ctx, stmt->data.array_decl.name, ptr_reg, arr_t);
+    ir_lower_bind_local(ctx, stmt->data.array_decl.name, ptr_reg, arr_t, TYPE_INT, NULL, 0);
     ir_lower_set_local_array_meta(ctx,
                                   stmt->data.array_decl.name,
                                   stmt->data.array_decl.dim_count,
@@ -4511,16 +5444,11 @@ static void lower_var_decl(IRLowerCtx* ctx, Node* stmt) {
                 return;
             }
             g->is_internal = true;
-            ir_lower_bind_local_static(ctx, stmt->data.var_decl.name, gname, bytes_t);
-            return;
-        }
+        ir_lower_bind_local_static(ctx, stmt->data.var_decl.name, gname, bytes_t, TYPE_INT, NULL, 0);
+        return;
+    }
 
-        IRType* value_type = ir_type_from_typespec(m,
-                                                   stmt->data.var_decl.type,
-                                                   stmt->data.var_decl.func_sig,
-                                                   stmt->data.var_decl.ptr_base_type,
-                                                   stmt->data.var_decl.ptr_base_type_name,
-                                                   stmt->data.var_decl.ptr_depth);
+        IRType* value_type = ir_type_from_datatype_ex(m, stmt->data.var_decl.type, stmt->data.var_decl.func_sig);
         IRValue* init = NULL;
         if (stmt->data.var_decl.expression) {
             init = ir_lower_global_init_value(ctx->builder, stmt->data.var_decl.expression, value_type);
@@ -4536,7 +5464,10 @@ static void lower_var_decl(IRLowerCtx* ctx, Node* stmt) {
             return;
         }
         g->is_internal = true;
-        ir_lower_bind_local_static(ctx, stmt->data.var_decl.name, gname, value_type);
+        ir_lower_bind_local_static(ctx, stmt->data.var_decl.name, gname, value_type,
+                                   stmt->data.var_decl.type == TYPE_POINTER ? stmt->data.var_decl.ptr_base_type : TYPE_INT,
+                                   stmt->data.var_decl.type == TYPE_POINTER ? stmt->data.var_decl.ptr_base_type_name : NULL,
+                                   stmt->data.var_decl.type == TYPE_POINTER ? stmt->data.var_decl.ptr_depth : 0);
         return;
     }
 
@@ -4551,16 +5482,13 @@ static void lower_var_decl(IRLowerCtx* ctx, Node* stmt) {
         IRType* bytes_t = ir_type_array(IR_TYPE_I8_T, n);
         int ptr_reg = ir_builder_emit_alloca(ctx->builder, bytes_t);
         ir_lower_tag_last_inst(ctx->builder, IR_OP_ALLOCA, ptr_reg, stmt->data.var_decl.name);
-        ir_lower_bind_local(ctx, stmt->data.var_decl.name, ptr_reg, bytes_t);
+        ir_lower_bind_local(ctx, stmt->data.var_decl.name, ptr_reg, bytes_t, TYPE_INT, NULL, 0);
         return;
     }
 
-    IRType* value_type = ir_type_from_typespec(ctx && ctx->builder ? ctx->builder->module : NULL,
-                                               stmt->data.var_decl.type,
-                                               stmt->data.var_decl.func_sig,
-                                               stmt->data.var_decl.ptr_base_type,
-                                               stmt->data.var_decl.ptr_base_type_name,
-                                               stmt->data.var_decl.ptr_depth);
+    IRType* value_type = ir_type_from_datatype_ex(ctx && ctx->builder ? ctx->builder->module : NULL,
+                                                  stmt->data.var_decl.type,
+                                                  stmt->data.var_decl.func_sig);
 
     // %ptr = حجز <value_type>
     int ptr_reg = ir_builder_emit_alloca(ctx->builder, value_type);
@@ -4569,7 +5497,10 @@ static void lower_var_decl(IRLowerCtx* ctx, Node* stmt) {
     ir_lower_tag_last_inst(ctx->builder, IR_OP_ALLOCA, ptr_reg, stmt->data.var_decl.name);
 
     // Bind name -> ptr reg so NODE_VAR_REF can emit حمل.
-    ir_lower_bind_local(ctx, stmt->data.var_decl.name, ptr_reg, value_type);
+    ir_lower_bind_local(ctx, stmt->data.var_decl.name, ptr_reg, value_type,
+                        stmt->data.var_decl.type == TYPE_POINTER ? stmt->data.var_decl.ptr_base_type : TYPE_INT,
+                        stmt->data.var_decl.type == TYPE_POINTER ? stmt->data.var_decl.ptr_base_type_name : NULL,
+                        stmt->data.var_decl.type == TYPE_POINTER ? stmt->data.var_decl.ptr_depth : 0);
 
     // Initializer is required for locals in the current language rules.
     IRValue* init = NULL;
@@ -5708,6 +6639,19 @@ IRModule* ir_lower_program(Node* program, const char* module_name,
                            bool enable_bounds_checks, const BaaTarget* target) {
     if (!program || program->type != NODE_PROGRAM) return NULL;
 
+    // هل لدينا `الرئيسية(صحيح، نص[])`؟ إن كان نعم سنولد غلاف ABI لـ C ونُعيد تسمية دالة المستخدم.
+    bool main_with_args = false;
+    const Node* main_site = NULL;
+    for (Node* d = program->data.program.declarations; d; d = d->next) {
+        if (d->type != NODE_FUNC_DEF) continue;
+        if (!ir_lower_ast_func_is_main_with_args(d)) continue;
+        main_with_args = true;
+        // نفضل موقع التعريف غير النموذجي لربط التشخيصات.
+        if (!main_site || (!d->data.func_def.is_prototype && main_site->data.func_def.is_prototype)) {
+            main_site = d;
+        }
+    }
+
     IRModule* module = ir_module_new(module_name ? module_name : "module");
     if (!module) return NULL;
 
@@ -5724,7 +6668,12 @@ IRModule* ir_lower_program(Node* program, const char* module_name,
         if (decl0->type != NODE_FUNC_DEF) continue;
         if (!decl0->data.func_def.name) continue;
 
-        IRFunc* existing = ir_module_find_func(module, decl0->data.func_def.name);
+        const char* ir_name = decl0->data.func_def.name;
+        if (main_with_args && ir_lower_ast_func_is_main_with_args(decl0)) {
+            ir_name = BAA_WRAPPED_USER_MAIN_NAME;
+        }
+
+        IRFunc* existing = ir_module_find_func(module, ir_name);
         if (existing) {
             if (!decl0->data.func_def.is_prototype) {
                 existing->is_prototype = false;
@@ -5732,24 +6681,18 @@ IRModule* ir_lower_program(Node* program, const char* module_name,
             continue;
         }
 
-        IRType* ret_type = ir_type_from_typespec(module,
-                                                 decl0->data.func_def.return_type,
-                                                 decl0->data.func_def.return_func_sig,
-                                                 decl0->data.func_def.return_ptr_base_type,
-                                                 decl0->data.func_def.return_ptr_base_type_name,
-                                                 decl0->data.func_def.return_ptr_depth);
-        IRFunc* f0 = ir_builder_create_func(builder, decl0->data.func_def.name, ret_type);
+        IRType* ret_type = ir_type_from_datatype_ex(module,
+                                                    decl0->data.func_def.return_type,
+                                                    decl0->data.func_def.return_func_sig);
+        IRFunc* f0 = ir_builder_create_func(builder, ir_name, ret_type);
         if (!f0) continue;
         f0->is_prototype = decl0->data.func_def.is_prototype;
 
         for (Node* p = decl0->data.func_def.params; p; p = p->next) {
             if (p->type != NODE_VAR_DECL) continue;
-            IRType* ptype = ir_type_from_typespec(module,
-                                                  p->data.var_decl.type,
-                                                  p->data.var_decl.func_sig,
-                                                  p->data.var_decl.ptr_base_type,
-                                                  p->data.var_decl.ptr_base_type_name,
-                                                  p->data.var_decl.ptr_depth);
+            IRType* ptype = ir_type_from_datatype_ex(module,
+                                                     p->data.var_decl.type,
+                                                     p->data.var_decl.func_sig);
             (void)ir_builder_add_param(builder, p->data.var_decl.name, ptype);
         }
     }
@@ -5792,14 +6735,7 @@ IRModule* ir_lower_program(Node* program, const char* module_name,
                 elem_t = IR_TYPE_I8_T;
                 arr_t = ir_type_array(IR_TYPE_I8_T, (int)total_bytes64);
             } else {
-                if (elem_dt == TYPE_POINTER) {
-                    elem_t = ir_type_from_ptr_spec(module,
-                                                   decl->data.array_decl.element_ptr_base_type,
-                                                   decl->data.array_decl.element_ptr_base_type_name,
-                                                   decl->data.array_decl.element_ptr_depth);
-                } else {
-                    elem_t = ir_type_from_datatype(module, elem_dt);
-                }
+                elem_t = ir_type_from_datatype(module, elem_dt);
                 if (!elem_t || elem_t->kind == IR_TYPE_VOID) elem_t = IR_TYPE_I64_T;
                 arr_t = ir_type_array(elem_t, total_count);
             }
@@ -5863,12 +6799,9 @@ IRModule* ir_lower_program(Node* program, const char* module_name,
                 continue;
             }
 
-            IRType* gtype = ir_type_from_typespec(module,
-                                                  decl->data.var_decl.type,
-                                                  decl->data.var_decl.func_sig,
-                                                  decl->data.var_decl.ptr_base_type,
-                                                  decl->data.var_decl.ptr_base_type_name,
-                                                  decl->data.var_decl.ptr_depth);
+            IRType* gtype = ir_type_from_datatype_ex(module,
+                                                     decl->data.var_decl.type,
+                                                     decl->data.var_decl.func_sig);
             IRValue* init = ir_lower_global_init_value(builder, decl->data.var_decl.expression, gtype);
 
             IRGlobal* g = ir_builder_create_global_init(builder, decl->data.var_decl.name, gtype, init,
@@ -5883,25 +6816,24 @@ IRModule* ir_lower_program(Node* program, const char* module_name,
         if (decl->type == NODE_FUNC_DEF) {
             if (!decl->data.func_def.name) continue;
 
-            IRFunc* func = ir_module_find_func(module, decl->data.func_def.name);
+            const char* ir_name = decl->data.func_def.name;
+            if (main_with_args && ir_lower_ast_func_is_main_with_args(decl)) {
+                ir_name = BAA_WRAPPED_USER_MAIN_NAME;
+            }
+
+            IRFunc* func = ir_module_find_func(module, ir_name);
             if (!func) {
-                IRType* ret_type = ir_type_from_typespec(module,
-                                                        decl->data.func_def.return_type,
-                                                        decl->data.func_def.return_func_sig,
-                                                        decl->data.func_def.return_ptr_base_type,
-                                                        decl->data.func_def.return_ptr_base_type_name,
-                                                        decl->data.func_def.return_ptr_depth);
-                func = ir_builder_create_func(builder, decl->data.func_def.name, ret_type);
+                IRType* ret_type = ir_type_from_datatype_ex(module,
+                                                            decl->data.func_def.return_type,
+                                                            decl->data.func_def.return_func_sig);
+                func = ir_builder_create_func(builder, ir_name, ret_type);
                 if (!func) continue;
                 func->is_prototype = decl->data.func_def.is_prototype;
                 for (Node* p = decl->data.func_def.params; p; p = p->next) {
                     if (p->type != NODE_VAR_DECL) continue;
-                    IRType* ptype = ir_type_from_typespec(module,
-                                                          p->data.var_decl.type,
-                                                          p->data.var_decl.func_sig,
-                                                          p->data.var_decl.ptr_base_type,
-                                                          p->data.var_decl.ptr_base_type_name,
-                                                          p->data.var_decl.ptr_depth);
+                    IRType* ptype = ir_type_from_datatype_ex(module,
+                                                             p->data.var_decl.type,
+                                                             p->data.var_decl.func_sig);
                     (void)ir_builder_add_param(builder, p->data.var_decl.name, ptype);
                 }
             }
@@ -5919,6 +6851,7 @@ IRModule* ir_lower_program(Node* program, const char* module_name,
 
             IRLowerCtx ctx;
             ir_lower_ctx_init(&ctx, builder);
+            // نُبقي الاسم المصدرّي لأغراض رسائل/تسميات داخلية حتى إن اختلف اسم IR.
             ctx.current_func_name = decl->data.func_def.name;
             ctx.static_local_counter = 0;
             ctx.enable_bounds_checks = enable_bounds_checks;
@@ -5945,7 +6878,10 @@ IRModule* ir_lower_program(Node* program, const char* module_name,
 
                 int ptr_reg = ir_builder_emit_alloca(builder, ptype);
                 ir_lower_tag_last_inst(builder, IR_OP_ALLOCA, ptr_reg, pname);
-                ir_lower_bind_local(&ctx, pname, ptr_reg, ptype);
+                ir_lower_bind_local(&ctx, pname, ptr_reg, ptype,
+                                    p->data.var_decl.type == TYPE_POINTER ? p->data.var_decl.ptr_base_type : TYPE_INT,
+                                    p->data.var_decl.type == TYPE_POINTER ? p->data.var_decl.ptr_base_type_name : NULL,
+                                    p->data.var_decl.type == TYPE_POINTER ? p->data.var_decl.ptr_depth : 0);
 
                 IRValue* val = ir_value_reg(preg, ptype);
                 IRType* ptr_type = ir_type_ptr(ptype ? ptype : IR_TYPE_I64_T);
@@ -5983,6 +6919,15 @@ IRModule* ir_lower_program(Node* program, const char* module_name,
                 ir_module_free(module);
                 return NULL;
             }
+        }
+    }
+
+    // إن كانت الرئيسية بوسائط: ولّد غلاف ABI لـ C باسم 'الرئيسية' ليستدعي '__baa_user_main'.
+    if (main_with_args) {
+        if (!ir_lower_emit_main_args_wrapper(builder, program, main_site, target)) {
+            ir_builder_free(builder);
+            ir_module_free(module);
+            return NULL;
         }
     }
 

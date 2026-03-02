@@ -32,6 +32,13 @@ typedef struct IRLowerBinding {
     IRType* value_type;   // Type of the value stored at ptr_reg (e.g., ص٦٤)
     const char* global_name; // اسم الرمز العام عند التخزين الساكن
     bool is_static_storage;  // هل الربط مُمثل بتخزين ساكن عبر رمز عام
+
+    // معلومات المؤشر (للأنواع TYPE_POINTER فقط)
+    bool is_pointer;          // هل قيمة هذا الربط "مؤشر" عام في لغة باء؟
+    DataType ptr_base_type;   // نوع أساس المؤشر (عندما is_pointer == true)
+    const char* ptr_base_type_name; // اسم النوع المركب لأساس المؤشر (قد يكون NULL)
+    int ptr_depth;            // عمق المؤشر
+
     bool is_array;           // هل الربط يمثل مصفوفة؟
     int array_rank;          // عدد أبعاد المصفوفة
     const int* array_dims;   // أبعاد المصفوفة (مرجع إلى AST)
@@ -80,13 +87,15 @@ void ir_lower_ctx_init(IRLowerCtx* ctx, IRBuilder* builder);
  * This is expected to be used by statement lowering (v0.3.0.4) when emitting
  * `حجز` for `NODE_VAR_DECL` so that `NODE_VAR_REF` can emit `حمل`.
  */
-void ir_lower_bind_local(IRLowerCtx* ctx, const char* name, int ptr_reg, IRType* value_type);
+void ir_lower_bind_local(IRLowerCtx* ctx, const char* name, int ptr_reg, IRType* value_type,
+                         DataType ptr_base_type, const char* ptr_base_type_name, int ptr_depth);
 
 /**
  * @brief ربط اسم محلي بتخزين ساكن ممثل برمز عام.
  */
 void ir_lower_bind_local_static(IRLowerCtx* ctx, const char* name,
-                                const char* global_name, IRType* value_type);
+                                const char* global_name, IRType* value_type,
+                                DataType ptr_base_type, const char* ptr_base_type_name, int ptr_depth);
 
 // ============================================================================
 // Expression lowering (v0.3.0.3)

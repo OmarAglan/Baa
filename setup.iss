@@ -45,6 +45,9 @@ Source: "build\baa.exe"; DestDir: "{app}"; Flags: ignoreversion
 ; plus the supporting libs and libexec needed by GCC.
 Source: "gcc\*"; DestDir: "{app}\gcc"; Flags: ignoreversion recursesubdirs createallsubdirs
 
+; Bundled Baa standard library (headers + implementation examples)
+Source: "stdlib\*"; DestDir: "{app}\stdlib"; Flags: ignoreversion recursesubdirs createallsubdirs
+
 ; Resources, docs, metadata
 Source: "resources\*"; DestDir: "{app}\resources"; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: "README.md"; DestDir: "{app}"; Flags: ignoreversion
@@ -61,6 +64,9 @@ Name: "{group}\{cm:UninstallProgram,Baa Compiler}"; Filename: "{uninstallexe}"
 ; Add Baa and the bundled GCC to the system PATH
 Root: HKLM; Subkey: "SYSTEM\CurrentControlSet\Control\Session Manager\Environment"; ValueType: expandsz; ValueName: "Path"; ValueData: "{olddata};{app}"; Check: Not PathContainsDir(ExpandConstant('{app}'))
 Root: HKLM; Subkey: "SYSTEM\CurrentControlSet\Control\Session Manager\Environment"; ValueType: expandsz; ValueName: "Path"; ValueData: "{olddata};{app}\gcc\bin"; Check: Not PathContainsDir(ExpandConstant('{app}\gcc\bin'))
+; Helpful environment variables for tooling/scripts
+Root: HKLM; Subkey: "SYSTEM\CurrentControlSet\Control\Session Manager\Environment"; ValueType: expandsz; ValueName: "BAA_HOME"; ValueData: "{app}"; Flags: uninsdeletevalue
+Root: HKLM; Subkey: "SYSTEM\CurrentControlSet\Control\Session Manager\Environment"; ValueType: expandsz; ValueName: "BAA_STDLIB"; ValueData: "{app}\stdlib"; Flags: uninsdeletevalue
 
 [Run]
 ; Open documentation (Optional)
@@ -99,6 +105,8 @@ begin
       Msg := 'Baa Compiler installed successfully!' + #13#13
              + 'A bundled GCC toolchain has been installed to:' + #13
              + ExpandConstant('{app}\gcc') + #13#13
+             + 'Baa standard library has been installed to:' + #13
+             + ExpandConstant('{app}\stdlib') + #13#13
              + 'Please restart your terminal for the PATH changes to take effect.';
       MsgBox(Msg, mbInformation, MB_OK);
     end

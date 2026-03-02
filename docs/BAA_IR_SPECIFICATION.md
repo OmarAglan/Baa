@@ -627,8 +627,9 @@ global      ::= ("internal")? ("const")? "global" "@" ident "=" type global_init
 global_init ::= value
              | "zeroinit"
              | "{" (value ("," value)* ","?)? "}"
-function    ::= "دالة" "@" ident "(" params ")" "->" type "{" block+ "}"
+function    ::= "دالة" "@" ident "(" params variadic_opt? ")" "->" type "{" block+ "}"
 params      ::= (type "%" ident ("،" type "%" ident)*)?
+variadic_opt ::= "..." | "،" "..."
 block       ::= label ":" instruction+
 label       ::= arabic_word
 instruction ::= assignment | terminator | store_inst
@@ -645,13 +646,15 @@ pointer     ::= "مؤشر" "[" type "]"
 array       ::= "مصفوفة" "[" type "،" number "]"
 ```
 
-**Notes (v0.3.10.6):**
+**Notes (v0.4.0.5):**
 
 - IR text `call` يدعم:
   - نداء مباشر: `call <ret_type> @name(arg0, arg1, ...)`
   - نداء غير مباشر: `call <ret_type> <callee>(arg0, arg1, ...)` حيث `callee` يمكن أن يكون:
     - `%rN` قيمة من نوع `func(...) -> ...`
     - أو `@name` مرجع دالة (بعد تحسين/نشر قد يظهر كقيمة مباشرة)
+- رأس الدالة في IR text يدعم لاحقة `...` للدوال المتغيرة المعاملات.
+- في v0.4.0.5، دوال باء المتغيرة تُخفض داخلياً بإضافة معامل خفي (`i8*`) يحمل قاعدة المعاملات المتغيرة المعبأة.
 
 ---
 
@@ -970,6 +973,9 @@ typedef struct IRFunc {
 
     // Is this a prototype (declaration without body)?
     bool is_prototype;
+
+    // هل الدالة متغيرة المعاملات (...)؟
+    bool is_variadic;
 
     // Linked list of functions in module
     struct IRFunc* next;

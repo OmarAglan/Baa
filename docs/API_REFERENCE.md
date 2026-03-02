@@ -4055,6 +4055,7 @@ typedef struct FuncPtrSig {
     DataType return_ptr_base_type;
     char* return_ptr_base_type_name; // مملوك (قد يكون NULL)
     int return_ptr_depth;
+    bool is_variadic;                // هل التوقيع متغير المعاملات ( ... )
 
     int param_count;
     DataType* param_types;              // مملوك (malloc)
@@ -4199,6 +4200,7 @@ typedef enum {
     // Symbols (الرموز)
     TOKEN_ASSIGN,       // =
     TOKEN_DOT,          // .
+    TOKEN_ELLIPSIS,     // ...
     TOKEN_COMMA,        // ,
     TOKEN_COLON,        // :
     TOKEN_SEMICOLON,    // ؛
@@ -4279,6 +4281,7 @@ typedef struct Node {
             FuncPtrSig* return_func_sig;
             struct Node* params;
             struct Node* body;   // NULL if prototype
+            bool is_variadic;
             bool is_prototype;
         } func_def;
 

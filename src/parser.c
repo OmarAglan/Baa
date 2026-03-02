@@ -93,6 +93,7 @@ static FuncPtrSig* parser_funcsig_clone(const FuncPtrSig* s)
     out->return_type = s->return_type;
     out->return_ptr_base_type = s->return_ptr_base_type;
     out->return_ptr_depth = s->return_ptr_depth;
+    out->is_variadic = s->is_variadic;
     if (s->return_ptr_base_type_name) {
         out->return_ptr_base_type_name = strdup(s->return_ptr_base_type_name);
         if (!out->return_ptr_base_type_name) {
@@ -516,6 +517,7 @@ static bool parse_type_spec_ex(DataType* out_type, char** out_type_name,
         // جمع معاملات التوقيع
         int cap = 0;
         int cnt = 0;
+        bool is_variadic = false;
         DataType* p_types = NULL;
         DataType* p_ptr_base_types = NULL;
         char** p_ptr_base_names = NULL;
@@ -523,6 +525,22 @@ static bool parse_type_spec_ex(DataType* out_type, char** out_type_name,
 
         if (parser.current.type != TOKEN_RPAREN) {
             while (1) {
+                if (parser.current.type == TOKEN_ELLIPSIS) {
+                    if (cnt <= 0) {
+                        error_report(parser.current, "غير مدعوم: '...' يتطلب وجود معامل ثابت واحد على الأقل.");
+                        synchronize_mode(PARSER_SYNC_DECLARATION);
+                        for (int i = 0; i < cnt; i++) free(p_ptr_base_names ? p_ptr_base_names[i] : NULL);
+                        free(p_types);
+                        free(p_ptr_base_types);
+                        free(p_ptr_base_names);
+                        free(p_ptr_depths);
+                        return false;
+                    }
+                    is_variadic = true;
+                    eat(TOKEN_ELLIPSIS);
+                    break;
+                }
+
                 Token tok_pt = parser.current;
                 DataType pdt = TYPE_INT;
                 char* ptn = NULL;
@@ -717,6 +735,7 @@ static bool parse_type_spec_ex(DataType* out_type, char** out_type_name,
         fsig->return_ptr_base_type_name = rptr_base_name;
         fsig->return_ptr_depth = rptr_depth;
         fsig->param_count = cnt;
+        fsig->is_variadic = is_variadic;
         fsig->param_types = p_types;
         fsig->param_ptr_base_types = p_ptr_base_types;
         fsig->param_ptr_base_type_names = p_ptr_base_names;
@@ -1261,15 +1280,57 @@ Node* parse_primary() {
             eat(TOKEN_LPAREN);
             Node* head_arg = NULL;
             Node* tail_arg = NULL;
+            int arg_index = 0;
+            bool is_variadic_next = (name && strcmp(name, "معامل_تالي") == 0);
 
             // تحليل الوسائط (مفصولة بفاصلة)
             if (parser.current.type != TOKEN_RPAREN) {
                 while (1) {
-                    Node* arg = parse_expression();
+                    Node* arg = NULL;
+
+                    // دعم خاص لـ معامل_تالي(قائمة، نوع): المعامل الثاني يقبل "نوع" مباشرةً.
+                    if (is_variadic_next && arg_index == 1 && parser_current_starts_type()) {
+                        Token tok_type = parser.current;
+                        DataType dt = TYPE_INT;
+                        char* tn = NULL;
+                        DataType ptr_base_type = TYPE_INT;
+                        char* ptr_base_type_name = NULL;
+                        int ptr_depth = 0;
+                        FuncPtrSig* func_sig = NULL;
+
+                        if (!parse_type_spec(&dt, &tn,
+                                             &ptr_base_type, &ptr_base_type_name,
+                                             &ptr_depth,
+                                             &func_sig)) {
+                            error_report(parser.current, "متوقع نوع كمعامل ثانٍ في 'معامل_تالي'.");
+                        } else {
+                            arg = ast_node_new(NODE_SIZEOF, tok_type);
+                            if (!arg) {
+                                free(tn);
+                                free(ptr_base_type_name);
+                                parser_funcsig_free(func_sig);
+                                return NULL;
+                            }
+                            arg->data.sizeof_expr.has_type_form = true;
+                            arg->data.sizeof_expr.target_type = dt;
+                            arg->data.sizeof_expr.target_type_name = tn;
+                            arg->data.sizeof_expr.expression = NULL;
+                            arg->data.sizeof_expr.size_bytes = 0;
+                            arg->data.sizeof_expr.size_known = false;
+                        }
+
+                        free(ptr_base_type_name);
+                        parser_funcsig_free(func_sig);
+                    }
+
+                    if (!arg) {
+                        arg = parse_expression();
+                    }
                     if (!arg) break; // تعافٍ من الخطأ
                     arg->next = NULL;
                     if (head_arg == NULL) { head_arg = arg; tail_arg = arg; }
                     else { tail_arg->next = arg; tail_arg = arg; }
+                    arg_index++;
 
                     if (parser.current.type == TOKEN_COMMA) eat(TOKEN_COMMA);
                     else break;
@@ -2817,8 +2878,19 @@ Node* parse_declaration() {
             eat(TOKEN_LPAREN);
             Node* head_param = NULL;
             Node* tail_param = NULL;
+            bool is_variadic = false;
             if (parser.current.type != TOKEN_RPAREN) {
                 while (1) {
+                    if (parser.current.type == TOKEN_ELLIPSIS) {
+                        if (!head_param) {
+                            error_report(parser.current, "غير مدعوم: '...' يتطلب وجود معامل ثابت واحد على الأقل.");
+                        } else {
+                            is_variadic = true;
+                        }
+                        eat(TOKEN_ELLIPSIS);
+                        break;
+                    }
+
                     // معاملات الدالة: نسمح بالأنواع البدائية العددية/النص/منطقي/حرف + سكر نحوي 'T[]' (يُعامل كمؤشر).
                     Token tok_param_type = parser.current;
                     DataType param_dt = TYPE_INT;
@@ -2958,6 +3030,7 @@ Node* parse_declaration() {
             func->data.func_def.return_func_sig = type_func_sig;
             func->data.func_def.params = head_param;
             func->data.func_def.body = body;
+            func->data.func_def.is_variadic = is_variadic;
             func->data.func_def.is_prototype = is_proto;
             free(type_name);
             return func;

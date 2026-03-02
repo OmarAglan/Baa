@@ -946,6 +946,7 @@ IRFunc* ir_func_new(const char* name, IRType* ret_type) {
     func->def_use = NULL;
     func->next_block_id = 0;
     func->is_prototype = false;
+    func->is_variadic = false;
     func->next = NULL;
     
     return func;
@@ -1699,6 +1700,11 @@ void ir_func_print(IRFunc* func, FILE* out, int use_arabic) {
         } else {
             fprintf(out, "arg%d", i);
         }
+    }
+
+    if (func->is_variadic) {
+        if (func->param_count > 0) fputs(sep, out);
+        fputs("...", out);
     }
 
     fputs(") -> ", out);

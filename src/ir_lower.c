@@ -947,6 +947,9 @@ void ir_lower_ctx_init(IRLowerCtx* ctx, IRBuilder* builder) {
     ctx->scope_depth = 0;
     ctx->current_func_name = NULL;
     ctx->static_local_counter = 0;
+    ctx->current_func_is_variadic = false;
+    ctx->current_func_fixed_params = 0;
+    ctx->current_func_va_base_reg = -1;
     ctx->enable_bounds_checks = false;
     ctx->program_root = NULL;
     ctx->target = NULL;
@@ -3436,6 +3439,240 @@ static IRValue* ir_lower_builtin_format_string_ar(IRLowerCtx* ctx, Node* call_ex
 static IRValue* ir_lower_builtin_scan_format_ar(IRLowerCtx* ctx, Node* call_expr);
 static IRValue* ir_lower_builtin_read_line_stdin_ar(IRLowerCtx* ctx, Node* call_expr);
 static IRValue* ir_lower_builtin_read_num_stdin_ar(IRLowerCtx* ctx, Node* call_expr);
+static IRValue* ir_lower_builtin_variadic_start(IRLowerCtx* ctx, Node* call_expr);
+static IRValue* ir_lower_builtin_variadic_next(IRLowerCtx* ctx, Node* call_expr);
+static IRValue* ir_lower_builtin_variadic_end(IRLowerCtx* ctx, Node* call_expr);
+static IRValue* lower_lvalue_address(IRLowerCtx* ctx, Node* expr, IRType** out_pointee_type);
+
+static bool ir_lower_variadic_extract_type(Node* type_arg, DataType* out_type)
+{
+    if (!out_type) return false;
+    *out_type = TYPE_INT;
+    if (!type_arg) return false;
+    if (type_arg->type != NODE_SIZEOF || !type_arg->data.sizeof_expr.has_type_form) return false;
+    *out_type = type_arg->data.sizeof_expr.target_type;
+    return true;
+}
+
+static IRValue* ir_lower_pack_variadic_args(IRLowerCtx* ctx, Node* site, IRValue** args, int arg_count)
+{
+    if (!ctx || !ctx->builder) return ir_value_const_int(0, ir_type_ptr(IR_TYPE_I8_T));
+
+    IRBuilder* b = ctx->builder;
+    IRModule* m = b->module;
+    if (m) ir_module_set_current(m);
+
+    IRType* i8_ptr_t = ir_type_ptr(IR_TYPE_I8_T);
+    IRType* i8_ptr_ptr_t = ir_type_ptr(i8_ptr_t);
+    IRType* i64_ptr_t = ir_type_ptr(IR_TYPE_I64_T);
+    IRType* f64_ptr_t = ir_type_ptr(IR_TYPE_F64_T);
+
+    int slots = arg_count > 0 ? arg_count : 1;
+    IRType* buf_arr_t = ir_type_array(IR_TYPE_I8_T, slots * 8);
+    if (!buf_arr_t) {
+        ir_lower_report_error(ctx, site, "فشل إنشاء مخزن معاملات متغيرة.");
+        return ir_value_const_int(0, i8_ptr_t);
+    }
+
+    int buf_reg = ir_builder_emit_alloca(b, buf_arr_t);
+    IRValue* buf_arr_ptr = ir_value_reg(buf_reg, ir_type_ptr(buf_arr_t));
+    int base_cast = ir_builder_emit_cast(b, buf_arr_ptr, i8_ptr_t);
+    IRValue* base_i8 = ir_value_reg(base_cast, i8_ptr_t);
+
+    for (int i = 0; i < arg_count; i++) {
+        IRValue* av = (args && args[i]) ? args[i] : ir_value_const_int(0, IR_TYPE_I64_T);
+        IRType* at = av->type ? av->type : IR_TYPE_I64_T;
+
+        if (site) ir_lower_set_loc(b, site);
+        int slot_r = ir_builder_emit_ptr_offset(b, i8_ptr_t, base_i8,
+                                                ir_value_const_int((int64_t)i * 8, IR_TYPE_I64_T));
+        IRValue* slot_i8 = ir_value_reg(slot_r, i8_ptr_t);
+
+        if (at->kind == IR_TYPE_F64) {
+            int cp = ir_builder_emit_cast(b, slot_i8, f64_ptr_t);
+            IRValue* slot_f64 = ir_value_reg(cp, f64_ptr_t);
+            IRValue* fv = cast_to(ctx, av, IR_TYPE_F64_T);
+            ir_builder_emit_store(b, fv, slot_f64);
+            continue;
+        }
+
+        if (at->kind == IR_TYPE_PTR) {
+            int cp = ir_builder_emit_cast(b, slot_i8, i8_ptr_ptr_t);
+            IRValue* slot_ptr = ir_value_reg(cp, i8_ptr_ptr_t);
+            IRValue* pv = cast_to(ctx, av, i8_ptr_t);
+            ir_builder_emit_store(b, pv, slot_ptr);
+            continue;
+        }
+
+        int cp = ir_builder_emit_cast(b, slot_i8, i64_ptr_t);
+        IRValue* slot_i64 = ir_value_reg(cp, i64_ptr_t);
+        IRValue* iv = ensure_i64(ctx, av);
+        ir_builder_emit_store(b, iv, slot_i64);
+    }
+
+    return base_i8;
+}
+
+static IRValue* ir_lower_builtin_variadic_start(IRLowerCtx* ctx, Node* call_expr)
+{
+    if (!ctx || !ctx->builder || !call_expr) return ir_builder_const_i64(0);
+
+    if (!ctx->current_func_is_variadic || ctx->current_func_va_base_reg < 0) {
+        ir_lower_report_error(ctx, call_expr, "استدعاء 'بدء_معاملات' خارج دالة متغيرة المعاملات.");
+        ir_lower_eval_call_args(ctx, call_expr->data.call.args);
+        return ir_builder_const_i64(0);
+    }
+
+    Node* a0 = call_expr->data.call.args;
+    Node* a1 = a0 ? a0->next : NULL;
+    if (!a0 || !a1 || a1->next) {
+        ir_lower_report_error(ctx, call_expr, "استدعاء 'بدء_معاملات' يتطلب معاملين.");
+        ir_lower_eval_call_args(ctx, call_expr->data.call.args);
+        return ir_builder_const_i64(0);
+    }
+    if (a0->type != NODE_VAR_REF) {
+        ir_lower_report_error(ctx, a0, "المعامل الأول في 'بدء_معاملات' يجب أن يكون متغيراً.");
+        ir_lower_eval_call_args(ctx, call_expr->data.call.args);
+        return ir_builder_const_i64(0);
+    }
+
+    IRType* cursor_pointee = IR_TYPE_I64_T;
+    IRValue* cursor_addr = lower_lvalue_address(ctx, a0, &cursor_pointee);
+    if (!cursor_pointee || cursor_pointee->kind != IR_TYPE_PTR) {
+        ir_lower_report_error(ctx, a0, "متغير قائمة المعاملات يجب أن يكون مؤشراً.");
+        ir_lower_eval_call_args(ctx, call_expr->data.call.args);
+        return ir_builder_const_i64(0);
+    }
+
+    IRType* i8_ptr_t = ir_type_ptr(IR_TYPE_I8_T);
+    IRValue* base = ir_value_reg(ctx->current_func_va_base_reg, i8_ptr_t);
+    int64_t off = (int64_t)ctx->current_func_fixed_params * 8;
+    if (off > 0) {
+        int pr = ir_builder_emit_ptr_offset(ctx->builder, i8_ptr_t, base,
+                                            ir_value_const_int(off, IR_TYPE_I64_T));
+        base = ir_value_reg(pr, i8_ptr_t);
+    }
+
+    if (call_expr) ir_lower_set_loc(ctx->builder, call_expr);
+    ir_builder_emit_store(ctx->builder, cast_to(ctx, base, cursor_pointee), cursor_addr);
+    return ir_builder_const_i64(0);
+}
+
+static IRValue* ir_lower_builtin_variadic_end(IRLowerCtx* ctx, Node* call_expr)
+{
+    if (!ctx || !ctx->builder || !call_expr) return ir_builder_const_i64(0);
+
+    Node* a0 = call_expr->data.call.args;
+    if (!a0 || a0->next) {
+        ir_lower_report_error(ctx, call_expr, "استدعاء 'نهاية_معاملات' يتطلب معاملاً واحداً.");
+        ir_lower_eval_call_args(ctx, call_expr->data.call.args);
+        return ir_builder_const_i64(0);
+    }
+    if (a0->type != NODE_VAR_REF) {
+        ir_lower_report_error(ctx, a0, "المعامل الأول في 'نهاية_معاملات' يجب أن يكون متغيراً.");
+        ir_lower_eval_call_args(ctx, call_expr->data.call.args);
+        return ir_builder_const_i64(0);
+    }
+
+    IRType* cursor_pointee = IR_TYPE_I64_T;
+    IRValue* cursor_addr = lower_lvalue_address(ctx, a0, &cursor_pointee);
+    if (!cursor_pointee || cursor_pointee->kind != IR_TYPE_PTR) {
+        ir_lower_report_error(ctx, a0, "متغير قائمة المعاملات يجب أن يكون مؤشراً.");
+        ir_lower_eval_call_args(ctx, call_expr->data.call.args);
+        return ir_builder_const_i64(0);
+    }
+
+    if (call_expr) ir_lower_set_loc(ctx->builder, call_expr);
+    ir_builder_emit_store(ctx->builder, ir_value_const_int(0, cursor_pointee), cursor_addr);
+    return ir_builder_const_i64(0);
+}
+
+static IRValue* ir_lower_builtin_variadic_next(IRLowerCtx* ctx, Node* call_expr)
+{
+    if (!ctx || !ctx->builder || !call_expr) return ir_builder_const_i64(0);
+
+    if (!ctx->current_func_is_variadic) {
+        ir_lower_report_error(ctx, call_expr, "استدعاء 'معامل_تالي' خارج دالة متغيرة المعاملات.");
+        ir_lower_eval_call_args(ctx, call_expr->data.call.args);
+        return ir_builder_const_i64(0);
+    }
+
+    Node* a0 = call_expr->data.call.args;
+    Node* a1 = a0 ? a0->next : NULL;
+    if (!a0 || !a1 || a1->next) {
+        ir_lower_report_error(ctx, call_expr, "استدعاء 'معامل_تالي' يتطلب معاملين.");
+        ir_lower_eval_call_args(ctx, call_expr->data.call.args);
+        return ir_builder_const_i64(0);
+    }
+    if (a0->type != NODE_VAR_REF) {
+        ir_lower_report_error(ctx, a0, "المعامل الأول في 'معامل_تالي' يجب أن يكون متغيراً.");
+        ir_lower_eval_call_args(ctx, call_expr->data.call.args);
+        return ir_builder_const_i64(0);
+    }
+
+    DataType want = TYPE_INT;
+    if (!ir_lower_variadic_extract_type(a1, &want)) {
+        ir_lower_report_error(ctx, a1, "المعامل الثاني في 'معامل_تالي' يجب أن يكون نوعاً.");
+        ir_lower_eval_call_args(ctx, call_expr->data.call.args);
+        return ir_builder_const_i64(0);
+    }
+
+    IRBuilder* b = ctx->builder;
+    IRModule* m = b->module;
+    if (m) ir_module_set_current(m);
+
+    IRType* cursor_pointee = IR_TYPE_I64_T;
+    IRValue* cursor_addr = lower_lvalue_address(ctx, a0, &cursor_pointee);
+    if (!cursor_pointee || cursor_pointee->kind != IR_TYPE_PTR) {
+        ir_lower_report_error(ctx, a0, "متغير قائمة المعاملات يجب أن يكون مؤشراً.");
+        ir_lower_eval_call_args(ctx, call_expr->data.call.args);
+        return ir_builder_const_i64(0);
+    }
+
+    IRType* i8_ptr_t = ir_type_ptr(IR_TYPE_I8_T);
+    IRType* i64_ptr_t = ir_type_ptr(IR_TYPE_I64_T);
+    IRType* f64_ptr_t = ir_type_ptr(IR_TYPE_F64_T);
+    IRType* i8_ptr_ptr_t = ir_type_ptr(i8_ptr_t);
+
+    if (call_expr) ir_lower_set_loc(b, call_expr);
+    int cur_r = ir_builder_emit_load(b, cursor_pointee, cursor_addr);
+    IRValue* cur_raw = ir_value_reg(cur_r, cursor_pointee);
+    IRValue* cur_i8 = cast_to(ctx, cur_raw, i8_ptr_t);
+
+    IRType* load_t = IR_TYPE_I64_T;
+    IRType* ret_t = ir_type_from_datatype(m, want);
+    if (!ret_t || ret_t->kind == IR_TYPE_VOID) ret_t = IR_TYPE_I64_T;
+
+    if (want == TYPE_FLOAT) {
+        load_t = IR_TYPE_F64_T;
+    } else if (want == TYPE_POINTER || want == TYPE_STRING) {
+        load_t = i8_ptr_t;
+    }
+
+    IRValue* slot_ptr = NULL;
+    if (load_t == IR_TYPE_F64_T) {
+        int cp = ir_builder_emit_cast(b, cur_i8, f64_ptr_t);
+        slot_ptr = ir_value_reg(cp, f64_ptr_t);
+    } else if (load_t == i8_ptr_t) {
+        int cp = ir_builder_emit_cast(b, cur_i8, i8_ptr_ptr_t);
+        slot_ptr = ir_value_reg(cp, i8_ptr_ptr_t);
+    } else {
+        int cp = ir_builder_emit_cast(b, cur_i8, i64_ptr_t);
+        slot_ptr = ir_value_reg(cp, i64_ptr_t);
+    }
+
+    int val_r = ir_builder_emit_load(b, load_t, slot_ptr);
+    IRValue* val = ir_value_reg(val_r, load_t);
+
+    int next_r = ir_builder_emit_ptr_offset(b, i8_ptr_t, cur_i8, ir_value_const_int(8, IR_TYPE_I64_T));
+    IRValue* next_i8 = ir_value_reg(next_r, i8_ptr_t);
+    ir_builder_emit_store(b, cast_to(ctx, next_i8, cursor_pointee), cursor_addr);
+
+    if (load_t != ret_t) {
+        val = cast_to(ctx, val, ret_t);
+    }
+    return val;
+}
 
 static IRValue* lower_call_expr(IRLowerCtx* ctx, Node* expr) {
     if (!ctx || !ctx->builder || !expr) return ir_builder_const_i64(0);
@@ -3473,6 +3710,15 @@ static IRValue* lower_call_expr(IRLowerCtx* ctx, Node* expr) {
         }
         if (strcmp(n, "اقرأ_رقم") == 0) {
             return ir_lower_builtin_read_num_stdin_ar(ctx, expr);
+        }
+        if (strcmp(n, "بدء_معاملات") == 0) {
+            return ir_lower_builtin_variadic_start(ctx, expr);
+        }
+        if (strcmp(n, "معامل_تالي") == 0) {
+            return ir_lower_builtin_variadic_next(ctx, expr);
+        }
+        if (strcmp(n, "نهاية_معاملات") == 0) {
+            return ir_lower_builtin_variadic_end(ctx, expr);
         }
     }
 
@@ -4417,11 +4663,18 @@ static IRValue* lower_call_expr(IRLowerCtx* ctx, Node* expr) {
         ret_type = ir_type_from_datatype_ex(m, expr->inferred_type, expr->inferred_func_sig);
     }
     if (!ret_type) ret_type = IR_TYPE_I64_T;
+    bool callee_is_variadic = (callee && callee->is_variadic);
+    int callee_fixed_params = 0;
+    if (callee) {
+        callee_fixed_params = callee->param_count;
+        if (callee_is_variadic && callee_fixed_params > 0) {
+            callee_fixed_params -= 1; // معامل خفي: __baa_va_base
+        }
+    }
 
     // Count args
     int arg_count = 0;
     for (Node* a = expr->data.call.args; a; a = a->next) arg_count++;
-
     IRValue** args = NULL;
     if (arg_count > 0) {
         args = (IRValue**)malloc(sizeof(IRValue*) * (size_t)arg_count);
@@ -4435,7 +4688,7 @@ static IRValue* lower_call_expr(IRLowerCtx* ctx, Node* expr) {
     for (Node* a = expr->data.call.args; a; a = a->next) {
         IRValue* av = lower_expr(ctx, a);
         IRType* exp_t = NULL;
-        if (callee && i < callee->param_count && callee->params) {
+        if (callee && i < callee_fixed_params && callee->params) {
             exp_t = callee->params[i].type;
         } else if (callee_sig && callee_sig->kind == IR_TYPE_FUNC &&
                    i < callee_sig->data.func.param_count && callee_sig->data.func.params) {
@@ -4447,17 +4700,39 @@ static IRValue* lower_call_expr(IRLowerCtx* ctx, Node* expr) {
         args[i++] = av;
     }
 
+    IRValue** call_args = args;
+    int call_arg_count = arg_count;
+    if (callee_is_variadic) {
+        IRValue* va_base = ir_lower_pack_variadic_args(ctx, expr, args, arg_count);
+        int fixed = callee_fixed_params;
+        if (fixed < 0) fixed = 0;
+        if (fixed > arg_count) fixed = arg_count;
+
+        call_arg_count = fixed + 1;
+        call_args = (IRValue**)malloc(sizeof(IRValue*) * (size_t)call_arg_count);
+        if (!call_args) {
+            if (args) free(args);
+            ir_lower_report_error(ctx, expr, "فشل تخصيص معاملات النداء المتغير.");
+            return ir_builder_const_i64(0);
+        }
+        for (int k = 0; k < fixed; k++) {
+            call_args[k] = args[k];
+        }
+        call_args[fixed] = va_base;
+    }
+
     int dest = -1;
     if (callee) {
-        dest = ir_builder_emit_call(ctx->builder, expr->data.call.name, ret_type, args, arg_count);
+        dest = ir_builder_emit_call(ctx->builder, expr->data.call.name, ret_type, call_args, call_arg_count);
     } else if (callee_val) {
-        dest = ir_builder_emit_call_indirect(ctx->builder, callee_val, ret_type, args, arg_count);
+        dest = ir_builder_emit_call_indirect(ctx->builder, callee_val, ret_type, call_args, call_arg_count);
     } else {
         ir_lower_report_error(ctx, expr, "استدعاء غير صالح: '%s' ليس دالة ولا مؤشر دالة.",
                               expr->data.call.name ? expr->data.call.name : "???");
         dest = -1;
     }
 
+    if (call_args && call_args != args) free(call_args);
     if (args) free(args);
 
     if (dest < 0) {
@@ -7569,6 +7844,10 @@ IRModule* ir_lower_program(Node* program, const char* module_name,
     for (Node* decl0 = program->data.program.declarations; decl0; decl0 = decl0->next) {
         if (decl0->type != NODE_FUNC_DEF) continue;
         if (!decl0->data.func_def.name) continue;
+        int decl0_param_count = 0;
+        for (Node* p = decl0->data.func_def.params; p; p = p->next) {
+            if (p->type == NODE_VAR_DECL) decl0_param_count++;
+        }
 
         const char* ir_name = decl0->data.func_def.name;
         if (main_with_args && ir_lower_ast_func_is_main_with_args(decl0)) {
@@ -7577,6 +7856,12 @@ IRModule* ir_lower_program(Node* program, const char* module_name,
 
         IRFunc* existing = ir_module_find_func(module, ir_name);
         if (existing) {
+            existing->is_variadic = decl0->data.func_def.is_variadic;
+            if (decl0->data.func_def.is_variadic &&
+                existing->param_count == decl0_param_count) {
+                ir_builder_set_func(builder, existing);
+                (void)ir_builder_add_param(builder, "__baa_va_base", ir_type_ptr(IR_TYPE_I8_T));
+            }
             if (!decl0->data.func_def.is_prototype) {
                 existing->is_prototype = false;
             }
@@ -7589,6 +7874,7 @@ IRModule* ir_lower_program(Node* program, const char* module_name,
         IRFunc* f0 = ir_builder_create_func(builder, ir_name, ret_type);
         if (!f0) continue;
         f0->is_prototype = decl0->data.func_def.is_prototype;
+        f0->is_variadic = decl0->data.func_def.is_variadic;
 
         for (Node* p = decl0->data.func_def.params; p; p = p->next) {
             if (p->type != NODE_VAR_DECL) continue;
@@ -7596,6 +7882,9 @@ IRModule* ir_lower_program(Node* program, const char* module_name,
                                                      p->data.var_decl.type,
                                                      p->data.var_decl.func_sig);
             (void)ir_builder_add_param(builder, p->data.var_decl.name, ptype);
+        }
+        if (decl0->data.func_def.is_variadic) {
+            (void)ir_builder_add_param(builder, "__baa_va_base", ir_type_ptr(IR_TYPE_I8_T));
         }
     }
 
@@ -7717,6 +8006,10 @@ IRModule* ir_lower_program(Node* program, const char* module_name,
         // Functions
         if (decl->type == NODE_FUNC_DEF) {
             if (!decl->data.func_def.name) continue;
+            int decl_param_count = 0;
+            for (Node* p = decl->data.func_def.params; p; p = p->next) {
+                if (p->type == NODE_VAR_DECL) decl_param_count++;
+            }
 
             const char* ir_name = decl->data.func_def.name;
             if (main_with_args && ir_lower_ast_func_is_main_with_args(decl)) {
@@ -7731,12 +8024,23 @@ IRModule* ir_lower_program(Node* program, const char* module_name,
                 func = ir_builder_create_func(builder, ir_name, ret_type);
                 if (!func) continue;
                 func->is_prototype = decl->data.func_def.is_prototype;
+                func->is_variadic = decl->data.func_def.is_variadic;
                 for (Node* p = decl->data.func_def.params; p; p = p->next) {
                     if (p->type != NODE_VAR_DECL) continue;
                     IRType* ptype = ir_type_from_datatype_ex(module,
                                                              p->data.var_decl.type,
                                                              p->data.var_decl.func_sig);
                     (void)ir_builder_add_param(builder, p->data.var_decl.name, ptype);
+                }
+                if (decl->data.func_def.is_variadic) {
+                    (void)ir_builder_add_param(builder, "__baa_va_base", ir_type_ptr(IR_TYPE_I8_T));
+                }
+            } else {
+                func->is_variadic = decl->data.func_def.is_variadic;
+                if (decl->data.func_def.is_variadic &&
+                    func->param_count == decl_param_count) {
+                    ir_builder_set_func(builder, func);
+                    (void)ir_builder_add_param(builder, "__baa_va_base", ir_type_ptr(IR_TYPE_I8_T));
                 }
             }
 
@@ -7759,6 +8063,15 @@ IRModule* ir_lower_program(Node* program, const char* module_name,
             ctx.enable_bounds_checks = enable_bounds_checks;
             ctx.program_root = program;
             ctx.target = target;
+            ctx.current_func_is_variadic = decl->data.func_def.is_variadic;
+            ctx.current_func_fixed_params = decl_param_count;
+            ctx.current_func_va_base_reg = -1;
+
+            if (ctx.current_func_is_variadic &&
+                func->param_count > ctx.current_func_fixed_params &&
+                func->params) {
+                ctx.current_func_va_base_reg = func->params[ctx.current_func_fixed_params].reg;
+            }
 
             // نطاق الدالة: المعاملات + جسم الدالة
             ir_lower_scope_push(&ctx);

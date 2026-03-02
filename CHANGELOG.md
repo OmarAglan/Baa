@@ -6,6 +6,35 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ---
 
+## [0.4.0.5] - 2026-03-02
+
+### Added
+
+- **Variadic function declarations** using `...` in normal function signatures and function-pointer signatures (`دالة(...)->...`).
+- **Variadic runtime builtins** (compiler intrinsics):
+  - `بدء_معاملات(قائمة، آخر_ثابت) -> عدم`
+  - `معامل_تالي(قائمة، نوع) -> <النوع_المطلوب>`
+  - `نهاية_معاملات(قائمة) -> عدم`
+- **Variadic IR metadata/text support**:
+  - `IRFunc.is_variadic` flag
+  - IR text/function printer support for trailing `...` in function signatures.
+- **New test coverage for variadics**:
+  - `tests/integration/backend/backend_variadic_functions_test.baa`
+  - `tests/neg/semantic_variadic_builtin_outside_function.baa`
+  - `tests/neg/semantic_variadic_start_anchor_mismatch.baa`
+  - `tests/neg/semantic_variadic_next_type_unsupported.baa`
+  - `tests/neg/semantic_variadic_funcptr_call_unsupported.baa`
+
+### Changed
+
+- **Variadic lowering model (v0.4.0.5):** direct variadic calls now package extra arguments into an internal slot buffer and pass a hidden pointer parameter (`__baa_va_base`) to the callee.
+- **Semantic checks:** variadic calls now enforce "at least fixed params" for variadic signatures and type-check supported variadic extra-argument kinds.
+- **Stdlib header sync:** `stdlib/baalib.baahd` now declares `قائمة_معاملات` and variadic runtime intrinsics.
+
+### Fixed
+
+- **IR lowering predeclaration path:** variadic functions declared before use now consistently receive the hidden variadic base parameter during IR signature setup (fixes false "outside variadic function" lowering errors).
+
 ## [0.4.0.0] - 2026-03-02
 
 ### Added

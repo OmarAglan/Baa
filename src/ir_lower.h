@@ -64,6 +64,9 @@ typedef struct IRLowerCtx {
     // توليد أسماء فريدة للمتغيرات المحلية الساكنة.
     const char* current_func_name;
     int static_local_counter;
+    bool current_func_is_variadic; // هل الدالة الحالية متغيرة المعاملات
+    int current_func_fixed_params; // عدد المعاملات الثابتة قبل ...
+    int current_func_va_base_reg;  // سجل معامل خفي يحمل قاعدة معاملات النداء
 
     // Control-flow context stacks (for break/continue).
     struct IRBlock* break_targets[64];

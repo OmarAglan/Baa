@@ -122,6 +122,7 @@ typedef struct {
     int* param_ptr_depths;
     FuncPtrSig** param_func_sigs; // مملوك (malloc+clone) عند TYPE_FUNC_PTR
     int param_count;
+    bool is_variadic; // هل الدالة تقبل معاملات متغيرة ( ... )
     // توقيع "مرجع الدالة" عندما تُستخدم الدالة كقيمة (مؤشر دالة) — مملوك (clone).
     // ملاحظة: لا يتم ملؤه إن كان التوقيع يتضمن معاملات/إرجاع من نوع TYPE_FUNC_PTR (Higher-order غير مدعوم حالياً).
     FuncPtrSig* ref_funcptr_sig;
@@ -151,6 +152,8 @@ static DataType current_func_return_ptr_base_type = TYPE_INT;
 static const char* current_func_return_ptr_base_type_name = NULL;
 static int current_func_return_ptr_depth = 0;
 static FuncPtrSig* current_func_return_func_sig = NULL;
+static bool current_func_is_variadic = false;
+static const char* current_func_variadic_anchor_name = NULL;
 
 // ============================================================================
 // دوال مساعدة (Helper Functions)
@@ -369,6 +372,7 @@ static void reset_analysis() {
         free(func_symbols[i].param_func_sigs);
         func_symbols[i].param_func_sigs = NULL;
         func_symbols[i].param_count = 0;
+        func_symbols[i].is_variadic = false;
         func_symbols[i].is_defined = false;
     }
     func_count = 0;
@@ -447,6 +451,8 @@ static void reset_analysis() {
     current_func_return_ptr_base_type_name = NULL;
     current_func_return_ptr_depth = 0;
     current_func_return_func_sig = NULL;
+    current_func_is_variadic = false;
+    current_func_variadic_anchor_name = NULL;
 }
 
 static FuncSymbol* func_lookup(const char* name)
@@ -463,6 +469,7 @@ static FuncSymbol* func_lookup(const char* name)
 static int func_signature_matches_decl(const FuncSymbol* a, const Node* node)
 {
     if (!a || !node || node->type != NODE_FUNC_DEF) return 0;
+    if (a->is_variadic != node->data.func_def.is_variadic) return 0;
 
     // نوع الإرجاع
     if (a->return_type != node->data.func_def.return_type) return 0;
@@ -565,6 +572,10 @@ static void func_register(Node* node)
     }
 
     if (strcmp(name, "الرئيسية") == 0) {
+        if (node->data.func_def.is_variadic) {
+            semantic_error(node,
+                           "توقيع 'الرئيسية' غير صحيح. لا يُسمح بالمعاملات المتغيرة في 'الرئيسية'.");
+        }
         if (node->data.func_def.return_type != TYPE_INT) {
             semantic_error(node, "الدالة 'الرئيسية' يجب أن تُرجع 'صحيح'.");
         }
@@ -623,6 +634,7 @@ static void func_register(Node* node)
     fs->return_func_sig = NULL;
     fs->ref_funcptr_sig = NULL;
     fs->param_count = param_count;
+    fs->is_variadic = node->data.func_def.is_variadic;
     fs->decl_file = node->filename ? node->filename : current_filename;
     fs->decl_line = node->line;
     fs->decl_col = node->col;
@@ -701,6 +713,7 @@ static void func_register(Node* node)
         tmp.return_ptr_depth = fs->return_ptr_depth;
         tmp.return_ptr_base_type_name = fs->return_ptr_base_type_name;
         tmp.param_count = fs->param_count;
+        tmp.is_variadic = fs->is_variadic;
         tmp.param_types = fs->param_types;
         tmp.param_ptr_base_types = fs->param_ptr_base_types;
         tmp.param_ptr_base_type_names = fs->param_ptr_base_type_names;
@@ -1015,6 +1028,7 @@ static FuncPtrSig* funcsig_clone(const FuncPtrSig* s)
     out->return_type = s->return_type;
     out->return_ptr_base_type = s->return_ptr_base_type;
     out->return_ptr_depth = s->return_ptr_depth;
+    out->is_variadic = s->is_variadic;
     if (s->return_ptr_base_type_name) {
         out->return_ptr_base_type_name = strdup(s->return_ptr_base_type_name);
         if (!out->return_ptr_base_type_name) {
@@ -1069,6 +1083,7 @@ static bool funcsig_equal(const FuncPtrSig* a, const FuncPtrSig* b)
         }
     }
 
+    if (a->is_variadic != b->is_variadic) return false;
     if (a->param_count != b->param_count) return false;
     for (int i = 0; i < a->param_count; i++) {
         DataType at = a->param_types ? a->param_types[i] : TYPE_INT;
@@ -2765,6 +2780,141 @@ static bool builtin_check_file_call(Node* call_node, const char* fname, Node* ar
     return true;
 }
 
+static bool variadic_extra_arg_type_supported(DataType t)
+{
+    if (t == TYPE_VOID || t == TYPE_STRUCT || t == TYPE_UNION || t == TYPE_FUNC_PTR) return false;
+    return true;
+}
+
+static bool builtin_validate_variadic_cursor_arg(Node* arg, const char* fname)
+{
+    if (!arg) {
+        semantic_error(NULL, "نداء '%s': وسيط قائمة المعاملات مفقود.", fname ? fname : "???");
+        return false;
+    }
+
+    DataType t = infer_type(arg);
+    bool ok = true;
+
+    if (arg->type != NODE_VAR_REF || !arg->data.var_ref.name) {
+        semantic_error(arg, "نداء '%s': وسيط قائمة المعاملات يجب أن يكون متغيراً.", fname ? fname : "???");
+        ok = false;
+    }
+
+    if (t != TYPE_POINTER) {
+        semantic_error(arg, "نداء '%s': وسيط قائمة المعاملات يجب أن يكون من نوع مؤشر.", fname ? fname : "???");
+        ok = false;
+    }
+
+    if (arg->type == NODE_VAR_REF && arg->data.var_ref.name) {
+        Symbol* s = lookup(arg->data.var_ref.name, false);
+        if (s && s->is_const) {
+            semantic_error(arg, "نداء '%s': لا يمكن تمرير متغير ثابت كقائمة معاملات.", fname ? fname : "???");
+            ok = false;
+        }
+    }
+
+    return ok;
+}
+
+/**
+ * @brief التحقق من دوال المعاملات المتغيرة (v0.4.0.5):
+ * - بدء_معاملات(قائمة، آخر_ثابت)
+ * - معامل_تالي(قائمة، نوع)
+ * - نهاية_معاملات(قائمة)
+ */
+static bool builtin_check_variadic_runtime_call(Node* call_node, const char* fname, Node* args, DataType* out_return_type)
+{
+    if (!call_node || !fname) return false;
+
+    bool is_va_start = (strcmp(fname, "بدء_معاملات") == 0);
+    bool is_va_next = (strcmp(fname, "معامل_تالي") == 0);
+    bool is_va_end = (strcmp(fname, "نهاية_معاملات") == 0);
+
+    if (!is_va_start && !is_va_next && !is_va_end) {
+        return false;
+    }
+
+    if (!current_func_is_variadic) {
+        semantic_error(call_node, "استدعاء '%s' مسموح فقط داخل دالة متغيرة المعاملات.", fname);
+    }
+
+    int supplied = 0;
+    for (Node* a = args; a; a = a->next) supplied++;
+
+    if (is_va_start) {
+        if (supplied != 2) {
+            semantic_error(call_node, "نداء 'بدء_معاملات' يتطلب معاملين.");
+        }
+
+        Node* a0 = args;
+        Node* a1 = a0 ? a0->next : NULL;
+        (void)builtin_validate_variadic_cursor_arg(a0, fname);
+
+        if (!a1) {
+            semantic_error(call_node, "نداء 'بدء_معاملات': المعامل الثاني (آخر_ثابت) مفقود.");
+        } else {
+            (void)infer_type(a1);
+            if (a1->type != NODE_VAR_REF || !a1->data.var_ref.name) {
+                semantic_error(a1, "نداء 'بدء_معاملات': المعامل الثاني يجب أن يكون اسم آخر معامل ثابت.");
+            } else if (!current_func_variadic_anchor_name) {
+                semantic_error(a1, "نداء 'بدء_معاملات': لا يوجد معامل ثابت في الدالة الحالية.");
+            } else if (strcmp(a1->data.var_ref.name, current_func_variadic_anchor_name) != 0) {
+                semantic_error(a1,
+                               "نداء 'بدء_معاملات': المعامل الثاني يجب أن يكون '%s'.",
+                               current_func_variadic_anchor_name);
+            }
+        }
+
+        if (out_return_type) *out_return_type = TYPE_VOID;
+        node_clear_inferred_ptr(call_node);
+        return true;
+    }
+
+    if (is_va_end) {
+        if (supplied != 1) {
+            semantic_error(call_node, "نداء 'نهاية_معاملات' يتطلب معاملاً واحداً.");
+        }
+        Node* a0 = args;
+        (void)builtin_validate_variadic_cursor_arg(a0, fname);
+        if (out_return_type) *out_return_type = TYPE_VOID;
+        node_clear_inferred_ptr(call_node);
+        return true;
+    }
+
+    // معامل_تالي
+    if (supplied != 2) {
+        semantic_error(call_node, "نداء 'معامل_تالي' يتطلب معاملين.");
+    }
+
+    Node* a0 = args;
+    Node* a1 = a0 ? a0->next : NULL;
+    (void)builtin_validate_variadic_cursor_arg(a0, fname);
+
+    DataType want = TYPE_INT;
+    bool have_type_arg = false;
+    if (!a1) {
+        semantic_error(call_node, "نداء 'معامل_تالي': معامل النوع مفقود.");
+    } else if (a1->type != NODE_SIZEOF || !a1->data.sizeof_expr.has_type_form) {
+        // ملاحظة: المعامل الثاني يُحلّل نحوياً كنوع خاص داخل parser.
+        semantic_error(a1, "نداء 'معامل_تالي': المعامل الثاني يجب أن يكون نوعاً (مثال: صحيح).");
+    } else {
+        want = a1->data.sizeof_expr.target_type;
+        have_type_arg = true;
+        if (!variadic_extra_arg_type_supported(want) || want == TYPE_FUNC_PTR) {
+            semantic_error(a1, "نداء 'معامل_تالي': نوع غير مدعوم في هذا الإصدار.");
+        }
+    }
+
+    if (out_return_type) *out_return_type = want;
+    if (have_type_arg && want == TYPE_POINTER) {
+        node_set_inferred_ptr(call_node, TYPE_INT, NULL, 1);
+    } else {
+        node_clear_inferred_ptr(call_node);
+    }
+    return true;
+}
+
 // ============================================================================
 // تنسيق عربي للإخراج/الإدخال (v0.4.0)
 // ============================================================================
@@ -3497,6 +3647,9 @@ static DataType infer_type_internal(Node* node) {
                     node_clear_inferred_ptr(node);
                     return TYPE_INT;
                 }
+                if (sig->is_variadic) {
+                    semantic_error(node, "نداء مؤشر دالة متغير المعاملات غير مدعوم حالياً.");
+                }
 
                 int i = 0;
                 Node* arg = node->data.call.args;
@@ -3524,13 +3677,27 @@ static DataType infer_type_internal(Node* node) {
                         } else {
                             maybe_warn_implicit_narrowing(at, exp, arg);
                         }
+                    } else {
+                        DataType at = infer_type(arg);
+                        if (sig->is_variadic) {
+                            if (!variadic_extra_arg_type_supported(at)) {
+                                semantic_error(arg, "نوع المعامل المتغير %d في نداء '%s' غير مدعوم.",
+                                               i + 1, fname ? fname : "???");
+                            }
+                        }
                     }
                     i++;
                     arg = arg->next;
                 }
 
-                if (i != sig->param_count) {
-                    semantic_error(node, "عدد معاملات نداء '%s' غير صحيح (المتوقع %d).", fname ? fname : "???", sig->param_count);
+                if (sig->is_variadic) {
+                    if (i < sig->param_count) {
+                        semantic_error(node, "عدد معاملات نداء '%s' غير صحيح (المتوقع على الأقل %d).",
+                                       fname ? fname : "???", sig->param_count);
+                    }
+                } else if (i != sig->param_count) {
+                    semantic_error(node, "عدد معاملات نداء '%s' غير صحيح (المتوقع %d).",
+                                   fname ? fname : "???", sig->param_count);
                 }
 
                 if (sig->return_type == TYPE_POINTER) {
@@ -3553,6 +3720,9 @@ static DataType infer_type_internal(Node* node) {
             if (!fs || !fs->is_defined) {
                 DataType built_ret = TYPE_INT;
                 if (builtin_check_format_call(node, fname, node->data.call.args, &built_ret)) {
+                    return built_ret;
+                }
+                if (builtin_check_variadic_runtime_call(node, fname, node->data.call.args, &built_ret)) {
                     return built_ret;
                 }
                 if (builtin_check_string_call(node, fname, node->data.call.args, &built_ret)) {
@@ -3608,11 +3778,23 @@ static DataType infer_type_internal(Node* node) {
                     } else {
                         maybe_warn_implicit_narrowing(at, fs->param_types[i], arg);
                     }
+                } else {
+                    DataType at = infer_type(arg);
+                    if (fs->is_variadic) {
+                        if (!variadic_extra_arg_type_supported(at)) {
+                            semantic_error(arg, "نوع المعامل المتغير %d في '%s' غير مدعوم.", i + 1, fs->name);
+                        }
+                    }
                 }
                 i++;
                 arg = arg->next;
             }
-            if (i != fs->param_count) {
+            if (fs->is_variadic) {
+                if (i < fs->param_count) {
+                    semantic_error(node, "عدد معاملات '%s' غير صحيح (المتوقع على الأقل %d).",
+                                   fs->name, fs->param_count);
+                }
+            } else if (i != fs->param_count) {
                 semantic_error(node, "عدد معاملات '%s' غير صحيح (المتوقع %d).", fs->name, fs->param_count);
             }
             if (fs->return_type == TYPE_POINTER) {
@@ -4293,12 +4475,16 @@ static void analyze_node(Node* node) {
             const char* prev_ret_ptr_base_name = current_func_return_ptr_base_type_name;
             int prev_ret_ptr_depth = current_func_return_ptr_depth;
             FuncPtrSig* prev_ret_func_sig = current_func_return_func_sig;
+            bool prev_is_variadic = current_func_is_variadic;
+            const char* prev_variadic_anchor = current_func_variadic_anchor_name;
             in_function = true;
             current_func_return_type = node->data.func_def.return_type;
             current_func_return_ptr_base_type = node->data.func_def.return_ptr_base_type;
             current_func_return_ptr_base_type_name = node->data.func_def.return_ptr_base_type_name;
             current_func_return_ptr_depth = node->data.func_def.return_ptr_depth;
             current_func_return_func_sig = node->data.func_def.return_func_sig;
+            current_func_is_variadic = node->data.func_def.is_variadic;
+            current_func_variadic_anchor_name = NULL;
 
             // إضافة المعاملات كمتغيرات محلية (المعاملات ليست ثوابت افتراضياً)
             Node* param = node->data.func_def.params;
@@ -4327,8 +4513,13 @@ static void analyze_node(Node* node) {
                      if (local_count > 0) {
                          local_symbols[local_count - 1].is_used = true;
                      }
+                     current_func_variadic_anchor_name = param->data.var_decl.name;
                  }
                 param = param->next;
+            }
+
+            if (current_func_is_variadic && !current_func_variadic_anchor_name) {
+                semantic_error(node, "الدالة المتغيرة المعاملات تتطلب معاملاً ثابتاً واحداً على الأقل قبل '...'.");
             }
 
             // تحليل جسم الدالة فقط إذا لم تكن نموذجاً أولياً
@@ -4345,6 +4536,8 @@ static void analyze_node(Node* node) {
             current_func_return_ptr_base_type_name = prev_ret_ptr_base_name;
             current_func_return_ptr_depth = prev_ret_ptr_depth;
             current_func_return_func_sig = prev_ret_func_sig;
+            current_func_is_variadic = prev_is_variadic;
+            current_func_variadic_anchor_name = prev_variadic_anchor;
             break;
         }
 
@@ -4704,6 +4897,9 @@ static void analyze_node(Node* node) {
                     while (arg) { (void)infer_type(arg); arg = arg->next; }
                     break;
                 }
+                if (sig->is_variadic) {
+                    semantic_error(node, "نداء مؤشر دالة متغير المعاملات غير مدعوم حالياً.");
+                }
 
                 int i = 0;
                 Node* arg = node->data.call.args;
@@ -4731,13 +4927,27 @@ static void analyze_node(Node* node) {
                         } else {
                             maybe_warn_implicit_narrowing(at, exp, arg);
                         }
+                    } else {
+                        DataType at = infer_type(arg);
+                        if (sig->is_variadic) {
+                            if (!variadic_extra_arg_type_supported(at)) {
+                                semantic_error(arg, "نوع المعامل المتغير %d في نداء '%s' غير مدعوم.",
+                                               i + 1, fname ? fname : "???");
+                            }
+                        }
                     }
                     i++;
                     arg = arg->next;
                 }
 
-                if (i != sig->param_count) {
-                    semantic_error(node, "عدد معاملات نداء '%s' غير صحيح (المتوقع %d).", fname ? fname : "???", sig->param_count);
+                if (sig->is_variadic) {
+                    if (i < sig->param_count) {
+                        semantic_error(node, "عدد معاملات نداء '%s' غير صحيح (المتوقع على الأقل %d).",
+                                       fname ? fname : "???", sig->param_count);
+                    }
+                } else if (i != sig->param_count) {
+                    semantic_error(node, "عدد معاملات نداء '%s' غير صحيح (المتوقع %d).",
+                                   fname ? fname : "???", sig->param_count);
                 }
                 break;
             }
@@ -4747,6 +4957,9 @@ static void analyze_node(Node* node) {
             if (!fs || !fs->is_defined) {
                 DataType built_ret = TYPE_VOID;
                 if (builtin_check_format_call(node, fname, node->data.call.args, &built_ret)) {
+                    break;
+                }
+                if (builtin_check_variadic_runtime_call(node, fname, node->data.call.args, &built_ret)) {
                     break;
                 }
                 if (builtin_check_string_call(node, fname, node->data.call.args, &built_ret)) {
@@ -4798,11 +5011,23 @@ static void analyze_node(Node* node) {
                     } else {
                         maybe_warn_implicit_narrowing(at, fs->param_types[i], arg);
                     }
+                } else {
+                    DataType at = infer_type(arg);
+                    if (fs->is_variadic) {
+                        if (!variadic_extra_arg_type_supported(at)) {
+                            semantic_error(arg, "نوع المعامل المتغير %d في '%s' غير مدعوم.", i + 1, fs->name);
+                        }
+                    }
                 }
                 i++;
                 arg = arg->next;
             }
-            if (i != fs->param_count) {
+            if (fs->is_variadic) {
+                if (i < fs->param_count) {
+                    semantic_error(node, "عدد معاملات '%s' غير صحيح (المتوقع على الأقل %d).",
+                                   fs->name, fs->param_count);
+                }
+            } else if (i != fs->param_count) {
                 semantic_error(node, "عدد معاملات '%s' غير صحيح (المتوقع %d).", fs->name, fs->param_count);
             }
             break;

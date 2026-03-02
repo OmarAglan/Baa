@@ -574,6 +574,7 @@ The Semantic Analyzer (`src/analysis.c`) performs a static check on the AST befo
 12. **Pointer Semantics (v0.3.10)**: Validates pointer arithmetic, comparisons, dereference, and address-of constraints.
 13. **Type Casting (v0.3.10.5)**: Enforces rules for explicit scalar and pointer conversions.
 14. **Function Pointers (v0.3.10.6)**: Validates assignment, comparison (EQ/NE only), and indirect calls matching exact signatures.
+15. **Variadic Functions (v0.4.0.5)**: Validates `...` signatures, variadic builtin usage (`بدء_معاملات/معامل_تالي/نهاية_معاملات`), and fixed/extra argument checks for variadic direct calls.
 
 ### 5.2. Constant Checking (v0.2.7+)
 
@@ -1340,6 +1341,10 @@ Currently lowered expressions:
   - `اذهب_لموقع`: lowers to `fseeko` (Linux) / `_fseeki64` (Windows)
   - `اقرأ_سطر`: reads bytes until `\\n`/EOF and returns nullable `نص`
   - `اكتب_سطر`: lowers to `fputs` + `fputc('\\n')`
+- Builtin variadic runtime calls in `NODE_CALL_EXPR` (`v0.4.0.5`):
+  - `بدء_معاملات`: initializes variadic cursor from hidden variadic base.
+  - `معامل_تالي`: reads next packed argument slot as requested type and advances cursor.
+  - `نهاية_معاملات`: clears variadic cursor.
 
 ### 6.11. AST → IR Lowering (Statements, v0.3.0.4+)
 
@@ -1912,7 +1917,7 @@ typedef struct MachineModule {
 | `IR_OP_BR` | `JMP label` | Unconditional jump |
 | `IR_OP_BR_COND` | `TEST cond, cond; JNE true_label; JMP false_label` | Three-instruction pattern |
 | `IR_OP_RET` | `MOV RAX, val; RET` | Uses special vreg -2 (= RAX) |
-| `IR_OP_CALL` | `MOV param_regs, args...; (setup stack args); CALL @func/*reg; MOV dst, RAX` | Direct: `CALL @func`. Indirect: `CALL *reg` (callee value). ABI: Windows (shadow) / SysV (no shadow) |
+| `IR_OP_CALL` | `MOV param_regs, args...; (setup stack args); CALL @func/*reg; MOV dst, RAX` | Direct: `CALL @func`. Indirect: `CALL *reg` (callee value). ABI: Windows (shadow) / SysV (no shadow). In v0.4.0.5 variadic Baa calls pass packed extras via hidden `__baa_va_base` pointer. |
 | `IR_OP_CALL` + `IR_OP_RET` (tail) | `MOV param_regs, args...; TAILJMP @func` | v0.3.2.7.3: مفعل فقط عند `-O2` وبشكل محافظ (register args only) |
 | `IR_OP_PHI` | `NOP` | Placeholder; copy insertion deferred to register allocation |
 | `IR_OP_CAST` | `MOV dst, src` (larger/same size) or `MOVZX/MOVSX dst, src` (smaller to larger) | Size and sign dependent conversion (`تحويل`) |

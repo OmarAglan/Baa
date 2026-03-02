@@ -695,7 +695,17 @@ Token lexer_next_token(Lexer* l) {
     }
 
     // معالجة الرموز والعمليات
-    if (*current == '.') { token.type = TOKEN_DOT; advance_pos(l); return token; }
+    if (*current == '.') {
+        if (*(l->state.cur_char + 1) == '.' && *(l->state.cur_char + 2) == '.') {
+            token.type = TOKEN_ELLIPSIS;
+            l->state.cur_char += 3;
+            l->state.col += 3;
+            return token;
+        }
+        token.type = TOKEN_DOT;
+        advance_pos(l);
+        return token;
+    }
     if (*current == ',') { token.type = TOKEN_COMMA; advance_pos(l); return token; }
     if (*current == ':') { token.type = TOKEN_COLON; advance_pos(l); return token; }
     
@@ -1024,6 +1034,7 @@ const char* token_type_to_str(BaaTokenType type) {
         // رموز
         case TOKEN_ASSIGN: return "=";
         case TOKEN_DOT: return ".";
+        case TOKEN_ELLIPSIS: return "...";
         case TOKEN_COMMA: return ",";
         case TOKEN_COLON: return ":";
         case TOKEN_SEMICOLON: return "؛";

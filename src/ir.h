@@ -361,6 +361,7 @@ typedef struct IRFunc {
     
     // Is this a prototype (declaration without body)?
     bool is_prototype;
+    bool is_variadic;            // هل الدالة متغيرة المعاملات ( ... )
     
     // Linked list of functions in module
     struct IRFunc* next;

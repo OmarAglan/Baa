@@ -1184,18 +1184,18 @@
 
 ✅ COMPLETED (2026-03-02)
 
-### v0.4.0.5: Variadic Functions (دوال متغيرة المعاملات) 📊
+### v0.4.0.5: Variadic Functions (دوال متغيرة المعاملات) ✅
 **Goal:** Functions accepting variable number of arguments.
 
 #### Features
-- [ ] **Variadic Declaration**:
+- [x] **Variadic Declaration**:
   ```baa
   عدم اطبع_منسق(نص تنسيق، ...) {
       // Implementation using variadic access
   }
   ```
 
-- [ ] **Variadic Access Macros/Functions**:
+- [x] **Variadic Access Macros/Functions**:
   ```baa
   عدم اطبع_أرقام(صحيح عدد، ...) {
       قائمة_معاملات معاملات.
@@ -1214,12 +1214,14 @@
   ```
 
 #### Implementation Tasks
-- [ ] **Lexer**: Tokenize `...` (ellipsis).
-- [ ] **Parser**: Parse variadic function declarations.
-- [ ] **Type System**: Handle variadic function types.
-- [ ] **Codegen (Windows x64)**: Follow Windows variadic ABI.
-- [ ] **Codegen (Linux x64)**: Follow SystemV variadic ABI (register save area).
-- [ ] **Built-ins**: Implement `بدء_معاملات`, `معامل_تالي`, `نهاية_معاملات`.
+- [x] **Lexer**: Tokenize `...` (ellipsis).
+- [x] **Parser**: Parse variadic function declarations (including `دالة(...)->...` signatures).
+- [x] **Type System**: Handle variadic function types and variadic call arity/type checks.
+- [x] **Codegen (Windows x64)**: Variadic calls lowered عبر وسيط داخلي موحد (`__baa_va_base`) متوافق مع مسار الباك-إند الحالي.
+- [x] **Codegen (Linux x64)**: نفس وسيط المعاملات الداخلي لضمان سلوك موحد على `x86_64-linux`.
+- [x] **Built-ins**: Implement `بدء_معاملات`, `معامل_تالي`, `نهاية_معاملات`.
+
+✅ COMPLETED (2026-03-02)
 
 ### v0.4.0.6: Inline Assembly (المجمع المدمج) 🔧
 **Goal:** Embed assembly code for low-level operations.

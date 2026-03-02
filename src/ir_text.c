@@ -471,6 +471,10 @@ static void ir_text_write_func(FILE* out, IRFunc* func) {
         ir_text_write_type(out, func->params[i].type);
         fprintf(out, " %%r%d", func->params[i].reg);
     }
+    if (func->is_variadic) {
+        if (func->param_count > 0) fputs(", ", out);
+        fputs("...", out);
+    }
     fputs(") -> ", out);
     ir_text_write_type(out, func->ret_type);
 
@@ -1494,24 +1498,38 @@ IRModule* ir_text_read_module_file(const char* filename) {
             // params
             ir_text_skip_ws(&p);
             if (!ir_text_match(&p, ")")) {
-                while (1) {
-                    IRType* pt = ir_text_parse_type_rec(&p);
-                    if (!pt) { ok = 0; free(line); break; }
-                    char* reg_tok = ir_text_parse_token(&p);
-                    if (!reg_tok) { ok = 0; free(line); break; }
-                    int preg = -1;
-                    if (!ir_text_parse_reg_token(reg_tok, &preg)) { free(reg_tok); ok = 0; free(line); break; }
-                    free(reg_tok);
-
-                    ir_func_add_param(fn, NULL, pt);
-                    // ضبط رقم السجل كما ورد في النص (إن اختلف)
-                    fn->params[fn->param_count - 1].reg = preg;
-                    if (preg + 1 > fn->next_reg) fn->next_reg = preg + 1;
-                    if (!ir_text_reg_type_set(&bmap, preg, pt)) { ok = 0; break; }
-
+                if (ir_text_match(&p, "...")) {
+                    fn->is_variadic = true;
                     ir_text_skip_ws(&p);
-                    if (ir_text_match(&p, ")")) break;
-                    if (!ir_text_match(&p, ",")) { ok = 0; free(line); break; }
+                    if (!ir_text_match(&p, ")")) { ok = 0; free(line); break; }
+                } else {
+                    while (1) {
+                        IRType* pt = ir_text_parse_type_rec(&p);
+                        if (!pt) { ok = 0; free(line); break; }
+                        char* reg_tok = ir_text_parse_token(&p);
+                        if (!reg_tok) { ok = 0; free(line); break; }
+                        int preg = -1;
+                        if (!ir_text_parse_reg_token(reg_tok, &preg)) { free(reg_tok); ok = 0; free(line); break; }
+                        free(reg_tok);
+
+                        ir_func_add_param(fn, NULL, pt);
+                        // ضبط رقم السجل كما ورد في النص (إن اختلف)
+                        fn->params[fn->param_count - 1].reg = preg;
+                        if (preg + 1 > fn->next_reg) fn->next_reg = preg + 1;
+                        if (!ir_text_reg_type_set(&bmap, preg, pt)) { ok = 0; break; }
+
+                        ir_text_skip_ws(&p);
+                        if (ir_text_match(&p, ")")) break;
+                        if (!ir_text_match(&p, ",")) { ok = 0; free(line); break; }
+
+                        ir_text_skip_ws(&p);
+                        if (ir_text_match(&p, "...")) {
+                            fn->is_variadic = true;
+                            ir_text_skip_ws(&p);
+                            if (!ir_text_match(&p, ")")) { ok = 0; free(line); break; }
+                            break;
+                        }
+                    }
                 }
                 if (!ok) { free(line); break; }
             }

@@ -77,6 +77,7 @@ typedef enum {
     // الرموز (Symbols)
     TOKEN_ASSIGN,       // =
     TOKEN_DOT,          // .
+    TOKEN_ELLIPSIS,     // ...
     TOKEN_COMMA,        // ,
     TOKEN_COLON,        // :
     TOKEN_SEMICOLON,    // ؛
@@ -399,6 +400,7 @@ typedef struct FuncPtrSig {
     int return_ptr_depth;
 
     int param_count;
+    bool is_variadic;                  // هل يقبل معاملات متغيرة ( ... )
     DataType* param_types;              // مملوك (malloc)
     DataType* param_ptr_base_types;     // مملوك (malloc)
     char** param_ptr_base_type_names;   // مملوك (malloc) وعناصره مملوكة (strdup) وقد تكون NULL
@@ -475,6 +477,7 @@ typedef struct Node {
             FuncPtrSig* return_func_sig;     // توقيع مؤشر الدالة عند return_type == TYPE_FUNC_PTR
             struct Node* params; // قائمة المعاملات (متغيرات)
             struct Node* body;   // جسم الدالة (كتلة) - NULL if prototype
+            bool is_variadic;    // هل الدالة تقبل معاملات متغيرة ( ... )
             bool is_prototype;   // هل هو نموذج أولي؟ (بدون جسم)
         } func_def;
 

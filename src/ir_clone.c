@@ -69,6 +69,7 @@ IRFunc* ir_func_clone(IRModule* module, IRFunc* src, const char* new_name) {
     if (!f) return NULL;
 
     f->is_prototype = src->is_prototype;
+    f->is_variadic = src->is_variadic;
     f->next_reg = 0;
     f->next_block_id = 0;
     f->next_inst_id = 0;

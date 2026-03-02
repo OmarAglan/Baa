@@ -16,6 +16,7 @@
 
 #include "baa.h"
 #include "ir_builder.h"
+typedef struct BaaTarget BaaTarget;
 
 #ifdef __cplusplus
 extern "C" {
@@ -65,6 +66,7 @@ typedef struct IRLowerCtx {
     int had_error;
     bool enable_bounds_checks; // تفعيل فحص الحدود وقت التشغيل (امتداد debug)
     Node* program_root;        // مرجع AST للبحث عن تعريفات عامة (metadata)
+    const BaaTarget* target;   // الهدف الحالي لاختيار استدعاءات libc الخاصة بالمنصة
 } IRLowerCtx;
 
 /**
@@ -126,7 +128,8 @@ void lower_stmt_list(IRLowerCtx* ctx, Node* first_stmt);
  * @param module_name Optional module name (usually filename).
  * @return Newly allocated IRModule (caller owns; free with ir_module_free()).
  */
-IRModule* ir_lower_program(Node* program, const char* module_name, bool enable_bounds_checks);
+IRModule* ir_lower_program(Node* program, const char* module_name,
+                           bool enable_bounds_checks, const BaaTarget* target);
 
 #ifdef __cplusplus
 }

@@ -1,6 +1,6 @@
 # Baa Compiler Internals
 
-> **Version:** 0.3.11.0 | [← Language Spec](LANGUAGE.md) | [API Reference →](API_REFERENCE.md)
+> **Version:** 0.3.12.0 | [← Language Spec](LANGUAGE.md) | [API Reference →](API_REFERENCE.md)
 
 **Target Architecture:** x86-64 (AMD64)
 **Targets:** Windows x64 (COFF/PE) + Linux x86-64 (ELF)
@@ -1325,6 +1325,18 @@ Currently lowered expressions:
   - `إعادة_حجز`: lowers to `realloc`
   - `نسخ_ذاكرة`: lowers to `memcpy`
   - `تعيين_ذاكرة`: lowers to `memset`
+- Builtin file I/O calls in `NODE_CALL_EXPR` (`v0.3.12`):
+  - `فتح_ملف`: lowers to `fopen` (handle is `عدم*` representing `FILE*`)
+  - `اغلق_ملف`: lowers to `fclose`
+  - `اقرأ_حرف`: lowers to `fgetc` + UTF-8 packing into `حرف`
+  - `اكتب_حرف`: lowers to `fputc`
+  - `اقرأ_ملف`: lowers to `fread`
+  - `اكتب_ملف`: lowers to `fwrite`
+  - `نهاية_ملف`: lowers to `feof`
+  - `موقع_ملف`: lowers to `ftello` (Linux) / `_ftelli64` (Windows)
+  - `اذهب_لموقع`: lowers to `fseeko` (Linux) / `_fseeki64` (Windows)
+  - `اقرأ_سطر`: reads bytes until `\\n`/EOF and returns nullable `نص`
+  - `اكتب_سطر`: lowers to `fputs` + `fputc('\\n')`
 
 ### 6.11. AST → IR Lowering (Statements, v0.3.0.4+)
 

@@ -1,7 +1,7 @@
 # Baa Roadmap (Updated)
 
 > Track the development progress of the Baa programming language.
-> **Current Status:** Phase 3.11 - Dynamic Memory (v0.3.11.0) ✅ COMPLETED (2026-03-01)
+> **Current Status:** Phase 3.12 - File I/O (v0.3.12.0) ✅ COMPLETED (2026-03-02)
 
 ---
 
@@ -1063,15 +1063,15 @@
 
 #### Features
 
-- [ ] **File Opening**:
+- [x] **File Opening**:
 
   ```baa
-  صحيح ملف = فتح_ملف("بيانات.txt", "قراءة").
-  صحيح ملف_كتابة = فتح_ملف("ناتج.txt", "كتابة").
-  صحيح ملف_إضافة = فتح_ملف("سجل.txt", "إضافة").
+  عدم* ملف = فتح_ملف("بيانات.txt", "قراءة").
+  عدم* ملف_كتابة = فتح_ملف("ناتج.txt", "كتابة").
+  عدم* ملف_إضافة = فتح_ملف("سجل.txt", "إضافة").
   ```
 
-- [ ] **File Reading**:
+- [x] **File Reading**:
 
   ```baa
   حرف حرف_واحد = اقرأ_حرف(ملف).
@@ -1079,7 +1079,7 @@
   صحيح بايتات = اقرأ_ملف(ملف, مخزن, حجم).
   ```
 
-- [ ] **File Writing**:
+- [x] **File Writing**:
 
   ```baa
   اكتب_حرف(ملف, 'أ').
@@ -1087,13 +1087,13 @@
   اكتب_ملف(ملف, بيانات, حجم).
   ```
 
-- [ ] **File Closing**:
+- [x] **File Closing**:
 
   ```baa
   اغلق_ملف(ملف).
   ```
 
-- [ ] **File Status**:
+- [x] **File Status**:
 
   ```baa
   منطقي انتهى = نهاية_ملف(ملف).
@@ -1103,10 +1103,12 @@
 
 #### Implementation Tasks
 
-- [ ] **Runtime**: Wrap C stdio functions (fopen, fread, fwrite, fclose).
-- [ ] **Built-in Functions**: Add file operation functions.
-- [ ] **Error Handling**: Return error codes for failed operations.
-- [ ] **Codegen**: Generate calls to file functions.
+- [x] **Runtime**: Wrap C stdio functions (fopen, fread, fwrite, fclose, fgetc, fputc, fputs, feof, ftello/fseeko).
+- [x] **Built-in Functions**: Add file operation functions using `عدم*` as an opaque `FILE*` handle.
+- [x] **Error Handling**: Return error codes for failed operations (`فتح_ملف` يعيد `عدم`، و `اكتب_سطر/اكتب_حرف` تعيد -1 عند الفشل).
+- [x] **Codegen**: Generate direct libc stdio calls with shadowing rules.
+
+✅ COMPLETED (2026-03-02)
 
 ### v0.3.12.5: Command Line Arguments (معاملات سطر الأوامر) 🖥️
 **Goal:** Access program arguments - essential for compiler self-hosting.

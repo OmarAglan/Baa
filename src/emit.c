@@ -22,6 +22,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdarg.h>
+#include <stdint.h>
 
 // ============================================================================
 // أسماء السجلات بصيغة AT&T (Register Names - AT&T Syntax)
@@ -64,6 +65,27 @@ static const char* reg8_names[PHYS_REG_COUNT] = {
     "%sil", "%dil", "%r8b",  "%r9b",  "%r10b", "%r11b",
     "%r12b", "%r13b", "%r14b", "%r15b"
 };
+
+/**
+ * @brief التحقق إن كانت القيمة الفورية تصلح كـ imm32 (مع تمديد الإشارة) في x86-64.
+ *
+ * معظم تعليمات x86-64 التي تقبل immediate بعرض 64-بت تقبل فعلياً imm32 فقط
+ * ويتم تمديد الإشارة. لذا القيم التي لا تتسع في int32 تحتاج materialization
+ * إلى سجل وسيط (مثل movabs).
+ */
+static bool imm_fits_imm32(int64_t imm)
+{
+    return (imm >= (int64_t)INT32_MIN) && (imm <= (int64_t)INT32_MAX);
+}
+
+static MachineOperand emit_scratch_r11(int bits)
+{
+    MachineOperand tmp = (MachineOperand){0};
+    tmp.kind = MACH_OP_VREG;
+    tmp.size_bits = (bits > 0) ? bits : 64;
+    tmp.data.vreg = PHYS_R11;
+    return tmp;
+}
 
 /**
  * @brief معرفات داخلية لتفادي تعارض تسميات الكتل بين الدوال.
@@ -627,6 +649,44 @@ void emit_inst(MachineInst* inst, MachineFunc* func, FILE* out) {
             if (inst->dst.kind == MACH_OP_NONE) break;
             if (inst->src1.kind == MACH_OP_NONE) break;
 
+            {
+                int bits = inst->dst.size_bits;
+                if (bits <= 0) bits = inst->src1.size_bits;
+                if (bits <= 0) bits = 64;
+
+                // دعم imm64 الحقيقي: movabs للتحميل، وسجل وسيط عند التخزين للذاكرة.
+                if (inst->src1.kind == MACH_OP_IMM && bits == 64 && !imm_fits_imm32(inst->src1.data.imm)) {
+                    MachineOperand imm = inst->src1;
+                    imm.size_bits = 64;
+
+                    if (inst->dst.kind == MACH_OP_VREG) {
+                        fprintf(out, "    movabsq ");
+                        emit_operand(&imm, out);
+                        fprintf(out, ", ");
+                        emit_operand(&inst->dst, out);
+                        fprintf(out, "\n");
+                        break;
+                    }
+
+                    if (inst->dst.kind == MACH_OP_MEM || inst->dst.kind == MACH_OP_GLOBAL) {
+                        MachineOperand tmp = emit_scratch_r11(64);
+
+                        fprintf(out, "    movabsq ");
+                        emit_operand(&imm, out);
+                        fprintf(out, ", ");
+                        emit_operand(&tmp, out);
+                        fprintf(out, "\n");
+
+                        fprintf(out, "    movq ");
+                        emit_operand(&tmp, out);
+                        fprintf(out, ", ");
+                        emit_operand(&inst->dst, out);
+                        fprintf(out, "\n");
+                        break;
+                    }
+                }
+            }
+
             // معالجة حالة ذاكرة ← ذاكرة (غير صالحة مباشرة في x86-64)
             // نستخدم %rax كسجل مؤقت لأنه محجوز عادةً ولا نخصصه للفترات العادية.
             if (inst->dst.kind == MACH_OP_MEM && inst->src1.kind == MACH_OP_MEM) {
@@ -674,19 +734,53 @@ void emit_inst(MachineInst* inst, MachineFunc* func, FILE* out) {
         case MACH_ADD:
             // AT&T: add src, dst (dst = dst + src)
             // src2 هو المعامل الفعلي للإضافة
-            fprintf(out, "    add%c ", infer_suffix(inst));
-            emit_operand(&inst->src2, out);
-            fprintf(out, ", ");
-            emit_operand(&inst->dst, out);
-            fprintf(out, "\n");
+            if (inst->src2.kind == MACH_OP_IMM && inst->dst.size_bits == 64 && !imm_fits_imm32(inst->src2.data.imm)) {
+                MachineOperand imm = inst->src2;
+                imm.size_bits = 64;
+                MachineOperand tmp = emit_scratch_r11(64);
+                fprintf(out, "    movabsq ");
+                emit_operand(&imm, out);
+                fprintf(out, ", ");
+                emit_operand(&tmp, out);
+                fprintf(out, "\n");
+
+                fprintf(out, "    addq ");
+                emit_operand(&tmp, out);
+                fprintf(out, ", ");
+                emit_operand(&inst->dst, out);
+                fprintf(out, "\n");
+            } else {
+                fprintf(out, "    add%c ", infer_suffix(inst));
+                emit_operand(&inst->src2, out);
+                fprintf(out, ", ");
+                emit_operand(&inst->dst, out);
+                fprintf(out, "\n");
+            }
             break;
 
         case MACH_SUB:
-            fprintf(out, "    sub%c ", infer_suffix(inst));
-            emit_operand(&inst->src2, out);
-            fprintf(out, ", ");
-            emit_operand(&inst->dst, out);
-            fprintf(out, "\n");
+            if (inst->src2.kind == MACH_OP_IMM && inst->dst.size_bits == 64 && !imm_fits_imm32(inst->src2.data.imm)) {
+                MachineOperand imm = inst->src2;
+                imm.size_bits = 64;
+                MachineOperand tmp = emit_scratch_r11(64);
+                fprintf(out, "    movabsq ");
+                emit_operand(&imm, out);
+                fprintf(out, ", ");
+                emit_operand(&tmp, out);
+                fprintf(out, "\n");
+
+                fprintf(out, "    subq ");
+                emit_operand(&tmp, out);
+                fprintf(out, ", ");
+                emit_operand(&inst->dst, out);
+                fprintf(out, "\n");
+            } else {
+                fprintf(out, "    sub%c ", infer_suffix(inst));
+                emit_operand(&inst->src2, out);
+                fprintf(out, ", ");
+                emit_operand(&inst->dst, out);
+                fprintf(out, "\n");
+            }
             break;
 
         case MACH_IMUL:
@@ -911,6 +1005,25 @@ void emit_inst(MachineInst* inst, MachineFunc* func, FILE* out) {
             if (bits <= 0) bits = inst->dst.size_bits;
             if (bits <= 0) bits = 64;
 
+            if (dst_mem && inst->src1.kind == MACH_OP_IMM && bits == 64 && !imm_fits_imm32(inst->src1.data.imm)) {
+                MachineOperand imm = inst->src1;
+                imm.size_bits = 64;
+                MachineOperand tmp = emit_scratch_r11(64);
+
+                fprintf(out, "    movabsq ");
+                emit_operand(&imm, out);
+                fprintf(out, ", ");
+                emit_operand(&tmp, out);
+                fprintf(out, "\n");
+
+                fprintf(out, "    movq ");
+                emit_operand(&tmp, out);
+                fprintf(out, ", ");
+                emit_operand(&inst->dst, out);
+                fprintf(out, "\n");
+                break;
+            }
+
             if (src_mem && dst_mem)
             {
                 MachineOperand tmp = {0};
@@ -947,6 +1060,25 @@ void emit_inst(MachineInst* inst, MachineFunc* func, FILE* out) {
         case MACH_CMP:
             // AT&T: cmp src2, src1 (يقارن src1 مع src2)
             // cmp لا يدعم ذاكرة-إلى-ذاكرة. إذا كان الطرفان ذاكرة/رمزاً عالمياً، استخدم %rax مؤقتاً.
+            if (inst->src2.kind == MACH_OP_IMM && inst->src1.size_bits == 64 && !imm_fits_imm32(inst->src2.data.imm)) {
+                MachineOperand imm = inst->src2;
+                imm.size_bits = 64;
+                MachineOperand tmp = emit_scratch_r11(64);
+
+                fprintf(out, "    movabsq ");
+                emit_operand(&imm, out);
+                fprintf(out, ", ");
+                emit_operand(&tmp, out);
+                fprintf(out, "\n");
+
+                fprintf(out, "    cmpq ");
+                emit_operand(&tmp, out);
+                fprintf(out, ", ");
+                emit_operand(&inst->src1, out);
+                fprintf(out, "\n");
+                break;
+            }
+
             if ((inst->src1.kind == MACH_OP_MEM || inst->src1.kind == MACH_OP_GLOBAL) &&
                 (inst->src2.kind == MACH_OP_MEM || inst->src2.kind == MACH_OP_GLOBAL)) {
                 int bits = inst->src1.size_bits;
@@ -1334,19 +1466,53 @@ void emit_inst(MachineInst* inst, MachineFunc* func, FILE* out) {
         // عمليات منطقية (Logical)
         // ================================================================
         case MACH_AND:
-            fprintf(out, "    and%c ", infer_suffix(inst));
-            emit_operand(&inst->src2, out);
-            fprintf(out, ", ");
-            emit_operand(&inst->dst, out);
-            fprintf(out, "\n");
+            if (inst->src2.kind == MACH_OP_IMM && inst->dst.size_bits == 64 && !imm_fits_imm32(inst->src2.data.imm)) {
+                MachineOperand imm = inst->src2;
+                imm.size_bits = 64;
+                MachineOperand tmp = emit_scratch_r11(64);
+                fprintf(out, "    movabsq ");
+                emit_operand(&imm, out);
+                fprintf(out, ", ");
+                emit_operand(&tmp, out);
+                fprintf(out, "\n");
+
+                fprintf(out, "    andq ");
+                emit_operand(&tmp, out);
+                fprintf(out, ", ");
+                emit_operand(&inst->dst, out);
+                fprintf(out, "\n");
+            } else {
+                fprintf(out, "    and%c ", infer_suffix(inst));
+                emit_operand(&inst->src2, out);
+                fprintf(out, ", ");
+                emit_operand(&inst->dst, out);
+                fprintf(out, "\n");
+            }
             break;
 
         case MACH_OR:
-            fprintf(out, "    or%c ", infer_suffix(inst));
-            emit_operand(&inst->src2, out);
-            fprintf(out, ", ");
-            emit_operand(&inst->dst, out);
-            fprintf(out, "\n");
+            if (inst->src2.kind == MACH_OP_IMM && inst->dst.size_bits == 64 && !imm_fits_imm32(inst->src2.data.imm)) {
+                MachineOperand imm = inst->src2;
+                imm.size_bits = 64;
+                MachineOperand tmp = emit_scratch_r11(64);
+                fprintf(out, "    movabsq ");
+                emit_operand(&imm, out);
+                fprintf(out, ", ");
+                emit_operand(&tmp, out);
+                fprintf(out, "\n");
+
+                fprintf(out, "    orq ");
+                emit_operand(&tmp, out);
+                fprintf(out, ", ");
+                emit_operand(&inst->dst, out);
+                fprintf(out, "\n");
+            } else {
+                fprintf(out, "    or%c ", infer_suffix(inst));
+                emit_operand(&inst->src2, out);
+                fprintf(out, ", ");
+                emit_operand(&inst->dst, out);
+                fprintf(out, "\n");
+            }
             break;
 
         case MACH_NOT:
@@ -1356,11 +1522,28 @@ void emit_inst(MachineInst* inst, MachineFunc* func, FILE* out) {
             break;
 
         case MACH_XOR:
-            fprintf(out, "    xor%c ", infer_suffix(inst));
-            emit_operand(&inst->src2, out);
-            fprintf(out, ", ");
-            emit_operand(&inst->dst, out);
-            fprintf(out, "\n");
+            if (inst->src2.kind == MACH_OP_IMM && inst->dst.size_bits == 64 && !imm_fits_imm32(inst->src2.data.imm)) {
+                MachineOperand imm = inst->src2;
+                imm.size_bits = 64;
+                MachineOperand tmp = emit_scratch_r11(64);
+                fprintf(out, "    movabsq ");
+                emit_operand(&imm, out);
+                fprintf(out, ", ");
+                emit_operand(&tmp, out);
+                fprintf(out, "\n");
+
+                fprintf(out, "    xorq ");
+                emit_operand(&tmp, out);
+                fprintf(out, ", ");
+                emit_operand(&inst->dst, out);
+                fprintf(out, "\n");
+            } else {
+                fprintf(out, "    xor%c ", infer_suffix(inst));
+                emit_operand(&inst->src2, out);
+                fprintf(out, ", ");
+                emit_operand(&inst->dst, out);
+                fprintf(out, "\n");
+            }
             break;
 
         // ================================================================

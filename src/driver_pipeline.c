@@ -114,7 +114,7 @@ static int compile_one_ir(const CompilerConfig *config,
     }
 
     if (config->time_phases) t0 = driver_time_seconds();
-    IRModule *ir_module = ir_lower_program(ast, current_input, config->debug_info);
+    IRModule *ir_module = ir_lower_program(ast, current_input, config->debug_info, config->target);
     if (config->time_phases) phase_times->lower_ir_s += (driver_time_seconds() - t0);
     if (!ir_module)
     {

@@ -2643,6 +2643,99 @@ static bool builtin_check_mem_call(Node* call_node, const char* fname, Node* arg
     return true;
 }
 
+typedef struct {
+    const char* name;
+    DataType return_type;
+    int param_count;
+    DataType param_types[3];
+} BuiltinFileFuncSig;
+
+static const BuiltinFileFuncSig builtin_file_funcs[] = {
+    { "فتح_ملف",   TYPE_POINTER, 2, { TYPE_STRING,  TYPE_STRING,  TYPE_INT } },
+    { "اغلق_ملف",  TYPE_INT,     1, { TYPE_POINTER, TYPE_INT,     TYPE_INT } },
+    { "اقرأ_حرف",  TYPE_CHAR,    1, { TYPE_POINTER, TYPE_INT,     TYPE_INT } },
+    { "اكتب_حرف",  TYPE_INT,     2, { TYPE_POINTER, TYPE_CHAR,    TYPE_INT } },
+    { "اقرأ_ملف",  TYPE_INT,     3, { TYPE_POINTER, TYPE_POINTER, TYPE_INT } },
+    { "اكتب_ملف",  TYPE_INT,     3, { TYPE_POINTER, TYPE_POINTER, TYPE_INT } },
+    { "نهاية_ملف", TYPE_BOOL,    1, { TYPE_POINTER, TYPE_INT,     TYPE_INT } },
+    { "موقع_ملف",  TYPE_INT,     1, { TYPE_POINTER, TYPE_INT,     TYPE_INT } },
+    { "اذهب_لموقع", TYPE_INT,    2, { TYPE_POINTER, TYPE_INT,     TYPE_INT } },
+    { "اقرأ_سطر",  TYPE_STRING,  1, { TYPE_POINTER, TYPE_INT,     TYPE_INT } },
+    { "اكتب_سطر",  TYPE_INT,     2, { TYPE_POINTER, TYPE_STRING,  TYPE_INT } },
+};
+
+static const BuiltinFileFuncSig* builtin_lookup_file_func(const char* name)
+{
+    if (!name) return NULL;
+    const int n = (int)(sizeof(builtin_file_funcs) / sizeof(builtin_file_funcs[0]));
+    for (int i = 0; i < n; i++) {
+        if (strcmp(name, builtin_file_funcs[i].name) == 0) {
+            return &builtin_file_funcs[i];
+        }
+    }
+    return NULL;
+}
+
+static DataType infer_type_allow_null_string(Node* expr, DataType expected)
+{
+    if (!expr) return TYPE_INT;
+    if (expected == TYPE_STRING && expr->type == NODE_NULL) {
+        // سماح: نص قابل للإلغاء (NULL) — يُستخدم مثلاً لتمثيل EOF في اقرأ_سطر.
+        expr->inferred_type = TYPE_STRING;
+        node_clear_inferred_ptr(expr);
+        return TYPE_STRING;
+    }
+    return infer_type(expr);
+}
+
+/**
+ * @brief التحقق من صحة استدعاء دوال الملفات المدمجة في v0.3.12.
+ * @return true إذا كان الاسم دالة مدمجة (سواء مع أخطاء أو بدونها)، false إذا لم يكن مدمجاً.
+ */
+static bool builtin_check_file_call(Node* call_node, const char* fname, Node* args, DataType* out_return_type)
+{
+    const BuiltinFileFuncSig* sig = builtin_lookup_file_func(fname);
+    if (!sig) return false;
+
+    int i = 0;
+    for (Node* arg = args; arg; arg = arg->next, i++) {
+        DataType expected = (i < sig->param_count) ? sig->param_types[i] : TYPE_INT;
+        DataType got = infer_type_allow_null_string(arg, expected);
+
+        if (i < sig->param_count) {
+            if (expected == TYPE_POINTER) {
+                // جميع معاملات المؤشر هنا هي عدم* (void*)، ويُسمح بالتحويلات الضمنية وفق قواعد void*.
+                if (got != TYPE_POINTER ||
+                    !ptr_type_compatible(arg->inferred_ptr_base_type,
+                                         arg->inferred_ptr_base_type_name,
+                                         arg->inferred_ptr_depth,
+                                         TYPE_VOID, NULL, 1,
+                                         true)) {
+                    semantic_error(arg, "نوع المعامل %d في '%s' غير متوافق.", i + 1, sig->name);
+                }
+            } else if (!types_compatible(got, expected)) {
+                semantic_error(arg, "نوع المعامل %d في '%s' غير متوافق.", i + 1, sig->name);
+            } else {
+                maybe_warn_implicit_narrowing(got, expected, arg);
+            }
+        }
+    }
+
+    if (i != sig->param_count) {
+        semantic_error(call_node, "عدد معاملات '%s' غير صحيح (المتوقع %d).", sig->name, sig->param_count);
+    }
+
+    if (out_return_type) *out_return_type = sig->return_type;
+
+    if (sig->return_type == TYPE_POINTER) {
+        node_set_inferred_ptr(call_node, TYPE_VOID, NULL, 1);
+    } else {
+        node_clear_inferred_ptr(call_node);
+    }
+
+    return true;
+}
+
 static bool datatype_size_bytes(DataType type, const char* type_name, int64_t* out_size)
 {
     if (!out_size) return false;
@@ -2971,9 +3064,9 @@ static DataType infer_type_internal(Node* node) {
                 int i = 0;
                 Node* arg = node->data.call.args;
                 while (arg) {
-                    DataType at = infer_type(arg);
                     if (i < sig->param_count) {
                         DataType exp = sig->param_types ? sig->param_types[i] : TYPE_INT;
+                        DataType at = infer_type_allow_null_string(arg, exp);
                         if (exp == TYPE_POINTER) {
                             DataType eb = sig->param_ptr_base_types ? sig->param_ptr_base_types[i] : TYPE_INT;
                             int ed = sig->param_ptr_depths ? sig->param_ptr_depths[i] : 0;
@@ -3029,6 +3122,9 @@ static DataType infer_type_internal(Node* node) {
                 if (builtin_check_mem_call(node, fname, node->data.call.args, &built_ret)) {
                     return built_ret;
                 }
+                if (builtin_check_file_call(node, fname, node->data.call.args, &built_ret)) {
+                    return built_ret;
+                }
 
                 semantic_error(node, "استدعاء دالة غير معرّفة '%s'.", fname ? fname : "???");
                 // ما زلنا نستنتج أنواع الوسائط لاكتشاف أخطاء أخرى.
@@ -3040,8 +3136,9 @@ static DataType infer_type_internal(Node* node) {
             int i = 0;
             Node* arg = node->data.call.args;
             while (arg) {
-                DataType at = infer_type(arg);
                 if (i < fs->param_count) {
+                    DataType expected0 = fs->param_types[i];
+                    DataType at = infer_type_allow_null_string(arg, expected0);
                     if (fs->param_types[i] == TYPE_POINTER) {
                         if (at != TYPE_POINTER ||
                             !ptr_type_compatible(arg->inferred_ptr_base_type,
@@ -3279,6 +3376,41 @@ static DataType infer_type_internal(Node* node) {
             
             // عمليات المقارنة تتطلب أنواعاً متوافقة وتعيد منطقي
             if (op == OP_EQ || op == OP_NEQ || op == OP_LT || op == OP_GT || op == OP_LTE || op == OP_GTE) {
+                // سماح v0.3.12: مقارنة نص مع نص (==/!=) وكذلك نص مع عدم (==/!=) لتسهيل نمط EOF في اقرأ_سطر.
+                if (left == TYPE_STRING || right == TYPE_STRING) {
+                    if (!(op == OP_EQ || op == OP_NEQ)) {
+                        semantic_error(node, "مقارنة النص تدعم فقط (==) أو (!=).");
+                    }
+
+                    Node* l = node->data.bin_op.left;
+                    Node* r = node->data.bin_op.right;
+                    bool l_null = (l && l->type == NODE_NULL);
+                    bool r_null = (r && r->type == NODE_NULL);
+
+                    // الحالات المدعومة:
+                    // - نص == نص
+                    // - نص == عدم (أو العكس)
+                    if (left == TYPE_STRING && !(right == TYPE_STRING || r_null)) {
+                        semantic_error(node, "مقارنة النص تتطلب نصاً أو 'عدم' على الطرف الآخر.");
+                    }
+                    if (right == TYPE_STRING && !(left == TYPE_STRING || l_null)) {
+                        semantic_error(node, "مقارنة النص تتطلب نصاً أو 'عدم' على الطرف الآخر.");
+                    }
+
+                    // اجعل NODE_NULL يُعامل كنص فارغ (NULL) في سياق مقارنة النص.
+                    if (l_null) {
+                        l->inferred_type = TYPE_STRING;
+                        node_clear_inferred_ptr(l);
+                    }
+                    if (r_null) {
+                        r->inferred_type = TYPE_STRING;
+                        node_clear_inferred_ptr(r);
+                    }
+
+                    node_clear_inferred_ptr(node);
+                    return TYPE_BOOL;
+                }
+
                 if (left == TYPE_POINTER || right == TYPE_POINTER) {
                     if (left == TYPE_POINTER && right == TYPE_POINTER) {
                         int ldepth = node->data.bin_op.left->inferred_ptr_depth;
@@ -3633,7 +3765,7 @@ static void analyze_node(Node* node) {
             else {
                 // 2) الأنواع البدائية
                 if (node->data.var_decl.expression) {
-                    DataType exprType = infer_type(node->data.var_decl.expression);
+                    DataType exprType = infer_type_allow_null_string(node->data.var_decl.expression, declType);
                     if (declType == TYPE_POINTER) {
                         if (!ptr_type_compatible(node->data.var_decl.expression->inferred_ptr_base_type,
                                                  node->data.var_decl.expression->inferred_ptr_base_type_name,
@@ -3797,7 +3929,7 @@ static void analyze_node(Node* node) {
                 if (sym->is_const) {
                     semantic_error(node, "لا يمكن إعادة إسناد الثابت '%s'.", node->data.assign_stmt.name);
                 }
-                DataType exprType = infer_type(node->data.assign_stmt.expression);
+                DataType exprType = infer_type_allow_null_string(node->data.assign_stmt.expression, sym->type);
                 if (sym->type == TYPE_ENUM) {
                     const char* en = expr_enum_name(node->data.assign_stmt.expression);
                     if (!types_compatible_named(exprType, en, TYPE_ENUM, sym->type_name)) {
@@ -4048,7 +4180,7 @@ static void analyze_node(Node* node) {
             }
 
             {
-                DataType rt = infer_type(node->data.return_stmt.expression);
+                DataType rt = infer_type_allow_null_string(node->data.return_stmt.expression, current_func_return_type);
                 if (current_func_return_type == TYPE_POINTER) {
                     if (!ptr_type_compatible(node->data.return_stmt.expression->inferred_ptr_base_type,
                                              node->data.return_stmt.expression->inferred_ptr_base_type_name,
@@ -4134,9 +4266,9 @@ static void analyze_node(Node* node) {
                 int i = 0;
                 Node* arg = node->data.call.args;
                 while (arg) {
-                    DataType at = infer_type(arg);
                     if (i < sig->param_count) {
                         DataType exp = sig->param_types ? sig->param_types[i] : TYPE_INT;
+                        DataType at = infer_type_allow_null_string(arg, exp);
                         if (exp == TYPE_POINTER) {
                             DataType eb = sig->param_ptr_base_types ? sig->param_ptr_base_types[i] : TYPE_INT;
                             int ed = sig->param_ptr_depths ? sig->param_ptr_depths[i] : 0;
@@ -4178,6 +4310,9 @@ static void analyze_node(Node* node) {
                 if (builtin_check_mem_call(node, fname, node->data.call.args, &built_ret)) {
                     break;
                 }
+                if (builtin_check_file_call(node, fname, node->data.call.args, &built_ret)) {
+                    break;
+                }
                 semantic_error(node, "استدعاء دالة غير معرّفة '%s'.", fname ? fname : "???");
                 Node* arg = node->data.call.args;
                 while (arg) { (void)infer_type(arg); arg = arg->next; }
@@ -4187,8 +4322,9 @@ static void analyze_node(Node* node) {
             int i = 0;
             Node* arg = node->data.call.args;
             while (arg) {
-                DataType at = infer_type(arg);
                 if (i < fs->param_count) {
+                    DataType expected0 = fs->param_types[i];
+                    DataType at = infer_type_allow_null_string(arg, expected0);
                     if (fs->param_types[i] == TYPE_POINTER) {
                         if (at != TYPE_POINTER ||
                             !ptr_type_compatible(arg->inferred_ptr_base_type,

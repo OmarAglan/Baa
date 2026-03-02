@@ -1,6 +1,6 @@
 # Baa User Guide
 
-> **Version:** 0.3.11.0 | [← README](../README.md) | [Language Spec →](LANGUAGE.md)
+> **Version:** 0.3.12.0 | [← README](../README.md) | [Language Spec →](LANGUAGE.md)
 
 Welcome to Baa (باء)! This guide will help you write your first Arabic computer program and use the Baa compiler toolchain.
 
@@ -547,6 +547,36 @@ Use the v0.3.11 memory APIs for heap allocation and raw memory operations:
     }
 
     تحرير_ذاكرة(أرقام).
+    إرجع ٠.
+}
+```
+
+### File I/O (إدخال/إخراج الملفات)
+
+يدعم باء (v0.3.12) عمليات الملفات عبر واجهات رقيقة فوق `stdio` في C.
+
+**ملاحظات:**
+
+- نوع مقبض الملف هو `عدم*` (يمثل `FILE*` بشكل معتم).
+- `فتح_ملف` يعيد `عدم` عند الفشل.
+- `اقرأ_سطر` يعيد `عدم` عند EOF قبل قراءة أي بايت.
+- السطر المعاد من `اقرأ_سطر` يجب تحريره عبر `حرر_نص`.
+
+```baa
+#تضمين "stdlib/baalib.baahd"
+
+صحيح الرئيسية() {
+    عدم* ف = فتح_ملف("بيانات.txt", "قراءة").
+    إذا (ف == عدم) { إرجع ١. }
+
+    طالما (صواب) {
+        نص س = اقرأ_سطر(ف).
+        إذا (س == عدم) { توقف. }
+        اطبع س.
+        حرر_نص(س).
+    }
+
+    اغلق_ملف(ف).
     إرجع ٠.
 }
 ```

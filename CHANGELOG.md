@@ -6,6 +6,38 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ---
 
+## [0.3.12.0] - 2026-03-02
+
+### Added
+
+- **File I/O APIs** (v0.3.12):
+  - `فتح_ملف(مسار، وضع) -> عدم*` (FILE* opaque handle via `fopen`)
+  - `اغلق_ملف(ملف) -> صحيح` (fclose)
+  - `اقرأ_حرف(ملف) -> حرف` (fgetc + UTF-8 packing)
+  - `اكتب_حرف(ملف، حرف) -> صحيح` (fputc)
+  - `اقرأ_ملف(ملف، مخزن، عدد_بايتات) -> صحيح` (fread)
+  - `اكتب_ملف(ملف، بيانات، عدد_بايتات) -> صحيح` (fwrite)
+  - `نهاية_ملف(ملف) -> منطقي` (feof)
+  - `موقع_ملف(ملف) -> صحيح` (Linux: ftello / Windows: _ftelli64)
+  - `اذهب_لموقع(ملف، موقع) -> صحيح` (Linux: fseeko / Windows: _fseeki64)
+  - `اقرأ_سطر(ملف) -> نص` (يعيد `عدم` عند EOF قبل قراءة أي بايت)
+  - `اكتب_سطر(ملف، سطر) -> صحيح` (fputs + '\n')
+- **Coverage for file I/O**:
+  - `tests/integration/backend/backend_file_io_test.baa`
+  - `tests/integration/backend/backend_file_io_noheader_test.baa`
+  - `tests/neg/semantic_file_open_bad_type.baa`
+  - `tests/neg/semantic_file_read_bad_types.baa`
+  - `tests/neg/semantic_file_line_bad_arity.baa`
+
+### Changed
+
+- **`نص` nullable support (v0.3.12):** the compiler allows assigning/returning `عدم` as a `نص` value for EOF-style patterns, and allows `==/!=` comparisons between `نص` and `عدم`, as well as `نص == نص` / `نص != نص` (pointer equality).
+- **IR lowering:** file I/O builtins are lowered directly to libc stdio calls, respecting shadowing rules.
+
+### Fixed
+
+- **Backend emitter:** handle true `imm64` materialization in AT&T output (`movabsq` + scratch register) for moves/stores and arithmetic/logical ops when an immediate does not fit `imm32`.
+
 ## [0.3.11.0] - 2026-03-01
 
 ### Added

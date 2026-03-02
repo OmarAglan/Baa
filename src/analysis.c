@@ -2780,6 +2780,175 @@ static bool builtin_check_file_call(Node* call_node, const char* fname, Node* ar
     return true;
 }
 
+typedef struct {
+    const char* name;
+    DataType return_type;
+    int param_count;
+    DataType param_types[2];
+} BuiltinMathFuncSig;
+
+static const BuiltinMathFuncSig builtin_math_funcs[] = {
+    { "جذر_تربيعي", TYPE_FLOAT, 1, { TYPE_FLOAT, TYPE_INT } },
+    { "أس",         TYPE_FLOAT, 2, { TYPE_FLOAT, TYPE_FLOAT } },
+    { "مطلق",       TYPE_INT,   1, { TYPE_INT,   TYPE_INT } },
+    { "عشوائي",     TYPE_INT,   0, { TYPE_INT,   TYPE_INT } },
+};
+
+static const BuiltinMathFuncSig* builtin_lookup_math_func(const char* name)
+{
+    if (!name) return NULL;
+    const int n = (int)(sizeof(builtin_math_funcs) / sizeof(builtin_math_funcs[0]));
+    for (int i = 0; i < n; i++) {
+        if (strcmp(name, builtin_math_funcs[i].name) == 0) {
+            return &builtin_math_funcs[i];
+        }
+    }
+    return NULL;
+}
+
+/**
+ * @brief التحقق من استدعاءات دوال الرياضيات المدمجة في v0.4.1.
+ * @return true إذا كان الاسم دالة مدمجة (سواء مع أخطاء أو بدونها)، false إذا لم يكن مدمجاً.
+ */
+static bool builtin_check_math_call(Node* call_node, const char* fname, Node* args, DataType* out_return_type)
+{
+    const BuiltinMathFuncSig* sig = builtin_lookup_math_func(fname);
+    if (!sig) return false;
+
+    int i = 0;
+    for (Node* arg = args; arg; arg = arg->next, i++) {
+        DataType got = infer_type(arg);
+        if (i < sig->param_count) {
+            DataType expected = sig->param_types[i];
+            if (!types_compatible(got, expected)) {
+                semantic_error(arg, "نوع المعامل %d في '%s' غير متوافق.", i + 1, sig->name);
+            } else {
+                maybe_warn_implicit_narrowing(got, expected, arg);
+            }
+        }
+    }
+
+    if (i != sig->param_count) {
+        semantic_error(call_node, "عدد معاملات '%s' غير صحيح (المتوقع %d).", sig->name, sig->param_count);
+    }
+
+    if (out_return_type) *out_return_type = sig->return_type;
+    node_clear_inferred_ptr(call_node);
+    return true;
+}
+
+typedef struct {
+    const char* name;
+    DataType return_type;
+    int param_count;
+    DataType param_types[1];
+} BuiltinSystemFuncSig;
+
+static const BuiltinSystemFuncSig builtin_system_funcs[] = {
+    { "متغير_بيئة", TYPE_STRING, 1, { TYPE_STRING } },
+    { "نفذ_أمر",    TYPE_INT,    1, { TYPE_STRING } },
+};
+
+static const BuiltinSystemFuncSig* builtin_lookup_system_func(const char* name)
+{
+    if (!name) return NULL;
+    const int n = (int)(sizeof(builtin_system_funcs) / sizeof(builtin_system_funcs[0]));
+    for (int i = 0; i < n; i++) {
+        if (strcmp(name, builtin_system_funcs[i].name) == 0) {
+            return &builtin_system_funcs[i];
+        }
+    }
+    return NULL;
+}
+
+/**
+ * @brief التحقق من استدعاءات دوال النظام المدمجة في v0.4.1.
+ * @return true إذا كان الاسم دالة مدمجة (سواء مع أخطاء أو بدونها)، false إذا لم يكن مدمجاً.
+ */
+static bool builtin_check_system_call(Node* call_node, const char* fname, Node* args, DataType* out_return_type)
+{
+    const BuiltinSystemFuncSig* sig = builtin_lookup_system_func(fname);
+    if (!sig) return false;
+
+    int i = 0;
+    for (Node* arg = args; arg; arg = arg->next, i++) {
+        if (i < sig->param_count) {
+            DataType expected = sig->param_types[i];
+            DataType got = infer_type_allow_null_string(arg, expected);
+            if (!types_compatible(got, expected)) {
+                semantic_error(arg, "نوع المعامل %d في '%s' غير متوافق.", i + 1, sig->name);
+            }
+        } else {
+            (void)infer_type(arg);
+        }
+    }
+
+    if (i != sig->param_count) {
+        semantic_error(call_node, "عدد معاملات '%s' غير صحيح (المتوقع %d).", sig->name, sig->param_count);
+    }
+
+    if (out_return_type) *out_return_type = sig->return_type;
+    node_clear_inferred_ptr(call_node);
+    return true;
+}
+
+typedef struct {
+    const char* name;
+    DataType return_type;
+    int param_count;
+    DataType param_types[1];
+} BuiltinTimeFuncSig;
+
+static const BuiltinTimeFuncSig builtin_time_funcs[] = {
+    { "وقت_حالي", TYPE_INT,    0, { TYPE_INT } },
+    { "وقت_كنص",  TYPE_STRING, 1, { TYPE_INT } },
+};
+
+static const BuiltinTimeFuncSig* builtin_lookup_time_func(const char* name)
+{
+    if (!name) return NULL;
+    const int n = (int)(sizeof(builtin_time_funcs) / sizeof(builtin_time_funcs[0]));
+    for (int i = 0; i < n; i++) {
+        if (strcmp(name, builtin_time_funcs[i].name) == 0) {
+            return &builtin_time_funcs[i];
+        }
+    }
+    return NULL;
+}
+
+/**
+ * @brief التحقق من استدعاءات دوال الوقت المدمجة في v0.4.1.
+ * @return true إذا كان الاسم دالة مدمجة (سواء مع أخطاء أو بدونها)، false إذا لم يكن مدمجاً.
+ */
+static bool builtin_check_time_call(Node* call_node, const char* fname, Node* args, DataType* out_return_type)
+{
+    const BuiltinTimeFuncSig* sig = builtin_lookup_time_func(fname);
+    if (!sig) return false;
+
+    int i = 0;
+    for (Node* arg = args; arg; arg = arg->next, i++) {
+        if (i < sig->param_count) {
+            DataType expected = sig->param_types[i];
+            DataType got = infer_type(arg);
+            if (!types_compatible(got, expected)) {
+                semantic_error(arg, "نوع المعامل %d في '%s' غير متوافق.", i + 1, sig->name);
+            } else {
+                maybe_warn_implicit_narrowing(got, expected, arg);
+            }
+        } else {
+            (void)infer_type(arg);
+        }
+    }
+
+    if (i != sig->param_count) {
+        semantic_error(call_node, "عدد معاملات '%s' غير صحيح (المتوقع %d).", sig->name, sig->param_count);
+    }
+
+    if (out_return_type) *out_return_type = sig->return_type;
+    node_clear_inferred_ptr(call_node);
+    return true;
+}
+
 static bool variadic_extra_arg_type_supported(DataType t)
 {
     if (t == TYPE_VOID || t == TYPE_STRUCT || t == TYPE_UNION || t == TYPE_FUNC_PTR) return false;
@@ -3800,6 +3969,15 @@ static DataType infer_type_internal(Node* node) {
                     return built_ret;
                 }
                 if (builtin_check_file_call(node, fname, node->data.call.args, &built_ret)) {
+                    return built_ret;
+                }
+                if (builtin_check_math_call(node, fname, node->data.call.args, &built_ret)) {
+                    return built_ret;
+                }
+                if (builtin_check_system_call(node, fname, node->data.call.args, &built_ret)) {
+                    return built_ret;
+                }
+                if (builtin_check_time_call(node, fname, node->data.call.args, &built_ret)) {
                     return built_ret;
                 }
 
@@ -5052,6 +5230,15 @@ static void analyze_node(Node* node) {
                     break;
                 }
                 if (builtin_check_file_call(node, fname, node->data.call.args, &built_ret)) {
+                    break;
+                }
+                if (builtin_check_math_call(node, fname, node->data.call.args, &built_ret)) {
+                    break;
+                }
+                if (builtin_check_system_call(node, fname, node->data.call.args, &built_ret)) {
+                    break;
+                }
+                if (builtin_check_time_call(node, fname, node->data.call.args, &built_ret)) {
                     break;
                 }
                 if (!fs) {

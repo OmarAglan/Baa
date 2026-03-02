@@ -1,6 +1,6 @@
 # Baa Compiler Internals
 
-> **Version:** 0.4.0.0 | [← Language Spec](LANGUAGE.md) | [API Reference →](API_REFERENCE.md)
+> **Version:** 0.4.1.0 | [← Language Spec](LANGUAGE.md) | [API Reference →](API_REFERENCE.md)
 
 **Target Architecture:** x86-64 (AMD64)
 **Targets:** Windows x64 (COFF/PE) + Linux x86-64 (ELF)
@@ -576,6 +576,7 @@ The Semantic Analyzer (`src/analysis.c`) performs a static check on the AST befo
 14. **Function Pointers (v0.3.10.6)**: Validates assignment, comparison (EQ/NE only), and indirect calls matching exact signatures.
 15. **Variadic Functions (v0.4.0.5)**: Validates `...` signatures, variadic builtin usage (`بدء_معاملات/معامل_تالي/نهاية_معاملات`), and fixed/extra argument checks for variadic direct calls.
 16. **Inline Assembly (v0.4.0.6)**: Validates `مجمع { ... }` blocks, enforces fixed-register constraint subset (`=a/=c/=d`, `a/c/d`), checks output lvalue requirements, and restricts operand types to integer/pointer forms.
+17. **Standard Library Modules (v0.4.1)**: Validates Math/System/Time builtins (`جذر_تربيعي/أس/مطلق/عشوائي/متغير_بيئة/نفذ_أمر/وقت_حالي/وقت_كنص`) for arity and type compatibility.
 
 ### 5.2. Constant Checking (v0.2.7+)
 
@@ -1346,6 +1347,10 @@ Currently lowered expressions:
   - `بدء_معاملات`: initializes variadic cursor from hidden variadic base.
   - `معامل_تالي`: reads next packed argument slot as requested type and advances cursor.
   - `نهاية_معاملات`: clears variadic cursor.
+- Builtin standard-library module calls in `NODE_CALL_EXPR` (`v0.4.1`):
+  - Math: `جذر_تربيعي` -> `sqrt`, `أس` -> `pow`, `مطلق` -> `llabs`, `عشوائي` -> `rand`
+  - System: `متغير_بيئة` -> `getenv` (+ C-string → Baa string conversion), `نفذ_أمر` -> `system`
+  - Time: `وقت_حالي` -> `time`, `وقت_كنص` -> `ctime` (+ C-string → Baa string conversion)
 
 ### 6.11. AST → IR Lowering (Statements, v0.3.0.4+)
 

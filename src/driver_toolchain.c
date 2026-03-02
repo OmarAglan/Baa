@@ -143,8 +143,8 @@ int driver_toolchain_link(const CompilerConfig *config,
     if (!config || !config->output_file) return 1;
     if (!obj_files || obj_count <= 0) return 1;
 
-    // مساحة إضافية للأعلام الاختيارية (debug/pie/startup) + -o + output + NULL
-    int argv_cap = obj_count + 12;
+    // مساحة إضافية للأعلام الاختيارية (debug/pie/startup/-lm) + -o + output + NULL
+    int argv_cap = obj_count + 13;
     const char **argv_link = (const char **)calloc((size_t)argv_cap, sizeof(char *));
     if (!argv_link)
     {
@@ -162,6 +162,9 @@ int driver_toolchain_link(const CompilerConfig *config,
 
     for (int i = 0; i < obj_count; i++)
         argv_link[lk++] = obj_files[i];
+
+    // ربط libm لدعم دوال الرياضيات القياسية (sqrt/pow) المستخدمة في stdlib v0.4.1.
+    argv_link[lk++] = "-lm";
 
     argv_link[lk++] = "-o";
     argv_link[lk++] = config->output_file;

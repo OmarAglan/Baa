@@ -1,7 +1,7 @@
 # Baa Roadmap (Updated)
 
 > Track the development progress of the Baa programming language.
-> **Current Status:** Phase 4.0.0 - Formatted Output & Input (v0.4.0.0) ✅ COMPLETED (2026-03-02)
+> **Current Status:** Phase 4.1 - Standard Library (v0.4.1) ✅ COMPLETED (2026-03-02)
 
 ---
 
@@ -1262,11 +1262,13 @@
 
 ### v0.4.1: Standard Library (مكتبة باء) 📚
 
-- [ ] **Math Module** — `جذر_تربيعي()`, `أس()`, `مطلق()`, `عشوائي()`.
-- [ ] **String Module** — Complete string manipulation.
-- [ ] **IO Module** — File and console operations.
-- [ ] **System Module** — Environment variables, command execution.
-- [ ] **Time Module** — Date/time operations.
+- [x] **Math Module** — `جذر_تربيعي()`, `أس()`, `مطلق()`, `عشوائي()`.
+- [x] **String Module** — Complete string manipulation.
+- [x] **IO Module** — File and console operations.
+- [x] **System Module** — Environment variables, command execution.
+- [x] **Time Module** — Date/time operations.
+
+✅ COMPLETED (2026-03-02)
 
 ### v0.4.2: Floating Point Extensions
 

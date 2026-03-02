@@ -6,6 +6,31 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ---
 
+## [0.4.1.0] - 2026-03-02
+
+### Added
+
+- **Standard Library modules (v0.4.1)** via compiler-backed builtins:
+  - **Math:** `جذر_تربيعي(عشري)`, `أس(عشري، عشري)`, `مطلق(صحيح)`, `عشوائي()`
+  - **System:** `متغير_بيئة(نص)`, `نفذ_أمر(نص)`
+  - **Time:** `وقت_حالي()`, `وقت_كنص(صحيح)`
+- **Stdlib header/API sync** in `stdlib/baalib.baahd` for new Math/System/Time declarations.
+- **New test coverage**:
+  - `tests/integration/backend/backend_stdlib_v041_test.baa`
+  - `tests/neg/semantic_math_sqrt_bad_type.baa`
+  - `tests/neg/semantic_system_env_bad_arity.baa`
+  - `tests/neg/semantic_time_now_bad_arity.baa`
+
+### Changed
+
+- **IR lowering** now recognizes v0.4.1 Math/System/Time APIs as builtins and lowers them directly to libc/libm calls (`sqrt`, `pow`, `llabs`, `rand`, `getenv`, `system`, `time`, `ctime`) with Arabic-first diagnostics and shadowing rules.
+- **Semantic analysis** now validates argument count/types for the new v0.4.1 APIs before codegen.
+- **Driver linker flags** now include `-lm` to ensure math runtime symbols are resolved during final link.
+
+### Fixed
+
+- **Link-time compatibility** for math stdlib calls on hosts requiring explicit libm linkage.
+
 ## [0.4.0.6] - 2026-03-02
 
 ### Added

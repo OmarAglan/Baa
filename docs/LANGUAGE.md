@@ -1323,6 +1323,33 @@ The standard library provides C-like dynamic memory APIs for low-level programmi
 }
 ```
 
+### 9.3. Math Module (الرياضيات) (v0.4.1)
+
+| Function | Signature | Description |
+|----------|-----------|-------------|
+| **Square Root** | `عشري جذر_تربيعي(عشري قيمة)` | Returns the square root of `قيمة`. |
+| **Power** | `عشري أس(عشري أساس، عشري قوة)` | Returns `أساس^قوة`. |
+| **Absolute Value** | `صحيح مطلق(صحيح قيمة)` | Returns absolute signed integer value. |
+| **Random** | `صحيح عشوائي()` | Returns a non-negative pseudo-random integer. |
+
+### 9.4. System Module (النظام) (v0.4.1)
+
+| Function | Signature | Description |
+|----------|-----------|-------------|
+| **Environment Lookup** | `نص متغير_بيئة(نص اسم)` | Returns a heap string copy of an environment variable value, or `عدم` if not found. |
+| **Command Execution** | `صحيح نفذ_أمر(نص أمر)` | Executes a host shell command and returns its status code. |
+
+**Memory Rule:** You must free the result of `متغير_بيئة(...)` using `حرر_نص(...)` or `تحرير_ذاكرة(...)`.
+
+### 9.5. Time Module (الوقت) (v0.4.1)
+
+| Function | Signature | Description |
+|----------|-----------|-------------|
+| **Current Time** | `صحيح وقت_حالي()` | Returns Unix epoch seconds. |
+| **Time as Text** | `نص وقت_كنص(صحيح طابع_زمني)` | Returns a heap string representation for a timestamp. |
+
+**Memory Rule:** You must free the result of `وقت_كنص(...)` using `حرر_نص(...)` or `تحرير_ذاكرة(...)`.
+
 ---
 
 ## 10. Inline Assembly (المجمع المدمج) (v0.4.0.6)

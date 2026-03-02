@@ -3927,6 +3927,337 @@ static IRValue* lower_call_expr(IRLowerCtx* ctx, Node* expr) {
         }
     }
 
+    bool allow_math_builtins = true;
+    if (expr->data.call.name) {
+        const char* n0 = expr->data.call.name;
+        if (find_local(ctx, n0)) {
+            allow_math_builtins = false;
+        }
+        if (m && ir_module_find_global(m, n0)) {
+            allow_math_builtins = false;
+        }
+        if (m) {
+            IRFunc* f0 = ir_module_find_func(m, n0);
+            if (f0 && !f0->is_prototype) {
+                allow_math_builtins = false;
+            }
+        }
+    }
+
+    if (allow_math_builtins && expr->data.call.name) {
+        const char* n = expr->data.call.name;
+        Node* a0 = expr->data.call.args;
+        Node* a1 = a0 ? a0->next : NULL;
+
+        if (strcmp(n, "جذر_تربيعي") == 0) {
+            if (!a0 || a1) {
+                ir_lower_report_error(ctx, expr, "استدعاء 'جذر_تربيعي' يتطلب وسيطاً واحداً.");
+                ir_lower_eval_call_args(ctx, expr->data.call.args);
+                return ir_value_const_int(0, IR_TYPE_F64_T);
+            }
+
+            IRValue* in_v = cast_to(ctx, lower_expr(ctx, a0), IR_TYPE_F64_T);
+            IRValue* args[1] = { in_v };
+            ir_lower_set_loc(ctx->builder, expr);
+            int r = ir_builder_emit_call(ctx->builder, "sqrt", IR_TYPE_F64_T, args, 1);
+            if (r < 0) {
+                ir_lower_report_error(ctx, expr, "فشل خفض نداء sqrt.");
+                return ir_value_const_int(0, IR_TYPE_F64_T);
+            }
+            return ir_value_reg(r, IR_TYPE_F64_T);
+        }
+
+        if (strcmp(n, "أس") == 0) {
+            if (!a0 || !a1 || a1->next) {
+                ir_lower_report_error(ctx, expr, "استدعاء 'أس' يتطلب وسيطين.");
+                ir_lower_eval_call_args(ctx, expr->data.call.args);
+                return ir_value_const_int(0, IR_TYPE_F64_T);
+            }
+
+            IRValue* base_v = cast_to(ctx, lower_expr(ctx, a0), IR_TYPE_F64_T);
+            IRValue* exp_v = cast_to(ctx, lower_expr(ctx, a1), IR_TYPE_F64_T);
+            IRValue* args[2] = { base_v, exp_v };
+            ir_lower_set_loc(ctx->builder, expr);
+            int r = ir_builder_emit_call(ctx->builder, "pow", IR_TYPE_F64_T, args, 2);
+            if (r < 0) {
+                ir_lower_report_error(ctx, expr, "فشل خفض نداء pow.");
+                return ir_value_const_int(0, IR_TYPE_F64_T);
+            }
+            return ir_value_reg(r, IR_TYPE_F64_T);
+        }
+
+        if (strcmp(n, "مطلق") == 0) {
+            if (!a0 || a1) {
+                ir_lower_report_error(ctx, expr, "استدعاء 'مطلق' يتطلب وسيطاً واحداً.");
+                ir_lower_eval_call_args(ctx, expr->data.call.args);
+                return ir_builder_const_i64(0);
+            }
+
+            IRValue* in_v = ensure_i64(ctx, lower_expr(ctx, a0));
+            IRValue* args[1] = { in_v };
+            ir_lower_set_loc(ctx->builder, expr);
+            int r = ir_builder_emit_call(ctx->builder, "llabs", IR_TYPE_I64_T, args, 1);
+            if (r < 0) {
+                ir_lower_report_error(ctx, expr, "فشل خفض نداء llabs.");
+                return ir_builder_const_i64(0);
+            }
+            return ir_value_reg(r, IR_TYPE_I64_T);
+        }
+
+        if (strcmp(n, "عشوائي") == 0) {
+            if (a0) {
+                ir_lower_report_error(ctx, expr, "استدعاء 'عشوائي' لا يقبل معاملات.");
+                ir_lower_eval_call_args(ctx, expr->data.call.args);
+                return ir_builder_const_i64(0);
+            }
+
+            ir_lower_set_loc(ctx->builder, expr);
+            int r = ir_builder_emit_call(ctx->builder, "rand", IR_TYPE_I32_T, NULL, 0);
+            if (r < 0) {
+                ir_lower_report_error(ctx, expr, "فشل خفض نداء rand.");
+                return ir_builder_const_i64(0);
+            }
+            return cast_to(ctx, ir_value_reg(r, IR_TYPE_I32_T), IR_TYPE_I64_T);
+        }
+    }
+
+    bool allow_system_builtins = true;
+    if (expr->data.call.name) {
+        const char* n0 = expr->data.call.name;
+        if (find_local(ctx, n0)) {
+            allow_system_builtins = false;
+        }
+        if (m && ir_module_find_global(m, n0)) {
+            allow_system_builtins = false;
+        }
+        if (m) {
+            IRFunc* f0 = ir_module_find_func(m, n0);
+            if (f0 && !f0->is_prototype) {
+                allow_system_builtins = false;
+            }
+        }
+    }
+
+    if (allow_system_builtins && expr->data.call.name) {
+        const char* n = expr->data.call.name;
+        Node* a0 = expr->data.call.args;
+        Node* a1 = a0 ? a0->next : NULL;
+
+        IRType* i8_ptr_t = ir_type_ptr(IR_TYPE_I8_T);
+        IRType* char_ptr_t = get_char_ptr_type(m);
+
+        if (strcmp(n, "متغير_بيئة") == 0) {
+            if (!a0 || a1) {
+                ir_lower_report_error(ctx, expr, "استدعاء 'متغير_بيئة' يتطلب وسيطاً واحداً.");
+                ir_lower_eval_call_args(ctx, expr->data.call.args);
+                return ir_value_const_int(0, char_ptr_t);
+            }
+
+            IRValue* key_i8 = NULL;
+            bool free_key = false;
+            if (a0->type == NODE_STRING && a0->data.string_lit.value) {
+                key_i8 = ir_builder_const_string(ctx->builder, a0->data.string_lit.value);
+            } else {
+                IRValue* key_baa = lower_expr(ctx, a0);
+                key_i8 = ir_lower_baa_string_to_cstr_alloc(ctx, expr, key_baa);
+                free_key = true;
+            }
+
+            int out_ptr_reg = ir_builder_emit_alloca(ctx->builder, i8_ptr_t);
+            IRValue* out_ptr = ir_value_reg(out_ptr_reg, ir_type_ptr(i8_ptr_t));
+            ir_builder_emit_store(ctx->builder, ir_value_const_int(0, i8_ptr_t), out_ptr);
+
+            int key_null_r = ir_builder_emit_cmp_eq(ctx->builder, key_i8, ir_value_const_int(0, i8_ptr_t));
+            IRValue* key_null = ir_value_reg(key_null_r, IR_TYPE_I1_T);
+
+            IRBlock* nullb = cf_create_block(ctx, "متغير_بيئة_مفتاح_فارغ");
+            IRBlock* callb = cf_create_block(ctx, "متغير_بيئة_نداء");
+            IRBlock* done = cf_create_block(ctx, "متغير_بيئة_نهاية");
+            if (!nullb || !callb || !done) {
+                if (free_key) {
+                    IRValue* fargs[1] = { key_i8 };
+                    ir_builder_emit_call_void(ctx->builder, "free", fargs, 1);
+                }
+                return ir_value_const_int(0, char_ptr_t);
+            }
+
+            if (!ir_builder_is_block_terminated(ctx->builder)) {
+                ir_builder_emit_br_cond(ctx->builder, key_null, nullb, callb);
+            }
+
+            ir_builder_set_insert_point(ctx->builder, nullb);
+            ir_lower_set_loc(ctx->builder, expr);
+            ir_builder_emit_store(ctx->builder, ir_value_const_int(0, i8_ptr_t), out_ptr);
+            if (free_key) {
+                IRValue* fargs[1] = { key_i8 };
+                ir_builder_emit_call_void(ctx->builder, "free", fargs, 1);
+            }
+            ir_builder_emit_br(ctx->builder, done);
+
+            ir_builder_set_insert_point(ctx->builder, callb);
+            ir_lower_set_loc(ctx->builder, expr);
+            IRValue* args[1] = { key_i8 };
+            int r = ir_builder_emit_call(ctx->builder, "getenv", i8_ptr_t, args, 1);
+            if (r < 0) {
+                ir_lower_report_error(ctx, expr, "فشل خفض نداء getenv.");
+                ir_builder_emit_store(ctx->builder, ir_value_const_int(0, i8_ptr_t), out_ptr);
+            } else {
+                ir_builder_emit_store(ctx->builder, ir_value_reg(r, i8_ptr_t), out_ptr);
+            }
+            if (free_key) {
+                IRValue* fargs[1] = { key_i8 };
+                ir_builder_emit_call_void(ctx->builder, "free", fargs, 1);
+            }
+            ir_builder_emit_br(ctx->builder, done);
+
+            ir_builder_set_insert_point(ctx->builder, done);
+            ir_lower_set_loc(ctx->builder, expr);
+            int raw_r = ir_builder_emit_load(ctx->builder, i8_ptr_t, out_ptr);
+            IRValue* raw = ir_value_reg(raw_r, i8_ptr_t);
+            return ir_lower_cstr_to_baa_string_alloc(ctx, expr, raw);
+        }
+
+        if (strcmp(n, "نفذ_أمر") == 0) {
+            if (!a0 || a1) {
+                ir_lower_report_error(ctx, expr, "استدعاء 'نفذ_أمر' يتطلب وسيطاً واحداً.");
+                ir_lower_eval_call_args(ctx, expr->data.call.args);
+                return ir_builder_const_i64(-1);
+            }
+
+            IRValue* cmd_i8 = NULL;
+            bool free_cmd = false;
+            if (a0->type == NODE_STRING && a0->data.string_lit.value) {
+                cmd_i8 = ir_builder_const_string(ctx->builder, a0->data.string_lit.value);
+            } else {
+                IRValue* cmd_baa = lower_expr(ctx, a0);
+                cmd_i8 = ir_lower_baa_string_to_cstr_alloc(ctx, expr, cmd_baa);
+                free_cmd = true;
+            }
+
+            int ret_ptr_reg = ir_builder_emit_alloca(ctx->builder, IR_TYPE_I64_T);
+            IRValue* ret_ptr = ir_value_reg(ret_ptr_reg, ir_type_ptr(IR_TYPE_I64_T));
+            ir_builder_emit_store(ctx->builder, ir_value_const_int(-1, IR_TYPE_I64_T), ret_ptr);
+
+            int cmd_null_r = ir_builder_emit_cmp_eq(ctx->builder, cmd_i8, ir_value_const_int(0, i8_ptr_t));
+            IRValue* cmd_null = ir_value_reg(cmd_null_r, IR_TYPE_I1_T);
+
+            IRBlock* nullb = cf_create_block(ctx, "نفذ_أمر_فارغ");
+            IRBlock* callb = cf_create_block(ctx, "نفذ_أمر_نداء");
+            IRBlock* done = cf_create_block(ctx, "نفذ_أمر_نهاية");
+            if (!nullb || !callb || !done) {
+                if (free_cmd) {
+                    IRValue* fargs[1] = { cmd_i8 };
+                    ir_builder_emit_call_void(ctx->builder, "free", fargs, 1);
+                }
+                return ir_builder_const_i64(-1);
+            }
+
+            if (!ir_builder_is_block_terminated(ctx->builder)) {
+                ir_builder_emit_br_cond(ctx->builder, cmd_null, nullb, callb);
+            }
+
+            ir_builder_set_insert_point(ctx->builder, nullb);
+            ir_lower_set_loc(ctx->builder, expr);
+            ir_builder_emit_store(ctx->builder, ir_value_const_int(-1, IR_TYPE_I64_T), ret_ptr);
+            if (free_cmd) {
+                IRValue* fargs[1] = { cmd_i8 };
+                ir_builder_emit_call_void(ctx->builder, "free", fargs, 1);
+            }
+            ir_builder_emit_br(ctx->builder, done);
+
+            ir_builder_set_insert_point(ctx->builder, callb);
+            ir_lower_set_loc(ctx->builder, expr);
+            IRValue* args[1] = { cmd_i8 };
+            int r = ir_builder_emit_call(ctx->builder, "system", IR_TYPE_I32_T, args, 1);
+            if (r < 0) {
+                ir_lower_report_error(ctx, expr, "فشل خفض نداء system.");
+                ir_builder_emit_store(ctx->builder, ir_value_const_int(-1, IR_TYPE_I64_T), ret_ptr);
+            } else {
+                ir_builder_emit_store(ctx->builder,
+                                      cast_to(ctx, ir_value_reg(r, IR_TYPE_I32_T), IR_TYPE_I64_T),
+                                      ret_ptr);
+            }
+            if (free_cmd) {
+                IRValue* fargs[1] = { cmd_i8 };
+                ir_builder_emit_call_void(ctx->builder, "free", fargs, 1);
+            }
+            ir_builder_emit_br(ctx->builder, done);
+
+            ir_builder_set_insert_point(ctx->builder, done);
+            ir_lower_set_loc(ctx->builder, expr);
+            int ret_r = ir_builder_emit_load(ctx->builder, IR_TYPE_I64_T, ret_ptr);
+            return ir_value_reg(ret_r, IR_TYPE_I64_T);
+        }
+    }
+
+    bool allow_time_builtins = true;
+    if (expr->data.call.name) {
+        const char* n0 = expr->data.call.name;
+        if (find_local(ctx, n0)) {
+            allow_time_builtins = false;
+        }
+        if (m && ir_module_find_global(m, n0)) {
+            allow_time_builtins = false;
+        }
+        if (m) {
+            IRFunc* f0 = ir_module_find_func(m, n0);
+            if (f0 && !f0->is_prototype) {
+                allow_time_builtins = false;
+            }
+        }
+    }
+
+    if (allow_time_builtins && expr->data.call.name) {
+        const char* n = expr->data.call.name;
+        Node* a0 = expr->data.call.args;
+        Node* a1 = a0 ? a0->next : NULL;
+
+        IRType* i8_ptr_t = ir_type_ptr(IR_TYPE_I8_T);
+        IRType* char_ptr_t = get_char_ptr_type(m);
+
+        if (strcmp(n, "وقت_حالي") == 0) {
+            if (a0) {
+                ir_lower_report_error(ctx, expr, "استدعاء 'وقت_حالي' لا يقبل معاملات.");
+                ir_lower_eval_call_args(ctx, expr->data.call.args);
+                return ir_builder_const_i64(-1);
+            }
+
+            IRValue* args[1] = { ir_value_const_int(0, i8_ptr_t) };
+            ir_lower_set_loc(ctx->builder, expr);
+            int r = ir_builder_emit_call(ctx->builder, "time", IR_TYPE_I64_T, args, 1);
+            if (r < 0) {
+                ir_lower_report_error(ctx, expr, "فشل خفض نداء time.");
+                return ir_builder_const_i64(-1);
+            }
+            return ir_value_reg(r, IR_TYPE_I64_T);
+        }
+
+        if (strcmp(n, "وقت_كنص") == 0) {
+            if (!a0 || a1) {
+                ir_lower_report_error(ctx, expr, "استدعاء 'وقت_كنص' يتطلب وسيطاً واحداً.");
+                ir_lower_eval_call_args(ctx, expr->data.call.args);
+                return ir_value_const_int(0, char_ptr_t);
+            }
+
+            IRValue* ts = ensure_i64(ctx, lower_expr(ctx, a0));
+            int ts_ptr_reg = ir_builder_emit_alloca(ctx->builder, IR_TYPE_I64_T);
+            IRValue* ts_ptr = ir_value_reg(ts_ptr_reg, ir_type_ptr(IR_TYPE_I64_T));
+            ir_builder_emit_store(ctx->builder, ts, ts_ptr);
+
+            IRValue* ts_arg = cast_to(ctx, ts_ptr, i8_ptr_t);
+            IRValue* args[1] = { ts_arg };
+            ir_lower_set_loc(ctx->builder, expr);
+            int r = ir_builder_emit_call(ctx->builder, "ctime", i8_ptr_t, args, 1);
+            if (r < 0) {
+                ir_lower_report_error(ctx, expr, "فشل خفض نداء ctime.");
+                return ir_value_const_int(0, char_ptr_t);
+            }
+
+            IRValue* raw = ir_value_reg(r, i8_ptr_t);
+            return ir_lower_cstr_to_baa_string_alloc(ctx, expr, raw);
+        }
+    }
+
     bool allow_file_builtins = true;
     if (expr->data.call.name) {
         const char* n0 = expr->data.call.name;

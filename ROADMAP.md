@@ -1,7 +1,7 @@
 # Baa Roadmap (Updated)
 
 > Track the development progress of the Baa programming language.
-> **Current Status:** Phase 4.2 - Floating Point Extensions (v0.4.2) ✅ COMPLETED (2026-03-02)
+> **Current Status:** Phase 4.5 - Bootstrap Readiness (v0.5.x) ← IN PROGRESS
 
 ---
 
@@ -1284,21 +1284,25 @@
 
 **Goal:** Graceful error management.
 
-- [ ] **Assertions**:
+- [x] **Assertions**:
 
   ```baa
   تأكد(س > ٠, "س يجب أن يكون موجباً").
   ```
 
-- [ ] **Error Codes** – Standardized error return values.
-- [ ] **Panic Function** – `توقف_فوري("رسالة خطأ")`.
+- [x] **Error Codes** – Standardized error return values.
+- [x] **Panic Function** – `توقف_فوري("رسالة خطأ")`.
+
+✅ COMPLETED (2026-03-02)
 
 ### v0.4.4: Final Polish 🎨
 
-- [ ] **Complete Documentation** — All features documented.
-- [ ] **Tutorial Series** — Step-by-step learning materials.
-- [ ] **Example Programs** — Comprehensive example collection.
-- [ ] **Performance Optimization** — Profile and optimize compiler.
+- [x] **Complete Documentation** — All features documented.
+- [x] **Tutorial Series** — Step-by-step learning materials.
+- [x] **Example Programs** — Comprehensive example collection.
+- [x] **Performance Optimization** — Profile and optimize compiler.
+
+✅ COMPLETED (2026-03-02)
 
 ## 🧱 Phase 4.5: Bootstrap Readiness (v0.5.x)
 

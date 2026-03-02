@@ -1,6 +1,6 @@
 # Baa Language Specification
 
-> **Version:** 0.4.0.0 | [← User Guide](USER_GUIDE.md) | [Compiler Internals →](INTERNALS.md)
+> **Version:** 0.4.4.0 | [← User Guide](USER_GUIDE.md) | [Compiler Internals →](INTERNALS.md)
 
 Baa (باء) is a compiled systems programming language using Arabic syntax. It compiles to native code via Assembly + host GCC/Clang on Windows and Linux.
 
@@ -1362,6 +1362,27 @@ The standard library provides C-like dynamic memory APIs for low-level programmi
 | **Time as Text** | `نص وقت_كنص(صحيح طابع_زمني)` | Returns a heap string representation for a timestamp. |
 
 **Memory Rule:** You must free the result of `وقت_كنص(...)` using `حرر_نص(...)` or `تحرير_ذاكرة(...)`.
+
+### 9.6. Error Handling Module (معالجة الأخطاء) (v0.4.3)
+
+| Function | Signature | Description |
+|----------|-----------|-------------|
+| **Assert** | `عدم تأكد(منطقي شرط، نص رسالة)` | Verifies `شرط`; if false, prints message and aborts execution. |
+| **Panic** | `عدم توقف_فوري(نص رسالة)` | Prints message and aborts execution immediately. |
+| **Get System Error** | `صحيح كود_خطأ_النظام()` | Returns current host `errno` value. |
+| **Set System Error** | `عدم ضبط_كود_خطأ_النظام(صحيح كود)` | Sets host `errno` to `كود`. |
+| **Error Text** | `نص نص_كود_خطأ(صحيح كود)` | Returns heap string message for an error code. |
+
+**Standardized Error Codes (`stdlib/baalib.baahd`):**
+
+- `كود_نجاح = 0`
+- `كود_فشل = 1`
+- `كود_وسيط_غير_صحيح = 2`
+- `كود_غير_مدعوم = 3`
+- `كود_نفاد_ذاكرة = 4`
+- `كود_نظام = 5`
+
+**Memory Rule:** You must free the result of `نص_كود_خطأ(...)` using `حرر_نص(...)` or `تحرير_ذاكرة(...)`.
 
 ---
 

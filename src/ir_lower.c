@@ -3447,6 +3447,11 @@ static IRValue* ir_lower_builtin_read_num_stdin_ar(IRLowerCtx* ctx, Node* call_e
 static IRValue* ir_lower_builtin_variadic_start(IRLowerCtx* ctx, Node* call_expr);
 static IRValue* ir_lower_builtin_variadic_next(IRLowerCtx* ctx, Node* call_expr);
 static IRValue* ir_lower_builtin_variadic_end(IRLowerCtx* ctx, Node* call_expr);
+static IRValue* ir_lower_builtin_assert(IRLowerCtx* ctx, Node* call_expr);
+static IRValue* ir_lower_builtin_panic(IRLowerCtx* ctx, Node* call_expr);
+static IRValue* ir_lower_builtin_errno_get(IRLowerCtx* ctx, Node* call_expr);
+static IRValue* ir_lower_builtin_errno_set(IRLowerCtx* ctx, Node* call_expr);
+static IRValue* ir_lower_builtin_errno_text(IRLowerCtx* ctx, Node* call_expr);
 static IRValue* lower_lvalue_address(IRLowerCtx* ctx, Node* expr, IRType** out_pointee_type);
 
 static bool ir_lower_variadic_extract_type(Node* type_arg, DataType* out_type)
@@ -3679,6 +3684,230 @@ static IRValue* ir_lower_builtin_variadic_next(IRLowerCtx* ctx, Node* call_expr)
     return val;
 }
 
+static const char* ir_lower_errno_symbol(const IRLowerCtx* ctx)
+{
+    bool is_win = (ctx && ctx->target && ctx->target->kind == BAA_TARGET_X86_64_WINDOWS);
+    return is_win ? "_errno" : "__errno_location";
+}
+
+static void ir_lower_emit_message_and_free_if_needed(IRLowerCtx* ctx,
+                                                     const Node* site,
+                                                     IRValue* cstr_msg,
+                                                     bool free_msg)
+{
+    if (!ctx || !ctx->builder || !cstr_msg) return;
+
+    IRBuilder* b = ctx->builder;
+    IRType* i8_ptr_t = ir_type_ptr(IR_TYPE_I8_T);
+    IRValue* n = ir_value_const_int(0, i8_ptr_t);
+
+    int is_null_r = ir_builder_emit_cmp_eq(b, cstr_msg, n);
+    IRValue* is_null = ir_value_reg(is_null_r, IR_TYPE_I1_T);
+
+    IRBlock* skipb = cf_create_block(ctx, "رسالة_تخطي");
+    IRBlock* printb = cf_create_block(ctx, "رسالة_طباعة");
+    IRBlock* doneb = cf_create_block(ctx, "رسالة_نهاية");
+    if (!skipb || !printb || !doneb) {
+        if (free_msg) {
+            IRValue* fargs[1] = { cstr_msg };
+            ir_builder_emit_call_void(b, "free", fargs, 1);
+        }
+        return;
+    }
+
+    if (!ir_builder_is_block_terminated(b)) {
+        ir_builder_emit_br_cond(b, is_null, skipb, printb);
+    }
+
+    ir_builder_set_insert_point(b, printb);
+    if (site) ir_lower_set_loc(b, site);
+    IRValue* pargs[1] = { cstr_msg };
+    (void)ir_builder_emit_call(b, "puts", IR_TYPE_I32_T, pargs, 1);
+    if (free_msg) {
+        IRValue* fargs[1] = { cstr_msg };
+        ir_builder_emit_call_void(b, "free", fargs, 1);
+    }
+    ir_builder_emit_br(b, doneb);
+
+    ir_builder_set_insert_point(b, skipb);
+    if (site) ir_lower_set_loc(b, site);
+    if (free_msg) {
+        IRValue* fargs[1] = { cstr_msg };
+        ir_builder_emit_call_void(b, "free", fargs, 1);
+    }
+    ir_builder_emit_br(b, doneb);
+
+    ir_builder_set_insert_point(b, doneb);
+    if (site) ir_lower_set_loc(b, site);
+}
+
+static IRValue* ir_lower_build_panic_path(IRLowerCtx* ctx, Node* site, Node* msg_node, const char* header)
+{
+    if (!ctx || !ctx->builder) return ir_builder_const_i64(0);
+
+    IRBuilder* b = ctx->builder;
+    IRType* i8_ptr_t = ir_type_ptr(IR_TYPE_I8_T);
+
+    if (header && header[0]) {
+        IRValue* hv = ir_builder_const_string(b, header);
+        IRValue* hargs[1] = { hv };
+        (void)ir_builder_emit_call(b, "puts", IR_TYPE_I32_T, hargs, 1);
+    }
+
+    if (msg_node) {
+        IRValue* msg_i8 = NULL;
+        bool free_msg = false;
+
+        if (msg_node->type == NODE_STRING && msg_node->data.string_lit.value) {
+            msg_i8 = ir_builder_const_string(b, msg_node->data.string_lit.value);
+        } else {
+            IRValue* msg_baa = lower_expr(ctx, msg_node);
+            msg_i8 = ir_lower_baa_string_to_cstr_alloc(ctx, site, msg_baa);
+            free_msg = true;
+        }
+
+        if (!msg_i8) {
+            msg_i8 = ir_value_const_int(0, i8_ptr_t);
+        }
+        ir_lower_emit_message_and_free_if_needed(ctx, site, msg_i8, free_msg);
+    }
+
+    ir_lower_emit_abort_path(ctx);
+
+    IRBlock* cont = cf_create_block(ctx, "ذعر_متابعة");
+    if (cont) {
+        ir_builder_set_insert_point(b, cont);
+        if (site) ir_lower_set_loc(b, site);
+    }
+    return ir_builder_const_i64(0);
+}
+
+static IRValue* ir_lower_builtin_assert(IRLowerCtx* ctx, Node* call_expr)
+{
+    if (!ctx || !ctx->builder || !call_expr) return ir_builder_const_i64(0);
+
+    Node* a0 = call_expr->data.call.args;
+    Node* a1 = a0 ? a0->next : NULL;
+    if (!a0 || !a1 || a1->next) {
+        ir_lower_report_error(ctx, call_expr, "استدعاء 'تأكد' يتطلب وسيطين.");
+        ir_lower_eval_call_args(ctx, call_expr->data.call.args);
+        return ir_builder_const_i64(0);
+    }
+
+    IRValue* cond_v = cast_to(ctx, lower_expr(ctx, a0), IR_TYPE_I1_T);
+    IRBlock* passb = cf_create_block(ctx, "تأكد_سليم");
+    IRBlock* failb = cf_create_block(ctx, "تأكد_فشل");
+    if (!passb || !failb) {
+        ir_lower_report_error(ctx, call_expr, "فشل إنشاء كتل تحكم لـ 'تأكد'.");
+        return ir_builder_const_i64(0);
+    }
+
+    if (!ir_builder_is_block_terminated(ctx->builder)) {
+        ir_builder_emit_br_cond(ctx->builder, cond_v, passb, failb);
+    }
+
+    ir_builder_set_insert_point(ctx->builder, failb);
+    ir_lower_set_loc(ctx->builder, call_expr);
+    (void)ir_lower_build_panic_path(ctx, call_expr, a1, "فشل_تأكد");
+
+    ir_builder_set_insert_point(ctx->builder, passb);
+    ir_lower_set_loc(ctx->builder, call_expr);
+    return ir_builder_const_i64(0);
+}
+
+static IRValue* ir_lower_builtin_panic(IRLowerCtx* ctx, Node* call_expr)
+{
+    if (!ctx || !ctx->builder || !call_expr) return ir_builder_const_i64(0);
+
+    Node* a0 = call_expr->data.call.args;
+    if (!a0 || a0->next) {
+        ir_lower_report_error(ctx, call_expr, "استدعاء 'توقف_فوري' يتطلب معاملاً واحداً.");
+        ir_lower_eval_call_args(ctx, call_expr->data.call.args);
+        return ir_builder_const_i64(0);
+    }
+    return ir_lower_build_panic_path(ctx, call_expr, a0, "توقف_فوري");
+}
+
+static IRValue* ir_lower_builtin_errno_get(IRLowerCtx* ctx, Node* call_expr)
+{
+    if (!ctx || !ctx->builder || !call_expr) return ir_builder_const_i64(0);
+
+    if (call_expr->data.call.args) {
+        ir_lower_report_error(ctx, call_expr, "استدعاء 'كود_خطأ_النظام' لا يقبل معاملات.");
+        ir_lower_eval_call_args(ctx, call_expr->data.call.args);
+        return ir_builder_const_i64(0);
+    }
+
+    IRType* i32_ptr_t = ir_type_ptr(IR_TYPE_I32_T);
+    const char* errno_fn = ir_lower_errno_symbol(ctx);
+    ir_lower_set_loc(ctx->builder, call_expr);
+    int pr = ir_builder_emit_call(ctx->builder, errno_fn, i32_ptr_t, NULL, 0);
+    if (pr < 0) {
+        ir_lower_report_error(ctx, call_expr, "فشل خفض نداء مؤشر errno.");
+        return ir_builder_const_i64(0);
+    }
+
+    IRValue* p = ir_value_reg(pr, i32_ptr_t);
+    int vr = ir_builder_emit_load(ctx->builder, IR_TYPE_I32_T, p);
+    return cast_to(ctx, ir_value_reg(vr, IR_TYPE_I32_T), IR_TYPE_I64_T);
+}
+
+static IRValue* ir_lower_builtin_errno_set(IRLowerCtx* ctx, Node* call_expr)
+{
+    if (!ctx || !ctx->builder || !call_expr) return ir_builder_const_i64(0);
+
+    Node* a0 = call_expr->data.call.args;
+    if (!a0 || a0->next) {
+        ir_lower_report_error(ctx, call_expr, "استدعاء 'ضبط_كود_خطأ_النظام' يتطلب معاملاً واحداً.");
+        ir_lower_eval_call_args(ctx, call_expr->data.call.args);
+        return ir_builder_const_i64(0);
+    }
+
+    IRType* i32_ptr_t = ir_type_ptr(IR_TYPE_I32_T);
+    const char* errno_fn = ir_lower_errno_symbol(ctx);
+
+    IRValue* in_i64 = ensure_i64(ctx, lower_expr(ctx, a0));
+    IRValue* in_i32 = cast_to(ctx, in_i64, IR_TYPE_I32_T);
+
+    ir_lower_set_loc(ctx->builder, call_expr);
+    int pr = ir_builder_emit_call(ctx->builder, errno_fn, i32_ptr_t, NULL, 0);
+    if (pr < 0) {
+        ir_lower_report_error(ctx, call_expr, "فشل خفض نداء مؤشر errno.");
+        return ir_builder_const_i64(0);
+    }
+
+    IRValue* p = ir_value_reg(pr, i32_ptr_t);
+    ir_builder_emit_store(ctx->builder, in_i32, p);
+    return ir_builder_const_i64(0);
+}
+
+static IRValue* ir_lower_builtin_errno_text(IRLowerCtx* ctx, Node* call_expr)
+{
+    if (!ctx || !ctx->builder || !call_expr) return ir_value_const_int(0, get_char_ptr_type(ctx->builder->module));
+
+    Node* a0 = call_expr->data.call.args;
+    if (!a0 || a0->next) {
+        ir_lower_report_error(ctx, call_expr, "استدعاء 'نص_كود_خطأ' يتطلب معاملاً واحداً.");
+        ir_lower_eval_call_args(ctx, call_expr->data.call.args);
+        return ir_value_const_int(0, get_char_ptr_type(ctx->builder->module));
+    }
+
+    IRType* i8_ptr_t = ir_type_ptr(IR_TYPE_I8_T);
+    IRType* char_ptr_t = get_char_ptr_type(ctx->builder->module);
+
+    IRValue* in_i64 = ensure_i64(ctx, lower_expr(ctx, a0));
+    IRValue* in_i32 = cast_to(ctx, in_i64, IR_TYPE_I32_T);
+    IRValue* args[1] = { in_i32 };
+
+    ir_lower_set_loc(ctx->builder, call_expr);
+    int r = ir_builder_emit_call(ctx->builder, "strerror", i8_ptr_t, args, 1);
+    if (r < 0) {
+        ir_lower_report_error(ctx, call_expr, "فشل خفض نداء strerror.");
+        return ir_value_const_int(0, char_ptr_t);
+    }
+    return ir_lower_cstr_to_baa_string_alloc(ctx, call_expr, ir_value_reg(r, i8_ptr_t));
+}
+
 static IRValue* lower_call_expr(IRLowerCtx* ctx, Node* expr) {
     if (!ctx || !ctx->builder || !expr) return ir_builder_const_i64(0);
 
@@ -3724,6 +3953,21 @@ static IRValue* lower_call_expr(IRLowerCtx* ctx, Node* expr) {
         }
         if (strcmp(n, "نهاية_معاملات") == 0) {
             return ir_lower_builtin_variadic_end(ctx, expr);
+        }
+        if (strcmp(n, "تأكد") == 0) {
+            return ir_lower_builtin_assert(ctx, expr);
+        }
+        if (strcmp(n, "توقف_فوري") == 0) {
+            return ir_lower_builtin_panic(ctx, expr);
+        }
+        if (strcmp(n, "كود_خطأ_النظام") == 0) {
+            return ir_lower_builtin_errno_get(ctx, expr);
+        }
+        if (strcmp(n, "ضبط_كود_خطأ_النظام") == 0) {
+            return ir_lower_builtin_errno_set(ctx, expr);
+        }
+        if (strcmp(n, "نص_كود_خطأ") == 0) {
+            return ir_lower_builtin_errno_text(ctx, expr);
         }
     }
 

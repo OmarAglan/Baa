@@ -1,6 +1,6 @@
 # Baa IR Specification
 
-> **Version:** 0.4.2.0 | [← Compiler Internals](INTERNALS.md) | [API Reference →](API_REFERENCE.md)
+> **Version:** 0.4.4.0 | [← Compiler Internals](INTERNALS.md) | [API Reference →](API_REFERENCE.md)
 
 This document specifies the Intermediate Representation (IR) for the Baa compiler. The IR uses Arabic naming conventions throughout, creating a culturally authentic yet technically robust design.
 
@@ -426,6 +426,11 @@ internal global @عداد_داخلي = ص٦٤ ٠ // ربط داخلي (v0.3.7.5)
 
 ملاحظة (`v0.4.2`): في مسار التنسيق العربي المدمج، `%أ` (scientific float) يُترجم
 إلى `%e/%le` على مستوى نداءات libc (`printf`/`snprintf`/`scanf`).
+
+ملاحظة (`v0.4.3`): دوال معالجة الأخطاء
+`تأكد/توقف_فوري/كود_خطأ_النظام/ضبط_كود_خطأ_النظام/نص_كود_خطأ`
+تُخفض إلى مسارات `abort` ونداءات libc (`puts`, `strerror`) وجسر `errno`
+حسب الهدف النشط (`__errno_location` على Linux و`_errno` على Windows).
 
 ### 6.2 Variable Handling
 

@@ -6,6 +6,48 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ---
 
+## [0.4.4.0] - 2026-03-02
+
+### Added
+
+- **Final Polish deliverables (v0.4.4)**:
+  - Arabic tutorial series: `docs/TUTORIALS_AR.md`
+  - Performance guide: `docs/PERFORMANCE.md`
+  - Curated example set under `examples/` with index `examples/README.md`
+- **New examples**:
+  - `examples/hello_world.baa`
+  - `examples/math_and_format.baa`
+  - `examples/error_handling_demo.baa`
+  - `examples/file_copy_small.baa`
+
+### Changed
+
+- **Documentation synchronization**: updated core references (`README.md`, `docs/LANGUAGE.md`, `docs/INTERNALS.md`, `docs/API_REFERENCE.md`, `docs/BAA_IR_SPECIFICATION.md`) to reflect v0.4.3/v0.4.4 behavior and versioning.
+- **Roadmap status**: marked v0.4.3 and v0.4.4 as completed and advanced current status to Phase 4.5 in progress.
+
+## [0.4.3.0] - 2026-03-02
+
+### Added
+
+- **Error handling builtins (v0.4.3)**:
+  - `تأكد(منطقي، نص)` for assertion-style fail-fast checks.
+  - `توقف_فوري(نص)` for immediate fatal termination.
+  - `كود_خطأ_النظام()` / `ضبط_كود_خطأ_النظام(صحيح)` for host `errno` bridging.
+  - `نص_كود_خطأ(صحيح)` for textual error description (heap string).
+- **Standardized error-code constants** in `stdlib/baalib.baahd`:
+  - `كود_نجاح`, `كود_فشل`, `كود_وسيط_غير_صحيح`, `كود_غير_مدعوم`, `كود_نفاد_ذاكرة`, `كود_نظام`.
+- **New test coverage**:
+  - `tests/integration/backend/backend_error_handling_v043_test.baa`
+  - `tests/neg/semantic_assert_bad_arity.baa`
+  - `tests/neg/semantic_assert_message_bad_type.baa`
+  - `tests/neg/semantic_panic_bad_arity.baa`
+  - `tests/neg/semantic_errno_text_bad_type.baa`
+
+### Changed
+
+- **Semantic analysis** now validates v0.4.3 error-handling APIs for arity/type compatibility.
+- **IR lowering** now lowers v0.4.3 APIs to fail-fast abort paths and libc bridges (`puts`, `strerror`, `__errno_location`/`_errno`) with Arabic diagnostics.
+
 ## [0.4.2.0] - 2026-03-02
 
 ### Added

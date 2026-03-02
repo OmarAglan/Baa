@@ -1375,11 +1375,34 @@
 - [ ] **Behavioral equivalence checks** — output parity vs C implementation.
 - [ ] **Go/No-Go report for Phase 5** — readiness decision based on objective gates.
 
+#### Phase 4.5 Exit Criteria (Mandatory Before Phase 5)
+
+- [ ] **Cross-target QA green** — `quick/full` pass on both `x86_64-windows` and `x86_64-linux`.
+- [ ] **Determinism checks green** — stable IR text and stable diagnostics for identical inputs.
+- [ ] **File-size governance active** — CI guard for module-size budget is enforced.
+- [ ] **Contracts frozen and published** — grammar/ABI/IR/Baa0 docs tagged and versioned.
+- [ ] **Bootstrap handoff bundle ready** — scripts + manifests + reproducible build notes archived.
+
+#### Phase 4.5 Required Artifacts
+
+- [ ] `docs/COMPONENT_OWNERSHIP.md` — boundaries + owners + allowed dependencies.
+- [ ] `docs/BOOTSTRAP_CONTRACT.md` — frozen ABI/IR/language requirements for v0.9.
+- [ ] `docs/BAA0_SPEC.md` — bootstrap subset definition and exclusions.
+- [ ] `scripts/qa_bootstrap_gate.py` — one-command admission checks for Phase 5.
+- [ ] `tests/bootstrap/` — parity corpus dedicated to migration from C → Baa slices.
+
 ---
 
 ## 🚀 Phase 5: Self-Hosting (v1.0.0)
 
 *Goal: The ultimate proof of capability — Baa compiling itself.*
+
+### Phase 5 Operating Rules (No Scope Drift)
+
+- [ ] **Feature freeze during migration** — no new language features while porting compiler slices.
+- [ ] **Parity-first policy** — semantic/diagnostic/IR behavior must match C baseline unless explicitly approved.
+- [ ] **Target parity policy** — every migration milestone must pass on Windows + Linux.
+- [ ] **Rollback-ready checkpoints** — each slice port keeps a reversible gate in CI.
 
 ### v0.9.0: Bootstrap Execution Baseline 🔧
 
@@ -1394,6 +1417,8 @@
 - [ ] **Enable mixed-unit builds** — compile/link `.c` and `.baa` compiler units together.
 - [ ] **Define bridge boundaries** — stable ABI/data-layout interfaces between C and Baa modules.
 - [ ] **Add parity harness** — module-level equivalence checks (tokens/AST/IR/asm as applicable).
+- [ ] **Golden corpus harness** — fixed corpus with expected outputs for every migration step.
+- [ ] **Diff tooling** — normalized comparator for diagnostics and IR text.
 
 ### v0.9.1: Rewrite Lexer 📝
 
@@ -1401,6 +1426,8 @@
 - [ ] **Build through mixed harness** — keep remaining compiler units in C.
 - [ ] **Token-stream parity tests** — compare lexer output against C baseline.
 - [ ] **No feature expansion in v0.9** — only correctness/portability fixes permitted.
+- [ ] **UTF-8 and preprocessor parity** — nested includes/macros/conditionals must match C behavior.
+- [ ] **Stress corpus parity** — large and malformed sources produce equivalent diagnostics.
 
 ### v0.9.2: Rewrite Parser 🌳
 
@@ -1408,30 +1435,40 @@
 - [ ] **Build through mixed harness** — C/Baa hybrid remains supported.
 - [ ] **AST + diagnostics parity tests** — match C baseline trees and key error anchors.
 - [ ] **Recursion/stack validation** — ensure depth safety on both targets.
+- [ ] **Panic recovery parity** — same synchronization behavior for statement/declaration/switch modes.
+- [ ] **Alias/type grammar parity** — no regressions in parser-side alias resolution.
 
 ### v0.9.3: Rewrite Semantic Analysis 🔍
 
 - [ ] **Port semantic slice to Baa** — preserve existing type/ABI rules.
 - [ ] **Port symbol/scope tables** — with ownership semantics equivalent to C version.
 - [ ] **Negative-suite parity** — verify same diagnostics and failure points.
+- [ ] **Warning parity** — warning classes and trigger points match baseline behavior.
+- [ ] **Deterministic diagnostics** — stable ordering/text for repeated runs.
 
 ### v0.9.4: Rewrite IR 🔄
 
 - [ ] **Port IR core + lowering slices to Baa** — aligned with v0.5 split modules.
 - [ ] **IR verifier parity** — preserve well-formedness and SSA contracts.
 - [ ] **IR text parity tests** — compare canonical IR output vs C baseline.
+- [ ] **Optimizer gate parity** — `--verify-ir/--verify-ssa` remain clean across corpus.
+- [ ] **Arena/ownership parity** — preserve module-owned bulk-free behavior.
 
 ### v0.9.5: Rewrite Code Generator ⚙️
 
 - [ ] **Port backend slices to Baa** — ISel/RegAlloc/Emit with unchanged ABI behavior.
 - [ ] **Target parity** — Windows x64 and Linux x64 assembly equivalence gates.
 - [ ] **Runtime parity** — integration tests must match C compiler behavior.
+- [ ] **ABI edge-case suite** — variadics, float args/returns, pointer-heavy calls, stack alignment.
+- [ ] **Asm diff audit** — differences explained and approved when semantically equivalent.
 
 ### v0.9.6: Rewrite Driver 🚗
 
 - [ ] **Port driver/diagnostics slices to Baa** — CLI orchestration + error reporting.
 - [ ] **Retire mixed mode** — switch default build to full-Baa compiler pipeline.
 - [ ] **Full compiler in Baa** — all core components ported and wired.
+- [ ] **CLI parity matrix** — all important flags preserve behavior (`--verify`, `--target`, `-S`, `-c`, ...).
+- [ ] **Multi-file parity** — compile/link workflows remain deterministic and stable.
 
 ### v1.0.0: First Self-Compile 🏆
 
@@ -1441,6 +1478,14 @@
 - [ ] **Compile Baa compiler with baa₂** — Produces baa₃.
 - [ ] **Verify baa₂ == baa₃** — Reproducible builds!
 - [ ] **Release v1.0.0** — Historic milestone! 🎉
+
+#### Phase 5 Exit Criteria (Release Gates)
+
+- [ ] **Functional parity** — all core QA suites pass using baa₁/baa₂ toolchains.
+- [ ] **Reproducibility parity** — bootstrap stages produce stable outputs per target.
+- [ ] **Operational parity** — driver flags + diagnostics match expected contracts.
+- [ ] **Performance budget** — compile-time regression remains within agreed threshold.
+- [ ] **Documentation parity** — bootstrap and recovery procedures are complete.
 
 #### Bootstrap Verification Script
 
@@ -1473,6 +1518,13 @@ fi
 
 *Goal: Remove dependency on external assembler (GAS/MASM).*
 
+### Phase 6 Architecture Scope
+
+- [ ] **Frontend** — assembly lexer/parser with strict diagnostics.
+- [ ] **Core** — instruction model + encoder + relocation planner.
+- [ ] **Writers** — COFF/ELF object emitters with symbol/relocation tables.
+- [ ] **Integration** — backend handoff + CLI controls + verification pipeline.
+
 ### v1.5.0: Baa Assembler (مُجمِّع باء) 🔧
 
 #### v1.5.0.1: Assembler Foundation
@@ -1481,6 +1533,8 @@ fi
 - [ ] **Parse assembly text** — Tokenize AT&T/Intel syntax.
 - [ ] **Build instruction IR** — Internal representation of machine code.
 - [ ] **Handle labels** — Track label addresses for jumps.
+- [ ] **MVP syntax decision** — AT&T as canonical input first, Intel optional later.
+- [ ] **Source mapping** — retain line/column mapping for assembler diagnostics.
 
 #### v1.5.0.2: x86-64 Encoding
 
@@ -1489,6 +1543,8 @@ fi
 - [ ] **Immediate encoding** — Handle different immediate sizes.
 - [ ] **Displacement encoding** — Memory offset encoding.
 - [ ] **Instruction validation** — Check valid operand combinations.
+- [ ] **Coverage matrix** — define required instruction families for Baa backend output.
+- [ ] **Relocation-aware encoding** — encode fixup placeholders for unresolved symbols.
 
 #### v1.5.0.3: Object File Generation
 
@@ -1497,6 +1553,8 @@ fi
 - [ ] **Section handling** — .text, .data, .bss, .rodata.
 - [ ] **Symbol table** — Export/import symbols.
 - [ ] **Relocation entries** — Handle address fixups.
+- [ ] **ABI metadata correctness** — calling-convention relevant symbol attributes.
+- [ ] **Cross-platform conformance tests** — validate produced `.obj/.o` with system linkers.
 
 #### v1.5.0.4: Assembler Integration
 
@@ -1504,6 +1562,8 @@ fi
 - [ ] **`--use-internal-asm` flag** — Optional internal assembler.
 - [ ] **Verify output** — Compare with GAS output.
 - [ ] **Performance test** — Ensure acceptable speed.
+- [ ] **Fallback policy** — clear fallback to external assembler on unsupported patterns.
+- [ ] **CI dual-mode runs** — external/internal assembler comparison in regression pipeline.
 
 #### v1.5.0.5: Assembler Polish
 
@@ -1512,11 +1572,32 @@ fi
 - [ ] **Listing output** — Optional assembly listing with addresses.
 - [ ] **Documentation** — Assembler internals guide.
 
+#### v1.5.0.6: Assembler Release Gate
+
+- [ ] **Default-on readiness** — internal assembler can become default for supported targets.
+- [ ] **Stability gate** — crash-free stress/fuzz-lite runs across assembler corpus.
+- [ ] **Parity signoff** — approved diff report vs GAS on representative corpus.
+
 ---
 
 ## 🔗 Phase 7: Own Linker (v2.0.0)
 
 *Goal: Remove dependency on external linker (ld/link.exe).*
+
+### Phase 7 Architecture Scope
+
+- [ ] **Object ingestion layer** — robust COFF/ELF readers with strict validation.
+- [ ] **Link graph core** — symbol table, section graph, relocation plan, address assignment.
+- [ ] **Format writers** — PE/ELF executable writers with deterministic layout rules.
+- [ ] **Runtime bridge layer** — controlled integration with CRT/system runtime requirements.
+- [ ] **Verification layer** — parity checks vs system linkers + deterministic output checks.
+
+### Phase 7 Operating Rules
+
+- [ ] **Deterministic link ordering** — stable output independent of host filesystem ordering.
+- [ ] **No silent symbol resolution** — ambiguous/duplicate/undefined symbols must emit explicit diagnostics.
+- [ ] **Relocation correctness first** — overflow and invalid relocation types are hard failures.
+- [ ] **Target isolation** — Windows and Linux paths share abstractions, not target-specific hacks.
 
 ### v2.0.0: Baa Linker (رابط باء) 🔗
 
@@ -1526,12 +1607,16 @@ fi
 - [ ] **Symbol resolution** — Match symbol references to definitions.
 - [ ] **Section merging** — Combine sections from multiple objects.
 - [ ] **Memory layout** — Assign virtual addresses to sections.
+- [ ] **Archive scanning strategy** — deterministic one-pass/two-pass policy for `.a/.lib`.
+- [ ] **Input validation policy** — reject malformed object metadata with Arabic diagnostics.
 
 #### v2.0.0.2: Relocation Processing
 
 - [ ] **Apply relocations** — Fix up addresses in code/data.
 - [ ] **Handle relocation types** — PC-relative, absolute, GOT, PLT.
 - [ ] **Overflow detection** — Check address range limits.
+- [ ] **Relocation test matrix** — per-target coverage for required relocation kinds.
+- [ ] **Late-binding audit logs** — debug trace mode for relocation decisions.
 
 #### v2.0.0.3: Executable Generation (Windows)
 
@@ -1541,6 +1626,8 @@ fi
 - [ ] **Import table** — For C runtime and Windows API.
 - [ ] **Export table** — If building DLLs (future).
 - [ ] **Generate .exe** — Complete Windows executable.
+- [ ] **PE conformance checks** — verify headers/alignments with tooling (`dumpbin`/`llvm-readobj`).
+- [ ] **Subsystem policies** — console/gui/custom-startup rules documented and tested.
 
 #### v2.0.0.4: Executable Generation (Linux)
 
@@ -1549,6 +1636,8 @@ fi
 - [ ] **Section headers** — .text, .data, .rodata, .bss.
 - [ ] **Dynamic linking info** — For libc linkage.
 - [ ] **Generate executable** — Complete Linux binary.
+- [ ] **ELF conformance checks** — validate segments/sections with `readelf`/`objdump`.
+- [ ] **PIE/non-PIE policy** — deterministic handling for code model and relocation mode.
 
 #### v2.0.0.5: Linker Features
 
@@ -1557,6 +1646,8 @@ fi
 - [ ] **Entry point selection** — Custom entry point support.
 - [ ] **Strip symbols** — Remove debug symbols for release.
 - [ ] **Map file** — Generate link map for debugging.
+- [ ] **Section GC plan** — optional dead-section elimination with safety checks.
+- [ ] **Weak symbol semantics** — explicit target-specific behavior for weak/strong bindings.
 
 #### v2.0.0.6: Linker Integration
 
@@ -1564,12 +1655,42 @@ fi
 - [ ] **`--use-internal-linker` flag** — Optional internal linker.
 - [ ] **Verify output** — Compare with system linker output.
 - [ ] **End-to-end test** — Compile and link without external tools.
+- [ ] **Dual-link CI mode** — run internal and system linker paths on same corpus.
+- [ ] **Fallback policy** — controlled fallback with reasoned diagnostics when unsupported.
+
+#### v2.0.0.7: Linker Release Gate
+
+- [ ] **Cross-target parity signoff** — runtime and symbol behavior match system linker expectations.
+- [ ] **Determinism signoff** — stable binary layout for identical inputs/toolchains.
+- [ ] **Stress signoff** — large multi-object links and archive-heavy workloads remain stable.
+
+#### Phase 7 Exit Criteria
+
+- [ ] **Default-on readiness** — internal linker can be default for supported targets.
+- [ ] **Regression stability** — quick/full/stress QA pass with internal linker enabled.
+- [ ] **Debuggability baseline** — diagnostics + map output sufficient for failure triage.
 
 ---
 
 ## 🏆 Phase 8: Full Independence (v3.0.0)
 
 *Goal: Zero external dependencies — Baa builds itself with no external tools.*
+
+### Phase 8 Architecture Scope
+
+- [ ] **Runtime kernel layer** — startup, syscall/API bridge, memory primitives, and process exit flow.
+- [ ] **Native stdlib layer** — string/math/memory/io modules implemented in Baa with stable ABI contracts.
+- [ ] **Bootstrap provenance layer** — staged compiler lineage (`baa0 -> baa1 -> baa2`) with hashable artifacts.
+- [ ] **Hermetic build layer** — controlled inputs, pinned flags, deterministic packaging outputs.
+- [ ] **Operational verification layer** — dependency scans, runtime smoke tests, and cross-target release gates.
+
+### Phase 8 Operating Rules
+
+- [ ] **No hidden host dependencies** — any required host tool must be explicitly listed in bootstrap docs.
+- [ ] **Reproducibility-first policy** — build determinism regressions block release.
+- [ ] **Cross-target parity policy** — Windows/Linux runtime features must ship together or stay gated.
+- [ ] **Fail-fast runtime diagnostics** — startup/syscall/runtime failures must emit explicit Arabic-first errors.
+- [ ] **Recovery-path requirement** — each independence milestone must define rollback and re-bootstrap steps.
 
 ### v3.0.0: Complete Toolchain 🛠️
 
@@ -1583,6 +1704,8 @@ fi
 - [ ] **Implement memory functions** — HeapAlloc/HeapFree instead of malloc/free.
 - [ ] **Implement file I/O** — CreateFile, ReadFile, WriteFile.
 - [ ] **Custom entry point** — Replace C runtime startup.
+- [ ] **SEH-aware startup** — preserve stable crash/exit semantics without CRT helpers.
+- [ ] **Win64 ABI compliance checks** — stack alignment, shadow space, and return path verified.
 
 **Linux:**
 
@@ -1592,6 +1715,8 @@ fi
 - [ ] **Implement memory functions** — mmap/munmap for allocation.
 - [ ] **Implement file I/O** — open, read, write, close syscalls.
 - [ ] **Custom _start** — No libc dependency.
+- [ ] **Syscall ABI validation** — register/stack contracts verified on x86_64 SystemV.
+- [ ] **Signal/exit behavior checks** — deterministic termination semantics across test corpus.
 
 #### v3.0.0.2: Native Standard Library
 
@@ -1599,6 +1724,9 @@ fi
 - [ ] **Rewrite math functions in Baa** — Pure Baa implementation.
 - [ ] **Rewrite memory functions in Baa** — Custom allocator.
 - [ ] **Full standard library in Baa** — All library code in Baa.
+- [ ] **Module boundary contracts** — document stable APIs for `core`, `memory`, `string`, `math`, `io`.
+- [ ] **Behavioral parity suite** — compare stdlib behavior vs prior runtime expectations.
+- [ ] **Allocator policy gates** — fragmentation/throughput baselines for long-running workloads.
 
 #### v3.0.0.3: Self-Contained Build
 
@@ -1606,6 +1734,9 @@ fi
 - [ ] **Cross-compilation support** — Build Linux binary on Windows and vice versa.
 - [ ] **Reproducible builds** — Same source → identical binary.
 - [ ] **Bootstrap from source** — Document minimal bootstrap path.
+- [ ] **Hermetic manifest** — lock source inputs, flags, and artifact metadata per release.
+- [ ] **Stage replay tooling** — deterministic scripts to replay bootstrap on clean machines.
+- [ ] **Provenance hashing** — publish hashes for each stage artifact and final binaries.
 
 #### v3.0.0.4: Verification & Release
 
@@ -1614,6 +1745,22 @@ fi
 - [ ] **Security audit** — Review for vulnerabilities.
 - [ ] **Documentation complete** — Full toolchain documentation.
 - [ ] **Release v3.0.0** — Fully independent Baa! 🎉
+- [ ] **Supply-chain audit** — verify release pipeline does not reintroduce external tool reliance.
+- [ ] **Disaster-recovery drill** — validate clean-room bootstrap from tagged sources.
+
+#### v3.0.0.5: Independence Release Gate
+
+- [ ] **Zero-dependency signoff** — compile/assemble/link/run path requires only Baa-delivered artifacts.
+- [ ] **Deterministic bootstrap signoff** — repeated stage builds are byte-stable per target.
+- [ ] **Cross-target signoff** — Windows + Linux release candidates pass identical gate checklist.
+- [ ] **Operational signoff** — upgrade/rollback/bootstrap recovery procedures validated and documented.
+
+#### Phase 8 Exit Criteria
+
+- [ ] **Runtime independence** — no libc/CRT dependency in default build+run workflow.
+- [ ] **Toolchain independence** — compiler, assembler, linker, and runtime owned by Baa project.
+- [ ] **Reproducibility baseline** — release artifacts are verifiable and reproducible from source.
+- [ ] **Sustainability baseline** — maintenance docs and on-call triage playbooks are complete.
 
 ### Toolchain Comparison
 

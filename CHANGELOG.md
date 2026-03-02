@@ -6,6 +6,25 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ---
 
+## [0.4.4.1] - 2026-03-02
+
+### Added
+
+- **Header include search paths from CLI**:
+  - `-I <dir>` and `-I<dir>` are both supported.
+  - Multiple `-I` flags are accepted with preserved left-to-right precedence.
+- **Include-path regression coverage**:
+  - `tests/integration/backend/backend_include_i_space_form_test.baa`
+  - `tests/integration/backend/backend_include_i_compact_form_test.baa`
+  - `tests/integration/backend/backend_include_i_precedence_test.baa`
+  - `tests/integration/backend/backend_include_i_path_with_spaces_test.baa`
+  - `tests/integration/backend/backend_include_i_nested_source_relative_priority_test.baa`
+
+### Changed
+
+- **Version synchronization**: unified current project metadata/version headers to `0.4.4.1` across compiler macro, resource metadata, installer metadata, CMake project version, and docs headers.
+- **Include resolution order** now explicitly applies: source-file directory → direct path → `BAA_HOME` (relative) → user `-I` paths → bare-name fallbacks (`<source_dir>/stdlib`, `stdlib`, `BAA_STDLIB`, `BAA_HOME/stdlib`).
+
 ## [0.4.4.0] - 2026-03-02
 
 ### Added

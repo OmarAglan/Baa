@@ -1,5 +1,5 @@
 ; -- Baa Compiler Setup Script (Inno Setup)
-; -- Version 0.4.0.0
+; -- Version 0.4.4.1
 ;
 ; Build instructions:
 ;   1. Place a MinGW-w64 GCC distribution in a folder called "gcc/"
@@ -12,7 +12,7 @@
 [Setup]
 ; Product Name
 AppName=Baa Compiler
-AppVersion=0.4.0.0
+AppVersion=0.4.4.1
 ; Publisher Name
 AppPublisher=Omar Aglan
 AppPublisherURL=https://github.com/OmarAglan/Baa
@@ -33,7 +33,7 @@ WizardStyle=modern
 
 ; Uninstaller information
 UninstallDisplayIcon={app}\baa.exe
-UninstallDisplayName=Baa Compiler 0.4.0.0
+UninstallDisplayName=Baa Compiler 0.4.4.1
 PrivilegesRequired=admin
 
 [Files]

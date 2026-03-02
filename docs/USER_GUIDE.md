@@ -1,6 +1,6 @@
 # Baa User Guide
 
-> **Version:** 0.3.12.5 | [← README](../README.md) | [Language Spec →](LANGUAGE.md)
+> **Version:** 0.4.0.0 | [← README](../README.md) | [Language Spec →](LANGUAGE.md)
 
 Welcome to Baa (باء)! This guide will help you write your first Arabic computer program and use the Baa compiler toolchain.
 
@@ -515,8 +515,35 @@ To manipulate dynamically allocated strings, include the standard library header
     اطبع الطول. // يطبع ١١
     
     // Free allocated memory
-    حرر_نص(رسالة).
+حرر_نص(رسالة).
     
+    إرجع ٠.
+}
+```
+
+### Formatted Console I/O (الإخراج/الإدخال المنسّق) (v0.4.0.0)
+
+Baa v0.4.0.0 adds formatted I/O builtins using **Arabic format specifiers** (مثل `%ص/%ن/%ع`) مع دعم `width` و `precision` على نمط C.
+
+> ملاحظة: تسلسلات الهروب في باء عربية، استخدم `\س` للسطر الجديد بدلاً من `\n`.
+
+```baa
+#تضمين "stdlib/baalib.baahd"
+
+صحيح الرئيسية() {
+    نص اسم = "علي".
+    صحيح عمر = ٢٥.
+
+    اطبع_منسق("الاسم: %ن، العمر: %ص\س", اسم, عمر).
+
+    نص رسالة = نسق("x=%س f=%.2ع", كـ<ط٦٤>(42), 3.5).
+    اطبع رسالة.
+    حرر_نص(رسالة).
+
+    صحيح رقم = اقرأ_رقم().
+    نص سطر = اقرأ_سطر().
+    إذا (سطر != عدم) { حرر_نص(سطر). }
+
     إرجع ٠.
 }
 ```

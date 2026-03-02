@@ -1,6 +1,6 @@
 # Baa IR Specification
 
-> **Version:** 0.3.12.5 | [← Compiler Internals](INTERNALS.md) | [API Reference →](API_REFERENCE.md)
+> **Version:** 0.4.0.0 | [← Compiler Internals](INTERNALS.md) | [API Reference →](API_REFERENCE.md)
 
 This document specifies the Intermediate Representation (IR) for the Baa compiler. The IR uses Arabic naming conventions throughout, creating a culturally authentic yet technically robust design.
 

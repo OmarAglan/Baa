@@ -14,8 +14,12 @@ TESTS_DIR = ROOT / "tests"
 INTEGRATION_DIR = TESTS_DIR / "integration"
 
 
-def _run(cmd: list[str], cwd: Path | None = None) -> int:
-    p = subprocess.run(cmd, cwd=str(cwd) if cwd else None)
+def _run(cmd: list[str], cwd: Path | None = None, stdin_text: str | None = None) -> int:
+    kwargs = {}
+    if stdin_text is not None:
+        kwargs["input"] = stdin_text
+        kwargs["text"] = True
+    p = subprocess.run(cmd, cwd=str(cwd) if cwd else None, **kwargs)
     return int(p.returncode)
 
 
@@ -59,6 +63,22 @@ def _expect_asm_markers(src: Path) -> list[str]:
     except Exception:
         return []
     return needles
+
+
+def _stdin_markers(src: Path) -> str | None:
+    lines: list[str] = []
+    try:
+        for line in src.read_text(encoding="utf-8", errors="replace").splitlines():
+            s = line.strip()
+            if s.startswith("// STDIN:"):
+                raw = s.split(":", 1)[1]
+                lines.append(raw.lstrip())
+    except Exception:
+        return None
+    if not lines:
+        return None
+    # نضيف '\n' بين الأسطر ونجعل النهاية بآخر '\n' لسهولة اختبار getchar/scanf.
+    return "\n".join(lines) + "\n"
 
 
 def _run_markers(src: Path) -> set[str]:
@@ -224,7 +244,8 @@ def main() -> int:
 
             # Runtime tests are expected to return 0 on PASS.
             args = _args_markers(src)
-            rc = _run([str(out), *args], cwd=ROOT)
+            stdin_text = _stdin_markers(src)
+            rc = _run([str(out), *args], cwd=ROOT, stdin_text=stdin_text)
             if rc != 0:
                 failures.append(f"run failed (exit={rc}): {src.name}")
     finally:

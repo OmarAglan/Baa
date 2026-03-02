@@ -1,0 +1,10 @@
+// RUN: compile-only
+// FLAGS: -S --target=x86_64-windows --startup=custom
+// EXPECT-ASM: __baa_start
+// EXPECT-ASM: mainCRTStartup
+// EXPECT-ASM: ExitProcess
+
+صحيح الرئيسية() {
+    إرجع 0.
+}
+

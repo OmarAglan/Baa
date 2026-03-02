@@ -1,6 +1,6 @@
 # Baa Documentation Style Guide
 
-> **Version:** 0.3.12.5 | **Last Updated:** 2026-03-02
+> **Version:** 0.4.0.0 | **Last Updated:** 2026-03-02
 
 This guide establishes standards for all Baa project documentation to ensure consistency, professionalism, and clarity across all documents.
 
@@ -73,7 +73,7 @@ Use the following hierarchy consistently:
 
 ### 2.1 Current Version
 
-The current version is **0.3.12.5**. All documents must display this version in their header.
+The current version is **0.4.0.0**. All documents must display this version in their header.
 
 ### 2.2 Version Update Rule
 
@@ -356,7 +356,7 @@ This section documents the coding standards for C source files in the Baa compil
 /**
  * @file filename.c
  * @brief وصف مختصر للملف (Brief description in Arabic)
- * @version 0.3.12.5
+ * @version 0.4.0.0
  *
  * وصف تفصيلي إضافي إذا لزم الأمر.
  */
@@ -608,7 +608,7 @@ Here is a complete example demonstrating the coding standards:
 /**
  * @file my_module.h
  * @brief واجهة برمجية لمعالجة البيانات.
- * @version 0.3.12.5
+ * @version 0.4.0.0
  */
 
 #ifndef BAA_MY_MODULE_H
@@ -654,7 +654,7 @@ void int_vector_free(IntVector* vec);
 /**
  * @file my_module.c
  * @brief تنفيذ معالجة البيانات.
- * @version 0.3.12.5
+ * @version 0.4.0.0
  */
 
 #include "my_module.h"
@@ -935,7 +935,7 @@ flowchart LR
 
 ### Documentation Changes
 
-- [ ] Version number is 0.3.12.5 in header
+- [ ] Version number is 0.4.0.0 in header
 - [ ] Document follows standard header/footer format
 - [ ] Table of Contents is present and accurate
 - [ ] Navigation links work and follow format

@@ -1,7 +1,7 @@
 # Baa Roadmap (Updated)
 
 > Track the development progress of the Baa programming language.
-> **Current Status:** Phase 3.12.5 - Command Line Arguments (v0.3.12.5) ✅ COMPLETED (2026-03-02)
+> **Current Status:** Phase 4.0.0 - Formatted Output & Input (v0.4.0.0) ✅ COMPLETED (2026-03-02)
 
 ---
 
@@ -1154,17 +1154,35 @@
 
 **Goal:** Professional I/O capabilities.
 
-- [ ] **Formatted Output**:
+- [x] **Formatted Output**:
 
   ```baa
-  اطبع_منسق("الاسم: %s، العمر: %d\n", اسم, عمر).
+  اطبع_منسق("الاسم: %ن، العمر: %ص\س", اسم, عمر).
   ```
 
-- [ ] **String Formatting**:
+- [x] **String Formatting**:
 
   ```baa
-  نص رسالة = نسق("النتيجة: %d", قيمة).
+  نص رسالة = نسق("النتيجة: %ص", قيمة).
+  حرر_نص(رسالة).
   ```
+
+- [x] **Formatted Input**:
+
+  ```baa
+  نص سطر = اقرأ_سطر().
+  صحيح رقم = اقرأ_رقم().
+
+  صحيح أ = ٠.
+  عشري ب = ٠.
+  نص س = عدم.
+
+  // ملاحظة: في الإدخال، %ن يتطلب عرضاً رقمياً (مثلاً %10ن).
+  صحيح مقروء = اقرأ_منسق("%ص %ع %10ن", &أ, &ب, &س).
+  إذا (مقروء == 3) { حرر_نص(س). }
+  ```
+
+✅ COMPLETED (2026-03-02)
 
 ### v0.4.0.5: Variadic Functions (دوال متغيرة المعاملات) 📊
 **Goal:** Functions accepting variable number of arguments.
@@ -1236,13 +1254,6 @@
 #### Deferred to v3.0
 - Full constraint support (memory, register classes)
 - Clobber lists
-  ```
-
-- [ ] **Formatted Input**:
-
-  ```baa
-  نص إدخال = اقرأ_سطر().
-  صحيح رقم = اقرأ_رقم().
   ```
 
 ### v0.4.1: Standard Library (مكتبة باء) 📚

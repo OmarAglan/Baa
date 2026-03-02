@@ -12,6 +12,7 @@
 
 #include "baa.h"
 
+#include <ctype.h>
 #include <limits.h>
 
 // ============================================================================
@@ -2764,6 +2765,351 @@ static bool builtin_check_file_call(Node* call_node, const char* fname, Node* ar
     return true;
 }
 
+// ============================================================================
+// تنسيق عربي للإخراج/الإدخال (v0.4.0)
+// ============================================================================
+
+#define BAA_FMT_MAX_SPECS 128
+
+typedef enum {
+    BAA_FMT_SPEC_I64,
+    BAA_FMT_SPEC_U64,
+    BAA_FMT_SPEC_HEX,
+    BAA_FMT_SPEC_STR,
+    BAA_FMT_SPEC_CHAR,
+    BAA_FMT_SPEC_F64,
+    BAA_FMT_SPEC_PTR,
+} BaaFmtSpecKind;
+
+typedef struct {
+    BaaFmtSpecKind kind;
+    int width; // للأمان في scanf مع %ن
+    bool has_width;
+} BaaFmtSpec;
+
+typedef struct {
+    int spec_count;
+    BaaFmtSpec specs[BAA_FMT_MAX_SPECS];
+} BaaFmtParse;
+
+static bool baa_utf8_decode_one(const char* s, uint32_t* out_cp, int* out_len)
+{
+    if (!s || !out_cp || !out_len) return false;
+    const unsigned char b0 = (unsigned char)s[0];
+    if (b0 == 0) return false;
+
+    if ((b0 & 0x80u) == 0x00u) {
+        *out_cp = (uint32_t)b0;
+        *out_len = 1;
+        return true;
+    }
+    if ((b0 & 0xE0u) == 0xC0u) {
+        const unsigned char b1 = (unsigned char)s[1];
+        if ((b1 & 0xC0u) != 0x80u) return false;
+        *out_cp = ((uint32_t)(b0 & 0x1Fu) << 6) | (uint32_t)(b1 & 0x3Fu);
+        *out_len = 2;
+        return true;
+    }
+    if ((b0 & 0xF0u) == 0xE0u) {
+        const unsigned char b1 = (unsigned char)s[1];
+        const unsigned char b2 = (unsigned char)s[2];
+        if ((b1 & 0xC0u) != 0x80u) return false;
+        if ((b2 & 0xC0u) != 0x80u) return false;
+        *out_cp = ((uint32_t)(b0 & 0x0Fu) << 12) |
+                  ((uint32_t)(b1 & 0x3Fu) << 6) |
+                  (uint32_t)(b2 & 0x3Fu);
+        *out_len = 3;
+        return true;
+    }
+    if ((b0 & 0xF8u) == 0xF0u) {
+        const unsigned char b1 = (unsigned char)s[1];
+        const unsigned char b2 = (unsigned char)s[2];
+        const unsigned char b3 = (unsigned char)s[3];
+        if ((b1 & 0xC0u) != 0x80u) return false;
+        if ((b2 & 0xC0u) != 0x80u) return false;
+        if ((b3 & 0xC0u) != 0x80u) return false;
+        *out_cp = ((uint32_t)(b0 & 0x07u) << 18) |
+                  ((uint32_t)(b1 & 0x3Fu) << 12) |
+                  ((uint32_t)(b2 & 0x3Fu) << 6) |
+                  (uint32_t)(b3 & 0x3Fu);
+        *out_len = 4;
+        return true;
+    }
+
+    return false;
+}
+
+static bool baa_fmt_parse_ar(Node* site, const char* fmt, bool is_input, BaaFmtParse* out)
+{
+    if (!out) return false;
+    memset(out, 0, sizeof(*out));
+    if (!fmt) return false;
+
+    const char* p = fmt;
+    while (*p) {
+        if (*p != '%') {
+            p++;
+            continue;
+        }
+
+        // %%
+        if (p[1] == '%') {
+            p += 2;
+            continue;
+        }
+
+        p++; // تخطِ '%'
+
+        // flags (ASCII)
+        while (*p && (*p == '-' || *p == '+' || *p == '0' || *p == ' ' || *p == '#')) {
+            p++;
+        }
+
+        int width = 0;
+        bool has_width = false;
+        while (*p && isdigit((unsigned char)*p)) {
+            has_width = true;
+            width = width * 10 + (int)(*p - '0');
+            if (width > 1000000) width = 1000000;
+            p++;
+        }
+
+        // precision (.NN) — نسمح بالأرقام فقط (لا نسمح بـ *)
+        if (*p == '.') {
+            p++;
+            if (*p == '*') {
+                semantic_error(site, "تنسيق عربي: الدقة باستخدام '*' غير مدعومة حالياً.");
+                return false;
+            }
+            while (*p && isdigit((unsigned char)*p)) {
+                p++;
+            }
+        }
+
+        uint32_t cp = 0;
+        int ulen = 0;
+        if (!baa_utf8_decode_one(p, &cp, &ulen) || ulen <= 0) {
+            semantic_error(site, "تنسيق عربي: محرف UTF-8 غير صالح بعد '%%'.");
+            return false;
+        }
+
+        if (out->spec_count >= BAA_FMT_MAX_SPECS) {
+            semantic_error(site, "تنسيق عربي: عدد المواصفات كبير جداً (الحد %d).", BAA_FMT_MAX_SPECS);
+            return false;
+        }
+
+        BaaFmtSpec spec;
+        memset(&spec, 0, sizeof(spec));
+        spec.width = width;
+        spec.has_width = has_width;
+
+        // ص ط س ن ح ع م
+        if (cp == 0x0635u) { // ص
+            spec.kind = BAA_FMT_SPEC_I64;
+        } else if (cp == 0x0637u) { // ط
+            spec.kind = BAA_FMT_SPEC_U64;
+        } else if (cp == 0x0633u) { // س
+            spec.kind = BAA_FMT_SPEC_HEX;
+        } else if (cp == 0x0646u) { // ن
+            spec.kind = BAA_FMT_SPEC_STR;
+            if (is_input) {
+                if (!has_width || width <= 0) {
+                    semantic_error(site, "تنسيق عربي: %%ن في الإدخال يتطلب عرضاً رقمياً (مثلاً %%64ن).");
+                    return false;
+                }
+            }
+        } else if (cp == 0x062Du) { // ح
+            spec.kind = BAA_FMT_SPEC_CHAR;
+            if (is_input) {
+                semantic_error(site, "تنسيق عربي: %%ح غير مدعوم في الإدخال حالياً.");
+                return false;
+            }
+        } else if (cp == 0x0639u) { // ع
+            spec.kind = BAA_FMT_SPEC_F64;
+        } else if (cp == 0x0645u) { // م
+            spec.kind = BAA_FMT_SPEC_PTR;
+            if (is_input) {
+                semantic_error(site, "تنسيق عربي: %%م غير مدعوم في الإدخال حالياً.");
+                return false;
+            }
+        } else {
+            semantic_error(site, "تنسيق عربي: مواصفة غير معروفة بعد '%%'.");
+            return false;
+        }
+
+        out->specs[out->spec_count++] = spec;
+        p += ulen;
+    }
+
+    return true;
+}
+
+/**
+ * @brief التحقق من استدعاءات التنسيق العربية (v0.4.0).
+ *
+ * الأسماء المدعومة:
+ * - اطبع_منسق(نص تنسيق، ...): void
+ * - نسق(نص تنسيق، ...): نص
+ * - اقرأ_منسق(نص تنسيق، ...): صحيح (عدد العناصر المقروءة)
+ * - اقرأ_سطر(): نص
+ * - اقرأ_رقم(): صحيح
+ */
+static bool builtin_check_format_call(Node* call_node, const char* fname, Node* args, DataType* out_return_type)
+{
+    if (!call_node || !fname) return false;
+
+    bool is_print = (strcmp(fname, "اطبع_منسق") == 0);
+    bool is_format = (strcmp(fname, "نسق") == 0);
+    bool is_scan = (strcmp(fname, "اقرأ_منسق") == 0);
+    bool is_read_line = (strcmp(fname, "اقرأ_سطر") == 0);
+    bool is_read_num = (strcmp(fname, "اقرأ_رقم") == 0);
+
+    if (!is_print && !is_format && !is_scan && !is_read_line && !is_read_num) {
+        return false;
+    }
+
+    // اقرأ_سطر(): نُميّزها فقط عند صفر معاملات حتى لا تتعارض مع اقرأ_سطر(ملف) في stdlib.
+    if (is_read_line) {
+        if (args) return false;
+        if (out_return_type) *out_return_type = TYPE_STRING;
+        node_clear_inferred_ptr(call_node);
+        return true;
+    }
+
+    if (is_read_num) {
+        if (args) {
+            semantic_error(call_node, "استدعاء 'اقرأ_رقم' لا يقبل معاملات.");
+            Node* a = args;
+            while (a) { (void)infer_type(a); a = a->next; }
+        }
+        if (out_return_type) *out_return_type = TYPE_INT;
+        node_clear_inferred_ptr(call_node);
+        return true;
+    }
+
+    // بقية الدوال: تتطلب نص تنسيق كمعامل أول.
+    if (!args) {
+        semantic_error(call_node, "استدعاء '%s' يتطلب نص تنسيق كمعامل أول.", fname);
+        if (out_return_type) *out_return_type = is_scan ? TYPE_INT : (is_format ? TYPE_STRING : TYPE_VOID);
+        node_clear_inferred_ptr(call_node);
+        return true;
+    }
+
+    Node* fmt_arg = args;
+    DataType fmt_t = infer_type(fmt_arg);
+    if (fmt_t != TYPE_STRING) {
+        semantic_error(fmt_arg, "المعامل الأول في '%s' يجب أن يكون من نوع 'نص'.", fname);
+    }
+    if (fmt_arg->type != NODE_STRING || !fmt_arg->data.string_lit.value) {
+        semantic_error(fmt_arg, "نص التنسيق في '%s' يجب أن يكون ثابتاً (literal) في هذا الإصدار.", fname);
+    }
+
+    BaaFmtParse parsed;
+    memset(&parsed, 0, sizeof(parsed));
+    bool ok = true;
+    if (fmt_arg->type == NODE_STRING && fmt_arg->data.string_lit.value) {
+        ok = baa_fmt_parse_ar(fmt_arg, fmt_arg->data.string_lit.value, is_scan, &parsed);
+    } else {
+        ok = false;
+    }
+
+    // تحقق عدد المعاملات
+    int supplied = 0;
+    for (Node* a = args ? args->next : NULL; a; a = a->next) supplied++;
+    if (ok && supplied != parsed.spec_count) {
+        semantic_error(call_node, "عدد معاملات '%s' لا يطابق نص التنسيق (المتوقع %d).",
+                       fname, parsed.spec_count + 1);
+    }
+
+    // تحقق الأنواع
+    int idx = 0;
+    for (Node* a = args ? args->next : NULL; a; a = a->next, idx++) {
+        if (!ok || idx >= parsed.spec_count) {
+            (void)infer_type(a);
+            continue;
+        }
+
+        BaaFmtSpecKind k = parsed.specs[idx].kind;
+
+        if (is_scan) {
+            DataType got = infer_type(a);
+            if (got != TYPE_POINTER) {
+                semantic_error(a, "نداء 'اقرأ_منسق': المعامل %d يجب أن يكون مؤشراً.", idx + 2);
+                continue;
+            }
+
+            // v0.4.0: ندعم الإدخال إلى 64-بت فقط بشكل محافظ.
+            if (k == BAA_FMT_SPEC_I64) {
+                if (!ptr_type_compatible(a->inferred_ptr_base_type, a->inferred_ptr_base_type_name, a->inferred_ptr_depth,
+                                         TYPE_INT, NULL, 1, true)) {
+                    semantic_error(a, "نداء 'اقرأ_منسق': المعامل %d يجب أن يكون 'صحيح*' مع %%ص.", idx + 2);
+                }
+            } else if (k == BAA_FMT_SPEC_U64 || k == BAA_FMT_SPEC_HEX) {
+                if (!ptr_type_compatible(a->inferred_ptr_base_type, a->inferred_ptr_base_type_name, a->inferred_ptr_depth,
+                                         TYPE_U64, NULL, 1, true)) {
+                    semantic_error(a, "نداء 'اقرأ_منسق': المعامل %d يجب أن يكون 'ط٦٤*' مع %%ط/%%س.", idx + 2);
+                }
+            } else if (k == BAA_FMT_SPEC_F64) {
+                if (!ptr_type_compatible(a->inferred_ptr_base_type, a->inferred_ptr_base_type_name, a->inferred_ptr_depth,
+                                         TYPE_FLOAT, NULL, 1, true)) {
+                    semantic_error(a, "نداء 'اقرأ_منسق': المعامل %d يجب أن يكون 'عشري*' مع %%ع.", idx + 2);
+                }
+            } else if (k == BAA_FMT_SPEC_STR) {
+                if (!ptr_type_compatible(a->inferred_ptr_base_type, a->inferred_ptr_base_type_name, a->inferred_ptr_depth,
+                                         TYPE_STRING, NULL, 1, true)) {
+                    semantic_error(a, "نداء 'اقرأ_منسق': المعامل %d يجب أن يكون 'نص*' مع %%ن.", idx + 2);
+                }
+            } else {
+                semantic_error(a, "نداء 'اقرأ_منسق': مواصفة غير مدعومة في الإدخال.");
+            }
+            continue;
+        }
+
+        // إخراج/تنسيق نصي
+        if (k == BAA_FMT_SPEC_STR) {
+            DataType got = infer_type_allow_null_string(a, TYPE_STRING);
+            if (got != TYPE_STRING) {
+                semantic_error(a, "نوع المعامل %d في '%s' يجب أن يكون 'نص' مع %%ن.", idx + 2, fname);
+            }
+        } else if (k == BAA_FMT_SPEC_CHAR) {
+            DataType got = infer_type(a);
+            if (got != TYPE_CHAR) {
+                semantic_error(a, "نوع المعامل %d في '%s' يجب أن يكون 'حرف' مع %%ح.", idx + 2, fname);
+            }
+        } else if (k == BAA_FMT_SPEC_F64) {
+            DataType got = infer_type(a);
+            if (got != TYPE_FLOAT) {
+                semantic_error(a, "نوع المعامل %d في '%s' يجب أن يكون 'عشري' مع %%ع.", idx + 2, fname);
+            }
+        } else if (k == BAA_FMT_SPEC_PTR) {
+            DataType got = infer_type_allow_null_string(a, TYPE_POINTER);
+            if (!(got == TYPE_POINTER || got == TYPE_STRING || got == TYPE_FUNC_PTR)) {
+                semantic_error(a, "نوع المعامل %d في '%s' يجب أن يكون مؤشراً مع %%م.", idx + 2, fname);
+            }
+        } else if (k == BAA_FMT_SPEC_U64 || k == BAA_FMT_SPEC_HEX) {
+            DataType got = infer_type(a);
+            if (!datatype_is_unsigned_int(got)) {
+                semantic_error(a, "نوع المعامل %d في '%s' يجب أن يكون غير موقّع مع %%ط/%%س.", idx + 2, fname);
+            }
+        } else { // I64
+            DataType got = infer_type(a);
+            if (!datatype_is_intlike(got) || datatype_is_unsigned_int(got)) {
+                semantic_error(a, "نوع المعامل %d في '%s' يجب أن يكون موقّعاً مع %%ص.", idx + 2, fname);
+            }
+        }
+    }
+
+    if (out_return_type) {
+        if (is_print) *out_return_type = TYPE_VOID;
+        else if (is_format) *out_return_type = TYPE_STRING;
+        else if (is_scan) *out_return_type = TYPE_INT;
+        else *out_return_type = TYPE_VOID;
+    }
+
+    node_clear_inferred_ptr(call_node);
+    return true;
+}
+
 static bool datatype_size_bytes(DataType type, const char* type_name, int64_t* out_size)
 {
     if (!out_size) return false;
@@ -3204,8 +3550,11 @@ static DataType infer_type_internal(Node* node) {
 
             // 2) ثم نحل الدوال المعرفة (أو builtins) إذا لم يوجد رمز بنفس الاسم.
             FuncSymbol* fs = func_lookup(fname);
-            if (!fs) {
+            if (!fs || !fs->is_defined) {
                 DataType built_ret = TYPE_INT;
+                if (builtin_check_format_call(node, fname, node->data.call.args, &built_ret)) {
+                    return built_ret;
+                }
                 if (builtin_check_string_call(node, fname, node->data.call.args, &built_ret)) {
                     node_clear_inferred_ptr(node);
                     return built_ret;
@@ -3217,11 +3566,13 @@ static DataType infer_type_internal(Node* node) {
                     return built_ret;
                 }
 
-                semantic_error(node, "استدعاء دالة غير معرّفة '%s'.", fname ? fname : "???");
-                // ما زلنا نستنتج أنواع الوسائط لاكتشاف أخطاء أخرى.
-                Node* arg = node->data.call.args;
-                while (arg) { (void)infer_type(arg); arg = arg->next; }
-                return TYPE_INT;
+                if (!fs) {
+                    semantic_error(node, "استدعاء دالة غير معرّفة '%s'.", fname ? fname : "???");
+                    // ما زلنا نستنتج أنواع الوسائط لاكتشاف أخطاء أخرى.
+                    Node* arg = node->data.call.args;
+                    while (arg) { (void)infer_type(arg); arg = arg->next; }
+                    return TYPE_INT;
+                }
             }
             // تحقق عدد وأنواع المعاملات
             int i = 0;
@@ -4393,8 +4744,11 @@ static void analyze_node(Node* node) {
 
             // 2) ثم نحل الدوال المعرفة (أو builtins) إذا لم يوجد رمز بنفس الاسم.
             FuncSymbol* fs = func_lookup(fname);
-            if (!fs) {
+            if (!fs || !fs->is_defined) {
                 DataType built_ret = TYPE_VOID;
+                if (builtin_check_format_call(node, fname, node->data.call.args, &built_ret)) {
+                    break;
+                }
                 if (builtin_check_string_call(node, fname, node->data.call.args, &built_ret)) {
                     break;
                 }
@@ -4404,10 +4758,12 @@ static void analyze_node(Node* node) {
                 if (builtin_check_file_call(node, fname, node->data.call.args, &built_ret)) {
                     break;
                 }
-                semantic_error(node, "استدعاء دالة غير معرّفة '%s'.", fname ? fname : "???");
-                Node* arg = node->data.call.args;
-                while (arg) { (void)infer_type(arg); arg = arg->next; }
-                break;
+                if (!fs) {
+                    semantic_error(node, "استدعاء دالة غير معرّفة '%s'.", fname ? fname : "???");
+                    Node* arg = node->data.call.args;
+                    while (arg) { (void)infer_type(arg); arg = arg->next; }
+                    break;
+                }
             }
 
             int i = 0;

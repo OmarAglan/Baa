@@ -1,6 +1,6 @@
 # Baa Compiler Internals
 
-> **Version:** 0.3.12.5 | [← Language Spec](LANGUAGE.md) | [API Reference →](API_REFERENCE.md)
+> **Version:** 0.4.0.0 | [← Language Spec](LANGUAGE.md) | [API Reference →](API_REFERENCE.md)
 
 **Target Architecture:** x86-64 (AMD64)
 **Targets:** Windows x64 (COFF/PE) + Linux x86-64 (ELF)
@@ -172,10 +172,13 @@ Notes:
   - `tests/test.py` (integration)
   - `tests/regress.py` (integration + corpus + negatives)
 - On all hosts: docs-derived v0.2.x corpus runs under `tests/corpus_v2x_docs/`.
-- On all hosts: negative diagnostics tests under `tests/neg/` use:
-  - `// EXPECT:` message anchors
-  - `// FLAGS:` per-test compile flags
+- Test metadata markers (recognized by `tests/test.py` and `tests/regress.py`):
   - `// RUN:` execution contract (`expect-pass`, `expect-fail`, `runtime`, `compile-only`, `skip`)
+  - `// FLAGS:` per-test compiler flags
+  - `// EXPECT:` negative diagnostic anchor(s)
+  - `// ARGS:` runtime executable arguments
+  - `// STDIN:` stdin lines for runtime tests (may repeat; joined with `\n` + trailing newline)
+  - `// EXPECT-ASM:` assembly substring expectations (used with `-S` compile-only tests)
 - Stress programs live under `tests/stress/`.
 
 Windows build:

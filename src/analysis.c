@@ -545,18 +545,46 @@ static void func_register(Node* node)
     int param_ptr_depths_local[ANALYSIS_MAX_FUNC_PARAMS];
     FuncPtrSig* param_func_sigs_local[ANALYSIS_MAX_FUNC_PARAMS];
     int param_count = 0;
+    Node* param0 = NULL;
+    Node* param1 = NULL;
     for (Node* p = node->data.func_def.params; p; p = p->next) {
         if (p->type != NODE_VAR_DECL) continue;
         if (param_count >= ANALYSIS_MAX_FUNC_PARAMS) {
             semantic_error(p, "عدد معاملات الدالة كبير جداً (الحد %d).", ANALYSIS_MAX_FUNC_PARAMS);
             return;
         }
+        if (param_count == 0) param0 = p;
+        if (param_count == 1) param1 = p;
         params_local[param_count] = p->data.var_decl.type;
         param_ptr_base_types_local[param_count] = p->data.var_decl.ptr_base_type;
         param_ptr_base_type_names_local[param_count] = p->data.var_decl.ptr_base_type_name;
         param_ptr_depths_local[param_count] = p->data.var_decl.ptr_depth;
         param_func_sigs_local[param_count] = p->data.var_decl.func_sig;
         param_count++;
+    }
+
+    if (strcmp(name, "الرئيسية") == 0) {
+        if (node->data.func_def.return_type != TYPE_INT) {
+            semantic_error(node, "الدالة 'الرئيسية' يجب أن تُرجع 'صحيح'.");
+        }
+        if (param_count == 0) {
+            // صحيح الرئيسية()
+        } else if (param_count == 2) {
+            bool ok0 = (param0 && param0->type == NODE_VAR_DECL && param0->data.var_decl.type == TYPE_INT);
+            bool ok1 = (param1 && param1->type == NODE_VAR_DECL &&
+                        param1->data.var_decl.type == TYPE_POINTER &&
+                        param1->data.var_decl.ptr_base_type == TYPE_STRING &&
+                        param1->data.var_decl.ptr_depth == 1);
+            if (!ok0 || !ok1) {
+                semantic_error(node,
+                               "توقيع 'الرئيسية' غير صحيح. الصيغ المدعومة: "
+                               "صحيح الرئيسية() أو صحيح الرئيسية(صحيح عدد، نص[] معاملات).");
+            }
+        } else {
+            semantic_error(node,
+                           "توقيع 'الرئيسية' غير صحيح. الصيغ المدعومة: "
+                           "صحيح الرئيسية() أو صحيح الرئيسية(صحيح عدد، نص[] معاملات).");
+        }
     }
 
     FuncSymbol* existing = func_lookup(name);
@@ -2981,6 +3009,69 @@ static DataType infer_type_internal(Node* node) {
                     }
                     node_clear_inferred_ptr(node);
                     return TYPE_CHAR;
+                }
+
+                // فهرسة المؤشر: p[i] ⇢ *(p + i)
+                if (sym->type == TYPE_POINTER) {
+                    DataType cur_t = TYPE_POINTER;
+                    DataType cur_base = sym->ptr_base_type;
+                    const char* cur_base_name = (sym->ptr_base_type_name[0] ? sym->ptr_base_type_name : NULL);
+                    int cur_depth = sym->ptr_depth;
+
+                    if (cur_depth <= 0) {
+                        semantic_error(node, "عمق المؤشر غير صالح في '%s'.", sym->name);
+                        node_clear_inferred_ptr(node);
+                        return TYPE_INT;
+                    }
+
+                    Node* idx_node = node->data.array_op.indices;
+                    for (int i = 0; i < supplied && idx_node; i++, idx_node = idx_node->next) {
+                        DataType it = infer_type(idx_node);
+                        if (!types_compatible(it, TYPE_INT) || it == TYPE_FLOAT) {
+                            semantic_error(idx_node, "فهرس المؤشر يجب أن يكون صحيحاً.");
+                        }
+
+                        if (cur_t == TYPE_POINTER) {
+                            if (!ptr_arith_allowed(cur_base, cur_depth)) {
+                                semantic_error(node, "فهرسة هذا المؤشر غير مسموحة (نوع الأساس غير قابل للحساب).");
+                                cur_t = TYPE_INT;
+                                break;
+                            }
+                            if (cur_depth <= 0) {
+                                semantic_error(node, "عمق المؤشر غير صالح أثناء فهرسة '%s'.", sym->name);
+                                cur_t = TYPE_INT;
+                                break;
+                            }
+                            if (cur_depth == 1) {
+                                cur_t = cur_base;
+                            } else {
+                                cur_depth--;
+                                cur_t = TYPE_POINTER;
+                            }
+                        } else if (cur_t == TYPE_STRING) {
+                            cur_t = TYPE_CHAR;
+                        } else {
+                            semantic_error(node, "لا يمكن فهرسة الناتج من '%s' بهذه الطريقة.", sym->name);
+                            cur_t = TYPE_INT;
+                            break;
+                        }
+
+                        if (cur_t == TYPE_CHAR && i != supplied - 1) {
+                            semantic_error(node, "فهرسة متعددة بعد محرف غير مدعومة.");
+                            break;
+                        }
+                    }
+
+                    if (cur_t == TYPE_POINTER) {
+                        node_set_inferred_ptr(node, cur_base, cur_base_name, cur_depth);
+                    } else {
+                        node_clear_inferred_ptr(node);
+                    }
+
+                    if (cur_t == TYPE_STRUCT || cur_t == TYPE_UNION) {
+                        semantic_error(node, "استخدام نوع مركب كناتج فهرسة '%s' كقيمة غير مدعوم.", sym->name);
+                    }
+                    return cur_t;
                 }
 
                 semantic_error(node, "'%s' ليس مصفوفة.", sym->name);

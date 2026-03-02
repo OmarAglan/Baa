@@ -2819,7 +2819,7 @@ Node* parse_declaration() {
             Node* tail_param = NULL;
             if (parser.current.type != TOKEN_RPAREN) {
                 while (1) {
-                    // معاملات الدالة: نسمح بالأنواع البدائية العددية/النص/منطقي/حرف.
+                    // معاملات الدالة: نسمح بالأنواع البدائية العددية/النص/منطقي/حرف + سكر نحوي 'T[]' (يُعامل كمؤشر).
                     Token tok_param_type = parser.current;
                     DataType param_dt = TYPE_INT;
                     char* param_tn = NULL;
@@ -2854,6 +2854,49 @@ Node* parse_declaration() {
                     }
 
                     char* pname = NULL;
+
+                    // -----------------------------------------------------------------
+                    // سكر نحوي لمعلمات الدالة: T[] ⇢ T*
+                    // ملاحظة: هذا يختلف عن مصفوفات اللغة الثابتة الحجم؛ هنا المقصود "مؤشر" مثل C.
+                    // -----------------------------------------------------------------
+                    if (parser.current.type == TOKEN_LBRACKET) {
+                        Token tok_lb = parser.current;
+                        eat(TOKEN_LBRACKET);
+                        if (parser.current.type != TOKEN_RBRACKET) {
+                            error_report(tok_lb, "غير مدعوم: معاملات الدوال تدعم فقط '[]' بدون حجم (سكر نحوي لمؤشر).");
+                            // محاولة استرداد بسيطة: التخلي عن تحليل هذه الدالة.
+                            free(pname);
+                            free(param_tn);
+                            free(param_ptr_base_type_name);
+                            parser_funcsig_free(param_func_sig);
+                            synchronize_mode(PARSER_SYNC_DECLARATION);
+                            return NULL;
+                        }
+                        eat(TOKEN_RBRACKET);
+
+                        if (parser.current.type == TOKEN_LBRACKET) {
+                            error_report(tok_lb, "غير مدعوم: أبعاد متعددة '[][]' في معاملات الدوال.");
+                            free(pname);
+                            free(param_tn);
+                            free(param_ptr_base_type_name);
+                            parser_funcsig_free(param_func_sig);
+                            synchronize_mode(PARSER_SYNC_DECLARATION);
+                            return NULL;
+                        }
+
+                        if (param_dt == TYPE_FUNC_PTR) {
+                            error_report(tok_param_type, "غير مدعوم: لاحقة '[]' بعد نوع مؤشر دالة.");
+                            // استرداد: نتجاهل '[]' ونُبقي النوع كما هو.
+                        } else if (param_dt == TYPE_POINTER) {
+                            // مثل C: T*[] ⇢ T**
+                            param_ptr_depth++;
+                        } else {
+                            param_ptr_base_type = param_dt;
+                            param_ptr_depth = 1;
+                            param_dt = TYPE_POINTER;
+                        }
+                    }
+
                     Token tok_param_name = tok_param_type;
                     if (parser.current.type == TOKEN_IDENTIFIER) {
                         tok_param_name = parser.current;
@@ -3075,4 +3118,3 @@ Node* parse(Lexer* l) {
     program->data.program.declarations = head;
     return program;
 }
-

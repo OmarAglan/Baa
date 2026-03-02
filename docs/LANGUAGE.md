@@ -1,6 +1,6 @@
 # Baa Language Specification
 
-> **Version:** 0.3.12.0 | [← User Guide](USER_GUIDE.md) | [Compiler Internals →](INTERNALS.md)
+> **Version:** 0.3.12.5 | [← User Guide](USER_GUIDE.md) | [Compiler Internals →](INTERNALS.md)
 
 Baa (باء) is a compiled systems programming language using Arabic syntax. It compiles to native code via Assembly + host GCC/Clang on Windows and Linux.
 
@@ -510,6 +510,7 @@ Baa is statically typed. All variables must be declared with their type.
 
 - دعم المؤشرات العامة مع تتبع نوع الأساس وعمق المؤشر (مثل `صحيح**`) في التحليل الدلالي.
 - الحساب عبر المؤشرات: `pointer +/- int` و `pointer - pointer` (الطرح يعيد فرق العناصر).
+- **فهرسة المؤشر:** `م[i]` مدعومة وهي سكر نحوي لـ `*(م + i)` (تُسمح فقط عندما يكون نوع الأساس قابلاً للحساب؛ `عدم*` و `هيكل*` و `اتحاد*` غير مسموحة عند عمق ١).
 - المقارنة بين المؤشرات: `==` و `!=` (مع السماح بـ `عدم`).
 - فك الإشارة يتطلب مؤشراً صالحاً، وأخذ العنوان يتطلب قيمة قابلة للإسناد (L-value).
 - مؤشرات الدوال مدعومة عبر النوع `دالة(...) -> ...` (انظر 5.6).
@@ -690,7 +691,7 @@ Every program **must** have a main function:
 
 **Important:** The entry point **must** be named `الرئيسية` (ar-ra'īsīyah). It is exported as `main` in the generated assembly.
 
-**Command Line Arguments [Scheduled v0.3.12.5]:**
+**Command Line Arguments [Implemented v0.3.12.5]:**
 The main function can optionally accept arguments:
 
 ```baa
@@ -701,6 +702,8 @@ The main function can optionally accept arguments:
     إرجع ٠.
 }
 ```
+
+**ملاحظة:** الصيغة `نص[]` داخل معاملات الدوال هي سكر نحوي لمعنى `نص*` (مثل C: `argv`).
 
 ### 5.5. Recursion (التكرار)
 

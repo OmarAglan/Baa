@@ -4,7 +4,7 @@
 <img width="260" height="260" alt="شعار باء" src="resources/Logo.png" />
 
 
-![الإصدار](https://img.shields.io/badge/%D8%A7%D9%84%D8%A5%D8%B5%D8%AF%D8%A7%D8%B1-0.3.12.0-blue.svg)
+![الإصدار](https://img.shields.io/badge/%D8%A7%D9%84%D8%A5%D8%B5%D8%AF%D8%A7%D8%B1-0.3.12.5-blue.svg)
 ![المنصة](https://img.shields.io/badge/%D8%A7%D9%84%D9%85%D9%86%D8%B5%D8%A9-%D9%88%D9%8A%D9%86%D8%AF%D9%88%D8%B2%20%7C%20%D9%84%D9%8A%D9%86%D9%83%D8%B3-lightgrey.svg)
 ![الرخصة](https://img.shields.io/badge/%D8%A7%D9%84%D8%B1%D8%AE%D8%B5%D8%A9-MIT-green.svg)
 

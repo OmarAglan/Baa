@@ -1,7 +1,7 @@
 # Baa Roadmap (Updated)
 
 > Track the development progress of the Baa programming language.
-> **Current Status:** Phase 3.12 - File I/O (v0.3.12.0) ✅ COMPLETED (2026-03-02)
+> **Current Status:** Phase 3.12.5 - Command Line Arguments (v0.3.12.5) ✅ COMPLETED (2026-03-02)
 
 ---
 
@@ -1114,7 +1114,7 @@
 **Goal:** Access program arguments - essential for compiler self-hosting.
 
 #### Features
-- [ ] **Main with Arguments**:
+- [x] **Main with Arguments**:
   ```baa
   صحيح الرئيسية(صحيح عدد، نص[] معاملات) {
       // عدد = argument count (like argc)
@@ -1136,10 +1136,12 @@
   ```
 
 #### Implementation Tasks
-- [ ] **Parser**: Allow parameters in `الرئيسية` function.
-- [ ] **Semantic**: Validate main signature matches expected pattern.
-- [ ] **Codegen**: Link with proper C runtime entry point.
+- [x] **Parser**: Allow parameters in `الرئيسية` function.
+- [x] **Semantic**: Validate main signature matches expected pattern.
+- [x] **Codegen**: Link with proper C runtime entry point.
 - [ ] **Codegen (Full Independence)**: Custom _start that sets up argc/argv.
+
+✅ COMPLETED (2026-03-02)
 
 ---
 

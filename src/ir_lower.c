@@ -324,6 +324,46 @@ static IRType* ir_type_from_datatype(IRModule* module, DataType t) {
     }
 }
 
+static IRType* ir_type_from_ptr_spec(IRModule* module, DataType base_type, const char* base_type_name, int depth)
+{
+    (void)base_type_name;
+    if (depth <= 0) {
+        return ir_type_ptr(IR_TYPE_I8_T);
+    }
+
+    IRType* pointee = NULL;
+    if (depth == 1) {
+        switch (base_type) {
+            case TYPE_BOOL:  pointee = IR_TYPE_I1_T; break;
+            case TYPE_I8:    pointee = IR_TYPE_I8_T; break;
+            case TYPE_I16:   pointee = IR_TYPE_I16_T; break;
+            case TYPE_I32:   pointee = IR_TYPE_I32_T; break;
+            case TYPE_U8:    pointee = IR_TYPE_U8_T; break;
+            case TYPE_U16:   pointee = IR_TYPE_U16_T; break;
+            case TYPE_U32:   pointee = IR_TYPE_U32_T; break;
+            case TYPE_U64:   pointee = IR_TYPE_U64_T; break;
+            case TYPE_ENUM:  pointee = IR_TYPE_I64_T; break;
+            case TYPE_INT:   pointee = IR_TYPE_I64_T; break;
+            case TYPE_CHAR:  pointee = IR_TYPE_CHAR_T; break;
+            case TYPE_FLOAT: pointee = IR_TYPE_F64_T; break;
+            case TYPE_STRING:
+                pointee = module ? get_char_ptr_type(module) : ir_type_ptr(IR_TYPE_CHAR_T);
+                break;
+            case TYPE_VOID:
+            case TYPE_STRUCT:
+            case TYPE_UNION:
+            default:
+                pointee = IR_TYPE_I8_T;
+                break;
+        }
+    } else {
+        pointee = ir_type_from_ptr_spec(module, base_type, base_type_name, depth - 1);
+    }
+
+    if (!pointee) pointee = IR_TYPE_I8_T;
+    return ir_type_ptr(pointee);
+}
+
 static IRType* ir_type_from_funcsig(IRModule* module, const FuncPtrSig* sig)
 {
     if (!sig) {
@@ -362,6 +402,22 @@ static IRType* ir_type_from_datatype_ex(IRModule* module, DataType t, const Func
 {
     if (t == TYPE_FUNC_PTR) {
         return ir_type_from_funcsig(module, sig);
+    }
+    return ir_type_from_datatype(module, t);
+}
+
+static IRType* ir_type_from_typespec(IRModule* module,
+                                     DataType t,
+                                     const FuncPtrSig* sig,
+                                     DataType ptr_base_type,
+                                     const char* ptr_base_type_name,
+                                     int ptr_depth)
+{
+    if (t == TYPE_FUNC_PTR) {
+        return ir_type_from_funcsig(module, sig);
+    }
+    if (t == TYPE_POINTER) {
+        return ir_type_from_ptr_spec(module, ptr_base_type, ptr_base_type_name, ptr_depth);
     }
     return ir_type_from_datatype(module, t);
 }
@@ -3194,6 +3250,66 @@ static IRValue* lower_call_expr(IRLowerCtx* ctx, Node* expr) {
     return ir_value_reg(dest, ret_type);
 }
 
+static IRValue* ir_lower_pointer_index_chain(IRLowerCtx* ctx,
+                                             Node* site,
+                                             IRValue* base_ptr_val,
+                                             IRType* base_ptr_type,
+                                             Node* indices,
+                                             int index_count,
+                                             bool return_address,
+                                             IRType** out_pointee_type)
+{
+    if (out_pointee_type) *out_pointee_type = IR_TYPE_I64_T;
+    if (!ctx || !ctx->builder || !base_ptr_val || !base_ptr_type || !indices) {
+        return ir_value_const_int(0, ir_type_ptr(IR_TYPE_I64_T));
+    }
+
+    if (index_count <= 0) {
+        index_count = ir_lower_index_count(indices);
+    }
+    if (index_count <= 0) {
+        ir_lower_report_error(ctx, site, "فهرسة مؤشر بدون فهارس غير صالحة.");
+        return return_address ? ir_value_const_int(0, ir_type_ptr(IR_TYPE_I64_T)) : ir_builder_const_i64(0);
+    }
+
+    IRValue* cur_ptr_val = base_ptr_val;
+    IRType* cur_ptr_t = base_ptr_type;
+    Node* idx_node = indices;
+
+    for (int i = 0; i < index_count && idx_node; i++, idx_node = idx_node->next) {
+        if (!cur_ptr_t || cur_ptr_t->kind != IR_TYPE_PTR || !cur_ptr_t->data.pointee) {
+            ir_lower_report_error(ctx, site, "نوع المؤشر غير صالح أثناء الفهرسة.");
+            return return_address ? ir_value_const_int(0, ir_type_ptr(IR_TYPE_I64_T)) : ir_builder_const_i64(0);
+        }
+
+        IRType* elem_t = cur_ptr_t->data.pointee;
+        IRValue* idx = ensure_i64(ctx, lower_expr(ctx, idx_node));
+        int ep = ir_builder_emit_ptr_offset(ctx->builder, cur_ptr_t, cur_ptr_val, idx);
+        IRValue* elem_addr = ir_value_reg(ep, cur_ptr_t);
+
+        if (i == index_count - 1) {
+            if (out_pointee_type) *out_pointee_type = elem_t;
+            if (return_address) {
+                return elem_addr;
+            }
+            int loaded = ir_builder_emit_load(ctx->builder, elem_t, elem_addr);
+            return ir_value_reg(loaded, elem_t);
+        }
+
+        if (!elem_t || elem_t->kind != IR_TYPE_PTR) {
+            ir_lower_report_error(ctx, site, "فهرسة متعددة تتطلب مؤشراً عند الفهرس %d.", i + 1);
+            return return_address ? ir_value_const_int(0, ir_type_ptr(IR_TYPE_I64_T)) : ir_builder_const_i64(0);
+        }
+
+        int loaded_ptr = ir_builder_emit_load(ctx->builder, elem_t, elem_addr);
+        cur_ptr_val = ir_value_reg(loaded_ptr, elem_t);
+        cur_ptr_t = elem_t;
+    }
+
+    ir_lower_report_error(ctx, site, "عدد الفهارس غير صالح أثناء فهرسة المؤشر.");
+    return return_address ? ir_value_const_int(0, ir_type_ptr(IR_TYPE_I64_T)) : ir_builder_const_i64(0);
+}
+
 static IRValue* lower_lvalue_address(IRLowerCtx* ctx, Node* expr, IRType** out_pointee_type)
 {
     if (out_pointee_type) *out_pointee_type = IR_TYPE_I64_T;
@@ -3272,6 +3388,26 @@ static IRValue* lower_lvalue_address(IRLowerCtx* ctx, Node* expr, IRType** out_p
         if (b) {
             const char* storage_name = ir_lower_binding_storage_name(b);
 
+            // فهرسة مؤشرات محلية: p[i] و p[i][j]...
+            if (!b->is_array && b->value_type && b->value_type->kind == IR_TYPE_PTR) {
+                IRType* ptr_t = b->value_type;
+                IRValue* ptr_val = NULL;
+                if (b->is_static_storage) {
+                    IRValue* gptr = ir_value_global(storage_name, ptr_t);
+                    int loaded = ir_builder_emit_load(ctx->builder, ptr_t, gptr);
+                    ptr_val = ir_value_reg(loaded, ptr_t);
+                } else {
+                    IRType* slot_t = ir_type_ptr(ptr_t);
+                    IRValue* slot = ir_value_reg(b->ptr_reg, slot_t);
+                    int loaded = ir_builder_emit_load(ctx->builder, ptr_t, slot);
+                    ptr_val = ir_value_reg(loaded, ptr_t);
+                }
+
+                return ir_lower_pointer_index_chain(ctx, expr, ptr_val, ptr_t,
+                                                    expr->data.array_op.indices, index_count,
+                                                    true, out_pointee_type);
+            }
+
             if (!b->is_array || !b->value_type || b->value_type->kind != IR_TYPE_ARRAY) {
                 ir_lower_report_error(ctx, expr, "'%s' ليس مصفوفة في مسار IR.", name ? name : "???");
                 for (Node* idx = expr->data.array_op.indices; idx; idx = idx->next) {
@@ -3308,6 +3444,15 @@ static IRValue* lower_lvalue_address(IRLowerCtx* ctx, Node* expr, IRType** out_p
         IRGlobal* g = NULL;
         if (ctx->builder && ctx->builder->module && name) {
             g = ir_module_find_global(ctx->builder->module, name);
+        }
+        if (g && g->type && g->type->kind == IR_TYPE_PTR) {
+            // فهرسة مؤشرات عامة: نحمّل قيمة المؤشر أولاً من @name ثم نفهرسه.
+            IRValue* gptr = ir_value_global(name, g->type);
+            int loaded = ir_builder_emit_load(ctx->builder, g->type, gptr);
+            IRValue* p = ir_value_reg(loaded, g->type);
+            return ir_lower_pointer_index_chain(ctx, expr, p, g->type,
+                                                expr->data.array_op.indices, index_count,
+                                                true, out_pointee_type);
         }
         if (!g || !g->type || g->type->kind != IR_TYPE_ARRAY) {
             ir_lower_report_error(ctx, expr, "'%s' ليس مصفوفة.", name ? name : "???");
@@ -3470,6 +3615,31 @@ IRValue* lower_expr(IRLowerCtx* ctx, Node* expr) {
                     return ir_value_reg(ch, IR_TYPE_CHAR_T);
                 }
 
+                // مؤشرات عامة (غير النص): p[i] و p[i][j]...
+                if (!b->is_array && b->value_type && b->value_type->kind == IR_TYPE_PTR) {
+                    if (!expr->data.array_op.indices) {
+                        ir_lower_report_error(ctx, expr, "فهرس المؤشر '%s' مفقود.", name ? name : "???");
+                        return ir_builder_const_i64(0);
+                    }
+
+                    IRType* ptr_t = b->value_type;
+                    IRValue* ptr_val = NULL;
+                    if (b->is_static_storage) {
+                        IRValue* gptr = ir_value_global(storage_name, ptr_t);
+                        int loaded = ir_builder_emit_load(ctx->builder, ptr_t, gptr);
+                        ptr_val = ir_value_reg(loaded, ptr_t);
+                    } else {
+                        IRType* slot_t = ir_type_ptr(ptr_t);
+                        IRValue* slot = ir_value_reg(b->ptr_reg, slot_t);
+                        int loaded = ir_builder_emit_load(ctx->builder, ptr_t, slot);
+                        ptr_val = ir_value_reg(loaded, ptr_t);
+                    }
+
+                    return ir_lower_pointer_index_chain(ctx, expr, ptr_val, ptr_t,
+                                                        expr->data.array_op.indices, index_count,
+                                                        false, NULL);
+                }
+
                 if (!b->is_array || !b->value_type || b->value_type->kind != IR_TYPE_ARRAY) {
                     ir_lower_report_error(ctx, expr, "'%s' ليس مصفوفة في مسار IR.", name ? name : "???");
                     for (Node* idx = expr->data.array_op.indices; idx; idx = idx->next) {
@@ -3552,6 +3722,16 @@ IRValue* lower_expr(IRLowerCtx* ctx, Node* expr) {
                     (void)lower_expr(ctx, idx);
                 }
                 return ir_builder_const_i64(0);
+            }
+
+            // فهرسة مؤشرات عامة: نحمّل قيمة المؤشر أولاً من @name ثم نفهرسه.
+            if (g->type->kind == IR_TYPE_PTR) {
+                IRValue* gptr = ir_value_global(name, g->type);
+                int loaded = ir_builder_emit_load(ctx->builder, g->type, gptr);
+                IRValue* p = ir_value_reg(loaded, g->type);
+                return ir_lower_pointer_index_chain(ctx, expr, p, g->type,
+                                                    expr->data.array_op.indices, index_count,
+                                                    false, NULL);
             }
 
             // نص عام: global يحمل ptr<char>، لذا نحمّله أولاً ثم نفهرسه.
@@ -4335,7 +4515,12 @@ static void lower_var_decl(IRLowerCtx* ctx, Node* stmt) {
             return;
         }
 
-        IRType* value_type = ir_type_from_datatype_ex(m, stmt->data.var_decl.type, stmt->data.var_decl.func_sig);
+        IRType* value_type = ir_type_from_typespec(m,
+                                                   stmt->data.var_decl.type,
+                                                   stmt->data.var_decl.func_sig,
+                                                   stmt->data.var_decl.ptr_base_type,
+                                                   stmt->data.var_decl.ptr_base_type_name,
+                                                   stmt->data.var_decl.ptr_depth);
         IRValue* init = NULL;
         if (stmt->data.var_decl.expression) {
             init = ir_lower_global_init_value(ctx->builder, stmt->data.var_decl.expression, value_type);
@@ -4370,9 +4555,12 @@ static void lower_var_decl(IRLowerCtx* ctx, Node* stmt) {
         return;
     }
 
-    IRType* value_type = ir_type_from_datatype_ex(ctx && ctx->builder ? ctx->builder->module : NULL,
-                                                  stmt->data.var_decl.type,
-                                                  stmt->data.var_decl.func_sig);
+    IRType* value_type = ir_type_from_typespec(ctx && ctx->builder ? ctx->builder->module : NULL,
+                                               stmt->data.var_decl.type,
+                                               stmt->data.var_decl.func_sig,
+                                               stmt->data.var_decl.ptr_base_type,
+                                               stmt->data.var_decl.ptr_base_type_name,
+                                               stmt->data.var_decl.ptr_depth);
 
     // %ptr = حجز <value_type>
     int ptr_reg = ir_builder_emit_alloca(ctx->builder, value_type);
@@ -5544,18 +5732,24 @@ IRModule* ir_lower_program(Node* program, const char* module_name,
             continue;
         }
 
-        IRType* ret_type = ir_type_from_datatype_ex(module,
-                                                     decl0->data.func_def.return_type,
-                                                     decl0->data.func_def.return_func_sig);
+        IRType* ret_type = ir_type_from_typespec(module,
+                                                 decl0->data.func_def.return_type,
+                                                 decl0->data.func_def.return_func_sig,
+                                                 decl0->data.func_def.return_ptr_base_type,
+                                                 decl0->data.func_def.return_ptr_base_type_name,
+                                                 decl0->data.func_def.return_ptr_depth);
         IRFunc* f0 = ir_builder_create_func(builder, decl0->data.func_def.name, ret_type);
         if (!f0) continue;
         f0->is_prototype = decl0->data.func_def.is_prototype;
 
         for (Node* p = decl0->data.func_def.params; p; p = p->next) {
             if (p->type != NODE_VAR_DECL) continue;
-            IRType* ptype = ir_type_from_datatype_ex(module,
-                                                     p->data.var_decl.type,
-                                                     p->data.var_decl.func_sig);
+            IRType* ptype = ir_type_from_typespec(module,
+                                                  p->data.var_decl.type,
+                                                  p->data.var_decl.func_sig,
+                                                  p->data.var_decl.ptr_base_type,
+                                                  p->data.var_decl.ptr_base_type_name,
+                                                  p->data.var_decl.ptr_depth);
             (void)ir_builder_add_param(builder, p->data.var_decl.name, ptype);
         }
     }
@@ -5598,7 +5792,14 @@ IRModule* ir_lower_program(Node* program, const char* module_name,
                 elem_t = IR_TYPE_I8_T;
                 arr_t = ir_type_array(IR_TYPE_I8_T, (int)total_bytes64);
             } else {
-                elem_t = ir_type_from_datatype(module, elem_dt);
+                if (elem_dt == TYPE_POINTER) {
+                    elem_t = ir_type_from_ptr_spec(module,
+                                                   decl->data.array_decl.element_ptr_base_type,
+                                                   decl->data.array_decl.element_ptr_base_type_name,
+                                                   decl->data.array_decl.element_ptr_depth);
+                } else {
+                    elem_t = ir_type_from_datatype(module, elem_dt);
+                }
                 if (!elem_t || elem_t->kind == IR_TYPE_VOID) elem_t = IR_TYPE_I64_T;
                 arr_t = ir_type_array(elem_t, total_count);
             }
@@ -5662,9 +5863,12 @@ IRModule* ir_lower_program(Node* program, const char* module_name,
                 continue;
             }
 
-            IRType* gtype = ir_type_from_datatype_ex(module,
-                                                     decl->data.var_decl.type,
-                                                     decl->data.var_decl.func_sig);
+            IRType* gtype = ir_type_from_typespec(module,
+                                                  decl->data.var_decl.type,
+                                                  decl->data.var_decl.func_sig,
+                                                  decl->data.var_decl.ptr_base_type,
+                                                  decl->data.var_decl.ptr_base_type_name,
+                                                  decl->data.var_decl.ptr_depth);
             IRValue* init = ir_lower_global_init_value(builder, decl->data.var_decl.expression, gtype);
 
             IRGlobal* g = ir_builder_create_global_init(builder, decl->data.var_decl.name, gtype, init,
@@ -5681,17 +5885,23 @@ IRModule* ir_lower_program(Node* program, const char* module_name,
 
             IRFunc* func = ir_module_find_func(module, decl->data.func_def.name);
             if (!func) {
-                IRType* ret_type = ir_type_from_datatype_ex(module,
-                                                            decl->data.func_def.return_type,
-                                                            decl->data.func_def.return_func_sig);
+                IRType* ret_type = ir_type_from_typespec(module,
+                                                        decl->data.func_def.return_type,
+                                                        decl->data.func_def.return_func_sig,
+                                                        decl->data.func_def.return_ptr_base_type,
+                                                        decl->data.func_def.return_ptr_base_type_name,
+                                                        decl->data.func_def.return_ptr_depth);
                 func = ir_builder_create_func(builder, decl->data.func_def.name, ret_type);
                 if (!func) continue;
                 func->is_prototype = decl->data.func_def.is_prototype;
                 for (Node* p = decl->data.func_def.params; p; p = p->next) {
                     if (p->type != NODE_VAR_DECL) continue;
-                    IRType* ptype = ir_type_from_datatype_ex(module,
-                                                             p->data.var_decl.type,
-                                                             p->data.var_decl.func_sig);
+                    IRType* ptype = ir_type_from_typespec(module,
+                                                          p->data.var_decl.type,
+                                                          p->data.var_decl.func_sig,
+                                                          p->data.var_decl.ptr_base_type,
+                                                          p->data.var_decl.ptr_base_type_name,
+                                                          p->data.var_decl.ptr_depth);
                     (void)ir_builder_add_param(builder, p->data.var_decl.name, ptype);
                 }
             }

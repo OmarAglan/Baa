@@ -6,6 +6,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ---
 
+## [0.3.12.5] - 2026-03-02
+
+### Added
+
+- **Command line arguments for `الرئيسية`** (v0.3.12.5): allow `صحيح الرئيسية(صحيح عدد، نص[] معاملات)` in addition to `صحيح الرئيسية()`.
+- **Pointer indexing** (v0.3.12.5): allow `p[i]` (and chained forms like `argv[i][j]`) as sugar for `*(p + i)` where valid.
+- **Test runner args marker:** `tests/test.py` now supports `// ARGS:` lines for runtime integration tests.
+- **Coverage for main args:**
+  - `tests/integration/backend/backend_main_args_test.baa`
+  - `tests/neg/semantic_main_args_bad_signature.baa`
+
 ## [0.3.12.0] - 2026-03-02
 
 ### Added

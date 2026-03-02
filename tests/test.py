@@ -33,6 +33,20 @@ def _flags_markers(src: Path) -> list[str]:
     return flags
 
 
+def _args_markers(src: Path) -> list[str]:
+    args: list[str] = []
+    try:
+        for line in src.read_text(encoding="utf-8", errors="replace").splitlines():
+            s = line.strip()
+            if s.startswith("// ARGS:"):
+                raw = s.split(":", 1)[1].strip()
+                if raw:
+                    args.extend(shlex.split(raw))
+    except Exception:
+        return []
+    return args
+
+
 def _run_markers(src: Path) -> set[str]:
     markers: set[str] = set()
     try:
@@ -176,7 +190,8 @@ def main() -> int:
                 continue
 
             # Runtime tests are expected to return 0 on PASS.
-            rc = _run([str(out)], cwd=ROOT)
+            args = _args_markers(src)
+            rc = _run([str(out), *args], cwd=ROOT)
             if rc != 0:
                 failures.append(f"run failed (exit={rc}): {src.name}")
     finally:

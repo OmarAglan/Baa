@@ -320,6 +320,20 @@ bool baa_process_run_redirect(const char* const* argv,
 
 #else
 
+static bool posix_redirect_file(const char* path, int target_fd)
+{
+    if (!path) return true;
+    int fd = open(path, O_CREAT | O_TRUNC | O_WRONLY, 0644);
+    if (fd < 0) return false;
+    if (dup2(fd, target_fd) < 0)
+    {
+        close(fd);
+        return false;
+    }
+    close(fd);
+    return true;
+}
+
 static bool posix_spawn_wait(const char* const* argv,
                              const char* cwd,
                              const char* stdout_path,
@@ -341,26 +355,17 @@ static bool posix_spawn_wait(const char* const* argv,
         {
             int fd = open(stdout_path, O_CREAT | O_TRUNC | O_WRONLY, 0644);
             if (fd < 0) _exit(127);
-            (void)dup2(fd, STDOUT_FILENO);
-            (void)dup2(fd, STDERR_FILENO);
+            if (dup2(fd, STDOUT_FILENO) < 0 || dup2(fd, STDERR_FILENO) < 0)
+            {
+                close(fd);
+                _exit(127);
+            }
             close(fd);
         }
         else
         {
-            if (stdout_path)
-            {
-                int fd = open(stdout_path, O_CREAT | O_TRUNC | O_WRONLY, 0644);
-                if (fd < 0) _exit(127);
-                (void)dup2(fd, STDOUT_FILENO);
-                close(fd);
-            }
-            if (stderr_path)
-            {
-                int fd = open(stderr_path, O_CREAT | O_TRUNC | O_WRONLY, 0644);
-                if (fd < 0) _exit(127);
-                (void)dup2(fd, STDERR_FILENO);
-                close(fd);
-            }
+            if (!posix_redirect_file(stdout_path, STDOUT_FILENO)) _exit(127);
+            if (!posix_redirect_file(stderr_path, STDERR_FILENO)) _exit(127);
         }
 
         execvp(argv[0], (char* const*)argv);

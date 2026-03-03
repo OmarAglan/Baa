@@ -52,6 +52,19 @@ static void print_phase_times_and_mem(const CompilerConfig* config,
             phase_times->ir_arena_chunks_max);
 }
 
+static int main_cleanup_and_return(DriverParseResult* cli,
+                                   char** obj_files,
+                                   int obj_count,
+                                   char* output_file,
+                                   bool output_file_owned,
+                                   int rc)
+{
+    driver_free_obj_files(obj_files, obj_count, output_file);
+    driver_parse_result_free(cli);
+    if (output_file_owned) free(output_file);
+    return rc;
+}
+
 // ============================================================================
 // نقطة الدخول (Main Entry Point)
 // ============================================================================
@@ -86,27 +99,23 @@ int main(int argc, char **argv)
 
     if (!driver_parse_cli(argc, argv, &config, &cli))
     {
-        driver_parse_result_free(&cli);
-        return 1;
+        return main_cleanup_and_return(&cli, NULL, 0, config.output_file, output_file_owned, 1);
     }
 
     if (cli.cmd == DRIVER_CMD_HELP)
     {
         driver_print_help();
-        driver_parse_result_free(&cli);
-        return 0;
+        return main_cleanup_and_return(&cli, NULL, 0, config.output_file, output_file_owned, 0);
     }
     if (cli.cmd == DRIVER_CMD_VERSION)
     {
         driver_print_version();
-        driver_parse_result_free(&cli);
-        return 0;
+        return main_cleanup_and_return(&cli, NULL, 0, config.output_file, output_file_owned, 0);
     }
     if (cli.cmd == DRIVER_CMD_UPDATE)
     {
         run_updater();
-        driver_parse_result_free(&cli);
-        return 0;
+        return main_cleanup_and_return(&cli, NULL, 0, config.output_file, output_file_owned, 0);
     }
 
     char **input_files = cli.input_files;
@@ -115,8 +124,7 @@ int main(int argc, char **argv)
     if (input_count == 0)
     {
         fprintf(stderr, "Error: No input file specified\n");
-        driver_parse_result_free(&cli);
-        return 1;
+        return main_cleanup_and_return(&cli, NULL, 0, config.output_file, output_file_owned, 1);
     }
 
     // تحديد اسم الملف المخرج الافتراضي
@@ -134,8 +142,7 @@ int main(int argc, char **argv)
             if (!config.output_file)
             {
                 fprintf(stderr, "خطأ: نفدت الذاكرة.\n");
-                driver_parse_result_free(&cli);
-                return 1;
+                return main_cleanup_and_return(&cli, NULL, 0, config.output_file, output_file_owned, 1);
             }
             output_file_owned = true;
             (void)snprintf(config.output_file, n, "out%s", ext);
@@ -155,9 +162,7 @@ int main(int argc, char **argv)
                     "خطأ: الهدف '%s' لا يطابق نظام المضيف لمرحلة التجميع/الربط.\n"
                     "ملاحظة: استخدم -S لتوليد ملف .s فقط. الدعم الكامل لـ cross-target مؤجل.\n",
                     config.target->name ? config.target->name : "<unknown>");
-            driver_parse_result_free(&cli);
-            if (output_file_owned) free(config.output_file);
-            return 1;
+            return main_cleanup_and_return(&cli, NULL, 0, config.output_file, output_file_owned, 1);
         }
     }
 
@@ -166,19 +171,16 @@ int main(int argc, char **argv)
     if (driver_compile_files(&config, input_files, input_count, &phase_times,
                              &obj_files_to_link, &obj_count) != 0)
     {
-        driver_parse_result_free(&cli);
-        if (output_file_owned) free(config.output_file);
-        return 1;
+        return main_cleanup_and_return(&cli, obj_files_to_link, obj_count, config.output_file,
+                                       output_file_owned, 1);
     }
 
     // إذا طلب المستخدم -S أو -c، نتوقف هنا
     if (config.assembly_only || config.compile_only)
     {
         print_phase_times_and_mem(&config, &phase_times);
-        driver_free_obj_files(obj_files_to_link, obj_count, config.output_file);
-        driver_parse_result_free(&cli);
-        if (output_file_owned) free(config.output_file);
-        return 0;
+        return main_cleanup_and_return(&cli, obj_files_to_link, obj_count, config.output_file,
+                                       output_file_owned, 0);
     }
 
     // --- المرحلة النهائية: الربط (Linking) ---
@@ -188,10 +190,8 @@ int main(int argc, char **argv)
     if (driver_toolchain_link(&config, &phase_times,
                               (const char **)obj_files_to_link, obj_count) != 0)
     {
-        driver_free_obj_files(obj_files_to_link, obj_count, config.output_file);
-        driver_parse_result_free(&cli);
-        if (output_file_owned) free(config.output_file);
-        return 1;
+        return main_cleanup_and_return(&cli, obj_files_to_link, obj_count, config.output_file,
+                                       output_file_owned, 1);
     }
 
     // تنظيف ملفات الكائنات المؤقتة
@@ -202,8 +202,6 @@ int main(int argc, char **argv)
             (void)driver_toolchain_delete_file_utf8(obj_files_to_link[i]);
         }
     }
-
-    driver_free_obj_files(obj_files_to_link, obj_count, config.output_file);
 
     // ملخص التحذيرات
     int warn_count = warning_get_count();
@@ -222,8 +220,6 @@ int main(int argc, char **argv)
 
     print_phase_times_and_mem(&config, &phase_times);
 
-    driver_parse_result_free(&cli);
-    if (output_file_owned) free(config.output_file);
-
-    return 0;
+    return main_cleanup_and_return(&cli, obj_files_to_link, obj_count, config.output_file,
+                                   output_file_owned, 0);
 }

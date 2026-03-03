@@ -312,26 +312,48 @@ bool driver_toolchain_delete_file_utf8(const char* path)
 #endif
 }
 
+#ifdef _WIN32
+static void win_cleanup_stage_pair(const char* stage_asm, const char* stage_obj)
+{
+    if (stage_asm && stage_asm[0]) (void)driver_toolchain_delete_file_utf8(stage_asm);
+    if (stage_obj && stage_obj[0]) (void)driver_toolchain_delete_file_utf8(stage_obj);
+}
+
+static void win_cleanup_staged_objects(char** staged_objects, int obj_count)
+{
+    if (!staged_objects) return;
+    for (int i = 0; i < obj_count; i++)
+    {
+        if (!staged_objects[i]) continue;
+        (void)driver_toolchain_delete_file_utf8(staged_objects[i]);
+        free(staged_objects[i]);
+    }
+}
+#endif
+
 int driver_toolchain_assemble_one(const CompilerConfig *config,
                                  CompilerPhaseTimes *times,
                                  const char *asm_file,
                                  const char *obj_file)
 {
     if (!config || !asm_file || !obj_file) return 1;
+    int rc = 1;
 
 #ifdef _WIN32
-    char stage_asm[MAX_PATH];
-    char stage_obj[MAX_PATH];
+    char stage_asm[MAX_PATH] = "";
+    char stage_obj[MAX_PATH] = "";
+    bool stage_paths_ready = false;
     if (!win_make_stage_file_path("unit", ".s", stage_asm, sizeof(stage_asm)) ||
         !win_make_stage_file_path("unit", ".o", stage_obj, sizeof(stage_obj)))
     {
         fprintf(stderr, "خطأ: فشل إنشاء مسار staging ASCII للتجميع.\n");
         return 1;
     }
+    stage_paths_ready = true;
 
     if (!driver_toolchain_copy_file_utf8(asm_file, stage_asm)) {
         fprintf(stderr, "خطأ: فشل نسخ ملف التجميع إلى staging: %s\n", asm_file);
-        return 1;
+        goto cleanup;
     }
 #else
     const char* stage_asm = asm_file;
@@ -355,26 +377,24 @@ int driver_toolchain_assemble_one(const CompilerConfig *config,
     if (!baa_process_run(argv, NULL, &pr) || pr.exit_code != 0)
     {
         printf("Error: Assembler failed for %s\n", stage_asm);
-#ifdef _WIN32
-        (void)driver_toolchain_delete_file_utf8(stage_asm);
-        (void)driver_toolchain_delete_file_utf8(stage_obj);
-#endif
-        return 1;
+        goto cleanup;
     }
 
 #ifdef _WIN32
     if (!driver_toolchain_copy_file_utf8(stage_obj, obj_file)) {
         fprintf(stderr, "خطأ: فشل نسخ ناتج الكائن من staging إلى المسار الهدف: %s\n", obj_file);
-        (void)driver_toolchain_delete_file_utf8(stage_asm);
-        (void)driver_toolchain_delete_file_utf8(stage_obj);
-        return 1;
+        goto cleanup;
     }
-    (void)driver_toolchain_delete_file_utf8(stage_asm);
-    (void)driver_toolchain_delete_file_utf8(stage_obj);
 #endif
 
     if (times && config->time_phases) times->assemble_s += (driver_time_seconds() - t0);
-    return 0;
+    rc = 0;
+
+cleanup:
+#ifdef _WIN32
+    if (stage_paths_ready) win_cleanup_stage_pair(stage_asm, stage_obj);
+#endif
+    return rc;
 }
 
 int driver_toolchain_link(const CompilerConfig *config,
@@ -384,6 +404,7 @@ int driver_toolchain_link(const CompilerConfig *config,
 {
     if (!config || !config->output_file) return 1;
     if (!obj_files || obj_count <= 0) return 1;
+    int rc = 1;
 
     // مساحة إضافية للأعلام الاختيارية (debug/pie/startup/-lm) + -o + output + NULL
     int argv_cap = obj_count + 13;
@@ -402,6 +423,8 @@ int driver_toolchain_link(const CompilerConfig *config,
         free(argv_link);
         return 1;
     }
+    char staged_output[MAX_PATH] = "";
+    bool staged_output_ready = false;
 
     bool staged_ok = true;
     for (int i = 0; i < obj_count; i++)
@@ -419,21 +442,12 @@ int driver_toolchain_link(const CompilerConfig *config,
         }
     }
 
-    char staged_output[MAX_PATH];
     if (!staged_ok || !win_make_stage_file_path("linked", ".exe", staged_output, sizeof(staged_output)))
     {
         fprintf(stderr, "خطأ: فشل تجهيز مسارات staging ASCII لعملية الربط.\n");
-        for (int i = 0; i < obj_count; i++)
-        {
-            if (staged_objects[i]) {
-                (void)driver_toolchain_delete_file_utf8(staged_objects[i]);
-                free(staged_objects[i]);
-            }
-        }
-        free(staged_objects);
-        free(argv_link);
-        return 1;
+        goto cleanup;
     }
+    staged_output_ready = true;
 #endif
 
     int lk = 0;
@@ -471,51 +485,26 @@ int driver_toolchain_link(const CompilerConfig *config,
     if (!baa_process_run(argv_link, NULL, &pr) || pr.exit_code != 0)
     {
         printf("Error: Linker failed.\n");
-#ifdef _WIN32
-        for (int i = 0; i < obj_count; i++)
-        {
-            if (staged_objects[i]) {
-                (void)driver_toolchain_delete_file_utf8(staged_objects[i]);
-                free(staged_objects[i]);
-            }
-        }
-        (void)driver_toolchain_delete_file_utf8(staged_output);
-        free(staged_objects);
-#endif
-        free(argv_link);
-        return 1;
+        goto cleanup;
     }
 
 #ifdef _WIN32
     if (!driver_toolchain_copy_file_utf8(staged_output, config->output_file))
     {
         fprintf(stderr, "خطأ: فشل نسخ الملف التنفيذي من staging إلى المسار الهدف: %s\n", config->output_file);
-        for (int i = 0; i < obj_count; i++)
-        {
-            if (staged_objects[i]) {
-                (void)driver_toolchain_delete_file_utf8(staged_objects[i]);
-                free(staged_objects[i]);
-            }
-        }
-        (void)driver_toolchain_delete_file_utf8(staged_output);
-        free(staged_objects);
-        free(argv_link);
-        return 1;
+        goto cleanup;
     }
-
-    for (int i = 0; i < obj_count; i++)
-    {
-        if (staged_objects[i]) {
-            (void)driver_toolchain_delete_file_utf8(staged_objects[i]);
-            free(staged_objects[i]);
-        }
-    }
-    (void)driver_toolchain_delete_file_utf8(staged_output);
-    free(staged_objects);
 #endif
 
     if (times && config->time_phases) times->link_s += (driver_time_seconds() - t0);
+    rc = 0;
 
+cleanup:
+#ifdef _WIN32
+    win_cleanup_staged_objects(staged_objects, obj_count);
+    free(staged_objects);
+    if (staged_output_ready) (void)driver_toolchain_delete_file_utf8(staged_output);
+#endif
     free(argv_link);
-    return 0;
+    return rc;
 }

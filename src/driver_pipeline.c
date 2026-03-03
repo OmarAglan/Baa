@@ -118,7 +118,7 @@ static char *change_extension_alloc(const char *filename, const char *new_ext)
         exit(1);
     }
 
-    char *dot = strrchr(filename, '.');
+    const char *dot = strrchr(filename, '.');
     size_t base_len = 0;
     if (!dot || dot == filename)
     {
@@ -160,6 +160,21 @@ static char* driver_make_ascii_temp_path(const char* prefix, const char* ext)
     char* out = (char*)malloc(need);
     if (!out) return NULL;
     memcpy(out, tmp_name, need);
+    return out;
+}
+
+static void driver_free_if_owned(char* ptr, const char* borrowed_ptr)
+{
+    if (ptr && ptr != borrowed_ptr) free(ptr);
+}
+
+static char* driver_strdup_alloc(const char* text)
+{
+    if (!text) return NULL;
+    size_t n = strlen(text);
+    char* out = (char*)malloc(n + 1);
+    if (!out) return NULL;
+    memcpy(out, text, n + 1);
     return out;
 }
 
@@ -396,7 +411,7 @@ static int compile_one_ir(const CompilerConfig *config,
         fprintf(stderr, "خطأ: فشل إنشاء مسار مؤقت ASCII لملف التجميع.\n");
         ir_module_free(ir_module);
         free(source);
-        if (final_asm_output && final_asm_output != config->output_file) free(final_asm_output);
+        driver_free_if_owned(final_asm_output, config->output_file);
         return 1;
     }
 
@@ -408,7 +423,7 @@ static int compile_one_ir(const CompilerConfig *config,
         ir_module_free(ir_module);
         free(source);
         free(asm_file);
-        if (final_asm_output && final_asm_output != config->output_file) free(final_asm_output);
+        driver_free_if_owned(final_asm_output, config->output_file);
         return 1;
     }
 
@@ -426,7 +441,7 @@ static int compile_one_ir(const CompilerConfig *config,
             ir_module_free(ir_module);
             free(source);
             free(asm_file);
-            if (final_asm_output && final_asm_output != config->output_file) free(final_asm_output);
+            driver_free_if_owned(final_asm_output, config->output_file);
             return 1;
         }
     }
@@ -440,7 +455,7 @@ static int compile_one_ir(const CompilerConfig *config,
         ir_module_free(ir_module);
         free(source);
         free(asm_file);
-        if (final_asm_output && final_asm_output != config->output_file) free(final_asm_output);
+        driver_free_if_owned(final_asm_output, config->output_file);
         return 1;
     }
     if (config->time_phases) phase_times->emit_s += (driver_time_seconds() - t0);
@@ -483,7 +498,7 @@ static int compile_one_ir(const CompilerConfig *config,
         {
             fprintf(stderr, "خطأ: فشل نسخ ملف التجميع إلى المسار الهدف '%s'.\n", final_asm_output);
             free(asm_file);
-            if (final_asm_output != config->output_file) free(final_asm_output);
+            driver_free_if_owned(final_asm_output, config->output_file);
             return 1;
         }
 
@@ -492,7 +507,7 @@ static int compile_one_ir(const CompilerConfig *config,
         if (!config->verbose)
             (void)driver_toolchain_delete_file_utf8(asm_file);
         free(asm_file);
-        if (final_asm_output != config->output_file) free(final_asm_output);
+        driver_free_if_owned(final_asm_output, config->output_file);
         return 0;
     }
 
@@ -512,7 +527,7 @@ static int compile_one_ir(const CompilerConfig *config,
             fprintf(stderr, "خطأ: فشل إنشاء مسار مؤقت ASCII لملف الكائن.\n");
             if (!config->verbose) (void)driver_toolchain_delete_file_utf8(asm_file);
             free(asm_file);
-            if (final_asm_output && final_asm_output != config->output_file) free(final_asm_output);
+            driver_free_if_owned(final_asm_output, config->output_file);
             return 1;
         }
     }
@@ -522,7 +537,7 @@ static int compile_one_ir(const CompilerConfig *config,
         if (!config->verbose) (void)driver_toolchain_delete_file_utf8(asm_file);
         free(asm_file);
         if (obj_file != config->output_file) free(obj_file);
-        if (final_asm_output && final_asm_output != config->output_file) free(final_asm_output);
+        driver_free_if_owned(final_asm_output, config->output_file);
         return 1;
     }
 
@@ -531,7 +546,7 @@ static int compile_one_ir(const CompilerConfig *config,
         (void)driver_toolchain_delete_file_utf8(asm_file);
     }
     free(asm_file);
-    if (final_asm_output && final_asm_output != config->output_file) free(final_asm_output);
+    driver_free_if_owned(final_asm_output, config->output_file);
 
     if (out_obj_file) *out_obj_file = obj_file;
     return 0;
@@ -620,8 +635,7 @@ int driver_compile_files(const CompilerConfig *config,
             remove(asm_path);
         }
 
-        size_t n = strlen(obj_path);
-        char* obj_dup = (char*)malloc(n + 1);
+        char* obj_dup = driver_strdup_alloc(obj_path);
         if (!obj_dup)
         {
             fprintf(stderr, "خطأ: نفدت الذاكرة.\n");
@@ -629,7 +643,6 @@ int driver_compile_files(const CompilerConfig *config,
             driver_free_obj_files(obj_files, obj_count, config->output_file);
             return 1;
         }
-        memcpy(obj_dup, obj_path, n + 1);
         obj_files[obj_count++] = obj_dup;
     }
 

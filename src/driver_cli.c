@@ -12,6 +12,37 @@
 #include <stdlib.h>
 #include <string.h>
 
+typedef enum
+{
+    WARN_PARSE_SET_ALL,
+    WARN_PARSE_SET_AS_ERRORS,
+    WARN_PARSE_SET_COLOR,
+    WARN_PARSE_SET_SPECIFIC,
+} WarnParseAction;
+
+typedef struct
+{
+    const char* flag;
+    WarnParseAction action;
+    WarningType warning_type;
+    bool value;
+} WarnFlagSpec;
+
+static const WarnFlagSpec k_warn_flag_specs[] = {
+    {"-Wall", WARN_PARSE_SET_ALL, WARN_UNUSED_VARIABLE, true},
+    {"-Werror", WARN_PARSE_SET_AS_ERRORS, WARN_UNUSED_VARIABLE, true},
+    {"-Wno-color", WARN_PARSE_SET_COLOR, WARN_UNUSED_VARIABLE, false},
+    {"-Wcolor", WARN_PARSE_SET_COLOR, WARN_UNUSED_VARIABLE, true},
+    {"-Wunused-variable", WARN_PARSE_SET_SPECIFIC, WARN_UNUSED_VARIABLE, true},
+    {"-Wno-unused-variable", WARN_PARSE_SET_SPECIFIC, WARN_UNUSED_VARIABLE, false},
+    {"-Wdead-code", WARN_PARSE_SET_SPECIFIC, WARN_DEAD_CODE, true},
+    {"-Wno-dead-code", WARN_PARSE_SET_SPECIFIC, WARN_DEAD_CODE, false},
+    {"-Wimplicit-narrowing", WARN_PARSE_SET_SPECIFIC, WARN_IMPLICIT_NARROWING, true},
+    {"-Wno-implicit-narrowing", WARN_PARSE_SET_SPECIFIC, WARN_IMPLICIT_NARROWING, false},
+    {"-Wsigned-unsigned-compare", WARN_PARSE_SET_SPECIFIC, WARN_SIGNED_UNSIGNED_COMPARE, true},
+    {"-Wno-signed-unsigned-compare", WARN_PARSE_SET_SPECIFIC, WARN_SIGNED_UNSIGNED_COMPARE, false},
+};
+
 /**
  * @brief تحليل علم تحذير (-W...).
  * @return true إذا تم التعرف على العلم.
@@ -20,91 +51,55 @@ static bool parse_warning_flag(const char *flag)
 {
     if (!flag) return false;
 
-    // -Wall: تفعيل جميع التحذيرات
-    if (strcmp(flag, "-Wall") == 0)
+    for (size_t i = 0; i < sizeof(k_warn_flag_specs) / sizeof(k_warn_flag_specs[0]); i++)
     {
-        g_warning_config.all_warnings = true;
-        return true;
-    }
+        const WarnFlagSpec* spec = &k_warn_flag_specs[i];
+        if (strcmp(flag, spec->flag) != 0) continue;
 
-    // -Werror: معاملة التحذيرات كأخطاء
-    if (strcmp(flag, "-Werror") == 0)
-    {
-        g_warning_config.warnings_as_errors = true;
-        return true;
-    }
-
-    // -Wno-color: تعطيل الألوان
-    if (strcmp(flag, "-Wno-color") == 0)
-    {
-        g_warning_config.colored_output = false;
-        return true;
-    }
-
-    // -Wcolor: تفعيل الألوان
-    if (strcmp(flag, "-Wcolor") == 0)
-    {
-        g_warning_config.colored_output = true;
-        return true;
-    }
-
-    // -Wunused-variable: تفعيل تحذير المتغيرات غير المستخدمة
-    if (strcmp(flag, "-Wunused-variable") == 0)
-    {
-        g_warning_config.enabled[WARN_UNUSED_VARIABLE] = true;
-        return true;
-    }
-
-    // -Wno-unused-variable: تعطيل تحذير المتغيرات غير المستخدمة
-    if (strcmp(flag, "-Wno-unused-variable") == 0)
-    {
-        g_warning_config.enabled[WARN_UNUSED_VARIABLE] = false;
-        return true;
-    }
-
-    // -Wdead-code: تفعيل تحذير الكود الميت
-    if (strcmp(flag, "-Wdead-code") == 0)
-    {
-        g_warning_config.enabled[WARN_DEAD_CODE] = true;
-        return true;
-    }
-
-    // -Wno-dead-code: تعطيل تحذير الكود الميت
-    if (strcmp(flag, "-Wno-dead-code") == 0)
-    {
-        g_warning_config.enabled[WARN_DEAD_CODE] = false;
-        return true;
-    }
-
-    // -Wimplicit-narrowing: تفعيل تحذير التحويل الضمني المضيّق
-    if (strcmp(flag, "-Wimplicit-narrowing") == 0)
-    {
-        g_warning_config.enabled[WARN_IMPLICIT_NARROWING] = true;
-        return true;
-    }
-
-    // -Wno-implicit-narrowing: تعطيل تحذير التحويل الضمني المضيّق
-    if (strcmp(flag, "-Wno-implicit-narrowing") == 0)
-    {
-        g_warning_config.enabled[WARN_IMPLICIT_NARROWING] = false;
-        return true;
-    }
-
-    // -Wsigned-unsigned-compare: تفعيل تحذير مقارنة الموقّع بغير الموقّع
-    if (strcmp(flag, "-Wsigned-unsigned-compare") == 0)
-    {
-        g_warning_config.enabled[WARN_SIGNED_UNSIGNED_COMPARE] = true;
-        return true;
-    }
-
-    // -Wno-signed-unsigned-compare: تعطيل تحذير مقارنة الموقّع بغير الموقّع
-    if (strcmp(flag, "-Wno-signed-unsigned-compare") == 0)
-    {
-        g_warning_config.enabled[WARN_SIGNED_UNSIGNED_COMPARE] = false;
+        switch (spec->action)
+        {
+            case WARN_PARSE_SET_ALL:
+                g_warning_config.all_warnings = spec->value;
+                break;
+            case WARN_PARSE_SET_AS_ERRORS:
+                g_warning_config.warnings_as_errors = spec->value;
+                break;
+            case WARN_PARSE_SET_COLOR:
+                g_warning_config.colored_output = spec->value;
+                break;
+            case WARN_PARSE_SET_SPECIFIC:
+                g_warning_config.enabled[spec->warning_type] = spec->value;
+                break;
+            default:
+                return false;
+        }
         return true;
     }
 
     return false;
+}
+
+static void parse_release_temp_arrays(char** inputs, const char** include_dirs)
+{
+    free(inputs);
+    free((void*)include_dirs);
+}
+
+static void parse_set_result(DriverParseResult* out,
+                             CompilerConfig* config,
+                             DriverCommand cmd,
+                             char** inputs,
+                             int input_count,
+                             const char** include_dirs,
+                             size_t include_dir_count)
+{
+    out->cmd = cmd;
+    out->input_files = inputs;
+    out->input_count = input_count;
+    out->include_dirs = include_dirs;
+    out->include_dir_count = include_dir_count;
+    config->include_dirs = include_dirs;
+    config->include_dir_count = include_dir_count;
 }
 
 void driver_print_help(void)
@@ -257,8 +252,7 @@ bool driver_parse_cli(int argc, char **argv, CompilerConfig *config, DriverParse
                 if (!parsed)
                 {
                     fprintf(stderr, "Error: Unknown target '%s'\n", t);
-                    free(inputs);
-                    free((void *)include_dirs);
+                    parse_release_temp_arrays(inputs, include_dirs);
                     return false;
                 }
                 config->target = parsed;
@@ -290,8 +284,7 @@ bool driver_parse_cli(int argc, char **argv, CompilerConfig *config, DriverParse
                     fprintf(stderr,
                             "Error: Unsupported code model '%s' (only small is supported)\n",
                             m);
-                    free(inputs);
-                    free((void *)include_dirs);
+                    parse_release_temp_arrays(inputs, include_dirs);
                     return false;
                 }
             }
@@ -310,8 +303,7 @@ bool driver_parse_cli(int argc, char **argv, CompilerConfig *config, DriverParse
                 else
                 {
                     fprintf(stderr, "Error: -o requires a filename\n");
-                    free(inputs);
-                    free((void *)include_dirs);
+                    parse_release_temp_arrays(inputs, include_dirs);
                     return false;
                 }
             }
@@ -320,8 +312,7 @@ bool driver_parse_cli(int argc, char **argv, CompilerConfig *config, DriverParse
                 if (i + 1 >= argc || !argv[i + 1] || argv[i + 1][0] == '\0')
                 {
                     fprintf(stderr, "Error: -I requires a directory path\n");
-                    free(inputs);
-                    free((void *)include_dirs);
+                    parse_release_temp_arrays(inputs, include_dirs);
                     return false;
                 }
                 include_dirs[include_dir_count++] = argv[++i];
@@ -332,32 +323,31 @@ bool driver_parse_cli(int argc, char **argv, CompilerConfig *config, DriverParse
                 if (!dir[0])
                 {
                     fprintf(stderr, "Error: -I requires a directory path\n");
-                    free(inputs);
-                    free((void *)include_dirs);
+                    parse_release_temp_arrays(inputs, include_dirs);
                     return false;
                 }
                 include_dirs[include_dir_count++] = dir;
             }
             else if (strcmp(arg, "--help") == 0 || strcmp(arg, "-h") == 0)
             {
-                out->cmd = DRIVER_CMD_HELP;
-                out->input_files = inputs;
-                out->input_count = input_count;
-                out->include_dirs = include_dirs;
-                out->include_dir_count = include_dir_count;
-                config->include_dirs = include_dirs;
-                config->include_dir_count = include_dir_count;
+                parse_set_result(out,
+                                 config,
+                                 DRIVER_CMD_HELP,
+                                 inputs,
+                                 input_count,
+                                 include_dirs,
+                                 include_dir_count);
                 return true;
             }
             else if (strcmp(arg, "--version") == 0)
             {
-                out->cmd = DRIVER_CMD_VERSION;
-                out->input_files = inputs;
-                out->input_count = input_count;
-                out->include_dirs = include_dirs;
-                out->include_dir_count = include_dir_count;
-                config->include_dirs = include_dirs;
-                config->include_dir_count = include_dir_count;
+                parse_set_result(out,
+                                 config,
+                                 DRIVER_CMD_VERSION,
+                                 inputs,
+                                 input_count,
+                                 include_dirs,
+                                 include_dir_count);
                 return true;
             }
             else if (strncmp(arg, "-W", 2) == 0)
@@ -365,16 +355,14 @@ bool driver_parse_cli(int argc, char **argv, CompilerConfig *config, DriverParse
                 if (!parse_warning_flag(arg))
                 {
                     fprintf(stderr, "Error: Unknown warning flag '%s'\n", arg);
-                    free(inputs);
-                    free((void *)include_dirs);
+                    parse_release_temp_arrays(inputs, include_dirs);
                     return false;
                 }
             }
             else
             {
                 fprintf(stderr, "Error: Unknown flag '%s'\n", arg);
-                free(inputs);
-                free((void *)include_dirs);
+                parse_release_temp_arrays(inputs, include_dirs);
                 return false;
             }
         }
@@ -384,12 +372,12 @@ bool driver_parse_cli(int argc, char **argv, CompilerConfig *config, DriverParse
         }
     }
 
-    out->cmd = DRIVER_CMD_COMPILE;
-    out->input_files = inputs;
-    out->input_count = input_count;
-    out->include_dirs = include_dirs;
-    out->include_dir_count = include_dir_count;
-    config->include_dirs = include_dirs;
-    config->include_dir_count = include_dir_count;
+    parse_set_result(out,
+                     config,
+                     DRIVER_CMD_COMPILE,
+                     inputs,
+                     input_count,
+                     include_dirs,
+                     include_dir_count);
     return true;
 }

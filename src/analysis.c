@@ -3576,6 +3576,120 @@ static bool sizeof_expr_bytes(Node* expr, int64_t* out_size)
 }
 
 /**
+ * @brief تنفيذ سلسلة فحص الدوال المدمجة بالترتيب القياسي.
+ * @return true إذا تم التعرف على الدالة كمدمجة وتم التعامل معها.
+ */
+static bool builtin_dispatch_known_call(Node* call_node,
+                                        const char* fname,
+                                        Node* args,
+                                        DataType* out_return_type,
+                                        bool clear_ptr_after_string)
+{
+    DataType built_ret = TYPE_INT;
+
+    if (builtin_check_format_call(call_node, fname, args, &built_ret)) {
+        if (out_return_type) *out_return_type = built_ret;
+        return true;
+    }
+    if (builtin_check_variadic_runtime_call(call_node, fname, args, &built_ret)) {
+        if (out_return_type) *out_return_type = built_ret;
+        return true;
+    }
+    if (builtin_check_string_call(call_node, fname, args, &built_ret)) {
+        if (clear_ptr_after_string && call_node) node_clear_inferred_ptr(call_node);
+        if (out_return_type) *out_return_type = built_ret;
+        return true;
+    }
+    if (builtin_check_mem_call(call_node, fname, args, &built_ret)) {
+        if (out_return_type) *out_return_type = built_ret;
+        return true;
+    }
+    if (builtin_check_file_call(call_node, fname, args, &built_ret)) {
+        if (out_return_type) *out_return_type = built_ret;
+        return true;
+    }
+    if (builtin_check_math_call(call_node, fname, args, &built_ret)) {
+        if (out_return_type) *out_return_type = built_ret;
+        return true;
+    }
+    if (builtin_check_system_call(call_node, fname, args, &built_ret)) {
+        if (out_return_type) *out_return_type = built_ret;
+        return true;
+    }
+    if (builtin_check_time_call(call_node, fname, args, &built_ret)) {
+        if (out_return_type) *out_return_type = built_ret;
+        return true;
+    }
+    if (builtin_check_error_call(call_node, fname, args, &built_ret)) {
+        if (out_return_type) *out_return_type = built_ret;
+        return true;
+    }
+
+    return false;
+}
+
+/**
+ * @brief التحقق الموحد من معاملات استدعاء دالة مستخدم.
+ */
+static void analyze_user_function_call_args(Node* call_node, FuncSymbol* fs, Node* args)
+{
+    if (!call_node || !fs) return;
+
+    int i = 0;
+    Node* arg = args;
+    while (arg) {
+        if (i < fs->param_count) {
+            DataType expected0 = fs->param_types[i];
+            DataType at = infer_type_allow_null_string(arg, expected0);
+            if (fs->param_types[i] == TYPE_POINTER) {
+                if (at != TYPE_POINTER ||
+                    !ptr_type_compatible(arg->inferred_ptr_base_type,
+                                         arg->inferred_ptr_base_type_name,
+                                         arg->inferred_ptr_depth,
+                                         fs->param_ptr_base_types ? fs->param_ptr_base_types[i] : TYPE_INT,
+                                         (fs->param_ptr_base_type_names && fs->param_ptr_base_type_names[i]) ? fs->param_ptr_base_type_names[i] : NULL,
+                                         fs->param_ptr_depths ? fs->param_ptr_depths[i] : 0,
+                                         true)) {
+                    semantic_error(arg, "نوع المعامل %d في '%s' غير متوافق.", i + 1, fs->name);
+                }
+            } else if (fs->param_types[i] == TYPE_FUNC_PTR) {
+                FuncPtrSig* expected_sig = (fs->param_func_sigs) ? fs->param_func_sigs[i] : NULL;
+                if (!expected_sig) {
+                    semantic_error(arg, "توقيع مؤشر الدالة لمعامل %d في '%s' مفقود.", i + 1, fs->name);
+                } else if (arg->type == NODE_NULL) {
+                    // سماح null لمؤشر الدالة: نُحدد نوعه كي يُخفض بشكل صحيح.
+                    arg->inferred_type = TYPE_FUNC_PTR;
+                    node_set_inferred_funcptr(arg, expected_sig);
+                } else if (at != TYPE_FUNC_PTR || !funcsig_equal(arg->inferred_func_sig, expected_sig)) {
+                    semantic_error(arg, "نوع المعامل %d في '%s' غير متوافق (توقيع مؤشر دالة مختلف).", i + 1, fs->name);
+                }
+            } else if (!types_compatible(at, fs->param_types[i])) {
+                semantic_error(arg, "نوع المعامل %d في '%s' غير متوافق.", i + 1, fs->name);
+            } else {
+                maybe_warn_implicit_narrowing(at, fs->param_types[i], arg);
+            }
+        } else {
+            DataType at = infer_type(arg);
+            if (fs->is_variadic) {
+                if (!variadic_extra_arg_type_supported(at)) {
+                    semantic_error(arg, "نوع المعامل المتغير %d في '%s' غير مدعوم.", i + 1, fs->name);
+                }
+            }
+        }
+        i++;
+        arg = arg->next;
+    }
+    if (fs->is_variadic) {
+        if (i < fs->param_count) {
+            semantic_error(call_node, "عدد معاملات '%s' غير صحيح (المتوقع على الأقل %d).",
+                           fs->name, fs->param_count);
+        }
+    } else if (i != fs->param_count) {
+        semantic_error(call_node, "عدد معاملات '%s' غير صحيح (المتوقع %d).", fs->name, fs->param_count);
+    }
+}
+
+/**
  * @brief استنتاج نوع التعبير.
  * @return DataType نوع التعبير الناتج.
  */
@@ -3944,32 +4058,7 @@ static DataType infer_type_internal(Node* node) {
             FuncSymbol* fs = func_lookup(fname);
             if (!fs || !fs->is_defined) {
                 DataType built_ret = TYPE_INT;
-                if (builtin_check_format_call(node, fname, node->data.call.args, &built_ret)) {
-                    return built_ret;
-                }
-                if (builtin_check_variadic_runtime_call(node, fname, node->data.call.args, &built_ret)) {
-                    return built_ret;
-                }
-                if (builtin_check_string_call(node, fname, node->data.call.args, &built_ret)) {
-                    node_clear_inferred_ptr(node);
-                    return built_ret;
-                }
-                if (builtin_check_mem_call(node, fname, node->data.call.args, &built_ret)) {
-                    return built_ret;
-                }
-                if (builtin_check_file_call(node, fname, node->data.call.args, &built_ret)) {
-                    return built_ret;
-                }
-                if (builtin_check_math_call(node, fname, node->data.call.args, &built_ret)) {
-                    return built_ret;
-                }
-                if (builtin_check_system_call(node, fname, node->data.call.args, &built_ret)) {
-                    return built_ret;
-                }
-                if (builtin_check_time_call(node, fname, node->data.call.args, &built_ret)) {
-                    return built_ret;
-                }
-                if (builtin_check_error_call(node, fname, node->data.call.args, &built_ret)) {
+                if (builtin_dispatch_known_call(node, fname, node->data.call.args, &built_ret, true)) {
                     return built_ret;
                 }
 
@@ -3982,58 +4071,7 @@ static DataType infer_type_internal(Node* node) {
                 }
             }
             // تحقق عدد وأنواع المعاملات
-            int i = 0;
-            Node* arg = node->data.call.args;
-            while (arg) {
-                if (i < fs->param_count) {
-                    DataType expected0 = fs->param_types[i];
-                    DataType at = infer_type_allow_null_string(arg, expected0);
-                    if (fs->param_types[i] == TYPE_POINTER) {
-                        if (at != TYPE_POINTER ||
-                            !ptr_type_compatible(arg->inferred_ptr_base_type,
-                                                 arg->inferred_ptr_base_type_name,
-                                                 arg->inferred_ptr_depth,
-                                                 fs->param_ptr_base_types ? fs->param_ptr_base_types[i] : TYPE_INT,
-                                                 (fs->param_ptr_base_type_names && fs->param_ptr_base_type_names[i]) ? fs->param_ptr_base_type_names[i] : NULL,
-                                                 fs->param_ptr_depths ? fs->param_ptr_depths[i] : 0,
-                                                 true)) {
-                            semantic_error(arg, "نوع المعامل %d في '%s' غير متوافق.", i + 1, fs->name);
-                        }
-                    } else if (fs->param_types[i] == TYPE_FUNC_PTR) {
-                        FuncPtrSig* expected_sig = (fs->param_func_sigs) ? fs->param_func_sigs[i] : NULL;
-                        if (!expected_sig) {
-                            semantic_error(arg, "توقيع مؤشر الدالة لمعامل %d في '%s' مفقود.", i + 1, fs->name);
-                        } else if (arg->type == NODE_NULL) {
-                            // سماح null لمؤشر الدالة: نُحدد نوعه كي يُخفض بشكل صحيح.
-                            arg->inferred_type = TYPE_FUNC_PTR;
-                            node_set_inferred_funcptr(arg, expected_sig);
-                        } else if (at != TYPE_FUNC_PTR || !funcsig_equal(arg->inferred_func_sig, expected_sig)) {
-                            semantic_error(arg, "نوع المعامل %d في '%s' غير متوافق (توقيع مؤشر دالة مختلف).", i + 1, fs->name);
-                        }
-                    } else if (!types_compatible(at, fs->param_types[i])) {
-                        semantic_error(arg, "نوع المعامل %d في '%s' غير متوافق.", i + 1, fs->name);
-                    } else {
-                        maybe_warn_implicit_narrowing(at, fs->param_types[i], arg);
-                    }
-                } else {
-                    DataType at = infer_type(arg);
-                    if (fs->is_variadic) {
-                        if (!variadic_extra_arg_type_supported(at)) {
-                            semantic_error(arg, "نوع المعامل المتغير %d في '%s' غير مدعوم.", i + 1, fs->name);
-                        }
-                    }
-                }
-                i++;
-                arg = arg->next;
-            }
-            if (fs->is_variadic) {
-                if (i < fs->param_count) {
-                    semantic_error(node, "عدد معاملات '%s' غير صحيح (المتوقع على الأقل %d).",
-                                   fs->name, fs->param_count);
-                }
-            } else if (i != fs->param_count) {
-                semantic_error(node, "عدد معاملات '%s' غير صحيح (المتوقع %d).", fs->name, fs->param_count);
-            }
+            analyze_user_function_call_args(node, fs, node->data.call.args);
             if (fs->return_type == TYPE_POINTER) {
                 node_set_inferred_ptr(node,
                                       fs->return_ptr_base_type,
@@ -5208,32 +5246,7 @@ static void analyze_node(Node* node) {
             // 2) ثم نحل الدوال المعرفة (أو builtins) إذا لم يوجد رمز بنفس الاسم.
             FuncSymbol* fs = func_lookup(fname);
             if (!fs || !fs->is_defined) {
-                DataType built_ret = TYPE_VOID;
-                if (builtin_check_format_call(node, fname, node->data.call.args, &built_ret)) {
-                    break;
-                }
-                if (builtin_check_variadic_runtime_call(node, fname, node->data.call.args, &built_ret)) {
-                    break;
-                }
-                if (builtin_check_string_call(node, fname, node->data.call.args, &built_ret)) {
-                    break;
-                }
-                if (builtin_check_mem_call(node, fname, node->data.call.args, &built_ret)) {
-                    break;
-                }
-                if (builtin_check_file_call(node, fname, node->data.call.args, &built_ret)) {
-                    break;
-                }
-                if (builtin_check_math_call(node, fname, node->data.call.args, &built_ret)) {
-                    break;
-                }
-                if (builtin_check_system_call(node, fname, node->data.call.args, &built_ret)) {
-                    break;
-                }
-                if (builtin_check_time_call(node, fname, node->data.call.args, &built_ret)) {
-                    break;
-                }
-                if (builtin_check_error_call(node, fname, node->data.call.args, &built_ret)) {
+                if (builtin_dispatch_known_call(node, fname, node->data.call.args, NULL, false)) {
                     break;
                 }
                 if (!fs) {
@@ -5244,57 +5257,7 @@ static void analyze_node(Node* node) {
                 }
             }
 
-            int i = 0;
-            Node* arg = node->data.call.args;
-            while (arg) {
-                if (i < fs->param_count) {
-                    DataType expected0 = fs->param_types[i];
-                    DataType at = infer_type_allow_null_string(arg, expected0);
-                    if (fs->param_types[i] == TYPE_POINTER) {
-                        if (at != TYPE_POINTER ||
-                            !ptr_type_compatible(arg->inferred_ptr_base_type,
-                                                 arg->inferred_ptr_base_type_name,
-                                                 arg->inferred_ptr_depth,
-                                                 fs->param_ptr_base_types ? fs->param_ptr_base_types[i] : TYPE_INT,
-                                                 (fs->param_ptr_base_type_names && fs->param_ptr_base_type_names[i]) ? fs->param_ptr_base_type_names[i] : NULL,
-                                                 fs->param_ptr_depths ? fs->param_ptr_depths[i] : 0,
-                                                 true)) {
-                            semantic_error(arg, "نوع المعامل %d في '%s' غير متوافق.", i + 1, fs->name);
-                        }
-                    } else if (fs->param_types[i] == TYPE_FUNC_PTR) {
-                        FuncPtrSig* expected_sig = (fs->param_func_sigs) ? fs->param_func_sigs[i] : NULL;
-                        if (!expected_sig) {
-                            semantic_error(arg, "توقيع مؤشر الدالة لمعامل %d في '%s' مفقود.", i + 1, fs->name);
-                        } else if (arg->type == NODE_NULL) {
-                            arg->inferred_type = TYPE_FUNC_PTR;
-                            node_set_inferred_funcptr(arg, expected_sig);
-                        } else if (at != TYPE_FUNC_PTR || !funcsig_equal(arg->inferred_func_sig, expected_sig)) {
-                            semantic_error(arg, "نوع المعامل %d في '%s' غير متوافق (توقيع مؤشر دالة مختلف).", i + 1, fs->name);
-                        }
-                    } else if (!types_compatible(at, fs->param_types[i])) {
-                        semantic_error(arg, "نوع المعامل %d في '%s' غير متوافق.", i + 1, fs->name);
-                    } else {
-                        maybe_warn_implicit_narrowing(at, fs->param_types[i], arg);
-                    }
-                } else {
-                    DataType at = infer_type(arg);
-                    if (fs->is_variadic) {
-                        if (!variadic_extra_arg_type_supported(at)) {
-                            semantic_error(arg, "نوع المعامل المتغير %d في '%s' غير مدعوم.", i + 1, fs->name);
-                        }
-                    }
-                }
-                i++;
-                arg = arg->next;
-            }
-            if (fs->is_variadic) {
-                if (i < fs->param_count) {
-                    semantic_error(node, "عدد معاملات '%s' غير صحيح (المتوقع على الأقل %d).",
-                                   fs->name, fs->param_count);
-                }
-            } else if (i != fs->param_count) {
-                semantic_error(node, "عدد معاملات '%s' غير صحيح (المتوقع %d).", fs->name, fs->param_count);
-            }
+            analyze_user_function_call_args(node, fs, node->data.call.args);
             break;
         }
 

@@ -3576,6 +3576,78 @@ static bool sizeof_expr_bytes(Node* expr, int64_t* out_size)
 }
 
 /**
+ * @brief استهلاك معاملات نداء أثناء الاسترداد لاكتشاف أخطاء إضافية.
+ */
+static void analyze_consume_call_args(Node* args)
+{
+    for (Node* arg = args; arg; arg = arg->next) {
+        (void)infer_type(arg);
+    }
+}
+
+/**
+ * @brief التحقق من معاملات نداء مؤشر دالة.
+ */
+static void analyze_funcptr_call_args(Node* call_node,
+                                      const char* fname,
+                                      Node* args,
+                                      const FuncPtrSig* sig)
+{
+    if (!call_node || !sig) return;
+    const char* call_name = fname ? fname : "???";
+
+    if (sig->is_variadic) {
+        semantic_error(call_node, "نداء مؤشر دالة متغير المعاملات غير مدعوم حالياً.");
+    }
+
+    int i = 0;
+    for (Node* arg = args; arg; arg = arg->next, i++) {
+        if (i < sig->param_count) {
+            DataType exp = sig->param_types ? sig->param_types[i] : TYPE_INT;
+            DataType at = infer_type_allow_null_string(arg, exp);
+            if (exp == TYPE_POINTER) {
+                DataType eb = sig->param_ptr_base_types ? sig->param_ptr_base_types[i] : TYPE_INT;
+                int ed = sig->param_ptr_depths ? sig->param_ptr_depths[i] : 0;
+                const char* en = (sig->param_ptr_base_type_names && sig->param_ptr_base_type_names[i])
+                                     ? sig->param_ptr_base_type_names[i]
+                                     : NULL;
+                if (at != TYPE_POINTER ||
+                    !ptr_type_compatible(arg->inferred_ptr_base_type,
+                                         arg->inferred_ptr_base_type_name,
+                                         arg->inferred_ptr_depth,
+                                         eb, en, ed, true)) {
+                    semantic_error(arg, "نوع المعامل %d في نداء '%s' غير متوافق.", i + 1, call_name);
+                }
+            } else if (exp == TYPE_FUNC_PTR) {
+                semantic_error(arg, "Higher-order غير مدعوم: معامل %d في توقيع مؤشر الدالة هو مؤشر دالة.", i + 1);
+            } else if (!types_compatible(at, exp)) {
+                semantic_error(arg, "نوع المعامل %d في نداء '%s' غير متوافق.", i + 1, call_name);
+            } else {
+                maybe_warn_implicit_narrowing(at, exp, arg);
+            }
+        } else {
+            DataType at = infer_type(arg);
+            if (sig->is_variadic) {
+                if (!variadic_extra_arg_type_supported(at)) {
+                    semantic_error(arg, "نوع المعامل المتغير %d في نداء '%s' غير مدعوم.",
+                                   i + 1, call_name);
+                }
+            }
+        }
+    }
+
+    if (sig->is_variadic) {
+        if (i < sig->param_count) {
+            semantic_error(call_node, "عدد معاملات نداء '%s' غير صحيح (المتوقع على الأقل %d).",
+                           call_name, sig->param_count);
+        }
+    } else if (i != sig->param_count) {
+        semantic_error(call_node, "عدد معاملات نداء '%s' غير صحيح (المتوقع %d).",
+                       call_name, sig->param_count);
+    }
+}
+
+/**
  * @brief تنفيذ سلسلة فحص الدوال المدمجة بالترتيب القياسي.
  * @return true إذا تم التعرف على الدالة كمدمجة وتم التعامل معها.
  */
@@ -3966,78 +4038,24 @@ static DataType infer_type_internal(Node* node) {
             if (callee_sym) {
                 if (callee_sym->is_array) {
                     semantic_error(node, "لا يمكن نداء المصفوفة '%s'.", callee_sym->name);
-                    Node* arg = node->data.call.args;
-                    while (arg) { (void)infer_type(arg); arg = arg->next; }
+                    analyze_consume_call_args(node->data.call.args);
                     return TYPE_INT;
                 }
 
                 if (callee_sym->type != TYPE_FUNC_PTR) {
                     semantic_error(node, "المعرف '%s' ليس دالة ولا مؤشر دالة قابل للنداء.", fname ? fname : "???");
-                    Node* arg = node->data.call.args;
-                    while (arg) { (void)infer_type(arg); arg = arg->next; }
+                    analyze_consume_call_args(node->data.call.args);
                     return TYPE_INT;
                 }
 
                 FuncPtrSig* sig = callee_sym->func_sig;
                 if (!sig) {
                     semantic_error(node, "توقيع مؤشر الدالة للرمز '%s' مفقود.", fname ? fname : "???");
-                    Node* arg = node->data.call.args;
-                    while (arg) { (void)infer_type(arg); arg = arg->next; }
+                    analyze_consume_call_args(node->data.call.args);
                     node_clear_inferred_ptr(node);
                     return TYPE_INT;
                 }
-                if (sig->is_variadic) {
-                    semantic_error(node, "نداء مؤشر دالة متغير المعاملات غير مدعوم حالياً.");
-                }
-
-                int i = 0;
-                Node* arg = node->data.call.args;
-                while (arg) {
-                    if (i < sig->param_count) {
-                        DataType exp = sig->param_types ? sig->param_types[i] : TYPE_INT;
-                        DataType at = infer_type_allow_null_string(arg, exp);
-                        if (exp == TYPE_POINTER) {
-                            DataType eb = sig->param_ptr_base_types ? sig->param_ptr_base_types[i] : TYPE_INT;
-                            int ed = sig->param_ptr_depths ? sig->param_ptr_depths[i] : 0;
-                            const char* en = (sig->param_ptr_base_type_names && sig->param_ptr_base_type_names[i])
-                                                 ? sig->param_ptr_base_type_names[i]
-                                                 : NULL;
-                            if (at != TYPE_POINTER ||
-                                !ptr_type_compatible(arg->inferred_ptr_base_type,
-                                                     arg->inferred_ptr_base_type_name,
-                                                     arg->inferred_ptr_depth,
-                                                     eb, en, ed, true)) {
-                                semantic_error(arg, "نوع المعامل %d في نداء '%s' غير متوافق.", i + 1, fname ? fname : "???");
-                            }
-                        } else if (exp == TYPE_FUNC_PTR) {
-                            semantic_error(arg, "Higher-order غير مدعوم: معامل %d في توقيع مؤشر الدالة هو مؤشر دالة.", i + 1);
-                        } else if (!types_compatible(at, exp)) {
-                            semantic_error(arg, "نوع المعامل %d في نداء '%s' غير متوافق.", i + 1, fname ? fname : "???");
-                        } else {
-                            maybe_warn_implicit_narrowing(at, exp, arg);
-                        }
-                    } else {
-                        DataType at = infer_type(arg);
-                        if (sig->is_variadic) {
-                            if (!variadic_extra_arg_type_supported(at)) {
-                                semantic_error(arg, "نوع المعامل المتغير %d في نداء '%s' غير مدعوم.",
-                                               i + 1, fname ? fname : "???");
-                            }
-                        }
-                    }
-                    i++;
-                    arg = arg->next;
-                }
-
-                if (sig->is_variadic) {
-                    if (i < sig->param_count) {
-                        semantic_error(node, "عدد معاملات نداء '%s' غير صحيح (المتوقع على الأقل %d).",
-                                       fname ? fname : "???", sig->param_count);
-                    }
-                } else if (i != sig->param_count) {
-                    semantic_error(node, "عدد معاملات نداء '%s' غير صحيح (المتوقع %d).",
-                                   fname ? fname : "???", sig->param_count);
-                }
+                analyze_funcptr_call_args(node, fname, node->data.call.args, sig);
 
                 if (sig->return_type == TYPE_POINTER) {
                     node_set_inferred_ptr(node,
@@ -4065,8 +4083,7 @@ static DataType infer_type_internal(Node* node) {
                 if (!fs) {
                     semantic_error(node, "استدعاء دالة غير معرّفة '%s'.", fname ? fname : "???");
                     // ما زلنا نستنتج أنواع الوسائط لاكتشاف أخطاء أخرى.
-                    Node* arg = node->data.call.args;
-                    while (arg) { (void)infer_type(arg); arg = arg->next; }
+                    analyze_consume_call_args(node->data.call.args);
                     return TYPE_INT;
                 }
             }
@@ -5169,77 +5186,23 @@ static void analyze_node(Node* node) {
             if (callee_sym) {
                 if (callee_sym->is_array) {
                     semantic_error(node, "لا يمكن نداء المصفوفة '%s'.", callee_sym->name);
-                    Node* arg = node->data.call.args;
-                    while (arg) { (void)infer_type(arg); arg = arg->next; }
+                    analyze_consume_call_args(node->data.call.args);
                     break;
                 }
 
                 if (callee_sym->type != TYPE_FUNC_PTR) {
                     semantic_error(node, "المعرف '%s' ليس دالة ولا مؤشر دالة قابل للنداء.", fname ? fname : "???");
-                    Node* arg = node->data.call.args;
-                    while (arg) { (void)infer_type(arg); arg = arg->next; }
+                    analyze_consume_call_args(node->data.call.args);
                     break;
                 }
 
                 FuncPtrSig* sig = callee_sym->func_sig;
                 if (!sig) {
                     semantic_error(node, "توقيع مؤشر الدالة للرمز '%s' مفقود.", fname ? fname : "???");
-                    Node* arg = node->data.call.args;
-                    while (arg) { (void)infer_type(arg); arg = arg->next; }
+                    analyze_consume_call_args(node->data.call.args);
                     break;
                 }
-                if (sig->is_variadic) {
-                    semantic_error(node, "نداء مؤشر دالة متغير المعاملات غير مدعوم حالياً.");
-                }
-
-                int i = 0;
-                Node* arg = node->data.call.args;
-                while (arg) {
-                    if (i < sig->param_count) {
-                        DataType exp = sig->param_types ? sig->param_types[i] : TYPE_INT;
-                        DataType at = infer_type_allow_null_string(arg, exp);
-                        if (exp == TYPE_POINTER) {
-                            DataType eb = sig->param_ptr_base_types ? sig->param_ptr_base_types[i] : TYPE_INT;
-                            int ed = sig->param_ptr_depths ? sig->param_ptr_depths[i] : 0;
-                            const char* en = (sig->param_ptr_base_type_names && sig->param_ptr_base_type_names[i])
-                                                 ? sig->param_ptr_base_type_names[i]
-                                                 : NULL;
-                            if (at != TYPE_POINTER ||
-                                !ptr_type_compatible(arg->inferred_ptr_base_type,
-                                                     arg->inferred_ptr_base_type_name,
-                                                     arg->inferred_ptr_depth,
-                                                     eb, en, ed, true)) {
-                                semantic_error(arg, "نوع المعامل %d في نداء '%s' غير متوافق.", i + 1, fname ? fname : "???");
-                            }
-                        } else if (exp == TYPE_FUNC_PTR) {
-                            semantic_error(arg, "Higher-order غير مدعوم: معامل %d في توقيع مؤشر الدالة هو مؤشر دالة.", i + 1);
-                        } else if (!types_compatible(at, exp)) {
-                            semantic_error(arg, "نوع المعامل %d في نداء '%s' غير متوافق.", i + 1, fname ? fname : "???");
-                        } else {
-                            maybe_warn_implicit_narrowing(at, exp, arg);
-                        }
-                    } else {
-                        DataType at = infer_type(arg);
-                        if (sig->is_variadic) {
-                            if (!variadic_extra_arg_type_supported(at)) {
-                                semantic_error(arg, "نوع المعامل المتغير %d في نداء '%s' غير مدعوم.",
-                                               i + 1, fname ? fname : "???");
-                            }
-                        }
-                    }
-                    i++;
-                    arg = arg->next;
-                }
-
-                if (sig->is_variadic) {
-                    if (i < sig->param_count) {
-                        semantic_error(node, "عدد معاملات نداء '%s' غير صحيح (المتوقع على الأقل %d).",
-                                       fname ? fname : "???", sig->param_count);
-                    }
-                } else if (i != sig->param_count) {
-                    semantic_error(node, "عدد معاملات نداء '%s' غير صحيح (المتوقع %d).",
-                                   fname ? fname : "???", sig->param_count);
-                }
+                analyze_funcptr_call_args(node, fname, node->data.call.args, sig);
                 break;
             }
 
@@ -5251,8 +5214,7 @@ static void analyze_node(Node* node) {
                 }
                 if (!fs) {
                     semantic_error(node, "استدعاء دالة غير معرّفة '%s'.", fname ? fname : "???");
-                    Node* arg = node->data.call.args;
-                    while (arg) { (void)infer_type(arg); arg = arg->next; }
+                    analyze_consume_call_args(node->data.call.args);
                     break;
                 }
             }

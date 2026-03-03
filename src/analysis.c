@@ -2562,6 +2562,60 @@ static void maybe_warn_signed_unsigned_compare(DataType left_type, DataType righ
 }
 
 static DataType infer_type(Node* node);
+static DataType infer_type_allow_null_string(Node* expr, DataType expected);
+
+static void builtin_report_param_type_mismatch(Node* arg, int param_index, const char* builtin_name)
+{
+    semantic_error(arg, "نوع المعامل %d في '%s' غير متوافق.", param_index, builtin_name);
+}
+
+static void builtin_report_param_count_mismatch(Node* call_node, const char* builtin_name, int expected_count)
+{
+    semantic_error(call_node, "عدد معاملات '%s' غير صحيح (المتوقع %d).", builtin_name, expected_count);
+}
+
+/**
+ * @brief التحقق من توافق المؤشر كـ عدم* (void*) في الدوال المدمجة.
+ */
+static bool builtin_arg_is_void_ptr_compatible(Node* arg, DataType got)
+{
+    if (!arg) return false;
+    if (got != TYPE_POINTER) return false;
+    return ptr_type_compatible(arg->inferred_ptr_base_type,
+                               arg->inferred_ptr_base_type_name,
+                               arg->inferred_ptr_depth,
+                               TYPE_VOID, NULL, 1,
+                               true);
+}
+
+/**
+ * @brief مسار تحقق موحد لمعاملات الدوال المدمجة البسيطة.
+ */
+static void builtin_check_args_scaffold(Node* call_node,
+                                        const char* builtin_name,
+                                        Node* args,
+                                        const DataType* param_types,
+                                        int param_count,
+                                        bool allow_null_string,
+                                        bool warn_narrowing)
+{
+    int i = 0;
+    for (Node* arg = args; arg; arg = arg->next, i++) {
+        DataType expected = (i < param_count) ? param_types[i] : TYPE_INT;
+        DataType got = allow_null_string ? infer_type_allow_null_string(arg, expected) : infer_type(arg);
+
+        if (i >= param_count) continue;
+        if (!types_compatible(got, expected)) {
+            builtin_report_param_type_mismatch(arg, i + 1, builtin_name);
+        } else if (warn_narrowing) {
+            maybe_warn_implicit_narrowing(got, expected, arg);
+        }
+    }
+
+    if (i != param_count) {
+        builtin_report_param_count_mismatch(call_node, builtin_name, param_count);
+    }
+}
 
 #define ANALYSIS_ARRAY_LEN(arr) ((int)(sizeof(arr) / sizeof((arr)[0])))
 
@@ -2607,22 +2661,7 @@ static bool builtin_check_string_call(Node* call_node, const char* fname, Node* 
     const BuiltinFuncSig* sig = builtin_lookup_string_func(fname);
     if (!sig) return false;
 
-    int i = 0;
-    for (Node* arg = args; arg; arg = arg->next, i++) {
-        DataType got = infer_type(arg);
-        if (i < sig->param_count) {
-            DataType expected = sig->param_types[i];
-            if (!types_compatible(got, expected)) {
-                semantic_error(arg, "نوع المعامل %d في '%s' غير متوافق.", i + 1, sig->name);
-            } else {
-                maybe_warn_implicit_narrowing(got, expected, arg);
-            }
-        }
-    }
-
-    if (i != sig->param_count) {
-        semantic_error(call_node, "عدد معاملات '%s' غير صحيح (المتوقع %d).", sig->name, sig->param_count);
-    }
+    builtin_check_args_scaffold(call_node, sig->name, args, sig->param_types, sig->param_count, false, true);
 
     if (out_return_type) *out_return_type = sig->return_type;
     return true;
@@ -2661,16 +2700,11 @@ static bool builtin_check_mem_call(Node* call_node, const char* fname, Node* arg
             DataType expected = sig->param_types[i];
             if (expected == TYPE_POINTER) {
                 // جميع معاملات المؤشر هنا هي عدم* (void*)، ويُسمح بالتحويلات الضمنية وفق قواعد void*.
-                if (got != TYPE_POINTER ||
-                    !ptr_type_compatible(arg->inferred_ptr_base_type,
-                                         arg->inferred_ptr_base_type_name,
-                                         arg->inferred_ptr_depth,
-                                         TYPE_VOID, NULL, 1,
-                                         true)) {
-                    semantic_error(arg, "نوع المعامل %d في '%s' غير متوافق.", i + 1, sig->name);
+                if (!builtin_arg_is_void_ptr_compatible(arg, got)) {
+                    builtin_report_param_type_mismatch(arg, i + 1, sig->name);
                 }
             } else if (!types_compatible(got, expected)) {
-                semantic_error(arg, "نوع المعامل %d في '%s' غير متوافق.", i + 1, sig->name);
+                builtin_report_param_type_mismatch(arg, i + 1, sig->name);
             } else {
                 maybe_warn_implicit_narrowing(got, expected, arg);
             }
@@ -2678,7 +2712,7 @@ static bool builtin_check_mem_call(Node* call_node, const char* fname, Node* arg
     }
 
     if (i != sig->param_count) {
-        semantic_error(call_node, "عدد معاملات '%s' غير صحيح (المتوقع %d).", sig->name, sig->param_count);
+        builtin_report_param_count_mismatch(call_node, sig->name, sig->param_count);
     }
 
     if (out_return_type) *out_return_type = sig->return_type;
@@ -2744,16 +2778,11 @@ static bool builtin_check_file_call(Node* call_node, const char* fname, Node* ar
         if (i < sig->param_count) {
             if (expected == TYPE_POINTER) {
                 // جميع معاملات المؤشر هنا هي عدم* (void*)، ويُسمح بالتحويلات الضمنية وفق قواعد void*.
-                if (got != TYPE_POINTER ||
-                    !ptr_type_compatible(arg->inferred_ptr_base_type,
-                                         arg->inferred_ptr_base_type_name,
-                                         arg->inferred_ptr_depth,
-                                         TYPE_VOID, NULL, 1,
-                                         true)) {
-                    semantic_error(arg, "نوع المعامل %d في '%s' غير متوافق.", i + 1, sig->name);
+                if (!builtin_arg_is_void_ptr_compatible(arg, got)) {
+                    builtin_report_param_type_mismatch(arg, i + 1, sig->name);
                 }
             } else if (!types_compatible(got, expected)) {
-                semantic_error(arg, "نوع المعامل %d في '%s' غير متوافق.", i + 1, sig->name);
+                builtin_report_param_type_mismatch(arg, i + 1, sig->name);
             } else {
                 maybe_warn_implicit_narrowing(got, expected, arg);
             }
@@ -2761,7 +2790,7 @@ static bool builtin_check_file_call(Node* call_node, const char* fname, Node* ar
     }
 
     if (i != sig->param_count) {
-        semantic_error(call_node, "عدد معاملات '%s' غير صحيح (المتوقع %d).", sig->name, sig->param_count);
+        builtin_report_param_count_mismatch(call_node, sig->name, sig->param_count);
     }
 
     if (out_return_type) *out_return_type = sig->return_type;
@@ -2803,22 +2832,7 @@ static bool builtin_check_math_call(Node* call_node, const char* fname, Node* ar
     const BuiltinMathFuncSig* sig = builtin_lookup_math_func(fname);
     if (!sig) return false;
 
-    int i = 0;
-    for (Node* arg = args; arg; arg = arg->next, i++) {
-        DataType got = infer_type(arg);
-        if (i < sig->param_count) {
-            DataType expected = sig->param_types[i];
-            if (!types_compatible(got, expected)) {
-                semantic_error(arg, "نوع المعامل %d في '%s' غير متوافق.", i + 1, sig->name);
-            } else {
-                maybe_warn_implicit_narrowing(got, expected, arg);
-            }
-        }
-    }
-
-    if (i != sig->param_count) {
-        semantic_error(call_node, "عدد معاملات '%s' غير صحيح (المتوقع %d).", sig->name, sig->param_count);
-    }
+    builtin_check_args_scaffold(call_node, sig->name, args, sig->param_types, sig->param_count, false, true);
 
     if (out_return_type) *out_return_type = sig->return_type;
     node_clear_inferred_ptr(call_node);
@@ -2848,22 +2862,7 @@ static bool builtin_check_system_call(Node* call_node, const char* fname, Node* 
     const BuiltinSystemFuncSig* sig = builtin_lookup_system_func(fname);
     if (!sig) return false;
 
-    int i = 0;
-    for (Node* arg = args; arg; arg = arg->next, i++) {
-        if (i < sig->param_count) {
-            DataType expected = sig->param_types[i];
-            DataType got = infer_type_allow_null_string(arg, expected);
-            if (!types_compatible(got, expected)) {
-                semantic_error(arg, "نوع المعامل %d في '%s' غير متوافق.", i + 1, sig->name);
-            }
-        } else {
-            (void)infer_type(arg);
-        }
-    }
-
-    if (i != sig->param_count) {
-        semantic_error(call_node, "عدد معاملات '%s' غير صحيح (المتوقع %d).", sig->name, sig->param_count);
-    }
+    builtin_check_args_scaffold(call_node, sig->name, args, sig->param_types, sig->param_count, true, false);
 
     if (out_return_type) *out_return_type = sig->return_type;
     node_clear_inferred_ptr(call_node);
@@ -2893,24 +2892,7 @@ static bool builtin_check_time_call(Node* call_node, const char* fname, Node* ar
     const BuiltinTimeFuncSig* sig = builtin_lookup_time_func(fname);
     if (!sig) return false;
 
-    int i = 0;
-    for (Node* arg = args; arg; arg = arg->next, i++) {
-        if (i < sig->param_count) {
-            DataType expected = sig->param_types[i];
-            DataType got = infer_type(arg);
-            if (!types_compatible(got, expected)) {
-                semantic_error(arg, "نوع المعامل %d في '%s' غير متوافق.", i + 1, sig->name);
-            } else {
-                maybe_warn_implicit_narrowing(got, expected, arg);
-            }
-        } else {
-            (void)infer_type(arg);
-        }
-    }
-
-    if (i != sig->param_count) {
-        semantic_error(call_node, "عدد معاملات '%s' غير صحيح (المتوقع %d).", sig->name, sig->param_count);
-    }
+    builtin_check_args_scaffold(call_node, sig->name, args, sig->param_types, sig->param_count, false, true);
 
     if (out_return_type) *out_return_type = sig->return_type;
     node_clear_inferred_ptr(call_node);
@@ -2946,24 +2928,7 @@ static bool builtin_check_error_call(Node* call_node, const char* fname, Node* a
     const BuiltinErrorFuncSig* sig = builtin_lookup_error_func(fname);
     if (!sig) return false;
 
-    int i = 0;
-    for (Node* arg = args; arg; arg = arg->next, i++) {
-        if (i < sig->param_count) {
-            DataType expected = sig->param_types[i];
-            DataType got = infer_type_allow_null_string(arg, expected);
-            if (!types_compatible(got, expected)) {
-                semantic_error(arg, "نوع المعامل %d في '%s' غير متوافق.", i + 1, sig->name);
-            } else {
-                maybe_warn_implicit_narrowing(got, expected, arg);
-            }
-        } else {
-            (void)infer_type(arg);
-        }
-    }
-
-    if (i != sig->param_count) {
-        semantic_error(call_node, "عدد معاملات '%s' غير صحيح (المتوقع %d).", sig->name, sig->param_count);
-    }
+    builtin_check_args_scaffold(call_node, sig->name, args, sig->param_types, sig->param_count, true, true);
 
     if (out_return_type) *out_return_type = sig->return_type;
     node_clear_inferred_ptr(call_node);

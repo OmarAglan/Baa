@@ -2617,6 +2617,24 @@ static void builtin_check_args_scaffold(Node* call_node,
     }
 }
 
+/**
+ * @brief إنهاء ضبط نوع إرجاع استدعاء دالة مدمجة وتحديث معلومات المؤشر المستنتج للعقدة.
+ */
+static void builtin_finalize_call_return(Node* call_node,
+                                         DataType return_type,
+                                         DataType* out_return_type,
+                                         bool pointer_returns_as_void_ptr)
+{
+    if (out_return_type) *out_return_type = return_type;
+    if (!call_node) return;
+
+    if (pointer_returns_as_void_ptr && return_type == TYPE_POINTER) {
+        node_set_inferred_ptr(call_node, TYPE_VOID, NULL, 1);
+    } else {
+        node_clear_inferred_ptr(call_node);
+    }
+}
+
 #define ANALYSIS_ARRAY_LEN(arr) ((int)(sizeof(arr) / sizeof((arr)[0])))
 
 /**
@@ -2715,14 +2733,7 @@ static bool builtin_check_mem_call(Node* call_node, const char* fname, Node* arg
         builtin_report_param_count_mismatch(call_node, sig->name, sig->param_count);
     }
 
-    if (out_return_type) *out_return_type = sig->return_type;
-
-    if (sig->return_type == TYPE_POINTER) {
-        node_set_inferred_ptr(call_node, TYPE_VOID, NULL, 1);
-    } else {
-        node_clear_inferred_ptr(call_node);
-    }
-
+    builtin_finalize_call_return(call_node, sig->return_type, out_return_type, true);
     return true;
 }
 
@@ -2793,14 +2804,7 @@ static bool builtin_check_file_call(Node* call_node, const char* fname, Node* ar
         builtin_report_param_count_mismatch(call_node, sig->name, sig->param_count);
     }
 
-    if (out_return_type) *out_return_type = sig->return_type;
-
-    if (sig->return_type == TYPE_POINTER) {
-        node_set_inferred_ptr(call_node, TYPE_VOID, NULL, 1);
-    } else {
-        node_clear_inferred_ptr(call_node);
-    }
-
+    builtin_finalize_call_return(call_node, sig->return_type, out_return_type, true);
     return true;
 }
 
@@ -2834,8 +2838,7 @@ static bool builtin_check_math_call(Node* call_node, const char* fname, Node* ar
 
     builtin_check_args_scaffold(call_node, sig->name, args, sig->param_types, sig->param_count, false, true);
 
-    if (out_return_type) *out_return_type = sig->return_type;
-    node_clear_inferred_ptr(call_node);
+    builtin_finalize_call_return(call_node, sig->return_type, out_return_type, false);
     return true;
 }
 
@@ -2864,8 +2867,7 @@ static bool builtin_check_system_call(Node* call_node, const char* fname, Node* 
 
     builtin_check_args_scaffold(call_node, sig->name, args, sig->param_types, sig->param_count, true, false);
 
-    if (out_return_type) *out_return_type = sig->return_type;
-    node_clear_inferred_ptr(call_node);
+    builtin_finalize_call_return(call_node, sig->return_type, out_return_type, false);
     return true;
 }
 
@@ -2894,8 +2896,7 @@ static bool builtin_check_time_call(Node* call_node, const char* fname, Node* ar
 
     builtin_check_args_scaffold(call_node, sig->name, args, sig->param_types, sig->param_count, false, true);
 
-    if (out_return_type) *out_return_type = sig->return_type;
-    node_clear_inferred_ptr(call_node);
+    builtin_finalize_call_return(call_node, sig->return_type, out_return_type, false);
     return true;
 }
 
@@ -2930,8 +2931,7 @@ static bool builtin_check_error_call(Node* call_node, const char* fname, Node* a
 
     builtin_check_args_scaffold(call_node, sig->name, args, sig->param_types, sig->param_count, true, true);
 
-    if (out_return_type) *out_return_type = sig->return_type;
-    node_clear_inferred_ptr(call_node);
+    builtin_finalize_call_return(call_node, sig->return_type, out_return_type, false);
     return true;
 }
 

@@ -178,40 +178,43 @@ static Token semantic_make_token(const char* filename, int line, int col)
 }
 
 /**
- * @brief الإبلاغ عن خطأ دلالي بمعلومات موقع.
+ * @brief تنفيذ مسار إخراج الخطأ الدلالي المشترك (مع va_list).
  */
-static void semantic_error(Node* node, const char* message, ...)
-{
-    has_error = true;
-
-    Token tok = semantic_make_token(
-        node ? node->filename : NULL,
-        node ? node->line : 1,
-        node ? node->col : 1
-    );
-
-    char buf[1024];
-    va_list args;
-    va_start(args, message);
-    (void)vsnprintf(buf, sizeof(buf), message, args);
-    va_end(args);
-
-    error_report(tok, "خطأ دلالي: %s", buf);
-}
-
-static void semantic_error_loc(const char* filename, int line, int col, const char* message, ...)
+static void semantic_error_vloc(const char* filename,
+                                int line,
+                                int col,
+                                const char* message,
+                                va_list args)
 {
     has_error = true;
 
     Token tok = semantic_make_token(filename, line, col);
-
     char buf[1024];
+    (void)vsnprintf(buf, sizeof(buf), message, args);
+    error_report(tok, "خطأ دلالي: %s", buf);
+}
+
+/**
+ * @brief الإبلاغ عن خطأ دلالي بمعلومات موقع.
+ */
+static void semantic_error(Node* node, const char* message, ...)
+{
     va_list args;
     va_start(args, message);
-    (void)vsnprintf(buf, sizeof(buf), message, args);
+    semantic_error_vloc(node ? node->filename : NULL,
+                        node ? node->line : 1,
+                        node ? node->col : 1,
+                        message,
+                        args);
     va_end(args);
+}
 
-    error_report(tok, "خطأ دلالي: %s", buf);
+static void semantic_error_loc(const char* filename, int line, int col, const char* message, ...)
+{
+    va_list args;
+    va_start(args, message);
+    semantic_error_vloc(filename, line, col, message, args);
+    va_end(args);
 }
 
 /**
@@ -229,16 +232,20 @@ static unsigned int symbol_hash_name(const char* name)
     return h;
 }
 
+static void int_array_fill_minus_one(int* arr, int count)
+{
+    if (!arr || count <= 0) return;
+    for (int i = 0; i < count; i++) arr[i] = -1;
+}
+
 static void symbol_hash_reset_heads(int* heads, int count)
 {
-    if (!heads || count <= 0) return;
-    for (int i = 0; i < count; i++) heads[i] = -1;
+    int_array_fill_minus_one(heads, count);
 }
 
 static void symbol_hash_reset_next(int* next_arr, int count)
 {
-    if (!next_arr || count <= 0) return;
-    for (int i = 0; i < count; i++) next_arr[i] = -1;
+    int_array_fill_minus_one(next_arr, count);
 }
 
 static void symbol_hash_insert(const Symbol* symbols,
@@ -2556,6 +2563,24 @@ static void maybe_warn_signed_unsigned_compare(DataType left_type, DataType righ
 
 static DataType infer_type(Node* node);
 
+#define ANALYSIS_ARRAY_LEN(arr) ((int)(sizeof(arr) / sizeof((arr)[0])))
+
+/**
+ * @brief توليد دوال بحث خطي متجانسة لجداول الدوال المدمجة.
+ */
+#define DEFINE_BUILTIN_LOOKUP(fn_name, sig_type, table_name)                          \
+    static const sig_type* fn_name(const char* name)                                   \
+    {                                                                                   \
+        if (!name) return NULL;                                                        \
+        const int n = ANALYSIS_ARRAY_LEN(table_name);                                  \
+        for (int i = 0; i < n; i++) {                                                  \
+            if (strcmp(name, table_name[i].name) == 0) {                               \
+                return &table_name[i];                                                  \
+            }                                                                           \
+        }                                                                               \
+        return NULL;                                                                    \
+    }
+
 typedef struct {
     const char* name;
     DataType return_type;
@@ -2571,17 +2596,7 @@ static const BuiltinFuncSig builtin_string_funcs[] = {
     { "حرر_نص", TYPE_VOID,   1, { TYPE_STRING, TYPE_INT } },
 };
 
-static const BuiltinFuncSig* builtin_lookup_string_func(const char* name)
-{
-    if (!name) return NULL;
-    const int n = (int)(sizeof(builtin_string_funcs) / sizeof(builtin_string_funcs[0]));
-    for (int i = 0; i < n; i++) {
-        if (strcmp(name, builtin_string_funcs[i].name) == 0) {
-            return &builtin_string_funcs[i];
-        }
-    }
-    return NULL;
-}
+DEFINE_BUILTIN_LOOKUP(builtin_lookup_string_func, BuiltinFuncSig, builtin_string_funcs)
 
 /**
  * @brief التحقق من صحة استدعاء دوال السلاسل المدمجة في v0.3.9.
@@ -2628,17 +2643,7 @@ static const BuiltinMemFuncSig builtin_mem_funcs[] = {
     { "تعيين_ذاكرة", TYPE_POINTER, 3, { TYPE_POINTER, TYPE_INT, TYPE_INT } },
 };
 
-static const BuiltinMemFuncSig* builtin_lookup_mem_func(const char* name)
-{
-    if (!name) return NULL;
-    const int n = (int)(sizeof(builtin_mem_funcs) / sizeof(builtin_mem_funcs[0]));
-    for (int i = 0; i < n; i++) {
-        if (strcmp(name, builtin_mem_funcs[i].name) == 0) {
-            return &builtin_mem_funcs[i];
-        }
-    }
-    return NULL;
-}
+DEFINE_BUILTIN_LOOKUP(builtin_lookup_mem_func, BuiltinMemFuncSig, builtin_mem_funcs)
 
 /**
  * @brief التحقق من صحة استدعاء دوال الذاكرة المدمجة في v0.3.11.
@@ -2708,17 +2713,7 @@ static const BuiltinFileFuncSig builtin_file_funcs[] = {
     { "اكتب_سطر",  TYPE_INT,     2, { TYPE_POINTER, TYPE_STRING,  TYPE_INT } },
 };
 
-static const BuiltinFileFuncSig* builtin_lookup_file_func(const char* name)
-{
-    if (!name) return NULL;
-    const int n = (int)(sizeof(builtin_file_funcs) / sizeof(builtin_file_funcs[0]));
-    for (int i = 0; i < n; i++) {
-        if (strcmp(name, builtin_file_funcs[i].name) == 0) {
-            return &builtin_file_funcs[i];
-        }
-    }
-    return NULL;
-}
+DEFINE_BUILTIN_LOOKUP(builtin_lookup_file_func, BuiltinFileFuncSig, builtin_file_funcs)
 
 static DataType infer_type_allow_null_string(Node* expr, DataType expected)
 {
@@ -2797,17 +2792,7 @@ static const BuiltinMathFuncSig builtin_math_funcs[] = {
     { "عشوائي",     TYPE_INT,   0, { TYPE_INT,   TYPE_INT } },
 };
 
-static const BuiltinMathFuncSig* builtin_lookup_math_func(const char* name)
-{
-    if (!name) return NULL;
-    const int n = (int)(sizeof(builtin_math_funcs) / sizeof(builtin_math_funcs[0]));
-    for (int i = 0; i < n; i++) {
-        if (strcmp(name, builtin_math_funcs[i].name) == 0) {
-            return &builtin_math_funcs[i];
-        }
-    }
-    return NULL;
-}
+DEFINE_BUILTIN_LOOKUP(builtin_lookup_math_func, BuiltinMathFuncSig, builtin_math_funcs)
 
 /**
  * @brief التحقق من استدعاءات دوال الرياضيات المدمجة في v0.4.1.
@@ -2852,17 +2837,7 @@ static const BuiltinSystemFuncSig builtin_system_funcs[] = {
     { "نفذ_أمر",    TYPE_INT,    1, { TYPE_STRING } },
 };
 
-static const BuiltinSystemFuncSig* builtin_lookup_system_func(const char* name)
-{
-    if (!name) return NULL;
-    const int n = (int)(sizeof(builtin_system_funcs) / sizeof(builtin_system_funcs[0]));
-    for (int i = 0; i < n; i++) {
-        if (strcmp(name, builtin_system_funcs[i].name) == 0) {
-            return &builtin_system_funcs[i];
-        }
-    }
-    return NULL;
-}
+DEFINE_BUILTIN_LOOKUP(builtin_lookup_system_func, BuiltinSystemFuncSig, builtin_system_funcs)
 
 /**
  * @brief التحقق من استدعاءات دوال النظام المدمجة في v0.4.1.
@@ -2907,17 +2882,7 @@ static const BuiltinTimeFuncSig builtin_time_funcs[] = {
     { "وقت_كنص",  TYPE_STRING, 1, { TYPE_INT } },
 };
 
-static const BuiltinTimeFuncSig* builtin_lookup_time_func(const char* name)
-{
-    if (!name) return NULL;
-    const int n = (int)(sizeof(builtin_time_funcs) / sizeof(builtin_time_funcs[0]));
-    for (int i = 0; i < n; i++) {
-        if (strcmp(name, builtin_time_funcs[i].name) == 0) {
-            return &builtin_time_funcs[i];
-        }
-    }
-    return NULL;
-}
+DEFINE_BUILTIN_LOOKUP(builtin_lookup_time_func, BuiltinTimeFuncSig, builtin_time_funcs)
 
 /**
  * @brief التحقق من استدعاءات دوال الوقت المدمجة في v0.4.1.
@@ -2967,17 +2932,10 @@ static const BuiltinErrorFuncSig builtin_error_funcs[] = {
     { "نص_كود_خطأ",         TYPE_STRING, 1, { TYPE_INT,    TYPE_INT } },
 };
 
-static const BuiltinErrorFuncSig* builtin_lookup_error_func(const char* name)
-{
-    if (!name) return NULL;
-    const int n = (int)(sizeof(builtin_error_funcs) / sizeof(builtin_error_funcs[0]));
-    for (int i = 0; i < n; i++) {
-        if (strcmp(name, builtin_error_funcs[i].name) == 0) {
-            return &builtin_error_funcs[i];
-        }
-    }
-    return NULL;
-}
+DEFINE_BUILTIN_LOOKUP(builtin_lookup_error_func, BuiltinErrorFuncSig, builtin_error_funcs)
+
+#undef DEFINE_BUILTIN_LOOKUP
+#undef ANALYSIS_ARRAY_LEN
 
 /**
  * @brief التحقق من استدعاءات دوال معالجة الأخطاء المدمجة في v0.4.3.

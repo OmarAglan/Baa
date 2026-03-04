@@ -51,13 +51,14 @@ static const char* driver_custom_startup_asm(const BaaTarget* target)
             "    movq (%rsp), %rsi\n"              // argc
             "    leaq 8(%rsp), %rdx\n"             // argv
             "    leaq main(%rip), %rdi\n"          // main
-            "    leaq __libc_csu_init(%rip), %rcx\n"
-            "    leaq __libc_csu_fini(%rip), %r8\n"
-            "    xorl %r9d, %r9d\n"                // fini = NULL
+            "    xorl %ecx, %ecx\n"                // init = NULL
+            "    xorl %r8d, %r8d\n"                // fini = NULL
+            "    xorl %r9d, %r9d\n"                // rtld_fini = NULL
             "    subq $8, %rsp\n"                  // محاذاة قبل push
             "    pushq %r10\n"                     // 7th arg: stack_end
             "    call __libc_start_main\n"
-            "    hlt\n";
+            "    hlt\n"
+            ".section .note.GNU-stack,\"\",@progbits\n";
     }
 
     // Windows/COFF (MinGW-w64)

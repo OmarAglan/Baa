@@ -21,6 +21,7 @@ DEFAULT_LOG_DIR = ROOT / ".baa_qa_logs"
 
 CORPUS_COMPILE_TIMEOUT_S = 25.0
 FUZZ_TIMEOUT_S = 8.0
+MODULE_SIZE_TIMEOUT_S = 30.0
 
 
 @dataclass
@@ -335,6 +336,71 @@ def _run_fuzz_lite(baa: Path, log_dir: Path, cases: int, seed: int) -> tuple[boo
     return ok, results
 
 
+def _run_module_size_guard(log_dir: Path) -> StepResult:
+    summary_rel = log_dir / "module-size-summary.json"
+    res = _run_logged(
+        "module-size-guard",
+        [
+            sys.executable,
+            str(ROOT / "scripts" / "check_module_sizes.py"),
+            "--json-out",
+            str(summary_rel.relative_to(ROOT)),
+        ],
+        cwd=ROOT,
+        log_dir=log_dir,
+        timeout_s=MODULE_SIZE_TIMEOUT_S,
+    )
+
+    try:
+        summary = json.loads(summary_rel.read_text(encoding="utf-8"))
+        warning_count = int(summary.get("warning_count", 0))
+        error_count = int(summary.get("error_count", 0))
+        file_count = int(summary.get("file_count", 0))
+        res.detail = f"{warning_count} warnings, {error_count} errors across {file_count} files"
+    except Exception:
+        pass
+
+    return res
+
+
+def _write_summary(
+    mode: str,
+    compiler: Path | None,
+    overall_ok: bool,
+    all_results: list[StepResult],
+    log_dir: Path,
+    summary_json: str,
+) -> int:
+    summary = {
+        "mode": mode,
+        "compiler": str(compiler) if compiler is not None else "",
+        "overall_passed": overall_ok,
+        "total_steps": len(all_results),
+        "passed_steps": sum(1 for r in all_results if r.passed),
+        "failed_steps": sum(1 for r in all_results if not r.passed),
+        "results": [asdict(r) for r in all_results],
+        "log_dir": str(log_dir.relative_to(ROOT)),
+    }
+
+    if summary_json:
+        out = Path(summary_json)
+        if not out.is_absolute():
+            out = ROOT / out
+        out.parent.mkdir(parents=True, exist_ok=True)
+        out.write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8")
+
+    print("qa: SUMMARY " + json.dumps({
+        "mode": summary["mode"],
+        "overall_passed": summary["overall_passed"],
+        "total_steps": summary["total_steps"],
+        "passed_steps": summary["passed_steps"],
+        "failed_steps": summary["failed_steps"],
+        "log_dir": summary["log_dir"],
+    }, ensure_ascii=False))
+
+    return 0 if overall_ok else 1
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Baa QA orchestrator")
     parser.add_argument("--mode", choices=["quick", "full", "stress"], default="quick")
@@ -349,11 +415,21 @@ def main() -> int:
         shutil.rmtree(log_dir, ignore_errors=True)
     log_dir.mkdir(parents=True, exist_ok=True)
 
-    baa = _find_baa()
+    baa: Path | None = None
     all_results: list[StepResult] = []
     overall_ok = True
 
     print(f"qa: mode={args.mode}")
+
+    if args.mode in ("full", "stress"):
+        module_size_res = _run_module_size_guard(log_dir)
+        _print_step(module_size_res)
+        all_results.append(module_size_res)
+        overall_ok = overall_ok and module_size_res.passed
+        if not module_size_res.passed:
+            return _write_summary(args.mode, baa, overall_ok, all_results, log_dir, args.summary_json)
+
+    baa = _find_baa()
     print(f"qa: compiler={baa}")
 
     # A) Integration tiers
@@ -397,34 +473,7 @@ def main() -> int:
         all_results.extend(fuzz_results)
         overall_ok = overall_ok and fuzz_ok
 
-    summary = {
-        "mode": args.mode,
-        "compiler": str(baa),
-        "overall_passed": overall_ok,
-        "total_steps": len(all_results),
-        "passed_steps": sum(1 for r in all_results if r.passed),
-        "failed_steps": sum(1 for r in all_results if not r.passed),
-        "results": [asdict(r) for r in all_results],
-        "log_dir": str(log_dir.relative_to(ROOT)),
-    }
-
-    if args.summary_json:
-        out = Path(args.summary_json)
-        if not out.is_absolute():
-            out = ROOT / out
-        out.parent.mkdir(parents=True, exist_ok=True)
-        out.write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8")
-
-    print("qa: SUMMARY " + json.dumps({
-        "mode": summary["mode"],
-        "overall_passed": summary["overall_passed"],
-        "total_steps": summary["total_steps"],
-        "passed_steps": summary["passed_steps"],
-        "failed_steps": summary["failed_steps"],
-        "log_dir": summary["log_dir"],
-    }, ensure_ascii=False))
-
-    return 0 if overall_ok else 1
+    return _write_summary(args.mode, baa, overall_ok, all_results, log_dir, args.summary_json)
 
 
 if __name__ == "__main__":

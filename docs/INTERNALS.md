@@ -13,6 +13,7 @@ This document details the internal architecture, data structures, and algorithms
 ## Table of Contents
 
 - [Pipeline Architecture](#1-pipeline-architecture)
+- [Component Boundaries & Size Guard](#121-component-boundaries--size-guard-v050-sidecar)
 - [Lexical Analysis](#2-lexical-analysis)
 - [Syntactic Analysis](#3-syntactic-analysis)
 - [Abstract Syntax Tree](#4-abstract-syntax-tree)
@@ -131,6 +132,37 @@ The driver in `main.c` (v0.2.0+) supports multi-file compilation and various mod
 | `--version` | **Version Info** | stdout | Displays compiler version and build date. |
 | `--help`, `-h` | **Help** | stdout | Shows usage information. |
 | `update` | **Self-Update** | - | Downloads and installs the latest version. |
+
+### 1.2.1. Component Boundaries & Size Guard (v0.5.0 sidecar)
+
+The source tree is still physically flat under `src/`, but `v0.5.0` now defines canonical logical ownership boundaries:
+
+| Component | Current scope |
+|-----------|---------------|
+| Frontend | source loading, lexing, preprocessing, parsing, AST construction |
+| Middle-End | semantic analysis, IR construction, IR verification, IR optimization |
+| Backend | target-aware IR lowering, register allocation, assembly emission |
+| Driver | CLI orchestration, staging/toolchain execution, updater entry points |
+| Support | shared diagnostics and shared declarations |
+
+The full ownership/dependency contract now lives in [Component Ownership](COMPONENT_OWNERSHIP.md).
+
+Size governance for handwritten modules is also active:
+
+- `scripts/check_module_sizes.py` scans `src/*.c` and `src/*.h`.
+- Warning threshold: `700` physical lines per file.
+- Error threshold: `1000` physical lines per file.
+- `scripts/qa_run.py --mode full|stress` runs the guard before the expensive QA stages.
+- CI runs the same guard before full QA on both Windows and Linux.
+
+This is intentionally a partial `v0.5.0` step: the policy and guard are live, and most non-legacy oversized modules now use in-place companion implementation files while the tree remains physically flat.
+
+Current in-place split pattern (2026-03-05):
+
+- `parser.c` now delegates to `parser_types.c`, `parser_expr.c`, `parser_stmt.c`, and `parser_decl.c`.
+- `analysis.c` now delegates to `analysis_scope.c`, `analysis_types.c`, `analysis_semantic_utils.c`, `analysis_builtins.c`, `analysis_format.c`, `analysis_infer_expr.c`, and `analysis_visit.c`.
+- `lexer.c`, `isel.c`, `regalloc.c`, `ir.c`, `ir_text.c`, and `ir_verify_ir.c` also use companion implementation files to shrink the original hotspots while preserving their exported entry points.
+- `ir_lower.c` and `emit.c` remain the only temporary hard-cap exceptions in `scripts/module_size_allowlist.txt`.
 
 ### 1.3. Diagnostic Engine
 

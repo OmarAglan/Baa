@@ -1310,14 +1310,20 @@
 
 ### v0.5.0: File & Component Organization 🗂️
 
-- [ ] **Define canonical component boundaries** — Frontend / Middle-End / Backend / Driver / Support.
-- [ ] **Set module-size policy** — target `<= 700` lines/file, hard cap `1000` lines for hand-written C modules.
-- [ ] **Split oversized modules first** — current hotspots: `ir_lower.c`, `analysis.c`, `parser.c`, `isel.c`, `emit.c`, `ir.c`, `ir_text.c`, `regalloc.c`, `ir_verify_ir.c`.
+- [x] **Define canonical component boundaries** — Frontend / Middle-End / Backend / Driver / Support.
+- [x] **Set module-size policy** — target `<= 700` lines/file, hard cap `1000` lines for hand-written C modules.
+- [~] **Split oversized modules first** — completed in-place splits: `analysis.c`, `isel.c`, `ir.c`, `ir_text.c`, `lexer.c`, `parser.c`, `regalloc.c`, `ir_verify_ir.c`; remaining hard-cap hotspots: `ir_lower.c`, `emit.c`.
 - [ ] **Restructure source layout safely** — organize files by component with compatibility shims as needed.
 - [ ] **Add local module facades** — internal headers per component to reduce cross-module leakage.
 - [ ] **Update build graph** — keep `CMakeLists.txt` deterministic after moves/renames.
-- [ ] **Add size-regression guard** — CI check to block new oversized source files.
-- [ ] **Document ownership map** — module responsibilities + dependency rules.
+- [x] **Add size-regression guard** — `scripts/check_module_sizes.py` enforces warn `700` / error `1000` and runs in `qa_run.py` + CI before full QA.
+- [x] **Document ownership map** — `docs/COMPONENT_OWNERSHIP.md` defines module responsibilities + dependency rules.
+
+Partial status update (2026-03-05):
+- policy/guard/documentation are in place for `v0.5.0`,
+- most non-legacy oversized modules were split in-place into companion implementation files without changing public APIs,
+- `scripts/module_size_allowlist.txt` temporarily carries only `ir_lower.c` and `emit.c` as legacy hard-cap exceptions,
+- physical source-tree reorganization and broad internal-facade coverage are still pending work.
 
 ### v0.5.1: Language + ABI Freeze 🔒
 
@@ -1379,13 +1385,13 @@
 
 - [ ] **Cross-target QA green** — `quick/full` pass on both `x86_64-windows` and `x86_64-linux`.
 - [ ] **Determinism checks green** — stable IR text and stable diagnostics for identical inputs.
-- [ ] **File-size governance active** — CI guard for module-size budget is enforced.
+- [x] **File-size governance active** — CI guard for module-size budget is enforced.
 - [ ] **Contracts frozen and published** — grammar/ABI/IR/Baa0 docs tagged and versioned.
 - [ ] **Bootstrap handoff bundle ready** — scripts + manifests + reproducible build notes archived.
 
 #### Phase 4.5 Required Artifacts
 
-- [ ] `docs/COMPONENT_OWNERSHIP.md` — boundaries + owners + allowed dependencies.
+- [x] `docs/COMPONENT_OWNERSHIP.md` — boundaries + owners + allowed dependencies.
 - [ ] `docs/BOOTSTRAP_CONTRACT.md` — frozen ABI/IR/language requirements for v0.9.
 - [ ] `docs/BAA0_SPEC.md` — bootstrap subset definition and exclusions.
 - [ ] `scripts/qa_bootstrap_gate.py` — one-command admission checks for Phase 5.

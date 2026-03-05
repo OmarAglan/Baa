@@ -6,6 +6,36 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ---
 
+## [0.5.0] - Unreleased
+
+### Added
+
+- **Component ownership map (v0.5.0 sidecar)**:
+  - Added `docs/COMPONENT_OWNERSHIP.md`.
+  - Defined canonical logical boundaries for `Frontend`, `Middle-End`, `Backend`, `Driver`, and `Support`.
+  - Documented allowed dependency directions between those components.
+- **Module-size guard**:
+  - Added `scripts/check_module_sizes.py` for handwritten `src/*.c` and `src/*.h` files.
+  - Default thresholds are `700` lines for warnings and `1000` lines for hard errors.
+  - Added `--json-out` to emit machine-readable summaries for QA/CI artifacts.
+
+### Changed
+
+- **QA orchestration**:
+  - `scripts/qa_run.py` now runs the module-size guard before `full` and `stress` QA work, and stops early on hard-cap violations.
+- **CI gating**:
+  - Windows and Linux `full` jobs now run the module-size guard before full QA.
+  - The JSON guard report is uploaded with failure artifacts.
+- **In-place source splitting**:
+  - `parser.c` now delegates to `parser_types.c`, `parser_expr.c`, `parser_stmt.c`, and `parser_decl.c`.
+  - `analysis.c` now delegates to `analysis_scope.c`, `analysis_types.c`, `analysis_semantic_utils.c`, `analysis_builtins.c`, `analysis_format.c`, `analysis_infer_expr.c`, and `analysis_visit.c`.
+  - `lexer.c`, `isel.c`, `regalloc.c`, `ir.c`, `ir_text.c`, and `ir_verify_ir.c` now use the same in-place companion-file split pattern.
+- **Guard policy**:
+  - `scripts/module_size_allowlist.txt` now limits temporary hard-cap exceptions to `src/ir_lower.c` and `src/emit.c`.
+- **Scope note**:
+  - This `v0.5.0` change still keeps the source tree physically flat under `src/`.
+  - Remaining split/restructure work is concentrated in `ir_lower.c` and `emit.c`, plus later directory moves/facade cleanup.
+
 ## [0.4.4.1] - 2026-03-02
 
 ### Added

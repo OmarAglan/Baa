@@ -84,6 +84,11 @@ jobs:
       - name: Build
         shell: pwsh
         run: cmake --build build
+      - name: Module Size Guard
+        shell: pwsh
+        env:
+          PYTHONUTF8: "1"
+        run: python scripts/check_module_sizes.py --json-out module-size-full-windows.json
       - name: QA Full
         shell: pwsh
         env:
@@ -97,6 +102,7 @@ jobs:
           if-no-files-found: ignore
           path: |
             .baa_qa_logs/**
+            module-size-full-windows.json
             qa-summary-full-windows.json
             build/**/*.s
             build/**/*.ir
@@ -153,6 +159,10 @@ jobs:
         run: cmake -B build-linux -DCMAKE_BUILD_TYPE=Release
       - name: Build
         run: cmake --build build-linux -j
+      - name: Module Size Guard
+        env:
+          PYTHONUTF8: "1"
+        run: python3 scripts/check_module_sizes.py --json-out module-size-full-linux.json
       - name: QA Full
         env:
           PYTHONUTF8: "1"
@@ -165,6 +175,7 @@ jobs:
           if-no-files-found: ignore
           path: |
             .baa_qa_logs/**
+            module-size-full-linux.json
             qa-summary-full-linux.json
             build-linux/**/*.s
             build-linux/**/*.ir

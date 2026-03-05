@@ -29,12 +29,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - **In-place source splitting**:
   - `parser.c` now delegates to `parser_types.c`, `parser_expr.c`, `parser_stmt.c`, and `parser_decl.c`.
   - `analysis.c` now delegates to `analysis_scope.c`, `analysis_types.c`, `analysis_semantic_utils.c`, `analysis_builtins.c`, `analysis_format.c`, `analysis_infer_expr.c`, and `analysis_visit.c`.
-  - `lexer.c`, `isel.c`, `regalloc.c`, `ir.c`, `ir_text.c`, and `ir_verify_ir.c` now use the same in-place companion-file split pattern.
+  - `lexer.c`, `isel.c`, `regalloc.c`, `ir.c`, `ir_text.c`, `ir_verify_ir.c`, `ir_lower.c`, and `emit.c` now use the same in-place companion-file split pattern.
+- **Physical component layout**:
+  - implementation files now live under `src/frontend`, `src/middleend`, `src/backend`, `src/driver`, and `src/support`.
+  - root-level `.c` compatibility shims preserve existing source paths while the actual implementation lives in the component directories.
 - **Guard policy**:
-  - `scripts/module_size_allowlist.txt` now limits temporary hard-cap exceptions to `src/ir_lower.c` and `src/emit.c`.
+  - `scripts/module_size_allowlist.txt` is now empty; the hard-cap guard has no remaining legacy exceptions.
 - **Scope note**:
-  - This `v0.5.0` change still keeps the source tree physically flat under `src/`.
-  - Remaining split/restructure work is concentrated in `ir_lower.c` and `emit.c`, plus later directory moves/facade cleanup.
+  - `CMakeLists.txt` remains deterministic and explicitly listed; the current transition still keeps public headers in the `src/` root.
+  - Remaining restructure work is now limited to internal-facade cleanup and future header relocation.
 
 ## [0.4.4.1] - 2026-03-02
 

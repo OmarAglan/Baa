@@ -1312,18 +1312,19 @@
 
 - [x] **Define canonical component boundaries** — Frontend / Middle-End / Backend / Driver / Support.
 - [x] **Set module-size policy** — target `<= 700` lines/file, hard cap `1000` lines for hand-written C modules.
-- [~] **Split oversized modules first** — completed in-place splits: `analysis.c`, `isel.c`, `ir.c`, `ir_text.c`, `lexer.c`, `parser.c`, `regalloc.c`, `ir_verify_ir.c`; remaining hard-cap hotspots: `ir_lower.c`, `emit.c`.
-- [ ] **Restructure source layout safely** — organize files by component with compatibility shims as needed.
+- [x] **Split oversized modules first** — `analysis.c`, `emit.c`, `ir.c`, `ir_lower.c`, `ir_text.c`, `isel.c`, `lexer.c`, `parser.c`, `regalloc.c`, and `ir_verify_ir.c` are now under the hard cap via companion implementation splits.
+- [x] **Restructure source layout safely** — component directories now exist under `src/` with root compatibility shims preserving legacy paths.
 - [ ] **Add local module facades** — internal headers per component to reduce cross-module leakage.
-- [ ] **Update build graph** — keep `CMakeLists.txt` deterministic after moves/renames.
+- [x] **Update build graph** — `CMakeLists.txt` remains explicit/deterministic and the Windows build uses C-only include propagation for compatibility shims.
 - [x] **Add size-regression guard** — `scripts/check_module_sizes.py` enforces warn `700` / error `1000` and runs in `qa_run.py` + CI before full QA.
 - [x] **Document ownership map** — `docs/COMPONENT_OWNERSHIP.md` defines module responsibilities + dependency rules.
 
-Partial status update (2026-03-05):
+Partial status update (2026-03-06):
 - policy/guard/documentation are in place for `v0.5.0`,
-- most non-legacy oversized modules were split in-place into companion implementation files without changing public APIs,
-- `scripts/module_size_allowlist.txt` temporarily carries only `ir_lower.c` and `emit.c` as legacy hard-cap exceptions,
-- physical source-tree reorganization and broad internal-facade coverage are still pending work.
+- all remaining hard-cap hotspots were split below the `1000`-line limit,
+- `scripts/module_size_allowlist.txt` is now empty,
+- source files were reorganized under `src/frontend`, `src/middleend`, `src/backend`, `src/driver`, and `src/support`,
+- root-level `.c` compatibility shims preserve legacy source paths while broader internal-facade cleanup remains pending.
 
 ### v0.5.1: Language + ABI Freeze 🔒
 

@@ -67,6 +67,10 @@ endif()
 # Windows executable extension
 add_executable(baa ${SOURCES})
 
+target_include_directories(baa PRIVATE
+    $<$<COMPILE_LANGUAGE:C>:${CMAKE_CURRENT_SOURCE_DIR}/src>
+)
+
 # ============================================================================
 # Install Rules (Linux packaging)
 # ============================================================================

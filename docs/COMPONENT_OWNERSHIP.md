@@ -1,17 +1,17 @@
 # Component Ownership
 
-This document defines the logical ownership boundaries for the current flat `src/` layout.
-It is an ownership map and dependency contract, not yet a directory split plan.
+This document defines the ownership boundaries for the current componentized `src/` layout.
+It remains both an ownership map and a dependency contract during the compatibility-shim transition.
 
 ## Goals
 
-- Keep each handwritten `src/*.c` and `src/*.h` module within a reviewable size budget.
-- Make cross-component dependencies explicit before any file moves or large refactors.
-- Give `v0.5.0` a stable contract for future source splitting work.
+- Keep each handwritten `src/**/*.c` and `src/**/*.h` module within a reviewable size budget.
+- Make cross-component dependencies explicit during and after the physical file move.
+- Give `v0.5.0` a stable contract for compatibility shims today and header cleanup later.
 
 ## Size Policy
 
-- Scope: handwritten `src/*.c` and `src/*.h` files.
+- Scope: handwritten `src/**/*.c` and `src/**/*.h` files.
 - Warning threshold: `700` physical lines per file.
 - Error threshold: `1000` physical lines per file.
 - Enforcement:
@@ -23,11 +23,11 @@ It is an ownership map and dependency contract, not yet a directory split plan.
 
 | Component | Responsibility | Representative modules |
 |-----------|----------------|------------------------|
-| Frontend | Source loading, lexing, preprocessing, parsing, AST construction | `lexer.c`, `parser.c`, `read_file.c` |
-| Middle-End | Semantic analysis, IR construction, IR verification, IR optimization, shared IR data layout | `analysis.c`, `ir*.c`, `ir*.h` |
-| Backend | Target-aware lowering from IR to machine form and assembly emission | `isel.c`, `regalloc.c`, `emit.c`, `target.c`, `code_model.h` |
-| Driver | CLI orchestration, per-file pipeline setup, toolchain execution, process management, updater entry points | `main.c`, `driver_*.c`, `process.c`, `updater.c`, `updater_stub.c` |
-| Support | Shared diagnostics and cross-cutting declarations that multiple components consume | `error.c`, `baa.h` |
+| Frontend | Source loading, lexing, preprocessing, parsing, AST construction | `src/frontend/lexer.c`, `src/frontend/parser.c`, `src/frontend/analysis.c` |
+| Middle-End | Semantic analysis, IR construction, IR verification, IR optimization, shared IR data layout | `src/middleend/ir*.c`, `src/middleend/ir_lower.c`, `src/middleend/ir_optimizer.c` |
+| Backend | Target-aware lowering from IR to machine form and assembly emission | `src/backend/isel.c`, `src/backend/regalloc.c`, `src/backend/emit.c`, `src/backend/target.c`, `code_model.h` |
+| Driver | CLI orchestration, per-file pipeline setup, toolchain execution, process management | `src/driver/main.c`, `src/driver/driver_*.c`, `src/driver/process.c` |
+| Support | Shared diagnostics, file loading, updater glue, and cross-cutting declarations | `src/support/error.c`, `src/support/read_file.c`, `src/support/updater*.c`, `baa.h` |
 
 ## Ownership Rules
 
@@ -35,7 +35,8 @@ It is an ownership map and dependency contract, not yet a directory split plan.
 - Cross-component calls should flow through the owning component's public header surface, not through private helper leakage.
 - `baa.h` is shared support surface, not a dumping ground for unrelated internal helpers.
 - When an oversized file is split, the new files inherit the original component owner unless the split intentionally creates a new boundary.
-- Physical layout may stay flat under `src/` until the restructure work lands; logical ownership already applies now.
+- Root-level `.c` files are temporary compatibility shims; the actual implementation now lives under the component subdirectories.
+- Public/shared headers remain in the `src/` root during this phase to avoid a risky include-graph rewrite.
 
 ## Dependency Rules
 
@@ -57,14 +58,14 @@ It is an ownership map and dependency contract, not yet a directory split plan.
 
 ## Current v0.5.0 Scope
 
-This sidecar slice completes the policy and guard work only:
+This `v0.5.0` slice now covers policy, guard, and physical source placement:
 
 - canonical component boundaries are now documented,
 - dependency rules are now documented,
-- module-size guarding is now wired into QA and CI.
+- module-size guarding is now wired into QA and CI,
+- implementation files now live under component directories with compatibility shims preserving old source paths.
 
 The following remain intentionally pending:
 
 - splitting oversized modules,
-- moving files into component directories,
 - adding component-local facade headers across the whole tree.

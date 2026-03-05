@@ -48,7 +48,7 @@ def _collect_modules(
     src_dir: Path, warn_lines: int, error_lines: int, allowlist: set[str]
 ) -> list[ModuleSize]:
     modules: list[ModuleSize] = []
-    for path in sorted(src_dir.iterdir()):
+    for path in sorted(src_dir.rglob("*")):
         if not path.is_file():
             continue
         if path.suffix.lower() not in MODULE_EXTS:
@@ -137,7 +137,7 @@ def _print_summary(summary: dict[str, object]) -> None:
 
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="Check handwritten src/*.c and src/*.h module sizes."
+        description="Check handwritten src/**/*.c and src/**/*.h module sizes."
     )
     parser.add_argument("--json-out", default="", help="Write the summary JSON to this path.")
     parser.add_argument("--warn-lines", type=int, default=WARN_LINES)

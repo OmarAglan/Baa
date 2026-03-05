@@ -84,16 +84,16 @@ flowchart LR
 
 ```mermaid
 flowchart TB
-    Driver["Driver / CLI\nsrc/main.c"] --> Lexer["Lexer + Preprocessor\nsrc/lexer.c"]
-    Lexer --> Parser["Parser\nsrc/parser.c"]
-    Parser --> Analyzer["Semantic Analysis\nsrc/analysis.c"]
-    Analyzer --> Lower["IR Lowering\nsrc/ir_lower.c (v0.3.0.3+)"]
-    Lower --> IR["IR Module\nsrc/ir.c (v0.3.0+)"]
-    IR --> Backend["Backend\nsrc/isel.c + src/regalloc.c + src/emit.c"]
+    Driver["Driver / CLI\nsrc/driver/main.c"] --> Lexer["Lexer + Preprocessor\nsrc/frontend/lexer.c"]
+    Lexer --> Parser["Parser\nsrc/frontend/parser.c"]
+    Parser --> Analyzer["Semantic Analysis\nsrc/frontend/analysis.c"]
+    Analyzer --> Lower["IR Lowering\nsrc/middleend/ir_lower.c (v0.3.0.3+)"]
+    Lower --> IR["IR Module\nsrc/middleend/ir.c (v0.3.0+)"]
+    IR --> Backend["Backend\nsrc/backend/isel.c + src/backend/regalloc.c + src/backend/emit.c"]
     Backend --> GCC["External Toolchain\nMinGW-w64 gcc"]
 
-    Driver --> Diagnostics["Diagnostics\nsrc/error.c"]
-    Driver --> Updater["Updater\nsrc/updater.c (Windows-only)"]
+    Driver --> Diagnostics["Diagnostics\nsrc/support/error.c"]
+    Driver --> Updater["Updater\nsrc/support/updater.c (Windows-only)"]
     
     style Lower fill:#fff3e0
     style IR fill:#fff3e0
@@ -135,7 +135,7 @@ The driver in `main.c` (v0.2.0+) supports multi-file compilation and various mod
 
 ### 1.2.1. Component Boundaries & Size Guard (v0.5.0 sidecar)
 
-The source tree is still physically flat under `src/`, but `v0.5.0` now defines canonical logical ownership boundaries:
+The source tree now uses physical component directories under `src/`, with root-level `.c` compatibility shims preserving legacy paths during the transition:
 
 | Component | Current scope |
 |-----------|---------------|
@@ -149,20 +149,20 @@ The full ownership/dependency contract now lives in [Component Ownership](COMPON
 
 Size governance for handwritten modules is also active:
 
-- `scripts/check_module_sizes.py` scans `src/*.c` and `src/*.h`.
+- `scripts/check_module_sizes.py` scans `src/**/*.c` and `src/**/*.h`.
 - Warning threshold: `700` physical lines per file.
 - Error threshold: `1000` physical lines per file.
 - `scripts/qa_run.py --mode full|stress` runs the guard before the expensive QA stages.
 - CI runs the same guard before full QA on both Windows and Linux.
 
-This is intentionally a partial `v0.5.0` step: the policy and guard are live, and most non-legacy oversized modules now use in-place companion implementation files while the tree remains physically flat.
+This remains a transitional `v0.5.0` step: implementation files now live under component directories, while root-level `.c` shims and root-level public headers preserve compatibility.
 
 Current in-place split pattern (2026-03-05):
 
 - `parser.c` now delegates to `parser_types.c`, `parser_expr.c`, `parser_stmt.c`, and `parser_decl.c`.
 - `analysis.c` now delegates to `analysis_scope.c`, `analysis_types.c`, `analysis_semantic_utils.c`, `analysis_builtins.c`, `analysis_format.c`, `analysis_infer_expr.c`, and `analysis_visit.c`.
-- `lexer.c`, `isel.c`, `regalloc.c`, `ir.c`, `ir_text.c`, and `ir_verify_ir.c` also use companion implementation files to shrink the original hotspots while preserving their exported entry points.
-- `ir_lower.c` and `emit.c` remain the only temporary hard-cap exceptions in `scripts/module_size_allowlist.txt`.
+- `lexer.c`, `isel.c`, `regalloc.c`, `ir.c`, `ir_text.c`, `ir_verify_ir.c`, `ir_lower.c`, and `emit.c` also use companion implementation files to shrink the original hotspots while preserving their exported entry points.
+- `scripts/module_size_allowlist.txt` is currently empty; the size guard has no active legacy exceptions.
 
 ### 1.3. Diagnostic Engine
 

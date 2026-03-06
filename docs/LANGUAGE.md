@@ -62,6 +62,12 @@ Include other files (headers) into the current file. This works like C's `#inclu
 4. User include directories from CLI (`-I <dir>` or `-I<dir>`) in the same order provided.
 5. For bare names (e.g., `baalib.baahd`): `<source_dir>/stdlib/<name>`, then `stdlib/<name>`, then `{BAA_STDLIB}/<name>`, then `{BAA_HOME}/stdlib/<name>`.
 
+**Determinism and safety notes:**
+
+- The selected include path is normalized before it becomes the active file identity inside the lexer.
+- Equivalent relative spellings such as `header.baahd` and `./header.baahd` are therefore treated as the same included file.
+- Include cycles are rejected with an Arabic diagnostic that prints the include chain.
+
 **Example:**
 
 ```baa

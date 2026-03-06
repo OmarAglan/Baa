@@ -1337,8 +1337,8 @@ Partial status update (2026-03-06):
 
 ### v0.5.2: Module & Multi-File Hardening 📦
 
-- [ ] **Deterministic include/import resolution** — stable behavior across hosts.
-- [ ] **Cycle diagnostics** — clear Arabic diagnostics for dependency loops.
+- [x] **Deterministic include/import resolution** — include resolution now canonicalizes successful paths before they become active lexer filenames, so equivalent relative spellings collapse to a single resolved path.
+- [x] **Cycle diagnostics** — `#تضمين` cycles are now rejected early with Arabic diagnostics that print the include chain instead of recursing until depth exhaustion.
 - [ ] **Symbol visibility rules** — explicit cross-file linkage behavior.
 - [x] **Header/API hygiene** — `baa.h` is now a compatibility umbrella only; shared declarations were split into component-owned public headers under `src/frontend/` and `src/support/`, diagnostics no longer depend on frontend lexer headers, and the middle-end now consumes a small shared target contract instead of touching backend target layout directly.
 

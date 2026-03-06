@@ -379,10 +379,12 @@ When `#تضمين "file"` is encountered:
    - `{BAA_HOME}/<path>` (for relative paths),
    - CLI include paths from `-I` (in the user-provided order),
    - for bare names: `<source_dir>/stdlib/<name>`, `stdlib/<name>`, `{BAA_STDLIB}/<name>`, `{BAA_HOME}/stdlib/<name>`.
-3. The selected file is read into memory.
-4. The current lexer state is pushed onto the include stack.
-5. The lexer state is updated to point to the new file's content.
-6. When EOF is reached, the previous state is popped and restored.
+3. The first successful candidate is normalized to a canonical active path.
+4. The normalized path is checked against the current include stack to reject cycles early.
+5. The selected file is read into memory.
+6. The current lexer state is pushed onto the include stack.
+7. The lexer state is updated to point to the new file's content.
+8. When EOF is reached, the previous state is popped and restored.
 
 #### 2.2.5. Conditional Stack Implementation
 

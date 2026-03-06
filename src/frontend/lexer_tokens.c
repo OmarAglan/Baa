@@ -65,6 +65,11 @@
                                    "BAA_HOME، مسارات -I، stdlib/، BAA_STDLIB.",
                                    path);
                      }
+
+                     if (lex_include_would_cycle(l, resolved_include_path)) {
+                         free(new_src);
+                         lex_fatal_include_cycle(l, path, resolved_include_path);
+                     }
                       
                      size_t max_include_depth = sizeof(l->stack) / sizeof(l->stack[0]);
                      if ((size_t)l->stack_depth >= max_include_depth) {

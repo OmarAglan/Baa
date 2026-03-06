@@ -366,7 +366,7 @@ Use header files for function prototypes and shared declarations.
 .\baa.exe main.baa math.baa -o myapp.exe
 ```
 
-> **Note:** `#تضمين` search order is: (1) current source-file directory, (2) exact path, (3) `{BAA_HOME}/<path>` for relative paths, (4) CLI `-I` paths in order; and for bare names (e.g. `baalib.baahd`) it also tries `<source_dir>/stdlib/`, `stdlib/`, `BAA_STDLIB`, then `{BAA_HOME}/stdlib`.
+> **Note:** `#تضمين` search order is: (1) current source-file directory, (2) exact path, (3) `{BAA_HOME}/<path>` for relative paths, (4) CLI `-I` paths in order; and for bare names (e.g. `baalib.baahd`) it also tries `<source_dir>/stdlib/`, `stdlib/`, `BAA_STDLIB`, then `{BAA_HOME}/stdlib`. Successful include paths are normalized before activation, so equivalent forms like `a.baahd` and `./a.baahd` collapse to one identity, and include cycles now produce an Arabic include-chain diagnostic.
 
 ### Compilation Workflow
 

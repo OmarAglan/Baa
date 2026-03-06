@@ -8,6 +8,19 @@
 #include <ctype.h>
 #include <stdarg.h>
 
+#ifdef _WIN32
+#include <direct.h>
+#else
+#include <limits.h>
+#include <unistd.h>
+#endif
+
+#ifndef PATH_MAX
+#define PATH_MAX 4096
+#endif
+
+#define LEX_PATH_BUFFER_SIZE PATH_MAX
+
 static int is_utf8_cont_byte(unsigned char b)
 {
     return ((b & 0xC0u) == 0x80u);
@@ -249,6 +262,140 @@ static char* lex_dirname_from_path(Lexer* l, const char* path)
 }
 
 /**
+ * @brief توحيد فواصل المسار وتمثيل حرف القرص على ويندوز.
+ */
+static void lex_normalize_path_text(char* path)
+{
+    if (!path) return;
+
+    for (size_t i = 0; path[i] != '\0'; ++i) {
+        if (path[i] == '\\') {
+            path[i] = '/';
+        }
+    }
+
+#ifdef _WIN32
+    if (isalpha((unsigned char)path[0]) && path[1] == ':') {
+        path[0] = (char)tolower((unsigned char)path[0]);
+    }
+#endif
+}
+
+/**
+ * @brief تطبيع مسار موجود فعلياً إلى مسار مطلق ثابت قدر الإمكان.
+ */
+static char* lex_normalize_existing_path(Lexer* l, const char* path)
+{
+    if (!l || !path || !path[0]) return NULL;
+
+    char resolved[LEX_PATH_BUFFER_SIZE];
+    char* out = NULL;
+
+#ifdef _WIN32
+    if (_fullpath(resolved, path, sizeof(resolved)) != NULL) {
+        out = lex_strdup_heap(l, resolved);
+    }
+#else
+    if (realpath(path, resolved) != NULL) {
+        out = lex_strdup_heap(l, resolved);
+    }
+#endif
+
+    if (!out) {
+        out = lex_strdup_heap(l, path);
+    }
+
+    lex_normalize_path_text(out);
+    return out;
+}
+
+/**
+ * @brief مقارنة مسارين بعد التطبيع حسب قواعد المنصة.
+ */
+static bool lex_paths_equivalent(Lexer* l, const char* lhs, const char* rhs)
+{
+    if (!l || !lhs || !rhs) return false;
+
+    char* lhs_norm = lex_normalize_existing_path(l, lhs);
+    char* rhs_norm = lex_normalize_existing_path(l, rhs);
+    if (!lhs_norm || !rhs_norm) {
+        free(lhs_norm);
+        free(rhs_norm);
+        return false;
+    }
+
+#ifdef _WIN32
+    bool same = (_stricmp(lhs_norm, rhs_norm) == 0);
+#else
+    bool same = (strcmp(lhs_norm, rhs_norm) == 0);
+#endif
+
+    free(lhs_norm);
+    free(rhs_norm);
+    return same;
+}
+
+/**
+ * @brief هل سيؤدي التضمين الجديد إلى دورة مع حالة التضمين الحالية؟
+ */
+static bool lex_include_would_cycle(Lexer* l, const char* resolved_path)
+{
+    if (!l || !resolved_path || !resolved_path[0]) return false;
+
+    if (l->state.filename && lex_paths_equivalent(l, l->state.filename, resolved_path)) {
+        return true;
+    }
+
+    for (int i = l->stack_depth - 1; i >= 0; --i) {
+        if (l->stack[i].filename && lex_paths_equivalent(l, l->stack[i].filename, resolved_path)) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+/**
+ * @brief بناء رسالة تشخيص عربية لسلسلة دورة التضمين.
+ */
+static void lex_fatal_include_cycle(Lexer* l, const char* requested_path, const char* resolved_path)
+{
+    if (!l || !resolved_path) {
+        lex_fatal(l, "خطأ قبلي: تم اكتشاف دورة تضمين.");
+        return;
+    }
+
+    char chain[2048];
+    int n = snprintf(chain, sizeof(chain),
+                     "خطأ قبلي: تم اكتشاف دورة تضمين عند '%s'. سلسلة التضمين: ",
+                     requested_path ? requested_path : resolved_path);
+    if (n < 0) {
+        lex_fatal(l, "خطأ قبلي: تم اكتشاف دورة تضمين.");
+        return;
+    }
+
+    size_t used = (size_t)n;
+    for (int i = 0; i < l->stack_depth; ++i) {
+        const char* filename = l->stack[i].filename ? l->stack[i].filename : "<unknown>";
+        n = snprintf(chain + used, (used < sizeof(chain)) ? sizeof(chain) - used : 0u,
+                     "%s -> ", filename);
+        if (n < 0) break;
+        used += (size_t)n;
+        if (used >= sizeof(chain)) break;
+    }
+
+    if (used < sizeof(chain)) {
+        const char* current = l->state.filename ? l->state.filename : "<unknown>";
+        n = snprintf(chain + used, sizeof(chain) - used, "%s -> %s", current, resolved_path);
+        if (n > 0) {
+            used += (size_t)n;
+        }
+    }
+
+    lex_fatal(l, "%s", chain);
+}
+
+/**
  * @brief محاولة قراءة ملف مرشح للتضمين.
  */
 static char* lex_try_read_include_candidate(Lexer* l, const char* candidate, char** out_resolved_path)
@@ -262,7 +409,7 @@ static char* lex_try_read_include_candidate(Lexer* l, const char* candidate, cha
     char* source = read_file(candidate);
     if (!source) return NULL;
 
-    *out_resolved_path = lex_strdup_heap(l, candidate);
+    *out_resolved_path = lex_normalize_existing_path(l, candidate);
     return source;
 }
 

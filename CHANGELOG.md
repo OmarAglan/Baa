@@ -55,6 +55,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - **Diagnostic and target contracts**:
   - `support/diagnostics.h` no longer depends on `frontend/lexer.h`; `error_report(...)` is now a token-like compatibility macro over `error_report_loc(...)`.
   - `support/target_contract.h` now exposes the opaque cross-component target contract used by IR lowering without requiring direct access to `backend/target.h`.
+- **Deterministic include resolution**:
+  - successful `#تضمين` paths are now normalized to a canonical active filename before they enter the lexer include stack.
+  - equivalent relative spellings such as `a.baahd` and `./a.baahd` now resolve to the same active include identity.
+  - include cycles are now diagnosed early with an Arabic include-chain error instead of cascading until the depth limit.
 
 ## [0.4.4.1] - 2026-03-02
 

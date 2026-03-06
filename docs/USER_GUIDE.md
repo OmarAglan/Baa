@@ -368,6 +368,13 @@ Use header files for function prototypes and shared declarations.
 
 > **Note:** `#تضمين` search order is: (1) current source-file directory, (2) exact path, (3) `{BAA_HOME}/<path>` for relative paths, (4) CLI `-I` paths in order; and for bare names (e.g. `baalib.baahd`) it also tries `<source_dir>/stdlib/`, `stdlib/`, `BAA_STDLIB`, then `{BAA_HOME}/stdlib`. Successful include paths are normalized before activation, so equivalent forms like `a.baahd` and `./a.baahd` collapse to one identity, and include cycles now produce an Arabic include-chain diagnostic.
 
+**Visibility rules for multi-file code:**
+
+- Top-level functions are externally visible by default and should be exposed through prototypes in `.baahd`.
+- A header prototype is a declaration only; it does not create a second function body.
+- Top-level `ساكن` variables and arrays are file-local and do not collide across files.
+- Shared cross-file state via global variables is not a stable public pattern yet because the language still lacks a separate `extern`-style variable declaration.
+
 ### Compilation Workflow
 
 The compiler can handle multiple source files and produce a single executable.

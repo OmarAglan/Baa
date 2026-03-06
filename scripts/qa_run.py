@@ -191,38 +191,53 @@ def _run_multifile_smoke(baa: Path, log_dir: Path) -> tuple[bool, list[StepResul
     exe_ext = ".exe" if os.name == "nt" else ""
     out_dir = ROOT / f".baa_multifile_smoke_out_{os.getpid()}"
     out_dir.mkdir(parents=True, exist_ok=True)
-    out = out_dir / f"multifile_counter{exe_ext}"
-    try:
-        compile_res = _run_logged(
-            "multifile-compile",
+    cases = [
+        (
+            "multifile-counter",
             [
-                str(baa),
-                "-O2",
-                "--verify",
                 "tests/fixtures/multifile_counter_main.baa",
                 "tests/fixtures/multifile_counter_lib.baa",
-                "-o",
-                str(out),
             ],
-            cwd=ROOT,
-            log_dir=log_dir,
-            timeout_s=CORPUS_COMPILE_TIMEOUT_S,
-        )
-        _print_step(compile_res)
-        results.append(compile_res)
-        if not compile_res.passed:
-            return False, results
+        ),
+        (
+            "multifile-visibility",
+            [
+                "tests/fixtures/multifile_visibility_main.baa",
+                "tests/fixtures/multifile_visibility_a.baa",
+                "tests/fixtures/multifile_visibility_b.baa",
+            ],
+        ),
+    ]
+    try:
+        overall_ok = True
+        for case_name, inputs in cases:
+            out = out_dir / f"{case_name}{exe_ext}"
+            compile_res = _run_logged(
+                f"{case_name}-compile",
+                [str(baa), "-O2", "--verify", *inputs, "-o", str(out)],
+                cwd=ROOT,
+                log_dir=log_dir,
+                timeout_s=CORPUS_COMPILE_TIMEOUT_S,
+            )
+            _print_step(compile_res)
+            results.append(compile_res)
+            if not compile_res.passed:
+                overall_ok = False
+                continue
 
-        run_res = _run_logged(
-            "multifile-run",
-            [str(out)],
-            cwd=ROOT,
-            log_dir=log_dir,
-            timeout_s=CORPUS_COMPILE_TIMEOUT_S,
-        )
-        _print_step(run_res)
-        results.append(run_res)
-        return run_res.passed, results
+            run_res = _run_logged(
+                f"{case_name}-run",
+                [str(out)],
+                cwd=ROOT,
+                log_dir=log_dir,
+                timeout_s=CORPUS_COMPILE_TIMEOUT_S,
+            )
+            _print_step(run_res)
+            results.append(run_res)
+            if not run_res.passed:
+                overall_ok = False
+
+        return overall_ok, results
     finally:
         shutil.rmtree(out_dir, ignore_errors=True)
 

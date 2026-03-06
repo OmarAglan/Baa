@@ -59,6 +59,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
   - successful `#تضمين` paths are now normalized to a canonical active filename before they enter the lexer include stack.
   - equivalent relative spellings such as `a.baahd` and `./a.baahd` now resolve to the same active include identity.
   - include cycles are now diagnosed early with an Arabic include-chain error instead of cascading until the depth limit.
+- **Multi-file symbol visibility contract**:
+  - top-level functions remain externally visible across translation units by default and are consumed through prototypes in `.baahd` headers.
+  - top-level `ساكن` globals and arrays continue to lower with file-local internal linkage.
+  - QA now includes dedicated multi-file visibility smoke coverage to lock this behavior.
 
 ## [0.4.4.1] - 2026-03-02
 

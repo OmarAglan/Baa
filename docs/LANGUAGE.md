@@ -689,6 +689,14 @@ To use a function defined in another file (or later in the same file), you can d
 }
 ```
 
+**Cross-file visibility rules:**
+
+- Top-level functions have external linkage by default.
+- A prototype in a `.baahd` header is a declaration only; it does not emit a definition by itself.
+- Top-level `ساكن` variables and arrays have file-local internal linkage.
+- `ساكن` on functions is not supported in this release.
+- There is still no separate `extern`-style declaration syntax for global variables, so shared cross-file APIs should use function prototypes, not duplicated global definitions.
+
 ### 5.3. Calling
 
 **Syntax:** `<name>(<arguments>)`

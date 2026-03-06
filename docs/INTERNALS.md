@@ -638,6 +638,18 @@ The Semantic Analyzer (`src/analysis.c`) performs a static check on the AST befo
 17. **Standard Library Modules + Float Extensions (v0.4.2)**: Validates Math/System/Time builtins (`جذر_تربيعي/أس/جيب/جيب_تمام/ظل/مطلق/عشوائي/متغير_بيئة/نفذ_أمر/وقت_حالي/وقت_كنص`), Arabic float format specs (`%ع/%أ`), and accepts `عشري٣٢` as a float keyword alias.
 18. **Error Handling Builtins (v0.4.3)**: Validates `تأكد/توقف_فوري/كود_خطأ_النظام/ضبط_كود_خطأ_النظام/نص_كود_خطأ` for arity/type contracts with Arabic diagnostics.
 
+### 5.1.1. Multi-File Symbol Visibility (v0.5.2)
+
+The current cross-file linkage contract is intentionally small and explicit:
+
+- top-level functions are externally visible by default,
+- a prototype declaration in a `.baahd` header does not emit a body,
+- top-level `ساكن` globals and arrays are lowered with internal linkage at file scope,
+- `ساكن` on functions remains rejected in parsing/semantic validation,
+- shared global-variable APIs are not first-class yet because there is no separate `extern`-style variable declaration syntax.
+
+This behavior is now locked by multi-file QA smoke in addition to the existing single-file semantic checks.
+
 ### 5.2. Constant Checking (v0.2.7+)
 
 The analyzer tracks `is_const` / `is_static` and enforces immutability + static-storage constraints:

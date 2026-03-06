@@ -1339,7 +1339,7 @@ Partial status update (2026-03-06):
 
 - [x] **Deterministic include/import resolution** — include resolution now canonicalizes successful paths before they become active lexer filenames, so equivalent relative spellings collapse to a single resolved path.
 - [x] **Cycle diagnostics** — `#تضمين` cycles are now rejected early with Arabic diagnostics that print the include chain instead of recursing until depth exhaustion.
-- [ ] **Symbol visibility rules** — explicit cross-file linkage behavior.
+- [x] **Symbol visibility rules** — top-level functions keep external linkage by default, top-level `ساكن` globals/arrays keep file-local internal linkage, and multi-file QA now locks this contract with dedicated smoke coverage.
 - [x] **Header/API hygiene** — `baa.h` is now a compatibility umbrella only; shared declarations were split into component-owned public headers under `src/frontend/` and `src/support/`, diagnostics no longer depend on frontend lexer headers, and the middle-end now consumes a small shared target contract instead of touching backend target layout directly.
 
 ### v0.5.3: Build System Maturity ⚙️

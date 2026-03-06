@@ -2,7 +2,7 @@
 
 > **Version:** 0.4.4.1 | [← Compiler Internals](INTERNALS.md) | [IR Specification →](BAA_IR_SPECIFICATION.md)
 
-This document details the C functions, enumerations, and structures defined in `src/baa.h`, `src/ir.h`, `src/ir_arena.h`, `src/ir_mutate.h`, `src/ir_defuse.h`, `src/ir_clone.h`, `src/ir_text.h`, `src/ir_loop.h`, `src/ir_licm.h`, `src/ir_unroll.h`, `src/ir_inline.h`, `src/ir_builder.h`, `src/ir_lower.h`, `src/ir_analysis.h`, `src/ir_pass.h`, `src/ir_mem2reg.h`, `src/ir_outssa.h`, `src/ir_verify_ssa.h`, `src/ir_verify_ir.h`, `src/ir_canon.h`, `src/ir_cfg_simplify.h`, `src/ir_dce.h`, `src/ir_copyprop.h`, `src/ir_cse.h`, `src/ir_optimizer.h`, `src/ir_data_layout.h`, `src/target.h`, `src/code_model.h`, `src/isel.h`, `src/regalloc.h`, and `src/emit.h`.
+This document details the C functions, enumerations, and structures defined in the current component-owned public headers under `src/frontend/`, `src/support/`, `src/middleend/`, and `src/backend/`. `src/baa.h` remains as a compatibility umbrella over the frontend/support public surface.
 
 ---
 
@@ -3891,10 +3891,17 @@ Registers a source file for use when printing error/warning context.
 #### `error_report`
 
 ```c
-void error_report(Token token, const char* message, ...)
+void error_report_loc(const char* filename, int line, int col, const char* message, ...)
 ```
 
 Reports an error with source location, line context, and a pointer to the error position.
+
+The compatibility surface used throughout the compiler is still:
+
+```c
+#define error_report(token_like, ...) \
+    error_report_loc((token_like).filename, (token_like).line, (token_like).col, __VA_ARGS__)
+```
 
 **Features:**
 
@@ -3982,7 +3989,7 @@ Manages variable scope and resolution.
 
 ### Symbol Structure
 
-Moved to `baa.h` for shared use between Analysis and Codegen.
+Defined in `src/frontend/analysis.h` as part of the frontend-owned semantic-analysis surface.
 
 ```c
 typedef struct {
@@ -4030,7 +4037,7 @@ typedef struct {
 | `ptr_depth` | `int` | The depth of the pointer (0 if not a pointer) |
 | `func_sig` | `FuncPtrSig*` | The function pointer signature if type is TYPE_FUNC_PTR |
 
-> **Note**: Symbol table management functions are implemented as static helper functions within `analysis.c`. The `Symbol` struct definition is shared via `baa.h` to support semantic analysis.
+> **Note**: Symbol table management functions are implemented as static helper functions within `analysis.c`. The `Symbol` struct definition now lives in `src/frontend/analysis.h`.
 
 ### DataType Enum
 

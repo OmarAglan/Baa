@@ -27,13 +27,13 @@ It remains both an ownership map and a dependency contract during the compatibil
 | Middle-End | Semantic analysis, IR construction, IR verification, IR optimization, shared IR data layout | `src/middleend/ir*.c`, `src/middleend/ir_lower.c`, `src/middleend/ir_optimizer.c` |
 | Backend | Target-aware lowering from IR to machine form and assembly emission | `src/backend/isel.c`, `src/backend/regalloc.c`, `src/backend/emit.c`, `src/backend/target.c`, `code_model.h` |
 | Driver | CLI orchestration, per-file pipeline setup, toolchain execution, process management | `src/driver/main.c`, `src/driver/driver_*.c`, `src/driver/process.c` |
-| Support | Shared diagnostics, file loading, updater glue, and cross-cutting declarations | `src/support/error.c`, `src/support/read_file.c`, `src/support/updater*.c`, `baa.h` |
+| Support | Shared diagnostics, file loading, updater glue, and cross-cutting declarations | `src/support/error.c`, `src/support/read_file.c`, `src/support/updater*.c`, `src/support/target_contract.h`, `baa.h` |
 
 ## Ownership Rules
 
 - Every source file belongs to exactly one canonical component.
 - Cross-component calls should flow through the owning component's public header surface, not through private helper leakage.
-- `baa.h` is shared support surface, not a dumping ground for unrelated internal helpers.
+- `baa.h` is a compatibility umbrella only; new shared declarations must live in component-owned public headers first.
 - When an oversized file is split, the new files inherit the original component owner unless the split intentionally creates a new boundary.
 - The build now compiles component source files directly from their subdirectories; root-level source compatibility shims have been removed.
 - The `src/` root is no longer used for compatibility wrappers; component headers now live with their owning component.
@@ -49,6 +49,11 @@ It remains both an ownership map and a dependency contract during the compatibil
 | Middle-End | Support, Frontend AST/contracts | Backend, Driver toolchain/process code |
 | Backend | Support, Middle-End IR/contracts | Frontend parser/lexer internals, Driver toolchain/process code |
 | Driver | Support, Frontend, Middle-End, Backend public entry points | Reaching into private static helpers of other components |
+
+Practical note:
+
+- The shared target contract is now exposed through `src/support/target_contract.h`, so middle-end code can query target identity without depending on backend-owned `target.h`.
+- `support/diagnostics.h` no longer imports frontend lexer declarations; callers pass any token-like object that exposes `filename`, `line`, and `col`.
 
 ## Practical Rules For Future Splits
 
@@ -71,9 +76,10 @@ The current hardening state covers policy, guard, physical source placement, loc
 - `driver*.h` and `process.h` now live under `src/driver/`,
 - `emit.h`, `isel.h`, `regalloc.h`, `target.h`, and `code_model.h` now live under `src/backend/`,
 - all `ir*.h` headers now live under `src/middleend/`,
-- the root `src/` directory is reduced to shared `baa.h` plus non-C source assets.
+- the root `src/` directory is reduced to the `baa.h` compatibility umbrella plus non-C source assets.
+- shared declarations previously living in `baa.h` now live under `src/frontend/` and `src/support/`.
+- the build intentionally avoids project-wide include directories; components include their own headers or explicit relative dependency headers only.
 
 The following remain intentionally pending:
 
-- public/API cleanup around `baa.h`,
 - longer-term dependency tightening beyond the current component facade layer.

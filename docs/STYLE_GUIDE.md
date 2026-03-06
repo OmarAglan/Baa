@@ -486,8 +486,9 @@ int64_t offset = (int64_t)index * sizeof(element);
 **Error Reporting Functions:**
 
 ```c
-// للأخطاء القاتلة - تتوقف عندها الترجمة
-void error_report(Token token, const char* message, ...);
+// للأخطاء القاتلة - استخدم error_report(token_like, ...)
+void error_report_loc(const char* filename, int line, int col,
+                      const char* message, ...);
 
 // للتحذيرات - تستمر الترجمة
 void warning_report(WarningType type, const char* filename, int line, int col,

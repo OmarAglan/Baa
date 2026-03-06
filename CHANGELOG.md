@@ -14,6 +14,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
   - Added `docs/COMPONENT_OWNERSHIP.md`.
   - Defined canonical logical boundaries for `Frontend`, `Middle-End`, `Backend`, `Driver`, and `Support`.
   - Documented allowed dependency directions between those components.
+- **Component-owned public header surfaces**:
+  - Added `src/frontend/lexer.h`, `src/frontend/ast.h`, `src/frontend/parser.h`, and `src/frontend/analysis.h` as the frontend-owned public declarations split out of the old shared surface.
+  - Added `src/support/version.h`, `src/support/read_file.h`, `src/support/diagnostics.h`, `src/support/updater.h`, and `src/support/target_contract.h` for support-owned cross-cutting contracts.
 - **Module-size guard**:
   - Added `scripts/check_module_sizes.py` for handwritten `src/*.c` and `src/*.h` files.
   - Default thresholds are `700` lines for warnings and `1000` lines for hard errors.
@@ -47,7 +50,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
   - `scripts/module_size_allowlist.txt` is now empty; the hard-cap guard has no remaining legacy exceptions.
 - **Scope note**:
   - `CMakeLists.txt` remains deterministic and explicitly listed.
-  - The `src/` root now only keeps shared `baa.h` plus resource files; broader API-surface cleanup remains future work.
+  - The build intentionally uses no project-wide include directories; component code now relies on local headers or explicit relative paths.
+  - `src/baa.h` is now a compatibility umbrella over component-owned public headers rather than the primary declaration home.
+- **Diagnostic and target contracts**:
+  - `support/diagnostics.h` no longer depends on `frontend/lexer.h`; `error_report(...)` is now a token-like compatibility macro over `error_report_loc(...)`.
+  - `support/target_contract.h` now exposes the opaque cross-component target contract used by IR lowering without requiring direct access to `backend/target.h`.
 
 ## [0.4.4.1] - 2026-03-02
 

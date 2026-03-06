@@ -176,7 +176,12 @@ Current in-place split pattern (2026-03-06):
 - `driver*.h` and `process.h` now live under `src/driver/`.
 - `emit.h`, `isel.h`, `regalloc.h`, `target.h`, and `code_model.h` now live under `src/backend/`.
 - all `ir*.h` headers now live under `src/middleend/`.
-- the `src/` root now effectively contains only shared `baa.h` and resource files.
+- `lexer.h`, `ast.h`, `parser.h`, and `analysis.h` now live under `src/frontend/` as the frontend-owned public surface.
+- `version.h`, `read_file.h`, `diagnostics.h`, `updater.h`, and `target_contract.h` now live under `src/support/` as the support-owned public surface.
+- `src/baa.h` is now a compatibility umbrella over those component-owned headers.
+- `support/diagnostics.h` no longer pulls in frontend lexer declarations directly; `error_report(...)` is a compatibility macro over `error_report_loc(...)`.
+- the build intentionally uses no project-wide include directories; source files must use same-directory includes or explicit relative component paths.
+- the `src/` root now effectively contains only the `baa.h` compatibility umbrella and resource files.
 
 ### 1.3. Diagnostic Engine
 
@@ -914,7 +919,7 @@ The hash function used is FNV-1a 32-bit for fast string hashing.
 
 ### 5.7. DataType and Operation Enums
 
-The AST uses the following type enumeration (defined in `src/baa.h`):
+The AST uses the following type enumeration (defined in `src/frontend/ast.h`):
 
 ```c
 typedef enum {

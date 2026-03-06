@@ -10,15 +10,15 @@
 #define BAA_MIDDLEEND_INTERNAL_H
 
 #include "../baa.h"
-#include "../ir.h"
-#include "../ir_analysis.h"
-#include "../ir_builder.h"
-#include "../ir_defuse.h"
-#include "../ir_lower.h"
-#include "../ir_mutate.h"
-#include "../ir_text.h"
-#include "../ir_verify_common.h"
-#include "../ir_verify_ir.h"
-#include "../backend/target.h"
+#include "ir.h"
+#include "ir_analysis.h"
+#include "ir_builder.h"
+#include "ir_defuse.h"
+#include "ir_lower.h"
+#include "ir_mutate.h"
+#include "ir_text.h"
+#include "ir_verify_common.h"
+#include "ir_verify_ir.h"
+#include "target.h"
 
 #endif

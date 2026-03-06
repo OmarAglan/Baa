@@ -11,10 +11,10 @@
 
 #include "../baa.h"
 #include "code_model.h"
-#include "../emit.h"
-#include "../ir_loop.h"
-#include "../isel.h"
-#include "../regalloc.h"
+#include "emit.h"
+#include "ir_loop.h"
+#include "isel.h"
+#include "regalloc.h"
 #include "target.h"
 
 #endif

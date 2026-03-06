@@ -39,12 +39,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - **First-wave header relocation**:
   - moved `driver.h`, `driver_cli.h`, `driver_pipeline.h`, `driver_time.h`, `driver_toolchain.h`, and `process.h` into `src/driver/`.
   - moved `target.h` and `code_model.h` into `src/backend/`.
-  - root-level header wrappers now preserve legacy include paths during the header migration.
+- **Second-wave header relocation**:
+  - moved `emit.h`, `isel.h`, and `regalloc.h` into `src/backend/`.
+  - moved all `ir*.h` headers into `src/middleend/`.
+  - temporary root header wrappers were removed after updating include paths and build search paths.
 - **Guard policy**:
   - `scripts/module_size_allowlist.txt` is now empty; the hard-cap guard has no remaining legacy exceptions.
 - **Scope note**:
   - `CMakeLists.txt` remains deterministic and explicitly listed.
-  - Remaining restructure work is now limited to broader public-header relocation and optional removal of temporary header wrappers.
+  - The `src/` root now only keeps shared `baa.h` plus resource files; broader API-surface cleanup remains future work.
 
 ## [0.4.4.1] - 2026-03-02
 

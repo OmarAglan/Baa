@@ -36,7 +36,7 @@ It remains both an ownership map and a dependency contract during the compatibil
 - `baa.h` is shared support surface, not a dumping ground for unrelated internal helpers.
 - When an oversized file is split, the new files inherit the original component owner unless the split intentionally creates a new boundary.
 - The build now compiles component source files directly from their subdirectories; root-level source compatibility shims have been removed.
-- Selected root-level headers may remain as temporary wrappers while header relocation proceeds incrementally.
+- The `src/` root is no longer used for compatibility wrappers; component headers now live with their owning component.
 - Each component may expose a local internal facade header inside its own directory (`frontend_internal.h`, `middleend_internal.h`, `backend_internal.h`, `driver_internal.h`, `support_internal.h`).
 - These local facades are transition boundaries for implementation files only; they are not public API.
 
@@ -60,7 +60,7 @@ It remains both an ownership map and a dependency contract during the compatibil
 
 ## Current v0.5.0 Scope
 
-The current hardening state covers policy, guard, physical source placement, local internal facades, and the first header-relocation wave:
+The current hardening state covers policy, guard, physical source placement, local internal facades, and two header-relocation waves:
 
 - canonical component boundaries are now documented,
 - dependency rules are now documented,
@@ -68,9 +68,12 @@ The current hardening state covers policy, guard, physical source placement, loc
 - implementation files now live under component directories and are built directly from those paths,
 - each component now has a local internal facade header to centralize its implementation-facing include surface.
 - the build now points at component source files directly and no longer relies on root `.c` shims,
-- the first relocated headers now live under `src/driver/` and `src/backend/`, with root wrapper headers preserving compatibility.
+- `driver*.h` and `process.h` now live under `src/driver/`,
+- `emit.h`, `isel.h`, `regalloc.h`, `target.h`, and `code_model.h` now live under `src/backend/`,
+- all `ir*.h` headers now live under `src/middleend/`,
+- the root `src/` directory is reduced to shared `baa.h` plus non-C source assets.
 
 The following remain intentionally pending:
 
-- public/header relocation beyond the current root-level transition,
-- eventual removal of temporary root header wrappers once include paths are fully migrated.
+- public/API cleanup around `baa.h`,
+- longer-term dependency tightening beyond the current component facade layer.

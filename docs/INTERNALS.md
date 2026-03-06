@@ -165,7 +165,7 @@ Size governance for handwritten modules is also active:
 - `scripts/qa_run.py --mode full|stress` runs the guard before the expensive QA stages.
 - CI runs the same guard before full QA on both Windows and Linux.
 
-This remains a transitional hardening step: implementation files live under component directories, local internal facade headers reduce direct cross-component include leakage, and only a limited set of root header wrappers remains for compatibility during header migration.
+This remains a transitional hardening step: implementation files and component-owned headers now live under component directories, and local internal facade headers reduce direct cross-component include leakage.
 
 Current in-place split pattern (2026-03-06):
 
@@ -173,7 +173,10 @@ Current in-place split pattern (2026-03-06):
 - `analysis.c` now delegates to `analysis_scope.c`, `analysis_types.c`, `analysis_semantic_utils.c`, `analysis_builtins.c`, `analysis_format.c`, `analysis_infer_expr.c`, and `analysis_visit.c`.
 - `lexer.c`, `isel.c`, `regalloc.c`, `ir.c`, `ir_text.c`, `ir_verify_ir.c`, `ir_lower.c`, and `emit.c` also use companion implementation files to shrink the original hotspots while preserving their exported entry points.
 - `scripts/module_size_allowlist.txt` is currently empty; the size guard has no active legacy exceptions.
-- first-wave relocated headers now live under `src/driver/` and `src/backend/`, while root wrapper headers preserve legacy include paths for `driver*.h`, `process.h`, `target.h`, and `code_model.h`.
+- `driver*.h` and `process.h` now live under `src/driver/`.
+- `emit.h`, `isel.h`, `regalloc.h`, `target.h`, and `code_model.h` now live under `src/backend/`.
+- all `ir*.h` headers now live under `src/middleend/`.
+- the `src/` root now effectively contains only shared `baa.h` and resource files.
 
 ### 1.3. Diagnostic Engine
 

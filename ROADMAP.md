@@ -1340,7 +1340,7 @@ Partial status update (2026-03-06):
 - [ ] **Deterministic include/import resolution** — stable behavior across hosts.
 - [ ] **Cycle diagnostics** — clear Arabic diagnostics for dependency loops.
 - [ ] **Symbol visibility rules** — explicit cross-file linkage behavior.
-- [~] **Header/API hygiene** — root `.c` shims were removed, and the first wave of header relocation moved `driver*.h`, `process.h`, `target.h`, and `code_model.h` into component directories with root wrappers retained temporarily.
+- [~] **Header/API hygiene** — root `.c` shims are gone, `driver*.h`, `process.h`, `target.h`, `code_model.h`, `emit.h`, `isel.h`, `regalloc.h`, and all `ir*.h` now live under component directories, and temporary root header wrappers were removed. Remaining work is the larger public-surface cleanup around `baa.h`.
 
 ### v0.5.3: Build System Maturity ⚙️
 

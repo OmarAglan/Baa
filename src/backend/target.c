@@ -112,3 +112,22 @@ const BaaTarget* baa_target_parse(const char* s)
 
     return NULL;
 }
+
+BaaTargetKind baa_target_kind(const BaaTarget* target)
+{
+    if (!target) {
+        return baa_target_host_default()->kind;
+    }
+
+    return target->kind;
+}
+
+bool baa_target_is_windows(const BaaTarget* target)
+{
+    return baa_target_kind(target) == BAA_TARGET_X86_64_WINDOWS;
+}
+
+bool baa_target_is_linux(const BaaTarget* target)
+{
+    return baa_target_kind(target) == BAA_TARGET_X86_64_LINUX;
+}

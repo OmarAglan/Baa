@@ -7,7 +7,7 @@
         IRType* i8_ptr_t = ir_type_ptr(IR_TYPE_I8_T);
         IRType* char_ptr_t = get_char_ptr_type(m);
 
-        bool is_win = (ctx && ctx->target && ctx->target->kind == BAA_TARGET_X86_64_WINDOWS);
+        bool is_win = baa_target_is_windows(ctx ? ctx->target : NULL);
         const char* fn_tell = is_win ? "_ftelli64" : "ftello";
         const char* fn_seek = is_win ? "_fseeki64" : "fseeko";
 

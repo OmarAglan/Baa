@@ -21,12 +21,11 @@
 
 #include <stdio.h>
 #include <stdbool.h>
+#include "../support/target_contract.h"
 #include "isel.h"
 #include "regalloc.h"
 
 #include "code_model.h"
-
-typedef struct BaaTarget BaaTarget;
 
 #ifdef __cplusplus
 extern "C" {

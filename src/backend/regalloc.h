@@ -17,9 +17,8 @@
 
 #include <stdbool.h>
 #include <stdint.h>
+#include "../support/target_contract.h"
 #include "isel.h"
-
-typedef struct BaaTarget BaaTarget;
 typedef struct BaaCallingConv BaaCallingConv;
 
 #ifdef __cplusplus

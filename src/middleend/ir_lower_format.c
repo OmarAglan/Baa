@@ -593,7 +593,7 @@ static IRValue* ir_lower_builtin_variadic_next(IRLowerCtx* ctx, Node* call_expr)
 
 static const char* ir_lower_errno_symbol(const IRLowerCtx* ctx)
 {
-    bool is_win = (ctx && ctx->target && ctx->target->kind == BAA_TARGET_X86_64_WINDOWS);
+    bool is_win = baa_target_is_windows(ctx ? ctx->target : NULL);
     return is_win ? "_errno" : "__errno_location";
 }
 

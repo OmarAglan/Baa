@@ -11,7 +11,7 @@
 #include <stddef.h>
 
 #include "../backend/code_model.h"
-#include "ir_optimizer.h"
+#include "../middleend/ir_optimizer.h"
 #include "../backend/target.h"
 
 typedef struct

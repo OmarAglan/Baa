@@ -16,9 +16,8 @@
 
 #include <stdbool.h>
 #include <stdint.h>
-#include "ir.h"
-
-typedef struct BaaTarget BaaTarget;
+#include "../support/target_contract.h"
+#include "../middleend/ir.h"
 
 #ifdef __cplusplus
 extern "C" {

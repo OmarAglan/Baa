@@ -156,9 +156,6 @@ static bool lex_utf8_validate_at(const char* s, int* out_len)
     return false;
 }
 
-// قراءة ملف (من main.c، يجب أن تكون متاحة للجميع الآن)
-char* read_file(const char* path);
-
 #define LEX_STDLIB_DIR "stdlib"
 #define LEX_ENV_BAA_STDLIB "BAA_STDLIB"
 #define LEX_ENV_BAA_HOME "BAA_HOME"

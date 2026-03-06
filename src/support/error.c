@@ -256,7 +256,7 @@ static void print_source_line(const char* filename, int line, int col,
 // الإبلاغ عن الأخطاء (Error Reporting)
 // ============================================================================
 
-void error_report(Token token, const char* message, ...) {
+void error_report_loc(const char* filename, int line, int col, const char* message, ...) {
     had_error = true;
     bool use_color = g_warning_config.colored_output;
     
@@ -264,14 +264,14 @@ void error_report(Token token, const char* message, ...) {
     if (use_color) {
         fprintf(stderr, "%s[Error]%s %s:%d:%d: ",
                 ANSI_BOLD_RED, ANSI_RESET,
-                token.filename ? token.filename : "unknown",
-                token.line,
-                token.col);
+                filename ? filename : "unknown",
+                line,
+                col);
     } else {
         fprintf(stderr, "[Error] %s:%d:%d: ",
-                token.filename ? token.filename : "unknown",
-                token.line,
-                token.col);
+                filename ? filename : "unknown",
+                line,
+                col);
     }
 
     // طباعة الرسالة المنسقة
@@ -282,7 +282,7 @@ void error_report(Token token, const char* message, ...) {
     fprintf(stderr, "\n");
 
     // طباعة سياق الكود
-    print_source_line(token.filename, token.line, token.col, use_color, ANSI_BOLD_RED);
+    print_source_line(filename, line, col, use_color, ANSI_BOLD_RED);
     fprintf(stderr, "\n");
 }
 

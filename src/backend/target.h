@@ -15,7 +15,8 @@
 
 #include <stdbool.h>
 
-#include "ir_data_layout.h"
+#include "../support/target_contract.h"
+#include "../middleend/ir_data_layout.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -24,11 +25,6 @@ extern "C" {
 // ============================================================================
 // أنواع الهدف (Target Kinds)
 // ============================================================================
-
-typedef enum {
-    BAA_TARGET_X86_64_WINDOWS = 0,
-    BAA_TARGET_X86_64_LINUX   = 1,
-} BaaTargetKind;
 
 typedef enum {
     BAA_OBJFORMAT_COFF = 0,

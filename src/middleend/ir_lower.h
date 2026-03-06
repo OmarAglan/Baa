@@ -14,9 +14,9 @@
 #ifndef BAA_IR_LOWER_H
 #define BAA_IR_LOWER_H
 
-#include "baa.h"
+#include "../frontend/ast.h"
+#include "../support/target_contract.h"
 #include "ir_builder.h"
-typedef struct BaaTarget BaaTarget;
 
 #ifdef __cplusplus
 extern "C" {

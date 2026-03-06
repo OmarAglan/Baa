@@ -4,7 +4,7 @@
  * @version 0.2.9 (Input & UX Polish)
  */
 
-#include "baa.h"
+#include "frontend_internal.h"
 #include <ctype.h>
 #include <stdarg.h>
 
@@ -524,8 +524,6 @@ char* get_macro_value(Lexer* l, const char* name) {
     }
     return NULL;
 }
-
-
 
 #include "lexer_tokens.c"
 #include "lexer_debug.c"

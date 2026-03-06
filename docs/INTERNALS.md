@@ -135,7 +135,7 @@ The driver in `main.c` (v0.2.0+) supports multi-file compilation and various mod
 
 ### 1.2.1. Component Boundaries & Size Guard (v0.5.0 sidecar)
 
-The source tree now uses physical component directories under `src/`, with root-level `.c` compatibility shims preserving legacy paths during the transition:
+The source tree now uses physical component directories under `src/`, and the build targets those component source files directly:
 
 | Component | Current scope |
 |-----------|---------------|
@@ -147,6 +147,16 @@ The source tree now uses physical component directories under `src/`, with root-
 
 The full ownership/dependency contract now lives in [Component Ownership](COMPONENT_OWNERSHIP.md).
 
+Component-local internal facades are also in place for the main implementation roots:
+
+- `src/frontend/frontend_internal.h`
+- `src/middleend/middleend_internal.h`
+- `src/backend/backend_internal.h`
+- `src/driver/driver_internal.h`
+- `src/support/support_internal.h`
+
+These headers are not public API; they centralize implementation-facing includes during the transition.
+
 Size governance for handwritten modules is also active:
 
 - `scripts/check_module_sizes.py` scans `src/**/*.c` and `src/**/*.h`.
@@ -155,14 +165,15 @@ Size governance for handwritten modules is also active:
 - `scripts/qa_run.py --mode full|stress` runs the guard before the expensive QA stages.
 - CI runs the same guard before full QA on both Windows and Linux.
 
-This remains a transitional `v0.5.0` step: implementation files now live under component directories, while root-level `.c` shims and root-level public headers preserve compatibility.
+This remains a transitional hardening step: implementation files live under component directories, local internal facade headers reduce direct cross-component include leakage, and only a limited set of root header wrappers remains for compatibility during header migration.
 
-Current in-place split pattern (2026-03-05):
+Current in-place split pattern (2026-03-06):
 
 - `parser.c` now delegates to `parser_types.c`, `parser_expr.c`, `parser_stmt.c`, and `parser_decl.c`.
 - `analysis.c` now delegates to `analysis_scope.c`, `analysis_types.c`, `analysis_semantic_utils.c`, `analysis_builtins.c`, `analysis_format.c`, `analysis_infer_expr.c`, and `analysis_visit.c`.
 - `lexer.c`, `isel.c`, `regalloc.c`, `ir.c`, `ir_text.c`, `ir_verify_ir.c`, `ir_lower.c`, and `emit.c` also use companion implementation files to shrink the original hotspots while preserving their exported entry points.
 - `scripts/module_size_allowlist.txt` is currently empty; the size guard has no active legacy exceptions.
+- first-wave relocated headers now live under `src/driver/` and `src/backend/`, while root wrapper headers preserve legacy include paths for `driver*.h`, `process.h`, `target.h`, and `code_model.h`.
 
 ### 1.3. Diagnostic Engine
 

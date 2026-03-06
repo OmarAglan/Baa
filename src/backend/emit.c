@@ -16,8 +16,8 @@
  * - SystemV AMD64 (Linux): لا shadow space و RDI/RSI/RDX/RCX/R8/R9
  */
 
-#include "emit.h"
-#include "target.h"
+#include "backend_internal.h"
+
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>

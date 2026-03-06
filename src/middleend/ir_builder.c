@@ -9,7 +9,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "ir_builder.h"
+#include "middleend_internal.h"
 
 // ============================================================================
 // Builder Lifecycle

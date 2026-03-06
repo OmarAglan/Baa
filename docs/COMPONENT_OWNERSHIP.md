@@ -7,7 +7,7 @@ It remains both an ownership map and a dependency contract during the compatibil
 
 - Keep each handwritten `src/**/*.c` and `src/**/*.h` module within a reviewable size budget.
 - Make cross-component dependencies explicit during and after the physical file move.
-- Give `v0.5.0` a stable contract for compatibility shims today and header cleanup later.
+- Give the current hardening pass a stable contract for component boundaries today and header cleanup later.
 
 ## Size Policy
 
@@ -35,8 +35,10 @@ It remains both an ownership map and a dependency contract during the compatibil
 - Cross-component calls should flow through the owning component's public header surface, not through private helper leakage.
 - `baa.h` is shared support surface, not a dumping ground for unrelated internal helpers.
 - When an oversized file is split, the new files inherit the original component owner unless the split intentionally creates a new boundary.
-- Root-level `.c` files are temporary compatibility shims; the actual implementation now lives under the component subdirectories.
-- Public/shared headers remain in the `src/` root during this phase to avoid a risky include-graph rewrite.
+- The build now compiles component source files directly from their subdirectories; root-level source compatibility shims have been removed.
+- Selected root-level headers may remain as temporary wrappers while header relocation proceeds incrementally.
+- Each component may expose a local internal facade header inside its own directory (`frontend_internal.h`, `middleend_internal.h`, `backend_internal.h`, `driver_internal.h`, `support_internal.h`).
+- These local facades are transition boundaries for implementation files only; they are not public API.
 
 ## Dependency Rules
 
@@ -58,14 +60,17 @@ It remains both an ownership map and a dependency contract during the compatibil
 
 ## Current v0.5.0 Scope
 
-This `v0.5.0` slice now covers policy, guard, and physical source placement:
+The current hardening state covers policy, guard, physical source placement, local internal facades, and the first header-relocation wave:
 
 - canonical component boundaries are now documented,
 - dependency rules are now documented,
 - module-size guarding is now wired into QA and CI,
-- implementation files now live under component directories with compatibility shims preserving old source paths.
+- implementation files now live under component directories and are built directly from those paths,
+- each component now has a local internal facade header to centralize its implementation-facing include surface.
+- the build now points at component source files directly and no longer relies on root `.c` shims,
+- the first relocated headers now live under `src/driver/` and `src/backend/`, with root wrapper headers preserving compatibility.
 
 The following remain intentionally pending:
 
-- splitting oversized modules,
-- adding component-local facade headers across the whole tree.
+- public/header relocation beyond the current root-level transition,
+- eventual removal of temporary root header wrappers once include paths are fully migrated.

@@ -7,13 +7,11 @@
  * يوفر دوال مساعدة لبناء الـ IR وطباعته وإدارة الذاكرة.
  */
 
+#include "middleend_internal.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "ir.h"
-#include "ir_mutate.h"
-#include "ir_defuse.h"
-#include "baa.h"  // لاستخدام دوال الأخطاء
 
 // ============================================================================
 // سياق الوحدة الحالية (للساحة)
@@ -819,7 +817,6 @@ void ir_inst_free(IRInst* inst) {
     (void)inst;
     // تُدار الذاكرة عبر الساحة (Arena): لا تحرير فردي للتعليمات.
 }
-
 
 #include "ir_containers.c"
 #include "ir_printing.c"

@@ -15,10 +15,7 @@
  *   (هذا يحدّث كاشات CFG لكنه لا يغيّر المعنى الدلالي للبرنامج).
  */
 
-#include "ir_verify_ir.h"
-
-#include "ir_analysis.h"
-#include "ir_verify_common.h"
+#include "middleend_internal.h"
 
 #include <stdarg.h>
 #include <stdlib.h>
@@ -433,7 +430,6 @@ static void ir_verify_value_type_eq(IRVerifyDiag* diag,
                   ir_type_to_arabic(v->type));
     }
 }
-
 
 #include "ir_verify_inst.c"
 #include "ir_verify_globals_local.c"

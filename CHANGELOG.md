@@ -32,12 +32,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
   - `lexer.c`, `isel.c`, `regalloc.c`, `ir.c`, `ir_text.c`, `ir_verify_ir.c`, `ir_lower.c`, and `emit.c` now use the same in-place companion-file split pattern.
 - **Physical component layout**:
   - implementation files now live under `src/frontend`, `src/middleend`, `src/backend`, `src/driver`, and `src/support`.
-  - root-level `.c` compatibility shims preserve existing source paths while the actual implementation lives in the component directories.
+  - `CMakeLists.txt` now builds directly from component source paths; root-level `.c` compatibility shims were removed.
+- **Local component facades**:
+  - `src/frontend/frontend_internal.h`, `src/middleend/middleend_internal.h`, `src/backend/backend_internal.h`, `src/driver/driver_internal.h`, and `src/support/support_internal.h` now provide component-local include surfaces.
+  - core entry modules in each component now include these local facades instead of pulling scattered root headers directly.
+- **First-wave header relocation**:
+  - moved `driver.h`, `driver_cli.h`, `driver_pipeline.h`, `driver_time.h`, `driver_toolchain.h`, and `process.h` into `src/driver/`.
+  - moved `target.h` and `code_model.h` into `src/backend/`.
+  - root-level header wrappers now preserve legacy include paths during the header migration.
 - **Guard policy**:
   - `scripts/module_size_allowlist.txt` is now empty; the hard-cap guard has no remaining legacy exceptions.
 - **Scope note**:
-  - `CMakeLists.txt` remains deterministic and explicitly listed; the current transition still keeps public headers in the `src/` root.
-  - Remaining restructure work is now limited to internal-facade cleanup and future header relocation.
+  - `CMakeLists.txt` remains deterministic and explicitly listed.
+  - Remaining restructure work is now limited to broader public-header relocation and optional removal of temporary header wrappers.
 
 ## [0.4.4.1] - 2026-03-02
 

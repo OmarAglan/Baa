@@ -3,10 +3,7 @@
  * @brief تنفيذ تجريد الهدف (Target Abstraction) — v0.3.2.8.1
  */
 
-#include "target.h"
-
-
-#include "regalloc.h" // PhysReg
+#include "backend_internal.h"
 
 #include <string.h>
 

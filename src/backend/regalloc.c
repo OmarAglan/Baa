@@ -11,9 +11,8 @@
  * 6. إعادة كتابة المعاملات بسجلات فيزيائية
  */
 
-#include "regalloc.h"
+#include "backend_internal.h"
 
-#include "target.h"
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
@@ -421,7 +420,6 @@ void regalloc_compute_def_use(RegAllocCtx *ctx)
         bi++;
     }
 }
-
 
 #include "regalloc_liveness.c"
 #include "regalloc_linear_scan.c"

@@ -10,7 +10,7 @@
  * @version 0.3.4
  */
 
-#include "baa.h"
+#include "frontend_internal.h"
 
 #include <ctype.h>
 #include <limits.h>
@@ -732,7 +732,6 @@ static void func_register(Node* node)
         }
     }
 }
-
 
 #include "analysis_scope.c"
 #include "analysis_types.c"

@@ -4,10 +4,7 @@
  * @version 0.3.4
  */
 
-#include "driver_toolchain.h"
-
-#include "process.h"
-#include "driver_time.h"
+#include "driver_internal.h"
 
 #include <stdio.h>
 #include <stdlib.h>

@@ -1313,18 +1313,20 @@
 - [x] **Define canonical component boundaries** — Frontend / Middle-End / Backend / Driver / Support.
 - [x] **Set module-size policy** — target `<= 700` lines/file, hard cap `1000` lines for hand-written C modules.
 - [x] **Split oversized modules first** — `analysis.c`, `emit.c`, `ir.c`, `ir_lower.c`, `ir_text.c`, `isel.c`, `lexer.c`, `parser.c`, `regalloc.c`, and `ir_verify_ir.c` are now under the hard cap via companion implementation splits.
-- [x] **Restructure source layout safely** — component directories now exist under `src/` with root compatibility shims preserving legacy paths.
-- [ ] **Add local module facades** — internal headers per component to reduce cross-module leakage.
-- [x] **Update build graph** — `CMakeLists.txt` remains explicit/deterministic and the Windows build uses C-only include propagation for compatibility shims.
+- [x] **Restructure source layout safely** — component directories now exist under `src/`, and the build now targets those files directly.
+- [x] **Add local module facades** — `frontend_internal.h`, `middleend_internal.h`, `backend_internal.h`, `driver_internal.h`, and `support_internal.h` now define component-local include surfaces.
+- [x] **Update build graph** — `CMakeLists.txt` remains explicit/deterministic and the Windows build uses C-only include propagation while header wrappers remain transitional.
 - [x] **Add size-regression guard** — `scripts/check_module_sizes.py` enforces warn `700` / error `1000` and runs in `qa_run.py` + CI before full QA.
 - [x] **Document ownership map** — `docs/COMPONENT_OWNERSHIP.md` defines module responsibilities + dependency rules.
+
+✅ COMPLETED (2026-03-06)
 
 Partial status update (2026-03-06):
 - policy/guard/documentation are in place for `v0.5.0`,
 - all remaining hard-cap hotspots were split below the `1000`-line limit,
 - `scripts/module_size_allowlist.txt` is now empty,
 - source files were reorganized under `src/frontend`, `src/middleend`, `src/backend`, `src/driver`, and `src/support`,
-- root-level `.c` compatibility shims preserve legacy source paths while broader internal-facade cleanup remains pending.
+- `CMakeLists.txt` now builds directly from component sources, while root-level compatibility is limited to selected header wrappers during header migration.
 
 ### v0.5.1: Language + ABI Freeze 🔒
 
@@ -1338,7 +1340,7 @@ Partial status update (2026-03-06):
 - [ ] **Deterministic include/import resolution** — stable behavior across hosts.
 - [ ] **Cycle diagnostics** — clear Arabic diagnostics for dependency loops.
 - [ ] **Symbol visibility rules** — explicit cross-file linkage behavior.
-- [ ] **Header/API hygiene** — minimize implicit coupling.
+- [~] **Header/API hygiene** — root `.c` shims were removed, and the first wave of header relocation moved `driver*.h`, `process.h`, `target.h`, and `code_model.h` into component directories with root wrappers retained temporarily.
 
 ### v0.5.3: Build System Maturity ⚙️
 

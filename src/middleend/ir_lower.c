@@ -10,8 +10,7 @@
  * v0.3.0.5: Control-flow lowering (if/while/for/switch/break/continue)
  */
 
-#include "ir_lower.h"
-#include "target.h"
+#include "middleend_internal.h"
 
 #include <stdarg.h>
 #include <stdio.h>

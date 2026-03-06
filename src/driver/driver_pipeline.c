@@ -4,22 +4,7 @@
  * @version 0.3.4
  */
 
-#include "driver_pipeline.h"
-
-#include "baa.h"
-#include "driver_time.h"
-#include "driver_toolchain.h"
-
-#include "emit.h"
-#include "ir_arena.h"
-#include "ir_lower.h"
-#include "ir_optimizer.h"
-#include "ir_outssa.h"
-#include "ir_unroll.h"
-#include "ir_verify_ir.h"
-#include "ir_verify_ssa.h"
-#include "isel.h"
-#include "regalloc.h"
+#include "driver_internal.h"
 
 #include <stdio.h>
 #include <stdlib.h>

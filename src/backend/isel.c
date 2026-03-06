@@ -11,10 +11,8 @@
  * - المقارنات باستخدام CMP + SETcc + MOVZX
  */
 
-#include "isel.h"
+#include "backend_internal.h"
 
-#include "ir_loop.h"
-#include "target.h"
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
@@ -381,7 +379,6 @@ static int isel_abi_ret_vreg(const BaaCallingConv *cc)
     return (cc) ? cc->abi_ret_vreg : -2;
 }
 
-
 // -----------------------------------------------------------------------------
 // تصريحات مسبقة (Forward Declarations)
 // -----------------------------------------------------------------------------
@@ -673,7 +670,6 @@ static MachineInst *isel_emit_comment(ISelCtx *ctx, MachineOp op,
 // ============================================================================
 // اختيار التعليمات لكل عملية IR
 // ============================================================================
-
 
 #include "isel_arith.c"
 #include "isel_memory.c"

@@ -9,59 +9,59 @@ option(BAA_WARNINGS_AS_ERRORS "Treat warnings as errors for hardening builds" OF
 
 # List of source files
 set(SOURCES
-    src/analysis.c    # Semantic Analysis module
-    src/error.c
-    src/read_file.c
-    src/ir.c          # Intermediate Representation (Phase 3)
-    src/ir_arena.c    # IR arena allocator (v0.3.2.6.1)
-    src/ir_mutate.c   # IR mutation helpers (v0.3.2.6.1)
-    src/ir_defuse.c   # IR def-use chains (v0.3.2.6.1)
-    src/ir_data_layout.c # IR data layout queries (v0.3.2.6.6)
-    src/ir_clone.c    # IR cloning (v0.3.2.6.1)
-    src/ir_text.c     # IR text serialization (v0.3.2.6.3)
-    src/ir_loop.c     # IR loop detection (v0.3.2.7.1)
-    src/ir_licm.c     # IR loop invariant code motion (v0.3.2.7.1)
-    src/ir_unroll.c   # IR loop unrolling (v0.3.2.7.1)
-    src/ir_inline.c   # IR inlining (v0.3.2.7.2)
-    src/ir_analysis.c # IR analysis (CFG + dominance) (v0.3.1.1)
-    src/ir_builder.c  # IR Builder pattern API (v0.3.0.2)
-    src/ir_verify_ssa.c # IR SSA verification (التحقق من SSA) (v0.3.2.5.3)
-    src/ir_verify_ir.c  # IR well-formedness verification (--verify-ir) (v0.3.2.6.5)
-    src/ir_verify_common.c # IR/SSA shared verification helpers (v0.3.2.9.4)
-    src/ir_canon.c      # IR canonicalization (v0.3.2.6.5)
-    src/ir_cfg_simplify.c # IR CFG simplification (v0.3.2.6.5)
-    src/ir_mem2reg.c  # IR Mem2Reg (إدراج فاي + SSA Renaming) (v0.3.2.5.2)
-    src/ir_outssa.c   # IR Out-of-SSA (إزالة فاي قبل الخلفية) (v0.3.2.5.2)
-    src/ir_constfold.c # IR constant folding (v0.3.1.2)
-    src/ir_instcombine.c # IR InstCombine (v0.3.2.8.6)
-    src/ir_sccp.c        # IR SCCP (v0.3.2.8.6)
-    src/ir_gvn.c         # IR GVN (v0.3.2.8.6)
-    src/ir_dce.c      # IR dead code elimination (حذف_الميت) (v0.3.1.3)
-    src/ir_copyprop.c # IR copy propagation (نشر_النسخ) (v0.3.1.4)
-    src/ir_cse.c      # IR CSE (حذف_المكرر) (v0.3.1.5)
-    src/ir_lower.c    # AST -> IR lowering (v0.3.0.3)
-    src/ir_pass.c     # IR optimizer pass interface (v0.3.1.1)
-    src/ir_optimizer.c # IR optimization pipeline (v0.3.1.6)
-    src/isel.c        # Instruction selection (v0.3.2.1)
-    src/regalloc.c    # Register allocation (v0.3.2.2)
-    src/emit.c        # Code emission (v0.3.2.3)
-    src/target.c      # Target abstraction (v0.3.2.8.1)
-    src/lexer.c
-    src/main.c
-    src/parser.c
-    src/process.c
-    src/driver_cli.c
-    src/driver_time.c
-    src/driver_toolchain.c
-    src/driver_pipeline.c
+    src/frontend/analysis.c    # Semantic Analysis module
+    src/support/error.c
+    src/support/read_file.c
+    src/middleend/ir.c          # Intermediate Representation (Phase 3)
+    src/middleend/ir_arena.c    # IR arena allocator (v0.3.2.6.1)
+    src/middleend/ir_mutate.c   # IR mutation helpers (v0.3.2.6.1)
+    src/middleend/ir_defuse.c   # IR def-use chains (v0.3.2.6.1)
+    src/middleend/ir_data_layout.c # IR data layout queries (v0.3.2.6.6)
+    src/middleend/ir_clone.c    # IR cloning (v0.3.2.6.1)
+    src/middleend/ir_text.c     # IR text serialization (v0.3.2.6.3)
+    src/middleend/ir_loop.c     # IR loop detection (v0.3.2.7.1)
+    src/middleend/ir_licm.c     # IR loop invariant code motion (v0.3.2.7.1)
+    src/middleend/ir_unroll.c   # IR loop unrolling (v0.3.2.7.1)
+    src/middleend/ir_inline.c   # IR inlining (v0.3.2.7.2)
+    src/middleend/ir_analysis.c # IR analysis (CFG + dominance) (v0.3.1.1)
+    src/middleend/ir_builder.c  # IR Builder pattern API (v0.3.0.2)
+    src/middleend/ir_verify_ssa.c # IR SSA verification (التحقق من SSA) (v0.3.2.5.3)
+    src/middleend/ir_verify_ir.c  # IR well-formedness verification (--verify-ir) (v0.3.2.6.5)
+    src/middleend/ir_verify_common.c # IR/SSA shared verification helpers (v0.3.2.9.4)
+    src/middleend/ir_canon.c      # IR canonicalization (v0.3.2.6.5)
+    src/middleend/ir_cfg_simplify.c # IR CFG simplification (v0.3.2.6.5)
+    src/middleend/ir_mem2reg.c  # IR Mem2Reg (إدراج فاي + SSA Renaming) (v0.3.2.5.2)
+    src/middleend/ir_outssa.c   # IR Out-of-SSA (إزالة فاي قبل الخلفية) (v0.3.2.5.2)
+    src/middleend/ir_constfold.c # IR constant folding (v0.3.1.2)
+    src/middleend/ir_instcombine.c # IR InstCombine (v0.3.2.8.6)
+    src/middleend/ir_sccp.c        # IR SCCP (v0.3.2.8.6)
+    src/middleend/ir_gvn.c         # IR GVN (v0.3.2.8.6)
+    src/middleend/ir_dce.c      # IR dead code elimination (حذف_الميت) (v0.3.1.3)
+    src/middleend/ir_copyprop.c # IR copy propagation (نشر_النسخ) (v0.3.1.4)
+    src/middleend/ir_cse.c      # IR CSE (حذف_المكرر) (v0.3.1.5)
+    src/middleend/ir_lower.c    # AST -> IR lowering (v0.3.0.3)
+    src/middleend/ir_pass.c     # IR optimizer pass interface (v0.3.1.1)
+    src/middleend/ir_optimizer.c # IR optimization pipeline (v0.3.1.6)
+    src/backend/isel.c        # Instruction selection (v0.3.2.1)
+    src/backend/regalloc.c    # Register allocation (v0.3.2.2)
+    src/backend/emit.c        # Code emission (v0.3.2.3)
+    src/backend/target.c      # Target abstraction (v0.3.2.8.1)
+    src/frontend/lexer.c
+    src/driver/main.c
+    src/frontend/parser.c
+    src/driver/process.c
+    src/driver/driver_cli.c
+    src/driver/driver_time.c
+    src/driver/driver_toolchain.c
+    src/driver/driver_pipeline.c
 )
 
 # Add resource file for Windows (Icon & Version Info)
 if(WIN32)
     list(APPEND SOURCES src/baa.rc)
-    list(APPEND SOURCES src/updater.c)
+    list(APPEND SOURCES src/support/updater.c)
 else()
-    list(APPEND SOURCES src/updater_stub.c)
+    list(APPEND SOURCES src/support/updater_stub.c)
 endif()
 
 # Windows executable extension

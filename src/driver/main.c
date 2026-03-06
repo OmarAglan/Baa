@@ -4,18 +4,11 @@
  * @version 0.3.4
  */
 
-#include "baa.h"
-#include "driver.h"
-#include "driver_cli.h"
-#include "driver_pipeline.h"
-#include "driver_time.h"
-#include "driver_toolchain.h"
+#include "driver_internal.h"
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
-
 
 /**
  * @brief طباعة ملخص قياس المراحل (زمن + ذاكرة ساحة IR) إلى stderr.

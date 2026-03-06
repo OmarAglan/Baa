@@ -4,7 +4,7 @@
  * @version 0.2.9 (Input & UX Polish)
  */
 
-#include "baa.h"
+#include "frontend_internal.h"
 #include <errno.h>
 #include <limits.h>
 
@@ -271,7 +271,6 @@ static bool parse_int_token_checked(Token tok, int64_t* out_value) {
     return true;
 }
 
-
 // ============================================================================
 // مساعدات إنشاء عقد AST مع معلومات الموقع (Debug Locations)
 // ============================================================================
@@ -326,7 +325,6 @@ bool is_type_keyword(BaaTokenType type) {
             type == TOKEN_KEYWORD_FLOAT32 ||
             type == TOKEN_ENUM || type == TOKEN_STRUCT || type == TOKEN_UNION);
 }
-
 
 #include "parser_types.c"
 #include "parser_expr.c"

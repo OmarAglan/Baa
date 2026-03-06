@@ -2,7 +2,7 @@
 // تسلسل IR النصي (IR Text Serialization)
 // ============================================================================
 
-#include "ir_text.h"
+#include "middleend_internal.h"
 
 #include <ctype.h>
 #include <errno.h>
@@ -810,6 +810,5 @@ static int ir_text_parse_blockref_token(const char* tok, int* out_id) {
     *out_id = (int)v;
     return 1;
 }
-
 
 #include "ir_text_reader.c"

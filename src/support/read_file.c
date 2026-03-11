@@ -13,7 +13,7 @@ static void read_file_die(FILE* f, char* buffer, const char* msg)
 {
     if (f) fclose(f);
     free(buffer);
-    printf("%s\n", msg);
+    fprintf(stderr, "%s\n", msg);
     exit(1);
 }
 
@@ -32,19 +32,19 @@ static void read_file_die_path(FILE* f, char* buffer, const char* path, ReadFile
     switch (err)
     {
         case READ_FILE_ERR_OPEN:
-            printf("Error: Could not open input file '%s'\n", path);
+            fprintf(stderr, "خطأ: تعذّر فتح ملف الإدخال '%s'\n", path);
             break;
         case READ_FILE_ERR_SEEK:
-            printf("Error: Could not seek input file '%s'\n", path);
+            fprintf(stderr, "خطأ: تعذّر تحريك مؤشر ملف الإدخال '%s'\n", path);
             break;
         case READ_FILE_ERR_SIZE:
-            printf("Error: Could not read size of input file '%s'\n", path);
+            fprintf(stderr, "خطأ: تعذّر قراءة حجم ملف الإدخال '%s'\n", path);
             break;
         case READ_FILE_ERR_READ:
-            printf("Error: Could not read input file '%s'\n", path);
+            fprintf(stderr, "خطأ: تعذّرت قراءة ملف الإدخال '%s'\n", path);
             break;
         default:
-            printf("Error: Could not read input file '%s'\n", path);
+            fprintf(stderr, "خطأ: تعذّرت قراءة ملف الإدخال '%s'\n", path);
             break;
     }
     exit(1);
@@ -52,6 +52,11 @@ static void read_file_die_path(FILE* f, char* buffer, const char* path, ReadFile
 
 char *read_file(const char *path)
 {
+    if (!path || path[0] == '\0')
+    {
+        read_file_die(NULL, NULL, "خطأ: مسار ملف الإدخال غير صالح");
+    }
+
     FILE *f = fopen(path, "rb");
     if (!f)
     {
@@ -77,7 +82,7 @@ char *read_file(const char *path)
     char *buffer = (char *)malloc((size_t)length + 1);
     if (!buffer)
     {
-        read_file_die(f, NULL, "Error: Memory allocation failed");
+        read_file_die(f, NULL, "خطأ: فشل حجز الذاكرة لقراءة الملف");
     }
 
     size_t got = fread(buffer, 1, (size_t)length, f);

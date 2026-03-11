@@ -24,6 +24,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Changed
 
+- **File-reading diagnostics hardening**:
+  - `src/support/read_file.c` now validates empty/null paths defensively before file access.
+  - File I/O failures now include Arabic-first diagnostics with the underlying system error reason.
+  - Fatal read-path diagnostics consistently terminate with `EXIT_FAILURE` via `stderr`.
+
 - **QA orchestration**:
   - `scripts/qa_run.py` now runs the module-size guard before `full` and `stress` QA work, and stops early on hard-cap violations.
 - **CI gating**:

@@ -70,8 +70,7 @@ char* read_file(const char* path)
         read_file_die(NULL, NULL, "خطأ: مسار ملف الإدخال غير صالح");
     }
 
-    errno = 0;
-    FILE* f = fopen(path, "rb");
+    FILE *f = fopen(path, "rb");
     if (!f)
     {
         read_file_die_path(NULL, NULL, path, READ_FILE_ERR_OPEN, errno);

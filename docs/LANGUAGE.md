@@ -4,6 +4,10 @@
 
 Baa (باء) is a compiled systems programming language using Arabic syntax. It compiles to native code via Assembly + host GCC/Clang on Windows and Linux.
 
+> **Bootstrap freeze note (v0.5.1):** The current language surface is frozen for bootstrap
+> readiness. See [BOOTSTRAP_CONTRACT.md](BOOTSTRAP_CONTRACT.md) for the canonical summary of the
+> frozen language, stdlib, ABI, and IR expectations.
+
 ---
 
 ## Table of Contents
@@ -719,6 +723,12 @@ Every program **must** have a main function:
 
 **Important:** The entry point **must** be named `الرئيسية` (ar-ra'īsīyah). It is exported as `main` in the generated assembly.
 
+**Bootstrap freeze rule (v0.5.1):** Only the two currently supported entry-point signatures are in
+scope for bootstrap:
+
+- `صحيح الرئيسية()`
+- `صحيح الرئيسية(صحيح عدد، نص[] معاملات)`
+
 **Command Line Arguments [Implemented v0.3.12.5]:**
 The main function can optionally accept arguments:
 
@@ -1289,6 +1299,10 @@ From highest to lowest:
 Baa includes a minimal standard library. To use it, you must include its header file.
 
 **Syntax:** `#تضمين "baalib.baahd"` (also supported: `#تضمين "stdlib/baalib.baahd"`)
+
+**Bootstrap freeze rule (v0.5.1):** The exact callable signature surface is defined by
+`stdlib/baalib.baahd`. This document describes that surface, but the header remains the canonical
+declaration source for bootstrap-facing stdlib contracts.
 
 ### 9.1. String Operations (`نص`)
 

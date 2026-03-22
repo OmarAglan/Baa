@@ -14,6 +14,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
   - Added `docs/COMPONENT_OWNERSHIP.md`.
   - Defined canonical logical boundaries for `Frontend`, `Middle-End`, `Backend`, `Driver`, and `Support`.
   - Documented allowed dependency directions between those components.
+- **Bootstrap contract freeze summary (v0.5.1 sidecar)**:
+  - Added `docs/BOOTSTRAP_CONTRACT.md`.
+  - Published the frozen bootstrap-facing contract for the current language surface, stdlib signatures, ABI rules, and IR/verifier guarantees.
+  - Declared the currently unsupported bootstrap surface that remains intentionally frozen as unsupported.
 - **Component-owned public header surfaces**:
   - Added `src/frontend/lexer.h`, `src/frontend/ast.h`, `src/frontend/parser.h`, and `src/frontend/analysis.h` as the frontend-owned public declarations split out of the old shared surface.
   - Added `src/support/version.h`, `src/support/read_file.h`, `src/support/diagnostics.h`, `src/support/updater.h`, and `src/support/target_contract.h` for support-owned cross-cutting contracts.
@@ -29,6 +33,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
   - File I/O failures now include Arabic-first diagnostics with the underlying system error reason.
   - Fatal read-path diagnostics consistently terminate with `EXIT_FAILURE` via `stderr`.
 
+- **Bootstrap freeze documentation sync**:
+  - `docs/LANGUAGE.md`, `docs/INTERNALS.md`, and `docs/BAA_IR_SPECIFICATION.md` now point to `docs/BOOTSTRAP_CONTRACT.md` as the bootstrap-facing summary of the frozen contracts.
+  - `stdlib/baalib.baahd` now explicitly declares itself as the canonical stdlib signature surface for the freeze.
+- **Bootstrap regression locking**:
+  - Added focused integration coverage for Windows x64 call-register/shadow-space emission, SysV varargs `AL=0` emission, and verifier-safe CFG/phi compilation.
 - **QA orchestration**:
   - `scripts/qa_run.py` now runs the module-size guard before `full` and `stress` QA work, and stops early on hard-cap violations.
 - **CI gating**:

@@ -13,6 +13,7 @@ This document details the internal architecture, data structures, and algorithms
 ## Table of Contents
 
 - [Pipeline Architecture](#1-pipeline-architecture)
+- [Bootstrap Contract](#11-bootstrap-contract-v051)
 - [Component Boundaries & Size Guard](#121-component-boundaries--size-guard-v050-sidecar)
 - [Lexical Analysis](#2-lexical-analysis)
 - [Syntactic Analysis](#3-syntactic-analysis)
@@ -79,6 +80,17 @@ flowchart LR
 | **7. Link** | `.o` Object | `.exe` Executable | `gcc` | Links with C Runtime. On Windows (v0.4.4.1), link inputs/outputs are staged on ASCII paths for GCC compatibility. |
 
 > **Note (v0.3.2.4+):** The compiler uses the full IR-based backend pipeline end-to-end: AST → IR → Optimizer → ISel → RegAlloc → Emit → Assembly.
+
+## 1.1. Bootstrap Contract (v0.5.1)
+
+For bootstrap planning, the current language/stdlib/ABI/IR surface is frozen and summarized in
+[BOOTSTRAP_CONTRACT.md](BOOTSTRAP_CONTRACT.md).
+
+Practical rule:
+
+- bootstrap work consumes the frozen contracts as inputs,
+- later milestones may extend them only through explicit roadmap work,
+- ad-hoc syntax or ABI churn is out of scope under the freeze.
 
 ### 1.1.1. Component Map
 
@@ -2375,7 +2387,9 @@ The emitter translates Arabic function names to their C runtime equivalents:
 
 #### 6.21.8. ABI Compliance (Windows x64 + SystemV AMD64)
 
-This backend is being refactored to support multiple ABIs via `BaaTarget` (`src/target.h`).
+The current backend ABI contract is frozen for bootstrap via `BaaTarget`
+([`src/backend/target.h`](../src/backend/target.h)) and summarized in
+[BOOTSTRAP_CONTRACT.md](BOOTSTRAP_CONTRACT.md).
 
 - **Windows x64 ABI:** shadow space (32 bytes) around calls; first 4 args in RCX/RDX/R8/R9; return in RAX.
 - **SystemV AMD64 (Linux):** no shadow space; first 6 args in RDI/RSI/RDX/RCX/R8/R9; return in RAX; varargs require `AL=0` when no XMM args.

@@ -1,0 +1,148 @@
+{
+  "version": 3,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 10,
+    "patch": 0
+  },
+  "configurePresets": [
+    {
+      "name": "windows-release",
+      "displayName": "Windows Release",
+      "description": "Release build for Windows with the existing stable build directory.",
+      "generator": "MinGW Makefiles",
+      "binaryDir": "${sourceDir}/build",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
+        "BAA_ENABLE_WARNINGS": "ON",
+        "BAA_WARNINGS_AS_ERRORS": "OFF"
+      }
+    },
+    {
+      "name": "windows-dev",
+      "displayName": "Windows Dev",
+      "description": "RelWithDebInfo build for local incremental work on Windows.",
+      "generator": "MinGW Makefiles",
+      "binaryDir": "${sourceDir}/build-dev",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "RelWithDebInfo",
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
+        "BAA_ENABLE_WARNINGS": "ON",
+        "BAA_WARNINGS_AS_ERRORS": "OFF"
+      }
+    },
+    {
+      "name": "windows-debug",
+      "displayName": "Windows Debug",
+      "description": "Debug build for Windows with debugger-friendly settings.",
+      "generator": "MinGW Makefiles",
+      "binaryDir": "${sourceDir}/build-debug",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
+        "BAA_ENABLE_WARNINGS": "ON",
+        "BAA_WARNINGS_AS_ERRORS": "OFF"
+      }
+    },
+    {
+      "name": "windows-verify",
+      "displayName": "Windows Verify",
+      "description": "Release-grade verification build for Windows with warnings as errors.",
+      "generator": "MinGW Makefiles",
+      "binaryDir": "${sourceDir}/build-verify",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
+        "BAA_ENABLE_WARNINGS": "ON",
+        "BAA_WARNINGS_AS_ERRORS": "ON"
+      }
+    },
+    {
+      "name": "linux-release",
+      "displayName": "Linux Release",
+      "description": "Release build for Linux with the existing stable build directory.",
+      "generator": "Unix Makefiles",
+      "binaryDir": "${sourceDir}/build-linux",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
+        "BAA_ENABLE_WARNINGS": "ON",
+        "BAA_WARNINGS_AS_ERRORS": "OFF"
+      }
+    },
+    {
+      "name": "linux-dev",
+      "displayName": "Linux Dev",
+      "description": "RelWithDebInfo build for local incremental work on Linux.",
+      "generator": "Unix Makefiles",
+      "binaryDir": "${sourceDir}/build-linux-dev",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "RelWithDebInfo",
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
+        "BAA_ENABLE_WARNINGS": "ON",
+        "BAA_WARNINGS_AS_ERRORS": "OFF"
+      }
+    },
+    {
+      "name": "linux-debug",
+      "displayName": "Linux Debug",
+      "description": "Debug build for Linux with debugger-friendly settings.",
+      "generator": "Unix Makefiles",
+      "binaryDir": "${sourceDir}/build-linux-debug",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
+        "BAA_ENABLE_WARNINGS": "ON",
+        "BAA_WARNINGS_AS_ERRORS": "OFF"
+      }
+    },
+    {
+      "name": "linux-verify",
+      "displayName": "Linux Verify",
+      "description": "Release-grade verification build for Linux with warnings as errors.",
+      "generator": "Unix Makefiles",
+      "binaryDir": "${sourceDir}/build-linux-verify",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
+        "BAA_ENABLE_WARNINGS": "ON",
+        "BAA_WARNINGS_AS_ERRORS": "ON"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "windows-release",
+      "configurePreset": "windows-release"
+    },
+    {
+      "name": "windows-dev",
+      "configurePreset": "windows-dev"
+    },
+    {
+      "name": "windows-debug",
+      "configurePreset": "windows-debug"
+    },
+    {
+      "name": "windows-verify",
+      "configurePreset": "windows-verify"
+    },
+    {
+      "name": "linux-release",
+      "configurePreset": "linux-release"
+    },
+    {
+      "name": "linux-dev",
+      "configurePreset": "linux-dev"
+    },
+    {
+      "name": "linux-debug",
+      "configurePreset": "linux-debug"
+    },
+    {
+      "name": "linux-verify",
+      "configurePreset": "linux-verify"
+    }
+  ]
+}

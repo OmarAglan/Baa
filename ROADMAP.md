@@ -1346,10 +1346,12 @@ Partial status update (2026-03-06):
 
 ### v0.5.3: Build System Maturity ⚙️
 
-- [ ] **Incremental compilation model** — avoid full rebuilds on small edits.
-- [ ] **Dependency tracking** — reliable invalidation for headers/includes.
-- [ ] **Reproducible outputs** — stable artifacts for same inputs/toolchain.
-- [ ] **Build profile presets** — dev/debug/release/verify presets.
+- [x] **Incremental compilation model** — persistent preset-specific build directories now validate no-op rebuilds and narrow header-triggered recompilation through `scripts/check_incremental_build.py`.
+- [x] **Dependency tracking** — CMake/Makefile invalidation is now exercised explicitly against a narrow header probe so header dependency fan-out regressions fail the gate.
+- [x] **Reproducible outputs** — `scripts/check_reproducibility.py` locks deterministic IR text, diagnostics, and selected cross-target assembly outputs for a fixed corpus.
+- [x] **Build profile presets** — `CMakePresets.json` now publishes `dev` / `debug` / `release` / `verify` presets for both Windows and Linux hosts.
+
+✅ COMPLETED (2026-04-02)
 
 ### v0.5.4: Diagnostics & Recovery Quality 🩺
 

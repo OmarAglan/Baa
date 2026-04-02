@@ -34,6 +34,7 @@
 - `v0.4.3.0` — **Error Handling (معالجة الأخطاء)** ✅ مكتمل (2026-03-02)
 - `v0.4.4.0` — **Final Polish (الضبط النهائي)** ✅ مكتمل (2026-03-02)
 - `v0.4.4.1` — **Include Paths & Version Sync (مسارات التضمين وتوحيد الإصدار)** ✅ مكتمل (2026-03-02)
+- `v0.5.3` — **Build System Maturity (نضج نظام البناء)** ✅ مكتمل (2026-04-02)
 
 ---
 
@@ -118,8 +119,8 @@ GCC/Clang المضيف (الربط والتجميع)
 ```powershell
 git clone https://github.com/OmarAglan/Baa.git
 cd Baa
-cmake -B build -G "MinGW Makefiles"
-cmake --build build
+cmake --preset windows-release
+cmake --build --preset windows-release
 ```
 
 **لينكس (GCC/Clang):**
@@ -127,8 +128,8 @@ cmake --build build
 ```bash
 git clone https://github.com/OmarAglan/Baa.git
 cd Baa
-cmake -B build-linux -DCMAKE_BUILD_TYPE=Release
-cmake --build build-linux -j
+cmake --preset linux-release
+cmake --build --preset linux-release
 ./build-linux/baa --version
 ```
 
@@ -160,6 +161,56 @@ cmake --build build-linux -j
 # التشغيل
 ./out
 ```
+
+### 1.1) ملفات البناء الجاهزة (v0.5.3)
+
+يوفر المستودع الآن ملفات جاهزة عبر `CMakePresets.json`:
+
+- ويندوز: `windows-dev` / `windows-debug` / `windows-release` / `windows-verify`
+- لينكس: `linux-dev` / `linux-debug` / `linux-release` / `linux-verify`
+
+أمثلة سريعة:
+
+```powershell
+cmake --preset windows-dev
+cmake --build --preset windows-dev
+
+cmake --preset windows-verify
+cmake --build --preset windows-verify
+```
+
+```bash
+cmake --preset linux-dev
+cmake --build --preset linux-dev
+
+cmake --preset linux-verify
+cmake --build --preset linux-verify
+```
+
+المعاني:
+
+- `dev`: بناء محلي سريع مع `RelWithDebInfo`
+- `debug`: بناء تصحيح كامل
+- `release`: البناء القياسي المحسن
+- `verify`: بناء تحقق مع `-Werror`
+
+### 1.2) فحوصات الحتمية والبناء التزايدي (v0.5.3)
+
+```powershell
+python scripts\check_incremental_build.py --preset windows-verify
+python scripts\check_reproducibility.py --preset windows-verify
+```
+
+```bash
+python3 scripts/check_incremental_build.py --preset linux-verify
+python3 scripts/check_reproducibility.py --preset linux-verify
+```
+
+هذه الفحوصات تتحقق من:
+
+1) أن إعادة البناء بدون تغييرات لا تعيد تصريف الوحدات.
+2) أن لمس ترويسة ضيقة التأثير يعيد بناء الوحدات المتأثرة فقط.
+3) أن مخرجات IR والتشخيصات وبعض ملفات assembly تبقى ثابتة بين تشغيلين متتاليين.
 
 ### 4) اختيار الهدف (تعدد الأهداف)
 

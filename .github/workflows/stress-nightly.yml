@@ -14,9 +14,9 @@ jobs:
         with:
           python-version: "3.11"
       - name: Configure (Linux)
-        run: cmake -B build-linux -DCMAKE_BUILD_TYPE=Release
+        run: cmake --preset linux-release
       - name: Build
-        run: cmake --build build-linux -j
+        run: cmake --build --preset linux-release
       - name: QA Stress
         env:
           PYTHONUTF8: "1"

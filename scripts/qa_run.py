@@ -16,6 +16,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 TESTS_DIR = ROOT / "tests"
+PRESETS_FILE = ROOT / "CMakePresets.json"
 
 DEFAULT_LOG_DIR = ROOT / ".baa_qa_logs"
 
@@ -42,18 +43,38 @@ def _find_baa() -> Path:
         if p.exists():
             return p
 
-    if os.name == "nt":
-        candidates = [
-            ROOT / "build" / "baa.exe",
-            ROOT / "build" / "baa",
-        ]
-    else:
-        candidates = [
-            ROOT / "build-linux" / "baa",
-            ROOT / "build" / "baa",
-        ]
+    candidates: list[Path] = []
+    if PRESETS_FILE.exists():
+        try:
+            presets = json.loads(PRESETS_FILE.read_text(encoding="utf-8"))
+            for preset in presets.get("configurePresets", []):
+                binary_dir = str(preset.get("binaryDir", ""))
+                if not binary_dir:
+                    continue
+                resolved_dir = Path(binary_dir.replace("${sourceDir}", str(ROOT)))
+                if os.name == "nt":
+                    candidates.extend([resolved_dir / "baa.exe", resolved_dir / "baa"])
+                else:
+                    candidates.extend([resolved_dir / "baa", resolved_dir / "baa.exe"])
+        except Exception:
+            pass
 
-    for c in candidates:
+    legacy_candidates = (
+        [ROOT / "build" / "baa.exe", ROOT / "build" / "baa"]
+        if os.name == "nt"
+        else [ROOT / "build-linux" / "baa", ROOT / "build" / "baa"]
+    )
+    candidates.extend(legacy_candidates)
+
+    seen: set[Path] = set()
+    deduped: list[Path] = []
+    for candidate in candidates:
+        if candidate in seen:
+            continue
+        seen.add(candidate)
+        deduped.append(candidate)
+
+    for c in deduped:
         if c.exists():
             return c
 

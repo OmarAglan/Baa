@@ -22,10 +22,10 @@ jobs:
           }
       - name: Configure (Windows MinGW)
         shell: pwsh
-        run: cmake -B build -G "MinGW Makefiles"
+        run: cmake --preset windows-release
       - name: Build
         shell: pwsh
-        run: cmake --build build
+        run: cmake --build --preset windows-release
 
   quick-windows:
     runs-on: windows-latest
@@ -43,10 +43,10 @@ jobs:
           }
       - name: Configure (Windows MinGW)
         shell: pwsh
-        run: cmake -B build -G "MinGW Makefiles"
+        run: cmake --preset windows-release
       - name: Build
         shell: pwsh
-        run: cmake --build build
+        run: cmake --build --preset windows-release
       - name: QA Quick
         shell: pwsh
         env:
@@ -80,15 +80,25 @@ jobs:
           }
       - name: Configure (Windows MinGW)
         shell: pwsh
-        run: cmake -B build -G "MinGW Makefiles"
+        run: cmake --preset windows-verify
       - name: Build
         shell: pwsh
-        run: cmake --build build
+        run: cmake --build --preset windows-verify
       - name: Module Size Guard
         shell: pwsh
         env:
           PYTHONUTF8: "1"
         run: python scripts/check_module_sizes.py --json-out module-size-full-windows.json
+      - name: Incremental Build Validation
+        shell: pwsh
+        env:
+          PYTHONUTF8: "1"
+        run: python scripts/check_incremental_build.py --preset windows-verify --json-out incremental-full-windows.json
+      - name: Reproducibility Check
+        shell: pwsh
+        env:
+          PYTHONUTF8: "1"
+        run: python scripts/check_reproducibility.py --preset windows-verify --json-out reproducibility-full-windows.json
       - name: QA Full
         shell: pwsh
         env:
@@ -102,10 +112,14 @@ jobs:
           if-no-files-found: ignore
           path: |
             .baa_qa_logs/**
+            incremental-full-windows.json
             module-size-full-windows.json
             qa-summary-full-windows.json
+            reproducibility-full-windows.json
             build/**/*.s
             build/**/*.ir
+            build-verify/**/*.s
+            build-verify/**/*.ir
 
   build-linux:
     runs-on: ubuntu-latest
@@ -115,9 +129,9 @@ jobs:
         with:
           python-version: "3.11"
       - name: Configure (Linux)
-        run: cmake -B build-linux -DCMAKE_BUILD_TYPE=Release
+        run: cmake --preset linux-release
       - name: Build
-        run: cmake --build build-linux -j
+        run: cmake --build --preset linux-release
 
   quick-linux:
     runs-on: ubuntu-latest
@@ -128,9 +142,9 @@ jobs:
         with:
           python-version: "3.11"
       - name: Configure (Linux)
-        run: cmake -B build-linux -DCMAKE_BUILD_TYPE=Release
+        run: cmake --preset linux-release
       - name: Build
-        run: cmake --build build-linux -j
+        run: cmake --build --preset linux-release
       - name: QA Quick
         env:
           PYTHONUTF8: "1"
@@ -156,13 +170,21 @@ jobs:
         with:
           python-version: "3.11"
       - name: Configure (Linux)
-        run: cmake -B build-linux -DCMAKE_BUILD_TYPE=Release
+        run: cmake --preset linux-verify
       - name: Build
-        run: cmake --build build-linux -j
+        run: cmake --build --preset linux-verify
       - name: Module Size Guard
         env:
           PYTHONUTF8: "1"
         run: python3 scripts/check_module_sizes.py --json-out module-size-full-linux.json
+      - name: Incremental Build Validation
+        env:
+          PYTHONUTF8: "1"
+        run: python3 scripts/check_incremental_build.py --preset linux-verify --json-out incremental-full-linux.json
+      - name: Reproducibility Check
+        env:
+          PYTHONUTF8: "1"
+        run: python3 scripts/check_reproducibility.py --preset linux-verify --json-out reproducibility-full-linux.json
       - name: QA Full
         env:
           PYTHONUTF8: "1"
@@ -175,7 +197,11 @@ jobs:
           if-no-files-found: ignore
           path: |
             .baa_qa_logs/**
+            incremental-full-linux.json
             module-size-full-linux.json
             qa-summary-full-linux.json
+            reproducibility-full-linux.json
             build-linux/**/*.s
             build-linux/**/*.ir
+            build-linux-verify/**/*.s
+            build-linux-verify/**/*.ir

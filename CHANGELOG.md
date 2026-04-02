@@ -10,6 +10,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Added
 
+- **Build system maturity (v0.5.3)**:
+  - Added `CMakePresets.json` with `dev`, `debug`, `release`, and `verify` configure/build presets for both Windows and Linux hosts.
+  - Added `scripts/check_incremental_build.py` to validate persistent incremental rebuild behavior and narrow header invalidation.
+  - Added `scripts/check_reproducibility.py` to compare canonical IR text, diagnostics, and selected assembly outputs across repeated compiler runs.
 - **Component ownership map (v0.5.0 sidecar)**:
   - Added `docs/COMPONENT_OWNERSHIP.md`.
   - Defined canonical logical boundaries for `Frontend`, `Middle-End`, `Backend`, `Driver`, and `Support`.
@@ -28,6 +32,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Changed
 
+- **Preset-driven build and QA flow**:
+  - CI now configures and builds through `CMakePresets.json` instead of repeating ad hoc raw CMake arguments.
+  - Full Windows/Linux CI jobs now run incremental-build and reproducibility validation in addition to the existing QA tiers.
+  - `scripts/qa_run.py` now discovers compiler binaries from preset-defined build directories before falling back to legacy paths.
 - **File-reading diagnostics hardening**:
   - `src/support/read_file.c` now validates empty/null paths defensively before file access.
   - File I/O failures now include Arabic-first diagnostics with the underlying system error reason.

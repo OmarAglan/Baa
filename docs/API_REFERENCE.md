@@ -8,7 +8,7 @@ This document details the C functions, enumerations, and structures defined in t
 
 ## Table of Contents
 
-- [QA Tooling](#0-qa-tooling-v038)
+- [Build & QA Tooling](#0-build--qa-tooling-v053)
 - [Lexer Module](#1-lexer-module)
 - [Parser Module](#2-parser-module)
 - [Semantic Analysis](#3-semantic-analysis)
@@ -29,7 +29,90 @@ This document details the C functions, enumerations, and structures defined in t
 
 ---
 
-## 0. QA Tooling (v0.3.8)
+## 0. Build & QA Tooling (v0.5.3)
+
+### `CMakePresets.json`
+
+The repository now exposes host-specific configure/build presets:
+
+```bash
+cmake --preset linux-release
+cmake --build --preset linux-release
+
+cmake --preset linux-verify
+cmake --build --preset linux-verify
+```
+
+```powershell
+cmake --preset windows-release
+cmake --build --preset windows-release
+
+cmake --preset windows-verify
+cmake --build --preset windows-verify
+```
+
+Published preset families:
+
+- Linux: `linux-dev`, `linux-debug`, `linux-release`, `linux-verify`
+- Windows: `windows-dev`, `windows-debug`, `windows-release`, `windows-verify`
+
+Preset meanings:
+
+- `dev` → `RelWithDebInfo` local incremental workflow
+- `debug` → `Debug`
+- `release` → canonical optimized build
+- `verify` → optimized gate build with `BAA_WARNINGS_AS_ERRORS=ON`
+
+### `scripts/check_incremental_build.py`
+
+Validates the repository's incremental-build contract using a temporary copy of the repo.
+
+```bash
+python3 scripts/check_incremental_build.py --preset linux-verify
+python3 scripts/check_incremental_build.py --preset linux-release --json-out incremental-linux.json
+```
+
+```powershell
+python scripts\check_incremental_build.py --preset windows-verify
+python scripts\check_incremental_build.py --preset windows-release --json-out incremental-windows.json
+```
+
+| Flag | Description |
+|------|-------------|
+| `--preset <name>` | Configure/build preset from `CMakePresets.json` |
+| `--json-out <path>` | Writes machine-readable incremental-build summary JSON |
+
+Behavior:
+
+- configures and builds once using the selected preset
+- verifies a no-op rebuild leaves object timestamps unchanged
+- touches `src/support/version.h`
+- verifies that only the expected driver/support object files are rebuilt
+
+### `scripts/check_reproducibility.py`
+
+Compares deterministic compiler outputs across repeated runs of a fixed corpus.
+
+```bash
+python3 scripts/check_reproducibility.py --preset linux-verify
+python3 scripts/check_reproducibility.py --preset linux-release --json-out reproducibility-linux.json
+```
+
+```powershell
+python scripts\check_reproducibility.py --preset windows-verify
+python scripts\check_reproducibility.py --preset windows-release --json-out reproducibility-windows.json
+```
+
+| Flag | Description |
+|------|-------------|
+| `--preset <name>` | Compiler build preset used to locate the `baa` binary |
+| `--json-out <path>` | Writes machine-readable reproducibility summary JSON |
+
+Behavior:
+
+- runs a fixed corpus twice
+- compares canonical IR text, diagnostics, and selected `-S` assembly outputs
+- normalizes run-root and repo-root path prefixes before comparison
 
 ### `scripts/qa_run.py`
 

@@ -15,6 +15,7 @@ This document details the internal architecture, data structures, and algorithms
 - [Pipeline Architecture](#1-pipeline-architecture)
 - [Bootstrap Contract](#11-bootstrap-contract-v051)
 - [Component Boundaries & Size Guard](#121-component-boundaries--size-guard-v050-sidecar)
+- [Build Profiles & Determinism](#122-build-profiles--determinism-v053)
 - [Lexical Analysis](#2-lexical-analysis)
 - [Syntactic Analysis](#3-syntactic-analysis)
 - [Abstract Syntax Tree](#4-abstract-syntax-tree)
@@ -195,6 +196,51 @@ Current in-place split pattern (2026-03-06):
 - the build intentionally uses no project-wide include directories; source files must use same-directory includes or explicit relative component paths.
 - the `src/` root now effectively contains only the `baa.h` compatibility umbrella and resource files.
 
+### 1.2.2. Build Profiles & Determinism (v0.5.3)
+
+The repository now publishes host-specific build presets through `CMakePresets.json`.
+
+Current preset families:
+
+- Windows: `windows-dev`, `windows-debug`, `windows-release`, `windows-verify`
+- Linux: `linux-dev`, `linux-debug`, `linux-release`, `linux-verify`
+
+Preset intent:
+
+- `dev`: `RelWithDebInfo` for fast local incremental work
+- `debug`: `Debug` for debugger-friendly inspection
+- `release`: canonical optimized build
+- `verify`: optimized gate build with `BAA_WARNINGS_AS_ERRORS=ON`
+
+Persistent binary directories are part of the contract:
+
+- stable release dirs remain `build/` and `build-linux/`
+- the other preset families use dedicated directories (`build-dev/`, `build-debug/`, `build-verify/`, and Linux equivalents)
+- local/CI workflows should reuse those directories instead of reconfiguring one directory between multiple build personalities
+
+Recommended commands:
+
+```bash
+cmake --preset linux-release
+cmake --build --preset linux-release
+
+cmake --preset linux-verify
+cmake --build --preset linux-verify
+```
+
+```powershell
+cmake --preset windows-release
+cmake --build --preset windows-release
+
+cmake --preset windows-verify
+cmake --build --preset windows-verify
+```
+
+Two validation scripts now lock the maturity contract:
+
+- `scripts/check_incremental_build.py` copies the repo into a temporary worktree, builds once, confirms a no-op rebuild, then touches `src/support/version.h` and verifies that only the expected driver/support objects are rebuilt.
+- `scripts/check_reproducibility.py` runs a fixed corpus twice and compares canonical IR text, diagnostics, and selected `-S` assembly outputs after path normalization.
+
 ### 1.3. Diagnostic Engine
 
 ### 1.3.1. Benchmarking (v0.3.2.9.2)
@@ -231,6 +277,9 @@ Notes:
   - `--mode quick`: integration smoke (`tests/integration/**/*.baa` via `tests/test.py`)
   - `--mode full`: integration + regression + verify smoke + multi-file smoke
   - `--mode stress`: full + `tests/stress/*.baa` + seeded fuzz-lite (timeout-guarded)
+- Determinism helpers:
+  - `scripts/check_incremental_build.py --preset <preset>`
+  - `scripts/check_reproducibility.py --preset <preset>`
 - Legacy runners remain valid:
   - `tests/test.py` (integration)
   - `tests/regress.py` (integration + corpus + negatives)
@@ -247,8 +296,8 @@ Notes:
 Windows build:
 
 ```
-cmake -B build -G "MinGW Makefiles"
-cmake --build build
+cmake --preset windows-release
+cmake --build --preset windows-release
 
 python scripts\qa_run.py --mode full
 ```
@@ -256,8 +305,8 @@ python scripts\qa_run.py --mode full
 Linux build:
 
 ```
-cmake -B build-linux -DCMAKE_BUILD_TYPE=Release
-cmake --build build-linux -j
+cmake --preset linux-release
+cmake --build --preset linux-release
 
 python3 scripts/qa_run.py --mode full
 ```

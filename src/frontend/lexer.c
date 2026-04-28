@@ -310,6 +310,33 @@ static char* lex_normalize_existing_path(Lexer* l, const char* path)
 }
 
 /**
+ * @brief تسجيل تبعية بناء مطبعة بدون تكرار.
+ */
+static void lex_record_dependency(Lexer* l, const char* resolved_path)
+{
+    if (!l || !resolved_path || !resolved_path[0]) return;
+
+    for (size_t i = 0; i < l->dependency_count; ++i) {
+        if (l->dependency_paths[i] && strcmp(l->dependency_paths[i], resolved_path) == 0) {
+            return;
+        }
+    }
+
+    if (l->dependency_count >= l->dependency_capacity) {
+        size_t new_cap = (l->dependency_capacity == 0) ? 8u : (l->dependency_capacity * 2u);
+        char** new_paths = (char**)realloc(l->dependency_paths, new_cap * sizeof(char*));
+        if (!new_paths) {
+            lex_fatal(l, "خطأ قبلي: نفدت الذاكرة أثناء تسجيل تبعيات البناء.");
+        }
+        l->dependency_paths = new_paths;
+        l->dependency_capacity = new_cap;
+    }
+
+    l->dependency_paths[l->dependency_count] = lex_strdup_heap(l, resolved_path);
+    l->dependency_count++;
+}
+
+/**
  * @brief مقارنة مسارين بعد التطبيع حسب قواعد المنصة.
  */
 static bool lex_paths_equivalent(Lexer* l, const char* lhs, const char* rhs)
@@ -549,6 +576,9 @@ void lexer_init(Lexer* l,
     l->if_depth = 0;
     l->include_dirs = include_dirs;
     l->include_dir_count = include_dir_count;
+    l->dependency_paths = NULL;
+    l->dependency_count = 0;
+    l->dependency_capacity = 0;
     
     // تهيئة الحالة الحالية
     l->state.source = src;
@@ -561,6 +591,32 @@ void lexer_init(Lexer* l,
     lex_skip_utf8_bom(&l->state);
 
     error_register_source(filename, src);
+
+    char* root_dep = lex_normalize_existing_path(l, filename ? filename : "<unknown>");
+    if (root_dep) {
+        lex_record_dependency(l, root_dep);
+        free(root_dep);
+    }
+}
+
+const char* const* lexer_get_dependencies(const Lexer* lexer, size_t* out_count)
+{
+    if (out_count) {
+        *out_count = lexer ? lexer->dependency_count : 0u;
+    }
+    return lexer ? (const char* const*)lexer->dependency_paths : NULL;
+}
+
+void lexer_free_dependencies(Lexer* lexer)
+{
+    if (!lexer) return;
+    for (size_t i = 0; i < lexer->dependency_count; ++i) {
+        free(lexer->dependency_paths[i]);
+    }
+    free(lexer->dependency_paths);
+    lexer->dependency_paths = NULL;
+    lexer->dependency_count = 0;
+    lexer->dependency_capacity = 0;
 }
 
 static bool pp_active(const Lexer* l)

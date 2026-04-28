@@ -1,6 +1,6 @@
 # Baa Internal API Reference
 
-> **Version:** 0.5.2 | [← Compiler Internals](INTERNALS.md) | [IR Specification →](BAA_IR_SPECIFICATION.md)
+> **Version:** 0.5.3 | [← Compiler Internals](INTERNALS.md) | [IR Specification →](BAA_IR_SPECIFICATION.md)
 
 This document details the C functions, enumerations, and structures defined in the current component-owned public headers under `src/frontend/`, `src/support/`, `src/middleend/`, and `src/backend/`. `src/baa.h` remains as a compatibility umbrella over the frontend/support public surface.
 
@@ -44,11 +44,16 @@ python scripts/qa_run.py --mode stress
 | Flag | Description |
 |------|-------------|
 | `--mode quick` | Integration smoke (`tests/integration/**/*.baa` via `tests/test.py`) |
-| `--mode full` | Quick + regression + verify smoke + multi-file smoke |
+| `--mode full` | Quick + regression + verify smoke + multi-file smoke + build maturity checks |
 | `--mode stress` | Full + stress suite (`tests/stress/*.baa`) + seeded fuzz-lite |
 | `--summary-json <path>` | Writes machine-readable QA summary JSON |
 | `--fuzz-cases <N>` | Number of fuzz-lite cases in stress mode |
 | `--seed <N>` | RNG seed for deterministic fuzz-lite generation |
+
+Additional build-maturity guards:
+
+- `scripts/check_build_profiles.py` validates required CMake configure/build presets.
+- `scripts/test_build_maturity.py` validates manifest stability, incremental cache hits, and header invalidation.
 
 ### Test Metadata Contract
 

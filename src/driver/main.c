@@ -143,6 +143,8 @@ int main(int argc, char **argv)
     }
 
     CompilerPhaseTimes phase_times = {0};
+    DriverBuildManifest build_manifest;
+    driver_build_manifest_init(&build_manifest);
 
     // v0.3.2.8.4: لا ندعم حالياً الربط/التجميع العابر للأهداف (cross-link/cross-assemble).
     // - نسمح بـ -S لتوليد assembly فقط لأي هدف.
@@ -155,6 +157,7 @@ int main(int argc, char **argv)
                     "خطأ: الهدف '%s' لا يطابق نظام المضيف لمرحلة التجميع/الربط.\n"
                     "ملاحظة: استخدم -S لتوليد ملف .s فقط. الدعم الكامل لـ cross-target مؤجل.\n",
                     config.target->name ? config.target->name : "<unknown>");
+            driver_build_manifest_free(&build_manifest);
             return main_cleanup_and_return(&cli, NULL, 0, config.output_file, output_file_owned, 1);
         }
     }
@@ -162,16 +165,30 @@ int main(int argc, char **argv)
     char **obj_files_to_link = NULL;
     int obj_count = 0;
     if (driver_compile_files(&config, input_files, input_count, &phase_times,
+                             &build_manifest,
                              &obj_files_to_link, &obj_count) != 0)
     {
+        driver_build_manifest_free(&build_manifest);
         return main_cleanup_and_return(&cli, obj_files_to_link, obj_count, config.output_file,
                                        output_file_owned, 1);
+    }
+
+    if (config.build_manifest_file)
+    {
+        if (!driver_build_write_manifest(&config, &build_manifest, config.build_manifest_file))
+        {
+            fprintf(stderr, "خطأ: فشل كتابة بيان البناء '%s'.\n", config.build_manifest_file);
+            driver_build_manifest_free(&build_manifest);
+            return main_cleanup_and_return(&cli, obj_files_to_link, obj_count, config.output_file,
+                                           output_file_owned, 1);
+        }
     }
 
     // إذا طلب المستخدم -S أو -c، نتوقف هنا
     if (config.assembly_only || config.compile_only)
     {
         print_phase_times_and_mem(&config, &phase_times);
+        driver_build_manifest_free(&build_manifest);
         return main_cleanup_and_return(&cli, obj_files_to_link, obj_count, config.output_file,
                                        output_file_owned, 0);
     }
@@ -183,6 +200,7 @@ int main(int argc, char **argv)
     if (driver_toolchain_link(&config, &phase_times,
                               (const char **)obj_files_to_link, obj_count) != 0)
     {
+        driver_build_manifest_free(&build_manifest);
         return main_cleanup_and_return(&cli, obj_files_to_link, obj_count, config.output_file,
                                        output_file_owned, 1);
     }
@@ -213,6 +231,7 @@ int main(int argc, char **argv)
 
     print_phase_times_and_mem(&config, &phase_times);
 
+    driver_build_manifest_free(&build_manifest);
     return main_cleanup_and_return(&cli, obj_files_to_link, obj_count, config.output_file,
                                    output_file_owned, 0);
 }

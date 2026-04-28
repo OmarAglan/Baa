@@ -32,6 +32,9 @@ typedef struct
     bool debug_info;    // --debug-info: إصدار معلومات ديبغ
     bool custom_startup; // --startup=custom: استخدام نقطة دخول مخصصة (مع الحفاظ على CRT/libc)
     bool funroll_loops; // -funroll-loops
+    bool incremental;   // --incremental: تفعيل إعادة استخدام كائنات البناء عند الأمان
+    char *build_manifest_file; // ملف بيان البناء (--emit-build-manifest)
+    char *cache_dir;    // مجلد كاش البناء (--cache-dir)
     OptLevel opt_level; // -O0/-O1/-O2
     const BaaTarget* target; // --target=...
     BaaCodegenOptions codegen_opts;

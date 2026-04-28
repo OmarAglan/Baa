@@ -1,6 +1,6 @@
 # Baa Compiler Internals
 
-> **Version:** 0.5.2 | [← Language Spec](LANGUAGE.md) | [API Reference →](API_REFERENCE.md)
+> **Version:** 0.5.3 | [← Language Spec](LANGUAGE.md) | [API Reference →](API_REFERENCE.md)
 
 **Target Architecture:** x86-64 (AMD64)
 **Targets:** Windows x64 (COFF/PE) + Linux x86-64 (ELF)
@@ -123,6 +123,9 @@ The driver in `main.c` (v0.2.0+) supports multi-file compilation and various mod
 | `--verify-ssa` | **SSA Verification** | stderr | Verifies SSA invariants after Mem2Reg and before Out-of-SSA (**requires `-O1`/`-O2`**) (v0.3.2.5.3). |
 | `--verify-gate` | **Verifier Gate (Debug)** | stderr | Runs `--verify-ir`/`--verify-ssa` after each optimizer iteration (**requires `-O1`/`-O2`**) (v0.3.2.6.5). |
 | `--time-phases` | **Phase Timings** | stderr | Prints per-phase timing and IR arena memory stats (`[TIME]`/`[MEM]`) (v0.3.2.9.2). |
+| `--emit-build-manifest <file>` | **Build Manifest** | JSON | Writes deterministic source/dependency hashes and cache status for the invocation (v0.5.3). |
+| `--incremental` | **Incremental Build** | `.o/.exe` | Reuses cached objects when source/include content hashes and relevant flags match (v0.5.3). |
+| `--cache-dir <dir>` | **Cache Location** | directory | Overrides the default `.baa_build/cache` incremental object cache (v0.5.3). |
 | `--target=<t>` | **Target Select** | `.s/.o/.exe` | Selects backend target: `x86_64-windows` or `x86_64-linux`. |
 | `-fPIC` / `-fPIE` | **Code Model (ELF)** | `.s/.o/.exe` | Enables PIC/PIE-friendly emission on Linux/ELF. |
 | `-fno-pic` / `-fno-pie` | **Disable PIC/PIE** | `.s/.o/.exe` | Disables PIC/PIE modes. |

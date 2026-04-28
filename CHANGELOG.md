@@ -6,6 +6,31 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ---
 
+## [0.5.3] - 2026-04-28
+
+**Build System Maturity**
+
+### Added
+
+- **Build profile presets**:
+  - Added `CMakePresets.json` with `dev`, `debug`, `release`, and `verify` profiles for Windows and Linux.
+  - Added `scripts/check_build_profiles.py` and wired it into full/stress QA.
+- **Build manifests and incremental cache**:
+  - Added `--emit-build-manifest <file>` to write deterministic JSON with canonical source/include dependencies and content hashes.
+  - Added opt-in `--incremental` object reuse for object-producing builds.
+  - Added `--cache-dir <dir>` to override the default `.baa_build/cache` object cache.
+  - Added `scripts/test_build_maturity.py` coverage for cache hits, header invalidation, and byte-stable cached manifests.
+- **Reproducible build-date override**:
+  - Added `BAA_REPRODUCIBLE_BUILD_DATE` CMake cache variable for stable `baa --version` build dates in release/verify presets.
+
+### Changed
+
+- **Frontend dependency tracking**:
+  - The lexer now records canonical source/include dependency paths discovered during preprocessing for driver build manifests.
+- **Documentation and version metadata**:
+  - Updated current project metadata and documentation headers to `0.5.3`.
+  - Documented the new build manifest, incremental cache, and CMake preset workflows.
+
 ## [0.5.2] - 2026-04-28
 
 **Module & Multi-File Hardening**

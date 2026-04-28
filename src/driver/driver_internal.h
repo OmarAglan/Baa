@@ -16,6 +16,7 @@
 #include "driver.h"
 #include "driver_cli.h"
 #include "driver_pipeline.h"
+#include "driver_build.h"
 #include "driver_time.h"
 #include "driver_toolchain.h"
 #include "process.h"

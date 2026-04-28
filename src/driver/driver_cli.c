@@ -120,6 +120,9 @@ void driver_print_help(void)
     printf("  --verify-ssa   Verify SSA invariants after Mem2Reg (requires -O1/-O2)\n");
     printf("  --verify-gate  Debug: run verify-ir/verify-ssa after each optimizer iteration\n");
     printf("  --time-phases  Print per-phase timing/memory stats\n");
+    printf("  --emit-build-manifest <file>  Write deterministic build dependency manifest\n");
+    printf("  --incremental   Reuse cached object files when dependency hashes match\n");
+    printf("  --cache-dir <dir>  Override incremental cache directory (default: .baa_build/cache)\n");
     printf("  --debug-info   Emit debug line info (.file/.loc) and pass -g to toolchain\n");
     printf("  --asm-comments  Emit explanatory comments in generated assembly\n");
     printf("  -O0            Disable optimization\n");
@@ -239,6 +242,30 @@ bool driver_parse_cli(int argc, char **argv, CompilerConfig *config, DriverParse
                 config->verify_gate = true;
             else if (strcmp(arg, "--time-phases") == 0)
                 config->time_phases = true;
+            else if (strcmp(arg, "--emit-build-manifest") == 0)
+            {
+                if (i + 1 < argc && argv[i + 1] && argv[i + 1][0])
+                    config->build_manifest_file = argv[++i];
+                else
+                {
+                    fprintf(stderr, "Error: --emit-build-manifest requires a filename\n");
+                    parse_release_temp_arrays(inputs, include_dirs);
+                    return false;
+                }
+            }
+            else if (strcmp(arg, "--incremental") == 0)
+                config->incremental = true;
+            else if (strcmp(arg, "--cache-dir") == 0)
+            {
+                if (i + 1 < argc && argv[i + 1] && argv[i + 1][0])
+                    config->cache_dir = argv[++i];
+                else
+                {
+                    fprintf(stderr, "Error: --cache-dir requires a directory path\n");
+                    parse_release_temp_arrays(inputs, include_dirs);
+                    return false;
+                }
+            }
             else if (strcmp(arg, "--debug-info") == 0)
                 config->debug_info = true;
             else if (strcmp(arg, "--asm-comments") == 0)

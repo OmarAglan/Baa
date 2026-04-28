@@ -23,6 +23,7 @@ mingw64.7z
 # نواتج QA المحلية
 /.baa_qa_logs/
 /.baa_*_out_*
+/.baa_build/
 /\.baa_test_file_*tmp\.txt
 /qa-summary-*.json
 /qa_summary*.json

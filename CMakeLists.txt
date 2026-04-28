@@ -1,11 +1,12 @@
 cmake_minimum_required(VERSION 3.10)
-project(baa VERSION 0.5.2 LANGUAGES C)
+project(baa VERSION 0.5.3 LANGUAGES C)
 
 set(CMAKE_C_STANDARD 11)
 
 # Build options
 option(BAA_ENABLE_WARNINGS "Enable compiler warnings for Baa" ON)
 option(BAA_WARNINGS_AS_ERRORS "Treat warnings as errors for hardening builds" OFF)
+set(BAA_REPRODUCIBLE_BUILD_DATE "" CACHE STRING "Override baa --version build date for reproducible builds")
 
 # List of source files
 set(SOURCES
@@ -54,6 +55,7 @@ set(SOURCES
     src/driver/driver_time.c
     src/driver/driver_toolchain.c
     src/driver/driver_pipeline.c
+    src/driver/driver_build.c
 )
 
 # Add resource file for Windows (Icon & Version Info)
@@ -66,6 +68,10 @@ endif()
 
 # Windows executable extension
 add_executable(baa ${SOURCES})
+
+if(BAA_REPRODUCIBLE_BUILD_DATE)
+    target_compile_definitions(baa PRIVATE BAA_BUILD_DATE_OVERRIDE="${BAA_REPRODUCIBLE_BUILD_DATE}")
+endif()
 
 # نبقي مسارات التضمين العامة مغلقة عمداً.
 # يجب أن تعتمد الملفات على ترويساتها المحلية أو على مسارات نسبية صريحة بين المكونات.

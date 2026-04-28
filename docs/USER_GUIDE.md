@@ -1,6 +1,6 @@
 # Baa User Guide
 
-> **Version:** 0.5.2 | [← README](../README.md) | [Language Spec →](LANGUAGE.md)
+> **Version:** 0.5.3 | [← README](../README.md) | [Language Spec →](LANGUAGE.md)
 
 Welcome to Baa (باء)! This guide will help you write your first Arabic computer program and use the Baa compiler toolchain.
 
@@ -196,6 +196,9 @@ baa [options] <source.baa> [-o <output>]
 | `-c` | **Compile and Assemble.** Produces object file (`.o`), does not link. | `.\baa.exe -c main.baa` (creates `main.o`) |
 | `-v` | Enable verbose output (shows all compilation steps with timing). | `.\baa.exe -v main.baa` |
 | `--time-phases` | Print per-phase timing and memory statistics. | `.\baa.exe --time-phases -O2 main.baa` |
+| `--emit-build-manifest <file>` | Write a deterministic JSON dependency/build manifest. | `.\baa.exe --emit-build-manifest build.json main.baa` |
+| `--incremental` | Reuse cached object files when source/header content hashes and flags match. | `.\baa.exe --incremental main.baa lib.baa` |
+| `--cache-dir <dir>` | Override the incremental cache directory (default: `.baa_build/cache`). | `.\baa.exe --incremental --cache-dir .cache/baa main.baa` |
 | `--debug-info` | Emit debug line info and pass `-g` to toolchain. | `.\baa.exe --debug-info main.baa` |
 | `--asm-comments` | Emit explanatory comments in generated assembly (`-S`). | `.\baa.exe -S --asm-comments main.baa` |
 | `--help`, `-h` | Display help message and usage. | `.\baa.exe --help` |
@@ -246,6 +249,33 @@ baa [options] <source.baa> [-o <output>]
 - With `-S` or `-c`, output defaults to `<input>.s` / `<input>.o`.
 - `-o <file>` is only applied for `-S` / `-c` when compiling a single input file.
 - `update` must be used alone: `.\baa.exe update`
+
+### Build Manifests and Incremental Builds (v0.5.3)
+
+- `--emit-build-manifest <file>` writes JSON with compiler version, target, output mode, source files, canonical dependencies, content hashes, and cache status.
+- `--incremental` is opt-in and only affects object-producing builds (`-c` and normal link mode).
+- Cache hits are disabled for observable compiler/debug modes: IR dumps, `--emit-ir`, and verifier flags.
+- Header invalidation is content-hash based: changing a `#تضمين` file rebuilds only source units that depended on it.
+
+### CMake Build Profiles (v0.5.3)
+
+Preset-capable CMake versions can use:
+
+```powershell
+cmake --preset windows-dev
+cmake --build --preset windows-dev
+cmake --preset windows-verify
+cmake --build --preset windows-verify
+```
+
+```bash
+cmake --preset linux-dev
+cmake --build --preset linux-dev
+cmake --preset linux-verify
+cmake --build --preset linux-verify
+```
+
+`verify` presets enable warnings as errors and release/verify presets set a reproducible build date.
 
 ### Cross-Target Notes (v0.3.2.8.4+)
 

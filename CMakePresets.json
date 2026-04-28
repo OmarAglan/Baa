@@ -1,0 +1,104 @@
+{
+  "version": 3,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 21,
+    "patch": 0
+  },
+  "configurePresets": [
+    {
+      "name": "windows-dev",
+      "displayName": "Windows Dev",
+      "generator": "MinGW Makefiles",
+      "binaryDir": "${sourceDir}/build/presets/windows-dev",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Windows"
+      },
+      "cacheVariables": {
+        "BAA_ENABLE_WARNINGS": "ON",
+        "BAA_WARNINGS_AS_ERRORS": "OFF"
+      }
+    },
+    {
+      "name": "windows-debug",
+      "displayName": "Windows Debug",
+      "inherits": "windows-dev",
+      "binaryDir": "${sourceDir}/build/presets/windows-debug",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug"
+      }
+    },
+    {
+      "name": "windows-release",
+      "displayName": "Windows Release",
+      "inherits": "windows-dev",
+      "binaryDir": "${sourceDir}/build/presets/windows-release",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "BAA_REPRODUCIBLE_BUILD_DATE": "2026-04-28"
+      }
+    },
+    {
+      "name": "windows-verify",
+      "displayName": "Windows Verify",
+      "inherits": "windows-release",
+      "binaryDir": "${sourceDir}/build/presets/windows-verify",
+      "cacheVariables": {
+        "BAA_WARNINGS_AS_ERRORS": "ON"
+      }
+    },
+    {
+      "name": "linux-dev",
+      "displayName": "Linux Dev",
+      "generator": "Unix Makefiles",
+      "binaryDir": "${sourceDir}/build-linux/presets/dev",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Linux"
+      },
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "BAA_ENABLE_WARNINGS": "ON",
+        "BAA_WARNINGS_AS_ERRORS": "OFF"
+      }
+    },
+    {
+      "name": "linux-debug",
+      "displayName": "Linux Debug",
+      "inherits": "linux-dev",
+      "binaryDir": "${sourceDir}/build-linux/presets/debug"
+    },
+    {
+      "name": "linux-release",
+      "displayName": "Linux Release",
+      "inherits": "linux-dev",
+      "binaryDir": "${sourceDir}/build-linux/presets/release",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "BAA_REPRODUCIBLE_BUILD_DATE": "2026-04-28"
+      }
+    },
+    {
+      "name": "linux-verify",
+      "displayName": "Linux Verify",
+      "inherits": "linux-release",
+      "binaryDir": "${sourceDir}/build-linux/presets/verify",
+      "cacheVariables": {
+        "BAA_WARNINGS_AS_ERRORS": "ON"
+      }
+    }
+  ],
+  "buildPresets": [
+    { "name": "windows-dev", "configurePreset": "windows-dev" },
+    { "name": "windows-debug", "configurePreset": "windows-debug" },
+    { "name": "windows-release", "configurePreset": "windows-release" },
+    { "name": "windows-verify", "configurePreset": "windows-verify" },
+    { "name": "linux-dev", "configurePreset": "linux-dev" },
+    { "name": "linux-debug", "configurePreset": "linux-debug" },
+    { "name": "linux-release", "configurePreset": "linux-release" },
+    { "name": "linux-verify", "configurePreset": "linux-verify" }
+  ]
+}

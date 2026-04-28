@@ -84,6 +84,7 @@
                      l->state.filename = resolved_include_path;
                      l->state.line = 1;
                      l->state.col = 1;
+                     lex_record_dependency(l, resolved_include_path);
                      lex_skip_utf8_bom(&l->state);
                       error_register_source(l->state.filename, new_src);
                      

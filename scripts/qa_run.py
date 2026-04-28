@@ -378,6 +378,16 @@ def _run_module_size_guard(log_dir: Path) -> StepResult:
     return res
 
 
+def _run_build_profile_guard(log_dir: Path) -> StepResult:
+    return _run_logged(
+        "build-profile-guard",
+        [sys.executable, str(ROOT / "scripts" / "check_build_profiles.py")],
+        cwd=ROOT,
+        log_dir=log_dir,
+        timeout_s=MODULE_SIZE_TIMEOUT_S,
+    )
+
+
 def _write_summary(
     mode: str,
     compiler: Path | None,
@@ -444,6 +454,13 @@ def main() -> int:
         if not module_size_res.passed:
             return _write_summary(args.mode, baa, overall_ok, all_results, log_dir, args.summary_json)
 
+        build_profile_res = _run_build_profile_guard(log_dir)
+        _print_step(build_profile_res)
+        all_results.append(build_profile_res)
+        overall_ok = overall_ok and build_profile_res.passed
+        if not build_profile_res.passed:
+            return _write_summary(args.mode, baa, overall_ok, all_results, log_dir, args.summary_json)
+
     baa = _find_baa()
     print(f"qa: compiler={baa}")
 
@@ -478,6 +495,17 @@ def main() -> int:
         mf_ok, mf_results = _run_multifile_smoke(baa, log_dir)
         all_results.extend(mf_results)
         overall_ok = overall_ok and mf_ok
+
+        build_maturity_res = _run_logged(
+            "build-maturity",
+            [sys.executable, str(ROOT / "scripts" / "test_build_maturity.py")],
+            cwd=ROOT,
+            log_dir=log_dir,
+            timeout_s=120.0,
+        )
+        _print_step(build_maturity_res)
+        all_results.append(build_maturity_res)
+        overall_ok = overall_ok and build_maturity_res.passed
 
     if args.mode == "stress":
         stress_ok, stress_results = _run_stress_suite(baa, log_dir)

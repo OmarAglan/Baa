@@ -9,6 +9,8 @@
 
 #include "driver.h"
 
+typedef struct DriverBuildManifest DriverBuildManifest;
+
 /**
  * @brief ترجمة قائمة ملفات مصدر وفق إعدادات CompilerConfig.
  *
@@ -20,6 +22,7 @@ int driver_compile_files(const CompilerConfig *config,
                          char **input_files,
                          int input_count,
                          CompilerPhaseTimes *phase_times,
+                         DriverBuildManifest *build_manifest,
                          char ***out_obj_files,
                          int *out_obj_count);
 

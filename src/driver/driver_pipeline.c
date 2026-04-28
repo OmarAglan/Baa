@@ -172,12 +172,42 @@ static int compile_one_ir(const CompilerConfig *config,
                          int input_count,
                          const char *current_input,
                          CompilerPhaseTimes *phase_times,
+                         DriverBuildManifest *build_manifest,
                          char **out_obj_file)
 {
     if (out_obj_file) *out_obj_file = NULL;
 
     if (config->verbose)
         printf("\n[INFO] Processing %s...\n", current_input);
+
+    char *early_obj_file = NULL;
+    if (!config->assembly_only)
+    {
+        if (config->compile_only)
+        {
+            if (input_count == 1 && config->output_file)
+                early_obj_file = config->output_file;
+            else
+                early_obj_file = change_extension_alloc(current_input, ".o");
+        }
+        else
+        {
+            early_obj_file = driver_make_ascii_temp_path("obj", ".o");
+            if (!early_obj_file)
+            {
+                fprintf(stderr, "خطأ: فشل إنشاء مسار مؤقت ASCII لملف الكائن.\n");
+                return 1;
+            }
+        }
+
+        if (driver_build_try_reuse_object(config, current_input, early_obj_file, build_manifest))
+        {
+            if (config->verbose)
+                printf("[INFO] Reused cached object: %s\n", current_input);
+            if (out_obj_file) *out_obj_file = early_obj_file;
+            return 0;
+        }
+    }
 
     double t0 = 0.0;
     if (config->time_phases) t0 = driver_time_seconds();
@@ -188,12 +218,16 @@ static int compile_one_ir(const CompilerConfig *config,
     Lexer lexer;
     lexer_init(&lexer, source, current_input, config->include_dirs, config->include_dir_count);
     Node *ast = parse(&lexer);
+    size_t lexer_dep_count = 0;
+    const char* const* lexer_deps = lexer_get_dependencies(&lexer, &lexer_dep_count);
     if (config->time_phases) phase_times->parse_s += (driver_time_seconds() - t0);
 
     if (error_has_occurred())
     {
         fprintf(stderr, "Aborting %s due to syntax errors.\n", current_input);
+        lexer_free_dependencies(&lexer);
         free(source);
+        if (early_obj_file && early_obj_file != config->output_file) free(early_obj_file);
         return 1;
     }
 
@@ -203,7 +237,9 @@ static int compile_one_ir(const CompilerConfig *config,
     if (!analyze(ast))
     {
         fprintf(stderr, "Aborting %s due to semantic errors.\n", current_input);
+        lexer_free_dependencies(&lexer);
         free(source);
+        if (early_obj_file && early_obj_file != config->output_file) free(early_obj_file);
         return 1;
     }
     if (config->time_phases) phase_times->analyze_s += (driver_time_seconds() - t0);
@@ -211,7 +247,9 @@ static int compile_one_ir(const CompilerConfig *config,
     if (g_warning_config.warnings_as_errors && warning_has_occurred())
     {
         fprintf(stderr, "Aborting %s: warnings treated as errors (-Werror).\n", current_input);
+        lexer_free_dependencies(&lexer);
         free(source);
+        if (early_obj_file && early_obj_file != config->output_file) free(early_obj_file);
         return 1;
     }
 
@@ -221,7 +259,9 @@ static int compile_one_ir(const CompilerConfig *config,
     if (!ir_module)
     {
         fprintf(stderr, "Aborting %s: internal IR lowering failure.\n", current_input);
+        lexer_free_dependencies(&lexer);
         free(source);
+        if (early_obj_file && early_obj_file != config->output_file) free(early_obj_file);
         return 1;
     }
 
@@ -246,7 +286,9 @@ static int compile_one_ir(const CompilerConfig *config,
         fprintf(stderr,
                 "خطأ: --verify-gate يتطلب -O1 أو -O2 لأن بوابة التحقق تعمل داخل المُحسِّن.\n");
         ir_module_free(ir_module);
+        lexer_free_dependencies(&lexer);
         free(source);
+        if (early_obj_file && early_obj_file != config->output_file) free(early_obj_file);
         return 1;
     }
 
@@ -265,7 +307,9 @@ static int compile_one_ir(const CompilerConfig *config,
                 fprintf(stderr, "ملاحظة: قد يكون سبب الفشل هو بوابة التحقق (--verify-gate).\n");
             if (config->verify_gate) ir_optimizer_set_verify_gate(0);
             ir_module_free(ir_module);
+            lexer_free_dependencies(&lexer);
             free(source);
+            if (early_obj_file && early_obj_file != config->output_file) free(early_obj_file);
             return 1;
         }
 
@@ -290,7 +334,9 @@ static int compile_one_ir(const CompilerConfig *config,
         {
             fprintf(stderr, "فشل التحقق من سلامة الـ IR.\n");
             ir_module_free(ir_module);
+            lexer_free_dependencies(&lexer);
             free(source);
+            if (early_obj_file && early_obj_file != config->output_file) free(early_obj_file);
             return 1;
         }
         if (config->time_phases) phase_times->verify_ir_s += (driver_time_seconds() - t0);
@@ -303,7 +349,9 @@ static int compile_one_ir(const CompilerConfig *config,
             fprintf(stderr,
                     "خطأ: --verify-ssa يتطلب -O1 أو -O2 لأن SSA يُبنى عبر Mem2Reg داخل المُحسِّن.\n");
             ir_module_free(ir_module);
+            lexer_free_dependencies(&lexer);
             free(source);
+            if (early_obj_file && early_obj_file != config->output_file) free(early_obj_file);
             return 1;
         }
 
@@ -315,7 +363,9 @@ static int compile_one_ir(const CompilerConfig *config,
         {
             fprintf(stderr, "فشل التحقق من SSA.\n");
             ir_module_free(ir_module);
+            lexer_free_dependencies(&lexer);
             free(source);
+            if (early_obj_file && early_obj_file != config->output_file) free(early_obj_file);
             return 1;
         }
         if (config->time_phases) phase_times->verify_ssa_s += (driver_time_seconds() - t0);
@@ -327,7 +377,9 @@ static int compile_one_ir(const CompilerConfig *config,
     {
         fprintf(stderr, "فشل تمريرة الخروج من SSA.\n");
         ir_module_free(ir_module);
+        lexer_free_dependencies(&lexer);
         free(source);
+        if (early_obj_file && early_obj_file != config->output_file) free(early_obj_file);
         return 1;
     }
     (void)outssa_changed;
@@ -349,7 +401,9 @@ static int compile_one_ir(const CompilerConfig *config,
             {
                 fprintf(stderr, "فشل التحقق من سلامة الـ IR بعد فك الحلقات.\n");
                 ir_module_free(ir_module);
+                lexer_free_dependencies(&lexer);
                 free(source);
+                if (early_obj_file && early_obj_file != config->output_file) free(early_obj_file);
                 return 1;
             }
         }
@@ -365,7 +419,9 @@ static int compile_one_ir(const CompilerConfig *config,
     {
         fprintf(stderr, "Aborting %s: instruction selection failed.\n", current_input);
         ir_module_free(ir_module);
+        lexer_free_dependencies(&lexer);
         free(source);
+        if (early_obj_file && early_obj_file != config->output_file) free(early_obj_file);
         return 1;
     }
 
@@ -377,7 +433,9 @@ static int compile_one_ir(const CompilerConfig *config,
         fprintf(stderr, "Aborting %s: register allocation failed.\n", current_input);
         mach_module_free(mach_module);
         ir_module_free(ir_module);
+        lexer_free_dependencies(&lexer);
         free(source);
+        if (early_obj_file && early_obj_file != config->output_file) free(early_obj_file);
         return 1;
     }
     if (config->time_phases) phase_times->regalloc_s += (driver_time_seconds() - t0);
@@ -396,8 +454,10 @@ static int compile_one_ir(const CompilerConfig *config,
     {
         fprintf(stderr, "خطأ: فشل إنشاء مسار مؤقت ASCII لملف التجميع.\n");
         ir_module_free(ir_module);
+        lexer_free_dependencies(&lexer);
         free(source);
         driver_free_if_owned(final_asm_output, config->output_file);
+        if (early_obj_file && early_obj_file != config->output_file) free(early_obj_file);
         return 1;
     }
 
@@ -407,9 +467,11 @@ static int compile_one_ir(const CompilerConfig *config,
         printf("Error: Could not write assembly file '%s'\n", asm_file);
         mach_module_free(mach_module);
         ir_module_free(ir_module);
+        lexer_free_dependencies(&lexer);
         free(source);
         free(asm_file);
         driver_free_if_owned(final_asm_output, config->output_file);
+        if (early_obj_file && early_obj_file != config->output_file) free(early_obj_file);
         return 1;
     }
 
@@ -425,9 +487,11 @@ static int compile_one_ir(const CompilerConfig *config,
             fclose(f_asm);
             mach_module_free(mach_module);
             ir_module_free(ir_module);
+            lexer_free_dependencies(&lexer);
             free(source);
             free(asm_file);
             driver_free_if_owned(final_asm_output, config->output_file);
+            if (early_obj_file && early_obj_file != config->output_file) free(early_obj_file);
             return 1;
         }
     }
@@ -439,9 +503,11 @@ static int compile_one_ir(const CompilerConfig *config,
         fclose(f_asm);
         mach_module_free(mach_module);
         ir_module_free(ir_module);
+        lexer_free_dependencies(&lexer);
         free(source);
         free(asm_file);
         driver_free_if_owned(final_asm_output, config->output_file);
+        if (early_obj_file && early_obj_file != config->output_file) free(early_obj_file);
         return 1;
     }
     if (config->time_phases) phase_times->emit_s += (driver_time_seconds() - t0);
@@ -459,6 +525,8 @@ static int compile_one_ir(const CompilerConfig *config,
     }
 
     ir_module_free(ir_module);
+    const char* const* build_deps = lexer_deps;
+    size_t build_dep_count = lexer_dep_count;
     free(source);
 
     if (config->assembly_only)
@@ -477,6 +545,7 @@ static int compile_one_ir(const CompilerConfig *config,
         if (!final_asm_output) {
             fprintf(stderr, "خطأ: مسار خرج التجميع غير صالح.\n");
             free(asm_file);
+            lexer_free_dependencies(&lexer);
             return 1;
         }
 
@@ -485,6 +554,7 @@ static int compile_one_ir(const CompilerConfig *config,
             fprintf(stderr, "خطأ: فشل نسخ ملف التجميع إلى المسار الهدف '%s'.\n", final_asm_output);
             free(asm_file);
             driver_free_if_owned(final_asm_output, config->output_file);
+            lexer_free_dependencies(&lexer);
             return 1;
         }
 
@@ -492,31 +562,20 @@ static int compile_one_ir(const CompilerConfig *config,
             printf("[INFO] Generated assembly: %s\n", final_asm_output);
         if (!config->verbose)
             (void)driver_toolchain_delete_file_utf8(asm_file);
+        (void)driver_build_record_uncached(config,
+                                           current_input,
+                                           final_asm_output,
+                                           build_deps,
+                                           build_dep_count,
+                                           "assembly-only",
+                                           build_manifest);
         free(asm_file);
         driver_free_if_owned(final_asm_output, config->output_file);
+        lexer_free_dependencies(&lexer);
         return 0;
     }
 
-    char *obj_file;
-    if (config->compile_only)
-    {
-        if (input_count == 1 && config->output_file)
-            obj_file = config->output_file;
-        else
-            obj_file = change_extension_alloc(current_input, ".o");
-    }
-    else
-    {
-        obj_file = driver_make_ascii_temp_path("obj", ".o");
-        if (!obj_file)
-        {
-            fprintf(stderr, "خطأ: فشل إنشاء مسار مؤقت ASCII لملف الكائن.\n");
-            if (!config->verbose) (void)driver_toolchain_delete_file_utf8(asm_file);
-            free(asm_file);
-            driver_free_if_owned(final_asm_output, config->output_file);
-            return 1;
-        }
-    }
+    char *obj_file = early_obj_file;
 
     if (driver_toolchain_assemble_one(config, phase_times, asm_file, obj_file) != 0)
     {
@@ -524,6 +583,7 @@ static int compile_one_ir(const CompilerConfig *config,
         free(asm_file);
         if (obj_file != config->output_file) free(obj_file);
         driver_free_if_owned(final_asm_output, config->output_file);
+        lexer_free_dependencies(&lexer);
         return 1;
     }
 
@@ -534,6 +594,20 @@ static int compile_one_ir(const CompilerConfig *config,
     free(asm_file);
     driver_free_if_owned(final_asm_output, config->output_file);
 
+    if (!driver_build_update_cache(config,
+                                   current_input,
+                                   obj_file,
+                                   build_deps,
+                                   build_dep_count,
+                                   build_manifest))
+    {
+        fprintf(stderr, "خطأ: فشل تحديث بيان/كاش البناء.\n");
+        if (obj_file != config->output_file) free(obj_file);
+        lexer_free_dependencies(&lexer);
+        return 1;
+    }
+
+    lexer_free_dependencies(&lexer);
     if (out_obj_file) *out_obj_file = obj_file;
     return 0;
 }
@@ -542,6 +616,7 @@ int driver_compile_files(const CompilerConfig *config,
                          char **input_files,
                          int input_count,
                          CompilerPhaseTimes *phase_times,
+                         DriverBuildManifest *build_manifest,
                          char ***out_obj_files,
                          int *out_obj_count)
 {
@@ -570,7 +645,7 @@ int driver_compile_files(const CompilerConfig *config,
         const char *current_input = input_files[i];
         char *obj_file = NULL;
 
-        int rc = compile_one_ir(config, input_count, current_input, phase_times, &obj_file);
+        int rc = compile_one_ir(config, input_count, current_input, phase_times, build_manifest, &obj_file);
 
         if (rc != 0)
         {

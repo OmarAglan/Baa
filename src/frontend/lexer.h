@@ -173,6 +173,11 @@ typedef struct {
         unsigned char in_else;
     } if_stack[32];
     int if_depth;
+
+    // تبعيات البناء المكتشفة أثناء المعالجة القبلية (مسارات مطبعة ومملوكة)
+    char** dependency_paths;
+    size_t dependency_count;
+    size_t dependency_capacity;
 } Lexer;
 
 /**
@@ -195,5 +200,15 @@ Token lexer_next_token(Lexer* lexer);
  * @brief تحويل نوع الوحدة إلى نص مقروء.
  */
 const char* token_type_to_str(BaaTokenType type);
+
+/**
+ * @brief إرجاع قائمة تبعيات البناء المكتشفة للمصدر الحالي.
+ */
+const char* const* lexer_get_dependencies(const Lexer* lexer, size_t* out_count);
+
+/**
+ * @brief تحرير قائمة تبعيات البناء المملوكة للمحلل اللفظي.
+ */
+void lexer_free_dependencies(Lexer* lexer);
 
 #endif

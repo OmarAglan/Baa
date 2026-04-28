@@ -1330,10 +1330,12 @@ Partial status update (2026-03-06):
 
 ### v0.5.1: Language + ABI Freeze 🔒
 
-- [ ] **Freeze grammar surface** — avoid syntax churn before bootstrap.
-- [ ] **Freeze stdlib signatures** — lock callable contracts used by compiler-in-Baa.
-- [ ] **Freeze target ABI contracts** — Windows x64 + SystemV AMD64 invariants.
-- [ ] **Freeze IR invariants** — verifier-enforced guarantees documented.
+- [x] **Freeze grammar surface** — avoid syntax churn before bootstrap.
+- [x] **Freeze stdlib signatures** — lock callable contracts used by compiler-in-Baa.
+- [x] **Freeze target ABI contracts** — Windows x64 + SystemV AMD64 invariants.
+- [x] **Freeze IR invariants** — verifier-enforced guarantees documented.
+
+✅ COMPLETED (2026-04-28)
 
 ### v0.5.2: Module & Multi-File Hardening 📦
 
@@ -1395,7 +1397,7 @@ Partial status update (2026-03-06):
 #### Phase 4.5 Required Artifacts
 
 - [x] `docs/COMPONENT_OWNERSHIP.md` — boundaries + owners + allowed dependencies.
-- [ ] `docs/BOOTSTRAP_CONTRACT.md` — frozen ABI/IR/language requirements for v0.9.
+- [x] `docs/BOOTSTRAP_CONTRACT.md` — frozen ABI/IR/language requirements for v0.9.
 - [ ] `docs/BAA0_SPEC.md` — bootstrap subset definition and exclusions.
 - [ ] `scripts/qa_bootstrap_gate.py` — one-command admission checks for Phase 5.
 - [ ] `tests/bootstrap/` — parity corpus dedicated to migration from C → Baa slices.

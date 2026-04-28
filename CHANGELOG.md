@@ -29,6 +29,24 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
   - top-level functions remain externally visible across translation units by default and are consumed through prototypes in `.baahd` headers.
   - top-level `ساكن` globals and arrays continue to lower with file-local internal linkage.
   - QA now includes dedicated multi-file visibility smoke coverage to lock this behavior.
+- **Version metadata synchronization**:
+  - Project metadata, installer metadata, Windows resource metadata, and documentation headers now report `0.5.2`.
+
+## [0.5.1] - 2026-04-28
+
+**Language + ABI Freeze**
+
+### Added
+
+- **Bootstrap contract**:
+  - Added `docs/BOOTSTRAP_CONTRACT.md` as the Phase 4.5 freeze contract for bootstrap readiness.
+  - The contract freezes the implemented grammar surface, stdlib callable signatures, Windows x64/SystemV AMD64 ABI invariants, and verifier-enforced IR guarantees.
+
+### Changed
+
+- **Roadmap status**:
+  - Marked `v0.5.1` freeze tasks complete.
+  - Marked `docs/BOOTSTRAP_CONTRACT.md` as the published freeze artifact for later Phase 5 admission work.
 
 ## [0.5.0] - 2026-03-06
 

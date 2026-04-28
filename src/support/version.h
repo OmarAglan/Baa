@@ -6,7 +6,7 @@
 #ifndef BAA_VERSION_H
 #define BAA_VERSION_H
 
-#define BAA_VERSION "0.4.4.1"
+#define BAA_VERSION "0.5.2"
 #define BAA_BUILD_DATE __DATE__
 
 #endif

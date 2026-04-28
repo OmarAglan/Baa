@@ -1,6 +1,6 @@
 # Baa Internal API Reference
 
-> **Version:** 0.4.4.1 | [← Compiler Internals](INTERNALS.md) | [IR Specification →](BAA_IR_SPECIFICATION.md)
+> **Version:** 0.5.2 | [← Compiler Internals](INTERNALS.md) | [IR Specification →](BAA_IR_SPECIFICATION.md)
 
 This document details the C functions, enumerations, and structures defined in the current component-owned public headers under `src/frontend/`, `src/support/`, `src/middleend/`, and `src/backend/`. `src/baa.h` remains as a compatibility umbrella over the frontend/support public surface.
 

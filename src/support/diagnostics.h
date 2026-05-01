@@ -33,13 +33,27 @@ typedef struct {
     bool colored_output;
 } WarningConfig;
 
+/**
+ * @struct DiagnosticSpan
+ * @brief نطاق تشخيص داخل سطر واحد. end_col حد حصري.
+ */
+typedef struct {
+    const char* filename;
+    int line;
+    int col;
+    int end_col;
+} DiagnosticSpan;
+
 extern WarningConfig g_warning_config;
 
 void error_init(const char* source);
 void error_register_source(const char* filename, const char* source);
 void warning_init(void);
 void error_report_loc(const char* filename, int line, int col, const char* message, ...);
+void error_report_span(DiagnosticSpan span, const char* message, ...);
+void error_report_span_hint(DiagnosticSpan span, const char* hint, const char* message, ...);
 void warning_report(WarningType type, const char* filename, int line, int col, const char* message, ...);
+void warning_report_span(WarningType type, DiagnosticSpan span, const char* message, ...);
 bool error_has_occurred(void);
 bool warning_has_occurred(void);
 int warning_get_count(void);
@@ -51,5 +65,14 @@ void warning_reset(void);
  */
 #define error_report(token_like, ...) \
     error_report_loc((token_like).filename, (token_like).line, (token_like).col, __VA_ARGS__)
+
+#define error_report_token(token_like, ...) \
+    error_report_span((DiagnosticSpan){(token_like).filename, (token_like).line, (token_like).col, \
+                      (token_like).col + ((token_like).length > 0 ? (token_like).length : 1)}, __VA_ARGS__)
+
+#define error_report_token_hint(token_like, hint_text, ...) \
+    error_report_span_hint((DiagnosticSpan){(token_like).filename, (token_like).line, (token_like).col, \
+                           (token_like).col + ((token_like).length > 0 ? (token_like).length : 1)}, \
+                           hint_text, __VA_ARGS__)
 
 #endif

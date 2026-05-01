@@ -1,6 +1,6 @@
 # Baa Compiler Internals
 
-> **Version:** 0.5.3 | [← Language Spec](LANGUAGE.md) | [API Reference →](API_REFERENCE.md)
+> **Version:** 0.5.4 | [← Language Spec](LANGUAGE.md) | [API Reference →](API_REFERENCE.md)
 
 **Target Architecture:** x86-64 (AMD64)
 **Targets:** Windows x64 (COFF/PE) + Linux x86-64 (ELF)
@@ -257,10 +257,13 @@ The compiler uses a centralized **Diagnostic Module** (`src/error.c`) to handle 
 
 Note (v0.3.2.9.4): semantic analysis errors now use `error_report(...)` as well, so semantic diagnostics include `file:line:col` and source context like parser errors.
 
+Note (v0.5.4): diagnostics support single-line spans and optional Arabic `مساعدة:` hint lines. Lexer tokens and AST nodes carry token byte length so parser/semantic diagnostics can underline complete offending tokens. Negative tests can also lock cascade behavior with `// EXPECT-NOT:` and `// EXPECT-DIAG-COUNT:`.
+
 **Error Features:**
 
 - **Source Context**: Prints the actual line of code where the error occurred.
-- **Pointers**: Uses `^` to point exactly to the offending token.
+- **Pointers/Spans**: Uses `^` to point to or underline the offending token.
+- **Hints**: Emits Arabic-first `مساعدة:` lines for curated common syntax and semantic errors.
 - **Colored Output**: Errors displayed in red (ANSI) when terminal supports it (v0.2.8+).
 - **Panic Mode Recovery (v0.3.7)**: When a syntax error is found, the parser does not exit immediately. It reports the error, enters panic mode, then synchronizes by context:
     1. **Statement mode**: sync on `.`, `}` and statement starters.

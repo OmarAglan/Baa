@@ -357,7 +357,10 @@ static void analyze_node(Node* node) {
         case NODE_ASSIGN: {
             Symbol* sym = lookup(node->data.assign_stmt.name, true); // تعليم كمستخدم
             if (!sym) {
-                semantic_error(node, "إسناد إلى متغير غير معرّف '%s'.", node->data.assign_stmt.name);
+                semantic_error_hint(node,
+                                    "عرّف المتغير قبل استخدامه أو صحح اسم المتغير.",
+                                    "إسناد إلى متغير غير معرّف '%s'.",
+                                    node->data.assign_stmt.name);
             } else {
                 if (sym->is_array) {
                     semantic_error(node, "لا يمكن تعيين قيمة للمصفوفة '%s' مباشرة (استخدم الفهرسة).", sym->name);
@@ -367,7 +370,10 @@ static void analyze_node(Node* node) {
                 }
                 // التحقق من الثوابت: لا يمكن إعادة تعيين قيمة ثابت
                 if (sym->is_const) {
-                    semantic_error(node, "لا يمكن إعادة إسناد الثابت '%s'.", node->data.assign_stmt.name);
+                    semantic_error_hint(node,
+                                        "استخدم متغيراً غير ثابت إذا كانت القيمة ستتغير.",
+                                        "لا يمكن إعادة إسناد الثابت '%s'.",
+                                        node->data.assign_stmt.name);
                 }
                 DataType exprType = infer_type_allow_null_string(node->data.assign_stmt.expression, sym->type);
                 if (sym->type == TYPE_ENUM) {
@@ -726,7 +732,10 @@ static void analyze_node(Node* node) {
                     break;
                 }
                 if (!fs) {
-                    semantic_error(node, "استدعاء دالة غير معرّفة '%s'.", fname ? fname : "???");
+                    semantic_error_hint(node,
+                                        "عرّف الدالة قبل ندائها أو أضف نموذجها الأولي في ملف مضمّن.",
+                                        "استدعاء دالة غير معرّفة '%s'.",
+                                        fname ? fname : "???");
                     analyze_consume_call_args(node->data.call.args);
                     break;
                 }

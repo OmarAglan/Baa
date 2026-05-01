@@ -162,6 +162,7 @@ typedef struct Node {
     const char* filename;
     int line;
     int col;
+    int length;
 
     // النوع المُستنتَج أثناء التحليل الدلالي للتعبيرات.
     // يُستخدم في خفض IR لتحديد حجم/إشارة العمليات.

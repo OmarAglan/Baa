@@ -1,6 +1,6 @@
 # Baa User Guide
 
-> **Version:** 0.5.3 | [← README](../README.md) | [Language Spec →](LANGUAGE.md)
+> **Version:** 0.5.4 | [← README](../README.md) | [Language Spec →](LANGUAGE.md)
 
 Welcome to Baa (باء)! This guide will help you write your first Arabic computer program and use the Baa compiler toolchain.
 
@@ -958,6 +958,8 @@ Test files can include special comments:
 
 - `// RUN:` - Test contract: `expect-pass`, `expect-fail`, `runtime`, `compile-only`, `skip`
 - `// EXPECT:` - Required diagnostic substring(s) for negative tests
+- `// EXPECT-NOT:` - Forbidden diagnostic substring(s) for negative tests
+- `// EXPECT-DIAG-COUNT:` - Required number of emitted `[Error]`/`[Warning]` diagnostics
 - `// FLAGS:` - Extra compiler flags for that specific test file
 
 ---
@@ -969,11 +971,11 @@ Test files can include special comments:
 | Error | Cause | Solution |
 |-------|-------|----------|
 | `خطأ لفظي: ...` | Unsupported byte, malformed UTF-8, or malformed literal | Ensure the file is UTF-8 and literals are closed correctly |
-| `خطأ نحوي: ...` | Missing token (`.`/`}`/`)`), or malformed statement/declaration | Fix the reported token location; parser recovery may report multiple related errors |
+| `خطأ نحوي: ...` | Missing token (`.`/`}`/`)`), or malformed statement/declaration | Fix the reported token location; `مساعدة:` lines may suggest the common fix |
 | `[Error] <file>:<line>:<col>: ...` | Syntax error (parser) | Check for missing `.` at statement end, missing `}`, or unmatched parentheses |
-| `[Semantic Error] ... متغير غير معرّف ...` | Variable used before declaration | Declare variables before using them |
+| `[Error] ... خطأ دلالي: ... متغير غير معرّف ...` | Variable used before declaration | Declare variables before using them or correct the name |
 | `[Semantic Error] ... عدم تطابق أنواع ...` | Assigning wrong type | Keep assignment/call/return types compatible |
-| `[Semantic Error] ... ثابت ...` | Modifying a constant | Constants declared with `ثابت` cannot be changed after initialization |
+| `[Error] ... خطأ دلالي: ... ثابت ...` | Modifying a constant | Constants declared with `ثابت` cannot be changed after initialization |
 | `Aborting <file> due to syntax errors.` | Parser reported one or more errors | Fix reported `[Error]` diagnostics and recompile |
 | `Aborting <file> due to semantic errors.` | Analyzer reported one or more errors | Fix reported `[Semantic Error]` messages and recompile |
 

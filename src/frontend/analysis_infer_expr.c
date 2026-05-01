@@ -188,7 +188,10 @@ static DataType infer_type_internal(Node* node) {
                                    node->data.var_ref.name ? node->data.var_ref.name : "???");
                     return TYPE_FUNC_PTR;
                 }
-                semantic_error(node, "متغير غير معرّف '%s'.", node->data.var_ref.name);
+                semantic_error_hint(node,
+                                    "عرّف المتغير قبل استخدامه أو صحح اسم المتغير.",
+                                    "متغير غير معرّف '%s'.",
+                                    node->data.var_ref.name);
                 return TYPE_INT; // استرداد الخطأ
             }
             if (sym->is_array) {
@@ -428,7 +431,10 @@ static DataType infer_type_internal(Node* node) {
                 }
 
                 if (!fs) {
-                    semantic_error(node, "استدعاء دالة غير معرّفة '%s'.", fname ? fname : "???");
+                    semantic_error_hint(node,
+                                        "عرّف الدالة قبل ندائها أو أضف نموذجها الأولي في ملف مضمّن.",
+                                        "استدعاء دالة غير معرّفة '%s'.",
+                                        fname ? fname : "???");
                     // ما زلنا نستنتج أنواع الوسائط لاكتشاف أخطاء أخرى.
                     analyze_consume_call_args(node->data.call.args);
                     return TYPE_INT;

@@ -1,4 +1,4 @@
-﻿Token lexer_next_token(Lexer* l) {
+Token lexer_next_token(Lexer* l) {
     Token token = {0};
     
     // 0. حلقة لتجاوز المسافات ومعالجة التضمين
@@ -238,7 +238,7 @@
             token.filename = l->state.filename;
             token.line = l->state.line;
             token.col = l->state.col;
-            return token;
+            return lex_finish_token(l, token);
         }
 
         // إذا كنا في وضع التخطي، نتجاهل كل شيء حتى نجد #
@@ -330,7 +330,7 @@
         advance_pos(l); // تخطي " النهاية
         token.type = TOKEN_STRING;
         token.value = str;
-        return token;
+        return lex_finish_token(l, token);
     }
 
     // --- معالجة الحروف ('...') ---
@@ -383,14 +383,14 @@
         if (blen) memcpy(val, bytes, (size_t)blen);
         val[blen] = '\0';
         token.value = val;
-        return token;
+        return lex_finish_token(l, token);
     }
 
     // معالجة الفاصلة المنقوطة العربية (؛)
     if ((unsigned char)*current == 0xD8 && (unsigned char)*(l->state.cur_char+1) == 0x9B) {
         token.type = TOKEN_SEMICOLON;
         l->state.cur_char += 2; l->state.col += 2; 
-        return token;
+        return lex_finish_token(l, token);
     }
 
     // معالجة الفاصلة العربية (،)
@@ -398,7 +398,7 @@
         token.type = TOKEN_COMMA;
         l->state.cur_char += 2;
         l->state.col += 2;
-        return token;
+        return lex_finish_token(l, token);
     }
 
     // معالجة الرموز والعمليات
@@ -407,91 +407,91 @@
             token.type = TOKEN_ELLIPSIS;
             l->state.cur_char += 3;
             l->state.col += 3;
-            return token;
+            return lex_finish_token(l, token);
         }
         token.type = TOKEN_DOT;
         advance_pos(l);
-        return token;
+        return lex_finish_token(l, token);
     }
-    if (*current == ',') { token.type = TOKEN_COMMA; advance_pos(l); return token; }
-    if (*current == ':') { token.type = TOKEN_COLON; advance_pos(l); return token; }
+    if (*current == ',') { token.type = TOKEN_COMMA; advance_pos(l); return lex_finish_token(l, token); }
+    if (*current == ':') { token.type = TOKEN_COLON; advance_pos(l); return lex_finish_token(l, token); }
     
     // الجمع والزيادة (++ و +)
     if (*current == '+') { 
         if (*(l->state.cur_char+1) == '+') {
-            token.type = TOKEN_INC; l->state.cur_char += 2; l->state.col += 2; return token;
+            token.type = TOKEN_INC; l->state.cur_char += 2; l->state.col += 2; return lex_finish_token(l, token);
         }
-        token.type = TOKEN_PLUS; advance_pos(l); return token; 
+        token.type = TOKEN_PLUS; advance_pos(l); return lex_finish_token(l, token); 
     }
     
     // الطرح والنقصان (-- و -)
     if (*current == '-') { 
         if (*(l->state.cur_char+1) == '-') {
-            token.type = TOKEN_DEC; l->state.cur_char += 2; l->state.col += 2; return token;
+            token.type = TOKEN_DEC; l->state.cur_char += 2; l->state.col += 2; return lex_finish_token(l, token);
         }
-        token.type = TOKEN_MINUS; advance_pos(l); return token; 
+        token.type = TOKEN_MINUS; advance_pos(l); return lex_finish_token(l, token); 
     }
 
-    if (*current == '*') { token.type = TOKEN_STAR; advance_pos(l); return token; }
-    if (*current == '/') { token.type = TOKEN_SLASH; advance_pos(l); return token; }
-    if (*current == '%') { token.type = TOKEN_PERCENT; advance_pos(l); return token; }
-    if (*current == '(') { token.type = TOKEN_LPAREN; advance_pos(l); return token; }
-    if (*current == ')') { token.type = TOKEN_RPAREN; advance_pos(l); return token; }
-    if (*current == '{') { token.type = TOKEN_LBRACE; advance_pos(l); return token; }
-    if (*current == '}') { token.type = TOKEN_RBRACE; advance_pos(l); return token; }
-    if (*current == '[') { token.type = TOKEN_LBRACKET; advance_pos(l); return token; }
-    if (*current == ']') { token.type = TOKEN_RBRACKET; advance_pos(l); return token; }
+    if (*current == '*') { token.type = TOKEN_STAR; advance_pos(l); return lex_finish_token(l, token); }
+    if (*current == '/') { token.type = TOKEN_SLASH; advance_pos(l); return lex_finish_token(l, token); }
+    if (*current == '%') { token.type = TOKEN_PERCENT; advance_pos(l); return lex_finish_token(l, token); }
+    if (*current == '(') { token.type = TOKEN_LPAREN; advance_pos(l); return lex_finish_token(l, token); }
+    if (*current == ')') { token.type = TOKEN_RPAREN; advance_pos(l); return lex_finish_token(l, token); }
+    if (*current == '{') { token.type = TOKEN_LBRACE; advance_pos(l); return lex_finish_token(l, token); }
+    if (*current == '}') { token.type = TOKEN_RBRACE; advance_pos(l); return lex_finish_token(l, token); }
+    if (*current == '[') { token.type = TOKEN_LBRACKET; advance_pos(l); return lex_finish_token(l, token); }
+    if (*current == ']') { token.type = TOKEN_RBRACKET; advance_pos(l); return lex_finish_token(l, token); }
 
     // معالجة العمليات المنطقية/البتية (&&، ||، !، &، |، ^، ~)
     if (*current == '&') {
         if (*(l->state.cur_char+1) == '&') {
-            token.type = TOKEN_AND; l->state.cur_char += 2; l->state.col += 2; return token;
+            token.type = TOKEN_AND; l->state.cur_char += 2; l->state.col += 2; return lex_finish_token(l, token);
         }
-        token.type = TOKEN_AMP; advance_pos(l); return token;
+        token.type = TOKEN_AMP; advance_pos(l); return lex_finish_token(l, token);
     }
     if (*current == '|') {
         if (*(l->state.cur_char+1) == '|') {
-            token.type = TOKEN_OR; l->state.cur_char += 2; l->state.col += 2; return token;
+            token.type = TOKEN_OR; l->state.cur_char += 2; l->state.col += 2; return lex_finish_token(l, token);
         }
-        token.type = TOKEN_PIPE; advance_pos(l); return token;
+        token.type = TOKEN_PIPE; advance_pos(l); return lex_finish_token(l, token);
     }
     if (*current == '^') {
-        token.type = TOKEN_CARET; advance_pos(l); return token;
+        token.type = TOKEN_CARET; advance_pos(l); return lex_finish_token(l, token);
     }
     if (*current == '~') {
-        token.type = TOKEN_TILDE; advance_pos(l); return token;
+        token.type = TOKEN_TILDE; advance_pos(l); return lex_finish_token(l, token);
     }
     if (*current == '!') {
         if (*(l->state.cur_char+1) == '=') {
-            token.type = TOKEN_NEQ; l->state.cur_char += 2; l->state.col += 2; return token;
+            token.type = TOKEN_NEQ; l->state.cur_char += 2; l->state.col += 2; return lex_finish_token(l, token);
         }
-        token.type = TOKEN_NOT; advance_pos(l); return token;
+        token.type = TOKEN_NOT; advance_pos(l); return lex_finish_token(l, token);
     }
 
     // معالجة عمليات المقارنة والتعيين (=، ==، <، <=، >، >=)
     if (*current == '=') { 
         if (*(l->state.cur_char+1) == '=') {
-            token.type = TOKEN_EQ; l->state.cur_char += 2; l->state.col += 2; return token;
+            token.type = TOKEN_EQ; l->state.cur_char += 2; l->state.col += 2; return lex_finish_token(l, token);
         }
-        token.type = TOKEN_ASSIGN; advance_pos(l); return token; 
+        token.type = TOKEN_ASSIGN; advance_pos(l); return lex_finish_token(l, token); 
     }
     if (*current == '<') {
         if (*(l->state.cur_char+1) == '<') {
-            token.type = TOKEN_SHL; l->state.cur_char += 2; l->state.col += 2; return token;
+            token.type = TOKEN_SHL; l->state.cur_char += 2; l->state.col += 2; return lex_finish_token(l, token);
         }
         if (*(l->state.cur_char+1) == '=') {
-            token.type = TOKEN_LTE; l->state.cur_char += 2; l->state.col += 2; return token;
+            token.type = TOKEN_LTE; l->state.cur_char += 2; l->state.col += 2; return lex_finish_token(l, token);
         }
-        token.type = TOKEN_LT; advance_pos(l); return token;
+        token.type = TOKEN_LT; advance_pos(l); return lex_finish_token(l, token);
     }
     if (*current == '>') {
         if (*(l->state.cur_char+1) == '>') {
-            token.type = TOKEN_SHR; l->state.cur_char += 2; l->state.col += 2; return token;
+            token.type = TOKEN_SHR; l->state.cur_char += 2; l->state.col += 2; return lex_finish_token(l, token);
         }
         if (*(l->state.cur_char+1) == '=') {
-            token.type = TOKEN_GTE; l->state.cur_char += 2; l->state.col += 2; return token;
+            token.type = TOKEN_GTE; l->state.cur_char += 2; l->state.col += 2; return lex_finish_token(l, token);
         }
-        token.type = TOKEN_GT; advance_pos(l); return token;
+        token.type = TOKEN_GT; advance_pos(l); return lex_finish_token(l, token);
     }
 
     // معالجة الأرقام
@@ -550,11 +550,11 @@
 
             token.type = TOKEN_FLOAT;
             token.value = strdup(buffer);
-            return token;
+            return lex_finish_token(l, token);
         }
 
         token.value = strdup(buffer);
-        return token;
+        return lex_finish_token(l, token);
     }
 
     // معالجة المعرفات والكلمات المفتاحية
@@ -634,7 +634,7 @@
                 }
             }
             free(word);
-            return token;
+            return lex_finish_token(l, token);
         }
 
         // 2. الكلمات المفتاحية المحجوزة
@@ -678,16 +678,16 @@
         else {
             token.type = TOKEN_IDENTIFIER;
             token.value = word;
-            return token;
+            return lex_finish_token(l, token);
         }
         free(word);
-        return token;
+        return lex_finish_token(l, token);
     }
 
     // إذا وصلنا لهنا، فهذا يعني وجود محرف غير معروف
     token.type = TOKEN_INVALID;
     lex_fatal(l, "خطأ لفظي: بايت غير معروف 0x%02X.", (unsigned char)*current);
-    return token;
+    return lex_finish_token(l, token);
 }
 
 /**

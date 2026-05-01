@@ -213,7 +213,9 @@ Node* parse_primary() {
     }
     else {
         if (!parser.panic_mode) {
-            error_report(parser.current, "متوقع تعبير.");
+            error_report_token_hint(parser.current,
+                                    "ابدأ التعبير بعدد أو معرّف أو '(' أو قيمة منطقية.",
+                                    "متوقع تعبير.");
             parser.panic_mode = true;
         }
         return NULL;

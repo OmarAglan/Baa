@@ -24,6 +24,8 @@ Supported line markers inside `.baa` files:
 
 - `// RUN:` execution contract (`expect-pass`, `expect-fail`, `runtime`, `compile-only`, `skip`)
 - `// EXPECT:` required stderr marker for expected-fail tests
+- `// EXPECT-NOT:` stderr marker that must not appear in expected-fail tests
+- `// EXPECT-DIAG-COUNT:` exact `[Error]`/`[Warning]` diagnostic count for expected-fail tests
 - `// FLAGS:` extra compiler flags for this test
 
 ## Runner Entry Points

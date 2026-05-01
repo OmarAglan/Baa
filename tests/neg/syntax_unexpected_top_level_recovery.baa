@@ -1,0 +1,4 @@
+// EXPECT: متوقع تصريح
+// EXPECT: ابدأ التصريح بنوع
+// EXPECT-DIAG-COUNT: 1
+إرجع 0.

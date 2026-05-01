@@ -271,6 +271,45 @@ static bool parse_int_token_checked(Token tok, int64_t* out_value) {
     return true;
 }
 
+static const char* parser_hint_for_expected(BaaTokenType type)
+{
+    switch (type) {
+        case TOKEN_DOT:
+            return "أضف '.' في نهاية الجملة.";
+        case TOKEN_SEMICOLON:
+            return "أضف '؛' في هذا الموضع.";
+        case TOKEN_RPAREN:
+            return "أغلق القوس بإضافة ')'.";
+        case TOKEN_RBRACE:
+            return "أغلق الكتلة بإضافة '}'.";
+        case TOKEN_LBRACE:
+            return "افتح كتلة التعليمات بإضافة '{'.";
+        case TOKEN_RBRACKET:
+            return "أغلق فهرس المصفوفة بإضافة ']'.";
+        default:
+            return NULL;
+    }
+}
+
+static void parser_error_expected_current(BaaTokenType type)
+{
+    const char* found_text = parser.current.value ? parser.current.value :
+                             token_type_to_str(parser.current.type);
+    const char* hint = parser_hint_for_expected(type);
+
+    if (hint) {
+        error_report_token_hint(parser.current, hint,
+                                "متوقع '%s' لكن وُجد '%s'.",
+                                token_type_to_str(type),
+                                found_text);
+    } else {
+        error_report_token(parser.current,
+                           "متوقع '%s' لكن وُجد '%s'.",
+                           token_type_to_str(type),
+                           found_text);
+    }
+}
+
 // ============================================================================
 // مساعدات إنشاء عقد AST مع معلومات الموقع (Debug Locations)
 // ============================================================================
@@ -287,6 +326,7 @@ static Node* ast_node_new(NodeType type, Token tok) {
     n->filename = tok.filename;
     n->line = tok.line;
     n->col = tok.col;
+    n->length = tok.length > 0 ? tok.length : 1;
     return n;
 }
 
@@ -303,12 +343,7 @@ void eat(BaaTokenType type) {
     
     parser.panic_mode = true;
     
-    // تحسين رسالة الخطأ
-    // إذا كانت الوحدة الحالية لها قيمة نصية (مثل اسم متغير)، اعرضها
-    // وإلا اعرض نوعها كنص
-    const char* found_text = parser.current.value ? parser.current.value : token_type_to_str(parser.current.type);
-    
-    error_report(parser.current, "متوقع '%s' لكن وُجد '%s'.", token_type_to_str(type), found_text);
+    parser_error_expected_current(type);
 }
 
 /**
@@ -351,6 +386,7 @@ Node* parse(Lexer* l) {
     tok_program.filename = l ? l->state.filename : NULL;
     tok_program.line = 1;
     tok_program.col = 1;
+    tok_program.length = 1;
 
     Node* program = ast_node_new(NODE_PROGRAM, tok_program);
     if (!program) return NULL;

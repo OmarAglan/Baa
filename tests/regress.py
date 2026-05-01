@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import re
 import shlex
 import subprocess
 import sys
@@ -71,6 +72,34 @@ def _expected_markers(src: Path) -> list[str]:
     except Exception:
         return []
     return markers
+
+
+def _expected_not_markers(src: Path) -> list[str]:
+    markers: list[str] = []
+    try:
+        for line in src.read_text(encoding="utf-8", errors="replace").splitlines():
+            s = line.strip()
+            if s.startswith("// EXPECT-NOT:"):
+                markers.append(s.split(":", 1)[1].strip())
+    except Exception:
+        return []
+    return markers
+
+
+def _expected_diag_count(src: Path) -> int | None:
+    try:
+        for line in src.read_text(encoding="utf-8", errors="replace").splitlines():
+            s = line.strip()
+            if s.startswith("// EXPECT-DIAG-COUNT:"):
+                raw = s.split(":", 1)[1].strip()
+                return int(raw)
+    except Exception:
+        return None
+    return None
+
+
+def _diagnostic_count(stderr_text: str) -> int:
+    return len(re.findall(r"(?m)^\[(?:Error|Warning)\]", stderr_text or ""))
 
 
 def _flags_markers(src: Path) -> list[str]:
@@ -200,6 +229,8 @@ def main() -> int:
         for src in neg:
             src_rel = src.relative_to(ROOT)
             markers = _expected_markers(src)
+            not_markers = _expected_not_markers(src)
+            expected_diag_count = _expected_diag_count(src)
             flags = _flags_markers(src)
             run_markers = _run_markers(src)
             if "skip" in run_markers:
@@ -237,6 +268,18 @@ def main() -> int:
                 for m in markers:
                     if m and m not in se:
                         print(f"regress: FAIL (neg missing marker '{m}'): {src_rel}")
+                        return 1
+                for m in not_markers:
+                    if m and m in se:
+                        print(f"regress: FAIL (neg forbidden marker '{m}'): {src_rel}")
+                        return 1
+                if expected_diag_count is not None:
+                    actual = _diagnostic_count(se)
+                    if actual != expected_diag_count:
+                        print(
+                            f"regress: FAIL (neg diagnostic count {actual}, "
+                            f"expected {expected_diag_count}): {src_rel}"
+                        )
                         return 1
             else:
                 if p.returncode != 0:

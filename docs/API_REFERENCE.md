@@ -1,6 +1,6 @@
 # Baa Internal API Reference
 
-> **Version:** 0.5.3 | [← Compiler Internals](INTERNALS.md) | [IR Specification →](BAA_IR_SPECIFICATION.md)
+> **Version:** 0.5.4 | [← Compiler Internals](INTERNALS.md) | [IR Specification →](BAA_IR_SPECIFICATION.md)
 
 This document details the C functions, enumerations, and structures defined in the current component-owned public headers under `src/frontend/`, `src/support/`, `src/middleend/`, and `src/backend/`. `src/baa.h` remains as a compatibility umbrella over the frontend/support public surface.
 
@@ -66,6 +66,8 @@ Supported in test files:
   - `compile-only`
   - `skip`
 - `// EXPECT:` negative diagnostic anchor(s)
+- `// EXPECT-NOT:` forbidden negative diagnostic anchor(s)
+- `// EXPECT-DIAG-COUNT:` exact negative diagnostic count
 - `// FLAGS:` per-test compiler flags
 - `// ARGS:` runtime execution arguments (one line; passed to the produced executable)
 - `// STDIN:` stdin lines for runtime tests (may appear multiple times; joined with `\n` and a trailing newline is appended)
@@ -3897,6 +3899,8 @@ Registers a source file for use when printing error/warning context.
 
 ```c
 void error_report_loc(const char* filename, int line, int col, const char* message, ...)
+void error_report_span(DiagnosticSpan span, const char* message, ...)
+void error_report_span_hint(DiagnosticSpan span, const char* hint, const char* message, ...)
 ```
 
 Reports an error with source location, line context, and a pointer to the error position.
@@ -3908,10 +3912,22 @@ The compatibility surface used throughout the compiler is still:
     error_report_loc((token_like).filename, (token_like).line, (token_like).col, __VA_ARGS__)
 ```
 
+Span-aware callers can pass:
+
+```c
+typedef struct {
+    const char* filename;
+    int line;
+    int col;
+    int end_col;
+} DiagnosticSpan;
+```
+
 **Features:**
 
 - Displays filename, line, and column
-- Shows the actual source line with a `^` pointer
+- Shows the actual source line with a `^` pointer or span-width underline
+- Supports Arabic `مساعدة:` hint lines for curated common errors
 - Supports printf-style formatting
 - **Colored output** (red) when terminal supports ANSI codes (v0.2.8+)
 
@@ -3929,6 +3945,7 @@ Initializes the warning configuration with default settings. Called automaticall
 
 ```c
 void warning_report(WarningType type, const char* filename, int line, int col, const char* message, ...)
+void warning_report_span(WarningType type, DiagnosticSpan span, const char* message, ...)
 ```
 
 Reports a warning with source location and warning type.

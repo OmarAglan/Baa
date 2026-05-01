@@ -121,6 +121,7 @@ typedef struct {
     char* value;        // القيمة النصية
     int line;           // رقم السطر
     int col;            // رقم العمود
+    int length;         // طول الوحدة بالبايتات داخل السطر
     const char* filename; // اسم الملف
 } Token;
 

@@ -92,6 +92,7 @@ static Token lex_make_token_at(const Lexer* l, int line, int col)
     t.filename = (l && l->state.filename) ? l->state.filename : "unknown";
     t.line = (line > 0) ? line : 1;
     t.col = (col > 0) ? col : 1;
+    t.length = 1;
     return t;
 }
 
@@ -678,6 +679,27 @@ char peek_next(Lexer* l) {
     if (!l->state.cur_char) return '\0';
     if (*l->state.cur_char == '\0') return '\0';
     return *(l->state.cur_char + 1);
+}
+
+/**
+ * @brief تثبيت طول الوحدة قبل إرجاعها من المحلل اللفظي.
+ */
+static Token lex_finish_token(Lexer* l, Token token)
+{
+    if (!l) {
+        if (token.length <= 0) token.length = 1;
+        return token;
+    }
+
+    if (token.length <= 0 &&
+        token.filename == l->state.filename &&
+        token.line == l->state.line) {
+        int len = l->state.col - token.col;
+        token.length = (len > 0) ? len : 1;
+    }
+
+    if (token.length <= 0) token.length = 1;
+    return token;
 }
 
 /**

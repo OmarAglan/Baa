@@ -1,6 +1,6 @@
 # Baa Bootstrap Contract
 
-> **Version:** 0.5.3 | [← Component Ownership](COMPONENT_OWNERSHIP.md) | [Language Spec →](LANGUAGE.md)
+> **Version:** 0.5.4 | [← Component Ownership](COMPONENT_OWNERSHIP.md) | [Language Spec →](LANGUAGE.md)
 
 This document freezes the language, ABI, standard-library, and IR contracts that Phase 5 bootstrap work must preserve.
 

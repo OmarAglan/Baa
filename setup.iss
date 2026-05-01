@@ -1,5 +1,5 @@
 ; -- Baa Compiler Setup Script (Inno Setup)
-; -- Version 0.5.3
+; -- Version 0.5.4
 ;
 ; Build instructions:
 ;   1. Place a MinGW-w64 GCC distribution in a folder called "gcc/"
@@ -10,7 +10,7 @@
 
 #define MyAppId "{{E4B6D77C-6C22-4E2D-8F9D-61D34A26B0D1}"
 #define MyAppName "Baa Compiler"
-#define MyAppVersion "0.5.3"
+#define MyAppVersion "0.5.4"
 #define MyAppPublisher "Omar Aglan"
 #define MyAppURL "https://github.com/OmarAglan/Baa"
 #define MyAppExeName "baa.exe"

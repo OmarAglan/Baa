@@ -644,12 +644,11 @@ static bool parser_current_starts_statement_anchor(void)
  */
 static void synchronize_mode(ParserSyncMode mode)
 {
-    parser.panic_mode = false;
-
     while (parser.current.type != TOKEN_EOF) {
         // إذا وجدنا فاصلة منقوطة، فغالباً انتهت الجملة السابقة
         if (parser.current.type == TOKEN_SEMICOLON || parser.current.type == TOKEN_DOT) {
             advance();
+            parser.panic_mode = false;
             return;
         }
 
@@ -657,20 +656,30 @@ static void synchronize_mode(ParserSyncMode mode)
             if (parser.current.type == TOKEN_CASE ||
                 parser.current.type == TOKEN_DEFAULT ||
                 parser.current.type == TOKEN_RBRACE) {
+                parser.panic_mode = false;
                 return;
             }
         } else if (mode == PARSER_SYNC_DECLARATION) {
-            if (parser_current_starts_declaration_anchor() || parser.current.type == TOKEN_RBRACE) {
+            if (parser.current.type == TOKEN_RBRACE) {
+                advance();
+                parser.panic_mode = false;
+                return;
+            }
+            if (parser_current_starts_declaration_anchor()) {
+                parser.panic_mode = false;
                 return;
             }
         } else {
             if (parser_current_starts_statement_anchor() || parser.current.type == TOKEN_RBRACE) {
+                parser.panic_mode = false;
                 return;
             }
         }
 
         advance();
     }
+
+    parser.panic_mode = false;
 }
 
 /**

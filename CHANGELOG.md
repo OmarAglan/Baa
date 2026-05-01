@@ -6,6 +6,27 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ---
 
+## [0.5.4] - 2026-05-01
+
+**Diagnostics & Recovery Quality**
+
+### Added
+
+- **Structured diagnostic spans and hints**:
+  - Added `DiagnosticSpan`, span-aware error/warning reporting, and Arabic fix-hint diagnostics for common parser and semantic failures.
+  - Lexer tokens and AST nodes now preserve token byte length so diagnostics can underline full tokens instead of only one column.
+- **Negative diagnostic contracts**:
+  - Added `// EXPECT-NOT:` and `// EXPECT-DIAG-COUNT:` support in `tests/regress.py`.
+  - Added focused negative tests for parser hints, cascade control, missing delimiters, undefined symbols, and const reassignment.
+
+### Changed
+
+- **Parser recovery**:
+  - Panic-mode synchronization now clears only after reaching a real recovery anchor.
+  - Declaration recovery now consumes stray top-level `}` tokens to avoid repeated diagnostics.
+- **Diagnostic rendering**:
+  - Source context now supports span-width carets and UTF-8-aware caret width calculation.
+
 ## [0.5.3] - 2026-04-28
 
 **Build System Maturity**

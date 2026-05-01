@@ -493,7 +493,9 @@
     }
     
     if (!parser.panic_mode) {
-        error_report(parser.current, "متوقع تصريح (دالة أو متغير عام).");
+        error_report_token_hint(parser.current,
+                                "ابدأ التصريح بنوع مثل 'صحيح' أو 'نص' أو بتعريف 'نوع'.",
+                                "متوقع تصريح (دالة أو متغير عام).");
         parser.panic_mode = true;
     }
     synchronize_mode(PARSER_SYNC_DECLARATION);

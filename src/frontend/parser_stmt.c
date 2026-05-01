@@ -958,7 +958,9 @@ Node* parse_statement() {
     }
 
     if (!parser.panic_mode) {
-        error_report(parser.current, "وحدة أو جملة غير متوقعة.");
+        error_report_token_hint(parser.current,
+                                "ابدأ الجملة بتعريف، إسناد، نداء، شرط، حلقة، أو 'إرجع'.",
+                                "وحدة أو جملة غير متوقعة.");
         parser.panic_mode = true;
     }
     return NULL;

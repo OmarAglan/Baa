@@ -174,7 +174,26 @@ static Token semantic_make_token(const char* filename, int line, int col)
     t.filename = filename ? filename : (current_filename ? current_filename : "غير_معروف");
     t.line = (line > 0) ? line : 1;
     t.col = (col > 0) ? col : 1;
+    t.length = 1;
     return t;
+}
+
+static DiagnosticSpan semantic_make_span(const char* filename, int line, int col, int length)
+{
+    DiagnosticSpan span;
+    span.filename = filename ? filename : (current_filename ? current_filename : "غير_معروف");
+    span.line = (line > 0) ? line : 1;
+    span.col = (col > 0) ? col : 1;
+    span.end_col = span.col + ((length > 0) ? length : 1);
+    return span;
+}
+
+static DiagnosticSpan semantic_node_span(const Node* node)
+{
+    return semantic_make_span(node ? node->filename : NULL,
+                              node ? node->line : 1,
+                              node ? node->col : 1,
+                              node ? node->length : 1);
 }
 
 /**
@@ -191,7 +210,19 @@ static void semantic_error_vloc(const char* filename,
     Token tok = semantic_make_token(filename, line, col);
     char buf[1024];
     (void)vsnprintf(buf, sizeof(buf), message, args);
-    error_report(tok, "خطأ دلالي: %s", buf);
+    error_report_token(tok, "خطأ دلالي: %s", buf);
+}
+
+static void semantic_error_vnode_hint(Node* node,
+                                      const char* hint,
+                                      const char* message,
+                                      va_list args)
+{
+    has_error = true;
+
+    char buf[1024];
+    (void)vsnprintf(buf, sizeof(buf), message, args);
+    error_report_span_hint(semantic_node_span(node), hint, "خطأ دلالي: %s", buf);
 }
 
 /**
@@ -206,6 +237,14 @@ static void semantic_error(Node* node, const char* message, ...)
                         node ? node->col : 1,
                         message,
                         args);
+    va_end(args);
+}
+
+static void semantic_error_hint(Node* node, const char* hint, const char* message, ...)
+{
+    va_list args;
+    va_start(args, message);
+    semantic_error_vnode_hint(node, hint, message, args);
     va_end(args);
 }
 

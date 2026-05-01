@@ -1355,10 +1355,12 @@ Partial status update (2026-03-06):
 
 ### v0.5.4: Diagnostics & Recovery Quality 🩺
 
-- [ ] **Improve span accuracy** — tighter line/column ranges.
-- [ ] **Add actionable fix hints** — Arabic-first suggestions for common errors.
-- [ ] **Strengthen panic recovery** — fewer cascading diagnostics.
-- [ ] **Negative test expansion** — enforce diagnostic contracts.
+- [x] **Improve span accuracy** — tighter line/column ranges.
+- [x] **Add actionable fix hints** — Arabic-first suggestions for common errors.
+- [x] **Strengthen panic recovery** — fewer cascading diagnostics.
+- [x] **Negative test expansion** — enforce diagnostic contracts.
+
+✅ COMPLETED (2026-05-01)
 
 ### v0.5.5: Runtime Safety Layer 🛡️
 

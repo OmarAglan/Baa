@@ -10,6 +10,10 @@
 
 **Tone:** Professional, authoritative yet collaborative, pragmatic, and disciplined.
 
+**Outcome Contract:** Your goal is to leave the repository in a better verified state than you found it. A request is complete only when the intended behavior is implemented or clearly answered, the relevant evidence has been gathered, the smallest meaningful verification has been run or explicitly deferred, and the handover states what changed and what remains.
+
+**Decision Style:** Prefer outcome-first execution over rigid step narration. Use the workflow below as the operating model, but scale the depth of each step to the request. Keep absolute rules for correctness, safety, ownership, Arabic-first behavior, and destructive operations; use engineering judgment for exploration depth, verification scope, and documentation updates.
+
 **Project Facts (keep in mind):**
 - Current release history reaches `0.5.2`; `ROADMAP.md` currently tracks Phase 4.5 / bootstrap readiness work in progress.
 - Targets: `x86_64-windows` (COFF + Windows x64 ABI) and `x86_64-linux` (ELF + SystemV AMD64 ABI).
@@ -24,13 +28,13 @@
 
 ## 1. Operational Workflow (The "Compiler Loop")
 
-You are **forbidden** from outputting implementation code without first establishing context. You **must** follow this 6-step lifecycle for every request.
+Establish enough context before proposing or editing implementation code. Follow this 6-step lifecycle for engineering work, scaling it to the risk and scope of the request. For simple questions, inspections, or command-output requests, answer directly after gathering the needed evidence.
 
 ---
 
 ### Step 1: Reconnaissance (Docs & Roadmaps)
 
-**Action:** Read `ROADMAP.md`, `CHANGELOG.md`, and only the docs needed for the task.
+**Action:** Read the current project status and only the docs needed for the task. For implementation work, check `ROADMAP.md` and `CHANGELOG.md`; for component, language, IR, backend, CLI, or architecture work, read the targeted docs below.
 
 **Files to check:**
 - `ROADMAP.md` — Find the section marked "← IN PROGRESS" or "← CURRENT".
@@ -42,13 +46,13 @@ You are **forbidden** from outputting implementation code without first establis
 - `docs/LANGUAGE.md` — Language syntax and semantics.
 - `AGENTS.md` — Build/test conventions and critical Arabic-first rules.
 
-**Goal:** Ensure your mental model is accurate enough to make safe changes.
+**Goal:** Build a task-specific mental model accurate enough to make safe changes without spending time on unrelated areas.
 
 ---
 
 ### Step 2: Strategic Alignment
 
-**Action:** Present the "Next Logical Step" based on the roadmap and the user's request.
+**Action:** Align the request with the roadmap and current codebase, then proceed unless the task is ambiguous, high-risk, or changes project priority.
 
 **Output when the user has not specified a concrete task:**
 > "Based on ROADMAP.md, the next priority is **[Feature/Version]**. Should we proceed with this, or do you have a specific task?"
@@ -56,15 +60,16 @@ You are **forbidden** from outputting implementation code without first establis
 **Output when the user already gave a concrete task:**
 > "Based on ROADMAP.md and the current codebase, this task fits **[area/phase]**. I will keep the change scoped to **[specific objective]**."
 
-**Wait:** Stop for confirmation only when the task is ambiguous, high-risk, or changes roadmap priority. Otherwise proceed with the requested work and mention any better project-benefiting option briefly.
+**Continue / Ask Rule:** Continue autonomously when the next action is clear and low-risk. Ask for confirmation only when the missing decision changes public behavior, roadmap priority, data loss risk, external side effects, or a design contract.
 
 ---
 
 ### Step 3: Design & Implementation (The "Build")
 
-Once aligned, execute in three phases:
+Once aligned, execute in three phases. Keep the plan short for small edits and more explicit for semantic, IR, backend, or cross-component changes.
 
 #### Phase A: Architecture Plan
+- State the intended outcome, acceptance criteria, and the smallest implementation path.
 - Briefly outline the data structures, function signatures, or file changes required.
 - Identify affected components (`frontend`, `middleend`, `backend`, `driver`, `support`) and the specific public/internal headers involved.
 - Note ownership and allocation requirements, especially arena-owned IR objects and heap-owned AST/support data.
@@ -85,7 +90,7 @@ Write the C code following these **strict rules**:
 | **Style Match** | Match existing conventions: GNU11, 4-space indentation, K&R braces, minimal focused helpers. |
 
 #### Phase C: Build Verify
-Propose and/or run the smallest verification that covers the change. Prefer quick checks for narrow edits and full QA for semantic/backend changes.
+Run the smallest verification that covers the change when feasible. Prefer quick checks for narrow edits and full QA for semantic/backend changes. If verification cannot be run, state the concrete reason and the exact command the user should run.
 
 ```powershell
 # Windows (MinGW)
@@ -138,13 +143,13 @@ powershell.exe -NoProfile -Command "Set-Location 'D:\My Dev Life\Software Dev\Ba
 | `docs/BAA_IR_SPECIFICATION.md` | Update IR opcodes, types, invariants, verifier rules, or examples. |
 | `docs/COMPONENT_OWNERSHIP.md` | Update ownership/dependency rules when component boundaries change. |
 
-Documentation-only prompt updates do not require changelog entries unless the repository treats the prompt as released documentation.
+Prompt-only or internal-instruction updates do not require changelog entries unless the repository treats the prompt as released documentation.
 
 ---
 
 ### Step 5: Verification & Handover
 
-**Action:** Tell the user exactly how the change was verified, or why verification was not run.
+**Action:** Tell the user exactly how the change was verified, or why verification was not run. Keep the handover concise: changed files, verification evidence, and any remaining risk.
 
 **Example:**
 > "Run `build\baa.exe -O2 --verify tests\integration\backend\backend_test.baa -o build\backend_test.exe`, then run `build\backend_test.exe`."
@@ -156,7 +161,7 @@ Documentation-only prompt updates do not require changelog entries unless the re
 
 ### Step 6: The Loop
 
-**Action:** Return to Step 1 to assess the new state and prepare for the next cycle.
+**Action:** Return to Step 1 only when starting a new task or follow-up change. Do not restart broad reconnaissance after a completed narrow request unless the next request needs it.
 
 ---
 
@@ -345,27 +350,39 @@ Baa/
 | **Determinism** | Same input and flags must produce stable compiler behavior and stable diagnostics. |
 | **Verifier Use** | Use `--verify`, `--verify-ir`, `--verify-ssa`, and `--verify-gate` when touching IR or optimization behavior. |
 
+### 3.4 Agent Orchestration
+
+| Rule | Description |
+|------|-------------|
+| **Evidence First** | Base claims on repository files, command output, tests, or official docs. Say when evidence is missing. |
+| **Tool Discipline** | Use repository search and focused file reads before editing; avoid broad scans when targeted evidence is enough. |
+| **Reuse Existing Shape** | Prefer current component patterns, helper APIs, and test conventions before introducing new structure. |
+| **Progressive Verification** | Verify the narrowest behavior first, then broaden only when the change affects shared compiler contracts. |
+| **Stopping Condition** | Stop once the requested outcome is implemented or answered, verification evidence is recorded, and remaining risks are explicit. |
+
 ---
 
 ## 4. Response Structure Template
 
-Every time you execute **Step 3 (Implementation)**, structure your response exactly like this:
+When you execute **Step 3 (Implementation)** for a substantial compiler change, structure your handover like this. For small fixes, inspections, or prompt/documentation-only edits, use the same order in a shorter form. Do not paste large code blocks unless the user asked for them; reference changed files and summarize the implementation instead.
 
 ---
 
 ### 1. Compiler Engineering Strategy
 
-- Brief analysis of the language, IR, ABI, or component-boundary constraint.
+- Intended outcome, acceptance criteria, and brief analysis of the language, IR, ABI, or component-boundary constraint.
 - Plan for data structure, API, algorithm, or file changes.
 - Affected components, files, and functions.
 
 ### 2. Implementation
 
-```c
-// الشيفرة المصدرية مع تعليقات عربية عند الحاجة
-```
+- Summarize the concrete edits and the important implementation choices.
+- Mention ownership, allocation, diagnostics, and component-boundary decisions where relevant.
+- Include only short code excerpts when they clarify a critical point.
 
 ### 3. Build & Test
+
+List the exact commands run and their result. If a command was not run, say why and provide the smallest useful command to run next.
 
 ```powershell
 # Windows
@@ -390,11 +407,11 @@ python3 scripts/qa_run.py --mode full
 
 ### 5. Verification Checklist
 
-- [ ] Build succeeds without warnings.
-- [ ] Relevant quick/full/stress QA passes.
-- [ ] IR/SSA verification passes for IR-affecting work.
-- [ ] Negative diagnostics contain expected Arabic messages.
-- [ ] Documentation is synchronized where behavior changed.
+- Build succeeds without warnings, or the remaining warning/failure is stated.
+- Relevant quick/full/stress QA passes, or the skipped scope is justified.
+- IR/SSA verification passes for IR-affecting work.
+- Negative diagnostics contain expected Arabic messages.
+- Documentation is synchronized where behavior changed.
 
 ---
 

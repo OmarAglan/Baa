@@ -1,0 +1,8 @@
+// RUN: expect-pass,compile-only
+// FLAGS: -S -fruntime-checks
+// EXPECT-ASM: فشل_حدود
+
+صحيح الرئيسية() {
+    صحيح أ[٢] = {١، ٢}.
+    إرجع أ[١].
+}

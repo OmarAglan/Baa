@@ -1,6 +1,6 @@
 # Baa Compiler Internals
 
-> **Version:** 0.5.4 | [← Language Spec](LANGUAGE.md) | [API Reference →](API_REFERENCE.md)
+> **Version:** 0.5.5 | [← Language Spec](LANGUAGE.md) | [API Reference →](API_REFERENCE.md)
 
 **Target Architecture:** x86-64 (AMD64)
 **Targets:** Windows x64 (COFF/PE) + Linux x86-64 (ELF)
@@ -114,6 +114,8 @@ The driver in `main.c` (v0.2.0+) supports multi-file compilation and various mod
 | `-v` | **Verbose** | - | Prints commands and compilation time; keeps intermediate `.s` files. |
 | `--debug-info` | **Debug Info** | `.s/.o/.exe` | Emits source `.file/.loc` info and passes `-g` to toolchain. |
 | `--asm-comments` | **Assembly Comments** | `.s` | Emits explanatory comments in generated assembly (prologue/epilogue/blocks). |
+| `-fruntime-checks` | **Runtime Checks** | `.s/.o/.exe` | Enables optional runtime safety guards such as dynamic array bounds checks. |
+| `-fno-runtime-checks` | **Runtime Checks Off** | `.s/.o/.exe` | Disables optional runtime safety guards (default). |
 | `-O0` / `-O1` / `-O2` | **Optimization Level** | - | Selects optimizer aggressiveness (`-O1` is default). |
 | `--dump-ir` | **IR Dump** | stdout | Prints Baa IR (Arabic) after semantic analysis (v0.3.0.6+). |
 | `--emit-ir` | **IR Emit** | `<input>.ir` | Writes Baa IR (Arabic) to a `.ir` file after semantic analysis (v0.3.0.7). |
@@ -233,6 +235,9 @@ Notes:
   - `// ARGS:` runtime executable arguments
   - `// STDIN:` stdin lines for runtime tests (may repeat; joined with `\n` + trailing newline)
   - `// EXPECT-ASM:` assembly substring expectations (used with `-S` compile-only tests)
+  - `// EXPECT-NOT-ASM:` forbidden assembly substring expectations (used with `-S` compile-only tests)
+  - `// EXPECT-EXIT:` expected runtime exit status
+  - `// EXPECT-OUT:` / `// EXPECT-ERR:` runtime stdout/stderr substring expectations
 - Stress programs live under `tests/stress/`.
 
 Windows build:
@@ -1430,7 +1435,7 @@ Currently lowered expressions:
   - System: `متغير_بيئة` -> `getenv` (+ C-string → Baa string conversion), `نفذ_أمر` -> `system`
   - Time: `وقت_حالي` -> `time`, `وقت_كنص` -> `ctime` (+ C-string → Baa string conversion)
 - Builtin error-handling calls in `NODE_CALL_EXPR` (`v0.4.3`):
-  - `تأكد` / `توقف_فوري`: fail-fast abort paths with message emission.
+  - `تأكد` / `توقف_فوري`: fail-fast `exit(1)` paths with message emission.
   - `كود_خطأ_النظام` / `ضبط_كود_خطأ_النظام`: host `errno` bridge (`__errno_location` on Linux, `_errno` on Windows).
   - `نص_كود_خطأ`: lowers to `strerror` + C-string → Baa string conversion.
 
@@ -2450,3 +2455,4 @@ Strings are collected during parsing and emitted with unique labels:
 ---
 
 *[← Language Spec](LANGUAGE.md) | [API Reference →](API_REFERENCE.md)*
+

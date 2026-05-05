@@ -1,0 +1,9 @@
+// RUN: expect-pass,runtime
+// EXPECT-EXIT: 1
+// EXPECT-OUT: توقف_فوري
+// EXPECT-OUT: ذعر_رسالة
+
+صحيح الرئيسية() {
+    توقف_فوري("ذعر_رسالة").
+    إرجع 0.
+}

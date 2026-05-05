@@ -1,6 +1,6 @@
 # Baa IR Specification
 
-> **Version:** 0.5.4 | [← Compiler Internals](INTERNALS.md) | [API Reference →](API_REFERENCE.md)
+> **Version:** 0.5.5 | [← Compiler Internals](INTERNALS.md) | [API Reference →](API_REFERENCE.md)
 
 This document specifies the Intermediate Representation (IR) for the Baa compiler. The IR uses Arabic naming conventions throughout, creating a culturally authentic yet technically robust design.
 
@@ -429,7 +429,7 @@ internal global @عداد_داخلي = ص٦٤ ٠ // ربط داخلي (v0.3.7.5)
 
 ملاحظة (`v0.4.3`): دوال معالجة الأخطاء
 `تأكد/توقف_فوري/كود_خطأ_النظام/ضبط_كود_خطأ_النظام/نص_كود_خطأ`
-تُخفض إلى مسارات `abort` ونداءات libc (`puts`, `strerror`) وجسر `errno`
+تُخفض إلى مسارات فشل حتمية عبر `exit(1)` ونداءات libc (`puts`, `strerror`) وجسر `errno`
 حسب الهدف النشط (`__errno_location` على Linux و`_errno` على Windows).
 
 ### 6.2 Variable Handling
@@ -459,7 +459,7 @@ internal global @__baa_static_<func>_<name>_<id> = ص٦٤ ٠
   - `linear = (((i * dim1) + j) * dim2 + ...) + k`
 - The linear index feeds `IR_OP_PTR_OFFSET` to compute the target element address.
 - Rank/dimension validity is a semantic-phase contract; IR lowering assumes validated shape metadata.
-- Optional debug-mode lowering may emit runtime bounds guard paths before computing the element address.
+- Optional `-fruntime-checks` lowering may emit runtime bounds guard paths before computing the element address.
 
 ### 6.3 Control Flow Lowering
 
@@ -1232,3 +1232,4 @@ IRModule* module = ir_module_new("example.baa");
 // ... build IR ...
 ir_module_free(module);  // Frees all arena memory
 ```
+

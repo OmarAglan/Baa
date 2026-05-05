@@ -1,6 +1,6 @@
 # Baa Language Specification
 
-> **Version:** 0.5.4 | [← User Guide](USER_GUIDE.md) | [Compiler Internals →](INTERNALS.md)
+> **Version:** 0.5.5 | [← User Guide](USER_GUIDE.md) | [Compiler Internals →](INTERNALS.md)
 
 Baa (باء) is a compiled systems programming language using Arabic syntax. It compiles to native code via Assembly + host GCC/Clang on Windows and Linux.
 
@@ -316,7 +316,8 @@ Baa is statically typed. All variables must be declared with their type.
 **فحص الفهارس:**
 - يجب أن يطابق عدد الفهارس رتبة المصفوفة (`rank`).
 - الفهارس الثابتة خارج الحدود تُرفض دلالياً.
-- في وضع التصحيح (مسار `--debug-info`) يمكن إدراج فحوص حدود وقت التشغيل للمؤشرات غير الثابتة.
+- يمكن تفعيل فحوص حدود وقت التشغيل للفهرسة غير الثابتة عبر `-fruntime-checks`.
+- `--debug-info` يضيف معلومات تصحيح فقط ولا يفعّل فحوص الحدود ضمنياً.
 
 **طول المصفوفة (نمط C):**
 
@@ -1389,8 +1390,8 @@ The standard library provides C-like dynamic memory APIs for low-level programmi
 
 | Function | Signature | Description |
 |----------|-----------|-------------|
-| **Assert** | `عدم تأكد(منطقي شرط، نص رسالة)` | Verifies `شرط`; if false, prints message and aborts execution. |
-| **Panic** | `عدم توقف_فوري(نص رسالة)` | Prints message and aborts execution immediately. |
+| **Assert** | `عدم تأكد(منطقي شرط، نص رسالة)` | Verifies `شرط`; if false, prints `فشل_تأكد` and the message, then exits with status `1`. |
+| **Panic** | `عدم توقف_فوري(نص رسالة)` | Prints `توقف_فوري` and the message, then exits with status `1`. |
 | **Get System Error** | `صحيح كود_خطأ_النظام()` | Returns current host `errno` value. |
 | **Set System Error** | `عدم ضبط_كود_خطأ_النظام(صحيح كود)` | Sets host `errno` to `كود`. |
 | **Error Text** | `نص نص_كود_خطأ(صحيح كود)` | Returns heap string message for an error code. |
@@ -1494,3 +1495,4 @@ The standard library provides C-like dynamic memory APIs for low-level programmi
 ---
 
 *[← User Guide](USER_GUIDE.md) | [Compiler Internals →](INTERNALS.md)*
+

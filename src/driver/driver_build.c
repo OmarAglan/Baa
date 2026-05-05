@@ -188,6 +188,11 @@ static void build_slot_hex(const CompilerConfig* config, const char* source, cha
              config ? (int)config->codegen_opts.code_model : 0,
              config ? (int)config->funroll_loops : 0);
     hash_string(&h, tmp);
+    snprintf(tmp,
+             sizeof(tmp),
+             "rtchecks=%d",
+             config ? (int)config->runtime_checks : 0);
+    hash_string(&h, tmp);
 
     if (config && config->include_dirs) {
         for (size_t i = 0; i < config->include_dir_count; ++i) {
@@ -618,6 +623,8 @@ bool driver_build_write_manifest(const CompilerConfig* config,
             config && config->assembly_only ? "assembly" :
             (config && config->compile_only ? "compile" : "link"));
     fprintf(out, "  \"opt_level\": %d,\n", config ? (int)config->opt_level : 0);
+    fprintf(out, "  \"runtime_checks\": %s,\n",
+            config && config->runtime_checks ? "true" : "false");
     fprintf(out, "  \"incremental\": %s,\n", config && config->incremental ? "true" : "false");
     fputs("  \"units\": [\n", out);
 

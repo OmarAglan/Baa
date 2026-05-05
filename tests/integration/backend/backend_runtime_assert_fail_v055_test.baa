@@ -1,0 +1,9 @@
+// RUN: expect-pass,runtime
+// EXPECT-EXIT: 1
+// EXPECT-OUT: فشل_تأكد
+// EXPECT-OUT: فشل_رسالة
+
+صحيح الرئيسية() {
+    تأكد(خطأ، "فشل_رسالة").
+    إرجع 0.
+}

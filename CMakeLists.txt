@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.10)
-project(baa VERSION 0.5.4 LANGUAGES C)
+project(baa VERSION 0.5.5 LANGUAGES C)
 
 set(CMAKE_C_STANDARD 11)
 
@@ -136,3 +136,4 @@ if(WIN32)
     target_link_libraries(baa urlmon wininet)
     target_link_libraries(baa wintrust crypt32)
 endif()
+

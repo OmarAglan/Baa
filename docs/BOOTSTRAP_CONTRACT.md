@@ -1,6 +1,6 @@
 # Baa Bootstrap Contract
 
-> **Version:** 0.5.4 | [← Component Ownership](COMPONENT_OWNERSHIP.md) | [Language Spec →](LANGUAGE.md)
+> **Version:** 0.5.5 | [← Component Ownership](COMPONENT_OWNERSHIP.md) | [Language Spec →](LANGUAGE.md)
 
 This document freezes the language, ABI, standard-library, and IR contracts that Phase 5 bootstrap work must preserve.
 
@@ -113,6 +113,8 @@ Ownership rules:
 
 - Functions returning `نص` from copy/format/time/error/file-line APIs may allocate heap memory as documented by `stdlib/baalib.baahd`.
 - `عدم*` remains the stable opaque handle representation for dynamic memory and file handles.
+- `تأكد` و`توقف_فوري` يطبعان رسالة فشل عربية وينهيان العملية بحالة خروج `1`.
+- فحوص حدود المصفوفات وقت التشغيل اختيارية وتُفعّل صراحةً عبر `-fruntime-checks`.
 - Variadic runtime intrinsics remain compiler-recognized builtins and are valid only under the semantic rules documented in `docs/LANGUAGE.md`.
 
 ---
@@ -198,3 +200,4 @@ A compiler slice is eligible for Phase 5 migration only when it preserves this c
 ---
 
 *[← Component Ownership](COMPONENT_OWNERSHIP.md) | [Language Spec →](LANGUAGE.md)*
+

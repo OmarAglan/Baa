@@ -6,6 +6,27 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ---
 
+## [0.5.5] - 2026-05-05
+
+**Runtime Safety Layer**
+
+### Added
+
+- **Explicit runtime safety flags**:
+  - Added `-fruntime-checks` to enable optional runtime guards such as dynamic array bounds checks.
+  - Added `-fno-runtime-checks` to keep optional runtime guards disabled explicitly (default behavior).
+- **Runtime safety integration tests**:
+  - Added focused tests for `تأكد`, `توقف_فوري`, runtime bounds failures, and `--debug-info`/`-fruntime-checks` separation.
+  - Extended `tests/test.py` with `// EXPECT-EXIT:`, `// EXPECT-OUT:`, `// EXPECT-ERR:`, and `// EXPECT-NOT-ASM:` markers.
+
+### Changed
+
+- **Deterministic fatal runtime behavior**:
+  - `تأكد`, `توقف_فوري`, and runtime bounds failures now emit Arabic failure text and terminate through `exit(1)` instead of relying on abort semantics.
+- **Runtime check control**:
+  - IR lowering now receives bounds-check enablement from `-fruntime-checks`; `--debug-info` no longer enables bounds checks implicitly.
+  - Incremental build cache slots and emitted build manifests now include the runtime-checks flag.
+
 ## [0.5.4] - 2026-05-01
 
 **Diagnostics & Recovery Quality**

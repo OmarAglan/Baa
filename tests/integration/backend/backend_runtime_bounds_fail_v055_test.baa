@@ -1,0 +1,12 @@
+// RUN: expect-pass,runtime
+// FLAGS: -fruntime-checks
+// EXPECT-EXIT: 1
+// EXPECT-OUT: فشل_حدود
+// EXPECT-OUT: فهرس خارج حدود المصفوفة
+
+صحيح الرئيسية() {
+    صحيح أ[٢] = {١، ٢}.
+    صحيح فهرس = ٢.
+    صحيح س = أ[فهرس].
+    إرجع س.
+}

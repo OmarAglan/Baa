@@ -1,6 +1,6 @@
 # Baa User Guide
 
-> **Version:** 0.5.4 | [← README](../README.md) | [Language Spec →](LANGUAGE.md)
+> **Version:** 0.5.5 | [← README](../README.md) | [Language Spec →](LANGUAGE.md)
 
 Welcome to Baa (باء)! This guide will help you write your first Arabic computer program and use the Baa compiler toolchain.
 
@@ -201,6 +201,8 @@ baa [options] <source.baa> [-o <output>]
 | `--cache-dir <dir>` | Override the incremental cache directory (default: `.baa_build/cache`). | `.\baa.exe --incremental --cache-dir .cache/baa main.baa` |
 | `--debug-info` | Emit debug line info and pass `-g` to toolchain. | `.\baa.exe --debug-info main.baa` |
 | `--asm-comments` | Emit explanatory comments in generated assembly (`-S`). | `.\baa.exe -S --asm-comments main.baa` |
+| `-fruntime-checks` | Enable optional runtime safety checks such as dynamic array bounds guards. | `.\baa.exe -fruntime-checks main.baa` |
+| `-fno-runtime-checks` | Disable optional runtime safety checks (default). | `.\baa.exe -fno-runtime-checks main.baa` |
 | `--help`, `-h` | Display help message and usage. | `.\baa.exe --help` |
 | `--version` | Display compiler version. | `.\baa.exe --version` |
 | `-O0` / `-O1` / `-O2` | Optimization levels (default: `-O1`). | `.\baa.exe -O2 main.baa` |
@@ -961,6 +963,11 @@ Test files can include special comments:
 - `// EXPECT-NOT:` - Forbidden diagnostic substring(s) for negative tests
 - `// EXPECT-DIAG-COUNT:` - Required number of emitted `[Error]`/`[Warning]` diagnostics
 - `// FLAGS:` - Extra compiler flags for that specific test file
+- `// ARGS:` - Runtime executable arguments
+- `// STDIN:` - Runtime stdin line(s); repeated markers are joined with newlines
+- `// EXPECT-EXIT:` - Expected runtime exit status
+- `// EXPECT-OUT:` / `// EXPECT-ERR:` - Required runtime stdout/stderr substring(s)
+- `// EXPECT-ASM:` / `// EXPECT-NOT-ASM:` - Required/forbidden assembly substring(s) for `-S` tests
 
 ---
 
@@ -1001,3 +1008,4 @@ Test files can include special comments:
 ---
 
 *[← README](../README.md) | [Language Specification →](LANGUAGE.md)*
+

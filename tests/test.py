@@ -23,6 +23,22 @@ def _run(cmd: list[str], cwd: Path | None = None, stdin_text: str | None = None)
     return int(p.returncode)
 
 
+def _run_capture(
+    cmd: list[str],
+    cwd: Path | None = None,
+    stdin_text: str | None = None,
+) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(
+        cmd,
+        cwd=str(cwd) if cwd else None,
+        input=stdin_text,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+        capture_output=True,
+    )
+
+
 def _flags_markers(src: Path) -> list[str]:
     flags: list[str] = []
     try:
@@ -63,6 +79,61 @@ def _expect_asm_markers(src: Path) -> list[str]:
     except Exception:
         return []
     return needles
+
+
+def _expect_not_asm_markers(src: Path) -> list[str]:
+    needles: list[str] = []
+    try:
+        for line in src.read_text(encoding="utf-8", errors="replace").splitlines():
+            s = line.strip()
+            if s.startswith("// EXPECT-NOT-ASM:"):
+                raw = s.split(":", 1)[1].strip()
+                if raw:
+                    needles.append(raw)
+    except Exception:
+        return []
+    return needles
+
+
+def _expect_out_markers(src: Path) -> list[str]:
+    needles: list[str] = []
+    try:
+        for line in src.read_text(encoding="utf-8", errors="replace").splitlines():
+            s = line.strip()
+            if s.startswith("// EXPECT-OUT:"):
+                raw = s.split(":", 1)[1].strip()
+                if raw:
+                    needles.append(raw)
+    except Exception:
+        return []
+    return needles
+
+
+def _expect_err_markers(src: Path) -> list[str]:
+    needles: list[str] = []
+    try:
+        for line in src.read_text(encoding="utf-8", errors="replace").splitlines():
+            s = line.strip()
+            if s.startswith("// EXPECT-ERR:"):
+                raw = s.split(":", 1)[1].strip()
+                if raw:
+                    needles.append(raw)
+    except Exception:
+        return []
+    return needles
+
+
+def _expect_exit_marker(src: Path) -> int | None:
+    try:
+        for line in src.read_text(encoding="utf-8", errors="replace").splitlines():
+            s = line.strip()
+            if s.startswith("// EXPECT-EXIT:"):
+                raw = s.split(":", 1)[1].strip()
+                if raw:
+                    return int(raw, 10)
+    except Exception:
+        return None
+    return None
 
 
 def _stdin_markers(src: Path) -> str | None:
@@ -209,9 +280,10 @@ def main() -> int:
             out_stem = _safe_name(str(src.relative_to(INTEGRATION_DIR).with_suffix("")))
             flags = _flags_markers(src)
             expect_asm = _expect_asm_markers(src)
+            expect_not_asm = _expect_not_asm_markers(src)
 
             # إذا كان لدينا EXPECT-ASM نُحوّل الاختبار إلى compile-only على ملف assembly.
-            if expect_asm:
+            if expect_asm or expect_not_asm:
                 out = out_dir / f"{out_stem}.s"
                 if "-S" not in flags and "-s" not in flags:
                     flags = ["-S", *flags]
@@ -228,7 +300,7 @@ def main() -> int:
                 failures.append(f"compile/verify failed: {src.name}")
                 continue
 
-            if expect_asm:
+            if expect_asm or expect_not_asm:
                 try:
                     asm_text = out.read_text(encoding="utf-8", errors="replace")
                 except Exception:
@@ -237,6 +309,9 @@ def main() -> int:
                 missing = [n for n in expect_asm if n not in asm_text]
                 if missing:
                     failures.append(f"asm missing {missing}: {src.name}")
+                present = [n for n in expect_not_asm if n in asm_text]
+                if present:
+                    failures.append(f"asm unexpectedly contained {present}: {src.name}")
                 continue
 
             if "runtime" not in run_markers:
@@ -245,9 +320,27 @@ def main() -> int:
             # Runtime tests are expected to return 0 on PASS.
             args = _args_markers(src)
             stdin_text = _stdin_markers(src)
-            rc = _run([str(out), *args], cwd=ROOT, stdin_text=stdin_text)
-            if rc != 0:
-                failures.append(f"run failed (exit={rc}): {src.name}")
+            expect_exit = _expect_exit_marker(src)
+            expect_out = _expect_out_markers(src)
+            expect_err = _expect_err_markers(src)
+            if expect_exit is None and not expect_out and not expect_err:
+                rc = _run([str(out), *args], cwd=ROOT, stdin_text=stdin_text)
+                if rc != 0:
+                    failures.append(f"run failed (exit={rc}): {src.name}")
+                continue
+
+            p = _run_capture([str(out), *args], cwd=ROOT, stdin_text=stdin_text)
+            expected_rc = 0 if expect_exit is None else expect_exit
+            if p.returncode != expected_rc:
+                failures.append(
+                    f"run exit expected {expected_rc} but got {p.returncode}: {src.name}"
+                )
+            missing_out = [n for n in expect_out if n not in p.stdout]
+            if missing_out:
+                failures.append(f"stdout missing {missing_out}: {src.name}")
+            missing_err = [n for n in expect_err if n not in p.stderr]
+            if missing_err:
+                failures.append(f"stderr missing {missing_err}: {src.name}")
     finally:
         shutil.rmtree(out_dir, ignore_errors=True)
     if failures:

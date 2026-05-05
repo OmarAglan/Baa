@@ -1,6 +1,6 @@
 # Baa Internal API Reference
 
-> **Version:** 0.5.4 | [← Compiler Internals](INTERNALS.md) | [IR Specification →](BAA_IR_SPECIFICATION.md)
+> **Version:** 0.5.5 | [← Compiler Internals](INTERNALS.md) | [IR Specification →](BAA_IR_SPECIFICATION.md)
 
 This document details the C functions, enumerations, and structures defined in the current component-owned public headers under `src/frontend/`, `src/support/`, `src/middleend/`, and `src/backend/`. `src/baa.h` remains as a compatibility umbrella over the frontend/support public surface.
 
@@ -72,6 +72,10 @@ Supported in test files:
 - `// ARGS:` runtime execution arguments (one line; passed to the produced executable)
 - `// STDIN:` stdin lines for runtime tests (may appear multiple times; joined with `\n` and a trailing newline is appended)
 - `// EXPECT-ASM:` assembly substring expectations (used with `-S` compile-only tests)
+- `// EXPECT-NOT-ASM:` forbidden assembly substring expectations (used with `-S` compile-only tests)
+- `// EXPECT-EXIT:` expected runtime exit status
+- `// EXPECT-OUT:` runtime stdout substring expectations
+- `// EXPECT-ERR:` runtime stderr substring expectations
 
 `tests/test.py` and `tests/regress.py` both recognize these markers.
 
@@ -2587,7 +2591,7 @@ A small context object used during lowering:
 - Holds the active `IRBuilder` insertion point
 - Tracks local/static variable bindings (including array rank/dim metadata)
 - Tracks scope/control-flow stacks during lowering
-- Carries optional debug bounds-check mode + root AST metadata lookup context
+- Carries explicit optional runtime bounds-check mode + root AST metadata lookup context
 
 ---
 
@@ -2689,7 +2693,7 @@ Top-level entry point for the driver: converts a validated `NODE_PROGRAM` AST in
 |-----------|------|-------------|
 | `program` | `Node*` | Root AST node (must be `NODE_PROGRAM`) |
 | `module_name` | `const char*` | Optional module name (usually filename) |
-| `enable_bounds_checks` | `bool` | Enables optional runtime bounds-check lowering paths for array accesses (debug-oriented mode) |
+| `enable_bounds_checks` | `bool` | Enables optional runtime bounds-check lowering paths for array accesses, driven by `-fruntime-checks` |
 | `target` | `const BaaTarget*` | Active target descriptor (ABI + data layout). Required for target-specific lowering decisions |
 
 **Returns:** Newly allocated `IRModule` (caller owns; free with `ir_module_free()`).
@@ -2700,7 +2704,7 @@ Top-level entry point for the driver: converts a validated `NODE_PROGRAM` AST in
 2. Walks top-level declarations:
    - Global variables (`NODE_VAR_DECL` with `is_global`) → `ir_builder_create_global_init()`
    - Functions (`NODE_FUNC_DEF`) → `ir_builder_create_func()` + parameter spilling + `lower_stmt()`
-3. Propagates lowering options/metadata through `IRLowerCtx` (including optional array bounds checks)
+3. Propagates lowering options/metadata through `IRLowerCtx` (including explicit optional array bounds checks)
 4. Returns the fully-lowered module
 
 ---
@@ -3697,7 +3701,7 @@ Top-level entry point for emitting a complete assembly file.
 3. Emits `.text` section with all functions
 4. Emits string table with `.Lstr_N` labels into read-only data section (COFF/ELF)
 
-**Driver flags:** `--debug-info` enables debug directives and `--asm-comments` enables explanatory assembly comments.
+**Driver flags:** `--debug-info` enables debug directives, `--asm-comments` enables explanatory assembly comments, and `-fruntime-checks` controls optional runtime safety lowering before backend emission.
 
 ---
 
@@ -4508,3 +4512,4 @@ typedef enum {
 ---
 
 *[← Compiler Internals](INTERNALS.md) | [IR Specification →](BAA_IR_SPECIFICATION.md)*
+

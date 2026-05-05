@@ -94,11 +94,11 @@ static Node* ir_lower_find_global_var_decl(IRLowerCtx* ctx, const char* name)
     return NULL;
 }
 
-static void ir_lower_emit_abort_path(IRLowerCtx* ctx)
+#define BAA_RUNTIME_FAILURE_EXIT_CODE 1
+
+static void ir_lower_emit_function_return_after_noreturn(IRLowerCtx* ctx)
 {
     if (!ctx || !ctx->builder) return;
-
-    ir_builder_emit_call_void(ctx->builder, "abort", NULL, 0);
 
     IRFunc* f = ctx->builder->current_func;
     if (!f || !f->ret_type || f->ret_type->kind == IR_TYPE_VOID) {
@@ -107,6 +107,30 @@ static void ir_lower_emit_abort_path(IRLowerCtx* ctx)
         IRValue* z = ir_value_const_int(0, f->ret_type);
         ir_builder_emit_ret(ctx->builder, z);
     }
+}
+
+static void ir_lower_emit_exit_failure_path(IRLowerCtx* ctx)
+{
+    if (!ctx || !ctx->builder) return;
+
+    IRValue* code = ir_value_const_int(BAA_RUNTIME_FAILURE_EXIT_CODE, IR_TYPE_I32_T);
+    IRValue* args[1] = { code };
+    ir_builder_emit_call_void(ctx->builder, "exit", args, 1);
+    ir_lower_emit_function_return_after_noreturn(ctx);
+}
+
+static void ir_lower_emit_abort_path(IRLowerCtx* ctx)
+{
+    ir_lower_emit_exit_failure_path(ctx);
+}
+
+static void ir_lower_emit_literal_line(IRLowerCtx* ctx, const char* text)
+{
+    if (!ctx || !ctx->builder || !text) return;
+
+    IRValue* msg = ir_builder_const_string(ctx->builder, text);
+    IRValue* args[1] = { msg };
+    (void)ir_builder_emit_call(ctx->builder, "puts", IR_TYPE_I32_T, args, 1);
 }
 
 static void ir_lower_emit_debug_bounds_check(IRLowerCtx* ctx, const Node* site, IRValue* idx, int dim)
@@ -133,6 +157,8 @@ static void ir_lower_emit_debug_bounds_check(IRLowerCtx* ctx, const Node* site, 
 
     ir_builder_set_insert_point(ctx->builder, fail);
     ir_lower_set_loc(ctx->builder, site);
+    ir_lower_emit_literal_line(ctx, "فشل_حدود");
+    ir_lower_emit_literal_line(ctx, "فهرس خارج حدود المصفوفة");
     ir_lower_emit_abort_path(ctx);
 
     ir_builder_set_insert_point(ctx->builder, pass);

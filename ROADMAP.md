@@ -832,9 +832,9 @@
   صحيح الطول = حجم(قائمة) / حجم(صحيح).  // Returns 10
   ```
 
-- [x] **Array Bounds Checking** (Optional debug mode) ✅ COMPLETED (2026-02-25):
-  - Runtime checks in debug-oriented lowering mode (`--debug-info` path).
-  - Abort path on out-of-bounds access.
+- [x] **Array Bounds Checking** (Optional runtime mode) ✅ COMPLETED (2026-02-25; flag contract stabilized 2026-05-05):
+  - Runtime checks in explicit `-fruntime-checks` lowering mode.
+  - Deterministic `exit(1)` path on out-of-bounds access.
 
 #### String Operations
 
@@ -1364,10 +1364,12 @@ Partial status update (2026-03-06):
 
 ### v0.5.5: Runtime Safety Layer 🛡️
 
-- [ ] **Assertion runtime contract** — stable behavior in debug/release modes.
-- [ ] **Panic/error-code policy** — consistent fatal/non-fatal paths.
-- [ ] **Safety toggles** — explicit compile-time/runtime control flags.
-- [ ] **Document failure semantics** — deterministic exit/status behavior.
+- [x] **Assertion runtime contract** — stable behavior in debug/release modes.
+- [x] **Panic/error-code policy** — consistent fatal/non-fatal paths.
+- [x] **Safety toggles** — explicit compile-time/runtime control flags.
+- [x] **Document failure semantics** — deterministic exit/status behavior.
+
+✅ COMPLETED (2026-05-05)
 
 ### v0.5.6: Determinism & QA Gates ✅
 

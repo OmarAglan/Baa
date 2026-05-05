@@ -27,6 +27,13 @@ Supported line markers inside `.baa` files:
 - `// EXPECT-NOT:` stderr marker that must not appear in expected-fail tests
 - `// EXPECT-DIAG-COUNT:` exact `[Error]`/`[Warning]` diagnostic count for expected-fail tests
 - `// FLAGS:` extra compiler flags for this test
+- `// ARGS:` runtime executable arguments
+- `// STDIN:` stdin lines for runtime tests
+- `// EXPECT-EXIT:` expected runtime exit status
+- `// EXPECT-OUT:` stdout marker for runtime tests
+- `// EXPECT-ERR:` stderr marker for runtime tests
+- `// EXPECT-ASM:` assembly marker for `-S` tests
+- `// EXPECT-NOT-ASM:` assembly marker that must not appear in `-S` tests
 
 ## Runner Entry Points
 

@@ -125,6 +125,8 @@ void driver_print_help(void)
     printf("  --cache-dir <dir>  Override incremental cache directory (default: .baa_build/cache)\n");
     printf("  --debug-info   Emit debug line info (.file/.loc) and pass -g to toolchain\n");
     printf("  --asm-comments  Emit explanatory comments in generated assembly\n");
+    printf("  -fruntime-checks     Enable optional runtime safety checks\n");
+    printf("  -fno-runtime-checks  Disable optional runtime safety checks (default)\n");
     printf("  -O0            Disable optimization\n");
     printf("  -O1            Basic optimization (default)\n");
     printf("  -O2            Full optimization (+ CSE)\n");
@@ -270,6 +272,10 @@ bool driver_parse_cli(int argc, char **argv, CompilerConfig *config, DriverParse
                 config->debug_info = true;
             else if (strcmp(arg, "--asm-comments") == 0)
                 config->codegen_opts.asm_comments = true;
+            else if (strcmp(arg, "-fruntime-checks") == 0)
+                config->runtime_checks = true;
+            else if (strcmp(arg, "-fno-runtime-checks") == 0)
+                config->runtime_checks = false;
             else if (strncmp(arg, "--target=", 9) == 0)
             {
                 const char *t = arg + 9;

@@ -1,6 +1,6 @@
 # IR Developer Guide
 
-> **Version:** 0.5.5 | [← Internals](INTERNALS.md) | [IR Specification →](BAA_IR_SPECIFICATION.md)
+> **Version:** 0.5.6 | [← Internals](INTERNALS.md) | [IR Specification →](BAA_IR_SPECIFICATION.md)
 
 This guide is for contributors working on the Baa IR and mid-end.
 
@@ -623,7 +623,7 @@ To add a new pass:
 - Use `--verify` to enable all verification checks.
 - Use `--verify-gate` to catch pass bugs early.
 - Use `--time-phases` when diagnosing compile-time regressions.
-- Use `--trace-lexer` or `--trace-parser` for frontend issues.
+- Use `--dump-ir` / `--dump-ir-opt` for frontend IR output.
 
 ### Common Debugging Commands
 
@@ -653,4 +653,3 @@ IR uses arena allocation for efficiency (ساحة ذاكرة IR):
 - Free the entire module with [`ir_module_free()`](src/ir.c) - never free individual objects.
 
 The Def-Use analysis cache ([`IRFunc.def_use`](src/ir.h:357)) is heap-allocated (كاش Def-Use - يُخصّص على heap ويُعاد بناؤه عند التغييرات) and must be rebuilt when IR changes ([`ir_epoch`](src/ir.h:354) tracks modifications).
-

@@ -1,6 +1,6 @@
 # Baa User Guide
 
-> **Version:** 0.5.5 | [← README](../README.md) | [Language Spec →](LANGUAGE.md)
+> **Version:** 0.5.6 | [← README](../README.md) | [Language Spec →](LANGUAGE.md)
 
 Welcome to Baa (باء)! This guide will help you write your first Arabic computer program and use the Baa compiler toolchain.
 
@@ -106,7 +106,7 @@ $current = [Environment]::GetEnvironmentVariable("Path", "User")
 **Linux:**
 
 ```bash
-sudo cp ./build/baa /usr/local/bin/
+sudo cp ./build-linux/baa /usr/local/bin/
 ```
 
 Open a new terminal and verify:
@@ -160,11 +160,11 @@ Create a file named `hello.baa` using any text editor. **Important:** Save the f
 
 ```bash
 # Using default output (out)
-./build/baa hello.baa
+./build-linux/baa hello.baa
 ./out
 
 # Or specify output name
-./build/baa hello.baa -o hello
+./build-linux/baa hello.baa -o hello
 ./hello
 ```
 
@@ -176,7 +176,7 @@ The Baa compiler is a full-featured command-line tool (since v0.2.0):
 
 - Windows: `baa.exe`
 - Linux: `baa`
-- In examples below, use `baa`/`baa.exe` if it's on `PATH`; otherwise use `build\baa.exe` (Windows) or `./build/baa` (Linux).
+- In examples below, use `baa`/`baa.exe` if it's on `PATH`; otherwise use `build\baa.exe` (Windows) or `./build-linux/baa` (Linux).
 
 ### Basic Usage
 
@@ -854,7 +854,7 @@ Baa supports fixed-width integer types:
     ط٣٢ طبيعي_كبير = ٤٠٠٠٠٠٠٠٠٠. // 32-bit unsigned
     ط٦٤ طبيعي_ضخم = ١٠٠٠٠٠٠٠٠٠٠٠٠٠. // 64-bit unsigned
     
-    // Regular صحيح is platform-dependent (usually 32-bit)
+    // Regular صحيح is always 64-bit (int64_t)
     صحيح عادي = ١٠٠.
     
     إرجع ٠.
@@ -895,6 +895,9 @@ python .\scripts\qa_run.py --mode full
 
 # Stress testing (full + stress suite + fuzz-lite)
 python .\scripts\qa_run.py --mode stress
+
+# Release gate (full + stress + fuzz-lite + determinism checks)
+python .\scripts\qa_run.py --mode release
 
 # Direct integration test runner
 python tests/test.py

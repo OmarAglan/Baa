@@ -1,6 +1,6 @@
 # Baa Internal API Reference
 
-> **Version:** 0.5.5 | [← Compiler Internals](INTERNALS.md) | [IR Specification →](BAA_IR_SPECIFICATION.md)
+> **Version:** 0.5.6 | [← Compiler Internals](INTERNALS.md) | [IR Specification →](BAA_IR_SPECIFICATION.md)
 
 This document details the C functions, enumerations, and structures defined in the current component-owned public headers under `src/frontend/`, `src/support/`, `src/middleend/`, and `src/backend/`. `src/baa.h` remains as a compatibility umbrella over the frontend/support public surface.
 
@@ -39,6 +39,7 @@ Unified QA entrypoint used by CI and local validation.
 python scripts/qa_run.py --mode quick
 python scripts/qa_run.py --mode full
 python scripts/qa_run.py --mode stress
+python scripts/qa_run.py --mode release
 ```
 
 | Flag | Description |
@@ -46,14 +47,16 @@ python scripts/qa_run.py --mode stress
 | `--mode quick` | Integration smoke (`tests/integration/**/*.baa` via `tests/test.py`) |
 | `--mode full` | Quick + regression + verify smoke + multi-file smoke + build maturity checks |
 | `--mode stress` | Full + stress suite (`tests/stress/*.baa`) + seeded fuzz-lite |
+| `--mode release` | Stress + deterministic IR/assembly/manifest checks + cross-target `-S` assembly gate |
 | `--summary-json <path>` | Writes machine-readable QA summary JSON |
-| `--fuzz-cases <N>` | Number of fuzz-lite cases in stress mode |
+| `--fuzz-cases <N>` | Number of fuzz-lite cases in stress/release mode |
 | `--seed <N>` | RNG seed for deterministic fuzz-lite generation |
 
 Additional build-maturity guards:
 
 - `scripts/check_build_profiles.py` validates required CMake configure/build presets.
 - `scripts/test_build_maturity.py` validates manifest stability, incremental cache hits, and header invalidation.
+- `scripts/test_determinism.py` validates stable `--dump-ir`, `--dump-ir-opt`, assembly, manifest, `--verify-gate`, cross-target assembly generation, and committed IR snapshot hashes under `tests/snapshots/`.
 
 ### Test Metadata Contract
 

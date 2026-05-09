@@ -1,6 +1,6 @@
 # Baa Compiler Internals
 
-> **Version:** 0.5.5 | [← Language Spec](LANGUAGE.md) | [API Reference →](API_REFERENCE.md)
+> **Version:** 0.5.6 | [← Language Spec](LANGUAGE.md) | [API Reference →](API_REFERENCE.md)
 
 **Target Architecture:** x86-64 (AMD64)
 **Targets:** Windows x64 (COFF/PE) + Linux x86-64 (ELF)
@@ -224,6 +224,8 @@ Notes:
   - `--mode quick`: integration smoke (`tests/integration/**/*.baa` via `tests/test.py`)
   - `--mode full`: integration + regression + verify smoke + multi-file smoke
   - `--mode stress`: full + `tests/stress/*.baa` + seeded fuzz-lite (timeout-guarded)
+  - `--mode release`: stress + deterministic IR/assembly/manifest checks + cross-target `-S` assembly gate
+- `scripts/test_determinism.py` owns the v0.5.6 deterministic checks and compares committed IR snapshot hashes under `tests/snapshots/`.
 - Legacy runners remain valid:
   - `tests/test.py` (integration)
   - `tests/regress.py` (integration + corpus + negatives)

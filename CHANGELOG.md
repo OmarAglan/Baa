@@ -6,6 +6,23 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ---
 
+## [0.5.6] - 2026-05-09
+
+**Determinism & QA Gates**
+
+### Added
+
+- **Release QA gate**:
+  - Added `python scripts/qa_run.py --mode release`, which runs the full/stress QA stack plus deterministic output checks.
+- **Determinism checker**:
+  - Added `scripts/test_determinism.py` to verify stable `--dump-ir`, `--dump-ir-opt`, assembly, build manifest output, and `--verify-gate` behavior.
+  - Added cross-target assembly generation checks for `--target=x86_64-windows -S` and `--target=x86_64-linux -S`.
+
+### Changed
+
+- **QA documentation**:
+  - Documented the release gate in the user guide, API reference, internals, tests README, and release metadata.
+
 ## [0.5.5] - 2026-05-05
 
 **Runtime Safety Layer**

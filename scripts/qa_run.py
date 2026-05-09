@@ -428,7 +428,7 @@ def _write_summary(
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Baa QA orchestrator")
-    parser.add_argument("--mode", choices=["quick", "full", "stress"], default="quick")
+    parser.add_argument("--mode", choices=["quick", "full", "stress", "release"], default="quick")
     parser.add_argument("--log-dir", default=str(DEFAULT_LOG_DIR))
     parser.add_argument("--summary-json", default="")
     parser.add_argument("--fuzz-cases", type=int, default=24)
@@ -446,7 +446,7 @@ def main() -> int:
 
     print(f"qa: mode={args.mode}")
 
-    if args.mode in ("full", "stress"):
+    if args.mode in ("full", "stress", "release"):
         module_size_res = _run_module_size_guard(log_dir)
         _print_step(module_size_res)
         all_results.append(module_size_res)
@@ -476,7 +476,7 @@ def main() -> int:
     all_results.append(test_res)
     overall_ok = overall_ok and test_res.passed
 
-    if args.mode in ("full", "stress"):
+    if args.mode in ("full", "stress", "release"):
         regress_res = _run_logged(
             "tests/regress.py",
             [sys.executable, str(TESTS_DIR / "regress.py")],
@@ -507,7 +507,7 @@ def main() -> int:
         all_results.append(build_maturity_res)
         overall_ok = overall_ok and build_maturity_res.passed
 
-    if args.mode == "stress":
+    if args.mode in ("stress", "release"):
         stress_ok, stress_results = _run_stress_suite(baa, log_dir)
         all_results.extend(stress_results)
         overall_ok = overall_ok and stress_ok
@@ -515,6 +515,24 @@ def main() -> int:
         fuzz_ok, fuzz_results = _run_fuzz_lite(baa, log_dir, args.fuzz_cases, args.seed)
         all_results.extend(fuzz_results)
         overall_ok = overall_ok and fuzz_ok
+
+    if args.mode == "release":
+        determinism_summary = log_dir / "determinism-summary.json"
+        determinism_res = _run_logged(
+            "determinism-gate",
+            [
+                sys.executable,
+                str(ROOT / "scripts" / "test_determinism.py"),
+                "--summary-json",
+                str(determinism_summary.relative_to(ROOT)),
+            ],
+            cwd=ROOT,
+            log_dir=log_dir,
+            timeout_s=180.0,
+        )
+        _print_step(determinism_res)
+        all_results.append(determinism_res)
+        overall_ok = overall_ok and determinism_res.passed
 
     return _write_summary(args.mode, baa, overall_ok, all_results, log_dir, args.summary_json)
 

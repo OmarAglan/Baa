@@ -11,6 +11,7 @@ tests/
 │   └── ir/        # compile-focused IR surface tests
 ├── neg/           # expected-fail diagnostics tests
 ├── stress/        # stress tests (large inputs / scale)
+├── snapshots/     # deterministic IR/QA snapshot contracts
 ├── fixtures/      # include files and multi-file fixtures
 ├── corpus_docs/   # extracted examples from docs
 ├── corpus_v2x_docs/ # historical docs corpus by version
@@ -40,3 +41,4 @@ Supported line markers inside `.baa` files:
 - Quick smoke: `python scripts/qa_run.py --mode quick`
 - Full regression: `python scripts/qa_run.py --mode full`
 - Stress suite: `python scripts/qa_run.py --mode stress`
+- Release gate: `python scripts/qa_run.py --mode release`

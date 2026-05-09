@@ -1373,10 +1373,12 @@ Partial status update (2026-03-06):
 
 ### v0.5.6: Determinism & QA Gates ✅
 
-- [ ] **Cross-target parity suite** — Linux/Windows behavior consistency.
-- [ ] **Fuzz + stress expansion** — parser/semantic/IR robustness.
-- [ ] **IR/SSA regression locking** — snapshots + verifier gating.
-- [ ] **Release gate checklist** — mandatory pass criteria before Phase 5.
+- [x] **Cross-target parity suite** — Linux/Windows behavior consistency.
+- [x] **Fuzz + stress expansion** — parser/semantic/IR robustness.
+- [x] **IR/SSA regression locking** — snapshots + verifier gating.
+- [x] **Release gate checklist** — mandatory pass criteria before Phase 5.
+
+✅ COMPLETED (2026-05-09)
 
 ### v0.5.7: Bootstrap Subset (Baa0) Definition 📐
 
@@ -1395,7 +1397,7 @@ Partial status update (2026-03-06):
 #### Phase 4.5 Exit Criteria (Mandatory Before Phase 5)
 
 - [ ] **Cross-target QA green** — `quick/full` pass on both `x86_64-windows` and `x86_64-linux`.
-- [ ] **Determinism checks green** — stable IR text and stable diagnostics for identical inputs.
+- [x] **Determinism checks green** — stable IR text and stable diagnostics for identical inputs.
 - [x] **File-size governance active** — CI guard for module-size budget is enforced.
 - [ ] **Contracts frozen and published** — grammar/ABI/IR/Baa0 docs tagged and versioned.
 - [ ] **Bootstrap handoff bundle ready** — scripts + manifests + reproducible build notes archived.

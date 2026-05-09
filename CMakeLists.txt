@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.10)
-project(baa VERSION 0.5.5 LANGUAGES C)
+project(baa VERSION 0.5.6 LANGUAGES C)
 
 set(CMAKE_C_STANDARD 11)
 

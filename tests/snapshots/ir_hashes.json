@@ -1,0 +1,6 @@
+{
+  "tests/integration/ir/ir_test.baa": {
+    "dump_ir_sha256": "f03fb4a4537b6c709b7bb0de724884528fd0bd07d2462ff988ed895285d248eb",
+    "dump_ir_opt_o2_sha256": "b76e3636022704e304056965010da60ea0a618d3aa62d872ddf10699bd2083bf"
+  }
+}

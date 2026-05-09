@@ -1,6 +1,6 @@
 # Baa IR Specification
 
-> **Version:** 0.5.5 | [← Compiler Internals](INTERNALS.md) | [API Reference →](API_REFERENCE.md)
+> **Version:** 0.5.6 | [← Compiler Internals](INTERNALS.md) | [API Reference →](API_REFERENCE.md)
 
 This document specifies the Intermediate Representation (IR) for the Baa compiler. The IR uses Arabic naming conventions throughout, creating a culturally authentic yet technically robust design.
 
@@ -121,11 +121,13 @@ The backend uses special negative register numbers for physical registers:
 | `-1` | `%إطار` | RBP | Frame pointer (base pointer) |
 | `-2` | `%عائد` | RAX | ABI return value register |
 | `-3` | `%مكدس` | RSP | Stack pointer |
-| `-10` | `%معامل٠` | RCX/RCX (Windows/Linux) | First integer argument |
-| `-11` | `%معامل١` | RDX/RDX | Second integer argument |
-| `-12` | `%معامل٢` | R8/RDI | Third integer argument |
-| `-13` | `%معامل٣` | R9/RSI | Fourth integer argument |
-| `-14` onwards | `%معامل٤+` | Stack/R10+ | Additional arguments |
+| `-10` | `%معامل٠` | RCX/RDI (Windows/Linux) | First integer argument |
+| `-11` | `%معامل١` | RDX/RSI | Second integer argument |
+| `-12` | `%معامل٢` | R8/RDX | Third integer argument |
+| `-13` | `%معامل٣` | R9/RCX | Fourth integer argument |
+| `-14` | `%معامل٤` | Stack/R8 (Windows/Linux) | Fifth integer argument |
+| `-15` | `%معامل٥` | Stack/R9 (Windows/Linux) | Sixth integer argument |
+| `-16` onwards | `%معامل٦+` | Stack | Additional arguments |
 
 ### 3.3 Phi Nodes
 
@@ -144,6 +146,7 @@ The `فاي` instruction selects a value based on which predecessor block was ex
 - **SSA verifier (v0.3.2.5.3):** The compiler provides `--verify-ssa` to validate SSA invariants after Mem2Reg and before Out-of-SSA (single-definition, dominance, and phi incoming-edge correctness).
 - **IR well-formedness verifier (v0.3.2.6.5):** The compiler provides `--verify-ir` to validate general IR invariants (operand counts, type consistency, terminator rules, phi placement, and intra-module call signature checks).
 - **All verifiers (v0.3.2.9.1):** The compiler provides `--verify` to run `--verify-ir` + `--verify-ssa` together (requires `-O1`/`-O2`).
+- **Verify gate (v0.3.2.9.1):** The compiler provides `--verify-gate` to run `--verify-ir`/`--verify-ssa` after each optimizer pass iteration (requires `-O1`/`-O2`).
 
 ### 3.4 Memory Model
 
@@ -660,7 +663,11 @@ return      ::= "رجوع" type operand
 store_inst  ::= "خزن" type operand "،" "%" ident
 operand     ::= "%" ident | immediate
 immediate   ::= arabic_number | "-" arabic_number
-type        ::= "ص٦٤" | "ص٣٢" | "ص١٦" | "ص٨" | "ص١" | "فراغ" | pointer | array
+type        ::= "ص٦٤" | "ص٣٢" | "ص١٦" | "ص٨" | "ص١"
+              | "ط٦٤" | "ط٣٢" | "ط١٦" | "ط٨"
+              | "حرف" | "ع٦٤"
+              | "فراغ"
+              | pointer | array
 pointer     ::= "مؤشر" "[" type "]"
 array       ::= "مصفوفة" "[" type "،" number "]"
 ```
@@ -1232,4 +1239,3 @@ IRModule* module = ir_module_new("example.baa");
 // ... build IR ...
 ir_module_free(module);  // Frees all arena memory
 ```
-

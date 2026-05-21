@@ -1382,10 +1382,12 @@ Partial status update (2026-03-06):
 
 ### v0.5.7: Bootstrap Subset (Baa0) Definition 📐
 
-- [ ] **Define minimal subset** — features required to implement compiler slices in Baa.
-- [ ] **Ban unstable features in Baa0** — keep bootstrap surface conservative.
-- [ ] **Publish Baa0 compliance suite** — tests for subset guarantees.
-- [ ] **Document migration plan** — C modules to Baa equivalents by priority.
+- [x] **Define minimal subset** — features required to implement compiler slices in Baa.
+- [x] **Ban unstable features in Baa0** — keep bootstrap surface conservative.
+- [x] **Publish Baa0 compliance suite** — tests for subset guarantees.
+- [x] **Document migration plan** — C modules to Baa equivalents by priority.
+
+✅ COMPLETED (2026-05-22)
 
 ### v0.5.8: Self-Hosting Pilot (Last Step Before Phase 5) 🧪
 
@@ -1399,16 +1401,16 @@ Partial status update (2026-03-06):
 - [ ] **Cross-target QA green** — `quick/full` pass on both `x86_64-windows` and `x86_64-linux`.
 - [x] **Determinism checks green** — stable IR text and stable diagnostics for identical inputs.
 - [x] **File-size governance active** — CI guard for module-size budget is enforced.
-- [ ] **Contracts frozen and published** — grammar/ABI/IR/Baa0 docs tagged and versioned.
+- [x] **Contracts frozen and published** — grammar/ABI/IR/Baa0 docs tagged and versioned.
 - [ ] **Bootstrap handoff bundle ready** — scripts + manifests + reproducible build notes archived.
 
 #### Phase 4.5 Required Artifacts
 
 - [x] `docs/COMPONENT_OWNERSHIP.md` — boundaries + owners + allowed dependencies.
 - [x] `docs/BOOTSTRAP_CONTRACT.md` — frozen ABI/IR/language requirements for v0.9.
-- [ ] `docs/BAA0_SPEC.md` — bootstrap subset definition and exclusions.
-- [ ] `scripts/qa_bootstrap_gate.py` — one-command admission checks for Phase 5.
-- [ ] `tests/bootstrap/` — parity corpus dedicated to migration from C → Baa slices.
+- [x] `docs/BAA0_SPEC.md` — bootstrap subset definition and exclusions.
+- [x] `scripts/qa_bootstrap_gate.py` — one-command admission checks for Phase 5.
+- [x] `tests/bootstrap/` — parity corpus dedicated to migration from C → Baa slices.
 
 ---
 

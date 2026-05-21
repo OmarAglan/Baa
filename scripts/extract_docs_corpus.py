@@ -63,6 +63,8 @@ def _git_list_md_files(ref: str) -> list[str]:
         ["git", "ls-tree", "-r", "--name-only", ref],
         cwd=str(ROOT),
         text=True,
+        encoding="utf-8",
+        errors="replace",
         capture_output=True,
         check=False,
     )
@@ -81,6 +83,8 @@ def _git_show_text(ref: str, path: str) -> str | None:
         ["git", "show", f"{ref}:{path}"],
         cwd=str(ROOT),
         text=True,
+        encoding="utf-8",
+        errors="replace",
         capture_output=True,
         check=False,
     )
@@ -145,7 +149,15 @@ def _compile_and_maybe_run(
     cmd.extend([str(src_rel), "-o", str(exe_path)])
 
     try:
-        p = subprocess.run(cmd, cwd=str(ROOT), text=True, capture_output=True, timeout=float(compile_timeout_s))
+        p = subprocess.run(
+            cmd,
+            cwd=str(ROOT),
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            capture_output=True,
+            timeout=float(compile_timeout_s),
+        )
     except subprocess.TimeoutExpired:
         return 124, "", "compile timeout"
     if p.returncode != 0:
@@ -153,7 +165,15 @@ def _compile_and_maybe_run(
 
     if run_it:
         try:
-            r = subprocess.run([str(exe_path)], cwd=str(ROOT), text=True, capture_output=True, timeout=float(run_timeout_s))
+            r = subprocess.run(
+                [str(exe_path)],
+                cwd=str(ROOT),
+                text=True,
+                encoding="utf-8",
+                errors="replace",
+                capture_output=True,
+                timeout=float(run_timeout_s),
+            )
             return int(r.returncode), r.stdout, r.stderr
         except subprocess.TimeoutExpired:
             return 124, "", "run timeout"
@@ -176,6 +196,8 @@ def _git_refs_from_pattern(pat: str) -> list[str]:
         ["git", "tag", "-l", pat],
         cwd=str(ROOT),
         text=True,
+        encoding="utf-8",
+        errors="replace",
         capture_output=True,
         check=False,
     )

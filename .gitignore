@@ -32,3 +32,4 @@ mingw64.7z
 __pycache__/
 *.pyc
 /.cache
+/.baa_bootstrap_logs/

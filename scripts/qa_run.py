@@ -534,6 +534,25 @@ def main() -> int:
         all_results.append(determinism_res)
         overall_ok = overall_ok and determinism_res.passed
 
+        bootstrap_summary = log_dir / "bootstrap-summary.json"
+        bootstrap_res = _run_logged(
+            "bootstrap-gate",
+            [
+                sys.executable,
+                str(ROOT / "scripts" / "qa_bootstrap_gate.py"),
+                "--baa",
+                str(baa),
+                "--summary-json",
+                str(bootstrap_summary.relative_to(ROOT)),
+            ],
+            cwd=ROOT,
+            log_dir=log_dir,
+            timeout_s=180.0,
+        )
+        _print_step(bootstrap_res)
+        all_results.append(bootstrap_res)
+        overall_ok = overall_ok and bootstrap_res.passed
+
     return _write_summary(args.mode, baa, overall_ok, all_results, log_dir, args.summary_json)
 
 

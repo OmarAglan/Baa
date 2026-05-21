@@ -1,6 +1,6 @@
 # Baa Bootstrap Contract
 
-> **Version:** 0.5.6 | [← Component Ownership](COMPONENT_OWNERSHIP.md) | [Language Spec →](LANGUAGE.md)
+> **Version:** 0.5.7 | [← Component Ownership](COMPONENT_OWNERSHIP.md) | [Language Spec →](LANGUAGE.md)
 
 This document freezes the language, ABI, standard-library, and IR contracts that Phase 5 bootstrap work must preserve.
 
@@ -194,10 +194,10 @@ A compiler slice is eligible for Phase 5 migration only when it preserves this c
 - `--verify`, `--verify-ir`, and `--verify-ssa` remain clean for IR-affecting paths.
 - Multi-file include resolution and symbol visibility behavior from `v0.5.2` remain unchanged.
 - Diagnostics remain Arabic-first and deterministic enough for negative-test anchors.
+- Baa0 candidate sources pass `scripts/qa_bootstrap_gate.py` and comply with `docs/BAA0_SPEC.md`.
 
-`docs/BAA0_SPEC.md`, `scripts/qa_bootstrap_gate.py`, and `tests/bootstrap/` are later Phase 4.5 artifacts and will build on this contract.
+`docs/BAA0_SPEC.md`, `scripts/qa_bootstrap_gate.py`, and `tests/bootstrap/` define the v0.5.7 bootstrap subset admission surface.
 
 ---
 
 *[← Component Ownership](COMPONENT_OWNERSHIP.md) | [Language Spec →](LANGUAGE.md)*
-

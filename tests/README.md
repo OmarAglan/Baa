@@ -10,6 +10,7 @@ tests/
 │   ├── backend/   # compile + runtime integration tests
 │   └── ir/        # compile-focused IR surface tests
 ├── neg/           # expected-fail diagnostics tests
+├── bootstrap/     # Baa0 bootstrap subset compliance corpus
 ├── stress/        # stress tests (large inputs / scale)
 ├── snapshots/     # deterministic IR/QA snapshot contracts
 ├── fixtures/      # include files and multi-file fixtures
@@ -42,3 +43,4 @@ Supported line markers inside `.baa` files:
 - Full regression: `python scripts/qa_run.py --mode full`
 - Stress suite: `python scripts/qa_run.py --mode stress`
 - Release gate: `python scripts/qa_run.py --mode release`
+- Bootstrap gate: `python scripts/qa_bootstrap_gate.py`

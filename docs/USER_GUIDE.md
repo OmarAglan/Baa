@@ -1,6 +1,6 @@
 # Baa User Guide
 
-> **Version:** 0.5.6 | [← README](../README.md) | [Language Spec →](LANGUAGE.md)
+> **Version:** 0.5.7 | [← README](../README.md) | [Language Spec →](LANGUAGE.md)
 
 Welcome to Baa (باء)! This guide will help you write your first Arabic computer program and use the Baa compiler toolchain.
 
@@ -896,7 +896,7 @@ python .\scripts\qa_run.py --mode full
 # Stress testing (full + stress suite + fuzz-lite)
 python .\scripts\qa_run.py --mode stress
 
-# Release gate (full + stress + fuzz-lite + determinism checks)
+# Release gate (full + stress + fuzz-lite + determinism + bootstrap checks)
 python .\scripts\qa_run.py --mode release
 
 # Direct integration test runner
@@ -1011,4 +1011,3 @@ Test files can include special comments:
 ---
 
 *[← README](../README.md) | [Language Specification →](LANGUAGE.md)*
-

@@ -6,6 +6,29 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ---
 
+## [0.5.7] - 2026-05-22
+
+**Bootstrap Subset Definition**
+
+### Added
+
+- **Baa0 subset specification**:
+  - Added `docs/BAA0_SPEC.md` to define the allowed bootstrap subset, banned unstable features, compliance rules, and migration priority.
+- **Bootstrap admission gate**:
+  - Added `scripts/qa_bootstrap_gate.py` to validate Baa0 policy, compile/runtime bootstrap cases, banned-feature fixtures, and cross-target `-S` assembly generation.
+  - Wired the bootstrap gate into `python scripts/qa_run.py --mode release`.
+- **Bootstrap compliance corpus**:
+  - Added `tests/bootstrap/` with positive Baa0 programs and excluded-feature fixtures.
+
+### Changed
+
+- **Bootstrap contract and roadmap**:
+  - Published the v0.5.7 Baa0 artifacts and marked the Phase 4.5 Baa0 definition tasks complete.
+- **Docs corpus QA robustness**:
+  - Made `scripts/extract_docs_corpus.py` decode subprocess output as UTF-8 on Windows so Arabic diagnostics do not fail corpus generation under non-UTF-8 console code pages.
+
+---
+
 ## [0.5.6] - 2026-05-09
 
 **Determinism & QA Gates**

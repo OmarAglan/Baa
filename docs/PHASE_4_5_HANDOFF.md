@@ -73,6 +73,8 @@ Phase 4.5 handoff bundle readiness is complete when:
 
 Full Phase 4.5 exit still additionally requires Windows and Linux `quick/full` evidence. If the handoff gate is run on only one platform, `phase45_exit_ready` remains false in the generated summary until the missing platform evidence is attached.
 
+As of 2026-05-22, Windows handoff evidence is present and Linux signoff is explicitly deferred. Phase 5 planning may consume the frozen artifacts above, but Phase 5 implementation checkpoints must continue to treat Linux `quick/full` evidence as a required gate before claiming full Phase 4.5 exit or a cross-platform release candidate.
+
 ---
 
 *[← Self-Hosting Pilot](SELF_HOSTING_PILOT_REPORT.md) | [Bootstrap Contract →](BOOTSTRAP_CONTRACT.md)*

@@ -22,6 +22,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 - **Roadmap closure**:
   - Marked the Phase 4.5 bootstrap handoff bundle exit item complete while keeping cross-platform QA signoff explicitly pending until both Windows and Linux evidence are attached.
+  - Recorded Linux signoff as intentionally deferred after Windows handoff/release evidence passed; full Phase 4.5 exit still requires Linux `quick/full` evidence.
 
 ---
 

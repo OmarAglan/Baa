@@ -1415,6 +1415,8 @@ Partial status update (2026-03-06):
 - [x] **Contracts frozen and published** — grammar/ABI/IR/Baa0 docs tagged and versioned.
 - [x] **Bootstrap handoff bundle ready** — scripts + manifests + reproducible build notes archived.
 
+> **Deferred signoff (2026-05-22):** Windows handoff/release evidence is present. Linux `quick/full` evidence is intentionally skipped for now and remains the blocker for full Phase 4.5 exit. Phase 5 planning may proceed from the frozen artifacts, but implementation milestones must keep Linux parity gated.
+
 #### Phase 4.5 Required Artifacts
 
 - [x] `docs/COMPONENT_OWNERSHIP.md` — boundaries + owners + allowed dependencies.

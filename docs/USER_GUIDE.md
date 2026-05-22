@@ -1,6 +1,6 @@
 # Baa User Guide
 
-> **Version:** 0.5.7 | [← README](../README.md) | [Language Spec →](LANGUAGE.md)
+> **Version:** 0.5.8 | [← README](../README.md) | [Language Spec →](LANGUAGE.md)
 
 Welcome to Baa (باء)! This guide will help you write your first Arabic computer program and use the Baa compiler toolchain.
 
@@ -898,6 +898,9 @@ python .\scripts\qa_run.py --mode stress
 
 # Release gate (full + stress + fuzz-lite + determinism + bootstrap checks)
 python .\scripts\qa_run.py --mode release
+
+# Self-hosting pilot gate
+python .\scripts\qa_selfhost_pilot.py
 
 # Direct integration test runner
 python tests/test.py

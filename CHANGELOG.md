@@ -6,6 +6,27 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ---
 
+## [0.5.8] - 2026-05-22
+
+**Self-Hosting Pilot**
+
+### Added
+
+- **Baa0 compiler-slice pilot**:
+  - Added `src/frontend/lexer_token_names_baa0.baa`, a small Baa0 frontend slice that mirrors token-name mapping behavior.
+- **Mixed C+Baa parity gate**:
+  - Added `scripts/qa_selfhost_pilot.py` to compile the Baa0 slice to an object, link it with a generated C parity harness, and compare behavior against `token_type_to_str()`.
+  - Wired the self-hosting pilot gate into `python scripts/qa_run.py --mode release`.
+- **Pilot report**:
+  - Added `docs/SELF_HOSTING_PILOT_REPORT.md` with the v0.5.8 go/no-go result and next Phase 5 harness recommendation.
+
+### Changed
+
+- **Release QA documentation**:
+  - Documented the self-hosting pilot gate in API, internals, user guide, test README, roadmap, and release metadata.
+
+---
+
 ## [0.5.7] - 2026-05-22
 
 **Bootstrap Subset Definition**

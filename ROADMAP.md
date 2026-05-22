@@ -1391,10 +1391,12 @@ Partial status update (2026-03-06):
 
 ### v0.5.8: Self-Hosting Pilot (Last Step Before Phase 5) 🧪
 
-- [ ] **Rewrite one compiler slice in Baa** — start with `lexer` (or smallest high-value slice).
-- [ ] **Mixed pipeline build** — C host compiler + Baa pilot module in one build.
-- [ ] **Behavioral equivalence checks** — output parity vs C implementation.
-- [ ] **Go/No-Go report for Phase 5** — readiness decision based on objective gates.
+- [x] **Rewrite one compiler slice in Baa** — token-name lexer helper is implemented as a Baa0 pilot slice.
+- [x] **Mixed pipeline build** — C host compiler + Baa pilot module link in one parity harness.
+- [x] **Behavioral equivalence checks** — token-name output parity vs C implementation is gated.
+- [x] **Go/No-Go report for Phase 5** — readiness decision recorded in `docs/SELF_HOSTING_PILOT_REPORT.md`.
+
+✅ COMPLETED (2026-05-22)
 
 #### Phase 4.5 Exit Criteria (Mandatory Before Phase 5)
 

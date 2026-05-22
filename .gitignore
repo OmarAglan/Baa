@@ -33,3 +33,4 @@ __pycache__/
 *.pyc
 /.cache
 /.baa_bootstrap_logs/
+/.baa_selfhost_logs/

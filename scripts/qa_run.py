@@ -553,6 +553,25 @@ def main() -> int:
         all_results.append(bootstrap_res)
         overall_ok = overall_ok and bootstrap_res.passed
 
+        selfhost_summary = log_dir / "selfhost-pilot-summary.json"
+        selfhost_res = _run_logged(
+            "selfhost-pilot-gate",
+            [
+                sys.executable,
+                str(ROOT / "scripts" / "qa_selfhost_pilot.py"),
+                "--baa",
+                str(baa),
+                "--summary-json",
+                str(selfhost_summary.relative_to(ROOT)),
+            ],
+            cwd=ROOT,
+            log_dir=log_dir,
+            timeout_s=180.0,
+        )
+        _print_step(selfhost_res)
+        all_results.append(selfhost_res)
+        overall_ok = overall_ok and selfhost_res.passed
+
     return _write_summary(args.mode, baa, overall_ok, all_results, log_dir, args.summary_json)
 
 

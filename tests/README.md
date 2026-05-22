@@ -44,3 +44,4 @@ Supported line markers inside `.baa` files:
 - Stress suite: `python scripts/qa_run.py --mode stress`
 - Release gate: `python scripts/qa_run.py --mode release`
 - Bootstrap gate: `python scripts/qa_bootstrap_gate.py`
+- Self-hosting pilot gate: `python scripts/qa_selfhost_pilot.py`

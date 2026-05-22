@@ -1,0 +1,65 @@
+{
+  "schema": 1,
+  "metadata_version": "0.9.0.1",
+  "stage0": {
+    "tag": "bootstrap-stage0-v0.9.0.1",
+    "commit": "619619ab04d30cb30bde5fc7d726814bf3c4c933",
+    "compiler_version": "0.5.9"
+  },
+  "base_release": {
+    "tag": "0.5.9",
+    "commit": "c0ec754fd410f01d60fd663d8de1073b6c5a7d92"
+  },
+  "signoff": {
+    "windows": "present",
+    "linux": "deferred",
+    "phase45_exit_ready": false
+  },
+  "frozen_artifacts": [
+    {
+      "path": "docs/COMPONENT_OWNERSHIP.md",
+      "object_type": "blob",
+      "git_object_id": "2c54d98d44177f045cba5985c22a2d235dda3d3f"
+    },
+    {
+      "path": "docs/BOOTSTRAP_CONTRACT.md",
+      "object_type": "blob",
+      "git_object_id": "a7c7d8def8bff1c0b52076715d3c8b8cfd056b9a"
+    },
+    {
+      "path": "docs/BAA0_SPEC.md",
+      "object_type": "blob",
+      "git_object_id": "ede89ef485bd3d369bd50ab80902e085fc163d54"
+    },
+    {
+      "path": "docs/SELF_HOSTING_PILOT_REPORT.md",
+      "object_type": "blob",
+      "git_object_id": "e212a3b87282925451c70361b3259534051427ec"
+    },
+    {
+      "path": "docs/PHASE_4_5_HANDOFF.md",
+      "object_type": "blob",
+      "git_object_id": "23b1a0513e98e36e18c99180dfba9a43e035be21"
+    },
+    {
+      "path": "scripts/qa_bootstrap_gate.py",
+      "object_type": "blob",
+      "git_object_id": "831a3774f94542e8021c1a51d57f36c3f8ab0823"
+    },
+    {
+      "path": "scripts/qa_selfhost_pilot.py",
+      "object_type": "blob",
+      "git_object_id": "1f942de8d414aa867b25b7e26f64ace279fed9e8"
+    },
+    {
+      "path": "scripts/qa_phase45_handoff.py",
+      "object_type": "blob",
+      "git_object_id": "8bbbf1d5206f37d0e6d017fa4cea15e924577304"
+    },
+    {
+      "path": "tests/bootstrap",
+      "object_type": "tree",
+      "git_object_id": "327c654c6c54ebc2b1681e1e17c009b372f1e36b"
+    }
+  ]
+}

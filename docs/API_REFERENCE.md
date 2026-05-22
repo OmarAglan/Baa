@@ -1,6 +1,6 @@
 # Baa Internal API Reference
 
-> **Version:** 0.5.9 | [← Compiler Internals](INTERNALS.md) | [IR Specification →](BAA_IR_SPECIFICATION.md)
+> **Version:** 0.9.0.1 | [← Compiler Internals](INTERNALS.md) | [IR Specification →](BAA_IR_SPECIFICATION.md)
 
 This document details the C functions, enumerations, and structures defined in the current component-owned public headers under `src/frontend/`, `src/support/`, `src/middleend/`, and `src/backend/`. `src/baa.h` remains as a compatibility umbrella over the frontend/support public surface.
 
@@ -60,6 +60,7 @@ Additional build-maturity guards:
 - `scripts/qa_bootstrap_gate.py` validates Baa0 positive sources, banned-feature fixtures, runtime-marked bootstrap cases, and cross-target `-S` assembly generation for the bootstrap corpus.
 - `scripts/qa_selfhost_pilot.py` validates the mixed C+Baa token-name pilot by linking a Baa0 object with a generated C parity harness.
 - `scripts/qa_phase45_handoff.py` creates the Phase 4.5 handoff evidence bundle and records local platform signoff status.
+- `scripts/qa_stage0_manifest.py` validates the v0.9.0.1 Stage-0 snapshot tag and frozen artifact Git object IDs.
 
 ### Test Metadata Contract
 

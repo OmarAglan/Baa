@@ -1,6 +1,6 @@
 # Phase 4.5 Handoff Bundle
 
-> **Version:** 0.5.9 | [← Self-Hosting Pilot](SELF_HOSTING_PILOT_REPORT.md) | [Bootstrap Contract →](BOOTSTRAP_CONTRACT.md)
+> **Version:** 0.9.0.1 | [← Self-Hosting Pilot](SELF_HOSTING_PILOT_REPORT.md) | [Stage-0 Manifest →](STAGE0_BOOTSTRAP_MANIFEST.md)
 
 This document defines the handoff package from Phase 4.5 bootstrap readiness into the Phase 5 / v0.9.0 self-hosting execution baseline.
 
@@ -77,4 +77,4 @@ As of 2026-05-22, Windows handoff evidence is present and Linux signoff is expli
 
 ---
 
-*[← Self-Hosting Pilot](SELF_HOSTING_PILOT_REPORT.md) | [Bootstrap Contract →](BOOTSTRAP_CONTRACT.md)*
+*[← Self-Hosting Pilot](SELF_HOSTING_PILOT_REPORT.md) | [Stage-0 Manifest →](STAGE0_BOOTSTRAP_MANIFEST.md)*

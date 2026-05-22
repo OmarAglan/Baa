@@ -6,6 +6,27 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ---
 
+## [0.9.0.1] - 2026-05-22
+
+**Stage-0 Bootstrap Manifest**
+
+### Added
+
+- **Stage-0 manifest**:
+  - Added `docs/STAGE0_TOOLCHAIN_MANIFEST.json` to pin the bootstrap snapshot tag, base release tag, frozen artifact Git object IDs, and platform signoff state.
+  - Added `docs/STAGE0_BOOTSTRAP_MANIFEST.md` to document the Stage-0 source anchor and deferred Linux signoff.
+- **Manifest validation gate**:
+  - Added `scripts/qa_stage0_manifest.py` to validate the bootstrap tag, base release tag, and frozen artifact object IDs.
+  - Created annotated tag `bootstrap-stage0-v0.9.0.1` for the Stage-0 snapshot.
+
+### Changed
+
+- **Phase 5 baseline**:
+  - Advanced visible project/compiler metadata to `0.9.0.1`.
+  - Marked the v0.9.0.1 roadmap checkpoint complete while keeping Linux signoff pending as the blocker for full Phase 4.5 exit.
+
+---
+
 ## [0.5.9] - 2026-05-22
 
 **Phase 4.5 Handoff Bundle**

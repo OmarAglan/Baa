@@ -1,7 +1,7 @@
 # Baa Roadmap (Updated)
 
 > Track the development progress of the Baa programming language.
-> **Current Status:** Phase 4.5 - Bootstrap Readiness (v0.5.x) ← IN PROGRESS
+> **Current Status:** Phase 5 - Bootstrap Execution Baseline (v0.9.0.x) ← IN PROGRESS
 
 ---
 
@@ -1444,9 +1444,11 @@ Partial status update (2026-03-06):
 
 #### v0.9.0.1: Consume Phase 4.5 Artifacts
 
-- [ ] **Use frozen contracts from v0.5** — language/ABI/IR/Baa0 are inputs, not redefined in v0.9.
-- [ ] **Pin Stage-0 toolchain manifest** — inherit deterministic build inputs from v0.5 gates.
-- [ ] **Create bootstrap snapshot tag** — lock the handoff commit before Baa rewrites.
+- [x] **Use frozen contracts from v0.5** — language/ABI/IR/Baa0 are inputs, not redefined in v0.9.
+- [x] **Pin Stage-0 toolchain manifest** — `docs/STAGE0_TOOLCHAIN_MANIFEST.json` records deterministic Stage-0 inputs.
+- [x] **Create bootstrap snapshot tag** — `bootstrap-stage0-v0.9.0.1` locks the handoff commit before Baa rewrites.
+
+✅ COMPLETED (2026-05-22)
 
 #### v0.9.0.2: Mixed C+Baa Harness
 

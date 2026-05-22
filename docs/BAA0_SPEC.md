@@ -1,6 +1,6 @@
 # Baa0 Bootstrap Subset Specification
 
-> **Version:** 0.5.8 | [← Bootstrap Contract](BOOTSTRAP_CONTRACT.md) | [Language Spec →](LANGUAGE.md)
+> **Version:** 0.5.9 | [← Bootstrap Contract](BOOTSTRAP_CONTRACT.md) | [Language Spec →](LANGUAGE.md)
 
 Baa0 is the conservative source subset used for early Phase 5 compiler-slice rewrites. It is not a new language mode and does not change what the compiler accepts. It defines which Baa features are allowed in bootstrap-owned source files so the first self-hosting work stays deterministic, portable, and easy to compare against the C baseline.
 

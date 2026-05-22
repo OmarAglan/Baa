@@ -45,3 +45,4 @@ Supported line markers inside `.baa` files:
 - Release gate: `python scripts/qa_run.py --mode release`
 - Bootstrap gate: `python scripts/qa_bootstrap_gate.py`
 - Self-hosting pilot gate: `python scripts/qa_selfhost_pilot.py`
+- Phase 4.5 handoff gate: `python scripts/qa_phase45_handoff.py`

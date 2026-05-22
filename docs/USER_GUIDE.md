@@ -1,6 +1,6 @@
 # Baa User Guide
 
-> **Version:** 0.5.8 | [← README](../README.md) | [Language Spec →](LANGUAGE.md)
+> **Version:** 0.5.9 | [← README](../README.md) | [Language Spec →](LANGUAGE.md)
 
 Welcome to Baa (باء)! This guide will help you write your first Arabic computer program and use the Baa compiler toolchain.
 
@@ -901,6 +901,9 @@ python .\scripts\qa_run.py --mode release
 
 # Self-hosting pilot gate
 python .\scripts\qa_selfhost_pilot.py
+
+# Phase 4.5 handoff bundle gate
+python .\scripts\qa_phase45_handoff.py
 
 # Direct integration test runner
 python tests/test.py

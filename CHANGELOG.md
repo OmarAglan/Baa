@@ -6,6 +6,25 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ---
 
+## [0.5.9] - 2026-05-22
+
+**Phase 4.5 Handoff Bundle**
+
+### Added
+
+- **Handoff document**:
+  - Added `docs/PHASE_4_5_HANDOFF.md` to define frozen inputs, Stage-0 toolchain requirements, and Phase 5 admission status.
+- **Handoff evidence gate**:
+  - Added `scripts/qa_phase45_handoff.py` to collect toolchain versions, git state, release QA evidence, a deterministic sample build manifest, and bootstrap/self-hosting gate summaries.
+  - Added local `.baa_phase45_handoff/` output for generated handoff evidence.
+
+### Changed
+
+- **Roadmap closure**:
+  - Marked the Phase 4.5 bootstrap handoff bundle exit item complete while keeping cross-platform QA signoff explicitly pending until both Windows and Linux evidence are attached.
+
+---
+
 ## [0.5.8] - 2026-05-22
 
 **Self-Hosting Pilot**

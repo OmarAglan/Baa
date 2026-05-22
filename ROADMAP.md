@@ -1398,13 +1398,22 @@ Partial status update (2026-03-06):
 
 ✅ COMPLETED (2026-05-22)
 
+### v0.5.9: Phase 4.5 Handoff Bundle 📦
+
+- [x] **Publish handoff document** — `docs/PHASE_4_5_HANDOFF.md` records frozen inputs and Stage-0 requirements.
+- [x] **Add handoff gate** — `scripts/qa_phase45_handoff.py` generates local handoff evidence and JSON summary.
+- [x] **Archive reproducibility evidence locally** — handoff output records tool versions, release QA summary, and sample build manifest.
+- [x] **Expose platform signoff slots** — Windows/Linux evidence is tracked without claiming unrun platforms.
+
+✅ COMPLETED (2026-05-22)
+
 #### Phase 4.5 Exit Criteria (Mandatory Before Phase 5)
 
 - [ ] **Cross-target QA green** — `quick/full` pass on both `x86_64-windows` and `x86_64-linux`.
 - [x] **Determinism checks green** — stable IR text and stable diagnostics for identical inputs.
 - [x] **File-size governance active** — CI guard for module-size budget is enforced.
 - [x] **Contracts frozen and published** — grammar/ABI/IR/Baa0 docs tagged and versioned.
-- [ ] **Bootstrap handoff bundle ready** — scripts + manifests + reproducible build notes archived.
+- [x] **Bootstrap handoff bundle ready** — scripts + manifests + reproducible build notes archived.
 
 #### Phase 4.5 Required Artifacts
 
@@ -1413,6 +1422,8 @@ Partial status update (2026-03-06):
 - [x] `docs/BAA0_SPEC.md` — bootstrap subset definition and exclusions.
 - [x] `scripts/qa_bootstrap_gate.py` — one-command admission checks for Phase 5.
 - [x] `tests/bootstrap/` — parity corpus dedicated to migration from C → Baa slices.
+- [x] `docs/PHASE_4_5_HANDOFF.md` — Stage-0 handoff notes and Phase 5 admission status.
+- [x] `scripts/qa_phase45_handoff.py` — local handoff bundle generator and evidence gate.
 
 ---
 

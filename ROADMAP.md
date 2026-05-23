@@ -1452,11 +1452,13 @@ Partial status update (2026-03-06):
 
 #### v0.9.0.2: Mixed C+Baa Harness
 
-- [ ] **Enable mixed-unit builds** — compile/link `.c` and `.baa` compiler units together.
-- [ ] **Define bridge boundaries** — stable ABI/data-layout interfaces between C and Baa modules.
-- [ ] **Add parity harness** — module-level equivalence checks (tokens/AST/IR/asm as applicable).
-- [ ] **Golden corpus harness** — fixed corpus with expected outputs for every migration step.
-- [ ] **Diff tooling** — normalized comparator for diagnostics and IR text.
+- [x] **Enable mixed-unit builds** — `scripts/qa_mixed_harness.py` compiles Baa slices and C harness units into parity executables.
+- [x] **Define bridge boundaries** — `docs/MIXED_HARNESS.md` records ABI/data-layout handoff rules for C+Baa modules.
+- [x] **Add parity harness** — token-name parity now runs through the reusable mixed harness.
+- [x] **Golden corpus harness** — lexer token-stream fixtures and JSONL snapshots are committed for v0.9.1 preparation.
+- [x] **Diff tooling** — normalized JSONL comparator records compact mismatches and full artifacts in the harness log directory.
+
+✅ COMPLETED (2026-05-23)
 
 ### v0.9.1: Rewrite Lexer 📝
 

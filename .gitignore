@@ -34,4 +34,6 @@ __pycache__/
 /.cache
 /.baa_bootstrap_logs/
 /.baa_selfhost_logs/
+/.baa_mixed_harness_logs/
+/.baa_mixed_harness_out/
 /.baa_phase45_handoff/

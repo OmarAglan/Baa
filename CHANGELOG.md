@@ -6,6 +6,27 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ---
 
+## [0.9.0.2] - 2026-05-23
+
+**Mixed C+Baa Harness**
+
+### Added
+
+- **Reusable mixed harness**:
+  - Added `scripts/qa_mixed_harness.py` with `token-names`, `lexer-token-stream`, and `all` targets.
+  - Added lexer token-stream fixtures and committed JSONL C-baseline snapshots under `tests/snapshots/mixed_harness/`.
+  - Added `docs/MIXED_HARNESS.md` to document the C+Baa object-link bridge, snapshot format, and v0.9.1 lexer-candidate slot.
+
+### Changed
+
+- **Self-hosting pilot compatibility**:
+  - Converted `scripts/qa_selfhost_pilot.py` into a compatibility wrapper over `qa_mixed_harness.py --target token-names`.
+  - Wired release QA to run the generalized mixed harness target set.
+  - Advanced visible project/compiler metadata to `0.9.0.2`.
+  - Marked the v0.9.0.2 roadmap checkpoint complete while keeping Linux signoff deferred.
+
+---
+
 ## [0.9.0.1] - 2026-05-22
 
 **Stage-0 Bootstrap Manifest**

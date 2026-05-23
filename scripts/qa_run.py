@@ -553,12 +553,14 @@ def main() -> int:
         all_results.append(bootstrap_res)
         overall_ok = overall_ok and bootstrap_res.passed
 
-        selfhost_summary = log_dir / "selfhost-pilot-summary.json"
+        selfhost_summary = log_dir / "mixed-harness-summary.json"
         selfhost_res = _run_logged(
-            "selfhost-pilot-gate",
+            "mixed-harness-gate",
             [
                 sys.executable,
-                str(ROOT / "scripts" / "qa_selfhost_pilot.py"),
+                str(ROOT / "scripts" / "qa_mixed_harness.py"),
+                "--target",
+                "all",
                 "--baa",
                 str(baa),
                 "--summary-json",

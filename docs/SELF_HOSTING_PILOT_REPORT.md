@@ -1,6 +1,6 @@
 # Baa Self-Hosting Pilot Report
 
-> **Version:** 0.9.0.1 | [← Baa0 Spec](BAA0_SPEC.md) | [Bootstrap Contract →](BOOTSTRAP_CONTRACT.md)
+> **Version:** 0.9.0.2 | [← Mixed Harness](MIXED_HARNESS.md) | [Bootstrap Contract →](BOOTSTRAP_CONTRACT.md)
 
 This report records the v0.5.8 self-hosting pilot result. It proves that a small Baa0 compiler slice can be compiled as an object, linked with C compiler code, and checked for behavior parity against the current C implementation.
 
@@ -27,7 +27,7 @@ This is intentionally not a full lexer port. It is the smallest useful frontend 
 Gate command:
 
 ```bash
-python scripts/qa_selfhost_pilot.py
+python scripts/qa_mixed_harness.py --target token-names
 ```
 
 The gate:
@@ -37,6 +37,8 @@ The gate:
 - Links the C baseline `src/frontend/lexer_debug.c`, the generated C harness, and the Baa object with the host C compiler.
 - Decodes Baa `نص` values from the current packed `حرف` representation before comparing them with C UTF-8 strings.
 - Fails if the Baa pilot source uses Baa0-banned features outside comments and literals.
+
+`scripts/qa_selfhost_pilot.py` remains as a compatibility wrapper for the token-name target.
 
 ---
 
@@ -56,4 +58,4 @@ Next recommended step:
 
 ---
 
-*[← Baa0 Spec](BAA0_SPEC.md) | [Bootstrap Contract →](BOOTSTRAP_CONTRACT.md)*
+*[← Mixed Harness](MIXED_HARNESS.md) | [Bootstrap Contract →](BOOTSTRAP_CONTRACT.md)*

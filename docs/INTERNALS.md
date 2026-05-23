@@ -1,6 +1,6 @@
 # Baa Compiler Internals
 
-> **Version:** 0.9.0.1 | [← Language Spec](LANGUAGE.md) | [API Reference →](API_REFERENCE.md)
+> **Version:** 0.9.0.2 | [← Language Spec](LANGUAGE.md) | [API Reference →](API_REFERENCE.md)
 
 **Target Architecture:** x86-64 (AMD64)
 **Targets:** Windows x64 (COFF/PE) + Linux x86-64 (ELF)
@@ -230,6 +230,7 @@ Notes:
 - `scripts/qa_selfhost_pilot.py` owns the v0.5.8 mixed C+Baa token-name parity pilot.
 - `scripts/qa_phase45_handoff.py` owns the v0.5.9 Phase 4.5 handoff evidence bundle.
 - `scripts/qa_stage0_manifest.py` owns the v0.9.0.1 Stage-0 snapshot manifest validation.
+- `scripts/qa_mixed_harness.py` owns the v0.9.0.2 mixed C+Baa harness and lexer token-stream baseline snapshots.
 - Legacy runners remain valid:
   - `tests/test.py` (integration)
   - `tests/regress.py` (integration + corpus + negatives)

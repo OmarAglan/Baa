@@ -1206,15 +1206,17 @@ def _lexer_state_snapshot_case(case_name: str, source_path: Path) -> dict[str, A
                 "length": int(row["length"]),
                 "line": line,
                 "column": col,
+                "value": str(row.get("value", "")),
             }
         )
     return {"name": case_name, "source": _rel(source_path), "tokens": tokens}
 
 
-def _format_lexer_state_array(name: str, tokens: list[dict[str, int]]) -> str:
+def _format_lexer_state_array(name: str, tokens: list[dict[str, Any]]) -> str:
     entries = "\n".join(
         "        {"
-        + f'{token["type"]}, {token["start"]}, {token["length"]}, {token["line"]}, {token["column"]}'
+        + f'{token["type"]}, {token["start"]}, {token["length"]}, {token["line"]}, {token["column"]}, '
+        + json.dumps(token["value"], ensure_ascii=False)
         + "},"
         for token in tokens
     )
@@ -1239,6 +1241,7 @@ def _write_lexer_state_harness(path: Path, snapshot_cases: list[dict[str, Any]])
         r'''#include <stdint.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 
 extern void محللباءهيئ(unsigned char* source);
 extern int64_t محللباءالتالي(int64_t* type,
@@ -1246,6 +1249,14 @@ extern int64_t محللباءالتالي(int64_t* type,
                              int64_t* length,
                              int64_t* line,
                              int64_t* column);
+extern int64_t محللباءالتالي_موسع(int64_t* type,
+                                  int64_t* start,
+                                  int64_t* length,
+                                  int64_t* line,
+                                  int64_t* column,
+                                  int64_t* value_start,
+                                  int64_t* value_length,
+                                  int64_t* value_mode);
 
 typedef struct ExpectedToken {
     int64_t type;
@@ -1253,6 +1264,7 @@ typedef struct ExpectedToken {
     int64_t length;
     int64_t line;
     int64_t column;
+    const char* value;
 } ExpectedToken;
 
 typedef struct ExpectedCase {
@@ -1262,24 +1274,81 @@ typedef struct ExpectedCase {
     int count;
 } ExpectedCase;
 
-static int check_token(int index, const ExpectedToken* expected)
+static int normalize_value(const unsigned char* source,
+                           int64_t value_start,
+                           int64_t value_length,
+                           int64_t value_mode,
+                           char* out,
+                           size_t out_size)
+{
+    size_t written = 0u;
+    if (!out || out_size == 0u) return 1;
+    out[0] = '\0';
+
+    if (value_mode == 0 || value_length <= 0) {
+        return 0;
+    }
+
+    for (int64_t i = 0; i < value_length;) {
+        unsigned char byte = source[value_start + i];
+        unsigned char out_byte = byte;
+        int64_t step = 1;
+
+        if (value_mode == 2 &&
+            byte == 0xD9u &&
+            i + 1 < value_length &&
+            source[value_start + i + 1] >= 0xA0u &&
+            source[value_start + i + 1] <= 0xA9u) {
+            out_byte = (unsigned char)('0' + (source[value_start + i + 1] - 0xA0u));
+            step = 2;
+        }
+
+        if (written + 1u >= out_size) {
+            fprintf(stderr, "lexer-state value buffer is too small\n");
+            return 1;
+        }
+        out[written++] = (char)out_byte;
+        i += step;
+    }
+
+    out[written] = '\0';
+    return 0;
+}
+
+static int check_token(const unsigned char* source, int index, const ExpectedToken* expected)
 {
     int64_t type = -1;
     int64_t start = -1;
     int64_t length = -1;
     int64_t line = -1;
     int64_t column = -1;
-    int64_t returned = محللباءالتالي(&type, &start, &length, &line, &column);
+    int64_t value_start = -1;
+    int64_t value_length = -1;
+    int64_t value_mode = -1;
+    char actual_value[512];
+    int64_t returned = محللباءالتالي_موسع(&type,
+                                          &start,
+                                          &length,
+                                          &line,
+                                          &column,
+                                          &value_start,
+                                          &value_length,
+                                          &value_mode);
+
+    if (normalize_value(source, value_start, value_length, value_mode, actual_value, sizeof(actual_value)) != 0) {
+        return 1;
+    }
 
     if (returned != expected->type ||
         type != expected->type ||
         start != expected->start ||
         length != expected->length ||
         line != expected->line ||
-        column != expected->column) {
+        column != expected->column ||
+        strcmp(actual_value, expected->value) != 0) {
         fprintf(stderr,
-                "lexer-state mismatch at %d: got type=%lld ret=%lld start=%lld len=%lld line=%lld col=%lld; "
-                "expected type=%lld start=%lld len=%lld line=%lld col=%lld\n",
+                "lexer-state mismatch at %d: got type=%lld ret=%lld start=%lld len=%lld line=%lld col=%lld value=\"%s\"; "
+                "expected type=%lld start=%lld len=%lld line=%lld col=%lld value=\"%s\"\n",
                 index,
                 (long long)type,
                 (long long)returned,
@@ -1287,11 +1356,13 @@ static int check_token(int index, const ExpectedToken* expected)
                 (long long)length,
                 (long long)line,
                 (long long)column,
+                actual_value,
                 (long long)expected->type,
                 (long long)expected->start,
                 (long long)expected->length,
                 (long long)expected->line,
-                (long long)expected->column);
+                (long long)expected->column,
+                expected->value);
         return 1;
     }
 
@@ -1302,7 +1373,7 @@ static int run_case(const char* name, unsigned char* source, const ExpectedToken
 {
     محللباءهيئ(source);
     for (int i = 0; i < count; ++i) {
-        if (check_token(i, &expected[i]) != 0) {
+        if (check_token(source, i, &expected[i]) != 0) {
             fprintf(stderr, "lexer-state case failed: %s\n", name);
             return 1;
         }
@@ -1363,41 +1434,41 @@ int main(int argc, char** argv)
 {
     unsigned char source[] = "  ()\n{}[] -> == != <= >= && || ++ -- ... . , : + - * / % < > ! & | ^ ~ << >> ؛";
     const ExpectedToken operators[] = {
-        {72, 2, 1, 1, 3},
-        {73, 3, 1, 1, 4},
-        {74, 5, 1, 2, 1},
-        {75, 6, 1, 2, 2},
-        {76, 7, 1, 2, 3},
-        {77, 8, 1, 2, 4},
-        {78, 10, 2, 2, 6},
-        {57, 13, 2, 2, 9},
-        {58, 16, 2, 2, 12},
-        {61, 19, 2, 2, 15},
-        {62, 22, 2, 2, 18},
-        {63, 25, 2, 2, 21},
-        {64, 28, 2, 2, 24},
-        {55, 31, 2, 2, 27},
-        {56, 34, 2, 2, 30},
-        {46, 37, 3, 2, 33},
-        {45, 41, 1, 2, 37},
-        {47, 43, 1, 2, 39},
-        {48, 45, 1, 2, 41},
-        {50, 47, 1, 2, 43},
-        {51, 49, 1, 2, 45},
-        {52, 51, 1, 2, 47},
-        {53, 53, 1, 2, 49},
-        {54, 55, 1, 2, 51},
-        {59, 57, 1, 2, 53},
-        {60, 59, 1, 2, 55},
-        {65, 61, 1, 2, 57},
-        {66, 63, 1, 2, 59},
-        {67, 65, 1, 2, 61},
-        {68, 67, 1, 2, 63},
-        {69, 69, 1, 2, 65},
-        {70, 71, 2, 2, 67},
-        {71, 74, 2, 2, 70},
-        {49, 77, 2, 2, 73},
-        {0, 79, 1, 2, 75},
+        {72, 2, 1, 1, 3, ""},
+        {73, 3, 1, 1, 4, ""},
+        {74, 5, 1, 2, 1, ""},
+        {75, 6, 1, 2, 2, ""},
+        {76, 7, 1, 2, 3, ""},
+        {77, 8, 1, 2, 4, ""},
+        {78, 10, 2, 2, 6, ""},
+        {57, 13, 2, 2, 9, ""},
+        {58, 16, 2, 2, 12, ""},
+        {61, 19, 2, 2, 15, ""},
+        {62, 22, 2, 2, 18, ""},
+        {63, 25, 2, 2, 21, ""},
+        {64, 28, 2, 2, 24, ""},
+        {55, 31, 2, 2, 27, ""},
+        {56, 34, 2, 2, 30, ""},
+        {46, 37, 3, 2, 33, ""},
+        {45, 41, 1, 2, 37, ""},
+        {47, 43, 1, 2, 39, ""},
+        {48, 45, 1, 2, 41, ""},
+        {50, 47, 1, 2, 43, ""},
+        {51, 49, 1, 2, 45, ""},
+        {52, 51, 1, 2, 47, ""},
+        {53, 53, 1, 2, 49, ""},
+        {54, 55, 1, 2, 51, ""},
+        {59, 57, 1, 2, 53, ""},
+        {60, 59, 1, 2, 55, ""},
+        {65, 61, 1, 2, 57, ""},
+        {66, 63, 1, 2, 59, ""},
+        {67, 65, 1, 2, 61, ""},
+        {68, 67, 1, 2, 63, ""},
+        {69, 69, 1, 2, 65, ""},
+        {70, 71, 2, 2, 67, ""},
+        {71, 74, 2, 2, 70, ""},
+        {49, 77, 2, 2, 73, ""},
+        {0, 79, 1, 2, 75, ""},
     };
 __SNAPSHOT_ARRAYS__
     static const ExpectedCase snapshot_cases[] = {

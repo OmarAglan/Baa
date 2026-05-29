@@ -1178,7 +1178,9 @@ def _run_lexer_transition(baa: Path, cc: str, log_dir: Path, out_dir: Path) -> l
 def _write_lexer_state_harness(path: Path) -> None:
     path.write_text(
         r'''#include <stdint.h>
+#include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 
 extern void محللباءهيئ(unsigned char* source);
 extern int64_t محللباءالتالي(int64_t* type,
@@ -1189,6 +1191,7 @@ extern int64_t محللباءالتالي(int64_t* type,
 
 typedef struct ExpectedToken {
     int64_t type;
+    int64_t start;
     int64_t length;
     int64_t line;
     int64_t column;
@@ -1205,79 +1208,171 @@ static int check_token(int index, const ExpectedToken* expected)
 
     if (returned != expected->type ||
         type != expected->type ||
+        start != expected->start ||
         length != expected->length ||
         line != expected->line ||
         column != expected->column) {
         fprintf(stderr,
-                "lexer-state mismatch at %d: got type=%lld ret=%lld len=%lld line=%lld col=%lld; "
-                "expected type=%lld len=%lld line=%lld col=%lld\n",
+                "lexer-state mismatch at %d: got type=%lld ret=%lld start=%lld len=%lld line=%lld col=%lld; "
+                "expected type=%lld start=%lld len=%lld line=%lld col=%lld\n",
                 index,
                 (long long)type,
                 (long long)returned,
+                (long long)start,
                 (long long)length,
                 (long long)line,
                 (long long)column,
                 (long long)expected->type,
+                (long long)expected->start,
                 (long long)expected->length,
                 (long long)expected->line,
                 (long long)expected->column);
         return 1;
     }
 
-    (void)start;
     return 0;
 }
 
-int main(void)
+static int run_case(const char* name, unsigned char* source, const ExpectedToken* expected, int count)
 {
-    unsigned char source[] = "  ()\n{}[] -> == != <= >= && || ++ -- ... . , : + - * / % < > ! & | ^ ~ << >> ؛";
-    const ExpectedToken expected[] = {
-        {72, 1, 1, 3},
-        {73, 1, 1, 4},
-        {74, 1, 2, 1},
-        {75, 1, 2, 2},
-        {76, 1, 2, 3},
-        {77, 1, 2, 4},
-        {78, 2, 2, 6},
-        {57, 2, 2, 9},
-        {58, 2, 2, 12},
-        {61, 2, 2, 15},
-        {62, 2, 2, 18},
-        {63, 2, 2, 21},
-        {64, 2, 2, 24},
-        {55, 2, 2, 27},
-        {56, 2, 2, 30},
-        {46, 3, 2, 33},
-        {45, 1, 2, 37},
-        {47, 1, 2, 39},
-        {48, 1, 2, 41},
-        {50, 1, 2, 43},
-        {51, 1, 2, 45},
-        {52, 1, 2, 47},
-        {53, 1, 2, 49},
-        {54, 1, 2, 51},
-        {59, 1, 2, 53},
-        {60, 1, 2, 55},
-        {65, 1, 2, 57},
-        {66, 1, 2, 59},
-        {67, 1, 2, 61},
-        {68, 1, 2, 63},
-        {69, 1, 2, 65},
-        {70, 2, 2, 67},
-        {71, 2, 2, 70},
-        {49, 2, 2, 73},
-        {0, 0, 2, 75},
-    };
-    const int count = (int)(sizeof(expected) / sizeof(expected[0]));
-
     محللباءهيئ(source);
     for (int i = 0; i < count; ++i) {
         if (check_token(i, &expected[i]) != 0) {
+            fprintf(stderr, "lexer-state case failed: %s\n", name);
             return 1;
         }
     }
+    return 0;
+}
 
-    puts("mixed-harness: lexer Baa-owned state PASS");
+static unsigned char* read_file(const char* path)
+{
+    FILE* f = fopen(path, "rb");
+    long size = 0;
+    unsigned char* buffer = NULL;
+
+    if (!f) {
+        fprintf(stderr, "failed to open fixture: %s\n", path);
+        return NULL;
+    }
+    if (fseek(f, 0, SEEK_END) != 0) {
+        fclose(f);
+        return NULL;
+    }
+    size = ftell(f);
+    if (size < 0) {
+        fclose(f);
+        return NULL;
+    }
+    if (fseek(f, 0, SEEK_SET) != 0) {
+        fclose(f);
+        return NULL;
+    }
+
+    buffer = (unsigned char*)malloc((size_t)size + 1u);
+    if (!buffer) {
+        fclose(f);
+        return NULL;
+    }
+    if (fread(buffer, 1u, (size_t)size, f) != (size_t)size) {
+        free(buffer);
+        fclose(f);
+        return NULL;
+    }
+    buffer[size] = 0;
+    fclose(f);
+    return buffer;
+}
+
+int main(int argc, char** argv)
+{
+    unsigned char source[] = "  ()\n{}[] -> == != <= >= && || ++ -- ... . , : + - * / % < > ! & | ^ ~ << >> ؛";
+    const ExpectedToken operators[] = {
+        {72, 2, 1, 1, 3},
+        {73, 3, 1, 1, 4},
+        {74, 5, 1, 2, 1},
+        {75, 6, 1, 2, 2},
+        {76, 7, 1, 2, 3},
+        {77, 8, 1, 2, 4},
+        {78, 10, 2, 2, 6},
+        {57, 13, 2, 2, 9},
+        {58, 16, 2, 2, 12},
+        {61, 19, 2, 2, 15},
+        {62, 22, 2, 2, 18},
+        {63, 25, 2, 2, 21},
+        {64, 28, 2, 2, 24},
+        {55, 31, 2, 2, 27},
+        {56, 34, 2, 2, 30},
+        {46, 37, 3, 2, 33},
+        {45, 41, 1, 2, 37},
+        {47, 43, 1, 2, 39},
+        {48, 45, 1, 2, 41},
+        {50, 47, 1, 2, 43},
+        {51, 49, 1, 2, 45},
+        {52, 51, 1, 2, 47},
+        {53, 53, 1, 2, 49},
+        {54, 55, 1, 2, 51},
+        {59, 57, 1, 2, 53},
+        {60, 59, 1, 2, 55},
+        {65, 61, 1, 2, 57},
+        {66, 63, 1, 2, 59},
+        {67, 65, 1, 2, 61},
+        {68, 67, 1, 2, 63},
+        {69, 69, 1, 2, 65},
+        {70, 71, 2, 2, 67},
+        {71, 74, 2, 2, 70},
+        {49, 77, 2, 2, 73},
+        {0, 79, 0, 2, 75},
+    };
+    const ExpectedToken basic_utf8[] = {
+        {6, 0, 8, 1, 1},
+        {5, 9, 16, 1, 10},
+        {72, 25, 1, 1, 26},
+        {73, 26, 1, 1, 27},
+        {74, 28, 1, 1, 29},
+        {6, 34, 8, 2, 5},
+        {5, 43, 6, 2, 14},
+        {44, 50, 1, 2, 21},
+        {1, 52, 6, 2, 23},
+        {45, 58, 1, 2, 29},
+        {15, 64, 4, 3, 5},
+        {5, 69, 10, 3, 10},
+        {44, 80, 1, 3, 21},
+        {3, 82, 12, 3, 23},
+        {45, 94, 1, 3, 35},
+        {26, 100, 8, 4, 5},
+        {5, 109, 6, 4, 14},
+        {45, 115, 1, 4, 20},
+        {75, 117, 1, 5, 1},
+        {0, 119, 0, 6, 1},
+    };
+    char path[4096];
+    unsigned char* fixture = NULL;
+
+    if (argc != 2) {
+        fprintf(stderr, "usage: lexer_state_harness <repo-root>\n");
+        return 2;
+    }
+
+    if (run_case("operators", source, operators, (int)(sizeof(operators) / sizeof(operators[0]))) != 0) {
+        return 1;
+    }
+
+    snprintf(path,
+             sizeof(path),
+             "%s/tests/fixtures/mixed_harness/lexer/basic_utf8.baa",
+             argv[1]);
+    fixture = read_file(path);
+    if (!fixture) {
+        return 1;
+    }
+    if (run_case("basic_utf8", fixture, basic_utf8, (int)(sizeof(basic_utf8) / sizeof(basic_utf8[0]))) != 0) {
+        free(fixture);
+        return 1;
+    }
+    free(fixture);
+
+    puts("mixed-harness: lexer Baa-owned state PASS (operators + basic_utf8)");
     return 0;
 }
 ''',
@@ -1332,7 +1427,7 @@ def _run_lexer_state(baa: Path, cc: str, log_dir: Path, out_dir: Path) -> list[C
     if not link.passed:
         return results
 
-    results.append(_run("lexer-state-run", [str(exe)], log_dir))
+    results.append(_run("lexer-state-run", [str(exe), str(ROOT)], log_dir))
     return results
 
 

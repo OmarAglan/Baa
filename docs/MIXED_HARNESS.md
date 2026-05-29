@@ -94,6 +94,8 @@ Compiles `src/frontend/lexer_transition_baa0.baa`, links it with a generated C h
 
 Compiles `src/frontend/lexer_state_baa0.baa`, links it with a generated C harness, and drives a Baa-owned scanner state over a caller-owned UTF-8 byte buffer. This is the first v0.9.1.5 path where Baa owns cursor, line, and column movement and returns token metadata through C-owned out parameters. It currently covers EOF, whitespace/newline skipping, simple punctuation, Arabic semicolon, and multi-character operator tokens; the production `lexer_next_token` path is unchanged.
 
+The target also drives `tests/fixtures/mixed_harness/lexer/basic_utf8.baa` through the Baa-owned scanner-state path and verifies token type, byte start, byte length, line, and column metadata for the first real UTF-8 source fixture. Token text ownership, preprocessing, includes, and diagnostics remain on the later v0.9.1.5 migration path.
+
 ---
 
 ## 4. Snapshot Policy

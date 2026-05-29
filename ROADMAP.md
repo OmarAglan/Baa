@@ -1495,6 +1495,7 @@ Partial status update (2026-03-06):
 
 - [x] **Initial Baa-owned scanner state** — `src/frontend/lexer_state_baa0.baa` owns source pointer, byte offset, line, and column state for a simple punctuation/operator token slice.
 - [x] **Scanner-state mixed harness** — `scripts/qa_mixed_harness.py --target lexer-state` compiles and links the Baa0 scanner slice, then validates token type, byte length, line, and column metadata through C-owned out parameters.
+- [x] **First real UTF-8 fixture checkpoint** — the Baa-owned scanner-state path now validates `basic_utf8.baa` token type, byte start, byte length, line, and column metadata for Arabic keywords/identifiers, Arabic-Indic integers, and string literals.
 - [ ] **Replace bridge with Baa-owned lexer state** — move cursor, source buffer, token construction, and include-stack state from the C-hosted callback path into Baa.
 - [ ] **Port UTF-8 scanner rules** — preserve Arabic identifiers, Arabic-Indic digits, string/char escapes, byte lengths, line/column accounting, and invalid-token behavior.
 - [ ] **Port preprocessor surface** — implement `#تضمين`, `#تعريف`, `#الغاء_تعريف`, `#إذا_عرف`, `#إذا_لم_يعرف`, and conditional skipping with C baseline parity.

@@ -19,11 +19,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
   - Extended the scanner-state checkpoint to recognize the first real UTF-8 fixture path: Arabic keywords/identifiers, Arabic-Indic integer literals, string literals, and byte-accurate source offsets for `basic_utf8.baa`.
   - Extended non-preprocessor scanner coverage to `stress_utf8_identifiers.baa`, including `//` line comments, `لكل`/`إذا` keywords, Arabic identifiers with underscores/digits, and snapshot-matched UTF-8 byte positions.
   - Added a mixed-harness-only extended scanner ABI that returns token value spans/modes for identifiers, integer literals, and string literals without introducing token heap ownership yet.
+  - Added a narrow Baa-owned conditional-preprocessor checkpoint for `#تعريف`, `#الغاء_تعريف`, `#إذا_عرف`, `#وإلا`, and `#نهاية` skipping in the lexer-state harness without replacing the production lexer.
 - **Mixed harness coverage**:
   - Added `scripts/qa_mixed_harness.py --target lexer-state` and included it in `--target all`.
   - The new gate compiles the Baa0 scanner-state module, links it with a generated C harness, and verifies token type, byte start, byte length, line, and column metadata.
   - The lexer-state harness now derives real-fixture expectations from committed token-stream snapshots instead of hand-maintained token rows.
   - The lexer-state harness now verifies token value parity for non-preprocessor fixtures, including Arabic-Indic digit normalization for integer values.
+  - The lexer-state harness now includes `conditional_macros.baa` snapshot parity so active/inactive conditional branches match the C baseline token stream.
 
 ### Remaining
 

@@ -1523,6 +1523,7 @@ def _run_lexer_state(baa: Path, cc: str, log_dir: Path, out_dir: Path) -> list[C
     snapshot_cases = [
         _lexer_state_snapshot_case("basic_utf8", LEXER_FIXTURE_DIR / "basic_utf8.baa"),
         _lexer_state_snapshot_case("stress_utf8_identifiers", ROOT / "tests" / "stress" / "stress_utf8_identifiers.baa"),
+        _lexer_state_snapshot_case("conditional_macros", LEXER_FIXTURE_DIR / "conditional_macros.baa"),
     ]
     _write_lexer_state_harness(harness_c, snapshot_cases)
 

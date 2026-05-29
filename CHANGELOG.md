@@ -6,6 +6,44 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ---
 
+## [0.9.1.5] - Planned
+
+**Full Baa Lexer Migration**
+
+### Planned
+
+- **Baa-owned lexer implementation**:
+  - Replace the v0.9.1 bridge checkpoint with a Baa lexer that owns scanner state, token construction, UTF-8 handling, preprocessor state, and include/dependency tracking.
+  - Keep the existing C lexer API contract available through a compatibility wrapper until the parser migration starts.
+- **Parity gates**:
+  - Promote `scripts/qa_mixed_harness.py --target lexer-token-stream` so it exercises the Baa lexer directly rather than delegating to the C baseline callback.
+  - Preserve lexer diagnostic parity for malformed sources, include cycles, bad escapes, and preprocessor EOF errors.
+- **Scope control**:
+  - No language feature expansion is planned for v0.9.1.5; the checkpoint is a relocation/correctness milestone before v0.9.2 parser work.
+
+---
+
+## [0.9.1] - 2026-05-29
+
+**Lexer Rewrite Checkpoint**
+
+### Added
+
+- **Baa lexer candidate bridge**:
+  - Added `src/frontend/lexer_candidate_baa0.baa` as the first Baa0 lexer-candidate object linked by the mixed harness.
+  - Extended `scripts/qa_mixed_harness.py --target lexer-token-stream` to compile the Baa candidate, link it with a C-hosted callback harness, and compare its token stream against the committed C-baseline JSONL snapshots.
+- **Lexer diagnostics parity target**:
+  - Added `scripts/qa_mixed_harness.py --target lexer-diagnostics`.
+  - Added committed diagnostic snapshots for malformed lexer/preprocessor cases under `tests/snapshots/mixed_harness/lexer_diagnostics/`.
+
+### Changed
+
+- **Bootstrap metadata**:
+  - Advanced visible project/compiler metadata to `0.9.1`.
+  - Updated mixed-harness documentation to describe the active lexer candidate bridge and diagnostics target.
+
+---
+
 ## [0.9.0.2] - 2026-05-23
 
 **Mixed C+Baa Harness**

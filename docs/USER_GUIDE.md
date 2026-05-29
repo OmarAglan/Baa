@@ -1,6 +1,6 @@
 # Baa User Guide
 
-> **Version:** 0.9.0.2 | [← README](../README.md) | [Language Spec →](LANGUAGE.md)
+> **Version:** 0.9.1 | [← README](../README.md) | [Language Spec →](LANGUAGE.md)
 
 Welcome to Baa (باء)! This guide will help you write your first Arabic computer program and use the Baa compiler toolchain.
 
@@ -904,6 +904,7 @@ python .\scripts\qa_selfhost_pilot.py
 
 # Mixed C+Baa harness
 python .\scripts\qa_mixed_harness.py --target all
+python .\scripts\qa_mixed_harness.py --target lexer-diagnostics
 
 # Phase 4.5 handoff bundle gate
 python .\scripts\qa_phase45_handoff.py

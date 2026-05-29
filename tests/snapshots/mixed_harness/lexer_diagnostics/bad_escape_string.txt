@@ -1,0 +1,3 @@
+[Error] tests/neg/lexer_bad_escape_in_string.baa:5:27: خطأ لفظي: تسلسل هروب غير مدعوم داخل النص.
+       5 |     نص س = "مرحبا\q".
+                           ^

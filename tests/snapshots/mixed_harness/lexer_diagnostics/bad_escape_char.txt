@@ -1,0 +1,3 @@
+[Error] tests/neg/lexer_bad_escape_in_char.baa:5:19: خطأ لفظي: تسلسل هروب غير معروف داخل الحرف الحرفي.
+       5 |     حرف ح = '\q'.
+                       ^

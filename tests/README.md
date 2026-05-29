@@ -46,5 +46,6 @@ Supported line markers inside `.baa` files:
 - Bootstrap gate: `python scripts/qa_bootstrap_gate.py`
 - Self-hosting pilot gate: `python scripts/qa_selfhost_pilot.py`
 - Mixed C+Baa harness: `python scripts/qa_mixed_harness.py --target all`
+- Lexer diagnostics harness: `python scripts/qa_mixed_harness.py --target lexer-diagnostics`
 - Phase 4.5 handoff gate: `python scripts/qa_phase45_handoff.py`
 - Stage-0 manifest gate: `python scripts/qa_stage0_manifest.py`

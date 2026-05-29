@@ -19,9 +19,11 @@ ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_LOG_DIR = ROOT / ".baa_mixed_harness_logs"
 DEFAULT_OUT_DIR = ROOT / ".baa_mixed_harness_out"
 SNAPSHOT_DIR = ROOT / "tests" / "snapshots" / "mixed_harness" / "lexer_token_stream"
+DIAGNOSTIC_SNAPSHOT_DIR = ROOT / "tests" / "snapshots" / "mixed_harness" / "lexer_diagnostics"
 LEXER_FIXTURE_DIR = ROOT / "tests" / "fixtures" / "mixed_harness" / "lexer"
 
 PILOT_SRC = ROOT / "src" / "frontend" / "lexer_token_names_baa0.baa"
+LEXER_CANDIDATE_SRC = ROOT / "src" / "frontend" / "lexer_candidate_baa0.baa"
 LEXER_HEADER = ROOT / "src" / "frontend" / "lexer.h"
 LEXER_DEBUG_C = ROOT / "src" / "frontend" / "lexer_debug.c"
 
@@ -29,6 +31,7 @@ TIMEOUT_S = 60.0
 
 TARGET_TOKEN_NAMES = "token-names"
 TARGET_LEXER_TOKEN_STREAM = "lexer-token-stream"
+TARGET_LEXER_DIAGNOSTICS = "lexer-diagnostics"
 TARGET_ALL = "all"
 
 BANNED_WORDS = [
@@ -65,6 +68,14 @@ LEXER_CASES = [
     ("basic_utf8", LEXER_FIXTURE_DIR / "basic_utf8.baa"),
     ("macro_include", LEXER_FIXTURE_DIR / "macro_include_main.baa"),
     ("conditional_macros", LEXER_FIXTURE_DIR / "conditional_macros.baa"),
+    ("stress_utf8_identifiers", ROOT / "tests" / "stress" / "stress_utf8_identifiers.baa"),
+]
+
+LEXER_DIAGNOSTIC_CASES = [
+    ("bad_escape_string", ROOT / "tests" / "neg" / "lexer_bad_escape_in_string.baa"),
+    ("bad_escape_char", ROOT / "tests" / "neg" / "lexer_bad_escape_in_char.baa"),
+    ("unclosed_ifdef", ROOT / "tests" / "neg" / "syntax_pp_unclosed_ifdef.baa"),
+    ("include_cycle", ROOT / "tests" / "neg" / "syntax_include_cycle_relative_alias.baa"),
 ]
 
 
@@ -251,26 +262,30 @@ def _strip_comments_and_literals(text: str) -> str:
     return "".join(out)
 
 
-def _policy_check_pilot() -> CheckResult:
-    text = PILOT_SRC.read_text(encoding="utf-8", errors="replace")
+def _policy_check_baa0_source(name: str, source: Path) -> CheckResult:
+    text = source.read_text(encoding="utf-8", errors="replace")
     stripped = _strip_comments_and_literals(text)
     violations: list[str] = []
     for word in BANNED_WORDS:
         pattern = re.compile(rf"(?<![\w\u0600-\u06FF]){re.escape(word)}(?![\w\u0600-\u06FF])")
         if pattern.search(stripped):
             violations.append(word)
-    for name, pattern in BANNED_PATTERNS:
+    for pattern_name, pattern in BANNED_PATTERNS:
         if pattern.search(stripped):
-            violations.append(name)
+            violations.append(pattern_name)
 
     passed = not violations
     return CheckResult(
-        name="token-names-baa0-policy",
+        name=name,
         passed=passed,
         returncode=0 if passed else 1,
         duration_s=0.0,
         detail="ok" if passed else "banned Baa0 feature(s): " + ", ".join(violations),
     )
+
+
+def _policy_check_pilot() -> CheckResult:
+    return _policy_check_baa0_source("token-names-baa0-policy", PILOT_SRC)
 
 
 def _write_token_name_harness(path: Path, token_names: list[str]) -> None:
@@ -493,6 +508,192 @@ int main(int argc, char** argv)
     )
 
 
+def _write_lexer_candidate_harness(path: Path) -> None:
+    path.write_text(
+        r'''#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#include "src/frontend/lexer.h"
+
+extern int64_t مرشح_المحلل_اللفظي_شغل(int64_t root_file_id);
+
+static const char* g_repo_root = NULL;
+static const char* g_case_path = NULL;
+
+static char* read_all(const char* path)
+{
+    FILE* f = fopen(path, "rb");
+    long size = 0;
+    char* buf = NULL;
+    if (!f) return NULL;
+    if (fseek(f, 0, SEEK_END) != 0) {
+        fclose(f);
+        return NULL;
+    }
+    size = ftell(f);
+    if (size < 0) {
+        fclose(f);
+        return NULL;
+    }
+    rewind(f);
+    buf = (char*)malloc((size_t)size + 1u);
+    if (!buf) {
+        fclose(f);
+        return NULL;
+    }
+    if (fread(buf, 1u, (size_t)size, f) != (size_t)size) {
+        free(buf);
+        fclose(f);
+        return NULL;
+    }
+    buf[size] = '\0';
+    fclose(f);
+    return buf;
+}
+
+static void slashify(char* text)
+{
+    if (!text) return;
+    for (char* p = text; *p; ++p) {
+        if (*p == '\\') *p = '/';
+    }
+}
+
+static const char* normalize_path(const char* root, const char* path, char* out, size_t out_cap)
+{
+    size_t root_len = root ? strlen(root) : 0u;
+    size_t path_len = path ? strlen(path) : 0u;
+    if (!out || out_cap == 0u || !path) return "";
+    if (path_len + 1u > out_cap) return path;
+    memcpy(out, path, path_len + 1u);
+    slashify(out);
+
+    if (root && root_len > 0u) {
+        char root_buf[4096];
+        if (root_len + 1u < sizeof(root_buf)) {
+            memcpy(root_buf, root, root_len + 1u);
+            slashify(root_buf);
+            root_len = strlen(root_buf);
+            if (strncmp(out, root_buf, root_len) == 0) {
+                const char* rel = out + root_len;
+                if (*rel == '/') ++rel;
+                memmove(out, rel, strlen(rel) + 1u);
+            }
+        }
+    }
+    return out;
+}
+
+static void json_string(const char* text)
+{
+    putchar('"');
+    if (text) {
+        for (const unsigned char* p = (const unsigned char*)text; *p; ++p) {
+            if (*p == '"' || *p == '\\') {
+                putchar('\\');
+                putchar((int)*p);
+            } else if (*p == '\n') {
+                fputs("\\n", stdout);
+            } else if (*p == '\r') {
+                fputs("\\r", stdout);
+            } else if (*p == '\t') {
+                fputs("\\t", stdout);
+            } else if (*p < 0x20u) {
+                printf("\\u%04x", (unsigned int)*p);
+            } else {
+                putchar((int)*p);
+            }
+        }
+    }
+    putchar('"');
+}
+
+static void print_token(const char* root, const char* case_path, Token tok, int index)
+{
+    char case_norm[4096];
+    char file_norm[4096];
+    const char* token_name = token_type_to_str(tok.type);
+    printf("{\"case\":");
+    json_string(normalize_path(root, case_path, case_norm, sizeof(case_norm)));
+    printf(",\"index\":%d,\"type\":%d,\"name\":", index, (int)tok.type);
+    json_string(token_name ? token_name : "");
+    printf(",\"value\":");
+    json_string(tok.value ? tok.value : "");
+    printf(",\"line\":%d,\"col\":%d,\"length\":%d,\"file\":",
+           tok.line,
+           tok.col,
+           tok.length);
+    json_string(normalize_path(root, tok.filename, file_norm, sizeof(file_norm)));
+    printf("}\n");
+}
+
+static int dump_current_case(void)
+{
+    char* source = NULL;
+    Lexer lexer;
+    int index = 0;
+    if (!g_repo_root || !g_case_path) {
+        fprintf(stderr, "candidate host case is not initialized\n");
+        return 2;
+    }
+
+    source = read_all(g_case_path);
+    if (!source) {
+        fprintf(stderr, "failed to read %s\n", g_case_path);
+        return 3;
+    }
+
+    lexer_init(&lexer, source, g_case_path, NULL, 0u);
+    for (;;) {
+        Token tok = lexer_next_token(&lexer);
+        print_token(g_repo_root, g_case_path, tok, index++);
+        if (tok.value) free(tok.value);
+        if (tok.type == TOKEN_EOF || tok.type == TOKEN_INVALID) break;
+        if (index > 20000) {
+            fprintf(stderr, "token limit exceeded for %s\n", g_case_path);
+            free(source);
+            lexer_free_dependencies(&lexer);
+            return 4;
+        }
+    }
+
+    lexer_free_dependencies(&lexer);
+    free(source);
+    return 0;
+}
+
+int64_t مرشح_المضيف_شغل_الأساس(int64_t root_file_id)
+{
+    (void)root_file_id;
+    return (int64_t)dump_current_case();
+}
+
+int main(int argc, char** argv)
+{
+    if (argc < 3) {
+        fprintf(stderr, "usage: lexer_candidate_dump <repo-root> <source>...\n");
+        return 2;
+    }
+
+    g_repo_root = argv[1];
+    for (int argi = 2; argi < argc; ++argi) {
+        int64_t rc = 0;
+        g_case_path = argv[argi];
+        rc = مرشح_المحلل_اللفظي_شغل((int64_t)(argi - 2));
+        if (rc != 0) {
+            fprintf(stderr, "candidate returned %lld for %s\n", (long long)rc, g_case_path);
+            return (int)rc;
+        }
+    }
+    return 0;
+}
+''',
+        encoding="utf-8",
+    )
+
+
 def _normalize_jsonl(text: str) -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
     for line_no, line in enumerate(text.splitlines(), 1):
@@ -594,6 +795,7 @@ def _run_token_names(baa: Path, cc: str, log_dir: Path, out_dir: Path) -> list[C
 
 
 def _run_lexer_token_stream(
+    baa: Path,
     cc: str,
     log_dir: Path,
     out_dir: Path,
@@ -670,7 +872,228 @@ def _run_lexer_token_stream(
             )
         )
 
-    results.append(CheckResult("lexer-token-stream-baa-candidate", True, 0, 0.0, "not-ready"))
+    results.extend(_run_lexer_candidate_token_stream(baa, cc, log_dir, out_dir, update_snapshots))
+    return results
+
+
+def _run_lexer_candidate_token_stream(
+    baa: Path,
+    cc: str,
+    log_dir: Path,
+    out_dir: Path,
+    update_snapshots: bool,
+) -> list[CheckResult]:
+    results: list[CheckResult] = []
+    policy = _policy_check_baa0_source("lexer-candidate-baa0-policy", LEXER_CANDIDATE_SRC)
+    results.append(policy)
+    if not policy.passed:
+        return results
+
+    harness_c = out_dir / "lexer_candidate_dump.c"
+    candidate_obj = out_dir / "lexer_candidate_baa0.o"
+    exe = out_dir / ("lexer_candidate_dump.exe" if os.name == "nt" else "lexer_candidate_dump")
+    _write_lexer_candidate_harness(harness_c)
+
+    compile_baa = _run(
+        "lexer-token-stream-compile-baa-candidate",
+        [
+            str(baa),
+            "-O2",
+            "--verify-ir",
+            "--verify-ssa",
+            "-c",
+            str(LEXER_CANDIDATE_SRC.relative_to(ROOT)),
+            "-o",
+            str(candidate_obj),
+        ],
+        log_dir,
+    )
+    results.append(compile_baa)
+    if not compile_baa.passed:
+        return results
+
+    link = _run(
+        "lexer-token-stream-link-baa-candidate",
+        [
+            cc,
+            "-std=gnu11",
+            "-finput-charset=UTF-8",
+            "-I",
+            str(ROOT),
+            str(harness_c),
+            str(ROOT / "src" / "frontend" / "lexer.c"),
+            str(ROOT / "src" / "support" / "error.c"),
+            str(ROOT / "src" / "support" / "read_file.c"),
+            str(candidate_obj),
+            "-o",
+            str(exe),
+        ],
+        log_dir,
+    )
+    results.append(link)
+    if not link.passed:
+        return results
+
+    for case_name, case_path in LEXER_CASES:
+        if not case_path.exists():
+            results.append(CheckResult(f"lexer-token-stream-baa-candidate:{case_name}", False, 1, 0.0, "missing fixture"))
+            continue
+
+        run, stdout = _run_capture(
+            f"lexer-token-stream-baa-candidate-run:{case_name}",
+            [str(exe), str(ROOT), str(case_path)],
+            log_dir,
+        )
+        if not run.passed:
+            results.append(run)
+            continue
+
+        started = time.monotonic()
+        snapshot = SNAPSHOT_DIR / f"{case_name}.jsonl"
+        actual_path = log_dir / f"lexer-token-stream-baa-candidate-{case_name}.actual.jsonl"
+        actual_path.write_text(stdout, encoding="utf-8")
+        try:
+            actual = _normalize_jsonl(stdout)
+            if update_snapshots:
+                expected = actual
+                detail = "candidate bridge matched updated baseline"
+                passed = True
+            else:
+                expected = _read_snapshot(snapshot)
+                diff = _diff_rows(expected, actual)
+                passed = not diff
+                detail = "candidate bridge matched baseline" if passed else diff
+                if diff:
+                    (log_dir / f"lexer-token-stream-baa-candidate-{case_name}.diff.txt").write_text(
+                        diff + "\n",
+                        encoding="utf-8",
+                    )
+        except RuntimeError as exc:
+            passed = False
+            detail = str(exc)
+        results.append(
+            CheckResult(
+                f"lexer-token-stream-baa-candidate:{case_name}",
+                passed,
+                0 if passed else 1,
+                time.monotonic() - started,
+                detail,
+                _rel(snapshot),
+            )
+        )
+
+    return results
+
+
+def _normalize_diagnostic_text(text: str, out_dir: Path) -> str:
+    root_native = str(ROOT.resolve())
+    root_posix = root_native.replace("\\", "/")
+    out_native = str(out_dir.resolve())
+    out_posix = out_native.replace("\\", "/")
+    normalized = text.replace("\r\n", "\n").replace("\r", "\n")
+    for root in (root_native, root_posix):
+        normalized = normalized.replace(root + "\\", "")
+        normalized = normalized.replace(root + "/", "")
+        normalized = normalized.replace(root, ".")
+    for out_root in (out_native, out_posix):
+        normalized = normalized.replace(out_root + "\\", "<out>/")
+        normalized = normalized.replace(out_root + "/", "<out>/")
+        normalized = normalized.replace(out_root, "<out>")
+    lines = [line.rstrip() for line in normalized.splitlines() if line.strip()]
+    return "\n".join(lines) + ("\n" if lines else "")
+
+
+def _run_lexer_diagnostics(
+    baa: Path,
+    log_dir: Path,
+    out_dir: Path,
+    update_snapshots: bool,
+) -> list[CheckResult]:
+    results: list[CheckResult] = []
+    for case_name, case_path in LEXER_DIAGNOSTIC_CASES:
+        if not case_path.exists():
+            results.append(CheckResult(f"lexer-diagnostics:{case_name}", False, 1, 0.0, "missing fixture"))
+            continue
+
+        started = time.monotonic()
+        output = out_dir / ("lexer_diag_tmp.exe" if os.name == "nt" else "lexer_diag_tmp")
+        cmd = [str(baa), "-O1", _rel(case_path), "-o", str(output)]
+        try:
+            proc = subprocess.run(
+                cmd,
+                cwd=str(ROOT),
+                text=True,
+                encoding="utf-8",
+                errors="replace",
+                capture_output=True,
+                timeout=TIMEOUT_S,
+            )
+            duration = time.monotonic() - started
+            raw = (proc.stderr or "") + (proc.stdout or "")
+            (log_dir / f"lexer-diagnostics-{case_name}.stderr.log").write_text(proc.stderr or "", encoding="utf-8")
+            (log_dir / f"lexer-diagnostics-{case_name}.stdout.log").write_text(proc.stdout or "", encoding="utf-8")
+            actual = _normalize_diagnostic_text(raw, out_dir)
+            actual_path = log_dir / f"lexer-diagnostics-{case_name}.actual.txt"
+            actual_path.write_text(actual, encoding="utf-8")
+
+            snapshot = DIAGNOSTIC_SNAPSHOT_DIR / f"{case_name}.txt"
+            if proc.returncode == 0:
+                results.append(
+                    CheckResult(
+                        f"lexer-diagnostics:{case_name}",
+                        False,
+                        1,
+                        duration,
+                        "expected compiler failure, got success",
+                        _rel(snapshot),
+                    )
+                )
+                continue
+
+            if update_snapshots:
+                snapshot.parent.mkdir(parents=True, exist_ok=True)
+                snapshot.write_text(actual, encoding="utf-8")
+                passed = True
+                detail = "snapshot updated"
+            else:
+                if not snapshot.exists():
+                    passed = False
+                    detail = f"missing snapshot: {_rel(snapshot)}"
+                else:
+                    expected = snapshot.read_text(encoding="utf-8")
+                    passed = expected == actual
+                    detail = "ok" if passed else "diagnostic snapshot mismatch"
+                    if not passed:
+                        diff = _diff_rows(
+                            [{"text": line} for line in expected.splitlines()],
+                            [{"text": line} for line in actual.splitlines()],
+                        )
+                        (log_dir / f"lexer-diagnostics-{case_name}.diff.txt").write_text(diff + "\n", encoding="utf-8")
+
+            results.append(
+                CheckResult(
+                    f"lexer-diagnostics:{case_name}",
+                    passed,
+                    0 if passed else 1,
+                    duration,
+                    detail,
+                    _rel(snapshot),
+                )
+            )
+        except subprocess.TimeoutExpired as exc:
+            duration = time.monotonic() - started
+            (log_dir / f"lexer-diagnostics-{case_name}.stdout.log").write_text(exc.stdout or "", encoding="utf-8")
+            (log_dir / f"lexer-diagnostics-{case_name}.stderr.log").write_text(exc.stderr or "", encoding="utf-8")
+            results.append(
+                CheckResult(
+                    f"lexer-diagnostics:{case_name}",
+                    False,
+                    124,
+                    duration,
+                    f"timeout ({TIMEOUT_S}s)",
+                )
+            )
+
     return results
 
 
@@ -703,7 +1126,11 @@ def _write_summary(path: str, baa: Path, cc: str, target: str, results: list[Che
 
 def main(argv: list[str]) -> int:
     parser = argparse.ArgumentParser(description="Reusable mixed C+Baa self-hosting harness")
-    parser.add_argument("--target", choices=[TARGET_TOKEN_NAMES, TARGET_LEXER_TOKEN_STREAM, TARGET_ALL], default=TARGET_ALL)
+    parser.add_argument(
+        "--target",
+        choices=[TARGET_TOKEN_NAMES, TARGET_LEXER_TOKEN_STREAM, TARGET_LEXER_DIAGNOSTICS, TARGET_ALL],
+        default=TARGET_ALL,
+    )
     parser.add_argument("--baa", default="")
     parser.add_argument("--cc", default="")
     parser.add_argument("--log-dir", default=str(DEFAULT_LOG_DIR))
@@ -734,7 +1161,9 @@ def main(argv: list[str]) -> int:
         if args.target in (TARGET_TOKEN_NAMES, TARGET_ALL):
             results.extend(_run_token_names(baa, cc, log_dir, out_dir))
         if args.target in (TARGET_LEXER_TOKEN_STREAM, TARGET_ALL):
-            results.extend(_run_lexer_token_stream(cc, log_dir, out_dir, args.update_snapshots))
+            results.extend(_run_lexer_token_stream(baa, cc, log_dir, out_dir, args.update_snapshots))
+        if args.target in (TARGET_LEXER_DIAGNOSTICS, TARGET_ALL):
+            results.extend(_run_lexer_diagnostics(baa, log_dir, out_dir, args.update_snapshots))
     finally:
         shutil.rmtree(out_dir, ignore_errors=True)
 

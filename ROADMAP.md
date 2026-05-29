@@ -1462,12 +1462,27 @@ Partial status update (2026-03-06):
 
 ### v0.9.1: Rewrite Lexer 📝
 
-- [ ] **Port lexer slice to Baa** — use split layout from v0.5 component organization.
-- [ ] **Build through mixed harness** — keep remaining compiler units in C.
-- [ ] **Token-stream parity tests** — compare lexer output against C baseline.
-- [ ] **No feature expansion in v0.9** — only correctness/portability fixes permitted.
-- [ ] **UTF-8 and preprocessor parity** — nested includes/macros/conditionals must match C behavior.
-- [ ] **Stress corpus parity** — large and malformed sources produce equivalent diagnostics.
+- [x] **Port lexer slice to Baa** — `src/frontend/lexer_candidate_baa0.baa` is the first reversible lexer-candidate bridge slice.
+- [x] **Build through mixed harness** — the candidate compiles as Baa0 and links with the C-hosted lexer harness.
+- [x] **Token-stream parity tests** — C baseline and Baa candidate bridge both compare against committed JSONL snapshots.
+- [x] **No feature expansion in v0.9** — production lexer/CLI behavior remains unchanged.
+- [x] **UTF-8 and preprocessor parity** — fixtures cover UTF-8 identifiers/text, includes, macros, and conditionals.
+- [x] **Stress corpus parity** — malformed lexer/preprocessor cases now have normalized diagnostic snapshots.
+
+✅ COMPLETED (2026-05-29)
+
+### v0.9.1.5: Fully Move Lexer to Baa 📝
+
+- [ ] **Replace bridge with Baa-owned lexer state** — move cursor, source buffer, token construction, and include-stack state from the C-hosted callback path into Baa.
+- [ ] **Port UTF-8 scanner rules** — preserve Arabic identifiers, Arabic-Indic digits, string/char escapes, byte lengths, line/column accounting, and invalid-token behavior.
+- [ ] **Port preprocessor surface** — implement `#تضمين`, `#تعريف`, `#الغاء_تعريف`, `#إذا_عرف`, `#إذا_لم_يعرف`, and conditional skipping with C baseline parity.
+- [ ] **Preserve dependency tracking** — keep normalized include dependencies and include-cycle diagnostics equivalent to `src/frontend/lexer.c`.
+- [ ] **Keep C compatibility wrapper** — expose the existing `lexer_init`/`lexer_next_token`/cleanup contract to the parser until the parser port starts.
+- [ ] **Promote mixed harness gate** — `lexer-token-stream` must exercise the Baa lexer implementation directly, not the C baseline callback.
+- [ ] **Diagnostics parity** — malformed source snapshots must match Arabic diagnostic text, source spans, include-chain notes, and EOF/preprocessor errors.
+- [ ] **Memory ownership audit** — define Baa/C ownership for token values, dependency paths, include buffers, macro tables, and cleanup paths.
+- [ ] **No language feature expansion** — keep v0.9.1.5 limited to lexer relocation and correctness fixes.
+- [ ] **Windows release signoff** — pass build, quick QA, release QA, and mixed harness; Linux remains deferred unless explicitly requested.
 
 ### v0.9.2: Rewrite Parser 🌳
 

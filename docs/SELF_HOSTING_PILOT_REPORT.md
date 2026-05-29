@@ -1,6 +1,6 @@
 # Baa Self-Hosting Pilot Report
 
-> **Version:** 0.9.0.2 | [← Mixed Harness](MIXED_HARNESS.md) | [Bootstrap Contract →](BOOTSTRAP_CONTRACT.md)
+> **Version:** 0.9.1 | [← Mixed Harness](MIXED_HARNESS.md) | [Bootstrap Contract →](BOOTSTRAP_CONTRACT.md)
 
 This report records the v0.5.8 self-hosting pilot result. It proves that a small Baa0 compiler slice can be compiled as an object, linked with C compiler code, and checked for behavior parity against the current C implementation.
 

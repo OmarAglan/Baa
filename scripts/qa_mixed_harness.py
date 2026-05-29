@@ -1175,12 +1175,70 @@ def _run_lexer_transition(baa: Path, cc: str, log_dir: Path, out_dir: Path) -> l
     return results
 
 
-def _write_lexer_state_harness(path: Path) -> None:
+def _byte_offset_from_line_col(source: bytes, line: int, col: int) -> int:
+    if line <= 0 or col <= 0:
+        raise RuntimeError(f"invalid source location line={line} col={col}")
+    line_start = 0
+    current_line = 1
+    for index, byte in enumerate(source):
+        if current_line == line:
+            return line_start + col - 1
+        if byte == 0x0A:
+            current_line += 1
+            line_start = index + 1
+    if current_line == line:
+        return line_start + col - 1
+    raise RuntimeError(f"source location beyond fixture: line={line} col={col}")
+
+
+def _lexer_state_snapshot_case(case_name: str, source_path: Path) -> dict[str, Any]:
+    rows = _read_snapshot(SNAPSHOT_DIR / f"{case_name}.jsonl")
+    source = source_path.read_bytes()
+    tokens: list[dict[str, int]] = []
+    for row in rows:
+        token_type = int(row["type"])
+        line = int(row["line"])
+        col = int(row["col"])
+        tokens.append(
+            {
+                "type": token_type,
+                "start": _byte_offset_from_line_col(source, line, col),
+                "length": int(row["length"]),
+                "line": line,
+                "column": col,
+            }
+        )
+    return {"name": case_name, "source": _rel(source_path), "tokens": tokens}
+
+
+def _format_lexer_state_array(name: str, tokens: list[dict[str, int]]) -> str:
+    entries = "\n".join(
+        "        {"
+        + f'{token["type"]}, {token["start"]}, {token["length"]}, {token["line"]}, {token["column"]}'
+        + "},"
+        for token in tokens
+    )
+    return f"    static const ExpectedToken {name}[] = {{\n{entries}\n    }};\n"
+
+
+def _write_lexer_state_harness(path: Path, snapshot_cases: list[dict[str, Any]]) -> None:
+    snapshot_arrays: list[str] = []
+    snapshot_entries: list[str] = []
+    for index, case in enumerate(snapshot_cases):
+        array_name = f"snapshot_case_{index}"
+        snapshot_arrays.append(_format_lexer_state_array(array_name, case["tokens"]))
+        snapshot_entries.append(
+            f'        {{"{case["name"]}", "{case["source"]}", '
+            f"{array_name}, (int)(sizeof({array_name}) / sizeof({array_name}[0]))}},"
+        )
+
+    snapshot_array_text = "\n".join(snapshot_arrays)
+    snapshot_case_text = "\n".join(snapshot_entries)
+
     path.write_text(
         r'''#include <stdint.h>
 #include <stdlib.h>
 #include <stdio.h>
-#include <string.h>
 
 extern void محللباءهيئ(unsigned char* source);
 extern int64_t محللباءالتالي(int64_t* type,
@@ -1196,6 +1254,13 @@ typedef struct ExpectedToken {
     int64_t line;
     int64_t column;
 } ExpectedToken;
+
+typedef struct ExpectedCase {
+    const char* name;
+    const char* source_path;
+    const ExpectedToken* tokens;
+    int count;
+} ExpectedCase;
 
 static int check_token(int index, const ExpectedToken* expected)
 {
@@ -1241,6 +1306,16 @@ static int run_case(const char* name, unsigned char* source, const ExpectedToken
             fprintf(stderr, "lexer-state case failed: %s\n", name);
             return 1;
         }
+    }
+    return 0;
+}
+
+static int join_path(char* out, size_t out_size, const char* root, const char* relative)
+{
+    int written = snprintf(out, out_size, "%s/%s", root, relative);
+    if (written < 0 || (size_t)written >= out_size) {
+        fprintf(stderr, "fixture path is too long: %s\n", relative);
+        return 1;
     }
     return 0;
 }
@@ -1322,29 +1397,11 @@ int main(int argc, char** argv)
         {70, 71, 2, 2, 67},
         {71, 74, 2, 2, 70},
         {49, 77, 2, 2, 73},
-        {0, 79, 0, 2, 75},
+        {0, 79, 1, 2, 75},
     };
-    const ExpectedToken basic_utf8[] = {
-        {6, 0, 8, 1, 1},
-        {5, 9, 16, 1, 10},
-        {72, 25, 1, 1, 26},
-        {73, 26, 1, 1, 27},
-        {74, 28, 1, 1, 29},
-        {6, 34, 8, 2, 5},
-        {5, 43, 6, 2, 14},
-        {44, 50, 1, 2, 21},
-        {1, 52, 6, 2, 23},
-        {45, 58, 1, 2, 29},
-        {15, 64, 4, 3, 5},
-        {5, 69, 10, 3, 10},
-        {44, 80, 1, 3, 21},
-        {3, 82, 12, 3, 23},
-        {45, 94, 1, 3, 35},
-        {26, 100, 8, 4, 5},
-        {5, 109, 6, 4, 14},
-        {45, 115, 1, 4, 20},
-        {75, 117, 1, 5, 1},
-        {0, 119, 0, 6, 1},
+__SNAPSHOT_ARRAYS__
+    static const ExpectedCase snapshot_cases[] = {
+__SNAPSHOT_CASES__
     };
     char path[4096];
     unsigned char* fixture = NULL;
@@ -1358,24 +1415,26 @@ int main(int argc, char** argv)
         return 1;
     }
 
-    snprintf(path,
-             sizeof(path),
-             "%s/tests/fixtures/mixed_harness/lexer/basic_utf8.baa",
-             argv[1]);
-    fixture = read_file(path);
-    if (!fixture) {
-        return 1;
-    }
-    if (run_case("basic_utf8", fixture, basic_utf8, (int)(sizeof(basic_utf8) / sizeof(basic_utf8[0]))) != 0) {
+    for (int i = 0; i < (int)(sizeof(snapshot_cases) / sizeof(snapshot_cases[0])); ++i) {
+        if (join_path(path, sizeof(path), argv[1], snapshot_cases[i].source_path) != 0) {
+            return 1;
+        }
+        fixture = read_file(path);
+        if (!fixture) {
+            return 1;
+        }
+        if (run_case(snapshot_cases[i].name, fixture, snapshot_cases[i].tokens, snapshot_cases[i].count) != 0) {
+            free(fixture);
+            return 1;
+        }
         free(fixture);
-        return 1;
+        fixture = NULL;
     }
-    free(fixture);
 
-    puts("mixed-harness: lexer Baa-owned state PASS (operators + basic_utf8)");
+    puts("mixed-harness: lexer Baa-owned state PASS (operators + snapshots)");
     return 0;
 }
-''',
+'''.replace("__SNAPSHOT_ARRAYS__", snapshot_array_text).replace("__SNAPSHOT_CASES__", snapshot_case_text),
         encoding="utf-8",
     )
 
@@ -1390,7 +1449,11 @@ def _run_lexer_state(baa: Path, cc: str, log_dir: Path, out_dir: Path) -> list[C
     harness_c = out_dir / "lexer_state_harness.c"
     state_obj = out_dir / "lexer_state_baa0.o"
     exe = out_dir / ("lexer_state_harness.exe" if os.name == "nt" else "lexer_state_harness")
-    _write_lexer_state_harness(harness_c)
+    snapshot_cases = [
+        _lexer_state_snapshot_case("basic_utf8", LEXER_FIXTURE_DIR / "basic_utf8.baa"),
+        _lexer_state_snapshot_case("stress_utf8_identifiers", ROOT / "tests" / "stress" / "stress_utf8_identifiers.baa"),
+    ]
+    _write_lexer_state_harness(harness_c, snapshot_cases)
 
     compile_baa = _run(
         "lexer-state-compile-baa",

@@ -6,11 +6,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ---
 
-## [0.9.1.5] - Planned
+## [0.9.1.5] - 2026-05-29
 
-**Full Baa Lexer Migration**
+**Full Baa Lexer Migration (In Progress)**
 
-### Planned
+### Added
+
+- **Baa-owned scanner state slice**:
+  - Added `src/frontend/lexer_state_baa0.baa`, a Baa0 lexer-state module that owns source pointer, byte offset, line, and column state.
+  - Added a narrow C/Baa ABI for initializing the Baa scanner from a caller-owned UTF-8 byte buffer and returning token metadata through C-owned out parameters.
+  - Added simple punctuation/operator token scanning for the first lexer-owned state path without replacing the production C lexer.
+- **Mixed harness coverage**:
+  - Added `scripts/qa_mixed_harness.py --target lexer-state` and included it in `--target all`.
+  - The new gate compiles the Baa0 scanner-state module, links it with a generated C harness, and verifies token type, byte length, line, and column metadata.
+
+### Remaining
 
 - **Baa-owned lexer implementation**:
   - Replace the v0.9.1 bridge checkpoint with a Baa lexer that owns scanner state, token construction, UTF-8 handling, preprocessor state, and include/dependency tracking.

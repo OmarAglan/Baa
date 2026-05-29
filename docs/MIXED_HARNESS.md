@@ -1,6 +1,6 @@
 # Mixed C+Baa Harness
 
-> **Version:** 0.9.1.4.5 | [← Stage-0 Manifest](STAGE0_BOOTSTRAP_MANIFEST.md) | [Self-Hosting Pilot →](SELF_HOSTING_PILOT_REPORT.md)
+> **Version:** 0.9.1.5 | [← Stage-0 Manifest](STAGE0_BOOTSTRAP_MANIFEST.md) | [Self-Hosting Pilot →](SELF_HOSTING_PILOT_REPORT.md)
 
 This document defines the v0.9.1 harness used to validate compiler slices built from a mix of C and Baa objects.
 
@@ -21,6 +21,7 @@ python scripts/qa_mixed_harness.py --target token-names
 python scripts/qa_mixed_harness.py --target lexer-token-stream
 python scripts/qa_mixed_harness.py --target lexer-diagnostics
 python scripts/qa_mixed_harness.py --target lexer-transition
+python scripts/qa_mixed_harness.py --target lexer-state
 ```
 
 The legacy pilot command remains valid:
@@ -44,6 +45,7 @@ Current bridge contract:
 - C and Baa objects are linked by the host C compiler into a parity executable.
 - Baa symbols exposed to C use the platform object ABI produced by the current backend.
 - Baa `نص` values crossing into C are decoded from the current packed `حرف` cell representation before comparison.
+- Baa-owned lexer-state slices accept caller-owned `ط٨*` buffers and return scalar token metadata through C-owned `صحيح*` out parameters.
 
 ---
 
@@ -87,6 +89,10 @@ The token-stream corpus also includes `tests/stress/stress_utf8_identifiers.baa`
 ### `lexer-transition`
 
 Compiles `src/frontend/lexer_transition_baa0.baa`, links it with a generated C harness, and runs a small non-production transition slice. This target proves that Baa0 can now consume the lexer-readability surface required before the full v0.9.1.5 migration: `ط٨*`, `خام"..."`, `طول_خام`, `قارن_خام`, `قارن_خام_بطول`, pointer arithmetic, and `هيكل* -> عضو`.
+
+### `lexer-state`
+
+Compiles `src/frontend/lexer_state_baa0.baa`, links it with a generated C harness, and drives a Baa-owned scanner state over a caller-owned UTF-8 byte buffer. This is the first v0.9.1.5 path where Baa owns cursor, line, and column movement and returns token metadata through C-owned out parameters. It currently covers EOF, whitespace/newline skipping, simple punctuation, Arabic semicolon, and multi-character operator tokens; the production `lexer_next_token` path is unchanged.
 
 ---
 

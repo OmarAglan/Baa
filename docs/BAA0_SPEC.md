@@ -1,6 +1,6 @@
 # Baa0 Bootstrap Subset Specification
 
-> **Version:** 0.9.1 | [← Bootstrap Contract](BOOTSTRAP_CONTRACT.md) | [Language Spec →](LANGUAGE.md)
+> **Version:** 0.9.1.5 | [← Bootstrap Contract](BOOTSTRAP_CONTRACT.md) | [Language Spec →](LANGUAGE.md)
 
 Baa0 is the conservative source subset used for early Phase 5 compiler-slice rewrites. It is not a new language mode and does not change what the compiler accepts. It defines which Baa features are allowed in bootstrap-owned source files so the first self-hosting work stays deterministic, portable, and easy to compare against the C baseline.
 
@@ -40,6 +40,7 @@ Allowed source forms:
 Allowed stdlib categories:
 
 - String helpers: `طول_نص`, `قارن_نص`, `نسخ_نص`, `دمج_نص`, `حرر_نص`.
+- Raw byte helpers: `طول_خام`, `قارن_خام`, `قارن_خام_بطول`, and static `خام"..."` byte literals for lexer/state slices.
 - Dynamic memory helpers: `حجز_ذاكرة`, `تحرير_ذاكرة`, `إعادة_حجز`, `نسخ_ذاكرة`, `تعيين_ذاكرة`.
 - File helpers from `stdlib/baalib.baahd` when used deterministically by tests or compiler code.
 - Runtime failure helpers: `تأكد`, `توقف_فوري`, and system error-code text helpers.

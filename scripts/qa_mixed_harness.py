@@ -25,6 +25,7 @@ LEXER_FIXTURE_DIR = ROOT / "tests" / "fixtures" / "mixed_harness" / "lexer"
 PILOT_SRC = ROOT / "src" / "frontend" / "lexer_token_names_baa0.baa"
 LEXER_CANDIDATE_SRC = ROOT / "src" / "frontend" / "lexer_candidate_baa0.baa"
 LEXER_TRANSITION_SRC = ROOT / "src" / "frontend" / "lexer_transition_baa0.baa"
+LEXER_STATE_SRC = ROOT / "src" / "frontend" / "lexer_state_baa0.baa"
 LEXER_HEADER = ROOT / "src" / "frontend" / "lexer.h"
 LEXER_DEBUG_C = ROOT / "src" / "frontend" / "lexer_debug.c"
 
@@ -34,6 +35,7 @@ TARGET_TOKEN_NAMES = "token-names"
 TARGET_LEXER_TOKEN_STREAM = "lexer-token-stream"
 TARGET_LEXER_DIAGNOSTICS = "lexer-diagnostics"
 TARGET_LEXER_TRANSITION = "lexer-transition"
+TARGET_LEXER_STATE = "lexer-state"
 TARGET_ALL = "all"
 
 BANNED_WORDS = [
@@ -1173,6 +1175,167 @@ def _run_lexer_transition(baa: Path, cc: str, log_dir: Path, out_dir: Path) -> l
     return results
 
 
+def _write_lexer_state_harness(path: Path) -> None:
+    path.write_text(
+        r'''#include <stdint.h>
+#include <stdio.h>
+
+extern void محللباءهيئ(unsigned char* source);
+extern int64_t محللباءالتالي(int64_t* type,
+                             int64_t* start,
+                             int64_t* length,
+                             int64_t* line,
+                             int64_t* column);
+
+typedef struct ExpectedToken {
+    int64_t type;
+    int64_t length;
+    int64_t line;
+    int64_t column;
+} ExpectedToken;
+
+static int check_token(int index, const ExpectedToken* expected)
+{
+    int64_t type = -1;
+    int64_t start = -1;
+    int64_t length = -1;
+    int64_t line = -1;
+    int64_t column = -1;
+    int64_t returned = محللباءالتالي(&type, &start, &length, &line, &column);
+
+    if (returned != expected->type ||
+        type != expected->type ||
+        length != expected->length ||
+        line != expected->line ||
+        column != expected->column) {
+        fprintf(stderr,
+                "lexer-state mismatch at %d: got type=%lld ret=%lld len=%lld line=%lld col=%lld; "
+                "expected type=%lld len=%lld line=%lld col=%lld\n",
+                index,
+                (long long)type,
+                (long long)returned,
+                (long long)length,
+                (long long)line,
+                (long long)column,
+                (long long)expected->type,
+                (long long)expected->length,
+                (long long)expected->line,
+                (long long)expected->column);
+        return 1;
+    }
+
+    (void)start;
+    return 0;
+}
+
+int main(void)
+{
+    unsigned char source[] = "  ()\n{}[] -> == != <= >= && || ++ -- ... . , : + - * / % < > ! & | ^ ~ << >> ؛";
+    const ExpectedToken expected[] = {
+        {72, 1, 1, 3},
+        {73, 1, 1, 4},
+        {74, 1, 2, 1},
+        {75, 1, 2, 2},
+        {76, 1, 2, 3},
+        {77, 1, 2, 4},
+        {78, 2, 2, 6},
+        {57, 2, 2, 9},
+        {58, 2, 2, 12},
+        {61, 2, 2, 15},
+        {62, 2, 2, 18},
+        {63, 2, 2, 21},
+        {64, 2, 2, 24},
+        {55, 2, 2, 27},
+        {56, 2, 2, 30},
+        {46, 3, 2, 33},
+        {45, 1, 2, 37},
+        {47, 1, 2, 39},
+        {48, 1, 2, 41},
+        {50, 1, 2, 43},
+        {51, 1, 2, 45},
+        {52, 1, 2, 47},
+        {53, 1, 2, 49},
+        {54, 1, 2, 51},
+        {59, 1, 2, 53},
+        {60, 1, 2, 55},
+        {65, 1, 2, 57},
+        {66, 1, 2, 59},
+        {67, 1, 2, 61},
+        {68, 1, 2, 63},
+        {69, 1, 2, 65},
+        {70, 2, 2, 67},
+        {71, 2, 2, 70},
+        {49, 2, 2, 73},
+        {0, 0, 2, 75},
+    };
+    const int count = (int)(sizeof(expected) / sizeof(expected[0]));
+
+    محللباءهيئ(source);
+    for (int i = 0; i < count; ++i) {
+        if (check_token(i, &expected[i]) != 0) {
+            return 1;
+        }
+    }
+
+    puts("mixed-harness: lexer Baa-owned state PASS");
+    return 0;
+}
+''',
+        encoding="utf-8",
+    )
+
+
+def _run_lexer_state(baa: Path, cc: str, log_dir: Path, out_dir: Path) -> list[CheckResult]:
+    results: list[CheckResult] = []
+    policy = _policy_check_baa0_source("lexer-state-baa0-policy", LEXER_STATE_SRC)
+    results.append(policy)
+    if not policy.passed:
+        return results
+
+    harness_c = out_dir / "lexer_state_harness.c"
+    state_obj = out_dir / "lexer_state_baa0.o"
+    exe = out_dir / ("lexer_state_harness.exe" if os.name == "nt" else "lexer_state_harness")
+    _write_lexer_state_harness(harness_c)
+
+    compile_baa = _run(
+        "lexer-state-compile-baa",
+        [
+            str(baa),
+            "-O2",
+            "--verify-ir",
+            "--verify-ssa",
+            "-c",
+            str(LEXER_STATE_SRC.relative_to(ROOT)),
+            "-o",
+            str(state_obj),
+        ],
+        log_dir,
+    )
+    results.append(compile_baa)
+    if not compile_baa.passed:
+        return results
+
+    link = _run(
+        "lexer-state-link",
+        [
+            cc,
+            "-std=gnu11",
+            "-finput-charset=UTF-8",
+            str(harness_c),
+            str(state_obj),
+            "-o",
+            str(exe),
+        ],
+        log_dir,
+    )
+    results.append(link)
+    if not link.passed:
+        return results
+
+    results.append(_run("lexer-state-run", [str(exe)], log_dir))
+    return results
+
+
 def _print_result(result: CheckResult) -> None:
     state = "PASS" if result.passed else "FAIL"
     artifact = f" artifact={result.artifact}" if result.artifact else ""
@@ -1209,6 +1372,7 @@ def main(argv: list[str]) -> int:
             TARGET_LEXER_TOKEN_STREAM,
             TARGET_LEXER_DIAGNOSTICS,
             TARGET_LEXER_TRANSITION,
+            TARGET_LEXER_STATE,
             TARGET_ALL,
         ],
         default=TARGET_ALL,
@@ -1248,6 +1412,8 @@ def main(argv: list[str]) -> int:
             results.extend(_run_lexer_diagnostics(baa, log_dir, out_dir, args.update_snapshots))
         if args.target in (TARGET_LEXER_TRANSITION, TARGET_ALL):
             results.extend(_run_lexer_transition(baa, cc, log_dir, out_dir))
+        if args.target in (TARGET_LEXER_STATE, TARGET_ALL):
+            results.extend(_run_lexer_state(baa, cc, log_dir, out_dir))
     finally:
         shutil.rmtree(out_dir, ignore_errors=True)
 

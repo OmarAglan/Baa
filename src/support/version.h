@@ -6,7 +6,7 @@
 #ifndef BAA_VERSION_H
 #define BAA_VERSION_H
 
-#define BAA_VERSION "0.9.1.4.5"
+#define BAA_VERSION "0.9.1.5"
 #ifdef BAA_BUILD_DATE_OVERRIDE
 #define BAA_BUILD_DATE BAA_BUILD_DATE_OVERRIDE
 #else

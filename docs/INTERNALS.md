@@ -1,6 +1,6 @@
 # Baa Compiler Internals
 
-> **Version:** 0.9.1.4.5 | [← Language Spec](LANGUAGE.md) | [API Reference →](API_REFERENCE.md)
+> **Version:** 0.9.1.5 | [← Language Spec](LANGUAGE.md) | [API Reference →](API_REFERENCE.md)
 
 **Target Architecture:** x86-64 (AMD64)
 **Targets:** Windows x64 (COFF/PE) + Linux x86-64 (ELF)

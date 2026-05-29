@@ -1,6 +1,6 @@
 # Baa Language Specification
 
-> **Version:** 0.9.1.4 | [← User Guide](USER_GUIDE.md) | [Compiler Internals →](INTERNALS.md)
+> **Version:** 0.9.1.4.5 | [← User Guide](USER_GUIDE.md) | [Compiler Internals →](INTERNALS.md)
 
 Baa (باء) is a compiled systems programming language using Arabic syntax. It compiles to native code via Assembly + host GCC/Clang on Windows and Linux.
 
@@ -230,6 +230,35 @@ Baa is statically typed. All variables must be declared with their type.
 
 - لا يوجد تحقق حدود تلقائي لفهرسة النص.
 - تعديل عناصر `نص` غير مدعوم حالياً.
+
+### 3.2.1.1. Raw Byte Literals (`خام"..."`)
+
+توفر صيغة `خام"..."` ثابت بايتات UTF-8 منتهياً بصفر ومناسباً لكود الأنظمة والـ lexer. النوع الدلالي للثابت هو `ط٨*`، ولا يُعامل كنوع `نص` ولا يستخدم تمثيل `حرف[]` المعبأ.
+
+```baa
+#تضمين "stdlib/baalib.baahd"
+
+صحيح الرئيسية() {
+    ط٨* كلمة = خام"keyword".
+
+    إذا (طول_خام(كلمة) != ٧) {
+        إرجع ١.
+    }
+
+    إذا (قارن_خام_بطول(خام"keyword:", ٧, خام"keyword")) {
+        إرجع ٠.
+    }
+
+    إرجع ٢.
+}
+```
+
+**ملاحظات:**
+
+- `خام"..."` ينتج تخزيناً ساكناً منتهياً بالبايت `0`.
+- الطول في `طول_خام` هو عدد البايتات، لا عدد محارف `حرف`.
+- تسلسلات الهروب ورفض UTF-8 غير الصالح يتبعان نفس مدخلات النصوص العادية.
+- لا يوجد تخصيص heap ولا حاجة إلى `حرر_نص`.
 
 ### 3.2.2. Integer Sizes (أحجام الأعداد الصحيحة)
 
@@ -1319,6 +1348,9 @@ Strings in Baa are UTF-8 arrays of `حرف` terminated by a null character. The 
 | **String Copy** | `نص نسخ_نص(نص س)` | Allocates heap memory and returns a duplicate of the string. |
 | **String Concat** | `نص دمج_نص(نص أ، نص ب)` | Allocates heap memory and returns a new string concatenating `أ` and `ب`. |
 | **Free Memory** | `عدم حرر_نص(نص س)` | Frees heap memory allocated by `نسخ_نص` or `دمج_نص`. |
+| **Raw Byte Length** | `صحيح طول_خام(ط٨* س)` | Returns the number of bytes before the first NUL byte. |
+| **Raw Byte Compare** | `صحيح قارن_خام(ط٨* أ، ط٨* ب)` | Byte-wise lexicographical comparison with unsigned byte ordering. |
+| **Raw Span Match** | `منطقي قارن_خام_بطول(ط٨* بداية، صحيح طول، ط٨* قالب)` | Returns true when `بداية[0..طول)` matches the whole NUL-terminated template. |
 
 **Important Memory Rule:** You must call `حرر_نص(...)` on any string returned by `نسخ_نص` or `دمج_نص` to avoid memory leaks.
 

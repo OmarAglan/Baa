@@ -60,6 +60,7 @@ typedef enum {
     NODE_INT,           // قيمة عددية صحيحة
     NODE_FLOAT,         // قيمة عددية عشرية
     NODE_STRING,        // قيمة نصية
+    NODE_RAW_STRING,    // نص بايتات خام منتهٍ بصفر
     NODE_CHAR,          // قيمة حرفية
     NODE_BOOL,          // قيمة منطقية (صواب/خطأ)
     NODE_NULL,          // مؤشر فارغ (عدم في سياق التعبير)

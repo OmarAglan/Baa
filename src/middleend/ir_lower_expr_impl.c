@@ -730,6 +730,9 @@ IRValue* lower_expr(IRLowerCtx* ctx, Node* expr) {
         case NODE_STRING:
             return ir_builder_const_baa_string(ctx->builder, expr->data.string_lit.value);
 
+        case NODE_RAW_STRING:
+            return ir_builder_const_string(ctx->builder, expr->data.string_lit.value);
+
         case NODE_SIZEOF:
             if (!expr->data.sizeof_expr.size_known) {
                 ir_lower_report_error(ctx, expr, "فشل حساب 'حجم' أثناء التحليل الدلالي.");

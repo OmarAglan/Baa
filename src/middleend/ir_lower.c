@@ -939,6 +939,7 @@ static void ir_lower_scope_pop(IRLowerCtx* ctx) {
 #include "ir_lower_helpers_core.c"
 #include "ir_lower_cf_helpers.c"
 #include "ir_lower_string_mem.c"
+#include "ir_lower_raw_bytes.c"
 #include "ir_lower_format.c"
 
 static IRValue* lower_call_expr(IRLowerCtx* ctx, Node* expr) {

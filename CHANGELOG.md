@@ -23,6 +23,28 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ---
 
+## [0.9.1.4.5] - 2026-05-29
+
+**Lexer Transition Kit**
+
+### Added
+
+- **Raw byte literals**:
+  - Added `خام"..."` syntax lowering to static NUL-terminated UTF-8 byte storage with semantic type `ط٨*`.
+  - Preserved existing string escape and UTF-8 validation behavior while keeping raw byte literals separate from packed `نص`.
+- **Raw byte helper intrinsics**:
+  - Added `طول_خام(ط٨*) -> صحيح`.
+  - Added `قارن_خام(ط٨*, ط٨*) -> صحيح`.
+  - Added `قارن_خام_بطول(ط٨*, صحيح, ط٨*) -> منطقي` for span-to-literal matching in lexer code.
+- **Lexer transition harness**:
+  - Added `src/frontend/lexer_transition_baa0.baa` as a non-production Baa0 transition slice using `ط٨*`, `->`, pointer arithmetic, and raw byte helpers.
+  - Added `scripts/qa_mixed_harness.py --target lexer-transition` and included it in `--target all`.
+- **Regression coverage**:
+  - Added backend runtime coverage for raw byte length, comparison, span matching, pointer dereference, and Arabic UTF-8 byte length.
+  - Added a negative semantic test for invalid `طول_خام` argument type.
+
+---
+
 ## [0.9.1.4] - 2026-05-29
 
 **Systems Ergonomics for Baa Lexer**

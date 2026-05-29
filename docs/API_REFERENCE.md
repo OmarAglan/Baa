@@ -1,6 +1,6 @@
 # Baa Internal API Reference
 
-> **Version:** 0.9.1.4 | [← Compiler Internals](INTERNALS.md) | [IR Specification →](BAA_IR_SPECIFICATION.md)
+> **Version:** 0.9.1.4.5 | [← Compiler Internals](INTERNALS.md) | [IR Specification →](BAA_IR_SPECIFICATION.md)
 
 This document details the C functions, enumerations, and structures defined in the current component-owned public headers under `src/frontend/`, `src/support/`, `src/middleend/`, and `src/backend/`. `src/baa.h` remains as a compatibility umbrella over the frontend/support public surface.
 
@@ -2649,10 +2649,15 @@ Currently supports:
 - `NODE_UNARY_OP` → `سالب`, bitwise `نفي` (`~`), and logical-not lowering via compare-to-zero
 - `NODE_SIZEOF` → compile-time constant size (`ص٦٤`)
 - `NODE_CALL_EXPR` → `نداء`
+- `NODE_RAW_STRING` → static NUL-terminated UTF-8 byte storage (`ط٨*`)
 - Builtin string calls (`v0.3.9`) in `NODE_CALL_EXPR`:
   - `طول_نص`, `قارن_نص`
   - `نسخ_نص`, `دمج_نص` (heap-backed via `malloc`)
   - `حرر_نص` (via `free`)
+- Builtin raw-byte calls (`v0.9.1.4.5`) in `NODE_CALL_EXPR`:
+  - `طول_خام`
+  - `قارن_خام`
+  - `قارن_خام_بطول`
 - Builtin memory/file calls (`v0.3.11`/`v0.3.12`) in `NODE_CALL_EXPR`:
   - `حجز_ذاكرة/تحرير_ذاكرة/إعادة_حجز/نسخ_ذاكرة/تعيين_ذاكرة`
   - `فتح_ملف/اغلق_ملف/اقرأ_ملف/اكتب_ملف/اقرأ_حرف/اكتب_حرف/نهاية_ملف/موقع_ملف/اذهب_لموقع/اقرأ_سطر(ملف)/اكتب_سطر`

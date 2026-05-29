@@ -35,6 +35,14 @@ Node* parse_primary() {
         node->data.string_lit.id = -1;
         eat(TOKEN_STRING);
     }
+    else if (parser.current.type == TOKEN_RAW_STRING) {
+        Token tok = parser.current;
+        node = ast_node_new(NODE_RAW_STRING, tok);
+        if (!node) return NULL;
+        node->data.string_lit.value = strdup(parser.current.value);
+        node->data.string_lit.id = -1;
+        eat(TOKEN_RAW_STRING);
+    }
     else if (parser.current.type == TOKEN_CHAR) {
         Token tok = parser.current;
         node = ast_node_new(NODE_CHAR, tok);

@@ -122,6 +122,58 @@ static bool builtin_check_string_call(Node* call_node, const char* fname, Node* 
     return true;
 }
 
+static bool builtin_arg_is_raw_byte_ptr(Node* arg, DataType got)
+{
+    if (!arg || got != TYPE_POINTER) return false;
+    return ptr_type_compatible(arg->inferred_ptr_base_type,
+                               arg->inferred_ptr_base_type_name,
+                               arg->inferred_ptr_depth,
+                               TYPE_U8, NULL, 1,
+                               false);
+}
+
+static bool builtin_check_raw_call(Node* call_node, const char* fname, Node* args, DataType* out_return_type)
+{
+    int expected_count = 0;
+    DataType return_type = TYPE_INT;
+
+    if (fname && strcmp(fname, "طول_خام") == 0) {
+        expected_count = 1;
+        return_type = TYPE_INT;
+    } else if (fname && strcmp(fname, "قارن_خام") == 0) {
+        expected_count = 2;
+        return_type = TYPE_INT;
+    } else if (fname && strcmp(fname, "قارن_خام_بطول") == 0) {
+        expected_count = 3;
+        return_type = TYPE_BOOL;
+    } else {
+        return false;
+    }
+
+    int i = 0;
+    for (Node* arg = args; arg; arg = arg->next, i++) {
+        DataType got = infer_type(arg);
+        if (i >= expected_count) continue;
+
+        if ((i == 0 || (strcmp(fname, "قارن_خام_بطول") != 0 && i == 1) ||
+             (strcmp(fname, "قارن_خام_بطول") == 0 && i == 2))) {
+            if (!builtin_arg_is_raw_byte_ptr(arg, got)) {
+                builtin_report_param_type_mismatch(arg, i + 1, fname);
+            }
+        } else if (!types_compatible(got, TYPE_INT)) {
+            builtin_report_param_type_mismatch(arg, i + 1, fname);
+        }
+    }
+
+    if (i != expected_count) {
+        builtin_report_param_count_mismatch(call_node, fname, expected_count);
+    }
+
+    if (out_return_type) *out_return_type = return_type;
+    if (call_node) node_clear_inferred_ptr(call_node);
+    return true;
+}
+
 typedef struct {
     const char* name;
     DataType return_type;
@@ -573,4 +625,3 @@ static bool builtin_check_variadic_runtime_call(Node* call_node, const char* fna
     }
     return true;
 }
-

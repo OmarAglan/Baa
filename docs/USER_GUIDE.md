@@ -1,6 +1,6 @@
 # Baa User Guide
 
-> **Version:** 0.9.1.4 | [← README](../README.md) | [Language Spec →](LANGUAGE.md)
+> **Version:** 0.9.1.4.5 | [← README](../README.md) | [Language Spec →](LANGUAGE.md)
 
 Welcome to Baa (باء)! This guide will help you write your first Arabic computer program and use the Baa compiler toolchain.
 
@@ -561,6 +561,26 @@ To manipulate dynamically allocated strings, include the standard library header
     // Free allocated memory
 حرر_نص(رسالة).
     
+    إرجع ٠.
+}
+```
+
+For byte-oriented lexer or systems code, `خام"..."` creates a static NUL-terminated UTF-8 byte sequence of type `ط٨*`. These values do not use the packed `نص` representation and do not need `حرر_نص`.
+
+```baa
+#تضمين "stdlib/baalib.baahd"
+
+صحيح الرئيسية() {
+    ط٨* كلمة = خام"token".
+
+    إذا (طول_خام(كلمة) != ٥) {
+        إرجع ١.
+    }
+
+    إذا (!قارن_خام_بطول(خام"token:", ٥, خام"token")) {
+        إرجع ٢.
+    }
+
     إرجع ٠.
 }
 ```

@@ -25,6 +25,40 @@
             return ir_lower_builtin_strcmp_from_values(ctx, expr, av, bv);
         }
 
+        if (strcmp(n, "طول_خام") == 0) {
+            if (!a0 || a1) {
+                ir_lower_report_error(ctx, expr, "استدعاء 'طول_خام' يتطلب وسيطاً واحداً.");
+                ir_lower_eval_call_args(ctx, expr->data.call.args);
+                return ir_builder_const_i64(0);
+            }
+            IRValue* sv = lower_expr(ctx, a0);
+            return ir_lower_builtin_raw_len_from_value(ctx, expr, sv);
+        }
+
+        if (strcmp(n, "قارن_خام") == 0) {
+            if (!a0 || !a1 || a2) {
+                ir_lower_report_error(ctx, expr, "استدعاء 'قارن_خام' يتطلب وسيطين.");
+                ir_lower_eval_call_args(ctx, expr->data.call.args);
+                return ir_builder_const_i64(0);
+            }
+            IRValue* av = lower_expr(ctx, a0);
+            IRValue* bv = lower_expr(ctx, a1);
+            return ir_lower_builtin_raw_cmp_from_values(ctx, expr, av, bv);
+        }
+
+        if (strcmp(n, "قارن_خام_بطول") == 0) {
+            Node* a3 = a2 ? a2->next : NULL;
+            if (!a0 || !a1 || !a2 || a3) {
+                ir_lower_report_error(ctx, expr, "استدعاء 'قارن_خام_بطول' يتطلب ثلاثة وسائط.");
+                ir_lower_eval_call_args(ctx, expr->data.call.args);
+                return ir_value_const_int(0, IR_TYPE_I1_T);
+            }
+            IRValue* av = lower_expr(ctx, a0);
+            IRValue* lv = lower_expr(ctx, a1);
+            IRValue* bv = lower_expr(ctx, a2);
+            return ir_lower_builtin_raw_eq_len_from_values(ctx, expr, av, lv, bv);
+        }
+
         if (strcmp(n, "نسخ_نص") == 0) {
             if (!a0 || a1) {
                 ir_lower_report_error(ctx, expr, "استدعاء 'نسخ_نص' يتطلب وسيطاً واحداً.");

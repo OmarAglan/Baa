@@ -800,4 +800,3 @@ static IRValue* ir_lower_builtin_read_line_from_file(IRLowerCtx* ctx, const Node
     int out_r = ir_builder_emit_load(b, char_ptr_t, res_ptr);
     return ir_value_reg(out_r, char_ptr_t);
 }
-

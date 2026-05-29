@@ -19,6 +19,10 @@
         if (out_return_type) *out_return_type = built_ret;
         return true;
     }
+    if (builtin_check_raw_call(call_node, fname, args, &built_ret)) {
+        if (out_return_type) *out_return_type = built_ret;
+        return true;
+    }
     if (builtin_check_mem_call(call_node, fname, args, &built_ret)) {
         if (out_return_type) *out_return_type = built_ret;
         return true;
@@ -136,6 +140,10 @@ static DataType infer_type_internal(Node* node) {
         
         case NODE_STRING:
             return TYPE_STRING;
+
+        case NODE_RAW_STRING:
+            node_set_inferred_ptr(node, TYPE_U8, NULL, 1);
+            return TYPE_POINTER;
         
         case NODE_BOOL:
             return TYPE_BOOL;

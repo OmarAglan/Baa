@@ -154,6 +154,10 @@ static IRValue* ir_lower_global_init_value(IRBuilder* builder, Node* expr, IRTyp
             // Adds to module string table and returns pointer value.
             return ir_builder_const_baa_string(builder, expr->data.string_lit.value);
 
+        case NODE_RAW_STRING:
+            // يضيف النص الخام إلى جدول C-string ويعيد مؤشر i8* ثابتاً.
+            return ir_builder_const_string(builder, expr->data.string_lit.value);
+
         case NODE_NULL:
             return ir_value_const_int(0, expected_type ? expected_type : ir_type_ptr(IR_TYPE_I8_T));
 

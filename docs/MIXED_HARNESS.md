@@ -1,6 +1,6 @@
 # Mixed C+Baa Harness
 
-> **Version:** 0.9.1 | [← Stage-0 Manifest](STAGE0_BOOTSTRAP_MANIFEST.md) | [Self-Hosting Pilot →](SELF_HOSTING_PILOT_REPORT.md)
+> **Version:** 0.9.1.4.5 | [← Stage-0 Manifest](STAGE0_BOOTSTRAP_MANIFEST.md) | [Self-Hosting Pilot →](SELF_HOSTING_PILOT_REPORT.md)
 
 This document defines the v0.9.1 harness used to validate compiler slices built from a mix of C and Baa objects.
 
@@ -20,6 +20,7 @@ Useful focused targets:
 python scripts/qa_mixed_harness.py --target token-names
 python scripts/qa_mixed_harness.py --target lexer-token-stream
 python scripts/qa_mixed_harness.py --target lexer-diagnostics
+python scripts/qa_mixed_harness.py --target lexer-transition
 ```
 
 The legacy pilot command remains valid:
@@ -82,6 +83,10 @@ tests/snapshots/mixed_harness/lexer_diagnostics/
 This target freezes source locations, include-cycle reporting, escape diagnostics, and preprocessor EOF diagnostics for the lexer rewrite path.
 
 The token-stream corpus also includes `tests/stress/stress_utf8_identifiers.baa` so the candidate bridge is checked against a stress-sized UTF-8 lexer fixture.
+
+### `lexer-transition`
+
+Compiles `src/frontend/lexer_transition_baa0.baa`, links it with a generated C harness, and runs a small non-production transition slice. This target proves that Baa0 can now consume the lexer-readability surface required before the full v0.9.1.5 migration: `ط٨*`, `خام"..."`, `طول_خام`, `قارن_خام`, `قارن_خام_بطول`, pointer arithmetic, and `هيكل* -> عضو`.
 
 ---
 

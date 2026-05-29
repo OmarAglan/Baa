@@ -1480,6 +1480,17 @@ Partial status update (2026-03-06):
 
 ✅ COMPLETED (2026-05-29)
 
+#### v0.9.1.4.5: Lexer Transition Kit
+
+- [x] **Raw byte literal syntax** — `خام"..."` produces a static NUL-terminated UTF-8 byte sequence with semantic type `ط٨*`.
+- [x] **Raw byte helper intrinsics** — `طول_خام`, `قارن_خام`, and `قارن_خام_بطول` lower directly to byte-wise IR loops.
+- [x] **Baa0 transition slice** — `src/frontend/lexer_transition_baa0.baa` consumes raw bytes, pointer arithmetic, and `->` without becoming the production lexer.
+- [x] **Mixed-harness target** — `scripts/qa_mixed_harness.py --target lexer-transition` compiles, links, and runs the transition slice.
+- [x] **Regression coverage** — backend and negative tests cover raw byte literals and helper type contracts.
+- [x] **Documentation sync** — README, language spec, stdlib prototypes, roadmap, and changelog describe the transition kit.
+
+✅ COMPLETED (2026-05-29)
+
 ### v0.9.1.5: Fully Move Lexer to Baa 📝
 
 - [ ] **Replace bridge with Baa-owned lexer state** — move cursor, source buffer, token construction, and include-stack state from the C-hosted callback path into Baa.

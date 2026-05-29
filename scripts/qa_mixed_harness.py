@@ -24,6 +24,7 @@ LEXER_FIXTURE_DIR = ROOT / "tests" / "fixtures" / "mixed_harness" / "lexer"
 
 PILOT_SRC = ROOT / "src" / "frontend" / "lexer_token_names_baa0.baa"
 LEXER_CANDIDATE_SRC = ROOT / "src" / "frontend" / "lexer_candidate_baa0.baa"
+LEXER_TRANSITION_SRC = ROOT / "src" / "frontend" / "lexer_transition_baa0.baa"
 LEXER_HEADER = ROOT / "src" / "frontend" / "lexer.h"
 LEXER_DEBUG_C = ROOT / "src" / "frontend" / "lexer_debug.c"
 
@@ -32,6 +33,7 @@ TIMEOUT_S = 60.0
 TARGET_TOKEN_NAMES = "token-names"
 TARGET_LEXER_TOKEN_STREAM = "lexer-token-stream"
 TARGET_LEXER_DIAGNOSTICS = "lexer-diagnostics"
+TARGET_LEXER_TRANSITION = "lexer-transition"
 TARGET_ALL = "all"
 
 BANNED_WORDS = [
@@ -1097,6 +1099,80 @@ def _run_lexer_diagnostics(
     return results
 
 
+def _write_lexer_transition_harness(path: Path) -> None:
+    path.write_text(
+        r'''#include <stdint.h>
+#include <stdio.h>
+
+extern int64_t انتقالالمحللاختبار(void);
+
+int main(void)
+{
+    int64_t rc = انتقالالمحللاختبار();
+    if (rc != 0) {
+        fprintf(stderr, "lexer transition Baa harness failed: %lld\n", (long long)rc);
+        return (int)rc;
+    }
+
+    puts("mixed-harness: lexer transition PASS");
+    return 0;
+}
+''',
+        encoding="utf-8",
+    )
+
+
+def _run_lexer_transition(baa: Path, cc: str, log_dir: Path, out_dir: Path) -> list[CheckResult]:
+    results: list[CheckResult] = []
+    policy = _policy_check_baa0_source("lexer-transition-baa0-policy", LEXER_TRANSITION_SRC)
+    results.append(policy)
+    if not policy.passed:
+        return results
+
+    harness_c = out_dir / "lexer_transition_harness.c"
+    transition_obj = out_dir / "lexer_transition_baa0.o"
+    exe = out_dir / ("lexer_transition_harness.exe" if os.name == "nt" else "lexer_transition_harness")
+    _write_lexer_transition_harness(harness_c)
+
+    compile_baa = _run(
+        "lexer-transition-compile-baa",
+        [
+            str(baa),
+            "-O2",
+            "--verify-ir",
+            "--verify-ssa",
+            "-c",
+            str(LEXER_TRANSITION_SRC.relative_to(ROOT)),
+            "-o",
+            str(transition_obj),
+        ],
+        log_dir,
+    )
+    results.append(compile_baa)
+    if not compile_baa.passed:
+        return results
+
+    link = _run(
+        "lexer-transition-link",
+        [
+            cc,
+            "-std=gnu11",
+            "-finput-charset=UTF-8",
+            str(harness_c),
+            str(transition_obj),
+            "-o",
+            str(exe),
+        ],
+        log_dir,
+    )
+    results.append(link)
+    if not link.passed:
+        return results
+
+    results.append(_run("lexer-transition-run", [str(exe)], log_dir))
+    return results
+
+
 def _print_result(result: CheckResult) -> None:
     state = "PASS" if result.passed else "FAIL"
     artifact = f" artifact={result.artifact}" if result.artifact else ""
@@ -1128,7 +1204,13 @@ def main(argv: list[str]) -> int:
     parser = argparse.ArgumentParser(description="Reusable mixed C+Baa self-hosting harness")
     parser.add_argument(
         "--target",
-        choices=[TARGET_TOKEN_NAMES, TARGET_LEXER_TOKEN_STREAM, TARGET_LEXER_DIAGNOSTICS, TARGET_ALL],
+        choices=[
+            TARGET_TOKEN_NAMES,
+            TARGET_LEXER_TOKEN_STREAM,
+            TARGET_LEXER_DIAGNOSTICS,
+            TARGET_LEXER_TRANSITION,
+            TARGET_ALL,
+        ],
         default=TARGET_ALL,
     )
     parser.add_argument("--baa", default="")
@@ -1164,6 +1246,8 @@ def main(argv: list[str]) -> int:
             results.extend(_run_lexer_token_stream(baa, cc, log_dir, out_dir, args.update_snapshots))
         if args.target in (TARGET_LEXER_DIAGNOSTICS, TARGET_ALL):
             results.extend(_run_lexer_diagnostics(baa, log_dir, out_dir, args.update_snapshots))
+        if args.target in (TARGET_LEXER_TRANSITION, TARGET_ALL):
+            results.extend(_run_lexer_transition(baa, cc, log_dir, out_dir))
     finally:
         shutil.rmtree(out_dir, ignore_errors=True)
 

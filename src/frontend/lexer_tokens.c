@@ -1,3 +1,79 @@
+static Token lex_read_quoted_bytes_token(Lexer* l, Token token, BaaTokenType type)
+{
+    advance_pos(l);
+
+    size_t cap = 32;
+    size_t len = 0;
+    char* str = (char*)malloc(cap);
+    if (!str) {
+        lex_fatal(l, "خطأ لفظي: نفدت الذاكرة أثناء قراءة النص.");
+    }
+
+    while (peek(l) != '"' && peek(l) != '\0') {
+        if (peek(l) == '\\') {
+            advance_pos(l);
+            if (peek(l) == '\0') {
+                free(str);
+                lex_fatal(l, "خطأ لفظي: تسلسل هروب غير مكتمل داخل النص.");
+            }
+
+            unsigned char out = 0;
+            if (peek(l) == '\\') { out = (unsigned char)'\\'; advance_pos(l); }
+            else if (peek(l) == '"') { out = (unsigned char)'"'; advance_pos(l); }
+            else if (peek(l) == '\'') { out = (unsigned char)'\''; advance_pos(l); }
+            else if (lex_decode_arabic_escape(l, &out)) { /* تم فك الهروب العربي. */ }
+            else {
+                free(str);
+                lex_fatal(l, "خطأ لفظي: تسلسل هروب غير مدعوم داخل النص.");
+            }
+
+            if (!lex_append_byte(&str, &len, &cap, out)) {
+                free(str);
+                lex_fatal(l, "خطأ لفظي: نفدت الذاكرة أثناء بناء النص.");
+            }
+            continue;
+        }
+
+        unsigned char b0 = (unsigned char)peek(l);
+        if (b0 >= 0x80u) {
+            int ulen = 0;
+            if (!lex_utf8_validate_at(l->state.cur_char, &ulen)) {
+                free(str);
+                lex_fatal(l, "خطأ لفظي: تسلسل UTF-8 غير صالح داخل النص.");
+            }
+            for (int i = 0; i < ulen; i++) {
+                if (!lex_append_byte(&str, &len, &cap, (unsigned char)*l->state.cur_char)) {
+                    free(str);
+                    lex_fatal(l, "خطأ لفظي: نفدت الذاكرة أثناء بناء النص.");
+                }
+                advance_pos(l);
+            }
+            continue;
+        }
+
+        if (!lex_append_byte(&str, &len, &cap, b0)) {
+            free(str);
+            lex_fatal(l, "خطأ لفظي: نفدت الذاكرة أثناء بناء النص.");
+        }
+        advance_pos(l);
+    }
+
+    if (peek(l) == '\0') {
+        free(str);
+        lex_fatal(l, "خطأ لفظي: النص غير مُغلق.");
+    }
+
+    if (!lex_append_byte(&str, &len, &cap, 0)) {
+        free(str);
+        lex_fatal(l, "خطأ لفظي: نفدت الذاكرة أثناء إنهاء النص.");
+    }
+
+    advance_pos(l);
+    token.type = type;
+    token.value = str;
+    return lex_finish_token(l, token);
+}
+
 Token lexer_next_token(Lexer* l) {
     Token token = {0};
     
@@ -256,6 +332,15 @@ Token lexer_next_token(Lexer* l) {
     token.filename = l->state.filename;
 
     char* current = l->state.cur_char;
+
+    const char* raw_prefix = "خام";
+    size_t raw_prefix_len = strlen(raw_prefix);
+    if (strncmp(current, raw_prefix, raw_prefix_len) == 0 &&
+        current[raw_prefix_len] == '"') {
+        l->state.cur_char += raw_prefix_len;
+        l->state.col += (int)raw_prefix_len;
+        return lex_read_quoted_bytes_token(l, token, TOKEN_RAW_STRING);
+    }
 
     // --- معالجة النصوص ("...") ---
     if (*current == '"') {

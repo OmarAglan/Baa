@@ -746,8 +746,6 @@ static DataType infer_type_internal(Node* node) {
 
         case NODE_UNARY_OP:
         case NODE_POSTFIX_OP: {
-            DataType ot = infer_type(node->data.unary_op.operand);
-
             if (node->data.unary_op.op == UOP_ADDR) {
                 Node* target = node->data.unary_op.operand;
                 if (!target ||
@@ -758,7 +756,31 @@ static DataType infer_type_internal(Node* node) {
                     semantic_error(node, "أخذ العنوان '&' يتطلب قيمة قابلة للإسناد.");
                 }
 
-                if (ot == TYPE_STRUCT || ot == TYPE_UNION || ot == TYPE_VOID) {
+                DataType ot = TYPE_INT;
+                const char* base_name = NULL;
+                if (target && target->type == NODE_VAR_REF) {
+                    Symbol* sym = lookup(target->data.var_ref.name, true);
+                    if (!sym) {
+                        semantic_error(node, "أخذ العنوان '&' يتطلب متغيراً معرّفاً.");
+                    } else {
+                        ot = sym->type;
+                        if (sym->type == TYPE_POINTER) {
+                            node_set_inferred_ptr(target,
+                                                  sym->ptr_base_type,
+                                                  sym->ptr_base_type_name[0] ? sym->ptr_base_type_name : NULL,
+                                                  sym->ptr_depth);
+                        } else if (sym->type == TYPE_FUNC_PTR) {
+                            node_set_inferred_funcptr(target, sym->func_sig);
+                        }
+                        if (sym->type == TYPE_STRUCT || sym->type == TYPE_UNION || sym->type == TYPE_ENUM) {
+                            base_name = sym->type_name[0] ? sym->type_name : NULL;
+                        }
+                    }
+                } else {
+                    ot = infer_type(target);
+                }
+
+                if (ot == TYPE_VOID) {
                     semantic_error(node, "لا يمكن أخذ عنوان هذا النوع.");
                     node_set_inferred_ptr(node, TYPE_INT, NULL, 1);
                     return TYPE_POINTER;
@@ -768,17 +790,21 @@ static DataType infer_type_internal(Node* node) {
                     node_set_inferred_ptr(node,
                                           node->data.unary_op.operand->inferred_ptr_base_type,
                                           node->data.unary_op.operand->inferred_ptr_base_type_name,
-                                          node->data.unary_op.operand->inferred_ptr_depth + 1);
+                                      node->data.unary_op.operand->inferred_ptr_depth + 1);
                 } else {
-                    const char* base_name = NULL;
-                    if (target->type == NODE_MEMBER_ACCESS &&
-                        target->data.member_access.member_type == TYPE_ENUM) {
-                        base_name = target->data.member_access.member_type_name;
+                    if (target && target->type == NODE_MEMBER_ACCESS) {
+                        if (target->data.member_access.member_type == TYPE_STRUCT ||
+                            target->data.member_access.member_type == TYPE_UNION ||
+                            target->data.member_access.member_type == TYPE_ENUM) {
+                            base_name = target->data.member_access.member_type_name;
+                        }
                     }
                     node_set_inferred_ptr(node, ot, base_name, 1);
                 }
                 return TYPE_POINTER;
             }
+
+            DataType ot = infer_type(node->data.unary_op.operand);
 
             if (node->data.unary_op.op == UOP_DEREF) {
                 if (ot != TYPE_POINTER) {
@@ -837,4 +863,3 @@ static DataType infer_type_internal(Node* node) {
             return TYPE_INT;
     }
 }
-

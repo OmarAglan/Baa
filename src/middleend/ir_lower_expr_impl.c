@@ -751,7 +751,8 @@ IRValue* lower_expr(IRLowerCtx* ctx, Node* expr) {
                 return ir_value_const_int(expr->data.member_access.enum_value, IR_TYPE_I64_T);
             }
 
-            if (!expr->data.member_access.is_struct_member || !expr->data.member_access.root_var) {
+            if (!expr->data.member_access.is_struct_member ||
+                (!expr->data.member_access.via_pointer && !expr->data.member_access.root_var)) {
                 ir_lower_report_error(ctx, expr, "وصول عضو غير صالح في مسار IR.");
                 return ir_builder_const_i64(0);
             }
@@ -768,7 +769,10 @@ IRValue* lower_expr(IRLowerCtx* ctx, Node* expr) {
             IRType* ptr_i8_t = ir_type_ptr(IR_TYPE_I8_T);
             IRValue* base_ptr = NULL;
 
-            if (expr->data.member_access.root_is_global) {
+            if (expr->data.member_access.via_pointer) {
+                IRValue* raw_ptr = lower_expr(ctx, expr->data.member_access.base);
+                base_ptr = cast_to(ctx, raw_ptr, ptr_i8_t);
+            } else if (expr->data.member_access.root_is_global) {
                 base_ptr = ir_value_global(expr->data.member_access.root_var, IR_TYPE_I8_T);
             } else {
                 IRLowerBinding* b = find_local(ctx, expr->data.member_access.root_var);
@@ -805,4 +809,3 @@ IRValue* lower_expr(IRLowerCtx* ctx, Node* expr) {
             return ir_builder_const_i64(0);
     }
 }
-

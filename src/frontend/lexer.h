@@ -108,6 +108,7 @@ typedef enum {
     TOKEN_RBRACE,       // }
     TOKEN_LBRACKET,     // [
     TOKEN_RBRACKET,     // ]
+    TOKEN_ARROW,        // ->
     
     TOKEN_INVALID       // وحدة غير صالحة
 } BaaTokenType;

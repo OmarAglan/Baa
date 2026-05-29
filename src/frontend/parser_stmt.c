@@ -839,8 +839,8 @@ Node* parse_statement() {
     if (parser.current.type == TOKEN_IDENTIFIER) {
         Token tok_name = parser.current;
 
-        // إسناد إلى عضو: س:حقل = ... .
-        if (parser.next.type == TOKEN_COLON) {
+        // إسناد إلى عضو: س:حقل = ... أو م->حقل = ... .
+        if (parser.next.type == TOKEN_COLON || parser.next.type == TOKEN_ARROW) {
             Node* target = parse_expression();
             eat(TOKEN_ASSIGN);
             Node* value = parse_expression();
@@ -860,7 +860,7 @@ Node* parse_statement() {
             Node* indices = parse_array_indices(&index_count);
 
             // إسناد إلى عضو عنصر مصفوفة: س[0]:حقل = ...
-            if (parser.current.type == TOKEN_COLON) {
+            if (parser.current.type == TOKEN_COLON || parser.current.type == TOKEN_ARROW) {
                 Node* target = ast_node_new(NODE_ARRAY_ACCESS, tok_name);
                 if (!target) return NULL;
                 target->data.array_op.name = name;
@@ -868,20 +868,22 @@ Node* parse_statement() {
                 target->data.array_op.index_count = index_count;
                 target->data.array_op.value = NULL;
 
-                while (parser.current.type == TOKEN_COLON) {
-                    Token tok_colon = parser.current;
-                    eat(TOKEN_COLON);
+                while (parser.current.type == TOKEN_COLON || parser.current.type == TOKEN_ARROW) {
+                    Token tok_member = parser.current;
+                    bool via_pointer = (parser.current.type == TOKEN_ARROW);
+                    eat(parser.current.type);
                     if (parser.current.type != TOKEN_IDENTIFIER) {
-                        error_report(parser.current, "متوقع اسم عضو بعد ':'.");
+                        error_report(parser.current, via_pointer ? "متوقع اسم عضو بعد '->'." : "متوقع اسم عضو بعد ':'.");
                         break;
                     }
                     char* member = strdup(parser.current.value);
                     eat(TOKEN_IDENTIFIER);
 
-                    Node* ma = ast_node_new(NODE_MEMBER_ACCESS, tok_colon);
+                    Node* ma = ast_node_new(NODE_MEMBER_ACCESS, tok_member);
                     if (!ma) return NULL;
                     ma->data.member_access.base = target;
                     ma->data.member_access.member = member;
+                    ma->data.member_access.via_pointer = via_pointer;
                     target = ma;
                 }
 

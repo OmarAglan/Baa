@@ -257,6 +257,7 @@ typedef struct Node {
             int64_t enum_value;      // قيمة العضو
 
             bool is_struct_member;   // هل هذا عضو هيكل؟
+            bool via_pointer;        // هل كُتب الوصول بصيغة مؤشر: أساس->عضو؟
             char* root_var;          // اسم المتغير الجذري للهيكل
             bool root_is_global;     // هل الجذر عام؟
             char* root_struct;       // اسم نوع الهيكل للجذر

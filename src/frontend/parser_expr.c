@@ -221,23 +221,25 @@ Node* parse_primary() {
         return NULL;
     }
 
-    // الوصول للأعضاء/القيم المؤهلة: <expr>:<member> (يمكن تكراره للتعشيش)
-    while (node && parser.current.type == TOKEN_COLON) {
-        Token tok_colon = parser.current;
-        eat(TOKEN_COLON);
+    // الوصول للأعضاء/القيم المؤهلة: <expr>:<member> أو <ptr>-><member>
+    while (node && (parser.current.type == TOKEN_COLON || parser.current.type == TOKEN_ARROW)) {
+        Token tok_member = parser.current;
+        bool via_pointer = (parser.current.type == TOKEN_ARROW);
+        eat(parser.current.type);
 
         if (parser.current.type != TOKEN_IDENTIFIER) {
-            error_report(parser.current, "متوقع اسم عضو بعد ':'.");
+            error_report(parser.current, via_pointer ? "متوقع اسم عضو بعد '->'." : "متوقع اسم عضو بعد ':'.");
             break;
         }
 
         char* member = strdup(parser.current.value);
         eat(TOKEN_IDENTIFIER);
 
-        Node* ma = ast_node_new(NODE_MEMBER_ACCESS, tok_colon);
+        Node* ma = ast_node_new(NODE_MEMBER_ACCESS, tok_member);
         if (!ma) return NULL;
         ma->data.member_access.base = node;
         ma->data.member_access.member = member;
+        ma->data.member_access.via_pointer = via_pointer;
         node = ma;
     }
 

@@ -427,7 +427,8 @@ static void lower_member_assign(IRLowerCtx* ctx, Node* stmt) {
         return;
     }
 
-    if (!target->data.member_access.is_struct_member || !target->data.member_access.root_var) {
+    if (!target->data.member_access.is_struct_member ||
+        (!target->data.member_access.via_pointer && !target->data.member_access.root_var)) {
         ir_lower_report_error(ctx, stmt, "إسناد عضو يتطلب عضواً هيكلياً محلولاً دلالياً.");
         (void)lower_expr(ctx, value);
         return;
@@ -446,7 +447,10 @@ static void lower_member_assign(IRLowerCtx* ctx, Node* stmt) {
     IRType* ptr_i8_t = ir_type_ptr(IR_TYPE_I8_T);
     IRValue* base_ptr = NULL;
 
-    if (target->data.member_access.root_is_global) {
+    if (target->data.member_access.via_pointer) {
+        IRValue* raw_ptr = lower_expr(ctx, target->data.member_access.base);
+        base_ptr = cast_to(ctx, raw_ptr, ptr_i8_t);
+    } else if (target->data.member_access.root_is_global) {
         base_ptr = ir_value_global(target->data.member_access.root_var, IR_TYPE_I8_T);
     } else {
         IRLowerBinding* b = find_local(ctx, target->data.member_access.root_var);
@@ -920,4 +924,3 @@ static void lower_inline_asm_stmt(IRLowerCtx* ctx, Node* stmt)
     ir_builder_emit_call_void(ctx->builder, BAA_INLINE_ASM_PSEUDO_CALL, args, arg_count);
     free(args);
 }
-

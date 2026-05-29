@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.10)
-project(baa VERSION 0.9.1 LANGUAGES C)
+project(baa VERSION 0.9.1.4 LANGUAGES C)
 
 set(CMAKE_C_STANDARD 11)
 
@@ -47,7 +47,6 @@ set(SOURCES
     src/backend/regalloc.c    # Register allocation (v0.3.2.2)
     src/backend/emit.c        # Code emission (v0.3.2.3)
     src/backend/target.c      # Target abstraction (v0.3.2.8.1)
-    src/frontend/lexer.c
     src/driver/main.c
     src/frontend/parser.c
     src/driver/process.c
@@ -56,6 +55,7 @@ set(SOURCES
     src/driver/driver_toolchain.c
     src/driver/driver_pipeline.c
     src/driver/driver_build.c
+    src/frontend/lexer.c
 )
 
 # Add resource file for Windows (Icon & Version Info)
@@ -66,7 +66,6 @@ else()
     list(APPEND SOURCES src/support/updater_stub.c)
 endif()
 
-# Windows executable extension
 add_executable(baa ${SOURCES})
 
 if(BAA_REPRODUCIBLE_BUILD_DATE)

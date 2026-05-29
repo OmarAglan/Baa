@@ -82,6 +82,7 @@
         case TOKEN_RBRACE: return "}";
         case TOKEN_LBRACKET: return "[";
         case TOKEN_RBRACKET: return "]";
+        case TOKEN_ARROW: return "->";
         
         default: return "UNKNOWN";
     }

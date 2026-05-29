@@ -708,7 +708,10 @@ static IRValue* lower_lvalue_address(IRLowerCtx* ctx, Node* expr, IRType** out_p
     if (expr->type == NODE_MEMBER_ACCESS && expr->data.member_access.is_struct_member) {
         IRType* ptr_i8_t = ir_type_ptr(IR_TYPE_I8_T);
         IRValue* base_ptr = NULL;
-        if (expr->data.member_access.root_is_global) {
+        if (expr->data.member_access.via_pointer) {
+            IRValue* raw_ptr = lower_expr(ctx, expr->data.member_access.base);
+            base_ptr = cast_to(ctx, raw_ptr, ptr_i8_t);
+        } else if (expr->data.member_access.root_is_global) {
             base_ptr = ir_value_global(expr->data.member_access.root_var, IR_TYPE_I8_T);
         } else {
             IRLowerBinding* b = find_local(ctx, expr->data.member_access.root_var);
@@ -854,4 +857,3 @@ static IRValue* lower_lvalue_address(IRLowerCtx* ctx, Node* expr, IRType** out_p
     ir_lower_report_error(ctx, expr, "أخذ العنوان '&' لهذا التعبير غير مدعوم.");
     return ir_value_const_int(0, ir_type_ptr(IR_TYPE_I64_T));
 }
-

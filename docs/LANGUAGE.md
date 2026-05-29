@@ -1,6 +1,6 @@
 # Baa Language Specification
 
-> **Version:** 0.9.1 | [← User Guide](USER_GUIDE.md) | [Compiler Internals →](INTERNALS.md)
+> **Version:** 0.9.1.4 | [← User Guide](USER_GUIDE.md) | [Compiler Internals →](INTERNALS.md)
 
 Baa (باء) is a compiled systems programming language using Arabic syntax. It compiles to native code via Assembly + host GCC/Clang on Windows and Linux.
 
@@ -388,6 +388,21 @@ Baa is statically typed. All variables must be declared with their type.
 }
 ```
 
+**الوصول عبر مؤشر هيكل:**
+
+```baa
+صحيح الرئيسية() {
+    هيكل نقطة ن.
+    ن:س = ١.
+    ن:ص = ٢.
+
+    هيكل نقطة* م = &ن.
+    م->س = م->س + ١.
+    اطبع ن:س.
+    إرجع ٠.
+}
+```
+
 **تعشيش الهياكل (Nested Structs):**
 
 ```baa
@@ -523,6 +538,7 @@ Baa is statically typed. All variables must be declared with their type.
 
 - تعريف نوع مؤشر: `نوع* م.` (مثلاً `صحيح* م`).
 - أخذ العنوان (Address-of): `م = &س.`
+- أخذ عنوان قيمة مركبة قابلة للإسناد مدعوم لـ `هيكل` و`اتحاد`، مثل: `هيكل موضع* م = &حالة.`
 - فك الإشارة (Dereference): `صحيح ق = *م.`
 - إسناد عبر المؤشر: `*م = ٢٠.`
 - المؤشر الفارغ: `عدم` (يمثل المؤشر الذي لا يشير لشيء).
@@ -532,6 +548,7 @@ Baa is statically typed. All variables must be declared with their type.
 - دعم المؤشرات العامة مع تتبع نوع الأساس وعمق المؤشر (مثل `صحيح**`) في التحليل الدلالي.
 - الحساب عبر المؤشرات: `pointer +/- int` و `pointer - pointer` (الطرح يعيد فرق العناصر).
 - **فهرسة المؤشر:** `م[i]` مدعومة وهي سكر نحوي لـ `*(م + i)` (تُسمح فقط عندما يكون نوع الأساس قابلاً للحساب؛ `عدم*` و `هيكل*` و `اتحاد*` غير مسموحة عند عمق ١).
+- **وصول عضو عبر مؤشر:** `م->حقل` مدعومة عندما يكون `م` من نوع `هيكل*` أو `اتحاد*`. الصيغة تقرأ/تكتب الحقل مباشرة ولا تنسخ قيمة الهيكل.
 - المقارنة بين المؤشرات: `==` و `!=` (مع السماح بـ `عدم`).
 - فك الإشارة يتطلب مؤشراً صالحاً، وأخذ العنوان يتطلب قيمة قابلة للإسناد (L-value).
 - مؤشرات الدوال مدعومة عبر النوع `دالة(...) -> ...` (انظر 5.6).

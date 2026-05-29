@@ -19,7 +19,24 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
   - Promote `scripts/qa_mixed_harness.py --target lexer-token-stream` so it exercises the Baa lexer directly rather than delegating to the C baseline callback.
   - Preserve lexer diagnostic parity for malformed sources, include cycles, bad escapes, and preprocessor EOF errors.
 - **Scope control**:
-  - No language feature expansion is planned for v0.9.1.5; the checkpoint is a relocation/correctness milestone before v0.9.2 parser work.
+  - No further language feature expansion is planned for v0.9.1.5 beyond consuming the v0.9.1.4 lexer-ergonomics surface; the checkpoint is a relocation/correctness milestone before v0.9.2 parser work.
+
+---
+
+## [0.9.1.4] - 2026-05-29
+
+**Systems Ergonomics for Baa Lexer**
+
+### Added
+
+- **Struct pointer member access**:
+  - Added `->` as member-access syntax for `هيكل*` and `اتحاد*` values.
+  - Added semantic and IR-lowering support for reading and writing fields through struct/union pointers.
+- **Compound address-of support**:
+  - Allowed taking the address of local/global `هيكل` and `اتحاد` lvalues so Baa code can form state pointers such as `هيكل موضع* مؤشر = &م.`.
+- **Regression coverage**:
+  - Added a backend runtime test for `هيكل* -> عضو` read/write behavior.
+  - Added a negative diagnostic test requiring `->` to target a struct/union pointer.
 
 ---
 

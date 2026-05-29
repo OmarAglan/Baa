@@ -424,10 +424,13 @@ Token lexer_next_token(Lexer* l) {
         token.type = TOKEN_PLUS; advance_pos(l); return lex_finish_token(l, token); 
     }
     
-    // الطرح والنقصان (-- و -)
+    // الطرح والنقصان والسهم (-- و -> و -)
     if (*current == '-') { 
         if (*(l->state.cur_char+1) == '-') {
             token.type = TOKEN_DEC; l->state.cur_char += 2; l->state.col += 2; return lex_finish_token(l, token);
+        }
+        if (*(l->state.cur_char+1) == '>') {
+            token.type = TOKEN_ARROW; l->state.cur_char += 2; l->state.col += 2; return lex_finish_token(l, token);
         }
         token.type = TOKEN_MINUS; advance_pos(l); return lex_finish_token(l, token); 
     }

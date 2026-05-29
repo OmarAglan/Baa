@@ -237,7 +237,24 @@ static void resolve_member_access(Node* node)
     int base_off = 0;
     bool base_const = false;
 
-    if (base->type == NODE_VAR_REF) {
+    if (node->data.member_access.via_pointer) {
+        DataType bt = infer_type(base);
+        if (bt != TYPE_POINTER || base->inferred_ptr_depth != 1 ||
+            (base->inferred_ptr_base_type != TYPE_STRUCT && base->inferred_ptr_base_type != TYPE_UNION)) {
+            semantic_error(node, "الوصول '->' يتطلب مؤشراً إلى هيكل أو اتحاد.");
+            return;
+        }
+        if (!base->inferred_ptr_base_type_name) {
+            semantic_error(node, "نوع أساس المؤشر غير معروف في الوصول '->'.");
+            return;
+        }
+        root_var = NULL;
+        root_is_global = false;
+        cur_struct = base->inferred_ptr_base_type_name;
+        cur_kind = base->inferred_ptr_base_type;
+        base_off = 0;
+        base_const = false;
+    } else if (base->type == NODE_VAR_REF) {
         Symbol* sym = lookup(base->data.var_ref.name, true);
         if (!sym) {
             semantic_error(node, "متغير غير معرّف '%s'.", base->data.var_ref.name ? base->data.var_ref.name : "???");
@@ -705,4 +722,3 @@ static void check_unused_global_variables(void) {
         }
     }
 }
-

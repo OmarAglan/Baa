@@ -351,14 +351,19 @@ static bool parse_type_spec_ex(DataType* out_type, char** out_type_name,
         eat(TOKEN_RPAREN);
 
         // السهم: ->
-        if (parser.current.type != TOKEN_MINUS || parser.next.type != TOKEN_GT) {
+        if (parser.current.type != TOKEN_ARROW &&
+            (parser.current.type != TOKEN_MINUS || parser.next.type != TOKEN_GT)) {
             error_report(parser.current, "متوقع '->' بعد معاملات توقيع الدالة.");
             for (int i = 0; i < cnt; i++) free(p_ptr_base_names ? p_ptr_base_names[i] : NULL);
             free(p_types); free(p_ptr_base_types); free(p_ptr_base_names); free(p_ptr_depths);
             return false;
         }
-        eat(TOKEN_MINUS);
-        eat(TOKEN_GT);
+        if (parser.current.type == TOKEN_ARROW) {
+            eat(TOKEN_ARROW);
+        } else {
+            eat(TOKEN_MINUS);
+            eat(TOKEN_GT);
+        }
 
         // نوع الإرجاع
         Token tok_rt = parser.current;

@@ -1471,6 +1471,15 @@ Partial status update (2026-03-06):
 
 ✅ COMPLETED (2026-05-29)
 
+#### v0.9.1.4: Systems Ergonomics for Baa Lexer
+
+- [x] **Struct pointer member access** — `هيكل*` and `اتحاد*` values support `مؤشر->عضو` for field reads and writes.
+- [x] **Compound address-of** — `&` now accepts `هيكل`/`اتحاد` lvalues so Baa lexer state can be addressed without global scratch slots.
+- [x] **Lexer-readability regression tests** — runtime and negative tests cover struct-pointer member access and invalid `->` targets.
+- [x] **Documented language surface** — `docs/LANGUAGE.md` records the new pointer/member rules and current boundaries.
+
+✅ COMPLETED (2026-05-29)
+
 ### v0.9.1.5: Fully Move Lexer to Baa 📝
 
 - [ ] **Replace bridge with Baa-owned lexer state** — move cursor, source buffer, token construction, and include-stack state from the C-hosted callback path into Baa.
@@ -1481,7 +1490,7 @@ Partial status update (2026-03-06):
 - [ ] **Promote mixed harness gate** — `lexer-token-stream` must exercise the Baa lexer implementation directly, not the C baseline callback.
 - [ ] **Diagnostics parity** — malformed source snapshots must match Arabic diagnostic text, source spans, include-chain notes, and EOF/preprocessor errors.
 - [ ] **Memory ownership audit** — define Baa/C ownership for token values, dependency paths, include buffers, macro tables, and cleanup paths.
-- [ ] **No language feature expansion** — keep v0.9.1.5 limited to lexer relocation and correctness fixes.
+- [ ] **No further language feature expansion** — consume the v0.9.1.4 ergonomics surface and keep v0.9.1.5 limited to lexer relocation and correctness fixes.
 - [ ] **Windows release signoff** — pass build, quick QA, release QA, and mixed harness; Linux remains deferred unless explicitly requested.
 
 ### v0.9.2: Rewrite Parser 🌳

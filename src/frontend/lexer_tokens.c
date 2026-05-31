@@ -242,11 +242,45 @@ Token lexer_next_token(Lexer* l) {
                      free(directive);
                      continue;
                  }
-                 // 4. #وإلا (Else)
+                 // 4. #إذا_لم_يعرف (If Not Defined)
+                 else if (strcmp(directive, "إذا_لم_يعرف") == 0) {
+                     // قراءة الاسم
+                     while (peek(l) != '\0' && isspace(peek(l))) advance_pos(l);
+                     char* name_start = l->state.cur_char;
+                     while (!isspace(peek(l)) && peek(l) != '\0') advance_pos(l);
+                     size_t name_len = l->state.cur_char - name_start;
+                     char* name = malloc(name_len + 1);
+                     if (!name) {
+                         free(directive);
+                         lex_fatal(l, "خطأ قبلي: نفدت الذاكرة أثناء قراءة اسم #إذا_لم_يعرف.");
+                     }
+                     if (name_len) memcpy(name, name_start, name_len);
+                     name[name_len] = '\0';
+
+                     bool undefined = (get_macro_value(l, name) == NULL);
+
+                     if (l->if_depth >= (int)(sizeof(l->if_stack) / sizeof(l->if_stack[0]))) {
+                         free(name);
+                         free(directive);
+                         lex_fatal(l, "خطأ قبلي: تجاوزت الشروط المتداخلة الحد الأقصى.");
+                     }
+
+                     bool parent = pp_active(l);
+                     l->if_stack[l->if_depth].parent_active = parent ? 1 : 0;
+                     l->if_stack[l->if_depth].cond_true = (parent && undefined) ? 1 : 0;
+                     l->if_stack[l->if_depth].in_else = 0;
+                     l->if_depth++;
+                     pp_recompute_skipping(l);
+
+                     free(name);
+                     free(directive);
+                     continue;
+                 }
+                 // 5. #وإلا (Else)
                  else if (strcmp(directive, "وإلا") == 0) {
                      if (l->if_depth <= 0) {
                          free(directive);
-                         lex_fatal(l, "خطأ قبلي: #وإلا بدون #إذا_عرف مطابق.");
+                         lex_fatal(l, "خطأ قبلي: #وإلا بدون شرط قبلي مطابق.");
                      }
                      int i = l->if_depth - 1;
                      if (l->if_stack[i].in_else) {
@@ -258,18 +292,18 @@ Token lexer_next_token(Lexer* l) {
                      free(directive);
                      continue;
                  }
-                 // 5. #نهاية (End)
+                 // 6. #نهاية (End)
                  else if (strcmp(directive, "نهاية") == 0) {
                      if (l->if_depth <= 0) {
                          free(directive);
-                         lex_fatal(l, "خطأ قبلي: #نهاية بدون #إذا_عرف مطابق.");
+                         lex_fatal(l, "خطأ قبلي: #نهاية بدون شرط قبلي مطابق.");
                      }
                      l->if_depth--;
                      pp_recompute_skipping(l);
                      free(directive);
                      continue;
                  }
-                 // 6. #الغاء_تعريف (Undefine)
+                 // 7. #الغاء_تعريف (Undefine)
                  else if (strcmp(directive, "الغاء_تعريف") == 0) {
                      if (l->skipping) { free(directive); continue; }
 
@@ -300,7 +334,7 @@ Token lexer_next_token(Lexer* l) {
         // نهاية الملف EOF
         if (peek(l) == '\0') {
             if (l->if_depth > 0 && l->stack_depth == 0) {
-                lex_fatal(l, "خطأ قبلي: نهاية الملف قبل إغلاق #إذا_عرف (مفقود #نهاية).");
+                lex_fatal(l, "خطأ قبلي: نهاية الملف قبل إغلاق شرط قبلي (مفقود #نهاية).");
             }
 
             // إذا كنا داخل ملف مضمن، نعود للملف السابق (Pop)

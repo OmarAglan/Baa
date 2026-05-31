@@ -137,6 +137,7 @@ Consumes input and returns the next valid token. **Handles preprocessor directiv
 - **Preprocessor:**
   - Handles `#تعريف <name> <value>` (define) to register macros.
   - Handles `#إذا_عرف <name>` (ifdef) to conditionally compile code.
+  - Handles `#إذا_لم_يعرف <name>` (ifndef) to conditionally compile code when a macro is absent.
   - Handles `#وإلا` (else) and `#نهاية` (endif) for conditional blocks.
   - Handles `#تضمين "file"` (include) to push new files onto the stack.
   - Handles `#الغاء_تعريف <name>` (undefine) to remove macro definitions.
@@ -4177,7 +4178,7 @@ typedef struct {
     int macro_count;
     bool skipping;          // True if inside disabled #if block
 
-    // Condition Stack (#إذا_عرف/#وإلا/#نهاية)
+    // Condition Stack (#إذا_عرف/#إذا_لم_يعرف/#وإلا/#نهاية)
     struct {
         unsigned char parent_active;
         unsigned char cond_true;

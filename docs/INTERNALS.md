@@ -336,7 +336,7 @@ typedef struct {
     int macro_count;      // عدد الماكروهات المعرفة
     bool skipping;        // هل نحن في وضع التخطي؟ (مُشتق من مكدس الشروط)
 
-    // مكدس الشروط (#إذا_عرف/#وإلا/#نهاية) لدعم التعشيش بشكل صحيح
+    // مكدس الشروط (#إذا_عرف/#إذا_لم_يعرف/#وإلا/#نهاية) لدعم التعشيش بشكل صحيح
     struct {
         unsigned char parent_active;
         unsigned char cond_true;
@@ -369,7 +369,7 @@ When `#تعريف NAME VALUE` is encountered:
     - If found, replaces the token's value with the macro value
     - Updates the token type based on the value (INT if numeric, STRING if quoted, IDENTIFIER otherwise)
 
-#### 2.2.2. Conditionals (`#إذا_عرف`)
+#### 2.2.2. Conditionals (`#إذا_عرف`, `#إذا_لم_يعرف`)
 
 When `#إذا_عرف NAME` is encountered:
 
@@ -377,6 +377,8 @@ When `#إذا_عرف NAME` is encountered:
 2. If it exists, normal parsing continues.
 3. If not, the lexer enters **Skipping Mode**.
 4. In Skipping Mode, all tokens are discarded until `#وإلا` or `#نهاية` is found.
+
+`#إذا_لم_يعرف NAME` uses the same conditional stack but inverts the macro-presence test, so its active branch is selected only when `NAME` is absent.
 
 #### 2.2.3. Undefine (`#الغاء_تعريف`)
 
@@ -416,7 +418,7 @@ The preprocessor supports nested conditionals via `if_stack[32]`:
 
 **Nesting rules:**
 - Maximum 32 nested conditional levels
-- `#إذا_عرف` pushes a new level onto `if_stack`
+- `#إذا_عرف` and `#إذا_لم_يعرف` push a new level onto `if_stack`
 - `#وإلا` toggles `cond_true` within the current level
 - `#نهاية` pops the current level
 - `skipping` mode is computed from the stack state

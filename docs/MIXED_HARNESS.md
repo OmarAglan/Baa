@@ -72,7 +72,7 @@ Each row records:
 - line, column, and byte length,
 - normalized token filename.
 
-The v0.9.1 Baa lexer candidate slot compiles `src/frontend/lexer_candidate_baa0.baa`, links it with a C host harness, and calls `مرشح_المحلل_اللفظي_شغل` for every fixture. The current candidate is a bridge checkpoint: C still owns file I/O, include resolution, baseline token emission, and memory cleanup, while the Baa object proves the reversible C→Baa→C ABI path before lexer state is moved into Baa.
+The v0.9.1 Baa lexer candidate slot now compiles `src/frontend/lexer_state_baa0.baa`, links it with a C host harness, and emits token-stream JSONL directly from the Baa-owned scanner state. C still owns fixture file reads, snapshot comparison, and token-name formatting, but cursor movement, token classification, conditional preprocessing, include-source stack switching, and macro value substitution are exercised through Baa before comparison against the committed C-baseline snapshots.
 
 ### `lexer-diagnostics`
 
@@ -94,7 +94,7 @@ Compiles `src/frontend/lexer_transition_baa0.baa`, links it with a generated C h
 
 Compiles `src/frontend/lexer_state_baa0.baa`, links it with a generated C harness, and drives a Baa-owned scanner state over a caller-owned UTF-8 byte buffer. This is the first v0.9.1.5 path where Baa owns cursor, line, and column movement and returns token metadata through C-owned out parameters. It currently covers EOF, whitespace/newline skipping, simple punctuation, Arabic semicolon, and multi-character operator tokens; the production `lexer_next_token` path is unchanged.
 
-The target also drives snapshot-backed real fixtures through the Baa-owned scanner-state path and verifies token type, byte start, byte length, line, column, and token value parity. It currently covers `basic_utf8.baa`, `tests/stress/stress_utf8_identifiers.baa`, and `conditional_macros.baa`, including line comments, Arabic keywords/identifiers, Arabic-Indic digits, strings, UTF-8 byte accounting, and a narrow `#تعريف`/`#الغاء_تعريف`/`#إذا_عرف`/`#وإلا`/`#نهاية` conditional-skipping checkpoint. A mixed-harness-only extended scanner ABI returns value spans into the caller-owned source buffer; the C harness reconstructs snapshot values, including Arabic-Indic digit normalization for integer literals. Token heap ownership, includes, macro value substitution, and preprocessor diagnostics remain on the later v0.9.1.5 migration path.
+The target also drives snapshot-backed real fixtures through the Baa-owned scanner-state path and verifies token type, byte start, byte length, line, column, and token value parity. It currently covers `basic_utf8.baa`, `tests/stress/stress_utf8_identifiers.baa`, and `conditional_macros.baa`, including line comments, Arabic keywords/identifiers, Arabic-Indic digits, strings, UTF-8 byte accounting, and source-local conditional skipping. The promoted `lexer-token-stream` Baa-state candidate covers `#تضمين`, macro value substitution from included headers, and `#إذا_لم_يعرف` parity against JSONL snapshots. Mixed-harness-only scanner ABIs return either source-relative value spans or raw value pointers so the C harness can reconstruct snapshot values, including Arabic-Indic digit normalization for direct integer literals. Token heap ownership, normalized dependency ownership, and preprocessor diagnostics remain on the later v0.9.1.5 migration path.
 
 ---
 

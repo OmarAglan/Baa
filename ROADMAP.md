@@ -1499,12 +1499,12 @@ Partial status update (2026-03-06):
 - [x] **Non-preprocessor UTF-8 stress checkpoint** — `lexer-state` now validates `stress_utf8_identifiers.baa` from committed token-stream snapshots, covering line comments, Arabic keyword/identifier scanning, Arabic-Indic digits, strings, and byte-position parity without switching the production lexer.
 - [x] **Non-preprocessor token-value checkpoint** — the Baa-owned scanner-state path now returns value spans/modes for identifiers, integer literals, and string literals, and `lexer-state` verifies snapshot value parity without introducing production token ownership changes.
 - [x] **Conditional-preprocessor scanner checkpoint** — `lexer-state` now validates `conditional_macros.baa` snapshot parity for Baa-owned `#تعريف`, `#الغاء_تعريف`, `#إذا_عرف`, `#وإلا`, and `#نهاية` branch skipping without moving include handling or diagnostics yet.
-- [ ] **Replace bridge with Baa-owned lexer state** — move cursor, source buffer, token construction, and include-stack state from the C-hosted callback path into Baa.
+- [x] **Replace bridge with Baa-owned lexer state** — `lexer-token-stream` now compiles `lexer_state_baa0.baa` directly and no longer emits candidate tokens through the C `lexer_next_token` bridge.
 - [ ] **Port UTF-8 scanner rules** — preserve Arabic identifiers, Arabic-Indic digits, string/char escapes, byte lengths, line/column accounting, and invalid-token behavior.
-- [ ] **Port preprocessor surface** — implement `#تضمين`, `#تعريف`, `#الغاء_تعريف`, `#إذا_عرف`, `#إذا_لم_يعرف`, and conditional skipping with C baseline parity.
+- [x] **Port preprocessor surface** — the Baa scanner-state path now handles `#تضمين`, `#تعريف`, `#الغاء_تعريف`, `#إذا_عرف`, `#إذا_لم_يعرف`, `#وإلا`, and `#نهاية` across token-stream snapshots, including macro value substitution from included headers.
 - [ ] **Preserve dependency tracking** — keep normalized include dependencies and include-cycle diagnostics equivalent to `src/frontend/lexer.c`.
 - [ ] **Keep C compatibility wrapper** — expose the existing `lexer_init`/`lexer_next_token`/cleanup contract to the parser until the parser port starts.
-- [ ] **Promote mixed harness gate** — `lexer-token-stream` must exercise the Baa lexer implementation directly, not the C baseline callback.
+- [x] **Promote mixed harness gate** — `lexer-token-stream` exercises the Baa scanner-state implementation directly and compares it against committed C-baseline JSONL snapshots.
 - [ ] **Diagnostics parity** — malformed source snapshots must match Arabic diagnostic text, source spans, include-chain notes, and EOF/preprocessor errors.
 - [ ] **Memory ownership audit** — define Baa/C ownership for token values, dependency paths, include buffers, macro tables, and cleanup paths.
 - [ ] **No further language feature expansion** — consume the v0.9.1.4 ergonomics surface and keep v0.9.1.5 limited to lexer relocation and correctness fixes.

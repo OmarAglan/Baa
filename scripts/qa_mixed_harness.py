@@ -72,6 +72,7 @@ LEXER_CASES = [
     ("basic_utf8", LEXER_FIXTURE_DIR / "basic_utf8.baa"),
     ("macro_include", LEXER_FIXTURE_DIR / "macro_include_main.baa"),
     ("conditional_macros", LEXER_FIXTURE_DIR / "conditional_macros.baa"),
+    ("conditional_ifndef", LEXER_FIXTURE_DIR / "conditional_ifndef.baa"),
     ("stress_utf8_identifiers", ROOT / "tests" / "stress" / "stress_utf8_identifiers.baa"),
 ]
 
@@ -79,6 +80,7 @@ LEXER_DIAGNOSTIC_CASES = [
     ("bad_escape_string", ROOT / "tests" / "neg" / "lexer_bad_escape_in_string.baa"),
     ("bad_escape_char", ROOT / "tests" / "neg" / "lexer_bad_escape_in_char.baa"),
     ("unclosed_ifdef", ROOT / "tests" / "neg" / "syntax_pp_unclosed_ifdef.baa"),
+    ("unclosed_ifndef", ROOT / "tests" / "neg" / "syntax_pp_unclosed_ifndef.baa"),
     ("include_cycle", ROOT / "tests" / "neg" / "syntax_include_cycle_relative_alias.baa"),
 ]
 
@@ -515,16 +517,27 @@ int main(int argc, char** argv)
 def _write_lexer_candidate_harness(path: Path) -> None:
     path.write_text(
         r'''#include <stdint.h>
+#include <inttypes.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 #include "src/frontend/lexer.h"
 
-extern int64_t مرشح_المحلل_اللفظي_شغل(int64_t root_file_id);
+extern void محللباءهيئ(unsigned char* source);
+extern int64_t محللباءالتالي_مؤشر(int64_t* type,
+                                  int64_t* start,
+                                  int64_t* length,
+                                  int64_t* line,
+                                  int64_t* column,
+                                  int64_t* value_ptr,
+                                  int64_t* value_length,
+                                  int64_t* value_mode);
 
 static const char* g_repo_root = NULL;
 static const char* g_case_path = NULL;
+static char* g_include_sources[32];
+static int g_include_source_count = 0;
 
 static char* read_all(const char* path)
 {
@@ -555,6 +568,86 @@ static char* read_all(const char* path)
     buf[size] = '\0';
     fclose(f);
     return buf;
+}
+
+static char* dup_span(const unsigned char* start, int64_t length)
+{
+    char* out = NULL;
+    if (!start || length < 0) return NULL;
+    out = (char*)malloc((size_t)length + 1u);
+    if (!out) return NULL;
+    if (length > 0) memcpy(out, start, (size_t)length);
+    out[length] = '\0';
+    return out;
+}
+
+static char* dirname_alloc(const char* path)
+{
+    const char* slash = NULL;
+    const char* backslash = NULL;
+    const char* sep = NULL;
+    size_t len = 0u;
+    char* out = NULL;
+    if (!path) return NULL;
+    slash = strrchr(path, '/');
+    backslash = strrchr(path, '\\');
+    sep = slash;
+    if (!sep || (backslash && backslash > sep)) sep = backslash;
+    if (!sep) return NULL;
+    len = (size_t)(sep - path) + 1u;
+    out = (char*)malloc(len + 1u);
+    if (!out) return NULL;
+    memcpy(out, path, len);
+    out[len] = '\0';
+    return out;
+}
+
+static char* join_alloc(const char* base, const char* leaf)
+{
+    size_t base_len = base ? strlen(base) : 0u;
+    size_t leaf_len = leaf ? strlen(leaf) : 0u;
+    char* out = NULL;
+    if (!base || !leaf) return NULL;
+    out = (char*)malloc(base_len + leaf_len + 1u);
+    if (!out) return NULL;
+    memcpy(out, base, base_len);
+    memcpy(out + base_len, leaf, leaf_len + 1u);
+    return out;
+}
+
+static void clear_include_sources(void)
+{
+    for (int i = 0; i < g_include_source_count; ++i) {
+        free(g_include_sources[i]);
+        g_include_sources[i] = NULL;
+    }
+    g_include_source_count = 0;
+}
+
+unsigned char* محللباءمضيف_تضمين(unsigned char* start, int64_t length)
+{
+    char* requested = dup_span(start, length);
+    char* dir = dirname_alloc(g_case_path);
+    char* full = NULL;
+    char* source = NULL;
+
+    if (!requested) return NULL;
+    if (dir) {
+        full = join_alloc(dir, requested);
+        if (full) source = read_all(full);
+    }
+    if (!source) {
+        source = read_all(requested);
+    }
+    free(requested);
+    free(dir);
+    free(full);
+
+    if (!source) return NULL;
+    if (g_include_source_count < (int)(sizeof(g_include_sources) / sizeof(g_include_sources[0]))) {
+        g_include_sources[g_include_source_count++] = source;
+    }
+    return (unsigned char*)source;
 }
 
 static void slashify(char* text)
@@ -614,32 +707,78 @@ static void json_string(const char* text)
     putchar('"');
 }
 
-static void print_token(const char* root, const char* case_path, Token tok, int index)
+static int normalize_value_from_ptr(const unsigned char* value,
+                                    int64_t value_length,
+                                    int64_t value_mode,
+                                    char* out,
+                                    size_t out_size)
+{
+    size_t written = 0u;
+    if (!out || out_size == 0u) return 1;
+    out[0] = '\0';
+
+    if (!value || value_length <= 0) {
+        return 0;
+    }
+
+    for (int64_t i = 0; i < value_length;) {
+        unsigned char byte = value[i];
+        unsigned char out_byte = byte;
+        int64_t step = 1;
+
+        if (value_mode == 2 &&
+            byte == 0xD9u &&
+            i + 1 < value_length &&
+            value[i + 1] >= 0xA0u &&
+            value[i + 1] <= 0xA9u) {
+            out_byte = (unsigned char)('0' + (value[i + 1] - 0xA0u));
+            step = 2;
+        }
+
+        if (written + 1u >= out_size) {
+            fprintf(stderr, "candidate value buffer is too small\n");
+            return 1;
+        }
+        out[written++] = (char)out_byte;
+        i += step;
+    }
+
+    out[written] = '\0';
+    return 0;
+}
+
+static void print_token(const char* root,
+                        const char* case_path,
+                        int64_t type,
+                        int64_t length,
+                        int64_t line,
+                        int64_t column,
+                        const char* value,
+                        int index)
 {
     char case_norm[4096];
     char file_norm[4096];
-    const char* token_name = token_type_to_str(tok.type);
+    const char* token_name = token_type_to_str((BaaTokenType)type);
     printf("{\"case\":");
     json_string(normalize_path(root, case_path, case_norm, sizeof(case_norm)));
-    printf(",\"index\":%d,\"type\":%d,\"name\":", index, (int)tok.type);
+    printf(",\"index\":%d,\"type\":%d,\"name\":", index, (int)type);
     json_string(token_name ? token_name : "");
     printf(",\"value\":");
-    json_string(tok.value ? tok.value : "");
+    json_string(value ? value : "");
     printf(",\"line\":%d,\"col\":%d,\"length\":%d,\"file\":",
-           tok.line,
-           tok.col,
-           tok.length);
-    json_string(normalize_path(root, tok.filename, file_norm, sizeof(file_norm)));
+           (int)line,
+           (int)column,
+           (int)length);
+    json_string(normalize_path(root, case_path, file_norm, sizeof(file_norm)));
     printf("}\n");
 }
 
 static int dump_current_case(void)
 {
     char* source = NULL;
-    Lexer lexer;
     int index = 0;
     if (!g_repo_root || !g_case_path) {
-        fprintf(stderr, "candidate host case is not initialized\n");
+        fprintf(stderr, "Baa lexer case is not initialized\n");
         return 2;
     }
 
@@ -649,29 +788,54 @@ static int dump_current_case(void)
         return 3;
     }
 
-    lexer_init(&lexer, source, g_case_path, NULL, 0u);
+    محللباءهيئ((unsigned char*)source);
     for (;;) {
-        Token tok = lexer_next_token(&lexer);
-        print_token(g_repo_root, g_case_path, tok, index++);
-        if (tok.value) free(tok.value);
-        if (tok.type == TOKEN_EOF || tok.type == TOKEN_INVALID) break;
+        int64_t type = -1;
+        int64_t start = -1;
+        int64_t length = -1;
+        int64_t line = -1;
+        int64_t column = -1;
+        int64_t value_ptr = 0;
+        int64_t value_length = 0;
+        int64_t value_mode = 0;
+        char value[512];
+        int64_t returned = محللباءالتالي_مؤشر(&type,
+                                             &start,
+                                             &length,
+                                             &line,
+                                             &column,
+                                             &value_ptr,
+                                             &value_length,
+                                             &value_mode);
+        (void)start;
+        if (returned != type) {
+            fprintf(stderr, "Baa lexer returned %" PRId64 " but wrote type %" PRId64 "\n", returned, type);
+            free(source);
+            clear_include_sources();
+            return 5;
+        }
+        if (normalize_value_from_ptr((const unsigned char*)(intptr_t)value_ptr,
+                                     value_length,
+                                     value_mode,
+                                     value,
+                                     sizeof(value)) != 0) {
+            free(source);
+            clear_include_sources();
+            return 6;
+        }
+        print_token(g_repo_root, g_case_path, type, length, line, column, value, index++);
+        if (type == TOKEN_EOF || type == TOKEN_INVALID) break;
         if (index > 20000) {
             fprintf(stderr, "token limit exceeded for %s\n", g_case_path);
             free(source);
-            lexer_free_dependencies(&lexer);
+            clear_include_sources();
             return 4;
         }
     }
 
-    lexer_free_dependencies(&lexer);
     free(source);
+    clear_include_sources();
     return 0;
-}
-
-int64_t مرشح_المضيف_شغل_الأساس(int64_t root_file_id)
-{
-    (void)root_file_id;
-    return (int64_t)dump_current_case();
 }
 
 int main(int argc, char** argv)
@@ -685,9 +849,9 @@ int main(int argc, char** argv)
     for (int argi = 2; argi < argc; ++argi) {
         int64_t rc = 0;
         g_case_path = argv[argi];
-        rc = مرشح_المحلل_اللفظي_شغل((int64_t)(argi - 2));
+        rc = (int64_t)dump_current_case();
         if (rc != 0) {
-            fprintf(stderr, "candidate returned %lld for %s\n", (long long)rc, g_case_path);
+            fprintf(stderr, "Baa lexer returned %lld for %s\n", (long long)rc, g_case_path);
             return (int)rc;
         }
     }
@@ -888,25 +1052,25 @@ def _run_lexer_candidate_token_stream(
     update_snapshots: bool,
 ) -> list[CheckResult]:
     results: list[CheckResult] = []
-    policy = _policy_check_baa0_source("lexer-candidate-baa0-policy", LEXER_CANDIDATE_SRC)
+    policy = _policy_check_baa0_source("lexer-token-stream-baa-state-policy", LEXER_STATE_SRC)
     results.append(policy)
     if not policy.passed:
         return results
 
-    harness_c = out_dir / "lexer_candidate_dump.c"
-    candidate_obj = out_dir / "lexer_candidate_baa0.o"
-    exe = out_dir / ("lexer_candidate_dump.exe" if os.name == "nt" else "lexer_candidate_dump")
+    harness_c = out_dir / "lexer_baa_state_dump.c"
+    candidate_obj = out_dir / "lexer_state_baa0_candidate.o"
+    exe = out_dir / ("lexer_baa_state_dump.exe" if os.name == "nt" else "lexer_baa_state_dump")
     _write_lexer_candidate_harness(harness_c)
 
     compile_baa = _run(
-        "lexer-token-stream-compile-baa-candidate",
+        "lexer-token-stream-compile-baa-state",
         [
             str(baa),
             "-O2",
             "--verify-ir",
             "--verify-ssa",
             "-c",
-            str(LEXER_CANDIDATE_SRC.relative_to(ROOT)),
+            str(LEXER_STATE_SRC.relative_to(ROOT)),
             "-o",
             str(candidate_obj),
         ],
@@ -917,17 +1081,17 @@ def _run_lexer_candidate_token_stream(
         return results
 
     link = _run(
-        "lexer-token-stream-link-baa-candidate",
+        "lexer-token-stream-link-baa-state",
         [
             cc,
             "-std=gnu11",
             "-finput-charset=UTF-8",
             "-I",
             str(ROOT),
+            "-include",
+            "src/frontend/lexer.h",
             str(harness_c),
-            str(ROOT / "src" / "frontend" / "lexer.c"),
-            str(ROOT / "src" / "support" / "error.c"),
-            str(ROOT / "src" / "support" / "read_file.c"),
+            str(LEXER_DEBUG_C),
             str(candidate_obj),
             "-o",
             str(exe),
@@ -940,11 +1104,11 @@ def _run_lexer_candidate_token_stream(
 
     for case_name, case_path in LEXER_CASES:
         if not case_path.exists():
-            results.append(CheckResult(f"lexer-token-stream-baa-candidate:{case_name}", False, 1, 0.0, "missing fixture"))
+            results.append(CheckResult(f"lexer-token-stream-baa-state:{case_name}", False, 1, 0.0, "missing fixture"))
             continue
 
         run, stdout = _run_capture(
-            f"lexer-token-stream-baa-candidate-run:{case_name}",
+            f"lexer-token-stream-baa-state-run:{case_name}",
             [str(exe), str(ROOT), str(case_path)],
             log_dir,
         )
@@ -954,21 +1118,21 @@ def _run_lexer_candidate_token_stream(
 
         started = time.monotonic()
         snapshot = SNAPSHOT_DIR / f"{case_name}.jsonl"
-        actual_path = log_dir / f"lexer-token-stream-baa-candidate-{case_name}.actual.jsonl"
+        actual_path = log_dir / f"lexer-token-stream-baa-state-{case_name}.actual.jsonl"
         actual_path.write_text(stdout, encoding="utf-8")
         try:
             actual = _normalize_jsonl(stdout)
             if update_snapshots:
                 expected = actual
-                detail = "candidate bridge matched updated baseline"
+                detail = "Baa lexer state matched updated baseline"
                 passed = True
             else:
                 expected = _read_snapshot(snapshot)
                 diff = _diff_rows(expected, actual)
                 passed = not diff
-                detail = "candidate bridge matched baseline" if passed else diff
+                detail = "Baa lexer state matched baseline" if passed else diff
                 if diff:
-                    (log_dir / f"lexer-token-stream-baa-candidate-{case_name}.diff.txt").write_text(
+                    (log_dir / f"lexer-token-stream-baa-state-{case_name}.diff.txt").write_text(
                         diff + "\n",
                         encoding="utf-8",
                     )
@@ -977,7 +1141,7 @@ def _run_lexer_candidate_token_stream(
             detail = str(exc)
         results.append(
             CheckResult(
-                f"lexer-token-stream-baa-candidate:{case_name}",
+                f"lexer-token-stream-baa-state:{case_name}",
                 passed,
                 0 if passed else 1,
                 time.monotonic() - started,
@@ -1257,6 +1421,13 @@ extern int64_t محللباءالتالي_موسع(int64_t* type,
                                   int64_t* value_start,
                                   int64_t* value_length,
                                   int64_t* value_mode);
+
+unsigned char* محللباءمضيف_تضمين(unsigned char* start, int64_t length)
+{
+    (void)start;
+    (void)length;
+    return NULL;
+}
 
 typedef struct ExpectedToken {
     int64_t type;

@@ -95,7 +95,7 @@ Define compile-time constants (macros). The compiler replaces the identifier wit
 }
 ```
 
-### 2.3. Conditional Compilation (`#إذا_عرف`)
+### 2.3. Conditional Compilation (`#إذا_عرف`, `#إذا_لم_يعرف`)
 
 Include or exclude blocks of code based on whether a symbol is defined.
 
@@ -106,6 +106,12 @@ Include or exclude blocks of code based on whether a symbol is defined.
     // Compiled if <name> is defined
 #وإلا
     // Compiled if <name> is NOT defined
+#نهاية
+
+#إذا_لم_يعرف <name>
+    // Compiled if <name> is NOT defined
+#وإلا
+    // Compiled if <name> is defined
 #نهاية
 ```
 

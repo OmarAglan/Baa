@@ -20,20 +20,24 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
   - Extended non-preprocessor scanner coverage to `stress_utf8_identifiers.baa`, including `//` line comments, `لكل`/`إذا` keywords, Arabic identifiers with underscores/digits, and snapshot-matched UTF-8 byte positions.
   - Added a mixed-harness-only extended scanner ABI that returns token value spans/modes for identifiers, integer literals, and string literals without introducing token heap ownership yet.
   - Added a narrow Baa-owned conditional-preprocessor checkpoint for `#تعريف`, `#الغاء_تعريف`, `#إذا_عرف`, `#وإلا`, and `#نهاية` skipping in the lexer-state harness without replacing the production lexer.
+  - Extended the Baa scanner-state path with include-source stack handling, macro value spans, macro substitution, and `#إذا_لم_يعرف` conditional support.
+  - Added C-baseline support for `#إذا_لم_يعرف` so the mixed harness can lock parity for both defined and undefined conditional branches.
 - **Mixed harness coverage**:
   - Added `scripts/qa_mixed_harness.py --target lexer-state` and included it in `--target all`.
   - The new gate compiles the Baa0 scanner-state module, links it with a generated C harness, and verifies token type, byte start, byte length, line, and column metadata.
   - The lexer-state harness now derives real-fixture expectations from committed token-stream snapshots instead of hand-maintained token rows.
   - The lexer-state harness now verifies token value parity for non-preprocessor fixtures, including Arabic-Indic digit normalization for integer values.
   - The lexer-state harness now includes `conditional_macros.baa` snapshot parity so active/inactive conditional branches match the C baseline token stream.
+  - Promoted `lexer-token-stream` candidate checks from the C callback bridge to the Baa-owned scanner-state implementation, while retaining C-baseline JSONL snapshots as the comparison oracle.
+  - Added `conditional_ifndef.baa` token-stream coverage for `#إذا_لم_يعرف` and `#وإلا` parity.
+  - Added diagnostic snapshot coverage for unclosed `#إذا_لم_يعرف` blocks and generalized the EOF conditional diagnostic to refer to an unclosed preprocessor condition.
 
 ### Remaining
 
 - **Baa-owned lexer implementation**:
-  - Replace the v0.9.1 bridge checkpoint with a Baa lexer that owns scanner state, token construction, UTF-8 handling, preprocessor state, and include/dependency tracking.
+  - Replace the production `lexer_next_token` implementation with a Baa-backed compatibility wrapper once diagnostic parity, token heap ownership, and dependency ownership are complete.
   - Keep the existing C lexer API contract available through a compatibility wrapper until the parser migration starts.
 - **Parity gates**:
-  - Promote `scripts/qa_mixed_harness.py --target lexer-token-stream` so it exercises the Baa lexer directly rather than delegating to the C baseline callback.
   - Preserve lexer diagnostic parity for malformed sources, include cycles, bad escapes, and preprocessor EOF errors.
 - **Scope control**:
   - No further language feature expansion is planned for v0.9.1.5 beyond consuming the v0.9.1.4 lexer-ergonomics surface; the checkpoint is a relocation/correctness milestone before v0.9.2 parser work.

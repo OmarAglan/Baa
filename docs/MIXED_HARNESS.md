@@ -19,6 +19,7 @@ Useful focused targets:
 ```bash
 python scripts/qa_mixed_harness.py --target token-names
 python scripts/qa_mixed_harness.py --target lexer-token-stream
+python scripts/qa_mixed_harness.py --target lexer-dependencies
 python scripts/qa_mixed_harness.py --target lexer-diagnostics
 python scripts/qa_mixed_harness.py --target lexer-transition
 python scripts/qa_mixed_harness.py --target lexer-state
@@ -74,6 +75,10 @@ Each row records:
 
 The v0.9.1 Baa lexer candidate slot now compiles `src/frontend/lexer_state_baa0.baa`, links it with a C host harness, and emits token-stream JSONL directly from the Baa-owned scanner state. C still owns fixture file reads, snapshot comparison, and token-name formatting, but cursor movement, token classification, conditional preprocessing, include-source stack switching, and macro value substitution are exercised through Baa before comparison against the committed C-baseline snapshots.
 
+### `lexer-dependencies`
+
+Builds both the current C lexer dependency dump and the Baa scanner-state candidate, then compares normalized dependency JSONL rows for the token-stream fixtures. This locks the migration boundary for root source paths and discovered include paths without changing the production `lexer_get_dependencies` API.
+
 ### `lexer-diagnostics`
 
 Runs malformed lexer/preprocessor negative fixtures through the current compiler and compares normalized diagnostics against committed text snapshots under:
@@ -83,6 +88,8 @@ tests/snapshots/mixed_harness/lexer_diagnostics/
 ```
 
 This target freezes source locations, include-cycle reporting, escape diagnostics, and preprocessor EOF diagnostics for the lexer rewrite path.
+
+The target also compiles the Baa scanner-state candidate and runs structured diagnostic smoke checks for unclosed `#إذا_عرف`, unclosed `#إذا_لم_يعرف`, and include-cycle detection. The Baa side returns diagnostic code and source location through a mixed-harness-only ABI; the C harness maps host include failures separately where path resolution owns the include-chain decision.
 
 The token-stream corpus also includes `tests/stress/stress_utf8_identifiers.baa` so the candidate bridge is checked against a stress-sized UTF-8 lexer fixture.
 
@@ -94,11 +101,24 @@ Compiles `src/frontend/lexer_transition_baa0.baa`, links it with a generated C h
 
 Compiles `src/frontend/lexer_state_baa0.baa`, links it with a generated C harness, and drives a Baa-owned scanner state over a caller-owned UTF-8 byte buffer. This is the first v0.9.1.5 path where Baa owns cursor, line, and column movement and returns token metadata through C-owned out parameters. It currently covers EOF, whitespace/newline skipping, simple punctuation, Arabic semicolon, and multi-character operator tokens; the production `lexer_next_token` path is unchanged.
 
-The target also drives snapshot-backed real fixtures through the Baa-owned scanner-state path and verifies token type, byte start, byte length, line, column, and token value parity. It currently covers `basic_utf8.baa`, `tests/stress/stress_utf8_identifiers.baa`, and `conditional_macros.baa`, including line comments, Arabic keywords/identifiers, Arabic-Indic digits, strings, UTF-8 byte accounting, and source-local conditional skipping. The promoted `lexer-token-stream` Baa-state candidate covers `#تضمين`, macro value substitution from included headers, and `#إذا_لم_يعرف` parity against JSONL snapshots. Mixed-harness-only scanner ABIs return either source-relative value spans or raw value pointers so the C harness can reconstruct snapshot values, including Arabic-Indic digit normalization for direct integer literals. Token heap ownership, normalized dependency ownership, and preprocessor diagnostics remain on the later v0.9.1.5 migration path.
+The target also drives snapshot-backed real fixtures through the Baa-owned scanner-state path and verifies token type, byte start, byte length, line, column, and token value parity. It currently covers `basic_utf8.baa`, `tests/stress/stress_utf8_identifiers.baa`, and `conditional_macros.baa`, including line comments, Arabic keywords/identifiers, Arabic-Indic digits, strings, UTF-8 byte accounting, and source-local conditional skipping. The promoted `lexer-token-stream` Baa-state candidate covers `#تضمين`, macro value substitution from included headers, and `#إذا_لم_يعرف` parity against JSONL snapshots. Mixed-harness-only scanner ABIs return either source-relative value spans or raw value pointers so the C harness can reconstruct snapshot values, including Arabic-Indic digit normalization for direct integer literals. Full production token heap ownership and bad-escape diagnostic parity remain on the later v0.9.1.5 migration path.
+
+## 4. Ownership Boundary
+
+The current Baa scanner-state boundary is intentionally non-production:
+
+| Data | Owner | Contract |
+| --- | --- | --- |
+| Root source buffer | C harness | Allocated by the harness, passed to `محللباءهيئ`, released after `محللباءنظف`. |
+| Included source buffers | C harness | Resolved, dependency-recorded, and released by the host include service. |
+| Token value text | C harness | Reconstructed from Baa-returned spans/pointers; Baa does not allocate token strings. |
+| Macro names/values | Baa scanner state | Stored as borrowed spans into active source buffers; valid until scanner cleanup. |
+| Dependency paths | C harness / C lexer | Copied into C-owned arrays for comparison and freed by the owning C side. |
+| Diagnostic text | C harness / compiler diagnostics | Baa returns structured code/location only; Arabic message text stays in the C diagnostic layer until production replacement. |
 
 ---
 
-## 4. Snapshot Policy
+## 5. Snapshot Policy
 
 Regenerate snapshots only after an intentional lexer behavior change:
 

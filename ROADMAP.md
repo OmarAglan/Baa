@@ -1502,11 +1502,11 @@ Partial status update (2026-03-06):
 - [x] **Replace bridge with Baa-owned lexer state** — `lexer-token-stream` now compiles `lexer_state_baa0.baa` directly and no longer emits candidate tokens through the C `lexer_next_token` bridge.
 - [ ] **Port UTF-8 scanner rules** — preserve Arabic identifiers, Arabic-Indic digits, string/char escapes, byte lengths, line/column accounting, and invalid-token behavior.
 - [x] **Port preprocessor surface** — the Baa scanner-state path now handles `#تضمين`, `#تعريف`, `#الغاء_تعريف`, `#إذا_عرف`, `#إذا_لم_يعرف`, `#وإلا`, and `#نهاية` across token-stream snapshots, including macro value substitution from included headers.
-- [ ] **Preserve dependency tracking** — keep normalized include dependencies and include-cycle diagnostics equivalent to `src/frontend/lexer.c`.
+- [x] **Preserve dependency tracking** — `lexer-dependencies` now compares Baa scanner-state root/include dependency paths against the current C lexer baseline, and the Baa diagnostic smoke gate covers include-cycle detection at the host include boundary.
 - [ ] **Keep C compatibility wrapper** — expose the existing `lexer_init`/`lexer_next_token`/cleanup contract to the parser until the parser port starts.
 - [x] **Promote mixed harness gate** — `lexer-token-stream` exercises the Baa scanner-state implementation directly and compares it against committed C-baseline JSONL snapshots.
-- [ ] **Diagnostics parity** — malformed source snapshots must match Arabic diagnostic text, source spans, include-chain notes, and EOF/preprocessor errors.
-- [ ] **Memory ownership audit** — define Baa/C ownership for token values, dependency paths, include buffers, macro tables, and cleanup paths.
+- [ ] **Diagnostics parity** — malformed source snapshots must match Arabic diagnostic text, source spans, include-chain notes, and EOF/preprocessor errors. The Baa scanner-state boundary now has structured preprocessor diagnostic codes, but full bad-escape/source-span parity remains before production replacement.
+- [x] **Memory ownership audit** — `docs/MIXED_HARNESS.md` now defines Baa/C ownership for token value spans, dependency paths, include buffers, macro spans, diagnostic text, and cleanup at the current scanner-state boundary.
 - [ ] **No further language feature expansion** — consume the v0.9.1.4 ergonomics surface and keep v0.9.1.5 limited to lexer relocation and correctness fixes.
 - [ ] **Windows release signoff** — pass build, quick QA, release QA, and mixed harness; Linux remains deferred unless explicitly requested.
 

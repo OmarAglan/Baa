@@ -33,6 +33,7 @@ TIMEOUT_S = 60.0
 
 TARGET_TOKEN_NAMES = "token-names"
 TARGET_LEXER_TOKEN_STREAM = "lexer-token-stream"
+TARGET_LEXER_DEPENDENCIES = "lexer-dependencies"
 TARGET_LEXER_DIAGNOSTICS = "lexer-diagnostics"
 TARGET_LEXER_TRANSITION = "lexer-transition"
 TARGET_LEXER_STATE = "lexer-state"
@@ -82,6 +83,15 @@ LEXER_DIAGNOSTIC_CASES = [
     ("unclosed_ifdef", ROOT / "tests" / "neg" / "syntax_pp_unclosed_ifdef.baa"),
     ("unclosed_ifndef", ROOT / "tests" / "neg" / "syntax_pp_unclosed_ifndef.baa"),
     ("include_cycle", ROOT / "tests" / "neg" / "syntax_include_cycle_relative_alias.baa"),
+]
+
+CANDIDATE_DIAG_UNCLOSED_CONDITION = 1
+CANDIDATE_DIAG_INCLUDE_CYCLE = 7
+
+LEXER_CANDIDATE_DIAGNOSTIC_CASES = [
+    ("unclosed_ifdef", ROOT / "tests" / "neg" / "syntax_pp_unclosed_ifdef.baa", CANDIDATE_DIAG_UNCLOSED_CONDITION),
+    ("unclosed_ifndef", ROOT / "tests" / "neg" / "syntax_pp_unclosed_ifndef.baa", CANDIDATE_DIAG_UNCLOSED_CONDITION),
+    ("include_cycle", ROOT / "tests" / "neg" / "syntax_include_cycle_relative_alias.baa", CANDIDATE_DIAG_INCLUDE_CYCLE),
 ]
 
 
@@ -361,7 +371,8 @@ int main(void)
 
 def _write_lexer_dump_harness(path: Path) -> None:
     path.write_text(
-        r'''#include <stdio.h>
+        r'''#include <ctype.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -404,6 +415,11 @@ static void slashify(char* text)
     for (char* p = text; *p; ++p) {
         if (*p == '\\') *p = '/';
     }
+#ifdef _WIN32
+    if (isalpha((unsigned char)text[0]) && text[1] == ':') {
+        text[0] = (char)tolower((unsigned char)text[0]);
+    }
+#endif
 }
 
 static const char* normalize_path(const char* root, const char* path, char* out, size_t out_cap)
@@ -474,15 +490,32 @@ static void print_token(const char* root, const char* case_path, Token tok, int 
     printf("}\n");
 }
 
+static void print_dependency(const char* root, const char* case_path, const char* path, int index)
+{
+    char case_norm[4096];
+    char path_norm[4096];
+    printf("{\"case\":");
+    json_string(normalize_path(root, case_path, case_norm, sizeof(case_norm)));
+    printf(",\"index\":%d,\"path\":", index);
+    json_string(normalize_path(root, path, path_norm, sizeof(path_norm)));
+    printf("}\n");
+}
+
 int main(int argc, char** argv)
 {
     const char* root = NULL;
-    if (argc < 3) {
-        fprintf(stderr, "usage: lexer_token_dump <repo-root> <source>...\n");
+    int print_deps = 0;
+    int argi = 1;
+    if (argc > 1 && strcmp(argv[1], "--deps") == 0) {
+        print_deps = 1;
+        argi = 2;
+    }
+    if (argc - argi < 2) {
+        fprintf(stderr, "usage: lexer_token_dump [--deps] <repo-root> <source>...\n");
         return 2;
     }
-    root = argv[1];
-    for (int argi = 2; argi < argc; ++argi) {
+    root = argv[argi++];
+    for (; argi < argc; ++argi) {
         const char* path = argv[argi];
         char* source = read_all(path);
         Lexer lexer;
@@ -494,7 +527,10 @@ int main(int argc, char** argv)
         lexer_init(&lexer, source, path, NULL, 0u);
         for (;;) {
             Token tok = lexer_next_token(&lexer);
-            print_token(root, path, tok, index++);
+            if (!print_deps) {
+                print_token(root, path, tok, index);
+            }
+            ++index;
             if (tok.value) free(tok.value);
             if (tok.type == TOKEN_EOF || tok.type == TOKEN_INVALID) break;
             if (index > 20000) {
@@ -502,6 +538,13 @@ int main(int argc, char** argv)
                 free(source);
                 lexer_free_dependencies(&lexer);
                 return 4;
+            }
+        }
+        if (print_deps) {
+            size_t dep_count = 0u;
+            const char* const* deps = lexer_get_dependencies(&lexer, &dep_count);
+            for (size_t i = 0; i < dep_count; ++i) {
+                print_dependency(root, path, deps[i], (int)i);
             }
         }
         lexer_free_dependencies(&lexer);
@@ -516,7 +559,8 @@ int main(int argc, char** argv)
 
 def _write_lexer_candidate_harness(path: Path) -> None:
     path.write_text(
-        r'''#include <stdint.h>
+        r'''#include <ctype.h>
+#include <stdint.h>
 #include <inttypes.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -525,6 +569,7 @@ def _write_lexer_candidate_harness(path: Path) -> None:
 #include "src/frontend/lexer.h"
 
 extern void محللباءهيئ(unsigned char* source);
+extern void محللباءنظف(void);
 extern int64_t محللباءالتالي_مؤشر(int64_t* type,
                                   int64_t* start,
                                   int64_t* length,
@@ -533,11 +578,38 @@ extern int64_t محللباءالتالي_مؤشر(int64_t* type,
                                   int64_t* value_ptr,
                                   int64_t* value_length,
                                   int64_t* value_mode);
+extern int64_t محللباءتشخيص(int64_t* code,
+                            int64_t* line,
+                            int64_t* column,
+                            int64_t* length);
+extern int64_t محللباءعمق_شرط(void);
+extern int64_t محللباءعمق_مصادر(void);
+
+#define CANDIDATE_MAX_SOURCES 64
+#define CANDIDATE_MAX_DEPENDENCIES 64
+#define CANDIDATE_MODE_TOKENS 0
+#define CANDIDATE_MODE_DEPENDENCIES 1
+#define CANDIDATE_MODE_DIAGNOSTICS 2
+#define CANDIDATE_DIAG_INCLUDE_MISSING 6
+#define CANDIDATE_DIAG_INCLUDE_CYCLE 7
+
+typedef struct CandidateSource {
+    unsigned char* source;
+    char* path;
+    size_t length;
+    int parent;
+} CandidateSource;
 
 static const char* g_repo_root = NULL;
 static const char* g_case_path = NULL;
-static char* g_include_sources[32];
-static int g_include_source_count = 0;
+static CandidateSource g_sources[CANDIDATE_MAX_SOURCES];
+static int g_source_count = 0;
+static char* g_dependencies[CANDIDATE_MAX_DEPENDENCIES];
+static int g_dependency_count = 0;
+static int64_t g_host_diag_code = 0;
+static int64_t g_host_diag_line = 0;
+static int64_t g_host_diag_column = 0;
+static int64_t g_host_diag_length = 1;
 
 static char* read_all(const char* path)
 {
@@ -568,6 +640,18 @@ static char* read_all(const char* path)
     buf[size] = '\0';
     fclose(f);
     return buf;
+}
+
+static char* candidate_strdup(const char* text)
+{
+    size_t len = 0u;
+    char* out = NULL;
+    if (!text) return NULL;
+    len = strlen(text);
+    out = (char*)malloc(len + 1u);
+    if (!out) return NULL;
+    memcpy(out, text, len + 1u);
+    return out;
 }
 
 static char* dup_span(const unsigned char* start, int64_t length)
@@ -615,39 +699,14 @@ static char* join_alloc(const char* base, const char* leaf)
     return out;
 }
 
-static void clear_include_sources(void)
+static int path_exists(const char* path)
 {
-    for (int i = 0; i < g_include_source_count; ++i) {
-        free(g_include_sources[i]);
-        g_include_sources[i] = NULL;
-    }
-    g_include_source_count = 0;
-}
-
-unsigned char* محللباءمضيف_تضمين(unsigned char* start, int64_t length)
-{
-    char* requested = dup_span(start, length);
-    char* dir = dirname_alloc(g_case_path);
-    char* full = NULL;
-    char* source = NULL;
-
-    if (!requested) return NULL;
-    if (dir) {
-        full = join_alloc(dir, requested);
-        if (full) source = read_all(full);
-    }
-    if (!source) {
-        source = read_all(requested);
-    }
-    free(requested);
-    free(dir);
-    free(full);
-
-    if (!source) return NULL;
-    if (g_include_source_count < (int)(sizeof(g_include_sources) / sizeof(g_include_sources[0]))) {
-        g_include_sources[g_include_source_count++] = source;
-    }
-    return (unsigned char*)source;
+    FILE* f = NULL;
+    if (!path) return 0;
+    f = fopen(path, "rb");
+    if (!f) return 0;
+    fclose(f);
+    return 1;
 }
 
 static void slashify(char* text)
@@ -656,6 +715,213 @@ static void slashify(char* text)
     for (char* p = text; *p; ++p) {
         if (*p == '\\') *p = '/';
     }
+#ifdef _WIN32
+    if (isalpha((unsigned char)text[0]) && text[1] == ':') {
+        text[0] = (char)tolower((unsigned char)text[0]);
+    }
+#endif
+}
+
+static char* normalize_existing_path_alloc(const char* path)
+{
+    char resolved[4096];
+    char* out = NULL;
+    if (!path || !path[0]) return NULL;
+#ifdef _WIN32
+    if (_fullpath(resolved, path, sizeof(resolved)) != NULL) {
+        out = candidate_strdup(resolved);
+    }
+#else
+    if (realpath(path, resolved) != NULL) {
+        out = candidate_strdup(resolved);
+    }
+#endif
+    if (!out) out = candidate_strdup(path);
+    slashify(out);
+    return out;
+}
+
+static int paths_equal(const char* lhs, const char* rhs)
+{
+    if (!lhs || !rhs) return 0;
+#ifdef _WIN32
+    return _stricmp(lhs, rhs) == 0;
+#else
+    return strcmp(lhs, rhs) == 0;
+#endif
+}
+
+static void clear_candidate_state(void)
+{
+    for (int i = 0; i < g_source_count; ++i) {
+        free(g_sources[i].source);
+        free(g_sources[i].path);
+        g_sources[i].source = NULL;
+        g_sources[i].path = NULL;
+        g_sources[i].length = 0u;
+        g_sources[i].parent = -1;
+    }
+    for (int i = 0; i < g_dependency_count; ++i) {
+        free(g_dependencies[i]);
+        g_dependencies[i] = NULL;
+    }
+    g_source_count = 0;
+    g_dependency_count = 0;
+    g_host_diag_code = 0;
+    g_host_diag_line = 0;
+    g_host_diag_column = 0;
+    g_host_diag_length = 1;
+}
+
+static int register_source(unsigned char* source, char* path, int parent)
+{
+    if (!source || !path || g_source_count >= CANDIDATE_MAX_SOURCES) {
+        return -1;
+    }
+    g_sources[g_source_count].source = source;
+    g_sources[g_source_count].path = path;
+    g_sources[g_source_count].length = strlen((const char*)source);
+    g_sources[g_source_count].parent = parent;
+    return g_source_count++;
+}
+
+static int find_source_for_span(const unsigned char* start)
+{
+    uintptr_t ptr = (uintptr_t)start;
+    for (int i = 0; i < g_source_count; ++i) {
+        uintptr_t begin = (uintptr_t)g_sources[i].source;
+        uintptr_t end = begin + g_sources[i].length + 1u;
+        if (ptr >= begin && ptr < end) {
+            return i;
+        }
+    }
+    return -1;
+}
+
+static void span_location(int source_index, const unsigned char* start, int64_t* line, int64_t* column)
+{
+    int64_t out_line = 1;
+    int64_t out_column = 1;
+    if (source_index >= 0 && source_index < g_source_count && start) {
+        const unsigned char* p = g_sources[source_index].source;
+        while (p && p < start && *p) {
+            if (*p == '\n') {
+                ++out_line;
+                out_column = 1;
+            } else {
+                ++out_column;
+            }
+            ++p;
+        }
+    }
+    if (line) *line = out_line;
+    if (column) *column = out_column;
+}
+
+static void set_host_diag(int64_t code, int source_index, const unsigned char* start, int64_t length)
+{
+    if (g_host_diag_code != 0) return;
+    g_host_diag_code = code;
+    g_host_diag_length = length > 0 ? length : 1;
+    span_location(source_index, start, &g_host_diag_line, &g_host_diag_column);
+}
+
+static int record_dependency(const char* path)
+{
+    if (!path || !path[0]) return 0;
+    for (int i = 0; i < g_dependency_count; ++i) {
+        if (paths_equal(g_dependencies[i], path)) {
+            return 0;
+        }
+    }
+    if (g_dependency_count >= CANDIDATE_MAX_DEPENDENCIES) {
+        return 1;
+    }
+    g_dependencies[g_dependency_count] = candidate_strdup(path);
+    if (!g_dependencies[g_dependency_count]) {
+        return 1;
+    }
+    ++g_dependency_count;
+    return 0;
+}
+
+static char* resolve_include_path(const char* current_path, const char* requested)
+{
+    char* dir = NULL;
+    char* full = NULL;
+    char* resolved = NULL;
+    if (!requested || !requested[0]) return NULL;
+    if (current_path) {
+        dir = dirname_alloc(current_path);
+        if (dir) {
+            full = join_alloc(dir, requested);
+            if (path_exists(full)) {
+                resolved = normalize_existing_path_alloc(full);
+            }
+        }
+    }
+    free(dir);
+    free(full);
+    if (!resolved && path_exists(requested)) {
+        resolved = normalize_existing_path_alloc(requested);
+    }
+    return resolved;
+}
+
+static int include_would_cycle(int current_index, const char* resolved_path)
+{
+    int index = current_index;
+    while (index >= 0 && index < g_source_count) {
+        if (paths_equal(g_sources[index].path, resolved_path)) {
+            return 1;
+        }
+        index = g_sources[index].parent;
+    }
+    return 0;
+}
+
+unsigned char* محللباءمضيف_تضمين(unsigned char* start, int64_t length)
+{
+    char* requested = dup_span(start, length);
+    char* resolved = NULL;
+    char* source = NULL;
+    int current_index = find_source_for_span(start);
+    int source_index = -1;
+
+    if (!requested) return NULL;
+    resolved = resolve_include_path(
+        current_index >= 0 ? g_sources[current_index].path : g_case_path,
+        requested);
+    if (!resolved) {
+        set_host_diag(CANDIDATE_DIAG_INCLUDE_MISSING, current_index, start, length);
+        free(requested);
+        return NULL;
+    }
+    if (include_would_cycle(current_index, resolved)) {
+        set_host_diag(CANDIDATE_DIAG_INCLUDE_CYCLE, current_index, start, length);
+        free(requested);
+        free(resolved);
+        return NULL;
+    }
+    source = read_all(resolved);
+    if (!source) {
+        set_host_diag(CANDIDATE_DIAG_INCLUDE_MISSING, current_index, start, length);
+        free(requested);
+        free(resolved);
+        return NULL;
+    }
+    source_index = register_source((unsigned char*)source, resolved, current_index);
+    if (source_index < 0 || record_dependency(resolved) != 0) {
+        free(requested);
+        if (source_index < 0) {
+            free(source);
+            free(resolved);
+        }
+        return NULL;
+    }
+    (void)source_index;
+    free(requested);
+    return (unsigned char*)source;
 }
 
 static const char* normalize_path(const char* root, const char* path, char* out, size_t out_cap)
@@ -705,6 +971,54 @@ static void json_string(const char* text)
         }
     }
     putchar('"');
+}
+
+static void print_dependency(const char* root, const char* case_path, const char* path, int index)
+{
+    char case_norm[4096];
+    char path_norm[4096];
+    printf("{\"case\":");
+    json_string(normalize_path(root, case_path, case_norm, sizeof(case_norm)));
+    printf(",\"index\":%d,\"path\":", index);
+    json_string(normalize_path(root, path, path_norm, sizeof(path_norm)));
+    printf("}\n");
+}
+
+static void print_candidate_diagnostic(const char* root, const char* case_path)
+{
+    int64_t code = 0;
+    int64_t line = 0;
+    int64_t column = 0;
+    int64_t length = 1;
+    int64_t baa_code = 0;
+    int64_t baa_line = 0;
+    int64_t baa_column = 0;
+    int64_t baa_length = 1;
+    char case_norm[4096];
+
+    (void)محللباءتشخيص(&baa_code, &baa_line, &baa_column, &baa_length);
+    if (g_host_diag_code != 0) {
+        code = g_host_diag_code;
+        line = g_host_diag_line;
+        column = g_host_diag_column;
+        length = g_host_diag_length;
+    } else {
+        code = baa_code;
+        line = baa_line;
+        column = baa_column;
+        length = baa_length;
+    }
+
+    printf("{\"case\":");
+    json_string(normalize_path(root, case_path, case_norm, sizeof(case_norm)));
+    printf(",\"code\":%" PRId64 ",\"line\":%" PRId64 ",\"col\":%" PRId64 ",\"length\":%" PRId64,
+           code,
+           line,
+           column,
+           length);
+    printf(",\"if_depth\":%" PRId64 ",\"source_depth\":%" PRId64 "}\n",
+           محللباءعمق_شرط(),
+           محللباءعمق_مصادر());
 }
 
 static int normalize_value_from_ptr(const unsigned char* value,
@@ -773,18 +1087,29 @@ static void print_token(const char* root,
     printf("}\n");
 }
 
-static int dump_current_case(void)
+static int dump_current_case(int output_mode)
 {
     char* source = NULL;
+    char* source_path = NULL;
     int index = 0;
+    int root_source = -1;
     if (!g_repo_root || !g_case_path) {
         fprintf(stderr, "Baa lexer case is not initialized\n");
         return 2;
     }
 
+    clear_candidate_state();
     source = read_all(g_case_path);
     if (!source) {
         fprintf(stderr, "failed to read %s\n", g_case_path);
+        return 3;
+    }
+    source_path = normalize_existing_path_alloc(g_case_path);
+    root_source = register_source((unsigned char*)source, source_path, -1);
+    if (root_source < 0 || record_dependency(source_path) != 0) {
+        free(source);
+        free(source_path);
+        clear_candidate_state();
         return 3;
     }
 
@@ -810,8 +1135,8 @@ static int dump_current_case(void)
         (void)start;
         if (returned != type) {
             fprintf(stderr, "Baa lexer returned %" PRId64 " but wrote type %" PRId64 "\n", returned, type);
-            free(source);
-            clear_include_sources();
+            محللباءنظف();
+            clear_candidate_state();
             return 5;
         }
         if (normalize_value_from_ptr((const unsigned char*)(intptr_t)value_ptr,
@@ -819,37 +1144,58 @@ static int dump_current_case(void)
                                      value_mode,
                                      value,
                                      sizeof(value)) != 0) {
-            free(source);
-            clear_include_sources();
+            محللباءنظف();
+            clear_candidate_state();
             return 6;
         }
-        print_token(g_repo_root, g_case_path, type, length, line, column, value, index++);
+        if (output_mode == CANDIDATE_MODE_TOKENS) {
+            print_token(g_repo_root, g_case_path, type, length, line, column, value, index);
+        }
+        ++index;
         if (type == TOKEN_EOF || type == TOKEN_INVALID) break;
         if (index > 20000) {
             fprintf(stderr, "token limit exceeded for %s\n", g_case_path);
-            free(source);
-            clear_include_sources();
+            محللباءنظف();
+            clear_candidate_state();
             return 4;
         }
     }
 
-    free(source);
-    clear_include_sources();
+    if (output_mode == CANDIDATE_MODE_DEPENDENCIES) {
+        for (int i = 0; i < g_dependency_count; ++i) {
+            print_dependency(g_repo_root, g_case_path, g_dependencies[i], i);
+        }
+    } else if (output_mode == CANDIDATE_MODE_DIAGNOSTICS) {
+        print_candidate_diagnostic(g_repo_root, g_case_path);
+    }
+
+    محللباءنظف();
+    clear_candidate_state();
     return 0;
 }
 
 int main(int argc, char** argv)
 {
-    if (argc < 3) {
-        fprintf(stderr, "usage: lexer_candidate_dump <repo-root> <source>...\n");
+    int output_mode = CANDIDATE_MODE_TOKENS;
+    int argi = 1;
+    if (argc > 1 && strcmp(argv[1], "--deps") == 0) {
+        output_mode = CANDIDATE_MODE_DEPENDENCIES;
+        argi = 2;
+    } else if (argc > 1 && strcmp(argv[1], "--diagnostics") == 0) {
+        output_mode = CANDIDATE_MODE_DIAGNOSTICS;
+        argi = 2;
+    }
+
+    if (argc - argi < 2) {
+        fprintf(stderr, "usage: lexer_candidate_dump [--deps|--diagnostics] <repo-root> <source>...\n");
         return 2;
     }
 
-    g_repo_root = argv[1];
-    for (int argi = 2; argi < argc; ++argi) {
+    g_repo_root = argv[argi++];
+    for (; argi < argc; ++argi) {
         int64_t rc = 0;
         g_case_path = argv[argi];
-        rc = (int64_t)dump_current_case();
+        rc = (int64_t)dump_current_case(output_mode);
         if (rc != 0) {
             fprintf(stderr, "Baa lexer returned %lld for %s\n", (long long)rc, g_case_path);
             return (int)rc;
@@ -1153,6 +1499,134 @@ def _run_lexer_candidate_token_stream(
     return results
 
 
+def _run_lexer_dependencies(baa: Path, cc: str, log_dir: Path, out_dir: Path) -> list[CheckResult]:
+    results: list[CheckResult] = []
+    policy = _policy_check_baa0_source("lexer-dependencies-baa-state-policy", LEXER_STATE_SRC)
+    results.append(policy)
+    if not policy.passed:
+        return results
+
+    baseline_c = out_dir / "lexer_dependency_baseline.c"
+    baseline_exe = out_dir / ("lexer_dependency_baseline.exe" if os.name == "nt" else "lexer_dependency_baseline")
+    candidate_c = out_dir / "lexer_dependency_baa_state.c"
+    candidate_obj = out_dir / "lexer_dependency_baa_state.o"
+    candidate_exe = out_dir / ("lexer_dependency_baa_state.exe" if os.name == "nt" else "lexer_dependency_baa_state")
+    _write_lexer_dump_harness(baseline_c)
+    _write_lexer_candidate_harness(candidate_c)
+
+    compile_baseline = _run(
+        "lexer-dependencies-build-c-baseline",
+        [
+            cc,
+            "-std=gnu11",
+            "-finput-charset=UTF-8",
+            "-I",
+            str(ROOT),
+            str(baseline_c),
+            str(ROOT / "src" / "frontend" / "lexer.c"),
+            str(ROOT / "src" / "support" / "error.c"),
+            str(ROOT / "src" / "support" / "read_file.c"),
+            "-o",
+            str(baseline_exe),
+        ],
+        log_dir,
+    )
+    results.append(compile_baseline)
+    if not compile_baseline.passed:
+        return results
+
+    compile_baa = _run(
+        "lexer-dependencies-compile-baa-state",
+        [
+            str(baa),
+            "-O2",
+            "--verify-ir",
+            "--verify-ssa",
+            "-c",
+            str(LEXER_STATE_SRC.relative_to(ROOT)),
+            "-o",
+            str(candidate_obj),
+        ],
+        log_dir,
+    )
+    results.append(compile_baa)
+    if not compile_baa.passed:
+        return results
+
+    link_candidate = _run(
+        "lexer-dependencies-link-baa-state",
+        [
+            cc,
+            "-std=gnu11",
+            "-finput-charset=UTF-8",
+            "-I",
+            str(ROOT),
+            "-include",
+            "src/frontend/lexer.h",
+            str(candidate_c),
+            str(LEXER_DEBUG_C),
+            str(candidate_obj),
+            "-o",
+            str(candidate_exe),
+        ],
+        log_dir,
+    )
+    results.append(link_candidate)
+    if not link_candidate.passed:
+        return results
+
+    for case_name, case_path in LEXER_CASES:
+        if not case_path.exists():
+            results.append(CheckResult(f"lexer-dependencies:{case_name}", False, 1, 0.0, "missing fixture"))
+            continue
+
+        baseline_run, baseline_stdout = _run_capture(
+            f"lexer-dependencies-c-run:{case_name}",
+            [str(baseline_exe), "--deps", str(ROOT), str(case_path)],
+            log_dir,
+        )
+        results.append(baseline_run)
+        if not baseline_run.passed:
+            continue
+
+        candidate_run, candidate_stdout = _run_capture(
+            f"lexer-dependencies-baa-state-run:{case_name}",
+            [str(candidate_exe), "--deps", str(ROOT), str(case_path)],
+            log_dir,
+        )
+        if not candidate_run.passed:
+            results.append(candidate_run)
+            continue
+
+        started = time.monotonic()
+        actual_path = log_dir / f"lexer-dependencies-baa-state-{case_name}.actual.jsonl"
+        baseline_path = log_dir / f"lexer-dependencies-c-{case_name}.actual.jsonl"
+        actual_path.write_text(candidate_stdout, encoding="utf-8")
+        baseline_path.write_text(baseline_stdout, encoding="utf-8")
+        try:
+            expected = _normalize_jsonl(baseline_stdout)
+            actual = _normalize_jsonl(candidate_stdout)
+            diff = _diff_rows(expected, actual)
+            passed = not diff
+            detail = "Baa dependency list matched C baseline" if passed else diff
+            if diff:
+                (log_dir / f"lexer-dependencies-{case_name}.diff.txt").write_text(diff + "\n", encoding="utf-8")
+        except RuntimeError as exc:
+            passed = False
+            detail = str(exc)
+        results.append(
+            CheckResult(
+                f"lexer-dependencies:{case_name}",
+                passed,
+                0 if passed else 1,
+                time.monotonic() - started,
+                detail,
+            )
+        )
+
+    return results
+
+
 def _normalize_diagnostic_text(text: str, out_dir: Path) -> str:
     root_native = str(ROOT.resolve())
     root_posix = root_native.replace("\\", "/")
@@ -1173,6 +1647,7 @@ def _normalize_diagnostic_text(text: str, out_dir: Path) -> str:
 
 def _run_lexer_diagnostics(
     baa: Path,
+    cc: str,
     log_dir: Path,
     out_dir: Path,
     update_snapshots: bool,
@@ -1261,6 +1736,107 @@ def _run_lexer_diagnostics(
                     f"timeout ({TIMEOUT_S}s)",
                 )
             )
+
+    results.extend(_run_lexer_candidate_diagnostics(baa, cc, log_dir, out_dir))
+    return results
+
+
+def _run_lexer_candidate_diagnostics(baa: Path, cc: str, log_dir: Path, out_dir: Path) -> list[CheckResult]:
+    results: list[CheckResult] = []
+    policy = _policy_check_baa0_source("lexer-diagnostics-baa-state-policy", LEXER_STATE_SRC)
+    results.append(policy)
+    if not policy.passed:
+        return results
+
+    harness_c = out_dir / "lexer_diagnostics_baa_state.c"
+    candidate_obj = out_dir / "lexer_diagnostics_baa_state.o"
+    exe = out_dir / ("lexer_diagnostics_baa_state.exe" if os.name == "nt" else "lexer_diagnostics_baa_state")
+    _write_lexer_candidate_harness(harness_c)
+
+    compile_baa = _run(
+        "lexer-diagnostics-compile-baa-state",
+        [
+            str(baa),
+            "-O2",
+            "--verify-ir",
+            "--verify-ssa",
+            "-c",
+            str(LEXER_STATE_SRC.relative_to(ROOT)),
+            "-o",
+            str(candidate_obj),
+        ],
+        log_dir,
+    )
+    results.append(compile_baa)
+    if not compile_baa.passed:
+        return results
+
+    link = _run(
+        "lexer-diagnostics-link-baa-state",
+        [
+            cc,
+            "-std=gnu11",
+            "-finput-charset=UTF-8",
+            "-I",
+            str(ROOT),
+            "-include",
+            "src/frontend/lexer.h",
+            str(harness_c),
+            str(LEXER_DEBUG_C),
+            str(candidate_obj),
+            "-o",
+            str(exe),
+        ],
+        log_dir,
+    )
+    results.append(link)
+    if not link.passed:
+        return results
+
+    for case_name, case_path, expected_code in LEXER_CANDIDATE_DIAGNOSTIC_CASES:
+        if not case_path.exists():
+            results.append(CheckResult(f"lexer-diagnostics-baa-state:{case_name}", False, 1, 0.0, "missing fixture"))
+            continue
+
+        run, stdout = _run_capture(
+            f"lexer-diagnostics-baa-state-run:{case_name}",
+            [str(exe), "--diagnostics", str(ROOT), str(case_path)],
+            log_dir,
+        )
+        if not run.passed:
+            results.append(run)
+            continue
+
+        started = time.monotonic()
+        actual_path = log_dir / f"lexer-diagnostics-baa-state-{case_name}.actual.jsonl"
+        actual_path.write_text(stdout, encoding="utf-8")
+        try:
+            rows = _normalize_jsonl(stdout)
+            if len(rows) != 1:
+                passed = False
+                detail = f"expected one diagnostic row, got {len(rows)}"
+            else:
+                code = rows[0].get("code")
+                line = rows[0].get("line")
+                col = rows[0].get("col")
+                passed = code == expected_code and isinstance(line, int) and line > 0 and isinstance(col, int) and col > 0
+                detail = (
+                    "Baa diagnostic code/location matched expectation"
+                    if passed
+                    else f"expected code {expected_code}, got row={json.dumps(rows[0], ensure_ascii=False, sort_keys=True)}"
+                )
+        except RuntimeError as exc:
+            passed = False
+            detail = str(exc)
+        results.append(
+            CheckResult(
+                f"lexer-diagnostics-baa-state:{case_name}",
+                passed,
+                0 if passed else 1,
+                time.monotonic() - started,
+                detail,
+            )
+        )
 
     return results
 
@@ -1771,6 +2347,7 @@ def main(argv: list[str]) -> int:
         choices=[
             TARGET_TOKEN_NAMES,
             TARGET_LEXER_TOKEN_STREAM,
+            TARGET_LEXER_DEPENDENCIES,
             TARGET_LEXER_DIAGNOSTICS,
             TARGET_LEXER_TRANSITION,
             TARGET_LEXER_STATE,
@@ -1809,8 +2386,10 @@ def main(argv: list[str]) -> int:
             results.extend(_run_token_names(baa, cc, log_dir, out_dir))
         if args.target in (TARGET_LEXER_TOKEN_STREAM, TARGET_ALL):
             results.extend(_run_lexer_token_stream(baa, cc, log_dir, out_dir, args.update_snapshots))
+        if args.target in (TARGET_LEXER_DEPENDENCIES, TARGET_ALL):
+            results.extend(_run_lexer_dependencies(baa, cc, log_dir, out_dir))
         if args.target in (TARGET_LEXER_DIAGNOSTICS, TARGET_ALL):
-            results.extend(_run_lexer_diagnostics(baa, log_dir, out_dir, args.update_snapshots))
+            results.extend(_run_lexer_diagnostics(baa, cc, log_dir, out_dir, args.update_snapshots))
         if args.target in (TARGET_LEXER_TRANSITION, TARGET_ALL):
             results.extend(_run_lexer_transition(baa, cc, log_dir, out_dir))
         if args.target in (TARGET_LEXER_STATE, TARGET_ALL):

@@ -31,6 +31,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
   - Promoted `lexer-token-stream` candidate checks from the C callback bridge to the Baa-owned scanner-state implementation, while retaining C-baseline JSONL snapshots as the comparison oracle.
   - Added `conditional_ifndef.baa` token-stream coverage for `#إذا_لم_يعرف` and `#وإلا` parity.
   - Added diagnostic snapshot coverage for unclosed `#إذا_لم_يعرف` blocks and generalized the EOF conditional diagnostic to refer to an unclosed preprocessor condition.
+  - Added `lexer-dependencies`, a mixed-harness gate that compares Baa scanner-state dependency paths against the current C lexer baseline.
+  - Added Baa scanner-state structured diagnostic smoke checks for unclosed preprocessor conditions and include-cycle detection without replacing production diagnostics.
+- **Boundary ownership contract**:
+  - Documented the current C/Baa ownership split for root and included source buffers, token value spans, macro spans, dependency path copies, diagnostics, and scanner cleanup.
 
 ### Remaining
 
@@ -38,7 +42,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
   - Replace the production `lexer_next_token` implementation with a Baa-backed compatibility wrapper once diagnostic parity, token heap ownership, and dependency ownership are complete.
   - Keep the existing C lexer API contract available through a compatibility wrapper until the parser migration starts.
 - **Parity gates**:
-  - Preserve lexer diagnostic parity for malformed sources, include cycles, bad escapes, and preprocessor EOF errors.
+  - Preserve full lexer diagnostic parity for malformed sources, bad escapes, and source-span exactness before the production wrapper flips.
 - **Scope control**:
   - No further language feature expansion is planned for v0.9.1.5 beyond consuming the v0.9.1.4 lexer-ergonomics surface; the checkpoint is a relocation/correctness milestone before v0.9.2 parser work.
 

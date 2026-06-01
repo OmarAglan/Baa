@@ -37,3 +37,4 @@ __pycache__/
 /.baa_mixed_harness_logs/
 /.baa_mixed_harness_out/
 /.baa_phase45_handoff/
+/build-baa-lexer

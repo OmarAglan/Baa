@@ -21,12 +21,23 @@
 
 #define LEX_PATH_BUFFER_SIZE PATH_MAX
 
+#if defined(BAA_USE_BAA_LEXER) && defined(__GNUC__)
+#define LEX_C_LEXER_ONLY __attribute__((unused))
+#else
+#define LEX_C_LEXER_ONLY
+#endif
+
+#ifdef BAA_USE_BAA_LEXER
+static void lex_baa_bridge_init(Lexer* l, char* src, const char* filename);
+static void lex_baa_bridge_cleanup(Lexer* l);
+#endif
+
 static int is_utf8_cont_byte(unsigned char b)
 {
     return ((b & 0xC0u) == 0x80u);
 }
 
-static bool lex_decode_arabic_escape(Lexer* l, unsigned char* out_byte)
+static LEX_C_LEXER_ONLY bool lex_decode_arabic_escape(Lexer* l, unsigned char* out_byte)
 {
     if (!l || !out_byte) return false;
 
@@ -65,7 +76,7 @@ static bool lex_decode_arabic_escape(Lexer* l, unsigned char* out_byte)
     return false;
 }
 
-static bool lex_append_byte(char** buf, size_t* len, size_t* cap, unsigned char byte)
+static LEX_C_LEXER_ONLY bool lex_append_byte(char** buf, size_t* len, size_t* cap, unsigned char byte)
 {
     if (!buf || !len || !cap || !*buf) return false;
 
@@ -366,7 +377,7 @@ static bool lex_paths_equivalent(Lexer* l, const char* lhs, const char* rhs)
 /**
  * @brief هل سيؤدي التضمين الجديد إلى دورة مع حالة التضمين الحالية؟
  */
-static bool lex_include_would_cycle(Lexer* l, const char* resolved_path)
+static LEX_C_LEXER_ONLY bool lex_include_would_cycle(Lexer* l, const char* resolved_path)
 {
     if (!l || !resolved_path || !resolved_path[0]) return false;
 
@@ -598,6 +609,10 @@ void lexer_init(Lexer* l,
         lex_record_dependency(l, root_dep);
         free(root_dep);
     }
+
+#ifdef BAA_USE_BAA_LEXER
+    lex_baa_bridge_init(l, src, filename);
+#endif
 }
 
 const char* const* lexer_get_dependencies(const Lexer* lexer, size_t* out_count)
@@ -611,6 +626,9 @@ const char* const* lexer_get_dependencies(const Lexer* lexer, size_t* out_count)
 void lexer_free_dependencies(Lexer* lexer)
 {
     if (!lexer) return;
+#ifdef BAA_USE_BAA_LEXER
+    lex_baa_bridge_cleanup(lexer);
+#endif
     for (size_t i = 0; i < lexer->dependency_count; ++i) {
         free(lexer->dependency_paths[i]);
     }
@@ -632,7 +650,7 @@ static bool pp_active(const Lexer* l)
     return in_else ? (!cond_true) : (cond_true != 0);
 }
 
-static void pp_recompute_skipping(Lexer* l)
+static LEX_C_LEXER_ONLY void pp_recompute_skipping(Lexer* l)
 {
     if (!l) return;
     l->skipping = pp_active(l) ? false : true;
@@ -720,7 +738,7 @@ void add_macro(Lexer* l, char* name, char* value) {
 /**
  * @brief إزالة تعريف ماكرو.
  */
-static void remove_macro(Lexer* l, const char* name) {
+static LEX_C_LEXER_ONLY void remove_macro(Lexer* l, const char* name) {
     for (int i = 0; i < l->macro_count; i++) {
         if (strcmp(l->macros[i].name, name) == 0) {
             free(l->macros[i].name);
@@ -747,5 +765,9 @@ char* get_macro_value(Lexer* l, const char* name) {
     return NULL;
 }
 
+#ifdef BAA_USE_BAA_LEXER
+#include "lexer_baa_bridge.c"
+#else
 #include "lexer_tokens.c"
+#endif
 #include "lexer_debug.c"

@@ -40,12 +40,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
   - Added production diagnostic snapshots and exact Baa scanner-state code/location anchors for bad string escapes, bad char escapes, unclosed strings, unclosed chars, unknown bytes, unclosed preprocessor conditions, and include cycles.
 - **Boundary ownership contract**:
   - Documented the current C/Baa ownership split for root and included source buffers, token value spans, macro spans, dependency path copies, diagnostics, and scanner cleanup.
+- **Opt-in production lexer bridge**:
+  - Added `BAA_USE_BAA_LEXER` and `BAA_BOOTSTRAP_COMPILER` CMake options so the compiler can link `src/frontend/lexer_state_baa0.baa` into the parser-facing lexer API without changing the default build.
+  - Added `src/frontend/lexer_baa_bridge.c`, which preserves the existing `lexer_init`/`lexer_next_token`/cleanup contract while delegating tokenization, preprocessing, macro substitution, and include switching to the Baa scanner.
+  - Extended the Baa scanner-state path for production use with the remaining keyword classifications, float literal classification, Arabic comma tokenization, and UTF-8 BOM skipping for root and included sources.
 
 ### Remaining
 
 - **Baa-owned lexer implementation**:
-  - Replace the production `lexer_next_token` implementation with a Baa-backed compatibility wrapper once token heap ownership is wired to the existing parser-facing C API.
-  - Keep the existing C lexer API contract available through a compatibility wrapper until the parser migration starts.
+  - Keep the opt-in Baa-backed compatibility wrapper behind the existing C lexer API until full/release QA and focused negative diagnostics sign off.
+  - Flip the Baa-backed lexer to the default path only after the opt-in bridge passes the full release gate.
   - Remove the C lexer and lexer-only migration harnesses only after the Baa-backed production wrapper owns the full lexer surface and regular QA carries the coverage.
 - **Scope control**:
   - No further language feature expansion is planned for v0.9.1.5 beyond consuming the v0.9.1.4 lexer-ergonomics surface; the checkpoint is a relocation/correctness milestone before v0.9.2 parser work.

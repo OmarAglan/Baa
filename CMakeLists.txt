@@ -6,7 +6,9 @@ set(CMAKE_C_STANDARD 11)
 # Build options
 option(BAA_ENABLE_WARNINGS "Enable compiler warnings for Baa" ON)
 option(BAA_WARNINGS_AS_ERRORS "Treat warnings as errors for hardening builds" OFF)
+option(BAA_USE_BAA_LEXER "Build the compiler with the Baa-backed lexer bridge" OFF)
 set(BAA_REPRODUCIBLE_BUILD_DATE "" CACHE STRING "Override baa --version build date for reproducible builds")
+set(BAA_BOOTSTRAP_COMPILER "" CACHE FILEPATH "Existing Baa compiler used to build Baa lexer objects when BAA_USE_BAA_LEXER=ON")
 
 # List of source files
 set(SOURCES
@@ -58,6 +60,29 @@ set(SOURCES
     src/frontend/lexer.c
 )
 
+if(BAA_USE_BAA_LEXER)
+    if(NOT BAA_BOOTSTRAP_COMPILER)
+        set(BAA_BOOTSTRAP_COMPILER "${CMAKE_BINARY_DIR}/baa${CMAKE_EXECUTABLE_SUFFIX}")
+    endif()
+    if(NOT EXISTS "${BAA_BOOTSTRAP_COMPILER}")
+        message(FATAL_ERROR "BAA_USE_BAA_LEXER=ON requires BAA_BOOTSTRAP_COMPILER to point to an existing baa compiler.")
+    endif()
+
+    set(BAA_LEXER_STATE_OBJECT "${CMAKE_BINARY_DIR}/lexer_state_baa0_baa.o")
+    add_custom_command(
+        OUTPUT "${BAA_LEXER_STATE_OBJECT}"
+        COMMAND "${BAA_BOOTSTRAP_COMPILER}" -O2 --verify-ir --verify-ssa -c src/frontend/lexer_state_baa0.baa -o "${BAA_LEXER_STATE_OBJECT}"
+        DEPENDS
+            src/frontend/lexer_state_baa0.baa
+            src/frontend/lexer_state_baa0.baahd
+            stdlib/baalib.baahd
+        WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
+        VERBATIM
+    )
+    set_source_files_properties("${BAA_LEXER_STATE_OBJECT}" PROPERTIES GENERATED TRUE EXTERNAL_OBJECT TRUE LANGUAGE C)
+    list(APPEND SOURCES "${BAA_LEXER_STATE_OBJECT}")
+endif()
+
 # Add resource file for Windows (Icon & Version Info)
 if(WIN32)
     list(APPEND SOURCES src/baa.rc)
@@ -70,6 +95,10 @@ add_executable(baa ${SOURCES})
 
 if(BAA_REPRODUCIBLE_BUILD_DATE)
     target_compile_definitions(baa PRIVATE BAA_BUILD_DATE_OVERRIDE="${BAA_REPRODUCIBLE_BUILD_DATE}")
+endif()
+
+if(BAA_USE_BAA_LEXER)
+    target_compile_definitions(baa PRIVATE BAA_USE_BAA_LEXER=1)
 endif()
 
 # نبقي مسارات التضمين العامة مغلقة عمداً.

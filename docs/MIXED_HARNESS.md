@@ -33,6 +33,15 @@ python scripts/qa_selfhost_pilot.py
 
 It delegates to `qa_mixed_harness.py --target token-names`.
 
+The opt-in production lexer bridge is built through CMake, not the mixed harness:
+
+```powershell
+cmake -B build-baa-lexer -G "MinGW Makefiles" -DBAA_USE_BAA_LEXER=ON -DBAA_BOOTSTRAP_COMPILER="D:/Side Dev/Baa/build/baa.exe"
+cmake --build build-baa-lexer
+```
+
+The bootstrap compiler must be an existing Baa compiler capable of compiling `src/frontend/lexer_state_baa0.baa` to an object file. The default compiler build still uses the C lexer until the release gate flips the default path.
+
 ---
 
 ## 2. Bridge Boundary
@@ -47,6 +56,7 @@ Current bridge contract:
 - Baa symbols exposed to C use the platform object ABI produced by the current backend.
 - Baa `نص` values crossing into C are decoded from the current packed `حرف` cell representation before comparison.
 - Baa-owned lexer-state slices accept caller-owned `ط٨*` buffers and return scalar token metadata through C-owned `صحيح*` out parameters.
+- With `BAA_USE_BAA_LEXER=ON`, `src/frontend/lexer_baa_bridge.c` links `src/frontend/lexer_state_baa0.baa` into the real compiler and preserves the existing parser-facing `lexer_init`/`lexer_next_token`/cleanup contract.
 
 ---
 
@@ -101,11 +111,11 @@ Compiles `src/frontend/lexer_transition_baa0.baa`, links it with a generated C h
 
 Compiles `src/frontend/lexer_state_baa0.baa`, links it with a generated C harness, and drives a Baa-owned scanner state over a caller-owned UTF-8 byte buffer. This is the first v0.9.1.5 path where Baa owns cursor, line, and column movement and returns token metadata through C-owned out parameters. It currently covers EOF, whitespace/newline skipping, simple punctuation, Arabic semicolon, and multi-character operator tokens; the production `lexer_next_token` path is unchanged.
 
-The target also drives snapshot-backed real fixtures through the Baa-owned scanner-state path and verifies token type, byte start, byte length, line, column, and token value parity. It currently covers `basic_utf8.baa`, `tests/fixtures/mixed_harness/lexer/char_raw_literals.baa`, `tests/stress/stress_utf8_identifiers.baa`, and `conditional_macros.baa`, including line comments, Arabic keywords/identifiers, Arabic-Indic digits, strings, char literals, raw byte strings, UTF-8 byte accounting, and source-local conditional skipping. The promoted `lexer-token-stream` Baa-state candidate covers `#تضمين`, macro value substitution from included headers, and `#إذا_لم_يعرف` parity against JSONL snapshots. Mixed-harness-only scanner ABIs return either source-relative value spans or raw value pointers so the C harness can reconstruct snapshot values, including Arabic-Indic digit normalization for direct integer literals. Full production token heap ownership remains on the later v0.9.1.5 compatibility-wrapper path.
+The target also drives snapshot-backed real fixtures through the Baa-owned scanner-state path and verifies token type, byte start, byte length, line, column, and token value parity. It currently covers `basic_utf8.baa`, `tests/fixtures/mixed_harness/lexer/char_raw_literals.baa`, `tests/stress/stress_utf8_identifiers.baa`, and `conditional_macros.baa`, including line comments, Arabic keywords/identifiers, Arabic-Indic digits, strings, char literals, raw byte strings, UTF-8 byte accounting, and source-local conditional skipping. The promoted `lexer-token-stream` Baa-state candidate covers `#تضمين`, macro value substitution from included headers, and `#إذا_لم_يعرف` parity against JSONL snapshots. Mixed-harness-only scanner ABIs return either source-relative value spans or raw value pointers so the C harness can reconstruct snapshot values, including Arabic-Indic digit normalization for direct integer literals. The opt-in production bridge now copies those Baa spans into heap-owned `Token.value` strings for the existing parser API.
 
 ## 4. Ownership Boundary
 
-The current Baa scanner-state boundary is intentionally non-production:
+The mixed-harness Baa scanner-state boundary is intentionally non-production. The opt-in production bridge uses the same scanner behind the C lexer API and takes C ownership of parser-visible heap strings, included source buffers, dependency paths, diagnostics, and cleanup.
 
 | Data | Owner | Contract |
 | --- | --- | --- |

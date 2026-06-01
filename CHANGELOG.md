@@ -22,6 +22,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
   - Added a narrow Baa-owned conditional-preprocessor checkpoint for `#تعريف`, `#الغاء_تعريف`, `#إذا_عرف`, `#وإلا`, and `#نهاية` skipping in the lexer-state harness without replacing the production lexer.
   - Extended the Baa scanner-state path with include-source stack handling, macro value spans, macro substitution, and `#إذا_لم_يعرف` conditional support.
   - Added C-baseline support for `#إذا_لم_يعرف` so the mixed harness can lock parity for both defined and undefined conditional branches.
+  - Extended the Baa scanner-state path to preserve char literal and raw byte string token parity, including escaped quote characters and UTF-8 value spans.
+  - Tightened Baa scanner-state identifier starts to Arabic UTF-8 starts so unknown bytes now flow through the invalid-token diagnostic path instead of being classified as identifiers.
 - **Mixed harness coverage**:
   - Added `scripts/qa_mixed_harness.py --target lexer-state` and included it in `--target all`.
   - The new gate compiles the Baa0 scanner-state module, links it with a generated C harness, and verifies token type, byte start, byte length, line, and column metadata.
@@ -33,16 +35,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
   - Added diagnostic snapshot coverage for unclosed `#إذا_لم_يعرف` blocks and generalized the EOF conditional diagnostic to refer to an unclosed preprocessor condition.
   - Added `lexer-dependencies`, a mixed-harness gate that compares Baa scanner-state dependency paths against the current C lexer baseline.
   - Added Baa scanner-state structured diagnostic smoke checks for unclosed preprocessor conditions and include-cycle detection without replacing production diagnostics.
+  - Added `char_raw_literals.baa` token-stream coverage for `حرف`, escaped char literals, `ط٨*`, and `خام"..."` parity.
+  - Added production diagnostic snapshots and exact Baa scanner-state code/location anchors for bad string escapes, bad char escapes, unclosed strings, unclosed chars, unknown bytes, unclosed preprocessor conditions, and include cycles.
 - **Boundary ownership contract**:
   - Documented the current C/Baa ownership split for root and included source buffers, token value spans, macro spans, dependency path copies, diagnostics, and scanner cleanup.
 
 ### Remaining
 
 - **Baa-owned lexer implementation**:
-  - Replace the production `lexer_next_token` implementation with a Baa-backed compatibility wrapper once diagnostic parity, token heap ownership, and dependency ownership are complete.
+  - Replace the production `lexer_next_token` implementation with a Baa-backed compatibility wrapper once token heap ownership is wired to the existing parser-facing C API.
   - Keep the existing C lexer API contract available through a compatibility wrapper until the parser migration starts.
-- **Parity gates**:
-  - Preserve full lexer diagnostic parity for malformed sources, bad escapes, and source-span exactness before the production wrapper flips.
 - **Scope control**:
   - No further language feature expansion is planned for v0.9.1.5 beyond consuming the v0.9.1.4 lexer-ergonomics surface; the checkpoint is a relocation/correctness milestone before v0.9.2 parser work.
 

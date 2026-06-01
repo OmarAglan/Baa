@@ -87,9 +87,9 @@ Runs malformed lexer/preprocessor negative fixtures through the current compiler
 tests/snapshots/mixed_harness/lexer_diagnostics/
 ```
 
-This target freezes source locations, include-cycle reporting, escape diagnostics, and preprocessor EOF diagnostics for the lexer rewrite path.
+This target freezes source locations, include-cycle reporting, malformed literal diagnostics, unknown-byte diagnostics, escape diagnostics, and preprocessor EOF diagnostics for the lexer rewrite path.
 
-The target also compiles the Baa scanner-state candidate and runs structured diagnostic smoke checks for unclosed `#إذا_عرف`, unclosed `#إذا_لم_يعرف`, and include-cycle detection. The Baa side returns diagnostic code and source location through a mixed-harness-only ABI; the C harness maps host include failures separately where path resolution owns the include-chain decision.
+The target also compiles the Baa scanner-state candidate and runs structured diagnostic smoke checks for bad string escapes, bad char escapes, unclosed string literals, unclosed char literals, unknown bytes, unclosed `#إذا_عرف`, unclosed `#إذا_لم_يعرف`, and include-cycle detection. The Baa side returns diagnostic code and source location through a mixed-harness-only ABI; the C harness maps host include failures separately where path resolution owns the include-chain decision.
 
 The token-stream corpus also includes `tests/stress/stress_utf8_identifiers.baa` so the candidate bridge is checked against a stress-sized UTF-8 lexer fixture.
 
@@ -101,7 +101,7 @@ Compiles `src/frontend/lexer_transition_baa0.baa`, links it with a generated C h
 
 Compiles `src/frontend/lexer_state_baa0.baa`, links it with a generated C harness, and drives a Baa-owned scanner state over a caller-owned UTF-8 byte buffer. This is the first v0.9.1.5 path where Baa owns cursor, line, and column movement and returns token metadata through C-owned out parameters. It currently covers EOF, whitespace/newline skipping, simple punctuation, Arabic semicolon, and multi-character operator tokens; the production `lexer_next_token` path is unchanged.
 
-The target also drives snapshot-backed real fixtures through the Baa-owned scanner-state path and verifies token type, byte start, byte length, line, column, and token value parity. It currently covers `basic_utf8.baa`, `tests/stress/stress_utf8_identifiers.baa`, and `conditional_macros.baa`, including line comments, Arabic keywords/identifiers, Arabic-Indic digits, strings, UTF-8 byte accounting, and source-local conditional skipping. The promoted `lexer-token-stream` Baa-state candidate covers `#تضمين`, macro value substitution from included headers, and `#إذا_لم_يعرف` parity against JSONL snapshots. Mixed-harness-only scanner ABIs return either source-relative value spans or raw value pointers so the C harness can reconstruct snapshot values, including Arabic-Indic digit normalization for direct integer literals. Full production token heap ownership and bad-escape diagnostic parity remain on the later v0.9.1.5 migration path.
+The target also drives snapshot-backed real fixtures through the Baa-owned scanner-state path and verifies token type, byte start, byte length, line, column, and token value parity. It currently covers `basic_utf8.baa`, `tests/fixtures/mixed_harness/lexer/char_raw_literals.baa`, `tests/stress/stress_utf8_identifiers.baa`, and `conditional_macros.baa`, including line comments, Arabic keywords/identifiers, Arabic-Indic digits, strings, char literals, raw byte strings, UTF-8 byte accounting, and source-local conditional skipping. The promoted `lexer-token-stream` Baa-state candidate covers `#تضمين`, macro value substitution from included headers, and `#إذا_لم_يعرف` parity against JSONL snapshots. Mixed-harness-only scanner ABIs return either source-relative value spans or raw value pointers so the C harness can reconstruct snapshot values, including Arabic-Indic digit normalization for direct integer literals. Full production token heap ownership remains on the later v0.9.1.5 compatibility-wrapper path.
 
 ## 4. Ownership Boundary
 

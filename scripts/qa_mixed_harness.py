@@ -71,6 +71,7 @@ BANNED_PATTERNS = [
 
 LEXER_CASES = [
     ("basic_utf8", LEXER_FIXTURE_DIR / "basic_utf8.baa"),
+    ("char_raw_literals", LEXER_FIXTURE_DIR / "char_raw_literals.baa"),
     ("macro_include", LEXER_FIXTURE_DIR / "macro_include_main.baa"),
     ("conditional_macros", LEXER_FIXTURE_DIR / "conditional_macros.baa"),
     ("conditional_ifndef", LEXER_FIXTURE_DIR / "conditional_ifndef.baa"),
@@ -80,6 +81,9 @@ LEXER_CASES = [
 LEXER_DIAGNOSTIC_CASES = [
     ("bad_escape_string", ROOT / "tests" / "neg" / "lexer_bad_escape_in_string.baa"),
     ("bad_escape_char", ROOT / "tests" / "neg" / "lexer_bad_escape_in_char.baa"),
+    ("unclosed_string", ROOT / "tests" / "neg" / "lexer_unclosed_string.baa"),
+    ("unclosed_char", ROOT / "tests" / "neg" / "lexer_unclosed_char.baa"),
+    ("unknown_byte", ROOT / "tests" / "neg" / "lexer_unknown_byte.baa"),
     ("unclosed_ifdef", ROOT / "tests" / "neg" / "syntax_pp_unclosed_ifdef.baa"),
     ("unclosed_ifndef", ROOT / "tests" / "neg" / "syntax_pp_unclosed_ifndef.baa"),
     ("include_cycle", ROOT / "tests" / "neg" / "syntax_include_cycle_relative_alias.baa"),
@@ -87,11 +91,21 @@ LEXER_DIAGNOSTIC_CASES = [
 
 CANDIDATE_DIAG_UNCLOSED_CONDITION = 1
 CANDIDATE_DIAG_INCLUDE_CYCLE = 7
+CANDIDATE_DIAG_BAD_STRING_ESCAPE = 8
+CANDIDATE_DIAG_UNCLOSED_STRING = 9
+CANDIDATE_DIAG_BAD_CHAR_ESCAPE = 10
+CANDIDATE_DIAG_UNCLOSED_CHAR = 11
+CANDIDATE_DIAG_UNKNOWN_BYTE = 14
 
 LEXER_CANDIDATE_DIAGNOSTIC_CASES = [
-    ("unclosed_ifdef", ROOT / "tests" / "neg" / "syntax_pp_unclosed_ifdef.baa", CANDIDATE_DIAG_UNCLOSED_CONDITION),
-    ("unclosed_ifndef", ROOT / "tests" / "neg" / "syntax_pp_unclosed_ifndef.baa", CANDIDATE_DIAG_UNCLOSED_CONDITION),
-    ("include_cycle", ROOT / "tests" / "neg" / "syntax_include_cycle_relative_alias.baa", CANDIDATE_DIAG_INCLUDE_CYCLE),
+    ("bad_escape_string", ROOT / "tests" / "neg" / "lexer_bad_escape_in_string.baa", CANDIDATE_DIAG_BAD_STRING_ESCAPE, 5, 27),
+    ("bad_escape_char", ROOT / "tests" / "neg" / "lexer_bad_escape_in_char.baa", CANDIDATE_DIAG_BAD_CHAR_ESCAPE, 5, 19),
+    ("unclosed_string", ROOT / "tests" / "neg" / "lexer_unclosed_string.baa", CANDIDATE_DIAG_UNCLOSED_STRING, 8, 1),
+    ("unclosed_char", ROOT / "tests" / "neg" / "lexer_unclosed_char.baa", CANDIDATE_DIAG_UNCLOSED_CHAR, 5, 20),
+    ("unknown_byte", ROOT / "tests" / "neg" / "lexer_unknown_byte.baa", CANDIDATE_DIAG_UNKNOWN_BYTE, 5, 5),
+    ("unclosed_ifdef", ROOT / "tests" / "neg" / "syntax_pp_unclosed_ifdef.baa", CANDIDATE_DIAG_UNCLOSED_CONDITION, 5, 1),
+    ("unclosed_ifndef", ROOT / "tests" / "neg" / "syntax_pp_unclosed_ifndef.baa", CANDIDATE_DIAG_UNCLOSED_CONDITION, 8, 1),
+    ("include_cycle", ROOT / "tests" / "neg" / "syntax_include_cycle_relative_alias.baa", CANDIDATE_DIAG_INCLUDE_CYCLE, 1, 14),
 ]
 
 
@@ -1793,7 +1807,7 @@ def _run_lexer_candidate_diagnostics(baa: Path, cc: str, log_dir: Path, out_dir:
     if not link.passed:
         return results
 
-    for case_name, case_path, expected_code in LEXER_CANDIDATE_DIAGNOSTIC_CASES:
+    for case_name, case_path, expected_code, expected_line, expected_col in LEXER_CANDIDATE_DIAGNOSTIC_CASES:
         if not case_path.exists():
             results.append(CheckResult(f"lexer-diagnostics-baa-state:{case_name}", False, 1, 0.0, "missing fixture"))
             continue
@@ -1819,11 +1833,14 @@ def _run_lexer_candidate_diagnostics(baa: Path, cc: str, log_dir: Path, out_dir:
                 code = rows[0].get("code")
                 line = rows[0].get("line")
                 col = rows[0].get("col")
-                passed = code == expected_code and isinstance(line, int) and line > 0 and isinstance(col, int) and col > 0
+                passed = code == expected_code and line == expected_line and col == expected_col
                 detail = (
                     "Baa diagnostic code/location matched expectation"
                     if passed
-                    else f"expected code {expected_code}, got row={json.dumps(rows[0], ensure_ascii=False, sort_keys=True)}"
+                    else (
+                        f"expected code {expected_code} at {expected_line}:{expected_col}, "
+                        f"got row={json.dumps(rows[0], ensure_ascii=False, sort_keys=True)}"
+                    )
                 )
         except RuntimeError as exc:
             passed = False

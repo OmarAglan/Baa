@@ -22,6 +22,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
   - Added a narrow Baa-owned conditional-preprocessor checkpoint for `#تعريف`, `#الغاء_تعريف`, `#إذا_عرف`, `#وإلا`, and `#نهاية` skipping in the lexer-state harness without replacing the production lexer.
   - Extended the Baa scanner-state path with include-source stack handling, macro value spans, macro substitution, and `#إذا_لم_يعرف` conditional support.
   - Added C-baseline support for `#إذا_لم_يعرف` so the mixed harness can lock parity for both defined and undefined conditional branches.
+  - Added `src/frontend/lexer_state_baa0.baahd` as the Baa header-format contract for the lexer-state ABI.
   - Extended the Baa scanner-state path to preserve char literal and raw byte string token parity, including escaped quote characters and UTF-8 value spans.
   - Tightened Baa scanner-state identifier starts to Arabic UTF-8 starts so unknown bytes now flow through the invalid-token diagnostic path instead of being classified as identifiers.
 - **Mixed harness coverage**:
@@ -45,6 +46,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - **Baa-owned lexer implementation**:
   - Replace the production `lexer_next_token` implementation with a Baa-backed compatibility wrapper once token heap ownership is wired to the existing parser-facing C API.
   - Keep the existing C lexer API contract available through a compatibility wrapper until the parser migration starts.
+  - Remove the C lexer and lexer-only migration harnesses only after the Baa-backed production wrapper owns the full lexer surface and regular QA carries the coverage.
 - **Scope control**:
   - No further language feature expansion is planned for v0.9.1.5 beyond consuming the v0.9.1.4 lexer-ergonomics surface; the checkpoint is a relocation/correctness milestone before v0.9.2 parser work.
 

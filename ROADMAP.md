@@ -1491,7 +1491,7 @@ Partial status update (2026-03-06):
 
 ✅ COMPLETED (2026-05-29)
 
-### v0.9.1.5: Fully Move Lexer to Baa 📝
+### v0.9.1.5: Fully Move Lexer to Baa
 
 - [x] **Initial Baa-owned scanner state** — `src/frontend/lexer_state_baa0.baa` owns source pointer, byte offset, line, and column state for a simple punctuation/operator token slice.
 - [x] **Scanner-state mixed harness** — `scripts/qa_mixed_harness.py --target lexer-state` compiles and links the Baa0 scanner slice, then validates token type, byte length, line, and column metadata through C-owned out parameters.
@@ -1500,22 +1500,37 @@ Partial status update (2026-03-06):
 - [x] **Non-preprocessor token-value checkpoint** — the Baa-owned scanner-state path now returns value spans/modes for identifiers, integer literals, and string literals, and `lexer-state` verifies snapshot value parity without introducing production token ownership changes.
 - [x] **Conditional-preprocessor scanner checkpoint** — `lexer-state` now validates `conditional_macros.baa` snapshot parity for Baa-owned `#تعريف`, `#الغاء_تعريف`, `#إذا_عرف`, `#وإلا`, and `#نهاية` branch skipping without moving include handling or diagnostics yet.
 - [x] **Replace bridge with Baa-owned lexer state** — `lexer-token-stream` now compiles `lexer_state_baa0.baa` directly and no longer emits candidate tokens through the C `lexer_next_token` bridge.
+- [x] **Move lexer-state ABI to Baa header format** — `src/frontend/lexer_state_baa0.baahd` now declares the Baa scanner-state contract consumed by `lexer_state_baa0.baa`.
 - [x] **Port UTF-8 scanner rules** — the Baa scanner-state path preserves Arabic identifiers, Arabic-Indic digits, string/char/raw literal value spans, byte lengths, line/column accounting, and unknown-byte invalid-token behavior across mixed-harness snapshots.
 - [x] **Port preprocessor surface** — the Baa scanner-state path now handles `#تضمين`, `#تعريف`, `#الغاء_تعريف`, `#إذا_عرف`, `#إذا_لم_يعرف`, `#وإلا`, and `#نهاية` across token-stream snapshots, including macro value substitution from included headers.
 - [x] **Preserve dependency tracking** — `lexer-dependencies` now compares Baa scanner-state root/include dependency paths against the current C lexer baseline, and the Baa diagnostic smoke gate covers include-cycle detection at the host include boundary.
 - [ ] **Keep C compatibility wrapper** — expose the existing `lexer_init`/`lexer_next_token`/cleanup contract to the parser until the parser port starts.
+- [ ] **Production Baa-backed lexer wrapper** — route the existing parser-facing C lexer API through the Baa scanner while preserving token heap ownership, source/include buffers, dependency arrays, diagnostics, and cleanup behavior.
 - [x] **Promote mixed harness gate** — `lexer-token-stream` exercises the Baa scanner-state implementation directly and compares it against committed C-baseline JSONL snapshots.
 - [x] **Diagnostics parity** — malformed source snapshots now cover bad string/char escapes, unclosed string/char literals, unknown bytes, include-cycle notes, and EOF/preprocessor errors; the Baa scanner-state boundary checks exact diagnostic code, line, and column anchors.
 - [x] **Memory ownership audit** — `docs/MIXED_HARNESS.md` now defines Baa/C ownership for token value spans, dependency paths, include buffers, macro spans, diagnostic text, and cleanup at the current scanner-state boundary.
+- [ ] **Full language lexer parity signoff** — prove the Baa-backed lexer accepts the full current language surface, including all literals, keywords, operators, include forms, macro behavior, diagnostics, and dependency tracking covered by the existing test suite.
+- [ ] **Remove C lexer implementation** — delete the old C tokenization/preprocessor implementation only after the Baa-backed wrapper passes mixed-harness, quick/full/release QA, and focused negative diagnostics.
+- [ ] **Retire lexer migration harness/files** — after production tests own the coverage, remove lexer-only migration harness targets, temporary fixtures/snapshots, and Baa0 bridge files that are no longer part of the production compiler.
+- [ ] **Post-migration Baa lexer readability pass** — once the C lexer is gone, refactor the Baa lexer to use the full stable Baa language surface rather than migration-minimal Baa0 style.
 - [x] **No further language feature expansion** — v0.9.1.5 remains limited to lexer relocation and correctness fixes while consuming the v0.9.1.4 ergonomics surface.
 - [ ] **Windows release signoff** — pass build, quick QA, release QA, and mixed harness; Linux remains deferred unless explicitly requested.
 
-### v0.9.2: Rewrite Parser 🌳
+### v0.9.2: Rewrite Parser
 
+- [ ] **Baa header contract first** — define parser-facing Baa `.baahd` declarations before moving implementation code.
 - [ ] **Port parser slice to Baa** — AST construction with existing grammar contracts.
-- [ ] **Build through mixed harness** — C/Baa hybrid remains supported.
+- [ ] **Build through mixed harness** — C/Baa hybrid remains supported while the parser is still behind a compatibility boundary.
 - [ ] **AST + diagnostics parity tests** — match C baseline trees and key error anchors.
+- [ ] **Production parser wrapper** — route the existing parser API through the Baa implementation without changing downstream semantic-analysis ownership.
+- [ ] **Remove C parser implementation** — delete the old C parser only after the Baa-backed path passes full/release QA.
+- [ ] **Retire parser migration harness/files** — remove temporary parser migration gates after normal tests own the coverage.
+- [ ] **Post-migration readability pass** — refactor the Baa parser using the full stable language surface after the C parser is gone.
 - [ ] **Recursion/stack validation** — ensure depth safety on both targets.
+
+### Phase 5 migration rule for later compiler layers
+
+Each following compiler layer must follow the same sequence used for the lexer: Baa `.baahd` contract, mixed C+Baa parity harness, production compatibility wrapper, full QA signoff, C implementation removal, migration-harness retirement, then a Baa readability pass using the full stable language surface.
 - [ ] **Panic recovery parity** — same synchronization behavior for statement/declaration/switch modes.
 - [ ] **Alias/type grammar parity** — no regressions in parser-side alias resolution.
 

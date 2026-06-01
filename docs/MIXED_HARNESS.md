@@ -73,7 +73,7 @@ Each row records:
 - line, column, and byte length,
 - normalized token filename.
 
-The v0.9.1 Baa lexer candidate slot now compiles `src/frontend/lexer_state_baa0.baa`, links it with a C host harness, and emits token-stream JSONL directly from the Baa-owned scanner state. C still owns fixture file reads, snapshot comparison, and token-name formatting, but cursor movement, token classification, conditional preprocessing, include-source stack switching, and macro value substitution are exercised through Baa before comparison against the committed C-baseline snapshots.
+The v0.9.1 Baa lexer candidate slot now compiles `src/frontend/lexer_state_baa0.baa`, whose harness-facing declarations live in `src/frontend/lexer_state_baa0.baahd`, links it with a C host harness, and emits token-stream JSONL directly from the Baa-owned scanner state. C still owns fixture file reads, snapshot comparison, and token-name formatting, but cursor movement, token classification, conditional preprocessing, include-source stack switching, and macro value substitution are exercised through Baa before comparison against the committed C-baseline snapshots.
 
 ### `lexer-dependencies`
 
@@ -110,6 +110,7 @@ The current Baa scanner-state boundary is intentionally non-production:
 | Data | Owner | Contract |
 | --- | --- | --- |
 | Root source buffer | C harness | Allocated by the harness, passed to `محللباءهيئ`, released after `محللباءنظف`. |
+| Baa lexer-state header | Baa source | `src/frontend/lexer_state_baa0.baahd` declares the temporary scanner-state ABI until the production wrapper replaces the migration boundary. |
 | Included source buffers | C harness | Resolved, dependency-recorded, and released by the host include service. |
 | Token value text | C harness | Reconstructed from Baa-returned spans/pointers; Baa does not allocate token strings. |
 | Macro names/values | Baa scanner state | Stored as borrowed spans into active source buffers; valid until scanner cleanup. |

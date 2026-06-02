@@ -1510,12 +1510,12 @@ Partial status update (2026-03-06):
 - [x] **Promote mixed harness gate** — `lexer-token-stream` exercises the Baa scanner-state implementation directly and compares it against committed C-baseline JSONL snapshots.
 - [x] **Diagnostics parity** — malformed source snapshots now cover bad string/char escapes, unclosed string/char literals, unknown bytes, include-cycle notes, and EOF/preprocessor errors; the Baa scanner-state boundary checks exact diagnostic code, line, and column anchors.
 - [x] **Memory ownership audit** — `docs/MIXED_HARNESS.md` now defines Baa/C ownership for token value spans, dependency paths, include buffers, macro spans, diagnostic text, and cleanup at the current scanner-state boundary.
-- [ ] **Full language lexer parity signoff** — prove the Baa-backed lexer accepts the full current language surface, including all literals, keywords, operators, include forms, macro behavior, diagnostics, and dependency tracking covered by the existing test suite; current evidence covers mixed-harness `all` and Windows quick QA under the opt-in bridge.
+- [x] **Full language lexer parity signoff** — the opt-in Baa-backed lexer bridge passes Windows release QA, including full integration/regression/negative coverage, stress, fuzz-lite, determinism, bootstrap, and mixed-harness `all`.
 - [ ] **Remove C lexer implementation** — delete the old C tokenization/preprocessor implementation only after the Baa-backed wrapper passes mixed-harness, quick/full/release QA, and focused negative diagnostics.
 - [ ] **Retire lexer migration harness/files** — after production tests own the coverage, remove lexer-only migration harness targets, temporary fixtures/snapshots, and Baa0 bridge files that are no longer part of the production compiler.
 - [ ] **Post-migration Baa lexer readability pass** — once the C lexer is gone, refactor the Baa lexer to use the full stable Baa language surface rather than migration-minimal Baa0 style.
 - [x] **No further language feature expansion** — v0.9.1.5 remains limited to lexer relocation and correctness fixes while consuming the v0.9.1.4 ergonomics surface.
-- [ ] **Windows release signoff** — pass build, quick QA, release QA, and mixed harness; Linux remains deferred unless explicitly requested.
+- [x] **Windows release signoff** — strict build and opt-in `python scripts\qa_run.py --mode release` pass with `build-baa-lexer\baa.exe`; Linux remains deferred unless explicitly requested.
 
 ### v0.9.2: Rewrite Parser
 

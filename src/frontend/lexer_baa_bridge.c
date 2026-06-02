@@ -376,7 +376,7 @@ static const char* lex_baa_diag_message(int64_t code)
     }
 }
 
-static void lex_baa_raise_diagnostic(Lexer* l)
+static void lex_baa_raise_diagnostic(Lexer* l, int64_t start)
 {
     int64_t code = 0;
     int64_t line = 1;
@@ -387,6 +387,18 @@ static void lex_baa_raise_diagnostic(Lexer* l)
 
     int source_index = lex_baa_find_source(l, محللباءمصدر_حالي());
     lex_baa_set_c_location(l, source_index, (int)line, (int)col);
+    if (code == BAA_BRIDGE_DIAG_UNKNOWN_BYTE && start >= 0) {
+        const unsigned char* source = محللباءمصدر_حالي();
+        if (source && source_index >= 0 && (size_t)source_index < l->baa_source_count) {
+            uintptr_t begin = (uintptr_t)l->baa_sources[source_index].source;
+            uintptr_t end = begin + l->baa_sources[source_index].length;
+            uintptr_t byte_addr = (uintptr_t)source + (uintptr_t)start;
+            if (byte_addr >= begin && byte_addr < end) {
+                lex_fatal(l, "خطأ لفظي: بايت غير معروف 0x%02X.",
+                          *(const unsigned char*)byte_addr);
+            }
+        }
+    }
     lex_fatal(l, "%s", lex_baa_diag_message(code));
 }
 
@@ -433,7 +445,11 @@ unsigned char* محللباءمضيف_تضمين(unsigned char* start, int64_t l
     int line = 1;
     int col = 1;
     lex_baa_span_location(l, current_index, start, &line, &col);
-    lex_baa_set_c_location(l, current_index, line, col);
+    int include_error_col = col;
+    if (length >= 0 && length < (int64_t)INT_MAX - col - 1) {
+        include_error_col = col + (int)length + 1;
+    }
+    lex_baa_set_c_location(l, current_index, line, include_error_col);
     lex_baa_prepare_include_stack(l, current_index);
 
     char* requested = lex_baa_dup_span(l, start, length);
@@ -459,6 +475,7 @@ unsigned char* محللباءمضيف_تضمين(unsigned char* start, int64_t l
     }
 
     lex_record_dependency(l, resolved_path);
+    error_register_source(resolved_path, included);
     free(requested);
     return (unsigned char*)lex_baa_skip_utf8_bom_ptr(included);
 }
@@ -494,7 +511,7 @@ Token lexer_next_token(Lexer* l)
                                           &value_length,
                                           &value_mode);
     if (returned != type || type == TOKEN_INVALID) {
-        lex_baa_raise_diagnostic(l);
+        lex_baa_raise_diagnostic(l, start);
     }
 
     unsigned char* current_source = محللباءمصدر_حالي();

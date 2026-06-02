@@ -115,7 +115,7 @@ The target also drives snapshot-backed real fixtures through the Baa-owned scann
 
 ## 4. Ownership Boundary
 
-The mixed-harness Baa scanner-state boundary is intentionally non-production. The opt-in production bridge uses the same scanner behind the C lexer API and takes C ownership of parser-visible heap strings, included source buffers, dependency paths, diagnostics, and cleanup.
+The mixed-harness Baa scanner-state boundary is intentionally non-production. The opt-in production bridge uses the same scanner behind the C lexer API and takes C ownership of parser-visible heap strings, included source buffers, dependency paths, diagnostics, and cleanup. Included source buffers must also be registered with the diagnostic subsystem so source-line rendering matches the C lexer baseline.
 
 | Data | Owner | Contract |
 | --- | --- | --- |

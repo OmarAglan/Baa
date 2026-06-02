@@ -44,12 +44,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
   - Added `BAA_USE_BAA_LEXER` and `BAA_BOOTSTRAP_COMPILER` CMake options so the compiler can link `src/frontend/lexer_state_baa0.baa` into the parser-facing lexer API without changing the default build.
   - Added `src/frontend/lexer_baa_bridge.c`, which preserves the existing `lexer_init`/`lexer_next_token`/cleanup contract while delegating tokenization, preprocessing, macro substitution, and include switching to the Baa scanner.
   - Extended the Baa scanner-state path for production use with the remaining keyword classifications, float literal classification, Arabic comma tokenization, and UTF-8 BOM skipping for root and included sources.
+  - Matched production lexer diagnostic snapshots under the opt-in bridge, including unknown-byte hex details and include-cycle source-line anchors from included buffers.
+  - Completed Windows opt-in release signoff with strict build, full QA, stress/fuzz-lite, determinism, bootstrap, and mixed-harness coverage.
 
 ### Remaining
 
 - **Baa-owned lexer implementation**:
-  - Keep the opt-in Baa-backed compatibility wrapper behind the existing C lexer API until full/release QA and focused negative diagnostics sign off.
-  - Flip the Baa-backed lexer to the default path only after the opt-in bridge passes the full release gate.
+  - Keep the opt-in Baa-backed compatibility wrapper behind the existing C lexer API until the default-flip checkpoint is applied.
+  - Flip the Baa-backed lexer to the default path in a separate checkpoint after preserving rollback through the C compatibility path.
   - Remove the C lexer and lexer-only migration harnesses only after the Baa-backed production wrapper owns the full lexer surface and regular QA carries the coverage.
 - **Scope control**:
   - No further language feature expansion is planned for v0.9.1.5 beyond consuming the v0.9.1.4 lexer-ergonomics surface; the checkpoint is a relocation/correctness milestone before v0.9.2 parser work.

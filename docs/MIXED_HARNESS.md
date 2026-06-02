@@ -33,14 +33,14 @@ python scripts/qa_selfhost_pilot.py
 
 It delegates to `qa_mixed_harness.py --target token-names`.
 
-The opt-in production lexer bridge is built through CMake, not the mixed harness:
+The production Baa-backed lexer bridge is built through CMake, not the mixed harness:
 
 ```powershell
-cmake -B build-baa-lexer -G "MinGW Makefiles" -DBAA_USE_BAA_LEXER=ON -DBAA_BOOTSTRAP_COMPILER="D:/Side Dev/Baa/build/baa.exe"
-cmake --build build-baa-lexer
+cmake -B build -G "MinGW Makefiles"
+cmake --build build
 ```
 
-The bootstrap compiler must be an existing Baa compiler capable of compiling `src/frontend/lexer_state_baa0.baa` to an object file. The default compiler build still uses the C lexer until the release gate flips the default path.
+`BAA_USE_BAA_LEXER` is ON by default. When `BAA_BOOTSTRAP_COMPILER` is not provided, CMake builds an internal C-lexer `baa_stage0` target and uses it to compile `src/frontend/lexer_state_baa0.baa` into the final compiler. Use `-DBAA_USE_BAA_LEXER=OFF` only for the explicit C-lexer rollback build.
 
 ---
 
@@ -56,7 +56,7 @@ Current bridge contract:
 - Baa symbols exposed to C use the platform object ABI produced by the current backend.
 - Baa `نص` values crossing into C are decoded from the current packed `حرف` cell representation before comparison.
 - Baa-owned lexer-state slices accept caller-owned `ط٨*` buffers and return scalar token metadata through C-owned `صحيح*` out parameters.
-- With `BAA_USE_BAA_LEXER=ON`, `src/frontend/lexer_baa_bridge.c` links `src/frontend/lexer_state_baa0.baa` into the real compiler and preserves the existing parser-facing `lexer_init`/`lexer_next_token`/cleanup contract.
+- By default, `src/frontend/lexer_baa_bridge.c` links `src/frontend/lexer_state_baa0.baa` into the real compiler and preserves the existing parser-facing `lexer_init`/`lexer_next_token`/cleanup contract.
 
 ---
 
@@ -115,7 +115,7 @@ The target also drives snapshot-backed real fixtures through the Baa-owned scann
 
 ## 4. Ownership Boundary
 
-The mixed-harness Baa scanner-state boundary is intentionally non-production. The opt-in production bridge uses the same scanner behind the C lexer API and takes C ownership of parser-visible heap strings, included source buffers, dependency paths, diagnostics, and cleanup. Included source buffers must also be registered with the diagnostic subsystem so source-line rendering matches the C lexer baseline.
+The mixed-harness Baa scanner-state boundary is intentionally non-production. The default production bridge uses the same scanner behind the C lexer API and takes C ownership of parser-visible heap strings, included source buffers, dependency paths, diagnostics, and cleanup. Included source buffers must also be registered with the diagnostic subsystem so source-line rendering matches the C lexer baseline.
 
 | Data | Owner | Contract |
 | --- | --- | --- |

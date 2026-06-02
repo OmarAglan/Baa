@@ -300,7 +300,7 @@ Note (v0.5.4): diagnostics support single-line spans and optional Arabic `مسا
 
 ## 2. Lexical Analysis
 
-The Lexer (`src/lexer.c`) transforms raw bytes into `Token` structures.
+The parser-facing lexer API (`src/frontend/lexer.c`) transforms raw bytes into `Token` structures. In the default v0.9.1.5 build, this API routes tokenization through the Baa scanner state in `src/frontend/lexer_state_baa0.baa` via `src/frontend/lexer_baa_bridge.c`. The C lexer remains available for the internal `baa_stage0` bootstrap target and for explicit `-DBAA_USE_BAA_LEXER=OFF` rollback builds until the later C-removal checkpoint.
 
 ### 2.1. Internal Structure
 

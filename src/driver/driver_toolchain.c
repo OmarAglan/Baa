@@ -39,6 +39,9 @@ static char g_gcc_path[MAX_PATH] = "";
 
 /**
  * @brief مسار تجهيزي ASCII لتشغيل أدوات GCC/LD بعيداً عن قيود Unicode.
+ *
+ * اسم الملف المرحلي يتضمن رقم العملية حتى لا تتصادم عمليات baa المتزامنة
+ * داخل مجلد staging المشترك.
  */
 static char g_stage_dir[MAX_PATH] = "";
 static unsigned long g_stage_counter = 0;
@@ -178,8 +181,9 @@ static bool win_make_stage_file_path(const char* prefix, const char* ext, char* 
     if (!prefix || !ext || !out || out_cap == 0) return false;
     if (!win_ensure_stage_dir()) return false;
 
+    unsigned long process_id = (unsigned long)GetCurrentProcessId();
     unsigned long id = ++g_stage_counter;
-    int n = snprintf(out, out_cap, "%s\\%s_%lu%s", g_stage_dir, prefix, id, ext);
+    int n = snprintf(out, out_cap, "%s\\%s_%lu_%lu%s", g_stage_dir, prefix, process_id, id, ext);
     return n > 0 && (size_t)n < out_cap;
 }
 

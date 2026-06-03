@@ -127,15 +127,6 @@ typedef struct {
     const char* filename; // اسم الملف
 } Token;
 
-/**
- * @struct Macro
- * @brief تمثيل لتعريف ماكرو (Preprocessor Macro).
- */
-typedef struct {
-    char* name;  // اسم الماكرو
-    char* value; // القيمة الاستبدالية
-} Macro;
-
 #define BAA_LEXER_BRIDGE_MAX_SOURCES 64u
 
 /**
@@ -165,19 +156,6 @@ typedef struct {
     // مكدس التضمين (Include Stack)
     LexerState stack[10]; // أقصى عمق للتضمين: 10
     int stack_depth;
-
-    // حالة المعالج القبلي (Preprocessor State)
-    Macro macros[100];    // جدول الماكروهات (حد أقصى 100)
-    int macro_count;      // عدد الماكروهات المعرفة
-    bool skipping;        // هل نحن في وضع التخطي؟ (مُشتق من مكدس الشروط)
-
-    // مكدس الشروط (#إذا_عرف/#وإلا/#نهاية) لدعم التعشيش بشكل صحيح
-    struct {
-        unsigned char parent_active;
-        unsigned char cond_true;
-        unsigned char in_else;
-    } if_stack[32];
-    int if_depth;
 
     // تبعيات البناء المكتشفة أثناء المعالجة القبلية (مسارات مطبعة ومملوكة)
     char** dependency_paths;

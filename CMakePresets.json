@@ -18,7 +18,8 @@
       },
       "cacheVariables": {
         "BAA_ENABLE_WARNINGS": "ON",
-        "BAA_WARNINGS_AS_ERRORS": "OFF"
+        "BAA_WARNINGS_AS_ERRORS": "OFF",
+        "BAA_BOOTSTRAP_COMPILER": "$env{BAA_BOOTSTRAP_COMPILER}"
       }
     },
     {
@@ -62,7 +63,8 @@
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
         "BAA_ENABLE_WARNINGS": "ON",
-        "BAA_WARNINGS_AS_ERRORS": "OFF"
+        "BAA_WARNINGS_AS_ERRORS": "OFF",
+        "BAA_BOOTSTRAP_COMPILER": "$env{BAA_BOOTSTRAP_COMPILER}"
       }
     },
     {

@@ -304,45 +304,26 @@ The parser-facing lexer API (`src/frontend/lexer.c`) transforms raw bytes into `
 
 ### 2.1. Internal Structure
 
-The Lexer now supports **Nested Includes** via a state stack and **Macro Definitions**.
+The C lexer surface is now a compatibility wrapper around the Baa scanner state. C owns parser-visible `Token` values, source buffers, dependency path copies, include resolution, and diagnostic source registration; Baa owns token classification, preprocessing state, macro substitution, conditional skipping, and source-stack cursor movement.
 
 ```c
-// Represents the state of a single file being parsed
 typedef struct {
-    char* source;       // Full source code buffer (owned by this state)
-    char* cur_char;     // Current reading pointer
-    const char* filename; // اسم الملف الحالي
+    char* source;          // مخزن المصدر
+    char* cur_char;        // مؤشر القراءة الحالي
+    const char* filename;  // اسم الملف الحالي
     int line;
     int col;
 } LexerState;
 
-// Definition (Macro)
 typedef struct {
-    char* name;  // اسم الماكرو
-    char* value; // القيمة الاستبدالية
-} Macro;
-
-// The main Lexer context
-typedef struct {
-    // الحالة الحالية
-    LexerState state;
-
-    // مكدس التضمين (Include Stack)
-    LexerState stack[10]; // أقصى عمق للتضمين: 10
+    LexerState state;      // الحالة الحالية المعروضة للتشخيص
+    const char* const* include_dirs;
+    size_t include_dir_count;
+    LexerState stack[10];  // سلسلة التضمين المعروضة للتشخيص
     int stack_depth;
-
-    // حالة المعالج القبلي (Preprocessor State)
-    Macro macros[100];    // جدول الماكروهات (حد أقصى 100)
-    int macro_count;      // عدد الماكروهات المعرفة
-    bool skipping;        // هل نحن في وضع التخطي؟ (مُشتق من مكدس الشروط)
-
-    // مكدس الشروط (#إذا_عرف/#إذا_لم_يعرف/#وإلا/#نهاية) لدعم التعشيش بشكل صحيح
-    struct {
-        unsigned char parent_active;
-        unsigned char cond_true;
-        unsigned char in_else;
-    } if_stack[32];
-    int if_depth;
+    char** dependency_paths;
+    size_t dependency_count;
+    size_t dependency_capacity;
 } Lexer;
 ```
 
@@ -350,78 +331,19 @@ typedef struct {
 
 | Limit | Value | Description |
 |-------|-------|-------------|
-| Max Include Depth | 10 | `stack[10]` - maximum nested `#تضمين` |
-| Max Macros | 100 | `macros[100]` - maximum `#تعريف` macros |
-| Max Conditional Nesting | 32 | `if_stack[32]` - maximum nested `#إذا_عرف` |
+| Max include chain exposed to C diagnostics | 10 | `stack[10]` mirrors the active Baa source stack |
+| Max Baa-owned source records | 64 | `BAA_LEXER_BRIDGE_MAX_SOURCES` bounds root/include buffers retained by the bridge |
 
 ### 2.2. Preprocessor Logic
 
-The preprocessor is integrated directly into the `lexer_next_token` function. It intercepts directives starting with `#` before tokenizing normal code.
+The preprocessor is implemented in `src/frontend/lexer_state_baa0.baa` and called through `src/frontend/lexer_baa_bridge.c`. The Baa scanner handles:
 
-#### 2.2.1. Definitions (`#تعريف`)
+- `#تعريف` and `#الغاء_تعريف` macro state.
+- `#إذا_عرف`, `#إذا_لم_يعرف`, `#وإلا`, and `#نهاية` conditional nesting.
+- `#تضمين` source switching through the C include service.
+- Macro value substitution before tokens are copied into parser-owned `Token` structures.
 
-When `#تعريف NAME VALUE` is encountered:
-
-1. The name and value are parsed as strings.
-2. They are stored in the `macros` table.
-3. When the Lexer later encounters an `IDENTIFIER`:
-    - It checks the macro table
-    - If found, replaces the token's value with the macro value
-    - Updates the token type based on the value (INT if numeric, STRING if quoted, IDENTIFIER otherwise)
-
-#### 2.2.2. Conditionals (`#إذا_عرف`, `#إذا_لم_يعرف`)
-
-When `#إذا_عرف NAME` is encountered:
-
-1. The lexer checks if `NAME` exists in the macro table.
-2. If it exists, normal parsing continues.
-3. If not, the lexer enters **Skipping Mode**.
-4. In Skipping Mode, all tokens are discarded until `#وإلا` or `#نهاية` is found.
-
-`#إذا_لم_يعرف NAME` uses the same conditional stack but inverts the macro-presence test, so its active branch is selected only when `NAME` is absent.
-
-#### 2.2.3. Undefine (`#الغاء_تعريف`)
-
-When `#الغاء_تعريف NAME` is encountered:
-
-1. The lexer searches for `NAME` in the macro table.
-2. If found, the entry is removed (by shifting subsequent entries).
-3. If not found, the directive is ignored.
-
-#### 2.2.4. Include (`#تضمين`)
-
-When `#تضمين "file"` is encountered:
-
-1. The filename is extracted from the quoted string.
-2. Include resolution tries, in order:
-   - source-file directory (`<source_dir>/<path>`),
-   - exact path as written,
-   - `{BAA_HOME}/<path>` (for relative paths),
-   - CLI include paths from `-I` (in the user-provided order),
-   - for bare names: `<source_dir>/stdlib/<name>`, `stdlib/<name>`, `{BAA_STDLIB}/<name>`, `{BAA_HOME}/stdlib/<name>`.
-3. The first successful candidate is normalized to a canonical active path.
-4. The normalized path is checked against the current include stack to reject cycles early.
-5. The selected file is read into memory.
-6. The current lexer state is pushed onto the include stack.
-7. The lexer state is updated to point to the new file's content.
-8. When EOF is reached, the previous state is popped and restored.
-
-#### 2.2.5. Conditional Stack Implementation
-
-The preprocessor supports nested conditionals via `if_stack[32]`:
-
-| Field | Purpose |
-|-------|---------|
-| `parent_active` | Was the parent conditional block active? |
-| `cond_true` | Is the current condition (or branch) true? |
-| `in_else` | Are we currently in the `#وإلا` (else) branch? |
-
-**Nesting rules:**
-- Maximum 32 nested conditional levels
-- `#إذا_عرف` and `#إذا_لم_يعرف` push a new level onto `if_stack`
-- `#وإلا` toggles `cond_true` within the current level
-- `#نهاية` pops the current level
-- `skipping` mode is computed from the stack state
+The C side still resolves include candidates in this order: source-file directory, exact path as written, `{BAA_HOME}/<path>` for relative paths, CLI `-I` paths, then standard-library lookup for bare names.
 
 ### 2.3. Key Features
 

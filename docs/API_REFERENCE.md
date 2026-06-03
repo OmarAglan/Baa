@@ -96,7 +96,11 @@ Handles UTF-8 string processing, tokenization, and **preprocessing**.
 ### `lexer_init`
 
 ```c
-void lexer_init(Lexer* l, char* src, const char* filename)
+void lexer_init(Lexer* l,
+                char* src,
+                const char* filename,
+                const char* const* include_dirs,
+                size_t include_dir_count)
 ```
 
 Initializes a new Lexer instance.
@@ -106,6 +110,8 @@ Initializes a new Lexer instance.
 | `l` | `Lexer*` | Pointer to Lexer struct to initialize |
 | `src` | `char*` | Source code buffer (mutable for internal pointer usage) |
 | `filename` | `const char*` | Name of the file (for error reporting) |
+| `include_dirs` | `const char* const*` | Optional `-I` include search paths |
+| `include_dir_count` | `size_t` | Number of include search paths |
 
 **Behavior:**
 
@@ -113,7 +119,7 @@ Initializes a new Lexer instance.
 - Sets up position pointers (`cur_char`) to start of source.
 - Detects and skips UTF-8 BOM (Byte Order Mark: `0xEF 0xBB 0xBF`) if present.
 - Initializes line counter to 1.
-- Resets preprocessor state (`macro_count = 0`, `skipping = false`).
+- Initializes dependency tracking and the Baa-backed scanner bridge.
 
 ---
 
@@ -123,7 +129,7 @@ Initializes a new Lexer instance.
 Token lexer_next_token(Lexer* l)
 ```
 
-Consumes input and returns the next valid token. **Handles preprocessor directives internally.**
+Consumes input and returns the next valid token. **Delegates tokenization and preprocessing to the Baa scanner.**
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
@@ -135,12 +141,12 @@ Consumes input and returns the next valid token. **Handles preprocessor directiv
 
 - Skips whitespace and comments (`//`).
 - **Preprocessor:**
-  - Handles `#تعريف <name> <value>` (define) to register macros.
+  - Handles `#تعريف <name> <value>` (define) in Baa-owned scanner state.
   - Handles `#إذا_عرف <name>` (ifdef) to conditionally compile code.
   - Handles `#إذا_لم_يعرف <name>` (ifndef) to conditionally compile code when a macro is absent.
   - Handles `#وإلا` (else) and `#نهاية` (endif) for conditional blocks.
-  - Handles `#تضمين "file"` (include) to push new files onto the stack.
-  - Handles `#الغاء_تعريف <name>` (undefine) to remove macro definitions.
+  - Handles `#تضمين "file"` (include) through the C include service.
+  - Handles `#الغاء_تعريف <name>` (undefine) in Baa-owned scanner state.
   - Replaces identifiers with macro values if defined.
 - Identifies keywords, literals, and operators.
 - Handles Arabic semicolon `؛`.
@@ -182,7 +188,7 @@ Entry point for the parsing phase.
 
 ```c
 Lexer lexer;
-lexer_init(&lexer, source_code, "filename.baa");
+lexer_init(&lexer, source_code, "filename.baa", NULL, 0);
 Node* ast = parse(&lexer);
 // Use ast...
 ```
@@ -4147,18 +4153,9 @@ Runs the built-in updater.
 
 ## 12. Data Structures
 
-### 11.1. Preprocessor Structures
-
-### Lexer & Preprocessor Structures
+### 11.1. Lexer Structures
 
 ```c
-// Macro Definition
-typedef struct {
-    char* name;
-    char* value;
-} Macro;
-
-// State for a single file
 typedef struct {
     char* source;
     char* cur_char;
@@ -4167,24 +4164,15 @@ typedef struct {
     int col;
 } LexerState;
 
-// Lexer State
 typedef struct {
-    LexerState state;       // Current file state
-    LexerState stack[10];   // Include stack (max depth: 10)
+    LexerState state;
+    const char* const* include_dirs;
+    size_t include_dir_count;
+    LexerState stack[10];
     int stack_depth;
-    
-    // Preprocessor
-    Macro macros[100];      // Defined macros
-    int macro_count;
-    bool skipping;          // True if inside disabled #if block
-
-    // Condition Stack (#إذا_عرف/#إذا_لم_يعرف/#وإلا/#نهاية)
-    struct {
-        unsigned char parent_active;
-        unsigned char cond_true;
-        unsigned char in_else;
-    } if_stack[32];
-    int if_depth;
+    char** dependency_paths;
+    size_t dependency_count;
+    size_t dependency_capacity;
 } Lexer;
 ```
 

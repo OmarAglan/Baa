@@ -61,6 +61,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - **C lexer removal checkpoint**:
   - Removed `src/frontend/lexer_tokens.c`, `BAA_USE_BAA_LEXER`, and the internal `baa_stage0` C fallback.
   - Final compiler builds now require `BAA_BOOTSTRAP_COMPILER` to point at an existing `baa` compiler that can compile the Baa lexer object.
+  - Updated CMake presets and the build-profile guard so profile builds carry the required bootstrap compiler setting.
   - Updated `lexer-token-stream` and `lexer-dependencies` so they compare Baa scanner-state output against committed snapshots instead of compiling a live C lexer baseline.
 
 ### Remaining

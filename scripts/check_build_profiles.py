@@ -66,6 +66,9 @@ def main() -> int:
         if cache.get("BAA_ENABLE_WARNINGS") != "ON":
             print(f"build-profiles: {name} must enable BAA_ENABLE_WARNINGS")
             return 1
+        if not cache.get("BAA_BOOTSTRAP_COMPILER"):
+            print(f"build-profiles: {name} must set BAA_BOOTSTRAP_COMPILER")
+            return 1
         if name.endswith("-verify") and cache.get("BAA_WARNINGS_AS_ERRORS") != "ON":
             print(f"build-profiles: {name} must enable BAA_WARNINGS_AS_ERRORS")
             return 1

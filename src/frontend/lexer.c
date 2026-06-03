@@ -492,9 +492,6 @@ void lexer_init(Lexer* l,
     if (!l) return;
 
     l->stack_depth = 0;
-    l->macro_count = 0;
-    l->skipping = false;
-    l->if_depth = 0;
     l->include_dirs = include_dirs;
     l->include_dir_count = include_dir_count;
     l->dependency_paths = NULL;

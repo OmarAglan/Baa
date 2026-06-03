@@ -61,7 +61,7 @@ Additional build-maturity guards:
 - `scripts/qa_selfhost_pilot.py` validates the mixed C+Baa token-name pilot by linking a Baa0 object with a generated C parity harness.
 - `scripts/qa_phase45_handoff.py` creates the Phase 4.5 handoff evidence bundle and records local platform signoff status.
 - `scripts/qa_stage0_manifest.py` validates the v0.9.0.1 Stage-0 snapshot tag and frozen artifact Git object IDs.
-- `scripts/qa_mixed_harness.py` validates reusable mixed C+Baa targets, including token-name parity, the Baa lexer candidate bridge, C lexer token-stream snapshots, and lexer diagnostic snapshots.
+- `scripts/qa_mixed_harness.py` validates reusable mixed C+Baa targets, including token-name parity, Baa scanner-state token/dependency snapshots, and lexer diagnostic snapshots.
 
 ### Test Metadata Contract
 

@@ -36,13 +36,13 @@ It delegates to `qa_mixed_harness.py --target token-names`.
 The production Baa-backed lexer bridge is built through CMake, not the mixed harness:
 
 ```powershell
-cmake -B build -G "MinGW Makefiles"
+cmake -B build -G "MinGW Makefiles" -DBAA_BOOTSTRAP_COMPILER="path\to\baa.exe"
 cmake --build build
 ```
 
-`BAA_USE_BAA_LEXER` is ON by default. When `BAA_BOOTSTRAP_COMPILER` is not provided, CMake builds an internal C-lexer `baa_stage0` target and uses it to compile `src/frontend/lexer_state_baa0.baa` into the final compiler. Use `-DBAA_USE_BAA_LEXER=OFF` only for the explicit C-lexer rollback build.
+The production compiler no longer contains a C lexer fallback. `BAA_BOOTSTRAP_COMPILER` must point at an existing `baa` compiler so CMake can compile `src/frontend/lexer_state_baa0.baa` into the final compiler.
 
-Normal QA now owns the promoted production lexer signoff in `tests/integration/backend/backend_lexer_production_signoff_test.baa` and focused negative preprocessor diagnostics under `tests/neg/`. The mixed harness remains the C-baseline parity oracle for token streams, dependency rows, and structured scanner diagnostics until the C lexer implementation is actually removed.
+Normal QA owns the promoted production lexer signoff in `tests/integration/backend/backend_lexer_production_signoff_test.baa` and focused negative preprocessor diagnostics under `tests/neg/`. The mixed harness now keeps the remaining lexer migration checks stable through committed token-stream, dependency, and diagnostic snapshots.
 
 ---
 
@@ -70,7 +70,7 @@ Compiles `src/frontend/lexer_token_names_baa0.baa`, links it with a generated C 
 
 ### `lexer-token-stream`
 
-Builds a C lexer-token dump harness from the current C lexer and compares fixed fixtures against committed JSONL snapshots under:
+Compiles `src/frontend/lexer_state_baa0.baa`, links it with a C host harness, and compares fixed fixtures against committed JSONL snapshots under:
 
 ```text
 tests/snapshots/mixed_harness/lexer_token_stream/
@@ -85,11 +85,17 @@ Each row records:
 - line, column, and byte length,
 - normalized token filename.
 
-The v0.9.1 Baa lexer candidate slot now compiles `src/frontend/lexer_state_baa0.baa`, whose harness-facing declarations live in `src/frontend/lexer_state_baa0.baahd`, links it with a C host harness, and emits token-stream JSONL directly from the Baa-owned scanner state. C still owns fixture file reads, snapshot comparison, and token-name formatting, but cursor movement, token classification, conditional preprocessing, include-source stack switching, macro value substitution, and Arabic-Indic numeric value-mode parity are exercised through Baa before comparison against the committed C-baseline snapshots.
+The harness-facing declarations live in `src/frontend/lexer_state_baa0.baahd`. C still owns fixture file reads, snapshot comparison, and token-name formatting, but cursor movement, token classification, conditional preprocessing, include-source stack switching, macro value substitution, and Arabic-Indic numeric value-mode parity are exercised through Baa before comparison against the committed snapshots.
 
 ### `lexer-dependencies`
 
-Builds both the current C lexer dependency dump and the Baa scanner-state candidate, then compares normalized dependency JSONL rows for the token-stream fixtures. This locks the migration boundary for root source paths and discovered include paths without changing the production `lexer_get_dependencies` API.
+Compiles the Baa scanner-state candidate and compares normalized dependency JSONL rows for the token-stream fixtures against committed snapshots under:
+
+```text
+tests/snapshots/mixed_harness/lexer_dependencies/
+```
+
+This locks the migration boundary for root source paths and discovered include paths without changing the production `lexer_get_dependencies` API.
 
 ### `lexer-diagnostics`
 
@@ -117,16 +123,16 @@ The target also drives snapshot-backed real fixtures through the Baa-owned scann
 
 ## 4. Ownership Boundary
 
-The mixed-harness Baa scanner-state boundary is intentionally non-production. The default production bridge uses the same scanner behind the C lexer API and takes C ownership of parser-visible heap strings, included source buffers, dependency paths, diagnostics, and cleanup. Included source buffers must also be registered with the diagnostic subsystem so source-line rendering matches the C lexer baseline.
+The mixed-harness Baa scanner-state boundary is intentionally non-production. The default production bridge uses the same scanner behind the parser-facing C API and takes C ownership of parser-visible heap strings, included source buffers, dependency paths, diagnostics, and cleanup. Included source buffers must also be registered with the diagnostic subsystem so source-line rendering matches production diagnostics.
 
 | Data | Owner | Contract |
 | --- | --- | --- |
 | Root source buffer | C harness | Allocated by the harness, passed to `محللباءهيئ`, released after `محللباءنظف`. |
-| Baa lexer-state header | Baa source | `src/frontend/lexer_state_baa0.baahd` declares the temporary scanner-state ABI until the production wrapper replaces the migration boundary. |
+| Baa lexer-state header | Baa source | `src/frontend/lexer_state_baa0.baahd` declares the scanner-state ABI consumed by the production build and mixed harness. |
 | Included source buffers | C harness | Resolved, dependency-recorded, and released by the host include service. |
 | Token value text | C harness | Reconstructed from Baa-returned spans/pointers; Baa does not allocate token strings. |
 | Macro names/values | Baa scanner state | Stored as borrowed spans into active source buffers; valid until scanner cleanup. |
-| Dependency paths | C harness / C lexer | Copied into C-owned arrays for comparison and freed by the owning C side. |
+| Dependency paths | C harness / production bridge | Copied into C-owned arrays for comparison and freed by the owning C side. |
 | Diagnostic text | C harness / compiler diagnostics | Baa returns structured code/location only; Arabic message text stays in the C diagnostic layer until production replacement. |
 
 ---
@@ -137,6 +143,7 @@ Regenerate snapshots only after an intentional lexer behavior change:
 
 ```bash
 python scripts/qa_mixed_harness.py --target lexer-token-stream --update-snapshots
+python scripts/qa_mixed_harness.py --target lexer-dependencies --update-snapshots
 python scripts/qa_mixed_harness.py --target lexer-diagnostics --update-snapshots
 ```
 

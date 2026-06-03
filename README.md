@@ -62,13 +62,15 @@ cmake --build build-linux -j
 - توجد حالة lexer مكتوبة بباء في `src/frontend/lexer_state_baa0.baa`.
 - يوجد عقد ترويسة باء لها في `src/frontend/lexer_state_baa0.baahd`.
 - مسار lexer المكتوب بباء هو المسار الإنتاجي الافتراضي الآن.
-- يبقى lexer المكتوب بـ C كمرحلة `baa_stage0` وكمسار رجوع صريح عبر `-DBAA_USE_BAA_LEXER=OFF` إلى أن تكتمل خطوة الحذف.
+- حُذف lexer المكتوب بـ C؛ بناء نسخة جديدة من المصدر يتطلب مصرّف باء موجوداً عبر `-DBAA_BOOTSTRAP_COMPILER=...`.
 
 بعد lexer، تُطبّق نفس القاعدة على parser ثم IR ثم بقية الطبقات: عقد باء، حاضنة توافق، غلاف إنتاجي، حذف C، ثم تنظيف الحاضنة المؤقتة.
 
 ## أوامر مفيدة
 
 ```powershell
+cmake -B build -G "MinGW Makefiles" -DBAA_BOOTSTRAP_COMPILER="path\to\baa.exe"
+cmake --build build
 build\baa.exe --help
 build\baa.exe --version
 build\baa.exe --dump-ir examples\hello_world.baa

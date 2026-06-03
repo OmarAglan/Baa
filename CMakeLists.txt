@@ -6,9 +6,8 @@ set(CMAKE_C_STANDARD 11)
 # Build options
 option(BAA_ENABLE_WARNINGS "Enable compiler warnings for Baa" ON)
 option(BAA_WARNINGS_AS_ERRORS "Treat warnings as errors for hardening builds" OFF)
-option(BAA_USE_BAA_LEXER "Build the compiler with the Baa-backed lexer bridge" ON)
 set(BAA_REPRODUCIBLE_BUILD_DATE "" CACHE STRING "Override baa --version build date for reproducible builds")
-set(BAA_BOOTSTRAP_COMPILER "" CACHE FILEPATH "Optional existing Baa compiler used to build Baa lexer objects")
+set(BAA_BOOTSTRAP_COMPILER "" CACHE FILEPATH "Existing Baa compiler used to build Baa lexer objects")
 
 # List of source files
 set(BAA_BASE_SOURCES
@@ -91,42 +90,33 @@ endfunction()
 
 set(BAA_FINAL_SOURCES ${BAA_BASE_SOURCES} ${BAA_PLATFORM_SOURCES})
 
-if(BAA_USE_BAA_LEXER)
-    set(BAA_LEXER_STATE_OBJECT "${CMAKE_BINARY_DIR}/lexer_state_baa0_baa.o")
-    if(BAA_BOOTSTRAP_COMPILER)
-        if(NOT EXISTS "${BAA_BOOTSTRAP_COMPILER}")
-            message(FATAL_ERROR "BAA_BOOTSTRAP_COMPILER must point to an existing baa compiler.")
-        endif()
-        set(BAA_LEXER_BOOTSTRAP_COMMAND "${BAA_BOOTSTRAP_COMPILER}")
-        set(BAA_LEXER_BOOTSTRAP_DEPENDS)
-    else()
-        add_executable(baa_stage0 ${BAA_BASE_SOURCES} ${BAA_PLATFORM_SOURCES})
-        baa_apply_common_target_settings(baa_stage0)
-        set(BAA_LEXER_BOOTSTRAP_COMMAND "$<TARGET_FILE:baa_stage0>")
-        set(BAA_LEXER_BOOTSTRAP_DEPENDS baa_stage0)
-    endif()
+set(BAA_LEXER_STATE_OBJECT "${CMAKE_BINARY_DIR}/lexer_state_baa0_baa.o")
+if(NOT BAA_BOOTSTRAP_COMPILER)
+    message(FATAL_ERROR "BAA_BOOTSTRAP_COMPILER is required after C lexer removal. Point it to an existing baa compiler.")
+endif()
+if(NOT EXISTS "${BAA_BOOTSTRAP_COMPILER}")
+    message(FATAL_ERROR "BAA_BOOTSTRAP_COMPILER must point to an existing baa compiler.")
+endif()
 
-    add_custom_command(
-        OUTPUT "${BAA_LEXER_STATE_OBJECT}"
-        COMMAND "${BAA_LEXER_BOOTSTRAP_COMMAND}" -O2 --verify-ir --verify-ssa -c src/frontend/lexer_state_baa0.baa -o "${BAA_LEXER_STATE_OBJECT}"
-        DEPENDS
-            ${BAA_LEXER_BOOTSTRAP_DEPENDS}
-            src/frontend/lexer_state_baa0.baa
-            src/frontend/lexer_state_baa0.baahd
-            stdlib/baalib.baahd
-        WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
-        VERBATIM
-    )
-    set_source_files_properties("${BAA_LEXER_STATE_OBJECT}" PROPERTIES GENERATED TRUE EXTERNAL_OBJECT TRUE LANGUAGE C)
-    list(APPEND BAA_FINAL_SOURCES "${BAA_LEXER_STATE_OBJECT}")
+add_custom_command(
+    OUTPUT "${BAA_LEXER_STATE_OBJECT}"
+    COMMAND "${BAA_BOOTSTRAP_COMPILER}" -O2 --verify-ir --verify-ssa -c src/frontend/lexer_state_baa0.baa -o "${BAA_LEXER_STATE_OBJECT}"
+    DEPENDS
+        src/frontend/lexer_state_baa0.baa
+        src/frontend/lexer_state_baa0.baahd
+        stdlib/baalib.baahd
+    WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
+    VERBATIM
+)
+set_source_files_properties("${BAA_LEXER_STATE_OBJECT}" PROPERTIES GENERATED TRUE EXTERNAL_OBJECT TRUE LANGUAGE C)
+list(APPEND BAA_FINAL_SOURCES "${BAA_LEXER_STATE_OBJECT}")
+
+if(CMAKE_BINARY_DIR STREQUAL CMAKE_SOURCE_DIR)
+    message(FATAL_ERROR "In-source builds are not supported.")
 endif()
 
 add_executable(baa ${BAA_FINAL_SOURCES})
 baa_apply_common_target_settings(baa)
-
-if(BAA_USE_BAA_LEXER)
-    target_compile_definitions(baa PRIVATE BAA_USE_BAA_LEXER=1)
-endif()
 
 # نبقي مسارات التضمين العامة مغلقة عمداً.
 # يجب أن تعتمد الملفات على ترويساتها المحلية أو على مسارات نسبية صريحة بين المكونات.

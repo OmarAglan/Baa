@@ -136,9 +136,7 @@ typedef struct {
     char* value; // القيمة الاستبدالية
 } Macro;
 
-#ifdef BAA_USE_BAA_LEXER
 #define BAA_LEXER_BRIDGE_MAX_SOURCES 64u
-#endif
 
 /**
  * @struct LexerState
@@ -186,7 +184,6 @@ typedef struct {
     size_t dependency_count;
     size_t dependency_capacity;
 
-#ifdef BAA_USE_BAA_LEXER
     // مصادر يملكها جسر المحلل المكتوب بباء حتى نهاية عمر المحلل.
     struct {
         char* source;
@@ -197,7 +194,6 @@ typedef struct {
         bool owns_filename;
     } baa_sources[BAA_LEXER_BRIDGE_MAX_SOURCES];
     size_t baa_source_count;
-#endif
 } Lexer;
 
 /**

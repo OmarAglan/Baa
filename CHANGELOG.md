@@ -21,7 +21,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
   - Added a mixed-harness-only extended scanner ABI that returns token value spans/modes for identifiers, integer literals, and string literals without introducing token heap ownership yet.
   - Added a narrow Baa-owned conditional-preprocessor checkpoint for `#تعريف`, `#الغاء_تعريف`, `#إذا_عرف`, `#وإلا`, and `#نهاية` skipping in the lexer-state harness without replacing the production lexer.
   - Extended the Baa scanner-state path with include-source stack handling, macro value spans, macro substitution, and `#إذا_لم_يعرف` conditional support.
-  - Added C-baseline support for `#إذا_لم_يعرف` so the mixed harness can lock parity for both defined and undefined conditional branches.
+  - Added `#إذا_لم_يعرف` fixture and snapshot coverage so the mixed harness can lock parity for both defined and undefined conditional branches.
   - Added `src/frontend/lexer_state_baa0.baahd` as the Baa header-format contract for the lexer-state ABI.
   - Extended the Baa scanner-state path to preserve char literal and raw byte string token parity, including escaped quote characters and UTF-8 value spans.
   - Tightened Baa scanner-state identifier starts to Arabic UTF-8 starts so unknown bytes now flow through the invalid-token diagnostic path instead of being classified as identifiers.
@@ -31,10 +31,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
   - The lexer-state harness now derives real-fixture expectations from committed token-stream snapshots instead of hand-maintained token rows.
   - The lexer-state harness now verifies token value parity for non-preprocessor fixtures, including Arabic-Indic digit normalization for integer values.
   - The lexer-state harness now includes `conditional_macros.baa` snapshot parity so active/inactive conditional branches match the C baseline token stream.
-  - Promoted `lexer-token-stream` candidate checks from the C callback bridge to the Baa-owned scanner-state implementation, while retaining C-baseline JSONL snapshots as the comparison oracle.
+  - Promoted `lexer-token-stream` candidate checks from the C callback bridge to the Baa-owned scanner-state implementation, using committed JSONL snapshots as the comparison oracle.
   - Added `conditional_ifndef.baa` token-stream coverage for `#إذا_لم_يعرف` and `#وإلا` parity.
   - Added diagnostic snapshot coverage for unclosed `#إذا_لم_يعرف` blocks and generalized the EOF conditional diagnostic to refer to an unclosed preprocessor condition.
-  - Added `lexer-dependencies`, a mixed-harness gate that compares Baa scanner-state dependency paths against the current C lexer baseline.
+  - Added `lexer-dependencies`, a mixed-harness gate that compares Baa scanner-state dependency paths against committed dependency snapshots.
   - Added Baa scanner-state structured diagnostic smoke checks for unclosed preprocessor conditions and include-cycle detection without replacing production diagnostics.
   - Added `char_raw_literals.baa` token-stream coverage for `حرف`, escaped char literals, `ط٨*`, and `خام"..."` parity.
   - Added production diagnostic snapshots and exact Baa scanner-state code/location anchors for bad string escapes, bad char escapes, unclosed strings, unclosed chars, unknown bytes, unclosed preprocessor conditions, and include cycles.
@@ -47,9 +47,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
   - Matched production lexer diagnostic snapshots under the opt-in bridge, including unknown-byte hex details and include-cycle source-line anchors from included buffers.
   - Completed Windows opt-in release signoff with strict build, full QA, stress/fuzz-lite, determinism, bootstrap, and mixed-harness coverage.
 - **Default production lexer path**:
-  - Switched `BAA_USE_BAA_LEXER` to ON by default, so the final `baa` target now uses the Baa-backed lexer bridge in normal builds.
-  - Added an internal C-lexer `baa_stage0` bootstrap target for clean builds when `BAA_BOOTSTRAP_COMPILER` is not provided.
-  - Preserved `-DBAA_USE_BAA_LEXER=OFF` as the explicit C-lexer fallback until the later C implementation removal checkpoint.
+  - Switched the final `baa` target to the Baa-backed lexer bridge in normal builds.
+  - Added bootstrap wiring so `BAA_BOOTSTRAP_COMPILER` can compile `src/frontend/lexer_state_baa0.baa` into the final compiler.
 - **Production lexer coverage promotion**:
   - Added a normal backend runtime signoff for the default Baa-backed lexer path covering Arabic UTF-8 tokens, Arabic-Indic literals, escaped char/raw string tokens, Arabic comma tokenization, macro substitution, conditional preprocessing, and include resolution.
   - Added focused negative tests for `#وإلا` without a condition, duplicate `#وإلا`, `#نهاية` without a condition, unknown preprocessor directives, and missing include files.
@@ -57,11 +56,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - **Windows toolchain staging hardening**:
   - Made Windows ASCII staging filenames process-unique so concurrent `baa.exe` invocations do not overwrite or delete each other's assembler/linker inputs.
 
+### Changed
+
+- **C lexer removal checkpoint**:
+  - Removed `src/frontend/lexer_tokens.c`, `BAA_USE_BAA_LEXER`, and the internal `baa_stage0` C fallback.
+  - Final compiler builds now require `BAA_BOOTSTRAP_COMPILER` to point at an existing `baa` compiler that can compile the Baa lexer object.
+  - Updated `lexer-token-stream` and `lexer-dependencies` so they compare Baa scanner-state output against committed snapshots instead of compiling a live C lexer baseline.
+
 ### Remaining
 
 - **Baa-owned lexer implementation**:
-  - Remove the C lexer and lexer-only migration harnesses only after the default Baa-backed production path remains green and regular QA plus mixed-harness parity carry the coverage.
-  - Keep the C lexer available as `baa_stage0`/`-DBAA_USE_BAA_LEXER=OFF` rollback until that removal checkpoint.
+  - Retire lexer-only migration harnesses, temporary fixtures/snapshots, and bridge files once normal production tests own the remaining coverage.
+  - Run the post-migration Baa lexer readability pass using the full stable Baa language surface where it improves maintainability.
 - **Scope control**:
   - No further language feature expansion is planned for v0.9.1.5 beyond consuming the v0.9.1.4 lexer-ergonomics surface; the checkpoint is a relocation/correctness milestone before v0.9.2 parser work.
 

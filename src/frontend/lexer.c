@@ -1,10 +1,11 @@
-﻿/**
+/**
  * @file lexer.c
- * @brief يقوم بتحويل الكود المصدري المكتوب باللغة العربية (UTF-8) إلى وحدات لفظية (Tokens).
- * @version 0.2.9 (Input & UX Polish)
+ * @brief جسر المحلل اللفظي المكتوب بباء مع واجهة الواجهة الأمامية المكتوبة بـ C.
+ * @version 0.9.1.5
  */
 
 #include "frontend_internal.h"
+
 #include <ctype.h>
 #include <stdarg.h>
 
@@ -21,75 +22,12 @@
 
 #define LEX_PATH_BUFFER_SIZE PATH_MAX
 
-#if defined(BAA_USE_BAA_LEXER) && defined(__GNUC__)
-#define LEX_C_LEXER_ONLY __attribute__((unused))
-#else
-#define LEX_C_LEXER_ONLY
-#endif
-
-#ifdef BAA_USE_BAA_LEXER
-static void lex_baa_bridge_init(Lexer* l, char* src, const char* filename);
-static void lex_baa_bridge_cleanup(Lexer* l);
-#endif
+void lex_baa_bridge_init(Lexer* l, char* src, const char* filename);
+void lex_baa_bridge_cleanup(Lexer* l);
 
 static int is_utf8_cont_byte(unsigned char b)
 {
     return ((b & 0xC0u) == 0x80u);
-}
-
-static LEX_C_LEXER_ONLY bool lex_decode_arabic_escape(Lexer* l, unsigned char* out_byte)
-{
-    if (!l || !out_byte) return false;
-
-    const unsigned char b0 = (unsigned char)l->state.cur_char[0];
-    const unsigned char b1 = (unsigned char)l->state.cur_char[1];
-
-    // \س => سطر جديد (LF)
-    if (b0 == 0xD8 && b1 == 0xB3) {
-        *out_byte = (unsigned char)'\n';
-        l->state.cur_char += 2;
-        l->state.col += 2;
-        return true;
-    }
-    // \ت => Tab
-    if (b0 == 0xD8 && b1 == 0xAA) {
-        *out_byte = (unsigned char)'\t';
-        l->state.cur_char += 2;
-        l->state.col += 2;
-        return true;
-    }
-    // \ر => Carriage Return
-    if (b0 == 0xD8 && b1 == 0xB1) {
-        *out_byte = (unsigned char)'\r';
-        l->state.cur_char += 2;
-        l->state.col += 2;
-        return true;
-    }
-    // \٠ => NULL
-    if (b0 == 0xD9 && b1 == 0xA0) {
-        *out_byte = 0;
-        l->state.cur_char += 2;
-        l->state.col += 2;
-        return true;
-    }
-
-    return false;
-}
-
-static LEX_C_LEXER_ONLY bool lex_append_byte(char** buf, size_t* len, size_t* cap, unsigned char byte)
-{
-    if (!buf || !len || !cap || !*buf) return false;
-
-    if (*len + 1 >= *cap) {
-        size_t new_cap = (*cap < 32) ? 32 : (*cap * 2);
-        char* new_buf = (char*)realloc(*buf, new_cap);
-        if (!new_buf) return false;
-        *buf = new_buf;
-        *cap = new_cap;
-    }
-
-    (*buf)[(*len)++] = (char)byte;
-    return true;
 }
 
 /**
@@ -124,10 +62,6 @@ static void lex_fatal(Lexer* l, const char* fmt, ...)
 
 /**
  * @brief التحقق من صحة تسلسل UTF-8 بدءاً من `s`.
- *
- * عند النجاح:
- * - تُخزّن طول التسلسل في out_len (1..4)
- * - تُرجع true
  */
 static bool lex_utf8_validate_at(const char* s, int* out_len)
 {
@@ -144,7 +78,7 @@ static bool lex_utf8_validate_at(const char* s, int* out_len)
         const unsigned char b1 = (unsigned char)s[1];
         if (b1 == 0 || !is_utf8_cont_byte(b1)) return false;
         uint32_t cp = ((uint32_t)(b0 & 0x1Fu) << 6) | (uint32_t)(b1 & 0x3Fu);
-        if (cp < 0x80u) return false; // overlong
+        if (cp < 0x80u) return false;
         if (out_len) *out_len = 2;
         return true;
     }
@@ -157,8 +91,8 @@ static bool lex_utf8_validate_at(const char* s, int* out_len)
         uint32_t cp = ((uint32_t)(b0 & 0x0Fu) << 12) |
                       ((uint32_t)(b1 & 0x3Fu) << 6) |
                       (uint32_t)(b2 & 0x3Fu);
-        if (cp < 0x800u) return false; // overlong
-        if (cp >= 0xD800u && cp <= 0xDFFFu) return false; // surrogate
+        if (cp < 0x800u) return false;
+        if (cp >= 0xD800u && cp <= 0xDFFFu) return false;
         if (out_len) *out_len = 3;
         return true;
     }
@@ -198,7 +132,7 @@ static bool lex_path_has_separator(const char* path)
 }
 
 /**
- * @brief هل المسار مطلق (Windows/Linux)؟
+ * @brief هل المسار مطلق على المنصة الحالية؟
  */
 static bool lex_path_is_absolute(const char* path)
 {
@@ -249,7 +183,7 @@ static char* lex_join_paths(Lexer* l, const char* base, const char* leaf)
 }
 
 /**
- * @brief استخراج مسار مجلد الملف الحالي (مع الفاصل الأخير).
+ * @brief استخراج مسار مجلد الملف الحالي.
  */
 static char* lex_dirname_from_path(Lexer* l, const char* path)
 {
@@ -375,26 +309,6 @@ static bool lex_paths_equivalent(Lexer* l, const char* lhs, const char* rhs)
 }
 
 /**
- * @brief هل سيؤدي التضمين الجديد إلى دورة مع حالة التضمين الحالية؟
- */
-static LEX_C_LEXER_ONLY bool lex_include_would_cycle(Lexer* l, const char* resolved_path)
-{
-    if (!l || !resolved_path || !resolved_path[0]) return false;
-
-    if (l->state.filename && lex_paths_equivalent(l, l->state.filename, resolved_path)) {
-        return true;
-    }
-
-    for (int i = l->stack_depth - 1; i >= 0; --i) {
-        if (l->stack[i].filename && lex_paths_equivalent(l, l->stack[i].filename, resolved_path)) {
-            return true;
-        }
-    }
-
-    return false;
-}
-
-/**
  * @brief بناء رسالة تشخيص عربية لسلسلة دورة التضمين.
  */
 static void lex_fatal_include_cycle(Lexer* l, const char* requested_path, const char* resolved_path)
@@ -454,14 +368,6 @@ static char* lex_try_read_include_candidate(Lexer* l, const char* candidate, cha
 
 /**
  * @brief حل مسار #تضمين وقراءة الملف من أقرب مسار مدعوم.
- *
- * ترتيب البحث:
- * 1) المسار النسبي من مجلد الملف الحالي (مثل C local include).
- * 2) كما كُتب في الكود.
- * 3) إن كان نسبياً: تحت BAA_HOME.
- * 4) مسارات -I من سطر الأوامر بالترتيب.
- * 5) إن كان اسماً مجرداً (بدون / أو \\):
- *    stdlib/ من مجلد الملف الحالي، ثم stdlib/ محلي، ثم BAA_STDLIB، ثم BAA_HOME/stdlib.
  */
 static char* lex_resolve_and_read_include(Lexer* l, const char* requested_path, char** out_resolved_path)
 {
@@ -581,7 +487,10 @@ void lexer_init(Lexer* l,
                 char* src,
                 const char* filename,
                 const char* const* include_dirs,
-                size_t include_dir_count) {
+                size_t include_dir_count)
+{
+    if (!l) return;
+
     l->stack_depth = 0;
     l->macro_count = 0;
     l->skipping = false;
@@ -591,15 +500,14 @@ void lexer_init(Lexer* l,
     l->dependency_paths = NULL;
     l->dependency_count = 0;
     l->dependency_capacity = 0;
-    
-    // تهيئة الحالة الحالية
+    l->baa_source_count = 0;
+
     l->state.source = src;
-    l->state.filename = filename; // تخزين اسم الملف
+    l->state.filename = filename;
     l->state.line = 1;
     l->state.col = 1;
     l->state.cur_char = src;
 
-    // تخطي علامة ترتيب البايت (BOM) لملفات UTF-8 إذا كانت موجودة
     lex_skip_utf8_bom(&l->state);
 
     error_register_source(filename, src);
@@ -610,9 +518,7 @@ void lexer_init(Lexer* l,
         free(root_dep);
     }
 
-#ifdef BAA_USE_BAA_LEXER
     lex_baa_bridge_init(l, src, filename);
-#endif
 }
 
 const char* const* lexer_get_dependencies(const Lexer* lexer, size_t* out_count)
@@ -626,9 +532,7 @@ const char* const* lexer_get_dependencies(const Lexer* lexer, size_t* out_count)
 void lexer_free_dependencies(Lexer* lexer)
 {
     if (!lexer) return;
-#ifdef BAA_USE_BAA_LEXER
     lex_baa_bridge_cleanup(lexer);
-#endif
     for (size_t i = 0; i < lexer->dependency_count; ++i) {
         free(lexer->dependency_paths[i]);
     }
@@ -636,67 +540,6 @@ void lexer_free_dependencies(Lexer* lexer)
     lexer->dependency_paths = NULL;
     lexer->dependency_count = 0;
     lexer->dependency_capacity = 0;
-}
-
-static bool pp_active(const Lexer* l)
-{
-    if (!l) return true;
-    if (l->if_depth <= 0) return true;
-    const int i = l->if_depth - 1;
-    const unsigned char parent_active = l->if_stack[i].parent_active;
-    const unsigned char cond_true = l->if_stack[i].cond_true;
-    const unsigned char in_else = l->if_stack[i].in_else;
-    if (!parent_active) return false;
-    return in_else ? (!cond_true) : (cond_true != 0);
-}
-
-static LEX_C_LEXER_ONLY void pp_recompute_skipping(Lexer* l)
-{
-    if (!l) return;
-    l->skipping = pp_active(l) ? false : true;
-}
-
-/**
- * @brief دالة مساعدة لتقديم المؤشر وتحديث السطر والعمود.
- */
-void advance_pos(Lexer* l) {
-    if (*l->state.cur_char == '\n') {
-        l->state.line++;
-        l->state.col = 1;
-    } else {
-        l->state.col++;
-    }
-    l->state.cur_char++;
-}
-
-/**
- * @brief التحقق مما إذا كان البايت الحالي بداية لمحرف عربي في ترميز UTF-8.
- */
-int is_arabic_start_byte(char c) {
-    unsigned char ub = (unsigned char)c;
-    return (ub >= 0xD8 && ub <= 0xDB);
-}
-
-/**
- * @brief التحقق مما إذا كان الجزء الحالي من النص يمثل رقماً عربياً (٠-٩).
- */
-int is_arabic_digit(const char* c) {
-    unsigned char b1 = (unsigned char)c[0];
-    unsigned char b2 = (unsigned char)c[1];
-    return (b1 == 0xD9 && b2 >= 0xA0 && b2 <= 0xA9);
-}
-
-/**
- * @brief استخراج الوحدة اللفظية التالية.
- */
-// مساعد: إرجاع المحرف الحالي دون تحريك المؤشر
-char peek(Lexer* l) { return *l->state.cur_char; }
-// مساعد: إرجاع المحرف التالي دون تحريك المؤشر
-char peek_next(Lexer* l) {
-    if (!l) return '\0';
-    if (!l->state.cur_char) return '\0';
-    if (*l->state.cur_char == '\0') return '\0';
-    return *(l->state.cur_char + 1);
 }
 
 /**
@@ -720,54 +563,5 @@ static Token lex_finish_token(Lexer* l, Token token)
     return token;
 }
 
-/**
- * @brief إضافة تعريف ماكرو جديد.
- */
-void add_macro(Lexer* l, char* name, char* value) {
-    if (l->macro_count >= 100) {
-        lex_fatal(l, "خطأ قبلي: عدد تعريفات الماكرو تجاوز الحد الأقصى (100).");
-    }
-    l->macros[l->macro_count].name = strdup(name);
-    l->macros[l->macro_count].value = strdup(value);
-    if (!l->macros[l->macro_count].name || !l->macros[l->macro_count].value) {
-        lex_fatal(l, "خطأ قبلي: نفدت الذاكرة أثناء إضافة ماكرو.");
-    }
-    l->macro_count++;
-}
-
-/**
- * @brief إزالة تعريف ماكرو.
- */
-static LEX_C_LEXER_ONLY void remove_macro(Lexer* l, const char* name) {
-    for (int i = 0; i < l->macro_count; i++) {
-        if (strcmp(l->macros[i].name, name) == 0) {
-            free(l->macros[i].name);
-            free(l->macros[i].value);
-            // إزاحة العناصر المتبقية
-            for (int j = i; j < l->macro_count - 1; j++) {
-                l->macros[j] = l->macros[j+1];
-            }
-            l->macro_count--;
-            return;
-        }
-    }
-}
-
-/**
- * @brief البحث عن ماكرو بالاسم.
- */
-char* get_macro_value(Lexer* l, const char* name) {
-    for (int i = 0; i < l->macro_count; i++) {
-        if (strcmp(l->macros[i].name, name) == 0) {
-            return l->macros[i].value;
-        }
-    }
-    return NULL;
-}
-
-#ifdef BAA_USE_BAA_LEXER
 #include "lexer_baa_bridge.c"
-#else
-#include "lexer_tokens.c"
-#endif
 #include "lexer_debug.c"

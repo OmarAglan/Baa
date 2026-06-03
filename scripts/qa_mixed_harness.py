@@ -20,6 +20,7 @@ DEFAULT_LOG_DIR = ROOT / ".baa_mixed_harness_logs"
 DEFAULT_OUT_DIR = ROOT / ".baa_mixed_harness_out"
 SNAPSHOT_DIR = ROOT / "tests" / "snapshots" / "mixed_harness" / "lexer_token_stream"
 DIAGNOSTIC_SNAPSHOT_DIR = ROOT / "tests" / "snapshots" / "mixed_harness" / "lexer_diagnostics"
+DEPENDENCY_SNAPSHOT_DIR = ROOT / "tests" / "snapshots" / "mixed_harness" / "lexer_dependencies"
 LEXER_FIXTURE_DIR = ROOT / "tests" / "fixtures" / "mixed_harness" / "lexer"
 
 PILOT_SRC = ROOT / "src" / "frontend" / "lexer_token_names_baa0.baa"
@@ -1329,79 +1330,7 @@ def _run_lexer_token_stream(
     out_dir: Path,
     update_snapshots: bool,
 ) -> list[CheckResult]:
-    results: list[CheckResult] = []
-    harness_c = out_dir / "lexer_token_dump.c"
-    exe = out_dir / ("lexer_token_dump.exe" if os.name == "nt" else "lexer_token_dump")
-    _write_lexer_dump_harness(harness_c)
-
-    compile_c = _run(
-        "lexer-token-stream-build-c-baseline",
-        [
-            cc,
-            "-std=gnu11",
-            "-finput-charset=UTF-8",
-            "-I",
-            str(ROOT),
-            str(harness_c),
-            str(ROOT / "src" / "frontend" / "lexer.c"),
-            str(ROOT / "src" / "support" / "error.c"),
-            str(ROOT / "src" / "support" / "read_file.c"),
-            "-o",
-            str(exe),
-        ],
-        log_dir,
-    )
-    results.append(compile_c)
-    if not compile_c.passed:
-        return results
-
-    for case_name, case_path in LEXER_CASES:
-        if not case_path.exists():
-            results.append(CheckResult(f"lexer-token-stream:{case_name}", False, 1, 0.0, "missing fixture"))
-            continue
-
-        run, stdout = _run_capture(
-            f"lexer-token-stream-run:{case_name}",
-            [str(exe), str(ROOT), str(case_path)],
-            log_dir,
-        )
-        if not run.passed:
-            results.append(run)
-            continue
-
-        started = time.monotonic()
-        snapshot = SNAPSHOT_DIR / f"{case_name}.jsonl"
-        actual_path = log_dir / f"lexer-token-stream-{case_name}.actual.jsonl"
-        actual_path.write_text(stdout, encoding="utf-8")
-        try:
-            actual = _normalize_jsonl(stdout)
-            if update_snapshots:
-                _write_snapshot(snapshot, actual)
-                detail = "snapshot updated"
-                passed = True
-            else:
-                expected = _read_snapshot(snapshot)
-                diff = _diff_rows(expected, actual)
-                passed = not diff
-                detail = "ok" if passed else diff
-                if diff:
-                    (log_dir / f"lexer-token-stream-{case_name}.diff.txt").write_text(diff + "\n", encoding="utf-8")
-        except RuntimeError as exc:
-            passed = False
-            detail = str(exc)
-        results.append(
-            CheckResult(
-                f"lexer-token-stream:{case_name}",
-                passed,
-                0 if passed else 1,
-                time.monotonic() - started,
-                detail,
-                _rel(snapshot),
-            )
-        )
-
-    results.extend(_run_lexer_candidate_token_stream(baa, cc, log_dir, out_dir, update_snapshots))
-    return results
+    return _run_lexer_candidate_token_stream(baa, cc, log_dir, out_dir, update_snapshots)
 
 
 def _run_lexer_candidate_token_stream(
@@ -1483,14 +1412,14 @@ def _run_lexer_candidate_token_stream(
         try:
             actual = _normalize_jsonl(stdout)
             if update_snapshots:
-                expected = actual
-                detail = "Baa lexer state matched updated baseline"
+                _write_snapshot(snapshot, actual)
+                detail = "snapshot updated"
                 passed = True
             else:
                 expected = _read_snapshot(snapshot)
                 diff = _diff_rows(expected, actual)
                 passed = not diff
-                detail = "Baa lexer state matched baseline" if passed else diff
+                detail = "Baa lexer state matched snapshot" if passed else diff
                 if diff:
                     (log_dir / f"lexer-token-stream-baa-state-{case_name}.diff.txt").write_text(
                         diff + "\n",
@@ -1513,41 +1442,23 @@ def _run_lexer_candidate_token_stream(
     return results
 
 
-def _run_lexer_dependencies(baa: Path, cc: str, log_dir: Path, out_dir: Path) -> list[CheckResult]:
+def _run_lexer_dependencies(
+    baa: Path,
+    cc: str,
+    log_dir: Path,
+    out_dir: Path,
+    update_snapshots: bool,
+) -> list[CheckResult]:
     results: list[CheckResult] = []
     policy = _policy_check_baa0_source("lexer-dependencies-baa-state-policy", LEXER_STATE_SRC)
     results.append(policy)
     if not policy.passed:
         return results
 
-    baseline_c = out_dir / "lexer_dependency_baseline.c"
-    baseline_exe = out_dir / ("lexer_dependency_baseline.exe" if os.name == "nt" else "lexer_dependency_baseline")
     candidate_c = out_dir / "lexer_dependency_baa_state.c"
     candidate_obj = out_dir / "lexer_dependency_baa_state.o"
     candidate_exe = out_dir / ("lexer_dependency_baa_state.exe" if os.name == "nt" else "lexer_dependency_baa_state")
-    _write_lexer_dump_harness(baseline_c)
     _write_lexer_candidate_harness(candidate_c)
-
-    compile_baseline = _run(
-        "lexer-dependencies-build-c-baseline",
-        [
-            cc,
-            "-std=gnu11",
-            "-finput-charset=UTF-8",
-            "-I",
-            str(ROOT),
-            str(baseline_c),
-            str(ROOT / "src" / "frontend" / "lexer.c"),
-            str(ROOT / "src" / "support" / "error.c"),
-            str(ROOT / "src" / "support" / "read_file.c"),
-            "-o",
-            str(baseline_exe),
-        ],
-        log_dir,
-    )
-    results.append(compile_baseline)
-    if not compile_baseline.passed:
-        return results
 
     compile_baa = _run(
         "lexer-dependencies-compile-baa-state",
@@ -1594,15 +1505,6 @@ def _run_lexer_dependencies(baa: Path, cc: str, log_dir: Path, out_dir: Path) ->
             results.append(CheckResult(f"lexer-dependencies:{case_name}", False, 1, 0.0, "missing fixture"))
             continue
 
-        baseline_run, baseline_stdout = _run_capture(
-            f"lexer-dependencies-c-run:{case_name}",
-            [str(baseline_exe), "--deps", str(ROOT), str(case_path)],
-            log_dir,
-        )
-        results.append(baseline_run)
-        if not baseline_run.passed:
-            continue
-
         candidate_run, candidate_stdout = _run_capture(
             f"lexer-dependencies-baa-state-run:{case_name}",
             [str(candidate_exe), "--deps", str(ROOT), str(case_path)],
@@ -1613,18 +1515,22 @@ def _run_lexer_dependencies(baa: Path, cc: str, log_dir: Path, out_dir: Path) ->
             continue
 
         started = time.monotonic()
+        snapshot = DEPENDENCY_SNAPSHOT_DIR / f"{case_name}.jsonl"
         actual_path = log_dir / f"lexer-dependencies-baa-state-{case_name}.actual.jsonl"
-        baseline_path = log_dir / f"lexer-dependencies-c-{case_name}.actual.jsonl"
         actual_path.write_text(candidate_stdout, encoding="utf-8")
-        baseline_path.write_text(baseline_stdout, encoding="utf-8")
         try:
-            expected = _normalize_jsonl(baseline_stdout)
             actual = _normalize_jsonl(candidate_stdout)
-            diff = _diff_rows(expected, actual)
-            passed = not diff
-            detail = "Baa dependency list matched C baseline" if passed else diff
-            if diff:
-                (log_dir / f"lexer-dependencies-{case_name}.diff.txt").write_text(diff + "\n", encoding="utf-8")
+            if update_snapshots:
+                _write_snapshot(snapshot, actual)
+                detail = "snapshot updated"
+                passed = True
+            else:
+                expected = _read_snapshot(snapshot)
+                diff = _diff_rows(expected, actual)
+                passed = not diff
+                detail = "Baa dependency list matched snapshot" if passed else diff
+                if diff:
+                    (log_dir / f"lexer-dependencies-{case_name}.diff.txt").write_text(diff + "\n", encoding="utf-8")
         except RuntimeError as exc:
             passed = False
             detail = str(exc)
@@ -1635,6 +1541,7 @@ def _run_lexer_dependencies(baa: Path, cc: str, log_dir: Path, out_dir: Path) ->
                 0 if passed else 1,
                 time.monotonic() - started,
                 detail,
+                _rel(snapshot),
             )
         )
 
@@ -2404,7 +2311,7 @@ def main(argv: list[str]) -> int:
         if args.target in (TARGET_LEXER_TOKEN_STREAM, TARGET_ALL):
             results.extend(_run_lexer_token_stream(baa, cc, log_dir, out_dir, args.update_snapshots))
         if args.target in (TARGET_LEXER_DEPENDENCIES, TARGET_ALL):
-            results.extend(_run_lexer_dependencies(baa, cc, log_dir, out_dir))
+            results.extend(_run_lexer_dependencies(baa, cc, log_dir, out_dir, args.update_snapshots))
         if args.target in (TARGET_LEXER_DIAGNOSTICS, TARGET_ALL):
             results.extend(_run_lexer_diagnostics(baa, cc, log_dir, out_dir, args.update_snapshots))
         if args.target in (TARGET_LEXER_TRANSITION, TARGET_ALL):

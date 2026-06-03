@@ -74,6 +74,29 @@ static Token lex_read_quoted_bytes_token(Lexer* l, Token token, BaaTokenType typ
     return lex_finish_token(l, token);
 }
 
+static char* lex_copy_normalized_number_value(Lexer* l, const char* text)
+{
+    if (!l || !text) return NULL;
+
+    size_t cap = strlen(text) + 1u;
+    char* out = (char*)malloc(cap);
+    if (!out) {
+        lex_fatal(l, "خطأ لفظي: نفدت الذاكرة أثناء نسخ قيمة رقمية للماكرو.");
+    }
+
+    size_t write = 0u;
+    for (size_t read = 0u; text[read] != '\0';) {
+        if (is_arabic_digit(text + read)) {
+            out[write++] = (char)('0' + ((unsigned char)text[read + 1] - 0xA0u));
+            read += 2u;
+        } else {
+            out[write++] = text[read++];
+        }
+    }
+    out[write] = '\0';
+    return out;
+}
+
 Token lexer_next_token(Lexer* l) {
     Token token = {0};
     
@@ -741,7 +764,7 @@ Token lexer_next_token(Lexer* l) {
             } 
             else if (isdigit((unsigned char)macro_val[0]) || is_arabic_digit(macro_val)) {
                 token.type = TOKEN_INT;
-                token.value = strdup(macro_val);
+                token.value = lex_copy_normalized_number_value(l, macro_val);
                 if (!token.value) {
                     free(word);
                     lex_fatal(l, "خطأ لفظي: نفدت الذاكرة أثناء نسخ قيمة الماكرو.");

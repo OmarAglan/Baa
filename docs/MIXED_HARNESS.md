@@ -42,6 +42,8 @@ cmake --build build
 
 `BAA_USE_BAA_LEXER` is ON by default. When `BAA_BOOTSTRAP_COMPILER` is not provided, CMake builds an internal C-lexer `baa_stage0` target and uses it to compile `src/frontend/lexer_state_baa0.baa` into the final compiler. Use `-DBAA_USE_BAA_LEXER=OFF` only for the explicit C-lexer rollback build.
 
+Normal QA now owns the promoted production lexer signoff in `tests/integration/backend/backend_lexer_production_signoff_test.baa` and focused negative preprocessor diagnostics under `tests/neg/`. The mixed harness remains the C-baseline parity oracle for token streams, dependency rows, and structured scanner diagnostics until the C lexer implementation is actually removed.
+
 ---
 
 ## 2. Bridge Boundary
@@ -83,7 +85,7 @@ Each row records:
 - line, column, and byte length,
 - normalized token filename.
 
-The v0.9.1 Baa lexer candidate slot now compiles `src/frontend/lexer_state_baa0.baa`, whose harness-facing declarations live in `src/frontend/lexer_state_baa0.baahd`, links it with a C host harness, and emits token-stream JSONL directly from the Baa-owned scanner state. C still owns fixture file reads, snapshot comparison, and token-name formatting, but cursor movement, token classification, conditional preprocessing, include-source stack switching, and macro value substitution are exercised through Baa before comparison against the committed C-baseline snapshots.
+The v0.9.1 Baa lexer candidate slot now compiles `src/frontend/lexer_state_baa0.baa`, whose harness-facing declarations live in `src/frontend/lexer_state_baa0.baahd`, links it with a C host harness, and emits token-stream JSONL directly from the Baa-owned scanner state. C still owns fixture file reads, snapshot comparison, and token-name formatting, but cursor movement, token classification, conditional preprocessing, include-source stack switching, macro value substitution, and Arabic-Indic numeric value-mode parity are exercised through Baa before comparison against the committed C-baseline snapshots.
 
 ### `lexer-dependencies`
 

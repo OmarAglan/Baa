@@ -1,0 +1,8 @@
+// RUN: expect-fail
+// EXPECT: تعذر فتح ملف التضمين
+
+#تضمين "tests/fixtures/lexer_production/missing.baahd"
+
+صحيح الرئيسية() {
+    إرجع ٠.
+}

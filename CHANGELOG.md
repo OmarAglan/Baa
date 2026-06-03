@@ -50,11 +50,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
   - Switched `BAA_USE_BAA_LEXER` to ON by default, so the final `baa` target now uses the Baa-backed lexer bridge in normal builds.
   - Added an internal C-lexer `baa_stage0` bootstrap target for clean builds when `BAA_BOOTSTRAP_COMPILER` is not provided.
   - Preserved `-DBAA_USE_BAA_LEXER=OFF` as the explicit C-lexer fallback until the later C implementation removal checkpoint.
+- **Production lexer coverage promotion**:
+  - Added a normal backend runtime signoff for the default Baa-backed lexer path covering Arabic UTF-8 tokens, Arabic-Indic literals, escaped char/raw string tokens, Arabic comma tokenization, macro substitution, conditional preprocessing, and include resolution.
+  - Added focused negative tests for `#وإلا` without a condition, duplicate `#وإلا`, `#نهاية` without a condition, unknown preprocessor directives, and missing include files.
+  - Fixed macro-expanded Arabic-Indic integer values so the Baa scanner reports numeric value mode to the C bridge and the existing parser receives normalized integer text.
+- **Windows toolchain staging hardening**:
+  - Made Windows ASCII staging filenames process-unique so concurrent `baa.exe` invocations do not overwrite or delete each other's assembler/linker inputs.
 
 ### Remaining
 
 - **Baa-owned lexer implementation**:
-  - Remove the C lexer and lexer-only migration harnesses only after the default Baa-backed production path remains green and regular QA carries the coverage.
+  - Remove the C lexer and lexer-only migration harnesses only after the default Baa-backed production path remains green and regular QA plus mixed-harness parity carry the coverage.
   - Keep the C lexer available as `baa_stage0`/`-DBAA_USE_BAA_LEXER=OFF` rollback until that removal checkpoint.
 - **Scope control**:
   - No further language feature expansion is planned for v0.9.1.5 beyond consuming the v0.9.1.4 lexer-ergonomics surface; the checkpoint is a relocation/correctness milestone before v0.9.2 parser work.

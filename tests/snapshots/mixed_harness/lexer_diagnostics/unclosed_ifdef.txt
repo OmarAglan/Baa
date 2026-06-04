@@ -1,3 +1,0 @@
-[Error] tests/neg/syntax_pp_unclosed_ifdef.baa:5:1: خطأ قبلي: نهاية الملف قبل إغلاق شرط قبلي (مفقود #نهاية).
-       5 |
-         ^

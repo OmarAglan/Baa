@@ -28,7 +28,6 @@ FROZEN_ARTIFACTS = [
     "docs/SELF_HOSTING_PILOT_REPORT.md",
     "docs/PHASE_4_5_HANDOFF.md",
     "scripts/qa_bootstrap_gate.py",
-    "scripts/qa_selfhost_pilot.py",
     "scripts/qa_phase45_handoff.py",
     "tests/bootstrap",
 ]

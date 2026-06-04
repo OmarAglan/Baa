@@ -1,3 +1,0 @@
-[Error] d:/Side Dev/Baa/tests/fixtures/include_cycle/b.baahd:1:24: خطأ قبلي: تم اكتشاف دورة تضمين عند './a.baahd'. سلسلة التضمين: tests/neg/syntax_include_cycle_relative_alias.baa -> d:/Side Dev/Baa/tests/fixtures/include_cycle/a.baahd -> d:/Side Dev/Baa/tests/fixtures/include_cycle/b.baahd -> d:/Side Dev/Baa/tests/fixtures/include_cycle/a.baahd
-       1 | #تضمين "./a.baahd"
-                           ^

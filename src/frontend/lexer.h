@@ -6,7 +6,7 @@
 #ifndef BAA_FRONTEND_LEXER_H
 #define BAA_FRONTEND_LEXER_H
 
-#include <stdbool.h>
+#include <stdint.h>
 #include <stddef.h>
 
 // ============================================================================
@@ -17,8 +17,10 @@
  * @enum BaaTokenType
  * @brief تصنيف الوحدات الذرية (Atomic Units) للكود المصدري.
  */
-typedef enum {
-    TOKEN_EOF,          // نهاية الملف
+typedef int64_t BaaTokenType;
+
+enum {
+    TOKEN_EOF = 0,      // نهاية الملف
     TOKEN_INT,          // رقم صحيح: 123
     TOKEN_FLOAT,        // رقم عشري: 3.14
     TOKEN_STRING,       // نص: "مرحباً"
@@ -112,7 +114,7 @@ typedef enum {
     TOKEN_RAW_STRING,   // خام"..."
     
     TOKEN_INVALID       // وحدة غير صالحة
-} BaaTokenType;
+};
 
 /**
  * @struct Token
@@ -121,9 +123,9 @@ typedef enum {
 typedef struct {
     BaaTokenType type;     // نوع الوحدة
     char* value;        // القيمة النصية
-    int line;           // رقم السطر
-    int col;            // رقم العمود
-    int length;         // طول الوحدة بالبايتات داخل السطر
+    int32_t line;       // رقم السطر
+    int32_t col;        // رقم العمود
+    int32_t length;     // طول الوحدة بالبايتات داخل السطر
     const char* filename; // اسم الملف
 } Token;
 
@@ -137,8 +139,8 @@ typedef struct {
     char* source;
     char* cur_char;
     const char* filename; // اسم الملف الحالي
-    int line;
-    int col;
+    int32_t line;
+    int32_t col;
 } LexerState;
 
 /**
@@ -155,7 +157,7 @@ typedef struct {
 
     // مكدس التضمين (Include Stack)
     LexerState stack[10]; // أقصى عمق للتضمين: 10
-    int stack_depth;
+    int32_t stack_depth;
 
     // تبعيات البناء المكتشفة أثناء المعالجة القبلية (مسارات مطبعة ومملوكة)
     char** dependency_paths;
@@ -167,9 +169,9 @@ typedef struct {
         char* source;
         char* filename;
         size_t length;
-        int parent;
-        bool owns_source;
-        bool owns_filename;
+        int32_t parent;
+        int32_t owns_source;
+        int32_t owns_filename;
     } baa_sources[BAA_LEXER_BRIDGE_MAX_SOURCES];
     size_t baa_source_count;
 } Lexer;
@@ -177,32 +179,45 @@ typedef struct {
 /**
  * @brief تهيئة المحلل اللفظي بنص المصدر وتخطي الـ BOM إذا وجد.
  */
-void lexer_init(Lexer* lexer,
-                char* src,
-                const char* filename,
-                const char* const* include_dirs,
-                size_t include_dir_count);
-
-// قراءة ملف بالكامل إلى ذاكرة
+void محلل_باء_هيئ(Lexer* lexer,
+                  char* src,
+                  const char* filename,
+                  const char* const* include_dirs,
+                  size_t include_dir_count);
 
 /**
- * @brief استخراج الوحدة اللفظية (Token) التالية من المصدر.
+ * @brief استخراج الوحدة اللفظية التالية إلى بنية يملكها المستدعي.
  */
-Token lexer_next_token(Lexer* lexer);
+void محلل_باء_التالي_إلى(Lexer* lexer, Token* out_token);
 
 /**
  * @brief تحويل نوع الوحدة إلى نص مقروء.
  */
-const char* token_type_to_str(BaaTokenType type);
+const char* اسم_نوع_وحدة_باء(BaaTokenType type);
 
 /**
  * @brief إرجاع قائمة تبعيات البناء المكتشفة للمصدر الحالي.
  */
-const char* const* lexer_get_dependencies(const Lexer* lexer, size_t* out_count);
+const char* const* محلل_باء_تبعيات(const Lexer* lexer, size_t* out_count);
+
+/**
+ * @brief إرجاع مصدر الجذر الحالي كما يملكه مسار المحلل المكتوب بباء.
+ */
+const char* محلل_باء_مصدر_رئيسي(void);
+
+/**
+ * @brief إرجاع اسم ملف الجذر الحالي كما يملكه مسار المحلل المكتوب بباء.
+ */
+const char* محلل_باء_ملف_رئيسي(void);
 
 /**
  * @brief تحرير قائمة تبعيات البناء المملوكة للمحلل اللفظي.
  */
-void lexer_free_dependencies(Lexer* lexer);
+void محلل_باء_حرر(Lexer* lexer);
+
+#define lexer_init محلل_باء_هيئ
+#define lexer_get_dependencies محلل_باء_تبعيات
+#define lexer_free_dependencies محلل_باء_حرر
+#define token_type_to_str اسم_نوع_وحدة_باء
 
 #endif

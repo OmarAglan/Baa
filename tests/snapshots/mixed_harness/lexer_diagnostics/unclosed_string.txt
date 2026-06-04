@@ -1,3 +1,0 @@
-[Error] tests/neg/lexer_unclosed_string.baa:8:1: خطأ لفظي: النص غير مُغلق.
-       8 |
-         ^

@@ -225,7 +225,7 @@ void advance() {
     parser.current = parser.next;
     
     while (true) {
-        parser.next = lexer_next_token(parser.lexer);
+        محلل_باء_التالي_إلى(parser.lexer, &parser.next);
         if (parser.next.type != TOKEN_INVALID) break;
         // إذا وجدنا وحدة غير صالحة، نبلغ عن الخطأ ونستمر في البحث
         error_report(parser.next, "وحدة لفظية غير صالحة.");
@@ -368,8 +368,10 @@ bool is_type_keyword(BaaTokenType type) {
 
 Node* parse(Lexer* l) {
     // تهيئة نظام الأخطاء بمؤشر المصدر للطباعة
-    error_init(l->state.source);
-    error_register_source(l->state.filename, l->state.source);
+    const char* source = محلل_باء_مصدر_رئيسي();
+    const char* filename = محلل_باء_ملف_رئيسي();
+    error_init(source);
+    error_register_source(filename, source);
     init_parser(l);
 
     Node* head = NULL;
@@ -383,7 +385,7 @@ Node* parse(Lexer* l) {
         // عندما تكون decl فارغة، فالتعافي غالباً تم داخل parse_declaration
     }
     Token tok_program = {0};
-    tok_program.filename = l ? l->state.filename : NULL;
+    tok_program.filename = filename;
     tok_program.line = 1;
     tok_program.col = 1;
     tok_program.length = 1;

@@ -24,7 +24,6 @@ REQUIRED_ARTIFACTS = [
     "docs/BAA0_SPEC.md",
     "docs/SELF_HOSTING_PILOT_REPORT.md",
     "scripts/qa_bootstrap_gate.py",
-    "scripts/qa_selfhost_pilot.py",
     "tests/bootstrap",
 ]
 
@@ -359,7 +358,6 @@ def main() -> int:
     if args.skip_release_qa:
         release_result = CheckResult("release-qa", True, 0, 0.0, "skipped by --skip-release-qa")
         results.append(_run_gate("bootstrap-gate", "qa_bootstrap_gate.py", baa, out_dir))
-        results.append(_run_gate("selfhost-pilot-gate", "qa_selfhost_pilot.py", baa, out_dir))
     else:
         release_result = _run_release_qa(out_dir)
         results.append(release_result)

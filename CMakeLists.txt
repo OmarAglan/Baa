@@ -56,7 +56,6 @@ set(BAA_BASE_SOURCES
     src/driver/driver_toolchain.c
     src/driver/driver_pipeline.c
     src/driver/driver_build.c
-    src/frontend/lexer.c
 )
 
 # Add resource file for Windows (Icon & Version Info)
@@ -90,7 +89,7 @@ endfunction()
 
 set(BAA_FINAL_SOURCES ${BAA_BASE_SOURCES} ${BAA_PLATFORM_SOURCES})
 
-set(BAA_LEXER_STATE_OBJECT "${CMAKE_BINARY_DIR}/lexer_state_baa0_baa.o")
+set(BAA_LEXER_OBJECT "${CMAKE_BINARY_DIR}/lexer_baa.o")
 if(NOT BAA_BOOTSTRAP_COMPILER)
     message(FATAL_ERROR "BAA_BOOTSTRAP_COMPILER is required after C lexer removal. Point it to an existing baa compiler.")
 endif()
@@ -99,17 +98,17 @@ if(NOT EXISTS "${BAA_BOOTSTRAP_COMPILER}")
 endif()
 
 add_custom_command(
-    OUTPUT "${BAA_LEXER_STATE_OBJECT}"
-    COMMAND "${BAA_BOOTSTRAP_COMPILER}" -O2 --verify-ir --verify-ssa -c src/frontend/lexer_state_baa0.baa -o "${BAA_LEXER_STATE_OBJECT}"
+    OUTPUT "${BAA_LEXER_OBJECT}"
+    COMMAND "${BAA_BOOTSTRAP_COMPILER}" -O2 --verify-ir --verify-ssa -c src/frontend/lexer.baa -o "${BAA_LEXER_OBJECT}"
     DEPENDS
-        src/frontend/lexer_state_baa0.baa
-        src/frontend/lexer_state_baa0.baahd
+        src/frontend/lexer.baa
+        src/frontend/lexer.baahd
         stdlib/baalib.baahd
     WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
     VERBATIM
 )
-set_source_files_properties("${BAA_LEXER_STATE_OBJECT}" PROPERTIES GENERATED TRUE EXTERNAL_OBJECT TRUE LANGUAGE C)
-list(APPEND BAA_FINAL_SOURCES "${BAA_LEXER_STATE_OBJECT}")
+set_source_files_properties("${BAA_LEXER_OBJECT}" PROPERTIES GENERATED TRUE EXTERNAL_OBJECT TRUE LANGUAGE C)
+list(APPEND BAA_FINAL_SOURCES "${BAA_LEXER_OBJECT}")
 
 if(CMAKE_BINARY_DIR STREQUAL CMAKE_SOURCE_DIR)
     message(FATAL_ERROR "In-source builds are not supported.")

@@ -1,3 +1,0 @@
-[Error] tests/neg/lexer_unknown_byte.baa:5:5: خطأ لفظي: بايت غير معروف 0x40.
-       5 |     @
-             ^

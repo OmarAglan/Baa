@@ -21,6 +21,9 @@
 #define PATH_MAX 4096
 #endif
 
+static const char* const* support_include_dirs = NULL;
+static int64_t support_include_dir_count = 0;
+
 static void read_file_die(FILE* f, char* buffer, const char* msg)
 {
     if (f) fclose(f);
@@ -131,6 +134,17 @@ static void support_normalize_path_text(char* path)
 #endif
 }
 
+char* دعمالمسارطبع(const char* path);
+
+/**
+ * @brief حفظ مسارات `-I` الحالية التي يملكها C ليستعملها lexer باء لاحقاً.
+ */
+void دعمالتضمينهيئ(const char* const* include_dirs, size_t include_dir_count)
+{
+    support_include_dirs = include_dirs;
+    support_include_dir_count = (int64_t)include_dir_count;
+}
+
 /**
  * @brief نسخ نص خام منتهي بصفر لاستخدام وحدات باء المرتبطة بالمترجم.
  */
@@ -190,6 +204,51 @@ char* دعمالملفجربقراءة(const char* path)
     buffer[got] = '\0';
     fclose(f);
     return buffer;
+}
+
+/**
+ * @brief تجربة مسارات `-I` التي يملكها C دون أن يفك كود باء مصفوفة argv الخام.
+ */
+char* دعمالتضمينجربمسارات(const char* requested, char** out_path)
+{
+    if (out_path) *out_path = NULL;
+    const char* const* include_dirs = support_include_dirs;
+    int64_t include_dir_count = support_include_dir_count;
+    if (!include_dirs || include_dir_count <= 0 || !requested || !requested[0] || !out_path) {
+        return NULL;
+    }
+
+    for (int64_t i = 0; i < include_dir_count; ++i) {
+        const char* dir = include_dirs[i];
+        if (!dir || !dir[0]) continue;
+
+        size_t dir_len = strlen(dir);
+        size_t req_len = strlen(requested);
+        int need_sep = !(dir[dir_len - 1u] == '/' || dir[dir_len - 1u] == '\\');
+        size_t total = dir_len + (need_sep ? 1u : 0u) + req_len;
+        char* candidate = (char*)malloc(total + 1u);
+        if (!candidate) return NULL;
+
+        memcpy(candidate, dir, dir_len);
+        size_t at = dir_len;
+        if (need_sep) candidate[at++] = '/';
+        memcpy(candidate + at, requested, req_len);
+        candidate[total] = '\0';
+
+        char* source = دعمالملفجربقراءة(candidate);
+        if (source) {
+            *out_path = دعمالمسارطبع(candidate);
+            free(candidate);
+            if (!*out_path) {
+                free(source);
+                return NULL;
+            }
+            return source;
+        }
+        free(candidate);
+    }
+
+    return NULL;
 }
 
 /**

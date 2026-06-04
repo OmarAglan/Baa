@@ -1312,7 +1312,7 @@
 
 - [x] **Define canonical component boundaries** — Frontend / Middle-End / Backend / Driver / Support.
 - [x] **Set module-size policy** — target `<= 700` lines/file, hard cap `1000` lines for hand-written C modules.
-- [x] **Split oversized modules first** — `analysis.c`, `emit.c`, `ir.c`, `ir_lower.c`, `ir_text.c`, `isel.c`, `lexer.c`, `parser.c`, `regalloc.c`, and `ir_verify_ir.c` are now under the hard cap via companion implementation splits.
+- [x] **Split oversized modules first** — `analysis.c`, `emit.c`, `ir.c`, `ir_lower.c`, `ir_text.c`, `isel.c`, `parser.c`, `regalloc.c`, and `ir_verify_ir.c` are now under the hard cap via companion implementation splits; the lexer has since moved to Baa.
 - [x] **Restructure source layout safely** — component directories now exist under `src/`, and the build now targets those files directly.
 - [x] **Add local module facades** — `frontend_internal.h`, `middleend_internal.h`, `backend_internal.h`, `driver_internal.h`, and `support_internal.h` now define component-local include surfaces.
 - [x] **Update build graph** — `CMakeLists.txt` remains explicit/deterministic and the Windows build uses C-only include propagation while header wrappers remain transitional.
@@ -1452,17 +1452,17 @@ Partial status update (2026-03-06):
 
 #### v0.9.0.2: Mixed C+Baa Harness
 
-- [x] **Enable mixed-unit builds** — `scripts/qa_mixed_harness.py` compiles Baa slices and C harness units into parity executables.
-- [x] **Define bridge boundaries** — `docs/MIXED_HARNESS.md` records ABI/data-layout handoff rules for C+Baa modules.
+- [x] **Enable mixed-unit builds** — the retired mixed harness compiled Baa slices and C harness units into parity executables.
+- [x] **Define bridge boundaries** — the retired mixed-harness contract recorded ABI/data-layout handoff rules for C+Baa modules.
 - [x] **Add parity harness** — token-name parity now runs through the reusable mixed harness.
 - [x] **Golden corpus harness** — lexer token-stream fixtures and JSONL snapshots are committed for v0.9.1 preparation.
 - [x] **Diff tooling** — normalized JSONL comparator records compact mismatches and full artifacts in the harness log directory.
 
 ✅ COMPLETED (2026-05-23)
 
-### v0.9.1: Rewrite Lexer 📝
+### v0.9.1: Rewrite Lexer
 
-- [x] **Port lexer slice to Baa** — `src/frontend/lexer_candidate_baa0.baa` is the first reversible lexer-candidate bridge slice.
+- [x] **Port lexer slice to Baa** — the first reversible lexer-candidate bridge slice proved Baa lexer code could be compared against the C baseline.
 - [x] **Build through mixed harness** — the candidate compiles as Baa0 and links with the C-hosted lexer harness.
 - [x] **Token-stream parity tests** — C baseline and Baa candidate bridge both compare against committed JSONL snapshots.
 - [x] **No feature expansion in v0.9** — production lexer/CLI behavior remains unchanged.
@@ -1484,8 +1484,8 @@ Partial status update (2026-03-06):
 
 - [x] **Raw byte literal syntax** — `خام"..."` produces a static NUL-terminated UTF-8 byte sequence with semantic type `ط٨*`.
 - [x] **Raw byte helper intrinsics** — `طول_خام`, `قارن_خام`, and `قارن_خام_بطول` lower directly to byte-wise IR loops.
-- [x] **Baa0 transition slice** — `src/frontend/lexer_transition_baa0.baa` consumes raw bytes, pointer arithmetic, and `->` without becoming the production lexer.
-- [x] **Mixed-harness target** — `scripts/qa_mixed_harness.py --target lexer-transition` compiles, links, and runs the transition slice.
+- [x] **Baa0 transition slice** — the retired transition slice consumed raw bytes, pointer arithmetic, and `->` before the production lexer move.
+- [x] **Mixed-harness target** — the retired mixed harness compiled, linked, and ran the transition slice.
 - [x] **Regression coverage** — backend and negative tests cover raw byte literals and helper type contracts.
 - [x] **Documentation sync** — README, language spec, stdlib prototypes, roadmap, and changelog describe the transition kit.
 

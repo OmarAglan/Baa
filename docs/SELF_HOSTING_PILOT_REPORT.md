@@ -12,7 +12,7 @@ This report records the v0.5.8 self-hosting pilot result. It proves that a small
 
 Pilot source at the time:
 
-- `src/frontend/lexer_token_names_baa0.baa` (retired in v0.9.1.5)
+- A small Baa0 token-name slice under the frontend lexer migration area, retired in v0.9.1.5.
 
 Validated behavior:
 
@@ -26,21 +26,17 @@ This is intentionally not a full lexer port. It is the smallest useful frontend 
 
 ## 2. Mixed Build Gate
 
-Gate command at the time:
-
-```bash
-python scripts/qa_mixed_harness.py --target token-names
-```
+Gate at the time: the retired mixed harness token-name target.
 
 The gate:
 
 - Compiles the Baa pilot source with `baa -O2 --verify-ir --verify-ssa -c`.
 - Generates a C parity harness from `src/frontend/lexer.h`.
-- Links the C baseline `src/frontend/lexer_debug.c`, the generated C harness, and the Baa object with the host C compiler.
+- Linked the C baseline helper, the generated C harness, and the Baa object with the host C compiler.
 - Decodes Baa `نص` values from the current packed `حرف` representation before comparing them with C UTF-8 strings.
 - Fails if the Baa pilot source uses Baa0-banned features outside comments and literals.
 
-`scripts/qa_selfhost_pilot.py` was later retired with the mixed harness.
+The compatibility wrapper was later retired with the mixed harness.
 
 ---
 

@@ -186,6 +186,11 @@ void محلل_باء_هيئ(Lexer* lexer,
                   size_t include_dir_count);
 
 /**
+ * @brief تهيئة مسارات `-I` التي يملكها C قبل دخول المحلل المكتوب بباء.
+ */
+void دعمالتضمينهيئ(const char* const* include_dirs, size_t include_dir_count);
+
+/**
  * @brief استخراج الوحدة اللفظية التالية إلى بنية يملكها المستدعي.
  */
 void محلل_باء_التالي_إلى(Lexer* lexer, Token* out_token);
@@ -215,7 +220,16 @@ const char* محلل_باء_ملف_رئيسي(void);
  */
 void محلل_باء_حرر(Lexer* lexer);
 
-#define lexer_init محلل_باء_هيئ
+static inline void lexer_init(Lexer* lexer,
+                              char* src,
+                              const char* filename,
+                              const char* const* include_dirs,
+                              size_t include_dir_count)
+{
+    دعمالتضمينهيئ(include_dirs, include_dir_count);
+    محلل_باء_هيئ(lexer, src, filename, NULL, 0u);
+}
+
 #define lexer_get_dependencies محلل_باء_تبعيات
 #define lexer_free_dependencies محلل_باء_حرر
 #define token_type_to_str اسم_نوع_وحدة_باء

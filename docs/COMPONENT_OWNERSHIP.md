@@ -23,7 +23,7 @@ It remains both an ownership map and a dependency contract during the compatibil
 
 | Component | Responsibility | Representative modules |
 |-----------|----------------|------------------------|
-| Frontend | Source loading, lexing, preprocessing, parsing, AST construction | `src/frontend/lexer.c`, `src/frontend/parser.c`, `src/frontend/analysis.c` |
+| Frontend | Source loading, lexing, preprocessing, parsing, AST construction | `src/frontend/lexer.baa`, `src/frontend/lexer.h`, `src/frontend/parser.c`, `src/frontend/analysis.c` |
 | Middle-End | Semantic analysis, IR construction, IR verification, IR optimization, shared IR data layout | `src/middleend/ir*.c`, `src/middleend/ir_lower.c`, `src/middleend/ir_optimizer.c` |
 | Backend | Target-aware lowering from IR to machine form and assembly emission | `src/backend/isel.c`, `src/backend/regalloc.c`, `src/backend/emit.c`, `src/backend/target.c`, `code_model.h` |
 | Driver | CLI orchestration, per-file pipeline setup, toolchain execution, process management | `src/driver/main.c`, `src/driver/driver_*.c`, `src/driver/process.c` |

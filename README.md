@@ -59,10 +59,10 @@ cmake --build build-linux -j
 
 المسار الحالي هو نقل المصرّف نفسه إلى باء خطوة خطوة. العمل النشط الآن في `v0.9.1.5` هو نقل المحلل اللفظي:
 
-- توجد حالة lexer مكتوبة بباء في `src/frontend/lexer_state_baa0.baa`.
-- يوجد عقد ترويسة باء لها في `src/frontend/lexer_state_baa0.baahd`.
-- مسار lexer المكتوب بباء هو المسار الإنتاجي الافتراضي الآن.
-- حُذف lexer المكتوب بـ C؛ بناء نسخة جديدة من المصدر يتطلب مصرّف باء موجوداً عبر `-DBAA_BOOTSTRAP_COMPILER=...`.
+- يوجد المحلل اللفظي الإنتاجي في `src/frontend/lexer.baa`.
+- يوجد عقد ترويسة باء له في `src/frontend/lexer.baahd`.
+- تبقى `src/frontend/lexer.h` واجهة توافق C مؤقتة للـ parser إلى أن يبدأ نقل parser.
+- حُذف lexer المكتوب بـ C وحاضنات الهجرة الخاصة به؛ بناء نسخة جديدة من المصدر يتطلب مصرّف باء موجوداً عبر `-DBAA_BOOTSTRAP_COMPILER=...`.
 
 بعد lexer، تُطبّق نفس القاعدة على parser ثم IR ثم بقية الطبقات: عقد باء، حاضنة توافق، غلاف إنتاجي، حذف C، ثم تنظيف الحاضنة المؤقتة.
 
@@ -76,7 +76,7 @@ build\baa.exe --version
 build\baa.exe --dump-ir examples\hello_world.baa
 python scripts\qa_run.py --mode quick
 python scripts\qa_run.py --mode full
-python scripts\qa_mixed_harness.py --target all
+python scripts\qa_run.py --mode release
 ```
 
 ## اقرأ أكثر

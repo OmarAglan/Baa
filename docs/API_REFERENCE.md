@@ -58,10 +58,8 @@ Additional build-maturity guards:
 - `scripts/test_build_maturity.py` validates manifest stability, incremental cache hits, and header invalidation.
 - `scripts/test_determinism.py` validates stable `--dump-ir`, `--dump-ir-opt`, assembly, manifest, `--verify-gate`, cross-target assembly generation, and committed IR snapshot hashes under `tests/snapshots/`.
 - `scripts/qa_bootstrap_gate.py` validates Baa0 positive sources, banned-feature fixtures, runtime-marked bootstrap cases, and cross-target `-S` assembly generation for the bootstrap corpus.
-- `scripts/qa_selfhost_pilot.py` validates the mixed C+Baa token-name pilot by linking a Baa0 object with a generated C parity harness.
 - `scripts/qa_phase45_handoff.py` creates the Phase 4.5 handoff evidence bundle and records local platform signoff status.
 - `scripts/qa_stage0_manifest.py` validates the v0.9.0.1 Stage-0 snapshot tag and frozen artifact Git object IDs.
-- `scripts/qa_mixed_harness.py` validates reusable mixed C+Baa targets, including token-name parity, Baa scanner-state token/dependency snapshots, and lexer diagnostic snapshots.
 
 ### Test Metadata Contract
 

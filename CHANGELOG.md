@@ -8,7 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [0.9.1.5] - 2026-05-29
 
-**Full Baa Lexer Migration (In Progress)**
+**Full Baa Lexer Migration**
 
 ### Added
 
@@ -63,12 +63,22 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
   - Final compiler builds now require `BAA_BOOTSTRAP_COMPILER` to point at an existing `baa` compiler that can compile the Baa lexer object.
   - Updated CMake presets and the build-profile guard so profile builds carry the required bootstrap compiler setting.
   - Updated `lexer-token-stream` and `lexer-dependencies` so they compare Baa scanner-state output against committed snapshots instead of compiling a live C lexer baseline.
+- **Production Baa lexer promotion**:
+  - Renamed the production lexer implementation and header contract to `src/frontend/lexer.baa` and `src/frontend/lexer.baahd`.
+  - The final compiler now links the Baa lexer object directly while preserving the existing `src/frontend/lexer.h` parser-facing compatibility contract.
+  - Parser diagnostic source registration now queries the Baa lexer root source/file helpers instead of reading a C lexer state object.
+  - Empty string token values are copied as owned empty strings so IR lowering preserves string literal parity.
+
+### Removed
+
+- Removed the obsolete C lexer implementation and bridge files: `src/frontend/lexer.c`, `src/frontend/lexer_baa_bridge.c`, `src/frontend/lexer_debug.c`, and the temporary Baa0 lexer migration slices.
+- Removed `scripts/qa_mixed_harness.py`, `scripts/qa_selfhost_pilot.py`, `docs/MIXED_HARNESS.md`, and lexer-only mixed-harness fixtures/snapshots after normal production tests took over lexer coverage.
+- Release QA no longer runs the retired mixed-harness gate.
 
 ### Remaining
 
-- **Baa-owned lexer implementation**:
-  - Retire lexer-only migration harnesses, temporary fixtures/snapshots, and bridge files once normal production tests own the remaining coverage.
-  - Run the post-migration Baa lexer readability pass using the full stable Baa language surface where it improves maintainability.
+- **Baa-owned lexer maintainability**:
+  - Continue the post-migration Baa lexer readability pass using the full stable Baa language surface where it improves maintainability.
 - **Scope control**:
   - No further language feature expansion is planned for v0.9.1.5 beyond consuming the v0.9.1.4 lexer-ergonomics surface; the checkpoint is a relocation/correctness milestone before v0.9.2 parser work.
 

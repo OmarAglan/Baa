@@ -70,7 +70,7 @@ flowchart LR
 
 | Stage | Input | Output | Component | Description |
 |-------|-------|--------|-----------|-------------|
-| **1. Frontend** | `.baa` Source | AST | `lexer.c`, `parser.c` | Tokenizes, handles macros, and builds the syntax tree. |
+| **1. Frontend** | `.baa` Source | AST | `lexer.baa`, `lexer.h`, `parser.c` | Tokenizes, handles macros, and builds the syntax tree. |
 | **2. Analysis** | AST | Valid AST | `analysis.c` | **Semantic Pass**: Checks types, scopes, and resolves symbols. |
 | **3. IR Lowering** | AST | IR | `ir_lower.c` (v0.3.0.3+) + `ir_builder.c` | Converts AST expressions/statements to SSA-form Intermediate Representation using the IR Builder. |
 | **4. Optimization** | IR | Optimized IR | `ir_optimizer.c`, `ir_mem2reg.c`, `ir_sccp.c`, `ir_gvn.c`, etc. | Full middle-end: Inlining (O2), Mem2Reg, Canon, InstCombine, SCCP, ConstFold, CopyProp, GVN (O2), CSE (O2), DCE, CFGSimplify, LICM. |
@@ -84,7 +84,7 @@ flowchart LR
 
 ```mermaid
 flowchart TB
-    Driver["Driver / CLI\nsrc/driver/main.c"] --> Lexer["Lexer + Preprocessor\nsrc/frontend/lexer.c"]
+    Driver["Driver / CLI\nsrc/driver/main.c"] --> Lexer["Lexer + Preprocessor\nsrc/frontend/lexer.baa"]
     Lexer --> Parser["Parser\nsrc/frontend/parser.c"]
     Parser --> Analyzer["Semantic Analysis\nsrc/frontend/analysis.c"]
     Analyzer --> Lower["IR Lowering\nsrc/middleend/ir_lower.c (v0.3.0.3+)"]
@@ -176,7 +176,7 @@ Current in-place split pattern (2026-03-06):
 
 - `parser.c` now delegates to `parser_types.c`, `parser_expr.c`, `parser_stmt.c`, and `parser_decl.c`.
 - `analysis.c` now delegates to `analysis_scope.c`, `analysis_types.c`, `analysis_semantic_utils.c`, `analysis_builtins.c`, `analysis_format.c`, `analysis_infer_expr.c`, and `analysis_visit.c`.
-- `lexer.c`, `isel.c`, `regalloc.c`, `ir.c`, `ir_text.c`, `ir_verify_ir.c`, `ir_lower.c`, and `emit.c` also use companion implementation files to shrink the original hotspots while preserving their exported entry points.
+- `isel.c`, `regalloc.c`, `ir.c`, `ir_text.c`, `ir_verify_ir.c`, `ir_lower.c`, and `emit.c` also use companion implementation files to shrink the original hotspots while preserving their exported entry points; the former C lexer has moved to `src/frontend/lexer.baa`.
 - `scripts/module_size_allowlist.txt` is currently empty; the size guard has no active legacy exceptions.
 - `driver*.h` and `process.h` now live under `src/driver/`.
 - `emit.h`, `isel.h`, `regalloc.h`, `target.h`, and `code_model.h` now live under `src/backend/`.
@@ -227,10 +227,8 @@ Notes:
   - `--mode release`: stress + deterministic IR/assembly/manifest checks + bootstrap subset gate
 - `scripts/test_determinism.py` owns the v0.5.6 deterministic checks and compares committed IR snapshot hashes under `tests/snapshots/`.
 - `scripts/qa_bootstrap_gate.py` owns the v0.5.7 Baa0 policy/compliance checks and cross-target bootstrap assembly smoke.
-- `scripts/qa_selfhost_pilot.py` owns the v0.5.8 mixed C+Baa token-name parity pilot.
 - `scripts/qa_phase45_handoff.py` owns the v0.5.9 Phase 4.5 handoff evidence bundle.
 - `scripts/qa_stage0_manifest.py` owns the v0.9.0.1 Stage-0 snapshot manifest validation.
-- `scripts/qa_mixed_harness.py` owns the v0.9.1 mixed C+Baa harness, lexer candidate bridge, token-stream snapshots, and diagnostic parity snapshots.
 - Legacy runners remain valid:
   - `tests/test.py` (integration)
   - `tests/regress.py` (integration + corpus + negatives)
@@ -300,11 +298,11 @@ Note (v0.5.4): diagnostics support single-line spans and optional Arabic `مسا
 
 ## 2. Lexical Analysis
 
-The parser-facing lexer API (`src/frontend/lexer.c`) transforms raw bytes into `Token` structures. In the default v0.9.1.5 build, this API routes tokenization through the Baa scanner state in `src/frontend/lexer_state_baa0.baa` via `src/frontend/lexer_baa_bridge.c`. The old C tokenization/preprocessor implementation has been removed; clean source builds require `BAA_BOOTSTRAP_COMPILER` so CMake can compile the Baa lexer object before linking the final compiler.
+The parser-facing lexer API (`src/frontend/lexer.h`) transforms raw bytes into `Token` structures. The implementation is now compiled from `src/frontend/lexer.baa` into `build/lexer_baa.o` by CMake, then linked into the final compiler. The old C tokenization/preprocessor implementation and temporary migration bridge have been removed; clean source builds require `BAA_BOOTSTRAP_COMPILER` so CMake can compile the Baa lexer object before linking the final compiler.
 
 ### 2.1. Internal Structure
 
-The C lexer surface is now a compatibility wrapper around the Baa scanner state. C owns parser-visible `Token` values, source buffers, dependency path copies, include resolution, and diagnostic source registration; Baa owns token classification, preprocessing state, macro substitution, conditional skipping, and source-stack cursor movement.
+The C header surface is now a compatibility contract around the Baa scanner. C parser code still passes `Lexer*` and `Token*`, while the Baa wrapper treats the lexer as a raw handle and owns the active scanner state in Baa globals. C-visible `Token.value` strings and dependency paths remain heap-owned copies that are released through the existing cleanup flow.
 
 ```c
 typedef struct {
@@ -336,7 +334,7 @@ typedef struct {
 
 ### 2.2. Preprocessor Logic
 
-The preprocessor is implemented in `src/frontend/lexer_state_baa0.baa` and called through `src/frontend/lexer_baa_bridge.c`. The Baa scanner handles:
+The preprocessor is implemented in `src/frontend/lexer.baa`. The Baa scanner handles:
 
 - `#تعريف` and `#الغاء_تعريف` macro state.
 - `#إذا_عرف`, `#إذا_لم_يعرف`, `#وإلا`, and `#نهاية` conditional nesting.

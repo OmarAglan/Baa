@@ -1493,14 +1493,14 @@ Partial status update (2026-03-06):
 
 ### v0.9.1.5: Fully Move Lexer to Baa
 
-- [x] **Initial Baa-owned scanner state** — `src/frontend/lexer_state_baa0.baa` owns source pointer, byte offset, line, and column state for a simple punctuation/operator token slice.
-- [x] **Scanner-state mixed harness** — `scripts/qa_mixed_harness.py --target lexer-state` compiles and links the Baa0 scanner slice, then validates token type, byte length, line, and column metadata through C-owned out parameters.
+- [x] **Initial Baa-owned scanner state** — the lexer migration started from a Baa-owned scanner-state slice with source pointer, byte offset, line, and column state.
+- [x] **Scanner-state mixed harness** — the retired mixed harness validated token type, byte length, line, and column metadata through C-owned out parameters before production promotion.
 - [x] **First real UTF-8 fixture checkpoint** — the Baa-owned scanner-state path now validates `basic_utf8.baa` token type, byte start, byte length, line, and column metadata for Arabic keywords/identifiers, Arabic-Indic integers, and string literals.
 - [x] **Non-preprocessor UTF-8 stress checkpoint** — `lexer-state` now validates `stress_utf8_identifiers.baa` from committed token-stream snapshots, covering line comments, Arabic keyword/identifier scanning, Arabic-Indic digits, strings, and byte-position parity without switching the production lexer.
 - [x] **Non-preprocessor token-value checkpoint** — the Baa-owned scanner-state path now returns value spans/modes for identifiers, integer literals, and string literals, and `lexer-state` verifies snapshot value parity without introducing production token ownership changes.
 - [x] **Conditional-preprocessor scanner checkpoint** — `lexer-state` now validates `conditional_macros.baa` snapshot parity for Baa-owned `#تعريف`, `#الغاء_تعريف`, `#إذا_عرف`, `#وإلا`, and `#نهاية` branch skipping without moving include handling or diagnostics yet.
-- [x] **Replace bridge with Baa-owned lexer state** — `lexer-token-stream` now compiles `lexer_state_baa0.baa` directly and no longer emits candidate tokens through the C `lexer_next_token` bridge.
-- [x] **Move lexer-state ABI to Baa header format** — `src/frontend/lexer_state_baa0.baahd` now declares the Baa scanner-state contract consumed by `lexer_state_baa0.baa`.
+- [x] **Replace bridge with Baa-owned lexer state** — the production lexer now compiles `src/frontend/lexer.baa` directly into the final compiler instead of routing through a C lexer implementation.
+- [x] **Move lexer-state ABI to Baa header format** — `src/frontend/lexer.baahd` declares the Baa scanner contract consumed by `src/frontend/lexer.baa`.
 - [x] **Port UTF-8 scanner rules** — the Baa scanner-state path preserves Arabic identifiers, Arabic-Indic digits, string/char/raw literal value spans, byte lengths, line/column accounting, and unknown-byte invalid-token behavior across mixed-harness snapshots.
 - [x] **Port preprocessor surface** — the Baa scanner-state path now handles `#تضمين`, `#تعريف`, `#الغاء_تعريف`, `#إذا_عرف`, `#إذا_لم_يعرف`, `#وإلا`, and `#نهاية` across token-stream snapshots, including macro value substitution from included headers.
 - [x] **Preserve dependency tracking** — `lexer-dependencies` now compares Baa scanner-state root/include dependency paths against committed dependency snapshots, and the Baa diagnostic smoke gate covers include-cycle detection at the host include boundary.
@@ -1509,12 +1509,12 @@ Partial status update (2026-03-06):
 - [x] **Default lexer flip** — the normal `baa` build now uses the Baa-backed lexer by default; the temporary C rollback path stayed available only until the later removal checkpoint.
 - [x] **Promote mixed harness gate** — `lexer-token-stream` exercises the Baa scanner-state implementation directly and compares it against committed JSONL snapshots.
 - [x] **Diagnostics parity** — malformed source snapshots now cover bad string/char escapes, unclosed string/char literals, unknown bytes, include-cycle notes, and EOF/preprocessor errors; the Baa scanner-state boundary checks exact diagnostic code, line, and column anchors.
-- [x] **Memory ownership audit** — `docs/MIXED_HARNESS.md` now defines Baa/C ownership for token value spans, dependency paths, include buffers, macro spans, diagnostic text, and cleanup at the current scanner-state boundary.
+- [x] **Memory ownership audit** — the production lexer boundary preserves Baa/C ownership for token value copies, dependency paths, include buffers, macro spans, diagnostic text, and cleanup.
 - [x] **Full language lexer parity signoff** — the opt-in Baa-backed lexer bridge passes Windows release QA, including full integration/regression/negative coverage, stress, fuzz-lite, determinism, bootstrap, and mixed-harness `all`.
 - [x] **Production lexer coverage signoff** — normal QA now includes a backend runtime signoff for UTF-8 identifiers/keywords, Arabic-Indic literals, strings, escaped chars, raw byte strings, Arabic comma tokenization, macro substitution, conditional preprocessing, and include resolution, plus focused negative tests for malformed preprocessor directives and missing includes.
 - [x] **Remove C lexer implementation** — the old C tokenization/preprocessor implementation is removed; source builds require `BAA_BOOTSTRAP_COMPILER`, and mixed-harness token/dependency gates now compare the Baa scanner-state path against committed snapshots.
-- [ ] **Retire lexer migration harness/files** — after production tests own the coverage, remove lexer-only migration harness targets, temporary fixtures/snapshots, and Baa0 bridge files that are no longer part of the production compiler.
-- [ ] **Post-migration Baa lexer readability pass** — once the C lexer is gone, refactor the Baa lexer to use the full stable Baa language surface rather than migration-minimal Baa0 style.
+- [x] **Retire lexer migration harness/files** — removed lexer-only migration harness targets, temporary fixtures/snapshots, and Baa0 bridge files after production tests took over the coverage. (2026-06-04)
+- [ ] **Post-migration Baa lexer readability pass** — now that the C lexer is gone, continue refactoring the Baa lexer toward the full stable Baa language surface where it improves maintainability.
 - [x] **No further language feature expansion** — v0.9.1.5 remains limited to lexer relocation and correctness fixes while consuming the v0.9.1.4 ergonomics surface.
 - [x] **Windows release signoff** — strict build and opt-in `python scripts\qa_run.py --mode release` pass with `build-baa-lexer\baa.exe`; Linux remains deferred unless explicitly requested.
 

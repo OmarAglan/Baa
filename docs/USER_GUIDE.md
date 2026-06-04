@@ -919,13 +919,6 @@ python .\scripts\qa_run.py --mode stress
 # Release gate (full + stress + fuzz-lite + determinism + bootstrap checks)
 python .\scripts\qa_run.py --mode release
 
-# Self-hosting pilot gate
-python .\scripts\qa_selfhost_pilot.py
-
-# Mixed C+Baa harness
-python .\scripts\qa_mixed_harness.py --target all
-python .\scripts\qa_mixed_harness.py --target lexer-diagnostics
-
 # Phase 4.5 handoff bundle gate
 python .\scripts\qa_phase45_handoff.py
 

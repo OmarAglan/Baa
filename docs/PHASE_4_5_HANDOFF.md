@@ -15,7 +15,6 @@ The v0.9.0 baseline must consume these artifacts as inputs, not redefine them:
 - `docs/BAA0_SPEC.md` — conservative bootstrap subset for Baa compiler slices.
 - `docs/SELF_HOSTING_PILOT_REPORT.md` — mixed C+Baa pilot result and next harness recommendation.
 - `scripts/qa_bootstrap_gate.py` — Baa0 compliance and bootstrap corpus gate.
-- `scripts/qa_selfhost_pilot.py` — mixed C+Baa pilot parity gate.
 - `tests/bootstrap/` — Baa0 compliance corpus.
 
 ---

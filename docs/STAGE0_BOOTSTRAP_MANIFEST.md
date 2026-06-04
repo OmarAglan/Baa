@@ -1,6 +1,6 @@
 # Stage-0 Bootstrap Manifest
 
-> **Version:** 0.9.1.5 | [← Phase 4.5 Handoff](PHASE_4_5_HANDOFF.md) | [Mixed Harness →](MIXED_HARNESS.md)
+> **Version:** 0.9.1.5 | [← Phase 4.5 Handoff](PHASE_4_5_HANDOFF.md)
 
 This document records how v0.9.0.1 consumes the frozen Phase 4.5 artifacts before mixed C+Baa migration begins.
 
@@ -50,4 +50,4 @@ Phase 5 implementation checkpoints may consume the frozen artifacts, but they mu
 
 ---
 
-*[← Phase 4.5 Handoff](PHASE_4_5_HANDOFF.md) | [Mixed Harness →](MIXED_HARNESS.md)*
+*[← Phase 4.5 Handoff](PHASE_4_5_HANDOFF.md)*

@@ -157,6 +157,40 @@ Consumes input and returns the next valid token. **Delegates tokenization and pr
 
 Handles syntactic analysis and AST construction.
 
+### Baa parser contract (v0.9.2)
+
+`src/frontend/parser.baahd` defines the first Baa-side parser entry contract for the parser rewrite:
+
+```baa
+#تضمين "ast.baahd"
+
+عقدة_باء محلل_قواعد_باء_حلل(ط٨* محلل_لفظي).
+```
+
+The Baa contract deliberately uses raw handles for the lexer and AST root while the production C API remains `parse(Lexer*) -> Node*`. Future parser slices must preserve the C-facing `parse` behavior through a compatibility wrapper before replacing `src/frontend/parser.c`.
+
+### Baa AST contract (v0.9.2)
+
+`src/frontend/ast.baahd` defines the Baa-side AST migration contract:
+
+```baa
+نوع عقدة_باء = ط٨*.
+نوع توقيع_دالة_باء = ط٨*.
+
+تعداد نوع_عقدة_باء { ... }
+تعداد نوع_بيانات_باء { ... }
+تعداد عملية_ثنائية_باء { ... }
+تعداد عملية_أحادية_باء { ... }
+
+عقدة_باء شجرة_باء_عقدة_أنشئ(صحيح وسم_نوع، ط٨* ملف، صحيح سطر، صحيح عمود، صحيح طول).
+عدم شجرة_باء_عقدة_التالي_ضع(عقدة_باء عقدة، عقدة_باء التالي).
+عقدة_باء شجرة_باء_عقدة_التالي(عقدة_باء عقدة).
+عدم شجرة_باء_برنامج_تصريحات_ضع(عقدة_باء برنامج، عقدة_باء تصريحات).
+عدم شجرة_باء_حرر(عقدة_باء جذر).
+```
+
+The header defines Baa enums aligned with `NodeType`, `DataType`, `OpType`, and `UnaryOpType`. These enums are a migration contract and must stay numerically aligned with `src/frontend/ast.h` until the full frontend representation is Baa-owned.
+
 ### `parse`
 
 ```c
@@ -196,6 +230,18 @@ Node* ast = parse(&lexer);
 ## 3. Semantic Analysis
 
 Handles type checking, symbol resolution, **constant validation**, and **static-storage validation**.
+
+### Baa semantic-analysis contract (v0.9.3)
+
+`src/frontend/analysis.baahd` defines the first Baa-side semantic entry contract:
+
+```baa
+#تضمين "ast.baahd"
+
+صحيح تحليل_دلالي_باء_حلل(عقدة_باء برنامج).
+```
+
+The Baa entry returns `1` for a valid AST and `0` for semantic errors. The production C API remains `analyze(Node*) -> bool` until the semantic-analysis port is wired through a compatibility wrapper.
 
 ### `analyze`
 

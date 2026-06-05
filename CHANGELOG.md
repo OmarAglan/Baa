@@ -6,6 +6,27 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ---
 
+## [0.9.2] - Unreleased
+
+**Parser Rewrite (In Progress)**
+
+### Added
+
+- **Parser Baa contract checkpoint**:
+  - Added `src/frontend/parser.baahd` as the first parser-facing Baa header contract.
+  - The contract exposes a raw-handle Baa parser entrypoint so future parser slices can preserve the external `parse(Lexer*) -> Node*` behavior without depending on C `Lexer` layout from Baa code.
+- **Frontend AST and semantic contract checkpoint**:
+  - Added `src/frontend/ast.baahd` with the opaque `عقدة_باء` AST handle, C-enum-aligned Baa enums for node/type/operator kinds, and the initial AST helper boundary for future Baa parser slices.
+  - Added `src/frontend/analysis.baahd` with the raw-handle semantic-analysis entrypoint planned to back the existing `analyze(Node*) -> bool` API.
+  - Updated the parser Baa contract to return `عقدة_باء` from the AST contract instead of an untyped raw pointer.
+  - Added a compile-only frontend integration test that includes the parser and semantic Baa contracts together to verify the guarded AST contract can be reused safely.
+
+### Unchanged
+
+- The production parser remains `src/frontend/parser.c`, and semantic analysis remains `src/frontend/analysis.c`; no parser/semantic behavior, diagnostics, AST ownership, or IR-lowering contract changed in this checkpoint.
+
+---
+
 ## [0.9.1.5] - 2026-05-29
 
 **Full Baa Lexer Migration**

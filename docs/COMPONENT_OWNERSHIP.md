@@ -23,8 +23,8 @@ It remains both an ownership map and a dependency contract during the compatibil
 
 | Component | Responsibility | Representative modules |
 |-----------|----------------|------------------------|
-| Frontend | Source loading, lexing, preprocessing, parsing, AST construction | `src/frontend/lexer.baa`, `src/frontend/lexer.h`, `src/frontend/parser.c`, `src/frontend/analysis.c` |
-| Middle-End | Semantic analysis, IR construction, IR verification, IR optimization, shared IR data layout | `src/middleend/ir*.c`, `src/middleend/ir_lower.c`, `src/middleend/ir_optimizer.c` |
+| Frontend | Source loading, lexing, preprocessing, parsing, AST construction, semantic analysis | `src/frontend/lexer.baa`, `src/frontend/lexer.h`, `src/frontend/parser.c`, `src/frontend/parser.baahd`, `src/frontend/ast.h`, `src/frontend/ast.baahd`, `src/frontend/analysis.c`, `src/frontend/analysis.baahd` |
+| Middle-End | IR construction, IR verification, IR optimization, shared IR data layout | `src/middleend/ir*.c`, `src/middleend/ir_lower.c`, `src/middleend/ir_optimizer.c` |
 | Backend | Target-aware lowering from IR to machine form and assembly emission | `src/backend/isel.c`, `src/backend/regalloc.c`, `src/backend/emit.c`, `src/backend/target.c`, `code_model.h` |
 | Driver | CLI orchestration, per-file pipeline setup, toolchain execution, process management | `src/driver/main.c`, `src/driver/driver_*.c`, `src/driver/process.c` |
 | Support | Shared diagnostics, file loading, updater glue, and cross-cutting declarations | `src/support/error.c`, `src/support/read_file.c`, `src/support/updater*.c`, `src/support/target_contract.h`, `baa.h` |

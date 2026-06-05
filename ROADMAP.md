@@ -1520,7 +1520,8 @@ Partial status update (2026-03-06):
 
 ### v0.9.2: Rewrite Parser
 
-- [ ] **Baa header contract first** — define parser-facing Baa `.baahd` declarations before moving implementation code.
+- [x] **Baa header contract first** — `src/frontend/parser.baahd` defines the raw-handle Baa parser entry contract while `parse(Lexer*)` remains the C-facing production API. (2026-06-05)
+- [x] **AST Baa header contract first** — `src/frontend/ast.baahd` defines raw AST handles, C-enum-aligned Baa enums, and the helper boundary required before Baa parser slices construct or mutate AST nodes. (2026-06-05)
 - [ ] **Port parser slice to Baa** — AST construction with existing grammar contracts.
 - [ ] **Build through mixed harness** — C/Baa hybrid remains supported while the parser is still behind a compatibility boundary.
 - [ ] **AST + diagnostics parity tests** — match C baseline trees and key error anchors.
@@ -1538,6 +1539,7 @@ Each following compiler layer must follow the same sequence used for the lexer: 
 
 ### v0.9.3: Rewrite Semantic Analysis 🔍
 
+- [x] **Baa header contract first** — `src/frontend/analysis.baahd` defines the raw-handle Baa semantic-analysis entry while `analyze(Node*)` remains the C-facing production API. (2026-06-05)
 - [ ] **Port semantic slice to Baa** — preserve existing type/ABI rules.
 - [ ] **Port symbol/scope tables** — with ownership semantics equivalent to C version.
 - [ ] **Negative-suite parity** — verify same diagnostics and failure points.

@@ -70,8 +70,8 @@ flowchart LR
 
 | Stage | Input | Output | Component | Description |
 |-------|-------|--------|-----------|-------------|
-| **1. Frontend** | `.baa` Source | AST | `lexer.baa`, `lexer.h`, `parser.c` | Tokenizes, handles macros, and builds the syntax tree. |
-| **2. Analysis** | AST | Valid AST | `analysis.c` | **Semantic Pass**: Checks types, scopes, and resolves symbols. |
+| **1. Frontend** | `.baa` Source | AST | `lexer.baa`, `lexer.h`, `parser.c`, `parser.baahd`, `ast.h`, `ast.baahd` | Tokenizes, handles macros, and builds the syntax tree. |
+| **2. Analysis** | AST | Valid AST | `analysis.c`, `analysis.baahd` | **Semantic Pass**: Checks types, scopes, and resolves symbols. |
 | **3. IR Lowering** | AST | IR | `ir_lower.c` (v0.3.0.3+) + `ir_builder.c` | Converts AST expressions/statements to SSA-form Intermediate Representation using the IR Builder. |
 | **4. Optimization** | IR | Optimized IR | `ir_optimizer.c`, `ir_mem2reg.c`, `ir_sccp.c`, `ir_gvn.c`, etc. | Full middle-end: Inlining (O2), Mem2Reg, Canon, InstCombine, SCCP, ConstFold, CopyProp, GVN (O2), CSE (O2), DCE, CFGSimplify, LICM. |
 | **5. Backend** | IR | `.s` Assembly | `isel.c`, `regalloc.c`, `emit.c` | Lowers IR to machine instructions, allocates registers, and emits x86-64 AT&T assembly. |
@@ -85,8 +85,8 @@ flowchart LR
 ```mermaid
 flowchart TB
     Driver["Driver / CLI\nsrc/driver/main.c"] --> Lexer["Lexer + Preprocessor\nsrc/frontend/lexer.baa"]
-    Lexer --> Parser["Parser\nsrc/frontend/parser.c"]
-    Parser --> Analyzer["Semantic Analysis\nsrc/frontend/analysis.c"]
+    Lexer --> Parser["Parser\nsrc/frontend/parser.c\nBaa contract: parser.baahd"]
+    Parser --> Analyzer["Semantic Analysis\nsrc/frontend/analysis.c\nBaa contract: analysis.baahd"]
     Analyzer --> Lower["IR Lowering\nsrc/middleend/ir_lower.c (v0.3.0.3+)"]
     Lower --> IR["IR Module\nsrc/middleend/ir.c (v0.3.0+)"]
     IR --> Backend["Backend\nsrc/backend/isel.c + src/backend/regalloc.c + src/backend/emit.c"]
@@ -144,8 +144,8 @@ The source tree now uses physical component directories under `src/`, and the bu
 
 | Component | Current scope |
 |-----------|---------------|
-| Frontend | source loading, lexing, preprocessing, parsing, AST construction |
-| Middle-End | semantic analysis, IR construction, IR verification, IR optimization |
+| Frontend | source loading, lexing, preprocessing, parsing, AST construction, semantic analysis |
+| Middle-End | IR construction, IR verification, IR optimization |
 | Backend | target-aware IR lowering, register allocation, assembly emission |
 | Driver | CLI orchestration, staging/toolchain execution, updater entry points |
 | Support | shared diagnostics and shared declarations |
@@ -370,7 +370,7 @@ Special:     IDENTIFIER, EOF
 
 ## 3. Syntactic Analysis
 
-The Parser (`src/parser.c`) builds the AST using Recursive Descent with 2-token lookahead.
+The Parser (`src/frontend/parser.c`) builds the AST using Recursive Descent with 2-token lookahead. The v0.9.2 migration contract now starts at `src/frontend/parser.baahd`, which exposes a raw-handle Baa parser entrypoint returning `عقدة_باء` from `src/frontend/ast.baahd` while the production C-facing API remains `parse(Lexer*) -> Node*`.
 
 ### 3.0. Parser Structure
 
@@ -525,7 +525,7 @@ The parser uses `synchronize()` to recover from errors.
 
 ## 4. Abstract Syntax Tree
 
-The AST uses a tagged union structure for type-safe node representation.
+The AST uses a tagged union structure for type-safe node representation. During the frontend port, `src/frontend/ast.baahd` is the Baa-side migration contract: it keeps `Node` opaque as `عقدة_باء = ط٨*`, defines Baa enums aligned with `NodeType`/`DataType`/operation enums in `ast.h`, and declares the raw-handle AST helper boundary that future Baa parser slices must use instead of assuming the C union layout.
 
 ### 4.1. Node Types
 
@@ -555,7 +555,7 @@ typedef struct Node {
 
 ## 5. Semantic Analysis
 
-The Semantic Analyzer (`src/analysis.c`) performs a static check on the AST before code generation.
+The Semantic Analyzer (`src/frontend/analysis.c`) performs a static check on the AST before code generation. The v0.9.3 migration contract starts at `src/frontend/analysis.baahd`, where `تحليل_دلالي_باء_حلل(عقدة_باء)` returns `1` for success and `0` for semantic errors while the production C-facing API remains `analyze(Node*) -> bool`.
 
 ### 5.1. Responsibilities
 

@@ -188,7 +188,7 @@ static const char* expr_enum_name(Node* expr)
     if (!expr) return NULL;
     if (expr->type == NODE_VAR_REF) {
         Symbol* sym = lookup(expr->data.var_ref.name, false);
-        if (sym && sym->type == TYPE_ENUM && sym->type_name[0]) return sym->type_name;
+        if (sym && sym->type == TYPE_ENUM && sym->type_name && sym->type_name[0]) return sym->type_name;
     }
     if (expr->type == NODE_MEMBER_ACCESS) {
         if (expr->data.member_access.is_enum_value) {
@@ -270,7 +270,7 @@ static void resolve_member_access(Node* node)
         }
         root_var = sym->name;
         root_is_global = (sym->scope == SCOPE_GLOBAL);
-        cur_struct = sym->type_name[0] ? sym->type_name : NULL;
+        cur_struct = (sym->type_name && sym->type_name[0]) ? sym->type_name : NULL;
         cur_kind = sym->type;
         base_off = 0;
         base_const = sym->is_const;
@@ -304,7 +304,7 @@ static void resolve_member_access(Node* node)
             return;
         }
 
-        int elem_size = type_size_align(sym->type, sym->type_name[0] ? sym->type_name : NULL, NULL);
+        int elem_size = type_size_align(sym->type, (sym->type_name && sym->type_name[0]) ? sym->type_name : NULL, NULL);
         if (elem_size <= 0) {
             semantic_error(base, "حجم عنصر المصفوفة غير صالح.");
             return;
@@ -318,7 +318,7 @@ static void resolve_member_access(Node* node)
 
         root_var = sym->name;
         root_is_global = (sym->scope == SCOPE_GLOBAL);
-        cur_struct = sym->type_name[0] ? sym->type_name : NULL;
+        cur_struct = (sym->type_name && sym->type_name[0]) ? sym->type_name : NULL;
         cur_kind = sym->type;
         base_off = (int)off64;
         base_const = sym->is_const;

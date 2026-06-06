@@ -1,4 +1,5 @@
 /build
+/build-ci-test
 /.agent
 Output/baa_setup.exe
 mingw64.7z
@@ -39,3 +40,4 @@ __pycache__/
 /.baa_phase45_handoff/
 /build-baa-lexer
 /build-c-lexer
+/.ci/

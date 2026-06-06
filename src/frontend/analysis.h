@@ -24,12 +24,12 @@ typedef enum {
  * @brief يمثل رمزاً (متغيراً) في جدول الرموز.
  */
 typedef struct {
-    char name[32];     // اسم الرمز
+    char* name;        // اسم الرمز (مملوك)
     ScopeType scope;   // النطاق (عام أو محلي)
     DataType type;     // نوع البيانات (للمتغير: نوعه، للمصفوفة: نوع العنصر)
-    char type_name[32]; // اسم النوع عند TYPE_ENUM/TYPE_STRUCT (فارغ لغير ذلك)
+    char* type_name;   // اسم النوع عند TYPE_ENUM/TYPE_STRUCT/TYPE_UNION (مملوك عند وجوده)
     DataType ptr_base_type;      // نوع أساس المؤشر عندما type == TYPE_POINTER
-    char ptr_base_type_name[32]; // اسم النوع المركب لأساس المؤشر
+    char* ptr_base_type_name;    // اسم النوع المركب لأساس المؤشر (مملوك عند وجوده)
     int ptr_depth;               // عمق المؤشر عندما type == TYPE_POINTER
     FuncPtrSig* func_sig;        // توقيع مؤشر الدالة عندما type == TYPE_FUNC_PTR
     bool is_array;     // هل الرمز مصفوفة؟

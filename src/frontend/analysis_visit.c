@@ -386,7 +386,7 @@ static void analyze_node(Node* node) {
                                              node->data.assign_stmt.expression->inferred_ptr_base_type_name,
                                              node->data.assign_stmt.expression->inferred_ptr_depth,
                                              sym->ptr_base_type,
-                                             sym->ptr_base_type_name[0] ? sym->ptr_base_type_name : NULL,
+                                             (sym->ptr_base_type_name && sym->ptr_base_type_name[0]) ? sym->ptr_base_type_name : NULL,
                                              sym->ptr_depth,
                                              true)) {
                         semantic_error(node, "عدم تطابق نوع المؤشر في الإسناد إلى '%s'.", node->data.assign_stmt.name);
@@ -920,7 +920,7 @@ static void analyze_node(Node* node) {
                                          node->data.array_op.value->inferred_ptr_base_type_name,
                                          node->data.array_op.value->inferred_ptr_depth,
                                          sym->ptr_base_type,
-                                         sym->ptr_base_type_name[0] ? sym->ptr_base_type_name : NULL,
+                                         (sym->ptr_base_type_name && sym->ptr_base_type_name[0]) ? sym->ptr_base_type_name : NULL,
                                          sym->ptr_depth,
                                          true)) {
                     semantic_error(node, "نوع القيمة في تعيين '%s' غير متوافق.", sym->name);

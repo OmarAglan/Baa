@@ -20,9 +20,13 @@ jobs:
           if (Test-Path ".\gcc\bin") {
             "$env:GITHUB_WORKSPACE\gcc\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
           }
+      - name: Prepare bootstrap compiler
+        id: bootstrap
+        shell: pwsh
+        run: python scripts/ci_prepare_bootstrap.py --source-dir .ci\bootstrap-src --build-dir .ci\bootstrap-build --cmake-generator "MinGW Makefiles"
       - name: Configure (Windows MinGW)
         shell: pwsh
-        run: cmake -B build -G "MinGW Makefiles"
+        run: cmake -B build -G "MinGW Makefiles" -DBAA_BOOTSTRAP_COMPILER="${{ steps.bootstrap.outputs.compiler }}"
       - name: Build
         shell: pwsh
         run: cmake --build build
@@ -41,9 +45,13 @@ jobs:
           if (Test-Path ".\gcc\bin") {
             "$env:GITHUB_WORKSPACE\gcc\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
           }
+      - name: Prepare bootstrap compiler
+        id: bootstrap
+        shell: pwsh
+        run: python scripts/ci_prepare_bootstrap.py --source-dir .ci\bootstrap-src --build-dir .ci\bootstrap-build --cmake-generator "MinGW Makefiles"
       - name: Configure (Windows MinGW)
         shell: pwsh
-        run: cmake -B build -G "MinGW Makefiles"
+        run: cmake -B build -G "MinGW Makefiles" -DBAA_BOOTSTRAP_COMPILER="${{ steps.bootstrap.outputs.compiler }}"
       - name: Build
         shell: pwsh
         run: cmake --build build
@@ -78,9 +86,13 @@ jobs:
           if (Test-Path ".\gcc\bin") {
             "$env:GITHUB_WORKSPACE\gcc\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
           }
+      - name: Prepare bootstrap compiler
+        id: bootstrap
+        shell: pwsh
+        run: python scripts/ci_prepare_bootstrap.py --source-dir .ci\bootstrap-src --build-dir .ci\bootstrap-build --cmake-generator "MinGW Makefiles"
       - name: Configure (Windows MinGW)
         shell: pwsh
-        run: cmake -B build -G "MinGW Makefiles"
+        run: cmake -B build -G "MinGW Makefiles" -DBAA_BOOTSTRAP_COMPILER="${{ steps.bootstrap.outputs.compiler }}"
       - name: Build
         shell: pwsh
         run: cmake --build build
@@ -114,8 +126,11 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
+      - name: Prepare bootstrap compiler
+        id: bootstrap
+        run: python3 scripts/ci_prepare_bootstrap.py --source-dir .ci/bootstrap-src --build-dir .ci/bootstrap-build --build-type Release
       - name: Configure (Linux)
-        run: cmake -B build-linux -DCMAKE_BUILD_TYPE=Release
+        run: cmake -B build-linux -DCMAKE_BUILD_TYPE=Release -DBAA_BOOTSTRAP_COMPILER="${{ steps.bootstrap.outputs.compiler }}"
       - name: Build
         run: cmake --build build-linux -j
 
@@ -127,8 +142,11 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
+      - name: Prepare bootstrap compiler
+        id: bootstrap
+        run: python3 scripts/ci_prepare_bootstrap.py --source-dir .ci/bootstrap-src --build-dir .ci/bootstrap-build --build-type Release
       - name: Configure (Linux)
-        run: cmake -B build-linux -DCMAKE_BUILD_TYPE=Release
+        run: cmake -B build-linux -DCMAKE_BUILD_TYPE=Release -DBAA_BOOTSTRAP_COMPILER="${{ steps.bootstrap.outputs.compiler }}"
       - name: Build
         run: cmake --build build-linux -j
       - name: QA Quick
@@ -155,8 +173,11 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
+      - name: Prepare bootstrap compiler
+        id: bootstrap
+        run: python3 scripts/ci_prepare_bootstrap.py --source-dir .ci/bootstrap-src --build-dir .ci/bootstrap-build --build-type Release
       - name: Configure (Linux)
-        run: cmake -B build-linux -DCMAKE_BUILD_TYPE=Release
+        run: cmake -B build-linux -DCMAKE_BUILD_TYPE=Release -DBAA_BOOTSTRAP_COMPILER="${{ steps.bootstrap.outputs.compiler }}"
       - name: Build
         run: cmake --build build-linux -j
       - name: Module Size Guard

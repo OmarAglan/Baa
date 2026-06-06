@@ -20,10 +20,24 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
   - Added `src/frontend/analysis.baahd` with the raw-handle semantic-analysis entrypoint planned to back the existing `analyze(Node*) -> bool` API.
   - Updated the parser Baa contract to return `عقدة_باء` from the AST contract instead of an untyped raw pointer.
   - Added a compile-only frontend integration test that includes the parser and semantic Baa contracts together to verify the guarded AST contract can be reused safely.
+- **Semantic limit regression coverage**:
+  - Added a backend runtime integration test for long Baa symbol names so identifiers beyond the old fixed semantic-name buffer remain accepted through semantic analysis, IR verification, and execution.
+- **CI bootstrap preparation**:
+  - Added `scripts/ci_prepare_bootstrap.py` so clean GitHub Actions runners can build a pinned source-bootstrap compiler before configuring the current tree.
+
+### Changed
+
+- **Post-migration Baa lexer readability pass**:
+  - Refactored repeated keyword, token-name, and lexer diagnostic mapping ladders in `src/frontend/lexer.baa` into full-Baa helper/switch forms while preserving the existing parser-facing lexer ABI and production behavior.
+- **Semantic analyzer storage**:
+  - Removed the fixed function-registration cap by growing the semantic function table on demand.
+  - Replaced fixed 31-byte semantic symbol-name/type-name buffers with owned strings, removing the old valid-identifier length rejection while keeping symbol cleanup explicit.
+- **GitHub Actions bootstrap builds**:
+  - Updated Windows, Linux, and nightly stress workflows to pass `BAA_BOOTSTRAP_COMPILER` during CMake configure instead of assuming a local bootstrap binary exists.
 
 ### Unchanged
 
-- The production parser remains `src/frontend/parser.c`, and semantic analysis remains `src/frontend/analysis.c`; no parser/semantic behavior, diagnostics, AST ownership, or IR-lowering contract changed in this checkpoint.
+- The production parser remains `src/frontend/parser.c`, and semantic analysis remains `src/frontend/analysis.c`; no parser behavior, AST ownership, diagnostics contract, or IR-lowering contract changed in the parser-contract checkpoint.
 
 ---
 

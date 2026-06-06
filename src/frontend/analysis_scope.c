@@ -33,6 +33,25 @@ static void scope_pop(void) {
     local_symbol_hash_rebuild();
 }
 
+static bool symbol_set_owned_text(char** out,
+                                  const char* value,
+                                  const char* decl_file,
+                                  int decl_line,
+                                  int decl_col,
+                                  const char* label)
+{
+    if (!out) return false;
+    *out = NULL;
+    if (!value || !value[0]) return true;
+    *out = strdup(value);
+    if (!*out) {
+        semantic_error_loc(decl_file, decl_line, decl_col,
+                           "نفدت الذاكرة أثناء نسخ %s.", label ? label : "نص الرمز");
+        return false;
+    }
+    return true;
+}
+
 /**
  * @brief إضافة رمز إلى النطاق الحالي.
  */
@@ -64,15 +83,6 @@ static void add_symbol(const char* name,
         return;
     }
 
-    size_t name_len = strlen(name);
-    size_t name_cap = sizeof(global_symbols[0].name);
-    if (name_len >= name_cap) {
-        semantic_error_loc(decl_file, decl_line, decl_col,
-                           "اسم الرمز طويل جداً: '%s' (الحد الأقصى %zu حرفاً).",
-                           name, name_cap - 1);
-        return;
-    }
-
     if (scope == SCOPE_GLOBAL) {
         // التحقق من التكرار
         if (global_lookup_by_name(name)) {
@@ -84,59 +94,54 @@ static void add_symbol(const char* name,
             semantic_error_loc(decl_file, decl_line, decl_col, "عدد المتغيرات العامة كبير جداً.");
             return;
         }
-        
-        memcpy(global_symbols[global_count].name, name, name_len + 1);
-        global_symbols[global_count].scope = SCOPE_GLOBAL;
-        global_symbols[global_count].type = type;
-        global_symbols[global_count].type_name[0] = '\0';
-        global_symbols[global_count].ptr_base_type = ptr_base_type;
-        global_symbols[global_count].ptr_base_type_name[0] = '\0';
-        global_symbols[global_count].ptr_depth = ptr_depth;
-        global_symbols[global_count].func_sig = NULL;
-        if (type_name && type_name[0]) {
-            size_t tn_len = strlen(type_name);
-            size_t tn_cap = sizeof(global_symbols[global_count].type_name);
-            if (tn_len < tn_cap) {
-                memcpy(global_symbols[global_count].type_name, type_name, tn_len + 1);
-            }
+
+        Symbol* sym = &global_symbols[global_count];
+        memset(sym, 0, sizeof(*sym));
+        if (!symbol_set_owned_text(&sym->name, name, decl_file, decl_line, decl_col, "اسم الرمز")) {
+            return;
         }
-        if (ptr_base_type_name && ptr_base_type_name[0]) {
-            size_t pn_len = strlen(ptr_base_type_name);
-            size_t pn_cap = sizeof(global_symbols[global_count].ptr_base_type_name);
-            if (pn_len < pn_cap) {
-                memcpy(global_symbols[global_count].ptr_base_type_name, ptr_base_type_name, pn_len + 1);
-            }
+        if (!symbol_set_owned_text(&sym->type_name, type_name, decl_file, decl_line, decl_col, "اسم نوع الرمز") ||
+            !symbol_set_owned_text(&sym->ptr_base_type_name, ptr_base_type_name, decl_file, decl_line, decl_col, "اسم أساس المؤشر")) {
+            symbol_release_array_dims(sym);
+            return;
         }
+        sym->scope = SCOPE_GLOBAL;
+        sym->type = type;
+        sym->ptr_base_type = ptr_base_type;
+        sym->ptr_depth = ptr_depth;
+        sym->func_sig = NULL;
         if (type == TYPE_FUNC_PTR) {
-            global_symbols[global_count].func_sig = funcsig_clone(func_sig);
-            if (!global_symbols[global_count].func_sig) {
+            sym->func_sig = funcsig_clone(func_sig);
+            if (!sym->func_sig) {
                 semantic_error_loc(decl_file, decl_line, decl_col,
                                    "نفدت الذاكرة أثناء نسخ توقيع مؤشر الدالة للرمز '%s'.", name);
+                symbol_release_array_dims(sym);
                 return;
             }
         }
-        global_symbols[global_count].is_array = is_array;
-        global_symbols[global_count].array_rank = 0;
-        global_symbols[global_count].array_total_elems = 0;
-        global_symbols[global_count].array_dims = NULL;
+        sym->is_array = is_array;
+        sym->array_rank = 0;
+        sym->array_total_elems = 0;
+        sym->array_dims = NULL;
         if (is_array && array_rank > 0 && array_dims) {
             int* dims_copy = (int*)malloc((size_t)array_rank * sizeof(int));
             if (!dims_copy) {
                 semantic_error_loc(decl_file, decl_line, decl_col,
                                    "نفدت الذاكرة أثناء نسخ أبعاد المصفوفة.");
+                symbol_release_array_dims(sym);
                 return;
             }
             for (int i = 0; i < array_rank; i++) dims_copy[i] = array_dims[i];
-            global_symbols[global_count].array_dims = dims_copy;
-            global_symbols[global_count].array_rank = array_rank;
-            global_symbols[global_count].array_total_elems = array_total_elems;
+            sym->array_dims = dims_copy;
+            sym->array_rank = array_rank;
+            sym->array_total_elems = array_total_elems;
         }
-        global_symbols[global_count].is_const = is_const;
-        global_symbols[global_count].is_static = is_static;
-        global_symbols[global_count].is_used = false;
-        global_symbols[global_count].decl_line = decl_line;
-        global_symbols[global_count].decl_col = decl_col;
-        global_symbols[global_count].decl_file = decl_file;
+        sym->is_const = is_const;
+        sym->is_static = is_static;
+        sym->is_used = false;
+        sym->decl_line = decl_line;
+        sym->decl_col = decl_col;
+        sym->decl_file = decl_file;
         symbol_hash_insert(global_symbols, global_symbol_hash_head, global_symbol_hash_next, global_count);
         global_count++;
     } else {
@@ -164,58 +169,53 @@ static void add_symbol(const char* name,
                 "المتغير المحلي '%s' يحجب متغيراً محلياً من نطاق خارجي.", name);
         }
 
-        memcpy(local_symbols[local_count].name, name, name_len + 1);
-        local_symbols[local_count].scope = SCOPE_LOCAL;
-        local_symbols[local_count].type = type;
-        local_symbols[local_count].type_name[0] = '\0';
-        local_symbols[local_count].ptr_base_type = ptr_base_type;
-        local_symbols[local_count].ptr_base_type_name[0] = '\0';
-        local_symbols[local_count].ptr_depth = ptr_depth;
-        local_symbols[local_count].func_sig = NULL;
-        if (type_name && type_name[0]) {
-            size_t tn_len = strlen(type_name);
-            size_t tn_cap = sizeof(local_symbols[local_count].type_name);
-            if (tn_len < tn_cap) {
-                memcpy(local_symbols[local_count].type_name, type_name, tn_len + 1);
-            }
+        Symbol* sym = &local_symbols[local_count];
+        memset(sym, 0, sizeof(*sym));
+        if (!symbol_set_owned_text(&sym->name, name, decl_file, decl_line, decl_col, "اسم الرمز")) {
+            return;
         }
-        if (ptr_base_type_name && ptr_base_type_name[0]) {
-            size_t pn_len = strlen(ptr_base_type_name);
-            size_t pn_cap = sizeof(local_symbols[local_count].ptr_base_type_name);
-            if (pn_len < pn_cap) {
-                memcpy(local_symbols[local_count].ptr_base_type_name, ptr_base_type_name, pn_len + 1);
-            }
+        if (!symbol_set_owned_text(&sym->type_name, type_name, decl_file, decl_line, decl_col, "اسم نوع الرمز") ||
+            !symbol_set_owned_text(&sym->ptr_base_type_name, ptr_base_type_name, decl_file, decl_line, decl_col, "اسم أساس المؤشر")) {
+            symbol_release_array_dims(sym);
+            return;
         }
+        sym->scope = SCOPE_LOCAL;
+        sym->type = type;
+        sym->ptr_base_type = ptr_base_type;
+        sym->ptr_depth = ptr_depth;
+        sym->func_sig = NULL;
         if (type == TYPE_FUNC_PTR) {
-            local_symbols[local_count].func_sig = funcsig_clone(func_sig);
-            if (!local_symbols[local_count].func_sig) {
+            sym->func_sig = funcsig_clone(func_sig);
+            if (!sym->func_sig) {
                 semantic_error_loc(decl_file, decl_line, decl_col,
                                    "نفدت الذاكرة أثناء نسخ توقيع مؤشر الدالة للرمز '%s'.", name);
+                symbol_release_array_dims(sym);
                 return;
             }
         }
-        local_symbols[local_count].is_array = is_array;
-        local_symbols[local_count].array_rank = 0;
-        local_symbols[local_count].array_total_elems = 0;
-        local_symbols[local_count].array_dims = NULL;
+        sym->is_array = is_array;
+        sym->array_rank = 0;
+        sym->array_total_elems = 0;
+        sym->array_dims = NULL;
         if (is_array && array_rank > 0 && array_dims) {
             int* dims_copy = (int*)malloc((size_t)array_rank * sizeof(int));
             if (!dims_copy) {
                 semantic_error_loc(decl_file, decl_line, decl_col,
                                    "نفدت الذاكرة أثناء نسخ أبعاد المصفوفة.");
+                symbol_release_array_dims(sym);
                 return;
             }
             for (int i = 0; i < array_rank; i++) dims_copy[i] = array_dims[i];
-            local_symbols[local_count].array_dims = dims_copy;
-            local_symbols[local_count].array_rank = array_rank;
-            local_symbols[local_count].array_total_elems = array_total_elems;
+            sym->array_dims = dims_copy;
+            sym->array_rank = array_rank;
+            sym->array_total_elems = array_total_elems;
         }
-        local_symbols[local_count].is_const = is_const;
-        local_symbols[local_count].is_static = is_static;
-        local_symbols[local_count].is_used = false;
-        local_symbols[local_count].decl_line = decl_line;
-        local_symbols[local_count].decl_col = decl_col;
-        local_symbols[local_count].decl_file = decl_file;
+        sym->is_const = is_const;
+        sym->is_static = is_static;
+        sym->is_used = false;
+        sym->decl_line = decl_line;
+        sym->decl_col = decl_col;
+        sym->decl_file = decl_file;
         symbol_hash_insert(local_symbols, local_symbol_hash_head, local_symbol_hash_next, local_count);
         local_count++;
     }
@@ -473,4 +473,3 @@ static bool symbol_const_linear_index(Symbol* sym, Node* indices, int expected_r
     *out_linear = linear;
     return true;
 }
-

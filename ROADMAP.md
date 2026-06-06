@@ -1514,7 +1514,7 @@ Partial status update (2026-03-06):
 - [x] **Production lexer coverage signoff** — normal QA now includes a backend runtime signoff for UTF-8 identifiers/keywords, Arabic-Indic literals, strings, escaped chars, raw byte strings, Arabic comma tokenization, macro substitution, conditional preprocessing, and include resolution, plus focused negative tests for malformed preprocessor directives and missing includes.
 - [x] **Remove C lexer implementation** — the old C tokenization/preprocessor implementation is removed; source builds require `BAA_BOOTSTRAP_COMPILER`, and mixed-harness token/dependency gates now compare the Baa scanner-state path against committed snapshots.
 - [x] **Retire lexer migration harness/files** — removed lexer-only migration harness targets, temporary fixtures/snapshots, and Baa0 bridge files after production tests took over the coverage. (2026-06-04)
-- [ ] **Post-migration Baa lexer readability pass** — now that the C lexer is gone, continue refactoring the Baa lexer toward the full stable Baa language surface where it improves maintainability.
+- [x] **Post-migration Baa lexer readability pass** — refactored repeated Baa lexer keyword/token/diagnostic mapping ladders toward the full stable Baa language surface while preserving production lexer behavior. (2026-06-06)
 - [x] **No further language feature expansion** — v0.9.1.5 remains limited to lexer relocation and correctness fixes while consuming the v0.9.1.4 ergonomics surface.
 - [x] **Windows release signoff** — strict build and opt-in `python scripts\qa_run.py --mode release` pass with `build-baa-lexer\baa.exe`; Linux remains deferred unless explicitly requested.
 

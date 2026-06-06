@@ -24,8 +24,8 @@
 
 #define ANALYSIS_MAX_SYMBOLS 100
 #define ANALYSIS_MAX_SCOPES  64
-#define ANALYSIS_MAX_FUNCS   128
 #define ANALYSIS_MAX_FUNC_PARAMS 32
+#define ANALYSIS_INITIAL_FUNC_CAPACITY 128
 #define ANALYSIS_SYMBOL_HASH_BUCKETS 257
 
 // أنواع مركبة (v0.3.4)
@@ -132,8 +132,9 @@ typedef struct {
     int decl_col;
 } FuncSymbol;
 
-static FuncSymbol func_symbols[ANALYSIS_MAX_FUNCS];
+static FuncSymbol* func_symbols = NULL;
 static int func_count = 0;
+static int func_capacity = 0;
 
 // مكدس النطاقات المحلية: نخزن قيمة local_count عند دخول نطاق جديد.
 static int scope_stack[ANALYSIS_MAX_SCOPES];
@@ -358,6 +359,12 @@ static void symbol_release_array_dims(Symbol* sym)
 {
     if (!sym) return;
     // تحرير ملكيات الرمز (غير مملوكة عبر arena).
+    free(sym->name);
+    sym->name = NULL;
+    free(sym->type_name);
+    sym->type_name = NULL;
+    free(sym->ptr_base_type_name);
+    sym->ptr_base_type_name = NULL;
     if (sym->func_sig) {
         funcsig_free(sym->func_sig);
         sym->func_sig = NULL;
@@ -420,6 +427,7 @@ static void reset_analysis() {
         func_symbols[i].param_count = 0;
         func_symbols[i].is_variadic = false;
         func_symbols[i].is_defined = false;
+        memset(&func_symbols[i], 0, sizeof(func_symbols[i]));
     }
     func_count = 0;
 
@@ -510,6 +518,25 @@ static FuncSymbol* func_lookup(const char* name)
         }
     }
     return NULL;
+}
+
+static FuncSymbol* func_symbol_append(Node* node)
+{
+    if (func_count >= func_capacity) {
+        int new_capacity = func_capacity > 0 ? func_capacity * 2 : ANALYSIS_INITIAL_FUNC_CAPACITY;
+        FuncSymbol* grown = (FuncSymbol*)realloc(func_symbols, (size_t)new_capacity * sizeof(FuncSymbol));
+        if (!grown) {
+            semantic_error(node, "نفدت الذاكرة أثناء توسيع جدول الدوال.");
+            return NULL;
+        }
+        memset(grown + func_capacity, 0, (size_t)(new_capacity - func_capacity) * sizeof(FuncSymbol));
+        func_symbols = grown;
+        func_capacity = new_capacity;
+    }
+
+    FuncSymbol* fs = &func_symbols[func_count++];
+    memset(fs, 0, sizeof(*fs));
+    return fs;
 }
 
 static int func_signature_matches_decl(const FuncSymbol* a, const Node* node)
@@ -661,13 +688,8 @@ static void func_register(Node* node)
         return;
     }
 
-    if (func_count >= ANALYSIS_MAX_FUNCS) {
-        semantic_error(node, "عدد الدوال كبير جداً.");
-        return;
-    }
-
-    FuncSymbol* fs = &func_symbols[func_count++];
-    memset(fs, 0, sizeof(*fs));
+    FuncSymbol* fs = func_symbol_append(node);
+    if (!fs) return;
     fs->name = strdup(name);
     if (!fs->name) {
         semantic_error(node, "نفدت الذاكرة أثناء تسجيل اسم الدالة.");

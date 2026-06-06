@@ -409,14 +409,14 @@ static bool sizeof_expr_bytes(Node* expr, int64_t* out_size)
 
         if (sym->is_array) {
             int64_t elem_size = 0;
-            if (!datatype_size_bytes(sym->type, sym->type_name[0] ? sym->type_name : NULL, &elem_size)) {
+            if (!datatype_size_bytes(sym->type, (sym->type_name && sym->type_name[0]) ? sym->type_name : NULL, &elem_size)) {
                 return false;
             }
             *out_size = elem_size * sym->array_total_elems;
             return true;
         }
 
-        return datatype_size_bytes(sym->type, sym->type_name[0] ? sym->type_name : NULL, out_size);
+        return datatype_size_bytes(sym->type, (sym->type_name && sym->type_name[0]) ? sym->type_name : NULL, out_size);
     }
 
     if (expr->type == NODE_MEMBER_ACCESS) {

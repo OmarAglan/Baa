@@ -213,7 +213,7 @@ static DataType infer_type_internal(Node* node) {
             if (sym->type == TYPE_POINTER) {
                 node_set_inferred_ptr(node,
                                       sym->ptr_base_type,
-                                      sym->ptr_base_type_name[0] ? sym->ptr_base_type_name : NULL,
+                                      (sym->ptr_base_type_name && sym->ptr_base_type_name[0]) ? sym->ptr_base_type_name : NULL,
                                       sym->ptr_depth);
             } else if (sym->type == TYPE_FUNC_PTR) {
                 node_set_inferred_funcptr(node, sym->func_sig);
@@ -280,7 +280,7 @@ static DataType infer_type_internal(Node* node) {
                 if (sym->type == TYPE_POINTER) {
                     DataType cur_t = TYPE_POINTER;
                     DataType cur_base = sym->ptr_base_type;
-                    const char* cur_base_name = (sym->ptr_base_type_name[0] ? sym->ptr_base_type_name : NULL);
+                    const char* cur_base_name = ((sym->ptr_base_type_name && sym->ptr_base_type_name[0]) ? sym->ptr_base_type_name : NULL);
                     int cur_depth = sym->ptr_depth;
 
                     if (cur_depth <= 0) {
@@ -380,7 +380,7 @@ static DataType infer_type_internal(Node* node) {
             if (sym->type == TYPE_POINTER) {
                 node_set_inferred_ptr(node,
                                       sym->ptr_base_type,
-                                      sym->ptr_base_type_name[0] ? sym->ptr_base_type_name : NULL,
+                                      (sym->ptr_base_type_name && sym->ptr_base_type_name[0]) ? sym->ptr_base_type_name : NULL,
                                       sym->ptr_depth);
             } else {
                 node_clear_inferred_ptr(node);
@@ -775,13 +775,13 @@ static DataType infer_type_internal(Node* node) {
                         if (sym->type == TYPE_POINTER) {
                             node_set_inferred_ptr(target,
                                                   sym->ptr_base_type,
-                                                  sym->ptr_base_type_name[0] ? sym->ptr_base_type_name : NULL,
+                                                  (sym->ptr_base_type_name && sym->ptr_base_type_name[0]) ? sym->ptr_base_type_name : NULL,
                                                   sym->ptr_depth);
                         } else if (sym->type == TYPE_FUNC_PTR) {
                             node_set_inferred_funcptr(target, sym->func_sig);
                         }
                         if (sym->type == TYPE_STRUCT || sym->type == TYPE_UNION || sym->type == TYPE_ENUM) {
-                            base_name = sym->type_name[0] ? sym->type_name : NULL;
+                            base_name = (sym->type_name && sym->type_name[0]) ? sym->type_name : NULL;
                         }
                     }
                 } else {

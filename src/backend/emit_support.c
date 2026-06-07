@@ -356,6 +356,88 @@ static void emit_operand(MachineOperand* op, FILE* out) {
     }
 }
 
+static bool emit_operand_is_memory_like(const MachineOperand* op)
+{
+    if (!op) return false;
+    return op->kind == MACH_OP_MEM || op->kind == MACH_OP_GLOBAL;
+}
+
+static MachineOperand emit_scratch_rax(int bits)
+{
+    MachineOperand tmp = (MachineOperand){0};
+    tmp.kind = MACH_OP_VREG;
+    tmp.size_bits = bits > 0 ? bits : 64;
+    tmp.data.vreg = PHYS_RAX;
+    return tmp;
+}
+
+static int emit_inst_bits_or_default(const MachineInst* inst)
+{
+    if (!inst) return 64;
+    if (inst->dst.size_bits > 0) return inst->dst.size_bits;
+    if (inst->src1.size_bits > 0) return inst->src1.size_bits;
+    if (inst->src2.size_bits > 0) return inst->src2.size_bits;
+    return 64;
+}
+
+static bool emit_two_addr_mem_to_mem(MachineInst* inst, FILE* out, const char* mnemonic)
+{
+    if (!inst || !out || !mnemonic) return false;
+    if (!emit_operand_is_memory_like(&inst->dst) || !emit_operand_is_memory_like(&inst->src2)) {
+        return false;
+    }
+
+    int bits = emit_inst_bits_or_default(inst);
+    char suffix = size_suffix(bits);
+    MachineOperand tmp = emit_scratch_rax(bits);
+    MachineOperand src = inst->src2;
+    src.size_bits = bits;
+
+    // تعليمة x86 لا تقبل ذاكرة-إلى-ذاكرة؛ نحمّل المصدر إلى سجل خدش غير مخصص.
+    fprintf(out, "    mov%c ", suffix);
+    emit_operand(&src, out);
+    fprintf(out, ", ");
+    emit_operand(&tmp, out);
+    fprintf(out, "\n");
+
+    fprintf(out, "    %s%c ", mnemonic, suffix);
+    emit_operand(&tmp, out);
+    fprintf(out, ", ");
+    emit_operand(&inst->dst, out);
+    fprintf(out, "\n");
+    return true;
+}
+
+static bool emit_imul_with_memory_dst(MachineInst* inst, FILE* out)
+{
+    if (!inst || !out) return false;
+    if (!emit_operand_is_memory_like(&inst->dst)) return false;
+
+    int bits = emit_inst_bits_or_default(inst);
+    char suffix = size_suffix(bits);
+    MachineOperand tmp = emit_scratch_rax(bits);
+
+    // imul ثنائية المعامل تتطلب أن تكون الوجهة سجلاً.
+    fprintf(out, "    mov%c ", suffix);
+    emit_operand(&inst->dst, out);
+    fprintf(out, ", ");
+    emit_operand(&tmp, out);
+    fprintf(out, "\n");
+
+    fprintf(out, "    imul%c ", suffix);
+    emit_operand(&inst->src2, out);
+    fprintf(out, ", ");
+    emit_operand(&tmp, out);
+    fprintf(out, "\n");
+
+    fprintf(out, "    mov%c ", suffix);
+    emit_operand(&tmp, out);
+    fprintf(out, ", ");
+    emit_operand(&inst->dst, out);
+    fprintf(out, "\n");
+    return true;
+}
+
 // ============================================================================
 // إصدار مقدمة وخاتمة الدالة (Function Prologue/Epilogue)
 // ============================================================================

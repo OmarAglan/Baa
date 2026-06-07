@@ -422,6 +422,8 @@
                 fprintf(out, ", ");
                 emit_operand(&inst->dst, out);
                 fprintf(out, "\n");
+            } else if (emit_two_addr_mem_to_mem(inst, out, "and")) {
+                break;
             } else {
                 fprintf(out, "    and%c ", infer_suffix(inst));
                 emit_operand(&inst->src2, out);
@@ -447,6 +449,8 @@
                 fprintf(out, ", ");
                 emit_operand(&inst->dst, out);
                 fprintf(out, "\n");
+            } else if (emit_two_addr_mem_to_mem(inst, out, "or")) {
+                break;
             } else {
                 fprintf(out, "    or%c ", infer_suffix(inst));
                 emit_operand(&inst->src2, out);
@@ -455,4 +459,3 @@
                 fprintf(out, "\n");
             }
             break;
-

@@ -129,6 +129,8 @@
                 fprintf(out, ", ");
                 emit_operand(&inst->dst, out);
                 fprintf(out, "\n");
+            } else if (emit_two_addr_mem_to_mem(inst, out, "add")) {
+                break;
             } else {
                 fprintf(out, "    add%c ", infer_suffix(inst));
                 emit_operand(&inst->src2, out);
@@ -154,6 +156,8 @@
                 fprintf(out, ", ");
                 emit_operand(&inst->dst, out);
                 fprintf(out, "\n");
+            } else if (emit_two_addr_mem_to_mem(inst, out, "sub")) {
+                break;
             } else {
                 fprintf(out, "    sub%c ", infer_suffix(inst));
                 emit_operand(&inst->src2, out);
@@ -164,6 +168,9 @@
             break;
 
         case MACH_IMUL:
+            if (emit_imul_with_memory_dst(inst, out)) {
+                break;
+            }
             fprintf(out, "    imul%c ", infer_suffix(inst));
             emit_operand(&inst->src2, out);
             fprintf(out, ", ");

@@ -20,6 +20,8 @@
                 fprintf(out, ", ");
                 emit_operand(&inst->dst, out);
                 fprintf(out, "\n");
+            } else if (emit_two_addr_mem_to_mem(inst, out, "xor")) {
+                break;
             } else {
                 fprintf(out, "    xor%c ", infer_suffix(inst));
                 emit_operand(&inst->src2, out);

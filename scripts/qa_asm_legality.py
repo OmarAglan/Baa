@@ -98,8 +98,7 @@ def main() -> int:
     source_arg = str(source.relative_to(ROOT)) if source.is_relative_to(ROOT) else str(source)
     cmd = [
         str(compiler),
-        "--target",
-        args.target,
+        f"--target={args.target}",
         "-S",
         "-O2",
         "--verify-ir",

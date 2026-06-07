@@ -22,6 +22,7 @@ DEFAULT_LOG_DIR = ROOT / ".baa_qa_logs"
 CORPUS_COMPILE_TIMEOUT_S = 25.0
 FUZZ_TIMEOUT_S = 8.0
 MODULE_SIZE_TIMEOUT_S = 30.0
+ASM_LEGALITY_TIMEOUT_S = 90.0
 
 
 @dataclass
@@ -388,6 +389,27 @@ def _run_build_profile_guard(log_dir: Path) -> StepResult:
     )
 
 
+def _run_asm_legality_guard(baa: Path, log_dir: Path) -> StepResult:
+    return _run_logged(
+        "asm-legality:lexer-linux",
+        [
+            sys.executable,
+            str(ROOT / "scripts" / "qa_asm_legality.py"),
+            "--compiler",
+            str(baa),
+            "--source",
+            "src/frontend/lexer.baa",
+            "--target",
+            "x86_64-linux",
+            "--out-dir",
+            str((log_dir / "asm-legality-out").relative_to(ROOT)),
+        ],
+        cwd=ROOT,
+        log_dir=log_dir,
+        timeout_s=ASM_LEGALITY_TIMEOUT_S,
+    )
+
+
 def _write_summary(
     mode: str,
     compiler: Path | None,
@@ -506,6 +528,11 @@ def main() -> int:
         _print_step(build_maturity_res)
         all_results.append(build_maturity_res)
         overall_ok = overall_ok and build_maturity_res.passed
+
+        asm_legality_res = _run_asm_legality_guard(baa, log_dir)
+        _print_step(asm_legality_res)
+        all_results.append(asm_legality_res)
+        overall_ok = overall_ok and asm_legality_res.passed
 
     if args.mode in ("stress", "release"):
         stress_ok, stress_results = _run_stress_suite(baa, log_dir)

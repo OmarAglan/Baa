@@ -13,6 +13,12 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_BOOTSTRAP_REF = "0.9.1.4.5"
+BOOTSTRAP_BACKEND_PATCH_FILES = (
+    "src/backend/emit_support.c",
+    "src/backend/emit_inst_body_a.inc",
+    "src/backend/emit_inst_body_b.inc",
+    "src/backend/emit_inst_body_c.inc",
+)
 
 
 def run(cmd: list[str], cwd: Path = ROOT) -> None:
@@ -48,6 +54,16 @@ def compiler_path(build_dir: Path) -> Path:
     return build_dir / ("baa.exe" if os.name == "nt" else "baa")
 
 
+def patch_bootstrap_backend(source_dir: Path) -> None:
+    for rel in BOOTSTRAP_BACKEND_PATCH_FILES:
+        current = ROOT / rel
+        target = source_dir / rel
+        if not current.exists() or not target.exists():
+            raise FileNotFoundError(f"cannot patch bootstrap backend file: {rel}")
+        shutil.copy2(current, target)
+    print("ci-bootstrap: patched backend emitter legality files")
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Prepare the Baa bootstrap compiler for CI")
     parser.add_argument("--ref", default=DEFAULT_BOOTSTRAP_REF)
@@ -69,6 +85,7 @@ def main() -> int:
     with tarfile.open(archive_path, "r") as archive:
         archive.extractall(source_dir)
     archive_path.unlink(missing_ok=True)
+    patch_bootstrap_backend(source_dir)
 
     configure = ["cmake", "-S", str(source_dir), "-B", str(build_dir)]
     if args.cmake_generator:

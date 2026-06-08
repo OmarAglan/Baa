@@ -41,3 +41,5 @@ __pycache__/
 /build-baa-lexer
 /build-c-lexer
 /.ci/
+/build-parser-slice-strict
+/build-parser-slice

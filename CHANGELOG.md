@@ -20,6 +20,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
   - Added `src/frontend/analysis.baahd` with the raw-handle semantic-analysis entrypoint planned to back the existing `analyze(Node*) -> bool` API.
   - Updated the parser Baa contract to return `عقدة_باء` from the AST contract instead of an untyped raw pointer.
   - Added a compile-only frontend integration test that includes the parser and semantic Baa contracts together to verify the guarded AST contract can be reused safely.
+- **Baa parser top-level slice**:
+  - Added an opt-in `src/frontend/parser.baa` slice that owns the parser top-level program/declaration-list loop while delegating declaration grammar to the existing C parser.
+  - Added the C/Baa AST and parser-state bridge helpers needed for Baa parser slices to construct a `NODE_PROGRAM` root without depending on C struct layout.
+  - Added a focused frontend compile-only smoke test for multiple top-level declarations through the parser-slice boundary.
 - **Semantic limit regression coverage**:
   - Added a backend runtime integration test for long Baa symbol names so identifiers beyond the old fixed semantic-name buffer remain accepted through semantic analysis, IR verification, and execution.
 - **CI bootstrap preparation**:
@@ -34,6 +38,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
   - Replaced fixed 31-byte semantic symbol-name/type-name buffers with owned strings, removing the old valid-identifier length rejection while keeping symbol cleanup explicit.
 - **GitHub Actions bootstrap builds**:
   - Updated Windows, Linux, and nightly stress workflows to pass `BAA_BOOTSTRAP_COMPILER` during CMake configure instead of assuming a local bootstrap binary exists.
+- **Parser migration build gate**:
+  - Added `BAA_USE_BAA_PARSER_TOPLEVEL` as an opt-in CMake switch for testing the first Baa parser slice while keeping the default production parser on the C path.
 
 ### Unchanged
 

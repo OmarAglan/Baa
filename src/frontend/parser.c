@@ -330,6 +330,39 @@ static Node* ast_node_new(NodeType type, Token tok) {
     return n;
 }
 
+Node* شجرة_باء_عقدة_أنشئ(int64_t node_type, char* filename,
+                          int64_t line, int64_t col, int64_t length)
+{
+    if (node_type < 0 || node_type > NODE_CALL_EXPR) {
+        return NULL;
+    }
+
+    Token tok = {0};
+    tok.filename = filename ? filename : "unknown";
+    tok.line = (int)line;
+    tok.col = (int)col;
+    tok.length = length > 0 ? (int)length : 1;
+    return ast_node_new((NodeType)node_type, tok);
+}
+
+void شجرة_باء_عقدة_التالي_ضع(Node* node, Node* next)
+{
+    if (!node) return;
+    node->next = next;
+}
+
+Node* شجرة_باء_عقدة_التالي(Node* node)
+{
+    if (!node) return NULL;
+    return node->next;
+}
+
+void شجرة_باء_برنامج_تصريحات_ضع(Node* program, Node* declarations)
+{
+    if (!program || program->type != NODE_PROGRAM) return;
+    program->data.program.declarations = declarations;
+}
+
 /**
  * @brief التأكد من أن الوحدة الحالية من نوع معين واستهلاكها، وإلا يتم إظهار خطأ.
  */
@@ -366,14 +399,39 @@ bool is_type_keyword(BaaTokenType type) {
 #include "parser_stmt.c"
 #include "parser_decl.c"
 
-Node* parse(Lexer* l) {
-    // تهيئة نظام الأخطاء بمؤشر المصدر للطباعة
+#ifdef BAA_USE_BAA_PARSER_TOPLEVEL
+Node* محلل_قواعد_باء_حلل(Lexer* lexer);
+#endif
+
+void محلل_قواعد_باء_هيئ(Lexer* lexer)
+{
     const char* source = محلل_باء_مصدر_رئيسي();
     const char* filename = محلل_باء_ملف_رئيسي();
     error_init(source);
     error_register_source(filename, source);
-    init_parser(l);
+    init_parser(lexer);
+}
 
+int64_t محلل_قواعد_باء_عند_النهاية(void)
+{
+    return parser.current.type == TOKEN_EOF ? 1 : 0;
+}
+
+Node* محلل_قواعد_باء_تصريح(void)
+{
+    return parse_declaration();
+}
+
+const char* محلل_قواعد_باء_ملف_رئيسي(void)
+{
+    return محلل_باء_ملف_رئيسي();
+}
+
+#ifndef BAA_USE_BAA_PARSER_TOPLEVEL
+static Node* parse_c_toplevel(Lexer* l)
+{
+    محلل_قواعد_باء_هيئ(l);
+    const char* filename = محلل_قواعد_باء_ملف_رئيسي();
     Node* head = NULL;
     Node* tail = NULL;
     while (parser.current.type != TOKEN_EOF) {
@@ -394,4 +452,13 @@ Node* parse(Lexer* l) {
     if (!program) return NULL;
     program->data.program.declarations = head;
     return program;
+}
+#endif
+
+Node* parse(Lexer* l) {
+#ifdef BAA_USE_BAA_PARSER_TOPLEVEL
+    return محلل_قواعد_باء_حلل(l);
+#else
+    return parse_c_toplevel(l);
+#endif
 }

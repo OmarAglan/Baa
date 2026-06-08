@@ -6,6 +6,7 @@ set(CMAKE_C_STANDARD 11)
 # Build options
 option(BAA_ENABLE_WARNINGS "Enable compiler warnings for Baa" ON)
 option(BAA_WARNINGS_AS_ERRORS "Treat warnings as errors for hardening builds" OFF)
+option(BAA_USE_BAA_PARSER_TOPLEVEL "Route the parser top-level loop through the opt-in Baa parser slice" OFF)
 set(BAA_REPRODUCIBLE_BUILD_DATE "" CACHE STRING "Override baa --version build date for reproducible builds")
 set(BAA_BOOTSTRAP_COMPILER "" CACHE FILEPATH "Existing Baa compiler used to build Baa lexer objects")
 
@@ -110,12 +111,32 @@ add_custom_command(
 set_source_files_properties("${BAA_LEXER_OBJECT}" PROPERTIES GENERATED TRUE EXTERNAL_OBJECT TRUE LANGUAGE C)
 list(APPEND BAA_FINAL_SOURCES "${BAA_LEXER_OBJECT}")
 
+if(BAA_USE_BAA_PARSER_TOPLEVEL)
+    set(BAA_PARSER_OBJECT "${CMAKE_BINARY_DIR}/parser_baa.o")
+    add_custom_command(
+        OUTPUT "${BAA_PARSER_OBJECT}"
+        COMMAND "${BAA_BOOTSTRAP_COMPILER}" -O2 --verify-ir --verify-ssa -c src/frontend/parser.baa -o "${BAA_PARSER_OBJECT}"
+        DEPENDS
+            src/frontend/parser.baa
+            src/frontend/parser_internal.baahd
+            src/frontend/parser.baahd
+            src/frontend/ast.baahd
+        WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
+        VERBATIM
+    )
+    set_source_files_properties("${BAA_PARSER_OBJECT}" PROPERTIES GENERATED TRUE EXTERNAL_OBJECT TRUE LANGUAGE C)
+    list(APPEND BAA_FINAL_SOURCES "${BAA_PARSER_OBJECT}")
+endif()
+
 if(CMAKE_BINARY_DIR STREQUAL CMAKE_SOURCE_DIR)
     message(FATAL_ERROR "In-source builds are not supported.")
 endif()
 
 add_executable(baa ${BAA_FINAL_SOURCES})
 baa_apply_common_target_settings(baa)
+if(BAA_USE_BAA_PARSER_TOPLEVEL)
+    target_compile_definitions(baa PRIVATE BAA_USE_BAA_PARSER_TOPLEVEL=1)
+endif()
 
 # نبقي مسارات التضمين العامة مغلقة عمداً.
 # يجب أن تعتمد الملفات على ترويساتها المحلية أو على مسارات نسبية صريحة بين المكونات.

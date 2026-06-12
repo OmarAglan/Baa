@@ -97,7 +97,7 @@ def _compiler_path(build_dir: Path) -> Path:
     return build_dir / ("baa.exe" if os.name == "nt" else "baa")
 
 
-def _configure_harness_build(compiler: Path, build_dir: Path) -> None:
+def _configure_harness_build(compiler: Path, build_dir: Path, use_baa_parser: bool = True) -> None:
     cmd = [
         "cmake",
         "-S",
@@ -105,7 +105,7 @@ def _configure_harness_build(compiler: Path, build_dir: Path) -> None:
         "-B",
         str(build_dir),
         f"-DBAA_BOOTSTRAP_COMPILER={compiler}",
-        "-DBAA_USE_BAA_PARSER_TOPLEVEL=ON",
+        f"-DBAA_USE_BAA_PARSER_TOPLEVEL={'ON' if use_baa_parser else 'OFF'}",
         "-DBAA_WARNINGS_AS_ERRORS=ON",
     ]
     if os.name == "nt":
@@ -211,7 +211,7 @@ def _run_parser_corpus(compiler: Path, out_dir: Path) -> None:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Build and test the opt-in Baa parser harness")
+    parser = argparse.ArgumentParser(description="Build and test the Baa parser top-level harness")
     parser.add_argument("--compiler", default="")
     parser.add_argument("--out-dir", default=str(DEFAULT_OUT_DIR))
     parser.add_argument("--keep-artifacts", action="store_true")

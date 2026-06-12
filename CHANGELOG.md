@@ -47,10 +47,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - **Parser migration build gate**:
   - Added `BAA_USE_BAA_PARSER_TOPLEVEL` as an opt-in CMake switch for testing the first Baa parser slice while keeping the default production parser on the C path.
   - Wired the parser mixed-harness gate into `python scripts/qa_run.py --mode full|stress|release`.
+- **Parser production wrapper**:
+  - Flipped `BAA_USE_BAA_PARSER_TOPLEVEL` to `ON` by default so the production `parse(Lexer*)` API routes through the Baa parser top-level wrapper.
+  - Kept `BAA_USE_BAA_PARSER_TOPLEVEL=OFF` as the temporary C parser baseline for parity checks and rollback during the remaining parser migration.
+  - Updated parser parity QA to compare the production Baa-wrapper compiler against an explicit C-baseline build.
 
 ### Unchanged
 
-- The production parser remains `src/frontend/parser.c`, and semantic analysis remains `src/frontend/analysis.c`; no parser behavior, AST ownership, diagnostics contract, or IR-lowering contract changed in the parser-contract checkpoint.
+- Declaration grammar parsing, semantic analysis, AST ownership, diagnostics contracts, and IR lowering remain on their existing C-owned paths while the Baa top-level wrapper is production-enabled.
 
 ---
 

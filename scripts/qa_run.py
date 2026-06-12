@@ -431,9 +431,6 @@ def _run_parser_harness(baa: Path, log_dir: Path) -> StepResult:
 
 
 def _run_parser_parity(baa: Path, log_dir: Path) -> StepResult:
-    harness_compiler = log_dir / "parser-harness-out" / "build" / (
-        "baa.exe" if os.name == "nt" else "baa"
-    )
     return _run_logged(
         "parser-parity:ast-diagnostics",
         [
@@ -441,8 +438,6 @@ def _run_parser_parity(baa: Path, log_dir: Path) -> StepResult:
             str(ROOT / "scripts" / "qa_parser_parity.py"),
             "--compiler",
             str(baa),
-            "--harness-compiler",
-            str(harness_compiler.relative_to(ROOT)),
             "--out-dir",
             str((log_dir / "parser-parity-out").relative_to(ROOT)),
         ],

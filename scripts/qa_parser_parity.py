@@ -61,25 +61,25 @@ def _write_mismatch(out_dir: Path, rel: str, suffix: str, text: str) -> None:
     path.write_text(text, encoding="utf-8", errors="replace")
 
 
-def _check_ast_case(default_compiler: Path, harness_compiler: Path, out_dir: Path, rel: str) -> None:
-    default_res = _run_capture([str(default_compiler), "--dump-ast", rel], AST_DUMP_TIMEOUT_S)
-    harness_res = _run_capture([str(harness_compiler), "--dump-ast", rel], AST_DUMP_TIMEOUT_S)
+def _check_ast_case(production_compiler: Path, baseline_compiler: Path, out_dir: Path, rel: str) -> None:
+    production_res = _run_capture([str(production_compiler), "--dump-ast", rel], AST_DUMP_TIMEOUT_S)
+    baseline_res = _run_capture([str(baseline_compiler), "--dump-ast", rel], AST_DUMP_TIMEOUT_S)
 
-    if default_res.returncode != 0:
-        sys.stdout.write(default_res.stdout or "")
-        sys.stderr.write(default_res.stderr or "")
-        raise RuntimeError(f"default compiler failed AST dump: {rel}")
-    if harness_res.returncode != 0:
-        sys.stdout.write(harness_res.stdout or "")
-        sys.stderr.write(harness_res.stderr or "")
-        raise RuntimeError(f"parser harness compiler failed AST dump: {rel}")
+    if production_res.returncode != 0:
+        sys.stdout.write(production_res.stdout or "")
+        sys.stderr.write(production_res.stderr or "")
+        raise RuntimeError(f"production compiler failed AST dump: {rel}")
+    if baseline_res.returncode != 0:
+        sys.stdout.write(baseline_res.stdout or "")
+        sys.stderr.write(baseline_res.stderr or "")
+        raise RuntimeError(f"C baseline compiler failed AST dump: {rel}")
 
-    default_ast = _normalize_text(default_res.stdout or "")
-    harness_ast = _normalize_text(harness_res.stdout or "")
-    if default_ast != harness_ast:
+    production_ast = _normalize_text(production_res.stdout or "")
+    baseline_ast = _normalize_text(baseline_res.stdout or "")
+    if production_ast != baseline_ast:
         mismatch_dir = out_dir / "ast-mismatches"
-        _write_mismatch(mismatch_dir, rel, "default.ast", default_ast)
-        _write_mismatch(mismatch_dir, rel, "harness.ast", harness_ast)
+        _write_mismatch(mismatch_dir, rel, "production.ast", production_ast)
+        _write_mismatch(mismatch_dir, rel, "baseline.ast", baseline_ast)
         raise RuntimeError(f"AST parity mismatch: {rel}")
 
     print(f"parser-parity: PASS ast {rel}")
@@ -100,57 +100,57 @@ def _check_expected_markers(src: Path, rel: str, output_text: str, side: str) ->
             )
 
 
-def _check_diagnostic_case(default_compiler: Path, harness_compiler: Path, out_dir: Path, rel: str) -> None:
+def _check_diagnostic_case(production_compiler: Path, baseline_compiler: Path, out_dir: Path, rel: str) -> None:
     src = ROOT / rel
     case_out = out_dir / "diag-outputs"
     case_out.mkdir(parents=True, exist_ok=True)
 
-    default_res = _run_capture(
-        [str(default_compiler), "-O2", "--verify", rel, "-o", str(case_out / "default.out")],
+    production_res = _run_capture(
+        [str(production_compiler), "-O2", "--verify", rel, "-o", str(case_out / "production.out")],
         COMPILE_TIMEOUT_S,
     )
-    harness_res = _run_capture(
-        [str(harness_compiler), "-O2", "--verify", rel, "-o", str(case_out / "harness.out")],
+    baseline_res = _run_capture(
+        [str(baseline_compiler), "-O2", "--verify", rel, "-o", str(case_out / "baseline.out")],
         COMPILE_TIMEOUT_S,
     )
 
-    if default_res.returncode == 0:
-        raise RuntimeError(f"default compiler unexpectedly accepted negative case: {rel}")
-    if harness_res.returncode == 0:
-        raise RuntimeError(f"parser harness compiler unexpectedly accepted negative case: {rel}")
+    if production_res.returncode == 0:
+        raise RuntimeError(f"production compiler unexpectedly accepted negative case: {rel}")
+    if baseline_res.returncode == 0:
+        raise RuntimeError(f"C baseline compiler unexpectedly accepted negative case: {rel}")
 
-    default_output = (default_res.stdout or "") + (default_res.stderr or "")
-    harness_output = (harness_res.stdout or "") + (harness_res.stderr or "")
-    _check_expected_markers(src, rel, default_output, "default")
-    _check_expected_markers(src, rel, harness_output, "harness")
+    production_output = (production_res.stdout or "") + (production_res.stderr or "")
+    baseline_output = (baseline_res.stdout or "") + (baseline_res.stderr or "")
+    _check_expected_markers(src, rel, production_output, "production")
+    _check_expected_markers(src, rel, baseline_output, "baseline")
 
-    default_norm = _normalize_text(default_output)
-    harness_norm = _normalize_text(harness_output)
-    if default_norm != harness_norm:
+    production_norm = _normalize_text(production_output)
+    baseline_norm = _normalize_text(baseline_output)
+    if production_norm != baseline_norm:
         mismatch_dir = out_dir / "diagnostic-mismatches"
-        _write_mismatch(mismatch_dir, rel, "default.diag", default_norm)
-        _write_mismatch(mismatch_dir, rel, "harness.diag", harness_norm)
+        _write_mismatch(mismatch_dir, rel, "production.diag", production_norm)
+        _write_mismatch(mismatch_dir, rel, "baseline.diag", baseline_norm)
         raise RuntimeError(f"diagnostic parity mismatch: {rel}")
 
     print(f"parser-parity: PASS diagnostic {rel}")
 
 
-def _resolve_harness_compiler(args: argparse.Namespace, compiler: Path, out_dir: Path) -> Path:
-    if args.harness_compiler:
-        harness_compiler = _as_repo_path(args.harness_compiler)
-        if not harness_compiler.exists():
-            raise FileNotFoundError(f"missing parser harness compiler: {harness_compiler}")
-        return harness_compiler
+def _resolve_baseline_compiler(args: argparse.Namespace, compiler: Path, out_dir: Path) -> Path:
+    if args.baseline_compiler:
+        baseline_compiler = _as_repo_path(args.baseline_compiler)
+        if not baseline_compiler.exists():
+            raise FileNotFoundError(f"missing C baseline compiler: {baseline_compiler}")
+        return baseline_compiler
 
     build_dir = out_dir / "build"
-    _configure_harness_build(compiler, build_dir)
+    _configure_harness_build(compiler, build_dir, use_baa_parser=False)
     return _build_harness_compiler(build_dir)
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Compare default C parser output with the opt-in Baa parser slice")
+    parser = argparse.ArgumentParser(description="Compare production Baa parser wrapper output with the C parser baseline")
     parser.add_argument("--compiler", default="")
-    parser.add_argument("--harness-compiler", default="")
+    parser.add_argument("--baseline-compiler", "--harness-compiler", dest="baseline_compiler", default="")
     parser.add_argument("--out-dir", default=str(DEFAULT_OUT_DIR))
     parser.add_argument("--keep-artifacts", action="store_true")
     args = parser.parse_args()
@@ -163,15 +163,15 @@ def main() -> int:
     try:
         compiler = _find_compiler(args.compiler or None)
         _safe_clean_dir(out_dir)
-        harness_compiler = _resolve_harness_compiler(args, compiler, out_dir)
+        baseline_compiler = _resolve_baseline_compiler(args, compiler, out_dir)
 
         for _case_name, rel, _should_run in POSITIVE_CASES:
-            _check_ast_case(compiler, harness_compiler, out_dir, rel)
+            _check_ast_case(compiler, baseline_compiler, out_dir, rel)
 
         for rel in NEGATIVE_CASES:
-            _check_diagnostic_case(compiler, harness_compiler, out_dir, rel)
+            _check_diagnostic_case(compiler, baseline_compiler, out_dir, rel)
 
-        print(f"parser-parity: PASS compiler={compiler} harness={harness_compiler}")
+        print(f"parser-parity: PASS compiler={compiler} baseline={baseline_compiler}")
         passed = True
         return 0
     except Exception as exc:

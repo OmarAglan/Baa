@@ -6,7 +6,7 @@ set(CMAKE_C_STANDARD 11)
 # Build options
 option(BAA_ENABLE_WARNINGS "Enable compiler warnings for Baa" ON)
 option(BAA_WARNINGS_AS_ERRORS "Treat warnings as errors for hardening builds" OFF)
-option(BAA_USE_BAA_PARSER_TOPLEVEL "Route the parser top-level loop through the opt-in Baa parser slice" OFF)
+option(BAA_USE_BAA_PARSER_TOPLEVEL "Route the parser top-level loop through the Baa parser slice" ON)
 set(BAA_REPRODUCIBLE_BUILD_DATE "" CACHE STRING "Override baa --version build date for reproducible builds")
 set(BAA_BOOTSTRAP_COMPILER "" CACHE FILEPATH "Existing Baa compiler used to build Baa lexer objects")
 

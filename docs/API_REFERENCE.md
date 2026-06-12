@@ -59,7 +59,7 @@ Additional build-maturity guards:
 - `scripts/test_determinism.py` validates stable `--dump-ir`, `--dump-ir-opt`, assembly, manifest, `--verify-gate`, cross-target assembly generation, and committed IR snapshot hashes under `tests/snapshots/`.
 - `scripts/qa_bootstrap_gate.py` validates Baa0 positive sources, banned-feature fixtures, runtime-marked bootstrap cases, and cross-target `-S` assembly generation for the bootstrap corpus.
 - `scripts/qa_parser_harness.py` builds the opt-in C/Baa parser compiler and runs the curated mixed parser corpus.
-- `scripts/qa_parser_parity.py` compares parser AST dumps and parser diagnostic output between the production C parser and the opt-in Baa parser slice.
+- `scripts/qa_parser_parity.py` compares parser AST dumps and parser diagnostic output between the production Baa parser wrapper and an explicit C parser baseline.
 - `scripts/qa_phase45_handoff.py` creates the Phase 4.5 handoff evidence bundle and records local platform signoff status.
 - `scripts/qa_stage0_manifest.py` validates the v0.9.0.1 Stage-0 snapshot tag and frozen artifact Git object IDs.
 
@@ -169,7 +169,7 @@ Handles syntactic analysis and AST construction.
 عقدة_باء محلل_قواعد_باء_حلل(ط٨* محلل_لفظي).
 ```
 
-The Baa contract deliberately uses raw handles for the lexer and AST root while the production C API remains `parse(Lexer*) -> Node*`. Future parser slices must preserve the C-facing `parse` behavior through a compatibility wrapper before replacing `src/frontend/parser.c`.
+The Baa contract deliberately uses raw handles for the lexer and AST root while the production C API remains `parse(Lexer*) -> Node*`. The default build routes that C-facing API through the Baa top-level wrapper; `BAA_USE_BAA_PARSER_TOPLEVEL=OFF` remains available temporarily as the C parser baseline during migration.
 
 ### Baa AST contract (v0.9.2)
 

@@ -112,6 +112,7 @@ void driver_print_help(void)
     printf("  -c           Compile to object file only (.o)\n");
     printf("  -v           Enable verbose output with timing\n");
     printf("  --startup=custom  Use custom entrypoint (__baa_start) while keeping CRT/libc init\n");
+    printf("  --dump-ast   Dump parser AST shape to stdout and stop after parsing\n");
     printf("  --dump-ir    Dump Baa IR (Arabic) to stdout after analysis\n");
     printf("  --emit-ir    Write Baa IR (Arabic) to <input>.ir after analysis\n");
     printf("  --dump-ir-opt  Dump Baa IR (Arabic) after optimization\n");
@@ -225,6 +226,8 @@ bool driver_parse_cli(int argc, char **argv, CompilerConfig *config, DriverParse
                 config->verbose = true;
             else if (strcmp(arg, "--startup=custom") == 0)
                 config->custom_startup = true;
+            else if (strcmp(arg, "--dump-ast") == 0)
+                config->dump_ast = true;
             else if (strcmp(arg, "--dump-ir") == 0)
                 config->dump_ir = true;
             else if (strcmp(arg, "--emit-ir") == 0)

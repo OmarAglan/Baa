@@ -117,6 +117,7 @@ The driver in `main.c` (v0.2.0+) supports multi-file compilation and various mod
 | `-fruntime-checks` | **Runtime Checks** | `.s/.o/.exe` | Enables optional runtime safety guards such as dynamic array bounds checks. |
 | `-fno-runtime-checks` | **Runtime Checks Off** | `.s/.o/.exe` | Disables optional runtime safety guards (default). |
 | `-O0` / `-O1` / `-O2` | **Optimization Level** | - | Selects optimizer aggressiveness (`-O1` is default). |
+| `--dump-ast` | **AST Dump** | stdout | Prints deterministic parser AST shape and stops after parsing. |
 | `--dump-ir` | **IR Dump** | stdout | Prints Baa IR (Arabic) after semantic analysis (v0.3.0.6+). |
 | `--emit-ir` | **IR Emit** | `<input>.ir` | Writes Baa IR (Arabic) to a `.ir` file after semantic analysis (v0.3.0.7). |
 | `--dump-ir-opt` | **Optimized IR Dump** | stdout | Prints Baa IR (Arabic) after optimization (v0.3.2.6.5). |

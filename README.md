@@ -73,6 +73,7 @@ cmake -B build -G "MinGW Makefiles" -DBAA_BOOTSTRAP_COMPILER="path\to\baa.exe"
 cmake --build build
 build\baa.exe --help
 build\baa.exe --version
+build\baa.exe --dump-ast examples\hello_world.baa
 build\baa.exe --dump-ir examples\hello_world.baa
 python scripts\qa_run.py --mode quick
 python scripts\qa_run.py --mode full

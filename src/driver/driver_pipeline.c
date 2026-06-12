@@ -6,6 +6,8 @@
 
 #include "driver_internal.h"
 
+#include "../frontend/ast_dump.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -181,7 +183,7 @@ static int compile_one_ir(const CompilerConfig *config,
         printf("\n[INFO] Processing %s...\n", current_input);
 
     char *early_obj_file = NULL;
-    if (!config->assembly_only)
+    if (!config->assembly_only && !config->dump_ast)
     {
         if (config->compile_only)
         {
@@ -229,6 +231,15 @@ static int compile_one_ir(const CompilerConfig *config,
         free(source);
         if (early_obj_file && early_obj_file != config->output_file) free(early_obj_file);
         return 1;
+    }
+
+    if (config->dump_ast)
+    {
+        printf("AST file=\"%s\"\n", current_input ? current_input : "<unknown>");
+        ast_dump_print(ast, stdout);
+        lexer_free_dependencies(&lexer);
+        free(source);
+        return 0;
     }
 
     if (config->verbose)
@@ -626,8 +637,12 @@ int driver_compile_files(const CompilerConfig *config,
 
     // عند -S لا نحتاج لإرجاع قائمة كائنات.
     // عند --startup=custom + ربط نهائي: نضيف كائناً إضافياً لبدء التشغيل.
-    bool need_startup_obj = (!config->assembly_only && !config->compile_only && config->custom_startup);
-    int cap = config->assembly_only ? 0 : (input_count + (need_startup_obj ? 1 : 0));
+    bool need_startup_obj = (!config->assembly_only &&
+                             !config->dump_ast &&
+                             !config->compile_only &&
+                             config->custom_startup);
+    int cap = (config->assembly_only || config->dump_ast) ?
+              0 : (input_count + (need_startup_obj ? 1 : 0));
     char **obj_files = NULL;
     int obj_count = 0;
     if (cap > 0)
@@ -655,7 +670,7 @@ int driver_compile_files(const CompilerConfig *config,
             return 1;
         }
 
-        if (!config->assembly_only)
+        if (!config->assembly_only && !config->dump_ast)
         {
             obj_files[obj_count++] = obj_file;
         }

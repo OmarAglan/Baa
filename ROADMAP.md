@@ -1523,8 +1523,8 @@ Partial status update (2026-03-06):
 - [x] **Baa header contract first** — `src/frontend/parser.baahd` defines the raw-handle Baa parser entry contract while `parse(Lexer*)` remains the C-facing production API. (2026-06-05)
 - [x] **AST Baa header contract first** — `src/frontend/ast.baahd` defines raw AST handles, C-enum-aligned Baa enums, and the helper boundary required before Baa parser slices construct or mutate AST nodes. (2026-06-05)
 - [x] **Port parser slice to Baa** — opt-in Baa top-level parser slice constructs the program root while preserving the existing C declaration grammar contract. (2026-06-08)
-- [ ] **Build through mixed harness** — C/Baa hybrid remains supported while the parser is still behind a compatibility boundary.
-- [ ] **AST + diagnostics parity tests** — match C baseline trees and key error anchors.
+- [x] **Build through mixed harness** — full/stress/release QA now builds the opt-in C/Baa parser compiler and runs a curated parser corpus while the parser remains behind a compatibility boundary. (2026-06-13)
+- [x] **AST + diagnostics parity tests** — match C baseline trees and key error anchors. (2026-06-13)
 - [ ] **Production parser wrapper** — route the existing parser API through the Baa implementation without changing downstream semantic-analysis ownership.
 - [ ] **Remove C parser implementation** — delete the old C parser only after the Baa-backed path passes full/release QA.
 - [ ] **Retire parser migration harness/files** — remove temporary parser migration gates after normal tests own the coverage.

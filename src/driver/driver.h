@@ -22,6 +22,7 @@ typedef struct
     bool assembly_only; // -S: إنتاج كود تجميع فقط
     bool compile_only;  // -c: تجميع إلى كائن فقط (بدون ربط)
     bool verbose;       // -v: وضع التفاصيل
+    bool dump_ast;      // --dump-ast: طباعة AST بعد التحليل القواعدي فقط
     bool dump_ir;       // --dump-ir: طباعة IR بعد التحليل الدلالي
     bool emit_ir;       // --emit-ir: كتابة IR إلى ملف .ir بجانب المصدر
     bool dump_ir_opt;   // --dump-ir-opt: طباعة IR بعد التحسين

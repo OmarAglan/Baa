@@ -50,6 +50,7 @@ set(BAA_BASE_SOURCES
     src/backend/emit.c        # Code emission (v0.3.2.3)
     src/backend/target.c      # Target abstraction (v0.3.2.8.1)
     src/driver/main.c
+    src/frontend/ast_dump.c
     src/frontend/parser.c
     src/driver/process.c
     src/driver/driver_cli.c

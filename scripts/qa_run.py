@@ -23,6 +23,8 @@ CORPUS_COMPILE_TIMEOUT_S = 25.0
 FUZZ_TIMEOUT_S = 8.0
 MODULE_SIZE_TIMEOUT_S = 30.0
 ASM_LEGALITY_TIMEOUT_S = 90.0
+PARSER_HARNESS_TIMEOUT_S = 300.0
+PARSER_PARITY_TIMEOUT_S = 240.0
 
 
 @dataclass
@@ -410,6 +412,46 @@ def _run_asm_legality_guard(baa: Path, log_dir: Path) -> StepResult:
     )
 
 
+def _run_parser_harness(baa: Path, log_dir: Path) -> StepResult:
+    return _run_logged(
+        "parser-harness:toplevel",
+        [
+            sys.executable,
+            str(ROOT / "scripts" / "qa_parser_harness.py"),
+            "--compiler",
+            str(baa),
+            "--out-dir",
+            str((log_dir / "parser-harness-out").relative_to(ROOT)),
+            "--keep-artifacts",
+        ],
+        cwd=ROOT,
+        log_dir=log_dir,
+        timeout_s=PARSER_HARNESS_TIMEOUT_S,
+    )
+
+
+def _run_parser_parity(baa: Path, log_dir: Path) -> StepResult:
+    harness_compiler = log_dir / "parser-harness-out" / "build" / (
+        "baa.exe" if os.name == "nt" else "baa"
+    )
+    return _run_logged(
+        "parser-parity:ast-diagnostics",
+        [
+            sys.executable,
+            str(ROOT / "scripts" / "qa_parser_parity.py"),
+            "--compiler",
+            str(baa),
+            "--harness-compiler",
+            str(harness_compiler.relative_to(ROOT)),
+            "--out-dir",
+            str((log_dir / "parser-parity-out").relative_to(ROOT)),
+        ],
+        cwd=ROOT,
+        log_dir=log_dir,
+        timeout_s=PARSER_PARITY_TIMEOUT_S,
+    )
+
+
 def _write_summary(
     mode: str,
     compiler: Path | None,
@@ -528,6 +570,18 @@ def main() -> int:
         _print_step(build_maturity_res)
         all_results.append(build_maturity_res)
         overall_ok = overall_ok and build_maturity_res.passed
+
+        parser_harness_res = _run_parser_harness(baa, log_dir)
+        _print_step(parser_harness_res)
+        all_results.append(parser_harness_res)
+        overall_ok = overall_ok and parser_harness_res.passed
+
+        parser_parity_res = _run_parser_parity(baa, log_dir)
+        _print_step(parser_parity_res)
+        all_results.append(parser_parity_res)
+        overall_ok = overall_ok and parser_parity_res.passed
+        if parser_harness_res.passed and parser_parity_res.passed:
+            shutil.rmtree(log_dir / "parser-harness-out", ignore_errors=True)
 
         asm_legality_res = _run_asm_legality_guard(baa, log_dir)
         _print_step(asm_legality_res)

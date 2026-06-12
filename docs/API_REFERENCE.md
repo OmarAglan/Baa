@@ -58,6 +58,8 @@ Additional build-maturity guards:
 - `scripts/test_build_maturity.py` validates manifest stability, incremental cache hits, and header invalidation.
 - `scripts/test_determinism.py` validates stable `--dump-ir`, `--dump-ir-opt`, assembly, manifest, `--verify-gate`, cross-target assembly generation, and committed IR snapshot hashes under `tests/snapshots/`.
 - `scripts/qa_bootstrap_gate.py` validates Baa0 positive sources, banned-feature fixtures, runtime-marked bootstrap cases, and cross-target `-S` assembly generation for the bootstrap corpus.
+- `scripts/qa_parser_harness.py` builds the opt-in C/Baa parser compiler and runs the curated mixed parser corpus.
+- `scripts/qa_parser_parity.py` compares parser AST dumps and parser diagnostic output between the production C parser and the opt-in Baa parser slice.
 - `scripts/qa_phase45_handoff.py` creates the Phase 4.5 handoff evidence bundle and records local platform signoff status.
 - `scripts/qa_stage0_manifest.py` validates the v0.9.0.1 Stage-0 snapshot tag and frozen artifact Git object IDs.
 
@@ -224,6 +226,21 @@ lexer_init(&lexer, source_code, "filename.baa", NULL, 0);
 Node* ast = parse(&lexer);
 // Use ast...
 ```
+
+### `ast_dump_print`
+
+```c
+void ast_dump_print(const Node* root, FILE* out)
+```
+
+Prints a deterministic parser-owned AST shape for diagnostics and parser migration parity tests. The dump is intentionally structural: it excludes addresses and semantic-analysis-only inferred fields.
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `root` | `const Node*` | AST root, usually `NODE_PROGRAM` |
+| `out` | `FILE*` | Output file handle; `NULL` defaults to `stdout` |
+
+**Driver flag:** `--dump-ast` parses each input, prints this AST shape to stdout, and exits before semantic analysis, IR lowering, assembling, or linking.
 
 ---
 

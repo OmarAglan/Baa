@@ -24,6 +24,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
   - Added an opt-in `src/frontend/parser.baa` slice that owns the parser top-level program/declaration-list loop while delegating declaration grammar to the existing C parser.
   - Added the C/Baa AST and parser-state bridge helpers needed for Baa parser slices to construct a `NODE_PROGRAM` root without depending on C struct layout.
   - Added a focused frontend compile-only smoke test for multiple top-level declarations through the parser-slice boundary.
+- **Parser mixed-harness gate**:
+  - Added `scripts/qa_parser_harness.py` to build the opt-in C/Baa parser compiler with `BAA_USE_BAA_PARSER_TOPLEVEL=ON` and warnings as errors.
+  - Added a curated parser corpus covering top-level declarations, arrays, structs, type aliases, function pointers, and existing parser diagnostics through the hybrid parser path.
+- **Parser AST and diagnostics parity gate**:
+  - Added `--dump-ast` as a parse-only inspection mode that prints deterministic AST shape before semantic analysis, IR lowering, assembling, or linking.
+  - Added `scripts/qa_parser_parity.py` and full/stress/release QA wiring to compare AST dumps and parser diagnostics between the production C parser and the opt-in Baa parser top-level slice.
 - **Semantic limit regression coverage**:
   - Added a backend runtime integration test for long Baa symbol names so identifiers beyond the old fixed semantic-name buffer remain accepted through semantic analysis, IR verification, and execution.
 - **CI bootstrap preparation**:
@@ -40,6 +46,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
   - Updated Windows, Linux, and nightly stress workflows to pass `BAA_BOOTSTRAP_COMPILER` during CMake configure instead of assuming a local bootstrap binary exists.
 - **Parser migration build gate**:
   - Added `BAA_USE_BAA_PARSER_TOPLEVEL` as an opt-in CMake switch for testing the first Baa parser slice while keeping the default production parser on the C path.
+  - Wired the parser mixed-harness gate into `python scripts/qa_run.py --mode full|stress|release`.
 
 ### Unchanged
 

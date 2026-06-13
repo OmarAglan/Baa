@@ -482,6 +482,162 @@ const char* محلل_قواعد_باء_ملف_رئيسي(void)
     return محلل_باء_ملف_رئيسي();
 }
 
+typedef struct ParserBaaAliasDecl {
+    Token tok_kw;
+    Token tok_name;
+    char* name;
+} ParserBaaAliasDecl;
+
+typedef struct ParserBaaTypeSpec {
+    DataType type;
+    char* type_name;
+    DataType ptr_base_type;
+    char* ptr_base_type_name;
+    int ptr_depth;
+    FuncPtrSig* func_sig;
+} ParserBaaTypeSpec;
+
+static void parser_baa_alias_decl_free(ParserBaaAliasDecl* decl)
+{
+    if (!decl) return;
+    free(decl->name);
+    free(decl);
+}
+
+static void parser_baa_type_spec_free(ParserBaaTypeSpec* spec)
+{
+    if (!spec) return;
+    free(spec->type_name);
+    free(spec->ptr_base_type_name);
+    parser_funcsig_free(spec->func_sig);
+    free(spec);
+}
+
+ParserBaaAliasDecl* محلل_قواعد_باء_اسم_نوع_بديل_ابدأ(void)
+{
+    if (!parser_current_is_type_alias_keyword()) {
+        error_report(parser.current, "متوقع 'نوع' في بداية تعريف الاسم البديل.");
+        synchronize_mode(PARSER_SYNC_DECLARATION);
+        return NULL;
+    }
+
+    ParserBaaAliasDecl* decl = (ParserBaaAliasDecl*)calloc(1, sizeof(ParserBaaAliasDecl));
+    if (!decl) {
+        error_report(parser.current, "نفدت الذاكرة أثناء بدء تعريف اسم النوع البديل.");
+        synchronize_mode(PARSER_SYNC_DECLARATION);
+        return NULL;
+    }
+
+    decl->tok_kw = parser.current;
+    eat(parser.current.type);
+
+    if (parser.current.type != TOKEN_IDENTIFIER) {
+        error_report(parser.current, "متوقع اسم بعد 'نوع'.");
+        parser_baa_alias_decl_free(decl);
+        synchronize_mode(PARSER_SYNC_DECLARATION);
+        return NULL;
+    }
+
+    decl->tok_name = parser.current;
+    decl->name = strdup(parser.current.value);
+    eat(TOKEN_IDENTIFIER);
+
+    if (!decl->name) {
+        error_report(decl->tok_name, "نفدت الذاكرة أثناء نسخ اسم النوع البديل.");
+        parser_baa_alias_decl_free(decl);
+        synchronize_mode(PARSER_SYNC_DECLARATION);
+        return NULL;
+    }
+
+    return decl;
+}
+
+void محلل_قواعد_باء_اسم_نوع_بديل_حرر(ParserBaaAliasDecl* decl)
+{
+    parser_baa_alias_decl_free(decl);
+}
+
+void محلل_قواعد_باء_اسم_نوع_بديل_استهلك_إسناد(void)
+{
+    eat(TOKEN_ASSIGN);
+}
+
+void محلل_قواعد_باء_اسم_نوع_بديل_استهلك_نقطة(void)
+{
+    eat(TOKEN_DOT);
+}
+
+ParserBaaTypeSpec* محلل_قواعد_باء_مواصفة_نوع_لاسم_بديل(void)
+{
+    ParserBaaTypeSpec* spec = (ParserBaaTypeSpec*)calloc(1, sizeof(ParserBaaTypeSpec));
+    if (!spec) {
+        error_report(parser.current, "نفدت الذاكرة أثناء تحليل مواصفة النوع البديل.");
+        synchronize_mode(PARSER_SYNC_DECLARATION);
+        return NULL;
+    }
+
+    spec->type = TYPE_INT;
+    spec->ptr_base_type = TYPE_INT;
+
+    if (!parse_type_spec(&spec->type, &spec->type_name,
+                         &spec->ptr_base_type, &spec->ptr_base_type_name,
+                         &spec->ptr_depth,
+                         &spec->func_sig)) {
+        error_report(parser.current, "متوقع نوع معروف بعد '=' في تعريف الاسم البديل.");
+        parser_baa_type_spec_free(spec);
+        synchronize_mode(PARSER_SYNC_DECLARATION);
+        return NULL;
+    }
+
+    return spec;
+}
+
+void محلل_قواعد_باء_مواصفة_نوع_حرر(ParserBaaTypeSpec* spec)
+{
+    parser_baa_type_spec_free(spec);
+}
+
+Node* محلل_قواعد_باء_اسم_نوع_بديل_أنشئ(ParserBaaAliasDecl* decl,
+                                         ParserBaaTypeSpec* spec)
+{
+    if (!decl || !spec) {
+        parser_baa_alias_decl_free(decl);
+        parser_baa_type_spec_free(spec);
+        return NULL;
+    }
+
+    Node* alias = ast_node_new(NODE_TYPE_ALIAS, decl->tok_name);
+    if (!alias) {
+        parser_baa_alias_decl_free(decl);
+        parser_baa_type_spec_free(spec);
+        return NULL;
+    }
+
+    alias->data.type_alias.name = decl->name;
+    alias->data.type_alias.target_type = spec->type;
+    alias->data.type_alias.target_type_name = spec->type_name;
+    alias->data.type_alias.target_ptr_base_type = spec->ptr_base_type;
+    alias->data.type_alias.target_ptr_base_type_name = spec->ptr_base_type_name;
+    alias->data.type_alias.target_ptr_depth = spec->ptr_depth;
+    alias->data.type_alias.target_func_sig = spec->func_sig;
+
+    (void)parser_type_alias_register(decl->tok_kw, alias->data.type_alias.name,
+                                     alias->data.type_alias.target_type,
+                                     alias->data.type_alias.target_type_name,
+                                     alias->data.type_alias.target_ptr_base_type,
+                                     alias->data.type_alias.target_ptr_base_type_name,
+                                     alias->data.type_alias.target_ptr_depth,
+                                     alias->data.type_alias.target_func_sig);
+
+    decl->name = NULL;
+    spec->type_name = NULL;
+    spec->ptr_base_type_name = NULL;
+    spec->func_sig = NULL;
+    parser_baa_alias_decl_free(decl);
+    parser_baa_type_spec_free(spec);
+    return alias;
+}
+
 #ifndef BAA_USE_BAA_PARSER_TOPLEVEL
 static Node* parse_c_toplevel(Lexer* l)
 {

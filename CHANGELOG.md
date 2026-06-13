@@ -55,10 +55,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
   - Moved top-level declaration classification in the production parser wrapper into `src/frontend/parser.baa`.
   - Split the C declaration parser into Baa-callable leaf entry points while keeping declaration grammar, AST ownership, diagnostics, and alias/type registries on the existing C-owned path.
   - Expanded parser harness/parity coverage for alias declarations, qualified globals, compound type declarations, alias-defined globals, and top-level recovery followed by a valid declaration.
+- **Baa-owned type alias declaration shell**:
+  - Moved the top-level `نوع <alias> = <type>.` token sequence into `src/frontend/parser.baa`.
+  - Added an opaque C/Baa type-spec bridge so C continues to own reusable type parsing, alias registry storage, and AST field transfer for this slice.
+  - Expanded parser harness/parity coverage for pointer aliases, function-pointer aliases, alias chains, missing alias names, missing alias targets, unknown alias targets, duplicate aliases, and higher-order function-pointer alias diagnostics.
 
 ### Unchanged
 
-- Leaf declaration grammar parsing, semantic analysis, AST ownership, diagnostics contracts, and IR lowering remain on their existing C-owned paths while the Baa top-level wrapper and declaration dispatch are production-enabled.
+- Non-alias leaf declaration grammar parsing, reusable type-spec parsing, semantic analysis, AST ownership, diagnostics contracts, and IR lowering remain on their existing C-owned paths while the Baa top-level wrapper, declaration dispatch, and type-alias declaration shell are production-enabled.
 
 ---
 

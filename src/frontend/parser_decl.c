@@ -514,12 +514,6 @@ Node* parse_declaration(void)
     return parse_declaration_after_qualifiers(decl_q);
 }
 
-Node* محلل_قواعد_باء_تصريح_اسم_نوع_بديل(void)
-{
-    ParserDeclQualifiers decl_q = {0};
-    return parse_declaration_after_qualifiers(decl_q);
-}
-
 Node* محلل_قواعد_باء_تصريح_بنوع(void)
 {
     ParserDeclQualifiers decl_q = {0};

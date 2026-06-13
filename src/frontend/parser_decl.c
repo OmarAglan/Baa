@@ -1,7 +1,7 @@
-﻿Node* parse_declaration() {
-    ParserDeclQualifiers decl_q;
-    parser_parse_decl_qualifiers(&decl_q);
+﻿static Node* parse_unexpected_top_level_declaration(void);
 
+static Node* parse_declaration_after_qualifiers(ParserDeclQualifiers decl_q)
+{
     if (parser_current_is_type_alias_keyword() && parser.next.type == TOKEN_IDENTIFIER) {
         if (decl_q.is_const || decl_q.is_static) {
             error_report(parser.current, "تعريف اسم النوع البديل لا يقبل 'ثابت' أو 'ساكن'.");
@@ -492,6 +492,11 @@
         return var;
     }
     
+    return parse_unexpected_top_level_declaration();
+}
+
+static Node* parse_unexpected_top_level_declaration(void)
+{
     if (!parser.panic_mode) {
         error_report_token_hint(parser.current,
                                 "ابدأ التصريح بنوع مثل 'صحيح' أو 'نص' أو بتعريف 'نوع'.",
@@ -500,4 +505,35 @@
     }
     synchronize_mode(PARSER_SYNC_DECLARATION);
     return NULL;
+}
+
+Node* parse_declaration(void)
+{
+    ParserDeclQualifiers decl_q;
+    parser_parse_decl_qualifiers(&decl_q);
+    return parse_declaration_after_qualifiers(decl_q);
+}
+
+Node* محلل_قواعد_باء_تصريح_اسم_نوع_بديل(void)
+{
+    ParserDeclQualifiers decl_q = {0};
+    return parse_declaration_after_qualifiers(decl_q);
+}
+
+Node* محلل_قواعد_باء_تصريح_بنوع(void)
+{
+    ParserDeclQualifiers decl_q = {0};
+    return parse_declaration_after_qualifiers(decl_q);
+}
+
+Node* محلل_قواعد_باء_تصريح_مؤهل(void)
+{
+    ParserDeclQualifiers decl_q;
+    parser_parse_decl_qualifiers(&decl_q);
+    return parse_declaration_after_qualifiers(decl_q);
+}
+
+Node* محلل_قواعد_باء_تصريح_غير_متوقع(void)
+{
+    return parse_unexpected_top_level_declaration();
 }

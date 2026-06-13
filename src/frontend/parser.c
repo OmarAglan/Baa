@@ -417,6 +417,61 @@ int64_t محلل_قواعد_باء_عند_النهاية(void)
     return parser.current.type == TOKEN_EOF ? 1 : 0;
 }
 
+int64_t محلل_قواعد_باء_نوع_حالي(void)
+{
+    return (int64_t)parser.current.type;
+}
+
+int64_t محلل_قواعد_باء_نوع_التالي(void)
+{
+    return (int64_t)parser.next.type;
+}
+
+const char* محلل_قواعد_باء_قيمة_حالية(void)
+{
+    return parser.current.value;
+}
+
+const char* محلل_قواعد_باء_ملف_حالي(void)
+{
+    return parser.current.filename;
+}
+
+int64_t محلل_قواعد_باء_سطر_حالي(void)
+{
+    return (int64_t)parser.current.line;
+}
+
+int64_t محلل_قواعد_باء_عمود_حالي(void)
+{
+    return (int64_t)parser.current.col;
+}
+
+int64_t محلل_قواعد_باء_طول_حالي(void)
+{
+    return (int64_t)parser.current.length;
+}
+
+int64_t محلل_قواعد_باء_الحالي_كلمة_اسم_نوع(void)
+{
+    return parser_current_is_type_alias_keyword() ? 1 : 0;
+}
+
+int64_t محلل_قواعد_باء_التالي_معرف(void)
+{
+    return parser.next.type == TOKEN_IDENTIFIER ? 1 : 0;
+}
+
+int64_t محلل_قواعد_باء_الحالي_بداية_نوع(void)
+{
+    return parser_current_starts_type() ? 1 : 0;
+}
+
+int64_t محلل_قواعد_باء_الحالي_واصفة_تصريح(void)
+{
+    return parser_is_decl_qualifier(parser.current.type) ? 1 : 0;
+}
+
 Node* محلل_قواعد_باء_تصريح(void)
 {
     return parse_declaration();

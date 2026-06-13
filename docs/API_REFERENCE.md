@@ -169,7 +169,7 @@ Handles syntactic analysis and AST construction.
 عقدة_باء محلل_قواعد_باء_حلل(ط٨* محلل_لفظي).
 ```
 
-The Baa contract deliberately uses raw handles for the lexer and AST root while the production C API remains `parse(Lexer*) -> Node*`. The default build routes that C-facing API through the Baa top-level wrapper; `BAA_USE_BAA_PARSER_TOPLEVEL=OFF` remains available temporarily as the C parser baseline during migration.
+The Baa contract deliberately uses raw handles for the lexer and AST root while the production C API remains `parse(Lexer*) -> Node*`. The default build routes that C-facing API through the Baa parser wrapper. In the current migration slice, Baa owns the top-level loop and declaration dispatch, then delegates leaf declaration grammar to C helpers; `BAA_USE_BAA_PARSER_TOPLEVEL=OFF` remains available temporarily as the C parser baseline during migration.
 
 ### Baa AST contract (v0.9.2)
 
@@ -210,7 +210,7 @@ Entry point for the parsing phase.
 **Behavior:**
 
 - Initializes internal `Parser` state with 2-token lookahead (current + next)
-- Parses list of declarations (global variables or functions)
+- Parses the top-level declaration list through the Baa wrapper and dispatches each declaration to the appropriate C-owned leaf parser
 - Parses global type aliases: `نوع <name> = <type>.` (v0.3.6.5)
 - Parses declaration qualifiers `ثابت` / `ساكن` in any order for variable/array declarations (v0.3.7.5)
 - Parses low-level expressions/operators: `&`, `|`, `^`, `~`, `<<`, `>>`, and `حجم(type|expr)` (v0.3.6)

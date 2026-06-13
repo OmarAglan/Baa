@@ -51,10 +51,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
   - Flipped `BAA_USE_BAA_PARSER_TOPLEVEL` to `ON` by default so the production `parse(Lexer*)` API routes through the Baa parser top-level wrapper.
   - Kept `BAA_USE_BAA_PARSER_TOPLEVEL=OFF` as the temporary C parser baseline for parity checks and rollback during the remaining parser migration.
   - Updated parser parity QA to compare the production Baa-wrapper compiler against an explicit C-baseline build.
+- **Baa-owned parser declaration dispatch**:
+  - Moved top-level declaration classification in the production parser wrapper into `src/frontend/parser.baa`.
+  - Split the C declaration parser into Baa-callable leaf entry points while keeping declaration grammar, AST ownership, diagnostics, and alias/type registries on the existing C-owned path.
+  - Expanded parser harness/parity coverage for alias declarations, qualified globals, compound type declarations, alias-defined globals, and top-level recovery followed by a valid declaration.
 
 ### Unchanged
 
-- Declaration grammar parsing, semantic analysis, AST ownership, diagnostics contracts, and IR lowering remain on their existing C-owned paths while the Baa top-level wrapper is production-enabled.
+- Leaf declaration grammar parsing, semantic analysis, AST ownership, diagnostics contracts, and IR lowering remain on their existing C-owned paths while the Baa top-level wrapper and declaration dispatch are production-enabled.
 
 ---
 

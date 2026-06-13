@@ -21,6 +21,7 @@ RUN_TIMEOUT_S = 20.0
 
 POSITIVE_CASES = (
     ("frontend-parser-toplevel", "tests/integration/frontend/frontend_baa_parser_toplevel_test.baa", False),
+    ("frontend-parser-decl-dispatch", "tests/integration/frontend/frontend_baa_parser_decl_dispatch_test.baa", False),
     ("backend-test", "tests/integration/backend/backend_test.baa", True),
     ("array-init", "tests/integration/backend/backend_array_init_test.baa", True),
     ("struct-pointer-member", "tests/integration/backend/backend_struct_pointer_member_test.baa", True),
@@ -31,6 +32,7 @@ POSITIVE_CASES = (
 NEGATIVE_CASES = (
     "tests/neg/syntax_missing_dot.baa",
     "tests/neg/syntax_unexpected_top_level_recovery.baa",
+    "tests/neg/parser_top_level_recovery_then_decl.baa",
     "tests/neg/parser_decl_qualifier_missing_type.baa",
     "tests/neg/parser_static_function_unsupported.baa",
     "tests/neg/type_alias_inside_function.baa",

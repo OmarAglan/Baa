@@ -63,10 +63,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
   - Moved the top-level `ثابت` / `ساكن` qualifier loop into `src/frontend/parser.baa`.
   - Added a narrow C bridge that preserves duplicate-qualifier diagnostics and passes qualifier flags into the existing C declaration leaf.
   - Expanded parser harness/parity coverage for both qualifier orders and duplicate `ثابت` / `ساكن` diagnostics.
+- **Baa-owned top-level recovery shell**:
+  - Moved the unexpected top-level declaration recovery entry into `src/frontend/parser.baa`.
+  - Kept diagnostic emission and declaration-mode synchronization in the C helper so parser parity remains locked while the shell ownership moves.
 
 ### Unchanged
 
-- Non-alias leaf declaration grammar parsing, reusable type-spec parsing, semantic analysis, AST ownership, diagnostics contracts, and IR lowering remain on their existing C-owned paths while the Baa top-level wrapper, declaration dispatch, type-alias declaration shell, and top-level declaration qualifier shell are production-enabled.
+- Non-alias leaf declaration grammar parsing, reusable type-spec parsing, semantic analysis, AST ownership, diagnostics internals, and IR lowering remain on their existing C-owned paths while the Baa top-level wrapper, declaration dispatch, type-alias declaration shell, top-level declaration qualifier shell, and unexpected-declaration recovery shell are production-enabled.
 
 ---
 

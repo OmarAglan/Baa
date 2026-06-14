@@ -169,7 +169,7 @@ Handles syntactic analysis and AST construction.
 عقدة_باء محلل_قواعد_باء_حلل(ط٨* محلل_لفظي).
 ```
 
-The Baa contract deliberately uses raw handles for the lexer and AST root while the production C API remains `parse(Lexer*) -> Node*`. The default build routes that C-facing API through the Baa parser wrapper. In the current migration slice, Baa owns the top-level loop, declaration dispatch, the `نوع <alias> = <type>.` declaration shell, and the top-level `ثابت` / `ساكن` declaration qualifier loop, then delegates reusable type-spec parsing and non-alias leaf declaration grammar to C helpers; `BAA_USE_BAA_PARSER_TOPLEVEL=OFF` remains available temporarily as the C parser baseline during migration.
+The Baa contract deliberately uses raw handles for the lexer and AST root while the production C API remains `parse(Lexer*) -> Node*`. The default build routes that C-facing API through the Baa parser wrapper. In the current migration slice, Baa owns the top-level loop, declaration dispatch, the `نوع <alias> = <type>.` declaration shell, the top-level `ثابت` / `ساكن` declaration qualifier loop, and the unexpected top-level declaration recovery shell, then delegates reusable type-spec parsing, non-alias leaf declaration grammar, and diagnostic/synchronization internals to C helpers; `BAA_USE_BAA_PARSER_TOPLEVEL=OFF` remains available temporarily as the C parser baseline during migration.
 
 ### Baa AST contract (v0.9.2)
 
@@ -213,6 +213,7 @@ Entry point for the parsing phase.
 - Parses the top-level declaration list through the Baa wrapper and dispatches each declaration to the appropriate parser leaf
 - Parses the global type-alias declaration shell in Baa: `نوع <name> = <type>.` while C still parses the `<type>` spec (v0.3.6.5)
 - Parses top-level declaration qualifiers `ثابت` / `ساكن` in Baa in any order, then passes qualifier flags to C-owned declaration leaves (v0.3.7.5)
+- Routes unexpected top-level declaration recovery through Baa while keeping declaration-mode synchronization diagnostics C-owned during migration
 - Parses low-level expressions/operators: `&`, `|`, `^`, `~`, `<<`, `>>`, and `حجم(type|expr)` (v0.3.6)
 - Implements operator precedence climbing for expressions
 - Uses context-aware panic recovery modes (statement/declaration/switch) to continue after syntax errors (v0.3.7)

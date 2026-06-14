@@ -528,7 +528,7 @@ Node* محلل_قواعد_باء_تصريح_بعد_مؤهلات(int64_t is_const
     return parse_declaration_after_qualifiers(decl_q);
 }
 
-Node* محلل_قواعد_باء_تصريح_غير_متوقع(void)
+Node* محلل_قواعد_باء_تصريح_غير_متوقع_تزامن(void)
 {
     return parse_unexpected_top_level_declaration();
 }

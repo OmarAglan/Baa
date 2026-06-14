@@ -1,5 +1,31 @@
 ﻿static Node* parse_unexpected_top_level_declaration(void);
 
+typedef struct ParserBaaDeclPrefix ParserBaaDeclPrefix;
+
+struct ParserBaaDeclPrefix {
+    ParserDeclQualifiers qualifiers;
+    Token tok_type;
+    DataType type;
+    char* type_name;
+    DataType ptr_base_type;
+    char* ptr_base_type_name;
+    int ptr_depth;
+    FuncPtrSig* func_sig;
+};
+
+static void parser_baa_decl_prefix_free(ParserBaaDeclPrefix* prefix)
+{
+    if (!prefix) return;
+    free(prefix->type_name);
+    free(prefix->ptr_base_type_name);
+    parser_funcsig_free(prefix->func_sig);
+    free(prefix);
+}
+
+static Node* parse_declaration_after_prefix(ParserBaaDeclPrefix* prefix);
+ParserBaaDeclPrefix* محلل_قواعد_باء_تصريح_بنوع_ابدأ(int64_t is_const, int64_t is_static);
+Node* محلل_قواعد_باء_تصريح_بنوع_أنهِ(ParserBaaDeclPrefix* prefix);
+
 static Node* parse_declaration_after_qualifiers(ParserDeclQualifiers decl_q)
 {
     if (parser_current_is_type_alias_keyword() && parser.next.type == TOKEN_IDENTIFIER) {
@@ -10,27 +36,34 @@ static Node* parse_declaration_after_qualifiers(ParserDeclQualifiers decl_q)
         return parse_type_alias_declaration(true);
     }
 
-    bool is_const = decl_q.is_const;
-    bool is_static = decl_q.is_static;
-
     if (parser_current_starts_type()) {
-        Token tok_type = parser.current;
-        DataType dt = TYPE_INT;
-        char* type_name = NULL;
-        DataType ptr_base_type = TYPE_INT;
-        char* ptr_base_type_name = NULL;
-        int ptr_depth = 0;
-        FuncPtrSig* type_func_sig = NULL;
-        (void)tok_type;
+        ParserBaaDeclPrefix* prefix =
+            محلل_قواعد_باء_تصريح_بنوع_ابدأ(decl_q.is_const ? 1 : 0,
+                                             decl_q.is_static ? 1 : 0);
+        return محلل_قواعد_باء_تصريح_بنوع_أنهِ(prefix);
+    }
 
-        if (!parse_type_spec(&dt, &type_name,
-                             &ptr_base_type, &ptr_base_type_name,
-                             &ptr_depth,
-                             &type_func_sig)) {
-            error_report(parser.current, "متوقع نوع.");
-            synchronize_mode(PARSER_SYNC_DECLARATION);
-            return NULL;
-        }
+    return parse_unexpected_top_level_declaration();
+}
+
+static Node* parse_declaration_after_prefix(ParserBaaDeclPrefix* prefix)
+{
+    if (!prefix) return NULL;
+
+    bool is_const = prefix->qualifiers.is_const;
+    bool is_static = prefix->qualifiers.is_static;
+    Token tok_type = prefix->tok_type;
+    DataType dt = prefix->type;
+    char* type_name = prefix->type_name;
+    DataType ptr_base_type = prefix->ptr_base_type;
+    char* ptr_base_type_name = prefix->ptr_base_type_name;
+    int ptr_depth = prefix->ptr_depth;
+    FuncPtrSig* type_func_sig = prefix->func_sig;
+
+    prefix->type_name = NULL;
+    prefix->ptr_base_type_name = NULL;
+    prefix->func_sig = NULL;
+    free(prefix);
 
         // تعريف تعداد/هيكل/اتحاد: تعداد <name> { ... }  |  هيكل <name> { ... } | اتحاد <name> { ... }
         if ((dt == TYPE_ENUM || dt == TYPE_STRUCT || dt == TYPE_UNION) && parser.current.type == TOKEN_LBRACE) {
@@ -490,9 +523,6 @@ static Node* parse_declaration_after_qualifiers(ParserDeclQualifiers decl_q)
         var->data.var_decl.is_const = is_const;
         var->data.var_decl.is_static = is_static;
         return var;
-    }
-    
-    return parse_unexpected_top_level_declaration();
 }
 
 static Node* parse_unexpected_top_level_declaration(void)
@@ -514,18 +544,51 @@ Node* parse_declaration(void)
     return parse_declaration_after_qualifiers(decl_q);
 }
 
-Node* محلل_قواعد_باء_تصريح_بنوع(void)
+ParserBaaDeclPrefix* محلل_قواعد_باء_تصريح_بنوع_ابدأ(int64_t is_const, int64_t is_static)
 {
-    ParserDeclQualifiers decl_q = {0};
-    return parse_declaration_after_qualifiers(decl_q);
+    ParserBaaDeclPrefix* prefix = (ParserBaaDeclPrefix*)calloc(1, sizeof(ParserBaaDeclPrefix));
+    if (!prefix) {
+        error_report(parser.current, "نفدت الذاكرة أثناء بدء التصريح.");
+        synchronize_mode(PARSER_SYNC_DECLARATION);
+        return NULL;
+    }
+
+    prefix->qualifiers.is_const = is_const != 0;
+    prefix->qualifiers.is_static = is_static != 0;
+    prefix->tok_type = parser.current;
+    prefix->type = TYPE_INT;
+    prefix->ptr_base_type = TYPE_INT;
+
+    if (!parse_type_spec(&prefix->type, &prefix->type_name,
+                         &prefix->ptr_base_type, &prefix->ptr_base_type_name,
+                         &prefix->ptr_depth,
+                         &prefix->func_sig)) {
+        error_report(parser.current, "متوقع نوع.");
+        parser_baa_decl_prefix_free(prefix);
+        synchronize_mode(PARSER_SYNC_DECLARATION);
+        return NULL;
+    }
+
+    return prefix;
 }
 
-Node* محلل_قواعد_باء_تصريح_بعد_مؤهلات(int64_t is_const, int64_t is_static)
+void محلل_قواعد_باء_تصريح_بنوع_حرر(ParserBaaDeclPrefix* prefix)
 {
-    ParserDeclQualifiers decl_q = {0};
-    decl_q.is_const = is_const != 0;
-    decl_q.is_static = is_static != 0;
-    return parse_declaration_after_qualifiers(decl_q);
+    parser_baa_decl_prefix_free(prefix);
+}
+
+Node* محلل_قواعد_باء_تصريح_بنوع_أنهِ(ParserBaaDeclPrefix* prefix)
+{
+    return parse_declaration_after_prefix(prefix);
+}
+
+Node* محلل_قواعد_باء_تصريح_اسم_نوع_بديل_بمؤهلات(int64_t is_const, int64_t is_static)
+{
+    bool has_qualifier = (is_const != 0) || (is_static != 0);
+    if (has_qualifier) {
+        error_report(parser.current, "تعريف اسم النوع البديل لا يقبل 'ثابت' أو 'ساكن'.");
+    }
+    return parse_type_alias_declaration(!has_qualifier);
 }
 
 Node* محلل_قواعد_باء_تصريح_غير_متوقع_تزامن(void)

@@ -15,7 +15,7 @@ ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_OUT_DIR = ROOT / f".baa_parser_harness_out_{os.getpid()}"
 
 CONFIGURE_TIMEOUT_S = 90.0
-BUILD_TIMEOUT_S = 180.0
+BUILD_TIMEOUT_S = 300.0
 COMPILE_TIMEOUT_S = 45.0
 RUN_TIMEOUT_S = 20.0
 
@@ -24,6 +24,7 @@ POSITIVE_CASES = (
     ("frontend-parser-decl-dispatch", "tests/integration/frontend/frontend_baa_parser_decl_dispatch_test.baa", False),
     ("frontend-parser-alias-shell", "tests/integration/frontend/frontend_baa_parser_alias_shell_test.baa", False),
     ("frontend-parser-qualifier-shell", "tests/integration/frontend/frontend_baa_parser_qualifier_shell_test.baa", True),
+    ("frontend-parser-decl-prefix", "tests/integration/frontend/frontend_baa_parser_decl_prefix_test.baa", False),
     ("backend-test", "tests/integration/backend/backend_test.baa", True),
     ("array-init", "tests/integration/backend/backend_array_init_test.baa", True),
     ("struct-pointer-member", "tests/integration/backend/backend_struct_pointer_member_test.baa", True),

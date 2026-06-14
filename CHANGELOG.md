@@ -59,10 +59,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
   - Moved the top-level `نوع <alias> = <type>.` token sequence into `src/frontend/parser.baa`.
   - Added an opaque C/Baa type-spec bridge so C continues to own reusable type parsing, alias registry storage, and AST field transfer for this slice.
   - Expanded parser harness/parity coverage for pointer aliases, function-pointer aliases, alias chains, missing alias names, missing alias targets, unknown alias targets, duplicate aliases, and higher-order function-pointer alias diagnostics.
+- **Baa-owned declaration qualifier shell**:
+  - Moved the top-level `ثابت` / `ساكن` qualifier loop into `src/frontend/parser.baa`.
+  - Added a narrow C bridge that preserves duplicate-qualifier diagnostics and passes qualifier flags into the existing C declaration leaf.
+  - Expanded parser harness/parity coverage for both qualifier orders and duplicate `ثابت` / `ساكن` diagnostics.
 
 ### Unchanged
 
-- Non-alias leaf declaration grammar parsing, reusable type-spec parsing, semantic analysis, AST ownership, diagnostics contracts, and IR lowering remain on their existing C-owned paths while the Baa top-level wrapper, declaration dispatch, and type-alias declaration shell are production-enabled.
+- Non-alias leaf declaration grammar parsing, reusable type-spec parsing, semantic analysis, AST ownership, diagnostics contracts, and IR lowering remain on their existing C-owned paths while the Baa top-level wrapper, declaration dispatch, type-alias declaration shell, and top-level declaration qualifier shell are production-enabled.
 
 ---
 

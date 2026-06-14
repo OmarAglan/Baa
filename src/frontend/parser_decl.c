@@ -520,10 +520,11 @@ Node* محلل_قواعد_باء_تصريح_بنوع(void)
     return parse_declaration_after_qualifiers(decl_q);
 }
 
-Node* محلل_قواعد_باء_تصريح_مؤهل(void)
+Node* محلل_قواعد_باء_تصريح_بعد_مؤهلات(int64_t is_const, int64_t is_static)
 {
-    ParserDeclQualifiers decl_q;
-    parser_parse_decl_qualifiers(&decl_q);
+    ParserDeclQualifiers decl_q = {0};
+    decl_q.is_const = is_const != 0;
+    decl_q.is_static = is_static != 0;
     return parse_declaration_after_qualifiers(decl_q);
 }
 

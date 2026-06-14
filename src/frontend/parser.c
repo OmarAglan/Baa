@@ -472,6 +472,27 @@ int64_t محلل_قواعد_باء_الحالي_واصفة_تصريح(void)
     return parser_is_decl_qualifier(parser.current.type) ? 1 : 0;
 }
 
+int64_t محلل_قواعد_باء_واصفة_تصريح_استهلك(int64_t has_const, int64_t has_static)
+{
+    if (parser.current.type == TOKEN_CONST) {
+        if (has_const) {
+            error_report(parser.current, "تكرار 'ثابت' غير مسموح.");
+        }
+        eat(TOKEN_CONST);
+        return 1;
+    }
+
+    if (parser.current.type == TOKEN_STATIC) {
+        if (has_static) {
+            error_report(parser.current, "تكرار 'ساكن' غير مسموح.");
+        }
+        eat(TOKEN_STATIC);
+        return 2;
+    }
+
+    return 0;
+}
+
 Node* محلل_قواعد_باء_تصريح(void)
 {
     return parse_declaration();

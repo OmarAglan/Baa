@@ -371,7 +371,7 @@ Special:     IDENTIFIER, EOF
 
 ## 3. Syntactic Analysis
 
-The Parser (`src/frontend/parser.c` plus the Baa slice in `src/frontend/parser.baa`) builds the AST using Recursive Descent with 2-token lookahead. The v0.9.2 migration contract starts at `src/frontend/parser.baahd`, which exposes a raw-handle Baa parser entrypoint returning `عقدة_باء` from `src/frontend/ast.baahd`. The production C-facing API remains `parse(Lexer*) -> Node*`, and it now routes through the Baa wrapper by default. Baa owns the top-level declaration-list loop, declaration dispatch/classification, and the top-level type-alias declaration shell; non-alias declaration leaves, reusable type-spec parsing, statement parsing, expression parsing, alias registry storage, AST allocation, and diagnostics remain C-owned until later parser-migration slices.
+The Parser (`src/frontend/parser.c` plus the Baa slice in `src/frontend/parser.baa`) builds the AST using Recursive Descent with 2-token lookahead. The v0.9.2 migration contract starts at `src/frontend/parser.baahd`, which exposes a raw-handle Baa parser entrypoint returning `عقدة_باء` from `src/frontend/ast.baahd`. The production C-facing API remains `parse(Lexer*) -> Node*`, and it now routes through the Baa wrapper by default. Baa owns the top-level declaration-list loop, declaration dispatch/classification, the top-level type-alias declaration shell, and the top-level `ثابت` / `ساكن` declaration qualifier loop; non-alias declaration leaves, reusable type-spec parsing, statement parsing, expression parsing, alias registry storage, AST allocation, and diagnostics remain C-owned until later parser-migration slices.
 
 ### 3.0. Parser Structure
 

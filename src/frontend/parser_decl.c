@@ -2,6 +2,7 @@
 
 typedef struct ParserBaaDeclPrefix ParserBaaDeclPrefix;
 typedef struct ParserBaaDeclParts ParserBaaDeclParts;
+typedef struct ParserBaaNamedDecl ParserBaaNamedDecl;
 
 struct ParserBaaDeclPrefix {
     ParserDeclQualifiers qualifiers;
@@ -25,6 +26,12 @@ struct ParserBaaDeclParts {
     FuncPtrSig* func_sig;
 };
 
+struct ParserBaaNamedDecl {
+    ParserBaaDeclParts parts;
+    Token tok_name;
+    char* name;
+};
+
 static void parser_baa_decl_prefix_free(ParserBaaDeclPrefix* prefix)
 {
     if (!prefix) return;
@@ -32,6 +39,18 @@ static void parser_baa_decl_prefix_free(ParserBaaDeclPrefix* prefix)
     free(prefix->ptr_base_type_name);
     parser_funcsig_free(prefix->func_sig);
     free(prefix);
+}
+
+static void parser_baa_decl_parts_release(ParserBaaDeclParts* parts)
+{
+    if (!parts) return;
+
+    free(parts->type_name);
+    free(parts->ptr_base_type_name);
+    parser_funcsig_free(parts->func_sig);
+    parts->type_name = NULL;
+    parts->ptr_base_type_name = NULL;
+    parts->func_sig = NULL;
 }
 
 static bool parser_baa_decl_prefix_take(ParserBaaDeclPrefix* prefix, ParserBaaDeclParts* out)
@@ -63,9 +82,40 @@ static bool parser_baa_decl_prefix_is_compound_definition(const ParserBaaDeclPre
            parser.current.type == TOKEN_LBRACE;
 }
 
+static void parser_baa_named_decl_free(ParserBaaNamedDecl* named)
+{
+    if (!named) return;
+
+    parser_baa_decl_parts_release(&named->parts);
+    free(named->name);
+    free(named);
+}
+
+static bool parser_baa_named_decl_take(ParserBaaNamedDecl* named,
+                                       ParserBaaDeclParts* out_parts,
+                                       Token* out_tok_name,
+                                       char** out_name)
+{
+    if (!named || !out_parts || !out_tok_name || !out_name) return false;
+
+    *out_parts = named->parts;
+    *out_tok_name = named->tok_name;
+    *out_name = named->name;
+    named->parts.type_name = NULL;
+    named->parts.ptr_base_type_name = NULL;
+    named->parts.func_sig = NULL;
+    named->name = NULL;
+    parser_baa_named_decl_free(named);
+    return true;
+}
+
 static Node* parse_declaration_after_prefix(ParserBaaDeclPrefix* prefix);
 static Node* parse_compound_declaration_after_prefix(ParserBaaDeclPrefix* prefix);
 static Node* parse_named_declaration_after_prefix(ParserBaaDeclPrefix* prefix);
+static ParserBaaNamedDecl* parse_named_declaration_start(ParserBaaDeclPrefix* prefix);
+static Node* parse_function_declaration_after_name(ParserBaaNamedDecl* named);
+static Node* parse_array_declaration_after_name(ParserBaaNamedDecl* named);
+static Node* parse_global_variable_declaration_after_name(ParserBaaNamedDecl* named);
 ParserBaaDeclPrefix* محلل_قواعد_باء_تصريح_بنوع_ابدأ(int64_t is_const, int64_t is_static);
 Node* محلل_قواعد_باء_تصريح_بنوع_أنهِ(ParserBaaDeclPrefix* prefix);
 
@@ -245,14 +295,56 @@ static Node* parse_compound_declaration_after_prefix(ParserBaaDeclPrefix* prefix
     return un;
 }
 
-static Node* parse_named_declaration_after_prefix(ParserBaaDeclPrefix* prefix)
+static ParserBaaNamedDecl* parse_named_declaration_start(ParserBaaDeclPrefix* prefix)
 {
     ParserBaaDeclParts parts;
     if (!parser_baa_decl_prefix_take(prefix, &parts)) return NULL;
 
+    Token tok_name = parser.current;
+    if (parser.current.type != TOKEN_IDENTIFIER) {
+        error_report(parser.current, "متوقع اسم معرّف بعد النوع.");
+        parser_baa_decl_parts_release(&parts);
+        synchronize_mode(PARSER_SYNC_DECLARATION);
+        return NULL;
+    }
+
+    ParserBaaNamedDecl* named = (ParserBaaNamedDecl*)calloc(1, sizeof(ParserBaaNamedDecl));
+    if (!named) {
+        error_report(parser.current, "نفدت الذاكرة أثناء بدء تصريح الرمز.");
+        parser_baa_decl_parts_release(&parts);
+        synchronize_mode(PARSER_SYNC_DECLARATION);
+        return NULL;
+    }
+
+    char* name = strdup(parser.current.value);
+    if (!name) {
+        error_report(parser.current, "نفدت الذاكرة أثناء نسخ اسم الرمز.");
+        parser_baa_decl_parts_release(&parts);
+        free(named);
+        synchronize_mode(PARSER_SYNC_DECLARATION);
+        return NULL;
+    }
+    eat(TOKEN_IDENTIFIER);
+
+    if (parts.type == TYPE_VOID && parser.current.type != TOKEN_LPAREN) {
+        error_report(parts.tok_type, "لا يمكن تعريف متغير عام من نوع 'عدم'.");
+    }
+
+    named->parts = parts;
+    named->tok_name = tok_name;
+    named->name = name;
+    return named;
+}
+
+static Node* parse_function_declaration_after_name(ParserBaaNamedDecl* named)
+{
+    ParserBaaDeclParts parts;
+    Token tok_name;
+    char* name = NULL;
+    if (!parser_baa_named_decl_take(named, &parts, &tok_name, &name)) return NULL;
+
     bool is_const = parts.qualifiers.is_const;
     bool is_static = parts.qualifiers.is_static;
-    Token tok_type = parts.tok_type;
     DataType dt = parts.type;
     char* type_name = parts.type_name;
     DataType ptr_base_type = parts.ptr_base_type;
@@ -260,253 +352,295 @@ static Node* parse_named_declaration_after_prefix(ParserBaaDeclPrefix* prefix)
     int ptr_depth = parts.ptr_depth;
     FuncPtrSig* type_func_sig = parts.func_sig;
 
-    // متغير/دالة: نحتاج اسم الرمز بعد نوعه.
-    Token tok_name = parser.current;
-    if (parser.current.type != TOKEN_IDENTIFIER) {
-        error_report(parser.current, "متوقع اسم معرّف بعد النوع.");
+    if (dt == TYPE_ENUM || dt == TYPE_STRUCT || dt == TYPE_UNION) {
+        error_report(parser.current, "أنواع الإرجاع المعرفة من المستخدم غير مدعومة بعد في تواقيع الدوال.");
         free(type_name);
         free(ptr_base_type_name);
         parser_funcsig_free(type_func_sig);
+        free(name);
         synchronize_mode(PARSER_SYNC_DECLARATION);
         return NULL;
     }
-
-    char* name = strdup(parser.current.value);
-    eat(TOKEN_IDENTIFIER);
-
-    if (dt == TYPE_VOID && parser.current.type != TOKEN_LPAREN) {
-        error_report(tok_type, "لا يمكن تعريف متغير عام من نوع 'عدم'.");
+    if (is_const || is_static) {
+        error_report(parser.current, "لا يمكن تعريف الدوال بوسم 'ثابت' أو 'ساكن'.");
     }
 
-    // دالة: نسمح فقط بأنواع بدائية حالياً.
-    if (parser.current.type == TOKEN_LPAREN) {
-        if (dt == TYPE_ENUM || dt == TYPE_STRUCT || dt == TYPE_UNION) {
-            error_report(parser.current, "أنواع الإرجاع المعرفة من المستخدم غير مدعومة بعد في تواقيع الدوال.");
-            free(type_name);
-            free(ptr_base_type_name);
-            parser_funcsig_free(type_func_sig);
-            free(name);
-            synchronize_mode(PARSER_SYNC_DECLARATION);
-            return NULL;
-        }
-        if (is_const || is_static) {
-            error_report(parser.current, "لا يمكن تعريف الدوال بوسم 'ثابت' أو 'ساكن'.");
-        }
-
-        eat(TOKEN_LPAREN);
-        Node* head_param = NULL;
-        Node* tail_param = NULL;
-        bool is_variadic = false;
-        if (parser.current.type != TOKEN_RPAREN) {
-            while (1) {
-                if (parser.current.type == TOKEN_ELLIPSIS) {
-                    if (!head_param) {
-                        error_report(parser.current, "غير مدعوم: '...' يتطلب وجود معامل ثابت واحد على الأقل.");
-                    } else {
-                        is_variadic = true;
-                    }
-                    eat(TOKEN_ELLIPSIS);
-                    break;
+    eat(TOKEN_LPAREN);
+    Node* head_param = NULL;
+    Node* tail_param = NULL;
+    bool is_variadic = false;
+    if (parser.current.type != TOKEN_RPAREN) {
+        while (1) {
+            if (parser.current.type == TOKEN_ELLIPSIS) {
+                if (!head_param) {
+                    error_report(parser.current, "غير مدعوم: '...' يتطلب وجود معامل ثابت واحد على الأقل.");
+                } else {
+                    is_variadic = true;
                 }
+                eat(TOKEN_ELLIPSIS);
+                break;
+            }
 
-                // معاملات الدالة: نسمح بالأنواع البدائية العددية/النص/منطقي/حرف + سكر 'T[]'.
-                Token tok_param_type = parser.current;
-                DataType param_dt = TYPE_INT;
-                char* param_tn = NULL;
-                DataType param_ptr_base_type = TYPE_INT;
-                char* param_ptr_base_type_name = NULL;
-                int param_ptr_depth = 0;
-                FuncPtrSig* param_func_sig = NULL;
-                if (!parse_type_spec(&param_dt, &param_tn,
-                                     &param_ptr_base_type, &param_ptr_base_type_name,
-                                     &param_ptr_depth,
-                                     &param_func_sig)) {
-                    error_report(parser.current, "متوقع نوع للمعامل.");
-                    synchronize_mode(PARSER_SYNC_DECLARATION);
-                    return NULL;
-                }
-                if (param_dt == TYPE_ENUM || param_dt == TYPE_STRUCT || param_dt == TYPE_UNION) {
-                    error_report(tok_param_type, "أنواع المعاملات المعرفة من المستخدم غير مدعومة بعد في تواقيع الدوال.");
-                    if (param_tn) free(param_tn);
-                    if (param_ptr_base_type_name) free(param_ptr_base_type_name);
-                    parser_funcsig_free(param_func_sig);
-                    param_tn = NULL;
-                    param_dt = TYPE_INT;
-                    param_func_sig = NULL;
-                } else if (param_dt == TYPE_VOID) {
-                    error_report(tok_param_type, "لا يمكن استخدام 'عدم' كنوع معامل.");
-                    if (param_tn) free(param_tn);
-                    if (param_ptr_base_type_name) free(param_ptr_base_type_name);
-                    parser_funcsig_free(param_func_sig);
-                    param_tn = NULL;
-                    param_dt = TYPE_INT;
-                    param_func_sig = NULL;
-                }
+            // معاملات الدالة: نسمح بالأنواع البدائية العددية/النص/منطقي/حرف + سكر 'T[]'.
+            Token tok_param_type = parser.current;
+            DataType param_dt = TYPE_INT;
+            char* param_tn = NULL;
+            DataType param_ptr_base_type = TYPE_INT;
+            char* param_ptr_base_type_name = NULL;
+            int param_ptr_depth = 0;
+            FuncPtrSig* param_func_sig = NULL;
+            if (!parse_type_spec(&param_dt, &param_tn,
+                                 &param_ptr_base_type, &param_ptr_base_type_name,
+                                 &param_ptr_depth,
+                                 &param_func_sig)) {
+                error_report(parser.current, "متوقع نوع للمعامل.");
+                free(param_tn);
+                free(param_ptr_base_type_name);
+                parser_funcsig_free(param_func_sig);
+                free(type_name);
+                free(ptr_base_type_name);
+                parser_funcsig_free(type_func_sig);
+                free(name);
+                synchronize_mode(PARSER_SYNC_DECLARATION);
+                return NULL;
+            }
+            if (param_dt == TYPE_ENUM || param_dt == TYPE_STRUCT || param_dt == TYPE_UNION) {
+                error_report(tok_param_type, "أنواع المعاملات المعرفة من المستخدم غير مدعومة بعد في تواقيع الدوال.");
+                if (param_tn) free(param_tn);
+                if (param_ptr_base_type_name) free(param_ptr_base_type_name);
+                parser_funcsig_free(param_func_sig);
+                param_tn = NULL;
+                param_dt = TYPE_INT;
+                param_func_sig = NULL;
+            } else if (param_dt == TYPE_VOID) {
+                error_report(tok_param_type, "لا يمكن استخدام 'عدم' كنوع معامل.");
+                if (param_tn) free(param_tn);
+                if (param_ptr_base_type_name) free(param_ptr_base_type_name);
+                parser_funcsig_free(param_func_sig);
+                param_tn = NULL;
+                param_dt = TYPE_INT;
+                param_func_sig = NULL;
+            }
 
-                char* pname = NULL;
+            char* pname = NULL;
 
-                // سكر نحوي لمعلمات الدالة: T[] ⇢ T*، وليس مصفوفة ثابتة الحجم.
-                if (parser.current.type == TOKEN_LBRACKET) {
-                    Token tok_lb = parser.current;
-                    eat(TOKEN_LBRACKET);
-                    if (parser.current.type != TOKEN_RBRACKET) {
-                        error_report(tok_lb, "غير مدعوم: معاملات الدوال تدعم فقط '[]' بدون حجم (سكر نحوي لمؤشر).");
-                        free(pname);
-                        free(param_tn);
-                        free(param_ptr_base_type_name);
-                        parser_funcsig_free(param_func_sig);
-                        synchronize_mode(PARSER_SYNC_DECLARATION);
-                        return NULL;
-                    }
-                    eat(TOKEN_RBRACKET);
-
-                    if (parser.current.type == TOKEN_LBRACKET) {
-                        error_report(tok_lb, "غير مدعوم: أبعاد متعددة '[][]' في معاملات الدوال.");
-                        free(pname);
-                        free(param_tn);
-                        free(param_ptr_base_type_name);
-                        parser_funcsig_free(param_func_sig);
-                        synchronize_mode(PARSER_SYNC_DECLARATION);
-                        return NULL;
-                    }
-
-                    if (param_dt == TYPE_FUNC_PTR) {
-                        error_report(tok_param_type, "غير مدعوم: لاحقة '[]' بعد نوع مؤشر دالة.");
-                    } else if (param_dt == TYPE_POINTER) {
-                        param_ptr_depth++;
-                    } else {
-                        param_ptr_base_type = param_dt;
-                        param_ptr_depth = 1;
-                        param_dt = TYPE_POINTER;
-                    }
-                }
-
-                Token tok_param_name = tok_param_type;
-                if (parser.current.type == TOKEN_IDENTIFIER) {
-                    tok_param_name = parser.current;
-                    pname = strdup(parser.current.value);
-                    eat(TOKEN_IDENTIFIER);
-                }
-
-                Node* param = ast_node_new(NODE_VAR_DECL, tok_param_name);
-                if (!param) {
+            // سكر نحوي لمعلمات الدالة: T[] ⇢ T*، وليس مصفوفة ثابتة الحجم.
+            if (parser.current.type == TOKEN_LBRACKET) {
+                Token tok_lb = parser.current;
+                eat(TOKEN_LBRACKET);
+                if (parser.current.type != TOKEN_RBRACKET) {
+                    error_report(tok_lb, "غير مدعوم: معاملات الدوال تدعم فقط '[]' بدون حجم (سكر نحوي لمؤشر).");
                     free(pname);
                     free(param_tn);
                     free(param_ptr_base_type_name);
                     parser_funcsig_free(param_func_sig);
+                    free(type_name);
+                    free(ptr_base_type_name);
+                    parser_funcsig_free(type_func_sig);
+                    free(name);
+                    synchronize_mode(PARSER_SYNC_DECLARATION);
                     return NULL;
                 }
-                param->data.var_decl.name = pname;
-                param->data.var_decl.type = param_dt;
-                param->data.var_decl.type_name = param_tn;
-                param->data.var_decl.ptr_base_type = param_ptr_base_type;
-                param->data.var_decl.ptr_base_type_name = param_ptr_base_type_name;
-                param->data.var_decl.ptr_depth = param_ptr_depth;
-                param->data.var_decl.func_sig = param_func_sig;
-                param->data.var_decl.expression = NULL;
-                param->data.var_decl.is_global = false;
-                param->data.var_decl.is_const = false;
-                if (head_param == NULL) { head_param = param; tail_param = param; }
-                else { tail_param->next = param; tail_param = param; }
+                eat(TOKEN_RBRACKET);
 
-                if (parser.current.type == TOKEN_COMMA) eat(TOKEN_COMMA);
-                else break;
+                if (parser.current.type == TOKEN_LBRACKET) {
+                    error_report(tok_lb, "غير مدعوم: أبعاد متعددة '[][]' في معاملات الدوال.");
+                    free(pname);
+                    free(param_tn);
+                    free(param_ptr_base_type_name);
+                    parser_funcsig_free(param_func_sig);
+                    free(type_name);
+                    free(ptr_base_type_name);
+                    parser_funcsig_free(type_func_sig);
+                    free(name);
+                    synchronize_mode(PARSER_SYNC_DECLARATION);
+                    return NULL;
+                }
+
+                if (param_dt == TYPE_FUNC_PTR) {
+                    error_report(tok_param_type, "غير مدعوم: لاحقة '[]' بعد نوع مؤشر دالة.");
+                } else if (param_dt == TYPE_POINTER) {
+                    param_ptr_depth++;
+                } else {
+                    param_ptr_base_type = param_dt;
+                    param_ptr_depth = 1;
+                    param_dt = TYPE_POINTER;
+                }
             }
-        }
-        eat(TOKEN_RPAREN);
 
-        Node* body = NULL;
-        bool is_proto = false;
+            Token tok_param_name = tok_param_type;
+            if (parser.current.type == TOKEN_IDENTIFIER) {
+                tok_param_name = parser.current;
+                pname = strdup(parser.current.value);
+                if (!pname) {
+                    error_report(parser.current, "نفدت الذاكرة أثناء نسخ اسم المعامل.");
+                    free(param_tn);
+                    free(param_ptr_base_type_name);
+                    parser_funcsig_free(param_func_sig);
+                    free(type_name);
+                    free(ptr_base_type_name);
+                    parser_funcsig_free(type_func_sig);
+                    free(name);
+                    synchronize_mode(PARSER_SYNC_DECLARATION);
+                    return NULL;
+                }
+                eat(TOKEN_IDENTIFIER);
+            }
 
-        if (parser.current.type == TOKEN_DOT) {
-            eat(TOKEN_DOT);
-            is_proto = true;
-        } else {
-            body = parse_block();
-            is_proto = false;
-        }
+            Node* param = ast_node_new(NODE_VAR_DECL, tok_param_name);
+            if (!param) {
+                free(pname);
+                free(param_tn);
+                free(param_ptr_base_type_name);
+                parser_funcsig_free(param_func_sig);
+                free(type_name);
+                free(ptr_base_type_name);
+                parser_funcsig_free(type_func_sig);
+                free(name);
+                return NULL;
+            }
+            param->data.var_decl.name = pname;
+            param->data.var_decl.type = param_dt;
+            param->data.var_decl.type_name = param_tn;
+            param->data.var_decl.ptr_base_type = param_ptr_base_type;
+            param->data.var_decl.ptr_base_type_name = param_ptr_base_type_name;
+            param->data.var_decl.ptr_depth = param_ptr_depth;
+            param->data.var_decl.func_sig = param_func_sig;
+            param->data.var_decl.expression = NULL;
+            param->data.var_decl.is_global = false;
+            param->data.var_decl.is_const = false;
+            if (head_param == NULL) { head_param = param; tail_param = param; }
+            else { tail_param->next = param; tail_param = param; }
 
-        Node* func = ast_node_new(NODE_FUNC_DEF, tok_name);
-        if (!func) {
-            free(name);
-            free(type_name);
-            free(ptr_base_type_name);
-            parser_funcsig_free(type_func_sig);
-            return NULL;
+            if (parser.current.type == TOKEN_COMMA) eat(TOKEN_COMMA);
+            else break;
         }
-        func->data.func_def.name = name;
-        func->data.func_def.return_type = dt;
-        func->data.func_def.return_ptr_base_type = ptr_base_type;
-        func->data.func_def.return_ptr_base_type_name = ptr_base_type_name;
-        func->data.func_def.return_ptr_depth = ptr_depth;
-        func->data.func_def.return_func_sig = type_func_sig;
-        func->data.func_def.params = head_param;
-        func->data.func_def.body = body;
-        func->data.func_def.is_variadic = is_variadic;
-        func->data.func_def.is_prototype = is_proto;
-        free(type_name);
-        return func;
     }
+    eat(TOKEN_RPAREN);
 
-    // تعريف مصفوفة عامة ثابتة الأبعاد.
-    if (parser.current.type == TOKEN_LBRACKET) {
-        if (dt == TYPE_FUNC_PTR) {
-            error_report(parser.current, "مصفوفات من نوع مؤشر دالة غير مدعومة بعد.");
-            free(type_name);
-            free(ptr_base_type_name);
-            parser_funcsig_free(type_func_sig);
-            free(name);
-            synchronize_mode(PARSER_SYNC_DECLARATION);
-            return NULL;
-        }
-        int* dims = NULL;
-        int dim_count = 0;
-        int64_t total_elems = 0;
-        if (!parse_array_dimensions(&dims, &dim_count, &total_elems)) {
-            free(type_name);
-            free(ptr_base_type_name);
-            parser_funcsig_free(type_func_sig);
-            free(name);
-            synchronize_mode(PARSER_SYNC_DECLARATION);
-            return NULL;
-        }
+    Node* body = NULL;
+    bool is_proto = false;
 
-        int init_count = 0;
-        bool has_init = false;
-        Node* init_vals = parse_array_initializer_list(&init_count, &has_init);
-
+    if (parser.current.type == TOKEN_DOT) {
         eat(TOKEN_DOT);
-
-        Node* arr = ast_node_new(NODE_ARRAY_DECL, tok_name);
-        if (!arr) {
-            free(dims);
-            free(type_name);
-            free(name);
-            parser_funcsig_free(type_func_sig);
-            return NULL;
-        }
-        arr->data.array_decl.name = name;
-        arr->data.array_decl.element_type = dt;
-        arr->data.array_decl.element_type_name = type_name;
-        arr->data.array_decl.element_ptr_base_type = ptr_base_type;
-        arr->data.array_decl.element_ptr_base_type_name = ptr_base_type_name;
-        arr->data.array_decl.element_ptr_depth = ptr_depth;
-        arr->data.array_decl.element_struct_size = 0;
-        arr->data.array_decl.element_struct_align = 0;
-        arr->data.array_decl.dims = dims;
-        arr->data.array_decl.dim_count = dim_count;
-        arr->data.array_decl.total_elems = total_elems;
-        arr->data.array_decl.is_global = true;
-        arr->data.array_decl.is_const = is_const;
-        arr->data.array_decl.is_static = is_static;
-        arr->data.array_decl.has_init = has_init;
-        arr->data.array_decl.init_values = init_vals;
-        arr->data.array_decl.init_count = init_count;
-        parser_funcsig_free(type_func_sig);
-        return arr;
+        is_proto = true;
+    } else {
+        body = parse_block();
+        is_proto = false;
     }
 
-    // متغير عام.
+    Node* func = ast_node_new(NODE_FUNC_DEF, tok_name);
+    if (!func) {
+        free(name);
+        free(type_name);
+        free(ptr_base_type_name);
+        parser_funcsig_free(type_func_sig);
+        return NULL;
+    }
+    func->data.func_def.name = name;
+    func->data.func_def.return_type = dt;
+    func->data.func_def.return_ptr_base_type = ptr_base_type;
+    func->data.func_def.return_ptr_base_type_name = ptr_base_type_name;
+    func->data.func_def.return_ptr_depth = ptr_depth;
+    func->data.func_def.return_func_sig = type_func_sig;
+    func->data.func_def.params = head_param;
+    func->data.func_def.body = body;
+    func->data.func_def.is_variadic = is_variadic;
+    func->data.func_def.is_prototype = is_proto;
+    free(type_name);
+    return func;
+}
+
+static Node* parse_array_declaration_after_name(ParserBaaNamedDecl* named)
+{
+    ParserBaaDeclParts parts;
+    Token tok_name;
+    char* name = NULL;
+    if (!parser_baa_named_decl_take(named, &parts, &tok_name, &name)) return NULL;
+
+    bool is_const = parts.qualifiers.is_const;
+    bool is_static = parts.qualifiers.is_static;
+    DataType dt = parts.type;
+    char* type_name = parts.type_name;
+    DataType ptr_base_type = parts.ptr_base_type;
+    char* ptr_base_type_name = parts.ptr_base_type_name;
+    int ptr_depth = parts.ptr_depth;
+    FuncPtrSig* type_func_sig = parts.func_sig;
+
+    if (dt == TYPE_FUNC_PTR) {
+        error_report(parser.current, "مصفوفات من نوع مؤشر دالة غير مدعومة بعد.");
+        free(type_name);
+        free(ptr_base_type_name);
+        parser_funcsig_free(type_func_sig);
+        free(name);
+        synchronize_mode(PARSER_SYNC_DECLARATION);
+        return NULL;
+    }
+
+    int* dims = NULL;
+    int dim_count = 0;
+    int64_t total_elems = 0;
+    if (!parse_array_dimensions(&dims, &dim_count, &total_elems)) {
+        free(type_name);
+        free(ptr_base_type_name);
+        parser_funcsig_free(type_func_sig);
+        free(name);
+        synchronize_mode(PARSER_SYNC_DECLARATION);
+        return NULL;
+    }
+
+    int init_count = 0;
+    bool has_init = false;
+    Node* init_vals = parse_array_initializer_list(&init_count, &has_init);
+
+    eat(TOKEN_DOT);
+
+    Node* arr = ast_node_new(NODE_ARRAY_DECL, tok_name);
+    if (!arr) {
+        free(dims);
+        free(type_name);
+        free(ptr_base_type_name);
+        free(name);
+        parser_funcsig_free(type_func_sig);
+        return NULL;
+    }
+    arr->data.array_decl.name = name;
+    arr->data.array_decl.element_type = dt;
+    arr->data.array_decl.element_type_name = type_name;
+    arr->data.array_decl.element_ptr_base_type = ptr_base_type;
+    arr->data.array_decl.element_ptr_base_type_name = ptr_base_type_name;
+    arr->data.array_decl.element_ptr_depth = ptr_depth;
+    arr->data.array_decl.element_struct_size = 0;
+    arr->data.array_decl.element_struct_align = 0;
+    arr->data.array_decl.dims = dims;
+    arr->data.array_decl.dim_count = dim_count;
+    arr->data.array_decl.total_elems = total_elems;
+    arr->data.array_decl.is_global = true;
+    arr->data.array_decl.is_const = is_const;
+    arr->data.array_decl.is_static = is_static;
+    arr->data.array_decl.has_init = has_init;
+    arr->data.array_decl.init_values = init_vals;
+    arr->data.array_decl.init_count = init_count;
+    parser_funcsig_free(type_func_sig);
+    return arr;
+}
+
+static Node* parse_global_variable_declaration_after_name(ParserBaaNamedDecl* named)
+{
+    ParserBaaDeclParts parts;
+    Token tok_name;
+    char* name = NULL;
+    if (!parser_baa_named_decl_take(named, &parts, &tok_name, &name)) return NULL;
+
+    bool is_const = parts.qualifiers.is_const;
+    bool is_static = parts.qualifiers.is_static;
+    DataType dt = parts.type;
+    char* type_name = parts.type_name;
+    DataType ptr_base_type = parts.ptr_base_type;
+    char* ptr_base_type_name = parts.ptr_base_type_name;
+    int ptr_depth = parts.ptr_depth;
+    FuncPtrSig* type_func_sig = parts.func_sig;
+
     if (dt == TYPE_STRUCT || dt == TYPE_UNION) {
         if (is_const) {
             error_report(parser.current, "لا يمكن تعريف نوع مركب ثابت بدون تهيئة (غير مدعوم حالياً).");
@@ -567,6 +701,20 @@ static Node* parse_named_declaration_after_prefix(ParserBaaDeclPrefix* prefix)
     var->data.var_decl.is_const = is_const;
     var->data.var_decl.is_static = is_static;
     return var;
+}
+
+static Node* parse_named_declaration_after_prefix(ParserBaaDeclPrefix* prefix)
+{
+    ParserBaaNamedDecl* named = parse_named_declaration_start(prefix);
+    if (!named) return NULL;
+
+    if (parser.current.type == TOKEN_LPAREN) {
+        return parse_function_declaration_after_name(named);
+    }
+    if (parser.current.type == TOKEN_LBRACKET) {
+        return parse_array_declaration_after_name(named);
+    }
+    return parse_global_variable_declaration_after_name(named);
 }
 
 static Node* parse_declaration_after_prefix(ParserBaaDeclPrefix* prefix)
@@ -648,6 +796,43 @@ Node* محلل_قواعد_باء_تصريح_تعريف_مركب_أنهِ(ParserB
 Node* محلل_قواعد_باء_تصريح_رمز_أنهِ(ParserBaaDeclPrefix* prefix)
 {
     return parse_named_declaration_after_prefix(prefix);
+}
+
+ParserBaaNamedDecl* محلل_قواعد_باء_تصريح_رمز_ابدأ(ParserBaaDeclPrefix* prefix)
+{
+    return parse_named_declaration_start(prefix);
+}
+
+void محلل_قواعد_باء_تصريح_رمز_حرر(ParserBaaNamedDecl* named)
+{
+    parser_baa_named_decl_free(named);
+}
+
+int64_t محلل_قواعد_باء_تصريح_رمز_دالة(ParserBaaNamedDecl* named)
+{
+    if (!named) return 0;
+    return parser.current.type == TOKEN_LPAREN ? 1 : 0;
+}
+
+int64_t محلل_قواعد_باء_تصريح_رمز_مصفوفة(ParserBaaNamedDecl* named)
+{
+    if (!named) return 0;
+    return parser.current.type == TOKEN_LBRACKET ? 1 : 0;
+}
+
+Node* محلل_قواعد_باء_تصريح_دالة_أنهِ(ParserBaaNamedDecl* named)
+{
+    return parse_function_declaration_after_name(named);
+}
+
+Node* محلل_قواعد_باء_تصريح_مصفوفة_أنهِ(ParserBaaNamedDecl* named)
+{
+    return parse_array_declaration_after_name(named);
+}
+
+Node* محلل_قواعد_باء_تصريح_متغير_عام_أنهِ(ParserBaaNamedDecl* named)
+{
+    return parse_global_variable_declaration_after_name(named);
 }
 
 Node* محلل_قواعد_باء_تصريح_اسم_نوع_بديل_بمؤهلات(int64_t is_const, int64_t is_static)

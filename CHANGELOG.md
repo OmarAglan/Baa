@@ -73,12 +73,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - **Baa-owned non-alias declaration tail dispatch**:
   - Moved the compound-definition versus named-symbol tail decision after a parsed declaration type prefix into `src/frontend/parser.baa`.
   - Split the C declaration tail path into Baa-callable compound-definition and named-symbol finish helpers while keeping the detailed enum/struct/union, function, array, and global-variable parsers C-owned.
+- **Baa-owned named declaration tail classification**:
+  - Moved top-level named declaration start and function/array/global-variable tail classification into `src/frontend/parser.baa`.
+  - Added an opaque C/Baa named-declaration handle so C still owns detailed function parameter/body parsing, array dimensions/initializers, global-variable AST construction, diagnostics internals, and ownership transfer.
 - **Parser QA robustness**:
   - Raised the parser harness build timeout so clean strict MinGW parser harness builds do not fail spuriously while rebuilding the Baa lexer and parser objects.
 
 ### Unchanged
 
-- Non-alias declaration tail body parsing, reusable type-spec parsing, semantic analysis, AST ownership, diagnostics internals, and IR lowering remain on their existing C-owned paths while the Baa top-level wrapper, declaration dispatch, type-alias declaration shell, top-level declaration qualifier shell, unexpected-declaration recovery shell, non-alias declaration prefix shell, and non-alias declaration tail dispatch are production-enabled.
+- Detailed non-alias declaration tail body parsing, reusable type-spec parsing, semantic analysis, AST ownership, diagnostics internals, and IR lowering remain on their existing C-owned paths while the Baa top-level wrapper, declaration dispatch, type-alias declaration shell, top-level declaration qualifier shell, unexpected-declaration recovery shell, non-alias declaration prefix shell, non-alias declaration tail dispatch, and named declaration tail classification are production-enabled.
 
 ---
 

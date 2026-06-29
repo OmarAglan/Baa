@@ -1586,6 +1586,103 @@ Partial status update (2026-03-06):
 - [ ] **Full release QA** — Windows + Linux quick/full/stress/release gates.
 - [ ] **Book + spec sync** — all docs updated to v0.9.0.
 - [ ] **Stage-0 bootstrap plan only** — define future self-hosting stages, rollback, and parity gates; do not make self-hosting the mainline compiler yet.
+- [ ] **Freestanding OS-dev profile plan only** — define the future `i386-elf`/`i386-pyramidos` path for PyramidOS experiments; do not move PyramidOS kernel core to Baa yet.
+
+---
+
+## 🧬 Future OS Development Profile: Freestanding / PyramidOS Target (post-v0.9)
+
+*Goal: Make Baa capable of compiling small freestanding objects for PyramidOS and OS-development experiments without pretending that the PyramidOS kernel can immediately move from C/Assembly to Baa.*
+
+### Scope Decision
+
+- [ ] **Baa v0.9 is not an OS-dev-ready release by itself** — v0.9 freezes the hosted language/toolchain baseline and only plans the freestanding path.
+- [ ] **PyramidOS kernel core remains C + Assembly** — bootloader, entry code, GDT/IDT/ISR, PMM/VMM, ATA, and panic paths stay in the current reference implementation until explicit gates pass.
+- [ ] **Baa enters PyramidOS gradually** — host tools first, then tiny mixed-link smoke objects, then userland, then carefully selected kernel leaf helpers.
+- [ ] **No hidden hosted dependencies** — freestanding Baa code must not silently call libc/CRT, file I/O, heap allocation, formatted I/O, or startup helpers.
+- [ ] **Object/linker-script compatibility first** — Baa must fit the PyramidOS linker script, section layout, symbols, and QEMU boot gate before any migration claim.
+- [ ] **Rollback is mandatory** — every Baa-in-PyramidOS experiment must be removable without breaking the C/Assembly kernel path.
+
+### v0.10.0: Freestanding Profile Foundation 🧱
+
+**Goal:** Add a hosted-vs-freestanding compiler mode split.
+
+- [ ] **`--freestanding` mode** — compile with no hosted OS/runtime assumptions.
+- [ ] **`--no-stdlib` mode** — reject or disable stdlib calls unless explicitly provided by the target.
+- [ ] **`--kernel` profile alias** — convenience mode for freestanding, no-stdlib, object-only defaults.
+- [ ] **Disable hosted builtins** — no implicit lowering to libc/CRT for print, read, files, time, environment, or allocation.
+- [ ] **Explicit runtime contract diagnostics** — Arabic errors when hosted features are used in freestanding mode.
+- [ ] **Custom entry symbol support** — allow kernel/userland entry symbols without assuming `الرئيسية` maps to hosted `main`.
+- [ ] **Object-only release gate** — freestanding mode initially produces assembly/object outputs only, not hosted executables.
+
+### v0.10.1: `i386-elf` / `i386-pyramidos` Target 🎯
+
+**Goal:** Add the target shape needed by the current 32-bit PyramidOS kernel.
+
+- [ ] **`--target=i386-elf` baseline** — 32-bit x86 freestanding object/assembly output.
+- [ ] **Optional `--target=i386-pyramidos` alias** — PyramidOS-specific ABI/layout defaults once proven useful.
+- [ ] **32-bit data layout** — pointer size, integer sizes, stack alignment, and aggregate layout documented and verified.
+- [ ] **cdecl-style call ABI** — stack arguments, return values, caller/callee-saved registers, and name decoration policy.
+- [ ] **32-bit instruction selection** — lower Baa IR to i386-compatible machine instructions.
+- [ ] **32-bit register allocation** — EAX/EBX/ECX/EDX/ESI/EDI/EBP/ESP constraints and spilling.
+- [ ] **GAS/NASM compatibility decision** — choose canonical emitted assembly syntax for PyramidOS builds.
+- [ ] **Cross-toolchain integration** — support `i686-elf`/`i386-elf` assembler flow where available, without requiring hosted GCC linkage.
+
+### v0.10.2: Kernel-Safety Language Features 🛡️
+
+**Goal:** Add the minimum low-level controls required for kernel code.
+
+- [ ] **Volatile memory access** — explicit volatile load/store for MMIO and hardware registers.
+- [ ] **Packed structs** — stable layout controls for descriptor tables and hardware data structures.
+- [ ] **Alignment attributes** — align variables/types/sections for page tables, stacks, and hardware structures.
+- [ ] **Custom section attributes** — place symbols in `.text`, `.rodata`, `.data`, `.bss`, boot/kernel-specific sections.
+- [ ] **Compile-time layout assertions** — verify `حجم`, alignment, and field offsets for ABI-critical structures.
+- [ ] **Inline assembly hardening** — tested patterns for `cli`, `sti`, `hlt`, `in`, `out`, `lgdt`, `lidt`, and control-register access.
+- [ ] **Interrupt-wrapper contract** — keep ISR/IRQ wrappers in Assembly first; only add Baa interrupt ABI support after wrapper tests pass.
+
+### v0.10.3: PyramidOS Mixed-Link Smoke Gate 🧪
+
+**Goal:** Prove one tiny Baa object can link into and boot inside PyramidOS without touching critical paths.
+
+- [ ] **Leaf Baa function object** — compile a tiny non-critical Baa function to an object file.
+- [ ] **C-callable ABI test** — call the Baa function from C diagnostic code and verify arguments/return value.
+- [ ] **Linker script compatibility** — place Baa sections correctly in the PyramidOS image.
+- [ ] **Symbol map verification** — confirm symbols appear at expected addresses in `kernel.map`.
+- [ ] **QEMU boot smoke** — boot PyramidOS and run a diagnostic command that exercises the Baa function.
+- [ ] **No critical subsystem migration** — bootloader, GDT/IDT/ISR, PMM/VMM, heap, ATA, and VFS remain C/Assembly in this milestone.
+- [ ] **Rollback test** — removing the Baa object restores the exact C/Assembly-only build behavior.
+
+### v0.10.4: PyramidOS Userland Foundation 👤
+
+**Goal:** Prefer Baa first for PyramidOS userland once Ring 3/syscalls exist.
+
+- [ ] **Userland target profile** — compile small Ring 3 Baa programs for PyramidOS when the OS ABI exists.
+- [ ] **Syscall wrapper declarations** — `.baahd` headers for stable PyramidOS syscalls.
+- [ ] **Minimal no-stdlib runtime** — startup + syscall exit/write path only.
+- [ ] **Userland hello program** — Baa program prints via PyramidOS syscall, not host libc.
+- [ ] **Userland ABI tests** — argument passing, return codes, stack alignment, and failure behavior.
+- [ ] **Separation policy** — userland Baa can advance faster than kernel Baa because it is less boot-critical.
+
+### v0.10.5: Kernel Leaf-Helper Pilot 🌱
+
+**Goal:** Try Baa inside the kernel only where failure risk is low and rollback is trivial.
+
+- [ ] **Allowed migration list** — small pure helpers only: string length, small formatting helpers, table lookup, diagnostics formatting.
+- [ ] **Forbidden migration list** — no bootloader, entry, GDT/IDT/ISR, PMM/VMM, heap allocator, ATA/PIO, scheduler, or panic core.
+- [ ] **C reference parity tests** — compare Baa helper behavior against existing C helpers.
+- [ ] **No heap by default** — kernel Baa code must not allocate unless PyramidOS exposes an explicit allocator contract.
+- [ ] **No implicit panics** — freestanding failure behavior must be explicit and kernel-safe.
+- [ ] **QEMU regression gate** — every helper migration must pass boot + shell + diagnostic smoke tests.
+- [ ] **Rollback branch discipline** — each helper migration lands as an isolated, revertable change.
+
+#### OS Development Profile Exit Criteria
+
+- [ ] **Freestanding mode is real** — no hidden libc/CRT dependency for accepted freestanding programs.
+- [ ] **i386 target is proven** — assembly/object output matches PyramidOS target expectations.
+- [ ] **Layout controls are tested** — packed/aligned/section features are verified with compile-time and binary checks.
+- [ ] **Mixed-link gate passes** — PyramidOS boots in QEMU with one C-called Baa object.
+- [ ] **Userland path is defined** — Baa has a cleaner first real OS role outside the kernel core.
+- [ ] **Kernel migration remains gated** — no critical subsystem is moved without separate design review and rollback plan.
 
 ---
 
@@ -2112,8 +2209,9 @@ Partial status update (2026-03-06):
 | Phase 6 | v0.6.x | Language Usability & Safety | Baa compiler |
 | Phase 7 | v0.7.x | Testing & External Integration Contracts | Baa + Takween/Qalam contracts |
 | Phase 8 | v0.8.x | Backend/Optimizer/Performance Reliability | Baa compiler |
-| Phase 9 | v0.9.x | Stable Beta + Future Bootstrap Plan | Baa compiler |
-| Future | post-v0.9 | Self-hosting / own assembler / own linker | Separate staged decision |
+| Phase 9 | v0.9.x | Stable Beta + Future Bootstrap/OS-dev Plan | Baa compiler |
+| Future | v0.10.x / post-v0.9 | Freestanding OS Development Profile | Baa compiler + PyramidOS C/ASM reference |
+| Future | post-v0.10 | Self-hosting / own assembler / own linker | Separate staged decision |
 
 ---
 

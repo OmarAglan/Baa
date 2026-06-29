@@ -1479,7 +1479,8 @@
   of aborting before a release receipt is written.
 
   Cross-platform receipt update (2026-06-29): the manual `Baa Release Candidate` workflow
-  performs strict Windows/Linux C-reference builds, runs release QA, and uploads both receipts.
+  performs strict Windows/Linux C-reference builds, runs all four QA modes, and uploads both
+  platform receipt sets.
 
   Version audit update (2026-06-29): authoritative compiler/package/documentation metadata now
   reports `0.5.9`, guarded by `scripts/check\_version\_sync.py`. The Windows ladder was rebuilt

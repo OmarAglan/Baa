@@ -25,9 +25,18 @@ class ReleaseCandidateWorkflowTests(unittest.TestCase):
         self.assertIn("cmake --preset linux-verify", self.text)
         self.assertIn("cmake --build --preset linux-verify --clean-first -j", self.text)
 
-    def test_runs_release_mode_and_preserves_both_receipts(self) -> None:
+    def test_runs_every_mode_and_preserves_both_receipt_sets(self) -> None:
+        self.assertEqual(self.text.count("--mode quick"), 2)
+        self.assertEqual(self.text.count("--mode full"), 2)
+        self.assertEqual(self.text.count("--mode stress"), 2)
         self.assertEqual(self.text.count("--mode release"), 2)
+        self.assertIn("qa-summary-quick-windows.json", self.text)
+        self.assertIn("qa-summary-full-windows.json", self.text)
+        self.assertIn("qa-summary-stress-windows.json", self.text)
         self.assertIn("qa-summary-release-windows.json", self.text)
+        self.assertIn("qa-summary-quick-linux.json", self.text)
+        self.assertIn("qa-summary-full-linux.json", self.text)
+        self.assertIn("qa-summary-stress-linux.json", self.text)
         self.assertIn("qa-summary-release-linux.json", self.text)
         self.assertEqual(self.text.count("if: always()"), 2)
         self.assertEqual(self.text.count("uses: actions/upload-artifact@v4"), 2)

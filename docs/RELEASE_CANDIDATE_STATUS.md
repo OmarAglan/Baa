@@ -53,7 +53,8 @@ receipt remains historical only because that binary still reported 0.5.6.
 **Status:** pending.
 
 The manual `Baa Release Candidate` GitHub Actions workflow runs strict Windows and Linux builds,
-executes release QA on both, and uploads the JSON/log receipts even when a gate fails.
+executes quick/full/stress/release QA on both, and uploads every JSON/log receipt even when a
+gate fails.
 
 Local equivalent:
 

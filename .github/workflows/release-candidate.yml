@@ -29,6 +29,18 @@ jobs:
         run: cmake --preset windows-verify
       - name: Clean strict Windows build
         run: cmake --build --preset windows-verify --clean-first
+      - name: Windows quick QA
+        env:
+          PYTHONUTF8: "1"
+        run: python scripts/qa_run.py --mode quick --summary-json qa-summary-quick-windows.json
+      - name: Windows full QA
+        env:
+          PYTHONUTF8: "1"
+        run: python scripts/qa_run.py --mode full --summary-json qa-summary-full-windows.json
+      - name: Windows stress QA
+        env:
+          PYTHONUTF8: "1"
+        run: python scripts/qa_run.py --mode stress --summary-json qa-summary-stress-windows.json
       - name: Windows release QA
         env:
           PYTHONUTF8: "1"
@@ -41,6 +53,9 @@ jobs:
           if-no-files-found: error
           path: |
             .baa_qa_logs/**
+            qa-summary-quick-windows.json
+            qa-summary-full-windows.json
+            qa-summary-stress-windows.json
             qa-summary-release-windows.json
 
   release-linux:
@@ -55,6 +70,18 @@ jobs:
         run: cmake --preset linux-verify
       - name: Clean strict Linux build
         run: cmake --build --preset linux-verify --clean-first -j
+      - name: Linux quick QA
+        env:
+          PYTHONUTF8: "1"
+        run: python3 scripts/qa_run.py --mode quick --summary-json qa-summary-quick-linux.json
+      - name: Linux full QA
+        env:
+          PYTHONUTF8: "1"
+        run: python3 scripts/qa_run.py --mode full --summary-json qa-summary-full-linux.json
+      - name: Linux stress QA
+        env:
+          PYTHONUTF8: "1"
+        run: python3 scripts/qa_run.py --mode stress --summary-json qa-summary-stress-linux.json
       - name: Linux release QA
         env:
           PYTHONUTF8: "1"
@@ -67,4 +94,7 @@ jobs:
           if-no-files-found: error
           path: |
             .baa_qa_logs/**
+            qa-summary-quick-linux.json
+            qa-summary-full-linux.json
+            qa-summary-stress-linux.json
             qa-summary-release-linux.json

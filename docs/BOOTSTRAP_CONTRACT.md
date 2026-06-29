@@ -2,13 +2,13 @@
 
 > **Version:** 0.5.6 | [← Component Ownership](COMPONENT_OWNERSHIP.md) | [Language Spec →](LANGUAGE.md)
 
-This document freezes the language, ABI, standard-library, and IR contracts that Phase 5 bootstrap work must preserve.
+This document freezes the language, ABI, standard-library, and IR contracts that the C reference compiler must preserve, and that any future staged bootstrap work must respect.
 
 ---
 
 ## 1. Summary
 
-This is the `v0.5.1` freeze contract for bootstrap readiness. It does not introduce new compiler behavior; it records the behavior that compiler-in-Baa migration work must treat as stable.
+This is the `v0.5.1` freeze contract for reference-compiler stability. It does not introduce new compiler behavior; it records the behavior that the C reference compiler must preserve. Broad compiler-in-Baa migration is not part of the active v0.5.8–v0.9.0 release path and remains a future staged experiment.
 
 The authoritative implementation and reference inputs are:
 
@@ -35,9 +35,10 @@ Frozen language surface:
 
 Freeze policy:
 
-- No new syntax is admitted into the bootstrap subset without an explicit post-freeze roadmap decision.
+- New syntax must be admitted through the main language roadmap first; it is not added only for bootstrap convenience.
 - Parser recovery changes may improve diagnostics, but they must not change accepted valid programs.
-- Existing diagnostics may be clarified in Arabic, but bootstrap parity checks should anchor behavior rather than exact punctuation where practical.
+- Existing diagnostics may be clarified in Arabic, but future parity checks should anchor behavior rather than exact punctuation where practical.
+- Any future Baa0/bootstrap subset is a consumer of this contract, not a replacement for it.
 
 ---
 
@@ -186,16 +187,18 @@ Freeze policy:
 
 ---
 
-## 6. Bootstrap Admission
+## 6. Future Bootstrap Admission
 
-A compiler slice is eligible for Phase 5 migration only when it preserves this contract and passes the relevant parity checks:
+The active release path keeps the C compiler as the reference implementation. A compiler slice may enter a future C→Baa staged migration only when it preserves this contract and passes the relevant parity checks:
 
+- The standard C-reference build remains available and green.
 - The existing quick/full QA suite remains green.
 - `--verify`, `--verify-ir`, and `--verify-ssa` remain clean for IR-affecting paths.
 - Multi-file include resolution and symbol visibility behavior from `v0.5.2` remain unchanged.
 - Diagnostics remain Arabic-first and deterministic enough for negative-test anchors.
+- The slice can be disabled or rolled back without blocking mainline compiler development.
 
-`docs/BAA0_SPEC.md`, `scripts/qa_bootstrap_gate.py`, and `tests/bootstrap/` are later Phase 4.5 artifacts and will build on this contract.
+`docs/BAA0_SPEC.md`, `scripts/qa_bootstrap_gate.py`, and `tests/bootstrap/` may define future admission checks, but they do not make self-hosting an active requirement for v0.5.8–v0.9.0.
 
 ---
 

@@ -1,7 +1,7 @@
 # Baa Roadmap (Updated)
 
 > Track the development progress of the Baa programming language.
-> **Current Status:** Phase 4.5 - Bootstrap Readiness (v0.5.x) ← IN PROGRESS
+> **Current Status:** Phase 4.5 - Reference Compiler Stabilization (v0.5.x) ← IN PROGRESS
 
 ---
 
@@ -416,7 +416,7 @@
 
 ## 📚 Phase 3.5: Language Completeness (v0.3.3 - v0.3.12)
 
-*Goal: Add essential features to make Baa practical for real-world programs and ready for self-hosting.*
+*Goal: Add essential features to make Baa practical for real-world programs and suitable for future staged bootstrap experiments, without making self-hosting part of the current release path.*
 
 ### v0.3.3: Array Initialization 📊 ✅ COMPLETED (2026-02-18)
 
@@ -1304,9 +1304,9 @@
 
 ✅ COMPLETED (2026-03-02)
 
-## 🧱 Phase 4.5: Bootstrap Readiness (v0.5.x)
+## 🧱 Phase 4.5: Reference Compiler Stabilization (v0.5.x)
 
-*Goal: Prepare the codebase, toolchain, and language contracts for a low-risk self-hosting transition.*
+*Goal: Keep the C implementation as the official reference compiler, stabilize the language/toolchain contracts, and defer self-hosting to a future staged effort after the language has matured.*
 
 ### v0.5.0: File & Component Organization 🗂️
 
@@ -1382,158 +1382,214 @@ Partial status update (2026-03-06):
 
 ### v0.5.7: Bootstrap Subset (Baa0) Definition 📐
 
-- [ ] **Define minimal subset** — features required to implement compiler slices in Baa.
-- [ ] **Ban unstable features in Baa0** — keep bootstrap surface conservative.
-- [ ] **Publish Baa0 compliance suite** — tests for subset guarantees.
-- [ ] **Document migration plan** — C modules to Baa equivalents by priority.
+- [ ] **Define minimal future subset** — features that could later support compiler slices in Baa without depending on unstable language behavior.
+- [ ] **Ban unstable features in Baa0** — keep any future bootstrap surface conservative and deterministic.
+- [ ] **Publish Baa0 compliance suite** — tests for subset guarantees, but not a production migration gate yet.
+- [ ] **Document migration policy** — C remains the reference compiler; Baa rewrites stay experimental until post-v0.9 staged gates.
 
-### v0.5.8: Self-Hosting Pilot (Last Step Before Phase 5) 🧪
+### v0.5.8: Reference Compiler Reset 🧭
 
-- [ ] **Rewrite one compiler slice in Baa** — start with `lexer` (or smallest high-value slice).
-- [ ] **Mixed pipeline build** — C host compiler + Baa pilot module in one build.
-- [ ] **Behavioral equivalence checks** — output parity vs C implementation.
-- [ ] **Go/No-Go report for Phase 5** — readiness decision based on objective gates.
+**Goal:** Stop broad compiler migration work and re-anchor the project around a stable C reference compiler.
 
-#### Phase 4.5 Exit Criteria (Mandatory Before Phase 5)
+- [ ] **Declare the C compiler as the reference implementation** — normal development must build without requiring a Baa-built compiler slice.
+- [ ] **Move C→Baa migration work to an experimental branch** — preserve useful experiments without making them part of the release path.
+- [ ] **Remove misleading bootstrap assumptions from the main build** — no required `BAA_BOOTSTRAP_COMPILER` for standard C-reference builds.
+- [ ] **Audit migration artifacts** — keep useful tests/docs, remove duplicated or stale migration-only wiring.
+- [ ] **Write self-hosting policy note** — future self-hosting must be staged, parity-tested, and rollback-ready.
+- [ ] **Update roadmap language** — replace “active rewrite” framing with “future staged bootstrap readiness.”
 
+### v0.5.9: Reference Compiler Release Candidate ✅
+
+**Goal:** Produce a clean, reproducible, cross-platform baseline before new v0.6.x language work.
+
+- [ ] **Windows full QA signoff** — `quick/full/stress/release` gates pass on Windows.
+- [ ] **Linux full QA signoff** — `quick/full/stress/release` gates pass on Linux.
+- [ ] **Reproducible build check** — stable version/date/manifest outputs for identical inputs.
+- [ ] **Determinism gate** — stable IR, optimized IR, assembly, diagnostics, and manifests.
+- [ ] **Known limitations page** — honest list of unsupported or intentionally deferred features.
+- [ ] **Release branch discipline** — only fixes, tests, and documentation polish after RC cut.
+
+#### Phase 4.5 Exit Criteria
+
+- [ ] **C-reference build is simple** — clean checkout can build the compiler without a Baa bootstrap compiler.
 - [ ] **Cross-target QA green** — `quick/full` pass on both `x86_64-windows` and `x86_64-linux`.
 - [x] **Determinism checks green** — stable IR text and stable diagnostics for identical inputs.
 - [x] **File-size governance active** — CI guard for module-size budget is enforced.
-- [ ] **Contracts frozen and published** — grammar/ABI/IR/Baa0 docs tagged and versioned.
-- [ ] **Bootstrap handoff bundle ready** — scripts + manifests + reproducible build notes archived.
+- [ ] **Contracts frozen and published** — grammar/ABI/IR/stdlib docs tagged and versioned.
+- [ ] **Future bootstrap policy published** — self-hosting is explicitly deferred until after v0.9 stabilization.
 
 #### Phase 4.5 Required Artifacts
 
 - [x] `docs/COMPONENT_OWNERSHIP.md` — boundaries + owners + allowed dependencies.
-- [x] `docs/BOOTSTRAP_CONTRACT.md` — frozen ABI/IR/language requirements for v0.9.
-- [ ] `docs/BAA0_SPEC.md` — bootstrap subset definition and exclusions.
-- [ ] `scripts/qa_bootstrap_gate.py` — one-command admission checks for Phase 5.
-- [ ] `tests/bootstrap/` — parity corpus dedicated to migration from C → Baa slices.
+- [x] `docs/BOOTSTRAP_CONTRACT.md` — frozen ABI/IR/language requirements and future bootstrap policy.
+- [ ] `docs/BAA0_SPEC.md` — future bootstrap subset definition and exclusions.
+- [ ] `tests/bootstrap/` — optional parity corpus for future staged migration experiments.
 
 ---
 
-## 🚀 Phase 5: Self-Hosting (v1.0.0)
+## 🧭 Ecosystem Ownership Boundaries
 
-*Goal: The ultimate proof of capability — Baa compiling itself.*
+*Goal: Keep the Baa repository focused on the compiler, language, ABI, diagnostics, stdlib contracts, and release-quality gates while sibling projects own their own product areas.*
 
-### Phase 5 Operating Rules (No Scope Drift)
-
-- [ ] **Feature freeze during migration** — no new language features while porting compiler slices.
-- [ ] **Parity-first policy** — semantic/diagnostic/IR behavior must match C baseline unless explicitly approved.
-- [ ] **Target parity policy** — every migration milestone must pass on Windows + Linux.
-- [ ] **Rollback-ready checkpoints** — each slice port keeps a reversible gate in CI.
-
-### v0.9.0: Bootstrap Execution Baseline 🔧
-
-#### v0.9.0.1: Consume Phase 4.5 Artifacts
-
-- [ ] **Use frozen contracts from v0.5** — language/ABI/IR/Baa0 are inputs, not redefined in v0.9.
-- [ ] **Pin Stage-0 toolchain manifest** — inherit deterministic build inputs from v0.5 gates.
-- [ ] **Create bootstrap snapshot tag** — lock the handoff commit before Baa rewrites.
-
-#### v0.9.0.2: Mixed C+Baa Harness
-
-- [ ] **Enable mixed-unit builds** — compile/link `.c` and `.baa` compiler units together.
-- [ ] **Define bridge boundaries** — stable ABI/data-layout interfaces between C and Baa modules.
-- [ ] **Add parity harness** — module-level equivalence checks (tokens/AST/IR/asm as applicable).
-- [ ] **Golden corpus harness** — fixed corpus with expected outputs for every migration step.
-- [ ] **Diff tooling** — normalized comparator for diagnostics and IR text.
-
-### v0.9.1: Rewrite Lexer 📝
-
-- [ ] **Port lexer slice to Baa** — use split layout from v0.5 component organization.
-- [ ] **Build through mixed harness** — keep remaining compiler units in C.
-- [ ] **Token-stream parity tests** — compare lexer output against C baseline.
-- [ ] **No feature expansion in v0.9** — only correctness/portability fixes permitted.
-- [ ] **UTF-8 and preprocessor parity** — nested includes/macros/conditionals must match C behavior.
-- [ ] **Stress corpus parity** — large and malformed sources produce equivalent diagnostics.
-
-### v0.9.2: Rewrite Parser 🌳
-
-- [ ] **Port parser slice to Baa** — AST construction with existing grammar contracts.
-- [ ] **Build through mixed harness** — C/Baa hybrid remains supported.
-- [ ] **AST + diagnostics parity tests** — match C baseline trees and key error anchors.
-- [ ] **Recursion/stack validation** — ensure depth safety on both targets.
-- [ ] **Panic recovery parity** — same synchronization behavior for statement/declaration/switch modes.
-- [ ] **Alias/type grammar parity** — no regressions in parser-side alias resolution.
-
-### v0.9.3: Rewrite Semantic Analysis 🔍
-
-- [ ] **Port semantic slice to Baa** — preserve existing type/ABI rules.
-- [ ] **Port symbol/scope tables** — with ownership semantics equivalent to C version.
-- [ ] **Negative-suite parity** — verify same diagnostics and failure points.
-- [ ] **Warning parity** — warning classes and trigger points match baseline behavior.
-- [ ] **Deterministic diagnostics** — stable ordering/text for repeated runs.
-
-### v0.9.4: Rewrite IR 🔄
-
-- [ ] **Port IR core + lowering slices to Baa** — aligned with v0.5 split modules.
-- [ ] **IR verifier parity** — preserve well-formedness and SSA contracts.
-- [ ] **IR text parity tests** — compare canonical IR output vs C baseline.
-- [ ] **Optimizer gate parity** — `--verify-ir/--verify-ssa` remain clean across corpus.
-- [ ] **Arena/ownership parity** — preserve module-owned bulk-free behavior.
-
-### v0.9.5: Rewrite Code Generator ⚙️
-
-- [ ] **Port backend slices to Baa** — ISel/RegAlloc/Emit with unchanged ABI behavior.
-- [ ] **Target parity** — Windows x64 and Linux x64 assembly equivalence gates.
-- [ ] **Runtime parity** — integration tests must match C compiler behavior.
-- [ ] **ABI edge-case suite** — variadics, float args/returns, pointer-heavy calls, stack alignment.
-- [ ] **Asm diff audit** — differences explained and approved when semantically equivalent.
-
-### v0.9.6: Rewrite Driver 🚗
-
-- [ ] **Port driver/diagnostics slices to Baa** — CLI orchestration + error reporting.
-- [ ] **Retire mixed mode** — switch default build to full-Baa compiler pipeline.
-- [ ] **Full compiler in Baa** — all core components ported and wired.
-- [ ] **CLI parity matrix** — all important flags preserve behavior (`--verify`, `--target`, `-S`, `-c`, ...).
-- [ ] **Multi-file parity** — compile/link workflows remain deterministic and stable.
-
-### v1.0.0: First Self-Compile 🏆
-
-- [ ] **Compile Baa compiler with C-Baa** — Produces baa₁.
-- [ ] **Test baa₁** — Run full test suite.
-- [ ] **Compile Baa compiler with baa₁** — Produces baa₂.
-- [ ] **Compile Baa compiler with baa₂** — Produces baa₃.
-- [ ] **Verify baa₂ == baa₃** — Reproducible builds!
-- [ ] **Release v1.0.0** — Historic milestone! 🎉
-
-#### Phase 5 Exit Criteria (Release Gates)
-
-- [ ] **Functional parity** — all core QA suites pass using baa₁/baa₂ toolchains.
-- [ ] **Reproducibility parity** — bootstrap stages produce stable outputs per target.
-- [ ] **Operational parity** — driver flags + diagnostics match expected contracts.
-- [ ] **Performance budget** — compile-time regression remains within agreed threshold.
-- [ ] **Documentation parity** — bootstrap and recovery procedures are complete.
-
-#### Bootstrap Verification Script
-
-```bash
-#!/bin/bash
-# verify_bootstrap.sh
-
-echo "Stage 0: Building with C compiler..."
-./baa_c baa.baa -o baa1.exe
-
-echo "Stage 1: Building with Baa (first generation)..."
-./baa1.exe baa.baa -o baa2.exe
-
-echo "Stage 2: Building with Baa (second generation)..."
-./baa2.exe baa.baa -o baa3.exe
-
-echo "Verifying reproducibility..."
-if diff baa2.exe baa3.exe > /dev/null; then
-    echo "✅ SUCCESS: baa2 and baa3 are identical!"
-    echo "🎉 BAA IS SELF-HOSTING!"
-else
-    echo "❌ FAILURE: baa2 and baa3 differ!"
-    exit 1
-fi
-```
+- **Takween** owns the Arabic-first project build workflow for Baa projects (`تكوين تهيئة/بناء/تشغيل/تنظيف`). Baa should expose stable compiler flags, manifest formats, include rules, and diagnostics for Takween to consume; Baa should not duplicate Takween as an internal `baa build` system.
+- **Qalam-IDE** owns the editor/IDE experience for Arabic-syntax systems languages starting with Baa. Baa should expose stable parser/check/diagnostic surfaces that Qalam can call; Baa should not duplicate Qalam as an internal IDE or editor extension roadmap.
+- **Baa** owns the compiler core, language specification, standard-library contracts, runtime checks, diagnostics, target ABI behavior, tests, and release artifacts.
 
 ---
 
-## 🔨 Phase 6: Own Assembler (v1.5.0)
+## 🧱 Phase 6: Language Usability & Safety (v0.6.x)
+
+*Goal: Make Baa more practical as an Arabic-first systems language without expanding into external build-system or IDE ownership.*
+
+### v0.6.0: Systems Language Completeness I 🧱
+
+- [ ] **`خارجي` declarations** — stable external function/global declarations for interop and headers.
+- [ ] **Global declaration vs definition rules** — header-safe shared globals without accidental duplicate definitions.
+- [ ] **Struct field initialization** — basic named-field initialization for `هيكل` values.
+- [ ] **Aggregate assignment policy** — either support selected safe cases or reject with precise diagnostics.
+- [ ] **Const pointer rules** — clarify pointer-to-const vs const-pointer semantics.
+- [ ] **Better null-pointer diagnostics** — warn or error when misuse is statically obvious.
+
+### v0.6.1: Arabic Diagnostics II 🩺
+
+- [ ] **Diagnostic codes** — stable identifiers such as `B0001` / `B0120` for errors and warnings.
+- [ ] **Multi-line spans** — underline full expressions/statements when one-line spans are insufficient.
+- [ ] **Fix-it hints** — suggest missing `.`, wrong `؛`, wrong type, or missing include where reliable.
+- [ ] **Diagnostic categories** — syntax, type, include, backend, runtime, warning.
+- [ ] **`--explain <CODE>`** — detailed Arabic explanation for each stable diagnostic code.
+- [ ] **Negative diagnostic expansion** — lock diagnostic count, hints, and cascade behavior.
+
+### v0.6.2: Standard Library Core 📦
+
+- [ ] **Dynamic array/vector API** — push/pop/length/free helpers for common element patterns.
+- [ ] **Byte buffer API** — explicit buffer type for compiler/tooling-style programs.
+- [ ] **Path API** — join, dirname, basename, extension, normalize.
+- [ ] **String builder** — efficient incremental text construction with explicit ownership.
+- [ ] **Result/error helpers** — consistent success/failure convention across stdlib modules.
+- [ ] **Ownership documentation** — every allocating stdlib function states who frees the result.
+
+### v0.6.3: Runtime Safety Guards 🛡️
+
+- [ ] **Null pointer checks** — optional trap before dereference where the compiler can emit one.
+- [ ] **Division-by-zero checks** — optional runtime guard for integer division and modulo.
+- [ ] **Shift-width checks** — optional guard for invalid runtime shift counts.
+- [ ] **Expanded bounds checks** — arrays and string indexing where shape information is available.
+- [ ] **Readable panic format** — file, line, function, and Arabic message.
+- [ ] **Selective safety flags** — `-fruntime-checks=<kind>` style suboptions.
+
+### v0.6.4: UTF-8/Text Correctness 📝
+
+- [ ] **Clarify `حرف` representation** — document byte/codepoint/grapheme policy precisely.
+- [ ] **String indexing policy** — define exactly what `نص[index]` returns and what it does not promise.
+- [ ] **UTF-8 validation tests** — identifiers, strings, chars, includes, diagnostics.
+- [ ] **Arabic numeral normalization tests** — source tokens, diagnostics, and IR output.
+- [ ] **Text stdlib helpers** — safe length/copy/compare behavior documented and tested.
+- [ ] **Known Unicode limitations** — no hidden claim of full grapheme-aware text processing unless implemented.
+
+### v0.6.5: Documentation Lock 📚
+
+- [ ] **Update Baa Book to current scope** — remove stale version references and align examples with current behavior.
+- [ ] **Verified example suite** — every public example compiles in CI.
+- [ ] **Exercises with expected output** — beginner, intermediate, and systems-level exercises.
+- [ ] **Terminology glossary** — one preferred Arabic term per core compiler/language concept.
+- [ ] **Native Arabic technical review** — language quality pass by Arabic-speaking engineers.
+- [ ] **Docs version sync gate** — reject release when docs show stale version headers.
+
+---
+
+## 🧪 Phase 7: Compiler Testing & Integration Surfaces (v0.7.x)
+
+*Goal: Strengthen Baa’s compiler-facing surfaces for Takween, Qalam-IDE, and future tooling without owning those external products inside this repository.*
+
+### v0.7.0: Takween Integration Contract 🏗️
+
+- [ ] **Stable compiler invocation contract** — document flags Takween may rely on for build/run/clean workflows.
+- [ ] **Manifest compatibility** — guarantee deterministic fields Takween can consume from `--emit-build-manifest`.
+- [ ] **Include/dependency contract** — document canonical dependency output and invalidation expectations.
+- [ ] **Exit-code contract** — stable compiler exit statuses for build tools.
+- [ ] **Machine-readable diagnostics plan** — define JSON diagnostics shape for future Takween/Qalam consumption.
+- [ ] **No internal Baa project build system** — Takween remains the owner of Arabic-first project build UX.
+
+### v0.7.1: Module and Visibility Cleanup 🧩
+
+- [ ] **Header/source convention** — formalize `.baahd` vs `.baa` usage.
+- [ ] **Visibility modifiers** — public/internal rules for functions and globals.
+- [ ] **Include-cycle diagnostics** — improve chain output and hints.
+- [ ] **One-definition checks** — better duplicate symbol diagnostics.
+- [ ] **Header self-check mode** — check declarations without emitting code.
+- [ ] **Migration guide** — from raw multi-file builds to Takween-managed builds.
+
+### v0.7.2: Qalam-IDE Integration Contract ✍️
+
+- [ ] **Fast check mode** — parse/type-check without assembly/linking for editor feedback.
+- [ ] **Machine-readable diagnostics** — JSON diagnostics with file, line, column, span, code, severity, and hint.
+- [ ] **Token dump mode** — stable token stream for syntax-highlighting/debugging integration.
+- [ ] **Symbol outline mode** — functions, globals, structs, enums, and type aliases for IDE navigation.
+- [ ] **Completion metadata export** — keywords, builtins, stdlib symbols, and snippets in a stable format.
+- [ ] **No internal Baa IDE roadmap** — Qalam-IDE remains the owner of editor UI/UX.
+
+### v0.7.3: Compiler Testing II 🧪
+
+- [ ] **Coverage reporting** — CI coverage for C compiler core.
+- [ ] **Fuzz targets** — lexer, parser, IR reader, include resolver.
+- [ ] **Differential tests** — compare `-O0` vs `-O2` runtime output.
+- [ ] **Crash minimization workflow** — reduce failing fuzz cases into committed regressions.
+- [ ] **Backend stress tests** — stack args, calls, structs, arrays, floats, and pointer-heavy programs.
+- [ ] **Release dashboard** — summarize pass/fail, coverage, fuzz corpus size, and determinism checks.
+
+---
+
+## 🎯 Phase 8: Backend, Optimizer, and Performance Reliability (v0.8.x)
+
+*Goal: Improve generated-code trustworthiness and prevent silent regressions before the v0.9 beta freeze.*
+
+### v0.8.0: Backend Correctness Hardening 🎯
+
+- [ ] **ABI test matrix** — Windows x64 and SysV calls, returns, varargs, and stack args.
+- [ ] **Struct/union layout tests** — size, alignment, and field-offset expectations.
+- [ ] **Floating-point ABI tests** — parameters, returns, varargs edge cases.
+- [ ] **Stack alignment verifier** — static backend checks before emission.
+- [ ] **Assembly golden tests** — stable snippets for sensitive cases.
+- [ ] **Cross-target `-S` release gate** — both Windows and Linux assembly output.
+
+### v0.8.1: Optimizer Reliability ⚙️
+
+- [ ] **Pass pipeline documentation** — exact O0/O1/O2 pass order.
+- [ ] **Per-pass verifier gate** — mandatory in CI debug mode.
+- [ ] **Optimization remarks** — report applied and missed optimizations.
+- [ ] **Alias-analysis baseline** — conservative, documented, test-backed.
+- [ ] **Optimization stress corpus** — loops, branches, calls, pointers, and aggregate-heavy cases.
+- [ ] **No unsafe optimization without verifier coverage** — correctness first.
+
+### v0.8.2: Performance Budget 📊
+
+- [ ] **Benchmark baselines** — compile time, runtime, and memory.
+- [ ] **Regression thresholds** — fail CI on large slowdowns.
+- [ ] **Phase timing JSON** — machine-readable `--time-phases` output.
+- [ ] **Memory budget tracking** — IR arena, parser allocations, backend allocations.
+- [ ] **Benchmark documentation** — exact local reproduction commands.
+- [ ] **Performance changelog entries** — record meaningful wins and regressions.
+
+---
+
+## 🚦 Phase 9: Stable Beta and Future Bootstrap Plan (v0.9.x)
+
+*Goal: Freeze a serious pre-1.0 baseline and define a future staged self-hosting plan without executing a production compiler rewrite in this roadmap window.*
+
+### v0.9.0: Stable Beta Freeze 🧊
+
+- [ ] **Language freeze candidate** — syntax and semantics locked for 1.0 review.
+- [ ] **Stdlib freeze candidate** — ownership, errors, memory, text, file, and path APIs documented.
+- [ ] **ABI freeze candidate** — Windows/Linux behavior documented and tested.
+- [ ] **Diagnostics freeze candidate** — diagnostic IDs, spans, hints, and `--explain` behavior stable.
+- [ ] **External tooling contracts freeze** — Takween/Qalam-facing outputs remain stable through 1.0 review.
+- [ ] **Full release QA** — Windows + Linux quick/full/stress/release gates.
+- [ ] **Book + spec sync** — all docs updated to v0.9.0.
+- [ ] **Stage-0 bootstrap plan only** — define future self-hosting stages, rollback, and parity gates; do not make self-hosting the mainline compiler yet.
+
+---
+
+## 🔨 Future Toolchain Independence: Own Assembler (post-v0.9)
 
 *Goal: Remove dependency on external assembler (GAS/MASM).*
 
@@ -1599,7 +1655,7 @@ fi
 
 ---
 
-## 🔗 Phase 7: Own Linker (v2.0.0)
+## 🔗 Future Toolchain Independence: Own Linker (post-v0.9)
 
 *Goal: Remove dependency on external linker (ld/link.exe).*
 
@@ -1691,7 +1747,7 @@ fi
 
 ---
 
-## 🏆 Phase 8: Full Independence (v3.0.0)
+## 🏆 Future Toolchain Independence: Full Independence (post-v0.9)
 
 *Goal: Zero external dependencies — Baa builds itself with no external tools.*
 
@@ -1794,10 +1850,10 @@ fi
 │  │ Compiler│   │                                           │  │
 │  └─────────┘   └───────────────────────────────────────────┘  │
 │                                                                │
-│  v1.0.0 (Self-Hosting):                                        │
+│  v0.9.x (Stable Beta):                                         │
 │  ┌─────────┐   ┌───────────────────────────────────────────┐  │
 │  │   Baa   │ → │  GCC (assembler + linker + C runtime)     │  │
-│  │ in Baa! │   │                                           │  │
+│  │ C ref   │   │  + future staged bootstrap plan only      │  │
 │  └─────────┘   └───────────────────────────────────────────┘  │
 │                                                                │
 │  v1.5.0 (Own Assembler):                                       │
@@ -2047,17 +2103,18 @@ fi
 
 ## 📊 Timeline Summary
 
-| Phase | Version | Milestone | Dependencies |
-|-------|---------|-----------|--------------|
+| Phase | Version | Milestone | Dependencies / Owner |
+|-------|---------|-----------|----------------------|
 | Phase 3 | v0.3.x | IR Complete | GCC |
 | Phase 3.5 | v0.3.3-v0.3.12 | Language Complete | GCC |
 | Phase 4 | v0.4.x | Standard Library | GCC |
-| Phase 5 | v1.0.0 | **Self-Hosting** 🏆 | GCC |
-| Phase 6 | v1.5.0 | Own Assembler | GCC (linker only) |
-| Phase 7 | v2.0.0 | Own Linker | C Runtime only |
-| Phase 8 | v3.0.0 | **Full Independence** 🏆 | **Nothing!** |
+| Phase 4.5 | v0.5.x | Reference Compiler Stabilization | GCC |
+| Phase 6 | v0.6.x | Language Usability & Safety | Baa compiler |
+| Phase 7 | v0.7.x | Testing & External Integration Contracts | Baa + Takween/Qalam contracts |
+| Phase 8 | v0.8.x | Backend/Optimizer/Performance Reliability | Baa compiler |
+| Phase 9 | v0.9.x | Stable Beta + Future Bootstrap Plan | Baa compiler |
+| Future | post-v0.9 | Self-hosting / own assembler / own linker | Separate staged decision |
 
 ---
 
 *For detailed changes, see the [Changelog](CHANGELOG.md)*
-iled changes, see the [Changelog](CHANGELOG.md)*

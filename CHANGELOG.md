@@ -38,6 +38,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - **Cross-platform RC workflow**:
   - Added a manual, read-only GitHub Actions workflow for strict Windows/Linux verify builds,
     quick/full/stress/release QA, and always-uploaded JSON/log receipts.
+  - Enabled hidden-file upload explicitly so `.baa_qa_logs` and determinism details are retained.
   - Added focused workflow contract tests to the full/stress/release QA preflight.
 - **Release branch discipline**:
   - Added `docs/RELEASE_PROCESS.md` with RC cut prerequisites, allowed fix scope, receipt

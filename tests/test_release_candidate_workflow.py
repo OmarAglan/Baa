@@ -41,6 +41,7 @@ class ReleaseCandidateWorkflowTests(unittest.TestCase):
         self.assertEqual(self.text.count("if: always()"), 2)
         self.assertEqual(self.text.count("uses: actions/upload-artifact@v4"), 2)
         self.assertEqual(self.text.count("if-no-files-found: error"), 2)
+        self.assertEqual(self.text.count("include-hidden-files: true"), 2)
 
 
 if __name__ == "__main__":

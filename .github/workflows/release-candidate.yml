@@ -51,6 +51,7 @@ jobs:
         with:
           name: qa-release-windows-${{ github.run_id }}
           if-no-files-found: error
+          include-hidden-files: true
           path: |
             .baa_qa_logs/**
             qa-summary-quick-windows.json
@@ -92,6 +93,7 @@ jobs:
         with:
           name: qa-release-linux-${{ github.run_id }}
           if-no-files-found: error
+          include-hidden-files: true
           path: |
             .baa_qa_logs/**
             qa-summary-quick-linux.json

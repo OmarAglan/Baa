@@ -1462,7 +1462,7 @@
 
   **Goal:** Produce a clean, reproducible, cross-platform baseline before new v0.6.x language work.
 
-* \[ ] **Windows full QA signoff** — `quick/full/stress/release` gates pass on Windows.
+* \[x] **Windows full QA signoff** — strict C build plus `quick` 5/5, `full` 19/19, `stress` 49/49, and `release` 50/50 passed on commit `9d67e25`; see `docs/RELEASE\_CANDIDATE\_STATUS.md`.
 * \[ ] **Linux full QA signoff** — `quick/full/stress/release` gates pass on Linux.
 * \[ ] **Reproducible build check** — stable version/date/manifest outputs for identical inputs.
 * \[ ] **Determinism gate** — stable IR, optimized IR, assembly, diagnostics, and manifests.
@@ -1472,7 +1472,7 @@
   Reproducibility coverage update (2026-06-29): the release gate now compares repeated
   `--version` output (including the configured build date) and negative diagnostic text/exit
   status in addition to IR, assembly, manifests, verifier behavior, and snapshots. Final
-  Windows/Linux RC receipts remain pending.
+  Linux RC receipt remains pending; the Windows release gate is green.
 
   RC gate reliability update (2026-06-29): compiler discovery now emits a structured
   `compiler-preflight` result, including missing/invalid compiler paths in summary JSON instead

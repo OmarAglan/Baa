@@ -30,6 +30,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
   - Git-backed documentation extraction now decodes filenames, tags, and Markdown as UTF-8,
     preserving Arabic source examples on Windows.
   - Added a real temporary-Git-repository regression test for Arabic fenced Baa programs.
+- **Windows v0.5.9 RC signoff**:
+  - Recorded a clean GCC 15.2 warning-as-error build and green quick (5/5), full (19/19),
+    stress (49/49), and release (50/50) QA receipts.
+  - Added `docs/RELEASE_CANDIDATE_STATUS.md` for platform-specific gate provenance; Linux
+    signoff remains pending.
 - **Known limitations**:
   - Added `docs/KNOWN_LIMITATIONS.md` to distinguish current v0.5.x behavior from draft
     language, target, safety, and tooling contracts.

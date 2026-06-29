@@ -85,8 +85,9 @@ two hosted x86-64 targets.
 ## Release Status
 
 - v0.5.8 establishes the C reference compiler policy; it is not a self-hosting milestone.
-- v0.5.9 Windows and Linux full RC signoffs remain pending until all
-  `quick/full/stress/release` gates are recorded green on both hosts.
+- v0.5.9 Windows RC signoff is recorded in
+  [RELEASE_CANDIDATE_STATUS.md](RELEASE_CANDIDATE_STATUS.md). Linux signoff remains pending
+  until all `quick/full/stress/release` gates are green there.
 - The language, diagnostics, ABI, standard library, and external tooling contracts are not
   stable-beta frozen until the v0.9 gates are completed.
 

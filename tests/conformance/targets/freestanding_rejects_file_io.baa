@@ -1,0 +1,8 @@
+// RUN: expect-fail
+// FLAGS: --target=i386-elf --freestanding --no-stdlib --check
+// EXPECT: hosted-only
+
+صحيح الرئيسية() {
+    عدم* ملف = فتح_ملف("x.txt", "قراءة").
+    إرجع ٠.
+}

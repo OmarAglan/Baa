@@ -1,0 +1,24 @@
+{
+  "schema_version": "target-spec-v1",
+  "name": "x86_64-windows",
+  "arch": "x86_64",
+  "bits": 64,
+  "environment": "hosted",
+  "object_format": "coff",
+  "assembly_syntax": "gas-att",
+  "pointer_width": 64,
+  "endianness": "little",
+  "calling_convention": "windows-x64",
+  "stack_alignment": 16,
+  "supports_libc": true,
+  "supports_stdlib": true,
+  "default_linker": "mingw-gcc",
+  "features": {
+    "pic": false,
+    "pie": false,
+    "stack_protector": false,
+    "inline_asm": true,
+    "freestanding": false,
+    "shadow_space_bytes": 32
+  }
+}

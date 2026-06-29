@@ -1,0 +1,9 @@
+// RUN: expect-fail
+// FLAGS: --check --diagnostics=json
+// EXPECT: B0001
+// EXPECT-DIAG-COUNT: 1
+
+صحيح الرئيسية() {
+    صحيح س = ١٠
+    إرجع ٠.
+}

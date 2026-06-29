@@ -1,0 +1,6 @@
+// RUN: expect-pass
+// EXPECT-EXIT: 0
+
+صحيح الرئيسية() {
+    إرجع ٠.
+}

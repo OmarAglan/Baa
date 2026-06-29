@@ -1,0 +1,23 @@
+{
+  "schema_version": "target-spec-v1",
+  "name": "x86_64-linux",
+  "arch": "x86_64",
+  "bits": 64,
+  "environment": "hosted",
+  "object_format": "elf",
+  "assembly_syntax": "gas-att",
+  "pointer_width": 64,
+  "endianness": "little",
+  "calling_convention": "sysv-amd64",
+  "stack_alignment": 16,
+  "supports_libc": true,
+  "supports_stdlib": true,
+  "default_linker": "host-gcc",
+  "features": {
+    "pic": true,
+    "pie": true,
+    "stack_protector": true,
+    "inline_asm": true,
+    "freestanding": false
+  }
+}

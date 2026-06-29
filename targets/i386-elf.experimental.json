@@ -1,0 +1,31 @@
+{
+  "schema_version": "target-spec-v1",
+  "name": "i386-elf",
+  "status": "experimental-post-v0.9",
+  "arch": "i386",
+  "bits": 32,
+  "environment": "freestanding",
+  "object_format": "elf",
+  "assembly_syntax": "gas-att",
+  "pointer_width": 32,
+  "endianness": "little",
+  "calling_convention": "cdecl-i386",
+  "stack_alignment": 4,
+  "supports_libc": false,
+  "supports_stdlib": false,
+  "default_linker": "external-cross-ld-or-pyramidos-link-script",
+  "features": {
+    "pic": false,
+    "pie": false,
+    "stack_protector": false,
+    "inline_asm": true,
+    "freestanding": true,
+    "volatile": true,
+    "packed_structs": true,
+    "custom_sections": true
+  },
+  "notes": [
+    "This target is a planning artifact only until the backend supports 32-bit lowering.",
+    "No libc or hosted stdlib calls are allowed in freestanding mode."
+  ]
+}

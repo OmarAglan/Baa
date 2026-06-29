@@ -1,0 +1,38 @@
+{
+  "schema_version": "target-spec-v1",
+  "name": "i386-pyramidos",
+  "status": "experimental-post-v0.9",
+  "arch": "i386",
+  "bits": 32,
+  "environment": "freestanding",
+  "object_format": "elf",
+  "assembly_syntax": "gas-att",
+  "pointer_width": 32,
+  "endianness": "little",
+  "calling_convention": "cdecl-i386",
+  "stack_alignment": 4,
+  "supports_libc": false,
+  "supports_stdlib": false,
+  "default_linker": "pyramidos-link-script",
+  "features": {
+    "pic": false,
+    "pie": false,
+    "stack_protector": false,
+    "inline_asm": true,
+    "freestanding": true,
+    "volatile": true,
+    "packed_structs": true,
+    "custom_sections": true,
+    "qemu_smoke_required": true
+  },
+  "pyramidos": {
+    "first_allowed_use": "one tiny non-critical Baa object linked into the C/ASM kernel and called from a diagnostic path",
+    "forbidden_initial_uses": [
+      "bootloader",
+      "GDT/IDT setup",
+      "ISR/IRQ entry paths",
+      "PMM/VMM core",
+      "ATA/storage core"
+    ]
+  }
+}

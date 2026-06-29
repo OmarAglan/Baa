@@ -35,6 +35,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
     stress (49/49), and release (50/50) QA receipts.
   - Added `docs/RELEASE_CANDIDATE_STATUS.md` for platform-specific gate provenance; Linux
     signoff remains pending.
+- **Cross-platform RC workflow**:
+  - Added a manual, read-only GitHub Actions workflow for strict Windows/Linux verify builds,
+    release-mode QA, and always-uploaded JSON/log receipts.
+  - Added focused workflow contract tests to the full/stress/release QA preflight.
 - **Known limitations**:
   - Added `docs/KNOWN_LIMITATIONS.md` to distinguish current v0.5.x behavior from draft
     language, target, safety, and tooling contracts.

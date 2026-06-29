@@ -488,6 +488,16 @@ def _run_docs_corpus_tests(log_dir: Path) -> StepResult:
     )
 
 
+def _run_release_workflow_tests(log_dir: Path) -> StepResult:
+    return _run_logged(
+        "release-workflow-tests",
+        [sys.executable, str(TESTS_DIR / "test_release_candidate_workflow.py")],
+        cwd=ROOT,
+        log_dir=log_dir,
+        timeout_s=MODULE_SIZE_TIMEOUT_S,
+    )
+
+
 def _write_summary(
     mode: str,
     compiler: Path | None,
@@ -580,6 +590,13 @@ def main() -> int:
         all_results.append(docs_corpus_test_res)
         overall_ok = overall_ok and docs_corpus_test_res.passed
         if not docs_corpus_test_res.passed:
+            return _write_summary(args.mode, baa, overall_ok, all_results, log_dir, args.summary_json)
+
+        release_workflow_test_res = _run_release_workflow_tests(log_dir)
+        _print_step(release_workflow_test_res)
+        all_results.append(release_workflow_test_res)
+        overall_ok = overall_ok and release_workflow_test_res.passed
+        if not release_workflow_test_res.passed:
             return _write_summary(args.mode, baa, overall_ok, all_results, log_dir, args.summary_json)
 
         module_size_res = _run_module_size_guard(log_dir)

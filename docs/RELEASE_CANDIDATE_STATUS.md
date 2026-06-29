@@ -48,7 +48,10 @@ manifest, verifier, and committed snapshot checks.
 
 **Status:** pending.
 
-Required receipt:
+The manual `Baa Release Candidate` GitHub Actions workflow runs strict Windows and Linux builds,
+executes release QA on both, and uploads the JSON/log receipts even when a gate fails.
+
+Local equivalent:
 
 ```bash
 cmake --preset linux-verify

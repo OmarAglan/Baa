@@ -1478,6 +1478,9 @@
   `compiler-preflight` result, including missing/invalid compiler paths in summary JSON instead
   of aborting before a release receipt is written.
 
+  Cross-platform receipt update (2026-06-29): the manual `Baa Release Candidate` workflow
+  performs strict Windows/Linux C-reference builds, runs release QA, and uploads both receipts.
+
   #### Phase 4.5 Exit Criteria
 
 * \[x] **C-reference build is simple** — clean checkout builds from C/RC inputs only, with the policy checked in every QA mode.

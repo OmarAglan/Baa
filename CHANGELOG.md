@@ -31,8 +31,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
     preserving Arabic source examples on Windows.
   - Added a real temporary-Git-repository regression test for Arabic fenced Baa programs.
 - **Windows v0.5.9 RC signoff**:
-  - Recorded a clean GCC 15.2 warning-as-error build and green quick (5/5), full (19/19),
-    stress (49/49), and release (50/50) QA receipts.
+  - Recorded a clean, correctly versioned GCC 15.2 warning-as-error build and green quick (7/7),
+    full (22/22), stress (52/52), and release (53/53) QA receipts on `9f8d068`.
   - Added `docs/RELEASE_CANDIDATE_STATUS.md` for platform-specific gate provenance; Linux
     signoff remains pending.
 - **Cross-platform RC workflow**:

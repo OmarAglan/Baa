@@ -1462,7 +1462,7 @@
 
   **Goal:** Produce a clean, reproducible, cross-platform baseline before new v0.6.x language work.
 
-* \[ ] **Windows full QA signoff** — the pre-version-bump receipt passed, but v0.5.9 metadata invalidated it; rebuild and rerun are required.
+* \[x] **Windows full QA signoff** — strict v0.5.9 C build plus `quick` 7/7, `full` 22/22, `stress` 52/52, and `release` 53/53 passed on commit `9f8d068`; see `docs/RELEASE\_CANDIDATE\_STATUS.md`.
 * \[ ] **Linux full QA signoff** — `quick/full/stress/release` gates pass on Linux.
 * \[ ] **Reproducible build check** — stable version/date/manifest outputs for identical inputs.
 * \[ ] **Determinism gate** — stable IR, optimized IR, assembly, diagnostics, and manifests.
@@ -1482,8 +1482,8 @@
   performs strict Windows/Linux C-reference builds, runs release QA, and uploads both receipts.
 
   Version audit update (2026-06-29): authoritative compiler/package/documentation metadata now
-  reports `0.5.9`, guarded by `scripts/check\_version\_sync.py`. Earlier Windows receipts built
-  as `0.5.6` are retained as test history but do not count as the v0.5.9 signoff.
+  reports `0.5.9`, guarded by `scripts/check\_version\_sync.py`. The Windows ladder was rebuilt
+  and rerun on the corrected baseline; earlier 0.5.6 receipts remain test history only.
 
   #### Phase 4.5 Exit Criteria
 

@@ -46,3 +46,6 @@ Supported line markers inside `.baa` files:
 Every mode starts with the C reference-compiler policy tests and guard. They verify that normal
 build entrypoints have no bootstrap compiler requirement and that the `baa` target remains a
 C/RC-only build.
+
+Compiler discovery is also recorded as a `compiler-preflight` result. Missing binaries and
+invalid `BAA` overrides produce a normal failed QA summary rather than an unhandled exception.

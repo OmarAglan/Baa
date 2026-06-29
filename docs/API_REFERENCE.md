@@ -52,6 +52,12 @@ python scripts/qa_run.py --mode release
 | `--fuzz-cases <N>` | Number of fuzz-lite cases in stress/release mode |
 | `--seed <N>` | RNG seed for deterministic fuzz-lite generation |
 
+Every mode runs a compiler preflight before compiler-dependent tests. The runner accepts the
+`BAA` environment variable as an explicit compiler path, then checks standard direct-build and
+CMake-preset output locations. A missing or invalid compiler is reported as a failed
+`compiler-preflight` step and is included in `--summary-json`; it does not terminate with a
+Python traceback.
+
 Additional build-maturity guards:
 
 - `scripts/check_build_profiles.py` validates required CMake configure/build presets.
@@ -4515,4 +4521,3 @@ typedef enum {
 ---
 
 *[← Compiler Internals](INTERNALS.md) | [IR Specification →](BAA_IR_SPECIFICATION.md)*
-

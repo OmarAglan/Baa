@@ -39,27 +39,73 @@ def _find_baa() -> Path:
     env = os.environ.get("BAA")
     if env:
         p = Path(env)
-        if p.exists():
+        if p.is_file():
             return p
+        raise FileNotFoundError(
+            f"BAA points to a missing compiler binary: {p}"
+        )
 
     if os.name == "nt":
         candidates = [
             ROOT / "build" / "baa.exe",
             ROOT / "build" / "baa",
+            ROOT / "build" / "presets" / "windows-verify" / "baa.exe",
+            ROOT / "build" / "presets" / "windows-release" / "baa.exe",
+            ROOT / "build" / "presets" / "windows-debug" / "baa.exe",
+            ROOT / "build" / "presets" / "windows-dev" / "baa.exe",
         ]
     else:
         candidates = [
             ROOT / "build-linux" / "baa",
+            ROOT / "build-linux" / "presets" / "verify" / "baa",
+            ROOT / "build-linux" / "presets" / "release" / "baa",
+            ROOT / "build-linux" / "presets" / "debug" / "baa",
+            ROOT / "build-linux" / "presets" / "dev" / "baa",
             ROOT / "build" / "baa",
         ]
 
     for c in candidates:
-        if c.exists():
+        if c.is_file():
             return c
 
     raise FileNotFoundError(
         "Could not find compiler binary. Build it first, or set BAA to the compiler path."
     )
+
+
+def _run_compiler_preflight(log_dir: Path) -> tuple[Path | None, StepResult]:
+    stdout_log = log_dir / "compiler-preflight.stdout.log"
+    stderr_log = log_dir / "compiler-preflight.stderr.log"
+    started = time.monotonic()
+
+    try:
+        baa = _find_baa()
+        out_text = f"{baa}\n"
+        err_text = ""
+        passed = True
+        returncode = 0
+        detail = f"compiler={baa}"
+    except FileNotFoundError as exc:
+        baa = None
+        out_text = ""
+        err_text = f"{exc}\n"
+        passed = False
+        returncode = 2
+        detail = str(exc)
+
+    stdout_log.write_text(out_text, encoding="utf-8")
+    stderr_log.write_text(err_text, encoding="utf-8")
+
+    result = StepResult(
+        name="compiler-preflight",
+        passed=passed,
+        returncode=returncode,
+        duration_s=time.monotonic() - started,
+        stdout_log=str(stdout_log.relative_to(ROOT)),
+        stderr_log=str(stderr_log.relative_to(ROOT)),
+        detail=detail,
+    )
+    return baa, result
 
 
 def _safe_name(s: str) -> str:
@@ -408,6 +454,16 @@ def _run_reference_compiler_guard_tests(log_dir: Path) -> StepResult:
     )
 
 
+def _run_qa_preflight_tests(log_dir: Path) -> StepResult:
+    return _run_logged(
+        "qa-preflight-tests",
+        [sys.executable, str(TESTS_DIR / "test_qa_preflight.py")],
+        cwd=ROOT,
+        log_dir=log_dir,
+        timeout_s=MODULE_SIZE_TIMEOUT_S,
+    )
+
+
 def _write_summary(
     mode: str,
     compiler: Path | None,
@@ -466,6 +522,13 @@ def main() -> int:
 
     print(f"qa: mode={args.mode}")
 
+    qa_preflight_test_res = _run_qa_preflight_tests(log_dir)
+    _print_step(qa_preflight_test_res)
+    all_results.append(qa_preflight_test_res)
+    overall_ok = overall_ok and qa_preflight_test_res.passed
+    if not qa_preflight_test_res.passed:
+        return _write_summary(args.mode, baa, overall_ok, all_results, log_dir, args.summary_json)
+
     reference_compiler_test_res = _run_reference_compiler_guard_tests(log_dir)
     _print_step(reference_compiler_test_res)
     all_results.append(reference_compiler_test_res)
@@ -495,7 +558,13 @@ def main() -> int:
         if not build_profile_res.passed:
             return _write_summary(args.mode, baa, overall_ok, all_results, log_dir, args.summary_json)
 
-    baa = _find_baa()
+    baa, compiler_preflight_res = _run_compiler_preflight(log_dir)
+    _print_step(compiler_preflight_res)
+    all_results.append(compiler_preflight_res)
+    overall_ok = overall_ok and compiler_preflight_res.passed
+    if baa is None:
+        return _write_summary(args.mode, baa, overall_ok, all_results, log_dir, args.summary_json)
+
     print(f"qa: compiler={baa}")
 
     # A) Integration tiers

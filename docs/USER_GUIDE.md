@@ -908,6 +908,10 @@ python tests/test.py
 python tests/regress.py
 ```
 
+Use `--summary-json <path>` for CI or release evidence. If no compiler binary can be found in the
+normal build locations (or through `BAA`), the command returns failure and records a
+`compiler-preflight` result in that summary instead of printing a Python traceback.
+
 ### Test Organization
 
 ```

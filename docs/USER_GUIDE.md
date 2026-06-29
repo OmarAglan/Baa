@@ -286,6 +286,8 @@ cmake --build --preset linux-verify
 ### Current Limitations (v0.3.10.6)
 
 - SIMD and non-`عشري` floating types are not supported yet.
+- The complete current release-candidate inventory is maintained in
+  [KNOWN_LIMITATIONS.md](KNOWN_LIMITATIONS.md).
 
 ---
 
@@ -1011,4 +1013,3 @@ Test files can include special comments:
 ---
 
 *[← README](../README.md) | [Language Specification →](LANGUAGE.md)*
-

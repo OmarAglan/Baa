@@ -4,6 +4,10 @@
 
 This document records which versions of Baa, Takween, Qalam-IDE, and PyramidOS-facing contracts are expected to work together.
 
+Draft contract names in this matrix are planning commitments, not claims of current
+implementation. See [KNOWN_LIMITATIONS.md](KNOWN_LIMITATIONS.md) for the implemented v0.5.x
+boundary.
+
 ---
 
 ## 1. Compatibility Policy

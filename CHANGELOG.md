@@ -15,6 +15,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
     requirements and Baa-written compiler inputs in normal build entrypoints.
   - Added focused policy regression tests and wired both the tests and guard into every
     `scripts/qa_run.py` mode.
+- **Known limitations**:
+  - Added `docs/KNOWN_LIMITATIONS.md` to distinguish current v0.5.x behavior from draft
+    language, target, safety, and tooling contracts.
 
 ### Changed
 

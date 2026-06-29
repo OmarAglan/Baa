@@ -231,7 +231,9 @@ Notes:
 - Compiler discovery is a structured `compiler-preflight` step. It checks an explicit `BAA`
   path and normal direct/preset build outputs; prerequisite failures remain visible in summary
   JSON instead of escaping as Python exceptions.
-- `scripts/test_determinism.py` owns the v0.5.6 deterministic checks and compares committed IR snapshot hashes under `tests/snapshots/`.
+- `scripts/test_determinism.py` owns release determinism checks for version/build-date output,
+  negative diagnostics, IR, assembly, manifests, cross-target `-S`, verifier gates, and committed
+  IR snapshot hashes under `tests/snapshots/`.
 - Legacy runners remain valid:
   - `tests/test.py` (integration)
   - `tests/regress.py` (integration + corpus + negatives)

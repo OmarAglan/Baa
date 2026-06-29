@@ -49,3 +49,7 @@ C/RC-only build.
 
 Compiler discovery is also recorded as a `compiler-preflight` result. Missing binaries and
 invalid `BAA` overrides produce a normal failed QA summary rather than an unhandled exception.
+
+Full, stress, and release modes run focused unit coverage for the determinism gate. Release mode
+then compares repeated version/build-date output, negative diagnostics and exit status, IR,
+assembly, manifests, verifier behavior, and cross-target assembly.

@@ -30,16 +30,27 @@ def _find_baa() -> Path:
     env = os.environ.get("BAA")
     if env:
         p = Path(env)
-        if p.exists():
+        if p.is_file():
             return p
+        raise FileNotFoundError(f"BAA points to a missing compiler binary: {p}")
 
-    candidates = []
     if os.name == "nt":
-        candidates.extend([ROOT / "build" / "baa.exe", ROOT / "build" / "baa"])
-    candidates.extend([ROOT / "build-linux" / "baa", ROOT / "build" / "baa"])
+        candidates = [
+            ROOT / "build" / "baa.exe",
+            ROOT / "build" / "baa",
+            ROOT / "build" / "presets" / "windows-verify" / "baa.exe",
+            ROOT / "build" / "presets" / "windows-release" / "baa.exe",
+        ]
+    else:
+        candidates = [
+            ROOT / "build-linux" / "baa",
+            ROOT / "build-linux" / "presets" / "verify" / "baa",
+            ROOT / "build-linux" / "presets" / "release" / "baa",
+            ROOT / "build" / "baa",
+        ]
 
     for candidate in candidates:
-        if candidate.exists():
+        if candidate.is_file():
             return candidate
 
     raise FileNotFoundError("Could not find compiler binary. Build it first or set BAA.")
@@ -92,6 +103,33 @@ def _compare_stdout(name: str, cmd: list[str]) -> CheckResult:
     if first_out != second_out:
         return _result(name, started, False, "stdout differed between identical runs")
     return _result(name, started, True, "stable stdout")
+
+
+def _compare_failure_output(name: str, cmd: list[str]) -> CheckResult:
+    started = time.monotonic()
+    first = _run(cmd)
+    if first.returncode == 0:
+        return _result(name, started, False, "first run unexpectedly succeeded")
+
+    second = _run(cmd)
+    if second.returncode == 0:
+        return _result(name, started, False, "second run unexpectedly succeeded")
+
+    if first.returncode != second.returncode:
+        return _result(
+            name,
+            started,
+            False,
+            f"exit code differed between runs ({first.returncode} != {second.returncode})",
+        )
+
+    first_stdout = _normalize_text(first.stdout)
+    second_stdout = _normalize_text(second.stdout)
+    first_stderr = _normalize_text(first.stderr)
+    second_stderr = _normalize_text(second.stderr)
+    if first_stdout != second_stdout or first_stderr != second_stderr:
+        return _result(name, started, False, "diagnostic output differed between identical runs")
+    return _result(name, started, True, "stable failure exit and diagnostic output")
 
 
 def _compare_output_file(name: str, cmd: list[str], out_file: Path) -> CheckResult:
@@ -248,8 +286,20 @@ def _check_ir_snapshots(baa: Path) -> list[CheckResult]:
 def run_checks(baa: Path, out_dir: Path) -> list[CheckResult]:
     ir_src = "tests/integration/ir/ir_test.baa"
     results = [
+        _compare_stdout("version-output-stability", [str(baa), "--version"]),
         _compare_stdout("dump-ir-stability", [str(baa), "--dump-ir", ir_src]),
         _compare_stdout("dump-ir-opt-stability", [str(baa), "-O2", "--dump-ir-opt", ir_src]),
+        _compare_failure_output(
+            "diagnostic-output-stability",
+            [
+                str(baa),
+                "-O1",
+                "-S",
+                "tests/neg/semantic_deref_non_pointer.baa",
+                "-o",
+                str(out_dir / "negative-diagnostic.s"),
+            ],
+        ),
     ]
 
     asm_output = out_dir / "stable_ir_test.s"

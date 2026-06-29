@@ -464,6 +464,16 @@ def _run_qa_preflight_tests(log_dir: Path) -> StepResult:
     )
 
 
+def _run_determinism_gate_tests(log_dir: Path) -> StepResult:
+    return _run_logged(
+        "determinism-gate-tests",
+        [sys.executable, str(TESTS_DIR / "test_determinism_gate.py")],
+        cwd=ROOT,
+        log_dir=log_dir,
+        timeout_s=MODULE_SIZE_TIMEOUT_S,
+    )
+
+
 def _write_summary(
     mode: str,
     compiler: Path | None,
@@ -544,6 +554,13 @@ def main() -> int:
         return _write_summary(args.mode, baa, overall_ok, all_results, log_dir, args.summary_json)
 
     if args.mode in ("full", "stress", "release"):
+        determinism_test_res = _run_determinism_gate_tests(log_dir)
+        _print_step(determinism_test_res)
+        all_results.append(determinism_test_res)
+        overall_ok = overall_ok and determinism_test_res.passed
+        if not determinism_test_res.passed:
+            return _write_summary(args.mode, baa, overall_ok, all_results, log_dir, args.summary_json)
+
         module_size_res = _run_module_size_guard(log_dir)
         _print_step(module_size_res)
         all_results.append(module_size_res)

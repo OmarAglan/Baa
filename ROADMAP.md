@@ -1469,6 +1469,11 @@
 * \[x] **Known limitations page** — `docs/KNOWN\_LIMITATIONS.md` lists unsupported targets, language/type restrictions, safety boundaries, and draft-only tooling surfaces.
 * \[ ] **Release branch discipline** — only fixes, tests, and documentation polish after RC cut.
 
+  Reproducibility coverage update (2026-06-29): the release gate now compares repeated
+  `--version` output (including the configured build date) and negative diagnostic text/exit
+  status in addition to IR, assembly, manifests, verifier behavior, and snapshots. Final
+  Windows/Linux RC receipts remain pending.
+
   RC gate reliability update (2026-06-29): compiler discovery now emits a structured
   `compiler-preflight` result, including missing/invalid compiler paths in summary JSON instead
   of aborting before a release receipt is written.

@@ -62,7 +62,10 @@ Additional build-maturity guards:
 
 - `scripts/check_build_profiles.py` validates required CMake configure/build presets.
 - `scripts/test_build_maturity.py` validates manifest stability, incremental cache hits, and header invalidation.
-- `scripts/test_determinism.py` validates stable `--dump-ir`, `--dump-ir-opt`, assembly, manifest, `--verify-gate`, cross-target assembly generation, and committed IR snapshot hashes under `tests/snapshots/`.
+- `scripts/test_determinism.py` validates stable `--version` output (including the configured
+  build date), negative diagnostic output/exit status, `--dump-ir`, `--dump-ir-opt`, assembly,
+  manifests, `--verify-gate`, cross-target assembly generation, and committed IR snapshot hashes
+  under `tests/snapshots/`.
 
 ### Test Metadata Contract
 

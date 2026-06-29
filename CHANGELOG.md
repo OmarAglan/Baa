@@ -20,6 +20,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
     `BAA` override as an explicit prerequisite failure.
   - Missing compiler binaries now produce a structured failed step and summary JSON instead of
     an unhandled Python traceback.
+- **Release determinism coverage**:
+  - Added repeated `--version` checks to lock compiler version/build-date output.
+  - Added repeated expected-failure checks to lock negative diagnostic text and exit status.
+  - Added focused unit tests for diagnostic drift, exit-code drift, and unexpected success.
 - **Known limitations**:
   - Added `docs/KNOWN_LIMITATIONS.md` to distinguish current v0.5.x behavior from draft
     language, target, safety, and tooling contracts.

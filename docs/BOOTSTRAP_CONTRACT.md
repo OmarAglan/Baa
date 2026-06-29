@@ -17,6 +17,29 @@ The authoritative implementation and reference inputs are:
 - `src/backend/target.h`, `src/backend/target.c`, and `src/support/target_contract.h` for target and ABI contracts.
 - `docs/BAA_IR_SPECIFICATION.md`, `src/middleend/ir.h`, `src/middleend/ir_verify_ir.c`, and `src/middleend/ir_verify_ssa.c` for IR invariants.
 
+### 1.1 Mainline Build Policy
+
+The official Baa reference compiler is the C implementation built by the root
+`CMakeLists.txt`.
+
+- The CMake project enables only the C language, and the `baa` target contains only C sources
+  plus the Windows resource file where applicable.
+- A clean checkout must configure and build without a Baa compiler binary.
+- Normal configure, build, package, and CI entrypoints must not read
+  `BAA_BOOTSTRAP_COMPILER`, `BAA0_COMPILER`, or an equivalent bootstrap-compiler setting.
+- Normal entrypoints must not compile or link a compiler slice written in `.baa` or `.baahd`.
+- Compiler-in-Baa experiments belong on a dedicated experimental branch and are not release
+  dependencies.
+
+The policy is enforced by:
+
+```bash
+python scripts/check_reference_compiler_policy.py
+```
+
+The guard also runs in every `scripts/qa_run.py` mode. CMake configuration and compilation in
+the Windows and Linux CI jobs provide the corresponding clean-build proof.
+
 ---
 
 ## 2. Language Freeze
@@ -203,4 +226,3 @@ The active release path keeps the C compiler as the reference implementation. A 
 ---
 
 *[← Component Ownership](COMPONENT_OWNERSHIP.md) | [Language Spec →](LANGUAGE.md)*
-

@@ -6,6 +6,24 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ---
 
+## [Unreleased]
+
+### Added
+
+- **C reference-compiler policy gate**:
+  - Added `scripts/check_reference_compiler_policy.py` to reject bootstrap-compiler
+    requirements and Baa-written compiler inputs in normal build entrypoints.
+  - Added focused policy regression tests and wired both the tests and guard into every
+    `scripts/qa_run.py` mode.
+
+### Changed
+
+- **Bootstrap policy**:
+  - Declared the C implementation as the official reference compiler and explicitly deferred
+    compiler-in-Baa work until after v0.9 stabilization.
+  - Reclassified the Baa0 specification and parity corpus as future optional artifacts rather
+    than Phase 4.5 release gates.
+
 ## [0.5.6] - 2026-05-09
 
 **Determinism & QA Gates**

@@ -225,6 +225,9 @@ Notes:
   - `--mode full`: integration + regression + verify smoke + multi-file smoke
   - `--mode stress`: full + `tests/stress/*.baa` + seeded fuzz-lite (timeout-guarded)
   - `--mode release`: stress + deterministic IR/assembly/manifest checks + cross-target `-S` assembly gate
+- Every mode first runs `tests/test_reference_compiler_policy.py` and
+  `scripts/check_reference_compiler_policy.py`. This locks the mainline compiler build to C/RC
+  inputs and rejects bootstrap-compiler requirements in normal build entrypoints.
 - `scripts/test_determinism.py` owns the v0.5.6 deterministic checks and compares committed IR snapshot hashes under `tests/snapshots/`.
 - Legacy runners remain valid:
   - `tests/test.py` (integration)
@@ -2457,4 +2460,3 @@ Strings are collected during parsing and emitted with unique labels:
 ---
 
 *[← Language Spec](LANGUAGE.md) | [API Reference →](API_REFERENCE.md)*
-

@@ -1095,7 +1095,7 @@
 
   ### v0.3.12: File I/O 📁
 
-  **Goal:** Enable reading and writing files for compiler self-hosting.
+  **Goal:** Enable reading and writing files for systems programs and future staged bootstrap experiments.
 
   #### Features
 
@@ -1148,7 +1148,7 @@
 
   ### v0.3.12.5: Command Line Arguments (معاملات سطر الأوامر) 🖥️
 
-  **Goal:** Access program arguments - essential for compiler self-hosting.
+  **Goal:** Access program arguments for general programs and future staged bootstrap experiments.
 
   #### Features
 
@@ -1435,7 +1435,10 @@
 
   ✅ COMPLETED (2026-05-09)
 
-  ### v0.5.7: Bootstrap Subset (Baa0) Definition 📐
+  ### Future Baa0 Bootstrap Subset Definition 📐 — DEFERRED UNTIL AFTER v0.9
+
+  These items are future planning work, not Phase 4.5 release gates. They must not add a
+  Baa-built compiler dependency to the mainline build.
 
 * \[ ] **Define minimal future subset** — features that could later support compiler slices in Baa without depending on unstable language behavior.
 * \[ ] **Ban unstable features in Baa0** — keep any future bootstrap surface conservative and deterministic.
@@ -1446,12 +1449,12 @@
 
   **Goal:** Stop broad compiler migration work and re-anchor the project around a stable C reference compiler.
 
-* \[ ] **Declare the C compiler as the reference implementation** — normal development must build without requiring a Baa-built compiler slice.
+* \[x] **Declare the C compiler as the reference implementation** — `docs/BOOTSTRAP_CONTRACT.md` defines the root CMake target as the official implementation.
 * \[ ] **Move C→Baa migration work to an experimental branch** — preserve useful experiments without making them part of the release path.
-* \[ ] **Remove misleading bootstrap assumptions from the main build** — no required `BAA\_BOOTSTRAP\_COMPILER` for standard C-reference builds.
+* \[x] **Remove misleading bootstrap assumptions from the main build** — the C-only build has no bootstrap input, and `scripts/check\_reference\_compiler\_policy.py` prevents regressions.
 * \[ ] **Audit migration artifacts** — keep useful tests/docs, remove duplicated or stale migration-only wiring.
-* \[ ] **Write self-hosting policy note** — future self-hosting must be staged, parity-tested, and rollback-ready.
-* \[ ] **Update roadmap language** — replace “active rewrite” framing with “future staged bootstrap readiness.”
+* \[x] **Write self-hosting policy note** — `docs/BOOTSTRAP_CONTRACT.md` keeps future work staged, parity-tested, rollback-ready, and outside the v0.9 release path.
+* \[x] **Update roadmap language** — current milestones use future staged bootstrap readiness rather than active rewrite framing.
 
   ### v0.5.9: Reference Compiler Release Candidate ✅
 
@@ -1466,19 +1469,22 @@
 
   #### Phase 4.5 Exit Criteria
 
-* \[ ] **C-reference build is simple** — clean checkout can build the compiler without a Baa bootstrap compiler.
+* \[x] **C-reference build is simple** — clean checkout builds from C/RC inputs only, with the policy checked in every QA mode.
 * \[ ] **Cross-target QA green** — `quick/full` pass on both `x86\_64-windows` and `x86\_64-linux`.
 * \[x] **Determinism checks green** — stable IR text and stable diagnostics for identical inputs.
 * \[x] **File-size governance active** — CI guard for module-size budget is enforced.
 * \[ ] **Contracts frozen and published** — grammar/ABI/IR/stdlib docs tagged and versioned.
-* \[ ] **Future bootstrap policy published** — self-hosting is explicitly deferred until after v0.9 stabilization.
+* \[x] **Future bootstrap policy published** — self-hosting is explicitly deferred until after v0.9 stabilization.
 
   #### Phase 4.5 Required Artifacts
 
 * \[x] `docs/COMPONENT\_OWNERSHIP.md` — boundaries + owners + allowed dependencies.
 * \[x] `docs/BOOTSTRAP\_CONTRACT.md` — frozen ABI/IR/language requirements and future bootstrap policy.
-* \[ ] `docs/BAA0\_SPEC.md` — future bootstrap subset definition and exclusions.
-* \[ ] `tests/bootstrap/` — optional parity corpus for future staged migration experiments.
+
+  Future optional artifacts (not Phase 4.5 gates):
+
+* \[ ] `docs/BAA0\_SPEC.md` — post-v0.9 bootstrap subset definition and exclusions.
+* \[ ] `tests/bootstrap/` — post-v0.9 parity corpus for staged migration experiments.
 
   \---
 
@@ -2287,4 +2293,3 @@
 \---
 
 *For detailed changes, see the* [*Changelog*](CHANGELOG.md)
-

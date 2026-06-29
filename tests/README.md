@@ -42,3 +42,7 @@ Supported line markers inside `.baa` files:
 - Full regression: `python scripts/qa_run.py --mode full`
 - Stress suite: `python scripts/qa_run.py --mode stress`
 - Release gate: `python scripts/qa_run.py --mode release`
+
+Every mode starts with the C reference-compiler policy tests and guard. They verify that normal
+build entrypoints have no bootstrap compiler requirement and that the `baa` target remains a
+C/RC-only build.

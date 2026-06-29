@@ -36,7 +36,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
   - Recorded a clean, correctly versioned GCC 15.2 warning-as-error build and green quick (7/7),
     full (22/22), stress (52/52), and release (53/53) QA receipts on `9f8d068`.
   - Added `docs/RELEASE_CANDIDATE_STATUS.md` for platform-specific gate provenance; Linux
-    signoff remains pending.
+    and Windows final receipts are now both recorded.
 - **Cross-platform RC workflow**:
   - Added a manual, read-only GitHub Actions workflow for strict Windows/Linux verify builds,
     quick/full/stress/release QA, and always-uploaded JSON/log receipts.
@@ -45,7 +45,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - **Release branch discipline**:
   - Added `docs/RELEASE_PROCESS.md` with RC cut prerequisites, allowed fix scope, receipt
     invalidation, tagging, and rollback rules.
-  - Kept the actual v0.5.9 branch cut gated on the pending Linux signoff.
+  - Satisfied the branch-cut prerequisite with green Windows/Linux receipt sets.
 - **v0.5.9 version synchronization**:
   - Updated compiler, CMake, Windows resource, installer, README, specification, and reproducible
     build-date metadata from 0.5.6 to 0.5.9.
@@ -58,6 +58,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
   - Explicitly excluded unimplemented v0.7+ JSON, diagnostics, conformance, and freestanding
     planning contracts from the v0.5.9 freeze.
   - Revalidated the Windows release gate at 53/53 after publishing the freeze index.
+- **Phase 4.5 cross-platform closure**:
+  - GitHub Actions run `28384736088` passed strict builds and quick (7/7), full (22/22),
+    stress (52/52), and release (53/53) on both Windows and Linux.
+  - Both detailed determinism receipts passed 14/14, including explicit manifest byte stability
+    and shape, with hidden QA logs retained in the workflow artifacts.
 - **Known limitations**:
   - Added `docs/KNOWN_LIMITATIONS.md` to distinguish current v0.5.x behavior from draft
     language, target, safety, and tooling contracts.

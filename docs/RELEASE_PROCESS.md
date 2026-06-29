@@ -74,6 +74,7 @@ when they do not alter generated corpora, tests, packaging inputs, or contract m
 
 ## 6. Current Activation State
 
-The policy is published for v0.5.9. The branch has not been cut because Linux signoff remains
-pending. Until both receipts are green, work continues on `master` under normal focused-change
-rules.
+The policy is active for v0.5.9. Windows and Linux receipts are green in Actions run
+`28384736088`, so the documentation-only closure commit may be used to cut `release/v0.5.9`.
+Feature development continues on `master`; the release branch accepts only the changes allowed
+above.

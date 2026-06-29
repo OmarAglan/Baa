@@ -1462,17 +1462,17 @@
 
   **Goal:** Produce a clean, reproducible, cross-platform baseline before new v0.6.x language work.
 
-* \[x] **Windows full QA signoff** — strict v0.5.9 C build plus `quick` 7/7, `full` 22/22, `stress` 52/52, and `release` 53/53 passed on commit `9f8d068`; see `docs/RELEASE\_CANDIDATE\_STATUS.md`.
-* \[ ] **Linux full QA signoff** — `quick/full/stress/release` gates pass on Linux.
-* \[ ] **Reproducible build check** — stable version/date/manifest outputs for identical inputs.
-* \[ ] **Determinism gate** — stable IR, optimized IR, assembly, diagnostics, and manifests.
+* \[x] **Windows full QA signoff** — strict v0.5.9 C build plus `quick` 7/7, `full` 22/22, `stress` 52/52, and `release` 53/53 passed in Actions run `28384736088`.
+* \[x] **Linux full QA signoff** — strict v0.5.9 C build plus `quick` 7/7, `full` 22/22, `stress` 52/52, and `release` 53/53 passed in Actions run `28384736088`.
+* \[x] **Reproducible build check** — Windows/Linux determinism receipts passed 14/14, including stable version/build-date and manifest bytes/shape.
+* \[x] **Determinism gate** — Windows/Linux receipts lock raw/optimized IR, assembly, diagnostics, manifests, verifier behavior, and snapshots.
 * \[x] **Known limitations page** — `docs/KNOWN\_LIMITATIONS.md` lists unsupported targets, language/type restrictions, safety boundaries, and draft-only tooling surfaces.
-* \[x] **Release branch discipline** — `docs/RELEASE\_PROCESS.md` limits post-cut work to focused fixes, tests, release gates, metadata, and documentation; the branch cut remains gated on Linux signoff.
+* \[x] **Release branch discipline** — `docs/RELEASE\_PROCESS.md` limits post-cut work to focused fixes, tests, release gates, metadata, and documentation; both platform prerequisites are green.
 
   Reproducibility coverage update (2026-06-29): the release gate now compares repeated
   `--version` output (including the configured build date) and negative diagnostic text/exit
   status in addition to IR, assembly, manifests, verifier behavior, and snapshots. Final
-  Linux RC receipt remains pending; the Windows release gate is green.
+  Windows and Linux receipts are green.
 
   RC gate reliability update (2026-06-29): compiler discovery now emits a structured
   `compiler-preflight` result, including missing/invalid compiler paths in summary JSON instead
@@ -1486,14 +1486,18 @@
   reports `0.5.9`, guarded by `scripts/check\_version\_sync.py`. The Windows ladder was rebuilt
   and rerun on the corrected baseline; earlier 0.5.6 receipts remain test history only.
 
+  ✅ COMPLETED (2026-06-29) — final cross-platform run `28384736088` on `fef76ca`.
+
   #### Phase 4.5 Exit Criteria
 
 * \[x] **C-reference build is simple** — clean checkout builds from C/RC inputs only, with the policy checked in every QA mode.
-* \[ ] **Cross-target QA green** — `quick/full` pass on both `x86\_64-windows` and `x86\_64-linux`.
+* \[x] **Cross-target QA green** — all four QA modes pass on both `x86\_64-windows` and `x86\_64-linux`.
 * \[x] **Determinism checks green** — stable IR text and stable diagnostics for identical inputs.
 * \[x] **File-size governance active** — CI guard for module-size budget is enforced.
 * \[x] **Contracts frozen and published** — `docs/CONTRACT\_FREEZE\_V0\_5.md` indexes the versioned v0.5.9 language, stdlib, hosted ABI, and IR baselines and explicitly excludes draft tooling contracts.
 * \[x] **Future bootstrap policy published** — self-hosting is explicitly deferred until after v0.9 stabilization.
+
+  ✅ PHASE 4.5 EXIT CRITERIA SATISFIED (2026-06-29)
 
   #### Phase 4.5 Required Artifacts
 

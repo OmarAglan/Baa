@@ -54,6 +54,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
     standard-library, hosted ABI, and IR baselines.
   - Explicitly excluded unimplemented v0.7+ JSON, diagnostics, conformance, and freestanding
     planning contracts from the v0.5.9 freeze.
+  - Revalidated the Windows release gate at 53/53 after publishing the freeze index.
 - **Known limitations**:
   - Added `docs/KNOWN_LIMITATIONS.md` to distinguish current v0.5.x behavior from draft
     language, target, safety, and tooling contracts.

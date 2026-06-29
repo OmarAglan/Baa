@@ -12,7 +12,8 @@ release QA modes pass.
 
 | Field | Receipt |
 |---|---|
-| Baseline commit | `9f8d068` |
+| Full ladder baseline | `9f8d068` |
+| Latest release revalidation | `c4fd155` (53/53 after core contract publication) |
 | Host | Windows x86-64 |
 | C toolchain | MSYS2 UCRT64 GCC 15.2.0 |
 | Build system | CMake 4.3.3 + MinGW Makefiles |

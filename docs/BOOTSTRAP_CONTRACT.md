@@ -40,6 +40,9 @@ python scripts/check_reference_compiler_policy.py
 The guard also runs in every `scripts/qa_run.py` mode. CMake configuration and compilation in
 the Windows and Linux CI jobs provide the corresponding clean-build proof.
 
+The v0.5.8 branch and artifact disposition is recorded in
+[`MIGRATION_ARTIFACT_AUDIT.md`](MIGRATION_ARTIFACT_AUDIT.md).
+
 ---
 
 ## 2. Language Freeze

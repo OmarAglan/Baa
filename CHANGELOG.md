@@ -23,6 +23,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
     compiler-in-Baa work until after v0.9 stabilization.
   - Reclassified the Baa0 specification and parity corpus as future optional artifacts rather
     than Phase 4.5 release gates.
+  - Audited `origin/moving-to-baa`, documented the experimental artifact disposition, and
+    closed v0.5.8 without importing bootstrap wiring into mainline.
 
 ## [0.5.6] - 2026-05-09
 

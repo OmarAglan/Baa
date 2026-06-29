@@ -1450,11 +1450,13 @@
   **Goal:** Stop broad compiler migration work and re-anchor the project around a stable C reference compiler.
 
 * \[x] **Declare the C compiler as the reference implementation** — `docs/BOOTSTRAP_CONTRACT.md` defines the root CMake target as the official implementation.
-* \[ ] **Move C→Baa migration work to an experimental branch** — preserve useful experiments without making them part of the release path.
+* \[x] **Move C→Baa migration work to an experimental branch** — `origin/moving-to-baa` preserves the Baa lexer/parser and bootstrap wiring outside the release path.
 * \[x] **Remove misleading bootstrap assumptions from the main build** — the C-only build has no bootstrap input, and `scripts/check\_reference\_compiler\_policy.py` prevents regressions.
-* \[ ] **Audit migration artifacts** — keep useful tests/docs, remove duplicated or stale migration-only wiring.
+* \[x] **Audit migration artifacts** — `docs/MIGRATION\_ARTIFACT\_AUDIT.md` records branch contents and the keep/defer/re-evaluate disposition.
 * \[x] **Write self-hosting policy note** — `docs/BOOTSTRAP_CONTRACT.md` keeps future work staged, parity-tested, rollback-ready, and outside the v0.9 release path.
 * \[x] **Update roadmap language** — current milestones use future staged bootstrap readiness rather than active rewrite framing.
+
+  ✅ COMPLETED (2026-06-29)
 
   ### v0.5.9: Reference Compiler Release Candidate ✅
 
@@ -1480,6 +1482,7 @@
 
 * \[x] `docs/COMPONENT\_OWNERSHIP.md` — boundaries + owners + allowed dependencies.
 * \[x] `docs/BOOTSTRAP\_CONTRACT.md` — frozen ABI/IR/language requirements and future bootstrap policy.
+* \[x] `docs/MIGRATION\_ARTIFACT\_AUDIT.md` — experimental-branch inventory and mainline disposition.
 
   Future optional artifacts (not Phase 4.5 gates):
 

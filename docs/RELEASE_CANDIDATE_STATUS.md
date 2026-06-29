@@ -63,7 +63,8 @@ python3 scripts/qa_run.py --mode release
 ```
 
 Phase 4.5 cross-platform signoff, the final reproducibility/determinism checkboxes, and the RC
-branch cut remain open until the Linux receipt is green.
+branch cut remain open until the Linux receipt is green. The post-cut admission and rollback
+rules are defined in [RELEASE_PROCESS.md](RELEASE_PROCESS.md).
 
 ## Receipt Rules
 

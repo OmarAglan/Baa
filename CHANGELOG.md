@@ -39,6 +39,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
   - Added a manual, read-only GitHub Actions workflow for strict Windows/Linux verify builds,
     release-mode QA, and always-uploaded JSON/log receipts.
   - Added focused workflow contract tests to the full/stress/release QA preflight.
+- **Release branch discipline**:
+  - Added `docs/RELEASE_PROCESS.md` with RC cut prerequisites, allowed fix scope, receipt
+    invalidation, tagging, and rollback rules.
+  - Kept the actual v0.5.9 branch cut gated on the pending Linux signoff.
 - **Known limitations**:
   - Added `docs/KNOWN_LIMITATIONS.md` to distinguish current v0.5.x behavior from draft
     language, target, safety, and tooling contracts.

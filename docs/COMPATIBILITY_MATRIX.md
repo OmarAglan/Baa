@@ -69,6 +69,8 @@ Before every Baa release:
 - [ ] State whether Qalam-IDE is affected.
 - [ ] State whether PyramidOS experiments are affected.
 - [ ] Add migration notes for breaking changes.
+- [ ] Follow the RC cut, admission, receipt, and rollback rules in
+      [RELEASE_PROCESS.md](RELEASE_PROCESS.md).
 
 ---
 

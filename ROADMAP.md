@@ -1467,7 +1467,7 @@
 * \[ ] **Reproducible build check** — stable version/date/manifest outputs for identical inputs.
 * \[ ] **Determinism gate** — stable IR, optimized IR, assembly, diagnostics, and manifests.
 * \[x] **Known limitations page** — `docs/KNOWN\_LIMITATIONS.md` lists unsupported targets, language/type restrictions, safety boundaries, and draft-only tooling surfaces.
-* \[ ] **Release branch discipline** — only fixes, tests, and documentation polish after RC cut.
+* \[x] **Release branch discipline** — `docs/RELEASE\_PROCESS.md` limits post-cut work to focused fixes, tests, release gates, metadata, and documentation; the branch cut remains gated on Linux signoff.
 
   Reproducibility coverage update (2026-06-29): the release gate now compares repeated
   `--version` output (including the configured build date) and negative diagnostic text/exit

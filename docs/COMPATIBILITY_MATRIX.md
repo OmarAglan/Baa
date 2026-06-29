@@ -30,6 +30,10 @@ A project may release independently as long as it stays compatible with the cont
 | `target-spec-v1` | Baa | Takween, PyramidOS experiments |
 | `conformance-v1` | Baa | Baa, future compilers/tools |
 | `freestanding-v0` | Baa | PyramidOS experiments |
+| `baa-language-v0.5.9` | Baa | C reference compiler, tests |
+| `baa-stdlib-v0.5.9` | Baa | hosted Baa programs |
+| `baa-hosted-abi-v0.5.9` | Baa | Windows/Linux backends |
+| `baa-ir-v0.5.9` | Baa | C reference compiler, verifier tooling |
 
 ---
 
@@ -38,7 +42,7 @@ A project may release independently as long as it stays compatible with the cont
 | Baa Version | Takween | Qalam-IDE | PyramidOS Use | Required Contracts |
 |---|---|---|---|---|
 | v0.5.8 | manual/experimental | manual/experimental | none | C reference reset |
-| v0.5.9 | manual/experimental | manual/experimental | none | RC QA baseline |
+| v0.5.9 | manual/experimental | manual/experimental | none | `baa-language-v0.5.9`, `baa-stdlib-v0.5.9`, `baa-hosted-abi-v0.5.9`, `baa-ir-v0.5.9` |
 | v0.6.x | Takween prototype | Qalam prototype | host tools only | compiler-cli-v1 draft |
 | v0.7.0 | Takween integration | Qalam not required | host tools only | build-manifest-v1, compiler-cli-v1 |
 | v0.7.2 | Takween integration | Qalam integration | host tools only | diagnostics-json-v1, tokens-json-v1, symbols-json-v1 |

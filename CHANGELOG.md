@@ -49,6 +49,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
   - Added `scripts/check_version_sync.py` plus focused drift tests to every QA mode and
     invalidated the earlier Windows receipt until it is rerun with the correctly versioned
     binary.
+- **Core contract publication**:
+  - Added `docs/CONTRACT_FREEZE_V0_5.md` as the versioned index for the v0.5.9 language,
+    standard-library, hosted ABI, and IR baselines.
+  - Explicitly excluded unimplemented v0.7+ JSON, diagnostics, conformance, and freestanding
+    planning contracts from the v0.5.9 freeze.
 - **Known limitations**:
   - Added `docs/KNOWN_LIMITATIONS.md` to distinguish current v0.5.x behavior from draft
     language, target, safety, and tooling contracts.

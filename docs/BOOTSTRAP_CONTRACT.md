@@ -4,6 +4,9 @@
 
 This document freezes the language, ABI, standard-library, and IR contracts that the C reference compiler must preserve, and that any future staged bootstrap work must respect.
 
+The canonical v0.5.9 publication index is
+[`CONTRACT_FREEZE_V0_5.md`](CONTRACT_FREEZE_V0_5.md).
+
 ---
 
 ## 1. Summary

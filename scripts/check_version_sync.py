@@ -14,6 +14,7 @@ ENGLISH_VERSION_DOCS = (
     "docs/API_REFERENCE.md",
     "docs/BAA_IR_SPECIFICATION.md",
     "docs/BOOTSTRAP_CONTRACT.md",
+    "docs/CONTRACT_FREEZE_V0_5.md",
     "docs/INTERNALS.md",
     "docs/IR_DEVELOPER_GUIDE.md",
     "docs/LANGUAGE.md",

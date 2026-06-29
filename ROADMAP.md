@@ -1491,7 +1491,7 @@
 * \[ ] **Cross-target QA green** — `quick/full` pass on both `x86\_64-windows` and `x86\_64-linux`.
 * \[x] **Determinism checks green** — stable IR text and stable diagnostics for identical inputs.
 * \[x] **File-size governance active** — CI guard for module-size budget is enforced.
-* \[ ] **Contracts frozen and published** — grammar/ABI/IR/stdlib docs tagged and versioned.
+* \[x] **Contracts frozen and published** — `docs/CONTRACT\_FREEZE\_V0\_5.md` indexes the versioned v0.5.9 language, stdlib, hosted ABI, and IR baselines and explicitly excludes draft tooling contracts.
 * \[x] **Future bootstrap policy published** — self-hosting is explicitly deferred until after v0.9 stabilization.
 
   #### Phase 4.5 Required Artifacts
@@ -1499,6 +1499,7 @@
 * \[x] `docs/COMPONENT\_OWNERSHIP.md` — boundaries + owners + allowed dependencies.
 * \[x] `docs/BOOTSTRAP\_CONTRACT.md` — frozen ABI/IR/language requirements and future bootstrap policy.
 * \[x] `docs/MIGRATION\_ARTIFACT\_AUDIT.md` — experimental-branch inventory and mainline disposition.
+* \[x] `docs/CONTRACT\_FREEZE\_V0\_5.md` — authoritative v0.5.9 core contract publication index.
 
   Future optional artifacts (not Phase 4.5 gates):
 

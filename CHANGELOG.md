@@ -26,6 +26,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
   - Added repeated `--version` checks to lock compiler version/build-date output.
   - Added repeated expected-failure checks to lock negative diagnostic text and exit status.
   - Added focused unit tests for diagnostic drift, exit-code drift, and unexpected success.
+  - Preserved both manifest byte-stability and manifest-shape results in the detailed release
+    receipt instead of collapsing a successful stability check into the shape result.
 - **Windows historical corpus reliability**:
   - Git-backed documentation extraction now decodes filenames, tags, and Markdown as UTF-8,
     preserving Arabic source examples on Windows.

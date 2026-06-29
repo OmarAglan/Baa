@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import importlib.util
+import json
 import subprocess
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 from unittest import mock
@@ -71,6 +73,43 @@ class DiagnosticDeterminismTests(unittest.TestCase):
 
         self.assertFalse(result.passed)
         self.assertIn("exit code differed", result.detail)
+
+    def test_manifest_receipt_keeps_stability_and_shape_results(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            out_dir = Path(temp_dir)
+            manifest = out_dir / "manifest.json"
+            manifest.write_text(
+                json.dumps(
+                    {
+                        "compiler_version": "0.5.9",
+                        "target": "x86_64-linux",
+                        "mode": "link",
+                        "opt_level": 2,
+                        "runtime_checks": False,
+                        "units": [],
+                    }
+                ),
+                encoding="utf-8",
+            )
+            stability = DETERMINISM.CheckResult(
+                name="manifest-byte-stability",
+                passed=True,
+                detail="stable output file",
+                duration_s=0.0,
+            )
+
+            with mock.patch.object(
+                DETERMINISM,
+                "_compare_output_file",
+                return_value=stability,
+            ):
+                results = DETERMINISM._check_manifest(Path("baa"), out_dir)
+
+        self.assertEqual([result.name for result in results], [
+            "manifest-byte-stability",
+            "manifest-shape",
+        ])
+        self.assertTrue(all(result.passed for result in results))
 
 
 if __name__ == "__main__":

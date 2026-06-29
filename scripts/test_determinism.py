@@ -159,7 +159,7 @@ def _compare_output_file(name: str, cmd: list[str], out_file: Path) -> CheckResu
     return _result(name, started, True, "stable output file")
 
 
-def _check_manifest(baa: Path, out_dir: Path) -> CheckResult:
+def _check_manifest(baa: Path, out_dir: Path) -> list[CheckResult]:
     manifest = out_dir / "manifest.json"
     output = out_dir / ("determinism_app.exe" if os.name == "nt" else "determinism_app")
     cmd = [
@@ -172,21 +172,30 @@ def _check_manifest(baa: Path, out_dir: Path) -> CheckResult:
         "-o",
         str(output),
     ]
-    result = _compare_output_file("manifest-byte-stability", cmd, manifest)
-    if not result.passed:
-        return result
+    stability = _compare_output_file("manifest-byte-stability", cmd, manifest)
+    if not stability.passed:
+        return [stability]
 
     started = time.monotonic()
     try:
         data = json.loads(manifest.read_text(encoding="utf-8"))
     except Exception as exc:
-        return _result("manifest-shape", started, False, f"manifest is not valid JSON: {exc}")
+        return [
+            stability,
+            _result("manifest-shape", started, False, f"manifest is not valid JSON: {exc}"),
+        ]
 
     required = {"compiler_version", "target", "mode", "opt_level", "runtime_checks", "units"}
     missing = sorted(k for k in required if k not in data)
     if missing:
-        return _result("manifest-shape", started, False, f"manifest missing keys: {missing}")
-    return _result("manifest-shape", started, True, "manifest has required deterministic keys")
+        return [
+            stability,
+            _result("manifest-shape", started, False, f"manifest missing keys: {missing}"),
+        ]
+    return [
+        stability,
+        _result("manifest-shape", started, True, "manifest has required deterministic keys"),
+    ]
 
 
 def _check_cross_target_assembly(baa: Path, out_dir: Path) -> list[CheckResult]:
@@ -311,7 +320,7 @@ def run_checks(baa: Path, out_dir: Path) -> list[CheckResult]:
         )
     )
     results.extend(_check_cross_target_assembly(baa, out_dir))
-    results.append(_check_manifest(baa, out_dir))
+    results.extend(_check_manifest(baa, out_dir))
     results.append(_check_verifier_gate(baa, out_dir))
     results.extend(_check_ir_snapshots(baa))
     return results

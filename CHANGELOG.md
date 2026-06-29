@@ -43,6 +43,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
   - Added `docs/RELEASE_PROCESS.md` with RC cut prerequisites, allowed fix scope, receipt
     invalidation, tagging, and rollback rules.
   - Kept the actual v0.5.9 branch cut gated on the pending Linux signoff.
+- **v0.5.9 version synchronization**:
+  - Updated compiler, CMake, Windows resource, installer, README, specification, and reproducible
+    build-date metadata from 0.5.6 to 0.5.9.
+  - Added `scripts/check_version_sync.py` plus focused drift tests to every QA mode and
+    invalidated the earlier Windows receipt until it is rerun with the correctly versioned
+    binary.
 - **Known limitations**:
   - Added `docs/KNOWN_LIMITATIONS.md` to distinguish current v0.5.x behavior from draft
     language, target, safety, and tooling contracts.

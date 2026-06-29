@@ -498,6 +498,26 @@ def _run_release_workflow_tests(log_dir: Path) -> StepResult:
     )
 
 
+def _run_version_sync_guard(log_dir: Path) -> StepResult:
+    return _run_logged(
+        "version-sync",
+        [sys.executable, str(ROOT / "scripts" / "check_version_sync.py")],
+        cwd=ROOT,
+        log_dir=log_dir,
+        timeout_s=MODULE_SIZE_TIMEOUT_S,
+    )
+
+
+def _run_version_sync_tests(log_dir: Path) -> StepResult:
+    return _run_logged(
+        "version-sync-tests",
+        [sys.executable, str(TESTS_DIR / "test_version_sync.py")],
+        cwd=ROOT,
+        log_dir=log_dir,
+        timeout_s=MODULE_SIZE_TIMEOUT_S,
+    )
+
+
 def _write_summary(
     mode: str,
     compiler: Path | None,
@@ -575,6 +595,20 @@ def main() -> int:
     all_results.append(reference_compiler_res)
     overall_ok = overall_ok and reference_compiler_res.passed
     if not reference_compiler_res.passed:
+        return _write_summary(args.mode, baa, overall_ok, all_results, log_dir, args.summary_json)
+
+    version_sync_test_res = _run_version_sync_tests(log_dir)
+    _print_step(version_sync_test_res)
+    all_results.append(version_sync_test_res)
+    overall_ok = overall_ok and version_sync_test_res.passed
+    if not version_sync_test_res.passed:
+        return _write_summary(args.mode, baa, overall_ok, all_results, log_dir, args.summary_json)
+
+    version_sync_res = _run_version_sync_guard(log_dir)
+    _print_step(version_sync_res)
+    all_results.append(version_sync_res)
+    overall_ok = overall_ok and version_sync_res.passed
+    if not version_sync_res.passed:
         return _write_summary(args.mode, baa, overall_ok, all_results, log_dir, args.summary_json)
 
     if args.mode in ("full", "stress", "release"):

@@ -8,11 +8,11 @@ release QA modes pass.
 
 ## Windows x86-64
 
-**Status:** signed off locally on 2026-06-29.
+**Status:** revalidation required after the v0.5.9 metadata synchronization.
 
 | Field | Receipt |
 |---|---|
-| Baseline commit | `9d67e25` |
+| Baseline commit | `9d67e25` (historical pre-version-bump receipt) |
 | Host | Windows x86-64 |
 | C toolchain | MSYS2 UCRT64 GCC 15.2.0 |
 | Build system | CMake 4.3.3 + MinGW Makefiles |
@@ -40,9 +40,13 @@ QA receipts:
 | `stress` | PASS | 49/49 |
 | `release` | PASS | 50/50 |
 
-The clean committed baseline was rerun through `--mode release`. Its determinism sub-gate passed
+The historical baseline was rerun through `--mode release`. Its determinism sub-gate passed
 the version/build-date, negative diagnostic, IR, optimized IR, assembly, cross-target assembly,
 manifest, verifier, and committed snapshot checks.
+
+This receipt identified the binary as `0.5.6`, so it is invalid as the final v0.5.9 signoff.
+After synchronized version metadata lands, Windows must be rebuilt cleanly and the complete
+ladder rerun before this section returns to signed-off status.
 
 ## Linux x86-64
 

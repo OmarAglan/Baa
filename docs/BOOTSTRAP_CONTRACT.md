@@ -1,6 +1,6 @@
 # Baa Bootstrap Contract
 
-> **Version:** 0.5.6 | [← Component Ownership](COMPONENT_OWNERSHIP.md) | [Language Spec →](LANGUAGE.md)
+> **Version:** 0.5.9 | [← Component Ownership](COMPONENT_OWNERSHIP.md) | [Language Spec →](LANGUAGE.md)
 
 This document freezes the language, ABI, standard-library, and IR contracts that the C reference compiler must preserve, and that any future staged bootstrap work must respect.
 

@@ -1,6 +1,6 @@
 # Baa User Guide
 
-> **Version:** 0.5.6 | [← README](../README.md) | [Language Spec →](LANGUAGE.md)
+> **Version:** 0.5.9 | [← README](../README.md) | [Language Spec →](LANGUAGE.md)
 
 Welcome to Baa (باء)! This guide will help you write your first Arabic computer program and use the Baa compiler toolchain.
 

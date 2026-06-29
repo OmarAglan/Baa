@@ -1,6 +1,6 @@
 # Baa Internal API Reference
 
-> **Version:** 0.5.6 | [← Compiler Internals](INTERNALS.md) | [IR Specification →](BAA_IR_SPECIFICATION.md)
+> **Version:** 0.5.9 | [← Compiler Internals](INTERNALS.md) | [IR Specification →](BAA_IR_SPECIFICATION.md)
 
 This document details the C functions, enumerations, and structures defined in the current component-owned public headers under `src/frontend/`, `src/support/`, `src/middleend/`, and `src/backend/`. `src/baa.h` remains as a compatibility umbrella over the frontend/support public surface.
 
@@ -61,6 +61,8 @@ runners use the same compiler selected by the orchestrator.
 
 Additional build-maturity guards:
 
+- `scripts/check_version_sync.py` keeps the CMake project, compiler macro, Windows resources,
+  installer, README badge, release build dates, and versioned specification headers aligned.
 - `scripts/check_build_profiles.py` validates required CMake configure/build presets.
 - `scripts/test_build_maturity.py` validates manifest stability, incremental cache hits, and header invalidation.
 - `scripts/test_determinism.py` validates stable `--version` output (including the configured

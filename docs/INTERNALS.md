@@ -1,6 +1,6 @@
 # Baa Compiler Internals
 
-> **Version:** 0.5.6 | [← Language Spec](LANGUAGE.md) | [API Reference →](API_REFERENCE.md)
+> **Version:** 0.5.9 | [← Language Spec](LANGUAGE.md) | [API Reference →](API_REFERENCE.md)
 
 **Target Architecture:** x86-64 (AMD64)
 **Targets:** Windows x64 (COFF/PE) + Linux x86-64 (ELF)
@@ -231,6 +231,8 @@ Notes:
 - Compiler discovery is a structured `compiler-preflight` step. It checks an explicit `BAA`
   path and normal direct/preset build outputs; prerequisite failures remain visible in summary
   JSON instead of escaping as Python exceptions.
+- Every QA mode runs `scripts/check_version_sync.py` before compiler-dependent tests so binary,
+  package, resource, build-date, and specification versions cannot drift independently.
 - `scripts/test_determinism.py` owns release determinism checks for version/build-date output,
   negative diagnostics, IR, assembly, manifests, cross-target `-S`, verifier gates, and committed
   IR snapshot hashes under `tests/snapshots/`.

@@ -238,6 +238,8 @@ Notes:
   - `tests/test.py` (integration)
   - `tests/regress.py` (integration + corpus + negatives)
 - On all hosts: docs-derived v0.2.x corpus runs under `tests/corpus_v2x_docs/`.
+  Git snapshot extraction decodes tag names, paths, and Markdown as UTF-8 so Arabic examples are
+  preserved on Windows.
 - Test metadata markers (recognized by `tests/test.py` and `tests/regress.py`):
   - `// RUN:` execution contract (`expect-pass`, `expect-fail`, `runtime`, `compile-only`, `skip`)
   - `// FLAGS:` per-test compiler flags

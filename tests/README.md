@@ -53,3 +53,6 @@ invalid `BAA` overrides produce a normal failed QA summary rather than an unhand
 Full, stress, and release modes run focused unit coverage for the determinism gate. Release mode
 then compares repeated version/build-date output, negative diagnostics and exit status, IR,
 assembly, manifests, verifier behavior, and cross-target assembly.
+
+Full and higher modes also verify that Git-backed historical documentation extraction preserves
+Arabic fenced programs under UTF-8, including on Windows.

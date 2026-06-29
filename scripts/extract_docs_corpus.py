@@ -63,6 +63,8 @@ def _git_list_md_files(ref: str) -> list[str]:
         ["git", "ls-tree", "-r", "--name-only", ref],
         cwd=str(ROOT),
         text=True,
+        encoding="utf-8",
+        errors="replace",
         capture_output=True,
         check=False,
     )
@@ -81,6 +83,8 @@ def _git_show_text(ref: str, path: str) -> str | None:
         ["git", "show", f"{ref}:{path}"],
         cwd=str(ROOT),
         text=True,
+        encoding="utf-8",
+        errors="replace",
         capture_output=True,
         check=False,
     )
@@ -176,6 +180,8 @@ def _git_refs_from_pattern(pat: str) -> list[str]:
         ["git", "tag", "-l", pat],
         cwd=str(ROOT),
         text=True,
+        encoding="utf-8",
+        errors="replace",
         capture_output=True,
         check=False,
     )

@@ -108,6 +108,10 @@ def _run_compiler_preflight(log_dir: Path) -> tuple[Path | None, StepResult]:
     return baa, result
 
 
+def _activate_compiler_for_children(baa: Path) -> None:
+    os.environ["BAA"] = str(baa)
+
+
 def _safe_name(s: str) -> str:
     out = []
     for ch in s:
@@ -474,6 +478,16 @@ def _run_determinism_gate_tests(log_dir: Path) -> StepResult:
     )
 
 
+def _run_docs_corpus_tests(log_dir: Path) -> StepResult:
+    return _run_logged(
+        "docs-corpus-tests",
+        [sys.executable, str(TESTS_DIR / "test_docs_corpus.py")],
+        cwd=ROOT,
+        log_dir=log_dir,
+        timeout_s=MODULE_SIZE_TIMEOUT_S,
+    )
+
+
 def _write_summary(
     mode: str,
     compiler: Path | None,
@@ -561,6 +575,13 @@ def main() -> int:
         if not determinism_test_res.passed:
             return _write_summary(args.mode, baa, overall_ok, all_results, log_dir, args.summary_json)
 
+        docs_corpus_test_res = _run_docs_corpus_tests(log_dir)
+        _print_step(docs_corpus_test_res)
+        all_results.append(docs_corpus_test_res)
+        overall_ok = overall_ok and docs_corpus_test_res.passed
+        if not docs_corpus_test_res.passed:
+            return _write_summary(args.mode, baa, overall_ok, all_results, log_dir, args.summary_json)
+
         module_size_res = _run_module_size_guard(log_dir)
         _print_step(module_size_res)
         all_results.append(module_size_res)
@@ -582,6 +603,7 @@ def main() -> int:
     if baa is None:
         return _write_summary(args.mode, baa, overall_ok, all_results, log_dir, args.summary_json)
 
+    _activate_compiler_for_children(baa)
     print(f"qa: compiler={baa}")
 
     # A) Integration tiers

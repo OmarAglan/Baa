@@ -56,7 +56,8 @@ Every mode runs a compiler preflight before compiler-dependent tests. The runner
 `BAA` environment variable as an explicit compiler path, then checks standard direct-build and
 CMake-preset output locations. A missing or invalid compiler is reported as a failed
 `compiler-preflight` step and is included in `--summary-json`; it does not terminate with a
-Python traceback.
+Python traceback. The resolved path is exported through `BAA` so nested test and build-maturity
+runners use the same compiler selected by the orchestrator.
 
 Additional build-maturity guards:
 

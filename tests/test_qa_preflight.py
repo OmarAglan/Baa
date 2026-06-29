@@ -92,6 +92,13 @@ class QaCompilerPreflightTests(unittest.TestCase):
         self.assertEqual(summary["results"][0]["name"], "compiler-preflight")
         self.assertEqual(summary["results"][0]["returncode"], 2)
 
+    def test_resolved_compiler_is_exported_to_child_runners(self) -> None:
+        compiler = self.root / "build" / "baa.exe"
+
+        with mock.patch.dict(os.environ, {}, clear=True):
+            QA._activate_compiler_for_children(compiler)
+            self.assertEqual(os.environ["BAA"], str(compiler))
+
 
 if __name__ == "__main__":
     unittest.main()

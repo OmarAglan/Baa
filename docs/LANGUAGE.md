@@ -1,6 +1,6 @@
 # Baa Language Specification
 
-> **Version:** 0.5.9 | [← User Guide](USER_GUIDE.md) | [Compiler Internals →](INTERNALS.md)
+> **Version:** 0.6.0 | [← User Guide](USER_GUIDE.md) | [Compiler Internals →](INTERNALS.md)
 
 Baa (باء) is a compiled systems programming language using Arabic syntax. It compiles to native code via Assembly + host GCC/Clang on Windows and Linux.
 
@@ -32,7 +32,7 @@ A Baa program is a collection of **Global Variables** and **Functions**.
 | **Entry Point** | `الرئيسية` (Main) function |
 | **Statements** | End with period (`.`) |
 | **Comments** | Single-line with `//` |
-| **Keywords** | `صحيح`, `ص٨`, `ص١٦`, `ص٣٢`, `ص٦٤`, `ط٨`, `ط١٦`, `ط٣٢`, `ط٦٤`, `عشري`, `حرف`, `نص`, `منطقي`, `عدم`, `حجم`, `نوع`, `دالة`, `ثابت`, `ساكن`, `إذا`, `وإلا`, `طالما`, `لكل`, `اختر`, `حالة`, `افتراضي`, `اطبع`, `اقرأ`, `إرجع`, `توقف`, `استمر`, `تعداد`, `هيكل`, `اتحاد`, `صواب`, `خطأ`, `كـ` |
+| **Keywords** | `صحيح`, `ص٨`, `ص١٦`, `ص٣٢`, `ص٦٤`, `ط٨`, `ط١٦`, `ط٣٢`, `ط٦٤`, `عشري`, `حرف`, `نص`, `منطقي`, `عدم`, `حجم`, `نوع`, `دالة`, `ثابت`, `ساكن`, `خارجي`, `إذا`, `وإلا`, `طالما`, `لكل`, `اختر`, `حالة`, `افتراضي`, `اطبع`, `اقرأ`, `إرجع`, `توقف`, `استمر`, `تعداد`, `هيكل`, `اتحاد`, `صواب`, `خطأ`, `كـ` |
 
 ### Minimal Program
 
@@ -683,6 +683,9 @@ To use a function defined in another file (or later in the same file), you can d
 // Prototype declaration (notice the dot at the end)
 صحيح جمع(صحيح أ، صحيح ب).
 
+// تصريح خارجي صريح مكافئ للنموذج الأولي أعلاه
+خارجي صحيح طرح(صحيح أ، صحيح ب).
+
 صحيح الرئيسية() {
     // Calls 'جمع' defined in another file
     اطبع جمع(١٠، ٢٠).
@@ -694,9 +697,45 @@ To use a function defined in another file (or later in the same file), you can d
 
 - Top-level functions have external linkage by default.
 - A prototype in a `.baahd` header is a declaration only; it does not emit a definition by itself.
+- `خارجي` may make a function prototype's external intent explicit; it must end with `.` and
+  cannot have a body.
 - Top-level `ساكن` variables and arrays have file-local internal linkage.
 - `ساكن` on functions is not supported in this release.
-- There is still no separate `extern`-style declaration syntax for global variables, so shared cross-file APIs should use function prototypes, not duplicated global definitions.
+
+### 5.2.1. External Globals (`خارجي`)
+
+`خارجي` declares storage or a function body that is defined in another source file (or later in
+the same translation unit).
+
+```baa
+// api.baahd
+خارجي صحيح عدد_الطلبات.
+خارجي صحيح قيم[٣].
+خارجي صحيح احسب(صحيح قيمة).
+
+// api.baa
+#تضمين "api.baahd"
+صحيح عدد_الطلبات = ٠.
+صحيح قيم[٣] = {١، ٢، ٣}.
+صحيح احسب(صحيح قيمة) {
+    إرجع قيمة + عدد_الطلبات.
+}
+```
+
+Rules:
+
+- `خارجي` is allowed only at top level.
+- External scalar/aggregate globals and fixed-size arrays must not have initializers.
+- External function declarations must be prototypes without bodies.
+- `خارجي` and `ساكن` cannot be combined because they request conflicting linkage.
+- Repeated external declarations are allowed when their type, pointer metadata, constness, and
+  array shape match.
+- One matching non-`خارجي` declaration supplies the actual definition/storage.
+- A mismatched declaration or a second definition is an error.
+- External declarations emit no storage or function body; the final linker must find a
+  definition in another input/library.
+- `ثابت خارجي` declares externally defined read-only state from the current source program's
+  perspective.
 
 ### 5.3. Calling
 

@@ -1,6 +1,6 @@
 # Baa IR Specification
 
-> **Version:** 0.5.9 | [← Compiler Internals](INTERNALS.md) | [API Reference →](API_REFERENCE.md)
+> **Version:** 0.6.0 | [← Compiler Internals](INTERNALS.md) | [API Reference →](API_REFERENCE.md)
 
 This document specifies the Intermediate Representation (IR) for the Baa compiler. The IR uses Arabic naming conventions throughout, creating a culturally authentic yet technically robust design.
 
@@ -366,12 +366,22 @@ Example:
 عام @اسم_المتغير = ص٦٤ ١٠٠
 عام @نص_ترحيب = نص "مرحباً"   // نص يُخزن كمؤشر إلى مصفوفة حرف[] ثابتة
 internal global @عداد_داخلي = ص٦٤ ٠ // ربط داخلي (v0.3.7.5)
+خارجي عام @قيمة_من_ملف_آخر : ص٦٤ // تصريح خارجي بلا تخزين محلي (v0.6.0)
 
 // مصفوفة عامة (تهيئة جزئية؛ الباقي أصفار مثل C)
 عام @قائمة = مصفوفة[ص٦٤، ٥] {١، ٢، ٣}
 
 // مصفوفة مؤشرات نصية عامة
 عام @أسماء = مصفوفة[مؤشر[ص٨]، ٢] {"علي"، "منى"}
+```
+
+تصريحات `خارجي` في المصدر تُخفض إلى عقدة `IRGlobal` مرجعية تحمل النوع والاسم فقط.
+هذه العقدة تسمح للتعليمات بالرجوع إلى الرمز (`@name`) لكنها لا تُصدر تخزيناً في قسم
+البيانات ولا تقبل مهيئاً. صيغة ملف IR النصي القانونية لها هي:
+
+```text
+external global @name : type
+external const global @readonly_name : type
 ```
 
 ملاحظة (v0.3.5): السلاسل النصية في IR لها جدولان:
@@ -645,7 +655,9 @@ Becomes:
 
 ```bnf
 module      ::= (global | function)*
-global      ::= ("internal")? ("const")? "global" "@" ident "=" type global_init
+global      ::= storage_global | external_global
+storage_global ::= ("internal")? ("const")? "global" "@" ident "=" type global_init
+external_global ::= "external" ("const")? "global" "@" ident ":" type
 global_init ::= value
              | "zeroinit"
              | "{" (value ("," value)* ","?)? "}"
@@ -1024,6 +1036,7 @@ typedef struct IRGlobal {
     bool has_init_list;         // هل وُجدت '=' في المصدر (حتى لو كانت القائمة فارغة)
     bool is_const;              // Is this a constant?
     bool is_internal;           // هل الربط داخلي على مستوى الملف؟
+    bool is_extern;             // هل هو تصريح خارجي بلا تخزين محلي؟
     struct IRGlobal* next;
 } IRGlobal;
 ```

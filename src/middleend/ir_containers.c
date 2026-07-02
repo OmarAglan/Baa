@@ -230,6 +230,7 @@ IRGlobal* ir_global_new(const char* name, IRType* type, int is_const) {
     global->has_init_list = false;
     global->is_const = is_const ? true : false;
     global->is_internal = false;
+    global->is_extern = false;
     global->next = NULL;
     
     return global;
@@ -422,4 +423,3 @@ void ir_module_free(IRModule* module) {
 
     free(module);
 }
-

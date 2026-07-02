@@ -28,6 +28,7 @@
         case TOKEN_TYPE_ALIAS: return "نوع";
         case TOKEN_CONST: return "ثابت";
         case TOKEN_STATIC: return "ساكن";
+        case TOKEN_EXTERN: return "خارجي";
         case TOKEN_RETURN: return "إرجع";
         case TOKEN_PRINT: return "اطبع";
         case TOKEN_READ: return "اقرأ";

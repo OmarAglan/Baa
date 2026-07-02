@@ -46,6 +46,7 @@ static void add_symbol(const char* name,
                        const FuncPtrSig* func_sig,
                        bool is_const,
                        bool is_static,
+                       bool is_extern,
                        bool is_array,
                        int array_rank,
                        const int* array_dims,
@@ -74,10 +75,54 @@ static void add_symbol(const char* name,
     }
 
     if (scope == SCOPE_GLOBAL) {
-        // التحقق من التكرار
-        if (global_lookup_by_name(name)) {
-            semantic_error_loc(decl_file, decl_line, decl_col,
-                               "إعادة تعريف المتغير العام '%s'.", name);
+        Symbol* existing = global_lookup_by_name(name);
+        if (existing) {
+            bool same_type = existing->type == type &&
+                             existing->ptr_base_type == ptr_base_type &&
+                             existing->ptr_depth == ptr_depth &&
+                             existing->is_const == is_const &&
+                             existing->is_static == is_static &&
+                             existing->is_array == is_array;
+            if (same_type && type == TYPE_FUNC_PTR) {
+                same_type = funcsig_equal(existing->func_sig, func_sig);
+            }
+            if (same_type && type_name && type_name[0]) {
+                same_type = strcmp(existing->type_name, type_name) == 0;
+            } else if (same_type && existing->type_name[0]) {
+                same_type = false;
+            }
+            if (same_type && ptr_base_type_name && ptr_base_type_name[0]) {
+                same_type = strcmp(existing->ptr_base_type_name, ptr_base_type_name) == 0;
+            } else if (same_type && existing->ptr_base_type_name[0]) {
+                same_type = false;
+            }
+            if (same_type && is_array) {
+                same_type = existing->array_rank == array_rank &&
+                            existing->array_total_elems == array_total_elems;
+                for (int i = 0; same_type && i < array_rank; i++) {
+                    same_type = existing->array_dims && array_dims &&
+                                existing->array_dims[i] == array_dims[i];
+                }
+            }
+
+            if (!same_type) {
+                semantic_error_loc(decl_file, decl_line, decl_col,
+                                   "تعارض في تصريح المتغير العام '%s'.", name);
+                return;
+            }
+
+            if (!is_extern) {
+                if (existing->is_defined) {
+                    semantic_error_loc(decl_file, decl_line, decl_col,
+                                       "إعادة تعريف المتغير العام '%s'.", name);
+                    return;
+                }
+                existing->is_defined = true;
+                existing->is_extern = false;
+                existing->decl_line = decl_line;
+                existing->decl_col = decl_col;
+                existing->decl_file = decl_file;
+            }
             return;
         }
         if (global_count >= ANALYSIS_MAX_SYMBOLS) {
@@ -133,6 +178,8 @@ static void add_symbol(const char* name,
         }
         global_symbols[global_count].is_const = is_const;
         global_symbols[global_count].is_static = is_static;
+        global_symbols[global_count].is_extern = is_extern;
+        global_symbols[global_count].is_defined = !is_extern;
         global_symbols[global_count].is_used = false;
         global_symbols[global_count].decl_line = decl_line;
         global_symbols[global_count].decl_col = decl_col;
@@ -212,6 +259,8 @@ static void add_symbol(const char* name,
         }
         local_symbols[local_count].is_const = is_const;
         local_symbols[local_count].is_static = is_static;
+        local_symbols[local_count].is_extern = false;
+        local_symbols[local_count].is_defined = true;
         local_symbols[local_count].is_used = false;
         local_symbols[local_count].decl_line = decl_line;
         local_symbols[local_count].decl_col = decl_col;
@@ -473,4 +522,3 @@ static bool symbol_const_linear_index(Symbol* sym, Node* indices, int expected_r
     *out_linear = linear;
     return true;
 }
-

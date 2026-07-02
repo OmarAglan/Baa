@@ -39,6 +39,8 @@ typedef struct {
     int offset;        // الإزاحة في المكدس أو العنوان
     bool is_const;     // هل هو ثابت (immutable)؟
     bool is_static;    // هل التخزين ساكن؟
+    bool is_extern;    // هل هو تصريح خارجي؟
+    bool is_defined;   // هل وُجد تعريف تخزين فعلي؟
     bool is_used;      // هل تم استخدام هذا المتغير؟ (للتحذيرات)
     int decl_line;     // سطر التعريف (للتحذيرات)
     int decl_col;      // عمود التعريف (للتحذيرات)

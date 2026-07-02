@@ -32,7 +32,6 @@ FIXTURE_FILES = (
     "docs/BAA_BOOK_AR.md",
     "docs/BAA_IR_SPECIFICATION.md",
     "docs/BOOTSTRAP_CONTRACT.md",
-    "docs/CONTRACT_FREEZE_V0_5.md",
     "docs/INTERNALS.md",
     "docs/IR_DEVELOPER_GUIDE.md",
     "docs/LANGUAGE.md",
@@ -68,13 +67,13 @@ class VersionSyncTests(unittest.TestCase):
         result, stdout, stderr = self.run_guard()
 
         self.assertEqual(result, 0)
-        self.assertIn("version-sync: PASS (version=0.5.9", stdout)
+        self.assertIn("version-sync: PASS (version=0.6.0", stdout)
         self.assertEqual(stderr, "")
 
     def test_rejects_compiler_macro_drift(self) -> None:
         header = self.root / "src" / "support" / "version.h"
         text = header.read_text(encoding="utf-8").replace(
-            '#define BAA_VERSION "0.5.9"',
+            '#define BAA_VERSION "0.6.0"',
             '#define BAA_VERSION "0.5.8"',
         )
         header.write_text(text, encoding="utf-8")
@@ -83,7 +82,7 @@ class VersionSyncTests(unittest.TestCase):
 
         self.assertEqual(result, 1)
         self.assertIn("src/support/version.h", stderr)
-        self.assertIn('#define BAA_VERSION "0.5.9"', stderr)
+        self.assertIn('#define BAA_VERSION "0.6.0"', stderr)
 
 
 if __name__ == "__main__":

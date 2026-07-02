@@ -491,6 +491,9 @@ void ir_func_print(IRFunc* func, FILE* out, int use_arabic) {
 void ir_global_print(IRGlobal* global, FILE* out, int use_arabic) {
     if (!global) return;
 
+    if (global->is_extern) {
+        fputs(use_arabic ? "خارجي " : "external ", out);
+    }
     if (use_arabic) {
         if (global->is_const) fputs("ثابت ", out);
         fputs("عام @", out);
@@ -501,8 +504,12 @@ void ir_global_print(IRGlobal* global, FILE* out, int use_arabic) {
 
     fputs(global->name ? global->name : "???", out);
 
-    fputs(" = ", out);
+    fputs(global->is_extern ? " : " : " = ", out);
     ir_type_print(global->type, out, use_arabic);
+    if (global->is_extern) {
+        fputc('\n', out);
+        return;
+    }
     fputc(' ', out);
 
     if (global->type && global->type->kind == IR_TYPE_ARRAY) {

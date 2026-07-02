@@ -187,7 +187,7 @@ static void analyze_node(Node* node) {
                 if (node->data.var_decl.expression) {
                     semantic_error(node, "تهيئة النوع المركب بهذه الصيغة غير مدعومة حالياً.");
                 }
-                if (node->data.var_decl.is_const) {
+                if (node->data.var_decl.is_const && !node->data.var_decl.is_extern) {
                     semantic_error(node, "لا يمكن تعريف نوع مركب ثابت بدون تهيئة (غير مدعوم حالياً).");
                 }
             }
@@ -254,6 +254,7 @@ static void analyze_node(Node* node) {
                        node->data.var_decl.func_sig,
                        node->data.var_decl.is_const,
                        node->data.var_decl.is_static,
+                       node->data.var_decl.is_extern,
                        false,
                        0,
                        NULL,
@@ -310,6 +311,7 @@ static void analyze_node(Node* node) {
                                 param->data.var_decl.ptr_base_type_name,
                                 param->data.var_decl.ptr_depth,
                                 param->data.var_decl.func_sig,
+                                false,
                                 false,
                                 false,
                                 false, 0, NULL, 0,
@@ -820,6 +822,7 @@ static void analyze_node(Node* node) {
                        NULL,
                        node->data.array_decl.is_const,
                        node->data.array_decl.is_static,
+                       node->data.array_decl.is_extern,
                        true,
                        node->data.array_decl.dim_count,
                        node->data.array_decl.dims,

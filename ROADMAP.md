@@ -1529,8 +1529,8 @@
 
   ### v0.6.0: Systems Language Completeness I 🧱
 
-* \[ ] **`خارجي` declarations** — stable external function/global declarations for interop and headers.
-* \[ ] **Global declaration vs definition rules** — header-safe shared globals without accidental duplicate definitions.
+* \[x] **`خارجي` declarations** — explicit external function, scalar-global, and fixed-array declarations are supported in headers and multi-file builds.
+* \[x] **Global declaration vs definition rules** — matching declarations merge with one definition; conflicting types/shapes and duplicate definitions are rejected.
 * \[ ] **Struct field initialization** — basic named-field initialization for `هيكل` values.
 * \[ ] **Aggregate assignment policy** — either support selected safe cases or reject with precise diagnostics.
 * \[ ] **Const pointer rules** — clarify pointer-to-const vs const-pointer semantics.

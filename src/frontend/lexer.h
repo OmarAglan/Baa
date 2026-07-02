@@ -46,6 +46,7 @@ typedef enum {
     TOKEN_TYPE_ALIAS,   // نوع
     TOKEN_CONST,        // ثابت
     TOKEN_STATIC,       // ساكن
+    TOKEN_EXTERN,       // خارجي
     TOKEN_RETURN,       // إرجع
     TOKEN_PRINT,        // اطبع
     TOKEN_READ,         // اقرأ

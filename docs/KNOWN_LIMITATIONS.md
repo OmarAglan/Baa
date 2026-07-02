@@ -1,6 +1,6 @@
 # Baa Known Limitations
 
-> **Baseline:** v0.5.8 reference compiler / v0.5.9 release-candidate preparation
+> **Baseline:** v0.6.0 development after the frozen v0.5.9 reference-compiler RC
 
 This page describes unsupported or intentionally deferred behavior in the current C reference
 compiler. Draft roadmap and tooling documents describe future contracts; they do not imply that

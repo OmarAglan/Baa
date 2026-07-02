@@ -10,6 +10,27 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Added
 
+- **Explicit external declarations**:
+  - Added the Arabic `خارجي` qualifier for top-level function prototypes, scalar globals, and
+    fixed-size global arrays.
+  - External globals emit no storage, may be repeated with matching types/shapes, and merge with
+    exactly one compatible definition.
+  - Added single-file, multi-file, parser, semantic-conflict, and linker coverage.
+
+### Changed
+
+- **Global declaration rules**:
+  - `خارجي` is now a reserved keyword and is rejected in local declarations, initializers,
+    function bodies, and combinations with `ساكن`.
+  - Advanced `master` metadata and versioned documentation to 0.6.0 while preserving the
+    historical v0.5.9 freeze index.
+
+## [0.5.9] - 2026-06-29
+
+**Reference Compiler Release Candidate**
+
+### Added
+
 - **C reference-compiler policy gate**:
   - Added `scripts/check_reference_compiler_policy.py` to reject bootstrap-compiler
     requirements and Baa-written compiler inputs in normal build entrypoints.

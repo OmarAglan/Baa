@@ -1,6 +1,6 @@
 # Baa User Guide
 
-> **Version:** 0.5.9 | [← README](../README.md) | [Language Spec →](LANGUAGE.md)
+> **Version:** 0.6.0 | [← README](../README.md) | [Language Spec →](LANGUAGE.md)
 
 Welcome to Baa (باء)! This guide will help you write your first Arabic computer program and use the Baa compiler toolchain.
 
@@ -407,7 +407,9 @@ Use header files for function prototypes and shared declarations.
 - Top-level functions are externally visible by default and should be exposed through prototypes in `.baahd`.
 - A header prototype is a declaration only; it does not create a second function body.
 - Top-level `ساكن` variables and arrays are file-local and do not collide across files.
-- Shared cross-file state via global variables is not a stable public pattern yet because the language still lacks a separate `extern`-style variable declaration.
+- `خارجي` declares functions, scalar globals, and fixed-size global arrays whose single matching
+  definition is supplied by another source file. It is top-level only, emits no storage, accepts
+  no initializer/body, and cannot be combined with `ساكن`.
 
 ### Compilation Workflow
 

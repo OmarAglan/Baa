@@ -1,6 +1,6 @@
 # IR Developer Guide
 
-> **Version:** 0.5.9 | [← Internals](INTERNALS.md) | [IR Specification →](BAA_IR_SPECIFICATION.md)
+> **Version:** 0.6.0 | [← Internals](INTERNALS.md) | [IR Specification →](BAA_IR_SPECIFICATION.md)
 
 This guide is for contributors working on the Baa IR and mid-end.
 
@@ -23,7 +23,7 @@ typedef struct IRModule {
     char* name;                    // Module name (source file)
     IRArena arena;                 // Arena allocator for all IR objects (ساحة ذاكرة IR)
     IRType* cached_i8_ptr_type;    // Cache for common types
-    IRGlobal* globals;             // Linked list of global variables
+    IRGlobal* globals;             // Linked list of global variables/declarations
     int global_count;
     IRFunc* funcs;                 // Linked list of functions
     int func_count;
@@ -547,6 +547,11 @@ ir_builder_free(builder);
 | [`ir_builder_const_baa_string()`](src/ir_builder.h:523) | `IRValue* ir_builder_const_baa_string(IRBuilder* builder, const char* str)` | Create a Baa string constant |
 
 ### Global Variables
+
+`IRGlobal` يمثل التخزين العام الفعلي وتصريحات الرموز الخارجية معاً. عند ضبط
+`is_extern` يكون الرمز مرجعاً خارجياً فقط: يبقى قابلاً للاستخدام في الأحمال
+والعناوين، لكن مولّد البيانات يتخطاه ولا يكتب له مهيئاً أو مساحة تخزين.
+تصريحات `خارجي` النصية تُكتب بصيغة `external global @name : type`.
 
 | Function | Signature | Description |
 |----------|-----------|-------------|

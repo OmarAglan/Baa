@@ -3,8 +3,8 @@
     parser_parse_decl_qualifiers(&decl_q);
 
     if (parser_current_is_type_alias_keyword() && parser.next.type == TOKEN_IDENTIFIER) {
-        if (decl_q.is_const || decl_q.is_static) {
-            error_report(parser.current, "تعريف اسم النوع البديل لا يقبل 'ثابت' أو 'ساكن'.");
+        if (decl_q.is_const || decl_q.is_static || decl_q.is_extern) {
+            error_report(parser.current, "تعريف اسم النوع البديل لا يقبل 'ثابت' أو 'ساكن' أو 'خارجي'.");
             return parse_type_alias_declaration(false);
         }
         return parse_type_alias_declaration(true);
@@ -12,6 +12,11 @@
 
     bool is_const = decl_q.is_const;
     bool is_static = decl_q.is_static;
+    bool is_extern = decl_q.is_extern;
+
+    if (is_extern && is_static) {
+        error_report(decl_q.tok_static, "لا يمكن الجمع بين 'خارجي' و'ساكن' في التصريح نفسه.");
+    }
 
     if (parser_current_starts_type()) {
         Token tok_type = parser.current;
@@ -38,8 +43,8 @@
             parser_funcsig_free(type_func_sig);
             type_func_sig = NULL;
 
-            if (is_const || is_static) {
-                error_report(parser.current, "لا يمكن وسم تعريف نوع بـ 'ثابت' أو 'ساكن'.");
+            if (is_const || is_static || is_extern) {
+                error_report(parser.current, "لا يمكن وسم تعريف نوع بـ 'ثابت' أو 'ساكن' أو 'خارجي'.");
             }
 
             Token tok_name = tok_type;
@@ -345,6 +350,10 @@
                 eat(TOKEN_DOT);
                 is_proto = true;
             } else {
+                if (is_extern) {
+                    error_report(decl_q.tok_extern,
+                                 "تصريح الدالة 'خارجي' يجب أن ينتهي بنقطة دون جسم.");
+                }
                 body = parse_block();
                 is_proto = false;
             }
@@ -367,6 +376,7 @@
             func->data.func_def.body = body;
             func->data.func_def.is_variadic = is_variadic;
             func->data.func_def.is_prototype = is_proto;
+            func->data.func_def.is_extern = is_extern;
             free(type_name);
             return func;
         }
@@ -397,6 +407,9 @@
             int init_count = 0;
             bool has_init = false;
             Node* init_vals = parse_array_initializer_list(&init_count, &has_init);
+            if (is_extern && has_init) {
+                error_report(decl_q.tok_extern, "لا يقبل تصريح المصفوفة 'خارجي' تهيئة.");
+            }
 
             eat(TOKEN_DOT);
 
@@ -422,6 +435,7 @@
             arr->data.array_decl.is_global = true;
             arr->data.array_decl.is_const = is_const;
             arr->data.array_decl.is_static = is_static;
+            arr->data.array_decl.is_extern = is_extern;
             arr->data.array_decl.has_init = has_init;
             arr->data.array_decl.init_values = init_vals;
             arr->data.array_decl.init_count = init_count;
@@ -431,10 +445,13 @@
 
         // متغير عام
         if (dt == TYPE_STRUCT || dt == TYPE_UNION) {
-            if (is_const) {
+            if (is_const && !is_extern) {
                 error_report(parser.current, "لا يمكن تعريف نوع مركب ثابت بدون تهيئة (غير مدعوم حالياً).");
             }
             if (parser.current.type == TOKEN_ASSIGN) {
+                if (is_extern) {
+                    error_report(decl_q.tok_extern, "لا يقبل التصريح 'خارجي' تهيئة.");
+                }
                 error_report(parser.current, "تهيئة الأنواع المركبة العامة بالصيغة '=' غير مدعومة حالياً.");
                 eat(TOKEN_ASSIGN);
                 (void)parse_expression();
@@ -460,11 +477,15 @@
             var->data.var_decl.is_global = true;
             var->data.var_decl.is_const = is_const;
             var->data.var_decl.is_static = is_static;
+            var->data.var_decl.is_extern = is_extern;
             return var;
         }
 
         Node* expr = NULL;
         if (parser.current.type == TOKEN_ASSIGN) {
+            if (is_extern) {
+                error_report(decl_q.tok_extern, "لا يقبل التصريح 'خارجي' تهيئة.");
+            }
             eat(TOKEN_ASSIGN);
             expr = parse_expression();
         }
@@ -489,6 +510,7 @@
         var->data.var_decl.is_global = true;
         var->data.var_decl.is_const = is_const;
         var->data.var_decl.is_static = is_static;
+        var->data.var_decl.is_extern = is_extern;
         return var;
     }
     

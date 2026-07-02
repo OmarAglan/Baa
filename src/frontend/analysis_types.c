@@ -695,7 +695,7 @@ static void check_unused_local_variables_range(int start, int end) {
  */
 static void check_unused_global_variables(void) {
     for (int i = 0; i < global_count; i++) {
-        if (!global_symbols[i].is_used) {
+        if (!global_symbols[i].is_used && !global_symbols[i].is_extern) {
             warning_report(WARN_UNUSED_VARIABLE,
                 global_symbols[i].decl_file,
                 global_symbols[i].decl_line,
@@ -705,4 +705,3 @@ static void check_unused_global_variables(void) {
         }
     }
 }
-

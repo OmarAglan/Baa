@@ -24,14 +24,16 @@ static bool parser_current_is_type_alias_keyword(void)
 
 static bool parser_is_decl_qualifier(BaaTokenType type)
 {
-    return type == TOKEN_CONST || type == TOKEN_STATIC;
+    return type == TOKEN_CONST || type == TOKEN_STATIC || type == TOKEN_EXTERN;
 }
 
 typedef struct {
     bool is_const;
     bool is_static;
+    bool is_extern;
     Token tok_const;
     Token tok_static;
+    Token tok_extern;
 } ParserDeclQualifiers;
 
 static void parser_parse_decl_qualifiers(ParserDeclQualifiers* out_q)
@@ -60,6 +62,17 @@ static void parser_parse_decl_qualifiers(ParserDeclQualifiers* out_q)
                 out_q->tok_static = parser.current;
             }
             eat(TOKEN_STATIC);
+            continue;
+        }
+
+        if (parser.current.type == TOKEN_EXTERN) {
+            if (out_q->is_extern) {
+                error_report(parser.current, "تكرار 'خارجي' غير مسموح.");
+            } else {
+                out_q->is_extern = true;
+                out_q->tok_extern = parser.current;
+            }
+            eat(TOKEN_EXTERN);
             continue;
         }
     }
@@ -611,14 +624,14 @@ static bool parser_current_starts_declaration_anchor(void)
 {
     if (parser_current_is_type_alias_keyword() && parser.next.type == TOKEN_IDENTIFIER) return true;
     if (parser_current_starts_type()) return true;
-    return parser.current.type == TOKEN_CONST || parser.current.type == TOKEN_STATIC;
+    return parser_is_decl_qualifier(parser.current.type);
 }
 
 static bool parser_current_starts_statement_anchor(void)
 {
     if (parser_current_starts_type()) return true;
     if (parser_current_is_type_alias_keyword()) return true;
-    if (parser.current.type == TOKEN_CONST || parser.current.type == TOKEN_STATIC) return true;
+    if (parser_is_decl_qualifier(parser.current.type)) return true;
     if (parser.current.type == TOKEN_IDENTIFIER) return true;
 
     switch (parser.current.type) {

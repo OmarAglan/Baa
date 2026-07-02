@@ -512,12 +512,17 @@ static void ir_text_write_func(FILE* out, IRFunc* func) {
 static void ir_text_write_global(FILE* out, IRGlobal* g) {
     if (!out || !g) return;
 
+    if (g->is_extern) fputs("external ", out);
     if (g->is_internal) fputs("internal ", out);
     if (g->is_const) fputs("const ", out);
     fputs("global @", out);
     fputs(g->name ? g->name : "???", out);
-    fputs(" = ", out);
+    fputs(g->is_extern ? " : " : " = ", out);
     ir_text_write_type(out, g->type);
+    if (g->is_extern) {
+        fputc('\n', out);
+        return;
+    }
     fputc(' ', out);
 
     if (g->type && g->type->kind == IR_TYPE_ARRAY) {

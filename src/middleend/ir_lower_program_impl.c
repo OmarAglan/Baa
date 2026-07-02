@@ -320,6 +320,9 @@ IRModule* ir_lower_program(Node* program, const char* module_name,
                                                    decl->data.array_decl.is_const ? 1 : 0);
             if (!g) continue;
             g->is_internal = decl->data.array_decl.is_static ? true : false;
+            g->is_extern = decl->data.array_decl.is_extern ? true : false;
+
+            if (g->is_extern) continue;
 
             g->has_init_list = decl->data.array_decl.has_init ? true : false;
 
@@ -370,6 +373,7 @@ IRModule* ir_lower_program(Node* program, const char* module_name,
                                                        decl->data.var_decl.is_const ? 1 : 0);
                 if (g) {
                     g->is_internal = decl->data.var_decl.is_static ? true : false;
+                    g->is_extern = decl->data.var_decl.is_extern ? true : false;
                 }
                 continue;
             }
@@ -377,6 +381,12 @@ IRModule* ir_lower_program(Node* program, const char* module_name,
             IRType* gtype = ir_type_from_datatype_ex(module,
                                                      decl->data.var_decl.type,
                                                      decl->data.var_decl.func_sig);
+            if (decl->data.var_decl.is_extern) {
+                IRGlobal* g = ir_builder_create_global(builder, decl->data.var_decl.name, gtype,
+                                                       decl->data.var_decl.is_const ? 1 : 0);
+                if (g) g->is_extern = true;
+                continue;
+            }
             IRValue* init = ir_lower_global_init_value(builder, decl->data.var_decl.expression, gtype);
 
             IRGlobal* g = ir_builder_create_global_init(builder, decl->data.var_decl.name, gtype, init,

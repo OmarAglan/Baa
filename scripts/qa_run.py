@@ -257,6 +257,13 @@ def _run_multifile_smoke(baa: Path, log_dir: Path) -> tuple[bool, list[StepResul
                 "tests/fixtures/multifile_visibility_b.baa",
             ],
         ),
+        (
+            "multifile-extern",
+            [
+                "tests/fixtures/extern_api_main.baa",
+                "tests/fixtures/extern_api_impl.baa",
+            ],
+        ),
     ]
     try:
         overall_ok = True

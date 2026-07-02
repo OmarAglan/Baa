@@ -388,6 +388,7 @@ typedef struct IRGlobal {
     bool has_init_list;         // هل وُجدت '=' في المصدر (حتى لو كانت القائمة فارغة)
     bool is_const;              // Is this a constant?
     bool is_internal;           // هل الربط داخلي على مستوى الملف؟
+    bool is_extern;             // هل هو تصريح خارجي بلا تخزين محلي؟
     struct IRGlobal* next;
 } IRGlobal;
 

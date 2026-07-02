@@ -545,11 +545,17 @@ IRModule* ir_text_read_module_file(const char* filename) {
         }
 
         // global
-        if (strncmp(p, "const global ", 13) == 0 ||
+        if (strncmp(p, "external ", 9) == 0 ||
+            strncmp(p, "const global ", 13) == 0 ||
             strncmp(p, "global ", 7) == 0 ||
             strncmp(p, "internal ", 9) == 0) {
+            int is_extern = 0;
             int is_internal = 0;
             int is_const = 0;
+            if (ir_text_match(&p, "external")) {
+                is_extern = 1;
+                ir_text_skip_ws(&p);
+            }
             if (ir_text_match(&p, "internal")) {
                 is_internal = 1;
                 ir_text_skip_ws(&p);
@@ -564,9 +570,27 @@ IRModule* ir_text_read_module_file(const char* filename) {
             char* name = ir_text_parse_token(&p);
             if (!name) { ok = 0; free(line); break; }
             ir_text_skip_ws(&p);
-            if (!ir_text_match(&p, "=")) { free(name); ok = 0; free(line); break; }
+            if (is_extern) {
+                if (!ir_text_match(&p, ":")) { free(name); ok = 0; free(line); break; }
+            } else if (!ir_text_match(&p, "=")) {
+                free(name);
+                ok = 0;
+                free(line);
+                break;
+            }
             IRType* t = ir_text_parse_type_rec(&p);
             if (!t) { free(name); ok = 0; free(line); break; }
+
+            if (is_extern) {
+                IRGlobal* g = ir_global_new(name, t, is_const);
+                free(name);
+                if (!g) { ok = 0; free(line); break; }
+                g->is_extern = true;
+                g->is_internal = is_internal ? true : false;
+                ir_module_add_global(module, g);
+                free(line);
+                continue;
+            }
 
             if (t->kind == IR_TYPE_ARRAY)
             {

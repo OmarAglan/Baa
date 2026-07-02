@@ -661,6 +661,7 @@ Token lexer_next_token(Lexer* l) {
         else if (strcmp(word, "حجم") == 0) token.type = TOKEN_SIZEOF;
         else if (strcmp(word, "ثابت") == 0) token.type = TOKEN_CONST;
         else if (strcmp(word, "ساكن") == 0) token.type = TOKEN_STATIC;
+        else if (strcmp(word, "خارجي") == 0) token.type = TOKEN_EXTERN;
         else if (strcmp(word, "إذا") == 0) token.type = TOKEN_IF;
         else if (strcmp(word, "وإلا") == 0) token.type = TOKEN_ELSE;
         else if (strcmp(word, "طالما") == 0) token.type = TOKEN_WHILE;

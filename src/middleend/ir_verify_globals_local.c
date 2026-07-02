@@ -19,6 +19,20 @@ static void ir_verify_globals(IRVerifyDiag* diag, IRModule* module) {
                       ir_safe_str(g->name));
         }
 
+        if (g->is_extern) {
+            if (g->is_internal) {
+                ir_report(diag, module, NULL, NULL, NULL,
+                          "المتغير العام الخارجي @%s لا يمكن أن يكون داخلي الربط.",
+                          ir_safe_str(g->name));
+            }
+            if (g->init || g->init_elems || g->init_elem_count != 0 || g->has_init_list) {
+                ir_report(diag, module, NULL, NULL, NULL,
+                          "التصريح العام الخارجي @%s لا يجب أن يملك تهيئة.",
+                          ir_safe_str(g->name));
+            }
+            continue;
+        }
+
         // مصفوفة عامة: تحقق من قائمة التهيئة
         if (g->type->kind == IR_TYPE_ARRAY) {
             IRType* elem_t = g->type->data.array.element;

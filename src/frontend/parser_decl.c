@@ -445,16 +445,17 @@
 
         // متغير عام
         if (dt == TYPE_STRUCT || dt == TYPE_UNION) {
-            if (is_const && !is_extern) {
-                error_report(parser.current, "لا يمكن تعريف نوع مركب ثابت بدون تهيئة (غير مدعوم حالياً).");
-            }
+            int init_count = 0;
+            bool has_init = false;
+            Node* init_vals = NULL;
             if (parser.current.type == TOKEN_ASSIGN) {
                 if (is_extern) {
                     error_report(decl_q.tok_extern, "لا يقبل التصريح 'خارجي' تهيئة.");
                 }
-                error_report(parser.current, "تهيئة الأنواع المركبة العامة بالصيغة '=' غير مدعومة حالياً.");
-                eat(TOKEN_ASSIGN);
-                (void)parse_expression();
+                init_vals = parse_struct_initializer_list(&init_count, &has_init);
+            }
+            if (is_const && !is_extern && !has_init) {
+                error_report(parser.current, "الثابت المركب يجب تهيئته.");
             }
             eat(TOKEN_DOT);
 
@@ -474,6 +475,8 @@
             var->data.var_decl.ptr_depth = ptr_depth;
             var->data.var_decl.func_sig = type_func_sig;
             var->data.var_decl.expression = NULL;
+            var->data.var_decl.struct_init_values = init_vals;
+            var->data.var_decl.struct_init_count = init_count;
             var->data.var_decl.is_global = true;
             var->data.var_decl.is_const = is_const;
             var->data.var_decl.is_static = is_static;
@@ -507,6 +510,8 @@
         var->data.var_decl.ptr_depth = ptr_depth;
         var->data.var_decl.func_sig = type_func_sig;
         var->data.var_decl.expression = expr;
+        var->data.var_decl.struct_init_values = NULL;
+        var->data.var_decl.struct_init_count = 0;
         var->data.var_decl.is_global = true;
         var->data.var_decl.is_const = is_const;
         var->data.var_decl.is_static = is_static;

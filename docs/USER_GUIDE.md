@@ -678,9 +678,7 @@ Group related data using `هيكل` (structs), `تعداد` (enums), and `اتح
 }
 
 صحيح الرئيسية() {
-    هيكل خادم خ.
-    خ:رقم = ١٠٤.
-    خ:حالة = حالة_النظام:يعمل.
+    هيكل خادم خ = { رقم: ١٠٤، حالة: حالة_النظام:يعمل }.
     
     إذا (خ:حالة == حالة_النظام:يعمل) {
         اطبع "الخادم يعمل!".
@@ -690,6 +688,10 @@ Group related data using `هيكل` (structs), `تعداد` (enums), and `اتح
     إرجع ٠.
 }
 ```
+
+Local `هيكل` values can be initialized with named fields using `{ field: value }`.
+Fields omitted from the initializer are zeroed. Static/global struct field initializers are
+still deferred.
 
 ### Static Variables
 

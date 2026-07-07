@@ -199,6 +199,8 @@ static Node* parse_array_initializer_list(int* out_count, bool* out_has_init) {
     return head;
 }
 
+#include "parser_struct_init.inc"
+
 /**
  * @brief تحليل تعريف اسم نوع بديل على المستوى العام.
  *
@@ -773,8 +775,12 @@ Node* parse_statement() {
 
         // تعريف هيكل (محلي): هيكل <T> <name>.
         if (dt == TYPE_STRUCT || dt == TYPE_UNION) {
-            if (is_const) {
-                error_report(decl_q.tok_const, "لا يمكن تعريف نوع مركب ثابت بدون تهيئة (غير مدعوم حالياً).");
+            int init_count = 0;
+            bool has_init = false;
+            Node* init_vals = parse_struct_initializer_list(&init_count, &has_init);
+
+            if (is_const && !has_init) {
+                error_report(decl_q.tok_const, "الثابت المركب يجب تهيئته.");
             }
             eat(TOKEN_DOT);
 
@@ -788,6 +794,8 @@ Node* parse_statement() {
             stmt->data.var_decl.ptr_depth = ptr_depth;
             stmt->data.var_decl.func_sig = func_sig;
             stmt->data.var_decl.expression = NULL;
+            stmt->data.var_decl.struct_init_values = init_vals;
+            stmt->data.var_decl.struct_init_count = init_count;
             stmt->data.var_decl.is_global = false;
             stmt->data.var_decl.is_const = is_const;
             stmt->data.var_decl.is_static = is_static;
@@ -818,6 +826,8 @@ Node* parse_statement() {
         stmt->data.var_decl.ptr_depth = ptr_depth;
         stmt->data.var_decl.func_sig = func_sig;
         stmt->data.var_decl.expression = expr;
+        stmt->data.var_decl.struct_init_values = NULL;
+        stmt->data.var_decl.struct_init_count = 0;
         stmt->data.var_decl.is_global = false;
         stmt->data.var_decl.is_const = is_const;
         stmt->data.var_decl.is_static = is_static;

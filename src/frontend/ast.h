@@ -51,6 +51,7 @@ typedef enum {
     // الوصول للأعضاء/المؤهلات (v0.3.4)
     NODE_MEMBER_ACCESS, // <expr>:<member> (عضو هيكل أو قيمة تعداد)
     NODE_MEMBER_ASSIGN, // <member_access> = <expr>.
+    NODE_STRUCT_FIELD_INIT, // عنصر تهيئة حقل هيكل: { حقل: قيمة }
     NODE_DEREF_ASSIGN,  // *ptr = <expr>.
     
     // التعبيرات (Expressions)
@@ -206,6 +207,8 @@ typedef struct Node {
             int struct_size;          // حجم الهيكل بالبايت عند TYPE_STRUCT (يُملأ دلالياً)
             int struct_align;         // محاذاة الهيكل عند TYPE_STRUCT (يُملأ دلالياً)
             struct Node* expression; // القيمة الابتدائية (اختياري)
+            struct Node* struct_init_values; // قائمة NODE_STRUCT_FIELD_INIT لتهيئة حقول الهيكل
+            int struct_init_count;     // عدد حقول تهيئة الهيكل المعطاة
             bool is_global;          // هل هو متغير عام؟
             bool is_const;           // هل هو ثابت (immutable)؟
             bool is_static;          // هل مدة تخزينه ساكنة؟
@@ -276,6 +279,20 @@ typedef struct Node {
             struct Node* target;     // NODE_MEMBER_ACCESS
             struct Node* value;      // RHS expression
         } member_assign;
+
+        // عنصر تهيئة حقل هيكل داخل قائمة { حقل: قيمة }.
+        struct {
+            char* field_name;        // اسم الحقل المطلوب تهيئته
+            struct Node* value;      // التعبير الابتدائي للحقل
+
+            // نتائج التحليل الدلالي:
+            int field_offset;        // إزاحة الحقل بالبايت من بداية الهيكل
+            DataType field_type;     // نوع الحقل
+            char* field_type_name;   // اسم النوع عند TYPE_ENUM/TYPE_STRUCT/TYPE_UNION
+            DataType field_ptr_base_type;   // نوع أساس المؤشر إذا كان الحقل مؤشراً
+            char* field_ptr_base_type_name; // اسم النوع المركب لأساس المؤشر
+            int field_ptr_depth;     // عمق المؤشر إذا كان الحقل مؤشراً
+        } struct_field_init;
 
         // إسناد عبر مؤشر: *ptr = value.
         struct {

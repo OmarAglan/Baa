@@ -1531,7 +1531,7 @@
 
 * \[x] **`خارجي` declarations** — explicit external function, scalar-global, and fixed-array declarations are supported in headers and multi-file builds.
 * \[x] **Global declaration vs definition rules** — matching declarations merge with one definition; conflicting types/shapes and duplicate definitions are rejected.
-* \[ ] **Struct field initialization** — basic named-field initialization for `هيكل` values.
+* \[x] **Struct field initialization** — basic named-field initialization for automatic local `هيكل` values; static/global aggregate initializers remain deferred.
 * \[ ] **Aggregate assignment policy** — either support selected safe cases or reject with precise diagnostics.
 * \[ ] **Const pointer rules** — clarify pointer-to-const vs const-pointer semantics.
 * \[ ] **Better null-pointer diagnostics** — warn or error when misuse is statically obvious.

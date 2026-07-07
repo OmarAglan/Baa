@@ -16,6 +16,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
   - External globals emit no storage, may be repeated with matching types/shapes, and merge with
     exactly one compatible definition.
   - Added single-file, multi-file, parser, semantic-conflict, and linker coverage.
+- **Struct field initialization**:
+  - Added named-field initialization for automatic local `هيكل` values with `{ حقل: قيمة }`.
+  - Omitted fields are zero-initialized, duplicate/unknown fields are rejected, and static/global
+    aggregate field initializers remain explicitly deferred.
 
 ### Changed
 

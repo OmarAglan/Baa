@@ -49,6 +49,8 @@ static void analyze_statements_with_dead_code_check(Node* statements, const char
     }
 }
 
+#include "analysis_struct_init.inc"
+
 static void analyze_node(Node* node) {
     if (!node) return;
 
@@ -172,6 +174,7 @@ static void analyze_node(Node* node) {
                         (void)struct_compute_layout(sd);
                         node->data.var_decl.struct_size = sd->size;
                         node->data.var_decl.struct_align = sd->align;
+                        analyze_struct_field_initializers(node, sd, has_static_storage);
                     }
                 } else {
                     UnionDef* ud = union_lookup_def(declTypeName);
@@ -182,13 +185,23 @@ static void analyze_node(Node* node) {
                         node->data.var_decl.struct_size = ud->size;
                         node->data.var_decl.struct_align = ud->align;
                     }
+                    if (node->data.var_decl.struct_init_values) {
+                        semantic_error(node, "تهيئة حقول الاتحاد غير مدعومة حالياً.");
+                        for (Node* item = node->data.var_decl.struct_init_values; item; item = item->next) {
+                            if (item->type == NODE_STRUCT_FIELD_INIT && item->data.struct_field_init.value) {
+                                (void)infer_type(item->data.struct_field_init.value);
+                            }
+                        }
+                    }
                 }
 
                 if (node->data.var_decl.expression) {
                     semantic_error(node, "تهيئة النوع المركب بهذه الصيغة غير مدعومة حالياً.");
                 }
-                if (node->data.var_decl.is_const && !node->data.var_decl.is_extern) {
-                    semantic_error(node, "لا يمكن تعريف نوع مركب ثابت بدون تهيئة (غير مدعوم حالياً).");
+                if (node->data.var_decl.is_const &&
+                    !node->data.var_decl.is_extern &&
+                    !node->data.var_decl.struct_init_values) {
+                    semantic_error(node, "الثابت المركب يجب تهيئته.");
                 }
             }
             else {

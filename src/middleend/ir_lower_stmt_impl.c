@@ -175,6 +175,52 @@ static void lower_array_decl(IRLowerCtx* ctx, Node* stmt) {
     }
 }
 
+static void lower_zero_aggregate_bytes(IRLowerCtx* ctx, Node* loc, IRValue* base_i8, int byte_count)
+{
+    if (!ctx || !ctx->builder || !base_i8 || byte_count <= 0) return;
+
+    IRType* ptr_i8_t = ir_type_ptr(IR_TYPE_I8_T);
+    for (int i = 0; i < byte_count; i++) {
+        ir_lower_set_loc(ctx->builder, loc);
+        IRValue* idx = ir_value_const_int((int64_t)i, IR_TYPE_I64_T);
+        int p = ir_builder_emit_ptr_offset(ctx->builder, ptr_i8_t, base_i8, idx);
+        ir_builder_emit_store(ctx->builder,
+                              ir_value_const_int(0, IR_TYPE_I8_T),
+                              ir_value_reg(p, ptr_i8_t));
+    }
+}
+
+static void lower_struct_field_initializer(IRLowerCtx* ctx, Node* item, IRValue* base_i8)
+{
+    if (!ctx || !ctx->builder || !item || item->type != NODE_STRUCT_FIELD_INIT || !base_i8) return;
+
+    Node* value = item->data.struct_field_init.value;
+    if (!value) return;
+
+    IRModule* m = ctx->builder->module;
+    if (m) ir_module_set_current(m);
+
+    IRType* ptr_i8_t = ir_type_ptr(IR_TYPE_I8_T);
+    IRValue* idx = ir_value_const_int((int64_t)item->data.struct_field_init.field_offset, IR_TYPE_I64_T);
+    int byte_ptr_reg = ir_builder_emit_ptr_offset(ctx->builder, ptr_i8_t, base_i8, idx);
+    IRValue* byte_ptr = ir_value_reg(byte_ptr_reg, ptr_i8_t);
+
+    IRType* field_t = ir_type_from_datatype(m, item->data.struct_field_init.field_type);
+    if (!field_t || field_t->kind == IR_TYPE_VOID) field_t = IR_TYPE_I64_T;
+    IRType* field_ptr_t = ir_type_ptr(field_t);
+    int field_ptr_reg = ir_builder_emit_cast(ctx->builder, byte_ptr, field_ptr_t);
+    IRValue* field_ptr = ir_value_reg(field_ptr_reg, field_ptr_t);
+
+    ir_lower_set_loc(ctx->builder, item);
+    IRValue* rhs = lower_expr(ctx, value);
+    if (rhs && rhs->type && !ir_types_equal(rhs->type, field_t)) {
+        int cv = ir_builder_emit_cast(ctx->builder, rhs, field_t);
+        rhs = ir_value_reg(cv, field_t);
+    }
+
+    ir_builder_emit_store(ctx->builder, rhs, field_ptr);
+}
+
 static void lower_var_decl(IRLowerCtx* ctx, Node* stmt) {
     if (!ctx || !ctx->builder || !stmt) return;
 
@@ -253,6 +299,18 @@ static void lower_var_decl(IRLowerCtx* ctx, Node* stmt) {
         int ptr_reg = ir_builder_emit_alloca(ctx->builder, bytes_t);
         ir_lower_tag_last_inst(ctx->builder, IR_OP_ALLOCA, ptr_reg, stmt->data.var_decl.name);
         ir_lower_bind_local(ctx, stmt->data.var_decl.name, ptr_reg, bytes_t, TYPE_INT, NULL, 0);
+
+        if (stmt->data.var_decl.struct_init_values) {
+            IRType* ptr_i8_t = ir_type_ptr(IR_TYPE_I8_T);
+            IRValue* storage_ptr = ir_value_reg(ptr_reg, ir_type_ptr(bytes_t));
+            int base_reg = ir_builder_emit_cast(ctx->builder, storage_ptr, ptr_i8_t);
+            IRValue* base_i8 = ir_value_reg(base_reg, ptr_i8_t);
+
+            lower_zero_aggregate_bytes(ctx, stmt, base_i8, n);
+            for (Node* item = stmt->data.var_decl.struct_init_values; item; item = item->next) {
+                lower_struct_field_initializer(ctx, item, base_i8);
+            }
+        }
         return;
     }
 
@@ -920,4 +978,3 @@ static void lower_inline_asm_stmt(IRLowerCtx* ctx, Node* stmt)
     ir_builder_emit_call_void(ctx->builder, BAA_INLINE_ASM_PSEUDO_CALL, args, arg_count);
     free(args);
 }
-

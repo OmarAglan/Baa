@@ -552,6 +552,8 @@ Baa is statically typed. All variables must be declared with their type.
 - **فهرسة المؤشر:** `م[i]` مدعومة وهي سكر نحوي لـ `*(م + i)` (تُسمح فقط عندما يكون نوع الأساس قابلاً للحساب؛ `عدم*` و `هيكل*` و `اتحاد*` غير مسموحة عند عمق ١).
 - المقارنة بين المؤشرات: `==` و `!=` (مع السماح بـ `عدم`).
 - فك الإشارة يتطلب مؤشراً صالحاً، وأخذ العنوان يتطلب قيمة قابلة للإسناد (L-value).
+- `ثابت T* م` يعني أن المتغير `م` نفسه ثابت ولا يمكن إعادة إسناده؛ لا توجد صيغة
+  `pointer-to-const` بعد، لذلك يُرفض `&` على قيمة `ثابت` كي لا تتحول إلى مؤشر قابل للكتابة.
 - مؤشرات الدوال مدعومة عبر النوع `دالة(...) -> ...` (انظر 5.6).
 
 **Example:**
@@ -661,6 +663,8 @@ Use the `ثابت` keyword before the type to declare a constant.
 | **Must be initialized (automatic scalars)** | Scalar constants في التخزين التلقائي (غير `ساكن` وغير عامة) تتطلب قيمة ابتدائية |
 | **Cannot be reassigned** | Attempting to reassign produces a semantic error |
 | **Array elements immutable** | Elements of constant arrays cannot be modified |
+| **Const pointer variable** | `ثابت T* م` freezes the pointer variable `م`; it does not make `*م` read-only |
+| **No pointer-to-const yet** | Taking the address of a `ثابت` object as a mutable pointer is rejected until pointer-to-const types exist |
 | **Functions cannot be const** | The `ثابت` keyword applies only to variables |
 
 ---

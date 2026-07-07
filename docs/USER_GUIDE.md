@@ -736,6 +736,10 @@ Use `&` to get the address of a variable, and `*` to dereference it. `عدم` re
 }
 ```
 
+`ثابت T*` makes the pointer variable itself immutable; it does not make `*pointer`
+read-only. Baa does not yet have pointer-to-const types, so taking the address of a `ثابت`
+object as a mutable pointer is rejected.
+
 ### Type Casting
 
 Use `كـ<النوع>(...)` for explicit conversions between numeric types or pointers.

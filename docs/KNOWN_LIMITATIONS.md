@@ -46,6 +46,13 @@ C-compatible behavior.
 - Indirect calls use a function-pointer identifier as the callee; arbitrary callee expressions
   are not supported.
 
+### Pointers and const
+
+- Pointer-to-const types are not supported yet. `ثابت T*` means the pointer variable itself is
+  immutable, while the pointed-to storage remains mutable if it was not declared `ثابت`.
+- Taking the address of a `ثابت` object as a mutable pointer is rejected to preserve immutability
+  until pointer-to-const metadata exists.
+
 ### Numeric and text behavior
 
 - `عشري٣٢` is currently a source-level alias of `عشري`; both use the current f64

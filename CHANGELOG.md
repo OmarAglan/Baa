@@ -32,6 +32,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
   - Whole-aggregate copy assignment is now explicitly rejected for variables, members, array
     elements, and dereferenced aggregate pointers with a consistent Arabic diagnostic directing
     users to update fields through `:`.
+- **Const pointer rules**:
+  - Clarified that `ثابت T*` means an immutable pointer variable, not a pointer-to-const.
+  - Taking the address of a `ثابت` object as a mutable pointer is now rejected until
+    pointer-to-const types are added.
 
 ## [0.5.9] - 2026-06-29
 

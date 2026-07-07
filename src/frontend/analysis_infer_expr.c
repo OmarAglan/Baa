@@ -48,6 +48,32 @@
 }
 
 /**
+ * @brief هل أخذ العنوان سيحوّل قيمة ثابتة إلى مؤشر قابل للكتابة؟
+ */
+static bool address_target_is_const_lvalue(Node* target)
+{
+    if (!target) return false;
+
+    if (target->type == NODE_VAR_REF) {
+        Symbol* sym = lookup(target->data.var_ref.name, true);
+        return sym ? sym->is_const : false;
+    }
+
+    if (target->type == NODE_MEMBER_ACCESS) {
+        resolve_member_access(target);
+        return target->data.member_access.is_struct_member &&
+               target->data.member_access.member_is_const;
+    }
+
+    if (target->type == NODE_ARRAY_ACCESS) {
+        Symbol* sym = lookup(target->data.array_op.name, true);
+        return sym ? sym->is_const : false;
+    }
+
+    return false;
+}
+
+/**
  * @brief التحقق الموحد من معاملات استدعاء دالة مستخدم.
  */
 static void analyze_user_function_call_args(Node* call_node, FuncSymbol* fs, Node* args)
@@ -758,6 +784,11 @@ static DataType infer_type_internal(Node* node) {
                     semantic_error(node, "أخذ العنوان '&' يتطلب قيمة قابلة للإسناد.");
                 }
 
+                if (address_target_is_const_lvalue(target)) {
+                    semantic_error(node,
+                                   "لا يمكن أخذ عنوان قيمة ثابتة كمؤشر قابل للكتابة؛ مؤشرات إلى ثابت غير مدعومة حالياً.");
+                }
+
                 if (ot == TYPE_STRUCT || ot == TYPE_UNION || ot == TYPE_VOID) {
                     semantic_error(node, "لا يمكن أخذ عنوان هذا النوع.");
                     node_set_inferred_ptr(node, TYPE_INT, NULL, 1);
@@ -837,4 +868,3 @@ static DataType infer_type_internal(Node* node) {
             return TYPE_INT;
     }
 }
-

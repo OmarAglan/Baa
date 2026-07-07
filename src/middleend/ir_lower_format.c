@@ -359,6 +359,8 @@ static IRValue* ir_lower_builtin_panic(IRLowerCtx* ctx, Node* call_expr);
 static IRValue* ir_lower_builtin_errno_get(IRLowerCtx* ctx, Node* call_expr);
 static IRValue* ir_lower_builtin_errno_set(IRLowerCtx* ctx, Node* call_expr);
 static IRValue* ir_lower_builtin_errno_text(IRLowerCtx* ctx, Node* call_expr);
+static IRValue* ir_lower_builtin_result_code_success(IRLowerCtx* ctx, Node* call_expr, bool success);
+static IRValue* ir_lower_builtin_result_code_from_bool(IRLowerCtx* ctx, Node* call_expr);
 static IRValue* lower_lvalue_address(IRLowerCtx* ctx, Node* expr, IRType** out_pointee_type);
 
 static bool ir_lower_variadic_extract_type(Node* type_arg, DataType* out_type)
@@ -815,3 +817,57 @@ static IRValue* ir_lower_builtin_errno_text(IRLowerCtx* ctx, Node* call_expr)
     return ir_lower_cstr_to_baa_string_alloc(ctx, call_expr, ir_value_reg(r, i8_ptr_t));
 }
 
+static IRValue* ir_lower_builtin_result_code_success(IRLowerCtx* ctx, Node* call_expr, bool success)
+{
+    if (!ctx || !ctx->builder || !call_expr) return ir_value_const_int(0, IR_TYPE_I1_T);
+
+    Node* a0 = call_expr->data.call.args;
+    if (!a0 || a0->next) {
+        ir_lower_report_error(ctx, call_expr,
+                              success
+                                  ? "استدعاء 'نتيجة_ناجحة' يتطلب معاملاً واحداً."
+                                  : "استدعاء 'نتيجة_فاشلة' يتطلب معاملاً واحداً.");
+        ir_lower_eval_call_args(ctx, call_expr->data.call.args);
+        return ir_value_const_int(0, IR_TYPE_I1_T);
+    }
+
+    IRValue* code = ensure_i64(ctx, lower_expr(ctx, a0));
+    int r = success
+                ? ir_builder_emit_cmp_eq(ctx->builder, code, ir_value_const_int(0, IR_TYPE_I64_T))
+                : ir_builder_emit_cmp_ne(ctx->builder, code, ir_value_const_int(0, IR_TYPE_I64_T));
+    return ir_value_reg(r, IR_TYPE_I1_T);
+}
+
+static IRValue* ir_lower_builtin_result_code_from_bool(IRLowerCtx* ctx, Node* call_expr)
+{
+    if (!ctx || !ctx->builder || !call_expr) return ir_builder_const_i64(1);
+
+    Node* a0 = call_expr->data.call.args;
+    if (!a0 || a0->next) {
+        ir_lower_report_error(ctx, call_expr, "استدعاء 'كود_نتيجة' يتطلب معاملاً واحداً.");
+        ir_lower_eval_call_args(ctx, call_expr->data.call.args);
+        return ir_builder_const_i64(1);
+    }
+
+    IRBuilder* b = ctx->builder;
+    IRType* i64_ptr_t = ir_type_ptr(IR_TYPE_I64_T);
+    IRValue* result_ptr = ir_value_reg(ir_builder_emit_alloca(b, IR_TYPE_I64_T), i64_ptr_t);
+    ir_builder_emit_store(b, ir_value_const_int(1, IR_TYPE_I64_T), result_ptr);
+
+    IRValue* ok = lower_to_bool(ctx, lower_expr(ctx, a0));
+    IRBlock* success = cf_create_block(ctx, "كود_نتيجة_نجاح");
+    IRBlock* done = cf_create_block(ctx, "كود_نتيجة_نهاية");
+    if (!success || !done) return ir_builder_const_i64(1);
+
+    ir_builder_emit_br_cond(b, ok, success, done);
+
+    ir_builder_set_insert_point(b, success);
+    ir_lower_set_loc(b, call_expr);
+    ir_builder_emit_store(b, ir_value_const_int(0, IR_TYPE_I64_T), result_ptr);
+    ir_builder_emit_br(b, done);
+
+    ir_builder_set_insert_point(b, done);
+    ir_lower_set_loc(b, call_expr);
+    int r = ir_builder_emit_load(b, IR_TYPE_I64_T, result_ptr);
+    return ir_value_reg(r, IR_TYPE_I64_T);
+}

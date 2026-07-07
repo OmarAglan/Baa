@@ -58,6 +58,15 @@
         if (strcmp(n, "نص_كود_خطأ") == 0) {
             return ir_lower_builtin_errno_text(ctx, expr);
         }
+        if (strcmp(n, "نتيجة_ناجحة") == 0) {
+            return ir_lower_builtin_result_code_success(ctx, expr, true);
+        }
+        if (strcmp(n, "نتيجة_فاشلة") == 0) {
+            return ir_lower_builtin_result_code_success(ctx, expr, false);
+        }
+        if (strcmp(n, "كود_نتيجة") == 0) {
+            return ir_lower_builtin_result_code_from_bool(ctx, expr);
+        }
     }
 
     // دوال السلاسل المدمجة في v0.3.9 (سلوك C-like مع أسماء عربية).
@@ -80,4 +89,3 @@
             }
         }
     }
-

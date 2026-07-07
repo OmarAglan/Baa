@@ -532,6 +532,9 @@ static const BuiltinErrorFuncSig builtin_error_funcs[] = {
     { "كود_خطأ_النظام",     TYPE_INT,    0, { TYPE_INT,    TYPE_INT } },
     { "ضبط_كود_خطأ_النظام", TYPE_VOID,   1, { TYPE_INT,    TYPE_INT } },
     { "نص_كود_خطأ",         TYPE_STRING, 1, { TYPE_INT,    TYPE_INT } },
+    { "نتيجة_ناجحة",        TYPE_BOOL,   1, { TYPE_INT,    TYPE_INT } },
+    { "نتيجة_فاشلة",        TYPE_BOOL,   1, { TYPE_INT,    TYPE_INT } },
+    { "كود_نتيجة",          TYPE_INT,    1, { TYPE_BOOL,   TYPE_INT } },
 };
 
 DEFINE_BUILTIN_LOOKUP(builtin_lookup_error_func, BuiltinErrorFuncSig, builtin_error_funcs)

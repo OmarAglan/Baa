@@ -51,6 +51,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
     and return owned `نص` snapshots.
   - Added positive backend coverage plus a negative semantic check for invalid
     append text arguments.
+- **Result/error stdlib helpers**:
+  - Added compiler-lowered helpers `نتيجة_ناجحة`, `نتيجة_فاشلة`, and `كود_نتيجة`
+    to bridge `منطقي` success/failure returns with integer status codes.
+  - Documented the stdlib convention: `صواب` means success for boolean helpers,
+    while `كود_نجاح` (`0`) means success for integer status helpers.
+  - Added positive backend coverage plus a negative semantic check for invalid
+    result-code arguments.
 - **Path stdlib API**:
   - Added compiler-lowered owned-string helpers: `ضم_مسار`, `مجلد_مسار`,
     `اسم_ملف_مسار`, `امتداد_مسار`, and `طبع_مسار`.

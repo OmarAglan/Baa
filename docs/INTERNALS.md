@@ -1501,6 +1501,8 @@ Currently lowered expressions:
   - `تأكد` / `توقف_فوري`: fail-fast `exit(1)` paths with message emission.
   - `كود_خطأ_النظام` / `ضبط_كود_خطأ_النظام`: host `errno` bridge (`__errno_location` on Linux, `_errno` on Windows).
   - `نص_كود_خطأ`: lowers to `strerror` + C-string → Baa string conversion.
+  - `نتيجة_ناجحة` / `نتيجة_فاشلة` / `كود_نتيجة`: pure status-convention helpers lowered to
+    integer comparisons or a small boolean-to-code branch.
 
 ### 6.11. AST → IR Lowering (Statements, v0.3.0.4+)
 

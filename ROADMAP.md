@@ -1551,7 +1551,7 @@
 * \[x] **Byte buffer API** — `مخزن_بايتات` provides create/free/length/capacity/data plus byte append for compiler/tooling-style buffers.
 * \[x] **Path API** — `ضم_مسار/مجلد_مسار/اسم_ملف_مسار/امتداد_مسار/طبع_مسار` provide owned-string lexical path helpers for join, dirname, basename, extension, and separator normalization.
 * \[x] **String builder** — `باني_نص` provides owned incremental text construction with append, clear, length, snapshot, and explicit free helpers.
-* \[ ] **Result/error helpers** — consistent success/failure convention across stdlib modules.
+* \[x] **Result/error helpers** — `نتيجة_ناجحة/نتيجة_فاشلة/كود_نتيجة` document and bridge the stdlib `منطقي` success and integer status-code conventions.
 * \[ ] **Ownership documentation** — every allocating stdlib function states who frees the result.
 
   ### v0.6.3: Runtime Safety Guards 🛡️

@@ -74,7 +74,9 @@ C-compatible behavior.
 - `بيانات_متجه` returns borrowed internal storage that may change after `ادفع_متجه`; callers
   must not free it separately.
 - `مخزن_بايتات` is byte-specialized (`ط٨`) storage. It currently supports single-byte append;
-  bulk append and higher-level text/builder APIs remain separate roadmap items.
+  bulk byte append remains a separate roadmap item.
+- `باني_نص` stores UTF-8 bytes and reports byte length via `طول_باني_نص`; it does not provide
+  grapheme-aware length or indexing.
 - Path helpers (`ضم_مسار`, `مجلد_مسار`, `اسم_ملف_مسار`, `امتداد_مسار`, `طبع_مسار`) are lexical
   string helpers. They do not query the filesystem, resolve symlinks, or currently fold `.` / `..`
   path segments.

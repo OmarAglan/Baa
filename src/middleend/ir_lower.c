@@ -942,6 +942,7 @@ static void ir_lower_scope_pop(IRLowerCtx* ctx) {
 #include "ir_lower_format.c"
 #include "ir_lower_vector.c"
 #include "ir_lower_path.c"
+#include "ir_lower_string_builder.c"
 
 static IRValue* lower_call_expr(IRLowerCtx* ctx, Node* expr) {
 #include "ir_lower_call_expr_body_a.inc"
@@ -954,6 +955,10 @@ static IRValue* lower_call_expr(IRLowerCtx* ctx, Node* expr) {
     IRValue* path_builtin_value = NULL;
     if (ir_lower_try_path_builtin(ctx, expr, &path_builtin_value)) {
         return path_builtin_value ? path_builtin_value : ir_builder_const_i64(0);
+    }
+    IRValue* string_builder_builtin_value = NULL;
+    if (ir_lower_try_string_builder_builtin(ctx, expr, &string_builder_builtin_value)) {
+        return string_builder_builtin_value ? string_builder_builtin_value : ir_builder_const_i64(0);
     }
 #include "ir_lower_call_expr_body_d.inc"
 #include "ir_lower_call_expr_body_e.inc"

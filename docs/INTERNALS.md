@@ -1464,6 +1464,13 @@ Currently lowered expressions:
   - `حرر_مخزن_بايتات` / `طول_مخزن_بايتات` / `سعة_مخزن_بايتات` /
     `بيانات_مخزن_بايتات`: reuse the vector metadata/data helpers
   - `أضف_بايت`: stores a `ط٨` temporary and appends one byte through the vector push path
+- Builtin string-builder calls in `NODE_CALL_EXPR` (`v0.6.2`):
+  - `أنشئ_باني_نص`: allocates a 24-byte opaque header (`len/cap/data`) plus an initial
+    NUL-terminated UTF-8 byte buffer
+  - `أضف_نص_للباني`: converts the Baa string argument to a temporary UTF-8 C string, grows
+    with `realloc`, copies bytes with `memcpy`, and preserves a trailing NUL
+  - `نص_الباني`: converts the internal UTF-8 C string into a newly allocated Baa `نص`
+  - `امسح_باني_نص` / `طول_باني_نص` / `حرر_باني_نص`: reset, query, and release the opaque handle
 - Builtin path calls in `NODE_CALL_EXPR` (`v0.6.2`):
   - `طبع_مسار`: allocates a normalized C string, converts `\` to `/`, collapses repeated separators,
     trims a trailing separator except for root, then returns an owned Baa `نص`

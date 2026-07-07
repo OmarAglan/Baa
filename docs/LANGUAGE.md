@@ -1496,7 +1496,40 @@ The standard library provides C-like dynamic memory APIs for low-level programmi
 }
 ```
 
-### 9.5. Path API (واجهات المسارات) (v0.6.2)
+### 9.5. String Builder (باني النص) (v0.6.2)
+
+`باني_نص` is an opaque heap-owned handle for efficient incremental UTF-8 text construction. Appending copies the supplied `نص`; the builder does not borrow the caller's string storage.
+
+| Function | Signature | Description |
+|----------|-----------|-------------|
+| **Create** | `باني_نص أنشئ_باني_نص()` | Allocates an empty builder, or returns `عدم` on allocation failure. |
+| **Free** | `عدم حرر_باني_نص(باني_نص ب)` | Frees the builder and its internal byte buffer. |
+| **Length** | `صحيح طول_باني_نص(باني_نص ب)` | Returns the current UTF-8 byte length, excluding the internal NUL terminator. |
+| **Append Text** | `منطقي أضف_نص_للباني(باني_نص ب، نص قيمة)` | Appends a copy of `قيمة`, growing as needed. Returns `خطأ` for invalid input or allocation failure. |
+| **Clear** | `عدم امسح_باني_نص(باني_نص ب)` | Resets the builder to empty while keeping its current storage. |
+| **Snapshot** | `نص نص_الباني(باني_نص ب)` | Returns a newly allocated Baa string snapshot, or `عدم` on failure. |
+
+**Ownership Rule:** `أنشئ_باني_نص(...)` returns a heap-owned handle released by `حرر_باني_نص(...)`. Each `نص_الباني(...)` result is a separate heap string released by `حرر_نص(...)`.
+
+**Example:**
+```baa
+#تضمين "stdlib/baalib.baahd"
+
+صحيح الرئيسية() {
+    باني_نص ب = أنشئ_باني_نص().
+    إذا (ب == عدم) { إرجع ١. }
+
+    أضف_نص_للباني(ب، "hello").
+    أضف_نص_للباني(ب، " baa").
+
+    نص ن = نص_الباني(ب).
+    حرر_نص(ن).
+    حرر_باني_نص(ب).
+    إرجع ٠.
+}
+```
+
+### 9.6. Path API (واجهات المسارات) (v0.6.2)
 
 Path helpers operate on `نص` values and return newly allocated `نص` results. Release each non-`عدم` result with `حرر_نص(...)` or `تحرير_ذاكرة(...)`.
 
@@ -1528,7 +1561,7 @@ Path helpers operate on `نص` values and return newly allocated `نص` results.
 }
 ```
 
-### 9.6. Math Module (الرياضيات) (v0.4.2)
+### 9.7. Math Module (الرياضيات) (v0.4.2)
 
 | Function | Signature | Description |
 |----------|-----------|-------------|
@@ -1540,7 +1573,7 @@ Path helpers operate on `نص` values and return newly allocated `نص` results.
 | **Absolute Value** | `صحيح مطلق(صحيح قيمة)` | Returns absolute signed integer value. |
 | **Random** | `صحيح عشوائي()` | Returns a non-negative pseudo-random integer. |
 
-### 9.7. System Module (النظام) (v0.4.1)
+### 9.8. System Module (النظام) (v0.4.1)
 
 | Function | Signature | Description |
 |----------|-----------|-------------|
@@ -1549,7 +1582,7 @@ Path helpers operate on `نص` values and return newly allocated `نص` results.
 
 **Memory Rule:** You must free the result of `متغير_بيئة(...)` using `حرر_نص(...)` or `تحرير_ذاكرة(...)`.
 
-### 9.8. Time Module (الوقت) (v0.4.1)
+### 9.9. Time Module (الوقت) (v0.4.1)
 
 | Function | Signature | Description |
 |----------|-----------|-------------|
@@ -1558,7 +1591,7 @@ Path helpers operate on `نص` values and return newly allocated `نص` results.
 
 **Memory Rule:** You must free the result of `وقت_كنص(...)` using `حرر_نص(...)` or `تحرير_ذاكرة(...)`.
 
-### 9.9. Error Handling Module (معالجة الأخطاء) (v0.4.3)
+### 9.10. Error Handling Module (معالجة الأخطاء) (v0.4.3)
 
 | Function | Signature | Description |
 |----------|-----------|-------------|

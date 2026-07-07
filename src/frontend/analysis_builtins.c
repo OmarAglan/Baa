@@ -322,6 +322,44 @@ typedef struct {
     const char* name;
     DataType return_type;
     int param_count;
+    DataType param_types[2];
+} BuiltinStringBuilderFuncSig;
+
+static const BuiltinStringBuilderFuncSig builtin_string_builder_funcs[] = {
+    { "أنشئ_باني_نص",  TYPE_POINTER, 0, { TYPE_INT,     TYPE_INT } },
+    { "حرر_باني_نص",   TYPE_VOID,    1, { TYPE_POINTER, TYPE_INT } },
+    { "طول_باني_نص",   TYPE_INT,     1, { TYPE_POINTER, TYPE_INT } },
+    { "أضف_نص_للباني", TYPE_BOOL,    2, { TYPE_POINTER, TYPE_STRING } },
+    { "امسح_باني_نص",  TYPE_VOID,    1, { TYPE_POINTER, TYPE_INT } },
+    { "نص_الباني",     TYPE_STRING,  1, { TYPE_POINTER, TYPE_INT } },
+};
+
+DEFINE_BUILTIN_LOOKUP(builtin_lookup_string_builder_func,
+                      BuiltinStringBuilderFuncSig,
+                      builtin_string_builder_funcs)
+
+/**
+ * @brief التحقق من صحة استدعاء دوال باني النص المدمجة في v0.6.2.
+ * @return true إذا كان الاسم دالة مدمجة (سواء مع أخطاء أو بدونها)، false إذا لم يكن مدمجاً.
+ */
+static bool builtin_check_string_builder_call(Node* call_node,
+                                              const char* fname,
+                                              Node* args,
+                                              DataType* out_return_type)
+{
+    const BuiltinStringBuilderFuncSig* sig = builtin_lookup_string_builder_func(fname);
+    if (!sig) return false;
+
+    builtin_check_args_scaffold(call_node, sig->name, args, sig->param_types, sig->param_count, false, true);
+    builtin_finalize_call_return(call_node, sig->return_type, out_return_type,
+                                 sig->return_type == TYPE_POINTER);
+    return true;
+}
+
+typedef struct {
+    const char* name;
+    DataType return_type;
+    int param_count;
     DataType param_types[3];
 } BuiltinFileFuncSig;
 

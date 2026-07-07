@@ -43,6 +43,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
     `سعة_مخزن_بايتات`, `بيانات_مخزن_بايتات`, and `أضف_بايت`.
   - Byte buffers reuse the fixed-size vector layout with one-byte elements and expose
     borrowed `ط٨*` storage for compiler/tooling-style accumulation.
+- **String builder stdlib API**:
+  - Added the opaque `باني_نص` handle and compiler-lowered helpers:
+    `أنشئ_باني_نص`, `حرر_باني_نص`, `طول_باني_نص`, `أضف_نص_للباني`,
+    `امسح_باني_نص`, and `نص_الباني`.
+  - Builders maintain a NUL-terminated UTF-8 byte buffer, copy appended text,
+    and return owned `نص` snapshots.
+  - Added positive backend coverage plus a negative semantic check for invalid
+    append text arguments.
 - **Path stdlib API**:
   - Added compiler-lowered owned-string helpers: `ضم_مسار`, `مجلد_مسار`,
     `اسم_ملف_مسار`, `امتداد_مسار`, and `طبع_مسار`.

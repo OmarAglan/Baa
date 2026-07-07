@@ -282,11 +282,16 @@ Note (v0.6.1): text diagnostics include stable family codes after severity. The 
 families are `B0001` for lexer/syntax/parser errors, `B1000` for semantic/type/scope
 errors, and `B1100`-`B1105` for current warnings.
 
+Note (v0.6.1): `DiagnosticSpan` can cover multiple lines. The renderer prints each
+covered source line with its own underline; semantic binary-expression errors use this
+path when the offending operands cross a newline.
+
 **Error Features:**
 
 - **Source Context**: Prints the actual line of code where the error occurred.
 - **Stable Codes**: Emits a bracketed `Bxxxx` code after `[Error]`/`[Warning]`.
-- **Pointers/Spans**: Uses `^` to point to or underline the offending token.
+- **Pointers/Spans**: Uses `^` to point to or underline the offending token/expression,
+  including multi-line spans where available.
 - **Hints**: Emits Arabic-first `مساعدة:` lines for curated common syntax and semantic errors.
 - **Colored Output**: Errors displayed in red (ANSI) when terminal supports it (v0.2.8+).
 - **Panic Mode Recovery (v0.3.7)**: When a syntax error is found, the parser does not exit immediately. It reports the error, enters panic mode, then synchronizes by context:

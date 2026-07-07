@@ -1017,7 +1017,8 @@ Test files can include special comments:
 
 **Note:** Text diagnostics include stable family codes: `B0001` for syntax/parser errors,
 `B1000` for semantic/type/scope errors, and `B110x` for warnings.
-Semantic analysis generates precise line and column numbers.
+Semantic analysis generates precise line and column numbers, and selected expression
+diagnostics can underline ranges that cross multiple source lines.
 
 > **Note:** Warnings are non-fatal by default. Use `-Werror` to treat them as errors.
 

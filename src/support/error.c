@@ -33,7 +33,6 @@
 #define DIAGNOSTIC_MIN_CARET_WIDTH 1
 #define DIAGNOSTIC_TAB_WIDTH 4
 #define DIAG_CODE_SYNTAX_GENERIC "B0001"
-#define DIAG_CODE_SEMANTIC_GENERIC "B1000"
 
 // ============================================================================
 // حالة النظام (System State)
@@ -153,7 +152,13 @@ static DiagnosticSpan diagnostic_span_normalize(DiagnosticSpan span)
 {
     if (span.line <= 0) span.line = 1;
     if (span.col <= 0) span.col = 1;
-    if (span.end_col <= span.col) span.end_col = span.col + DIAGNOSTIC_MIN_CARET_WIDTH;
+    if (span.end_line <= 0) span.end_line = span.line;
+    if (span.end_line < span.line) span.end_line = span.line;
+    if (span.end_line == span.line && span.end_col <= span.col) {
+        span.end_col = span.col + DIAGNOSTIC_MIN_CARET_WIDTH;
+    } else if (span.end_line > span.line && span.end_col <= 0) {
+        span.end_col = DIAGNOSTIC_MIN_CARET_WIDTH + 1;
+    }
     return span;
 }
 
@@ -163,6 +168,7 @@ static DiagnosticSpan diagnostic_span_from_loc(const char* filename, int line, i
     span.filename = filename;
     span.line = line;
     span.col = col;
+    span.end_line = line;
     span.end_col = col + DIAGNOSTIC_MIN_CARET_WIDTH;
     return diagnostic_span_normalize(span);
 }
@@ -307,7 +313,7 @@ static void print_source_line(DiagnosticSpan span,
     const char* src = error_sources_lookup(span.filename);
     if (!src) return;
 
-    // 1. البحث عن بداية السطر
+    // 1. البحث عن بداية السطر الأول.
     const char* start = src;
     int current_line = 1;
     while (current_line < span.line && *start != '\0') {
@@ -315,43 +321,57 @@ static void print_source_line(DiagnosticSpan span,
         start++;
     }
 
-    // 2. البحث عن نهاية السطر
-    const char* end = start;
-    while (*end != '\n' && *end != '\0') {
-        end++;
-    }
+    while (current_line <= span.end_line && *start != '\0') {
+        // 2. البحث عن نهاية السطر الحالي.
+        const char* end = start;
+        while (*end != '\n' && *end != '\0') {
+            end++;
+        }
 
-    // 3. طباعة رقم السطر والسطر نفسه
-    if (use_color) {
-        fprintf(stderr, "\n    %s%4d |%s %.*s\n",
-                ANSI_CYAN, span.line, ANSI_RESET, (int)(end - start), start);
-    } else {
-        fprintf(stderr, "\n    %4d | %.*s\n", span.line, (int)(end - start), start);
-    }
+        const char* display_end = end;
+        if (display_end > start && *(display_end - 1) == '\r') {
+            display_end--;
+        }
 
-    int line_bytes = (int)(end - start);
-    int start_byte = span.col - 1;
-    int end_byte = span.end_col - 1;
-    if (start_byte < 0) start_byte = 0;
-    if (start_byte > line_bytes) start_byte = line_bytes;
-    if (end_byte <= start_byte) end_byte = start_byte + DIAGNOSTIC_MIN_CARET_WIDTH;
-    if (end_byte > line_bytes && start_byte < line_bytes) end_byte = line_bytes;
+        // 3. طباعة رقم السطر والسطر نفسه.
+        if (use_color) {
+            fprintf(stderr, "\n    %s%4d |%s %.*s\n",
+                    ANSI_CYAN, current_line, ANSI_RESET, (int)(display_end - start), start);
+        } else {
+            fprintf(stderr, "\n    %4d | %.*s\n", current_line, (int)(display_end - start), start);
+        }
 
-    int pointer_spaces = diagnostic_display_width_bytes(start, start_byte);
-    int caret_width = diagnostic_display_width_bytes(start + start_byte, end_byte - start_byte);
-    if (caret_width < DIAGNOSTIC_MIN_CARET_WIDTH) caret_width = DIAGNOSTIC_MIN_CARET_WIDTH;
+        int line_bytes = (int)(display_end - start);
+        int start_byte = (current_line == span.line) ? span.col - 1 : 0;
+        int end_byte = (current_line == span.end_line) ? span.end_col - 1 : line_bytes;
+        if (start_byte < 0) start_byte = 0;
+        if (start_byte > line_bytes) start_byte = line_bytes;
+        if (end_byte <= start_byte) end_byte = start_byte + DIAGNOSTIC_MIN_CARET_WIDTH;
+        if (end_byte > line_bytes && start_byte < line_bytes) end_byte = line_bytes;
 
-    // 4. طباعة المؤشر (^) بعرض النطاق.
-    fprintf(stderr, "         ");
-    diagnostic_print_spaces(pointer_spaces);
-    
-    if (use_color) {
-        fprintf(stderr, "%s", pointer_color);
-        for (int i = 0; i < caret_width; i++) fputc('^', stderr);
-        fprintf(stderr, "%s ", ANSI_RESET);
-    } else {
-        for (int i = 0; i < caret_width; i++) fputc('^', stderr);
-        fprintf(stderr, " ");
+        int pointer_spaces = diagnostic_display_width_bytes(start, start_byte);
+        int caret_width = diagnostic_display_width_bytes(start + start_byte, end_byte - start_byte);
+        if (caret_width < DIAGNOSTIC_MIN_CARET_WIDTH) caret_width = DIAGNOSTIC_MIN_CARET_WIDTH;
+
+        // 4. طباعة المؤشر (^) بعرض النطاق على كل سطر مشمول.
+        fprintf(stderr, "         ");
+        diagnostic_print_spaces(pointer_spaces);
+
+        if (use_color) {
+            fprintf(stderr, "%s", pointer_color);
+            for (int i = 0; i < caret_width; i++) fputc('^', stderr);
+            fprintf(stderr, "%s ", ANSI_RESET);
+        } else {
+            for (int i = 0; i < caret_width; i++) fputc('^', stderr);
+            fprintf(stderr, " ");
+        }
+
+        if (*end == '\n') {
+            start = end + 1;
+        } else {
+            start = end;
+        }
+        current_line++;
     }
 }
 

@@ -185,6 +185,7 @@ static DiagnosticSpan semantic_make_span(const char* filename, int line, int col
     span.filename = filename ? filename : (current_filename ? current_filename : "غير_معروف");
     span.line = (line > 0) ? line : 1;
     span.col = (col > 0) ? col : 1;
+    span.end_line = span.line;
     span.end_col = span.col + ((length > 0) ? length : 1);
     return span;
 }
@@ -195,6 +196,50 @@ static DiagnosticSpan semantic_node_span(const Node* node)
                               node ? node->line : 1,
                               node ? node->col : 1,
                               node ? node->length : 1);
+}
+
+static const Node* semantic_span_start_node(const Node* node)
+{
+    if (!node) return NULL;
+    if (node->type == NODE_BIN_OP && node->data.bin_op.left) {
+        return semantic_span_start_node(node->data.bin_op.left);
+    }
+    return node;
+}
+
+static int semantic_node_end_line(const Node* node)
+{
+    if (!node) return 1;
+    if (node->type == NODE_BIN_OP && node->data.bin_op.right) {
+        return semantic_node_end_line(node->data.bin_op.right);
+    }
+    return (node->line > 0) ? node->line : 1;
+}
+
+static int semantic_node_end_col(const Node* node)
+{
+    if (!node) return 2;
+    if (node->type == NODE_BIN_OP && node->data.bin_op.right) {
+        return semantic_node_end_col(node->data.bin_op.right);
+    }
+
+    int col = (node->col > 0) ? node->col : 1;
+    int length = (node->length > 0) ? node->length : 1;
+    return col + length;
+}
+
+static DiagnosticSpan semantic_expr_span(const Node* node)
+{
+    const Node* start = semantic_span_start_node(node);
+    DiagnosticSpan span = semantic_node_span(start ? start : node);
+    span.end_line = semantic_node_end_line(node);
+    span.end_col = semantic_node_end_col(node);
+    if (span.end_line < span.line ||
+        (span.end_line == span.line && span.end_col <= span.col)) {
+        span.end_line = span.line;
+        span.end_col = span.col + 1;
+    }
+    return span;
 }
 
 /**
@@ -230,6 +275,15 @@ static void semantic_error_vnode_hint(Node* node,
                                 buf);
 }
 
+static void semantic_error_vspan(DiagnosticSpan span, const char* message, va_list args)
+{
+    has_error = true;
+
+    char buf[1024];
+    (void)vsnprintf(buf, sizeof(buf), message, args);
+    error_report_span_code(ANALYSIS_DIAG_CODE_SEMANTIC, span, "خطأ دلالي: %s", buf);
+}
+
 /**
  * @brief الإبلاغ عن خطأ دلالي بمعلومات موقع.
  */
@@ -250,6 +304,14 @@ static void semantic_error_hint(Node* node, const char* hint, const char* messag
     va_list args;
     va_start(args, message);
     semantic_error_vnode_hint(node, hint, message, args);
+    va_end(args);
+}
+
+static void semantic_error_expr(Node* node, const char* message, ...)
+{
+    va_list args;
+    va_start(args, message);
+    semantic_error_vspan(semantic_expr_span(node), message, args);
     va_end(args);
 }
 

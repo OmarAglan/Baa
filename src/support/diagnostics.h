@@ -35,12 +35,13 @@ typedef struct {
 
 /**
  * @struct DiagnosticSpan
- * @brief نطاق تشخيص داخل سطر واحد. end_col حد حصري.
+ * @brief نطاق تشخيص. end_line/end_col يحددان النهاية الحصرية.
  */
 typedef struct {
     const char* filename;
     int line;
     int col;
+    int end_line;
     int end_col;
 } DiagnosticSpan;
 
@@ -71,21 +72,25 @@ void warning_reset(void);
 
 #define error_report_token(token_like, ...) \
     error_report_span((DiagnosticSpan){(token_like).filename, (token_like).line, (token_like).col, \
+                      (token_like).line, \
                       (token_like).col + ((token_like).length > 0 ? (token_like).length : 1)}, __VA_ARGS__)
 
 #define error_report_token_code(token_like, code_text, ...) \
     error_report_span_code(code_text, \
                           (DiagnosticSpan){(token_like).filename, (token_like).line, (token_like).col, \
+                          (token_like).line, \
                           (token_like).col + ((token_like).length > 0 ? (token_like).length : 1)}, __VA_ARGS__)
 
 #define error_report_token_hint(token_like, hint_text, ...) \
     error_report_span_hint((DiagnosticSpan){(token_like).filename, (token_like).line, (token_like).col, \
+                           (token_like).line, \
                            (token_like).col + ((token_like).length > 0 ? (token_like).length : 1)}, \
                            hint_text, __VA_ARGS__)
 
 #define error_report_token_hint_code(token_like, code_text, hint_text, ...) \
     error_report_span_hint_code(code_text, \
                                (DiagnosticSpan){(token_like).filename, (token_like).line, (token_like).col, \
+                               (token_like).line, \
                                (token_like).col + ((token_like).length > 0 ? (token_like).length : 1)}, \
                                hint_text, __VA_ARGS__)
 

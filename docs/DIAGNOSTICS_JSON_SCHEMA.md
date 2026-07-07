@@ -114,7 +114,8 @@ types. JSON output remains a future driver surface.
 - Columns are 1-based and count Unicode scalar display positions only approximately.
 - Byte offsets are 0-based UTF-8 byte offsets from the start of the file.
 - Tools should use byte offsets for exact slicing and columns for display.
-- Multi-line spans are allowed.
+- Multi-line spans are allowed; text diagnostics can render all source lines covered by the
+  primary span.
 
 ---
 

@@ -638,7 +638,7 @@ static DataType infer_type_internal(Node* node) {
                 }
 
                 if (!datatype_is_intlike(left) || !datatype_is_intlike(right)) {
-                    semantic_error(node, "العمليات الحسابية تتطلب معاملات صحيحة.");
+                    semantic_error_expr(node, "العمليات الحسابية تتطلب معاملات صحيحة.");
                 }
                 node_clear_inferred_ptr(node);
                 return datatype_usual_arith(left, right);

@@ -3942,6 +3942,7 @@ typedef struct {
     const char* filename;
     int line;
     int col;
+    int end_line;
     int end_col;
 } DiagnosticSpan;
 ```
@@ -3950,7 +3951,7 @@ typedef struct {
 
 - Displays filename, line, and column
 - Emits stable bracketed diagnostic codes such as `[B0001]` and `[B1000]`
-- Shows the actual source line with a `^` pointer or span-width underline
+- Shows the actual source line(s) with a `^` pointer or span-width underline
 - Supports Arabic `مساعدة:` hint lines for curated common errors
 - Supports printf-style formatting
 - **Colored output** (red) when terminal supports ANSI codes (v0.2.8+)

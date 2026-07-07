@@ -3918,11 +3918,15 @@ Registers a source file for use when printing error/warning context.
 
 ```c
 void error_report_loc(const char* filename, int line, int col, const char* message, ...)
+void error_report_loc_code(const char* code, const char* filename, int line, int col, const char* message, ...)
 void error_report_span(DiagnosticSpan span, const char* message, ...)
+void error_report_span_code(const char* code, DiagnosticSpan span, const char* message, ...)
 void error_report_span_hint(DiagnosticSpan span, const char* hint, const char* message, ...)
+void error_report_span_hint_code(const char* code, DiagnosticSpan span, const char* hint, const char* message, ...)
 ```
 
 Reports an error with source location, line context, and a pointer to the error position.
+The default error family code is `B0001`; semantic wrappers currently pass `B1000`.
 
 The compatibility surface used throughout the compiler is still:
 
@@ -3945,6 +3949,7 @@ typedef struct {
 **Features:**
 
 - Displays filename, line, and column
+- Emits stable bracketed diagnostic codes such as `[B0001]` and `[B1000]`
 - Shows the actual source line with a `^` pointer or span-width underline
 - Supports Arabic `مساعدة:` hint lines for curated common errors
 - Supports printf-style formatting
@@ -3981,6 +3986,7 @@ Reports a warning with source location and warning type.
 
 - Only emitted if warning type is enabled (via `-Wall` or specific `-W<type>`)
 - **Colored output** (yellow) when terminal supports ANSI codes
+- Emits stable warning codes `B1100`-`B1105` based on `WarningType`
 - Shows warning name in brackets: `[-Wunused-variable]`
 - With `-Werror`, warnings are displayed as errors (red)
 - Supports numeric diagnostics flags: `-Wimplicit-narrowing`, `-Wsigned-unsigned-compare`

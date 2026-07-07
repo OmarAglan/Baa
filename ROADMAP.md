@@ -1538,7 +1538,7 @@
 
   ### v0.6.1: Arabic Diagnostics II 🩺
 
-* \[ ] **Diagnostic codes** — stable identifiers such as `B0001` / `B0120` for errors and warnings.
+* \[x] **Diagnostic codes** — text diagnostics now include stable family identifiers such as `B0001`, `B1000`, and warning-specific `B110x` codes.
 * \[ ] **Multi-line spans** — underline full expressions/statements when one-line spans are insufficient.
 * \[ ] **Fix-it hints** — suggest missing `.`, wrong `؛`, wrong type, or missing include where reliable.
 * \[ ] **Diagnostic categories** — syntax, type, include, backend, runtime, warning.

@@ -32,6 +32,8 @@
 
 #define DIAGNOSTIC_MIN_CARET_WIDTH 1
 #define DIAGNOSTIC_TAB_WIDTH 4
+#define DIAG_CODE_SYNTAX_GENERIC "B0001"
+#define DIAG_CODE_SEMANTIC_GENERIC "B1000"
 
 // ============================================================================
 // حالة النظام (System State)
@@ -92,6 +94,30 @@ static const char* warning_type_name(WarningType type) {
         case WARN_SIGNED_UNSIGNED_COMPARE: return "signed-unsigned-compare";
         default:                   return "unknown";
     }
+}
+
+/**
+ * @brief الحصول على الرمز التشخيصي الثابت للتحذير.
+ */
+static const char* warning_type_code(WarningType type)
+{
+    switch (type) {
+        case WARN_UNUSED_VARIABLE: return "B1100";
+        case WARN_DEAD_CODE: return "B1101";
+        case WARN_IMPLICIT_RETURN: return "B1102";
+        case WARN_SHADOW_VARIABLE: return "B1103";
+        case WARN_IMPLICIT_NARROWING: return "B1104";
+        case WARN_SIGNED_UNSIGNED_COMPARE: return "B1105";
+        default: return "B1199";
+    }
+}
+
+/**
+ * @brief اختيار رمز تشخيص صالح مع قيمة احتياطية.
+ */
+static const char* diagnostic_code_or_default(const char* code, const char* fallback)
+{
+    return (code && code[0]) ? code : fallback;
 }
 
 static void error_sources_clear(void) {
@@ -344,24 +370,28 @@ static void print_hint_line(const char* hint, bool use_color)
 // الإبلاغ عن الأخطاء (Error Reporting)
 // ============================================================================
 
-static void error_report_vspan(DiagnosticSpan span,
+static void error_report_vspan(const char* code,
+                               DiagnosticSpan span,
                                const char* hint,
                                const char* message,
                                va_list args)
 {
     span = diagnostic_span_normalize(span);
+    code = diagnostic_code_or_default(code, DIAG_CODE_SYNTAX_GENERIC);
     had_error = true;
     bool use_color = g_warning_config.colored_output;
     
     // طباعة رأس الخطأ
     if (use_color) {
-        fprintf(stderr, "%s[Error]%s %s:%d:%d: ",
+        fprintf(stderr, "%s[Error]%s %s[%s]%s %s:%d:%d: ",
                 ANSI_BOLD_RED, ANSI_RESET,
+                ANSI_CYAN, code, ANSI_RESET,
                 span.filename ? span.filename : "unknown",
                 span.line,
                 span.col);
     } else {
-        fprintf(stderr, "[Error] %s:%d:%d: ",
+        fprintf(stderr, "[Error] [%s] %s:%d:%d: ",
+                code,
                 span.filename ? span.filename : "unknown",
                 span.line,
                 span.col);
@@ -380,7 +410,24 @@ static void error_report_vspan(DiagnosticSpan span,
 void error_report_loc(const char* filename, int line, int col, const char* message, ...) {
     va_list args;
     va_start(args, message);
-    error_report_vspan(diagnostic_span_from_loc(filename, line, col), NULL, message, args);
+    error_report_vspan(DIAG_CODE_SYNTAX_GENERIC,
+                       diagnostic_span_from_loc(filename, line, col),
+                       NULL,
+                       message,
+                       args);
+    va_end(args);
+}
+
+void error_report_loc_code(const char* code,
+                           const char* filename,
+                           int line,
+                           int col,
+                           const char* message,
+                           ...)
+{
+    va_list args;
+    va_start(args, message);
+    error_report_vspan(code, diagnostic_span_from_loc(filename, line, col), NULL, message, args);
     va_end(args);
 }
 
@@ -388,7 +435,15 @@ void error_report_span(DiagnosticSpan span, const char* message, ...)
 {
     va_list args;
     va_start(args, message);
-    error_report_vspan(span, NULL, message, args);
+    error_report_vspan(DIAG_CODE_SYNTAX_GENERIC, span, NULL, message, args);
+    va_end(args);
+}
+
+void error_report_span_code(const char* code, DiagnosticSpan span, const char* message, ...)
+{
+    va_list args;
+    va_start(args, message);
+    error_report_vspan(code, span, NULL, message, args);
     va_end(args);
 }
 
@@ -396,7 +451,19 @@ void error_report_span_hint(DiagnosticSpan span, const char* hint, const char* m
 {
     va_list args;
     va_start(args, message);
-    error_report_vspan(span, hint, message, args);
+    error_report_vspan(DIAG_CODE_SYNTAX_GENERIC, span, hint, message, args);
+    va_end(args);
+}
+
+void error_report_span_hint_code(const char* code,
+                                 DiagnosticSpan span,
+                                 const char* hint,
+                                 const char* message,
+                                 ...)
+{
+    va_list args;
+    va_start(args, message);
+    error_report_vspan(code, span, hint, message, args);
     va_end(args);
 }
 
@@ -427,25 +494,28 @@ static void warning_report_vspan(WarningType type,
     
     // طباعة رأس التحذير
     const char* warn_name = warning_type_name(type);
+    const char* warn_code = warning_type_code(type);
     
     if (use_color) {
         if (g_warning_config.warnings_as_errors) {
-            fprintf(stderr, "%s[Error]%s %s:%d:%d: ",
+            fprintf(stderr, "%s[Error]%s %s[%s]%s %s:%d:%d: ",
                     ANSI_BOLD_RED, ANSI_RESET,
+                    ANSI_CYAN, warn_code, ANSI_RESET,
                     span.filename ? span.filename : "unknown", span.line, span.col);
         } else {
-            fprintf(stderr, "%s[Warning]%s %s:%d:%d: ",
+            fprintf(stderr, "%s[Warning]%s %s[%s]%s %s:%d:%d: ",
                     ANSI_BOLD_YELLOW, ANSI_RESET,
+                    ANSI_CYAN, warn_code, ANSI_RESET,
                     span.filename ? span.filename : "unknown", span.line, span.col);
         }
         fprintf(stderr, "%s[-W%s]%s ", ANSI_CYAN, warn_name, ANSI_RESET);
     } else {
         if (g_warning_config.warnings_as_errors) {
-            fprintf(stderr, "[Error] %s:%d:%d: ",
-                    span.filename ? span.filename : "unknown", span.line, span.col);
+            fprintf(stderr, "[Error] [%s] %s:%d:%d: ",
+                    warn_code, span.filename ? span.filename : "unknown", span.line, span.col);
         } else {
-            fprintf(stderr, "[Warning] %s:%d:%d: ",
-                    span.filename ? span.filename : "unknown", span.line, span.col);
+            fprintf(stderr, "[Warning] [%s] %s:%d:%d: ",
+                    warn_code, span.filename ? span.filename : "unknown", span.line, span.col);
         }
         fprintf(stderr, "[-W%s] ", warn_name);
     }

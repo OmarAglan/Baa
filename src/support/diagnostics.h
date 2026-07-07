@@ -50,8 +50,11 @@ void error_init(const char* source);
 void error_register_source(const char* filename, const char* source);
 void warning_init(void);
 void error_report_loc(const char* filename, int line, int col, const char* message, ...);
+void error_report_loc_code(const char* code, const char* filename, int line, int col, const char* message, ...);
 void error_report_span(DiagnosticSpan span, const char* message, ...);
+void error_report_span_code(const char* code, DiagnosticSpan span, const char* message, ...);
 void error_report_span_hint(DiagnosticSpan span, const char* hint, const char* message, ...);
+void error_report_span_hint_code(const char* code, DiagnosticSpan span, const char* hint, const char* message, ...);
 void warning_report(WarningType type, const char* filename, int line, int col, const char* message, ...);
 void warning_report_span(WarningType type, DiagnosticSpan span, const char* message, ...);
 bool error_has_occurred(void);
@@ -70,9 +73,20 @@ void warning_reset(void);
     error_report_span((DiagnosticSpan){(token_like).filename, (token_like).line, (token_like).col, \
                       (token_like).col + ((token_like).length > 0 ? (token_like).length : 1)}, __VA_ARGS__)
 
+#define error_report_token_code(token_like, code_text, ...) \
+    error_report_span_code(code_text, \
+                          (DiagnosticSpan){(token_like).filename, (token_like).line, (token_like).col, \
+                          (token_like).col + ((token_like).length > 0 ? (token_like).length : 1)}, __VA_ARGS__)
+
 #define error_report_token_hint(token_like, hint_text, ...) \
     error_report_span_hint((DiagnosticSpan){(token_like).filename, (token_like).line, (token_like).col, \
                            (token_like).col + ((token_like).length > 0 ? (token_like).length : 1)}, \
                            hint_text, __VA_ARGS__)
+
+#define error_report_token_hint_code(token_like, code_text, hint_text, ...) \
+    error_report_span_hint_code(code_text, \
+                               (DiagnosticSpan){(token_like).filename, (token_like).line, (token_like).col, \
+                               (token_like).col + ((token_like).length > 0 ? (token_like).length : 1)}, \
+                               hint_text, __VA_ARGS__)
 
 #endif

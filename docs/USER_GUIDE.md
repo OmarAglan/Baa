@@ -999,12 +999,12 @@ Test files can include special comments:
 |-------|-------|----------|
 | `خطأ لفظي: ...` | Unsupported byte, malformed UTF-8, or malformed literal | Ensure the file is UTF-8 and literals are closed correctly |
 | `خطأ نحوي: ...` | Missing token (`.`/`}`/`)`), or malformed statement/declaration | Fix the reported token location; `مساعدة:` lines may suggest the common fix |
-| `[Error] <file>:<line>:<col>: ...` | Syntax error (parser) | Check for missing `.` at statement end, missing `}`, or unmatched parentheses |
-| `[Error] ... خطأ دلالي: ... متغير غير معرّف ...` | Variable used before declaration | Declare variables before using them or correct the name |
-| `[Semantic Error] ... عدم تطابق أنواع ...` | Assigning wrong type | Keep assignment/call/return types compatible |
-| `[Error] ... خطأ دلالي: ... ثابت ...` | Modifying a constant | Constants declared with `ثابت` cannot be changed after initialization |
+| `[Error] [B0001] <file>:<line>:<col>: ...` | Syntax-family error | Check for missing `.` at statement end, missing `}`, or malformed declarations |
+| `[Error] [B1000] ... خطأ دلالي: ... متغير غير معرّف ...` | Semantic-family error | Declare variables before using them or correct the name |
+| `[Error] [B1000] ... عدم تطابق أنواع ...` | Assigning wrong type | Keep assignment/call/return types compatible |
+| `[Error] [B1000] ... خطأ دلالي: ... ثابت ...` | Modifying a constant | Constants declared with `ثابت` cannot be changed after initialization |
 | `Aborting <file> due to syntax errors.` | Parser reported one or more errors | Fix reported `[Error]` diagnostics and recompile |
-| `Aborting <file> due to semantic errors.` | Analyzer reported one or more errors | Fix reported `[Semantic Error]` messages and recompile |
+| `Aborting <file> due to semantic errors.` | Analyzer reported one or more errors | Fix reported semantic `[Error]` messages and recompile |
 
 ### Common Warnings (v0.2.8+)
 
@@ -1015,7 +1015,9 @@ Test files can include special comments:
 | `[-Wdead-code] Unreachable code after 'return/break' statement.` | Dead code after terminator | Remove code after `إرجع`/`توقف`/`استمر` |
 | `[-Wshadow-variable] Local variable 'x' shadows global variable.` | Variable shadowing | Rename the local variable |
 
-**Note:** Semantic analysis generates precise line and column numbers.
+**Note:** Text diagnostics include stable family codes: `B0001` for syntax/parser errors,
+`B1000` for semantic/type/scope errors, and `B110x` for warnings.
+Semantic analysis generates precise line and column numbers.
 
 > **Note:** Warnings are non-fatal by default. Use `-Werror` to treat them as errors.
 

@@ -1,5 +1,6 @@
 // FLAGS: -Wall -Werror
 // EXPECT: [Error]
+// EXPECT: [B1105]
 // EXPECT: [-Wsigned-unsigned-compare]
 // EXPECT: مقارنة بين نوع موقّع وغير موقّع
 صحيح الرئيسية() {

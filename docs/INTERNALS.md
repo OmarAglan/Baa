@@ -278,9 +278,14 @@ Note (v0.3.2.9.4): semantic analysis errors now use `error_report(...)` as well,
 
 Note (v0.5.4): diagnostics support single-line spans and optional Arabic `مساعدة:` hint lines. Lexer tokens and AST nodes carry token byte length so parser/semantic diagnostics can underline complete offending tokens. Negative tests can also lock cascade behavior with `// EXPECT-NOT:` and `// EXPECT-DIAG-COUNT:`.
 
+Note (v0.6.1): text diagnostics include stable family codes after severity. The first
+families are `B0001` for lexer/syntax/parser errors, `B1000` for semantic/type/scope
+errors, and `B1100`-`B1105` for current warnings.
+
 **Error Features:**
 
 - **Source Context**: Prints the actual line of code where the error occurred.
+- **Stable Codes**: Emits a bracketed `Bxxxx` code after `[Error]`/`[Warning]`.
 - **Pointers/Spans**: Uses `^` to point to or underline the offending token.
 - **Hints**: Emits Arabic-first `مساعدة:` lines for curated common syntax and semantic errors.
 - **Colored Output**: Errors displayed in red (ANSI) when terminal supports it (v0.2.8+).

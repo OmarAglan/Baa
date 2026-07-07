@@ -102,6 +102,10 @@ When `--diagnostics=json` is used, diagnostics are written as JSON to stdout or 
 | `B5000`-`B5999` | stdlib/runtime checks |
 | `B9000`-`B9999` | internal compiler errors |
 
+Current text diagnostics use this range at family granularity: `B0001` for syntax-family
+errors, `B1000` for semantic-family errors, and `B1100`-`B1105` for the current warning
+types. JSON output remains a future driver surface.
+
 ---
 
 ## 6. Line, Column, and Byte Rules

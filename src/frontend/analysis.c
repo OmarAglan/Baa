@@ -27,6 +27,7 @@
 #define ANALYSIS_MAX_FUNCS   128
 #define ANALYSIS_MAX_FUNC_PARAMS 32
 #define ANALYSIS_SYMBOL_HASH_BUCKETS 257
+#define ANALYSIS_DIAG_CODE_SEMANTIC "B1000"
 
 // أنواع مركبة (v0.3.4)
 #define ANALYSIS_MAX_ENUMS   128
@@ -210,7 +211,7 @@ static void semantic_error_vloc(const char* filename,
     Token tok = semantic_make_token(filename, line, col);
     char buf[1024];
     (void)vsnprintf(buf, sizeof(buf), message, args);
-    error_report_token(tok, "خطأ دلالي: %s", buf);
+    error_report_token_code(tok, ANALYSIS_DIAG_CODE_SEMANTIC, "خطأ دلالي: %s", buf);
 }
 
 static void semantic_error_vnode_hint(Node* node,
@@ -222,7 +223,11 @@ static void semantic_error_vnode_hint(Node* node,
 
     char buf[1024];
     (void)vsnprintf(buf, sizeof(buf), message, args);
-    error_report_span_hint(semantic_node_span(node), hint, "خطأ دلالي: %s", buf);
+    error_report_span_hint_code(ANALYSIS_DIAG_CODE_SEMANTIC,
+                                semantic_node_span(node),
+                                hint,
+                                "خطأ دلالي: %s",
+                                buf);
 }
 
 /**

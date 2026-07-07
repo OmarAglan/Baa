@@ -10,6 +10,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Added
 
+- **Stable diagnostic codes**:
+  - Text diagnostics now include stable code tokens after severity, starting with `B0001`
+    for syntax-family errors, `B1000` for semantic-family errors, and `B110x` for warnings.
 - **Explicit external declarations**:
   - Added the Arabic `خارجي` qualifier for top-level function prototypes, scalar globals, and
     fixed-size global arrays.

@@ -52,6 +52,8 @@ C-compatible behavior.
   immutable, while the pointed-to storage remains mutable if it was not declared `ثابت`.
 - Taking the address of a `ثابت` object as a mutable pointer is rejected to preserve immutability
   until pointer-to-const metadata exists.
+- Null-pointer analysis is not flow-sensitive yet; the semantic pass rejects direct `*عدم`
+  dereferences explicitly, but it does not prove whether pointer variables may be null.
 
 ### Numeric and text behavior
 

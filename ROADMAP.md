@@ -1534,7 +1534,7 @@
 * \[x] **Struct field initialization** — basic named-field initialization for automatic local `هيكل` values; static/global aggregate initializers remain deferred.
 * \[x] **Aggregate assignment policy** — whole-aggregate copy assignment is explicitly rejected for variables, members, array elements, and dereferenced aggregate pointers with field-update guidance.
 * \[x] **Const pointer rules** — `ثابت T*` freezes the pointer variable, pointer-to-const types remain unsupported, and taking a mutable pointer to a `ثابت` object is rejected.
-* \[ ] **Better null-pointer diagnostics** — warn or error when misuse is statically obvious.
+* \[x] **Better null-pointer diagnostics** — direct dereference of the null literal `عدم` is rejected with an explicit Arabic diagnostic; broader flow-sensitive null analysis remains deferred.
 
   ### v0.6.1: Arabic Diagnostics II 🩺
 

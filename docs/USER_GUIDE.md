@@ -715,6 +715,8 @@ Use `ساكن` to declare variables that persist between function calls.
 ### Pointers and References
 
 Use `&` to get the address of a variable, and `*` to dereference it. `عدم` represents a null pointer.
+Directly dereferencing `عدم` (`*عدم`) is rejected with a semantic diagnostic; check pointer
+variables against `عدم` before dereferencing them.
 
 ```baa
 صحيح الرئيسية() {

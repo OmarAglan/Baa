@@ -812,6 +812,13 @@ static DataType infer_type_internal(Node* node) {
             }
 
             if (node->data.unary_op.op == UOP_DEREF) {
+                if (node->data.unary_op.operand &&
+                    node->data.unary_op.operand->type == NODE_NULL) {
+                    semantic_error(node, "لا يمكن فك المؤشر الفارغ 'عدم'.");
+                    node_clear_inferred_ptr(node);
+                    return TYPE_INT;
+                }
+
                 if (ot != TYPE_POINTER) {
                     semantic_error(node, "فك الإشارة '*' يتطلب مؤشراً.");
                     node_clear_inferred_ptr(node);

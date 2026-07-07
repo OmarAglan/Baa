@@ -36,6 +36,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
   - Clarified that `ثابت T*` means an immutable pointer variable, not a pointer-to-const.
   - Taking the address of a `ثابت` object as a mutable pointer is now rejected until
     pointer-to-const types are added.
+- **Null-pointer diagnostics**:
+  - Direct dereference of the null literal `عدم` now reports an explicit Arabic semantic error
+    before generic pointer-depth checks.
 
 ## [0.5.9] - 2026-06-29
 

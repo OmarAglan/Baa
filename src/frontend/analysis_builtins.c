@@ -291,6 +291,37 @@ typedef struct {
     const char* name;
     DataType return_type;
     int param_count;
+    DataType param_types[2];
+} BuiltinPathFuncSig;
+
+static const BuiltinPathFuncSig builtin_path_funcs[] = {
+    { "ضم_مسار",       TYPE_STRING, 2, { TYPE_STRING, TYPE_STRING } },
+    { "مجلد_مسار",     TYPE_STRING, 1, { TYPE_STRING, TYPE_INT } },
+    { "اسم_ملف_مسار",  TYPE_STRING, 1, { TYPE_STRING, TYPE_INT } },
+    { "امتداد_مسار",   TYPE_STRING, 1, { TYPE_STRING, TYPE_INT } },
+    { "طبع_مسار",      TYPE_STRING, 1, { TYPE_STRING, TYPE_INT } },
+};
+
+DEFINE_BUILTIN_LOOKUP(builtin_lookup_path_func, BuiltinPathFuncSig, builtin_path_funcs)
+
+/**
+ * @brief التحقق من صحة استدعاء دوال المسارات المدمجة في v0.6.2.
+ * @return true إذا كان الاسم دالة مدمجة (سواء مع أخطاء أو بدونها)، false إذا لم يكن مدمجاً.
+ */
+static bool builtin_check_path_call(Node* call_node, const char* fname, Node* args, DataType* out_return_type)
+{
+    const BuiltinPathFuncSig* sig = builtin_lookup_path_func(fname);
+    if (!sig) return false;
+
+    builtin_check_args_scaffold(call_node, sig->name, args, sig->param_types, sig->param_count, false, true);
+    builtin_finalize_call_return(call_node, sig->return_type, out_return_type, false);
+    return true;
+}
+
+typedef struct {
+    const char* name;
+    DataType return_type;
+    int param_count;
     DataType param_types[3];
 } BuiltinFileFuncSig;
 

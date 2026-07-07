@@ -111,6 +111,45 @@ static BaaCodegenOptions g_emit_opts;
 #include "emit_support.c"
 #include "emit_frame.c"
 
+static bool emit_operand_is_memory_like(const MachineOperand* op)
+{
+    return op && (op->kind == MACH_OP_MEM || op->kind == MACH_OP_GLOBAL);
+}
+
+/**
+ * @brief إصدار عملية حسابية عندما يكون المصدر والوجهة في الذاكرة.
+ *
+ * x86-64 لا يسمح بتعليمة حسابية ذاكرة-إلى-ذاكرة مباشرة، لذلك نمرر
+ * المصدر الثاني عبر %r11 قبل تحديث الوجهة.
+ */
+static bool emit_binary_mem_rhs_via_scratch(FILE* out, const char* mnemonic, MachineInst* inst)
+{
+    if (!out || !mnemonic || !inst) return false;
+    if (!emit_operand_is_memory_like(&inst->dst) || !emit_operand_is_memory_like(&inst->src2)) {
+        return false;
+    }
+
+    int bits = inst->dst.size_bits;
+    if (bits <= 0) bits = inst->src2.size_bits;
+    if (bits <= 0) bits = 64;
+
+    MachineOperand tmp = emit_scratch_r11(bits);
+    char suffix = size_suffix(bits);
+
+    fprintf(out, "    mov%c ", suffix);
+    emit_operand(&inst->src2, out);
+    fprintf(out, ", ");
+    emit_operand(&tmp, out);
+    fprintf(out, "\n");
+
+    fprintf(out, "    %s%c ", mnemonic, suffix);
+    emit_operand(&tmp, out);
+    fprintf(out, ", ");
+    emit_operand(&inst->dst, out);
+    fprintf(out, "\n");
+    return true;
+}
+
 void emit_inst(MachineInst* inst, MachineFunc* func, FILE* out) {
     if (!inst || !out) return;
     (void)func;

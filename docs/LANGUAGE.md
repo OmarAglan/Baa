@@ -1496,7 +1496,39 @@ The standard library provides C-like dynamic memory APIs for low-level programmi
 }
 ```
 
-### 9.5. Math Module (الرياضيات) (v0.4.2)
+### 9.5. Path API (واجهات المسارات) (v0.6.2)
+
+Path helpers operate on `نص` values and return newly allocated `نص` results. Release each non-`عدم` result with `حرر_نص(...)` or `تحرير_ذاكرة(...)`.
+
+| Function | Signature | Description |
+|----------|-----------|-------------|
+| **Join** | `نص ضم_مسار(نص أساس، نص جزء)` | Normalizes both parts, then joins them with one `/`. If `جزء` is absolute (`/x`), it is returned normalized. |
+| **Dirname** | `نص مجلد_مسار(نص مسار)` | Returns the directory component, `/` for root, or `.` when there is no directory. |
+| **Basename** | `نص اسم_ملف_مسار(نص مسار)` | Returns the file-name component after the last separator. |
+| **Extension** | `نص امتداد_مسار(نص مسار)` | Returns the last extension including the dot, or an empty string. A leading dot in `.env` is not treated as an extension. |
+| **Normalize** | `نص طبع_مسار(نص مسار)` | Converts `\` to `/`, collapses repeated separators, and removes a trailing separator except for root. |
+
+**Scope:** normalization is lexical only. It does not query the filesystem, resolve symlinks, or currently fold `.` / `..` path segments.
+
+**Example:**
+```baa
+#تضمين "stdlib/baalib.baahd"
+
+صحيح الرئيسية() {
+    نص كامل = ضم_مسار("src/", "middle//ir.baa").
+    نص مجلد = مجلد_مسار(كامل).
+    نص اسم = اسم_ملف_مسار(كامل).
+    نص امتداد = امتداد_مسار(كامل).
+
+    حرر_نص(امتداد).
+    حرر_نص(اسم).
+    حرر_نص(مجلد).
+    حرر_نص(كامل).
+    إرجع ٠.
+}
+```
+
+### 9.6. Math Module (الرياضيات) (v0.4.2)
 
 | Function | Signature | Description |
 |----------|-----------|-------------|
@@ -1508,7 +1540,7 @@ The standard library provides C-like dynamic memory APIs for low-level programmi
 | **Absolute Value** | `صحيح مطلق(صحيح قيمة)` | Returns absolute signed integer value. |
 | **Random** | `صحيح عشوائي()` | Returns a non-negative pseudo-random integer. |
 
-### 9.6. System Module (النظام) (v0.4.1)
+### 9.7. System Module (النظام) (v0.4.1)
 
 | Function | Signature | Description |
 |----------|-----------|-------------|
@@ -1517,7 +1549,7 @@ The standard library provides C-like dynamic memory APIs for low-level programmi
 
 **Memory Rule:** You must free the result of `متغير_بيئة(...)` using `حرر_نص(...)` or `تحرير_ذاكرة(...)`.
 
-### 9.7. Time Module (الوقت) (v0.4.1)
+### 9.8. Time Module (الوقت) (v0.4.1)
 
 | Function | Signature | Description |
 |----------|-----------|-------------|
@@ -1526,7 +1558,7 @@ The standard library provides C-like dynamic memory APIs for low-level programmi
 
 **Memory Rule:** You must free the result of `وقت_كنص(...)` using `حرر_نص(...)` or `تحرير_ذاكرة(...)`.
 
-### 9.8. Error Handling Module (معالجة الأخطاء) (v0.4.3)
+### 9.9. Error Handling Module (معالجة الأخطاء) (v0.4.3)
 
 | Function | Signature | Description |
 |----------|-----------|-------------|

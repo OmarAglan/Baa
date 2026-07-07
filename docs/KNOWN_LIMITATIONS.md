@@ -75,6 +75,9 @@ C-compatible behavior.
   must not free it separately.
 - `مخزن_بايتات` is byte-specialized (`ط٨`) storage. It currently supports single-byte append;
   bulk append and higher-level text/builder APIs remain separate roadmap items.
+- Path helpers (`ضم_مسار`, `مجلد_مسار`, `اسم_ملف_مسار`, `امتداد_مسار`, `طبع_مسار`) are lexical
+  string helpers. They do not query the filesystem, resolve symlinks, or currently fold `.` / `..`
+  path segments.
 
 ### Other syntax and runtime limits
 

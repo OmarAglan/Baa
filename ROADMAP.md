@@ -1549,7 +1549,7 @@
 
 * \[x] **Dynamic array/vector API** — `متجه` provides create/free/length/capacity/data/push/pop helpers for fixed-size element patterns, with byte-copy storage and explicit ownership notes.
 * \[x] **Byte buffer API** — `مخزن_بايتات` provides create/free/length/capacity/data plus byte append for compiler/tooling-style buffers.
-* \[ ] **Path API** — join, dirname, basename, extension, normalize.
+* \[x] **Path API** — `ضم_مسار/مجلد_مسار/اسم_ملف_مسار/امتداد_مسار/طبع_مسار` provide owned-string lexical path helpers for join, dirname, basename, extension, and separator normalization.
 * \[ ] **String builder** — efficient incremental text construction with explicit ownership.
 * \[ ] **Result/error helpers** — consistent success/failure convention across stdlib modules.
 * \[ ] **Ownership documentation** — every allocating stdlib function states who frees the result.

@@ -112,6 +112,9 @@
         // عمليات حسابية (Arithmetic)
         // ================================================================
         case MACH_ADD:
+            if (emit_binary_mem_rhs_via_scratch(out, "add", inst)) {
+                break;
+            }
             // AT&T: add src, dst (dst = dst + src)
             // src2 هو المعامل الفعلي للإضافة
             if (inst->src2.kind == MACH_OP_IMM && inst->dst.size_bits == 64 && !imm_fits_imm32(inst->src2.data.imm)) {
@@ -139,6 +142,9 @@
             break;
 
         case MACH_SUB:
+            if (emit_binary_mem_rhs_via_scratch(out, "sub", inst)) {
+                break;
+            }
             if (inst->src2.kind == MACH_OP_IMM && inst->dst.size_bits == 64 && !imm_fits_imm32(inst->src2.data.imm)) {
                 MachineOperand imm = inst->src2;
                 imm.size_bits = 64;

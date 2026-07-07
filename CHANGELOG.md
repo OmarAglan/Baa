@@ -43,6 +43,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
     `سعة_مخزن_بايتات`, `بيانات_مخزن_بايتات`, and `أضف_بايت`.
   - Byte buffers reuse the fixed-size vector layout with one-byte elements and expose
     borrowed `ط٨*` storage for compiler/tooling-style accumulation.
+- **Path stdlib API**:
+  - Added compiler-lowered owned-string helpers: `ضم_مسار`, `مجلد_مسار`,
+    `اسم_ملف_مسار`, `امتداد_مسار`, and `طبع_مسار`.
+  - Path normalization converts separators to `/`, collapses repeated separators,
+    trims trailing separators except for root, and is documented as lexical-only.
+  - Added positive backend coverage plus negative semantic checks for invalid path
+    builtin arguments and arity.
 - **Explicit external declarations**:
   - Added the Arabic `خارجي` qualifier for top-level function prototypes, scalar globals, and
     fixed-size global arrays.

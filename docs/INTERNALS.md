@@ -1464,6 +1464,12 @@ Currently lowered expressions:
   - `حرر_مخزن_بايتات` / `طول_مخزن_بايتات` / `سعة_مخزن_بايتات` /
     `بيانات_مخزن_بايتات`: reuse the vector metadata/data helpers
   - `أضف_بايت`: stores a `ط٨` temporary and appends one byte through the vector push path
+- Builtin path calls in `NODE_CALL_EXPR` (`v0.6.2`):
+  - `طبع_مسار`: allocates a normalized C string, converts `\` to `/`, collapses repeated separators,
+    trims a trailing separator except for root, then returns an owned Baa `نص`
+  - `ضم_مسار`: normalizes both operands, handles empty/absolute right-hand paths, and copies the joined
+    result into an owned Baa `نص`
+  - `مجلد_مسار` / `اسم_ملف_مسار` / `امتداد_مسار`: derive owned slices from the normalized path string
 - Builtin file I/O calls in `NODE_CALL_EXPR` (`v0.3.12`):
   - `فتح_ملف`: lowers to `fopen` (handle is `عدم*` representing `FILE*`)
   - `اغلق_ملف`: lowers to `fclose`

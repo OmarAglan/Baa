@@ -1543,7 +1543,7 @@
 * \[x] **Fix-it hints** — parser expected-token diagnostics suggest missing `.`, `؛`, and delimiters; semantic assignment type mismatches now suggest matching the value type or using explicit conversion.
 * \[x] **Diagnostic categories** — text diagnostics derive category labels such as `syntax`, `semantic`, `include`, `backend`, `runtime`, `warning`, and `internal` from stable code families.
 * \[x] **`--explain <CODE>`** — built-in Arabic explanations for the stable text diagnostic families and current warning codes.
-* \[ ] **Negative diagnostic expansion** — lock diagnostic count, hints, and cascade behavior.
+* \[x] **Negative diagnostic expansion** — representative syntax, semantic, warning, null, hint, and multi-line-span negatives now lock diagnostic counts and selected cascade guards.
 
   ### v0.6.2: Standard Library Core 📦
 

@@ -25,6 +25,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - **Diagnostic explanations**:
   - Added `--explain <CODE>` / `--explain=<CODE>` to print Arabic explanations and advice for
     stable diagnostic codes such as `B0001`, `B1000`, and current `B110x` warnings.
+- **Negative diagnostic anchors**:
+  - Expanded representative negative tests with `EXPECT-DIAG-COUNT` and `EXPECT-NOT`
+    coverage for syntax hints, semantic hints, warning-as-error output, null diagnostics,
+    and multi-line span rendering.
 - **Explicit external declarations**:
   - Added the Arabic `خارجي` qualifier for top-level function prototypes, scalar globals, and
     fixed-size global arrays.

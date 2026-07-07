@@ -4,6 +4,7 @@
 // EXPECT: [warning]
 // EXPECT: [-Wimplicit-narrowing]
 // EXPECT: تحويل ضمني قد يسبب فقدان بيانات
+// EXPECT-DIAG-COUNT: 1
 صحيح الرئيسية() {
     ص٨ صغير = ٣٠٠.
     إرجع صغير.

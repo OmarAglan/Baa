@@ -296,6 +296,9 @@ stable code family (`syntax`, `semantic`, `include`, `ir`, `backend`, `runtime`,
 Note (v0.6.1): `--explain <CODE>` prints Arabic explanations for the stable text
 diagnostic families and current warning codes.
 
+Note (v0.6.1): representative negative diagnostics lock exact diagnostic counts and
+selected cascade guards with `// EXPECT-DIAG-COUNT:` and `// EXPECT-NOT:`.
+
 **Error Features:**
 
 - **Source Context**: Prints the actual line of code where the error occurred.

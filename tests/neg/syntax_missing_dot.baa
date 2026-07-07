@@ -1,6 +1,8 @@
 // EXPECT: [Error]
 // EXPECT: مساعدة
 // EXPECT: أضف '.' في نهاية الجملة.
+// EXPECT-NOT: خطأ دلالي
+// EXPECT-DIAG-COUNT: 1
 صحيح الرئيسية() {
     صحيح س = 1
     إرجع 0.

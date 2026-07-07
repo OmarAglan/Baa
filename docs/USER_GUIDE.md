@@ -205,6 +205,7 @@ baa [options] <source.baa> [-o <output>]
 | `-fno-runtime-checks` | Disable optional runtime safety checks (default). | `.\baa.exe -fno-runtime-checks main.baa` |
 | `--help`, `-h` | Display help message and usage. | `.\baa.exe --help` |
 | `--version` | Display compiler version. | `.\baa.exe --version` |
+| `--explain <CODE>` | Print an Arabic explanation for a stable diagnostic code. | `.\baa.exe --explain B1000` |
 | `-O0` / `-O1` / `-O2` | Optimization levels (default: `-O1`). | `.\baa.exe -O2 main.baa` |
 | `--target=<t>` | Select backend target (`x86_64-windows` or `x86_64-linux`). | `.\baa.exe --target=x86_64-linux main.baa` |
 | `--startup=custom` | Use custom entrypoint symbol `__baa_start` (via linker `-e`) while keeping CRT/libc initialization. | `.\baa.exe --startup=custom main.baa -o app.exe` |

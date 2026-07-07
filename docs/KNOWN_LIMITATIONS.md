@@ -80,7 +80,6 @@ current driver:
 
 - `--check`
 - `--diagnostics=json`
-- `--explain <CODE>`
 - JSON token dumps
 - JSON symbol outlines
 - completion metadata export

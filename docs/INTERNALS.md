@@ -293,11 +293,15 @@ Note (v0.6.1): text diagnostic headers include a category label derived from the
 stable code family (`syntax`, `semantic`, `include`, `ir`, `backend`, `runtime`,
 `warning`, or `internal`).
 
+Note (v0.6.1): `--explain <CODE>` prints Arabic explanations for the stable text
+diagnostic families and current warning codes.
+
 **Error Features:**
 
 - **Source Context**: Prints the actual line of code where the error occurred.
 - **Stable Codes**: Emits a bracketed `Bxxxx` code after `[Error]`/`[Warning]`.
 - **Categories**: Emits a bracketed category label after the stable code.
+- **Explain command**: `baa --explain B1000` prints Arabic context and advice for a code.
 - **Pointers/Spans**: Uses `^` to point to or underline the offending token/expression,
   including multi-line spans where available.
 - **Hints**: Emits Arabic-first `مساعدة:` lines for curated common syntax and semantic errors.

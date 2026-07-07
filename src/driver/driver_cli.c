@@ -96,6 +96,7 @@ static void parse_set_result(DriverParseResult* out,
     out->input_count = input_count;
     out->include_dirs = include_dirs;
     out->include_dir_count = include_dir_count;
+    out->explain_code = NULL;
     config->include_dirs = include_dirs;
     config->include_dir_count = include_dir_count;
 }
@@ -142,6 +143,7 @@ void driver_print_help(void)
     printf("  -fno-stack-protector    Disable stack canary\n");
     printf("  --help, -h   Show this help message\n");
     printf("  --version    Show version info\n");
+    printf("  --explain <CODE>  Explain a stable diagnostic code in Arabic\n");
     printf("\nWarning Options:\n");
     printf("  -Wall              Enable all warnings\n");
     printf("  -Werror            Treat warnings as errors\n");
@@ -167,6 +169,101 @@ void driver_print_version(void)
     printf("Built on %s\n", BAA_BUILD_DATE);
 }
 
+typedef struct
+{
+    const char *code;
+    const char *category;
+    const char *title;
+    const char *explanation;
+    const char *advice;
+} DiagnosticExplainEntry;
+
+static const DiagnosticExplainEntry g_diagnostic_explain_entries[] = {
+    {
+        "B0001",
+        "syntax",
+        "خطأ نحوي أو لفظي عام",
+        "حدث الخطأ أثناء قراءة الوحدات أو بناء شجرة البرنامج. غالباً يعني ذلك رمزاً مفقوداً أو ترتيباً غير صالح.",
+        "راجع الموضع المشار إليه وسطر المساعدة إن وُجد؛ أكثر الحالات شيوعاً هي نسيان '.' أو '؛' أو قوس إغلاق."
+    },
+    {
+        "B1000",
+        "semantic",
+        "خطأ دلالي عام",
+        "البرنامج مفهوم نحوياً، لكن التحليل الدلالي رفضه بسبب نوع أو نطاق أو قاعدة لغة غير مستوفاة.",
+        "طابق الأنواع، عرّف الرموز قبل استخدامها، واتبع سطر 'مساعدة:' عندما يظهر."
+    },
+    {
+        "B1100",
+        "warning",
+        "تحذير متغير غير مستخدم",
+        "تم تعريف متغير أو رمز عام ولم يُستخدم في المسار المحلل.",
+        "استخدم المتغير أو احذف التعريف إن لم يكن مطلوباً."
+    },
+    {
+        "B1101",
+        "warning",
+        "تحذير كود غير قابل للوصول",
+        "توجد تعليمات بعد جملة تنهي المسار مثل 'إرجع' أو 'توقف' أو 'استمر'.",
+        "انقل التعليمات قبل نهاية المسار أو احذفها إذا كانت ميتة فعلاً."
+    },
+    {
+        "B1102",
+        "warning",
+        "تحذير إرجاع ضمني",
+        "قد تنتهي دالة دون جملة إرجاع صريحة.",
+        "أضف 'إرجع' مناسباً لكل مسار منطقي في الدالة."
+    },
+    {
+        "B1103",
+        "warning",
+        "تحذير حجب اسم",
+        "متغير محلي يستخدم اسماً يحجب رمزاً من نطاق أوسع.",
+        "غيّر اسم المتغير المحلي أو استخدم نطاقاً أوضح لتجنب الالتباس."
+    },
+    {
+        "B1104",
+        "warning",
+        "تحذير تضييق ضمني",
+        "قد يؤدي التحويل الضمني بين الأعداد إلى فقدان بيانات.",
+        "استخدم نوعاً أوسع أو تحويلاً صريحاً إذا كان التضييق مقصوداً."
+    },
+    {
+        "B1105",
+        "warning",
+        "تحذير مقارنة موقّع/غير موقّع",
+        "المقارنة تمزج بين نوع عددي موقّع وآخر غير موقّع.",
+        "وحّد إشارة النوعين أو استخدم تحويلاً صريحاً ومدروساً."
+    },
+};
+
+bool driver_print_diagnostic_explain(const char *code)
+{
+    if (!code || !code[0])
+    {
+        fprintf(stderr, "خطأ: --explain يتطلب رمز تشخيص مثل B1000.\n");
+        return false;
+    }
+
+    size_t count = sizeof(g_diagnostic_explain_entries) / sizeof(g_diagnostic_explain_entries[0]);
+    for (size_t i = 0; i < count; i++)
+    {
+        const DiagnosticExplainEntry *entry = &g_diagnostic_explain_entries[i];
+        if (strcmp(entry->code, code) == 0)
+        {
+            printf("الرمز: %s\n", entry->code);
+            printf("الفئة: %s\n", entry->category);
+            printf("العنوان: %s\n", entry->title);
+            printf("الشرح: %s\n", entry->explanation);
+            printf("اقتراح: %s\n", entry->advice);
+            return true;
+        }
+    }
+
+    fprintf(stderr, "خطأ: لا يوجد شرح معروف لرمز التشخيص '%s'.\n", code);
+    return false;
+}
+
 void driver_parse_result_free(DriverParseResult *r)
 {
     if (!r) return;
@@ -176,6 +273,7 @@ void driver_parse_result_free(DriverParseResult *r)
     r->input_count = 0;
     r->include_dirs = NULL;
     r->include_dir_count = 0;
+    r->explain_code = NULL;
     r->cmd = DRIVER_CMD_COMPILE;
 }
 
@@ -379,6 +477,44 @@ bool driver_parse_cli(int argc, char **argv, CompilerConfig *config, DriverParse
                                  input_count,
                                  include_dirs,
                                  include_dir_count);
+                return true;
+            }
+            else if (strcmp(arg, "--explain") == 0)
+            {
+                if (i + 1 < argc && argv[i + 1] && argv[i + 1][0])
+                {
+                    const char *code = argv[++i];
+                    parse_set_result(out,
+                                     config,
+                                     DRIVER_CMD_EXPLAIN,
+                                     inputs,
+                                     input_count,
+                                     include_dirs,
+                                     include_dir_count);
+                    out->explain_code = code;
+                    return true;
+                }
+                fprintf(stderr, "Error: --explain requires a diagnostic code\n");
+                parse_release_temp_arrays(inputs, include_dirs);
+                return false;
+            }
+            else if (strncmp(arg, "--explain=", 10) == 0)
+            {
+                const char *code = arg + 10;
+                if (!code[0])
+                {
+                    fprintf(stderr, "Error: --explain requires a diagnostic code\n");
+                    parse_release_temp_arrays(inputs, include_dirs);
+                    return false;
+                }
+                parse_set_result(out,
+                                 config,
+                                 DRIVER_CMD_EXPLAIN,
+                                 inputs,
+                                 input_count,
+                                 include_dirs,
+                                 include_dir_count);
+                out->explain_code = code;
                 return true;
             }
             else if (strncmp(arg, "-W", 2) == 0)

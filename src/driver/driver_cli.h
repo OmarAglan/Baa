@@ -17,6 +17,7 @@ typedef enum
     DRIVER_CMD_HELP = 1,
     DRIVER_CMD_VERSION = 2,
     DRIVER_CMD_UPDATE = 3,
+    DRIVER_CMD_EXPLAIN = 4,
 } DriverCommand;
 
 typedef struct
@@ -26,6 +27,7 @@ typedef struct
     int input_count;
     const char **include_dirs; // مسارات -I (مملوكة من Parser)
     size_t include_dir_count;
+    const char *explain_code; // رمز التشخيص لـ --explain (مؤشر إلى argv)
 } DriverParseResult;
 
 /**
@@ -41,5 +43,6 @@ void driver_parse_result_free(DriverParseResult *r);
 
 void driver_print_help(void);
 void driver_print_version(void);
+bool driver_print_diagnostic_explain(const char *code);
 
 #endif // BAA_DRIVER_CLI_H

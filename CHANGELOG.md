@@ -22,6 +22,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - **Diagnostic categories**:
   - Text diagnostic headers now include a bracketed category label derived from the stable
     code family, such as `[syntax]`, `[semantic]`, or `[warning]`.
+- **Diagnostic explanations**:
+  - Added `--explain <CODE>` / `--explain=<CODE>` to print Arabic explanations and advice for
+    stable diagnostic codes such as `B0001`, `B1000`, and current `B110x` warnings.
 - **Explicit external declarations**:
   - Added the Arabic `خارجي` qualifier for top-level function prototypes, scalar globals, and
     fixed-size global arrays.

@@ -105,6 +105,11 @@ int main(int argc, char **argv)
         driver_print_version();
         return main_cleanup_and_return(&cli, NULL, 0, config.output_file, output_file_owned, 0);
     }
+    if (cli.cmd == DRIVER_CMD_EXPLAIN)
+    {
+        bool ok = driver_print_diagnostic_explain(cli.explain_code);
+        return main_cleanup_and_return(&cli, NULL, 0, config.output_file, output_file_owned, ok ? 0 : 1);
+    }
     if (cli.cmd == DRIVER_CMD_UPDATE)
     {
         run_updater();

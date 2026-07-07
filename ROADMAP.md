@@ -1542,7 +1542,7 @@
 * \[x] **Multi-line spans** — diagnostic spans can cover multiple source lines, with semantic binary-expression errors using the wider range when operands cross lines.
 * \[x] **Fix-it hints** — parser expected-token diagnostics suggest missing `.`, `؛`, and delimiters; semantic assignment type mismatches now suggest matching the value type or using explicit conversion.
 * \[x] **Diagnostic categories** — text diagnostics derive category labels such as `syntax`, `semantic`, `include`, `backend`, `runtime`, `warning`, and `internal` from stable code families.
-* \[ ] **`--explain <CODE>`** — detailed Arabic explanation for each stable diagnostic code.
+* \[x] **`--explain <CODE>`** — built-in Arabic explanations for the stable text diagnostic families and current warning codes.
 * \[ ] **Negative diagnostic expansion** — lock diagnostic count, hints, and cascade behavior.
 
   ### v0.6.2: Standard Library Core 📦

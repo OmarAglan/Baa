@@ -108,6 +108,25 @@ def _run_compiler_preflight(log_dir: Path) -> tuple[Path | None, StepResult]:
     return baa, result
 
 
+def _run_diagnostic_explain_smoke(baa: Path, log_dir: Path) -> StepResult:
+    res = _run_logged(
+        "diagnostic-explain-smoke",
+        [str(baa), "--explain", "B1000"],
+        cwd=ROOT,
+        log_dir=log_dir,
+        timeout_s=CORPUS_COMPILE_TIMEOUT_S,
+    )
+    if res.passed:
+        stdout_path = ROOT / res.stdout_log
+        stdout_text = stdout_path.read_text(encoding="utf-8", errors="replace")
+        required = ("الرمز: B1000", "الفئة: semantic", "الشرح:")
+        missing = [marker for marker in required if marker not in stdout_text]
+        if missing:
+            res.passed = False
+            res.detail = "missing explain marker(s): " + ", ".join(missing)
+    return res
+
+
 def _activate_compiler_for_children(baa: Path) -> None:
     os.environ["BAA"] = str(baa)
 
@@ -663,6 +682,11 @@ def main() -> int:
 
     _activate_compiler_for_children(baa)
     print(f"qa: compiler={baa}")
+
+    explain_res = _run_diagnostic_explain_smoke(baa, log_dir)
+    _print_step(explain_res)
+    all_results.append(explain_res)
+    overall_ok = overall_ok and explain_res.passed
 
     # A) Integration tiers
     test_res = _run_logged(

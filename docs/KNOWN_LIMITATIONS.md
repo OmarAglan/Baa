@@ -23,16 +23,18 @@ those features are implemented today.
 
 ### Aggregates
 
-- Struct/union initialization with `=` is not supported; initialize individual fields through
-  member access.
-- Whole-aggregate assignment and using aggregate array elements as first-class values are not
-  supported.
+- Named-field initialization with `=` is supported for automatic local structs only; static/global
+  struct field initializers and union field initializers remain deferred.
+- Whole-aggregate copy assignment is explicitly rejected for aggregate variables, aggregate
+  members, aggregate array elements, and dereferenced aggregate pointers; update individual fields
+  through member access.
+- Using aggregate values or aggregate array elements as first-class values is not supported.
 - Aggregate array initializer lists are not supported by the IR path.
 - Array fields inside structs/unions and recursive/cyclic aggregate definitions are not supported.
 - User-defined aggregate types are not supported as function parameter or return types.
 
-These restrictions are scheduled for explicit policy and ABI work rather than being silently
-treated as C-compatible behavior.
+These restrictions are scheduled for ABI/data-layout work rather than being silently treated as
+C-compatible behavior.
 
 ### Function pointers
 

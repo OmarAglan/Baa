@@ -28,6 +28,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
     function bodies, and combinations with `ساكن`.
   - Advanced `master` metadata and versioned documentation to 0.6.0 while preserving the
     historical v0.5.9 freeze index.
+- **Aggregate assignment policy**:
+  - Whole-aggregate copy assignment is now explicitly rejected for variables, members, array
+    elements, and dereferenced aggregate pointers with a consistent Arabic diagnostic directing
+    users to update fields through `:`.
 
 ## [0.5.9] - 2026-06-29
 

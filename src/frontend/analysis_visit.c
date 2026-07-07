@@ -50,6 +50,7 @@ static void analyze_statements_with_dead_code_check(Node* statements, const char
 }
 
 #include "analysis_struct_init.inc"
+#include "analysis_aggregate_policy.inc"
 
 static void analyze_node(Node* node) {
     if (!node) return;
@@ -380,8 +381,10 @@ static void analyze_node(Node* node) {
                 if (sym->is_array) {
                     semantic_error(node, "لا يمكن تعيين قيمة للمصفوفة '%s' مباشرة (استخدم الفهرسة).", sym->name);
                 }
-                if (sym->type == TYPE_STRUCT) {
-                    semantic_error(node, "لا يمكن إسناد قيمة إلى هيكل '%s' مباشرة.", sym->name);
+                if (is_aggregate_assignment_type(sym->type)) {
+                    report_aggregate_assignment_policy(node, "المتغير", sym->name);
+                    analyze_aggregate_assignment_rhs(node->data.assign_stmt.expression);
+                    break;
                 }
                 // التحقق من الثوابت: لا يمكن إعادة تعيين قيمة ثابت
                 if (sym->is_const) {
@@ -449,9 +452,10 @@ static void analyze_node(Node* node) {
                 (void)infer_type(value);
                 break;
             }
-            if (target->data.member_access.member_type == TYPE_STRUCT) {
-                semantic_error(node, "إسناد عضو من نوع هيكل غير مدعوم حالياً.");
-                (void)infer_type(value);
+            if (is_aggregate_assignment_type(target->data.member_access.member_type)) {
+                report_aggregate_assignment_policy(node, "العضو",
+                                                   target->data.member_access.member);
+                analyze_aggregate_assignment_rhs(value);
                 break;
             }
 
@@ -504,9 +508,14 @@ static void analyze_node(Node* node) {
             }
 
             DataType tt = infer_type(target);
-            if (tt == TYPE_STRUCT || tt == TYPE_UNION || tt == TYPE_VOID) {
-                semantic_error(node, "الإسناد عبر المؤشر لهذا النوع غير مدعوم.");
-                if (value) (void)infer_type(value);
+            if (is_aggregate_assignment_type(tt)) {
+                report_aggregate_assignment_policy(node, "المؤشر", "*");
+                analyze_aggregate_assignment_rhs(value);
+                break;
+            }
+            if (tt == TYPE_VOID) {
+                semantic_error(node, "الإسناد عبر مؤشر إلى 'عدم' غير مدعوم.");
+                if (value) analyze_aggregate_assignment_rhs(value);
                 break;
             }
 
@@ -929,6 +938,12 @@ static void analyze_node(Node* node) {
 
             int expected = (sym->array_rank > 0) ? sym->array_rank : 1;
             (void)analyze_indices_type_and_bounds(sym, node, node->data.array_op.indices, expected);
+
+            if (is_aggregate_assignment_type(sym->type)) {
+                report_aggregate_assignment_policy(node, "عنصر المصفوفة", sym->name);
+                analyze_aggregate_assignment_rhs(node->data.array_op.value);
+                break;
+            }
 
             DataType vt = infer_type(node->data.array_op.value);
             if (sym->type == TYPE_POINTER) {

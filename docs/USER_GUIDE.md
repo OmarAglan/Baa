@@ -691,7 +691,8 @@ Group related data using `هيكل` (structs), `تعداد` (enums), and `اتح
 
 Local `هيكل` values can be initialized with named fields using `{ field: value }`.
 Fields omitted from the initializer are zeroed. Static/global struct field initializers are
-still deferred.
+still deferred. Copying an entire struct/union with assignment is intentionally rejected for now;
+assign individual fields with `:`.
 
 ### Static Variables
 

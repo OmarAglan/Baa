@@ -422,7 +422,10 @@ static void analyze_node(Node* node) {
                         semantic_error(node, "عدم تطابق توقيع مؤشر الدالة في الإسناد إلى '%s'.", node->data.assign_stmt.name);
                     }
                 } else if (!types_compatible(exprType, sym->type)) {
-                    semantic_error(node, "عدم تطابق النوع في الإسناد إلى '%s'.", node->data.assign_stmt.name);
+                    semantic_error_hint(node,
+                                        "اجعل نوع القيمة مطابقاً لنوع المتغير أو استخدم تحويلاً صريحاً بـ كـ<...>(...) إذا كان التحويل مقصوداً.",
+                                        "عدم تطابق النوع في الإسناد إلى '%s'.",
+                                        node->data.assign_stmt.name);
                 } else {
                     maybe_warn_implicit_narrowing(exprType, sym->type, node->data.assign_stmt.expression);
                 }

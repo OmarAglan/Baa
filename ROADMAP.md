@@ -1540,7 +1540,7 @@
 
 * \[x] **Diagnostic codes** — text diagnostics now include stable family identifiers such as `B0001`, `B1000`, and warning-specific `B110x` codes.
 * \[x] **Multi-line spans** — diagnostic spans can cover multiple source lines, with semantic binary-expression errors using the wider range when operands cross lines.
-* \[ ] **Fix-it hints** — suggest missing `.`, wrong `؛`, wrong type, or missing include where reliable.
+* \[x] **Fix-it hints** — parser expected-token diagnostics suggest missing `.`, `؛`, and delimiters; semantic assignment type mismatches now suggest matching the value type or using explicit conversion.
 * \[ ] **Diagnostic categories** — syntax, type, include, backend, runtime, warning.
 * \[ ] **`--explain <CODE>`** — detailed Arabic explanation for each stable diagnostic code.
 * \[ ] **Negative diagnostic expansion** — lock diagnostic count, hints, and cascade behavior.

@@ -1001,7 +1001,7 @@ Test files can include special comments:
 | `خطأ نحوي: ...` | Missing token (`.`/`}`/`)`), or malformed statement/declaration | Fix the reported token location; `مساعدة:` lines may suggest the common fix |
 | `[Error] [B0001] <file>:<line>:<col>: ...` | Syntax-family error | Check for missing `.` at statement end, missing `}`, or malformed declarations |
 | `[Error] [B1000] ... خطأ دلالي: ... متغير غير معرّف ...` | Semantic-family error | Declare variables before using them or correct the name |
-| `[Error] [B1000] ... عدم تطابق أنواع ...` | Assigning wrong type | Keep assignment/call/return types compatible |
+| `[Error] [B1000] ... عدم تطابق أنواع ...` | Assigning wrong type | Keep assignment/call/return types compatible; assignment mismatches may include an Arabic `مساعدة:` hint |
 | `[Error] [B1000] ... خطأ دلالي: ... ثابت ...` | Modifying a constant | Constants declared with `ثابت` cannot be changed after initialization |
 | `Aborting <file> due to syntax errors.` | Parser reported one or more errors | Fix reported `[Error]` diagnostics and recompile |
 | `Aborting <file> due to semantic errors.` | Analyzer reported one or more errors | Fix reported semantic `[Error]` messages and recompile |

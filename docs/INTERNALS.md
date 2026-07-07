@@ -286,6 +286,9 @@ Note (v0.6.1): `DiagnosticSpan` can cover multiple lines. The renderer prints ea
 covered source line with its own underline; semantic binary-expression errors use this
 path when the offending operands cross a newline.
 
+Note (v0.6.1): curated fix-it hints cover parser expected-token recovery (`.`, `؛`,
+closing delimiters) and semantic assignment type mismatches.
+
 **Error Features:**
 
 - **Source Context**: Prints the actual line of code where the error occurred.

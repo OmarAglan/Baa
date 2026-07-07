@@ -16,6 +16,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - **Multi-line diagnostic spans**:
   - The diagnostic engine can render source ranges across multiple lines, and semantic
     arithmetic type errors now underline the full binary expression when operands cross lines.
+- **Fix-it hints**:
+  - Ordinary assignment type mismatches now include an Arabic `مساعدة:` hint that points users
+    toward matching the assigned value type or using an explicit `كـ<...>(...)` conversion.
 - **Explicit external declarations**:
   - Added the Arabic `خارجي` qualifier for top-level function prototypes, scalar globals, and
     fixed-size global arrays.

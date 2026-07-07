@@ -58,6 +58,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
     while `كود_نجاح` (`0`) means success for integer status helpers.
   - Added positive backend coverage plus a negative semantic check for invalid
     result-code arguments.
+- **Stdlib ownership contract**:
+  - Added `docs/STDLIB_OWNERSHIP.md` as the single ownership matrix for owned
+    heap results, borrowed pointers, opaque handles, and matching release helpers.
+  - Linked the ownership contract from the README and language reference.
 - **Path stdlib API**:
   - Added compiler-lowered owned-string helpers: `ضم_مسار`, `مجلد_مسار`,
     `اسم_ملف_مسار`, `امتداد_مسار`, and `طبع_مسار`.

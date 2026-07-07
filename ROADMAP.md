@@ -1552,7 +1552,7 @@
 * \[x] **Path API** — `ضم_مسار/مجلد_مسار/اسم_ملف_مسار/امتداد_مسار/طبع_مسار` provide owned-string lexical path helpers for join, dirname, basename, extension, and separator normalization.
 * \[x] **String builder** — `باني_نص` provides owned incremental text construction with append, clear, length, snapshot, and explicit free helpers.
 * \[x] **Result/error helpers** — `نتيجة_ناجحة/نتيجة_فاشلة/كود_نتيجة` document and bridge the stdlib `منطقي` success and integer status-code conventions.
-* \[ ] **Ownership documentation** — every allocating stdlib function states who frees the result.
+* \[x] **Ownership documentation** — `docs/STDLIB_OWNERSHIP.md` indexes owned results, borrowed pointers, and release helpers for public stdlib APIs.
 
   ### v0.6.3: Runtime Safety Guards 🛡️
 

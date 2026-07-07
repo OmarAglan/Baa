@@ -1353,6 +1353,8 @@ Baa includes a minimal standard library. To use it, you must include its header 
 
 **Syntax:** `#تضمين "baalib.baahd"` (also supported: `#تضمين "stdlib/baalib.baahd"`)
 
+For a single ownership matrix covering owned heap results, borrowed pointers, and matching release helpers, see [Standard Library Ownership Contract](STDLIB_OWNERSHIP.md).
+
 ### 9.1. String Operations (`نص`)
 
 Strings in Baa are UTF-8 arrays of `حرف` terminated by a null character. The standard library provides C-like string manipulation functions.

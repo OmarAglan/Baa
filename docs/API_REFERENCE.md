@@ -3951,6 +3951,7 @@ typedef struct {
 
 - Displays filename, line, and column
 - Emits stable bracketed diagnostic codes such as `[B0001]` and `[B1000]`
+- Emits derived bracketed category labels such as `[syntax]`, `[semantic]`, or `[warning]`
 - Shows the actual source line(s) with a `^` pointer or span-width underline
 - Supports Arabic `مساعدة:` hint lines for curated common errors
 - Supports printf-style formatting

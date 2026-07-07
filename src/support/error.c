@@ -119,6 +119,26 @@ static const char* diagnostic_code_or_default(const char* code, const char* fall
     return (code && code[0]) ? code : fallback;
 }
 
+/**
+ * @brief اشتقاق فئة التشخيص من عائلة الرمز الثابت.
+ */
+static const char* diagnostic_category_for_code(const char* code)
+{
+    code = diagnostic_code_or_default(code, DIAG_CODE_SYNTAX_GENERIC);
+    if (strncmp(code, "B11", 3) == 0) return "warning";
+
+    switch (code[1]) {
+        case '0': return "syntax";
+        case '1': return "semantic";
+        case '2': return "include";
+        case '3': return "ir";
+        case '4': return "backend";
+        case '5': return "runtime";
+        case '9': return "internal";
+        default: return "internal";
+    }
+}
+
 static void error_sources_clear(void) {
     if (g_error_sources) {
         for (int i = 0; i < g_error_sources_count; i++) {
@@ -398,20 +418,23 @@ static void error_report_vspan(const char* code,
 {
     span = diagnostic_span_normalize(span);
     code = diagnostic_code_or_default(code, DIAG_CODE_SYNTAX_GENERIC);
+    const char* category = diagnostic_category_for_code(code);
     had_error = true;
     bool use_color = g_warning_config.colored_output;
     
     // طباعة رأس الخطأ
     if (use_color) {
-        fprintf(stderr, "%s[Error]%s %s[%s]%s %s:%d:%d: ",
+        fprintf(stderr, "%s[Error]%s %s[%s]%s %s[%s]%s %s:%d:%d: ",
                 ANSI_BOLD_RED, ANSI_RESET,
                 ANSI_CYAN, code, ANSI_RESET,
+                ANSI_CYAN, category, ANSI_RESET,
                 span.filename ? span.filename : "unknown",
                 span.line,
                 span.col);
     } else {
-        fprintf(stderr, "[Error] [%s] %s:%d:%d: ",
+        fprintf(stderr, "[Error] [%s] [%s] %s:%d:%d: ",
                 code,
+                category,
                 span.filename ? span.filename : "unknown",
                 span.line,
                 span.col);
@@ -515,27 +538,32 @@ static void warning_report_vspan(WarningType type,
     // طباعة رأس التحذير
     const char* warn_name = warning_type_name(type);
     const char* warn_code = warning_type_code(type);
+    const char* warn_category = diagnostic_category_for_code(warn_code);
     
     if (use_color) {
         if (g_warning_config.warnings_as_errors) {
-            fprintf(stderr, "%s[Error]%s %s[%s]%s %s:%d:%d: ",
+            fprintf(stderr, "%s[Error]%s %s[%s]%s %s[%s]%s %s:%d:%d: ",
                     ANSI_BOLD_RED, ANSI_RESET,
                     ANSI_CYAN, warn_code, ANSI_RESET,
+                    ANSI_CYAN, warn_category, ANSI_RESET,
                     span.filename ? span.filename : "unknown", span.line, span.col);
         } else {
-            fprintf(stderr, "%s[Warning]%s %s[%s]%s %s:%d:%d: ",
+            fprintf(stderr, "%s[Warning]%s %s[%s]%s %s[%s]%s %s:%d:%d: ",
                     ANSI_BOLD_YELLOW, ANSI_RESET,
                     ANSI_CYAN, warn_code, ANSI_RESET,
+                    ANSI_CYAN, warn_category, ANSI_RESET,
                     span.filename ? span.filename : "unknown", span.line, span.col);
         }
         fprintf(stderr, "%s[-W%s]%s ", ANSI_CYAN, warn_name, ANSI_RESET);
     } else {
         if (g_warning_config.warnings_as_errors) {
-            fprintf(stderr, "[Error] [%s] %s:%d:%d: ",
-                    warn_code, span.filename ? span.filename : "unknown", span.line, span.col);
+            fprintf(stderr, "[Error] [%s] [%s] %s:%d:%d: ",
+                    warn_code, warn_category,
+                    span.filename ? span.filename : "unknown", span.line, span.col);
         } else {
-            fprintf(stderr, "[Warning] [%s] %s:%d:%d: ",
-                    warn_code, span.filename ? span.filename : "unknown", span.line, span.col);
+            fprintf(stderr, "[Warning] [%s] [%s] %s:%d:%d: ",
+                    warn_code, warn_category,
+                    span.filename ? span.filename : "unknown", span.line, span.col);
         }
         fprintf(stderr, "[-W%s] ", warn_name);
     }

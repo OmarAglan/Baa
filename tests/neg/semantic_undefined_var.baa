@@ -1,5 +1,6 @@
 // EXPECT: [Error]
 // EXPECT: [B1000]
+// EXPECT: [semantic]
 // EXPECT: خطأ دلالي
 // EXPECT: إسناد إلى متغير غير معرّف
 // EXPECT: عرّف المتغير قبل استخدامه

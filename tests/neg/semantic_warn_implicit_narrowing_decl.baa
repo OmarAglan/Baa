@@ -1,6 +1,7 @@
 // FLAGS: -Wall -Werror
 // EXPECT: [Error]
 // EXPECT: [B1104]
+// EXPECT: [warning]
 // EXPECT: [-Wimplicit-narrowing]
 // EXPECT: تحويل ضمني قد يسبب فقدان بيانات
 صحيح الرئيسية() {

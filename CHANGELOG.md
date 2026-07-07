@@ -19,6 +19,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - **Fix-it hints**:
   - Ordinary assignment type mismatches now include an Arabic `مساعدة:` hint that points users
     toward matching the assigned value type or using an explicit `كـ<...>(...)` conversion.
+- **Diagnostic categories**:
+  - Text diagnostic headers now include a bracketed category label derived from the stable
+    code family, such as `[syntax]`, `[semantic]`, or `[warning]`.
 - **Explicit external declarations**:
   - Added the Arabic `خارجي` qualifier for top-level function prototypes, scalar globals, and
     fixed-size global arrays.

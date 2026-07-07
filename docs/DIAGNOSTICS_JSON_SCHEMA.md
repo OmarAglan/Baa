@@ -104,7 +104,8 @@ When `--diagnostics=json` is used, diagnostics are written as JSON to stdout or 
 
 Current text diagnostics use this range at family granularity: `B0001` for syntax-family
 errors, `B1000` for semantic-family errors, and `B1100`-`B1105` for the current warning
-types. JSON output remains a future driver surface.
+types. Text headers also include a derived category label, for example
+`[Error] [B1000] [semantic] ...`. JSON output remains a future driver surface.
 
 ---
 

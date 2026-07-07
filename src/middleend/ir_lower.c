@@ -940,11 +940,16 @@ static void ir_lower_scope_pop(IRLowerCtx* ctx) {
 #include "ir_lower_cf_helpers.c"
 #include "ir_lower_string_mem.c"
 #include "ir_lower_format.c"
+#include "ir_lower_vector.c"
 
 static IRValue* lower_call_expr(IRLowerCtx* ctx, Node* expr) {
 #include "ir_lower_call_expr_body_a.inc"
 #include "ir_lower_call_expr_body_b.inc"
 #include "ir_lower_call_expr_body_c.inc"
+    IRValue* vector_builtin_value = NULL;
+    if (ir_lower_try_vector_builtin(ctx, expr, &vector_builtin_value)) {
+        return vector_builtin_value ? vector_builtin_value : ir_builder_const_i64(0);
+    }
 #include "ir_lower_call_expr_body_d.inc"
 #include "ir_lower_call_expr_body_e.inc"
 #include "ir_lower_call_expr_body_f.inc"

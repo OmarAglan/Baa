@@ -1453,6 +1453,12 @@ Currently lowered expressions:
   - `إعادة_حجز`: lowers to `realloc`
   - `نسخ_ذاكرة`: lowers to `memcpy`
   - `تعيين_ذاكرة`: lowers to `memset`
+- Builtin dynamic vector calls in `NODE_CALL_EXPR` (`v0.6.2`):
+  - `أنشئ_متجه`: allocates a 32-byte opaque header (`len/cap/elem_size/data`)
+  - `حرر_متجه`: frees the internal data pointer and then the header
+  - `طول_متجه` / `سعة_متجه` / `بيانات_متجه`: read borrowed metadata/storage
+  - `ادفع_متجه`: grows via `realloc`, then copies one fixed-size element via `memcpy`
+  - `اسحب_متجه`: optionally copies the last element out, then decrements length
 - Builtin file I/O calls in `NODE_CALL_EXPR` (`v0.3.12`):
   - `فتح_ملف`: lowers to `fopen` (handle is `عدم*` representing `FILE*`)
   - `اغلق_ملف`: lowers to `fclose`

@@ -178,6 +178,61 @@ typedef struct {
     const char* name;
     DataType return_type;
     int param_count;
+    DataType param_types[2];
+} BuiltinVectorFuncSig;
+
+static const BuiltinVectorFuncSig builtin_vector_funcs[] = {
+    { "أنشئ_متجه",  TYPE_POINTER, 1, { TYPE_INT,     TYPE_INT } },
+    { "حرر_متجه",   TYPE_VOID,    1, { TYPE_POINTER, TYPE_INT } },
+    { "طول_متجه",   TYPE_INT,     1, { TYPE_POINTER, TYPE_INT } },
+    { "سعة_متجه",   TYPE_INT,     1, { TYPE_POINTER, TYPE_INT } },
+    { "بيانات_متجه", TYPE_POINTER, 1, { TYPE_POINTER, TYPE_INT } },
+    { "ادفع_متجه",  TYPE_BOOL,    2, { TYPE_POINTER, TYPE_POINTER } },
+    { "اسحب_متجه",  TYPE_BOOL,    2, { TYPE_POINTER, TYPE_POINTER } },
+};
+
+DEFINE_BUILTIN_LOOKUP(builtin_lookup_vector_func, BuiltinVectorFuncSig, builtin_vector_funcs)
+
+/**
+ * @brief التحقق من صحة استدعاء دوال المتجه الديناميكي المدمجة في v0.6.2.
+ * @return true إذا كان الاسم دالة مدمجة (سواء مع أخطاء أو بدونها)، false إذا لم يكن مدمجاً.
+ */
+static bool builtin_check_vector_call(Node* call_node, const char* fname, Node* args, DataType* out_return_type)
+{
+    const BuiltinVectorFuncSig* sig = builtin_lookup_vector_func(fname);
+    if (!sig) return false;
+
+    int i = 0;
+    for (Node* arg = args; arg; arg = arg->next, i++) {
+        DataType got = infer_type(arg);
+        if (i < sig->param_count) {
+            DataType expected = sig->param_types[i];
+            if (expected == TYPE_POINTER) {
+                // متجه وعدم* معاملات معتمة؛ يسمح عدم* بتمرير مؤشرات عناصر مختلفة أو عدم.
+                if (!builtin_arg_is_void_ptr_compatible(arg, got)) {
+                    builtin_report_param_type_mismatch(arg, i + 1, sig->name);
+                }
+            } else if (!types_compatible(got, expected)) {
+                builtin_report_param_type_mismatch(arg, i + 1, sig->name);
+            } else {
+                maybe_warn_implicit_narrowing(got, expected, arg);
+            }
+        }
+    }
+
+    if (i != sig->param_count) {
+        builtin_report_param_count_mismatch(call_node, sig->name, sig->param_count);
+    }
+
+    builtin_finalize_call_return(call_node, sig->return_type, out_return_type,
+                                 sig->return_type == TYPE_POINTER);
+    return true;
+}
+
+typedef struct {
+    const char* name;
+    DataType return_type;
+    int param_count;
     DataType param_types[3];
 } BuiltinFileFuncSig;
 
@@ -573,4 +628,3 @@ static bool builtin_check_variadic_runtime_call(Node* call_node, const char* fna
     }
     return true;
 }
-

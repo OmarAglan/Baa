@@ -1547,7 +1547,7 @@
 
   ### v0.6.2: Standard Library Core 📦
 
-* \[ ] **Dynamic array/vector API** — push/pop/length/free helpers for common element patterns.
+* \[x] **Dynamic array/vector API** — `متجه` provides create/free/length/capacity/data/push/pop helpers for fixed-size element patterns, with byte-copy storage and explicit ownership notes.
 * \[ ] **Byte buffer API** — explicit buffer type for compiler/tooling-style programs.
 * \[ ] **Path API** — join, dirname, basename, extension, normalize.
 * \[ ] **String builder** — efficient incremental text construction with explicit ownership.

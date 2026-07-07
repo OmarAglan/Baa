@@ -1,6 +1,6 @@
 # Baa Known Limitations
 
-> **Baseline:** v0.6.0 development after the frozen v0.5.9 reference-compiler RC
+> **Baseline:** v0.6.2 development after the frozen v0.5.9 reference-compiler RC
 
 This page describes unsupported or intentionally deferred behavior in the current C reference
 compiler. Draft roadmap and tooling documents describe future contracts; they do not imply that
@@ -65,6 +65,14 @@ C-compatible behavior.
   grapheme-cluster-aware indexing/length behavior.
 - Runtime checks are optional and currently cover selected array-bounds paths. Baa is not a
   memory-safe language; raw pointers and inline assembly remain unsafe operations.
+
+### Standard library containers
+
+- `متجه` is an opaque fixed-element-size byte-copy container, not a generic typed collection.
+  Callers pass element addresses explicitly and cast `بيانات_متجه` to the intended element
+  pointer type when they need direct access.
+- `بيانات_متجه` returns borrowed internal storage that may change after `ادفع_متجه`; callers
+  must not free it separately.
 
 ### Other syntax and runtime limits
 

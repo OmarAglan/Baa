@@ -29,6 +29,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
   - Expanded representative negative tests with `EXPECT-DIAG-COUNT` and `EXPECT-NOT`
     coverage for syntax hints, semantic hints, warning-as-error output, null diagnostics,
     and multi-line span rendering.
+- **Dynamic vector stdlib API**:
+  - Added the opaque `متجه` handle and compiler-lowered helpers:
+    `أنشئ_متجه`, `حرر_متجه`, `طول_متجه`, `سعة_متجه`, `بيانات_متجه`,
+    `ادفع_متجه`, and `اسحب_متجه`.
+  - The implementation stores fixed-size elements by byte copy, grows with `realloc`,
+    and documents explicit ownership for the handle and borrowed data pointer.
+  - Added positive backend coverage plus negative semantic checks for invalid vector
+    create/push arguments.
 - **Explicit external declarations**:
   - Added the Arabic `خارجي` qualifier for top-level function prototypes, scalar globals, and
     fixed-size global arrays.

@@ -1418,7 +1418,48 @@ The standard library provides C-like dynamic memory APIs for low-level programmi
 }
 ```
 
-### 9.3. Math Module (الرياضيات) (v0.4.2)
+### 9.3. Dynamic Vector (المتجه الديناميكي) (v0.6.2)
+
+`متجه` is an opaque heap-owned handle for a growable byte-copy array. The caller chooses the fixed element size at creation time, then passes element addresses to push/pop operations.
+
+| Function | Signature | Description |
+|----------|-----------|-------------|
+| **Create** | `متجه أنشئ_متجه(صحيح حجم_العنصر)` | Allocates a vector handle for fixed-size elements. Returns `عدم` on invalid element size or allocation failure. |
+| **Free** | `عدم حرر_متجه(متجه م)` | Frees the vector handle and its internal storage. It does not free pointers stored as element values. |
+| **Length** | `صحيح طول_متجه(متجه م)` | Returns the number of stored elements, or `0` for `عدم`. |
+| **Capacity** | `صحيح سعة_متجه(متجه م)` | Returns current element capacity, or `0` for `عدم`. |
+| **Data** | `عدم* بيانات_متجه(متجه م)` | Returns the internal storage pointer. The caller does not own it, and it may change after `ادفع_متجه`. |
+| **Push** | `منطقي ادفع_متجه(متجه م، عدم* عنصر)` | Copies one element from `عنصر` into the vector, growing as needed. Returns `خطأ` on allocation failure or invalid input. |
+| **Pop** | `منطقي اسحب_متجه(متجه م، عدم* وجهة)` | Removes the last element. If `وجهة != عدم`, copies the removed bytes there. Returns `خطأ` if the vector is empty or invalid. |
+
+**Ownership Rule:** `أنشئ_متجه(...)` returns a heap-owned handle that must be released with `حرر_متجه(...)`. `بيانات_متجه(...)` is borrowed internal storage, not a separately owned allocation.
+
+**Example:**
+```baa
+#تضمين "stdlib/baalib.baahd"
+
+صحيح الرئيسية() {
+    متجه أعداد = أنشئ_متجه(حجم(صحيح)).
+    إذا (أعداد == عدم) { إرجع ١. }
+
+    صحيح قيمة = ٧.
+    إذا (!ادفع_متجه(أعداد، &قيمة)) {
+        حرر_متجه(أعداد).
+        إرجع ٢.
+    }
+
+    صحيح خارج = ٠.
+    إذا (!اسحب_متجه(أعداد، &خارج)) {
+        حرر_متجه(أعداد).
+        إرجع ٣.
+    }
+
+    حرر_متجه(أعداد).
+    إرجع خارج != ٧.
+}
+```
+
+### 9.4. Math Module (الرياضيات) (v0.4.2)
 
 | Function | Signature | Description |
 |----------|-----------|-------------|
@@ -1430,7 +1471,7 @@ The standard library provides C-like dynamic memory APIs for low-level programmi
 | **Absolute Value** | `صحيح مطلق(صحيح قيمة)` | Returns absolute signed integer value. |
 | **Random** | `صحيح عشوائي()` | Returns a non-negative pseudo-random integer. |
 
-### 9.4. System Module (النظام) (v0.4.1)
+### 9.5. System Module (النظام) (v0.4.1)
 
 | Function | Signature | Description |
 |----------|-----------|-------------|
@@ -1439,7 +1480,7 @@ The standard library provides C-like dynamic memory APIs for low-level programmi
 
 **Memory Rule:** You must free the result of `متغير_بيئة(...)` using `حرر_نص(...)` or `تحرير_ذاكرة(...)`.
 
-### 9.5. Time Module (الوقت) (v0.4.1)
+### 9.6. Time Module (الوقت) (v0.4.1)
 
 | Function | Signature | Description |
 |----------|-----------|-------------|
@@ -1448,7 +1489,7 @@ The standard library provides C-like dynamic memory APIs for low-level programmi
 
 **Memory Rule:** You must free the result of `وقت_كنص(...)` using `حرر_نص(...)` or `تحرير_ذاكرة(...)`.
 
-### 9.6. Error Handling Module (معالجة الأخطاء) (v0.4.3)
+### 9.7. Error Handling Module (معالجة الأخطاء) (v0.4.3)
 
 | Function | Signature | Description |
 |----------|-----------|-------------|

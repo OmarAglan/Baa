@@ -37,6 +37,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
     and documents explicit ownership for the handle and borrowed data pointer.
   - Added positive backend coverage plus negative semantic checks for invalid vector
     create/push arguments.
+- **Byte buffer stdlib API**:
+  - Added the opaque `مخزن_بايتات` handle and compiler-lowered helpers:
+    `أنشئ_مخزن_بايتات`, `حرر_مخزن_بايتات`, `طول_مخزن_بايتات`,
+    `سعة_مخزن_بايتات`, `بيانات_مخزن_بايتات`, and `أضف_بايت`.
+  - Byte buffers reuse the fixed-size vector layout with one-byte elements and expose
+    borrowed `ط٨*` storage for compiler/tooling-style accumulation.
 - **Explicit external declarations**:
   - Added the Arabic `خارجي` qualifier for top-level function prototypes, scalar globals, and
     fixed-size global arrays.

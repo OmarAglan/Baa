@@ -1548,7 +1548,7 @@
   ### v0.6.2: Standard Library Core 📦
 
 * \[x] **Dynamic array/vector API** — `متجه` provides create/free/length/capacity/data/push/pop helpers for fixed-size element patterns, with byte-copy storage and explicit ownership notes.
-* \[ ] **Byte buffer API** — explicit buffer type for compiler/tooling-style programs.
+* \[x] **Byte buffer API** — `مخزن_بايتات` provides create/free/length/capacity/data plus byte append for compiler/tooling-style buffers.
 * \[ ] **Path API** — join, dirname, basename, extension, normalize.
 * \[ ] **String builder** — efficient incremental text construction with explicit ownership.
 * \[ ] **Result/error helpers** — consistent success/failure convention across stdlib modules.

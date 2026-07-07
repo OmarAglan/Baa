@@ -73,6 +73,8 @@ C-compatible behavior.
   pointer type when they need direct access.
 - `بيانات_متجه` returns borrowed internal storage that may change after `ادفع_متجه`; callers
   must not free it separately.
+- `مخزن_بايتات` is byte-specialized (`ط٨`) storage. It currently supports single-byte append;
+  bulk append and higher-level text/builder APIs remain separate roadmap items.
 
 ### Other syntax and runtime limits
 

@@ -33,6 +33,17 @@ static bool ir_lower_vector_name_known(const char* name)
             strcmp(name, "اسحب_متجه") == 0);
 }
 
+static bool ir_lower_byte_buffer_name_known(const char* name)
+{
+    return name &&
+           (strcmp(name, "أنشئ_مخزن_بايتات") == 0 ||
+            strcmp(name, "حرر_مخزن_بايتات") == 0 ||
+            strcmp(name, "طول_مخزن_بايتات") == 0 ||
+            strcmp(name, "سعة_مخزن_بايتات") == 0 ||
+            strcmp(name, "بيانات_مخزن_بايتات") == 0 ||
+            strcmp(name, "أضف_بايت") == 0);
+}
+
 static IRValue* ir_lower_vector_const_bool(bool value)
 {
     return ir_value_const_int(value ? 1 : 0, IR_TYPE_I1_T);
@@ -497,13 +508,29 @@ static IRValue* ir_lower_vector_pop(IRLowerCtx* ctx, const Node* site, IRValue* 
     return ir_lower_vector_load_result(ctx, result_ptr, IR_TYPE_I1_T);
 }
 
+static IRValue* ir_lower_byte_buffer_push_byte(IRLowerCtx* ctx,
+                                               const Node* site,
+                                               IRValue* buffer_in,
+                                               IRValue* byte_in)
+{
+    IRBuilder* b = ctx ? ctx->builder : NULL;
+    IRType* i8_ptr_t = ir_type_ptr(IR_TYPE_I8_T);
+    if (!b) return ir_lower_vector_const_bool(false);
+
+    IRValue* byte_slot = ir_lower_vector_alloca_result(ctx, IR_TYPE_U8_T);
+    IRValue* byte_value = cast_to(ctx, byte_in, IR_TYPE_U8_T);
+    ir_builder_emit_store(b, byte_value, byte_slot);
+    IRValue* byte_ptr = cast_to(ctx, byte_slot, i8_ptr_t);
+    return ir_lower_vector_push(ctx, site, buffer_in, byte_ptr);
+}
+
 static bool ir_lower_try_vector_builtin(IRLowerCtx* ctx, Node* expr, IRValue** out_value)
 {
     if (out_value) *out_value = NULL;
     if (!ctx || !ctx->builder || !expr || !expr->data.call.name) return false;
 
     const char* name = expr->data.call.name;
-    if (!ir_lower_vector_name_known(name)) return false;
+    if (!ir_lower_vector_name_known(name) && !ir_lower_byte_buffer_name_known(name)) return false;
 
     IRModule* m = ctx->builder->module;
     if (m) ir_module_set_current(m);
@@ -589,6 +616,72 @@ static bool ir_lower_try_vector_builtin(IRLowerCtx* ctx, Node* expr, IRValue** o
         IRValue* vec = lower_expr(ctx, a0);
         IRValue* out = lower_expr(ctx, a1);
         if (out_value) *out_value = ir_lower_vector_pop(ctx, expr, vec, out);
+        return true;
+    }
+
+    if (strcmp(name, "أنشئ_مخزن_بايتات") == 0) {
+        if (a0) {
+            ir_lower_report_error(ctx, expr, "استدعاء 'أنشئ_مخزن_بايتات' لا يتطلب وسائط.");
+            ir_lower_eval_call_args(ctx, expr->data.call.args);
+            if (out_value) *out_value = ir_lower_vector_const_ptr(i8_ptr_t);
+            return true;
+        }
+        if (out_value) {
+            *out_value = ir_lower_vector_create(ctx, expr, ir_value_const_int(1, IR_TYPE_I64_T));
+        }
+        return true;
+    }
+
+    if (strcmp(name, "حرر_مخزن_بايتات") == 0) {
+        if (!a0 || a1) {
+            ir_lower_report_error(ctx, expr, "استدعاء 'حرر_مخزن_بايتات' يتطلب وسيطاً واحداً.");
+            ir_lower_eval_call_args(ctx, expr->data.call.args);
+            if (out_value) *out_value = ir_builder_const_i64(0);
+            return true;
+        }
+        IRValue* buffer = lower_expr(ctx, a0);
+        if (out_value) *out_value = ir_lower_vector_free(ctx, expr, buffer);
+        return true;
+    }
+
+    if (strcmp(name, "طول_مخزن_بايتات") == 0 || strcmp(name, "سعة_مخزن_بايتات") == 0) {
+        if (!a0 || a1) {
+            ir_lower_report_error(ctx, expr,
+                                  strcmp(name, "طول_مخزن_بايتات") == 0
+                                      ? "استدعاء 'طول_مخزن_بايتات' يتطلب وسيطاً واحداً."
+                                      : "استدعاء 'سعة_مخزن_بايتات' يتطلب وسيطاً واحداً.");
+            ir_lower_eval_call_args(ctx, expr->data.call.args);
+            if (out_value) *out_value = ir_value_const_int(0, IR_TYPE_I64_T);
+            return true;
+        }
+        IRValue* buffer = lower_expr(ctx, a0);
+        int field = (strcmp(name, "طول_مخزن_بايتات") == 0) ? 0 : 1;
+        if (out_value) *out_value = ir_lower_vector_query_i64(ctx, expr, buffer, field);
+        return true;
+    }
+
+    if (strcmp(name, "بيانات_مخزن_بايتات") == 0) {
+        if (!a0 || a1) {
+            ir_lower_report_error(ctx, expr, "استدعاء 'بيانات_مخزن_بايتات' يتطلب وسيطاً واحداً.");
+            ir_lower_eval_call_args(ctx, expr->data.call.args);
+            if (out_value) *out_value = ir_lower_vector_const_ptr(i8_ptr_t);
+            return true;
+        }
+        IRValue* buffer = lower_expr(ctx, a0);
+        if (out_value) *out_value = ir_lower_vector_data(ctx, expr, buffer);
+        return true;
+    }
+
+    if (strcmp(name, "أضف_بايت") == 0) {
+        if (!a0 || !a1 || a2) {
+            ir_lower_report_error(ctx, expr, "استدعاء 'أضف_بايت' يتطلب وسيطين.");
+            ir_lower_eval_call_args(ctx, expr->data.call.args);
+            if (out_value) *out_value = ir_lower_vector_const_bool(false);
+            return true;
+        }
+        IRValue* buffer = lower_expr(ctx, a0);
+        IRValue* byte_value = lower_expr(ctx, a1);
+        if (out_value) *out_value = ir_lower_byte_buffer_push_byte(ctx, expr, buffer, byte_value);
         return true;
     }
 

@@ -1459,7 +1459,44 @@ The standard library provides C-like dynamic memory APIs for low-level programmi
 }
 ```
 
-### 9.4. Math Module (الرياضيات) (v0.4.2)
+### 9.4. Byte Buffer (مخزن البايتات) (v0.6.2)
+
+`مخزن_بايتات` is an opaque growable buffer specialized for `ط٨` byte accumulation. It is intended for compiler/tooling-style code that builds byte sequences incrementally.
+
+| Function | Signature | Description |
+|----------|-----------|-------------|
+| **Create** | `مخزن_بايتات أنشئ_مخزن_بايتات()` | Allocates an empty byte buffer handle, or returns `عدم` on allocation failure. |
+| **Free** | `عدم حرر_مخزن_بايتات(مخزن_بايتات م)` | Frees the buffer handle and its internal storage. |
+| **Length** | `صحيح طول_مخزن_بايتات(مخزن_بايتات م)` | Returns the number of stored bytes, or `0` for `عدم`. |
+| **Capacity** | `صحيح سعة_مخزن_بايتات(مخزن_بايتات م)` | Returns current byte capacity, or `0` for `عدم`. |
+| **Data** | `عدم* بيانات_مخزن_بايتات(مخزن_بايتات م)` | Returns borrowed internal storage; cast to `ط٨*` for indexed byte access. |
+| **Append Byte** | `منطقي أضف_بايت(مخزن_بايتات م، ط٨ قيمة)` | Appends one byte, growing as needed. Returns `خطأ` on allocation failure or invalid input. |
+
+**Ownership Rule:** `أنشئ_مخزن_بايتات(...)` returns a heap-owned handle that must be released with `حرر_مخزن_بايتات(...)`. `بيانات_مخزن_بايتات(...)` is borrowed and may change after `أضف_بايت`.
+
+**Example:**
+```baa
+#تضمين "stdlib/baalib.baahd"
+
+صحيح الرئيسية() {
+    مخزن_بايتات مخزن = أنشئ_مخزن_بايتات().
+    إذا (مخزن == عدم) { إرجع ١. }
+
+    أضف_بايت(مخزن، كـ<ط٨>(٦٥)).
+    أضف_بايت(مخزن، كـ<ط٨>(٦٦)).
+
+    ط٨* بيانات = كـ<ط٨*>(بيانات_مخزن_بايتات(مخزن)).
+    صحيح ok = ١.
+    إذا (طول_مخزن_بايتات(مخزن) != ٢) { ok = ٠. }
+    إذا (*(بيانات + ٠) != كـ<ط٨>(٦٥)) { ok = ٠. }
+    إذا (*(بيانات + ١) != كـ<ط٨>(٦٦)) { ok = ٠. }
+
+    حرر_مخزن_بايتات(مخزن).
+    إرجع !ok.
+}
+```
+
+### 9.5. Math Module (الرياضيات) (v0.4.2)
 
 | Function | Signature | Description |
 |----------|-----------|-------------|
@@ -1471,7 +1508,7 @@ The standard library provides C-like dynamic memory APIs for low-level programmi
 | **Absolute Value** | `صحيح مطلق(صحيح قيمة)` | Returns absolute signed integer value. |
 | **Random** | `صحيح عشوائي()` | Returns a non-negative pseudo-random integer. |
 
-### 9.5. System Module (النظام) (v0.4.1)
+### 9.6. System Module (النظام) (v0.4.1)
 
 | Function | Signature | Description |
 |----------|-----------|-------------|
@@ -1480,7 +1517,7 @@ The standard library provides C-like dynamic memory APIs for low-level programmi
 
 **Memory Rule:** You must free the result of `متغير_بيئة(...)` using `حرر_نص(...)` or `تحرير_ذاكرة(...)`.
 
-### 9.6. Time Module (الوقت) (v0.4.1)
+### 9.7. Time Module (الوقت) (v0.4.1)
 
 | Function | Signature | Description |
 |----------|-----------|-------------|
@@ -1489,7 +1526,7 @@ The standard library provides C-like dynamic memory APIs for low-level programmi
 
 **Memory Rule:** You must free the result of `وقت_كنص(...)` using `حرر_نص(...)` or `تحرير_ذاكرة(...)`.
 
-### 9.7. Error Handling Module (معالجة الأخطاء) (v0.4.3)
+### 9.8. Error Handling Module (معالجة الأخطاء) (v0.4.3)
 
 | Function | Signature | Description |
 |----------|-----------|-------------|

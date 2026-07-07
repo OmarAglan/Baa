@@ -1459,6 +1459,11 @@ Currently lowered expressions:
   - `طول_متجه` / `سعة_متجه` / `بيانات_متجه`: read borrowed metadata/storage
   - `ادفع_متجه`: grows via `realloc`, then copies one fixed-size element via `memcpy`
   - `اسحب_متجه`: optionally copies the last element out, then decrements length
+- Builtin byte-buffer calls in `NODE_CALL_EXPR` (`v0.6.2`):
+  - `أنشئ_مخزن_بايتات`: creates the same opaque header with `elem_size = 1`
+  - `حرر_مخزن_بايتات` / `طول_مخزن_بايتات` / `سعة_مخزن_بايتات` /
+    `بيانات_مخزن_بايتات`: reuse the vector metadata/data helpers
+  - `أضف_بايت`: stores a `ط٨` temporary and appends one byte through the vector push path
 - Builtin file I/O calls in `NODE_CALL_EXPR` (`v0.3.12`):
   - `فتح_ملف`: lowers to `fopen` (handle is `عدم*` representing `FILE*`)
   - `اغلق_ملف`: lowers to `fclose`

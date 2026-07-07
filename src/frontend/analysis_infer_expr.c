@@ -27,6 +27,10 @@
         if (out_return_type) *out_return_type = built_ret;
         return true;
     }
+    if (builtin_check_byte_buffer_call(call_node, fname, args, &built_ret)) {
+        if (out_return_type) *out_return_type = built_ret;
+        return true;
+    }
     if (builtin_check_file_call(call_node, fname, args, &built_ret)) {
         if (out_return_type) *out_return_type = built_ret;
         return true;

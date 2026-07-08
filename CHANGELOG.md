@@ -63,6 +63,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - **Baa Book exercises**:
   - Added beginner, intermediate, and systems-level exercises with exact expected output
     blocks to the Arabic book.
+- **Target descriptor validation gate**:
+  - Added `tests/test_target_specs.py` and wired it into QA so hosted x86-64 descriptors,
+    experimental i386 planning descriptors, and the `target-spec-v1` documentation contract
+    are checked in every mode.
 - **Stable diagnostic codes**:
   - Text diagnostics now include stable code tokens after severity, starting with `B0001`
     for syntax-family errors, `B1000` for semantic-family errors, and `B110x` for warnings.

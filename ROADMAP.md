@@ -1593,12 +1593,12 @@
 * \[ ] `docs/COMPATIBILITY\\\_MATRIX.md` — version compatibility table for compiler/tooling contracts.
 * \[ ] `docs/TOOLING\\\_CONTRACTS.md` — stable CLI, manifest, exit-code, and machine-readable output contracts.
 * \[ ] `docs/DIAGNOSTICS\\\_JSON\\\_SCHEMA.md` — stable diagnostics JSON schema for Takween/Qalam.
-* \[ ] `docs/TARGET\\\_SPECIFICATION.md` — target descriptor model for hosted and future freestanding targets.
+* \[x] `docs/TARGET\\\_SPECIFICATION.md` — target descriptor model for hosted and future freestanding targets, now covered by `tests/test_target_specs.py`.
 * \[ ] `docs/CONFORMANCE\\\_SUITE.md` — language, ABI, stdlib, diagnostics, and target conformance plan.
 * \[ ] `docs/SDK\\\_RELEASE\\\_PLAN.md` — future Baa SDK bundle/versioning plan.
-* \[ ] `targets/x86\\\_64-linux.json` and `targets/x86\\\_64-windows.json` — first hosted target descriptors.
+* \[x] `targets/x86\\\_64-linux.json` and `targets/x86\\\_64-windows.json` — first hosted target descriptors, validated in QA.
 
-  \[ ] `targets/i386-elf.experimental.json` and `targets/i386-pyramidos.experimental.json` — planning descriptors only, not supported targets yet.
+  \[x] `targets/i386-elf.experimental.json` and `targets/i386-pyramidos.experimental.json` — planning descriptors only, not supported targets yet; QA keeps them experimental/freestanding.
 
   ### v0.7.0: Takween Integration Contract 🏗️
 

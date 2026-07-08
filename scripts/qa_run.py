@@ -544,6 +544,16 @@ def _run_example_tests(log_dir: Path) -> StepResult:
     )
 
 
+def _run_target_spec_tests(log_dir: Path) -> StepResult:
+    return _run_logged(
+        "target-spec-tests",
+        [sys.executable, str(TESTS_DIR / "test_target_specs.py")],
+        cwd=ROOT,
+        log_dir=log_dir,
+        timeout_s=MODULE_SIZE_TIMEOUT_S,
+    )
+
+
 def _run_release_workflow_tests(log_dir: Path) -> StepResult:
     return _run_logged(
         "release-workflow-tests",
@@ -665,6 +675,13 @@ def main() -> int:
     all_results.append(version_sync_res)
     overall_ok = overall_ok and version_sync_res.passed
     if not version_sync_res.passed:
+        return _write_summary(args.mode, baa, overall_ok, all_results, log_dir, args.summary_json)
+
+    target_spec_res = _run_target_spec_tests(log_dir)
+    _print_step(target_spec_res)
+    all_results.append(target_spec_res)
+    overall_ok = overall_ok and target_spec_res.passed
+    if not target_spec_res.passed:
         return _write_summary(args.mode, baa, overall_ok, all_results, log_dir, args.summary_json)
 
     if args.mode in ("full", "stress", "release"):

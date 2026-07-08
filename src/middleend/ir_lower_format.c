@@ -662,6 +662,7 @@ static IRValue* ir_lower_build_panic_path(IRLowerCtx* ctx, Node* site, Node* msg
         IRValue* hargs[1] = { hv };
         (void)ir_builder_emit_call(b, "puts", IR_TYPE_I32_T, hargs, 1);
     }
+    ir_lower_emit_runtime_site_line(ctx, site);
 
     if (msg_node) {
         IRValue* msg_i8 = NULL;

@@ -2668,7 +2668,7 @@ Currently supports:
   - System: `متغير_بيئة`, `نفذ_أمر`
   - Time: `وقت_حالي`, `وقت_كنص`
 - Builtin error-handling calls (`v0.4.3`) in `NODE_CALL_EXPR`:
-  - `تأكد`, `توقف_فوري`
+  - `تأكد`, `توقف_فوري` (fail-fast paths print marker, `الموقع: file:line:col | الدالة: name`, and message)
   - `كود_خطأ_النظام`, `ضبط_كود_خطأ_النظام`, `نص_كود_خطأ`
 
 ---

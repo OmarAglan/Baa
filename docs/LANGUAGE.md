@@ -1601,14 +1601,17 @@ Path helpers operate on `نص` values and return newly allocated `نص` results.
 
 | Function | Signature | Description |
 |----------|-----------|-------------|
-| **Assert** | `عدم تأكد(منطقي شرط، نص رسالة)` | Verifies `شرط`; if false, prints `فشل_تأكد` and the message, then exits with status `1`. |
-| **Panic** | `عدم توقف_فوري(نص رسالة)` | Prints `توقف_فوري` and the message, then exits with status `1`. |
+| **Assert** | `عدم تأكد(منطقي شرط، نص رسالة)` | Verifies `شرط`; if false, prints `فشل_تأكد`, a source location/function line, and the message, then exits with status `1`. |
+| **Panic** | `عدم توقف_فوري(نص رسالة)` | Prints `توقف_فوري`, a source location/function line, and the message, then exits with status `1`. |
 | **Get System Error** | `صحيح كود_خطأ_النظام()` | Returns current host `errno` value. |
 | **Set System Error** | `عدم ضبط_كود_خطأ_النظام(صحيح كود)` | Sets host `errno` to `كود`. |
 | **Error Text** | `نص نص_كود_خطأ(صحيح كود)` | Returns heap string message for an error code. |
 | **Code Success** | `منطقي نتيجة_ناجحة(صحيح كود)` | Returns `صواب` when `كود == كود_نجاح`. |
 | **Code Failure** | `منطقي نتيجة_فاشلة(صحيح كود)` | Returns `صواب` when `كود != كود_نجاح`. |
 | **Bool to Code** | `صحيح كود_نتيجة(منطقي تم)` | Returns `كود_نجاح` for `صواب`, otherwise `كود_فشل`. |
+
+تستخدم مسارات الفشل السريعة، بما فيها حراس `-fruntime-checks`، الصيغة:
+`وسم_الفشل` ثم `الموقع: file:line:col | الدالة: name` ثم الرسالة العربية.
 
 **Standardized Error Codes (`stdlib/baalib.baahd`):**
 

@@ -133,6 +133,29 @@ static void ir_lower_emit_literal_line(IRLowerCtx* ctx, const char* text)
     (void)ir_builder_emit_call(ctx->builder, "puts", IR_TYPE_I32_T, args, 1);
 }
 
+static void ir_lower_emit_runtime_site_line(IRLowerCtx* ctx, const Node* site)
+{
+    if (!ctx || !ctx->builder) return;
+
+    const char* file = (site && site->filename && site->filename[0]) ? site->filename : "<غير_معروف>";
+    int line = (site && site->line > 0) ? site->line : 1;
+    int col = (site && site->col > 0) ? site->col : 1;
+    const char* func = (ctx->current_func_name && ctx->current_func_name[0])
+        ? ctx->current_func_name
+        : "<دالة_غير_معروفة>";
+
+    char file_buf[640];
+    size_t i = 0;
+    for (; file[i] && i + 1 < sizeof(file_buf); i++) {
+        file_buf[i] = (file[i] == '\\') ? '/' : file[i];
+    }
+    file_buf[i] = '\0';
+
+    char line_buf[1024];
+    snprintf(line_buf, sizeof(line_buf), "الموقع: %s:%d:%d | الدالة: %s", file_buf, line, col, func);
+    ir_lower_emit_literal_line(ctx, line_buf);
+}
+
 static void ir_lower_emit_debug_bounds_check_value(IRLowerCtx* ctx,
                                                    const Node* site,
                                                    IRValue* idx,
@@ -161,6 +184,7 @@ static void ir_lower_emit_debug_bounds_check_value(IRLowerCtx* ctx,
     ir_builder_set_insert_point(ctx->builder, fail);
     ir_lower_set_loc(ctx->builder, site);
     ir_lower_emit_literal_line(ctx, "فشل_حدود");
+    ir_lower_emit_runtime_site_line(ctx, site);
     ir_lower_emit_literal_line(ctx, detail ? detail : "فهرس خارج الحدود");
     ir_lower_emit_abort_path(ctx);
 
@@ -201,6 +225,7 @@ static void ir_lower_emit_debug_null_check(IRLowerCtx* ctx, const Node* site, IR
     ir_builder_set_insert_point(ctx->builder, fail);
     ir_lower_set_loc(ctx->builder, site);
     ir_lower_emit_literal_line(ctx, "فشل_مؤشر_فارغ");
+    ir_lower_emit_runtime_site_line(ctx, site);
     ir_lower_emit_literal_line(ctx, "فك مؤشر فارغ");
     ir_lower_emit_abort_path(ctx);
 
@@ -230,6 +255,7 @@ static void ir_lower_emit_debug_div_zero_check(IRLowerCtx* ctx,
     ir_builder_set_insert_point(ctx->builder, fail);
     ir_lower_set_loc(ctx->builder, site);
     ir_lower_emit_literal_line(ctx, "فشل_قسمة_على_صفر");
+    ir_lower_emit_runtime_site_line(ctx, site);
     ir_lower_emit_literal_line(ctx, is_mod ? "باقي قسمة على صفر" : "قسمة على صفر");
     ir_lower_emit_abort_path(ctx);
 
@@ -261,6 +287,7 @@ static void ir_lower_emit_debug_shift_width_check(IRLowerCtx* ctx, const Node* s
     ir_builder_set_insert_point(ctx->builder, fail);
     ir_lower_set_loc(ctx->builder, site);
     ir_lower_emit_literal_line(ctx, "فشل_إزاحة_غير_صالحة");
+    ir_lower_emit_runtime_site_line(ctx, site);
     ir_lower_emit_literal_line(ctx, "عدد إزاحة غير صالح");
     ir_lower_emit_abort_path(ctx);
 

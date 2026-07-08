@@ -445,7 +445,8 @@ external const global @readonly_name : type
 ملاحظة (`v0.4.3`): دوال معالجة الأخطاء
 `تأكد/توقف_فوري/كود_خطأ_النظام/ضبط_كود_خطأ_النظام/نص_كود_خطأ`
 تُخفض إلى مسارات فشل حتمية عبر `exit(1)` ونداءات libc (`puts`, `strerror`) وجسر `errno`
-حسب الهدف النشط (`__errno_location` على Linux و`_errno` على Windows).
+حسب الهدف النشط (`__errno_location` على Linux و`_errno` على Windows). تطبع مسارات الفشل
+وسماً عربياً، ثم سطر `الموقع: file:line:col | الدالة: name`، ثم الرسالة العربية.
 
 ### 6.2 Variable Handling
 

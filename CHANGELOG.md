@@ -24,6 +24,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
   - `-fruntime-checks` now also guards `نص[i]` and inner character indexes of
     `نص[]` arrays by deriving text length at runtime, printing `فهرس خارج حدود النص`
     on failure.
+- **Readable runtime failure format**:
+  - Fail-fast runtime paths now print an Arabic site line with source file, line, column,
+    and function name between the failure marker and the user-facing message.
 - **Stable diagnostic codes**:
   - Text diagnostics now include stable code tokens after severity, starting with `B0001`
     for syntax-family errors, `B1000` for semantic-family errors, and `B110x` for warnings.

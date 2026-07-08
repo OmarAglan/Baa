@@ -1500,7 +1500,7 @@ Currently lowered expressions:
   - System: `متغير_بيئة` -> `getenv` (+ C-string → Baa string conversion), `نفذ_أمر` -> `system`
   - Time: `وقت_حالي` -> `time`, `وقت_كنص` -> `ctime` (+ C-string → Baa string conversion)
 - Builtin error-handling calls in `NODE_CALL_EXPR` (`v0.4.3`):
-  - `تأكد` / `توقف_فوري`: fail-fast `exit(1)` paths with message emission.
+  - `تأكد` / `توقف_فوري`: fail-fast `exit(1)` paths with marker, source site/function line, and message emission.
   - `كود_خطأ_النظام` / `ضبط_كود_خطأ_النظام`: host `errno` bridge (`__errno_location` on Linux, `_errno` on Windows).
   - `نص_كود_خطأ`: lowers to `strerror` + C-string → Baa string conversion.
   - `نتيجة_ناجحة` / `نتيجة_فاشلة` / `كود_نتيجة`: pure status-convention helpers lowered to

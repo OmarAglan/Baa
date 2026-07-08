@@ -1,0 +1,12 @@
+// RUN: expect-pass,runtime
+// EXPECT-EXIT: 1
+// EXPECT-OUT: توقف_فوري
+// EXPECT-OUT: رسالة_موقع
+// EXPECT-OUT: الموقع:
+// EXPECT-OUT: الدالة:
+// EXPECT-OUT: backend_runtime_panic_location_v063_test.baa
+
+صحيح الرئيسية() {
+    توقف_فوري("رسالة_موقع").
+    إرجع ٠.
+}

@@ -1575,7 +1575,7 @@
   ### v0.6.5: Documentation Lock 📚
 
 * \[x] **Update Baa Book to current scope** — stale v0.3.10.6 scope text, warning-flag wording, and example-review baseline were refreshed for current v0.6.x behavior.
-* \[ ] **Verified example suite** — every public example compiles in CI.
+* \[x] **Verified example suite** — `tests/test_examples.py` compiles every public `examples/*.baa` program in QA with `-O2 --verify`.
 * \[ ] **Exercises with expected output** — beginner, intermediate, and systems-level exercises.
 * \[x] **Terminology glossary** — one preferred Arabic term per core compiler/language concept is recorded in `docs/TERMINOLOGY_GLOSSARY.md`.
 * \[ ] **Native Arabic technical review** — language quality pass by Arabic-speaking engineers.

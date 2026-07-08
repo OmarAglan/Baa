@@ -16,6 +16,7 @@ tests/
 ├── corpus_docs/   # extracted examples from docs
 ├── corpus_v2x_docs/ # historical docs corpus by version
 ├── test_arabic_numerals.py # Arabic numeral IR-output regression coverage
+├── test_examples.py # public examples compile gate
 ├── test_utf8_validation.py # malformed UTF-8 byte regression coverage
 ├── test.py        # integration runner
 └── regress.py     # regression runner (integration + corpus + neg)
@@ -56,6 +57,8 @@ Every mode runs `tests/test_utf8_validation.py`, which creates malformed byte se
 runtime to verify UTF-8 diagnostics without storing invalid UTF-8 source files in the repository.
 Every mode also runs `tests/test_arabic_numerals.py` to verify Arabic numeral rendering in
 machine-readable IR dumps.
+Every mode also runs `tests/test_examples.py`, which compiles every public `examples/*.baa`
+program with `-O2 --verify`.
 The integration and negative suites also lock the v0.6.4 text-helper contract for empty strings,
 prefix comparison signs, copy ownership, and bad `طول_نص`/`قارن_نص`/`نسخ_نص` calls.
 

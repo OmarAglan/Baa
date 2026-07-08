@@ -57,6 +57,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
   - Updated stale book front-matter from the old v0.3.10.6 scope to the current v0.6.x
     feature set, corrected warning-flag wording for warning families without standalone
     CLI flags, and moved example-review wording to the current QA/compiler baseline.
+- **Verified public example suite**:
+  - Added `tests/test_examples.py` and wired it into QA so every public `examples/*.baa`
+    program is compiled with `-O2 --verify`.
 - **Stable diagnostic codes**:
   - Text diagnostics now include stable code tokens after severity, starting with `B0001`
     for syntax-family errors, `B1000` for semantic-family errors, and `B110x` for warnings.

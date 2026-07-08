@@ -50,6 +50,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - **Docs version-sync gate hardening**:
   - The release/QA version-sync guard now requires canonical docs to carry the current
     version in their top-level header, and rejects stale document headers during tests.
+- **Terminology glossary**:
+  - Added `docs/TERMINOLOGY_GLOSSARY.md` as the canonical Arabic/English vocabulary
+    source for compiler, language, backend, diagnostics, testing, and release terms.
 - **Stable diagnostic codes**:
   - Text diagnostics now include stable code tokens after severity, starting with `B0001`
     for syntax-family errors, `B1000` for semantic-family errors, and `B110x` for warnings.

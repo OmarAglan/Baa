@@ -165,41 +165,7 @@ Baa documentation uses both Arabic and English. Follow these rules:
 
 ### 4.2 Standard Terminology Glossary
 
-| English | Arabic | Notes |
-|---------|--------|-------|
-| Compiler | المُصرِّف | Always use this term |
-| Intermediate Representation | التّمثيل الوسيط (IR) | IR acceptable after first mention |
-| Preprocessor | المعالج القبلي | Use Arabic form |
-| Parser | المحلّل النحوي | Use Arabic form |
-| Lexer | المحلّل اللفظي | Use Arabic form |
-| Backend | الخلفية | Use Arabic form |
-| Frontend | الواجهة الأمامية | Use Arabic form |
-| Code Generation | توليد الشيفرة | Use Arabic form |
-| Optimization | التحسين | Use Arabic form |
-| Register | السّجل | Use Arabic form |
-| Basic Block | الكتلة الأساسية | Use Arabic form |
-| Virtual Register | السّجل الافتراضي | Use Arabic form |
-| Physical Register | السّجل الفعلي | Use Arabic form |
-| Stack | المكدّس | Use Arabic form |
-| Heap | الكومة | Use Arabic form |
-| Function | الدّالة | Use Arabic form |
-| Variable | المتغيّر | Use Arabic form |
-| Constant | الثّابت | Use Arabic form |
-| Array | المصفوفة | Use Arabic form |
-| Pointer | المؤشّر | Use Arabic form |
-| Type | النّوع | Use Arabic form |
-| Statement | العبارة | Use Arabic form |
-| Expression | التّعبير | Use Arabic form |
-| Keyword | الكلمة المفتاحية | Use Arabic form |
-| Identifier | المعرّف | Use Arabic form |
-| Literal | القيمة الحرفية | Use Arabic form |
-| Operator | المُعامِل | Use Arabic form |
-| Operand | المُعامَل | Use Arabic form |
-| Control Flow | تدفّق التحكّم | Use Arabic form |
-| Loop | الحلقة | Use Arabic form |
-| Condition | الشّرط | Use Arabic form |
-| Scope | النّطاق | Use Arabic form |
-| Symbol | الرّمز | Use Arabic form |
+The canonical terminology table lives in [Baa Terminology Glossary](TERMINOLOGY_GLOSSARY.md). Do not create competing terminology tables; update the glossary first, then reference it from other docs.
 
 ### 4.3 Code-Related Terms
 

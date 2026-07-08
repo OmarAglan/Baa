@@ -36,6 +36,7 @@ FIXTURE_FILES = (
     "docs/IR_DEVELOPER_GUIDE.md",
     "docs/LANGUAGE.md",
     "docs/STYLE_GUIDE.md",
+    "docs/TERMINOLOGY_GLOSSARY.md",
     "docs/USER_GUIDE.md",
 )
 

@@ -10,7 +10,7 @@
 *Goal: Produce a Kernighan \& Ritchie–style first book for Baa, in Arabic, serving as the definitive learning + reference resource.*
 
 * \[\~] **Write the Arabic "Baa Book"** — book-length guide in Arabic with exercises. — draft exists in `docs/BAA\_BOOK\_AR.md`
-* \[ ] **Define terminology glossary** — consistent Arabic technical vocabulary.
+* \[x] **Define terminology glossary** — `docs/TERMINOLOGY_GLOSSARY.md` is the canonical Arabic/English vocabulary source.
 * \[ ] **Create example suite** — verified, idiomatic examples that compile with v0.3.7.
 * \[ ] **Add exercises and challenges** — per chapter, with expected outputs.
 * \[ ] **Add debugging and performance chapters** — common pitfalls, diagnostics, optimization notes.
@@ -1577,7 +1577,7 @@
 * \[ ] **Update Baa Book to current scope** — remove stale version references and align examples with current behavior.
 * \[ ] **Verified example suite** — every public example compiles in CI.
 * \[ ] **Exercises with expected output** — beginner, intermediate, and systems-level exercises.
-* \[ ] **Terminology glossary** — one preferred Arabic term per core compiler/language concept.
+* \[x] **Terminology glossary** — one preferred Arabic term per core compiler/language concept is recorded in `docs/TERMINOLOGY_GLOSSARY.md`.
 * \[ ] **Native Arabic technical review** — language quality pass by Arabic-speaking engineers.
 * \[x] **Docs version sync gate** — QA now rejects canonical docs whose top-level version header drifts from the CMake project version.
 

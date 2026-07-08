@@ -214,6 +214,7 @@ baa --target=x86_64-linux   البرنامج.baa
 - فهرس أمثلة جاهزة: `examples/README.md`
 - دليل الأداء والقياس: `docs/PERFORMANCE.md`
 - عقد التمهيد المجمّد: `docs/BOOTSTRAP_CONTRACT.md`
+- معجم المصطلحات: `docs/TERMINOLOGY_GLOSSARY.md`
 
 ### دوال النص القياسية (0.3.9)
 

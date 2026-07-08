@@ -11,7 +11,8 @@ This document defines the compiler surfaces that external tools may rely on.
 - Human-readable Arabic output is for users.
 - Machine-readable JSON output is for Takween, Qalam-IDE, CI, and scripts.
 - Tools must not parse unstable human text when JSON exists.
-- Every machine-readable output has a `schema_version` field.
+- New v1 JSON surfaces use a `schema_version` field; the current deterministic build
+  manifest keeps its numeric `schema` field until `build-manifest-v1` is promoted.
 - Stable fields are never removed without a schema version bump.
 
 ---
@@ -25,14 +26,47 @@ This document defines the compiler surfaces that external tools may rely on.
 | `-c` | produce object | Takween, future OS experiments |
 | `--check` | parse + semantic check only | Qalam, Takween |
 | `--emit-build-manifest <file>` | dependency/cache manifest | Takween |
+| `--incremental` | reuse cached object files when safe | Takween |
+| `--cache-dir <dir>` | select the incremental cache directory | Takween |
 | `--diagnostics=json` | machine-readable diagnostics | Qalam, Takween |
 | `--dump-tokens=json` | stable token stream | Qalam/debug tools |
 | `--dump-symbols=json` | symbol outline | Qalam |
 | `--target=<target>` | target selection | Takween, OS experiments |
+| `-I <dir>` / `-I<dir>` | include search path | Takween, users |
 
 ---
 
-## 3. Exit Codes
+## 3. Takween Invocation Contract
+
+Takween may rely on these compiler invocation shapes:
+
+```bash
+baa --check [-I <dir>...] [--target=<target>] <inputs...>
+baa [-O0|-O1|-O2] [--verify] [-I <dir>...] <inputs...> -o <executable>
+baa -c [-O0|-O1|-O2] [-I <dir>...] <inputs...> -o <object>
+baa -S [-O0|-O1|-O2] [--target=<target>] <input> -o <assembly>
+baa --incremental --cache-dir <dir> --emit-build-manifest <file> <inputs...> -o <output>
+```
+
+Stable invocation inputs are:
+
+- source/input file paths,
+- `-I` include directories in command-line order,
+- output path from `-o`,
+- target from `--target=<target>`,
+- optimization level,
+- validation flags such as `--verify`, `--verify-ir`, `--verify-ssa`, and `--verify-gate`,
+- runtime-check flags and runtime-check mask,
+- incremental cache directory,
+- build-manifest path.
+
+Run and clean are Takween workflow operations, not Baa compiler subcommands. Takween runs the
+produced executable when a build succeeds, and Takween deletes its own build/cache directories
+for clean workflows. `compiler-cli-v1` does not include `baa build`, `baa run`, or `baa clean`.
+
+---
+
+## 4. Exit Codes
 
 | Code | Meaning |
 |---:|---|
@@ -47,49 +81,77 @@ Exit-code meanings are part of `compiler-cli-v1`.
 
 ---
 
-## 4. Build Manifest Contract
+## 5. Build Manifest Contract
 
-`--emit-build-manifest <file>` should include:
+`--emit-build-manifest <file>` currently writes deterministic UTF-8 JSON with these stable
+top-level fields:
 
 ```json
 {
-  "schema_version": "build-manifest-v1",
-  "compiler": {
-    "name": "baa",
-    "version": "0.7.0",
-    "target": "x86_64-linux"
-  },
-  "mode": "compile-link",
-  "inputs": [
+  "schema": 1,
+  "compiler_version": "0.6.0",
+  "target": "x86_64-linux",
+  "mode": "link",
+  "opt_level": 2,
+  "runtime_checks": false,
+  "runtime_check_mask": 0,
+  "incremental": true,
+  "units": [
     {
-      "path": "src/main.baa",
-      "canonical_path": "/abs/path/src/main.baa",
-      "sha256": "...",
+      "source": "/abs/path/src/main.baa",
+      "output": "/abs/path/build/main.o",
+      "cache": {
+        "enabled": true,
+        "hit": false,
+        "slot": "...",
+        "reason": "miss"
+      },
       "dependencies": [
-        {
-          "path": "include/lib.baahd",
-          "canonical_path": "/abs/path/include/lib.baahd",
-          "sha256": "..."
-        }
+        { "path": "/abs/path/src/main.baa", "hash": "..." },
+        { "path": "/abs/path/include/lib.baahd", "hash": "..." }
       ]
     }
-  ],
-  "outputs": [
-    { "kind": "executable", "path": "build/app" }
-  ],
-  "cache": {
-    "enabled": true,
-    "hits": 1,
-    "misses": 0
-  }
+  ]
 }
 ```
 
+Until `build-manifest-v1` is promoted, Takween should treat the numeric `schema` plus the
+fields above as the compatibility contract. Adding optional fields is allowed. Removing,
+renaming, or changing the meaning of these fields requires a compatibility-matrix note and a
+schema bump.
+
 ---
 
-## 5. JSON Output Rules
+## 6. Include and Dependency Contract
 
-All JSON outputs must:
+The manifest `units[].dependencies[]` list is the canonical invalidation surface for Takween.
+
+Dependency rules:
+
+- Each compiled source unit records its root source and resolved include files.
+- Dependency `path` values are canonical paths as resolved by the compiler.
+- Dependency `hash` values are content hashes used by incremental cache validation.
+- Duplicate include paths are recorded once per source unit after resolution.
+- Include diagnostics remain source errors and use exit code `1`.
+
+Takween must invalidate cached build results when any of these values change:
+
+- compiler version,
+- manifest `schema`,
+- target,
+- mode,
+- optimization level,
+- runtime-check mask,
+- ordered input file list,
+- ordered `-I` include directory list,
+- source or dependency hash,
+- output kind when switching between link, `-c`, and `-S`.
+
+---
+
+## 7. JSON Output Rules
+
+New v1 JSON outputs must:
 
 - be UTF-8,
 - use LF line endings,
@@ -102,7 +164,7 @@ All JSON outputs must:
 
 ---
 
-## 6. Contract Versioning
+## 8. Contract Versioning
 
 | Change | Required action |
 |---|---|
@@ -114,12 +176,13 @@ All JSON outputs must:
 
 ---
 
-## 7. Tool Responsibilities
+## 9. Tool Responsibilities
 
 Takween should consume:
 
 - exit codes,
 - build manifest,
+- include/dependency hashes,
 - diagnostic JSON,
 - target support list.
 

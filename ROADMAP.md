@@ -1602,12 +1602,12 @@
 
   ### v0.7.0: Takween Integration Contract 🏗️
 
-* \[ ] **Stable compiler invocation contract** — document flags Takween may rely on for build/run/clean workflows.
-* \[ ] **Manifest compatibility** — guarantee deterministic fields Takween can consume from `--emit-build-manifest`.
-* \[ ] **Include/dependency contract** — document canonical dependency output and invalidation expectations.
-* \[ ] **Exit-code contract** — stable compiler exit statuses for build tools.
-* \[ ] **Machine-readable diagnostics plan** — define JSON diagnostics shape for future Takween/Qalam consumption.
-* \[ ] **No internal Baa project build system** — Takween remains the owner of Arabic-first project build UX.
+* \[x] **Stable compiler invocation contract** — `docs/TOOLING_CONTRACTS.md` documents the flags Takween may rely on for check/compile/link/object/assembly workflows.
+* \[x] **Manifest compatibility** — `docs/TOOLING_CONTRACTS.md` records deterministic fields Takween can consume from `--emit-build-manifest`.
+* \[x] **Include/dependency contract** — canonical manifest dependencies and invalidation expectations are documented and covered by `tests/test_integration_artifacts.py`.
+* \[x] **Exit-code contract** — stable compiler exit statuses for build tools are documented in `docs/TOOLING_CONTRACTS.md`.
+* \[x] **Machine-readable diagnostics plan** — `docs/DIAGNOSTICS_JSON_SCHEMA.md` defines the future JSON diagnostics shape for Takween/Qalam.
+* \[x] **No internal Baa project build system** — Baa keeps `baa build`/`baa run`/`baa clean` out of `compiler-cli-v1`; Takween owns Arabic-first project workflow UX.
 
   ### v0.7.1: Module and Visibility Cleanup 🧩
 

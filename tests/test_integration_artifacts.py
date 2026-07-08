@@ -71,10 +71,13 @@ class IntegrationArtifactDocumentationTests(unittest.TestCase):
         for surface in (
             "`--check`",
             "`--emit-build-manifest <file>`",
+            "`--incremental`",
+            "`--cache-dir <dir>`",
             "`--diagnostics=json`",
             "`--dump-tokens=json`",
             "`--dump-symbols=json`",
             "`--target=<target>`",
+            "`-I <dir>` / `-I<dir>`",
             "`schema_version`",
             "Exit-code meanings are part of `compiler-cli-v1`.",
         ):
@@ -84,6 +87,27 @@ class IntegrationArtifactDocumentationTests(unittest.TestCase):
         for code in ("| 0 | success |", "| 1 | user/source error:", "| 5 | internal compiler error |"):
             with self.subTest(code=code):
                 self.assertIn(code, text)
+
+    def test_takween_contracts_cover_invocation_manifest_and_dependency_invalidation(self) -> None:
+        text = _read("docs/TOOLING_CONTRACTS.md")
+        for marker in (
+            "## 3. Takween Invocation Contract",
+            "baa --check [-I <dir>...] [--target=<target>] <inputs...>",
+            "baa --incremental --cache-dir <dir> --emit-build-manifest <file> <inputs...> -o <output>",
+            "`compiler-cli-v1` does not include `baa build`, `baa run`, or `baa clean`.",
+            '"schema": 1',
+            '"compiler_version": "0.6.0"',
+            '"runtime_check_mask": 0',
+            '"units": [',
+            '"cache": {',
+            '"dependencies": [',
+            "## 6. Include and Dependency Contract",
+            "The manifest `units[].dependencies[]` list is the canonical invalidation surface for Takween.",
+            "ordered `-I` include directory list",
+            "output kind when switching between link, `-c`, and `-S`",
+        ):
+            with self.subTest(marker=marker):
+                self.assertIn(marker, text)
 
     def test_diagnostics_json_schema_covers_tooling_fields_and_codes(self) -> None:
         text = _read("docs/DIAGNOSTICS_JSON_SCHEMA.md")

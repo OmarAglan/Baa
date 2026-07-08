@@ -71,6 +71,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
   - Added `tests/test_integration_artifacts.py` and wired it into QA so the ecosystem
     boundaries, compatibility matrix, tooling contracts, diagnostics JSON schema,
     conformance-suite plan, and SDK release plan keep their external contract sections.
+- **Takween integration contract**:
+  - Tightened `docs/TOOLING_CONTRACTS.md` around stable compiler invocation shapes,
+    current build-manifest fields, include/dependency invalidation rules, exit codes,
+    and the boundary that project build/run/clean UX remains Takween-owned.
 - **Stable diagnostic codes**:
   - Text diagnostics now include stable code tokens after severity, starting with `B0001`
     for syntax-family errors, `B1000` for semantic-family errors, and `B110x` for warnings.

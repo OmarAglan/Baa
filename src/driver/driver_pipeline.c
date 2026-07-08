@@ -168,11 +168,135 @@ static char* driver_strdup_alloc(const char* text)
 // خط الأنابيب لكل ملف
 // ============================================================================
 
+typedef struct
+{
+    char* name;
+    char* source;
+    const char* kind;
+} DriverOneDefinitionSymbol;
+
+typedef struct
+{
+    DriverOneDefinitionSymbol* symbols;
+    size_t count;
+    size_t capacity;
+} DriverOneDefinitionRegistry;
+
+static void driver_odr_registry_init(DriverOneDefinitionRegistry* registry)
+{
+    if (!registry) return;
+    registry->symbols = NULL;
+    registry->count = 0;
+    registry->capacity = 0;
+}
+
+static void driver_odr_registry_free(DriverOneDefinitionRegistry* registry)
+{
+    if (!registry) return;
+    for (size_t i = 0; i < registry->count; ++i)
+    {
+        free(registry->symbols[i].name);
+        free(registry->symbols[i].source);
+    }
+    free(registry->symbols);
+    registry->symbols = NULL;
+    registry->count = 0;
+    registry->capacity = 0;
+}
+
+static bool driver_odr_registry_reserve(DriverOneDefinitionRegistry* registry)
+{
+    if (!registry) return false;
+    if (registry->count < registry->capacity) return true;
+
+    size_t new_capacity = registry->capacity ? registry->capacity * 2u : 32u;
+    DriverOneDefinitionSymbol* grown =
+        (DriverOneDefinitionSymbol*)realloc(registry->symbols,
+                                            new_capacity * sizeof(*grown));
+    if (!grown) return false;
+
+    registry->symbols = grown;
+    registry->capacity = new_capacity;
+    return true;
+}
+
+static bool driver_odr_record_symbol(DriverOneDefinitionRegistry* registry,
+                                     const char* name,
+                                     const char* source,
+                                     const char* kind)
+{
+    if (!registry || !name || !name[0]) return true;
+    if (!source) source = "<unknown>";
+    if (!kind) kind = "رمز";
+
+    for (size_t i = 0; i < registry->count; ++i)
+    {
+        DriverOneDefinitionSymbol* prev = &registry->symbols[i];
+        if (prev->name && strcmp(prev->name, name) == 0)
+        {
+            fprintf(stderr, "خطأ: تعريف متعدد للرمز العام '%s'.\n", name);
+            fprintf(stderr, "  التعريف الأول: %s في %s\n",
+                    prev->kind ? prev->kind : "رمز",
+                    prev->source ? prev->source : "<unknown>");
+            fprintf(stderr, "  التعريف الثاني: %s في %s\n", kind, source);
+            fprintf(stderr,
+                    "مساعدة: اجعل أحد التعريفين تصريحاً 'خارجي' في ملف .baahd، "
+                    "أو استخدم 'ساكن' للرموز المحلية.\n");
+            return false;
+        }
+    }
+
+    if (!driver_odr_registry_reserve(registry))
+    {
+        fprintf(stderr, "خطأ: نفدت الذاكرة أثناء فحص التعريفات العامة المتعددة.\n");
+        return false;
+    }
+
+    DriverOneDefinitionSymbol* slot = &registry->symbols[registry->count++];
+    slot->name = driver_strdup_alloc(name);
+    slot->source = driver_strdup_alloc(source);
+    slot->kind = kind;
+    if (!slot->name || !slot->source)
+    {
+        fprintf(stderr, "خطأ: نفدت الذاكرة أثناء تسجيل تعريف عام.\n");
+        return false;
+    }
+    return true;
+}
+
+static bool driver_record_exported_definitions(DriverOneDefinitionRegistry* registry,
+                                               IRModule* module,
+                                               const char* source)
+{
+    if (!registry || !module) return true;
+
+    for (IRFunc* fn = module->funcs; fn; fn = fn->next)
+    {
+        if (!fn->is_prototype)
+        {
+            if (!driver_odr_record_symbol(registry, fn->name, source, "دالة"))
+                return false;
+        }
+    }
+
+    for (IRGlobal* global = module->globals; global; global = global->next)
+    {
+        if (!global->is_extern && !global->is_internal)
+        {
+            if (!driver_odr_record_symbol(registry, global->name, source, "متغير عام"))
+                return false;
+        }
+    }
+
+    return true;
+}
+
 static int compile_one_ir(const CompilerConfig *config,
                          int input_count,
                          const char *current_input,
                          CompilerPhaseTimes *phase_times,
                          DriverBuildManifest *build_manifest,
+                         DriverOneDefinitionRegistry *odr_registry,
                          char **out_obj_file)
 {
     if (out_obj_file) *out_obj_file = NULL;
@@ -259,6 +383,15 @@ static int compile_one_ir(const CompilerConfig *config,
     if (!ir_module)
     {
         fprintf(stderr, "Aborting %s: internal IR lowering failure.\n", current_input);
+        lexer_free_dependencies(&lexer);
+        free(source);
+        if (early_obj_file && early_obj_file != config->output_file) free(early_obj_file);
+        return 1;
+    }
+
+    if (!driver_record_exported_definitions(odr_registry, ir_module, current_input))
+    {
+        ir_module_free(ir_module);
         lexer_free_dependencies(&lexer);
         free(source);
         if (early_obj_file && early_obj_file != config->output_file) free(early_obj_file);
@@ -640,15 +773,25 @@ int driver_compile_files(const CompilerConfig *config,
         }
     }
 
+    DriverOneDefinitionRegistry odr_registry;
+    DriverOneDefinitionRegistry* odr_registry_ptr = NULL;
+    if (!config->assembly_only && !config->compile_only && input_count > 1)
+    {
+        driver_odr_registry_init(&odr_registry);
+        odr_registry_ptr = &odr_registry;
+    }
+
     for (int i = 0; i < input_count; i++)
     {
         const char *current_input = input_files[i];
         char *obj_file = NULL;
 
-        int rc = compile_one_ir(config, input_count, current_input, phase_times, build_manifest, &obj_file);
+        int rc = compile_one_ir(config, input_count, current_input, phase_times,
+                                build_manifest, odr_registry_ptr, &obj_file);
 
         if (rc != 0)
         {
+            driver_odr_registry_free(odr_registry_ptr);
             driver_free_obj_files(obj_files, obj_count, config->output_file);
             if (out_obj_files) *out_obj_files = NULL;
             if (out_obj_count) *out_obj_count = 0;
@@ -670,6 +813,7 @@ int driver_compile_files(const CompilerConfig *config,
         const char* stub = driver_custom_startup_asm(config->target);
         if (!stub)
         {
+            driver_odr_registry_free(odr_registry_ptr);
             fprintf(stderr, "خطأ: فشل توليد كود بدء التشغيل.\n");
             driver_free_obj_files(obj_files, obj_count, config->output_file);
             return 1;
@@ -677,6 +821,7 @@ int driver_compile_files(const CompilerConfig *config,
 
         if (driver_write_text_file(asm_path, stub) != 0)
         {
+            driver_odr_registry_free(odr_registry_ptr);
             fprintf(stderr, "خطأ: فشل كتابة ملف بدء التشغيل '%s'.\n", asm_path);
             driver_free_obj_files(obj_files, obj_count, config->output_file);
             return 1;
@@ -685,6 +830,7 @@ int driver_compile_files(const CompilerConfig *config,
         // نجمعه إلى كائن ثم نضيفه لقائمة الربط.
         if (driver_toolchain_assemble_one(config, phase_times, asm_path, obj_path) != 0)
         {
+            driver_odr_registry_free(odr_registry_ptr);
             fprintf(stderr, "خطأ: فشل تجميع كود بدء التشغيل.\n");
             if (!config->verbose) remove(asm_path);
             driver_free_obj_files(obj_files, obj_count, config->output_file);
@@ -699,6 +845,7 @@ int driver_compile_files(const CompilerConfig *config,
         char* obj_dup = driver_strdup_alloc(obj_path);
         if (!obj_dup)
         {
+            driver_odr_registry_free(odr_registry_ptr);
             fprintf(stderr, "خطأ: نفدت الذاكرة.\n");
             if (!config->verbose) remove(obj_path);
             driver_free_obj_files(obj_files, obj_count, config->output_file);
@@ -707,6 +854,7 @@ int driver_compile_files(const CompilerConfig *config,
         obj_files[obj_count++] = obj_dup;
     }
 
+    driver_odr_registry_free(odr_registry_ptr);
     if (out_obj_files) *out_obj_files = obj_files;
     if (out_obj_count) *out_obj_count = obj_count;
     return 0;

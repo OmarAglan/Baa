@@ -544,6 +544,16 @@ def _run_example_tests(log_dir: Path) -> StepResult:
     )
 
 
+def _run_one_definition_tests(log_dir: Path) -> StepResult:
+    return _run_logged(
+        "one-definition-tests",
+        [sys.executable, str(TESTS_DIR / "test_one_definition.py")],
+        cwd=ROOT,
+        log_dir=log_dir,
+        timeout_s=120.0,
+    )
+
+
 def _run_target_spec_tests(log_dir: Path) -> StepResult:
     return _run_logged(
         "target-spec-tests",
@@ -783,6 +793,11 @@ def main() -> int:
     _print_step(example_res)
     all_results.append(example_res)
     overall_ok = overall_ok and example_res.passed
+
+    one_definition_res = _run_one_definition_tests(log_dir)
+    _print_step(one_definition_res)
+    all_results.append(one_definition_res)
+    overall_ok = overall_ok and one_definition_res.passed
 
     # A) Integration tiers
     test_res = _run_logged(

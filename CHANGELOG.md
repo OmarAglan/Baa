@@ -83,6 +83,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
   - Include-cycle errors now keep more diagnostic text and append an Arabic `مساعدة:` hint
     that directs users to break mutual `#تضمين` dependencies through shared declaration
     headers or by removing one include edge.
+- **One-definition diagnostics**:
+  - Multi-file link builds now detect duplicate exported function/global definitions after
+    IR lowering and report an Arabic diagnostic with first/second source files before falling
+    through to linker diagnostics; `ساكن` file-local globals remain valid across files.
 - **Stable diagnostic codes**:
   - Text diagnostics now include stable code tokens after severity, starting with `B0001`
     for syntax-family errors, `B1000` for semantic-family errors, and `B110x` for warnings.

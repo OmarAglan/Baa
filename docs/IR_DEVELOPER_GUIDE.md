@@ -131,7 +131,7 @@ Value kinds ([`IRValueKind`](src/ir.h:177)):
 - `IR_VAL_NONE` - No value (void)
 - `IR_VAL_CONST_INT` - Constant integer
 - `IR_VAL_CONST_STR` - Constant string (pointer to .rdata)
-- `IR_VAL_BAA_STR` - Baa string (pointer to .rodata UTF-8 chars array)
+- `IR_VAL_BAA_STR` - Baa string (pointer to a zero-terminated .rodata array of packed `حرف` values)
 - `IR_VAL_REG` - Virtual register (%م<n>)
 - `IR_VAL_GLOBAL` - Global variable (@name)
 - `IR_VAL_FUNC` - Function reference (@name)
@@ -187,7 +187,7 @@ Types:         فراغ، ص١، ص٨، ص١٦، ص٣٢، ص٦٤، ط٨، ط١٦
 | `IR_TYPE_U16` | ط١٦ | 16-bit unsigned integer |
 | `IR_TYPE_U32` | ط٣٢ | 32-bit unsigned integer |
 | `IR_TYPE_U64` | ط٦٤ | 64-bit unsigned integer |
-| `IR_TYPE_CHAR` | حرف | UTF-8 character (packed) |
+| `IR_TYPE_CHAR` | حرف | Unicode scalar packed as UTF-8 bytes + length |
 | `IR_TYPE_F64` | ع٦٤ | 64-bit floating point |
 | `IR_TYPE_PTR` | مؤشر | Pointer type |
 | `IR_TYPE_ARRAY` | مصفوفة | Array type |

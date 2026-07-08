@@ -548,6 +548,7 @@ You can control the compilation stages if needed:
 ### Strings and Standard Library
 
 To manipulate dynamically allocated strings, include the standard library header. Remember to free memory allocated by `دمج_نص` or `نسخ_نص`.
+`حرف` is one packed Unicode scalar value, not a raw UTF-8 byte or a full grapheme cluster. `نص[i]` returns the `i`th packed `حرف`, so indexing Arabic text is scalar-based and does not perform Unicode normalization or user-perceived grapheme segmentation.
 With `-fruntime-checks` or `-fruntime-checks=bounds`, direct `نص[i]` indexing and inner character indexing of `نص[]` arrays get optional bounds guards.
 
 ```baa

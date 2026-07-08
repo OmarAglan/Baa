@@ -324,7 +324,7 @@ typedef enum {
     IR_TYPE_U16,    // ط١٦ - 16-bit unsigned integer
     IR_TYPE_U32,    // ط٣٢ - 32-bit unsigned integer
     IR_TYPE_U64,    // ط٦٤ - 64-bit unsigned integer
-    IR_TYPE_CHAR,   // حرف - UTF-8 character (packed)
+    IR_TYPE_CHAR,   // حرف - Unicode scalar packed as UTF-8 bytes + length
     IR_TYPE_F64,    // ع٦٤ - 64-bit floating point (storage only for now)
     IR_TYPE_PTR,    // مؤشر - Pointer type
     IR_TYPE_ARRAY,  // مصفوفة - Array type
@@ -340,7 +340,7 @@ typedef enum {
     IR_VAL_NONE,        // No value (void)
     IR_VAL_CONST_INT,   // Constant integer
     IR_VAL_CONST_STR,   // Constant string (pointer to .rdata)
-    IR_VAL_BAA_STR,     // Baa string (pointer to .rodata UTF-8 chars array)
+    IR_VAL_BAA_STR,     // Baa string (pointer to .rodata packed حرف array)
     IR_VAL_REG,         // Virtual register (%م<n>)
     IR_VAL_GLOBAL,      // Global variable (@name)
     IR_VAL_FUNC,        // Function reference (@name)
@@ -435,7 +435,9 @@ typedef struct IRStringEntry {
 ```
 
 #### `IRBaaStringEntry` Struct
-Baa string constant represented as a `حرف[]` array.
+Baa string constant represented as a zero-terminated `حرف[]` array. Each `حرف`
+entry is a packed Unicode scalar value: low 32 bits contain UTF-8 bytes and
+high 32 bits contain the byte length.
 
 ```c
 typedef struct IRBaaStringEntry {
@@ -4109,7 +4111,7 @@ typedef enum {
     TYPE_POINTER,       // مؤشر عام
     TYPE_FUNC_PTR,      // مؤشر دالة: دالة(...) -> نوع
     TYPE_BOOL,          // منطقي (bool - stored as byte)
-    TYPE_CHAR,          // حرف (UTF-8 sequence)
+    TYPE_CHAR,          // حرف (Unicode scalar packed as UTF-8 bytes + length)
     TYPE_FLOAT,         // عشري (float64)
     TYPE_VOID,          // عدم (void)
     TYPE_ENUM,          // تعداد (يُخزن كـ int64)

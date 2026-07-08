@@ -32,6 +32,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
     separators. Supported names are `all`, `bounds`, `null`, `div-zero`/`div0`/`div`,
     `shift`, and `none`; build manifests and incremental cache keys now record the
     runtime-check mask.
+- **Text scalar model documentation**:
+  - Documented that `حرف` is a packed Unicode scalar value, `نص[i]` indexes packed
+    `حرف` elements, and current text behavior does not promise normalization or
+    grapheme-cluster segmentation.
 - **Stable diagnostic codes**:
   - Text diagnostics now include stable code tokens after severity, starting with `B0001`
     for syntax-family errors, `B1000` for semantic-family errors, and `B110x` for warnings.
@@ -926,8 +930,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Added
 
-- **Character type (`حرف`)** — a distinct scalar type representing a single UTF-8 character (1..4 bytes) with a packed internal representation.
-- **UTF-8 char literals** — `'أ'` and other multi-byte UTF-8 characters are accepted as a single char literal.
+- **Character type (`حرف`)** — a distinct scalar type representing a single Unicode scalar value with a packed internal representation.
+- **UTF-8 char literals** — `'أ'` and other single-scalar UTF-8 characters are accepted as a single char literal.
 - **String-char relationship** — `نص` is represented as a null-terminated `حرف[]` and supports indexing with `اسم[٠]`.
 - **Float type (`عشري`) (storage-only)** — decimal literals and `عشري` variables are supported as 64-bit storage; FP ops/ABI remain deferred.
 

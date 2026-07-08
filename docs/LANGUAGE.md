@@ -171,7 +171,7 @@ Baa is statically typed. All variables must be declared with their type.
 | `ط٦٤` | `uint64_t` | Unsigned 64-bit integer | `ط٦٤ س = ١.` |
 | `نص` | `حرف*` (logical) | Null-terminated string of `حرف` (`حرف[]`) | `نص اسم = "باء".` |
 | `منطقي` | `bool` (stored as byte) | Boolean value (`صواب`/`خطأ`) | `منطقي ب = صواب.` |
-| `حرف` | `uint64_t` (packed) | One UTF-8 character (1..4 bytes) | `'أ'` |
+| `حرف` | `uint64_t` (packed) | One Unicode scalar value packed as UTF-8 bytes + length | `'أ'` |
 | `عشري` | `double` | 64-bit floating point (f64) | `٣.١٤` |
 | `عدم` | `void` | Void type (no value) | `عدم فارغ()` |
 | `دالة(...)` | function pointer | Function pointer type | `دالة(صحيح) -> صحيح` |
@@ -201,8 +201,10 @@ Baa is statically typed. All variables must be declared with their type.
 
 ### 3.2.1. Characters (`حرف`) and Strings (`نص`)
 
-- `حرف` يمثل **محرف UTF-8 واحد** (1..4 بايت) مثل `'أ'`.
-- `نص` يمثل **سلسلة محارف** من نوع `حرف[]` منتهية بمحرف صفر (`'\0'`).
+- `حرف` يمثل **قيمة Unicode scalar واحدة** (نقطة-كود صالحة) مكتوبة أو مطبوعة بترميز UTF-8، مثل `'أ'`.
+- `حرف` ليس بايتاً خاماً وليس عنقوداً كتابياً (grapheme cluster). التسلسلات المركبة مثل حرف أساس مع علامة تركيب، أو emoji مع ZWJ/لون، قد تتكوّن من أكثر من `حرف`.
+- تمثيل `حرف` الحالي في ABI/IR هو ٨ بايت: الأربع بايتات الدنيا تحمل بايتات UTF-8 بالترتيب، والبتات 32..63 تحمل طول الترميز (1..4). قيمة الطول 0 تمثل محرف النهاية.
+- `نص` يمثل **سلسلة محارف** من نوع `حرف[]` منتهية بمحرف طولُه 0 (`'\0'`). لذلك `حجم(حرف)` يساوي ٨ في ABI الحالي، واستخدم `ط٨`/`مخزن_بايتات` عندما تحتاج إلى معالجة بايتات خام.
 - تسلسلات الهروب المدعومة في النصوص/المحارف (v0.3.6):
   - `\س` سطر جديد (LF)
   - `\ت` جدولة (TAB)
@@ -211,7 +213,7 @@ Baa is statically typed. All variables must be declared with their type.
   - `\\` شرطة مائلة عكسية
   - `\"` اقتباس مزدوج داخل النص
   - `\'` اقتباس مفرد داخل المحرف
-- فهرسة النص تُعيد `حرف`:
+- فهرسة النص تُعيد `حرف` عند فهرس القيمة النصية المطلوبة:
 
 ```baa
 صحيح الرئيسية() {
@@ -228,6 +230,8 @@ Baa is statically typed. All variables must be declared with their type.
 
 **قيود حالية:**
 
+- فهرس `نص[i]` يعدّ عناصر `حرف` المعبأة، أي قيم Unicode scalar، ولا يعدّ بايتات UTF-8 الخام أو العناقيد الكتابية المرئية للمستخدم.
+- لا تُطبّق باء تطبيع Unicode؛ النصان المتشابهان بصرياً لكن بتمثيلين مختلفين (مثل محرف جاهز مقابل حرف أساس + علامة تركيب) يبقيان تسلسلين مختلفين من `حرف`.
 - لا يوجد تحقق حدود افتراضي لفهرسة النص، لكن `-fruntime-checks` أو `-fruntime-checks=bounds` يضيف حارساً اختيارياً لـ `نص[i]` وفهرسة محارف عناصر `نص[]`؛ عند الفشل يطبع `فهرس خارج حدود النص` ثم ينهي بـ `exit(1)`.
 - تعديل عناصر `نص` غير مدعوم حالياً.
 
@@ -910,7 +914,7 @@ Prints a value followed by a newline.
 - Integer variables (`صحيح`, `ص٨`, `ط٦٤`, etc.) are dynamically printed as 64-bit values (`%lld` or `%llu`) based on their signed/unsigned type.
 - Float variables (`عشري`) are printed using `%g\n`.
 - String variables (`نص`) are printed using a character iteration loop to correctly emit Baa `حرف` arrays until a null terminator.
-- Character literals or variables (`حرف`) correctly print as packed UTF-8 sequences.
+- Character literals or variables (`حرف`) print their packed Unicode scalar as UTF-8 bytes.
 
 ```baa
 اطبع "مرحباً بالعالم".    // طباعة نص

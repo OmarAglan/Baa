@@ -457,7 +457,7 @@ The preprocessor supports nested conditionals via `if_stack[32]`:
 
 | Feature | Description |
 |---------|-------------|
-| **UTF-8 Handling** | Full Unicode support for Arabic text |
+| **UTF-8 Handling** | UTF-8 validation and packed Unicode-scalar `حرف` values; no grapheme-cluster segmentation promise |
 | **Strict UTF-8 Validation (v0.3.7)** | Rejects invalid UTF-8 sequences in identifiers and string/char literals |
 | **BOM Detection** | Skips `0xEF 0xBB 0xBF` if present |
 | **Arabic Numerals** | Normalizes `٠`-`٩` → `0`-`9` |
@@ -1002,7 +1002,7 @@ typedef enum {
     TYPE_POINTER,       // مؤشر عام
     TYPE_FUNC_PTR,      // مؤشر دالة: دالة(...) -> نوع
     TYPE_BOOL,          // منطقي (bool - stored as byte)
-    TYPE_CHAR,          // حرف (UTF-8 sequence)
+    TYPE_CHAR,          // حرف (Unicode scalar packed as UTF-8 bytes + length)
     TYPE_FLOAT,         // عشري (float64) + عشري٣٢ (alias في v0.4.2)
     TYPE_VOID,          // عدم (void)
     TYPE_ENUM,          // تعداد (يُخزن كـ int64)
@@ -1269,7 +1269,7 @@ For indirect function calls through function pointers:
 | `IR_TYPE_U16` | ط١٦ | 16 | Unsigned short |
 | `IR_TYPE_U32` | ط٣٢ | 32 | Unsigned int |
 | `IR_TYPE_U64` | ط٦٤ | 64 | Unsigned long |
-| `IR_TYPE_CHAR` | حرف | 8 | UTF-8 char (packed into i64) |
+| `IR_TYPE_CHAR` | حرف | 8 | Unicode scalar packed as UTF-8 bytes + length |
 | `IR_TYPE_F64` | ع٦٤ | 64 | Float (double) |
 | `IR_TYPE_PTR` | مؤشر | 64 | Pointer |
 | `IR_TYPE_ARRAY` | مصفوفة | varies | Array |

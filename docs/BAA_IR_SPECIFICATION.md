@@ -27,7 +27,7 @@ This document specifies the Intermediate Representation (IR) for the Baa compile
 
 - **SSA Form**: Each virtual register is assigned exactly once
 - **Arabic Identity**: All opcodes, types, and keywords use Arabic names
-- **Unicode Native**: Full UTF-8 support for Arabic numerals and text
+- **Unicode Native**: UTF-8 source validation with text modeled as packed Unicode scalar values, not grapheme clusters
 - **Target Independent**: Abstracts away x86-64 specifics until backend lowering
 
 ### 1.2 IR Pipeline Position
@@ -53,9 +53,14 @@ AST → [Baa IR] → Optimizations → Backend Codegen → x86-64 Assembly
 | `u32` | `ط٣٢` | `IR_TYPE_U32` | 4 bytes | 32-bit unsigned integer |
 | `u16` | `ط١٦` | `IR_TYPE_U16` | 2 bytes | 16-bit unsigned integer |
 | `u8` | `ط٨` | `IR_TYPE_U8` | 1 byte | 8-bit unsigned integer |
-| `char` | `حرف` | `IR_TYPE_CHAR` | 8 bytes | UTF-8 character (packed into i64) |
+| `char` | `حرف` | `IR_TYPE_CHAR` | 8 bytes | Unicode scalar packed as UTF-8 bytes + length |
 | `f64` | `ع٦٤` | `IR_TYPE_F64` | 8 bytes | 64-bit float |
 | `void` | `فراغ` | `IR_TYPE_VOID` | 0 | No value (void) |
+
+`IR_TYPE_CHAR` stores one Unicode scalar value, not one byte and not a grapheme
+cluster. The low 32 bits hold up to four UTF-8 bytes and the high 32 bits hold
+the byte length; length 0 is the Baa string terminator. Baa strings are pointers
+to zero-terminated arrays of these packed `char` entries.
 
 ### 2.2 Derived Types
 
@@ -389,7 +394,7 @@ external const global @readonly_name : type
 ملاحظة (v0.3.5): السلاسل النصية في IR لها جدولان:
 
 - `.Lstr_N`: سلاسل C (`i8*`) لاستخدامها مع `printf/scanf` (مثل صيغ الطباعة).
-- `.Lbs_N`: سلاسل باء (`حرف[]`) كقائمة محارف UTF-8 مع مُنهٍ صفري.
+- `.Lbs_N`: سلاسل باء (`حرف[]`) كقائمة قيم `حرف` معبأة مع مُنهٍ طوله 0.
 
 ---
 
@@ -803,7 +808,7 @@ typedef enum {
     IR_TYPE_U16,    // ط١٦ - 16-bit unsigned integer
     IR_TYPE_U32,    // ط٣٢ - 32-bit unsigned integer
     IR_TYPE_U64,    // ط٦٤ - 64-bit unsigned integer
-    IR_TYPE_CHAR,   // حرف - UTF-8 character (packed)
+    IR_TYPE_CHAR,   // حرف - Unicode scalar packed as UTF-8 bytes + length
     IR_TYPE_F64,    // ع٦٤ - 64-bit floating point (storage only for now)
     IR_TYPE_PTR,    // مؤشر - Pointer type
     IR_TYPE_ARRAY,  // مصفوفة - Array type
@@ -839,7 +844,7 @@ typedef enum {
     IR_VAL_NONE,        // No value (void)
     IR_VAL_CONST_INT,   // Constant integer
     IR_VAL_CONST_STR,   // Constant string (pointer to .rdata)
-    IR_VAL_BAA_STR,     // Baa string (pointer to .rodata UTF-8 chars array)
+    IR_VAL_BAA_STR,     // Baa string (pointer to .rodata packed حرف array)
     IR_VAL_REG,         // Virtual register (%م<n>)
     IR_VAL_GLOBAL,      // Global variable (@name)
     IR_VAL_FUNC,        // Function reference (@name)
@@ -847,7 +852,7 @@ typedef enum {
 } IRValueKind;
 ```
 
-**Note:** `IR_VAL_BAA_STR` represents Baa language strings (arrays of `حرف`) stored in read-only data, distinct from C-style strings (`IR_VAL_CONST_STR`).
+**Note:** `IR_VAL_BAA_STR` represents Baa language strings (zero-terminated arrays of packed `حرف` values) stored in read-only data, distinct from C-style strings (`IR_VAL_CONST_STR`).
 
 #### Predefined Type Constants
 
@@ -864,7 +869,7 @@ extern IRType* IR_TYPE_U8_T;     // ط٨
 extern IRType* IR_TYPE_U16_T;    // ط١٦
 extern IRType* IR_TYPE_U32_T;    // ط٣٢
 extern IRType* IR_TYPE_U64_T;    // ط٦٤
-extern IRType* IR_TYPE_CHAR_T;   // حرف (UTF-8 character)
+extern IRType* IR_TYPE_CHAR_T;   // حرف (Unicode scalar packed as UTF-8 bytes + length)
 extern IRType* IR_TYPE_F64_T;    // ع٦٤ (64-bit float)
 ```
 

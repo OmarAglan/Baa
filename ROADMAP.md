@@ -573,7 +573,7 @@
 
 #### Features
 
-* \[x] **Character Type (`حرف`)** – UTF-8 character value (variable-length, 1..4 bytes) stored as a packed scalar.
+* \[x] **Character Type (`حرف`)** – Unicode scalar value stored as packed UTF-8 bytes plus length in a scalar.
 * \[x] **String-Char Relationship** – Strings (`نص`) are represented as arrays of `حرف` (`حرف\[]`) with indexing (`اسم\[٠]`).
 * \[x] **Float Type (`عشري`)** – *Deferred from v0.3.4.5* (introduced as a basic type + literals in v0.3.5; completed in v0.3.5.5 with ops/ABI).
 
@@ -1565,12 +1565,12 @@
 
   ### v0.6.4: UTF-8/Text Correctness 📝
 
-* \[ ] **Clarify `حرف` representation** — document byte/codepoint/grapheme policy precisely.
-* \[ ] **String indexing policy** — define exactly what `نص\[index]` returns and what it does not promise.
+* \[x] **Clarify `حرف` representation** — `حرف` is documented as one packed Unicode scalar value, not a raw byte or grapheme cluster.
+* \[x] **String indexing policy** — `نص\[index]` is documented as returning the indexed packed `حرف`/Unicode scalar value, not raw bytes or user-perceived graphemes.
 * \[ ] **UTF-8 validation tests** — identifiers, strings, chars, includes, diagnostics.
 * \[ ] **Arabic numeral normalization tests** — source tokens, diagnostics, and IR output.
 * \[ ] **Text stdlib helpers** — safe length/copy/compare behavior documented and tested.
-* \[ ] **Known Unicode limitations** — no hidden claim of full grapheme-aware text processing unless implemented.
+* \[x] **Known Unicode limitations** — docs now explicitly disclaim normalization and grapheme-cluster-aware behavior.
 
   ### v0.6.5: Documentation Lock 📚
 

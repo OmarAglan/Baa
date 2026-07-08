@@ -62,8 +62,13 @@ C-compatible behavior.
   representation. SIMD/vector types are not supported.
 - Floating-point remainder and floating-point increment/decrement are not supported.
 - `نص` elements cannot be modified through indexing.
-- Text storage is UTF-8, but the current string helpers do not promise Unicode normalization or
-  grapheme-cluster-aware indexing/length behavior.
+- `حرف` is a packed Unicode scalar value, not a raw byte and not a grapheme cluster. A visually
+  single character made from combining marks or ZWJ emoji may contain multiple `حرف` elements.
+- `نص[i]` indexes packed `حرف` elements (Unicode scalar values). It does not index raw UTF-8
+  bytes and does not promise user-perceived grapheme-cluster behavior.
+- Text storage is UTF-8, but the current string helpers do not promise Unicode normalization.
+  Decomposed and precomposed spellings that look similar remain distinct sequences unless user
+  code normalizes them externally.
 - Runtime checks are optional and currently cover selected array/text-bounds paths, emitted
   null-pointer dereferences, integer divide/modulo-by-zero traps, and invalid shift-count traps.
   Baa is not a memory-safe language; raw pointers and inline assembly remain unsafe operations.

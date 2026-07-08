@@ -1377,6 +1377,13 @@ Strings in Baa are UTF-8 arrays of `حرف` terminated by a null character. The 
 
 **Important Memory Rule:** You must call `حرر_نص(...)` on any string returned by `نسخ_نص` or `دمج_نص` to avoid memory leaks.
 
+**Text helper safety contract (v0.6.4):**
+
+- `طول_نص` counts `حرف` scalar elements until the null terminator; it does not count raw UTF-8 bytes or grapheme clusters.
+- `قارن_نص` compares packed `حرف` scalar values lexicographically. Only the sign is contractual: `٠` for equality, a negative value for less-than, and a positive value for greater-than.
+- `نسخ_نص` and `دمج_نص` return independent heap-owned `نص` values, or `عدم` if allocation fails. Check the result before passing it to `طول_نص` or `قارن_نص`.
+- `حرر_نص(عدم)` is allowed through the C runtime `free(NULL)` behavior, but length/copy/compare helpers require a valid `نص` value.
+
 **Example:**
 ```baa
 #تضمين "stdlib/baalib.baahd"

@@ -56,6 +56,8 @@ Every mode runs `tests/test_utf8_validation.py`, which creates malformed byte se
 runtime to verify UTF-8 diagnostics without storing invalid UTF-8 source files in the repository.
 Every mode also runs `tests/test_arabic_numerals.py` to verify Arabic numeral rendering in
 machine-readable IR dumps.
+The integration and negative suites also lock the v0.6.4 text-helper contract for empty strings,
+prefix comparison signs, copy ownership, and bad `طول_نص`/`قارن_نص`/`نسخ_نص` calls.
 
 Full, stress, and release modes run focused unit coverage for the determinism gate. Release mode
 then compares repeated version/build-date output, negative diagnostics and exit status, IR,

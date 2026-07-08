@@ -1569,7 +1569,7 @@
 * \[x] **String indexing policy** — `نص\[index]` is documented as returning the indexed packed `حرف`/Unicode scalar value, not raw bytes or user-perceived graphemes.
 * \[x] **UTF-8 validation tests** — focused coverage now checks valid UTF-8 identifiers/literals/includes plus malformed identifier, string, char, and included-file diagnostics.
 * \[x] **Arabic numeral normalization tests** — source-token parsing, diagnostic snippets, and `--dump-ir` Arabic numeral output are covered by focused tests.
-* \[ ] **Text stdlib helpers** — safe length/copy/compare behavior documented and tested.
+* \[x] **Text stdlib helpers** — safe length/copy/compare behavior is documented and covered for empty text, prefix comparison, bad calls, and owned-copy lifetime.
 * \[x] **Known Unicode limitations** — docs now explicitly disclaim normalization and grapheme-cluster-aware behavior.
 
   ### v0.6.5: Documentation Lock 📚

@@ -43,6 +43,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - **Arabic numeral normalization coverage**:
   - Added tests for Arabic-Indic numeric source tokens, diagnostic snippets that preserve
     Arabic digits, and `--dump-ir` output using Arabic register/constant numerals.
+- **Text stdlib helper contracts**:
+  - Documented and tested safe `طول_نص`/`قارن_نص`/`نسخ_نص` behavior for empty text,
+    scalar-count length, prefix comparison signs, type/arity misuse, and owned copies
+    that remain valid after the source heap string is released.
 - **Stable diagnostic codes**:
   - Text diagnostics now include stable code tokens after severity, starting with `B0001`
     for syntax-family errors, `B1000` for semantic-family errors, and `B110x` for warnings.

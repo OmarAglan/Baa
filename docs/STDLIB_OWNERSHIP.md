@@ -10,13 +10,14 @@ This page is the single ownership index for public stdlib helpers that allocate,
 - Owned heap results must be released exactly once with the matching release helper.
 - Borrowed pointers remain owned by the original handle; do not free them separately.
 - Functions that copy into a caller-provided destination do not transfer ownership of that destination.
+- `طول_نص`/`قارن_نص`/`نسخ_نص` require a valid `نص`; check allocation-returning helpers for `عدم` before passing their result to text helpers.
 
 ## Owned results and handles
 
 | API | Owned result | Release with | Notes |
 |-----|--------------|--------------|-------|
-| `نسخ_نص(نص)` | New `نص` | `حرر_نص` or `تحرير_ذاكرة` | Duplicate of the input string. |
-| `دمج_نص(نص، نص)` | New `نص` | `حرر_نص` or `تحرير_ذاكرة` | Concatenated string. |
+| `نسخ_نص(نص)` | New `نص` | `حرر_نص` or `تحرير_ذاكرة` | Independent duplicate of the input string, or `عدم` on allocation failure. |
+| `دمج_نص(نص، نص)` | New `نص` | `حرر_نص` or `تحرير_ذاكرة` | Independent concatenated string, or `عدم` on allocation failure. |
 | `نسق(نص، ...)` | New `نص` | `حرر_نص` or `تحرير_ذاكرة` | Formatted string builtin. |
 | `اقرأ_سطر()` | New `نص` or `عدم` | `حرر_نص` or `تحرير_ذاكرة` | Reads from stdin. |
 | `اقرأ_سطر(عدم* ملف)` | New `نص` or `عدم` | `حرر_نص` or `تحرير_ذاكرة` | Returns `عدم` on EOF before any byte. |

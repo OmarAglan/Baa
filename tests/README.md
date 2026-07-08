@@ -18,6 +18,7 @@ tests/
 ├── test_arabic_numerals.py # Arabic numeral IR-output regression coverage
 ├── test_examples.py # public examples compile gate
 ├── test_integration_artifacts.py # ecosystem/tooling integration docs gate
+├── test_module_visibility_docs.py # module/header/visibility contract docs gate
 ├── test_target_specs.py # target descriptor schema/contract coverage
 ├── test_utf8_validation.py # malformed UTF-8 byte regression coverage
 ├── test.py        # integration runner
@@ -64,6 +65,9 @@ program with `-O2 --verify`.
 Every mode also runs `tests/test_integration_artifacts.py`, which checks the required
 ecosystem, compatibility, tooling, diagnostics JSON, conformance-suite, and SDK planning
 documents for the contract sections external tooling depends on.
+Every mode also runs `tests/test_module_visibility_docs.py`, which keeps the `.baa`/`.baahd`
+file-role convention, current `خارجي`/`ساكن` visibility rules, and Takween migration boundary
+documented.
 Every mode also runs `tests/test_target_specs.py`, which validates the hosted
 `x86_64-windows`/`x86_64-linux` descriptors and keeps the `i386` planning descriptors
 explicitly experimental and freestanding.

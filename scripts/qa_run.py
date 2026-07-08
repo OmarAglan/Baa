@@ -564,6 +564,16 @@ def _run_integration_artifact_tests(log_dir: Path) -> StepResult:
     )
 
 
+def _run_module_visibility_docs_tests(log_dir: Path) -> StepResult:
+    return _run_logged(
+        "module-visibility-doc-tests",
+        [sys.executable, str(TESTS_DIR / "test_module_visibility_docs.py")],
+        cwd=ROOT,
+        log_dir=log_dir,
+        timeout_s=MODULE_SIZE_TIMEOUT_S,
+    )
+
+
 def _run_release_workflow_tests(log_dir: Path) -> StepResult:
     return _run_logged(
         "release-workflow-tests",
@@ -699,6 +709,13 @@ def main() -> int:
     all_results.append(integration_artifact_res)
     overall_ok = overall_ok and integration_artifact_res.passed
     if not integration_artifact_res.passed:
+        return _write_summary(args.mode, baa, overall_ok, all_results, log_dir, args.summary_json)
+
+    module_visibility_docs_res = _run_module_visibility_docs_tests(log_dir)
+    _print_step(module_visibility_docs_res)
+    all_results.append(module_visibility_docs_res)
+    overall_ok = overall_ok and module_visibility_docs_res.passed
+    if not module_visibility_docs_res.passed:
         return _write_summary(args.mode, baa, overall_ok, all_results, log_dir, args.summary_json)
 
     if args.mode in ("full", "stress", "release"):

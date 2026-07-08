@@ -75,6 +75,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
   - Tightened `docs/TOOLING_CONTRACTS.md` around stable compiler invocation shapes,
     current build-manifest fields, include/dependency invalidation rules, exit codes,
     and the boundary that project build/run/clean UX remains Takween-owned.
+- **Module and visibility contract**:
+  - Added `docs/MODULES_AND_VISIBILITY.md` plus a QA guard for `.baa` implementation roots,
+    `.baahd` declaration headers, current `خارجي`/`ساكن` visibility rules, and the
+    migration path from raw multi-file compiler calls to Takween-managed builds.
 - **Stable diagnostic codes**:
   - Text diagnostics now include stable code tokens after severity, starting with `B0001`
     for syntax-family errors, `B1000` for semantic-family errors, and `B110x` for warnings.

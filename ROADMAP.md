@@ -1611,12 +1611,12 @@
 
   ### v0.7.1: Module and Visibility Cleanup 🧩
 
-* \[ ] **Header/source convention** — formalize `.baahd` vs `.baa` usage.
-* \[ ] **Visibility modifiers** — public/internal rules for functions and globals.
+* \[x] **Header/source convention** — `docs/MODULES_AND_VISIBILITY.md` formalizes `.baahd` vs `.baa` usage and is covered by `tests/test_module_visibility_docs.py`.
+* \[x] **Visibility modifiers** — current public/default, `خارجي`, and `ساكن` rules for functions and globals are documented and guarded.
 * \[ ] **Include-cycle diagnostics** — improve chain output and hints.
 * \[ ] **One-definition checks** — better duplicate symbol diagnostics.
 * \[ ] **Header self-check mode** — check declarations without emitting code.
-* \[ ] **Migration guide** — from raw multi-file builds to Takween-managed builds.
+* \[x] **Migration guide** — `docs/MODULES_AND_VISIBILITY.md` records the path from raw multi-file builds to Takween-managed builds.
 
   ### v0.7.2: Qalam-IDE Integration Contract ✍️
 

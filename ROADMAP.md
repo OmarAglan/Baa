@@ -1561,7 +1561,7 @@
 * \[x] **Shift-width checks** — `-fruntime-checks` now emits optional traps before lowered shifts when the dynamic count is outside `0..63`, printing `فشل_إزاحة_غير_صالحة` before `exit(1)`.
 * \[x] **Expanded bounds checks** — `-fruntime-checks` now covers static-shape arrays plus `نص[i]` and inner `نص[]` character indexes, printing `فهرس خارج حدود النص` for text bounds failures.
 * \[x] **Readable panic format** — fail-fast runtime paths now print `الموقع: file:line:col | الدالة: name` between the Arabic failure marker and message.
-* \[ ] **Selective safety flags** — `-fruntime-checks=<kind>` style suboptions.
+* \[x] **Selective safety flags** — `-fruntime-checks=<list>` now accepts `all`, `bounds`, `null`, `div-zero`/`div0`/`div`, `shift`, and `none` with comma or plus separators.
 
   ### v0.6.4: UTF-8/Text Correctness 📝
 

@@ -86,6 +86,7 @@ class DiagnosticDeterminismTests(unittest.TestCase):
                         "mode": "link",
                         "opt_level": 2,
                         "runtime_checks": False,
+                        "runtime_check_mask": 0,
                         "units": [],
                     }
                 ),

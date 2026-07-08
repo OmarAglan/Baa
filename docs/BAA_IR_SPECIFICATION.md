@@ -224,7 +224,7 @@ typedef enum {
 
 **Arithmetic Semantics (Strict):**
 - **Overflow:** Standard **Two's Complement Wrap**. `INT_MAX + 1` → `INT_MIN`. No undefined behavior.
-- **Division/Modulo by Zero:** Undefined in raw IR (backend may trap); source lowering with `-fruntime-checks` emits an explicit integer zero-divisor guard before division/modulo.
+- **Division/Modulo by Zero:** Undefined in raw IR (backend may trap); source lowering with `-fruntime-checks` or `-fruntime-checks=div-zero` emits an explicit integer zero-divisor guard before division/modulo.
 - **Signed Division Edge Case:** `INT64_MIN / -1` wraps to `INT64_MIN` (does not trap).
 - **Signed Modulo Edge Case:** `INT64_MIN % -1` yields `0`.
 
@@ -290,7 +290,7 @@ typedef enum {
 | `shl` | `ازاحة_يسار` | `IR_OP_SHL` | `%r = ازاحة_يسار <type> %a، %b` | Shift left |
 | `shr` | `ازاحة_يمين` | `IR_OP_SHR` | `%r = ازاحة_يمين <type> %a، %b` | Shift right |
 
-Source lowering with `-fruntime-checks` emits an explicit `0 <= count < 64` guard before integer shifts; raw IR shift counts outside that range remain a backend/target concern.
+Source lowering with `-fruntime-checks` or `-fruntime-checks=shift` emits an explicit `0 <= count < 64` guard before integer shifts; raw IR shift counts outside that range remain a backend/target concern.
 
 ### 4.6 Control Flow Instructions
 
@@ -475,7 +475,7 @@ internal global @__baa_static_<func>_<name>_<id> = ص٦٤ ٠
   - `linear = (((i * dim1) + j) * dim2 + ...) + k`
 - The linear index feeds `IR_OP_PTR_OFFSET` to compute the target element address.
 - Rank/dimension validity is a semantic-phase contract; IR lowering assumes validated shape metadata.
-- Optional `-fruntime-checks` lowering may emit runtime bounds guard paths before computing array/text element addresses, null-pointer guard paths before emitted dereferences, integer zero-divisor guard paths before division/modulo, and shift-count guard paths before integer shifts.
+- Optional `-fruntime-checks` lowering may emit runtime bounds guard paths before computing array/text element addresses, null-pointer guard paths before emitted dereferences, integer zero-divisor guard paths before division/modulo, and shift-count guard paths before integer shifts. `-fruntime-checks=<list>` lowers only the selected guard families (`bounds`, `null`, `div-zero`, `shift`).
 
 ### 6.3 Control Flow Lowering
 

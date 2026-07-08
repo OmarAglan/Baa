@@ -27,6 +27,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - **Readable runtime failure format**:
   - Fail-fast runtime paths now print an Arabic site line with source file, line, column,
     and function name between the failure marker and the user-facing message.
+- **Selective runtime safety flags**:
+  - `-fruntime-checks=<list>` now enables selected guard families with comma or plus
+    separators. Supported names are `all`, `bounds`, `null`, `div-zero`/`div0`/`div`,
+    `shift`, and `none`; build manifests and incremental cache keys now record the
+    runtime-check mask.
 - **Stable diagnostic codes**:
   - Text diagnostics now include stable code tokens after severity, starting with `B0001`
     for syntax-family errors, `B1000` for semantic-family errors, and `B110x` for warnings.
@@ -745,8 +750,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - **Array AST/Symbol metadata** — array nodes/symbols now track rank + per-dimension sizes + total element count instead of a single fixed size.
 - **Array type support** — fixed-size arrays are no longer restricted to `صحيح`; declarations now carry element-type metadata and validate compound element layouts.
 - **`حجم(المصفوفة)` array-length idiom formalized** — `حجم(قائمة) / حجم(نوع_العنصر)` is now the documented C-like pattern for fixed-size array length.
-- **IR lowering API** — `ir_lower_program` now accepts `enable_bounds_checks` to control optional debug bounds instrumentation:
-  - `IRModule* ir_lower_program(Node* program, const char* module_name, bool enable_bounds_checks);`
+- **IR lowering API** — `ir_lower_program` now accepts a runtime-check mask to control optional safety instrumentation:
+  - `IRModule* ir_lower_program(Node* program, const char* module_name, unsigned runtime_check_mask, const BaaTarget* target);`
 
 ### Fixed
 

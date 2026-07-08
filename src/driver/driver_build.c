@@ -190,8 +190,8 @@ static void build_slot_hex(const CompilerConfig* config, const char* source, cha
     hash_string(&h, tmp);
     snprintf(tmp,
              sizeof(tmp),
-             "rtchecks=%d",
-             config ? (int)config->runtime_checks : 0);
+             "rtchecks=%u",
+             config ? config->runtime_check_mask : 0u);
     hash_string(&h, tmp);
 
     if (config && config->include_dirs) {
@@ -625,6 +625,8 @@ bool driver_build_write_manifest(const CompilerConfig* config,
     fprintf(out, "  \"opt_level\": %d,\n", config ? (int)config->opt_level : 0);
     fprintf(out, "  \"runtime_checks\": %s,\n",
             config && config->runtime_checks ? "true" : "false");
+    fprintf(out, "  \"runtime_check_mask\": %u,\n",
+            config ? config->runtime_check_mask : 0u);
     fprintf(out, "  \"incremental\": %s,\n", config && config->incremental ? "true" : "false");
     fputs("  \"units\": [\n", out);
 

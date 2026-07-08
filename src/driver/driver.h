@@ -13,6 +13,7 @@
 #include "../backend/code_model.h"
 #include "../middleend/ir_optimizer.h"
 #include "../backend/target.h"
+#include "../support/runtime_checks.h"
 
 typedef struct
 {
@@ -30,7 +31,8 @@ typedef struct
     bool verify_gate;   // --verify-gate: بوابة تحقق داخل المُحسِّن
     bool time_phases;   // --time-phases: قياس أزمنة المراحل
     bool debug_info;    // --debug-info: إصدار معلومات ديبغ
-    bool runtime_checks; // -fruntime-checks: تفعيل فحوص وقت التشغيل الاختيارية
+    bool runtime_checks; // -fruntime-checks: تفعيل أي فحص وقت تشغيل اختياري
+    unsigned runtime_check_mask; // قناع فحوص وقت التشغيل الاختيارية
     bool custom_startup; // --startup=custom: استخدام نقطة دخول مخصصة (مع الحفاظ على CRT/libc)
     bool funroll_loops; // -funroll-loops
     bool incremental;   // --incremental: تفعيل إعادة استخدام كائنات البناء عند الأمان

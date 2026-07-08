@@ -202,6 +202,7 @@ baa [options] <source.baa> [-o <output>]
 | `--debug-info` | Emit debug line info and pass `-g` to toolchain. | `.\baa.exe --debug-info main.baa` |
 | `--asm-comments` | Emit explanatory comments in generated assembly (`-S`). | `.\baa.exe -S --asm-comments main.baa` |
 | `-fruntime-checks` | Enable optional runtime safety checks such as dynamic array/text bounds guards, null-pointer dereference traps, integer divide/modulo-by-zero traps, and invalid shift-count traps. | `.\baa.exe -fruntime-checks main.baa` |
+| `-fruntime-checks=<list>` | Enable selected runtime safety checks. Use comma or plus between `all`, `bounds`, `null`, `div-zero`/`div0`/`div`, `shift`, and `none`. | `.\baa.exe -fruntime-checks=bounds,null main.baa` |
 | `-fno-runtime-checks` | Disable optional runtime safety checks (default). | `.\baa.exe -fno-runtime-checks main.baa` |
 | `--help`, `-h` | Display help message and usage. | `.\baa.exe --help` |
 | `--version` | Display compiler version. | `.\baa.exe --version` |
@@ -547,7 +548,7 @@ You can control the compilation stages if needed:
 ### Strings and Standard Library
 
 To manipulate dynamically allocated strings, include the standard library header. Remember to free memory allocated by `دمج_نص` or `نسخ_نص`.
-With `-fruntime-checks`, direct `نص[i]` indexing and inner character indexing of `نص[]` arrays get optional bounds guards.
+With `-fruntime-checks` or `-fruntime-checks=bounds`, direct `نص[i]` indexing and inner character indexing of `نص[]` arrays get optional bounds guards.
 
 ```baa
 #تضمين "stdlib/baalib.baahd"
@@ -719,7 +720,7 @@ Use `ساكن` to declare variables that persist between function calls.
 Use `&` to get the address of a variable, and `*` to dereference it. `عدم` represents a null pointer.
 Directly dereferencing `عدم` (`*عدم`) is rejected with a semantic diagnostic; check pointer
 variables against `عدم` before dereferencing them.
-With `-fruntime-checks`, lowered pointer dereferences also get an optional null guard that prints
+With `-fruntime-checks` or `-fruntime-checks=null`, lowered pointer dereferences also get an optional null guard that prints
 `فشل_مؤشر_فارغ` and exits with status `1` when the pointer value is null.
 
 ```baa

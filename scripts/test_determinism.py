@@ -185,7 +185,15 @@ def _check_manifest(baa: Path, out_dir: Path) -> list[CheckResult]:
             _result("manifest-shape", started, False, f"manifest is not valid JSON: {exc}"),
         ]
 
-    required = {"compiler_version", "target", "mode", "opt_level", "runtime_checks", "units"}
+    required = {
+        "compiler_version",
+        "target",
+        "mode",
+        "opt_level",
+        "runtime_checks",
+        "runtime_check_mask",
+        "units",
+    }
     missing = sorted(k for k in required if k not in data)
     if missing:
         return [

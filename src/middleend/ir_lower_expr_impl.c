@@ -7,9 +7,11 @@ static void ir_lower_emit_debug_string_index_check(IRLowerCtx* ctx,
                                                    IRValue* str_ptr,
                                                    IRValue* idx)
 {
-    if (!ctx || !ctx->builder || !str_ptr || !idx || !ctx->enable_bounds_checks) return;
+    if (!ctx || !ctx->builder || !str_ptr || !idx) return;
 
     ir_lower_emit_debug_null_check(ctx, site, str_ptr);
+    if (!ir_lower_runtime_check_enabled(ctx, BAA_RUNTIME_CHECK_BOUNDS)) return;
+
     IRValue* len = ir_lower_builtin_strlen_from_value(ctx, site, str_ptr);
     ir_lower_emit_debug_bounds_check_value(ctx, site, idx, len, "فهرس خارج حدود النص");
 }

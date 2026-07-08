@@ -197,7 +197,7 @@ static IRValue* ir_lower_global_init_value(IRBuilder* builder, Node* expr, IRTyp
 }
 
 IRModule* ir_lower_program(Node* program, const char* module_name,
-                           bool enable_bounds_checks, const BaaTarget* target) {
+                           unsigned runtime_check_mask, const BaaTarget* target) {
     if (!program || program->type != NODE_PROGRAM) return NULL;
 
     // هل لدينا `الرئيسية(صحيح، نص[])`؟ إن كان نعم سنولد غلاف ABI لـ C ونُعيد تسمية دالة المستخدم.
@@ -454,7 +454,7 @@ IRModule* ir_lower_program(Node* program, const char* module_name,
             // نُبقي الاسم المصدرّي لأغراض رسائل/تسميات داخلية حتى إن اختلف اسم IR.
             ctx.current_func_name = decl->data.func_def.name;
             ctx.static_local_counter = 0;
-            ctx.enable_bounds_checks = enable_bounds_checks;
+            ctx.runtime_check_mask = runtime_check_mask;
             ctx.program_root = program;
             ctx.target = target;
             ctx.current_func_is_variadic = decl->data.func_def.is_variadic;

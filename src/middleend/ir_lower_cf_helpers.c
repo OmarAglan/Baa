@@ -96,6 +96,11 @@ static Node* ir_lower_find_global_var_decl(IRLowerCtx* ctx, const char* name)
 
 #define BAA_RUNTIME_FAILURE_EXIT_CODE 1
 
+static bool ir_lower_runtime_check_enabled(IRLowerCtx* ctx, unsigned check)
+{
+    return ctx && ((ctx->runtime_check_mask & check) != 0);
+}
+
 static void ir_lower_emit_function_return_after_noreturn(IRLowerCtx* ctx)
 {
     if (!ctx || !ctx->builder) return;
@@ -162,7 +167,8 @@ static void ir_lower_emit_debug_bounds_check_value(IRLowerCtx* ctx,
                                                    IRValue* dim,
                                                    const char* detail)
 {
-    if (!ctx || !ctx->builder || !idx || !dim || !ctx->enable_bounds_checks) return;
+    if (!ctx || !ctx->builder || !idx || !dim ||
+        !ir_lower_runtime_check_enabled(ctx, BAA_RUNTIME_CHECK_BOUNDS)) return;
 
     IRValue* i64_idx = ensure_i64(ctx, idx);
     IRValue* i64_dim = ensure_i64(ctx, dim);
@@ -194,7 +200,8 @@ static void ir_lower_emit_debug_bounds_check_value(IRLowerCtx* ctx,
 
 static void ir_lower_emit_debug_bounds_check(IRLowerCtx* ctx, const Node* site, IRValue* idx, int dim)
 {
-    if (!ctx || !ctx->builder || !idx || !ctx->enable_bounds_checks) return;
+    if (!ctx || !ctx->builder || !idx ||
+        !ir_lower_runtime_check_enabled(ctx, BAA_RUNTIME_CHECK_BOUNDS)) return;
     if (dim <= 0) return;
 
     IRValue* dimv = ir_value_const_int((int64_t)dim, IR_TYPE_I64_T);
@@ -203,7 +210,8 @@ static void ir_lower_emit_debug_bounds_check(IRLowerCtx* ctx, const Node* site, 
 
 static void ir_lower_emit_debug_null_check(IRLowerCtx* ctx, const Node* site, IRValue* ptr)
 {
-    if (!ctx || !ctx->builder || !ptr || !ctx->enable_bounds_checks) return;
+    if (!ctx || !ctx->builder || !ptr ||
+        !ir_lower_runtime_check_enabled(ctx, BAA_RUNTIME_CHECK_NULL)) return;
 
     IRType* ptr_t = ptr->type;
     IRValue* checked = ptr;
@@ -238,7 +246,8 @@ static void ir_lower_emit_debug_div_zero_check(IRLowerCtx* ctx,
                                                IRValue* divisor,
                                                bool is_mod)
 {
-    if (!ctx || !ctx->builder || !divisor || !ctx->enable_bounds_checks) return;
+    if (!ctx || !ctx->builder || !divisor ||
+        !ir_lower_runtime_check_enabled(ctx, BAA_RUNTIME_CHECK_DIV_ZERO)) return;
 
     IRType* value_t = divisor->type ? divisor->type : IR_TYPE_I64_T;
     IRValue* checked = cast_to(ctx, divisor, value_t);
@@ -265,7 +274,8 @@ static void ir_lower_emit_debug_div_zero_check(IRLowerCtx* ctx,
 
 static void ir_lower_emit_debug_shift_width_check(IRLowerCtx* ctx, const Node* site, IRValue* count)
 {
-    if (!ctx || !ctx->builder || !count || !ctx->enable_bounds_checks) return;
+    if (!ctx || !ctx->builder || !count ||
+        !ir_lower_runtime_check_enabled(ctx, BAA_RUNTIME_CHECK_SHIFT)) return;
 
     IRValue* count64 = ensure_i64(ctx, count);
     IRValue* zero = ir_value_const_int(0, IR_TYPE_I64_T);

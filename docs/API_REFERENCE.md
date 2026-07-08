@@ -2596,7 +2596,7 @@ typedef struct IRLowerCtx {
     int cf_depth;
 
     int had_error;
-    bool enable_bounds_checks;
+    unsigned runtime_check_mask;
     Node* program_root;
 } IRLowerCtx;
 ```
@@ -2699,7 +2699,7 @@ Supported statements (v0.3.0.5):
 
 ```c
 IRModule* ir_lower_program(Node* program, const char* module_name,
-                           bool enable_bounds_checks, const BaaTarget* target);
+                           unsigned runtime_check_mask, const BaaTarget* target);
 ```
 
 Top-level entry point for the driver: converts a validated `NODE_PROGRAM` AST into a fully-populated `IRModule`.
@@ -2708,7 +2708,7 @@ Top-level entry point for the driver: converts a validated `NODE_PROGRAM` AST in
 |-----------|------|-------------|
 | `program` | `Node*` | Root AST node (must be `NODE_PROGRAM`) |
 | `module_name` | `const char*` | Optional module name (usually filename) |
-| `enable_bounds_checks` | `bool` | Enables optional runtime-check lowering paths driven by `-fruntime-checks` (currently selected array/text bounds, null-pointer dereference, integer zero-divisor, and shift-count guards) |
+| `runtime_check_mask` | `unsigned` | Bitmask of optional runtime-check lowering paths driven by `-fruntime-checks` / `-fruntime-checks=<list>` (`bounds`, `null`, `div-zero`, `shift`) |
 | `target` | `const BaaTarget*` | Active target descriptor (ABI + data layout). Required for target-specific lowering decisions |
 
 **Returns:** Newly allocated `IRModule` (caller owns; free with `ir_module_free()`).

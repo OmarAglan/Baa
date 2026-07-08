@@ -16,6 +16,7 @@
 
 #include "../frontend/ast.h"
 #include "../support/target_contract.h"
+#include "../support/runtime_checks.h"
 #include "ir_builder.h"
 
 #ifdef __cplusplus
@@ -74,7 +75,7 @@ typedef struct IRLowerCtx {
     int cf_depth;
 
     int had_error;
-    bool enable_bounds_checks; // تفعيل فحوص السلامة الاختيارية وقت التشغيل عبر -fruntime-checks
+    unsigned runtime_check_mask; // قناع فحوص السلامة الاختيارية وقت التشغيل عبر -fruntime-checks
     Node* program_root;        // مرجع AST للبحث عن تعريفات عامة (metadata)
     const BaaTarget* target;   // الهدف الحالي لاختيار استدعاءات libc الخاصة بالمنصة
 } IRLowerCtx;
@@ -141,7 +142,7 @@ void lower_stmt_list(IRLowerCtx* ctx, Node* first_stmt);
  * @return Newly allocated IRModule (caller owns; free with ir_module_free()).
  */
 IRModule* ir_lower_program(Node* program, const char* module_name,
-                           bool enable_bounds_checks, const BaaTarget* target);
+                           unsigned runtime_check_mask, const BaaTarget* target);
 
 #ifdef __cplusplus
 }

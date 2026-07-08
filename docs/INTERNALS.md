@@ -114,7 +114,7 @@ The driver in `main.c` (v0.2.0+) supports multi-file compilation and various mod
 | `-v` | **Verbose** | - | Prints commands and compilation time; keeps intermediate `.s` files. |
 | `--debug-info` | **Debug Info** | `.s/.o/.exe` | Emits source `.file/.loc` info and passes `-g` to toolchain. |
 | `--asm-comments` | **Assembly Comments** | `.s` | Emits explanatory comments in generated assembly (prologue/epilogue/blocks). |
-| `-fruntime-checks` | **Runtime Checks** | `.s/.o/.exe` | Enables optional runtime safety guards such as dynamic array/text bounds checks, null-pointer dereference traps, integer divide/modulo-by-zero traps, and invalid shift-count traps. |
+| `-fruntime-checks` / `-fruntime-checks=<list>` | **Runtime Checks** | `.s/.o/.exe` | Enables all optional runtime safety guards, or selected guards from `bounds`, `null`, `div-zero`, and `shift` (plus `all`/`none`) separated by comma or `+`. |
 | `-fno-runtime-checks` | **Runtime Checks Off** | `.s/.o/.exe` | Disables optional runtime safety guards (default). |
 | `-O0` / `-O1` / `-O2` | **Optimization Level** | - | Selects optimizer aggressiveness (`-O1` is default). |
 | `--dump-ir` | **IR Dump** | stdout | Prints Baa IR (Arabic) after semantic analysis (v0.3.0.6+). |

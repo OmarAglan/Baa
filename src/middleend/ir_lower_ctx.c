@@ -13,7 +13,7 @@ void ir_lower_ctx_init(IRLowerCtx* ctx, IRBuilder* builder) {
     ctx->current_func_is_variadic = false;
     ctx->current_func_fixed_params = 0;
     ctx->current_func_va_base_reg = -1;
-    ctx->enable_bounds_checks = false;
+    ctx->runtime_check_mask = 0;
     ctx->program_root = NULL;
     ctx->target = NULL;
 }
@@ -133,4 +133,3 @@ static void ir_lower_set_local_array_meta(IRLowerCtx* ctx,
         }
     }
 }
-

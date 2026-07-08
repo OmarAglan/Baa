@@ -41,6 +41,52 @@ static const WarnFlagSpec k_warn_flag_specs[] = {
     {"-Wno-signed-unsigned-compare", WARN_PARSE_SET_SPECIFIC, WARN_SIGNED_UNSIGNED_COMPARE, false},
 };
 
+static bool runtime_check_token_equals(const char* start, size_t len, const char* expected)
+{
+    return expected && strlen(expected) == len && strncmp(start, expected, len) == 0;
+}
+
+static bool parse_runtime_check_mask(const char* spec, unsigned* out_mask)
+{
+    if (!spec || !out_mask) return false;
+    if (!spec[0]) return false;
+
+    unsigned mask = 0;
+    const char* p = spec;
+    while (*p) {
+        const char* start = p;
+        while (*p && *p != ',' && *p != '+') p++;
+        size_t len = (size_t)(p - start);
+        if (len == 0) return false;
+
+        if (runtime_check_token_equals(start, len, "all")) {
+            mask |= BAA_RUNTIME_CHECK_ALL;
+        } else if (runtime_check_token_equals(start, len, "none")) {
+            mask = 0;
+        } else if (runtime_check_token_equals(start, len, "bounds")) {
+            mask |= BAA_RUNTIME_CHECK_BOUNDS;
+        } else if (runtime_check_token_equals(start, len, "null")) {
+            mask |= BAA_RUNTIME_CHECK_NULL;
+        } else if (runtime_check_token_equals(start, len, "div-zero") ||
+                   runtime_check_token_equals(start, len, "div0") ||
+                   runtime_check_token_equals(start, len, "div")) {
+            mask |= BAA_RUNTIME_CHECK_DIV_ZERO;
+        } else if (runtime_check_token_equals(start, len, "shift")) {
+            mask |= BAA_RUNTIME_CHECK_SHIFT;
+        } else {
+            return false;
+        }
+
+        if (*p == ',' || *p == '+') {
+            p++;
+            if (!*p) return false;
+        }
+    }
+
+    *out_mask = mask;
+    return true;
+}
+
 /**
  * @brief تحليل علم تحذير (-W...).
  * @return true إذا تم التعرف على العلم.
@@ -126,7 +172,8 @@ void driver_print_help(void)
     printf("  --cache-dir <dir>  Override incremental cache directory (default: .baa_build/cache)\n");
     printf("  --debug-info   Emit debug line info (.file/.loc) and pass -g to toolchain\n");
     printf("  --asm-comments  Emit explanatory comments in generated assembly\n");
-    printf("  -fruntime-checks     Enable optional runtime safety checks\n");
+    printf("  -fruntime-checks     Enable all optional runtime safety checks\n");
+    printf("  -fruntime-checks=<list>  Enable selected checks: all, bounds, null, div-zero, shift, none\n");
     printf("  -fno-runtime-checks  Disable optional runtime safety checks (default)\n");
     printf("  -O0            Disable optimization\n");
     printf("  -O1            Basic optimization (default)\n");
@@ -371,9 +418,30 @@ bool driver_parse_cli(int argc, char **argv, CompilerConfig *config, DriverParse
             else if (strcmp(arg, "--asm-comments") == 0)
                 config->codegen_opts.asm_comments = true;
             else if (strcmp(arg, "-fruntime-checks") == 0)
+            {
                 config->runtime_checks = true;
+                config->runtime_check_mask = BAA_RUNTIME_CHECK_ALL;
+            }
+            else if (strncmp(arg, "-fruntime-checks=", 17) == 0)
+            {
+                unsigned mask = 0;
+                const char* spec = arg + 17;
+                if (!parse_runtime_check_mask(spec, &mask))
+                {
+                    fprintf(stderr,
+                            "خطأ: اختيار فحص وقت التشغيل '%s' غير معروف (المتوقع: all,bounds,null,div-zero,shift,none)\n",
+                            spec);
+                    parse_release_temp_arrays(inputs, include_dirs);
+                    return false;
+                }
+                config->runtime_check_mask = mask;
+                config->runtime_checks = (mask != 0);
+            }
             else if (strcmp(arg, "-fno-runtime-checks") == 0)
+            {
                 config->runtime_checks = false;
+                config->runtime_check_mask = 0;
+            }
             else if (strncmp(arg, "--target=", 9) == 0)
             {
                 const char *t = arg + 9;

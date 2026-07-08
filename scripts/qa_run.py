@@ -514,6 +514,16 @@ def _run_docs_corpus_tests(log_dir: Path) -> StepResult:
     )
 
 
+def _run_utf8_validation_tests(log_dir: Path) -> StepResult:
+    return _run_logged(
+        "utf8-validation-tests",
+        [sys.executable, str(TESTS_DIR / "test_utf8_validation.py")],
+        cwd=ROOT,
+        log_dir=log_dir,
+        timeout_s=MODULE_SIZE_TIMEOUT_S,
+    )
+
+
 def _run_release_workflow_tests(log_dir: Path) -> StepResult:
     return _run_logged(
         "release-workflow-tests",
@@ -687,6 +697,11 @@ def main() -> int:
     _print_step(explain_res)
     all_results.append(explain_res)
     overall_ok = overall_ok and explain_res.passed
+
+    utf8_validation_res = _run_utf8_validation_tests(log_dir)
+    _print_step(utf8_validation_res)
+    all_results.append(utf8_validation_res)
+    overall_ok = overall_ok and utf8_validation_res.passed
 
     # A) Integration tiers
     test_res = _run_logged(

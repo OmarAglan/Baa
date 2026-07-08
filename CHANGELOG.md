@@ -36,6 +36,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
   - Documented that `حرف` is a packed Unicode scalar value, `نص[i]` indexes packed
     `حرف` elements, and current text behavior does not promise normalization or
     grapheme-cluster segmentation.
+- **UTF-8 validation coverage**:
+  - Added valid UTF-8 integration coverage for identifiers, strings, char literals, and
+    included headers, plus malformed-byte regression tests for identifiers, strings,
+    char literals, included files, and their diagnostics.
 - **Stable diagnostic codes**:
   - Text diagnostics now include stable code tokens after severity, starting with `B0001`
     for syntax-family errors, `B1000` for semantic-family errors, and `B110x` for warnings.

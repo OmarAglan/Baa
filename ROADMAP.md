@@ -1589,13 +1589,13 @@
 
 &#x09;#### Required integration artifacts
 
-* \[ ] `docs/ECOSYSTEM\\\_BOUNDARIES.md` — ownership rules between Baa, Takween, Qalam-IDE, and PyramidOS.
-* \[ ] `docs/COMPATIBILITY\\\_MATRIX.md` — version compatibility table for compiler/tooling contracts.
-* \[ ] `docs/TOOLING\\\_CONTRACTS.md` — stable CLI, manifest, exit-code, and machine-readable output contracts.
-* \[ ] `docs/DIAGNOSTICS\\\_JSON\\\_SCHEMA.md` — stable diagnostics JSON schema for Takween/Qalam.
+* \[x] `docs/ECOSYSTEM\\\_BOUNDARIES.md` — ownership rules between Baa, Takween, Qalam-IDE, and PyramidOS, covered by `tests/test_integration_artifacts.py`.
+* \[x] `docs/COMPATIBILITY\\\_MATRIX.md` — version compatibility table for compiler/tooling contracts, covered by `tests/test_integration_artifacts.py`.
+* \[x] `docs/TOOLING\\\_CONTRACTS.md` — stable CLI, manifest, exit-code, and machine-readable output contracts, covered by `tests/test_integration_artifacts.py`.
+* \[x] `docs/DIAGNOSTICS\\\_JSON\\\_SCHEMA.md` — stable diagnostics JSON schema for Takween/Qalam, covered by `tests/test_integration_artifacts.py`.
 * \[x] `docs/TARGET\\\_SPECIFICATION.md` — target descriptor model for hosted and future freestanding targets, now covered by `tests/test_target_specs.py`.
-* \[ ] `docs/CONFORMANCE\\\_SUITE.md` — language, ABI, stdlib, diagnostics, and target conformance plan.
-* \[ ] `docs/SDK\\\_RELEASE\\\_PLAN.md` — future Baa SDK bundle/versioning plan.
+* \[x] `docs/CONFORMANCE\\\_SUITE.md` — language, ABI, stdlib, diagnostics, and target conformance plan, covered by `tests/test_integration_artifacts.py`.
+* \[x] `docs/SDK\\\_RELEASE\\\_PLAN.md` — future Baa SDK bundle/versioning plan, covered by `tests/test_integration_artifacts.py`.
 * \[x] `targets/x86\\\_64-linux.json` and `targets/x86\\\_64-windows.json` — first hosted target descriptors, validated in QA.
 
   \[x] `targets/i386-elf.experimental.json` and `targets/i386-pyramidos.experimental.json` — planning descriptors only, not supported targets yet; QA keeps them experimental/freestanding.

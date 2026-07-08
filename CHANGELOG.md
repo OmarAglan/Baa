@@ -53,6 +53,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - **Terminology glossary**:
   - Added `docs/TERMINOLOGY_GLOSSARY.md` as the canonical Arabic/English vocabulary
     source for compiler, language, backend, diagnostics, testing, and release terms.
+- **Baa Book current-scope refresh**:
+  - Updated stale book front-matter from the old v0.3.10.6 scope to the current v0.6.x
+    feature set, corrected warning-flag wording for warning families without standalone
+    CLI flags, and moved example-review wording to the current QA/compiler baseline.
 - **Stable diagnostic codes**:
   - Text diagnostics now include stable code tokens after severity, starting with `B0001`
     for syntax-family errors, `B1000` for semantic-family errors, and `B110x` for warnings.

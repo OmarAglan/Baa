@@ -1574,7 +1574,7 @@
 
   ### v0.6.5: Documentation Lock 📚
 
-* \[ ] **Update Baa Book to current scope** — remove stale version references and align examples with current behavior.
+* \[x] **Update Baa Book to current scope** — stale v0.3.10.6 scope text, warning-flag wording, and example-review baseline were refreshed for current v0.6.x behavior.
 * \[ ] **Verified example suite** — every public example compiles in CI.
 * \[ ] **Exercises with expected output** — beginner, intermediate, and systems-level exercises.
 * \[x] **Terminology glossary** — one preferred Arabic term per core compiler/language concept is recorded in `docs/TERMINOLOGY_GLOSSARY.md`.

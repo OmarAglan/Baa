@@ -14,6 +14,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
   - `-fruntime-checks` now emits optional guards before lowered pointer dereferences,
     including value loads and `*p = value`, and prints Arabic failure text
     (`فشل_مؤشر_فارغ`) before exiting with status `1`.
+- **Runtime division-by-zero guard**:
+  - `-fruntime-checks` now emits optional guards before lowered integer division and
+    modulo operations, printing `فشل_قسمة_على_صفر` before exiting with status `1`.
 - **Stable diagnostic codes**:
   - Text diagnostics now include stable code tokens after severity, starting with `B0001`
     for syntax-family errors, `B1000` for semantic-family errors, and `B110x` for warnings.

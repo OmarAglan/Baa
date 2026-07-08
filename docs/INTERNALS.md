@@ -114,7 +114,7 @@ The driver in `main.c` (v0.2.0+) supports multi-file compilation and various mod
 | `-v` | **Verbose** | - | Prints commands and compilation time; keeps intermediate `.s` files. |
 | `--debug-info` | **Debug Info** | `.s/.o/.exe` | Emits source `.file/.loc` info and passes `-g` to toolchain. |
 | `--asm-comments` | **Assembly Comments** | `.s` | Emits explanatory comments in generated assembly (prologue/epilogue/blocks). |
-| `-fruntime-checks` | **Runtime Checks** | `.s/.o/.exe` | Enables optional runtime safety guards such as dynamic array bounds checks and null-pointer dereference traps. |
+| `-fruntime-checks` | **Runtime Checks** | `.s/.o/.exe` | Enables optional runtime safety guards such as dynamic array bounds checks, null-pointer dereference traps, and integer divide/modulo-by-zero traps. |
 | `-fno-runtime-checks` | **Runtime Checks Off** | `.s/.o/.exe` | Disables optional runtime safety guards (default). |
 | `-O0` / `-O1` / `-O2` | **Optimization Level** | - | Selects optimizer aggressiveness (`-O1` is default). |
 | `--dump-ir` | **IR Dump** | stdout | Prints Baa IR (Arabic) after semantic analysis (v0.3.0.6+). |
@@ -1064,6 +1064,7 @@ The parser performs constant folding on arithmetic expressions. If both operands
 
 **Supported Operations:** `+`, `-`, `*`, `/`, `%`
 **Note:** Division/modulo by zero is detected and reported during folding.
+With `-fruntime-checks`, non-folded integer division/modulo can also lower an explicit runtime trap path.
 
 ---
 
@@ -1436,7 +1437,7 @@ Currently lowered expressions:
 
 - `NODE_INT`, `NODE_STRING`, `NODE_CHAR`, `NODE_BOOL`, `NODE_FLOAT`, `NODE_NULL`
 - `NODE_VAR_REF` (loads via `حمل`)
-- `NODE_BIN_OP` (arithmetic, comparisons, logical ops, pointer difference)
+- `NODE_BIN_OP` (arithmetic, comparisons, logical ops, pointer difference; integer `/` and `%` can emit optional `-fruntime-checks` zero-divisor guards)
 - `NODE_UNARY_OP` (`سالب`, bitwise `نفي`, `!`, `UOP_ADDR` via pointers, `UOP_DEREF` via load with an optional `-fruntime-checks` null guard)
 - `NODE_POSTFIX_OP` (`++`/`--` postfix via load + add/sub + store; expression result is the old value)
 - `NODE_SIZEOF` -> compile-time constant size

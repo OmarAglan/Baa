@@ -1,0 +1,13 @@
+// RUN: expect-pass,compile-only
+// FLAGS: -S -fruntime-checks
+// EXPECT-ASM: فشل_قسمة_على_صفر
+
+صحيح صفر() {
+    إرجع ٠.
+}
+
+صحيح الرئيسية() {
+    صحيح ب = صفر().
+    صحيح س = ١٠ / ب.
+    إرجع س.
+}

@@ -196,6 +196,35 @@ static void ir_lower_emit_debug_null_check(IRLowerCtx* ctx, const Node* site, IR
     ir_lower_set_loc(ctx->builder, site);
 }
 
+static void ir_lower_emit_debug_div_zero_check(IRLowerCtx* ctx,
+                                               const Node* site,
+                                               IRValue* divisor,
+                                               bool is_mod)
+{
+    if (!ctx || !ctx->builder || !divisor || !ctx->enable_bounds_checks) return;
+
+    IRType* value_t = divisor->type ? divisor->type : IR_TYPE_I64_T;
+    IRValue* checked = cast_to(ctx, divisor, value_t);
+    IRValue* zero = ir_value_const_int(0, value_t);
+    int ok_r = ir_builder_emit_cmp_ne(ctx->builder, checked, zero);
+    IRValue* ok = ir_value_reg(ok_r, IR_TYPE_I1_T);
+
+    IRBlock* pass = cf_create_block(ctx, "قسمة_سليمة");
+    IRBlock* fail = cf_create_block(ctx, "قسمة_على_صفر");
+    if (!pass || !fail) return;
+
+    ir_builder_emit_br_cond(ctx->builder, ok, pass, fail);
+
+    ir_builder_set_insert_point(ctx->builder, fail);
+    ir_lower_set_loc(ctx->builder, site);
+    ir_lower_emit_literal_line(ctx, "فشل_قسمة_على_صفر");
+    ir_lower_emit_literal_line(ctx, is_mod ? "باقي قسمة على صفر" : "قسمة على صفر");
+    ir_lower_emit_abort_path(ctx);
+
+    ir_builder_set_insert_point(ctx->builder, pass);
+    ir_lower_set_loc(ctx->builder, site);
+}
+
 static IRValue* ir_lower_build_linear_index(IRLowerCtx* ctx,
                                             const Node* site,
                                             Node* indices,

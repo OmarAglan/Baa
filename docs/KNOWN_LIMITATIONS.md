@@ -64,9 +64,9 @@ C-compatible behavior.
 - `نص` elements cannot be modified through indexing.
 - Text storage is UTF-8, but the current string helpers do not promise Unicode normalization or
   grapheme-cluster-aware indexing/length behavior.
-- Runtime checks are optional and currently cover selected array-bounds paths plus emitted
-  null-pointer dereferences. Baa is not a memory-safe language; raw pointers and inline assembly
-  remain unsafe operations.
+- Runtime checks are optional and currently cover selected array-bounds paths, emitted
+  null-pointer dereferences, and integer divide/modulo-by-zero traps. Baa is not a memory-safe
+  language; raw pointers and inline assembly remain unsafe operations.
 
 ### Standard library containers
 

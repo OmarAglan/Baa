@@ -427,6 +427,10 @@ IRValue* lower_expr(IRLowerCtx* ctx, Node* expr) {
                 IRValue* rhs = cast_to(ctx, rhs0, type);
                 int dest = -1;
 
+                if (op == OP_DIV || op == OP_MOD) {
+                    ir_lower_emit_debug_div_zero_check(ctx, expr, rhs, op == OP_MOD);
+                }
+
                 switch (ir_binop_to_irop(op)) {
                     case IR_OP_ADD: dest = ir_builder_emit_add(ctx->builder, type, lhs, rhs); break;
                     case IR_OP_SUB: dest = ir_builder_emit_sub(ctx->builder, type, lhs, rhs); break;

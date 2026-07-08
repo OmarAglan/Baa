@@ -224,7 +224,7 @@ typedef enum {
 
 **Arithmetic Semantics (Strict):**
 - **Overflow:** Standard **Two's Complement Wrap**. `INT_MAX + 1` → `INT_MIN`. No undefined behavior.
-- **Division/Modulo by Zero:** Undefined in IR (backend may trap).
+- **Division/Modulo by Zero:** Undefined in raw IR (backend may trap); source lowering with `-fruntime-checks` emits an explicit integer zero-divisor guard before division/modulo.
 - **Signed Division Edge Case:** `INT64_MIN / -1` wraps to `INT64_MIN` (does not trap).
 - **Signed Modulo Edge Case:** `INT64_MIN % -1` yields `0`.
 
@@ -472,7 +472,7 @@ internal global @__baa_static_<func>_<name>_<id> = ص٦٤ ٠
   - `linear = (((i * dim1) + j) * dim2 + ...) + k`
 - The linear index feeds `IR_OP_PTR_OFFSET` to compute the target element address.
 - Rank/dimension validity is a semantic-phase contract; IR lowering assumes validated shape metadata.
-- Optional `-fruntime-checks` lowering may emit runtime bounds guard paths before computing the element address, and null-pointer guard paths before emitted dereferences.
+- Optional `-fruntime-checks` lowering may emit runtime bounds guard paths before computing the element address, null-pointer guard paths before emitted dereferences, and integer zero-divisor guard paths before division/modulo.
 
 ### 6.3 Control Flow Lowering
 

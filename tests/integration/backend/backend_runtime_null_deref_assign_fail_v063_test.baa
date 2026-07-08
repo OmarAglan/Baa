@@ -1,0 +1,10 @@
+// RUN: expect-pass,runtime
+// FLAGS: -fruntime-checks
+// EXPECT-EXIT: 1
+// EXPECT-OUT: فشل_مؤشر_فارغ
+
+صحيح الرئيسية() {
+    صحيح* م = عدم.
+    *م = ١.
+    إرجع ٠.
+}

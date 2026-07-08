@@ -201,7 +201,7 @@ baa [options] <source.baa> [-o <output>]
 | `--cache-dir <dir>` | Override the incremental cache directory (default: `.baa_build/cache`). | `.\baa.exe --incremental --cache-dir .cache/baa main.baa` |
 | `--debug-info` | Emit debug line info and pass `-g` to toolchain. | `.\baa.exe --debug-info main.baa` |
 | `--asm-comments` | Emit explanatory comments in generated assembly (`-S`). | `.\baa.exe -S --asm-comments main.baa` |
-| `-fruntime-checks` | Enable optional runtime safety checks such as dynamic array bounds guards. | `.\baa.exe -fruntime-checks main.baa` |
+| `-fruntime-checks` | Enable optional runtime safety checks such as dynamic array bounds guards and null-pointer dereference traps. | `.\baa.exe -fruntime-checks main.baa` |
 | `-fno-runtime-checks` | Disable optional runtime safety checks (default). | `.\baa.exe -fno-runtime-checks main.baa` |
 | `--help`, `-h` | Display help message and usage. | `.\baa.exe --help` |
 | `--version` | Display compiler version. | `.\baa.exe --version` |
@@ -718,6 +718,8 @@ Use `ساكن` to declare variables that persist between function calls.
 Use `&` to get the address of a variable, and `*` to dereference it. `عدم` represents a null pointer.
 Directly dereferencing `عدم` (`*عدم`) is rejected with a semantic diagnostic; check pointer
 variables against `عدم` before dereferencing them.
+With `-fruntime-checks`, lowered pointer dereferences also get an optional null guard that prints
+`فشل_مؤشر_فارغ` and exits with status `1` when the pointer value is null.
 
 ```baa
 صحيح الرئيسية() {

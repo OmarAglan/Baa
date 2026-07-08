@@ -53,7 +53,8 @@ C-compatible behavior.
 - Taking the address of a `ثابت` object as a mutable pointer is rejected to preserve immutability
   until pointer-to-const metadata exists.
 - Null-pointer analysis is not flow-sensitive yet; the semantic pass rejects direct `*عدم`
-  dereferences explicitly, but it does not prove whether pointer variables may be null.
+  dereferences explicitly, and `-fruntime-checks` can trap emitted pointer dereferences at runtime,
+  but Baa does not currently prove whether pointer variables may be null.
 
 ### Numeric and text behavior
 
@@ -63,8 +64,9 @@ C-compatible behavior.
 - `نص` elements cannot be modified through indexing.
 - Text storage is UTF-8, but the current string helpers do not promise Unicode normalization or
   grapheme-cluster-aware indexing/length behavior.
-- Runtime checks are optional and currently cover selected array-bounds paths. Baa is not a
-  memory-safe language; raw pointers and inline assembly remain unsafe operations.
+- Runtime checks are optional and currently cover selected array-bounds paths plus emitted
+  null-pointer dereferences. Baa is not a memory-safe language; raw pointers and inline assembly
+  remain unsafe operations.
 
 ### Standard library containers
 

@@ -618,6 +618,7 @@ IRValue* lower_expr(IRLowerCtx* ctx, Node* expr) {
                 }
                 IRType* ptr_t = ir_type_ptr(target_t);
                 IRValue* p = cast_to(ctx, p0, ptr_t);
+                ir_lower_emit_debug_null_check(ctx, expr, p);
                 int lr = ir_builder_emit_load(ctx->builder, target_t, p);
                 return ir_value_reg(lr, target_t);
             }
@@ -805,4 +806,3 @@ IRValue* lower_expr(IRLowerCtx* ctx, Node* expr) {
             return ir_builder_const_i64(0);
     }
 }
-

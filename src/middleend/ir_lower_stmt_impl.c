@@ -556,6 +556,7 @@ static void lower_deref_assign(IRLowerCtx* ctx, Node* stmt) {
     if (!value_t || value_t->kind == IR_TYPE_VOID) value_t = IR_TYPE_I64_T;
     IRType* ptr_t = ir_type_ptr(value_t);
     IRValue* ptr = cast_to(ctx, p0, ptr_t);
+    ir_lower_emit_debug_null_check(ctx, target, ptr);
 
     IRValue* rhs = lower_expr(ctx, value);
     if (rhs && rhs->type && !ir_types_equal(rhs->type, value_t)) {

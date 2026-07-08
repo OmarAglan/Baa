@@ -165,6 +165,37 @@ static void ir_lower_emit_debug_bounds_check(IRLowerCtx* ctx, const Node* site, 
     ir_lower_set_loc(ctx->builder, site);
 }
 
+static void ir_lower_emit_debug_null_check(IRLowerCtx* ctx, const Node* site, IRValue* ptr)
+{
+    if (!ctx || !ctx->builder || !ptr || !ctx->enable_bounds_checks) return;
+
+    IRType* ptr_t = ptr->type;
+    IRValue* checked = ptr;
+    if (!ptr_t || ptr_t->kind != IR_TYPE_PTR) {
+        ptr_t = ir_type_ptr(IR_TYPE_I8_T);
+        checked = cast_to(ctx, ptr, ptr_t);
+    }
+
+    IRValue* null_ptr = ir_value_const_int(0, ptr_t);
+    int ok_r = ir_builder_emit_cmp_ne(ctx->builder, checked, null_ptr);
+    IRValue* ok = ir_value_reg(ok_r, IR_TYPE_I1_T);
+
+    IRBlock* pass = cf_create_block(ctx, "مؤشر_سليم");
+    IRBlock* fail = cf_create_block(ctx, "مؤشر_فارغ");
+    if (!pass || !fail) return;
+
+    ir_builder_emit_br_cond(ctx->builder, ok, pass, fail);
+
+    ir_builder_set_insert_point(ctx->builder, fail);
+    ir_lower_set_loc(ctx->builder, site);
+    ir_lower_emit_literal_line(ctx, "فشل_مؤشر_فارغ");
+    ir_lower_emit_literal_line(ctx, "فك مؤشر فارغ");
+    ir_lower_emit_abort_path(ctx);
+
+    ir_builder_set_insert_point(ctx->builder, pass);
+    ir_lower_set_loc(ctx->builder, site);
+}
+
 static IRValue* ir_lower_build_linear_index(IRLowerCtx* ctx,
                                             const Node* site,
                                             Node* indices,
@@ -689,4 +720,3 @@ static IRValue* ir_lower_baa_string_to_cstr_alloc(IRLowerCtx* ctx, const Node* s
     int r = ir_builder_emit_load(b, i8_ptr_t, res_ptr);
     return ir_value_reg(r, i8_ptr_t);
 }
-

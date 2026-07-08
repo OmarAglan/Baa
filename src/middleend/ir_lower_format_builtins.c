@@ -696,10 +696,11 @@ static IRValue* lower_lvalue_address(IRLowerCtx* ctx, Node* expr, IRType** out_p
     }
 
     if (expr->type == NODE_UNARY_OP && expr->data.unary_op.op == UOP_DEREF) {
-        IRValue* p = lower_expr(ctx, expr->data.unary_op.operand);
+        IRType* t = ir_type_from_datatype(ctx->builder->module, expr->inferred_type);
+        if (!t || t->kind == IR_TYPE_VOID) t = IR_TYPE_I64_T;
+        IRValue* p = cast_to(ctx, lower_expr(ctx, expr->data.unary_op.operand), ir_type_ptr(t));
+        ir_lower_emit_debug_null_check(ctx, expr, p);
         if (out_pointee_type) {
-            IRType* t = ir_type_from_datatype(ctx->builder->module, expr->inferred_type);
-            if (!t || t->kind == IR_TYPE_VOID) t = IR_TYPE_I64_T;
             *out_pointee_type = t;
         }
         return p;
@@ -854,4 +855,3 @@ static IRValue* lower_lvalue_address(IRLowerCtx* ctx, Node* expr, IRType** out_p
     ir_lower_report_error(ctx, expr, "أخذ العنوان '&' لهذا التعبير غير مدعوم.");
     return ir_value_const_int(0, ir_type_ptr(IR_TYPE_I64_T));
 }
-

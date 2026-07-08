@@ -1556,7 +1556,7 @@
 
   ### v0.6.3: Runtime Safety Guards 🛡️
 
-* \[ ] **Null pointer checks** — optional trap before dereference where the compiler can emit one.
+* \[x] **Null pointer checks** — `-fruntime-checks` now emits optional traps before lowered pointer dereferences and `*p = value`, printing `فشل_مؤشر_فارغ` before `exit(1)`.
 * \[ ] **Division-by-zero checks** — optional runtime guard for integer division and modulo.
 * \[ ] **Shift-width checks** — optional guard for invalid runtime shift counts.
 * \[ ] **Expanded bounds checks** — arrays and string indexing where shape information is available.

@@ -1,0 +1,9 @@
+// RUN: expect-pass,compile-only
+// FLAGS: -S -fruntime-checks
+// EXPECT-ASM: فشل_مؤشر_فارغ
+
+صحيح الرئيسية() {
+    صحيح* م = عدم.
+    صحيح س = *م.
+    إرجع س.
+}

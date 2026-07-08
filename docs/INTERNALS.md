@@ -114,7 +114,7 @@ The driver in `main.c` (v0.2.0+) supports multi-file compilation and various mod
 | `-v` | **Verbose** | - | Prints commands and compilation time; keeps intermediate `.s` files. |
 | `--debug-info` | **Debug Info** | `.s/.o/.exe` | Emits source `.file/.loc` info and passes `-g` to toolchain. |
 | `--asm-comments` | **Assembly Comments** | `.s` | Emits explanatory comments in generated assembly (prologue/epilogue/blocks). |
-| `-fruntime-checks` | **Runtime Checks** | `.s/.o/.exe` | Enables optional runtime safety guards such as dynamic array bounds checks. |
+| `-fruntime-checks` | **Runtime Checks** | `.s/.o/.exe` | Enables optional runtime safety guards such as dynamic array bounds checks and null-pointer dereference traps. |
 | `-fno-runtime-checks` | **Runtime Checks Off** | `.s/.o/.exe` | Disables optional runtime safety guards (default). |
 | `-O0` / `-O1` / `-O2` | **Optimization Level** | - | Selects optimizer aggressiveness (`-O1` is default). |
 | `--dump-ir` | **IR Dump** | stdout | Prints Baa IR (Arabic) after semantic analysis (v0.3.0.6+). |
@@ -1427,7 +1427,7 @@ Expression lowering lives in `src/ir_lower.h` and `src/ir_lower.c` and is built 
 
 Key concepts:
 
-- `IRLowerCtx`: Lowering context (builder + local bindings + control-flow stacks + debug bounds-check toggle).
+- `IRLowerCtx`: Lowering context (builder + local bindings + control-flow stacks + optional runtime-check toggle).
 - `ir_lower_bind_local()`: Bind a variable name to its `حجز` pointer register. *(Statement lowering will populate this in v0.3.0.4.)*
 - Local bindings now carry array metadata (rank/dimensions/element type) to support multi-dimensional indexing.
 - `lower_expr()`: Lower AST expressions into IR operands (`IRValue*`) and emits IR instructions via the builder.
@@ -1437,7 +1437,7 @@ Currently lowered expressions:
 - `NODE_INT`, `NODE_STRING`, `NODE_CHAR`, `NODE_BOOL`, `NODE_FLOAT`, `NODE_NULL`
 - `NODE_VAR_REF` (loads via `حمل`)
 - `NODE_BIN_OP` (arithmetic, comparisons, logical ops, pointer difference)
-- `NODE_UNARY_OP` (`سالب`, bitwise `نفي`, `!`, `UOP_ADDR` via pointers, `UOP_DEREF` via load)
+- `NODE_UNARY_OP` (`سالب`, bitwise `نفي`, `!`, `UOP_ADDR` via pointers, `UOP_DEREF` via load with an optional `-fruntime-checks` null guard)
 - `NODE_POSTFIX_OP` (`++`/`--` postfix via load + add/sub + store; expression result is the old value)
 - `NODE_SIZEOF` -> compile-time constant size
 - `NODE_CAST` -> `تحويل` (cast)

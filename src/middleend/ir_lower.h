@@ -74,7 +74,7 @@ typedef struct IRLowerCtx {
     int cf_depth;
 
     int had_error;
-    bool enable_bounds_checks; // تفعيل فحص الحدود الاختياري وقت التشغيل
+    bool enable_bounds_checks; // تفعيل فحوص السلامة الاختيارية وقت التشغيل عبر -fruntime-checks
     Node* program_root;        // مرجع AST للبحث عن تعريفات عامة (metadata)
     const BaaTarget* target;   // الهدف الحالي لاختيار استدعاءات libc الخاصة بالمنصة
 } IRLowerCtx;

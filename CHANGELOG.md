@@ -60,6 +60,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - **Verified public example suite**:
   - Added `tests/test_examples.py` and wired it into QA so every public `examples/*.baa`
     program is compiled with `-O2 --verify`.
+- **Baa Book exercises**:
+  - Added beginner, intermediate, and systems-level exercises with exact expected output
+    blocks to the Arabic book.
 - **Stable diagnostic codes**:
   - Text diagnostics now include stable code tokens after severity, starting with `B0001`
     for syntax-family errors, `B1000` for semantic-family errors, and `B110x` for warnings.

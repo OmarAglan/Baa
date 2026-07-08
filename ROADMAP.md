@@ -1576,7 +1576,7 @@
 
 * \[x] **Update Baa Book to current scope** — stale v0.3.10.6 scope text, warning-flag wording, and example-review baseline were refreshed for current v0.6.x behavior.
 * \[x] **Verified example suite** — `tests/test_examples.py` compiles every public `examples/*.baa` program in QA with `-O2 --verify`.
-* \[ ] **Exercises with expected output** — beginner, intermediate, and systems-level exercises.
+* \[x] **Exercises with expected output** — Baa Book now includes beginner, intermediate, and systems-level exercises with exact output blocks.
 * \[x] **Terminology glossary** — one preferred Arabic term per core compiler/language concept is recorded in `docs/TERMINOLOGY_GLOSSARY.md`.
 * \[ ] **Native Arabic technical review** — language quality pass by Arabic-speaking engineers.
 * \[x] **Docs version sync gate** — QA now rejects canonical docs whose top-level version header drifts from the CMake project version.

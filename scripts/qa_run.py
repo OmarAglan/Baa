@@ -524,6 +524,16 @@ def _run_utf8_validation_tests(log_dir: Path) -> StepResult:
     )
 
 
+def _run_arabic_numeral_tests(log_dir: Path) -> StepResult:
+    return _run_logged(
+        "arabic-numeral-tests",
+        [sys.executable, str(TESTS_DIR / "test_arabic_numerals.py")],
+        cwd=ROOT,
+        log_dir=log_dir,
+        timeout_s=MODULE_SIZE_TIMEOUT_S,
+    )
+
+
 def _run_release_workflow_tests(log_dir: Path) -> StepResult:
     return _run_logged(
         "release-workflow-tests",
@@ -702,6 +712,11 @@ def main() -> int:
     _print_step(utf8_validation_res)
     all_results.append(utf8_validation_res)
     overall_ok = overall_ok and utf8_validation_res.passed
+
+    arabic_numeral_res = _run_arabic_numeral_tests(log_dir)
+    _print_step(arabic_numeral_res)
+    all_results.append(arabic_numeral_res)
+    overall_ok = overall_ok and arabic_numeral_res.passed
 
     # A) Integration tiers
     test_res = _run_logged(

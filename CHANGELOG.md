@@ -40,6 +40,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
   - Added valid UTF-8 integration coverage for identifiers, strings, char literals, and
     included headers, plus malformed-byte regression tests for identifiers, strings,
     char literals, included files, and their diagnostics.
+- **Arabic numeral normalization coverage**:
+  - Added tests for Arabic-Indic numeric source tokens, diagnostic snippets that preserve
+    Arabic digits, and `--dump-ir` output using Arabic register/constant numerals.
 - **Stable diagnostic codes**:
   - Text diagnostics now include stable code tokens after severity, starting with `B0001`
     for syntax-family errors, `B1000` for semantic-family errors, and `B110x` for warnings.

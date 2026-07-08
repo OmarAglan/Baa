@@ -114,7 +114,7 @@ The driver in `main.c` (v0.2.0+) supports multi-file compilation and various mod
 | `-v` | **Verbose** | - | Prints commands and compilation time; keeps intermediate `.s` files. |
 | `--debug-info` | **Debug Info** | `.s/.o/.exe` | Emits source `.file/.loc` info and passes `-g` to toolchain. |
 | `--asm-comments` | **Assembly Comments** | `.s` | Emits explanatory comments in generated assembly (prologue/epilogue/blocks). |
-| `-fruntime-checks` | **Runtime Checks** | `.s/.o/.exe` | Enables optional runtime safety guards such as dynamic array bounds checks, null-pointer dereference traps, integer divide/modulo-by-zero traps, and invalid shift-count traps. |
+| `-fruntime-checks` | **Runtime Checks** | `.s/.o/.exe` | Enables optional runtime safety guards such as dynamic array/text bounds checks, null-pointer dereference traps, integer divide/modulo-by-zero traps, and invalid shift-count traps. |
 | `-fno-runtime-checks` | **Runtime Checks Off** | `.s/.o/.exe` | Disables optional runtime safety guards (default). |
 | `-O0` / `-O1` / `-O2` | **Optimization Level** | - | Selects optimizer aggressiveness (`-O1` is default). |
 | `--dump-ir` | **IR Dump** | stdout | Prints Baa IR (Arabic) after semantic analysis (v0.3.0.6+). |
@@ -1437,6 +1437,7 @@ Currently lowered expressions:
 
 - `NODE_INT`, `NODE_STRING`, `NODE_CHAR`, `NODE_BOOL`, `NODE_FLOAT`, `NODE_NULL`
 - `NODE_VAR_REF` (loads via `حمل`)
+- `NODE_ARRAY_ACCESS` (static-shape arrays and text indexes can emit optional `-fruntime-checks` bounds guards)
 - `NODE_BIN_OP` (arithmetic, comparisons, logical ops, pointer difference; integer `/`/`%` and shifts can emit optional `-fruntime-checks` safety guards)
 - `NODE_UNARY_OP` (`سالب`, bitwise `نفي`, `!`, `UOP_ADDR` via pointers, `UOP_DEREF` via load with an optional `-fruntime-checks` null guard)
 - `NODE_POSTFIX_OP` (`++`/`--` postfix via load + add/sub + store; expression result is the old value)

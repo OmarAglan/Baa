@@ -2,6 +2,18 @@
 // Expression lowering (v0.3.0.3)
 // ============================================================================
 
+static void ir_lower_emit_debug_string_index_check(IRLowerCtx* ctx,
+                                                   const Node* site,
+                                                   IRValue* str_ptr,
+                                                   IRValue* idx)
+{
+    if (!ctx || !ctx->builder || !str_ptr || !idx || !ctx->enable_bounds_checks) return;
+
+    ir_lower_emit_debug_null_check(ctx, site, str_ptr);
+    IRValue* len = ir_lower_builtin_strlen_from_value(ctx, site, str_ptr);
+    ir_lower_emit_debug_bounds_check_value(ctx, site, idx, len, "فهرس خارج حدود النص");
+}
+
 IRValue* lower_expr(IRLowerCtx* ctx, Node* expr) {
     if (!ctx || !ctx->builder || !expr) {
         return ir_builder_const_i64(0);
@@ -114,6 +126,7 @@ IRValue* lower_expr(IRLowerCtx* ctx, Node* expr) {
                     }
 
                     IRValue* idx = ensure_i64(ctx, lower_expr(ctx, idx_node));
+                    ir_lower_emit_debug_string_index_check(ctx, expr, str_ptr, idx);
                     int ep = ir_builder_emit_ptr_offset(ctx->builder, str_t, str_ptr, idx);
                     IRValue* elem_ptr = ir_value_reg(ep, str_t);
                     int ch = ir_builder_emit_load(ctx->builder, IR_TYPE_CHAR_T, elem_ptr);
@@ -194,6 +207,7 @@ IRValue* lower_expr(IRLowerCtx* ctx, Node* expr) {
 
                     Node* inner_node = ir_lower_nth_index(expr->data.array_op.indices, b->array_rank);
                     IRValue* inner_idx = ensure_i64(ctx, lower_expr(ctx, inner_node));
+                    ir_lower_emit_debug_string_index_check(ctx, expr, str_ptr, inner_idx);
                     int ep_inner = ir_builder_emit_ptr_offset(ctx->builder, elem_t, str_ptr, inner_idx);
                     IRValue* ch_ptr = ir_value_reg(ep_inner, elem_t);
                     int ch = ir_builder_emit_load(ctx->builder, IR_TYPE_CHAR_T, ch_ptr);
@@ -260,6 +274,7 @@ IRValue* lower_expr(IRLowerCtx* ctx, Node* expr) {
                 IRValue* str_ptr = ir_value_reg(loaded, g->type);
 
                 IRValue* idx = ensure_i64(ctx, lower_expr(ctx, idx_node));
+                ir_lower_emit_debug_string_index_check(ctx, expr, str_ptr, idx);
                 int ep = ir_builder_emit_ptr_offset(ctx->builder, g->type, str_ptr, idx);
                 IRValue* elem_ptr = ir_value_reg(ep, g->type);
                 int ch = ir_builder_emit_load(ctx->builder, IR_TYPE_CHAR_T, elem_ptr);
@@ -308,6 +323,7 @@ IRValue* lower_expr(IRLowerCtx* ctx, Node* expr) {
 
                 Node* inner_node = ir_lower_nth_index(expr->data.array_op.indices, rank);
                 IRValue* inner_idx = ensure_i64(ctx, lower_expr(ctx, inner_node));
+                ir_lower_emit_debug_string_index_check(ctx, expr, str_ptr, inner_idx);
                 int ep_inner = ir_builder_emit_ptr_offset(ctx->builder, elem_t, str_ptr, inner_idx);
                 IRValue* ch_ptr = ir_value_reg(ep_inner, elem_t);
                 int ch = ir_builder_emit_load(ctx->builder, IR_TYPE_CHAR_T, ch_ptr);

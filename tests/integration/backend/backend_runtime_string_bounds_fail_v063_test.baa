@@ -1,0 +1,16 @@
+// RUN: expect-pass,runtime
+// FLAGS: -fruntime-checks
+// EXPECT-EXIT: 1
+// EXPECT-OUT: فشل_حدود
+// EXPECT-OUT: فهرس خارج حدود النص
+
+صحيح اثنان() {
+    إرجع ٢.
+}
+
+صحيح الرئيسية() {
+    نص س = "أب".
+    صحيح ن = اثنان().
+    حرف ح = س[ن].
+    إرجع ح.
+}

@@ -20,6 +20,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - **Runtime shift-width guard**:
   - `-fruntime-checks` now emits optional guards before lowered integer shifts and
     traps dynamic shift counts outside `0..63` with `فشل_إزاحة_غير_صالحة`.
+- **Expanded runtime bounds checks**:
+  - `-fruntime-checks` now also guards `نص[i]` and inner character indexes of
+    `نص[]` arrays by deriving text length at runtime, printing `فهرس خارج حدود النص`
+    on failure.
 - **Stable diagnostic codes**:
   - Text diagnostics now include stable code tokens after severity, starting with `B0001`
     for syntax-family errors, `B1000` for semantic-family errors, and `B110x` for warnings.

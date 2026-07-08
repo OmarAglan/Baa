@@ -144,7 +144,7 @@ Ownership rules:
 - Functions returning `نص` from copy/format/time/error/file-line APIs may allocate heap memory as documented by `stdlib/baalib.baahd`.
 - `عدم*` remains the stable opaque handle representation for dynamic memory and file handles.
 - `تأكد` و`توقف_فوري` يطبعان رسالة فشل عربية وينهيان العملية بحالة خروج `1`.
-- فحوص حدود المصفوفات وفك المؤشر الفارغ وقسمة الصفر وعدد الإزاحة وقت التشغيل اختيارية وتُفعّل صراحةً عبر `-fruntime-checks`.
+- فحوص حدود المصفوفات والنصوص وفك المؤشر الفارغ وقسمة الصفر وعدد الإزاحة وقت التشغيل اختيارية وتُفعّل صراحةً عبر `-fruntime-checks`.
 - Variadic runtime intrinsics remain compiler-recognized builtins and are valid only under the semantic rules documented in `docs/LANGUAGE.md`.
 
 ---

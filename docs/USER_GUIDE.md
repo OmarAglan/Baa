@@ -201,7 +201,7 @@ baa [options] <source.baa> [-o <output>]
 | `--cache-dir <dir>` | Override the incremental cache directory (default: `.baa_build/cache`). | `.\baa.exe --incremental --cache-dir .cache/baa main.baa` |
 | `--debug-info` | Emit debug line info and pass `-g` to toolchain. | `.\baa.exe --debug-info main.baa` |
 | `--asm-comments` | Emit explanatory comments in generated assembly (`-S`). | `.\baa.exe -S --asm-comments main.baa` |
-| `-fruntime-checks` | Enable optional runtime safety checks such as dynamic array bounds guards, null-pointer dereference traps, integer divide/modulo-by-zero traps, and invalid shift-count traps. | `.\baa.exe -fruntime-checks main.baa` |
+| `-fruntime-checks` | Enable optional runtime safety checks such as dynamic array/text bounds guards, null-pointer dereference traps, integer divide/modulo-by-zero traps, and invalid shift-count traps. | `.\baa.exe -fruntime-checks main.baa` |
 | `-fno-runtime-checks` | Disable optional runtime safety checks (default). | `.\baa.exe -fno-runtime-checks main.baa` |
 | `--help`, `-h` | Display help message and usage. | `.\baa.exe --help` |
 | `--version` | Display compiler version. | `.\baa.exe --version` |
@@ -547,6 +547,7 @@ You can control the compilation stages if needed:
 ### Strings and Standard Library
 
 To manipulate dynamically allocated strings, include the standard library header. Remember to free memory allocated by `دمج_نص` or `نسخ_نص`.
+With `-fruntime-checks`, direct `نص[i]` indexing and inner character indexing of `نص[]` arrays get optional bounds guards.
 
 ```baa
 #تضمين "stdlib/baalib.baahd"

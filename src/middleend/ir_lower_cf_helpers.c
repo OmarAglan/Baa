@@ -133,17 +133,20 @@ static void ir_lower_emit_literal_line(IRLowerCtx* ctx, const char* text)
     (void)ir_builder_emit_call(ctx->builder, "puts", IR_TYPE_I32_T, args, 1);
 }
 
-static void ir_lower_emit_debug_bounds_check(IRLowerCtx* ctx, const Node* site, IRValue* idx, int dim)
+static void ir_lower_emit_debug_bounds_check_value(IRLowerCtx* ctx,
+                                                   const Node* site,
+                                                   IRValue* idx,
+                                                   IRValue* dim,
+                                                   const char* detail)
 {
-    if (!ctx || !ctx->builder || !idx || !ctx->enable_bounds_checks) return;
-    if (dim <= 0) return;
+    if (!ctx || !ctx->builder || !idx || !dim || !ctx->enable_bounds_checks) return;
 
     IRValue* i64_idx = ensure_i64(ctx, idx);
+    IRValue* i64_dim = ensure_i64(ctx, dim);
     IRValue* zero = ir_value_const_int(0, IR_TYPE_I64_T);
-    IRValue* dimv = ir_value_const_int((int64_t)dim, IR_TYPE_I64_T);
 
     int ge = ir_builder_emit_cmp_ge(ctx->builder, i64_idx, zero);
-    int lt = ir_builder_emit_cmp_lt(ctx->builder, i64_idx, dimv);
+    int lt = ir_builder_emit_cmp_lt(ctx->builder, i64_idx, i64_dim);
     IRValue* ge_v = ir_value_reg(ge, IR_TYPE_I1_T);
     IRValue* lt_v = ir_value_reg(lt, IR_TYPE_I1_T);
     int okb = ir_builder_emit_and(ctx->builder, IR_TYPE_I1_T, ge_v, lt_v);
@@ -158,11 +161,20 @@ static void ir_lower_emit_debug_bounds_check(IRLowerCtx* ctx, const Node* site, 
     ir_builder_set_insert_point(ctx->builder, fail);
     ir_lower_set_loc(ctx->builder, site);
     ir_lower_emit_literal_line(ctx, "فشل_حدود");
-    ir_lower_emit_literal_line(ctx, "فهرس خارج حدود المصفوفة");
+    ir_lower_emit_literal_line(ctx, detail ? detail : "فهرس خارج الحدود");
     ir_lower_emit_abort_path(ctx);
 
     ir_builder_set_insert_point(ctx->builder, pass);
     ir_lower_set_loc(ctx->builder, site);
+}
+
+static void ir_lower_emit_debug_bounds_check(IRLowerCtx* ctx, const Node* site, IRValue* idx, int dim)
+{
+    if (!ctx || !ctx->builder || !idx || !ctx->enable_bounds_checks) return;
+    if (dim <= 0) return;
+
+    IRValue* dimv = ir_value_const_int((int64_t)dim, IR_TYPE_I64_T);
+    ir_lower_emit_debug_bounds_check_value(ctx, site, idx, dimv, "فهرس خارج حدود المصفوفة");
 }
 
 static void ir_lower_emit_debug_null_check(IRLowerCtx* ctx, const Node* site, IRValue* ptr)

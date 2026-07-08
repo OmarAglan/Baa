@@ -87,6 +87,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
   - Multi-file link builds now detect duplicate exported function/global definitions after
     IR lowering and report an Arabic diagnostic with first/second source files before falling
     through to linker diagnostics; `ساكن` file-local globals remain valid across files.
+- **Header self-check mode**:
+  - Added `--check-header` to parse and semantically validate header/declaration files without
+    producing IR, assembly, object files, or executables, with focused QA coverage for valid
+    and invalid `.baahd` inputs.
 - **Stable diagnostic codes**:
   - Text diagnostics now include stable code tokens after severity, starting with `B0001`
     for syntax-family errors, `B1000` for semantic-family errors, and `B110x` for warnings.

@@ -24,6 +24,7 @@ This document defines the compiler surfaces that external tools may rely on.
 | compile/link default | produce executable | users, Takween |
 | `-S` | produce assembly | compiler tests, backend tests |
 | `-c` | produce object | Takween, future OS experiments |
+| `--check-header` | parse + semantic-check header declarations without codegen | Takween, Qalam |
 | `--check` | parse + semantic check only | Qalam, Takween |
 | `--emit-build-manifest <file>` | dependency/cache manifest | Takween |
 | `--incremental` | reuse cached object files when safe | Takween |
@@ -42,6 +43,7 @@ Takween may rely on these compiler invocation shapes:
 
 ```bash
 baa --check [-I <dir>...] [--target=<target>] <inputs...>
+baa --check-header [-I <dir>...] <headers...>
 baa [-O0|-O1|-O2] [--verify] [-I <dir>...] <inputs...> -o <executable>
 baa -c [-O0|-O1|-O2] [-I <dir>...] <inputs...> -o <object>
 baa -S [-O0|-O1|-O2] [--target=<target>] <input> -o <assembly>
@@ -56,6 +58,7 @@ Stable invocation inputs are:
 - target from `--target=<target>`,
 - optimization level,
 - validation flags such as `--verify`, `--verify-ir`, `--verify-ssa`, and `--verify-gate`,
+- header declaration check mode (`--check-header`),
 - runtime-check flags and runtime-check mask,
 - incremental cache directory,
 - build-manifest path.

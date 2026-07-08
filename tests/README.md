@@ -17,6 +17,7 @@ tests/
 ├── corpus_v2x_docs/ # historical docs corpus by version
 ├── test_arabic_numerals.py # Arabic numeral IR-output regression coverage
 ├── test_examples.py # public examples compile gate
+├── test_header_self_check.py # --check-header parser/semantic no-output coverage
 ├── test_integration_artifacts.py # ecosystem/tooling integration docs gate
 ├── test_module_visibility_docs.py # module/header/visibility contract docs gate
 ├── test_one_definition.py # multi-file exported-symbol duplicate diagnostics
@@ -63,6 +64,8 @@ Every mode also runs `tests/test_arabic_numerals.py` to verify Arabic numeral re
 machine-readable IR dumps.
 Every mode also runs `tests/test_examples.py`, which compiles every public `examples/*.baa`
 program with `-O2 --verify`.
+Every mode also runs `tests/test_header_self_check.py`, which verifies `--check-header`
+accepts declaration headers, rejects invalid header declarations, and emits no code/output.
 Every mode also runs `tests/test_integration_artifacts.py`, which checks the required
 ecosystem, compatibility, tooling, diagnostics JSON, conformance-suite, and SDK planning
 documents for the contract sections external tooling depends on.

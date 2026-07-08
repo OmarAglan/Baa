@@ -20,16 +20,18 @@ the language-level module, header, and visibility contract.
 | Extension | Role | Passed as compiler input? | Recommended contents |
 |---|---|---:|---|
 | `.baa` | implementation/source unit | yes | function bodies, global definitions, local helpers, entry point |
-| `.baahd` | header/declaration unit | no, except future self-check mode | prototypes, `خارجي` declarations, shared type declarations, macros |
+| `.baahd` | header/declaration unit | only with `--check-header` | prototypes, `خارجي` declarations, shared type declarations, macros |
 
 Rules:
 
 - Compile implementation units (`.baa`) as roots.
 - Include headers (`.baahd`) from implementation units with `#تضمين`.
 - Do not use `.baahd` files as independent implementation inputs in normal builds.
+- Use `--check-header` to parse and semantically validate a header without emitting IR,
+  assembly, object files, or an executable.
 - New public headers should be declaration-only by convention.
-- The current parser still processes included headers as normal Baa source; strict header-body
-  rejection is reserved for the future header self-check mode.
+- The current parser still processes included headers as normal Baa source; `--check-header`
+  does not yet enforce a header-only grammar.
 
 ---
 
@@ -137,7 +139,7 @@ baa main.baa math.baa -o app
 Takween-managed builds should preserve the same compiler contract:
 
 1. Treat `.baa` files as implementation roots.
-2. Treat `.baahd` files as include/declaration surfaces.
+2. Treat `.baahd` files as include/declaration surfaces, optionally checked with `--check-header`.
 3. Pass include directories with `-I` in project-config order.
 4. Pass all implementation inputs explicitly to Baa.
 5. Consume `--emit-build-manifest` for dependency hashes and invalidation.
@@ -149,6 +151,5 @@ Takween-managed builds should preserve the same compiler contract:
 ## 8. Current Non-Goals
 
 - No enforced header-only grammar for `.baahd` yet.
-- No standalone header self-check mode yet.
 - No `public`/`internal` keyword pair yet.
 - No Baa-owned project build system; Takween owns that workflow.

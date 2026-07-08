@@ -24,12 +24,13 @@ class ModuleVisibilityDocumentationTests(unittest.TestCase):
     def test_file_role_contract_covers_baa_and_baahd(self) -> None:
         for marker in (
             "| `.baa` | implementation/source unit | yes |",
-            "| `.baahd` | header/declaration unit | no, except future self-check mode |",
+            "| `.baahd` | header/declaration unit | only with `--check-header` |",
             "Compile implementation units (`.baa`) as roots.",
             "Include headers (`.baahd`) from implementation units with `#تضمين`.",
+            "Use `--check-header` to parse and semantically validate a header",
             "New public headers should be declaration-only by convention.",
-            "strict header-body",
-            "rejection is reserved for the future header self-check mode.",
+            "`--check-header`",
+            "does not yet enforce a header-only grammar.",
         ):
             with self.subTest(marker=marker):
                 self.assertIn(marker, self.text)
@@ -63,7 +64,7 @@ class ModuleVisibilityDocumentationTests(unittest.TestCase):
     def test_takween_migration_path_keeps_baa_compiler_boundary(self) -> None:
         for marker in (
             "Treat `.baa` files as implementation roots.",
-            "Treat `.baahd` files as include/declaration surfaces.",
+            "Treat `.baahd` files as include/declaration surfaces, optionally checked with `--check-header`.",
             "Pass include directories with `-I` in project-config order.",
             "Consume `--emit-build-manifest` for dependency hashes and invalidation.",
             "`baa build`, `baa run`, and `baa clean` are not compiler",

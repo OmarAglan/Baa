@@ -554,6 +554,16 @@ def _run_one_definition_tests(log_dir: Path) -> StepResult:
     )
 
 
+def _run_header_self_check_tests(log_dir: Path) -> StepResult:
+    return _run_logged(
+        "header-self-check-tests",
+        [sys.executable, str(TESTS_DIR / "test_header_self_check.py")],
+        cwd=ROOT,
+        log_dir=log_dir,
+        timeout_s=120.0,
+    )
+
+
 def _run_target_spec_tests(log_dir: Path) -> StepResult:
     return _run_logged(
         "target-spec-tests",
@@ -798,6 +808,11 @@ def main() -> int:
     _print_step(one_definition_res)
     all_results.append(one_definition_res)
     overall_ok = overall_ok and one_definition_res.passed
+
+    header_self_check_res = _run_header_self_check_tests(log_dir)
+    _print_step(header_self_check_res)
+    all_results.append(header_self_check_res)
+    overall_ok = overall_ok and header_self_check_res.passed
 
     # A) Integration tiers
     test_res = _run_logged(

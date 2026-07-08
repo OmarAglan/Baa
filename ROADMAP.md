@@ -1615,7 +1615,7 @@
 * \[x] **Visibility modifiers** — current public/default, `خارجي`, and `ساكن` rules for functions and globals are documented and guarded.
 * \[x] **Include-cycle diagnostics** — cycle-chain diagnostics now include an Arabic help hint and focused negative-test coverage.
 * \[x] **One-definition checks** — multi-file link builds now reject duplicate exported function/global definitions before linker fallback diagnostics.
-* \[ ] **Header self-check mode** — check declarations without emitting code.
+* \[x] **Header self-check mode** — `--check-header` parses and semantically checks header declarations without emitting code.
 * \[x] **Migration guide** — `docs/MODULES_AND_VISIBILITY.md` records the path from raw multi-file builds to Takween-managed builds.
 
   ### v0.7.2: Qalam-IDE Integration Contract ✍️

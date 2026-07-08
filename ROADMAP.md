@@ -1613,7 +1613,7 @@
 
 * \[x] **Header/source convention** — `docs/MODULES_AND_VISIBILITY.md` formalizes `.baahd` vs `.baa` usage and is covered by `tests/test_module_visibility_docs.py`.
 * \[x] **Visibility modifiers** — current public/default, `خارجي`, and `ساكن` rules for functions and globals are documented and guarded.
-* \[ ] **Include-cycle diagnostics** — improve chain output and hints.
+* \[x] **Include-cycle diagnostics** — cycle-chain diagnostics now include an Arabic help hint and focused negative-test coverage.
 * \[ ] **One-definition checks** — better duplicate symbol diagnostics.
 * \[ ] **Header self-check mode** — check declarations without emitting code.
 * \[x] **Migration guide** — `docs/MODULES_AND_VISIBILITY.md` records the path from raw multi-file builds to Takween-managed builds.

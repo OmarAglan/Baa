@@ -1,6 +1,7 @@
 // EXPECT: تم اكتشاف دورة تضمين
 // EXPECT: include_cycle/a.baahd
 // EXPECT: include_cycle/b.baahd
+// EXPECT: مساعدة: اكسر دورة التضمين
 
 #تضمين "tests/fixtures/include_cycle/a.baahd"
 

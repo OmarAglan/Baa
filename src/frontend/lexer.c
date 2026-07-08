@@ -101,7 +101,7 @@ static void lex_fatal(Lexer* l, const char* fmt, ...)
     int line = (l ? l->state.line : 1);
     int col = (l ? l->state.col : 1);
 
-    char msg[512];
+    char msg[2048];
     va_list args;
     va_start(args, fmt);
     (void)vsnprintf(msg, sizeof(msg), fmt, args);
@@ -418,6 +418,12 @@ static void lex_fatal_include_cycle(Lexer* l, const char* requested_path, const 
         if (n > 0) {
             used += (size_t)n;
         }
+    }
+
+    if (used < sizeof(chain)) {
+        (void)snprintf(chain + used, sizeof(chain) - used,
+                       ". مساعدة: اكسر دورة التضمين بنقل التصريحات المشتركة إلى ملف "
+                       ".baahd مستقل أو بإزالة أحد مسارات #تضمين المتبادلة");
     }
 
     lex_fatal(l, "%s", chain);

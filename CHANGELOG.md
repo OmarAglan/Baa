@@ -79,6 +79,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
   - Added `docs/MODULES_AND_VISIBILITY.md` plus a QA guard for `.baa` implementation roots,
     `.baahd` declaration headers, current `خارجي`/`ساكن` visibility rules, and the
     migration path from raw multi-file compiler calls to Takween-managed builds.
+- **Include-cycle diagnostic hint**:
+  - Include-cycle errors now keep more diagnostic text and append an Arabic `مساعدة:` hint
+    that directs users to break mutual `#تضمين` dependencies through shared declaration
+    headers or by removing one include edge.
 - **Stable diagnostic codes**:
   - Text diagnostics now include stable code tokens after severity, starting with `B0001`
     for syntax-family errors, `B1000` for semantic-family errors, and `B110x` for warnings.

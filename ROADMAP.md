@@ -1579,7 +1579,7 @@
 * \[ ] **Exercises with expected output** — beginner, intermediate, and systems-level exercises.
 * \[ ] **Terminology glossary** — one preferred Arabic term per core compiler/language concept.
 * \[ ] **Native Arabic technical review** — language quality pass by Arabic-speaking engineers.
-* \[ ] **Docs version sync gate** — reject release when docs show stale version headers.
+* \[x] **Docs version sync gate** — QA now rejects canonical docs whose top-level version header drifts from the CMake project version.
 
   \---
 

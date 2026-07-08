@@ -31,6 +31,14 @@ def _require(errors: list[str], relative: str, expected: str) -> None:
         errors.append(f"{relative}: missing expected version marker: {expected}")
 
 
+def _require_doc_header(errors: list[str], relative: str, label: str, version: str) -> None:
+    """تحقق أن إصدار المستند مثبت في ترويسة الملف العليا لا في أي موضع عابر."""
+    expected = f"> {label} {version}"
+    header_lines = _read(relative).splitlines()[:8]
+    if not any(line.startswith(expected) for line in header_lines):
+        errors.append(f"{relative}: missing top-level version header: {expected}")
+
+
 def main() -> int:
     errors: list[str] = []
     cmake = _read("CMakeLists.txt")
@@ -59,8 +67,8 @@ def main() -> int:
     _require(errors, "README.md", f"%D8%A7%D8%B1-{version}-blue.svg")
 
     for relative in ENGLISH_VERSION_DOCS:
-        _require(errors, relative, f"**Version:** {version}")
-    _require(errors, "docs/BAA_BOOK_AR.md", f"**الإصدار:** {version}")
+        _require_doc_header(errors, relative, "**Version:**", version)
+    _require_doc_header(errors, "docs/BAA_BOOK_AR.md", "**الإصدار:**", version)
 
     presets = json.loads(_read("CMakePresets.json"))
     dates: dict[str, str] = {}

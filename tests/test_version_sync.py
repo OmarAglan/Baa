@@ -84,6 +84,21 @@ class VersionSyncTests(unittest.TestCase):
         self.assertIn("src/support/version.h", stderr)
         self.assertIn('#define BAA_VERSION "0.6.0"', stderr)
 
+    def test_rejects_stale_document_header(self) -> None:
+        language = self.root / "docs" / "LANGUAGE.md"
+        text = language.read_text(encoding="utf-8").replace(
+            "> **Version:** 0.6.0",
+            "> **Version:** 0.5.9",
+            1,
+        )
+        language.write_text(text, encoding="utf-8")
+
+        result, _, stderr = self.run_guard()
+
+        self.assertEqual(result, 1)
+        self.assertIn("docs/LANGUAGE.md", stderr)
+        self.assertIn("top-level version header", stderr)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -469,6 +469,10 @@ IRValue* lower_expr(IRLowerCtx* ctx, Node* expr) {
                 IRValue* rhs = cast_to(ctx, rhs0, type);
                 int dest = -1;
 
+                if (op == OP_SHL || op == OP_SHR) {
+                    ir_lower_emit_debug_shift_width_check(ctx, expr, rhs);
+                }
+
                 switch (op) {
                     case OP_BIT_AND:
                         dest = ir_builder_emit_and(ctx->builder, type, lhs, rhs);

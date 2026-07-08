@@ -290,6 +290,8 @@ typedef enum {
 | `shl` | `ازاحة_يسار` | `IR_OP_SHL` | `%r = ازاحة_يسار <type> %a، %b` | Shift left |
 | `shr` | `ازاحة_يمين` | `IR_OP_SHR` | `%r = ازاحة_يمين <type> %a، %b` | Shift right |
 
+Source lowering with `-fruntime-checks` emits an explicit `0 <= count < 64` guard before integer shifts; raw IR shift counts outside that range remain a backend/target concern.
+
 ### 4.6 Control Flow Instructions
 
 | Opcode | Arabic | C Enum | Syntax | Description |
@@ -472,7 +474,7 @@ internal global @__baa_static_<func>_<name>_<id> = ص٦٤ ٠
   - `linear = (((i * dim1) + j) * dim2 + ...) + k`
 - The linear index feeds `IR_OP_PTR_OFFSET` to compute the target element address.
 - Rank/dimension validity is a semantic-phase contract; IR lowering assumes validated shape metadata.
-- Optional `-fruntime-checks` lowering may emit runtime bounds guard paths before computing the element address, null-pointer guard paths before emitted dereferences, and integer zero-divisor guard paths before division/modulo.
+- Optional `-fruntime-checks` lowering may emit runtime bounds guard paths before computing the element address, null-pointer guard paths before emitted dereferences, integer zero-divisor guard paths before division/modulo, and shift-count guard paths before integer shifts.
 
 ### 6.3 Control Flow Lowering
 

@@ -1558,7 +1558,7 @@
 
 * \[x] **Null pointer checks** — `-fruntime-checks` now emits optional traps before lowered pointer dereferences and `*p = value`, printing `فشل_مؤشر_فارغ` before `exit(1)`.
 * \[x] **Division-by-zero checks** — `-fruntime-checks` now emits optional traps before lowered integer division/modulo, printing `فشل_قسمة_على_صفر` before `exit(1)`.
-* \[ ] **Shift-width checks** — optional guard for invalid runtime shift counts.
+* \[x] **Shift-width checks** — `-fruntime-checks` now emits optional traps before lowered shifts when the dynamic count is outside `0..63`, printing `فشل_إزاحة_غير_صالحة` before `exit(1)`.
 * \[ ] **Expanded bounds checks** — arrays and string indexing where shape information is available.
 * \[ ] **Readable panic format** — file, line, function, and Arabic message.
 * \[ ] **Selective safety flags** — `-fruntime-checks=<kind>` style suboptions.

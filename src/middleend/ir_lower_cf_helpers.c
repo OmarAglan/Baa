@@ -225,6 +225,37 @@ static void ir_lower_emit_debug_div_zero_check(IRLowerCtx* ctx,
     ir_lower_set_loc(ctx->builder, site);
 }
 
+static void ir_lower_emit_debug_shift_width_check(IRLowerCtx* ctx, const Node* site, IRValue* count)
+{
+    if (!ctx || !ctx->builder || !count || !ctx->enable_bounds_checks) return;
+
+    IRValue* count64 = ensure_i64(ctx, count);
+    IRValue* zero = ir_value_const_int(0, IR_TYPE_I64_T);
+    IRValue* max_width = ir_value_const_int(64, IR_TYPE_I64_T);
+
+    int ge = ir_builder_emit_cmp_ge(ctx->builder, count64, zero);
+    int lt = ir_builder_emit_cmp_lt(ctx->builder, count64, max_width);
+    IRValue* ge_v = ir_value_reg(ge, IR_TYPE_I1_T);
+    IRValue* lt_v = ir_value_reg(lt, IR_TYPE_I1_T);
+    int ok_r = ir_builder_emit_and(ctx->builder, IR_TYPE_I1_T, ge_v, lt_v);
+    IRValue* ok = ir_value_reg(ok_r, IR_TYPE_I1_T);
+
+    IRBlock* pass = cf_create_block(ctx, "إزاحة_سليمة");
+    IRBlock* fail = cf_create_block(ctx, "إزاحة_فشل");
+    if (!pass || !fail) return;
+
+    ir_builder_emit_br_cond(ctx->builder, ok, pass, fail);
+
+    ir_builder_set_insert_point(ctx->builder, fail);
+    ir_lower_set_loc(ctx->builder, site);
+    ir_lower_emit_literal_line(ctx, "فشل_إزاحة_غير_صالحة");
+    ir_lower_emit_literal_line(ctx, "عدد إزاحة غير صالح");
+    ir_lower_emit_abort_path(ctx);
+
+    ir_builder_set_insert_point(ctx->builder, pass);
+    ir_lower_set_loc(ctx->builder, site);
+}
+
 static IRValue* ir_lower_build_linear_index(IRLowerCtx* ctx,
                                             const Node* site,
                                             Node* indices,

@@ -2708,7 +2708,7 @@ Top-level entry point for the driver: converts a validated `NODE_PROGRAM` AST in
 |-----------|------|-------------|
 | `program` | `Node*` | Root AST node (must be `NODE_PROGRAM`) |
 | `module_name` | `const char*` | Optional module name (usually filename) |
-| `enable_bounds_checks` | `bool` | Enables optional runtime-check lowering paths driven by `-fruntime-checks` (currently selected bounds, null-pointer dereference, and integer zero-divisor guards) |
+| `enable_bounds_checks` | `bool` | Enables optional runtime-check lowering paths driven by `-fruntime-checks` (currently selected bounds, null-pointer dereference, integer zero-divisor, and shift-count guards) |
 | `target` | `const BaaTarget*` | Active target descriptor (ABI + data layout). Required for target-specific lowering decisions |
 
 **Returns:** Newly allocated `IRModule` (caller owns; free with `ir_module_free()`).

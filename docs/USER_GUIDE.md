@@ -201,7 +201,7 @@ baa [options] <source.baa> [-o <output>]
 | `--cache-dir <dir>` | Override the incremental cache directory (default: `.baa_build/cache`). | `.\baa.exe --incremental --cache-dir .cache/baa main.baa` |
 | `--debug-info` | Emit debug line info and pass `-g` to toolchain. | `.\baa.exe --debug-info main.baa` |
 | `--asm-comments` | Emit explanatory comments in generated assembly (`-S`). | `.\baa.exe -S --asm-comments main.baa` |
-| `-fruntime-checks` | Enable optional runtime safety checks such as dynamic array bounds guards, null-pointer dereference traps, and integer divide/modulo-by-zero traps. | `.\baa.exe -fruntime-checks main.baa` |
+| `-fruntime-checks` | Enable optional runtime safety checks such as dynamic array bounds guards, null-pointer dereference traps, integer divide/modulo-by-zero traps, and invalid shift-count traps. | `.\baa.exe -fruntime-checks main.baa` |
 | `-fno-runtime-checks` | Disable optional runtime safety checks (default). | `.\baa.exe -fno-runtime-checks main.baa` |
 | `--help`, `-h` | Display help message and usage. | `.\baa.exe --help` |
 | `--version` | Display compiler version. | `.\baa.exe --version` |

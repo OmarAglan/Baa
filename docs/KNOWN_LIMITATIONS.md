@@ -100,19 +100,18 @@ C-compatible behavior.
 The following surfaces appear in draft v0.7+ contract documents but are not accepted by the
 current driver:
 
-- `--check`
 - `--diagnostics=json`
 - JSON token dumps
 - JSON symbol outlines
 - completion metadata export
 - `--print-targets` and `--print-target-spec`
 
-The files under `tests/conformance/` are a seed layout. Cases that mention these future flags do
-not yet form an executable release gate.
+The files under `tests/conformance/` are a seed layout. Cases that mention the remaining future
+flags do not yet form an executable release gate.
 
 Implemented machine-facing surfaces currently include deterministic build manifests,
-incremental-cache metadata, IR dumps, verifier flags, phase timing, and target selection for the
-two hosted x86-64 targets.
+incremental-cache metadata, `--check` fast source validation, IR dumps, verifier flags, phase
+timing, and target selection for the two hosted x86-64 targets.
 
 ## Release Status
 

@@ -132,6 +132,8 @@ int main(int argc, char **argv)
             config.output_file = NULL; // سيتم تحديده لكل ملف
         else if (config.compile_only)
             config.output_file = NULL; // سيتم تحديده لكل ملف
+        else if (config.check_only)
+            config.output_file = NULL;
         else if (config.header_check)
             config.output_file = NULL;
         else
@@ -156,7 +158,7 @@ int main(int argc, char **argv)
     // v0.3.2.8.4: لا ندعم حالياً الربط/التجميع العابر للأهداف (cross-link/cross-assemble).
     // - نسمح بـ -S لتوليد assembly فقط لأي هدف.
     // - أما -c أو الربط النهائي فيتطلبان أن يطابق الهدف نظام المضيف.
-    if (!config.assembly_only && !config.header_check)
+    if (!config.assembly_only && !config.check_only && !config.header_check)
     {
         if (config.target && config.target->obj_format != driver_toolchain_host_object_format())
         {
@@ -191,8 +193,8 @@ int main(int argc, char **argv)
         }
     }
 
-    // إذا طلب المستخدم -S أو -c، نتوقف هنا
-    if (config.assembly_only || config.compile_only || config.header_check)
+    // إذا طلب المستخدم نمطاً يتوقف قبل الربط النهائي، نتوقف هنا
+    if (config.assembly_only || config.compile_only || config.check_only || config.header_check)
     {
         print_phase_times_and_mem(&config, &phase_times);
         driver_build_manifest_free(&build_manifest);

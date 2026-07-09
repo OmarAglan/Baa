@@ -91,6 +91,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
   - Added `--check-header` to parse and semantically validate header/declaration files without
     producing IR, assembly, object files, or executables, with focused QA coverage for valid
     and invalid `.baahd` inputs.
+- **Fast source check mode**:
+  - Added `--check` to parse and semantically validate `.baa` sources for editor/tool feedback
+    without IR lowering, optimization, assembly, object files, executables, or host toolchain
+    use; check-mode manifests record `"mode": "check"` and include dependencies.
 - **Stable diagnostic codes**:
   - Text diagnostics now include stable code tokens after severity, starting with `B0001`
     for syntax-family errors, `B1000` for semantic-family errors, and `B110x` for warnings.

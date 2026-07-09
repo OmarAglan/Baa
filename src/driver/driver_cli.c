@@ -157,6 +157,7 @@ void driver_print_help(void)
     printf("  -I<dir>      Add include search directory (compact form)\n");
     printf("  -S, -s       Compile to assembly only (.s)\n");
     printf("  -c           Compile to object file only (.o)\n");
+    printf("  --check      Parse/analyze source files without emitting code\n");
     printf("  --check-header  Parse/analyze header declarations without emitting code\n");
     printf("  -v           Enable verbose output with timing\n");
     printf("  --startup=custom  Use custom entrypoint (__baa_start) while keeping CRT/libc init\n");
@@ -367,6 +368,8 @@ bool driver_parse_cli(int argc, char **argv, CompilerConfig *config, DriverParse
                 config->assembly_only = true;
             else if (strcmp(arg, "-c") == 0)
                 config->compile_only = true;
+            else if (strcmp(arg, "--check") == 0)
+                config->check_only = true;
             else if (strcmp(arg, "--check-header") == 0)
                 config->header_check = true;
             else if (strcmp(arg, "-v") == 0)

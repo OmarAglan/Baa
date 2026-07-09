@@ -50,6 +50,12 @@ baa -S [-O0|-O1|-O2] [--target=<target>] <input> -o <assembly>
 baa --incremental --cache-dir <dir> --emit-build-manifest <file> <inputs...> -o <output>
 ```
 
+`--check` is the fast editor/build-tool validation mode: it reads sources and includes,
+parses, runs semantic analysis, and stops before IR lowering, optimization, assembly,
+object emission, and linking. It may be combined with `--emit-build-manifest`; those
+manifests use `"mode": "check"` and record source/include dependencies without an output
+artifact.
+
 Stable invocation inputs are:
 
 - source/input file paths,
@@ -58,6 +64,7 @@ Stable invocation inputs are:
 - target from `--target=<target>`,
 - optimization level,
 - validation flags such as `--verify`, `--verify-ir`, `--verify-ssa`, and `--verify-gate`,
+- source fast-check mode (`--check`),
 - header declaration check mode (`--check-header`),
 - runtime-check flags and runtime-check mask,
 - incremental cache directory,

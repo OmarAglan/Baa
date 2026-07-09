@@ -305,7 +305,7 @@ static int compile_one_ir(const CompilerConfig *config,
         printf("\n[INFO] Processing %s...\n", current_input);
 
     char *early_obj_file = NULL;
-    if (!config->assembly_only && !config->header_check)
+    if (!config->assembly_only && !config->check_only && !config->header_check)
     {
         if (config->compile_only)
         {
@@ -377,8 +377,22 @@ static int compile_one_ir(const CompilerConfig *config,
         return 1;
     }
 
-    if (config->header_check)
+    if (config->check_only || config->header_check)
     {
+        const char* reason = config->check_only ? "check-only" : "header-check";
+        if (!driver_build_record_uncached(config,
+                                          current_input,
+                                          NULL,
+                                          lexer_deps,
+                                          lexer_dep_count,
+                                          reason,
+                                          build_manifest))
+        {
+            fprintf(stderr, "خطأ: فشل تحديث بيان فحص المصدر.\n");
+            lexer_free_dependencies(&lexer);
+            free(source);
+            return 1;
+        }
         lexer_free_dependencies(&lexer);
         free(source);
         return 0;
@@ -767,8 +781,8 @@ int driver_compile_files(const CompilerConfig *config,
     // عند -S لا نحتاج لإرجاع قائمة كائنات.
     // عند --startup=custom + ربط نهائي: نضيف كائناً إضافياً لبدء التشغيل.
     bool need_startup_obj =
-        (!config->assembly_only && !config->compile_only && !config->header_check && config->custom_startup);
-    int cap = (config->assembly_only || config->header_check) ? 0
+        (!config->assembly_only && !config->compile_only && !config->check_only && !config->header_check && config->custom_startup);
+    int cap = (config->assembly_only || config->check_only || config->header_check) ? 0
         : (input_count + (need_startup_obj ? 1 : 0));
     char **obj_files = NULL;
     int obj_count = 0;
@@ -784,7 +798,7 @@ int driver_compile_files(const CompilerConfig *config,
 
     DriverOneDefinitionRegistry odr_registry;
     DriverOneDefinitionRegistry* odr_registry_ptr = NULL;
-    if (!config->assembly_only && !config->compile_only && !config->header_check && input_count > 1)
+    if (!config->assembly_only && !config->compile_only && !config->check_only && !config->header_check && input_count > 1)
     {
         driver_odr_registry_init(&odr_registry);
         odr_registry_ptr = &odr_registry;
@@ -807,7 +821,7 @@ int driver_compile_files(const CompilerConfig *config,
             return 1;
         }
 
-        if (!config->assembly_only && !config->header_check)
+        if (!config->assembly_only && !config->check_only && !config->header_check)
         {
             obj_files[obj_count++] = obj_file;
         }

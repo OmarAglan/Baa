@@ -18,6 +18,7 @@
 typedef struct
 {
     bool header_check;  // --check-header: فحص الترويسة دون توليد كود
+    bool check_only;    // --check: فحص المصدر نحوياً ودلالياً دون توليد كود
     char *output_file;  // ملف الخرج (.exe, .o, .s)
     const char **include_dirs; // مسارات البحث الإضافية للتضمين (-I)
     size_t include_dir_count;  // عدد مسارات -I

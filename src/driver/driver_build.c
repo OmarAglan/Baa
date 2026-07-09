@@ -217,6 +217,7 @@ bool driver_build_cache_is_allowed(const CompilerConfig* config)
 {
     if (!config || !config->incremental) return false;
     if (config->assembly_only) return false;
+    if (config->check_only || config->header_check) return false;
     if (config->dump_ir || config->dump_ir_opt || config->emit_ir) return false;
     if (config->verify_ir || config->verify_ssa || config->verify_gate) return false;
     return true;
@@ -619,9 +620,16 @@ bool driver_build_write_manifest(const CompilerConfig* config,
     fprintf(out, "  \"compiler_version\": \"%s\",\n", BAA_VERSION);
     fprintf(out, "  \"target\": \"");
     json_escape(out, config && config->target ? config->target->name : "");
-    fprintf(out, "\",\n  \"mode\": \"%s\",\n",
-            config && config->assembly_only ? "assembly" :
-            (config && config->compile_only ? "compile" : "link"));
+    const char* mode = "link";
+    if (config && config->check_only)
+        mode = "check";
+    else if (config && config->header_check)
+        mode = "check-header";
+    else if (config && config->assembly_only)
+        mode = "assembly";
+    else if (config && config->compile_only)
+        mode = "compile";
+    fprintf(out, "\",\n  \"mode\": \"%s\",\n", mode);
     fprintf(out, "  \"opt_level\": %d,\n", config ? (int)config->opt_level : 0);
     fprintf(out, "  \"runtime_checks\": %s,\n",
             config && config->runtime_checks ? "true" : "false");

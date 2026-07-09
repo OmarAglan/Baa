@@ -14,6 +14,8 @@ baa --diagnostics=json file.baa -o app
 ```
 
 When `--diagnostics=json` is used, diagnostics are written as JSON to stdout or to the path given by a future `--diagnostics-output <file>` option.
+The current driver emits the top-level object below for compile/check invocations, including
+an empty `diagnostics` array when no diagnostics were produced.
 
 ---
 
@@ -102,11 +104,12 @@ When `--diagnostics=json` is used, diagnostics are written as JSON to stdout or 
 | `B5000`-`B5999` | stdlib/runtime checks |
 | `B9000`-`B9999` | internal compiler errors |
 
-Current text diagnostics use this range at family granularity: `B0001` for syntax-family
+Current diagnostics use this range at family granularity: `B0001` for syntax-family
 errors, `B1000` for semantic-family errors, and `B1100`-`B1105` for the current warning
 types. Text headers also include a derived category label, for example
-`[Error] [B1000] [semantic] ...`. `--explain <CODE>` provides Arabic explanations for
-the currently emitted text codes. JSON output remains a future driver surface.
+`[Error] [B1000] [semantic] ...`. `--diagnostics=json` emits the same codes, derived
+categories, primary spans, and hints in machine-readable form. `--explain <CODE>` provides
+Arabic explanations for the currently emitted codes.
 
 ---
 

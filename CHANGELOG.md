@@ -99,6 +99,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
   - Tightened the ecosystem contract so Qalam-facing Baa roadmap work remains limited to
     compiler/data surfaces, while editor UI/UX, commands, extension packaging, themes, and
     layout stay owned by Qalam-IDE.
+- **Machine-readable diagnostics**:
+  - Added `--diagnostics=json` to emit `diagnostics-json-v1` objects with stable code,
+    severity, category, file, line, column, span, and hint fields for compiler errors and
+    warnings, while keeping normal human-readable diagnostics unchanged by default.
 - **Stable diagnostic codes**:
   - Text diagnostics now include stable code tokens after severity, starting with `B0001`
     for syntax-family errors, `B1000` for semantic-family errors, and `B110x` for warnings.

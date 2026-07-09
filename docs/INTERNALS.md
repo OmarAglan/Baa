@@ -113,6 +113,7 @@ The driver in `main.c` (v0.2.0+) supports multi-file compilation and various mod
 | `-c` | **Compile Only** | `.o` | Stops after assembling. Writes `<input>.o` (or `-o` when a single input file is used). |
 | `--check` | **Fast Check** | none | Stops after parse and semantic analysis for editor/tool feedback; no IR, assembly, object, or executable is emitted. |
 | `-v` | **Verbose** | - | Prints commands and compilation time; keeps intermediate `.s` files. |
+| `--diagnostics=json` | **JSON Diagnostics** | stdout | Emits machine-readable diagnostics with stable codes, severity/category, source span, and hints. |
 | `--debug-info` | **Debug Info** | `.s/.o/.exe` | Emits source `.file/.loc` info and passes `-g` to toolchain. |
 | `--asm-comments` | **Assembly Comments** | `.s` | Emits explanatory comments in generated assembly (prologue/epilogue/blocks). |
 | `-fruntime-checks` / `-fruntime-checks=<list>` | **Runtime Checks** | `.s/.o/.exe` | Enables all optional runtime safety guards, or selected guards from `bounds`, `null`, `div-zero`, and `shift` (plus `all`/`none`) separated by comma or `+`. |

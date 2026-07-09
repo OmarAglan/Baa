@@ -7,6 +7,7 @@
 #define BAA_SUPPORT_DIAGNOSTICS_H
 
 #include <stdbool.h>
+#include <stdio.h>
 
 /**
  * @enum WarningType
@@ -63,6 +64,14 @@ bool warning_has_occurred(void);
 int warning_get_count(void);
 void error_reset(void);
 void warning_reset(void);
+void diagnostics_set_json_enabled(bool enabled);
+bool diagnostics_json_enabled(void);
+void diagnostics_json_reset(void);
+void diagnostics_json_write(FILE* out,
+                            const char* compiler_version,
+                            const char* mode,
+                            const char* target,
+                            const char* working_directory);
 
 /**
  * @brief غلاف توافق لاستقبال بنية تحتوي filename/line/col مثل Token.

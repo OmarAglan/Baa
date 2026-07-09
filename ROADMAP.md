@@ -1621,7 +1621,7 @@
   ### v0.7.2: Qalam-IDE Integration Contract ✍️
 
 * \[x] **Fast check mode** — `--check` parses and semantically checks sources without IR/codegen/toolchain output for editor feedback.
-* \[ ] **Machine-readable diagnostics** — JSON diagnostics with file, line, column, span, code, severity, and hint.
+* \[x] **Machine-readable diagnostics** — `--diagnostics=json` emits `diagnostics-json-v1` with file, line, column, span, code, severity, category, and hint fields.
 * \[ ] **Token dump mode** — stable token stream for syntax-highlighting/debugging integration.
 * \[ ] **Symbol outline mode** — functions, globals, structs, enums, and type aliases for IDE navigation.
 * \[ ] **Completion metadata export** — keywords, builtins, stdlib symbols, and snippets in a stable format.

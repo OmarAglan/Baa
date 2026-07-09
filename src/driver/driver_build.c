@@ -218,6 +218,7 @@ bool driver_build_cache_is_allowed(const CompilerConfig* config)
     if (!config || !config->incremental) return false;
     if (config->assembly_only) return false;
     if (config->check_only || config->header_check) return false;
+    if (config->diagnostics_json) return false;
     if (config->dump_ir || config->dump_ir_opt || config->emit_ir) return false;
     if (config->verify_ir || config->verify_ssa || config->verify_gate) return false;
     return true;

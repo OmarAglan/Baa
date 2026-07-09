@@ -340,6 +340,7 @@ baa --target=x86_64-linux   البرنامج.baa
 | `--verify` | التحقق من صحة IR/SSA بعد التحسين |
 | `--verify-ir` | التحقق من صحة IR فقط |
 | `--verify-ssa` | التحقق من صحة SSA فقط |
+| `--diagnostics=json` | إخراج التشخيصات بصيغة JSON مستقرة للأدوات |
 | `-fPIC` / `-fPIE` | خيارات PIC/PIE (لينكس/ELF) |
 | `-fstack-protector` / `-fstack-protector-all` | حماية المكدس (لينكس/ELF) |
 | `-mcmodel=small` | نموذج الذاكرة الصغير |

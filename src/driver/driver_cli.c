@@ -159,6 +159,7 @@ void driver_print_help(void)
     printf("  -c           Compile to object file only (.o)\n");
     printf("  --check      Parse/analyze source files without emitting code\n");
     printf("  --check-header  Parse/analyze header declarations without emitting code\n");
+    printf("  --diagnostics=json  Emit machine-readable diagnostics JSON to stdout\n");
     printf("  -v           Enable verbose output with timing\n");
     printf("  --startup=custom  Use custom entrypoint (__baa_start) while keeping CRT/libc init\n");
     printf("  --dump-ir    Dump Baa IR (Arabic) to stdout after analysis\n");
@@ -372,6 +373,14 @@ bool driver_parse_cli(int argc, char **argv, CompilerConfig *config, DriverParse
                 config->check_only = true;
             else if (strcmp(arg, "--check-header") == 0)
                 config->header_check = true;
+            else if (strcmp(arg, "--diagnostics=json") == 0)
+                config->diagnostics_json = true;
+            else if (strncmp(arg, "--diagnostics=", 14) == 0)
+            {
+                fprintf(stderr, "Error: Unsupported diagnostics format '%s' (expected json)\n", arg + 14);
+                parse_release_temp_arrays(inputs, include_dirs);
+                return false;
+            }
             else if (strcmp(arg, "-v") == 0)
                 config->verbose = true;
             else if (strcmp(arg, "--startup=custom") == 0)

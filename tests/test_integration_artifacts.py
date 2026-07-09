@@ -122,7 +122,7 @@ class IntegrationArtifactDocumentationTests(unittest.TestCase):
             "| `B0001`-`B0999` | lexer/syntax/parser |",
             "| `B1000`-`B1999` | semantic/type/scope |",
             "| `B9000`-`B9999` | internal compiler errors |",
-            "JSON output remains a future driver surface.",
+            "`--diagnostics=json` emits the same codes",
         ):
             with self.subTest(marker=marker):
                 self.assertIn(marker, text)

@@ -45,13 +45,32 @@ static void print_phase_times_and_mem(const CompilerConfig* config,
             phase_times->ir_arena_chunks_max);
 }
 
-static int main_cleanup_and_return(DriverParseResult* cli,
+static const char* main_mode_name(const CompilerConfig* config)
+{
+    if (!config) return "compile";
+    if (config->check_only) return "check";
+    if (config->header_check) return "check-header";
+    if (config->assembly_only) return "assembly";
+    if (config->compile_only) return "compile";
+    return "link";
+}
+
+static int main_cleanup_and_return(const CompilerConfig* config,
+                                   DriverParseResult* cli,
                                    char** obj_files,
                                    int obj_count,
                                    char* output_file,
                                    bool output_file_owned,
                                    int rc)
 {
+    if (config && config->diagnostics_json && cli && cli->cmd == DRIVER_CMD_COMPILE)
+    {
+        diagnostics_json_write(stdout,
+                               BAA_VERSION,
+                               main_mode_name(config),
+                               config->target ? config->target->name : "",
+                               ".");
+    }
     driver_free_obj_files(obj_files, obj_count, output_file);
     driver_parse_result_free(cli);
     if (output_file_owned) free(output_file);
@@ -76,6 +95,8 @@ int main(int argc, char **argv)
 
     // تهيئة نظام التحذيرات
     warning_init();
+    diagnostics_json_reset();
+    diagnostics_set_json_enabled(false);
 
     // البحث عن GCC المضمّن (إن وُجد)
     driver_toolchain_resolve_gcc_path();
@@ -92,28 +113,31 @@ int main(int argc, char **argv)
 
     if (!driver_parse_cli(argc, argv, &config, &cli))
     {
-        return main_cleanup_and_return(&cli, NULL, 0, config.output_file, output_file_owned, 1);
+        return main_cleanup_and_return(&config, &cli, NULL, 0, config.output_file, output_file_owned, 1);
     }
+    diagnostics_set_json_enabled(config.diagnostics_json);
+    if (config.diagnostics_json)
+        g_warning_config.colored_output = false;
 
     if (cli.cmd == DRIVER_CMD_HELP)
     {
         driver_print_help();
-        return main_cleanup_and_return(&cli, NULL, 0, config.output_file, output_file_owned, 0);
+        return main_cleanup_and_return(&config, &cli, NULL, 0, config.output_file, output_file_owned, 0);
     }
     if (cli.cmd == DRIVER_CMD_VERSION)
     {
         driver_print_version();
-        return main_cleanup_and_return(&cli, NULL, 0, config.output_file, output_file_owned, 0);
+        return main_cleanup_and_return(&config, &cli, NULL, 0, config.output_file, output_file_owned, 0);
     }
     if (cli.cmd == DRIVER_CMD_EXPLAIN)
     {
         bool ok = driver_print_diagnostic_explain(cli.explain_code);
-        return main_cleanup_and_return(&cli, NULL, 0, config.output_file, output_file_owned, ok ? 0 : 1);
+        return main_cleanup_and_return(&config, &cli, NULL, 0, config.output_file, output_file_owned, ok ? 0 : 1);
     }
     if (cli.cmd == DRIVER_CMD_UPDATE)
     {
         run_updater();
-        return main_cleanup_and_return(&cli, NULL, 0, config.output_file, output_file_owned, 0);
+        return main_cleanup_and_return(&config, &cli, NULL, 0, config.output_file, output_file_owned, 0);
     }
 
     char **input_files = cli.input_files;
@@ -122,7 +146,7 @@ int main(int argc, char **argv)
     if (input_count == 0)
     {
         fprintf(stderr, "Error: No input file specified\n");
-        return main_cleanup_and_return(&cli, NULL, 0, config.output_file, output_file_owned, 1);
+        return main_cleanup_and_return(&config, &cli, NULL, 0, config.output_file, output_file_owned, 1);
     }
 
     // تحديد اسم الملف المخرج الافتراضي
@@ -144,7 +168,7 @@ int main(int argc, char **argv)
             if (!config.output_file)
             {
                 fprintf(stderr, "خطأ: نفدت الذاكرة.\n");
-                return main_cleanup_and_return(&cli, NULL, 0, config.output_file, output_file_owned, 1);
+                return main_cleanup_and_return(&config, &cli, NULL, 0, config.output_file, output_file_owned, 1);
             }
             output_file_owned = true;
             (void)snprintf(config.output_file, n, "out%s", ext);
@@ -167,7 +191,7 @@ int main(int argc, char **argv)
                     "ملاحظة: استخدم -S لتوليد ملف .s فقط. الدعم الكامل لـ cross-target مؤجل.\n",
                     config.target->name ? config.target->name : "<unknown>");
             driver_build_manifest_free(&build_manifest);
-            return main_cleanup_and_return(&cli, NULL, 0, config.output_file, output_file_owned, 1);
+            return main_cleanup_and_return(&config, &cli, NULL, 0, config.output_file, output_file_owned, 1);
         }
     }
 
@@ -178,7 +202,7 @@ int main(int argc, char **argv)
                              &obj_files_to_link, &obj_count) != 0)
     {
         driver_build_manifest_free(&build_manifest);
-        return main_cleanup_and_return(&cli, obj_files_to_link, obj_count, config.output_file,
+        return main_cleanup_and_return(&config, &cli, obj_files_to_link, obj_count, config.output_file,
                                        output_file_owned, 1);
     }
 
@@ -188,7 +212,7 @@ int main(int argc, char **argv)
         {
             fprintf(stderr, "خطأ: فشل كتابة بيان البناء '%s'.\n", config.build_manifest_file);
             driver_build_manifest_free(&build_manifest);
-            return main_cleanup_and_return(&cli, obj_files_to_link, obj_count, config.output_file,
+            return main_cleanup_and_return(&config, &cli, obj_files_to_link, obj_count, config.output_file,
                                            output_file_owned, 1);
         }
     }
@@ -198,7 +222,7 @@ int main(int argc, char **argv)
     {
         print_phase_times_and_mem(&config, &phase_times);
         driver_build_manifest_free(&build_manifest);
-        return main_cleanup_and_return(&cli, obj_files_to_link, obj_count, config.output_file,
+        return main_cleanup_and_return(&config, &cli, obj_files_to_link, obj_count, config.output_file,
                                        output_file_owned, 0);
     }
 
@@ -210,7 +234,7 @@ int main(int argc, char **argv)
                               (const char **)obj_files_to_link, obj_count) != 0)
     {
         driver_build_manifest_free(&build_manifest);
-        return main_cleanup_and_return(&cli, obj_files_to_link, obj_count, config.output_file,
+        return main_cleanup_and_return(&config, &cli, obj_files_to_link, obj_count, config.output_file,
                                        output_file_owned, 1);
     }
 
@@ -241,6 +265,6 @@ int main(int argc, char **argv)
     print_phase_times_and_mem(&config, &phase_times);
 
     driver_build_manifest_free(&build_manifest);
-    return main_cleanup_and_return(&cli, obj_files_to_link, obj_count, config.output_file,
+    return main_cleanup_and_return(&config, &cli, obj_files_to_link, obj_count, config.output_file,
                                    output_file_owned, 0);
 }

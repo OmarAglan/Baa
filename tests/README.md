@@ -20,6 +20,7 @@ tests/
 ├── test_fast_check.py # --check parser/semantic no-output coverage
 ├── test_header_self_check.py # --check-header parser/semantic no-output coverage
 ├── test_integration_artifacts.py # ecosystem/tooling integration docs gate
+├── test_json_diagnostics.py # --diagnostics=json machine-readable diagnostics coverage
 ├── test_module_visibility_docs.py # module/header/visibility contract docs gate
 ├── test_one_definition.py # multi-file exported-symbol duplicate diagnostics
 ├── test_target_specs.py # target descriptor schema/contract coverage
@@ -70,6 +71,9 @@ accepts declaration headers, rejects invalid header declarations, and emits no c
 Every mode also runs `tests/test_fast_check.py`, which verifies `--check` accepts valid
 source files, rejects semantic errors, records check-mode dependency manifests, and emits no
 assembly, objects, or executables.
+Every mode also runs `tests/test_json_diagnostics.py`, which verifies `--diagnostics=json`
+emits the stable top-level schema, error/warning summaries, source spans, codes, severities,
+categories, and hints for Qalam/Takween consumers.
 Every mode also runs `tests/test_integration_artifacts.py`, which checks the required
 ecosystem, compatibility, tooling, diagnostics JSON, conformance-suite, and SDK planning
 documents for the contract sections external tooling depends on.

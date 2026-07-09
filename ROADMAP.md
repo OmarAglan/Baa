@@ -1625,7 +1625,7 @@
 * \[ ] **Token dump mode** — stable token stream for syntax-highlighting/debugging integration.
 * \[ ] **Symbol outline mode** — functions, globals, structs, enums, and type aliases for IDE navigation.
 * \[ ] **Completion metadata export** — keywords, builtins, stdlib symbols, and snippets in a stable format.
-* \[ ] **No internal Baa IDE roadmap** — Qalam-IDE remains the owner of editor UI/UX.
+* \[x] **No internal Baa IDE roadmap** — `docs/ECOSYSTEM_BOUNDARIES.md` keeps Qalam-facing Baa work limited to compiler/data contracts while Qalam-IDE owns editor UI/UX.
 
   ### v0.7.3: Compiler Testing II 🧪
 

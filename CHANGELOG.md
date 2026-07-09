@@ -95,6 +95,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
   - Added `--check` to parse and semantically validate `.baa` sources for editor/tool feedback
     without IR lowering, optimization, assembly, object files, executables, or host toolchain
     use; check-mode manifests record `"mode": "check"` and include dependencies.
+- **Qalam ownership boundary**:
+  - Tightened the ecosystem contract so Qalam-facing Baa roadmap work remains limited to
+    compiler/data surfaces, while editor UI/UX, commands, extension packaging, themes, and
+    layout stay owned by Qalam-IDE.
 - **Stable diagnostic codes**:
   - Text diagnostics now include stable code tokens after severity, starting with `B0001`
     for syntax-family errors, `B1000` for semantic-family errors, and `B110x` for warnings.

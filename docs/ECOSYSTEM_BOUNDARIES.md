@@ -95,6 +95,10 @@ Baa must support Qalam by providing:
 - completion metadata,
 - stable diagnostic codes.
 
+Qalam-facing roadmap entries in Baa must stay limited to compiler/data contracts: check
+modes, machine-readable diagnostics, token streams, symbol metadata, and completion metadata.
+Baa does not own editor widgets, IDE commands, extension packaging, themes, layout, or UI flows.
+
 Qalam should not parse unstable human-readable compiler text when a machine-readable contract exists.
 
 ---

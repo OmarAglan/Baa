@@ -41,6 +41,8 @@ class IntegrationArtifactDocumentationTests(unittest.TestCase):
             "| PyramidOS | Future freestanding/OS-development consumer and testbed |",
             "Do not add `baa build` while Takween owns project build UX.",
             "Do not add editor/IDE roadmap items to Baa while Qalam owns IDE UX.",
+            "Qalam-facing roadmap entries in Baa must stay limited to compiler/data contracts",
+            "Baa does not own editor widgets, IDE commands, extension packaging, themes, layout, or UI flows.",
             "Do not add PyramidOS kernel migration tasks to Baa before the freestanding profile exists.",
             "Do not add production self-hosting work before v0.9 stable beta freeze.",
         ):

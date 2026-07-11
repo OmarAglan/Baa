@@ -14,6 +14,7 @@
 #include <stdarg.h>
 
 #include "version.h"
+#include "file_io.h"
 #include "read_file.h"
 #include "diagnostics.h"
 #include "updater.h"

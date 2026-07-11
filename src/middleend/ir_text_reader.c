@@ -496,7 +496,7 @@ static char* ir_text_read_line(FILE* in) {
 
 IRModule* ir_text_read_module_file(const char* filename) {
     if (!filename) return NULL;
-    FILE* in = fopen(filename, "r");
+    FILE* in = baa_fopen_utf8(filename, "r");
     if (!in) return NULL;
 
     IRModule* module = ir_module_new(filename);

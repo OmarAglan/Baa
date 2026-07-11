@@ -255,10 +255,10 @@ bool driver_toolchain_copy_file_utf8(const char* src_path, const char* dst_path)
     free(dst_w);
     return ok ? true : false;
 #else
-    FILE* in_f = fopen(src_path, "rb");
+    FILE* in_f = baa_fopen_utf8(src_path, "rb");
     if (!in_f) return false;
 
-    FILE* out_f = fopen(dst_path, "wb");
+    FILE* out_f = baa_fopen_utf8(dst_path, "wb");
     if (!out_f) {
         fclose(in_f);
         return false;

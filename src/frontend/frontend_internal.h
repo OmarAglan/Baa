@@ -18,6 +18,7 @@
 #include "parser.h"
 #include "analysis.h"
 #include "../support/diagnostics.h"
+#include "../support/file_io.h"
 #include "../support/read_file.h"
 
 #endif

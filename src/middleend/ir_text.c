@@ -596,7 +596,7 @@ int ir_text_write_module(IRModule* module, FILE* out) {
 
 int ir_text_dump_module(IRModule* module, const char* filename) {
     if (!module || !filename) return 0;
-    FILE* out = fopen(filename, "w");
+    FILE* out = baa_fopen_utf8(filename, "w");
     if (!out) return 0;
     int ok = ir_text_write_module(module, out);
     fclose(out);

@@ -2,7 +2,8 @@
 
 > **Version:** draft-0.1 | **Applies to:** Baa v0.5.8+
 
-This document records which versions of Baa, Takween, Qalam-IDE, and PyramidOS-facing contracts are expected to work together.
+This document records which versions of Baa, Nazm, Takween, Qalam-IDE, and
+PyramidOS-facing contracts are expected to work together.
 
 Draft contract names in this matrix are planning commitments, not claims of current
 implementation. See [KNOWN_LIMITATIONS.md](KNOWN_LIMITATIONS.md) for the implemented v0.5.x
@@ -30,6 +31,9 @@ A project may release independently as long as it stays compatible with the cont
 | `target-spec-v1` | Baa | Takween, PyramidOS experiments |
 | `conformance-v1` | Baa | Baa, future compilers/tools |
 | `freestanding-v0` | Baa | PyramidOS experiments |
+| `baa-nazm-boundary-v0` | Baa + Nazm | Baa backend, Nazm CLI/API |
+| `nazm-source-v0.4` | Nazm | humans, future Baa Arabic assembly emitter |
+| `elf64-object-v0` / `coff-object-v0` | Nazm | system linkers, future Baa builds |
 | `baa-language-v0.5.9` | Baa | C reference compiler, tests |
 | `baa-stdlib-v0.5.9` | Baa | hosted Baa programs |
 | `baa-hosted-abi-v0.5.9` | Baa | Windows/Linux backends |
@@ -39,16 +43,16 @@ A project may release independently as long as it stays compatible with the cont
 
 ## 3. Planned Compatibility Table
 
-| Baa Version | Takween | Qalam-IDE | PyramidOS Use | Required Contracts |
-|---|---|---|---|---|
-| v0.5.8 | manual/experimental | manual/experimental | none | C reference reset |
-| v0.5.9 | manual/experimental | manual/experimental | none | `baa-language-v0.5.9`, `baa-stdlib-v0.5.9`, `baa-hosted-abi-v0.5.9`, `baa-ir-v0.5.9` |
-| v0.6.x | Takween prototype | Qalam prototype | host tools only | compiler-cli-v1 draft |
-| v0.7.0 | Takween integration | Qalam not required | host tools only | build-manifest-v1, compiler-cli-v1 |
-| v0.7.2 | Takween integration | Qalam integration | host tools only | diagnostics-json-v1, tokens-json-v1, symbols-json-v1 |
-| v0.8.x | stable integration | stable integration | host tools only | conformance-v1 draft, target-spec-v1 |
-| v0.9.0 | stable through 1.0 review | stable through 1.0 review | freestanding plan only | all v1 hosted contracts frozen |
-| v0.10.x/post-v0.9 | stable | stable | tiny mixed-link experiments | freestanding-v0, i386 target drafts |
+| Baa Version | Nazm | Takween | Qalam-IDE | PyramidOS Use | Required Contracts |
+|---|---|---|---|---|---|
+| v0.5.8 | independent; no integration | manual/experimental | manual/experimental | none | C reference reset |
+| v0.5.9 | independent; no integration | manual/experimental | manual/experimental | none | `baa-language-v0.5.9`, `baa-stdlib-v0.5.9`, `baa-hosted-abi-v0.5.9`, `baa-ir-v0.5.9` |
+| v0.6.x | Nazm 0.4 independent; boundary planning | Takween prototype | Qalam prototype | host tools only | compiler-cli-v1 draft, diagnostics-json-v1 implemented draft |
+| v0.7.0 | Baa emission inventory | Takween integration | Qalam not required | host tools only | build-manifest-v1, compiler-cli-v1, baa-nazm-boundary-v0 draft |
+| v0.7.2 | non-default shadow subprocess | Takween integration | Qalam integration | host tools only | diagnostics-json-v1, tokens-json-v1, symbols-json-v1 |
+| v0.8.x | parity hardening; still gated | stable integration | stable integration | host tools only | conformance-v1 draft, target-spec-v1 |
+| v0.9.0 | default decision only after parity signoff | stable through 1.0 review | stable through 1.0 review | freestanding plan only | all v1 hosted contracts frozen |
+| v0.10.x/post-v0.9 | admitted path or explicit external-assembler fallback | stable | stable | tiny mixed-link experiments | freestanding-v0, architecture target decision |
 
 ---
 
@@ -71,6 +75,7 @@ Before every Baa release:
 - [ ] State which contracts changed.
 - [ ] State whether Takween is affected.
 - [ ] State whether Qalam-IDE is affected.
+- [ ] State whether Nazm or the assembly boundary is affected.
 - [ ] State whether PyramidOS experiments are affected.
 - [ ] Add migration notes for breaking changes.
 - [ ] Follow the RC cut, admission, receipt, and rollback rules in

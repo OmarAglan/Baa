@@ -21,6 +21,7 @@
 #include "driver_toolchain.h"
 #include "process.h"
 #include "../support/version.h"
+#include "../support/file_io.h"
 #include "../support/read_file.h"
 #include "../support/diagnostics.h"
 #include "../support/updater.h"

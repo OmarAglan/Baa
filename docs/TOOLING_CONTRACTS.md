@@ -204,6 +204,18 @@ Qalam should consume:
 - symbol JSON,
 - completion metadata.
 
+Nazm integration should consume:
+
+- canonical Arabic assembly text emitted after Baa register allocation,
+- explicit target and object-format selection,
+- source-map metadata for generated assembly diagnostics, and
+- a complete generated-form inventory from Baa's Windows/Linux test corpus.
+
+Until `baa-nazm-boundary-v0` is admitted, Baa's public `-S` output remains
+GAS/AT&T and production object generation continues through the external host
+assembler. A Nazm shadow path must be opt-in, non-default, and unable to hide an
+unsupported form behind silent fallback.
+
 PyramidOS experiments should consume:
 
 - target specs,

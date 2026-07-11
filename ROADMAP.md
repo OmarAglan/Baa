@@ -1787,69 +1787,43 @@
 
   \---
 
-  ## 🔨 Future Toolchain Independence: Own Assembler (post-v0.9)
+  ## 🔨 Future Toolchain Independence: Nazm Integration (post-v0.9)
 
-  *Goal: Remove dependency on external assembler (GAS/MASM).*
+  *Goal: replace the external GAS/MASM assembly boundary with the independently
+  tested Nazm assembler without duplicating its parser, encoder, or object writers
+  inside Baa.*
 
   ### Phase 6 Architecture Scope
 
-* \[ ] **Frontend** — assembly lexer/parser with strict diagnostics.
-* \[ ] **Core** — instruction model + encoder + relocation planner.
-* \[ ] **Writers** — COFF/ELF object emitters with symbol/relocation tables.
-* \[ ] **Integration** — backend handoff + CLI controls + verification pipeline.
+* \[ ] **Boundary contract** — freeze `baa-nazm-boundary-v0` ownership, text, target, diagnostics, and source-map behavior.
+* \[ ] **Coverage inventory** — extract every instruction, operand, directive, section, symbol, and relocation form emitted by the Windows/Linux corpus.
+* \[ ] **Arabic emitter** — emit canonical Nazm 0.4 text after register allocation while retaining inspectable `-S` output.
+* \[ ] **Shadow integration** — invoke Nazm without changing the production GAS result and compare object/link/runtime semantics.
+* \[ ] **Embedding** — adopt `nazm_assemble_buffer()` only after its public ownership and error contracts are stable.
 
-  ### v1.5.0: Baa Assembler (مُجمِّع باء) 🔧
+  ### v1.5.0: Baa + Nazm Assembler Path 🔧
 
-  #### v1.5.0.1: Assembler Foundation
+  #### v1.5.0.1: Inventory and Contract
 
-* \[ ] **Define instruction encoding tables** — x86-64 opcode maps.
-* \[ ] **Parse assembly text** — Tokenize AT\&T/Intel syntax.
-* \[ ] **Build instruction IR** — Internal representation of machine code.
-* \[ ] **Handle labels** — Track label addresses for jumps.
-* \[ ] **MVP syntax decision** — AT\&T as canonical input first, Intel optional later.
-* \[ ] **Source mapping** — retain line/column mapping for assembler diagnostics.
+* \[ ] **Generated-form corpus** — build Nazm fixtures from Baa quick/full/stress output on both targets.
+* \[ ] **Source mapping** — retain Baa line/column identity through generated assembly diagnostics.
+* \[ ] **Inline assembly migration** — version the breaking move from raw `مجمع { ... }` GAS text to canonical `نظم { ... }` source.
+* \[ ] **Target contract** — map Baa targets explicitly to Nazm ELF64/COFF modes.
 
-  #### v1.5.0.2: x86-64 Encoding
+  #### v1.5.0.2: Shadow and Parity
 
-* \[ ] **REX prefixes** — 64-bit register encoding.
-* \[ ] **ModR/M and SIB bytes** — Addressing mode encoding.
-* \[ ] **Immediate encoding** — Handle different immediate sizes.
-* \[ ] **Displacement encoding** — Memory offset encoding.
-* \[ ] **Instruction validation** — Check valid operand combinations.
-* \[ ] **Coverage matrix** — define required instruction families for Baa backend output.
-* \[ ] **Relocation-aware encoding** — encode fixup placeholders for unresolved symbols.
+* \[ ] **Opt-in shadow flag** — assemble with Nazm beside the production GAS path.
+* \[ ] **Object comparison** — compare sections, symbols, relocations, and normalized semantics rather than requiring incidental byte identity.
+* \[ ] **Link/runtime comparison** — link and run both outputs on Windows and Linux.
+* \[ ] **Diagnostics comparison** — unsupported forms remain visible Arabic failures.
+* \[ ] **No silent fallback** — never substitute guessed bytes or hide unsupported Nazm input behind GAS.
 
-  #### v1.5.0.3: Object File Generation
+  #### v1.5.0.3: Production Admission
 
-* \[ ] **COFF format (Windows)** — Generate .obj files.
-* \[ ] **ELF format (Linux)** — Generate .o files.
-* \[ ] **Section handling** — .text, .data, .bss, .rodata.
-* \[ ] **Symbol table** — Export/import symbols.
-* \[ ] **Relocation entries** — Handle address fixups.
-* \[ ] **ABI metadata correctness** — calling-convention relevant symbol attributes.
-* \[ ] **Cross-platform conformance tests** — validate produced `.obj/.o` with system linkers.
-
-  #### v1.5.0.4: Assembler Integration
-
-* \[ ] **Replace GAS calls** — Use internal assembler.
-* \[ ] **`--use-internal-asm` flag** — Optional internal assembler.
-* \[ ] **Verify output** — Compare with GAS output.
-* \[ ] **Performance test** — Ensure acceptable speed.
-* \[ ] **Fallback policy** — clear fallback to external assembler on unsupported patterns.
-* \[ ] **CI dual-mode runs** — external/internal assembler comparison in regression pipeline.
-
-  #### v1.5.0.5: Assembler Polish
-
-* \[ ] **Error messages** — Clear assembly error diagnostics.
-* \[ ] **Debug info** — Generate debug symbols.
-* \[ ] **Listing output** — Optional assembly listing with addresses.
-* \[ ] **Documentation** — Assembler internals guide.
-
-  #### v1.5.0.6: Assembler Release Gate
-
-* \[ ] **Default-on readiness** — internal assembler can become default for supported targets.
-* \[ ] **Stability gate** — crash-free stress/fuzz-lite runs across assembler corpus.
-* \[ ] **Parity signoff** — approved diff report vs GAS on representative corpus.
+* \[ ] **Full gate** — quick, full, stress, determinism, release, and cross-target suites pass through Nazm.
+* \[ ] **Linker acceptance** — real Windows and Linux linkers accept produced objects.
+* \[ ] **Default-on readiness** — approved parity report and rollback procedure exist.
+* \[ ] **In-process equivalence** — CLI and future buffer API produce equivalent object semantics before embedding becomes default.
 
   \---
 
@@ -2031,7 +2005,7 @@
   #### Phase 8 Exit Criteria
 
 * \[ ] **Runtime independence** — no libc/CRT dependency in default build+run workflow.
-* \[ ] **Toolchain independence** — compiler, assembler, linker, and runtime owned by Baa project.
+* \[ ] **Toolchain independence** — compiler, assembler, linker, and runtime are owned by the Baa ecosystem with explicit repository boundaries.
 * \[ ] **Reproducibility baseline** — release artifacts are verifiable and reproducible from source.
 * \[ ] **Sustainability baseline** — maintenance docs and on-call triage playbooks are complete.
 
@@ -2054,21 +2028,21 @@
 │  │ C ref   │   │  + future staged bootstrap plan only      │  │
 │  └─────────┘   └───────────────────────────────────────────┘  │
 │                                                                │
-│  v1.5.0 (Own Assembler):                                       │
+│  v1.5.0 (Nazm Assembler):                                      │
 │  ┌─────────┐   ┌─────────┐   ┌─────────────────────────────┐  │
-│  │   Baa   │ → │   Baa   │ → │  GCC (linker + C runtime)   │  │
-│  │ Compiler│   │ Assembler│  │                             │  │
+│  │   Baa   │ → │  Nazm   │ → │  GCC (linker + C runtime)   │  │
+│  │ Compiler│   │Assembler│   │                             │  │
 │  └─────────┘   └─────────┘   └─────────────────────────────┘  │
 │                                                                │
 │  v2.0.0 (Own Linker):                                          │
 │  ┌─────────┐   ┌─────────┐   ┌─────────┐   ┌───────────────┐  │
-│  │   Baa   │ → │   Baa   │ → │   Baa   │ → │  C Runtime    │  │
-│  │ Compiler│   │ Assembler│  │  Linker │   │  (printf etc) │  │
+│  │   Baa   │ → │  Nazm   │ → │  Linker │ → │  C Runtime    │  │
+│  │ Compiler│   │Assembler│   │ (future)│   │  (printf etc) │  │
 │  └─────────┘   └─────────┘   └─────────┘   └───────────────┘  │
 │                                                                │
 │  v3.0.0 (Full Independence):                                   │
 │  ┌─────────────────────────────────────────────────────────┐  │
-│  │              Baa Toolchain (100% Baa)                   │  │
+│  │         Baa Ecosystem Toolchain (independently owned)   │  │
 │  │  Compiler → Assembler → Linker → Native Runtime         │  │
 │  │                                                         │  │
 │  │                 No External Dependencies!               │  │

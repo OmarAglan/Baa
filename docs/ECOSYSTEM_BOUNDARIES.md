@@ -15,6 +15,7 @@ The ecosystem projects are:
 | Project | Role |
 |---|---|
 | Baa | Arabic-first systems language and reference compiler |
+| Nazm | Arabic-first assembler and ELF64/COFF object writer |
 | Takween | Arabic-first build workflow for Baa projects |
 | Qalam-IDE | Arabic/RTL IDE and editor experience |
 | PyramidOS | Future freestanding/OS-development consumer and testbed |
@@ -46,9 +47,39 @@ Baa does **not** own:
 - a package registry before the language is stable,
 - production self-hosting before a staged post-v0.9 decision.
 
+Baa currently owns its GAS/AT&T text emitter and external assembler invocation.
+After the `baa-nazm-boundary-v0` admission gates pass, Nazm owns Arabic assembly
+syntax, instruction encoding, relocations, and object serialization; Baa keeps
+Machine IR, register allocation, ABI lowering, and prologue/epilogue ownership.
+
 ---
 
-## 3. Takween Ownership
+## 3. Nazm Ownership
+
+Nazm owns:
+
+- canonical Arabic assembly syntax and terminology,
+- parsing and operand validation,
+- x86-64 instruction encoding,
+- symbol and relocation handling,
+- ELF64 and PE/COFF object serialization,
+- assembler diagnostics, listings, CLI, and future embedding API.
+
+Baa must support Nazm integration by providing:
+
+- a complete inventory of emitted machine forms for Windows and Linux,
+- a canonical Arabic Nazm text emitter after register allocation,
+- source mapping from generated assembly back to Baa source,
+- a shadow mode that never changes production output silently, and
+- parity tests for objects, links, runtime behavior, symbols, and relocations.
+
+Nazm must not be made the default assembler until Baa's quick, full, stress,
+determinism, and cross-target gates pass through the Nazm path. Unsupported forms
+must fail visibly; integration must not guess bytes or silently fall back to GAS.
+
+---
+
+## 4. Takween Ownership
 
 Takween owns:
 
@@ -72,7 +103,7 @@ Takween must not rely on private Baa internals.
 
 ---
 
-## 4. Qalam-IDE Ownership
+## 5. Qalam-IDE Ownership
 
 Qalam-IDE owns:
 
@@ -103,7 +134,7 @@ Qalam should not parse unstable human-readable compiler text when a machine-read
 
 ---
 
-## 5. PyramidOS Ownership
+## 6. PyramidOS Ownership
 
 PyramidOS owns:
 
@@ -130,7 +161,7 @@ PyramidOS kernel core should not move to Baa until the freestanding profile pass
 
 ---
 
-## 6. Breaking Change Policy
+## 7. Breaking Change Policy
 
 A Baa change is considered breaking if it changes:
 
@@ -143,6 +174,7 @@ A Baa change is considered breaking if it changes:
 - ABI behavior,
 - stdlib signatures,
 - exit codes used by Takween/Qalam.
+- the Baa-to-Nazm textual or embedding boundary.
 
 Breaking changes require:
 
@@ -150,14 +182,15 @@ Breaking changes require:
 2. compatibility matrix update,
 3. migration note,
 4. conformance test update,
-5. Takween/Qalam impact note when relevant.
+5. Takween/Qalam/Nazm impact note when relevant.
 
 ---
 
-## 7. Anti-Scope-Drift Rules
+## 8. Anti-Scope-Drift Rules
 
 - Do not add `baa build` while Takween owns project build UX.
 - Do not add editor/IDE roadmap items to Baa while Qalam owns IDE UX.
 - Do not add PyramidOS kernel migration tasks to Baa before the freestanding profile exists.
 - Do not add production self-hosting work before v0.9 stable beta freeze.
-- Do not add assembler/linker independence before backend/optimizer/release quality is stable.
+- Do not duplicate Nazm's parser, encoder, or object writers inside Baa.
+- Do not make Nazm the production assembler before backend/optimizer/release quality and parity gates are stable.

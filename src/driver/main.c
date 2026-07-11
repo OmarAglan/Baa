@@ -10,6 +10,10 @@
 #include <stdlib.h>
 #include <string.h>
 
+#ifdef _WIN32
+#include <windows.h>
+#endif
+
 /**
  * @brief طباعة ملخص قياس المراحل (زمن + ذاكرة ساحة IR) إلى stderr.
  */
@@ -81,7 +85,7 @@ static int main_cleanup_and_return(const CompilerConfig* config,
 // نقطة الدخول (Main Entry Point)
 // ============================================================================
 
-int main(int argc, char **argv)
+static int baa_main(int argc, char **argv)
 {
     CompilerConfig config = {0};
     bool output_file_owned = false;
@@ -268,3 +272,65 @@ int main(int argc, char **argv)
     return main_cleanup_and_return(&config, &cli, obj_files_to_link, obj_count, config.output_file,
                                    output_file_owned, 0);
 }
+
+#ifdef _WIN32
+/**
+ * @brief تحويل وسيط UTF-16 من سطر أوامر ويندوز إلى UTF-8 مملوك.
+ */
+static char* main_utf8_from_wide(const wchar_t* value)
+{
+    if (!value) return NULL;
+
+    int needed = WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS, value, -1,
+                                     NULL, 0, NULL, NULL);
+    if (needed <= 0) return NULL;
+
+    char* utf8 = (char*)malloc((size_t)needed);
+    if (!utf8) return NULL;
+
+    if (WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS, value, -1,
+                            utf8, needed, NULL, NULL) <= 0)
+    {
+        free(utf8);
+        return NULL;
+    }
+    return utf8;
+}
+
+/**
+ * @brief نقطة دخول ويندوز الواسعة؛ تمنع فساد أسماء الملفات العربية في argv.
+ */
+int wmain(int argc, wchar_t** wide_argv)
+{
+    if (argc < 0 || !wide_argv) return 5;
+
+    char** utf8_argv = (char**)calloc((size_t)argc + 1, sizeof(char*));
+    if (!utf8_argv)
+    {
+        fputs("خطأ داخلي: تعذر تخصيص وسائط سطر الأوامر.\n", stderr);
+        return 5;
+    }
+
+    for (int i = 0; i < argc; ++i)
+    {
+        utf8_argv[i] = main_utf8_from_wide(wide_argv[i]);
+        if (!utf8_argv[i])
+        {
+            fputs("خطأ داخلي: تعذر تحويل وسيط سطر الأوامر إلى UTF-8.\n", stderr);
+            for (int j = 0; j < i; ++j) free(utf8_argv[j]);
+            free(utf8_argv);
+            return 5;
+        }
+    }
+
+    int rc = baa_main(argc, utf8_argv);
+    for (int i = 0; i < argc; ++i) free(utf8_argv[i]);
+    free(utf8_argv);
+    return rc;
+}
+#else
+int main(int argc, char** argv)
+{
+    return baa_main(argc, argv);
+}
+#endif

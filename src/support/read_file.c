@@ -52,7 +52,7 @@ static void read_file_die_path(FILE* f, char* buffer, const char* path, ReadFile
 
 char *read_file(const char *path)
 {
-    FILE *f = fopen(path, "rb");
+    FILE *f = baa_fopen_utf8(path, "rb");
     if (!f)
     {
         read_file_die_path(NULL, NULL, path, READ_FILE_ERR_OPEN);

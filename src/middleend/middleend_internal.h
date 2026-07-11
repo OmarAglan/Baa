@@ -24,5 +24,6 @@
 #include "ir_verify_ir.h"
 #include "../frontend/ast.h"
 #include "../support/diagnostics.h"
+#include "../support/file_io.h"
 
 #endif

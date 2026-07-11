@@ -436,7 +436,7 @@ static char* lex_try_read_include_candidate(Lexer* l, const char* candidate, cha
 {
     if (!l || !candidate || !candidate[0] || !out_resolved_path) return NULL;
 
-    FILE* probe = fopen(candidate, "rb");
+    FILE* probe = baa_fopen_utf8(candidate, "rb");
     if (!probe) return NULL;
     fclose(probe);
 

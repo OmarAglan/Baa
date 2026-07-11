@@ -12,6 +12,7 @@ set(BAA_REPRODUCIBLE_BUILD_DATE "" CACHE STRING "Override baa --version build da
 set(SOURCES
     src/frontend/analysis.c    # Semantic Analysis module
     src/support/error.c
+    src/support/file_io.c
     src/support/read_file.c
     src/middleend/ir.c          # Intermediate Representation (Phase 3)
     src/middleend/ir_arena.c    # IR arena allocator (v0.3.2.6.1)
@@ -68,6 +69,12 @@ endif()
 
 # Windows executable extension
 add_executable(baa ${SOURCES})
+
+# MinGW needs the Unicode CRT entrypoint so wmain receives the original UTF-16
+# command line. main.c converts it once to the compiler's internal UTF-8 contract.
+if(MINGW)
+    set_property(TARGET baa APPEND_STRING PROPERTY LINK_FLAGS " -municode")
+endif()
 
 if(BAA_REPRODUCIBLE_BUILD_DATE)
     target_compile_definitions(baa PRIVATE BAA_BUILD_DATE_OVERRIDE="${BAA_REPRODUCIBLE_BUILD_DATE}")

@@ -638,7 +638,7 @@ void ir_module_print(IRModule* module, FILE* out, int use_arabic) {
  * Dump module to file (convenience wrapper)
  */
 void ir_module_dump(IRModule* module, const char* filename, int use_arabic) {
-    FILE* out = fopen(filename, "w");
+    FILE* out = baa_fopen_utf8(filename, "w");
     if (!out) {
         fprintf(stderr, "خطأ: لا يمكن فتح الملف %s\n", filename);
         return;

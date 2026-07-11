@@ -70,7 +70,7 @@ static const char* driver_custom_startup_asm(const BaaTarget* target)
 static int driver_write_text_file(const char* path, const char* text)
 {
     if (!path || !text) return 1;
-    FILE* f = fopen(path, "wb");
+    FILE* f = baa_fopen_utf8(path, "wb");
     if (!f) return 1;
     size_t n = strlen(text);
     size_t w = fwrite(text, 1, n, f);
@@ -84,7 +84,7 @@ static int driver_write_text_file(const char* path, const char* text)
 static int driver_append_text_file(const char* path, const char* text)
 {
     if (!path || !text) return 1;
-    FILE* f = fopen(path, "ab");
+    FILE* f = baa_fopen_utf8(path, "ab");
     if (!f) return 1;
     size_t n = strlen(text);
     size_t w = fwrite(text, 1, n, f);
@@ -615,7 +615,7 @@ static int compile_one_ir(const CompilerConfig *config,
         return 1;
     }
 
-    FILE *f_asm = fopen(asm_file, "w");
+    FILE *f_asm = baa_fopen_utf8(asm_file, "w");
     if (!f_asm)
     {
         printf("Error: Could not write assembly file '%s'\n", asm_file);

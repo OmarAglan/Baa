@@ -53,7 +53,7 @@ static void hash_to_hex(uint64_t h, char out[17])
 static bool hash_file_hex(const char* path, char out[17])
 {
     if (!path || !out) return false;
-    FILE* f = fopen(path, "rb");
+    FILE* f = baa_fopen_utf8(path, "rb");
     if (!f) return false;
 
     uint64_t h = BAA_HASH_OFFSET;
@@ -365,7 +365,7 @@ static bool parse_cache_meta(const char* meta_path, DriverCacheMeta* meta)
 {
     if (!meta_path || !meta) return false;
     memset(meta, 0, sizeof(*meta));
-    FILE* probe = fopen(meta_path, "rb");
+    FILE* probe = baa_fopen_utf8(meta_path, "rb");
     if (!probe) return false;
     fclose(probe);
     char* text = read_file(meta_path);
@@ -431,7 +431,7 @@ static bool cache_meta_valid(const DriverCacheMeta* meta, const char* source_has
     if (!meta || !source_hash || strcmp(meta->source_hash, source_hash) != 0) return false;
     if (!meta->object_path[0]) return false;
 
-    FILE* obj = fopen(meta->object_path, "rb");
+    FILE* obj = baa_fopen_utf8(meta->object_path, "rb");
     if (!obj) return false;
     fclose(obj);
 
@@ -508,7 +508,7 @@ static bool write_cache_meta(const char* meta_path,
                              const DriverBuildUnitRecord* unit)
 {
     if (!meta_path || !object_path || !unit) return false;
-    FILE* out = fopen(meta_path, "wb");
+    FILE* out = baa_fopen_utf8(meta_path, "wb");
     if (!out) return false;
     char source_hash[17];
     if (!unit->source || !hash_file_hex(unit->source, source_hash)) {
@@ -614,7 +614,7 @@ bool driver_build_write_manifest(const CompilerConfig* config,
                                  const char* manifest_path)
 {
     if (!manifest_path || !manifest) return true;
-    FILE* out = fopen(manifest_path, "wb");
+    FILE* out = baa_fopen_utf8(manifest_path, "wb");
     if (!out) return false;
 
     fprintf(out, "{\n  \"schema\": %d,\n", BAA_BUILD_SCHEMA);

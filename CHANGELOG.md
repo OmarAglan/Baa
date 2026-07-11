@@ -173,6 +173,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
   - Omitted fields are zero-initialized, duplicate/unknown fields are rejected, and static/global
     aggregate field initializers remain explicitly deferred.
 
+### Fixed
+
+- **Windows Unicode command-line paths**:
+  - The Windows executable now receives UTF-16 arguments through `wmain` and converts them once
+    to the compiler's internal UTF-8 representation, so Arabic source, include, output, and
+    working-directory paths are not corrupted by the active ANSI code page.
+  - Added a Windows regression using Arabic source and header names inside an Arabic directory.
+
 ### Changed
 
 - **Global declaration rules**:

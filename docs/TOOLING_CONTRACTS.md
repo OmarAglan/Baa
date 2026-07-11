@@ -74,6 +74,12 @@ Run and clean are Takween workflow operations, not Baa compiler subcommands. Tak
 produced executable when a build succeeds, and Takween deletes its own build/cache directories
 for clean workflows. `compiler-cli-v1` does not include `baa build`, `baa run`, or `baa clean`.
 
+Hosted Baa build tools should use the structured stdlib process API (`ابدأ_عملية` plus
+poll/wait/cancel/exit/free) for compiler and executable invocations. The API preserves argv
+boundaries and supports explicit cwd, environment, and stdout/stderr routing. Shell command
+strings through `نفذ_أمر` are outside the Takween integration contract. Directory initialization
+and cleanup use `انشئ_مجلدات` and guarded `احذف_شجرة` rather than host shell utilities.
+
 ---
 
 ## 4. Exit Codes

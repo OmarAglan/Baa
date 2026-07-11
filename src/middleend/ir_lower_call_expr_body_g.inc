@@ -82,9 +82,9 @@
             ir_builder_set_insert_point(ctx->builder, callb);
             ir_lower_set_loc(ctx->builder, expr);
             IRValue* fargs2[2] = { path_i8, mode_i8 };
-            int fr = ir_builder_emit_call(ctx->builder, "fopen", i8_ptr_t, fargs2, 2);
+            int fr = ir_builder_emit_call(ctx->builder, "baa_fopen_utf8", i8_ptr_t, fargs2, 2);
             if (fr < 0) {
-                ir_lower_report_error(ctx, expr, "فشل خفض نداء fopen.");
+                ir_lower_report_error(ctx, expr, "فشل خفض نداء baa_fopen_utf8.");
                 ir_builder_emit_store(ctx->builder, ir_value_const_int(0, i8_ptr_t), res_ptr);
             } else {
                 ir_builder_emit_store(ctx->builder, ir_value_reg(fr, i8_ptr_t), res_ptr);
@@ -664,4 +664,3 @@
             return ir_value_reg(out_r, IR_TYPE_I64_T);
         }
     }
-

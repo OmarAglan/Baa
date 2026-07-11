@@ -1596,8 +1596,22 @@ Path helpers operate on `نص` values and return newly allocated `نص` results.
 |----------|-----------|-------------|
 | **Environment Lookup** | `نص متغير_بيئة(نص اسم)` | Returns a heap string copy of an environment variable value, or `عدم` if not found. |
 | **Command Execution** | `صحيح نفذ_أمر(نص أمر)` | Executes a host shell command and returns its status code. |
+| **Start Process** | `مقبض_عملية ابدأ_عملية(نص[] argv، صحيح argc، نص cwd، نص[] env، صحيح envc، نص stdout، نص stderr)` | Starts a process directly without a shell and returns an owned handle, or `عدم`. |
+| **Poll Process** | `صحيح حالة_عملية(مقبض_عملية)` | Returns `0` while running, `1` after exit, or `-1` on error. |
+| **Wait Process** | `صحيح انتظر_عملية(مقبض_عملية)` | Waits and returns the child exit code, or `-1` on error. |
+| **Cancel Process** | `منطقي الغ_عملية(مقبض_عملية)` | Requests termination of a running child. |
+| **Exit Code** | `صحيح كود_خروج_عملية(مقبض_عملية)` | Returns the collected exit code, or `-1` while running/invalid. |
+| **Free Process** | `عدم حرر_عملية(مقبض_عملية)` | Releases the handle; a still-running child is cancelled and collected first. |
+| **Create Directories** | `صحيح انشئ_مجلدات(نص مسار)` | Creates a directory tree with UTF-8 path handling. |
+| **Remove Tree** | `صحيح احذف_شجرة(نص مسار)` | Removes one file/tree without following directory links; rejects roots, `.`, and `..` traversal. |
 
 **Memory Rule:** You must free the result of `متغير_بيئة(...)` using `حرر_نص(...)` or `تحرير_ذاكرة(...)`.
+
+`ابدأ_عملية` takes an array pointer such as `&وسائط[٠]`. Passing `عدم` with count `0`
+inherits the current environment; a non-empty environment list replaces it and each entry must
+be `NAME=VALUE`. `عدم` stdout/stderr paths inherit the corresponding stream. A path redirects
+that stream to a file, and the same path for both streams merges them. Every successful start
+must be paired with exactly one `حرر_عملية`.
 
 ### 9.9. Time Module (الوقت) (v0.4.1)
 

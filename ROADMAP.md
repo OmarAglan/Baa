@@ -1602,6 +1602,10 @@
 
   ### v0.7.0: Takween Integration Contract 🏗️
 
+* \[x] **Structured process runtime** — hosted Baa tools can launch direct argv with explicit
+  cwd/environment/stdout/stderr, poll/wait/cancel, and collect exit status without shell text.
+* \[x] **Hosted filesystem bridge** — UTF-8 file opening plus guarded recursive mkdir/remove
+  let Takween initialize and clean projects consistently on Windows and Linux.
 * \[x] **Stable compiler invocation contract** — `docs/TOOLING_CONTRACTS.md` documents the flags Takween may rely on for check/compile/link/object/assembly workflows.
 * \[x] **Manifest compatibility** — `docs/TOOLING_CONTRACTS.md` records deterministic fields Takween can consume from `--emit-build-manifest`.
 * \[x] **Include/dependency contract** — canonical manifest dependencies and invalidation expectations are documented and covered by `tests/test_integration_artifacts.py`.

@@ -32,6 +32,7 @@ This page is the single ownership index for public stdlib helpers that allocate,
 | `أنشئ_مخزن_بايتات()` | New `مخزن_بايتات` or `عدم` | `حرر_مخزن_بايتات` | Frees byte-buffer storage. |
 | `أنشئ_باني_نص()` | New `باني_نص` or `عدم` | `حرر_باني_نص` | Frees builder storage, not strings returned earlier by `نص_الباني`. |
 | `فتح_ملف(نص، نص)` | File handle `عدم*` or `عدم` | `اغلق_ملف` | Opaque host `FILE*` handle. |
+| `ابدأ_عملية(...)` | Process handle `مقبض_عملية` or `عدم` | `حرر_عملية` | The handle owns the host process reference; freeing a running handle cancels and collects it. |
 
 ## Borrowed or caller-owned results
 

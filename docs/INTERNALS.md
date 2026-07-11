@@ -1482,7 +1482,8 @@ Currently lowered expressions:
     result into an owned Baa `نص`
   - `مجلد_مسار` / `اسم_ملف_مسار` / `امتداد_مسار`: derive owned slices from the normalized path string
 - Builtin file I/O calls in `NODE_CALL_EXPR` (`v0.3.12`):
-  - `فتح_ملف`: lowers to `fopen` (handle is `عدم*` representing `FILE*`)
+  - `فتح_ملف`: lowers to `baa_fopen_utf8` (`_wfopen` on Windows, `fopen` on POSIX;
+    handle is `عدم*` representing `FILE*`)
   - `اغلق_ملف`: lowers to `fclose`
   - `اقرأ_حرف`: lowers to `fgetc` + UTF-8 packing into `حرف`
   - `اكتب_حرف`: lowers to `fputc`
@@ -1500,6 +1501,9 @@ Currently lowered expressions:
 - Builtin standard-library module calls in `NODE_CALL_EXPR` (`v0.4.2`):
   - Math: `جذر_تربيعي` -> `sqrt`, `أس` -> `pow`, `جيب` -> `sin`, `جيب_تمام` -> `cos`, `ظل` -> `tan`, `مطلق` -> `llabs`, `عشوائي` -> `rand`
   - System: `متغير_بيئة` -> `getenv` (+ C-string → Baa string conversion), `نفذ_أمر` -> `system`
+  - Structured process/runtime: `ابدأ_عملية/حالة_عملية/انتظر_عملية/الغ_عملية/كود_خروج_عملية/حرر_عملية`
+    lower to `libbaa_runtime.a`, which uses `CreateProcessW` on Windows and `fork` + direct
+    `exec` on POSIX. `انشئ_مجلدات/احذف_شجرة` use the same UTF-8 runtime boundary.
   - Time: `وقت_حالي` -> `time`, `وقت_كنص` -> `ctime` (+ C-string → Baa string conversion)
 - Builtin error-handling calls in `NODE_CALL_EXPR` (`v0.4.3`):
   - `تأكد` / `توقف_فوري`: fail-fast `exit(1)` paths with marker, source site/function line, and message emission.

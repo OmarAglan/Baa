@@ -261,6 +261,9 @@ def main() -> int:
         else:
             baa_copy = out_dir / (baa_real.name + ".copy")
         shutil.copy2(baa_real, baa_copy)
+        runtime_library = baa_real.parent / "libbaa_runtime.a"
+        if runtime_library.exists():
+            shutil.copy2(runtime_library, out_dir / runtime_library.name)
         if os.name != "nt":
             st = baa_copy.stat()
             baa_copy.chmod(st.st_mode | 0o111)

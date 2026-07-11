@@ -10,6 +10,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Added
 
+- **Structured process runtime for hosted tools**:
+  - Added the owned `مقبض_عملية` API with explicit argv, working directory, replacement
+    environment, inherited/file-routed stdout and stderr, polling, waiting, exit status,
+    cancellation, and deterministic release.
+  - Added `انشئ_مجلدات` and guarded `احذف_شجرة` so build tools do not need shell commands
+    for directory creation or cleanup.
+  - Baa executables now link `libbaa_runtime.a`; installed compilers discover it under
+    `lib/baa`, while build-tree compilers discover it beside the executable.
+- **UTF-8 runtime file opening**:
+  - `فتح_ملف` now lowers to `baa_fopen_utf8`, using `_wfopen` on Windows and `fopen` on
+    POSIX, so program-level file I/O agrees with Unicode directory/process paths.
+
 - **Runtime null-pointer guard**:
   - `-fruntime-checks` now emits optional guards before lowered pointer dereferences,
     including value loads and `*p = value`, and prints Arabic failure text

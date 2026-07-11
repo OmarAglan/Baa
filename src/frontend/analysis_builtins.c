@@ -465,12 +465,21 @@ typedef struct {
     const char* name;
     DataType return_type;
     int param_count;
-    DataType param_types[1];
+    DataType param_types[7];
 } BuiltinSystemFuncSig;
 
 static const BuiltinSystemFuncSig builtin_system_funcs[] = {
     { "متغير_بيئة", TYPE_STRING, 1, { TYPE_STRING } },
     { "نفذ_أمر",    TYPE_INT,    1, { TYPE_STRING } },
+    { "ابدأ_عملية", TYPE_POINTER, 7,
+      { TYPE_POINTER, TYPE_INT, TYPE_STRING, TYPE_POINTER, TYPE_INT, TYPE_STRING, TYPE_STRING } },
+    { "حالة_عملية", TYPE_INT, 1, { TYPE_POINTER } },
+    { "انتظر_عملية", TYPE_INT, 1, { TYPE_POINTER } },
+    { "الغ_عملية", TYPE_BOOL, 1, { TYPE_POINTER } },
+    { "كود_خروج_عملية", TYPE_INT, 1, { TYPE_POINTER } },
+    { "حرر_عملية", TYPE_VOID, 1, { TYPE_POINTER } },
+    { "انشئ_مجلدات", TYPE_INT, 1, { TYPE_STRING } },
+    { "احذف_شجرة", TYPE_INT, 1, { TYPE_STRING } },
 };
 
 DEFINE_BUILTIN_LOOKUP(builtin_lookup_system_func, BuiltinSystemFuncSig, builtin_system_funcs)
@@ -484,9 +493,29 @@ static bool builtin_check_system_call(Node* call_node, const char* fname, Node* 
     const BuiltinSystemFuncSig* sig = builtin_lookup_system_func(fname);
     if (!sig) return false;
 
-    builtin_check_args_scaffold(call_node, sig->name, args, sig->param_types, sig->param_count, true, false);
+    int i = 0;
+    for (Node* arg = args; arg; arg = arg->next, ++i) {
+        DataType expected = (i < sig->param_count) ? sig->param_types[i] : TYPE_INT;
+        DataType got = infer_type_allow_null_string(arg, expected);
+        if (i >= sig->param_count) continue;
 
-    builtin_finalize_call_return(call_node, sig->return_type, out_return_type, false);
+        if (expected == TYPE_POINTER) {
+            if (arg->type == NODE_NULL) {
+                arg->inferred_type = TYPE_POINTER;
+                node_set_inferred_ptr(arg, TYPE_VOID, NULL, 1);
+            } else if (got != TYPE_POINTER) {
+                builtin_report_param_type_mismatch(arg, i + 1, sig->name);
+            }
+        } else if (!types_compatible(got, expected)) {
+            builtin_report_param_type_mismatch(arg, i + 1, sig->name);
+        }
+    }
+    if (i != sig->param_count) {
+        builtin_report_param_count_mismatch(call_node, sig->name, sig->param_count);
+    }
+
+    builtin_finalize_call_return(call_node, sig->return_type, out_return_type,
+                                 sig->return_type == TYPE_POINTER);
     return true;
 }
 

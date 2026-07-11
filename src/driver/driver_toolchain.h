@@ -17,6 +17,11 @@
 void driver_toolchain_resolve_gcc_path(void);
 
 /**
+ * @brief إرجاع مسار مكتبة وقت تشغيل باء، أو NULL إذا لم توجد.
+ */
+const char* driver_toolchain_get_runtime_library(void);
+
+/**
  * @brief إرجاع أمر GCC المناسب ("gcc" أو مسار كامل على Windows).
  */
 const char *driver_toolchain_get_gcc_command(void);

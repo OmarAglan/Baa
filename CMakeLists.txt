@@ -70,6 +70,16 @@ endif()
 # Windows executable extension
 add_executable(baa ${SOURCES})
 
+# مكتبة وقت التشغيل التي ترتبط بها برامج باء عند استخدام واجهات النظام.
+add_library(baa_runtime STATIC
+    src/runtime/process_runtime.c
+    src/support/file_io.c
+)
+set_target_properties(baa_runtime PROPERTIES
+    OUTPUT_NAME baa_runtime
+    ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}"
+)
+
 # MinGW needs the Unicode CRT entrypoint so wmain receives the original UTF-16
 # command line. main.c converts it once to the compiler's internal UTF-8 contract.
 if(MINGW)
@@ -93,11 +103,19 @@ install(TARGETS baa
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
 )
 
+install(TARGETS baa_runtime
+    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}/baa
+)
+
 install(DIRECTORY docs
     DESTINATION ${CMAKE_INSTALL_DATADIR}/baa
 )
 
 install(DIRECTORY resources
+    DESTINATION ${CMAKE_INSTALL_DATADIR}/baa
+)
+
+install(DIRECTORY stdlib
     DESTINATION ${CMAKE_INSTALL_DATADIR}/baa
 )
 
@@ -132,8 +150,10 @@ include(CPack)
 if(BAA_ENABLE_WARNINGS)
     if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
         target_compile_options(baa PRIVATE -Wall -Wextra -Wformat=2 -Wshadow)
+        target_compile_options(baa_runtime PRIVATE -Wall -Wextra -Wformat=2 -Wshadow)
         if(BAA_WARNINGS_AS_ERRORS)
             target_compile_options(baa PRIVATE -Werror)
+            target_compile_options(baa_runtime PRIVATE -Werror)
         endif()
     endif()
 endif()

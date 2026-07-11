@@ -31,6 +31,41 @@
  * @brief مسار GCC المكتشف (فارغ = استخدام "gcc" من PATH).
  */
 static char g_gcc_path[MAX_PATH] = "";
+static char g_runtime_library_path[MAX_PATH] = "";
+
+static bool runtime_library_exists(const char* path)
+{
+    if (!path || !path[0]) return false;
+    FILE* file = baa_fopen_utf8(path, "rb");
+    if (!file) return false;
+    fclose(file);
+    return true;
+}
+
+static bool runtime_library_try_dir(const char* directory)
+{
+    if (!directory || !directory[0]) return false;
+    const char* suffix = "/libbaa_runtime.a";
+    size_t need = strlen(directory) + strlen(suffix) + 1u;
+    if (need > sizeof(g_runtime_library_path)) return false;
+    snprintf(g_runtime_library_path, sizeof(g_runtime_library_path), "%s%s", directory, suffix);
+    if (runtime_library_exists(g_runtime_library_path)) return true;
+    g_runtime_library_path[0] = '\0';
+    return false;
+}
+
+static void runtime_library_resolve_from_exe_dir(const char* exe_dir)
+{
+    if (!exe_dir || !exe_dir[0] || g_runtime_library_path[0]) return;
+    if (runtime_library_try_dir(exe_dir)) return;
+
+    char candidate[MAX_PATH];
+    int n = snprintf(candidate, sizeof(candidate), "%s/../lib/baa", exe_dir);
+    if (n > 0 && (size_t)n < sizeof(candidate) && runtime_library_try_dir(candidate)) return;
+
+    n = snprintf(candidate, sizeof(candidate), "%s/../lib64/baa", exe_dir);
+    if (n > 0 && (size_t)n < sizeof(candidate)) (void)runtime_library_try_dir(candidate);
+}
 
 #ifdef _WIN32
 
@@ -203,6 +238,11 @@ void driver_toolchain_resolve_gcc_path(void)
         return;
     *last_sep = L'\0';
 
+    char exe_dir_utf8[MAX_PATH];
+    if (win_wide_to_utf8(exe_path, exe_dir_utf8, sizeof(exe_dir_utf8))) {
+        runtime_library_resolve_from_exe_dir(exe_dir_utf8);
+    }
+
     // المسار 1: <baa_dir>\gcc\bin\gcc.exe
     wchar_t candidate[MAX_PATH];
     if (path_build_suffix_w(candidate, MAX_PATH, exe_path, BAA_PATH_SUFFIX_GCC_BIN_W) &&
@@ -219,8 +259,24 @@ void driver_toolchain_resolve_gcc_path(void)
     {
         return;
     }
+#else
+    char exe_path[MAX_PATH];
+    ssize_t len = readlink("/proc/self/exe", exe_path, sizeof(exe_path) - 1u);
+    if (len > 0 && (size_t)len < sizeof(exe_path)) {
+        exe_path[len] = '\0';
+        char* last_sep = strrchr(exe_path, '/');
+        if (last_sep) {
+            *last_sep = '\0';
+            runtime_library_resolve_from_exe_dir(exe_path);
+        }
+    }
 #endif
     // لم يُوجد gcc مضمّن ← سيُستخدم "gcc" من PATH
+}
+
+const char* driver_toolchain_get_runtime_library(void)
+{
+    return g_runtime_library_path[0] ? g_runtime_library_path : NULL;
 }
 
 const char *driver_toolchain_get_gcc_command(void)
@@ -403,8 +459,8 @@ int driver_toolchain_link(const CompilerConfig *config,
     if (!obj_files || obj_count <= 0) return 1;
     int rc = 1;
 
-    // مساحة إضافية للأعلام الاختيارية (debug/pie/startup/-lm) + -o + output + NULL
-    int argv_cap = obj_count + 13;
+    // مساحة إضافية للأعلام الاختيارية (debug/pie/startup/runtime/-lm) + -o + output + NULL
+    int argv_cap = obj_count + 14;
     const char **argv_link = (const char **)calloc((size_t)argv_cap, sizeof(char *));
     if (!argv_link)
     {
@@ -422,6 +478,8 @@ int driver_toolchain_link(const CompilerConfig *config,
     }
     char staged_output[MAX_PATH] = "";
     bool staged_output_ready = false;
+    char staged_runtime[MAX_PATH] = "";
+    bool staged_runtime_ready = false;
 
     bool staged_ok = true;
     for (int i = 0; i < obj_count; i++)
@@ -447,6 +505,21 @@ int driver_toolchain_link(const CompilerConfig *config,
     staged_output_ready = true;
 #endif
 
+    const char* runtime_library = driver_toolchain_get_runtime_library();
+    if (!runtime_library) {
+        fprintf(stderr, "خطأ: لم يتم العثور على مكتبة وقت تشغيل باء libbaa_runtime.a بجانب المصرّف أو في lib/baa.\n");
+        goto cleanup;
+    }
+
+#ifdef _WIN32
+    if (!win_make_stage_file_path("runtime", ".a", staged_runtime, sizeof(staged_runtime)) ||
+        !driver_toolchain_copy_file_utf8(runtime_library, staged_runtime)) {
+        fprintf(stderr, "خطأ: فشل تجهيز مكتبة وقت التشغيل لعملية الربط.\n");
+        goto cleanup;
+    }
+    staged_runtime_ready = true;
+#endif
+
     int lk = 0;
     argv_link[lk++] = driver_toolchain_get_gcc_command();
     if (config->debug_info) argv_link[lk++] = "-g";
@@ -463,6 +536,12 @@ int driver_toolchain_link(const CompilerConfig *config,
         argv_link[lk++] = obj_files[i];
 #endif
     }
+
+#ifdef _WIN32
+    argv_link[lk++] = staged_runtime;
+#else
+    argv_link[lk++] = runtime_library;
+#endif
 
     // ربط libm لدعم دوال الرياضيات القياسية (sqrt/pow) المستخدمة في stdlib v0.4.1.
     argv_link[lk++] = "-lm";
@@ -501,6 +580,7 @@ cleanup:
     win_cleanup_staged_objects(staged_objects, obj_count);
     free(staged_objects);
     if (staged_output_ready) (void)driver_toolchain_delete_file_utf8(staged_output);
+    if (staged_runtime_ready) (void)driver_toolchain_delete_file_utf8(staged_runtime);
 #endif
     free(argv_link);
     return rc;

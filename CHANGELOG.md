@@ -175,6 +175,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Fixed
 
+- **Parser recovery progress**:
+  - An identifier that is not a valid declaration, assignment, call, or expression
+    statement now advances before synchronization, preventing repeated diagnostics and
+    an infinite parse loop on misspelled statement keywords.
+
 - **Windows Unicode command-line paths**:
   - The Windows executable now receives UTF-16 arguments through `wmain` and converts them once
     to the compiler's internal UTF-8 representation, so Arabic source, include, output, and

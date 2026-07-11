@@ -981,5 +981,10 @@ Node* parse_statement() {
                                 "وحدة أو جملة غير متوقعة.");
         parser.panic_mode = true;
     }
+    // المعرّف غير المطابق لأي شكل جملة هو مرساة مزامنة بحد ذاته؛ تقدّم هنا
+    // حتى لا يعيد parse_block تحليل الرمز نفسه إلى ما لا نهاية.
+    if (parser.current.type == TOKEN_IDENTIFIER) {
+        advance();
+    }
     return NULL;
 }

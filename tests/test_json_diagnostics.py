@@ -122,6 +122,24 @@ class JsonDiagnosticsTests(unittest.TestCase):
         self.assertEqual(diag["category"], "warning")
         self.assertEqual(diag["hint"], None)
 
+    def test_unexpected_identifier_statement_recovers_without_looping(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="baa_json_diag_recovery_") as temp:
+            work = Path(temp)
+            (work / "bad.baa").write_text(
+                "صحيح الرئيسية() {\n"
+                "    أرجع ٠.\n"
+                "}\n",
+                encoding="utf-8",
+            )
+
+            proc = self.run_baa(work, "--check", "--diagnostics=json", "bad.baa")
+
+        self.assertNotEqual(proc.returncode, 0, proc.stdout)
+        data = json.loads(proc.stdout)
+        self.assertEqual(data["summary"]["errors"], 1)
+        self.assertEqual(len(data["diagnostics"]), 1)
+        self.assertEqual(data["diagnostics"][0]["code"], "B0001")
+
 
 if __name__ == "__main__":
     unittest.main()

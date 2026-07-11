@@ -125,11 +125,7 @@ char* driver_build_default_cache_dir(void)
 static bool ensure_dir_one(const char* path)
 {
     if (!path || !path[0]) return false;
-#ifdef _WIN32
-    if (_mkdir(path) == 0) return true;
-#else
-    if (mkdir(path, 0777) == 0) return true;
-#endif
+    if (baa_mkdir_utf8(path) == 0) return true;
     return errno == EEXIST;
 }
 

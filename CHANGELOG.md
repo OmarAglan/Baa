@@ -180,6 +180,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
     to the compiler's internal UTF-8 representation, so Arabic source, include, output, and
     working-directory paths are not corrupted by the active ANSI code page.
   - Added a Windows regression using Arabic source and header names inside an Arabic directory.
+  - File opening and single-directory creation now use wide Windows APIs, including Unicode
+    `--cache-dir` paths used by Takween incremental builds; the regression verifies a second
+    build reports a cache hit and emits schema 1 metadata.
 
 ### Changed
 

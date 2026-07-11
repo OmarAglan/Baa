@@ -133,6 +133,50 @@ class Utf8ValidationTests(unittest.TestCase):
         self.assertEqual(data["schema_version"], "diagnostics-json-v1")
         self.assertEqual(data["diagnostics"], [])
 
+    @unittest.skipUnless(os.name == "nt", "Windows Unicode cache-path regression")
+    def test_windows_incremental_cache_accepts_unicode_directory(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="baa_unicode_cache_") as temp:
+            work = Path(temp)
+            source = work / "main.baa"
+            source.write_text(
+                "صحيح الرئيسية() { إرجع ٠. }\n",
+                encoding="utf-8",
+            )
+            cache = work / "بناء" / ".baa-cache"
+            manifest = work / "بناء" / "build-manifest.json"
+            output = work / "out.exe"
+            (work / "بناء").mkdir()
+            command = [
+                str(self.baa),
+                "--incremental",
+                "--cache-dir",
+                str(cache.relative_to(work)),
+                "--emit-build-manifest",
+                str(manifest.relative_to(work)),
+                source.name,
+                "-o",
+                output.name,
+            ]
+
+            first = subprocess.run(
+                command,
+                cwd=str(work),
+                timeout=20,
+            )
+            second = subprocess.run(
+                command,
+                cwd=str(work),
+                timeout=20,
+            )
+            self.assertEqual(first.returncode, 0)
+            self.assertEqual(second.returncode, 0)
+            data = json.loads(manifest.read_text(encoding="utf-8"))
+
+        self.assertEqual(data["schema"], 1)
+        self.assertTrue(data["incremental"])
+        self.assertTrue(data["units"])
+        self.assertTrue(data["units"][0]["cache"]["hit"])
+
 
 if __name__ == "__main__":
     unittest.main()

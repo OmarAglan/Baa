@@ -8,6 +8,7 @@
 #include <stdlib.h>
 
 #ifdef _WIN32
+#include <direct.h>
 #include <windows.h>
 
 static wchar_t* file_io_utf8_to_wide(const char* value)
@@ -27,6 +28,8 @@ static wchar_t* file_io_utf8_to_wide(const char* value)
     }
     return wide;
 }
+#else
+#include <sys/stat.h>
 #endif
 
 FILE* baa_fopen_utf8(const char* path, const char* mode)
@@ -52,3 +55,17 @@ FILE* baa_fopen_utf8(const char* path, const char* mode)
 #endif
 }
 
+int baa_mkdir_utf8(const char* path)
+{
+    if (!path) return -1;
+
+#ifdef _WIN32
+    wchar_t* path_w = file_io_utf8_to_wide(path);
+    if (!path_w) return -1;
+    int result = _wmkdir(path_w);
+    free(path_w);
+    return result;
+#else
+    return mkdir(path, 0777);
+#endif
+}

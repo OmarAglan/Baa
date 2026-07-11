@@ -13,5 +13,9 @@
  */
 FILE* baa_fopen_utf8(const char* path, const char* mode);
 
-#endif
+/**
+ * @brief إنشاء مجلد واحد من مسار UTF-8، مع دلالة رجوع mkdir المعتادة.
+ */
+int baa_mkdir_utf8(const char* path);
 
+#endif

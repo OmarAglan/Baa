@@ -33,6 +33,7 @@ This document defines the compiler surfaces that external tools may rely on.
 | `--dump-tokens=json` | stable token stream | Qalam/debug tools |
 | `--dump-symbols=json` | symbol outline | Qalam |
 | `--target=<target>` | target selection | Takween, OS experiments |
+| `--target-info=json` | host target, executable suffix, object format, and capabilities | Takween, CI |
 | `-I <dir>` / `-I<dir>` | include search path | Takween, users |
 
 ---
@@ -48,7 +49,12 @@ baa [-O0|-O1|-O2] [--verify] [-I <dir>...] <inputs...> -o <executable>
 baa -c [-O0|-O1|-O2] [-I <dir>...] <inputs...> -o <object>
 baa -S [-O0|-O1|-O2] [--target=<target>] <input> -o <assembly>
 baa --incremental --cache-dir <dir> --emit-build-manifest <file> <inputs...> -o <output>
+baa [--target=<target>] --target-info=json
 ```
+
+`--target-info=json` emits the stable `target-info-v1` discovery document. Takween must use
+its `host_target`, `selected_target`, `targets[].executable_suffix`, object format, and
+capability booleans instead of inferring platform behavior from the host OS or filename.
 
 `--check` is the fast editor/build-tool validation mode: it reads sources and includes,
 parses, runs semantic analysis, and stops before IR lowering, optimization, assembly,

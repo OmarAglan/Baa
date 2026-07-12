@@ -6,6 +6,7 @@
   "bits": 32,
   "environment": "freestanding",
   "object_format": "elf",
+  "executable_suffix": "",
   "assembly_syntax": "gas-att",
   "pointer_width": 32,
   "endianness": "little",

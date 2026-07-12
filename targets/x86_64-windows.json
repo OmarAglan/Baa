@@ -5,6 +5,7 @@
   "bits": 64,
   "environment": "hosted",
   "object_format": "coff",
+  "executable_suffix": ".exe",
   "assembly_syntax": "gas-att",
   "pointer_width": 64,
   "endianness": "little",

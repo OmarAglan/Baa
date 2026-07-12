@@ -1613,6 +1613,10 @@
 * \[x] **Machine-readable diagnostics plan** — `docs/DIAGNOSTICS_JSON_SCHEMA.md` defines the future JSON diagnostics shape for Takween/Qalam.
 * \[x] **No internal Baa project build system** — Baa keeps `baa build`/`baa run`/`baa clean` out of `compiler-cli-v1`; Takween owns Arabic-first project workflow UX.
 
+* \[x] **Stable target discovery** — `--target-info=json` emits `target-info-v1` with the
+  host/selected targets, executable suffix, object format, and host-sensitive capabilities;
+  focused runtime tests cover default and explicit target queries.
+
   ### v0.7.1: Module and Visibility Cleanup 🧩
 
 * \[x] **Header/source convention** — `docs/MODULES_AND_VISIBILITY.md` formalizes `.baahd` vs `.baa` usage and is covered by `tests/test_module_visibility_docs.py`.

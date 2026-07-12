@@ -183,6 +183,7 @@ void driver_print_help(void)
     printf("  -O2            Full optimization (+ CSE)\n");
     printf("  -funroll-loops  Unroll small constant-count loops (after Out-of-SSA)\n");
     printf("  --target=<t>    Target: x86_64-windows | x86_64-linux\n");
+    printf("  --target-info=json  Print stable host/target capabilities as JSON\n");
     printf("  -fPIC           Emit PIC-friendly code (ELF/Linux)\n");
     printf("  -fPIE           Build as PIE (ELF/Linux; adds -pie at link)\n");
     printf("  -fno-pic        Disable PIC\n");
@@ -217,6 +218,58 @@ void driver_print_version(void)
 {
     printf("baa version %s\n", BAA_VERSION);
     printf("Built on %s\n", BAA_BUILD_DATE);
+}
+
+static const char *target_object_format_name(const BaaTarget *target)
+{
+    if (!target) return "unknown";
+    return target->obj_format == BAA_OBJFORMAT_COFF ? "coff" : "elf";
+}
+
+static void print_target_record_json(const BaaTarget *target,
+                                     const BaaTarget *host,
+                                     bool trailing_comma)
+{
+    bool is_host = target && host && target->kind == host->kind;
+    bool is_linux = baa_target_is_linux(target);
+
+    printf("    {\n");
+    printf("      \"name\": \"%s\",\n", target->name);
+    printf("      \"triple\": \"%s\",\n", target->triple);
+    printf("      \"object_format\": \"%s\",\n", target_object_format_name(target));
+    printf("      \"executable_suffix\": \"%s\",\n", target->default_exe_ext);
+    printf("      \"is_host\": %s,\n", is_host ? "true" : "false");
+    printf("      \"capabilities\": {\n");
+    printf("        \"assembly\": true,\n");
+    printf("        \"object\": %s,\n", is_host ? "true" : "false");
+    printf("        \"link\": %s,\n", is_host ? "true" : "false");
+    printf("        \"libc\": true,\n");
+    printf("        \"stdlib\": true,\n");
+    printf("        \"pic\": %s,\n", is_linux ? "true" : "false");
+    printf("        \"pie\": %s,\n", is_linux ? "true" : "false");
+    printf("        \"stack_protector\": %s,\n", is_linux ? "true" : "false");
+    printf("        \"inline_asm\": true\n");
+    printf("      }\n");
+    printf("    }%s\n", trailing_comma ? "," : "");
+}
+
+void driver_print_target_info_json(const BaaTarget *selected_target)
+{
+    const BaaTarget *host = baa_target_host_default();
+    const BaaTarget *selected = selected_target ? selected_target : host;
+    const BaaTarget *windows = baa_target_builtin_windows_x86_64();
+    const BaaTarget *linux = baa_target_builtin_linux_x86_64();
+
+    printf("{\n");
+    printf("  \"schema_version\": \"target-info-v1\",\n");
+    printf("  \"compiler_version\": \"%s\",\n", BAA_VERSION);
+    printf("  \"host_target\": \"%s\",\n", host->name);
+    printf("  \"selected_target\": \"%s\",\n", selected->name);
+    printf("  \"targets\": [\n");
+    print_target_record_json(windows, host, true);
+    print_target_record_json(linux, host, false);
+    printf("  ]\n");
+    printf("}\n");
 }
 
 typedef struct
@@ -357,6 +410,7 @@ bool driver_parse_cli(int argc, char **argv, CompilerConfig *config, DriverParse
 
     int input_count = 0;
     size_t include_dir_count = 0;
+    bool target_info_requested = false;
 
     for (int i = 1; i < argc; i++)
     {
@@ -468,6 +522,15 @@ bool driver_parse_cli(int argc, char **argv, CompilerConfig *config, DriverParse
                     return false;
                 }
                 config->target = parsed;
+            }
+            else if (strcmp(arg, "--target-info=json") == 0 ||
+                     strcmp(arg, "--print-target-info=json") == 0)
+                target_info_requested = true;
+            else if (strncmp(arg, "--target-info=", 14) == 0)
+            {
+                fprintf(stderr, "Error: Unsupported target info format '%s' (expected json)\n", arg + 14);
+                parse_release_temp_arrays(inputs, include_dirs);
+                return false;
             }
             else if (strcmp(arg, "-fPIC") == 0)
                 config->codegen_opts.pic = true;
@@ -624,7 +687,7 @@ bool driver_parse_cli(int argc, char **argv, CompilerConfig *config, DriverParse
 
     parse_set_result(out,
                      config,
-                     DRIVER_CMD_COMPILE,
+                     target_info_requested ? DRIVER_CMD_TARGET_INFO : DRIVER_CMD_COMPILE,
                      inputs,
                      input_count,
                      include_dirs,

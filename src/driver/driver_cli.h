@@ -18,6 +18,7 @@ typedef enum
     DRIVER_CMD_VERSION = 2,
     DRIVER_CMD_UPDATE = 3,
     DRIVER_CMD_EXPLAIN = 4,
+    DRIVER_CMD_TARGET_INFO = 5,
 } DriverCommand;
 
 typedef struct
@@ -43,6 +44,7 @@ void driver_parse_result_free(DriverParseResult *r);
 
 void driver_print_help(void);
 void driver_print_version(void);
+void driver_print_target_info_json(const BaaTarget *selected_target);
 bool driver_print_diagnostic_explain(const char *code);
 
 #endif // BAA_DRIVER_CLI_H

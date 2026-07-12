@@ -43,6 +43,7 @@ i386-pyramidos
   "bits": 64,
   "environment": "hosted",
   "object_format": "elf",
+  "executable_suffix": "",
   "assembly_syntax": "gas-att",
   "pointer_width": 64,
   "endianness": "little",
@@ -73,6 +74,7 @@ i386-pyramidos
 | `bits` | pointer/integer ABI family width when relevant |
 | `environment` | `hosted` or `freestanding` |
 | `object_format` | `coff`, `elf`, or future format |
+| `executable_suffix` | suffix for linked executables (`.exe` on Windows, empty on Linux) |
 | `assembly_syntax` | emitted assembly flavor |
 | `pointer_width` | pointer width in bits |
 | `endianness` | `little` or `big` |
@@ -132,14 +134,20 @@ i386-pyramidos
 
 ---
 
-## 7. CLI Proposal
+## 7. Stable CLI Discovery
 
 ```bash
-baa --print-targets
-baa --print-target-spec=x86_64-linux
+baa --target-info=json
+baa --target=x86_64-linux --target-info=json
 baa --target=x86_64-linux file.baa
-baa --target=i386-elf --freestanding --no-stdlib -c file.baa
 ```
+
+`--target-info=json` emits `target-info-v1`. The document includes the compiler version,
+host and selected target names, and every currently supported compiler target. Each target
+record exposes its triple, object format, executable suffix, whether it is the host, and
+capabilities for assembly, object emission, linking, libc, stdlib, PIC/PIE, stack protection,
+and inline assembly. Object emission and linking are true only for the host target while
+cross-target support remains assembly-only.
 
 ---
 

@@ -28,6 +28,7 @@ COMMON_REQUIRED_FIELDS = {
     "bits",
     "environment",
     "object_format",
+    "executable_suffix",
     "assembly_syntax",
     "pointer_width",
     "endianness",
@@ -78,6 +79,7 @@ class TargetSpecificationTests(unittest.TestCase):
                 self.assertTrue(_is_positive_int(spec["bits"]))
                 self.assertIn(spec["environment"], {"hosted", "freestanding"})
                 self.assertIn(spec["object_format"], {"coff", "elf"})
+                self.assertIsInstance(spec["executable_suffix"], str)
                 self.assertEqual(spec["assembly_syntax"], "gas-att")
                 self.assertTrue(_is_positive_int(spec["pointer_width"]))
                 self.assertIn(spec["endianness"], {"little", "big"})
@@ -120,6 +122,8 @@ class TargetSpecificationTests(unittest.TestCase):
 
         windows_features = self.specs["x86_64-windows.json"]["features"]
         self.assertEqual(windows_features["shadow_space_bytes"], 32)
+        self.assertEqual(self.specs["x86_64-windows.json"]["executable_suffix"], ".exe")
+        self.assertEqual(self.specs["x86_64-linux.json"]["executable_suffix"], "")
 
     def test_i386_targets_remain_experimental_and_freestanding(self) -> None:
         for file_name in ("i386-elf.experimental.json", "i386-pyramidos.experimental.json"):

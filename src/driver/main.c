@@ -133,6 +133,11 @@ static int baa_main(int argc, char **argv)
         driver_print_version();
         return main_cleanup_and_return(&config, &cli, NULL, 0, config.output_file, output_file_owned, 0);
     }
+    if (cli.cmd == DRIVER_CMD_TARGET_INFO)
+    {
+        driver_print_target_info_json(config.target);
+        return main_cleanup_and_return(&config, &cli, NULL, 0, config.output_file, output_file_owned, 0);
+    }
     if (cli.cmd == DRIVER_CMD_EXPLAIN)
     {
         bool ok = driver_print_diagnostic_explain(cli.explain_code);

@@ -584,6 +584,16 @@ def _run_json_diagnostics_tests(log_dir: Path) -> StepResult:
     )
 
 
+def _run_target_info_tests(log_dir: Path) -> StepResult:
+    return _run_logged(
+        "target-info-tests",
+        [sys.executable, str(TESTS_DIR / "test_target_info.py")],
+        cwd=ROOT,
+        log_dir=log_dir,
+        timeout_s=120.0,
+    )
+
+
 def _run_target_spec_tests(log_dir: Path) -> StepResult:
     return _run_logged(
         "target-spec-tests",
@@ -843,6 +853,11 @@ def main() -> int:
     _print_step(json_diagnostics_res)
     all_results.append(json_diagnostics_res)
     overall_ok = overall_ok and json_diagnostics_res.passed
+
+    target_info_res = _run_target_info_tests(log_dir)
+    _print_step(target_info_res)
+    all_results.append(target_info_res)
+    overall_ok = overall_ok and target_info_res.passed
 
     # A) Integration tiers
     test_res = _run_logged(

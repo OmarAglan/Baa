@@ -5,6 +5,7 @@
   "bits": 64,
   "environment": "hosted",
   "object_format": "elf",
+  "executable_suffix": "",
   "assembly_syntax": "gas-att",
   "pointer_width": 64,
   "endianness": "little",

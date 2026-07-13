@@ -1508,7 +1508,8 @@ Currently lowered expressions:
   - System: `متغير_بيئة` -> `getenv` (+ C-string → Baa string conversion), `نفذ_أمر` -> `system`
   - Structured process/runtime: `ابدأ_عملية/حالة_عملية/انتظر_عملية/الغ_عملية/كود_خروج_عملية/حرر_عملية`
     lower to `libbaa_runtime.a`, which uses `CreateProcessW` on Windows and `fork` + direct
-    `exec` on POSIX. `انشئ_مجلدات/احذف_شجرة` use the same UTF-8 runtime boundary.
+    `exec` on POSIX. `انشئ_مجلدات/احذف_شجرة/تجزئة_ملف_SHA256` use the same
+    UTF-8 runtime boundary; the hash result is lowercase owned Baa text.
   - Time: `وقت_حالي` -> `time`, `وقت_كنص` -> `ctime` (+ C-string → Baa string conversion)
 - Builtin error-handling calls in `NODE_CALL_EXPR` (`v0.4.3`):
   - `تأكد` / `توقف_فوري`: fail-fast `exit(1)` paths with marker, source site/function line, and message emission.

@@ -13,7 +13,7 @@ It is generated from every `.baa` source under `tests/integration`,
 metadata. The inventory command compiles every source for both supported
 x86-64 targets and fails if any source cannot produce assembly.
 
-The 2026-07-13 baseline contains 99 sources per target with zero omissions:
+The 2026-07-13 baseline contains 100 sources per target with zero omissions:
 
 | Target | Instruction forms | Directive forms | Sections | Registers | Relocation candidates |
 |---|---:|---:|---:|---:|---:|
@@ -81,4 +81,3 @@ are not yet admitted. Nazm still needs coverage for Baa's observed operand
 widths, `setcc`, extension and division forms, scalar SSE2 forms, read-only
 sections, external symbols, and the required ELF64/COFF relocations. The
 production assembler therefore remains unchanged.
-

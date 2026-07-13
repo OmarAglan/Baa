@@ -2670,7 +2670,7 @@ Currently supports:
   - System: `متغير_بيئة`, `نفذ_أمر`
   - Structured process: `ابدأ_عملية`, `حالة_عملية`, `انتظر_عملية`, `الغ_عملية`,
     `كود_خروج_عملية`, `حرر_عملية`
-  - Hosted filesystem: `انشئ_مجلدات`, `احذف_شجرة`
+  - Hosted filesystem: `انشئ_مجلدات`, `احذف_شجرة`, `تجزئة_ملف_SHA256`
   - Time: `وقت_حالي`, `وقت_كنص`
 - Builtin error-handling calls (`v0.4.3`) in `NODE_CALL_EXPR`:
   - `تأكد`, `توقف_فوري` (fail-fast paths print marker, `الموقع: file:line:col | الدالة: name`, and message)

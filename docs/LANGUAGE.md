@@ -1604,8 +1604,10 @@ Path helpers operate on `نص` values and return newly allocated `نص` results.
 | **Free Process** | `عدم حرر_عملية(مقبض_عملية)` | Releases the handle; a still-running child is cancelled and collected first. |
 | **Create Directories** | `صحيح انشئ_مجلدات(نص مسار)` | Creates a directory tree with UTF-8 path handling. |
 | **Remove Tree** | `صحيح احذف_شجرة(نص مسار)` | Removes one file/tree without following directory links; rejects roots, `.`, and `..` traversal. |
+| **SHA-256 File Hash** | `نص تجزئة_ملف_SHA256(نص مسار)` | Returns a newly allocated 64-character lowercase SHA-256 hex digest, or `عدم` when the file cannot be read. |
 
-**Memory Rule:** You must free the result of `متغير_بيئة(...)` using `حرر_نص(...)` or `تحرير_ذاكرة(...)`.
+**Memory Rule:** You must free the result of `متغير_بيئة(...)` and
+`تجزئة_ملف_SHA256(...)` using `حرر_نص(...)` or `تحرير_ذاكرة(...)`.
 
 `ابدأ_عملية` takes an array pointer such as `&وسائط[٠]`. Passing `عدم` with count `0`
 inherits the current environment; a non-empty environment list replaces it and each entry must

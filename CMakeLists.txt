@@ -72,6 +72,7 @@ add_executable(baa ${SOURCES})
 
 # مكتبة وقت التشغيل التي ترتبط بها برامج باء عند استخدام واجهات النظام.
 add_library(baa_runtime STATIC
+    src/runtime/hash_runtime.c
     src/runtime/process_runtime.c
     src/support/file_io.c
 )

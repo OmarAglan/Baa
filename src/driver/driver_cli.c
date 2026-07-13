@@ -257,8 +257,8 @@ void driver_print_target_info_json(const BaaTarget *selected_target)
 {
     const BaaTarget *host = baa_target_host_default();
     const BaaTarget *selected = selected_target ? selected_target : host;
-    const BaaTarget *windows = baa_target_builtin_windows_x86_64();
-    const BaaTarget *linux = baa_target_builtin_linux_x86_64();
+    const BaaTarget *windows_target = baa_target_builtin_windows_x86_64();
+    const BaaTarget *linux_target = baa_target_builtin_linux_x86_64();
 
     printf("{\n");
     printf("  \"schema_version\": \"target-info-v1\",\n");
@@ -266,8 +266,8 @@ void driver_print_target_info_json(const BaaTarget *selected_target)
     printf("  \"host_target\": \"%s\",\n", host->name);
     printf("  \"selected_target\": \"%s\",\n", selected->name);
     printf("  \"targets\": [\n");
-    print_target_record_json(windows, host, true);
-    print_target_record_json(linux, host, false);
+    print_target_record_json(windows_target, host, true);
+    print_target_record_json(linux_target, host, false);
     printf("  ]\n");
     printf("}\n");
 }

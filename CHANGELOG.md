@@ -10,6 +10,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Added
 
+- **Enforced `compiler-cli-v1` exit codes**:
+  - Centralized driver statuses `0` through `5` and stopped collapsing invalid invocation,
+    unsupported target/mode, external toolchain/output, and internal failures into source
+    status `1`.
+  - Added cross-platform contract tests for observable statuses `0` through `4` plus a
+    structural guard for the non-injectable internal status `5`.
+
 - **Structured process runtime for hosted tools**:
   - Added the owned `مقبض_عملية` API with explicit argv, working directory, replacement
     environment, inherited/file-routed stdout and stderr, polling, waiting, exit status,

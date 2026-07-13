@@ -15,6 +15,19 @@
 #include "../backend/target.h"
 #include "../support/runtime_checks.h"
 
+/**
+ * @brief أكواد الخروج الثابتة لعقد compiler-cli-v1.
+ */
+typedef enum
+{
+    BAA_COMPILER_EXIT_SUCCESS = 0,
+    BAA_COMPILER_EXIT_SOURCE_ERROR = 1,
+    BAA_COMPILER_EXIT_INVALID_INVOCATION = 2,
+    BAA_COMPILER_EXIT_UNSUPPORTED = 3,
+    BAA_COMPILER_EXIT_TOOLCHAIN_ERROR = 4,
+    BAA_COMPILER_EXIT_INTERNAL_ERROR = 5,
+} BaaCompilerExitCode;
+
 typedef struct
 {
     bool header_check;  // --check-header: فحص الترويسة دون توليد كود

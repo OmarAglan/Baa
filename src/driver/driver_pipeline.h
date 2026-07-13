@@ -18,13 +18,13 @@ typedef struct DriverBuildManifest DriverBuildManifest;
  * - عند -c: تُنتج ملفات كائنات لكل ملف (أو ملف واحد باسم -o).
  * - عند البناء الكامل: تُنتج ملفات كائنات للربط النهائي.
  */
-int driver_compile_files(const CompilerConfig *config,
-                         char **input_files,
-                         int input_count,
-                         CompilerPhaseTimes *phase_times,
-                         DriverBuildManifest *build_manifest,
-                         char ***out_obj_files,
-                         int *out_obj_count);
+BaaCompilerExitCode driver_compile_files(const CompilerConfig *config,
+                                         char **input_files,
+                                         int input_count,
+                                         CompilerPhaseTimes *phase_times,
+                                         DriverBuildManifest *build_manifest,
+                                         char ***out_obj_files,
+                                         int *out_obj_count);
 
 /**
  * @brief تحرير قائمة ملفات الكائنات المُخرجة.

@@ -104,6 +104,11 @@ flowchart TB
 
 The driver in `main.c` (v0.2.0+) supports multi-file compilation and various modes:
 
+The driver also owns the enforced `compiler-cli-v1` status classification: success `0`,
+source diagnostics `1`, invalid invocation `2`, unsupported target/mode `3`, external
+toolchain or output failure `4`, and internal compiler failure `5`. Pipeline and toolchain
+helpers return this classification to `main.c` rather than collapsing every failure to `1`.
+
 | Flag | Mode | Output | Action |
 |------|------|--------|--------|
 | (Default) | **Compile & Link** | `.exe` | Runs full pipeline. Deletes intermediate `.s` and `.o` files. |

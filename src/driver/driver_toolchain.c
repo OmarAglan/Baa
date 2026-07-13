@@ -384,13 +384,13 @@ static void win_cleanup_staged_objects(char** staged_objects, int obj_count)
 }
 #endif
 
-int driver_toolchain_assemble_one(const CompilerConfig *config,
-                                 CompilerPhaseTimes *times,
-                                 const char *asm_file,
-                                 const char *obj_file)
+BaaCompilerExitCode driver_toolchain_assemble_one(const CompilerConfig *config,
+                                                  CompilerPhaseTimes *times,
+                                                  const char *asm_file,
+                                                  const char *obj_file)
 {
-    if (!config || !asm_file || !obj_file) return 1;
-    int rc = 1;
+    if (!config || !asm_file || !obj_file) return BAA_COMPILER_EXIT_INTERNAL_ERROR;
+    BaaCompilerExitCode rc = BAA_COMPILER_EXIT_TOOLCHAIN_ERROR;
 
 #ifdef _WIN32
     char stage_asm[MAX_PATH] = "";
@@ -400,7 +400,7 @@ int driver_toolchain_assemble_one(const CompilerConfig *config,
         !win_make_stage_file_path("unit", ".o", stage_obj, sizeof(stage_obj)))
     {
         fprintf(stderr, "خطأ: فشل إنشاء مسار staging ASCII للتجميع.\n");
-        return 1;
+        return BAA_COMPILER_EXIT_TOOLCHAIN_ERROR;
     }
     stage_paths_ready = true;
 
@@ -441,7 +441,7 @@ int driver_toolchain_assemble_one(const CompilerConfig *config,
 #endif
 
     if (times && config->time_phases) times->assemble_s += (driver_time_seconds() - t0);
-    rc = 0;
+    rc = BAA_COMPILER_EXIT_SUCCESS;
 
 cleanup:
 #ifdef _WIN32
@@ -450,14 +450,14 @@ cleanup:
     return rc;
 }
 
-int driver_toolchain_link(const CompilerConfig *config,
-                          CompilerPhaseTimes *times,
-                          const char **obj_files,
-                          int obj_count)
+BaaCompilerExitCode driver_toolchain_link(const CompilerConfig *config,
+                                          CompilerPhaseTimes *times,
+                                          const char **obj_files,
+                                          int obj_count)
 {
-    if (!config || !config->output_file) return 1;
-    if (!obj_files || obj_count <= 0) return 1;
-    int rc = 1;
+    if (!config || !config->output_file) return BAA_COMPILER_EXIT_INTERNAL_ERROR;
+    if (!obj_files || obj_count <= 0) return BAA_COMPILER_EXIT_INTERNAL_ERROR;
+    BaaCompilerExitCode rc = BAA_COMPILER_EXIT_TOOLCHAIN_ERROR;
 
     // مساحة إضافية للأعلام الاختيارية (debug/pie/startup/runtime/-lm) + -o + output + NULL
     int argv_cap = obj_count + 14;
@@ -465,7 +465,7 @@ int driver_toolchain_link(const CompilerConfig *config,
     if (!argv_link)
     {
         fprintf(stderr, "خطأ: نفدت الذاكرة.\n");
-        return 1;
+        return BAA_COMPILER_EXIT_INTERNAL_ERROR;
     }
 
 #ifdef _WIN32
@@ -474,7 +474,7 @@ int driver_toolchain_link(const CompilerConfig *config,
     {
         fprintf(stderr, "خطأ: نفدت الذاكرة.\n");
         free(argv_link);
-        return 1;
+        return BAA_COMPILER_EXIT_INTERNAL_ERROR;
     }
     char staged_output[MAX_PATH] = "";
     bool staged_output_ready = false;
@@ -573,7 +573,7 @@ int driver_toolchain_link(const CompilerConfig *config,
 #endif
 
     if (times && config->time_phases) times->link_s += (driver_time_seconds() - t0);
-    rc = 0;
+    rc = BAA_COMPILER_EXIT_SUCCESS;
 
 cleanup:
 #ifdef _WIN32

@@ -291,13 +291,13 @@ static bool driver_record_exported_definitions(DriverOneDefinitionRegistry* regi
     return true;
 }
 
-static int compile_one_ir(const CompilerConfig *config,
-                         int input_count,
-                         const char *current_input,
-                         CompilerPhaseTimes *phase_times,
-                         DriverBuildManifest *build_manifest,
-                         DriverOneDefinitionRegistry *odr_registry,
-                         char **out_obj_file)
+static BaaCompilerExitCode compile_one_ir(const CompilerConfig *config,
+                                          int input_count,
+                                          const char *current_input,
+                                          CompilerPhaseTimes *phase_times,
+                                          DriverBuildManifest *build_manifest,
+                                          DriverOneDefinitionRegistry *odr_registry,
+                                          char **out_obj_file)
 {
     if (out_obj_file) *out_obj_file = NULL;
 
@@ -320,7 +320,7 @@ static int compile_one_ir(const CompilerConfig *config,
             if (!early_obj_file)
             {
                 fprintf(stderr, "خطأ: فشل إنشاء مسار مؤقت ASCII لملف الكائن.\n");
-                return 1;
+                return BAA_COMPILER_EXIT_INTERNAL_ERROR;
             }
         }
 
@@ -329,7 +329,7 @@ static int compile_one_ir(const CompilerConfig *config,
             if (config->verbose)
                 printf("[INFO] Reused cached object: %s\n", current_input);
             if (out_obj_file) *out_obj_file = early_obj_file;
-            return 0;
+            return BAA_COMPILER_EXIT_SUCCESS;
         }
     }
 
@@ -352,7 +352,7 @@ static int compile_one_ir(const CompilerConfig *config,
         lexer_free_dependencies(&lexer);
         free(source);
         if (early_obj_file && early_obj_file != config->output_file) free(early_obj_file);
-        return 1;
+        return BAA_COMPILER_EXIT_SOURCE_ERROR;
     }
 
     if (config->verbose)
@@ -364,7 +364,7 @@ static int compile_one_ir(const CompilerConfig *config,
         lexer_free_dependencies(&lexer);
         free(source);
         if (early_obj_file && early_obj_file != config->output_file) free(early_obj_file);
-        return 1;
+        return BAA_COMPILER_EXIT_SOURCE_ERROR;
     }
     if (config->time_phases) phase_times->analyze_s += (driver_time_seconds() - t0);
 
@@ -374,7 +374,7 @@ static int compile_one_ir(const CompilerConfig *config,
         lexer_free_dependencies(&lexer);
         free(source);
         if (early_obj_file && early_obj_file != config->output_file) free(early_obj_file);
-        return 1;
+        return BAA_COMPILER_EXIT_SOURCE_ERROR;
     }
 
     if (config->check_only || config->header_check)
@@ -391,11 +391,11 @@ static int compile_one_ir(const CompilerConfig *config,
             fprintf(stderr, "خطأ: فشل تحديث بيان فحص المصدر.\n");
             lexer_free_dependencies(&lexer);
             free(source);
-            return 1;
+            return BAA_COMPILER_EXIT_TOOLCHAIN_ERROR;
         }
         lexer_free_dependencies(&lexer);
         free(source);
-        return 0;
+        return BAA_COMPILER_EXIT_SUCCESS;
     }
 
     if (config->time_phases) t0 = driver_time_seconds();
@@ -407,7 +407,7 @@ static int compile_one_ir(const CompilerConfig *config,
         lexer_free_dependencies(&lexer);
         free(source);
         if (early_obj_file && early_obj_file != config->output_file) free(early_obj_file);
-        return 1;
+        return BAA_COMPILER_EXIT_INTERNAL_ERROR;
     }
 
     if (!driver_record_exported_definitions(odr_registry, ir_module, current_input))
@@ -416,7 +416,7 @@ static int compile_one_ir(const CompilerConfig *config,
         lexer_free_dependencies(&lexer);
         free(source);
         if (early_obj_file && early_obj_file != config->output_file) free(early_obj_file);
-        return 1;
+        return BAA_COMPILER_EXIT_SOURCE_ERROR;
     }
 
     if (config->dump_ir)
@@ -443,7 +443,7 @@ static int compile_one_ir(const CompilerConfig *config,
         lexer_free_dependencies(&lexer);
         free(source);
         if (early_obj_file && early_obj_file != config->output_file) free(early_obj_file);
-        return 1;
+        return BAA_COMPILER_EXIT_INVALID_INVOCATION;
     }
 
     if (config->opt_level > OPT_LEVEL_0)
@@ -464,7 +464,7 @@ static int compile_one_ir(const CompilerConfig *config,
             lexer_free_dependencies(&lexer);
             free(source);
             if (early_obj_file && early_obj_file != config->output_file) free(early_obj_file);
-            return 1;
+            return BAA_COMPILER_EXIT_INTERNAL_ERROR;
         }
 
         if (config->verify_gate) ir_optimizer_set_verify_gate(0);
@@ -491,7 +491,7 @@ static int compile_one_ir(const CompilerConfig *config,
             lexer_free_dependencies(&lexer);
             free(source);
             if (early_obj_file && early_obj_file != config->output_file) free(early_obj_file);
-            return 1;
+            return BAA_COMPILER_EXIT_INTERNAL_ERROR;
         }
         if (config->time_phases) phase_times->verify_ir_s += (driver_time_seconds() - t0);
     }
@@ -506,7 +506,7 @@ static int compile_one_ir(const CompilerConfig *config,
             lexer_free_dependencies(&lexer);
             free(source);
             if (early_obj_file && early_obj_file != config->output_file) free(early_obj_file);
-            return 1;
+            return BAA_COMPILER_EXIT_INVALID_INVOCATION;
         }
 
         if (config->verbose)
@@ -520,7 +520,7 @@ static int compile_one_ir(const CompilerConfig *config,
             lexer_free_dependencies(&lexer);
             free(source);
             if (early_obj_file && early_obj_file != config->output_file) free(early_obj_file);
-            return 1;
+            return BAA_COMPILER_EXIT_INTERNAL_ERROR;
         }
         if (config->time_phases) phase_times->verify_ssa_s += (driver_time_seconds() - t0);
     }
@@ -534,7 +534,7 @@ static int compile_one_ir(const CompilerConfig *config,
         lexer_free_dependencies(&lexer);
         free(source);
         if (early_obj_file && early_obj_file != config->output_file) free(early_obj_file);
-        return 1;
+        return BAA_COMPILER_EXIT_INTERNAL_ERROR;
     }
     (void)outssa_changed;
     if (config->time_phases) phase_times->outssa_s += (driver_time_seconds() - t0);
@@ -558,7 +558,7 @@ static int compile_one_ir(const CompilerConfig *config,
                 lexer_free_dependencies(&lexer);
                 free(source);
                 if (early_obj_file && early_obj_file != config->output_file) free(early_obj_file);
-                return 1;
+                return BAA_COMPILER_EXIT_INTERNAL_ERROR;
             }
         }
     }
@@ -576,7 +576,7 @@ static int compile_one_ir(const CompilerConfig *config,
         lexer_free_dependencies(&lexer);
         free(source);
         if (early_obj_file && early_obj_file != config->output_file) free(early_obj_file);
-        return 1;
+        return BAA_COMPILER_EXIT_INTERNAL_ERROR;
     }
 
     if (config->verbose)
@@ -590,7 +590,7 @@ static int compile_one_ir(const CompilerConfig *config,
         lexer_free_dependencies(&lexer);
         free(source);
         if (early_obj_file && early_obj_file != config->output_file) free(early_obj_file);
-        return 1;
+        return BAA_COMPILER_EXIT_INTERNAL_ERROR;
     }
     if (config->time_phases) phase_times->regalloc_s += (driver_time_seconds() - t0);
 
@@ -612,7 +612,7 @@ static int compile_one_ir(const CompilerConfig *config,
         free(source);
         driver_free_if_owned(final_asm_output, config->output_file);
         if (early_obj_file && early_obj_file != config->output_file) free(early_obj_file);
-        return 1;
+        return BAA_COMPILER_EXIT_INTERNAL_ERROR;
     }
 
     FILE *f_asm = baa_fopen_utf8(asm_file, "w");
@@ -626,7 +626,7 @@ static int compile_one_ir(const CompilerConfig *config,
         free(asm_file);
         driver_free_if_owned(final_asm_output, config->output_file);
         if (early_obj_file && early_obj_file != config->output_file) free(early_obj_file);
-        return 1;
+        return BAA_COMPILER_EXIT_INTERNAL_ERROR;
     }
 
     if (config->verbose)
@@ -646,7 +646,7 @@ static int compile_one_ir(const CompilerConfig *config,
             free(asm_file);
             driver_free_if_owned(final_asm_output, config->output_file);
             if (early_obj_file && early_obj_file != config->output_file) free(early_obj_file);
-            return 1;
+            return BAA_COMPILER_EXIT_UNSUPPORTED;
         }
     }
 
@@ -662,7 +662,7 @@ static int compile_one_ir(const CompilerConfig *config,
         free(asm_file);
         driver_free_if_owned(final_asm_output, config->output_file);
         if (early_obj_file && early_obj_file != config->output_file) free(early_obj_file);
-        return 1;
+        return BAA_COMPILER_EXIT_INTERNAL_ERROR;
     }
     if (config->time_phases) phase_times->emit_s += (driver_time_seconds() - t0);
     fclose(f_asm);
@@ -700,7 +700,7 @@ static int compile_one_ir(const CompilerConfig *config,
             fprintf(stderr, "خطأ: مسار خرج التجميع غير صالح.\n");
             free(asm_file);
             lexer_free_dependencies(&lexer);
-            return 1;
+            return BAA_COMPILER_EXIT_INTERNAL_ERROR;
         }
 
         if (!driver_toolchain_copy_file_utf8(asm_file, final_asm_output))
@@ -709,7 +709,7 @@ static int compile_one_ir(const CompilerConfig *config,
             free(asm_file);
             driver_free_if_owned(final_asm_output, config->output_file);
             lexer_free_dependencies(&lexer);
-            return 1;
+            return BAA_COMPILER_EXIT_TOOLCHAIN_ERROR;
         }
 
         if (config->verbose)
@@ -726,19 +726,21 @@ static int compile_one_ir(const CompilerConfig *config,
         free(asm_file);
         driver_free_if_owned(final_asm_output, config->output_file);
         lexer_free_dependencies(&lexer);
-        return 0;
+        return BAA_COMPILER_EXIT_SUCCESS;
     }
 
     char *obj_file = early_obj_file;
 
-    if (driver_toolchain_assemble_one(config, phase_times, asm_file, obj_file) != 0)
+    BaaCompilerExitCode assemble_rc =
+        driver_toolchain_assemble_one(config, phase_times, asm_file, obj_file);
+    if (assemble_rc != BAA_COMPILER_EXIT_SUCCESS)
     {
         if (!config->verbose) (void)driver_toolchain_delete_file_utf8(asm_file);
         free(asm_file);
         if (obj_file != config->output_file) free(obj_file);
         driver_free_if_owned(final_asm_output, config->output_file);
         lexer_free_dependencies(&lexer);
-        return 1;
+        return assemble_rc;
     }
 
     if (!config->verbose)
@@ -758,25 +760,26 @@ static int compile_one_ir(const CompilerConfig *config,
         fprintf(stderr, "خطأ: فشل تحديث بيان/كاش البناء.\n");
         if (obj_file != config->output_file) free(obj_file);
         lexer_free_dependencies(&lexer);
-        return 1;
+        return BAA_COMPILER_EXIT_TOOLCHAIN_ERROR;
     }
 
     lexer_free_dependencies(&lexer);
     if (out_obj_file) *out_obj_file = obj_file;
-    return 0;
+    return BAA_COMPILER_EXIT_SUCCESS;
 }
 
-int driver_compile_files(const CompilerConfig *config,
-                         char **input_files,
-                         int input_count,
-                         CompilerPhaseTimes *phase_times,
-                         DriverBuildManifest *build_manifest,
-                         char ***out_obj_files,
-                         int *out_obj_count)
+BaaCompilerExitCode driver_compile_files(const CompilerConfig *config,
+                                         char **input_files,
+                                         int input_count,
+                                         CompilerPhaseTimes *phase_times,
+                                         DriverBuildManifest *build_manifest,
+                                         char ***out_obj_files,
+                                         int *out_obj_count)
 {
     if (out_obj_files) *out_obj_files = NULL;
     if (out_obj_count) *out_obj_count = 0;
-    if (!config || !input_files || input_count <= 0 || !phase_times) return 1;
+    if (!config || !input_files || input_count <= 0 || !phase_times)
+        return BAA_COMPILER_EXIT_INTERNAL_ERROR;
 
     // عند -S لا نحتاج لإرجاع قائمة كائنات.
     // عند --startup=custom + ربط نهائي: نضيف كائناً إضافياً لبدء التشغيل.
@@ -792,7 +795,7 @@ int driver_compile_files(const CompilerConfig *config,
         if (!obj_files)
         {
             fprintf(stderr, "خطأ: نفدت الذاكرة.\n");
-            return 1;
+            return BAA_COMPILER_EXIT_INTERNAL_ERROR;
         }
     }
 
@@ -809,16 +812,16 @@ int driver_compile_files(const CompilerConfig *config,
         const char *current_input = input_files[i];
         char *obj_file = NULL;
 
-        int rc = compile_one_ir(config, input_count, current_input, phase_times,
-                                build_manifest, odr_registry_ptr, &obj_file);
+        BaaCompilerExitCode rc = compile_one_ir(config, input_count, current_input, phase_times,
+                                                build_manifest, odr_registry_ptr, &obj_file);
 
-        if (rc != 0)
+        if (rc != BAA_COMPILER_EXIT_SUCCESS)
         {
             driver_odr_registry_free(odr_registry_ptr);
             driver_free_obj_files(obj_files, obj_count, config->output_file);
             if (out_obj_files) *out_obj_files = NULL;
             if (out_obj_count) *out_obj_count = 0;
-            return 1;
+            return rc;
         }
 
         if (!config->assembly_only && !config->check_only && !config->header_check)
@@ -839,7 +842,7 @@ int driver_compile_files(const CompilerConfig *config,
             driver_odr_registry_free(odr_registry_ptr);
             fprintf(stderr, "خطأ: فشل توليد كود بدء التشغيل.\n");
             driver_free_obj_files(obj_files, obj_count, config->output_file);
-            return 1;
+            return BAA_COMPILER_EXIT_INTERNAL_ERROR;
         }
 
         if (driver_write_text_file(asm_path, stub) != 0)
@@ -847,17 +850,19 @@ int driver_compile_files(const CompilerConfig *config,
             driver_odr_registry_free(odr_registry_ptr);
             fprintf(stderr, "خطأ: فشل كتابة ملف بدء التشغيل '%s'.\n", asm_path);
             driver_free_obj_files(obj_files, obj_count, config->output_file);
-            return 1;
+            return BAA_COMPILER_EXIT_TOOLCHAIN_ERROR;
         }
 
         // نجمعه إلى كائن ثم نضيفه لقائمة الربط.
-        if (driver_toolchain_assemble_one(config, phase_times, asm_path, obj_path) != 0)
+        BaaCompilerExitCode startup_assemble_rc =
+            driver_toolchain_assemble_one(config, phase_times, asm_path, obj_path);
+        if (startup_assemble_rc != BAA_COMPILER_EXIT_SUCCESS)
         {
             driver_odr_registry_free(odr_registry_ptr);
             fprintf(stderr, "خطأ: فشل تجميع كود بدء التشغيل.\n");
             if (!config->verbose) remove(asm_path);
             driver_free_obj_files(obj_files, obj_count, config->output_file);
-            return 1;
+            return startup_assemble_rc;
         }
 
         if (!config->verbose)
@@ -872,7 +877,7 @@ int driver_compile_files(const CompilerConfig *config,
             fprintf(stderr, "خطأ: نفدت الذاكرة.\n");
             if (!config->verbose) remove(obj_path);
             driver_free_obj_files(obj_files, obj_count, config->output_file);
-            return 1;
+            return BAA_COMPILER_EXIT_INTERNAL_ERROR;
         }
         obj_files[obj_count++] = obj_dup;
     }
@@ -880,7 +885,7 @@ int driver_compile_files(const CompilerConfig *config,
     driver_odr_registry_free(odr_registry_ptr);
     if (out_obj_files) *out_obj_files = obj_files;
     if (out_obj_count) *out_obj_count = obj_count;
-    return 0;
+    return BAA_COMPILER_EXIT_SUCCESS;
 }
 
 void driver_free_obj_files(char **obj_files, int obj_count, const char *output_file)

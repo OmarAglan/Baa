@@ -100,6 +100,12 @@ and cleanup use `انشئ_مجلدات` and guarded `احذف_شجرة` rather t
 | 5 | internal compiler error |
 
 Exit-code meanings are part of `compiler-cli-v1`.
+The driver enforces the table at its owning boundaries: CLI parse failures return `2`,
+unsupported target/mode combinations return `3`, external assembler/linker and output
+failures return `4`, and compiler invariant/allocation failures return `5`. Source and include
+diagnostics remain `1`, including when `--diagnostics=json` is enabled. Takween and other
+process consumers must preserve the numeric status and must not reclassify failures by parsing
+human-readable output.
 
 ---
 

@@ -83,6 +83,7 @@ class IntegrationArtifactDocumentationTests(unittest.TestCase):
             "`-I <dir>` / `-I<dir>`",
             "`schema_version`",
             "Exit-code meanings are part of `compiler-cli-v1`.",
+            "must preserve the numeric status",
         ):
             with self.subTest(surface=surface):
                 self.assertIn(surface, text)

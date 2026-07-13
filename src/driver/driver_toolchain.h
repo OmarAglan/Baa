@@ -34,18 +34,18 @@ BaaObjectFormat driver_toolchain_host_object_format(void);
 /**
  * @brief تجميع ملف .s إلى .o عبر GCC.
  */
-int driver_toolchain_assemble_one(const CompilerConfig *config,
-                                 CompilerPhaseTimes *times,
-                                 const char *asm_file,
-                                 const char *obj_file);
+BaaCompilerExitCode driver_toolchain_assemble_one(const CompilerConfig *config,
+                                                  CompilerPhaseTimes *times,
+                                                  const char *asm_file,
+                                                  const char *obj_file);
 
 /**
  * @brief ربط ملفات الكائنات إلى ملف تنفيذ.
  */
-int driver_toolchain_link(const CompilerConfig *config,
-                          CompilerPhaseTimes *times,
-                          const char **obj_files,
-                          int obj_count);
+BaaCompilerExitCode driver_toolchain_link(const CompilerConfig *config,
+                                          CompilerPhaseTimes *times,
+                                          const char **obj_files,
+                                          int obj_count);
 
 /**
  * @brief نسخ ملف مع دعم مسارات UTF-8 على ويندوز.

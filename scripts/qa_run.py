@@ -594,6 +594,16 @@ def _run_target_info_tests(log_dir: Path) -> StepResult:
     )
 
 
+def _run_cli_exit_code_tests(log_dir: Path) -> StepResult:
+    return _run_logged(
+        "compiler-cli-exit-code-tests",
+        [sys.executable, str(TESTS_DIR / "test_cli_exit_codes.py")],
+        cwd=ROOT,
+        log_dir=log_dir,
+        timeout_s=120.0,
+    )
+
+
 def _run_target_spec_tests(log_dir: Path) -> StepResult:
     return _run_logged(
         "target-spec-tests",
@@ -858,6 +868,11 @@ def main() -> int:
     _print_step(target_info_res)
     all_results.append(target_info_res)
     overall_ok = overall_ok and target_info_res.passed
+
+    cli_exit_code_res = _run_cli_exit_code_tests(log_dir)
+    _print_step(cli_exit_code_res)
+    all_results.append(cli_exit_code_res)
+    overall_ok = overall_ok and cli_exit_code_res.passed
 
     # A) Integration tiers
     test_res = _run_logged(

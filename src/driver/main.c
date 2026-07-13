@@ -112,12 +112,13 @@ static int baa_main(int argc, char **argv)
     if (argc < 2)
     {
         driver_print_help();
-        return 1;
+        return BAA_COMPILER_EXIT_INVALID_INVOCATION;
     }
 
     if (!driver_parse_cli(argc, argv, &config, &cli))
     {
-        return main_cleanup_and_return(&config, &cli, NULL, 0, config.output_file, output_file_owned, 1);
+        return main_cleanup_and_return(&config, &cli, NULL, 0, config.output_file,
+                                       output_file_owned, BAA_COMPILER_EXIT_INVALID_INVOCATION);
     }
     diagnostics_set_json_enabled(config.diagnostics_json);
     if (config.diagnostics_json)
@@ -126,27 +127,33 @@ static int baa_main(int argc, char **argv)
     if (cli.cmd == DRIVER_CMD_HELP)
     {
         driver_print_help();
-        return main_cleanup_and_return(&config, &cli, NULL, 0, config.output_file, output_file_owned, 0);
+        return main_cleanup_and_return(&config, &cli, NULL, 0, config.output_file,
+                                       output_file_owned, BAA_COMPILER_EXIT_SUCCESS);
     }
     if (cli.cmd == DRIVER_CMD_VERSION)
     {
         driver_print_version();
-        return main_cleanup_and_return(&config, &cli, NULL, 0, config.output_file, output_file_owned, 0);
+        return main_cleanup_and_return(&config, &cli, NULL, 0, config.output_file,
+                                       output_file_owned, BAA_COMPILER_EXIT_SUCCESS);
     }
     if (cli.cmd == DRIVER_CMD_TARGET_INFO)
     {
         driver_print_target_info_json(config.target);
-        return main_cleanup_and_return(&config, &cli, NULL, 0, config.output_file, output_file_owned, 0);
+        return main_cleanup_and_return(&config, &cli, NULL, 0, config.output_file,
+                                       output_file_owned, BAA_COMPILER_EXIT_SUCCESS);
     }
     if (cli.cmd == DRIVER_CMD_EXPLAIN)
     {
         bool ok = driver_print_diagnostic_explain(cli.explain_code);
-        return main_cleanup_and_return(&config, &cli, NULL, 0, config.output_file, output_file_owned, ok ? 0 : 1);
+        return main_cleanup_and_return(
+            &config, &cli, NULL, 0, config.output_file, output_file_owned,
+            ok ? BAA_COMPILER_EXIT_SUCCESS : BAA_COMPILER_EXIT_INVALID_INVOCATION);
     }
     if (cli.cmd == DRIVER_CMD_UPDATE)
     {
         run_updater();
-        return main_cleanup_and_return(&config, &cli, NULL, 0, config.output_file, output_file_owned, 0);
+        return main_cleanup_and_return(&config, &cli, NULL, 0, config.output_file,
+                                       output_file_owned, BAA_COMPILER_EXIT_SUCCESS);
     }
 
     char **input_files = cli.input_files;
@@ -155,7 +162,8 @@ static int baa_main(int argc, char **argv)
     if (input_count == 0)
     {
         fprintf(stderr, "Error: No input file specified\n");
-        return main_cleanup_and_return(&config, &cli, NULL, 0, config.output_file, output_file_owned, 1);
+        return main_cleanup_and_return(&config, &cli, NULL, 0, config.output_file,
+                                       output_file_owned, BAA_COMPILER_EXIT_INVALID_INVOCATION);
     }
 
     // تحديد اسم الملف المخرج الافتراضي
@@ -177,7 +185,8 @@ static int baa_main(int argc, char **argv)
             if (!config.output_file)
             {
                 fprintf(stderr, "خطأ: نفدت الذاكرة.\n");
-                return main_cleanup_and_return(&config, &cli, NULL, 0, config.output_file, output_file_owned, 1);
+                return main_cleanup_and_return(&config, &cli, NULL, 0, config.output_file,
+                                               output_file_owned, BAA_COMPILER_EXIT_INTERNAL_ERROR);
             }
             output_file_owned = true;
             (void)snprintf(config.output_file, n, "out%s", ext);
@@ -200,19 +209,21 @@ static int baa_main(int argc, char **argv)
                     "ملاحظة: استخدم -S لتوليد ملف .s فقط. الدعم الكامل لـ cross-target مؤجل.\n",
                     config.target->name ? config.target->name : "<unknown>");
             driver_build_manifest_free(&build_manifest);
-            return main_cleanup_and_return(&config, &cli, NULL, 0, config.output_file, output_file_owned, 1);
+            return main_cleanup_and_return(&config, &cli, NULL, 0, config.output_file,
+                                           output_file_owned, BAA_COMPILER_EXIT_UNSUPPORTED);
         }
     }
 
     char **obj_files_to_link = NULL;
     int obj_count = 0;
-    if (driver_compile_files(&config, input_files, input_count, &phase_times,
-                             &build_manifest,
-                             &obj_files_to_link, &obj_count) != 0)
+    BaaCompilerExitCode compile_rc =
+        driver_compile_files(&config, input_files, input_count, &phase_times,
+                             &build_manifest, &obj_files_to_link, &obj_count);
+    if (compile_rc != BAA_COMPILER_EXIT_SUCCESS)
     {
         driver_build_manifest_free(&build_manifest);
         return main_cleanup_and_return(&config, &cli, obj_files_to_link, obj_count, config.output_file,
-                                       output_file_owned, 1);
+                                       output_file_owned, compile_rc);
     }
 
     if (config.build_manifest_file)
@@ -222,7 +233,7 @@ static int baa_main(int argc, char **argv)
             fprintf(stderr, "خطأ: فشل كتابة بيان البناء '%s'.\n", config.build_manifest_file);
             driver_build_manifest_free(&build_manifest);
             return main_cleanup_and_return(&config, &cli, obj_files_to_link, obj_count, config.output_file,
-                                           output_file_owned, 1);
+                                           output_file_owned, BAA_COMPILER_EXIT_TOOLCHAIN_ERROR);
         }
     }
 
@@ -232,19 +243,21 @@ static int baa_main(int argc, char **argv)
         print_phase_times_and_mem(&config, &phase_times);
         driver_build_manifest_free(&build_manifest);
         return main_cleanup_and_return(&config, &cli, obj_files_to_link, obj_count, config.output_file,
-                                       output_file_owned, 0);
+                                       output_file_owned, BAA_COMPILER_EXIT_SUCCESS);
     }
 
     // --- المرحلة النهائية: الربط (Linking) ---
     if (config.verbose)
         printf("\n[INFO] Linking %d object files...\n", obj_count);
 
-    if (driver_toolchain_link(&config, &phase_times,
-                              (const char **)obj_files_to_link, obj_count) != 0)
+    BaaCompilerExitCode link_rc =
+        driver_toolchain_link(&config, &phase_times,
+                              (const char **)obj_files_to_link, obj_count);
+    if (link_rc != BAA_COMPILER_EXIT_SUCCESS)
     {
         driver_build_manifest_free(&build_manifest);
         return main_cleanup_and_return(&config, &cli, obj_files_to_link, obj_count, config.output_file,
-                                       output_file_owned, 1);
+                                       output_file_owned, link_rc);
     }
 
     // تنظيف ملفات الكائنات المؤقتة
@@ -275,7 +288,7 @@ static int baa_main(int argc, char **argv)
 
     driver_build_manifest_free(&build_manifest);
     return main_cleanup_and_return(&config, &cli, obj_files_to_link, obj_count, config.output_file,
-                                   output_file_owned, 0);
+                                   output_file_owned, BAA_COMPILER_EXIT_SUCCESS);
 }
 
 #ifdef _WIN32
@@ -307,13 +320,13 @@ static char* main_utf8_from_wide(const wchar_t* value)
  */
 int wmain(int argc, wchar_t** wide_argv)
 {
-    if (argc < 0 || !wide_argv) return 5;
+    if (argc < 0 || !wide_argv) return BAA_COMPILER_EXIT_INTERNAL_ERROR;
 
     char** utf8_argv = (char**)calloc((size_t)argc + 1, sizeof(char*));
     if (!utf8_argv)
     {
         fputs("خطأ داخلي: تعذر تخصيص وسائط سطر الأوامر.\n", stderr);
-        return 5;
+        return BAA_COMPILER_EXIT_INTERNAL_ERROR;
     }
 
     for (int i = 0; i < argc; ++i)
@@ -324,7 +337,7 @@ int wmain(int argc, wchar_t** wide_argv)
             fputs("خطأ داخلي: تعذر تحويل وسيط سطر الأوامر إلى UTF-8.\n", stderr);
             for (int j = 0; j < i; ++j) free(utf8_argv[j]);
             free(utf8_argv);
-            return 5;
+            return BAA_COMPILER_EXIT_INTERNAL_ERROR;
         }
     }
 

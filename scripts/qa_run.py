@@ -604,6 +604,34 @@ def _run_cli_exit_code_tests(log_dir: Path) -> StepResult:
     )
 
 
+def _run_assembly_surface_inventory_tests(log_dir: Path) -> StepResult:
+    return _run_logged(
+        "assembly-surface-inventory-tests",
+        [sys.executable, str(TESTS_DIR / "test_assembly_surface_inventory.py")],
+        cwd=ROOT,
+        log_dir=log_dir,
+        timeout_s=120.0,
+    )
+
+
+def _run_assembly_surface_inventory_gate(baa: Path, log_dir: Path) -> StepResult:
+    return _run_logged(
+        "assembly-surface-inventory-gate",
+        [
+            sys.executable,
+            str(ROOT / "scripts" / "inventory_assembly_surface.py"),
+            "--compiler",
+            str(baa),
+            "--output",
+            str(ROOT / "docs" / "generated" / "assembly_surface_v1.json"),
+            "--check",
+        ],
+        cwd=ROOT,
+        log_dir=log_dir,
+        timeout_s=120.0,
+    )
+
+
 def _run_target_spec_tests(log_dir: Path) -> StepResult:
     return _run_logged(
         "target-spec-tests",
@@ -824,6 +852,11 @@ def main() -> int:
     _activate_compiler_for_children(baa)
     print(f"qa: compiler={baa}")
 
+    assembly_surface_inventory_gate_res = _run_assembly_surface_inventory_gate(baa, log_dir)
+    _print_step(assembly_surface_inventory_gate_res)
+    all_results.append(assembly_surface_inventory_gate_res)
+    overall_ok = overall_ok and assembly_surface_inventory_gate_res.passed
+
     explain_res = _run_diagnostic_explain_smoke(baa, log_dir)
     _print_step(explain_res)
     all_results.append(explain_res)
@@ -873,6 +906,11 @@ def main() -> int:
     _print_step(cli_exit_code_res)
     all_results.append(cli_exit_code_res)
     overall_ok = overall_ok and cli_exit_code_res.passed
+
+    assembly_surface_inventory_res = _run_assembly_surface_inventory_tests(log_dir)
+    _print_step(assembly_surface_inventory_res)
+    all_results.append(assembly_surface_inventory_res)
+    overall_ok = overall_ok and assembly_surface_inventory_res.passed
 
     # A) Integration tiers
     test_res = _run_logged(

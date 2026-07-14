@@ -5,6 +5,7 @@ from __future__ import annotations
 import os
 import re
 import shutil
+import struct
 import subprocess
 import tempfile
 import unittest
@@ -12,6 +13,121 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
+
+
+def _read_c_string(data: bytes, offset: int) -> str:
+    end = data.find(b"\0", offset)
+    if end < 0:
+        end = len(data)
+    return data[offset:end].decode("ascii", errors="replace")
+
+
+def _inspect_coff_object(data: bytes) -> tuple[set[str], set[str], int]:
+    if len(data) < 20:
+        raise ValueError("truncated COFF header")
+
+    machine, section_count, _, symbol_offset, symbol_count, optional_size, _ = (
+        struct.unpack_from("<HHLLLHH", data, 0)
+    )
+    if machine != 0x8664:
+        raise ValueError(f"unexpected COFF machine: 0x{machine:04x}")
+
+    sections: set[str] = set()
+    relocation_count = 0
+    section_offset = 20 + optional_size
+    for index in range(section_count):
+        offset = section_offset + (index * 40)
+        if offset + 40 > len(data):
+            raise ValueError("truncated COFF section table")
+        raw_name = data[offset : offset + 8]
+        sections.add(raw_name.rstrip(b"\0").decode("ascii", errors="replace"))
+        relocation_count += struct.unpack_from("<H", data, offset + 32)[0]
+
+    symbol_table_end = symbol_offset + (symbol_count * 18)
+    if symbol_table_end + 4 > len(data):
+        raise ValueError("truncated COFF symbol table")
+    string_table = data[symbol_table_end:]
+
+    global_symbols: set[str] = set()
+    index = 0
+    while index < symbol_count:
+        offset = symbol_offset + (index * 18)
+        raw_name = data[offset : offset + 8]
+        zeroes, string_offset = struct.unpack_from("<LL", raw_name, 0)
+        if zeroes == 0:
+            name = _read_c_string(string_table, string_offset)
+        else:
+            name = raw_name.rstrip(b"\0").decode("ascii", errors="replace")
+        section_number = struct.unpack_from("<h", data, offset + 12)[0]
+        storage_class = data[offset + 16]
+        auxiliary_count = data[offset + 17]
+        if storage_class == 2 and section_number > 0:
+            global_symbols.add(name)
+        index += 1 + auxiliary_count
+
+    return sections, global_symbols, relocation_count
+
+
+def _inspect_elf64_object(data: bytes) -> tuple[set[str], set[str], int]:
+    if len(data) < 64 or data[:6] != b"\x7fELF\x02\x01":
+        raise ValueError("not a little-endian ELF64 object")
+
+    section_offset = struct.unpack_from("<Q", data, 40)[0]
+    section_entry_size = struct.unpack_from("<H", data, 58)[0]
+    section_count = struct.unpack_from("<H", data, 60)[0]
+    section_names_index = struct.unpack_from("<H", data, 62)[0]
+    if section_entry_size < 64 or section_names_index >= section_count:
+        raise ValueError("invalid ELF64 section table")
+
+    section_headers: list[tuple[int, int, int, int, int, int, int]] = []
+    for index in range(section_count):
+        offset = section_offset + (index * section_entry_size)
+        if offset + 64 > len(data):
+            raise ValueError("truncated ELF64 section table")
+        name, section_type = struct.unpack_from("<II", data, offset)
+        file_offset, size = struct.unpack_from("<QQ", data, offset + 24)
+        link, info = struct.unpack_from("<II", data, offset + 40)
+        entry_size = struct.unpack_from("<Q", data, offset + 56)[0]
+        section_headers.append(
+            (name, section_type, file_offset, size, link, info, entry_size)
+        )
+
+    _, _, names_offset, names_size, _, _, _ = section_headers[section_names_index]
+    section_names = data[names_offset : names_offset + names_size]
+    sections = {_read_c_string(section_names, header[0]) for header in section_headers}
+
+    global_symbols: set[str] = set()
+    relocation_count = 0
+    for _, section_type, file_offset, size, link, _, entry_size in section_headers:
+        if section_type in (4, 9):
+            if entry_size == 0 or size % entry_size != 0:
+                raise ValueError("invalid ELF64 relocation table")
+            relocation_count += size // entry_size
+        if section_type != 2:
+            continue
+        if link >= section_count:
+            raise ValueError("invalid ELF64 symbol string table")
+        _, _, strings_offset, strings_size, _, _, _ = section_headers[link]
+        strings = data[strings_offset : strings_offset + strings_size]
+        if entry_size < 24 or size % entry_size != 0:
+            raise ValueError("invalid ELF64 symbol table")
+        for symbol_offset in range(file_offset, file_offset + size, entry_size):
+            if symbol_offset + entry_size > len(data):
+                raise ValueError("truncated ELF64 symbol table")
+            name = struct.unpack_from("<I", data, symbol_offset)[0]
+            info = data[symbol_offset + 4]
+            section_index = struct.unpack_from("<H", data, symbol_offset + 6)[0]
+            if (info >> 4) == 1 and section_index != 0:
+                global_symbols.add(_read_c_string(strings, name))
+
+    return sections, global_symbols, relocation_count
+
+
+def _inspect_object(path: Path) -> tuple[set[str], set[str], int]:
+    data = path.read_bytes()
+    if data.startswith(b"\x7fELF"):
+        return _inspect_elf64_object(data)
+    return _inspect_coff_object(data)
 
 
 def _find_baa() -> Path:
@@ -199,48 +315,17 @@ class NazmEmitterTests(unittest.TestCase):
             self.assertEqual(shadow_run.stdout, production_run.stdout)
             self.assertEqual(shadow_run.stderr, production_run.stderr)
 
-            nm = shutil.which("nm")
-            objdump = shutil.which("objdump")
-            if nm and objdump:
-                production_object = work / f"إنتاج{object_suffix}"
-                compile_object = self.run_baa(
-                    work, "-c", str(source), "-o", str(production_object)
-                )
-                self.assertEqual(compile_object.returncode, 0, compile_object.stderr)
+            production_object = work / f"إنتاج{object_suffix}"
+            compile_object = self.run_baa(
+                work, "-c", str(source), "-o", str(production_object)
+            )
+            self.assertEqual(compile_object.returncode, 0, compile_object.stderr)
 
-                for artifact in (production_object, shadow_object):
-                    symbols = subprocess.run(
-                        [nm, "-g", "--defined-only", str(artifact)],
-                        text=True,
-                        encoding="utf-8",
-                        errors="replace",
-                        capture_output=True,
-                        timeout=30,
-                        check=True,
-                    ).stdout
-                    self.assertRegex(symbols, r"\bmain$")
-
-                    sections = subprocess.run(
-                        [objdump, "-h", str(artifact)],
-                        text=True,
-                        encoding="utf-8",
-                        errors="replace",
-                        capture_output=True,
-                        timeout=30,
-                        check=True,
-                    ).stdout
-                    self.assertRegex(sections, r"\s\.text\s")
-
-                    relocations = subprocess.run(
-                        [objdump, "-r", str(artifact)],
-                        text=True,
-                        encoding="utf-8",
-                        errors="replace",
-                        capture_output=True,
-                        timeout=30,
-                        check=True,
-                    ).stdout
-                    self.assertNotRegex(relocations, r"R_X86_64_|IMAGE_REL_AMD64_")
+            for artifact in (production_object, shadow_object):
+                sections, global_symbols, relocation_count = _inspect_object(artifact)
+                self.assertIn(".text", sections)
+                self.assertIn("main", global_symbols)
+                self.assertEqual(relocation_count, 0)
 
 
 if __name__ == "__main__":

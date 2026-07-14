@@ -212,7 +212,7 @@ static char* join_cache_path(const CompilerConfig* config, const char* slot, con
 bool driver_build_cache_is_allowed(const CompilerConfig* config)
 {
     if (!config || !config->incremental) return false;
-    if (config->assembly_only) return false;
+    if (config->assembly_only || config->emit_nazm) return false;
     if (config->check_only || config->header_check) return false;
     if (config->diagnostics_json) return false;
     if (config->dump_ir || config->dump_ir_opt || config->emit_ir) return false;
@@ -624,6 +624,8 @@ bool driver_build_write_manifest(const CompilerConfig* config,
         mode = "check-header";
     else if (config && config->assembly_only)
         mode = "assembly";
+    else if (config && config->emit_nazm)
+        mode = "nazm-source";
     else if (config && config->compile_only)
         mode = "compile";
     fprintf(out, "\",\n  \"mode\": \"%s\",\n", mode);

@@ -305,7 +305,8 @@ static BaaCompilerExitCode compile_one_ir(const CompilerConfig *config,
         printf("\n[INFO] Processing %s...\n", current_input);
 
     char *early_obj_file = NULL;
-    if (!config->assembly_only && !config->check_only && !config->header_check)
+    if (!config->assembly_only && !config->emit_nazm &&
+        !config->check_only && !config->header_check)
     {
         if (config->compile_only)
         {
@@ -594,6 +595,59 @@ static BaaCompilerExitCode compile_one_ir(const CompilerConfig *config,
     }
     if (config->time_phases) phase_times->regalloc_s += (driver_time_seconds() - t0);
 
+    if (config->emit_nazm)
+    {
+        char *nazm_output = NULL;
+        if (input_count == 1 && config->output_file)
+            nazm_output = config->output_file;
+        else
+            nazm_output = change_extension_alloc(current_input, ".نظم");
+
+        if (!nazm_output)
+        {
+            fprintf(stderr, "خطأ: تعذر تحديد مسار خرج نظم.\n");
+            mach_module_free(mach_module);
+            ir_module_free(ir_module);
+            lexer_free_dependencies(&lexer);
+            free(source);
+            return BAA_COMPILER_EXIT_INTERNAL_ERROR;
+        }
+
+        if (config->time_phases) t0 = driver_time_seconds();
+        BaaCompilerExitCode nazm_rc =
+            driver_emit_nazm_source(config, mach_module, current_input, nazm_output);
+        if (config->time_phases) phase_times->emit_s += (driver_time_seconds() - t0);
+
+        if (nazm_rc != BAA_COMPILER_EXIT_SUCCESS)
+        {
+            mach_module_free(mach_module);
+            ir_module_free(ir_module);
+            lexer_free_dependencies(&lexer);
+            free(source);
+            driver_free_if_owned(nazm_output, config->output_file);
+            return nazm_rc;
+        }
+
+        bool manifest_ok = driver_build_record_uncached(config,
+                                                         current_input,
+                                                         nazm_output,
+                                                         lexer_deps,
+                                                         lexer_dep_count,
+                                                         "nazm-source",
+                                                         build_manifest);
+        if (config->verbose)
+            printf("[INFO] Generated Nazm source: %s\n", nazm_output);
+
+        mach_module_free(mach_module);
+        ir_module_free(ir_module);
+        lexer_free_dependencies(&lexer);
+        free(source);
+        driver_free_if_owned(nazm_output, config->output_file);
+        return manifest_ok
+            ? BAA_COMPILER_EXIT_SUCCESS
+            : BAA_COMPILER_EXIT_TOOLCHAIN_ERROR;
+    }
+
     char* final_asm_output = NULL;
     if (config->assembly_only)
     {
@@ -784,8 +838,10 @@ BaaCompilerExitCode driver_compile_files(const CompilerConfig *config,
     // عند -S لا نحتاج لإرجاع قائمة كائنات.
     // عند --startup=custom + ربط نهائي: نضيف كائناً إضافياً لبدء التشغيل.
     bool need_startup_obj =
-        (!config->assembly_only && !config->compile_only && !config->check_only && !config->header_check && config->custom_startup);
-    int cap = (config->assembly_only || config->check_only || config->header_check) ? 0
+        (!config->assembly_only && !config->emit_nazm && !config->compile_only &&
+         !config->check_only && !config->header_check && config->custom_startup);
+    int cap = (config->assembly_only || config->emit_nazm ||
+               config->check_only || config->header_check) ? 0
         : (input_count + (need_startup_obj ? 1 : 0));
     char **obj_files = NULL;
     int obj_count = 0;
@@ -801,7 +857,8 @@ BaaCompilerExitCode driver_compile_files(const CompilerConfig *config,
 
     DriverOneDefinitionRegistry odr_registry;
     DriverOneDefinitionRegistry* odr_registry_ptr = NULL;
-    if (!config->assembly_only && !config->compile_only && !config->check_only && !config->header_check && input_count > 1)
+    if (!config->assembly_only && !config->emit_nazm && !config->compile_only &&
+        !config->check_only && !config->header_check && input_count > 1)
     {
         driver_odr_registry_init(&odr_registry);
         odr_registry_ptr = &odr_registry;
@@ -824,7 +881,8 @@ BaaCompilerExitCode driver_compile_files(const CompilerConfig *config,
             return rc;
         }
 
-        if (!config->assembly_only && !config->check_only && !config->header_check)
+        if (!config->assembly_only && !config->emit_nazm &&
+            !config->check_only && !config->header_check)
         {
             obj_files[obj_count++] = obj_file;
         }

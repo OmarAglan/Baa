@@ -47,6 +47,7 @@ set(SOURCES
     src/backend/isel.c        # Instruction selection (v0.3.2.1)
     src/backend/regalloc.c    # Register allocation (v0.3.2.2)
     src/backend/emit.c        # Code emission (v0.3.2.3)
+    src/backend/emit_nazm.c   # Canonical Arabic Nazm source emission
     src/backend/target.c      # Target abstraction (v0.3.2.8.1)
     src/frontend/lexer.c
     src/driver/main.c
@@ -55,6 +56,7 @@ set(SOURCES
     src/driver/driver_cli.c
     src/driver/driver_time.c
     src/driver/driver_toolchain.c
+    src/driver/driver_nazm.c
     src/driver/driver_pipeline.c
     src/driver/driver_build.c
 )

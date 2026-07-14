@@ -24,6 +24,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
   - Kept arbitrary ASCII linker symbols, external calls, RIP-relative references, read-only
     sections, unsupported widths, `setcc`, extensions, and SSE2 visible instead of treating
     GAS success as Nazm success; the entry symbol now has the Arabic source spelling `الرئيسية`.
+- **First executable Arabic Nazm emitter slice**:
+  - Added non-default `--emit-nazm` output after register allocation for a minimal integer
+    entry program on Windows and Linux targets while leaving `-S` and production GAS unchanged.
+  - Emits Arabic mnemonics, registers, labels, and numerals only; the source entry remains
+    `الرئيسية`, with line/column comments preserving the originating Baa span.
+  - Preflights the complete machine module and returns unsupported status `3` without a
+    partial output file for every unimplemented instruction, operand, data, or string form.
 - **Portable SHA-256 file hashing**:
   - Added `تجزئة_ملف_SHA256` as an owned lowercase digest primitive on Windows and POSIX,
     with a known-vector integration test for tooling and immutable package archives.

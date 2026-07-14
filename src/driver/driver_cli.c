@@ -156,6 +156,7 @@ void driver_print_help(void)
     printf("  -I <dir>     Add include search directory (can be repeated)\n");
     printf("  -I<dir>      Add include search directory (compact form)\n");
     printf("  -S, -s       Compile to assembly only (.s)\n");
+    printf("  --emit-nazm  Emit canonical Arabic Nazm source only (.نظم)\n");
     printf("  -c           Compile to object file only (.o)\n");
     printf("  --check      Parse/analyze source files without emitting code\n");
     printf("  --check-header  Parse/analyze header declarations without emitting code\n");
@@ -421,6 +422,8 @@ bool driver_parse_cli(int argc, char **argv, CompilerConfig *config, DriverParse
         {
             if (strcmp(arg, "-S") == 0 || strcmp(arg, "-s") == 0)
                 config->assembly_only = true;
+            else if (strcmp(arg, "--emit-nazm") == 0)
+                config->emit_nazm = true;
             else if (strcmp(arg, "-c") == 0)
                 config->compile_only = true;
             else if (strcmp(arg, "--check") == 0)
@@ -683,6 +686,15 @@ bool driver_parse_cli(int argc, char **argv, CompilerConfig *config, DriverParse
         {
             inputs[input_count++] = arg;
         }
+    }
+
+    if (config->emit_nazm &&
+        (config->assembly_only || config->compile_only ||
+         config->check_only || config->header_check))
+    {
+        fprintf(stderr, "خطأ: --emit-nazm لا يقبل -S أو -c أو أوضاع الفحص.\n");
+        parse_release_temp_arrays(inputs, include_dirs);
+        return false;
     }
 
     parse_set_result(out,

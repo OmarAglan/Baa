@@ -54,6 +54,7 @@ static const char* main_mode_name(const CompilerConfig* config)
     if (!config) return "compile";
     if (config->check_only) return "check";
     if (config->header_check) return "check-header";
+    if (config->emit_nazm) return "nazm-source";
     if (config->assembly_only) return "assembly";
     if (config->compile_only) return "compile";
     return "link";
@@ -169,7 +170,7 @@ static int baa_main(int argc, char **argv)
     // تحديد اسم الملف المخرج الافتراضي
     if (!config.output_file)
     {
-        if (config.assembly_only)
+        if (config.assembly_only || config.emit_nazm)
             config.output_file = NULL; // سيتم تحديده لكل ملف
         else if (config.compile_only)
             config.output_file = NULL; // سيتم تحديده لكل ملف
@@ -200,7 +201,8 @@ static int baa_main(int argc, char **argv)
     // v0.3.2.8.4: لا ندعم حالياً الربط/التجميع العابر للأهداف (cross-link/cross-assemble).
     // - نسمح بـ -S لتوليد assembly فقط لأي هدف.
     // - أما -c أو الربط النهائي فيتطلبان أن يطابق الهدف نظام المضيف.
-    if (!config.assembly_only && !config.check_only && !config.header_check)
+    if (!config.assembly_only && !config.emit_nazm &&
+        !config.check_only && !config.header_check)
     {
         if (config.target && config.target->obj_format != driver_toolchain_host_object_format())
         {
@@ -238,7 +240,8 @@ static int baa_main(int argc, char **argv)
     }
 
     // إذا طلب المستخدم نمطاً يتوقف قبل الربط النهائي، نتوقف هنا
-    if (config.assembly_only || config.compile_only || config.check_only || config.header_check)
+    if (config.assembly_only || config.emit_nazm || config.compile_only ||
+        config.check_only || config.header_check)
     {
         print_phase_times_and_mem(&config, &phase_times);
         driver_build_manifest_free(&build_manifest);

@@ -111,9 +111,15 @@ the coverage matrix.
 
 ## Current admission status
 
-Stage B and the Stage B.1 comparison/fixture gate are complete. The canonical
-Arabic emitter and executable shadow option are not yet admitted. Nazm still
-needs support for Baa's observed operand widths, `setcc`, extension and
-division forms, scalar SSE2 forms, external symbols, read-only sections,
-and the required ELF64/COFF relocations. The production assembler therefore
-remains unchanged.
+Stage B, the Stage B.1 comparison/fixture gate, and the first executable
+emitter slice are complete. `--emit-nazm` now emits an Arabic-only `.نظم`
+source for a minimal integer entry program on either target. It retains Baa
+line/column spans in Arabic comments, uses `الرئيسية` rather than an ASCII ABI
+name, and fails with status `3` before leaving an output file when any machine
+form is unsupported.
+
+The explicit `--nazm-shadow=<path>` invocation and automated object/link/runtime
+comparison are not yet admitted. Nazm still needs support for Baa's observed
+operand widths, `setcc`, extension and division forms, scalar SSE2 forms,
+external symbols, read-only sections, and the required ELF64/COFF relocations.
+The production assembler therefore remains unchanged.

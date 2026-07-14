@@ -210,6 +210,23 @@ def _print_step(res: StepResult) -> None:
         print(f"       detail: {res.detail}")
         print(f"       stdout: {res.stdout_log}")
         print(f"       stderr: {res.stderr_log}")
+        for label, relative_path in (
+            ("stdout tail", res.stdout_log),
+            ("stderr tail", res.stderr_log),
+        ):
+            if not relative_path:
+                continue
+            path = ROOT / relative_path
+            try:
+                lines = path.read_text(
+                    encoding="utf-8", errors="replace"
+                ).splitlines()[-20:]
+            except OSError:
+                continue
+            if lines:
+                print(f"       {label}:")
+                for line in lines:
+                    print(f"         {line}")
 
 
 def _run_verify_smoke(baa: Path, log_dir: Path) -> tuple[bool, list[StepResult]]:

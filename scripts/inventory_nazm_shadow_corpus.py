@@ -236,6 +236,49 @@ def build_matrix(
     }
 
 
+def _short_value(value: Any) -> str:
+    rendered = repr(value)
+    return rendered if len(rendered) <= 240 else rendered[:237] + "..."
+
+
+def _first_difference(current: Any, generated: Any, path: str = "$") -> str | None:
+    if type(current) is not type(generated):
+        return (
+            f"{path}: type {type(current).__name__} != "
+            f"{type(generated).__name__}"
+        )
+    if isinstance(current, dict):
+        current_keys = set(current)
+        generated_keys = set(generated)
+        if current_keys != generated_keys:
+            return (
+                f"{path}: keys {_short_value(sorted(current_keys))} != "
+                f"{_short_value(sorted(generated_keys))}"
+            )
+        for key in current:
+            difference = _first_difference(
+                current[key], generated[key], f"{path}.{key}"
+            )
+            if difference:
+                return difference
+        return None
+    if isinstance(current, list):
+        if len(current) != len(generated):
+            return f"{path}: length {len(current)} != {len(generated)}"
+        for index, (current_item, generated_item) in enumerate(
+            zip(current, generated)
+        ):
+            difference = _first_difference(
+                current_item, generated_item, f"{path}[{index}]"
+            )
+            if difference:
+                return difference
+        return None
+    if current != generated:
+        return f"{path}: {_short_value(current)} != {_short_value(generated)}"
+    return None
+
+
 def _parse_args(argv: list[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--compiler", type=Path, required=True)
@@ -278,10 +321,19 @@ def main(argv: list[str] | None = None) -> int:
             print(f"error: cannot read checked matrix {output}: {exc}", file=sys.stderr)
             return 1
         if current != generated:
+            try:
+                current_payload = json.loads(current)
+            except json.JSONDecodeError as exc:
+                difference = f"$: checked matrix is invalid JSON: {exc}"
+            else:
+                difference = _first_difference(current_payload, document)
+                if difference is None:
+                    difference = "$: semantic content matches; JSON formatting differs"
             print(
                 "error: checked Baa-to-Nazm shadow matrix is stale; regenerate it without --check",
                 file=sys.stderr,
             )
+            print(f"error: first difference: {difference}", file=sys.stderr)
             return 1
         print(f"verified {output}")
         return 1 if has_errors else 0

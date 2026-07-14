@@ -100,6 +100,55 @@ class Utf8ValidationTests(unittest.TestCase):
             "0xFF",
         )
 
+    def test_generated_program_accepts_arabic_argv_without_main_alias(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="baa_arabic_entry_") as temp:
+            work = Path(temp)
+            source = work / "الرئيسية.baa"
+            output = work / ("برنامج.exe" if os.name == "nt" else "برنامج")
+            assembly = work / "برنامج.s"
+            source.write_text(
+                '#تضمين "baalib.baahd"\n'
+                "صحيح الرئيسية(صحيح عدد، نص[] معاملات) {\n"
+                "    إذا (عدد != ٢) { إرجع ١. }\n"
+                '    إذا (قارن_نص(معاملات[١]، "تحقق") != ٠) { إرجع ٢. }\n'
+                "    إرجع ٠.\n"
+                "}\n",
+                encoding="utf-8",
+            )
+            compile_proc = subprocess.run(
+                [str(self.baa), "-I", str(ROOT / "stdlib"), source.name, "-o", str(output)],
+                cwd=str(work),
+                text=True,
+                encoding="utf-8",
+                errors="replace",
+                capture_output=True,
+                timeout=30,
+            )
+            self.assertEqual(
+                compile_proc.returncode,
+                0,
+                f"{compile_proc.stdout}\n{compile_proc.stderr}",
+            )
+            run_proc = subprocess.run(
+                [str(output), "تحقق"],
+                cwd=str(work),
+                capture_output=True,
+                timeout=20,
+            )
+            self.assertEqual(run_proc.returncode, 0, run_proc.stderr)
+
+            assembly_proc = subprocess.run(
+                [str(self.baa), "-I", str(ROOT / "stdlib"), "-S", source.name, "-o", str(assembly)],
+                cwd=str(work),
+                capture_output=True,
+                timeout=20,
+            )
+            self.assertEqual(assembly_proc.returncode, 0, assembly_proc.stderr)
+            assembly_text = assembly.read_text(encoding="utf-8")
+            self.assertIn(".globl الرئيسية", assembly_text)
+            self.assertNotIn(".globl main", assembly_text)
+            self.assertIn("الرئيسية_المستخدم", assembly_text)
+
     @unittest.skipUnless(os.name == "nt", "Windows Unicode argv regression")
     def test_windows_unicode_source_and_include_paths_reach_driver_as_utf8(self) -> None:
         with tempfile.TemporaryDirectory(prefix="baa_unicode_argv_") as temp:

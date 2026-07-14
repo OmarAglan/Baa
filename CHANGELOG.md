@@ -10,6 +10,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Added
 
+- **Arabic-only hosted entry ABI**:
+  - Production GAS objects now export `الرئيسية` unchanged, argument-bearing programs use
+    `الرئيسية_المستخدم`, and final executables enter through `الرئيسية_بدء`; no `main` or
+    `wmain` alias is generated.
+  - Linux startup passes the Arabic entry to `__libc_start_main`. Windows uses an Arabic
+    `بدء_ويندوز` bridge that converts the original UTF-16 command line to UTF-8 before Baa's
+    `نص[]` lowering, so Arabic commands and paths need no Latin fallback.
+  - Windows passes the UTF-8 entry symbol to the native linker through a response file,
+    avoiding narrow-argv corruption while keeping GAS as the production assembler.
+
 - **Baa/Nazm assembly-surface inventory**:
   - Added the deterministic `baa-assembly-surface-v1` generator and QA `--check` gate over
     all assembly-producing integration, stress, and example sources for Windows and Linux.
@@ -35,7 +45,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
     include-path pointers whose lifetime differed between Windows and Linux.
 - **First executable Arabic Nazm emitter slice**:
   - Added non-default `--emit-nazm` output after register allocation for a minimal integer
-    entry program on Windows and Linux targets while leaving `-S` and production GAS unchanged.
+    entry program on Windows and Linux targets while leaving GAS as the production/default assembler.
   - Emits Arabic mnemonics, registers, labels, and numerals only; the source entry remains
     `الرئيسية`, with line/column comments preserving the originating Baa span.
   - Preflights the complete machine module and returns unsupported status `3` without a
@@ -43,8 +53,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
   - Added one-input `--nazm-shadow=<path>` mode, using structured argv to assemble the
     Arabic source with the explicitly selected Nazm executable, then linking production GAS
     and Nazm shadow executables side by side without treating GAS success as fallback.
-  - Added optional ecosystem parity coverage for source spelling, `.text`, exported `main`,
+  - Added optional ecosystem parity coverage for source spelling, `.text`, exported entry,
     relocations, link success, exit status, stdout, and stderr on the host platform.
+  - Preserved `الرئيسية` unchanged in Nazm ELF64/COFF objects and selected that Arabic
+    symbol directly as the shadow process entry, with no `main` linker alias.
   - Added dedicated Windows and Linux CI jobs that check out and build Nazm, then run the
     real cross-repository shadow parity suite instead of silently skipping it.
 - **Portable SHA-256 file hashing**:
@@ -728,7 +740,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 - **Command line arguments for `الرئيسية`** (v0.3.12.5): allow `صحيح الرئيسية(صحيح عدد، نص[] معاملات)` in addition to `صحيح الرئيسية()`.
 - **Pointer indexing** (v0.3.12.5): allow `p[i]` (and chained forms like `argv[i][j]`) as sugar for `*(p + i)` where valid.
-- **Custom startup entrypoint** (v0.3.12.5): `--startup=custom` links with entry symbol `__baa_start` and injects a small startup stub while still keeping CRT/libc initialization.
+- **Custom startup entrypoint** (v0.3.12.5, superseded): the original `__baa_start` switch injected a hosted stub; the current contract uses `الرئيسية_بدء` by default and keeps the switch only for explicit `-S` inspection.
 - **Test runner args marker:** `tests/test.py` now supports `// ARGS:` lines for runtime integration tests.
 - **Test runner assembly expectations:** `tests/test.py` now supports `// EXPECT-ASM:` lines for `-S` assembly substring checks.
 - **Coverage for main args:**

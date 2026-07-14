@@ -19,14 +19,14 @@ class AssemblySurfaceInventoryTests(unittest.TestCase):
     def test_extracts_deterministic_surface_forms(self) -> None:
         fixture = """\
 .text
-.globl main
-main:
+.globl الرئيسية
+الرئيسية:
     movq $42, %rax
-    movq item(%rip), %rcx
+    movq عنصر(%rip), %rcx
     call printf
     ret
 .data
-item: .quad main
+عنصر: .quad الرئيسية
 .section .note.GNU-stack,"",@progbits
 """
         with tempfile.TemporaryDirectory(prefix="baa-inventory-test-") as temp:
@@ -40,6 +40,12 @@ item: .quad main
         self.assertIn(("movq", ("immediate-integer", "register")), forms)
         self.assertIn(("movq", ("memory-rip-relative", "register")), forms)
         self.assertIn(("call", ("symbol",)), forms)
+        directives = {
+            (item["directive"], tuple(item["operands"]))
+            for item in result["directives"]
+        }
+        self.assertIn((".globl", ("symbol",)), directives)
+        self.assertEqual(INVENTORY._operand_kind("قيمة_مضمّنة"), "symbol")
         self.assertEqual([item["name"] for item in result["sections"]], [
             ".data",
             ".note.GNU-stack",

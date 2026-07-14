@@ -228,10 +228,19 @@ static int nazm_frame_size(const MachineFunc *func, const BaaTarget *target)
     return total;
 }
 
-static void nazm_write_epilogue(FILE *out)
+static void nazm_write_epilogue(FILE *out,
+                                bool is_arabic_entry,
+                                const BaaTarget *target)
 {
     fputs("    انقل مؤشر_المكدس، مؤشر_القاعدة\n", out);
     fputs("    اسحب مؤشر_القاعدة\n", out);
+    if (is_arabic_entry && target && target->obj_format == BAA_OBJFORMAT_ELF)
+    {
+        fputs("    انقل فهرس_الوجهة، سجل_المركم\n", out);
+        fputs("    انقل سجل_المركم، ٦٠\n", out);
+        fputs("    ناد_النظام\n", out);
+        return;
+    }
     fputs("    ارجع\n", out);
 }
 
@@ -240,6 +249,7 @@ static void nazm_write_function(FILE *out,
                                 const BaaTarget *target,
                                 unsigned function_id)
 {
+    bool is_arabic_entry = strcmp(func->name, "الرئيسية") == 0;
     fputs("\n.عام ", out);
     fputs(func->name, out);
     fputc('\n', out);
@@ -281,7 +291,7 @@ static void nazm_write_function(FILE *out,
                     break;
 
                 case MACH_RET:
-                    nazm_write_epilogue(out);
+                    nazm_write_epilogue(out, is_arabic_entry, target);
                     has_return = true;
                     break;
 
@@ -299,7 +309,7 @@ static void nazm_write_function(FILE *out,
     {
         if (strcmp(func->name, "الرئيسية") == 0)
             fputs("    انقل سجل_المركم، ٠\n", out);
-        nazm_write_epilogue(out);
+        nazm_write_epilogue(out, is_arabic_entry, target);
     }
 }
 

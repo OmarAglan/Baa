@@ -1722,7 +1722,7 @@
 * \[ ] **`--kernel` profile alias** — convenience mode for freestanding, no-stdlib, object-only defaults.
 * \[ ] **Disable hosted builtins** — no implicit lowering to libc/CRT for print, read, files, time, environment, or allocation.
 * \[ ] **Explicit runtime contract diagnostics** — Arabic errors when hosted features are used in freestanding mode.
-* \[ ] **Custom entry symbol support** — allow kernel/userland entry symbols without assuming `الرئيسية` maps to hosted `main`.
+* \[ ] **Arbitrary freestanding entry support** — allow kernel/userland symbols other than the hosted Arabic `الرئيسية_بدء` contract.
 * \[ ] **Object-only release gate** — freestanding mode initially produces assembly/object outputs only, not hosted executables.
 
   ### v0.10.1: `i386-elf` / `i386-pyramidos` Target 🎯
@@ -1827,6 +1827,8 @@
 * \[x] **Opt-in shadow flag** — assemble with Nazm beside the production GAS path.
 * \[x] **Object comparison** — compare sections, symbols, relocations, and normalized semantics rather than requiring incidental byte identity for every admitted source.
 * \[x] **Link/runtime comparison** — link and run both outputs on Windows and Linux for every admitted source.
+* \[x] **Arabic linker entry** — preserve `الرئيسية` in Nazm ELF64/COFF objects and select it directly as the shadow entry without a `main` alias.
+* \[x] **Arabic production ABI** — GAS remains the production assembler, but emits `الرئيسية` unchanged, links through `الرئيسية_بدء`, and converts Windows UTF-16 argv through `بدء_ويندوز` without `main`/`wmain` aliases.
 * \[x] **Diagnostics comparison** — unsupported forms remain visible Arabic failures.
 * \[x] **No silent fallback** — never substitute guessed bytes or hide unsupported Nazm input behind GAS.
 
@@ -2222,7 +2224,7 @@
 <summary><strong>v0.0.8</strong> — Functions</summary>
 
 * \[x] **Functions** — Function definitions and calls
-* \[x] **Entry Point** — Mandatory `الرئيسية` exported as `main`
+* \[x] **Entry Point** — Mandatory `الرئيسية` exported unchanged with an Arabic-only hosted startup ABI
 * \[x] **Scoping** — Global vs Local variables
 * \[x] **Windows x64 ABI** — Register passing, stack alignment, shadow space
 

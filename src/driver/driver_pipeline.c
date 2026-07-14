@@ -14,7 +14,7 @@
 // بدء تشغيل مخصص (custom startup)
 // ============================================================================
 
-#define BAA_CUSTOM_START_SYMBOL "__baa_start"
+#define BAA_CUSTOM_START_SYMBOL "الرئيسية_بدء"
 
 /**
  * @brief الحصول على كود assembly لتعريف نقطة دخول مخصصة.
@@ -35,7 +35,7 @@ static const char* driver_custom_startup_asm(const BaaTarget* target)
             "    movq %rsp, %r10\n"                // stack_end
             "    movq (%rsp), %rsi\n"              // argc
             "    leaq 8(%rsp), %rdx\n"             // argv
-            "    leaq main(%rip), %rdi\n"          // main
+            "    leaq الرئيسية(%rip), %rdi\n"     // نقطة دخول البرنامج العربية
             "    xorl %ecx, %ecx\n"                // init = NULL
             "    xorl %r8d, %r8d\n"                // fini = NULL
             "    xorl %r9d, %r9d\n"                // rtld_fini = NULL
@@ -46,21 +46,14 @@ static const char* driver_custom_startup_asm(const BaaTarget* target)
             ".section .note.GNU-stack,\"\",@progbits\n";
     }
 
-    // Windows/COFF (MinGW-w64)
+    // Windows/COFF (MinGW-w64): runtime bridge decodes UTF-16 argv to UTF-8.
     return
         ".text\n"
         ".globl " BAA_CUSTOM_START_SYMBOL "\n"
         BAA_CUSTOM_START_SYMBOL ":\n"
-        "    movq %rsp, %r11\n"
-        "    andq $15, %r11\n"                   // فحص المحاذاة (0 أو 8 غالباً)
-        "    subq $32, %rsp\n"                   // shadow space (Win x64 ABI)
-        "    cmpq $8, %r11\n"
-        "    jne 1f\n"
-        "    subq $8, %rsp\n"                    // ضمان أن %rsp%16==0 قبل call
-        "1:\n"
-        "    call mainCRTStartup\n"
-        "    movl %eax, %ecx\n"
-        "    call ExitProcess\n"
+        "    andq $-16, %rsp\n"
+        "    subq $32, %rsp\n"
+        "    call بدء_ويندوز\n"
         "    hlt\n";
 }
 
@@ -755,7 +748,7 @@ static BaaCompilerExitCode compile_one_ir(const CompilerConfig *config,
 
     if (config->assembly_only)
     {
-        // عند طلب -S مع --startup=custom وفي ملف واحد، نلحق كود `__baa_start` بنفس ملف assembly
+        // عند طلب -S مع --startup=custom وفي ملف واحد، نلحق `الرئيسية_بدء` بنفس ملف assembly
         // حتى يتمكن المستخدم من ربطه يدوياً أو فحصه (ويُستخدم أيضاً لاختبارات asm-only).
         if (config->custom_startup && input_count == 1)
         {
@@ -854,10 +847,10 @@ BaaCompilerExitCode driver_compile_files(const CompilerConfig *config,
         return BAA_COMPILER_EXIT_INTERNAL_ERROR;
 
     // عند -S لا نحتاج لإرجاع قائمة كائنات.
-    // عند --startup=custom + ربط نهائي: نضيف كائناً إضافياً لبدء التشغيل.
+    // كل ربط تنفيذي إنتاجي يضيف نقطة بدء عربية؛ لا يعتمد ABI على main.
     bool need_startup_obj =
         (!config->assembly_only && !config->emit_nazm && !config->compile_only &&
-         !config->check_only && !config->header_check && config->custom_startup);
+         !config->check_only && !config->header_check);
     int cap = (config->assembly_only || config->emit_nazm ||
                config->check_only || config->header_check) ? 0
         : (input_count + (need_startup_obj ? 1 : 0));

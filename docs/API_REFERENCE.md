@@ -3742,7 +3742,7 @@ Emits a single function with prologue and epilogue.
 
 **Behavior:**
 
-1. Emits function label (translates Arabic names: الرئيسية → main)
+1. Emits the function label unchanged, including the Arabic entry `الرئيسية`
 2. Emits prologue (stack setup, callee-saved preservation)
 3. Emits all instructions in all blocks
 4. Emits epilogue (callee-saved restoration, stack teardown)
@@ -3862,7 +3862,7 @@ Translates Arabic function names to C runtime equivalents.
 
 | Baa Name | Translated Name |
 |----------|-----------------|
-| `الرئيسية` | `main` |
+| `الرئيسية` | `الرئيسية` |
 | `اطبع` | `printf` |
 | `اقرأ` | `scanf` |
 

@@ -12,7 +12,7 @@
   "shadow_corpus": {
     "schema": "baa-nazm-shadow-corpus-v1",
     "compiler": "baa version 0.6.0",
-    "sha256": "7490db375b720fe76950c0ca737d8356942cbe1cc62b6b6fbb3ab3f5debdf777"
+    "sha256": "d57e2ae38faa8c870fd18f48fe41635ba6c5e595f70e8b60c175941c5b5e99f4"
   },
   "status_contract": {
     "supported": "The complete inventory form is implemented by Nazm.",
@@ -431,7 +431,7 @@
               "source": "tests/integration/backend/backend_pp_nested_test.baa",
               "status": "emitted",
               "exit_code": 0,
-              "sha256": "da03f5d8de143160d36468e15966210d826b472385812fbd189deeb6454a6e49"
+              "sha256": "4fa6b9bbfaadc9141b3351325ad6e1fb98e51152257627d06c88e44b58414709"
             },
             {
               "source": "tests/integration/backend/backend_process_runtime_v065_test.baa",
@@ -1091,20 +1091,6 @@
         {
           "mnemonic": "call",
           "operands": [
-            "expression"
-          ],
-          "count": 599,
-          "samples": [
-            "examples/error_handling_demo.baa:81",
-            "examples/file_copy_small.baa:978",
-            "tests/integration/backend/backend_byte_buffer_stdlib_v062_test.baa:323"
-          ],
-          "status": "unsupported",
-          "reason": "Nazm implements this mnemonic, but not this operand shape or width."
-        },
-        {
-          "mnemonic": "call",
-          "operands": [
             "register-expression"
           ],
           "count": 5,
@@ -1128,11 +1114,11 @@
           "operands": [
             "symbol"
           ],
-          "count": 901,
+          "count": 1500,
           "samples": [
+            "examples/error_handling_demo.baa:81",
             "examples/error_handling_demo.baa:91",
-            "examples/error_handling_demo.baa:95",
-            "examples/error_handling_demo.baa:104"
+            "examples/error_handling_demo.baa:95"
           ],
           "status": "partial",
           "nazm": {
@@ -2712,34 +2698,13 @@
         {
           "directive": ".globl",
           "operands": [
-            "expression"
-          ],
-          "count": 205,
-          "samples": [
-            "examples/error_handling_demo.baa:8",
-            "examples/file_copy_small.baa:8",
-            "tests/integration/backend/backend_byte_buffer_stdlib_v062_test.baa:7"
-          ],
-          "status": "partial",
-          "nazm": {
-            "directive": ".عام",
-            "operands": [
-              "label"
-            ]
-          },
-          "reason": "Canonical Arabic labels are supported, but the Baa inventory expression category is broader than one label token.",
-          "acceptance_fixture": "tests/fixtures/baa_coverage/بيانات-باء.نظم"
-        },
-        {
-          "directive": ".globl",
-          "operands": [
             "symbol"
           ],
-          "count": 106,
+          "count": 311,
           "samples": [
+            "examples/error_handling_demo.baa:8",
             "examples/error_handling_demo.baa:61",
-            "examples/file_copy_small.baa:968",
-            "examples/hello_world.baa:8"
+            "examples/file_copy_small.baa:8"
           ],
           "status": "partial",
           "nazm": {
@@ -2754,7 +2719,7 @@
         {
           "directive": ".local",
           "operands": [
-            "expression"
+            "symbol"
           ],
           "count": 10,
           "samples": [
@@ -2762,15 +2727,14 @@
             "tests/integration/backend/backend_static_storage_test.baa:7",
             "tests/integration/backend/backend_static_storage_test.baa:9"
           ],
-          "status": "partial",
+          "status": "unsupported",
           "nazm": {
             "directive": ".محلي",
             "operands": [
               "label"
             ]
           },
-          "reason": "Canonical Arabic labels are supported, but the Baa inventory expression category is broader than one label token.",
-          "acceptance_fixture": "tests/fixtures/baa_coverage/بيانات-باء.نظم"
+          "reason": "ASCII source identifiers are not accepted; local symbols must use canonical Arabic labels."
         },
         {
           "directive": ".loc",
@@ -2963,7 +2927,7 @@
         },
         {
           "form": "instruction:call:symbol",
-          "count": 901,
+          "count": 1500,
           "status": "partial",
           "reason": "Calls to labels defined in the same .text input are resolved, but external-symbol call relocations are not implemented."
         },
@@ -3001,13 +2965,13 @@
       "summary": {
         "forms": {
           "supported": 38,
-          "partial": 5,
+          "partial": 3,
           "unsupported": 91
         },
         "emissions": {
           "supported": 52946,
-          "partial": 2123,
-          "unsupported": 24966
+          "partial": 3311,
+          "unsupported": 24377
         }
       }
     },
@@ -4047,20 +4011,6 @@
         {
           "mnemonic": "call",
           "operands": [
-            "expression"
-          ],
-          "count": 599,
-          "samples": [
-            "examples/error_handling_demo.baa:86",
-            "examples/file_copy_small.baa:1049",
-            "tests/integration/backend/backend_byte_buffer_stdlib_v062_test.baa:339"
-          ],
-          "status": "unsupported",
-          "reason": "Nazm implements this mnemonic, but not this operand shape or width."
-        },
-        {
-          "mnemonic": "call",
-          "operands": [
             "register-expression"
           ],
           "count": 5,
@@ -4084,11 +4034,11 @@
           "operands": [
             "symbol"
           ],
-          "count": 904,
+          "count": 1500,
           "samples": [
+            "examples/error_handling_demo.baa:86",
             "examples/error_handling_demo.baa:97",
-            "examples/error_handling_demo.baa:102",
-            "examples/error_handling_demo.baa:113"
+            "examples/error_handling_demo.baa:102"
           ],
           "status": "partial",
           "nazm": {
@@ -4192,7 +4142,7 @@
             "immediate-integer",
             "register"
           ],
-          "count": 2064,
+          "count": 2061,
           "samples": [
             "examples/error_handling_demo.baa:20",
             "examples/error_handling_demo.baa:34",
@@ -4331,9 +4281,9 @@
           "operands": [],
           "count": 3,
           "samples": [
-            "tests/integration/backend/backend_custom_startup_test.baa:1345",
-            "tests/integration/ir/ir_custom_startup_linux_asm_test.baa:32",
-            "tests/integration/ir/ir_custom_startup_windows_asm_test.baa:32"
+            "tests/integration/backend/backend_custom_startup_test.baa:1338",
+            "tests/integration/ir/ir_custom_startup_linux_asm_test.baa:25",
+            "tests/integration/ir/ir_custom_startup_windows_asm_test.baa:25"
           ],
           "status": "supported",
           "nazm": {
@@ -4447,20 +4397,6 @@
             "width_bits": 64
           },
           "acceptance_fixture": "tests/fixtures/baa_coverage/حساب-وتحكم-باء.نظم"
-        },
-        {
-          "mnemonic": "jne",
-          "operands": [
-            "expression"
-          ],
-          "count": 3,
-          "samples": [
-            "tests/integration/backend/backend_custom_startup_test.baa:1339",
-            "tests/integration/ir/ir_custom_startup_linux_asm_test.baa:26",
-            "tests/integration/ir/ir_custom_startup_windows_asm_test.baa:26"
-          ],
-          "status": "unsupported",
-          "reason": "Nazm implements this mnemonic, but not this operand shape or width."
         },
         {
           "mnemonic": "jne",
@@ -4710,7 +4646,7 @@
             "register",
             "register"
           ],
-          "count": 223,
+          "count": 220,
           "samples": [
             "examples/error_handling_demo.baa:109",
             "examples/error_handling_demo.baa:111",
@@ -4852,7 +4788,7 @@
             "register",
             "register"
           ],
-          "count": 13310,
+          "count": 13307,
           "samples": [
             "examples/error_handling_demo.baa:16",
             "examples/error_handling_demo.baa:17",
@@ -5451,7 +5387,7 @@
             "immediate-integer",
             "register"
           ],
-          "count": 2702,
+          "count": 2699,
           "samples": [
             "examples/error_handling_demo.baa:79",
             "examples/error_handling_demo.baa:96",
@@ -5646,34 +5582,13 @@
         {
           "directive": ".globl",
           "operands": [
-            "expression"
-          ],
-          "count": 205,
-          "samples": [
-            "examples/error_handling_demo.baa:8",
-            "examples/file_copy_small.baa:8",
-            "tests/integration/backend/backend_byte_buffer_stdlib_v062_test.baa:7"
-          ],
-          "status": "partial",
-          "nazm": {
-            "directive": ".عام",
-            "operands": [
-              "label"
-            ]
-          },
-          "reason": "Canonical Arabic labels are supported, but the Baa inventory expression category is broader than one label token.",
-          "acceptance_fixture": "tests/fixtures/baa_coverage/بيانات-باء.نظم"
-        },
-        {
-          "directive": ".globl",
-          "operands": [
             "symbol"
           ],
-          "count": 106,
+          "count": 311,
           "samples": [
+            "examples/error_handling_demo.baa:8",
             "examples/error_handling_demo.baa:61",
-            "examples/file_copy_small.baa:1036",
-            "examples/hello_world.baa:8"
+            "examples/file_copy_small.baa:8"
           ],
           "status": "partial",
           "nazm": {
@@ -5841,7 +5756,7 @@
         }
       ],
       "symbols": {
-        "defined": 624,
+        "defined": 621,
         "global-declaration": 311,
         "local": 4067
       },
@@ -5854,7 +5769,7 @@
         },
         {
           "form": "instruction:call:symbol",
-          "count": 904,
+          "count": 1500,
           "status": "partial",
           "reason": "Calls to labels defined in the same .text input are resolved, but external-symbol call relocations are not implemented."
         },
@@ -5892,13 +5807,13 @@
       "summary": {
         "forms": {
           "supported": 37,
-          "partial": 4,
-          "unsupported": 87
+          "partial": 3,
+          "unsupported": 85
         },
         "emissions": {
-          "supported": 58065,
-          "partial": 2119,
-          "unsupported": 23574
+          "supported": 58056,
+          "partial": 3311,
+          "unsupported": 22969
         }
       }
     }

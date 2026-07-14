@@ -121,6 +121,16 @@ static bool win_utf8_is_ascii(const char* text)
     return true;
 }
 
+static bool win_write_entry_response(const char* path, const char* symbol)
+{
+    if (!path || !symbol) return false;
+    FILE* file = baa_fopen_utf8(path, "wb");
+    if (!file) return false;
+    int written = fprintf(file, "-nostartfiles\n-Wl,-e,%s\n", symbol);
+    bool ok = written > 0 && fclose(file) == 0;
+    return ok;
+}
+
 static bool path_build_suffix_w(wchar_t* out, size_t out_cap, const wchar_t* base, const wchar_t* suffix)
 {
     if (!out || out_cap == 0 || !base || !suffix) return false;
@@ -480,6 +490,9 @@ BaaCompilerExitCode driver_toolchain_link(const CompilerConfig *config,
     bool staged_output_ready = false;
     char staged_runtime[MAX_PATH] = "";
     bool staged_runtime_ready = false;
+    char staged_entry_response[MAX_PATH] = "";
+    char staged_entry_argument[MAX_PATH + 2] = "";
+    bool staged_entry_response_ready = false;
 
     bool staged_ok = true;
     for (int i = 0; i < obj_count; i++)
@@ -525,8 +538,33 @@ BaaCompilerExitCode driver_toolchain_link(const CompilerConfig *config,
     if (config->debug_info) argv_link[lk++] = "-g";
     if (config->codegen_opts.pie && config->target && config->target->obj_format == BAA_OBJFORMAT_ELF)
         argv_link[lk++] = "-pie";
-    if (config->custom_startup)
-        argv_link[lk++] = "-Wl,-e,__baa_start";
+#ifdef _WIN32
+    const char* entry_symbol = config->nazm_arabic_entry_link ? "الرئيسية" : "الرئيسية_بدء";
+    if (!win_make_stage_file_path("link_entry", ".rsp", staged_entry_response,
+                                  sizeof(staged_entry_response)) ||
+        !win_write_entry_response(staged_entry_response, entry_symbol))
+    {
+        fprintf(stderr, "خطأ: فشل تجهيز وسيط نقطة الدخول العربية للرابط.\n");
+        goto cleanup;
+    }
+    staged_entry_response_ready = true;
+    int response_chars = snprintf(staged_entry_argument, sizeof(staged_entry_argument),
+                                  "@%s", staged_entry_response);
+    if (response_chars <= 1 || (size_t)response_chars >= sizeof(staged_entry_argument))
+        goto cleanup;
+    argv_link[lk++] = staged_entry_argument;
+#else
+    if (config->nazm_arabic_entry_link)
+    {
+        argv_link[lk++] = "-nostartfiles";
+        argv_link[lk++] = "-Wl,-e,الرئيسية";
+    }
+    else
+    {
+        argv_link[lk++] = "-nostartfiles";
+        argv_link[lk++] = "-Wl,-e,الرئيسية_بدء";
+    }
+#endif
 
     for (int i = 0; i < obj_count; i++)
     {
@@ -545,6 +583,8 @@ BaaCompilerExitCode driver_toolchain_link(const CompilerConfig *config,
 
     // ربط libm لدعم دوال الرياضيات القياسية (sqrt/pow) المستخدمة في stdlib v0.4.1.
     argv_link[lk++] = "-lm";
+    if (config->target && config->target->obj_format == BAA_OBJFORMAT_COFF)
+        argv_link[lk++] = "-lshell32";
 
     argv_link[lk++] = "-o";
 #ifdef _WIN32
@@ -581,6 +621,8 @@ cleanup:
     free(staged_objects);
     if (staged_output_ready) (void)driver_toolchain_delete_file_utf8(staged_output);
     if (staged_runtime_ready) (void)driver_toolchain_delete_file_utf8(staged_runtime);
+    if (staged_entry_response_ready)
+        (void)driver_toolchain_delete_file_utf8(staged_entry_response);
 #endif
     free(argv_link);
     return rc;

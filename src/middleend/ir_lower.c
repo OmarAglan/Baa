@@ -25,7 +25,7 @@
 // ============================================================================
 
 #define BAA_ENTRY_FUNC_NAME "الرئيسية"
-#define BAA_WRAPPED_USER_MAIN_NAME "__baa_user_main"
+#define BAA_WRAPPED_USER_MAIN_NAME "الرئيسية_المستخدم"
 #define BAA_INLINE_ASM_PSEUDO_CALL "__baa_inline_asm_v0406"
 
 // ============================================================================
@@ -820,7 +820,7 @@ static bool ir_lower_emit_main_args_wrapper(IRBuilder* builder,
     IRType* char_ptr_t = get_char_ptr_type(m);
     IRType* char_ptr_ptr_t = ir_type_ptr(char_ptr_t);
 
-    // إنشاء دالة الغلاف: اسمها في IR هو 'الرئيسية' وسيحوّلها backend إلى 'main'.
+    // إنشاء دالة الغلاف: اسمها في IR وABI هو 'الرئيسية' بلا alias لاتيني.
     IRFunc* wrap = ir_builder_create_func(builder, BAA_ENTRY_FUNC_NAME, IR_TYPE_I64_T);
     if (!wrap) {
         fprintf(stderr, "خطأ (تحويل IR): فشل إنشاء دالة غلاف '%s'.\n", BAA_ENTRY_FUNC_NAME);
@@ -830,7 +830,7 @@ static bool ir_lower_emit_main_args_wrapper(IRBuilder* builder,
 
     // توقيع C ABI: (argc: i64, argv: i8**)
     (void)ir_builder_add_param(builder, "عدد", IR_TYPE_I64_T);
-    (void)ir_builder_add_param(builder, "argv", i8_pp_t);
+    (void)ir_builder_add_param(builder, "معاملات_خام", i8_pp_t);
 
     ir_builder_set_func(builder, wrap);
 

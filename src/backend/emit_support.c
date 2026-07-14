@@ -330,12 +330,8 @@ static void emit_operand(MachineOperand* op, FILE* out) {
         case MACH_OP_FUNC:
             // مرجع دالة: اسم الدالة مباشرة
             if (op->data.name) {
-                // تحويل الرئيسية → main
-                if (strcmp(op->data.name, "الرئيسية") == 0) {
-                    fprintf(out, "main");
-                }
                 // تحويل اطبع → printf
-                else if (strcmp(op->data.name, "اطبع") == 0 ||
+                if (strcmp(op->data.name, "اطبع") == 0 ||
                          strcmp(op->data.name, "اطبع_صحيح") == 0) {
                     fprintf(out, "printf");
                 }

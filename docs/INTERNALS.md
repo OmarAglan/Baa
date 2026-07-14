@@ -2457,13 +2457,13 @@ global_fp:  .quad جمع          # Function pointer initializer (func address)
     .quad 0
 ```
 
-#### 6.21.7. Function Name Translation
+#### 6.21.7. Runtime Function Name Translation
 
-The emitter translates Arabic function names to their C runtime equivalents:
+The emitter preserves Baa-defined Arabic function symbols. Only compiler-recognized C runtime calls use their external ABI names:
 
 | Baa Name | Assembly Name | Purpose |
 |----------|---------------|---------|
-| `الرئيسية` | `main` | Program entry point |
+| `الرئيسية` | `الرئيسية` | Arabic program entry; no Latin alias |
 | `اطبع` | `printf` | Print function |
 | `اقرأ` | `scanf` | Input function |
 
@@ -2528,11 +2528,11 @@ Strings are collected during parsing and emitted with unique labels:
 
 | Aspect | Details |
 |--------|---------|
-| **Entry Point** | `الرئيسية` → exported as `main` |
+| **Entry Point** | `الرئيسية` is exported unchanged; hosted links enter through `الرئيسية_بدء` |
 | **Name Mangling** | None - functions use their Arabic UTF-8 names as assembly labels |
-| **Special Case** | `الرئيسية` is explicitly exported as `main` using `.globl main` |
-| **Main with args (v0.3.12.5)** | If the user defines `صحيح الرئيسية(صحيح عدد، نص[] معاملات)`, the compiler lowers the user function as `__baa_user_main` and emits an ABI wrapper named `الرئيسية` (exported as `main`). The wrapper converts C `char** argv` into Baa `نص[]` (`حرف[]` packed UTF-8) before calling `__baa_user_main`. |
-| **Custom startup (v0.3.12.5)** | `--startup=custom` selects a custom entry symbol `__baa_start` (driver injects a small startup stub and links with `-Wl,-e,__baa_start`). The stub delegates to CRT/libc startup (`mainCRTStartup` on Windows, `__libc_start_main` on Linux). |
+| **Special Case** | No `main`/`wmain` symbol is emitted. The linker receives the UTF-8 entry name through a response file on Windows so native narrow argv cannot corrupt it. |
+| **Main with args (v0.3.12.5)** | If the user defines `صحيح الرئيسية(صحيح عدد، نص[] معاملات)`, the compiler lowers the body as `الرئيسية_المستخدم` and emits the Arabic ABI wrapper `الرئيسية`. Linux passes UTF-8 argv; Windows `بدء_ويندوز` converts the original UTF-16 command line to UTF-8 before the wrapper constructs Baa `نص[]`. |
+| **Hosted startup** | Every final GAS link injects `الرئيسية_بدء`. Linux passes `الرئيسية` to `__libc_start_main`; Windows calls the runtime `بدء_ويندوز` bridge and exits through `ExitProcess`. `--startup=custom` remains a compatibility switch for appending this same stub to explicit `-S` output. |
 | **External Calls** | C runtime (`printf`, etc.) via toolchain symbol resolution |
 
 ---

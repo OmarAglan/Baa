@@ -39,6 +39,7 @@ typedef struct
     bool assembly_only; // -S: إنتاج كود تجميع فقط
     bool emit_nazm;     // --emit-nazm: إصدار مصدر نظم العربي فقط
     char *nazm_shadow_executable; // --nazm-shadow=<path>: مسار مجمّع نظم لمسار الظل
+    bool nazm_arabic_entry_link;  // ربط كائن نظم بمدخل `الرئيسية` بلا alias لاتيني
     bool compile_only;  // -c: تجميع إلى كائن فقط (بدون ربط)
     bool verbose;       // -v: وضع التفاصيل
     bool dump_ir;       // --dump-ir: طباعة IR بعد التحليل الدلالي

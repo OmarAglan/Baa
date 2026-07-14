@@ -163,7 +163,7 @@ void driver_print_help(void)
     printf("  --check-header  Parse/analyze header declarations without emitting code\n");
     printf("  --diagnostics=json  Emit machine-readable diagnostics JSON to stdout\n");
     printf("  -v           Enable verbose output with timing\n");
-    printf("  --startup=custom  Use custom entrypoint (__baa_start) while keeping CRT/libc init\n");
+    printf("  --startup=custom  Emit the default Arabic startup stub in -S output\n");
     printf("  --dump-ir    Dump Baa IR (Arabic) to stdout after analysis\n");
     printf("  --emit-ir    Write Baa IR (Arabic) to <input>.ir after analysis\n");
     printf("  --dump-ir-opt  Dump Baa IR (Arabic) after optimization\n");

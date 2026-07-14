@@ -528,7 +528,6 @@ static int isel_type_bits(IRType *type)
 static const char* isel_translate_func_name(const char* name)
 {
     if (!name) return name;
-    if (strcmp(name, "الرئيسية") == 0) return "main";
     if (strcmp(name, "اطبع") == 0 || strcmp(name, "اطبع_صحيح") == 0) return "printf";
     if (strcmp(name, "اقرأ") == 0 || strcmp(name, "اقرأ_صحيح") == 0) return "scanf";
     return name;

@@ -59,13 +59,9 @@ bool emit_func(MachineFunc* func, FILE* out) {
     g_emit_current_func_uid = g_emit_next_func_uid++;
     g_emit_sp_seq = 0;
 
-    // تحديد اسم الدالة (تحويل الرئيسية → main)
+    // الاسم العربي هو رمز ABI الفعلي؛ لا نولد alias لاتينيا لنقطة الدخول.
     const char* func_name = func->name;
-    bool is_main = false;
-    if (func_name && strcmp(func_name, "الرئيسية") == 0) {
-        func_name = "main";
-        is_main = true;
-    }
+    bool is_main = func_name && strcmp(func_name, "الرئيسية") == 0;
 
     // إصدار تعريف الرمز العام
     fprintf(out, "\n.globl %s\n", func_name);

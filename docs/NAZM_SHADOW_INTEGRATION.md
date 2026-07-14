@@ -69,12 +69,15 @@ inventory omissions:
 
 | Target | Instruction forms S/P/U | Directive forms S/P/U | Sections S/U | Relocations P/U |
 |---|---:|---:|---:|---:|
-| `x86_64-linux` | 30 / 1 / 77 | 6 / 3 / 6 | 2 / 2 | 1 / 6 |
-| `x86_64-windows` | 29 / 1 / 75 | 6 / 2 / 5 | 2 / 1 | 1 / 6 |
+| `x86_64-linux` | 30 / 1 / 76 | 6 / 1 / 7 | 2 / 2 | 1 / 6 |
+| `x86_64-windows` | 29 / 1 / 73 | 6 / 1 / 5 | 2 / 1 | 1 / 6 |
 
 Each supported row names the checked Nazm acceptance fixture that exercises
 its canonical Arabic lowering. Baa emits the entry label as `الرئيسية`; Nazm
-maps that exported Arabic symbol internally to the platform ABI name `main`.
+preserves that exported Arabic symbol as `الرئيسية` in ELF64 and COFF. The
+shadow linker selects it explicitly as the process entry without an ASCII
+alias. Production remains GAS by default, but now also exports `الرئيسية`
+unchanged and links through the Arabic hosted startup symbol `الرئيسية_بدء`.
 Arbitrary ASCII source identifiers, external calls, RIP-relative references,
 read-only sections, byte/32-bit forms, `setcc`, extensions, and scalar SSE2
 remain partial or unsupported where applicable.
@@ -126,7 +129,7 @@ The shadow path is admitted in ordered increments:
 1. The checked Stage B inventory is the required input to Nazm coverage work.
 2. Baa adds a canonical Arabic emitter after register allocation. Its output is
    inspectable UTF-8 `.نظم` source; the public `-S` contract remains GAS until a
-   separately versioned cutover.
+   separately versioned assembler cutover, while both paths preserve the Arabic entry ABI.
 3. An explicit, non-default shadow option invokes Nazm beside the successful
    production GAS path. A missing Nazm executable, unsupported form, assembler
    failure, or comparison failure makes the shadow result fail.
@@ -173,4 +176,4 @@ comparison is admitted only for its one currently emitted member. Nazm
 still needs support for Baa's observed operand widths, `setcc`, extension and
 division forms, scalar SSE2 forms, external symbols, read-only sections, and
 the required ELF64/COFF relocations. The production assembler therefore remains
-unchanged.
+GAS even though its public entry and startup symbols are now Arabic-only.

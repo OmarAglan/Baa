@@ -531,7 +531,7 @@ IRModule* ir_lower_program(Node* program, const char* module_name,
         }
     }
 
-    // إن كانت الرئيسية بوسائط: ولّد غلاف ABI لـ C باسم 'الرئيسية' ليستدعي '__baa_user_main'.
+    // إن كانت الرئيسية بوسائط: ولّد غلاف ABI عربي باسم 'الرئيسية'.
     if (main_with_args) {
         if (!ir_lower_emit_main_args_wrapper(builder, program, main_site, target)) {
             ir_builder_free(builder);

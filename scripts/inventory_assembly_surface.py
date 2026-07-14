@@ -10,6 +10,7 @@ import shlex
 import subprocess
 import sys
 import tempfile
+import unicodedata
 from collections import Counter, defaultdict
 from pathlib import Path
 from typing import Iterable
@@ -28,7 +29,20 @@ LABEL_RE = re.compile(r"^([^\s:]+):\s*(.*)$")
 TOKEN_RE = re.compile(r"^([^\s]+)(?:\s+(.*))?$")
 INTEGER_RE = re.compile(r"^[+-]?(?:0[xX][0-9a-fA-F]+|[0-9]+)$")
 REGISTER_RE = re.compile(r"%[A-Za-z][A-Za-z0-9]*")
-SYMBOL_RE = re.compile(r"^[.$A-Za-z_][.$A-Za-z0-9_@]*$")
+
+
+def _is_symbol(value: str) -> bool:
+    """Recognize GAS UTF-8 symbols, including Arabic combining marks."""
+    if not value:
+        return False
+    first = value[0]
+    if first not in ".$_" and not unicodedata.category(first).startswith("L"):
+        return False
+    for char in value[1:]:
+        category = unicodedata.category(char)
+        if char not in ".$@_" and category[0] not in {"L", "M", "N"} and category != "Pc":
+            return False
+    return True
 
 
 def _relative(path: Path) -> str:
@@ -111,7 +125,7 @@ def _operand_kind(operand: str) -> str:
         return "register"
     if INTEGER_RE.fullmatch(value):
         return "integer"
-    if SYMBOL_RE.fullmatch(value):
+    if _is_symbol(value):
         return "local-symbol" if value.startswith(".L") else "symbol"
     if REGISTER_RE.search(value):
         return "register-expression"

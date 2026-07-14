@@ -776,7 +776,7 @@ Rules:
 
 ### 5.4. Entry Point (`الرئيسية`)
 
-Every program **must** have a main function:
+Every hosted program **must** have an Arabic entry function:
 
 ```baa
 صحيح الرئيسية() {
@@ -785,7 +785,7 @@ Every program **must** have a main function:
 }
 ```
 
-**Important:** The entry point **must** be named `الرئيسية` (ar-ra'īsīyah). It is exported as `main` in the generated assembly.
+**Important:** The entry point **must** be named `الرئيسية` (ar-ra'īsīyah). GAS and Nazm objects export that exact UTF-8 symbol; the compiler never emits a `main` or `wmain` alias. Final hosted executables use the Arabic startup symbol `الرئيسية_بدء`.
 
 **Command Line Arguments [Implemented v0.3.12.5]:**
 The main function can optionally accept arguments:
@@ -805,7 +805,8 @@ The main function can optionally accept arguments:
 
 - `عدد` يشمل اسم البرنامج أيضاً (مثل C: `argc`).
 - `معاملات[٠]` هو عادةً مسار/اسم البرنامج، و`معاملات[١]..` هي معاملات المستخدم.
-- يتم تحويل معاملات C (`char** argv` بترميز UTF-8) إلى تمثيل `نص` في باء تلقائياً عند نقطة الدخول، لذا يمكن استخدام `قارن_نص` و`طول_نص` والطباعة مباشرة على `معاملات[i]`.
+- في Linux تصل معاملات النظام بترميز UTF-8. وفي Windows يقرأ جسر `بدء_ويندوز` سطر الأوامر UTF-16 ويحوله إلى UTF-8 قبل استدعاء `الرئيسية`؛ لذلك لا تحتاج الأوامر أو المسارات العربية إلى بديل لاتيني.
+- يحول غلاف ABI العربي المعاملات إلى تمثيل `نص` في باء تلقائياً، لذا يمكن استخدام `قارن_نص` و`طول_نص` والطباعة مباشرة على `معاملات[i]`.
 
 ### 5.5. Recursion (التكرار)
 

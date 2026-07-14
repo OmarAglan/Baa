@@ -19,7 +19,7 @@ def _read_c_string(data: bytes, offset: int) -> str:
     end = data.find(b"\0", offset)
     if end < 0:
         end = len(data)
-    return data[offset:end].decode("ascii", errors="replace")
+    return data[offset:end].decode("utf-8", errors="strict")
 
 
 def _inspect_coff_object(data: bytes) -> tuple[set[str], set[str], int]:
@@ -328,7 +328,8 @@ class NazmEmitterTests(unittest.TestCase):
             )
             self.assertEqual(assembly_proc.returncode, 0, assembly_proc.stderr)
             gas_text = production_assembly.read_text(encoding="utf-8")
-            self.assertIn(".globl main", gas_text)
+            self.assertIn(".globl الرئيسية", gas_text)
+            self.assertNotRegex(gas_text, r"(?m)^\.globl main$")
             self.assertRegex(gas_text, r"mov[q]?\s+\$0,\s*%rax")
 
             production_run = subprocess.run(
@@ -350,7 +351,8 @@ class NazmEmitterTests(unittest.TestCase):
             for artifact in (production_object, shadow_object):
                 sections, global_symbols, relocation_count = _inspect_object(artifact)
                 self.assertIn(".text", sections)
-                self.assertIn("main", global_symbols)
+                self.assertIn("الرئيسية", global_symbols)
+                self.assertNotIn("main", global_symbols)
                 self.assertEqual(relocation_count, 0)
 
     def test_supported_corpus_source_links_and_matches_runtime(self) -> None:
@@ -395,7 +397,8 @@ class NazmEmitterTests(unittest.TestCase):
 
             sections, global_symbols, relocation_count = _inspect_object(shadow_object)
             self.assertIn(".text", sections)
-            self.assertIn("main", global_symbols)
+            self.assertIn("الرئيسية", global_symbols)
+            self.assertNotIn("main", global_symbols)
             self.assertEqual(relocation_count, 0)
 
 

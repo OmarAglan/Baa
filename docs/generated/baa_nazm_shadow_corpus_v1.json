@@ -3,7 +3,7 @@
   "compiler": "baa version 0.6.0",
   "source_inventory": {
     "schema": "baa-assembly-surface-v1",
-    "sha256": "da53638227cc4c71d24c3288ade85860f2006accf524d626eaa5b6527f6b3e94"
+    "sha256": "9b2086b8cd886efb2a02379c69a4b2795403eccbbb95c5e3d962c3a6ae20ac65"
   },
   "status_contract": {
     "emitted": "Baa emitted canonical Arabic Nazm without Latin letters.",
@@ -309,7 +309,7 @@
           "source": "tests/integration/backend/backend_pp_nested_test.baa",
           "status": "emitted",
           "exit_code": 0,
-          "sha256": "da03f5d8de143160d36468e15966210d826b472385812fbd189deeb6454a6e49"
+          "sha256": "4fa6b9bbfaadc9141b3351325ad6e1fb98e51152257627d06c88e44b58414709"
         },
         {
           "source": "tests/integration/backend/backend_process_runtime_v065_test.baa",

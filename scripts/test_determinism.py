@@ -210,8 +210,8 @@ def _check_cross_target_assembly(baa: Path, out_dir: Path) -> list[CheckResult]:
     results: list[CheckResult] = []
     src = "tests/integration/ir/ir_test.baa"
     targets = [
-        ("x86_64-windows", out_dir / "cross_windows.s", [".section .rdata", ".globl main"]),
-        ("x86_64-linux", out_dir / "cross_linux.s", [".section .rodata", ".globl main"]),
+        ("x86_64-windows", out_dir / "cross_windows.s", [".section .rdata", ".globl الرئيسية"]),
+        ("x86_64-linux", out_dir / "cross_linux.s", [".section .rodata", ".globl الرئيسية"]),
     ]
     for target, output, markers in targets:
         cmd = [str(baa), "-O2", "--verify", "-S", f"--target={target}", src, "-o", str(output)]

@@ -265,18 +265,6 @@
         {
           "mnemonic": "call",
           "operands": [
-            "expression"
-          ],
-          "count": 599,
-          "samples": [
-            "examples/error_handling_demo.baa:81",
-            "examples/file_copy_small.baa:978",
-            "tests/integration/backend/backend_byte_buffer_stdlib_v062_test.baa:323"
-          ]
-        },
-        {
-          "mnemonic": "call",
-          "operands": [
             "register-expression"
           ],
           "count": 5,
@@ -291,11 +279,11 @@
           "operands": [
             "symbol"
           ],
-          "count": 901,
+          "count": 1500,
           "samples": [
+            "examples/error_handling_demo.baa:81",
             "examples/error_handling_demo.baa:91",
-            "examples/error_handling_demo.baa:95",
-            "examples/error_handling_demo.baa:104"
+            "examples/error_handling_demo.baa:95"
           ]
         },
         {
@@ -1484,31 +1472,19 @@
         {
           "directive": ".globl",
           "operands": [
-            "expression"
-          ],
-          "count": 205,
-          "samples": [
-            "examples/error_handling_demo.baa:8",
-            "examples/file_copy_small.baa:8",
-            "tests/integration/backend/backend_byte_buffer_stdlib_v062_test.baa:7"
-          ]
-        },
-        {
-          "directive": ".globl",
-          "operands": [
             "symbol"
           ],
-          "count": 106,
+          "count": 311,
           "samples": [
+            "examples/error_handling_demo.baa:8",
             "examples/error_handling_demo.baa:61",
-            "examples/file_copy_small.baa:968",
-            "examples/hello_world.baa:8"
+            "examples/file_copy_small.baa:8"
           ]
         },
         {
           "directive": ".local",
           "operands": [
-            "expression"
+            "symbol"
           ],
           "count": 10,
           "samples": [
@@ -1820,7 +1796,7 @@
         },
         {
           "form": "instruction:call:symbol",
-          "count": 901
+          "count": 1500
         },
         {
           "form": "instruction:leaq:memory-rip-relative,register",
@@ -2389,18 +2365,6 @@
         {
           "mnemonic": "call",
           "operands": [
-            "expression"
-          ],
-          "count": 599,
-          "samples": [
-            "examples/error_handling_demo.baa:86",
-            "examples/file_copy_small.baa:1049",
-            "tests/integration/backend/backend_byte_buffer_stdlib_v062_test.baa:339"
-          ]
-        },
-        {
-          "mnemonic": "call",
-          "operands": [
             "register-expression"
           ],
           "count": 5,
@@ -2415,11 +2379,11 @@
           "operands": [
             "symbol"
           ],
-          "count": 904,
+          "count": 1500,
           "samples": [
+            "examples/error_handling_demo.baa:86",
             "examples/error_handling_demo.baa:97",
-            "examples/error_handling_demo.baa:102",
-            "examples/error_handling_demo.baa:113"
+            "examples/error_handling_demo.baa:102"
           ]
         },
         {
@@ -2502,7 +2466,7 @@
             "immediate-integer",
             "register"
           ],
-          "count": 2064,
+          "count": 2061,
           "samples": [
             "examples/error_handling_demo.baa:20",
             "examples/error_handling_demo.baa:34",
@@ -2601,9 +2565,9 @@
           "operands": [],
           "count": 3,
           "samples": [
-            "tests/integration/backend/backend_custom_startup_test.baa:1345",
-            "tests/integration/ir/ir_custom_startup_linux_asm_test.baa:32",
-            "tests/integration/ir/ir_custom_startup_windows_asm_test.baa:32"
+            "tests/integration/backend/backend_custom_startup_test.baa:1338",
+            "tests/integration/ir/ir_custom_startup_linux_asm_test.baa:25",
+            "tests/integration/ir/ir_custom_startup_windows_asm_test.baa:25"
           ]
         },
         {
@@ -2667,18 +2631,6 @@
             "examples/error_handling_demo.baa:25",
             "examples/error_handling_demo.baa:39",
             "examples/error_handling_demo.baa:94"
-          ]
-        },
-        {
-          "mnemonic": "jne",
-          "operands": [
-            "expression"
-          ],
-          "count": 3,
-          "samples": [
-            "tests/integration/backend/backend_custom_startup_test.baa:1339",
-            "tests/integration/ir/ir_custom_startup_linux_asm_test.baa:26",
-            "tests/integration/ir/ir_custom_startup_windows_asm_test.baa:26"
           ]
         },
         {
@@ -2876,7 +2828,7 @@
             "register",
             "register"
           ],
-          "count": 223,
+          "count": 220,
           "samples": [
             "examples/error_handling_demo.baa:109",
             "examples/error_handling_demo.baa:111",
@@ -2978,7 +2930,7 @@
             "register",
             "register"
           ],
-          "count": 13310,
+          "count": 13307,
           "samples": [
             "examples/error_handling_demo.baa:16",
             "examples/error_handling_demo.baa:17",
@@ -3450,7 +3402,7 @@
             "immediate-integer",
             "register"
           ],
-          "count": 2702,
+          "count": 2699,
           "samples": [
             "examples/error_handling_demo.baa:79",
             "examples/error_handling_demo.baa:96",
@@ -3595,25 +3547,13 @@
         {
           "directive": ".globl",
           "operands": [
-            "expression"
-          ],
-          "count": 205,
-          "samples": [
-            "examples/error_handling_demo.baa:8",
-            "examples/file_copy_small.baa:8",
-            "tests/integration/backend/backend_byte_buffer_stdlib_v062_test.baa:7"
-          ]
-        },
-        {
-          "directive": ".globl",
-          "operands": [
             "symbol"
           ],
-          "count": 106,
+          "count": 311,
           "samples": [
+            "examples/error_handling_demo.baa:8",
             "examples/error_handling_demo.baa:61",
-            "examples/file_copy_small.baa:1036",
-            "examples/hello_world.baa:8"
+            "examples/file_copy_small.baa:8"
           ]
         },
         {
@@ -3724,7 +3664,7 @@
         }
       ],
       "symbols": {
-        "defined": 624,
+        "defined": 621,
         "global-declaration": 311,
         "local": 4067
       },
@@ -3747,7 +3687,7 @@
         },
         {
           "name": "%eax",
-          "count": 188
+          "count": 185
         },
         {
           "name": "%ebx",
@@ -3755,7 +3695,7 @@
         },
         {
           "name": "%ecx",
-          "count": 45
+          "count": 42
         },
         {
           "name": "%edi",
@@ -3783,7 +3723,7 @@
         },
         {
           "name": "%r11",
-          "count": 3215
+          "count": 3206
         },
         {
           "name": "%r12",
@@ -3875,7 +3815,7 @@
         },
         {
           "name": "%rsp",
-          "count": 5759
+          "count": 5756
         },
         {
           "name": "%sil",
@@ -3905,7 +3845,7 @@
         },
         {
           "form": "instruction:call:symbol",
-          "count": 904
+          "count": 1500
         },
         {
           "form": "instruction:leaq:memory-rip-relative,register",

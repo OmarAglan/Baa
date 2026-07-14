@@ -18,6 +18,7 @@ tests/
 ├── test_arabic_numerals.py # Arabic numeral IR-output regression coverage
 ├── test_examples.py # public examples compile gate
 ├── test_fast_check.py # --check parser/semantic no-output coverage
+├── test_function_capacity.py # tooling-scale module function-capacity guard
 ├── test_header_self_check.py # --check-header parser/semantic no-output coverage
 ├── test_integration_artifacts.py # ecosystem/tooling integration docs gate
 ├── test_json_diagnostics.py # --diagnostics=json machine-readable diagnostics coverage
@@ -71,6 +72,8 @@ accepts declaration headers, rejects invalid header declarations, and emits no c
 Every mode also runs `tests/test_fast_check.py`, which verifies `--check` accepts valid
 source files, rejects semantic errors, records check-mode dependency manifests, and emits no
 assembly, objects, or executables.
+Every mode also runs `tests/test_function_capacity.py`, which keeps tooling-scale Baa modules
+above the former 128-function ceiling by checking a deterministic 192-function source file.
 Every mode also runs `tests/test_json_diagnostics.py`, which verifies `--diagnostics=json`
 emits the stable top-level schema, error/warning summaries, source spans, codes, severities,
 categories, and hints for Qalam/Takween consumers.

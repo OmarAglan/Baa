@@ -604,6 +604,16 @@ def _run_cli_exit_code_tests(log_dir: Path) -> StepResult:
     )
 
 
+def _run_function_capacity_tests(log_dir: Path) -> StepResult:
+    return _run_logged(
+        "function-capacity-tests",
+        [sys.executable, str(TESTS_DIR / "test_function_capacity.py")],
+        cwd=ROOT,
+        log_dir=log_dir,
+        timeout_s=120.0,
+    )
+
+
 def _run_assembly_surface_inventory_tests(log_dir: Path) -> StepResult:
     return _run_logged(
         "assembly-surface-inventory-tests",
@@ -906,6 +916,11 @@ def main() -> int:
     _print_step(cli_exit_code_res)
     all_results.append(cli_exit_code_res)
     overall_ok = overall_ok and cli_exit_code_res.passed
+
+    function_capacity_res = _run_function_capacity_tests(log_dir)
+    _print_step(function_capacity_res)
+    all_results.append(function_capacity_res)
+    overall_ok = overall_ok and function_capacity_res.passed
 
     assembly_surface_inventory_res = _run_assembly_surface_inventory_tests(log_dir)
     _print_step(assembly_surface_inventory_res)

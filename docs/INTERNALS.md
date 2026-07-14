@@ -816,7 +816,7 @@ The semantic analyzer uses the following constants (defined in `src/analysis.c`)
 |----------|-------|-------------|
 | `ANALYSIS_MAX_SYMBOLS` | 100 | Maximum symbols per scope (global/local) |
 | `ANALYSIS_MAX_SCOPES` | 64 | Maximum nested scope depth |
-| `ANALYSIS_MAX_FUNCS` | 128 | Maximum function declarations |
+| `ANALYSIS_MAX_FUNCS` | 256 | Maximum function declarations |
 | `ANALYSIS_MAX_FUNC_PARAMS` | 32 | Maximum parameters per function |
 | `ANALYSIS_SYMBOL_HASH_BUCKETS` | 257 | Hash table buckets for symbol lookup |
 | `ANALYSIS_MAX_ENUMS` | 128 | Maximum enum definitions |
@@ -825,6 +825,10 @@ The semantic analyzer uses the following constants (defined in `src/analysis.c`)
 | `ANALYSIS_MAX_ENUM_MEMBERS` | 128 | Maximum members per enum |
 | `ANALYSIS_MAX_STRUCT_FIELDS` | 128 | Maximum fields per struct/union |
 | `ANALYSIS_MAX_TYPE_ALIASES` | 256 | Maximum type alias definitions |
+
+The 256-function ceiling supports tooling-sized Baa programs such as Takween while retaining
+a bounded analyzer. `tests/test_function_capacity.py` checks a generated 192-function module
+in every QA mode so this capacity cannot silently regress to the former 128-function limit.
 
 ### 5.6. Symbol Table Structures
 

@@ -10,6 +10,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Added
 
+- **Baa/Nazm assembly-surface inventory**:
+  - Added the deterministic `baa-assembly-surface-v1` generator and QA `--check` gate over
+    all assembly-producing integration, stress, and example sources for Windows and Linux.
+  - Recorded 100 sources per target with zero omissions while keeping Nazm non-default and
+    requiring visible shadow failures before any production cutover.
+- **Portable SHA-256 file hashing**:
+  - Added `تجزئة_ملف_SHA256` as an owned lowercase digest primitive on Windows and POSIX,
+    with a known-vector integration test for tooling and immutable package archives.
+- **Tooling-scale function capacity**:
+  - Raised the bounded semantic function table from 128 to 256 declarations and added an
+    every-mode 192-function regression guard for Baa-written tools such as Takween.
+
 - **Enforced `compiler-cli-v1` exit codes**:
   - Centralized driver statuses `0` through `5` and stopped collapsing invalid invocation,
     unsupported target/mode, external toolchain/output, and internal failures into source

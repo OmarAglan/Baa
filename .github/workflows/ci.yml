@@ -179,3 +179,61 @@ jobs:
             qa-summary-full-linux.json
             build-linux/**/*.s
             build-linux/**/*.ir
+
+  nazm-shadow-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: OmarAglan/Nazm
+          ref: main
+          path: Nazm
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Add bundled toolchain to PATH (if present)
+        shell: pwsh
+        run: |
+          if (Test-Path ".\gcc\bin") {
+            "$env:GITHUB_WORKSPACE\gcc\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+          }
+      - name: Build Baa and Nazm
+        shell: pwsh
+        run: |
+          cmake -B build -G "MinGW Makefiles"
+          cmake --build build
+          cmake -S Nazm -B Nazm/build -G "MinGW Makefiles"
+          cmake --build Nazm/build
+      - name: Baa to Nazm shadow parity
+        shell: pwsh
+        env:
+          PYTHONUTF8: "1"
+          BAA: ${{ github.workspace }}\build\baa.exe
+          NAZM: ${{ github.workspace }}\Nazm\build\nazm.exe
+        run: python tests/test_nazm_emitter.py -v
+
+  nazm-shadow-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: OmarAglan/Nazm
+          ref: main
+          path: Nazm
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Build Baa and Nazm
+        run: |
+          cmake -B build-linux -DCMAKE_BUILD_TYPE=Release
+          cmake --build build-linux -j
+          cmake -S Nazm -B Nazm/build -DCMAKE_BUILD_TYPE=Release
+          cmake --build Nazm/build -j
+      - name: Baa to Nazm shadow parity
+        env:
+          PYTHONUTF8: "1"
+          BAA: ${{ github.workspace }}/build-linux/baa
+          NAZM: ${{ github.workspace }}/Nazm/build/nazm
+        run: python3 tests/test_nazm_emitter.py -v

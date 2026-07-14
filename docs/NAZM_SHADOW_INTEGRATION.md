@@ -131,6 +131,8 @@ Missing Nazm, an unsupported emitter form, assembler failure, or shadow-link
 failure makes the command fail; production GAS success never hides it. The
 ecosystem test compares the minimal slice's Arabic source, `.text`, exported
 entry symbol, relocation absence, link success, exit status, stdout, and stderr.
+Dedicated `nazm-shadow-windows` and `nazm-shadow-linux` CI jobs build both
+repositories and run this real parity path on every Baa change.
 
 Full-corpus automated object/link/runtime comparison is not yet admitted. Nazm
 still needs support for Baa's observed operand widths, `setcc`, extension and

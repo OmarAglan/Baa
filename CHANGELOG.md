@@ -21,9 +21,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
   - Classified every emitted form as supported, partial, or unsupported with a reason and
     attached every supported form to a focused Nazm ELF64/COFF acceptance fixture.
   - Wired the coverage completeness and no-overclaim checks into every Baa QA mode.
-  - Kept ASCII linker symbols, external calls, RIP-relative references, read-only sections,
-    unsupported widths, `setcc`, extensions, and SSE2 visible instead of treating GAS success
-    as Nazm success.
+  - Kept arbitrary ASCII linker symbols, external calls, RIP-relative references, read-only
+    sections, unsupported widths, `setcc`, extensions, and SSE2 visible instead of treating
+    GAS success as Nazm success; the entry symbol now has the Arabic source spelling `الرئيسية`.
 - **Portable SHA-256 file hashing**:
   - Added `تجزئة_ملف_SHA256` as an owned lowercase digest primitive on Windows and POSIX,
     with a known-vector integration test for tooling and immutable package archives.

@@ -85,7 +85,7 @@ class NazmCoverageTests(unittest.TestCase):
                 if item["status"] == "supported"
             ))
 
-    def test_contract_does_not_overstate_external_calls_or_rip_relative(self) -> None:
+    def test_contract_preserves_arabic_source_and_backend_limits(self) -> None:
         linux = self.coverage["targets"]["x86_64-linux"]
         instruction_index = {
             (item["mnemonic"], tuple(item["operands"])): item
@@ -117,10 +117,10 @@ class NazmCoverageTests(unittest.TestCase):
         }
         self.assertEqual(
             directive_index[(".globl", ("symbol",))]["status"],
-            "unsupported",
+            "partial",
         )
         self.assertIn(
-            "ASCII linker identifiers",
+            "الرئيسية",
             directive_index[(".globl", ("symbol",))]["reason"],
         )
 

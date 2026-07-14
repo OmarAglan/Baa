@@ -7,7 +7,7 @@
   "nazm_capabilities": {
     "schema": "nazm-capabilities-v1",
     "assembler": "Nazm 0.4.0",
-    "sha256": "f8d85029e2d5df6b9ee829b1d5e539f0ea855d19db426a512c9b22a6b3777435"
+    "sha256": "4892fded92ba3196e5b15662a5f03a56acdb32bb873710d2b330d758720e8023"
   },
   "status_contract": {
     "supported": "The complete inventory form is implemented by Nazm.",
@@ -2003,14 +2003,15 @@
             "examples/file_copy_small.baa:968",
             "examples/hello_world.baa:8"
           ],
-          "status": "unsupported",
+          "status": "partial",
           "nazm": {
             "directive": ".عام",
             "operands": [
               "label"
             ]
           },
-          "reason": "Nazm 0.4 rejects ASCII linker identifiers such as main."
+          "reason": "The Baa entry symbol main is emitted canonically as the Arabic source label الرئيسية and mapped internally by the object writer; arbitrary ASCII linker identifiers remain unsupported.",
+          "acceptance_fixture": "tests/fixtures/baa_coverage/بيانات-باء.نظم"
         },
         {
           "directive": ".local",
@@ -2262,13 +2263,13 @@
       "summary": {
         "forms": {
           "supported": 38,
-          "partial": 4,
-          "unsupported": 92
+          "partial": 5,
+          "unsupported": 91
         },
         "emissions": {
           "supported": 52946,
-          "partial": 2017,
-          "unsupported": 25072
+          "partial": 2123,
+          "unsupported": 24966
         }
       }
     },
@@ -4203,14 +4204,15 @@
             "examples/file_copy_small.baa:1036",
             "examples/hello_world.baa:8"
           ],
-          "status": "unsupported",
+          "status": "partial",
           "nazm": {
             "directive": ".عام",
             "operands": [
               "label"
             ]
           },
-          "reason": "Nazm 0.4 rejects ASCII linker identifiers such as main."
+          "reason": "The Baa entry symbol main is emitted canonically as the Arabic source label الرئيسية and mapped internally by the object writer; arbitrary ASCII linker identifiers remain unsupported.",
+          "acceptance_fixture": "tests/fixtures/baa_coverage/بيانات-باء.نظم"
         },
         {
           "directive": ".loc",
@@ -4419,13 +4421,13 @@
       "summary": {
         "forms": {
           "supported": 37,
-          "partial": 3,
-          "unsupported": 88
+          "partial": 4,
+          "unsupported": 87
         },
         "emissions": {
           "supported": 58065,
-          "partial": 2013,
-          "unsupported": 23680
+          "partial": 2119,
+          "unsupported": 23574
         }
       }
     }

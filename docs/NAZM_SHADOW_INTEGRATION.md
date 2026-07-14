@@ -69,14 +69,15 @@ inventory omissions:
 
 | Target | Instruction forms S/P/U | Directive forms S/P/U | Sections S/U | Relocations P/U |
 |---|---:|---:|---:|---:|
-| `x86_64-linux` | 30 / 1 / 77 | 6 / 2 / 7 | 2 / 2 | 1 / 6 |
-| `x86_64-windows` | 29 / 1 / 75 | 6 / 1 / 6 | 2 / 1 | 1 / 6 |
+| `x86_64-linux` | 30 / 1 / 77 | 6 / 3 / 6 | 2 / 2 | 1 / 6 |
+| `x86_64-windows` | 29 / 1 / 75 | 6 / 2 / 5 | 2 / 1 | 1 / 6 |
 
 Each supported row names the checked Nazm acceptance fixture that exercises
-its canonical Arabic lowering. The matrix deliberately records ASCII linker
-identifiers such as `main`, external calls, RIP-relative references,
-read-only sections, byte/32-bit forms, `setcc`, extensions, and scalar SSE2 as
-partial or unsupported where applicable.
+its canonical Arabic lowering. Baa emits the entry label as `الرئيسية`; Nazm
+maps that exported Arabic symbol internally to the platform ABI name `main`.
+Arbitrary ASCII source identifiers, external calls, RIP-relative references,
+read-only sections, byte/32-bit forms, `setcc`, extensions, and scalar SSE2
+remain partial or unsupported where applicable.
 
 Regenerate or verify the comparison from an ecosystem checkout:
 
@@ -113,6 +114,6 @@ the coverage matrix.
 Stage B and the Stage B.1 comparison/fixture gate are complete. The canonical
 Arabic emitter and executable shadow option are not yet admitted. Nazm still
 needs support for Baa's observed operand widths, `setcc`, extension and
-division forms, scalar SSE2 forms, ASCII/external symbols, read-only sections,
+division forms, scalar SSE2 forms, external symbols, read-only sections,
 and the required ELF64/COFF relocations. The production assembler therefore
 remains unchanged.

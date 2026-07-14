@@ -227,7 +227,9 @@ Nazm integration should consume:
 - canonical Arabic assembly text emitted after Baa register allocation,
 - explicit target and object-format selection,
 - source-map metadata for generated assembly diagnostics, and
-- a complete generated-form inventory from Baa's Windows/Linux test corpus.
+- a complete generated-form inventory from Baa's Windows/Linux test corpus,
+- `baa-nazm-shadow-corpus-v1`, with one emitted/unsupported/error result for
+  every inventoried source and target.
 
 Until `baa-nazm-boundary-v0` is admitted, Baa's public `-S` output remains
 GAS/AT&T and production object generation continues through the external host

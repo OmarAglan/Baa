@@ -86,6 +86,37 @@ python scripts/generate_nazm_coverage.py
 python scripts/generate_nazm_coverage.py --check
 ```
 
+## Stage B.2 source-level shadow matrix
+
+The generated [`baa-nazm-shadow-corpus-v1`](generated/baa_nazm_shadow_corpus_v1.json)
+artifact runs `--emit-nazm` against the same 100 sources for both targets. It
+records one explicit result per source: Arabic-only emission, visible
+unsupported status `3`, or a gate error. Unsupported results must leave no
+partial output. `baa-nazm-coverage-v1` embeds this complete matrix and pins its
+SHA-256 digest.
+
+The initial source-level baseline is identical on Linux and Windows:
+
+| Target | Arabic-only emitted | Visible unsupported | Gate errors |
+|---|---:|---:|---:|
+| `x86_64-linux` | 1 | 99 | 0 |
+| `x86_64-windows` | 1 | 99 | 0 |
+
+The admitted corpus source is
+`tests/integration/backend/backend_pp_nested_test.baa`. It now passes the real
+GAS/Nazm object, link, and runtime comparison on both CI hosts. The 99 visible
+rejections quantify the next backend work: 48 first encounter a string table,
+26 a global, 12 an unsupported machine instruction, 5 a callee-saved register,
+4 a function whose Baa spelling still contains Latin letters, and 4 an
+unsupported startup/debug/stack-protection mode.
+
+Regenerate or verify the matrix with the current compiler:
+
+```text
+python scripts/inventory_nazm_shadow_corpus.py --compiler build/baa
+python scripts/inventory_nazm_shadow_corpus.py --compiler build/baa --check
+```
+
 ## Non-default shadow path
 
 The shadow path is admitted in ordered increments:
@@ -118,7 +149,7 @@ line/column spans in Arabic comments, uses `الرئيسية` rather than an ASC
 name, and fails with status `3` before leaving an output file when any machine
 form is unsupported.
 
-The first explicit `--nazm-shadow=<path>` slice is also admitted for one input,
+The first explicit `--nazm-shadow=<path>` slice is admitted for one input at a time,
 where `<path>` is the Nazm executable. Baa still completes its production GAS
 build, but also invokes Nazm with structured argv and links these receipts next
 to the requested output:
@@ -129,12 +160,14 @@ to the requested output:
 
 Missing Nazm, an unsupported emitter form, assembler failure, or shadow-link
 failure makes the command fail; production GAS success never hides it. The
-ecosystem test compares the minimal slice's Arabic source, `.text`, exported
-entry symbol, relocation absence, link success, exit status, stdout, and stderr.
+ecosystem test compares the synthetic minimal slice and the first admitted
+100-source corpus member for Arabic source, `.text`, exported entry symbol,
+relocation absence, link success, exit status, stdout, and stderr.
 Dedicated `nazm-shadow-windows` and `nazm-shadow-linux` CI jobs build both
 repositories and run this real parity path on every Baa change.
 
-Full-corpus automated object/link/runtime comparison is not yet admitted. Nazm
+The full corpus is now classified automatically, but object/link/runtime
+comparison is admitted only for its one currently emitted member. Nazm
 still needs support for Baa's observed operand widths, `setcc`, extension and
 division forms, scalar SSE2 forms, external symbols, read-only sections, and
 the required ELF64/COFF relocations. The production assembler therefore remains

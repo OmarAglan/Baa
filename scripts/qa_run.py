@@ -634,6 +634,16 @@ def _run_nazm_coverage_tests(log_dir: Path) -> StepResult:
     )
 
 
+def _run_nazm_shadow_corpus_tests(log_dir: Path) -> StepResult:
+    return _run_logged(
+        "nazm-shadow-corpus-tests",
+        [sys.executable, str(TESTS_DIR / "test_nazm_shadow_corpus.py")],
+        cwd=ROOT,
+        log_dir=log_dir,
+        timeout_s=120.0,
+    )
+
+
 def _run_nazm_emitter_tests(log_dir: Path) -> StepResult:
     return _run_logged(
         "nazm-emitter-tests",
@@ -951,6 +961,11 @@ def main() -> int:
     _print_step(nazm_coverage_res)
     all_results.append(nazm_coverage_res)
     overall_ok = overall_ok and nazm_coverage_res.passed
+
+    nazm_shadow_corpus_res = _run_nazm_shadow_corpus_tests(log_dir)
+    _print_step(nazm_shadow_corpus_res)
+    all_results.append(nazm_shadow_corpus_res)
+    overall_ok = overall_ok and nazm_shadow_corpus_res.passed
 
     nazm_emitter_res = _run_nazm_emitter_tests(log_dir)
     _print_step(nazm_emitter_res)

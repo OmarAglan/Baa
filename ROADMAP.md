@@ -1817,17 +1817,18 @@
   #### v1.5.0.1: Inventory and Contract
 
 * \[x] **Generated-form corpus** — version `baa-nazm-coverage-v1` from the full 100-source, two-target inventory and assemble focused ELF64/COFF fixtures for every currently supported form; partial and unsupported forms remain explicit.
+* \[x] **Source-level shadow matrix** — classify all 100 sources on both targets as Arabic-only emitted, visibly unsupported, or gate error; the initial baseline admits 1 source and rejects 99 with status `3` and no output.
 * \[ ] **Source mapping** — retain Baa line/column identity through generated assembly diagnostics.
 * \[ ] **Inline assembly migration** — version the breaking move from raw `مجمع { ... }` GAS text to canonical `نظم { ... }` source.
-* \[ ] **Target contract** — map Baa targets explicitly to Nazm ELF64/COFF modes.
+* \[x] **Target contract** — map Baa targets explicitly to Nazm ELF64/COFF modes.
 
   #### v1.5.0.2: Shadow and Parity
 
-* \[ ] **Opt-in shadow flag** — assemble with Nazm beside the production GAS path.
-* \[ ] **Object comparison** — compare sections, symbols, relocations, and normalized semantics rather than requiring incidental byte identity.
-* \[ ] **Link/runtime comparison** — link and run both outputs on Windows and Linux.
-* \[ ] **Diagnostics comparison** — unsupported forms remain visible Arabic failures.
-* \[ ] **No silent fallback** — never substitute guessed bytes or hide unsupported Nazm input behind GAS.
+* \[x] **Opt-in shadow flag** — assemble with Nazm beside the production GAS path.
+* \[x] **Object comparison** — compare sections, symbols, relocations, and normalized semantics rather than requiring incidental byte identity for every admitted source.
+* \[x] **Link/runtime comparison** — link and run both outputs on Windows and Linux for every admitted source.
+* \[x] **Diagnostics comparison** — unsupported forms remain visible Arabic failures.
+* \[x] **No silent fallback** — never substitute guessed bytes or hide unsupported Nazm input behind GAS.
 
   #### v1.5.0.3: Production Admission
 

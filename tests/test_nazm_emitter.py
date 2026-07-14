@@ -327,6 +327,51 @@ class NazmEmitterTests(unittest.TestCase):
                 self.assertIn("main", global_symbols)
                 self.assertEqual(relocation_count, 0)
 
+    def test_supported_corpus_source_links_and_matches_runtime(self) -> None:
+        nazm = _find_nazm()
+        if nazm is None:
+            self.skipTest("Nazm executable is unavailable in this checkout")
+
+        source = (
+            ROOT / "tests" / "integration" / "backend" / "backend_pp_nested_test.baa"
+        )
+        with tempfile.TemporaryDirectory(prefix="baa_nazm_corpus_shadow_") as temp:
+            work = Path(temp)
+            exe_suffix = ".exe" if os.name == "nt" else ""
+            object_suffix = ".obj" if os.name == "nt" else ".o"
+            output = work / f"برنامج-المصفوفة{exe_suffix}"
+            proc = self.run_baa(
+                work,
+                f"--nazm-shadow={nazm}",
+                str(source),
+                "-o",
+                str(output),
+            )
+            self.assertEqual(proc.returncode, 0, proc.stderr)
+
+            shadow_source = Path(f"{output}.ظل-نظم.نظم")
+            shadow_object = Path(f"{output}.ظل-نظم{object_suffix}")
+            shadow_executable = Path(f"{output}.ظل-نظم{exe_suffix}")
+            nazm_text = shadow_source.read_text(encoding="utf-8")
+            self.assertIsNone(re.search(r"[A-Za-z]", nazm_text))
+            self.assertTrue(shadow_object.is_file())
+            self.assertTrue(shadow_executable.is_file())
+
+            production_run = subprocess.run(
+                [str(output)], capture_output=True, timeout=30
+            )
+            shadow_run = subprocess.run(
+                [str(shadow_executable)], capture_output=True, timeout=30
+            )
+            self.assertEqual(shadow_run.returncode, production_run.returncode)
+            self.assertEqual(shadow_run.stdout, production_run.stdout)
+            self.assertEqual(shadow_run.stderr, production_run.stderr)
+
+            sections, global_symbols, relocation_count = _inspect_object(shadow_object)
+            self.assertIn(".text", sections)
+            self.assertIn("main", global_symbols)
+            self.assertEqual(relocation_count, 0)
+
 
 if __name__ == "__main__":
     unittest.main()

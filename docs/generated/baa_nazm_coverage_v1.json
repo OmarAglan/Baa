@@ -9,6 +9,11 @@
     "assembler": "Nazm 0.4.0",
     "sha256": "4892fded92ba3196e5b15662a5f03a56acdb32bb873710d2b330d758720e8023"
   },
+  "shadow_corpus": {
+    "schema": "baa-nazm-shadow-corpus-v1",
+    "compiler": "baa version 0.6.0",
+    "sha256": "776cdb705f270ebb6a83c506e47dfc1c2840c9d0af5a9102864e3977351e5eb7"
+  },
   "status_contract": {
     "supported": "The complete inventory form is implemented by Nazm.",
     "partial": "Only a stated subset is implemented; this is not shadow-ready.",
@@ -127,7 +132,810 @@
           "tests/stress/stress_deep_scopes.baa",
           "tests/stress/stress_symbol_volume.baa",
           "tests/stress/stress_utf8_identifiers.baa"
-        ]
+        ],
+        "shadow_matrix": {
+          "source_count": 100,
+          "summary": {
+            "emitted": 1,
+            "unsupported": 99,
+            "error": 0
+          },
+          "unsupported_reasons": [
+            {
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
+              "count": 48
+            },
+            {
+              "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم.",
+              "count": 26
+            },
+            {
+              "reason": "خطأ: تعليمة الآلة غير مدعومة في شريحة نظم التنفيذية الأولى.",
+              "count": 12
+            },
+            {
+              "reason": "خطأ: حفظ السجلات المحفوظة عبر الاستدعاء غير مدعوم بعد في مسار نظم.",
+              "count": 5
+            },
+            {
+              "reason": "خطأ: أسماء الدوال في مصدر نظم يجب أن تكون عربية فقط.",
+              "count": 4
+            },
+            {
+              "reason": "خطأ: شريحة نظم الأولى لا تدعم بدء التشغيل المخصص أو معلومات التنقيح أو حماية المكدس.",
+              "count": 4
+            }
+          ],
+          "sources": [
+            {
+              "source": "examples/error_handling_demo.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+            },
+            {
+              "source": "examples/file_copy_small.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+            },
+            {
+              "source": "examples/hello_world.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+            },
+            {
+              "source": "examples/math_and_format.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+            },
+            {
+              "source": "tests/integration/backend/backend_arabic_numeral_source_tokens_v064_test.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+            },
+            {
+              "source": "tests/integration/backend/backend_array_init_test.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "reason": "خطأ: تعليمة الآلة غير مدعومة في شريحة نظم التنفيذية الأولى.",
+              "location": {
+                "file": "tests/integration/backend/backend_array_init_test.baa",
+                "line": 3,
+                "column": 14
+              }
+            },
+            {
+              "source": "tests/integration/backend/backend_array_length_operator_test.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+            },
+            {
+              "source": "tests/integration/backend/backend_array_sum_test.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "reason": "خطأ: تعليمة الآلة غير مدعومة في شريحة نظم التنفيذية الأولى.",
+              "location": {
+                "file": "tests/integration/backend/backend_array_sum_test.baa",
+                "line": 2,
+                "column": 14
+              }
+            },
+            {
+              "source": "tests/integration/backend/backend_byte_buffer_stdlib_v062_test.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم."
+            },
+            {
+              "source": "tests/integration/backend/backend_cast_pointer_diff_test.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "reason": "خطأ: تعليمة الآلة غير مدعومة في شريحة نظم التنفيذية الأولى.",
+              "location": {
+                "file": "tests/integration/backend/backend_cast_pointer_diff_test.baa",
+                "line": 2,
+                "column": 14
+              }
+            },
+            {
+              "source": "tests/integration/backend/backend_const_pointer_rules_test.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "reason": "خطأ: تعليمة الآلة غير مدعومة في شريحة نظم التنفيذية الأولى.",
+              "location": {
+                "file": "tests/integration/backend/backend_const_pointer_rules_test.baa",
+                "line": 2,
+                "column": 14
+              }
+            },
+            {
+              "source": "tests/integration/backend/backend_custom_startup_test.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "flags": [
+                "--startup=custom"
+              ],
+              "reason": "خطأ: شريحة نظم الأولى لا تدعم بدء التشغيل المخصص أو معلومات التنقيح أو حماية المكدس."
+            },
+            {
+              "source": "tests/integration/backend/backend_dynamic_memory_noheader_test.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "reason": "خطأ: تعليمة الآلة غير مدعومة في شريحة نظم التنفيذية الأولى.",
+              "location": {
+                "file": "tests/integration/backend/backend_dynamic_memory_noheader_test.baa",
+                "line": 2,
+                "column": 20
+              }
+            },
+            {
+              "source": "tests/integration/backend/backend_dynamic_memory_test.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم."
+            },
+            {
+              "source": "tests/integration/backend/backend_enum_struct_test.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم."
+            },
+            {
+              "source": "tests/integration/backend/backend_error_handling_v043_test.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم."
+            },
+            {
+              "source": "tests/integration/backend/backend_file_io_noheader_test.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+            },
+            {
+              "source": "tests/integration/backend/backend_file_io_test.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم."
+            },
+            {
+              "source": "tests/integration/backend/backend_float_extensions_v042_test.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم."
+            },
+            {
+              "source": "tests/integration/backend/backend_format_arabic_test.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+            },
+            {
+              "source": "tests/integration/backend/backend_func_ptr_shadow_call_test.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "reason": "خطأ: حفظ السجلات المحفوظة عبر الاستدعاء غير مدعوم بعد في مسار نظم."
+            },
+            {
+              "source": "tests/integration/backend/backend_func_ptr_test.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "reason": "خطأ: حفظ السجلات المحفوظة عبر الاستدعاء غير مدعوم بعد في مسار نظم."
+            },
+            {
+              "source": "tests/integration/backend/backend_global_array_init_test.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم."
+            },
+            {
+              "source": "tests/integration/backend/backend_include_bom_test.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم."
+            },
+            {
+              "source": "tests/integration/backend/backend_include_i_compact_form_test.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "flags": [
+                "-Itests/fixtures/include_i/compact"
+              ],
+              "reason": "خطأ: أسماء الدوال في مصدر نظم يجب أن تكون عربية فقط."
+            },
+            {
+              "source": "tests/integration/backend/backend_include_i_nested_source_relative_priority_test.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "flags": [
+                "-I",
+                "tests/fixtures/include_i/nested_override",
+                "-I",
+                "tests/fixtures/include_i/nested_primary"
+              ],
+              "reason": "خطأ: أسماء الدوال في مصدر نظم يجب أن تكون عربية فقط."
+            },
+            {
+              "source": "tests/integration/backend/backend_include_i_path_with_spaces_test.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "flags": [
+                "-I",
+                "tests/fixtures/include i space"
+              ],
+              "reason": "خطأ: تعليمة الآلة غير مدعومة في شريحة نظم التنفيذية الأولى.",
+              "location": {
+                "file": "tests/integration/backend/backend_include_i_path_with_spaces_test.baa",
+                "line": 7,
+                "column": 13
+              }
+            },
+            {
+              "source": "tests/integration/backend/backend_include_i_precedence_test.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "flags": [
+                "-I",
+                "tests/fixtures/include_i/prio_first",
+                "-I",
+                "tests/fixtures/include_i/prio_second"
+              ],
+              "reason": "خطأ: أسماء الدوال في مصدر نظم يجب أن تكون عربية فقط."
+            },
+            {
+              "source": "tests/integration/backend/backend_include_i_space_form_test.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "flags": [
+                "-I",
+                "tests/fixtures/include_i/single_space"
+              ],
+              "reason": "خطأ: أسماء الدوال في مصدر نظم يجب أن تكون عربية فقط."
+            },
+            {
+              "source": "tests/integration/backend/backend_include_relative_alias_path_test.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "reason": "خطأ: تعليمة الآلة غير مدعومة في شريحة نظم التنفيذية الأولى.",
+              "location": {
+                "file": "c:/Users/Dell/Documents/GitHub/Eco/Baa/tests/fixtures/include_alias/outer.baahd",
+                "line": 4,
+                "column": 14
+              }
+            },
+            {
+              "source": "tests/integration/backend/backend_include_relative_dir_test.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "reason": "خطأ: تعليمة الآلة غير مدعومة في شريحة نظم التنفيذية الأولى.",
+              "location": {
+                "file": "c:/Users/Dell/Documents/GitHub/Eco/Baa/tests/fixtures/include_rel/outer.baahd",
+                "line": 4,
+                "column": 14
+              }
+            },
+            {
+              "source": "tests/integration/backend/backend_inline_test.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+            },
+            {
+              "source": "tests/integration/backend/backend_int_semantics_test.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم."
+            },
+            {
+              "source": "tests/integration/backend/backend_low_level_ops_test.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم."
+            },
+            {
+              "source": "tests/integration/backend/backend_main_args_test.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+            },
+            {
+              "source": "tests/integration/backend/backend_mod_test.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "reason": "خطأ: تعليمة الآلة غير مدعومة في شريحة نظم التنفيذية الأولى.",
+              "location": {
+                "file": "tests/integration/backend/backend_mod_test.baa",
+                "line": 4,
+                "column": 24
+              }
+            },
+            {
+              "source": "tests/integration/backend/backend_multidim_array_test.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم."
+            },
+            {
+              "source": "tests/integration/backend/backend_path_stdlib_v062_test.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم."
+            },
+            {
+              "source": "tests/integration/backend/backend_pointer_core_test.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "reason": "خطأ: تعليمة الآلة غير مدعومة في شريحة نظم التنفيذية الأولى.",
+              "location": {
+                "file": "tests/integration/backend/backend_pointer_core_test.baa",
+                "line": 2,
+                "column": 14
+              }
+            },
+            {
+              "source": "tests/integration/backend/backend_pp_nested_test.baa",
+              "status": "emitted",
+              "exit_code": 0,
+              "sha256": "da03f5d8de143160d36468e15966210d826b472385812fbd189deeb6454a6e49"
+            },
+            {
+              "source": "tests/integration/backend/backend_process_runtime_v065_test.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+            },
+            {
+              "source": "tests/integration/backend/backend_readline_stdin_test.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+            },
+            {
+              "source": "tests/integration/backend/backend_readnum_stdin_test.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+            },
+            {
+              "source": "tests/integration/backend/backend_regalloc_stress.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم."
+            },
+            {
+              "source": "tests/integration/backend/backend_result_helpers_stdlib_v062_test.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم."
+            },
+            {
+              "source": "tests/integration/backend/backend_runtime_assert_fail_v055_test.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+            },
+            {
+              "source": "tests/integration/backend/backend_runtime_assert_pass_v055_test.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+            },
+            {
+              "source": "tests/integration/backend/backend_runtime_bounds_fail_v055_test.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "flags": [
+                "-fruntime-checks"
+              ],
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+            },
+            {
+              "source": "tests/integration/backend/backend_runtime_checks_selective_bounds_fail_v063_test.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "flags": [
+                "-fruntime-checks=bounds"
+              ],
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+            },
+            {
+              "source": "tests/integration/backend/backend_runtime_checks_selective_null_fail_v063_test.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "flags": [
+                "-fruntime-checks=null"
+              ],
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+            },
+            {
+              "source": "tests/integration/backend/backend_runtime_div_zero_fail_v063_test.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "flags": [
+                "-fruntime-checks"
+              ],
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+            },
+            {
+              "source": "tests/integration/backend/backend_runtime_mod_zero_fail_v063_test.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "flags": [
+                "-fruntime-checks"
+              ],
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+            },
+            {
+              "source": "tests/integration/backend/backend_runtime_null_deref_assign_fail_v063_test.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "flags": [
+                "-fruntime-checks"
+              ],
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+            },
+            {
+              "source": "tests/integration/backend/backend_runtime_null_deref_fail_v063_test.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "flags": [
+                "-fruntime-checks"
+              ],
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+            },
+            {
+              "source": "tests/integration/backend/backend_runtime_panic_location_v063_test.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+            },
+            {
+              "source": "tests/integration/backend/backend_runtime_panic_v055_test.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+            },
+            {
+              "source": "tests/integration/backend/backend_runtime_shift_width_high_fail_v063_test.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "flags": [
+                "-fruntime-checks"
+              ],
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+            },
+            {
+              "source": "tests/integration/backend/backend_runtime_shift_width_negative_fail_v063_test.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "flags": [
+                "-fruntime-checks"
+              ],
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+            },
+            {
+              "source": "tests/integration/backend/backend_runtime_string_array_inner_bounds_fail_v063_test.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "flags": [
+                "-fruntime-checks"
+              ],
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+            },
+            {
+              "source": "tests/integration/backend/backend_runtime_string_bounds_fail_v063_test.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "flags": [
+                "-fruntime-checks"
+              ],
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+            },
+            {
+              "source": "tests/integration/backend/backend_scan_arabic_test.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+            },
+            {
+              "source": "tests/integration/backend/backend_scope_test.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم."
+            },
+            {
+              "source": "tests/integration/backend/backend_sha256_file_v066_test.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+            },
+            {
+              "source": "tests/integration/backend/backend_stackargs_test.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+            },
+            {
+              "source": "tests/integration/backend/backend_static_storage_test.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم."
+            },
+            {
+              "source": "tests/integration/backend/backend_stdlib_short_include_test.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+            },
+            {
+              "source": "tests/integration/backend/backend_stdlib_v041_test.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم."
+            },
+            {
+              "source": "tests/integration/backend/backend_string_builder_stdlib_v062_test.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم."
+            },
+            {
+              "source": "tests/integration/backend/backend_string_ops_test.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم."
+            },
+            {
+              "source": "tests/integration/backend/backend_struct_init_test.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "reason": "خطأ: تعليمة الآلة غير مدعومة في شريحة نظم التنفيذية الأولى.",
+              "location": {
+                "file": "tests/integration/backend/backend_struct_init_test.baa",
+                "line": 18,
+                "column": 23
+              }
+            },
+            {
+              "source": "tests/integration/backend/backend_sysv_6args_test.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+            },
+            {
+              "source": "tests/integration/backend/backend_tailcall_float_test.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "reason": "خطأ: حفظ السجلات المحفوظة عبر الاستدعاء غير مدعوم بعد في مسار نظم."
+            },
+            {
+              "source": "tests/integration/backend/backend_tailcall_test.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+            },
+            {
+              "source": "tests/integration/backend/backend_test.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم."
+            },
+            {
+              "source": "tests/integration/backend/backend_text_stdlib_helpers_v064_test.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم."
+            },
+            {
+              "source": "tests/integration/backend/backend_type_alias_test.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم."
+            },
+            {
+              "source": "tests/integration/backend/backend_union_test.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+            },
+            {
+              "source": "tests/integration/backend/backend_utf8_validation_valid_v064_test.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+            },
+            {
+              "source": "tests/integration/backend/backend_variadic_functions_test.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+            },
+            {
+              "source": "tests/integration/backend/backend_vector_stdlib_v062_test.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم."
+            },
+            {
+              "source": "tests/integration/backend/int_sizes_test.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+            },
+            {
+              "source": "tests/integration/frontend/frontend_extern_declarations_test.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم."
+            },
+            {
+              "source": "tests/integration/frontend/frontend_extern_no_storage_test.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "flags": [
+                "-O1"
+              ],
+              "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم."
+            },
+            {
+              "source": "tests/integration/ir/ir_custom_startup_linux_asm_test.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "flags": [
+                "--target=x86_64-linux",
+                "--startup=custom"
+              ],
+              "reason": "خطأ: شريحة نظم الأولى لا تدعم بدء التشغيل المخصص أو معلومات التنقيح أو حماية المكدس."
+            },
+            {
+              "source": "tests/integration/ir/ir_custom_startup_windows_asm_test.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "flags": [
+                "--target=x86_64-windows",
+                "--startup=custom"
+              ],
+              "reason": "خطأ: شريحة نظم الأولى لا تدعم بدء التشغيل المخصص أو معلومات التنقيح أو حماية المكدس."
+            },
+            {
+              "source": "tests/integration/ir/ir_inline_asm_test.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+            },
+            {
+              "source": "tests/integration/ir/ir_printer.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "reason": "خطأ: تعليمة الآلة غير مدعومة في شريحة نظم التنفيذية الأولى.",
+              "location": {
+                "file": "tests/integration/ir/ir_printer.baa",
+                "line": 4,
+                "column": 18
+              }
+            },
+            {
+              "source": "tests/integration/ir/ir_runtime_bounds_debug_info_no_checks_v055_test.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "flags": [
+                "--debug-info"
+              ],
+              "reason": "خطأ: شريحة نظم الأولى لا تدعم بدء التشغيل المخصص أو معلومات التنقيح أو حماية المكدس."
+            },
+            {
+              "source": "tests/integration/ir/ir_runtime_bounds_enabled_v055_test.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "flags": [
+                "-fruntime-checks"
+              ],
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+            },
+            {
+              "source": "tests/integration/ir/ir_runtime_checks_none_v063_test.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "flags": [
+                "-fruntime-checks=none"
+              ],
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+            },
+            {
+              "source": "tests/integration/ir/ir_runtime_checks_selective_bounds_shift_v063_test.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "flags": [
+                "-fruntime-checks=bounds+shift"
+              ],
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+            },
+            {
+              "source": "tests/integration/ir/ir_runtime_checks_selective_null_div_v063_test.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "flags": [
+                "-fruntime-checks=null,div-zero"
+              ],
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+            },
+            {
+              "source": "tests/integration/ir/ir_runtime_div_zero_enabled_v063_test.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "flags": [
+                "-fruntime-checks"
+              ],
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+            },
+            {
+              "source": "tests/integration/ir/ir_runtime_null_deref_enabled_v063_test.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "flags": [
+                "-fruntime-checks"
+              ],
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+            },
+            {
+              "source": "tests/integration/ir/ir_runtime_shift_width_enabled_v063_test.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "flags": [
+                "-fruntime-checks"
+              ],
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+            },
+            {
+              "source": "tests/integration/ir/ir_runtime_string_bounds_enabled_v063_test.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "flags": [
+                "-fruntime-checks"
+              ],
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+            },
+            {
+              "source": "tests/integration/ir/ir_test.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم."
+            },
+            {
+              "source": "tests/stress/stress_deep_scopes.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "reason": "خطأ: حفظ السجلات المحفوظة عبر الاستدعاء غير مدعوم بعد في مسار نظم.",
+              "location": {
+                "file": "tests/stress/stress_deep_scopes.baa",
+                "line": 6,
+                "column": 22
+              }
+            },
+            {
+              "source": "tests/stress/stress_symbol_volume.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "reason": "خطأ: حفظ السجلات المحفوظة عبر الاستدعاء غير مدعوم بعد في مسار نظم.",
+              "location": {
+                "file": "tests/stress/stress_symbol_volume.baa",
+                "line": 5,
+                "column": 32
+              }
+            },
+            {
+              "source": "tests/stress/stress_utf8_identifiers.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+            }
+          ]
+        }
       },
       "instruction_forms": [
         {
@@ -2380,7 +3188,810 @@
           "tests/stress/stress_deep_scopes.baa",
           "tests/stress/stress_symbol_volume.baa",
           "tests/stress/stress_utf8_identifiers.baa"
-        ]
+        ],
+        "shadow_matrix": {
+          "source_count": 100,
+          "summary": {
+            "emitted": 1,
+            "unsupported": 99,
+            "error": 0
+          },
+          "unsupported_reasons": [
+            {
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
+              "count": 48
+            },
+            {
+              "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم.",
+              "count": 26
+            },
+            {
+              "reason": "خطأ: تعليمة الآلة غير مدعومة في شريحة نظم التنفيذية الأولى.",
+              "count": 12
+            },
+            {
+              "reason": "خطأ: حفظ السجلات المحفوظة عبر الاستدعاء غير مدعوم بعد في مسار نظم.",
+              "count": 5
+            },
+            {
+              "reason": "خطأ: أسماء الدوال في مصدر نظم يجب أن تكون عربية فقط.",
+              "count": 4
+            },
+            {
+              "reason": "خطأ: شريحة نظم الأولى لا تدعم بدء التشغيل المخصص أو معلومات التنقيح أو حماية المكدس.",
+              "count": 4
+            }
+          ],
+          "sources": [
+            {
+              "source": "examples/error_handling_demo.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+            },
+            {
+              "source": "examples/file_copy_small.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+            },
+            {
+              "source": "examples/hello_world.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+            },
+            {
+              "source": "examples/math_and_format.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+            },
+            {
+              "source": "tests/integration/backend/backend_arabic_numeral_source_tokens_v064_test.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+            },
+            {
+              "source": "tests/integration/backend/backend_array_init_test.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "reason": "خطأ: تعليمة الآلة غير مدعومة في شريحة نظم التنفيذية الأولى.",
+              "location": {
+                "file": "tests/integration/backend/backend_array_init_test.baa",
+                "line": 3,
+                "column": 14
+              }
+            },
+            {
+              "source": "tests/integration/backend/backend_array_length_operator_test.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+            },
+            {
+              "source": "tests/integration/backend/backend_array_sum_test.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "reason": "خطأ: تعليمة الآلة غير مدعومة في شريحة نظم التنفيذية الأولى.",
+              "location": {
+                "file": "tests/integration/backend/backend_array_sum_test.baa",
+                "line": 2,
+                "column": 14
+              }
+            },
+            {
+              "source": "tests/integration/backend/backend_byte_buffer_stdlib_v062_test.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم."
+            },
+            {
+              "source": "tests/integration/backend/backend_cast_pointer_diff_test.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "reason": "خطأ: تعليمة الآلة غير مدعومة في شريحة نظم التنفيذية الأولى.",
+              "location": {
+                "file": "tests/integration/backend/backend_cast_pointer_diff_test.baa",
+                "line": 2,
+                "column": 14
+              }
+            },
+            {
+              "source": "tests/integration/backend/backend_const_pointer_rules_test.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "reason": "خطأ: تعليمة الآلة غير مدعومة في شريحة نظم التنفيذية الأولى.",
+              "location": {
+                "file": "tests/integration/backend/backend_const_pointer_rules_test.baa",
+                "line": 2,
+                "column": 14
+              }
+            },
+            {
+              "source": "tests/integration/backend/backend_custom_startup_test.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "flags": [
+                "--startup=custom"
+              ],
+              "reason": "خطأ: شريحة نظم الأولى لا تدعم بدء التشغيل المخصص أو معلومات التنقيح أو حماية المكدس."
+            },
+            {
+              "source": "tests/integration/backend/backend_dynamic_memory_noheader_test.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "reason": "خطأ: تعليمة الآلة غير مدعومة في شريحة نظم التنفيذية الأولى.",
+              "location": {
+                "file": "tests/integration/backend/backend_dynamic_memory_noheader_test.baa",
+                "line": 2,
+                "column": 20
+              }
+            },
+            {
+              "source": "tests/integration/backend/backend_dynamic_memory_test.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم."
+            },
+            {
+              "source": "tests/integration/backend/backend_enum_struct_test.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم."
+            },
+            {
+              "source": "tests/integration/backend/backend_error_handling_v043_test.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم."
+            },
+            {
+              "source": "tests/integration/backend/backend_file_io_noheader_test.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+            },
+            {
+              "source": "tests/integration/backend/backend_file_io_test.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم."
+            },
+            {
+              "source": "tests/integration/backend/backend_float_extensions_v042_test.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم."
+            },
+            {
+              "source": "tests/integration/backend/backend_format_arabic_test.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+            },
+            {
+              "source": "tests/integration/backend/backend_func_ptr_shadow_call_test.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "reason": "خطأ: حفظ السجلات المحفوظة عبر الاستدعاء غير مدعوم بعد في مسار نظم."
+            },
+            {
+              "source": "tests/integration/backend/backend_func_ptr_test.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "reason": "خطأ: حفظ السجلات المحفوظة عبر الاستدعاء غير مدعوم بعد في مسار نظم."
+            },
+            {
+              "source": "tests/integration/backend/backend_global_array_init_test.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم."
+            },
+            {
+              "source": "tests/integration/backend/backend_include_bom_test.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم."
+            },
+            {
+              "source": "tests/integration/backend/backend_include_i_compact_form_test.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "flags": [
+                "-Itests/fixtures/include_i/compact"
+              ],
+              "reason": "خطأ: أسماء الدوال في مصدر نظم يجب أن تكون عربية فقط."
+            },
+            {
+              "source": "tests/integration/backend/backend_include_i_nested_source_relative_priority_test.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "flags": [
+                "-I",
+                "tests/fixtures/include_i/nested_override",
+                "-I",
+                "tests/fixtures/include_i/nested_primary"
+              ],
+              "reason": "خطأ: أسماء الدوال في مصدر نظم يجب أن تكون عربية فقط."
+            },
+            {
+              "source": "tests/integration/backend/backend_include_i_path_with_spaces_test.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "flags": [
+                "-I",
+                "tests/fixtures/include i space"
+              ],
+              "reason": "خطأ: تعليمة الآلة غير مدعومة في شريحة نظم التنفيذية الأولى.",
+              "location": {
+                "file": "tests/integration/backend/backend_include_i_path_with_spaces_test.baa",
+                "line": 7,
+                "column": 13
+              }
+            },
+            {
+              "source": "tests/integration/backend/backend_include_i_precedence_test.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "flags": [
+                "-I",
+                "tests/fixtures/include_i/prio_first",
+                "-I",
+                "tests/fixtures/include_i/prio_second"
+              ],
+              "reason": "خطأ: أسماء الدوال في مصدر نظم يجب أن تكون عربية فقط."
+            },
+            {
+              "source": "tests/integration/backend/backend_include_i_space_form_test.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "flags": [
+                "-I",
+                "tests/fixtures/include_i/single_space"
+              ],
+              "reason": "خطأ: أسماء الدوال في مصدر نظم يجب أن تكون عربية فقط."
+            },
+            {
+              "source": "tests/integration/backend/backend_include_relative_alias_path_test.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "reason": "خطأ: تعليمة الآلة غير مدعومة في شريحة نظم التنفيذية الأولى.",
+              "location": {
+                "file": "c:/Users/Dell/Documents/GitHub/Eco/Baa/tests/fixtures/include_alias/outer.baahd",
+                "line": 4,
+                "column": 14
+              }
+            },
+            {
+              "source": "tests/integration/backend/backend_include_relative_dir_test.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "reason": "خطأ: تعليمة الآلة غير مدعومة في شريحة نظم التنفيذية الأولى.",
+              "location": {
+                "file": "c:/Users/Dell/Documents/GitHub/Eco/Baa/tests/fixtures/include_rel/outer.baahd",
+                "line": 4,
+                "column": 14
+              }
+            },
+            {
+              "source": "tests/integration/backend/backend_inline_test.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+            },
+            {
+              "source": "tests/integration/backend/backend_int_semantics_test.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم."
+            },
+            {
+              "source": "tests/integration/backend/backend_low_level_ops_test.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم."
+            },
+            {
+              "source": "tests/integration/backend/backend_main_args_test.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+            },
+            {
+              "source": "tests/integration/backend/backend_mod_test.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "reason": "خطأ: تعليمة الآلة غير مدعومة في شريحة نظم التنفيذية الأولى.",
+              "location": {
+                "file": "tests/integration/backend/backend_mod_test.baa",
+                "line": 4,
+                "column": 24
+              }
+            },
+            {
+              "source": "tests/integration/backend/backend_multidim_array_test.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم."
+            },
+            {
+              "source": "tests/integration/backend/backend_path_stdlib_v062_test.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم."
+            },
+            {
+              "source": "tests/integration/backend/backend_pointer_core_test.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "reason": "خطأ: تعليمة الآلة غير مدعومة في شريحة نظم التنفيذية الأولى.",
+              "location": {
+                "file": "tests/integration/backend/backend_pointer_core_test.baa",
+                "line": 2,
+                "column": 14
+              }
+            },
+            {
+              "source": "tests/integration/backend/backend_pp_nested_test.baa",
+              "status": "emitted",
+              "exit_code": 0,
+              "sha256": "6dc33a1579df35180709dd74bcf0dd3b6b2b3c56411fec555f18c5996bf84e12"
+            },
+            {
+              "source": "tests/integration/backend/backend_process_runtime_v065_test.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+            },
+            {
+              "source": "tests/integration/backend/backend_readline_stdin_test.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+            },
+            {
+              "source": "tests/integration/backend/backend_readnum_stdin_test.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+            },
+            {
+              "source": "tests/integration/backend/backend_regalloc_stress.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم."
+            },
+            {
+              "source": "tests/integration/backend/backend_result_helpers_stdlib_v062_test.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم."
+            },
+            {
+              "source": "tests/integration/backend/backend_runtime_assert_fail_v055_test.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+            },
+            {
+              "source": "tests/integration/backend/backend_runtime_assert_pass_v055_test.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+            },
+            {
+              "source": "tests/integration/backend/backend_runtime_bounds_fail_v055_test.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "flags": [
+                "-fruntime-checks"
+              ],
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+            },
+            {
+              "source": "tests/integration/backend/backend_runtime_checks_selective_bounds_fail_v063_test.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "flags": [
+                "-fruntime-checks=bounds"
+              ],
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+            },
+            {
+              "source": "tests/integration/backend/backend_runtime_checks_selective_null_fail_v063_test.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "flags": [
+                "-fruntime-checks=null"
+              ],
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+            },
+            {
+              "source": "tests/integration/backend/backend_runtime_div_zero_fail_v063_test.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "flags": [
+                "-fruntime-checks"
+              ],
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+            },
+            {
+              "source": "tests/integration/backend/backend_runtime_mod_zero_fail_v063_test.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "flags": [
+                "-fruntime-checks"
+              ],
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+            },
+            {
+              "source": "tests/integration/backend/backend_runtime_null_deref_assign_fail_v063_test.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "flags": [
+                "-fruntime-checks"
+              ],
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+            },
+            {
+              "source": "tests/integration/backend/backend_runtime_null_deref_fail_v063_test.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "flags": [
+                "-fruntime-checks"
+              ],
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+            },
+            {
+              "source": "tests/integration/backend/backend_runtime_panic_location_v063_test.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+            },
+            {
+              "source": "tests/integration/backend/backend_runtime_panic_v055_test.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+            },
+            {
+              "source": "tests/integration/backend/backend_runtime_shift_width_high_fail_v063_test.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "flags": [
+                "-fruntime-checks"
+              ],
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+            },
+            {
+              "source": "tests/integration/backend/backend_runtime_shift_width_negative_fail_v063_test.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "flags": [
+                "-fruntime-checks"
+              ],
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+            },
+            {
+              "source": "tests/integration/backend/backend_runtime_string_array_inner_bounds_fail_v063_test.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "flags": [
+                "-fruntime-checks"
+              ],
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+            },
+            {
+              "source": "tests/integration/backend/backend_runtime_string_bounds_fail_v063_test.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "flags": [
+                "-fruntime-checks"
+              ],
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+            },
+            {
+              "source": "tests/integration/backend/backend_scan_arabic_test.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+            },
+            {
+              "source": "tests/integration/backend/backend_scope_test.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم."
+            },
+            {
+              "source": "tests/integration/backend/backend_sha256_file_v066_test.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+            },
+            {
+              "source": "tests/integration/backend/backend_stackargs_test.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+            },
+            {
+              "source": "tests/integration/backend/backend_static_storage_test.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم."
+            },
+            {
+              "source": "tests/integration/backend/backend_stdlib_short_include_test.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+            },
+            {
+              "source": "tests/integration/backend/backend_stdlib_v041_test.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم."
+            },
+            {
+              "source": "tests/integration/backend/backend_string_builder_stdlib_v062_test.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم."
+            },
+            {
+              "source": "tests/integration/backend/backend_string_ops_test.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم."
+            },
+            {
+              "source": "tests/integration/backend/backend_struct_init_test.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "reason": "خطأ: تعليمة الآلة غير مدعومة في شريحة نظم التنفيذية الأولى.",
+              "location": {
+                "file": "tests/integration/backend/backend_struct_init_test.baa",
+                "line": 18,
+                "column": 23
+              }
+            },
+            {
+              "source": "tests/integration/backend/backend_sysv_6args_test.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+            },
+            {
+              "source": "tests/integration/backend/backend_tailcall_float_test.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "reason": "خطأ: حفظ السجلات المحفوظة عبر الاستدعاء غير مدعوم بعد في مسار نظم."
+            },
+            {
+              "source": "tests/integration/backend/backend_tailcall_test.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+            },
+            {
+              "source": "tests/integration/backend/backend_test.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم."
+            },
+            {
+              "source": "tests/integration/backend/backend_text_stdlib_helpers_v064_test.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم."
+            },
+            {
+              "source": "tests/integration/backend/backend_type_alias_test.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم."
+            },
+            {
+              "source": "tests/integration/backend/backend_union_test.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+            },
+            {
+              "source": "tests/integration/backend/backend_utf8_validation_valid_v064_test.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+            },
+            {
+              "source": "tests/integration/backend/backend_variadic_functions_test.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+            },
+            {
+              "source": "tests/integration/backend/backend_vector_stdlib_v062_test.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم."
+            },
+            {
+              "source": "tests/integration/backend/int_sizes_test.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+            },
+            {
+              "source": "tests/integration/frontend/frontend_extern_declarations_test.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم."
+            },
+            {
+              "source": "tests/integration/frontend/frontend_extern_no_storage_test.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "flags": [
+                "-O1"
+              ],
+              "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم."
+            },
+            {
+              "source": "tests/integration/ir/ir_custom_startup_linux_asm_test.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "flags": [
+                "--target=x86_64-linux",
+                "--startup=custom"
+              ],
+              "reason": "خطأ: شريحة نظم الأولى لا تدعم بدء التشغيل المخصص أو معلومات التنقيح أو حماية المكدس."
+            },
+            {
+              "source": "tests/integration/ir/ir_custom_startup_windows_asm_test.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "flags": [
+                "--target=x86_64-windows",
+                "--startup=custom"
+              ],
+              "reason": "خطأ: شريحة نظم الأولى لا تدعم بدء التشغيل المخصص أو معلومات التنقيح أو حماية المكدس."
+            },
+            {
+              "source": "tests/integration/ir/ir_inline_asm_test.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+            },
+            {
+              "source": "tests/integration/ir/ir_printer.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "reason": "خطأ: تعليمة الآلة غير مدعومة في شريحة نظم التنفيذية الأولى.",
+              "location": {
+                "file": "tests/integration/ir/ir_printer.baa",
+                "line": 4,
+                "column": 18
+              }
+            },
+            {
+              "source": "tests/integration/ir/ir_runtime_bounds_debug_info_no_checks_v055_test.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "flags": [
+                "--debug-info"
+              ],
+              "reason": "خطأ: شريحة نظم الأولى لا تدعم بدء التشغيل المخصص أو معلومات التنقيح أو حماية المكدس."
+            },
+            {
+              "source": "tests/integration/ir/ir_runtime_bounds_enabled_v055_test.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "flags": [
+                "-fruntime-checks"
+              ],
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+            },
+            {
+              "source": "tests/integration/ir/ir_runtime_checks_none_v063_test.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "flags": [
+                "-fruntime-checks=none"
+              ],
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+            },
+            {
+              "source": "tests/integration/ir/ir_runtime_checks_selective_bounds_shift_v063_test.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "flags": [
+                "-fruntime-checks=bounds+shift"
+              ],
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+            },
+            {
+              "source": "tests/integration/ir/ir_runtime_checks_selective_null_div_v063_test.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "flags": [
+                "-fruntime-checks=null,div-zero"
+              ],
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+            },
+            {
+              "source": "tests/integration/ir/ir_runtime_div_zero_enabled_v063_test.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "flags": [
+                "-fruntime-checks"
+              ],
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+            },
+            {
+              "source": "tests/integration/ir/ir_runtime_null_deref_enabled_v063_test.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "flags": [
+                "-fruntime-checks"
+              ],
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+            },
+            {
+              "source": "tests/integration/ir/ir_runtime_shift_width_enabled_v063_test.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "flags": [
+                "-fruntime-checks"
+              ],
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+            },
+            {
+              "source": "tests/integration/ir/ir_runtime_string_bounds_enabled_v063_test.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "flags": [
+                "-fruntime-checks"
+              ],
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+            },
+            {
+              "source": "tests/integration/ir/ir_test.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم."
+            },
+            {
+              "source": "tests/stress/stress_deep_scopes.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "reason": "خطأ: حفظ السجلات المحفوظة عبر الاستدعاء غير مدعوم بعد في مسار نظم.",
+              "location": {
+                "file": "tests/stress/stress_deep_scopes.baa",
+                "line": 6,
+                "column": 22
+              }
+            },
+            {
+              "source": "tests/stress/stress_symbol_volume.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "reason": "خطأ: حفظ السجلات المحفوظة عبر الاستدعاء غير مدعوم بعد في مسار نظم.",
+              "location": {
+                "file": "tests/stress/stress_symbol_volume.baa",
+                "line": 5,
+                "column": 32
+              }
+            },
+            {
+              "source": "tests/stress/stress_utf8_identifiers.baa",
+              "status": "unsupported",
+              "exit_code": 3,
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+            }
+          ]
+        }
       },
       "instruction_forms": [
         {

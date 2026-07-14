@@ -24,6 +24,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
   - Kept arbitrary ASCII linker symbols, external calls, RIP-relative references, read-only
     sections, unsupported widths, `setcc`, extensions, and SSE2 visible instead of treating
     GAS success as Nazm success; the entry symbol now has the Arabic source spelling `الرئيسية`.
+- **Baa/Nazm full-corpus shadow matrix**:
+  - Added deterministic `baa-nazm-shadow-corpus-v1` classification for all 100 inventoried
+    sources on both targets and embedded the complete result in `baa-nazm-coverage-v1`.
+  - Admitted one real corpus source through Arabic-only emission and GAS/Nazm object,
+    link, and runtime parity; all other 99 sources return visible status `3` with no output.
+  - Replaced host `nm`/`objdump` assertions with Unicode-safe COFF/ELF inspection so Arabic
+    artifact paths remain mandatory on Windows and Linux CI.
 - **First executable Arabic Nazm emitter slice**:
   - Added non-default `--emit-nazm` output after register allocation for a minimal integer
     entry program on Windows and Linux targets while leaving `-S` and production GAS unchanged.

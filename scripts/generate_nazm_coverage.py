@@ -16,11 +16,15 @@ ROOT = Path(__file__).resolve().parents[1]
 SCHEMA = "baa-nazm-coverage-v1"
 INVENTORY_SCHEMA = "baa-assembly-surface-v1"
 CAPABILITIES_SCHEMA = "nazm-capabilities-v1"
+SHADOW_SCHEMA = "baa-nazm-shadow-corpus-v1"
 DEFAULT_INVENTORY = ROOT / "docs" / "generated" / "assembly_surface_v1.json"
 DEFAULT_CAPABILITIES = (
     ROOT.parent / "Nazm" / "Docs" / "generated" / "nazm_capabilities_v1.json"
 )
 DEFAULT_OUTPUT = ROOT / "docs" / "generated" / "baa_nazm_coverage_v1.json"
+DEFAULT_SHADOW_MATRIX = (
+    ROOT / "docs" / "generated" / "baa_nazm_shadow_corpus_v1.json"
+)
 
 
 SSE_MNEMONICS = {
@@ -328,11 +332,16 @@ def build_coverage(
     inventory: dict[str, Any],
     capabilities: dict[str, Any],
     capabilities_sha256: str,
+    shadow_matrix: dict[str, Any],
+    shadow_sha256: str,
 ) -> dict[str, Any]:
     targets: dict[str, Any] = {}
     inventory_targets = inventory.get("targets")
     if not isinstance(inventory_targets, dict) or not inventory_targets:
         raise ValueError("assembly inventory has no targets")
+    shadow_targets = shadow_matrix.get("targets")
+    if not isinstance(shadow_targets, dict) or set(shadow_targets) != set(inventory_targets):
+        raise ValueError("shadow corpus targets do not match the assembly inventory")
 
     for target_name in sorted(inventory_targets):
         source = inventory_targets[target_name]
@@ -347,6 +356,12 @@ def build_coverage(
         sources = source.get("sources", [])
         compiled_count = source.get("compiled_source_count", 0)
         failures = source.get("compile_failures", [])
+        shadow_target = shadow_targets[target_name]
+        shadow_sources = shadow_target.get("sources", [])
+        if [item.get("source") for item in shadow_sources] != sources:
+            raise ValueError(
+                f"shadow corpus sources do not match inventory target {target_name!r}"
+            )
         targets[target_name] = {
             "corpus": {
                 "source_count": len(sources),
@@ -354,6 +369,14 @@ def build_coverage(
                 "omitted_source_count": len(sources) - compiled_count,
                 "compile_failures": failures,
                 "sources": sources,
+                "shadow_matrix": {
+                    "source_count": shadow_target.get("source_count", 0),
+                    "summary": shadow_target.get("summary", {}),
+                    "unsupported_reasons": shadow_target.get(
+                        "unsupported_reasons", []
+                    ),
+                    "sources": shadow_sources,
+                },
             },
             "instruction_forms": instructions,
             "directive_forms": directives,
@@ -374,6 +397,11 @@ def build_coverage(
             "assembler": capabilities.get("assembler", "unknown"),
             "sha256": capabilities_sha256,
         },
+        "shadow_corpus": {
+            "schema": shadow_matrix["schema"],
+            "compiler": shadow_matrix.get("compiler", "unknown"),
+            "sha256": shadow_sha256,
+        },
         "status_contract": {
             "supported": "The complete inventory form is implemented by Nazm.",
             "partial": "Only a stated subset is implemented; this is not shadow-ready.",
@@ -388,6 +416,7 @@ def _parse_args(argv: list[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--inventory", type=Path, default=DEFAULT_INVENTORY)
     parser.add_argument("--nazm-capabilities", type=Path, default=DEFAULT_CAPABILITIES)
+    parser.add_argument("--shadow-matrix", type=Path, default=DEFAULT_SHADOW_MATRIX)
     parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)
     parser.add_argument(
         "--check",
@@ -404,10 +433,15 @@ def main(argv: list[str] | None = None) -> int:
         capabilities, capabilities_raw = _read_json(
             args.nazm_capabilities.resolve(), CAPABILITIES_SCHEMA
         )
+        shadow_matrix, shadow_raw = _read_json(
+            args.shadow_matrix.resolve(), SHADOW_SCHEMA
+        )
         document = build_coverage(
             inventory,
             capabilities,
             hashlib.sha256(capabilities_raw).hexdigest(),
+            shadow_matrix,
+            hashlib.sha256(shadow_raw).hexdigest(),
         )
     except ValueError as exc:
         print(f"error: {exc}", file=sys.stderr)

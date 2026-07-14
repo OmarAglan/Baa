@@ -62,18 +62,13 @@ def _normalize_path(text: str) -> str:
     return normalized.replace("\\", "/")
 
 
-def _diagnostic(stderr: str) -> tuple[str, dict[str, Any] | None]:
+def _diagnostic(stderr: str) -> str:
     lines = [line.strip() for line in stderr.splitlines() if line.strip()]
     message = _normalize_path(lines[-1] if lines else "missing compiler diagnostic")
     match = LOCATION_RE.search(message)
     if not match:
-        return message, None
-    location = {
-        "file": match.group(1),
-        "line": int(match.group(2)),
-        "column": int(match.group(3)),
-    }
-    return message[: match.start()].rstrip(), location
+        return message
+    return message[: match.start()].rstrip()
 
 
 def _source_flag_index(target: dict[str, Any]) -> dict[str, list[str]]:
@@ -145,10 +140,7 @@ def _classify_source(
         row["sha256"] = hashlib.sha256(text.encode("utf-8")).hexdigest()
         return row
 
-    reason, location = _diagnostic(result.stderr)
-    row["reason"] = reason
-    if location:
-        row["location"] = location
+    row["reason"] = _diagnostic(result.stderr)
     if result.returncode == 3 and not output.exists():
         row["status"] = "unsupported"
     elif result.returncode == 3:

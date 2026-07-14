@@ -617,7 +617,7 @@ static BaaCompilerExitCode compile_one_ir(const CompilerConfig *config,
 
         if (config->time_phases) t0 = driver_time_seconds();
         BaaCompilerExitCode nazm_rc =
-            driver_emit_nazm_source(config, mach_module, current_input, nazm_output);
+            driver_emit_nazm_source(config, mach_module, nazm_output);
         if (config->time_phases) phase_times->emit_s += (driver_time_seconds() - t0);
 
         if (nazm_rc != BAA_COMPILER_EXIT_SUCCESS)
@@ -653,7 +653,7 @@ static BaaCompilerExitCode compile_one_ir(const CompilerConfig *config,
     if (config->nazm_shadow_executable)
     {
         BaaCompilerExitCode shadow_rc = driver_emit_nazm_shadow_object(
-            config, mach_module, current_input, out_nazm_shadow_object);
+            config, mach_module, out_nazm_shadow_object);
         if (shadow_rc != BAA_COMPILER_EXIT_SUCCESS)
         {
             mach_module_free(mach_module);

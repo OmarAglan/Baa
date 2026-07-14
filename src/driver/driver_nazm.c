@@ -19,7 +19,6 @@ static char *driver_nazm_artifact_path(const char *base, const char *suffix)
 
 BaaCompilerExitCode driver_emit_nazm_source(const CompilerConfig *config,
                                             MachineModule *module,
-                                            const char *current_input,
                                             const char *output_path)
 {
     if (!config || !module || !output_path)
@@ -50,13 +49,6 @@ BaaCompilerExitCode driver_emit_nazm_source(const CompilerConfig *config,
     {
         fprintf(stderr, "خطأ: %s",
                 result.reason ? result.reason : "صيغة نظم غير مدعومة.");
-        if (result.source_line > 0)
-        {
-            fprintf(stderr, " (%s:%d:%d)",
-                    result.source_file ? result.source_file : current_input,
-                    result.source_line,
-                    result.source_col);
-        }
         fputc('\n', stderr);
         return BAA_COMPILER_EXIT_UNSUPPORTED;
     }
@@ -67,7 +59,6 @@ BaaCompilerExitCode driver_emit_nazm_source(const CompilerConfig *config,
 
 BaaCompilerExitCode driver_emit_nazm_shadow_object(const CompilerConfig *config,
                                                    MachineModule *module,
-                                                   const char *current_input,
                                                    char **out_object_path)
 {
     if (out_object_path) *out_object_path = NULL;
@@ -96,7 +87,7 @@ BaaCompilerExitCode driver_emit_nazm_shadow_object(const CompilerConfig *config,
     }
 
     BaaCompilerExitCode emit_rc =
-        driver_emit_nazm_source(config, module, current_input, source_path);
+        driver_emit_nazm_source(config, module, source_path);
     if (emit_rc != BAA_COMPILER_EXIT_SUCCESS)
     {
         free(source_path);

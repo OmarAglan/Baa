@@ -240,6 +240,32 @@ class NazmEmitterTests(unittest.TestCase):
             self.assertIn("غير مدعومة", proc.stderr)
             self.assertFalse(output.exists())
 
+    def test_unsupported_include_source_has_stable_diagnostic(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="baa_nazm_include_unsupported_") as temp:
+            work = Path(temp)
+            output = work / "غير-مدعوم-تضمين.نظم"
+            source = (
+                ROOT
+                / "tests"
+                / "integration"
+                / "backend"
+                / "backend_include_relative_alias_path_test.baa"
+            )
+            proc = self.run_baa(
+                work,
+                "--emit-nazm",
+                "-I",
+                str(ROOT),
+                str(source),
+                "-o",
+                str(output),
+            )
+
+            self.assertEqual(proc.returncode, 3, proc.stderr)
+            self.assertIn("غير مدعومة", proc.stderr)
+            self.assertNotIn("\x06", proc.stderr)
+            self.assertFalse(output.exists())
+
     def test_conflicting_output_modes_are_invalid_invocation(self) -> None:
         with tempfile.TemporaryDirectory(prefix="baa_nazm_conflict_") as temp:
             work = Path(temp)

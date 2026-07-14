@@ -31,6 +31,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
     link, and runtime parity; all other 99 sources return visible status `3` with no output.
   - Replaced host `nm`/`objdump` assertions with Unicode-safe COFF/ELF inspection so Arabic
     artifact paths remain mandatory on Windows and Linux CI.
+  - Kept unsupported diagnostics source-level and deterministic instead of exposing borrowed
+    include-path pointers whose lifetime differed between Windows and Linux.
 - **First executable Arabic Nazm emitter slice**:
   - Added non-default `--emit-nazm` output after register allocation for a minimal integer
     entry program on Windows and Linux targets while leaving `-S` and production GAS unchanged.

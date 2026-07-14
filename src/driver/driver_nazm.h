@@ -11,7 +11,6 @@
 
 BaaCompilerExitCode driver_emit_nazm_source(const CompilerConfig *config,
                                             MachineModule *module,
-                                            const char *current_input,
                                             const char *output_path);
 
 /**
@@ -20,7 +19,6 @@ BaaCompilerExitCode driver_emit_nazm_source(const CompilerConfig *config,
  */
 BaaCompilerExitCode driver_emit_nazm_shadow_object(const CompilerConfig *config,
                                                    MachineModule *module,
-                                                   const char *current_input,
                                                    char **out_object_path);
 
 #endif

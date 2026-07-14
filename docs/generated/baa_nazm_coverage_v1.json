@@ -12,7 +12,7 @@
   "shadow_corpus": {
     "schema": "baa-nazm-shadow-corpus-v1",
     "compiler": "baa version 0.6.0",
-    "sha256": "776cdb705f270ebb6a83c506e47dfc1c2840c9d0af5a9102864e3977351e5eb7"
+    "sha256": "7490db375b720fe76950c0ca737d8356942cbe1cc62b6b6fbb3ab3f5debdf777"
   },
   "status_contract": {
     "supported": "The complete inventory form is implemented by Nazm.",
@@ -201,12 +201,7 @@
               "source": "tests/integration/backend/backend_array_init_test.baa",
               "status": "unsupported",
               "exit_code": 3,
-              "reason": "خطأ: تعليمة الآلة غير مدعومة في شريحة نظم التنفيذية الأولى.",
-              "location": {
-                "file": "tests/integration/backend/backend_array_init_test.baa",
-                "line": 3,
-                "column": 14
-              }
+              "reason": "خطأ: تعليمة الآلة غير مدعومة في شريحة نظم التنفيذية الأولى."
             },
             {
               "source": "tests/integration/backend/backend_array_length_operator_test.baa",
@@ -218,12 +213,7 @@
               "source": "tests/integration/backend/backend_array_sum_test.baa",
               "status": "unsupported",
               "exit_code": 3,
-              "reason": "خطأ: تعليمة الآلة غير مدعومة في شريحة نظم التنفيذية الأولى.",
-              "location": {
-                "file": "tests/integration/backend/backend_array_sum_test.baa",
-                "line": 2,
-                "column": 14
-              }
+              "reason": "خطأ: تعليمة الآلة غير مدعومة في شريحة نظم التنفيذية الأولى."
             },
             {
               "source": "tests/integration/backend/backend_byte_buffer_stdlib_v062_test.baa",
@@ -235,23 +225,13 @@
               "source": "tests/integration/backend/backend_cast_pointer_diff_test.baa",
               "status": "unsupported",
               "exit_code": 3,
-              "reason": "خطأ: تعليمة الآلة غير مدعومة في شريحة نظم التنفيذية الأولى.",
-              "location": {
-                "file": "tests/integration/backend/backend_cast_pointer_diff_test.baa",
-                "line": 2,
-                "column": 14
-              }
+              "reason": "خطأ: تعليمة الآلة غير مدعومة في شريحة نظم التنفيذية الأولى."
             },
             {
               "source": "tests/integration/backend/backend_const_pointer_rules_test.baa",
               "status": "unsupported",
               "exit_code": 3,
-              "reason": "خطأ: تعليمة الآلة غير مدعومة في شريحة نظم التنفيذية الأولى.",
-              "location": {
-                "file": "tests/integration/backend/backend_const_pointer_rules_test.baa",
-                "line": 2,
-                "column": 14
-              }
+              "reason": "خطأ: تعليمة الآلة غير مدعومة في شريحة نظم التنفيذية الأولى."
             },
             {
               "source": "tests/integration/backend/backend_custom_startup_test.baa",
@@ -266,12 +246,7 @@
               "source": "tests/integration/backend/backend_dynamic_memory_noheader_test.baa",
               "status": "unsupported",
               "exit_code": 3,
-              "reason": "خطأ: تعليمة الآلة غير مدعومة في شريحة نظم التنفيذية الأولى.",
-              "location": {
-                "file": "tests/integration/backend/backend_dynamic_memory_noheader_test.baa",
-                "line": 2,
-                "column": 20
-              }
+              "reason": "خطأ: تعليمة الآلة غير مدعومة في شريحة نظم التنفيذية الأولى."
             },
             {
               "source": "tests/integration/backend/backend_dynamic_memory_test.baa",
@@ -368,12 +343,7 @@
                 "-I",
                 "tests/fixtures/include i space"
               ],
-              "reason": "خطأ: تعليمة الآلة غير مدعومة في شريحة نظم التنفيذية الأولى.",
-              "location": {
-                "file": "tests/integration/backend/backend_include_i_path_with_spaces_test.baa",
-                "line": 7,
-                "column": 13
-              }
+              "reason": "خطأ: تعليمة الآلة غير مدعومة في شريحة نظم التنفيذية الأولى."
             },
             {
               "source": "tests/integration/backend/backend_include_i_precedence_test.baa",
@@ -401,23 +371,13 @@
               "source": "tests/integration/backend/backend_include_relative_alias_path_test.baa",
               "status": "unsupported",
               "exit_code": 3,
-              "reason": "خطأ: تعليمة الآلة غير مدعومة في شريحة نظم التنفيذية الأولى.",
-              "location": {
-                "file": "c:/Users/Dell/Documents/GitHub/Eco/Baa/tests/fixtures/include_alias/outer.baahd",
-                "line": 4,
-                "column": 14
-              }
+              "reason": "خطأ: تعليمة الآلة غير مدعومة في شريحة نظم التنفيذية الأولى."
             },
             {
               "source": "tests/integration/backend/backend_include_relative_dir_test.baa",
               "status": "unsupported",
               "exit_code": 3,
-              "reason": "خطأ: تعليمة الآلة غير مدعومة في شريحة نظم التنفيذية الأولى.",
-              "location": {
-                "file": "c:/Users/Dell/Documents/GitHub/Eco/Baa/tests/fixtures/include_rel/outer.baahd",
-                "line": 4,
-                "column": 14
-              }
+              "reason": "خطأ: تعليمة الآلة غير مدعومة في شريحة نظم التنفيذية الأولى."
             },
             {
               "source": "tests/integration/backend/backend_inline_test.baa",
@@ -447,12 +407,7 @@
               "source": "tests/integration/backend/backend_mod_test.baa",
               "status": "unsupported",
               "exit_code": 3,
-              "reason": "خطأ: تعليمة الآلة غير مدعومة في شريحة نظم التنفيذية الأولى.",
-              "location": {
-                "file": "tests/integration/backend/backend_mod_test.baa",
-                "line": 4,
-                "column": 24
-              }
+              "reason": "خطأ: تعليمة الآلة غير مدعومة في شريحة نظم التنفيذية الأولى."
             },
             {
               "source": "tests/integration/backend/backend_multidim_array_test.baa",
@@ -470,12 +425,7 @@
               "source": "tests/integration/backend/backend_pointer_core_test.baa",
               "status": "unsupported",
               "exit_code": 3,
-              "reason": "خطأ: تعليمة الآلة غير مدعومة في شريحة نظم التنفيذية الأولى.",
-              "location": {
-                "file": "tests/integration/backend/backend_pointer_core_test.baa",
-                "line": 2,
-                "column": 14
-              }
+              "reason": "خطأ: تعليمة الآلة غير مدعومة في شريحة نظم التنفيذية الأولى."
             },
             {
               "source": "tests/integration/backend/backend_pp_nested_test.baa",
@@ -694,12 +644,7 @@
               "source": "tests/integration/backend/backend_struct_init_test.baa",
               "status": "unsupported",
               "exit_code": 3,
-              "reason": "خطأ: تعليمة الآلة غير مدعومة في شريحة نظم التنفيذية الأولى.",
-              "location": {
-                "file": "tests/integration/backend/backend_struct_init_test.baa",
-                "line": 18,
-                "column": 23
-              }
+              "reason": "خطأ: تعليمة الآلة غير مدعومة في شريحة نظم التنفيذية الأولى."
             },
             {
               "source": "tests/integration/backend/backend_sysv_6args_test.baa",
@@ -812,12 +757,7 @@
               "source": "tests/integration/ir/ir_printer.baa",
               "status": "unsupported",
               "exit_code": 3,
-              "reason": "خطأ: تعليمة الآلة غير مدعومة في شريحة نظم التنفيذية الأولى.",
-              "location": {
-                "file": "tests/integration/ir/ir_printer.baa",
-                "line": 4,
-                "column": 18
-              }
+              "reason": "خطأ: تعليمة الآلة غير مدعومة في شريحة نظم التنفيذية الأولى."
             },
             {
               "source": "tests/integration/ir/ir_runtime_bounds_debug_info_no_checks_v055_test.baa",
@@ -910,23 +850,13 @@
               "source": "tests/stress/stress_deep_scopes.baa",
               "status": "unsupported",
               "exit_code": 3,
-              "reason": "خطأ: حفظ السجلات المحفوظة عبر الاستدعاء غير مدعوم بعد في مسار نظم.",
-              "location": {
-                "file": "tests/stress/stress_deep_scopes.baa",
-                "line": 6,
-                "column": 22
-              }
+              "reason": "خطأ: حفظ السجلات المحفوظة عبر الاستدعاء غير مدعوم بعد في مسار نظم."
             },
             {
               "source": "tests/stress/stress_symbol_volume.baa",
               "status": "unsupported",
               "exit_code": 3,
-              "reason": "خطأ: حفظ السجلات المحفوظة عبر الاستدعاء غير مدعوم بعد في مسار نظم.",
-              "location": {
-                "file": "tests/stress/stress_symbol_volume.baa",
-                "line": 5,
-                "column": 32
-              }
+              "reason": "خطأ: حفظ السجلات المحفوظة عبر الاستدعاء غير مدعوم بعد في مسار نظم."
             },
             {
               "source": "tests/stress/stress_utf8_identifiers.baa",
@@ -3257,12 +3187,7 @@
               "source": "tests/integration/backend/backend_array_init_test.baa",
               "status": "unsupported",
               "exit_code": 3,
-              "reason": "خطأ: تعليمة الآلة غير مدعومة في شريحة نظم التنفيذية الأولى.",
-              "location": {
-                "file": "tests/integration/backend/backend_array_init_test.baa",
-                "line": 3,
-                "column": 14
-              }
+              "reason": "خطأ: تعليمة الآلة غير مدعومة في شريحة نظم التنفيذية الأولى."
             },
             {
               "source": "tests/integration/backend/backend_array_length_operator_test.baa",
@@ -3274,12 +3199,7 @@
               "source": "tests/integration/backend/backend_array_sum_test.baa",
               "status": "unsupported",
               "exit_code": 3,
-              "reason": "خطأ: تعليمة الآلة غير مدعومة في شريحة نظم التنفيذية الأولى.",
-              "location": {
-                "file": "tests/integration/backend/backend_array_sum_test.baa",
-                "line": 2,
-                "column": 14
-              }
+              "reason": "خطأ: تعليمة الآلة غير مدعومة في شريحة نظم التنفيذية الأولى."
             },
             {
               "source": "tests/integration/backend/backend_byte_buffer_stdlib_v062_test.baa",
@@ -3291,23 +3211,13 @@
               "source": "tests/integration/backend/backend_cast_pointer_diff_test.baa",
               "status": "unsupported",
               "exit_code": 3,
-              "reason": "خطأ: تعليمة الآلة غير مدعومة في شريحة نظم التنفيذية الأولى.",
-              "location": {
-                "file": "tests/integration/backend/backend_cast_pointer_diff_test.baa",
-                "line": 2,
-                "column": 14
-              }
+              "reason": "خطأ: تعليمة الآلة غير مدعومة في شريحة نظم التنفيذية الأولى."
             },
             {
               "source": "tests/integration/backend/backend_const_pointer_rules_test.baa",
               "status": "unsupported",
               "exit_code": 3,
-              "reason": "خطأ: تعليمة الآلة غير مدعومة في شريحة نظم التنفيذية الأولى.",
-              "location": {
-                "file": "tests/integration/backend/backend_const_pointer_rules_test.baa",
-                "line": 2,
-                "column": 14
-              }
+              "reason": "خطأ: تعليمة الآلة غير مدعومة في شريحة نظم التنفيذية الأولى."
             },
             {
               "source": "tests/integration/backend/backend_custom_startup_test.baa",
@@ -3322,12 +3232,7 @@
               "source": "tests/integration/backend/backend_dynamic_memory_noheader_test.baa",
               "status": "unsupported",
               "exit_code": 3,
-              "reason": "خطأ: تعليمة الآلة غير مدعومة في شريحة نظم التنفيذية الأولى.",
-              "location": {
-                "file": "tests/integration/backend/backend_dynamic_memory_noheader_test.baa",
-                "line": 2,
-                "column": 20
-              }
+              "reason": "خطأ: تعليمة الآلة غير مدعومة في شريحة نظم التنفيذية الأولى."
             },
             {
               "source": "tests/integration/backend/backend_dynamic_memory_test.baa",
@@ -3424,12 +3329,7 @@
                 "-I",
                 "tests/fixtures/include i space"
               ],
-              "reason": "خطأ: تعليمة الآلة غير مدعومة في شريحة نظم التنفيذية الأولى.",
-              "location": {
-                "file": "tests/integration/backend/backend_include_i_path_with_spaces_test.baa",
-                "line": 7,
-                "column": 13
-              }
+              "reason": "خطأ: تعليمة الآلة غير مدعومة في شريحة نظم التنفيذية الأولى."
             },
             {
               "source": "tests/integration/backend/backend_include_i_precedence_test.baa",
@@ -3457,23 +3357,13 @@
               "source": "tests/integration/backend/backend_include_relative_alias_path_test.baa",
               "status": "unsupported",
               "exit_code": 3,
-              "reason": "خطأ: تعليمة الآلة غير مدعومة في شريحة نظم التنفيذية الأولى.",
-              "location": {
-                "file": "c:/Users/Dell/Documents/GitHub/Eco/Baa/tests/fixtures/include_alias/outer.baahd",
-                "line": 4,
-                "column": 14
-              }
+              "reason": "خطأ: تعليمة الآلة غير مدعومة في شريحة نظم التنفيذية الأولى."
             },
             {
               "source": "tests/integration/backend/backend_include_relative_dir_test.baa",
               "status": "unsupported",
               "exit_code": 3,
-              "reason": "خطأ: تعليمة الآلة غير مدعومة في شريحة نظم التنفيذية الأولى.",
-              "location": {
-                "file": "c:/Users/Dell/Documents/GitHub/Eco/Baa/tests/fixtures/include_rel/outer.baahd",
-                "line": 4,
-                "column": 14
-              }
+              "reason": "خطأ: تعليمة الآلة غير مدعومة في شريحة نظم التنفيذية الأولى."
             },
             {
               "source": "tests/integration/backend/backend_inline_test.baa",
@@ -3503,12 +3393,7 @@
               "source": "tests/integration/backend/backend_mod_test.baa",
               "status": "unsupported",
               "exit_code": 3,
-              "reason": "خطأ: تعليمة الآلة غير مدعومة في شريحة نظم التنفيذية الأولى.",
-              "location": {
-                "file": "tests/integration/backend/backend_mod_test.baa",
-                "line": 4,
-                "column": 24
-              }
+              "reason": "خطأ: تعليمة الآلة غير مدعومة في شريحة نظم التنفيذية الأولى."
             },
             {
               "source": "tests/integration/backend/backend_multidim_array_test.baa",
@@ -3526,12 +3411,7 @@
               "source": "tests/integration/backend/backend_pointer_core_test.baa",
               "status": "unsupported",
               "exit_code": 3,
-              "reason": "خطأ: تعليمة الآلة غير مدعومة في شريحة نظم التنفيذية الأولى.",
-              "location": {
-                "file": "tests/integration/backend/backend_pointer_core_test.baa",
-                "line": 2,
-                "column": 14
-              }
+              "reason": "خطأ: تعليمة الآلة غير مدعومة في شريحة نظم التنفيذية الأولى."
             },
             {
               "source": "tests/integration/backend/backend_pp_nested_test.baa",
@@ -3750,12 +3630,7 @@
               "source": "tests/integration/backend/backend_struct_init_test.baa",
               "status": "unsupported",
               "exit_code": 3,
-              "reason": "خطأ: تعليمة الآلة غير مدعومة في شريحة نظم التنفيذية الأولى.",
-              "location": {
-                "file": "tests/integration/backend/backend_struct_init_test.baa",
-                "line": 18,
-                "column": 23
-              }
+              "reason": "خطأ: تعليمة الآلة غير مدعومة في شريحة نظم التنفيذية الأولى."
             },
             {
               "source": "tests/integration/backend/backend_sysv_6args_test.baa",
@@ -3868,12 +3743,7 @@
               "source": "tests/integration/ir/ir_printer.baa",
               "status": "unsupported",
               "exit_code": 3,
-              "reason": "خطأ: تعليمة الآلة غير مدعومة في شريحة نظم التنفيذية الأولى.",
-              "location": {
-                "file": "tests/integration/ir/ir_printer.baa",
-                "line": 4,
-                "column": 18
-              }
+              "reason": "خطأ: تعليمة الآلة غير مدعومة في شريحة نظم التنفيذية الأولى."
             },
             {
               "source": "tests/integration/ir/ir_runtime_bounds_debug_info_no_checks_v055_test.baa",
@@ -3966,23 +3836,13 @@
               "source": "tests/stress/stress_deep_scopes.baa",
               "status": "unsupported",
               "exit_code": 3,
-              "reason": "خطأ: حفظ السجلات المحفوظة عبر الاستدعاء غير مدعوم بعد في مسار نظم.",
-              "location": {
-                "file": "tests/stress/stress_deep_scopes.baa",
-                "line": 6,
-                "column": 22
-              }
+              "reason": "خطأ: حفظ السجلات المحفوظة عبر الاستدعاء غير مدعوم بعد في مسار نظم."
             },
             {
               "source": "tests/stress/stress_symbol_volume.baa",
               "status": "unsupported",
               "exit_code": 3,
-              "reason": "خطأ: حفظ السجلات المحفوظة عبر الاستدعاء غير مدعوم بعد في مسار نظم.",
-              "location": {
-                "file": "tests/stress/stress_symbol_volume.baa",
-                "line": 5,
-                "column": 32
-              }
+              "reason": "خطأ: حفظ السجلات المحفوظة عبر الاستدعاء غير مدعوم بعد في مسار نظم."
             },
             {
               "source": "tests/stress/stress_utf8_identifiers.baa",

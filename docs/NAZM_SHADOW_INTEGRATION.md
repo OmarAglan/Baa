@@ -93,7 +93,9 @@ artifact runs `--emit-nazm` against the same 100 sources for both targets. It
 records one explicit result per source: Arabic-only emission, visible
 unsupported status `3`, or a gate error. Unsupported results must leave no
 partial output. `baa-nazm-coverage-v1` embeds this complete matrix and pins its
-SHA-256 digest.
+SHA-256 digest. The v1 matrix records the stable source and rejection reason,
+but deliberately does not pin an include-level line/column until Nazm source
+paths have an owned lifetime contract.
 
 The initial source-level baseline is identical on Linux and Windows:
 

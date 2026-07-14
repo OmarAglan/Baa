@@ -624,6 +624,16 @@ def _run_assembly_surface_inventory_tests(log_dir: Path) -> StepResult:
     )
 
 
+def _run_nazm_coverage_tests(log_dir: Path) -> StepResult:
+    return _run_logged(
+        "nazm-coverage-tests",
+        [sys.executable, str(TESTS_DIR / "test_nazm_coverage.py")],
+        cwd=ROOT,
+        log_dir=log_dir,
+        timeout_s=120.0,
+    )
+
+
 def _run_assembly_surface_inventory_gate(baa: Path, log_dir: Path) -> StepResult:
     return _run_logged(
         "assembly-surface-inventory-gate",
@@ -926,6 +936,11 @@ def main() -> int:
     _print_step(assembly_surface_inventory_res)
     all_results.append(assembly_surface_inventory_res)
     overall_ok = overall_ok and assembly_surface_inventory_res.passed
+
+    nazm_coverage_res = _run_nazm_coverage_tests(log_dir)
+    _print_step(nazm_coverage_res)
+    all_results.append(nazm_coverage_res)
+    overall_ok = overall_ok and nazm_coverage_res.passed
 
     # A) Integration tiers
     test_res = _run_logged(

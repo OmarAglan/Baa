@@ -15,6 +15,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
     all assembly-producing integration, stress, and example sources for Windows and Linux.
   - Recorded 100 sources per target with zero omissions while keeping Nazm non-default and
     requiring visible shadow failures before any production cutover.
+- **Baa/Nazm capability coverage contract**:
+  - Added deterministic `baa-nazm-coverage-v1` generation from Baa's complete checked
+    inventory and Nazm's versioned instruction/directive/object capability contract.
+  - Classified every emitted form as supported, partial, or unsupported with a reason and
+    attached every supported form to a focused Nazm ELF64/COFF acceptance fixture.
+  - Wired the coverage completeness and no-overclaim checks into every Baa QA mode.
+  - Kept ASCII linker symbols, external calls, RIP-relative references, read-only sections,
+    unsupported widths, `setcc`, extensions, and SSE2 visible instead of treating GAS success
+    as Nazm success.
 - **Portable SHA-256 file hashing**:
   - Added `تجزئة_ملف_SHA256` as an owned lowercase digest primitive on Windows and POSIX,
     with a known-vector integration test for tooling and immutable package archives.

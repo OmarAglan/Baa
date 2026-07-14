@@ -1,0 +1,4433 @@
+{
+  "schema": "baa-nazm-coverage-v1",
+  "source_inventory": {
+    "schema": "baa-assembly-surface-v1",
+    "compiler": "baa version 0.6.0"
+  },
+  "nazm_capabilities": {
+    "schema": "nazm-capabilities-v1",
+    "assembler": "Nazm 0.4.0",
+    "sha256": "f8d85029e2d5df6b9ee829b1d5e539f0ea855d19db426a512c9b22a6b3777435"
+  },
+  "status_contract": {
+    "supported": "The complete inventory form is implemented by Nazm.",
+    "partial": "Only a stated subset is implemented; this is not shadow-ready.",
+    "unsupported": "Nazm must reject or Baa must report the form; no fallback is allowed."
+  },
+  "acceptance_fixtures": [
+    "tests/fixtures/baa_coverage/حركة-باء.نظم",
+    "tests/fixtures/baa_coverage/حساب-وتحكم-باء.نظم",
+    "tests/fixtures/baa_coverage/بيانات-باء.نظم"
+  ],
+  "targets": {
+    "x86_64-linux": {
+      "corpus": {
+        "source_count": 100,
+        "compiled_source_count": 100,
+        "omitted_source_count": 0,
+        "compile_failures": [],
+        "sources": [
+          "examples/error_handling_demo.baa",
+          "examples/file_copy_small.baa",
+          "examples/hello_world.baa",
+          "examples/math_and_format.baa",
+          "tests/integration/backend/backend_arabic_numeral_source_tokens_v064_test.baa",
+          "tests/integration/backend/backend_array_init_test.baa",
+          "tests/integration/backend/backend_array_length_operator_test.baa",
+          "tests/integration/backend/backend_array_sum_test.baa",
+          "tests/integration/backend/backend_byte_buffer_stdlib_v062_test.baa",
+          "tests/integration/backend/backend_cast_pointer_diff_test.baa",
+          "tests/integration/backend/backend_const_pointer_rules_test.baa",
+          "tests/integration/backend/backend_custom_startup_test.baa",
+          "tests/integration/backend/backend_dynamic_memory_noheader_test.baa",
+          "tests/integration/backend/backend_dynamic_memory_test.baa",
+          "tests/integration/backend/backend_enum_struct_test.baa",
+          "tests/integration/backend/backend_error_handling_v043_test.baa",
+          "tests/integration/backend/backend_file_io_noheader_test.baa",
+          "tests/integration/backend/backend_file_io_test.baa",
+          "tests/integration/backend/backend_float_extensions_v042_test.baa",
+          "tests/integration/backend/backend_format_arabic_test.baa",
+          "tests/integration/backend/backend_func_ptr_shadow_call_test.baa",
+          "tests/integration/backend/backend_func_ptr_test.baa",
+          "tests/integration/backend/backend_global_array_init_test.baa",
+          "tests/integration/backend/backend_include_bom_test.baa",
+          "tests/integration/backend/backend_include_i_compact_form_test.baa",
+          "tests/integration/backend/backend_include_i_nested_source_relative_priority_test.baa",
+          "tests/integration/backend/backend_include_i_path_with_spaces_test.baa",
+          "tests/integration/backend/backend_include_i_precedence_test.baa",
+          "tests/integration/backend/backend_include_i_space_form_test.baa",
+          "tests/integration/backend/backend_include_relative_alias_path_test.baa",
+          "tests/integration/backend/backend_include_relative_dir_test.baa",
+          "tests/integration/backend/backend_inline_test.baa",
+          "tests/integration/backend/backend_int_semantics_test.baa",
+          "tests/integration/backend/backend_low_level_ops_test.baa",
+          "tests/integration/backend/backend_main_args_test.baa",
+          "tests/integration/backend/backend_mod_test.baa",
+          "tests/integration/backend/backend_multidim_array_test.baa",
+          "tests/integration/backend/backend_path_stdlib_v062_test.baa",
+          "tests/integration/backend/backend_pointer_core_test.baa",
+          "tests/integration/backend/backend_pp_nested_test.baa",
+          "tests/integration/backend/backend_process_runtime_v065_test.baa",
+          "tests/integration/backend/backend_readline_stdin_test.baa",
+          "tests/integration/backend/backend_readnum_stdin_test.baa",
+          "tests/integration/backend/backend_regalloc_stress.baa",
+          "tests/integration/backend/backend_result_helpers_stdlib_v062_test.baa",
+          "tests/integration/backend/backend_runtime_assert_fail_v055_test.baa",
+          "tests/integration/backend/backend_runtime_assert_pass_v055_test.baa",
+          "tests/integration/backend/backend_runtime_bounds_fail_v055_test.baa",
+          "tests/integration/backend/backend_runtime_checks_selective_bounds_fail_v063_test.baa",
+          "tests/integration/backend/backend_runtime_checks_selective_null_fail_v063_test.baa",
+          "tests/integration/backend/backend_runtime_div_zero_fail_v063_test.baa",
+          "tests/integration/backend/backend_runtime_mod_zero_fail_v063_test.baa",
+          "tests/integration/backend/backend_runtime_null_deref_assign_fail_v063_test.baa",
+          "tests/integration/backend/backend_runtime_null_deref_fail_v063_test.baa",
+          "tests/integration/backend/backend_runtime_panic_location_v063_test.baa",
+          "tests/integration/backend/backend_runtime_panic_v055_test.baa",
+          "tests/integration/backend/backend_runtime_shift_width_high_fail_v063_test.baa",
+          "tests/integration/backend/backend_runtime_shift_width_negative_fail_v063_test.baa",
+          "tests/integration/backend/backend_runtime_string_array_inner_bounds_fail_v063_test.baa",
+          "tests/integration/backend/backend_runtime_string_bounds_fail_v063_test.baa",
+          "tests/integration/backend/backend_scan_arabic_test.baa",
+          "tests/integration/backend/backend_scope_test.baa",
+          "tests/integration/backend/backend_sha256_file_v066_test.baa",
+          "tests/integration/backend/backend_stackargs_test.baa",
+          "tests/integration/backend/backend_static_storage_test.baa",
+          "tests/integration/backend/backend_stdlib_short_include_test.baa",
+          "tests/integration/backend/backend_stdlib_v041_test.baa",
+          "tests/integration/backend/backend_string_builder_stdlib_v062_test.baa",
+          "tests/integration/backend/backend_string_ops_test.baa",
+          "tests/integration/backend/backend_struct_init_test.baa",
+          "tests/integration/backend/backend_sysv_6args_test.baa",
+          "tests/integration/backend/backend_tailcall_float_test.baa",
+          "tests/integration/backend/backend_tailcall_test.baa",
+          "tests/integration/backend/backend_test.baa",
+          "tests/integration/backend/backend_text_stdlib_helpers_v064_test.baa",
+          "tests/integration/backend/backend_type_alias_test.baa",
+          "tests/integration/backend/backend_union_test.baa",
+          "tests/integration/backend/backend_utf8_validation_valid_v064_test.baa",
+          "tests/integration/backend/backend_variadic_functions_test.baa",
+          "tests/integration/backend/backend_vector_stdlib_v062_test.baa",
+          "tests/integration/backend/int_sizes_test.baa",
+          "tests/integration/frontend/frontend_extern_declarations_test.baa",
+          "tests/integration/frontend/frontend_extern_no_storage_test.baa",
+          "tests/integration/ir/ir_custom_startup_linux_asm_test.baa",
+          "tests/integration/ir/ir_custom_startup_windows_asm_test.baa",
+          "tests/integration/ir/ir_inline_asm_test.baa",
+          "tests/integration/ir/ir_printer.baa",
+          "tests/integration/ir/ir_runtime_bounds_debug_info_no_checks_v055_test.baa",
+          "tests/integration/ir/ir_runtime_bounds_enabled_v055_test.baa",
+          "tests/integration/ir/ir_runtime_checks_none_v063_test.baa",
+          "tests/integration/ir/ir_runtime_checks_selective_bounds_shift_v063_test.baa",
+          "tests/integration/ir/ir_runtime_checks_selective_null_div_v063_test.baa",
+          "tests/integration/ir/ir_runtime_div_zero_enabled_v063_test.baa",
+          "tests/integration/ir/ir_runtime_null_deref_enabled_v063_test.baa",
+          "tests/integration/ir/ir_runtime_shift_width_enabled_v063_test.baa",
+          "tests/integration/ir/ir_runtime_string_bounds_enabled_v063_test.baa",
+          "tests/integration/ir/ir_test.baa",
+          "tests/stress/stress_deep_scopes.baa",
+          "tests/stress/stress_symbol_volume.baa",
+          "tests/stress/stress_utf8_identifiers.baa"
+        ]
+      },
+      "instruction_forms": [
+        {
+          "mnemonic": "addq",
+          "operands": [
+            "immediate-integer",
+            "memory-base-displacement"
+          ],
+          "count": 417,
+          "samples": [
+            "examples/error_handling_demo.baa:581",
+            "examples/error_handling_demo.baa:584",
+            "examples/error_handling_demo.baa:587"
+          ],
+          "status": "unsupported",
+          "reason": "Nazm implements this mnemonic, but not this operand shape or width."
+        },
+        {
+          "mnemonic": "addq",
+          "operands": [
+            "immediate-integer",
+            "register"
+          ],
+          "count": 1949,
+          "samples": [
+            "examples/error_handling_demo.baa:155",
+            "examples/error_handling_demo.baa:267",
+            "examples/error_handling_demo.baa:269"
+          ],
+          "status": "supported",
+          "nazm": {
+            "mnemonic": "أضف",
+            "operands": [
+              "register",
+              "immediate"
+            ],
+            "width_bits": 64
+          },
+          "acceptance_fixture": "tests/fixtures/baa_coverage/حساب-وتحكم-باء.نظم"
+        },
+        {
+          "mnemonic": "addq",
+          "operands": [
+            "memory-base-displacement",
+            "register"
+          ],
+          "count": 375,
+          "samples": [
+            "examples/error_handling_demo.baa:181",
+            "examples/error_handling_demo.baa:601",
+            "examples/file_copy_small.baa:64"
+          ],
+          "status": "supported",
+          "nazm": {
+            "mnemonic": "أضف",
+            "operands": [
+              "register",
+              "memory-base-displacement"
+            ],
+            "width_bits": 64
+          },
+          "acceptance_fixture": "tests/fixtures/baa_coverage/حساب-وتحكم-باء.نظم"
+        },
+        {
+          "mnemonic": "addq",
+          "operands": [
+            "register",
+            "memory-base-displacement"
+          ],
+          "count": 183,
+          "samples": [
+            "examples/file_copy_small.baa:509",
+            "tests/integration/backend/backend_custom_startup_test.baa:163",
+            "tests/integration/backend/backend_custom_startup_test.baa:211"
+          ],
+          "status": "unsupported",
+          "reason": "Nazm implements this mnemonic, but not this operand shape or width."
+        },
+        {
+          "mnemonic": "addq",
+          "operands": [
+            "register",
+            "register"
+          ],
+          "count": 2411,
+          "samples": [
+            "examples/error_handling_demo.baa:224",
+            "examples/error_handling_demo.baa:226",
+            "examples/error_handling_demo.baa:228"
+          ],
+          "status": "supported",
+          "nazm": {
+            "mnemonic": "أضف",
+            "operands": [
+              "register",
+              "register"
+            ],
+            "width_bits": 64
+          },
+          "acceptance_fixture": "tests/fixtures/baa_coverage/حساب-وتحكم-باء.نظم"
+        },
+        {
+          "mnemonic": "addsd",
+          "operands": [
+            "register",
+            "register"
+          ],
+          "count": 7,
+          "samples": [
+            "tests/integration/backend/backend_float_extensions_v042_test.baa:838",
+            "tests/integration/backend/backend_tailcall_float_test.baa:36",
+            "tests/integration/backend/backend_test.baa:3077"
+          ],
+          "status": "unsupported",
+          "reason": "Nazm does not implement scalar SSE2 registers or instructions."
+        },
+        {
+          "mnemonic": "andb",
+          "operands": [
+            "memory-base-displacement",
+            "register"
+          ],
+          "count": 6,
+          "samples": [
+            "examples/file_copy_small.baa:754",
+            "tests/integration/backend/backend_file_io_test.baa:4600",
+            "tests/integration/backend/backend_file_io_test.baa:5353"
+          ],
+          "status": "unsupported",
+          "reason": "Nazm exposes only 64-bit general-purpose register instruction forms."
+        },
+        {
+          "mnemonic": "andb",
+          "operands": [
+            "register",
+            "memory-base-displacement"
+          ],
+          "count": 18,
+          "samples": [
+            "examples/file_copy_small.baa:722",
+            "examples/file_copy_small.baa:742",
+            "tests/integration/backend/backend_file_io_noheader_test.baa:893"
+          ],
+          "status": "unsupported",
+          "reason": "Nazm exposes only 64-bit general-purpose register instruction forms."
+        },
+        {
+          "mnemonic": "andb",
+          "operands": [
+            "register",
+            "register"
+          ],
+          "count": 476,
+          "samples": [
+            "examples/error_handling_demo.baa:291",
+            "examples/error_handling_demo.baa:350",
+            "examples/error_handling_demo.baa:352"
+          ],
+          "status": "unsupported",
+          "reason": "Nazm exposes only 64-bit general-purpose register instruction forms."
+        },
+        {
+          "mnemonic": "andq",
+          "operands": [
+            "immediate-integer",
+            "memory-base-displacement"
+          ],
+          "count": 295,
+          "samples": [
+            "examples/error_handling_demo.baa:192",
+            "examples/error_handling_demo.baa:332",
+            "examples/error_handling_demo.baa:401"
+          ],
+          "status": "unsupported",
+          "reason": "Nazm implements this mnemonic, but not this operand shape or width."
+        },
+        {
+          "mnemonic": "andq",
+          "operands": [
+            "immediate-integer",
+            "register"
+          ],
+          "count": 595,
+          "samples": [
+            "examples/error_handling_demo.baa:194",
+            "examples/error_handling_demo.baa:196",
+            "examples/error_handling_demo.baa:198"
+          ],
+          "status": "supported",
+          "nazm": {
+            "mnemonic": "و_بتيا",
+            "operands": [
+              "register",
+              "immediate"
+            ],
+            "width_bits": 64
+          },
+          "acceptance_fixture": "tests/fixtures/baa_coverage/حساب-وتحكم-باء.نظم"
+        },
+        {
+          "mnemonic": "andq",
+          "operands": [
+            "register",
+            "register"
+          ],
+          "count": 26,
+          "samples": [
+            "examples/file_copy_small.baa:98",
+            "examples/file_copy_small.baa:294",
+            "tests/integration/backend/backend_file_io_noheader_test.baa:100"
+          ],
+          "status": "supported",
+          "nazm": {
+            "mnemonic": "و_بتيا",
+            "operands": [
+              "register",
+              "register"
+            ],
+            "width_bits": 64
+          },
+          "acceptance_fixture": "tests/fixtures/baa_coverage/حساب-وتحكم-باء.نظم"
+        },
+        {
+          "mnemonic": "call",
+          "operands": [
+            "expression"
+          ],
+          "count": 599,
+          "samples": [
+            "examples/error_handling_demo.baa:81",
+            "examples/file_copy_small.baa:978",
+            "tests/integration/backend/backend_byte_buffer_stdlib_v062_test.baa:323"
+          ],
+          "status": "unsupported",
+          "reason": "Nazm implements this mnemonic, but not this operand shape or width."
+        },
+        {
+          "mnemonic": "call",
+          "operands": [
+            "register-expression"
+          ],
+          "count": 5,
+          "samples": [
+            "tests/integration/backend/backend_func_ptr_shadow_call_test.baa:53",
+            "tests/integration/backend/backend_func_ptr_test.baa:40",
+            "tests/integration/backend/backend_func_ptr_test.baa:57"
+          ],
+          "status": "supported",
+          "nazm": {
+            "mnemonic": "ناد",
+            "operands": [
+              "register"
+            ],
+            "width_bits": 64
+          },
+          "acceptance_fixture": "tests/fixtures/baa_coverage/حساب-وتحكم-باء.نظم"
+        },
+        {
+          "mnemonic": "call",
+          "operands": [
+            "symbol"
+          ],
+          "count": 901,
+          "samples": [
+            "examples/error_handling_demo.baa:91",
+            "examples/error_handling_demo.baa:95",
+            "examples/error_handling_demo.baa:104"
+          ],
+          "status": "partial",
+          "nazm": {
+            "mnemonic": "ناد",
+            "operands": [
+              "label"
+            ],
+            "width_bits": 64
+          },
+          "reason": "Only labels defined in the same .text input are supported; external call relocations are not implemented."
+        },
+        {
+          "mnemonic": "cmpb",
+          "operands": [
+            "immediate-integer",
+            "memory-base-displacement"
+          ],
+          "count": 1,
+          "samples": [
+            "tests/integration/backend/backend_vector_stdlib_v062_test.baa:1046"
+          ],
+          "status": "unsupported",
+          "reason": "Nazm exposes only 64-bit general-purpose register instruction forms."
+        },
+        {
+          "mnemonic": "cmpb",
+          "operands": [
+            "immediate-integer",
+            "register"
+          ],
+          "count": 50,
+          "samples": [
+            "examples/error_handling_demo.baa:183",
+            "examples/file_copy_small.baa:429",
+            "examples/math_and_format.baa:130"
+          ],
+          "status": "unsupported",
+          "reason": "Nazm exposes only 64-bit general-purpose register instruction forms."
+        },
+        {
+          "mnemonic": "cmpl",
+          "operands": [
+            "immediate-integer",
+            "memory-base-displacement"
+          ],
+          "count": 3,
+          "samples": [
+            "tests/integration/backend/backend_file_io_test.baa:5251",
+            "tests/integration/backend/backend_file_io_test.baa:5562",
+            "tests/integration/backend/backend_file_io_test.baa:5873"
+          ],
+          "status": "unsupported",
+          "reason": "Nazm exposes only 64-bit general-purpose register instruction forms."
+        },
+        {
+          "mnemonic": "cmpl",
+          "operands": [
+            "immediate-integer",
+            "register"
+          ],
+          "count": 100,
+          "samples": [
+            "examples/file_copy_small.baa:426",
+            "examples/file_copy_small.baa:443",
+            "examples/file_copy_small.baa:555"
+          ],
+          "status": "unsupported",
+          "reason": "Nazm exposes only 64-bit general-purpose register instruction forms."
+        },
+        {
+          "mnemonic": "cmpl",
+          "operands": [
+            "register",
+            "register"
+          ],
+          "count": 1,
+          "samples": [
+            "tests/integration/backend/backend_byte_buffer_stdlib_v062_test.baa:661"
+          ],
+          "status": "unsupported",
+          "reason": "Nazm exposes only 64-bit general-purpose register instruction forms."
+        },
+        {
+          "mnemonic": "cmpq",
+          "operands": [
+            "immediate-integer",
+            "memory-base-displacement"
+          ],
+          "count": 524,
+          "samples": [
+            "examples/error_handling_demo.baa:346",
+            "examples/error_handling_demo.baa:424",
+            "examples/error_handling_demo.baa:427"
+          ],
+          "status": "unsupported",
+          "reason": "Nazm implements this mnemonic, but not this operand shape or width."
+        },
+        {
+          "mnemonic": "cmpq",
+          "operands": [
+            "immediate-integer",
+            "register"
+          ],
+          "count": 1936,
+          "samples": [
+            "examples/error_handling_demo.baa:20",
+            "examples/error_handling_demo.baa:34",
+            "examples/error_handling_demo.baa:83"
+          ],
+          "status": "supported",
+          "nazm": {
+            "mnemonic": "قارن",
+            "operands": [
+              "register",
+              "immediate"
+            ],
+            "width_bits": 64
+          },
+          "acceptance_fixture": "tests/fixtures/baa_coverage/حساب-وتحكم-باء.نظم"
+        },
+        {
+          "mnemonic": "cmpq",
+          "operands": [
+            "memory-base-displacement",
+            "register"
+          ],
+          "count": 10,
+          "samples": [
+            "tests/integration/backend/backend_byte_buffer_stdlib_v062_test.baa:551",
+            "tests/integration/backend/backend_dynamic_memory_test.baa:374",
+            "tests/integration/backend/backend_dynamic_memory_test.baa:596"
+          ],
+          "status": "supported",
+          "nazm": {
+            "mnemonic": "قارن",
+            "operands": [
+              "register",
+              "memory-base-displacement"
+            ],
+            "width_bits": 64
+          },
+          "acceptance_fixture": "tests/fixtures/baa_coverage/حساب-وتحكم-باء.نظم"
+        },
+        {
+          "mnemonic": "cmpq",
+          "operands": [
+            "register",
+            "memory-base-displacement"
+          ],
+          "count": 85,
+          "samples": [
+            "tests/integration/backend/backend_custom_startup_test.baa:334",
+            "tests/integration/backend/backend_custom_startup_test.baa:772",
+            "tests/integration/backend/backend_custom_startup_test.baa:854"
+          ],
+          "status": "unsupported",
+          "reason": "Nazm implements this mnemonic, but not this operand shape or width."
+        },
+        {
+          "mnemonic": "cmpq",
+          "operands": [
+            "register",
+            "register"
+          ],
+          "count": 38,
+          "samples": [
+            "tests/integration/backend/backend_cast_pointer_diff_test.baa:47",
+            "tests/integration/backend/backend_dynamic_memory_test.baa:342",
+            "tests/integration/backend/backend_dynamic_memory_test.baa:467"
+          ],
+          "status": "supported",
+          "nazm": {
+            "mnemonic": "قارن",
+            "operands": [
+              "register",
+              "register"
+            ],
+            "width_bits": 64
+          },
+          "acceptance_fixture": "tests/fixtures/baa_coverage/حساب-وتحكم-باء.نظم"
+        },
+        {
+          "mnemonic": "cqo",
+          "operands": [],
+          "count": 2262,
+          "samples": [
+            "examples/error_handling_demo.baa:50",
+            "examples/error_handling_demo.baa:532",
+            "examples/error_handling_demo.baa:537"
+          ],
+          "status": "unsupported",
+          "reason": "Nazm does not implement the cqo instruction."
+        },
+        {
+          "mnemonic": "cvtsi2sd",
+          "operands": [
+            "register",
+            "register"
+          ],
+          "count": 14,
+          "samples": [
+            "tests/integration/backend/backend_cast_pointer_diff_test.baa:62",
+            "tests/integration/backend/backend_tailcall_float_test.baa:63",
+            "tests/integration/backend/backend_test.baa:3095"
+          ],
+          "status": "unsupported",
+          "reason": "Nazm does not implement scalar SSE2 registers or instructions."
+        },
+        {
+          "mnemonic": "cvttsd2si",
+          "operands": [
+            "register",
+            "register"
+          ],
+          "count": 9,
+          "samples": [
+            "tests/integration/backend/backend_cast_pointer_diff_test.baa:65",
+            "tests/integration/backend/backend_tailcall_float_test.baa:70",
+            "tests/integration/backend/backend_test.baa:3144"
+          ],
+          "status": "unsupported",
+          "reason": "Nazm does not implement scalar SSE2 registers or instructions."
+        },
+        {
+          "mnemonic": "divsd",
+          "operands": [
+            "register",
+            "register"
+          ],
+          "count": 2,
+          "samples": [
+            "tests/integration/backend/backend_test.baa:3157",
+            "tests/integration/backend/backend_test.baa:3279"
+          ],
+          "status": "unsupported",
+          "reason": "Nazm does not implement scalar SSE2 registers or instructions."
+        },
+        {
+          "mnemonic": "hlt",
+          "operands": [],
+          "count": 3,
+          "samples": [
+            "tests/integration/backend/backend_custom_startup_test.baa:1323",
+            "tests/integration/ir/ir_custom_startup_linux_asm_test.baa:33",
+            "tests/integration/ir/ir_custom_startup_windows_asm_test.baa:33"
+          ],
+          "status": "supported",
+          "nazm": {
+            "mnemonic": "أوقف",
+            "operands": [],
+            "width_bits": 64
+          },
+          "acceptance_fixture": "tests/fixtures/baa_coverage/حساب-وتحكم-باء.نظم"
+        },
+        {
+          "mnemonic": "idivq",
+          "operands": [
+            "register"
+          ],
+          "count": 2262,
+          "samples": [
+            "examples/error_handling_demo.baa:51",
+            "examples/error_handling_demo.baa:533",
+            "examples/error_handling_demo.baa:538"
+          ],
+          "status": "supported",
+          "nazm": {
+            "mnemonic": "اقسم_موقع",
+            "operands": [
+              "register"
+            ],
+            "width_bits": 64
+          },
+          "acceptance_fixture": "tests/fixtures/baa_coverage/حساب-وتحكم-باء.نظم"
+        },
+        {
+          "mnemonic": "imulq",
+          "operands": [
+            "immediate-integer",
+            "register"
+          ],
+          "count": 282,
+          "samples": [
+            "examples/error_handling_demo.baa:157",
+            "examples/error_handling_demo.baa:220",
+            "examples/file_copy_small.baa:501"
+          ],
+          "status": "supported",
+          "nazm": {
+            "mnemonic": "اضرب_موقع",
+            "operands": [
+              "register",
+              "register",
+              "immediate"
+            ],
+            "width_bits": 64
+          },
+          "lowering": "duplicate-destination-as-source",
+          "acceptance_fixture": "tests/fixtures/baa_coverage/حساب-وتحكم-باء.نظم"
+        },
+        {
+          "mnemonic": "imulq",
+          "operands": [
+            "memory-base-displacement",
+            "register"
+          ],
+          "count": 262,
+          "samples": [
+            "tests/integration/backend/backend_byte_buffer_stdlib_v062_test.baa:496",
+            "tests/integration/backend/backend_custom_startup_test.baa:199",
+            "tests/integration/backend/backend_custom_startup_test.baa:201"
+          ],
+          "status": "unsupported",
+          "reason": "Nazm implements this mnemonic, but not this operand shape or width."
+        },
+        {
+          "mnemonic": "imulq",
+          "operands": [
+            "register",
+            "register"
+          ],
+          "count": 272,
+          "samples": [
+            "tests/integration/backend/backend_byte_buffer_stdlib_v062_test.baa:526",
+            "tests/integration/backend/backend_custom_startup_test.baa:203",
+            "tests/integration/backend/backend_custom_startup_test.baa:205"
+          ],
+          "status": "supported",
+          "nazm": {
+            "mnemonic": "اضرب_موقع",
+            "operands": [
+              "register",
+              "register"
+            ],
+            "width_bits": 64
+          },
+          "acceptance_fixture": "tests/fixtures/baa_coverage/حساب-وتحكم-باء.نظم"
+        },
+        {
+          "mnemonic": "jmp",
+          "operands": [
+            "local-symbol"
+          ],
+          "count": 3094,
+          "samples": [
+            "examples/error_handling_demo.baa:25",
+            "examples/error_handling_demo.baa:39",
+            "examples/error_handling_demo.baa:88"
+          ],
+          "status": "supported",
+          "nazm": {
+            "mnemonic": "اقفز",
+            "operands": [
+              "label"
+            ],
+            "width_bits": 64
+          },
+          "acceptance_fixture": "tests/fixtures/baa_coverage/حساب-وتحكم-باء.نظم"
+        },
+        {
+          "mnemonic": "jne",
+          "operands": [
+            "local-symbol"
+          ],
+          "count": 1388,
+          "samples": [
+            "examples/error_handling_demo.baa:24",
+            "examples/error_handling_demo.baa:38",
+            "examples/error_handling_demo.baa:87"
+          ],
+          "status": "supported",
+          "nazm": {
+            "mnemonic": "اقفز_غير_مساو",
+            "operands": [
+              "label"
+            ],
+            "width_bits": 64
+          },
+          "acceptance_fixture": "tests/fixtures/baa_coverage/حساب-وتحكم-باء.نظم"
+        },
+        {
+          "mnemonic": "leaq",
+          "operands": [
+            "memory-base-displacement",
+            "register"
+          ],
+          "count": 419,
+          "samples": [
+            "examples/error_handling_demo.baa:72",
+            "examples/error_handling_demo.baa:99",
+            "examples/error_handling_demo.baa:527"
+          ],
+          "status": "supported",
+          "nazm": {
+            "mnemonic": "احسب_عنوان",
+            "operands": [
+              "register",
+              "memory-base-displacement"
+            ],
+            "width_bits": 64
+          },
+          "acceptance_fixture": "tests/fixtures/baa_coverage/حركة-باء.نظم"
+        },
+        {
+          "mnemonic": "leaq",
+          "operands": [
+            "memory-rip-relative",
+            "register"
+          ],
+          "count": 868,
+          "samples": [
+            "examples/error_handling_demo.baa:113",
+            "examples/error_handling_demo.baa:118",
+            "examples/error_handling_demo.baa:123"
+          ],
+          "status": "unsupported",
+          "reason": "Nazm implements this mnemonic, but not this operand shape or width."
+        },
+        {
+          "mnemonic": "leave",
+          "operands": [],
+          "count": 470,
+          "samples": [
+            "examples/error_handling_demo.baa:31",
+            "examples/error_handling_demo.baa:45",
+            "examples/error_handling_demo.baa:58"
+          ],
+          "status": "unsupported",
+          "reason": "Nazm does not implement the leave instruction."
+        },
+        {
+          "mnemonic": "movabsq",
+          "operands": [
+            "immediate-integer",
+            "register"
+          ],
+          "count": 821,
+          "samples": [
+            "examples/error_handling_demo.baa:262",
+            "examples/error_handling_demo.baa:301",
+            "examples/error_handling_demo.baa:368"
+          ],
+          "status": "supported",
+          "nazm": {
+            "mnemonic": "انقل",
+            "operands": [
+              "register",
+              "immediate"
+            ],
+            "width_bits": 64
+          },
+          "acceptance_fixture": "tests/fixtures/baa_coverage/حركة-باء.نظم"
+        },
+        {
+          "mnemonic": "movb",
+          "operands": [
+            "immediate-integer",
+            "memory-base-displacement"
+          ],
+          "count": 435,
+          "samples": [
+            "examples/error_handling_demo.baa:599",
+            "examples/error_handling_demo.baa:602",
+            "examples/file_copy_small.baa:128"
+          ],
+          "status": "unsupported",
+          "reason": "Nazm exposes only 64-bit general-purpose register instruction forms."
+        },
+        {
+          "mnemonic": "movb",
+          "operands": [
+            "immediate-integer",
+            "register"
+          ],
+          "count": 15,
+          "samples": [
+            "tests/integration/backend/backend_error_handling_v043_test.baa:279",
+            "tests/integration/backend/backend_error_handling_v043_test.baa:284",
+            "tests/integration/backend/backend_error_handling_v043_test.baa:289"
+          ],
+          "status": "unsupported",
+          "reason": "Nazm exposes only 64-bit general-purpose register instruction forms."
+        },
+        {
+          "mnemonic": "movb",
+          "operands": [
+            "memory-base-displacement",
+            "register"
+          ],
+          "count": 566,
+          "samples": [
+            "examples/error_handling_demo.baa:182",
+            "examples/error_handling_demo.baa:278",
+            "examples/error_handling_demo.baa:325"
+          ],
+          "status": "unsupported",
+          "reason": "Nazm exposes only 64-bit general-purpose register instruction forms."
+        },
+        {
+          "mnemonic": "movb",
+          "operands": [
+            "register",
+            "memory-base-displacement"
+          ],
+          "count": 625,
+          "samples": [
+            "examples/error_handling_demo.baa:589",
+            "examples/error_handling_demo.baa:591",
+            "examples/error_handling_demo.baa:594"
+          ],
+          "status": "unsupported",
+          "reason": "Nazm exposes only 64-bit general-purpose register instruction forms."
+        },
+        {
+          "mnemonic": "movb",
+          "operands": [
+            "register",
+            "register"
+          ],
+          "count": 1071,
+          "samples": [
+            "examples/error_handling_demo.baa:290",
+            "examples/error_handling_demo.baa:349",
+            "examples/error_handling_demo.baa:351"
+          ],
+          "status": "unsupported",
+          "reason": "Nazm exposes only 64-bit general-purpose register instruction forms."
+        },
+        {
+          "mnemonic": "movl",
+          "operands": [
+            "immediate-integer",
+            "memory-base-displacement"
+          ],
+          "count": 4,
+          "samples": [
+            "examples/error_handling_demo.baa:93",
+            "tests/integration/backend/backend_error_handling_v043_test.baa:297",
+            "tests/integration/ir/ir_inline_asm_test.baa:17"
+          ],
+          "status": "unsupported",
+          "reason": "Nazm exposes only 64-bit general-purpose register instruction forms."
+        },
+        {
+          "mnemonic": "movl",
+          "operands": [
+            "immediate-integer",
+            "register"
+          ],
+          "count": 65,
+          "samples": [
+            "examples/error_handling_demo.baa:138",
+            "examples/error_handling_demo.baa:659",
+            "examples/math_and_format.baa:23"
+          ],
+          "status": "unsupported",
+          "reason": "Nazm exposes only 64-bit general-purpose register instruction forms."
+        },
+        {
+          "mnemonic": "movl",
+          "operands": [
+            "memory-base-displacement",
+            "register"
+          ],
+          "count": 5,
+          "samples": [
+            "examples/error_handling_demo.baa:97",
+            "examples/file_copy_small.baa:889",
+            "tests/integration/backend/backend_error_handling_v043_test.baa:301"
+          ],
+          "status": "unsupported",
+          "reason": "Nazm exposes only 64-bit general-purpose register instruction forms."
+        },
+        {
+          "mnemonic": "movl",
+          "operands": [
+            "memory-rip-relative",
+            "register"
+          ],
+          "count": 1,
+          "samples": [
+            "tests/integration/backend/backend_int_semantics_test.baa:273"
+          ],
+          "status": "unsupported",
+          "reason": "Nazm does not implement RIP-relative memory operands."
+        },
+        {
+          "mnemonic": "movl",
+          "operands": [
+            "register",
+            "memory-base-displacement"
+          ],
+          "count": 5,
+          "samples": [
+            "tests/integration/backend/backend_file_io_test.baa:5250",
+            "tests/integration/backend/backend_file_io_test.baa:5561",
+            "tests/integration/backend/backend_file_io_test.baa:5872"
+          ],
+          "status": "unsupported",
+          "reason": "Nazm exposes only 64-bit general-purpose register instruction forms."
+        },
+        {
+          "mnemonic": "movl",
+          "operands": [
+            "register",
+            "register"
+          ],
+          "count": 219,
+          "samples": [
+            "examples/error_handling_demo.baa:101",
+            "examples/error_handling_demo.baa:102",
+            "examples/error_handling_demo.baa:117"
+          ],
+          "status": "unsupported",
+          "reason": "Nazm exposes only 64-bit general-purpose register instruction forms."
+        },
+        {
+          "mnemonic": "movq",
+          "operands": [
+            "immediate-integer",
+            "memory-base-displacement"
+          ],
+          "count": 903,
+          "samples": [
+            "examples/error_handling_demo.baa:75",
+            "examples/error_handling_demo.baa:164",
+            "examples/error_handling_demo.baa:165"
+          ],
+          "status": "unsupported",
+          "reason": "Nazm implements this mnemonic, but not this operand shape or width."
+        },
+        {
+          "mnemonic": "movq",
+          "operands": [
+            "immediate-integer",
+            "memory-rip-relative"
+          ],
+          "count": 1,
+          "samples": [
+            "tests/integration/backend/backend_test.baa:2412"
+          ],
+          "status": "unsupported",
+          "reason": "Nazm implements this mnemonic, but not this operand shape or width."
+        },
+        {
+          "mnemonic": "movq",
+          "operands": [
+            "immediate-integer",
+            "register"
+          ],
+          "count": 2745,
+          "samples": [
+            "examples/error_handling_demo.baa:27",
+            "examples/error_handling_demo.baa:41",
+            "examples/error_handling_demo.baa:54"
+          ],
+          "status": "supported",
+          "nazm": {
+            "mnemonic": "انقل",
+            "operands": [
+              "register",
+              "immediate"
+            ],
+            "width_bits": 64
+          },
+          "acceptance_fixture": "tests/fixtures/baa_coverage/حركة-باء.نظم"
+        },
+        {
+          "mnemonic": "movq",
+          "operands": [
+            "memory-base-displacement",
+            "register"
+          ],
+          "count": 8838,
+          "samples": [
+            "examples/error_handling_demo.baa:74",
+            "examples/error_handling_demo.baa:76",
+            "examples/error_handling_demo.baa:168"
+          ],
+          "status": "supported",
+          "nazm": {
+            "mnemonic": "انقل",
+            "operands": [
+              "register",
+              "memory-base-displacement"
+            ],
+            "width_bits": 64
+          },
+          "acceptance_fixture": "tests/fixtures/baa_coverage/حركة-باء.نظم"
+        },
+        {
+          "mnemonic": "movq",
+          "operands": [
+            "memory-rip-relative",
+            "register"
+          ],
+          "count": 69,
+          "samples": [
+            "tests/integration/backend/backend_byte_buffer_stdlib_v062_test.baa:257",
+            "tests/integration/backend/backend_byte_buffer_stdlib_v062_test.baa:697",
+            "tests/integration/backend/backend_dynamic_memory_test.baa:257"
+          ],
+          "status": "unsupported",
+          "reason": "Nazm implements this mnemonic, but not this operand shape or width."
+        },
+        {
+          "mnemonic": "movq",
+          "operands": [
+            "register",
+            "memory-base-displacement"
+          ],
+          "count": 4466,
+          "samples": [
+            "examples/error_handling_demo.baa:53",
+            "examples/error_handling_demo.baa:73",
+            "examples/error_handling_demo.baa:100"
+          ],
+          "status": "supported",
+          "nazm": {
+            "mnemonic": "انقل",
+            "operands": [
+              "memory-base-displacement",
+              "register"
+            ],
+            "width_bits": 64
+          },
+          "acceptance_fixture": "tests/fixtures/baa_coverage/حركة-باء.نظم"
+        },
+        {
+          "mnemonic": "movq",
+          "operands": [
+            "register",
+            "memory-rip-relative"
+          ],
+          "count": 23,
+          "samples": [
+            "tests/integration/backend/backend_byte_buffer_stdlib_v062_test.baa:260",
+            "tests/integration/backend/backend_dynamic_memory_test.baa:260",
+            "tests/integration/backend/backend_error_handling_v043_test.baa:260"
+          ],
+          "status": "unsupported",
+          "reason": "Nazm implements this mnemonic, but not this operand shape or width."
+        },
+        {
+          "mnemonic": "movq",
+          "operands": [
+            "register",
+            "register"
+          ],
+          "count": 11988,
+          "samples": [
+            "examples/error_handling_demo.baa:16",
+            "examples/error_handling_demo.baa:17",
+            "examples/error_handling_demo.baa:18"
+          ],
+          "status": "supported",
+          "nazm": {
+            "mnemonic": "انقل",
+            "operands": [
+              "register",
+              "register"
+            ],
+            "width_bits": 64
+          },
+          "acceptance_fixture": "tests/fixtures/baa_coverage/حركة-باء.نظم"
+        },
+        {
+          "mnemonic": "movsbl",
+          "operands": [
+            "register",
+            "register"
+          ],
+          "count": 7,
+          "samples": [
+            "tests/integration/backend/backend_file_io_test.baa:1585",
+            "tests/integration/backend/backend_file_io_test.baa:1598",
+            "tests/integration/backend/backend_file_io_test.baa:1611"
+          ],
+          "status": "unsupported",
+          "reason": "Nazm does not implement sign- or zero-extension instructions."
+        },
+        {
+          "mnemonic": "movsbq",
+          "operands": [
+            "register",
+            "register"
+          ],
+          "count": 799,
+          "samples": [
+            "examples/error_handling_demo.baa:213",
+            "examples/error_handling_demo.baa:214",
+            "examples/error_handling_demo.baa:215"
+          ],
+          "status": "unsupported",
+          "reason": "Nazm does not implement sign- or zero-extension instructions."
+        },
+        {
+          "mnemonic": "movslq",
+          "operands": [
+            "memory-base-displacement",
+            "register"
+          ],
+          "count": 3,
+          "samples": [
+            "tests/integration/backend/backend_file_io_test.baa:5380",
+            "tests/integration/backend/backend_file_io_test.baa:5691",
+            "tests/integration/backend/backend_file_io_test.baa:6002"
+          ],
+          "status": "unsupported",
+          "reason": "Nazm does not implement sign- or zero-extension instructions."
+        },
+        {
+          "mnemonic": "movslq",
+          "operands": [
+            "register",
+            "register"
+          ],
+          "count": 65,
+          "samples": [
+            "examples/error_handling_demo.baa:98",
+            "examples/file_copy_small.baa:471",
+            "examples/file_copy_small.baa:558"
+          ],
+          "status": "unsupported",
+          "reason": "Nazm does not implement sign- or zero-extension instructions."
+        },
+        {
+          "mnemonic": "movzbl",
+          "operands": [
+            "register",
+            "register"
+          ],
+          "count": 2,
+          "samples": [
+            "tests/integration/backend/backend_byte_buffer_stdlib_v062_test.baa:659",
+            "tests/integration/backend/backend_byte_buffer_stdlib_v062_test.baa:660"
+          ],
+          "status": "unsupported",
+          "reason": "Nazm does not implement sign- or zero-extension instructions."
+        },
+        {
+          "mnemonic": "movzbq",
+          "operands": [
+            "memory-base-displacement",
+            "register"
+          ],
+          "count": 38,
+          "samples": [
+            "examples/error_handling_demo.baa:422",
+            "examples/math_and_format.baa:369",
+            "examples/math_and_format.baa:747"
+          ],
+          "status": "unsupported",
+          "reason": "Nazm does not implement sign- or zero-extension instructions."
+        },
+        {
+          "mnemonic": "movzbq",
+          "operands": [
+            "register",
+            "register"
+          ],
+          "count": 2968,
+          "samples": [
+            "examples/error_handling_demo.baa:22",
+            "examples/error_handling_demo.baa:36",
+            "examples/error_handling_demo.baa:85"
+          ],
+          "status": "unsupported",
+          "reason": "Nazm does not implement sign- or zero-extension instructions."
+        },
+        {
+          "mnemonic": "mov",
+          "operands": [
+            "memory-base-displacement",
+            "register"
+          ],
+          "count": 1484,
+          "samples": [
+            "examples/error_handling_demo.baa:28",
+            "examples/error_handling_demo.baa:29",
+            "examples/error_handling_demo.baa:30"
+          ],
+          "status": "unsupported",
+          "reason": "The unsuffixed GAS form has no width in the inventory and cannot be mapped safely."
+        },
+        {
+          "mnemonic": "mov",
+          "operands": [
+            "register",
+            "memory-base-displacement"
+          ],
+          "count": 713,
+          "samples": [
+            "examples/error_handling_demo.baa:13",
+            "examples/error_handling_demo.baa:14",
+            "examples/error_handling_demo.baa:15"
+          ],
+          "status": "unsupported",
+          "reason": "The unsuffixed GAS form has no width in the inventory and cannot be mapped safely."
+        },
+        {
+          "mnemonic": "mov",
+          "operands": [
+            "register",
+            "register"
+          ],
+          "count": 271,
+          "samples": [
+            "examples/error_handling_demo.baa:11",
+            "examples/error_handling_demo.baa:64",
+            "examples/file_copy_small.baa:11"
+          ],
+          "status": "unsupported",
+          "reason": "The unsuffixed GAS form has no width in the inventory and cannot be mapped safely."
+        },
+        {
+          "mnemonic": "mulsd",
+          "operands": [
+            "register",
+            "register"
+          ],
+          "count": 7,
+          "samples": [
+            "tests/integration/backend/backend_tailcall_float_test.baa:67",
+            "tests/integration/backend/backend_test.baa:3141",
+            "tests/integration/backend/backend_test.baa:3164"
+          ],
+          "status": "unsupported",
+          "reason": "Nazm does not implement scalar SSE2 registers or instructions."
+        },
+        {
+          "mnemonic": "nop",
+          "operands": [],
+          "count": 1,
+          "samples": [
+            "tests/integration/ir/ir_inline_asm_test.baa:40"
+          ],
+          "status": "supported",
+          "nazm": {
+            "mnemonic": "لا_تفعل",
+            "operands": [],
+            "width_bits": 64
+          },
+          "acceptance_fixture": "tests/fixtures/baa_coverage/حساب-وتحكم-باء.نظم"
+        },
+        {
+          "mnemonic": "notb",
+          "operands": [
+            "memory-base-displacement"
+          ],
+          "count": 2,
+          "samples": [
+            "tests/integration/backend/backend_path_stdlib_v062_test.baa:3223",
+            "tests/integration/backend/backend_path_stdlib_v062_test.baa:4357"
+          ],
+          "status": "unsupported",
+          "reason": "Nazm exposes only 64-bit general-purpose register instruction forms."
+        },
+        {
+          "mnemonic": "notb",
+          "operands": [
+            "register"
+          ],
+          "count": 48,
+          "samples": [
+            "examples/file_copy_small.baa:517",
+            "examples/file_copy_small.baa:572",
+            "examples/file_copy_small.baa:620"
+          ],
+          "status": "unsupported",
+          "reason": "Nazm exposes only 64-bit general-purpose register instruction forms."
+        },
+        {
+          "mnemonic": "orb",
+          "operands": [
+            "register",
+            "register"
+          ],
+          "count": 75,
+          "samples": [
+            "examples/file_copy_small.baa:43",
+            "examples/file_copy_small.baa:239",
+            "tests/integration/backend/backend_file_io_noheader_test.baa:45"
+          ],
+          "status": "unsupported",
+          "reason": "Nazm exposes only 64-bit general-purpose register instruction forms."
+        },
+        {
+          "mnemonic": "orq",
+          "operands": [
+            "register",
+            "register"
+          ],
+          "count": 448,
+          "samples": [
+            "examples/error_handling_demo.baa:263",
+            "examples/error_handling_demo.baa:299",
+            "examples/error_handling_demo.baa:302"
+          ],
+          "status": "supported",
+          "nazm": {
+            "mnemonic": "أو_بتيا",
+            "operands": [
+              "register",
+              "register"
+            ],
+            "width_bits": 64
+          },
+          "acceptance_fixture": "tests/fixtures/baa_coverage/حساب-وتحكم-باء.نظم"
+        },
+        {
+          "mnemonic": "pushq",
+          "operands": [
+            "register"
+          ],
+          "count": 3,
+          "samples": [
+            "tests/integration/backend/backend_custom_startup_test.baa:1321",
+            "tests/integration/ir/ir_custom_startup_linux_asm_test.baa:31",
+            "tests/integration/ir/ir_custom_startup_windows_asm_test.baa:31"
+          ],
+          "status": "supported",
+          "nazm": {
+            "mnemonic": "ادفع",
+            "operands": [
+              "register"
+            ],
+            "width_bits": 64
+          },
+          "acceptance_fixture": "tests/fixtures/baa_coverage/حركة-باء.نظم"
+        },
+        {
+          "mnemonic": "push",
+          "operands": [
+            "register"
+          ],
+          "count": 271,
+          "samples": [
+            "examples/error_handling_demo.baa:10",
+            "examples/error_handling_demo.baa:63",
+            "examples/file_copy_small.baa:10"
+          ],
+          "status": "supported",
+          "nazm": {
+            "mnemonic": "ادفع",
+            "operands": [
+              "register"
+            ],
+            "width_bits": 64
+          },
+          "acceptance_fixture": "tests/fixtures/baa_coverage/حركة-باء.نظم"
+        },
+        {
+          "mnemonic": "rdtsc",
+          "operands": [],
+          "count": 1,
+          "samples": [
+            "tests/integration/ir/ir_inline_asm_test.baa:20"
+          ],
+          "status": "unsupported",
+          "reason": "Nazm does not implement the rdtsc instruction."
+        },
+        {
+          "mnemonic": "ret",
+          "operands": [],
+          "count": 470,
+          "samples": [
+            "examples/error_handling_demo.baa:32",
+            "examples/error_handling_demo.baa:46",
+            "examples/error_handling_demo.baa:59"
+          ],
+          "status": "supported",
+          "nazm": {
+            "mnemonic": "ارجع",
+            "operands": [],
+            "width_bits": 64
+          },
+          "acceptance_fixture": "tests/fixtures/baa_coverage/حساب-وتحكم-باء.نظم"
+        },
+        {
+          "mnemonic": "sarl",
+          "operands": [
+            "register",
+            "register"
+          ],
+          "count": 1,
+          "samples": [
+            "tests/integration/backend/backend_runtime_shift_width_negative_fail_v063_test.baa:45"
+          ],
+          "status": "unsupported",
+          "reason": "Nazm exposes only 64-bit general-purpose register instruction forms."
+        },
+        {
+          "mnemonic": "sarq",
+          "operands": [
+            "immediate-integer",
+            "memory-base-displacement"
+          ],
+          "count": 27,
+          "samples": [
+            "examples/file_copy_small.baa:95",
+            "examples/file_copy_small.baa:291",
+            "examples/file_copy_small.baa:786"
+          ],
+          "status": "unsupported",
+          "reason": "Nazm implements this mnemonic, but not this operand shape or width."
+        },
+        {
+          "mnemonic": "sarq",
+          "operands": [
+            "immediate-integer",
+            "register"
+          ],
+          "count": 107,
+          "samples": [
+            "examples/file_copy_small.baa:62",
+            "examples/file_copy_small.baa:102",
+            "examples/file_copy_small.baa:106"
+          ],
+          "status": "supported",
+          "nazm": {
+            "mnemonic": "ازح_حسابيا_يمينا",
+            "operands": [
+              "register",
+              "immediate"
+            ],
+            "width_bits": 64
+          },
+          "acceptance_fixture": "tests/fixtures/baa_coverage/حساب-وتحكم-باء.نظم"
+        },
+        {
+          "mnemonic": "setae",
+          "operands": [
+            "register"
+          ],
+          "count": 3,
+          "samples": [
+            "tests/integration/backend/backend_float_extensions_v042_test.baa:305",
+            "tests/integration/backend/backend_test.baa:3230",
+            "tests/integration/backend/backend_test.baa:3310"
+          ],
+          "status": "unsupported",
+          "reason": "Nazm does not implement setcc instructions or 8-bit destinations."
+        },
+        {
+          "mnemonic": "seta",
+          "operands": [
+            "register"
+          ],
+          "count": 4,
+          "samples": [
+            "tests/integration/backend/backend_scan_arabic_test.baa:483",
+            "tests/integration/backend/backend_stdlib_v041_test.baa:286",
+            "tests/integration/backend/backend_stdlib_v041_test.baa:314"
+          ],
+          "status": "unsupported",
+          "reason": "Nazm does not implement setcc instructions or 8-bit destinations."
+        },
+        {
+          "mnemonic": "setbe",
+          "operands": [
+            "register"
+          ],
+          "count": 1,
+          "samples": [
+            "tests/integration/backend/backend_test.baa:3191"
+          ],
+          "status": "unsupported",
+          "reason": "Nazm does not implement setcc instructions or 8-bit destinations."
+        },
+        {
+          "mnemonic": "setb",
+          "operands": [
+            "register"
+          ],
+          "count": 6,
+          "samples": [
+            "tests/integration/backend/backend_float_extensions_v042_test.baa:286",
+            "tests/integration/backend/backend_scan_arabic_test.baa:473",
+            "tests/integration/backend/backend_stdlib_v041_test.baa:292"
+          ],
+          "status": "unsupported",
+          "reason": "Nazm does not implement setcc instructions or 8-bit destinations."
+        },
+        {
+          "mnemonic": "sete",
+          "operands": [
+            "memory-base-displacement"
+          ],
+          "count": 38,
+          "samples": [
+            "examples/error_handling_demo.baa:421",
+            "examples/math_and_format.baa:368",
+            "examples/math_and_format.baa:746"
+          ],
+          "status": "unsupported",
+          "reason": "Nazm does not implement setcc instructions or 8-bit destinations."
+        },
+        {
+          "mnemonic": "sete",
+          "operands": [
+            "register"
+          ],
+          "count": 1971,
+          "samples": [
+            "examples/error_handling_demo.baa:21",
+            "examples/error_handling_demo.baa:35",
+            "examples/error_handling_demo.baa:84"
+          ],
+          "status": "unsupported",
+          "reason": "Nazm does not implement setcc instructions or 8-bit destinations."
+        },
+        {
+          "mnemonic": "setge",
+          "operands": [
+            "register"
+          ],
+          "count": 99,
+          "samples": [
+            "examples/file_copy_small.baa:120",
+            "examples/file_copy_small.baa:143",
+            "examples/file_copy_small.baa:159"
+          ],
+          "status": "unsupported",
+          "reason": "Nazm does not implement setcc instructions or 8-bit destinations."
+        },
+        {
+          "mnemonic": "setg",
+          "operands": [
+            "register"
+          ],
+          "count": 71,
+          "samples": [
+            "examples/file_copy_small.baa:514",
+            "tests/integration/backend/backend_custom_startup_test.baa:855",
+            "tests/integration/backend/backend_dynamic_memory_test.baa:343"
+          ],
+          "status": "unsupported",
+          "reason": "Nazm does not implement setcc instructions or 8-bit destinations."
+        },
+        {
+          "mnemonic": "setle",
+          "operands": [
+            "register"
+          ],
+          "count": 47,
+          "samples": [
+            "tests/integration/backend/backend_byte_buffer_stdlib_v062_test.baa:477",
+            "tests/integration/backend/backend_file_io_noheader_test.baa:511",
+            "tests/integration/backend/backend_file_io_noheader_test.baa:694"
+          ],
+          "status": "unsupported",
+          "reason": "Nazm does not implement setcc instructions or 8-bit destinations."
+        },
+        {
+          "mnemonic": "setl",
+          "operands": [
+            "register"
+          ],
+          "count": 78,
+          "samples": [
+            "examples/file_copy_small.baa:836",
+            "examples/file_copy_small.baa:856",
+            "examples/file_copy_small.baa:876"
+          ],
+          "status": "unsupported",
+          "reason": "Nazm does not implement setcc instructions or 8-bit destinations."
+        },
+        {
+          "mnemonic": "setne",
+          "operands": [
+            "register"
+          ],
+          "count": 450,
+          "samples": [
+            "examples/error_handling_demo.baa:174",
+            "examples/error_handling_demo.baa:288",
+            "examples/error_handling_demo.baa:344"
+          ],
+          "status": "unsupported",
+          "reason": "Nazm does not implement setcc instructions or 8-bit destinations."
+        },
+        {
+          "mnemonic": "setnp",
+          "operands": [
+            "register"
+          ],
+          "count": 9,
+          "samples": [
+            "tests/integration/backend/backend_float_extensions_v042_test.baa:287",
+            "tests/integration/backend/backend_scan_arabic_test.baa:474",
+            "tests/integration/backend/backend_stdlib_v041_test.baa:293"
+          ],
+          "status": "unsupported",
+          "reason": "Nazm does not implement setcc instructions or 8-bit destinations."
+        },
+        {
+          "mnemonic": "setp",
+          "operands": [
+            "register"
+          ],
+          "count": 4,
+          "samples": [
+            "tests/integration/backend/backend_multidim_array_test.baa:333",
+            "tests/integration/backend/backend_test.baa:3211",
+            "tests/integration/backend/backend_test.baa:3293"
+          ],
+          "status": "unsupported",
+          "reason": "Nazm does not implement setcc instructions or 8-bit destinations."
+        },
+        {
+          "mnemonic": "shll",
+          "operands": [
+            "register",
+            "register"
+          ],
+          "count": 4,
+          "samples": [
+            "tests/integration/backend/backend_runtime_shift_width_high_fail_v063_test.baa:45",
+            "tests/integration/ir/ir_runtime_checks_none_v063_test.baa:70",
+            "tests/integration/ir/ir_runtime_checks_selective_bounds_shift_v063_test.baa:266"
+          ],
+          "status": "unsupported",
+          "reason": "Nazm exposes only 64-bit general-purpose register instruction forms."
+        },
+        {
+          "mnemonic": "shlq",
+          "operands": [
+            "immediate-integer",
+            "register"
+          ],
+          "count": 1556,
+          "samples": [
+            "examples/error_handling_demo.baa:218",
+            "examples/error_handling_demo.baa:222",
+            "examples/error_handling_demo.baa:258"
+          ],
+          "status": "supported",
+          "nazm": {
+            "mnemonic": "ازح_يسارا",
+            "operands": [
+              "register",
+              "immediate"
+            ],
+            "width_bits": 64
+          },
+          "acceptance_fixture": "tests/fixtures/baa_coverage/حساب-وتحكم-باء.نظم"
+        },
+        {
+          "mnemonic": "subq",
+          "operands": [
+            "immediate-integer",
+            "memory-base-displacement"
+          ],
+          "count": 9,
+          "samples": [
+            "tests/integration/backend/backend_path_stdlib_v062_test.baa:5146",
+            "tests/integration/backend/backend_path_stdlib_v062_test.baa:6591",
+            "tests/integration/backend/backend_path_stdlib_v062_test.baa:8037"
+          ],
+          "status": "unsupported",
+          "reason": "Nazm implements this mnemonic, but not this operand shape or width."
+        },
+        {
+          "mnemonic": "subq",
+          "operands": [
+            "immediate-integer",
+            "register"
+          ],
+          "count": 1202,
+          "samples": [
+            "tests/integration/backend/backend_custom_startup_test.baa:157",
+            "tests/integration/backend/backend_custom_startup_test.baa:161",
+            "tests/integration/backend/backend_custom_startup_test.baa:165"
+          ],
+          "status": "supported",
+          "nazm": {
+            "mnemonic": "اطرح",
+            "operands": [
+              "register",
+              "immediate"
+            ],
+            "width_bits": 64
+          },
+          "acceptance_fixture": "tests/fixtures/baa_coverage/حساب-وتحكم-باء.نظم"
+        },
+        {
+          "mnemonic": "subq",
+          "operands": [
+            "register",
+            "memory-base-displacement"
+          ],
+          "count": 3,
+          "samples": [
+            "tests/integration/backend/backend_path_stdlib_v062_test.baa:8109",
+            "tests/integration/backend/backend_path_stdlib_v062_test.baa:9218",
+            "tests/integration/backend/backend_path_stdlib_v062_test.baa:10373"
+          ],
+          "status": "unsupported",
+          "reason": "Nazm implements this mnemonic, but not this operand shape or width."
+        },
+        {
+          "mnemonic": "subq",
+          "operands": [
+            "register",
+            "register"
+          ],
+          "count": 37,
+          "samples": [
+            "tests/integration/backend/backend_cast_pointer_diff_test.baa:25",
+            "tests/integration/backend/backend_custom_startup_test.baa:349",
+            "tests/integration/backend/backend_custom_startup_test.baa:787"
+          ],
+          "status": "supported",
+          "nazm": {
+            "mnemonic": "اطرح",
+            "operands": [
+              "register",
+              "register"
+            ],
+            "width_bits": 64
+          },
+          "acceptance_fixture": "tests/fixtures/baa_coverage/حساب-وتحكم-باء.نظم"
+        },
+        {
+          "mnemonic": "subsd",
+          "operands": [
+            "register",
+            "register"
+          ],
+          "count": 1,
+          "samples": [
+            "tests/integration/backend/backend_float_extensions_v042_test.baa:280"
+          ],
+          "status": "unsupported",
+          "reason": "Nazm does not implement scalar SSE2 registers or instructions."
+        },
+        {
+          "mnemonic": "sub",
+          "operands": [
+            "immediate-integer",
+            "register"
+          ],
+          "count": 201,
+          "samples": [
+            "examples/error_handling_demo.baa:12",
+            "examples/error_handling_demo.baa:65",
+            "examples/file_copy_small.baa:12"
+          ],
+          "status": "unsupported",
+          "reason": "The unsuffixed GAS form has no width in the inventory and cannot be mapped safely."
+        },
+        {
+          "mnemonic": "testb",
+          "operands": [
+            "register",
+            "memory-base-displacement"
+          ],
+          "count": 5,
+          "samples": [
+            "tests/integration/backend/backend_path_stdlib_v062_test.baa:3225",
+            "tests/integration/backend/backend_path_stdlib_v062_test.baa:3236",
+            "tests/integration/backend/backend_path_stdlib_v062_test.baa:4359"
+          ],
+          "status": "unsupported",
+          "reason": "Nazm exposes only 64-bit general-purpose register instruction forms."
+        },
+        {
+          "mnemonic": "testb",
+          "operands": [
+            "register",
+            "register"
+          ],
+          "count": 1383,
+          "samples": [
+            "examples/error_handling_demo.baa:23",
+            "examples/error_handling_demo.baa:37",
+            "examples/error_handling_demo.baa:86"
+          ],
+          "status": "unsupported",
+          "reason": "Nazm exposes only 64-bit general-purpose register instruction forms."
+        },
+        {
+          "mnemonic": "ucomisd",
+          "operands": [
+            "register",
+            "register"
+          ],
+          "count": 20,
+          "samples": [
+            "tests/integration/backend/backend_float_extensions_v042_test.baa:285",
+            "tests/integration/backend/backend_float_extensions_v042_test.baa:304",
+            "tests/integration/backend/backend_multidim_array_test.baa:331"
+          ],
+          "status": "unsupported",
+          "reason": "Nazm does not implement scalar SSE2 registers or instructions."
+        },
+        {
+          "mnemonic": "xorl",
+          "operands": [
+            "register",
+            "register"
+          ],
+          "count": 1487,
+          "samples": [
+            "examples/error_handling_demo.baa:80",
+            "examples/error_handling_demo.baa:90",
+            "examples/error_handling_demo.baa:94"
+          ],
+          "status": "unsupported",
+          "reason": "Nazm exposes only 64-bit general-purpose register instruction forms."
+        },
+        {
+          "mnemonic": "xorpd",
+          "operands": [
+            "register",
+            "register"
+          ],
+          "count": 2,
+          "samples": [
+            "tests/integration/backend/backend_float_extensions_v042_test.baa:297",
+            "tests/integration/backend/backend_test.baa:3128"
+          ],
+          "status": "unsupported",
+          "reason": "Nazm does not implement scalar SSE2 registers or instructions."
+        }
+      ],
+      "directive_forms": [
+        {
+          "directive": ".asciz",
+          "operands": [
+            "string"
+          ],
+          "count": 499,
+          "samples": [
+            "examples/error_handling_demo.baa:2",
+            "examples/error_handling_demo.baa:3",
+            "examples/error_handling_demo.baa:4"
+          ],
+          "status": "supported",
+          "nazm": {
+            "directive": ".سلسلة_منتهية_بصفر",
+            "operands": [
+              "string"
+            ]
+          },
+          "acceptance_fixture": "tests/fixtures/baa_coverage/بيانات-باء.نظم"
+        },
+        {
+          "directive": ".data",
+          "operands": [],
+          "count": 26,
+          "samples": [
+            "tests/integration/backend/backend_byte_buffer_stdlib_v062_test.baa:6",
+            "tests/integration/backend/backend_dynamic_memory_test.baa:6",
+            "tests/integration/backend/backend_enum_struct_test.baa:6"
+          ],
+          "status": "supported",
+          "nazm": {
+            "directive": ".بيانات",
+            "operands": []
+          },
+          "acceptance_fixture": "tests/fixtures/baa_coverage/بيانات-باء.نظم"
+        },
+        {
+          "directive": ".file",
+          "operands": [
+            "expression"
+          ],
+          "count": 1,
+          "samples": [
+            "tests/integration/ir/ir_runtime_bounds_debug_info_no_checks_v055_test.baa:16"
+          ],
+          "status": "unsupported",
+          "reason": "Nazm does not implement GAS debug/source mapping directives."
+        },
+        {
+          "directive": ".globl",
+          "operands": [
+            "expression"
+          ],
+          "count": 205,
+          "samples": [
+            "examples/error_handling_demo.baa:8",
+            "examples/file_copy_small.baa:8",
+            "tests/integration/backend/backend_byte_buffer_stdlib_v062_test.baa:7"
+          ],
+          "status": "partial",
+          "nazm": {
+            "directive": ".عام",
+            "operands": [
+              "label"
+            ]
+          },
+          "reason": "Canonical Arabic labels are supported, but the Baa inventory expression category is broader than one label token.",
+          "acceptance_fixture": "tests/fixtures/baa_coverage/بيانات-باء.نظم"
+        },
+        {
+          "directive": ".globl",
+          "operands": [
+            "symbol"
+          ],
+          "count": 106,
+          "samples": [
+            "examples/error_handling_demo.baa:61",
+            "examples/file_copy_small.baa:968",
+            "examples/hello_world.baa:8"
+          ],
+          "status": "unsupported",
+          "nazm": {
+            "directive": ".عام",
+            "operands": [
+              "label"
+            ]
+          },
+          "reason": "Nazm 0.4 rejects ASCII linker identifiers such as main."
+        },
+        {
+          "directive": ".local",
+          "operands": [
+            "expression"
+          ],
+          "count": 10,
+          "samples": [
+            "tests/integration/backend/backend_multidim_array_test.baa:27",
+            "tests/integration/backend/backend_static_storage_test.baa:7",
+            "tests/integration/backend/backend_static_storage_test.baa:9"
+          ],
+          "status": "partial",
+          "nazm": {
+            "directive": ".محلي",
+            "operands": [
+              "label"
+            ]
+          },
+          "reason": "Canonical Arabic labels are supported, but the Baa inventory expression category is broader than one label token.",
+          "acceptance_fixture": "tests/fixtures/baa_coverage/بيانات-باء.نظم"
+        },
+        {
+          "directive": ".loc",
+          "operands": [
+            "expression"
+          ],
+          "count": 5,
+          "samples": [
+            "tests/integration/ir/ir_runtime_bounds_debug_info_no_checks_v055_test.baa:17",
+            "tests/integration/ir/ir_runtime_bounds_debug_info_no_checks_v055_test.baa:21",
+            "tests/integration/ir/ir_runtime_bounds_debug_info_no_checks_v055_test.baa:25"
+          ],
+          "status": "unsupported",
+          "reason": "Nazm does not implement GAS debug/source mapping directives."
+        },
+        {
+          "directive": ".long",
+          "operands": [
+            "integer"
+          ],
+          "count": 1,
+          "samples": [
+            "tests/integration/backend/backend_int_semantics_test.baa:10"
+          ],
+          "status": "supported",
+          "nazm": {
+            "directive": ".عدد٣٢",
+            "operands": [
+              "immediate"
+            ]
+          },
+          "acceptance_fixture": "tests/fixtures/baa_coverage/بيانات-باء.نظم"
+        },
+        {
+          "directive": ".p2align",
+          "operands": [
+            "integer"
+          ],
+          "count": 304,
+          "samples": [
+            "examples/file_copy_small.baa:989",
+            "examples/file_copy_small.baa:1002",
+            "examples/hello_world.baa:140"
+          ],
+          "status": "unsupported",
+          "reason": "Nazm does not implement an alignment directive."
+        },
+        {
+          "directive": ".quad",
+          "operands": [
+            "integer"
+          ],
+          "count": 4168,
+          "samples": [
+            "examples/file_copy_small.baa:991",
+            "examples/file_copy_small.baa:992",
+            "examples/file_copy_small.baa:993"
+          ],
+          "status": "supported",
+          "nazm": {
+            "directive": ".عدد٦٤",
+            "operands": [
+              "immediate"
+            ]
+          },
+          "acceptance_fixture": "tests/fixtures/baa_coverage/بيانات-باء.نظم"
+        },
+        {
+          "directive": ".quad",
+          "operands": [
+            "local-symbol"
+          ],
+          "count": 3,
+          "samples": [
+            "tests/integration/backend/backend_multidim_array_test.baa:25",
+            "tests/integration/backend/backend_multidim_array_test.baa:26",
+            "tests/integration/backend/backend_test.baa:14"
+          ],
+          "status": "unsupported",
+          "reason": "Nazm implements this directive, but not this operand shape."
+        },
+        {
+          "directive": ".section",
+          "operands": [
+            "expression",
+            "string",
+            "expression"
+          ],
+          "count": 103,
+          "samples": [
+            "examples/error_handling_demo.baa:684",
+            "examples/file_copy_small.baa:1015",
+            "examples/hello_world.baa:157"
+          ],
+          "status": "unsupported",
+          "reason": "Nazm supports only its canonical .text and .data section directives."
+        },
+        {
+          "directive": ".section",
+          "operands": [
+            "symbol"
+          ],
+          "count": 208,
+          "samples": [
+            "examples/error_handling_demo.baa:1",
+            "examples/error_handling_demo.baa:674",
+            "examples/file_copy_small.baa:1"
+          ],
+          "status": "unsupported",
+          "reason": "Nazm supports only its canonical .text and .data section directives."
+        },
+        {
+          "directive": ".text",
+          "operands": [],
+          "count": 103,
+          "samples": [
+            "examples/error_handling_demo.baa:6",
+            "examples/file_copy_small.baa:6",
+            "examples/hello_world.baa:6"
+          ],
+          "status": "supported",
+          "nazm": {
+            "directive": ".نص",
+            "operands": []
+          },
+          "acceptance_fixture": "tests/fixtures/baa_coverage/بيانات-باء.نظم"
+        },
+        {
+          "directive": ".zero",
+          "operands": [
+            "integer"
+          ],
+          "count": 2,
+          "samples": [
+            "tests/integration/backend/backend_enum_struct_test.baa:8",
+            "tests/integration/backend/backend_test.baa:29"
+          ],
+          "status": "supported",
+          "nazm": {
+            "directive": ".مساحة_صفرية",
+            "operands": [
+              "immediate"
+            ]
+          },
+          "acceptance_fixture": "tests/fixtures/baa_coverage/بيانات-باء.نظم"
+        }
+      ],
+      "sections": [
+        {
+          "name": ".data",
+          "count": 26,
+          "status": "supported",
+          "nazm": ".بيانات",
+          "object": ".data",
+          "acceptance_fixture": "tests/fixtures/baa_coverage/بيانات-باء.نظم"
+        },
+        {
+          "name": ".note.GNU-stack",
+          "count": 103,
+          "status": "unsupported",
+          "reason": "Nazm does not emit this object section."
+        },
+        {
+          "name": ".rodata",
+          "count": 208,
+          "status": "unsupported",
+          "reason": "Nazm has no read-only data section."
+        },
+        {
+          "name": ".text",
+          "count": 103,
+          "status": "supported",
+          "nazm": ".نص",
+          "object": ".text",
+          "acceptance_fixture": "tests/fixtures/baa_coverage/بيانات-باء.نظم"
+        }
+      ],
+      "symbols": {
+        "defined": 621,
+        "global-declaration": 311,
+        "local": 4067,
+        "local-declaration": 10
+      },
+      "relocation_candidates": [
+        {
+          "form": "data:.quad",
+          "count": 3,
+          "status": "unsupported",
+          "reason": "Nazm does not implement data-section symbol relocations."
+        },
+        {
+          "form": "instruction:call:symbol",
+          "count": 901,
+          "status": "partial",
+          "reason": "Calls to labels defined in the same .text input are resolved, but external-symbol call relocations are not implemented."
+        },
+        {
+          "form": "instruction:leaq:memory-rip-relative,register",
+          "count": 868,
+          "status": "unsupported",
+          "reason": "Nazm does not implement RIP-relative relocations."
+        },
+        {
+          "form": "instruction:movl:memory-rip-relative,register",
+          "count": 1,
+          "status": "unsupported",
+          "reason": "Nazm does not implement RIP-relative relocations."
+        },
+        {
+          "form": "instruction:movq:immediate-integer,memory-rip-relative",
+          "count": 1,
+          "status": "unsupported",
+          "reason": "Nazm does not implement RIP-relative relocations."
+        },
+        {
+          "form": "instruction:movq:memory-rip-relative,register",
+          "count": 69,
+          "status": "unsupported",
+          "reason": "Nazm does not implement RIP-relative relocations."
+        },
+        {
+          "form": "instruction:movq:register,memory-rip-relative",
+          "count": 23,
+          "status": "unsupported",
+          "reason": "Nazm does not implement RIP-relative relocations."
+        }
+      ],
+      "summary": {
+        "forms": {
+          "supported": 38,
+          "partial": 4,
+          "unsupported": 92
+        },
+        "emissions": {
+          "supported": 52946,
+          "partial": 2017,
+          "unsupported": 25072
+        }
+      }
+    },
+    "x86_64-windows": {
+      "corpus": {
+        "source_count": 100,
+        "compiled_source_count": 100,
+        "omitted_source_count": 0,
+        "compile_failures": [],
+        "sources": [
+          "examples/error_handling_demo.baa",
+          "examples/file_copy_small.baa",
+          "examples/hello_world.baa",
+          "examples/math_and_format.baa",
+          "tests/integration/backend/backend_arabic_numeral_source_tokens_v064_test.baa",
+          "tests/integration/backend/backend_array_init_test.baa",
+          "tests/integration/backend/backend_array_length_operator_test.baa",
+          "tests/integration/backend/backend_array_sum_test.baa",
+          "tests/integration/backend/backend_byte_buffer_stdlib_v062_test.baa",
+          "tests/integration/backend/backend_cast_pointer_diff_test.baa",
+          "tests/integration/backend/backend_const_pointer_rules_test.baa",
+          "tests/integration/backend/backend_custom_startup_test.baa",
+          "tests/integration/backend/backend_dynamic_memory_noheader_test.baa",
+          "tests/integration/backend/backend_dynamic_memory_test.baa",
+          "tests/integration/backend/backend_enum_struct_test.baa",
+          "tests/integration/backend/backend_error_handling_v043_test.baa",
+          "tests/integration/backend/backend_file_io_noheader_test.baa",
+          "tests/integration/backend/backend_file_io_test.baa",
+          "tests/integration/backend/backend_float_extensions_v042_test.baa",
+          "tests/integration/backend/backend_format_arabic_test.baa",
+          "tests/integration/backend/backend_func_ptr_shadow_call_test.baa",
+          "tests/integration/backend/backend_func_ptr_test.baa",
+          "tests/integration/backend/backend_global_array_init_test.baa",
+          "tests/integration/backend/backend_include_bom_test.baa",
+          "tests/integration/backend/backend_include_i_compact_form_test.baa",
+          "tests/integration/backend/backend_include_i_nested_source_relative_priority_test.baa",
+          "tests/integration/backend/backend_include_i_path_with_spaces_test.baa",
+          "tests/integration/backend/backend_include_i_precedence_test.baa",
+          "tests/integration/backend/backend_include_i_space_form_test.baa",
+          "tests/integration/backend/backend_include_relative_alias_path_test.baa",
+          "tests/integration/backend/backend_include_relative_dir_test.baa",
+          "tests/integration/backend/backend_inline_test.baa",
+          "tests/integration/backend/backend_int_semantics_test.baa",
+          "tests/integration/backend/backend_low_level_ops_test.baa",
+          "tests/integration/backend/backend_main_args_test.baa",
+          "tests/integration/backend/backend_mod_test.baa",
+          "tests/integration/backend/backend_multidim_array_test.baa",
+          "tests/integration/backend/backend_path_stdlib_v062_test.baa",
+          "tests/integration/backend/backend_pointer_core_test.baa",
+          "tests/integration/backend/backend_pp_nested_test.baa",
+          "tests/integration/backend/backend_process_runtime_v065_test.baa",
+          "tests/integration/backend/backend_readline_stdin_test.baa",
+          "tests/integration/backend/backend_readnum_stdin_test.baa",
+          "tests/integration/backend/backend_regalloc_stress.baa",
+          "tests/integration/backend/backend_result_helpers_stdlib_v062_test.baa",
+          "tests/integration/backend/backend_runtime_assert_fail_v055_test.baa",
+          "tests/integration/backend/backend_runtime_assert_pass_v055_test.baa",
+          "tests/integration/backend/backend_runtime_bounds_fail_v055_test.baa",
+          "tests/integration/backend/backend_runtime_checks_selective_bounds_fail_v063_test.baa",
+          "tests/integration/backend/backend_runtime_checks_selective_null_fail_v063_test.baa",
+          "tests/integration/backend/backend_runtime_div_zero_fail_v063_test.baa",
+          "tests/integration/backend/backend_runtime_mod_zero_fail_v063_test.baa",
+          "tests/integration/backend/backend_runtime_null_deref_assign_fail_v063_test.baa",
+          "tests/integration/backend/backend_runtime_null_deref_fail_v063_test.baa",
+          "tests/integration/backend/backend_runtime_panic_location_v063_test.baa",
+          "tests/integration/backend/backend_runtime_panic_v055_test.baa",
+          "tests/integration/backend/backend_runtime_shift_width_high_fail_v063_test.baa",
+          "tests/integration/backend/backend_runtime_shift_width_negative_fail_v063_test.baa",
+          "tests/integration/backend/backend_runtime_string_array_inner_bounds_fail_v063_test.baa",
+          "tests/integration/backend/backend_runtime_string_bounds_fail_v063_test.baa",
+          "tests/integration/backend/backend_scan_arabic_test.baa",
+          "tests/integration/backend/backend_scope_test.baa",
+          "tests/integration/backend/backend_sha256_file_v066_test.baa",
+          "tests/integration/backend/backend_stackargs_test.baa",
+          "tests/integration/backend/backend_static_storage_test.baa",
+          "tests/integration/backend/backend_stdlib_short_include_test.baa",
+          "tests/integration/backend/backend_stdlib_v041_test.baa",
+          "tests/integration/backend/backend_string_builder_stdlib_v062_test.baa",
+          "tests/integration/backend/backend_string_ops_test.baa",
+          "tests/integration/backend/backend_struct_init_test.baa",
+          "tests/integration/backend/backend_sysv_6args_test.baa",
+          "tests/integration/backend/backend_tailcall_float_test.baa",
+          "tests/integration/backend/backend_tailcall_test.baa",
+          "tests/integration/backend/backend_test.baa",
+          "tests/integration/backend/backend_text_stdlib_helpers_v064_test.baa",
+          "tests/integration/backend/backend_type_alias_test.baa",
+          "tests/integration/backend/backend_union_test.baa",
+          "tests/integration/backend/backend_utf8_validation_valid_v064_test.baa",
+          "tests/integration/backend/backend_variadic_functions_test.baa",
+          "tests/integration/backend/backend_vector_stdlib_v062_test.baa",
+          "tests/integration/backend/int_sizes_test.baa",
+          "tests/integration/frontend/frontend_extern_declarations_test.baa",
+          "tests/integration/frontend/frontend_extern_no_storage_test.baa",
+          "tests/integration/ir/ir_custom_startup_linux_asm_test.baa",
+          "tests/integration/ir/ir_custom_startup_windows_asm_test.baa",
+          "tests/integration/ir/ir_inline_asm_test.baa",
+          "tests/integration/ir/ir_printer.baa",
+          "tests/integration/ir/ir_runtime_bounds_debug_info_no_checks_v055_test.baa",
+          "tests/integration/ir/ir_runtime_bounds_enabled_v055_test.baa",
+          "tests/integration/ir/ir_runtime_checks_none_v063_test.baa",
+          "tests/integration/ir/ir_runtime_checks_selective_bounds_shift_v063_test.baa",
+          "tests/integration/ir/ir_runtime_checks_selective_null_div_v063_test.baa",
+          "tests/integration/ir/ir_runtime_div_zero_enabled_v063_test.baa",
+          "tests/integration/ir/ir_runtime_null_deref_enabled_v063_test.baa",
+          "tests/integration/ir/ir_runtime_shift_width_enabled_v063_test.baa",
+          "tests/integration/ir/ir_runtime_string_bounds_enabled_v063_test.baa",
+          "tests/integration/ir/ir_test.baa",
+          "tests/stress/stress_deep_scopes.baa",
+          "tests/stress/stress_symbol_volume.baa",
+          "tests/stress/stress_utf8_identifiers.baa"
+        ]
+      },
+      "instruction_forms": [
+        {
+          "mnemonic": "addq",
+          "operands": [
+            "immediate-integer",
+            "memory-base-displacement"
+          ],
+          "count": 289,
+          "samples": [
+            "examples/error_handling_demo.baa:606",
+            "examples/error_handling_demo.baa:609",
+            "examples/file_copy_small.baa:122"
+          ],
+          "status": "unsupported",
+          "reason": "Nazm implements this mnemonic, but not this operand shape or width."
+        },
+        {
+          "mnemonic": "addq",
+          "operands": [
+            "immediate-integer",
+            "register"
+          ],
+          "count": 3572,
+          "samples": [
+            "examples/error_handling_demo.baa:87",
+            "examples/error_handling_demo.baa:98",
+            "examples/error_handling_demo.baa:103"
+          ],
+          "status": "supported",
+          "nazm": {
+            "mnemonic": "أضف",
+            "operands": [
+              "register",
+              "immediate"
+            ],
+            "width_bits": 64
+          },
+          "acceptance_fixture": "tests/fixtures/baa_coverage/حساب-وتحكم-باء.نظم"
+        },
+        {
+          "mnemonic": "addq",
+          "operands": [
+            "memory-base-displacement",
+            "register"
+          ],
+          "count": 372,
+          "samples": [
+            "examples/error_handling_demo.baa:205",
+            "examples/error_handling_demo.baa:622",
+            "examples/file_copy_small.baa:66"
+          ],
+          "status": "supported",
+          "nazm": {
+            "mnemonic": "أضف",
+            "operands": [
+              "register",
+              "memory-base-displacement"
+            ],
+            "width_bits": 64
+          },
+          "acceptance_fixture": "tests/fixtures/baa_coverage/حساب-وتحكم-باء.نظم"
+        },
+        {
+          "mnemonic": "addq",
+          "operands": [
+            "register",
+            "memory-base-displacement"
+          ],
+          "count": 174,
+          "samples": [
+            "tests/integration/backend/backend_custom_startup_test.baa:169",
+            "tests/integration/backend/backend_custom_startup_test.baa:217",
+            "tests/integration/backend/backend_custom_startup_test.baa:291"
+          ],
+          "status": "unsupported",
+          "reason": "Nazm implements this mnemonic, but not this operand shape or width."
+        },
+        {
+          "mnemonic": "addq",
+          "operands": [
+            "register",
+            "register"
+          ],
+          "count": 2423,
+          "samples": [
+            "examples/error_handling_demo.baa:248",
+            "examples/error_handling_demo.baa:250",
+            "examples/error_handling_demo.baa:252"
+          ],
+          "status": "supported",
+          "nazm": {
+            "mnemonic": "أضف",
+            "operands": [
+              "register",
+              "register"
+            ],
+            "width_bits": 64
+          },
+          "acceptance_fixture": "tests/fixtures/baa_coverage/حساب-وتحكم-باء.نظم"
+        },
+        {
+          "mnemonic": "addsd",
+          "operands": [
+            "register",
+            "register"
+          ],
+          "count": 7,
+          "samples": [
+            "tests/integration/backend/backend_float_extensions_v042_test.baa:883",
+            "tests/integration/backend/backend_tailcall_float_test.baa:36",
+            "tests/integration/backend/backend_test.baa:3470"
+          ],
+          "status": "unsupported",
+          "reason": "Nazm does not implement scalar SSE2 registers or instructions."
+        },
+        {
+          "mnemonic": "andb",
+          "operands": [
+            "register",
+            "register"
+          ],
+          "count": 500,
+          "samples": [
+            "examples/error_handling_demo.baa:315",
+            "examples/error_handling_demo.baa:374",
+            "examples/error_handling_demo.baa:376"
+          ],
+          "status": "unsupported",
+          "reason": "Nazm exposes only 64-bit general-purpose register instruction forms."
+        },
+        {
+          "mnemonic": "andq",
+          "operands": [
+            "immediate-integer",
+            "memory-base-displacement"
+          ],
+          "count": 208,
+          "samples": [
+            "examples/error_handling_demo.baa:216",
+            "examples/error_handling_demo.baa:428",
+            "examples/error_handling_demo.baa:431"
+          ],
+          "status": "unsupported",
+          "reason": "Nazm implements this mnemonic, but not this operand shape or width."
+        },
+        {
+          "mnemonic": "andq",
+          "operands": [
+            "immediate-integer",
+            "register"
+          ],
+          "count": 685,
+          "samples": [
+            "examples/error_handling_demo.baa:218",
+            "examples/error_handling_demo.baa:220",
+            "examples/error_handling_demo.baa:222"
+          ],
+          "status": "supported",
+          "nazm": {
+            "mnemonic": "و_بتيا",
+            "operands": [
+              "register",
+              "immediate"
+            ],
+            "width_bits": 64
+          },
+          "acceptance_fixture": "tests/fixtures/baa_coverage/حساب-وتحكم-باء.نظم"
+        },
+        {
+          "mnemonic": "andq",
+          "operands": [
+            "register",
+            "register"
+          ],
+          "count": 26,
+          "samples": [
+            "examples/file_copy_small.baa:102",
+            "examples/file_copy_small.baa:309",
+            "tests/integration/backend/backend_file_io_noheader_test.baa:104"
+          ],
+          "status": "supported",
+          "nazm": {
+            "mnemonic": "و_بتيا",
+            "operands": [
+              "register",
+              "register"
+            ],
+            "width_bits": 64
+          },
+          "acceptance_fixture": "tests/fixtures/baa_coverage/حساب-وتحكم-باء.نظم"
+        },
+        {
+          "mnemonic": "call",
+          "operands": [
+            "expression"
+          ],
+          "count": 599,
+          "samples": [
+            "examples/error_handling_demo.baa:86",
+            "examples/file_copy_small.baa:1049",
+            "tests/integration/backend/backend_byte_buffer_stdlib_v062_test.baa:339"
+          ],
+          "status": "unsupported",
+          "reason": "Nazm implements this mnemonic, but not this operand shape or width."
+        },
+        {
+          "mnemonic": "call",
+          "operands": [
+            "register-expression"
+          ],
+          "count": 5,
+          "samples": [
+            "tests/integration/backend/backend_func_ptr_shadow_call_test.baa:56",
+            "tests/integration/backend/backend_func_ptr_test.baa:42",
+            "tests/integration/backend/backend_func_ptr_test.baa:63"
+          ],
+          "status": "supported",
+          "nazm": {
+            "mnemonic": "ناد",
+            "operands": [
+              "register"
+            ],
+            "width_bits": 64
+          },
+          "acceptance_fixture": "tests/fixtures/baa_coverage/حساب-وتحكم-باء.نظم"
+        },
+        {
+          "mnemonic": "call",
+          "operands": [
+            "symbol"
+          ],
+          "count": 904,
+          "samples": [
+            "examples/error_handling_demo.baa:97",
+            "examples/error_handling_demo.baa:102",
+            "examples/error_handling_demo.baa:113"
+          ],
+          "status": "partial",
+          "nazm": {
+            "mnemonic": "ناد",
+            "operands": [
+              "label"
+            ],
+            "width_bits": 64
+          },
+          "reason": "Only labels defined in the same .text input are supported; external call relocations are not implemented."
+        },
+        {
+          "mnemonic": "cmpb",
+          "operands": [
+            "immediate-integer",
+            "memory-base-displacement"
+          ],
+          "count": 1,
+          "samples": [
+            "tests/integration/backend/backend_vector_stdlib_v062_test.baa:1124"
+          ],
+          "status": "unsupported",
+          "reason": "Nazm exposes only 64-bit general-purpose register instruction forms."
+        },
+        {
+          "mnemonic": "cmpb",
+          "operands": [
+            "immediate-integer",
+            "register"
+          ],
+          "count": 50,
+          "samples": [
+            "examples/error_handling_demo.baa:207",
+            "examples/file_copy_small.baa:457",
+            "examples/math_and_format.baa:159"
+          ],
+          "status": "unsupported",
+          "reason": "Nazm exposes only 64-bit general-purpose register instruction forms."
+        },
+        {
+          "mnemonic": "cmpl",
+          "operands": [
+            "immediate-integer",
+            "memory-base-displacement"
+          ],
+          "count": 3,
+          "samples": [
+            "tests/integration/backend/backend_file_io_test.baa:5518",
+            "tests/integration/backend/backend_file_io_test.baa:5843",
+            "tests/integration/backend/backend_file_io_test.baa:6168"
+          ],
+          "status": "unsupported",
+          "reason": "Nazm exposes only 64-bit general-purpose register instruction forms."
+        },
+        {
+          "mnemonic": "cmpl",
+          "operands": [
+            "immediate-integer",
+            "register"
+          ],
+          "count": 100,
+          "samples": [
+            "examples/file_copy_small.baa:454",
+            "examples/file_copy_small.baa:473",
+            "examples/file_copy_small.baa:593"
+          ],
+          "status": "unsupported",
+          "reason": "Nazm exposes only 64-bit general-purpose register instruction forms."
+        },
+        {
+          "mnemonic": "cmpl",
+          "operands": [
+            "register",
+            "register"
+          ],
+          "count": 1,
+          "samples": [
+            "tests/integration/backend/backend_byte_buffer_stdlib_v062_test.baa:706"
+          ],
+          "status": "unsupported",
+          "reason": "Nazm exposes only 64-bit general-purpose register instruction forms."
+        },
+        {
+          "mnemonic": "cmpq",
+          "operands": [
+            "immediate-integer",
+            "memory-base-displacement"
+          ],
+          "count": 399,
+          "samples": [
+            "examples/error_handling_demo.baa:450",
+            "examples/error_handling_demo.baa:453",
+            "examples/file_copy_small.baa:37"
+          ],
+          "status": "unsupported",
+          "reason": "Nazm implements this mnemonic, but not this operand shape or width."
+        },
+        {
+          "mnemonic": "cmpq",
+          "operands": [
+            "immediate-integer",
+            "register"
+          ],
+          "count": 2064,
+          "samples": [
+            "examples/error_handling_demo.baa:20",
+            "examples/error_handling_demo.baa:34",
+            "examples/error_handling_demo.baa:89"
+          ],
+          "status": "supported",
+          "nazm": {
+            "mnemonic": "قارن",
+            "operands": [
+              "register",
+              "immediate"
+            ],
+            "width_bits": 64
+          },
+          "acceptance_fixture": "tests/fixtures/baa_coverage/حساب-وتحكم-باء.نظم"
+        },
+        {
+          "mnemonic": "cmpq",
+          "operands": [
+            "memory-base-displacement",
+            "register"
+          ],
+          "count": 14,
+          "samples": [
+            "tests/integration/backend/backend_dynamic_memory_test.baa:400",
+            "tests/integration/backend/backend_dynamic_memory_test.baa:657",
+            "tests/integration/backend/backend_file_io_noheader_test.baa:732"
+          ],
+          "status": "supported",
+          "nazm": {
+            "mnemonic": "قارن",
+            "operands": [
+              "register",
+              "memory-base-displacement"
+            ],
+            "width_bits": 64
+          },
+          "acceptance_fixture": "tests/fixtures/baa_coverage/حساب-وتحكم-باء.نظم"
+        },
+        {
+          "mnemonic": "cmpq",
+          "operands": [
+            "register",
+            "memory-base-displacement"
+          ],
+          "count": 79,
+          "samples": [
+            "tests/integration/backend/backend_custom_startup_test.baa:340",
+            "tests/integration/backend/backend_custom_startup_test.baa:780",
+            "tests/integration/backend/backend_custom_startup_test.baa:870"
+          ],
+          "status": "unsupported",
+          "reason": "Nazm implements this mnemonic, but not this operand shape or width."
+        },
+        {
+          "mnemonic": "cmpq",
+          "operands": [
+            "register",
+            "register"
+          ],
+          "count": 40,
+          "samples": [
+            "tests/integration/backend/backend_byte_buffer_stdlib_v062_test.baa:588",
+            "tests/integration/backend/backend_cast_pointer_diff_test.baa:47",
+            "tests/integration/backend/backend_dynamic_memory_test.baa:365"
+          ],
+          "status": "supported",
+          "nazm": {
+            "mnemonic": "قارن",
+            "operands": [
+              "register",
+              "register"
+            ],
+            "width_bits": 64
+          },
+          "acceptance_fixture": "tests/fixtures/baa_coverage/حساب-وتحكم-باء.نظم"
+        },
+        {
+          "mnemonic": "cqo",
+          "operands": [],
+          "count": 2262,
+          "samples": [
+            "examples/error_handling_demo.baa:50",
+            "examples/error_handling_demo.baa:555",
+            "examples/error_handling_demo.baa:560"
+          ],
+          "status": "unsupported",
+          "reason": "Nazm does not implement the cqo instruction."
+        },
+        {
+          "mnemonic": "cvtsi2sd",
+          "operands": [
+            "register",
+            "register"
+          ],
+          "count": 14,
+          "samples": [
+            "tests/integration/backend/backend_cast_pointer_diff_test.baa:62",
+            "tests/integration/backend/backend_tailcall_float_test.baa:69",
+            "tests/integration/backend/backend_test.baa:3488"
+          ],
+          "status": "unsupported",
+          "reason": "Nazm does not implement scalar SSE2 registers or instructions."
+        },
+        {
+          "mnemonic": "cvttsd2si",
+          "operands": [
+            "register",
+            "register"
+          ],
+          "count": 9,
+          "samples": [
+            "tests/integration/backend/backend_cast_pointer_diff_test.baa:65",
+            "tests/integration/backend/backend_tailcall_float_test.baa:76",
+            "tests/integration/backend/backend_test.baa:3539"
+          ],
+          "status": "unsupported",
+          "reason": "Nazm does not implement scalar SSE2 registers or instructions."
+        },
+        {
+          "mnemonic": "divsd",
+          "operands": [
+            "register",
+            "register"
+          ],
+          "count": 2,
+          "samples": [
+            "tests/integration/backend/backend_test.baa:3555",
+            "tests/integration/backend/backend_test.baa:3696"
+          ],
+          "status": "unsupported",
+          "reason": "Nazm does not implement scalar SSE2 registers or instructions."
+        },
+        {
+          "mnemonic": "hlt",
+          "operands": [],
+          "count": 3,
+          "samples": [
+            "tests/integration/backend/backend_custom_startup_test.baa:1345",
+            "tests/integration/ir/ir_custom_startup_linux_asm_test.baa:32",
+            "tests/integration/ir/ir_custom_startup_windows_asm_test.baa:32"
+          ],
+          "status": "supported",
+          "nazm": {
+            "mnemonic": "أوقف",
+            "operands": [],
+            "width_bits": 64
+          },
+          "acceptance_fixture": "tests/fixtures/baa_coverage/حساب-وتحكم-باء.نظم"
+        },
+        {
+          "mnemonic": "idivq",
+          "operands": [
+            "register"
+          ],
+          "count": 2262,
+          "samples": [
+            "examples/error_handling_demo.baa:51",
+            "examples/error_handling_demo.baa:556",
+            "examples/error_handling_demo.baa:561"
+          ],
+          "status": "supported",
+          "nazm": {
+            "mnemonic": "اقسم_موقع",
+            "operands": [
+              "register"
+            ],
+            "width_bits": 64
+          },
+          "acceptance_fixture": "tests/fixtures/baa_coverage/حساب-وتحكم-باء.نظم"
+        },
+        {
+          "mnemonic": "imulq",
+          "operands": [
+            "immediate-integer",
+            "register"
+          ],
+          "count": 282,
+          "samples": [
+            "examples/error_handling_demo.baa:179",
+            "examples/error_handling_demo.baa:244",
+            "examples/file_copy_small.baa:537"
+          ],
+          "status": "supported",
+          "nazm": {
+            "mnemonic": "اضرب_موقع",
+            "operands": [
+              "register",
+              "register",
+              "immediate"
+            ],
+            "width_bits": 64
+          },
+          "lowering": "duplicate-destination-as-source",
+          "acceptance_fixture": "tests/fixtures/baa_coverage/حساب-وتحكم-باء.نظم"
+        },
+        {
+          "mnemonic": "imulq",
+          "operands": [
+            "memory-base-displacement",
+            "register"
+          ],
+          "count": 262,
+          "samples": [
+            "tests/integration/backend/backend_byte_buffer_stdlib_v062_test.baa:523",
+            "tests/integration/backend/backend_custom_startup_test.baa:205",
+            "tests/integration/backend/backend_custom_startup_test.baa:207"
+          ],
+          "status": "unsupported",
+          "reason": "Nazm implements this mnemonic, but not this operand shape or width."
+        },
+        {
+          "mnemonic": "imulq",
+          "operands": [
+            "register",
+            "register"
+          ],
+          "count": 272,
+          "samples": [
+            "tests/integration/backend/backend_byte_buffer_stdlib_v062_test.baa:556",
+            "tests/integration/backend/backend_custom_startup_test.baa:209",
+            "tests/integration/backend/backend_custom_startup_test.baa:211"
+          ],
+          "status": "supported",
+          "nazm": {
+            "mnemonic": "اضرب_موقع",
+            "operands": [
+              "register",
+              "register"
+            ],
+            "width_bits": 64
+          },
+          "acceptance_fixture": "tests/fixtures/baa_coverage/حساب-وتحكم-باء.نظم"
+        },
+        {
+          "mnemonic": "jmp",
+          "operands": [
+            "local-symbol"
+          ],
+          "count": 3094,
+          "samples": [
+            "examples/error_handling_demo.baa:25",
+            "examples/error_handling_demo.baa:39",
+            "examples/error_handling_demo.baa:94"
+          ],
+          "status": "supported",
+          "nazm": {
+            "mnemonic": "اقفز",
+            "operands": [
+              "label"
+            ],
+            "width_bits": 64
+          },
+          "acceptance_fixture": "tests/fixtures/baa_coverage/حساب-وتحكم-باء.نظم"
+        },
+        {
+          "mnemonic": "jne",
+          "operands": [
+            "expression"
+          ],
+          "count": 3,
+          "samples": [
+            "tests/integration/backend/backend_custom_startup_test.baa:1339",
+            "tests/integration/ir/ir_custom_startup_linux_asm_test.baa:26",
+            "tests/integration/ir/ir_custom_startup_windows_asm_test.baa:26"
+          ],
+          "status": "unsupported",
+          "reason": "Nazm implements this mnemonic, but not this operand shape or width."
+        },
+        {
+          "mnemonic": "jne",
+          "operands": [
+            "local-symbol"
+          ],
+          "count": 1388,
+          "samples": [
+            "examples/error_handling_demo.baa:24",
+            "examples/error_handling_demo.baa:38",
+            "examples/error_handling_demo.baa:93"
+          ],
+          "status": "supported",
+          "nazm": {
+            "mnemonic": "اقفز_غير_مساو",
+            "operands": [
+              "label"
+            ],
+            "width_bits": 64
+          },
+          "acceptance_fixture": "tests/fixtures/baa_coverage/حساب-وتحكم-باء.نظم"
+        },
+        {
+          "mnemonic": "leaq",
+          "operands": [
+            "memory-base-displacement",
+            "register"
+          ],
+          "count": 416,
+          "samples": [
+            "examples/error_handling_demo.baa:74",
+            "examples/error_handling_demo.baa:107",
+            "examples/error_handling_demo.baa:550"
+          ],
+          "status": "supported",
+          "nazm": {
+            "mnemonic": "احسب_عنوان",
+            "operands": [
+              "register",
+              "memory-base-displacement"
+            ],
+            "width_bits": 64
+          },
+          "acceptance_fixture": "tests/fixtures/baa_coverage/حركة-باء.نظم"
+        },
+        {
+          "mnemonic": "leaq",
+          "operands": [
+            "memory-rip-relative",
+            "register"
+          ],
+          "count": 866,
+          "samples": [
+            "examples/error_handling_demo.baa:124",
+            "examples/error_handling_demo.baa:131",
+            "examples/error_handling_demo.baa:137"
+          ],
+          "status": "unsupported",
+          "reason": "Nazm implements this mnemonic, but not this operand shape or width."
+        },
+        {
+          "mnemonic": "leave",
+          "operands": [],
+          "count": 470,
+          "samples": [
+            "examples/error_handling_demo.baa:31",
+            "examples/error_handling_demo.baa:45",
+            "examples/error_handling_demo.baa:58"
+          ],
+          "status": "unsupported",
+          "reason": "Nazm does not implement the leave instruction."
+        },
+        {
+          "mnemonic": "movabsq",
+          "operands": [
+            "immediate-integer",
+            "register"
+          ],
+          "count": 821,
+          "samples": [
+            "examples/error_handling_demo.baa:286",
+            "examples/error_handling_demo.baa:325",
+            "examples/error_handling_demo.baa:392"
+          ],
+          "status": "supported",
+          "nazm": {
+            "mnemonic": "انقل",
+            "operands": [
+              "register",
+              "immediate"
+            ],
+            "width_bits": 64
+          },
+          "acceptance_fixture": "tests/fixtures/baa_coverage/حركة-باء.نظم"
+        },
+        {
+          "mnemonic": "movb",
+          "operands": [
+            "immediate-integer",
+            "memory-base-displacement"
+          ],
+          "count": 435,
+          "samples": [
+            "examples/error_handling_demo.baa:620",
+            "examples/error_handling_demo.baa:623",
+            "examples/file_copy_small.baa:132"
+          ],
+          "status": "unsupported",
+          "reason": "Nazm exposes only 64-bit general-purpose register instruction forms."
+        },
+        {
+          "mnemonic": "movb",
+          "operands": [
+            "immediate-integer",
+            "register"
+          ],
+          "count": 15,
+          "samples": [
+            "tests/integration/backend/backend_error_handling_v043_test.baa:292",
+            "tests/integration/backend/backend_error_handling_v043_test.baa:300",
+            "tests/integration/backend/backend_error_handling_v043_test.baa:308"
+          ],
+          "status": "unsupported",
+          "reason": "Nazm exposes only 64-bit general-purpose register instruction forms."
+        },
+        {
+          "mnemonic": "movb",
+          "operands": [
+            "memory-base-displacement",
+            "register"
+          ],
+          "count": 398,
+          "samples": [
+            "examples/error_handling_demo.baa:206",
+            "examples/error_handling_demo.baa:302",
+            "examples/error_handling_demo.baa:349"
+          ],
+          "status": "unsupported",
+          "reason": "Nazm exposes only 64-bit general-purpose register instruction forms."
+        },
+        {
+          "mnemonic": "movb",
+          "operands": [
+            "register",
+            "memory-base-displacement"
+          ],
+          "count": 607,
+          "samples": [
+            "examples/error_handling_demo.baa:611",
+            "examples/error_handling_demo.baa:613",
+            "examples/error_handling_demo.baa:615"
+          ],
+          "status": "unsupported",
+          "reason": "Nazm exposes only 64-bit general-purpose register instruction forms."
+        },
+        {
+          "mnemonic": "movb",
+          "operands": [
+            "register",
+            "register"
+          ],
+          "count": 1257,
+          "samples": [
+            "examples/error_handling_demo.baa:314",
+            "examples/error_handling_demo.baa:373",
+            "examples/error_handling_demo.baa:375"
+          ],
+          "status": "unsupported",
+          "reason": "Nazm exposes only 64-bit general-purpose register instruction forms."
+        },
+        {
+          "mnemonic": "movl",
+          "operands": [
+            "immediate-integer",
+            "memory-base-displacement"
+          ],
+          "count": 4,
+          "samples": [
+            "examples/error_handling_demo.baa:100",
+            "tests/integration/backend/backend_error_handling_v043_test.baa:319",
+            "tests/integration/ir/ir_inline_asm_test.baa:17"
+          ],
+          "status": "unsupported",
+          "reason": "Nazm exposes only 64-bit general-purpose register instruction forms."
+        },
+        {
+          "mnemonic": "movl",
+          "operands": [
+            "immediate-integer",
+            "register"
+          ],
+          "count": 41,
+          "samples": [
+            "examples/error_handling_demo.baa:155",
+            "examples/error_handling_demo.baa:696",
+            "tests/integration/backend/backend_file_io_noheader_test.baa:290"
+          ],
+          "status": "unsupported",
+          "reason": "Nazm exposes only 64-bit general-purpose register instruction forms."
+        },
+        {
+          "mnemonic": "movl",
+          "operands": [
+            "memory-base-displacement",
+            "register"
+          ],
+          "count": 4,
+          "samples": [
+            "examples/error_handling_demo.baa:105",
+            "tests/integration/backend/backend_error_handling_v043_test.baa:324",
+            "tests/integration/ir/ir_inline_asm_test.baa:23"
+          ],
+          "status": "unsupported",
+          "reason": "Nazm exposes only 64-bit general-purpose register instruction forms."
+        },
+        {
+          "mnemonic": "movl",
+          "operands": [
+            "memory-rip-relative",
+            "register"
+          ],
+          "count": 1,
+          "samples": [
+            "tests/integration/backend/backend_int_semantics_test.baa:327"
+          ],
+          "status": "unsupported",
+          "reason": "Nazm does not implement RIP-relative memory operands."
+        },
+        {
+          "mnemonic": "movl",
+          "operands": [
+            "register",
+            "memory-base-displacement"
+          ],
+          "count": 5,
+          "samples": [
+            "tests/integration/backend/backend_file_io_test.baa:5517",
+            "tests/integration/backend/backend_file_io_test.baa:5842",
+            "tests/integration/backend/backend_file_io_test.baa:6167"
+          ],
+          "status": "unsupported",
+          "reason": "Nazm exposes only 64-bit general-purpose register instruction forms."
+        },
+        {
+          "mnemonic": "movl",
+          "operands": [
+            "register",
+            "register"
+          ],
+          "count": 223,
+          "samples": [
+            "examples/error_handling_demo.baa:109",
+            "examples/error_handling_demo.baa:111",
+            "examples/error_handling_demo.baa:129"
+          ],
+          "status": "unsupported",
+          "reason": "Nazm exposes only 64-bit general-purpose register instruction forms."
+        },
+        {
+          "mnemonic": "movq",
+          "operands": [
+            "immediate-integer",
+            "memory-base-displacement"
+          ],
+          "count": 900,
+          "samples": [
+            "examples/error_handling_demo.baa:77",
+            "examples/error_handling_demo.baa:188",
+            "examples/error_handling_demo.baa:189"
+          ],
+          "status": "unsupported",
+          "reason": "Nazm implements this mnemonic, but not this operand shape or width."
+        },
+        {
+          "mnemonic": "movq",
+          "operands": [
+            "immediate-integer",
+            "memory-rip-relative"
+          ],
+          "count": 1,
+          "samples": [
+            "tests/integration/backend/backend_test.baa:2762"
+          ],
+          "status": "unsupported",
+          "reason": "Nazm implements this mnemonic, but not this operand shape or width."
+        },
+        {
+          "mnemonic": "movq",
+          "operands": [
+            "immediate-integer",
+            "register"
+          ],
+          "count": 2748,
+          "samples": [
+            "examples/error_handling_demo.baa:27",
+            "examples/error_handling_demo.baa:41",
+            "examples/error_handling_demo.baa:54"
+          ],
+          "status": "supported",
+          "nazm": {
+            "mnemonic": "انقل",
+            "operands": [
+              "register",
+              "immediate"
+            ],
+            "width_bits": 64
+          },
+          "acceptance_fixture": "tests/fixtures/baa_coverage/حركة-باء.نظم"
+        },
+        {
+          "mnemonic": "movq",
+          "operands": [
+            "memory-base-displacement",
+            "register"
+          ],
+          "count": 7763,
+          "samples": [
+            "examples/error_handling_demo.baa:76",
+            "examples/error_handling_demo.baa:78",
+            "examples/error_handling_demo.baa:192"
+          ],
+          "status": "supported",
+          "nazm": {
+            "mnemonic": "انقل",
+            "operands": [
+              "register",
+              "memory-base-displacement"
+            ],
+            "width_bits": 64
+          },
+          "acceptance_fixture": "tests/fixtures/baa_coverage/حركة-باء.نظم"
+        },
+        {
+          "mnemonic": "movq",
+          "operands": [
+            "memory-rip-relative",
+            "register"
+          ],
+          "count": 69,
+          "samples": [
+            "tests/integration/backend/backend_byte_buffer_stdlib_v062_test.baa:267",
+            "tests/integration/backend/backend_byte_buffer_stdlib_v062_test.baa:749",
+            "tests/integration/backend/backend_dynamic_memory_test.baa:267"
+          ],
+          "status": "unsupported",
+          "reason": "Nazm implements this mnemonic, but not this operand shape or width."
+        },
+        {
+          "mnemonic": "movq",
+          "operands": [
+            "register",
+            "memory-base-displacement"
+          ],
+          "count": 5984,
+          "samples": [
+            "examples/error_handling_demo.baa:53",
+            "examples/error_handling_demo.baa:75",
+            "examples/error_handling_demo.baa:83"
+          ],
+          "status": "supported",
+          "nazm": {
+            "mnemonic": "انقل",
+            "operands": [
+              "memory-base-displacement",
+              "register"
+            ],
+            "width_bits": 64
+          },
+          "acceptance_fixture": "tests/fixtures/baa_coverage/حركة-باء.نظم"
+        },
+        {
+          "mnemonic": "movq",
+          "operands": [
+            "register",
+            "memory-rip-relative"
+          ],
+          "count": 23,
+          "samples": [
+            "tests/integration/backend/backend_byte_buffer_stdlib_v062_test.baa:270",
+            "tests/integration/backend/backend_dynamic_memory_test.baa:270",
+            "tests/integration/backend/backend_error_handling_v043_test.baa:270"
+          ],
+          "status": "unsupported",
+          "reason": "Nazm implements this mnemonic, but not this operand shape or width."
+        },
+        {
+          "mnemonic": "movq",
+          "operands": [
+            "register",
+            "register"
+          ],
+          "count": 13310,
+          "samples": [
+            "examples/error_handling_demo.baa:16",
+            "examples/error_handling_demo.baa:17",
+            "examples/error_handling_demo.baa:18"
+          ],
+          "status": "supported",
+          "nazm": {
+            "mnemonic": "انقل",
+            "operands": [
+              "register",
+              "register"
+            ],
+            "width_bits": 64
+          },
+          "acceptance_fixture": "tests/fixtures/baa_coverage/حركة-باء.نظم"
+        },
+        {
+          "mnemonic": "movsbl",
+          "operands": [
+            "register",
+            "register"
+          ],
+          "count": 7,
+          "samples": [
+            "tests/integration/backend/backend_file_io_test.baa:1699",
+            "tests/integration/backend/backend_file_io_test.baa:1715",
+            "tests/integration/backend/backend_file_io_test.baa:1731"
+          ],
+          "status": "unsupported",
+          "reason": "Nazm does not implement sign- or zero-extension instructions."
+        },
+        {
+          "mnemonic": "movsbq",
+          "operands": [
+            "register",
+            "register"
+          ],
+          "count": 799,
+          "samples": [
+            "examples/error_handling_demo.baa:237",
+            "examples/error_handling_demo.baa:238",
+            "examples/error_handling_demo.baa:239"
+          ],
+          "status": "unsupported",
+          "reason": "Nazm does not implement sign- or zero-extension instructions."
+        },
+        {
+          "mnemonic": "movslq",
+          "operands": [
+            "memory-base-displacement",
+            "register"
+          ],
+          "count": 3,
+          "samples": [
+            "tests/integration/backend/backend_file_io_test.baa:5653",
+            "tests/integration/backend/backend_file_io_test.baa:5978",
+            "tests/integration/backend/backend_file_io_test.baa:6303"
+          ],
+          "status": "unsupported",
+          "reason": "Nazm does not implement sign- or zero-extension instructions."
+        },
+        {
+          "mnemonic": "movslq",
+          "operands": [
+            "register",
+            "register"
+          ],
+          "count": 65,
+          "samples": [
+            "examples/error_handling_demo.baa:106",
+            "examples/file_copy_small.baa:507",
+            "examples/file_copy_small.baa:596"
+          ],
+          "status": "unsupported",
+          "reason": "Nazm does not implement sign- or zero-extension instructions."
+        },
+        {
+          "mnemonic": "movzbl",
+          "operands": [
+            "register",
+            "register"
+          ],
+          "count": 2,
+          "samples": [
+            "tests/integration/backend/backend_byte_buffer_stdlib_v062_test.baa:704",
+            "tests/integration/backend/backend_byte_buffer_stdlib_v062_test.baa:705"
+          ],
+          "status": "unsupported",
+          "reason": "Nazm does not implement sign- or zero-extension instructions."
+        },
+        {
+          "mnemonic": "movzbq",
+          "operands": [
+            "memory-base-displacement",
+            "register"
+          ],
+          "count": 4,
+          "samples": [
+            "tests/integration/backend/backend_float_extensions_v042_test.baa:617",
+            "tests/integration/backend/backend_process_runtime_v065_test.baa:464",
+            "tests/integration/backend/backend_process_runtime_v065_test.baa:1844"
+          ],
+          "status": "unsupported",
+          "reason": "Nazm does not implement sign- or zero-extension instructions."
+        },
+        {
+          "mnemonic": "movzbq",
+          "operands": [
+            "register",
+            "register"
+          ],
+          "count": 3002,
+          "samples": [
+            "examples/error_handling_demo.baa:22",
+            "examples/error_handling_demo.baa:36",
+            "examples/error_handling_demo.baa:91"
+          ],
+          "status": "unsupported",
+          "reason": "Nazm does not implement sign- or zero-extension instructions."
+        },
+        {
+          "mnemonic": "mov",
+          "operands": [
+            "memory-base-displacement",
+            "register"
+          ],
+          "count": 1914,
+          "samples": [
+            "examples/error_handling_demo.baa:28",
+            "examples/error_handling_demo.baa:29",
+            "examples/error_handling_demo.baa:30"
+          ],
+          "status": "unsupported",
+          "reason": "The unsuffixed GAS form has no width in the inventory and cannot be mapped safely."
+        },
+        {
+          "mnemonic": "mov",
+          "operands": [
+            "register",
+            "memory-base-displacement"
+          ],
+          "count": 897,
+          "samples": [
+            "examples/error_handling_demo.baa:13",
+            "examples/error_handling_demo.baa:14",
+            "examples/error_handling_demo.baa:15"
+          ],
+          "status": "unsupported",
+          "reason": "The unsuffixed GAS form has no width in the inventory and cannot be mapped safely."
+        },
+        {
+          "mnemonic": "mov",
+          "operands": [
+            "register",
+            "register"
+          ],
+          "count": 271,
+          "samples": [
+            "examples/error_handling_demo.baa:11",
+            "examples/error_handling_demo.baa:64",
+            "examples/file_copy_small.baa:11"
+          ],
+          "status": "unsupported",
+          "reason": "The unsuffixed GAS form has no width in the inventory and cannot be mapped safely."
+        },
+        {
+          "mnemonic": "mulsd",
+          "operands": [
+            "register",
+            "register"
+          ],
+          "count": 7,
+          "samples": [
+            "tests/integration/backend/backend_tailcall_float_test.baa:73",
+            "tests/integration/backend/backend_test.baa:3536",
+            "tests/integration/backend/backend_test.baa:3562"
+          ],
+          "status": "unsupported",
+          "reason": "Nazm does not implement scalar SSE2 registers or instructions."
+        },
+        {
+          "mnemonic": "nop",
+          "operands": [],
+          "count": 1,
+          "samples": [
+            "tests/integration/ir/ir_inline_asm_test.baa:41"
+          ],
+          "status": "supported",
+          "nazm": {
+            "mnemonic": "لا_تفعل",
+            "operands": [],
+            "width_bits": 64
+          },
+          "acceptance_fixture": "tests/fixtures/baa_coverage/حساب-وتحكم-باء.نظم"
+        },
+        {
+          "mnemonic": "notb",
+          "operands": [
+            "memory-base-displacement"
+          ],
+          "count": 2,
+          "samples": [
+            "tests/integration/backend/backend_path_stdlib_v062_test.baa:3318",
+            "tests/integration/backend/backend_path_stdlib_v062_test.baa:4512"
+          ],
+          "status": "unsupported",
+          "reason": "Nazm exposes only 64-bit general-purpose register instruction forms."
+        },
+        {
+          "mnemonic": "notb",
+          "operands": [
+            "register"
+          ],
+          "count": 48,
+          "samples": [
+            "examples/file_copy_small.baa:553",
+            "examples/file_copy_small.baa:610",
+            "examples/file_copy_small.baa:662"
+          ],
+          "status": "unsupported",
+          "reason": "Nazm exposes only 64-bit general-purpose register instruction forms."
+        },
+        {
+          "mnemonic": "orb",
+          "operands": [
+            "register",
+            "register"
+          ],
+          "count": 75,
+          "samples": [
+            "examples/file_copy_small.baa:45",
+            "examples/file_copy_small.baa:252",
+            "tests/integration/backend/backend_file_io_noheader_test.baa:47"
+          ],
+          "status": "unsupported",
+          "reason": "Nazm exposes only 64-bit general-purpose register instruction forms."
+        },
+        {
+          "mnemonic": "orq",
+          "operands": [
+            "register",
+            "register"
+          ],
+          "count": 448,
+          "samples": [
+            "examples/error_handling_demo.baa:287",
+            "examples/error_handling_demo.baa:323",
+            "examples/error_handling_demo.baa:326"
+          ],
+          "status": "supported",
+          "nazm": {
+            "mnemonic": "أو_بتيا",
+            "operands": [
+              "register",
+              "register"
+            ],
+            "width_bits": 64
+          },
+          "acceptance_fixture": "tests/fixtures/baa_coverage/حساب-وتحكم-باء.نظم"
+        },
+        {
+          "mnemonic": "push",
+          "operands": [
+            "register"
+          ],
+          "count": 271,
+          "samples": [
+            "examples/error_handling_demo.baa:10",
+            "examples/error_handling_demo.baa:63",
+            "examples/file_copy_small.baa:10"
+          ],
+          "status": "supported",
+          "nazm": {
+            "mnemonic": "ادفع",
+            "operands": [
+              "register"
+            ],
+            "width_bits": 64
+          },
+          "acceptance_fixture": "tests/fixtures/baa_coverage/حركة-باء.نظم"
+        },
+        {
+          "mnemonic": "rdtsc",
+          "operands": [],
+          "count": 1,
+          "samples": [
+            "tests/integration/ir/ir_inline_asm_test.baa:20"
+          ],
+          "status": "unsupported",
+          "reason": "Nazm does not implement the rdtsc instruction."
+        },
+        {
+          "mnemonic": "ret",
+          "operands": [],
+          "count": 470,
+          "samples": [
+            "examples/error_handling_demo.baa:32",
+            "examples/error_handling_demo.baa:46",
+            "examples/error_handling_demo.baa:59"
+          ],
+          "status": "supported",
+          "nazm": {
+            "mnemonic": "ارجع",
+            "operands": [],
+            "width_bits": 64
+          },
+          "acceptance_fixture": "tests/fixtures/baa_coverage/حساب-وتحكم-باء.نظم"
+        },
+        {
+          "mnemonic": "sarl",
+          "operands": [
+            "register",
+            "register"
+          ],
+          "count": 1,
+          "samples": [
+            "tests/integration/backend/backend_runtime_shift_width_negative_fail_v063_test.baa:47"
+          ],
+          "status": "unsupported",
+          "reason": "Nazm exposes only 64-bit general-purpose register instruction forms."
+        },
+        {
+          "mnemonic": "sarq",
+          "operands": [
+            "immediate-integer",
+            "memory-base-displacement"
+          ],
+          "count": 26,
+          "samples": [
+            "examples/file_copy_small.baa:99",
+            "examples/file_copy_small.baa:306",
+            "tests/integration/backend/backend_file_io_noheader_test.baa:101"
+          ],
+          "status": "unsupported",
+          "reason": "Nazm implements this mnemonic, but not this operand shape or width."
+        },
+        {
+          "mnemonic": "sarq",
+          "operands": [
+            "immediate-integer",
+            "register"
+          ],
+          "count": 108,
+          "samples": [
+            "examples/file_copy_small.baa:64",
+            "examples/file_copy_small.baa:106",
+            "examples/file_copy_small.baa:110"
+          ],
+          "status": "supported",
+          "nazm": {
+            "mnemonic": "ازح_حسابيا_يمينا",
+            "operands": [
+              "register",
+              "immediate"
+            ],
+            "width_bits": 64
+          },
+          "acceptance_fixture": "tests/fixtures/baa_coverage/حساب-وتحكم-باء.نظم"
+        },
+        {
+          "mnemonic": "setae",
+          "operands": [
+            "register"
+          ],
+          "count": 3,
+          "samples": [
+            "tests/integration/backend/backend_float_extensions_v042_test.baa:315",
+            "tests/integration/backend/backend_test.baa:3629",
+            "tests/integration/backend/backend_test.baa:3727"
+          ],
+          "status": "unsupported",
+          "reason": "Nazm does not implement setcc instructions or 8-bit destinations."
+        },
+        {
+          "mnemonic": "seta",
+          "operands": [
+            "register"
+          ],
+          "count": 4,
+          "samples": [
+            "tests/integration/backend/backend_scan_arabic_test.baa:507",
+            "tests/integration/backend/backend_stdlib_v041_test.baa:300",
+            "tests/integration/backend/backend_stdlib_v041_test.baa:334"
+          ],
+          "status": "unsupported",
+          "reason": "Nazm does not implement setcc instructions or 8-bit destinations."
+        },
+        {
+          "mnemonic": "setbe",
+          "operands": [
+            "register"
+          ],
+          "count": 1,
+          "samples": [
+            "tests/integration/backend/backend_test.baa:3592"
+          ],
+          "status": "unsupported",
+          "reason": "Nazm does not implement setcc instructions or 8-bit destinations."
+        },
+        {
+          "mnemonic": "setb",
+          "operands": [
+            "register"
+          ],
+          "count": 6,
+          "samples": [
+            "tests/integration/backend/backend_float_extensions_v042_test.baa:296",
+            "tests/integration/backend/backend_scan_arabic_test.baa:497",
+            "tests/integration/backend/backend_stdlib_v041_test.baa:306"
+          ],
+          "status": "unsupported",
+          "reason": "Nazm does not implement setcc instructions or 8-bit destinations."
+        },
+        {
+          "mnemonic": "sete",
+          "operands": [
+            "memory-base-displacement"
+          ],
+          "count": 4,
+          "samples": [
+            "tests/integration/backend/backend_float_extensions_v042_test.baa:616",
+            "tests/integration/backend/backend_process_runtime_v065_test.baa:463",
+            "tests/integration/backend/backend_process_runtime_v065_test.baa:1843"
+          ],
+          "status": "unsupported",
+          "reason": "Nazm does not implement setcc instructions or 8-bit destinations."
+        },
+        {
+          "mnemonic": "sete",
+          "operands": [
+            "register"
+          ],
+          "count": 2005,
+          "samples": [
+            "examples/error_handling_demo.baa:21",
+            "examples/error_handling_demo.baa:35",
+            "examples/error_handling_demo.baa:90"
+          ],
+          "status": "unsupported",
+          "reason": "Nazm does not implement setcc instructions or 8-bit destinations."
+        },
+        {
+          "mnemonic": "setge",
+          "operands": [
+            "register"
+          ],
+          "count": 99,
+          "samples": [
+            "examples/file_copy_small.baa:124",
+            "examples/file_copy_small.baa:147",
+            "examples/file_copy_small.baa:163"
+          ],
+          "status": "unsupported",
+          "reason": "Nazm does not implement setcc instructions or 8-bit destinations."
+        },
+        {
+          "mnemonic": "setg",
+          "operands": [
+            "register"
+          ],
+          "count": 71,
+          "samples": [
+            "examples/file_copy_small.baa:550",
+            "tests/integration/backend/backend_custom_startup_test.baa:871",
+            "tests/integration/backend/backend_dynamic_memory_test.baa:366"
+          ],
+          "status": "unsupported",
+          "reason": "Nazm does not implement setcc instructions or 8-bit destinations."
+        },
+        {
+          "mnemonic": "setle",
+          "operands": [
+            "register"
+          ],
+          "count": 47,
+          "samples": [
+            "tests/integration/backend/backend_byte_buffer_stdlib_v062_test.baa:504",
+            "tests/integration/backend/backend_file_io_noheader_test.baa:548",
+            "tests/integration/backend/backend_file_io_noheader_test.baa:733"
+          ],
+          "status": "unsupported",
+          "reason": "Nazm does not implement setcc instructions or 8-bit destinations."
+        },
+        {
+          "mnemonic": "setl",
+          "operands": [
+            "register"
+          ],
+          "count": 78,
+          "samples": [
+            "examples/file_copy_small.baa:895",
+            "examples/file_copy_small.baa:918",
+            "examples/file_copy_small.baa:941"
+          ],
+          "status": "unsupported",
+          "reason": "Nazm does not implement setcc instructions or 8-bit destinations."
+        },
+        {
+          "mnemonic": "setne",
+          "operands": [
+            "register"
+          ],
+          "count": 450,
+          "samples": [
+            "examples/error_handling_demo.baa:198",
+            "examples/error_handling_demo.baa:312",
+            "examples/error_handling_demo.baa:368"
+          ],
+          "status": "unsupported",
+          "reason": "Nazm does not implement setcc instructions or 8-bit destinations."
+        },
+        {
+          "mnemonic": "setnp",
+          "operands": [
+            "register"
+          ],
+          "count": 9,
+          "samples": [
+            "tests/integration/backend/backend_float_extensions_v042_test.baa:297",
+            "tests/integration/backend/backend_scan_arabic_test.baa:498",
+            "tests/integration/backend/backend_stdlib_v041_test.baa:307"
+          ],
+          "status": "unsupported",
+          "reason": "Nazm does not implement setcc instructions or 8-bit destinations."
+        },
+        {
+          "mnemonic": "setp",
+          "operands": [
+            "register"
+          ],
+          "count": 4,
+          "samples": [
+            "tests/integration/backend/backend_multidim_array_test.baa:352",
+            "tests/integration/backend/backend_test.baa:3612",
+            "tests/integration/backend/backend_test.baa:3710"
+          ],
+          "status": "unsupported",
+          "reason": "Nazm does not implement setcc instructions or 8-bit destinations."
+        },
+        {
+          "mnemonic": "shll",
+          "operands": [
+            "register",
+            "register"
+          ],
+          "count": 4,
+          "samples": [
+            "tests/integration/backend/backend_runtime_shift_width_high_fail_v063_test.baa:47",
+            "tests/integration/ir/ir_runtime_checks_none_v063_test.baa:78",
+            "tests/integration/ir/ir_runtime_checks_selective_bounds_shift_v063_test.baa:284"
+          ],
+          "status": "unsupported",
+          "reason": "Nazm exposes only 64-bit general-purpose register instruction forms."
+        },
+        {
+          "mnemonic": "shlq",
+          "operands": [
+            "immediate-integer",
+            "register"
+          ],
+          "count": 1556,
+          "samples": [
+            "examples/error_handling_demo.baa:242",
+            "examples/error_handling_demo.baa:246",
+            "examples/error_handling_demo.baa:282"
+          ],
+          "status": "supported",
+          "nazm": {
+            "mnemonic": "ازح_يسارا",
+            "operands": [
+              "register",
+              "immediate"
+            ],
+            "width_bits": 64
+          },
+          "acceptance_fixture": "tests/fixtures/baa_coverage/حساب-وتحكم-باء.نظم"
+        },
+        {
+          "mnemonic": "subq",
+          "operands": [
+            "immediate-integer",
+            "memory-base-displacement"
+          ],
+          "count": 7,
+          "samples": [
+            "tests/integration/backend/backend_path_stdlib_v062_test.baa:5347",
+            "tests/integration/backend/backend_path_stdlib_v062_test.baa:6825",
+            "tests/integration/backend/backend_path_stdlib_v062_test.baa:8304"
+          ],
+          "status": "unsupported",
+          "reason": "Nazm implements this mnemonic, but not this operand shape or width."
+        },
+        {
+          "mnemonic": "subq",
+          "operands": [
+            "immediate-integer",
+            "register"
+          ],
+          "count": 2702,
+          "samples": [
+            "examples/error_handling_demo.baa:79",
+            "examples/error_handling_demo.baa:96",
+            "examples/error_handling_demo.baa:101"
+          ],
+          "status": "supported",
+          "nazm": {
+            "mnemonic": "اطرح",
+            "operands": [
+              "register",
+              "immediate"
+            ],
+            "width_bits": 64
+          },
+          "acceptance_fixture": "tests/fixtures/baa_coverage/حساب-وتحكم-باء.نظم"
+        },
+        {
+          "mnemonic": "subq",
+          "operands": [
+            "register",
+            "memory-base-displacement"
+          ],
+          "count": 3,
+          "samples": [
+            "tests/integration/backend/backend_path_stdlib_v062_test.baa:8376",
+            "tests/integration/backend/backend_path_stdlib_v062_test.baa:9515",
+            "tests/integration/backend/backend_path_stdlib_v062_test.baa:10700"
+          ],
+          "status": "unsupported",
+          "reason": "Nazm implements this mnemonic, but not this operand shape or width."
+        },
+        {
+          "mnemonic": "subq",
+          "operands": [
+            "register",
+            "register"
+          ],
+          "count": 37,
+          "samples": [
+            "tests/integration/backend/backend_cast_pointer_diff_test.baa:25",
+            "tests/integration/backend/backend_custom_startup_test.baa:355",
+            "tests/integration/backend/backend_custom_startup_test.baa:795"
+          ],
+          "status": "supported",
+          "nazm": {
+            "mnemonic": "اطرح",
+            "operands": [
+              "register",
+              "register"
+            ],
+            "width_bits": 64
+          },
+          "acceptance_fixture": "tests/fixtures/baa_coverage/حساب-وتحكم-باء.نظم"
+        },
+        {
+          "mnemonic": "subsd",
+          "operands": [
+            "register",
+            "register"
+          ],
+          "count": 1,
+          "samples": [
+            "tests/integration/backend/backend_float_extensions_v042_test.baa:290"
+          ],
+          "status": "unsupported",
+          "reason": "Nazm does not implement scalar SSE2 registers or instructions."
+        },
+        {
+          "mnemonic": "sub",
+          "operands": [
+            "immediate-integer",
+            "register"
+          ],
+          "count": 271,
+          "samples": [
+            "examples/error_handling_demo.baa:12",
+            "examples/error_handling_demo.baa:65",
+            "examples/file_copy_small.baa:12"
+          ],
+          "status": "unsupported",
+          "reason": "The unsuffixed GAS form has no width in the inventory and cannot be mapped safely."
+        },
+        {
+          "mnemonic": "testb",
+          "operands": [
+            "register",
+            "memory-base-displacement"
+          ],
+          "count": 5,
+          "samples": [
+            "tests/integration/backend/backend_path_stdlib_v062_test.baa:3320",
+            "tests/integration/backend/backend_path_stdlib_v062_test.baa:3335",
+            "tests/integration/backend/backend_path_stdlib_v062_test.baa:4514"
+          ],
+          "status": "unsupported",
+          "reason": "Nazm exposes only 64-bit general-purpose register instruction forms."
+        },
+        {
+          "mnemonic": "testb",
+          "operands": [
+            "register",
+            "register"
+          ],
+          "count": 1383,
+          "samples": [
+            "examples/error_handling_demo.baa:23",
+            "examples/error_handling_demo.baa:37",
+            "examples/error_handling_demo.baa:92"
+          ],
+          "status": "unsupported",
+          "reason": "Nazm exposes only 64-bit general-purpose register instruction forms."
+        },
+        {
+          "mnemonic": "ucomisd",
+          "operands": [
+            "register",
+            "register"
+          ],
+          "count": 20,
+          "samples": [
+            "tests/integration/backend/backend_float_extensions_v042_test.baa:295",
+            "tests/integration/backend/backend_float_extensions_v042_test.baa:314",
+            "tests/integration/backend/backend_multidim_array_test.baa:350"
+          ],
+          "status": "unsupported",
+          "reason": "Nazm does not implement scalar SSE2 registers or instructions."
+        },
+        {
+          "mnemonic": "xorpd",
+          "operands": [
+            "register",
+            "register"
+          ],
+          "count": 2,
+          "samples": [
+            "tests/integration/backend/backend_float_extensions_v042_test.baa:307",
+            "tests/integration/backend/backend_test.baa:3523"
+          ],
+          "status": "unsupported",
+          "reason": "Nazm does not implement scalar SSE2 registers or instructions."
+        }
+      ],
+      "directive_forms": [
+        {
+          "directive": ".asciz",
+          "operands": [
+            "string"
+          ],
+          "count": 499,
+          "samples": [
+            "examples/error_handling_demo.baa:2",
+            "examples/error_handling_demo.baa:3",
+            "examples/error_handling_demo.baa:4"
+          ],
+          "status": "supported",
+          "nazm": {
+            "directive": ".سلسلة_منتهية_بصفر",
+            "operands": [
+              "string"
+            ]
+          },
+          "acceptance_fixture": "tests/fixtures/baa_coverage/بيانات-باء.نظم"
+        },
+        {
+          "directive": ".data",
+          "operands": [],
+          "count": 26,
+          "samples": [
+            "tests/integration/backend/backend_byte_buffer_stdlib_v062_test.baa:6",
+            "tests/integration/backend/backend_dynamic_memory_test.baa:6",
+            "tests/integration/backend/backend_enum_struct_test.baa:6"
+          ],
+          "status": "supported",
+          "nazm": {
+            "directive": ".بيانات",
+            "operands": []
+          },
+          "acceptance_fixture": "tests/fixtures/baa_coverage/بيانات-باء.نظم"
+        },
+        {
+          "directive": ".file",
+          "operands": [
+            "expression"
+          ],
+          "count": 1,
+          "samples": [
+            "tests/integration/ir/ir_runtime_bounds_debug_info_no_checks_v055_test.baa:16"
+          ],
+          "status": "unsupported",
+          "reason": "Nazm does not implement GAS debug/source mapping directives."
+        },
+        {
+          "directive": ".globl",
+          "operands": [
+            "expression"
+          ],
+          "count": 205,
+          "samples": [
+            "examples/error_handling_demo.baa:8",
+            "examples/file_copy_small.baa:8",
+            "tests/integration/backend/backend_byte_buffer_stdlib_v062_test.baa:7"
+          ],
+          "status": "partial",
+          "nazm": {
+            "directive": ".عام",
+            "operands": [
+              "label"
+            ]
+          },
+          "reason": "Canonical Arabic labels are supported, but the Baa inventory expression category is broader than one label token.",
+          "acceptance_fixture": "tests/fixtures/baa_coverage/بيانات-باء.نظم"
+        },
+        {
+          "directive": ".globl",
+          "operands": [
+            "symbol"
+          ],
+          "count": 106,
+          "samples": [
+            "examples/error_handling_demo.baa:61",
+            "examples/file_copy_small.baa:1036",
+            "examples/hello_world.baa:8"
+          ],
+          "status": "unsupported",
+          "nazm": {
+            "directive": ".عام",
+            "operands": [
+              "label"
+            ]
+          },
+          "reason": "Nazm 0.4 rejects ASCII linker identifiers such as main."
+        },
+        {
+          "directive": ".loc",
+          "operands": [
+            "expression"
+          ],
+          "count": 5,
+          "samples": [
+            "tests/integration/ir/ir_runtime_bounds_debug_info_no_checks_v055_test.baa:17",
+            "tests/integration/ir/ir_runtime_bounds_debug_info_no_checks_v055_test.baa:21",
+            "tests/integration/ir/ir_runtime_bounds_debug_info_no_checks_v055_test.baa:25"
+          ],
+          "status": "unsupported",
+          "reason": "Nazm does not implement GAS debug/source mapping directives."
+        },
+        {
+          "directive": ".long",
+          "operands": [
+            "integer"
+          ],
+          "count": 1,
+          "samples": [
+            "tests/integration/backend/backend_int_semantics_test.baa:10"
+          ],
+          "status": "supported",
+          "nazm": {
+            "directive": ".عدد٣٢",
+            "operands": [
+              "immediate"
+            ]
+          },
+          "acceptance_fixture": "tests/fixtures/baa_coverage/بيانات-باء.نظم"
+        },
+        {
+          "directive": ".p2align",
+          "operands": [
+            "integer"
+          ],
+          "count": 304,
+          "samples": [
+            "examples/file_copy_small.baa:1061",
+            "examples/file_copy_small.baa:1074",
+            "examples/hello_world.baa:147"
+          ],
+          "status": "unsupported",
+          "reason": "Nazm does not implement an alignment directive."
+        },
+        {
+          "directive": ".quad",
+          "operands": [
+            "integer"
+          ],
+          "count": 4168,
+          "samples": [
+            "examples/file_copy_small.baa:1063",
+            "examples/file_copy_small.baa:1064",
+            "examples/file_copy_small.baa:1065"
+          ],
+          "status": "supported",
+          "nazm": {
+            "directive": ".عدد٦٤",
+            "operands": [
+              "immediate"
+            ]
+          },
+          "acceptance_fixture": "tests/fixtures/baa_coverage/بيانات-باء.نظم"
+        },
+        {
+          "directive": ".quad",
+          "operands": [
+            "local-symbol"
+          ],
+          "count": 3,
+          "samples": [
+            "tests/integration/backend/backend_multidim_array_test.baa:25",
+            "tests/integration/backend/backend_multidim_array_test.baa:26",
+            "tests/integration/backend/backend_test.baa:14"
+          ],
+          "status": "unsupported",
+          "reason": "Nazm implements this directive, but not this operand shape."
+        },
+        {
+          "directive": ".section",
+          "operands": [
+            "symbol",
+            "string"
+          ],
+          "count": 208,
+          "samples": [
+            "examples/error_handling_demo.baa:1",
+            "examples/error_handling_demo.baa:714",
+            "examples/file_copy_small.baa:1"
+          ],
+          "status": "unsupported",
+          "reason": "Nazm supports only its canonical .text and .data section directives."
+        },
+        {
+          "directive": ".text",
+          "operands": [],
+          "count": 103,
+          "samples": [
+            "examples/error_handling_demo.baa:6",
+            "examples/file_copy_small.baa:6",
+            "examples/hello_world.baa:6"
+          ],
+          "status": "supported",
+          "nazm": {
+            "directive": ".نص",
+            "operands": []
+          },
+          "acceptance_fixture": "tests/fixtures/baa_coverage/بيانات-باء.نظم"
+        },
+        {
+          "directive": ".zero",
+          "operands": [
+            "integer"
+          ],
+          "count": 2,
+          "samples": [
+            "tests/integration/backend/backend_enum_struct_test.baa:8",
+            "tests/integration/backend/backend_test.baa:29"
+          ],
+          "status": "supported",
+          "nazm": {
+            "directive": ".مساحة_صفرية",
+            "operands": [
+              "immediate"
+            ]
+          },
+          "acceptance_fixture": "tests/fixtures/baa_coverage/بيانات-باء.نظم"
+        }
+      ],
+      "sections": [
+        {
+          "name": ".data",
+          "count": 26,
+          "status": "supported",
+          "nazm": ".بيانات",
+          "object": ".data",
+          "acceptance_fixture": "tests/fixtures/baa_coverage/بيانات-باء.نظم"
+        },
+        {
+          "name": ".rdata",
+          "count": 208,
+          "status": "unsupported",
+          "reason": "Nazm has no read-only data section."
+        },
+        {
+          "name": ".text",
+          "count": 103,
+          "status": "supported",
+          "nazm": ".نص",
+          "object": ".text",
+          "acceptance_fixture": "tests/fixtures/baa_coverage/بيانات-باء.نظم"
+        }
+      ],
+      "symbols": {
+        "defined": 624,
+        "global-declaration": 311,
+        "local": 4067
+      },
+      "relocation_candidates": [
+        {
+          "form": "data:.quad",
+          "count": 3,
+          "status": "unsupported",
+          "reason": "Nazm does not implement data-section symbol relocations."
+        },
+        {
+          "form": "instruction:call:symbol",
+          "count": 904,
+          "status": "partial",
+          "reason": "Calls to labels defined in the same .text input are resolved, but external-symbol call relocations are not implemented."
+        },
+        {
+          "form": "instruction:leaq:memory-rip-relative,register",
+          "count": 866,
+          "status": "unsupported",
+          "reason": "Nazm does not implement RIP-relative relocations."
+        },
+        {
+          "form": "instruction:movl:memory-rip-relative,register",
+          "count": 1,
+          "status": "unsupported",
+          "reason": "Nazm does not implement RIP-relative relocations."
+        },
+        {
+          "form": "instruction:movq:immediate-integer,memory-rip-relative",
+          "count": 1,
+          "status": "unsupported",
+          "reason": "Nazm does not implement RIP-relative relocations."
+        },
+        {
+          "form": "instruction:movq:memory-rip-relative,register",
+          "count": 69,
+          "status": "unsupported",
+          "reason": "Nazm does not implement RIP-relative relocations."
+        },
+        {
+          "form": "instruction:movq:register,memory-rip-relative",
+          "count": 23,
+          "status": "unsupported",
+          "reason": "Nazm does not implement RIP-relative relocations."
+        }
+      ],
+      "summary": {
+        "forms": {
+          "supported": 37,
+          "partial": 3,
+          "unsupported": 88
+        },
+        "emissions": {
+          "supported": 58065,
+          "partial": 2013,
+          "unsupported": 23680
+        }
+      }
+    }
+  }
+}

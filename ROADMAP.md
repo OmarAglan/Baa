@@ -1814,7 +1814,7 @@
 
   #### v1.5.0.1: Inventory and Contract
 
-* \[ ] **Generated-form corpus** — build Nazm fixtures from Baa quick/full/stress output on both targets.
+* \[x] **Generated-form corpus** — version `baa-nazm-coverage-v1` from the full 100-source, two-target inventory and assemble focused ELF64/COFF fixtures for every currently supported form; partial and unsupported forms remain explicit.
 * \[ ] **Source mapping** — retain Baa line/column identity through generated assembly diagnostics.
 * \[ ] **Inline assembly migration** — version the breaking move from raw `مجمع { ... }` GAS text to canonical `نظم { ... }` source.
 * \[ ] **Target contract** — map Baa targets explicitly to Nazm ELF64/COFF modes.

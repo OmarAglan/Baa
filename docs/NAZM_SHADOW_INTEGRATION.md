@@ -47,9 +47,43 @@ python scripts/inventory_assembly_surface.py \
   --check
 ```
 
-Baa's QA runner executes the parser tests and the full `--check` gate. A stale
-artifact, a missing source, a failed source compilation, or a changed emitted
-form fails QA visibly.
+Baa's QA runner executes the inventory parser tests, the full inventory
+`--check` gate, and the Nazm coverage contract tests. A stale artifact, a
+missing source, a failed source compilation, an unclassified emitted form, or
+a supported form without a named fixture fails QA visibly.
+
+## Stage B.1 coverage contract
+
+The generated comparison artifact is
+[`generated/baa_nazm_coverage_v1.json`](generated/baa_nazm_coverage_v1.json).
+`scripts/generate_nazm_coverage.py` compares the checked Baa inventory with
+Nazm's versioned `nazm-capabilities-v1` document. Every inventory form is
+classified as:
+
+- `supported`: the complete form is accepted and has a focused Nazm fixture;
+- `partial`: only the stated subset is accepted and is not shadow-ready; or
+- `unsupported`: the shadow path must fail visibly and must not fall back.
+
+The initial comparison covers all 100 sources on both targets with zero
+inventory omissions:
+
+| Target | Instruction forms S/P/U | Directive forms S/P/U | Sections S/U | Relocations P/U |
+|---|---:|---:|---:|---:|
+| `x86_64-linux` | 30 / 1 / 77 | 6 / 2 / 7 | 2 / 2 | 1 / 6 |
+| `x86_64-windows` | 29 / 1 / 75 | 6 / 1 / 6 | 2 / 1 | 1 / 6 |
+
+Each supported row names the checked Nazm acceptance fixture that exercises
+its canonical Arabic lowering. The matrix deliberately records ASCII linker
+identifiers such as `main`, external calls, RIP-relative references,
+read-only sections, byte/32-bit forms, `setcc`, extensions, and scalar SSE2 as
+partial or unsupported where applicable.
+
+Regenerate or verify the comparison from an ecosystem checkout:
+
+```text
+python scripts/generate_nazm_coverage.py
+python scripts/generate_nazm_coverage.py --check
+```
 
 ## Non-default shadow path
 
@@ -76,8 +110,9 @@ the coverage matrix.
 
 ## Current admission status
 
-Stage B is complete. The canonical Arabic emitter and executable shadow option
-are not yet admitted. Nazm still needs coverage for Baa's observed operand
-widths, `setcc`, extension and division forms, scalar SSE2 forms, read-only
-sections, external symbols, and the required ELF64/COFF relocations. The
-production assembler therefore remains unchanged.
+Stage B and the Stage B.1 comparison/fixture gate are complete. The canonical
+Arabic emitter and executable shadow option are not yet admitted. Nazm still
+needs support for Baa's observed operand widths, `setcc`, extension and
+division forms, scalar SSE2 forms, ASCII/external symbols, read-only sections,
+and the required ELF64/COFF relocations. The production assembler therefore
+remains unchanged.

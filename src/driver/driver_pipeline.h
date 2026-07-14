@@ -24,7 +24,8 @@ BaaCompilerExitCode driver_compile_files(const CompilerConfig *config,
                                          CompilerPhaseTimes *phase_times,
                                          DriverBuildManifest *build_manifest,
                                          char ***out_obj_files,
-                                         int *out_obj_count);
+                                         int *out_obj_count,
+                                         char **out_nazm_shadow_object);
 
 /**
  * @brief تحرير قائمة ملفات الكائنات المُخرجة.

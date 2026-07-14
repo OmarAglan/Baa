@@ -31,6 +31,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
     `الرئيسية`, with line/column comments preserving the originating Baa span.
   - Preflights the complete machine module and returns unsupported status `3` without a
     partial output file for every unimplemented instruction, operand, data, or string form.
+  - Added one-input `--nazm-shadow=<path>` mode, using structured argv to assemble the
+    Arabic source with the explicitly selected Nazm executable, then linking production GAS
+    and Nazm shadow executables side by side without treating GAS success as fallback.
+  - Added optional ecosystem parity coverage for source spelling, `.text`, exported `main`,
+    relocations, link success, exit status, stdout, and stderr on the host platform.
 - **Portable SHA-256 file hashing**:
   - Added `تجزئة_ملف_SHA256` as an owned lowercase digest primitive on Windows and POSIX,
     with a known-vector integration test for tooling and immutable package archives.

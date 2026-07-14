@@ -118,8 +118,22 @@ line/column spans in Arabic comments, uses `الرئيسية` rather than an ASC
 name, and fails with status `3` before leaving an output file when any machine
 form is unsupported.
 
-The explicit `--nazm-shadow=<path>` invocation and automated object/link/runtime
-comparison are not yet admitted. Nazm still needs support for Baa's observed
-operand widths, `setcc`, extension and division forms, scalar SSE2 forms,
-external symbols, read-only sections, and the required ELF64/COFF relocations.
-The production assembler therefore remains unchanged.
+The first explicit `--nazm-shadow=<path>` slice is also admitted for one input,
+where `<path>` is the Nazm executable. Baa still completes its production GAS
+build, but also invokes Nazm with structured argv and links these receipts next
+to the requested output:
+
+- `<output>.ظل-نظم.نظم` — canonical Arabic source;
+- `<output>.ظل-نظم.obj` or `.o` — Nazm object;
+- `<output>.ظل-نظم.exe` or the suffixless Linux equivalent — shadow executable.
+
+Missing Nazm, an unsupported emitter form, assembler failure, or shadow-link
+failure makes the command fail; production GAS success never hides it. The
+ecosystem test compares the minimal slice's Arabic source, `.text`, exported
+entry symbol, relocation absence, link success, exit status, stdout, and stderr.
+
+Full-corpus automated object/link/runtime comparison is not yet admitted. Nazm
+still needs support for Baa's observed operand widths, `setcc`, extension and
+division forms, scalar SSE2 forms, external symbols, read-only sections, and
+the required ELF64/COFF relocations. The production assembler therefore remains
+unchanged.

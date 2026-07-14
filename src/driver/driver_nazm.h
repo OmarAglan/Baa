@@ -14,4 +14,13 @@ BaaCompilerExitCode driver_emit_nazm_source(const CompilerConfig *config,
                                             const char *current_input,
                                             const char *output_path);
 
+/**
+ * @brief إصدار مصدر الظل وتجميعه عبر ملف نظم التنفيذي المحدد صراحة.
+ * @param out_object_path مسار مملوك للمستدعي عند النجاح.
+ */
+BaaCompilerExitCode driver_emit_nazm_shadow_object(const CompilerConfig *config,
+                                                   MachineModule *module,
+                                                   const char *current_input,
+                                                   char **out_object_path);
+
 #endif

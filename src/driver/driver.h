@@ -38,6 +38,7 @@ typedef struct
     size_t include_dir_count;  // عدد مسارات -I
     bool assembly_only; // -S: إنتاج كود تجميع فقط
     bool emit_nazm;     // --emit-nazm: إصدار مصدر نظم العربي فقط
+    char *nazm_shadow_executable; // --nazm-shadow=<path>: مسار مجمّع نظم لمسار الظل
     bool compile_only;  // -c: تجميع إلى كائن فقط (بدون ربط)
     bool verbose;       // -v: وضع التفاصيل
     bool dump_ir;       // --dump-ir: طباعة IR بعد التحليل الدلالي

@@ -297,9 +297,11 @@ static BaaCompilerExitCode compile_one_ir(const CompilerConfig *config,
                                           CompilerPhaseTimes *phase_times,
                                           DriverBuildManifest *build_manifest,
                                           DriverOneDefinitionRegistry *odr_registry,
-                                          char **out_obj_file)
+                                          char **out_obj_file,
+                                          char **out_nazm_shadow_object)
 {
     if (out_obj_file) *out_obj_file = NULL;
+    if (out_nazm_shadow_object) *out_nazm_shadow_object = NULL;
 
     if (config->verbose)
         printf("\n[INFO] Processing %s...\n", current_input);
@@ -648,6 +650,20 @@ static BaaCompilerExitCode compile_one_ir(const CompilerConfig *config,
             : BAA_COMPILER_EXIT_TOOLCHAIN_ERROR;
     }
 
+    if (config->nazm_shadow_executable)
+    {
+        BaaCompilerExitCode shadow_rc = driver_emit_nazm_shadow_object(
+            config, mach_module, current_input, out_nazm_shadow_object);
+        if (shadow_rc != BAA_COMPILER_EXIT_SUCCESS)
+        {
+            mach_module_free(mach_module);
+            ir_module_free(ir_module);
+            lexer_free_dependencies(&lexer);
+            free(source);
+            return shadow_rc;
+        }
+    }
+
     char* final_asm_output = NULL;
     if (config->assembly_only)
     {
@@ -828,10 +844,12 @@ BaaCompilerExitCode driver_compile_files(const CompilerConfig *config,
                                          CompilerPhaseTimes *phase_times,
                                          DriverBuildManifest *build_manifest,
                                          char ***out_obj_files,
-                                         int *out_obj_count)
+                                         int *out_obj_count,
+                                         char **out_nazm_shadow_object)
 {
     if (out_obj_files) *out_obj_files = NULL;
     if (out_obj_count) *out_obj_count = 0;
+    if (out_nazm_shadow_object) *out_nazm_shadow_object = NULL;
     if (!config || !input_files || input_count <= 0 || !phase_times)
         return BAA_COMPILER_EXIT_INTERNAL_ERROR;
 
@@ -868,9 +886,11 @@ BaaCompilerExitCode driver_compile_files(const CompilerConfig *config,
     {
         const char *current_input = input_files[i];
         char *obj_file = NULL;
+        char *shadow_object = NULL;
 
         BaaCompilerExitCode rc = compile_one_ir(config, input_count, current_input, phase_times,
-                                                build_manifest, odr_registry_ptr, &obj_file);
+                                                build_manifest, odr_registry_ptr, &obj_file,
+                                                &shadow_object);
 
         if (rc != BAA_COMPILER_EXIT_SUCCESS)
         {
@@ -878,7 +898,26 @@ BaaCompilerExitCode driver_compile_files(const CompilerConfig *config,
             driver_free_obj_files(obj_files, obj_count, config->output_file);
             if (out_obj_files) *out_obj_files = NULL;
             if (out_obj_count) *out_obj_count = 0;
+            if (shadow_object)
+            {
+                (void)driver_toolchain_delete_file_utf8(shadow_object);
+                free(shadow_object);
+            }
             return rc;
+        }
+
+        if (shadow_object)
+        {
+            if (out_nazm_shadow_object && !*out_nazm_shadow_object)
+                *out_nazm_shadow_object = shadow_object;
+            else
+            {
+                (void)driver_toolchain_delete_file_utf8(shadow_object);
+                free(shadow_object);
+                driver_odr_registry_free(odr_registry_ptr);
+                driver_free_obj_files(obj_files, obj_count, config->output_file);
+                return BAA_COMPILER_EXIT_INTERNAL_ERROR;
+            }
         }
 
         if (!config->assembly_only && !config->emit_nazm &&

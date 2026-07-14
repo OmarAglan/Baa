@@ -1809,6 +1809,7 @@
 * \[ ] **Arabic emitter** — emit canonical Nazm 0.4 text after register allocation while retaining inspectable `-S` output.
   * \[x] First executable slice: `--emit-nazm` emits an Arabic-only minimal integer entry for Windows/Linux targets and visibly rejects every unsupported form.
 * \[ ] **Shadow integration** — invoke Nazm without changing the production GAS result and compare object/link/runtime semantics.
+  * \[x] First executable slice: `--nazm-shadow=<path>` assembles and links a one-input minimal program beside GAS with visible no-fallback failures and host runtime parity coverage.
 * \[ ] **Embedding** — adopt `nazm_assemble_buffer()` only after its public ownership and error contracts are stable.
 
   ### v1.5.0: Baa + Nazm Assembler Path 🔧

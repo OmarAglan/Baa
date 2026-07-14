@@ -60,6 +60,32 @@ static const char* main_mode_name(const CompilerConfig* config)
     return "link";
 }
 
+static char *main_nazm_shadow_output_path(const CompilerConfig *config)
+{
+    if (!config || !config->output_file) return NULL;
+    const char *exe_suffix = config->target && config->target->default_exe_ext
+        ? config->target->default_exe_ext
+        : "";
+    const char *marker = ".ظل-نظم";
+    size_t output_len = strlen(config->output_file);
+    size_t marker_len = strlen(marker);
+    size_t suffix_len = strlen(exe_suffix);
+    char *path = (char *)malloc(output_len + marker_len + suffix_len + 1u);
+    if (!path) return NULL;
+    memcpy(path, config->output_file, output_len);
+    memcpy(path + output_len, marker, marker_len);
+    memcpy(path + output_len + marker_len, exe_suffix, suffix_len + 1u);
+    return path;
+}
+
+static void main_release_shadow_object(char **path, bool remove_file)
+{
+    if (!path || !*path) return;
+    if (remove_file) (void)driver_toolchain_delete_file_utf8(*path);
+    free(*path);
+    *path = NULL;
+}
+
 static int main_cleanup_and_return(const CompilerConfig* config,
                                    DriverParseResult* cli,
                                    char** obj_files,
@@ -166,6 +192,12 @@ static int baa_main(int argc, char **argv)
         return main_cleanup_and_return(&config, &cli, NULL, 0, config.output_file,
                                        output_file_owned, BAA_COMPILER_EXIT_INVALID_INVOCATION);
     }
+    if (config.nazm_shadow_executable && input_count != 1)
+    {
+        fprintf(stderr, "خطأ: --nazm-shadow يدعم ملف باء واحدا في الشريحة الأولى.\n");
+        return main_cleanup_and_return(&config, &cli, NULL, 0, config.output_file,
+                                       output_file_owned, BAA_COMPILER_EXIT_INVALID_INVOCATION);
+    }
 
     // تحديد اسم الملف المخرج الافتراضي
     if (!config.output_file)
@@ -218,9 +250,11 @@ static int baa_main(int argc, char **argv)
 
     char **obj_files_to_link = NULL;
     int obj_count = 0;
+    char *nazm_shadow_object = NULL;
     BaaCompilerExitCode compile_rc =
         driver_compile_files(&config, input_files, input_count, &phase_times,
-                             &build_manifest, &obj_files_to_link, &obj_count);
+                             &build_manifest, &obj_files_to_link, &obj_count,
+                             &nazm_shadow_object);
     if (compile_rc != BAA_COMPILER_EXIT_SUCCESS)
     {
         driver_build_manifest_free(&build_manifest);
@@ -234,6 +268,7 @@ static int baa_main(int argc, char **argv)
         {
             fprintf(stderr, "خطأ: فشل كتابة بيان البناء '%s'.\n", config.build_manifest_file);
             driver_build_manifest_free(&build_manifest);
+            main_release_shadow_object(&nazm_shadow_object, true);
             return main_cleanup_and_return(&config, &cli, obj_files_to_link, obj_count, config.output_file,
                                            output_file_owned, BAA_COMPILER_EXIT_TOOLCHAIN_ERROR);
         }
@@ -245,6 +280,7 @@ static int baa_main(int argc, char **argv)
     {
         print_phase_times_and_mem(&config, &phase_times);
         driver_build_manifest_free(&build_manifest);
+        main_release_shadow_object(&nazm_shadow_object, true);
         return main_cleanup_and_return(&config, &cli, obj_files_to_link, obj_count, config.output_file,
                                        output_file_owned, BAA_COMPILER_EXIT_SUCCESS);
     }
@@ -259,8 +295,53 @@ static int baa_main(int argc, char **argv)
     if (link_rc != BAA_COMPILER_EXIT_SUCCESS)
     {
         driver_build_manifest_free(&build_manifest);
+        main_release_shadow_object(&nazm_shadow_object, true);
         return main_cleanup_and_return(&config, &cli, obj_files_to_link, obj_count, config.output_file,
                                        output_file_owned, link_rc);
+    }
+
+    if (config.nazm_shadow_executable)
+    {
+        if (!nazm_shadow_object)
+        {
+            fprintf(stderr, "خطأ: لم ينتج مسار ظل نظم ملفا كائنيا.\n");
+            driver_build_manifest_free(&build_manifest);
+            return main_cleanup_and_return(&config, &cli, obj_files_to_link, obj_count,
+                                           config.output_file, output_file_owned,
+                                           BAA_COMPILER_EXIT_INTERNAL_ERROR);
+        }
+
+        char *shadow_output = main_nazm_shadow_output_path(&config);
+        if (!shadow_output)
+        {
+            main_release_shadow_object(&nazm_shadow_object, true);
+            driver_build_manifest_free(&build_manifest);
+            return main_cleanup_and_return(&config, &cli, obj_files_to_link, obj_count,
+                                           config.output_file, output_file_owned,
+                                           BAA_COMPILER_EXIT_INTERNAL_ERROR);
+        }
+
+        CompilerConfig shadow_config = config;
+        shadow_config.output_file = shadow_output;
+        shadow_config.nazm_shadow_executable = NULL;
+        const char *shadow_objects[] = {nazm_shadow_object};
+        BaaCompilerExitCode shadow_link_rc =
+            driver_toolchain_link(&shadow_config, &phase_times, shadow_objects, 1);
+        if (shadow_link_rc != BAA_COMPILER_EXIT_SUCCESS)
+        {
+            fprintf(stderr, "خطأ: فشل ربط ناتج ظل نظم؛ لا يعد نجاح GAS نجاحا للمسار الظلي.\n");
+            free(shadow_output);
+            main_release_shadow_object(&nazm_shadow_object, false);
+            driver_build_manifest_free(&build_manifest);
+            return main_cleanup_and_return(&config, &cli, obj_files_to_link, obj_count,
+                                           config.output_file, output_file_owned,
+                                           shadow_link_rc);
+        }
+
+        if (config.verbose)
+            printf("[INFO] Linked Nazm shadow executable: %s\n", shadow_output);
+        free(shadow_output);
+        main_release_shadow_object(&nazm_shadow_object, false);
     }
 
     // تنظيف ملفات الكائنات المؤقتة

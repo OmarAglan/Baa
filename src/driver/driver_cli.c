@@ -157,6 +157,7 @@ void driver_print_help(void)
     printf("  -I<dir>      Add include search directory (compact form)\n");
     printf("  -S, -s       Compile to assembly only (.s)\n");
     printf("  --emit-nazm  Emit canonical Arabic Nazm source only (.نظم)\n");
+    printf("  --nazm-shadow=<path>  Build production GAS and an explicit Nazm shadow beside it\n");
     printf("  -c           Compile to object file only (.o)\n");
     printf("  --check      Parse/analyze source files without emitting code\n");
     printf("  --check-header  Parse/analyze header declarations without emitting code\n");
@@ -424,6 +425,17 @@ bool driver_parse_cli(int argc, char **argv, CompilerConfig *config, DriverParse
                 config->assembly_only = true;
             else if (strcmp(arg, "--emit-nazm") == 0)
                 config->emit_nazm = true;
+            else if (strncmp(arg, "--nazm-shadow=", 14) == 0)
+            {
+                const char *path = arg + 14;
+                if (!path[0])
+                {
+                    fprintf(stderr, "خطأ: --nazm-shadow يتطلب مسار ملف نظم التنفيذي.\n");
+                    parse_release_temp_arrays(inputs, include_dirs);
+                    return false;
+                }
+                config->nazm_shadow_executable = (char *)path;
+            }
             else if (strcmp(arg, "-c") == 0)
                 config->compile_only = true;
             else if (strcmp(arg, "--check") == 0)
@@ -693,6 +705,14 @@ bool driver_parse_cli(int argc, char **argv, CompilerConfig *config, DriverParse
          config->check_only || config->header_check))
     {
         fprintf(stderr, "خطأ: --emit-nazm لا يقبل -S أو -c أو أوضاع الفحص.\n");
+        parse_release_temp_arrays(inputs, include_dirs);
+        return false;
+    }
+    if (config->nazm_shadow_executable &&
+        (config->emit_nazm || config->assembly_only || config->compile_only ||
+         config->check_only || config->header_check))
+    {
+        fprintf(stderr, "خطأ: --nazm-shadow يعمل فقط مع بناء وربط تنفيذي كامل.\n");
         parse_release_temp_arrays(inputs, include_dirs);
         return false;
     }

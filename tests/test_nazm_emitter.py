@@ -271,6 +271,62 @@ class NazmEmitterTests(unittest.TestCase):
                     self.assertIn("كتلة_٠_٦:", text)
                     self.assertIsNone(re.search(r"[A-Za-z]", text))
 
+    def test_global_function_pointer_uses_arabic_data_relocation(self) -> None:
+        nazm = _find_nazm()
+        if nazm is None:
+            self.skipTest("Nazm executable is unavailable in this checkout")
+
+        with tempfile.TemporaryDirectory(prefix="baa_nazm_global_data_") as temp:
+            work = Path(temp)
+            source = work / "بيانات.باء"
+            source.write_text(
+                "صحيح ضاعف(صحيح س) {\n"
+                "    إرجع س + س.\n"
+                "}\n"
+                "دالة(صحيح) -> صحيح مؤشر_عام = ضاعف.\n"
+                "صحيح الرئيسية() {\n"
+                "    إرجع ٠.\n"
+                "}\n",
+                encoding="utf-8",
+            )
+
+            exe_suffix = ".exe" if os.name == "nt" else ""
+            object_suffix = ".obj" if os.name == "nt" else ".o"
+            output = work / f"برنامج-بيانات{exe_suffix}"
+            proc = self.run_baa(
+                work,
+                f"--nazm-shadow={nazm}",
+                str(source),
+                "-o",
+                str(output),
+            )
+            self.assertEqual(proc.returncode, 0, proc.stderr)
+
+            shadow_source = Path(f"{output}.ظل-نظم.نظم")
+            shadow_object = Path(f"{output}.ظل-نظم{object_suffix}")
+            shadow_executable = Path(f"{output}.ظل-نظم{exe_suffix}")
+            nazm_text = shadow_source.read_text(encoding="utf-8")
+            self.assertIsNone(re.search(r"[A-Za-z]", nazm_text))
+            self.assertIn(".بيانات", nazm_text)
+            self.assertIn("مؤشر_عام: .عدد٦٤ ضاعف", nazm_text)
+
+            sections, global_symbols, relocation_count = _inspect_object(
+                shadow_object
+            )
+            self.assertIn(".data", sections)
+            self.assertIn("مؤشر_عام", global_symbols)
+            self.assertGreaterEqual(relocation_count, 1)
+
+            production_run = subprocess.run(
+                [str(output)], capture_output=True, timeout=30
+            )
+            shadow_run = subprocess.run(
+                [str(shadow_executable)], capture_output=True, timeout=30
+            )
+            self.assertEqual(shadow_run.returncode, production_run.returncode)
+            self.assertEqual(shadow_run.stdout, production_run.stdout)
+            self.assertEqual(shadow_run.stderr, production_run.stderr)
+
     def test_unsupported_form_is_visible_and_leaves_no_output(self) -> None:
         with tempfile.TemporaryDirectory(prefix="baa_nazm_unsupported_") as temp:
             work = Path(temp)
@@ -484,7 +540,7 @@ class NazmEmitterTests(unittest.TestCase):
             for row in matrix["targets"][target]["sources"]
             if row["status"] == "emitted"
         ]
-        self.assertEqual(len(rows), 14)
+        self.assertEqual(len(rows), 15)
         for row in rows:
             source = ROOT / row["source"]
             flags = ["-I", str(ROOT), *row.get("flags", [])]
@@ -543,6 +599,7 @@ class NazmEmitterTests(unittest.TestCase):
                 expected_relocations = {
                     "backend_func_ptr_shadow_call_test.baa": 1,
                     "backend_func_ptr_test.baa": 3,
+                    "backend_global_array_init_test.baa": 5,
                 }.get(source.name, 0)
                 self.assertEqual(relocation_count, expected_relocations)
 

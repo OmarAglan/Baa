@@ -56,15 +56,15 @@ class NazmShadowCorpusTests(unittest.TestCase):
                 [row["source"] for row in rows], inventory_target["sources"]
             )
             self.assertEqual(target["summary"], {
-                "emitted": 14,
-                "unsupported": 86,
+                "emitted": 15,
+                "unsupported": 85,
                 "error": 0,
             })
             self.assertEqual(
-                sum(item["count"] for item in target["unsupported_reasons"]), 86
+                sum(item["count"] for item in target["unsupported_reasons"]), 85
             )
             self.assertEqual(
-                sum(item["count"] for item in target["unsupported_blockers"]), 86
+                sum(item["count"] for item in target["unsupported_blockers"]), 85
             )
             self.assertTrue(all(
                 row["status"] in {"emitted", "unsupported"} for row in rows
@@ -87,14 +87,14 @@ class NazmShadowCorpusTests(unittest.TestCase):
                     blockers_by_kind.get(blocker["kind"], 0) + blocker["count"]
                 )
             self.assertEqual(blockers_by_kind, {
-                "جداول_سلاسل": 48,
-                "متغيرات_عامة": 26,
+                "جداول_سلاسل": 67,
                 "تعليمة_آلة": 1,
                 "اسم_دالة_غير_عربي": 4,
                 "إعدادات_التحويل": 4,
-                "اسم_رمز_غير_عربي": 1,
+                "اسم_رمز_غير_عربي": 2,
                 "عرض_أو_نوع_معامل": 1,
-                "نوع_معامل_قيمة_غير_مدعوم": 1,
+                "نوع_معامل_قيمة_غير_مدعوم": 4,
+                "نوع_تهيئة_عامة": 2,
             })
 
             emitted = [row for row in rows if row["status"] == "emitted"]
@@ -106,6 +106,7 @@ class NazmShadowCorpusTests(unittest.TestCase):
                     "tests/integration/backend/backend_const_pointer_rules_test.baa",
                     "tests/integration/backend/backend_func_ptr_shadow_call_test.baa",
                     "tests/integration/backend/backend_func_ptr_test.baa",
+                    "tests/integration/backend/backend_global_array_init_test.baa",
                     "tests/integration/backend/backend_include_i_path_with_spaces_test.baa",
                     "tests/integration/backend/backend_include_relative_alias_path_test.baa",
                     "tests/integration/backend/backend_include_relative_dir_test.baa",

@@ -39,8 +39,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
     aggregate counts, without exposing borrowed include paths or parsing human prose.
   - Added deterministic `baa-nazm-shadow-corpus-v1` classification for all 100 inventoried
     sources on both targets and embedded the complete result in `baa-nazm-coverage-v1`.
-  - Admitted fourteen real corpus sources through Arabic-only emission and GAS/Nazm object,
-    link, and runtime parity; all other 86 sources return visible status `3` with no output.
+  - Admitted fifteen real corpus sources through Arabic-only emission and GAS/Nazm object,
+    link, and runtime parity; all other 85 sources return visible status `3` with no output.
   - Replaced host `nm`/`objdump` assertions with Unicode-safe COFF/ELF inspection so Arabic
     artifact paths remain mandatory on Windows and Linux CI.
   - Kept unsupported diagnostics source-level and deterministic instead of exposing borrowed
@@ -63,6 +63,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
     division, indirect calls, and local branches while keeping external relocations visible.
   - Added direct Arabic function calls and Arabic function-address materialization; Latin
     platform symbols remain visible blockers until an explicit Arabic ABI bridge exists.
+  - Added Arabic integer globals, partially initialized arrays, global function-pointer
+    initializers, and absolute data relocations; the 100-source matrix now admits the
+    global-array runtime case while preserving every unsupported string/PIC form visibly.
   - Added optional ecosystem parity coverage for source spelling, `.text`, exported entry,
     relocations, link success, exit status, stdout, and stderr on the host platform.
   - Preserved `الرئيسية` unchanged in Nazm ELF64/COFF objects and selected that Arabic

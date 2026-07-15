@@ -15,18 +15,14 @@
     "x86_64-linux": {
       "source_count": 100,
       "summary": {
-        "emitted": 14,
-        "unsupported": 86,
+        "emitted": 15,
+        "unsupported": 85,
         "error": 0
       },
       "unsupported_reasons": [
         {
           "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
-          "count": 48
-        },
-        {
-          "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم.",
-          "count": 26
+          "count": 67
         },
         {
           "reason": "خطأ: أسماء الدوال في مصدر نظم يجب أن تكون عربية فقط.",
@@ -37,6 +33,14 @@
           "count": 4
         },
         {
+          "reason": "خطأ: نوع معامل القيمة غير مدعوم في مسار نظم.",
+          "count": 4
+        },
+        {
+          "reason": "خطأ: نوع تهيئة المتغير العام غير مدعوم في مسار نظم.",
+          "count": 2
+        },
+        {
           "reason": "خطأ: المعامل ليس سجلا ماديا بعرض ٨ أو ١٦ أو ٣٢ أو ٦٤ بت.",
           "count": 1
         },
@@ -45,22 +49,18 @@
           "count": 1
         },
         {
-          "reason": "خطأ: رموز الدوال في مصدر نظم وكائنه يجب أن تكون عربية فقط.",
+          "reason": "خطأ: رموز البيانات في مصدر نظم وكائنه يجب أن تكون عربية فقط.",
           "count": 1
         },
         {
-          "reason": "خطأ: نوع معامل القيمة غير مدعوم في مسار نظم.",
+          "reason": "خطأ: رموز الدوال في مصدر نظم وكائنه يجب أن تكون عربية فقط.",
           "count": 1
         }
       ],
       "unsupported_blockers": [
         {
           "kind": "جداول_سلاسل",
-          "count": 48
-        },
-        {
-          "kind": "متغيرات_عامة",
-          "count": 26
+          "count": 67
         },
         {
           "kind": "إعدادات_التحويل",
@@ -71,7 +71,20 @@
           "count": 4
         },
         {
+          "kind": "نوع_معامل_قيمة_غير_مدعوم",
+          "count": 4
+        },
+        {
+          "kind": "نوع_تهيئة_عامة",
+          "count": 2
+        },
+        {
           "kind": "اسم_رمز_غير_عربي",
+          "count": 1
+        },
+        {
+          "kind": "اسم_رمز_غير_عربي",
+          "detail": "اسم_متغير_عام",
           "count": 1
         },
         {
@@ -81,10 +94,6 @@
         },
         {
           "kind": "عرض_أو_نوع_معامل",
-          "count": 1
-        },
-        {
-          "kind": "نوع_معامل_قيمة_غير_مدعوم",
           "count": 1
         }
       ],
@@ -159,9 +168,9 @@
           "source": "tests/integration/backend/backend_byte_buffer_stdlib_v062_test.baa",
           "status": "unsupported",
           "exit_code": 3,
-          "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم.",
+          "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
           "blocker": {
-            "kind": "متغيرات_عامة"
+            "kind": "جداول_سلاسل"
           }
         },
         {
@@ -205,27 +214,27 @@
           "source": "tests/integration/backend/backend_dynamic_memory_test.baa",
           "status": "unsupported",
           "exit_code": 3,
-          "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم.",
+          "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
           "blocker": {
-            "kind": "متغيرات_عامة"
+            "kind": "جداول_سلاسل"
           }
         },
         {
           "source": "tests/integration/backend/backend_enum_struct_test.baa",
           "status": "unsupported",
           "exit_code": 3,
-          "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم.",
+          "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
           "blocker": {
-            "kind": "متغيرات_عامة"
+            "kind": "جداول_سلاسل"
           }
         },
         {
           "source": "tests/integration/backend/backend_error_handling_v043_test.baa",
           "status": "unsupported",
           "exit_code": 3,
-          "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم.",
+          "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
           "blocker": {
-            "kind": "متغيرات_عامة"
+            "kind": "جداول_سلاسل"
           }
         },
         {
@@ -241,18 +250,18 @@
           "source": "tests/integration/backend/backend_file_io_test.baa",
           "status": "unsupported",
           "exit_code": 3,
-          "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم.",
+          "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
           "blocker": {
-            "kind": "متغيرات_عامة"
+            "kind": "جداول_سلاسل"
           }
         },
         {
           "source": "tests/integration/backend/backend_float_extensions_v042_test.baa",
           "status": "unsupported",
           "exit_code": 3,
-          "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم.",
+          "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
           "blocker": {
-            "kind": "متغيرات_عامة"
+            "kind": "جداول_سلاسل"
           }
         },
         {
@@ -278,20 +287,17 @@
         },
         {
           "source": "tests/integration/backend/backend_global_array_init_test.baa",
-          "status": "unsupported",
-          "exit_code": 3,
-          "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم.",
-          "blocker": {
-            "kind": "متغيرات_عامة"
-          }
+          "status": "emitted",
+          "exit_code": 0,
+          "sha256": "9817f0f54a167275ea87f58860d9398a7ac4f86de862d5df79cc62d3ae55a800"
         },
         {
           "source": "tests/integration/backend/backend_include_bom_test.baa",
           "status": "unsupported",
           "exit_code": 3,
-          "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم.",
+          "reason": "خطأ: نوع معامل القيمة غير مدعوم في مسار نظم.",
           "blocker": {
-            "kind": "متغيرات_عامة"
+            "kind": "نوع_معامل_قيمة_غير_مدعوم"
           }
         },
         {
@@ -384,18 +390,18 @@
           "source": "tests/integration/backend/backend_int_semantics_test.baa",
           "status": "unsupported",
           "exit_code": 3,
-          "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم.",
+          "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
           "blocker": {
-            "kind": "متغيرات_عامة"
+            "kind": "جداول_سلاسل"
           }
         },
         {
           "source": "tests/integration/backend/backend_low_level_ops_test.baa",
           "status": "unsupported",
           "exit_code": 3,
-          "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم.",
+          "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
           "blocker": {
-            "kind": "متغيرات_عامة"
+            "kind": "جداول_سلاسل"
           }
         },
         {
@@ -417,18 +423,18 @@
           "source": "tests/integration/backend/backend_multidim_array_test.baa",
           "status": "unsupported",
           "exit_code": 3,
-          "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم.",
+          "reason": "خطأ: نوع تهيئة المتغير العام غير مدعوم في مسار نظم.",
           "blocker": {
-            "kind": "متغيرات_عامة"
+            "kind": "نوع_تهيئة_عامة"
           }
         },
         {
           "source": "tests/integration/backend/backend_path_stdlib_v062_test.baa",
           "status": "unsupported",
           "exit_code": 3,
-          "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم.",
+          "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
           "blocker": {
-            "kind": "متغيرات_عامة"
+            "kind": "جداول_سلاسل"
           }
         },
         {
@@ -474,18 +480,18 @@
           "source": "tests/integration/backend/backend_regalloc_stress.baa",
           "status": "unsupported",
           "exit_code": 3,
-          "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم.",
+          "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
           "blocker": {
-            "kind": "متغيرات_عامة"
+            "kind": "جداول_سلاسل"
           }
         },
         {
           "source": "tests/integration/backend/backend_result_helpers_stdlib_v062_test.baa",
           "status": "unsupported",
           "exit_code": 3,
-          "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم.",
+          "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
           "blocker": {
-            "kind": "متغيرات_عامة"
+            "kind": "جداول_سلاسل"
           }
         },
         {
@@ -669,9 +675,9 @@
           "source": "tests/integration/backend/backend_scope_test.baa",
           "status": "unsupported",
           "exit_code": 3,
-          "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم.",
+          "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
           "blocker": {
-            "kind": "متغيرات_عامة"
+            "kind": "جداول_سلاسل"
           }
         },
         {
@@ -696,9 +702,10 @@
           "source": "tests/integration/backend/backend_static_storage_test.baa",
           "status": "unsupported",
           "exit_code": 3,
-          "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم.",
+          "reason": "خطأ: رموز البيانات في مصدر نظم وكائنه يجب أن تكون عربية فقط.",
           "blocker": {
-            "kind": "متغيرات_عامة"
+            "kind": "اسم_رمز_غير_عربي",
+            "detail": "اسم_متغير_عام"
           }
         },
         {
@@ -714,27 +721,27 @@
           "source": "tests/integration/backend/backend_stdlib_v041_test.baa",
           "status": "unsupported",
           "exit_code": 3,
-          "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم.",
+          "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
           "blocker": {
-            "kind": "متغيرات_عامة"
+            "kind": "جداول_سلاسل"
           }
         },
         {
           "source": "tests/integration/backend/backend_string_builder_stdlib_v062_test.baa",
           "status": "unsupported",
           "exit_code": 3,
-          "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم.",
+          "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
           "blocker": {
-            "kind": "متغيرات_عامة"
+            "kind": "جداول_سلاسل"
           }
         },
         {
           "source": "tests/integration/backend/backend_string_ops_test.baa",
           "status": "unsupported",
           "exit_code": 3,
-          "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم.",
+          "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
           "blocker": {
-            "kind": "متغيرات_عامة"
+            "kind": "جداول_سلاسل"
           }
         },
         {
@@ -774,27 +781,27 @@
           "source": "tests/integration/backend/backend_test.baa",
           "status": "unsupported",
           "exit_code": 3,
-          "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم.",
+          "reason": "خطأ: نوع تهيئة المتغير العام غير مدعوم في مسار نظم.",
           "blocker": {
-            "kind": "متغيرات_عامة"
+            "kind": "نوع_تهيئة_عامة"
           }
         },
         {
           "source": "tests/integration/backend/backend_text_stdlib_helpers_v064_test.baa",
           "status": "unsupported",
           "exit_code": 3,
-          "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم.",
+          "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
           "blocker": {
-            "kind": "متغيرات_عامة"
+            "kind": "جداول_سلاسل"
           }
         },
         {
           "source": "tests/integration/backend/backend_type_alias_test.baa",
           "status": "unsupported",
           "exit_code": 3,
-          "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم.",
+          "reason": "خطأ: نوع معامل القيمة غير مدعوم في مسار نظم.",
           "blocker": {
-            "kind": "متغيرات_عامة"
+            "kind": "نوع_معامل_قيمة_غير_مدعوم"
           }
         },
         {
@@ -828,9 +835,9 @@
           "source": "tests/integration/backend/backend_vector_stdlib_v062_test.baa",
           "status": "unsupported",
           "exit_code": 3,
-          "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم.",
+          "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
           "blocker": {
-            "kind": "متغيرات_عامة"
+            "kind": "جداول_سلاسل"
           }
         },
         {
@@ -846,9 +853,9 @@
           "source": "tests/integration/frontend/frontend_extern_declarations_test.baa",
           "status": "unsupported",
           "exit_code": 3,
-          "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم.",
+          "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
           "blocker": {
-            "kind": "متغيرات_عامة"
+            "kind": "جداول_سلاسل"
           }
         },
         {
@@ -858,9 +865,9 @@
           "flags": [
             "-O1"
           ],
-          "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم.",
+          "reason": "خطأ: نوع معامل القيمة غير مدعوم في مسار نظم.",
           "blocker": {
-            "kind": "متغيرات_عامة"
+            "kind": "نوع_معامل_قيمة_غير_مدعوم"
           }
         },
         {
@@ -1016,9 +1023,9 @@
           "source": "tests/integration/ir/ir_test.baa",
           "status": "unsupported",
           "exit_code": 3,
-          "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم.",
+          "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
           "blocker": {
-            "kind": "متغيرات_عامة"
+            "kind": "جداول_سلاسل"
           }
         },
         {
@@ -1050,18 +1057,14 @@
     "x86_64-windows": {
       "source_count": 100,
       "summary": {
-        "emitted": 14,
-        "unsupported": 86,
+        "emitted": 15,
+        "unsupported": 85,
         "error": 0
       },
       "unsupported_reasons": [
         {
           "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
-          "count": 48
-        },
-        {
-          "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم.",
-          "count": 26
+          "count": 67
         },
         {
           "reason": "خطأ: أسماء الدوال في مصدر نظم يجب أن تكون عربية فقط.",
@@ -1072,6 +1075,14 @@
           "count": 4
         },
         {
+          "reason": "خطأ: نوع معامل القيمة غير مدعوم في مسار نظم.",
+          "count": 4
+        },
+        {
+          "reason": "خطأ: نوع تهيئة المتغير العام غير مدعوم في مسار نظم.",
+          "count": 2
+        },
+        {
           "reason": "خطأ: المعامل ليس سجلا ماديا بعرض ٨ أو ١٦ أو ٣٢ أو ٦٤ بت.",
           "count": 1
         },
@@ -1080,22 +1091,18 @@
           "count": 1
         },
         {
-          "reason": "خطأ: رموز الدوال في مصدر نظم وكائنه يجب أن تكون عربية فقط.",
+          "reason": "خطأ: رموز البيانات في مصدر نظم وكائنه يجب أن تكون عربية فقط.",
           "count": 1
         },
         {
-          "reason": "خطأ: نوع معامل القيمة غير مدعوم في مسار نظم.",
+          "reason": "خطأ: رموز الدوال في مصدر نظم وكائنه يجب أن تكون عربية فقط.",
           "count": 1
         }
       ],
       "unsupported_blockers": [
         {
           "kind": "جداول_سلاسل",
-          "count": 48
-        },
-        {
-          "kind": "متغيرات_عامة",
-          "count": 26
+          "count": 67
         },
         {
           "kind": "إعدادات_التحويل",
@@ -1106,7 +1113,20 @@
           "count": 4
         },
         {
+          "kind": "نوع_معامل_قيمة_غير_مدعوم",
+          "count": 4
+        },
+        {
+          "kind": "نوع_تهيئة_عامة",
+          "count": 2
+        },
+        {
           "kind": "اسم_رمز_غير_عربي",
+          "count": 1
+        },
+        {
+          "kind": "اسم_رمز_غير_عربي",
+          "detail": "اسم_متغير_عام",
           "count": 1
         },
         {
@@ -1116,10 +1136,6 @@
         },
         {
           "kind": "عرض_أو_نوع_معامل",
-          "count": 1
-        },
-        {
-          "kind": "نوع_معامل_قيمة_غير_مدعوم",
           "count": 1
         }
       ],
@@ -1194,9 +1210,9 @@
           "source": "tests/integration/backend/backend_byte_buffer_stdlib_v062_test.baa",
           "status": "unsupported",
           "exit_code": 3,
-          "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم.",
+          "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
           "blocker": {
-            "kind": "متغيرات_عامة"
+            "kind": "جداول_سلاسل"
           }
         },
         {
@@ -1240,27 +1256,27 @@
           "source": "tests/integration/backend/backend_dynamic_memory_test.baa",
           "status": "unsupported",
           "exit_code": 3,
-          "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم.",
+          "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
           "blocker": {
-            "kind": "متغيرات_عامة"
+            "kind": "جداول_سلاسل"
           }
         },
         {
           "source": "tests/integration/backend/backend_enum_struct_test.baa",
           "status": "unsupported",
           "exit_code": 3,
-          "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم.",
+          "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
           "blocker": {
-            "kind": "متغيرات_عامة"
+            "kind": "جداول_سلاسل"
           }
         },
         {
           "source": "tests/integration/backend/backend_error_handling_v043_test.baa",
           "status": "unsupported",
           "exit_code": 3,
-          "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم.",
+          "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
           "blocker": {
-            "kind": "متغيرات_عامة"
+            "kind": "جداول_سلاسل"
           }
         },
         {
@@ -1276,18 +1292,18 @@
           "source": "tests/integration/backend/backend_file_io_test.baa",
           "status": "unsupported",
           "exit_code": 3,
-          "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم.",
+          "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
           "blocker": {
-            "kind": "متغيرات_عامة"
+            "kind": "جداول_سلاسل"
           }
         },
         {
           "source": "tests/integration/backend/backend_float_extensions_v042_test.baa",
           "status": "unsupported",
           "exit_code": 3,
-          "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم.",
+          "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
           "blocker": {
-            "kind": "متغيرات_عامة"
+            "kind": "جداول_سلاسل"
           }
         },
         {
@@ -1313,20 +1329,17 @@
         },
         {
           "source": "tests/integration/backend/backend_global_array_init_test.baa",
-          "status": "unsupported",
-          "exit_code": 3,
-          "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم.",
-          "blocker": {
-            "kind": "متغيرات_عامة"
-          }
+          "status": "emitted",
+          "exit_code": 0,
+          "sha256": "feecf1cfc0f8c1fefab7c46cc7fc6463bf212f502067252c21eaa5ee8acbdd98"
         },
         {
           "source": "tests/integration/backend/backend_include_bom_test.baa",
           "status": "unsupported",
           "exit_code": 3,
-          "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم.",
+          "reason": "خطأ: نوع معامل القيمة غير مدعوم في مسار نظم.",
           "blocker": {
-            "kind": "متغيرات_عامة"
+            "kind": "نوع_معامل_قيمة_غير_مدعوم"
           }
         },
         {
@@ -1419,18 +1432,18 @@
           "source": "tests/integration/backend/backend_int_semantics_test.baa",
           "status": "unsupported",
           "exit_code": 3,
-          "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم.",
+          "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
           "blocker": {
-            "kind": "متغيرات_عامة"
+            "kind": "جداول_سلاسل"
           }
         },
         {
           "source": "tests/integration/backend/backend_low_level_ops_test.baa",
           "status": "unsupported",
           "exit_code": 3,
-          "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم.",
+          "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
           "blocker": {
-            "kind": "متغيرات_عامة"
+            "kind": "جداول_سلاسل"
           }
         },
         {
@@ -1452,18 +1465,18 @@
           "source": "tests/integration/backend/backend_multidim_array_test.baa",
           "status": "unsupported",
           "exit_code": 3,
-          "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم.",
+          "reason": "خطأ: نوع تهيئة المتغير العام غير مدعوم في مسار نظم.",
           "blocker": {
-            "kind": "متغيرات_عامة"
+            "kind": "نوع_تهيئة_عامة"
           }
         },
         {
           "source": "tests/integration/backend/backend_path_stdlib_v062_test.baa",
           "status": "unsupported",
           "exit_code": 3,
-          "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم.",
+          "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
           "blocker": {
-            "kind": "متغيرات_عامة"
+            "kind": "جداول_سلاسل"
           }
         },
         {
@@ -1509,18 +1522,18 @@
           "source": "tests/integration/backend/backend_regalloc_stress.baa",
           "status": "unsupported",
           "exit_code": 3,
-          "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم.",
+          "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
           "blocker": {
-            "kind": "متغيرات_عامة"
+            "kind": "جداول_سلاسل"
           }
         },
         {
           "source": "tests/integration/backend/backend_result_helpers_stdlib_v062_test.baa",
           "status": "unsupported",
           "exit_code": 3,
-          "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم.",
+          "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
           "blocker": {
-            "kind": "متغيرات_عامة"
+            "kind": "جداول_سلاسل"
           }
         },
         {
@@ -1704,9 +1717,9 @@
           "source": "tests/integration/backend/backend_scope_test.baa",
           "status": "unsupported",
           "exit_code": 3,
-          "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم.",
+          "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
           "blocker": {
-            "kind": "متغيرات_عامة"
+            "kind": "جداول_سلاسل"
           }
         },
         {
@@ -1731,9 +1744,10 @@
           "source": "tests/integration/backend/backend_static_storage_test.baa",
           "status": "unsupported",
           "exit_code": 3,
-          "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم.",
+          "reason": "خطأ: رموز البيانات في مصدر نظم وكائنه يجب أن تكون عربية فقط.",
           "blocker": {
-            "kind": "متغيرات_عامة"
+            "kind": "اسم_رمز_غير_عربي",
+            "detail": "اسم_متغير_عام"
           }
         },
         {
@@ -1749,27 +1763,27 @@
           "source": "tests/integration/backend/backend_stdlib_v041_test.baa",
           "status": "unsupported",
           "exit_code": 3,
-          "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم.",
+          "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
           "blocker": {
-            "kind": "متغيرات_عامة"
+            "kind": "جداول_سلاسل"
           }
         },
         {
           "source": "tests/integration/backend/backend_string_builder_stdlib_v062_test.baa",
           "status": "unsupported",
           "exit_code": 3,
-          "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم.",
+          "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
           "blocker": {
-            "kind": "متغيرات_عامة"
+            "kind": "جداول_سلاسل"
           }
         },
         {
           "source": "tests/integration/backend/backend_string_ops_test.baa",
           "status": "unsupported",
           "exit_code": 3,
-          "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم.",
+          "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
           "blocker": {
-            "kind": "متغيرات_عامة"
+            "kind": "جداول_سلاسل"
           }
         },
         {
@@ -1809,27 +1823,27 @@
           "source": "tests/integration/backend/backend_test.baa",
           "status": "unsupported",
           "exit_code": 3,
-          "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم.",
+          "reason": "خطأ: نوع تهيئة المتغير العام غير مدعوم في مسار نظم.",
           "blocker": {
-            "kind": "متغيرات_عامة"
+            "kind": "نوع_تهيئة_عامة"
           }
         },
         {
           "source": "tests/integration/backend/backend_text_stdlib_helpers_v064_test.baa",
           "status": "unsupported",
           "exit_code": 3,
-          "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم.",
+          "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
           "blocker": {
-            "kind": "متغيرات_عامة"
+            "kind": "جداول_سلاسل"
           }
         },
         {
           "source": "tests/integration/backend/backend_type_alias_test.baa",
           "status": "unsupported",
           "exit_code": 3,
-          "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم.",
+          "reason": "خطأ: نوع معامل القيمة غير مدعوم في مسار نظم.",
           "blocker": {
-            "kind": "متغيرات_عامة"
+            "kind": "نوع_معامل_قيمة_غير_مدعوم"
           }
         },
         {
@@ -1863,9 +1877,9 @@
           "source": "tests/integration/backend/backend_vector_stdlib_v062_test.baa",
           "status": "unsupported",
           "exit_code": 3,
-          "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم.",
+          "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
           "blocker": {
-            "kind": "متغيرات_عامة"
+            "kind": "جداول_سلاسل"
           }
         },
         {
@@ -1881,9 +1895,9 @@
           "source": "tests/integration/frontend/frontend_extern_declarations_test.baa",
           "status": "unsupported",
           "exit_code": 3,
-          "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم.",
+          "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
           "blocker": {
-            "kind": "متغيرات_عامة"
+            "kind": "جداول_سلاسل"
           }
         },
         {
@@ -1893,9 +1907,9 @@
           "flags": [
             "-O1"
           ],
-          "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم.",
+          "reason": "خطأ: نوع معامل القيمة غير مدعوم في مسار نظم.",
           "blocker": {
-            "kind": "متغيرات_عامة"
+            "kind": "نوع_معامل_قيمة_غير_مدعوم"
           }
         },
         {
@@ -2051,9 +2065,9 @@
           "source": "tests/integration/ir/ir_test.baa",
           "status": "unsupported",
           "exit_code": 3,
-          "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم.",
+          "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
           "blocker": {
-            "kind": "متغيرات_عامة"
+            "kind": "جداول_سلاسل"
           }
         },
         {

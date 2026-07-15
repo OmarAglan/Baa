@@ -18,6 +18,9 @@ typedef struct
     unsigned generated_line;
 } NazmSourceMapWriter;
 
+static BaaNazmEmitResult nazm_validate_globals(const MachineModule *module);
+static unsigned nazm_write_globals(FILE *out, const MachineModule *module);
+
 static const char *const k_nazm_registers[PHYS_REG_COUNT] = {
     "سجل_المركم",
     "سجل_العداد",
@@ -503,11 +506,9 @@ static BaaNazmEmitResult nazm_validate_module(const MachineModule *module,
                                 NULL,
                                 "وصف الهدف أو اتفاقية الاستدعاء مفقودة.",
                                 NULL);
-    if (module->global_count != 0 || module->globals != NULL)
-        return nazm_unsupported("متغيرات_عامة",
-                                NULL,
-                                "المتغيرات العامة غير مدعومة بعد في مسار نظم.",
-                                NULL);
+    BaaNazmEmitResult global_validation = nazm_validate_globals(module);
+    if (global_validation.status != BAA_NAZM_EMIT_OK)
+        return global_validation;
     if (module->string_count != 0 || module->strings != NULL ||
         module->baa_string_count != 0 || module->baa_strings != NULL)
         return nazm_unsupported("جداول_سلاسل",
@@ -804,6 +805,7 @@ static unsigned nazm_write_epilogue(FILE *out,
     return (unsigned)(callee_count + 3);
 }
 
+#include "emit_nazm_data.c"
 #include "emit_nazm_function.c"
 
 BaaNazmEmitResult emit_nazm_module_with_source_map(const MachineModule *module,
@@ -835,8 +837,10 @@ BaaNazmEmitResult emit_nazm_module_with_source_map(const MachineModule *module,
     }
 
     fputs("; مصدر نظم مولد من باء\n", out);
+    map.generated_line = 1;
+    map.generated_line += nazm_write_globals(out, module);
     fputs(".نص\n", out);
-    map.generated_line = 2;
+    map.generated_line += 1;
 
     for (const MachineFunc *func = module->funcs; func; func = func->next)
     {

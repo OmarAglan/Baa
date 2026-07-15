@@ -281,18 +281,36 @@ def _classify_relocations(
                 {
                     "status": "partial",
                     "reason": (
-                        "Calls to labels defined in the same .text input are resolved, but "
-                        "external-symbol call relocations are not implemented."
+                        "Local and Arabic external call relocations are supported, but "
+                        "Latin platform ABI symbols still require an Arabic bridge."
                     ),
                 }
             )
         elif form == "data:.quad":
-            row.update(
-                {
-                    "status": "unsupported",
-                    "reason": "Nazm does not implement data-section symbol relocations.",
-                }
-            )
+            if capabilities.get("relocations", {}).get("data_relocations"):
+                fixture = capabilities.get("baa_acceptance_fixtures", {}).get(
+                    "directives", {}
+                ).get(".quad|local-symbol")
+                if not fixture:
+                    raise ValueError(
+                        "supported data relocation has no acceptance fixture"
+                    )
+                row.update(
+                    {
+                        "status": "supported",
+                        "nazm_kind": "ABS64",
+                        "acceptance_fixture": fixture,
+                    }
+                )
+            else:
+                row.update(
+                    {
+                        "status": "unsupported",
+                        "reason": (
+                            "Nazm does not implement data-section symbol relocations."
+                        ),
+                    }
+                )
         elif "memory-rip-relative" in form:
             row.update(
                 {

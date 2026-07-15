@@ -38,4 +38,16 @@ BaaNazmEmitResult emit_nazm_module(const MachineModule *module,
                                    FILE *out,
                                    const BaaTarget *target);
 
+/**
+ * @brief إصدار مصدر نظم مع خريطة `baa-nazm-source-map-v1` اختيارية.
+ *
+ * تربط الخريطة أسطر نظم المولدة بملف/سطر/عمود باء الأصلي، وتحفظ المسارات
+ * كبايتات UTF-8 سداسية لتبقى قابلة للقراءة بلا غموض escaping على كل مضيف.
+ */
+BaaNazmEmitResult emit_nazm_module_with_source_map(const MachineModule *module,
+                                                   FILE *out,
+                                                   FILE *source_map,
+                                                   const char *generated_path,
+                                                   const BaaTarget *target);
+
 #endif

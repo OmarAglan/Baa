@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
+import json
 import os
 import re
 import shutil
 import struct
 import subprocess
+import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -223,6 +225,27 @@ class NazmEmitterTests(unittest.TestCase):
                         re.search(r"[A-Za-z]", text),
                         "Nazm source contains a Latin letter",
                     )
+                    source_map_path = Path(f"{output}.خريطة-باء.json")
+                    source_map = json.loads(source_map_path.read_text(encoding="utf-8"))
+                    self.assertEqual(source_map["schema"], "baa-nazm-source-map-v1")
+                    self.assertEqual(
+                        bytes.fromhex(source_map["generated_path_utf8_hex"]).decode("utf-8"),
+                        str(output),
+                    )
+                    self.assertGreaterEqual(len(source_map["entries"]), 1)
+                    mapped = source_map["entries"][0]
+                    self.assertEqual(
+                        bytes.fromhex(mapped["source_file_utf8_hex"]).decode("utf-8"),
+                        str(source),
+                    )
+                    self.assertEqual(mapped["source_line"], 2)
+                    generated_lines = text.splitlines()
+                    for line_number in range(
+                        mapped["generated_line_start"],
+                        mapped["generated_line_end"] + 1,
+                    ):
+                        self.assertGreaterEqual(line_number, 1)
+                        self.assertLessEqual(line_number, len(generated_lines))
 
     def test_unsupported_form_is_visible_and_leaves_no_output(self) -> None:
         with tempfile.TemporaryDirectory(prefix="baa_nazm_unsupported_") as temp:
@@ -239,6 +262,7 @@ class NazmEmitterTests(unittest.TestCase):
             self.assertEqual(proc.returncode, 3, proc.stderr)
             self.assertIn("غير مدعومة", proc.stderr)
             self.assertFalse(output.exists())
+            self.assertFalse(Path(f"{output}.خريطة-باء.json").exists())
 
     def test_unsupported_include_source_has_stable_diagnostic(self) -> None:
         with tempfile.TemporaryDirectory(prefix="baa_nazm_include_unsupported_") as temp:
@@ -291,6 +315,66 @@ class NazmEmitterTests(unittest.TestCase):
             self.assertIn("فشل مجمّع نظم", proc.stderr)
             self.assertFalse(output.exists(), "GAS output must not hide a shadow failure")
 
+    def test_shadow_assembler_failure_maps_back_to_baa_source(self) -> None:
+        compiler = shutil.which("gcc") or shutil.which("cc")
+        if compiler is None:
+            adjacent = Path(sys.executable).with_name(
+                "gcc.exe" if os.name == "nt" else "gcc"
+            )
+            if adjacent.is_file():
+                compiler = str(adjacent)
+        if compiler is None:
+            self.skipTest("A C compiler is required for the diagnostic adapter fixture")
+
+        with tempfile.TemporaryDirectory(prefix="baa_nazm_source_map_") as temp:
+            work = Path(temp)
+            source = self.write_minimal_source(work)
+            fake_source = work / "fake_nazm.c"
+            fake_executable = work / ("fake-nazm.exe" if os.name == "nt" else "fake-nazm")
+            fake_source.write_text(
+                "#include <stdio.h>\n"
+                "int main(int argc, char **argv) {\n"
+                "#ifdef _WIN32\n"
+                "  const int line = 11;\n"
+                "#else\n"
+                "  const int line = 10;\n"
+                "#endif\n"
+                "  if (argc < 2) return 2;\n"
+                '  fprintf(stderr, "%s:%d:1: synthetic nazm failure\\n", argv[argc - 1], line);\n'
+                "  return 9;\n"
+                "}\n",
+                encoding="utf-8",
+            )
+            build = subprocess.run(
+                [compiler, str(fake_source), "-o", str(fake_executable)],
+                cwd=str(work),
+                text=True,
+                encoding="utf-8",
+                errors="replace",
+                capture_output=True,
+                timeout=30,
+            )
+            self.assertEqual(build.returncode, 0, build.stderr)
+
+            output = work / ("برنامج.exe" if os.name == "nt" else "برنامج")
+            proc = self.run_baa(
+                work,
+                f"--nazm-shadow={fake_executable}",
+                str(source),
+                "-o",
+                str(output),
+            )
+
+            self.assertEqual(proc.returncode, 4, proc.stderr)
+            self.assertIn("synthetic nazm failure", proc.stderr)
+            self.assertIn("موضع باء الأصلي:", proc.stderr)
+            self.assertIn(str(source), proc.stderr)
+            self.assertRegex(proc.stderr, re.escape(str(source)) + r":2:\d+")
+            self.assertFalse(output.exists(), "GAS output must not hide a mapped Nazm failure")
+            shadow_source = Path(f"{output}.ظل-نظم.نظم")
+            self.assertFalse(shadow_source.exists())
+            self.assertFalse(Path(f"{shadow_source}.خريطة-باء.json").exists())
+
     def test_explicit_shadow_links_and_matches_minimal_runtime(self) -> None:
         nazm = _find_nazm()
         if nazm is None:
@@ -312,11 +396,17 @@ class NazmEmitterTests(unittest.TestCase):
             self.assertEqual(proc.returncode, 0, proc.stderr)
 
             shadow_source = Path(f"{output}.ظل-نظم.نظم")
+            shadow_map = Path(f"{shadow_source}.خريطة-باء.json")
             shadow_object = Path(f"{output}.ظل-نظم{object_suffix}")
             shadow_executable = Path(f"{output}.ظل-نظم{exe_suffix}")
             self.assertTrue(shadow_source.is_file())
+            self.assertTrue(shadow_map.is_file())
             self.assertTrue(shadow_object.is_file())
             self.assertTrue(shadow_executable.is_file())
+
+            source_map = json.loads(shadow_map.read_text(encoding="utf-8"))
+            self.assertEqual(source_map["schema"], "baa-nazm-source-map-v1")
+            self.assertGreaterEqual(len(source_map["entries"]), 1)
 
             nazm_text = shadow_source.read_text(encoding="utf-8")
             self.assertIsNone(re.search(r"[A-Za-z]", nazm_text))
@@ -378,10 +468,14 @@ class NazmEmitterTests(unittest.TestCase):
             self.assertEqual(proc.returncode, 0, proc.stderr)
 
             shadow_source = Path(f"{output}.ظل-نظم.نظم")
+            shadow_map = Path(f"{shadow_source}.خريطة-باء.json")
             shadow_object = Path(f"{output}.ظل-نظم{object_suffix}")
             shadow_executable = Path(f"{output}.ظل-نظم{exe_suffix}")
             nazm_text = shadow_source.read_text(encoding="utf-8")
             self.assertIsNone(re.search(r"[A-Za-z]", nazm_text))
+            source_map = json.loads(shadow_map.read_text(encoding="utf-8"))
+            self.assertEqual(source_map["schema"], "baa-nazm-source-map-v1")
+            self.assertGreaterEqual(len(source_map["entries"]), 1)
             self.assertTrue(shadow_object.is_file())
             self.assertTrue(shadow_executable.is_file())
 

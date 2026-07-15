@@ -107,6 +107,16 @@ class NazmShadowCorpusTests(unittest.TestCase):
         })
         self.assertEqual(index["عينة.باء"], ["-O1", "-fruntime-checks"])
 
+    def test_source_location_does_not_fragment_unsupported_reason_counts(self) -> None:
+        diagnostic = (
+            "خطأ في C:/مشروع/عينة.باء:7:13: "
+            "تعليمة الآلة غير مدعومة في شريحة نظم التنفيذية الأولى.\n"
+        )
+        self.assertEqual(
+            MATRIX._diagnostic(diagnostic),
+            "خطأ: تعليمة الآلة غير مدعومة في شريحة نظم التنفيذية الأولى.",
+        )
+
     @unittest.skipUnless(_find_baa(), "Baa compiler is unavailable")
     def test_checked_matrix_is_fresh_against_the_current_compiler(self) -> None:
         compiler = _find_baa()

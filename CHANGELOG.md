@@ -43,6 +43,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
     artifact paths remain mandatory on Windows and Linux CI.
   - Kept unsupported diagnostics source-level and deterministic instead of exposing borrowed
     include-path pointers whose lifetime differed between Windows and Linux.
+  - Added `baa-nazm-source-map-v1` sidecars that map generated Nazm line ranges to exact
+    UTF-8 Baa file/line/column spans. Shadow execution captures and replays Nazm stderr,
+    then appends the mapped original Baa location without shell parsing or fallback.
 - **First executable Arabic Nazm emitter slice**:
   - Added non-default `--emit-nazm` output after register allocation for a minimal integer
     entry program on Windows and Linux targets while leaving GAS as the production/default assembler.

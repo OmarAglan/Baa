@@ -1818,7 +1818,7 @@
 
 * \[x] **Generated-form corpus** — version `baa-nazm-coverage-v1` from the full 100-source, two-target inventory and assemble focused ELF64/COFF fixtures for every currently supported form; partial and unsupported forms remain explicit.
 * \[x] **Source-level shadow matrix** — classify all 100 sources on both targets as Arabic-only emitted, visibly unsupported, or gate error; the initial baseline admits 1 source and rejects 99 with status `3` and no output.
-* \[ ] **Source mapping** — retain Baa line/column identity through generated assembly diagnostics.
+* \[x] **Source mapping** — `baa-nazm-source-map-v1` binds generated Nazm line ranges to the original UTF-8 Baa file/line/column, and shadow assembler failures replay the Nazm diagnostic plus its mapped Baa location on Windows/Linux.
 * \[ ] **Inline assembly migration** — version the breaking move from raw `مجمع { ... }` GAS text to canonical `نظم { ... }` source.
 * \[x] **Target contract** — map Baa targets explicitly to Nazm ELF64/COFF modes.
 

@@ -23,6 +23,7 @@ DEFAULT_OUTPUT = ROOT / "docs" / "generated" / "baa_nazm_shadow_corpus_v1.json"
 TARGETS = ("x86_64-linux", "x86_64-windows")
 LATIN_LETTER_RE = re.compile(r"[A-Za-z]")
 LOCATION_RE = re.compile(r"\s+\((.+):(\d+):(\d+)\)\s*$")
+PREFIX_LOCATION_RE = re.compile(r"^خطأ في .+:\d+:\d+:\s*(.+)$")
 ARABIC_DIGIT_TRANSLATION = str.maketrans("0123456789", "٠١٢٣٤٥٦٧٨٩")
 INVENTORY_OUTPUT_FLAGS = {"-S", "-c", "--check", "--check-header", "--emit-ir"}
 
@@ -65,6 +66,9 @@ def _normalize_path(text: str) -> str:
 def _diagnostic(stderr: str) -> str:
     lines = [line.strip() for line in stderr.splitlines() if line.strip()]
     message = _normalize_path(lines[-1] if lines else "missing compiler diagnostic")
+    prefix_match = PREFIX_LOCATION_RE.match(message)
+    if prefix_match:
+        return f"خطأ: {prefix_match.group(1)}"
     match = LOCATION_RE.search(message)
     if not match:
         return message

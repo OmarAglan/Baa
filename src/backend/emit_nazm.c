@@ -11,6 +11,13 @@
 
 #include "regalloc.h"
 
+typedef struct
+{
+    FILE *out;
+    bool first_entry;
+    unsigned generated_line;
+} NazmSourceMapWriter;
+
 static const char *const k_nazm_registers[PHYS_REG_COUNT] = {
     "سجل_المركم",
     "سجل_العداد",
@@ -206,9 +213,9 @@ static void nazm_write_operand(FILE *out, const MachineOperand *operand)
     fputs(k_nazm_registers[operand->data.vreg], out);
 }
 
-static void nazm_write_source_span(FILE *out, const MachineInst *inst)
+static unsigned nazm_write_source_span(FILE *out, const MachineInst *inst)
 {
-    if (!inst || inst->src_line <= 0) return;
+    if (!inst || inst->src_line <= 0) return 0;
     fputs("    ; موضع باء: السطر ", out);
     nazm_write_unsigned(out, (uint64_t)inst->src_line);
     if (inst->src_col > 0)
@@ -217,6 +224,64 @@ static void nazm_write_source_span(FILE *out, const MachineInst *inst)
         nazm_write_unsigned(out, (uint64_t)inst->src_col);
     }
     fputc('\n', out);
+    return 1;
+}
+
+static void nazm_write_utf8_hex(FILE *out, const char *value)
+{
+    static const char digits[] = "0123456789abcdef";
+    if (!out || !value) return;
+    for (const unsigned char *p = (const unsigned char *)value; *p; ++p)
+    {
+        fputc(digits[*p >> 4], out);
+        fputc(digits[*p & 0x0fu], out);
+    }
+}
+
+static bool nazm_source_map_begin(NazmSourceMapWriter *map,
+                                  FILE *out,
+                                  const char *generated_path)
+{
+    if (!map) return false;
+    map->out = out;
+    map->first_entry = true;
+    map->generated_line = 0;
+    if (!out) return true;
+    fputs("{\n  \"schema\": \"baa-nazm-source-map-v1\",\n", out);
+    fputs("  \"generated_path_utf8_hex\": \"", out);
+    nazm_write_utf8_hex(out, generated_path ? generated_path : "");
+    fputs("\",\n  \"entries\": [\n", out);
+    return !ferror(out);
+}
+
+static void nazm_source_map_entry(NazmSourceMapWriter *map,
+                                  unsigned generated_start,
+                                  unsigned generated_end,
+                                  const MachineInst *inst)
+{
+    if (!map || !map->out || !inst || !inst->src_file ||
+        inst->src_line <= 0 || generated_start == 0 ||
+        generated_end < generated_start)
+        return;
+    fputs(map->first_entry ? "" : ",\n", map->out);
+    map->first_entry = false;
+    fprintf(map->out,
+            "    {\"generated_line_start\": %u, \"generated_line_end\": %u, "
+            "\"source_file_utf8_hex\": \"",
+            generated_start,
+            generated_end);
+    nazm_write_utf8_hex(map->out, inst->src_file);
+    fprintf(map->out,
+            "\", \"source_line\": %d, \"source_column\": %d}",
+            inst->src_line,
+            inst->src_col > 0 ? inst->src_col : 1);
+}
+
+static bool nazm_source_map_end(NazmSourceMapWriter *map)
+{
+    if (!map || !map->out) return true;
+    fputs("\n  ]\n}\n", map->out);
+    return !ferror(map->out);
 }
 
 static int nazm_frame_size(const MachineFunc *func, const BaaTarget *target)
@@ -228,9 +293,9 @@ static int nazm_frame_size(const MachineFunc *func, const BaaTarget *target)
     return total;
 }
 
-static void nazm_write_epilogue(FILE *out,
-                                bool is_arabic_entry,
-                                const BaaTarget *target)
+static unsigned nazm_write_epilogue(FILE *out,
+                                    bool is_arabic_entry,
+                                    const BaaTarget *target)
 {
     fputs("    انقل مؤشر_المكدس، مؤشر_القاعدة\n", out);
     fputs("    اسحب مؤشر_القاعدة\n", out);
@@ -239,24 +304,28 @@ static void nazm_write_epilogue(FILE *out,
         fputs("    انقل فهرس_الوجهة، سجل_المركم\n", out);
         fputs("    انقل سجل_المركم، ٦٠\n", out);
         fputs("    ناد_النظام\n", out);
-        return;
+        return 5;
     }
     fputs("    ارجع\n", out);
+    return 3;
 }
 
 static void nazm_write_function(FILE *out,
                                 const MachineFunc *func,
                                 const BaaTarget *target,
-                                unsigned function_id)
+                                unsigned function_id,
+                                NazmSourceMapWriter *map)
 {
     bool is_arabic_entry = strcmp(func->name, "الرئيسية") == 0;
     fputs("\n.عام ", out);
     fputs(func->name, out);
     fputc('\n', out);
+    map->generated_line += 2;
     fputs(func->name, out);
     fputs(":\n", out);
     fputs("    ادفع مؤشر_القاعدة\n", out);
     fputs("    انقل مؤشر_القاعدة، مؤشر_المكدس\n", out);
+    map->generated_line += 3;
 
     int frame_size = nazm_frame_size(func, target);
     if (frame_size > 0)
@@ -264,6 +333,7 @@ static void nazm_write_function(FILE *out,
         fputs("    اطرح مؤشر_المكدس، ", out);
         nazm_write_unsigned(out, (uint64_t)frame_size);
         fputc('\n', out);
+        map->generated_line += 1;
     }
 
     bool has_return = false;
@@ -271,7 +341,9 @@ static void nazm_write_function(FILE *out,
     {
         for (const MachineInst *inst = block->first; inst; inst = inst->next)
         {
-            nazm_write_source_span(out, inst);
+            map->generated_line += nazm_write_source_span(out, inst);
+            unsigned generated_start = map->generated_line + 1;
+            unsigned emitted_lines = 0;
             switch (inst->op)
             {
                 case MACH_LABEL:
@@ -280,6 +352,7 @@ static void nazm_write_function(FILE *out,
                     fputc('_', out);
                     nazm_write_unsigned(out, (uint64_t)inst->dst.data.label_id);
                     fputs(":\n", out);
+                    emitted_lines = 1;
                     break;
 
                 case MACH_MOV:
@@ -288,10 +361,11 @@ static void nazm_write_function(FILE *out,
                     fputs("، ", out);
                     nazm_write_operand(out, &inst->src1);
                     fputc('\n', out);
+                    emitted_lines = 1;
                     break;
 
                 case MACH_RET:
-                    nazm_write_epilogue(out, is_arabic_entry, target);
+                    emitted_lines = nazm_write_epilogue(out, is_arabic_entry, target);
                     has_return = true;
                     break;
 
@@ -302,20 +376,31 @@ static void nazm_write_function(FILE *out,
                 default:
                     break;
             }
+            map->generated_line += emitted_lines;
+            if (emitted_lines > 0)
+                nazm_source_map_entry(map,
+                                      generated_start,
+                                      map->generated_line,
+                                      inst);
         }
     }
 
     if (!has_return)
     {
         if (strcmp(func->name, "الرئيسية") == 0)
+        {
             fputs("    انقل سجل_المركم، ٠\n", out);
-        nazm_write_epilogue(out, is_arabic_entry, target);
+            map->generated_line += 1;
+        }
+        map->generated_line += nazm_write_epilogue(out, is_arabic_entry, target);
     }
 }
 
-BaaNazmEmitResult emit_nazm_module(const MachineModule *module,
-                                   FILE *out,
-                                   const BaaTarget *target)
+BaaNazmEmitResult emit_nazm_module_with_source_map(const MachineModule *module,
+                                                   FILE *out,
+                                                   FILE *source_map,
+                                                   const char *generated_path,
+                                                   const BaaTarget *target)
 {
     if (!out)
     {
@@ -329,24 +414,42 @@ BaaNazmEmitResult emit_nazm_module(const MachineModule *module,
     BaaNazmEmitResult validation = nazm_validate_module(module, target);
     if (validation.status != BAA_NAZM_EMIT_OK) return validation;
 
+    NazmSourceMapWriter map = {0};
+    if (!nazm_source_map_begin(&map, source_map, generated_path))
+    {
+        BaaNazmEmitResult result = {0};
+        result.status = BAA_NAZM_EMIT_IO_ERROR;
+        result.op = MACH_OP_COUNT;
+        result.reason = "فشلت كتابة خريطة مصدر نظم.";
+        return result;
+    }
+
     fputs("; مصدر نظم مولد من باء\n", out);
     fputs(".نص\n", out);
+    map.generated_line = 2;
 
     unsigned function_id = 0;
     for (const MachineFunc *func = module->funcs; func; func = func->next)
     {
         if (!func->is_prototype)
-            nazm_write_function(out, func, target, function_id++);
+            nazm_write_function(out, func, target, function_id++, &map);
     }
 
-    if (ferror(out))
+    if (!nazm_source_map_end(&map) || ferror(out))
     {
         BaaNazmEmitResult result = {0};
         result.status = BAA_NAZM_EMIT_IO_ERROR;
         result.op = MACH_OP_COUNT;
-        result.reason = "فشلت كتابة مصدر نظم.";
+        result.reason = "فشلت كتابة مصدر نظم أو خريطته.";
         return result;
     }
 
     return nazm_ok();
+}
+
+BaaNazmEmitResult emit_nazm_module(const MachineModule *module,
+                                   FILE *out,
+                                   const BaaTarget *target)
+{
+    return emit_nazm_module_with_source_map(module, out, NULL, NULL, target);
 }

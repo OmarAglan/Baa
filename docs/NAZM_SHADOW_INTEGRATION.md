@@ -96,9 +96,9 @@ artifact runs `--emit-nazm` against the same 100 sources for both targets. It
 records one explicit result per source: Arabic-only emission, visible
 unsupported status `3`, or a gate error. Unsupported results must leave no
 partial output. `baa-nazm-coverage-v1` embeds this complete matrix and pins its
-SHA-256 digest. The v1 matrix records the stable source and rejection reason,
-but deliberately does not pin an include-level line/column until Nazm source
-paths have an owned lifetime contract.
+SHA-256 digest. The matrix records the stable source and rejection reason;
+each emitted artifact separately carries the exact versioned source mapping
+described below rather than duplicating per-instruction spans in the corpus matrix.
 
 The initial source-level baseline is identical on Linux and Windows:
 
@@ -145,6 +145,24 @@ continue to exist for comparison, but it never converts a failed Nazm shadow
 result into success. Unsupported forms must be reported and remain visible in
 the coverage matrix.
 
+## Source-map and assembler-diagnostic contract
+
+Every successful `--emit-nazm` source `<output>` is accompanied by
+`<output>.خريطة-باء.json` using `baa-nazm-source-map-v1`. Each entry maps an
+inclusive generated Nazm line range to the originating Baa UTF-8 file, line,
+and column. File paths are stored as lowercase hexadecimal UTF-8 bytes so
+Windows separators, Arabic paths, quotes, and other valid path bytes require no
+host-specific JSON escaping. The generated `.نظم` source itself remains
+Arabic-only.
+
+The shadow driver redirects Nazm stderr without a shell, replays it unchanged,
+extracts the reported generated `file:line:column`, and resolves that line
+through the sidecar. When a mapping exists it adds a stable
+`موضع باء الأصلي: <file>:<line>:<column>` diagnostic. A malformed or missing
+map never turns an assembler failure into success. Focused tests use a failing
+assembler adapter to prove the mapping on Windows and Linux and also verify
+that unsupported emission leaves neither source nor sidecar output.
+
 ## Current admission status
 
 Stage B, the Stage B.1 comparison/fixture gate, and the first executable
@@ -160,11 +178,13 @@ build, but also invokes Nazm with structured argv and links these receipts next
 to the requested output:
 
 - `<output>.ظل-نظم.نظم` — canonical Arabic source;
+- `<output>.ظل-نظم.نظم.خريطة-باء.json` — `baa-nazm-source-map-v1` spans;
 - `<output>.ظل-نظم.obj` or `.o` — Nazm object;
 - `<output>.ظل-نظم.exe` or the suffixless Linux equivalent — shadow executable.
 
 Missing Nazm, an unsupported emitter form, assembler failure, or shadow-link
-failure makes the command fail; production GAS success never hides it. The
+failure makes the command fail; assembler diagnostics map back to Baa source
+locations, and production GAS success never hides it. The
 ecosystem test compares the synthetic minimal slice and the first admitted
 100-source corpus member for Arabic source, `.text`, exported entry symbol,
 relocation absence, link success, exit status, stdout, and stderr.

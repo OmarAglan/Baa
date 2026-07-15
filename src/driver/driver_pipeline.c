@@ -850,7 +850,8 @@ BaaCompilerExitCode driver_compile_files(const CompilerConfig *config,
     // كل ربط تنفيذي إنتاجي يضيف نقطة بدء عربية؛ لا يعتمد ABI على main.
     bool need_startup_obj =
         (!config->assembly_only && !config->emit_nazm && !config->compile_only &&
-         !config->check_only && !config->header_check);
+         !config->check_only && !config->header_check &&
+         !(config->target && config->target->obj_format == BAA_OBJFORMAT_COFF));
     int cap = (config->assembly_only || config->emit_nazm ||
                config->check_only || config->header_check) ? 0
         : (input_count + (need_startup_obj ? 1 : 0));

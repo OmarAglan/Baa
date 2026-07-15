@@ -56,9 +56,11 @@ static BaaNazmEmitResult nazm_validate_data_symbol(const char *name,
 {
     if (!name || !name[0])
         return nazm_unsupported(kind, NULL, "اسم رمز البيانات مفقود.", NULL);
-    if (nazm_identifier_has_ascii_letter(name))
+    if (nazm_identifier_has_ascii_letter(name) &&
+        !nazm_arabic_abi_symbol(name) &&
+        !nazm_is_generated_static_symbol(name))
         return nazm_unsupported("اسم_رمز_غير_عربي",
-                                kind,
+                                name,
                                 "رموز البيانات في مصدر نظم وكائنه يجب أن تكون عربية فقط.",
                                 NULL);
     return nazm_ok();
@@ -81,6 +83,9 @@ static BaaNazmEmitResult nazm_validate_data_value(const IRValue *value,
         bits == 64)
         return nazm_validate_data_symbol(value->data.global_name,
                                          "مرجع_تهيئة_عامة");
+    if ((value->kind == IR_VAL_CONST_STR || value->kind == IR_VAL_BAA_STR) &&
+        bits == 64 && value->data.const_str.id >= 0)
+        return nazm_ok();
 
     return nazm_unsupported("نوع_تهيئة_عامة",
                             NULL,
@@ -146,6 +151,49 @@ static BaaNazmEmitResult nazm_validate_globals(const MachineModule *module)
     return nazm_ok();
 }
 
+static BaaNazmEmitResult nazm_validate_string_tables(const MachineModule *module)
+{
+    if (!module) return nazm_ok();
+
+    int string_count = 0;
+    for (const IRStringEntry *string = module->strings;
+         string;
+         string = string->next)
+    {
+        if (string->id < 0 || !string->content)
+            return nazm_unsupported("جدول_سلاسل_سي_غير_صالح",
+                                    NULL,
+                                    "جدول سلاسل سي يحتوي مدخلا غير صالح.",
+                                    NULL);
+        string_count += 1;
+    }
+    if (string_count != module->string_count)
+        return nazm_unsupported("عدد_سلاسل_سي_غير_متسق",
+                                NULL,
+                                "عدد سلاسل سي لا يطابق قائمتها.",
+                                NULL);
+
+    int baa_string_count = 0;
+    for (const IRBaaStringEntry *string = module->baa_strings;
+         string;
+         string = string->next)
+    {
+        if (string->id < 0 || !string->content)
+            return nazm_unsupported("جدول_سلاسل_باء_غير_صالح",
+                                    NULL,
+                                    "جدول سلاسل باء يحتوي مدخلا غير صالح.",
+                                    NULL);
+        baa_string_count += 1;
+    }
+    if (baa_string_count != module->baa_string_count)
+        return nazm_unsupported("عدد_سلاسل_باء_غير_متسق",
+                                NULL,
+                                "عدد سلاسل باء لا يطابق قائمتها.",
+                                NULL);
+
+    return nazm_ok();
+}
+
 static void nazm_write_data_value(FILE *out, const IRValue *value)
 {
     if (!value || value->kind == IR_VAL_NONE)
@@ -158,13 +206,112 @@ static void nazm_write_data_value(FILE *out, const IRValue *value)
         nazm_write_signed(out, value->data.const_int);
         return;
     }
-    fputs(value->data.global_name, out);
+    if (value->kind == IR_VAL_CONST_STR || value->kind == IR_VAL_BAA_STR)
+    {
+        nazm_write_generated_string_label(
+            out,
+            value->kind == IR_VAL_BAA_STR,
+            (uint64_t)value->data.const_str.id);
+        return;
+    }
+    nazm_write_symbol(out, value->data.global_name);
+}
+
+static uint64_t nazm_pack_baa_character(const unsigned char **cursor)
+{
+    const unsigned char *p = *cursor;
+    unsigned char first = p[0];
+    int length = 0;
+    if ((first & 0x80u) == 0x00u) length = 1;
+    else if ((first & 0xe0u) == 0xc0u) length = 2;
+    else if ((first & 0xf0u) == 0xe0u) length = 3;
+    else if ((first & 0xf8u) == 0xf0u) length = 4;
+
+    unsigned char bytes[4] = {0, 0, 0, 0};
+    bool valid = length > 0;
+    for (int i = 0; valid && i < length; ++i)
+    {
+        unsigned char byte = p[i];
+        if (byte == 0 || (i > 0 && (byte & 0xc0u) != 0x80u))
+            valid = false;
+        else
+            bytes[i] = byte;
+    }
+
+    if (!valid)
+    {
+        bytes[0] = 0xefu;
+        bytes[1] = 0xbfu;
+        bytes[2] = 0xbdu;
+        length = 3;
+        *cursor = p + 1;
+    }
+    else
+    {
+        *cursor = p + (size_t)length;
+    }
+
+    uint64_t bytes_field = (uint64_t)bytes[0] |
+                           ((uint64_t)bytes[1] << 8) |
+                           ((uint64_t)bytes[2] << 16) |
+                           ((uint64_t)bytes[3] << 24);
+    return bytes_field | ((uint64_t)(unsigned)length << 32);
+}
+
+static unsigned nazm_write_string_tables(FILE *out,
+                                         const MachineModule *module)
+{
+    if (!module || (!module->strings && !module->baa_strings)) return 0;
+
+    fputs(".بيانات_للقراءة\n", out);
+    unsigned lines = 1;
+    for (const IRStringEntry *string = module->strings;
+         string;
+         string = string->next)
+    {
+        nazm_write_generated_string_label(out, false, (uint64_t)string->id);
+        fputs(":\n", out);
+        lines += 1;
+        for (const unsigned char *p = (const unsigned char *)string->content;
+             *p;
+             ++p)
+        {
+            fputs("    .عدد٨ ", out);
+            nazm_write_unsigned(out, (uint64_t)*p);
+            fputc('\n', out);
+            lines += 1;
+        }
+        fputs("    .عدد٨ ٠\n", out);
+        lines += 1;
+    }
+
+    for (const IRBaaStringEntry *string = module->baa_strings;
+         string;
+         string = string->next)
+    {
+        fputs("    .محاذاة ٨\n", out);
+        nazm_write_generated_string_label(out, true, (uint64_t)string->id);
+        fputs(":\n", out);
+        lines += 2;
+        const unsigned char *cursor = (const unsigned char *)string->content;
+        while (*cursor)
+        {
+            uint64_t packed = nazm_pack_baa_character(&cursor);
+            fputs("    .عدد٦٤ ", out);
+            nazm_write_unsigned(out, packed);
+            fputc('\n', out);
+            lines += 1;
+        }
+        fputs("    .عدد٦٤ ٠\n", out);
+        lines += 1;
+    }
+    return lines;
 }
 
 static unsigned nazm_write_global(FILE *out, const IRGlobal *global)
 {
     fputs(global->is_internal ? ".محلي " : ".عام ", out);
-    fputs(global->name, out);
+    nazm_write_symbol(out, global->name);
     fputc('\n', out);
     unsigned lines = 1;
 
@@ -183,7 +330,7 @@ static unsigned nazm_write_global(FILE *out, const IRGlobal *global)
             }
         }
 
-        fputs(global->name, out);
+        nazm_write_symbol(out, global->name);
         if (all_zero)
         {
             fputs(": .مساحة_صفرية ", out);
@@ -212,7 +359,7 @@ static unsigned nazm_write_global(FILE *out, const IRGlobal *global)
     }
 
     int bits = nazm_data_type_bits(global->type);
-    fputs(global->name, out);
+    nazm_write_symbol(out, global->name);
     fputs(": ", out);
     fputs(nazm_data_directive(bits), out);
     fputc(' ', out);
@@ -231,7 +378,7 @@ static unsigned nazm_write_globals(FILE *out, const MachineModule *module)
         if (global->is_extern)
         {
             fputs(".خارجي ", out);
-            fputs(global->name, out);
+            nazm_write_symbol(out, global->name);
             fputc('\n', out);
             lines += 1;
         }

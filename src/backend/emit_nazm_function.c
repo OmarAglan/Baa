@@ -72,23 +72,8 @@ static void nazm_write_function(FILE *out,
                     break;
 
                 case MACH_LEA:
-                    if (inst->src1.kind == MACH_OP_FUNC ||
-                        inst->src1.kind == MACH_OP_GLOBAL)
-                    {
-                        fputs("    انقل ", out);
-                        nazm_write_operand(out, &inst->dst);
-                        fputs("، ", out);
-                        fputs(inst->src1.data.name, out);
-                    }
-                    else
-                    {
-                        fputs("    احسب_عنوان ", out);
-                        nazm_write_operand(out, &inst->dst);
-                        fputs("، ", out);
-                        nazm_write_memory_operand(out, &inst->src1);
-                    }
-                    fputc('\n', out);
-                    emitted_lines = 1;
+                    emitted_lines = nazm_write_lea(
+                        out, &inst->dst, &inst->src1);
                     break;
 
                 case MACH_ADD:
@@ -117,13 +102,13 @@ static void nazm_write_function(FILE *out,
                     break;
 
                 case MACH_CMP:
-                    emitted_lines = nazm_write_binary(
-                        out, "قارن", &inst->src1, &inst->src2);
+                    emitted_lines = nazm_write_comparison(
+                        out, "قارن", &inst->src1, &inst->src2, true);
                     break;
 
                 case MACH_TEST:
-                    emitted_lines = nazm_write_binary(
-                        out, "اختبر_البتات", &inst->src1, &inst->src2);
+                    emitted_lines = nazm_write_comparison(
+                        out, "اختبر_البتات", &inst->src1, &inst->src2, false);
                     break;
 
                 case MACH_IMUL:
@@ -146,17 +131,17 @@ static void nazm_write_function(FILE *out,
                     break;
 
                 case MACH_SHL:
-                    emitted_lines = nazm_write_binary(
+                    emitted_lines = nazm_write_shift(
                         out, "ازح_يسارا", &inst->dst, &inst->src2);
                     break;
 
                 case MACH_SHR:
-                    emitted_lines = nazm_write_binary(
+                    emitted_lines = nazm_write_shift(
                         out, "ازح_منطقيا_يمينا", &inst->dst, &inst->src2);
                     break;
 
                 case MACH_SAR:
-                    emitted_lines = nazm_write_binary(
+                    emitted_lines = nazm_write_shift(
                         out, "ازح_حسابيا_يمينا", &inst->dst, &inst->src2);
                     break;
 
@@ -218,7 +203,7 @@ static void nazm_write_function(FILE *out,
 
                 case MACH_MOVZX:
                 case MACH_MOVSX:
-                    emitted_lines = nazm_write_binary(
+                    emitted_lines = nazm_write_extension(
                         out,
                         inst->op == MACH_MOVZX ? "وسع_بصفر" : "وسع_بإشارة",
                         &inst->dst,
@@ -228,7 +213,7 @@ static void nazm_write_function(FILE *out,
                 case MACH_CALL:
                     fputs("    ناد ", out);
                     if (inst->src1.kind == MACH_OP_FUNC)
-                        fputs(inst->src1.data.name, out);
+                        nazm_write_symbol(out, inst->src1.data.name);
                     else
                         nazm_write_operand(out, &inst->src1);
                     fputc('\n', out);

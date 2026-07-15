@@ -20,6 +20,37 @@ MATRIX = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(MATRIX)
 
 
+EXPECTED_TARGETS = {
+    "x86_64-linux": {
+        "summary": {"emitted": 46, "unsupported": 54, "error": 0},
+        "blockers": {
+            "إعدادات_التحويل": 4,
+            "اسم_دالة_غير_عربي": 4,
+            "تعليمة_آلة": 3,
+            "ذاكرة_غير_مدعومة_لهذه_التعليمة": 13,
+            "عرض_أو_نوع_معامل": 3,
+            "نوع_معامل_قيمة_غير_مدعوم": 27,
+        },
+        "emitted_sources_sha256": (
+            "1291c64dd31d03f6efdc3b31ad6c23f9fb80fe52d5d7c0fff988963bd573e090"
+        ),
+    },
+    "x86_64-windows": {
+        "summary": {"emitted": 47, "unsupported": 53, "error": 0},
+        "blockers": {
+            "إعدادات_التحويل": 4,
+            "اسم_دالة_غير_عربي": 4,
+            "تعليمة_آلة": 3,
+            "ذاكرة_غير_مدعومة_لهذه_التعليمة": 15,
+            "نوع_معامل_قيمة_غير_مدعوم": 27,
+        },
+        "emitted_sources_sha256": (
+            "7e08d8fc33a468a9faaf068a1e4f9e753e46956b1d381c84a0b2b451bd668ccf"
+        ),
+    },
+}
+
+
 def _find_baa() -> Path | None:
     configured = os.environ.get("BAA")
     candidates = [
@@ -49,22 +80,22 @@ class NazmShadowCorpusTests(unittest.TestCase):
 
         for target_name, inventory_target in self.inventory["targets"].items():
             target = self.matrix["targets"][target_name]
+            expected = EXPECTED_TARGETS[target_name]
             rows = target["sources"]
             self.assertEqual(target["source_count"], 100)
             self.assertEqual(len(rows), 100)
             self.assertEqual(
                 [row["source"] for row in rows], inventory_target["sources"]
             )
-            self.assertEqual(target["summary"], {
-                "emitted": 15,
-                "unsupported": 85,
-                "error": 0,
-            })
+            self.assertEqual(target["summary"], expected["summary"])
+            unsupported_count = expected["summary"]["unsupported"]
             self.assertEqual(
-                sum(item["count"] for item in target["unsupported_reasons"]), 85
+                sum(item["count"] for item in target["unsupported_reasons"]),
+                unsupported_count,
             )
             self.assertEqual(
-                sum(item["count"] for item in target["unsupported_blockers"]), 85
+                sum(item["count"] for item in target["unsupported_blockers"]),
+                unsupported_count,
             )
             self.assertTrue(all(
                 row["status"] in {"emitted", "unsupported"} for row in rows
@@ -86,37 +117,14 @@ class NazmShadowCorpusTests(unittest.TestCase):
                 blockers_by_kind[blocker["kind"]] = (
                     blockers_by_kind.get(blocker["kind"], 0) + blocker["count"]
                 )
-            self.assertEqual(blockers_by_kind, {
-                "جداول_سلاسل": 67,
-                "تعليمة_آلة": 1,
-                "اسم_دالة_غير_عربي": 4,
-                "إعدادات_التحويل": 4,
-                "اسم_رمز_غير_عربي": 2,
-                "عرض_أو_نوع_معامل": 1,
-                "نوع_معامل_قيمة_غير_مدعوم": 4,
-                "نوع_تهيئة_عامة": 2,
-            })
+            self.assertEqual(blockers_by_kind, expected["blockers"])
 
             emitted = [row for row in rows if row["status"] == "emitted"]
             self.assertEqual(
-                [row["source"] for row in emitted],
-                [
-                    "tests/integration/backend/backend_array_init_test.baa",
-                    "tests/integration/backend/backend_array_sum_test.baa",
-                    "tests/integration/backend/backend_const_pointer_rules_test.baa",
-                    "tests/integration/backend/backend_func_ptr_shadow_call_test.baa",
-                    "tests/integration/backend/backend_func_ptr_test.baa",
-                    "tests/integration/backend/backend_global_array_init_test.baa",
-                    "tests/integration/backend/backend_include_i_path_with_spaces_test.baa",
-                    "tests/integration/backend/backend_include_relative_alias_path_test.baa",
-                    "tests/integration/backend/backend_include_relative_dir_test.baa",
-                    "tests/integration/backend/backend_mod_test.baa",
-                    "tests/integration/backend/backend_pointer_core_test.baa",
-                    "tests/integration/backend/backend_pp_nested_test.baa",
-                    "tests/integration/backend/backend_struct_init_test.baa",
-                    "tests/integration/ir/ir_printer.baa",
-                    "tests/stress/stress_deep_scopes.baa",
-                ],
+                hashlib.sha256(
+                    "\n".join(row["source"] for row in emitted).encode("utf-8")
+                ).hexdigest(),
+                expected["emitted_sources_sha256"],
             )
             self.assertTrue(all(
                 re.fullmatch(r"[0-9a-f]{64}", row["sha256"])

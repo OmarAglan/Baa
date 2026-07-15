@@ -15,14 +15,18 @@
     "x86_64-linux": {
       "source_count": 100,
       "summary": {
-        "emitted": 15,
-        "unsupported": 85,
+        "emitted": 46,
+        "unsupported": 54,
         "error": 0
       },
       "unsupported_reasons": [
         {
-          "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
-          "count": 67
+          "reason": "خطأ: نوع معامل القيمة غير مدعوم في مسار نظم.",
+          "count": 27
+        },
+        {
+          "reason": "خطأ: معامل الذاكرة غير مدعوم لهذه التعليمة.",
+          "count": 13
         },
         {
           "reason": "خطأ: أسماء الدوال في مصدر نظم يجب أن تكون عربية فقط.",
@@ -33,34 +37,23 @@
           "count": 4
         },
         {
-          "reason": "خطأ: نوع معامل القيمة غير مدعوم في مسار نظم.",
-          "count": 4
-        },
-        {
-          "reason": "خطأ: نوع تهيئة المتغير العام غير مدعوم في مسار نظم.",
-          "count": 2
-        },
-        {
           "reason": "خطأ: المعامل ليس سجلا ماديا بعرض ٨ أو ١٦ أو ٣٢ أو ٦٤ بت.",
-          "count": 1
+          "count": 3
         },
         {
           "reason": "خطأ: تعليمة الآلة غير مدعومة في شريحة نظم التنفيذية الأولى.",
-          "count": 1
-        },
-        {
-          "reason": "خطأ: رموز البيانات في مصدر نظم وكائنه يجب أن تكون عربية فقط.",
-          "count": 1
-        },
-        {
-          "reason": "خطأ: رموز الدوال في مصدر نظم وكائنه يجب أن تكون عربية فقط.",
-          "count": 1
+          "count": 3
         }
       ],
       "unsupported_blockers": [
         {
-          "kind": "جداول_سلاسل",
-          "count": 67
+          "kind": "نوع_معامل_قيمة_غير_مدعوم",
+          "detail": "تحميل",
+          "count": 23
+        },
+        {
+          "kind": "ذاكرة_غير_مدعومة_لهذه_التعليمة",
+          "count": 13
         },
         {
           "kind": "إعدادات_التحويل",
@@ -72,28 +65,22 @@
         },
         {
           "kind": "نوع_معامل_قيمة_غير_مدعوم",
+          "detail": "نقل",
           "count": 4
         },
         {
-          "kind": "نوع_تهيئة_عامة",
-          "count": 2
-        },
-        {
-          "kind": "اسم_رمز_غير_عربي",
-          "count": 1
-        },
-        {
-          "kind": "اسم_رمز_غير_عربي",
-          "detail": "اسم_متغير_عام",
-          "count": 1
+          "kind": "عرض_أو_نوع_معامل",
+          "detail": "تعيين_مساو",
+          "count": 3
         },
         {
           "kind": "تعليمة_آلة",
           "detail": "تحويل_صحيح_إلى_عشري",
-          "count": 1
+          "count": 2
         },
         {
-          "kind": "عرض_أو_نوع_معامل",
+          "kind": "تعليمة_آلة",
+          "detail": "نظم_ضمني",
           "count": 1
         }
       ],
@@ -102,75 +89,66 @@
           "source": "examples/error_handling_demo.baa",
           "status": "unsupported",
           "exit_code": 3,
-          "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
+          "reason": "خطأ: المعامل ليس سجلا ماديا بعرض ٨ أو ١٦ أو ٣٢ أو ٦٤ بت.",
           "blocker": {
-            "kind": "جداول_سلاسل"
+            "kind": "عرض_أو_نوع_معامل",
+            "detail": "تعيين_مساو"
           }
         },
         {
           "source": "examples/file_copy_small.baa",
-          "status": "unsupported",
-          "exit_code": 3,
-          "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
-          "blocker": {
-            "kind": "جداول_سلاسل"
-          }
+          "status": "emitted",
+          "exit_code": 0,
+          "sha256": "6d7d66289e2dd11267bbe29eeaecb76e847adf6024d344daadd8a019052ee672"
         },
         {
           "source": "examples/hello_world.baa",
-          "status": "unsupported",
-          "exit_code": 3,
-          "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
-          "blocker": {
-            "kind": "جداول_سلاسل"
-          }
+          "status": "emitted",
+          "exit_code": 0,
+          "sha256": "01bf2bec3c9cdf91904fca1f872500649427405fc557156a9452e274b2006e0d"
         },
         {
           "source": "examples/math_and_format.baa",
           "status": "unsupported",
           "exit_code": 3,
-          "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
+          "reason": "خطأ: نوع معامل القيمة غير مدعوم في مسار نظم.",
           "blocker": {
-            "kind": "جداول_سلاسل"
+            "kind": "نوع_معامل_قيمة_غير_مدعوم",
+            "detail": "نقل"
           }
         },
         {
           "source": "tests/integration/backend/backend_arabic_numeral_source_tokens_v064_test.baa",
-          "status": "unsupported",
-          "exit_code": 3,
-          "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
-          "blocker": {
-            "kind": "جداول_سلاسل"
-          }
+          "status": "emitted",
+          "exit_code": 0,
+          "sha256": "166cf0bacc3f1e9809c22602960ea722c410fd0f89c737cf2e654019a9444759"
         },
         {
           "source": "tests/integration/backend/backend_array_init_test.baa",
           "status": "emitted",
           "exit_code": 0,
-          "sha256": "e0476370efd22dc2a3f0e50b443cd1168d66cf62670d27cf656690ba1e993f2e"
+          "sha256": "b41175583e7f0364ceba497eaf36ec936498b563dc278fb7cec75682a3365997"
         },
         {
           "source": "tests/integration/backend/backend_array_length_operator_test.baa",
-          "status": "unsupported",
-          "exit_code": 3,
-          "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
-          "blocker": {
-            "kind": "جداول_سلاسل"
-          }
+          "status": "emitted",
+          "exit_code": 0,
+          "sha256": "c8350fa39fe16fe3610d91b1191a188198dd39cc44ea48bd6ddeca4a9b3b9fbd"
         },
         {
           "source": "tests/integration/backend/backend_array_sum_test.baa",
           "status": "emitted",
           "exit_code": 0,
-          "sha256": "fe7595eb9a04192f2b5a3d0ed080709b84f41a3144a538f590124f9db2bcd99b"
+          "sha256": "f958ea8761d8b69382c4bc8d94b94580051013d283a92395e04aaf98cdbeb73e"
         },
         {
           "source": "tests/integration/backend/backend_byte_buffer_stdlib_v062_test.baa",
           "status": "unsupported",
           "exit_code": 3,
-          "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
+          "reason": "خطأ: نوع معامل القيمة غير مدعوم في مسار نظم.",
           "blocker": {
-            "kind": "جداول_سلاسل"
+            "kind": "نوع_معامل_قيمة_غير_مدعوم",
+            "detail": "تحميل"
           }
         },
         {
@@ -187,7 +165,7 @@
           "source": "tests/integration/backend/backend_const_pointer_rules_test.baa",
           "status": "emitted",
           "exit_code": 0,
-          "sha256": "27d301f947d6b58d639da556d03469dafb0a54eb89002148427681c1cb9f5415"
+          "sha256": "46edc018b0b831dd638cab79300c2335cd4a5ca3239dc03573d1e4a17b3db7d4"
         },
         {
           "source": "tests/integration/backend/backend_custom_startup_test.baa",
@@ -203,93 +181,92 @@
         },
         {
           "source": "tests/integration/backend/backend_dynamic_memory_noheader_test.baa",
-          "status": "unsupported",
-          "exit_code": 3,
-          "reason": "خطأ: رموز الدوال في مصدر نظم وكائنه يجب أن تكون عربية فقط.",
-          "blocker": {
-            "kind": "اسم_رمز_غير_عربي"
-          }
+          "status": "emitted",
+          "exit_code": 0,
+          "sha256": "187857a3419180bd1627026beec6725177414a6878cdfc3ee93fb6aec3508f00"
         },
         {
           "source": "tests/integration/backend/backend_dynamic_memory_test.baa",
           "status": "unsupported",
           "exit_code": 3,
-          "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
+          "reason": "خطأ: نوع معامل القيمة غير مدعوم في مسار نظم.",
           "blocker": {
-            "kind": "جداول_سلاسل"
+            "kind": "نوع_معامل_قيمة_غير_مدعوم",
+            "detail": "تحميل"
           }
         },
         {
           "source": "tests/integration/backend/backend_enum_struct_test.baa",
-          "status": "unsupported",
-          "exit_code": 3,
-          "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
-          "blocker": {
-            "kind": "جداول_سلاسل"
-          }
+          "status": "emitted",
+          "exit_code": 0,
+          "sha256": "7306d8ae7a602575c358e7f67bcb320ca313934155e4677bb1904635c36dfe93"
         },
         {
           "source": "tests/integration/backend/backend_error_handling_v043_test.baa",
           "status": "unsupported",
           "exit_code": 3,
-          "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
+          "reason": "خطأ: نوع معامل القيمة غير مدعوم في مسار نظم.",
           "blocker": {
-            "kind": "جداول_سلاسل"
+            "kind": "نوع_معامل_قيمة_غير_مدعوم",
+            "detail": "تحميل"
           }
         },
         {
           "source": "tests/integration/backend/backend_file_io_noheader_test.baa",
           "status": "unsupported",
           "exit_code": 3,
-          "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
+          "reason": "خطأ: معامل الذاكرة غير مدعوم لهذه التعليمة.",
           "blocker": {
-            "kind": "جداول_سلاسل"
+            "kind": "ذاكرة_غير_مدعومة_لهذه_التعليمة"
           }
         },
         {
           "source": "tests/integration/backend/backend_file_io_test.baa",
           "status": "unsupported",
           "exit_code": 3,
-          "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
+          "reason": "خطأ: نوع معامل القيمة غير مدعوم في مسار نظم.",
           "blocker": {
-            "kind": "جداول_سلاسل"
+            "kind": "نوع_معامل_قيمة_غير_مدعوم",
+            "detail": "تحميل"
           }
         },
         {
           "source": "tests/integration/backend/backend_float_extensions_v042_test.baa",
           "status": "unsupported",
           "exit_code": 3,
-          "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
+          "reason": "خطأ: نوع معامل القيمة غير مدعوم في مسار نظم.",
           "blocker": {
-            "kind": "جداول_سلاسل"
+            "kind": "نوع_معامل_قيمة_غير_مدعوم",
+            "detail": "تحميل"
           }
         },
         {
           "source": "tests/integration/backend/backend_format_arabic_test.baa",
           "status": "unsupported",
           "exit_code": 3,
-          "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
+          "reason": "خطأ: نوع معامل القيمة غير مدعوم في مسار نظم.",
           "blocker": {
-            "kind": "جداول_سلاسل"
+            "kind": "نوع_معامل_قيمة_غير_مدعوم",
+            "detail": "نقل"
           }
         },
         {
           "source": "tests/integration/backend/backend_func_ptr_shadow_call_test.baa",
           "status": "emitted",
           "exit_code": 0,
-          "sha256": "33c742718463572d2a544ae50ecaddfc6d9763bbd3d88f2f82775b893f0f53df"
+          "sha256": "6558361165f799d8b2cd06bf71cf5fce5d1b28080fbb71e82d3ebcca031c3474"
         },
         {
           "source": "tests/integration/backend/backend_func_ptr_test.baa",
           "status": "emitted",
           "exit_code": 0,
-          "sha256": "f75dae983191ff6f6c9f52bf998d26b57c2fa80661add52b4c7603e38c99141e"
+          "sha256": "01476c05d5345ad26ccde73a924792182530eb1a9763872ae32ddda23adde55d"
         },
         {
           "source": "tests/integration/backend/backend_global_array_init_test.baa",
           "status": "emitted",
           "exit_code": 0,
-          "sha256": "9817f0f54a167275ea87f58860d9398a7ac4f86de862d5df79cc62d3ae55a800"
+          "sha256": "d9df88cc9d597d7d5c68a7ce0fd42c7ce7839a23e10d783d73517ba767b89366"
         },
         {
           "source": "tests/integration/backend/backend_include_bom_test.baa",
@@ -297,7 +274,8 @@
           "exit_code": 3,
           "reason": "خطأ: نوع معامل القيمة غير مدعوم في مسار نظم.",
           "blocker": {
-            "kind": "نوع_معامل_قيمة_غير_مدعوم"
+            "kind": "نوع_معامل_قيمة_غير_مدعوم",
+            "detail": "تحميل"
           }
         },
         {
@@ -335,7 +313,7 @@
             "-I",
             "tests/fixtures/include i space"
           ],
-          "sha256": "22bee7d0379742f971d475db301557eac7bf42e3612e4027cd63803779ee6551"
+          "sha256": "21f110add2ca71eb052e9ed86a0d7ffc12cd22d4706dbf2a153de333e2d87f5f"
         },
         {
           "source": "tests/integration/backend/backend_include_i_precedence_test.baa",
@@ -369,160 +347,152 @@
           "source": "tests/integration/backend/backend_include_relative_alias_path_test.baa",
           "status": "emitted",
           "exit_code": 0,
-          "sha256": "d2d0df0830a5e9a2e56663151ca3d01c0eb93e87d20c252b2d12142c113167c8"
+          "sha256": "8d83339c73a0db780d48770ce628388d67b8bc5ba55486eb2098332fa4b10205"
         },
         {
           "source": "tests/integration/backend/backend_include_relative_dir_test.baa",
           "status": "emitted",
           "exit_code": 0,
-          "sha256": "81736dc4a97c38c703829915a0613b356054bcc5c933e08afc14eb7e982be05f"
+          "sha256": "3fad93f24dac102bb98db0a35736a55e1f349afdc09f5756c869eb975c1abe0e"
         },
         {
           "source": "tests/integration/backend/backend_inline_test.baa",
-          "status": "unsupported",
-          "exit_code": 3,
-          "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
-          "blocker": {
-            "kind": "جداول_سلاسل"
-          }
+          "status": "emitted",
+          "exit_code": 0,
+          "sha256": "0408722b5a323ff3a49f91b5d3b883b686bcf2f9b23e087886d93fc7b187d875"
         },
         {
           "source": "tests/integration/backend/backend_int_semantics_test.baa",
           "status": "unsupported",
           "exit_code": 3,
-          "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
+          "reason": "خطأ: نوع معامل القيمة غير مدعوم في مسار نظم.",
           "blocker": {
-            "kind": "جداول_سلاسل"
+            "kind": "نوع_معامل_قيمة_غير_مدعوم",
+            "detail": "تحميل"
           }
         },
         {
           "source": "tests/integration/backend/backend_low_level_ops_test.baa",
           "status": "unsupported",
           "exit_code": 3,
-          "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
+          "reason": "خطأ: نوع معامل القيمة غير مدعوم في مسار نظم.",
           "blocker": {
-            "kind": "جداول_سلاسل"
+            "kind": "نوع_معامل_قيمة_غير_مدعوم",
+            "detail": "تحميل"
           }
         },
         {
           "source": "tests/integration/backend/backend_main_args_test.baa",
           "status": "unsupported",
           "exit_code": 3,
-          "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
+          "reason": "خطأ: معامل الذاكرة غير مدعوم لهذه التعليمة.",
           "blocker": {
-            "kind": "جداول_سلاسل"
+            "kind": "ذاكرة_غير_مدعومة_لهذه_التعليمة"
           }
         },
         {
           "source": "tests/integration/backend/backend_mod_test.baa",
           "status": "emitted",
           "exit_code": 0,
-          "sha256": "f3284a5edc23adfdde0803acbed42e7d1d098f7fcac6f462f0242a1e0f3715bc"
+          "sha256": "366b952d70f4c47942e8b5a764aed83d04493a7ead8f2b98d1406fe57cec85f4"
         },
         {
           "source": "tests/integration/backend/backend_multidim_array_test.baa",
           "status": "unsupported",
           "exit_code": 3,
-          "reason": "خطأ: نوع تهيئة المتغير العام غير مدعوم في مسار نظم.",
+          "reason": "خطأ: نوع معامل القيمة غير مدعوم في مسار نظم.",
           "blocker": {
-            "kind": "نوع_تهيئة_عامة"
+            "kind": "نوع_معامل_قيمة_غير_مدعوم",
+            "detail": "نقل"
           }
         },
         {
           "source": "tests/integration/backend/backend_path_stdlib_v062_test.baa",
           "status": "unsupported",
           "exit_code": 3,
-          "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
+          "reason": "خطأ: نوع معامل القيمة غير مدعوم في مسار نظم.",
           "blocker": {
-            "kind": "جداول_سلاسل"
+            "kind": "نوع_معامل_قيمة_غير_مدعوم",
+            "detail": "تحميل"
           }
         },
         {
           "source": "tests/integration/backend/backend_pointer_core_test.baa",
           "status": "emitted",
           "exit_code": 0,
-          "sha256": "3395c2274624c36d1e9c1523abdf2036f607fbf9e7967273a61a8806c3ae33ee"
+          "sha256": "de5c1fc6078e3954e2ddf86a80128092f072702943bf8b4173dbec532c785442"
         },
         {
           "source": "tests/integration/backend/backend_pp_nested_test.baa",
           "status": "emitted",
           "exit_code": 0,
-          "sha256": "4fa6b9bbfaadc9141b3351325ad6e1fb98e51152257627d06c88e44b58414709"
+          "sha256": "a08434ca715e6239a9777e397203798fc26638668593d2a1988c6c966a1624ed"
         },
         {
           "source": "tests/integration/backend/backend_process_runtime_v065_test.baa",
           "status": "unsupported",
           "exit_code": 3,
-          "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
+          "reason": "خطأ: معامل الذاكرة غير مدعوم لهذه التعليمة.",
           "blocker": {
-            "kind": "جداول_سلاسل"
+            "kind": "ذاكرة_غير_مدعومة_لهذه_التعليمة"
           }
         },
         {
           "source": "tests/integration/backend/backend_readline_stdin_test.baa",
           "status": "unsupported",
           "exit_code": 3,
-          "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
+          "reason": "خطأ: المعامل ليس سجلا ماديا بعرض ٨ أو ١٦ أو ٣٢ أو ٦٤ بت.",
           "blocker": {
-            "kind": "جداول_سلاسل"
+            "kind": "عرض_أو_نوع_معامل",
+            "detail": "تعيين_مساو"
           }
         },
         {
           "source": "tests/integration/backend/backend_readnum_stdin_test.baa",
-          "status": "unsupported",
-          "exit_code": 3,
-          "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
-          "blocker": {
-            "kind": "جداول_سلاسل"
-          }
+          "status": "emitted",
+          "exit_code": 0,
+          "sha256": "371680b8b79f279dc48c3e000997eb1d2fe84c65dc2dd38d77670d9e17d62031"
         },
         {
           "source": "tests/integration/backend/backend_regalloc_stress.baa",
           "status": "unsupported",
           "exit_code": 3,
-          "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
+          "reason": "خطأ: نوع معامل القيمة غير مدعوم في مسار نظم.",
           "blocker": {
-            "kind": "جداول_سلاسل"
+            "kind": "نوع_معامل_قيمة_غير_مدعوم",
+            "detail": "تحميل"
           }
         },
         {
           "source": "tests/integration/backend/backend_result_helpers_stdlib_v062_test.baa",
           "status": "unsupported",
           "exit_code": 3,
-          "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
+          "reason": "خطأ: نوع معامل القيمة غير مدعوم في مسار نظم.",
           "blocker": {
-            "kind": "جداول_سلاسل"
+            "kind": "نوع_معامل_قيمة_غير_مدعوم",
+            "detail": "تحميل"
           }
         },
         {
           "source": "tests/integration/backend/backend_runtime_assert_fail_v055_test.baa",
-          "status": "unsupported",
-          "exit_code": 3,
-          "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
-          "blocker": {
-            "kind": "جداول_سلاسل"
-          }
+          "status": "emitted",
+          "exit_code": 0,
+          "sha256": "d8ef0c7eafaebda814c1e5d67ca44ac15940c648340085a867c5b5324904365a"
         },
         {
           "source": "tests/integration/backend/backend_runtime_assert_pass_v055_test.baa",
-          "status": "unsupported",
-          "exit_code": 3,
-          "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
-          "blocker": {
-            "kind": "جداول_سلاسل"
-          }
+          "status": "emitted",
+          "exit_code": 0,
+          "sha256": "8c5912ba842516e8f2fda58a99da6eae4fbb3dd4df90811dc147ea8d09a2a9ee"
         },
         {
           "source": "tests/integration/backend/backend_runtime_bounds_fail_v055_test.baa",
-          "status": "unsupported",
-          "exit_code": 3,
+          "status": "emitted",
+          "exit_code": 0,
           "flags": [
             "-fruntime-checks"
           ],
-          "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
-          "blocker": {
-            "kind": "جداول_سلاسل"
-          }
+          "sha256": "e593ac2c5c8fc4bad5cb2c6f36e1fed8193aa7cd29a94391eba74f353659d19c"
         },
         {
           "source": "tests/integration/backend/backend_runtime_checks_selective_bounds_fail_v063_test.baa",
@@ -531,112 +501,85 @@
           "flags": [
             "-fruntime-checks=bounds"
           ],
-          "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
+          "reason": "خطأ: معامل الذاكرة غير مدعوم لهذه التعليمة.",
           "blocker": {
-            "kind": "جداول_سلاسل"
+            "kind": "ذاكرة_غير_مدعومة_لهذه_التعليمة"
           }
         },
         {
           "source": "tests/integration/backend/backend_runtime_checks_selective_null_fail_v063_test.baa",
-          "status": "unsupported",
-          "exit_code": 3,
+          "status": "emitted",
+          "exit_code": 0,
           "flags": [
             "-fruntime-checks=null"
           ],
-          "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
-          "blocker": {
-            "kind": "جداول_سلاسل"
-          }
+          "sha256": "fdbf62f665d75d3f5a4480dfbf93560b92bc7ddf664ded80e3c1656b9985f365"
         },
         {
           "source": "tests/integration/backend/backend_runtime_div_zero_fail_v063_test.baa",
-          "status": "unsupported",
-          "exit_code": 3,
+          "status": "emitted",
+          "exit_code": 0,
           "flags": [
             "-fruntime-checks"
           ],
-          "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
-          "blocker": {
-            "kind": "جداول_سلاسل"
-          }
+          "sha256": "b853a731085d3b343c96d2634960cc7c73a3e2e29f0408a13a82aa03aa003c67"
         },
         {
           "source": "tests/integration/backend/backend_runtime_mod_zero_fail_v063_test.baa",
-          "status": "unsupported",
-          "exit_code": 3,
+          "status": "emitted",
+          "exit_code": 0,
           "flags": [
             "-fruntime-checks"
           ],
-          "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
-          "blocker": {
-            "kind": "جداول_سلاسل"
-          }
+          "sha256": "a61af7db18a9e0817fa7f01205f031d8ab4b01cbf6bf7de62ff4f0437c5f5e48"
         },
         {
           "source": "tests/integration/backend/backend_runtime_null_deref_assign_fail_v063_test.baa",
-          "status": "unsupported",
-          "exit_code": 3,
+          "status": "emitted",
+          "exit_code": 0,
           "flags": [
             "-fruntime-checks"
           ],
-          "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
-          "blocker": {
-            "kind": "جداول_سلاسل"
-          }
+          "sha256": "d282fd722c9701578c36451d238a556dbcdb5fb25f2b68c93e564cbe347a6c12"
         },
         {
           "source": "tests/integration/backend/backend_runtime_null_deref_fail_v063_test.baa",
-          "status": "unsupported",
-          "exit_code": 3,
+          "status": "emitted",
+          "exit_code": 0,
           "flags": [
             "-fruntime-checks"
           ],
-          "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
-          "blocker": {
-            "kind": "جداول_سلاسل"
-          }
+          "sha256": "99557d483a362b074879c63d06a34e824bd188cf73fa36463d024f6b7d8991bf"
         },
         {
           "source": "tests/integration/backend/backend_runtime_panic_location_v063_test.baa",
-          "status": "unsupported",
-          "exit_code": 3,
-          "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
-          "blocker": {
-            "kind": "جداول_سلاسل"
-          }
+          "status": "emitted",
+          "exit_code": 0,
+          "sha256": "6d0b478ef5a2a1b3f786d435219b2dee8f4dfe504afde64b4ecbf5e70887b4d8"
         },
         {
           "source": "tests/integration/backend/backend_runtime_panic_v055_test.baa",
-          "status": "unsupported",
-          "exit_code": 3,
-          "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
-          "blocker": {
-            "kind": "جداول_سلاسل"
-          }
+          "status": "emitted",
+          "exit_code": 0,
+          "sha256": "778c43f1a698ad096914364ed35d7f53ce7d0cc7b3852625bb032458ec088adb"
         },
         {
           "source": "tests/integration/backend/backend_runtime_shift_width_high_fail_v063_test.baa",
-          "status": "unsupported",
-          "exit_code": 3,
+          "status": "emitted",
+          "exit_code": 0,
           "flags": [
             "-fruntime-checks"
           ],
-          "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
-          "blocker": {
-            "kind": "جداول_سلاسل"
-          }
+          "sha256": "03fe55733bf74c323dd096cc74ecde758f27f85b368b95f0c68ab7d1cf4b81b7"
         },
         {
           "source": "tests/integration/backend/backend_runtime_shift_width_negative_fail_v063_test.baa",
-          "status": "unsupported",
-          "exit_code": 3,
+          "status": "emitted",
+          "exit_code": 0,
           "flags": [
             "-fruntime-checks"
           ],
-          "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
-          "blocker": {
-            "kind": "جداول_سلاسل"
-          }
+          "sha256": "a25b30008bd88025fa791796858d6ca05cf2732dd3e295c13cbb762dc9bf7c2e"
         },
         {
           "source": "tests/integration/backend/backend_runtime_string_array_inner_bounds_fail_v063_test.baa",
@@ -645,9 +588,9 @@
           "flags": [
             "-fruntime-checks"
           ],
-          "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
+          "reason": "خطأ: معامل الذاكرة غير مدعوم لهذه التعليمة.",
           "blocker": {
-            "kind": "جداول_سلاسل"
+            "kind": "ذاكرة_غير_مدعومة_لهذه_التعليمة"
           }
         },
         {
@@ -657,107 +600,106 @@
           "flags": [
             "-fruntime-checks"
           ],
-          "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
+          "reason": "خطأ: معامل الذاكرة غير مدعوم لهذه التعليمة.",
           "blocker": {
-            "kind": "جداول_سلاسل"
+            "kind": "ذاكرة_غير_مدعومة_لهذه_التعليمة"
           }
         },
         {
           "source": "tests/integration/backend/backend_scan_arabic_test.baa",
           "status": "unsupported",
           "exit_code": 3,
-          "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
+          "reason": "خطأ: المعامل ليس سجلا ماديا بعرض ٨ أو ١٦ أو ٣٢ أو ٦٤ بت.",
           "blocker": {
-            "kind": "جداول_سلاسل"
+            "kind": "عرض_أو_نوع_معامل",
+            "detail": "تعيين_مساو"
           }
         },
         {
           "source": "tests/integration/backend/backend_scope_test.baa",
           "status": "unsupported",
           "exit_code": 3,
-          "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
+          "reason": "خطأ: نوع معامل القيمة غير مدعوم في مسار نظم.",
           "blocker": {
-            "kind": "جداول_سلاسل"
+            "kind": "نوع_معامل_قيمة_غير_مدعوم",
+            "detail": "تحميل"
           }
         },
         {
           "source": "tests/integration/backend/backend_sha256_file_v066_test.baa",
           "status": "unsupported",
           "exit_code": 3,
-          "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
+          "reason": "خطأ: معامل الذاكرة غير مدعوم لهذه التعليمة.",
           "blocker": {
-            "kind": "جداول_سلاسل"
+            "kind": "ذاكرة_غير_مدعومة_لهذه_التعليمة"
           }
         },
         {
           "source": "tests/integration/backend/backend_stackargs_test.baa",
-          "status": "unsupported",
-          "exit_code": 3,
-          "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
-          "blocker": {
-            "kind": "جداول_سلاسل"
-          }
+          "status": "emitted",
+          "exit_code": 0,
+          "sha256": "f4dba789efb2edd0337d9988104ed6957bb28831389b0adc4984c6ce8215219b"
         },
         {
           "source": "tests/integration/backend/backend_static_storage_test.baa",
           "status": "unsupported",
           "exit_code": 3,
-          "reason": "خطأ: رموز البيانات في مصدر نظم وكائنه يجب أن تكون عربية فقط.",
+          "reason": "خطأ: نوع معامل القيمة غير مدعوم في مسار نظم.",
           "blocker": {
-            "kind": "اسم_رمز_غير_عربي",
-            "detail": "اسم_متغير_عام"
+            "kind": "نوع_معامل_قيمة_غير_مدعوم",
+            "detail": "تحميل"
           }
         },
         {
           "source": "tests/integration/backend/backend_stdlib_short_include_test.baa",
           "status": "unsupported",
           "exit_code": 3,
-          "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
+          "reason": "خطأ: معامل الذاكرة غير مدعوم لهذه التعليمة.",
           "blocker": {
-            "kind": "جداول_سلاسل"
+            "kind": "ذاكرة_غير_مدعومة_لهذه_التعليمة"
           }
         },
         {
           "source": "tests/integration/backend/backend_stdlib_v041_test.baa",
           "status": "unsupported",
           "exit_code": 3,
-          "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
+          "reason": "خطأ: نوع معامل القيمة غير مدعوم في مسار نظم.",
           "blocker": {
-            "kind": "جداول_سلاسل"
+            "kind": "نوع_معامل_قيمة_غير_مدعوم",
+            "detail": "تحميل"
           }
         },
         {
           "source": "tests/integration/backend/backend_string_builder_stdlib_v062_test.baa",
           "status": "unsupported",
           "exit_code": 3,
-          "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
+          "reason": "خطأ: نوع معامل القيمة غير مدعوم في مسار نظم.",
           "blocker": {
-            "kind": "جداول_سلاسل"
+            "kind": "نوع_معامل_قيمة_غير_مدعوم",
+            "detail": "تحميل"
           }
         },
         {
           "source": "tests/integration/backend/backend_string_ops_test.baa",
           "status": "unsupported",
           "exit_code": 3,
-          "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
+          "reason": "خطأ: نوع معامل القيمة غير مدعوم في مسار نظم.",
           "blocker": {
-            "kind": "جداول_سلاسل"
+            "kind": "نوع_معامل_قيمة_غير_مدعوم",
+            "detail": "تحميل"
           }
         },
         {
           "source": "tests/integration/backend/backend_struct_init_test.baa",
           "status": "emitted",
           "exit_code": 0,
-          "sha256": "e915658ac83e08a1f68f95df6b55c00d08c1ac0786fef722b232cfb8b27a63d2"
+          "sha256": "b7122f83e84655b94558f2f93dcc65b02213e2414d20b2d614042699d42acee5"
         },
         {
           "source": "tests/integration/backend/backend_sysv_6args_test.baa",
-          "status": "unsupported",
-          "exit_code": 3,
-          "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
-          "blocker": {
-            "kind": "جداول_سلاسل"
-          }
+          "status": "emitted",
+          "exit_code": 0,
+          "sha256": "0bf4449951e93f80fc98187a0e9ee5b1cef0b6ae612fb15623b8ae8f9fb6e7c6"
         },
         {
           "source": "tests/integration/backend/backend_tailcall_float_test.baa",
@@ -765,34 +707,34 @@
           "exit_code": 3,
           "reason": "خطأ: نوع معامل القيمة غير مدعوم في مسار نظم.",
           "blocker": {
-            "kind": "نوع_معامل_قيمة_غير_مدعوم"
+            "kind": "نوع_معامل_قيمة_غير_مدعوم",
+            "detail": "نقل"
           }
         },
         {
           "source": "tests/integration/backend/backend_tailcall_test.baa",
-          "status": "unsupported",
-          "exit_code": 3,
-          "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
-          "blocker": {
-            "kind": "جداول_سلاسل"
-          }
+          "status": "emitted",
+          "exit_code": 0,
+          "sha256": "d4e0c8fa965fcfaa7688f471ce758e9980ad4e4560a4b62c5a253af70f040a35"
         },
         {
           "source": "tests/integration/backend/backend_test.baa",
           "status": "unsupported",
           "exit_code": 3,
-          "reason": "خطأ: نوع تهيئة المتغير العام غير مدعوم في مسار نظم.",
+          "reason": "خطأ: نوع معامل القيمة غير مدعوم في مسار نظم.",
           "blocker": {
-            "kind": "نوع_تهيئة_عامة"
+            "kind": "نوع_معامل_قيمة_غير_مدعوم",
+            "detail": "تحميل"
           }
         },
         {
           "source": "tests/integration/backend/backend_text_stdlib_helpers_v064_test.baa",
           "status": "unsupported",
           "exit_code": 3,
-          "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
+          "reason": "خطأ: نوع معامل القيمة غير مدعوم في مسار نظم.",
           "blocker": {
-            "kind": "جداول_سلاسل"
+            "kind": "نوع_معامل_قيمة_غير_مدعوم",
+            "detail": "تحميل"
           }
         },
         {
@@ -801,61 +743,59 @@
           "exit_code": 3,
           "reason": "خطأ: نوع معامل القيمة غير مدعوم في مسار نظم.",
           "blocker": {
-            "kind": "نوع_معامل_قيمة_غير_مدعوم"
+            "kind": "نوع_معامل_قيمة_غير_مدعوم",
+            "detail": "تحميل"
           }
         },
         {
           "source": "tests/integration/backend/backend_union_test.baa",
-          "status": "unsupported",
-          "exit_code": 3,
-          "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
-          "blocker": {
-            "kind": "جداول_سلاسل"
-          }
+          "status": "emitted",
+          "exit_code": 0,
+          "sha256": "ee8c626150c49af58cb1780f3bfaf1f3e0136f579231cdeb4b58d9f74a55061a"
         },
         {
           "source": "tests/integration/backend/backend_utf8_validation_valid_v064_test.baa",
           "status": "unsupported",
           "exit_code": 3,
-          "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
+          "reason": "خطأ: معامل الذاكرة غير مدعوم لهذه التعليمة.",
           "blocker": {
-            "kind": "جداول_سلاسل"
+            "kind": "ذاكرة_غير_مدعومة_لهذه_التعليمة"
           }
         },
         {
           "source": "tests/integration/backend/backend_variadic_functions_test.baa",
           "status": "unsupported",
           "exit_code": 3,
-          "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
+          "reason": "خطأ: تعليمة الآلة غير مدعومة في شريحة نظم التنفيذية الأولى.",
           "blocker": {
-            "kind": "جداول_سلاسل"
+            "kind": "تعليمة_آلة",
+            "detail": "تحويل_صحيح_إلى_عشري"
           }
         },
         {
           "source": "tests/integration/backend/backend_vector_stdlib_v062_test.baa",
           "status": "unsupported",
           "exit_code": 3,
-          "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
+          "reason": "خطأ: نوع معامل القيمة غير مدعوم في مسار نظم.",
           "blocker": {
-            "kind": "جداول_سلاسل"
+            "kind": "نوع_معامل_قيمة_غير_مدعوم",
+            "detail": "تحميل"
           }
         },
         {
           "source": "tests/integration/backend/int_sizes_test.baa",
-          "status": "unsupported",
-          "exit_code": 3,
-          "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
-          "blocker": {
-            "kind": "جداول_سلاسل"
-          }
+          "status": "emitted",
+          "exit_code": 0,
+          "sha256": "346b1fa21a65b23331b89d9dd1d1bf0f62aab54f60980be419805514bcbc8d61"
         },
         {
           "source": "tests/integration/frontend/frontend_extern_declarations_test.baa",
           "status": "unsupported",
           "exit_code": 3,
-          "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
+          "reason": "خطأ: نوع معامل القيمة غير مدعوم في مسار نظم.",
           "blocker": {
-            "kind": "جداول_سلاسل"
+            "kind": "نوع_معامل_قيمة_غير_مدعوم",
+            "detail": "تحميل"
           }
         },
         {
@@ -867,7 +807,8 @@
           ],
           "reason": "خطأ: نوع معامل القيمة غير مدعوم في مسار نظم.",
           "blocker": {
-            "kind": "نوع_معامل_قيمة_غير_مدعوم"
+            "kind": "نوع_معامل_قيمة_غير_مدعوم",
+            "detail": "تحميل"
           }
         },
         {
@@ -900,16 +841,17 @@
           "source": "tests/integration/ir/ir_inline_asm_test.baa",
           "status": "unsupported",
           "exit_code": 3,
-          "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
+          "reason": "خطأ: تعليمة الآلة غير مدعومة في شريحة نظم التنفيذية الأولى.",
           "blocker": {
-            "kind": "جداول_سلاسل"
+            "kind": "تعليمة_آلة",
+            "detail": "نظم_ضمني"
           }
         },
         {
           "source": "tests/integration/ir/ir_printer.baa",
           "status": "emitted",
           "exit_code": 0,
-          "sha256": "0c7cc16889ee9617680b5be88712d4514bc229380e4af5dbb488b29d2fb0d799"
+          "sha256": "eecd2b434baa4c06fe8c6dc28fb73c6662ebb583e647c36256a02494fc530673"
         },
         {
           "source": "tests/integration/ir/ir_runtime_bounds_debug_info_no_checks_v055_test.baa",
@@ -925,15 +867,12 @@
         },
         {
           "source": "tests/integration/ir/ir_runtime_bounds_enabled_v055_test.baa",
-          "status": "unsupported",
-          "exit_code": 3,
+          "status": "emitted",
+          "exit_code": 0,
           "flags": [
             "-fruntime-checks"
           ],
-          "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
-          "blocker": {
-            "kind": "جداول_سلاسل"
-          }
+          "sha256": "54b0d4c75c6f97d71632ca04f401e9cb2a7174a92a65125ee1e917a58d682079"
         },
         {
           "source": "tests/integration/ir/ir_runtime_checks_none_v063_test.baa",
@@ -942,9 +881,9 @@
           "flags": [
             "-fruntime-checks=none"
           ],
-          "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
+          "reason": "خطأ: معامل الذاكرة غير مدعوم لهذه التعليمة.",
           "blocker": {
-            "kind": "جداول_سلاسل"
+            "kind": "ذاكرة_غير_مدعومة_لهذه_التعليمة"
           }
         },
         {
@@ -954,58 +893,46 @@
           "flags": [
             "-fruntime-checks=bounds+shift"
           ],
-          "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
+          "reason": "خطأ: معامل الذاكرة غير مدعوم لهذه التعليمة.",
           "blocker": {
-            "kind": "جداول_سلاسل"
+            "kind": "ذاكرة_غير_مدعومة_لهذه_التعليمة"
           }
         },
         {
           "source": "tests/integration/ir/ir_runtime_checks_selective_null_div_v063_test.baa",
-          "status": "unsupported",
-          "exit_code": 3,
+          "status": "emitted",
+          "exit_code": 0,
           "flags": [
             "-fruntime-checks=null,div-zero"
           ],
-          "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
-          "blocker": {
-            "kind": "جداول_سلاسل"
-          }
+          "sha256": "c13932d4ab9c57c8836e0370fe4be5bd6e0f72e9565512feb48edc230d26cbea"
         },
         {
           "source": "tests/integration/ir/ir_runtime_div_zero_enabled_v063_test.baa",
-          "status": "unsupported",
-          "exit_code": 3,
+          "status": "emitted",
+          "exit_code": 0,
           "flags": [
             "-fruntime-checks"
           ],
-          "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
-          "blocker": {
-            "kind": "جداول_سلاسل"
-          }
+          "sha256": "fe2e0ba1c9d97ca3d993133fe6e1389104b8b164000202261f451fb120832250"
         },
         {
           "source": "tests/integration/ir/ir_runtime_null_deref_enabled_v063_test.baa",
-          "status": "unsupported",
-          "exit_code": 3,
+          "status": "emitted",
+          "exit_code": 0,
           "flags": [
             "-fruntime-checks"
           ],
-          "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
-          "blocker": {
-            "kind": "جداول_سلاسل"
-          }
+          "sha256": "05c1233b72e75d4c923da4adab6c677e2cae80dd5c98a30e679489c3ee8352bd"
         },
         {
           "source": "tests/integration/ir/ir_runtime_shift_width_enabled_v063_test.baa",
-          "status": "unsupported",
-          "exit_code": 3,
+          "status": "emitted",
+          "exit_code": 0,
           "flags": [
             "-fruntime-checks"
           ],
-          "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
-          "blocker": {
-            "kind": "جداول_سلاسل"
-          }
+          "sha256": "485b23b5799c02004c4b96a919bf086b7d25e562471251a760509eb568275aa3"
         },
         {
           "source": "tests/integration/ir/ir_runtime_string_bounds_enabled_v063_test.baa",
@@ -1014,42 +941,40 @@
           "flags": [
             "-fruntime-checks"
           ],
-          "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
+          "reason": "خطأ: معامل الذاكرة غير مدعوم لهذه التعليمة.",
           "blocker": {
-            "kind": "جداول_سلاسل"
+            "kind": "ذاكرة_غير_مدعومة_لهذه_التعليمة"
           }
         },
         {
           "source": "tests/integration/ir/ir_test.baa",
           "status": "unsupported",
           "exit_code": 3,
-          "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
+          "reason": "خطأ: نوع معامل القيمة غير مدعوم في مسار نظم.",
           "blocker": {
-            "kind": "جداول_سلاسل"
+            "kind": "نوع_معامل_قيمة_غير_مدعوم",
+            "detail": "تحميل"
           }
         },
         {
           "source": "tests/stress/stress_deep_scopes.baa",
           "status": "emitted",
           "exit_code": 0,
-          "sha256": "440c47ec253743ea7a524807ba743f19c84e6b5b3268c192492b8349b6a88381"
+          "sha256": "c7757ca33bbeda6cdf35a645164197c296cf7d6425ee4ce186034f981b41774b"
         },
         {
           "source": "tests/stress/stress_symbol_volume.baa",
-          "status": "unsupported",
-          "exit_code": 3,
-          "reason": "خطأ: المعامل ليس سجلا ماديا بعرض ٨ أو ١٦ أو ٣٢ أو ٦٤ بت.",
-          "blocker": {
-            "kind": "عرض_أو_نوع_معامل"
-          }
+          "status": "emitted",
+          "exit_code": 0,
+          "sha256": "e33ca6687e98842ac48e7f6536755eacfee1f991b2835c5ce1e1c7ce66e3d8e3"
         },
         {
           "source": "tests/stress/stress_utf8_identifiers.baa",
           "status": "unsupported",
           "exit_code": 3,
-          "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
+          "reason": "خطأ: معامل الذاكرة غير مدعوم لهذه التعليمة.",
           "blocker": {
-            "kind": "جداول_سلاسل"
+            "kind": "ذاكرة_غير_مدعومة_لهذه_التعليمة"
           }
         }
       ]
@@ -1057,14 +982,18 @@
     "x86_64-windows": {
       "source_count": 100,
       "summary": {
-        "emitted": 15,
-        "unsupported": 85,
+        "emitted": 47,
+        "unsupported": 53,
         "error": 0
       },
       "unsupported_reasons": [
         {
-          "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
-          "count": 67
+          "reason": "خطأ: نوع معامل القيمة غير مدعوم في مسار نظم.",
+          "count": 27
+        },
+        {
+          "reason": "خطأ: معامل الذاكرة غير مدعوم لهذه التعليمة.",
+          "count": 15
         },
         {
           "reason": "خطأ: أسماء الدوال في مصدر نظم يجب أن تكون عربية فقط.",
@@ -1075,34 +1004,19 @@
           "count": 4
         },
         {
-          "reason": "خطأ: نوع معامل القيمة غير مدعوم في مسار نظم.",
-          "count": 4
-        },
-        {
-          "reason": "خطأ: نوع تهيئة المتغير العام غير مدعوم في مسار نظم.",
-          "count": 2
-        },
-        {
-          "reason": "خطأ: المعامل ليس سجلا ماديا بعرض ٨ أو ١٦ أو ٣٢ أو ٦٤ بت.",
-          "count": 1
-        },
-        {
           "reason": "خطأ: تعليمة الآلة غير مدعومة في شريحة نظم التنفيذية الأولى.",
-          "count": 1
-        },
-        {
-          "reason": "خطأ: رموز البيانات في مصدر نظم وكائنه يجب أن تكون عربية فقط.",
-          "count": 1
-        },
-        {
-          "reason": "خطأ: رموز الدوال في مصدر نظم وكائنه يجب أن تكون عربية فقط.",
-          "count": 1
+          "count": 3
         }
       ],
       "unsupported_blockers": [
         {
-          "kind": "جداول_سلاسل",
-          "count": 67
+          "kind": "نوع_معامل_قيمة_غير_مدعوم",
+          "detail": "تحميل",
+          "count": 23
+        },
+        {
+          "kind": "ذاكرة_غير_مدعومة_لهذه_التعليمة",
+          "count": 15
         },
         {
           "kind": "إعدادات_التحويل",
@@ -1114,105 +1028,81 @@
         },
         {
           "kind": "نوع_معامل_قيمة_غير_مدعوم",
+          "detail": "نقل",
           "count": 4
-        },
-        {
-          "kind": "نوع_تهيئة_عامة",
-          "count": 2
-        },
-        {
-          "kind": "اسم_رمز_غير_عربي",
-          "count": 1
-        },
-        {
-          "kind": "اسم_رمز_غير_عربي",
-          "detail": "اسم_متغير_عام",
-          "count": 1
         },
         {
           "kind": "تعليمة_آلة",
           "detail": "تحويل_صحيح_إلى_عشري",
-          "count": 1
+          "count": 2
         },
         {
-          "kind": "عرض_أو_نوع_معامل",
+          "kind": "تعليمة_آلة",
+          "detail": "نظم_ضمني",
           "count": 1
         }
       ],
       "sources": [
         {
           "source": "examples/error_handling_demo.baa",
-          "status": "unsupported",
-          "exit_code": 3,
-          "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
-          "blocker": {
-            "kind": "جداول_سلاسل"
-          }
+          "status": "emitted",
+          "exit_code": 0,
+          "sha256": "0ba3674850a382e15d26e83b7d7edf62a199a550b0579df39b7e508e857e97be"
         },
         {
           "source": "examples/file_copy_small.baa",
-          "status": "unsupported",
-          "exit_code": 3,
-          "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
-          "blocker": {
-            "kind": "جداول_سلاسل"
-          }
+          "status": "emitted",
+          "exit_code": 0,
+          "sha256": "702bae86c6ba9f7e64ef8b495718f44d7b18a8e37bb8517058f0ddf4ee0bdbd4"
         },
         {
           "source": "examples/hello_world.baa",
-          "status": "unsupported",
-          "exit_code": 3,
-          "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
-          "blocker": {
-            "kind": "جداول_سلاسل"
-          }
+          "status": "emitted",
+          "exit_code": 0,
+          "sha256": "c20fe1a3ce48cbd7035dca76e760edbc1254383c73dd53900138804e449cd252"
         },
         {
           "source": "examples/math_and_format.baa",
           "status": "unsupported",
           "exit_code": 3,
-          "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
+          "reason": "خطأ: نوع معامل القيمة غير مدعوم في مسار نظم.",
           "blocker": {
-            "kind": "جداول_سلاسل"
+            "kind": "نوع_معامل_قيمة_غير_مدعوم",
+            "detail": "نقل"
           }
         },
         {
           "source": "tests/integration/backend/backend_arabic_numeral_source_tokens_v064_test.baa",
-          "status": "unsupported",
-          "exit_code": 3,
-          "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
-          "blocker": {
-            "kind": "جداول_سلاسل"
-          }
+          "status": "emitted",
+          "exit_code": 0,
+          "sha256": "fb8ea5d0d6d56c8a10655f17d300e3dc09a2c7de32fc3788ba192eef18e11d83"
         },
         {
           "source": "tests/integration/backend/backend_array_init_test.baa",
           "status": "emitted",
           "exit_code": 0,
-          "sha256": "d98a96a601b31f13fd59a3aef1c556ffdebce42a62ef864726c877788d363277"
+          "sha256": "eb46c7e3d779d0ef8bc23bb2c7f5a0f5d639badd74d91e9041ae864be09fe686"
         },
         {
           "source": "tests/integration/backend/backend_array_length_operator_test.baa",
-          "status": "unsupported",
-          "exit_code": 3,
-          "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
-          "blocker": {
-            "kind": "جداول_سلاسل"
-          }
+          "status": "emitted",
+          "exit_code": 0,
+          "sha256": "94a90e5f1058518520908e298af17039b262b76bd534627a6f38fa687a8f2830"
         },
         {
           "source": "tests/integration/backend/backend_array_sum_test.baa",
           "status": "emitted",
           "exit_code": 0,
-          "sha256": "5f6eb4c05e8042580b9a3547dc0e674535b6a963d3a9bc58faad049fee59a509"
+          "sha256": "4d8776ae1e6241323ffca34058f1d678b99fd62b0037bfc946a1e4f5cac9b980"
         },
         {
           "source": "tests/integration/backend/backend_byte_buffer_stdlib_v062_test.baa",
           "status": "unsupported",
           "exit_code": 3,
-          "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
+          "reason": "خطأ: نوع معامل القيمة غير مدعوم في مسار نظم.",
           "blocker": {
-            "kind": "جداول_سلاسل"
+            "kind": "نوع_معامل_قيمة_غير_مدعوم",
+            "detail": "تحميل"
           }
         },
         {
@@ -1229,7 +1119,7 @@
           "source": "tests/integration/backend/backend_const_pointer_rules_test.baa",
           "status": "emitted",
           "exit_code": 0,
-          "sha256": "12133a1f69734e99b42aba1c8ca7828dd98ee98f31962413907d64045816d3a9"
+          "sha256": "23655f1a0e20d9d5a547cc569eb270628a1138ea9643b0829afe55676e57d68a"
         },
         {
           "source": "tests/integration/backend/backend_custom_startup_test.baa",
@@ -1245,93 +1135,91 @@
         },
         {
           "source": "tests/integration/backend/backend_dynamic_memory_noheader_test.baa",
-          "status": "unsupported",
-          "exit_code": 3,
-          "reason": "خطأ: رموز الدوال في مصدر نظم وكائنه يجب أن تكون عربية فقط.",
-          "blocker": {
-            "kind": "اسم_رمز_غير_عربي"
-          }
+          "status": "emitted",
+          "exit_code": 0,
+          "sha256": "1c75eab9b335a1ef57015539dc39c7aa30a66a008b006807cda8e4bb512c88a7"
         },
         {
           "source": "tests/integration/backend/backend_dynamic_memory_test.baa",
           "status": "unsupported",
           "exit_code": 3,
-          "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
+          "reason": "خطأ: نوع معامل القيمة غير مدعوم في مسار نظم.",
           "blocker": {
-            "kind": "جداول_سلاسل"
+            "kind": "نوع_معامل_قيمة_غير_مدعوم",
+            "detail": "تحميل"
           }
         },
         {
           "source": "tests/integration/backend/backend_enum_struct_test.baa",
-          "status": "unsupported",
-          "exit_code": 3,
-          "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
-          "blocker": {
-            "kind": "جداول_سلاسل"
-          }
+          "status": "emitted",
+          "exit_code": 0,
+          "sha256": "dd56c0240178c4ed5f5565df1b760184ce1ed4091e42e0f016eaef1341b325da"
         },
         {
           "source": "tests/integration/backend/backend_error_handling_v043_test.baa",
           "status": "unsupported",
           "exit_code": 3,
-          "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
+          "reason": "خطأ: نوع معامل القيمة غير مدعوم في مسار نظم.",
           "blocker": {
-            "kind": "جداول_سلاسل"
+            "kind": "نوع_معامل_قيمة_غير_مدعوم",
+            "detail": "تحميل"
           }
         },
         {
           "source": "tests/integration/backend/backend_file_io_noheader_test.baa",
           "status": "unsupported",
           "exit_code": 3,
-          "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
+          "reason": "خطأ: معامل الذاكرة غير مدعوم لهذه التعليمة.",
           "blocker": {
-            "kind": "جداول_سلاسل"
+            "kind": "ذاكرة_غير_مدعومة_لهذه_التعليمة"
           }
         },
         {
           "source": "tests/integration/backend/backend_file_io_test.baa",
           "status": "unsupported",
           "exit_code": 3,
-          "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
+          "reason": "خطأ: نوع معامل القيمة غير مدعوم في مسار نظم.",
           "blocker": {
-            "kind": "جداول_سلاسل"
+            "kind": "نوع_معامل_قيمة_غير_مدعوم",
+            "detail": "تحميل"
           }
         },
         {
           "source": "tests/integration/backend/backend_float_extensions_v042_test.baa",
           "status": "unsupported",
           "exit_code": 3,
-          "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
+          "reason": "خطأ: نوع معامل القيمة غير مدعوم في مسار نظم.",
           "blocker": {
-            "kind": "جداول_سلاسل"
+            "kind": "نوع_معامل_قيمة_غير_مدعوم",
+            "detail": "تحميل"
           }
         },
         {
           "source": "tests/integration/backend/backend_format_arabic_test.baa",
           "status": "unsupported",
           "exit_code": 3,
-          "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
+          "reason": "خطأ: معامل الذاكرة غير مدعوم لهذه التعليمة.",
           "blocker": {
-            "kind": "جداول_سلاسل"
+            "kind": "ذاكرة_غير_مدعومة_لهذه_التعليمة"
           }
         },
         {
           "source": "tests/integration/backend/backend_func_ptr_shadow_call_test.baa",
           "status": "emitted",
           "exit_code": 0,
-          "sha256": "94e1eab31061cf11e801dca37bcd2822658301b72e33139ccb45129cb28ce5d6"
+          "sha256": "c0ed9ef5ed071952511def7b7a7bb3158ded22b55eff258c0d9e01c6b77a4fd5"
         },
         {
           "source": "tests/integration/backend/backend_func_ptr_test.baa",
           "status": "emitted",
           "exit_code": 0,
-          "sha256": "7a31e2b95472332adce9345e2faf8669f5c4bf1b0919d669653639495b8752c2"
+          "sha256": "10ec1b6cda41da8ef4f85835b488493912bff4cd0c25987ce9cd89d11f49484d"
         },
         {
           "source": "tests/integration/backend/backend_global_array_init_test.baa",
           "status": "emitted",
           "exit_code": 0,
-          "sha256": "feecf1cfc0f8c1fefab7c46cc7fc6463bf212f502067252c21eaa5ee8acbdd98"
+          "sha256": "3bdbcda27331817ea85c03ccd3237eecd083eab05d4b07824db8ead41e68feb3"
         },
         {
           "source": "tests/integration/backend/backend_include_bom_test.baa",
@@ -1339,7 +1227,8 @@
           "exit_code": 3,
           "reason": "خطأ: نوع معامل القيمة غير مدعوم في مسار نظم.",
           "blocker": {
-            "kind": "نوع_معامل_قيمة_غير_مدعوم"
+            "kind": "نوع_معامل_قيمة_غير_مدعوم",
+            "detail": "تحميل"
           }
         },
         {
@@ -1377,7 +1266,7 @@
             "-I",
             "tests/fixtures/include i space"
           ],
-          "sha256": "9c1ce7730b030e964b624c0c65fee43902aea70a34351d3fc7ae4da84b14dcd3"
+          "sha256": "5afbdb4e87438c0191b04a3506a94736915dd42c86a7e1fc227036bf53ba3ac1"
         },
         {
           "source": "tests/integration/backend/backend_include_i_precedence_test.baa",
@@ -1411,160 +1300,151 @@
           "source": "tests/integration/backend/backend_include_relative_alias_path_test.baa",
           "status": "emitted",
           "exit_code": 0,
-          "sha256": "3010baa11d1b22d17af2d7ce54dc7f44cc3ad38b0159c307f55396ae82126bdc"
+          "sha256": "31190baf21df657d4317a14cc6a5c0086d6062f0d77fedb1bf791d80e3d7e07f"
         },
         {
           "source": "tests/integration/backend/backend_include_relative_dir_test.baa",
           "status": "emitted",
           "exit_code": 0,
-          "sha256": "c4cb71fe50d848cb68bad1c9b2b3a0c822ce94d66c803498c3cbe3a3abc17ae8"
+          "sha256": "b37dd59ebc7c13423adffe94b60944e30106098696a19d202b7a3624c1a10805"
         },
         {
           "source": "tests/integration/backend/backend_inline_test.baa",
-          "status": "unsupported",
-          "exit_code": 3,
-          "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
-          "blocker": {
-            "kind": "جداول_سلاسل"
-          }
+          "status": "emitted",
+          "exit_code": 0,
+          "sha256": "27367c497393bb28aecb7de531cd10ace7f8fca828cf673fa209a7acf7f67184"
         },
         {
           "source": "tests/integration/backend/backend_int_semantics_test.baa",
           "status": "unsupported",
           "exit_code": 3,
-          "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
+          "reason": "خطأ: نوع معامل القيمة غير مدعوم في مسار نظم.",
           "blocker": {
-            "kind": "جداول_سلاسل"
+            "kind": "نوع_معامل_قيمة_غير_مدعوم",
+            "detail": "تحميل"
           }
         },
         {
           "source": "tests/integration/backend/backend_low_level_ops_test.baa",
           "status": "unsupported",
           "exit_code": 3,
-          "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
+          "reason": "خطأ: نوع معامل القيمة غير مدعوم في مسار نظم.",
           "blocker": {
-            "kind": "جداول_سلاسل"
+            "kind": "نوع_معامل_قيمة_غير_مدعوم",
+            "detail": "تحميل"
           }
         },
         {
           "source": "tests/integration/backend/backend_main_args_test.baa",
           "status": "unsupported",
           "exit_code": 3,
-          "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
+          "reason": "خطأ: معامل الذاكرة غير مدعوم لهذه التعليمة.",
           "blocker": {
-            "kind": "جداول_سلاسل"
+            "kind": "ذاكرة_غير_مدعومة_لهذه_التعليمة"
           }
         },
         {
           "source": "tests/integration/backend/backend_mod_test.baa",
           "status": "emitted",
           "exit_code": 0,
-          "sha256": "6351d33999fa3182c1ba8fda22465bbbda03a8e84037aea2af30aa2286cdd7fb"
+          "sha256": "3169ea0d8e0c2a68d0d16bb3a629d9afda9c4238cc7fb174654ff0a470be6ef7"
         },
         {
           "source": "tests/integration/backend/backend_multidim_array_test.baa",
           "status": "unsupported",
           "exit_code": 3,
-          "reason": "خطأ: نوع تهيئة المتغير العام غير مدعوم في مسار نظم.",
+          "reason": "خطأ: نوع معامل القيمة غير مدعوم في مسار نظم.",
           "blocker": {
-            "kind": "نوع_تهيئة_عامة"
+            "kind": "نوع_معامل_قيمة_غير_مدعوم",
+            "detail": "نقل"
           }
         },
         {
           "source": "tests/integration/backend/backend_path_stdlib_v062_test.baa",
           "status": "unsupported",
           "exit_code": 3,
-          "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
+          "reason": "خطأ: نوع معامل القيمة غير مدعوم في مسار نظم.",
           "blocker": {
-            "kind": "جداول_سلاسل"
+            "kind": "نوع_معامل_قيمة_غير_مدعوم",
+            "detail": "تحميل"
           }
         },
         {
           "source": "tests/integration/backend/backend_pointer_core_test.baa",
           "status": "emitted",
           "exit_code": 0,
-          "sha256": "0c3879b314d8466ad9a6ee2d96445c9549565c5675c7b8eb2c973f1328470c43"
+          "sha256": "99b764ff53755c158476881c73198f7157efd04005350f8e9d7d826393d788ed"
         },
         {
           "source": "tests/integration/backend/backend_pp_nested_test.baa",
           "status": "emitted",
           "exit_code": 0,
-          "sha256": "6dc33a1579df35180709dd74bcf0dd3b6b2b3c56411fec555f18c5996bf84e12"
+          "sha256": "4d24ef0e05e37689d39c87c0c8657463cd256fa4c01aae944c02f00cc53184c1"
         },
         {
           "source": "tests/integration/backend/backend_process_runtime_v065_test.baa",
           "status": "unsupported",
           "exit_code": 3,
-          "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
+          "reason": "خطأ: معامل الذاكرة غير مدعوم لهذه التعليمة.",
           "blocker": {
-            "kind": "جداول_سلاسل"
+            "kind": "ذاكرة_غير_مدعومة_لهذه_التعليمة"
           }
         },
         {
           "source": "tests/integration/backend/backend_readline_stdin_test.baa",
           "status": "unsupported",
           "exit_code": 3,
-          "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
+          "reason": "خطأ: معامل الذاكرة غير مدعوم لهذه التعليمة.",
           "blocker": {
-            "kind": "جداول_سلاسل"
+            "kind": "ذاكرة_غير_مدعومة_لهذه_التعليمة"
           }
         },
         {
           "source": "tests/integration/backend/backend_readnum_stdin_test.baa",
-          "status": "unsupported",
-          "exit_code": 3,
-          "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
-          "blocker": {
-            "kind": "جداول_سلاسل"
-          }
+          "status": "emitted",
+          "exit_code": 0,
+          "sha256": "dc3a499433415883b140467b465ad844c3c004c5e6b874f93ab4d70865226a54"
         },
         {
           "source": "tests/integration/backend/backend_regalloc_stress.baa",
           "status": "unsupported",
           "exit_code": 3,
-          "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
+          "reason": "خطأ: نوع معامل القيمة غير مدعوم في مسار نظم.",
           "blocker": {
-            "kind": "جداول_سلاسل"
+            "kind": "نوع_معامل_قيمة_غير_مدعوم",
+            "detail": "تحميل"
           }
         },
         {
           "source": "tests/integration/backend/backend_result_helpers_stdlib_v062_test.baa",
           "status": "unsupported",
           "exit_code": 3,
-          "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
+          "reason": "خطأ: نوع معامل القيمة غير مدعوم في مسار نظم.",
           "blocker": {
-            "kind": "جداول_سلاسل"
+            "kind": "نوع_معامل_قيمة_غير_مدعوم",
+            "detail": "تحميل"
           }
         },
         {
           "source": "tests/integration/backend/backend_runtime_assert_fail_v055_test.baa",
-          "status": "unsupported",
-          "exit_code": 3,
-          "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
-          "blocker": {
-            "kind": "جداول_سلاسل"
-          }
+          "status": "emitted",
+          "exit_code": 0,
+          "sha256": "886dd776d9c49a7f935edc5d8b5400746bf62d58d59ce846049844709ff7f049"
         },
         {
           "source": "tests/integration/backend/backend_runtime_assert_pass_v055_test.baa",
-          "status": "unsupported",
-          "exit_code": 3,
-          "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
-          "blocker": {
-            "kind": "جداول_سلاسل"
-          }
+          "status": "emitted",
+          "exit_code": 0,
+          "sha256": "a37c5de34692f05dac4285435507f5ec5e1446fd8a4b50aafd5c0dec3d2c827e"
         },
         {
           "source": "tests/integration/backend/backend_runtime_bounds_fail_v055_test.baa",
-          "status": "unsupported",
-          "exit_code": 3,
+          "status": "emitted",
+          "exit_code": 0,
           "flags": [
             "-fruntime-checks"
           ],
-          "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
-          "blocker": {
-            "kind": "جداول_سلاسل"
-          }
+          "sha256": "112b7aae924c9e4bff423e98ac0f1e33623b73577d09aa4742e879e78471765f"
         },
         {
           "source": "tests/integration/backend/backend_runtime_checks_selective_bounds_fail_v063_test.baa",
@@ -1573,112 +1453,85 @@
           "flags": [
             "-fruntime-checks=bounds"
           ],
-          "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
+          "reason": "خطأ: معامل الذاكرة غير مدعوم لهذه التعليمة.",
           "blocker": {
-            "kind": "جداول_سلاسل"
+            "kind": "ذاكرة_غير_مدعومة_لهذه_التعليمة"
           }
         },
         {
           "source": "tests/integration/backend/backend_runtime_checks_selective_null_fail_v063_test.baa",
-          "status": "unsupported",
-          "exit_code": 3,
+          "status": "emitted",
+          "exit_code": 0,
           "flags": [
             "-fruntime-checks=null"
           ],
-          "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
-          "blocker": {
-            "kind": "جداول_سلاسل"
-          }
+          "sha256": "8220043cf37ae9aba73cb7e7e47ef6209a4064ec4cb8c4de5a9a7c805e692bda"
         },
         {
           "source": "tests/integration/backend/backend_runtime_div_zero_fail_v063_test.baa",
-          "status": "unsupported",
-          "exit_code": 3,
+          "status": "emitted",
+          "exit_code": 0,
           "flags": [
             "-fruntime-checks"
           ],
-          "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
-          "blocker": {
-            "kind": "جداول_سلاسل"
-          }
+          "sha256": "f0dff5e411debe97475f44dac43e9fe24b2ce6d466fd95ddd634b85da85e215b"
         },
         {
           "source": "tests/integration/backend/backend_runtime_mod_zero_fail_v063_test.baa",
-          "status": "unsupported",
-          "exit_code": 3,
+          "status": "emitted",
+          "exit_code": 0,
           "flags": [
             "-fruntime-checks"
           ],
-          "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
-          "blocker": {
-            "kind": "جداول_سلاسل"
-          }
+          "sha256": "8e16df5a110f0dd937fb5b8b83c899ae17bb802d9d92e1afb8848ff31b99e13c"
         },
         {
           "source": "tests/integration/backend/backend_runtime_null_deref_assign_fail_v063_test.baa",
-          "status": "unsupported",
-          "exit_code": 3,
+          "status": "emitted",
+          "exit_code": 0,
           "flags": [
             "-fruntime-checks"
           ],
-          "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
-          "blocker": {
-            "kind": "جداول_سلاسل"
-          }
+          "sha256": "8cb4d9be9314b4d974baadb9ba15a0af8e757c2142414284d53e692a8b10aa4c"
         },
         {
           "source": "tests/integration/backend/backend_runtime_null_deref_fail_v063_test.baa",
-          "status": "unsupported",
-          "exit_code": 3,
+          "status": "emitted",
+          "exit_code": 0,
           "flags": [
             "-fruntime-checks"
           ],
-          "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
-          "blocker": {
-            "kind": "جداول_سلاسل"
-          }
+          "sha256": "07f6f51a4f530891bad84781d340bd488abcde8b51f14239dccfc254ff719d7f"
         },
         {
           "source": "tests/integration/backend/backend_runtime_panic_location_v063_test.baa",
-          "status": "unsupported",
-          "exit_code": 3,
-          "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
-          "blocker": {
-            "kind": "جداول_سلاسل"
-          }
+          "status": "emitted",
+          "exit_code": 0,
+          "sha256": "c41bc530ca436a7bcedae698b1dec234308c30734b9a5a83711dfd16c4d7bb06"
         },
         {
           "source": "tests/integration/backend/backend_runtime_panic_v055_test.baa",
-          "status": "unsupported",
-          "exit_code": 3,
-          "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
-          "blocker": {
-            "kind": "جداول_سلاسل"
-          }
+          "status": "emitted",
+          "exit_code": 0,
+          "sha256": "24bb93f8216edda10d7ef8d301ff2f6d556b7a5878046ce1cae1ef171d3c93f4"
         },
         {
           "source": "tests/integration/backend/backend_runtime_shift_width_high_fail_v063_test.baa",
-          "status": "unsupported",
-          "exit_code": 3,
+          "status": "emitted",
+          "exit_code": 0,
           "flags": [
             "-fruntime-checks"
           ],
-          "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
-          "blocker": {
-            "kind": "جداول_سلاسل"
-          }
+          "sha256": "1b146e8230b3b172f238266c846086d812be58a082f66ee9954105674b09b573"
         },
         {
           "source": "tests/integration/backend/backend_runtime_shift_width_negative_fail_v063_test.baa",
-          "status": "unsupported",
-          "exit_code": 3,
+          "status": "emitted",
+          "exit_code": 0,
           "flags": [
             "-fruntime-checks"
           ],
-          "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
-          "blocker": {
-            "kind": "جداول_سلاسل"
-          }
+          "sha256": "dfd56041e15937662128978076f95c8d4f054d655a60a58d28827d79cf5f7b80"
         },
         {
           "source": "tests/integration/backend/backend_runtime_string_array_inner_bounds_fail_v063_test.baa",
@@ -1687,9 +1540,9 @@
           "flags": [
             "-fruntime-checks"
           ],
-          "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
+          "reason": "خطأ: معامل الذاكرة غير مدعوم لهذه التعليمة.",
           "blocker": {
-            "kind": "جداول_سلاسل"
+            "kind": "ذاكرة_غير_مدعومة_لهذه_التعليمة"
           }
         },
         {
@@ -1699,107 +1552,106 @@
           "flags": [
             "-fruntime-checks"
           ],
-          "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
+          "reason": "خطأ: معامل الذاكرة غير مدعوم لهذه التعليمة.",
           "blocker": {
-            "kind": "جداول_سلاسل"
+            "kind": "ذاكرة_غير_مدعومة_لهذه_التعليمة"
           }
         },
         {
           "source": "tests/integration/backend/backend_scan_arabic_test.baa",
           "status": "unsupported",
           "exit_code": 3,
-          "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
+          "reason": "خطأ: نوع معامل القيمة غير مدعوم في مسار نظم.",
           "blocker": {
-            "kind": "جداول_سلاسل"
+            "kind": "نوع_معامل_قيمة_غير_مدعوم",
+            "detail": "نقل"
           }
         },
         {
           "source": "tests/integration/backend/backend_scope_test.baa",
           "status": "unsupported",
           "exit_code": 3,
-          "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
+          "reason": "خطأ: نوع معامل القيمة غير مدعوم في مسار نظم.",
           "blocker": {
-            "kind": "جداول_سلاسل"
+            "kind": "نوع_معامل_قيمة_غير_مدعوم",
+            "detail": "تحميل"
           }
         },
         {
           "source": "tests/integration/backend/backend_sha256_file_v066_test.baa",
           "status": "unsupported",
           "exit_code": 3,
-          "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
+          "reason": "خطأ: معامل الذاكرة غير مدعوم لهذه التعليمة.",
           "blocker": {
-            "kind": "جداول_سلاسل"
+            "kind": "ذاكرة_غير_مدعومة_لهذه_التعليمة"
           }
         },
         {
           "source": "tests/integration/backend/backend_stackargs_test.baa",
-          "status": "unsupported",
-          "exit_code": 3,
-          "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
-          "blocker": {
-            "kind": "جداول_سلاسل"
-          }
+          "status": "emitted",
+          "exit_code": 0,
+          "sha256": "a8eeb10a6512a3b5de6f89447a3ab9bae36fd4badac48e4882d6678026f721b4"
         },
         {
           "source": "tests/integration/backend/backend_static_storage_test.baa",
           "status": "unsupported",
           "exit_code": 3,
-          "reason": "خطأ: رموز البيانات في مصدر نظم وكائنه يجب أن تكون عربية فقط.",
+          "reason": "خطأ: نوع معامل القيمة غير مدعوم في مسار نظم.",
           "blocker": {
-            "kind": "اسم_رمز_غير_عربي",
-            "detail": "اسم_متغير_عام"
+            "kind": "نوع_معامل_قيمة_غير_مدعوم",
+            "detail": "تحميل"
           }
         },
         {
           "source": "tests/integration/backend/backend_stdlib_short_include_test.baa",
           "status": "unsupported",
           "exit_code": 3,
-          "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
+          "reason": "خطأ: معامل الذاكرة غير مدعوم لهذه التعليمة.",
           "blocker": {
-            "kind": "جداول_سلاسل"
+            "kind": "ذاكرة_غير_مدعومة_لهذه_التعليمة"
           }
         },
         {
           "source": "tests/integration/backend/backend_stdlib_v041_test.baa",
           "status": "unsupported",
           "exit_code": 3,
-          "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
+          "reason": "خطأ: نوع معامل القيمة غير مدعوم في مسار نظم.",
           "blocker": {
-            "kind": "جداول_سلاسل"
+            "kind": "نوع_معامل_قيمة_غير_مدعوم",
+            "detail": "تحميل"
           }
         },
         {
           "source": "tests/integration/backend/backend_string_builder_stdlib_v062_test.baa",
           "status": "unsupported",
           "exit_code": 3,
-          "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
+          "reason": "خطأ: نوع معامل القيمة غير مدعوم في مسار نظم.",
           "blocker": {
-            "kind": "جداول_سلاسل"
+            "kind": "نوع_معامل_قيمة_غير_مدعوم",
+            "detail": "تحميل"
           }
         },
         {
           "source": "tests/integration/backend/backend_string_ops_test.baa",
           "status": "unsupported",
           "exit_code": 3,
-          "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
+          "reason": "خطأ: نوع معامل القيمة غير مدعوم في مسار نظم.",
           "blocker": {
-            "kind": "جداول_سلاسل"
+            "kind": "نوع_معامل_قيمة_غير_مدعوم",
+            "detail": "تحميل"
           }
         },
         {
           "source": "tests/integration/backend/backend_struct_init_test.baa",
           "status": "emitted",
           "exit_code": 0,
-          "sha256": "4903ad1a7ed5eeb7d0791fd8d15de9d6cc3258aa6900fe3a1eb8e369d761fe08"
+          "sha256": "517092d465b74d5f39690ed1a032f61c36cdb34d4060bd0db2ac0783b4b1f5aa"
         },
         {
           "source": "tests/integration/backend/backend_sysv_6args_test.baa",
-          "status": "unsupported",
-          "exit_code": 3,
-          "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
-          "blocker": {
-            "kind": "جداول_سلاسل"
-          }
+          "status": "emitted",
+          "exit_code": 0,
+          "sha256": "dc8cce5cb6579e86ebe913f5441f916e422b0236719bd425bcdc8291124c74f0"
         },
         {
           "source": "tests/integration/backend/backend_tailcall_float_test.baa",
@@ -1807,34 +1659,34 @@
           "exit_code": 3,
           "reason": "خطأ: نوع معامل القيمة غير مدعوم في مسار نظم.",
           "blocker": {
-            "kind": "نوع_معامل_قيمة_غير_مدعوم"
+            "kind": "نوع_معامل_قيمة_غير_مدعوم",
+            "detail": "نقل"
           }
         },
         {
           "source": "tests/integration/backend/backend_tailcall_test.baa",
-          "status": "unsupported",
-          "exit_code": 3,
-          "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
-          "blocker": {
-            "kind": "جداول_سلاسل"
-          }
+          "status": "emitted",
+          "exit_code": 0,
+          "sha256": "c71e6d8a3a1f3c950156cc36ea8476d5104a0fd5f7a2cccb1883abc2a6b58b72"
         },
         {
           "source": "tests/integration/backend/backend_test.baa",
           "status": "unsupported",
           "exit_code": 3,
-          "reason": "خطأ: نوع تهيئة المتغير العام غير مدعوم في مسار نظم.",
+          "reason": "خطأ: نوع معامل القيمة غير مدعوم في مسار نظم.",
           "blocker": {
-            "kind": "نوع_تهيئة_عامة"
+            "kind": "نوع_معامل_قيمة_غير_مدعوم",
+            "detail": "تحميل"
           }
         },
         {
           "source": "tests/integration/backend/backend_text_stdlib_helpers_v064_test.baa",
           "status": "unsupported",
           "exit_code": 3,
-          "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
+          "reason": "خطأ: نوع معامل القيمة غير مدعوم في مسار نظم.",
           "blocker": {
-            "kind": "جداول_سلاسل"
+            "kind": "نوع_معامل_قيمة_غير_مدعوم",
+            "detail": "تحميل"
           }
         },
         {
@@ -1843,61 +1695,59 @@
           "exit_code": 3,
           "reason": "خطأ: نوع معامل القيمة غير مدعوم في مسار نظم.",
           "blocker": {
-            "kind": "نوع_معامل_قيمة_غير_مدعوم"
+            "kind": "نوع_معامل_قيمة_غير_مدعوم",
+            "detail": "تحميل"
           }
         },
         {
           "source": "tests/integration/backend/backend_union_test.baa",
-          "status": "unsupported",
-          "exit_code": 3,
-          "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
-          "blocker": {
-            "kind": "جداول_سلاسل"
-          }
+          "status": "emitted",
+          "exit_code": 0,
+          "sha256": "044ddad1db79a279622d5332a1200ac2ba3744f2402ff419ef0759f6bbafdc77"
         },
         {
           "source": "tests/integration/backend/backend_utf8_validation_valid_v064_test.baa",
           "status": "unsupported",
           "exit_code": 3,
-          "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
+          "reason": "خطأ: معامل الذاكرة غير مدعوم لهذه التعليمة.",
           "blocker": {
-            "kind": "جداول_سلاسل"
+            "kind": "ذاكرة_غير_مدعومة_لهذه_التعليمة"
           }
         },
         {
           "source": "tests/integration/backend/backend_variadic_functions_test.baa",
           "status": "unsupported",
           "exit_code": 3,
-          "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
+          "reason": "خطأ: تعليمة الآلة غير مدعومة في شريحة نظم التنفيذية الأولى.",
           "blocker": {
-            "kind": "جداول_سلاسل"
+            "kind": "تعليمة_آلة",
+            "detail": "تحويل_صحيح_إلى_عشري"
           }
         },
         {
           "source": "tests/integration/backend/backend_vector_stdlib_v062_test.baa",
           "status": "unsupported",
           "exit_code": 3,
-          "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
+          "reason": "خطأ: نوع معامل القيمة غير مدعوم في مسار نظم.",
           "blocker": {
-            "kind": "جداول_سلاسل"
+            "kind": "نوع_معامل_قيمة_غير_مدعوم",
+            "detail": "تحميل"
           }
         },
         {
           "source": "tests/integration/backend/int_sizes_test.baa",
-          "status": "unsupported",
-          "exit_code": 3,
-          "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
-          "blocker": {
-            "kind": "جداول_سلاسل"
-          }
+          "status": "emitted",
+          "exit_code": 0,
+          "sha256": "e6551fab80e7d921fd5084cc201a3afb2e77a5c14f2cc82699d3558597023990"
         },
         {
           "source": "tests/integration/frontend/frontend_extern_declarations_test.baa",
           "status": "unsupported",
           "exit_code": 3,
-          "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
+          "reason": "خطأ: نوع معامل القيمة غير مدعوم في مسار نظم.",
           "blocker": {
-            "kind": "جداول_سلاسل"
+            "kind": "نوع_معامل_قيمة_غير_مدعوم",
+            "detail": "تحميل"
           }
         },
         {
@@ -1909,7 +1759,8 @@
           ],
           "reason": "خطأ: نوع معامل القيمة غير مدعوم في مسار نظم.",
           "blocker": {
-            "kind": "نوع_معامل_قيمة_غير_مدعوم"
+            "kind": "نوع_معامل_قيمة_غير_مدعوم",
+            "detail": "تحميل"
           }
         },
         {
@@ -1942,16 +1793,17 @@
           "source": "tests/integration/ir/ir_inline_asm_test.baa",
           "status": "unsupported",
           "exit_code": 3,
-          "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
+          "reason": "خطأ: تعليمة الآلة غير مدعومة في شريحة نظم التنفيذية الأولى.",
           "blocker": {
-            "kind": "جداول_سلاسل"
+            "kind": "تعليمة_آلة",
+            "detail": "نظم_ضمني"
           }
         },
         {
           "source": "tests/integration/ir/ir_printer.baa",
           "status": "emitted",
           "exit_code": 0,
-          "sha256": "7de004a3f15036a99389570c7cba3c30f8629a40e156a1cef8113576b425dd3e"
+          "sha256": "a44eb1c1762239f2df04ef61930caaf1c491f72421146dd202f551f2ae9ba3dd"
         },
         {
           "source": "tests/integration/ir/ir_runtime_bounds_debug_info_no_checks_v055_test.baa",
@@ -1967,15 +1819,12 @@
         },
         {
           "source": "tests/integration/ir/ir_runtime_bounds_enabled_v055_test.baa",
-          "status": "unsupported",
-          "exit_code": 3,
+          "status": "emitted",
+          "exit_code": 0,
           "flags": [
             "-fruntime-checks"
           ],
-          "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
-          "blocker": {
-            "kind": "جداول_سلاسل"
-          }
+          "sha256": "95ddabde9fd917db0a3c15a20c540f299ffdb97c5d6bedf8b6768291f54b2a46"
         },
         {
           "source": "tests/integration/ir/ir_runtime_checks_none_v063_test.baa",
@@ -1984,9 +1833,9 @@
           "flags": [
             "-fruntime-checks=none"
           ],
-          "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
+          "reason": "خطأ: معامل الذاكرة غير مدعوم لهذه التعليمة.",
           "blocker": {
-            "kind": "جداول_سلاسل"
+            "kind": "ذاكرة_غير_مدعومة_لهذه_التعليمة"
           }
         },
         {
@@ -1996,58 +1845,46 @@
           "flags": [
             "-fruntime-checks=bounds+shift"
           ],
-          "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
+          "reason": "خطأ: معامل الذاكرة غير مدعوم لهذه التعليمة.",
           "blocker": {
-            "kind": "جداول_سلاسل"
+            "kind": "ذاكرة_غير_مدعومة_لهذه_التعليمة"
           }
         },
         {
           "source": "tests/integration/ir/ir_runtime_checks_selective_null_div_v063_test.baa",
-          "status": "unsupported",
-          "exit_code": 3,
+          "status": "emitted",
+          "exit_code": 0,
           "flags": [
             "-fruntime-checks=null,div-zero"
           ],
-          "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
-          "blocker": {
-            "kind": "جداول_سلاسل"
-          }
+          "sha256": "76e150678edf349c2b115a1e03f0921e4bc863e38acfe4a31f742ae1c864aab5"
         },
         {
           "source": "tests/integration/ir/ir_runtime_div_zero_enabled_v063_test.baa",
-          "status": "unsupported",
-          "exit_code": 3,
+          "status": "emitted",
+          "exit_code": 0,
           "flags": [
             "-fruntime-checks"
           ],
-          "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
-          "blocker": {
-            "kind": "جداول_سلاسل"
-          }
+          "sha256": "f7157116dd8f052b0396c72d400305fc6e0751259cf0223e4573c0246700d20b"
         },
         {
           "source": "tests/integration/ir/ir_runtime_null_deref_enabled_v063_test.baa",
-          "status": "unsupported",
-          "exit_code": 3,
+          "status": "emitted",
+          "exit_code": 0,
           "flags": [
             "-fruntime-checks"
           ],
-          "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
-          "blocker": {
-            "kind": "جداول_سلاسل"
-          }
+          "sha256": "3eea714e8fadab6e5a08d16f77f06db72ec10bde46bf2156ace96334e9e4e456"
         },
         {
           "source": "tests/integration/ir/ir_runtime_shift_width_enabled_v063_test.baa",
-          "status": "unsupported",
-          "exit_code": 3,
+          "status": "emitted",
+          "exit_code": 0,
           "flags": [
             "-fruntime-checks"
           ],
-          "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
-          "blocker": {
-            "kind": "جداول_سلاسل"
-          }
+          "sha256": "7f12a3a17474a3e72a34c009198281959ceacba5a94ac4ab262abd6cac1cbbac"
         },
         {
           "source": "tests/integration/ir/ir_runtime_string_bounds_enabled_v063_test.baa",
@@ -2056,42 +1893,40 @@
           "flags": [
             "-fruntime-checks"
           ],
-          "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
+          "reason": "خطأ: معامل الذاكرة غير مدعوم لهذه التعليمة.",
           "blocker": {
-            "kind": "جداول_سلاسل"
+            "kind": "ذاكرة_غير_مدعومة_لهذه_التعليمة"
           }
         },
         {
           "source": "tests/integration/ir/ir_test.baa",
           "status": "unsupported",
           "exit_code": 3,
-          "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
+          "reason": "خطأ: نوع معامل القيمة غير مدعوم في مسار نظم.",
           "blocker": {
-            "kind": "جداول_سلاسل"
+            "kind": "نوع_معامل_قيمة_غير_مدعوم",
+            "detail": "تحميل"
           }
         },
         {
           "source": "tests/stress/stress_deep_scopes.baa",
           "status": "emitted",
           "exit_code": 0,
-          "sha256": "41d0955af262ef568be3062c10d5f5a40869ee2f65f7d498d72af289f7f774a8"
+          "sha256": "a95dbff9432864be121590026b5a5205b6dfd0478d0567213f45da799428a2d3"
         },
         {
           "source": "tests/stress/stress_symbol_volume.baa",
-          "status": "unsupported",
-          "exit_code": 3,
-          "reason": "خطأ: المعامل ليس سجلا ماديا بعرض ٨ أو ١٦ أو ٣٢ أو ٦٤ بت.",
-          "blocker": {
-            "kind": "عرض_أو_نوع_معامل"
-          }
+          "status": "emitted",
+          "exit_code": 0,
+          "sha256": "05c7168a1feb7713d0c9973b4a6fccbfe3ad4fb016fb5fa49f13e49127c3c786"
         },
         {
           "source": "tests/stress/stress_utf8_identifiers.baa",
           "status": "unsupported",
           "exit_code": 3,
-          "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
+          "reason": "خطأ: معامل الذاكرة غير مدعوم لهذه التعليمة.",
           "blocker": {
-            "kind": "جداول_سلاسل"
+            "kind": "ذاكرة_غير_مدعومة_لهذه_التعليمة"
           }
         }
       ]

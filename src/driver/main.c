@@ -324,7 +324,8 @@ static int baa_main(int argc, char **argv)
         CompilerConfig shadow_config = config;
         shadow_config.output_file = shadow_output;
         shadow_config.nazm_shadow_executable = NULL;
-        shadow_config.nazm_arabic_entry_link = true;
+        shadow_config.nazm_arabic_entry_link =
+            !(config.target && config.target->obj_format == BAA_OBJFORMAT_COFF);
         const char *shadow_objects[] = {nazm_shadow_object};
         BaaCompilerExitCode shadow_link_rc =
             driver_toolchain_link(&shadow_config, &phase_times, shadow_objects, 1);

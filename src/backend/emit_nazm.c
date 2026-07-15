@@ -19,7 +19,10 @@ typedef struct
 } NazmSourceMapWriter;
 
 static BaaNazmEmitResult nazm_validate_globals(const MachineModule *module);
+static BaaNazmEmitResult nazm_validate_string_tables(const MachineModule *module);
 static unsigned nazm_write_globals(FILE *out, const MachineModule *module);
+static unsigned nazm_write_string_tables(FILE *out, const MachineModule *module);
+static void nazm_write_symbol(FILE *out, const char *name);
 
 static const char *const k_nazm_registers[PHYS_REG_COUNT] = {
     "سجل_المركم",
@@ -180,6 +183,8 @@ static bool nazm_identifier_has_ascii_letter(const char *name)
     return false;
 }
 
+#include "emit_nazm_symbols.c"
+
 static bool nazm_width_is_supported(int bits)
 {
     return bits == 0 || bits == 8 || bits == 16 || bits == 32 || bits == 64;
@@ -228,7 +233,7 @@ static BaaNazmEmitResult nazm_validate_operand(const MachineOperand *operand,
     (void)target;
     if (!nazm_register_is_valid(operand))
         return nazm_unsupported("عرض_أو_نوع_معامل",
-                                NULL,
+                                inst ? nazm_machine_op_arabic(inst->op) : NULL,
                                 "المعامل ليس سجلا ماديا بعرض ٨ أو ١٦ أو ٣٢ أو ٦٤ بت.",
                                 inst);
     return nazm_ok();
@@ -271,8 +276,11 @@ static BaaNazmEmitResult nazm_validate_symbol_operand(
         !operand->data.name[0])
         return nazm_unsupported("مرجع_دالة_غير_صالح", NULL,
                                 "مرجع الدالة ليس اسما صالحا بعرض ٦٤ بت.", inst);
-    if (nazm_identifier_has_ascii_letter(operand->data.name))
-        return nazm_unsupported("اسم_رمز_غير_عربي", NULL,
+    if (nazm_identifier_has_ascii_letter(operand->data.name) &&
+        !nazm_arabic_abi_symbol(operand->data.name) &&
+        !nazm_is_generated_static_symbol(operand->data.name) &&
+        !nazm_parse_generated_string_label(operand->data.name, NULL, NULL))
+        return nazm_unsupported("اسم_رمز_غير_عربي", operand->data.name,
                                 "رموز الدوال في مصدر نظم وكائنه يجب أن تكون عربية فقط.",
                                 inst);
     return nazm_ok();
@@ -290,7 +298,8 @@ static BaaNazmEmitResult nazm_validate_value_operand(const MachineOperand *opera
     if (allow_immediate && operand && operand->kind == MACH_OP_IMM &&
         nazm_width_is_supported(operand->size_bits))
         return nazm_ok();
-    return nazm_unsupported("نوع_معامل_قيمة_غير_مدعوم", NULL,
+    return nazm_unsupported("نوع_معامل_قيمة_غير_مدعوم",
+                            inst ? nazm_machine_op_arabic(inst->op) : NULL,
                             "نوع معامل القيمة غير مدعوم في مسار نظم.", inst);
 }
 
@@ -325,7 +334,8 @@ static BaaNazmEmitResult nazm_validate_binary(const MachineOperand *dst,
                                               const MachineInst *inst,
                                               bool allow_memory)
 {
-    BaaNazmEmitResult result = nazm_validate_operand(dst, target, inst);
+    BaaNazmEmitResult result = nazm_validate_value_operand(
+        dst, target, inst, false);
     if (result.status != BAA_NAZM_EMIT_OK) return result;
     if (src->kind == MACH_OP_MEM && !allow_memory)
         return nazm_unsupported("ذاكرة_غير_مدعومة_لهذه_التعليمة", NULL,
@@ -336,8 +346,6 @@ static BaaNazmEmitResult nazm_validate_binary(const MachineOperand *dst,
     if (src->kind == MACH_OP_IMM)
     {
         bool fits = nazm_immediate_fits_width(src->data.imm, bits);
-        if (bits == 64)
-            fits = src->data.imm >= INT32_MIN && src->data.imm <= INT32_MAX;
         if (!fits)
             return nazm_unsupported("مدى_قيمة_فورية",
                                     nazm_machine_op_arabic(inst->op),
@@ -376,8 +384,14 @@ static BaaNazmEmitResult nazm_validate_instruction(const MachineInst *inst,
 
         case MACH_LEA:
         {
-            BaaNazmEmitResult dst = nazm_validate_operand(&inst->dst, target, inst);
+            BaaNazmEmitResult dst = nazm_validate_value_operand(
+                &inst->dst, target, inst, false);
             if (dst.status != BAA_NAZM_EMIT_OK) return dst;
+            if (nazm_operand_bits(&inst->dst) != 64)
+                return nazm_unsupported("عرض_وجهة_حساب_عنوان",
+                                        NULL,
+                                        "وجهة حساب العنوان يجب أن تكون بعرض ٦٤ بت.",
+                                        inst);
             if (inst->src1.kind == MACH_OP_FUNC ||
                 inst->src1.kind == MACH_OP_GLOBAL)
                 return nazm_validate_symbol_operand(&inst->src1, inst);
@@ -398,17 +412,23 @@ static BaaNazmEmitResult nazm_validate_instruction(const MachineInst *inst,
 
         case MACH_TEST:
             return nazm_validate_binary(
-                &inst->src1, &inst->src2, target, inst, false);
+                &inst->src1, &inst->src2, target, inst, true);
 
         case MACH_IMUL:
+        {
+            BaaNazmEmitResult dst = nazm_validate_operand(
+                &inst->dst, target, inst);
+            if (dst.status != BAA_NAZM_EMIT_OK) return dst;
             return nazm_validate_binary(
                 &inst->dst, &inst->src2, target, inst, false);
+        }
 
         case MACH_SHL:
         case MACH_SHR:
         case MACH_SAR:
         {
-            BaaNazmEmitResult dst = nazm_validate_operand(&inst->dst, target, inst);
+            BaaNazmEmitResult dst = nazm_validate_value_operand(
+                &inst->dst, target, inst, false);
             if (dst.status != BAA_NAZM_EMIT_OK) return dst;
             if (inst->src2.kind == MACH_OP_IMM &&
                 inst->src2.data.imm >= 0 && inst->src2.data.imm <= UINT8_MAX)
@@ -445,9 +465,11 @@ static BaaNazmEmitResult nazm_validate_instruction(const MachineInst *inst,
         case MACH_MOVZX:
         case MACH_MOVSX:
         {
-            BaaNazmEmitResult dst = nazm_validate_operand(&inst->dst, target, inst);
+            BaaNazmEmitResult dst = nazm_validate_value_operand(
+                &inst->dst, target, inst, false);
             if (dst.status != BAA_NAZM_EMIT_OK) return dst;
-            BaaNazmEmitResult src = nazm_validate_operand(&inst->src1, target, inst);
+            BaaNazmEmitResult src = nazm_validate_value_operand(
+                &inst->src1, target, inst, false);
             if (src.status != BAA_NAZM_EMIT_OK) return src;
             int dst_bits = nazm_operand_bits(&inst->dst);
             int src_bits = nazm_operand_bits(&inst->src1);
@@ -509,12 +531,9 @@ static BaaNazmEmitResult nazm_validate_module(const MachineModule *module,
     BaaNazmEmitResult global_validation = nazm_validate_globals(module);
     if (global_validation.status != BAA_NAZM_EMIT_OK)
         return global_validation;
-    if (module->string_count != 0 || module->strings != NULL ||
-        module->baa_string_count != 0 || module->baa_strings != NULL)
-        return nazm_unsupported("جداول_سلاسل",
-                                NULL,
-                                "جداول السلاسل غير مدعومة بعد في مسار نظم.",
-                                NULL);
+    BaaNazmEmitResult string_validation = nazm_validate_string_tables(module);
+    if (string_validation.status != BAA_NAZM_EMIT_OK)
+        return string_validation;
 
     for (const MachineFunc *func = module->funcs; func; func = func->next)
     {
@@ -584,6 +603,77 @@ static void nazm_write_signed(FILE *out, int64_t value)
     nazm_write_unsigned(out, magnitude);
 }
 
+static void nazm_write_generated_string_label(FILE *out,
+                                              bool is_baa_string,
+                                              uint64_t id)
+{
+    fputs(is_baa_string ? "سلسلة_باء_" : "سلسلة_سي_", out);
+    nazm_write_unsigned(out, id);
+}
+
+static void nazm_write_symbol(FILE *out, const char *name)
+{
+    const char *arabic_abi = nazm_arabic_abi_symbol(name);
+    if (arabic_abi)
+    {
+        fputs(arabic_abi, out);
+        return;
+    }
+
+    if (nazm_is_generated_static_symbol(name))
+    {
+        static const char prefix[] = "__baa_static_";
+        fputs("تخزين_ساكن_", out);
+        for (const unsigned char *p =
+                 (const unsigned char *)(name + sizeof(prefix) - 1u);
+             *p;
+             ++p)
+        {
+            if (*p >= (unsigned char)'0' && *p <= (unsigned char)'9')
+                nazm_write_unsigned(out, (uint64_t)(*p - (unsigned char)'0'));
+            else
+                fputc((int)*p, out);
+        }
+        return;
+    }
+
+    bool is_baa_string = false;
+    uint64_t id = 0;
+    if (nazm_parse_generated_string_label(name, &is_baa_string, &id))
+    {
+        nazm_write_generated_string_label(out, is_baa_string, id);
+        return;
+    }
+    fputs(name, out);
+}
+
+static unsigned nazm_write_arabic_abi_externals(FILE *out)
+{
+    unsigned lines = 0;
+    for (size_t i = 0;
+         i < sizeof(k_nazm_arabic_abi_symbols) /
+                 sizeof(k_nazm_arabic_abi_symbols[0]);
+         ++i)
+    {
+        const char *symbol = k_nazm_arabic_abi_symbols[i].arabic;
+        bool seen = false;
+        for (size_t previous = 0; previous < i; ++previous)
+        {
+            if (strcmp(symbol, k_nazm_arabic_abi_symbols[previous].arabic) == 0)
+            {
+                seen = true;
+                break;
+            }
+        }
+        if (seen) continue;
+        fputs(".خارجي ", out);
+        fputs(symbol, out);
+        fputc('\n', out);
+        lines += 1;
+    }
+    return lines;
+}
+
 static void nazm_write_operand(FILE *out, const MachineOperand *operand)
 {
     if (operand->kind == MACH_OP_IMM)
@@ -630,7 +720,9 @@ static unsigned nazm_write_move(FILE *out,
         MachineOperand scratch = {0};
         scratch.kind = MACH_OP_VREG;
         scratch.size_bits = nazm_operand_bits(dst);
-        scratch.data.vreg = PHYS_R11;
+        scratch.data.vreg = dst->data.mem.base_vreg == PHYS_R11
+            ? PHYS_RAX
+            : PHYS_R11;
         fputs("    انقل ", out);
         nazm_write_operand(out, &scratch);
         fputs("، ", out);
@@ -669,20 +761,26 @@ static unsigned nazm_write_move(FILE *out,
     return 1;
 }
 
-static unsigned nazm_write_binary(FILE *out,
-                                  const char *mnemonic,
-                                  const MachineOperand *dst,
-                                  const MachineOperand *src)
+static MachineOperand nazm_scratch_operand(PhysReg reg, int bits)
 {
-    fputs("    ", out);
-    fputs(mnemonic, out);
-    fputc(' ', out);
-    nazm_write_any_operand(out, dst);
-    fputs("، ", out);
-    nazm_write_any_operand(out, src);
-    fputc('\n', out);
-    return 1;
+    MachineOperand scratch = {0};
+    scratch.kind = MACH_OP_VREG;
+    scratch.size_bits = bits > 0 ? bits : 64;
+    scratch.data.vreg = reg;
+    return scratch;
 }
+
+static bool nazm_operand_uses_register(const MachineOperand *operand,
+                                       PhysReg reg)
+{
+    if (!operand) return false;
+    if (operand->kind == MACH_OP_VREG) return operand->data.vreg == reg;
+    if (operand->kind == MACH_OP_MEM)
+        return operand->data.mem.base_vreg == reg;
+    return false;
+}
+
+#include "emit_nazm_lowering.c"
 
 static void nazm_write_local_label(FILE *out,
                                    unsigned function_id,
@@ -838,17 +936,20 @@ BaaNazmEmitResult emit_nazm_module_with_source_map(const MachineModule *module,
 
     fputs("; مصدر نظم مولد من باء\n", out);
     map.generated_line = 1;
+    map.generated_line += nazm_write_string_tables(out, module);
     map.generated_line += nazm_write_globals(out, module);
     fputs(".نص\n", out);
     map.generated_line += 1;
+    map.generated_line += nazm_write_arabic_abi_externals(out);
 
     for (const MachineFunc *func = module->funcs; func; func = func->next)
     {
         if (func->is_prototype && func->name && func->name[0] &&
+            !nazm_arabic_abi_symbol(func->name) &&
             !nazm_identifier_has_ascii_letter(func->name))
         {
             fputs(".خارجي ", out);
-            fputs(func->name, out);
+            nazm_write_symbol(out, func->name);
             fputc('\n', out);
             map.generated_line += 1;
         }

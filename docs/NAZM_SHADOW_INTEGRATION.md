@@ -17,8 +17,8 @@ The 2026-07-13 baseline contains 100 sources per target with zero omissions:
 
 | Target | Instruction forms | Directive forms | Sections | Registers | Relocation candidates |
 |---|---:|---:|---:|---:|---:|
-| `x86_64-linux` | 108 | 15 | 4 | 41 | 7 |
-| `x86_64-windows` | 105 | 13 | 3 | 42 | 7 |
+| `x86_64-linux` | 107 | 14 | 4 | 41 | 7 |
+| `x86_64-windows` | 103 | 12 | 3 | 42 | 7 |
 
 The section surface observed in the corpus is `.text`, `.data`, and
 target-specific read-only data (`.rodata` or `.rdata`), plus
@@ -67,10 +67,10 @@ classified as:
 The initial comparison covers all 100 sources on both targets with zero
 inventory omissions:
 
-| Target | Instruction forms S/P/U | Directive forms S/P/U | Sections S/U | Relocations P/U |
+| Target | Instruction forms S/P/U | Directive forms S/P/U | Sections S/U | Relocations S/P/U |
 |---|---:|---:|---:|---:|
-| `x86_64-linux` | 48 / 1 / 58 | 6 / 1 / 7 | 2 / 2 | 1 / 6 |
-| `x86_64-windows` | 47 / 1 / 55 | 6 / 1 / 5 | 2 / 1 | 1 / 6 |
+| `x86_64-linux` | 48 / 1 / 58 | 8 / 1 / 5 | 3 / 1 | 1 / 1 / 5 |
+| `x86_64-windows` | 47 / 1 / 55 | 8 / 1 / 3 | 3 / 0 | 1 / 1 / 5 |
 
 Each supported row names the checked Nazm acceptance fixture that exercises
 its canonical Arabic lowering. Baa emits the entry label as `الرئيسية`; Nazm
@@ -78,9 +78,11 @@ preserves that exported Arabic symbol as `الرئيسية` in ELF64 and COFF. T
 shadow linker selects it explicitly as the process entry without an ASCII
 alias. Production remains GAS by default, but now also exports `الرئيسية`
 unchanged and links through the Arabic hosted startup symbol `الرئيسية_بدء`.
-Arbitrary Latin source identifiers, external calls, RIP-relative references,
-read-only sections, memory forms that require unavailable addressing, and scalar
-SSE2 remain partial or unsupported where applicable.
+Compiler-owned platform calls are translated through an explicit Arabic runtime
+ABI bridge; arbitrary Latin source and external identifiers remain visible
+rejections. Read-only string tables, zero-initialized data, and explicit
+alignment are supported. RIP-relative global memory, remaining memory forms,
+and scalar SSE2 remain partial or unsupported where applicable.
 
 Regenerate or verify the comparison from an ecosystem checkout:
 
@@ -103,22 +105,31 @@ every unsupported row also records an Arabic `blocker.kind` and optional
 each emitted artifact separately carries the exact versioned source mapping
 described below rather than duplicating per-instruction spans in the corpus matrix.
 
-The initial source-level baseline is identical on Linux and Windows:
+The current source-level baseline is target-specific and has no gate errors:
 
 | Target | Arabic-only emitted | Visible unsupported | Gate errors |
 |---|---:|---:|---:|
-| `x86_64-linux` | 15 | 85 | 0 |
-| `x86_64-windows` | 15 | 85 | 0 |
+| `x86_64-linux` | 46 | 54 | 0 |
+| `x86_64-windows` | 47 | 53 | 0 |
 
-The fifteen admitted sources cover array initialization and summation, global
-integer-array data, pointer and constant-pointer rules, modulo, preprocessor
-nesting, structure initialization, two function-pointer/address cases, three
-include-resolution/direct-call cases, IR printing, and deep nested scopes. They
-pass the real GAS/Nazm object, link, and runtime comparison. The 85 visible
-rejections quantify the next wave: 67 first encounter a string table, 4 a
-conversion configuration, 4 a function whose Baa spelling still contains Latin
-letters, 4 an unsupported value operand, 2 an unsupported global initializer,
-2 a non-Arabic symbol, and 2 isolated instruction/width forms.
+The admitted sources now include string-heavy examples, runtime diagnostics,
+dynamic memory, file and error helpers, integer-width and callee-saved-register
+cases, stack arguments, tail calls, arrays, structures, unions, function
+pointers, and the earlier integer/control corpus. Every admitted source uses an
+Arabic-only Nazm artifact and passes production/shadow object, link, and runtime
+comparison on its host gate. Nazm may retain relocations for same-object symbols
+that GAS resolves while assembling; the gate therefore compares normalized
+section/symbol structure, requires every production relocation site to remain
+represented, and proves the retained relocations through real linking and
+runtime behavior.
+
+The remaining visible blockers are dominated by global load/move operands that
+need the planned PC-relative relocation slice (27 on each target) and memory
+forms not yet accepted by the relevant instruction (13 Linux, 15 Windows).
+Four conversion configurations and four Latin-spelled source functions remain
+unsupported on each target. The final isolated cases are spilled `setcc`,
+integer-to-scalar-SSE conversion, and legacy inline assembly. None falls back to
+GAS inside the shadow result.
 
 Regenerate or verify the matrix with the current compiler:
 
@@ -196,11 +207,18 @@ relocation structure, link success, exit status, stdout, and stderr.
 Dedicated `nazm-shadow-windows` and `nazm-shadow-linux` CI jobs build both
 repositories and run this real parity path on every Baa change.
 
-The full corpus is now classified automatically, and object/link/runtime
-comparison covers all fifteen currently emitted members. Nazm and Baa now share
-the required integer widths, condition-code writes, extension and division
-forms, indirect calls, callee-saved frames, integer global data, Arabic external
-symbols, and absolute data relocations. Nazm still needs scalar SSE2, read-only
-and BSS sections, string tables, alignment, and RIP-relative/PIC references. The
-production assembler therefore remains GAS even though its public entry and
-startup symbols are now Arabic-only.
+The full corpus is classified automatically, and object/link/runtime comparison
+covers all 46 Linux and 47 Windows emitted members. Nazm and Baa now share the
+required integer widths, condition-code writes, extension and division forms,
+indirect calls, callee-saved frames, integer globals, Arabic external symbols,
+absolute data relocations, read-only string tables, BSS, and alignment. Baa maps
+compiler-owned platform ABI names to Arabic runtime adapters and rejects any
+unmapped Latin symbol.
+
+On Windows, both production and shadow executables enter through the strong
+Arabic runtime symbol `الرئيسية_بدء`, which dispatches to `بدء_ويندوز`; no
+`main`, `wmain`, or mojibaked linker alias is involved. Baa routes the UTF-8
+entry spelling through a linker-owned response file so GNU `ld` consumes the
+symbol bytes directly. The remaining production-admission work is PC-relative
+global memory/PIC, additional memory forms, scalar SSE2, and the complete hosted
+gate set. GAS therefore remains the default assembler.

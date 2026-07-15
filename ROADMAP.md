@@ -1817,7 +1817,7 @@
   #### v1.5.0.1: Inventory and Contract
 
 * \[x] **Generated-form corpus** — version `baa-nazm-coverage-v1` from the full 100-source, two-target inventory and assemble focused ELF64/COFF fixtures for every currently supported form; partial and unsupported forms remain explicit.
-* \[x] **Source-level shadow matrix** — classify all 100 sources on both targets as Arabic-only emitted, visibly unsupported, or gate error; every rejection carries a stable Arabic blocker kind/detail. The integer/control, Arabic symbol, global integer-data, and absolute data-relocation expansion covers 8/16/32/64-bit registers, saved frames, memory moves, arithmetic, shifts, comparisons, `setcc`, extensions, division, direct/indirect calls, function addresses, and local branches, admitting 15 sources and rejecting 85 with status `3` and no output.
+* \[x] **Source-level shadow matrix** — classify all 100 sources on both targets as Arabic-only emitted, visibly unsupported, or gate error; every rejection carries a stable Arabic blocker kind/detail. The integer/control, Arabic runtime ABI, read-only string-table, BSS, alignment, global-data, absolute-relocation, and spill-safe expansion now admits 46 Linux and 47 Windows sources with zero gate errors; the remaining 54/53 sources reject with status `3`, stable blocker data, and no output.
 * \[x] **Source mapping** — `baa-nazm-source-map-v1` binds generated Nazm line ranges to the original UTF-8 Baa file/line/column, and shadow assembler failures replay the Nazm diagnostic plus its mapped Baa location on Windows/Linux.
 * \[ ] **Inline assembly migration** — version the breaking move from raw `مجمع { ... }` GAS text to canonical `نظم { ... }` source.
 * \[x] **Target contract** — map Baa targets explicitly to Nazm ELF64/COFF modes.
@@ -1829,6 +1829,7 @@
 * \[x] **Link/runtime comparison** — link and run both outputs on Windows and Linux for every admitted source.
 * \[x] **Arabic linker entry** — preserve `الرئيسية` in Nazm ELF64/COFF objects and select it directly as the shadow entry without a `main` alias.
 * \[x] **Arabic production ABI** — GAS remains the production assembler, but emits `الرئيسية` unchanged, links through `الرئيسية_بدء`, and converts Windows UTF-16 argv through `بدء_ويندوز` without `main`/`wmain` aliases.
+* \[x] **Arabic shadow startup ABI** — Windows production and Nazm shadow links both resolve the strong Arabic runtime entry `الرئيسية_بدء`; the linker reads its UTF-8 spelling from a linker-owned response file, avoiding both narrow-argv mojibake and a hidden ASCII default entry.
 * \[x] **Diagnostics comparison** — unsupported forms remain visible Arabic failures.
 * \[x] **No silent fallback** — never substitute guessed bytes or hide unsupported Nazm input behind GAS.
 

@@ -271,6 +271,122 @@ class NazmEmitterTests(unittest.TestCase):
                     self.assertIn("كتلة_٠_٦:", text)
                     self.assertIsNone(re.search(r"[A-Za-z]", text))
 
+    def test_baa_string_table_uses_arabic_read_only_symbols(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="baa_nazm_strings_") as temp:
+            work = Path(temp)
+            source = work / "سلاسل.باء"
+            source.write_text(
+                "نص رسالة_عامة = \"Baa باء\".\n"
+                "صحيح الرئيسية() {\n"
+                "    إرجع ٠.\n"
+                "}\n",
+                encoding="utf-8",
+            )
+
+            for target in ("x86_64-windows", "x86_64-linux"):
+                with self.subTest(target=target):
+                    output = work / f"سلاسل-{target}.نظم"
+                    proc = self.run_baa(
+                        work,
+                        "--emit-nazm",
+                        f"--target={target}",
+                        str(source),
+                        "-o",
+                        str(output),
+                    )
+                    self.assertEqual(proc.returncode, 0, proc.stderr)
+                    text = output.read_text(encoding="utf-8")
+                    self.assertIn(".بيانات_للقراءة", text)
+                    self.assertIn("سلسلة_باء_٠:", text)
+                    self.assertIn(".محاذاة ٨", text)
+                    self.assertIn(".عدد٦٤", text)
+                    self.assertIsNone(
+                        re.search(r"[A-Za-z]", text),
+                        "Nazm source contains a Latin letter",
+                    )
+
+    def test_baa_string_shadow_links_read_only_data_and_matches_runtime(self) -> None:
+        nazm = _find_nazm()
+        if nazm is None:
+            self.skipTest("Nazm executable is unavailable in this checkout")
+
+        with tempfile.TemporaryDirectory(prefix="baa_nazm_string_shadow_") as temp:
+            work = Path(temp)
+            source = work / "سلاسل.باء"
+            source.write_text(
+                "نص رسالة_عامة = \"Baa باء\".\n"
+                "صحيح الرئيسية() {\n"
+                "    إرجع ٠.\n"
+                "}\n",
+                encoding="utf-8",
+            )
+            exe_suffix = ".exe" if os.name == "nt" else ""
+            object_suffix = ".obj" if os.name == "nt" else ".o"
+            output = work / f"برنامج-سلاسل{exe_suffix}"
+            proc = self.run_baa(
+                work,
+                f"--nazm-shadow={nazm}",
+                str(source),
+                "-o",
+                str(output),
+            )
+            self.assertEqual(proc.returncode, 0, proc.stderr)
+
+            shadow_source = Path(f"{output}.ظل-نظم.نظم")
+            shadow_object = Path(f"{output}.ظل-نظم{object_suffix}")
+            shadow_executable = Path(f"{output}.ظل-نظم{exe_suffix}")
+            nazm_text = shadow_source.read_text(encoding="utf-8")
+            self.assertIsNone(re.search(r"[A-Za-z]", nazm_text))
+            self.assertIn(".بيانات_للقراءة", nazm_text)
+            self.assertIn("سلسلة_باء_٠:", nazm_text)
+
+            sections, _, relocation_count = _inspect_object(shadow_object)
+            self.assertIn(".rdata" if os.name == "nt" else ".rodata", sections)
+            self.assertGreaterEqual(relocation_count, 1)
+
+            production_run = subprocess.run(
+                [str(output)],
+                stdin=subprocess.DEVNULL,
+                capture_output=True,
+                timeout=30,
+            )
+            repetitions = 25 if os.name == "nt" else 1
+            for _ in range(repetitions):
+                shadow_run = subprocess.run(
+                    [str(shadow_executable)],
+                    stdin=subprocess.DEVNULL,
+                    capture_output=True,
+                    timeout=30,
+                )
+                self.assertEqual(shadow_run.returncode, production_run.returncode)
+                self.assertEqual(shadow_run.stdout, production_run.stdout)
+                self.assertEqual(shadow_run.stderr, production_run.stderr)
+
+    def test_spilled_pointer_store_preserves_the_r11_address(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="baa_nazm_spilled_pointer_") as temp:
+            work = Path(temp)
+            output = work / "تخزين-مؤشر.نظم"
+            proc = self.run_baa(
+                work,
+                "--emit-nazm",
+                "--target=x86_64-windows",
+                "-I",
+                str(ROOT),
+                str(ROOT / "examples" / "error_handling_demo.baa"),
+                "-o",
+                str(output),
+            )
+            self.assertEqual(proc.returncode, 0, proc.stderr)
+            text = output.read_text(encoding="utf-8")
+            self.assertIn(
+                "انقل سجل_المركم، ٠\n    انقل [سجل_عام_١١]، سجل_المركم",
+                text,
+            )
+            self.assertNotIn(
+                "انقل سجل_عام_١١، ٠\n    انقل [سجل_عام_١١]، سجل_عام_١١",
+                text,
+            )
+
     def test_global_function_pointer_uses_arabic_data_relocation(self) -> None:
         nazm = _find_nazm()
         if nazm is None:
@@ -334,7 +450,15 @@ class NazmEmitterTests(unittest.TestCase):
             proc = self.run_baa(
                 work,
                 "--emit-nazm",
-                str(ROOT / "examples" / "hello_world.baa"),
+                "-I",
+                str(ROOT),
+                str(
+                    ROOT
+                    / "tests"
+                    / "integration"
+                    / "backend"
+                    / "backend_string_ops_test.baa"
+                ),
                 "-o",
                 str(output),
             )
@@ -399,7 +523,7 @@ class NazmEmitterTests(unittest.TestCase):
             self.assertFalse(output.exists(), "GAS output must not hide a shadow failure")
 
     def test_shadow_assembler_failure_maps_back_to_baa_source(self) -> None:
-        compiler = shutil.which("gcc") or shutil.which("cc")
+        compiler = os.environ.get("CC") or shutil.which("gcc") or shutil.which("cc")
         if compiler is None:
             adjacent = Path(sys.executable).with_name(
                 "gcc.exe" if os.name == "nt" else "gcc"
@@ -416,21 +540,62 @@ class NazmEmitterTests(unittest.TestCase):
             fake_executable = work / ("fake-nazm.exe" if os.name == "nt" else "fake-nazm")
             fake_source.write_text(
                 "#include <stdio.h>\n"
-                "int main(int argc, char **argv) {\n"
+                "#include <string.h>\n"
                 "#ifdef _WIN32\n"
-                "  const int line = 11;\n"
-                "#else\n"
-                "  const int line = 10;\n"
-                "#endif\n"
+                "#include <windows.h>\n"
+                "#include <wchar.h>\n"
+                "static FILE *open_input(const wchar_t *path) { return _wfopen(path, L\"rb\"); }\n"
+                "static int adapter_main(int argc, wchar_t **argv) {\n"
                 "  if (argc < 2) return 2;\n"
-                '  fprintf(stderr, "%s:%d:1: synthetic nazm failure\\n", argv[argc - 1], line);\n'
+                "  FILE *input = open_input(argv[argc - 1]);\n"
+                "  char path[32768];\n"
+                "  if (WideCharToMultiByte(CP_UTF8, 0, argv[argc - 1], -1, path,\n"
+                "                          (int)sizeof(path), NULL, NULL) <= 0) return 3;\n"
+                "#else\n"
+                "static FILE *open_input(const char *path) { return fopen(path, \"rb\"); }\n"
+                "static int adapter_main(int argc, char **argv) {\n"
+                "  if (argc < 2) return 2;\n"
+                "  FILE *input = open_input(argv[argc - 1]);\n"
+                "  const char *path = argv[argc - 1];\n"
+                "#endif\n"
+                "  if (!input) return 4;\n"
+                "  char text[4096];\n"
+                "  int line = 0;\n"
+                "  int previous_was_span = 0;\n"
+                "  while (fgets(text, (int)sizeof(text), input)) {\n"
+                "    ++line;\n"
+                "    if (previous_was_span && strncmp(text, \"    \" , 4) == 0 && text[4] != ';') break;\n"
+                "    previous_was_span = strncmp(text, \"    ;\", 5) == 0;\n"
+                "  }\n"
+                "  fclose(input);\n"
+                '  fprintf(stderr, "%s:%d:1: synthetic nazm failure\\n", path, line);\n'
                 "  return 9;\n"
-                "}\n",
+                "}\n"
+                "#ifdef _WIN32\n"
+                "int wmain(int argc, wchar_t **argv) { return adapter_main(argc, argv); }\n"
+                "#else\n"
+                "int main(int argc, char **argv) { return adapter_main(argc, argv); }\n"
+                "#endif\n",
                 encoding="utf-8",
             )
+            compiler_env = os.environ.copy()
+            compiler_parent = Path(compiler).parent
+            if compiler_parent != Path("."):
+                compiler_env["PATH"] = (
+                    str(compiler_parent)
+                    + os.pathsep
+                    + compiler_env.get("PATH", "")
+                )
             build = subprocess.run(
-                [compiler, str(fake_source), "-o", str(fake_executable)],
+                [
+                    compiler,
+                    *(["-municode"] if os.name == "nt" else []),
+                    str(fake_source),
+                    "-o",
+                    str(fake_executable),
+                ],
                 cwd=str(work),
+                env=compiler_env,
                 text=True,
                 encoding="utf-8",
                 errors="replace",
@@ -540,7 +705,9 @@ class NazmEmitterTests(unittest.TestCase):
             for row in matrix["targets"][target]["sources"]
             if row["status"] == "emitted"
         ]
-        self.assertEqual(len(rows), 15)
+        self.assertEqual(
+            len(rows), matrix["targets"][target]["summary"]["emitted"]
+        )
         for row in rows:
             source = ROOT / row["source"]
             flags = ["-I", str(ROOT), *row.get("flags", [])]
@@ -582,26 +749,54 @@ class NazmEmitterTests(unittest.TestCase):
                 self.assertTrue(shadow_object.is_file())
                 self.assertTrue(shadow_executable.is_file())
 
+                production_object = work / f"إنتاج-المصفوفة{object_suffix}"
+                production_object_proc = self.run_baa(
+                    work,
+                    "-c",
+                    *flags,
+                    str(source),
+                    "-o",
+                    str(production_object),
+                )
+                self.assertEqual(
+                    production_object_proc.returncode,
+                    0,
+                    production_object_proc.stderr,
+                )
+
                 production_run = subprocess.run(
-                    [str(output)], capture_output=True, timeout=30
+                    [str(output)],
+                    stdin=subprocess.DEVNULL,
+                    capture_output=True,
+                    timeout=30,
                 )
                 shadow_run = subprocess.run(
-                    [str(shadow_executable)], capture_output=True, timeout=30
+                    [str(shadow_executable)],
+                    stdin=subprocess.DEVNULL,
+                    capture_output=True,
+                    timeout=30,
                 )
                 self.assertEqual(shadow_run.returncode, production_run.returncode)
                 self.assertEqual(shadow_run.stdout, production_run.stdout)
                 self.assertEqual(shadow_run.stderr, production_run.stderr)
 
                 sections, global_symbols, relocation_count = _inspect_object(shadow_object)
+                (
+                    production_sections,
+                    production_global_symbols,
+                    production_relocation_count,
+                ) = _inspect_object(production_object)
                 self.assertIn(".text", sections)
                 self.assertIn("الرئيسية", global_symbols)
                 self.assertNotIn("main", global_symbols)
-                expected_relocations = {
-                    "backend_func_ptr_shadow_call_test.baa": 1,
-                    "backend_func_ptr_test.baa": 3,
-                    "backend_global_array_init_test.baa": 5,
-                }.get(source.name, 0)
-                self.assertEqual(relocation_count, expected_relocations)
+                self.assertTrue(sections.issubset(production_sections))
+                self.assertEqual(global_symbols, production_global_symbols)
+                self.assertGreaterEqual(
+                    relocation_count,
+                    production_relocation_count,
+                    "Nazm may retain resolved internal relocations, but must not "
+                    "omit any relocation required by the production object",
+                )
 
 
 if __name__ == "__main__":

@@ -60,4 +60,12 @@ __attribute__((noreturn)) void baa_windows_arabic_entry(void)
     free(argv);
     ExitProcess((UINT)result);
 }
+
+__attribute__((noreturn)) void baa_windows_arabic_start(void)
+    __asm__("الرئيسية_بدء");
+
+__attribute__((noreturn)) void baa_windows_arabic_start(void)
+{
+    baa_windows_arabic_entry();
+}
 #endif

@@ -31,16 +31,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
   - Classified every emitted form as supported, partial, or unsupported with a reason and
     attached every supported form to a focused Nazm ELF64/COFF acceptance fixture.
   - Wired the coverage completeness and no-overclaim checks into every Baa QA mode.
-  - Kept arbitrary Latin linker symbols, external calls, RIP-relative references, read-only
-    sections and SSE2 visible instead of treating
-    GAS success as Nazm success; the entry symbol now has the Arabic source spelling `الرئيسية`.
+  - Kept arbitrary Latin linker symbols, RIP-relative references, remaining memory forms,
+    and SSE2 visible instead of treating GAS success as Nazm success; compiler-owned platform
+    calls now cross an explicit Arabic runtime ABI bridge.
 - **Baa/Nazm full-corpus shadow matrix**:
   - Added stable Arabic blocker kind/detail data to every unsupported corpus row and
     aggregate counts, without exposing borrowed include paths or parsing human prose.
   - Added deterministic `baa-nazm-shadow-corpus-v1` classification for all 100 inventoried
     sources on both targets and embedded the complete result in `baa-nazm-coverage-v1`.
-  - Admitted fifteen real corpus sources through Arabic-only emission and GAS/Nazm object,
-    link, and runtime parity; all other 85 sources return visible status `3` with no output.
+  - Admitted 46 Linux and 47 Windows corpus sources through Arabic-only emission and
+    GAS/Nazm object, link, and runtime parity; all remaining 54/53 sources return visible
+    status `3` with stable blocker data and no output.
   - Replaced host `nm`/`objdump` assertions with Unicode-safe COFF/ELF inspection so Arabic
     artifact paths remain mandatory on Windows and Linux CI.
   - Kept unsupported diagnostics source-level and deterministic instead of exposing borrowed
@@ -61,11 +62,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
   - Expanded the canonical emitter across 8/16/32/64-bit registers, saved frames, memory
     moves, integer arithmetic and shifts, comparisons, `setcc`, extensions, signed/unsigned
     division, indirect calls, and local branches while keeping external relocations visible.
-  - Added direct Arabic function calls and Arabic function-address materialization; Latin
-    platform symbols remain visible blockers until an explicit Arabic ABI bridge exists.
+  - Added direct Arabic function calls and Arabic function-address materialization, plus a
+    closed mapping from compiler-owned platform symbols to Arabic link-visible runtime adapters;
+    arbitrary unmapped Latin symbols remain visible blockers.
   - Added Arabic integer globals, partially initialized arrays, global function-pointer
     initializers, and absolute data relocations; the 100-source matrix now admits the
     global-array runtime case while preserving every unsupported string/PIC form visibly.
+  - Added Arabic read-only string tables, numeric UTF-8 byte emission, BSS and alignment,
+    spill-safe integer lowering, and full-corpus production/shadow relocation and runtime gates.
+  - Made Windows production and Nazm shadow executables share the strong Arabic startup
+    `الرئيسية_بدء` → `بدء_ويندوز`. A linker-owned UTF-8 response file avoids narrow-argv
+    mojibake without falling back to `main`, `wmain`, or the linker's ASCII default entry.
   - Added optional ecosystem parity coverage for source spelling, `.text`, exported entry,
     relocations, link success, exit status, stdout, and stderr on the host platform.
   - Preserved `الرئيسية` unchanged in Nazm ELF64/COFF objects and selected that Arabic

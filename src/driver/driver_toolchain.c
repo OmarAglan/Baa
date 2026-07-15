@@ -126,7 +126,7 @@ static bool win_write_entry_response(const char* path, const char* symbol)
     if (!path || !symbol) return false;
     FILE* file = baa_fopen_utf8(path, "wb");
     if (!file) return false;
-    int written = fprintf(file, "-nostartfiles\n-Wl,-e,%s\n", symbol);
+    int written = fprintf(file, "-u\n%s\n-e\n%s\n", symbol, symbol);
     bool ok = written > 0 && fclose(file) == 0;
     return ok;
 }
@@ -549,9 +549,10 @@ BaaCompilerExitCode driver_toolchain_link(const CompilerConfig *config,
     }
     staged_entry_response_ready = true;
     int response_chars = snprintf(staged_entry_argument, sizeof(staged_entry_argument),
-                                  "@%s", staged_entry_response);
+                                  "-Wl,@%s", staged_entry_response);
     if (response_chars <= 1 || (size_t)response_chars >= sizeof(staged_entry_argument))
         goto cleanup;
+    argv_link[lk++] = "-nostartfiles";
     argv_link[lk++] = staged_entry_argument;
 #else
     if (config->nazm_arabic_entry_link)

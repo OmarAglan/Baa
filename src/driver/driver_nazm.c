@@ -237,17 +237,9 @@ BaaCompilerExitCode driver_emit_nazm_source(const CompilerConfig *config,
     free(source_map_path);
     if (result.status == BAA_NAZM_EMIT_UNSUPPORTED)
     {
-        if (result.source_file && result.source_line > 0)
-            fprintf(stderr,
-                    "خطأ في %s:%d:%d: %s\n",
-                    result.source_file,
-                    result.source_line,
-                    result.source_col > 0 ? result.source_col : 1,
-                    result.reason ? result.reason : "صيغة نظم غير مدعومة.");
-        else
-            fprintf(stderr,
-                    "خطأ: %s\n",
-                    result.reason ? result.reason : "صيغة نظم غير مدعومة.");
+        fprintf(stderr,
+                "خطأ: %s\n",
+                result.reason ? result.reason : "صيغة نظم غير مدعومة.");
         return BAA_COMPILER_EXIT_UNSUPPORTED;
     }
 

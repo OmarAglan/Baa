@@ -287,6 +287,7 @@ class NazmEmitterTests(unittest.TestCase):
 
             self.assertEqual(proc.returncode, 3, proc.stderr)
             self.assertIn("غير مدعومة", proc.stderr)
+            self.assertNotIn("خطأ في", proc.stderr)
             self.assertNotIn("\x06", proc.stderr)
             self.assertFalse(output.exists())
 

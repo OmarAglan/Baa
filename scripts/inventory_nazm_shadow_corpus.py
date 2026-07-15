@@ -23,6 +23,9 @@ DEFAULT_OUTPUT = ROOT / "docs" / "generated" / "baa_nazm_shadow_corpus_v1.json"
 TARGETS = ("x86_64-linux", "x86_64-windows")
 LATIN_LETTER_RE = re.compile(r"[A-Za-z]")
 LOCATION_RE = re.compile(r"\s+\((.+):(\d+):(\d+)\)\s*$")
+BLOCKER_RE = re.compile(
+    r"\s+\[عائق_نظم=([^؛\]]+)(?:؛تفصيل=([^\]]+))?\]\s*$"
+)
 ARABIC_DIGIT_TRANSLATION = str.maketrans("0123456789", "٠١٢٣٤٥٦٧٨٩")
 INVENTORY_OUTPUT_FLAGS = {"-S", "-c", "--check", "--check-header", "--emit-ir"}
 
@@ -62,13 +65,24 @@ def _normalize_path(text: str) -> str:
     return normalized.replace("\\", "/")
 
 
-def _diagnostic(stderr: str) -> str:
+def _diagnostic_and_blocker(stderr: str) -> tuple[str, dict[str, str] | None]:
     lines = [line.strip() for line in stderr.splitlines() if line.strip()]
     message = _normalize_path(lines[-1] if lines else "missing compiler diagnostic")
+    blocker: dict[str, str] | None = None
+    blocker_match = BLOCKER_RE.search(message)
+    if blocker_match:
+        blocker = {"kind": blocker_match.group(1)}
+        if blocker_match.group(2):
+            blocker["detail"] = blocker_match.group(2)
+        message = message[: blocker_match.start()].rstrip()
     match = LOCATION_RE.search(message)
-    if not match:
-        return message
-    return message[: match.start()].rstrip()
+    if match:
+        message = message[: match.start()].rstrip()
+    return message, blocker
+
+
+def _diagnostic(stderr: str) -> str:
+    return _diagnostic_and_blocker(stderr)[0]
 
 
 def _source_flag_index(target: dict[str, Any]) -> dict[str, list[str]]:
@@ -140,9 +154,13 @@ def _classify_source(
         row["sha256"] = hashlib.sha256(text.encode("utf-8")).hexdigest()
         return row
 
-    row["reason"] = _diagnostic(result.stderr)
-    if result.returncode == 3 and not output.exists():
+    row["reason"], blocker = _diagnostic_and_blocker(result.stderr)
+    if blocker:
+        row["blocker"] = blocker
+    if result.returncode == 3 and not output.exists() and blocker:
         row["status"] = "unsupported"
+    elif result.returncode == 3 and not blocker:
+        row["reason"] = "Unsupported emission did not report a structured Nazm blocker."
     elif result.returncode == 3:
         row["reason"] = "Unsupported emission left a partial Nazm source."
     return row
@@ -178,6 +196,11 @@ def _target_matrix(
     reason_counts = Counter(
         row["reason"] for row in rows if row["status"] == "unsupported"
     )
+    blocker_counts = Counter(
+        (row["blocker"]["kind"], row["blocker"].get("detail", ""))
+        for row in rows
+        if row["status"] == "unsupported"
+    )
     return {
         "source_count": len(rows),
         "summary": {
@@ -187,6 +210,17 @@ def _target_matrix(
             {"reason": reason, "count": count}
             for reason, count in sorted(
                 reason_counts.items(), key=lambda item: (-item[1], item[0])
+            )
+        ],
+        "unsupported_blockers": [
+            {
+                **{"kind": kind},
+                **({"detail": detail} if detail else {}),
+                "count": count,
+            }
+            for (kind, detail), count in sorted(
+                blocker_counts.items(),
+                key=lambda item: (-item[1], item[0][0], item[0][1]),
             )
         ],
         "sources": rows,
@@ -223,6 +257,7 @@ def build_matrix(
             "emitted": "Baa emitted canonical Arabic Nazm without Latin letters.",
             "unsupported": "Baa returned compiler-cli-v1 code 3 and left no output.",
             "error": "The classification gate failed; this is never a GAS fallback.",
+            "blocker": "Every unsupported row carries a stable Arabic kind and optional detail.",
         },
         "targets": rendered_targets,
     }

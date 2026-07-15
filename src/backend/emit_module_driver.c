@@ -8,47 +8,6 @@
  * يمشي على جميع تعليمات الدالة ويكشف أي سجلات callee-saved
  * استُخدمت كوجهة (dst) حتى نحفظها في المقدمة ونستعيدها في الخاتمة.
  */
-static int collect_callee_saved(MachineFunc* func, PhysReg* regs_out) {
-    // السجلات المحفوظة التي قد نحتاج لحفظها
-    // RBX, RSI, RDI, R12-R15 (نرشحها حسب الهدف؛ لا نحفظ RBP لأنه يُحفظ في المقدمة)
-    static const PhysReg candidates[] = {
-        PHYS_RBX, PHYS_RSI, PHYS_RDI,
-        PHYS_R12, PHYS_R13, PHYS_R14, PHYS_R15
-    };
-    static const int candidate_count = 7;
-
-    bool used[PHYS_REG_COUNT] = {false};
-
-    // المشي على جميع التعليمات
-    for (MachineBlock* block = func->blocks; block; block = block->next) {
-        for (MachineInst* inst = block->first; inst; inst = inst->next) {
-            // التحقق من الوجهة
-            if (inst->dst.kind == MACH_OP_VREG) {
-                int r = inst->dst.data.vreg;
-                if (r >= 0 && r < PHYS_REG_COUNT) used[r] = true;
-            }
-            // التحقق من المصادر
-            if (inst->src1.kind == MACH_OP_VREG) {
-                int r = inst->src1.data.vreg;
-                if (r >= 0 && r < PHYS_REG_COUNT) used[r] = true;
-            }
-            if (inst->src2.kind == MACH_OP_VREG) {
-                int r = inst->src2.data.vreg;
-                if (r >= 0 && r < PHYS_REG_COUNT) used[r] = true;
-            }
-        }
-    }
-
-    int count = 0;
-    for (int i = 0; i < candidate_count; i++) {
-        if (used[candidates[i]] && emit_reg_is_callee_saved(candidates[i])) {
-            regs_out[count++] = candidates[i];
-        }
-    }
-
-    return count;
-}
-
 bool emit_func(MachineFunc* func, FILE* out) {
     if (!func || !out) return false;
 
@@ -70,7 +29,9 @@ bool emit_func(MachineFunc* func, FILE* out) {
 
     // جمع السجلات المحفوظة المستخدمة
     PhysReg callee_regs[16];
-    int callee_count = collect_callee_saved(func, callee_regs);
+    int callee_count = machine_func_collect_callee_saved(
+        func, g_emit_target, callee_regs, 16);
+    if (callee_count < 0) return false;
 
     // إصدار المقدمة
     emit_prologue(func, out, callee_regs, callee_count);

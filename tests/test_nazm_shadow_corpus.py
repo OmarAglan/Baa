@@ -56,12 +56,15 @@ class NazmShadowCorpusTests(unittest.TestCase):
                 [row["source"] for row in rows], inventory_target["sources"]
             )
             self.assertEqual(target["summary"], {
-                "emitted": 1,
-                "unsupported": 99,
+                "emitted": 14,
+                "unsupported": 86,
                 "error": 0,
             })
             self.assertEqual(
-                sum(item["count"] for item in target["unsupported_reasons"]), 99
+                sum(item["count"] for item in target["unsupported_reasons"]), 86
+            )
+            self.assertEqual(
+                sum(item["count"] for item in target["unsupported_blockers"]), 86
             )
             self.assertTrue(all(
                 row["status"] in {"emitted", "unsupported"} for row in rows
@@ -73,13 +76,51 @@ class NazmShadowCorpusTests(unittest.TestCase):
             self.assertTrue(all(
                 row.get("reason") for row in rows if row["status"] == "unsupported"
             ))
+            self.assertTrue(all(
+                row.get("blocker", {}).get("kind")
+                for row in rows
+                if row["status"] == "unsupported"
+            ))
+            blockers_by_kind: dict[str, int] = {}
+            for blocker in target["unsupported_blockers"]:
+                blockers_by_kind[blocker["kind"]] = (
+                    blockers_by_kind.get(blocker["kind"], 0) + blocker["count"]
+                )
+            self.assertEqual(blockers_by_kind, {
+                "جداول_سلاسل": 48,
+                "متغيرات_عامة": 26,
+                "تعليمة_آلة": 1,
+                "اسم_دالة_غير_عربي": 4,
+                "إعدادات_التحويل": 4,
+                "اسم_رمز_غير_عربي": 1,
+                "عرض_أو_نوع_معامل": 1,
+                "نوع_معامل_قيمة_غير_مدعوم": 1,
+            })
 
             emitted = [row for row in rows if row["status"] == "emitted"]
             self.assertEqual(
                 [row["source"] for row in emitted],
-                ["tests/integration/backend/backend_pp_nested_test.baa"],
+                [
+                    "tests/integration/backend/backend_array_init_test.baa",
+                    "tests/integration/backend/backend_array_sum_test.baa",
+                    "tests/integration/backend/backend_const_pointer_rules_test.baa",
+                    "tests/integration/backend/backend_func_ptr_shadow_call_test.baa",
+                    "tests/integration/backend/backend_func_ptr_test.baa",
+                    "tests/integration/backend/backend_include_i_path_with_spaces_test.baa",
+                    "tests/integration/backend/backend_include_relative_alias_path_test.baa",
+                    "tests/integration/backend/backend_include_relative_dir_test.baa",
+                    "tests/integration/backend/backend_mod_test.baa",
+                    "tests/integration/backend/backend_pointer_core_test.baa",
+                    "tests/integration/backend/backend_pp_nested_test.baa",
+                    "tests/integration/backend/backend_struct_init_test.baa",
+                    "tests/integration/ir/ir_printer.baa",
+                    "tests/stress/stress_deep_scopes.baa",
+                ],
             )
-            self.assertRegex(emitted[0]["sha256"], r"^[0-9a-f]{64}$")
+            self.assertTrue(all(
+                re.fullmatch(r"[0-9a-f]{64}", row["sha256"])
+                for row in emitted
+            ))
 
     def test_coverage_contract_embeds_the_full_shadow_matrix(self) -> None:
         raw = MATRIX_PATH.read_bytes()
@@ -106,6 +147,14 @@ class NazmShadowCorpusTests(unittest.TestCase):
             }]
         })
         self.assertEqual(index["عينة.باء"], ["-O1", "-fruntime-checks"])
+
+    def test_arabic_blocker_suffix_is_parsed_without_becoming_the_reason(self) -> None:
+        reason, blocker = MATRIX._diagnostic_and_blocker(
+            "خطأ: صيغة غير مدعومة. "
+            "[عائق_نظم=تعليمة_آلة؛تفصيل=جمع]\n"
+        )
+        self.assertEqual(reason, "خطأ: صيغة غير مدعومة.")
+        self.assertEqual(blocker, {"kind": "تعليمة_آلة", "detail": "جمع"})
 
     @unittest.skipUnless(_find_baa(), "Baa compiler is unavailable")
     def test_checked_matrix_is_fresh_against_the_current_compiler(self) -> None:

@@ -20,6 +20,22 @@ static char *driver_nazm_artifact_path(const char *base, const char *suffix)
     return path;
 }
 
+static void driver_nazm_report_unsupported(const char *reason,
+                                           const char *blocker_kind,
+                                           const char *blocker_detail)
+{
+    const char *message = reason ? reason : "صيغة نظم غير مدعومة.";
+    const char *kind = blocker_kind ? blocker_kind : "غير_مصنف";
+    if (blocker_detail && blocker_detail[0])
+        fprintf(stderr,
+                "خطأ: %s [عائق_نظم=%s؛تفصيل=%s]\n",
+                message,
+                kind,
+                blocker_detail);
+    else
+        fprintf(stderr, "خطأ: %s [عائق_نظم=%s]\n", message, kind);
+}
+
 static int driver_nazm_hex_value(char value)
 {
     if (value >= '0' && value <= '9') return value - '0';
@@ -195,8 +211,10 @@ BaaCompilerExitCode driver_emit_nazm_source(const CompilerConfig *config,
     if (config->custom_startup || config->debug_info ||
         config->codegen_opts.stack_protector != BAA_STACKPROT_OFF)
     {
-        fprintf(stderr,
-                "خطأ: شريحة نظم الأولى لا تدعم بدء التشغيل المخصص أو معلومات التنقيح أو حماية المكدس.\n");
+        driver_nazm_report_unsupported(
+            "شريحة نظم الأولى لا تدعم بدء التشغيل المخصص أو معلومات التنقيح أو حماية المكدس.",
+            "إعدادات_التحويل",
+            NULL);
         return BAA_COMPILER_EXIT_UNSUPPORTED;
     }
 
@@ -237,9 +255,9 @@ BaaCompilerExitCode driver_emit_nazm_source(const CompilerConfig *config,
     free(source_map_path);
     if (result.status == BAA_NAZM_EMIT_UNSUPPORTED)
     {
-        fprintf(stderr,
-                "خطأ: %s\n",
-                result.reason ? result.reason : "صيغة نظم غير مدعومة.");
+        driver_nazm_report_unsupported(result.reason,
+                                       result.blocker_kind,
+                                       result.blocker_detail);
         return BAA_COMPILER_EXIT_UNSUPPORTED;
     }
 

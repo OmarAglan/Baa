@@ -375,6 +375,9 @@ def build_coverage(
                     "unsupported_reasons": shadow_target.get(
                         "unsupported_reasons", []
                     ),
+                    "unsupported_blockers": shadow_target.get(
+                        "unsupported_blockers", []
+                    ),
                     "sources": shadow_sources,
                 },
             },

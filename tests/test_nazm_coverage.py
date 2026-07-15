@@ -109,7 +109,7 @@ class NazmCoverageTests(unittest.TestCase):
         )
         self.assertEqual(
             instruction_index[("sete", ("register",))]["status"],
-            "unsupported",
+            "supported",
         )
         directive_index = {
             (item["directive"], tuple(item["operands"])): item

@@ -15,6 +15,7 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
+SHADOW_MATRIX = ROOT / "docs" / "generated" / "baa_nazm_shadow_corpus_v1.json"
 
 
 def _read_c_string(data: bytes, offset: int) -> str:
@@ -247,6 +248,29 @@ class NazmEmitterTests(unittest.TestCase):
                         self.assertGreaterEqual(line_number, 1)
                         self.assertLessEqual(line_number, len(generated_lines))
 
+    def test_local_jump_source_is_canonical_arabic_for_both_targets(self) -> None:
+        source = (
+            ROOT / "tests" / "integration" / "backend" / "backend_mod_test.baa"
+        )
+        with tempfile.TemporaryDirectory(prefix="baa_nazm_jump_") as temp:
+            work = Path(temp)
+            for target in ("x86_64-windows", "x86_64-linux"):
+                with self.subTest(target=target):
+                    output = work / f"قفز-{target}.نظم"
+                    proc = self.run_baa(
+                        work,
+                        "--emit-nazm",
+                        f"--target={target}",
+                        str(source),
+                        "-o",
+                        str(output),
+                    )
+                    self.assertEqual(proc.returncode, 0, proc.stderr)
+                    text = output.read_text(encoding="utf-8")
+                    self.assertIn("اقفز كتلة_٠_٦", text)
+                    self.assertIn("كتلة_٠_٦:", text)
+                    self.assertIsNone(re.search(r"[A-Za-z]", text))
+
     def test_unsupported_form_is_visible_and_leaves_no_output(self) -> None:
         with tempfile.TemporaryDirectory(prefix="baa_nazm_unsupported_") as temp:
             work = Path(temp)
@@ -260,7 +284,8 @@ class NazmEmitterTests(unittest.TestCase):
             )
 
             self.assertEqual(proc.returncode, 3, proc.stderr)
-            self.assertIn("غير مدعومة", proc.stderr)
+            self.assertIn("خطأ:", proc.stderr)
+            self.assertIn("[عائق_نظم=", proc.stderr)
             self.assertFalse(output.exists())
             self.assertFalse(Path(f"{output}.خريطة-باء.json").exists())
 
@@ -273,7 +298,7 @@ class NazmEmitterTests(unittest.TestCase):
                 / "tests"
                 / "integration"
                 / "backend"
-                / "backend_include_relative_alias_path_test.baa"
+                / "backend_include_bom_test.baa"
             )
             proc = self.run_baa(
                 work,
@@ -286,7 +311,8 @@ class NazmEmitterTests(unittest.TestCase):
             )
 
             self.assertEqual(proc.returncode, 3, proc.stderr)
-            self.assertIn("غير مدعومة", proc.stderr)
+            self.assertIn("خطأ:", proc.stderr)
+            self.assertIn("[عائق_نظم=", proc.stderr)
             self.assertNotIn("خطأ في", proc.stderr)
             self.assertNotIn("\x06", proc.stderr)
             self.assertFalse(output.exists())
@@ -446,55 +472,79 @@ class NazmEmitterTests(unittest.TestCase):
                 self.assertNotIn("main", global_symbols)
                 self.assertEqual(relocation_count, 0)
 
-    def test_supported_corpus_source_links_and_matches_runtime(self) -> None:
+    def test_supported_corpus_sources_link_and_match_runtime(self) -> None:
         nazm = _find_nazm()
         if nazm is None:
             self.skipTest("Nazm executable is unavailable in this checkout")
 
-        source = (
-            ROOT / "tests" / "integration" / "backend" / "backend_pp_nested_test.baa"
-        )
-        with tempfile.TemporaryDirectory(prefix="baa_nazm_corpus_shadow_") as temp:
-            work = Path(temp)
-            exe_suffix = ".exe" if os.name == "nt" else ""
-            object_suffix = ".obj" if os.name == "nt" else ".o"
-            output = work / f"برنامج-المصفوفة{exe_suffix}"
-            proc = self.run_baa(
-                work,
-                f"--nazm-shadow={nazm}",
-                str(source),
-                "-o",
-                str(output),
-            )
-            self.assertEqual(proc.returncode, 0, proc.stderr)
+        target = "x86_64-windows" if os.name == "nt" else "x86_64-linux"
+        matrix = json.loads(SHADOW_MATRIX.read_text(encoding="utf-8"))
+        rows = [
+            row
+            for row in matrix["targets"][target]["sources"]
+            if row["status"] == "emitted"
+        ]
+        self.assertEqual(len(rows), 14)
+        for row in rows:
+            source = ROOT / row["source"]
+            flags = ["-I", str(ROOT), *row.get("flags", [])]
+            for index, flag in enumerate(flags):
+                if index > 0 and flags[index - 1] == "-I":
+                    candidate = Path(flag)
+                    if not candidate.is_absolute():
+                        flags[index] = str(ROOT / candidate)
+                elif flag.startswith("-I") and len(flag) > 2:
+                    candidate = Path(flag[2:])
+                    if not candidate.is_absolute():
+                        flags[index] = f"-I{ROOT / candidate}"
+            with self.subTest(source=source.name), tempfile.TemporaryDirectory(
+                prefix="baa_nazm_corpus_shadow_"
+            ) as temp:
+                work = Path(temp)
+                exe_suffix = ".exe" if os.name == "nt" else ""
+                object_suffix = ".obj" if os.name == "nt" else ".o"
+                output = work / f"برنامج-المصفوفة{exe_suffix}"
+                proc = self.run_baa(
+                    work,
+                    f"--nazm-shadow={nazm}",
+                    *flags,
+                    str(source),
+                    "-o",
+                    str(output),
+                )
+                self.assertEqual(proc.returncode, 0, proc.stderr)
 
-            shadow_source = Path(f"{output}.ظل-نظم.نظم")
-            shadow_map = Path(f"{shadow_source}.خريطة-باء.json")
-            shadow_object = Path(f"{output}.ظل-نظم{object_suffix}")
-            shadow_executable = Path(f"{output}.ظل-نظم{exe_suffix}")
-            nazm_text = shadow_source.read_text(encoding="utf-8")
-            self.assertIsNone(re.search(r"[A-Za-z]", nazm_text))
-            source_map = json.loads(shadow_map.read_text(encoding="utf-8"))
-            self.assertEqual(source_map["schema"], "baa-nazm-source-map-v1")
-            self.assertGreaterEqual(len(source_map["entries"]), 1)
-            self.assertTrue(shadow_object.is_file())
-            self.assertTrue(shadow_executable.is_file())
+                shadow_source = Path(f"{output}.ظل-نظم.نظم")
+                shadow_map = Path(f"{shadow_source}.خريطة-باء.json")
+                shadow_object = Path(f"{output}.ظل-نظم{object_suffix}")
+                shadow_executable = Path(f"{output}.ظل-نظم{exe_suffix}")
+                nazm_text = shadow_source.read_text(encoding="utf-8")
+                self.assertIsNone(re.search(r"[A-Za-z]", nazm_text))
+                source_map = json.loads(shadow_map.read_text(encoding="utf-8"))
+                self.assertEqual(source_map["schema"], "baa-nazm-source-map-v1")
+                self.assertGreaterEqual(len(source_map["entries"]), 1)
+                self.assertTrue(shadow_object.is_file())
+                self.assertTrue(shadow_executable.is_file())
 
-            production_run = subprocess.run(
-                [str(output)], capture_output=True, timeout=30
-            )
-            shadow_run = subprocess.run(
-                [str(shadow_executable)], capture_output=True, timeout=30
-            )
-            self.assertEqual(shadow_run.returncode, production_run.returncode)
-            self.assertEqual(shadow_run.stdout, production_run.stdout)
-            self.assertEqual(shadow_run.stderr, production_run.stderr)
+                production_run = subprocess.run(
+                    [str(output)], capture_output=True, timeout=30
+                )
+                shadow_run = subprocess.run(
+                    [str(shadow_executable)], capture_output=True, timeout=30
+                )
+                self.assertEqual(shadow_run.returncode, production_run.returncode)
+                self.assertEqual(shadow_run.stdout, production_run.stdout)
+                self.assertEqual(shadow_run.stderr, production_run.stderr)
 
-            sections, global_symbols, relocation_count = _inspect_object(shadow_object)
-            self.assertIn(".text", sections)
-            self.assertIn("الرئيسية", global_symbols)
-            self.assertNotIn("main", global_symbols)
-            self.assertEqual(relocation_count, 0)
+                sections, global_symbols, relocation_count = _inspect_object(shadow_object)
+                self.assertIn(".text", sections)
+                self.assertIn("الرئيسية", global_symbols)
+                self.assertNotIn("main", global_symbols)
+                expected_relocations = {
+                    "backend_func_ptr_shadow_call_test.baa": 1,
+                    "backend_func_ptr_test.baa": 3,
+                }.get(source.name, 0)
+                self.assertEqual(relocation_count, expected_relocations)
 
 
 if __name__ == "__main__":

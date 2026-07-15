@@ -7,12 +7,12 @@
   "nazm_capabilities": {
     "schema": "nazm-capabilities-v1",
     "assembler": "Nazm 0.4.0",
-    "sha256": "4892fded92ba3196e5b15662a5f03a56acdb32bb873710d2b330d758720e8023"
+    "sha256": "90fb72a44af1fa73cfb96bc393fad144c516f21e19dc9854aaa58601423ad8d6"
   },
   "shadow_corpus": {
     "schema": "baa-nazm-shadow-corpus-v1",
     "compiler": "baa version 0.6.0",
-    "sha256": "d57e2ae38faa8c870fd18f48fe41635ba6c5e595f70e8b60c175941c5b5e99f4"
+    "sha256": "9d8a8a204c7037160f864a8077831054f723781ca13b6167d74943c620f552d9"
   },
   "status_contract": {
     "supported": "The complete inventory form is implemented by Nazm.",
@@ -136,8 +136,8 @@
         "shadow_matrix": {
           "source_count": 100,
           "summary": {
-            "emitted": 1,
-            "unsupported": 99,
+            "emitted": 14,
+            "unsupported": 86,
             "error": 0
           },
           "unsupported_reasons": [
@@ -150,20 +150,63 @@
               "count": 26
             },
             {
-              "reason": "خطأ: تعليمة الآلة غير مدعومة في شريحة نظم التنفيذية الأولى.",
-              "count": 12
-            },
-            {
-              "reason": "خطأ: حفظ السجلات المحفوظة عبر الاستدعاء غير مدعوم بعد في مسار نظم.",
-              "count": 5
-            },
-            {
               "reason": "خطأ: أسماء الدوال في مصدر نظم يجب أن تكون عربية فقط.",
               "count": 4
             },
             {
               "reason": "خطأ: شريحة نظم الأولى لا تدعم بدء التشغيل المخصص أو معلومات التنقيح أو حماية المكدس.",
               "count": 4
+            },
+            {
+              "reason": "خطأ: المعامل ليس سجلا ماديا بعرض ٨ أو ١٦ أو ٣٢ أو ٦٤ بت.",
+              "count": 1
+            },
+            {
+              "reason": "خطأ: تعليمة الآلة غير مدعومة في شريحة نظم التنفيذية الأولى.",
+              "count": 1
+            },
+            {
+              "reason": "خطأ: رموز الدوال في مصدر نظم وكائنه يجب أن تكون عربية فقط.",
+              "count": 1
+            },
+            {
+              "reason": "خطأ: نوع معامل القيمة غير مدعوم في مسار نظم.",
+              "count": 1
+            }
+          ],
+          "unsupported_blockers": [
+            {
+              "kind": "جداول_سلاسل",
+              "count": 48
+            },
+            {
+              "kind": "متغيرات_عامة",
+              "count": 26
+            },
+            {
+              "kind": "إعدادات_التحويل",
+              "count": 4
+            },
+            {
+              "kind": "اسم_دالة_غير_عربي",
+              "count": 4
+            },
+            {
+              "kind": "اسم_رمز_غير_عربي",
+              "count": 1
+            },
+            {
+              "kind": "تعليمة_آلة",
+              "detail": "تحويل_صحيح_إلى_عشري",
+              "count": 1
+            },
+            {
+              "kind": "عرض_أو_نوع_معامل",
+              "count": 1
+            },
+            {
+              "kind": "نوع_معامل_قيمة_غير_مدعوم",
+              "count": 1
             }
           ],
           "sources": [
@@ -171,67 +214,92 @@
               "source": "examples/error_handling_demo.baa",
               "status": "unsupported",
               "exit_code": 3,
-              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
+              "blocker": {
+                "kind": "جداول_سلاسل"
+              }
             },
             {
               "source": "examples/file_copy_small.baa",
               "status": "unsupported",
               "exit_code": 3,
-              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
+              "blocker": {
+                "kind": "جداول_سلاسل"
+              }
             },
             {
               "source": "examples/hello_world.baa",
               "status": "unsupported",
               "exit_code": 3,
-              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
+              "blocker": {
+                "kind": "جداول_سلاسل"
+              }
             },
             {
               "source": "examples/math_and_format.baa",
               "status": "unsupported",
               "exit_code": 3,
-              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
+              "blocker": {
+                "kind": "جداول_سلاسل"
+              }
             },
             {
               "source": "tests/integration/backend/backend_arabic_numeral_source_tokens_v064_test.baa",
               "status": "unsupported",
               "exit_code": 3,
-              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
+              "blocker": {
+                "kind": "جداول_سلاسل"
+              }
             },
             {
               "source": "tests/integration/backend/backend_array_init_test.baa",
-              "status": "unsupported",
-              "exit_code": 3,
-              "reason": "خطأ: تعليمة الآلة غير مدعومة في شريحة نظم التنفيذية الأولى."
+              "status": "emitted",
+              "exit_code": 0,
+              "sha256": "e0476370efd22dc2a3f0e50b443cd1168d66cf62670d27cf656690ba1e993f2e"
             },
             {
               "source": "tests/integration/backend/backend_array_length_operator_test.baa",
               "status": "unsupported",
               "exit_code": 3,
-              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
+              "blocker": {
+                "kind": "جداول_سلاسل"
+              }
             },
             {
               "source": "tests/integration/backend/backend_array_sum_test.baa",
-              "status": "unsupported",
-              "exit_code": 3,
-              "reason": "خطأ: تعليمة الآلة غير مدعومة في شريحة نظم التنفيذية الأولى."
+              "status": "emitted",
+              "exit_code": 0,
+              "sha256": "fe7595eb9a04192f2b5a3d0ed080709b84f41a3144a538f590124f9db2bcd99b"
             },
             {
               "source": "tests/integration/backend/backend_byte_buffer_stdlib_v062_test.baa",
               "status": "unsupported",
               "exit_code": 3,
-              "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم."
+              "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم.",
+              "blocker": {
+                "kind": "متغيرات_عامة"
+              }
             },
             {
               "source": "tests/integration/backend/backend_cast_pointer_diff_test.baa",
               "status": "unsupported",
               "exit_code": 3,
-              "reason": "خطأ: تعليمة الآلة غير مدعومة في شريحة نظم التنفيذية الأولى."
+              "reason": "خطأ: تعليمة الآلة غير مدعومة في شريحة نظم التنفيذية الأولى.",
+              "blocker": {
+                "kind": "تعليمة_آلة",
+                "detail": "تحويل_صحيح_إلى_عشري"
+              }
             },
             {
               "source": "tests/integration/backend/backend_const_pointer_rules_test.baa",
-              "status": "unsupported",
-              "exit_code": 3,
-              "reason": "خطأ: تعليمة الآلة غير مدعومة في شريحة نظم التنفيذية الأولى."
+              "status": "emitted",
+              "exit_code": 0,
+              "sha256": "27d301f947d6b58d639da556d03469dafb0a54eb89002148427681c1cb9f5415"
             },
             {
               "source": "tests/integration/backend/backend_custom_startup_test.baa",
@@ -240,79 +308,112 @@
               "flags": [
                 "--startup=custom"
               ],
-              "reason": "خطأ: شريحة نظم الأولى لا تدعم بدء التشغيل المخصص أو معلومات التنقيح أو حماية المكدس."
+              "reason": "خطأ: شريحة نظم الأولى لا تدعم بدء التشغيل المخصص أو معلومات التنقيح أو حماية المكدس.",
+              "blocker": {
+                "kind": "إعدادات_التحويل"
+              }
             },
             {
               "source": "tests/integration/backend/backend_dynamic_memory_noheader_test.baa",
               "status": "unsupported",
               "exit_code": 3,
-              "reason": "خطأ: تعليمة الآلة غير مدعومة في شريحة نظم التنفيذية الأولى."
+              "reason": "خطأ: رموز الدوال في مصدر نظم وكائنه يجب أن تكون عربية فقط.",
+              "blocker": {
+                "kind": "اسم_رمز_غير_عربي"
+              }
             },
             {
               "source": "tests/integration/backend/backend_dynamic_memory_test.baa",
               "status": "unsupported",
               "exit_code": 3,
-              "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم."
+              "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم.",
+              "blocker": {
+                "kind": "متغيرات_عامة"
+              }
             },
             {
               "source": "tests/integration/backend/backend_enum_struct_test.baa",
               "status": "unsupported",
               "exit_code": 3,
-              "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم."
+              "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم.",
+              "blocker": {
+                "kind": "متغيرات_عامة"
+              }
             },
             {
               "source": "tests/integration/backend/backend_error_handling_v043_test.baa",
               "status": "unsupported",
               "exit_code": 3,
-              "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم."
+              "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم.",
+              "blocker": {
+                "kind": "متغيرات_عامة"
+              }
             },
             {
               "source": "tests/integration/backend/backend_file_io_noheader_test.baa",
               "status": "unsupported",
               "exit_code": 3,
-              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
+              "blocker": {
+                "kind": "جداول_سلاسل"
+              }
             },
             {
               "source": "tests/integration/backend/backend_file_io_test.baa",
               "status": "unsupported",
               "exit_code": 3,
-              "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم."
+              "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم.",
+              "blocker": {
+                "kind": "متغيرات_عامة"
+              }
             },
             {
               "source": "tests/integration/backend/backend_float_extensions_v042_test.baa",
               "status": "unsupported",
               "exit_code": 3,
-              "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم."
+              "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم.",
+              "blocker": {
+                "kind": "متغيرات_عامة"
+              }
             },
             {
               "source": "tests/integration/backend/backend_format_arabic_test.baa",
               "status": "unsupported",
               "exit_code": 3,
-              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
+              "blocker": {
+                "kind": "جداول_سلاسل"
+              }
             },
             {
               "source": "tests/integration/backend/backend_func_ptr_shadow_call_test.baa",
-              "status": "unsupported",
-              "exit_code": 3,
-              "reason": "خطأ: حفظ السجلات المحفوظة عبر الاستدعاء غير مدعوم بعد في مسار نظم."
+              "status": "emitted",
+              "exit_code": 0,
+              "sha256": "33c742718463572d2a544ae50ecaddfc6d9763bbd3d88f2f82775b893f0f53df"
             },
             {
               "source": "tests/integration/backend/backend_func_ptr_test.baa",
-              "status": "unsupported",
-              "exit_code": 3,
-              "reason": "خطأ: حفظ السجلات المحفوظة عبر الاستدعاء غير مدعوم بعد في مسار نظم."
+              "status": "emitted",
+              "exit_code": 0,
+              "sha256": "f75dae983191ff6f6c9f52bf998d26b57c2fa80661add52b4c7603e38c99141e"
             },
             {
               "source": "tests/integration/backend/backend_global_array_init_test.baa",
               "status": "unsupported",
               "exit_code": 3,
-              "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم."
+              "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم.",
+              "blocker": {
+                "kind": "متغيرات_عامة"
+              }
             },
             {
               "source": "tests/integration/backend/backend_include_bom_test.baa",
               "status": "unsupported",
               "exit_code": 3,
-              "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم."
+              "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم.",
+              "blocker": {
+                "kind": "متغيرات_عامة"
+              }
             },
             {
               "source": "tests/integration/backend/backend_include_i_compact_form_test.baa",
@@ -321,7 +422,10 @@
               "flags": [
                 "-Itests/fixtures/include_i/compact"
               ],
-              "reason": "خطأ: أسماء الدوال في مصدر نظم يجب أن تكون عربية فقط."
+              "reason": "خطأ: أسماء الدوال في مصدر نظم يجب أن تكون عربية فقط.",
+              "blocker": {
+                "kind": "اسم_دالة_غير_عربي"
+              }
             },
             {
               "source": "tests/integration/backend/backend_include_i_nested_source_relative_priority_test.baa",
@@ -333,17 +437,20 @@
                 "-I",
                 "tests/fixtures/include_i/nested_primary"
               ],
-              "reason": "خطأ: أسماء الدوال في مصدر نظم يجب أن تكون عربية فقط."
+              "reason": "خطأ: أسماء الدوال في مصدر نظم يجب أن تكون عربية فقط.",
+              "blocker": {
+                "kind": "اسم_دالة_غير_عربي"
+              }
             },
             {
               "source": "tests/integration/backend/backend_include_i_path_with_spaces_test.baa",
-              "status": "unsupported",
-              "exit_code": 3,
+              "status": "emitted",
+              "exit_code": 0,
               "flags": [
                 "-I",
                 "tests/fixtures/include i space"
               ],
-              "reason": "خطأ: تعليمة الآلة غير مدعومة في شريحة نظم التنفيذية الأولى."
+              "sha256": "22bee7d0379742f971d475db301557eac7bf42e3612e4027cd63803779ee6551"
             },
             {
               "source": "tests/integration/backend/backend_include_i_precedence_test.baa",
@@ -355,7 +462,10 @@
                 "-I",
                 "tests/fixtures/include_i/prio_second"
               ],
-              "reason": "خطأ: أسماء الدوال في مصدر نظم يجب أن تكون عربية فقط."
+              "reason": "خطأ: أسماء الدوال في مصدر نظم يجب أن تكون عربية فقط.",
+              "blocker": {
+                "kind": "اسم_دالة_غير_عربي"
+              }
             },
             {
               "source": "tests/integration/backend/backend_include_i_space_form_test.baa",
@@ -365,67 +475,88 @@
                 "-I",
                 "tests/fixtures/include_i/single_space"
               ],
-              "reason": "خطأ: أسماء الدوال في مصدر نظم يجب أن تكون عربية فقط."
+              "reason": "خطأ: أسماء الدوال في مصدر نظم يجب أن تكون عربية فقط.",
+              "blocker": {
+                "kind": "اسم_دالة_غير_عربي"
+              }
             },
             {
               "source": "tests/integration/backend/backend_include_relative_alias_path_test.baa",
-              "status": "unsupported",
-              "exit_code": 3,
-              "reason": "خطأ: تعليمة الآلة غير مدعومة في شريحة نظم التنفيذية الأولى."
+              "status": "emitted",
+              "exit_code": 0,
+              "sha256": "d2d0df0830a5e9a2e56663151ca3d01c0eb93e87d20c252b2d12142c113167c8"
             },
             {
               "source": "tests/integration/backend/backend_include_relative_dir_test.baa",
-              "status": "unsupported",
-              "exit_code": 3,
-              "reason": "خطأ: تعليمة الآلة غير مدعومة في شريحة نظم التنفيذية الأولى."
+              "status": "emitted",
+              "exit_code": 0,
+              "sha256": "81736dc4a97c38c703829915a0613b356054bcc5c933e08afc14eb7e982be05f"
             },
             {
               "source": "tests/integration/backend/backend_inline_test.baa",
               "status": "unsupported",
               "exit_code": 3,
-              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
+              "blocker": {
+                "kind": "جداول_سلاسل"
+              }
             },
             {
               "source": "tests/integration/backend/backend_int_semantics_test.baa",
               "status": "unsupported",
               "exit_code": 3,
-              "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم."
+              "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم.",
+              "blocker": {
+                "kind": "متغيرات_عامة"
+              }
             },
             {
               "source": "tests/integration/backend/backend_low_level_ops_test.baa",
               "status": "unsupported",
               "exit_code": 3,
-              "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم."
+              "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم.",
+              "blocker": {
+                "kind": "متغيرات_عامة"
+              }
             },
             {
               "source": "tests/integration/backend/backend_main_args_test.baa",
               "status": "unsupported",
               "exit_code": 3,
-              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
+              "blocker": {
+                "kind": "جداول_سلاسل"
+              }
             },
             {
               "source": "tests/integration/backend/backend_mod_test.baa",
-              "status": "unsupported",
-              "exit_code": 3,
-              "reason": "خطأ: تعليمة الآلة غير مدعومة في شريحة نظم التنفيذية الأولى."
+              "status": "emitted",
+              "exit_code": 0,
+              "sha256": "f3284a5edc23adfdde0803acbed42e7d1d098f7fcac6f462f0242a1e0f3715bc"
             },
             {
               "source": "tests/integration/backend/backend_multidim_array_test.baa",
               "status": "unsupported",
               "exit_code": 3,
-              "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم."
+              "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم.",
+              "blocker": {
+                "kind": "متغيرات_عامة"
+              }
             },
             {
               "source": "tests/integration/backend/backend_path_stdlib_v062_test.baa",
               "status": "unsupported",
               "exit_code": 3,
-              "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم."
+              "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم.",
+              "blocker": {
+                "kind": "متغيرات_عامة"
+              }
             },
             {
               "source": "tests/integration/backend/backend_pointer_core_test.baa",
-              "status": "unsupported",
-              "exit_code": 3,
-              "reason": "خطأ: تعليمة الآلة غير مدعومة في شريحة نظم التنفيذية الأولى."
+              "status": "emitted",
+              "exit_code": 0,
+              "sha256": "3395c2274624c36d1e9c1523abdf2036f607fbf9e7967273a61a8806c3ae33ee"
             },
             {
               "source": "tests/integration/backend/backend_pp_nested_test.baa",
@@ -437,43 +568,64 @@
               "source": "tests/integration/backend/backend_process_runtime_v065_test.baa",
               "status": "unsupported",
               "exit_code": 3,
-              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
+              "blocker": {
+                "kind": "جداول_سلاسل"
+              }
             },
             {
               "source": "tests/integration/backend/backend_readline_stdin_test.baa",
               "status": "unsupported",
               "exit_code": 3,
-              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
+              "blocker": {
+                "kind": "جداول_سلاسل"
+              }
             },
             {
               "source": "tests/integration/backend/backend_readnum_stdin_test.baa",
               "status": "unsupported",
               "exit_code": 3,
-              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
+              "blocker": {
+                "kind": "جداول_سلاسل"
+              }
             },
             {
               "source": "tests/integration/backend/backend_regalloc_stress.baa",
               "status": "unsupported",
               "exit_code": 3,
-              "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم."
+              "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم.",
+              "blocker": {
+                "kind": "متغيرات_عامة"
+              }
             },
             {
               "source": "tests/integration/backend/backend_result_helpers_stdlib_v062_test.baa",
               "status": "unsupported",
               "exit_code": 3,
-              "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم."
+              "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم.",
+              "blocker": {
+                "kind": "متغيرات_عامة"
+              }
             },
             {
               "source": "tests/integration/backend/backend_runtime_assert_fail_v055_test.baa",
               "status": "unsupported",
               "exit_code": 3,
-              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
+              "blocker": {
+                "kind": "جداول_سلاسل"
+              }
             },
             {
               "source": "tests/integration/backend/backend_runtime_assert_pass_v055_test.baa",
               "status": "unsupported",
               "exit_code": 3,
-              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
+              "blocker": {
+                "kind": "جداول_سلاسل"
+              }
             },
             {
               "source": "tests/integration/backend/backend_runtime_bounds_fail_v055_test.baa",
@@ -482,7 +634,10 @@
               "flags": [
                 "-fruntime-checks"
               ],
-              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
+              "blocker": {
+                "kind": "جداول_سلاسل"
+              }
             },
             {
               "source": "tests/integration/backend/backend_runtime_checks_selective_bounds_fail_v063_test.baa",
@@ -491,7 +646,10 @@
               "flags": [
                 "-fruntime-checks=bounds"
               ],
-              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
+              "blocker": {
+                "kind": "جداول_سلاسل"
+              }
             },
             {
               "source": "tests/integration/backend/backend_runtime_checks_selective_null_fail_v063_test.baa",
@@ -500,7 +658,10 @@
               "flags": [
                 "-fruntime-checks=null"
               ],
-              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
+              "blocker": {
+                "kind": "جداول_سلاسل"
+              }
             },
             {
               "source": "tests/integration/backend/backend_runtime_div_zero_fail_v063_test.baa",
@@ -509,7 +670,10 @@
               "flags": [
                 "-fruntime-checks"
               ],
-              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
+              "blocker": {
+                "kind": "جداول_سلاسل"
+              }
             },
             {
               "source": "tests/integration/backend/backend_runtime_mod_zero_fail_v063_test.baa",
@@ -518,7 +682,10 @@
               "flags": [
                 "-fruntime-checks"
               ],
-              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
+              "blocker": {
+                "kind": "جداول_سلاسل"
+              }
             },
             {
               "source": "tests/integration/backend/backend_runtime_null_deref_assign_fail_v063_test.baa",
@@ -527,7 +694,10 @@
               "flags": [
                 "-fruntime-checks"
               ],
-              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
+              "blocker": {
+                "kind": "جداول_سلاسل"
+              }
             },
             {
               "source": "tests/integration/backend/backend_runtime_null_deref_fail_v063_test.baa",
@@ -536,19 +706,28 @@
               "flags": [
                 "-fruntime-checks"
               ],
-              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
+              "blocker": {
+                "kind": "جداول_سلاسل"
+              }
             },
             {
               "source": "tests/integration/backend/backend_runtime_panic_location_v063_test.baa",
               "status": "unsupported",
               "exit_code": 3,
-              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
+              "blocker": {
+                "kind": "جداول_سلاسل"
+              }
             },
             {
               "source": "tests/integration/backend/backend_runtime_panic_v055_test.baa",
               "status": "unsupported",
               "exit_code": 3,
-              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
+              "blocker": {
+                "kind": "جداول_سلاسل"
+              }
             },
             {
               "source": "tests/integration/backend/backend_runtime_shift_width_high_fail_v063_test.baa",
@@ -557,7 +736,10 @@
               "flags": [
                 "-fruntime-checks"
               ],
-              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
+              "blocker": {
+                "kind": "جداول_سلاسل"
+              }
             },
             {
               "source": "tests/integration/backend/backend_runtime_shift_width_negative_fail_v063_test.baa",
@@ -566,7 +748,10 @@
               "flags": [
                 "-fruntime-checks"
               ],
-              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
+              "blocker": {
+                "kind": "جداول_سلاسل"
+              }
             },
             {
               "source": "tests/integration/backend/backend_runtime_string_array_inner_bounds_fail_v063_test.baa",
@@ -575,7 +760,10 @@
               "flags": [
                 "-fruntime-checks"
               ],
-              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
+              "blocker": {
+                "kind": "جداول_سلاسل"
+              }
             },
             {
               "source": "tests/integration/backend/backend_runtime_string_bounds_fail_v063_test.baa",
@@ -584,139 +772,205 @@
               "flags": [
                 "-fruntime-checks"
               ],
-              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
+              "blocker": {
+                "kind": "جداول_سلاسل"
+              }
             },
             {
               "source": "tests/integration/backend/backend_scan_arabic_test.baa",
               "status": "unsupported",
               "exit_code": 3,
-              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
+              "blocker": {
+                "kind": "جداول_سلاسل"
+              }
             },
             {
               "source": "tests/integration/backend/backend_scope_test.baa",
               "status": "unsupported",
               "exit_code": 3,
-              "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم."
+              "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم.",
+              "blocker": {
+                "kind": "متغيرات_عامة"
+              }
             },
             {
               "source": "tests/integration/backend/backend_sha256_file_v066_test.baa",
               "status": "unsupported",
               "exit_code": 3,
-              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
+              "blocker": {
+                "kind": "جداول_سلاسل"
+              }
             },
             {
               "source": "tests/integration/backend/backend_stackargs_test.baa",
               "status": "unsupported",
               "exit_code": 3,
-              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
+              "blocker": {
+                "kind": "جداول_سلاسل"
+              }
             },
             {
               "source": "tests/integration/backend/backend_static_storage_test.baa",
               "status": "unsupported",
               "exit_code": 3,
-              "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم."
+              "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم.",
+              "blocker": {
+                "kind": "متغيرات_عامة"
+              }
             },
             {
               "source": "tests/integration/backend/backend_stdlib_short_include_test.baa",
               "status": "unsupported",
               "exit_code": 3,
-              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
+              "blocker": {
+                "kind": "جداول_سلاسل"
+              }
             },
             {
               "source": "tests/integration/backend/backend_stdlib_v041_test.baa",
               "status": "unsupported",
               "exit_code": 3,
-              "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم."
+              "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم.",
+              "blocker": {
+                "kind": "متغيرات_عامة"
+              }
             },
             {
               "source": "tests/integration/backend/backend_string_builder_stdlib_v062_test.baa",
               "status": "unsupported",
               "exit_code": 3,
-              "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم."
+              "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم.",
+              "blocker": {
+                "kind": "متغيرات_عامة"
+              }
             },
             {
               "source": "tests/integration/backend/backend_string_ops_test.baa",
               "status": "unsupported",
               "exit_code": 3,
-              "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم."
+              "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم.",
+              "blocker": {
+                "kind": "متغيرات_عامة"
+              }
             },
             {
               "source": "tests/integration/backend/backend_struct_init_test.baa",
-              "status": "unsupported",
-              "exit_code": 3,
-              "reason": "خطأ: تعليمة الآلة غير مدعومة في شريحة نظم التنفيذية الأولى."
+              "status": "emitted",
+              "exit_code": 0,
+              "sha256": "e915658ac83e08a1f68f95df6b55c00d08c1ac0786fef722b232cfb8b27a63d2"
             },
             {
               "source": "tests/integration/backend/backend_sysv_6args_test.baa",
               "status": "unsupported",
               "exit_code": 3,
-              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
+              "blocker": {
+                "kind": "جداول_سلاسل"
+              }
             },
             {
               "source": "tests/integration/backend/backend_tailcall_float_test.baa",
               "status": "unsupported",
               "exit_code": 3,
-              "reason": "خطأ: حفظ السجلات المحفوظة عبر الاستدعاء غير مدعوم بعد في مسار نظم."
+              "reason": "خطأ: نوع معامل القيمة غير مدعوم في مسار نظم.",
+              "blocker": {
+                "kind": "نوع_معامل_قيمة_غير_مدعوم"
+              }
             },
             {
               "source": "tests/integration/backend/backend_tailcall_test.baa",
               "status": "unsupported",
               "exit_code": 3,
-              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
+              "blocker": {
+                "kind": "جداول_سلاسل"
+              }
             },
             {
               "source": "tests/integration/backend/backend_test.baa",
               "status": "unsupported",
               "exit_code": 3,
-              "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم."
+              "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم.",
+              "blocker": {
+                "kind": "متغيرات_عامة"
+              }
             },
             {
               "source": "tests/integration/backend/backend_text_stdlib_helpers_v064_test.baa",
               "status": "unsupported",
               "exit_code": 3,
-              "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم."
+              "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم.",
+              "blocker": {
+                "kind": "متغيرات_عامة"
+              }
             },
             {
               "source": "tests/integration/backend/backend_type_alias_test.baa",
               "status": "unsupported",
               "exit_code": 3,
-              "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم."
+              "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم.",
+              "blocker": {
+                "kind": "متغيرات_عامة"
+              }
             },
             {
               "source": "tests/integration/backend/backend_union_test.baa",
               "status": "unsupported",
               "exit_code": 3,
-              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
+              "blocker": {
+                "kind": "جداول_سلاسل"
+              }
             },
             {
               "source": "tests/integration/backend/backend_utf8_validation_valid_v064_test.baa",
               "status": "unsupported",
               "exit_code": 3,
-              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
+              "blocker": {
+                "kind": "جداول_سلاسل"
+              }
             },
             {
               "source": "tests/integration/backend/backend_variadic_functions_test.baa",
               "status": "unsupported",
               "exit_code": 3,
-              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
+              "blocker": {
+                "kind": "جداول_سلاسل"
+              }
             },
             {
               "source": "tests/integration/backend/backend_vector_stdlib_v062_test.baa",
               "status": "unsupported",
               "exit_code": 3,
-              "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم."
+              "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم.",
+              "blocker": {
+                "kind": "متغيرات_عامة"
+              }
             },
             {
               "source": "tests/integration/backend/int_sizes_test.baa",
               "status": "unsupported",
               "exit_code": 3,
-              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
+              "blocker": {
+                "kind": "جداول_سلاسل"
+              }
             },
             {
               "source": "tests/integration/frontend/frontend_extern_declarations_test.baa",
               "status": "unsupported",
               "exit_code": 3,
-              "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم."
+              "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم.",
+              "blocker": {
+                "kind": "متغيرات_عامة"
+              }
             },
             {
               "source": "tests/integration/frontend/frontend_extern_no_storage_test.baa",
@@ -725,7 +979,10 @@
               "flags": [
                 "-O1"
               ],
-              "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم."
+              "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم.",
+              "blocker": {
+                "kind": "متغيرات_عامة"
+              }
             },
             {
               "source": "tests/integration/ir/ir_custom_startup_linux_asm_test.baa",
@@ -735,7 +992,10 @@
                 "--target=x86_64-linux",
                 "--startup=custom"
               ],
-              "reason": "خطأ: شريحة نظم الأولى لا تدعم بدء التشغيل المخصص أو معلومات التنقيح أو حماية المكدس."
+              "reason": "خطأ: شريحة نظم الأولى لا تدعم بدء التشغيل المخصص أو معلومات التنقيح أو حماية المكدس.",
+              "blocker": {
+                "kind": "إعدادات_التحويل"
+              }
             },
             {
               "source": "tests/integration/ir/ir_custom_startup_windows_asm_test.baa",
@@ -745,19 +1005,25 @@
                 "--target=x86_64-windows",
                 "--startup=custom"
               ],
-              "reason": "خطأ: شريحة نظم الأولى لا تدعم بدء التشغيل المخصص أو معلومات التنقيح أو حماية المكدس."
+              "reason": "خطأ: شريحة نظم الأولى لا تدعم بدء التشغيل المخصص أو معلومات التنقيح أو حماية المكدس.",
+              "blocker": {
+                "kind": "إعدادات_التحويل"
+              }
             },
             {
               "source": "tests/integration/ir/ir_inline_asm_test.baa",
               "status": "unsupported",
               "exit_code": 3,
-              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
+              "blocker": {
+                "kind": "جداول_سلاسل"
+              }
             },
             {
               "source": "tests/integration/ir/ir_printer.baa",
-              "status": "unsupported",
-              "exit_code": 3,
-              "reason": "خطأ: تعليمة الآلة غير مدعومة في شريحة نظم التنفيذية الأولى."
+              "status": "emitted",
+              "exit_code": 0,
+              "sha256": "0c7cc16889ee9617680b5be88712d4514bc229380e4af5dbb488b29d2fb0d799"
             },
             {
               "source": "tests/integration/ir/ir_runtime_bounds_debug_info_no_checks_v055_test.baa",
@@ -766,7 +1032,10 @@
               "flags": [
                 "--debug-info"
               ],
-              "reason": "خطأ: شريحة نظم الأولى لا تدعم بدء التشغيل المخصص أو معلومات التنقيح أو حماية المكدس."
+              "reason": "خطأ: شريحة نظم الأولى لا تدعم بدء التشغيل المخصص أو معلومات التنقيح أو حماية المكدس.",
+              "blocker": {
+                "kind": "إعدادات_التحويل"
+              }
             },
             {
               "source": "tests/integration/ir/ir_runtime_bounds_enabled_v055_test.baa",
@@ -775,7 +1044,10 @@
               "flags": [
                 "-fruntime-checks"
               ],
-              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
+              "blocker": {
+                "kind": "جداول_سلاسل"
+              }
             },
             {
               "source": "tests/integration/ir/ir_runtime_checks_none_v063_test.baa",
@@ -784,7 +1056,10 @@
               "flags": [
                 "-fruntime-checks=none"
               ],
-              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
+              "blocker": {
+                "kind": "جداول_سلاسل"
+              }
             },
             {
               "source": "tests/integration/ir/ir_runtime_checks_selective_bounds_shift_v063_test.baa",
@@ -793,7 +1068,10 @@
               "flags": [
                 "-fruntime-checks=bounds+shift"
               ],
-              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
+              "blocker": {
+                "kind": "جداول_سلاسل"
+              }
             },
             {
               "source": "tests/integration/ir/ir_runtime_checks_selective_null_div_v063_test.baa",
@@ -802,7 +1080,10 @@
               "flags": [
                 "-fruntime-checks=null,div-zero"
               ],
-              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
+              "blocker": {
+                "kind": "جداول_سلاسل"
+              }
             },
             {
               "source": "tests/integration/ir/ir_runtime_div_zero_enabled_v063_test.baa",
@@ -811,7 +1092,10 @@
               "flags": [
                 "-fruntime-checks"
               ],
-              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
+              "blocker": {
+                "kind": "جداول_سلاسل"
+              }
             },
             {
               "source": "tests/integration/ir/ir_runtime_null_deref_enabled_v063_test.baa",
@@ -820,7 +1104,10 @@
               "flags": [
                 "-fruntime-checks"
               ],
-              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
+              "blocker": {
+                "kind": "جداول_سلاسل"
+              }
             },
             {
               "source": "tests/integration/ir/ir_runtime_shift_width_enabled_v063_test.baa",
@@ -829,7 +1116,10 @@
               "flags": [
                 "-fruntime-checks"
               ],
-              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
+              "blocker": {
+                "kind": "جداول_سلاسل"
+              }
             },
             {
               "source": "tests/integration/ir/ir_runtime_string_bounds_enabled_v063_test.baa",
@@ -838,31 +1128,43 @@
               "flags": [
                 "-fruntime-checks"
               ],
-              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
+              "blocker": {
+                "kind": "جداول_سلاسل"
+              }
             },
             {
               "source": "tests/integration/ir/ir_test.baa",
               "status": "unsupported",
               "exit_code": 3,
-              "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم."
+              "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم.",
+              "blocker": {
+                "kind": "متغيرات_عامة"
+              }
             },
             {
               "source": "tests/stress/stress_deep_scopes.baa",
-              "status": "unsupported",
-              "exit_code": 3,
-              "reason": "خطأ: حفظ السجلات المحفوظة عبر الاستدعاء غير مدعوم بعد في مسار نظم."
+              "status": "emitted",
+              "exit_code": 0,
+              "sha256": "440c47ec253743ea7a524807ba743f19c84e6b5b3268c192492b8349b6a88381"
             },
             {
               "source": "tests/stress/stress_symbol_volume.baa",
               "status": "unsupported",
               "exit_code": 3,
-              "reason": "خطأ: حفظ السجلات المحفوظة عبر الاستدعاء غير مدعوم بعد في مسار نظم."
+              "reason": "خطأ: المعامل ليس سجلا ماديا بعرض ٨ أو ١٦ أو ٣٢ أو ٦٤ بت.",
+              "blocker": {
+                "kind": "عرض_أو_نوع_معامل"
+              }
             },
             {
               "source": "tests/stress/stress_utf8_identifiers.baa",
               "status": "unsupported",
               "exit_code": 3,
-              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
+              "blocker": {
+                "kind": "جداول_سلاسل"
+              }
             }
           ]
         }
@@ -902,7 +1204,12 @@
               "register",
               "immediate"
             ],
-            "width_bits": 64
+            "width_bits": [
+              8,
+              16,
+              32,
+              64
+            ]
           },
           "acceptance_fixture": "tests/fixtures/baa_coverage/حساب-وتحكم-باء.نظم"
         },
@@ -925,7 +1232,12 @@
               "register",
               "memory-base-displacement"
             ],
-            "width_bits": 64
+            "width_bits": [
+              8,
+              16,
+              32,
+              64
+            ]
           },
           "acceptance_fixture": "tests/fixtures/baa_coverage/حساب-وتحكم-باء.نظم"
         },
@@ -963,7 +1275,12 @@
               "register",
               "register"
             ],
-            "width_bits": 64
+            "width_bits": [
+              8,
+              16,
+              32,
+              64
+            ]
           },
           "acceptance_fixture": "tests/fixtures/baa_coverage/حساب-وتحكم-باء.نظم"
         },
@@ -1061,7 +1378,12 @@
               "register",
               "immediate"
             ],
-            "width_bits": 64
+            "width_bits": [
+              8,
+              16,
+              32,
+              64
+            ]
           },
           "acceptance_fixture": "tests/fixtures/baa_coverage/حساب-وتحكم-باء.نظم"
         },
@@ -1084,7 +1406,12 @@
               "register",
               "register"
             ],
-            "width_bits": 64
+            "width_bits": [
+              8,
+              16,
+              32,
+              64
+            ]
           },
           "acceptance_fixture": "tests/fixtures/baa_coverage/حساب-وتحكم-باء.نظم"
         },
@@ -1235,7 +1562,12 @@
               "register",
               "immediate"
             ],
-            "width_bits": 64
+            "width_bits": [
+              8,
+              16,
+              32,
+              64
+            ]
           },
           "acceptance_fixture": "tests/fixtures/baa_coverage/حساب-وتحكم-باء.نظم"
         },
@@ -1258,7 +1590,12 @@
               "register",
               "memory-base-displacement"
             ],
-            "width_bits": 64
+            "width_bits": [
+              8,
+              16,
+              32,
+              64
+            ]
           },
           "acceptance_fixture": "tests/fixtures/baa_coverage/حساب-وتحكم-باء.نظم"
         },
@@ -1296,7 +1633,12 @@
               "register",
               "register"
             ],
-            "width_bits": 64
+            "width_bits": [
+              8,
+              16,
+              32,
+              64
+            ]
           },
           "acceptance_fixture": "tests/fixtures/baa_coverage/حساب-وتحكم-باء.نظم"
         },
@@ -1309,8 +1651,13 @@
             "examples/error_handling_demo.baa:532",
             "examples/error_handling_demo.baa:537"
           ],
-          "status": "unsupported",
-          "reason": "Nazm does not implement the cqo instruction."
+          "status": "supported",
+          "nazm": {
+            "mnemonic": "وسع_إشارة_القسمة",
+            "operands": [],
+            "width_bits": 64
+          },
+          "acceptance_fixture": "tests/fixtures/baa_coverage/حساب-وتحكم-باء.نظم"
         },
         {
           "mnemonic": "cvtsi2sd",
@@ -1390,7 +1737,12 @@
             "operands": [
               "register"
             ],
-            "width_bits": 64
+            "width_bits": [
+              8,
+              16,
+              32,
+              64
+            ]
           },
           "acceptance_fixture": "tests/fixtures/baa_coverage/حساب-وتحكم-باء.نظم"
         },
@@ -1414,7 +1766,11 @@
               "register",
               "immediate"
             ],
-            "width_bits": 64
+            "width_bits": [
+              16,
+              32,
+              64
+            ]
           },
           "lowering": "duplicate-destination-as-source",
           "acceptance_fixture": "tests/fixtures/baa_coverage/حساب-وتحكم-باء.نظم"
@@ -1453,7 +1809,11 @@
               "register",
               "register"
             ],
-            "width_bits": 64
+            "width_bits": [
+              16,
+              32,
+              64
+            ]
           },
           "acceptance_fixture": "tests/fixtures/baa_coverage/حساب-وتحكم-باء.نظم"
         },
@@ -1568,7 +1928,12 @@
               "register",
               "immediate"
             ],
-            "width_bits": 64
+            "width_bits": [
+              8,
+              16,
+              32,
+              64
+            ]
           },
           "acceptance_fixture": "tests/fixtures/baa_coverage/حركة-باء.نظم"
         },
@@ -1782,7 +2147,12 @@
               "register",
               "immediate"
             ],
-            "width_bits": 64
+            "width_bits": [
+              8,
+              16,
+              32,
+              64
+            ]
           },
           "acceptance_fixture": "tests/fixtures/baa_coverage/حركة-باء.نظم"
         },
@@ -1805,7 +2175,12 @@
               "register",
               "memory-base-displacement"
             ],
-            "width_bits": 64
+            "width_bits": [
+              8,
+              16,
+              32,
+              64
+            ]
           },
           "acceptance_fixture": "tests/fixtures/baa_coverage/حركة-باء.نظم"
         },
@@ -1843,7 +2218,12 @@
               "memory-base-displacement",
               "register"
             ],
-            "width_bits": 64
+            "width_bits": [
+              8,
+              16,
+              32,
+              64
+            ]
           },
           "acceptance_fixture": "tests/fixtures/baa_coverage/حركة-باء.نظم"
         },
@@ -1881,7 +2261,12 @@
               "register",
               "register"
             ],
-            "width_bits": 64
+            "width_bits": [
+              8,
+              16,
+              32,
+              64
+            ]
           },
           "acceptance_fixture": "tests/fixtures/baa_coverage/حركة-باء.نظم"
         },
@@ -1897,8 +2282,25 @@
             "tests/integration/backend/backend_file_io_test.baa:1598",
             "tests/integration/backend/backend_file_io_test.baa:1611"
           ],
-          "status": "unsupported",
-          "reason": "Nazm does not implement sign- or zero-extension instructions."
+          "status": "supported",
+          "nazm": {
+            "mnemonic": "وسع_بإشارة",
+            "operands": [
+              "register",
+              "register"
+            ],
+            "width_bits": {
+              "source": [
+                8,
+                32
+              ],
+              "destination": [
+                32,
+                64
+              ]
+            }
+          },
+          "acceptance_fixture": "tests/fixtures/baa_coverage/حساب-وتحكم-باء.نظم"
         },
         {
           "mnemonic": "movsbq",
@@ -1912,8 +2314,25 @@
             "examples/error_handling_demo.baa:214",
             "examples/error_handling_demo.baa:215"
           ],
-          "status": "unsupported",
-          "reason": "Nazm does not implement sign- or zero-extension instructions."
+          "status": "supported",
+          "nazm": {
+            "mnemonic": "وسع_بإشارة",
+            "operands": [
+              "register",
+              "register"
+            ],
+            "width_bits": {
+              "source": [
+                8,
+                32
+              ],
+              "destination": [
+                32,
+                64
+              ]
+            }
+          },
+          "acceptance_fixture": "tests/fixtures/baa_coverage/حساب-وتحكم-باء.نظم"
         },
         {
           "mnemonic": "movslq",
@@ -1928,7 +2347,7 @@
             "tests/integration/backend/backend_file_io_test.baa:6002"
           ],
           "status": "unsupported",
-          "reason": "Nazm does not implement sign- or zero-extension instructions."
+          "reason": "Nazm implements this mnemonic, but not this operand shape or width."
         },
         {
           "mnemonic": "movslq",
@@ -1942,8 +2361,25 @@
             "examples/file_copy_small.baa:471",
             "examples/file_copy_small.baa:558"
           ],
-          "status": "unsupported",
-          "reason": "Nazm does not implement sign- or zero-extension instructions."
+          "status": "supported",
+          "nazm": {
+            "mnemonic": "وسع_بإشارة",
+            "operands": [
+              "register",
+              "register"
+            ],
+            "width_bits": {
+              "source": [
+                8,
+                32
+              ],
+              "destination": [
+                32,
+                64
+              ]
+            }
+          },
+          "acceptance_fixture": "tests/fixtures/baa_coverage/حساب-وتحكم-باء.نظم"
         },
         {
           "mnemonic": "movzbl",
@@ -1956,8 +2392,24 @@
             "tests/integration/backend/backend_byte_buffer_stdlib_v062_test.baa:659",
             "tests/integration/backend/backend_byte_buffer_stdlib_v062_test.baa:660"
           ],
-          "status": "unsupported",
-          "reason": "Nazm does not implement sign- or zero-extension instructions."
+          "status": "supported",
+          "nazm": {
+            "mnemonic": "وسع_بصفر",
+            "operands": [
+              "register",
+              "register"
+            ],
+            "width_bits": {
+              "source": [
+                8
+              ],
+              "destination": [
+                32,
+                64
+              ]
+            }
+          },
+          "acceptance_fixture": "tests/fixtures/baa_coverage/حساب-وتحكم-باء.نظم"
         },
         {
           "mnemonic": "movzbq",
@@ -1972,7 +2424,7 @@
             "examples/math_and_format.baa:747"
           ],
           "status": "unsupported",
-          "reason": "Nazm does not implement sign- or zero-extension instructions."
+          "reason": "Nazm implements this mnemonic, but not this operand shape or width."
         },
         {
           "mnemonic": "movzbq",
@@ -1986,8 +2438,24 @@
             "examples/error_handling_demo.baa:36",
             "examples/error_handling_demo.baa:85"
           ],
-          "status": "unsupported",
-          "reason": "Nazm does not implement sign- or zero-extension instructions."
+          "status": "supported",
+          "nazm": {
+            "mnemonic": "وسع_بصفر",
+            "operands": [
+              "register",
+              "register"
+            ],
+            "width_bits": {
+              "source": [
+                8
+              ],
+              "destination": [
+                32,
+                64
+              ]
+            }
+          },
+          "acceptance_fixture": "tests/fixtures/baa_coverage/حساب-وتحكم-باء.نظم"
         },
         {
           "mnemonic": "mov",
@@ -2125,7 +2593,12 @@
               "register",
               "register"
             ],
-            "width_bits": 64
+            "width_bits": [
+              8,
+              16,
+              32,
+              64
+            ]
           },
           "acceptance_fixture": "tests/fixtures/baa_coverage/حساب-وتحكم-باء.نظم"
         },
@@ -2245,7 +2718,12 @@
               "register",
               "immediate"
             ],
-            "width_bits": 64
+            "width_bits": [
+              8,
+              16,
+              32,
+              64
+            ]
           },
           "acceptance_fixture": "tests/fixtures/baa_coverage/حساب-وتحكم-باء.نظم"
         },
@@ -2260,8 +2738,15 @@
             "tests/integration/backend/backend_test.baa:3230",
             "tests/integration/backend/backend_test.baa:3310"
           ],
-          "status": "unsupported",
-          "reason": "Nazm does not implement setcc instructions or 8-bit destinations."
+          "status": "supported",
+          "nazm": {
+            "mnemonic": "عين_فوق_أو_مساو",
+            "operands": [
+              "register"
+            ],
+            "width_bits": 8
+          },
+          "acceptance_fixture": "tests/fixtures/baa_coverage/حساب-وتحكم-باء.نظم"
         },
         {
           "mnemonic": "seta",
@@ -2274,8 +2759,15 @@
             "tests/integration/backend/backend_stdlib_v041_test.baa:286",
             "tests/integration/backend/backend_stdlib_v041_test.baa:314"
           ],
-          "status": "unsupported",
-          "reason": "Nazm does not implement setcc instructions or 8-bit destinations."
+          "status": "supported",
+          "nazm": {
+            "mnemonic": "عين_فوق",
+            "operands": [
+              "register"
+            ],
+            "width_bits": 8
+          },
+          "acceptance_fixture": "tests/fixtures/baa_coverage/حساب-وتحكم-باء.نظم"
         },
         {
           "mnemonic": "setbe",
@@ -2286,8 +2778,15 @@
           "samples": [
             "tests/integration/backend/backend_test.baa:3191"
           ],
-          "status": "unsupported",
-          "reason": "Nazm does not implement setcc instructions or 8-bit destinations."
+          "status": "supported",
+          "nazm": {
+            "mnemonic": "عين_تحت_أو_مساو",
+            "operands": [
+              "register"
+            ],
+            "width_bits": 8
+          },
+          "acceptance_fixture": "tests/fixtures/baa_coverage/حساب-وتحكم-باء.نظم"
         },
         {
           "mnemonic": "setb",
@@ -2300,8 +2799,15 @@
             "tests/integration/backend/backend_scan_arabic_test.baa:473",
             "tests/integration/backend/backend_stdlib_v041_test.baa:292"
           ],
-          "status": "unsupported",
-          "reason": "Nazm does not implement setcc instructions or 8-bit destinations."
+          "status": "supported",
+          "nazm": {
+            "mnemonic": "عين_تحت",
+            "operands": [
+              "register"
+            ],
+            "width_bits": 8
+          },
+          "acceptance_fixture": "tests/fixtures/baa_coverage/حساب-وتحكم-باء.نظم"
         },
         {
           "mnemonic": "sete",
@@ -2315,7 +2821,7 @@
             "examples/math_and_format.baa:746"
           ],
           "status": "unsupported",
-          "reason": "Nazm does not implement setcc instructions or 8-bit destinations."
+          "reason": "Nazm implements this mnemonic, but not this operand shape or width."
         },
         {
           "mnemonic": "sete",
@@ -2328,8 +2834,15 @@
             "examples/error_handling_demo.baa:35",
             "examples/error_handling_demo.baa:84"
           ],
-          "status": "unsupported",
-          "reason": "Nazm does not implement setcc instructions or 8-bit destinations."
+          "status": "supported",
+          "nazm": {
+            "mnemonic": "عين_مساو",
+            "operands": [
+              "register"
+            ],
+            "width_bits": 8
+          },
+          "acceptance_fixture": "tests/fixtures/baa_coverage/حساب-وتحكم-باء.نظم"
         },
         {
           "mnemonic": "setge",
@@ -2342,8 +2855,15 @@
             "examples/file_copy_small.baa:143",
             "examples/file_copy_small.baa:159"
           ],
-          "status": "unsupported",
-          "reason": "Nazm does not implement setcc instructions or 8-bit destinations."
+          "status": "supported",
+          "nazm": {
+            "mnemonic": "عين_أكبر_أو_مساو",
+            "operands": [
+              "register"
+            ],
+            "width_bits": 8
+          },
+          "acceptance_fixture": "tests/fixtures/baa_coverage/حساب-وتحكم-باء.نظم"
         },
         {
           "mnemonic": "setg",
@@ -2356,8 +2876,15 @@
             "tests/integration/backend/backend_custom_startup_test.baa:855",
             "tests/integration/backend/backend_dynamic_memory_test.baa:343"
           ],
-          "status": "unsupported",
-          "reason": "Nazm does not implement setcc instructions or 8-bit destinations."
+          "status": "supported",
+          "nazm": {
+            "mnemonic": "عين_أكبر",
+            "operands": [
+              "register"
+            ],
+            "width_bits": 8
+          },
+          "acceptance_fixture": "tests/fixtures/baa_coverage/حساب-وتحكم-باء.نظم"
         },
         {
           "mnemonic": "setle",
@@ -2370,8 +2897,15 @@
             "tests/integration/backend/backend_file_io_noheader_test.baa:511",
             "tests/integration/backend/backend_file_io_noheader_test.baa:694"
           ],
-          "status": "unsupported",
-          "reason": "Nazm does not implement setcc instructions or 8-bit destinations."
+          "status": "supported",
+          "nazm": {
+            "mnemonic": "عين_أصغر_أو_مساو",
+            "operands": [
+              "register"
+            ],
+            "width_bits": 8
+          },
+          "acceptance_fixture": "tests/fixtures/baa_coverage/حساب-وتحكم-باء.نظم"
         },
         {
           "mnemonic": "setl",
@@ -2384,8 +2918,15 @@
             "examples/file_copy_small.baa:856",
             "examples/file_copy_small.baa:876"
           ],
-          "status": "unsupported",
-          "reason": "Nazm does not implement setcc instructions or 8-bit destinations."
+          "status": "supported",
+          "nazm": {
+            "mnemonic": "عين_أصغر",
+            "operands": [
+              "register"
+            ],
+            "width_bits": 8
+          },
+          "acceptance_fixture": "tests/fixtures/baa_coverage/حساب-وتحكم-باء.نظم"
         },
         {
           "mnemonic": "setne",
@@ -2398,8 +2939,15 @@
             "examples/error_handling_demo.baa:288",
             "examples/error_handling_demo.baa:344"
           ],
-          "status": "unsupported",
-          "reason": "Nazm does not implement setcc instructions or 8-bit destinations."
+          "status": "supported",
+          "nazm": {
+            "mnemonic": "عين_غير_مساو",
+            "operands": [
+              "register"
+            ],
+            "width_bits": 8
+          },
+          "acceptance_fixture": "tests/fixtures/baa_coverage/حساب-وتحكم-باء.نظم"
         },
         {
           "mnemonic": "setnp",
@@ -2412,8 +2960,15 @@
             "tests/integration/backend/backend_scan_arabic_test.baa:474",
             "tests/integration/backend/backend_stdlib_v041_test.baa:293"
           ],
-          "status": "unsupported",
-          "reason": "Nazm does not implement setcc instructions or 8-bit destinations."
+          "status": "supported",
+          "nazm": {
+            "mnemonic": "عين_عدم_تكافؤ",
+            "operands": [
+              "register"
+            ],
+            "width_bits": 8
+          },
+          "acceptance_fixture": "tests/fixtures/baa_coverage/حساب-وتحكم-باء.نظم"
         },
         {
           "mnemonic": "setp",
@@ -2426,8 +2981,15 @@
             "tests/integration/backend/backend_test.baa:3211",
             "tests/integration/backend/backend_test.baa:3293"
           ],
-          "status": "unsupported",
-          "reason": "Nazm does not implement setcc instructions or 8-bit destinations."
+          "status": "supported",
+          "nazm": {
+            "mnemonic": "عين_تكافؤ",
+            "operands": [
+              "register"
+            ],
+            "width_bits": 8
+          },
+          "acceptance_fixture": "tests/fixtures/baa_coverage/حساب-وتحكم-باء.نظم"
         },
         {
           "mnemonic": "shll",
@@ -2463,7 +3025,12 @@
               "register",
               "immediate"
             ],
-            "width_bits": 64
+            "width_bits": [
+              8,
+              16,
+              32,
+              64
+            ]
           },
           "acceptance_fixture": "tests/fixtures/baa_coverage/حساب-وتحكم-باء.نظم"
         },
@@ -2501,7 +3068,12 @@
               "register",
               "immediate"
             ],
-            "width_bits": 64
+            "width_bits": [
+              8,
+              16,
+              32,
+              64
+            ]
           },
           "acceptance_fixture": "tests/fixtures/baa_coverage/حساب-وتحكم-باء.نظم"
         },
@@ -2539,7 +3111,12 @@
               "register",
               "register"
             ],
-            "width_bits": 64
+            "width_bits": [
+              8,
+              16,
+              32,
+              64
+            ]
           },
           "acceptance_fixture": "tests/fixtures/baa_coverage/حساب-وتحكم-باء.نظم"
         },
@@ -2713,7 +3290,7 @@
               "label"
             ]
           },
-          "reason": "The Baa entry symbol main is emitted canonically as the Arabic source label الرئيسية and mapped internally by the object writer; arbitrary ASCII linker identifiers remain unsupported.",
+          "reason": "The Baa entry symbol is emitted and preserved as the Arabic object symbol الرئيسية; arbitrary Latin linker identifiers are unsupported.",
           "acceptance_fixture": "tests/fixtures/baa_coverage/بيانات-باء.نظم"
         },
         {
@@ -2734,7 +3311,7 @@
               "label"
             ]
           },
-          "reason": "ASCII source identifiers are not accepted; local symbols must use canonical Arabic labels."
+          "reason": "Latin source identifiers are not accepted; local symbols must use canonical Arabic labels."
         },
         {
           "directive": ".loc",
@@ -2964,14 +3541,14 @@
       ],
       "summary": {
         "forms": {
-          "supported": 38,
+          "supported": 56,
           "partial": 3,
-          "unsupported": 91
+          "unsupported": 73
         },
         "emissions": {
-          "supported": 52946,
+          "supported": 61792,
           "partial": 3311,
-          "unsupported": 24377
+          "unsupported": 15531
         }
       }
     },
@@ -3086,8 +3663,8 @@
         "shadow_matrix": {
           "source_count": 100,
           "summary": {
-            "emitted": 1,
-            "unsupported": 99,
+            "emitted": 14,
+            "unsupported": 86,
             "error": 0
           },
           "unsupported_reasons": [
@@ -3100,20 +3677,63 @@
               "count": 26
             },
             {
-              "reason": "خطأ: تعليمة الآلة غير مدعومة في شريحة نظم التنفيذية الأولى.",
-              "count": 12
-            },
-            {
-              "reason": "خطأ: حفظ السجلات المحفوظة عبر الاستدعاء غير مدعوم بعد في مسار نظم.",
-              "count": 5
-            },
-            {
               "reason": "خطأ: أسماء الدوال في مصدر نظم يجب أن تكون عربية فقط.",
               "count": 4
             },
             {
               "reason": "خطأ: شريحة نظم الأولى لا تدعم بدء التشغيل المخصص أو معلومات التنقيح أو حماية المكدس.",
               "count": 4
+            },
+            {
+              "reason": "خطأ: المعامل ليس سجلا ماديا بعرض ٨ أو ١٦ أو ٣٢ أو ٦٤ بت.",
+              "count": 1
+            },
+            {
+              "reason": "خطأ: تعليمة الآلة غير مدعومة في شريحة نظم التنفيذية الأولى.",
+              "count": 1
+            },
+            {
+              "reason": "خطأ: رموز الدوال في مصدر نظم وكائنه يجب أن تكون عربية فقط.",
+              "count": 1
+            },
+            {
+              "reason": "خطأ: نوع معامل القيمة غير مدعوم في مسار نظم.",
+              "count": 1
+            }
+          ],
+          "unsupported_blockers": [
+            {
+              "kind": "جداول_سلاسل",
+              "count": 48
+            },
+            {
+              "kind": "متغيرات_عامة",
+              "count": 26
+            },
+            {
+              "kind": "إعدادات_التحويل",
+              "count": 4
+            },
+            {
+              "kind": "اسم_دالة_غير_عربي",
+              "count": 4
+            },
+            {
+              "kind": "اسم_رمز_غير_عربي",
+              "count": 1
+            },
+            {
+              "kind": "تعليمة_آلة",
+              "detail": "تحويل_صحيح_إلى_عشري",
+              "count": 1
+            },
+            {
+              "kind": "عرض_أو_نوع_معامل",
+              "count": 1
+            },
+            {
+              "kind": "نوع_معامل_قيمة_غير_مدعوم",
+              "count": 1
             }
           ],
           "sources": [
@@ -3121,67 +3741,92 @@
               "source": "examples/error_handling_demo.baa",
               "status": "unsupported",
               "exit_code": 3,
-              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
+              "blocker": {
+                "kind": "جداول_سلاسل"
+              }
             },
             {
               "source": "examples/file_copy_small.baa",
               "status": "unsupported",
               "exit_code": 3,
-              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
+              "blocker": {
+                "kind": "جداول_سلاسل"
+              }
             },
             {
               "source": "examples/hello_world.baa",
               "status": "unsupported",
               "exit_code": 3,
-              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
+              "blocker": {
+                "kind": "جداول_سلاسل"
+              }
             },
             {
               "source": "examples/math_and_format.baa",
               "status": "unsupported",
               "exit_code": 3,
-              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
+              "blocker": {
+                "kind": "جداول_سلاسل"
+              }
             },
             {
               "source": "tests/integration/backend/backend_arabic_numeral_source_tokens_v064_test.baa",
               "status": "unsupported",
               "exit_code": 3,
-              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
+              "blocker": {
+                "kind": "جداول_سلاسل"
+              }
             },
             {
               "source": "tests/integration/backend/backend_array_init_test.baa",
-              "status": "unsupported",
-              "exit_code": 3,
-              "reason": "خطأ: تعليمة الآلة غير مدعومة في شريحة نظم التنفيذية الأولى."
+              "status": "emitted",
+              "exit_code": 0,
+              "sha256": "d98a96a601b31f13fd59a3aef1c556ffdebce42a62ef864726c877788d363277"
             },
             {
               "source": "tests/integration/backend/backend_array_length_operator_test.baa",
               "status": "unsupported",
               "exit_code": 3,
-              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
+              "blocker": {
+                "kind": "جداول_سلاسل"
+              }
             },
             {
               "source": "tests/integration/backend/backend_array_sum_test.baa",
-              "status": "unsupported",
-              "exit_code": 3,
-              "reason": "خطأ: تعليمة الآلة غير مدعومة في شريحة نظم التنفيذية الأولى."
+              "status": "emitted",
+              "exit_code": 0,
+              "sha256": "5f6eb4c05e8042580b9a3547dc0e674535b6a963d3a9bc58faad049fee59a509"
             },
             {
               "source": "tests/integration/backend/backend_byte_buffer_stdlib_v062_test.baa",
               "status": "unsupported",
               "exit_code": 3,
-              "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم."
+              "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم.",
+              "blocker": {
+                "kind": "متغيرات_عامة"
+              }
             },
             {
               "source": "tests/integration/backend/backend_cast_pointer_diff_test.baa",
               "status": "unsupported",
               "exit_code": 3,
-              "reason": "خطأ: تعليمة الآلة غير مدعومة في شريحة نظم التنفيذية الأولى."
+              "reason": "خطأ: تعليمة الآلة غير مدعومة في شريحة نظم التنفيذية الأولى.",
+              "blocker": {
+                "kind": "تعليمة_آلة",
+                "detail": "تحويل_صحيح_إلى_عشري"
+              }
             },
             {
               "source": "tests/integration/backend/backend_const_pointer_rules_test.baa",
-              "status": "unsupported",
-              "exit_code": 3,
-              "reason": "خطأ: تعليمة الآلة غير مدعومة في شريحة نظم التنفيذية الأولى."
+              "status": "emitted",
+              "exit_code": 0,
+              "sha256": "12133a1f69734e99b42aba1c8ca7828dd98ee98f31962413907d64045816d3a9"
             },
             {
               "source": "tests/integration/backend/backend_custom_startup_test.baa",
@@ -3190,79 +3835,112 @@
               "flags": [
                 "--startup=custom"
               ],
-              "reason": "خطأ: شريحة نظم الأولى لا تدعم بدء التشغيل المخصص أو معلومات التنقيح أو حماية المكدس."
+              "reason": "خطأ: شريحة نظم الأولى لا تدعم بدء التشغيل المخصص أو معلومات التنقيح أو حماية المكدس.",
+              "blocker": {
+                "kind": "إعدادات_التحويل"
+              }
             },
             {
               "source": "tests/integration/backend/backend_dynamic_memory_noheader_test.baa",
               "status": "unsupported",
               "exit_code": 3,
-              "reason": "خطأ: تعليمة الآلة غير مدعومة في شريحة نظم التنفيذية الأولى."
+              "reason": "خطأ: رموز الدوال في مصدر نظم وكائنه يجب أن تكون عربية فقط.",
+              "blocker": {
+                "kind": "اسم_رمز_غير_عربي"
+              }
             },
             {
               "source": "tests/integration/backend/backend_dynamic_memory_test.baa",
               "status": "unsupported",
               "exit_code": 3,
-              "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم."
+              "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم.",
+              "blocker": {
+                "kind": "متغيرات_عامة"
+              }
             },
             {
               "source": "tests/integration/backend/backend_enum_struct_test.baa",
               "status": "unsupported",
               "exit_code": 3,
-              "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم."
+              "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم.",
+              "blocker": {
+                "kind": "متغيرات_عامة"
+              }
             },
             {
               "source": "tests/integration/backend/backend_error_handling_v043_test.baa",
               "status": "unsupported",
               "exit_code": 3,
-              "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم."
+              "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم.",
+              "blocker": {
+                "kind": "متغيرات_عامة"
+              }
             },
             {
               "source": "tests/integration/backend/backend_file_io_noheader_test.baa",
               "status": "unsupported",
               "exit_code": 3,
-              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
+              "blocker": {
+                "kind": "جداول_سلاسل"
+              }
             },
             {
               "source": "tests/integration/backend/backend_file_io_test.baa",
               "status": "unsupported",
               "exit_code": 3,
-              "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم."
+              "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم.",
+              "blocker": {
+                "kind": "متغيرات_عامة"
+              }
             },
             {
               "source": "tests/integration/backend/backend_float_extensions_v042_test.baa",
               "status": "unsupported",
               "exit_code": 3,
-              "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم."
+              "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم.",
+              "blocker": {
+                "kind": "متغيرات_عامة"
+              }
             },
             {
               "source": "tests/integration/backend/backend_format_arabic_test.baa",
               "status": "unsupported",
               "exit_code": 3,
-              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
+              "blocker": {
+                "kind": "جداول_سلاسل"
+              }
             },
             {
               "source": "tests/integration/backend/backend_func_ptr_shadow_call_test.baa",
-              "status": "unsupported",
-              "exit_code": 3,
-              "reason": "خطأ: حفظ السجلات المحفوظة عبر الاستدعاء غير مدعوم بعد في مسار نظم."
+              "status": "emitted",
+              "exit_code": 0,
+              "sha256": "94e1eab31061cf11e801dca37bcd2822658301b72e33139ccb45129cb28ce5d6"
             },
             {
               "source": "tests/integration/backend/backend_func_ptr_test.baa",
-              "status": "unsupported",
-              "exit_code": 3,
-              "reason": "خطأ: حفظ السجلات المحفوظة عبر الاستدعاء غير مدعوم بعد في مسار نظم."
+              "status": "emitted",
+              "exit_code": 0,
+              "sha256": "7a31e2b95472332adce9345e2faf8669f5c4bf1b0919d669653639495b8752c2"
             },
             {
               "source": "tests/integration/backend/backend_global_array_init_test.baa",
               "status": "unsupported",
               "exit_code": 3,
-              "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم."
+              "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم.",
+              "blocker": {
+                "kind": "متغيرات_عامة"
+              }
             },
             {
               "source": "tests/integration/backend/backend_include_bom_test.baa",
               "status": "unsupported",
               "exit_code": 3,
-              "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم."
+              "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم.",
+              "blocker": {
+                "kind": "متغيرات_عامة"
+              }
             },
             {
               "source": "tests/integration/backend/backend_include_i_compact_form_test.baa",
@@ -3271,7 +3949,10 @@
               "flags": [
                 "-Itests/fixtures/include_i/compact"
               ],
-              "reason": "خطأ: أسماء الدوال في مصدر نظم يجب أن تكون عربية فقط."
+              "reason": "خطأ: أسماء الدوال في مصدر نظم يجب أن تكون عربية فقط.",
+              "blocker": {
+                "kind": "اسم_دالة_غير_عربي"
+              }
             },
             {
               "source": "tests/integration/backend/backend_include_i_nested_source_relative_priority_test.baa",
@@ -3283,17 +3964,20 @@
                 "-I",
                 "tests/fixtures/include_i/nested_primary"
               ],
-              "reason": "خطأ: أسماء الدوال في مصدر نظم يجب أن تكون عربية فقط."
+              "reason": "خطأ: أسماء الدوال في مصدر نظم يجب أن تكون عربية فقط.",
+              "blocker": {
+                "kind": "اسم_دالة_غير_عربي"
+              }
             },
             {
               "source": "tests/integration/backend/backend_include_i_path_with_spaces_test.baa",
-              "status": "unsupported",
-              "exit_code": 3,
+              "status": "emitted",
+              "exit_code": 0,
               "flags": [
                 "-I",
                 "tests/fixtures/include i space"
               ],
-              "reason": "خطأ: تعليمة الآلة غير مدعومة في شريحة نظم التنفيذية الأولى."
+              "sha256": "9c1ce7730b030e964b624c0c65fee43902aea70a34351d3fc7ae4da84b14dcd3"
             },
             {
               "source": "tests/integration/backend/backend_include_i_precedence_test.baa",
@@ -3305,7 +3989,10 @@
                 "-I",
                 "tests/fixtures/include_i/prio_second"
               ],
-              "reason": "خطأ: أسماء الدوال في مصدر نظم يجب أن تكون عربية فقط."
+              "reason": "خطأ: أسماء الدوال في مصدر نظم يجب أن تكون عربية فقط.",
+              "blocker": {
+                "kind": "اسم_دالة_غير_عربي"
+              }
             },
             {
               "source": "tests/integration/backend/backend_include_i_space_form_test.baa",
@@ -3315,67 +4002,88 @@
                 "-I",
                 "tests/fixtures/include_i/single_space"
               ],
-              "reason": "خطأ: أسماء الدوال في مصدر نظم يجب أن تكون عربية فقط."
+              "reason": "خطأ: أسماء الدوال في مصدر نظم يجب أن تكون عربية فقط.",
+              "blocker": {
+                "kind": "اسم_دالة_غير_عربي"
+              }
             },
             {
               "source": "tests/integration/backend/backend_include_relative_alias_path_test.baa",
-              "status": "unsupported",
-              "exit_code": 3,
-              "reason": "خطأ: تعليمة الآلة غير مدعومة في شريحة نظم التنفيذية الأولى."
+              "status": "emitted",
+              "exit_code": 0,
+              "sha256": "3010baa11d1b22d17af2d7ce54dc7f44cc3ad38b0159c307f55396ae82126bdc"
             },
             {
               "source": "tests/integration/backend/backend_include_relative_dir_test.baa",
-              "status": "unsupported",
-              "exit_code": 3,
-              "reason": "خطأ: تعليمة الآلة غير مدعومة في شريحة نظم التنفيذية الأولى."
+              "status": "emitted",
+              "exit_code": 0,
+              "sha256": "c4cb71fe50d848cb68bad1c9b2b3a0c822ce94d66c803498c3cbe3a3abc17ae8"
             },
             {
               "source": "tests/integration/backend/backend_inline_test.baa",
               "status": "unsupported",
               "exit_code": 3,
-              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
+              "blocker": {
+                "kind": "جداول_سلاسل"
+              }
             },
             {
               "source": "tests/integration/backend/backend_int_semantics_test.baa",
               "status": "unsupported",
               "exit_code": 3,
-              "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم."
+              "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم.",
+              "blocker": {
+                "kind": "متغيرات_عامة"
+              }
             },
             {
               "source": "tests/integration/backend/backend_low_level_ops_test.baa",
               "status": "unsupported",
               "exit_code": 3,
-              "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم."
+              "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم.",
+              "blocker": {
+                "kind": "متغيرات_عامة"
+              }
             },
             {
               "source": "tests/integration/backend/backend_main_args_test.baa",
               "status": "unsupported",
               "exit_code": 3,
-              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
+              "blocker": {
+                "kind": "جداول_سلاسل"
+              }
             },
             {
               "source": "tests/integration/backend/backend_mod_test.baa",
-              "status": "unsupported",
-              "exit_code": 3,
-              "reason": "خطأ: تعليمة الآلة غير مدعومة في شريحة نظم التنفيذية الأولى."
+              "status": "emitted",
+              "exit_code": 0,
+              "sha256": "6351d33999fa3182c1ba8fda22465bbbda03a8e84037aea2af30aa2286cdd7fb"
             },
             {
               "source": "tests/integration/backend/backend_multidim_array_test.baa",
               "status": "unsupported",
               "exit_code": 3,
-              "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم."
+              "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم.",
+              "blocker": {
+                "kind": "متغيرات_عامة"
+              }
             },
             {
               "source": "tests/integration/backend/backend_path_stdlib_v062_test.baa",
               "status": "unsupported",
               "exit_code": 3,
-              "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم."
+              "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم.",
+              "blocker": {
+                "kind": "متغيرات_عامة"
+              }
             },
             {
               "source": "tests/integration/backend/backend_pointer_core_test.baa",
-              "status": "unsupported",
-              "exit_code": 3,
-              "reason": "خطأ: تعليمة الآلة غير مدعومة في شريحة نظم التنفيذية الأولى."
+              "status": "emitted",
+              "exit_code": 0,
+              "sha256": "0c3879b314d8466ad9a6ee2d96445c9549565c5675c7b8eb2c973f1328470c43"
             },
             {
               "source": "tests/integration/backend/backend_pp_nested_test.baa",
@@ -3387,43 +4095,64 @@
               "source": "tests/integration/backend/backend_process_runtime_v065_test.baa",
               "status": "unsupported",
               "exit_code": 3,
-              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
+              "blocker": {
+                "kind": "جداول_سلاسل"
+              }
             },
             {
               "source": "tests/integration/backend/backend_readline_stdin_test.baa",
               "status": "unsupported",
               "exit_code": 3,
-              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
+              "blocker": {
+                "kind": "جداول_سلاسل"
+              }
             },
             {
               "source": "tests/integration/backend/backend_readnum_stdin_test.baa",
               "status": "unsupported",
               "exit_code": 3,
-              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
+              "blocker": {
+                "kind": "جداول_سلاسل"
+              }
             },
             {
               "source": "tests/integration/backend/backend_regalloc_stress.baa",
               "status": "unsupported",
               "exit_code": 3,
-              "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم."
+              "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم.",
+              "blocker": {
+                "kind": "متغيرات_عامة"
+              }
             },
             {
               "source": "tests/integration/backend/backend_result_helpers_stdlib_v062_test.baa",
               "status": "unsupported",
               "exit_code": 3,
-              "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم."
+              "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم.",
+              "blocker": {
+                "kind": "متغيرات_عامة"
+              }
             },
             {
               "source": "tests/integration/backend/backend_runtime_assert_fail_v055_test.baa",
               "status": "unsupported",
               "exit_code": 3,
-              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
+              "blocker": {
+                "kind": "جداول_سلاسل"
+              }
             },
             {
               "source": "tests/integration/backend/backend_runtime_assert_pass_v055_test.baa",
               "status": "unsupported",
               "exit_code": 3,
-              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
+              "blocker": {
+                "kind": "جداول_سلاسل"
+              }
             },
             {
               "source": "tests/integration/backend/backend_runtime_bounds_fail_v055_test.baa",
@@ -3432,7 +4161,10 @@
               "flags": [
                 "-fruntime-checks"
               ],
-              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
+              "blocker": {
+                "kind": "جداول_سلاسل"
+              }
             },
             {
               "source": "tests/integration/backend/backend_runtime_checks_selective_bounds_fail_v063_test.baa",
@@ -3441,7 +4173,10 @@
               "flags": [
                 "-fruntime-checks=bounds"
               ],
-              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
+              "blocker": {
+                "kind": "جداول_سلاسل"
+              }
             },
             {
               "source": "tests/integration/backend/backend_runtime_checks_selective_null_fail_v063_test.baa",
@@ -3450,7 +4185,10 @@
               "flags": [
                 "-fruntime-checks=null"
               ],
-              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
+              "blocker": {
+                "kind": "جداول_سلاسل"
+              }
             },
             {
               "source": "tests/integration/backend/backend_runtime_div_zero_fail_v063_test.baa",
@@ -3459,7 +4197,10 @@
               "flags": [
                 "-fruntime-checks"
               ],
-              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
+              "blocker": {
+                "kind": "جداول_سلاسل"
+              }
             },
             {
               "source": "tests/integration/backend/backend_runtime_mod_zero_fail_v063_test.baa",
@@ -3468,7 +4209,10 @@
               "flags": [
                 "-fruntime-checks"
               ],
-              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
+              "blocker": {
+                "kind": "جداول_سلاسل"
+              }
             },
             {
               "source": "tests/integration/backend/backend_runtime_null_deref_assign_fail_v063_test.baa",
@@ -3477,7 +4221,10 @@
               "flags": [
                 "-fruntime-checks"
               ],
-              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
+              "blocker": {
+                "kind": "جداول_سلاسل"
+              }
             },
             {
               "source": "tests/integration/backend/backend_runtime_null_deref_fail_v063_test.baa",
@@ -3486,19 +4233,28 @@
               "flags": [
                 "-fruntime-checks"
               ],
-              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
+              "blocker": {
+                "kind": "جداول_سلاسل"
+              }
             },
             {
               "source": "tests/integration/backend/backend_runtime_panic_location_v063_test.baa",
               "status": "unsupported",
               "exit_code": 3,
-              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
+              "blocker": {
+                "kind": "جداول_سلاسل"
+              }
             },
             {
               "source": "tests/integration/backend/backend_runtime_panic_v055_test.baa",
               "status": "unsupported",
               "exit_code": 3,
-              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
+              "blocker": {
+                "kind": "جداول_سلاسل"
+              }
             },
             {
               "source": "tests/integration/backend/backend_runtime_shift_width_high_fail_v063_test.baa",
@@ -3507,7 +4263,10 @@
               "flags": [
                 "-fruntime-checks"
               ],
-              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
+              "blocker": {
+                "kind": "جداول_سلاسل"
+              }
             },
             {
               "source": "tests/integration/backend/backend_runtime_shift_width_negative_fail_v063_test.baa",
@@ -3516,7 +4275,10 @@
               "flags": [
                 "-fruntime-checks"
               ],
-              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
+              "blocker": {
+                "kind": "جداول_سلاسل"
+              }
             },
             {
               "source": "tests/integration/backend/backend_runtime_string_array_inner_bounds_fail_v063_test.baa",
@@ -3525,7 +4287,10 @@
               "flags": [
                 "-fruntime-checks"
               ],
-              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
+              "blocker": {
+                "kind": "جداول_سلاسل"
+              }
             },
             {
               "source": "tests/integration/backend/backend_runtime_string_bounds_fail_v063_test.baa",
@@ -3534,139 +4299,205 @@
               "flags": [
                 "-fruntime-checks"
               ],
-              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
+              "blocker": {
+                "kind": "جداول_سلاسل"
+              }
             },
             {
               "source": "tests/integration/backend/backend_scan_arabic_test.baa",
               "status": "unsupported",
               "exit_code": 3,
-              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
+              "blocker": {
+                "kind": "جداول_سلاسل"
+              }
             },
             {
               "source": "tests/integration/backend/backend_scope_test.baa",
               "status": "unsupported",
               "exit_code": 3,
-              "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم."
+              "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم.",
+              "blocker": {
+                "kind": "متغيرات_عامة"
+              }
             },
             {
               "source": "tests/integration/backend/backend_sha256_file_v066_test.baa",
               "status": "unsupported",
               "exit_code": 3,
-              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
+              "blocker": {
+                "kind": "جداول_سلاسل"
+              }
             },
             {
               "source": "tests/integration/backend/backend_stackargs_test.baa",
               "status": "unsupported",
               "exit_code": 3,
-              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
+              "blocker": {
+                "kind": "جداول_سلاسل"
+              }
             },
             {
               "source": "tests/integration/backend/backend_static_storage_test.baa",
               "status": "unsupported",
               "exit_code": 3,
-              "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم."
+              "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم.",
+              "blocker": {
+                "kind": "متغيرات_عامة"
+              }
             },
             {
               "source": "tests/integration/backend/backend_stdlib_short_include_test.baa",
               "status": "unsupported",
               "exit_code": 3,
-              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
+              "blocker": {
+                "kind": "جداول_سلاسل"
+              }
             },
             {
               "source": "tests/integration/backend/backend_stdlib_v041_test.baa",
               "status": "unsupported",
               "exit_code": 3,
-              "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم."
+              "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم.",
+              "blocker": {
+                "kind": "متغيرات_عامة"
+              }
             },
             {
               "source": "tests/integration/backend/backend_string_builder_stdlib_v062_test.baa",
               "status": "unsupported",
               "exit_code": 3,
-              "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم."
+              "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم.",
+              "blocker": {
+                "kind": "متغيرات_عامة"
+              }
             },
             {
               "source": "tests/integration/backend/backend_string_ops_test.baa",
               "status": "unsupported",
               "exit_code": 3,
-              "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم."
+              "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم.",
+              "blocker": {
+                "kind": "متغيرات_عامة"
+              }
             },
             {
               "source": "tests/integration/backend/backend_struct_init_test.baa",
-              "status": "unsupported",
-              "exit_code": 3,
-              "reason": "خطأ: تعليمة الآلة غير مدعومة في شريحة نظم التنفيذية الأولى."
+              "status": "emitted",
+              "exit_code": 0,
+              "sha256": "4903ad1a7ed5eeb7d0791fd8d15de9d6cc3258aa6900fe3a1eb8e369d761fe08"
             },
             {
               "source": "tests/integration/backend/backend_sysv_6args_test.baa",
               "status": "unsupported",
               "exit_code": 3,
-              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
+              "blocker": {
+                "kind": "جداول_سلاسل"
+              }
             },
             {
               "source": "tests/integration/backend/backend_tailcall_float_test.baa",
               "status": "unsupported",
               "exit_code": 3,
-              "reason": "خطأ: حفظ السجلات المحفوظة عبر الاستدعاء غير مدعوم بعد في مسار نظم."
+              "reason": "خطأ: نوع معامل القيمة غير مدعوم في مسار نظم.",
+              "blocker": {
+                "kind": "نوع_معامل_قيمة_غير_مدعوم"
+              }
             },
             {
               "source": "tests/integration/backend/backend_tailcall_test.baa",
               "status": "unsupported",
               "exit_code": 3,
-              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
+              "blocker": {
+                "kind": "جداول_سلاسل"
+              }
             },
             {
               "source": "tests/integration/backend/backend_test.baa",
               "status": "unsupported",
               "exit_code": 3,
-              "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم."
+              "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم.",
+              "blocker": {
+                "kind": "متغيرات_عامة"
+              }
             },
             {
               "source": "tests/integration/backend/backend_text_stdlib_helpers_v064_test.baa",
               "status": "unsupported",
               "exit_code": 3,
-              "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم."
+              "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم.",
+              "blocker": {
+                "kind": "متغيرات_عامة"
+              }
             },
             {
               "source": "tests/integration/backend/backend_type_alias_test.baa",
               "status": "unsupported",
               "exit_code": 3,
-              "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم."
+              "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم.",
+              "blocker": {
+                "kind": "متغيرات_عامة"
+              }
             },
             {
               "source": "tests/integration/backend/backend_union_test.baa",
               "status": "unsupported",
               "exit_code": 3,
-              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
+              "blocker": {
+                "kind": "جداول_سلاسل"
+              }
             },
             {
               "source": "tests/integration/backend/backend_utf8_validation_valid_v064_test.baa",
               "status": "unsupported",
               "exit_code": 3,
-              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
+              "blocker": {
+                "kind": "جداول_سلاسل"
+              }
             },
             {
               "source": "tests/integration/backend/backend_variadic_functions_test.baa",
               "status": "unsupported",
               "exit_code": 3,
-              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
+              "blocker": {
+                "kind": "جداول_سلاسل"
+              }
             },
             {
               "source": "tests/integration/backend/backend_vector_stdlib_v062_test.baa",
               "status": "unsupported",
               "exit_code": 3,
-              "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم."
+              "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم.",
+              "blocker": {
+                "kind": "متغيرات_عامة"
+              }
             },
             {
               "source": "tests/integration/backend/int_sizes_test.baa",
               "status": "unsupported",
               "exit_code": 3,
-              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
+              "blocker": {
+                "kind": "جداول_سلاسل"
+              }
             },
             {
               "source": "tests/integration/frontend/frontend_extern_declarations_test.baa",
               "status": "unsupported",
               "exit_code": 3,
-              "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم."
+              "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم.",
+              "blocker": {
+                "kind": "متغيرات_عامة"
+              }
             },
             {
               "source": "tests/integration/frontend/frontend_extern_no_storage_test.baa",
@@ -3675,7 +4506,10 @@
               "flags": [
                 "-O1"
               ],
-              "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم."
+              "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم.",
+              "blocker": {
+                "kind": "متغيرات_عامة"
+              }
             },
             {
               "source": "tests/integration/ir/ir_custom_startup_linux_asm_test.baa",
@@ -3685,7 +4519,10 @@
                 "--target=x86_64-linux",
                 "--startup=custom"
               ],
-              "reason": "خطأ: شريحة نظم الأولى لا تدعم بدء التشغيل المخصص أو معلومات التنقيح أو حماية المكدس."
+              "reason": "خطأ: شريحة نظم الأولى لا تدعم بدء التشغيل المخصص أو معلومات التنقيح أو حماية المكدس.",
+              "blocker": {
+                "kind": "إعدادات_التحويل"
+              }
             },
             {
               "source": "tests/integration/ir/ir_custom_startup_windows_asm_test.baa",
@@ -3695,19 +4532,25 @@
                 "--target=x86_64-windows",
                 "--startup=custom"
               ],
-              "reason": "خطأ: شريحة نظم الأولى لا تدعم بدء التشغيل المخصص أو معلومات التنقيح أو حماية المكدس."
+              "reason": "خطأ: شريحة نظم الأولى لا تدعم بدء التشغيل المخصص أو معلومات التنقيح أو حماية المكدس.",
+              "blocker": {
+                "kind": "إعدادات_التحويل"
+              }
             },
             {
               "source": "tests/integration/ir/ir_inline_asm_test.baa",
               "status": "unsupported",
               "exit_code": 3,
-              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
+              "blocker": {
+                "kind": "جداول_سلاسل"
+              }
             },
             {
               "source": "tests/integration/ir/ir_printer.baa",
-              "status": "unsupported",
-              "exit_code": 3,
-              "reason": "خطأ: تعليمة الآلة غير مدعومة في شريحة نظم التنفيذية الأولى."
+              "status": "emitted",
+              "exit_code": 0,
+              "sha256": "7de004a3f15036a99389570c7cba3c30f8629a40e156a1cef8113576b425dd3e"
             },
             {
               "source": "tests/integration/ir/ir_runtime_bounds_debug_info_no_checks_v055_test.baa",
@@ -3716,7 +4559,10 @@
               "flags": [
                 "--debug-info"
               ],
-              "reason": "خطأ: شريحة نظم الأولى لا تدعم بدء التشغيل المخصص أو معلومات التنقيح أو حماية المكدس."
+              "reason": "خطأ: شريحة نظم الأولى لا تدعم بدء التشغيل المخصص أو معلومات التنقيح أو حماية المكدس.",
+              "blocker": {
+                "kind": "إعدادات_التحويل"
+              }
             },
             {
               "source": "tests/integration/ir/ir_runtime_bounds_enabled_v055_test.baa",
@@ -3725,7 +4571,10 @@
               "flags": [
                 "-fruntime-checks"
               ],
-              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
+              "blocker": {
+                "kind": "جداول_سلاسل"
+              }
             },
             {
               "source": "tests/integration/ir/ir_runtime_checks_none_v063_test.baa",
@@ -3734,7 +4583,10 @@
               "flags": [
                 "-fruntime-checks=none"
               ],
-              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
+              "blocker": {
+                "kind": "جداول_سلاسل"
+              }
             },
             {
               "source": "tests/integration/ir/ir_runtime_checks_selective_bounds_shift_v063_test.baa",
@@ -3743,7 +4595,10 @@
               "flags": [
                 "-fruntime-checks=bounds+shift"
               ],
-              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
+              "blocker": {
+                "kind": "جداول_سلاسل"
+              }
             },
             {
               "source": "tests/integration/ir/ir_runtime_checks_selective_null_div_v063_test.baa",
@@ -3752,7 +4607,10 @@
               "flags": [
                 "-fruntime-checks=null,div-zero"
               ],
-              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
+              "blocker": {
+                "kind": "جداول_سلاسل"
+              }
             },
             {
               "source": "tests/integration/ir/ir_runtime_div_zero_enabled_v063_test.baa",
@@ -3761,7 +4619,10 @@
               "flags": [
                 "-fruntime-checks"
               ],
-              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
+              "blocker": {
+                "kind": "جداول_سلاسل"
+              }
             },
             {
               "source": "tests/integration/ir/ir_runtime_null_deref_enabled_v063_test.baa",
@@ -3770,7 +4631,10 @@
               "flags": [
                 "-fruntime-checks"
               ],
-              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
+              "blocker": {
+                "kind": "جداول_سلاسل"
+              }
             },
             {
               "source": "tests/integration/ir/ir_runtime_shift_width_enabled_v063_test.baa",
@@ -3779,7 +4643,10 @@
               "flags": [
                 "-fruntime-checks"
               ],
-              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
+              "blocker": {
+                "kind": "جداول_سلاسل"
+              }
             },
             {
               "source": "tests/integration/ir/ir_runtime_string_bounds_enabled_v063_test.baa",
@@ -3788,31 +4655,43 @@
               "flags": [
                 "-fruntime-checks"
               ],
-              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
+              "blocker": {
+                "kind": "جداول_سلاسل"
+              }
             },
             {
               "source": "tests/integration/ir/ir_test.baa",
               "status": "unsupported",
               "exit_code": 3,
-              "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم."
+              "reason": "خطأ: المتغيرات العامة غير مدعومة بعد في مسار نظم.",
+              "blocker": {
+                "kind": "متغيرات_عامة"
+              }
             },
             {
               "source": "tests/stress/stress_deep_scopes.baa",
-              "status": "unsupported",
-              "exit_code": 3,
-              "reason": "خطأ: حفظ السجلات المحفوظة عبر الاستدعاء غير مدعوم بعد في مسار نظم."
+              "status": "emitted",
+              "exit_code": 0,
+              "sha256": "41d0955af262ef568be3062c10d5f5a40869ee2f65f7d498d72af289f7f774a8"
             },
             {
               "source": "tests/stress/stress_symbol_volume.baa",
               "status": "unsupported",
               "exit_code": 3,
-              "reason": "خطأ: حفظ السجلات المحفوظة عبر الاستدعاء غير مدعوم بعد في مسار نظم."
+              "reason": "خطأ: المعامل ليس سجلا ماديا بعرض ٨ أو ١٦ أو ٣٢ أو ٦٤ بت.",
+              "blocker": {
+                "kind": "عرض_أو_نوع_معامل"
+              }
             },
             {
               "source": "tests/stress/stress_utf8_identifiers.baa",
               "status": "unsupported",
               "exit_code": 3,
-              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم."
+              "reason": "خطأ: جداول السلاسل غير مدعومة بعد في مسار نظم.",
+              "blocker": {
+                "kind": "جداول_سلاسل"
+              }
             }
           ]
         }
@@ -3852,7 +4731,12 @@
               "register",
               "immediate"
             ],
-            "width_bits": 64
+            "width_bits": [
+              8,
+              16,
+              32,
+              64
+            ]
           },
           "acceptance_fixture": "tests/fixtures/baa_coverage/حساب-وتحكم-باء.نظم"
         },
@@ -3875,7 +4759,12 @@
               "register",
               "memory-base-displacement"
             ],
-            "width_bits": 64
+            "width_bits": [
+              8,
+              16,
+              32,
+              64
+            ]
           },
           "acceptance_fixture": "tests/fixtures/baa_coverage/حساب-وتحكم-باء.نظم"
         },
@@ -3913,7 +4802,12 @@
               "register",
               "register"
             ],
-            "width_bits": 64
+            "width_bits": [
+              8,
+              16,
+              32,
+              64
+            ]
           },
           "acceptance_fixture": "tests/fixtures/baa_coverage/حساب-وتحكم-باء.نظم"
         },
@@ -3981,7 +4875,12 @@
               "register",
               "immediate"
             ],
-            "width_bits": 64
+            "width_bits": [
+              8,
+              16,
+              32,
+              64
+            ]
           },
           "acceptance_fixture": "tests/fixtures/baa_coverage/حساب-وتحكم-باء.نظم"
         },
@@ -4004,7 +4903,12 @@
               "register",
               "register"
             ],
-            "width_bits": 64
+            "width_bits": [
+              8,
+              16,
+              32,
+              64
+            ]
           },
           "acceptance_fixture": "tests/fixtures/baa_coverage/حساب-وتحكم-باء.نظم"
         },
@@ -4155,7 +5059,12 @@
               "register",
               "immediate"
             ],
-            "width_bits": 64
+            "width_bits": [
+              8,
+              16,
+              32,
+              64
+            ]
           },
           "acceptance_fixture": "tests/fixtures/baa_coverage/حساب-وتحكم-باء.نظم"
         },
@@ -4178,7 +5087,12 @@
               "register",
               "memory-base-displacement"
             ],
-            "width_bits": 64
+            "width_bits": [
+              8,
+              16,
+              32,
+              64
+            ]
           },
           "acceptance_fixture": "tests/fixtures/baa_coverage/حساب-وتحكم-باء.نظم"
         },
@@ -4216,7 +5130,12 @@
               "register",
               "register"
             ],
-            "width_bits": 64
+            "width_bits": [
+              8,
+              16,
+              32,
+              64
+            ]
           },
           "acceptance_fixture": "tests/fixtures/baa_coverage/حساب-وتحكم-باء.نظم"
         },
@@ -4229,8 +5148,13 @@
             "examples/error_handling_demo.baa:555",
             "examples/error_handling_demo.baa:560"
           ],
-          "status": "unsupported",
-          "reason": "Nazm does not implement the cqo instruction."
+          "status": "supported",
+          "nazm": {
+            "mnemonic": "وسع_إشارة_القسمة",
+            "operands": [],
+            "width_bits": 64
+          },
+          "acceptance_fixture": "tests/fixtures/baa_coverage/حساب-وتحكم-باء.نظم"
         },
         {
           "mnemonic": "cvtsi2sd",
@@ -4310,7 +5234,12 @@
             "operands": [
               "register"
             ],
-            "width_bits": 64
+            "width_bits": [
+              8,
+              16,
+              32,
+              64
+            ]
           },
           "acceptance_fixture": "tests/fixtures/baa_coverage/حساب-وتحكم-باء.نظم"
         },
@@ -4334,7 +5263,11 @@
               "register",
               "immediate"
             ],
-            "width_bits": 64
+            "width_bits": [
+              16,
+              32,
+              64
+            ]
           },
           "lowering": "duplicate-destination-as-source",
           "acceptance_fixture": "tests/fixtures/baa_coverage/حساب-وتحكم-باء.نظم"
@@ -4373,7 +5306,11 @@
               "register",
               "register"
             ],
-            "width_bits": 64
+            "width_bits": [
+              16,
+              32,
+              64
+            ]
           },
           "acceptance_fixture": "tests/fixtures/baa_coverage/حساب-وتحكم-باء.نظم"
         },
@@ -4488,7 +5425,12 @@
               "register",
               "immediate"
             ],
-            "width_bits": 64
+            "width_bits": [
+              8,
+              16,
+              32,
+              64
+            ]
           },
           "acceptance_fixture": "tests/fixtures/baa_coverage/حركة-باء.نظم"
         },
@@ -4702,7 +5644,12 @@
               "register",
               "immediate"
             ],
-            "width_bits": 64
+            "width_bits": [
+              8,
+              16,
+              32,
+              64
+            ]
           },
           "acceptance_fixture": "tests/fixtures/baa_coverage/حركة-باء.نظم"
         },
@@ -4725,7 +5672,12 @@
               "register",
               "memory-base-displacement"
             ],
-            "width_bits": 64
+            "width_bits": [
+              8,
+              16,
+              32,
+              64
+            ]
           },
           "acceptance_fixture": "tests/fixtures/baa_coverage/حركة-باء.نظم"
         },
@@ -4763,7 +5715,12 @@
               "memory-base-displacement",
               "register"
             ],
-            "width_bits": 64
+            "width_bits": [
+              8,
+              16,
+              32,
+              64
+            ]
           },
           "acceptance_fixture": "tests/fixtures/baa_coverage/حركة-باء.نظم"
         },
@@ -4801,7 +5758,12 @@
               "register",
               "register"
             ],
-            "width_bits": 64
+            "width_bits": [
+              8,
+              16,
+              32,
+              64
+            ]
           },
           "acceptance_fixture": "tests/fixtures/baa_coverage/حركة-باء.نظم"
         },
@@ -4817,8 +5779,25 @@
             "tests/integration/backend/backend_file_io_test.baa:1715",
             "tests/integration/backend/backend_file_io_test.baa:1731"
           ],
-          "status": "unsupported",
-          "reason": "Nazm does not implement sign- or zero-extension instructions."
+          "status": "supported",
+          "nazm": {
+            "mnemonic": "وسع_بإشارة",
+            "operands": [
+              "register",
+              "register"
+            ],
+            "width_bits": {
+              "source": [
+                8,
+                32
+              ],
+              "destination": [
+                32,
+                64
+              ]
+            }
+          },
+          "acceptance_fixture": "tests/fixtures/baa_coverage/حساب-وتحكم-باء.نظم"
         },
         {
           "mnemonic": "movsbq",
@@ -4832,8 +5811,25 @@
             "examples/error_handling_demo.baa:238",
             "examples/error_handling_demo.baa:239"
           ],
-          "status": "unsupported",
-          "reason": "Nazm does not implement sign- or zero-extension instructions."
+          "status": "supported",
+          "nazm": {
+            "mnemonic": "وسع_بإشارة",
+            "operands": [
+              "register",
+              "register"
+            ],
+            "width_bits": {
+              "source": [
+                8,
+                32
+              ],
+              "destination": [
+                32,
+                64
+              ]
+            }
+          },
+          "acceptance_fixture": "tests/fixtures/baa_coverage/حساب-وتحكم-باء.نظم"
         },
         {
           "mnemonic": "movslq",
@@ -4848,7 +5844,7 @@
             "tests/integration/backend/backend_file_io_test.baa:6303"
           ],
           "status": "unsupported",
-          "reason": "Nazm does not implement sign- or zero-extension instructions."
+          "reason": "Nazm implements this mnemonic, but not this operand shape or width."
         },
         {
           "mnemonic": "movslq",
@@ -4862,8 +5858,25 @@
             "examples/file_copy_small.baa:507",
             "examples/file_copy_small.baa:596"
           ],
-          "status": "unsupported",
-          "reason": "Nazm does not implement sign- or zero-extension instructions."
+          "status": "supported",
+          "nazm": {
+            "mnemonic": "وسع_بإشارة",
+            "operands": [
+              "register",
+              "register"
+            ],
+            "width_bits": {
+              "source": [
+                8,
+                32
+              ],
+              "destination": [
+                32,
+                64
+              ]
+            }
+          },
+          "acceptance_fixture": "tests/fixtures/baa_coverage/حساب-وتحكم-باء.نظم"
         },
         {
           "mnemonic": "movzbl",
@@ -4876,8 +5889,24 @@
             "tests/integration/backend/backend_byte_buffer_stdlib_v062_test.baa:704",
             "tests/integration/backend/backend_byte_buffer_stdlib_v062_test.baa:705"
           ],
-          "status": "unsupported",
-          "reason": "Nazm does not implement sign- or zero-extension instructions."
+          "status": "supported",
+          "nazm": {
+            "mnemonic": "وسع_بصفر",
+            "operands": [
+              "register",
+              "register"
+            ],
+            "width_bits": {
+              "source": [
+                8
+              ],
+              "destination": [
+                32,
+                64
+              ]
+            }
+          },
+          "acceptance_fixture": "tests/fixtures/baa_coverage/حساب-وتحكم-باء.نظم"
         },
         {
           "mnemonic": "movzbq",
@@ -4892,7 +5921,7 @@
             "tests/integration/backend/backend_process_runtime_v065_test.baa:1844"
           ],
           "status": "unsupported",
-          "reason": "Nazm does not implement sign- or zero-extension instructions."
+          "reason": "Nazm implements this mnemonic, but not this operand shape or width."
         },
         {
           "mnemonic": "movzbq",
@@ -4906,8 +5935,24 @@
             "examples/error_handling_demo.baa:36",
             "examples/error_handling_demo.baa:91"
           ],
-          "status": "unsupported",
-          "reason": "Nazm does not implement sign- or zero-extension instructions."
+          "status": "supported",
+          "nazm": {
+            "mnemonic": "وسع_بصفر",
+            "operands": [
+              "register",
+              "register"
+            ],
+            "width_bits": {
+              "source": [
+                8
+              ],
+              "destination": [
+                32,
+                64
+              ]
+            }
+          },
+          "acceptance_fixture": "tests/fixtures/baa_coverage/حساب-وتحكم-باء.نظم"
         },
         {
           "mnemonic": "mov",
@@ -5045,7 +6090,12 @@
               "register",
               "register"
             ],
-            "width_bits": 64
+            "width_bits": [
+              8,
+              16,
+              32,
+              64
+            ]
           },
           "acceptance_fixture": "tests/fixtures/baa_coverage/حساب-وتحكم-باء.نظم"
         },
@@ -5144,7 +6194,12 @@
               "register",
               "immediate"
             ],
-            "width_bits": 64
+            "width_bits": [
+              8,
+              16,
+              32,
+              64
+            ]
           },
           "acceptance_fixture": "tests/fixtures/baa_coverage/حساب-وتحكم-باء.نظم"
         },
@@ -5159,8 +6214,15 @@
             "tests/integration/backend/backend_test.baa:3629",
             "tests/integration/backend/backend_test.baa:3727"
           ],
-          "status": "unsupported",
-          "reason": "Nazm does not implement setcc instructions or 8-bit destinations."
+          "status": "supported",
+          "nazm": {
+            "mnemonic": "عين_فوق_أو_مساو",
+            "operands": [
+              "register"
+            ],
+            "width_bits": 8
+          },
+          "acceptance_fixture": "tests/fixtures/baa_coverage/حساب-وتحكم-باء.نظم"
         },
         {
           "mnemonic": "seta",
@@ -5173,8 +6235,15 @@
             "tests/integration/backend/backend_stdlib_v041_test.baa:300",
             "tests/integration/backend/backend_stdlib_v041_test.baa:334"
           ],
-          "status": "unsupported",
-          "reason": "Nazm does not implement setcc instructions or 8-bit destinations."
+          "status": "supported",
+          "nazm": {
+            "mnemonic": "عين_فوق",
+            "operands": [
+              "register"
+            ],
+            "width_bits": 8
+          },
+          "acceptance_fixture": "tests/fixtures/baa_coverage/حساب-وتحكم-باء.نظم"
         },
         {
           "mnemonic": "setbe",
@@ -5185,8 +6254,15 @@
           "samples": [
             "tests/integration/backend/backend_test.baa:3592"
           ],
-          "status": "unsupported",
-          "reason": "Nazm does not implement setcc instructions or 8-bit destinations."
+          "status": "supported",
+          "nazm": {
+            "mnemonic": "عين_تحت_أو_مساو",
+            "operands": [
+              "register"
+            ],
+            "width_bits": 8
+          },
+          "acceptance_fixture": "tests/fixtures/baa_coverage/حساب-وتحكم-باء.نظم"
         },
         {
           "mnemonic": "setb",
@@ -5199,8 +6275,15 @@
             "tests/integration/backend/backend_scan_arabic_test.baa:497",
             "tests/integration/backend/backend_stdlib_v041_test.baa:306"
           ],
-          "status": "unsupported",
-          "reason": "Nazm does not implement setcc instructions or 8-bit destinations."
+          "status": "supported",
+          "nazm": {
+            "mnemonic": "عين_تحت",
+            "operands": [
+              "register"
+            ],
+            "width_bits": 8
+          },
+          "acceptance_fixture": "tests/fixtures/baa_coverage/حساب-وتحكم-باء.نظم"
         },
         {
           "mnemonic": "sete",
@@ -5214,7 +6297,7 @@
             "tests/integration/backend/backend_process_runtime_v065_test.baa:1843"
           ],
           "status": "unsupported",
-          "reason": "Nazm does not implement setcc instructions or 8-bit destinations."
+          "reason": "Nazm implements this mnemonic, but not this operand shape or width."
         },
         {
           "mnemonic": "sete",
@@ -5227,8 +6310,15 @@
             "examples/error_handling_demo.baa:35",
             "examples/error_handling_demo.baa:90"
           ],
-          "status": "unsupported",
-          "reason": "Nazm does not implement setcc instructions or 8-bit destinations."
+          "status": "supported",
+          "nazm": {
+            "mnemonic": "عين_مساو",
+            "operands": [
+              "register"
+            ],
+            "width_bits": 8
+          },
+          "acceptance_fixture": "tests/fixtures/baa_coverage/حساب-وتحكم-باء.نظم"
         },
         {
           "mnemonic": "setge",
@@ -5241,8 +6331,15 @@
             "examples/file_copy_small.baa:147",
             "examples/file_copy_small.baa:163"
           ],
-          "status": "unsupported",
-          "reason": "Nazm does not implement setcc instructions or 8-bit destinations."
+          "status": "supported",
+          "nazm": {
+            "mnemonic": "عين_أكبر_أو_مساو",
+            "operands": [
+              "register"
+            ],
+            "width_bits": 8
+          },
+          "acceptance_fixture": "tests/fixtures/baa_coverage/حساب-وتحكم-باء.نظم"
         },
         {
           "mnemonic": "setg",
@@ -5255,8 +6352,15 @@
             "tests/integration/backend/backend_custom_startup_test.baa:871",
             "tests/integration/backend/backend_dynamic_memory_test.baa:366"
           ],
-          "status": "unsupported",
-          "reason": "Nazm does not implement setcc instructions or 8-bit destinations."
+          "status": "supported",
+          "nazm": {
+            "mnemonic": "عين_أكبر",
+            "operands": [
+              "register"
+            ],
+            "width_bits": 8
+          },
+          "acceptance_fixture": "tests/fixtures/baa_coverage/حساب-وتحكم-باء.نظم"
         },
         {
           "mnemonic": "setle",
@@ -5269,8 +6373,15 @@
             "tests/integration/backend/backend_file_io_noheader_test.baa:548",
             "tests/integration/backend/backend_file_io_noheader_test.baa:733"
           ],
-          "status": "unsupported",
-          "reason": "Nazm does not implement setcc instructions or 8-bit destinations."
+          "status": "supported",
+          "nazm": {
+            "mnemonic": "عين_أصغر_أو_مساو",
+            "operands": [
+              "register"
+            ],
+            "width_bits": 8
+          },
+          "acceptance_fixture": "tests/fixtures/baa_coverage/حساب-وتحكم-باء.نظم"
         },
         {
           "mnemonic": "setl",
@@ -5283,8 +6394,15 @@
             "examples/file_copy_small.baa:918",
             "examples/file_copy_small.baa:941"
           ],
-          "status": "unsupported",
-          "reason": "Nazm does not implement setcc instructions or 8-bit destinations."
+          "status": "supported",
+          "nazm": {
+            "mnemonic": "عين_أصغر",
+            "operands": [
+              "register"
+            ],
+            "width_bits": 8
+          },
+          "acceptance_fixture": "tests/fixtures/baa_coverage/حساب-وتحكم-باء.نظم"
         },
         {
           "mnemonic": "setne",
@@ -5297,8 +6415,15 @@
             "examples/error_handling_demo.baa:312",
             "examples/error_handling_demo.baa:368"
           ],
-          "status": "unsupported",
-          "reason": "Nazm does not implement setcc instructions or 8-bit destinations."
+          "status": "supported",
+          "nazm": {
+            "mnemonic": "عين_غير_مساو",
+            "operands": [
+              "register"
+            ],
+            "width_bits": 8
+          },
+          "acceptance_fixture": "tests/fixtures/baa_coverage/حساب-وتحكم-باء.نظم"
         },
         {
           "mnemonic": "setnp",
@@ -5311,8 +6436,15 @@
             "tests/integration/backend/backend_scan_arabic_test.baa:498",
             "tests/integration/backend/backend_stdlib_v041_test.baa:307"
           ],
-          "status": "unsupported",
-          "reason": "Nazm does not implement setcc instructions or 8-bit destinations."
+          "status": "supported",
+          "nazm": {
+            "mnemonic": "عين_عدم_تكافؤ",
+            "operands": [
+              "register"
+            ],
+            "width_bits": 8
+          },
+          "acceptance_fixture": "tests/fixtures/baa_coverage/حساب-وتحكم-باء.نظم"
         },
         {
           "mnemonic": "setp",
@@ -5325,8 +6457,15 @@
             "tests/integration/backend/backend_test.baa:3612",
             "tests/integration/backend/backend_test.baa:3710"
           ],
-          "status": "unsupported",
-          "reason": "Nazm does not implement setcc instructions or 8-bit destinations."
+          "status": "supported",
+          "nazm": {
+            "mnemonic": "عين_تكافؤ",
+            "operands": [
+              "register"
+            ],
+            "width_bits": 8
+          },
+          "acceptance_fixture": "tests/fixtures/baa_coverage/حساب-وتحكم-باء.نظم"
         },
         {
           "mnemonic": "shll",
@@ -5362,7 +6501,12 @@
               "register",
               "immediate"
             ],
-            "width_bits": 64
+            "width_bits": [
+              8,
+              16,
+              32,
+              64
+            ]
           },
           "acceptance_fixture": "tests/fixtures/baa_coverage/حساب-وتحكم-باء.نظم"
         },
@@ -5400,7 +6544,12 @@
               "register",
               "immediate"
             ],
-            "width_bits": 64
+            "width_bits": [
+              8,
+              16,
+              32,
+              64
+            ]
           },
           "acceptance_fixture": "tests/fixtures/baa_coverage/حساب-وتحكم-باء.نظم"
         },
@@ -5438,7 +6587,12 @@
               "register",
               "register"
             ],
-            "width_bits": 64
+            "width_bits": [
+              8,
+              16,
+              32,
+              64
+            ]
           },
           "acceptance_fixture": "tests/fixtures/baa_coverage/حساب-وتحكم-باء.نظم"
         },
@@ -5597,7 +6751,7 @@
               "label"
             ]
           },
-          "reason": "The Baa entry symbol main is emitted canonically as the Arabic source label الرئيسية and mapped internally by the object writer; arbitrary ASCII linker identifiers remain unsupported.",
+          "reason": "The Baa entry symbol is emitted and preserved as the Arabic object symbol الرئيسية; arbitrary Latin linker identifiers are unsupported.",
           "acceptance_fixture": "tests/fixtures/baa_coverage/بيانات-باء.نظم"
         },
         {
@@ -5806,14 +6960,14 @@
       ],
       "summary": {
         "forms": {
-          "supported": 37,
+          "supported": 55,
           "partial": 3,
-          "unsupported": 85
+          "unsupported": 67
         },
         "emissions": {
-          "supported": 58056,
+          "supported": 66970,
           "partial": 3311,
-          "unsupported": 22969
+          "unsupported": 14055
         }
       }
     }

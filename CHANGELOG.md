@@ -31,14 +31,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
   - Classified every emitted form as supported, partial, or unsupported with a reason and
     attached every supported form to a focused Nazm ELF64/COFF acceptance fixture.
   - Wired the coverage completeness and no-overclaim checks into every Baa QA mode.
-  - Kept arbitrary ASCII linker symbols, external calls, RIP-relative references, read-only
-    sections, unsupported widths, `setcc`, extensions, and SSE2 visible instead of treating
+  - Kept arbitrary Latin linker symbols, external calls, RIP-relative references, read-only
+    sections and SSE2 visible instead of treating
     GAS success as Nazm success; the entry symbol now has the Arabic source spelling `الرئيسية`.
 - **Baa/Nazm full-corpus shadow matrix**:
+  - Added stable Arabic blocker kind/detail data to every unsupported corpus row and
+    aggregate counts, without exposing borrowed include paths or parsing human prose.
   - Added deterministic `baa-nazm-shadow-corpus-v1` classification for all 100 inventoried
     sources on both targets and embedded the complete result in `baa-nazm-coverage-v1`.
-  - Admitted one real corpus source through Arabic-only emission and GAS/Nazm object,
-    link, and runtime parity; all other 99 sources return visible status `3` with no output.
+  - Admitted fourteen real corpus sources through Arabic-only emission and GAS/Nazm object,
+    link, and runtime parity; all other 86 sources return visible status `3` with no output.
   - Replaced host `nm`/`objdump` assertions with Unicode-safe COFF/ELF inspection so Arabic
     artifact paths remain mandatory on Windows and Linux CI.
   - Kept unsupported diagnostics source-level and deterministic instead of exposing borrowed
@@ -56,6 +58,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
   - Added one-input `--nazm-shadow=<path>` mode, using structured argv to assemble the
     Arabic source with the explicitly selected Nazm executable, then linking production GAS
     and Nazm shadow executables side by side without treating GAS success as fallback.
+  - Expanded the canonical emitter across 8/16/32/64-bit registers, saved frames, memory
+    moves, integer arithmetic and shifts, comparisons, `setcc`, extensions, signed/unsigned
+    division, indirect calls, and local branches while keeping external relocations visible.
+  - Added direct Arabic function calls and Arabic function-address materialization; Latin
+    platform symbols remain visible blockers until an explicit Arabic ABI bridge exists.
   - Added optional ecosystem parity coverage for source spelling, `.text`, exported entry,
     relocations, link success, exit status, stdout, and stderr on the host platform.
   - Preserved `الرئيسية` unchanged in Nazm ELF64/COFF objects and selected that Arabic

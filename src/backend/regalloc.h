@@ -71,6 +71,15 @@ const char* phys_reg_name(PhysReg reg);
  */
 bool phys_reg_is_callee_saved(PhysReg reg);
 
+/**
+ * @brief Collect target-specific callee-saved registers used by a machine function.
+ * @return Number written to regs_out, or -1 when arguments/capacity are invalid.
+ */
+int machine_func_collect_callee_saved(const MachineFunc* func,
+                                      const BaaTarget* target,
+                                      PhysReg* regs_out,
+                                      int regs_capacity);
+
 // ============================================================================
 // عدد السجلات المتاحة للتخصيص
 // ============================================================================

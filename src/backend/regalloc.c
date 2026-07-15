@@ -57,6 +57,51 @@ bool phys_reg_is_callee_saved(PhysReg reg)
     }
 }
 
+int machine_func_collect_callee_saved(const MachineFunc* func,
+                                      const BaaTarget* target,
+                                      PhysReg* regs_out,
+                                      int regs_capacity)
+{
+    static const PhysReg candidates[] = {
+        PHYS_RBX, PHYS_RSI, PHYS_RDI,
+        PHYS_R12, PHYS_R13, PHYS_R14, PHYS_R15
+    };
+    bool used[PHYS_REG_COUNT] = {false};
+    if (!func || !target || !target->cc || !regs_out || regs_capacity < 0)
+        return -1;
+
+    for (const MachineBlock* block = func->blocks; block; block = block->next)
+    {
+        for (const MachineInst* inst = block->first; inst; inst = inst->next)
+        {
+            const MachineOperand* operands[] = {
+                &inst->dst, &inst->src1, &inst->src2
+            };
+            for (int i = 0; i < 3; ++i)
+            {
+                const MachineOperand* operand = operands[i];
+                int reg = PHYS_NONE;
+                if (operand->kind == MACH_OP_VREG) reg = operand->data.vreg;
+                else if (operand->kind == MACH_OP_MEM) reg = operand->data.mem.base_vreg;
+                if (reg >= 0 && reg < PHYS_REG_COUNT) used[reg] = true;
+            }
+        }
+    }
+
+    int count = 0;
+    int candidate_count = (int)(sizeof(candidates) / sizeof(candidates[0]));
+    for (int i = 0; i < candidate_count; ++i)
+    {
+        PhysReg reg = candidates[i];
+        bool callee_saved =
+            (target->cc->callee_saved_mask & (1u << (unsigned)reg)) != 0u;
+        if (!used[reg] || !callee_saved) continue;
+        if (count >= regs_capacity) return -1;
+        regs_out[count++] = reg;
+    }
+    return count;
+}
+
 static const BaaCallingConv* regalloc_cc_or_default(const BaaTarget* target)
 {
     if (target && target->cc)

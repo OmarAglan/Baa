@@ -69,8 +69,8 @@ inventory omissions:
 
 | Target | Instruction forms S/P/U | Directive forms S/P/U | Sections S/U | Relocations P/U |
 |---|---:|---:|---:|---:|
-| `x86_64-linux` | 30 / 1 / 76 | 6 / 1 / 7 | 2 / 2 | 1 / 6 |
-| `x86_64-windows` | 29 / 1 / 73 | 6 / 1 / 5 | 2 / 1 | 1 / 6 |
+| `x86_64-linux` | 48 / 1 / 58 | 6 / 1 / 7 | 2 / 2 | 1 / 6 |
+| `x86_64-windows` | 47 / 1 / 55 | 6 / 1 / 5 | 2 / 1 | 1 / 6 |
 
 Each supported row names the checked Nazm acceptance fixture that exercises
 its canonical Arabic lowering. Baa emits the entry label as `الرئيسية`; Nazm
@@ -78,9 +78,9 @@ preserves that exported Arabic symbol as `الرئيسية` in ELF64 and COFF. T
 shadow linker selects it explicitly as the process entry without an ASCII
 alias. Production remains GAS by default, but now also exports `الرئيسية`
 unchanged and links through the Arabic hosted startup symbol `الرئيسية_بدء`.
-Arbitrary ASCII source identifiers, external calls, RIP-relative references,
-read-only sections, byte/32-bit forms, `setcc`, extensions, and scalar SSE2
-remain partial or unsupported where applicable.
+Arbitrary Latin source identifiers, external calls, RIP-relative references,
+read-only sections, memory forms that require unavailable addressing, and scalar
+SSE2 remain partial or unsupported where applicable.
 
 Regenerate or verify the comparison from an ecosystem checkout:
 
@@ -97,6 +97,9 @@ records one explicit result per source: Arabic-only emission, visible
 unsupported status `3`, or a gate error. Unsupported results must leave no
 partial output. `baa-nazm-coverage-v1` embeds this complete matrix and pins its
 SHA-256 digest. The matrix records the stable source and rejection reason;
+every unsupported row also records an Arabic `blocker.kind` and optional
+`blocker.detail`, while each target aggregates the same data under
+`unsupported_blockers` to drive the next admission slice without parsing prose.
 each emitted artifact separately carries the exact versioned source mapping
 described below rather than duplicating per-instruction spans in the corpus matrix.
 
@@ -104,16 +107,17 @@ The initial source-level baseline is identical on Linux and Windows:
 
 | Target | Arabic-only emitted | Visible unsupported | Gate errors |
 |---|---:|---:|---:|
-| `x86_64-linux` | 1 | 99 | 0 |
-| `x86_64-windows` | 1 | 99 | 0 |
+| `x86_64-linux` | 14 | 86 | 0 |
+| `x86_64-windows` | 14 | 86 | 0 |
 
-The admitted corpus source is
-`tests/integration/backend/backend_pp_nested_test.baa`. It now passes the real
-GAS/Nazm object, link, and runtime comparison on both CI hosts. The 99 visible
-rejections quantify the next backend work: 48 first encounter a string table,
-26 a global, 12 an unsupported machine instruction, 5 a callee-saved register,
-4 a function whose Baa spelling still contains Latin letters, and 4 an
-unsupported startup/debug/stack-protection mode.
+The fourteen admitted sources cover array initialization and summation, pointer and
+constant-pointer rules, modulo, preprocessor nesting, structure initialization,
+two function-pointer/address cases, three include-resolution/direct-call cases,
+IR printing, and deep nested scopes. They pass the real GAS/Nazm object, link,
+and runtime comparison. The 86 visible rejections quantify the next wave: 48
+first encounter a string table, 26 a global, 4 a conversion configuration, 4 a
+function whose Baa spelling still contains Latin letters, 1 a Latin platform
+symbol, and 3 isolated operand/SSE forms.
 
 Regenerate or verify the matrix with the current compiler:
 
@@ -185,15 +189,16 @@ to the requested output:
 Missing Nazm, an unsupported emitter form, assembler failure, or shadow-link
 failure makes the command fail; assembler diagnostics map back to Baa source
 locations, and production GAS success never hides it. The
-ecosystem test compares the synthetic minimal slice and the first admitted
+ecosystem test compares the synthetic minimal slice and every admitted
 100-source corpus member for Arabic source, `.text`, exported entry symbol,
 relocation absence, link success, exit status, stdout, and stderr.
 Dedicated `nazm-shadow-windows` and `nazm-shadow-linux` CI jobs build both
 repositories and run this real parity path on every Baa change.
 
-The full corpus is now classified automatically, but object/link/runtime
-comparison is admitted only for its one currently emitted member. Nazm
-still needs support for Baa's observed operand widths, `setcc`, extension and
-division forms, scalar SSE2 forms, external symbols, read-only sections, and
+The full corpus is now classified automatically, and object/link/runtime
+comparison covers all fourteen currently emitted members. Nazm and Baa now share
+the required integer widths, condition-code writes, extension and division
+forms, indirect calls, and callee-saved frames. Nazm still needs scalar SSE2
+forms, external symbols, read-only sections, global/string data, and
 the required ELF64/COFF relocations. The production assembler therefore remains
 GAS even though its public entry and startup symbols are now Arabic-only.

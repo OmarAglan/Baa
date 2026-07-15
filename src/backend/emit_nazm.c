@@ -37,6 +37,27 @@ static const char *const k_nazm_registers[PHYS_REG_COUNT] = {
     "سجل_عام_١٥",
 };
 
+static const char *const k_nazm_registers_32[PHYS_REG_COUNT] = {
+    "سجل_المركم_٣٢", "سجل_العداد_٣٢", "سجل_البيانات_٣٢", "سجل_القاعدة_٣٢",
+    "مؤشر_المكدس_٣٢", "مؤشر_القاعدة_٣٢", "فهرس_المصدر_٣٢", "فهرس_الوجهة_٣٢",
+    "سجل_عام_٨_٣٢", "سجل_عام_٩_٣٢", "سجل_عام_١٠_٣٢", "سجل_عام_١١_٣٢",
+    "سجل_عام_١٢_٣٢", "سجل_عام_١٣_٣٢", "سجل_عام_١٤_٣٢", "سجل_عام_١٥_٣٢",
+};
+
+static const char *const k_nazm_registers_16[PHYS_REG_COUNT] = {
+    "سجل_المركم_١٦", "سجل_العداد_١٦", "سجل_البيانات_١٦", "سجل_القاعدة_١٦",
+    "مؤشر_المكدس_١٦", "مؤشر_القاعدة_١٦", "فهرس_المصدر_١٦", "فهرس_الوجهة_١٦",
+    "سجل_عام_٨_١٦", "سجل_عام_٩_١٦", "سجل_عام_١٠_١٦", "سجل_عام_١١_١٦",
+    "سجل_عام_١٢_١٦", "سجل_عام_١٣_١٦", "سجل_عام_١٤_١٦", "سجل_عام_١٥_١٦",
+};
+
+static const char *const k_nazm_registers_8[PHYS_REG_COUNT] = {
+    "سجل_المركم_٨", "سجل_العداد_٨", "سجل_البيانات_٨", "سجل_القاعدة_٨",
+    "مؤشر_المكدس_٨", "مؤشر_القاعدة_٨", "فهرس_المصدر_٨", "فهرس_الوجهة_٨",
+    "سجل_عام_٨_٨", "سجل_عام_٩_٨", "سجل_عام_١٠_٨", "سجل_عام_١١_٨",
+    "سجل_عام_١٢_٨", "سجل_عام_١٣_٨", "سجل_عام_١٤_٨", "سجل_عام_١٥_٨",
+};
+
 static BaaNazmEmitResult nazm_ok(void)
 {
     BaaNazmEmitResult result = {0};
@@ -45,17 +66,103 @@ static BaaNazmEmitResult nazm_ok(void)
     return result;
 }
 
-static BaaNazmEmitResult nazm_unsupported(const char *reason,
+static BaaNazmEmitResult nazm_unsupported(const char *blocker_kind,
+                                          const char *blocker_detail,
+                                          const char *reason,
                                           const MachineInst *inst)
 {
     BaaNazmEmitResult result = {0};
     result.status = BAA_NAZM_EMIT_UNSUPPORTED;
     result.op = inst ? inst->op : MACH_OP_COUNT;
     result.reason = reason;
+    result.blocker_kind = blocker_kind;
+    result.blocker_detail = blocker_detail;
     result.source_file = inst ? inst->src_file : NULL;
     result.source_line = inst ? inst->src_line : 0;
     result.source_col = inst ? inst->src_col : 0;
     return result;
+}
+
+static const char *nazm_machine_op_arabic(MachineOp op)
+{
+    switch (op)
+    {
+        case MACH_ADD: return "جمع";
+        case MACH_SUB: return "طرح";
+        case MACH_IMUL: return "ضرب_موقع";
+        case MACH_SHL: return "إزاحة_يسار";
+        case MACH_SHR: return "إزاحة_يمين_منطقية";
+        case MACH_SAR: return "إزاحة_يمين_حسابية";
+        case MACH_IDIV: return "قسمة_موقعة";
+        case MACH_DIV: return "قسمة_غير_موقعة";
+        case MACH_NEG: return "عكس_الإشارة";
+        case MACH_CQO: return "توسيع_إشارة_القسمة";
+        case MACH_ADDSD: return "جمع_عشري";
+        case MACH_SUBSD: return "طرح_عشري";
+        case MACH_MULSD: return "ضرب_عشري";
+        case MACH_DIVSD: return "قسمة_عشرية";
+        case MACH_UCOMISD: return "مقارنة_عشرية";
+        case MACH_XORPD: return "خلاف_عشري";
+        case MACH_CVTSI2SD: return "تحويل_صحيح_إلى_عشري";
+        case MACH_CVTTSD2SI: return "تحويل_عشري_إلى_صحيح";
+        case MACH_MOV: return "نقل";
+        case MACH_LEA: return "حساب_عنوان";
+        case MACH_LOAD: return "تحميل";
+        case MACH_STORE: return "تخزين";
+        case MACH_CMP: return "مقارنة";
+        case MACH_TEST: return "اختبار_بتات";
+        case MACH_SETE: return "تعيين_مساو";
+        case MACH_SETNE: return "تعيين_غير_مساو";
+        case MACH_SETG: return "تعيين_أكبر";
+        case MACH_SETL: return "تعيين_أصغر";
+        case MACH_SETGE: return "تعيين_أكبر_أو_مساو";
+        case MACH_SETLE: return "تعيين_أصغر_أو_مساو";
+        case MACH_SETA: return "تعيين_فوق";
+        case MACH_SETB: return "تعيين_تحت";
+        case MACH_SETAE: return "تعيين_فوق_أو_مساو";
+        case MACH_SETBE: return "تعيين_تحت_أو_مساو";
+        case MACH_SETP: return "تعيين_تكافؤ";
+        case MACH_SETNP: return "تعيين_عدم_تكافؤ";
+        case MACH_MOVZX: return "توسيع_بصفر";
+        case MACH_MOVSX: return "توسيع_بإشارة";
+        case MACH_AND: return "و_بتي";
+        case MACH_OR: return "أو_بتي";
+        case MACH_NOT: return "عكس_البتات";
+        case MACH_XOR: return "خلاف_بتي";
+        case MACH_JMP: return "قفز";
+        case MACH_JE: return "قفز_مساو";
+        case MACH_JNE: return "قفز_غير_مساو";
+        case MACH_CALL: return "نداء";
+        case MACH_TAILJMP: return "قفز_ذيلي";
+        case MACH_RET: return "رجوع";
+        case MACH_PUSH: return "دفع";
+        case MACH_POP: return "سحب";
+        case MACH_NOP: return "لا_عملية";
+        case MACH_LABEL: return "وسم";
+        case MACH_COMMENT: return "تعليق";
+        case MACH_INLINE_ASM: return "نظم_ضمني";
+        default: return "غير_معروفة";
+    }
+}
+
+static const char *nazm_setcc_mnemonic(MachineOp op)
+{
+    switch (op)
+    {
+        case MACH_SETE: return "عين_مساو";
+        case MACH_SETNE: return "عين_غير_مساو";
+        case MACH_SETG: return "عين_أكبر";
+        case MACH_SETL: return "عين_أصغر";
+        case MACH_SETGE: return "عين_أكبر_أو_مساو";
+        case MACH_SETLE: return "عين_أصغر_أو_مساو";
+        case MACH_SETA: return "عين_فوق";
+        case MACH_SETB: return "عين_تحت";
+        case MACH_SETAE: return "عين_فوق_أو_مساو";
+        case MACH_SETBE: return "عين_تحت_أو_مساو";
+        case MACH_SETP: return "عين_تكافؤ";
+        case MACH_SETNP: return "عين_عدم_تكافؤ";
+        default: return NULL;
+    }
 }
 
 static bool nazm_identifier_has_ascii_letter(const char *name)
@@ -70,40 +177,186 @@ static bool nazm_identifier_has_ascii_letter(const char *name)
     return false;
 }
 
-static bool nazm_width_is_64(int bits)
+static bool nazm_width_is_supported(int bits)
 {
-    return bits == 0 || bits == 64;
+    return bits == 0 || bits == 8 || bits == 16 || bits == 32 || bits == 64;
+}
+
+static const char *nazm_register_name(int reg, int bits)
+{
+    if (reg < 0 || reg >= PHYS_REG_COUNT) return NULL;
+    if (bits == 0 || bits == 64) return k_nazm_registers[reg];
+    if (bits == 32) return k_nazm_registers_32[reg];
+    if (bits == 16) return k_nazm_registers_16[reg];
+    if (bits == 8) return k_nazm_registers_8[reg];
+    return NULL;
+}
+
+static int nazm_operand_bits(const MachineOperand *operand)
+{
+    return (!operand || operand->size_bits == 0) ? 64 : operand->size_bits;
+}
+
+static bool nazm_immediate_fits_width(int64_t value, int bits)
+{
+    if (bits == 64) return true;
+    if (bits == 32) return value >= INT32_MIN && value <= (int64_t)UINT32_MAX;
+    if (bits == 16) return value >= INT16_MIN && value <= (int64_t)UINT16_MAX;
+    if (bits == 8) return value >= INT8_MIN && value <= (int64_t)UINT8_MAX;
+    return false;
 }
 
 static bool nazm_register_is_valid(const MachineOperand *operand)
 {
     return operand && operand->kind == MACH_OP_VREG &&
            operand->data.vreg >= 0 && operand->data.vreg < PHYS_REG_COUNT &&
-           nazm_width_is_64(operand->size_bits);
+           nazm_width_is_supported(operand->size_bits);
 }
 
-static bool nazm_register_is_callee_saved(const MachineOperand *operand,
-                                          const BaaTarget *target)
+static bool nazm_physical_register_index_is_valid(int reg)
 {
-    if (!nazm_register_is_valid(operand) || !target || !target->cc) return false;
-    return (target->cc->callee_saved_mask & (1u << (unsigned)operand->data.vreg)) != 0u;
+    return reg >= 0 && reg < PHYS_REG_COUNT;
 }
 
 static BaaNazmEmitResult nazm_validate_operand(const MachineOperand *operand,
                                                const BaaTarget *target,
                                                const MachineInst *inst)
 {
+    (void)target;
     if (!nazm_register_is_valid(operand))
-        return nazm_unsupported("تدعم الشريحة الأولى سجلات ٦٤ بت المادية فقط.", inst);
-    if (nazm_register_is_callee_saved(operand, target))
-        return nazm_unsupported("حفظ السجلات المحفوظة عبر الاستدعاء غير مدعوم بعد في مسار نظم.", inst);
+        return nazm_unsupported("عرض_أو_نوع_معامل",
+                                NULL,
+                                "المعامل ليس سجلا ماديا بعرض ٨ أو ١٦ أو ٣٢ أو ٦٤ بت.",
+                                inst);
+    return nazm_ok();
+}
+
+static BaaNazmEmitResult nazm_validate_memory_operand(const MachineOperand *operand,
+                                                      const BaaTarget *target,
+                                                      const MachineInst *inst)
+{
+    if (!operand || operand->kind != MACH_OP_MEM ||
+        !nazm_width_is_supported(operand->size_bits) ||
+        !nazm_physical_register_index_is_valid(operand->data.mem.base_vreg))
+        return nazm_unsupported("عنوان_ذاكرة_غير_مدعوم",
+                                NULL,
+                                "عنوان الذاكرة ليس قاعدة مادية بعرض ٦٤ بت مع إزاحة ثابتة.",
+                                inst);
+
+    (void)target;
+    return nazm_ok();
+}
+
+static BaaNazmEmitResult nazm_validate_label_operand(const MachineOperand *operand,
+                                                     const MachineInst *inst)
+{
+    if (!operand || operand->kind != MACH_OP_LABEL || operand->data.label_id < 0)
+        return nazm_unsupported("وسم_محلي_غير_صالح",
+                                NULL,
+                                "معامل القفز ليس وسم كتلة محليا صالحا.",
+                                inst);
+    return nazm_ok();
+}
+
+static BaaNazmEmitResult nazm_validate_symbol_operand(
+    const MachineOperand *operand,
+    const MachineInst *inst)
+{
+    if (!operand ||
+        (operand->kind != MACH_OP_FUNC && operand->kind != MACH_OP_GLOBAL) ||
+        operand->size_bits != 64 || !operand->data.name ||
+        !operand->data.name[0])
+        return nazm_unsupported("مرجع_دالة_غير_صالح", NULL,
+                                "مرجع الدالة ليس اسما صالحا بعرض ٦٤ بت.", inst);
+    if (nazm_identifier_has_ascii_letter(operand->data.name))
+        return nazm_unsupported("اسم_رمز_غير_عربي", NULL,
+                                "رموز الدوال في مصدر نظم وكائنه يجب أن تكون عربية فقط.",
+                                inst);
+    return nazm_ok();
+}
+
+static BaaNazmEmitResult nazm_validate_value_operand(const MachineOperand *operand,
+                                                     const BaaTarget *target,
+                                                     const MachineInst *inst,
+                                                     bool allow_immediate)
+{
+    if (operand && operand->kind == MACH_OP_VREG)
+        return nazm_validate_operand(operand, target, inst);
+    if (operand && operand->kind == MACH_OP_MEM)
+        return nazm_validate_memory_operand(operand, target, inst);
+    if (allow_immediate && operand && operand->kind == MACH_OP_IMM &&
+        nazm_width_is_supported(operand->size_bits))
+        return nazm_ok();
+    return nazm_unsupported("نوع_معامل_قيمة_غير_مدعوم", NULL,
+                            "نوع معامل القيمة غير مدعوم في مسار نظم.", inst);
+}
+
+static BaaNazmEmitResult nazm_validate_move(const MachineOperand *dst,
+                                            const MachineOperand *src,
+                                            const BaaTarget *target,
+                                            const MachineInst *inst)
+{
+    BaaNazmEmitResult result = nazm_validate_value_operand(dst, target, inst, false);
+    if (result.status != BAA_NAZM_EMIT_OK) return result;
+    result = nazm_validate_value_operand(src, target, inst, true);
+    if (result.status != BAA_NAZM_EMIT_OK) return result;
+
+    int bits = nazm_operand_bits(dst);
+    if (src->kind == MACH_OP_IMM)
+    {
+        if (!nazm_immediate_fits_width(src->data.imm, bits))
+            return nazm_unsupported("مدى_قيمة_فورية", "نقل",
+                                    "قيمة النقل الفورية لا تدخل في مدى عرض الوجهة.", inst);
+    }
+    else if (bits != nazm_operand_bits(src))
+    {
+        return nazm_unsupported("عدم_تطابق_عرض_معاملين", "نقل",
+                                "عرض معاملي النقل غير متطابق.", inst);
+    }
+    return nazm_ok();
+}
+
+static BaaNazmEmitResult nazm_validate_binary(const MachineOperand *dst,
+                                              const MachineOperand *src,
+                                              const BaaTarget *target,
+                                              const MachineInst *inst,
+                                              bool allow_memory)
+{
+    BaaNazmEmitResult result = nazm_validate_operand(dst, target, inst);
+    if (result.status != BAA_NAZM_EMIT_OK) return result;
+    if (src->kind == MACH_OP_MEM && !allow_memory)
+        return nazm_unsupported("ذاكرة_غير_مدعومة_لهذه_التعليمة", NULL,
+                                "معامل الذاكرة غير مدعوم لهذه التعليمة.", inst);
+    result = nazm_validate_value_operand(src, target, inst, true);
+    if (result.status != BAA_NAZM_EMIT_OK) return result;
+    int bits = nazm_operand_bits(dst);
+    if (src->kind == MACH_OP_IMM)
+    {
+        bool fits = nazm_immediate_fits_width(src->data.imm, bits);
+        if (bits == 64)
+            fits = src->data.imm >= INT32_MIN && src->data.imm <= INT32_MAX;
+        if (!fits)
+            return nazm_unsupported("مدى_قيمة_فورية",
+                                    nazm_machine_op_arabic(inst->op),
+                                    "القيمة الفورية لا تدخل في مدى التعليمة.", inst);
+    }
+    else if (bits != nazm_operand_bits(src))
+    {
+        return nazm_unsupported("عدم_تطابق_عرض_معاملين",
+                                nazm_machine_op_arabic(inst->op),
+                                "عرض معاملي التعليمة غير متطابق.", inst);
+    }
     return nazm_ok();
 }
 
 static BaaNazmEmitResult nazm_validate_instruction(const MachineInst *inst,
                                                    const BaaTarget *target)
 {
-    if (!inst) return nazm_unsupported("تعليمة آلة مفقودة.", NULL);
+    if (!inst)
+        return nazm_unsupported("تعليمة_آلة_مفقودة",
+                                NULL,
+                                "تعليمة آلة مفقودة.",
+                                NULL);
 
     switch (inst->op)
     {
@@ -114,46 +367,174 @@ static BaaNazmEmitResult nazm_validate_instruction(const MachineInst *inst,
             return nazm_ok();
 
         case MACH_MOV:
+        case MACH_LOAD:
+        case MACH_STORE:
+            return nazm_validate_move(&inst->dst, &inst->src1, target, inst);
+
+        case MACH_LEA:
         {
             BaaNazmEmitResult dst = nazm_validate_operand(&inst->dst, target, inst);
             if (dst.status != BAA_NAZM_EMIT_OK) return dst;
-
-            if (inst->src1.kind == MACH_OP_IMM)
-            {
-                if (!nazm_width_is_64(inst->src1.size_bits))
-                    return nazm_unsupported("القيمة الفورية ليست بعرض ٦٤ بت.", inst);
-                return nazm_ok();
-            }
-
-            return nazm_validate_operand(&inst->src1, target, inst);
+            if (inst->src1.kind == MACH_OP_FUNC ||
+                inst->src1.kind == MACH_OP_GLOBAL)
+                return nazm_validate_symbol_operand(&inst->src1, inst);
+            return nazm_validate_memory_operand(&inst->src1, target, inst);
         }
 
+        case MACH_ADD:
+        case MACH_SUB:
+        case MACH_AND:
+        case MACH_OR:
+        case MACH_XOR:
+            return nazm_validate_binary(
+                &inst->dst, &inst->src2, target, inst, true);
+
+        case MACH_CMP:
+            return nazm_validate_binary(
+                &inst->src1, &inst->src2, target, inst, true);
+
+        case MACH_TEST:
+            return nazm_validate_binary(
+                &inst->src1, &inst->src2, target, inst, false);
+
+        case MACH_IMUL:
+            return nazm_validate_binary(
+                &inst->dst, &inst->src2, target, inst, false);
+
+        case MACH_SHL:
+        case MACH_SHR:
+        case MACH_SAR:
+        {
+            BaaNazmEmitResult dst = nazm_validate_operand(&inst->dst, target, inst);
+            if (dst.status != BAA_NAZM_EMIT_OK) return dst;
+            if (inst->src2.kind == MACH_OP_IMM &&
+                inst->src2.data.imm >= 0 && inst->src2.data.imm <= UINT8_MAX)
+                return nazm_ok();
+            if (inst->src2.kind == MACH_OP_VREG &&
+                inst->src2.data.vreg == PHYS_RCX)
+                return nazm_ok();
+            return nazm_unsupported("معامل_إزاحة_غير_مدعوم", NULL,
+                                    "مقدار الإزاحة ليس قيمة ٨ بت أو سجل العداد.", inst);
+        }
+
+        case MACH_NEG:
+        case MACH_NOT:
+            return nazm_validate_operand(&inst->dst, target, inst);
+
+        case MACH_IDIV:
+        case MACH_DIV:
+            return nazm_validate_operand(&inst->src1, target, inst);
+
+        case MACH_CQO:
+            return nazm_ok();
+
+        case MACH_SETE: case MACH_SETNE:
+        case MACH_SETG: case MACH_SETL:
+        case MACH_SETGE: case MACH_SETLE:
+        case MACH_SETA: case MACH_SETB:
+        case MACH_SETAE: case MACH_SETBE:
+        case MACH_SETP: case MACH_SETNP:
+            if (inst->dst.size_bits != 8)
+                return nazm_unsupported("عرض_وجهة_تعيين_شرط", NULL,
+                                        "وجهة تعيين الشرط يجب أن تكون ٨ بت.", inst);
+            return nazm_validate_operand(&inst->dst, target, inst);
+
+        case MACH_MOVZX:
+        case MACH_MOVSX:
+        {
+            BaaNazmEmitResult dst = nazm_validate_operand(&inst->dst, target, inst);
+            if (dst.status != BAA_NAZM_EMIT_OK) return dst;
+            BaaNazmEmitResult src = nazm_validate_operand(&inst->src1, target, inst);
+            if (src.status != BAA_NAZM_EMIT_OK) return src;
+            int dst_bits = nazm_operand_bits(&inst->dst);
+            int src_bits = nazm_operand_bits(&inst->src1);
+            bool supported = (src_bits == 8 && dst_bits > src_bits) ||
+                             (src_bits == 16 && (dst_bits == 32 || dst_bits == 64)) ||
+                             (inst->op == MACH_MOVSX && src_bits == 32 && dst_bits == 64);
+            if (!supported)
+                return nazm_unsupported("عرض_توسيع_غير_مدعوم", NULL,
+                                        "عرضا المصدر والوجهة لا يشكلان توسيعا مدعوما.", inst);
+            return nazm_ok();
+        }
+
+        case MACH_JMP:
+            return nazm_validate_label_operand(&inst->dst, inst);
+
+        case MACH_JE:
+        case MACH_JNE:
+            return nazm_validate_label_operand(&inst->dst, inst);
+
+        case MACH_CALL:
+            if (inst->src1.kind == MACH_OP_VREG &&
+                nazm_operand_bits(&inst->src1) == 64)
+                return nazm_validate_operand(&inst->src1, target, inst);
+            if (inst->src1.kind == MACH_OP_FUNC)
+                return nazm_validate_symbol_operand(&inst->src1, inst);
+            return nazm_unsupported("هدف_نداء_غير_مدعوم", NULL,
+                                    "هدف النداء ليس سجلا أو رمز دالة عربيا.", inst);
+
+        case MACH_PUSH:
+            if (nazm_operand_bits(&inst->src1) != 64)
+                return nazm_unsupported("عرض_دفع", NULL,
+                                        "الدفع يتطلب سجلا بعرض ٦٤ بت.", inst);
+            return nazm_validate_operand(&inst->src1, target, inst);
+
+        case MACH_POP:
+            if (nazm_operand_bits(&inst->dst) != 64)
+                return nazm_unsupported("عرض_سحب", NULL,
+                                        "السحب يتطلب سجلا بعرض ٦٤ بت.", inst);
+            return nazm_validate_operand(&inst->dst, target, inst);
+
         default:
-            return nazm_unsupported("تعليمة الآلة غير مدعومة في شريحة نظم التنفيذية الأولى.", inst);
+            return nazm_unsupported("تعليمة_آلة",
+                                    nazm_machine_op_arabic(inst->op),
+                                    "تعليمة الآلة غير مدعومة في شريحة نظم التنفيذية الأولى.",
+                                    inst);
     }
 }
 
 static BaaNazmEmitResult nazm_validate_module(const MachineModule *module,
                                               const BaaTarget *target)
 {
-    if (!module) return nazm_unsupported("وحدة الآلة مفقودة.", NULL);
+    if (!module)
+        return nazm_unsupported("وحدة_آلة_مفقودة", NULL, "وحدة الآلة مفقودة.", NULL);
     if (!target || !target->cc)
-        return nazm_unsupported("وصف الهدف أو اتفاقية الاستدعاء مفقودة.", NULL);
+        return nazm_unsupported("عقد_هدف_مفقود",
+                                NULL,
+                                "وصف الهدف أو اتفاقية الاستدعاء مفقودة.",
+                                NULL);
     if (module->global_count != 0 || module->globals != NULL)
-        return nazm_unsupported("المتغيرات العامة غير مدعومة بعد في مسار نظم.", NULL);
+        return nazm_unsupported("متغيرات_عامة",
+                                NULL,
+                                "المتغيرات العامة غير مدعومة بعد في مسار نظم.",
+                                NULL);
     if (module->string_count != 0 || module->strings != NULL ||
         module->baa_string_count != 0 || module->baa_strings != NULL)
-        return nazm_unsupported("جداول السلاسل غير مدعومة بعد في مسار نظم.", NULL);
+        return nazm_unsupported("جداول_سلاسل",
+                                NULL,
+                                "جداول السلاسل غير مدعومة بعد في مسار نظم.",
+                                NULL);
 
     for (const MachineFunc *func = module->funcs; func; func = func->next)
     {
         if (func->is_prototype) continue;
         if (!func->name || !func->name[0])
-            return nazm_unsupported("اسم الدالة مفقود.", NULL);
+            return nazm_unsupported("اسم_دالة_مفقود", NULL, "اسم الدالة مفقود.", NULL);
         if (nazm_identifier_has_ascii_letter(func->name))
-            return nazm_unsupported("أسماء الدوال في مصدر نظم يجب أن تكون عربية فقط.", NULL);
+            return nazm_unsupported("اسم_دالة_غير_عربي",
+                                    NULL,
+                                    "أسماء الدوال في مصدر نظم يجب أن تكون عربية فقط.",
+                                    NULL);
         if (func->stack_size < 0)
-            return nazm_unsupported("حجم إطار المكدس غير صالح.", NULL);
+            return nazm_unsupported("إطار_مكدس_غير_صالح",
+                                    NULL,
+                                    "حجم إطار المكدس غير صالح.",
+                                    NULL);
+        PhysReg callee_regs[PHYS_REG_COUNT];
+        if (machine_func_collect_callee_saved(
+                func, target, callee_regs, PHYS_REG_COUNT) < 0)
+            return nazm_unsupported("حصر_سجلات_محفوظة_فاشل", NULL,
+                                    "تعذر حصر السجلات المحفوظة للدالة.", NULL);
 
         for (const MachineBlock *block = func->blocks; block; block = block->next)
         {
@@ -210,7 +591,106 @@ static void nazm_write_operand(FILE *out, const MachineOperand *operand)
         return;
     }
 
-    fputs(k_nazm_registers[operand->data.vreg], out);
+    fputs(nazm_register_name(operand->data.vreg, operand->size_bits), out);
+}
+
+static void nazm_write_memory_operand(FILE *out, const MachineOperand *operand)
+{
+    fputc('[', out);
+    fputs(nazm_register_name(operand->data.mem.base_vreg, 64), out);
+    if (operand->data.mem.offset > 0)
+    {
+        fputc('+', out);
+        nazm_write_unsigned(out, (uint64_t)operand->data.mem.offset);
+    }
+    else if (operand->data.mem.offset < 0)
+    {
+        int64_t offset = operand->data.mem.offset;
+        fputc('-', out);
+        nazm_write_unsigned(out, (uint64_t)(-offset));
+    }
+    fputc(']', out);
+}
+
+static void nazm_write_any_operand(FILE *out, const MachineOperand *operand)
+{
+    if (operand->kind == MACH_OP_MEM)
+        nazm_write_memory_operand(out, operand);
+    else
+        nazm_write_operand(out, operand);
+}
+
+static unsigned nazm_write_move(FILE *out,
+                                const MachineOperand *dst,
+                                const MachineOperand *src)
+{
+    if (dst->kind == MACH_OP_MEM && src->kind == MACH_OP_IMM)
+    {
+        MachineOperand scratch = {0};
+        scratch.kind = MACH_OP_VREG;
+        scratch.size_bits = nazm_operand_bits(dst);
+        scratch.data.vreg = PHYS_R11;
+        fputs("    انقل ", out);
+        nazm_write_operand(out, &scratch);
+        fputs("، ", out);
+        nazm_write_operand(out, src);
+        fputs("\n    انقل ", out);
+        nazm_write_memory_operand(out, dst);
+        fputs("، ", out);
+        nazm_write_operand(out, &scratch);
+        fputc('\n', out);
+        return 2;
+    }
+
+    if (dst->kind == MACH_OP_MEM && src->kind == MACH_OP_MEM)
+    {
+        MachineOperand scratch = {0};
+        scratch.kind = MACH_OP_VREG;
+        scratch.size_bits = nazm_operand_bits(dst);
+        scratch.data.vreg = PHYS_RAX;
+        fputs("    انقل ", out);
+        nazm_write_operand(out, &scratch);
+        fputs("، ", out);
+        nazm_write_memory_operand(out, src);
+        fputs("\n    انقل ", out);
+        nazm_write_memory_operand(out, dst);
+        fputs("، ", out);
+        nazm_write_operand(out, &scratch);
+        fputc('\n', out);
+        return 2;
+    }
+
+    fputs("    انقل ", out);
+    nazm_write_any_operand(out, dst);
+    fputs("، ", out);
+    nazm_write_any_operand(out, src);
+    fputc('\n', out);
+    return 1;
+}
+
+static unsigned nazm_write_binary(FILE *out,
+                                  const char *mnemonic,
+                                  const MachineOperand *dst,
+                                  const MachineOperand *src)
+{
+    fputs("    ", out);
+    fputs(mnemonic, out);
+    fputc(' ', out);
+    nazm_write_any_operand(out, dst);
+    fputs("، ", out);
+    nazm_write_any_operand(out, src);
+    fputc('\n', out);
+    return 1;
+}
+
+static void nazm_write_local_label(FILE *out,
+                                   unsigned function_id,
+                                   int label_id)
+{
+    fputs("كتلة_", out);
+    nazm_write_unsigned(out, function_id);
+    fputc('_', out);
+    nazm_write_unsigned(out, (uint64_t)label_id);
 }
 
 static unsigned nazm_write_source_span(FILE *out, const MachineInst *inst)
@@ -284,9 +764,11 @@ static bool nazm_source_map_end(NazmSourceMapWriter *map)
     return !ferror(map->out);
 }
 
-static int nazm_frame_size(const MachineFunc *func, const BaaTarget *target)
+static int nazm_frame_size(const MachineFunc *func,
+                           const BaaTarget *target,
+                           int callee_count)
 {
-    int total = func->stack_size + target->cc->shadow_space_bytes;
+    int total = func->stack_size + target->cc->shadow_space_bytes + callee_count * 8;
     int align = target->cc->stack_align_bytes > 0 ? target->cc->stack_align_bytes : 16;
     if (total > 0 && total % align != 0)
         total = ((total / align) + 1) * align;
@@ -295,8 +777,20 @@ static int nazm_frame_size(const MachineFunc *func, const BaaTarget *target)
 
 static unsigned nazm_write_epilogue(FILE *out,
                                     bool is_arabic_entry,
-                                    const BaaTarget *target)
+                                    const MachineFunc *func,
+                                    const BaaTarget *target,
+                                    const PhysReg *callee_regs,
+                                    int callee_count)
 {
+    for (int i = callee_count - 1; i >= 0; --i)
+    {
+        int offset = -(func->stack_size + target->cc->shadow_space_bytes + (i + 1) * 8);
+        fputs("    انقل ", out);
+        fputs(nazm_register_name(callee_regs[i], 64), out);
+        fputs("، [مؤشر_القاعدة", out);
+        nazm_write_signed(out, offset);
+        fputs("]\n", out);
+    }
     fputs("    انقل مؤشر_المكدس، مؤشر_القاعدة\n", out);
     fputs("    اسحب مؤشر_القاعدة\n", out);
     if (is_arabic_entry && target && target->obj_format == BAA_OBJFORMAT_ELF)
@@ -304,10 +798,10 @@ static unsigned nazm_write_epilogue(FILE *out,
         fputs("    انقل فهرس_الوجهة، سجل_المركم\n", out);
         fputs("    انقل سجل_المركم، ٦٠\n", out);
         fputs("    ناد_النظام\n", out);
-        return 5;
+        return (unsigned)(callee_count + 5);
     }
     fputs("    ارجع\n", out);
-    return 3;
+    return (unsigned)(callee_count + 3);
 }
 
 static void nazm_write_function(FILE *out,
@@ -317,6 +811,10 @@ static void nazm_write_function(FILE *out,
                                 NazmSourceMapWriter *map)
 {
     bool is_arabic_entry = strcmp(func->name, "الرئيسية") == 0;
+    PhysReg callee_regs[PHYS_REG_COUNT];
+    int callee_count = machine_func_collect_callee_saved(
+        func, target, callee_regs, PHYS_REG_COUNT);
+    if (callee_count < 0) callee_count = 0;
     fputs("\n.عام ", out);
     fputs(func->name, out);
     fputc('\n', out);
@@ -327,11 +825,22 @@ static void nazm_write_function(FILE *out,
     fputs("    انقل مؤشر_القاعدة، مؤشر_المكدس\n", out);
     map->generated_line += 3;
 
-    int frame_size = nazm_frame_size(func, target);
+    int frame_size = nazm_frame_size(func, target, callee_count);
     if (frame_size > 0)
     {
         fputs("    اطرح مؤشر_المكدس، ", out);
         nazm_write_unsigned(out, (uint64_t)frame_size);
+        fputc('\n', out);
+        map->generated_line += 1;
+    }
+
+    for (int i = 0; i < callee_count; ++i)
+    {
+        int offset = -(func->stack_size + target->cc->shadow_space_bytes + (i + 1) * 8);
+        fputs("    انقل [مؤشر_القاعدة", out);
+        nazm_write_signed(out, offset);
+        fputs("]، ", out);
+        fputs(nazm_register_name(callee_regs[i], 64), out);
         fputc('\n', out);
         map->generated_line += 1;
     }
@@ -347,25 +856,200 @@ static void nazm_write_function(FILE *out,
             switch (inst->op)
             {
                 case MACH_LABEL:
-                    fputs("كتلة_", out);
-                    nazm_write_unsigned(out, function_id);
-                    fputc('_', out);
-                    nazm_write_unsigned(out, (uint64_t)inst->dst.data.label_id);
+                    nazm_write_local_label(out, function_id, inst->dst.data.label_id);
                     fputs(":\n", out);
                     emitted_lines = 1;
                     break;
 
                 case MACH_MOV:
-                    fputs("    انقل ", out);
+                case MACH_LOAD:
+                case MACH_STORE:
+                    emitted_lines = nazm_write_move(
+                        out, &inst->dst, &inst->src1);
+                    break;
+
+                case MACH_LEA:
+                    if (inst->src1.kind == MACH_OP_FUNC ||
+                        inst->src1.kind == MACH_OP_GLOBAL)
+                    {
+                        fputs("    انقل ", out);
+                        nazm_write_operand(out, &inst->dst);
+                        fputs("، ", out);
+                        fputs(inst->src1.data.name, out);
+                    }
+                    else
+                    {
+                        fputs("    احسب_عنوان ", out);
+                        nazm_write_operand(out, &inst->dst);
+                        fputs("، ", out);
+                        nazm_write_memory_operand(out, &inst->src1);
+                    }
+                    fputc('\n', out);
+                    emitted_lines = 1;
+                    break;
+
+                case MACH_ADD:
+                    emitted_lines = nazm_write_binary(
+                        out, "أضف", &inst->dst, &inst->src2);
+                    break;
+
+                case MACH_SUB:
+                    emitted_lines = nazm_write_binary(
+                        out, "اطرح", &inst->dst, &inst->src2);
+                    break;
+
+                case MACH_AND:
+                    emitted_lines = nazm_write_binary(
+                        out, "و_بتيا", &inst->dst, &inst->src2);
+                    break;
+
+                case MACH_OR:
+                    emitted_lines = nazm_write_binary(
+                        out, "أو_بتيا", &inst->dst, &inst->src2);
+                    break;
+
+                case MACH_XOR:
+                    emitted_lines = nazm_write_binary(
+                        out, "خالف_بتيا", &inst->dst, &inst->src2);
+                    break;
+
+                case MACH_CMP:
+                    emitted_lines = nazm_write_binary(
+                        out, "قارن", &inst->src1, &inst->src2);
+                    break;
+
+                case MACH_TEST:
+                    emitted_lines = nazm_write_binary(
+                        out, "اختبر_البتات", &inst->src1, &inst->src2);
+                    break;
+
+                case MACH_IMUL:
+                    if (inst->src2.kind == MACH_OP_IMM)
+                    {
+                        fputs("    اضرب_موقع ", out);
+                        nazm_write_operand(out, &inst->dst);
+                        fputs("، ", out);
+                        nazm_write_operand(out, &inst->dst);
+                        fputs("، ", out);
+                        nazm_write_operand(out, &inst->src2);
+                        fputc('\n', out);
+                        emitted_lines = 1;
+                    }
+                    else
+                    {
+                        emitted_lines = nazm_write_binary(
+                            out, "اضرب_موقع", &inst->dst, &inst->src2);
+                    }
+                    break;
+
+                case MACH_SHL:
+                    emitted_lines = nazm_write_binary(
+                        out, "ازح_يسارا", &inst->dst, &inst->src2);
+                    break;
+
+                case MACH_SHR:
+                    emitted_lines = nazm_write_binary(
+                        out, "ازح_منطقيا_يمينا", &inst->dst, &inst->src2);
+                    break;
+
+                case MACH_SAR:
+                    emitted_lines = nazm_write_binary(
+                        out, "ازح_حسابيا_يمينا", &inst->dst, &inst->src2);
+                    break;
+
+                case MACH_NEG:
+                case MACH_NOT:
+                    fputs(inst->op == MACH_NEG
+                              ? "    اعكس_الإشارة "
+                              : "    اعكس_البتات ", out);
                     nazm_write_operand(out, &inst->dst);
-                    fputs("، ", out);
+                    fputc('\n', out);
+                    emitted_lines = 1;
+                    break;
+
+                case MACH_IDIV:
+                case MACH_DIV:
+                    fputs(inst->op == MACH_IDIV
+                              ? "    اقسم_موقع "
+                              : "    اقسم_غير_موقع ", out);
                     nazm_write_operand(out, &inst->src1);
                     fputc('\n', out);
                     emitted_lines = 1;
                     break;
 
+                case MACH_CQO:
+                    fputs("    وسع_إشارة_القسمة\n", out);
+                    emitted_lines = 1;
+                    break;
+
+                case MACH_JMP:
+                    fputs("    اقفز ", out);
+                    nazm_write_local_label(out, function_id, inst->dst.data.label_id);
+                    fputc('\n', out);
+                    emitted_lines = 1;
+                    break;
+
+                case MACH_JE:
+                case MACH_JNE:
+                    fputs(inst->op == MACH_JE
+                              ? "    اقفز_مساو "
+                              : "    اقفز_غير_مساو ", out);
+                    nazm_write_local_label(out, function_id, inst->dst.data.label_id);
+                    fputc('\n', out);
+                    emitted_lines = 1;
+                    break;
+
+                case MACH_SETE: case MACH_SETNE:
+                case MACH_SETG: case MACH_SETL:
+                case MACH_SETGE: case MACH_SETLE:
+                case MACH_SETA: case MACH_SETB:
+                case MACH_SETAE: case MACH_SETBE:
+                case MACH_SETP: case MACH_SETNP:
+                    fputs("    ", out);
+                    fputs(nazm_setcc_mnemonic(inst->op), out);
+                    fputc(' ', out);
+                    nazm_write_operand(out, &inst->dst);
+                    fputc('\n', out);
+                    emitted_lines = 1;
+                    break;
+
+                case MACH_MOVZX:
+                case MACH_MOVSX:
+                    emitted_lines = nazm_write_binary(
+                        out,
+                        inst->op == MACH_MOVZX ? "وسع_بصفر" : "وسع_بإشارة",
+                        &inst->dst,
+                        &inst->src1);
+                    break;
+
+                case MACH_CALL:
+                    fputs("    ناد ", out);
+                    if (inst->src1.kind == MACH_OP_FUNC)
+                        fputs(inst->src1.data.name, out);
+                    else
+                        nazm_write_operand(out, &inst->src1);
+                    fputc('\n', out);
+                    emitted_lines = 1;
+                    break;
+
+                case MACH_PUSH:
+                    fputs("    ادفع ", out);
+                    nazm_write_operand(out, &inst->src1);
+                    fputc('\n', out);
+                    emitted_lines = 1;
+                    break;
+
+                case MACH_POP:
+                    fputs("    اسحب ", out);
+                    nazm_write_operand(out, &inst->dst);
+                    fputc('\n', out);
+                    emitted_lines = 1;
+                    break;
+
                 case MACH_RET:
-                    emitted_lines = nazm_write_epilogue(out, is_arabic_entry, target);
+                    emitted_lines = nazm_write_epilogue(
+                        out, is_arabic_entry, func, target,
+                        callee_regs, callee_count);
                     has_return = true;
                     break;
 
@@ -392,7 +1076,8 @@ static void nazm_write_function(FILE *out,
             fputs("    انقل سجل_المركم، ٠\n", out);
             map->generated_line += 1;
         }
-        map->generated_line += nazm_write_epilogue(out, is_arabic_entry, target);
+        map->generated_line += nazm_write_epilogue(
+            out, is_arabic_entry, func, target, callee_regs, callee_count);
     }
 }
 
@@ -427,6 +1112,18 @@ BaaNazmEmitResult emit_nazm_module_with_source_map(const MachineModule *module,
     fputs("; مصدر نظم مولد من باء\n", out);
     fputs(".نص\n", out);
     map.generated_line = 2;
+
+    for (const MachineFunc *func = module->funcs; func; func = func->next)
+    {
+        if (func->is_prototype && func->name && func->name[0] &&
+            !nazm_identifier_has_ascii_letter(func->name))
+        {
+            fputs(".خارجي ", out);
+            fputs(func->name, out);
+            fputc('\n', out);
+            map.generated_line += 1;
+        }
+    }
 
     unsigned function_id = 0;
     for (const MachineFunc *func = module->funcs; func; func = func->next)

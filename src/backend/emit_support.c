@@ -97,14 +97,6 @@ static void emit_rodata_section(FILE* out)
     }
 }
 
-static bool emit_reg_is_callee_saved(PhysReg r)
-{
-    const BaaCallingConv* cc = emit_cc_or_default();
-    if (!cc) return false;
-    if (r < 0 || r >= PHYS_REG_COUNT) return false;
-    return (cc->callee_saved_mask & (1u << (unsigned)r)) != 0u;
-}
-
 typedef struct {
     const char** files;
     int file_count;

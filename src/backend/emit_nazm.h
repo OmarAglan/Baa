@@ -23,6 +23,8 @@ typedef struct
     BaaNazmEmitStatus status;
     MachineOp op;
     const char *reason;
+    const char *blocker_kind;
+    const char *blocker_detail;
     const char *source_file;
     int source_line;
     int source_col;

@@ -7,7 +7,7 @@
   "nazm_capabilities": {
     "schema": "nazm-capabilities-v1",
     "assembler": "Nazm 0.4.0",
-    "sha256": "89fce822e4ae40f4f03030f99b6ad5e3c5f72cc8b0157d32f12e8a3fecb72793"
+    "sha256": "488afaeb4dc7f3e89ea71b7583a95137fe67b09e1d88119a8747d54ed8b41687"
   },
   "shadow_corpus": {
     "schema": "baa-nazm-shadow-corpus-v1",
@@ -3363,8 +3363,14 @@
             "examples/file_copy_small.baa:1002",
             "examples/hello_world.baa:140"
           ],
-          "status": "unsupported",
-          "reason": "Nazm does not implement an alignment directive."
+          "status": "supported",
+          "nazm": {
+            "directive": ".محاذاة",
+            "operands": [
+              "power-of-two-byte-alignment"
+            ]
+          },
+          "acceptance_fixture": "tests/fixtures/baa_coverage/بيانات-باء.نظم"
         },
         {
           "directive": ".quad",
@@ -3556,14 +3562,14 @@
       ],
       "summary": {
         "forms": {
-          "supported": 58,
+          "supported": 59,
           "partial": 3,
-          "unsupported": 71
+          "unsupported": 70
         },
         "emissions": {
-          "supported": 61798,
+          "supported": 62102,
           "partial": 3311,
-          "unsupported": 15525
+          "unsupported": 15221
         }
       }
     },
@@ -6819,8 +6825,14 @@
             "examples/file_copy_small.baa:1074",
             "examples/hello_world.baa:147"
           ],
-          "status": "unsupported",
-          "reason": "Nazm does not implement an alignment directive."
+          "status": "supported",
+          "nazm": {
+            "directive": ".محاذاة",
+            "operands": [
+              "power-of-two-byte-alignment"
+            ]
+          },
+          "acceptance_fixture": "tests/fixtures/baa_coverage/بيانات-باء.نظم"
         },
         {
           "directive": ".quad",
@@ -6990,14 +7002,14 @@
       ],
       "summary": {
         "forms": {
-          "supported": 57,
+          "supported": 58,
           "partial": 3,
-          "unsupported": 65
+          "unsupported": 64
         },
         "emissions": {
-          "supported": 66976,
+          "supported": 67280,
           "partial": 3311,
-          "unsupported": 14049
+          "unsupported": 13745
         }
       }
     }

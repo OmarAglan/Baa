@@ -443,6 +443,74 @@ class NazmEmitterTests(unittest.TestCase):
             self.assertEqual(shadow_run.stdout, production_run.stdout)
             self.assertEqual(shadow_run.stderr, production_run.stderr)
 
+    def test_global_integer_uses_arabic_pc_relative_memory(self) -> None:
+        nazm = _find_nazm()
+        if nazm is None:
+            self.skipTest("Nazm executable is unavailable in this checkout")
+
+        with tempfile.TemporaryDirectory(prefix="baa_nazm_global_value_") as temp:
+            work = Path(temp)
+            source = work / "قيمة-عامة.باء"
+            source.write_text(
+                "صحيح عداد_عام = ٧.\n"
+                "صحيح الرئيسية() {\n"
+                "    عداد_عام = عداد_عام + ٥.\n"
+                "    إرجع عداد_عام.\n"
+                "}\n",
+                encoding="utf-8",
+            )
+
+            for target in ("x86_64-windows", "x86_64-linux"):
+                with self.subTest(target=target):
+                    emitted = work / f"قيمة-{target}.نظم"
+                    proc = self.run_baa(
+                        work,
+                        "--emit-nazm",
+                        f"--target={target}",
+                        str(source),
+                        "-o",
+                        str(emitted),
+                    )
+                    self.assertEqual(proc.returncode, 0, proc.stderr)
+                    text = emitted.read_text(encoding="utf-8")
+                    self.assertIsNone(re.search(r"[A-Za-z]", text))
+                    self.assertGreaterEqual(
+                        text.count("[مؤشر_التعليمة+عداد_عام]"), 3
+                    )
+
+            exe_suffix = ".exe" if os.name == "nt" else ""
+            object_suffix = ".obj" if os.name == "nt" else ".o"
+            output = work / f"قيمة-عامة{exe_suffix}"
+            shadow = self.run_baa(
+                work,
+                f"--nazm-shadow={nazm}",
+                str(source),
+                "-o",
+                str(output),
+            )
+            self.assertEqual(shadow.returncode, 0, shadow.stderr)
+
+            shadow_object = Path(f"{output}.ظل-نظم{object_suffix}")
+            sections, global_symbols, relocation_count = _inspect_object(
+                shadow_object
+            )
+            self.assertIn(".data", sections)
+            self.assertIn("عداد_عام", global_symbols)
+            self.assertGreaterEqual(relocation_count, 3)
+
+            production_run = subprocess.run(
+                [str(output)], capture_output=True, timeout=30
+            )
+            shadow_run = subprocess.run(
+                [str(Path(f"{output}.ظل-نظم{exe_suffix}"))],
+                capture_output=True,
+                timeout=30,
+            )
+            self.assertEqual(production_run.returncode, 12)
+            self.assertEqual(shadow_run.returncode, production_run.returncode)
+            self.assertEqual(shadow_run.stdout, production_run.stdout)
+            self.assertEqual(shadow_run.stderr, production_run.stderr)
+
     def test_unsupported_form_is_visible_and_leaves_no_output(self) -> None:
         with tempfile.TemporaryDirectory(prefix="baa_nazm_unsupported_") as temp:
             work = Path(temp)
@@ -469,8 +537,8 @@ class NazmEmitterTests(unittest.TestCase):
             self.assertFalse(output.exists())
             self.assertFalse(Path(f"{output}.خريطة-باء.json").exists())
 
-    def test_unsupported_include_source_has_stable_diagnostic(self) -> None:
-        with tempfile.TemporaryDirectory(prefix="baa_nazm_include_unsupported_") as temp:
+    def test_include_source_global_uses_stable_arabic_symbol(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="baa_nazm_include_global_") as temp:
             work = Path(temp)
             output = work / "غير-مدعوم-تضمين.نظم"
             source = (
@@ -490,12 +558,12 @@ class NazmEmitterTests(unittest.TestCase):
                 str(output),
             )
 
-            self.assertEqual(proc.returncode, 3, proc.stderr)
-            self.assertIn("خطأ:", proc.stderr)
-            self.assertIn("[عائق_نظم=", proc.stderr)
-            self.assertNotIn("خطأ في", proc.stderr)
-            self.assertNotIn("\x06", proc.stderr)
-            self.assertFalse(output.exists())
+            self.assertEqual(proc.returncode, 0, proc.stderr)
+            text = output.read_text(encoding="utf-8")
+            self.assertIsNone(re.search(r"[A-Za-z]", text))
+            self.assertIn("[مؤشر_التعليمة+قيمة_مضمنة]", text)
+            source_map = Path(f"{output}.خريطة-باء.json")
+            self.assertTrue(source_map.is_file())
 
     def test_conflicting_output_modes_are_invalid_invocation(self) -> None:
         with tempfile.TemporaryDirectory(prefix="baa_nazm_conflict_") as temp:
@@ -710,6 +778,11 @@ class NazmEmitterTests(unittest.TestCase):
         )
         for row in rows:
             source = ROOT / row["source"]
+            compile_only = bool(re.search(
+                r"^//\s*RUN:\s*compile-only\s*$",
+                source.read_text(encoding="utf-8-sig"),
+                re.MULTILINE,
+            ))
             flags = ["-I", str(ROOT), *row.get("flags", [])]
             for index, flag in enumerate(flags):
                 if index > 0 and flags[index - 1] == "-I":
@@ -726,6 +799,66 @@ class NazmEmitterTests(unittest.TestCase):
                 work = Path(temp)
                 exe_suffix = ".exe" if os.name == "nt" else ""
                 object_suffix = ".obj" if os.name == "nt" else ".o"
+                if compile_only:
+                    shadow_source = work / "برنامج-المصفوفة.نظم"
+                    shadow_object = work / f"ظل-المصفوفة{object_suffix}"
+                    emit = self.run_baa(
+                        work,
+                        "--emit-nazm",
+                        f"--target={target}",
+                        *flags,
+                        str(source),
+                        "-o",
+                        str(shadow_source),
+                    )
+                    self.assertEqual(emit.returncode, 0, emit.stderr)
+                    nazm_text = shadow_source.read_text(encoding="utf-8")
+                    self.assertIsNone(re.search(r"[A-Za-z]", nazm_text))
+                    assemble = subprocess.run(
+                        [
+                            str(nazm),
+                            "-ص",
+                            "كوف" if os.name == "nt" else "إلف64",
+                            "-خ",
+                            str(shadow_object),
+                            str(shadow_source),
+                        ],
+                        cwd=str(work),
+                        text=True,
+                        encoding="utf-8",
+                        errors="replace",
+                        capture_output=True,
+                        timeout=30,
+                    )
+                    self.assertEqual(assemble.returncode, 0, assemble.stderr)
+
+                    production_object = work / f"إنتاج-المصفوفة{object_suffix}"
+                    production = self.run_baa(
+                        work,
+                        "-c",
+                        *flags,
+                        str(source),
+                        "-o",
+                        str(production_object),
+                    )
+                    self.assertEqual(production.returncode, 0, production.stderr)
+                    sections, global_symbols, relocation_count = _inspect_object(
+                        shadow_object
+                    )
+                    (
+                        production_sections,
+                        production_global_symbols,
+                        production_relocation_count,
+                    ) = _inspect_object(production_object)
+                    self.assertIn(".text", sections)
+                    self.assertIn("الرئيسية", global_symbols)
+                    self.assertTrue(sections.issubset(production_sections))
+                    self.assertEqual(global_symbols, production_global_symbols)
+                    self.assertGreaterEqual(
+                        relocation_count, production_relocation_count
+                    )
+                    continue
+
                 output = work / f"برنامج-المصفوفة{exe_suffix}"
                 proc = self.run_baa(
                     work,

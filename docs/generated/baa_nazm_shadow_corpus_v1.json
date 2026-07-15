@@ -15,21 +15,25 @@
     "x86_64-linux": {
       "source_count": 100,
       "summary": {
-        "emitted": 46,
-        "unsupported": 54,
+        "emitted": 57,
+        "unsupported": 43,
         "error": 0
       },
       "unsupported_reasons": [
         {
-          "reason": "خطأ: نوع معامل القيمة غير مدعوم في مسار نظم.",
-          "count": 27
+          "reason": "خطأ: معامل الذاكرة غير مدعوم لهذه التعليمة.",
+          "count": 21
         },
         {
-          "reason": "خطأ: معامل الذاكرة غير مدعوم لهذه التعليمة.",
-          "count": 13
+          "reason": "خطأ: نوع معامل القيمة غير مدعوم في مسار نظم.",
+          "count": 6
         },
         {
           "reason": "خطأ: أسماء الدوال في مصدر نظم يجب أن تكون عربية فقط.",
+          "count": 4
+        },
+        {
+          "reason": "خطأ: المعامل ليس سجلا ماديا بعرض ٨ أو ١٦ أو ٣٢ أو ٦٤ بت.",
           "count": 4
         },
         {
@@ -37,23 +41,23 @@
           "count": 4
         },
         {
-          "reason": "خطأ: المعامل ليس سجلا ماديا بعرض ٨ أو ١٦ أو ٣٢ أو ٦٤ بت.",
+          "reason": "خطأ: تعليمة الآلة غير مدعومة في شريحة نظم التنفيذية الأولى.",
           "count": 3
         },
         {
-          "reason": "خطأ: تعليمة الآلة غير مدعومة في شريحة نظم التنفيذية الأولى.",
-          "count": 3
+          "reason": "خطأ: عرض معاملي النقل غير متطابق.",
+          "count": 1
         }
       ],
       "unsupported_blockers": [
         {
-          "kind": "نوع_معامل_قيمة_غير_مدعوم",
-          "detail": "تحميل",
-          "count": 23
+          "kind": "ذاكرة_غير_مدعومة_لهذه_التعليمة",
+          "count": 21
         },
         {
-          "kind": "ذاكرة_غير_مدعومة_لهذه_التعليمة",
-          "count": 13
+          "kind": "نوع_معامل_قيمة_غير_مدعوم",
+          "detail": "نقل",
+          "count": 6
         },
         {
           "kind": "إعدادات_التحويل",
@@ -64,14 +68,9 @@
           "count": 4
         },
         {
-          "kind": "نوع_معامل_قيمة_غير_مدعوم",
-          "detail": "نقل",
-          "count": 4
-        },
-        {
           "kind": "عرض_أو_نوع_معامل",
           "detail": "تعيين_مساو",
-          "count": 3
+          "count": 4
         },
         {
           "kind": "تعليمة_آلة",
@@ -81,6 +80,11 @@
         {
           "kind": "تعليمة_آلة",
           "detail": "نظم_ضمني",
+          "count": 1
+        },
+        {
+          "kind": "عدم_تطابق_عرض_معاملين",
+          "detail": "نقل",
           "count": 1
         }
       ],
@@ -99,13 +103,13 @@
           "source": "examples/file_copy_small.baa",
           "status": "emitted",
           "exit_code": 0,
-          "sha256": "6d7d66289e2dd11267bbe29eeaecb76e847adf6024d344daadd8a019052ee672"
+          "sha256": "75ca116a98d399c4df340f1a9b05f1b7e4f6d27066e0654cf40f7f0a114e0a06"
         },
         {
           "source": "examples/hello_world.baa",
           "status": "emitted",
           "exit_code": 0,
-          "sha256": "01bf2bec3c9cdf91904fca1f872500649427405fc557156a9452e274b2006e0d"
+          "sha256": "bb5a2e775d9a277b1a8626686320ca16a1dc486cc7a85f50872531387f4fc5bc"
         },
         {
           "source": "examples/math_and_format.baa",
@@ -121,7 +125,7 @@
           "source": "tests/integration/backend/backend_arabic_numeral_source_tokens_v064_test.baa",
           "status": "emitted",
           "exit_code": 0,
-          "sha256": "166cf0bacc3f1e9809c22602960ea722c410fd0f89c737cf2e654019a9444759"
+          "sha256": "f7deae7ad2da4f7649ffe947c346f45d1c1f3a68147f108f508cd08976a13a5b"
         },
         {
           "source": "tests/integration/backend/backend_array_init_test.baa",
@@ -133,7 +137,7 @@
           "source": "tests/integration/backend/backend_array_length_operator_test.baa",
           "status": "emitted",
           "exit_code": 0,
-          "sha256": "c8350fa39fe16fe3610d91b1191a188198dd39cc44ea48bd6ddeca4a9b3b9fbd"
+          "sha256": "70abfa530839ba6570377962f783dfa39af95c9612f1407592c2b4b67abac6f2"
         },
         {
           "source": "tests/integration/backend/backend_array_sum_test.baa",
@@ -145,10 +149,9 @@
           "source": "tests/integration/backend/backend_byte_buffer_stdlib_v062_test.baa",
           "status": "unsupported",
           "exit_code": 3,
-          "reason": "خطأ: نوع معامل القيمة غير مدعوم في مسار نظم.",
+          "reason": "خطأ: معامل الذاكرة غير مدعوم لهذه التعليمة.",
           "blocker": {
-            "kind": "نوع_معامل_قيمة_غير_مدعوم",
-            "detail": "تحميل"
+            "kind": "ذاكرة_غير_مدعومة_لهذه_التعليمة"
           }
         },
         {
@@ -187,28 +190,24 @@
         },
         {
           "source": "tests/integration/backend/backend_dynamic_memory_test.baa",
-          "status": "unsupported",
-          "exit_code": 3,
-          "reason": "خطأ: نوع معامل القيمة غير مدعوم في مسار نظم.",
-          "blocker": {
-            "kind": "نوع_معامل_قيمة_غير_مدعوم",
-            "detail": "تحميل"
-          }
+          "status": "emitted",
+          "exit_code": 0,
+          "sha256": "979f18712314474108f7fff5bff59f3ae0d832388e9d7e16c136515534293770"
         },
         {
           "source": "tests/integration/backend/backend_enum_struct_test.baa",
           "status": "emitted",
           "exit_code": 0,
-          "sha256": "7306d8ae7a602575c358e7f67bcb320ca313934155e4677bb1904635c36dfe93"
+          "sha256": "c0d438df11098dc8c290b6be04dcb0eb3370ca2e303aabe41201149653b51381"
         },
         {
           "source": "tests/integration/backend/backend_error_handling_v043_test.baa",
           "status": "unsupported",
           "exit_code": 3,
-          "reason": "خطأ: نوع معامل القيمة غير مدعوم في مسار نظم.",
+          "reason": "خطأ: المعامل ليس سجلا ماديا بعرض ٨ أو ١٦ أو ٣٢ أو ٦٤ بت.",
           "blocker": {
-            "kind": "نوع_معامل_قيمة_غير_مدعوم",
-            "detail": "تحميل"
+            "kind": "عرض_أو_نوع_معامل",
+            "detail": "تعيين_مساو"
           }
         },
         {
@@ -224,10 +223,9 @@
           "source": "tests/integration/backend/backend_file_io_test.baa",
           "status": "unsupported",
           "exit_code": 3,
-          "reason": "خطأ: نوع معامل القيمة غير مدعوم في مسار نظم.",
+          "reason": "خطأ: معامل الذاكرة غير مدعوم لهذه التعليمة.",
           "blocker": {
-            "kind": "نوع_معامل_قيمة_غير_مدعوم",
-            "detail": "تحميل"
+            "kind": "ذاكرة_غير_مدعومة_لهذه_التعليمة"
           }
         },
         {
@@ -237,7 +235,7 @@
           "reason": "خطأ: نوع معامل القيمة غير مدعوم في مسار نظم.",
           "blocker": {
             "kind": "نوع_معامل_قيمة_غير_مدعوم",
-            "detail": "تحميل"
+            "detail": "نقل"
           }
         },
         {
@@ -254,29 +252,25 @@
           "source": "tests/integration/backend/backend_func_ptr_shadow_call_test.baa",
           "status": "emitted",
           "exit_code": 0,
-          "sha256": "6558361165f799d8b2cd06bf71cf5fce5d1b28080fbb71e82d3ebcca031c3474"
+          "sha256": "3399c44e86b1e45322d361d51632262e16c71ce87c71f4e07a0e0a6e23860557"
         },
         {
           "source": "tests/integration/backend/backend_func_ptr_test.baa",
           "status": "emitted",
           "exit_code": 0,
-          "sha256": "01476c05d5345ad26ccde73a924792182530eb1a9763872ae32ddda23adde55d"
+          "sha256": "b7ab6be4787460a583f7ed4835e3875f7e7f5e3e9fbea8465d895fa72bf8a04b"
         },
         {
           "source": "tests/integration/backend/backend_global_array_init_test.baa",
           "status": "emitted",
           "exit_code": 0,
-          "sha256": "d9df88cc9d597d7d5c68a7ce0fd42c7ce7839a23e10d783d73517ba767b89366"
+          "sha256": "2fd9eec49e6bd3d50d25b0cde938def92ff8379c29012886007e40e079b8b10f"
         },
         {
           "source": "tests/integration/backend/backend_include_bom_test.baa",
-          "status": "unsupported",
-          "exit_code": 3,
-          "reason": "خطأ: نوع معامل القيمة غير مدعوم في مسار نظم.",
-          "blocker": {
-            "kind": "نوع_معامل_قيمة_غير_مدعوم",
-            "detail": "تحميل"
-          }
+          "status": "emitted",
+          "exit_code": 0,
+          "sha256": "507be492d2dee41b96115e3dbee5ebe7590b89f46014f37f59dcfbc38dbbc014"
         },
         {
           "source": "tests/integration/backend/backend_include_i_compact_form_test.baa",
@@ -359,27 +353,23 @@
           "source": "tests/integration/backend/backend_inline_test.baa",
           "status": "emitted",
           "exit_code": 0,
-          "sha256": "0408722b5a323ff3a49f91b5d3b883b686bcf2f9b23e087886d93fc7b187d875"
+          "sha256": "0b05bd46ead9b5524cadad61c7bc4d977c480bb5209a15ebcfad47ffef7fe9d2"
         },
         {
           "source": "tests/integration/backend/backend_int_semantics_test.baa",
           "status": "unsupported",
           "exit_code": 3,
-          "reason": "خطأ: نوع معامل القيمة غير مدعوم في مسار نظم.",
+          "reason": "خطأ: عرض معاملي النقل غير متطابق.",
           "blocker": {
-            "kind": "نوع_معامل_قيمة_غير_مدعوم",
-            "detail": "تحميل"
+            "kind": "عدم_تطابق_عرض_معاملين",
+            "detail": "نقل"
           }
         },
         {
           "source": "tests/integration/backend/backend_low_level_ops_test.baa",
-          "status": "unsupported",
-          "exit_code": 3,
-          "reason": "خطأ: نوع معامل القيمة غير مدعوم في مسار نظم.",
-          "blocker": {
-            "kind": "نوع_معامل_قيمة_غير_مدعوم",
-            "detail": "تحميل"
-          }
+          "status": "emitted",
+          "exit_code": 0,
+          "sha256": "edaeceea2cb9e596907da09959e94147ad4ac068063bc09164878b6de8b579c3"
         },
         {
           "source": "tests/integration/backend/backend_main_args_test.baa",
@@ -410,10 +400,9 @@
           "source": "tests/integration/backend/backend_path_stdlib_v062_test.baa",
           "status": "unsupported",
           "exit_code": 3,
-          "reason": "خطأ: نوع معامل القيمة غير مدعوم في مسار نظم.",
+          "reason": "خطأ: معامل الذاكرة غير مدعوم لهذه التعليمة.",
           "blocker": {
-            "kind": "نوع_معامل_قيمة_غير_مدعوم",
-            "detail": "تحميل"
+            "kind": "ذاكرة_غير_مدعومة_لهذه_التعليمة"
           }
         },
         {
@@ -451,33 +440,25 @@
           "source": "tests/integration/backend/backend_readnum_stdin_test.baa",
           "status": "emitted",
           "exit_code": 0,
-          "sha256": "371680b8b79f279dc48c3e000997eb1d2fe84c65dc2dd38d77670d9e17d62031"
+          "sha256": "ae4e5ed77a7df0e1e8ae2b80aaef62f8a94461c66d6d3fa84e76c4921cf7115b"
         },
         {
           "source": "tests/integration/backend/backend_regalloc_stress.baa",
-          "status": "unsupported",
-          "exit_code": 3,
-          "reason": "خطأ: نوع معامل القيمة غير مدعوم في مسار نظم.",
-          "blocker": {
-            "kind": "نوع_معامل_قيمة_غير_مدعوم",
-            "detail": "تحميل"
-          }
+          "status": "emitted",
+          "exit_code": 0,
+          "sha256": "c8bb0734d3e970e192c6f1667fa5a5f08f27e7bf28cd678b13536e3044e46022"
         },
         {
           "source": "tests/integration/backend/backend_result_helpers_stdlib_v062_test.baa",
-          "status": "unsupported",
-          "exit_code": 3,
-          "reason": "خطأ: نوع معامل القيمة غير مدعوم في مسار نظم.",
-          "blocker": {
-            "kind": "نوع_معامل_قيمة_غير_مدعوم",
-            "detail": "تحميل"
-          }
+          "status": "emitted",
+          "exit_code": 0,
+          "sha256": "d3b2ab55d32f24cdf46df0622d83745084b8bea92edc13d1e727e1043109fbfa"
         },
         {
           "source": "tests/integration/backend/backend_runtime_assert_fail_v055_test.baa",
           "status": "emitted",
           "exit_code": 0,
-          "sha256": "d8ef0c7eafaebda814c1e5d67ca44ac15940c648340085a867c5b5324904365a"
+          "sha256": "08e3a4528e260b3d3288e8f1b7d895fe50fab8d847f6add0616ea7aa545ff7a0"
         },
         {
           "source": "tests/integration/backend/backend_runtime_assert_pass_v055_test.baa",
@@ -492,7 +473,7 @@
           "flags": [
             "-fruntime-checks"
           ],
-          "sha256": "e593ac2c5c8fc4bad5cb2c6f36e1fed8193aa7cd29a94391eba74f353659d19c"
+          "sha256": "edf29c16a7d78f7f25c3f3acb77dd497f3f81c915390b0a9b1697a02f41bb212"
         },
         {
           "source": "tests/integration/backend/backend_runtime_checks_selective_bounds_fail_v063_test.baa",
@@ -513,7 +494,7 @@
           "flags": [
             "-fruntime-checks=null"
           ],
-          "sha256": "fdbf62f665d75d3f5a4480dfbf93560b92bc7ddf664ded80e3c1656b9985f365"
+          "sha256": "c510e042bcdbcde5ccf5af2f5b82b7bf6add59ec3e586486ff00d4e2fd04271e"
         },
         {
           "source": "tests/integration/backend/backend_runtime_div_zero_fail_v063_test.baa",
@@ -522,7 +503,7 @@
           "flags": [
             "-fruntime-checks"
           ],
-          "sha256": "b853a731085d3b343c96d2634960cc7c73a3e2e29f0408a13a82aa03aa003c67"
+          "sha256": "1ab9083a9f3fc93e9e6999510b611ab4ad526b45c231c25de99a566d6129a170"
         },
         {
           "source": "tests/integration/backend/backend_runtime_mod_zero_fail_v063_test.baa",
@@ -531,7 +512,7 @@
           "flags": [
             "-fruntime-checks"
           ],
-          "sha256": "a61af7db18a9e0817fa7f01205f031d8ab4b01cbf6bf7de62ff4f0437c5f5e48"
+          "sha256": "bd50a8b21479388f1b6910f4941ae3027fce6c122641bbe5d47920cc370a613a"
         },
         {
           "source": "tests/integration/backend/backend_runtime_null_deref_assign_fail_v063_test.baa",
@@ -540,7 +521,7 @@
           "flags": [
             "-fruntime-checks"
           ],
-          "sha256": "d282fd722c9701578c36451d238a556dbcdb5fb25f2b68c93e564cbe347a6c12"
+          "sha256": "a7d2159236d234c25f8b8470477c074e39ed745158aa086ea67eb89057ed1050"
         },
         {
           "source": "tests/integration/backend/backend_runtime_null_deref_fail_v063_test.baa",
@@ -549,19 +530,19 @@
           "flags": [
             "-fruntime-checks"
           ],
-          "sha256": "99557d483a362b074879c63d06a34e824bd188cf73fa36463d024f6b7d8991bf"
+          "sha256": "46465da15f834044f9462cfb1c8442e342c8f1ae26271f2bcd15fa54193798db"
         },
         {
           "source": "tests/integration/backend/backend_runtime_panic_location_v063_test.baa",
           "status": "emitted",
           "exit_code": 0,
-          "sha256": "6d0b478ef5a2a1b3f786d435219b2dee8f4dfe504afde64b4ecbf5e70887b4d8"
+          "sha256": "843e061971bd92fc2b96943ccb80dba2250998c6a06efe23f7bcd94811708064"
         },
         {
           "source": "tests/integration/backend/backend_runtime_panic_v055_test.baa",
           "status": "emitted",
           "exit_code": 0,
-          "sha256": "778c43f1a698ad096914364ed35d7f53ce7d0cc7b3852625bb032458ec088adb"
+          "sha256": "207d847db2397eaa34ccbc2dd72c90296a5ba6bb4a03cd0e7929425c2d8ebee0"
         },
         {
           "source": "tests/integration/backend/backend_runtime_shift_width_high_fail_v063_test.baa",
@@ -570,7 +551,7 @@
           "flags": [
             "-fruntime-checks"
           ],
-          "sha256": "03fe55733bf74c323dd096cc74ecde758f27f85b368b95f0c68ab7d1cf4b81b7"
+          "sha256": "aa9be61fdce54c5f1060e9df90ce58fd401bff05701f6a7cfc8311000e672261"
         },
         {
           "source": "tests/integration/backend/backend_runtime_shift_width_negative_fail_v063_test.baa",
@@ -579,7 +560,7 @@
           "flags": [
             "-fruntime-checks"
           ],
-          "sha256": "a25b30008bd88025fa791796858d6ca05cf2732dd3e295c13cbb762dc9bf7c2e"
+          "sha256": "6abdb5c5edd1d34c1218aa8d6781d9efe26bce8144938c1a26873d6dacf63967"
         },
         {
           "source": "tests/integration/backend/backend_runtime_string_array_inner_bounds_fail_v063_test.baa",
@@ -617,13 +598,9 @@
         },
         {
           "source": "tests/integration/backend/backend_scope_test.baa",
-          "status": "unsupported",
-          "exit_code": 3,
-          "reason": "خطأ: نوع معامل القيمة غير مدعوم في مسار نظم.",
-          "blocker": {
-            "kind": "نوع_معامل_قيمة_غير_مدعوم",
-            "detail": "تحميل"
-          }
+          "status": "emitted",
+          "exit_code": 0,
+          "sha256": "9b3b2f3e385fc088d63671f51a05d3b77178edefc13d76ef6931ce33356217ad"
         },
         {
           "source": "tests/integration/backend/backend_sha256_file_v066_test.baa",
@@ -638,17 +615,13 @@
           "source": "tests/integration/backend/backend_stackargs_test.baa",
           "status": "emitted",
           "exit_code": 0,
-          "sha256": "f4dba789efb2edd0337d9988104ed6957bb28831389b0adc4984c6ce8215219b"
+          "sha256": "650f1253aaa5f27fc6ff24bfdd0ddbd5f28cce5f14479fdedad1e37a2c4feab9"
         },
         {
           "source": "tests/integration/backend/backend_static_storage_test.baa",
-          "status": "unsupported",
-          "exit_code": 3,
-          "reason": "خطأ: نوع معامل القيمة غير مدعوم في مسار نظم.",
-          "blocker": {
-            "kind": "نوع_معامل_قيمة_غير_مدعوم",
-            "detail": "تحميل"
-          }
+          "status": "emitted",
+          "exit_code": 0,
+          "sha256": "f03e952134850fd8ccb0134a19c09f6bc3c7919d30f200dcde2592fbf3aae186"
         },
         {
           "source": "tests/integration/backend/backend_stdlib_short_include_test.baa",
@@ -666,27 +639,25 @@
           "reason": "خطأ: نوع معامل القيمة غير مدعوم في مسار نظم.",
           "blocker": {
             "kind": "نوع_معامل_قيمة_غير_مدعوم",
-            "detail": "تحميل"
+            "detail": "نقل"
           }
         },
         {
           "source": "tests/integration/backend/backend_string_builder_stdlib_v062_test.baa",
           "status": "unsupported",
           "exit_code": 3,
-          "reason": "خطأ: نوع معامل القيمة غير مدعوم في مسار نظم.",
+          "reason": "خطأ: معامل الذاكرة غير مدعوم لهذه التعليمة.",
           "blocker": {
-            "kind": "نوع_معامل_قيمة_غير_مدعوم",
-            "detail": "تحميل"
+            "kind": "ذاكرة_غير_مدعومة_لهذه_التعليمة"
           }
         },
         {
           "source": "tests/integration/backend/backend_string_ops_test.baa",
           "status": "unsupported",
           "exit_code": 3,
-          "reason": "خطأ: نوع معامل القيمة غير مدعوم في مسار نظم.",
+          "reason": "خطأ: معامل الذاكرة غير مدعوم لهذه التعليمة.",
           "blocker": {
-            "kind": "نوع_معامل_قيمة_غير_مدعوم",
-            "detail": "تحميل"
+            "kind": "ذاكرة_غير_مدعومة_لهذه_التعليمة"
           }
         },
         {
@@ -699,7 +670,7 @@
           "source": "tests/integration/backend/backend_sysv_6args_test.baa",
           "status": "emitted",
           "exit_code": 0,
-          "sha256": "0bf4449951e93f80fc98187a0e9ee5b1cef0b6ae612fb15623b8ae8f9fb6e7c6"
+          "sha256": "54b38eb1f90f280da9ee7bf8903d7778daf082a7b88e68b2421a37942cf3b9d0"
         },
         {
           "source": "tests/integration/backend/backend_tailcall_float_test.baa",
@@ -715,43 +686,37 @@
           "source": "tests/integration/backend/backend_tailcall_test.baa",
           "status": "emitted",
           "exit_code": 0,
-          "sha256": "d4e0c8fa965fcfaa7688f471ce758e9980ad4e4560a4b62c5a253af70f040a35"
+          "sha256": "3cacfe79385efcaa71e75147a9fbda59da488f28bea3e2851ab0b21925d64ae2"
         },
         {
           "source": "tests/integration/backend/backend_test.baa",
           "status": "unsupported",
           "exit_code": 3,
-          "reason": "خطأ: نوع معامل القيمة غير مدعوم في مسار نظم.",
+          "reason": "خطأ: معامل الذاكرة غير مدعوم لهذه التعليمة.",
           "blocker": {
-            "kind": "نوع_معامل_قيمة_غير_مدعوم",
-            "detail": "تحميل"
+            "kind": "ذاكرة_غير_مدعومة_لهذه_التعليمة"
           }
         },
         {
           "source": "tests/integration/backend/backend_text_stdlib_helpers_v064_test.baa",
           "status": "unsupported",
           "exit_code": 3,
-          "reason": "خطأ: نوع معامل القيمة غير مدعوم في مسار نظم.",
+          "reason": "خطأ: معامل الذاكرة غير مدعوم لهذه التعليمة.",
           "blocker": {
-            "kind": "نوع_معامل_قيمة_غير_مدعوم",
-            "detail": "تحميل"
+            "kind": "ذاكرة_غير_مدعومة_لهذه_التعليمة"
           }
         },
         {
           "source": "tests/integration/backend/backend_type_alias_test.baa",
-          "status": "unsupported",
-          "exit_code": 3,
-          "reason": "خطأ: نوع معامل القيمة غير مدعوم في مسار نظم.",
-          "blocker": {
-            "kind": "نوع_معامل_قيمة_غير_مدعوم",
-            "detail": "تحميل"
-          }
+          "status": "emitted",
+          "exit_code": 0,
+          "sha256": "1e627f4c4819184ba1fcf706515e36dd1e049aeaa8e5d9516afb03d48289d341"
         },
         {
           "source": "tests/integration/backend/backend_union_test.baa",
           "status": "emitted",
           "exit_code": 0,
-          "sha256": "ee8c626150c49af58cb1780f3bfaf1f3e0136f579231cdeb4b58d9f74a55061a"
+          "sha256": "758be459e924edbf6e1aee4143049dc0dd745014c9634f278083c353474dfbe6"
         },
         {
           "source": "tests/integration/backend/backend_utf8_validation_valid_v064_test.baa",
@@ -776,40 +741,31 @@
           "source": "tests/integration/backend/backend_vector_stdlib_v062_test.baa",
           "status": "unsupported",
           "exit_code": 3,
-          "reason": "خطأ: نوع معامل القيمة غير مدعوم في مسار نظم.",
+          "reason": "خطأ: معامل الذاكرة غير مدعوم لهذه التعليمة.",
           "blocker": {
-            "kind": "نوع_معامل_قيمة_غير_مدعوم",
-            "detail": "تحميل"
+            "kind": "ذاكرة_غير_مدعومة_لهذه_التعليمة"
           }
         },
         {
           "source": "tests/integration/backend/int_sizes_test.baa",
           "status": "emitted",
           "exit_code": 0,
-          "sha256": "346b1fa21a65b23331b89d9dd1d1bf0f62aab54f60980be419805514bcbc8d61"
+          "sha256": "96f4b9a6cd0bd47ea018ddae1ebedfcb814ad79a7e00cd6b65a2bc9abf86bcda"
         },
         {
           "source": "tests/integration/frontend/frontend_extern_declarations_test.baa",
-          "status": "unsupported",
-          "exit_code": 3,
-          "reason": "خطأ: نوع معامل القيمة غير مدعوم في مسار نظم.",
-          "blocker": {
-            "kind": "نوع_معامل_قيمة_غير_مدعوم",
-            "detail": "تحميل"
-          }
+          "status": "emitted",
+          "exit_code": 0,
+          "sha256": "29dc124baa0718faa1ccd70ee83cdf68d6fa52ecb3d6c374158b58f15daa4341"
         },
         {
           "source": "tests/integration/frontend/frontend_extern_no_storage_test.baa",
-          "status": "unsupported",
-          "exit_code": 3,
+          "status": "emitted",
+          "exit_code": 0,
           "flags": [
             "-O1"
           ],
-          "reason": "خطأ: نوع معامل القيمة غير مدعوم في مسار نظم.",
-          "blocker": {
-            "kind": "نوع_معامل_قيمة_غير_مدعوم",
-            "detail": "تحميل"
-          }
+          "sha256": "40922f74492587b53b7037c7cef8efe9b152697c3022b50554357a404d033a1d"
         },
         {
           "source": "tests/integration/ir/ir_custom_startup_linux_asm_test.baa",
@@ -905,7 +861,7 @@
           "flags": [
             "-fruntime-checks=null,div-zero"
           ],
-          "sha256": "c13932d4ab9c57c8836e0370fe4be5bd6e0f72e9565512feb48edc230d26cbea"
+          "sha256": "3f43c80cdc0788a99f9f824711c6541b867efaea53ebf69b372b6d992f39e300"
         },
         {
           "source": "tests/integration/ir/ir_runtime_div_zero_enabled_v063_test.baa",
@@ -914,7 +870,7 @@
           "flags": [
             "-fruntime-checks"
           ],
-          "sha256": "fe2e0ba1c9d97ca3d993133fe6e1389104b8b164000202261f451fb120832250"
+          "sha256": "5a8ec6fb9c1ef8bfced6d1732e6f38da93f9652dde8a153e653aa81aa2db5363"
         },
         {
           "source": "tests/integration/ir/ir_runtime_null_deref_enabled_v063_test.baa",
@@ -923,7 +879,7 @@
           "flags": [
             "-fruntime-checks"
           ],
-          "sha256": "05c1233b72e75d4c923da4adab6c677e2cae80dd5c98a30e679489c3ee8352bd"
+          "sha256": "644ffc9a2d00ea5493a2ea5a98f27455abd6f416192d153711bb4d6d818b763c"
         },
         {
           "source": "tests/integration/ir/ir_runtime_shift_width_enabled_v063_test.baa",
@@ -932,7 +888,7 @@
           "flags": [
             "-fruntime-checks"
           ],
-          "sha256": "485b23b5799c02004c4b96a919bf086b7d25e562471251a760509eb568275aa3"
+          "sha256": "950972446a70feb2d8acb229d14a36c4599c2b5fee0c9af1d58f150df82cad4c"
         },
         {
           "source": "tests/integration/ir/ir_runtime_string_bounds_enabled_v063_test.baa",
@@ -948,13 +904,9 @@
         },
         {
           "source": "tests/integration/ir/ir_test.baa",
-          "status": "unsupported",
-          "exit_code": 3,
-          "reason": "خطأ: نوع معامل القيمة غير مدعوم في مسار نظم.",
-          "blocker": {
-            "kind": "نوع_معامل_قيمة_غير_مدعوم",
-            "detail": "تحميل"
-          }
+          "status": "emitted",
+          "exit_code": 0,
+          "sha256": "d6127e158c81d73edaf58f421a8a9dde49b64299d1749461c4ca01e7933e737a"
         },
         {
           "source": "tests/stress/stress_deep_scopes.baa",
@@ -982,18 +934,18 @@
     "x86_64-windows": {
       "source_count": 100,
       "summary": {
-        "emitted": 47,
-        "unsupported": 53,
+        "emitted": 58,
+        "unsupported": 42,
         "error": 0
       },
       "unsupported_reasons": [
         {
-          "reason": "خطأ: نوع معامل القيمة غير مدعوم في مسار نظم.",
-          "count": 27
+          "reason": "خطأ: معامل الذاكرة غير مدعوم لهذه التعليمة.",
+          "count": 24
         },
         {
-          "reason": "خطأ: معامل الذاكرة غير مدعوم لهذه التعليمة.",
-          "count": 15
+          "reason": "خطأ: نوع معامل القيمة غير مدعوم في مسار نظم.",
+          "count": 6
         },
         {
           "reason": "خطأ: أسماء الدوال في مصدر نظم يجب أن تكون عربية فقط.",
@@ -1006,17 +958,21 @@
         {
           "reason": "خطأ: تعليمة الآلة غير مدعومة في شريحة نظم التنفيذية الأولى.",
           "count": 3
+        },
+        {
+          "reason": "خطأ: عرض معاملي النقل غير متطابق.",
+          "count": 1
         }
       ],
       "unsupported_blockers": [
         {
-          "kind": "نوع_معامل_قيمة_غير_مدعوم",
-          "detail": "تحميل",
-          "count": 23
+          "kind": "ذاكرة_غير_مدعومة_لهذه_التعليمة",
+          "count": 24
         },
         {
-          "kind": "ذاكرة_غير_مدعومة_لهذه_التعليمة",
-          "count": 15
+          "kind": "نوع_معامل_قيمة_غير_مدعوم",
+          "detail": "نقل",
+          "count": 6
         },
         {
           "kind": "إعدادات_التحويل",
@@ -1024,11 +980,6 @@
         },
         {
           "kind": "اسم_دالة_غير_عربي",
-          "count": 4
-        },
-        {
-          "kind": "نوع_معامل_قيمة_غير_مدعوم",
-          "detail": "نقل",
           "count": 4
         },
         {
@@ -1040,6 +991,11 @@
           "kind": "تعليمة_آلة",
           "detail": "نظم_ضمني",
           "count": 1
+        },
+        {
+          "kind": "عدم_تطابق_عرض_معاملين",
+          "detail": "نقل",
+          "count": 1
         }
       ],
       "sources": [
@@ -1047,19 +1003,19 @@
           "source": "examples/error_handling_demo.baa",
           "status": "emitted",
           "exit_code": 0,
-          "sha256": "0ba3674850a382e15d26e83b7d7edf62a199a550b0579df39b7e508e857e97be"
+          "sha256": "ab61508cfb41750c6a0b7a9e37451e1197f69373c14c2cb960ebbeab4c089d87"
         },
         {
           "source": "examples/file_copy_small.baa",
           "status": "emitted",
           "exit_code": 0,
-          "sha256": "702bae86c6ba9f7e64ef8b495718f44d7b18a8e37bb8517058f0ddf4ee0bdbd4"
+          "sha256": "3e6ceea509ca60159016a8e7b5ae2d3deff3023e366c9a54412969ef2f0e579e"
         },
         {
           "source": "examples/hello_world.baa",
           "status": "emitted",
           "exit_code": 0,
-          "sha256": "c20fe1a3ce48cbd7035dca76e760edbc1254383c73dd53900138804e449cd252"
+          "sha256": "a54c889ab3ebf56369c7c09c450690a65c6433733907292980d2b35a6d7c1a17"
         },
         {
           "source": "examples/math_and_format.baa",
@@ -1075,7 +1031,7 @@
           "source": "tests/integration/backend/backend_arabic_numeral_source_tokens_v064_test.baa",
           "status": "emitted",
           "exit_code": 0,
-          "sha256": "fb8ea5d0d6d56c8a10655f17d300e3dc09a2c7de32fc3788ba192eef18e11d83"
+          "sha256": "13f9a0dbb69f1b6c7af98c988e7cda2394465947869120005af1261c56fddf7e"
         },
         {
           "source": "tests/integration/backend/backend_array_init_test.baa",
@@ -1087,7 +1043,7 @@
           "source": "tests/integration/backend/backend_array_length_operator_test.baa",
           "status": "emitted",
           "exit_code": 0,
-          "sha256": "94a90e5f1058518520908e298af17039b262b76bd534627a6f38fa687a8f2830"
+          "sha256": "4a03f049592e3da1d33aa587155c9e8bed4203f7b39a59c9a163a2f745aa31e9"
         },
         {
           "source": "tests/integration/backend/backend_array_sum_test.baa",
@@ -1099,10 +1055,9 @@
           "source": "tests/integration/backend/backend_byte_buffer_stdlib_v062_test.baa",
           "status": "unsupported",
           "exit_code": 3,
-          "reason": "خطأ: نوع معامل القيمة غير مدعوم في مسار نظم.",
+          "reason": "خطأ: معامل الذاكرة غير مدعوم لهذه التعليمة.",
           "blocker": {
-            "kind": "نوع_معامل_قيمة_غير_مدعوم",
-            "detail": "تحميل"
+            "kind": "ذاكرة_غير_مدعومة_لهذه_التعليمة"
           }
         },
         {
@@ -1141,28 +1096,23 @@
         },
         {
           "source": "tests/integration/backend/backend_dynamic_memory_test.baa",
-          "status": "unsupported",
-          "exit_code": 3,
-          "reason": "خطأ: نوع معامل القيمة غير مدعوم في مسار نظم.",
-          "blocker": {
-            "kind": "نوع_معامل_قيمة_غير_مدعوم",
-            "detail": "تحميل"
-          }
+          "status": "emitted",
+          "exit_code": 0,
+          "sha256": "6374afe9ca89f7bcb37405f975514715ad534ea807815f3f19459f7bb44d9d41"
         },
         {
           "source": "tests/integration/backend/backend_enum_struct_test.baa",
           "status": "emitted",
           "exit_code": 0,
-          "sha256": "dd56c0240178c4ed5f5565df1b760184ce1ed4091e42e0f016eaef1341b325da"
+          "sha256": "8cad824af06b93232308386ad098fbd2579157f84827313a57fcf73505613c3b"
         },
         {
           "source": "tests/integration/backend/backend_error_handling_v043_test.baa",
           "status": "unsupported",
           "exit_code": 3,
-          "reason": "خطأ: نوع معامل القيمة غير مدعوم في مسار نظم.",
+          "reason": "خطأ: معامل الذاكرة غير مدعوم لهذه التعليمة.",
           "blocker": {
-            "kind": "نوع_معامل_قيمة_غير_مدعوم",
-            "detail": "تحميل"
+            "kind": "ذاكرة_غير_مدعومة_لهذه_التعليمة"
           }
         },
         {
@@ -1178,10 +1128,9 @@
           "source": "tests/integration/backend/backend_file_io_test.baa",
           "status": "unsupported",
           "exit_code": 3,
-          "reason": "خطأ: نوع معامل القيمة غير مدعوم في مسار نظم.",
+          "reason": "خطأ: معامل الذاكرة غير مدعوم لهذه التعليمة.",
           "blocker": {
-            "kind": "نوع_معامل_قيمة_غير_مدعوم",
-            "detail": "تحميل"
+            "kind": "ذاكرة_غير_مدعومة_لهذه_التعليمة"
           }
         },
         {
@@ -1191,7 +1140,7 @@
           "reason": "خطأ: نوع معامل القيمة غير مدعوم في مسار نظم.",
           "blocker": {
             "kind": "نوع_معامل_قيمة_غير_مدعوم",
-            "detail": "تحميل"
+            "detail": "نقل"
           }
         },
         {
@@ -1207,29 +1156,25 @@
           "source": "tests/integration/backend/backend_func_ptr_shadow_call_test.baa",
           "status": "emitted",
           "exit_code": 0,
-          "sha256": "c0ed9ef5ed071952511def7b7a7bb3158ded22b55eff258c0d9e01c6b77a4fd5"
+          "sha256": "272156c8ec5f99e759fe0ce8c5708a669db6b7f0a226c0e9c233244dc62c7b5b"
         },
         {
           "source": "tests/integration/backend/backend_func_ptr_test.baa",
           "status": "emitted",
           "exit_code": 0,
-          "sha256": "10ec1b6cda41da8ef4f85835b488493912bff4cd0c25987ce9cd89d11f49484d"
+          "sha256": "caea5c24a5c3796aa2fce5cabfdbaa0665ce05fce5738f9ca154d59c9eaa92c5"
         },
         {
           "source": "tests/integration/backend/backend_global_array_init_test.baa",
           "status": "emitted",
           "exit_code": 0,
-          "sha256": "3bdbcda27331817ea85c03ccd3237eecd083eab05d4b07824db8ead41e68feb3"
+          "sha256": "963c8e71c3374e018f1f51b1f1b42809f7b65d770aa085e11668459837599eb0"
         },
         {
           "source": "tests/integration/backend/backend_include_bom_test.baa",
-          "status": "unsupported",
-          "exit_code": 3,
-          "reason": "خطأ: نوع معامل القيمة غير مدعوم في مسار نظم.",
-          "blocker": {
-            "kind": "نوع_معامل_قيمة_غير_مدعوم",
-            "detail": "تحميل"
-          }
+          "status": "emitted",
+          "exit_code": 0,
+          "sha256": "e2c98a3192b892207c21ed69aaa2e925280edde0099324efcd0b4cef819b364d"
         },
         {
           "source": "tests/integration/backend/backend_include_i_compact_form_test.baa",
@@ -1312,27 +1257,23 @@
           "source": "tests/integration/backend/backend_inline_test.baa",
           "status": "emitted",
           "exit_code": 0,
-          "sha256": "27367c497393bb28aecb7de531cd10ace7f8fca828cf673fa209a7acf7f67184"
+          "sha256": "ade336cd73bddda50550f1cbde10cd38a175f5e8e3add343d7b5aa2cc75fd59a"
         },
         {
           "source": "tests/integration/backend/backend_int_semantics_test.baa",
           "status": "unsupported",
           "exit_code": 3,
-          "reason": "خطأ: نوع معامل القيمة غير مدعوم في مسار نظم.",
+          "reason": "خطأ: عرض معاملي النقل غير متطابق.",
           "blocker": {
-            "kind": "نوع_معامل_قيمة_غير_مدعوم",
-            "detail": "تحميل"
+            "kind": "عدم_تطابق_عرض_معاملين",
+            "detail": "نقل"
           }
         },
         {
           "source": "tests/integration/backend/backend_low_level_ops_test.baa",
-          "status": "unsupported",
-          "exit_code": 3,
-          "reason": "خطأ: نوع معامل القيمة غير مدعوم في مسار نظم.",
-          "blocker": {
-            "kind": "نوع_معامل_قيمة_غير_مدعوم",
-            "detail": "تحميل"
-          }
+          "status": "emitted",
+          "exit_code": 0,
+          "sha256": "dc0939f6d807bc8dd5ee6b54612109eb6aafd98ca62147abf0c8b05a8250145d"
         },
         {
           "source": "tests/integration/backend/backend_main_args_test.baa",
@@ -1363,10 +1304,9 @@
           "source": "tests/integration/backend/backend_path_stdlib_v062_test.baa",
           "status": "unsupported",
           "exit_code": 3,
-          "reason": "خطأ: نوع معامل القيمة غير مدعوم في مسار نظم.",
+          "reason": "خطأ: معامل الذاكرة غير مدعوم لهذه التعليمة.",
           "blocker": {
-            "kind": "نوع_معامل_قيمة_غير_مدعوم",
-            "detail": "تحميل"
+            "kind": "ذاكرة_غير_مدعومة_لهذه_التعليمة"
           }
         },
         {
@@ -1403,33 +1343,25 @@
           "source": "tests/integration/backend/backend_readnum_stdin_test.baa",
           "status": "emitted",
           "exit_code": 0,
-          "sha256": "dc3a499433415883b140467b465ad844c3c004c5e6b874f93ab4d70865226a54"
+          "sha256": "261b3616d00d22ad0d68881b1d2a83f34aa233e5af1740176d8881d86e66ae3b"
         },
         {
           "source": "tests/integration/backend/backend_regalloc_stress.baa",
-          "status": "unsupported",
-          "exit_code": 3,
-          "reason": "خطأ: نوع معامل القيمة غير مدعوم في مسار نظم.",
-          "blocker": {
-            "kind": "نوع_معامل_قيمة_غير_مدعوم",
-            "detail": "تحميل"
-          }
+          "status": "emitted",
+          "exit_code": 0,
+          "sha256": "90ee4a684f18b59360f74c4ceed688318decfb6879cc1029e2d202703bf43e79"
         },
         {
           "source": "tests/integration/backend/backend_result_helpers_stdlib_v062_test.baa",
-          "status": "unsupported",
-          "exit_code": 3,
-          "reason": "خطأ: نوع معامل القيمة غير مدعوم في مسار نظم.",
-          "blocker": {
-            "kind": "نوع_معامل_قيمة_غير_مدعوم",
-            "detail": "تحميل"
-          }
+          "status": "emitted",
+          "exit_code": 0,
+          "sha256": "46eecffc67045f802d706bc9c9e8b67c3e508a23dcf081ab4ec82f2ee3e435e5"
         },
         {
           "source": "tests/integration/backend/backend_runtime_assert_fail_v055_test.baa",
           "status": "emitted",
           "exit_code": 0,
-          "sha256": "886dd776d9c49a7f935edc5d8b5400746bf62d58d59ce846049844709ff7f049"
+          "sha256": "f1210656065cf0ff1abf2581311e446b292bca3b34b9d26bb85e9212a9bf22b3"
         },
         {
           "source": "tests/integration/backend/backend_runtime_assert_pass_v055_test.baa",
@@ -1444,7 +1376,7 @@
           "flags": [
             "-fruntime-checks"
           ],
-          "sha256": "112b7aae924c9e4bff423e98ac0f1e33623b73577d09aa4742e879e78471765f"
+          "sha256": "11b95259523f1adc8c5dfac80a789e8f98b81ca1a0ce883760cb2e393e52ed3e"
         },
         {
           "source": "tests/integration/backend/backend_runtime_checks_selective_bounds_fail_v063_test.baa",
@@ -1465,7 +1397,7 @@
           "flags": [
             "-fruntime-checks=null"
           ],
-          "sha256": "8220043cf37ae9aba73cb7e7e47ef6209a4064ec4cb8c4de5a9a7c805e692bda"
+          "sha256": "fa5a53ac703233822b09d4e59c6ccc468169248b4e1b6b0ddc71cef7e050da4a"
         },
         {
           "source": "tests/integration/backend/backend_runtime_div_zero_fail_v063_test.baa",
@@ -1474,7 +1406,7 @@
           "flags": [
             "-fruntime-checks"
           ],
-          "sha256": "f0dff5e411debe97475f44dac43e9fe24b2ce6d466fd95ddd634b85da85e215b"
+          "sha256": "960922c9d0cefb8fbed220fb938bca13d7f9bfda55c5460c59ad768fdef8867e"
         },
         {
           "source": "tests/integration/backend/backend_runtime_mod_zero_fail_v063_test.baa",
@@ -1483,7 +1415,7 @@
           "flags": [
             "-fruntime-checks"
           ],
-          "sha256": "8e16df5a110f0dd937fb5b8b83c899ae17bb802d9d92e1afb8848ff31b99e13c"
+          "sha256": "373a9962a69d96fd27e84dcd3998ebb464aa08d11448234000035ed5e11369d4"
         },
         {
           "source": "tests/integration/backend/backend_runtime_null_deref_assign_fail_v063_test.baa",
@@ -1492,7 +1424,7 @@
           "flags": [
             "-fruntime-checks"
           ],
-          "sha256": "8cb4d9be9314b4d974baadb9ba15a0af8e757c2142414284d53e692a8b10aa4c"
+          "sha256": "6b4a7fea7f3a54b3c1409eadcb07758e2d4a62f1db273080e82cc5c7ca5bfb43"
         },
         {
           "source": "tests/integration/backend/backend_runtime_null_deref_fail_v063_test.baa",
@@ -1501,19 +1433,19 @@
           "flags": [
             "-fruntime-checks"
           ],
-          "sha256": "07f6f51a4f530891bad84781d340bd488abcde8b51f14239dccfc254ff719d7f"
+          "sha256": "68a5edf39b60ef512d946133bafe8d1e55f680fd86ee8ff07ce48efc1e768702"
         },
         {
           "source": "tests/integration/backend/backend_runtime_panic_location_v063_test.baa",
           "status": "emitted",
           "exit_code": 0,
-          "sha256": "c41bc530ca436a7bcedae698b1dec234308c30734b9a5a83711dfd16c4d7bb06"
+          "sha256": "835f2f77d8897ea93458de60b09324e95046d8f31566234136f64049efc3aa26"
         },
         {
           "source": "tests/integration/backend/backend_runtime_panic_v055_test.baa",
           "status": "emitted",
           "exit_code": 0,
-          "sha256": "24bb93f8216edda10d7ef8d301ff2f6d556b7a5878046ce1cae1ef171d3c93f4"
+          "sha256": "435957261c0286b3d4e9241de8ef0701a228ff828d1c959a2fc47f91a1ad68d0"
         },
         {
           "source": "tests/integration/backend/backend_runtime_shift_width_high_fail_v063_test.baa",
@@ -1522,7 +1454,7 @@
           "flags": [
             "-fruntime-checks"
           ],
-          "sha256": "1b146e8230b3b172f238266c846086d812be58a082f66ee9954105674b09b573"
+          "sha256": "c29454dcd2bc7422095bb71fac2a0357ce4a273525afe373c0d235053db7898c"
         },
         {
           "source": "tests/integration/backend/backend_runtime_shift_width_negative_fail_v063_test.baa",
@@ -1531,7 +1463,7 @@
           "flags": [
             "-fruntime-checks"
           ],
-          "sha256": "dfd56041e15937662128978076f95c8d4f054d655a60a58d28827d79cf5f7b80"
+          "sha256": "991bda076ffb4be21d767ad2b1046f844b0b8e2224351807d399999ab3b13d5c"
         },
         {
           "source": "tests/integration/backend/backend_runtime_string_array_inner_bounds_fail_v063_test.baa",
@@ -1569,13 +1501,9 @@
         },
         {
           "source": "tests/integration/backend/backend_scope_test.baa",
-          "status": "unsupported",
-          "exit_code": 3,
-          "reason": "خطأ: نوع معامل القيمة غير مدعوم في مسار نظم.",
-          "blocker": {
-            "kind": "نوع_معامل_قيمة_غير_مدعوم",
-            "detail": "تحميل"
-          }
+          "status": "emitted",
+          "exit_code": 0,
+          "sha256": "7750b6853c28291402ed08958b85963863aeabd4888e3f66f62fa0b80895a880"
         },
         {
           "source": "tests/integration/backend/backend_sha256_file_v066_test.baa",
@@ -1590,17 +1518,13 @@
           "source": "tests/integration/backend/backend_stackargs_test.baa",
           "status": "emitted",
           "exit_code": 0,
-          "sha256": "a8eeb10a6512a3b5de6f89447a3ab9bae36fd4badac48e4882d6678026f721b4"
+          "sha256": "a6a0b6747cdd950132477e998e684ca107547ec931951c481850ad7c4d16e14d"
         },
         {
           "source": "tests/integration/backend/backend_static_storage_test.baa",
-          "status": "unsupported",
-          "exit_code": 3,
-          "reason": "خطأ: نوع معامل القيمة غير مدعوم في مسار نظم.",
-          "blocker": {
-            "kind": "نوع_معامل_قيمة_غير_مدعوم",
-            "detail": "تحميل"
-          }
+          "status": "emitted",
+          "exit_code": 0,
+          "sha256": "bd4a13477f85280652903e9f24cd9d711ecee49aa5e73e9832ea4bb06f16400e"
         },
         {
           "source": "tests/integration/backend/backend_stdlib_short_include_test.baa",
@@ -1618,27 +1542,25 @@
           "reason": "خطأ: نوع معامل القيمة غير مدعوم في مسار نظم.",
           "blocker": {
             "kind": "نوع_معامل_قيمة_غير_مدعوم",
-            "detail": "تحميل"
+            "detail": "نقل"
           }
         },
         {
           "source": "tests/integration/backend/backend_string_builder_stdlib_v062_test.baa",
           "status": "unsupported",
           "exit_code": 3,
-          "reason": "خطأ: نوع معامل القيمة غير مدعوم في مسار نظم.",
+          "reason": "خطأ: معامل الذاكرة غير مدعوم لهذه التعليمة.",
           "blocker": {
-            "kind": "نوع_معامل_قيمة_غير_مدعوم",
-            "detail": "تحميل"
+            "kind": "ذاكرة_غير_مدعومة_لهذه_التعليمة"
           }
         },
         {
           "source": "tests/integration/backend/backend_string_ops_test.baa",
           "status": "unsupported",
           "exit_code": 3,
-          "reason": "خطأ: نوع معامل القيمة غير مدعوم في مسار نظم.",
+          "reason": "خطأ: معامل الذاكرة غير مدعوم لهذه التعليمة.",
           "blocker": {
-            "kind": "نوع_معامل_قيمة_غير_مدعوم",
-            "detail": "تحميل"
+            "kind": "ذاكرة_غير_مدعومة_لهذه_التعليمة"
           }
         },
         {
@@ -1651,7 +1573,7 @@
           "source": "tests/integration/backend/backend_sysv_6args_test.baa",
           "status": "emitted",
           "exit_code": 0,
-          "sha256": "dc8cce5cb6579e86ebe913f5441f916e422b0236719bd425bcdc8291124c74f0"
+          "sha256": "676343d4c570bb3dad0df9b20904ac80725b35bf790cf85f69cd5d7b0e037feb"
         },
         {
           "source": "tests/integration/backend/backend_tailcall_float_test.baa",
@@ -1667,43 +1589,37 @@
           "source": "tests/integration/backend/backend_tailcall_test.baa",
           "status": "emitted",
           "exit_code": 0,
-          "sha256": "c71e6d8a3a1f3c950156cc36ea8476d5104a0fd5f7a2cccb1883abc2a6b58b72"
+          "sha256": "a3de52ebf272a03a3c7e5fbdc9939fbfbafba0b3c11c1eac26e0e5f8a4f7f354"
         },
         {
           "source": "tests/integration/backend/backend_test.baa",
           "status": "unsupported",
           "exit_code": 3,
-          "reason": "خطأ: نوع معامل القيمة غير مدعوم في مسار نظم.",
+          "reason": "خطأ: معامل الذاكرة غير مدعوم لهذه التعليمة.",
           "blocker": {
-            "kind": "نوع_معامل_قيمة_غير_مدعوم",
-            "detail": "تحميل"
+            "kind": "ذاكرة_غير_مدعومة_لهذه_التعليمة"
           }
         },
         {
           "source": "tests/integration/backend/backend_text_stdlib_helpers_v064_test.baa",
           "status": "unsupported",
           "exit_code": 3,
-          "reason": "خطأ: نوع معامل القيمة غير مدعوم في مسار نظم.",
+          "reason": "خطأ: معامل الذاكرة غير مدعوم لهذه التعليمة.",
           "blocker": {
-            "kind": "نوع_معامل_قيمة_غير_مدعوم",
-            "detail": "تحميل"
+            "kind": "ذاكرة_غير_مدعومة_لهذه_التعليمة"
           }
         },
         {
           "source": "tests/integration/backend/backend_type_alias_test.baa",
-          "status": "unsupported",
-          "exit_code": 3,
-          "reason": "خطأ: نوع معامل القيمة غير مدعوم في مسار نظم.",
-          "blocker": {
-            "kind": "نوع_معامل_قيمة_غير_مدعوم",
-            "detail": "تحميل"
-          }
+          "status": "emitted",
+          "exit_code": 0,
+          "sha256": "38b8d525614c1e3c82d6cebb2a1b84ebb8f8c39b0b3ab63376f68d09e6d2f66e"
         },
         {
           "source": "tests/integration/backend/backend_union_test.baa",
           "status": "emitted",
           "exit_code": 0,
-          "sha256": "044ddad1db79a279622d5332a1200ac2ba3744f2402ff419ef0759f6bbafdc77"
+          "sha256": "9b570e128c1a5aeb010331054f18f6489ca13a9e03e50c139a9a9fdeec3c5d5f"
         },
         {
           "source": "tests/integration/backend/backend_utf8_validation_valid_v064_test.baa",
@@ -1728,40 +1644,31 @@
           "source": "tests/integration/backend/backend_vector_stdlib_v062_test.baa",
           "status": "unsupported",
           "exit_code": 3,
-          "reason": "خطأ: نوع معامل القيمة غير مدعوم في مسار نظم.",
+          "reason": "خطأ: معامل الذاكرة غير مدعوم لهذه التعليمة.",
           "blocker": {
-            "kind": "نوع_معامل_قيمة_غير_مدعوم",
-            "detail": "تحميل"
+            "kind": "ذاكرة_غير_مدعومة_لهذه_التعليمة"
           }
         },
         {
           "source": "tests/integration/backend/int_sizes_test.baa",
           "status": "emitted",
           "exit_code": 0,
-          "sha256": "e6551fab80e7d921fd5084cc201a3afb2e77a5c14f2cc82699d3558597023990"
+          "sha256": "b7b165d6141163b910c055244ddaa9b35e24ff7d6f1ee9fe0dca6e8479746633"
         },
         {
           "source": "tests/integration/frontend/frontend_extern_declarations_test.baa",
-          "status": "unsupported",
-          "exit_code": 3,
-          "reason": "خطأ: نوع معامل القيمة غير مدعوم في مسار نظم.",
-          "blocker": {
-            "kind": "نوع_معامل_قيمة_غير_مدعوم",
-            "detail": "تحميل"
-          }
+          "status": "emitted",
+          "exit_code": 0,
+          "sha256": "4d96760474b0f5356f2213bcfb35470144aeb4e3c69e84c2d2e6349126f0d21d"
         },
         {
           "source": "tests/integration/frontend/frontend_extern_no_storage_test.baa",
-          "status": "unsupported",
-          "exit_code": 3,
+          "status": "emitted",
+          "exit_code": 0,
           "flags": [
             "-O1"
           ],
-          "reason": "خطأ: نوع معامل القيمة غير مدعوم في مسار نظم.",
-          "blocker": {
-            "kind": "نوع_معامل_قيمة_غير_مدعوم",
-            "detail": "تحميل"
-          }
+          "sha256": "bad785c4ff689dfcc85767fea53362b28332eba9fe1f8ed585a5445491f2b9e6"
         },
         {
           "source": "tests/integration/ir/ir_custom_startup_linux_asm_test.baa",
@@ -1857,7 +1764,7 @@
           "flags": [
             "-fruntime-checks=null,div-zero"
           ],
-          "sha256": "76e150678edf349c2b115a1e03f0921e4bc863e38acfe4a31f742ae1c864aab5"
+          "sha256": "ed29eae9bfe56bc8966956c1bac5e076f8bdcb8e5cea843b02924c3f80ae294a"
         },
         {
           "source": "tests/integration/ir/ir_runtime_div_zero_enabled_v063_test.baa",
@@ -1866,7 +1773,7 @@
           "flags": [
             "-fruntime-checks"
           ],
-          "sha256": "f7157116dd8f052b0396c72d400305fc6e0751259cf0223e4573c0246700d20b"
+          "sha256": "1ed9b8b127d2ec9c22340141b2e445680b645aff4ac0edd4afdb5b0bd234fd51"
         },
         {
           "source": "tests/integration/ir/ir_runtime_null_deref_enabled_v063_test.baa",
@@ -1875,7 +1782,7 @@
           "flags": [
             "-fruntime-checks"
           ],
-          "sha256": "3eea714e8fadab6e5a08d16f77f06db72ec10bde46bf2156ace96334e9e4e456"
+          "sha256": "fddd34a4b14ff5d6710ad0a1a436ff635c8434265076a12ec82f54c0e92f7e36"
         },
         {
           "source": "tests/integration/ir/ir_runtime_shift_width_enabled_v063_test.baa",
@@ -1884,7 +1791,7 @@
           "flags": [
             "-fruntime-checks"
           ],
-          "sha256": "7f12a3a17474a3e72a34c009198281959ceacba5a94ac4ab262abd6cac1cbbac"
+          "sha256": "b56d352915f2c860b8aa49df4b7ef2f17b041ab3baff92ac1fd9881c0f4b54e6"
         },
         {
           "source": "tests/integration/ir/ir_runtime_string_bounds_enabled_v063_test.baa",
@@ -1900,13 +1807,9 @@
         },
         {
           "source": "tests/integration/ir/ir_test.baa",
-          "status": "unsupported",
-          "exit_code": 3,
-          "reason": "خطأ: نوع معامل القيمة غير مدعوم في مسار نظم.",
-          "blocker": {
-            "kind": "نوع_معامل_قيمة_غير_مدعوم",
-            "detail": "تحميل"
-          }
+          "status": "emitted",
+          "exit_code": 0,
+          "sha256": "b0b6f3142248a9db48b0fd37105b93f18675dfe65f14eaa95d59dbba9c27af4f"
         },
         {
           "source": "tests/stress/stress_deep_scopes.baa",

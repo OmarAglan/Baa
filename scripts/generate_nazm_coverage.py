@@ -272,6 +272,10 @@ def _classify_sections(
 def _classify_relocations(
     candidates: list[dict[str, Any]], capabilities: dict[str, Any]
 ) -> list[dict[str, Any]]:
+    instruction_index, _ = _instruction_index(capabilities)
+    fixture_index = capabilities.get("baa_acceptance_fixtures", {}).get(
+        "instructions", {}
+    )
     rendered: list[dict[str, Any]] = []
     for item in candidates:
         form = item["form"]
@@ -312,12 +316,44 @@ def _classify_relocations(
                     }
                 )
         elif "memory-rip-relative" in form:
-            row.update(
-                {
-                    "status": "unsupported",
-                    "reason": "Nazm does not implement RIP-relative relocations.",
-                }
-            )
+            _, mnemonic, operands_text = form.split(":", 2)
+            operands = tuple(operands_text.split(","))
+            capability = instruction_index.get((mnemonic, operands))
+            if capability and capability["status"] == "supported":
+                fixture_key = f"{mnemonic}|{','.join(operands)}"
+                fixture = fixture_index.get(fixture_key)
+                if not fixture:
+                    raise ValueError(
+                        "supported RIP-relative relocation has no acceptance "
+                        f"fixture: {fixture_key}"
+                    )
+                row.update(
+                    {
+                        "status": "supported",
+                        "nazm_kind": "PC32",
+                        "acceptance_fixture": fixture,
+                    }
+                )
+            elif capability and capability["status"] == "partial":
+                row.update(
+                    {
+                        "status": "partial",
+                        "reason": capability.get("reason")
+                        or "This RIP-relative form requires explicit producer lowering.",
+                    }
+                )
+                if capability.get("lowering"):
+                    row["lowering"] = capability["lowering"]
+            else:
+                row.update(
+                    {
+                        "status": "unsupported",
+                        "reason": (
+                            "Nazm supports PC32 relocation records, but not this "
+                            "RIP-relative instruction shape."
+                        ),
+                    }
+                )
         else:
             row.update(
                 {

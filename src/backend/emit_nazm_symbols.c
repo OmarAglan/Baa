@@ -120,3 +120,16 @@ static bool nazm_parse_generated_string_label(const char *name,
     if (id) *id = value;
     return true;
 }
+
+static bool nazm_operand_is_memory(const MachineOperand *operand)
+{
+    return operand &&
+        (operand->kind == MACH_OP_MEM || operand->kind == MACH_OP_GLOBAL);
+}
+
+static void nazm_write_symbolic_memory_operand(FILE *out, const char *name)
+{
+    fputs("[مؤشر_التعليمة+", out);
+    nazm_write_symbol(out, name);
+    fputc(']', out);
+}

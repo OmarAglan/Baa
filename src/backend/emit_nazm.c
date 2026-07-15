@@ -23,6 +23,7 @@ static BaaNazmEmitResult nazm_validate_string_tables(const MachineModule *module
 static unsigned nazm_write_globals(FILE *out, const MachineModule *module);
 static unsigned nazm_write_string_tables(FILE *out, const MachineModule *module);
 static void nazm_write_symbol(FILE *out, const char *name);
+static void nazm_write_symbolic_memory_operand(FILE *out, const char *name);
 
 static const char *const k_nazm_registers[PHYS_REG_COUNT] = {
     "سجل_المركم",
@@ -270,12 +271,16 @@ static BaaNazmEmitResult nazm_validate_symbol_operand(
     const MachineOperand *operand,
     const MachineInst *inst)
 {
+    bool valid_width = operand &&
+        ((operand->kind == MACH_OP_FUNC && operand->size_bits == 64) ||
+         (operand->kind == MACH_OP_GLOBAL &&
+          nazm_width_is_supported(operand->size_bits)));
     if (!operand ||
         (operand->kind != MACH_OP_FUNC && operand->kind != MACH_OP_GLOBAL) ||
-        operand->size_bits != 64 || !operand->data.name ||
+        !valid_width || !operand->data.name ||
         !operand->data.name[0])
-        return nazm_unsupported("مرجع_دالة_غير_صالح", NULL,
-                                "مرجع الدالة ليس اسما صالحا بعرض ٦٤ بت.", inst);
+        return nazm_unsupported("مرجع_رمز_غير_صالح", NULL,
+                                "مرجع الرمز ليس اسما عربيا صالحا بعرض مدعوم.", inst);
     if (nazm_identifier_has_ascii_letter(operand->data.name) &&
         !nazm_arabic_abi_symbol(operand->data.name) &&
         !nazm_is_generated_static_symbol(operand->data.name) &&
@@ -308,9 +313,13 @@ static BaaNazmEmitResult nazm_validate_move(const MachineOperand *dst,
                                             const BaaTarget *target,
                                             const MachineInst *inst)
 {
-    BaaNazmEmitResult result = nazm_validate_value_operand(dst, target, inst, false);
+    BaaNazmEmitResult result = dst && dst->kind == MACH_OP_GLOBAL
+        ? nazm_validate_symbol_operand(dst, inst)
+        : nazm_validate_value_operand(dst, target, inst, false);
     if (result.status != BAA_NAZM_EMIT_OK) return result;
-    result = nazm_validate_value_operand(src, target, inst, true);
+    result = src && src->kind == MACH_OP_GLOBAL
+        ? nazm_validate_symbol_operand(src, inst)
+        : nazm_validate_value_operand(src, target, inst, true);
     if (result.status != BAA_NAZM_EMIT_OK) return result;
 
     int bits = nazm_operand_bits(dst);
@@ -701,83 +710,6 @@ static void nazm_write_memory_operand(FILE *out, const MachineOperand *operand)
         nazm_write_unsigned(out, (uint64_t)(-offset));
     }
     fputc(']', out);
-}
-
-static void nazm_write_any_operand(FILE *out, const MachineOperand *operand)
-{
-    if (operand->kind == MACH_OP_MEM)
-        nazm_write_memory_operand(out, operand);
-    else
-        nazm_write_operand(out, operand);
-}
-
-static unsigned nazm_write_move(FILE *out,
-                                const MachineOperand *dst,
-                                const MachineOperand *src)
-{
-    if (dst->kind == MACH_OP_MEM && src->kind == MACH_OP_IMM)
-    {
-        MachineOperand scratch = {0};
-        scratch.kind = MACH_OP_VREG;
-        scratch.size_bits = nazm_operand_bits(dst);
-        scratch.data.vreg = dst->data.mem.base_vreg == PHYS_R11
-            ? PHYS_RAX
-            : PHYS_R11;
-        fputs("    انقل ", out);
-        nazm_write_operand(out, &scratch);
-        fputs("، ", out);
-        nazm_write_operand(out, src);
-        fputs("\n    انقل ", out);
-        nazm_write_memory_operand(out, dst);
-        fputs("، ", out);
-        nazm_write_operand(out, &scratch);
-        fputc('\n', out);
-        return 2;
-    }
-
-    if (dst->kind == MACH_OP_MEM && src->kind == MACH_OP_MEM)
-    {
-        MachineOperand scratch = {0};
-        scratch.kind = MACH_OP_VREG;
-        scratch.size_bits = nazm_operand_bits(dst);
-        scratch.data.vreg = PHYS_RAX;
-        fputs("    انقل ", out);
-        nazm_write_operand(out, &scratch);
-        fputs("، ", out);
-        nazm_write_memory_operand(out, src);
-        fputs("\n    انقل ", out);
-        nazm_write_memory_operand(out, dst);
-        fputs("، ", out);
-        nazm_write_operand(out, &scratch);
-        fputc('\n', out);
-        return 2;
-    }
-
-    fputs("    انقل ", out);
-    nazm_write_any_operand(out, dst);
-    fputs("، ", out);
-    nazm_write_any_operand(out, src);
-    fputc('\n', out);
-    return 1;
-}
-
-static MachineOperand nazm_scratch_operand(PhysReg reg, int bits)
-{
-    MachineOperand scratch = {0};
-    scratch.kind = MACH_OP_VREG;
-    scratch.size_bits = bits > 0 ? bits : 64;
-    scratch.data.vreg = reg;
-    return scratch;
-}
-
-static bool nazm_operand_uses_register(const MachineOperand *operand,
-                                       PhysReg reg)
-{
-    if (!operand) return false;
-    if (operand->kind == MACH_OP_VREG) return operand->data.vreg == reg;
-    if (operand->kind == MACH_OP_MEM)
-        return operand->data.mem.base_vreg == reg;
-    return false;
 }
 
 #include "emit_nazm_lowering.c"

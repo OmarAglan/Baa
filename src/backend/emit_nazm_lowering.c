@@ -7,6 +7,86 @@
  * preserving the reserved scratch-register contracts.
  */
 
+static void nazm_write_any_operand(FILE *out, const MachineOperand *operand)
+{
+    if (operand->kind == MACH_OP_MEM)
+        nazm_write_memory_operand(out, operand);
+    else if (operand->kind == MACH_OP_GLOBAL)
+        nazm_write_symbolic_memory_operand(out, operand->data.name);
+    else
+        nazm_write_operand(out, operand);
+}
+
+static unsigned nazm_write_move(FILE *out,
+                                const MachineOperand *dst,
+                                const MachineOperand *src)
+{
+    if (nazm_operand_is_memory(dst) && src->kind == MACH_OP_IMM)
+    {
+        MachineOperand scratch = {0};
+        scratch.kind = MACH_OP_VREG;
+        scratch.size_bits = nazm_operand_bits(dst);
+        scratch.data.vreg = dst->kind == MACH_OP_MEM &&
+                            dst->data.mem.base_vreg == PHYS_R11
+            ? PHYS_RAX
+            : PHYS_R11;
+        fputs("    انقل ", out);
+        nazm_write_operand(out, &scratch);
+        fputs("، ", out);
+        nazm_write_operand(out, src);
+        fputs("\n    انقل ", out);
+        nazm_write_any_operand(out, dst);
+        fputs("، ", out);
+        nazm_write_operand(out, &scratch);
+        fputc('\n', out);
+        return 2;
+    }
+
+    if (nazm_operand_is_memory(dst) && nazm_operand_is_memory(src))
+    {
+        MachineOperand scratch = {0};
+        scratch.kind = MACH_OP_VREG;
+        scratch.size_bits = nazm_operand_bits(dst);
+        scratch.data.vreg = PHYS_RAX;
+        fputs("    انقل ", out);
+        nazm_write_operand(out, &scratch);
+        fputs("، ", out);
+        nazm_write_any_operand(out, src);
+        fputs("\n    انقل ", out);
+        nazm_write_any_operand(out, dst);
+        fputs("، ", out);
+        nazm_write_operand(out, &scratch);
+        fputc('\n', out);
+        return 2;
+    }
+
+    fputs("    انقل ", out);
+    nazm_write_any_operand(out, dst);
+    fputs("، ", out);
+    nazm_write_any_operand(out, src);
+    fputc('\n', out);
+    return 1;
+}
+
+static MachineOperand nazm_scratch_operand(PhysReg reg, int bits)
+{
+    MachineOperand scratch = {0};
+    scratch.kind = MACH_OP_VREG;
+    scratch.size_bits = bits > 0 ? bits : 64;
+    scratch.data.vreg = reg;
+    return scratch;
+}
+
+static bool nazm_operand_uses_register(const MachineOperand *operand,
+                                       PhysReg reg)
+{
+    if (!operand) return false;
+    if (operand->kind == MACH_OP_VREG) return operand->data.vreg == reg;
+    if (operand->kind == MACH_OP_MEM)
+        return operand->data.mem.base_vreg == reg;
+    return false;
+}
+
 static unsigned nazm_write_lea(FILE *out,
                                const MachineOperand *dst,
                                const MachineOperand *src)
@@ -19,10 +99,10 @@ static unsigned nazm_write_lea(FILE *out,
 
     if (src->kind == MACH_OP_FUNC || src->kind == MACH_OP_GLOBAL)
     {
-        fputs("    انقل ", out);
+        fputs("    احسب_عنوان ", out);
         nazm_write_operand(out, actual_dst);
         fputs("، ", out);
-        nazm_write_symbol(out, src->data.name);
+        nazm_write_symbolic_memory_operand(out, src->data.name);
     }
     else
     {

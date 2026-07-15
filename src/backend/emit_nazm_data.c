@@ -368,6 +368,19 @@ static unsigned nazm_write_global(FILE *out, const IRGlobal *global)
     return lines + 1;
 }
 
+static bool nazm_module_defines_global(const MachineModule *module,
+                                       const char *name)
+{
+    if (!module || !name) return false;
+    for (const IRGlobal *global = module->globals; global; global = global->next)
+    {
+        if (!global->is_extern && global->name &&
+            strcmp(global->name, name) == 0)
+            return true;
+    }
+    return false;
+}
+
 static unsigned nazm_write_globals(FILE *out, const MachineModule *module)
 {
     unsigned lines = 0;
@@ -375,7 +388,8 @@ static unsigned nazm_write_globals(FILE *out, const MachineModule *module)
 
     for (const IRGlobal *global = module->globals; global; global = global->next)
     {
-        if (global->is_extern)
+        if (global->is_extern &&
+            !nazm_module_defines_global(module, global->name))
         {
             fputs(".خارجي ", out);
             nazm_write_symbol(out, global->name);

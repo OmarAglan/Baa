@@ -99,7 +99,25 @@ class NazmCoverageTests(unittest.TestCase):
             instruction_index[("leaq", ("memory-rip-relative", "register"))][
                 "status"
             ],
-            "unsupported",
+            "supported",
+        )
+        self.assertEqual(
+            instruction_index[("movq", ("memory-rip-relative", "register"))][
+                "status"
+            ],
+            "supported",
+        )
+        self.assertEqual(
+            instruction_index[("movq", ("register", "memory-rip-relative"))][
+                "status"
+            ],
+            "supported",
+        )
+        self.assertEqual(
+            instruction_index[
+                ("movq", ("immediate-integer", "memory-rip-relative"))
+            ]["status"],
+            "partial",
         )
         self.assertEqual(
             instruction_index[("movq", ("immediate-integer", "register"))][
@@ -122,6 +140,21 @@ class NazmCoverageTests(unittest.TestCase):
         self.assertIn(
             "الرئيسية",
             directive_index[(".globl", ("symbol",))]["reason"],
+        )
+        relocation_index = {
+            item["form"]: item for item in linux["relocation_candidates"]
+        }
+        self.assertEqual(
+            relocation_index[
+                "instruction:leaq:memory-rip-relative,register"
+            ]["status"],
+            "supported",
+        )
+        self.assertEqual(
+            relocation_index[
+                "instruction:movq:immediate-integer,memory-rip-relative"
+            ]["status"],
+            "partial",
         )
 
     @unittest.skipUnless(

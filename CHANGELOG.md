@@ -31,16 +31,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
   - Classified every emitted form as supported, partial, or unsupported with a reason and
     attached every supported form to a focused Nazm ELF64/COFF acceptance fixture.
   - Wired the coverage completeness and no-overclaim checks into every Baa QA mode.
-  - Kept arbitrary Latin linker symbols, RIP-relative references, remaining memory forms,
-    and SSE2 visible instead of treating GAS success as Nazm success; compiler-owned platform
-    calls now cross an explicit Arabic runtime ABI bridge.
+  - Added supported MOV/LEA RIP-relative forms through the Arabic-only
+    `[مؤشر_التعليمة+الرمز]` contract; immediate-to-symbol stores remain explicitly partial
+    and lower through a register in Baa. Arbitrary Latin linker symbols, remaining memory
+    forms, and SSE2 stay visible instead of treating GAS success as Nazm success.
 - **Baa/Nazm full-corpus shadow matrix**:
   - Added stable Arabic blocker kind/detail data to every unsupported corpus row and
     aggregate counts, without exposing borrowed include paths or parsing human prose.
   - Added deterministic `baa-nazm-shadow-corpus-v1` classification for all 100 inventoried
     sources on both targets and embedded the complete result in `baa-nazm-coverage-v1`.
-  - Admitted 46 Linux and 47 Windows corpus sources through Arabic-only emission and
-    GAS/Nazm object, link, and runtime parity; all remaining 54/53 sources return visible
+  - Admitted 57 Linux and 58 Windows corpus sources through Arabic-only emission and
+    GAS/Nazm object, link, and runtime parity; all remaining 43/42 sources return visible
     status `3` with stable blocker data and no output.
   - Replaced host `nm`/`objdump` assertions with Unicode-safe COFF/ELF inspection so Arabic
     artifact paths remain mandatory on Windows and Linux CI.
@@ -68,6 +69,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
   - Added Arabic integer globals, partially initialized arrays, global function-pointer
     initializers, and absolute data relocations; the 100-source matrix now admits the
     global-array runtime case while preserving every unsupported string/PIC form visibly.
+  - Added Arabic PC-relative scalar-global loads/stores and function/global address
+    formation. Immediate and memory-to-memory global moves reuse spill-safe scratch
+    lowering; extern declarations followed by an in-module definition no longer produce a
+    conflicting `.خارجي` declaration in Nazm.
   - Added Arabic read-only string tables, numeric UTF-8 byte emission, BSS and alignment,
     spill-safe integer lowering, and full-corpus production/shadow relocation and runtime gates.
   - Made Windows production and Nazm shadow executables share the strong Arabic startup

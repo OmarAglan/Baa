@@ -2481,6 +2481,10 @@ This backend is being refactored to support multiple ABIs via `BaaTarget` (`src/
 3. **Callee-saved detection:** Scans all instructions to determine which registers need preservation, minimizing prologue/epilogue overhead.
 4. **Call frame management:** Allocates shadow space on Windows; emits SysV call sequence on ELF targets.
 5. **Size suffix inference:** Determines instruction size suffix (q/l/w/b) from operand size_bits field.
+6. **Nazm shadow globals:** The non-default canonical Arabic emitter lowers scalar
+   `MACH_OP_GLOBAL` loads/stores to `[مؤشر_التعليمة+الرمز]` and lowers global or
+   function address formation through `احسب_عنوان`. Nazm owns the resulting PC32
+   encoding and ELF64/COFF relocation records; Baa never duplicates those writers.
 
 **Entry Points:**
 

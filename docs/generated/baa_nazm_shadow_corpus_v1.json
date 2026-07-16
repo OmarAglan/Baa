@@ -15,23 +15,12 @@
     "x86_64-linux": {
       "source_count": 100,
       "summary": {
-        "emitted": 99,
-        "unsupported": 1,
+        "emitted": 100,
+        "unsupported": 0,
         "error": 0
       },
-      "unsupported_reasons": [
-        {
-          "reason": "خطأ: مسار نظم لا ينتج معلومات تنقيح كائنية مكافئة بعد.",
-          "count": 1
-        }
-      ],
-      "unsupported_blockers": [
-        {
-          "kind": "معلومات_تنقيح_كائنية",
-          "detail": "دورف",
-          "count": 1
-        }
-      ],
+      "unsupported_reasons": [],
+      "unsupported_blockers": [],
       "sources": [
         {
           "source": "examples/error_handling_demo.baa",
@@ -619,16 +608,12 @@
         },
         {
           "source": "tests/integration/ir/ir_runtime_bounds_debug_info_no_checks_v055_test.baa",
-          "status": "unsupported",
-          "exit_code": 3,
+          "status": "emitted",
+          "exit_code": 0,
           "flags": [
             "--debug-info"
           ],
-          "reason": "خطأ: مسار نظم لا ينتج معلومات تنقيح كائنية مكافئة بعد.",
-          "blocker": {
-            "kind": "معلومات_تنقيح_كائنية",
-            "detail": "دورف"
-          }
+          "sha256": "6a6d4b110b17f2a33411c7a16ba30f3c5deef2c2caf2265f16a747e128f1724b"
         },
         {
           "source": "tests/integration/ir/ir_runtime_bounds_enabled_v055_test.baa",
@@ -737,23 +722,12 @@
     "x86_64-windows": {
       "source_count": 100,
       "summary": {
-        "emitted": 99,
-        "unsupported": 1,
+        "emitted": 100,
+        "unsupported": 0,
         "error": 0
       },
-      "unsupported_reasons": [
-        {
-          "reason": "خطأ: مسار نظم لا ينتج معلومات تنقيح كائنية مكافئة بعد.",
-          "count": 1
-        }
-      ],
-      "unsupported_blockers": [
-        {
-          "kind": "معلومات_تنقيح_كائنية",
-          "detail": "كودفيو",
-          "count": 1
-        }
-      ],
+      "unsupported_reasons": [],
+      "unsupported_blockers": [],
       "sources": [
         {
           "source": "examples/error_handling_demo.baa",
@@ -1341,16 +1315,12 @@
         },
         {
           "source": "tests/integration/ir/ir_runtime_bounds_debug_info_no_checks_v055_test.baa",
-          "status": "unsupported",
-          "exit_code": 3,
+          "status": "emitted",
+          "exit_code": 0,
           "flags": [
             "--debug-info"
           ],
-          "reason": "خطأ: مسار نظم لا ينتج معلومات تنقيح كائنية مكافئة بعد.",
-          "blocker": {
-            "kind": "معلومات_تنقيح_كائنية",
-            "detail": "كودفيو"
-          }
+          "sha256": "564f2bc502b5b898cae176bc9765115cb57d4f9b3f6374f2ca2603964a1266b6"
         },
         {
           "source": "tests/integration/ir/ir_runtime_bounds_enabled_v055_test.baa",

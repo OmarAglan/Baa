@@ -17,10 +17,14 @@ static void nazm_write_function(FILE *out,
     int callee_count = machine_func_collect_callee_saved(
         func, target, callee_regs, PHYS_REG_COUNT);
     if (callee_count < 0) callee_count = 0;
-    fputs("\n.عام ", out);
+    fputc('\n', out);
+    map->generated_line += 1;
+    map->generated_line +=
+        nazm_write_debug_location_reset(out, map);
+    fputs(".عام ", out);
     fputs(func->name, out);
     fputc('\n', out);
-    map->generated_line += 2;
+    map->generated_line += 1;
     fputs(func->name, out);
     fputs(":\n", out);
     fputs("    ادفع مؤشر_القاعدة\n", out);
@@ -52,7 +56,8 @@ static void nazm_write_function(FILE *out,
     {
         for (const MachineInst *inst = block->first; inst; inst = inst->next)
         {
-            map->generated_line += nazm_write_source_span(out, inst);
+            map->generated_line +=
+                nazm_write_source_span(out, map, inst);
             unsigned generated_start = map->generated_line + 1;
             unsigned emitted_lines = 0;
             switch (inst->op)
@@ -328,6 +333,8 @@ static void nazm_write_function(FILE *out,
 
     if (!has_return)
     {
+        map->generated_line +=
+            nazm_write_debug_location_reset(out, map);
         if (strcmp(func->name, "الرئيسية") == 0)
         {
             fputs("    انقل سجل_المركم، ٠\n", out);

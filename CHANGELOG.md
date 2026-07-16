@@ -21,9 +21,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
     syntax now produces an Arabic migration diagnostic directing small
     operations to the typed builtins and larger assembly to standalone `.نظم`
     modules.
-  - Regenerated the complete two-target 100-source receipts: 99 sources now
-    emit canonical Arabic Nazm on each target, leaving only object debug
-    information as a separate visible blocker.
+  - Regenerated the complete two-target 100-source receipts: all 100 sources
+    now emit canonical Arabic Nazm on each target with zero unsupported rows.
+
+- **Nazm debug-line emission**:
+  - Added Arabic-only `.ملف_بايتات` and `.موضع` lowering for `--debug-info`.
+    Source paths travel as Arabic decimal UTF-8 bytes, so generated `.نظم`
+    remains free of Latin letters while Nazm reconstructs the exact path.
+  - Nazm objects now carry DWARF v4 `.debug_line`/`.rela.debug_line` on ELF64
+    and CodeView C13 `.debug$S` on COFF, with explicit relocations to `.text`.
+  - Added cross-target object inspection and host link/runtime parity coverage
+    for the former final corpus blocker.
 
 - **Arabic-only hosted entry ABI**:
   - Production GAS objects now export `الرئيسية` unchanged, argument-bearing programs use
@@ -57,11 +65,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
     aggregate counts, without exposing borrowed include paths or parsing human prose.
   - Added deterministic `baa-nazm-shadow-corpus-v1` classification for all 100 inventoried
     sources on both targets and embedded the complete result in `baa-nazm-coverage-v1`.
-  - Admitted 99 Linux and 99 Windows corpus sources through Arabic-only emission and
-    GAS/Nazm object, link, and runtime parity. `--startup=custom` no longer blocks or
-    duplicates Nazm output because hosted startup remains owned by the final link path.
-  - Reduced the remaining visible exclusion to object debug information. It
-    returns status `3`, target-specific stable Arabic blocker data, and no output.
+  - Expanded the host parity gate to all 100 emitted rows on Linux and Windows.
+    The complete Windows object/link/runtime run is green locally; the matching
+    Linux result remains owned by the exact-SHA hosted gate. `--startup=custom`
+    no longer blocks or duplicates Nazm output because hosted startup remains
+    owned by the final link path.
+  - Removed the object-debug exclusion by versioning Arabic source-location
+    directives and target-specific DWARF/CodeView line-table output.
   - Replaced host `nm`/`objdump` assertions with Unicode-safe COFF/ELF inspection so Arabic
     artifact paths remain mandatory on Windows and Linux CI.
   - Kept unsupported diagnostics source-level and deterministic instead of exposing borrowed

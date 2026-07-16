@@ -7,12 +7,12 @@
   "nazm_capabilities": {
     "schema": "nazm-capabilities-v1",
     "assembler": "Nazm 0.4.0",
-    "sha256": "66b297dde7cf303b9d1ad2992b1920abe73af49a754cccb1ed59bd1dc09dba4b"
+    "sha256": "46bbaa2b1428faa848b6bd629808cac9a9844bd4b76b0bac1655b65f12064bcb"
   },
   "shadow_corpus": {
     "schema": "baa-nazm-shadow-corpus-v1",
     "compiler": "baa version 0.6.0",
-    "sha256": "1338c11f641f92689be713030c7020fa1c87e5194cba1e4d2e4c59b2e6e7237f"
+    "sha256": "8b3537ae059e1a48a400531f63f2a47beac9d3f63014a1c39a3dc2f011f2fb52"
   },
   "status_contract": {
     "supported": "The complete inventory form is implemented by Nazm.",
@@ -23,7 +23,8 @@
     "tests/fixtures/baa_coverage/حركة-باء.نظم",
     "tests/fixtures/baa_coverage/حساب-وتحكم-باء.نظم",
     "tests/fixtures/baa_coverage/بيانات-باء.نظم",
-    "tests/fixtures/baa_coverage/عشري-باء.نظم"
+    "tests/fixtures/baa_coverage/عشري-باء.نظم",
+    "tests/fixtures/baa_coverage/تنقيح-باء.نظم"
   ],
   "targets": {
     "x86_64-linux": {
@@ -137,23 +138,12 @@
         "shadow_matrix": {
           "source_count": 100,
           "summary": {
-            "emitted": 99,
-            "unsupported": 1,
+            "emitted": 100,
+            "unsupported": 0,
             "error": 0
           },
-          "unsupported_reasons": [
-            {
-              "reason": "خطأ: مسار نظم لا ينتج معلومات تنقيح كائنية مكافئة بعد.",
-              "count": 1
-            }
-          ],
-          "unsupported_blockers": [
-            {
-              "kind": "معلومات_تنقيح_كائنية",
-              "detail": "دورف",
-              "count": 1
-            }
-          ],
+          "unsupported_reasons": [],
+          "unsupported_blockers": [],
           "sources": [
             {
               "source": "examples/error_handling_demo.baa",
@@ -741,16 +731,12 @@
             },
             {
               "source": "tests/integration/ir/ir_runtime_bounds_debug_info_no_checks_v055_test.baa",
-              "status": "unsupported",
-              "exit_code": 3,
+              "status": "emitted",
+              "exit_code": 0,
               "flags": [
                 "--debug-info"
               ],
-              "reason": "خطأ: مسار نظم لا ينتج معلومات تنقيح كائنية مكافئة بعد.",
-              "blocker": {
-                "kind": "معلومات_تنقيح_كائنية",
-                "detail": "دورف"
-              }
+              "sha256": "6a6d4b110b17f2a33411c7a16ba30f3c5deef2c2caf2265f16a747e128f1724b"
             },
             {
               "source": "tests/integration/ir/ir_runtime_bounds_enabled_v055_test.baa",
@@ -3229,8 +3215,15 @@
           "samples": [
             "tests/integration/ir/ir_runtime_bounds_debug_info_no_checks_v055_test.baa:16"
           ],
-          "status": "unsupported",
-          "reason": "Nazm does not implement GAS debug/source mapping directives."
+          "status": "supported",
+          "nazm": {
+            "directive": ".ملف_بايتات",
+            "operands": [
+              "positive-file-id",
+              "arabic-decimal-utf8-bytes"
+            ]
+          },
+          "acceptance_fixture": "tests/fixtures/baa_coverage/تنقيح-باء.نظم"
         },
         {
           "directive": ".globl",
@@ -3284,8 +3277,16 @@
             "tests/integration/ir/ir_runtime_bounds_debug_info_no_checks_v055_test.baa:21",
             "tests/integration/ir/ir_runtime_bounds_debug_info_no_checks_v055_test.baa:25"
           ],
-          "status": "unsupported",
-          "reason": "Nazm does not implement GAS debug/source mapping directives."
+          "status": "supported",
+          "nazm": {
+            "directive": ".موضع",
+            "operands": [
+              "file-id",
+              "line",
+              "column"
+            ]
+          },
+          "acceptance_fixture": "tests/fixtures/baa_coverage/تنقيح-باء.نظم"
         },
         {
           "directive": ".long",
@@ -3522,14 +3523,14 @@
       ],
       "summary": {
         "forms": {
-          "supported": 87,
+          "supported": 89,
           "partial": 5,
-          "unsupported": 40
+          "unsupported": 38
         },
         "emissions": {
-          "supported": 67154,
+          "supported": 67160,
           "partial": 3313,
-          "unsupported": 10147
+          "unsupported": 10141
         }
       }
     },
@@ -3644,23 +3645,12 @@
         "shadow_matrix": {
           "source_count": 100,
           "summary": {
-            "emitted": 99,
-            "unsupported": 1,
+            "emitted": 100,
+            "unsupported": 0,
             "error": 0
           },
-          "unsupported_reasons": [
-            {
-              "reason": "خطأ: مسار نظم لا ينتج معلومات تنقيح كائنية مكافئة بعد.",
-              "count": 1
-            }
-          ],
-          "unsupported_blockers": [
-            {
-              "kind": "معلومات_تنقيح_كائنية",
-              "detail": "كودفيو",
-              "count": 1
-            }
-          ],
+          "unsupported_reasons": [],
+          "unsupported_blockers": [],
           "sources": [
             {
               "source": "examples/error_handling_demo.baa",
@@ -4248,16 +4238,12 @@
             },
             {
               "source": "tests/integration/ir/ir_runtime_bounds_debug_info_no_checks_v055_test.baa",
-              "status": "unsupported",
-              "exit_code": 3,
+              "status": "emitted",
+              "exit_code": 0,
               "flags": [
                 "--debug-info"
               ],
-              "reason": "خطأ: مسار نظم لا ينتج معلومات تنقيح كائنية مكافئة بعد.",
-              "blocker": {
-                "kind": "معلومات_تنقيح_كائنية",
-                "detail": "كودفيو"
-              }
+              "sha256": "564f2bc502b5b898cae176bc9765115cb57d4f9b3f6374f2ca2603964a1266b6"
             },
             {
               "source": "tests/integration/ir/ir_runtime_bounds_enabled_v055_test.baa",
@@ -6669,8 +6655,15 @@
           "samples": [
             "tests/integration/ir/ir_runtime_bounds_debug_info_no_checks_v055_test.baa:16"
           ],
-          "status": "unsupported",
-          "reason": "Nazm does not implement GAS debug/source mapping directives."
+          "status": "supported",
+          "nazm": {
+            "directive": ".ملف_بايتات",
+            "operands": [
+              "positive-file-id",
+              "arabic-decimal-utf8-bytes"
+            ]
+          },
+          "acceptance_fixture": "tests/fixtures/baa_coverage/تنقيح-باء.نظم"
         },
         {
           "directive": ".globl",
@@ -6704,8 +6697,16 @@
             "tests/integration/ir/ir_runtime_bounds_debug_info_no_checks_v055_test.baa:21",
             "tests/integration/ir/ir_runtime_bounds_debug_info_no_checks_v055_test.baa:25"
           ],
-          "status": "unsupported",
-          "reason": "Nazm does not implement GAS debug/source mapping directives."
+          "status": "supported",
+          "nazm": {
+            "directive": ".موضع",
+            "operands": [
+              "file-id",
+              "line",
+              "column"
+            ]
+          },
+          "acceptance_fixture": "tests/fixtures/baa_coverage/تنقيح-باء.نظم"
         },
         {
           "directive": ".long",
@@ -6920,14 +6921,14 @@
       ],
       "summary": {
         "forms": {
-          "supported": 86,
+          "supported": 88,
           "partial": 5,
-          "unsupported": 34
+          "unsupported": 32
         },
         "emissions": {
-          "supported": 72302,
+          "supported": 72308,
           "partial": 3313,
-          "unsupported": 8734
+          "unsupported": 8728
         }
       }
     }

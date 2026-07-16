@@ -69,8 +69,8 @@ inventory omissions:
 
 | Target | Instruction forms S/P/U | Directive forms S/P/U | Sections S/U | Relocations S/P/U |
 |---|---:|---:|---:|---:|
-| `x86_64-linux` | 70 / 2 / 35 | 8 / 1 / 5 | 3 / 1 | 5 / 2 / 0 |
-| `x86_64-windows` | 69 / 2 / 32 | 8 / 1 / 3 | 3 / 0 | 5 / 2 / 0 |
+| `x86_64-linux` | 71 / 2 / 34 | 10 / 1 / 3 | 3 / 1 | 5 / 2 / 0 |
+| `x86_64-windows` | 70 / 2 / 31 | 10 / 1 / 1 | 3 / 0 | 5 / 2 / 0 |
 
 Each supported row names the checked Nazm acceptance fixture that exercises
 its canonical Arabic lowering. Baa emits the entry label as `الرئيسية`; Nazm
@@ -85,7 +85,8 @@ ABI bridge; arbitrary Latin source and external identifiers remain visible
 rejections. Read-only string tables, zero-initialized data, explicit alignment,
 MOV/LEA PC-relative global memory, base/displacement memory-source IMUL, and
 spilled SETcc destinations are supported. The eight scalar SSE2 forms map to
-Arabic-only `سجل_عشري_*` operands and a fourth focused acceptance fixture.
+Arabic-only `سجل_عشري_*` operands; the debug-line contract adds the fifth
+focused acceptance fixture.
 Immediate-to-symbol stores remain a documented producer lowering, while later
 PIC/addressing forms remain partial or unsupported where applicable.
 
@@ -110,12 +111,13 @@ every unsupported row also records an Arabic `blocker.kind` and optional
 each emitted artifact separately carries the exact versioned source mapping
 described below rather than duplicating per-instruction spans in the corpus matrix.
 
-The current source-level baseline is target-specific and has no gate errors:
+The current source-level baseline is target-specific and has no unsupported
+rows or gate errors:
 
 | Target | Arabic-only emitted | Visible unsupported | Gate errors |
 |---|---:|---:|---:|
-| `x86_64-linux` | 98 | 2 | 0 |
-| `x86_64-windows` | 98 | 2 | 0 |
+| `x86_64-linux` | 100 | 0 | 0 |
+| `x86_64-windows` | 100 | 0 | 0 |
 
 The admitted sources now include string-heavy examples, runtime diagnostics,
 dynamic memory, file and error helpers, integer-width and callee-saved-register
@@ -140,11 +142,13 @@ all three `--startup=custom` sources: that option controls the inspectable GAS
 `-S` presentation and does not own hosted startup in canonical Nazm output.
 The structured architecture slice then replaced raw inline text with typed
 `لا_تفعل()` and `اقرأ_عداد_الزمن()` operations backed by IR/Machine IR and
-added the matching Nazm instruction. This raises both targets to 99 sources.
-The only remaining corpus blocker is object debug information
-(`معلومات_تنقيح_كائنية`, with target-specific `دورف`/`كودفيو` detail). Stack
-protection has its own explicit `حماية_المكدس` blocker when requested. None
-falls back to GAS inside the shadow result.
+added the matching Nazm instruction, raising both targets to 99 sources. The
+debug-information slice then added Arabic-only `.ملف_بايتات` and `.موضع`
+directives. Nazm decodes the exact UTF-8 source path and emits a DWARF v4 line
+table for ELF64 or CodeView C13 line data for COFF, admitting the 100th source
+on both targets. Stack protection still has an explicit `حماية_المكدس`
+blocker when requested outside this corpus. No failed Nazm path falls back to
+GAS.
 
 Regenerate or verify the matrix with the current compiler:
 
@@ -217,8 +221,11 @@ Every successful `--emit-nazm` source `<output>` is accompanied by
 inclusive generated Nazm line range to the originating Baa UTF-8 file, line,
 and column. File paths are stored as lowercase hexadecimal UTF-8 bytes so
 Windows separators, Arabic paths, quotes, and other valid path bytes require no
-host-specific JSON escaping. The generated `.نظم` source itself remains
-Arabic-only.
+host-specific JSON escaping. When `--debug-info` is active, the generated
+source additionally declares each original path through `.ملف_بايتات` as
+Arabic decimal UTF-8 bytes and selects instruction locations through `.موضع`.
+Nazm reconstructs the original path only inside the object debug metadata, so
+the generated `.نظم` source itself remains Arabic-only.
 
 The shadow driver redirects Nazm stderr without a shell, replays it unchanged,
 extracts the reported generated `file:line:column`, and resolves that line
@@ -230,12 +237,12 @@ that unsupported emission leaves neither source nor sidecar output.
 
 ## Current admission status
 
-Stage B, the Stage B.1 comparison/fixture gate, and the structured architecture
-slice are complete. `--emit-nazm` emits Arabic-only `.نظم` for 99 of the 100
-corpus sources on either target. It retains Baa line/column spans in Arabic
-comments, uses `الرئيسية` rather than an ASCII ABI name, and fails with status
-`3` before leaving an output file when the remaining debug-information form is
-unsupported.
+Stage B, the Stage B.1 comparison/fixture gate, the structured architecture
+slice, and the debug-information slice are complete. `--emit-nazm` emits
+Arabic-only `.نظم` for all 100 corpus sources on either target. It retains Baa
+line/column spans in Arabic comments and structured `.موضع` directives, uses
+`الرئيسية` rather than an ASCII ABI name, and never hides an unsupported
+configuration behind GAS.
 
 The first explicit `--nazm-shadow=<path>` slice is admitted for one input at a time,
 where `<path>` is the Nazm executable. Baa still completes its production GAS
@@ -256,8 +263,10 @@ relocation structure, link success, exit status, stdout, and stderr.
 Dedicated `nazm-shadow-windows` and `nazm-shadow-linux` CI jobs build both
 repositories and run this real parity path on every Baa change.
 
-The full corpus is classified automatically, and object/link/runtime comparison
-covers all 99 Linux and 99 Windows emitted members. Nazm and Baa now share the
+The full corpus is classified automatically, and the host
+object/link/runtime comparison is configured to cover all 100 emitted members
+on both Linux and Windows. The complete Windows run is green locally; the
+matching Linux result remains an exact-SHA hosted-CI receipt. Nazm and Baa now share the
 required integer widths, condition-code writes, extension and division forms,
 indirect calls, callee-saved frames, memory-source multiplication, spilled
 condition-code writes, integer globals, Arabic external symbols,
@@ -268,7 +277,9 @@ compiler-owned platform ABI names to Arabic runtime adapters and rejects any
 unmapped Latin symbol. Linux Nazm calls also preserve the machine-level
 System V decimal-register count in `سجل_المركم_٣٢` before `ناد`, including
 variadic decimal printing; the focused emitter test checks this cross-target
-even when it runs on Windows.
+even when it runs on Windows. The former debug source now assembles to
+`.debug_line` plus `.rela.debug_line` on ELF64 and `.debug$S` plus
+`IMAGE_REL_AMD64_SECREL`/`IMAGE_REL_AMD64_SECTION` relocations on COFF.
 
 On both targets, production and shadow executables enter through the strong
 Arabic symbol `الرئيسية_بدء`; no `main`, `wmain`, direct-function process entry,
@@ -280,6 +291,7 @@ and routes the UTF-8 entry spelling through a linker-owned response file so GNU
 across the full corpus because Nazm resolves same-object references that GAS may
 leave to the linker; focused fixtures verify relocation kinds, while successful
 linking and identical runtime behavior prove required external relocations. The
-remaining production-admission work is additional PIC/base-index memory forms,
-the two explicit debug/inline-assembly exclusions, and the complete hosted gate
-set. GAS therefore remains the default assembler.
+remaining production-admission work is additional PIC/base-index memory forms
+when the producer requires them, stack-protector lowering, and the complete
+hosted quick/full/stress/determinism/release gate set. GAS therefore remains
+the default assembler.

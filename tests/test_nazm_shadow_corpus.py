@@ -22,21 +22,17 @@ SPEC.loader.exec_module(MATRIX)
 
 EXPECTED_TARGETS = {
     "x86_64-linux": {
-        "summary": {"emitted": 99, "unsupported": 1, "error": 0},
-        "blockers": {
-            "معلومات_تنقيح_كائنية": 1,
-        },
+        "summary": {"emitted": 100, "unsupported": 0, "error": 0},
+        "blockers": {},
         "emitted_sources_sha256": (
-            "2b35c43c904a7bfe0f356ba2439ef626d38e770401a03e5837bf51e47e7ed51a"
+            "a0f36b388029e61e8737c028b5290b853e780e104034f5fea0340e8c403a86ee"
         ),
     },
     "x86_64-windows": {
-        "summary": {"emitted": 99, "unsupported": 1, "error": 0},
-        "blockers": {
-            "معلومات_تنقيح_كائنية": 1,
-        },
+        "summary": {"emitted": 100, "unsupported": 0, "error": 0},
+        "blockers": {},
         "emitted_sources_sha256": (
-            "2b35c43c904a7bfe0f356ba2439ef626d38e770401a03e5837bf51e47e7ed51a"
+            "a0f36b388029e61e8737c028b5290b853e780e104034f5fea0340e8c403a86ee"
         ),
     },
 }

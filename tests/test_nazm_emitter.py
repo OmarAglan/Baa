@@ -36,7 +36,7 @@ def _inspect_coff_object(data: bytes) -> tuple[set[str], set[str], int]:
     if machine != 0x8664:
         raise ValueError(f"unexpected COFF machine: 0x{machine:04x}")
 
-    sections: set[str] = set()
+    raw_section_names: list[bytes] = []
     relocation_count = 0
     section_offset = 20 + optional_size
     for index in range(section_count):
@@ -44,13 +44,20 @@ def _inspect_coff_object(data: bytes) -> tuple[set[str], set[str], int]:
         if offset + 40 > len(data):
             raise ValueError("truncated COFF section table")
         raw_name = data[offset : offset + 8]
-        sections.add(raw_name.rstrip(b"\0").decode("ascii", errors="replace"))
+        raw_section_names.append(raw_name)
         relocation_count += struct.unpack_from("<H", data, offset + 32)[0]
 
     symbol_table_end = symbol_offset + (symbol_count * 18)
     if symbol_table_end + 4 > len(data):
         raise ValueError("truncated COFF symbol table")
     string_table = data[symbol_table_end:]
+    sections: set[str] = set()
+    for raw_name in raw_section_names:
+        short_name = raw_name.rstrip(b"\0").decode("ascii", errors="replace")
+        if short_name.startswith("/") and short_name[1:].isdigit():
+            sections.add(_read_c_string(string_table, int(short_name[1:])))
+        else:
+            sections.add(short_name)
 
     global_symbols: set[str] = set()
     index = 0
@@ -132,6 +139,18 @@ def _inspect_object(path: Path) -> tuple[set[str], set[str], int]:
     if data.startswith(b"\x7fELF"):
         return _inspect_elf64_object(data)
     return _inspect_coff_object(data)
+
+
+def _debug_sections(sections: set[str]) -> set[str]:
+    return {
+        section
+        for section in sections
+        if section.startswith(".debug") or section.startswith(".zdebug")
+    }
+
+
+def _non_debug_sections(sections: set[str]) -> set[str]:
+    return sections - _debug_sections(sections)
 
 
 def _find_baa() -> Path:
@@ -1036,14 +1055,18 @@ class NazmEmitterTests(unittest.TestCase):
                         Path(f"{output}.خريطة-باء.json").is_file()
                     )
 
-    def test_debug_info_has_a_target_specific_object_blocker(self) -> None:
+    def test_debug_info_emits_target_specific_object_sections(self) -> None:
+        nazm = _find_nazm()
+        if nazm is None:
+            self.skipTest("Nazm executable is unavailable in this checkout")
+
         with tempfile.TemporaryDirectory(prefix="baa_nazm_debug_info_") as temp:
             work = Path(temp)
             source = self.write_minimal_source(work)
 
-            for target, detail in (
-                ("x86_64-windows", "كودفيو"),
-                ("x86_64-linux", "دورف"),
+            for target, object_format, suffix, debug_section in (
+                ("x86_64-windows", "كوف", ".obj", ".debug$S"),
+                ("x86_64-linux", "إلف64", ".o", ".debug_line"),
             ):
                 with self.subTest(target=target):
                     output = work / f"تنقيح-{target}.نظم"
@@ -1057,15 +1080,67 @@ class NazmEmitterTests(unittest.TestCase):
                         str(output),
                     )
 
-                    self.assertEqual(proc.returncode, 3, proc.stderr)
-                    self.assertIn(
-                        f"[عائق_نظم=معلومات_تنقيح_كائنية؛تفصيل={detail}]",
-                        proc.stderr,
+                    self.assertEqual(proc.returncode, 0, proc.stderr)
+                    self.assertTrue(output.is_file())
+                    self.assertTrue(
+                        Path(f"{output}.خريطة-باء.json").is_file()
                     )
-                    self.assertFalse(output.exists())
-                    self.assertFalse(
-                        Path(f"{output}.خريطة-باء.json").exists()
+                    text = output.read_text(encoding="utf-8")
+                    self.assertIn(".ملف_بايتات ١، ", text)
+                    self.assertRegex(text, r"\.موضع ١، \d+، \d+")
+                    self.assertNotIn(".file", text)
+                    self.assertNotIn(".loc", text)
+
+                    object_path = work / f"تنقيح-{target}{suffix}"
+                    assembled = subprocess.run(
+                        [
+                            str(nazm),
+                            "-ص",
+                            object_format,
+                            "-خ",
+                            str(object_path),
+                            str(output),
+                        ],
+                        cwd=str(work),
+                        text=True,
+                        encoding="utf-8",
+                        errors="replace",
+                        capture_output=True,
+                        timeout=30,
                     )
+                    self.assertEqual(
+                        assembled.returncode, 0, assembled.stderr
+                    )
+                    sections, _, relocation_count = _inspect_object(
+                        object_path
+                    )
+                    self.assertIn(debug_section, sections)
+                    self.assertGreaterEqual(relocation_count, 1)
+
+            exe_suffix = ".exe" if os.name == "nt" else ""
+            executable = work / f"برنامج-تنقيح{exe_suffix}"
+            shadow = self.run_baa(
+                work,
+                "--debug-info",
+                f"--nazm-shadow={nazm}",
+                str(source),
+                "-o",
+                str(executable),
+            )
+            self.assertEqual(shadow.returncode, 0, shadow.stderr)
+            production_run = subprocess.run(
+                [str(executable)], capture_output=True, timeout=30
+            )
+            shadow_run = subprocess.run(
+                [str(Path(f"{executable}.ظل-نظم{exe_suffix}"))],
+                capture_output=True,
+                timeout=30,
+            )
+            self.assertEqual(
+                shadow_run.returncode, production_run.returncode
+            )
+            self.assertEqual(shadow_run.stdout, production_run.stdout)
+            self.assertEqual(shadow_run.stderr, production_run.stderr)
 
     def test_stack_protector_has_a_distinct_nazm_blocker(self) -> None:
         with tempfile.TemporaryDirectory(prefix="baa_nazm_stack_guard_") as temp:
@@ -1394,7 +1469,14 @@ class NazmEmitterTests(unittest.TestCase):
                     ) = _inspect_object(production_object)
                     self.assertIn(".text", sections)
                     self.assertIn("الرئيسية", global_symbols)
-                    self.assertTrue(sections.issubset(production_sections))
+                    self.assertTrue(
+                        _non_debug_sections(sections).issubset(
+                            _non_debug_sections(production_sections)
+                        )
+                    )
+                    if "--debug-info" in flags:
+                        self.assertTrue(_debug_sections(sections))
+                        self.assertTrue(_debug_sections(production_sections))
                     self.assertEqual(global_symbols, production_global_symbols)
                     continue
 
@@ -1469,7 +1551,14 @@ class NazmEmitterTests(unittest.TestCase):
                 self.assertIn(".text", sections)
                 self.assertIn("الرئيسية", global_symbols)
                 self.assertNotIn("main", global_symbols)
-                self.assertTrue(sections.issubset(production_sections))
+                self.assertTrue(
+                    _non_debug_sections(sections).issubset(
+                        _non_debug_sections(production_sections)
+                    )
+                )
+                if "--debug-info" in flags:
+                    self.assertTrue(_debug_sections(sections))
+                    self.assertTrue(_debug_sections(production_sections))
                 self.assertEqual(global_symbols, production_global_symbols)
 
 

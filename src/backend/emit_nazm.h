@@ -6,6 +6,7 @@
 #ifndef BAA_EMIT_NAZM_H
 #define BAA_EMIT_NAZM_H
 
+#include <stdbool.h>
 #include <stdio.h>
 
 #include "isel.h"
@@ -50,6 +51,7 @@ BaaNazmEmitResult emit_nazm_module_with_source_map(const MachineModule *module,
                                                    FILE *out,
                                                    FILE *source_map,
                                                    const char *generated_path,
-                                                   const BaaTarget *target);
+                                                   const BaaTarget *target,
+                                                   bool debug_info);
 
 #endif

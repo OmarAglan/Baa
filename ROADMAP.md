@@ -1846,7 +1846,7 @@
 
 * \[x] **Boundary contract** — freeze `baa-nazm-boundary-v0` ownership, text, target, diagnostics, and source-map behavior.
 * \[x] **Coverage inventory** — extract every instruction, operand, directive, section, symbol, and relocation form emitted by the Windows/Linux corpus.
-* \[ ] **Arabic emitter** — emit canonical Nazm 0.4 text after register allocation while retaining inspectable `-S` output.
+* \[x] **Arabic emitter** — emit canonical Nazm 0.4 text after register allocation while retaining inspectable `-S` output.
   * \[x] First executable slice: `--emit-nazm` emits an Arabic-only minimal integer entry for Windows/Linux targets and visibly rejects every unsupported form.
   * \[x] PC-relative global slice: scalar global loads/stores and function/global addresses emit `[مؤشر_التعليمة+الرمز]`; immediate stores lower through a scratch register and duplicate extern-plus-definition declarations emit one definition.
   * \[x] Memory arithmetic slice: `imul` accepts base/displacement memory sources and spilled `setcc` destinations emit the native Arabic memory form.
@@ -1860,8 +1860,10 @@
     through a spill-safe scratch register.
   * \[x] Conversion-configuration slice: `--startup=custom` remains a GAS `-S`
     presentation option and no longer blocks or duplicates canonical Nazm
-    emission; object debug information and stack protection now have separate
-    stable blocker contracts instead of a shared catch-all.
+    emission; stack protection retains its own stable blocker contract.
+  * \[x] Debug-information slice: `--debug-info` emits Arabic-only
+    `.ملف_بايتات`/`.موضع` directives, which Nazm lowers to DWARF v4 line
+    tables in ELF64 and CodeView C13 line tables in COFF.
 * \[ ] **Shadow integration** — invoke Nazm without changing the production GAS result and compare object/link/runtime semantics.
   * \[x] First executable slice: `--nazm-shadow=<path>` assembles and links a one-input minimal program beside GAS with visible no-fallback failures and host runtime parity coverage.
 * \[ ] **Embedding** — adopt `nazm_assemble_buffer()` only after its public ownership and error contracts are stable.
@@ -1871,7 +1873,7 @@
   #### v1.5.0.1: Inventory and Contract
 
 * \[x] **Generated-form corpus** — version `baa-nazm-coverage-v1` from the full 100-source, two-target inventory and assemble focused ELF64/COFF fixtures for every currently supported form; partial and unsupported forms remain explicit.
-* \[x] **Source-level shadow matrix** — classify all 100 sources on both targets as Arabic-only emitted, visibly unsupported, or gate error; every rejection carries a stable Arabic blocker kind/detail. Structured `لا_تفعل` and `اقرأ_عداد_الزمن` removed the raw-GAS source blocker, so the matrix now admits 99 sources on each target with zero gate errors; only object debug information remains a visible status-`3` blocker.
+* \[x] **Source-level shadow matrix** — classify all 100 sources on both targets as Arabic-only emitted, visibly unsupported, or gate error; every rejection carries a stable Arabic blocker kind/detail. Structured architecture operations and target-specific debug line tables now admit all 100 sources on each target with zero unsupported rows and zero gate errors.
 * \[x] **Source mapping** — `baa-nazm-source-map-v1` binds generated Nazm line ranges to the original UTF-8 Baa file/line/column, and shadow assembler failures replay the Nazm diagnostic plus its mapped Baa location on Windows/Linux.
 * \[x] **Inline assembly migration contract** — version the breaking move away from raw `مجمع { ... }` GAS text: common in-function operations become typed Arabic Baa intrinsics backed by Machine IR, while arbitrary assembly lives in first-class `.نظم` modules.
 * \[x] **Inline assembly migration implementation** — Nazm encodes `اقرأ_عداد_الزمن`; Baa exposes typed `لا_تفعل()` and `اقرأ_عداد_الزمن()` operations backed by structured IR/Machine IR and lowers them to GAS and canonical Arabic Nazm; Takween compiles mixed `.baa`/`.نظم` roots; raw `مجمع` now returns an Arabic source-migration error. A future inline `نظم { ... }` extension remains optional and must use explicit inputs/outputs/clobbers without embedding or translating GAS text.

@@ -12,7 +12,7 @@
   "shadow_corpus": {
     "schema": "baa-nazm-shadow-corpus-v1",
     "compiler": "baa version 0.6.0",
-    "sha256": "e43e03bd333df8cc7df4f2ba7210b8e0cc7b012b54d661bdf1c351e0c62a6fb1"
+    "sha256": "89d6d80d1c008f7c363e391b4a49683cbc7943db781faeae50df34e728d65d1a"
   },
   "status_contract": {
     "supported": "The complete inventory form is implemented by Nazm.",
@@ -137,28 +137,29 @@
         "shadow_matrix": {
           "source_count": 100,
           "summary": {
-            "emitted": 95,
-            "unsupported": 5,
+            "emitted": 98,
+            "unsupported": 2,
             "error": 0
           },
           "unsupported_reasons": [
             {
-              "reason": "خطأ: شريحة نظم الأولى لا تدعم بدء التشغيل المخصص أو معلومات التنقيح أو حماية المكدس.",
-              "count": 4
+              "reason": "خطأ: جملة 'مجمع' تحمل نص GAS خاما؛ مسار نظم يرفضها حتى انتقال المصدر إلى عقد 'نظم' العربي المهيكل.",
+              "count": 1
             },
             {
-              "reason": "خطأ: تعليمة الآلة غير مدعومة في شريحة نظم التنفيذية الأولى.",
+              "reason": "خطأ: مسار نظم لا ينتج معلومات تنقيح كائنية مكافئة بعد.",
               "count": 1
             }
           ],
           "unsupported_blockers": [
             {
-              "kind": "إعدادات_التحويل",
-              "count": 4
+              "kind": "ترحيل_التجميع_الضمني",
+              "detail": "مجمع_جاس_خام",
+              "count": 1
             },
             {
-              "kind": "تعليمة_آلة",
-              "detail": "نظم_ضمني",
+              "kind": "معلومات_تنقيح_كائنية",
+              "detail": "دورف",
               "count": 1
             }
           ],
@@ -231,15 +232,12 @@
             },
             {
               "source": "tests/integration/backend/backend_custom_startup_test.baa",
-              "status": "unsupported",
-              "exit_code": 3,
+              "status": "emitted",
+              "exit_code": 0,
               "flags": [
                 "--startup=custom"
               ],
-              "reason": "خطأ: شريحة نظم الأولى لا تدعم بدء التشغيل المخصص أو معلومات التنقيح أو حماية المكدس.",
-              "blocker": {
-                "kind": "إعدادات_التحويل"
-              }
+              "sha256": "d1002a7850216d56161749bfce9e3895d5088573930eb3b9e639c3e065cbe069"
             },
             {
               "source": "tests/integration/backend/backend_dynamic_memory_noheader_test.baa",
@@ -728,38 +726,30 @@
             },
             {
               "source": "tests/integration/ir/ir_custom_startup_linux_asm_test.baa",
-              "status": "unsupported",
-              "exit_code": 3,
+              "status": "emitted",
+              "exit_code": 0,
               "flags": [
-                "--target=x86_64-linux",
                 "--startup=custom"
               ],
-              "reason": "خطأ: شريحة نظم الأولى لا تدعم بدء التشغيل المخصص أو معلومات التنقيح أو حماية المكدس.",
-              "blocker": {
-                "kind": "إعدادات_التحويل"
-              }
+              "sha256": "3591d7d1550e5bd62e8a4bc73ed71acb4c377054134d6b221e69dbeff5f32ee6"
             },
             {
               "source": "tests/integration/ir/ir_custom_startup_windows_asm_test.baa",
-              "status": "unsupported",
-              "exit_code": 3,
+              "status": "emitted",
+              "exit_code": 0,
               "flags": [
-                "--target=x86_64-windows",
                 "--startup=custom"
               ],
-              "reason": "خطأ: شريحة نظم الأولى لا تدعم بدء التشغيل المخصص أو معلومات التنقيح أو حماية المكدس.",
-              "blocker": {
-                "kind": "إعدادات_التحويل"
-              }
+              "sha256": "3591d7d1550e5bd62e8a4bc73ed71acb4c377054134d6b221e69dbeff5f32ee6"
             },
             {
               "source": "tests/integration/ir/ir_inline_asm_test.baa",
               "status": "unsupported",
               "exit_code": 3,
-              "reason": "خطأ: تعليمة الآلة غير مدعومة في شريحة نظم التنفيذية الأولى.",
+              "reason": "خطأ: جملة 'مجمع' تحمل نص GAS خاما؛ مسار نظم يرفضها حتى انتقال المصدر إلى عقد 'نظم' العربي المهيكل.",
               "blocker": {
-                "kind": "تعليمة_آلة",
-                "detail": "نظم_ضمني"
+                "kind": "ترحيل_التجميع_الضمني",
+                "detail": "مجمع_جاس_خام"
               }
             },
             {
@@ -775,9 +765,10 @@
               "flags": [
                 "--debug-info"
               ],
-              "reason": "خطأ: شريحة نظم الأولى لا تدعم بدء التشغيل المخصص أو معلومات التنقيح أو حماية المكدس.",
+              "reason": "خطأ: مسار نظم لا ينتج معلومات تنقيح كائنية مكافئة بعد.",
               "blocker": {
-                "kind": "إعدادات_التحويل"
+                "kind": "معلومات_تنقيح_كائنية",
+                "detail": "دورف"
               }
             },
             {
@@ -3662,28 +3653,29 @@
         "shadow_matrix": {
           "source_count": 100,
           "summary": {
-            "emitted": 95,
-            "unsupported": 5,
+            "emitted": 98,
+            "unsupported": 2,
             "error": 0
           },
           "unsupported_reasons": [
             {
-              "reason": "خطأ: شريحة نظم الأولى لا تدعم بدء التشغيل المخصص أو معلومات التنقيح أو حماية المكدس.",
-              "count": 4
+              "reason": "خطأ: جملة 'مجمع' تحمل نص GAS خاما؛ مسار نظم يرفضها حتى انتقال المصدر إلى عقد 'نظم' العربي المهيكل.",
+              "count": 1
             },
             {
-              "reason": "خطأ: تعليمة الآلة غير مدعومة في شريحة نظم التنفيذية الأولى.",
+              "reason": "خطأ: مسار نظم لا ينتج معلومات تنقيح كائنية مكافئة بعد.",
               "count": 1
             }
           ],
           "unsupported_blockers": [
             {
-              "kind": "إعدادات_التحويل",
-              "count": 4
+              "kind": "ترحيل_التجميع_الضمني",
+              "detail": "مجمع_جاس_خام",
+              "count": 1
             },
             {
-              "kind": "تعليمة_آلة",
-              "detail": "نظم_ضمني",
+              "kind": "معلومات_تنقيح_كائنية",
+              "detail": "كودفيو",
               "count": 1
             }
           ],
@@ -3756,15 +3748,12 @@
             },
             {
               "source": "tests/integration/backend/backend_custom_startup_test.baa",
-              "status": "unsupported",
-              "exit_code": 3,
+              "status": "emitted",
+              "exit_code": 0,
               "flags": [
                 "--startup=custom"
               ],
-              "reason": "خطأ: شريحة نظم الأولى لا تدعم بدء التشغيل المخصص أو معلومات التنقيح أو حماية المكدس.",
-              "blocker": {
-                "kind": "إعدادات_التحويل"
-              }
+              "sha256": "5a5c34ed1e47456c27638e76c7d9008ac6edbcc55ff56b49f444da2827bb07bb"
             },
             {
               "source": "tests/integration/backend/backend_dynamic_memory_noheader_test.baa",
@@ -4253,38 +4242,30 @@
             },
             {
               "source": "tests/integration/ir/ir_custom_startup_linux_asm_test.baa",
-              "status": "unsupported",
-              "exit_code": 3,
+              "status": "emitted",
+              "exit_code": 0,
               "flags": [
-                "--target=x86_64-linux",
                 "--startup=custom"
               ],
-              "reason": "خطأ: شريحة نظم الأولى لا تدعم بدء التشغيل المخصص أو معلومات التنقيح أو حماية المكدس.",
-              "blocker": {
-                "kind": "إعدادات_التحويل"
-              }
+              "sha256": "56f472bf331256a598b0ebc6bfd3e1984d0eb3774bcf0463136c06620730cd37"
             },
             {
               "source": "tests/integration/ir/ir_custom_startup_windows_asm_test.baa",
-              "status": "unsupported",
-              "exit_code": 3,
+              "status": "emitted",
+              "exit_code": 0,
               "flags": [
-                "--target=x86_64-windows",
                 "--startup=custom"
               ],
-              "reason": "خطأ: شريحة نظم الأولى لا تدعم بدء التشغيل المخصص أو معلومات التنقيح أو حماية المكدس.",
-              "blocker": {
-                "kind": "إعدادات_التحويل"
-              }
+              "sha256": "56f472bf331256a598b0ebc6bfd3e1984d0eb3774bcf0463136c06620730cd37"
             },
             {
               "source": "tests/integration/ir/ir_inline_asm_test.baa",
               "status": "unsupported",
               "exit_code": 3,
-              "reason": "خطأ: تعليمة الآلة غير مدعومة في شريحة نظم التنفيذية الأولى.",
+              "reason": "خطأ: جملة 'مجمع' تحمل نص GAS خاما؛ مسار نظم يرفضها حتى انتقال المصدر إلى عقد 'نظم' العربي المهيكل.",
               "blocker": {
-                "kind": "تعليمة_آلة",
-                "detail": "نظم_ضمني"
+                "kind": "ترحيل_التجميع_الضمني",
+                "detail": "مجمع_جاس_خام"
               }
             },
             {
@@ -4300,9 +4281,10 @@
               "flags": [
                 "--debug-info"
               ],
-              "reason": "خطأ: شريحة نظم الأولى لا تدعم بدء التشغيل المخصص أو معلومات التنقيح أو حماية المكدس.",
+              "reason": "خطأ: مسار نظم لا ينتج معلومات تنقيح كائنية مكافئة بعد.",
               "blocker": {
-                "kind": "إعدادات_التحويل"
+                "kind": "معلومات_تنقيح_كائنية",
+                "detail": "كودفيو"
               }
             },
             {

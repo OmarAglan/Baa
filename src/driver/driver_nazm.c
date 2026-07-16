@@ -208,12 +208,29 @@ BaaCompilerExitCode driver_emit_nazm_source(const CompilerConfig *config,
     if (!config || !module || !output_path)
         return BAA_COMPILER_EXIT_INTERNAL_ERROR;
 
-    if (config->custom_startup || config->debug_info ||
-        config->codegen_opts.stack_protector != BAA_STACKPROT_OFF)
+    /*
+     * --startup=custom is a GAS -S presentation contract.  Hosted startup
+     * ownership remains in the final link path, so canonical Nazm emission
+     * must not duplicate or reject it.
+     */
+    if (config->debug_info)
+    {
+        const char *debug_format =
+            config->target && config->target->obj_format == BAA_OBJFORMAT_COFF
+                ? "كودفيو"
+                : "دورف";
+        driver_nazm_report_unsupported(
+            "مسار نظم لا ينتج معلومات تنقيح كائنية مكافئة بعد.",
+            "معلومات_تنقيح_كائنية",
+            debug_format);
+        return BAA_COMPILER_EXIT_UNSUPPORTED;
+    }
+
+    if (config->codegen_opts.stack_protector != BAA_STACKPROT_OFF)
     {
         driver_nazm_report_unsupported(
-            "شريحة نظم الأولى لا تدعم بدء التشغيل المخصص أو معلومات التنقيح أو حماية المكدس.",
-            "إعدادات_التحويل",
+            "مسار نظم لا ينتج حماية المكدس المكافئة بعد.",
+            "حماية_المكدس",
             NULL);
         return BAA_COMPILER_EXIT_UNSUPPORTED;
     }

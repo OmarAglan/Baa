@@ -92,7 +92,10 @@ def _source_flag_index(target: dict[str, Any]) -> dict[str, list[str]]:
         flags = entry.get("flags")
         if isinstance(source, str) and isinstance(flags, list):
             result[source] = [
-                str(flag) for flag in flags if str(flag) not in INVENTORY_OUTPUT_FLAGS
+                str(flag)
+                for flag in flags
+                if str(flag) not in INVENTORY_OUTPUT_FLAGS
+                and not str(flag).startswith("--target=")
             ]
     return result
 

@@ -533,6 +533,13 @@ static BaaNazmEmitResult nazm_validate_instruction(const MachineInst *inst,
                                         "السحب يتطلب سجلا بعرض ٦٤ بت.", inst);
             return nazm_validate_operand(&inst->dst, target, inst);
 
+        case MACH_INLINE_ASM:
+            return nazm_unsupported(
+                "ترحيل_التجميع_الضمني",
+                "مجمع_جاس_خام",
+                "جملة 'مجمع' تحمل نص GAS خاما؛ مسار نظم يرفضها حتى انتقال المصدر إلى عقد 'نظم' العربي المهيكل.",
+                inst);
+
         default:
             return nazm_unsupported("تعليمة_آلة",
                                     nazm_machine_op_arabic(inst->op),

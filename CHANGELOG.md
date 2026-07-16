@@ -42,9 +42,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
     aggregate counts, without exposing borrowed include paths or parsing human prose.
   - Added deterministic `baa-nazm-shadow-corpus-v1` classification for all 100 inventoried
     sources on both targets and embedded the complete result in `baa-nazm-coverage-v1`.
-  - Admitted 95 Linux and 95 Windows corpus sources through Arabic-only emission and
-    GAS/Nazm object, link, and runtime parity; all remaining five sources return visible
-    status `3` with stable blocker data and no output.
+  - Admitted 98 Linux and 98 Windows corpus sources through Arabic-only emission and
+    GAS/Nazm object, link, and runtime parity. `--startup=custom` no longer blocks or
+    duplicates Nazm output because hosted startup remains owned by the final link path.
+  - Reduced the remaining visible exclusions to object debug information and legacy raw-GAS
+    inline assembly. Both return status `3`, distinct stable Arabic blocker data, and no output.
   - Replaced host `nm`/`objdump` assertions with Unicode-safe COFF/ELF inspection so Arabic
     artifact paths remain mandatory on Windows and Linux CI.
   - Kept unsupported diagnostics source-level and deterministic instead of exposing borrowed
@@ -87,6 +89,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
   - Added 32-to-64 zero extension through the architectural 32-bit destination view and
     spill-safe unary bitwise-NOT lowering, admitting the integer-semantics and path-stdlib
     runtime sources on both targets.
+  - Split conversion-option rejection into precise object-debug and stack-protection
+    blockers, admitted all three custom-startup corpus sources, and gave legacy `مجمع`
+    a versioned migration blocker instead of a generic unsupported-machine instruction.
   - Added Arabic read-only string tables, numeric UTF-8 byte emission, BSS and alignment,
     spill-safe integer lowering, and full-corpus production/shadow relocation and runtime gates.
   - Made Windows production and Nazm shadow executables share the strong Arabic startup

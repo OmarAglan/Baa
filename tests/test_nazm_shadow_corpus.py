@@ -22,23 +22,23 @@ SPEC.loader.exec_module(MATRIX)
 
 EXPECTED_TARGETS = {
     "x86_64-linux": {
-        "summary": {"emitted": 95, "unsupported": 5, "error": 0},
+        "summary": {"emitted": 98, "unsupported": 2, "error": 0},
         "blockers": {
-            "إعدادات_التحويل": 4,
-            "تعليمة_آلة": 1,
+            "ترحيل_التجميع_الضمني": 1,
+            "معلومات_تنقيح_كائنية": 1,
         },
         "emitted_sources_sha256": (
-            "6e075132cbec23a896f01a1f89f05492b4c845dbc318d2bb0567264f76a3cd94"
+            "38d3197662497a87df95998a32b1c1c48304962567d31440fec07208320e7f90"
         ),
     },
     "x86_64-windows": {
-        "summary": {"emitted": 95, "unsupported": 5, "error": 0},
+        "summary": {"emitted": 98, "unsupported": 2, "error": 0},
         "blockers": {
-            "إعدادات_التحويل": 4,
-            "تعليمة_آلة": 1,
+            "ترحيل_التجميع_الضمني": 1,
+            "معلومات_تنقيح_كائنية": 1,
         },
         "emitted_sources_sha256": (
-            "6e075132cbec23a896f01a1f89f05492b4c845dbc318d2bb0567264f76a3cd94"
+            "38d3197662497a87df95998a32b1c1c48304962567d31440fec07208320e7f90"
         ),
     },
 }
@@ -145,7 +145,12 @@ class NazmShadowCorpusTests(unittest.TestCase):
         index = MATRIX._source_flag_index({
             "source_flags": [{
                 "source": "عينة.باء",
-                "flags": ["-O1", "-S", "-fruntime-checks"],
+                "flags": [
+                    "-O1",
+                    "-S",
+                    "--target=x86_64-linux",
+                    "-fruntime-checks",
+                ],
             }]
         })
         self.assertEqual(index["عينة.باء"], ["-O1", "-fruntime-checks"])

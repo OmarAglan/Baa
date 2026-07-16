@@ -695,7 +695,88 @@ class NazmEmitterTests(unittest.TestCase):
 
             self.assertEqual(proc.returncode, 3, proc.stderr)
             self.assertIn("خطأ:", proc.stderr)
-            self.assertIn("[عائق_نظم=", proc.stderr)
+            self.assertIn(
+                "[عائق_نظم=ترحيل_التجميع_الضمني؛تفصيل=مجمع_جاس_خام]",
+                proc.stderr,
+            )
+            self.assertFalse(output.exists())
+            self.assertFalse(Path(f"{output}.خريطة-باء.json").exists())
+
+    def test_custom_startup_flag_does_not_duplicate_hosted_startup(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="baa_nazm_custom_startup_") as temp:
+            work = Path(temp)
+            source = self.write_minimal_source(work)
+
+            for target in ("x86_64-windows", "x86_64-linux"):
+                with self.subTest(target=target):
+                    output = work / f"بدء-{target}.نظم"
+                    proc = self.run_baa(
+                        work,
+                        "--emit-nazm",
+                        "--startup=custom",
+                        f"--target={target}",
+                        str(source),
+                        "-o",
+                        str(output),
+                    )
+
+                    self.assertEqual(proc.returncode, 0, proc.stderr)
+                    text = output.read_text(encoding="utf-8")
+                    self.assertIn(".عام الرئيسية", text)
+                    self.assertNotIn("الرئيسية_بدء", text)
+                    self.assertIsNone(re.search(r"[A-Za-z]", text))
+                    self.assertTrue(
+                        Path(f"{output}.خريطة-باء.json").is_file()
+                    )
+
+    def test_debug_info_has_a_target_specific_object_blocker(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="baa_nazm_debug_info_") as temp:
+            work = Path(temp)
+            source = self.write_minimal_source(work)
+
+            for target, detail in (
+                ("x86_64-windows", "كودفيو"),
+                ("x86_64-linux", "دورف"),
+            ):
+                with self.subTest(target=target):
+                    output = work / f"تنقيح-{target}.نظم"
+                    proc = self.run_baa(
+                        work,
+                        "--emit-nazm",
+                        "--debug-info",
+                        f"--target={target}",
+                        str(source),
+                        "-o",
+                        str(output),
+                    )
+
+                    self.assertEqual(proc.returncode, 3, proc.stderr)
+                    self.assertIn(
+                        f"[عائق_نظم=معلومات_تنقيح_كائنية؛تفصيل={detail}]",
+                        proc.stderr,
+                    )
+                    self.assertFalse(output.exists())
+                    self.assertFalse(
+                        Path(f"{output}.خريطة-باء.json").exists()
+                    )
+
+    def test_stack_protector_has_a_distinct_nazm_blocker(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="baa_nazm_stack_guard_") as temp:
+            work = Path(temp)
+            source = self.write_minimal_source(work)
+            output = work / "حماية.نظم"
+            proc = self.run_baa(
+                work,
+                "--emit-nazm",
+                "--target=x86_64-linux",
+                "-fstack-protector",
+                str(source),
+                "-o",
+                str(output),
+            )
+
+            self.assertEqual(proc.returncode, 3, proc.stderr)
+            self.assertIn("[عائق_نظم=حماية_المكدس]", proc.stderr)
             self.assertFalse(output.exists())
             self.assertFalse(Path(f"{output}.خريطة-باء.json").exists())
 

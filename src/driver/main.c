@@ -230,21 +230,35 @@ static int baa_main(int argc, char **argv)
     DriverBuildManifest build_manifest;
     driver_build_manifest_init(&build_manifest);
 
-    // v0.3.2.8.4: لا ندعم حالياً الربط/التجميع العابر للأهداف (cross-link/cross-assemble).
-    // - نسمح بـ -S لتوليد assembly فقط لأي هدف.
-    // - أما -c أو الربط النهائي فيتطلبان أن يطابق الهدف نظام المضيف.
+    // v0.3.2.8.4+: الربط النهائي يبقى مقيدا بالمضيف.
+    // - نسمح بـ -S لأي هدف.
+    // - يسمح نظم أيضا بـ -c عابر للأهداف لأنه يكتب ELF64/COFF مباشرة.
+    // - GAS -c والربط النهائي يتطلبان أن يطابق الهدف نظام المضيف.
     if (!config.assembly_only && !config.emit_nazm &&
         !config.check_only && !config.header_check)
     {
         if (config.target && config.target->obj_format != driver_toolchain_host_object_format())
         {
-            fprintf(stderr,
-                    "خطأ: الهدف '%s' لا يطابق نظام المضيف لمرحلة التجميع/الربط.\n"
-                    "ملاحظة: استخدم -S لتوليد ملف .s فقط. الدعم الكامل لـ cross-target مؤجل.\n",
-                    config.target->name ? config.target->name : "<unknown>");
-            driver_build_manifest_free(&build_manifest);
-            return main_cleanup_and_return(&config, &cli, NULL, 0, config.output_file,
-                                           output_file_owned, BAA_COMPILER_EXIT_UNSUPPORTED);
+            bool nazm_cross_object =
+                config.compile_only &&
+                config.assembler == BAA_ASSEMBLER_NAZM;
+            if (!nazm_cross_object)
+            {
+                fprintf(stderr,
+                        "خطأ: الهدف '%s' لا يطابق نظام المضيف لمرحلة التجميع/الربط.\n"
+                        "ملاحظة: استخدم -S، أو -c --assembler=nazm لتوليد كائن عابر للأهداف. "
+                        "الربط العابر للأهداف مؤجل.\n",
+                        config.target->name ? config.target->name : "<unknown>");
+                driver_build_manifest_free(&build_manifest);
+                return main_cleanup_and_return(
+                    &config,
+                    &cli,
+                    NULL,
+                    0,
+                    config.output_file,
+                    output_file_owned,
+                    BAA_COMPILER_EXIT_UNSUPPORTED);
+            }
         }
     }
 

@@ -120,7 +120,9 @@ helpers return this classification to `main.c` rather than collapsing every fail
 | (Default) | **Compile & Link** | `.exe` | Runs full pipeline. Deletes intermediate `.s` and `.o` files. |
 | `-o <file>` | **Custom Output** | `.exe` | Sets the linked output filename (default: `out.exe`). |
 | (Multiple Files) | **Multi-File Build** | `.exe` | Compiles each `.baa` to `.o` and links them. |
-| `-S`, `-s` | **Assembly Only** | `.s` | Stops after code emission. Writes `<input>.s` (or `-o` when a single input file is used). |
+| `-S`, `-s` | **Assembly Only** | `.s` / `.نظم` | Stops after code emission. The selected assembler controls the emitted dialect. |
+| `--assembler=gas\|nazm` | **Assembler Select** | `.s/.نظم/.o/.exe` | GAS is the default rollback; Nazm emits canonical Arabic source, assembles it directly to the selected object, then reuses the normal linker. |
+| `--nazm-path=<path>` | **Nazm Tool Select** | - | Overrides `BAA_NAZM` and `nazm` lookup from `PATH`. |
 | `-c` | **Compile Only** | `.o` | Stops after assembling. Writes `<input>.o` (or `-o` when a single input file is used). |
 | `--check` | **Fast Check** | none | Stops after parse and semantic analysis for editor/tool feedback; no IR, assembly, object, or executable is emitted. |
 | `-v` | **Verbose** | - | Prints commands and compilation time; keeps intermediate `.s` files. |
@@ -2545,7 +2547,7 @@ Strings are collected during parsing and emitted with unique labels:
 | **Name Mangling** | None - functions use their Arabic UTF-8 names as assembly labels |
 | **Special Case** | No `main`/`wmain` symbol is emitted. The linker receives the UTF-8 entry name through a response file on Windows so native narrow argv cannot corrupt it. |
 | **Main with args (v0.3.12.5)** | If the user defines `صحيح الرئيسية(صحيح عدد، نص[] معاملات)`, the compiler lowers the body as `الرئيسية_المستخدم` and emits the Arabic ABI wrapper `الرئيسية`. Linux passes UTF-8 argv; Windows `بدء_ويندوز` converts the original UTF-16 command line to UTF-8 before the wrapper constructs Baa `نص[]`. |
-| **Hosted startup** | Every final GAS link and every Nazm shadow link enters through `الرئيسية_بدء`. Linux passes the returning `الرئيسية` to `__libc_start_main`; Windows calls the runtime `بدء_ويندوز` bridge and exits through `ExitProcess`. `--startup=custom` remains a compatibility switch for appending this same stub to explicit `-S` output. |
+| **Hosted startup** | Every final GAS, selected-Nazm, and Nazm-shadow link enters through `الرئيسية_بدء`. The selected Nazm Linux path assembles an Arabic-only startup source that calls the compiler-owned `ابدأ_المكتبة_المستضافة` runtime adapter; GAS/shadow compatibility retains the existing hosted behavior. Windows calls the runtime `بدء_ويندوز` bridge and exits through `ExitProcess`. `--startup=custom` remains a compatibility switch for appending the GAS stub to explicit GAS `-S` output. |
 | **External Calls** | C runtime (`printf`, etc.) via toolchain symbol resolution |
 
 ---

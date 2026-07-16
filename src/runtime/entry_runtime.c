@@ -68,4 +68,41 @@ __attribute__((noreturn)) void baa_windows_arabic_start(void)
 {
     baa_windows_arabic_entry();
 }
+#else
+typedef int (*BaaHostedMain)(int, char **, char **);
+typedef void (*BaaHostedHook)(void);
+
+extern int __libc_start_main(BaaHostedMain main_function,
+                             int argc,
+                             char **argv,
+                             BaaHostedHook init,
+                             BaaHostedHook fini,
+                             BaaHostedHook runtime_loader_fini,
+                             void *stack_end);
+
+int baa_linux_hosted_start(BaaHostedMain main_function,
+                           int argc,
+                           char **argv,
+                           BaaHostedHook init,
+                           BaaHostedHook fini,
+                           BaaHostedHook runtime_loader_fini,
+                           void *stack_end)
+    __asm__("ابدأ_المكتبة_المستضافة");
+
+int baa_linux_hosted_start(BaaHostedMain main_function,
+                           int argc,
+                           char **argv,
+                           BaaHostedHook init,
+                           BaaHostedHook fini,
+                           BaaHostedHook runtime_loader_fini,
+                           void *stack_end)
+{
+    return __libc_start_main(main_function,
+                             argc,
+                             argv,
+                             init,
+                             fini,
+                             runtime_loader_fini,
+                             stack_end);
+}
 #endif

@@ -120,6 +120,7 @@ top-level fields:
   "compiler_version": "0.6.0",
   "target": "x86_64-linux",
   "mode": "link",
+  "assembler": "gas",
   "opt_level": 2,
   "runtime_checks": false,
   "runtime_check_mask": 0,
@@ -147,6 +148,11 @@ Until `build-manifest-v1` is promoted, Takween should treat the numeric `schema`
 fields above as the compatibility contract. Adding optional fields is allowed. Removing,
 renaming, or changing the meaning of these fields requires a compatibility-matrix note and a
 schema bump.
+
+`assembler` is `gas` or `nazm`. Nazm builds currently bypass the incremental
+object cache until the cache key records a verified Nazm version fingerprint;
+the manifest therefore reports `cache.enabled: false` rather than reusing an
+object produced by a different assembler.
 
 ---
 

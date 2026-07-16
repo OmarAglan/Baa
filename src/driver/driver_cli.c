@@ -157,6 +157,8 @@ void driver_print_help(void)
     printf("  -I<dir>      Add include search directory (compact form)\n");
     printf("  -S, -s       Compile to assembly only (.s)\n");
     printf("  --emit-nazm  Emit canonical Arabic Nazm source only (.نظم)\n");
+    printf("  --assembler=gas|nazm  Select the normal assembler (default: gas)\n");
+    printf("  --nazm-path=<path>  Nazm executable; otherwise BAA_NAZM or PATH is used\n");
     printf("  --nazm-shadow=<path>  Build production GAS and an explicit Nazm shadow beside it\n");
     printf("  -c           Compile to object file only (.o)\n");
     printf("  --check      Parse/analyze source files without emitting code\n");
@@ -425,6 +427,34 @@ bool driver_parse_cli(int argc, char **argv, CompilerConfig *config, DriverParse
                 config->assembly_only = true;
             else if (strcmp(arg, "--emit-nazm") == 0)
                 config->emit_nazm = true;
+            else if (strncmp(arg, "--assembler=", 12) == 0)
+            {
+                const char *assembler = arg + 12;
+                if (strcmp(assembler, "gas") == 0)
+                    config->assembler = BAA_ASSEMBLER_GAS;
+                else if (strcmp(assembler, "nazm") == 0)
+                    config->assembler = BAA_ASSEMBLER_NAZM;
+                else
+                {
+                    fprintf(stderr,
+                            "خطأ: قيمة --assembler غير معروفة '%s' "
+                            "(المتوقع gas أو nazm).\n",
+                            assembler);
+                    parse_release_temp_arrays(inputs, include_dirs);
+                    return false;
+                }
+            }
+            else if (strncmp(arg, "--nazm-path=", 12) == 0)
+            {
+                const char *path = arg + 12;
+                if (!path[0])
+                {
+                    fprintf(stderr, "خطأ: --nazm-path يتطلب مسار ملف نظم التنفيذي.\n");
+                    parse_release_temp_arrays(inputs, include_dirs);
+                    return false;
+                }
+                config->nazm_executable = (char *)path;
+            }
             else if (strncmp(arg, "--nazm-shadow=", 14) == 0)
             {
                 const char *path = arg + 14;
@@ -713,6 +743,23 @@ bool driver_parse_cli(int argc, char **argv, CompilerConfig *config, DriverParse
          config->check_only || config->header_check))
     {
         fprintf(stderr, "خطأ: --nazm-shadow يعمل فقط مع بناء وربط تنفيذي كامل.\n");
+        parse_release_temp_arrays(inputs, include_dirs);
+        return false;
+    }
+    if (config->nazm_shadow_executable &&
+        config->assembler == BAA_ASSEMBLER_NAZM)
+    {
+        fprintf(stderr,
+                "خطأ: --nazm-shadow لا يجتمع مع --assembler=nazm؛ "
+                "المسار الطبيعي نفسه يستخدم نظم.\n");
+        parse_release_temp_arrays(inputs, include_dirs);
+        return false;
+    }
+    if (config->nazm_executable &&
+        config->assembler != BAA_ASSEMBLER_NAZM)
+    {
+        fprintf(stderr,
+                "خطأ: --nazm-path يتطلب --assembler=nazm.\n");
         parse_release_temp_arrays(inputs, include_dirs);
         return false;
     }

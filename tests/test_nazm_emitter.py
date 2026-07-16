@@ -12,6 +12,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -298,6 +299,129 @@ class NazmEmitterTests(unittest.TestCase):
                     ):
                         self.assertGreaterEqual(line_number, 1)
                         self.assertLessEqual(line_number, len(generated_lines))
+
+    def test_nazm_is_a_normal_selectable_assembler(self) -> None:
+        nazm = _find_nazm()
+        if nazm is None:
+            self.skipTest("Nazm executable is unavailable in this checkout")
+
+        with tempfile.TemporaryDirectory(prefix="baa_nazm_normal_") as temp:
+            work = Path(temp)
+            source = self.write_minimal_source(work)
+
+            emitted = work / "برنامج.نظم"
+            emit = self.run_baa(
+                work,
+                "-S",
+                "--assembler=nazm",
+                f"--nazm-path={nazm}",
+                str(source),
+                "-o",
+                str(emitted),
+            )
+            self.assertEqual(emit.returncode, 0, emit.stderr)
+            text = emitted.read_text(encoding="utf-8")
+            self.assertIn(".عام الرئيسية", text)
+            self.assertIsNone(re.search(r"[A-Za-z]", text))
+
+            object_suffix = ".obj" if os.name == "nt" else ".o"
+            object_path = work / f"برنامج{object_suffix}"
+            manifest_path = work / "بيان-البناء.json"
+            path_with_nazm = (
+                str(nazm.parent)
+                + os.pathsep
+                + os.environ.get("PATH", "")
+            )
+            with mock.patch.dict(os.environ, {"PATH": path_with_nazm}):
+                compile_object = self.run_baa(
+                    work,
+                    "-c",
+                    "--assembler=nazm",
+                    "--incremental",
+                    "--emit-build-manifest",
+                    str(manifest_path),
+                    str(source),
+                    "-o",
+                    str(object_path),
+                )
+            self.assertEqual(compile_object.returncode, 0, compile_object.stderr)
+            sections, global_symbols, _ = _inspect_object(object_path)
+            self.assertIn(".text", sections)
+            self.assertIn("الرئيسية", global_symbols)
+            self.assertNotIn("main", global_symbols)
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            self.assertEqual(manifest["assembler"], "nazm")
+            self.assertFalse(manifest["units"][0]["cache"]["enabled"])
+
+            cross_target = (
+                "x86_64-linux" if os.name == "nt" else "x86_64-windows"
+            )
+            cross_object = work / (
+                "برنامج-عابر.o" if os.name == "nt" else "برنامج-عابر.obj"
+            )
+            cross_compile = self.run_baa(
+                work,
+                "-c",
+                "--assembler=nazm",
+                f"--nazm-path={nazm}",
+                f"--target={cross_target}",
+                str(source),
+                "-o",
+                str(cross_object),
+            )
+            self.assertEqual(cross_compile.returncode, 0, cross_compile.stderr)
+            cross_sections, cross_symbols, _ = _inspect_object(cross_object)
+            self.assertIn(".text", cross_sections)
+            self.assertIn("الرئيسية", cross_symbols)
+
+            exe_suffix = ".exe" if os.name == "nt" else ""
+            executable = work / f"برنامج-تشغيل{exe_suffix}"
+            link = self.run_baa(
+                work,
+                "--assembler=nazm",
+                f"--nazm-path={nazm}",
+                str(source),
+                "-o",
+                str(executable),
+            )
+            self.assertEqual(link.returncode, 0, link.stderr)
+            run = subprocess.run(
+                [str(executable)],
+                capture_output=True,
+                timeout=30,
+            )
+            self.assertEqual(run.returncode, 0)
+
+    def test_missing_normal_nazm_never_falls_back_to_gas(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="baa_nazm_normal_missing_") as temp:
+            work = Path(temp)
+            source = self.write_minimal_source(work)
+            output = work / ("برنامج.obj" if os.name == "nt" else "برنامج.o")
+            missing = work / "نظم-مفقود"
+            proc = self.run_baa(
+                work,
+                "-c",
+                "--assembler=nazm",
+                f"--nazm-path={missing}",
+                str(source),
+                "-o",
+                str(output),
+            )
+
+            self.assertEqual(proc.returncode, 4, proc.stderr)
+            self.assertIn("فشل مجمّع نظم", proc.stderr)
+            self.assertFalse(output.exists())
+
+    def test_unknown_assembler_is_invalid_invocation(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="baa_unknown_assembler_") as temp:
+            work = Path(temp)
+            source = self.write_minimal_source(work)
+            proc = self.run_baa(
+                work,
+                "--assembler=مجهول",
+                str(source),
+            )
+            self.assertEqual(proc.returncode, 2, proc.stderr)
 
     def test_local_jump_source_is_canonical_arabic_for_both_targets(self) -> None:
         source = (

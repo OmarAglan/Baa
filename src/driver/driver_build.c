@@ -171,6 +171,10 @@ static void build_slot_hex(const CompilerConfig* config, const char* source, cha
     hash_string(&h, BAA_VERSION);
     hash_string(&h, source ? source : "");
     hash_string(&h, config && config->target ? config->target->name : "");
+    hash_string(&h,
+                config && config->assembler == BAA_ASSEMBLER_NAZM
+                    ? "nazm"
+                    : "gas");
 
     char tmp[128];
     snprintf(tmp,
@@ -214,6 +218,11 @@ bool driver_build_cache_is_allowed(const CompilerConfig* config)
     if (!config || !config->incremental) return false;
     if (config->assembly_only || config->emit_nazm) return false;
     if (config->nazm_shadow_executable) return false;
+    /*
+     * Nazm object caching waits for an assembler-version fingerprint rather
+     * than keying only on the executable spelling.
+     */
+    if (config->assembler == BAA_ASSEMBLER_NAZM) return false;
     if (config->check_only || config->header_check) return false;
     if (config->diagnostics_json) return false;
     if (config->dump_ir || config->dump_ir_opt || config->emit_ir) return false;
@@ -630,6 +639,11 @@ bool driver_build_write_manifest(const CompilerConfig* config,
     else if (config && config->compile_only)
         mode = "compile";
     fprintf(out, "\",\n  \"mode\": \"%s\",\n", mode);
+    fprintf(out,
+            "  \"assembler\": \"%s\",\n",
+            config && config->assembler == BAA_ASSEMBLER_NAZM
+                ? "nazm"
+                : "gas");
     fprintf(out, "  \"opt_level\": %d,\n", config ? (int)config->opt_level : 0);
     fprintf(out, "  \"runtime_checks\": %s,\n",
             config && config->runtime_checks ? "true" : "false");

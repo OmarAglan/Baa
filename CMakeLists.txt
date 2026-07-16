@@ -57,6 +57,7 @@ set(SOURCES
     src/driver/driver_time.c
     src/driver/driver_toolchain.c
     src/driver/driver_nazm.c
+    src/driver/driver_startup.c
     src/driver/driver_pipeline.c
     src/driver/driver_build.c
 )

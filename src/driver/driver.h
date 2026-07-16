@@ -28,6 +28,12 @@ typedef enum
     BAA_COMPILER_EXIT_INTERNAL_ERROR = 5,
 } BaaCompilerExitCode;
 
+typedef enum
+{
+    BAA_ASSEMBLER_GAS = 0,
+    BAA_ASSEMBLER_NAZM = 1,
+} BaaAssemblerKind;
+
 typedef struct
 {
     bool header_check;  // --check-header: فحص الترويسة دون توليد كود
@@ -39,6 +45,8 @@ typedef struct
     bool assembly_only; // -S: إنتاج كود تجميع فقط
     bool emit_nazm;     // --emit-nazm: إصدار مصدر نظم العربي فقط
     char *nazm_shadow_executable; // --nazm-shadow=<path>: مسار مجمّع نظم لمسار الظل
+    BaaAssemblerKind assembler; // --assembler=gas|nazm
+    char *nazm_executable; // --nazm-path=<path> أو BAA_NAZM أو nazm من PATH
     bool compile_only;  // -c: تجميع إلى كائن فقط (بدون ربط)
     bool verbose;       // -v: وضع التفاصيل
     bool dump_ir;       // --dump-ir: طباعة IR بعد التحليل الدلالي

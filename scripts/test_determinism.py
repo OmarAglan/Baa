@@ -189,6 +189,7 @@ def _check_manifest(baa: Path, out_dir: Path) -> list[CheckResult]:
         "compiler_version",
         "target",
         "mode",
+        "assembler",
         "opt_level",
         "runtime_checks",
         "runtime_check_mask",

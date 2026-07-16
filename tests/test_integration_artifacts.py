@@ -102,6 +102,7 @@ class IntegrationArtifactDocumentationTests(unittest.TestCase):
             "`compiler-cli-v1` does not include `baa build`, `baa run`, or `baa clean`.",
             '"schema": 1',
             '"compiler_version": "0.6.0"',
+            '"assembler": "gas"',
             '"runtime_check_mask": 0',
             '"units": [',
             '"cache": {',

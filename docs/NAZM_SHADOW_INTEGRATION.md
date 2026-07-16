@@ -175,6 +175,26 @@ continue to exist for comparison, but it never converts a failed Nazm shadow
 result into success. Unsupported forms must be reported and remain visible in
 the coverage matrix.
 
+## Selectable normal assembler path
+
+`--assembler=nazm` promotes the same canonical emitter from comparison-only use
+to the normal C-like assembler position:
+
+```text
+Baa source -> Machine IR -> Arabic Nazm source -> nazm -> object -> host linker
+```
+
+The executable is selected by `--nazm-path=<path>`, then `BAA_NAZM`, then
+`nazm` from `PATH`. `-S --assembler=nazm` stops at inspectable `.نظم` source;
+`-c` writes the requested object directly, including cross-target ELF64/COFF
+objects because Nazm owns both writers; a normal host full build links Nazm
+objects with the Baa runtime. Cross-target linking remains deferred. Linux uses
+a small Arabic-only Nazm startup object
+that calls the compiler-owned Arabic hosted-runtime adapter. Missing tools,
+unsupported emission, assembly errors, or link errors remain terminal and
+never retry through GAS. `--assembler=gas` stays the default rollback until the
+production-admission and rollback gates are signed off.
+
 ## Source-map and assembler-diagnostic contract
 
 Every successful `--emit-nazm` source `<output>` is accompanied by

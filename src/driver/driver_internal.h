@@ -20,6 +20,7 @@
 #include "driver_time.h"
 #include "driver_toolchain.h"
 #include "driver_nazm.h"
+#include "driver_startup.h"
 #include "process.h"
 #include "../support/version.h"
 #include "../support/file_io.h"

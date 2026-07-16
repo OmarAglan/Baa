@@ -84,6 +84,7 @@ class DiagnosticDeterminismTests(unittest.TestCase):
                         "compiler_version": "0.5.9",
                         "target": "x86_64-linux",
                         "mode": "link",
+                        "assembler": "gas",
                         "opt_level": 2,
                         "runtime_checks": False,
                         "runtime_check_mask": 0,

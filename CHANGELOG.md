@@ -54,6 +54,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
   - Added `baa-nazm-source-map-v1` sidecars that map generated Nazm line ranges to exact
     UTF-8 Baa file/line/column spans. Shadow execution captures and replays Nazm stderr,
     then appends the mapped original Baa location without shell parsing or fallback.
+- **Selectable normal Nazm assembler path**:
+  - Added `--assembler=nazm` with `--nazm-path`, `BAA_NAZM`, then `PATH`
+    resolution; `-S` emits Arabic `.نظم`, `-c` writes the selected object
+    directly, and full builds pass Nazm objects to the existing linker.
+  - Kept `--assembler=gas` as the explicit default rollback during production
+    admission. Missing or failing Nazm returns toolchain code `4`, removes the
+    object, and never retries through GAS.
+  - Added an Arabic-only Nazm Linux hosted-startup object that calls the
+    compiler-owned Arabic runtime adapter for `__libc_start_main`; public
+    assembly and linker entry names remain Arabic.
+  - Added the selected assembler to deterministic build manifests and bypassed
+    Nazm incremental reuse until the cache key includes a verified assembler
+    version fingerprint.
 - **First executable Arabic Nazm emitter slice**:
   - Added non-default `--emit-nazm` output after register allocation for a minimal integer
     entry program on Windows and Linux targets while leaving GAS as the production/default assembler.

@@ -1892,7 +1892,7 @@
 
 * \[ ] **Full gate** — quick, full, stress, determinism, release, and cross-target suites pass through Nazm.
 * \[ ] **Linker acceptance** — real Windows and Linux linkers accept produced objects.
-* \[ ] **Normal assembler selection** — add `--assembler=nazm` with executable resolution from configuration or `PATH`; keep explicit `--assembler=gas` only as the measured migration rollback.
+* \[x] **Normal assembler selection** — `--assembler=nazm` resolves the executable from `--nazm-path`, `BAA_NAZM`, or `PATH`, emits/assembles canonical Arabic source directly to the selected object, and passes it to the normal linker; `--assembler=gas` remains the explicit measured migration rollback with no silent fallback.
 * \[ ] **Default-on readiness** — approved parity report and rollback procedure exist.
 * \[ ] **In-process equivalence** — CLI and future buffer API produce equivalent object semantics before embedding becomes default.
 

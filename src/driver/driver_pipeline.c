@@ -10,67 +10,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-// ============================================================================
-// بدء تشغيل مخصص (custom startup)
-// ============================================================================
-
-#define BAA_CUSTOM_START_SYMBOL "الرئيسية_بدء"
-
-/**
- * @brief الحصول على كود assembly لتعريف نقطة دخول مخصصة.
- *
- * ملاحظة مهمة:
- * - هذا الكود لا يلغي CRT/libc، بل يحافظ على التهيئة الصحيحة:
- *   - Windows/COFF: يستدعي mainCRTStartup (CRT) ثم ExitProcess إن عاد.
- *   - Linux/ELF: يستدعي __libc_start_main لضمان تهيئة libc.
- */
-static const char* driver_custom_startup_asm(const BaaTarget* target)
-{
-    // GAS AT&T syntax
-    if (target && target->obj_format == BAA_OBJFORMAT_ELF) {
-        return
-            ".text\n"
-            ".globl " BAA_CUSTOM_START_SYMBOL "\n"
-            BAA_CUSTOM_START_SYMBOL ":\n"
-            "    movq %rsp, %r10\n"                // stack_end
-            "    movq (%rsp), %rsi\n"              // argc
-            "    leaq 8(%rsp), %rdx\n"             // argv
-            "    leaq الرئيسية(%rip), %rdi\n"     // نقطة دخول البرنامج العربية
-            "    xorl %ecx, %ecx\n"                // init = NULL
-            "    xorl %r8d, %r8d\n"                // fini = NULL
-            "    xorl %r9d, %r9d\n"                // rtld_fini = NULL
-            "    subq $8, %rsp\n"                  // محاذاة قبل push
-            "    pushq %r10\n"                     // 7th arg: stack_end
-            "    call __libc_start_main\n"
-            "    hlt\n"
-            ".section .note.GNU-stack,\"\",@progbits\n";
-    }
-
-    // Windows/COFF (MinGW-w64): runtime bridge decodes UTF-16 argv to UTF-8.
-    return
-        ".text\n"
-        ".globl " BAA_CUSTOM_START_SYMBOL "\n"
-        BAA_CUSTOM_START_SYMBOL ":\n"
-        "    andq $-16, %rsp\n"
-        "    subq $32, %rsp\n"
-        "    call بدء_ويندوز\n"
-        "    hlt\n";
-}
-
-/**
- * @brief كتابة نص إلى ملف (استبدال محتواه).
- */
-static int driver_write_text_file(const char* path, const char* text)
-{
-    if (!path || !text) return 1;
-    FILE* f = baa_fopen_utf8(path, "wb");
-    if (!f) return 1;
-    size_t n = strlen(text);
-    size_t w = fwrite(text, 1, n, f);
-    fclose(f);
-    return (w == n) ? 0 : 1;
-}
-
 /**
  * @brief إلحاق نص بنهاية ملف (append).
  */
@@ -590,7 +529,8 @@ static BaaCompilerExitCode compile_one_ir(const CompilerConfig *config,
     }
     if (config->time_phases) phase_times->regalloc_s += (driver_time_seconds() - t0);
 
-    if (config->emit_nazm)
+    if (config->emit_nazm ||
+        (config->assembly_only && config->assembler == BAA_ASSEMBLER_NAZM))
     {
         char *nazm_output = NULL;
         if (input_count == 1 && config->output_file)
@@ -628,7 +568,9 @@ static BaaCompilerExitCode compile_one_ir(const CompilerConfig *config,
                                                          nazm_output,
                                                          lexer_deps,
                                                          lexer_dep_count,
-                                                         "nazm-source",
+                                                         config->assembly_only
+                                                            ? "assembly-only-nazm"
+                                                            : "nazm-source",
                                                          build_manifest);
         if (config->verbose)
             printf("[INFO] Generated Nazm source: %s\n", nazm_output);
@@ -655,6 +597,85 @@ static BaaCompilerExitCode compile_one_ir(const CompilerConfig *config,
             free(source);
             return shadow_rc;
         }
+    }
+
+    if (config->assembler == BAA_ASSEMBLER_NAZM)
+    {
+        char *nazm_source =
+            driver_make_ascii_temp_path("nazm", ".نظم");
+        char *obj_file = early_obj_file;
+        if (!nazm_source || !obj_file)
+        {
+            fprintf(stderr, "خطأ: تعذر تحديد مسار مصدر/كائن نظم المؤقت.\n");
+            free(nazm_source);
+            mach_module_free(mach_module);
+            ir_module_free(ir_module);
+            lexer_free_dependencies(&lexer);
+            free(source);
+            if (early_obj_file && early_obj_file != config->output_file)
+                free(early_obj_file);
+            return BAA_COMPILER_EXIT_INTERNAL_ERROR;
+        }
+
+        BaaCompilerExitCode assemble_rc = driver_assemble_nazm_module(
+            config,
+            phase_times,
+            mach_module,
+            nazm_source,
+            obj_file,
+            config->verbose);
+        if (assemble_rc != BAA_COMPILER_EXIT_SUCCESS)
+        {
+            free(nazm_source);
+            mach_module_free(mach_module);
+            ir_module_free(ir_module);
+            lexer_free_dependencies(&lexer);
+            free(source);
+            if (obj_file != config->output_file) free(obj_file);
+            return assemble_rc;
+        }
+
+        if (config->verbose)
+        {
+            printf("[INFO] Assembled with Nazm: %s\n", obj_file);
+            printf("[INFO] Retained Nazm source: %s\n", nazm_source);
+        }
+        free(nazm_source);
+        mach_module_free(mach_module);
+
+        if (config->time_phases)
+        {
+            IRArenaStats s = {0};
+            ir_arena_get_stats(&ir_module->arena, &s);
+            if (s.used_bytes > phase_times->ir_arena_used_max)
+                phase_times->ir_arena_used_max = s.used_bytes;
+            if (s.cap_bytes > phase_times->ir_arena_cap_max)
+                phase_times->ir_arena_cap_max = s.cap_bytes;
+            if (s.chunks > phase_times->ir_arena_chunks_max)
+                phase_times->ir_arena_chunks_max = s.chunks;
+        }
+
+        ir_module_free(ir_module);
+        const char* const* build_deps = lexer_deps;
+        size_t build_dep_count = lexer_dep_count;
+        free(source);
+
+        if (!driver_build_update_cache(config,
+                                       current_input,
+                                       obj_file,
+                                       build_deps,
+                                       build_dep_count,
+                                       build_manifest))
+        {
+            fprintf(stderr, "خطأ: فشل تحديث بيان/كاش البناء.\n");
+            if (obj_file != config->output_file) free(obj_file);
+            lexer_free_dependencies(&lexer);
+            return BAA_COMPILER_EXIT_TOOLCHAIN_ERROR;
+        }
+
+        lexer_free_dependencies(&lexer);
+        if (out_obj_file) *out_obj_file = obj_file;
+        return BAA_COMPILER_EXIT_SUCCESS;
     }
 
     char* final_asm_output = NULL;
@@ -752,7 +773,7 @@ static BaaCompilerExitCode compile_one_ir(const CompilerConfig *config,
         // حتى يتمكن المستخدم من ربطه يدوياً أو فحصه (ويُستخدم أيضاً لاختبارات asm-only).
         if (config->custom_startup && input_count == 1)
         {
-            const char* stub = driver_custom_startup_asm(config->target);
+            const char* stub = driver_startup_gas_source(config->target);
             if (stub && driver_append_text_file(asm_file, "\n\n") == 0)
             {
                 (void)driver_append_text_file(asm_file, stub);
@@ -924,53 +945,17 @@ BaaCompilerExitCode driver_compile_files(const CompilerConfig *config,
     // أضف كائن بدء التشغيل في نهاية قائمة الربط.
     if (need_startup_obj)
     {
-        const char* asm_path = ".baa_startup_tmp.s";
-        const char* obj_path = ".baa_startup_tmp.o";
-
-        const char* stub = driver_custom_startup_asm(config->target);
-        if (!stub)
-        {
-            driver_odr_registry_free(odr_registry_ptr);
-            fprintf(stderr, "خطأ: فشل توليد كود بدء التشغيل.\n");
-            driver_free_obj_files(obj_files, obj_count, config->output_file);
-            return BAA_COMPILER_EXIT_INTERNAL_ERROR;
-        }
-
-        if (driver_write_text_file(asm_path, stub) != 0)
-        {
-            driver_odr_registry_free(odr_registry_ptr);
-            fprintf(stderr, "خطأ: فشل كتابة ملف بدء التشغيل '%s'.\n", asm_path);
-            driver_free_obj_files(obj_files, obj_count, config->output_file);
-            return BAA_COMPILER_EXIT_TOOLCHAIN_ERROR;
-        }
-
-        // نجمعه إلى كائن ثم نضيفه لقائمة الربط.
+        char *startup_object = NULL;
         BaaCompilerExitCode startup_assemble_rc =
-            driver_toolchain_assemble_one(config, phase_times, asm_path, obj_path);
+            driver_build_startup_object(config, phase_times, &startup_object);
         if (startup_assemble_rc != BAA_COMPILER_EXIT_SUCCESS)
         {
             driver_odr_registry_free(odr_registry_ptr);
             fprintf(stderr, "خطأ: فشل تجميع كود بدء التشغيل.\n");
-            if (!config->verbose) remove(asm_path);
             driver_free_obj_files(obj_files, obj_count, config->output_file);
             return startup_assemble_rc;
         }
-
-        if (!config->verbose)
-        {
-            remove(asm_path);
-        }
-
-        char* obj_dup = driver_strdup_alloc(obj_path);
-        if (!obj_dup)
-        {
-            driver_odr_registry_free(odr_registry_ptr);
-            fprintf(stderr, "خطأ: نفدت الذاكرة.\n");
-            if (!config->verbose) remove(obj_path);
-            driver_free_obj_files(obj_files, obj_count, config->output_file);
-            return BAA_COMPILER_EXIT_INTERNAL_ERROR;
-        }
-        obj_files[obj_count++] = obj_dup;
+        obj_files[obj_count++] = startup_object;
     }
 
     driver_odr_registry_free(odr_registry_ptr);

@@ -8,6 +8,25 @@
 #include <ctype.h>
 #include <limits.h>
 
+static const char k_driver_nazm_linux_startup[] =
+    "; نقطة البدء المستضافة العربية لهدف لينكس\n"
+    ".نص\n"
+    ".خارجي الرئيسية\n"
+    ".خارجي ابدأ_المكتبة_المستضافة\n"
+    ".عام الرئيسية_بدء\n"
+    "الرئيسية_بدء:\n"
+    "    انقل سجل_عام_١٠، مؤشر_المكدس\n"
+    "    انقل فهرس_المصدر، [مؤشر_المكدس]\n"
+    "    احسب_عنوان سجل_البيانات، [مؤشر_المكدس+٨]\n"
+    "    احسب_عنوان فهرس_الوجهة، [مؤشر_التعليمة+الرئيسية]\n"
+    "    خالف_بتيا سجل_العداد_٣٢، سجل_العداد_٣٢\n"
+    "    خالف_بتيا سجل_عام_٨_٣٢، سجل_عام_٨_٣٢\n"
+    "    خالف_بتيا سجل_عام_٩_٣٢، سجل_عام_٩_٣٢\n"
+    "    اطرح مؤشر_المكدس، ٨\n"
+    "    ادفع سجل_عام_١٠\n"
+    "    ناد ابدأ_المكتبة_المستضافة\n"
+    "    أوقف\n";
+
 static char *driver_nazm_artifact_path(const char *base, const char *suffix)
 {
     if (!base || !suffix) return NULL;
@@ -201,6 +220,96 @@ static void driver_nazm_replay_diagnostic(const char *diagnostic_path,
     free(diagnostic);
 }
 
+static bool driver_nazm_write_text(const char *path, const char *text)
+{
+    if (!path || !text) return false;
+    FILE *out = baa_fopen_utf8(path, "wb");
+    if (!out) return false;
+    size_t size = strlen(text);
+    bool ok = fwrite(text, 1u, size, out) == size;
+    if (fclose(out) != 0) ok = false;
+    return ok;
+}
+
+const char *driver_nazm_get_executable(const CompilerConfig *config)
+{
+    if (config && config->nazm_executable && config->nazm_executable[0])
+        return config->nazm_executable;
+    const char *environment = getenv("BAA_NAZM");
+    if (environment && environment[0]) return environment;
+    return "nazm";
+}
+
+static BaaCompilerExitCode driver_nazm_run_assembler(
+    const CompilerConfig *config,
+    CompilerPhaseTimes *times,
+    const char *executable,
+    const char *source_path,
+    const char *source_map_path,
+    const char *object_path,
+    bool keep_source)
+{
+    if (!config || !executable || !source_path || !object_path)
+        return BAA_COMPILER_EXIT_INTERNAL_ERROR;
+
+    const char *format = config->target &&
+                         config->target->obj_format == BAA_OBJFORMAT_COFF
+        ? "كوف"
+        : "إلف64";
+    char *diagnostic_path =
+        driver_nazm_artifact_path(object_path, ".تشخيص-نظم");
+    if (!diagnostic_path) return BAA_COMPILER_EXIT_INTERNAL_ERROR;
+
+    const char *argv[] = {
+        executable,
+        "-ص",
+        format,
+        "-خ",
+        object_path,
+        source_path,
+        NULL,
+    };
+    double started = 0.0;
+    if (times && config->time_phases) started = driver_time_seconds();
+    BaaProcessResult process = {0};
+    bool process_ok = baa_process_run_redirect(argv,
+                                               NULL,
+                                               NULL,
+                                               diagnostic_path,
+                                               &process);
+    if (times && config->time_phases)
+        times->assemble_s += driver_time_seconds() - started;
+
+    driver_nazm_replay_diagnostic(diagnostic_path, source_map_path);
+    (void)driver_toolchain_delete_file_utf8(diagnostic_path);
+    free(diagnostic_path);
+
+    if (!process_ok || !process.started || process.exit_code != 0)
+    {
+        fprintf(stderr,
+                "خطأ: فشل مجمّع نظم '%s'%s%d.\n",
+                executable,
+                process.started ? " برمز خروج " : " قبل بدء العملية؛ الرمز ",
+                process.exit_code);
+        (void)driver_toolchain_delete_file_utf8(object_path);
+        if (!keep_source)
+        {
+            (void)driver_toolchain_delete_file_utf8(source_path);
+            if (source_map_path)
+                (void)driver_toolchain_delete_file_utf8(source_map_path);
+        }
+        return BAA_COMPILER_EXIT_TOOLCHAIN_ERROR;
+    }
+
+    if (!keep_source)
+    {
+        (void)driver_toolchain_delete_file_utf8(source_path);
+        if (source_map_path)
+            (void)driver_toolchain_delete_file_utf8(source_map_path);
+    }
+    return BAA_COMPILER_EXIT_SUCCESS;
+}
+
 BaaCompilerExitCode driver_emit_nazm_source(const CompilerConfig *config,
                                             MachineModule *module,
                                             const char *output_path)
@@ -282,6 +391,79 @@ BaaCompilerExitCode driver_emit_nazm_source(const CompilerConfig *config,
     return BAA_COMPILER_EXIT_TOOLCHAIN_ERROR;
 }
 
+BaaCompilerExitCode driver_assemble_nazm_module(
+    const CompilerConfig *config,
+    CompilerPhaseTimes *times,
+    MachineModule *module,
+    const char *source_path,
+    const char *object_path,
+    bool keep_source)
+{
+    if (!config || !module || !source_path || !object_path)
+        return BAA_COMPILER_EXIT_INTERNAL_ERROR;
+
+    (void)driver_toolchain_delete_file_utf8(object_path);
+    double started = 0.0;
+    if (times && config->time_phases) started = driver_time_seconds();
+    BaaCompilerExitCode emit_rc =
+        driver_emit_nazm_source(config, module, source_path);
+    if (times && config->time_phases)
+        times->emit_s += driver_time_seconds() - started;
+    if (emit_rc != BAA_COMPILER_EXIT_SUCCESS)
+    {
+        (void)driver_toolchain_delete_file_utf8(object_path);
+        return emit_rc;
+    }
+
+    char *source_map_path =
+        driver_nazm_artifact_path(source_path, ".خريطة-باء.json");
+    if (!source_map_path)
+    {
+        (void)driver_toolchain_delete_file_utf8(source_path);
+        return BAA_COMPILER_EXIT_INTERNAL_ERROR;
+    }
+
+    BaaCompilerExitCode rc = driver_nazm_run_assembler(
+        config,
+        times,
+        driver_nazm_get_executable(config),
+        source_path,
+        source_map_path,
+        object_path,
+        keep_source);
+    free(source_map_path);
+    return rc;
+}
+
+BaaCompilerExitCode driver_assemble_nazm_startup(
+    const CompilerConfig *config,
+    CompilerPhaseTimes *times,
+    const char *source_path,
+    const char *object_path,
+    bool keep_source)
+{
+    if (!config || !source_path || !object_path)
+        return BAA_COMPILER_EXIT_INTERNAL_ERROR;
+    if (!config->target || config->target->obj_format != BAA_OBJFORMAT_ELF)
+        return BAA_COMPILER_EXIT_UNSUPPORTED;
+    (void)driver_toolchain_delete_file_utf8(object_path);
+    if (!driver_nazm_write_text(source_path, k_driver_nazm_linux_startup))
+    {
+        fprintf(stderr,
+                "خطأ: تعذرت كتابة مصدر بدء التشغيل لنظم '%s'.\n",
+                source_path);
+        return BAA_COMPILER_EXIT_TOOLCHAIN_ERROR;
+    }
+    return driver_nazm_run_assembler(
+        config,
+        times,
+        driver_nazm_get_executable(config),
+        source_path,
+        NULL,
+        object_path,
+        keep_source);
+}
+
 BaaCompilerExitCode driver_emit_nazm_shadow_object(const CompilerConfig *config,
                                                    MachineModule *module,
                                                    char **out_object_path)
@@ -295,11 +477,6 @@ BaaCompilerExitCode driver_emit_nazm_shadow_object(const CompilerConfig *config,
                                 config->target->obj_format == BAA_OBJFORMAT_COFF
         ? ".ظل-نظم.obj"
         : ".ظل-نظم.o";
-    const char *format = config->target &&
-                         config->target->obj_format == BAA_OBJFORMAT_COFF
-        ? "كوف"
-        : "إلف64";
-
     char *source_path = driver_nazm_artifact_path(config->output_file,
                                                   ".ظل-نظم.نظم");
     char *object_path = driver_nazm_artifact_path(config->output_file,
@@ -307,14 +484,11 @@ BaaCompilerExitCode driver_emit_nazm_shadow_object(const CompilerConfig *config,
     char *source_map_path = source_path
         ? driver_nazm_artifact_path(source_path, ".خريطة-باء.json")
         : NULL;
-    char *diagnostic_path = driver_nazm_artifact_path(config->output_file,
-                                                       ".ظل-نظم.تشخيص");
-    if (!source_path || !object_path || !source_map_path || !diagnostic_path)
+    if (!source_path || !object_path || !source_map_path)
     {
         free(source_path);
         free(object_path);
         free(source_map_path);
-        free(diagnostic_path);
         return BAA_COMPILER_EXIT_INTERNAL_ERROR;
     }
 
@@ -325,42 +499,26 @@ BaaCompilerExitCode driver_emit_nazm_shadow_object(const CompilerConfig *config,
         free(source_path);
         free(object_path);
         free(source_map_path);
-        free(diagnostic_path);
         return emit_rc;
     }
 
-    const char *argv[] = {
-        config->nazm_shadow_executable,
-        "-ص",
-        format,
-        "-خ",
-        object_path,
-        source_path,
+    BaaCompilerExitCode assemble_rc = driver_nazm_run_assembler(
+        config,
         NULL,
-    };
-    BaaProcessResult process = {0};
-    bool process_ok = baa_process_run_redirect(argv,
-                                               NULL,
-                                               NULL,
-                                               diagnostic_path,
-                                               &process);
-    driver_nazm_replay_diagnostic(diagnostic_path, source_map_path);
-    (void)driver_toolchain_delete_file_utf8(diagnostic_path);
-    if (!process_ok || !process.started ||
-        process.exit_code != 0)
+        config->nazm_shadow_executable,
+        source_path,
+        source_map_path,
+        object_path,
+        true);
+    if (assemble_rc != BAA_COMPILER_EXIT_SUCCESS)
     {
-        fprintf(stderr,
-                "خطأ: فشل مجمّع نظم في مسار الظل%s%d.\n",
-                process.started ? " برمز خروج " : " قبل بدء العملية؛ الرمز ",
-                process.exit_code);
         (void)driver_toolchain_delete_file_utf8(source_path);
         (void)driver_toolchain_delete_file_utf8(source_map_path);
         (void)driver_toolchain_delete_file_utf8(object_path);
         free(source_path);
         free(object_path);
         free(source_map_path);
-        free(diagnostic_path);
-        return BAA_COMPILER_EXIT_TOOLCHAIN_ERROR;
+        return assemble_rc;
     }
 
     if (config->verbose)
@@ -371,7 +529,6 @@ BaaCompilerExitCode driver_emit_nazm_shadow_object(const CompilerConfig *config,
 
     free(source_path);
     free(source_map_path);
-    free(diagnostic_path);
     *out_object_path = object_path;
     return BAA_COMPILER_EXIT_SUCCESS;
 }

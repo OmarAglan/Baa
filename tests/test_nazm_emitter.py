@@ -345,6 +345,7 @@ class NazmEmitterTests(unittest.TestCase):
                 "}\n"
                 "صحيح الرئيسية() {\n"
                 "    عشري ناتج = احسب(كـ<عشري>(٦)، ٢.٠).\n"
+                "    اطبع ناتج.\n"
                 "    إرجع كـ<صحيح>(ناتج) + ٦.\n"
                 "}\n",
                 encoding="utf-8",
@@ -383,6 +384,11 @@ class NazmEmitterTests(unittest.TestCase):
                     self.assertIn("سجل_عشري_٠", text)
                     for mnemonic in expected_mnemonics:
                         self.assertIn(mnemonic, text)
+                    if target == "x86_64-linux":
+                        self.assertRegex(
+                            text,
+                            r"انقل سجل_المركم_٣٢، ١\s+ناد اطبع_منسقا",
+                        )
 
                     object_path = work / f"عشري-{target}{object_suffix}"
                     assembled = subprocess.run(

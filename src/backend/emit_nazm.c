@@ -500,6 +500,14 @@ static BaaNazmEmitResult nazm_validate_instruction(const MachineInst *inst,
             return nazm_validate_label_operand(&inst->dst, inst);
 
         case MACH_CALL:
+            if (target && target->cc &&
+                target->cc->sysv_set_al_zero_on_call &&
+                (inst->sysv_al < -1 || inst->sysv_al > 8))
+                return nazm_unsupported(
+                    "عدد_سجلات_عشرية_للنداء",
+                    NULL,
+                    "عدد سجلات المعاملات العشرية لنداء نظام في يجب أن يكون بين ٠ و٨.",
+                    inst);
             if (inst->src1.kind == MACH_OP_VREG &&
                 nazm_operand_bits(&inst->src1) == 64)
                 return nazm_validate_operand(&inst->src1, target, inst);

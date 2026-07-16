@@ -295,6 +295,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
   - The Baa/Nazm runtime gate now pins the exact fixed and scientific decimal
     output instead of allowing two equally undefined executions to compare
     successfully.
+- **System V decimal varargs in Nazm shadow output**:
+  - Arabic Nazm call emission now preserves Baa's machine-level count of
+    decimal argument registers in `سجل_المركم_٣٢` before every Linux call.
+  - Cross-target emission coverage now pins the count before decimal printing,
+    preventing a Windows-only validation run from missing Linux varargs drift.
 
 - **Parser recovery progress**:
   - An identifier that is not a valid declaration, assignment, call, or expression

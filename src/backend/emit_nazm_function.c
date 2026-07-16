@@ -253,13 +253,24 @@ static void nazm_write_function(FILE *out,
                     break;
 
                 case MACH_CALL:
+                    if (target->cc->sysv_set_al_zero_on_call)
+                    {
+                        int decimal_register_count = inst->sysv_al;
+                        if (decimal_register_count < 0)
+                            decimal_register_count = 0;
+                        fputs("    انقل سجل_المركم_٣٢، ", out);
+                        nazm_write_unsigned(
+                            out, (uint64_t)decimal_register_count);
+                        fputc('\n', out);
+                        emitted_lines += 1;
+                    }
                     fputs("    ناد ", out);
                     if (inst->src1.kind == MACH_OP_FUNC)
                         nazm_write_symbol(out, inst->src1.data.name);
                     else
                         nazm_write_operand(out, &inst->src1);
                     fputc('\n', out);
-                    emitted_lines = 1;
+                    emitted_lines += 1;
                     break;
 
                 case MACH_PUSH:

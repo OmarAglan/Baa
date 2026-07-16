@@ -222,7 +222,10 @@ absolute data relocations, PC-relative global loads/stores/address formation,
 read-only string tables, BSS, alignment, and the complete scalar-decimal
 instruction surface emitted by the current corpus. Baa maps
 compiler-owned platform ABI names to Arabic runtime adapters and rejects any
-unmapped Latin symbol.
+unmapped Latin symbol. Linux Nazm calls also preserve the machine-level
+System V decimal-register count in `سجل_المركم_٣٢` before `ناد`, including
+variadic decimal printing; the focused emitter test checks this cross-target
+even when it runs on Windows.
 
 On both targets, production and shadow executables enter through the strong
 Arabic symbol `الرئيسية_بدء`; no `main`, `wmain`, direct-function process entry,

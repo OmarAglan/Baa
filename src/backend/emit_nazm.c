@@ -809,7 +809,6 @@ static int nazm_frame_size(const MachineFunc *func,
 }
 
 static unsigned nazm_write_epilogue(FILE *out,
-                                    bool is_arabic_entry,
                                     const MachineFunc *func,
                                     const BaaTarget *target,
                                     const PhysReg *callee_regs,
@@ -826,13 +825,6 @@ static unsigned nazm_write_epilogue(FILE *out,
     }
     fputs("    انقل مؤشر_المكدس، مؤشر_القاعدة\n", out);
     fputs("    اسحب مؤشر_القاعدة\n", out);
-    if (is_arabic_entry && target && target->obj_format == BAA_OBJFORMAT_ELF)
-    {
-        fputs("    انقل فهرس_الوجهة، سجل_المركم\n", out);
-        fputs("    انقل سجل_المركم، ٦٠\n", out);
-        fputs("    ناد_النظام\n", out);
-        return (unsigned)(callee_count + 5);
-    }
     fputs("    ارجع\n", out);
     return (unsigned)(callee_count + 3);
 }

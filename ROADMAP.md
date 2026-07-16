@@ -1829,9 +1829,9 @@
 * \[x] **Opt-in shadow flag** — assemble with Nazm beside the production GAS path.
 * \[x] **Object comparison** — compare sections, symbols, relocations, and normalized semantics rather than requiring incidental byte identity for every admitted source.
 * \[x] **Link/runtime comparison** — link and run both outputs on Windows and Linux for every admitted source.
-* \[x] **Arabic linker entry** — preserve `الرئيسية` in Nazm ELF64/COFF objects and select it directly as the shadow entry without a `main` alias.
+* \[x] **Arabic linker entry** — preserve `الرئيسية` in Nazm ELF64/COFF objects and enter both hosted shadow targets through `الرئيسية_بدء` without a `main` alias or direct-function process entry.
 * \[x] **Arabic production ABI** — GAS remains the production assembler, but emits `الرئيسية` unchanged, links through `الرئيسية_بدء`, and converts Windows UTF-16 argv through `بدء_ويندوز` without `main`/`wmain` aliases.
-* \[x] **Arabic shadow startup ABI** — Windows production and Nazm shadow links both resolve the strong Arabic runtime entry `الرئيسية_بدء`; the linker reads its UTF-8 spelling from a linker-owned response file, avoiding both narrow-argv mojibake and a hidden ASCII default entry.
+* \[x] **Arabic shadow startup ABI** — Linux reuses the generated `الرئيسية_بدء` object and returns through `__libc_start_main`; Windows resolves the same strong Arabic entry through a linker-owned UTF-8 response file and dispatches to `بدء_ويندوز`.
 * \[x] **Diagnostics comparison** — unsupported forms remain visible Arabic failures.
 * \[x] **No silent fallback** — never substitute guessed bytes or hide unsupported Nazm input behind GAS.
 

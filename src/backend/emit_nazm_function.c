@@ -13,7 +13,6 @@ static void nazm_write_function(FILE *out,
                                 unsigned function_id,
                                 NazmSourceMapWriter *map)
 {
-    bool is_arabic_entry = strcmp(func->name, "الرئيسية") == 0;
     PhysReg callee_regs[PHYS_REG_COUNT];
     int callee_count = machine_func_collect_callee_saved(
         func, target, callee_regs, PHYS_REG_COUNT);
@@ -236,7 +235,7 @@ static void nazm_write_function(FILE *out,
 
                 case MACH_RET:
                     emitted_lines = nazm_write_epilogue(
-                        out, is_arabic_entry, func, target,
+                        out, func, target,
                         callee_regs, callee_count);
                     has_return = true;
                     break;
@@ -265,6 +264,6 @@ static void nazm_write_function(FILE *out,
             map->generated_line += 1;
         }
         map->generated_line += nazm_write_epilogue(
-            out, is_arabic_entry, func, target, callee_regs, callee_count);
+            out, func, target, callee_regs, callee_count);
     }
 }

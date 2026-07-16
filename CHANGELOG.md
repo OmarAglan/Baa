@@ -81,10 +81,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
   - Made Windows production and Nazm shadow executables share the strong Arabic startup
     `الرئيسية_بدء` → `بدء_ويندوز`. A linker-owned UTF-8 response file avoids narrow-argv
     mojibake without falling back to `main`, `wmain`, or the linker's ASCII default entry.
+  - Made Linux production and Nazm shadow executables share the generated
+    `الرئيسية_بدء` startup object. Nazm-emitted `الرئيسية` now returns through
+    `__libc_start_main` instead of issuing a raw exit syscall, preserving libc
+    initialization, buffered output, arguments, and normal exit behavior.
   - Added optional ecosystem parity coverage for source spelling, `.text`, exported entry,
     relocations, link success, exit status, stdout, and stderr on the host platform.
-  - Preserved `الرئيسية` unchanged in Nazm ELF64/COFF objects and selected that Arabic
-    symbol directly as the shadow process entry, with no `main` linker alias.
+  - Preserved `الرئيسية` unchanged in Nazm ELF64/COFF objects while selecting the shared
+    Arabic `الرئيسية_بدء` hosted entry, with no `main` linker alias.
   - Added dedicated Windows and Linux CI jobs that check out and build Nazm, then run the
     real cross-repository shadow parity suite instead of silently skipping it.
 - **Portable SHA-256 file hashing**:

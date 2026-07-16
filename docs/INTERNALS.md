@@ -2539,7 +2539,7 @@ Strings are collected during parsing and emitted with unique labels:
 | **Name Mangling** | None - functions use their Arabic UTF-8 names as assembly labels |
 | **Special Case** | No `main`/`wmain` symbol is emitted. The linker receives the UTF-8 entry name through a response file on Windows so native narrow argv cannot corrupt it. |
 | **Main with args (v0.3.12.5)** | If the user defines `صحيح الرئيسية(صحيح عدد، نص[] معاملات)`, the compiler lowers the body as `الرئيسية_المستخدم` and emits the Arabic ABI wrapper `الرئيسية`. Linux passes UTF-8 argv; Windows `بدء_ويندوز` converts the original UTF-16 command line to UTF-8 before the wrapper constructs Baa `نص[]`. |
-| **Hosted startup** | Every final GAS link injects `الرئيسية_بدء`. Linux passes `الرئيسية` to `__libc_start_main`; Windows calls the runtime `بدء_ويندوز` bridge and exits through `ExitProcess`. `--startup=custom` remains a compatibility switch for appending this same stub to explicit `-S` output. |
+| **Hosted startup** | Every final GAS link and every Nazm shadow link enters through `الرئيسية_بدء`. Linux passes the returning `الرئيسية` to `__libc_start_main`; Windows calls the runtime `بدء_ويندوز` bridge and exits through `ExitProcess`. `--startup=custom` remains a compatibility switch for appending this same stub to explicit `-S` output. |
 | **External Calls** | C runtime (`printf`, etc.) via toolchain symbol resolution |
 
 ---

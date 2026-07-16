@@ -539,10 +539,9 @@ BaaCompilerExitCode driver_toolchain_link(const CompilerConfig *config,
     if (config->codegen_opts.pie && config->target && config->target->obj_format == BAA_OBJFORMAT_ELF)
         argv_link[lk++] = "-pie";
 #ifdef _WIN32
-    const char* entry_symbol = config->nazm_arabic_entry_link ? "الرئيسية" : "الرئيسية_بدء";
     if (!win_make_stage_file_path("link_entry", ".rsp", staged_entry_response,
                                   sizeof(staged_entry_response)) ||
-        !win_write_entry_response(staged_entry_response, entry_symbol))
+        !win_write_entry_response(staged_entry_response, "الرئيسية_بدء"))
     {
         fprintf(stderr, "خطأ: فشل تجهيز وسيط نقطة الدخول العربية للرابط.\n");
         goto cleanup;
@@ -555,16 +554,8 @@ BaaCompilerExitCode driver_toolchain_link(const CompilerConfig *config,
     argv_link[lk++] = "-nostartfiles";
     argv_link[lk++] = staged_entry_argument;
 #else
-    if (config->nazm_arabic_entry_link)
-    {
-        argv_link[lk++] = "-nostartfiles";
-        argv_link[lk++] = "-Wl,-e,الرئيسية";
-    }
-    else
-    {
-        argv_link[lk++] = "-nostartfiles";
-        argv_link[lk++] = "-Wl,-e,الرئيسية_بدء";
-    }
+    argv_link[lk++] = "-nostartfiles";
+    argv_link[lk++] = "-Wl,-e,الرئيسية_بدء";
 #endif
 
     for (int i = 0; i < obj_count; i++)

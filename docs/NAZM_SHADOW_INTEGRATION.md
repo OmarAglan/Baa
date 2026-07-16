@@ -75,9 +75,11 @@ inventory omissions:
 Each supported row names the checked Nazm acceptance fixture that exercises
 its canonical Arabic lowering. Baa emits the entry label as `الرئيسية`; Nazm
 preserves that exported Arabic symbol as `الرئيسية` in ELF64 and COFF. The
-shadow linker selects it explicitly as the process entry without an ASCII
-alias. Production remains GAS by default, but now also exports `الرئيسية`
-unchanged and links through the Arabic hosted startup symbol `الرئيسية_بدء`.
+production and shadow linkers both select the Arabic hosted startup symbol
+`الرئيسية_بدء` without an ASCII alias. On Linux, the shared startup object
+enters libc correctly and calls the returning `الرئيسية`; on Windows the
+runtime bridge dispatches through `بدء_ويندوز`. Production remains GAS by
+default and exports `الرئيسية` unchanged.
 Compiler-owned platform calls are translated through an explicit Arabic runtime
 ABI bridge; arbitrary Latin source and external identifiers remain visible
 rejections. Read-only string tables, zero-initialized data, explicit alignment,
@@ -220,10 +222,16 @@ read-only string tables, BSS, and alignment. Baa maps
 compiler-owned platform ABI names to Arabic runtime adapters and rejects any
 unmapped Latin symbol.
 
-On Windows, both production and shadow executables enter through the strong
-Arabic runtime symbol `الرئيسية_بدء`, which dispatches to `بدء_ويندوز`; no
-`main`, `wmain`, or mojibaked linker alias is involved. Baa routes the UTF-8
-entry spelling through a linker-owned response file so GNU `ld` consumes the
-symbol bytes directly. The remaining production-admission work is additional
-PIC/base-index memory forms, scalar SSE2, and the complete hosted gate set. GAS
-therefore remains the default assembler.
+On both targets, production and shadow executables enter through the strong
+Arabic symbol `الرئيسية_بدء`; no `main`, `wmain`, direct-function process entry,
+or mojibaked linker alias is involved. Linux reuses the compiler-generated
+startup object that calls `__libc_start_main`, so buffered I/O, arguments, and
+normal return semantics match production. Windows dispatches to `بدء_ويندوز`
+and routes the UTF-8 entry spelling through a linker-owned response file so GNU
+`ld` consumes the symbol bytes directly. Raw relocation counts are not compared
+across the full corpus because Nazm resolves same-object references that GAS may
+leave to the linker; focused fixtures verify relocation kinds, while successful
+linking and identical runtime behavior prove required external relocations. The
+remaining production-admission work is additional PIC/base-index memory forms,
+scalar SSE2, and the complete hosted gate set. GAS therefore remains the
+default assembler.

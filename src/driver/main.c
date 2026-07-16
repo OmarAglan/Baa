@@ -324,11 +324,27 @@ static int baa_main(int argc, char **argv)
         CompilerConfig shadow_config = config;
         shadow_config.output_file = shadow_output;
         shadow_config.nazm_shadow_executable = NULL;
-        shadow_config.nazm_arabic_entry_link =
-            !(config.target && config.target->obj_format == BAA_OBJFORMAT_COFF);
-        const char *shadow_objects[] = {nazm_shadow_object};
+        const char *shadow_objects[2] = {nazm_shadow_object, NULL};
+        int shadow_object_count = 1;
+        if (config.target && config.target->obj_format == BAA_OBJFORMAT_ELF)
+        {
+            if (obj_count < 1)
+            {
+                fprintf(stderr, "خطأ: كائن بدء التشغيل العربي مفقود من ربط ظل نظم.\n");
+                free(shadow_output);
+                main_release_shadow_object(&nazm_shadow_object, false);
+                driver_build_manifest_free(&build_manifest);
+                return main_cleanup_and_return(&config, &cli, obj_files_to_link, obj_count,
+                                               config.output_file, output_file_owned,
+                                               BAA_COMPILER_EXIT_INTERNAL_ERROR);
+            }
+            // يضيف خط التجميع كائن `الرئيسية_بدء` أخيرا لكل ربط ELF تنفيذي.
+            // يعيد ظل نظم استخدام الكائن نفسه حتى يمر عبر عقد بدء التشغيل المستضاف.
+            shadow_objects[shadow_object_count++] = obj_files_to_link[obj_count - 1];
+        }
         BaaCompilerExitCode shadow_link_rc =
-            driver_toolchain_link(&shadow_config, &phase_times, shadow_objects, 1);
+            driver_toolchain_link(&shadow_config, &phase_times,
+                                  shadow_objects, shadow_object_count);
         if (shadow_link_rc != BAA_COMPILER_EXIT_SUCCESS)
         {
             fprintf(stderr, "خطأ: فشل ربط ناتج ظل نظم؛ لا يعد نجاح GAS نجاحا للمسار الظلي.\n");

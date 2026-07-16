@@ -22,29 +22,23 @@ SPEC.loader.exec_module(MATRIX)
 
 EXPECTED_TARGETS = {
     "x86_64-linux": {
-        "summary": {"emitted": 89, "unsupported": 11, "error": 0},
+        "summary": {"emitted": 95, "unsupported": 5, "error": 0},
         "blockers": {
             "إعدادات_التحويل": 4,
-            "اسم_دالة_غير_عربي": 4,
             "تعليمة_آلة": 1,
-            "عرض_أو_نوع_معامل": 1,
-            "عدم_تطابق_عرض_معاملين": 1,
         },
         "emitted_sources_sha256": (
-            "cbf6564c60b0b17900f6fac0e5a2805bc70aa259219c431b60e35594f5871456"
+            "6e075132cbec23a896f01a1f89f05492b4c845dbc318d2bb0567264f76a3cd94"
         ),
     },
     "x86_64-windows": {
-        "summary": {"emitted": 89, "unsupported": 11, "error": 0},
+        "summary": {"emitted": 95, "unsupported": 5, "error": 0},
         "blockers": {
             "إعدادات_التحويل": 4,
-            "اسم_دالة_غير_عربي": 4,
             "تعليمة_آلة": 1,
-            "عرض_أو_نوع_معامل": 1,
-            "عدم_تطابق_عرض_معاملين": 1,
         },
         "emitted_sources_sha256": (
-            "cbf6564c60b0b17900f6fac0e5a2805bc70aa259219c431b60e35594f5871456"
+            "6e075132cbec23a896f01a1f89f05492b4c845dbc318d2bb0567264f76a3cd94"
         ),
     },
 }

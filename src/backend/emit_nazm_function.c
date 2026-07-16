@@ -146,12 +146,12 @@ static void nazm_write_function(FILE *out,
 
                 case MACH_NEG:
                 case MACH_NOT:
-                    fputs(inst->op == MACH_NEG
-                              ? "    اعكس_الإشارة "
-                              : "    اعكس_البتات ", out);
-                    nazm_write_operand(out, &inst->dst);
-                    fputc('\n', out);
-                    emitted_lines = 1;
+                    emitted_lines = nazm_write_unary(
+                        out,
+                        inst->op == MACH_NEG
+                            ? "اعكس_الإشارة"
+                            : "اعكس_البتات",
+                        &inst->dst);
                     break;
 
                 case MACH_IDIV:
@@ -249,7 +249,8 @@ static void nazm_write_function(FILE *out,
                         out,
                         inst->op == MACH_MOVZX ? "وسع_بصفر" : "وسع_بإشارة",
                         &inst->dst,
-                        &inst->src1);
+                        &inst->src1,
+                        inst->op == MACH_MOVZX);
                     break;
 
                 case MACH_CALL:

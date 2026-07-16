@@ -42,8 +42,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
     aggregate counts, without exposing borrowed include paths or parsing human prose.
   - Added deterministic `baa-nazm-shadow-corpus-v1` classification for all 100 inventoried
     sources on both targets and embedded the complete result in `baa-nazm-coverage-v1`.
-  - Admitted 89 Linux and 89 Windows corpus sources through Arabic-only emission and
-    GAS/Nazm object, link, and runtime parity; all remaining 11 sources return visible
+  - Admitted 95 Linux and 95 Windows corpus sources through Arabic-only emission and
+    GAS/Nazm object, link, and runtime parity; all remaining five sources return visible
     status `3` with stable blocker data and no output.
   - Replaced host `nm`/`objdump` assertions with Unicode-safe COFF/ELF inspection so Arabic
     artifact paths remain mandatory on Windows and Linux CI.
@@ -82,6 +82,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
     eight Baa-required operations: add/subtract/multiply/divide, unordered comparison,
     sign-bit XOR, and both integer/decimal conversions. Focused tests assemble the same
     source to ELF64 and COFF and prove host production/shadow runtime parity.
+  - Replaced the last Latin letters embedded in include-path fixture function identities
+    with descriptive Arabic names; no source or linker alias was introduced.
+  - Added 32-to-64 zero extension through the architectural 32-bit destination view and
+    spill-safe unary bitwise-NOT lowering, admitting the integer-semantics and path-stdlib
+    runtime sources on both targets.
   - Added Arabic read-only string tables, numeric UTF-8 byte emission, BSS and alignment,
     spill-safe integer lowering, and full-corpus production/shadow relocation and runtime gates.
   - Made Windows production and Nazm shadow executables share the strong Arabic startup

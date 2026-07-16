@@ -79,6 +79,12 @@ flowchart LR
 | **7. Link** | `.o` Object | `.exe` Executable | `gcc` | Links with C Runtime. On Windows (v0.4.4.1), link inputs/outputs are staged on ASCII paths for GCC compatibility. |
 
 > **Note (v0.3.2.4+):** The compiler uses the full IR-based backend pipeline end-to-end: AST → IR → Optimizer → ISel → RegAlloc → Emit → Assembly.
+>
+> **Compatibility bridge:** Windows ASCII staging is a temporary external-toolchain
+> workaround, not the target architecture. The roadmap requires a measured Unicode
+> capability matrix, direct `-S` output, direct object/cache destinations, and direct
+> linking of real paths before removing staging. Incompatible arbitrary toolchains
+> must fail explicitly rather than silently reintroducing normal-path copies.
 
 ### 1.1.1. Component Map
 

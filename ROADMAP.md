@@ -1796,6 +1796,46 @@
 
   \---
 
+  ## Direct Unicode Windows Artifact Pipeline
+
+  *Goal: retire the Windows ASCII staging bridge after proving that the selected
+  GCC/assembler/linker can consume and produce Arabic/Unicode paths directly.
+  Preserve the real compile/assemble/link phases, but remove redundant filesystem
+  copies and make their timing observable.*
+
+  ### Direct-pipeline admission sequence
+
+* \[ ] **Measured staging baseline** — record assembly copy-in, object copy-out,
+  link-input staging, runtime-archive staging, executable copy-out, tool execution,
+  bytes copied, and multi-file amplification as separate metrics.
+* \[ ] **Windows toolchain capability matrix** — prove Arabic assembly input,
+  Arabic object output, Arabic object link input, Arabic executable output,
+  Arabic-plus-space paths, long paths, multiple objects, UTF-8 response files,
+  and the Arabic `الرئيسية_بدء` entry symbol with the bundled GCC/assembler/linker.
+* \[ ] **Direct `-S` output** — emit assembly to the requested output path without
+  an ASCII temporary file or copy, because this mode invokes no external assembler.
+* \[ ] **Direct object destination** — make the assembler write directly to the
+  Baa/Takween-selected object or cache path; prefer streaming generated assembly
+  through standard input where the admitted toolchain supports it.
+* \[ ] **Direct linking** — pass real object paths and the real runtime archive to
+  GCC/LD, and write the executable directly to the requested destination.
+* \[ ] **Explicit incompatibility** — an arbitrary toolchain that fails the Unicode
+  capability contract returns a stable external-toolchain error; no silent normal-path
+  staging fallback may hide the limitation. Any temporary migration fallback must be
+  explicit, measurable, and separately tested.
+* \[ ] **Remove staging implementation** — delete the ASCII staging directory,
+  copy-in/copy-out helpers, and redundant cleanup once direct mode is the admitted
+  Windows path.
+* \[ ] **Ecosystem gates** — pass Arabic-path, spaces, long-path, multi-file,
+  incremental-cache, Takween, Windows/Linux, phase-timing, and determinism suites.
+
+  **Ordering:** complete the current Nazm production-admission gate first, then
+  land this direct artifact pipeline before Takween 0.4's content-addressed cache
+  and workspace expansion, so Takween can select final object/cache destinations
+  without Baa copying them through an internal staging tree.
+
+  \---
+
   ## 🔨 Future Toolchain Independence: Nazm Integration (post-v0.9)
 
   *Goal: replace the external GAS/MASM assembly boundary with the independently
@@ -1814,6 +1854,10 @@
     `سجل_عشري_٠` through `سجل_عشري_١٥`; arithmetic, comparison, bit transport,
     and integer/decimal conversions assemble to ELF64 and COFF with no Latin
     source aliases.
+  * \[x] Arabic fixture and spill-width slice: include-path fixtures use
+    Arabic-only function identities, 32-bit PC-relative globals zero-extend
+    through a 32-bit destination view, and spilled unary bitwise-NOT lowers
+    through a spill-safe scratch register.
 * \[ ] **Shadow integration** — invoke Nazm without changing the production GAS result and compare object/link/runtime semantics.
   * \[x] First executable slice: `--nazm-shadow=<path>` assembles and links a one-input minimal program beside GAS with visible no-fallback failures and host runtime parity coverage.
 * \[ ] **Embedding** — adopt `nazm_assemble_buffer()` only after its public ownership and error contracts are stable.
@@ -1823,7 +1867,7 @@
   #### v1.5.0.1: Inventory and Contract
 
 * \[x] **Generated-form corpus** — version `baa-nazm-coverage-v1` from the full 100-source, two-target inventory and assemble focused ELF64/COFF fixtures for every currently supported form; partial and unsupported forms remain explicit.
-* \[x] **Source-level shadow matrix** — classify all 100 sources on both targets as Arabic-only emitted, visibly unsupported, or gate error; every rejection carries a stable Arabic blocker kind/detail. The integer/control, Arabic runtime ABI, data, spill-safe, PC-relative global, memory-source IMUL, spilled-SETcc, and scalar-decimal expansion now admits 89 sources on each target with zero gate errors; the remaining 11 sources reject with status `3`, stable blocker data, and no output.
+* \[x] **Source-level shadow matrix** — classify all 100 sources on both targets as Arabic-only emitted, visibly unsupported, or gate error; every rejection carries a stable Arabic blocker kind/detail. The integer/control, Arabic runtime ABI, data, spill-safe, PC-relative global, memory-source IMUL, spilled-SETcc, scalar-decimal, Arabic-fixture, 32-bit-global, and spilled-unary expansion now admits 95 sources on each target with zero gate errors; the remaining five sources reject with status `3`, stable blocker data, and no output.
 * \[x] **Source mapping** — `baa-nazm-source-map-v1` binds generated Nazm line ranges to the original UTF-8 Baa file/line/column, and shadow assembler failures replay the Nazm diagnostic plus its mapped Baa location on Windows/Linux.
 * \[ ] **Inline assembly migration** — version the breaking move from raw `مجمع { ... }` GAS text to canonical `نظم { ... }` source.
 * \[x] **Target contract** — map Baa targets explicitly to Nazm ELF64/COFF modes.

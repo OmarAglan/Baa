@@ -173,6 +173,34 @@ static unsigned nazm_write_binary(FILE *out,
     return prefix_lines + 1;
 }
 
+static unsigned nazm_write_unary(FILE *out,
+                                 const char *mnemonic,
+                                 const MachineOperand *dst)
+{
+    if (!nazm_operand_is_memory(dst))
+    {
+        fputs("    ", out);
+        fputs(mnemonic, out);
+        fputc(' ', out);
+        nazm_write_operand(out, dst);
+        fputc('\n', out);
+        return 1;
+    }
+
+    MachineOperand scratch = nazm_scratch_operand(
+        nazm_operand_uses_register(dst, PHYS_R11) ? PHYS_RAX : PHYS_R11,
+        nazm_operand_bits(dst));
+    unsigned lines = nazm_write_move(out, &scratch, dst);
+    fputs("    ", out);
+    fputs(mnemonic, out);
+    fputc(' ', out);
+    nazm_write_operand(out, &scratch);
+    fputc('\n', out);
+    lines += 1;
+    lines += nazm_write_move(out, dst, &scratch);
+    return lines;
+}
+
 static unsigned nazm_write_comparison(FILE *out,
                                       const char *mnemonic,
                                       const MachineOperand *left,
@@ -226,10 +254,33 @@ static unsigned nazm_write_comparison(FILE *out,
 static unsigned nazm_write_extension(FILE *out,
                                      const char *mnemonic,
                                      const MachineOperand *dst,
-                                     const MachineOperand *src)
+                                     const MachineOperand *src,
+                                     bool zero_extend)
 {
     int dst_bits = nazm_operand_bits(dst);
     int src_bits = nazm_operand_bits(src);
+    if (zero_extend && src_bits == 32 && dst_bits == 64)
+    {
+        MachineOperand source_32 = *src;
+        source_32.size_bits = 32;
+        if (nazm_operand_is_memory(dst))
+        {
+            MachineOperand scratch = nazm_scratch_operand(
+                nazm_operand_uses_register(dst, PHYS_R11)
+                    ? PHYS_RAX
+                    : PHYS_R11,
+                32);
+            unsigned lines = nazm_write_move(out, &scratch, &source_32);
+            scratch.size_bits = 64;
+            lines += nazm_write_move(out, dst, &scratch);
+            return lines;
+        }
+
+        MachineOperand destination_32 = *dst;
+        destination_32.size_bits = 32;
+        return nazm_write_move(out, &destination_32, &source_32);
+    }
+
     MachineOperand source_scratch = nazm_scratch_operand(PHYS_R11, src_bits);
     MachineOperand destination_scratch = nazm_scratch_operand(PHYS_RAX, dst_bits);
     const MachineOperand *actual_src = src;

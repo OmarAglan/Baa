@@ -12,7 +12,7 @@
   "shadow_corpus": {
     "schema": "baa-nazm-shadow-corpus-v1",
     "compiler": "baa version 0.6.0",
-    "sha256": "a7c2982fa54c0b8840330f8975d6f7f78f7343a4785ce1c42a3f187e90882c00"
+    "sha256": "e43e03bd333df8cc7df4f2ba7210b8e0cc7b012b54d661bdf1c351e0c62a6fb1"
   },
   "status_contract": {
     "supported": "The complete inventory form is implemented by Nazm.",
@@ -137,29 +137,17 @@
         "shadow_matrix": {
           "source_count": 100,
           "summary": {
-            "emitted": 89,
-            "unsupported": 11,
+            "emitted": 95,
+            "unsupported": 5,
             "error": 0
           },
           "unsupported_reasons": [
-            {
-              "reason": "خطأ: أسماء الدوال في مصدر نظم يجب أن تكون عربية فقط.",
-              "count": 4
-            },
             {
               "reason": "خطأ: شريحة نظم الأولى لا تدعم بدء التشغيل المخصص أو معلومات التنقيح أو حماية المكدس.",
               "count": 4
             },
             {
-              "reason": "خطأ: المعامل ليس سجلا ماديا بعرض ٨ أو ١٦ أو ٣٢ أو ٦٤ بت.",
-              "count": 1
-            },
-            {
               "reason": "خطأ: تعليمة الآلة غير مدعومة في شريحة نظم التنفيذية الأولى.",
-              "count": 1
-            },
-            {
-              "reason": "خطأ: عرض معاملي النقل غير متطابق.",
               "count": 1
             }
           ],
@@ -169,22 +157,8 @@
               "count": 4
             },
             {
-              "kind": "اسم_دالة_غير_عربي",
-              "count": 4
-            },
-            {
               "kind": "تعليمة_آلة",
               "detail": "نظم_ضمني",
-              "count": 1
-            },
-            {
-              "kind": "عدم_تطابق_عرض_معاملين",
-              "detail": "نقل",
-              "count": 1
-            },
-            {
-              "kind": "عرض_أو_نوع_معامل",
-              "detail": "عكس_البتات",
               "count": 1
             }
           ],
@@ -341,30 +315,24 @@
             },
             {
               "source": "tests/integration/backend/backend_include_i_compact_form_test.baa",
-              "status": "unsupported",
-              "exit_code": 3,
+              "status": "emitted",
+              "exit_code": 0,
               "flags": [
                 "-Itests/fixtures/include_i/compact"
               ],
-              "reason": "خطأ: أسماء الدوال في مصدر نظم يجب أن تكون عربية فقط.",
-              "blocker": {
-                "kind": "اسم_دالة_غير_عربي"
-              }
+              "sha256": "9a4b7b6bde4552df1e89a38b937445a814415be4955da3f5dcbc2d4dafa5da8b"
             },
             {
               "source": "tests/integration/backend/backend_include_i_nested_source_relative_priority_test.baa",
-              "status": "unsupported",
-              "exit_code": 3,
+              "status": "emitted",
+              "exit_code": 0,
               "flags": [
                 "-I",
                 "tests/fixtures/include_i/nested_override",
                 "-I",
                 "tests/fixtures/include_i/nested_primary"
               ],
-              "reason": "خطأ: أسماء الدوال في مصدر نظم يجب أن تكون عربية فقط.",
-              "blocker": {
-                "kind": "اسم_دالة_غير_عربي"
-              }
+              "sha256": "0ef3c26bf770fb388b80fb33b3e45810c6ecfdad7dbd133331b031127596cc3f"
             },
             {
               "source": "tests/integration/backend/backend_include_i_path_with_spaces_test.baa",
@@ -378,31 +346,25 @@
             },
             {
               "source": "tests/integration/backend/backend_include_i_precedence_test.baa",
-              "status": "unsupported",
-              "exit_code": 3,
+              "status": "emitted",
+              "exit_code": 0,
               "flags": [
                 "-I",
                 "tests/fixtures/include_i/prio_first",
                 "-I",
                 "tests/fixtures/include_i/prio_second"
               ],
-              "reason": "خطأ: أسماء الدوال في مصدر نظم يجب أن تكون عربية فقط.",
-              "blocker": {
-                "kind": "اسم_دالة_غير_عربي"
-              }
+              "sha256": "da655ac8449b53656f380e37697e39538c97c7fc6190da023a9a5004f65679a8"
             },
             {
               "source": "tests/integration/backend/backend_include_i_space_form_test.baa",
-              "status": "unsupported",
-              "exit_code": 3,
+              "status": "emitted",
+              "exit_code": 0,
               "flags": [
                 "-I",
                 "tests/fixtures/include_i/single_space"
               ],
-              "reason": "خطأ: أسماء الدوال في مصدر نظم يجب أن تكون عربية فقط.",
-              "blocker": {
-                "kind": "اسم_دالة_غير_عربي"
-              }
+              "sha256": "4679015e1adb8282d29296b06c851ba0f97fa07929f9249b2a22c6e174b8f950"
             },
             {
               "source": "tests/integration/backend/backend_include_relative_alias_path_test.baa",
@@ -424,13 +386,9 @@
             },
             {
               "source": "tests/integration/backend/backend_int_semantics_test.baa",
-              "status": "unsupported",
-              "exit_code": 3,
-              "reason": "خطأ: عرض معاملي النقل غير متطابق.",
-              "blocker": {
-                "kind": "عدم_تطابق_عرض_معاملين",
-                "detail": "نقل"
-              }
+              "status": "emitted",
+              "exit_code": 0,
+              "sha256": "58162dcc8d9205e811c3d12b999c705247144422c1dfc424dd107496ded5442d"
             },
             {
               "source": "tests/integration/backend/backend_low_level_ops_test.baa",
@@ -458,13 +416,9 @@
             },
             {
               "source": "tests/integration/backend/backend_path_stdlib_v062_test.baa",
-              "status": "unsupported",
-              "exit_code": 3,
-              "reason": "خطأ: المعامل ليس سجلا ماديا بعرض ٨ أو ١٦ أو ٣٢ أو ٦٤ بت.",
-              "blocker": {
-                "kind": "عرض_أو_نوع_معامل",
-                "detail": "عكس_البتات"
-              }
+              "status": "emitted",
+              "exit_code": 0,
+              "sha256": "0afc57f092b74188f1112800d3ed20d5fd768d3d0aae1c2775f52cfe6c9cc148"
             },
             {
               "source": "tests/integration/backend/backend_pointer_core_test.baa",
@@ -3708,29 +3662,17 @@
         "shadow_matrix": {
           "source_count": 100,
           "summary": {
-            "emitted": 89,
-            "unsupported": 11,
+            "emitted": 95,
+            "unsupported": 5,
             "error": 0
           },
           "unsupported_reasons": [
-            {
-              "reason": "خطأ: أسماء الدوال في مصدر نظم يجب أن تكون عربية فقط.",
-              "count": 4
-            },
             {
               "reason": "خطأ: شريحة نظم الأولى لا تدعم بدء التشغيل المخصص أو معلومات التنقيح أو حماية المكدس.",
               "count": 4
             },
             {
-              "reason": "خطأ: المعامل ليس سجلا ماديا بعرض ٨ أو ١٦ أو ٣٢ أو ٦٤ بت.",
-              "count": 1
-            },
-            {
               "reason": "خطأ: تعليمة الآلة غير مدعومة في شريحة نظم التنفيذية الأولى.",
-              "count": 1
-            },
-            {
-              "reason": "خطأ: عرض معاملي النقل غير متطابق.",
               "count": 1
             }
           ],
@@ -3740,22 +3682,8 @@
               "count": 4
             },
             {
-              "kind": "اسم_دالة_غير_عربي",
-              "count": 4
-            },
-            {
               "kind": "تعليمة_آلة",
               "detail": "نظم_ضمني",
-              "count": 1
-            },
-            {
-              "kind": "عدم_تطابق_عرض_معاملين",
-              "detail": "نقل",
-              "count": 1
-            },
-            {
-              "kind": "عرض_أو_نوع_معامل",
-              "detail": "عكس_البتات",
               "count": 1
             }
           ],
@@ -3912,30 +3840,24 @@
             },
             {
               "source": "tests/integration/backend/backend_include_i_compact_form_test.baa",
-              "status": "unsupported",
-              "exit_code": 3,
+              "status": "emitted",
+              "exit_code": 0,
               "flags": [
                 "-Itests/fixtures/include_i/compact"
               ],
-              "reason": "خطأ: أسماء الدوال في مصدر نظم يجب أن تكون عربية فقط.",
-              "blocker": {
-                "kind": "اسم_دالة_غير_عربي"
-              }
+              "sha256": "4f0052c8a02327cc041657926d176f57fd7178501ccbb832e842e1a6d0311090"
             },
             {
               "source": "tests/integration/backend/backend_include_i_nested_source_relative_priority_test.baa",
-              "status": "unsupported",
-              "exit_code": 3,
+              "status": "emitted",
+              "exit_code": 0,
               "flags": [
                 "-I",
                 "tests/fixtures/include_i/nested_override",
                 "-I",
                 "tests/fixtures/include_i/nested_primary"
               ],
-              "reason": "خطأ: أسماء الدوال في مصدر نظم يجب أن تكون عربية فقط.",
-              "blocker": {
-                "kind": "اسم_دالة_غير_عربي"
-              }
+              "sha256": "995d7909fd62f35b6d4fd58f8fa30d29afd33017d837fba6ba9b2480443fc5e0"
             },
             {
               "source": "tests/integration/backend/backend_include_i_path_with_spaces_test.baa",
@@ -3949,31 +3871,25 @@
             },
             {
               "source": "tests/integration/backend/backend_include_i_precedence_test.baa",
-              "status": "unsupported",
-              "exit_code": 3,
+              "status": "emitted",
+              "exit_code": 0,
               "flags": [
                 "-I",
                 "tests/fixtures/include_i/prio_first",
                 "-I",
                 "tests/fixtures/include_i/prio_second"
               ],
-              "reason": "خطأ: أسماء الدوال في مصدر نظم يجب أن تكون عربية فقط.",
-              "blocker": {
-                "kind": "اسم_دالة_غير_عربي"
-              }
+              "sha256": "62582cf3bbf1916c00db6790e1b7be941f59425d0fa1879f48b04b1565b3b573"
             },
             {
               "source": "tests/integration/backend/backend_include_i_space_form_test.baa",
-              "status": "unsupported",
-              "exit_code": 3,
+              "status": "emitted",
+              "exit_code": 0,
               "flags": [
                 "-I",
                 "tests/fixtures/include_i/single_space"
               ],
-              "reason": "خطأ: أسماء الدوال في مصدر نظم يجب أن تكون عربية فقط.",
-              "blocker": {
-                "kind": "اسم_دالة_غير_عربي"
-              }
+              "sha256": "25b12e4311c9ee1226d6bcd57f472e31bf83e501a0a66793e8d86259841c5e2d"
             },
             {
               "source": "tests/integration/backend/backend_include_relative_alias_path_test.baa",
@@ -3995,13 +3911,9 @@
             },
             {
               "source": "tests/integration/backend/backend_int_semantics_test.baa",
-              "status": "unsupported",
-              "exit_code": 3,
-              "reason": "خطأ: عرض معاملي النقل غير متطابق.",
-              "blocker": {
-                "kind": "عدم_تطابق_عرض_معاملين",
-                "detail": "نقل"
-              }
+              "status": "emitted",
+              "exit_code": 0,
+              "sha256": "c89284b9337aae5d398b20beac6f8516a1d428b0b4f27379495edd439727856d"
             },
             {
               "source": "tests/integration/backend/backend_low_level_ops_test.baa",
@@ -4029,13 +3941,9 @@
             },
             {
               "source": "tests/integration/backend/backend_path_stdlib_v062_test.baa",
-              "status": "unsupported",
-              "exit_code": 3,
-              "reason": "خطأ: المعامل ليس سجلا ماديا بعرض ٨ أو ١٦ أو ٣٢ أو ٦٤ بت.",
-              "blocker": {
-                "kind": "عرض_أو_نوع_معامل",
-                "detail": "عكس_البتات"
-              }
+              "status": "emitted",
+              "exit_code": 0,
+              "sha256": "76b2286e3db85eb1a7d9cc3f9626476a1c2144a87762b22ab2126431921b4a2c"
             },
             {
               "source": "tests/integration/backend/backend_pointer_core_test.baa",

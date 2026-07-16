@@ -60,7 +60,8 @@ Practical note:
 - Frontend should hand off AST and diagnostics data, not backend-specific lowering details.
 - Middle-End should consume AST and produce IR; backend must consume IR, never raw AST.
 - Backend-specific ABI and object-format knowledge belongs in backend-owned modules (`target.*`, `emit.*`, `regalloc.*`, `isel.*`).
-- Toolchain launching, filesystem staging, and updater behavior remain driver-owned concerns.
+- Toolchain launching, the temporary filesystem-staging compatibility bridge,
+  its measurements/removal, and updater behavior remain driver-owned concerns.
 - Shared helpers that do not fit a single component should move into an explicit support module instead of creating new ad-hoc cross-links.
 
 ## Current v0.5.0 Scope

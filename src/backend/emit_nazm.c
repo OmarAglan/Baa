@@ -262,7 +262,9 @@ static BaaNazmEmitResult nazm_validate_move(const MachineOperand *dst,
             return nazm_unsupported("مدى_قيمة_فورية", "نقل",
                                     "قيمة النقل الفورية لا تدخل في مدى عرض الوجهة.", inst);
     }
-    else if (bits != nazm_operand_bits(src))
+    else if (dst->kind != MACH_OP_GLOBAL &&
+             src->kind != MACH_OP_GLOBAL &&
+             bits != nazm_operand_bits(src))
     {
         return nazm_unsupported("عدم_تطابق_عرض_معاملين", "نقل",
                                 "عرض معاملي النقل غير متطابق.", inst);
@@ -431,7 +433,8 @@ static BaaNazmEmitResult nazm_validate_instruction(const MachineInst *inst,
 
         case MACH_NEG:
         case MACH_NOT:
-            return nazm_validate_operand(&inst->dst, target, inst);
+            return nazm_validate_value_operand(
+                &inst->dst, target, inst, false);
 
         case MACH_IDIV:
         case MACH_DIV:
@@ -485,6 +488,8 @@ static BaaNazmEmitResult nazm_validate_instruction(const MachineInst *inst,
             int src_bits = nazm_operand_bits(&inst->src1);
             bool supported = (src_bits == 8 && dst_bits > src_bits) ||
                              (src_bits == 16 && (dst_bits == 32 || dst_bits == 64)) ||
+                             (inst->op == MACH_MOVZX &&
+                              src_bits == 32 && dst_bits == 64) ||
                              (inst->op == MACH_MOVSX && src_bits == 32 && dst_bits == 64);
             if (!supported)
                 return nazm_unsupported("عرض_توسيع_غير_مدعوم", NULL,

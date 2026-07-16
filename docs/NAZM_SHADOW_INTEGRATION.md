@@ -114,8 +114,8 @@ The current source-level baseline is target-specific and has no gate errors:
 
 | Target | Arabic-only emitted | Visible unsupported | Gate errors |
 |---|---:|---:|---:|
-| `x86_64-linux` | 89 | 11 | 0 |
-| `x86_64-windows` | 89 | 11 | 0 |
+| `x86_64-linux` | 95 | 5 | 0 |
+| `x86_64-windows` | 95 | 5 | 0 |
 
 The admitted sources now include string-heavy examples, runtime diagnostics,
 dynamic memory, file and error helpers, integer-width and callee-saved-register
@@ -131,10 +131,12 @@ runtime behavior.
 The PC-relative slice removed 21 global-value blockers per target. The following
 memory-arithmetic slice accepted all 262 emitted IMUL memory-source sites per
 target plus 38 Linux and 4 Windows spilled SETcc sites. The scalar-decimal slice
-then admitted every XMM move and all eight SSE2 inventory forms, raising both
-targets to 89 sources. The remaining visible blockers are four conversion
-configurations, four Latin-spelled source functions, one width mismatch, one
-spilled NOT, and legacy inline assembly. None falls back to GAS inside the
+then admitted every XMM move and all eight SSE2 inventory forms. The next slice
+renamed four include-path fixture functions to Arabic-only identities, admitted
+32-to-64 zero extension of a PC-relative global through a 32-bit destination
+view, and lowered spilled unary bitwise-NOT through a scratch register, raising
+both targets to 95 sources. The remaining visible blockers are four conversion
+configurations and legacy inline assembly. None falls back to GAS inside the
 shadow result.
 
 Regenerate or verify the matrix with the current compiler:
@@ -214,7 +216,7 @@ Dedicated `nazm-shadow-windows` and `nazm-shadow-linux` CI jobs build both
 repositories and run this real parity path on every Baa change.
 
 The full corpus is classified automatically, and object/link/runtime comparison
-covers all 89 Linux and 89 Windows emitted members. Nazm and Baa now share the
+covers all 95 Linux and 95 Windows emitted members. Nazm and Baa now share the
 required integer widths, condition-code writes, extension and division forms,
 indirect calls, callee-saved frames, memory-source multiplication, spilled
 condition-code writes, integer globals, Arabic external symbols,
@@ -238,6 +240,6 @@ across the full corpus because Nazm resolves same-object references that GAS may
 leave to the linker; focused fixtures verify relocation kinds, while successful
 linking and identical runtime behavior prove required external relocations. The
 remaining production-admission work is additional PIC/base-index memory forms,
-the eleven explicit producer/configuration blockers, and the complete hosted
+the five explicit configuration/inline-assembly blockers, and the complete hosted
 gate set. GAS therefore remains the
 default assembler.

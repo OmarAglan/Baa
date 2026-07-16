@@ -40,8 +40,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
     aggregate counts, without exposing borrowed include paths or parsing human prose.
   - Added deterministic `baa-nazm-shadow-corpus-v1` classification for all 100 inventoried
     sources on both targets and embedded the complete result in `baa-nazm-coverage-v1`.
-  - Admitted 57 Linux and 58 Windows corpus sources through Arabic-only emission and
-    GAS/Nazm object, link, and runtime parity; all remaining 43/42 sources return visible
+  - Admitted 79 Linux and 80 Windows corpus sources through Arabic-only emission and
+    GAS/Nazm object, link, and runtime parity; all remaining 21/20 sources return visible
     status `3` with stable blocker data and no output.
   - Replaced host `nm`/`objdump` assertions with Unicode-safe COFF/ELF inspection so Arabic
     artifact paths remain mandatory on Windows and Linux CI.
@@ -73,6 +73,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
     formation. Immediate and memory-to-memory global moves reuse spill-safe scratch
     lowering; extern declarations followed by an in-module definition no longer produce a
     conflicting `.خارجي` declaration in Nazm.
+  - Added native Arabic base/displacement memory-source IMUL and spilled SETcc
+    destinations, eliminating the full remaining memory-form blocker category from the
+    source-level matrix.
   - Added Arabic read-only string tables, numeric UTF-8 byte emission, BSS and alignment,
     spill-safe integer lowering, and full-corpus production/shadow relocation and runtime gates.
   - Made Windows production and Nazm shadow executables share the strong Arabic startup

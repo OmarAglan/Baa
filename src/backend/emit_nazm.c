@@ -347,7 +347,8 @@ static BaaNazmEmitResult nazm_validate_binary(const MachineOperand *dst,
         dst, target, inst, false);
     if (result.status != BAA_NAZM_EMIT_OK) return result;
     if (src->kind == MACH_OP_MEM && !allow_memory)
-        return nazm_unsupported("ذاكرة_غير_مدعومة_لهذه_التعليمة", NULL,
+        return nazm_unsupported("ذاكرة_غير_مدعومة_لهذه_التعليمة",
+                                nazm_machine_op_arabic(inst->op),
                                 "معامل الذاكرة غير مدعوم لهذه التعليمة.", inst);
     result = nazm_validate_value_operand(src, target, inst, true);
     if (result.status != BAA_NAZM_EMIT_OK) return result;
@@ -429,7 +430,7 @@ static BaaNazmEmitResult nazm_validate_instruction(const MachineInst *inst,
                 &inst->dst, target, inst);
             if (dst.status != BAA_NAZM_EMIT_OK) return dst;
             return nazm_validate_binary(
-                &inst->dst, &inst->src2, target, inst, false);
+                &inst->dst, &inst->src2, target, inst, true);
         }
 
         case MACH_SHL:
@@ -469,7 +470,8 @@ static BaaNazmEmitResult nazm_validate_instruction(const MachineInst *inst,
             if (inst->dst.size_bits != 8)
                 return nazm_unsupported("عرض_وجهة_تعيين_شرط", NULL,
                                         "وجهة تعيين الشرط يجب أن تكون ٨ بت.", inst);
-            return nazm_validate_operand(&inst->dst, target, inst);
+            return nazm_validate_value_operand(
+                &inst->dst, target, inst, false);
 
         case MACH_MOVZX:
         case MACH_MOVSX:

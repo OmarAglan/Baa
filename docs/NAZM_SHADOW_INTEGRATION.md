@@ -13,7 +13,7 @@ It is generated from every `.baa` source under `tests/integration`,
 metadata. The inventory command compiles every source for both supported
 x86-64 targets and fails if any source cannot produce assembly.
 
-The 2026-07-15 baseline contains 100 sources per target with zero omissions:
+The 2026-07-16 baseline contains 100 sources per target with zero omissions:
 
 | Target | Instruction forms | Directive forms | Sections | Registers | Relocation candidates |
 |---|---:|---:|---:|---:|---:|
@@ -69,8 +69,8 @@ inventory omissions:
 
 | Target | Instruction forms S/P/U | Directive forms S/P/U | Sections S/U | Relocations S/P/U |
 |---|---:|---:|---:|---:|
-| `x86_64-linux` | 60 / 2 / 45 | 8 / 1 / 5 | 3 / 1 | 5 / 2 / 0 |
-| `x86_64-windows` | 59 / 2 / 42 | 8 / 1 / 3 | 3 / 0 | 5 / 2 / 0 |
+| `x86_64-linux` | 62 / 2 / 43 | 8 / 1 / 5 | 3 / 1 | 5 / 2 / 0 |
+| `x86_64-windows` | 61 / 2 / 40 | 8 / 1 / 3 | 3 / 0 | 5 / 2 / 0 |
 
 Each supported row names the checked Nazm acceptance fixture that exercises
 its canonical Arabic lowering. Baa emits the entry label as `الرئيسية`; Nazm
@@ -81,9 +81,10 @@ unchanged and links through the Arabic hosted startup symbol `الرئيسية_�
 Compiler-owned platform calls are translated through an explicit Arabic runtime
 ABI bridge; arbitrary Latin source and external identifiers remain visible
 rejections. Read-only string tables, zero-initialized data, explicit alignment,
-and MOV/LEA PC-relative global memory are supported. Immediate-to-symbol stores
-remain a documented producer lowering, while remaining memory forms and scalar
-SSE2 remain partial or unsupported where applicable.
+MOV/LEA PC-relative global memory, base/displacement memory-source IMUL, and
+spilled SETcc destinations are supported. Immediate-to-symbol stores remain a
+documented producer lowering, while scalar SSE2 and later PIC forms remain
+partial or unsupported where applicable.
 
 Regenerate or verify the comparison from an ecosystem checkout:
 
@@ -110,8 +111,8 @@ The current source-level baseline is target-specific and has no gate errors:
 
 | Target | Arabic-only emitted | Visible unsupported | Gate errors |
 |---|---:|---:|---:|
-| `x86_64-linux` | 57 | 43 | 0 |
-| `x86_64-windows` | 58 | 42 | 0 |
+| `x86_64-linux` | 79 | 21 | 0 |
+| `x86_64-windows` | 80 | 20 | 0 |
 
 The admitted sources now include string-heavy examples, runtime diagnostics,
 dynamic memory, file and error helpers, integer-width and callee-saved-register
@@ -124,13 +125,14 @@ section/symbol structure, requires every production relocation site to remain
 represented, and proves the retained relocations through real linking and
 runtime behavior.
 
-The PC-relative slice removes 21 global-value blockers per target and admits 11
-additional sources. The remaining visible blockers are now led by later memory
-forms (21 Linux, 24 Windows); six value-operand cases are SSE/aggregate follow-on
-work. Four conversion configurations and four Latin-spelled source functions
-remain unsupported on each target, with isolated width mismatch, scalar-SSE,
-and legacy inline-assembly cases. None falls back to GAS inside the shadow
-result.
+The PC-relative slice removed 21 global-value blockers per target. The following
+memory-arithmetic slice accepts all 262 emitted IMUL memory-source sites per
+target plus 38 Linux and 4 Windows spilled SETcc sites, raising admission by 22
+sources per target. The remaining visible blockers are led by XMM/value moves
+(8 Linux, 7 Windows), four conversion configurations, four Latin-spelled source
+functions, two integer-to-scalar-SSE instructions, one width mismatch, one
+spilled NOT, and legacy inline assembly. None falls back to GAS inside the
+shadow result.
 
 Regenerate or verify the matrix with the current compiler:
 
@@ -209,9 +211,10 @@ Dedicated `nazm-shadow-windows` and `nazm-shadow-linux` CI jobs build both
 repositories and run this real parity path on every Baa change.
 
 The full corpus is classified automatically, and object/link/runtime comparison
-covers all 57 Linux and 58 Windows emitted members. Nazm and Baa now share the
+covers all 79 Linux and 80 Windows emitted members. Nazm and Baa now share the
 required integer widths, condition-code writes, extension and division forms,
-indirect calls, callee-saved frames, integer globals, Arabic external symbols,
+indirect calls, callee-saved frames, memory-source multiplication, spilled
+condition-code writes, integer globals, Arabic external symbols,
 absolute data relocations, PC-relative global loads/stores/address formation,
 read-only string tables, BSS, and alignment. Baa maps
 compiler-owned platform ABI names to Arabic runtime adapters and rejects any

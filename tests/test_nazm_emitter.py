@@ -179,9 +179,19 @@ class NazmEmitterTests(unittest.TestCase):
         cls.baa = _find_baa()
 
     def run_baa(self, work: Path, *args: str) -> subprocess.CompletedProcess[str]:
+        env = os.environ.copy()
+        env["BAA_STDLIB"] = str(ROOT / "stdlib")
+        compiler_driver = Path(env.get("CC", ""))
+        if compiler_driver.is_file():
+            env["PATH"] = (
+                str(compiler_driver.resolve().parent)
+                + os.pathsep
+                + env.get("PATH", "")
+            )
         return subprocess.run(
             [str(self.baa), *args],
             cwd=str(work),
+            env=env,
             text=True,
             encoding="utf-8",
             errors="replace",
@@ -524,8 +534,8 @@ class NazmEmitterTests(unittest.TestCase):
                     ROOT
                     / "tests"
                     / "integration"
-                    / "backend"
-                    / "backend_string_ops_test.baa"
+                    / "ir"
+                    / "ir_inline_asm_test.baa"
                 ),
                 "-o",
                 str(output),

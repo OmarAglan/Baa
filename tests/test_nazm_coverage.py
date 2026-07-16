@@ -115,6 +115,18 @@ class NazmCoverageTests(unittest.TestCase):
         )
         self.assertEqual(
             instruction_index[
+                ("imulq", ("memory-base-displacement", "register"))
+            ]["status"],
+            "supported",
+        )
+        self.assertEqual(
+            instruction_index[("sete", ("memory-base-displacement",))][
+                "status"
+            ],
+            "supported",
+        )
+        self.assertEqual(
+            instruction_index[
                 ("movq", ("immediate-integer", "memory-rip-relative"))
             ]["status"],
             "partial",

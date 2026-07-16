@@ -196,7 +196,7 @@ static void nazm_write_function(FILE *out,
                     fputs("    ", out);
                     fputs(nazm_setcc_mnemonic(inst->op), out);
                     fputc(' ', out);
-                    nazm_write_operand(out, &inst->dst);
+                    nazm_write_any_operand(out, &inst->dst);
                     fputc('\n', out);
                     emitted_lines = 1;
                     break;

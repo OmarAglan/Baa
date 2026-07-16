@@ -2485,6 +2485,9 @@ This backend is being refactored to support multiple ABIs via `BaaTarget` (`src/
    `MACH_OP_GLOBAL` loads/stores to `[مؤشر_التعليمة+الرمز]` and lowers global or
    function address formation through `احسب_عنوان`. Nazm owns the resulting PC32
    encoding and ELF64/COFF relocation records; Baa never duplicates those writers.
+7. **Nazm memory arithmetic:** `MACH_IMUL` may retain a base/displacement memory
+   source, and spilled 8-bit SETcc destinations remain memory operands; Nazm owns
+   both ModRM/SIB encodings while Baa only emits the canonical Arabic operands.
 
 **Entry Points:**
 

@@ -7,12 +7,12 @@
   "nazm_capabilities": {
     "schema": "nazm-capabilities-v1",
     "assembler": "Nazm 0.4.0",
-    "sha256": "a2e14bdbdc4c6356ae5c02ab73a0ec8af93feed6a57631c2365ff943c93b16d1"
+    "sha256": "349dd82bb1b7c10509cad815948496facdc115b3f2a5495d55199376be8d4bf5"
   },
   "shadow_corpus": {
     "schema": "baa-nazm-shadow-corpus-v1",
     "compiler": "baa version 0.6.0",
-    "sha256": "6aef4fd293dac4283f5a0ac2c374f29027ec8c546de39134d0748d220e190178"
+    "sha256": "098ff8597a2ba2618ed2272aa00e2c1008e1acc032eed877063d365ace3bc66d"
   },
   "status_contract": {
     "supported": "The complete inventory form is implemented by Nazm.",
@@ -136,25 +136,17 @@
         "shadow_matrix": {
           "source_count": 100,
           "summary": {
-            "emitted": 57,
-            "unsupported": 43,
+            "emitted": 79,
+            "unsupported": 21,
             "error": 0
           },
           "unsupported_reasons": [
             {
-              "reason": "خطأ: معامل الذاكرة غير مدعوم لهذه التعليمة.",
-              "count": 21
-            },
-            {
               "reason": "خطأ: نوع معامل القيمة غير مدعوم في مسار نظم.",
-              "count": 6
+              "count": 8
             },
             {
               "reason": "خطأ: أسماء الدوال في مصدر نظم يجب أن تكون عربية فقط.",
-              "count": 4
-            },
-            {
-              "reason": "خطأ: المعامل ليس سجلا ماديا بعرض ٨ أو ١٦ أو ٣٢ أو ٦٤ بت.",
               "count": 4
             },
             {
@@ -166,19 +158,19 @@
               "count": 3
             },
             {
+              "reason": "خطأ: المعامل ليس سجلا ماديا بعرض ٨ أو ١٦ أو ٣٢ أو ٦٤ بت.",
+              "count": 1
+            },
+            {
               "reason": "خطأ: عرض معاملي النقل غير متطابق.",
               "count": 1
             }
           ],
           "unsupported_blockers": [
             {
-              "kind": "ذاكرة_غير_مدعومة_لهذه_التعليمة",
-              "count": 21
-            },
-            {
               "kind": "نوع_معامل_قيمة_غير_مدعوم",
               "detail": "نقل",
-              "count": 6
+              "count": 8
             },
             {
               "kind": "إعدادات_التحويل",
@@ -186,11 +178,6 @@
             },
             {
               "kind": "اسم_دالة_غير_عربي",
-              "count": 4
-            },
-            {
-              "kind": "عرض_أو_نوع_معامل",
-              "detail": "تعيين_مساو",
               "count": 4
             },
             {
@@ -207,18 +194,19 @@
               "kind": "عدم_تطابق_عرض_معاملين",
               "detail": "نقل",
               "count": 1
+            },
+            {
+              "kind": "عرض_أو_نوع_معامل",
+              "detail": "عكس_البتات",
+              "count": 1
             }
           ],
           "sources": [
             {
               "source": "examples/error_handling_demo.baa",
-              "status": "unsupported",
-              "exit_code": 3,
-              "reason": "خطأ: المعامل ليس سجلا ماديا بعرض ٨ أو ١٦ أو ٣٢ أو ٦٤ بت.",
-              "blocker": {
-                "kind": "عرض_أو_نوع_معامل",
-                "detail": "تعيين_مساو"
-              }
+              "status": "emitted",
+              "exit_code": 0,
+              "sha256": "5f25e24ef0b8056585e0ef5fe38dd9fa59389a31b7d2738a74f5d806ff531e9c"
             },
             {
               "source": "examples/file_copy_small.baa",
@@ -268,12 +256,9 @@
             },
             {
               "source": "tests/integration/backend/backend_byte_buffer_stdlib_v062_test.baa",
-              "status": "unsupported",
-              "exit_code": 3,
-              "reason": "خطأ: معامل الذاكرة غير مدعوم لهذه التعليمة.",
-              "blocker": {
-                "kind": "ذاكرة_غير_مدعومة_لهذه_التعليمة"
-              }
+              "status": "emitted",
+              "exit_code": 0,
+              "sha256": "4ee1011c04c6b4e4d8a61d803e6f8c294bb841d733b93f5bbc2b3a429db25343"
             },
             {
               "source": "tests/integration/backend/backend_cast_pointer_diff_test.baa",
@@ -323,31 +308,21 @@
             },
             {
               "source": "tests/integration/backend/backend_error_handling_v043_test.baa",
-              "status": "unsupported",
-              "exit_code": 3,
-              "reason": "خطأ: المعامل ليس سجلا ماديا بعرض ٨ أو ١٦ أو ٣٢ أو ٦٤ بت.",
-              "blocker": {
-                "kind": "عرض_أو_نوع_معامل",
-                "detail": "تعيين_مساو"
-              }
+              "status": "emitted",
+              "exit_code": 0,
+              "sha256": "608a9271d88baca4e10d1a1caa75bda0b22931cc0c20693c72d305fd0260c645"
             },
             {
               "source": "tests/integration/backend/backend_file_io_noheader_test.baa",
-              "status": "unsupported",
-              "exit_code": 3,
-              "reason": "خطأ: معامل الذاكرة غير مدعوم لهذه التعليمة.",
-              "blocker": {
-                "kind": "ذاكرة_غير_مدعومة_لهذه_التعليمة"
-              }
+              "status": "emitted",
+              "exit_code": 0,
+              "sha256": "e8712a08b33cacd6f974e165a799fd6063df745c253ce885169a4542f3c5aefa"
             },
             {
               "source": "tests/integration/backend/backend_file_io_test.baa",
-              "status": "unsupported",
-              "exit_code": 3,
-              "reason": "خطأ: معامل الذاكرة غير مدعوم لهذه التعليمة.",
-              "blocker": {
-                "kind": "ذاكرة_غير_مدعومة_لهذه_التعليمة"
-              }
+              "status": "emitted",
+              "exit_code": 0,
+              "sha256": "612b353eb2c26a425525e8725d31d5b62cccb3dd4944253fd1183dc74aab2d30"
             },
             {
               "source": "tests/integration/backend/backend_float_extensions_v042_test.baa",
@@ -494,12 +469,9 @@
             },
             {
               "source": "tests/integration/backend/backend_main_args_test.baa",
-              "status": "unsupported",
-              "exit_code": 3,
-              "reason": "خطأ: معامل الذاكرة غير مدعوم لهذه التعليمة.",
-              "blocker": {
-                "kind": "ذاكرة_غير_مدعومة_لهذه_التعليمة"
-              }
+              "status": "emitted",
+              "exit_code": 0,
+              "sha256": "06bba28a6d3954e327a9078e04a8a67b75fa912f26b276b512dc737b2614ef51"
             },
             {
               "source": "tests/integration/backend/backend_mod_test.baa",
@@ -521,9 +493,10 @@
               "source": "tests/integration/backend/backend_path_stdlib_v062_test.baa",
               "status": "unsupported",
               "exit_code": 3,
-              "reason": "خطأ: معامل الذاكرة غير مدعوم لهذه التعليمة.",
+              "reason": "خطأ: المعامل ليس سجلا ماديا بعرض ٨ أو ١٦ أو ٣٢ أو ٦٤ بت.",
               "blocker": {
-                "kind": "ذاكرة_غير_مدعومة_لهذه_التعليمة"
+                "kind": "عرض_أو_نوع_معامل",
+                "detail": "عكس_البتات"
               }
             },
             {
@@ -540,22 +513,15 @@
             },
             {
               "source": "tests/integration/backend/backend_process_runtime_v065_test.baa",
-              "status": "unsupported",
-              "exit_code": 3,
-              "reason": "خطأ: معامل الذاكرة غير مدعوم لهذه التعليمة.",
-              "blocker": {
-                "kind": "ذاكرة_غير_مدعومة_لهذه_التعليمة"
-              }
+              "status": "emitted",
+              "exit_code": 0,
+              "sha256": "4d751781ea9613db71020b14fc6eecb0c796f2abade11ca53d4a2e152a9ab6aa"
             },
             {
               "source": "tests/integration/backend/backend_readline_stdin_test.baa",
-              "status": "unsupported",
-              "exit_code": 3,
-              "reason": "خطأ: المعامل ليس سجلا ماديا بعرض ٨ أو ١٦ أو ٣٢ أو ٦٤ بت.",
-              "blocker": {
-                "kind": "عرض_أو_نوع_معامل",
-                "detail": "تعيين_مساو"
-              }
+              "status": "emitted",
+              "exit_code": 0,
+              "sha256": "38ab8b087532c0e2db1aceb82c99cfce52b7ebbfb14048bef97f3ac2ff81e023"
             },
             {
               "source": "tests/integration/backend/backend_readnum_stdin_test.baa",
@@ -598,15 +564,12 @@
             },
             {
               "source": "tests/integration/backend/backend_runtime_checks_selective_bounds_fail_v063_test.baa",
-              "status": "unsupported",
-              "exit_code": 3,
+              "status": "emitted",
+              "exit_code": 0,
               "flags": [
                 "-fruntime-checks=bounds"
               ],
-              "reason": "خطأ: معامل الذاكرة غير مدعوم لهذه التعليمة.",
-              "blocker": {
-                "kind": "ذاكرة_غير_مدعومة_لهذه_التعليمة"
-              }
+              "sha256": "823cbca256536aeeff96653e22e6e7bb225991ec92fc68942a76c69c5ed4d487"
             },
             {
               "source": "tests/integration/backend/backend_runtime_checks_selective_null_fail_v063_test.baa",
@@ -685,36 +648,30 @@
             },
             {
               "source": "tests/integration/backend/backend_runtime_string_array_inner_bounds_fail_v063_test.baa",
-              "status": "unsupported",
-              "exit_code": 3,
+              "status": "emitted",
+              "exit_code": 0,
               "flags": [
                 "-fruntime-checks"
               ],
-              "reason": "خطأ: معامل الذاكرة غير مدعوم لهذه التعليمة.",
-              "blocker": {
-                "kind": "ذاكرة_غير_مدعومة_لهذه_التعليمة"
-              }
+              "sha256": "d4147cd36c150156824dd4b4037aa60d0d2b573b44b5c244f2a2436c58236d7b"
             },
             {
               "source": "tests/integration/backend/backend_runtime_string_bounds_fail_v063_test.baa",
-              "status": "unsupported",
-              "exit_code": 3,
+              "status": "emitted",
+              "exit_code": 0,
               "flags": [
                 "-fruntime-checks"
               ],
-              "reason": "خطأ: معامل الذاكرة غير مدعوم لهذه التعليمة.",
-              "blocker": {
-                "kind": "ذاكرة_غير_مدعومة_لهذه_التعليمة"
-              }
+              "sha256": "97275f9a10a15ebfcac0223a4f4ca7da25fb27f9dabbdb5ac3ffd91cd9402208"
             },
             {
               "source": "tests/integration/backend/backend_scan_arabic_test.baa",
               "status": "unsupported",
               "exit_code": 3,
-              "reason": "خطأ: المعامل ليس سجلا ماديا بعرض ٨ أو ١٦ أو ٣٢ أو ٦٤ بت.",
+              "reason": "خطأ: نوع معامل القيمة غير مدعوم في مسار نظم.",
               "blocker": {
-                "kind": "عرض_أو_نوع_معامل",
-                "detail": "تعيين_مساو"
+                "kind": "نوع_معامل_قيمة_غير_مدعوم",
+                "detail": "نقل"
               }
             },
             {
@@ -725,12 +682,9 @@
             },
             {
               "source": "tests/integration/backend/backend_sha256_file_v066_test.baa",
-              "status": "unsupported",
-              "exit_code": 3,
-              "reason": "خطأ: معامل الذاكرة غير مدعوم لهذه التعليمة.",
-              "blocker": {
-                "kind": "ذاكرة_غير_مدعومة_لهذه_التعليمة"
-              }
+              "status": "emitted",
+              "exit_code": 0,
+              "sha256": "6e830f34cfe8071475f3036af7f38677df46c27682256d45a9858fe618bb33ca"
             },
             {
               "source": "tests/integration/backend/backend_stackargs_test.baa",
@@ -746,12 +700,9 @@
             },
             {
               "source": "tests/integration/backend/backend_stdlib_short_include_test.baa",
-              "status": "unsupported",
-              "exit_code": 3,
-              "reason": "خطأ: معامل الذاكرة غير مدعوم لهذه التعليمة.",
-              "blocker": {
-                "kind": "ذاكرة_غير_مدعومة_لهذه_التعليمة"
-              }
+              "status": "emitted",
+              "exit_code": 0,
+              "sha256": "8da55e8b389e632e714b6f8a003a8a41b2b01c0062d24994da44f909a176cecb"
             },
             {
               "source": "tests/integration/backend/backend_stdlib_v041_test.baa",
@@ -765,21 +716,15 @@
             },
             {
               "source": "tests/integration/backend/backend_string_builder_stdlib_v062_test.baa",
-              "status": "unsupported",
-              "exit_code": 3,
-              "reason": "خطأ: معامل الذاكرة غير مدعوم لهذه التعليمة.",
-              "blocker": {
-                "kind": "ذاكرة_غير_مدعومة_لهذه_التعليمة"
-              }
+              "status": "emitted",
+              "exit_code": 0,
+              "sha256": "5cce496052f37c5c94fe43ecd99747e5f88b8e29778108818677a7f799881ced"
             },
             {
               "source": "tests/integration/backend/backend_string_ops_test.baa",
-              "status": "unsupported",
-              "exit_code": 3,
-              "reason": "خطأ: معامل الذاكرة غير مدعوم لهذه التعليمة.",
-              "blocker": {
-                "kind": "ذاكرة_غير_مدعومة_لهذه_التعليمة"
-              }
+              "status": "emitted",
+              "exit_code": 0,
+              "sha256": "5b51fa85ccc9484784e520673e15ad2c2914539700fd7804bea083c257f3cb31"
             },
             {
               "source": "tests/integration/backend/backend_struct_init_test.baa",
@@ -813,19 +758,17 @@
               "source": "tests/integration/backend/backend_test.baa",
               "status": "unsupported",
               "exit_code": 3,
-              "reason": "خطأ: معامل الذاكرة غير مدعوم لهذه التعليمة.",
+              "reason": "خطأ: نوع معامل القيمة غير مدعوم في مسار نظم.",
               "blocker": {
-                "kind": "ذاكرة_غير_مدعومة_لهذه_التعليمة"
+                "kind": "نوع_معامل_قيمة_غير_مدعوم",
+                "detail": "نقل"
               }
             },
             {
               "source": "tests/integration/backend/backend_text_stdlib_helpers_v064_test.baa",
-              "status": "unsupported",
-              "exit_code": 3,
-              "reason": "خطأ: معامل الذاكرة غير مدعوم لهذه التعليمة.",
-              "blocker": {
-                "kind": "ذاكرة_غير_مدعومة_لهذه_التعليمة"
-              }
+              "status": "emitted",
+              "exit_code": 0,
+              "sha256": "072dc36d04c849ee150b8305287d8cd8c42e2a132dacebf0f07ebffce55ca623"
             },
             {
               "source": "tests/integration/backend/backend_type_alias_test.baa",
@@ -841,12 +784,9 @@
             },
             {
               "source": "tests/integration/backend/backend_utf8_validation_valid_v064_test.baa",
-              "status": "unsupported",
-              "exit_code": 3,
-              "reason": "خطأ: معامل الذاكرة غير مدعوم لهذه التعليمة.",
-              "blocker": {
-                "kind": "ذاكرة_غير_مدعومة_لهذه_التعليمة"
-              }
+              "status": "emitted",
+              "exit_code": 0,
+              "sha256": "35126f0be0c1a26fbcb0e96e1418839360e2a617bb30d9cb7681de9fa465bf61"
             },
             {
               "source": "tests/integration/backend/backend_variadic_functions_test.baa",
@@ -860,12 +800,9 @@
             },
             {
               "source": "tests/integration/backend/backend_vector_stdlib_v062_test.baa",
-              "status": "unsupported",
-              "exit_code": 3,
-              "reason": "خطأ: معامل الذاكرة غير مدعوم لهذه التعليمة.",
-              "blocker": {
-                "kind": "ذاكرة_غير_مدعومة_لهذه_التعليمة"
-              }
+              "status": "emitted",
+              "exit_code": 0,
+              "sha256": "233008947baca5a6437fd9c4fd4972c2849e4a4f7aa4e241e6ef07d85aac217b"
             },
             {
               "source": "tests/integration/backend/int_sizes_test.baa",
@@ -953,27 +890,21 @@
             },
             {
               "source": "tests/integration/ir/ir_runtime_checks_none_v063_test.baa",
-              "status": "unsupported",
-              "exit_code": 3,
+              "status": "emitted",
+              "exit_code": 0,
               "flags": [
                 "-fruntime-checks=none"
               ],
-              "reason": "خطأ: معامل الذاكرة غير مدعوم لهذه التعليمة.",
-              "blocker": {
-                "kind": "ذاكرة_غير_مدعومة_لهذه_التعليمة"
-              }
+              "sha256": "80ba400c9c82617841f895b23c69df77d2198148c692cb11e4cc2ee11ee6ce89"
             },
             {
               "source": "tests/integration/ir/ir_runtime_checks_selective_bounds_shift_v063_test.baa",
-              "status": "unsupported",
-              "exit_code": 3,
+              "status": "emitted",
+              "exit_code": 0,
               "flags": [
                 "-fruntime-checks=bounds+shift"
               ],
-              "reason": "خطأ: معامل الذاكرة غير مدعوم لهذه التعليمة.",
-              "blocker": {
-                "kind": "ذاكرة_غير_مدعومة_لهذه_التعليمة"
-              }
+              "sha256": "67f0bff5186c563e462e2dc16e6209402d25b1e8a51a4b9750249bdd41f8f334"
             },
             {
               "source": "tests/integration/ir/ir_runtime_checks_selective_null_div_v063_test.baa",
@@ -1013,15 +944,12 @@
             },
             {
               "source": "tests/integration/ir/ir_runtime_string_bounds_enabled_v063_test.baa",
-              "status": "unsupported",
-              "exit_code": 3,
+              "status": "emitted",
+              "exit_code": 0,
               "flags": [
                 "-fruntime-checks"
               ],
-              "reason": "خطأ: معامل الذاكرة غير مدعوم لهذه التعليمة.",
-              "blocker": {
-                "kind": "ذاكرة_غير_مدعومة_لهذه_التعليمة"
-              }
+              "sha256": "7dd29d9e1cd5367934e53719310727143c03a396b716c259527c017715846bf4"
             },
             {
               "source": "tests/integration/ir/ir_test.baa",
@@ -1043,12 +971,9 @@
             },
             {
               "source": "tests/stress/stress_utf8_identifiers.baa",
-              "status": "unsupported",
-              "exit_code": 3,
-              "reason": "خطأ: معامل الذاكرة غير مدعوم لهذه التعليمة.",
-              "blocker": {
-                "kind": "ذاكرة_غير_مدعومة_لهذه_التعليمة"
-              }
+              "status": "emitted",
+              "exit_code": 0,
+              "sha256": "ba684a76ac7e7b7eb2eadef6dac5d9f9c96624972e27c84a10248a9268470dc2"
             }
           ]
         }
@@ -1671,8 +1596,20 @@
             "tests/integration/backend/backend_custom_startup_test.baa:199",
             "tests/integration/backend/backend_custom_startup_test.baa:201"
           ],
-          "status": "unsupported",
-          "reason": "Nazm implements this mnemonic, but not this operand shape or width."
+          "status": "supported",
+          "nazm": {
+            "mnemonic": "اضرب_موقع",
+            "operands": [
+              "register",
+              "memory-base-displacement"
+            ],
+            "width_bits": [
+              16,
+              32,
+              64
+            ]
+          },
+          "acceptance_fixture": "tests/fixtures/baa_coverage/حساب-وتحكم-باء.نظم"
         },
         {
           "mnemonic": "imulq",
@@ -2869,8 +2806,15 @@
             "examples/math_and_format.baa:368",
             "examples/math_and_format.baa:746"
           ],
-          "status": "unsupported",
-          "reason": "Nazm implements this mnemonic, but not this operand shape or width."
+          "status": "supported",
+          "nazm": {
+            "mnemonic": "عين_مساو",
+            "operands": [
+              "memory-base-displacement"
+            ],
+            "width_bits": 8
+          },
+          "acceptance_fixture": "tests/fixtures/baa_coverage/حساب-وتحكم-باء.نظم"
         },
         {
           "mnemonic": "sete",
@@ -3611,14 +3555,14 @@
       ],
       "summary": {
         "forms": {
-          "supported": 76,
+          "supported": 78,
           "partial": 5,
-          "unsupported": 51
+          "unsupported": 49
         },
         "emissions": {
-          "supported": 66803,
+          "supported": 67103,
           "partial": 3313,
-          "unsupported": 10518
+          "unsupported": 10218
         }
       }
     },
@@ -3733,18 +3677,14 @@
         "shadow_matrix": {
           "source_count": 100,
           "summary": {
-            "emitted": 58,
-            "unsupported": 42,
+            "emitted": 80,
+            "unsupported": 20,
             "error": 0
           },
           "unsupported_reasons": [
             {
-              "reason": "خطأ: معامل الذاكرة غير مدعوم لهذه التعليمة.",
-              "count": 24
-            },
-            {
               "reason": "خطأ: نوع معامل القيمة غير مدعوم في مسار نظم.",
-              "count": 6
+              "count": 7
             },
             {
               "reason": "خطأ: أسماء الدوال في مصدر نظم يجب أن تكون عربية فقط.",
@@ -3759,19 +3699,19 @@
               "count": 3
             },
             {
+              "reason": "خطأ: المعامل ليس سجلا ماديا بعرض ٨ أو ١٦ أو ٣٢ أو ٦٤ بت.",
+              "count": 1
+            },
+            {
               "reason": "خطأ: عرض معاملي النقل غير متطابق.",
               "count": 1
             }
           ],
           "unsupported_blockers": [
             {
-              "kind": "ذاكرة_غير_مدعومة_لهذه_التعليمة",
-              "count": 24
-            },
-            {
               "kind": "نوع_معامل_قيمة_غير_مدعوم",
               "detail": "نقل",
-              "count": 6
+              "count": 7
             },
             {
               "kind": "إعدادات_التحويل",
@@ -3794,6 +3734,11 @@
             {
               "kind": "عدم_تطابق_عرض_معاملين",
               "detail": "نقل",
+              "count": 1
+            },
+            {
+              "kind": "عرض_أو_نوع_معامل",
+              "detail": "عكس_البتات",
               "count": 1
             }
           ],
@@ -3852,12 +3797,9 @@
             },
             {
               "source": "tests/integration/backend/backend_byte_buffer_stdlib_v062_test.baa",
-              "status": "unsupported",
-              "exit_code": 3,
-              "reason": "خطأ: معامل الذاكرة غير مدعوم لهذه التعليمة.",
-              "blocker": {
-                "kind": "ذاكرة_غير_مدعومة_لهذه_التعليمة"
-              }
+              "status": "emitted",
+              "exit_code": 0,
+              "sha256": "c11a61366a87a991de83e134b100c17cd72adba68c5b9ab084979117e2716ab2"
             },
             {
               "source": "tests/integration/backend/backend_cast_pointer_diff_test.baa",
@@ -3907,30 +3849,21 @@
             },
             {
               "source": "tests/integration/backend/backend_error_handling_v043_test.baa",
-              "status": "unsupported",
-              "exit_code": 3,
-              "reason": "خطأ: معامل الذاكرة غير مدعوم لهذه التعليمة.",
-              "blocker": {
-                "kind": "ذاكرة_غير_مدعومة_لهذه_التعليمة"
-              }
+              "status": "emitted",
+              "exit_code": 0,
+              "sha256": "337a9820e42bb4b4506f6a04e073decc336dd18a7f99bde1eb78739173e94b49"
             },
             {
               "source": "tests/integration/backend/backend_file_io_noheader_test.baa",
-              "status": "unsupported",
-              "exit_code": 3,
-              "reason": "خطأ: معامل الذاكرة غير مدعوم لهذه التعليمة.",
-              "blocker": {
-                "kind": "ذاكرة_غير_مدعومة_لهذه_التعليمة"
-              }
+              "status": "emitted",
+              "exit_code": 0,
+              "sha256": "f08a60fca7c943f032d2333db6869dba114b15e4202fbf1b5a59894956189432"
             },
             {
               "source": "tests/integration/backend/backend_file_io_test.baa",
-              "status": "unsupported",
-              "exit_code": 3,
-              "reason": "خطأ: معامل الذاكرة غير مدعوم لهذه التعليمة.",
-              "blocker": {
-                "kind": "ذاكرة_غير_مدعومة_لهذه_التعليمة"
-              }
+              "status": "emitted",
+              "exit_code": 0,
+              "sha256": "63a5accb98ce0239772ce84c5c0f82e1ceec4d83c4c89b746d89e03e00af1aa0"
             },
             {
               "source": "tests/integration/backend/backend_float_extensions_v042_test.baa",
@@ -3944,12 +3877,9 @@
             },
             {
               "source": "tests/integration/backend/backend_format_arabic_test.baa",
-              "status": "unsupported",
-              "exit_code": 3,
-              "reason": "خطأ: معامل الذاكرة غير مدعوم لهذه التعليمة.",
-              "blocker": {
-                "kind": "ذاكرة_غير_مدعومة_لهذه_التعليمة"
-              }
+              "status": "emitted",
+              "exit_code": 0,
+              "sha256": "55f2f50caa3b3a57f698a0c436573dda522a9b604efd3518edc8e7e95c06d546"
             },
             {
               "source": "tests/integration/backend/backend_func_ptr_shadow_call_test.baa",
@@ -4076,12 +4006,9 @@
             },
             {
               "source": "tests/integration/backend/backend_main_args_test.baa",
-              "status": "unsupported",
-              "exit_code": 3,
-              "reason": "خطأ: معامل الذاكرة غير مدعوم لهذه التعليمة.",
-              "blocker": {
-                "kind": "ذاكرة_غير_مدعومة_لهذه_التعليمة"
-              }
+              "status": "emitted",
+              "exit_code": 0,
+              "sha256": "7c054f4b667ca6cbce0f5ccacee6993c2530d8cb041ec41bbd4602586b2185ef"
             },
             {
               "source": "tests/integration/backend/backend_mod_test.baa",
@@ -4103,9 +4030,10 @@
               "source": "tests/integration/backend/backend_path_stdlib_v062_test.baa",
               "status": "unsupported",
               "exit_code": 3,
-              "reason": "خطأ: معامل الذاكرة غير مدعوم لهذه التعليمة.",
+              "reason": "خطأ: المعامل ليس سجلا ماديا بعرض ٨ أو ١٦ أو ٣٢ أو ٦٤ بت.",
               "blocker": {
-                "kind": "ذاكرة_غير_مدعومة_لهذه_التعليمة"
+                "kind": "عرض_أو_نوع_معامل",
+                "detail": "عكس_البتات"
               }
             },
             {
@@ -4122,21 +4050,15 @@
             },
             {
               "source": "tests/integration/backend/backend_process_runtime_v065_test.baa",
-              "status": "unsupported",
-              "exit_code": 3,
-              "reason": "خطأ: معامل الذاكرة غير مدعوم لهذه التعليمة.",
-              "blocker": {
-                "kind": "ذاكرة_غير_مدعومة_لهذه_التعليمة"
-              }
+              "status": "emitted",
+              "exit_code": 0,
+              "sha256": "7b1e5f4f20d1947b8f1e200d74e1c0e595ef3815095ae2eabdfbae42768e4a3a"
             },
             {
               "source": "tests/integration/backend/backend_readline_stdin_test.baa",
-              "status": "unsupported",
-              "exit_code": 3,
-              "reason": "خطأ: معامل الذاكرة غير مدعوم لهذه التعليمة.",
-              "blocker": {
-                "kind": "ذاكرة_غير_مدعومة_لهذه_التعليمة"
-              }
+              "status": "emitted",
+              "exit_code": 0,
+              "sha256": "31071892cd68f551c67f8ba77d023c568b457bf5ce329bebe7df1f65862642dd"
             },
             {
               "source": "tests/integration/backend/backend_readnum_stdin_test.baa",
@@ -4179,15 +4101,12 @@
             },
             {
               "source": "tests/integration/backend/backend_runtime_checks_selective_bounds_fail_v063_test.baa",
-              "status": "unsupported",
-              "exit_code": 3,
+              "status": "emitted",
+              "exit_code": 0,
               "flags": [
                 "-fruntime-checks=bounds"
               ],
-              "reason": "خطأ: معامل الذاكرة غير مدعوم لهذه التعليمة.",
-              "blocker": {
-                "kind": "ذاكرة_غير_مدعومة_لهذه_التعليمة"
-              }
+              "sha256": "f7af8a3e0b04942d3b875333156907c6cafd630439336068dd53e66df2bcbbc4"
             },
             {
               "source": "tests/integration/backend/backend_runtime_checks_selective_null_fail_v063_test.baa",
@@ -4266,27 +4185,21 @@
             },
             {
               "source": "tests/integration/backend/backend_runtime_string_array_inner_bounds_fail_v063_test.baa",
-              "status": "unsupported",
-              "exit_code": 3,
+              "status": "emitted",
+              "exit_code": 0,
               "flags": [
                 "-fruntime-checks"
               ],
-              "reason": "خطأ: معامل الذاكرة غير مدعوم لهذه التعليمة.",
-              "blocker": {
-                "kind": "ذاكرة_غير_مدعومة_لهذه_التعليمة"
-              }
+              "sha256": "ebba0798bf5927354d1b400180699eb40b55ccfb199ff3e94751ad33864f6208"
             },
             {
               "source": "tests/integration/backend/backend_runtime_string_bounds_fail_v063_test.baa",
-              "status": "unsupported",
-              "exit_code": 3,
+              "status": "emitted",
+              "exit_code": 0,
               "flags": [
                 "-fruntime-checks"
               ],
-              "reason": "خطأ: معامل الذاكرة غير مدعوم لهذه التعليمة.",
-              "blocker": {
-                "kind": "ذاكرة_غير_مدعومة_لهذه_التعليمة"
-              }
+              "sha256": "b02a4714144b208b828ee49668f853a60ea69fff87112b21d96a3347dd323f0e"
             },
             {
               "source": "tests/integration/backend/backend_scan_arabic_test.baa",
@@ -4306,12 +4219,9 @@
             },
             {
               "source": "tests/integration/backend/backend_sha256_file_v066_test.baa",
-              "status": "unsupported",
-              "exit_code": 3,
-              "reason": "خطأ: معامل الذاكرة غير مدعوم لهذه التعليمة.",
-              "blocker": {
-                "kind": "ذاكرة_غير_مدعومة_لهذه_التعليمة"
-              }
+              "status": "emitted",
+              "exit_code": 0,
+              "sha256": "1f926820b446d4d4f9f69da52e4749dcb7817f57d0455bf96bacc5a72a9fe3ee"
             },
             {
               "source": "tests/integration/backend/backend_stackargs_test.baa",
@@ -4327,12 +4237,9 @@
             },
             {
               "source": "tests/integration/backend/backend_stdlib_short_include_test.baa",
-              "status": "unsupported",
-              "exit_code": 3,
-              "reason": "خطأ: معامل الذاكرة غير مدعوم لهذه التعليمة.",
-              "blocker": {
-                "kind": "ذاكرة_غير_مدعومة_لهذه_التعليمة"
-              }
+              "status": "emitted",
+              "exit_code": 0,
+              "sha256": "4f840b9d1bc44f2f2967f1408d38dee2048d1d5c1fa17ad51edf2e2f84d6ce6c"
             },
             {
               "source": "tests/integration/backend/backend_stdlib_v041_test.baa",
@@ -4346,21 +4253,15 @@
             },
             {
               "source": "tests/integration/backend/backend_string_builder_stdlib_v062_test.baa",
-              "status": "unsupported",
-              "exit_code": 3,
-              "reason": "خطأ: معامل الذاكرة غير مدعوم لهذه التعليمة.",
-              "blocker": {
-                "kind": "ذاكرة_غير_مدعومة_لهذه_التعليمة"
-              }
+              "status": "emitted",
+              "exit_code": 0,
+              "sha256": "3e1e1375dd745f1c87b050f2c261b4eb0f97daf5234a2e42004c16a98c354c6a"
             },
             {
               "source": "tests/integration/backend/backend_string_ops_test.baa",
-              "status": "unsupported",
-              "exit_code": 3,
-              "reason": "خطأ: معامل الذاكرة غير مدعوم لهذه التعليمة.",
-              "blocker": {
-                "kind": "ذاكرة_غير_مدعومة_لهذه_التعليمة"
-              }
+              "status": "emitted",
+              "exit_code": 0,
+              "sha256": "699113f719584d2fca27354113f07886e3b35cac303f9cedc59b02f9e27b4866"
             },
             {
               "source": "tests/integration/backend/backend_struct_init_test.baa",
@@ -4394,19 +4295,17 @@
               "source": "tests/integration/backend/backend_test.baa",
               "status": "unsupported",
               "exit_code": 3,
-              "reason": "خطأ: معامل الذاكرة غير مدعوم لهذه التعليمة.",
+              "reason": "خطأ: نوع معامل القيمة غير مدعوم في مسار نظم.",
               "blocker": {
-                "kind": "ذاكرة_غير_مدعومة_لهذه_التعليمة"
+                "kind": "نوع_معامل_قيمة_غير_مدعوم",
+                "detail": "نقل"
               }
             },
             {
               "source": "tests/integration/backend/backend_text_stdlib_helpers_v064_test.baa",
-              "status": "unsupported",
-              "exit_code": 3,
-              "reason": "خطأ: معامل الذاكرة غير مدعوم لهذه التعليمة.",
-              "blocker": {
-                "kind": "ذاكرة_غير_مدعومة_لهذه_التعليمة"
-              }
+              "status": "emitted",
+              "exit_code": 0,
+              "sha256": "f9b384d8dc94a6d926724a311f1241716cf856d75b0a54098e01f6459b3bce08"
             },
             {
               "source": "tests/integration/backend/backend_type_alias_test.baa",
@@ -4422,12 +4321,9 @@
             },
             {
               "source": "tests/integration/backend/backend_utf8_validation_valid_v064_test.baa",
-              "status": "unsupported",
-              "exit_code": 3,
-              "reason": "خطأ: معامل الذاكرة غير مدعوم لهذه التعليمة.",
-              "blocker": {
-                "kind": "ذاكرة_غير_مدعومة_لهذه_التعليمة"
-              }
+              "status": "emitted",
+              "exit_code": 0,
+              "sha256": "91c274a3b3656f24e581de51c7cb0bacf31cddbb3859d4b08aad8166d39a1e53"
             },
             {
               "source": "tests/integration/backend/backend_variadic_functions_test.baa",
@@ -4441,12 +4337,9 @@
             },
             {
               "source": "tests/integration/backend/backend_vector_stdlib_v062_test.baa",
-              "status": "unsupported",
-              "exit_code": 3,
-              "reason": "خطأ: معامل الذاكرة غير مدعوم لهذه التعليمة.",
-              "blocker": {
-                "kind": "ذاكرة_غير_مدعومة_لهذه_التعليمة"
-              }
+              "status": "emitted",
+              "exit_code": 0,
+              "sha256": "8711a2202000348fc99e6627a9b623afdd81b4ceb3266240b24249a312a63038"
             },
             {
               "source": "tests/integration/backend/int_sizes_test.baa",
@@ -4534,27 +4427,21 @@
             },
             {
               "source": "tests/integration/ir/ir_runtime_checks_none_v063_test.baa",
-              "status": "unsupported",
-              "exit_code": 3,
+              "status": "emitted",
+              "exit_code": 0,
               "flags": [
                 "-fruntime-checks=none"
               ],
-              "reason": "خطأ: معامل الذاكرة غير مدعوم لهذه التعليمة.",
-              "blocker": {
-                "kind": "ذاكرة_غير_مدعومة_لهذه_التعليمة"
-              }
+              "sha256": "29b63cde9ea354be3d05250d63d5dac5a9b3393753284bf2c6dd6116275a14d8"
             },
             {
               "source": "tests/integration/ir/ir_runtime_checks_selective_bounds_shift_v063_test.baa",
-              "status": "unsupported",
-              "exit_code": 3,
+              "status": "emitted",
+              "exit_code": 0,
               "flags": [
                 "-fruntime-checks=bounds+shift"
               ],
-              "reason": "خطأ: معامل الذاكرة غير مدعوم لهذه التعليمة.",
-              "blocker": {
-                "kind": "ذاكرة_غير_مدعومة_لهذه_التعليمة"
-              }
+              "sha256": "a21b0b39359f5182f74e2461fe87f3373a5531068e1d1acb4dfe2b6545bda07a"
             },
             {
               "source": "tests/integration/ir/ir_runtime_checks_selective_null_div_v063_test.baa",
@@ -4594,15 +4481,12 @@
             },
             {
               "source": "tests/integration/ir/ir_runtime_string_bounds_enabled_v063_test.baa",
-              "status": "unsupported",
-              "exit_code": 3,
+              "status": "emitted",
+              "exit_code": 0,
               "flags": [
                 "-fruntime-checks"
               ],
-              "reason": "خطأ: معامل الذاكرة غير مدعوم لهذه التعليمة.",
-              "blocker": {
-                "kind": "ذاكرة_غير_مدعومة_لهذه_التعليمة"
-              }
+              "sha256": "fc66c8c3841a8d9f1ac36f4a25529a9ae2b1a887e08351d3ef15207e28bb2c33"
             },
             {
               "source": "tests/integration/ir/ir_test.baa",
@@ -4624,12 +4508,9 @@
             },
             {
               "source": "tests/stress/stress_utf8_identifiers.baa",
-              "status": "unsupported",
-              "exit_code": 3,
-              "reason": "خطأ: معامل الذاكرة غير مدعوم لهذه التعليمة.",
-              "blocker": {
-                "kind": "ذاكرة_غير_مدعومة_لهذه_التعليمة"
-              }
+              "status": "emitted",
+              "exit_code": 0,
+              "sha256": "0ca2bf7011886f433a432abbb05ec3eb8dc69509c15ca7777a2c1301f346ba06"
             }
           ]
         }
@@ -5222,8 +5103,20 @@
             "tests/integration/backend/backend_custom_startup_test.baa:205",
             "tests/integration/backend/backend_custom_startup_test.baa:207"
           ],
-          "status": "unsupported",
-          "reason": "Nazm implements this mnemonic, but not this operand shape or width."
+          "status": "supported",
+          "nazm": {
+            "mnemonic": "اضرب_موقع",
+            "operands": [
+              "register",
+              "memory-base-displacement"
+            ],
+            "width_bits": [
+              16,
+              32,
+              64
+            ]
+          },
+          "acceptance_fixture": "tests/fixtures/baa_coverage/حساب-وتحكم-باء.نظم"
         },
         {
           "mnemonic": "imulq",
@@ -6399,8 +6292,15 @@
             "tests/integration/backend/backend_process_runtime_v065_test.baa:463",
             "tests/integration/backend/backend_process_runtime_v065_test.baa:1843"
           ],
-          "status": "unsupported",
-          "reason": "Nazm implements this mnemonic, but not this operand shape or width."
+          "status": "supported",
+          "nazm": {
+            "mnemonic": "عين_مساو",
+            "operands": [
+              "memory-base-displacement"
+            ],
+            "width_bits": 8
+          },
+          "acceptance_fixture": "tests/fixtures/baa_coverage/حساب-وتحكم-باء.نظم"
         },
         {
           "mnemonic": "sete",
@@ -7084,14 +6984,14 @@
       ],
       "summary": {
         "forms": {
-          "supported": 75,
+          "supported": 77,
           "partial": 5,
-          "unsupported": 45
+          "unsupported": 43
         },
         "emissions": {
-          "supported": 71953,
+          "supported": 72219,
           "partial": 3313,
-          "unsupported": 9070
+          "unsupported": 8804
         }
       }
     }

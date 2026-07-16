@@ -235,6 +235,16 @@ void ir_inst_print(IRInst* inst, FILE* out, int use_arabic) {
 
     // Many opcodes have custom formatting to match the IR spec.
     switch (inst->op) {
+        case IR_OP_CPU_NOP:
+            fputc('\n', out);
+            return;
+
+        case IR_OP_READ_TSC:
+            fputc(' ', out);
+            ir_type_print(inst->type, out, use_arabic);
+            fputc('\n', out);
+            return;
+
         case IR_OP_BR:
             fputc(' ', out);
             if (inst->operand_count >= 1) ir_value_print_ex(inst->operands[0], out, use_arabic);

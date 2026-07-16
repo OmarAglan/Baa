@@ -705,8 +705,15 @@ The Semantic Analyzer (`src/analysis.c`) performs a static check on the AST befo
 13. **Type Casting (v0.3.10.5)**: Enforces rules for explicit scalar and pointer conversions.
 14. **Function Pointers (v0.3.10.6)**: Validates assignment, comparison (EQ/NE only), and indirect calls matching exact signatures.
 15. **Variadic Functions (v0.4.0.5)**: Validates `...` signatures, variadic builtin usage (`بدء_معاملات/معامل_تالي/نهاية_معاملات`), and fixed/extra argument checks for variadic direct calls.
-16. **Inline Assembly (v0.4.0.6)**: Validates `مجمع { ... }` blocks, enforces fixed-register constraint subset (`=a/=c/=d`, `a/c/d`), checks output lvalue requirements, and restricts operand types to integer/pointer forms.
-17. **Standard Library Modules + Float Extensions (v0.4.2)**: Validates Math/System/Time builtins (`جذر_تربيعي/أس/جيب/جيب_تمام/ظل/مطلق/عشوائي/متغير_بيئة/نفذ_أمر/وقت_حالي/وقت_كنص`), Arabic float format specs (`%ع/%أ`), and accepts `عشري٣٢` as a float keyword alias.
+16. **Structured Architecture Operations**: Validates zero-argument
+    `لا_تفعل()` and `اقرأ_عداد_الزمن()` builtins. The legacy `مجمع { ... }`
+    syntax is retained only for a source-migration diagnostic and never reaches IR.
+17. **Standard Library Modules + Float Extensions (v0.4.2)**: Validates
+    Math/System/Time builtins, including the structured
+    `لا_تفعل/اقرأ_عداد_الزمن` operations and
+    `جذر_تربيعي/أس/جيب/جيب_تمام/ظل/مطلق/عشوائي/متغير_بيئة/نفذ_أمر/وقت_حالي/وقت_كنص`;
+    validates Arabic float format specs (`%ع/%أ`) and accepts `عشري٣٢` as a
+    float keyword alias.
 18. **Error Handling Builtins (v0.4.3)**: Validates `تأكد/توقف_فوري/كود_خطأ_النظام/ضبط_كود_خطأ_النظام/نص_كود_خطأ` for arity/type contracts with Arabic diagnostics.
 
 ### 5.1.1. Multi-File Symbol Visibility (v0.5.2)
@@ -2107,7 +2114,9 @@ typedef struct MachineModule {
 | `IR_OP_BR` | `JMP label` | Unconditional jump |
 | `IR_OP_BR_COND` | `TEST cond, cond; JNE true_label; JMP false_label` | Three-instruction pattern |
 | `IR_OP_RET` | `MOV RAX, val; RET` | Uses special vreg -2 (= RAX) |
-| `IR_OP_CALL` | `MOV param_regs, args...; (setup stack args); CALL @func/*reg; MOV dst, RAX` | Direct: `CALL @func`. Indirect: `CALL *reg` (callee value). ABI: Windows (shadow) / SysV (no shadow). In v0.4.0.5 variadic Baa calls pass packed extras via hidden `__baa_va_base` pointer. In v0.4.0.6 inline asm is lowered كـ pseudo-call (`__baa_inline_asm_v0406`) ويُحوّل في ISel إلى أسطر تجميع خام مع نقل مدخلات/مخرجات السجلات. |
+| `IR_OP_CALL` | `MOV param_regs, args...; (setup stack args); CALL @func/*reg; MOV dst, RAX` | Direct: `CALL @func`. Indirect: `CALL *reg` (callee value). ABI: Windows (shadow) / SysV (no shadow). Variadic Baa calls pass packed extras via hidden `__baa_va_base` pointer. |
+| `IR_OP_CPU_NOP` | `MACH_CPU_NOP` | Emits one intentional `nop` in GAS or `لا_تفعل` in Nazm. |
+| `IR_OP_READ_TSC` | `MACH_RDTSC dst` | Reads EDX:EAX, combines the halves into a 64-bit value, then moves the result to `dst`; GAS and Nazm lower from the same structured operation. |
 | `IR_OP_CALL` + `IR_OP_RET` (tail) | `MOV param_regs, args...; TAILJMP @func` | v0.3.2.7.3: مفعل فقط عند `-O2` وبشكل محافظ (register args only) |
 | `IR_OP_PHI` | `NOP` | Placeholder; copy insertion deferred to register allocation |
 | `IR_OP_CAST` | `MOV dst, src` (larger/same size) or `MOVZX/MOVSX dst, src` (smaller to larger) | Size and sign dependent conversion (`تحويل`) |

@@ -323,6 +323,8 @@ Source lowering with `-fruntime-checks` or `-fruntime-checks=shift` emits an exp
 
 | Opcode | Arabic | C Enum | Syntax | Description |
 |--------|--------|--------|--------|-------------|
+| `cpu.nop` | `لا_تفعل` | `IR_OP_CPU_NOP` | `لا_تفعل` | Emit one intentional architectural no-op |
+| `read.tsc` | `اقرأ_عداد_الزمن` | `IR_OP_READ_TSC` | `%r = اقرأ_عداد_الزمن ص٦٤` | Read and combine the x86-64 timestamp counter |
 | `nop` | `لاعمل` | `IR_OP_NOP` | `لاعمل` | No operation (placeholder) |
 
 ---
@@ -427,7 +429,9 @@ external const global @readonly_name : type
 | `NODE_UNARY_OP (ADDR)` | Returns underlying pointer register/global |
 | `NODE_UNARY_OP (DEREF)`| `حمل` from pointer |
 | `NODE_DEREF_ASSIGN` | `خزن` to pointer |
-| `NODE_INLINE_ASM` | Pseudo-call metadata packet (`نداء @__baa_inline_asm_v0406(...)`) consumed in ISel |
+| `NODE_CALL_EXPR لا_تفعل` | `IR_OP_CPU_NOP` with no operands or destination |
+| `NODE_CALL_EXPR اقرأ_عداد_الزمن` | `IR_OP_READ_TSC` producing `ص٦٤` |
+| `NODE_INLINE_ASM` | Source-migration error; raw assembly text is not lowered |
 
 ملاحظة (`v0.3.9`): استدعاءات السلاسل `طول_نص/قارن_نص/نسخ_نص/دمج_نص/حرر_نص`
 تُخفض داخلياً إلى حلقات/نداءات `malloc/free` حسب الحالة بدلاً من مجرد تمرير `call` خام.
@@ -435,9 +439,10 @@ external const global @readonly_name : type
 ملاحظة (`v0.3.11`): استدعاءات الذاكرة `حجز_ذاكرة/تحرير_ذاكرة/إعادة_حجز/نسخ_ذاكرة/تعيين_ذاكرة`
 تُخفض داخلياً إلى `malloc/free/realloc/memcpy/memset` مع الحفاظ على قواعد الـ shadowing.
 
-ملاحظة (`v0.4.0.6`): جملة `مجمع { ... }` لا تضيف opcode جديداً في IR حالياً؛
-تُشفّر كنداء مباشر خاص إلى `@__baa_inline_asm_v0406` مع معاملات وصفية
-(عدد الأسطر/المخارج/المدخلات + قيود + قيم)، ثم يُحوّلها ISel إلى أسطر تجميع خام.
+ملاحظة: أزيل خفض جملة `مجمع { ... }` من عقد المصدر. يبقي المحلل العقدة
+القديمة كي يصدر رسالة ترحيل، لكن التحليل الدلالي يوقف البناء قبل IR. العمليات
+الصغيرة تستخدم `IR_OP_CPU_NOP` و`IR_OP_READ_TSC` المهيكلتين، والتجميع الأكبر
+يوضع في وحدة `.نظم` مستقلة.
 
 ملاحظة (`v0.4.2`): استدعاءات وحدات المكتبة القياسية
 `جذر_تربيعي/أس/جيب/جيب_تمام/ظل/مطلق/عشوائي/متغير_بيئة/نفذ_أمر/وقت_حالي/وقت_كنص`

@@ -21,6 +21,19 @@
             // تجاهل تعليمات NOP (عناصر نائبة لـ phi وغيرها)
             break;
 
+        case MACH_CPU_NOP:
+            fprintf(out, "    nop\n");
+            break;
+
+        case MACH_RDTSC:
+            fprintf(out, "    rdtsc\n");
+            fprintf(out, "    shlq $32, %%rdx\n");
+            fprintf(out, "    orq %%rdx, %%rax\n");
+            fprintf(out, "    movq %%rax, ");
+            emit_operand(&inst->dst, out);
+            fprintf(out, "\n");
+            break;
+
         // ================================================================
         // عمليات نقل البيانات (Data Movement)
         // ================================================================

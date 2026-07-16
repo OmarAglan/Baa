@@ -85,11 +85,3 @@ static void isel_lower_ret(ISelCtx *ctx, IRInst *inst)
 
     isel_emit(ctx, MACH_RET, mach_op_none(), mach_op_none(), mach_op_none());
 }
-
-typedef struct
-{
-    int fixed_vreg;
-    int bits;
-    IRValue *addr;
-} InlineAsmOutputBinding;
-

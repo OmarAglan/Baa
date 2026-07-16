@@ -74,7 +74,7 @@ void regalloc_linear_scan(RegAllocCtx *ctx)
             for (int p = 0; p < ctx->total_insts; p++)
             {
                 MachineInst *inst = ctx->inst_map[p];
-                if (inst && (inst->op == MACH_CALL || inst->op == MACH_INLINE_ASM))
+                if (inst && inst->op == MACH_CALL)
                 {
                     call_pos[call_count++] = p;
                 }
@@ -307,4 +307,3 @@ void regalloc_linear_scan(RegAllocCtx *ctx)
     free(call_pos);
     free(active);
 }
-

@@ -189,6 +189,8 @@ const char* ir_op_to_arabic(IROp op) {
         case IR_OP_CAST:    return "تحويل";
         
         // متفرقات
+        case IR_OP_CPU_NOP:  return "لا_تفعل";
+        case IR_OP_READ_TSC: return "اقرأ_عداد_الزمن";
         case IR_OP_NOP:     return "لاعمل";
         
         default:            return "مجهول";
@@ -224,6 +226,8 @@ const char* ir_op_to_english(IROp op) {
         case IR_OP_PHI:     return "phi";
         case IR_OP_COPY:    return "copy";
         case IR_OP_CAST:    return "cast";
+        case IR_OP_CPU_NOP:  return "cpu.nop";
+        case IR_OP_READ_TSC: return "read.tsc";
         case IR_OP_NOP:     return "nop";
         default:            return "unknown";
     }

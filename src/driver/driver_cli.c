@@ -254,7 +254,8 @@ static void print_target_record_json(const BaaTarget *target,
     printf("        \"pie\": %s,\n", is_linux ? "true" : "false");
     printf("        \"stack_protector\": %s,\n", is_linux ? "true" : "false");
     printf("        \"nazm_source\": true,\n");
-    printf("        \"inline_asm\": true\n");
+    printf("        \"structured_arch_ops\": true,\n");
+    printf("        \"inline_asm\": false\n");
     printf("      }\n");
     printf("    }%s\n", trailing_comma ? "," : "");
 }

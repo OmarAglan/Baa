@@ -89,7 +89,6 @@
         "tests/integration/frontend/frontend_extern_no_storage_test.baa",
         "tests/integration/ir/ir_custom_startup_linux_asm_test.baa",
         "tests/integration/ir/ir_custom_startup_windows_asm_test.baa",
-        "tests/integration/ir/ir_inline_asm_test.baa",
         "tests/integration/ir/ir_printer.baa",
         "tests/integration/ir/ir_runtime_bounds_debug_info_no_checks_v055_test.baa",
         "tests/integration/ir/ir_runtime_bounds_enabled_v055_test.baa",
@@ -100,6 +99,7 @@
         "tests/integration/ir/ir_runtime_null_deref_enabled_v063_test.baa",
         "tests/integration/ir/ir_runtime_shift_width_enabled_v063_test.baa",
         "tests/integration/ir/ir_runtime_string_bounds_enabled_v063_test.baa",
+        "tests/integration/ir/ir_structured_arch_ops_test.baa",
         "tests/integration/ir/ir_test.baa",
         "tests/stress/stress_deep_scopes.baa",
         "tests/stress/stress_symbol_volume.baa",
@@ -164,7 +164,7 @@
             "register",
             "register"
           ],
-          "count": 2411,
+          "count": 2410,
           "samples": [
             "examples/error_handling_demo.baa:224",
             "examples/error_handling_demo.baa:226",
@@ -551,7 +551,7 @@
             "memory-base-displacement",
             "register"
           ],
-          "count": 419,
+          "count": 417,
           "samples": [
             "examples/error_handling_demo.baa:72",
             "examples/error_handling_demo.baa:99",
@@ -665,11 +665,10 @@
             "immediate-integer",
             "memory-base-displacement"
           ],
-          "count": 4,
+          "count": 2,
           "samples": [
             "examples/error_handling_demo.baa:93",
-            "tests/integration/backend/backend_error_handling_v043_test.baa:297",
-            "tests/integration/ir/ir_inline_asm_test.baa:17"
+            "tests/integration/backend/backend_error_handling_v043_test.baa:297"
           ]
         },
         {
@@ -691,7 +690,7 @@
             "memory-base-displacement",
             "register"
           ],
-          "count": 5,
+          "count": 3,
           "samples": [
             "examples/error_handling_demo.baa:97",
             "examples/file_copy_small.baa:889",
@@ -715,7 +714,7 @@
             "register",
             "memory-base-displacement"
           ],
-          "count": 5,
+          "count": 3,
           "samples": [
             "tests/integration/backend/backend_file_io_test.baa:5250",
             "tests/integration/backend/backend_file_io_test.baa:5561",
@@ -728,7 +727,7 @@
             "register",
             "register"
           ],
-          "count": 219,
+          "count": 217,
           "samples": [
             "examples/error_handling_demo.baa:101",
             "examples/error_handling_demo.baa:102",
@@ -933,7 +932,7 @@
             "memory-base-displacement",
             "register"
           ],
-          "count": 1484,
+          "count": 1482,
           "samples": [
             "examples/error_handling_demo.baa:28",
             "examples/error_handling_demo.baa:29",
@@ -946,7 +945,7 @@
             "register",
             "memory-base-displacement"
           ],
-          "count": 713,
+          "count": 711,
           "samples": [
             "examples/error_handling_demo.baa:13",
             "examples/error_handling_demo.baa:14",
@@ -984,7 +983,7 @@
           "operands": [],
           "count": 1,
           "samples": [
-            "tests/integration/ir/ir_inline_asm_test.baa:40"
+            "tests/integration/ir/ir_structured_arch_ops_test.baa:26"
           ]
         },
         {
@@ -1029,7 +1028,7 @@
             "register",
             "register"
           ],
-          "count": 448,
+          "count": 449,
           "samples": [
             "examples/error_handling_demo.baa:263",
             "examples/error_handling_demo.baa:299",
@@ -1065,7 +1064,7 @@
           "operands": [],
           "count": 1,
           "samples": [
-            "tests/integration/ir/ir_inline_asm_test.baa:20"
+            "tests/integration/ir/ir_structured_arch_ops_test.baa:13"
           ]
         },
         {
@@ -1288,7 +1287,7 @@
             "immediate-integer",
             "register"
           ],
-          "count": 1556,
+          "count": 1557,
           "samples": [
             "examples/error_handling_demo.baa:218",
             "examples/error_handling_demo.baa:222",
@@ -1364,7 +1363,7 @@
             "immediate-integer",
             "register"
           ],
-          "count": 201,
+          "count": 200,
           "samples": [
             "examples/error_handling_demo.baa:12",
             "examples/error_handling_demo.baa:65",
@@ -1442,7 +1441,7 @@
           "operands": [
             "string"
           ],
-          "count": 499,
+          "count": 495,
           "samples": [
             "examples/error_handling_demo.baa:2",
             "examples/error_handling_demo.baa:3",
@@ -1570,7 +1569,7 @@
           "operands": [
             "symbol"
           ],
-          "count": 208,
+          "count": 207,
           "samples": [
             "examples/error_handling_demo.baa:1",
             "examples/error_handling_demo.baa:674",
@@ -1610,7 +1609,7 @@
         },
         {
           "name": ".rodata",
-          "count": 208
+          "count": 207
         },
         {
           "name": ".text",
@@ -1620,7 +1619,7 @@
       "symbols": {
         "defined": 621,
         "global-declaration": 311,
-        "local": 4067,
+        "local": 4063,
         "local-declaration": 10
       },
       "registers": [
@@ -1642,11 +1641,11 @@
         },
         {
           "name": "%eax",
-          "count": 3165
+          "count": 3164
         },
         {
           "name": "%ebx",
-          "count": 57
+          "count": 56
         },
         {
           "name": "%ecx",
@@ -1657,12 +1656,8 @@
           "count": 42
         },
         {
-          "name": "%edx",
-          "count": 1
-        },
-        {
           "name": "%r10",
-          "count": 18866
+          "count": 18865
         },
         {
           "name": "%r10b",
@@ -1670,7 +1665,7 @@
         },
         {
           "name": "%r10d",
-          "count": 349
+          "count": 345
         },
         {
           "name": "%r11",
@@ -1678,7 +1673,7 @@
         },
         {
           "name": "%r12",
-          "count": 9536
+          "count": 9529
         },
         {
           "name": "%r12b",
@@ -1686,7 +1681,7 @@
         },
         {
           "name": "%r12d",
-          "count": 18
+          "count": 17
         },
         {
           "name": "%r13",
@@ -1742,15 +1737,15 @@
         },
         {
           "name": "%rax",
-          "count": 7950
+          "count": 7952
         },
         {
           "name": "%rbp",
-          "count": 17699
+          "count": 17693
         },
         {
           "name": "%rbx",
-          "count": 9876
+          "count": 9869
         },
         {
           "name": "%rcx",
@@ -1762,7 +1757,7 @@
         },
         {
           "name": "%rdx",
-          "count": 1329
+          "count": 1331
         },
         {
           "name": "%rip",
@@ -1774,7 +1769,7 @@
         },
         {
           "name": "%rsp",
-          "count": 512
+          "count": 511
         },
         {
           "name": "%xmm0",
@@ -1905,7 +1900,6 @@
         "tests/integration/frontend/frontend_extern_no_storage_test.baa",
         "tests/integration/ir/ir_custom_startup_linux_asm_test.baa",
         "tests/integration/ir/ir_custom_startup_windows_asm_test.baa",
-        "tests/integration/ir/ir_inline_asm_test.baa",
         "tests/integration/ir/ir_printer.baa",
         "tests/integration/ir/ir_runtime_bounds_debug_info_no_checks_v055_test.baa",
         "tests/integration/ir/ir_runtime_bounds_enabled_v055_test.baa",
@@ -1916,6 +1910,7 @@
         "tests/integration/ir/ir_runtime_null_deref_enabled_v063_test.baa",
         "tests/integration/ir/ir_runtime_shift_width_enabled_v063_test.baa",
         "tests/integration/ir/ir_runtime_string_bounds_enabled_v063_test.baa",
+        "tests/integration/ir/ir_structured_arch_ops_test.baa",
         "tests/integration/ir/ir_test.baa",
         "tests/stress/stress_deep_scopes.baa",
         "tests/stress/stress_symbol_volume.baa",
@@ -2056,12 +2051,6 @@
           ]
         },
         {
-          "source": "tests/integration/ir/ir_inline_asm_test.baa",
-          "flags": [
-            "-S"
-          ]
-        },
-        {
           "source": "tests/integration/ir/ir_runtime_bounds_debug_info_no_checks_v055_test.baa",
           "flags": [
             "-S",
@@ -2122,6 +2111,12 @@
           "flags": [
             "-S",
             "-fruntime-checks"
+          ]
+        },
+        {
+          "source": "tests/integration/ir/ir_structured_arch_ops_test.baa",
+          "flags": [
+            "-S"
           ]
         }
       ],
@@ -2215,7 +2210,6 @@
         "tests/integration/frontend/frontend_extern_no_storage_test.baa",
         "tests/integration/ir/ir_custom_startup_linux_asm_test.baa",
         "tests/integration/ir/ir_custom_startup_windows_asm_test.baa",
-        "tests/integration/ir/ir_inline_asm_test.baa",
         "tests/integration/ir/ir_printer.baa",
         "tests/integration/ir/ir_runtime_bounds_debug_info_no_checks_v055_test.baa",
         "tests/integration/ir/ir_runtime_bounds_enabled_v055_test.baa",
@@ -2226,6 +2220,7 @@
         "tests/integration/ir/ir_runtime_null_deref_enabled_v063_test.baa",
         "tests/integration/ir/ir_runtime_shift_width_enabled_v063_test.baa",
         "tests/integration/ir/ir_runtime_string_bounds_enabled_v063_test.baa",
+        "tests/integration/ir/ir_structured_arch_ops_test.baa",
         "tests/integration/ir/ir_test.baa",
         "tests/stress/stress_deep_scopes.baa",
         "tests/stress/stress_symbol_volume.baa",
@@ -2290,7 +2285,7 @@
             "register",
             "register"
           ],
-          "count": 2423,
+          "count": 2422,
           "samples": [
             "examples/error_handling_demo.baa:248",
             "examples/error_handling_demo.baa:250",
@@ -2651,7 +2646,7 @@
             "memory-base-displacement",
             "register"
           ],
-          "count": 416,
+          "count": 414,
           "samples": [
             "examples/error_handling_demo.baa:74",
             "examples/error_handling_demo.baa:107",
@@ -2765,11 +2760,10 @@
             "immediate-integer",
             "memory-base-displacement"
           ],
-          "count": 4,
+          "count": 2,
           "samples": [
             "examples/error_handling_demo.baa:100",
-            "tests/integration/backend/backend_error_handling_v043_test.baa:319",
-            "tests/integration/ir/ir_inline_asm_test.baa:17"
+            "tests/integration/backend/backend_error_handling_v043_test.baa:319"
           ]
         },
         {
@@ -2791,11 +2785,10 @@
             "memory-base-displacement",
             "register"
           ],
-          "count": 4,
+          "count": 2,
           "samples": [
             "examples/error_handling_demo.baa:105",
-            "tests/integration/backend/backend_error_handling_v043_test.baa:324",
-            "tests/integration/ir/ir_inline_asm_test.baa:23"
+            "tests/integration/backend/backend_error_handling_v043_test.baa:324"
           ]
         },
         {
@@ -2815,7 +2808,7 @@
             "register",
             "memory-base-displacement"
           ],
-          "count": 5,
+          "count": 3,
           "samples": [
             "tests/integration/backend/backend_file_io_test.baa:5517",
             "tests/integration/backend/backend_file_io_test.baa:5842",
@@ -2828,7 +2821,7 @@
             "register",
             "register"
           ],
-          "count": 220,
+          "count": 218,
           "samples": [
             "examples/error_handling_demo.baa:109",
             "examples/error_handling_demo.baa:111",
@@ -3033,7 +3026,7 @@
             "memory-base-displacement",
             "register"
           ],
-          "count": 1914,
+          "count": 1912,
           "samples": [
             "examples/error_handling_demo.baa:28",
             "examples/error_handling_demo.baa:29",
@@ -3046,7 +3039,7 @@
             "register",
             "memory-base-displacement"
           ],
-          "count": 897,
+          "count": 895,
           "samples": [
             "examples/error_handling_demo.baa:13",
             "examples/error_handling_demo.baa:14",
@@ -3084,7 +3077,7 @@
           "operands": [],
           "count": 1,
           "samples": [
-            "tests/integration/ir/ir_inline_asm_test.baa:41"
+            "tests/integration/ir/ir_structured_arch_ops_test.baa:28"
           ]
         },
         {
@@ -3129,7 +3122,7 @@
             "register",
             "register"
           ],
-          "count": 448,
+          "count": 449,
           "samples": [
             "examples/error_handling_demo.baa:287",
             "examples/error_handling_demo.baa:323",
@@ -3153,7 +3146,7 @@
           "operands": [],
           "count": 1,
           "samples": [
-            "tests/integration/ir/ir_inline_asm_test.baa:20"
+            "tests/integration/ir/ir_structured_arch_ops_test.baa:14"
           ]
         },
         {
@@ -3376,7 +3369,7 @@
             "immediate-integer",
             "register"
           ],
-          "count": 1556,
+          "count": 1557,
           "samples": [
             "examples/error_handling_demo.baa:242",
             "examples/error_handling_demo.baa:246",
@@ -3517,7 +3510,7 @@
           "operands": [
             "string"
           ],
-          "count": 499,
+          "count": 495,
           "samples": [
             "examples/error_handling_demo.baa:2",
             "examples/error_handling_demo.baa:3",
@@ -3620,7 +3613,7 @@
             "symbol",
             "string"
           ],
-          "count": 208,
+          "count": 207,
           "samples": [
             "examples/error_handling_demo.baa:1",
             "examples/error_handling_demo.baa:714",
@@ -3656,7 +3649,7 @@
         },
         {
           "name": ".rdata",
-          "count": 208
+          "count": 207
         },
         {
           "name": ".text",
@@ -3666,7 +3659,7 @@
       "symbols": {
         "defined": 621,
         "global-declaration": 311,
-        "local": 4067
+        "local": 4063
       },
       "registers": [
         {
@@ -3687,7 +3680,7 @@
         },
         {
           "name": "%eax",
-          "count": 185
+          "count": 184
         },
         {
           "name": "%ebx",
@@ -3699,19 +3692,15 @@
         },
         {
           "name": "%edi",
-          "count": 17
-        },
-        {
-          "name": "%edx",
-          "count": 1
+          "count": 16
         },
         {
           "name": "%esi",
-          "count": 45
+          "count": 44
         },
         {
           "name": "%r10",
-          "count": 16296
+          "count": 16295
         },
         {
           "name": "%r10b",
@@ -3719,7 +3708,7 @@
         },
         {
           "name": "%r10d",
-          "count": 349
+          "count": 345
         },
         {
           "name": "%r11",
@@ -3783,11 +3772,11 @@
         },
         {
           "name": "%rax",
-          "count": 7558
+          "count": 7560
         },
         {
           "name": "%rbp",
-          "count": 15933
+          "count": 15927
         },
         {
           "name": "%rbx",
@@ -3799,11 +3788,11 @@
         },
         {
           "name": "%rdi",
-          "count": 8847
+          "count": 8840
         },
         {
           "name": "%rdx",
-          "count": 2701
+          "count": 2703
         },
         {
           "name": "%rip",
@@ -3811,7 +3800,7 @@
         },
         {
           "name": "%rsi",
-          "count": 9912
+          "count": 9905
         },
         {
           "name": "%rsp",
@@ -3954,7 +3943,6 @@
         "tests/integration/frontend/frontend_extern_no_storage_test.baa",
         "tests/integration/ir/ir_custom_startup_linux_asm_test.baa",
         "tests/integration/ir/ir_custom_startup_windows_asm_test.baa",
-        "tests/integration/ir/ir_inline_asm_test.baa",
         "tests/integration/ir/ir_printer.baa",
         "tests/integration/ir/ir_runtime_bounds_debug_info_no_checks_v055_test.baa",
         "tests/integration/ir/ir_runtime_bounds_enabled_v055_test.baa",
@@ -3965,6 +3953,7 @@
         "tests/integration/ir/ir_runtime_null_deref_enabled_v063_test.baa",
         "tests/integration/ir/ir_runtime_shift_width_enabled_v063_test.baa",
         "tests/integration/ir/ir_runtime_string_bounds_enabled_v063_test.baa",
+        "tests/integration/ir/ir_structured_arch_ops_test.baa",
         "tests/integration/ir/ir_test.baa",
         "tests/stress/stress_deep_scopes.baa",
         "tests/stress/stress_symbol_volume.baa",
@@ -4105,12 +4094,6 @@
           ]
         },
         {
-          "source": "tests/integration/ir/ir_inline_asm_test.baa",
-          "flags": [
-            "-S"
-          ]
-        },
-        {
           "source": "tests/integration/ir/ir_runtime_bounds_debug_info_no_checks_v055_test.baa",
           "flags": [
             "-S",
@@ -4171,6 +4154,12 @@
           "flags": [
             "-S",
             "-fruntime-checks"
+          ]
+        },
+        {
+          "source": "tests/integration/ir/ir_structured_arch_ops_test.baa",
+          "flags": [
+            "-S"
           ]
         }
       ],

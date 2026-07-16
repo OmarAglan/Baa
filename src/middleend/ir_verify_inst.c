@@ -13,7 +13,9 @@
     }
 
     // تحقق عام للنوع/الوجهة.
-    if (inst->op != IR_OP_STORE && inst->op != IR_OP_BR && inst->op != IR_OP_BR_COND && inst->op != IR_OP_RET) {
+    if (inst->op != IR_OP_STORE && inst->op != IR_OP_BR &&
+        inst->op != IR_OP_BR_COND && inst->op != IR_OP_RET &&
+        inst->op != IR_OP_CPU_NOP) {
         // معظم التعليمات المنتجة للقيم يجب أن تملك type غير void.
         if (!inst->type) {
             ir_report(diag, module, func, block, inst, "تعليمة بدون نوع (type=NULL).");
@@ -572,7 +574,31 @@
         }
 
         // --------------------------------------------------------------------
-        // nop: بدون معاملات ولا وجهة
+        // structured architectural operations
+        // --------------------------------------------------------------------
+        case IR_OP_CPU_NOP:
+            if (inst->operand_count != 0) {
+                ir_report(diag, module, func, block, inst, "تعليمة `لا_تفعل` يجب ألا تملك معاملات.");
+            }
+            if (inst->dest >= 0) {
+                ir_report(diag, module, func, block, inst, "تعليمة `لا_تفعل` لا يجب أن تملك وجهة.");
+            }
+            if (!inst->type || inst->type->kind != IR_TYPE_VOID) {
+                ir_report(diag, module, func, block, inst, "تعليمة `لا_تفعل` يجب أن تكون من نوع فراغ.");
+            }
+            break;
+
+        case IR_OP_READ_TSC:
+            ir_verify_inst_dest_rules(diag, module, func, block, inst, 1);
+            if (inst->operand_count != 0) {
+                ir_report(diag, module, func, block, inst, "تعليمة `اقرأ_عداد_الزمن` يجب ألا تملك معاملات.");
+            }
+            if (!inst->type || inst->type->kind != IR_TYPE_I64) {
+                ir_report(diag, module, func, block, inst, "تعليمة `اقرأ_عداد_الزمن` يجب أن تنتج ص٦٤.");
+            }
+            break;
+
+        // nop placeholder: بدون معاملات ولا وجهة
         // --------------------------------------------------------------------
         case IR_OP_NOP:
             if (inst->operand_count != 0) {
@@ -691,4 +717,3 @@ static bool ir_verify_func_internal(IRModule* module_for_diag,
 
     return diag.error_count == 0;
 }
-

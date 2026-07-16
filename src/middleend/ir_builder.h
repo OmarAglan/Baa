@@ -482,6 +482,20 @@ int ir_builder_emit_copy(IRBuilder* builder, IRType* type, IRValue* source);
 int ir_builder_emit_cast(IRBuilder* builder, IRValue* value, IRType* to_type);
 
 // ============================================================================
+// Structured machine operations (عمليات آلة مهيكلة)
+// ============================================================================
+
+/**
+ * @brief Emit one architectural no-op instruction.
+ */
+void ir_builder_emit_cpu_nop(IRBuilder* builder);
+
+/**
+ * @brief Read the x86-64 timestamp counter and return a 64-bit value.
+ */
+int ir_builder_emit_read_tsc(IRBuilder* builder);
+
+// ============================================================================
 // Constant Value Helpers
 // ============================================================================
 

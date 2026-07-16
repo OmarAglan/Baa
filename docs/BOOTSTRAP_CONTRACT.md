@@ -57,9 +57,9 @@ Frozen language surface:
 - File format: UTF-8 `.baa` source files and `.baahd` headers.
 - Statement terminator: `.`; Arabic semicolon `؛` remains the `لكل` separator.
 - Preprocessor directives: `#تضمين`, `#تعريف`, `#إذا_عرف`, `#وإلا`, `#نهاية`, `#الغاء_تعريف`, and `#خطأ`.
-- Keywords and type forms currently recognized by the lexer/parser, including scalar integer widths, unsigned widths, `عشري`, `عشري٣٢`, `حرف`, `نص`, `منطقي`, `عدم`, `نوع`, `دالة(...) -> ...`, `ثابت`, `ساكن`, `خارجي`, `تعداد`, `هيكل`, `اتحاد`, `مجمع`, and `كـ`.
+- Keywords and type forms currently recognized by the lexer/parser, including scalar integer widths, unsigned widths, `عشري`, `عشري٣٢`, `حرف`, `نص`, `منطقي`, `عدم`, `نوع`, `دالة(...) -> ...`, `ثابت`, `ساكن`, `خارجي`, `تعداد`, `هيكل`, `اتحاد`, and `كـ`. The legacy `مجمع` token is recognized only to issue its migration diagnostic.
 - Top-level declarations: functions, prototypes, external declarations, globals, static globals, arrays, type aliases, enums, structs, and unions.
-- Statements and expressions documented in `docs/LANGUAGE.md`, including control flow, pointer operations, casts, `حجم`, formatted I/O builtins, variadics, and inline assembly.
+- Statements and expressions documented in `docs/LANGUAGE.md`, including control flow, pointer operations, casts, `حجم`, formatted I/O builtins, variadics, and structured architecture builtins.
 - Entry points: `صحيح الرئيسية()` and `صحيح الرئيسية(صحيح عدد، نص[] معاملات)`.
 
 Freeze policy:

@@ -150,6 +150,27 @@ static int ir_text_parse_instruction_line(IRModule* module, IRFunc* func, IRBloc
 
     IRInst* inst = NULL;
 
+    if (op == IR_OP_CPU_NOP) {
+        if (dest >= 0) return 0;
+        inst = ir_inst_new(IR_OP_CPU_NOP, IR_TYPE_VOID_T, -1);
+        if (!inst) return 0;
+        if (!ir_text_parse_inst_attrs(&p, inst, func)) return 0;
+        ir_block_append(block, inst);
+        return 1;
+    }
+
+    if (op == IR_OP_READ_TSC) {
+        if (dest < 0) return 0;
+        IRType* type = ir_text_parse_type_rec(&p);
+        if (!type || type->kind != IR_TYPE_I64) return 0;
+        inst = ir_inst_new(IR_OP_READ_TSC, type, dest);
+        if (!inst) return 0;
+        if (!ir_text_parse_inst_attrs(&p, inst, func)) return 0;
+        ir_block_append(block, inst);
+        if (dest >= func->next_reg) func->next_reg = dest + 1;
+        return 1;
+    }
+
     if (op == IR_OP_NOP) {
         inst = ir_inst_new(IR_OP_NOP, IR_TYPE_VOID_T, -1);
         if (!inst) return 0;

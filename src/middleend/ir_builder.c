@@ -521,6 +521,26 @@ int ir_builder_emit_cast(IRBuilder* builder, IRValue* value, IRType* to_type) {
 }
 
 // ============================================================================
+// Structured machine operations
+// ============================================================================
+
+void ir_builder_emit_cpu_nop(IRBuilder* builder) {
+    if (!builder || !builder->current_func) return;
+
+    IRInst* inst = ir_inst_new(IR_OP_CPU_NOP, IR_TYPE_VOID_T, -1);
+    emit_inst(builder, inst);
+}
+
+int ir_builder_emit_read_tsc(IRBuilder* builder) {
+    if (!builder || !builder->current_func) return -1;
+
+    int dest = ir_builder_alloc_reg(builder);
+    IRInst* inst = ir_inst_new(IR_OP_READ_TSC, IR_TYPE_I64_T, dest);
+    emit_inst(builder, inst);
+    return dest;
+}
+
+// ============================================================================
 // Constant Value Helpers
 // ============================================================================
 

@@ -469,6 +469,7 @@ typedef struct {
 } BuiltinSystemFuncSig;
 
 static const BuiltinSystemFuncSig builtin_system_funcs[] = {
+    { "لا_تفعل",     TYPE_VOID,   0, { TYPE_INT } },
     { "متغير_بيئة", TYPE_STRING, 1, { TYPE_STRING } },
     { "نفذ_أمر",    TYPE_INT,    1, { TYPE_STRING } },
     { "ابدأ_عملية", TYPE_POINTER, 7,
@@ -528,6 +529,7 @@ typedef struct {
 } BuiltinTimeFuncSig;
 
 static const BuiltinTimeFuncSig builtin_time_funcs[] = {
+    { "اقرأ_عداد_الزمن", TYPE_INT,    0, { TYPE_INT } },
     { "وقت_حالي", TYPE_INT,    0, { TYPE_INT } },
     { "وقت_كنص",  TYPE_STRING, 1, { TYPE_INT } },
 };
@@ -591,73 +593,6 @@ static bool variadic_extra_arg_type_supported(DataType t)
 {
     if (t == TYPE_VOID || t == TYPE_STRUCT || t == TYPE_UNION || t == TYPE_FUNC_PTR) return false;
     return true;
-}
-
-static bool inline_asm_constraint_supported(const char* constraint, bool is_output, char* out_reg_code)
-{
-    if (out_reg_code) *out_reg_code = '\0';
-    if (!constraint || !constraint[0]) return false;
-
-    const char* p = constraint;
-    if (is_output) {
-        if (p[0] != '=') return false;
-        p++;
-    } else if (p[0] == '=') {
-        return false;
-    }
-
-    if (p[0] == '\0' || p[1] != '\0') return false;
-
-    if (p[0] != 'a' && p[0] != 'c' && p[0] != 'd') {
-        return false;
-    }
-
-    if (out_reg_code) *out_reg_code = p[0];
-    return true;
-}
-
-static bool inline_asm_expr_is_lvalue(Node* expr)
-{
-    if (!expr) return false;
-    if (expr->type == NODE_VAR_REF) return true;
-    if (expr->type == NODE_MEMBER_ACCESS) return true;
-    if (expr->type == NODE_ARRAY_ACCESS) return true;
-    if (expr->type == NODE_UNARY_OP && expr->data.unary_op.op == UOP_DEREF) return true;
-    return false;
-}
-
-static void analyze_inline_asm_operands(Node* stmt, Node* list, bool is_output)
-{
-    for (Node* op = list; op; op = op->next) {
-        if (op->type != NODE_ASM_OPERAND) {
-            semantic_error(stmt, "تركيب جملة 'مجمع' غير صالح.");
-            continue;
-        }
-
-        const char* constraint = op->data.asm_operand.constraint;
-        if (!inline_asm_constraint_supported(constraint, is_output, NULL)) {
-            semantic_error(op,
-                           is_output
-                               ? "قيد خرج غير مدعوم في 'مجمع' (المتاح حالياً: =a، =c، =d)."
-                               : "قيد إدخال غير مدعوم في 'مجمع' (المتاح حالياً: a، c، d).");
-        }
-
-        Node* expr = op->data.asm_operand.expression;
-        if (!expr) {
-            semantic_error(op, "معامل 'مجمع' يتطلب تعبيراً بين القوسين.");
-            continue;
-        }
-
-        DataType t = infer_type(expr);
-
-        if (is_output && !inline_asm_expr_is_lvalue(expr)) {
-            semantic_error(expr, "خرج 'مجمع' يجب أن يكون قيمة قابلة للإسناد.");
-        }
-
-        if (!(datatype_is_intlike(t) || t == TYPE_POINTER)) {
-            semantic_error(expr, "معاملات 'مجمع' تدعم القيم الصحيحة أو المؤشرات فقط.");
-        }
-    }
 }
 
 static bool builtin_validate_variadic_cursor_arg(Node* arg, const char* fname)

@@ -43,6 +43,7 @@ static int ir_inst_has_side_effects(IRInst* inst) {
     switch (inst->op) {
         case IR_OP_STORE:
         case IR_OP_CALL:
+        case IR_OP_CPU_NOP:
             return 1;
 
         case IR_OP_BR:

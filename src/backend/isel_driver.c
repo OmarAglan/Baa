@@ -442,12 +442,14 @@ const char *mach_op_to_string(MachineOp op)
         return "pop";
     case MACH_NOP:
         return "nop";
+    case MACH_CPU_NOP:
+        return "cpu_nop";
+    case MACH_RDTSC:
+        return "rdtsc";
     case MACH_LABEL:
         return "label";
     case MACH_COMMENT:
         return "comment";
-    case MACH_INLINE_ASM:
-        return "inline_asm";
     default:
         return "???";
     }
@@ -536,13 +538,6 @@ void mach_inst_print(MachineInst *inst, FILE *out)
         return;
     }
 
-    if (inst->op == MACH_INLINE_ASM)
-    {
-        if (inst->comment)
-            fprintf(out, "    %s\n", inst->comment);
-        return;
-    }
-
     fprintf(out, "    %-8s", mach_op_to_string(inst->op));
 
     // طباعة المعاملات
@@ -619,4 +614,3 @@ void mach_module_print(MachineModule *module, FILE *out)
         mach_func_print(func, out);
     }
 }
-

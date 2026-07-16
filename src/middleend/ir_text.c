@@ -288,7 +288,13 @@ static void ir_text_write_inst(FILE* out, IRInst* inst) {
     fputs(ir_op_to_english(inst->op), out);
 
     switch (inst->op) {
+        case IR_OP_CPU_NOP:
         case IR_OP_NOP:
+            break;
+
+        case IR_OP_READ_TSC:
+            fputc(' ', out);
+            ir_text_write_type(out, inst->type);
             break;
 
         case IR_OP_BR:
@@ -691,6 +697,8 @@ static IROp ir_text_parse_op(const char* op) {
     if (strcmp(op, "phi") == 0) return IR_OP_PHI;
     if (strcmp(op, "copy") == 0) return IR_OP_COPY;
     if (strcmp(op, "cast") == 0) return IR_OP_CAST;
+    if (strcmp(op, "cpu.nop") == 0) return IR_OP_CPU_NOP;
+    if (strcmp(op, "read.tsc") == 0) return IR_OP_READ_TSC;
     if (strcmp(op, "nop") == 0) return IR_OP_NOP;
     return IR_OP_NOP;
 }

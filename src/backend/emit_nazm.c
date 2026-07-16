@@ -365,8 +365,23 @@ static BaaNazmEmitResult nazm_validate_instruction(const MachineInst *inst,
         case MACH_LABEL:
         case MACH_RET:
         case MACH_NOP:
+        case MACH_CPU_NOP:
         case MACH_COMMENT:
             return nazm_ok();
+
+        case MACH_RDTSC:
+        {
+            BaaNazmEmitResult dst = nazm_validate_value_operand(
+                &inst->dst, target, inst, false);
+            if (dst.status != BAA_NAZM_EMIT_OK) return dst;
+            if (nazm_operand_bits(&inst->dst) != 64)
+                return nazm_unsupported(
+                    "عرض_نتيجة_عداد_الزمن",
+                    NULL,
+                    "نتيجة قراءة عداد الزمن يجب أن تكون بعرض ٦٤ بت.",
+                    inst);
+            return nazm_ok();
+        }
 
         case MACH_MOV:
         case MACH_LOAD:
@@ -532,13 +547,6 @@ static BaaNazmEmitResult nazm_validate_instruction(const MachineInst *inst,
                 return nazm_unsupported("عرض_سحب", NULL,
                                         "السحب يتطلب سجلا بعرض ٦٤ بت.", inst);
             return nazm_validate_operand(&inst->dst, target, inst);
-
-        case MACH_INLINE_ASM:
-            return nazm_unsupported(
-                "ترحيل_التجميع_الضمني",
-                "مجمع_جاس_خام",
-                "جملة 'مجمع' تحمل نص GAS خاما؛ مسار نظم يرفضها حتى انتقال المصدر إلى عقد 'نظم' العربي المهيكل.",
-                inst);
 
         default:
             return nazm_unsupported("تعليمة_آلة",

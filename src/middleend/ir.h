@@ -87,6 +87,8 @@ typedef enum {
     // --------------------------------------------------------------------
     // Special Operations
     // --------------------------------------------------------------------
+    IR_OP_CPU_NOP,  // لا_تفعل - Emit an architectural no-op
+    IR_OP_READ_TSC, // اقرأ_عداد_الزمن - Read the x86-64 timestamp counter
     IR_OP_NOP,      // No operation (placeholder)
     
     IR_OP_COUNT     // Total number of opcodes

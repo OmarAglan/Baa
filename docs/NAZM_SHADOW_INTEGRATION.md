@@ -138,12 +138,13 @@ view, and lowered spilled unary bitwise-NOT through a scratch register, raising
 both targets to 95 sources. The conversion-configuration slice then admitted
 all three `--startup=custom` sources: that option controls the inspectable GAS
 `-S` presentation and does not own hosted startup in canonical Nazm output.
-This raises both targets to 98 sources. The two remaining visible blockers are
-object debug information (`معلومات_تنقيح_كائنية`, with target-specific
-`دورف`/`كودفيو` detail) and legacy raw-GAS inline assembly
-(`ترحيل_التجميع_الضمني/مجمع_جاس_خام`). Stack protection has its own explicit
-`حماية_المكدس` blocker when requested. None falls back to GAS inside the shadow
-result.
+The structured architecture slice then replaced raw inline text with typed
+`لا_تفعل()` and `اقرأ_عداد_الزمن()` operations backed by IR/Machine IR and
+added the matching Nazm instruction. This raises both targets to 99 sources.
+The only remaining corpus blocker is object debug information
+(`معلومات_تنقيح_كائنية`, with target-specific `دورف`/`كودفيو` detail). Stack
+protection has its own explicit `حماية_المكدس` blocker when requested. None
+falls back to GAS inside the shadow result.
 
 Regenerate or verify the matrix with the current compiler:
 
@@ -229,12 +230,12 @@ that unsupported emission leaves neither source nor sidecar output.
 
 ## Current admission status
 
-Stage B, the Stage B.1 comparison/fixture gate, and the first executable
-emitter slice are complete. `--emit-nazm` now emits an Arabic-only `.نظم`
-source for a minimal integer entry program on either target. It retains Baa
-line/column spans in Arabic comments, uses `الرئيسية` rather than an ASCII ABI
-name, and fails with status `3` before leaving an output file when any machine
-form is unsupported.
+Stage B, the Stage B.1 comparison/fixture gate, and the structured architecture
+slice are complete. `--emit-nazm` emits Arabic-only `.نظم` for 99 of the 100
+corpus sources on either target. It retains Baa line/column spans in Arabic
+comments, uses `الرئيسية` rather than an ASCII ABI name, and fails with status
+`3` before leaving an output file when the remaining debug-information form is
+unsupported.
 
 The first explicit `--nazm-shadow=<path>` slice is admitted for one input at a time,
 where `<path>` is the Nazm executable. Baa still completes its production GAS
@@ -256,7 +257,7 @@ Dedicated `nazm-shadow-windows` and `nazm-shadow-linux` CI jobs build both
 repositories and run this real parity path on every Baa change.
 
 The full corpus is classified automatically, and object/link/runtime comparison
-covers all 98 Linux and 98 Windows emitted members. Nazm and Baa now share the
+covers all 99 Linux and 99 Windows emitted members. Nazm and Baa now share the
 required integer widths, condition-code writes, extension and division forms,
 indirect calls, callee-saved frames, memory-source multiplication, spilled
 condition-code writes, integer globals, Arabic external symbols,

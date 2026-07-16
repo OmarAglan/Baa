@@ -26,7 +26,6 @@
 
 #define BAA_ENTRY_FUNC_NAME "الرئيسية"
 #define BAA_WRAPPED_USER_MAIN_NAME "الرئيسية_المستخدم"
-#define BAA_INLINE_ASM_PSEUDO_CALL "__baa_inline_asm_v0406"
 
 // ============================================================================
 // Locals table helpers
@@ -944,6 +943,7 @@ static void ir_lower_scope_pop(IRLowerCtx* ctx) {
 #include "ir_lower_path.c"
 #include "ir_lower_string_builder.c"
 #include "ir_lower_process.c"
+#include "ir_lower_arch.c"
 
 static IRValue* lower_call_expr(IRLowerCtx* ctx, Node* expr) {
 #include "ir_lower_call_expr_body_a.inc"
@@ -960,6 +960,10 @@ static IRValue* lower_call_expr(IRLowerCtx* ctx, Node* expr) {
     IRValue* string_builder_builtin_value = NULL;
     if (ir_lower_try_string_builder_builtin(ctx, expr, &string_builder_builtin_value)) {
         return string_builder_builtin_value ? string_builder_builtin_value : ir_builder_const_i64(0);
+    }
+    IRValue* arch_builtin_value = NULL;
+    if (ir_lower_try_arch_builtin(ctx, expr, &arch_builtin_value)) {
+        return arch_builtin_value ? arch_builtin_value : ir_builder_const_i64(0);
     }
     IRValue* process_builtin_value = NULL;
     if (ir_lower_try_process_builtin(ctx, expr, &process_builtin_value)) {

@@ -325,7 +325,18 @@ static void isel_lower_inst(ISelCtx *ctx, IRInst *inst)
         isel_lower_cast(ctx, inst);
         break;
 
-    // لا عملية
+    // عمليات آلة مهيكلة
+    case IR_OP_CPU_NOP:
+        isel_emit(ctx, MACH_CPU_NOP, mach_op_none(), mach_op_none(), mach_op_none());
+        break;
+    case IR_OP_READ_TSC: {
+        MachineOperand dst = mach_op_vreg(inst->dest, 64);
+        MachineInst *mi = isel_emit(ctx, MACH_RDTSC, dst, mach_op_none(), mach_op_none());
+        if (mi) mi->ir_reg = inst->dest;
+        break;
+    }
+
+    // لا عملية داخلية
     case IR_OP_NOP:
         isel_emit(ctx, MACH_NOP, mach_op_none(), mach_op_none(), mach_op_none());
         break;

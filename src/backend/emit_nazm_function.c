@@ -169,6 +169,21 @@ static void nazm_write_function(FILE *out,
                     emitted_lines = 1;
                     break;
 
+                case MACH_CPU_NOP:
+                    fputs("    لا_تفعل\n", out);
+                    emitted_lines = 1;
+                    break;
+
+                case MACH_RDTSC:
+                    fputs("    اقرأ_عداد_الزمن\n", out);
+                    fputs("    ازح_يسارا سجل_البيانات، ٣٢\n", out);
+                    fputs("    أو_بتيا سجل_المركم، سجل_البيانات\n", out);
+                    fputs("    انقل ", out);
+                    nazm_write_operand(out, &inst->dst);
+                    fputs("، سجل_المركم\n", out);
+                    emitted_lines = 4;
+                    break;
+
                 case MACH_ADDSD:
                     emitted_lines = nazm_write_binary(
                         out, "جمع_عشري", &inst->dst, &inst->src2);

@@ -57,7 +57,8 @@ i386-pyramidos
     "pie": true,
     "stack_protector": true,
     "nazm_source": true,
-    "inline_asm": true,
+    "structured_arch_ops": true,
+    "inline_asm": false,
     "freestanding": false
   }
 }

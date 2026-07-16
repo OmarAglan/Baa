@@ -708,18 +708,11 @@ static void analyze_node(Node* node) {
         }
 
         case NODE_INLINE_ASM: {
-            if (!node->data.inline_asm.templates) {
-                semantic_error(node, "جملة 'مجمع' تتطلب سطر تجميع واحداً على الأقل.");
-            }
-
-            for (Node* tpl = node->data.inline_asm.templates; tpl; tpl = tpl->next) {
-                if (tpl->type != NODE_STRING || !tpl->data.string_lit.value) {
-                    semantic_error(tpl ? tpl : node, "أسطر 'مجمع' يجب أن تكون نصوصاً ثابتة.");
-                }
-            }
-
-            analyze_inline_asm_operands(node, node->data.inline_asm.outputs, true);
-            analyze_inline_asm_operands(node, node->data.inline_asm.inputs, false);
+            semantic_error(
+                node,
+                "أزيلت جملة 'مجمع' الخام؛ استخدم 'لا_تفعل()' أو "
+                "'اقرأ_عداد_الزمن()' للعمليات الصغيرة، وملف '.نظم' "
+                "للتجميع المستقل.");
             break;
         }
             

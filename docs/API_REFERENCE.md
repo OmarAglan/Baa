@@ -303,6 +303,8 @@ typedef enum {
     // --------------------------------------------------------------------
     // Special Operations
     // --------------------------------------------------------------------
+    IR_OP_CPU_NOP,  // Intentional architectural no-op
+    IR_OP_READ_TSC, // Structured x86-64 timestamp-counter read
     IR_OP_NOP,      // No operation (placeholder)
     
     IR_OP_COUNT     // Total number of opcodes
@@ -2398,6 +2400,27 @@ Emits: `%dest = تحويل from_type to to_type value`
 
 ---
 
+### 5.10.1. Structured Architecture Operations
+
+#### `ir_builder_emit_cpu_nop`
+
+```c
+void ir_builder_emit_cpu_nop(IRBuilder* builder)
+```
+
+Emits an intentional architectural no-op.
+
+#### `ir_builder_emit_read_tsc`
+
+```c
+int ir_builder_emit_read_tsc(IRBuilder* builder)
+```
+
+Emits a structured timestamp-counter read and returns the destination `ص٦٤`
+register number.
+
+---
+
 ### 5.11. Control Flow Helpers
 
 #### `ir_builder_create_if_then`
@@ -2694,7 +2717,7 @@ Supported statements (v0.3.0.5):
 - `NODE_PRINT`: `نداء @اطبع(...)`
 - `NODE_READ`: `نداء @اقرأ(%ptr)`
 - `NODE_CALL_STMT`: lowered through call expression path
-- `NODE_INLINE_ASM`: lowered to metadata pseudo-call consumed in ISel and emitted as raw assembly lines
+- `NODE_INLINE_ASM`: retained only to report migration away from raw assembly; it does not lower to IR
 - `NODE_IF`, `NODE_WHILE`, `NODE_FOR`, `NODE_SWITCH`
 - `NODE_BREAK`, `NODE_CONTINUE`
 
@@ -3280,7 +3303,7 @@ typedef enum {
     // Stack
     MACH_PUSH, MACH_POP,
     // Special
-    MACH_NOP, MACH_LABEL, MACH_COMMENT
+    MACH_NOP, MACH_CPU_NOP, MACH_RDTSC, MACH_LABEL, MACH_COMMENT
 } MachineOp;
 ```
 

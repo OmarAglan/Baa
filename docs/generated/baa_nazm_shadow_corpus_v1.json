@@ -3,7 +3,7 @@
   "compiler": "baa version 0.6.0",
   "source_inventory": {
     "schema": "baa-assembly-surface-v1",
-    "sha256": "2039a6df4f95b0eb8e0c8988d1d522b09dec52b87dfef0d269b106d22a7daccd"
+    "sha256": "1956cdf8f65e3fc5ab8c069b4f4a7381438f6f9c29c217505356fda1ed1ed2f2"
   },
   "status_contract": {
     "emitted": "Baa emitted canonical Arabic Nazm without Latin letters.",
@@ -15,26 +15,17 @@
     "x86_64-linux": {
       "source_count": 100,
       "summary": {
-        "emitted": 98,
-        "unsupported": 2,
+        "emitted": 99,
+        "unsupported": 1,
         "error": 0
       },
       "unsupported_reasons": [
-        {
-          "reason": "خطأ: جملة 'مجمع' تحمل نص GAS خاما؛ مسار نظم يرفضها حتى انتقال المصدر إلى عقد 'نظم' العربي المهيكل.",
-          "count": 1
-        },
         {
           "reason": "خطأ: مسار نظم لا ينتج معلومات تنقيح كائنية مكافئة بعد.",
           "count": 1
         }
       ],
       "unsupported_blockers": [
-        {
-          "kind": "ترحيل_التجميع_الضمني",
-          "detail": "مجمع_جاس_خام",
-          "count": 1
-        },
         {
           "kind": "معلومات_تنقيح_كائنية",
           "detail": "دورف",
@@ -621,16 +612,6 @@
           "sha256": "3591d7d1550e5bd62e8a4bc73ed71acb4c377054134d6b221e69dbeff5f32ee6"
         },
         {
-          "source": "tests/integration/ir/ir_inline_asm_test.baa",
-          "status": "unsupported",
-          "exit_code": 3,
-          "reason": "خطأ: جملة 'مجمع' تحمل نص GAS خاما؛ مسار نظم يرفضها حتى انتقال المصدر إلى عقد 'نظم' العربي المهيكل.",
-          "blocker": {
-            "kind": "ترحيل_التجميع_الضمني",
-            "detail": "مجمع_جاس_خام"
-          }
-        },
-        {
           "source": "tests/integration/ir/ir_printer.baa",
           "status": "emitted",
           "exit_code": 0,
@@ -722,6 +703,12 @@
           "sha256": "e61e54a1d3bf0c71d8c6cd49f6e32031fc07db14a78ca6de4a76aaa6041b3015"
         },
         {
+          "source": "tests/integration/ir/ir_structured_arch_ops_test.baa",
+          "status": "emitted",
+          "exit_code": 0,
+          "sha256": "9eac405f3aec242782186e9d1f35d050c47f1bfee1c759901a1fcd56ec604124"
+        },
+        {
           "source": "tests/integration/ir/ir_test.baa",
           "status": "emitted",
           "exit_code": 0,
@@ -750,26 +737,17 @@
     "x86_64-windows": {
       "source_count": 100,
       "summary": {
-        "emitted": 98,
-        "unsupported": 2,
+        "emitted": 99,
+        "unsupported": 1,
         "error": 0
       },
       "unsupported_reasons": [
-        {
-          "reason": "خطأ: جملة 'مجمع' تحمل نص GAS خاما؛ مسار نظم يرفضها حتى انتقال المصدر إلى عقد 'نظم' العربي المهيكل.",
-          "count": 1
-        },
         {
           "reason": "خطأ: مسار نظم لا ينتج معلومات تنقيح كائنية مكافئة بعد.",
           "count": 1
         }
       ],
       "unsupported_blockers": [
-        {
-          "kind": "ترحيل_التجميع_الضمني",
-          "detail": "مجمع_جاس_خام",
-          "count": 1
-        },
         {
           "kind": "معلومات_تنقيح_كائنية",
           "detail": "كودفيو",
@@ -1356,16 +1334,6 @@
           "sha256": "56f472bf331256a598b0ebc6bfd3e1984d0eb3774bcf0463136c06620730cd37"
         },
         {
-          "source": "tests/integration/ir/ir_inline_asm_test.baa",
-          "status": "unsupported",
-          "exit_code": 3,
-          "reason": "خطأ: جملة 'مجمع' تحمل نص GAS خاما؛ مسار نظم يرفضها حتى انتقال المصدر إلى عقد 'نظم' العربي المهيكل.",
-          "blocker": {
-            "kind": "ترحيل_التجميع_الضمني",
-            "detail": "مجمع_جاس_خام"
-          }
-        },
-        {
           "source": "tests/integration/ir/ir_printer.baa",
           "status": "emitted",
           "exit_code": 0,
@@ -1455,6 +1423,12 @@
             "-fruntime-checks"
           ],
           "sha256": "fc66c8c3841a8d9f1ac36f4a25529a9ae2b1a887e08351d3ef15207e28bb2c33"
+        },
+        {
+          "source": "tests/integration/ir/ir_structured_arch_ops_test.baa",
+          "status": "emitted",
+          "exit_code": 0,
+          "sha256": "664cd3b68969262e5f1c45060bf41f75a974e1069c6f4a921d554175035bfdf7"
         },
         {
           "source": "tests/integration/ir/ir_test.baa",

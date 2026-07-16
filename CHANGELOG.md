@@ -10,6 +10,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Added
 
+- **Structured Arabic architecture operations**:
+  - Added typed `لا_تفعل()` and `اقرأ_عداد_الزمن()` builtins with dedicated
+    IR and Machine IR operations; the timestamp result combines the two
+    architectural halves into one `ص٦٤` value.
+  - GAS and the canonical Nazm emitter now lower the same structured
+    operations, while Nazm encodes the Arabic `اقرأ_عداد_الزمن` instruction
+    as `0F 31`.
+  - Removed raw `مجمع { ... }` from the accepted Baa source contract. Legacy
+    syntax now produces an Arabic migration diagnostic directing small
+    operations to the typed builtins and larger assembly to standalone `.نظم`
+    modules.
+  - Regenerated the complete two-target 100-source receipts: 99 sources now
+    emit canonical Arabic Nazm on each target, leaving only object debug
+    information as a separate visible blocker.
+
 - **Arabic-only hosted entry ABI**:
   - Production GAS objects now export `الرئيسية` unchanged, argument-bearing programs use
     `الرئيسية_المستخدم`, and final executables enter through `الرئيسية_بدء`; no `main` or
@@ -42,11 +57,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
     aggregate counts, without exposing borrowed include paths or parsing human prose.
   - Added deterministic `baa-nazm-shadow-corpus-v1` classification for all 100 inventoried
     sources on both targets and embedded the complete result in `baa-nazm-coverage-v1`.
-  - Admitted 98 Linux and 98 Windows corpus sources through Arabic-only emission and
+  - Admitted 99 Linux and 99 Windows corpus sources through Arabic-only emission and
     GAS/Nazm object, link, and runtime parity. `--startup=custom` no longer blocks or
     duplicates Nazm output because hosted startup remains owned by the final link path.
-  - Reduced the remaining visible exclusions to object debug information and legacy raw-GAS
-    inline assembly. Both return status `3`, distinct stable Arabic blocker data, and no output.
+  - Reduced the remaining visible exclusion to object debug information. It
+    returns status `3`, target-specific stable Arabic blocker data, and no output.
   - Replaced host `nm`/`objdump` assertions with Unicode-safe COFF/ELF inspection so Arabic
     artifact paths remain mandatory on Windows and Linux CI.
   - Kept unsupported diagnostics source-level and deterministic instead of exposing borrowed

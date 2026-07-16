@@ -948,10 +948,10 @@ class NazmEmitterTests(unittest.TestCase):
             self.assertEqual(shadow_run.stdout, production_run.stdout)
             self.assertEqual(shadow_run.stderr, production_run.stderr)
 
-    def test_unsupported_form_is_visible_and_leaves_no_output(self) -> None:
-        with tempfile.TemporaryDirectory(prefix="baa_nazm_unsupported_") as temp:
+    def test_structured_arch_operations_emit_canonical_arabic(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="baa_nazm_arch_ops_") as temp:
             work = Path(temp)
-            output = work / "غير-مدعوم.نظم"
+            output = work / "عمليات-معمارية.نظم"
             proc = self.run_baa(
                 work,
                 "--emit-nazm",
@@ -962,18 +962,50 @@ class NazmEmitterTests(unittest.TestCase):
                     / "tests"
                     / "integration"
                     / "ir"
-                    / "ir_inline_asm_test.baa"
+                    / "ir_structured_arch_ops_test.baa"
                 ),
                 "-o",
                 str(output),
             )
 
-            self.assertEqual(proc.returncode, 3, proc.stderr)
-            self.assertIn("خطأ:", proc.stderr)
-            self.assertIn(
-                "[عائق_نظم=ترحيل_التجميع_الضمني؛تفصيل=مجمع_جاس_خام]",
-                proc.stderr,
+            self.assertEqual(proc.returncode, 0, proc.stderr)
+            text = output.read_text(encoding="utf-8")
+            self.assertIn("اقرأ_عداد_الزمن", text)
+            self.assertIn("لا_تفعل", text)
+            self.assertIn("ازح_يسارا سجل_البيانات، ٣٢", text)
+            self.assertIn("أو_بتيا سجل_المركم، سجل_البيانات", text)
+            self.assertIsNone(re.search(r"[A-Za-z]", text))
+            self.assertTrue(Path(f"{output}.خريطة-باء.json").is_file())
+
+    def test_raw_inline_asm_is_visible_and_leaves_no_nazm_output(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="baa_nazm_raw_inline_") as temp:
+            work = Path(temp)
+            source = work / "خام.baa"
+            source.write_text(
+                """
+صحيح الرئيسية() {
+    مجمع {
+        "nop"
+    }
+    إرجع ٠.
+}
+""".strip()
+                + "\n",
+                encoding="utf-8",
             )
+            output = work / "غير-مدعوم.نظم"
+            proc = self.run_baa(
+                work,
+                "--emit-nazm",
+                str(source),
+                "-o",
+                str(output),
+            )
+
+            self.assertEqual(proc.returncode, 1, proc.stderr)
+            self.assertIn("أزيلت جملة 'مجمع' الخام", proc.stderr)
+            self.assertIn("اقرأ_عداد_الزمن()", proc.stderr)
+            self.assertIn("ملف '.نظم'", proc.stderr)
             self.assertFalse(output.exists())
             self.assertFalse(Path(f"{output}.خريطة-باء.json").exists())
 

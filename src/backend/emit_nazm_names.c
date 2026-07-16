@@ -108,9 +108,10 @@ static const char *nazm_machine_op_arabic(MachineOp op)
         case MACH_PUSH: return "دفع";
         case MACH_POP: return "سحب";
         case MACH_NOP: return "لا_عملية";
+        case MACH_CPU_NOP: return "لا_تفعل";
+        case MACH_RDTSC: return "قراءة_عداد_الزمن";
         case MACH_LABEL: return "وسم";
         case MACH_COMMENT: return "تعليق";
-        case MACH_INLINE_ASM: return "نظم_ضمني";
         default: return "غير_معروفة";
     }
 }

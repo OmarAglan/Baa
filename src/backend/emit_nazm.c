@@ -25,45 +25,7 @@ static unsigned nazm_write_string_tables(FILE *out, const MachineModule *module)
 static void nazm_write_symbol(FILE *out, const char *name);
 static void nazm_write_symbolic_memory_operand(FILE *out, const char *name);
 
-static const char *const k_nazm_registers[PHYS_REG_COUNT] = {
-    "سجل_المركم",
-    "سجل_العداد",
-    "سجل_البيانات",
-    "سجل_القاعدة",
-    "مؤشر_المكدس",
-    "مؤشر_القاعدة",
-    "فهرس_المصدر",
-    "فهرس_الوجهة",
-    "سجل_عام_٨",
-    "سجل_عام_٩",
-    "سجل_عام_١٠",
-    "سجل_عام_١١",
-    "سجل_عام_١٢",
-    "سجل_عام_١٣",
-    "سجل_عام_١٤",
-    "سجل_عام_١٥",
-};
-
-static const char *const k_nazm_registers_32[PHYS_REG_COUNT] = {
-    "سجل_المركم_٣٢", "سجل_العداد_٣٢", "سجل_البيانات_٣٢", "سجل_القاعدة_٣٢",
-    "مؤشر_المكدس_٣٢", "مؤشر_القاعدة_٣٢", "فهرس_المصدر_٣٢", "فهرس_الوجهة_٣٢",
-    "سجل_عام_٨_٣٢", "سجل_عام_٩_٣٢", "سجل_عام_١٠_٣٢", "سجل_عام_١١_٣٢",
-    "سجل_عام_١٢_٣٢", "سجل_عام_١٣_٣٢", "سجل_عام_١٤_٣٢", "سجل_عام_١٥_٣٢",
-};
-
-static const char *const k_nazm_registers_16[PHYS_REG_COUNT] = {
-    "سجل_المركم_١٦", "سجل_العداد_١٦", "سجل_البيانات_١٦", "سجل_القاعدة_١٦",
-    "مؤشر_المكدس_١٦", "مؤشر_القاعدة_١٦", "فهرس_المصدر_١٦", "فهرس_الوجهة_١٦",
-    "سجل_عام_٨_١٦", "سجل_عام_٩_١٦", "سجل_عام_١٠_١٦", "سجل_عام_١١_١٦",
-    "سجل_عام_١٢_١٦", "سجل_عام_١٣_١٦", "سجل_عام_١٤_١٦", "سجل_عام_١٥_١٦",
-};
-
-static const char *const k_nazm_registers_8[PHYS_REG_COUNT] = {
-    "سجل_المركم_٨", "سجل_العداد_٨", "سجل_البيانات_٨", "سجل_القاعدة_٨",
-    "مؤشر_المكدس_٨", "مؤشر_القاعدة_٨", "فهرس_المصدر_٨", "فهرس_الوجهة_٨",
-    "سجل_عام_٨_٨", "سجل_عام_٩_٨", "سجل_عام_١٠_٨", "سجل_عام_١١_٨",
-    "سجل_عام_١٢_٨", "سجل_عام_١٣_٨", "سجل_عام_١٤_٨", "سجل_عام_١٥_٨",
-};
+#include "emit_nazm_names.c"
 
 static BaaNazmEmitResult nazm_ok(void)
 {
@@ -88,88 +50,6 @@ static BaaNazmEmitResult nazm_unsupported(const char *blocker_kind,
     result.source_line = inst ? inst->src_line : 0;
     result.source_col = inst ? inst->src_col : 0;
     return result;
-}
-
-static const char *nazm_machine_op_arabic(MachineOp op)
-{
-    switch (op)
-    {
-        case MACH_ADD: return "جمع";
-        case MACH_SUB: return "طرح";
-        case MACH_IMUL: return "ضرب_موقع";
-        case MACH_SHL: return "إزاحة_يسار";
-        case MACH_SHR: return "إزاحة_يمين_منطقية";
-        case MACH_SAR: return "إزاحة_يمين_حسابية";
-        case MACH_IDIV: return "قسمة_موقعة";
-        case MACH_DIV: return "قسمة_غير_موقعة";
-        case MACH_NEG: return "عكس_الإشارة";
-        case MACH_CQO: return "توسيع_إشارة_القسمة";
-        case MACH_ADDSD: return "جمع_عشري";
-        case MACH_SUBSD: return "طرح_عشري";
-        case MACH_MULSD: return "ضرب_عشري";
-        case MACH_DIVSD: return "قسمة_عشرية";
-        case MACH_UCOMISD: return "مقارنة_عشرية";
-        case MACH_XORPD: return "خلاف_عشري";
-        case MACH_CVTSI2SD: return "تحويل_صحيح_إلى_عشري";
-        case MACH_CVTTSD2SI: return "تحويل_عشري_إلى_صحيح";
-        case MACH_MOV: return "نقل";
-        case MACH_LEA: return "حساب_عنوان";
-        case MACH_LOAD: return "تحميل";
-        case MACH_STORE: return "تخزين";
-        case MACH_CMP: return "مقارنة";
-        case MACH_TEST: return "اختبار_بتات";
-        case MACH_SETE: return "تعيين_مساو";
-        case MACH_SETNE: return "تعيين_غير_مساو";
-        case MACH_SETG: return "تعيين_أكبر";
-        case MACH_SETL: return "تعيين_أصغر";
-        case MACH_SETGE: return "تعيين_أكبر_أو_مساو";
-        case MACH_SETLE: return "تعيين_أصغر_أو_مساو";
-        case MACH_SETA: return "تعيين_فوق";
-        case MACH_SETB: return "تعيين_تحت";
-        case MACH_SETAE: return "تعيين_فوق_أو_مساو";
-        case MACH_SETBE: return "تعيين_تحت_أو_مساو";
-        case MACH_SETP: return "تعيين_تكافؤ";
-        case MACH_SETNP: return "تعيين_عدم_تكافؤ";
-        case MACH_MOVZX: return "توسيع_بصفر";
-        case MACH_MOVSX: return "توسيع_بإشارة";
-        case MACH_AND: return "و_بتي";
-        case MACH_OR: return "أو_بتي";
-        case MACH_NOT: return "عكس_البتات";
-        case MACH_XOR: return "خلاف_بتي";
-        case MACH_JMP: return "قفز";
-        case MACH_JE: return "قفز_مساو";
-        case MACH_JNE: return "قفز_غير_مساو";
-        case MACH_CALL: return "نداء";
-        case MACH_TAILJMP: return "قفز_ذيلي";
-        case MACH_RET: return "رجوع";
-        case MACH_PUSH: return "دفع";
-        case MACH_POP: return "سحب";
-        case MACH_NOP: return "لا_عملية";
-        case MACH_LABEL: return "وسم";
-        case MACH_COMMENT: return "تعليق";
-        case MACH_INLINE_ASM: return "نظم_ضمني";
-        default: return "غير_معروفة";
-    }
-}
-
-static const char *nazm_setcc_mnemonic(MachineOp op)
-{
-    switch (op)
-    {
-        case MACH_SETE: return "عين_مساو";
-        case MACH_SETNE: return "عين_غير_مساو";
-        case MACH_SETG: return "عين_أكبر";
-        case MACH_SETL: return "عين_أصغر";
-        case MACH_SETGE: return "عين_أكبر_أو_مساو";
-        case MACH_SETLE: return "عين_أصغر_أو_مساو";
-        case MACH_SETA: return "عين_فوق";
-        case MACH_SETB: return "عين_تحت";
-        case MACH_SETAE: return "عين_فوق_أو_مساو";
-        case MACH_SETBE: return "عين_تحت_أو_مساو";
-        case MACH_SETP: return "عين_تكافؤ";
-        case MACH_SETNP: return "عين_عدم_تكافؤ";
-        default: return NULL;
-    }
 }
 
 static bool nazm_identifier_has_ascii_letter(const char *name)
@@ -222,6 +102,13 @@ static bool nazm_register_is_valid(const MachineOperand *operand)
            nazm_width_is_supported(operand->size_bits);
 }
 
+static bool nazm_decimal_register_is_valid(const MachineOperand *operand)
+{
+    return operand && operand->kind == MACH_OP_XMM &&
+           operand->data.xmm >= 0 && operand->data.xmm < 16 &&
+           operand->size_bits == 64;
+}
+
 static bool nazm_physical_register_index_is_valid(int reg)
 {
     return reg >= 0 && reg < PHYS_REG_COUNT;
@@ -253,6 +140,18 @@ static BaaNazmEmitResult nazm_validate_memory_operand(const MachineOperand *oper
                                 inst);
 
     (void)target;
+    return nazm_ok();
+}
+
+static BaaNazmEmitResult nazm_validate_decimal_operand(
+    const MachineOperand *operand,
+    const MachineInst *inst)
+{
+    if (!nazm_decimal_register_is_valid(operand))
+        return nazm_unsupported("سجل_عشري_غير_صالح",
+                                inst ? nazm_machine_op_arabic(inst->op) : NULL,
+                                "المعامل ليس سجلا عشريا عربيا صالحا بعرض ٦٤ بت.",
+                                inst);
     return nazm_ok();
 }
 
@@ -313,6 +212,40 @@ static BaaNazmEmitResult nazm_validate_move(const MachineOperand *dst,
                                             const BaaTarget *target,
                                             const MachineInst *inst)
 {
+    if ((dst && dst->kind == MACH_OP_XMM) ||
+        (src && src->kind == MACH_OP_XMM))
+    {
+        if (dst && src &&
+            nazm_decimal_register_is_valid(dst) &&
+            nazm_decimal_register_is_valid(src))
+            return nazm_ok();
+
+        const MachineOperand *decimal =
+            dst && dst->kind == MACH_OP_XMM ? dst : src;
+        const MachineOperand *storage = decimal == dst ? src : dst;
+        BaaNazmEmitResult decimal_result =
+            nazm_validate_decimal_operand(decimal, inst);
+        if (decimal_result.status != BAA_NAZM_EMIT_OK)
+            return decimal_result;
+
+        BaaNazmEmitResult storage_result;
+        if (storage && storage->kind == MACH_OP_VREG)
+            storage_result = nazm_validate_operand(storage, target, inst);
+        else
+            storage_result = nazm_validate_memory_operand(storage, target, inst);
+        if (storage_result.status != BAA_NAZM_EMIT_OK)
+            return nazm_unsupported("نقل_عشري_غير_مدعوم",
+                                    "نقل",
+                                    "النقل العشري يتطلب سجلا عاما أو ذاكرة بعرض ٦٤ بت.",
+                                    inst);
+        if (nazm_operand_bits(storage) != 64)
+            return nazm_unsupported("عرض_نقل_عشري",
+                                    "نقل",
+                                    "النقل بين السجل العشري والتخزين يتطلب عرض ٦٤ بت.",
+                                    inst);
+        return nazm_ok();
+    }
+
     BaaNazmEmitResult result = dst && dst->kind == MACH_OP_GLOBAL
         ? nazm_validate_symbol_operand(dst, inst)
         : nazm_validate_value_operand(dst, target, inst, false);
@@ -335,6 +268,52 @@ static BaaNazmEmitResult nazm_validate_move(const MachineOperand *dst,
                                 "عرض معاملي النقل غير متطابق.", inst);
     }
     return nazm_ok();
+}
+
+static BaaNazmEmitResult nazm_validate_decimal_binary(
+    const MachineOperand *dst,
+    const MachineOperand *src,
+    const MachineInst *inst)
+{
+    BaaNazmEmitResult result = nazm_validate_decimal_operand(dst, inst);
+    if (result.status != BAA_NAZM_EMIT_OK) return result;
+    return nazm_validate_decimal_operand(src, inst);
+}
+
+static BaaNazmEmitResult nazm_validate_int_to_decimal(
+    const MachineOperand *dst,
+    const MachineOperand *src,
+    const BaaTarget *target,
+    const MachineInst *inst)
+{
+    BaaNazmEmitResult result = nazm_validate_decimal_operand(dst, inst);
+    if (result.status != BAA_NAZM_EMIT_OK) return result;
+    result = nazm_validate_operand(src, target, inst);
+    if (result.status != BAA_NAZM_EMIT_OK) return result;
+    int bits = nazm_operand_bits(src);
+    if (bits != 32 && bits != 64)
+        return nazm_unsupported("عرض_تحويل_صحيح_إلى_عشري",
+                                NULL,
+                                "التحويل إلى عشري يتطلب سجلا صحيحا بعرض ٣٢ أو ٦٤ بت.",
+                                inst);
+    return nazm_ok();
+}
+
+static BaaNazmEmitResult nazm_validate_decimal_to_int(
+    const MachineOperand *dst,
+    const MachineOperand *src,
+    const BaaTarget *target,
+    const MachineInst *inst)
+{
+    BaaNazmEmitResult result = nazm_validate_operand(dst, target, inst);
+    if (result.status != BAA_NAZM_EMIT_OK) return result;
+    int bits = nazm_operand_bits(dst);
+    if (bits != 32 && bits != 64)
+        return nazm_unsupported("عرض_تحويل_عشري_إلى_صحيح",
+                                NULL,
+                                "التحويل من عشري يتطلب سجلا صحيحا بعرض ٣٢ أو ٦٤ بت.",
+                                inst);
+    return nazm_validate_decimal_operand(src, inst);
 }
 
 static BaaNazmEmitResult nazm_validate_binary(const MachineOperand *dst,
@@ -460,6 +439,26 @@ static BaaNazmEmitResult nazm_validate_instruction(const MachineInst *inst,
 
         case MACH_CQO:
             return nazm_ok();
+
+        case MACH_ADDSD:
+        case MACH_SUBSD:
+        case MACH_MULSD:
+        case MACH_DIVSD:
+        case MACH_XORPD:
+            return nazm_validate_decimal_binary(
+                &inst->dst, &inst->src2, inst);
+
+        case MACH_UCOMISD:
+            return nazm_validate_decimal_binary(
+                &inst->src1, &inst->src2, inst);
+
+        case MACH_CVTSI2SD:
+            return nazm_validate_int_to_decimal(
+                &inst->dst, &inst->src1, target, inst);
+
+        case MACH_CVTTSD2SI:
+            return nazm_validate_decimal_to_int(
+                &inst->dst, &inst->src1, target, inst);
 
         case MACH_SETE: case MACH_SETNE:
         case MACH_SETG: case MACH_SETL:
@@ -690,6 +689,12 @@ static void nazm_write_operand(FILE *out, const MachineOperand *operand)
     if (operand->kind == MACH_OP_IMM)
     {
         nazm_write_signed(out, operand->data.imm);
+        return;
+    }
+
+    if (operand->kind == MACH_OP_XMM)
+    {
+        fputs(k_nazm_decimal_registers[operand->data.xmm], out);
         return;
     }
 

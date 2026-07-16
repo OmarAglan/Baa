@@ -3,7 +3,7 @@
   "compiler": "baa version 0.6.0",
   "source_inventory": {
     "schema": "baa-assembly-surface-v1",
-    "sha256": "9b2086b8cd886efb2a02379c69a4b2795403eccbbb95c5e3d962c3a6ae20ac65"
+    "sha256": "2039a6df4f95b0eb8e0c8988d1d522b09dec52b87dfef0d269b106d22a7daccd"
   },
   "status_contract": {
     "emitted": "Baa emitted canonical Arabic Nazm without Latin letters.",
@@ -15,15 +15,11 @@
     "x86_64-linux": {
       "source_count": 100,
       "summary": {
-        "emitted": 79,
-        "unsupported": 21,
+        "emitted": 89,
+        "unsupported": 11,
         "error": 0
       },
       "unsupported_reasons": [
-        {
-          "reason": "خطأ: نوع معامل القيمة غير مدعوم في مسار نظم.",
-          "count": 8
-        },
         {
           "reason": "خطأ: أسماء الدوال في مصدر نظم يجب أن تكون عربية فقط.",
           "count": 4
@@ -33,11 +29,11 @@
           "count": 4
         },
         {
-          "reason": "خطأ: تعليمة الآلة غير مدعومة في شريحة نظم التنفيذية الأولى.",
-          "count": 3
+          "reason": "خطأ: المعامل ليس سجلا ماديا بعرض ٨ أو ١٦ أو ٣٢ أو ٦٤ بت.",
+          "count": 1
         },
         {
-          "reason": "خطأ: المعامل ليس سجلا ماديا بعرض ٨ أو ١٦ أو ٣٢ أو ٦٤ بت.",
+          "reason": "خطأ: تعليمة الآلة غير مدعومة في شريحة نظم التنفيذية الأولى.",
           "count": 1
         },
         {
@@ -47,22 +43,12 @@
       ],
       "unsupported_blockers": [
         {
-          "kind": "نوع_معامل_قيمة_غير_مدعوم",
-          "detail": "نقل",
-          "count": 8
-        },
-        {
           "kind": "إعدادات_التحويل",
           "count": 4
         },
         {
           "kind": "اسم_دالة_غير_عربي",
           "count": 4
-        },
-        {
-          "kind": "تعليمة_آلة",
-          "detail": "تحويل_صحيح_إلى_عشري",
-          "count": 2
         },
         {
           "kind": "تعليمة_آلة",
@@ -101,13 +87,9 @@
         },
         {
           "source": "examples/math_and_format.baa",
-          "status": "unsupported",
-          "exit_code": 3,
-          "reason": "خطأ: نوع معامل القيمة غير مدعوم في مسار نظم.",
-          "blocker": {
-            "kind": "نوع_معامل_قيمة_غير_مدعوم",
-            "detail": "نقل"
-          }
+          "status": "emitted",
+          "exit_code": 0,
+          "sha256": "feacc0add1228bb654f419cd43ddd0af603ef8fe8454eb46c1c3f1db5c55805b"
         },
         {
           "source": "tests/integration/backend/backend_arabic_numeral_source_tokens_v064_test.baa",
@@ -141,13 +123,9 @@
         },
         {
           "source": "tests/integration/backend/backend_cast_pointer_diff_test.baa",
-          "status": "unsupported",
-          "exit_code": 3,
-          "reason": "خطأ: تعليمة الآلة غير مدعومة في شريحة نظم التنفيذية الأولى.",
-          "blocker": {
-            "kind": "تعليمة_آلة",
-            "detail": "تحويل_صحيح_إلى_عشري"
-          }
+          "status": "emitted",
+          "exit_code": 0,
+          "sha256": "1e3c874ef9da93a3d5cad27bfd40dbb82f735faae5cafeb3c464b7a23a20a3fa"
         },
         {
           "source": "tests/integration/backend/backend_const_pointer_rules_test.baa",
@@ -205,23 +183,15 @@
         },
         {
           "source": "tests/integration/backend/backend_float_extensions_v042_test.baa",
-          "status": "unsupported",
-          "exit_code": 3,
-          "reason": "خطأ: نوع معامل القيمة غير مدعوم في مسار نظم.",
-          "blocker": {
-            "kind": "نوع_معامل_قيمة_غير_مدعوم",
-            "detail": "نقل"
-          }
+          "status": "emitted",
+          "exit_code": 0,
+          "sha256": "3a575613d3d2710dbf3e0d6bfb4b7ff5cfb3b73edeb9f89273c5dd6603cf7e1f"
         },
         {
           "source": "tests/integration/backend/backend_format_arabic_test.baa",
-          "status": "unsupported",
-          "exit_code": 3,
-          "reason": "خطأ: نوع معامل القيمة غير مدعوم في مسار نظم.",
-          "blocker": {
-            "kind": "نوع_معامل_قيمة_غير_مدعوم",
-            "detail": "نقل"
-          }
+          "status": "emitted",
+          "exit_code": 0,
+          "sha256": "3f6e17797193d3ed31992ffb4e1f785f0a1364bfd4a1619b6db64fcc7007cbf6"
         },
         {
           "source": "tests/integration/backend/backend_func_ptr_shadow_call_test.baa",
@@ -360,13 +330,9 @@
         },
         {
           "source": "tests/integration/backend/backend_multidim_array_test.baa",
-          "status": "unsupported",
-          "exit_code": 3,
-          "reason": "خطأ: نوع معامل القيمة غير مدعوم في مسار نظم.",
-          "blocker": {
-            "kind": "نوع_معامل_قيمة_غير_مدعوم",
-            "detail": "نقل"
-          }
+          "status": "emitted",
+          "exit_code": 0,
+          "sha256": "72e299756f95b41709135055b9535f965a53a6bdaed289e9f831e4b7c7a3edf8"
         },
         {
           "source": "tests/integration/backend/backend_path_stdlib_v062_test.baa",
@@ -545,13 +511,9 @@
         },
         {
           "source": "tests/integration/backend/backend_scan_arabic_test.baa",
-          "status": "unsupported",
-          "exit_code": 3,
-          "reason": "خطأ: نوع معامل القيمة غير مدعوم في مسار نظم.",
-          "blocker": {
-            "kind": "نوع_معامل_قيمة_غير_مدعوم",
-            "detail": "نقل"
-          }
+          "status": "emitted",
+          "exit_code": 0,
+          "sha256": "11c2b6db0fc953790a86cc1c458854ce4934376d279ed88495ba6b6efb5dfff7"
         },
         {
           "source": "tests/integration/backend/backend_scope_test.baa",
@@ -585,13 +547,9 @@
         },
         {
           "source": "tests/integration/backend/backend_stdlib_v041_test.baa",
-          "status": "unsupported",
-          "exit_code": 3,
-          "reason": "خطأ: نوع معامل القيمة غير مدعوم في مسار نظم.",
-          "blocker": {
-            "kind": "نوع_معامل_قيمة_غير_مدعوم",
-            "detail": "نقل"
-          }
+          "status": "emitted",
+          "exit_code": 0,
+          "sha256": "701856d8aab08c726c9240612cca54996235b04d12432dfe958f7614ae4001ee"
         },
         {
           "source": "tests/integration/backend/backend_string_builder_stdlib_v062_test.baa",
@@ -619,13 +577,9 @@
         },
         {
           "source": "tests/integration/backend/backend_tailcall_float_test.baa",
-          "status": "unsupported",
-          "exit_code": 3,
-          "reason": "خطأ: نوع معامل القيمة غير مدعوم في مسار نظم.",
-          "blocker": {
-            "kind": "نوع_معامل_قيمة_غير_مدعوم",
-            "detail": "نقل"
-          }
+          "status": "emitted",
+          "exit_code": 0,
+          "sha256": "b9668e1879b2defb3e2d13eea7a8e002719a3b2b3de79864fc3c9fb7b4b66c3b"
         },
         {
           "source": "tests/integration/backend/backend_tailcall_test.baa",
@@ -635,13 +589,9 @@
         },
         {
           "source": "tests/integration/backend/backend_test.baa",
-          "status": "unsupported",
-          "exit_code": 3,
-          "reason": "خطأ: نوع معامل القيمة غير مدعوم في مسار نظم.",
-          "blocker": {
-            "kind": "نوع_معامل_قيمة_غير_مدعوم",
-            "detail": "نقل"
-          }
+          "status": "emitted",
+          "exit_code": 0,
+          "sha256": "307164b0c2c3c523b676fcbdc468c2ac0697ba8ec1a56495ca83ac3c4a22fe27"
         },
         {
           "source": "tests/integration/backend/backend_text_stdlib_helpers_v064_test.baa",
@@ -669,13 +619,9 @@
         },
         {
           "source": "tests/integration/backend/backend_variadic_functions_test.baa",
-          "status": "unsupported",
-          "exit_code": 3,
-          "reason": "خطأ: تعليمة الآلة غير مدعومة في شريحة نظم التنفيذية الأولى.",
-          "blocker": {
-            "kind": "تعليمة_آلة",
-            "detail": "تحويل_صحيح_إلى_عشري"
-          }
+          "status": "emitted",
+          "exit_code": 0,
+          "sha256": "0ca8acef1ae364d64ae5492f61b5b5fc9ed8651d9aab9702080f09f4a8458eb6"
         },
         {
           "source": "tests/integration/backend/backend_vector_stdlib_v062_test.baa",
@@ -859,15 +805,11 @@
     "x86_64-windows": {
       "source_count": 100,
       "summary": {
-        "emitted": 80,
-        "unsupported": 20,
+        "emitted": 89,
+        "unsupported": 11,
         "error": 0
       },
       "unsupported_reasons": [
-        {
-          "reason": "خطأ: نوع معامل القيمة غير مدعوم في مسار نظم.",
-          "count": 7
-        },
         {
           "reason": "خطأ: أسماء الدوال في مصدر نظم يجب أن تكون عربية فقط.",
           "count": 4
@@ -877,11 +819,11 @@
           "count": 4
         },
         {
-          "reason": "خطأ: تعليمة الآلة غير مدعومة في شريحة نظم التنفيذية الأولى.",
-          "count": 3
+          "reason": "خطأ: المعامل ليس سجلا ماديا بعرض ٨ أو ١٦ أو ٣٢ أو ٦٤ بت.",
+          "count": 1
         },
         {
-          "reason": "خطأ: المعامل ليس سجلا ماديا بعرض ٨ أو ١٦ أو ٣٢ أو ٦٤ بت.",
+          "reason": "خطأ: تعليمة الآلة غير مدعومة في شريحة نظم التنفيذية الأولى.",
           "count": 1
         },
         {
@@ -891,22 +833,12 @@
       ],
       "unsupported_blockers": [
         {
-          "kind": "نوع_معامل_قيمة_غير_مدعوم",
-          "detail": "نقل",
-          "count": 7
-        },
-        {
           "kind": "إعدادات_التحويل",
           "count": 4
         },
         {
           "kind": "اسم_دالة_غير_عربي",
           "count": 4
-        },
-        {
-          "kind": "تعليمة_آلة",
-          "detail": "تحويل_صحيح_إلى_عشري",
-          "count": 2
         },
         {
           "kind": "تعليمة_آلة",
@@ -945,13 +877,9 @@
         },
         {
           "source": "examples/math_and_format.baa",
-          "status": "unsupported",
-          "exit_code": 3,
-          "reason": "خطأ: نوع معامل القيمة غير مدعوم في مسار نظم.",
-          "blocker": {
-            "kind": "نوع_معامل_قيمة_غير_مدعوم",
-            "detail": "نقل"
-          }
+          "status": "emitted",
+          "exit_code": 0,
+          "sha256": "0eb3f15cb83dad69fe50609ec11c0f6944ad43e39c1b95c59b0ee912c55e2554"
         },
         {
           "source": "tests/integration/backend/backend_arabic_numeral_source_tokens_v064_test.baa",
@@ -985,13 +913,9 @@
         },
         {
           "source": "tests/integration/backend/backend_cast_pointer_diff_test.baa",
-          "status": "unsupported",
-          "exit_code": 3,
-          "reason": "خطأ: تعليمة الآلة غير مدعومة في شريحة نظم التنفيذية الأولى.",
-          "blocker": {
-            "kind": "تعليمة_آلة",
-            "detail": "تحويل_صحيح_إلى_عشري"
-          }
+          "status": "emitted",
+          "exit_code": 0,
+          "sha256": "e9725fd7be5fe41d07ddfcd2b83b2e7d65b62a0fae688ae6783cb70332cf31d8"
         },
         {
           "source": "tests/integration/backend/backend_const_pointer_rules_test.baa",
@@ -1049,13 +973,9 @@
         },
         {
           "source": "tests/integration/backend/backend_float_extensions_v042_test.baa",
-          "status": "unsupported",
-          "exit_code": 3,
-          "reason": "خطأ: نوع معامل القيمة غير مدعوم في مسار نظم.",
-          "blocker": {
-            "kind": "نوع_معامل_قيمة_غير_مدعوم",
-            "detail": "نقل"
-          }
+          "status": "emitted",
+          "exit_code": 0,
+          "sha256": "a02833948f8daf86fa640375e0f5b754f572164dcfe3d75e741655196c681f8d"
         },
         {
           "source": "tests/integration/backend/backend_format_arabic_test.baa",
@@ -1200,13 +1120,9 @@
         },
         {
           "source": "tests/integration/backend/backend_multidim_array_test.baa",
-          "status": "unsupported",
-          "exit_code": 3,
-          "reason": "خطأ: نوع معامل القيمة غير مدعوم في مسار نظم.",
-          "blocker": {
-            "kind": "نوع_معامل_قيمة_غير_مدعوم",
-            "detail": "نقل"
-          }
+          "status": "emitted",
+          "exit_code": 0,
+          "sha256": "e10dcecec065af33c837dacdf2856de14162c3018a341f238655d22a1ac6ad87"
         },
         {
           "source": "tests/integration/backend/backend_path_stdlib_v062_test.baa",
@@ -1385,13 +1301,9 @@
         },
         {
           "source": "tests/integration/backend/backend_scan_arabic_test.baa",
-          "status": "unsupported",
-          "exit_code": 3,
-          "reason": "خطأ: نوع معامل القيمة غير مدعوم في مسار نظم.",
-          "blocker": {
-            "kind": "نوع_معامل_قيمة_غير_مدعوم",
-            "detail": "نقل"
-          }
+          "status": "emitted",
+          "exit_code": 0,
+          "sha256": "71b7b95b2d37a2205862dbba7522cc409ff82ead879bcedd622759d2b22c1cc3"
         },
         {
           "source": "tests/integration/backend/backend_scope_test.baa",
@@ -1425,13 +1337,9 @@
         },
         {
           "source": "tests/integration/backend/backend_stdlib_v041_test.baa",
-          "status": "unsupported",
-          "exit_code": 3,
-          "reason": "خطأ: نوع معامل القيمة غير مدعوم في مسار نظم.",
-          "blocker": {
-            "kind": "نوع_معامل_قيمة_غير_مدعوم",
-            "detail": "نقل"
-          }
+          "status": "emitted",
+          "exit_code": 0,
+          "sha256": "675a6237ef69de412db654d7b3edc075cc9b9aa4560803f8f114d3aeb351eaec"
         },
         {
           "source": "tests/integration/backend/backend_string_builder_stdlib_v062_test.baa",
@@ -1459,13 +1367,9 @@
         },
         {
           "source": "tests/integration/backend/backend_tailcall_float_test.baa",
-          "status": "unsupported",
-          "exit_code": 3,
-          "reason": "خطأ: نوع معامل القيمة غير مدعوم في مسار نظم.",
-          "blocker": {
-            "kind": "نوع_معامل_قيمة_غير_مدعوم",
-            "detail": "نقل"
-          }
+          "status": "emitted",
+          "exit_code": 0,
+          "sha256": "b5e793132a714f0a14bd3c0e7fbd3e366bb7e76bc53d264bd50426228f8ff2b4"
         },
         {
           "source": "tests/integration/backend/backend_tailcall_test.baa",
@@ -1475,13 +1379,9 @@
         },
         {
           "source": "tests/integration/backend/backend_test.baa",
-          "status": "unsupported",
-          "exit_code": 3,
-          "reason": "خطأ: نوع معامل القيمة غير مدعوم في مسار نظم.",
-          "blocker": {
-            "kind": "نوع_معامل_قيمة_غير_مدعوم",
-            "detail": "نقل"
-          }
+          "status": "emitted",
+          "exit_code": 0,
+          "sha256": "bf1c6573c04d59821b27cd578b3afcc26d21d9bce368bff2d302cc93655fe028"
         },
         {
           "source": "tests/integration/backend/backend_text_stdlib_helpers_v064_test.baa",
@@ -1509,13 +1409,9 @@
         },
         {
           "source": "tests/integration/backend/backend_variadic_functions_test.baa",
-          "status": "unsupported",
-          "exit_code": 3,
-          "reason": "خطأ: تعليمة الآلة غير مدعومة في شريحة نظم التنفيذية الأولى.",
-          "blocker": {
-            "kind": "تعليمة_آلة",
-            "detail": "تحويل_صحيح_إلى_عشري"
-          }
+          "status": "emitted",
+          "exit_code": 0,
+          "sha256": "50a9bac041c64fb4858cc136f71a6e972df7a45f6f405a16977249fca2ad8bbf"
         },
         {
           "source": "tests/integration/backend/backend_vector_stdlib_v062_test.baa",

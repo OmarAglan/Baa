@@ -69,8 +69,8 @@ inventory omissions:
 
 | Target | Instruction forms S/P/U | Directive forms S/P/U | Sections S/U | Relocations S/P/U |
 |---|---:|---:|---:|---:|
-| `x86_64-linux` | 62 / 2 / 43 | 8 / 1 / 5 | 3 / 1 | 5 / 2 / 0 |
-| `x86_64-windows` | 61 / 2 / 40 | 8 / 1 / 3 | 3 / 0 | 5 / 2 / 0 |
+| `x86_64-linux` | 70 / 2 / 35 | 8 / 1 / 5 | 3 / 1 | 5 / 2 / 0 |
+| `x86_64-windows` | 69 / 2 / 32 | 8 / 1 / 3 | 3 / 0 | 5 / 2 / 0 |
 
 Each supported row names the checked Nazm acceptance fixture that exercises
 its canonical Arabic lowering. Baa emits the entry label as `الرئيسية`; Nazm
@@ -84,9 +84,10 @@ Compiler-owned platform calls are translated through an explicit Arabic runtime
 ABI bridge; arbitrary Latin source and external identifiers remain visible
 rejections. Read-only string tables, zero-initialized data, explicit alignment,
 MOV/LEA PC-relative global memory, base/displacement memory-source IMUL, and
-spilled SETcc destinations are supported. Immediate-to-symbol stores remain a
-documented producer lowering, while scalar SSE2 and later PIC forms remain
-partial or unsupported where applicable.
+spilled SETcc destinations are supported. The eight scalar SSE2 forms map to
+Arabic-only `سجل_عشري_*` operands and a fourth focused acceptance fixture.
+Immediate-to-symbol stores remain a documented producer lowering, while later
+PIC/addressing forms remain partial or unsupported where applicable.
 
 Regenerate or verify the comparison from an ecosystem checkout:
 
@@ -113,8 +114,8 @@ The current source-level baseline is target-specific and has no gate errors:
 
 | Target | Arabic-only emitted | Visible unsupported | Gate errors |
 |---|---:|---:|---:|
-| `x86_64-linux` | 79 | 21 | 0 |
-| `x86_64-windows` | 80 | 20 | 0 |
+| `x86_64-linux` | 89 | 11 | 0 |
+| `x86_64-windows` | 89 | 11 | 0 |
 
 The admitted sources now include string-heavy examples, runtime diagnostics,
 dynamic memory, file and error helpers, integer-width and callee-saved-register
@@ -128,11 +129,11 @@ represented, and proves the retained relocations through real linking and
 runtime behavior.
 
 The PC-relative slice removed 21 global-value blockers per target. The following
-memory-arithmetic slice accepts all 262 emitted IMUL memory-source sites per
-target plus 38 Linux and 4 Windows spilled SETcc sites, raising admission by 22
-sources per target. The remaining visible blockers are led by XMM/value moves
-(8 Linux, 7 Windows), four conversion configurations, four Latin-spelled source
-functions, two integer-to-scalar-SSE instructions, one width mismatch, one
+memory-arithmetic slice accepted all 262 emitted IMUL memory-source sites per
+target plus 38 Linux and 4 Windows spilled SETcc sites. The scalar-decimal slice
+then admitted every XMM move and all eight SSE2 inventory forms, raising both
+targets to 89 sources. The remaining visible blockers are four conversion
+configurations, four Latin-spelled source functions, one width mismatch, one
 spilled NOT, and legacy inline assembly. None falls back to GAS inside the
 shadow result.
 
@@ -213,12 +214,13 @@ Dedicated `nazm-shadow-windows` and `nazm-shadow-linux` CI jobs build both
 repositories and run this real parity path on every Baa change.
 
 The full corpus is classified automatically, and object/link/runtime comparison
-covers all 79 Linux and 80 Windows emitted members. Nazm and Baa now share the
+covers all 89 Linux and 89 Windows emitted members. Nazm and Baa now share the
 required integer widths, condition-code writes, extension and division forms,
 indirect calls, callee-saved frames, memory-source multiplication, spilled
 condition-code writes, integer globals, Arabic external symbols,
 absolute data relocations, PC-relative global loads/stores/address formation,
-read-only string tables, BSS, and alignment. Baa maps
+read-only string tables, BSS, alignment, and the complete scalar-decimal
+instruction surface emitted by the current corpus. Baa maps
 compiler-owned platform ABI names to Arabic runtime adapters and rejects any
 unmapped Latin symbol.
 
@@ -233,5 +235,6 @@ across the full corpus because Nazm resolves same-object references that GAS may
 leave to the linker; focused fixtures verify relocation kinds, while successful
 linking and identical runtime behavior prove required external relocations. The
 remaining production-admission work is additional PIC/base-index memory forms,
-scalar SSE2, and the complete hosted gate set. GAS therefore remains the
+the eleven explicit producer/configuration blockers, and the complete hosted
+gate set. GAS therefore remains the
 default assembler.

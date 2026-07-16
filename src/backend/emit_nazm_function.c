@@ -169,6 +169,49 @@ static void nazm_write_function(FILE *out,
                     emitted_lines = 1;
                     break;
 
+                case MACH_ADDSD:
+                    emitted_lines = nazm_write_binary(
+                        out, "جمع_عشري", &inst->dst, &inst->src2);
+                    break;
+
+                case MACH_SUBSD:
+                    emitted_lines = nazm_write_binary(
+                        out, "طرح_عشري", &inst->dst, &inst->src2);
+                    break;
+
+                case MACH_MULSD:
+                    emitted_lines = nazm_write_binary(
+                        out, "ضرب_عشري", &inst->dst, &inst->src2);
+                    break;
+
+                case MACH_DIVSD:
+                    emitted_lines = nazm_write_binary(
+                        out, "قسمة_عشرية", &inst->dst, &inst->src2);
+                    break;
+
+                case MACH_UCOMISD:
+                    emitted_lines = nazm_write_comparison(
+                        out, "مقارنة_عشرية",
+                        &inst->src1, &inst->src2, false);
+                    break;
+
+                case MACH_XORPD:
+                    emitted_lines = nazm_write_binary(
+                        out, "خلاف_عشري", &inst->dst, &inst->src2);
+                    break;
+
+                case MACH_CVTSI2SD:
+                    emitted_lines = nazm_write_binary(
+                        out, "تحويل_صحيح_إلى_عشري",
+                        &inst->dst, &inst->src1);
+                    break;
+
+                case MACH_CVTTSD2SI:
+                    emitted_lines = nazm_write_binary(
+                        out, "تحويل_عشري_إلى_صحيح",
+                        &inst->dst, &inst->src1);
+                    break;
+
                 case MACH_JMP:
                     fputs("    اقفز ", out);
                     nazm_write_local_label(out, function_id, inst->dst.data.label_id);

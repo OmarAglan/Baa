@@ -336,6 +336,19 @@ static void isel_lower_call(ISelCtx *ctx, IRInst *inst)
             arg = isel_materialize_imm_to_gpr64(ctx, arg);
             MachineOperand xmm = mach_op_xmm(locs[i].idx);
             isel_emit(ctx, MACH_MOV, xmm, arg, mach_op_none());
+            if (is_win)
+            {
+                /*
+                 * Windows x64 requires floating-point arguments to variadic or
+                 * unprototyped callees in both XMM<n> and the matching integer
+                 * argument register. Duplicating every register-passed f64 is
+                 * harmless for fixed prototypes and keeps indirect/external
+                 * calls correct without depending on frontend signature data.
+                 */
+                MachineOperand mirror = mach_op_vreg(
+                    isel_abi_arg_vreg(cc, locs[i].idx), 64);
+                isel_emit(ctx, MACH_MOV, mirror, arg, mach_op_none());
+            }
         }
     }
 
@@ -588,6 +601,12 @@ static bool isel_lower_tailcall(ISelCtx *ctx, IRInst *call)
             arg = isel_materialize_imm_to_gpr64(ctx, arg);
             MachineOperand xmm = mach_op_xmm(locs[i].idx);
             isel_emit(ctx, MACH_MOV, xmm, arg, mach_op_none());
+            if (is_win)
+            {
+                MachineOperand mirror = mach_op_vreg(
+                    isel_abi_arg_vreg(cc, locs[i].idx), 64);
+                isel_emit(ctx, MACH_MOV, mirror, arg, mach_op_none());
+            }
         }
     }
 

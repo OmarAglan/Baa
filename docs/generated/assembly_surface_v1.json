@@ -2305,7 +2305,7 @@
           ],
           "count": 7,
           "samples": [
-            "tests/integration/backend/backend_float_extensions_v042_test.baa:883",
+            "tests/integration/backend/backend_float_extensions_v042_test.baa:895",
             "tests/integration/backend/backend_tailcall_float_test.baa:36",
             "tests/integration/backend/backend_test.baa:3470"
           ]
@@ -2407,7 +2407,7 @@
           "samples": [
             "examples/error_handling_demo.baa:207",
             "examples/file_copy_small.baa:457",
-            "examples/math_and_format.baa:159"
+            "examples/math_and_format.baa:164"
           ]
         },
         {
@@ -2531,7 +2531,7 @@
           "count": 14,
           "samples": [
             "tests/integration/backend/backend_cast_pointer_diff_test.baa:62",
-            "tests/integration/backend/backend_tailcall_float_test.baa:69",
+            "tests/integration/backend/backend_tailcall_float_test.baa:71",
             "tests/integration/backend/backend_test.baa:3488"
           ]
         },
@@ -2544,7 +2544,7 @@
           "count": 9,
           "samples": [
             "tests/integration/backend/backend_cast_pointer_diff_test.baa:65",
-            "tests/integration/backend/backend_tailcall_float_test.baa:76",
+            "tests/integration/backend/backend_tailcall_float_test.baa:78",
             "tests/integration/backend/backend_test.baa:3539"
           ]
         },
@@ -2878,7 +2878,7 @@
             "memory-base-displacement",
             "register"
           ],
-          "count": 7763,
+          "count": 7766,
           "samples": [
             "examples/error_handling_demo.baa:76",
             "examples/error_handling_demo.baa:78",
@@ -2930,7 +2930,7 @@
             "register",
             "register"
           ],
-          "count": 13307,
+          "count": 13336,
           "samples": [
             "examples/error_handling_demo.baa:16",
             "examples/error_handling_demo.baa:17",
@@ -3074,7 +3074,7 @@
           ],
           "count": 7,
           "samples": [
-            "tests/integration/backend/backend_tailcall_float_test.baa:73",
+            "tests/integration/backend/backend_tailcall_float_test.baa:75",
             "tests/integration/backend/backend_test.baa:3536",
             "tests/integration/backend/backend_test.baa:3562"
           ]
@@ -3223,8 +3223,8 @@
           "count": 4,
           "samples": [
             "tests/integration/backend/backend_scan_arabic_test.baa:507",
-            "tests/integration/backend/backend_stdlib_v041_test.baa:300",
-            "tests/integration/backend/backend_stdlib_v041_test.baa:334"
+            "tests/integration/backend/backend_stdlib_v041_test.baa:301",
+            "tests/integration/backend/backend_stdlib_v041_test.baa:337"
           ]
         },
         {
@@ -3246,7 +3246,7 @@
           "samples": [
             "tests/integration/backend/backend_float_extensions_v042_test.baa:296",
             "tests/integration/backend/backend_scan_arabic_test.baa:497",
-            "tests/integration/backend/backend_stdlib_v041_test.baa:306"
+            "tests/integration/backend/backend_stdlib_v041_test.baa:307"
           ]
         },
         {
@@ -3342,7 +3342,7 @@
           "samples": [
             "tests/integration/backend/backend_float_extensions_v042_test.baa:297",
             "tests/integration/backend/backend_scan_arabic_test.baa:498",
-            "tests/integration/backend/backend_stdlib_v041_test.baa:307"
+            "tests/integration/backend/backend_stdlib_v041_test.baa:308"
           ]
         },
         {
@@ -3711,7 +3711,7 @@
         },
         {
           "name": "%r10",
-          "count": 16269
+          "count": 16296
         },
         {
           "name": "%r10b",
@@ -3727,7 +3727,7 @@
         },
         {
           "name": "%r12",
-          "count": 5168
+          "count": 5170
         },
         {
           "name": "%r12b",
@@ -3775,11 +3775,11 @@
         },
         {
           "name": "%r8",
-          "count": 138
+          "count": 142
         },
         {
           "name": "%r9",
-          "count": 30
+          "count": 36
         },
         {
           "name": "%rax",
@@ -3787,7 +3787,7 @@
         },
         {
           "name": "%rbp",
-          "count": 15930
+          "count": 15933
         },
         {
           "name": "%rbx",
@@ -3795,7 +3795,7 @@
         },
         {
           "name": "%rcx",
-          "count": 2634
+          "count": 2646
         },
         {
           "name": "%rdi",
@@ -3803,7 +3803,7 @@
         },
         {
           "name": "%rdx",
-          "count": 2691
+          "count": 2701
         },
         {
           "name": "%rip",

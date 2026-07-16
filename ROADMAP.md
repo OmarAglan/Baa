@@ -1810,6 +1810,10 @@
   * \[x] First executable slice: `--emit-nazm` emits an Arabic-only minimal integer entry for Windows/Linux targets and visibly rejects every unsupported form.
   * \[x] PC-relative global slice: scalar global loads/stores and function/global addresses emit `[مؤشر_التعليمة+الرمز]`; immediate stores lower through a scratch register and duplicate extern-plus-definition declarations emit one definition.
   * \[x] Memory arithmetic slice: `imul` accepts base/displacement memory sources and spilled `setcc` destinations emit the native Arabic memory form.
+  * \[x] Scalar-decimal slice: all 16 XMM identities emit only as
+    `سجل_عشري_٠` through `سجل_عشري_١٥`; arithmetic, comparison, bit transport,
+    and integer/decimal conversions assemble to ELF64 and COFF with no Latin
+    source aliases.
 * \[ ] **Shadow integration** — invoke Nazm without changing the production GAS result and compare object/link/runtime semantics.
   * \[x] First executable slice: `--nazm-shadow=<path>` assembles and links a one-input minimal program beside GAS with visible no-fallback failures and host runtime parity coverage.
 * \[ ] **Embedding** — adopt `nazm_assemble_buffer()` only after its public ownership and error contracts are stable.
@@ -1819,7 +1823,7 @@
   #### v1.5.0.1: Inventory and Contract
 
 * \[x] **Generated-form corpus** — version `baa-nazm-coverage-v1` from the full 100-source, two-target inventory and assemble focused ELF64/COFF fixtures for every currently supported form; partial and unsupported forms remain explicit.
-* \[x] **Source-level shadow matrix** — classify all 100 sources on both targets as Arabic-only emitted, visibly unsupported, or gate error; every rejection carries a stable Arabic blocker kind/detail. The integer/control, Arabic runtime ABI, data, spill-safe, PC-relative global, memory-source IMUL, and spilled-SETcc expansion now admits 79 Linux and 80 Windows sources with zero gate errors; the remaining 21/20 sources reject with status `3`, stable blocker data, and no output.
+* \[x] **Source-level shadow matrix** — classify all 100 sources on both targets as Arabic-only emitted, visibly unsupported, or gate error; every rejection carries a stable Arabic blocker kind/detail. The integer/control, Arabic runtime ABI, data, spill-safe, PC-relative global, memory-source IMUL, spilled-SETcc, and scalar-decimal expansion now admits 89 sources on each target with zero gate errors; the remaining 11 sources reject with status `3`, stable blocker data, and no output.
 * \[x] **Source mapping** — `baa-nazm-source-map-v1` binds generated Nazm line ranges to the original UTF-8 Baa file/line/column, and shadow assembler failures replay the Nazm diagnostic plus its mapped Baa location on Windows/Linux.
 * \[ ] **Inline assembly migration** — version the breaking move from raw `مجمع { ... }` GAS text to canonical `نظم { ... }` source.
 * \[x] **Target contract** — map Baa targets explicitly to Nazm ELF64/COFF modes.

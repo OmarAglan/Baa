@@ -160,6 +160,8 @@ def _find_nazm() -> Path | None:
             return candidate
 
     candidates = [
+        ROOT.parent / "Nazm" / "build" / "eco-verify" / "nazm.exe",
+        ROOT.parent / "Nazm" / "build" / "eco-verify" / "nazm",
         ROOT.parent / "Nazm" / "build-e31" / "nazm.exe",
         ROOT.parent / "Nazm" / "build-e31" / "nazm",
         ROOT.parent / "Nazm" / "build" / "nazm.exe",
@@ -173,6 +175,41 @@ def _find_nazm() -> Path | None:
     return Path(command) if command else None
 
 
+def _find_c_compiler() -> Path | None:
+    configured = os.environ.get("CC")
+    if configured:
+        candidate = Path(configured)
+        if candidate.is_file():
+            return candidate.resolve()
+        command = shutil.which(configured)
+        if command:
+            return Path(command).resolve()
+
+    for name in ("gcc", "cc", "clang"):
+        command = shutil.which(name)
+        if command:
+            return Path(command).resolve()
+
+    candidates: list[Path] = []
+    if os.name == "nt":
+        candidates.extend(
+            [
+                Path("C:/msys64/ucrt64/bin/gcc.exe"),
+                Path("C:/msys64/mingw64/bin/gcc.exe"),
+                Path("C:/msys64/clang64/bin/clang.exe"),
+                Path(sys.executable).with_name("gcc.exe"),
+                Path(sys.executable).with_name("clang.exe"),
+            ]
+        )
+    else:
+        candidates.extend((Path("/usr/bin/cc"), Path("/usr/bin/gcc")))
+
+    for candidate in candidates:
+        if candidate.is_file():
+            return candidate.resolve()
+    return None
+
+
 class NazmEmitterTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
@@ -181,10 +218,11 @@ class NazmEmitterTests(unittest.TestCase):
     def run_baa(self, work: Path, *args: str) -> subprocess.CompletedProcess[str]:
         env = os.environ.copy()
         env["BAA_STDLIB"] = str(ROOT / "stdlib")
-        compiler_driver = Path(env.get("CC", ""))
-        if compiler_driver.is_file():
+        compiler_driver = _find_c_compiler()
+        if compiler_driver is not None:
+            env["CC"] = str(compiler_driver)
             env["PATH"] = (
-                str(compiler_driver.resolve().parent)
+                str(compiler_driver.parent)
                 + os.pathsep
                 + env.get("PATH", "")
             )
@@ -283,6 +321,111 @@ class NazmEmitterTests(unittest.TestCase):
                     self.assertIn("اقفز كتلة_٠_٦", text)
                     self.assertIn("كتلة_٠_٦:", text)
                     self.assertIsNone(re.search(r"[A-Za-z]", text))
+
+    def test_scalar_decimal_source_is_arabic_and_assembles_for_both_targets(
+        self,
+    ) -> None:
+        nazm = _find_nazm()
+        if nazm is None:
+            self.skipTest("Nazm executable is unavailable in this checkout")
+
+        with tempfile.TemporaryDirectory(prefix="baa_nazm_decimal_") as temp:
+            work = Path(temp)
+            source = work / "حساب-عشري.باء"
+            source.write_text(
+                "عشري احسب(عشري أ، عشري ب) {\n"
+                "    عشري ج = أ + ب.\n"
+                "    ج = ج - ب.\n"
+                "    ج = ج * ب.\n"
+                "    ج = ج / ب.\n"
+                "    إذا (ج > ب) {\n"
+                "        ج = -ج.\n"
+                "    }\n"
+                "    إرجع ج.\n"
+                "}\n"
+                "صحيح الرئيسية() {\n"
+                "    عشري ناتج = احسب(كـ<عشري>(٦)، ٢.٠).\n"
+                "    إرجع كـ<صحيح>(ناتج) + ٦.\n"
+                "}\n",
+                encoding="utf-8",
+            )
+
+            expected_mnemonics = (
+                "جمع_عشري",
+                "طرح_عشري",
+                "ضرب_عشري",
+                "قسمة_عشرية",
+                "مقارنة_عشرية",
+                "خلاف_عشري",
+                "تحويل_صحيح_إلى_عشري",
+                "تحويل_عشري_إلى_صحيح",
+            )
+            for target, object_format, object_suffix in (
+                ("x86_64-windows", "كوف", ".obj"),
+                ("x86_64-linux", "إلف64", ".o"),
+            ):
+                with self.subTest(target=target):
+                    emitted = work / f"عشري-{target}.نظم"
+                    proc = self.run_baa(
+                        work,
+                        "--emit-nazm",
+                        f"--target={target}",
+                        str(source),
+                        "-o",
+                        str(emitted),
+                    )
+                    self.assertEqual(proc.returncode, 0, proc.stderr)
+                    text = emitted.read_text(encoding="utf-8")
+                    self.assertIsNone(
+                        re.search(r"[A-Za-z]", text),
+                        "Nazm source contains a Latin letter",
+                    )
+                    self.assertIn("سجل_عشري_٠", text)
+                    for mnemonic in expected_mnemonics:
+                        self.assertIn(mnemonic, text)
+
+                    object_path = work / f"عشري-{target}{object_suffix}"
+                    assembled = subprocess.run(
+                        [
+                            str(nazm),
+                            "-ص",
+                            object_format,
+                            "-خ",
+                            str(object_path),
+                            str(emitted),
+                        ],
+                        cwd=str(work),
+                        text=True,
+                        encoding="utf-8",
+                        errors="replace",
+                        capture_output=True,
+                        timeout=30,
+                    )
+                    self.assertEqual(assembled.returncode, 0, assembled.stderr)
+                    self.assertTrue(object_path.is_file())
+
+            exe_suffix = ".exe" if os.name == "nt" else ""
+            output = work / f"برنامج-عشري{exe_suffix}"
+            shadow = self.run_baa(
+                work,
+                f"--nazm-shadow={nazm}",
+                str(source),
+                "-o",
+                str(output),
+            )
+            self.assertEqual(shadow.returncode, 0, shadow.stderr)
+            production_run = subprocess.run(
+                [str(output)], capture_output=True, timeout=30
+            )
+            shadow_run = subprocess.run(
+                [str(Path(f"{output}.ظل-نظم{exe_suffix}"))],
+                capture_output=True,
+                timeout=30,
+            )
+            self.assertEqual(production_run.returncode, 0)
+            self.assertEqual(shadow_run.returncode, production_run.returncode)
+            self.assertEqual(shadow_run.stdout, production_run.stdout)
+            self.assertEqual(shadow_run.stderr, production_run.stderr)
 
     def test_baa_string_table_uses_arabic_read_only_symbols(self) -> None:
         with tempfile.TemporaryDirectory(prefix="baa_nazm_strings_") as temp:
@@ -604,13 +747,7 @@ class NazmEmitterTests(unittest.TestCase):
             self.assertFalse(output.exists(), "GAS output must not hide a shadow failure")
 
     def test_shadow_assembler_failure_maps_back_to_baa_source(self) -> None:
-        compiler = os.environ.get("CC") or shutil.which("gcc") or shutil.which("cc")
-        if compiler is None:
-            adjacent = Path(sys.executable).with_name(
-                "gcc.exe" if os.name == "nt" else "gcc"
-            )
-            if adjacent.is_file():
-                compiler = str(adjacent)
+        compiler = _find_c_compiler()
         if compiler is None:
             self.skipTest("A C compiler is required for the diagnostic adapter fixture")
 
@@ -660,7 +797,7 @@ class NazmEmitterTests(unittest.TestCase):
                 encoding="utf-8",
             )
             compiler_env = os.environ.copy()
-            compiler_parent = Path(compiler).parent
+            compiler_parent = compiler.parent
             if compiler_parent != Path("."):
                 compiler_env["PATH"] = (
                     str(compiler_parent)
@@ -669,7 +806,7 @@ class NazmEmitterTests(unittest.TestCase):
                 )
             build = subprocess.run(
                 [
-                    compiler,
+                    str(compiler),
                     *(["-municode"] if os.name == "nt" else []),
                     str(fake_source),
                     "-o",
@@ -920,6 +1057,9 @@ class NazmEmitterTests(unittest.TestCase):
                 self.assertEqual(shadow_run.returncode, production_run.returncode)
                 self.assertEqual(shadow_run.stdout, production_run.stdout)
                 self.assertEqual(shadow_run.stderr, production_run.stderr)
+                if source.name == "math_and_format.baa":
+                    self.assertIn(b"0.4794", production_run.stdout)
+                    self.assertIn(b"4.794255e-01", production_run.stdout)
 
                 # Raw relocation counts are not a semantic parity measure here:
                 # Nazm resolves same-object symbols during assembly while GAS

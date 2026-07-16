@@ -141,6 +141,22 @@ class NazmCoverageTests(unittest.TestCase):
             instruction_index[("sete", ("register",))]["status"],
             "supported",
         )
+        for mnemonic in (
+            "addsd",
+            "subsd",
+            "mulsd",
+            "divsd",
+            "ucomisd",
+            "xorpd",
+            "cvtsi2sd",
+            "cvttsd2si",
+        ):
+            row = instruction_index[(mnemonic, ("register", "register"))]
+            self.assertEqual(row["status"], "supported")
+            self.assertEqual(
+                row["acceptance_fixture"],
+                "tests/fixtures/baa_coverage/عشري-باء.نظم",
+            )
         directive_index = {
             (item["directive"], tuple(item["operands"])): item
             for item in linux["directive_forms"]

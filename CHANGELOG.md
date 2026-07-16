@@ -76,6 +76,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
   - Direct Nazm source errors preserve compiler source status `1`; missing
     tools/process failures remain status `4`, unsupported validation/source
     modes remain status `3`, and no path retries through GAS.
+  - The implicit PATH command is now the primary Arabic launcher `نظم`;
+    `--nazm-path` and `BAA_NAZM` remain explicit compatibility overrides.
 - **First executable Arabic Nazm emitter slice**:
   - Added non-default `--emit-nazm` output after register allocation for a minimal integer
     entry program on Windows and Linux targets while leaving GAS as the production/default assembler.

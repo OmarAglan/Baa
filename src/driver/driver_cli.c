@@ -158,7 +158,7 @@ void driver_print_help(void)
     printf("  -S, -s       Compile to assembly only (.s)\n");
     printf("  --emit-nazm  Emit canonical Arabic Nazm source only (.نظم)\n");
     printf("  --assembler=gas|nazm  Select the normal assembler (default: gas)\n");
-    printf("  --nazm-path=<path>  Nazm executable for generated or direct .نظم sources\n");
+    printf("  --nazm-path=<path>  Nazm executable; otherwise BAA_NAZM or نظم from PATH\n");
     printf("  --nazm-shadow=<path>  Build production GAS and an explicit Nazm shadow beside it\n");
     printf("  -c           Compile to object file only (.o)\n");
     printf("  --check      Parse/analyze source files without emitting code\n");

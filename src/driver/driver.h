@@ -46,7 +46,7 @@ typedef struct
     bool emit_nazm;     // --emit-nazm: إصدار مصدر نظم العربي فقط
     char *nazm_shadow_executable; // --nazm-shadow=<path>: مسار مجمّع نظم لمسار الظل
     BaaAssemblerKind assembler; // --assembler=gas|nazm
-    char *nazm_executable; // --nazm-path=<path> أو BAA_NAZM أو nazm من PATH
+    char *nazm_executable; // --nazm-path=<path> أو BAA_NAZM أو نظم من PATH
     bool compile_only;  // -c: تجميع إلى كائن فقط (بدون ربط)
     bool verbose;       // -v: وضع التفاصيل
     bool dump_ir;       // --dump-ir: طباعة IR بعد التحليل الدلالي

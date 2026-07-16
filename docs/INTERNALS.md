@@ -122,7 +122,7 @@ helpers return this classification to `main.c` rather than collapsing every fail
 | (Multiple Files) | **Multi-File Build** | `.exe` | Compiles each `.baa` root and assembles each direct `.نظم` root to an object, then links the mixed object list. |
 | `-S`, `-s` | **Assembly Only** | `.s` / `.نظم` | Stops after code emission. The selected assembler controls the emitted dialect. |
 | `--assembler=gas\|nazm` | **Assembler Select** | `.s/.نظم/.o/.exe` | GAS is the default rollback; Nazm emits canonical Arabic source, assembles it directly to the selected object, then reuses the normal linker. |
-| `--nazm-path=<path>` | **Nazm Tool Select** | - | Overrides `BAA_NAZM` and `nazm` lookup from `PATH`. |
+| `--nazm-path=<path>` | **Nazm Tool Select** | - | Overrides `BAA_NAZM` and the primary Arabic `نظم` lookup from `PATH`. |
 | `-c` | **Compile Only** | `.o` | Stops after assembling. Writes `<input>.o` (or `-o` when a single input file is used). |
 | `--check` | **Fast Check** | none | Stops after parse and semantic analysis for editor/tool feedback; no IR, assembly, object, or executable is emitted. |
 | `-v` | **Verbose** | - | Prints commands and compilation time; keeps intermediate `.s` files. |

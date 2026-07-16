@@ -327,8 +327,14 @@ class NazmEmitterTests(unittest.TestCase):
             object_suffix = ".obj" if os.name == "nt" else ".o"
             object_path = work / f"برنامج{object_suffix}"
             manifest_path = work / "بيان-البناء.json"
+            arabic_bin = work / "أدوات"
+            arabic_bin.mkdir()
+            arabic_command = arabic_bin / (
+                "نظم.exe" if os.name == "nt" else "نظم"
+            )
+            shutil.copy2(nazm, arabic_command)
             path_with_nazm = (
-                str(nazm.parent)
+                str(arabic_bin)
                 + os.pathsep
                 + os.environ.get("PATH", "")
             )

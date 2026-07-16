@@ -184,8 +184,8 @@ to the normal C-like assembler position:
 Baa source -> Machine IR -> Arabic Nazm source -> nazm -> object -> host linker
 ```
 
-The executable is selected by `--nazm-path=<path>`, then `BAA_NAZM`, then
-`nazm` from `PATH`. `-S --assembler=nazm` stops at inspectable `.نظم` source;
+The executable is selected by `--nazm-path=<path>`, then `BAA_NAZM`, then the
+primary Arabic command `نظم` from `PATH`. `-S --assembler=nazm` stops at inspectable `.نظم` source;
 `-c` writes the requested object directly, including cross-target ELF64/COFF
 objects because Nazm owns both writers; a normal host full build links Nazm
 objects with the Baa runtime. Cross-target linking remains deferred. Linux uses

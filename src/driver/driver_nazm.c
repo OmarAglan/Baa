@@ -282,7 +282,7 @@ const char *driver_nazm_get_executable(const CompilerConfig *config)
         return config->nazm_executable;
     const char *environment = getenv("BAA_NAZM");
     if (environment && environment[0]) return environment;
-    return "nazm";
+    return "نظم";
 }
 
 static BaaCompilerExitCode driver_nazm_run_assembler(

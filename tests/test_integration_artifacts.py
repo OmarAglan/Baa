@@ -103,6 +103,7 @@ class IntegrationArtifactDocumentationTests(unittest.TestCase):
             '"schema": 1',
             '"compiler_version": "0.6.0"',
             '"assembler": "gas"',
+            '"source_kind": "baa"',
             '"runtime_check_mask": 0',
             '"units": [',
             '"cache": {',

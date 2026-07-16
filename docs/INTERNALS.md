@@ -119,7 +119,7 @@ helpers return this classification to `main.c` rather than collapsing every fail
 |------|------|--------|--------|
 | (Default) | **Compile & Link** | `.exe` | Runs full pipeline. Deletes intermediate `.s` and `.o` files. |
 | `-o <file>` | **Custom Output** | `.exe` | Sets the linked output filename (default: `out.exe`). |
-| (Multiple Files) | **Multi-File Build** | `.exe` | Compiles each `.baa` to `.o` and links them. |
+| (Multiple Files) | **Multi-File Build** | `.exe` | Compiles each `.baa` root and assembles each direct `.نظم` root to an object, then links the mixed object list. |
 | `-S`, `-s` | **Assembly Only** | `.s` / `.نظم` | Stops after code emission. The selected assembler controls the emitted dialect. |
 | `--assembler=gas\|nazm` | **Assembler Select** | `.s/.نظم/.o/.exe` | GAS is the default rollback; Nazm emits canonical Arabic source, assembles it directly to the selected object, then reuses the normal linker. |
 | `--nazm-path=<path>` | **Nazm Tool Select** | - | Overrides `BAA_NAZM` and `nazm` lookup from `PATH`. |
@@ -143,6 +143,12 @@ helpers return this classification to `main.c` rather than collapsing every fail
 | `--emit-build-manifest <file>` | **Build Manifest** | JSON | Writes deterministic source/dependency hashes and cache status for the invocation (v0.5.3). |
 | `--incremental` | **Incremental Build** | `.o/.exe` | Reuses cached objects when source/include content hashes and relevant flags match (v0.5.3). |
 | `--cache-dir <dir>` | **Cache Location** | directory | Overrides the default `.baa_build/cache` incremental object cache (v0.5.3). |
+
+Direct `.نظم` roots are source-kind dispatch, not inline assembly and not a
+fallback. They bypass the Baa lexer/IR/backend, invoke the external Nazm CLI
+with structured argv, and enter the same object/link plan. Their manifest unit
+records `source_kind: nazm`, `assembler: nazm`, and a cache bypass until a
+verified Nazm version fingerprint becomes part of the key.
 | `--target=<t>` | **Target Select** | `.s/.o/.exe` | Selects backend target: `x86_64-windows` or `x86_64-linux`. |
 | `-fPIC` / `-fPIE` | **Code Model (ELF)** | `.s/.o/.exe` | Enables PIC/PIE-friendly emission on Linux/ELF. |
 | `-fno-pic` / `-fno-pie` | **Disable PIC/PIE** | `.s/.o/.exe` | Disables PIC/PIE modes. |

@@ -16,6 +16,8 @@ typedef struct {
 typedef struct {
     char* source;
     char* output;
+    char* source_kind;
+    char* assembler;
     char* cache_slot;
     char* cache_reason;
     bool cache_enabled;
@@ -57,6 +59,11 @@ bool driver_build_record_uncached(const CompilerConfig* config,
                                   size_t dep_count,
                                   const char* reason,
                                   DriverBuildManifest* manifest);
+
+bool driver_build_record_nazm_input(const CompilerConfig* config,
+                                    const char* input_file,
+                                    const char* output_file,
+                                    DriverBuildManifest* manifest);
 
 bool driver_build_write_manifest(const CompilerConfig* config,
                                  const DriverBuildManifest* manifest,

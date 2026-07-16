@@ -70,6 +70,7 @@ class TargetInfoTests(unittest.TestCase):
         self.assertTrue(host["is_host"])
         self.assertTrue(host["capabilities"]["object"])
         self.assertTrue(host["capabilities"]["link"])
+        self.assertTrue(host["capabilities"]["nazm_source"])
 
     def test_target_selection_does_not_change_host_capabilities(self) -> None:
         selected = "x86_64-linux" if self.host_name.endswith("windows") else "x86_64-windows"
@@ -84,6 +85,7 @@ class TargetInfoTests(unittest.TestCase):
         self.assertFalse(target["capabilities"]["object"])
         self.assertFalse(target["capabilities"]["link"])
         self.assertTrue(target["capabilities"]["assembly"])
+        self.assertTrue(target["capabilities"]["nazm_source"])
 
     def test_unknown_target_info_format_is_rejected(self) -> None:
         proc = self.run_baa("--target-info=text")

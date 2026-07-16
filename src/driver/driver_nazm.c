@@ -8,6 +8,51 @@
 #include <ctype.h>
 #include <limits.h>
 
+bool driver_nazm_is_source_path(const char *path)
+{
+    static const char suffix[] = ".نظم";
+    if (!path) return false;
+    size_t path_len = strlen(path);
+    size_t suffix_len = sizeof(suffix) - 1u;
+    return path_len >= suffix_len &&
+           memcmp(path + path_len - suffix_len, suffix, suffix_len) == 0;
+}
+
+BaaCompilerExitCode driver_validate_nazm_inputs(
+    const CompilerConfig *config,
+    char **input_files,
+    int input_count)
+{
+    if (!config || !input_files || input_count <= 0)
+        return BAA_COMPILER_EXIT_INTERNAL_ERROR;
+    bool has_direct_input = false;
+    for (int i = 0; i < input_count; ++i)
+    {
+        if (driver_nazm_is_source_path(input_files[i]))
+        {
+            has_direct_input = true;
+            break;
+        }
+    }
+    if (!has_direct_input) return BAA_COMPILER_EXIT_SUCCESS;
+    if (config->nazm_shadow_executable)
+    {
+        fprintf(stderr,
+                "خطأ: --nazm-shadow يقارن خرج باء المولد فقط، "
+                "ولا يقبل ملف `.نظم` مباشرا.\n");
+        return BAA_COMPILER_EXIT_INVALID_INVOCATION;
+    }
+    if (config->assembly_only || config->emit_nazm ||
+        config->check_only || config->header_check)
+    {
+        fprintf(stderr,
+                "غير مدعوم: ملفات `.نظم` المباشرة تعمل حاليا مع -c "
+                "أو البناء والربط الكامل فقط؛ لا يوجد تحقق JSON أو تحويل مصدر لها.\n");
+        return BAA_COMPILER_EXIT_UNSUPPORTED;
+    }
+    return BAA_COMPILER_EXIT_SUCCESS;
+}
+
 static const char k_driver_nazm_linux_startup[] =
     "; نقطة البدء المستضافة العربية لهدف لينكس\n"
     ".نص\n"
@@ -247,7 +292,8 @@ static BaaCompilerExitCode driver_nazm_run_assembler(
     const char *source_path,
     const char *source_map_path,
     const char *object_path,
-    bool keep_source)
+    bool keep_source,
+    bool user_source)
 {
     if (!config || !executable || !source_path || !object_path)
         return BAA_COMPILER_EXIT_INTERNAL_ERROR;
@@ -298,6 +344,9 @@ static BaaCompilerExitCode driver_nazm_run_assembler(
             if (source_map_path)
                 (void)driver_toolchain_delete_file_utf8(source_map_path);
         }
+        if (user_source && process_ok && process.started &&
+            process.exit_code == 1)
+            return BAA_COMPILER_EXIT_SOURCE_ERROR;
         return BAA_COMPILER_EXIT_TOOLCHAIN_ERROR;
     }
 
@@ -430,7 +479,8 @@ BaaCompilerExitCode driver_assemble_nazm_module(
         source_path,
         source_map_path,
         object_path,
-        keep_source);
+        keep_source,
+        false);
     free(source_map_path);
     return rc;
 }
@@ -461,7 +511,105 @@ BaaCompilerExitCode driver_assemble_nazm_startup(
         source_path,
         NULL,
         object_path,
-        keep_source);
+        keep_source,
+        false);
+}
+
+BaaCompilerExitCode driver_compile_nazm_input(
+    const CompilerConfig *config,
+    int input_count,
+    const char *source_path,
+    CompilerPhaseTimes *times,
+    DriverBuildManifest *build_manifest,
+    char **out_object_path)
+{
+    static unsigned long input_counter = 0;
+    if (out_object_path) *out_object_path = NULL;
+    if (!config || input_count <= 0 || !source_path || !times ||
+        !out_object_path || !driver_nazm_is_source_path(source_path))
+        return BAA_COMPILER_EXIT_INTERNAL_ERROR;
+
+    char *object_path = NULL;
+    bool object_path_owned = true;
+    if (config->compile_only)
+    {
+        if (input_count == 1 && config->output_file)
+        {
+            object_path = config->output_file;
+            object_path_owned = false;
+        }
+        else
+        {
+            size_t path_len = strlen(source_path);
+            size_t suffix_len = strlen(".نظم");
+            size_t object_len = path_len - suffix_len + strlen(".o");
+            object_path = (char *)malloc(object_len + 1u);
+            if (object_path)
+            {
+                memcpy(object_path, source_path, path_len - suffix_len);
+                memcpy(object_path + path_len - suffix_len,
+                       ".o",
+                       strlen(".o") + 1u);
+            }
+        }
+    }
+    else
+    {
+        char suffix[96];
+        int length = snprintf(suffix,
+                              sizeof(suffix),
+                              ".وحدة-نظم-%lu.o",
+                              ++input_counter);
+        if (length > 0 && (size_t)length < sizeof(suffix))
+        {
+            object_path = config->output_file
+                ? driver_nazm_artifact_path(config->output_file, suffix)
+                : driver_nazm_artifact_path(".باء", suffix);
+        }
+    }
+
+    if (!object_path)
+    {
+        fprintf(stderr,
+                "خطأ: تعذر تحديد مسار كائن مصدر نظم '%s'.\n",
+                source_path);
+        return BAA_COMPILER_EXIT_INTERNAL_ERROR;
+    }
+
+    (void)driver_toolchain_delete_file_utf8(object_path);
+    BaaCompilerExitCode rc = driver_nazm_run_assembler(
+        config,
+        times,
+        driver_nazm_get_executable(config),
+        source_path,
+        NULL,
+        object_path,
+        true,
+        true);
+    if (rc != BAA_COMPILER_EXIT_SUCCESS)
+    {
+        if (object_path_owned) free(object_path);
+        return rc;
+    }
+
+    if (!driver_build_record_nazm_input(config,
+                                        source_path,
+                                        object_path,
+                                        build_manifest))
+    {
+        fprintf(stderr,
+                "خطأ: فشل تسجيل مصدر نظم المباشر في بيان البناء.\n");
+        (void)driver_toolchain_delete_file_utf8(object_path);
+        if (object_path_owned) free(object_path);
+        return BAA_COMPILER_EXIT_TOOLCHAIN_ERROR;
+    }
+
+    if (config->verbose)
+        printf("[INFO] Assembled direct Nazm source: %s -> %s\n",
+               source_path,
+               object_path);
+    *out_object_path = object_path;
+    return BAA_COMPILER_EXIT_SUCCESS;
 }
 
 BaaCompilerExitCode driver_emit_nazm_shadow_object(const CompilerConfig *config,
@@ -509,7 +657,8 @@ BaaCompilerExitCode driver_emit_nazm_shadow_object(const CompilerConfig *config,
         source_path,
         source_map_path,
         object_path,
-        true);
+        true,
+        false);
     if (assemble_rc != BAA_COMPILER_EXIT_SUCCESS)
     {
         (void)driver_toolchain_delete_file_utf8(source_path);

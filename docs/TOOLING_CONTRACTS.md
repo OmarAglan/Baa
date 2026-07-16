@@ -129,6 +129,8 @@ top-level fields:
     {
       "source": "/abs/path/src/main.baa",
       "output": "/abs/path/build/main.o",
+      "source_kind": "baa",
+      "assembler": "gas",
       "cache": {
         "enabled": true,
         "hit": false,
@@ -149,10 +151,14 @@ fields above as the compatibility contract. Adding optional fields is allowed. R
 renaming, or changing the meaning of these fields requires a compatibility-matrix note and a
 schema bump.
 
-`assembler` is `gas` or `nazm`. Nazm builds currently bypass the incremental
-object cache until the cache key records a verified Nazm version fingerprint;
-the manifest therefore reports `cache.enabled: false` rather than reusing an
-object produced by a different assembler.
+The top-level `assembler` is the policy for generated Baa units. Each unit also
+records its actual `source_kind` (`baa` or `nazm`) and `assembler` (`gas` or
+`nazm`). Direct `.نظم` units always report `nazm`, even when Baa units in the
+same link retain the default GAS policy. Generated and direct Nazm objects
+currently bypass the incremental object cache until the cache key records a
+verified Nazm version fingerprint; the manifest therefore reports
+`cache.enabled: false` rather than reusing an object produced by a different
+assembler.
 
 ---
 
@@ -236,6 +242,14 @@ Nazm integration should consume:
 - a complete generated-form inventory from Baa's Windows/Linux test corpus,
 - `baa-nazm-shadow-corpus-v1`, with one emitted/unsupported/error result for
   every inventoried source and target.
+
+Baa also accepts direct Arabic `.نظم` source roots in `-c` and normal hosted
+link invocations. Those roots bypass Baa parsing and Machine IR, invoke Nazm
+through structured argv, and join the same object/link plan as `.baa` roots.
+Direct Nazm source diagnostics return source status `1`; missing or failed
+process/tool execution returns `4`. `--check`, `-S`, `--emit-nazm`, and
+`--nazm-shadow` reject direct `.نظم` roots explicitly until Nazm exposes the
+required JSON validation/source-map contracts. No failure retries through GAS.
 
 Until `baa-nazm-boundary-v0` is admitted, Baa's public `-S` output remains
 GAS/AT&T and production object generation continues through the external host

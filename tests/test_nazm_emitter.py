@@ -423,6 +423,151 @@ class NazmEmitterTests(unittest.TestCase):
             )
             self.assertEqual(proc.returncode, 2, proc.stderr)
 
+    def test_direct_nazm_source_compiles_and_links_with_baa(self) -> None:
+        nazm = _find_nazm()
+        if nazm is None:
+            self.skipTest("Nazm executable is unavailable in this checkout")
+
+        with tempfile.TemporaryDirectory(prefix="baa_direct_nazm_") as temp:
+            work = Path(temp)
+            baa_source = work / "الرئيسية.baa"
+            baa_source.write_text(
+                "خارجي صحيح قيمة_نظم().\n"
+                "صحيح الرئيسية() {\n"
+                "    إرجع قيمة_نظم() - ٧.\n"
+                "}\n",
+                encoding="utf-8",
+            )
+            nazm_source = work / "مساعدة.نظم"
+            nazm_source.write_text(
+                ".نص\n"
+                ".عام قيمة_نظم\n"
+                "قيمة_نظم:\n"
+                "    انقل سجل_المركم_٣٢، ٧\n"
+                "    ارجع\n",
+                encoding="utf-8",
+            )
+
+            object_path = work / (
+                "مساعدة.obj" if os.name == "nt" else "مساعدة.o"
+            )
+            direct_object = self.run_baa(
+                work,
+                "-c",
+                f"--nazm-path={nazm}",
+                str(nazm_source),
+                "-o",
+                str(object_path),
+            )
+            self.assertEqual(direct_object.returncode, 0, direct_object.stderr)
+            sections, symbols, _ = _inspect_object(object_path)
+            self.assertIn(".text", sections)
+            self.assertIn("قيمة_نظم", symbols)
+
+            cross_target = (
+                "x86_64-linux" if os.name == "nt" else "x86_64-windows"
+            )
+            cross_object = work / (
+                "مساعدة-عابرة.o" if os.name == "nt" else "مساعدة-عابرة.obj"
+            )
+            direct_cross = self.run_baa(
+                work,
+                "-c",
+                f"--nazm-path={nazm}",
+                f"--target={cross_target}",
+                str(nazm_source),
+                "-o",
+                str(cross_object),
+            )
+            self.assertEqual(direct_cross.returncode, 0, direct_cross.stderr)
+            cross_sections, cross_symbols, _ = _inspect_object(cross_object)
+            self.assertIn(".text", cross_sections)
+            self.assertIn("قيمة_نظم", cross_symbols)
+
+            manifest_path = work / "بيان-مختلط.json"
+            executable = work / (
+                "برنامج-مختلط.exe" if os.name == "nt" else "برنامج-مختلط"
+            )
+            path_with_nazm = (
+                str(nazm.parent)
+                + os.pathsep
+                + os.environ.get("PATH", "")
+            )
+            with mock.patch.dict(os.environ, {"PATH": path_with_nazm}):
+                mixed = self.run_baa(
+                    work,
+                    "--incremental",
+                    "--emit-build-manifest",
+                    str(manifest_path),
+                    str(baa_source),
+                    str(nazm_source),
+                    "-o",
+                    str(executable),
+                )
+            self.assertEqual(mixed.returncode, 0, mixed.stderr)
+            run = subprocess.run(
+                [str(executable)],
+                capture_output=True,
+                timeout=30,
+            )
+            self.assertEqual(run.returncode, 0)
+
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            self.assertEqual(manifest["assembler"], "gas")
+            self.assertEqual(
+                [
+                    (unit["source_kind"], unit["assembler"])
+                    for unit in manifest["units"]
+                ],
+                [("baa", "gas"), ("nazm", "nazm")],
+            )
+            self.assertFalse(manifest["units"][1]["cache"]["enabled"])
+            self.assertEqual(
+                manifest["units"][1]["cache"]["reason"],
+                "nazm-input",
+            )
+
+    def test_direct_nazm_failures_and_unsupported_modes_are_visible(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="baa_direct_nazm_fail_") as temp:
+            work = Path(temp)
+            source = work / "خاطئ.نظم"
+            source.write_text(
+                ".نص\n"
+                ".عام خاطئ\n"
+                "خاطئ:\n"
+                "    تعليمة_غير_موجودة\n",
+                encoding="utf-8",
+            )
+            output = work / ("خاطئ.obj" if os.name == "nt" else "خاطئ.o")
+            nazm = _find_nazm()
+            if nazm is not None:
+                invalid = self.run_baa(
+                    work,
+                    "-c",
+                    f"--nazm-path={nazm}",
+                    str(source),
+                    "-o",
+                    str(output),
+                )
+                self.assertEqual(invalid.returncode, 1, invalid.stderr)
+                self.assertFalse(output.exists())
+
+            check = self.run_baa(work, "--check", str(source))
+            self.assertEqual(check.returncode, 3, check.stderr)
+            self.assertIn("ملفات `.نظم` المباشرة", check.stderr)
+
+            missing = work / "نظم-مفقود"
+            missing_tool = self.run_baa(
+                work,
+                "-c",
+                f"--nazm-path={missing}",
+                str(source),
+                "-o",
+                str(output),
+            )
+            self.assertEqual(missing_tool.returncode, 4, missing_tool.stderr)
+            self.assertFalse(output.exists())
+
     def test_local_jump_source_is_canonical_arabic_for_both_targets(self) -> None:
         source = (
             ROOT / "tests" / "integration" / "backend" / "backend_mod_test.baa"

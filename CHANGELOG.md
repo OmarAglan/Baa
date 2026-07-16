@@ -67,6 +67,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
   - Added the selected assembler to deterministic build manifests and bypassed
     Nazm incremental reuse until the cache key includes a verified assembler
     version fingerprint.
+- **Mixed Baa and direct Nazm source roots**:
+  - The normal driver now accepts `.baa` and Arabic `.نظم` roots in one
+    invocation. Direct Nazm roots bypass Baa parsing, assemble through
+    `--nazm-path`, `BAA_NAZM`, or `PATH`, and join the same object/link plan.
+  - Added per-unit `source_kind` and actual `assembler` build-manifest receipts,
+    plus `target-info-v1.capabilities.nazm_source`.
+  - Direct Nazm source errors preserve compiler source status `1`; missing
+    tools/process failures remain status `4`, unsupported validation/source
+    modes remain status `3`, and no path retries through GAS.
 - **First executable Arabic Nazm emitter slice**:
   - Added non-default `--emit-nazm` output after register allocation for a minimal integer
     entry program on Windows and Linux targets while leaving GAS as the production/default assembler.

@@ -172,7 +172,9 @@ static void build_slot_hex(const CompilerConfig* config, const char* source, cha
     hash_string(&h, source ? source : "");
     hash_string(&h, config && config->target ? config->target->name : "");
     hash_string(&h,
-                config && config->assembler == BAA_ASSEMBLER_NAZM
+                driver_nazm_is_source_path(source)
+                    ? "nazm-input"
+                    : config && config->assembler == BAA_ASSEMBLER_NAZM
                     ? "nazm"
                     : "gas");
 
@@ -243,6 +245,8 @@ static void free_unit(DriverBuildUnitRecord* unit)
     if (!unit) return;
     free(unit->source);
     free(unit->output);
+    free(unit->source_kind);
+    free(unit->assembler);
     free(unit->cache_slot);
     free(unit->cache_reason);
     for (size_t i = 0; i < unit->dep_count; ++i) {
@@ -328,9 +332,19 @@ static bool add_record(DriverBuildManifest* manifest,
 
     unit->source = driver_build_canonical_path(input_file);
     unit->output = driver_build_canonical_path(output_file);
+    bool nazm_input = driver_nazm_is_source_path(input_file);
+    unit->source_kind = driver_build_strdup(nazm_input ? "nazm" : "baa");
+    unit->assembler = driver_build_strdup(
+        nazm_input
+            ? "nazm"
+            : config && config->assembler == BAA_ASSEMBLER_NAZM
+                ? "nazm"
+                : "gas");
     unit->cache_enabled = cache_enabled;
     unit->cache_hit = cache_hit;
     unit->cache_reason = driver_build_strdup(reason ? reason : "");
+    if (!unit->source_kind || !unit->assembler || !unit->cache_reason)
+        return false;
 
     if (unit->source) {
         char slot[17];
@@ -615,6 +629,22 @@ bool driver_build_record_uncached(const CompilerConfig* config,
                       reason ? reason : (cache_allowed ? "miss" : "bypass"));
 }
 
+bool driver_build_record_nazm_input(const CompilerConfig* config,
+                                    const char* input_file,
+                                    const char* output_file,
+                                    DriverBuildManifest* manifest)
+{
+    return add_record(manifest,
+                      config,
+                      input_file,
+                      output_file,
+                      NULL,
+                      0,
+                      false,
+                      false,
+                      "nazm-input");
+}
+
 bool driver_build_write_manifest(const CompilerConfig* config,
                                  const DriverBuildManifest* manifest,
                                  const char* manifest_path)
@@ -658,6 +688,10 @@ bool driver_build_write_manifest(const CompilerConfig* config,
         json_escape(out, unit->source ? unit->source : "");
         fprintf(out, "\",\n      \"output\": \"");
         json_escape(out, unit->output ? unit->output : "");
+        fprintf(out, "\",\n      \"source_kind\": \"");
+        json_escape(out, unit->source_kind ? unit->source_kind : "");
+        fprintf(out, "\",\n      \"assembler\": \"");
+        json_escape(out, unit->assembler ? unit->assembler : "");
         fprintf(out, "\",\n      \"cache\": {\"enabled\": %s, \"hit\": %s, \"slot\": \"",
                 unit->cache_enabled ? "true" : "false",
                 unit->cache_hit ? "true" : "false");

@@ -86,6 +86,16 @@ static void main_release_shadow_object(char **path, bool remove_file)
     *path = NULL;
 }
 
+static bool main_all_inputs_are_nazm(char **input_files, int input_count)
+{
+    if (!input_files || input_count <= 0) return false;
+    for (int i = 0; i < input_count; ++i)
+    {
+        if (!driver_nazm_is_source_path(input_files[i])) return false;
+    }
+    return true;
+}
+
 static int main_cleanup_and_return(const CompilerConfig* config,
                                    DriverParseResult* cli,
                                    char** obj_files,
@@ -241,7 +251,8 @@ static int baa_main(int argc, char **argv)
         {
             bool nazm_cross_object =
                 config.compile_only &&
-                config.assembler == BAA_ASSEMBLER_NAZM;
+                (config.assembler == BAA_ASSEMBLER_NAZM ||
+                 main_all_inputs_are_nazm(input_files, input_count));
             if (!nazm_cross_object)
             {
                 fprintf(stderr,

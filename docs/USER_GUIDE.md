@@ -188,14 +188,14 @@ baa [options] <source.baa> [-o <output>]
 
 | Flag | Description | Example |
 |------|-------------|---------|
-| `<input.baa>` | Source file(s) to compile. | `.\baa.exe main.baa lib.baa` |
+| `<input.baa>` / `<input.نظم>` | Baa implementation roots compile normally; direct Arabic Nazm roots are assembled by Nazm and their objects join the same link. | `.\baa.exe main.baa helper.نظم -o app.exe` |
 | `update` | **Self Update.** Windows-only currently. | `.\baa.exe update` |
 | `-o <file>` | Specify the output filename (e.g., `myapp.exe`, `mylib.o`, `output.s`). | `.\baa.exe main.baa -o myapp.exe` |
 | `-I <dir>` / `-I<dir>` | Add include search directory for `#تضمين` (can be repeated; order preserved). | `.\baa.exe -I include -I third_party\hdr main.baa` |
 | `-S`, `-s` | **Compile only to Assembly.** Produces `.s` with GAS or `.نظم` with `--assembler=nazm`; does not invoke assembler/linker. | `.\baa.exe -S main.baa` (creates `main.s`) |
 | `--emit-nazm` | Emit canonical Arabic Nazm source plus its `baa-nazm-source-map-v1` sidecar. This experimental path is explicit and never replaces the production GAS path. | `.\baa.exe --emit-nazm main.baa -o main.نظم` |
 | `--assembler=gas\|nazm` | Select the normal assembler. GAS remains the default rollback; Nazm emits canonical Arabic source, invokes `nazm`, and passes its object to the normal linker. | `.\baa.exe --assembler=nazm main.baa -o main.exe` |
-| `--nazm-path=<path>` | Explicit Nazm executable for `--assembler=nazm`. Without it, Baa uses `BAA_NAZM`, then resolves `nazm` from `PATH`. | `.\baa.exe --assembler=nazm --nazm-path=C:\tools\nazm.exe main.baa` |
+| `--nazm-path=<path>` | Explicit Nazm executable for `--assembler=nazm` or direct `.نظم` roots. Without it, Baa uses `BAA_NAZM`, then resolves `nazm` from `PATH`. | `.\baa.exe --nazm-path=C:\tools\nazm.exe main.baa helper.نظم` |
 | `--nazm-shadow=<path>` | Build through the production GAS path and also assemble/link an explicit Nazm shadow. Nazm failures are visible, never fall back to GAS, and assembler locations are mapped back to the original Baa source. | `.\baa.exe main.baa -o main.exe --nazm-shadow=C:\tools\nazm.exe` |
 | `-c` | **Compile and Assemble.** Produces object file (`.o`), does not link. | `.\baa.exe -c main.baa` (creates `main.o`) |
 | `-v` | Enable verbose output (shows all compilation steps with timing). | `.\baa.exe -v main.baa` |
@@ -260,7 +260,7 @@ baa [options] <source.baa> [-o <output>]
 
 ### Build Manifests and Incremental Builds (v0.5.3)
 
-- `--emit-build-manifest <file>` writes JSON with compiler version, target, output mode, selected assembler, source files, canonical dependencies, content hashes, and cache status.
+- `--emit-build-manifest <file>` writes JSON with compiler version, target, output mode, selected assembler policy, each unit's `baa`/`nazm` source kind and actual assembler, canonical dependencies, content hashes, and cache status.
 - `--incremental` is opt-in and only affects object-producing builds (`-c` and normal link mode).
 - Cache hits are disabled for observable compiler/debug modes: IR dumps, `--emit-ir`, and verifier flags.
 - Header invalidation is content-hash based: changing a `#تضمين` file rebuilds only source units that depended on it.

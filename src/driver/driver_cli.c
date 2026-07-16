@@ -150,7 +150,7 @@ static void parse_set_result(DriverParseResult* out,
 void driver_print_help(void)
 {
     printf("Baa Compiler (baa) - The Arabic Programming Language\n");
-    printf("Usage: baa [options] <files>...\n");
+    printf("Usage: baa [options] <files.baa|files.نظم>...\n");
     printf("\nOptions:\n");
     printf("  -o <file>    Specify output filename\n");
     printf("  -I <dir>     Add include search directory (can be repeated)\n");
@@ -158,7 +158,7 @@ void driver_print_help(void)
     printf("  -S, -s       Compile to assembly only (.s)\n");
     printf("  --emit-nazm  Emit canonical Arabic Nazm source only (.نظم)\n");
     printf("  --assembler=gas|nazm  Select the normal assembler (default: gas)\n");
-    printf("  --nazm-path=<path>  Nazm executable; otherwise BAA_NAZM or PATH is used\n");
+    printf("  --nazm-path=<path>  Nazm executable for generated or direct .نظم sources\n");
     printf("  --nazm-shadow=<path>  Build production GAS and an explicit Nazm shadow beside it\n");
     printf("  -c           Compile to object file only (.o)\n");
     printf("  --check      Parse/analyze source files without emitting code\n");
@@ -214,6 +214,7 @@ void driver_print_help(void)
     printf("\nExamples:\n");
     printf("  baa main.baa\n");
     printf("  baa main.baa lib.baa -o app.exe\n");
+    printf("  baa main.baa helper.نظم -o app.exe\n");
     printf("  baa -Wall -Werror main.baa\n");
     printf("  baa -S main.baa\n");
 }
@@ -252,6 +253,7 @@ static void print_target_record_json(const BaaTarget *target,
     printf("        \"pic\": %s,\n", is_linux ? "true" : "false");
     printf("        \"pie\": %s,\n", is_linux ? "true" : "false");
     printf("        \"stack_protector\": %s,\n", is_linux ? "true" : "false");
+    printf("        \"nazm_source\": true,\n");
     printf("        \"inline_asm\": true\n");
     printf("      }\n");
     printf("    }%s\n", trailing_comma ? "," : "");
@@ -755,11 +757,22 @@ bool driver_parse_cli(int argc, char **argv, CompilerConfig *config, DriverParse
         parse_release_temp_arrays(inputs, include_dirs);
         return false;
     }
+    bool has_direct_nazm_input = false;
+    for (int i = 0; i < input_count; ++i)
+    {
+        if (driver_nazm_is_source_path(inputs[i]))
+        {
+            has_direct_nazm_input = true;
+            break;
+        }
+    }
     if (config->nazm_executable &&
-        config->assembler != BAA_ASSEMBLER_NAZM)
+        config->assembler != BAA_ASSEMBLER_NAZM &&
+        !has_direct_nazm_input)
     {
         fprintf(stderr,
-                "خطأ: --nazm-path يتطلب --assembler=nazm.\n");
+                "خطأ: --nazm-path يتطلب --assembler=nazm "
+                "أو ملف مصدر مباشر بامتداد `.نظم`.\n");
         parse_release_temp_arrays(inputs, include_dirs);
         return false;
     }

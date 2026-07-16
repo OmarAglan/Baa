@@ -56,6 +56,7 @@ i386-pyramidos
     "pic": true,
     "pie": true,
     "stack_protector": true,
+    "nazm_source": true,
     "inline_asm": true,
     "freestanding": false
   }
@@ -146,8 +147,10 @@ baa --target=x86_64-linux file.baa
 host and selected target names, and every currently supported compiler target. Each target
 record exposes its triple, object format, executable suffix, whether it is the host, and
 capabilities for assembly, object emission, linking, libc, stdlib, PIC/PIE, stack protection,
-and inline assembly. Object emission and linking are true only for the host target while
-cross-target support remains assembly-only.
+direct Arabic Nazm roots, and inline assembly. `nazm_source` means the driver
+can send a `.نظم` root to the configured/PATH Nazm CLI. General object emission
+and linking remain true only for the host target; direct or generated Nazm
+object-only invocations may select the other implemented object format.
 
 ---
 

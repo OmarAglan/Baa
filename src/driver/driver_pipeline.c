@@ -867,6 +867,10 @@ BaaCompilerExitCode driver_compile_files(const CompilerConfig *config,
     if (!config || !input_files || input_count <= 0 || !phase_times)
         return BAA_COMPILER_EXIT_INTERNAL_ERROR;
 
+    BaaCompilerExitCode input_rc =
+        driver_validate_nazm_inputs(config, input_files, input_count);
+    if (input_rc != BAA_COMPILER_EXIT_SUCCESS) return input_rc;
+
     // عند -S لا نحتاج لإرجاع قائمة كائنات.
     // كل ربط تنفيذي إنتاجي يضيف نقطة بدء عربية؛ لا يعتمد ABI على main.
     bool need_startup_obj =
@@ -903,9 +907,21 @@ BaaCompilerExitCode driver_compile_files(const CompilerConfig *config,
         char *obj_file = NULL;
         char *shadow_object = NULL;
 
-        BaaCompilerExitCode rc = compile_one_ir(config, input_count, current_input, phase_times,
-                                                build_manifest, odr_registry_ptr, &obj_file,
-                                                &shadow_object);
+        BaaCompilerExitCode rc = driver_nazm_is_source_path(current_input)
+            ? driver_compile_nazm_input(config,
+                                        input_count,
+                                        current_input,
+                                        phase_times,
+                                        build_manifest,
+                                        &obj_file)
+            : compile_one_ir(config,
+                             input_count,
+                             current_input,
+                             phase_times,
+                             build_manifest,
+                             odr_registry_ptr,
+                             &obj_file,
+                             &shadow_object);
 
         if (rc != BAA_COMPILER_EXIT_SUCCESS)
         {

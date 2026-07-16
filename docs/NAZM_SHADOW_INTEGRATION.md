@@ -195,6 +195,20 @@ unsupported emission, assembly errors, or link errors remain terminal and
 never retry through GAS. `--assembler=gas` stays the default rollback until the
 production-admission and rollback gates are signed off.
 
+The normal driver also accepts mixed source roots:
+
+```text
+module.baa  -> Baa -> selected generated-source assembler -> object
+helper.نظم -> Nazm directly                              -> object
+both objects -> the same hosted linker and Arabic startup ABI
+```
+
+The direct `.نظم` route resolves the executable through the same
+`--nazm-path`, `BAA_NAZM`, and `PATH` order. It is valid for `-c` and normal
+host links, including cross-target object-only output. It never parses the file
+as Baa and never falls back to GAS. Source diagnostics return code `1`;
+tool/process failures return code `4`.
+
 ## Source-map and assembler-diagnostic contract
 
 Every successful `--emit-nazm` source `<output>` is accompanied by

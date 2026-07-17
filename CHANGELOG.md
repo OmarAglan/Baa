@@ -32,6 +32,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
   - The Windows corpus passes with the selected Nazm executable resolved by the
     driver; every runnable result matches GAS in exit status, stdout, and stderr.
     Linux remains an exact-SHA hosted-CI receipt before production admission.
+  - Baa now passes Nazm the stable Arabic logical source identity
+    `باء-مولد.نظم` while retaining process-unique physical intermediates.
+    Repeated canonical source, object, and manifest generation is byte-stable
+    without reintroducing shared temporary-file collisions.
+  - The complete Windows release orchestrator passes all 75 steps with these
+    normal/shadow/determinism gates enabled; Linux remains an exact-SHA hosted
+    receipt before the cross-platform admission item can close.
 
 - **Structured Arabic architecture operations**:
   - Added typed `لا_تفعل()` and `اقرأ_عداد_الزمن()` builtins with dedicated

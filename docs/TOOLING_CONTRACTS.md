@@ -251,6 +251,12 @@ process/tool execution returns `4`. `--check`, `-S`, `--emit-nazm`, and
 `--nazm-shadow` reject direct `.نظم` roots explicitly until Nazm exposes the
 required JSON validation/source-map contracts. No failure retries through GAS.
 
+For compiler-generated Nazm sources, the selected Nazm CLI must accept the
+Arabic `--اسم-المصدر` option. Baa passes a stable logical identity while the
+physical generated source remains process-unique; this prevents temporary
+paths from entering deterministic COFF object metadata. Direct `.نظم` roots
+retain their user-provided identity.
+
 Until `baa-nazm-boundary-v0` is admitted, Baa's public `-S` output remains
 GAS/AT&T and production object generation continues through the external host
 assembler. A Nazm shadow path must be opt-in, non-default, and unable to hide an

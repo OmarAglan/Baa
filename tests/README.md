@@ -95,7 +95,8 @@ exported function/global diagnostics while keeping duplicate `ساكن` file-loc
 Every mode also runs `tests/test_nazm_emitter.py`. When both binaries are available, its
 100-source host corpus compiles through the explicit shadow route and the normal
 `--assembler=nazm` route; compile-only objects and runnable link/runtime behavior must match
-the GAS baseline without fallback.
+the GAS baseline without fallback. It also repeats normal Nazm source, object, and manifest
+generation byte-for-byte while physical intermediate filenames remain process-unique.
 Every mode also runs `tests/test_target_specs.py`, which validates the hosted
 `x86_64-windows`/`x86_64-linux` descriptors and keeps the `i386` planning descriptors
 explicitly experimental and freestanding.

@@ -200,12 +200,21 @@ unsupported emission, assembly errors, or link errors remain terminal and
 never retry through GAS. `--assembler=gas` stays the default rollback until the
 production-admission and rollback gates are signed off.
 
+Generated `.نظم` intermediates retain process-unique physical paths so
+concurrent builds cannot collide. Baa separately passes Nazm the stable Arabic
+logical identity `باء-مولد.نظم` through `--اسم-المصدر` (and
+`بدء-باء.نظم` for the hosted startup). Nazm uses that identity for diagnostics
+and object metadata, so identical source, object, and manifest outputs remain
+byte-stable without sharing a temporary filename. Direct user-authored `.نظم`
+roots keep their own source identity and do not receive this override.
+
 The 100-source host corpus exercises this normal path as well as the shadow
 path. Compile-only members produce their requested object through
 `--assembler=nazm`; runnable members link through the ordinary host linker and
 must match GAS in exit status, stdout, and stderr. The complete Windows corpus
-is green locally. The matching Linux normal-path result is an exact-SHA hosted
-CI receipt and is not inferred from cross-target object generation.
+and the 75-step release orchestrator are green locally. The matching Linux
+normal-path/release result is an exact-SHA hosted CI receipt and is not inferred
+from cross-target object generation.
 
 The normal driver also accepts mixed source roots:
 

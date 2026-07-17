@@ -437,6 +437,67 @@ class NazmEmitterTests(unittest.TestCase):
             self.assertIn("فشل مجمّع نظم", proc.stderr)
             self.assertFalse(output.exists())
 
+    def test_normal_nazm_source_object_and_manifest_are_deterministic(self) -> None:
+        nazm = _find_nazm()
+        if nazm is None:
+            self.skipTest("Nazm executable is unavailable in this checkout")
+
+        with tempfile.TemporaryDirectory(prefix="baa_nazm_determinism_") as temp:
+            work = Path(temp)
+            source = work / "حتمية.baa"
+            source.write_text(
+                "صحيح قيمة = ٧.\n"
+                "صحيح الرئيسية() {\n"
+                "    اطبع \"نظم\".\n"
+                "    إرجع ٠.\n"
+                "}\n",
+                encoding="utf-8",
+            )
+            emitted = work / "حتمية.نظم"
+            object_path = work / ("حتمية.obj" if os.name == "nt" else "حتمية.o")
+            manifest = work / "بيان.json"
+
+            def emit_source() -> bytes:
+                emitted.unlink(missing_ok=True)
+                proc = self.run_baa(
+                    work,
+                    "-S",
+                    "--assembler=nazm",
+                    f"--nazm-path={nazm}",
+                    str(source),
+                    "-o",
+                    str(emitted),
+                )
+                self.assertEqual(proc.returncode, 0, proc.stderr)
+                return emitted.read_bytes()
+
+            def emit_object_and_manifest() -> tuple[bytes, bytes]:
+                object_path.unlink(missing_ok=True)
+                manifest.unlink(missing_ok=True)
+                proc = self.run_baa(
+                    work,
+                    "-c",
+                    "--assembler=nazm",
+                    f"--nazm-path={nazm}",
+                    "--emit-build-manifest",
+                    str(manifest),
+                    str(source),
+                    "-o",
+                    str(object_path),
+                )
+                self.assertEqual(proc.returncode, 0, proc.stderr)
+                return object_path.read_bytes(), manifest.read_bytes()
+
+            self.assertEqual(emit_source(), emit_source())
+            first_object, first_manifest = emit_object_and_manifest()
+            second_object, second_manifest = emit_object_and_manifest()
+            self.assertEqual(first_object, second_object)
+            self.assertEqual(first_manifest, second_manifest)
+
+            receipt = json.loads(second_manifest.decode("utf-8"))
+            self.assertEqual(receipt["assembler"], "nazm")
+            self.assertEqual(receipt["units"][0]["assembler"], "nazm")
+
     def test_unknown_assembler_is_invalid_invocation(self) -> None:
         with tempfile.TemporaryDirectory(prefix="baa_unknown_assembler_") as temp:
             work = Path(temp)

@@ -292,6 +292,7 @@ static BaaCompilerExitCode driver_nazm_run_assembler(
     const char *source_path,
     const char *source_map_path,
     const char *object_path,
+    const char *logical_source_name,
     bool keep_source,
     bool user_source)
 {
@@ -306,15 +307,22 @@ static BaaCompilerExitCode driver_nazm_run_assembler(
         driver_nazm_artifact_path(object_path, ".تشخيص-نظم");
     if (!diagnostic_path) return BAA_COMPILER_EXIT_INTERNAL_ERROR;
 
-    const char *argv[] = {
+    const char *argv[10] = {
         executable,
         "-ص",
         format,
         "-خ",
         object_path,
-        source_path,
         NULL,
     };
+    size_t argv_count = 5;
+    if (logical_source_name && logical_source_name[0])
+    {
+        argv[argv_count++] = "--اسم-المصدر";
+        argv[argv_count++] = logical_source_name;
+    }
+    argv[argv_count++] = source_path;
+    argv[argv_count] = NULL;
     double started = 0.0;
     if (times && config->time_phases) started = driver_time_seconds();
     BaaProcessResult process = {0};
@@ -462,6 +470,7 @@ BaaCompilerExitCode driver_assemble_nazm_module(
         source_path,
         source_map_path,
         object_path,
+        "باء-مولد.نظم",
         keep_source,
         false);
     free(source_map_path);
@@ -494,6 +503,7 @@ BaaCompilerExitCode driver_assemble_nazm_startup(
         source_path,
         NULL,
         object_path,
+        "بدء-باء.نظم",
         keep_source,
         false);
 }
@@ -567,6 +577,7 @@ BaaCompilerExitCode driver_compile_nazm_input(
         source_path,
         NULL,
         object_path,
+        NULL,
         true,
         true);
     if (rc != BAA_COMPILER_EXIT_SUCCESS)
@@ -640,6 +651,7 @@ BaaCompilerExitCode driver_emit_nazm_shadow_object(const CompilerConfig *config,
         source_path,
         source_map_path,
         object_path,
+        "باء-مولد.نظم",
         true,
         false);
     if (assemble_rc != BAA_COMPILER_EXIT_SUCCESS)

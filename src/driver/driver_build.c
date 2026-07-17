@@ -9,10 +9,8 @@
 #include <sys/stat.h>
 
 #ifdef _WIN32
-#include <direct.h>
 #else
 #include <limits.h>
-#include <unistd.h>
 #endif
 
 #ifndef PATH_MAX
@@ -100,18 +98,7 @@ static void normalize_path_text(char* path)
 char* driver_build_canonical_path(const char* path)
 {
     if (!path || !path[0]) return NULL;
-    char resolved[PATH_MAX];
-    char* out = NULL;
-
-#ifdef _WIN32
-    if (_fullpath(resolved, path, sizeof(resolved)) != NULL) {
-        out = driver_build_strdup(resolved);
-    }
-#else
-    if (realpath(path, resolved) != NULL) {
-        out = driver_build_strdup(resolved);
-    }
-#endif
+    char* out = baa_fullpath_utf8(path);
     if (!out) out = driver_build_strdup(path);
     if (out) normalize_path_text(out);
     return out;
@@ -316,6 +303,32 @@ static bool fill_deps(DriverBuildUnitRecord* unit, const char* const* dep_paths,
     return true;
 }
 
+static bool manifest_is_link_mode(const CompilerConfig* config)
+{
+    return config &&
+           !config->assembly_only &&
+           !config->emit_nazm &&
+           !config->compile_only &&
+           !config->check_only &&
+           !config->header_check;
+}
+
+static char* manifest_logical_object_path(const char* canonical_source)
+{
+    if (!canonical_source) return NULL;
+    const char* slash = strrchr(canonical_source, '/');
+    const char* dot = strrchr(canonical_source, '.');
+    size_t base_size = strlen(canonical_source);
+    if (dot && (!slash || dot > slash))
+        base_size = (size_t)(dot - canonical_source);
+
+    char* path = (char*)malloc(base_size + 3u);
+    if (!path) return NULL;
+    memcpy(path, canonical_source, base_size);
+    memcpy(path + base_size, ".o", 3u);
+    return path;
+}
+
 static bool add_record(DriverBuildManifest* manifest,
                        const CompilerConfig* config,
                        const char* input_file,
@@ -331,7 +344,9 @@ static bool add_record(DriverBuildManifest* manifest,
     if (!unit) return false;
 
     unit->source = driver_build_canonical_path(input_file);
-    unit->output = driver_build_canonical_path(output_file);
+    unit->output = manifest_is_link_mode(config)
+        ? manifest_logical_object_path(unit->source)
+        : driver_build_canonical_path(output_file);
     bool nazm_input = driver_nazm_is_source_path(input_file);
     unit->source_kind = driver_build_strdup(nazm_input ? "nazm" : "baa");
     unit->assembler = driver_build_strdup(

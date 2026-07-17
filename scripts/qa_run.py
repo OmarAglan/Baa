@@ -541,6 +541,16 @@ def _run_utf8_validation_tests(log_dir: Path) -> StepResult:
     )
 
 
+def _run_toolchain_unicode_path_tests(log_dir: Path) -> StepResult:
+    return _run_logged(
+        "toolchain-unicode-path-tests",
+        [sys.executable, str(TESTS_DIR / "test_toolchain_unicode_paths.py")],
+        cwd=ROOT,
+        log_dir=log_dir,
+        timeout_s=120.0,
+    )
+
+
 def _run_arabic_numeral_tests(log_dir: Path) -> StepResult:
     return _run_logged(
         "arabic-numeral-tests",
@@ -923,6 +933,11 @@ def main() -> int:
     _print_step(utf8_validation_res)
     all_results.append(utf8_validation_res)
     overall_ok = overall_ok and utf8_validation_res.passed
+
+    toolchain_unicode_path_res = _run_toolchain_unicode_path_tests(log_dir)
+    _print_step(toolchain_unicode_path_res)
+    all_results.append(toolchain_unicode_path_res)
+    overall_ok = overall_ok and toolchain_unicode_path_res.passed
 
     arabic_numeral_res = _run_arabic_numeral_tests(log_dir)
     _print_step(arabic_numeral_res)

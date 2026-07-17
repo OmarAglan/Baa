@@ -10,6 +10,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Added
 
+- **No-copy Windows artifact pipeline**:
+  - Removed the shared `baa_stage` directory and all assembly, object, runtime,
+    and executable staging copies. `-S` now emits directly to its requested path.
+  - Assembly and link phases operate on the real Baa/Takween-selected artifacts.
+    Because the selected MSYS2 GCC 15.2 rejects Unicode argv paths, Windows passes
+    a filesystem short-name alias to the same real file; no artifact bytes move.
+  - Added an every-mode capability matrix covering Arabic paths, spaces, long
+    paths, multiple objects, UTF-8 `الرئيسية_بدء` response input, link, and runtime,
+    plus a six-process same-directory concurrency regression.
+  - Missing short aliases now return visible external-toolchain status `4`;
+    temporary artifact and response names include the process identity.
+  - Centralized UTF-8 full-path resolution through wide Windows APIs so Arabic
+    source/dependency paths and source-derived logical object identities remain
+    valid, deterministic UTF-8 in build manifests.
+
 - **Structured Arabic architecture operations**:
   - Added typed `لا_تفعل()` and `اقرأ_عداد_الزمن()` builtins with dedicated
     IR and Machine IR operations; the timestamp result combines the two

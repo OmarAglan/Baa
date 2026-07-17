@@ -25,7 +25,8 @@ tests/
 ├── test_module_visibility_docs.py # module/header/visibility contract docs gate
 ├── test_one_definition.py # multi-file exported-symbol duplicate diagnostics
 ├── test_target_specs.py # target descriptor schema/contract coverage
-├── test_utf8_validation.py # malformed UTF-8 byte regression coverage
+├── test_utf8_validation.py # malformed UTF-8 and direct -S path regressions
+├── test_toolchain_unicode_paths.py # direct Windows GCC/LD Unicode path matrix
 ├── test.py        # integration runner
 └── regress.py     # regression runner (integration + corpus + neg)
 ```
@@ -63,6 +64,11 @@ invalid `BAA` overrides produce a normal failed QA summary rather than an unhand
 
 Every mode runs `tests/test_utf8_validation.py`, which creates malformed byte sequences at
 runtime to verify UTF-8 diagnostics without storing invalid UTF-8 source files in the repository.
+On Windows, every mode runs `tests/test_toolchain_unicode_paths.py` against the resolved GCC.
+It proves that no-copy aliases to real Arabic artifacts handle spaces, long paths, multiple
+objects, a UTF-8 response file and Arabic entry symbol, linked output, and runtime behavior.
+It also launches six Baa builds concurrently from one directory to reject shared temporary
+artifact names. Other hosts report this platform-specific matrix as skipped.
 Every mode also runs `tests/test_arabic_numerals.py` to verify Arabic numeral rendering in
 machine-readable IR dumps.
 Every mode also runs `tests/test_examples.py`, which compiles every public `examples/*.baa`

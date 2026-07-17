@@ -8,19 +8,6 @@
 #include <ctype.h>
 #include <stdarg.h>
 
-#ifdef _WIN32
-#include <direct.h>
-#else
-#include <limits.h>
-#include <unistd.h>
-#endif
-
-#ifndef PATH_MAX
-#define PATH_MAX 4096
-#endif
-
-#define LEX_PATH_BUFFER_SIZE PATH_MAX
-
 static int is_utf8_cont_byte(unsigned char b)
 {
     return ((b & 0xC0u) == 0x80u);
@@ -289,19 +276,7 @@ static char* lex_normalize_existing_path(Lexer* l, const char* path)
 {
     if (!l || !path || !path[0]) return NULL;
 
-    char resolved[LEX_PATH_BUFFER_SIZE];
-    char* out = NULL;
-
-#ifdef _WIN32
-    if (_fullpath(resolved, path, sizeof(resolved)) != NULL) {
-        out = lex_strdup_heap(l, resolved);
-    }
-#else
-    if (realpath(path, resolved) != NULL) {
-        out = lex_strdup_heap(l, resolved);
-    }
-#endif
-
+    char* out = baa_fullpath_utf8(path);
     if (!out) {
         out = lex_strdup_heap(l, path);
     }

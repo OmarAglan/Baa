@@ -182,6 +182,39 @@ class Utf8ValidationTests(unittest.TestCase):
         self.assertEqual(data["schema_version"], "diagnostics-json-v1")
         self.assertEqual(data["diagnostics"], [])
 
+    def test_assembly_only_writes_unicode_output_directly(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="baa_direct_assembly_") as temp:
+            work = Path(temp) / "مشروع عربي مباشر"
+            work.mkdir()
+            source = work / "مدخل.baa"
+            output = work / "ناتج نهائي.s"
+            source.write_text(
+                "صحيح الرئيسية() { إرجع ٠. }\n",
+                encoding="utf-8",
+            )
+            proc = subprocess.run(
+                [
+                    str(self.baa),
+                    "-v",
+                    "-S",
+                    source.name,
+                    "-o",
+                    output.name,
+                ],
+                cwd=str(work),
+                text=True,
+                encoding="utf-8",
+                errors="replace",
+                capture_output=True,
+                timeout=20,
+            )
+
+            combined = f"{proc.stdout}\n{proc.stderr}"
+            self.assertEqual(proc.returncode, 0, combined)
+            self.assertTrue(output.is_file())
+            self.assertIn(".globl الرئيسية", output.read_text(encoding="utf-8"))
+            self.assertEqual(list(work.glob(".baa_asm_*.s")), [])
+
     @unittest.skipUnless(os.name == "nt", "Windows Unicode cache-path regression")
     def test_windows_incremental_cache_accepts_unicode_directory(self) -> None:
         with tempfile.TemporaryDirectory(prefix="baa_unicode_cache_") as temp:

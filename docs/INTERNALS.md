@@ -75,16 +75,17 @@ flowchart LR
 | **3. IR Lowering** | AST | IR | `ir_lower.c` (v0.3.0.3+) + `ir_builder.c` | Converts AST expressions/statements to SSA-form Intermediate Representation using the IR Builder. |
 | **4. Optimization** | IR | Optimized IR | `ir_optimizer.c`, `ir_mem2reg.c`, `ir_sccp.c`, `ir_gvn.c`, etc. | Full middle-end: Inlining (O2), Mem2Reg, Canon, InstCombine, SCCP, ConstFold, CopyProp, GVN (O2), CSE (O2), DCE, CFGSimplify, LICM. |
 | **5. Backend** | IR | `.s` Assembly | `isel.c`, `regalloc.c`, `emit.c` | Lowers IR to machine instructions, allocates registers, and emits x86-64 AT&T assembly. |
-| **6. Assemble** | `.s` Assembly | `.o` Object | `gcc -c` | Invokes external assembler. On Windows (v0.4.4.1), toolchain calls run via ASCII staging paths, then outputs are copied back to requested UTF-8 paths. |
-| **7. Link** | `.o` Object | `.exe` Executable | `gcc` | Links with C Runtime. On Windows (v0.4.4.1), link inputs/outputs are staged on ASCII paths for GCC compatibility. |
+| **6. Assemble** | `.s` Assembly | `.o` Object | `gcc -c` | Invokes the external assembler and writes the selected object directly. Windows exposes Unicode/spaced/long real files through no-copy filesystem aliases when the selected GCC cannot open Unicode argv paths. |
+| **7. Link** | `.o` Object | `.exe` Executable | `gcc` | Links real objects and the real runtime archive directly to the requested executable. No Windows staging copies are used. |
 
 > **Note (v0.3.2.4+):** The compiler uses the full IR-based backend pipeline end-to-end: AST → IR → Optimizer → ISel → RegAlloc → Emit → Assembly.
 >
-> **Compatibility bridge:** Windows ASCII staging is a temporary external-toolchain
-> workaround, not the target architecture. The roadmap requires a measured Unicode
-> capability matrix, direct `-S` output, direct object/cache destinations, and direct
-> linking of real paths before removing staging. Incompatible arbitrary toolchains
-> must fail explicitly rather than silently reintroducing normal-path copies.
+> **Windows path adapter:** `-S` writes directly to its requested path. Assemble
+> and link phases also operate on the real artifacts. The selected MSYS2 GCC does
+> not accept Unicode filesystem arguments, so Baa presents a short-name alias to
+> the same real file—never a copied staging file. Missing aliases fail explicitly
+> with toolchain status `4`. The measured matrix and retired-copy accounting live
+> in [Windows Toolchain Paths](WINDOWS_TOOLCHAIN_PATHS.md).
 
 ### 1.1.1. Component Map
 
@@ -168,7 +169,7 @@ The source tree now uses physical component directories under `src/`, and the bu
 | Frontend | source loading, lexing, preprocessing, parsing, AST construction |
 | Middle-End | semantic analysis, IR construction, IR verification, IR optimization |
 | Backend | target-aware IR lowering, register allocation, assembly emission |
-| Driver | CLI orchestration, staging/toolchain execution, updater entry points |
+| Driver | CLI orchestration, direct-artifact toolchain execution, updater entry points |
 | Support | shared diagnostics and shared declarations |
 
 The full ownership/dependency contract now lives in [Component Ownership](COMPONENT_OWNERSHIP.md).

@@ -18,4 +18,11 @@ FILE* baa_fopen_utf8(const char* path, const char* mode);
  */
 int baa_mkdir_utf8(const char* path);
 
+/**
+ * @brief إرجاع مسار مطلق مطبّع من مسار UTF-8.
+ *
+ * يملك المستدعي النص المعاد ويحرره عبر free(). تعاد NULL عند تعذر الحل.
+ */
+char* baa_fullpath_utf8(const char* path);
+
 #endif

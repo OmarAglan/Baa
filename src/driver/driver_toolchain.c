@@ -20,9 +20,6 @@
 #define MAX_PATH 4096
 #endif
 
-#define BAA_STAGE_BASENAME "baa_stage"
-#define BAA_STAGE_BASENAME_W L"baa_stage"
-
 // ============================================================================
 // البحث عن GCC المرفق (اكتشاف GCC المضمّن)
 // ============================================================================
@@ -72,11 +69,7 @@ static void runtime_library_resolve_from_exe_dir(const char* exe_dir)
 #define BAA_PATH_SUFFIX_GCC_BIN_W L"\\gcc\\bin\\gcc.exe"
 #define BAA_PATH_SUFFIX_GCC_BIN_DEV_W L"\\..\\gcc\\bin\\gcc.exe"
 
-/**
- * @brief مسار تجهيزي ASCII لتشغيل أدوات GCC/LD بعيداً عن قيود Unicode.
- */
-static char g_stage_dir[MAX_PATH] = "";
-static unsigned long g_stage_counter = 0;
+static unsigned long g_toolchain_file_counter = 0;
 
 static wchar_t* win_utf8_to_wide_alloc(const char* text)
 {
@@ -145,87 +138,76 @@ static bool path_build_suffix_w(wchar_t* out, size_t out_cap, const wchar_t* bas
     return true;
 }
 
-static bool win_join_path_w(wchar_t* out, size_t out_cap, const wchar_t* base, const wchar_t* leaf)
+static bool win_copy_path_text(const char* path, char* out, size_t out_cap)
 {
-    if (!out || out_cap == 0 || !base || !leaf) return false;
-    size_t base_len = wcslen(base);
-    size_t leaf_len = wcslen(leaf);
-    bool need_sep = (base_len > 0 && base[base_len - 1] != L'\\' && base[base_len - 1] != L'/');
-    size_t total = base_len + (need_sep ? 1u : 0u) + leaf_len + 1u;
-    if (total > out_cap) return false;
-
-    memcpy(out, base, base_len * sizeof(wchar_t));
-    size_t pos = base_len;
-    if (need_sep) out[pos++] = L'\\';
-    memcpy(out + pos, leaf, (leaf_len + 1) * sizeof(wchar_t));
+    if (!path || !out || out_cap == 0) return false;
+    size_t size = strlen(path) + 1u;
+    if (size > out_cap) return false;
+    memcpy(out, path, size);
     return true;
 }
 
-static bool win_try_prepare_stage_dir(const wchar_t* base_dir, char* out_utf8, size_t out_cap)
+static bool win_prepare_output_file(const wchar_t* path)
 {
-    if (!base_dir || !out_utf8 || out_cap == 0) return false;
+    if (!path) return false;
+    HANDLE file = CreateFileW(path,
+                              GENERIC_READ | GENERIC_WRITE,
+                              FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+                              NULL,
+                              OPEN_ALWAYS,
+                              FILE_ATTRIBUTE_NORMAL,
+                              NULL);
+    if (file == INVALID_HANDLE_VALUE) return false;
+    CloseHandle(file);
+    return true;
+}
 
-    wchar_t candidate[MAX_PATH];
-    if (!win_join_path_w(candidate, MAX_PATH, base_dir, BAA_STAGE_BASENAME_W)) {
+/**
+ * @brief تجهيز مسار الأداة إلى الملف الحقيقي بلا نسخ.
+ *
+ * GCC المرفق حالياً لا يفتح مسارات Unicode من argv. عند الحاجة نستخدم الاسم
+ * القصير لنفس كيان NTFS؛ لذلك تكتب الأداة مباشرة في الملف العربي المطلوب.
+ */
+static bool win_prepare_toolchain_path(const char* path,
+                                       bool prepare_output,
+                                       char* out,
+                                       size_t out_cap)
+{
+    if (!path || !out || out_cap == 0) return false;
+    bool needs_alias = !win_utf8_is_ascii(path) ||
+                       strlen(path) >= 240u ||
+                       strpbrk(path, " \t") != NULL;
+    if (!needs_alias) return win_copy_path_text(path, out, out_cap);
+
+    wchar_t* path_w = win_utf8_to_wide_alloc(path);
+    if (!path_w) return false;
+    if (prepare_output && !win_prepare_output_file(path_w)) {
+        free(path_w);
         return false;
     }
 
-    if (!CreateDirectoryW(candidate, NULL)) {
-        DWORD e = GetLastError();
-        if (e != ERROR_ALREADY_EXISTS) return false;
-    }
-
-    wchar_t resolved[MAX_PATH];
-    DWORD short_len = GetShortPathNameW(candidate, resolved, MAX_PATH);
-    const wchar_t* best = (short_len > 0 && short_len < MAX_PATH) ? resolved : candidate;
-
-    char best_utf8[MAX_PATH];
-    if (!win_wide_to_utf8(best, best_utf8, sizeof(best_utf8))) return false;
-    if (!win_utf8_is_ascii(best_utf8)) return false;
-
-    size_t n = strlen(best_utf8);
-    if (n + 1 > out_cap) return false;
-    memcpy(out_utf8, best_utf8, n + 1);
-    return true;
+    wchar_t short_w[MAX_PATH];
+    DWORD short_len = GetShortPathNameW(path_w, short_w, MAX_PATH);
+    free(path_w);
+    if (short_len == 0 || short_len >= MAX_PATH) return false;
+    if (!win_wide_to_utf8(short_w, out, out_cap)) return false;
+    return win_utf8_is_ascii(out);
 }
 
-static bool win_ensure_stage_dir(void)
+static bool win_make_link_response_path(const char* output_path,
+                                        char* out,
+                                        size_t out_cap)
 {
-    if (g_stage_dir[0]) return true;
-
-    wchar_t temp_dir[MAX_PATH];
-    DWORD temp_len = GetTempPathW(MAX_PATH, temp_dir);
-    if (temp_len > 0 && temp_len < MAX_PATH) {
-        if (win_try_prepare_stage_dir(temp_dir, g_stage_dir, sizeof(g_stage_dir))) return true;
-    }
-
-    wchar_t public_dir[MAX_PATH];
-    DWORD pub_len = GetEnvironmentVariableW(L"PUBLIC", public_dir, MAX_PATH);
-    if (pub_len > 0 && pub_len < MAX_PATH) {
-        if (win_try_prepare_stage_dir(public_dir, g_stage_dir, sizeof(g_stage_dir))) return true;
-    }
-
-    wchar_t exe_path[MAX_PATH];
-    DWORD exe_len = GetModuleFileNameW(NULL, exe_path, MAX_PATH);
-    if (exe_len > 0 && exe_len < MAX_PATH) {
-        wchar_t* last_sep = wcsrchr(exe_path, L'\\');
-        if (last_sep) {
-            *last_sep = L'\0';
-            if (win_try_prepare_stage_dir(exe_path, g_stage_dir, sizeof(g_stage_dir))) return true;
-        }
-    }
-
-    return false;
-}
-
-static bool win_make_stage_file_path(const char* prefix, const char* ext, char* out, size_t out_cap)
-{
-    if (!prefix || !ext || !out || out_cap == 0) return false;
-    if (!win_ensure_stage_dir()) return false;
-
-    unsigned long id = ++g_stage_counter;
-    int n = snprintf(out, out_cap, "%s\\%s_%lu%s", g_stage_dir, prefix, id, ext);
-    return n > 0 && (size_t)n < out_cap;
+    if (!output_path || !out || out_cap == 0) return false;
+    unsigned long process_id = (unsigned long)GetCurrentProcessId();
+    unsigned long file_id = ++g_toolchain_file_counter;
+    int count = snprintf(out,
+                         out_cap,
+                         "%s.baa_link_%lu_%lu.rsp",
+                         output_path,
+                         process_id,
+                         file_id);
+    return count > 0 && (size_t)count < out_cap;
 }
 
 /**
@@ -376,20 +358,12 @@ bool driver_toolchain_delete_file_utf8(const char* path)
 }
 
 #ifdef _WIN32
-static void win_cleanup_stage_pair(const char* stage_asm, const char* stage_obj)
+static void win_free_tool_paths(char** paths, int path_count)
 {
-    if (stage_asm && stage_asm[0]) (void)driver_toolchain_delete_file_utf8(stage_asm);
-    if (stage_obj && stage_obj[0]) (void)driver_toolchain_delete_file_utf8(stage_obj);
-}
-
-static void win_cleanup_staged_objects(char** staged_objects, int obj_count)
-{
-    if (!staged_objects) return;
-    for (int i = 0; i < obj_count; i++)
+    if (!paths) return;
+    for (int i = 0; i < path_count; i++)
     {
-        if (!staged_objects[i]) continue;
-        (void)driver_toolchain_delete_file_utf8(staged_objects[i]);
-        free(staged_objects[i]);
+        free(paths[i]);
     }
 }
 #endif
@@ -403,24 +377,22 @@ BaaCompilerExitCode driver_toolchain_assemble_one(const CompilerConfig *config,
     BaaCompilerExitCode rc = BAA_COMPILER_EXIT_TOOLCHAIN_ERROR;
 
 #ifdef _WIN32
-    char stage_asm[MAX_PATH] = "";
-    char stage_obj[MAX_PATH] = "";
-    bool stage_paths_ready = false;
-    if (!win_make_stage_file_path("unit", ".s", stage_asm, sizeof(stage_asm)) ||
-        !win_make_stage_file_path("unit", ".o", stage_obj, sizeof(stage_obj)))
+    char tool_asm[MAX_PATH] = "";
+    char tool_obj[MAX_PATH] = "";
+    (void)driver_toolchain_delete_file_utf8(obj_file);
+    if (!win_prepare_toolchain_path(asm_file, false, tool_asm, sizeof(tool_asm)) ||
+        !win_prepare_toolchain_path(obj_file, true, tool_obj, sizeof(tool_obj)))
     {
-        fprintf(stderr, "خطأ: فشل إنشاء مسار staging ASCII للتجميع.\n");
+        fprintf(stderr,
+                "خطأ: أداة التجميع لا تدعم المسار Unicode مباشرة، "
+                "ولم يوفر نظام الملفات اسماً قصيراً للملف الحقيقي: %s\n",
+                obj_file);
+        (void)driver_toolchain_delete_file_utf8(obj_file);
         return BAA_COMPILER_EXIT_TOOLCHAIN_ERROR;
     }
-    stage_paths_ready = true;
-
-    if (!driver_toolchain_copy_file_utf8(asm_file, stage_asm)) {
-        fprintf(stderr, "خطأ: فشل نسخ ملف التجميع إلى staging: %s\n", asm_file);
-        goto cleanup;
-    }
 #else
-    const char* stage_asm = asm_file;
-    const char* stage_obj = obj_file;
+    const char* tool_asm = asm_file;
+    const char* tool_obj = obj_file;
 #endif
 
     const char *argv[8];
@@ -428,9 +400,9 @@ BaaCompilerExitCode driver_toolchain_assemble_one(const CompilerConfig *config,
     argv[k++] = driver_toolchain_get_gcc_command();
     if (config->debug_info) argv[k++] = "-g";
     argv[k++] = "-c";
-    argv[k++] = stage_asm;
+    argv[k++] = tool_asm;
     argv[k++] = "-o";
-    argv[k++] = stage_obj;
+    argv[k++] = tool_obj;
     argv[k] = NULL;
 
     double t0 = 0.0;
@@ -439,23 +411,17 @@ BaaCompilerExitCode driver_toolchain_assemble_one(const CompilerConfig *config,
     BaaProcessResult pr;
     if (!baa_process_run(argv, NULL, &pr) || pr.exit_code != 0)
     {
-        printf("Error: Assembler failed for %s\n", stage_asm);
+        fprintf(stderr, "خطأ: فشلت أداة التجميع للملف الحقيقي: %s\n", asm_file);
         goto cleanup;
     }
-
-#ifdef _WIN32
-    if (!driver_toolchain_copy_file_utf8(stage_obj, obj_file)) {
-        fprintf(stderr, "خطأ: فشل نسخ ناتج الكائن من staging إلى المسار الهدف: %s\n", obj_file);
-        goto cleanup;
-    }
-#endif
 
     if (times && config->time_phases) times->assemble_s += (driver_time_seconds() - t0);
     rc = BAA_COMPILER_EXIT_SUCCESS;
 
 cleanup:
 #ifdef _WIN32
-    if (stage_paths_ready) win_cleanup_stage_pair(stage_asm, stage_obj);
+    if (rc != BAA_COMPILER_EXIT_SUCCESS)
+        (void)driver_toolchain_delete_file_utf8(obj_file);
 #endif
     return rc;
 }
@@ -479,43 +445,53 @@ BaaCompilerExitCode driver_toolchain_link(const CompilerConfig *config,
     }
 
 #ifdef _WIN32
-    char **staged_objects = (char **)calloc((size_t)obj_count, sizeof(char *));
-    if (!staged_objects)
+    char **tool_objects = (char **)calloc((size_t)obj_count, sizeof(char *));
+    if (!tool_objects)
     {
         fprintf(stderr, "خطأ: نفدت الذاكرة.\n");
         free(argv_link);
         return BAA_COMPILER_EXIT_INTERNAL_ERROR;
     }
-    char staged_output[MAX_PATH] = "";
-    bool staged_output_ready = false;
-    char staged_runtime[MAX_PATH] = "";
-    bool staged_runtime_ready = false;
-    char staged_entry_response[MAX_PATH] = "";
-    char staged_entry_argument[MAX_PATH + 2] = "";
-    bool staged_entry_response_ready = false;
+    char tool_output[MAX_PATH] = "";
+    bool tool_output_ready = false;
+    char tool_runtime[MAX_PATH] = "";
+    char entry_response_path[MAX_PATH] = "";
+    char tool_entry_response[MAX_PATH] = "";
+    char entry_response_argument[MAX_PATH + 8] = "";
+    bool entry_response_ready = false;
 
-    bool staged_ok = true;
+    bool paths_ok = true;
     for (int i = 0; i < obj_count; i++)
     {
-        staged_objects[i] = (char *)calloc((size_t)MAX_PATH, sizeof(char));
-        if (!staged_objects[i]) {
-            staged_ok = false;
+        tool_objects[i] = (char *)calloc((size_t)MAX_PATH, sizeof(char));
+        if (!tool_objects[i]) {
+            paths_ok = false;
             break;
         }
-        if (!win_make_stage_file_path("link_obj", ".o", staged_objects[i], MAX_PATH) ||
-            !driver_toolchain_copy_file_utf8(obj_files[i], staged_objects[i]))
+        if (!win_prepare_toolchain_path(obj_files[i],
+                                        false,
+                                        tool_objects[i],
+                                        MAX_PATH))
         {
-            staged_ok = false;
+            paths_ok = false;
             break;
         }
     }
 
-    if (!staged_ok || !win_make_stage_file_path("linked", ".exe", staged_output, sizeof(staged_output)))
+    (void)driver_toolchain_delete_file_utf8(config->output_file);
+    if (!paths_ok ||
+        !win_prepare_toolchain_path(config->output_file,
+                                    true,
+                                    tool_output,
+                                    sizeof(tool_output)))
     {
-        fprintf(stderr, "خطأ: فشل تجهيز مسارات staging ASCII لعملية الربط.\n");
+        fprintf(stderr,
+                "خطأ: الرابط لا يدعم أحد مسارات Unicode مباشرة، "
+                "ولم يوفر نظام الملفات اسماً قصيراً للملف الحقيقي.\n");
+        (void)driver_toolchain_delete_file_utf8(config->output_file);
         goto cleanup;
     }
-    staged_output_ready = true;
+    tool_output_ready = true;
 #endif
 
     const char* runtime_library = driver_toolchain_get_runtime_library();
@@ -525,12 +501,14 @@ BaaCompilerExitCode driver_toolchain_link(const CompilerConfig *config,
     }
 
 #ifdef _WIN32
-    if (!win_make_stage_file_path("runtime", ".a", staged_runtime, sizeof(staged_runtime)) ||
-        !driver_toolchain_copy_file_utf8(runtime_library, staged_runtime)) {
-        fprintf(stderr, "خطأ: فشل تجهيز مكتبة وقت التشغيل لعملية الربط.\n");
+    if (!win_prepare_toolchain_path(runtime_library,
+                                    false,
+                                    tool_runtime,
+                                    sizeof(tool_runtime))) {
+        fprintf(stderr,
+                "خطأ: تعذر تمرير مكتبة وقت التشغيل الحقيقية إلى الرابط بلا نسخ.\n");
         goto cleanup;
     }
-    staged_runtime_ready = true;
 #endif
 
     int lk = 0;
@@ -539,20 +517,33 @@ BaaCompilerExitCode driver_toolchain_link(const CompilerConfig *config,
     if (config->codegen_opts.pie && config->target && config->target->obj_format == BAA_OBJFORMAT_ELF)
         argv_link[lk++] = "-pie";
 #ifdef _WIN32
-    if (!win_make_stage_file_path("link_entry", ".rsp", staged_entry_response,
-                                  sizeof(staged_entry_response)) ||
-        !win_write_entry_response(staged_entry_response, "الرئيسية_بدء"))
+    if (!win_make_link_response_path(config->output_file,
+                                     entry_response_path,
+                                     sizeof(entry_response_path)) ||
+        !win_write_entry_response(entry_response_path, "الرئيسية_بدء"))
     {
         fprintf(stderr, "خطأ: فشل تجهيز وسيط نقطة الدخول العربية للرابط.\n");
         goto cleanup;
     }
-    staged_entry_response_ready = true;
-    int response_chars = snprintf(staged_entry_argument, sizeof(staged_entry_argument),
-                                  "-Wl,@%s", staged_entry_response);
-    if (response_chars <= 1 || (size_t)response_chars >= sizeof(staged_entry_argument))
+    entry_response_ready = true;
+    if (!win_prepare_toolchain_path(entry_response_path,
+                                    false,
+                                    tool_entry_response,
+                                    sizeof(tool_entry_response)))
+    {
+        fprintf(stderr,
+                "خطأ: تعذر تمرير ملف استجابة نقطة الدخول العربية إلى الرابط.\n");
+        goto cleanup;
+    }
+    int response_chars = snprintf(entry_response_argument,
+                                  sizeof(entry_response_argument),
+                                  "-Wl,@%s",
+                                  tool_entry_response);
+    if (response_chars <= 1 ||
+        (size_t)response_chars >= sizeof(entry_response_argument))
         goto cleanup;
     argv_link[lk++] = "-nostartfiles";
-    argv_link[lk++] = staged_entry_argument;
+    argv_link[lk++] = entry_response_argument;
 #else
     argv_link[lk++] = "-nostartfiles";
     argv_link[lk++] = "-Wl,-e,الرئيسية_بدء";
@@ -561,14 +552,14 @@ BaaCompilerExitCode driver_toolchain_link(const CompilerConfig *config,
     for (int i = 0; i < obj_count; i++)
     {
 #ifdef _WIN32
-        argv_link[lk++] = staged_objects[i];
+        argv_link[lk++] = tool_objects[i];
 #else
         argv_link[lk++] = obj_files[i];
 #endif
     }
 
 #ifdef _WIN32
-    argv_link[lk++] = staged_runtime;
+    argv_link[lk++] = tool_runtime;
 #else
     argv_link[lk++] = runtime_library;
 #endif
@@ -580,7 +571,7 @@ BaaCompilerExitCode driver_toolchain_link(const CompilerConfig *config,
 
     argv_link[lk++] = "-o";
 #ifdef _WIN32
-    argv_link[lk++] = staged_output;
+    argv_link[lk++] = tool_output;
 #else
     argv_link[lk++] = config->output_file;
 #endif
@@ -596,25 +587,17 @@ BaaCompilerExitCode driver_toolchain_link(const CompilerConfig *config,
         goto cleanup;
     }
 
-#ifdef _WIN32
-    if (!driver_toolchain_copy_file_utf8(staged_output, config->output_file))
-    {
-        fprintf(stderr, "خطأ: فشل نسخ الملف التنفيذي من staging إلى المسار الهدف: %s\n", config->output_file);
-        goto cleanup;
-    }
-#endif
-
     if (times && config->time_phases) times->link_s += (driver_time_seconds() - t0);
     rc = BAA_COMPILER_EXIT_SUCCESS;
 
 cleanup:
 #ifdef _WIN32
-    win_cleanup_staged_objects(staged_objects, obj_count);
-    free(staged_objects);
-    if (staged_output_ready) (void)driver_toolchain_delete_file_utf8(staged_output);
-    if (staged_runtime_ready) (void)driver_toolchain_delete_file_utf8(staged_runtime);
-    if (staged_entry_response_ready)
-        (void)driver_toolchain_delete_file_utf8(staged_entry_response);
+    win_free_tool_paths(tool_objects, obj_count);
+    free(tool_objects);
+    if (entry_response_ready)
+        (void)driver_toolchain_delete_file_utf8(entry_response_path);
+    if (tool_output_ready && rc != BAA_COMPILER_EXIT_SUCCESS)
+        (void)driver_toolchain_delete_file_utf8(config->output_file);
 #endif
     free(argv_link);
     return rc;

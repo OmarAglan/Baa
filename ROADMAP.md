@@ -1798,34 +1798,40 @@
 
   ## Direct Unicode Windows Artifact Pipeline
 
-  *Goal: retire the Windows ASCII staging bridge after proving that the selected
-  GCC/assembler/linker can consume and produce Arabic/Unicode paths directly.
-  Preserve the real compile/assemble/link phases, but remove redundant filesystem
-  copies and make their timing observable.*
+  *Goal: retire the Windows ASCII staging bridge while preserving real
+  Arabic/Unicode artifacts even when the selected GCC cannot open Unicode argv
+  paths. Preserve the real compile/assemble/link phases, remove redundant
+  filesystem copies, and keep compatibility behavior explicit.*
 
   ### Direct-pipeline admission sequence
 
-* \[ ] **Measured staging baseline** — record assembly copy-in, object copy-out,
+* \[x] **Measured staging baseline** — record assembly copy-in, object copy-out,
   link-input staging, runtime-archive staging, executable copy-out, tool execution,
-  bytes copied, and multi-file amplification as separate metrics.
-* \[ ] **Windows toolchain capability matrix** — prove Arabic assembly input,
+  bytes copied, and multi-file amplification as separate metrics. The retired
+  bridge cost `3N + 2` copies and excluded all copy I/O from phase timers; the
+  exact byte formula is versioned in `docs/WINDOWS_TOOLCHAIN_PATHS.md`.
+* \[x] **Windows toolchain capability matrix** — prove Arabic assembly input,
   Arabic object output, Arabic object link input, Arabic executable output,
   Arabic-plus-space paths, long paths, multiple objects, UTF-8 response files,
-  and the Arabic `الرئيسية_بدء` entry symbol with the bundled GCC/assembler/linker.
-* \[ ] **Direct `-S` output** — emit assembly to the requested output path without
+  and the Arabic `الرئيسية_بدء` entry symbol with the selected GCC/assembler/linker.
+  Native Unicode argv and UTF-8 GCC response paths fail with MSYS2 GCC 15.2;
+  no-copy short aliases to the same real artifacts pass the full matrix.
+* \[x] **Direct `-S` output** — emit assembly to the requested output path without
   an ASCII temporary file or copy, because this mode invokes no external assembler.
-* \[ ] **Direct object destination** — make the assembler write directly to the
-  Baa/Takween-selected object or cache path; prefer streaming generated assembly
-  through standard input where the admitted toolchain supports it.
-* \[ ] **Direct linking** — pass real object paths and the real runtime archive to
-  GCC/LD, and write the executable directly to the requested destination.
-* \[ ] **Explicit incompatibility** — an arbitrary toolchain that fails the Unicode
+* \[x] **Direct object destination** — make the assembler write directly to the
+  Baa/Takween-selected object or cache path. The selected GNU assembler cannot
+  write an object to stdout, so Windows uses a no-copy alias to the real object.
+* \[x] **Direct linking** — pass the real object/runtime entities to GCC/LD and
+  write the executable directly to the requested destination through the same
+  no-copy path adapter.
+* \[x] **Explicit incompatibility** — an arbitrary toolchain that fails the Unicode
   capability contract returns a stable external-toolchain error; no silent normal-path
-  staging fallback may hide the limitation. Any temporary migration fallback must be
-  explicit, measurable, and separately tested.
-* \[ ] **Remove staging implementation** — delete the ASCII staging directory,
+  staging fallback may hide the limitation. A missing filesystem alias is an
+  explicit status-4 failure.
+* \[x] **Remove staging implementation** — delete the ASCII staging directory,
   copy-in/copy-out helpers, and redundant cleanup once direct mode is the admitted
-  Windows path.
+  Windows path. Temporary artifact and linker-response names include the process
+  identity to eliminate cross-process collisions.
 * \[ ] **Ecosystem gates** — pass Arabic-path, spaces, long-path, multi-file,
   incremental-cache, Takween, Windows/Linux, phase-timing, and determinism suites.
 

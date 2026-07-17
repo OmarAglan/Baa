@@ -5,6 +5,7 @@
  */
 
 #include "driver_internal.h"
+#include "driver_artifacts.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -59,26 +60,6 @@ static char *change_extension_alloc(const char *filename, const char *new_ext)
     memcpy(new_name, filename, base_len);
     memcpy(new_name + base_len, new_ext, ext_len + 1);
     return new_name;
-}
-
-/**
- * @brief إنشاء مسار مؤقت ASCII داخل مجلد العمل.
- */
-static char* driver_make_ascii_temp_path(const char* prefix, const char* ext)
-{
-    static unsigned long temp_counter = 0;
-    if (!prefix || !ext) return NULL;
-
-    unsigned long id = ++temp_counter;
-    char tmp_name[256];
-    int n = snprintf(tmp_name, sizeof(tmp_name), ".baa_%s_%lu%s", prefix, id, ext);
-    if (n <= 0 || (size_t)n >= sizeof(tmp_name)) return NULL;
-
-    size_t need = (size_t)n + 1;
-    char* out = (char*)malloc(need);
-    if (!out) return NULL;
-    memcpy(out, tmp_name, need);
-    return out;
 }
 
 static void driver_free_if_owned(char* ptr, const char* borrowed_ptr)
@@ -251,10 +232,13 @@ static BaaCompilerExitCode compile_one_ir(const CompilerConfig *config,
         }
         else
         {
-            early_obj_file = driver_make_ascii_temp_path("obj", ".o");
+            const char* artifact_base =
+                config->output_file ? config->output_file : current_input;
+            early_obj_file =
+                driver_make_temp_artifact_path(artifact_base, "obj", ".o");
             if (!early_obj_file)
             {
-                fprintf(stderr, "خطأ: فشل إنشاء مسار مؤقت ASCII لملف الكائن.\n");
+                fprintf(stderr, "خطأ: فشل إنشاء مسار أثر مؤقت لملف الكائن.\n");
                 return BAA_COMPILER_EXIT_INTERNAL_ERROR;
             }
         }
@@ -601,9 +585,9 @@ static BaaCompilerExitCode compile_one_ir(const CompilerConfig *config,
 
     if (config->assembler == BAA_ASSEMBLER_NAZM)
     {
-        char *nazm_source =
-            driver_make_ascii_temp_path("nazm", ".نظم");
         char *obj_file = early_obj_file;
+        char *nazm_source =
+            driver_make_temp_artifact_path(obj_file, "nazm", ".نظم");
         if (!nazm_source || !obj_file)
         {
             fprintf(stderr, "خطأ: تعذر تحديد مسار مصدر/كائن نظم المؤقت.\n");
@@ -687,10 +671,12 @@ static BaaCompilerExitCode compile_one_ir(const CompilerConfig *config,
             final_asm_output = change_extension_alloc(current_input, ".s");
     }
 
-    char* asm_file = driver_make_ascii_temp_path("asm", ".s");
+    char* asm_file = config->assembly_only
+        ? driver_strdup_alloc(final_asm_output)
+        : driver_make_temp_artifact_path(early_obj_file, "asm", ".s");
     if (!asm_file)
     {
-        fprintf(stderr, "خطأ: فشل إنشاء مسار مؤقت ASCII لملف التجميع.\n");
+        fprintf(stderr, "خطأ: فشل تحديد مسار ملف التجميع.\n");
         ir_module_free(ir_module);
         lexer_free_dependencies(&lexer);
         free(source);
@@ -702,7 +688,7 @@ static BaaCompilerExitCode compile_one_ir(const CompilerConfig *config,
     FILE *f_asm = baa_fopen_utf8(asm_file, "w");
     if (!f_asm)
     {
-        printf("Error: Could not write assembly file '%s'\n", asm_file);
+        fprintf(stderr, "خطأ: تعذرت كتابة ملف التجميع '%s'.\n", asm_file);
         mach_module_free(mach_module);
         ir_module_free(ir_module);
         lexer_free_dependencies(&lexer);
@@ -710,7 +696,7 @@ static BaaCompilerExitCode compile_one_ir(const CompilerConfig *config,
         free(asm_file);
         driver_free_if_owned(final_asm_output, config->output_file);
         if (early_obj_file && early_obj_file != config->output_file) free(early_obj_file);
-        return BAA_COMPILER_EXIT_INTERNAL_ERROR;
+        return BAA_COMPILER_EXIT_TOOLCHAIN_ERROR;
     }
 
     if (config->verbose)
@@ -723,6 +709,8 @@ static BaaCompilerExitCode compile_one_ir(const CompilerConfig *config,
         {
             fprintf(stderr, "خطأ: -fstack-protector مدعوم حالياً فقط لهدف ELF/Linux.\n");
             fclose(f_asm);
+            if (config->assembly_only)
+                (void)driver_toolchain_delete_file_utf8(asm_file);
             mach_module_free(mach_module);
             ir_module_free(ir_module);
             lexer_free_dependencies(&lexer);
@@ -739,6 +727,8 @@ static BaaCompilerExitCode compile_one_ir(const CompilerConfig *config,
     {
         fprintf(stderr, "Aborting %s: code emission failed.\n", current_input);
         fclose(f_asm);
+        if (config->assembly_only)
+            (void)driver_toolchain_delete_file_utf8(asm_file);
         mach_module_free(mach_module);
         ir_module_free(ir_module);
         lexer_free_dependencies(&lexer);
@@ -780,26 +770,8 @@ static BaaCompilerExitCode compile_one_ir(const CompilerConfig *config,
             }
         }
 
-        if (!final_asm_output) {
-            fprintf(stderr, "خطأ: مسار خرج التجميع غير صالح.\n");
-            free(asm_file);
-            lexer_free_dependencies(&lexer);
-            return BAA_COMPILER_EXIT_INTERNAL_ERROR;
-        }
-
-        if (!driver_toolchain_copy_file_utf8(asm_file, final_asm_output))
-        {
-            fprintf(stderr, "خطأ: فشل نسخ ملف التجميع إلى المسار الهدف '%s'.\n", final_asm_output);
-            free(asm_file);
-            driver_free_if_owned(final_asm_output, config->output_file);
-            lexer_free_dependencies(&lexer);
-            return BAA_COMPILER_EXIT_TOOLCHAIN_ERROR;
-        }
-
         if (config->verbose)
             printf("[INFO] Generated assembly: %s\n", final_asm_output);
-        if (!config->verbose)
-            (void)driver_toolchain_delete_file_utf8(asm_file);
         (void)driver_build_record_uncached(config,
                                            current_input,
                                            final_asm_output,

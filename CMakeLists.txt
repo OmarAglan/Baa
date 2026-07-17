@@ -54,6 +54,7 @@ set(SOURCES
     src/frontend/parser.c
     src/driver/process.c
     src/driver/driver_cli.c
+    src/driver/driver_artifacts.c
     src/driver/driver_time.c
     src/driver/driver_toolchain.c
     src/driver/driver_nazm.c

@@ -24,6 +24,13 @@ FUZZ_TIMEOUT_S = 8.0
 MODULE_SIZE_TIMEOUT_S = 30.0
 
 
+def _resolve_log_dir(value: str | Path) -> Path:
+    path = Path(value)
+    if not path.is_absolute():
+        path = ROOT / path
+    return path.resolve()
+
+
 @dataclass
 class StepResult:
     name: str
@@ -806,7 +813,7 @@ def main() -> int:
     parser.add_argument("--seed", type=int, default=1337)
     args = parser.parse_args()
 
-    log_dir = Path(args.log_dir)
+    log_dir = _resolve_log_dir(args.log_dir)
     if log_dir.exists():
         shutil.rmtree(log_dir, ignore_errors=True)
     log_dir.mkdir(parents=True, exist_ok=True)

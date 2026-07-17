@@ -49,6 +49,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
     builds both repositories, runs quick/full/stress/release on Windows and
     Linux with explicit compiler/assembler paths, and uploads revision plus QA
     receipts.
+  - Fixed the first hosted admission preflight: strict Linux builds now include
+    the POSIX declaration for `readlink`, and repository-relative QA log
+    directories are normalized consistently on Windows and Linux.
 
 - **Structured Arabic architecture operations**:
   - Added typed `لا_تفعل()` and `اقرأ_عداد_الزمن()` builtins with dedicated

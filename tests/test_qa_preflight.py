@@ -99,6 +99,15 @@ class QaCompilerPreflightTests(unittest.TestCase):
             QA._activate_compiler_for_children(compiler)
             self.assertEqual(os.environ["BAA"], str(compiler))
 
+    def test_relative_log_dir_is_resolved_under_repository_root(self) -> None:
+        log_dir = QA._resolve_log_dir(".baa_qa_logs/quick-windows")
+
+        self.assertEqual(
+            log_dir,
+            (self.root / ".baa_qa_logs" / "quick-windows").resolve(),
+        )
+        self.assertTrue(log_dir.is_absolute())
+
 
 if __name__ == "__main__":
     unittest.main()

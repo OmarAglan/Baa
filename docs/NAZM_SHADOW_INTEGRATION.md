@@ -200,6 +200,11 @@ unsupported emission, assembly errors, or link errors remain terminal and
 never retry through GAS. `--assembler=gas` stays the default rollback until the
 production-admission and rollback gates are signed off.
 
+The authoritative decision state, exact candidate revisions, gate receipts,
+known exclusions, and explicit GAS rollback drill live in
+[`NAZM_PRODUCTION_ADMISSION.md`](NAZM_PRODUCTION_ADMISSION.md). That document
+must say APPROVED before any separate default-selector change is allowed.
+
 Generated `.نظم` intermediates retain process-unique physical paths so
 concurrent builds cannot collide. Baa separately passes Nazm the stable Arabic
 logical identity `باء-مولد.نظم` through `--اسم-المصدر` (and

@@ -39,6 +39,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
   - The complete Windows release orchestrator passes all 75 steps with these
     normal/shadow/determinism gates enabled; Linux remains an exact-SHA hosted
     receipt before the cross-platform admission item can close.
+  - Added `baa-nazm-production-admission-v1`, an explicit HOLD/APPROVED decision
+    record with exact revisions, parity requirements, hosted receipts, known
+    exclusions, a no-silent-fallback GAS rollback drill, and three-owner
+    signoff. It keeps the default cutover blocked while any gate is red or
+    missing.
 
 - **Structured Arabic architecture operations**:
   - Added typed `لا_تفعل()` and `اقرأ_عداد_الزمن()` builtins with dedicated

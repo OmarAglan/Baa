@@ -15,6 +15,7 @@ REQUIRED_DOCS = {
     "docs/DIAGNOSTICS_JSON_SCHEMA.md": "# Baa Diagnostics JSON Schema",
     "docs/CONFORMANCE_SUITE.md": "# Baa Conformance Suite",
     "docs/SDK_RELEASE_PLAN.md": "# Baa SDK Release Plan",
+    "docs/NAZM_PRODUCTION_ADMISSION.md": "# Baa/Nazm Production Admission and Rollback",
 }
 
 
@@ -168,6 +169,25 @@ class IntegrationArtifactDocumentationTests(unittest.TestCase):
             "| full | default + Qalam metadata and optional IDE link |",
             "| ci | compiler + stdlib + target specs, no local docs |",
             "Do not build a public package registry until:",
+        ):
+            with self.subTest(marker=marker):
+                self.assertIn(marker, text)
+
+    def test_nazm_production_admission_records_receipts_and_rollback(self) -> None:
+        text = _read("docs/NAZM_PRODUCTION_ADMISSION.md")
+        for marker in (
+            "`baa-nazm-production-admission-v1`",
+            "**Decision:** HOLD",
+            "## 3. Parity Surface",
+            "## 4. Candidate Receipts",
+            "## 6. Rollback Procedure",
+            "no failed Nazm invocation retries through GAS",
+            "`--assembler=gas`",
+            "- [ ] Green Nazm exact-revision CI.",
+            "- [ ] Terminal green Baa exact-revision CI receipt.",
+            "| Baa compiler | pending |",
+            "| Nazm assembler | pending |",
+            "| Takween consumer | pending |",
         ):
             with self.subTest(marker=marker):
                 self.assertIn(marker, text)

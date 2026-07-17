@@ -1907,6 +1907,7 @@
   * \[x] **Deterministic generated-source identity** — keep process-unique physical `.نظم` intermediates for concurrency, but pass the stable Arabic `باء-مولد.نظم` identity to Nazm; repeated canonical source, object, and build-manifest outputs are byte-identical.
 * \[x] **Mixed Baa/Nazm roots** — direct `.نظم` roots bypass Baa parsing, assemble through the same resolved Nazm CLI, record per-unit source/assembler receipts, and join `.baa` objects in one hosted Arabic-ABI link; source/tool failures remain distinct and never fall back to GAS.
 * \[ ] **Default-on readiness** — approved parity report and rollback procedure exist.
+  * \[x] **Decision record drafted** — `docs/NAZM_PRODUCTION_ADMISSION.md` records the exact candidate revisions, parity surface, current receipts, exclusions, explicit GAS rollback drill, and owner signoff table. Its decision remains HOLD until every hosted gate is green and approved.
 * \[ ] **In-process equivalence** — CLI and future buffer API produce equivalent object semantics before embedding becomes default.
 
   \---

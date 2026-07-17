@@ -25,6 +25,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
     source/dependency paths and source-derived logical object identities remain
     valid, deterministic UTF-8 in build manifests.
 
+- **100-source normal Nazm assembler gate**:
+  - Extended the complete host corpus beyond comparison-only shadow builds:
+    compile-only sources now produce objects through `--assembler=nazm`, and
+    runnable sources use the normal Nazm object-to-host-linker pipeline.
+  - The Windows corpus passes with the selected Nazm executable resolved by the
+    driver; every runnable result matches GAS in exit status, stdout, and stderr.
+    Linux remains an exact-SHA hosted-CI receipt before production admission.
+
 - **Structured Arabic architecture operations**:
   - Added typed `لا_تفعل()` and `اقرأ_عداد_الزمن()` builtins with dedicated
     IR and Machine IR operations; the timestamp result combines the two

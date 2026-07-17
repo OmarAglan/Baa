@@ -200,6 +200,13 @@ unsupported emission, assembly errors, or link errors remain terminal and
 never retry through GAS. `--assembler=gas` stays the default rollback until the
 production-admission and rollback gates are signed off.
 
+The 100-source host corpus exercises this normal path as well as the shadow
+path. Compile-only members produce their requested object through
+`--assembler=nazm`; runnable members link through the ordinary host linker and
+must match GAS in exit status, stdout, and stderr. The complete Windows corpus
+is green locally. The matching Linux normal-path result is an exact-SHA hosted
+CI receipt and is not inferred from cross-target object generation.
+
 The normal driver also accepts mixed source roots:
 
 ```text
@@ -265,7 +272,8 @@ repositories and run this real parity path on every Baa change.
 
 The full corpus is classified automatically, and the host
 object/link/runtime comparison is configured to cover all 100 emitted members
-on both Linux and Windows. The complete Windows run is green locally; the
+on both Linux and Windows through both the explicit shadow route and the normal
+selected-assembler route. The complete Windows run is green locally; the
 matching Linux result remains an exact-SHA hosted-CI receipt. Nazm and Baa now share the
 required integer widths, condition-code writes, extension and division forms,
 indirect calls, callee-saved frames, memory-source multiplication, spilled

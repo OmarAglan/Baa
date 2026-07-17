@@ -1901,6 +1901,7 @@
 * \[ ] **Full gate** — quick, full, stress, determinism, release, and cross-target suites pass through Nazm.
 * \[ ] **Linker acceptance** — real Windows and Linux linkers accept produced objects.
 * \[x] **Normal assembler selection** — `--assembler=nazm` resolves the executable from `--nazm-path`, `BAA_NAZM`, or the primary Arabic `نظم` command on `PATH`, emits/assembles canonical Arabic source directly to the selected object, and passes it to the normal linker; `--assembler=gas` remains the explicit measured migration rollback with no silent fallback.
+  * \[x] **100-source normal-path gate** — every admitted host corpus source also builds through `--assembler=nazm`; runnable programs match the GAS result in exit status, stdout, and stderr. Windows is green locally and Linux remains an exact-SHA hosted-CI receipt.
 * \[x] **Mixed Baa/Nazm roots** — direct `.نظم` roots bypass Baa parsing, assemble through the same resolved Nazm CLI, record per-unit source/assembler receipts, and join `.baa` objects in one hosted Arabic-ABI link; source/tool failures remain distinct and never fall back to GAS.
 * \[ ] **Default-on readiness** — approved parity report and rollback procedure exist.
 * \[ ] **In-process equivalence** — CLI and future buffer API produce equivalent object semantics before embedding becomes default.

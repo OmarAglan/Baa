@@ -1420,7 +1420,7 @@ class NazmEmitterTests(unittest.TestCase):
                 object_suffix = ".obj" if os.name == "nt" else ".o"
                 if compile_only:
                     shadow_source = work / "برنامج-المصفوفة.نظم"
-                    shadow_object = work / f"ظل-المصفوفة{object_suffix}"
+                    selected_object = work / f"نظم-المصفوفة{object_suffix}"
                     emit = self.run_baa(
                         work,
                         "--emit-nazm",
@@ -1433,23 +1433,17 @@ class NazmEmitterTests(unittest.TestCase):
                     self.assertEqual(emit.returncode, 0, emit.stderr)
                     nazm_text = shadow_source.read_text(encoding="utf-8")
                     self.assertIsNone(re.search(r"[A-Za-z]", nazm_text))
-                    assemble = subprocess.run(
-                        [
-                            str(nazm),
-                            "-ص",
-                            "كوف" if os.name == "nt" else "إلف64",
-                            "-خ",
-                            str(shadow_object),
-                            str(shadow_source),
-                        ],
-                        cwd=str(work),
-                        text=True,
-                        encoding="utf-8",
-                        errors="replace",
-                        capture_output=True,
-                        timeout=30,
+                    selected = self.run_baa(
+                        work,
+                        "-c",
+                        "--assembler=nazm",
+                        f"--nazm-path={nazm}",
+                        *flags,
+                        str(source),
+                        "-o",
+                        str(selected_object),
                     )
-                    self.assertEqual(assemble.returncode, 0, assemble.stderr)
+                    self.assertEqual(selected.returncode, 0, selected.stderr)
 
                     production_object = work / f"إنتاج-المصفوفة{object_suffix}"
                     production = self.run_baa(
@@ -1461,7 +1455,7 @@ class NazmEmitterTests(unittest.TestCase):
                         str(production_object),
                     )
                     self.assertEqual(production.returncode, 0, production.stderr)
-                    sections, global_symbols, _ = _inspect_object(shadow_object)
+                    sections, global_symbols, _ = _inspect_object(selected_object)
                     (
                         production_sections,
                         production_global_symbols,
@@ -1518,6 +1512,22 @@ class NazmEmitterTests(unittest.TestCase):
                     production_object_proc.stderr,
                 )
 
+                selected_output = work / f"برنامج-نظم{exe_suffix}"
+                selected_proc = self.run_baa(
+                    work,
+                    "--assembler=nazm",
+                    f"--nazm-path={nazm}",
+                    *flags,
+                    str(source),
+                    "-o",
+                    str(selected_output),
+                )
+                self.assertEqual(
+                    selected_proc.returncode,
+                    0,
+                    selected_proc.stderr,
+                )
+
                 production_run = subprocess.run(
                     [str(output)],
                     stdin=subprocess.DEVNULL,
@@ -1530,9 +1540,18 @@ class NazmEmitterTests(unittest.TestCase):
                     capture_output=True,
                     timeout=30,
                 )
+                selected_run = subprocess.run(
+                    [str(selected_output)],
+                    stdin=subprocess.DEVNULL,
+                    capture_output=True,
+                    timeout=30,
+                )
                 self.assertEqual(shadow_run.returncode, production_run.returncode)
                 self.assertEqual(shadow_run.stdout, production_run.stdout)
                 self.assertEqual(shadow_run.stderr, production_run.stderr)
+                self.assertEqual(selected_run.returncode, production_run.returncode)
+                self.assertEqual(selected_run.stdout, production_run.stdout)
+                self.assertEqual(selected_run.stderr, production_run.stderr)
                 if source.name == "math_and_format.baa":
                     self.assertIn(b"0.4794", production_run.stdout)
                     self.assertIn(b"4.794255e-01", production_run.stdout)

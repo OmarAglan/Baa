@@ -23,6 +23,7 @@ tests/
 ├── test_integration_artifacts.py # ecosystem/tooling integration docs gate
 ├── test_json_diagnostics.py # --diagnostics=json machine-readable diagnostics coverage
 ├── test_module_visibility_docs.py # module/header/visibility contract docs gate
+├── test_nazm_emitter.py # normal and shadow Nazm object/link/runtime parity
 ├── test_one_definition.py # multi-file exported-symbol duplicate diagnostics
 ├── test_target_specs.py # target descriptor schema/contract coverage
 ├── test_utf8_validation.py # malformed UTF-8 and direct -S path regressions
@@ -91,6 +92,10 @@ file-role convention, current `خارجي`/`ساكن` visibility rules, and Takw
 documented.
 Every mode also runs `tests/test_one_definition.py`, which verifies multi-file duplicate
 exported function/global diagnostics while keeping duplicate `ساكن` file-local globals valid.
+Every mode also runs `tests/test_nazm_emitter.py`. When both binaries are available, its
+100-source host corpus compiles through the explicit shadow route and the normal
+`--assembler=nazm` route; compile-only objects and runnable link/runtime behavior must match
+the GAS baseline without fallback.
 Every mode also runs `tests/test_target_specs.py`, which validates the hosted
 `x86_64-windows`/`x86_64-linux` descriptors and keeps the `i386` planning descriptors
 explicitly experimental and freestanding.

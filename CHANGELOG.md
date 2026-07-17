@@ -44,6 +44,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
     exclusions, a no-silent-fallback GAS rollback drill, and three-owner
     signoff. It keeps the default cutover blocked while any gate is red or
     missing.
+  - Added a read-only manual `Baa Nazm Production Admission` workflow. It
+    requires exact Baa and Nazm commits, verifies both revision identities,
+    builds both repositories, runs quick/full/stress/release on Windows and
+    Linux with explicit compiler/assembler paths, and uploads revision plus QA
+    receipts.
 
 - **Structured Arabic architecture operations**:
   - Added typed `لا_تفعل()` and `اقرأ_عداد_الزمن()` builtins with dedicated

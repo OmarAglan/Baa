@@ -1,0 +1,213 @@
+name: Baa Nazm Production Admission
+
+on:
+  workflow_dispatch:
+    inputs:
+      baa_ref:
+        description: Exact 40-hex Baa candidate commit SHA
+        required: true
+        type: string
+      nazm_ref:
+        description: Exact 40-hex Nazm candidate commit SHA
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: baa-nazm-admission-${{ inputs.baa_ref }}-${{ inputs.nazm_ref }}
+  cancel-in-progress: false
+
+jobs:
+  admission-windows:
+    runs-on: windows-latest
+    timeout-minutes: 60
+    env:
+      PYTHONUTF8: "1"
+      BAA: ${{ github.workspace }}\build\presets\windows-verify\baa.exe
+      NAZM: ${{ github.workspace }}\Nazm\build-admission\nazm.exe
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.baa_ref }}
+      - uses: actions/checkout@v4
+        with:
+          repository: OmarAglan/Nazm
+          ref: ${{ inputs.nazm_ref }}
+          path: Nazm
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Add bundled toolchain to PATH (if present)
+        shell: pwsh
+        run: |
+          if (Test-Path ".\gcc\bin") {
+            "$env:GITHUB_WORKSPACE\gcc\bin" |
+              Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+          }
+      - name: Verify exact candidate revisions
+        shell: pwsh
+        run: |
+          $expectedBaa = "${{ inputs.baa_ref }}"
+          $expectedNazm = "${{ inputs.nazm_ref }}"
+          if ($expectedBaa -cnotmatch '^[0-9a-f]{40}$') {
+            throw "baa_ref must be an exact lowercase 40-hex commit SHA"
+          }
+          if ($expectedNazm -cnotmatch '^[0-9a-f]{40}$') {
+            throw "nazm_ref must be an exact lowercase 40-hex commit SHA"
+          }
+          $actualBaa = (git rev-parse HEAD).Trim()
+          $actualNazm = (git -C Nazm rev-parse HEAD).Trim()
+          if ($actualBaa -cne $expectedBaa) {
+            throw "Baa checkout mismatch: expected $expectedBaa, got $actualBaa"
+          }
+          if ($actualNazm -cne $expectedNazm) {
+            throw "Nazm checkout mismatch: expected $expectedNazm, got $actualNazm"
+          }
+          @{
+            schema = "baa-nazm-admission-revisions-v1"
+            host = "windows"
+            workflow = "${{ github.sha }}"
+            baa = $actualBaa
+            nazm = $actualNazm
+          } | ConvertTo-Json |
+            Set-Content -Path admission-revisions-windows.json -Encoding utf8
+      - name: Configure strict Baa and Nazm builds
+        shell: pwsh
+        run: |
+          cmake --preset windows-verify
+          cmake -S Nazm -B Nazm/build-admission -G "MinGW Makefiles" `
+            -DCMAKE_BUILD_TYPE=Release
+      - name: Build Baa and Nazm
+        shell: pwsh
+        run: |
+          cmake --build --preset windows-verify --clean-first
+          cmake --build Nazm/build-admission --clean-first
+      - name: Windows quick admission
+        run: >
+          python scripts/qa_run.py --mode quick
+          --log-dir .baa_qa_logs/quick-windows
+          --summary-json qa-summary-nazm-quick-windows.json
+      - name: Windows full admission
+        run: >
+          python scripts/qa_run.py --mode full
+          --log-dir .baa_qa_logs/full-windows
+          --summary-json qa-summary-nazm-full-windows.json
+      - name: Windows stress admission
+        run: >
+          python scripts/qa_run.py --mode stress
+          --log-dir .baa_qa_logs/stress-windows
+          --summary-json qa-summary-nazm-stress-windows.json
+      - name: Windows release admission
+        run: >
+          python scripts/qa_run.py --mode release
+          --log-dir .baa_qa_logs/release-windows
+          --summary-json qa-summary-nazm-release-windows.json
+      - name: Upload Windows Nazm admission receipt
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: baa-nazm-admission-windows-${{ github.run_id }}
+          if-no-files-found: error
+          include-hidden-files: true
+          path: |
+            admission-revisions-windows.json
+            .baa_qa_logs/**
+            qa-summary-nazm-quick-windows.json
+            qa-summary-nazm-full-windows.json
+            qa-summary-nazm-stress-windows.json
+            qa-summary-nazm-release-windows.json
+
+  admission-linux:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      PYTHONUTF8: "1"
+      BAA: ${{ github.workspace }}/build-linux/presets/verify/baa
+      NAZM: ${{ github.workspace }}/Nazm/build-admission/nazm
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.baa_ref }}
+      - uses: actions/checkout@v4
+        with:
+          repository: OmarAglan/Nazm
+          ref: ${{ inputs.nazm_ref }}
+          path: Nazm
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Verify exact candidate revisions
+        shell: bash
+        run: |
+          expected_baa='${{ inputs.baa_ref }}'
+          expected_nazm='${{ inputs.nazm_ref }}'
+          if [[ ! "$expected_baa" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "baa_ref must be an exact lowercase 40-hex commit SHA" >&2
+            exit 2
+          fi
+          if [[ ! "$expected_nazm" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "nazm_ref must be an exact lowercase 40-hex commit SHA" >&2
+            exit 2
+          fi
+          actual_baa="$(git rev-parse HEAD)"
+          actual_nazm="$(git -C Nazm rev-parse HEAD)"
+          if [[ "$actual_baa" != "$expected_baa" ]]; then
+            echo "Baa checkout mismatch: expected $expected_baa, got $actual_baa" >&2
+            exit 2
+          fi
+          if [[ "$actual_nazm" != "$expected_nazm" ]]; then
+            echo "Nazm checkout mismatch: expected $expected_nazm, got $actual_nazm" >&2
+            exit 2
+          fi
+          printf '%s\n' \
+            '{' \
+            '  "schema": "baa-nazm-admission-revisions-v1",' \
+            '  "host": "linux",' \
+            "  \"workflow\": \"${{ github.sha }}\"," \
+            "  \"baa\": \"$actual_baa\"," \
+            "  \"nazm\": \"$actual_nazm\"" \
+            '}' > admission-revisions-linux.json
+      - name: Configure strict Baa and Nazm builds
+        run: |
+          cmake --preset linux-verify
+          cmake -S Nazm -B Nazm/build-admission -DCMAKE_BUILD_TYPE=Release
+      - name: Build Baa and Nazm
+        run: |
+          cmake --build --preset linux-verify --clean-first -j
+          cmake --build Nazm/build-admission --clean-first -j
+      - name: Linux quick admission
+        run: >
+          python3 scripts/qa_run.py --mode quick
+          --log-dir .baa_qa_logs/quick-linux
+          --summary-json qa-summary-nazm-quick-linux.json
+      - name: Linux full admission
+        run: >
+          python3 scripts/qa_run.py --mode full
+          --log-dir .baa_qa_logs/full-linux
+          --summary-json qa-summary-nazm-full-linux.json
+      - name: Linux stress admission
+        run: >
+          python3 scripts/qa_run.py --mode stress
+          --log-dir .baa_qa_logs/stress-linux
+          --summary-json qa-summary-nazm-stress-linux.json
+      - name: Linux release admission
+        run: >
+          python3 scripts/qa_run.py --mode release
+          --log-dir .baa_qa_logs/release-linux
+          --summary-json qa-summary-nazm-release-linux.json
+      - name: Upload Linux Nazm admission receipt
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: baa-nazm-admission-linux-${{ github.run_id }}
+          if-no-files-found: error
+          include-hidden-files: true
+          path: |
+            admission-revisions-linux.json
+            .baa_qa_logs/**
+            qa-summary-nazm-quick-linux.json
+            qa-summary-nazm-full-linux.json
+            qa-summary-nazm-stress-linux.json
+            qa-summary-nazm-release-linux.json

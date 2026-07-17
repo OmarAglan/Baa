@@ -1901,6 +1901,7 @@
 * \[ ] **Full gate** — quick, full, stress, determinism, release, and cross-target suites pass through Nazm.
   * \[x] **Windows release receipt** — the complete 75-step release orchestrator passes with the 100-source normal/shadow gate and deterministic Nazm source/object/manifest receipt enabled.
   * \[ ] **Linux release receipt** — run the same exact Baa/Nazm commits through hosted Linux CI before closing the cross-platform gate.
+  * \[x] **Exact-revision hosted ladder** — the read-only `Baa Nazm Production Admission` workflow requires and verifies full Baa and Nazm commit SHAs, builds both projects, runs quick/full/stress/release on Windows/Linux with explicit `BAA`/`NAZM` bindings, and retains revision plus QA receipts.
 * \[ ] **Linker acceptance** — real Windows and Linux linkers accept produced objects.
 * \[x] **Normal assembler selection** — `--assembler=nazm` resolves the executable from `--nazm-path`, `BAA_NAZM`, or the primary Arabic `نظم` command on `PATH`, emits/assembles canonical Arabic source directly to the selected object, and passes it to the normal linker; `--assembler=gas` remains the explicit measured migration rollback with no silent fallback.
   * \[x] **100-source normal-path gate** — every admitted host corpus source also builds through `--assembler=nazm`; runnable programs match the GAS result in exit status, stdout, and stderr. Windows is green locally and Linux remains an exact-SHA hosted-CI receipt.

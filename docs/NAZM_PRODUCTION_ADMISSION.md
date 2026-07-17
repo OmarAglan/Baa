@@ -43,8 +43,7 @@ and the Arabic `نظم` command on `PATH`. `--assembler=gas` remains the explici
 rollback, and GAS remains the default.
 
 The decision remains **HOLD** because the Nazm repository's exact-revision CI
-is red in its direct non-CMake test path, the Baa Windows full job has not yet
-been recorded at terminal state in this receipt, and the hosted
+is red in its direct non-CMake test path and the hosted
 quick/full/stress/release ladder has not yet been signed off for both hosts.
 
 ## 3. Parity Surface
@@ -89,7 +88,7 @@ deterministic against itself.
 | Baa hosted Linux build/quick/full | PASS | Actions run [`29583330068`](https://github.com/OmarAglan/Baa/actions/runs/29583330068) |
 | Baa hosted Linux Nazm shadow + normal corpus | PASS | `nazm-shadow-linux` in run `29583330068` |
 | Baa hosted Windows Nazm shadow + normal corpus | PASS | `nazm-shadow-windows` in run `29583330068` |
-| Baa hosted Windows full | PENDING RECEIPT | job was still running at the last authenticated metadata read |
+| Baa hosted Windows full | PASS | `full-windows` completed successfully in run [`29583330068`](https://github.com/OmarAglan/Baa/actions/runs/29583330068); all eight jobs in the exact-SHA run are green |
 | Nazm exact-revision repository CI | FAIL | Actions run [`29583299601`](https://github.com/OmarAglan/Nazm/actions/runs/29583299601), direct test path; its source list omits `src/output/debug_line.c`, reproducing undefined DWARF/CodeView builder references |
 | Hosted stress/release on both hosts | MISSING | manual release-candidate receipt not yet recorded for this revision set |
 
@@ -155,7 +154,7 @@ Every item must be complete:
 - [x] Deterministic generated source, object, and manifest identity.
 - [x] Explicit GAS rollback procedure.
 - [ ] Green Nazm exact-revision CI.
-- [ ] Terminal green Baa exact-revision CI receipt.
+- [x] Terminal green Baa exact-revision CI receipt.
 - [ ] Hosted quick/full/stress/release receipts on Windows and Linux.
 - [ ] No unresolved current-corpus blocker or gate error.
 - [ ] Baa compiler owner approval.
@@ -177,10 +176,12 @@ GAS remains the production default.
 
 1. Repair and rerun Nazm's direct `build.sh test` CI path without weakening a
    test.
-2. Record the terminal result of Baa run `29583330068`.
-3. Run the manual quick/full/stress/release workflow on Windows and Linux for
-   the exact candidate revisions.
-4. Update this receipt with terminal URLs, toolchain provenance, and step
+2. Run the manual quick/full/stress/release workflow on Windows and Linux for
+   the exact candidate revisions. `Baa Nazm Production Admission` requires
+   full 40-hex Baa and Nazm commits as its `baa_ref` and `nazm_ref` inputs,
+   verifies both checkouts, and records the workflow plus both candidate
+   revisions in its uploaded artifacts.
+3. Update this receipt with terminal URLs, toolchain provenance, and step
    counts.
-5. Review the rollback drill, record owner decisions, and only then consider a
+4. Review the rollback drill, record owner decisions, and only then consider a
    separate default-selector change.

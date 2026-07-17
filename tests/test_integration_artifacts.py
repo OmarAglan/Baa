@@ -184,7 +184,7 @@ class IntegrationArtifactDocumentationTests(unittest.TestCase):
             "no failed Nazm invocation retries through GAS",
             "`--assembler=gas`",
             "- [ ] Green Nazm exact-revision CI.",
-            "- [ ] Terminal green Baa exact-revision CI receipt.",
+            "- [x] Terminal green Baa exact-revision CI receipt.",
             "| Baa compiler | pending |",
             "| Nazm assembler | pending |",
             "| Takween consumer | pending |",

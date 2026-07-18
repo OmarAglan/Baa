@@ -9,13 +9,16 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 
 REQUIRED_DOCS = {
-    "docs/ECOSYSTEM_BOUNDARIES.md": "# Baa Ecosystem Boundaries",
-    "docs/COMPATIBILITY_MATRIX.md": "# Baa Ecosystem Compatibility Matrix",
-    "docs/TOOLING_CONTRACTS.md": "# Baa Tooling Contracts",
-    "docs/DIAGNOSTICS_JSON_SCHEMA.md": "# Baa Diagnostics JSON Schema",
-    "docs/CONFORMANCE_SUITE.md": "# Baa Conformance Suite",
-    "docs/SDK_RELEASE_PLAN.md": "# Baa SDK Release Plan",
-    "docs/NAZM_PRODUCTION_ADMISSION.md": "# Baa/Nazm Production Admission and Rollback",
+    "docs/ECOSYSTEM_BOUNDARIES.md": ("# Baa Ecosystem Boundaries", "draft-0.1"),
+    "docs/COMPATIBILITY_MATRIX.md": ("# Baa Ecosystem Compatibility Matrix", "draft-0.1"),
+    "docs/TOOLING_CONTRACTS.md": ("# Baa Tooling Contracts", "draft-0.1"),
+    "docs/DIAGNOSTICS_JSON_SCHEMA.md": ("# Baa Diagnostics JSON Schema", "draft-0.1"),
+    "docs/CONFORMANCE_SUITE.md": ("# Baa Conformance Suite", "draft-0.1"),
+    "docs/SDK_RELEASE_PLAN.md": ("# Baa SDK Release Plan", "draft-0.1"),
+    "docs/NAZM_PRODUCTION_ADMISSION.md": (
+        "# Baa/Nazm Production Admission and Rollback",
+        "1.0",
+    ),
 }
 
 
@@ -25,13 +28,13 @@ def _read(relative: str) -> str:
 
 class IntegrationArtifactDocumentationTests(unittest.TestCase):
     def test_required_integration_docs_exist_with_expected_titles(self) -> None:
-        for relative, title in REQUIRED_DOCS.items():
+        for relative, (title, version) in REQUIRED_DOCS.items():
             with self.subTest(doc=relative):
                 path = ROOT / relative
                 self.assertTrue(path.is_file(), f"missing required integration doc: {relative}")
                 text = path.read_text(encoding="utf-8")
                 self.assertIn(title, text)
-                self.assertIn("> **Version:** draft-0.1", text)
+                self.assertIn(f"> **Version:** {version}", text)
 
     def test_ecosystem_boundaries_lock_project_ownership(self) -> None:
         text = _read("docs/ECOSYSTEM_BOUNDARIES.md")
@@ -103,7 +106,7 @@ class IntegrationArtifactDocumentationTests(unittest.TestCase):
             "`compiler-cli-v1` does not include `baa build`, `baa run`, or `baa clean`.",
             '"schema": 1',
             '"compiler_version": "0.6.0"',
-            '"assembler": "gas"',
+            '"assembler": "nazm"',
             '"source_kind": "baa"',
             '"runtime_check_mask": 0',
             '"units": [',
@@ -177,7 +180,7 @@ class IntegrationArtifactDocumentationTests(unittest.TestCase):
         text = _read("docs/NAZM_PRODUCTION_ADMISSION.md")
         for marker in (
             "`baa-nazm-production-admission-v1`",
-            "**Decision:** HOLD",
+            "**Decision:** APPROVED",
             "## 3. Parity Surface",
             "## 4. Candidate Receipts",
             "## 6. Rollback Procedure",
@@ -186,11 +189,11 @@ class IntegrationArtifactDocumentationTests(unittest.TestCase):
             "- [x] Green Nazm exact-revision CI.",
             "- [x] Terminal green Baa exact-revision CI receipt.",
             "- [x] Hosted quick/full/stress/release receipts on Windows and Linux.",
-            "29590118064",
+            "29648276376",
             "| Explicit GAS rollback drill | PASS |",
-            "| Baa compiler | pending |",
-            "| Nazm assembler | pending |",
-            "| Takween consumer | pending |",
+            "| Baa compiler | approved |",
+            "| Nazm assembler | approved |",
+            "| Takween consumer | approved |",
         ):
             with self.subTest(marker=marker):
                 self.assertIn(marker, text)

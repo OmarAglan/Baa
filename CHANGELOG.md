@@ -52,6 +52,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
   - Fixed the first hosted admission preflight: strict Linux builds now include
     the POSIX declaration for `readlink`, and repository-relative QA log
     directories are normalized consistently on Windows and Linux.
+  - Recorded the terminal exact-revision production-admission receipt: Baa
+    `a669e7d...` and Nazm `a4013da...` pass quick 27/27, full 44/44, stress
+    74/74, and release 75/75 on both hosted Windows and Linux. The automated
+    gate is green, while GAS remains the default pending three-owner approval.
+  - Executed the rollback drill against the exact Baa candidate: a missing
+    selected Nazm remains a visible exit `4` with no output, while a separate
+    explicit GAS build succeeds and records `gas` in the build and unit
+    manifests.
 
 - **Structured Arabic architecture operations**:
   - Added typed `لا_تفعل()` and `اقرأ_عداد_الزمن()` builtins with dedicated

@@ -157,23 +157,22 @@ python scripts/inventory_nazm_shadow_corpus.py --compiler build/baa
 python scripts/inventory_nazm_shadow_corpus.py --compiler build/baa --check
 ```
 
-## Non-default shadow path
+## Shadow comparison path
 
-The shadow path is admitted in ordered increments:
+The shadow path was admitted in ordered increments:
 
 1. The checked Stage B inventory is the required input to Nazm coverage work.
 2. Baa adds a canonical Arabic emitter after register allocation. Its output is
-   inspectable UTF-8 `.نظم` source; the public `-S` contract remains GAS until a
-   separately versioned assembler cutover, while both paths preserve the Arabic entry ABI.
-3. An explicit, non-default shadow option invokes Nazm beside the successful
-   production GAS path. A missing Nazm executable, unsupported form, assembler
+   inspectable UTF-8 `.نظم` source; the public `-S` contract now uses this
+   dialect by default, while both paths preserve the Arabic entry ABI.
+3. The explicit shadow option selects a GAS comparison leg and invokes Nazm
+   beside it. A missing Nazm executable, unsupported form, assembler
    failure, or comparison failure makes the shadow result fail.
 4. CI compares normalized sections, public symbols, relocations, diagnostics,
    link results, and runtime results on Windows and Linux. Incidental object
    byte identity is not required.
-5. Nazm becomes eligible for a production cutover only after Baa's quick,
-   full, stress, determinism, release, and cross-target gates pass through the
-   Nazm path.
+5. Nazm became the production default only after Baa's quick, full, stress,
+   determinism, release, and cross-target gates passed through the Nazm path.
 
 There is no silent fallback rule at every stage: a production GAS result may
 continue to exist for comparison, but it never converts a failed Nazm shadow
@@ -182,8 +181,8 @@ the coverage matrix.
 
 ## Selectable normal assembler path
 
-`--assembler=nazm` promotes the same canonical emitter from comparison-only use
-to the normal C-like assembler position:
+The default assembler and explicit `--assembler=nazm` use the same canonical
+emitter in the normal C-like assembler position:
 
 ```text
 Baa source -> Machine IR -> Arabic Nazm source -> nazm -> object -> host linker
@@ -197,13 +196,12 @@ objects with the Baa runtime. Cross-target linking remains deferred. Linux uses
 a small Arabic-only Nazm startup object
 that calls the compiler-owned Arabic hosted-runtime adapter. Missing tools,
 unsupported emission, assembly errors, or link errors remain terminal and
-never retry through GAS. `--assembler=gas` stays the default rollback until the
-production-admission and rollback gates are signed off.
+never retry through GAS. `--assembler=gas` is the explicit measured rollback.
 
 The authoritative decision state, exact candidate revisions, gate receipts,
 known exclusions, and explicit GAS rollback drill live in
 [`NAZM_PRODUCTION_ADMISSION.md`](NAZM_PRODUCTION_ADMISSION.md). That document
-must say APPROVED before any separate default-selector change is allowed.
+records APPROVED for the exact revision that contains the default selector.
 
 Generated `.نظم` intermediates retain process-unique physical paths so
 concurrent builds cannot collide. Baa separately passes Nazm the stable Arabic

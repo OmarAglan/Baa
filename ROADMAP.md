@@ -1891,7 +1891,7 @@
 * \[x] **Object comparison** — compare sections, symbols, relocations, and normalized semantics rather than requiring incidental byte identity for every admitted source.
 * \[x] **Link/runtime comparison** — link and run both outputs on Windows and Linux for every admitted source.
 * \[x] **Arabic linker entry** — preserve `الرئيسية` in Nazm ELF64/COFF objects and enter both hosted shadow targets through `الرئيسية_بدء` without a `main` alias or direct-function process entry.
-* \[x] **Arabic production ABI** — GAS remains the production assembler, but emits `الرئيسية` unchanged, links through `الرئيسية_بدء`, and converts Windows UTF-16 argv through `بدء_ويندوز` without `main`/`wmain` aliases.
+* \[x] **Arabic production ABI** — both assemblers emit `الرئيسية` unchanged, link through `الرئيسية_بدء`, and convert Windows UTF-16 argv through `بدء_ويندوز` without `main`/`wmain` aliases; Nazm is now the production default.
 * \[x] **Arabic shadow startup ABI** — Linux reuses the generated `الرئيسية_بدء` object and returns through `__libc_start_main`; Windows resolves the same strong Arabic entry through a linker-owned UTF-8 response file and dispatches to `بدء_ويندوز`.
 * \[x] **Diagnostics comparison** — unsupported forms remain visible Arabic failures.
 * \[x] **No silent fallback** — never substitute guessed bytes or hide unsupported Nazm input behind GAS.
@@ -1900,16 +1900,17 @@
 
 * \[x] **Full gate** — quick, full, stress, determinism, release, and cross-target suites pass through Nazm.
   * \[x] **Windows release receipt** — the complete 75-step release orchestrator passes with the 100-source normal/shadow gate and deterministic Nazm source/object/manifest receipt enabled.
-  * \[x] **Linux release receipt** — exact Baa `a669e7d...` and Nazm `a4013da...` pass 75/75 release steps on hosted Linux in admission run `29590118064`.
+  * \[x] **Linux release receipt** — exact Baa `5d3f00c...` and Nazm `7be5799...` pass 75/75 release steps on hosted Linux in admission run `29648276376`.
   * \[x] **Exact-revision hosted ladder** — the read-only `Baa Nazm Production Admission` workflow requires and verifies full Baa and Nazm commit SHAs, builds both projects, runs quick/full/stress/release on Windows/Linux with explicit `BAA`/`NAZM` bindings, and retains revision plus QA receipts.
 * \[x] **Linker acceptance** — real Windows and Linux linkers accept produced objects.
 * \[x] **Normal assembler selection** — `--assembler=nazm` resolves the executable from `--nazm-path`, `BAA_NAZM`, or the primary Arabic `نظم` command on `PATH`, emits/assembles canonical Arabic source directly to the selected object, and passes it to the normal linker; `--assembler=gas` remains the explicit measured migration rollback with no silent fallback.
   * \[x] **100-source normal-path gate** — every admitted host corpus source also builds through `--assembler=nazm`; runnable programs match the GAS result in exit status, stdout, and stderr on Windows and Linux in exact-SHA hosted CI.
   * \[x] **Deterministic generated-source identity** — keep process-unique physical `.نظم` intermediates for concurrency, but pass the stable Arabic `باء-مولد.نظم` identity to Nazm; repeated canonical source, object, and build-manifest outputs are byte-identical.
 * \[x] **Mixed Baa/Nazm roots** — direct `.نظم` roots bypass Baa parsing, assemble through the same resolved Nazm CLI, record per-unit source/assembler receipts, and join `.baa` objects in one hosted Arabic-ABI link; source/tool failures remain distinct and never fall back to GAS.
-* \[ ] **Default-on readiness** — approved parity report and rollback procedure exist.
+* \[x] **Default-on readiness** — approved parity report and rollback procedure exist; Nazm is the production default and GAS is the explicit rollback.
   * \[x] **Automated production admission** — exact candidate revisions pass quick/full/stress/release on Windows and Linux with 27/27, 44/44, 74/74, and 75/75 receipts respectively.
-  * \[x] **Decision record drafted** — `docs/NAZM_PRODUCTION_ADMISSION.md` records the exact candidate revisions, parity surface, terminal receipts, exclusions, completed explicit GAS rollback drill, and owner signoff table. Its decision remains HOLD pending all three owner approvals.
+  * \[x] **Decision record approved** — `docs/NAZM_PRODUCTION_ADMISSION.md` records Baa `5d3f00c...`, Nazm `7be5799...`, Takween `4fe634f...`, terminal runs `29648252057`, `29648276376`, `29648265475`, the explicit GAS rollback drill, and all three owner approvals.
+  * \[x] **Default cutover** — omitted assembler selection now chooses Nazm; `--assembler=gas` is the only normal rollback, and failures never trigger it automatically.
 * \[ ] **In-process equivalence** — CLI and future buffer API produce equivalent object semantics before embedding becomes default.
 
   \---

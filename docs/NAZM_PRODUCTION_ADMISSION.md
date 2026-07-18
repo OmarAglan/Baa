@@ -1,22 +1,22 @@
 # Baa/Nazm Production Admission and Rollback
 
-> **Version:** draft-0.1
+> **Version:** 1.0
 > **Receipt:** `baa-nazm-production-admission-v1`
-> **Updated:** 2026-07-17
-> **Decision:** HOLD — Nazm is selectable, but GAS remains the default.
+> **Updated:** 2026-07-18
+> **Decision:** APPROVED — Nazm is the production default; GAS is the explicit rollback.
 
 This document is the decision record for moving Nazm into Baa's normal
-assembler position. It does not authorize a default change by itself. A default
-change requires every gate below to be green for one exact revision set and
-requires explicit owner approval.
+assembler position. The exact candidate below passed every gate and received
+the three required owner approvals. The default-selector change is part of the
+approved Baa revision rather than a later unverified commit.
 
 ## 1. Candidate Revision Set
 
 | Component | Exact revision | Role |
 |---|---|---|
-| Baa | `a669e7dd3fa80bc266cb4d0b77cb3e92b1738325` | C reference compiler, canonical Arabic emitter, driver, runtime |
-| Nazm | `a4013da1f9ce1d98ea1d2dfe36528c8feb8e2374` | Arabic parser, encoder, ELF64/COFF object writers |
-| Takween | `623419e909eb78ed8e09a4836bfc0f6f23d97c73` | Ecosystem build/run/test consumer |
+| Baa | `5d3f00cb94b653afb213f66947a8a439051e18bd` | C reference compiler, Nazm-default driver, canonical Arabic emitter, runtime |
+| Nazm | `7be5799f88bf70da781499dd35ccc4c4eda12e6f` | Arabic parser, encoder, ELF64/COFF object writers |
+| Takween | `4fe634f92abf9658a21b6ce5bf80b91e08958877` | Nazm-default ecosystem build/run/test consumer |
 
 Any behavior change in the emitter, assembler, object writer, startup bridge,
 link path, manifest, or parity tests creates a new candidate revision set.
@@ -25,8 +25,7 @@ only receipt commit may still name the last behavior commit explicitly.
 
 ## 2. Current Decision
 
-Nazm already occupies the ordinary C-like assembler slot when explicitly
-selected:
+Nazm occupies the ordinary C-like assembler slot by default:
 
 ```text
 Baa source
@@ -38,14 +37,19 @@ Baa source
   -> executable
 ```
 
-The supported selectors are `--assembler=nazm`, `--nazm-path`, `BAA_NAZM`,
-and the Arabic `نظم` command on `PATH`. `--assembler=gas` remains the explicit
-rollback, and GAS remains the default.
+The default resolves Nazm from `--nazm-path`, `BAA_NAZM`, then the Arabic
+`نظم` command on `PATH`. `--assembler=nazm` may still make that choice explicit.
+`--assembler=gas` remains the explicit measured rollback and no Nazm failure
+silently activates it.
 
-The automated technical gate is green for the exact candidate set. The
-decision remains **HOLD** solely because the Baa, Nazm, and Takween owners have
-not yet recorded approval against these revisions. GAS remains the default
-until all three decisions are explicit.
+For comparison work, `--nazm-shadow=<path>` selects an explicit GAS production
+leg when no assembler selector was supplied, then builds the Nazm shadow.
+Combining an explicit Nazm selector with shadow mode is rejected instead of
+pretending to compare Nazm with itself.
+
+The automated technical gate is green for the exact candidate set and the Baa,
+Nazm, and Takween owner decisions are recorded below. The decision is
+**APPROVED**.
 
 ## 3. Parity Surface
 
@@ -82,16 +86,16 @@ deterministic against itself.
 
 | Gate | Result | Evidence |
 |---|---:|---|
-| Nazm exact-revision repository CI | PASS | Run [`29589635435`](https://github.com/OmarAglan/Nazm/actions/runs/29589635435): Release build, 23/23 CTest, 18-group direct path, Arabic ELF link/run |
-| Baa exact-revision repository CI | PASS | Run [`29589188470`](https://github.com/OmarAglan/Baa/actions/runs/29589188470): all eight Windows/Linux build, quick/full, and normal/shadow jobs |
-| Baa 100-source normal/shadow/runtime parity | PASS | `nazm-shadow-windows` and `nazm-shadow-linux` in run `29589188470`; every selected-Nazm runnable matches GAS |
-| Hosted quick | PASS | 27/27 on Windows and 27/27 on Linux in run [`29590118064`](https://github.com/OmarAglan/Baa/actions/runs/29590118064) |
-| Hosted full | PASS | 44/44 on Windows and 44/44 on Linux in run `29590118064` |
-| Hosted stress | PASS | 74/74 on Windows and 74/74 on Linux in run `29590118064` |
-| Hosted release + determinism | PASS | 75/75 on Windows and 75/75 on Linux in run `29590118064` |
-| Exact revision artifacts | PASS | `baa-nazm-admission-revisions-v1` records Baa `a669e7d...` and Nazm `a4013da...` for both hosts; all eight QA summaries report zero failures |
+| Nazm exact-revision repository CI | PASS | Run [`29637594387`](https://github.com/OmarAglan/Nazm/actions/runs/29637594387): Release build, full CTest/direct path, Arabic ELF link/run |
+| Baa exact-revision repository CI | PASS | Run [`29648252057`](https://github.com/OmarAglan/Baa/actions/runs/29648252057): all eight Windows/Linux build, quick/full, and normal/shadow jobs |
+| Baa 100-source normal/shadow/runtime parity | PASS | `nazm-shadow-windows` and `nazm-shadow-linux` in run `29648252057`; every selected-Nazm runnable matches GAS |
+| Hosted quick | PASS | 27/27 on Windows and 27/27 on Linux in run [`29648276376`](https://github.com/OmarAglan/Baa/actions/runs/29648276376) |
+| Hosted full | PASS | 44/44 on Windows and 44/44 on Linux in run `29648276376` |
+| Hosted stress | PASS | 74/74 on Windows and 74/74 on Linux in run `29648276376` |
+| Hosted release + determinism | PASS | 75/75 on Windows and 75/75 on Linux in run `29648276376` |
+| Exact revision artifacts | PASS | `baa-nazm-admission-revisions-v1` records Baa `5d3f00c...` and Nazm `7be5799...` for both hosts; all eight QA summaries report zero failures |
 | Explicit GAS rollback drill | PASS | Exact Baa candidate returns `4` and creates no object for a missing selected Nazm; a separate `--assembler=gas` invocation succeeds and records `assembler: gas` for the build and unit |
-| Takween Windows ecosystem smoke | PASS | Exact candidate binaries pass build/run/clean/test, mixed `.baa`/`.نظم`, packages, manifests |
+| Takween ecosystem smoke | PASS | Run [`29648265475`](https://github.com/OmarAglan/Takween/actions/runs/29648265475): exact Baa/Nazm/Takween revisions pass build/run/clean/test, mixed `.baa`/`.نظم`, packages, plans, cache, and manifests on Windows/Linux |
 
 The hosted ladder used GitHub-hosted `windows-latest` and `ubuntu-latest`.
 Windows configured Baa and Nazm with MinGW Makefiles; Linux used the native
@@ -120,16 +124,6 @@ host parity.
 
 Rollback is an explicit build decision, never an automatic reaction to a
 failed Nazm process.
-
-### Before a default cutover
-
-1. Use the current default, or pass `--assembler=gas`.
-2. Do not pass `--nazm-path` or direct `.نظم` roots when a GAS-only build is
-   required.
-3. Retain the failing Nazm diagnostics and exit status; start a separate GAS
-   build only when the user or build configuration explicitly requests it.
-
-### After a future default cutover
 
 1. Switch the project/tool invocation to `--assembler=gas`.
 2. Keep assembler identity in the build manifest and invalidate any artifact
@@ -161,26 +155,27 @@ Every item must be complete:
 - [x] Terminal green Baa exact-revision CI receipt.
 - [x] Hosted quick/full/stress/release receipts on Windows and Linux.
 - [x] No unresolved current-corpus blocker or gate error.
-- [ ] Baa compiler owner approval.
-- [ ] Nazm assembler owner approval.
-- [ ] Takween consumer owner approval.
+- [x] Baa compiler owner approval.
+- [x] Nazm assembler owner approval.
+- [x] Takween consumer owner approval.
 
 ## 8. Approval Record
 
 | Owner | Decision | Revision/date |
 |---|---|---|
-| Baa compiler | pending | — |
-| Nazm assembler | pending | — |
-| Takween consumer | pending | — |
+| Baa compiler | approved | `5d3f00cb94b653afb213f66947a8a439051e18bd`, 2026-07-18 |
+| Nazm assembler | approved | `7be5799f88bf70da781499dd35ccc4c4eda12e6f`, 2026-07-18 |
+| Takween consumer | approved | `4fe634f92abf9658a21b6ce5bf80b91e08958877`, 2026-07-18 |
 
-Until all three decisions are approved against the same candidate revision set,
-GAS remains the production default.
+The ecosystem owner approved all three roles against this exact candidate set
+after the hosted runs reached terminal success.
 
 ## 9. Next Actions
 
-1. Review the parity and completed rollback receipts against the exact
-   candidate set.
-2. Record the Baa compiler, Nazm assembler, and Takween consumer decisions.
-3. Only if all three owners approve, prepare a separate default-selector
-   change. If any owner rejects or defers, keep GAS as the default without
-   weakening the selectable Nazm path or its continuous parity gates.
+1. Keep the exact-SHA Baa/Nazm admission workflow and Takween cross-platform
+   smoke mandatory for emitter, assembler, object-writer, startup, link, or
+   default-policy changes.
+2. Add a Nazm version fingerprint to cache keys before enabling Nazm object
+   reuse.
+3. Continue the optional in-process buffer API without changing the inspected
+   Arabic textual contract or the explicit GAS rollback.

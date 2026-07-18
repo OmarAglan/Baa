@@ -82,6 +82,7 @@ round trip, so Arabic working directories cannot leak ANSI bytes into JSON.
 
 A future bundled GCC/assembler/linker may pass Unicode paths natively. That
 capability must be proven by the same matrix before bypassing the alias adapter.
-Nazm already owns its Unicode-aware object output path independently; GAS
-remains the production default until the separate Nazm production-admission
-gate is complete.
+Nazm owns its Unicode-aware object output path independently and is the
+production assembler default after the separate admission gate completed.
+The short-name adapter remains relevant only to the explicit GAS rollback and
+the external linker/runtime inputs that still require it.

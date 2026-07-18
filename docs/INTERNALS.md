@@ -122,7 +122,7 @@ helpers return this classification to `main.c` rather than collapsing every fail
 | `-o <file>` | **Custom Output** | `.exe` | Sets the linked output filename (default: `out.exe`). |
 | (Multiple Files) | **Multi-File Build** | `.exe` | Compiles each `.baa` root and assembles each direct `.نظم` root to an object, then links the mixed object list. |
 | `-S`, `-s` | **Assembly Only** | `.s` / `.نظم` | Stops after code emission. The selected assembler controls the emitted dialect. |
-| `--assembler=gas\|nazm` | **Assembler Select** | `.s/.نظم/.o/.exe` | GAS is the default rollback; Nazm emits canonical Arabic source, assembles it directly to the selected object, then reuses the normal linker. |
+| `--assembler=gas\|nazm` | **Assembler Select** | `.s/.نظم/.o/.exe` | Nazm is the production default; GAS is an explicit rollback. Nazm emits canonical Arabic source, assembles it directly to the selected object, then reuses the normal linker. |
 | `--nazm-path=<path>` | **Nazm Tool Select** | - | Overrides `BAA_NAZM` and the primary Arabic `نظم` lookup from `PATH`. |
 | `-c` | **Compile Only** | `.o` | Stops after assembling. Writes `<input>.o` (or `-o` when a single input file is used). |
 | `--check` | **Fast Check** | none | Stops after parse and semantic analysis for editor/tool feedback; no IR, assembly, object, or executable is emitted. |
@@ -2500,12 +2500,12 @@ This backend is being refactored to support multiple ABIs via `BaaTarget` (`src/
 
 #### 6.21.9. Design Decisions
 
-1. **AT&T syntax:** Chosen for compatibility with GAS (GNU Assembler) which is the default on MinGW-w64.
+1. **Dual emitters:** Canonical Arabic Nazm is the production default after register allocation. AT&T syntax remains available only through explicit `--assembler=gas` for rollback and parity diagnosis.
 2. **Redundant move elimination:** The emitter skips `mov %reg, %reg` instructions that may result from register allocation.
 3. **Callee-saved detection:** Scans all instructions to determine which registers need preservation, minimizing prologue/epilogue overhead.
 4. **Call frame management:** Allocates shadow space on Windows; emits SysV call sequence on ELF targets.
 5. **Size suffix inference:** Determines instruction size suffix (q/l/w/b) from operand size_bits field.
-6. **Nazm shadow globals:** The non-default canonical Arabic emitter lowers scalar
+6. **Nazm globals:** The canonical Arabic emitter lowers scalar
    `MACH_OP_GLOBAL` loads/stores to `[مؤشر_التعليمة+الرمز]` and lowers global or
    function address formation through `احسب_عنوان`. Nazm owns the resulting PC32
    encoding and ELF64/COFF relocation records; Baa never duplicates those writers.

@@ -120,7 +120,7 @@ top-level fields:
   "compiler_version": "0.6.0",
   "target": "x86_64-linux",
   "mode": "link",
-  "assembler": "gas",
+  "assembler": "nazm",
   "opt_level": 2,
   "runtime_checks": false,
   "runtime_check_mask": 0,
@@ -130,12 +130,12 @@ top-level fields:
       "source": "/abs/path/src/main.baa",
       "output": "/abs/path/build/main.o",
       "source_kind": "baa",
-      "assembler": "gas",
+      "assembler": "nazm",
       "cache": {
-        "enabled": true,
+        "enabled": false,
         "hit": false,
         "slot": "...",
-        "reason": "miss"
+        "reason": "bypass"
       },
       "dependencies": [
         { "path": "/abs/path/src/main.baa", "hash": "..." },
@@ -153,8 +153,9 @@ schema bump.
 
 The top-level `assembler` is the policy for generated Baa units. Each unit also
 records its actual `source_kind` (`baa` or `nazm`) and `assembler` (`gas` or
-`nazm`). Direct `.نظم` units always report `nazm`, even when Baa units in the
-same link retain the default GAS policy. Generated and direct Nazm objects
+`nazm`). Direct `.نظم` units always report `nazm`; generated Baa units report
+the production default `nazm` unless the caller explicitly selects GAS.
+Generated and direct Nazm objects
 currently bypass the incremental object cache until the cache key records a
 verified Nazm version fingerprint; the manifest therefore reports
 `cache.enabled: false` rather than reusing an object produced by a different
@@ -257,10 +258,11 @@ physical generated source remains process-unique; this prevents temporary
 paths from entering deterministic COFF object metadata. Direct `.نظم` roots
 retain their user-provided identity.
 
-Until `baa-nazm-boundary-v0` is admitted, Baa's public `-S` output remains
-GAS/AT&T and production object generation continues through the external host
-assembler. A Nazm shadow path must be opt-in, non-default, and unable to hide an
-unsupported form behind silent fallback.
+`baa-nazm-boundary-v0` is admitted for the checked Baa/Nazm/Takween revisions.
+Baa's public `-S` output is canonical Arabic `.نظم` by default, and production
+object generation invokes Nazm. GAS/AT&T remains available through explicit
+`--assembler=gas`; the shadow path selects a measured GAS comparison leg and
+cannot hide an unsupported form behind silent fallback.
 
 PyramidOS experiments should consume:
 

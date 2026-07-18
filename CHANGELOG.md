@@ -10,6 +10,23 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Added
 
+- **Nazm production admission and default cutover**:
+  - Made the canonical Arabic Nazm path the normal assembler default for
+    generated Baa units; `--assembler=gas` remains the explicit measured
+    rollback and no Nazm failure activates it silently.
+  - Made shadow comparison select an explicit GAS leg when no assembler was
+    supplied, and reject explicit Nazm-plus-shadow self-comparison.
+  - Fixed two blockers found by the default gate: narrow global stores now
+    preserve their real 8/16/32/64-bit width instead of corrupting adjacent
+    pointers under ASLR, and Nazm lowering now supports ABI-correct tail jumps.
+  - Pinned standard Baa and Takween workflows to exact Nazm/Baa revisions.
+    Baa CI run `29648252057`, exact admission run `29648276376`, Nazm CI run
+    `29637594387`, and Takween smoke run `29648265475` are terminal green on
+    their Windows/Linux matrices.
+  - Approved `baa-nazm-production-admission-v1` for Baa `5d3f00c...`, Nazm
+    `7be5799...`, and Takween `4fe634f...`; quick/full/stress/release report
+    27/27, 44/44, 74/74, and 75/75 on both admission hosts.
+
 - **No-copy Windows artifact pipeline**:
   - Removed the shared `baa_stage` directory and all assembly, object, runtime,
     and executable staging copies. `-S` now emits directly to its requested path.
@@ -55,7 +72,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
   - Recorded the terminal exact-revision production-admission receipt: Baa
     `a669e7d...` and Nazm `a4013da...` pass quick 27/27, full 44/44, stress
     74/74, and release 75/75 on both hosted Windows and Linux. The automated
-    gate is green, while GAS remains the default pending three-owner approval.
+    gate is green. The later exact default-cutover candidate and owner approval
+    supersede this pre-cutover receipt.
   - Executed the rollback drill against the exact Baa candidate: a missing
     selected Nazm remains a visible exit `4` with no output, while a separate
     explicit GAS build succeeds and records `gas` in the build and unit
@@ -134,7 +152,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
   - Added `--assembler=nazm` with `--nazm-path`, `BAA_NAZM`, then `PATH`
     resolution; `-S` emits Arabic `.نظم`, `-c` writes the selected object
     directly, and full builds pass Nazm objects to the existing linker.
-  - Kept `--assembler=gas` as the explicit default rollback during production
+  - Kept `--assembler=gas` as the explicit rollback during production
     admission. Missing or failing Nazm returns toolchain code `4`, removes the
     object, and never retries through GAS.
   - Added an Arabic-only Nazm Linux hosted-startup object that calls the
@@ -156,7 +174,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
     `--nazm-path` and `BAA_NAZM` remain explicit compatibility overrides.
 - **First executable Arabic Nazm emitter slice**:
   - Added non-default `--emit-nazm` output after register allocation for a minimal integer
-    entry program on Windows and Linux targets while leaving GAS as the production/default assembler.
+    entry program on Windows and Linux targets; the later production-admission
+    candidate promoted this path to the default.
   - Emits Arabic mnemonics, registers, labels, and numerals only; the source entry remains
     `الرئيسية`, with line/column comments preserving the originating Baa span.
   - Preflights the complete machine module and returns unsupported status `3` without a

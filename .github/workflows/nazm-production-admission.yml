@@ -26,6 +26,7 @@ jobs:
     env:
       PYTHONUTF8: "1"
       BAA: ${{ github.workspace }}\build\presets\windows-verify\baa.exe
+      BAA_NAZM: ${{ github.workspace }}\Nazm\build-admission\nazm.exe
       NAZM: ${{ github.workspace }}\Nazm\build-admission\nazm.exe
     steps:
       - uses: actions/checkout@v4
@@ -125,6 +126,7 @@ jobs:
     env:
       PYTHONUTF8: "1"
       BAA: ${{ github.workspace }}/build-linux/presets/verify/baa
+      BAA_NAZM: ${{ github.workspace }}/Nazm/build-admission/nazm
       NAZM: ${{ github.workspace }}/Nazm/build-admission/nazm
     steps:
       - uses: actions/checkout@v4

@@ -157,7 +157,12 @@ static void isel_lower_call(ISelCtx *ctx, IRInst *inst)
         MachineOperand mem = mach_op_mem(isel_abi_sp_vreg(), off, 64);
 
         MachineOperand arg = isel_lower_value(ctx, inst->call_args[i]);
-        arg = isel_materialize_imm_to_gpr64(ctx, arg);
+        IRType *at = (inst->call_args && inst->call_args[i])
+            ? inst->call_args[i]->type : NULL;
+        bool is_f64 = (at && at->kind == IR_TYPE_F64);
+        arg = is_f64
+            ? isel_materialize_imm_to_gpr64(ctx, arg)
+            : isel_extend_to_gpr64(ctx, arg, at);
 
         if (arg.kind == MACH_OP_MEM || arg.kind == MACH_OP_GLOBAL)
         {
@@ -421,7 +426,12 @@ static bool isel_lower_tailcall(ISelCtx *ctx, IRInst *call)
             MachineOperand mem = mach_op_mem(-1, off, 64); // base -1 => RBP
 
             MachineOperand arg = isel_lower_value(ctx, call->call_args[i]);
-            arg = isel_materialize_imm_to_gpr64(ctx, arg);
+            IRType *at = (call->call_args && call->call_args[i])
+                ? call->call_args[i]->type : NULL;
+            bool is_f64 = (at && at->kind == IR_TYPE_F64);
+            arg = is_f64
+                ? isel_materialize_imm_to_gpr64(ctx, arg)
+                : isel_extend_to_gpr64(ctx, arg, at);
 
             if (arg.kind == MACH_OP_MEM || arg.kind == MACH_OP_GLOBAL)
             {

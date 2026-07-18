@@ -129,6 +129,7 @@ static int baa_main(int argc, char **argv)
     config.output_file = NULL;
     config.opt_level = OPT_LEVEL_1; // Default optimization level
     config.funroll_loops = false;
+    config.assembler = BAA_ASSEMBLER_NAZM;
     config.target = baa_target_host_default();
     config.codegen_opts = baa_codegen_options_default();
 

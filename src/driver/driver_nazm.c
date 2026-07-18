@@ -86,10 +86,16 @@ static char *driver_nazm_artifact_path(const char *base, const char *suffix)
 
 static void driver_nazm_report_unsupported(const char *reason,
                                            const char *blocker_kind,
-                                           const char *blocker_detail)
+                                           const char *blocker_detail,
+                                           const char *source_file,
+                                           int source_line,
+                                           int source_col)
 {
     const char *message = reason ? reason : "صيغة نظم غير مدعومة.";
     const char *kind = blocker_kind ? blocker_kind : "غير_مصنف";
+    if (source_file && source_file[0] && source_line > 0)
+        fprintf(stderr, "%s:%d:%d: ", source_file, source_line,
+                source_col > 0 ? source_col : 1);
     if (blocker_detail && blocker_detail[0])
         fprintf(stderr,
                 "خطأ: %s [عائق_نظم=%s؛تفصيل=%s]\n",
@@ -379,7 +385,10 @@ BaaCompilerExitCode driver_emit_nazm_source(const CompilerConfig *config,
         driver_nazm_report_unsupported(
             "مسار نظم لا ينتج حماية المكدس المكافئة بعد.",
             "حماية_المكدس",
-            NULL);
+            NULL,
+            NULL,
+            0,
+            0);
         return BAA_COMPILER_EXIT_UNSUPPORTED;
     }
 
@@ -423,7 +432,10 @@ BaaCompilerExitCode driver_emit_nazm_source(const CompilerConfig *config,
     {
         driver_nazm_report_unsupported(result.reason,
                                        result.blocker_kind,
-                                       result.blocker_detail);
+                                       result.blocker_detail,
+                                       result.source_file,
+                                       result.source_line,
+                                       result.source_col);
         return BAA_COMPILER_EXIT_UNSUPPORTED;
     }
 

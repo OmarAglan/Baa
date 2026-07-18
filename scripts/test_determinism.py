@@ -211,8 +211,8 @@ def _check_cross_target_assembly(baa: Path, out_dir: Path) -> list[CheckResult]:
     results: list[CheckResult] = []
     src = "tests/integration/ir/ir_test.baa"
     targets = [
-        ("x86_64-windows", out_dir / "cross_windows.s", [".section .rdata", ".globl الرئيسية"]),
-        ("x86_64-linux", out_dir / "cross_linux.s", [".section .rodata", ".globl الرئيسية"]),
+        ("x86_64-windows", out_dir / "cross_windows.نظم", [".بيانات_للقراءة", ".عام الرئيسية"]),
+        ("x86_64-linux", out_dir / "cross_linux.نظم", [".بيانات_للقراءة", ".عام الرئيسية"]),
     ]
     for target, output, markers in targets:
         cmd = [str(baa), "-O2", "--verify", "-S", f"--target={target}", src, "-o", str(output)]
@@ -315,12 +315,12 @@ def run_checks(baa: Path, out_dir: Path) -> list[CheckResult]:
                 "-S",
                 "tests/neg/semantic_deref_non_pointer.baa",
                 "-o",
-                str(out_dir / "negative-diagnostic.s"),
+                str(out_dir / "negative-diagnostic.نظم"),
             ],
         ),
     ]
 
-    asm_output = out_dir / "stable_ir_test.s"
+    asm_output = out_dir / "stable_ir_test.نظم"
     results.append(
         _compare_output_file(
             "assembly-byte-stability",

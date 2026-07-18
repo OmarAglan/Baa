@@ -530,6 +530,18 @@ static BaaNazmEmitResult nazm_validate_instruction(const MachineInst *inst,
             return nazm_unsupported("هدف_نداء_غير_مدعوم", NULL,
                                     "هدف النداء ليس سجلا أو رمز دالة عربيا.", inst);
 
+        case MACH_TAILJMP:
+            if (inst->src1.kind == MACH_OP_FUNC)
+                return nazm_validate_symbol_operand(&inst->src1, inst);
+            if (inst->src1.kind == MACH_OP_VREG &&
+                nazm_operand_bits(&inst->src1) == 64)
+                return nazm_validate_operand(&inst->src1, target, inst);
+            return nazm_unsupported(
+                "هدف_قفز_ذيلي_غير_مدعوم",
+                NULL,
+                "هدف القفز الذيلي ليس سجلا بعرض ٦٤ بت أو رمز دالة عربيا.",
+                inst);
+
         case MACH_PUSH:
             if (nazm_operand_bits(&inst->src1) != 64)
                 return nazm_unsupported("عرض_دفع", NULL,

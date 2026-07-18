@@ -26,13 +26,13 @@
           "source": "examples/error_handling_demo.baa",
           "status": "emitted",
           "exit_code": 0,
-          "sha256": "5310b13c5d82f7b88643adb10f221d85bcce565715981b9a82ffd07cc1a985f9"
+          "sha256": "f891de09db5d49f5c83f5fafba26ece64375ed0fb6815fa549bae42836859fc9"
         },
         {
           "source": "examples/file_copy_small.baa",
           "status": "emitted",
           "exit_code": 0,
-          "sha256": "6f0e4106cc969cdf99e31e7a6f541682a6ce7c36f65e1aa58c7bc65a9dedb9c4"
+          "sha256": "f21cae74ad4e58ec2a0899ce67532797710024e639177b38b87273872fd76ef2"
         },
         {
           "source": "examples/hello_world.baa",
@@ -44,7 +44,7 @@
           "source": "examples/math_and_format.baa",
           "status": "emitted",
           "exit_code": 0,
-          "sha256": "f6c322aa11cdc6110daad597ce851ed8c9d793bc7d44869e66401116a3624a9f"
+          "sha256": "fc653ca401e3036bcaaa3fe395156a712998a0bf95bccf7fecad939d8aea57af"
         },
         {
           "source": "tests/integration/backend/backend_arabic_numeral_source_tokens_v064_test.baa",
@@ -74,7 +74,7 @@
           "source": "tests/integration/backend/backend_byte_buffer_stdlib_v062_test.baa",
           "status": "emitted",
           "exit_code": 0,
-          "sha256": "408d5fd8d5ace666fee827fb879835763a5100d6250477769bfd67b33aebbb62"
+          "sha256": "10893800720654168d6e44cbc8ffec3ada6687e7b0d80cda9a9246c26946487f"
         },
         {
           "source": "tests/integration/backend/backend_cast_pointer_diff_test.baa",
@@ -107,7 +107,7 @@
           "source": "tests/integration/backend/backend_dynamic_memory_test.baa",
           "status": "emitted",
           "exit_code": 0,
-          "sha256": "835aec9da52ad91c4d92765161799073812fc3aa58d7e9258575c558c26315ec"
+          "sha256": "ddc0bb9ead6ee692ed6b820f6b839b6d9cf8679f635a9ee39d6915698fd5d373"
         },
         {
           "source": "tests/integration/backend/backend_enum_struct_test.baa",
@@ -119,7 +119,7 @@
           "source": "tests/integration/backend/backend_error_handling_v043_test.baa",
           "status": "emitted",
           "exit_code": 0,
-          "sha256": "8055d0ad0cb5b16c1011c161f69b90f5bf721d1dd9dca76ad3214a7599105a28"
+          "sha256": "badedae8ec08acc487c6a6379b2cee13bf4206e2407eeccfba632364c3e69898"
         },
         {
           "source": "tests/integration/backend/backend_file_io_noheader_test.baa",
@@ -131,19 +131,19 @@
           "source": "tests/integration/backend/backend_file_io_test.baa",
           "status": "emitted",
           "exit_code": 0,
-          "sha256": "3ad254de64b26b9db051c096d0489fb92aaee568cd9aac9de0a7bba1a9edd5f8"
+          "sha256": "ea70c6d5da739df07e654ec53d0fd303db3bf31fb3e1317cac4a0c4663afe2c5"
         },
         {
           "source": "tests/integration/backend/backend_float_extensions_v042_test.baa",
           "status": "emitted",
           "exit_code": 0,
-          "sha256": "b89e444dac7cb628db44af433f81804ba997cef4b876c3c27718e742681d1a20"
+          "sha256": "e9a48404945c26c66a9d62c52f5020443b9be270bef3ac967da24651d85c1820"
         },
         {
           "source": "tests/integration/backend/backend_format_arabic_test.baa",
           "status": "emitted",
           "exit_code": 0,
-          "sha256": "db1a8a0717a2f9db5c19d3a54aebe45fab73b23c08500400fad138f79856cb9c"
+          "sha256": "fab1bc6451d90b810e64cd7103b35cea7ae979aa93e51fa1e020646644092dfe"
         },
         {
           "source": "tests/integration/backend/backend_func_ptr_shadow_call_test.baa",
@@ -274,7 +274,7 @@
           "source": "tests/integration/backend/backend_path_stdlib_v062_test.baa",
           "status": "emitted",
           "exit_code": 0,
-          "sha256": "0afc57f092b74188f1112800d3ed20d5fd768d3d0aae1c2775f52cfe6c9cc148"
+          "sha256": "e185dfa92c8f71e8f2be5ceae46080d6da2ae097546f03a51f0ae33a997cc02d"
         },
         {
           "source": "tests/integration/backend/backend_pointer_core_test.baa",
@@ -292,13 +292,13 @@
           "source": "tests/integration/backend/backend_process_runtime_v065_test.baa",
           "status": "emitted",
           "exit_code": 0,
-          "sha256": "15fc9d81e89bca605862d6f67af57d4b37344ba008b0b084726c75862e27883a"
+          "sha256": "04ce74b424dea35e3218bd9d3dd181716a5da6d4f3d4a3df995d6457adc71ba7"
         },
         {
           "source": "tests/integration/backend/backend_readline_stdin_test.baa",
           "status": "emitted",
           "exit_code": 0,
-          "sha256": "109bd995d722fc7a7f11ec3bb3128c9b793dce7c71f1954893a6b10d29c18c9f"
+          "sha256": "0d19a2ac775f34444a0f3bb543aa601808d763e46080ddeb1d19587b971b0aa1"
         },
         {
           "source": "tests/integration/backend/backend_readnum_stdin_test.baa",
@@ -316,7 +316,7 @@
           "source": "tests/integration/backend/backend_result_helpers_stdlib_v062_test.baa",
           "status": "emitted",
           "exit_code": 0,
-          "sha256": "e6566c912522fcb10e2a2a31a675c4459711c5e0ddaa151ea060b20c9a725411"
+          "sha256": "382f102a3af687115df0f3dddd7a86ce9dbcfa1527267489c23fa57c1a7e2db4"
         },
         {
           "source": "tests/integration/backend/backend_runtime_assert_fail_v055_test.baa",
@@ -445,7 +445,7 @@
           "source": "tests/integration/backend/backend_scan_arabic_test.baa",
           "status": "emitted",
           "exit_code": 0,
-          "sha256": "2cbda40a765e9128a8f1bc1b33ecac33dee2c85fc944fa987b749e013de44396"
+          "sha256": "a852f045bb76731b82509b7459b63f4655ba7c4db7497ee4fde5e96f3e6c49bb"
         },
         {
           "source": "tests/integration/backend/backend_scope_test.baa",
@@ -457,7 +457,7 @@
           "source": "tests/integration/backend/backend_sha256_file_v066_test.baa",
           "status": "emitted",
           "exit_code": 0,
-          "sha256": "4d6359dd2aa9a60369e5d4a0602042e7e11f5a9d970986bf4dc8616fd28b3ba0"
+          "sha256": "a67fe6fdaf84478dfa8463e1d73f279f308f2ee05ae4c179e4910babf8720628"
         },
         {
           "source": "tests/integration/backend/backend_stackargs_test.baa",
@@ -475,25 +475,25 @@
           "source": "tests/integration/backend/backend_stdlib_short_include_test.baa",
           "status": "emitted",
           "exit_code": 0,
-          "sha256": "2161d1f5eb82690ef13c19ad237bb9677f097fd8ef4e2faab066a016fe68b9c6"
+          "sha256": "164c0d7f09b1c77af29bd16fd895c436db75ac6ae4433cc26b4bf8e4933dcbf0"
         },
         {
           "source": "tests/integration/backend/backend_stdlib_v041_test.baa",
           "status": "emitted",
           "exit_code": 0,
-          "sha256": "ab3b207a3d99b104a8418148370685caf43ced802daedd113b976d655f485d51"
+          "sha256": "660a9796b93ece355cabad43f679048418514a10486e1ac0d010f2032cf929cc"
         },
         {
           "source": "tests/integration/backend/backend_string_builder_stdlib_v062_test.baa",
           "status": "emitted",
           "exit_code": 0,
-          "sha256": "9341c8ac20b987aee92ec6737fbb85a77c4778c94c9a198c47ccef28a2e138ab"
+          "sha256": "3e19ef096d5219d8842d6e7c777209f9219f5aafe2d8ddf9766df6ceba92ffb9"
         },
         {
           "source": "tests/integration/backend/backend_string_ops_test.baa",
           "status": "emitted",
           "exit_code": 0,
-          "sha256": "34868c393a3dd53d87af6bf8886898f494ec3bba8e91817f0f2f7d0a112580d0"
+          "sha256": "bbca6aa9d49796ce4e5964c5ca56c5a5922a5c01133dbe4299772ac8d4db3ff7"
         },
         {
           "source": "tests/integration/backend/backend_struct_init_test.baa",
@@ -529,7 +529,7 @@
           "source": "tests/integration/backend/backend_text_stdlib_helpers_v064_test.baa",
           "status": "emitted",
           "exit_code": 0,
-          "sha256": "662029cf9b7c08cb7a9175017bb62f1c532bab9d5093d949b0b3e684373fbdde"
+          "sha256": "6f7e4cf7714b7ce39c4ed057672a04bcd197722570f99ccec4d9dd0ed36fadaa"
         },
         {
           "source": "tests/integration/backend/backend_type_alias_test.baa",
@@ -553,13 +553,13 @@
           "source": "tests/integration/backend/backend_variadic_functions_test.baa",
           "status": "emitted",
           "exit_code": 0,
-          "sha256": "43a6a6fdd93afe791c00374943c80158aef1631ede3a97e02d889922606fab0e"
+          "sha256": "b8482b5ee8dc17f44ef8950469d6e7e111f07070ea8c835dee2d56bb64e28047"
         },
         {
           "source": "tests/integration/backend/backend_vector_stdlib_v062_test.baa",
           "status": "emitted",
           "exit_code": 0,
-          "sha256": "075b2357bba0f6a650252a0d75b4785763e62ee4be69fb6ccfd0e562c00b32cf"
+          "sha256": "133086bb8737c5f5bbba2824f8798e28ed62fbd7f505a366297b10afe6090e41"
         },
         {
           "source": "tests/integration/backend/int_sizes_test.baa",
@@ -733,13 +733,13 @@
           "source": "examples/error_handling_demo.baa",
           "status": "emitted",
           "exit_code": 0,
-          "sha256": "ab61508cfb41750c6a0b7a9e37451e1197f69373c14c2cb960ebbeab4c089d87"
+          "sha256": "9fd8c628939520a891e611f84446a87882bc446283708ffcb00da29f9fecdba3"
         },
         {
           "source": "examples/file_copy_small.baa",
           "status": "emitted",
           "exit_code": 0,
-          "sha256": "3e6ceea509ca60159016a8e7b5ae2d3deff3023e366c9a54412969ef2f0e579e"
+          "sha256": "2282a5015b94ebe37e1f1417ed666bdd7acc0ab2e967692b9b00a7b27077f145"
         },
         {
           "source": "examples/hello_world.baa",
@@ -751,7 +751,7 @@
           "source": "examples/math_and_format.baa",
           "status": "emitted",
           "exit_code": 0,
-          "sha256": "0eb3f15cb83dad69fe50609ec11c0f6944ad43e39c1b95c59b0ee912c55e2554"
+          "sha256": "37fd36cd79c6a7e1bd484373359e6cf70eadc53ad35f30e33c574b3dc8c94f58"
         },
         {
           "source": "tests/integration/backend/backend_arabic_numeral_source_tokens_v064_test.baa",
@@ -781,7 +781,7 @@
           "source": "tests/integration/backend/backend_byte_buffer_stdlib_v062_test.baa",
           "status": "emitted",
           "exit_code": 0,
-          "sha256": "c11a61366a87a991de83e134b100c17cd72adba68c5b9ab084979117e2716ab2"
+          "sha256": "9c4837be04de72f08f9c7540ff93a71a380a51597617a9748dd6b20f7d4cfd19"
         },
         {
           "source": "tests/integration/backend/backend_cast_pointer_diff_test.baa",
@@ -814,7 +814,7 @@
           "source": "tests/integration/backend/backend_dynamic_memory_test.baa",
           "status": "emitted",
           "exit_code": 0,
-          "sha256": "6374afe9ca89f7bcb37405f975514715ad534ea807815f3f19459f7bb44d9d41"
+          "sha256": "0a15f30b87ed1220aa4acf7f3d3179bbd6cc19aa7cbad3df6745b185d8546825"
         },
         {
           "source": "tests/integration/backend/backend_enum_struct_test.baa",
@@ -826,7 +826,7 @@
           "source": "tests/integration/backend/backend_error_handling_v043_test.baa",
           "status": "emitted",
           "exit_code": 0,
-          "sha256": "337a9820e42bb4b4506f6a04e073decc336dd18a7f99bde1eb78739173e94b49"
+          "sha256": "e98a6eb7360a5ec6137984ea2652b4d362df460d5018fdb40a860544a66d6870"
         },
         {
           "source": "tests/integration/backend/backend_file_io_noheader_test.baa",
@@ -838,19 +838,19 @@
           "source": "tests/integration/backend/backend_file_io_test.baa",
           "status": "emitted",
           "exit_code": 0,
-          "sha256": "63a5accb98ce0239772ce84c5c0f82e1ceec4d83c4c89b746d89e03e00af1aa0"
+          "sha256": "85177b5184189ae28b522c410808e2586f820c1b94be4dc6a2336cc5d51c19c8"
         },
         {
           "source": "tests/integration/backend/backend_float_extensions_v042_test.baa",
           "status": "emitted",
           "exit_code": 0,
-          "sha256": "a02833948f8daf86fa640375e0f5b754f572164dcfe3d75e741655196c681f8d"
+          "sha256": "925303be17289f2742ccf714c7bdabde2da0d0944c2ae537f5d9e7a9dc8b50c8"
         },
         {
           "source": "tests/integration/backend/backend_format_arabic_test.baa",
           "status": "emitted",
           "exit_code": 0,
-          "sha256": "55f2f50caa3b3a57f698a0c436573dda522a9b604efd3518edc8e7e95c06d546"
+          "sha256": "7c176c340f3d248981f1016030ce453af5235bcbcfb547397a35bdd006baa498"
         },
         {
           "source": "tests/integration/backend/backend_func_ptr_shadow_call_test.baa",
@@ -981,7 +981,7 @@
           "source": "tests/integration/backend/backend_path_stdlib_v062_test.baa",
           "status": "emitted",
           "exit_code": 0,
-          "sha256": "76b2286e3db85eb1a7d9cc3f9626476a1c2144a87762b22ab2126431921b4a2c"
+          "sha256": "cee2cb809f7838f762fce7779e2412734184d53d28ab7a774f9bf091fdddf085"
         },
         {
           "source": "tests/integration/backend/backend_pointer_core_test.baa",
@@ -999,13 +999,13 @@
           "source": "tests/integration/backend/backend_process_runtime_v065_test.baa",
           "status": "emitted",
           "exit_code": 0,
-          "sha256": "7b1e5f4f20d1947b8f1e200d74e1c0e595ef3815095ae2eabdfbae42768e4a3a"
+          "sha256": "9f86b6a2b9a5e7c9281287c6218a4b8c294fe79b85f161bf047b84a2868c46ff"
         },
         {
           "source": "tests/integration/backend/backend_readline_stdin_test.baa",
           "status": "emitted",
           "exit_code": 0,
-          "sha256": "31071892cd68f551c67f8ba77d023c568b457bf5ce329bebe7df1f65862642dd"
+          "sha256": "849aaa72b053df5f621c0f31d3b6a425547827aece44b3132fb12a0feaf89d79"
         },
         {
           "source": "tests/integration/backend/backend_readnum_stdin_test.baa",
@@ -1023,7 +1023,7 @@
           "source": "tests/integration/backend/backend_result_helpers_stdlib_v062_test.baa",
           "status": "emitted",
           "exit_code": 0,
-          "sha256": "46eecffc67045f802d706bc9c9e8b67c3e508a23dcf081ab4ec82f2ee3e435e5"
+          "sha256": "a48d75a0c36a01839622b6144eb44a22000eec2ffd2fe96add962c92c841e641"
         },
         {
           "source": "tests/integration/backend/backend_runtime_assert_fail_v055_test.baa",
@@ -1152,7 +1152,7 @@
           "source": "tests/integration/backend/backend_scan_arabic_test.baa",
           "status": "emitted",
           "exit_code": 0,
-          "sha256": "71b7b95b2d37a2205862dbba7522cc409ff82ead879bcedd622759d2b22c1cc3"
+          "sha256": "62bc973418af28a81b974a57c20ad92b59ac832bcd2d3b46ebb8d9d163c38c9b"
         },
         {
           "source": "tests/integration/backend/backend_scope_test.baa",
@@ -1164,7 +1164,7 @@
           "source": "tests/integration/backend/backend_sha256_file_v066_test.baa",
           "status": "emitted",
           "exit_code": 0,
-          "sha256": "1f926820b446d4d4f9f69da52e4749dcb7817f57d0455bf96bacc5a72a9fe3ee"
+          "sha256": "2e2a12dd197f8fc5ac09c8f7cc0db0175c5cfccf8f94668cbf1fd425861df6f1"
         },
         {
           "source": "tests/integration/backend/backend_stackargs_test.baa",
@@ -1182,25 +1182,25 @@
           "source": "tests/integration/backend/backend_stdlib_short_include_test.baa",
           "status": "emitted",
           "exit_code": 0,
-          "sha256": "4f840b9d1bc44f2f2967f1408d38dee2048d1d5c1fa17ad51edf2e2f84d6ce6c"
+          "sha256": "2b5bb9030e23f750a0832cb345bca9cf18b3f612a9af72e40adaf84fa1e2ee46"
         },
         {
           "source": "tests/integration/backend/backend_stdlib_v041_test.baa",
           "status": "emitted",
           "exit_code": 0,
-          "sha256": "675a6237ef69de412db654d7b3edc075cc9b9aa4560803f8f114d3aeb351eaec"
+          "sha256": "7f9fb615a7a00ab2ef861f794fc741b6fd568554bf90891e3de7c8aaeaef70ef"
         },
         {
           "source": "tests/integration/backend/backend_string_builder_stdlib_v062_test.baa",
           "status": "emitted",
           "exit_code": 0,
-          "sha256": "3e1e1375dd745f1c87b050f2c261b4eb0f97daf5234a2e42004c16a98c354c6a"
+          "sha256": "d666405a1e8ca75b39efd8879b936725fbfcc72ecb08445bfafd3308cfc114ce"
         },
         {
           "source": "tests/integration/backend/backend_string_ops_test.baa",
           "status": "emitted",
           "exit_code": 0,
-          "sha256": "699113f719584d2fca27354113f07886e3b35cac303f9cedc59b02f9e27b4866"
+          "sha256": "e8d1825a5892b19337971ea8ae79a624a61b6c0abdc9b8b1713acfbd19c8301f"
         },
         {
           "source": "tests/integration/backend/backend_struct_init_test.baa",
@@ -1236,7 +1236,7 @@
           "source": "tests/integration/backend/backend_text_stdlib_helpers_v064_test.baa",
           "status": "emitted",
           "exit_code": 0,
-          "sha256": "f9b384d8dc94a6d926724a311f1241716cf856d75b0a54098e01f6459b3bce08"
+          "sha256": "f0398b1ad9d675d8724663268456d5f5df6da8b19ee43ba1cb506721473fb43c"
         },
         {
           "source": "tests/integration/backend/backend_type_alias_test.baa",
@@ -1260,13 +1260,13 @@
           "source": "tests/integration/backend/backend_variadic_functions_test.baa",
           "status": "emitted",
           "exit_code": 0,
-          "sha256": "50a9bac041c64fb4858cc136f71a6e972df7a45f6f405a16977249fca2ad8bbf"
+          "sha256": "20a2bdc56bf464884e9ec0f934510caf92cf8332d033af3e86682fe5c8f74125"
         },
         {
           "source": "tests/integration/backend/backend_vector_stdlib_v062_test.baa",
           "status": "emitted",
           "exit_code": 0,
-          "sha256": "8711a2202000348fc99e6627a9b623afdd81b4ceb3266240b24249a312a63038"
+          "sha256": "3aa071076e9b7a79e5c250e3ec0af1b414c749dd27ae8fe5ded8efe9dec3eec1"
         },
         {
           "source": "tests/integration/backend/int_sizes_test.baa",

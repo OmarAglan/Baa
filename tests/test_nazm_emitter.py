@@ -319,7 +319,212 @@ class NazmEmitterTests(unittest.TestCase):
                         self.assertGreaterEqual(line_number, 1)
                         self.assertLessEqual(line_number, len(generated_lines))
 
-    def test_nazm_is_a_normal_selectable_assembler(self) -> None:
+    def test_narrow_stack_argument_is_extended_for_both_abis(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="baa_nazm_stack_arg_") as temp:
+            work = Path(temp)
+            source = work / "معاملات_المكدس.baa"
+            source.write_text(
+                "صحيح انتق(صحيح ا، صحيح ب، صحيح ج، صحيح د، صحيح هـ، "
+                "صحيح و، منطقي قرار، صحيح قيمة) {\n"
+                "    إذا (قرار) { إرجع قيمة. }\n"
+                "    إرجع ا + ب + ج + د + هـ + و.\n"
+                "}\n"
+                "صحيح الرئيسية() {\n"
+                "    إرجع انتق(١، ٢، ٣، ٤، ٥، ٦، صواب، ٠).\n"
+                "}\n",
+                encoding="utf-8",
+            )
+
+            for target in ("x86_64-windows", "x86_64-linux"):
+                with self.subTest(target=target):
+                    emitted = work / f"مكدس-{target}.نظم"
+                    proc = self.run_baa(
+                        work,
+                        "--emit-nazm",
+                        f"--target={target}",
+                        str(source),
+                        "-o",
+                        str(emitted),
+                    )
+                    self.assertEqual(proc.returncode, 0, proc.stderr)
+                    self.assertTrue(emitted.is_file())
+
+            nazm = _find_nazm()
+            if nazm is None:
+                return
+            executable = work / ("مكدس.exe" if os.name == "nt" else "مكدس")
+            link = self.run_baa(
+                work,
+                f"--nazm-path={nazm}",
+                str(source),
+                "-o",
+                str(executable),
+            )
+            self.assertEqual(link.returncode, 0, link.stderr)
+            run = subprocess.run(
+                [str(executable)],
+                cwd=str(work),
+                capture_output=True,
+                timeout=30,
+            )
+            self.assertEqual(run.returncode, 0, run.stderr)
+
+    def test_narrow_global_store_does_not_overwrite_adjacent_pointer(self) -> None:
+        nazm = _find_nazm()
+        if nazm is None:
+            self.skipTest("Nazm executable is unavailable in this checkout")
+
+        with tempfile.TemporaryDirectory(prefix="baa_nazm_global_width_") as temp:
+            work = Path(temp)
+            source = work / "عرض_المتغير_العام.baa"
+            source.write_text(
+                "منطقي راية = خطأ.\n"
+                "نص قيمة = \"\".\n"
+                "صحيح الرئيسية() {\n"
+                "    قيمة = نسخ_نص(\"نظم\").\n"
+                "    راية = صواب.\n"
+                "    إذا (!راية) { حرر_نص(قيمة). إرجع ١. }\n"
+                "    حرر_نص(قيمة).\n"
+                "    إرجع ٠.\n"
+                "}\n",
+                encoding="utf-8",
+            )
+
+            for target in ("x86_64-windows", "x86_64-linux"):
+                with self.subTest(target=target):
+                    emitted = work / f"عرض-{target}.نظم"
+                    emit = self.run_baa(
+                        work,
+                        "--emit-nazm",
+                        f"--target={target}",
+                        str(source),
+                        "-o",
+                        str(emitted),
+                    )
+                    self.assertEqual(emit.returncode, 0, emit.stderr)
+                    flag_stores = [
+                        line
+                        for line in emitted.read_text(encoding="utf-8").splitlines()
+                        if "[مؤشر_التعليمة+راية]" in line
+                    ]
+                    self.assertGreaterEqual(len(flag_stores), 1)
+                    self.assertTrue(
+                        all("_٨" in line for line in flag_stores),
+                        "Boolean global stores must use an 8-bit source register",
+                    )
+
+            suffix = ".exe" if os.name == "nt" else ""
+            nazm_executable = work / f"عرض-نظم{suffix}"
+            nazm_link = self.run_baa(
+                work,
+                f"--nazm-path={nazm}",
+                str(source),
+                "-o",
+                str(nazm_executable),
+            )
+            self.assertEqual(nazm_link.returncode, 0, nazm_link.stderr)
+            nazm_run = subprocess.run(
+                [str(nazm_executable)],
+                cwd=str(work),
+                capture_output=True,
+                timeout=30,
+            )
+            self.assertEqual(nazm_run.returncode, 0, nazm_run.stderr)
+
+            gas_executable = work / f"عرض-غاز{suffix}"
+            gas_link = self.run_baa(
+                work,
+                "--assembler=gas",
+                str(source),
+                "-o",
+                str(gas_executable),
+            )
+            self.assertEqual(gas_link.returncode, 0, gas_link.stderr)
+            gas_run = subprocess.run(
+                [str(gas_executable)],
+                cwd=str(work),
+                capture_output=True,
+                timeout=30,
+            )
+            self.assertEqual(gas_run.returncode, nazm_run.returncode)
+            self.assertEqual(gas_run.stdout, nazm_run.stdout)
+            self.assertEqual(gas_run.stderr, nazm_run.stderr)
+
+    def test_tail_call_emits_arabic_jump_and_matches_gas(self) -> None:
+        nazm = _find_nazm()
+        if nazm is None:
+            self.skipTest("Nazm executable is unavailable in this checkout")
+
+        with tempfile.TemporaryDirectory(prefix="baa_nazm_tailcall_") as temp:
+            work = Path(temp)
+            source = work / "نداء_ذيلي.baa"
+            source.write_text(
+                "صحيح عد(صحيح قيمة) {\n"
+                "    إذا (قيمة <= ٠) { إرجع ٠. }\n"
+                "    إرجع عد(قيمة - ١).\n"
+                "}\n"
+                "صحيح الرئيسية() { إرجع عد(٣). }\n",
+                encoding="utf-8",
+            )
+
+            for target in ("x86_64-windows", "x86_64-linux"):
+                with self.subTest(target=target):
+                    emitted = work / f"نداء-{target}.نظم"
+                    emit = self.run_baa(
+                        work,
+                        "-O2",
+                        "--emit-nazm",
+                        f"--target={target}",
+                        str(source),
+                        "-o",
+                        str(emitted),
+                    )
+                    self.assertEqual(emit.returncode, 0, emit.stderr)
+                    self.assertIn(
+                        "اقفز عد",
+                        emitted.read_text(encoding="utf-8"),
+                    )
+
+            suffix = ".exe" if os.name == "nt" else ""
+            nazm_executable = work / f"نداء-نظم{suffix}"
+            nazm_link = self.run_baa(
+                work,
+                "-O2",
+                f"--nazm-path={nazm}",
+                str(source),
+                "-o",
+                str(nazm_executable),
+            )
+            self.assertEqual(nazm_link.returncode, 0, nazm_link.stderr)
+            nazm_run = subprocess.run(
+                [str(nazm_executable)],
+                cwd=str(work),
+                capture_output=True,
+                timeout=30,
+            )
+            self.assertEqual(nazm_run.returncode, 0, nazm_run.stderr)
+
+            gas_executable = work / f"نداء-غاز{suffix}"
+            gas_link = self.run_baa(
+                work,
+                "-O2",
+                "--assembler=gas",
+                str(source),
+                "-o",
+                str(gas_executable),
+            )
+            self.assertEqual(gas_link.returncode, 0, gas_link.stderr)
+            gas_run = subprocess.run(
+                [str(gas_executable)],
+                cwd=str(work),
+                capture_output=True,
+                timeout=30,
+            )
+            self.assertEqual(gas_run.returncode, nazm_run.returncode)
+            self.assertEqual(gas_run.stdout, nazm_run.stdout)
+            self.assertEqual(gas_run.stderr, nazm_run.stderr)
+
+    def test_nazm_is_the_default_and_remains_explicitly_selectable(self) -> None:
         nazm = _find_nazm()
         if nazm is None:
             self.skipTest("Nazm executable is unavailable in this checkout")
@@ -332,7 +537,6 @@ class NazmEmitterTests(unittest.TestCase):
             emit = self.run_baa(
                 work,
                 "-S",
-                "--assembler=nazm",
                 f"--nazm-path={nazm}",
                 str(source),
                 "-o",
@@ -361,7 +565,6 @@ class NazmEmitterTests(unittest.TestCase):
                 compile_object = self.run_baa(
                     work,
                     "-c",
-                    "--assembler=nazm",
                     "--incremental",
                     "--emit-build-manifest",
                     str(manifest_path),
@@ -377,6 +580,25 @@ class NazmEmitterTests(unittest.TestCase):
             manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
             self.assertEqual(manifest["assembler"], "nazm")
             self.assertFalse(manifest["units"][0]["cache"]["enabled"])
+
+            gas_object = work / f"برنامج-غاز{object_suffix}"
+            gas_manifest_path = work / "بيان-غاز.json"
+            gas_compile = self.run_baa(
+                work,
+                "-c",
+                "--assembler=gas",
+                "--emit-build-manifest",
+                str(gas_manifest_path),
+                str(source),
+                "-o",
+                str(gas_object),
+            )
+            self.assertEqual(gas_compile.returncode, 0, gas_compile.stderr)
+            gas_manifest = json.loads(
+                gas_manifest_path.read_text(encoding="utf-8")
+            )
+            self.assertEqual(gas_manifest["assembler"], "gas")
+            self.assertEqual(gas_manifest["units"][0]["assembler"], "gas")
 
             cross_target = (
                 "x86_64-linux" if os.name == "nt" else "x86_64-windows"
@@ -426,7 +648,6 @@ class NazmEmitterTests(unittest.TestCase):
             proc = self.run_baa(
                 work,
                 "-c",
-                "--assembler=nazm",
                 f"--nazm-path={missing}",
                 str(source),
                 "-o",
@@ -599,13 +820,13 @@ class NazmEmitterTests(unittest.TestCase):
             self.assertEqual(run.returncode, 0)
 
             manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-            self.assertEqual(manifest["assembler"], "gas")
+            self.assertEqual(manifest["assembler"], "nazm")
             self.assertEqual(
                 [
                     (unit["source_kind"], unit["assembler"])
                     for unit in manifest["units"]
                 ],
-                [("baa", "gas"), ("nazm", "nazm")],
+                [("baa", "nazm"), ("nazm", "nazm")],
             )
             self.assertFalse(manifest["units"][1]["cache"]["enabled"])
             self.assertEqual(
@@ -1410,7 +1631,12 @@ class NazmEmitterTests(unittest.TestCase):
 
             production_assembly = work / "إنتاج.s"
             assembly_proc = self.run_baa(
-                work, "-S", str(source), "-o", str(production_assembly)
+                work,
+                "-S",
+                "--assembler=gas",
+                str(source),
+                "-o",
+                str(production_assembly),
             )
             self.assertEqual(assembly_proc.returncode, 0, assembly_proc.stderr)
             gas_text = production_assembly.read_text(encoding="utf-8")
@@ -1430,7 +1656,12 @@ class NazmEmitterTests(unittest.TestCase):
 
             production_object = work / f"إنتاج{object_suffix}"
             compile_object = self.run_baa(
-                work, "-c", str(source), "-o", str(production_object)
+                work,
+                "-c",
+                "--assembler=gas",
+                str(source),
+                "-o",
+                str(production_object),
             )
             self.assertEqual(compile_object.returncode, 0, compile_object.stderr)
 
@@ -1510,6 +1741,7 @@ class NazmEmitterTests(unittest.TestCase):
                     production = self.run_baa(
                         work,
                         "-c",
+                        "--assembler=gas",
                         *flags,
                         str(source),
                         "-o",
@@ -1562,6 +1794,7 @@ class NazmEmitterTests(unittest.TestCase):
                 production_object_proc = self.run_baa(
                     work,
                     "-c",
+                    "--assembler=gas",
                     *flags,
                     str(source),
                     "-o",

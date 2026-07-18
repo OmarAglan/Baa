@@ -423,7 +423,7 @@ def _run_fuzz_lite(baa: Path, log_dir: Path, cases: int, seed: int) -> tuple[boo
     try:
         for i in range(cases):
             src = out_dir / f"fuzz_{i:03d}.baa"
-            asm = out_dir / f"fuzz_{i:03d}.s"
+            asm = out_dir / f"fuzz_{i:03d}.نظم"
             src.write_text(_build_fuzz_case(rng, i), encoding="utf-8")
             rel_src = str(src.relative_to(ROOT))
             rel_asm = str(asm.relative_to(ROOT))

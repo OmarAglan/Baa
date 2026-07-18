@@ -7,6 +7,34 @@
  * canonical Nazm emitter.
  */
 
+static unsigned nazm_write_tailjmp(FILE *out,
+                                   const MachineFunc *func,
+                                   const BaaTarget *target,
+                                   const PhysReg *callee_regs,
+                                   int callee_count,
+                                   const MachineOperand *jump_target)
+{
+    for (int i = callee_count - 1; i >= 0; --i)
+    {
+        int offset = -(func->stack_size + target->cc->shadow_space_bytes +
+                       (i + 1) * 8);
+        fputs("    انقل ", out);
+        fputs(nazm_register_name(callee_regs[i], 64), out);
+        fputs("، [مؤشر_القاعدة", out);
+        nazm_write_signed(out, offset);
+        fputs("]\n", out);
+    }
+    fputs("    انقل مؤشر_المكدس، مؤشر_القاعدة\n", out);
+    fputs("    اسحب مؤشر_القاعدة\n", out);
+    fputs("    اقفز ", out);
+    if (jump_target->kind == MACH_OP_FUNC)
+        nazm_write_symbol(out, jump_target->data.name);
+    else
+        nazm_write_operand(out, jump_target);
+    fputc('\n', out);
+    return (unsigned)(callee_count + 3);
+}
+
 static void nazm_write_function(FILE *out,
                                 const MachineFunc *func,
                                 const BaaTarget *target,
@@ -292,6 +320,13 @@ static void nazm_write_function(FILE *out,
                         nazm_write_operand(out, &inst->src1);
                     fputc('\n', out);
                     emitted_lines += 1;
+                    break;
+
+                case MACH_TAILJMP:
+                    emitted_lines = nazm_write_tailjmp(
+                        out, func, target, callee_regs, callee_count,
+                        &inst->src1);
+                    has_return = true;
                     break;
 
                 case MACH_PUSH:

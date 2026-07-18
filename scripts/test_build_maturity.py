@@ -41,6 +41,7 @@ def _build(baa: Path, work: Path, manifest: Path) -> dict:
     exe = work / f"app_{manifest.stem}{suffix}"
     cmd = [
         str(baa),
+        "--assembler=gas",
         "--incremental",
         "--cache-dir",
         str(work / "cache"),

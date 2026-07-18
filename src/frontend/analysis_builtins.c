@@ -481,7 +481,7 @@ static const BuiltinSystemFuncSig builtin_system_funcs[] = {
     { "حرر_عملية", TYPE_VOID, 1, { TYPE_POINTER } },
     { "انشئ_مجلدات", TYPE_INT, 1, { TYPE_STRING } },
     { "احذف_شجرة", TYPE_INT, 1, { TYPE_STRING } },
-    { "تجزئة_ملف_SHA256", TYPE_STRING, 1, { TYPE_STRING } },
+    { "تجزئة_ملف_شا٢٥٦", TYPE_STRING, 1, { TYPE_STRING } },
 };
 
 DEFINE_BUILTIN_LOOKUP(builtin_lookup_system_func, BuiltinSystemFuncSig, builtin_system_funcs)

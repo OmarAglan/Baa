@@ -284,12 +284,18 @@ def main() -> int:
             flags = _flags_markers(src)
             expect_asm = _expect_asm_markers(src)
             expect_not_asm = _expect_not_asm_markers(src)
+            if (
+                ("-S" in flags or "-s" in flags)
+                and not any(flag.startswith("--assembler=") for flag in flags)
+            ):
+                # EXPECT-ASM fixtures pin the retained GAS rollback dialect.
+                flags = ["--assembler=gas", *flags]
 
             # إذا كان لدينا EXPECT-ASM نُحوّل الاختبار إلى compile-only على ملف assembly.
             if expect_asm or expect_not_asm:
                 out = out_dir / f"{out_stem}.s"
                 if "-S" not in flags and "-s" not in flags:
-                    flags = ["-S", *flags]
+                    flags = ["-S", "--assembler=gas", *flags]
             else:
                 out = out_dir / f"{out_stem}{exe_ext}"
 

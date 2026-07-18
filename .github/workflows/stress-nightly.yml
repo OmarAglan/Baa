@@ -8,15 +8,27 @@ on:
 jobs:
   stress-linux:
     runs-on: ubuntu-latest
+    env:
+      BAA_NAZM: ${{ github.workspace }}/Nazm/build/nazm
+      NAZM: ${{ github.workspace }}/Nazm/build/nazm
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: OmarAglan/Nazm
+          ref: 7be5799f88bf70da781499dd35ccc4c4eda12e6f
+          path: Nazm
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
       - name: Configure (Linux)
-        run: cmake -B build-linux -DCMAKE_BUILD_TYPE=Release
+        run: |
+          cmake -B build-linux -DCMAKE_BUILD_TYPE=Release
+          cmake -S Nazm -B Nazm/build -DCMAKE_BUILD_TYPE=Release
       - name: Build
-        run: cmake --build build-linux -j
+        run: |
+          cmake --build build-linux -j
+          cmake --build Nazm/build -j
       - name: QA Stress
         env:
           PYTHONUTF8: "1"

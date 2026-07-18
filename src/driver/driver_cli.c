@@ -157,9 +157,9 @@ void driver_print_help(void)
     printf("  -I<dir>      Add include search directory (compact form)\n");
     printf("  -S, -s       Compile to assembly only (.s)\n");
     printf("  --emit-nazm  Emit canonical Arabic Nazm source only (.نظم)\n");
-    printf("  --assembler=gas|nazm  Select the normal assembler (default: gas)\n");
+    printf("  --assembler=gas|nazm  Select the normal assembler (default: nazm)\n");
     printf("  --nazm-path=<path>  Nazm executable; otherwise BAA_NAZM or نظم from PATH\n");
-    printf("  --nazm-shadow=<path>  Build production GAS and an explicit Nazm shadow beside it\n");
+    printf("  --nazm-shadow=<path>  Compare explicit GAS rollback with a Nazm shadow beside it\n");
     printf("  -c           Compile to object file only (.o)\n");
     printf("  --check      Parse/analyze source files without emitting code\n");
     printf("  --check-header  Parse/analyze header declarations without emitting code\n");
@@ -446,6 +446,7 @@ bool driver_parse_cli(int argc, char **argv, CompilerConfig *config, DriverParse
                     parse_release_temp_arrays(inputs, include_dirs);
                     return false;
                 }
+                config->assembler_explicit = true;
             }
             else if (strncmp(arg, "--nazm-path=", 12) == 0)
             {
@@ -750,6 +751,7 @@ bool driver_parse_cli(int argc, char **argv, CompilerConfig *config, DriverParse
         return false;
     }
     if (config->nazm_shadow_executable &&
+        config->assembler_explicit &&
         config->assembler == BAA_ASSEMBLER_NAZM)
     {
         fprintf(stderr,
@@ -757,6 +759,14 @@ bool driver_parse_cli(int argc, char **argv, CompilerConfig *config, DriverParse
                 "المسار الطبيعي نفسه يستخدم نظم.\n");
         parse_release_temp_arrays(inputs, include_dirs);
         return false;
+    }
+    if (config->nazm_shadow_executable && !config->assembler_explicit)
+    {
+        /*
+         * يبقى وضع الظل مقارنة صريحة بين مسار الرجوع GAS ومسار نظم حتى بعد
+         * اعتماد نظم افتراضيا. لا يوجد رجوع تلقائي عند فشل الظل.
+         */
+        config->assembler = BAA_ASSEMBLER_GAS;
     }
     bool has_direct_nazm_input = false;
     for (int i = 0; i < input_count; ++i)

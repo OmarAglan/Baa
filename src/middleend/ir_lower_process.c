@@ -35,7 +35,7 @@ static bool ir_lower_try_process_builtin(IRLowerCtx* ctx, Node* expr, IRValue** 
         symbol = "baa_runtime_make_dirs";
     } else if (strcmp(name, "احذف_شجرة") == 0) {
         symbol = "baa_runtime_remove_tree";
-    } else if (strcmp(name, "تجزئة_ملف_SHA256") == 0) {
+    } else if (strcmp(name, "تجزئة_ملف_شا٢٥٦") == 0) {
         symbol = "baa_runtime_sha256_file";
         result_type = get_char_ptr_type(ctx->builder->module);
     } else {

@@ -96,6 +96,8 @@ static void isel_lower_store(ISelCtx *ctx, IRInst *inst)
     // إذا كانت القيمة فورية، يمكن لـ x86-64 تخزين imm32 مباشرة في الذاكرة.
     // أما imm64 الكامل فلا يمكن تخزينه مباشرة إلى الذاكرة: نحتاج سجل وسيط.
     MachineOperand store_val = val;
+    if (store_val.kind == MACH_OP_VREG || store_val.kind == MACH_OP_IMM)
+        store_val.size_bits = bits;
     if (val.kind == MACH_OP_IMM && ptr.kind == MACH_OP_VREG)
     {
         bool fits_imm32 = (val.data.imm >= INT32_MIN && val.data.imm <= INT32_MAX);
@@ -119,6 +121,7 @@ static void isel_lower_store(ISelCtx *ctx, IRInst *inst)
     }
     else if (ptr.kind == MACH_OP_GLOBAL)
     {
+        ptr.size_bits = bits;
         isel_emit(ctx, MACH_STORE, ptr, store_val, mach_op_none());
     }
     else
@@ -264,4 +267,3 @@ static void isel_lower_logical(ISelCtx *ctx, IRInst *inst)
             mi->ir_reg = inst->dest;
     }
 }
-

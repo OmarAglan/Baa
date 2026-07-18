@@ -105,7 +105,7 @@ class Utf8ValidationTests(unittest.TestCase):
             work = Path(temp)
             source = work / "الرئيسية.baa"
             output = work / ("برنامج.exe" if os.name == "nt" else "برنامج")
-            assembly = work / "برنامج.s"
+            assembly = work / "برنامج.نظم"
             source.write_text(
                 '#تضمين "baalib.baahd"\n'
                 "صحيح الرئيسية(صحيح عدد، نص[] معاملات) {\n"
@@ -145,8 +145,8 @@ class Utf8ValidationTests(unittest.TestCase):
             )
             self.assertEqual(assembly_proc.returncode, 0, assembly_proc.stderr)
             assembly_text = assembly.read_text(encoding="utf-8")
-            self.assertIn(".globl الرئيسية", assembly_text)
-            self.assertNotIn(".globl main", assembly_text)
+            self.assertIn(".عام الرئيسية", assembly_text)
+            self.assertNotIn(".globl", assembly_text)
             self.assertIn("الرئيسية_المستخدم", assembly_text)
 
     @unittest.skipUnless(os.name == "nt", "Windows Unicode argv regression")
@@ -187,7 +187,7 @@ class Utf8ValidationTests(unittest.TestCase):
             work = Path(temp) / "مشروع عربي مباشر"
             work.mkdir()
             source = work / "مدخل.baa"
-            output = work / "ناتج نهائي.s"
+            output = work / "ناتج نهائي.نظم"
             source.write_text(
                 "صحيح الرئيسية() { إرجع ٠. }\n",
                 encoding="utf-8",
@@ -212,7 +212,7 @@ class Utf8ValidationTests(unittest.TestCase):
             combined = f"{proc.stdout}\n{proc.stderr}"
             self.assertEqual(proc.returncode, 0, combined)
             self.assertTrue(output.is_file())
-            self.assertIn(".globl الرئيسية", output.read_text(encoding="utf-8"))
+            self.assertIn(".عام الرئيسية", output.read_text(encoding="utf-8"))
             self.assertEqual(list(work.glob(".baa_asm_*.s")), [])
 
     @unittest.skipUnless(os.name == "nt", "Windows Unicode cache-path regression")
@@ -230,6 +230,7 @@ class Utf8ValidationTests(unittest.TestCase):
             (work / "بناء").mkdir()
             command = [
                 str(self.baa),
+                "--assembler=gas",
                 "--incremental",
                 "--cache-dir",
                 str(cache.relative_to(work)),

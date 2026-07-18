@@ -14,8 +14,16 @@ jobs:
   release-windows:
     runs-on: windows-latest
     timeout-minutes: 45
+    env:
+      BAA_NAZM: ${{ github.workspace }}\Nazm\build-release\nazm.exe
+      NAZM: ${{ github.workspace }}\Nazm\build-release\nazm.exe
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: OmarAglan/Nazm
+          ref: 7be5799f88bf70da781499dd35ccc4c4eda12e6f
+          path: Nazm
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
@@ -26,9 +34,13 @@ jobs:
             "$env:GITHUB_WORKSPACE\gcc\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
           }
       - name: Configure strict Windows C reference build
-        run: cmake --preset windows-verify
+        run: |
+          cmake --preset windows-verify
+          cmake -S Nazm -B Nazm/build-release -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release
       - name: Clean strict Windows build
-        run: cmake --build --preset windows-verify --clean-first
+        run: |
+          cmake --build --preset windows-verify --clean-first
+          cmake --build Nazm/build-release --clean-first
       - name: Windows quick QA
         env:
           PYTHONUTF8: "1"
@@ -62,15 +74,27 @@ jobs:
   release-linux:
     runs-on: ubuntu-latest
     timeout-minutes: 45
+    env:
+      BAA_NAZM: ${{ github.workspace }}/Nazm/build-release/nazm
+      NAZM: ${{ github.workspace }}/Nazm/build-release/nazm
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: OmarAglan/Nazm
+          ref: 7be5799f88bf70da781499dd35ccc4c4eda12e6f
+          path: Nazm
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
       - name: Configure strict Linux C reference build
-        run: cmake --preset linux-verify
+        run: |
+          cmake --preset linux-verify
+          cmake -S Nazm -B Nazm/build-release -DCMAKE_BUILD_TYPE=Release
       - name: Clean strict Linux build
-        run: cmake --build --preset linux-verify --clean-first -j
+        run: |
+          cmake --build --preset linux-verify --clean-first -j
+          cmake --build Nazm/build-release --clean-first -j
       - name: Linux quick QA
         env:
           PYTHONUTF8: "1"

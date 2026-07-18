@@ -301,6 +301,7 @@ def _compile_target(compiler: Path, target: str, sources: list[Path], directory:
                 *flags,
                 f"--target={target}",
                 "-S",
+                "--assembler=gas",
                 str(source),
                 "-o",
                 str(output),

@@ -141,6 +141,13 @@ def _inspect_object(path: Path) -> tuple[set[str], set[str], int]:
     return _inspect_coff_object(data)
 
 
+def _elf_object_type(path: Path) -> int:
+    data = path.read_bytes()
+    if len(data) < 18 or data[:6] != b"\x7fELF\x02\x01":
+        raise ValueError("not a little-endian ELF64 file")
+    return struct.unpack_from("<H", data, 16)[0]
+
+
 def _debug_sections(sections: set[str]) -> set[str]:
     return {
         section
@@ -1248,6 +1255,122 @@ class NazmEmitterTests(unittest.TestCase):
             self.assertEqual(shadow_run.returncode, production_run.returncode)
             self.assertEqual(shadow_run.stdout, production_run.stdout)
             self.assertEqual(shadow_run.stderr, production_run.stderr)
+
+    @unittest.skipIf(os.name == "nt", "PIC/PIE is an ELF/Linux contract")
+    def test_linux_pic_objects_and_pie_runtime_match_gas(self) -> None:
+        nazm = _find_nazm()
+        if nazm is None:
+            self.skipTest("Nazm executable is unavailable in this checkout")
+
+        with tempfile.TemporaryDirectory(prefix="baa_nazm_pic_pie_") as temp:
+            work = Path(temp)
+            source = work / "موضعية-البيانات.باء"
+            source.write_text(
+                "منطقي راية = خطأ.\n"
+                "نص قيمة = \"\".\n"
+                "صحيح الرئيسية() {\n"
+                "    قيمة = نسخ_نص(\"نظم موضعي\").\n"
+                "    راية = صواب.\n"
+                "    إذا (!راية) { حرر_نص(قيمة). إرجع ١. }\n"
+                "    اطبع قيمة.\n"
+                "    حرر_نص(قيمة).\n"
+                "    إرجع ٠.\n"
+                "}\n",
+                encoding="utf-8",
+            )
+
+            for flag in ("-fPIC", "-fPIE"):
+                with self.subTest(flag=flag):
+                    nazm_object = work / f"نظم-{flag[2:]}.o"
+                    nazm_compile = self.run_baa(
+                        work,
+                        "-c",
+                        flag,
+                        f"--nazm-path={nazm}",
+                        str(source),
+                        "-o",
+                        str(nazm_object),
+                    )
+                    self.assertEqual(
+                        nazm_compile.returncode, 0, nazm_compile.stderr
+                    )
+
+                    gas_object = work / f"غاز-{flag[2:]}.o"
+                    gas_compile = self.run_baa(
+                        work,
+                        "-c",
+                        flag,
+                        "--assembler=gas",
+                        str(source),
+                        "-o",
+                        str(gas_object),
+                    )
+                    self.assertEqual(
+                        gas_compile.returncode, 0, gas_compile.stderr
+                    )
+
+                    sections, symbols, relocations = _inspect_object(
+                        nazm_object
+                    )
+                    (
+                        gas_sections,
+                        gas_symbols,
+                        gas_relocations,
+                    ) = _inspect_object(gas_object)
+                    self.assertTrue(
+                        {".text", ".bss", ".rodata"}.issubset(sections)
+                    )
+                    self.assertIn("الرئيسية", symbols)
+                    self.assertNotIn("main", symbols)
+                    self.assertTrue(
+                        _non_debug_sections(sections).issubset(
+                            _non_debug_sections(gas_sections)
+                        )
+                    )
+                    self.assertEqual(symbols, gas_symbols)
+                    self.assertGreaterEqual(relocations, 3)
+                    self.assertGreaterEqual(gas_relocations, 3)
+
+            nazm_executable = work / "برنامج-نظم-موضعي"
+            nazm_link = self.run_baa(
+                work,
+                "-fPIE",
+                f"--nazm-path={nazm}",
+                str(source),
+                "-o",
+                str(nazm_executable),
+            )
+            self.assertEqual(nazm_link.returncode, 0, nazm_link.stderr)
+
+            gas_executable = work / "برنامج-غاز-موضعي"
+            gas_link = self.run_baa(
+                work,
+                "-fPIE",
+                "--assembler=gas",
+                str(source),
+                "-o",
+                str(gas_executable),
+            )
+            self.assertEqual(gas_link.returncode, 0, gas_link.stderr)
+            self.assertEqual(_elf_object_type(nazm_executable), 3)
+            self.assertEqual(_elf_object_type(gas_executable), 3)
+
+            nazm_run = subprocess.run(
+                [str(nazm_executable)],
+                stdin=subprocess.DEVNULL,
+                capture_output=True,
+                timeout=30,
+            )
+            gas_run = subprocess.run(
+                [str(gas_executable)],
+                stdin=subprocess.DEVNULL,
+                capture_output=True,
+                timeout=30,
+            )
+            self.assertEqual(nazm_run.returncode, 0, nazm_run.stderr)
+            self.assertEqual(nazm_run.returncode, gas_run.returncode)
+            self.assertEqual(nazm_run.stdout, gas_run.stdout)
+            self.assertEqual(nazm_run.stderr, gas_run.stderr)
 
     def test_structured_arch_operations_emit_canonical_arabic(self) -> None:
         with tempfile.TemporaryDirectory(prefix="baa_nazm_arch_ops_") as temp:

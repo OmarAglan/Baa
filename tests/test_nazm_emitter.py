@@ -1318,7 +1318,7 @@ class NazmEmitterTests(unittest.TestCase):
                         gas_relocations,
                     ) = _inspect_object(gas_object)
                     self.assertTrue(
-                        {".text", ".bss", ".rodata"}.issubset(sections)
+                        {".text", ".data", ".rodata"}.issubset(sections)
                     )
                     self.assertIn("الرئيسية", symbols)
                     self.assertNotIn("main", symbols)

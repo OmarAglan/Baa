@@ -20,13 +20,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
     preserve their real 8/16/32/64-bit width instead of corrupting adjacent
     pointers under ASLR, and Nazm lowering now supports ABI-correct tail jumps.
   - Pinned standard Baa and Takween workflows to exact Nazm/Baa revisions.
-    Baa CI run `29679921655`, exact admission run `29680127124`, Nazm CI run
-    `29637594387`, and Takween smoke run `29681669191` are terminal green on
+    Nazm CI run `29685356936`, Baa CI run `29685512987`, exact admission run
+    `29687846586`, and Takween smoke run `29689709002` are terminal green on
     their Windows/Linux matrices.
   - Added a focused Linux producer gate for default-Nazm `-fPIC`/`-fPIE`
     objects and `ET_DYN` link/runtime parity against the explicit GAS rollback.
-  - Approved `baa-nazm-production-admission-v1` for Baa `9efbcc4...`, Nazm
-    `7be5799...`, and Takween `bc2eccc...`; quick/full/stress/release report
+  - Approved `baa-nazm-production-admission-v1` for Baa `661edd9...`, Nazm
+    `7236491...`, and Takween `da8378e...`; quick/full/stress/release report
     27/27, 44/44, 74/74, and 75/75 on both admission hosts.
 
 - **No-copy Windows artifact pipeline**:
@@ -43,6 +43,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
   - Centralized UTF-8 full-path resolution through wide Windows APIs so Arabic
     source/dependency paths and source-derived logical object identities remain
     valid, deterministic UTF-8 in build manifests.
+  - Extended Baa and Nazm filesystem operations past the legacy 260-character
+    Windows limit. The hosted gate now compiles and runs both default Nazm and
+    explicit GAS from a spaced Arabic long path, checks assemble/link phase
+    timings, and proves that no staging or temporary artifact survives.
 
 - **100-source normal Nazm assembler gate**:
   - Extended the complete host corpus beyond comparison-only shadow builds:

@@ -1832,8 +1832,10 @@
   copy-in/copy-out helpers, and redundant cleanup once direct mode is the admitted
   Windows path. Temporary artifact and linker-response names include the process
   identity to eliminate cross-process collisions.
-* \[ ] **Ecosystem gates** — pass Arabic-path, spaces, long-path, multi-file,
-  incremental-cache, Takween, Windows/Linux, phase-timing, and determinism suites.
+* \[x] **Ecosystem gates** — Arabic-path, spaces, a Windows path beyond 260
+  UTF-16 units, multi-file, concurrent-build, phase-timing, and determinism
+  coverage passes in Baa CI `29685512987` and exact admission `29687846586`;
+  Takween cache/build/run/clean/test passes on Windows/Linux in `29689709002`.
 
   **Ordering:** complete the current Nazm production-admission gate first, then
   land this direct artifact pipeline before Takween 0.4's content-addressed cache
@@ -1901,7 +1903,7 @@
 
 * \[x] **Full gate** — quick, full, stress, determinism, release, and cross-target suites pass through Nazm.
   * \[x] **Windows release receipt** — the complete 75-step release orchestrator passes with the 100-source normal/shadow gate and deterministic Nazm source/object/manifest receipt enabled.
-  * \[x] **Linux release receipt** — exact Baa `9efbcc4...` and Nazm `7be5799...` pass 75/75 release steps on hosted Linux in admission run `29680127124`.
+  * \[x] **Linux release receipt** — exact Baa `661edd9...` and Nazm `7236491...` pass 75/75 release steps on hosted Linux in admission run `29687846586`.
   * \[x] **Exact-revision hosted ladder** — the read-only `Baa Nazm Production Admission` workflow requires and verifies full Baa and Nazm commit SHAs, builds both projects, runs quick/full/stress/release on Windows/Linux with explicit `BAA`/`NAZM` bindings, and retains revision plus QA receipts.
 * \[x] **Linker acceptance** — real Windows and Linux linkers accept produced objects.
 * \[x] **Normal assembler selection** — `--assembler=nazm` resolves the executable from `--nazm-path`, `BAA_NAZM`, or the primary Arabic `نظم` command on `PATH`, emits/assembles canonical Arabic source directly to the selected object, and passes it to the normal linker; `--assembler=gas` remains the explicit measured migration rollback with no silent fallback.
@@ -1910,7 +1912,7 @@
 * \[x] **Mixed Baa/Nazm roots** — direct `.نظم` roots bypass Baa parsing, assemble through the same resolved Nazm CLI, record per-unit source/assembler receipts, and join `.baa` objects in one hosted Arabic-ABI link; source/tool failures remain distinct and never fall back to GAS.
 * \[x] **Default-on readiness** — approved parity report and rollback procedure exist; Nazm is the production default and GAS is the explicit rollback.
   * \[x] **Automated production admission** — exact candidate revisions pass quick/full/stress/release on Windows and Linux with 27/27, 44/44, 74/74, and 75/75 receipts respectively.
-  * \[x] **Decision record approved** — `docs/NAZM_PRODUCTION_ADMISSION.md` records Baa `9efbcc4...`, Nazm `7be5799...`, Takween `bc2eccc...`, terminal runs `29679921655`, `29680127124`, `29681669191`, the explicit GAS rollback drill, and all three owner approvals.
+  * \[x] **Decision record approved** — `docs/NAZM_PRODUCTION_ADMISSION.md` records Baa `661edd9...`, Nazm `7236491...`, Takween `da8378e...`, terminal runs `29685356936`, `29685512987`, `29687846586`, `29689709002`, the explicit GAS rollback drill, and all three owner approvals.
   * \[x] **Default cutover** — omitted assembler selection now chooses Nazm; `--assembler=gas` is the only normal rollback, and failures never trigger it automatically.
 * \[ ] **In-process equivalence** — CLI and future buffer API produce equivalent object semantics before embedding becomes default.
 

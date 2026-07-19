@@ -44,7 +44,7 @@ The Windows gate covers:
 - Arabic object input while linking;
 - Arabic executable output;
 - Arabic paths containing spaces;
-- real paths at least 220 UTF-16 code units long;
+- real paths beyond the legacy 260 UTF-16-unit limit;
 - multiple objects;
 - a UTF-8 response file containing `الرئيسية_بدء`;
 - successful link and runtime behavior.
@@ -84,5 +84,10 @@ A future bundled GCC/assembler/linker may pass Unicode paths natively. That
 capability must be proven by the same matrix before bypassing the alias adapter.
 Nazm owns its Unicode-aware object output path independently and is the
 production assembler default after the separate admission gate completed.
+Both Baa and Nazm normalize Windows filesystem operations to absolute extended
+paths when required. The hosted gate builds and runs through default Nazm and
+explicit GAS under a spaced Arabic path beyond 260 UTF-16 units, checks positive
+assemble/link phase timings, and verifies that no staging tree or temporary
+artifact remains.
 The short-name adapter remains relevant only to the explicit GAS rollback and
 the external linker/runtime inputs that still require it.

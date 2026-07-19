@@ -14,9 +14,9 @@ approved Baa revision rather than a later unverified commit.
 
 | Component | Exact revision | Role |
 |---|---|---|
-| Baa | `9efbcc417a7a67bfb6928921f2257a872c25160a` | C reference compiler, Nazm-default driver, canonical Arabic emitter, runtime, PIC/PIE parity gate |
-| Nazm | `7be5799f88bf70da781499dd35ccc4c4eda12e6f` | Arabic parser, encoder, ELF64/COFF object writers |
-| Takween | `bc2eccc7b126adbfaa6cb472d61daf4607c6c59a` | Nazm-default ecosystem build/run/test consumer pinned to the exact Baa candidate |
+| Baa | `661edd9b05ecdda7fca75905263dc7dfa365693b` | C reference compiler, Nazm-default driver, canonical Arabic emitter, runtime, direct long-Unicode artifact pipeline, PIC/PIE parity gate |
+| Nazm | `7236491528567832d25eb0908cec9eac39831779` | Arabic parser, encoder, long-Unicode file I/O, ELF64/COFF object writers |
+| Takween | `da8378e097ef0f98acd19bfc76da7acf445547af` | Nazm-default ecosystem build/run/test consumer pinned to the exact Baa/Nazm candidates |
 
 Any behavior change in the emitter, assembler, object writer, startup bridge,
 link path, manifest, or parity tests creates a new candidate revision set.
@@ -86,17 +86,18 @@ deterministic against itself.
 
 | Gate | Result | Evidence |
 |---|---:|---|
-| Nazm exact-revision repository CI | PASS | Run [`29637594387`](https://github.com/OmarAglan/Nazm/actions/runs/29637594387): Release build, full CTest/direct path, Arabic ELF link/run |
-| Baa exact-revision repository CI | PASS | Run [`29679921655`](https://github.com/OmarAglan/Baa/actions/runs/29679921655): all eight Windows/Linux build, quick/full, and normal/shadow jobs |
-| Baa 100-source normal/shadow/runtime parity | PASS | `nazm-shadow-windows` and `nazm-shadow-linux` in run `29679921655`; every selected-Nazm runnable matches GAS |
-| Linux PIC/PIE producer contract | PASS | Run `29679921655` compiles global/string/runtime-call objects through default Nazm under `-fPIC` and `-fPIE`, compares normalized sections/symbols/relocation presence with GAS, links an `ET_DYN` executable, and matches runtime behavior |
-| Hosted quick | PASS | 27/27 on Windows and 27/27 on Linux in run [`29680127124`](https://github.com/OmarAglan/Baa/actions/runs/29680127124) |
-| Hosted full | PASS | 44/44 on Windows and 44/44 on Linux in run `29680127124` |
-| Hosted stress | PASS | 74/74 on Windows and 74/74 on Linux in run `29680127124` |
-| Hosted release + determinism | PASS | 75/75 on Windows and 75/75 on Linux in run `29680127124` |
-| Exact revision artifacts | PASS | `baa-nazm-admission-revisions-v1` records Baa `9efbcc4...` and Nazm `7be5799...` for both hosts; all eight QA summaries report zero failures |
+| Nazm exact-revision repository CI | PASS | Run [`29685356936`](https://github.com/OmarAglan/Nazm/actions/runs/29685356936): strict Release build, full CTest/direct path, Arabic ELF link/run, and long-Unicode Windows I/O |
+| Baa exact-revision repository CI | PASS | Run [`29685512987`](https://github.com/OmarAglan/Baa/actions/runs/29685512987): all eight Windows/Linux build, quick/full, and normal/shadow jobs |
+| Baa 100-source normal/shadow/runtime parity | PASS | `nazm-shadow-windows` and `nazm-shadow-linux` in run `29685512987`; every selected-Nazm runnable matches GAS |
+| Direct Unicode artifact pipeline | PASS | Run `29685512987` covers Arabic paths, spaces, a Windows path beyond 260 UTF-16 units, multi-file and concurrent builds, phase timings, determinism, direct default-Nazm objects, and the explicit GAS rollback without `baa_stage` or artifact copies |
+| Linux PIC/PIE producer contract | PASS | Run `29685512987` compiles global/string/runtime-call objects through default Nazm under `-fPIC` and `-fPIE`, compares normalized sections/symbols/relocation presence with GAS, links an `ET_DYN` executable, and matches runtime behavior |
+| Hosted quick | PASS | 27/27 on Windows and 27/27 on Linux in run [`29687846586`](https://github.com/OmarAglan/Baa/actions/runs/29687846586) |
+| Hosted full | PASS | 44/44 on Windows and 44/44 on Linux in run `29687846586` |
+| Hosted stress | PASS | 74/74 on Windows and 74/74 on Linux in run `29687846586` |
+| Hosted release + determinism | PASS | 75/75 on Windows and 75/75 on Linux in run `29687846586` |
+| Exact revision artifacts | PASS | `baa-nazm-admission-revisions-v1` records Baa `661edd9...` and Nazm `7236491...` for both hosts; all eight QA summaries report zero failures |
 | Explicit GAS rollback drill | PASS | Exact Baa candidate returns `4` and creates no object for a missing selected Nazm; a separate `--assembler=gas` invocation succeeds and records `assembler: gas` for the build and unit |
-| Takween ecosystem smoke | PASS | Run [`29681669191`](https://github.com/OmarAglan/Takween/actions/runs/29681669191): exact Baa `9efbcc4...`, Nazm `7be5799...`, and Takween `bc2eccc...` pass build/run/clean/test, mixed `.baa`/`.نظم`, packages, plans, cache, and manifests on Windows/Linux |
+| Takween ecosystem smoke | PASS | Run [`29689709002`](https://github.com/OmarAglan/Takween/actions/runs/29689709002): exact Baa `661edd9...`, Nazm `7236491...`, and Takween `da8378e...` pass build/run/clean/test, mixed `.baa`/`.نظم`, packages, plans, cache, and manifests on Windows/Linux |
 
 The hosted ladder used GitHub-hosted `windows-latest` and `ubuntu-latest`.
 Windows configured Baa and Nazm with MinGW Makefiles; Linux used the native
@@ -165,9 +166,9 @@ Every item must be complete:
 
 | Owner | Decision | Revision/date |
 |---|---|---|
-| Baa compiler | approved | `9efbcc417a7a67bfb6928921f2257a872c25160a`, 2026-07-19 |
-| Nazm assembler | approved | `7be5799f88bf70da781499dd35ccc4c4eda12e6f`, 2026-07-18 |
-| Takween consumer | approved | `bc2eccc7b126adbfaa6cb472d61daf4607c6c59a`, 2026-07-19 |
+| Baa compiler | approved | `661edd9b05ecdda7fca75905263dc7dfa365693b`, 2026-07-19 |
+| Nazm assembler | approved | `7236491528567832d25eb0908cec9eac39831779`, 2026-07-19 |
+| Takween consumer | approved | `da8378e097ef0f98acd19bfc76da7acf445547af`, 2026-07-19 |
 
 The ecosystem owner approved all three roles against this exact candidate set
 after the hosted runs reached terminal success.

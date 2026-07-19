@@ -20,10 +20,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
     preserve their real 8/16/32/64-bit width instead of corrupting adjacent
     pointers under ASLR, and Nazm lowering now supports ABI-correct tail jumps.
   - Pinned standard Baa and Takween workflows to exact Nazm/Baa revisions.
-    Baa CI run `29648252057`, exact admission run `29648276376`, Nazm CI run
+    Baa CI run `29679921655`, exact admission run `29680127124`, Nazm CI run
     `29637594387`, and Takween smoke run `29648265475` are terminal green on
     their Windows/Linux matrices.
-  - Approved `baa-nazm-production-admission-v1` for Baa `5d3f00c...`, Nazm
+  - Added a focused Linux producer gate for default-Nazm `-fPIC`/`-fPIE`
+    objects and `ET_DYN` link/runtime parity against the explicit GAS rollback.
+  - Approved `baa-nazm-production-admission-v1` for Baa `9efbcc4...`, Nazm
     `7be5799...`, and Takween `4fe634f...`; quick/full/stress/release report
     27/27, 44/44, 74/74, and 75/75 on both admission hosts.
 

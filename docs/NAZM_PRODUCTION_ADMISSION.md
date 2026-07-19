@@ -2,7 +2,7 @@
 
 > **Version:** 1.0
 > **Receipt:** `baa-nazm-production-admission-v1`
-> **Updated:** 2026-07-18
+> **Updated:** 2026-07-19
 > **Decision:** APPROVED — Nazm is the production default; GAS is the explicit rollback.
 
 This document is the decision record for moving Nazm into Baa's normal
@@ -14,7 +14,7 @@ approved Baa revision rather than a later unverified commit.
 
 | Component | Exact revision | Role |
 |---|---|---|
-| Baa | `5d3f00cb94b653afb213f66947a8a439051e18bd` | C reference compiler, Nazm-default driver, canonical Arabic emitter, runtime |
+| Baa | `9efbcc417a7a67bfb6928921f2257a872c25160a` | C reference compiler, Nazm-default driver, canonical Arabic emitter, runtime, PIC/PIE parity gate |
 | Nazm | `7be5799f88bf70da781499dd35ccc4c4eda12e6f` | Arabic parser, encoder, ELF64/COFF object writers |
 | Takween | `4fe634f92abf9658a21b6ce5bf80b91e08958877` | Nazm-default ecosystem build/run/test consumer |
 
@@ -87,13 +87,14 @@ deterministic against itself.
 | Gate | Result | Evidence |
 |---|---:|---|
 | Nazm exact-revision repository CI | PASS | Run [`29637594387`](https://github.com/OmarAglan/Nazm/actions/runs/29637594387): Release build, full CTest/direct path, Arabic ELF link/run |
-| Baa exact-revision repository CI | PASS | Run [`29648252057`](https://github.com/OmarAglan/Baa/actions/runs/29648252057): all eight Windows/Linux build, quick/full, and normal/shadow jobs |
-| Baa 100-source normal/shadow/runtime parity | PASS | `nazm-shadow-windows` and `nazm-shadow-linux` in run `29648252057`; every selected-Nazm runnable matches GAS |
-| Hosted quick | PASS | 27/27 on Windows and 27/27 on Linux in run [`29648276376`](https://github.com/OmarAglan/Baa/actions/runs/29648276376) |
-| Hosted full | PASS | 44/44 on Windows and 44/44 on Linux in run `29648276376` |
-| Hosted stress | PASS | 74/74 on Windows and 74/74 on Linux in run `29648276376` |
-| Hosted release + determinism | PASS | 75/75 on Windows and 75/75 on Linux in run `29648276376` |
-| Exact revision artifacts | PASS | `baa-nazm-admission-revisions-v1` records Baa `5d3f00c...` and Nazm `7be5799...` for both hosts; all eight QA summaries report zero failures |
+| Baa exact-revision repository CI | PASS | Run [`29679921655`](https://github.com/OmarAglan/Baa/actions/runs/29679921655): all eight Windows/Linux build, quick/full, and normal/shadow jobs |
+| Baa 100-source normal/shadow/runtime parity | PASS | `nazm-shadow-windows` and `nazm-shadow-linux` in run `29679921655`; every selected-Nazm runnable matches GAS |
+| Linux PIC/PIE producer contract | PASS | Run `29679921655` compiles global/string/runtime-call objects through default Nazm under `-fPIC` and `-fPIE`, compares normalized sections/symbols/relocation presence with GAS, links an `ET_DYN` executable, and matches runtime behavior |
+| Hosted quick | PASS | 27/27 on Windows and 27/27 on Linux in run [`29680127124`](https://github.com/OmarAglan/Baa/actions/runs/29680127124) |
+| Hosted full | PASS | 44/44 on Windows and 44/44 on Linux in run `29680127124` |
+| Hosted stress | PASS | 74/74 on Windows and 74/74 on Linux in run `29680127124` |
+| Hosted release + determinism | PASS | 75/75 on Windows and 75/75 on Linux in run `29680127124` |
+| Exact revision artifacts | PASS | `baa-nazm-admission-revisions-v1` records Baa `9efbcc4...` and Nazm `7be5799...` for both hosts; all eight QA summaries report zero failures |
 | Explicit GAS rollback drill | PASS | Exact Baa candidate returns `4` and creates no object for a missing selected Nazm; a separate `--assembler=gas` invocation succeeds and records `assembler: gas` for the build and unit |
 | Takween ecosystem smoke | PASS | Run [`29648265475`](https://github.com/OmarAglan/Takween/actions/runs/29648265475): exact Baa/Nazm/Takween revisions pass build/run/clean/test, mixed `.baa`/`.نظم`, packages, plans, cache, and manifests on Windows/Linux |
 
@@ -108,8 +109,9 @@ and per-mode logs.
 The following work is not silently included in this candidate:
 
 - stack-protector lowering through Nazm;
-- GOT/PLT or additional base-index-scale PIC/PIE forms not emitted by the
-  current checked corpus;
+- GOT/PLT or additional base-index-scale forms not emitted by the current
+  checked corpus; producer-required direct-symbol `-fPIC`/`-fPIE` references
+  are admitted;
 - cross-target executable linking;
 - the future in-process `nazm_assemble_buffer()` boundary;
 - changing Baa's reference implementation away from C;
@@ -163,7 +165,7 @@ Every item must be complete:
 
 | Owner | Decision | Revision/date |
 |---|---|---|
-| Baa compiler | approved | `5d3f00cb94b653afb213f66947a8a439051e18bd`, 2026-07-18 |
+| Baa compiler | approved | `9efbcc417a7a67bfb6928921f2257a872c25160a`, 2026-07-19 |
 | Nazm assembler | approved | `7be5799f88bf70da781499dd35ccc4c4eda12e6f`, 2026-07-18 |
 | Takween consumer | approved | `4fe634f92abf9658a21b6ce5bf80b91e08958877`, 2026-07-18 |
 

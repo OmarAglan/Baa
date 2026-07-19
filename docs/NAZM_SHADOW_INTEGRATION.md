@@ -1,8 +1,10 @@
 # Nazm Shadow Integration
 
-This document records the evidence and admission rules for
-`baa-nazm-boundary-v0`. Production Baa still emits AT&T/GAS assembly and uses
-the host toolchain. Nazm is not a default or fallback assembler.
+This document records the evidence and admission rules that began with
+`baa-nazm-boundary-v0` and now govern the production boundary. Baa emits
+canonical Arabic Nazm source and selects Nazm by default. GAS remains an
+explicit measured rollback and comparison leg; it is never a fallback for a
+failed Nazm invocation.
 
 ## Stage B inventory
 
@@ -310,8 +312,12 @@ and routes the UTF-8 entry spelling through a linker-owned response file so GNU
 `ld` consumes the symbol bytes directly. Raw relocation counts are not compared
 across the full corpus because Nazm resolves same-object references that GAS may
 leave to the linker; focused fixtures verify relocation kinds, while successful
-linking and identical runtime behavior prove required external relocations. The
-remaining production-admission work is additional PIC/base-index memory forms
-when the producer requires them, stack-protector lowering, and the complete
-hosted quick/full/stress/determinism/release gate set. GAS therefore remains
-the default assembler.
+linking and identical runtime behavior prove required external relocations.
+Producer-required Linux references are also compiled under both `-fPIC` and
+`-fPIE`; the focused gate compares initialized/read-only sections, public
+symbols, and relocation presence, then proves that the default Nazm path links
+an `ET_DYN` executable with GAS-equivalent runtime behavior. Future GOT/PLT or
+base-index-scale forms remain conditional on Baa actually emitting them, and
+stack-protector lowering remains a visible unsupported mode. The hosted
+quick/full/stress/determinism/release ladder is green and Nazm is the production
+default.

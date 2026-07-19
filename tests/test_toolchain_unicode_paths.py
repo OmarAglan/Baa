@@ -5,6 +5,7 @@ from __future__ import annotations
 import ctypes
 import json
 import os
+import re
 import shutil
 import subprocess
 import tempfile
@@ -305,6 +306,84 @@ class ToolchainUnicodePathTests(unittest.TestCase):
                     self.assertEqual(Path(unit["output"]).name, f"{source.stem}.o")
                     self.assertNotIn(".baa_", unit["output"])
 
+            self.assertEqual(list(work.glob("*.baa_*")), [])
+
+    def test_phase_timings_cover_direct_assemble_and_link(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="baa_unicode_timing_") as temp:
+            work = _make_long_unicode_directory(Path(temp))
+            source = work / "مدخل قياس مباشر مع مسافات.baa"
+            executable = work / "برنامج قياس مباشر مع مسافات.exe"
+            source.write_text(
+                "صحيح الرئيسية() { إرجع ٠. }\n",
+                encoding="utf-8",
+            )
+            expected = {
+                "read",
+                "parse",
+                "analyze",
+                "lower",
+                "isel",
+                "regalloc",
+                "emit",
+                "assemble",
+                "link",
+                "total",
+            }
+            for assembler, selector in (
+                ("nazm", []),
+                ("gas", ["--assembler=gas"]),
+            ):
+                with self.subTest(assembler=assembler):
+                    selected_output = executable.with_stem(
+                        f"{executable.stem}-{assembler}"
+                    )
+                    proc = self.run_checked(
+                        [
+                            str(self.baa),
+                            "--time-phases",
+                            *selector,
+                            source.name,
+                            "-o",
+                            selected_output.name,
+                        ],
+                        cwd=work,
+                        timeout=60,
+                    )
+                    timing_line = next(
+                        (
+                            line
+                            for line in proc.stderr.splitlines()
+                            if line.startswith("[TIME] ")
+                        ),
+                        "",
+                    )
+                    self.assertTrue(timing_line, proc.stderr)
+                    values = {
+                        name: float(value)
+                        for name, value in re.findall(
+                            r"([a-z_]+)=([0-9]+\.[0-9]+)",
+                            timing_line,
+                        )
+                    }
+                    self.assertTrue(expected.issubset(values), timing_line)
+                    self.assertTrue(
+                        all(values[name] >= 0.0 for name in expected)
+                    )
+                    self.assertGreater(values["assemble"], 0.0)
+                    self.assertGreater(values["link"], 0.0)
+                    self.assertGreaterEqual(
+                        values["total"] + 0.001,
+                        values["assemble"] + values["link"],
+                    )
+                    self.assertGreater(selected_output.stat().st_size, 0)
+                    run = subprocess.run(
+                        [str(selected_output)],
+                        cwd=str(work),
+                        capture_output=True,
+                        timeout=20,
+                    )
+                    self.assertEqual(run.returncode, 0, run.stderr)
+            self.assertFalse((work / "baa_stage").exists())
             self.assertEqual(list(work.glob("*.baa_*")), [])
 
 

@@ -5,12 +5,14 @@
 
 #include "file_io.h"
 
+#include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
 
 #ifdef _WIN32
 #include <direct.h>
 #include <windows.h>
+#include <wchar.h>
 
 static wchar_t* file_io_utf8_to_wide(const char* value)
 {
@@ -62,6 +64,73 @@ static char* file_io_wide_to_utf8(const wchar_t* value)
     }
     return utf8;
 }
+
+static wchar_t* file_io_absolute_wide_utf8(const char* path)
+{
+    wchar_t* path_w = file_io_utf8_to_wide(path);
+    if (!path_w) return NULL;
+
+    if (wcsncmp(path_w, L"\\\\?\\", 4) == 0 ||
+        wcsncmp(path_w, L"\\\\.\\", 4) == 0)
+        return path_w;
+
+    DWORD needed = GetFullPathNameW(path_w, 0, NULL, NULL);
+    if (needed == 0)
+    {
+        free(path_w);
+        return NULL;
+    }
+
+    wchar_t* absolute =
+        (wchar_t*)calloc((size_t)needed + 1u, sizeof(wchar_t));
+    if (!absolute)
+    {
+        free(path_w);
+        return NULL;
+    }
+
+    DWORD written = GetFullPathNameW(path_w, needed, absolute, NULL);
+    free(path_w);
+    if (written == 0 || written >= needed)
+    {
+        free(absolute);
+        return NULL;
+    }
+    for (wchar_t* cursor = absolute; *cursor; ++cursor)
+    {
+        if (*cursor == L'/') *cursor = L'\\';
+    }
+    return absolute;
+}
+
+wchar_t* baa_windows_extended_path_utf8(const char* path)
+{
+    if (!path || !path[0]) return NULL;
+    wchar_t* absolute = file_io_absolute_wide_utf8(path);
+    if (!absolute) return NULL;
+    if (wcsncmp(absolute, L"\\\\?\\", 4) == 0 ||
+        wcsncmp(absolute, L"\\\\.\\", 4) == 0)
+        return absolute;
+
+    bool unc = absolute[0] == L'\\' && absolute[1] == L'\\';
+    const wchar_t* prefix = unc ? L"\\\\?\\UNC\\" : L"\\\\?\\";
+    const wchar_t* suffix = unc ? absolute + 2 : absolute;
+    size_t prefix_len = wcslen(prefix);
+    size_t suffix_len = wcslen(suffix);
+    wchar_t* extended = (wchar_t*)malloc(
+        (prefix_len + suffix_len + 1u) * sizeof(wchar_t));
+    if (!extended)
+    {
+        free(absolute);
+        return NULL;
+    }
+    memcpy(extended, prefix, prefix_len * sizeof(wchar_t));
+    memcpy(extended + prefix_len,
+           suffix,
+           (suffix_len + 1u) * sizeof(wchar_t));
+    free(absolute);
+    return extended;
+}
 #else
 #include <limits.h>
 #include <sys/stat.h>
@@ -76,7 +145,7 @@ FILE* baa_fopen_utf8(const char* path, const char* mode)
     if (!path || !mode) return NULL;
 
 #ifdef _WIN32
-    wchar_t* path_w = file_io_utf8_to_wide(path);
+    wchar_t* path_w = baa_windows_extended_path_utf8(path);
     wchar_t* mode_w = file_io_utf8_to_wide(mode);
     if (!path_w || !mode_w)
     {
@@ -99,7 +168,7 @@ int baa_mkdir_utf8(const char* path)
     if (!path) return -1;
 
 #ifdef _WIN32
-    wchar_t* path_w = file_io_utf8_to_wide(path);
+    wchar_t* path_w = baa_windows_extended_path_utf8(path);
     if (!path_w) return -1;
     int result = _wmkdir(path_w);
     free(path_w);
@@ -114,16 +183,36 @@ char* baa_fullpath_utf8(const char* path)
     if (!path || !path[0]) return NULL;
 
 #ifdef _WIN32
-    wchar_t* path_w = file_io_utf8_to_wide(path);
-    if (!path_w) return NULL;
+    wchar_t* resolved = file_io_absolute_wide_utf8(path);
+    if (!resolved) return NULL;
 
-    wchar_t resolved_w[32768];
-    wchar_t* resolved = _wfullpath(
-        resolved_w,
-        path_w,
-        sizeof(resolved_w) / sizeof(resolved_w[0]));
-    free(path_w);
-    return resolved ? file_io_wide_to_utf8(resolved) : NULL;
+    const wchar_t* canonical = resolved;
+    wchar_t* unc = NULL;
+    if (wcsncmp(resolved, L"\\\\?\\UNC\\", 8) == 0)
+    {
+        size_t suffix_len = wcslen(resolved + 8);
+        unc = (wchar_t*)malloc((suffix_len + 3u) * sizeof(wchar_t));
+        if (!unc)
+        {
+            free(resolved);
+            return NULL;
+        }
+        unc[0] = L'\\';
+        unc[1] = L'\\';
+        memcpy(unc + 2,
+               resolved + 8,
+               (suffix_len + 1u) * sizeof(wchar_t));
+        canonical = unc;
+    }
+    else if (wcsncmp(resolved, L"\\\\?\\", 4) == 0)
+    {
+        canonical = resolved + 4;
+    }
+
+    char* utf8 = file_io_wide_to_utf8(canonical);
+    free(unc);
+    free(resolved);
+    return utf8;
 #else
     char resolved[PATH_MAX];
     if (!realpath(path, resolved)) return NULL;

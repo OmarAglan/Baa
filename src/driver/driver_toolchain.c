@@ -73,29 +73,6 @@ static void runtime_library_resolve_from_exe_dir(const char* exe_dir)
 
 static unsigned long g_toolchain_file_counter = 0;
 
-static wchar_t* win_utf8_to_wide_alloc(const char* text)
-{
-    if (!text) return NULL;
-
-    int need = MultiByteToWideChar(CP_UTF8, 0, text, -1, NULL, 0);
-    UINT code_page = CP_UTF8;
-    if (need <= 0) {
-        code_page = CP_ACP;
-        need = MultiByteToWideChar(code_page, 0, text, -1, NULL, 0);
-    }
-    if (need <= 0) return NULL;
-
-    wchar_t* out = (wchar_t*)calloc((size_t)need, sizeof(wchar_t));
-    if (!out) return NULL;
-
-    if (MultiByteToWideChar(code_page, 0, text, -1, out, need) <= 0) {
-        free(out);
-        return NULL;
-    }
-
-    return out;
-}
-
 static bool win_wide_to_utf8(const wchar_t* text, char* out, size_t out_cap)
 {
     if (!text || !out || out_cap == 0) return false;
@@ -105,6 +82,31 @@ static bool win_wide_to_utf8(const wchar_t* text, char* out, size_t out_cap)
     if ((size_t)need > out_cap) return false;
 
     return WideCharToMultiByte(CP_UTF8, 0, text, -1, out, (int)out_cap, NULL, NULL) > 0;
+}
+
+static bool win_extended_wide_to_utf8(const wchar_t* text,
+                                      char* out,
+                                      size_t out_cap)
+{
+    if (!text) return false;
+    if (wcsncmp(text, L"\\\\?\\UNC\\", 8) == 0)
+    {
+        size_t suffix_len = wcslen(text + 8);
+        wchar_t* unc =
+            (wchar_t*)malloc((suffix_len + 3u) * sizeof(wchar_t));
+        if (!unc) return false;
+        unc[0] = L'\\';
+        unc[1] = L'\\';
+        memcpy(unc + 2,
+               text + 8,
+               (suffix_len + 1u) * sizeof(wchar_t));
+        bool ok = win_wide_to_utf8(unc, out, out_cap);
+        free(unc);
+        return ok;
+    }
+    if (wcsncmp(text, L"\\\\?\\", 4) == 0)
+        text += 4;
+    return win_wide_to_utf8(text, out, out_cap);
 }
 
 static bool win_utf8_is_ascii(const char* text)
@@ -181,18 +183,33 @@ static bool win_prepare_toolchain_path(const char* path,
                        strpbrk(path, " \t") != NULL;
     if (!needs_alias) return win_copy_path_text(path, out, out_cap);
 
-    wchar_t* path_w = win_utf8_to_wide_alloc(path);
+    wchar_t* path_w = baa_windows_extended_path_utf8(path);
     if (!path_w) return false;
     if (prepare_output && !win_prepare_output_file(path_w)) {
         free(path_w);
         return false;
     }
 
-    wchar_t short_w[MAX_PATH];
-    DWORD short_len = GetShortPathNameW(path_w, short_w, MAX_PATH);
+    DWORD short_need = GetShortPathNameW(path_w, NULL, 0);
+    if (short_need == 0) {
+        free(path_w);
+        return false;
+    }
+    wchar_t* short_w =
+        (wchar_t*)calloc((size_t)short_need + 1u, sizeof(wchar_t));
+    if (!short_w) {
+        free(path_w);
+        return false;
+    }
+    DWORD short_len = GetShortPathNameW(path_w, short_w, short_need);
     free(path_w);
-    if (short_len == 0 || short_len >= MAX_PATH) return false;
-    if (!win_wide_to_utf8(short_w, out, out_cap)) return false;
+    if (short_len == 0 || short_len >= short_need) {
+        free(short_w);
+        return false;
+    }
+    bool converted = win_extended_wide_to_utf8(short_w, out, out_cap);
+    free(short_w);
+    if (!converted) return false;
     return win_utf8_is_ascii(out);
 }
 
@@ -292,8 +309,8 @@ bool driver_toolchain_copy_file_utf8(const char* src_path, const char* dst_path)
     if (!src_path || !dst_path) return false;
 
 #ifdef _WIN32
-    wchar_t* src_w = win_utf8_to_wide_alloc(src_path);
-    wchar_t* dst_w = win_utf8_to_wide_alloc(dst_path);
+    wchar_t* src_w = baa_windows_extended_path_utf8(src_path);
+    wchar_t* dst_w = baa_windows_extended_path_utf8(dst_path);
     if (!src_w || !dst_w) {
         free(src_w);
         free(dst_w);
@@ -341,7 +358,7 @@ bool driver_toolchain_delete_file_utf8(const char* path)
     if (!path) return false;
 
 #ifdef _WIN32
-    wchar_t* path_w = win_utf8_to_wide_alloc(path);
+    wchar_t* path_w = baa_windows_extended_path_utf8(path);
     if (!path_w) return false;
 
     BOOL ok = DeleteFileW(path_w);

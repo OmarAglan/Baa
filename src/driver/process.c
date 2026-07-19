@@ -5,6 +5,7 @@
  */
 
 #include "process.h"
+#include "../support/file_io.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -195,7 +196,7 @@ static bool win_run_createprocess(const char* const* argv,
 
     if (inherit && stdout_path)
     {
-        stdout_w = win_utf8_to_wide_alloc(stdout_path);
+        stdout_w = baa_windows_extended_path_utf8(stdout_path);
         if (!stdout_w) {
             free(cmdline);
             free(cwd_w);
@@ -218,7 +219,7 @@ static bool win_run_createprocess(const char* const* argv,
         }
         else
         {
-            stderr_w = win_utf8_to_wide_alloc(stderr_path);
+            stderr_w = baa_windows_extended_path_utf8(stderr_path);
             if (!stderr_w) {
                 if (h_out) CloseHandle(h_out);
                 free(cmdline);

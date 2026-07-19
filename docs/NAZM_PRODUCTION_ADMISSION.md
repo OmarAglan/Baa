@@ -16,7 +16,7 @@ approved Baa revision rather than a later unverified commit.
 |---|---|---|
 | Baa | `9efbcc417a7a67bfb6928921f2257a872c25160a` | C reference compiler, Nazm-default driver, canonical Arabic emitter, runtime, PIC/PIE parity gate |
 | Nazm | `7be5799f88bf70da781499dd35ccc4c4eda12e6f` | Arabic parser, encoder, ELF64/COFF object writers |
-| Takween | `4fe634f92abf9658a21b6ce5bf80b91e08958877` | Nazm-default ecosystem build/run/test consumer |
+| Takween | `bc2eccc7b126adbfaa6cb472d61daf4607c6c59a` | Nazm-default ecosystem build/run/test consumer pinned to the exact Baa candidate |
 
 Any behavior change in the emitter, assembler, object writer, startup bridge,
 link path, manifest, or parity tests creates a new candidate revision set.
@@ -96,7 +96,7 @@ deterministic against itself.
 | Hosted release + determinism | PASS | 75/75 on Windows and 75/75 on Linux in run `29680127124` |
 | Exact revision artifacts | PASS | `baa-nazm-admission-revisions-v1` records Baa `9efbcc4...` and Nazm `7be5799...` for both hosts; all eight QA summaries report zero failures |
 | Explicit GAS rollback drill | PASS | Exact Baa candidate returns `4` and creates no object for a missing selected Nazm; a separate `--assembler=gas` invocation succeeds and records `assembler: gas` for the build and unit |
-| Takween ecosystem smoke | PASS | Run [`29648265475`](https://github.com/OmarAglan/Takween/actions/runs/29648265475): exact Baa/Nazm/Takween revisions pass build/run/clean/test, mixed `.baa`/`.نظم`, packages, plans, cache, and manifests on Windows/Linux |
+| Takween ecosystem smoke | PASS | Run [`29681669191`](https://github.com/OmarAglan/Takween/actions/runs/29681669191): exact Baa `9efbcc4...`, Nazm `7be5799...`, and Takween `bc2eccc...` pass build/run/clean/test, mixed `.baa`/`.نظم`, packages, plans, cache, and manifests on Windows/Linux |
 
 The hosted ladder used GitHub-hosted `windows-latest` and `ubuntu-latest`.
 Windows configured Baa and Nazm with MinGW Makefiles; Linux used the native
@@ -167,7 +167,7 @@ Every item must be complete:
 |---|---|---|
 | Baa compiler | approved | `9efbcc417a7a67bfb6928921f2257a872c25160a`, 2026-07-19 |
 | Nazm assembler | approved | `7be5799f88bf70da781499dd35ccc4c4eda12e6f`, 2026-07-18 |
-| Takween consumer | approved | `4fe634f92abf9658a21b6ce5bf80b91e08958877`, 2026-07-18 |
+| Takween consumer | approved | `bc2eccc7b126adbfaa6cb472d61daf4607c6c59a`, 2026-07-19 |
 
 The ecosystem owner approved all three roles against this exact candidate set
 after the hosted runs reached terminal success.

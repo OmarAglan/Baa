@@ -1910,7 +1910,7 @@
 * \[x] **Mixed Baa/Nazm roots** — direct `.نظم` roots bypass Baa parsing, assemble through the same resolved Nazm CLI, record per-unit source/assembler receipts, and join `.baa` objects in one hosted Arabic-ABI link; source/tool failures remain distinct and never fall back to GAS.
 * \[x] **Default-on readiness** — approved parity report and rollback procedure exist; Nazm is the production default and GAS is the explicit rollback.
   * \[x] **Automated production admission** — exact candidate revisions pass quick/full/stress/release on Windows and Linux with 27/27, 44/44, 74/74, and 75/75 receipts respectively.
-  * \[x] **Decision record approved** — `docs/NAZM_PRODUCTION_ADMISSION.md` records Baa `9efbcc4...`, Nazm `7be5799...`, Takween `4fe634f...`, terminal runs `29679921655`, `29680127124`, `29648265475`, the explicit GAS rollback drill, and all three owner approvals.
+  * \[x] **Decision record approved** — `docs/NAZM_PRODUCTION_ADMISSION.md` records Baa `9efbcc4...`, Nazm `7be5799...`, Takween `bc2eccc...`, terminal runs `29679921655`, `29680127124`, `29681669191`, the explicit GAS rollback drill, and all three owner approvals.
   * \[x] **Default cutover** — omitted assembler selection now chooses Nazm; `--assembler=gas` is the only normal rollback, and failures never trigger it automatically.
 * \[ ] **In-process equivalence** — CLI and future buffer API produce equivalent object semantics before embedding becomes default.
 

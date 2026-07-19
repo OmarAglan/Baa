@@ -191,6 +191,7 @@ class IntegrationArtifactDocumentationTests(unittest.TestCase):
             "- [x] Hosted quick/full/stress/release receipts on Windows and Linux.",
             "29679921655",
             "29680127124",
+            "29681669191",
             "| Linux PIC/PIE producer contract | PASS |",
             "| Explicit GAS rollback drill | PASS |",
             "| Baa compiler | approved |",

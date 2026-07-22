@@ -7,6 +7,54 @@ on:
   workflow_dispatch:
 
 jobs:
+  nazm-api-v1:
+    name: Nazm API v1 (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: OmarAglan/Nazm
+          ref: 43d315d76dccb0281900fc2a695d3a2021932744
+          path: Nazm
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Add bundled toolchain to PATH (if present)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          if (Test-Path ".\gcc\bin") {
+            "$env:GITHUB_WORKSPACE\gcc\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+          }
+      - name: Configure embedded path (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          cmake -S Nazm -B Nazm/build -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release
+          cmake -B build-embedded -G "MinGW Makefiles" -DBAA_ENABLE_EMBEDDED_NAZM=ON -DBAA_NAZM_SOURCE_DIR="$env:GITHUB_WORKSPACE/Nazm"
+      - name: Configure embedded path (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          cmake -S Nazm -B Nazm/build -DCMAKE_BUILD_TYPE=Release
+          cmake -B build-embedded -DCMAKE_BUILD_TYPE=Release -DBAA_ENABLE_EMBEDDED_NAZM=ON -DBAA_NAZM_SOURCE_DIR="$GITHUB_WORKSPACE/Nazm"
+      - name: Build embedded path
+        run: |
+          cmake --build Nazm/build --parallel
+          cmake --build build-embedded --parallel
+      - name: Verify API, subprocess parity, and cache identity
+        shell: pwsh
+        env:
+          PYTHONUTF8: "1"
+          BAA_EMBEDDED_NAZM_TEST: "1"
+          BAA: ${{ github.workspace }}/build-embedded/baa${{ runner.os == 'Windows' && '.exe' || '' }}
+          NAZM: ${{ github.workspace }}/Nazm/build/nazm${{ runner.os == 'Windows' && '.exe' || '' }}
+        run: python tests/test_nazm_api_integration.py
+
   build-windows:
     runs-on: windows-latest
     steps:
@@ -38,7 +86,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: OmarAglan/Nazm
-          ref: 7236491528567832d25eb0908cec9eac39831779
+          ref: 43d315d76dccb0281900fc2a695d3a2021932744
           path: Nazm
       - uses: actions/setup-python@v5
         with:
@@ -88,7 +136,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: OmarAglan/Nazm
-          ref: 7236491528567832d25eb0908cec9eac39831779
+          ref: 43d315d76dccb0281900fc2a695d3a2021932744
           path: Nazm
       - uses: actions/setup-python@v5
         with:
@@ -156,7 +204,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: OmarAglan/Nazm
-          ref: 7236491528567832d25eb0908cec9eac39831779
+          ref: 43d315d76dccb0281900fc2a695d3a2021932744
           path: Nazm
       - uses: actions/setup-python@v5
         with:
@@ -197,7 +245,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: OmarAglan/Nazm
-          ref: 7236491528567832d25eb0908cec9eac39831779
+          ref: 43d315d76dccb0281900fc2a695d3a2021932744
           path: Nazm
       - uses: actions/setup-python@v5
         with:
@@ -239,7 +287,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: OmarAglan/Nazm
-          ref: 7236491528567832d25eb0908cec9eac39831779
+          ref: 43d315d76dccb0281900fc2a695d3a2021932744
           path: Nazm
       - uses: actions/setup-python@v5
         with:
@@ -273,7 +321,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: OmarAglan/Nazm
-          ref: 7236491528567832d25eb0908cec9eac39831779
+          ref: 43d315d76dccb0281900fc2a695d3a2021932744
           path: Nazm
       - uses: actions/setup-python@v5
         with:

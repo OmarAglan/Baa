@@ -159,6 +159,7 @@ void driver_print_help(void)
     printf("  --emit-nazm  Emit canonical Arabic Nazm source only (.نظم)\n");
     printf("  --assembler=gas|nazm  Select the normal assembler (default: nazm)\n");
     printf("  --nazm-path=<path>  Nazm executable; otherwise BAA_NAZM or نظم from PATH\n");
+    printf("  --نظم-داخل-العملية  Use linked nazm-api-v1 (opt-in build only)\n");
     printf("  --nazm-shadow=<path>  Compare explicit GAS rollback with a Nazm shadow beside it\n");
     printf("  -c           Compile to object file only (.o)\n");
     printf("  --check      Parse/analyze source files without emitting code\n");
@@ -459,6 +460,8 @@ bool driver_parse_cli(int argc, char **argv, CompilerConfig *config, DriverParse
                 }
                 config->nazm_executable = (char *)path;
             }
+            else if (strcmp(arg, "--نظم-داخل-العملية") == 0)
+                config->nazm_in_process = true;
             else if (strncmp(arg, "--nazm-shadow=", 14) == 0)
             {
                 const char *path = arg + 14;
@@ -784,6 +787,16 @@ bool driver_parse_cli(int argc, char **argv, CompilerConfig *config, DriverParse
         fprintf(stderr,
                 "خطأ: --nazm-path يتطلب --assembler=nazm "
                 "أو ملف مصدر مباشر بامتداد `.نظم`.\n");
+        parse_release_temp_arrays(inputs, include_dirs);
+        return false;
+    }
+    if (config->nazm_in_process &&
+        (config->assembler != BAA_ASSEMBLER_NAZM ||
+         config->nazm_shadow_executable || config->nazm_executable))
+    {
+        fprintf(stderr,
+                "خطأ: --نظم-داخل-العملية يتطلب مجمع نظم الطبيعي ولا يجتمع "
+                "مع مسار ملف تنفيذي أو وضع الظل.\n");
         parse_release_temp_arrays(inputs, include_dirs);
         return false;
     }

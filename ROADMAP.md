@@ -1874,7 +1874,7 @@
     tables in ELF64 and CodeView C13 line tables in COFF.
 * \[x] **Shadow integration** — invoke Nazm without changing the production GAS result and compare object/link/runtime semantics.
   * \[x] First executable slice: `--nazm-shadow=<path>` assembles and links a one-input minimal program beside GAS with visible no-fallback failures and host runtime parity coverage.
-* \[ ] **Embedding** — adopt `nazm_assemble_buffer()` only after its public ownership and error contracts are stable.
+* \[x] **Guarded embedding** — `nazm-api-v1` freezes owned result/diagnostic lifetimes and OOM/error status; Baa can call `nazm_assemble_buffer()` only in an explicitly enabled build and only after `--نظم-داخل-العملية`, while the subprocess remains the production default.
 
   ### v1.5.0: Baa + Nazm Assembler Path 🔧
 
@@ -1914,7 +1914,7 @@
   * \[x] **Automated production admission** — exact candidate revisions pass quick/full/stress/release on Windows and Linux with 27/27, 44/44, 74/74, and 75/75 receipts respectively.
   * \[x] **Decision record approved** — `docs/NAZM_PRODUCTION_ADMISSION.md` records Baa `661edd9...`, Nazm `7236491...`, Takween `da8378e...`, terminal runs `29685356936`, `29685512987`, `29687846586`, `29689709002`, the explicit GAS rollback drill, and all three owner approvals.
   * \[x] **Default cutover** — omitted assembler selection now chooses Nazm; `--assembler=gas` is the only normal rollback, and failures never trigger it automatically.
-* \[ ] **In-process equivalence** — CLI and future buffer API produce equivalent object semantics before embedding becomes default.
+* \[x] **In-process equivalence** — the Nazm CLI and `nazm-api-v1` path produce byte-identical ELF64/COFF objects and matching primary failures; the exact API/version/capability fingerprint is recorded in manifests and cache keys before generated or direct Nazm objects are reused. Default in-process cutover remains a separate future admission decision.
 
   \---
 

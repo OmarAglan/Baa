@@ -196,6 +196,7 @@ baa [options] <source.baa> [-o <output>]
 | `--emit-nazm` | Emit canonical Arabic Nazm source plus its `baa-nazm-source-map-v1` sidecar. | `.\baa.exe --emit-nazm main.baa -o main.نظم` |
 | `--assembler=gas\|nazm` | Select the normal assembler. Nazm is the production default; GAS is an explicit rollback. Nazm emits canonical Arabic source, invokes `نظم`, and passes its object to the normal linker. | `.\baa.exe --assembler=gas main.baa -o main.exe` |
 | `--nazm-path=<path>` | Explicit Nazm executable for `--assembler=nazm` or direct `.نظم` roots. Without it, Baa uses `BAA_NAZM`, then resolves the primary Arabic command `نظم` from `PATH`. | `.\baa.exe --nazm-path=C:\tools\نظم.exe main.baa helper.نظم` |
+| `--نظم-داخل-العملية` | Opt into linked `nazm-api-v1`. This requires a Baa build configured with `BAA_ENABLE_EMBEDDED_NAZM=ON`; the normal production path remains the external Nazm process. | `.\baa.exe --نظم-داخل-العملية -c main.baa` |
 | `--nazm-shadow=<path>` | Select an explicit GAS comparison leg and also assemble/link a Nazm shadow. Nazm failures are visible, never fall back to GAS, and assembler locations are mapped back to the original Baa source. | `.\baa.exe main.baa -o main.exe --nazm-shadow=C:\tools\nazm.exe` |
 | `-c` | **Compile and Assemble.** Produces object file (`.o`), does not link. | `.\baa.exe -c main.baa` (creates `main.o`) |
 | `-v` | Enable verbose output (shows all compilation steps with timing). | `.\baa.exe -v main.baa` |
@@ -260,10 +261,18 @@ baa [options] <source.baa> [-o <output>]
 
 ### Build Manifests and Incremental Builds (v0.5.3)
 
-- `--emit-build-manifest <file>` writes JSON with compiler version, target, output mode, selected assembler policy, each unit's `baa`/`nazm` source kind and actual assembler, canonical dependencies, content hashes, and cache status.
+- `--emit-build-manifest <file>` writes JSON with compiler version, target, output mode, selected assembler policy, exact `assembler_fingerprint`, each unit's `baa`/`nazm` source kind and actual assembler, canonical dependencies, content hashes, and cache status.
 - `--incremental` is opt-in and only affects object-producing builds (`-c` and normal link mode).
 - Cache hits are disabled for observable compiler/debug modes: IR dumps, `--emit-ir`, and verifier flags.
 - Header invalidation is content-hash based: changing a `#تضمين` file rebuilds only source units that depended on it.
+- Nazm-generated and direct `.نظم` objects are reusable only after Baa obtains the exact `nazm-api-v1;version=...;capabilities=nazm-capabilities-v1:<sha256>` fingerprint. It is part of the object-cache slot and is empty for GAS builds.
+
+The embedded experiment is disabled by default. Configure it with
+`-DBAA_ENABLE_EMBEDDED_NAZM=ON -DBAA_NAZM_SOURCE_DIR=<Nazm source tree>`, then
+select it per invocation with `--نظم-داخل-العملية`. It preserves the same
+canonical Arabic `.نظم` text and produces byte-identical ELF64/COFF objects in
+the parity gate. Omitting the flag keeps the independent Nazm process as the
+production and rollback boundary.
 
 ### CMake Build Profiles (v0.5.3)
 

@@ -586,7 +586,34 @@ class NazmEmitterTests(unittest.TestCase):
             self.assertNotIn("main", global_symbols)
             manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
             self.assertEqual(manifest["assembler"], "nazm")
-            self.assertFalse(manifest["units"][0]["cache"]["enabled"])
+            self.assertRegex(
+                manifest["assembler_fingerprint"],
+                r"^nazm-api-v1;version=[^;]+;capabilities="
+                r"nazm-capabilities-v1:[0-9a-f]{64}$",
+            )
+            self.assertTrue(manifest["units"][0]["cache"]["enabled"])
+            self.assertFalse(manifest["units"][0]["cache"]["hit"])
+
+            with mock.patch.dict(os.environ, {"PATH": path_with_nazm}):
+                cached_object = self.run_baa(
+                    work,
+                    "-c",
+                    "--incremental",
+                    "--emit-build-manifest",
+                    str(manifest_path),
+                    str(source),
+                    "-o",
+                    str(object_path),
+                )
+            self.assertEqual(cached_object.returncode, 0, cached_object.stderr)
+            cached_manifest = json.loads(
+                manifest_path.read_text(encoding="utf-8")
+            )
+            self.assertEqual(
+                cached_manifest["assembler_fingerprint"],
+                manifest["assembler_fingerprint"],
+            )
+            self.assertTrue(cached_manifest["units"][0]["cache"]["hit"])
 
             gas_object = work / f"برنامج-غاز{object_suffix}"
             gas_manifest_path = work / "بيان-غاز.json"
@@ -724,6 +751,11 @@ class NazmEmitterTests(unittest.TestCase):
 
             receipt = json.loads(second_manifest.decode("utf-8"))
             self.assertEqual(receipt["assembler"], "nazm")
+            self.assertRegex(
+                receipt["assembler_fingerprint"],
+                r"^nazm-api-v1;version=[^;]+;capabilities="
+                r"nazm-capabilities-v1:[0-9a-f]{64}$",
+            )
             self.assertEqual(receipt["units"][0]["assembler"], "nazm")
 
     def test_unknown_assembler_is_invalid_invocation(self) -> None:
@@ -835,11 +867,40 @@ class NazmEmitterTests(unittest.TestCase):
                 ],
                 [("baa", "nazm"), ("nazm", "nazm")],
             )
-            self.assertFalse(manifest["units"][1]["cache"]["enabled"])
+            self.assertTrue(all(
+                unit["cache"]["enabled"] for unit in manifest["units"]
+            ))
+            self.assertTrue(all(
+                not unit["cache"]["hit"] for unit in manifest["units"]
+            ))
+
+            with mock.patch.dict(os.environ, {"PATH": path_with_nazm}):
+                cached_mixed = self.run_baa(
+                    work,
+                    "--incremental",
+                    "--emit-build-manifest",
+                    str(manifest_path),
+                    str(baa_source),
+                    str(nazm_source),
+                    "-o",
+                    str(executable),
+                )
             self.assertEqual(
-                manifest["units"][1]["cache"]["reason"],
-                "nazm-input",
+                cached_mixed.returncode,
+                0,
+                cached_mixed.stderr,
             )
+            cached_manifest = json.loads(
+                manifest_path.read_text(encoding="utf-8")
+            )
+            self.assertEqual(
+                cached_manifest["assembler_fingerprint"],
+                manifest["assembler_fingerprint"],
+            )
+            self.assertTrue(all(
+                unit["cache"]["hit"]
+                for unit in cached_manifest["units"]
+            ))
 
     def test_direct_nazm_failures_and_unsupported_modes_are_visible(self) -> None:
         with tempfile.TemporaryDirectory(prefix="baa_direct_nazm_fail_") as temp:

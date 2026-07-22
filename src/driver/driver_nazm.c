@@ -4,6 +4,11 @@
  */
 
 #include "driver_internal.h"
+#include "driver_artifacts.h"
+
+#ifdef BAA_EMBEDDED_NAZM
+#include "nazm.h"
+#endif
 
 #include <ctype.h>
 #include <limits.h>
@@ -291,6 +296,247 @@ const char *driver_nazm_get_executable(const CompilerConfig *config)
     return "نظم";
 }
 
+#ifdef BAA_EMBEDDED_NAZM
+static char *driver_nazm_copy_text(const char *text)
+{
+    if (!text) return NULL;
+    size_t size = strlen(text) + 1u;
+    char *copy = (char *)malloc(size);
+    if (copy) memcpy(copy, text, size);
+    return copy;
+}
+#endif
+
+static char *driver_nazm_extract_fingerprint(const char *document)
+{
+    static const char key[] = "\"fingerprint\":\"";
+    if (!document || !strstr(document, "\"schema\":\"nazm-api-v1\""))
+        return NULL;
+    const char *value = strstr(document, key);
+    if (!value) return NULL;
+    value += sizeof(key) - 1u;
+    const char *end = strchr(value, '"');
+    if (!end || end == value) return NULL;
+    size_t size = (size_t)(end - value);
+    char *fingerprint = (char *)malloc(size + 1u);
+    if (!fingerprint) return NULL;
+    memcpy(fingerprint, value, size);
+    fingerprint[size] = '\0';
+    return fingerprint;
+}
+
+BaaCompilerExitCode driver_nazm_resolve_fingerprint(CompilerConfig *config)
+{
+    if (!config) return BAA_COMPILER_EXIT_INTERNAL_ERROR;
+    if (config->nazm_fingerprint && config->nazm_fingerprint[0])
+        return BAA_COMPILER_EXIT_SUCCESS;
+
+#ifdef BAA_EMBEDDED_NAZM
+    if (config->nazm_in_process)
+    {
+        NazmApiInfo info = nazm_api_info();
+        if (info.api_version != NAZM_API_VERSION ||
+            !info.api_schema || strcmp(info.api_schema, "nazm-api-v1") != 0 ||
+            !info.fingerprint || !info.fingerprint[0])
+        {
+            fprintf(stderr,
+                    "خطأ داخلي: مكتبة نظم المضمنة لا تحقق عقد nazm-api-v1.\n");
+            return BAA_COMPILER_EXIT_INTERNAL_ERROR;
+        }
+        config->nazm_fingerprint = driver_nazm_copy_text(info.fingerprint);
+        return config->nazm_fingerprint
+            ? BAA_COMPILER_EXIT_SUCCESS
+            : BAA_COMPILER_EXIT_INTERNAL_ERROR;
+    }
+#endif
+
+    char *info_path = driver_make_temp_artifact_path(
+        ".باء", "بصمة-نظم", ".json");
+    char *diagnostic_path = driver_make_temp_artifact_path(
+        ".باء", "تشخيص-بصمة-نظم", ".txt");
+    if (!info_path || !diagnostic_path)
+    {
+        free(info_path);
+        free(diagnostic_path);
+        return BAA_COMPILER_EXIT_INTERNAL_ERROR;
+    }
+
+    const char *argv[] = {
+        driver_nazm_get_executable(config),
+        "--معلومات-الواجهة=json",
+        NULL,
+    };
+    BaaProcessResult process = {0};
+    bool ran = baa_process_run_redirect(
+        argv, NULL, info_path, diagnostic_path, &process);
+    if (!ran || !process.started || process.exit_code != 0)
+    {
+        driver_nazm_replay_diagnostic(diagnostic_path, NULL);
+        fprintf(stderr,
+                "خطأ: تعذر قراءة بصمة إصدار وقدرات مجمّع نظم '%s'.\n",
+                driver_nazm_get_executable(config));
+        (void)driver_toolchain_delete_file_utf8(info_path);
+        (void)driver_toolchain_delete_file_utf8(diagnostic_path);
+        free(info_path);
+        free(diagnostic_path);
+        return BAA_COMPILER_EXIT_TOOLCHAIN_ERROR;
+    }
+
+    char *document = read_file(info_path);
+    config->nazm_fingerprint = driver_nazm_extract_fingerprint(document);
+    free(document);
+    (void)driver_toolchain_delete_file_utf8(info_path);
+    (void)driver_toolchain_delete_file_utf8(diagnostic_path);
+    free(info_path);
+    free(diagnostic_path);
+    if (!config->nazm_fingerprint)
+    {
+        fprintf(stderr,
+                "خطأ: أعاد مجمّع نظم معلومات واجهة بلا بصمة صالحة.\n");
+        return BAA_COMPILER_EXIT_TOOLCHAIN_ERROR;
+    }
+    return BAA_COMPILER_EXIT_SUCCESS;
+}
+
+#ifdef BAA_EMBEDDED_NAZM
+static bool driver_nazm_read_bytes(const char *path,
+                                   uint8_t **out_data,
+                                   size_t *out_size)
+{
+    if (out_data) *out_data = NULL;
+    if (out_size) *out_size = 0u;
+    if (!path || !out_data || !out_size) return false;
+    FILE *file = baa_fopen_utf8(path, "rb");
+    if (!file) return false;
+    if (fseek(file, 0, SEEK_END) != 0)
+    {
+        fclose(file);
+        return false;
+    }
+    long length = ftell(file);
+    if (length < 0 || fseek(file, 0, SEEK_SET) != 0)
+    {
+        fclose(file);
+        return false;
+    }
+    size_t size = (size_t)length;
+    uint8_t *data = (uint8_t *)malloc(size ? size : 1u);
+    if (!data)
+    {
+        fclose(file);
+        return false;
+    }
+    bool ok = !size || fread(data, 1u, size, file) == size;
+    if (fclose(file) != 0) ok = false;
+    if (!ok)
+    {
+        free(data);
+        return false;
+    }
+    *out_data = data;
+    *out_size = size;
+    return true;
+}
+
+static void driver_nazm_report_api_diagnostics(const NazmResult *result,
+                                               const char *source_map_path)
+{
+    if (!result) return;
+    for (size_t i = 0; i < result->diagnostic_count; ++i)
+    {
+        const NazmDiagnostic *diagnostic = &result->diagnostics[i];
+        fprintf(stderr,
+                "خطأ في %s:%d:%d: %s\n",
+                diagnostic->file ? diagnostic->file : "",
+                diagnostic->line,
+                diagnostic->col,
+                diagnostic->message ? diagnostic->message : "خطأ نظم");
+
+        char *source_file = NULL;
+        unsigned source_line = 0;
+        unsigned source_col = 0;
+        if (source_map_path && diagnostic->line > 0 &&
+            driver_nazm_lookup_source_map(source_map_path,
+                                           (unsigned)diagnostic->line,
+                                           &source_file,
+                                           &source_line,
+                                           &source_col))
+        {
+            fprintf(stderr,
+                    "موضع باء الأصلي: %s:%u:%u (من سطر نظم %d).\n",
+                    source_file,
+                    source_line,
+                    source_col,
+                    diagnostic->line);
+        }
+        free(source_file);
+    }
+}
+
+static BaaCompilerExitCode driver_nazm_run_in_process(
+    const CompilerConfig *config,
+    const char *source_path,
+    const char *source_map_path,
+    const char *object_path,
+    const char *logical_source_name,
+    bool user_source)
+{
+    if (!config || !source_path || !object_path)
+        return BAA_COMPILER_EXIT_INTERNAL_ERROR;
+    uint8_t *source = NULL;
+    size_t source_size = 0u;
+    if (!driver_nazm_read_bytes(source_path, &source, &source_size))
+    {
+        fprintf(stderr, "خطأ: تعذرت قراءة مصدر نظم '%s'.\n", source_path);
+        return BAA_COMPILER_EXIT_TOOLCHAIN_ERROR;
+    }
+
+    NazmOptions options = nazm_default_options();
+    options.format = config->target &&
+                     config->target->obj_format == BAA_OBJFORMAT_COFF
+        ? NAZM_FORMAT_COFF
+        : NAZM_FORMAT_ELF64;
+    NazmResult result = nazm_assemble_buffer(
+        source,
+        source_size,
+        logical_source_name && logical_source_name[0]
+            ? logical_source_name
+            : source_path,
+        options);
+    free(source);
+
+    if (result.status != NAZM_STATUS_OK)
+    {
+        driver_nazm_report_api_diagnostics(&result, source_map_path);
+        NazmStatus status = result.status;
+        nazm_result_free(&result);
+        if (status == NAZM_STATUS_OUT_OF_MEMORY ||
+            status == NAZM_STATUS_INTERNAL_ERROR ||
+            status == NAZM_STATUS_INVALID_ARGUMENT)
+            return BAA_COMPILER_EXIT_INTERNAL_ERROR;
+        if (status == NAZM_STATUS_SOURCE_ERROR && user_source)
+            return BAA_COMPILER_EXIT_SOURCE_ERROR;
+        return BAA_COMPILER_EXIT_TOOLCHAIN_ERROR;
+    }
+
+    FILE *object = baa_fopen_utf8(object_path, "wb");
+    bool written = object &&
+        fwrite(result.object_data, 1u, result.object_size, object) ==
+            result.object_size;
+    if (object && fclose(object) != 0) written = false;
+    nazm_result_free(&result);
+    if (!written)
+    {
+        fprintf(stderr,
+                "خطأ: تعذرت كتابة كائن نظم المضمن '%s'.\n",
+                object_path);
+        (void)driver_toolchain_delete_file_utf8(object_path);
+        return BAA_COMPILER_EXIT_TOOLCHAIN_ERROR;
+    }
+    return BAA_COMPILER_EXIT_SUCCESS;
+}
+#endif
+
 static BaaCompilerExitCode driver_nazm_run_assembler(
     const CompilerConfig *config,
     CompilerPhaseTimes *times,
@@ -304,6 +550,32 @@ static BaaCompilerExitCode driver_nazm_run_assembler(
 {
     if (!config || !executable || !source_path || !object_path)
         return BAA_COMPILER_EXIT_INTERNAL_ERROR;
+
+#ifdef BAA_EMBEDDED_NAZM
+    if (config->nazm_in_process)
+    {
+        double started = 0.0;
+        if (times && config->time_phases) started = driver_time_seconds();
+        BaaCompilerExitCode rc = driver_nazm_run_in_process(
+            config,
+            source_path,
+            source_map_path,
+            object_path,
+            logical_source_name,
+            user_source);
+        if (times && config->time_phases)
+            times->assemble_s += driver_time_seconds() - started;
+        if (rc != BAA_COMPILER_EXIT_SUCCESS)
+            (void)driver_toolchain_delete_file_utf8(object_path);
+        if (!keep_source)
+        {
+            (void)driver_toolchain_delete_file_utf8(source_path);
+            if (source_map_path)
+                (void)driver_toolchain_delete_file_utf8(source_map_path);
+        }
+        return rc;
+    }
+#endif
 
     const char *format = config->target &&
                          config->target->obj_format == BAA_OBJFORMAT_COFF
@@ -581,6 +853,19 @@ BaaCompilerExitCode driver_compile_nazm_input(
         return BAA_COMPILER_EXIT_INTERNAL_ERROR;
     }
 
+    if (driver_build_try_reuse_object(config,
+                                      source_path,
+                                      object_path,
+                                      build_manifest))
+    {
+        if (config->verbose)
+            printf("[INFO] Reused direct Nazm object: %s -> %s\n",
+                   source_path,
+                   object_path);
+        *out_object_path = object_path;
+        return BAA_COMPILER_EXIT_SUCCESS;
+    }
+
     (void)driver_toolchain_delete_file_utf8(object_path);
     BaaCompilerExitCode rc = driver_nazm_run_assembler(
         config,
@@ -598,10 +883,12 @@ BaaCompilerExitCode driver_compile_nazm_input(
         return rc;
     }
 
-    if (!driver_build_record_nazm_input(config,
-                                        source_path,
-                                        object_path,
-                                        build_manifest))
+    if (!driver_build_update_cache(config,
+                                   source_path,
+                                   object_path,
+                                   NULL,
+                                   0u,
+                                   build_manifest))
     {
         fprintf(stderr,
                 "خطأ: فشل تسجيل مصدر نظم المباشر في بيان البناء.\n");

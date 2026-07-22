@@ -6,7 +6,24 @@ set(CMAKE_C_STANDARD 11)
 # Build options
 option(BAA_ENABLE_WARNINGS "Enable compiler warnings for Baa" ON)
 option(BAA_WARNINGS_AS_ERRORS "Treat warnings as errors for hardening builds" OFF)
+option(BAA_ENABLE_EMBEDDED_NAZM
+       "Enable the opt-in in-process nazm-api-v1 assembler path" OFF)
+set(BAA_NAZM_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../Nazm" CACHE PATH
+    "Nazm source tree used when BAA_ENABLE_EMBEDDED_NAZM is enabled")
 set(BAA_REPRODUCIBLE_BUILD_DATE "" CACHE STRING "Override baa --version build date for reproducible builds")
+
+if(BAA_ENABLE_EMBEDDED_NAZM)
+    if(NOT EXISTS "${BAA_NAZM_SOURCE_DIR}/include/nazm.h")
+        message(FATAL_ERROR
+            "BAA_ENABLE_EMBEDDED_NAZM requires a Nazm source tree at "
+            "${BAA_NAZM_SOURCE_DIR}")
+    endif()
+    set(NAZM_BUILD_CLI OFF CACHE BOOL "" FORCE)
+    set(NAZM_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+    add_subdirectory("${BAA_NAZM_SOURCE_DIR}"
+                     "${CMAKE_BINARY_DIR}/nazm-embedded"
+                     EXCLUDE_FROM_ALL)
+endif()
 
 # List of source files
 set(SOURCES
@@ -73,6 +90,11 @@ endif()
 
 # Windows executable extension
 add_executable(baa ${SOURCES})
+
+if(BAA_ENABLE_EMBEDDED_NAZM)
+    target_link_libraries(baa PRIVATE libnazm)
+    target_compile_definitions(baa PRIVATE BAA_EMBEDDED_NAZM=1)
+endif()
 
 # مكتبة وقت التشغيل التي ترتبط بها برامج باء عند استخدام واجهات النظام.
 add_library(baa_runtime STATIC
@@ -167,6 +189,6 @@ endif()
 
 # Link Windows libraries for Updater (WinINet, UrlMon)
 if(WIN32)
-    target_link_libraries(baa urlmon wininet)
-    target_link_libraries(baa wintrust crypt32)
+    target_link_libraries(baa PRIVATE urlmon wininet)
+    target_link_libraries(baa PRIVATE wintrust crypt32)
 endif()

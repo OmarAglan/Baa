@@ -60,11 +60,6 @@ bool driver_build_record_uncached(const CompilerConfig* config,
                                   const char* reason,
                                   DriverBuildManifest* manifest);
 
-bool driver_build_record_nazm_input(const CompilerConfig* config,
-                                    const char* input_file,
-                                    const char* output_file,
-                                    DriverBuildManifest* manifest);
-
 bool driver_build_write_manifest(const CompilerConfig* config,
                                  const DriverBuildManifest* manifest,
                                  const char* manifest_path);

@@ -121,6 +121,7 @@ top-level fields:
   "target": "x86_64-linux",
   "mode": "link",
   "assembler": "nazm",
+  "assembler_fingerprint": "nazm-api-v1;version=0.4.0;capabilities=nazm-capabilities-v1:<sha256>",
   "opt_level": 2,
   "runtime_checks": false,
   "runtime_check_mask": 0,
@@ -155,11 +156,12 @@ The top-level `assembler` is the policy for generated Baa units. Each unit also
 records its actual `source_kind` (`baa` or `nazm`) and `assembler` (`gas` or
 `nazm`). Direct `.نظم` units always report `nazm`; generated Baa units report
 the production default `nazm` unless the caller explicitly selects GAS.
-Generated and direct Nazm objects
-currently bypass the incremental object cache until the cache key records a
-verified Nazm version fingerprint; the manifest therefore reports
-`cache.enabled: false` rather than reusing an object produced by a different
-assembler.
+For Nazm builds, `assembler_fingerprint` is the exact stable value reported by
+`nazm-api-v1`: API schema, Nazm version, capability schema, and SHA-256 digest.
+It is empty for GAS. Baa includes that whole value in generated-Baa and direct
+`.نظم` cache slots, so incremental reuse is enabled only after the fingerprint
+has been resolved. A missing or invalid fingerprint is a visible toolchain
+failure, never permission to reuse an object from an unknown assembler.
 
 ---
 
@@ -187,6 +189,7 @@ Takween must invalidate cached build results when any of these values change:
 - ordered `-I` include directory list,
 - source or dependency hash,
 - output kind when switching between link, `-c`, and `-S`.
+- exact assembler fingerprint for every Nazm-produced object.
 
 ---
 
@@ -246,7 +249,8 @@ Nazm integration should consume:
 
 Baa also accepts direct Arabic `.نظم` source roots in `-c` and normal hosted
 link invocations. Those roots bypass Baa parsing and Machine IR, invoke Nazm
-through structured argv, and join the same object/link plan as `.baa` roots.
+through structured argv by default, and join the same object/link plan as
+`.baa` roots.
 Direct Nazm source diagnostics return source status `1`; missing or failed
 process/tool execution returns `4`. `--check`, `-S`, `--emit-nazm`, and
 `--nazm-shadow` reject direct `.نظم` roots explicitly until Nazm exposes the
@@ -263,6 +267,15 @@ Baa's public `-S` output is canonical Arabic `.نظم` by default, and productio
 object generation invokes Nazm. GAS/AT&T remains available through explicit
 `--assembler=gas`; the shadow path selects a measured GAS comparison leg and
 cannot hide an unsupported form behind silent fallback.
+
+An opt-in build may link Nazm and expose the Arabic runtime selector
+`--نظم-داخل-العملية`. CMake keeps this disabled unless
+`BAA_ENABLE_EMBEDDED_NAZM=ON` points at a source tree implementing
+`nazm-api-v1`. The API path preserves the canonical emitted Arabic text,
+returns owned object bytes and structured diagnostics, and is tested against
+the CLI for exact ELF64/COFF object bytes and matching primary failures. It is
+not the production default: omitting the selector always retains the separate
+Nazm process, and explicit GAS remains the compiler-level rollback.
 
 PyramidOS experiments should consume:
 

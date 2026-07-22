@@ -164,6 +164,10 @@ static void build_slot_hex(const CompilerConfig* config, const char* source, cha
                     : config && config->assembler == BAA_ASSEMBLER_NAZM
                     ? "nazm"
                     : "gas");
+    if (config && config->nazm_fingerprint &&
+        (driver_nazm_is_source_path(source) ||
+         config->assembler == BAA_ASSEMBLER_NAZM))
+        hash_string(&h, config->nazm_fingerprint);
 
     char tmp[128];
     snprintf(tmp,
@@ -207,11 +211,9 @@ bool driver_build_cache_is_allowed(const CompilerConfig* config)
     if (!config || !config->incremental) return false;
     if (config->assembly_only || config->emit_nazm) return false;
     if (config->nazm_shadow_executable) return false;
-    /*
-     * Nazm object caching waits for an assembler-version fingerprint rather
-     * than keying only on the executable spelling.
-     */
-    if (config->assembler == BAA_ASSEMBLER_NAZM) return false;
+    if (config->assembler == BAA_ASSEMBLER_NAZM &&
+        (!config->nazm_fingerprint || !config->nazm_fingerprint[0]))
+        return false;
     if (config->check_only || config->header_check) return false;
     if (config->diagnostics_json) return false;
     if (config->dump_ir || config->dump_ir_opt || config->emit_ir) return false;
@@ -644,22 +646,6 @@ bool driver_build_record_uncached(const CompilerConfig* config,
                       reason ? reason : (cache_allowed ? "miss" : "bypass"));
 }
 
-bool driver_build_record_nazm_input(const CompilerConfig* config,
-                                    const char* input_file,
-                                    const char* output_file,
-                                    DriverBuildManifest* manifest)
-{
-    return add_record(manifest,
-                      config,
-                      input_file,
-                      output_file,
-                      NULL,
-                      0,
-                      false,
-                      false,
-                      "nazm-input");
-}
-
 bool driver_build_write_manifest(const CompilerConfig* config,
                                  const DriverBuildManifest* manifest,
                                  const char* manifest_path)
@@ -689,6 +675,12 @@ bool driver_build_write_manifest(const CompilerConfig* config,
             config && config->assembler == BAA_ASSEMBLER_NAZM
                 ? "nazm"
                 : "gas");
+    fputs("  \"assembler_fingerprint\": \"", out);
+    json_escape(out,
+                config && config->nazm_fingerprint
+                    ? config->nazm_fingerprint
+                    : "");
+    fputs("\",\n", out);
     fprintf(out, "  \"opt_level\": %d,\n", config ? (int)config->opt_level : 0);
     fprintf(out, "  \"runtime_checks\": %s,\n",
             config && config->runtime_checks ? "true" : "false");

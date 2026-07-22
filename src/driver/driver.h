@@ -48,6 +48,8 @@ typedef struct
     BaaAssemblerKind assembler; // --assembler=gas|nazm
     bool assembler_explicit; // هل اختار المستخدم المجمّع صراحة؟
     char *nazm_executable; // --nazm-path=<path> أو BAA_NAZM أو نظم من PATH
+    bool nazm_in_process; // --نظم-داخل-العملية (يتطلب دعم nazm-api-v1 في البناء)
+    char *nazm_fingerprint; // بصمة الإصدار والقدرات الدقيقة المملوكة للسائق
     bool compile_only;  // -c: تجميع إلى كائن فقط (بدون ربط)
     bool verbose;       // -v: وضع التفاصيل
     bool dump_ir;       // --dump-ir: طباعة IR بعد التحليل الدلالي

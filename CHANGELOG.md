@@ -10,6 +10,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Added
 
+- **Stable Nazm API, fingerprinted reuse, and guarded embedding**:
+  - Consumed `nazm-api-v1` through a CMake option that is disabled by default
+    and an explicit Arabic `--نظم-داخل-العملية` runtime selector. The normal
+    subprocess Nazm path and explicit GAS rollback remain unchanged.
+  - Added exact CLI/API ELF64 and COFF object-byte parity, diagnostic/exit-code
+    checks, and first-miss/second-hit integration coverage on Windows/Linux.
+  - Added the complete Nazm API/version/capability fingerprint to deterministic
+    build manifests and object-cache slots. Generated Baa units and direct
+    `.نظم` roots can now reuse objects only when that fingerprint matches.
+  - Kept the canonical Arabic `.نظم` artifact as the inspectable compiler to
+    assembler contract while removing the process boundary in the opt-in path.
+
 - **Nazm production admission and default cutover**:
   - Made the canonical Arabic Nazm path the normal assembler default for
     generated Baa units; `--assembler=gas` remains the explicit measured
@@ -164,9 +176,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
   - Added an Arabic-only Nazm Linux hosted-startup object that calls the
     compiler-owned Arabic runtime adapter for `__libc_start_main`; public
     assembly and linker entry names remain Arabic.
-  - Added the selected assembler to deterministic build manifests and bypassed
-    Nazm incremental reuse until the cache key includes a verified assembler
-    version fingerprint.
+  - Added the selected assembler to deterministic build manifests and initially
+    bypassed Nazm incremental reuse until the later stable API fingerprint
+    contract was admitted.
 - **Mixed Baa and direct Nazm source roots**:
   - The normal driver now accepts `.baa` and Arabic `.نظم` roots in one
     invocation. Direct Nazm roots bypass Baa parsing, assemble through

@@ -47,10 +47,12 @@ Baa does **not** own:
 - a package registry before the language is stable,
 - production self-hosting before a staged post-v0.9 decision.
 
-Baa currently owns its GAS/AT&T text emitter and external assembler invocation.
-After the `baa-nazm-boundary-v0` admission gates pass, Nazm owns Arabic assembly
-syntax, instruction encoding, relocations, and object serialization; Baa keeps
-Machine IR, register allocation, ABI lowering, and prologue/epilogue ownership.
+Baa owns its Machine IR, register allocation, ABI lowering, prologue/epilogue,
+canonical Arabic Nazm emission, and assembler-path selection. Nazm owns Arabic
+assembly syntax, instruction encoding, relocations, object serialization, and
+the stable assembler API. The admitted production boundary is a Nazm process;
+an explicit Baa build/invocation may use the same API in-process without moving
+those ownership lines.
 
 ---
 
@@ -63,7 +65,7 @@ Nazm owns:
 - x86-64 instruction encoding,
 - symbol and relocation handling,
 - ELF64 and PE/COFF object serialization,
-- assembler diagnostics, listings, CLI, and future embedding API.
+- assembler diagnostics, listings, CLI, and `nazm-api-v1` embedding API.
 
 Baa must support Nazm integration by providing:
 
@@ -73,9 +75,10 @@ Baa must support Nazm integration by providing:
 - a shadow mode that never changes production output silently, and
 - parity tests for objects, links, runtime behavior, symbols, and relocations.
 
-Nazm must not be made the default assembler until Baa's quick, full, stress,
-determinism, and cross-target gates pass through the Nazm path. Unsupported forms
-must fail visibly; integration must not guess bytes or silently fall back to GAS.
+Nazm's default admission has passed Baa's quick, full, stress, determinism, and
+cross-target gates. Unsupported forms must still fail visibly; integration must
+not guess bytes or silently fall back to GAS. Making the in-process API the
+default is a separate future admission and cannot be inferred from API parity.
 
 ---
 

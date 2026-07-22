@@ -114,6 +114,7 @@ static int main_cleanup_and_return(const CompilerConfig* config,
     }
     driver_free_obj_files(obj_files, obj_count, output_file);
     driver_parse_result_free(cli);
+    if (config) free(config->nazm_fingerprint);
     if (output_file_owned) free(output_file);
     return rc;
 }
@@ -194,6 +195,20 @@ static int baa_main(int argc, char **argv)
                                        output_file_owned, BAA_COMPILER_EXIT_SUCCESS);
     }
 
+#ifndef BAA_EMBEDDED_NAZM
+    if (config.nazm_in_process)
+    {
+        fprintf(stderr,
+                "غير مدعوم: هذا البناء لا يتضمن nazm-api-v1؛ أعد بناء باء "
+                "مع BAA_ENABLE_EMBEDDED_NAZM=ON أو احذف "
+                "--نظم-داخل-العملية.\n");
+        return main_cleanup_and_return(&config, &cli, NULL, 0,
+                                       config.output_file,
+                                       output_file_owned,
+                                       BAA_COMPILER_EXIT_UNSUPPORTED);
+    }
+#endif
+
     char **input_files = cli.input_files;
     int input_count = cli.input_count;
 
@@ -240,6 +255,26 @@ static int baa_main(int argc, char **argv)
     CompilerPhaseTimes phase_times = {0};
     DriverBuildManifest build_manifest;
     driver_build_manifest_init(&build_manifest);
+
+    bool build_uses_nazm = config.assembler == BAA_ASSEMBLER_NAZM;
+    for (int i = 0; i < input_count && !build_uses_nazm; ++i)
+        build_uses_nazm = driver_nazm_is_source_path(input_files[i]);
+    if (build_uses_nazm &&
+        (config.incremental || config.build_manifest_file) &&
+        !config.check_only && !config.header_check && !config.emit_nazm &&
+        !config.assembly_only)
+    {
+        BaaCompilerExitCode fingerprint_rc =
+            driver_nazm_resolve_fingerprint(&config);
+        if (fingerprint_rc != BAA_COMPILER_EXIT_SUCCESS)
+        {
+            driver_build_manifest_free(&build_manifest);
+            return main_cleanup_and_return(&config, &cli, NULL, 0,
+                                           config.output_file,
+                                           output_file_owned,
+                                           fingerprint_rc);
+        }
+    }
 
     // v0.3.2.8.4+: الربط النهائي يبقى مقيدا بالمضيف.
     // - نسمح بـ -S لأي هدف.

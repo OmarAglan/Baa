@@ -36,6 +36,11 @@ BaaCompilerExitCode driver_emit_nazm_source(const CompilerConfig *config,
 const char *driver_nazm_get_executable(const CompilerConfig *config);
 
 /**
+ * @brief تثبيت بصمة إصدار/قدرات نظم الدقيقة في إعداد البناء.
+ */
+BaaCompilerExitCode driver_nazm_resolve_fingerprint(CompilerConfig *config);
+
+/**
  * @brief إصدار وحدة الآلة كمصدر نظم وتجميعها إلى كائن للمسار الطبيعي.
  */
 BaaCompilerExitCode driver_assemble_nazm_module(

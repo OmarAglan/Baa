@@ -114,7 +114,8 @@ The following work is not silently included in this candidate:
   checked corpus; producer-required direct-symbol `-fPIC`/`-fPIE` references
   are admitted;
 - cross-target executable linking;
-- the future in-process `nazm_assemble_buffer()` boundary;
+- making the in-process `nazm_assemble_buffer()` boundary the production
+  default (a later opt-in extension is recorded below);
 - changing Baa's reference implementation away from C;
 - removing the GAS selector; and
 - enabling a public package registry or lifecycle scripts in Takween.
@@ -129,9 +130,8 @@ Rollback is an explicit build decision, never an automatic reaction to a
 failed Nazm process.
 
 1. Switch the project/tool invocation to `--assembler=gas`.
-2. Keep assembler identity in the build manifest and invalidate any artifact
-   whose recorded assembler differs. Nazm incremental cache reuse remains
-   disabled until its cache-key contract is admitted.
+2. Keep assembler identity and exact fingerprint in the build manifest and
+   invalidate any artifact whose recorded assembler or fingerprint differs.
 3. If the default itself is defective, revert only the default-selector commit;
    do not remove the Arabic emitter, shadow gate, source maps, or Nazm tests.
 4. Run the Baa release orchestrator and Takween smoke suite through GAS.
@@ -178,7 +178,29 @@ after the hosted runs reached terminal success.
 1. Keep the exact-SHA Baa/Nazm admission workflow and Takween cross-platform
    smoke mandatory for emitter, assembler, object-writer, startup, link, or
    default-policy changes.
-2. Add a Nazm version fingerprint to cache keys before enabling Nazm object
-   reuse.
-3. Continue the optional in-process buffer API without changing the inspected
-   Arabic textual contract or the explicit GAS rollback.
+2. Keep the admitted Nazm API/version/capability fingerprint in every Nazm
+   object-cache key.
+3. Keep the optional in-process buffer API behind its build option and Arabic
+   invocation selector without changing the inspected textual contract or the
+   explicit subprocess/GAS rollback paths.
+
+## 10. Post-Admission API and Cache Extension
+
+The default-cutover receipts and approval table above remain historical and
+unchanged. A later guarded extension pins Nazm
+`43d315d76dccb0281900fc2a695d3a2021932744` and adds:
+
+- stable `nazm-api-v1` result ownership, structured diagnostic, OOM-recovery,
+  ELF64/COFF option, and object-byte contracts;
+- exact CLI/API object-byte equivalence and primary-failure parity tests;
+- the complete
+  `nazm-api-v1;version=...;capabilities=nazm-capabilities-v1:<sha256>` value in
+  Baa manifests and cache slots before any Nazm reuse;
+- cache reuse for both compiler-generated and direct `.نظم` units; and
+- an opt-in `BAA_ENABLE_EMBEDDED_NAZM` build plus
+  `--نظم-داخل-العملية` invocation selector.
+
+This extension does not approve an embedded default. The separate Nazm process
+remains the normal production boundary and direct operational rollback; GAS
+remains the explicit compiler-level rollback. No failure silently switches
+between these paths.

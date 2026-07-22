@@ -32,8 +32,10 @@ A project may release independently as long as it stays compatible with the cont
 | `conformance-v1` | Baa | Baa, future compilers/tools |
 | `freestanding-v0` | Baa | PyramidOS experiments |
 | `baa-nazm-boundary-v0` | Baa + Nazm | Baa backend, Nazm CLI/API |
-| `nazm-source-v0.4` | Nazm | humans, future Baa Arabic assembly emitter |
-| `elf64-object-v0` / `coff-object-v0` | Nazm | system linkers, future Baa builds |
+| `nazm-api-v1` | Nazm | opt-in embedded Baa path, API/CLI parity gates |
+| `nazm-capabilities-v1` | Nazm | Baa and Takween cache fingerprints |
+| `nazm-source-v0.4` | Nazm | humans, Baa canonical Arabic assembly emitter |
+| `elf64-object-v0` / `coff-object-v0` | Nazm | system linkers, Baa builds |
 | `baa-language-v0.5.9` | Baa | C reference compiler, tests |
 | `baa-stdlib-v0.5.9` | Baa | hosted Baa programs |
 | `baa-hosted-abi-v0.5.9` | Baa | Windows/Linux backends |
@@ -53,6 +55,16 @@ A project may release independently as long as it stays compatible with the cont
 | v0.8.x | parity hardening; still gated | stable integration | stable integration | host tools only | conformance-v1 draft, target-spec-v1 |
 | v0.9.0 | default decision only after parity signoff | stable through 1.0 review | stable through 1.0 review | freestanding plan only | all v1 hosted contracts frozen |
 | v0.10.x/post-v0.9 | admitted path or explicit external-assembler fallback | stable | stable | tiny mixed-link experiments | freestanding-v0, architecture target decision |
+
+### Current admitted ecosystem snapshot
+
+The implementation has advanced beyond the original version forecast above:
+Nazm is the production assembler default with explicit GAS rollback, while the
+new in-process path remains opt-in. Baa consumes `nazm-api-v1` only when built
+with embedding enabled and records the exact `nazm-capabilities-v1` digest in
+its full assembler fingerprint. Takween treats that value as required cache-key
+evidence for Nazm artifacts. CLI/API equivalence is gated on ELF64 and COFF;
+the default process boundary cannot change without a separate admission.
 
 ---
 

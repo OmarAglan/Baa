@@ -124,6 +124,7 @@ helpers return this classification to `main.c` rather than collapsing every fail
 | `-S`, `-s` | **Assembly Only** | `.s` / `.نظم` | Stops after code emission. The selected assembler controls the emitted dialect. |
 | `--assembler=gas\|nazm` | **Assembler Select** | `.s/.نظم/.o/.exe` | Nazm is the production default; GAS is an explicit rollback. Nazm emits canonical Arabic source, assembles it directly to the selected object, then reuses the normal linker. |
 | `--nazm-path=<path>` | **Nazm Tool Select** | - | Overrides `BAA_NAZM` and the primary Arabic `نظم` lookup from `PATH`. |
+| `--نظم-داخل-العملية` | **Nazm API Experiment** | `.o/.exe` | Uses linked `nazm-api-v1` only in a build configured with `BAA_ENABLE_EMBEDDED_NAZM=ON`; subprocess Nazm remains the default. |
 | `-c` | **Compile Only** | `.o` | Stops after assembling. Writes `<input>.o` (or `-o` when a single input file is used). |
 | `--check` | **Fast Check** | none | Stops after parse and semantic analysis for editor/tool feedback; no IR, assembly, object, or executable is emitted. |
 | `-v` | **Verbose** | - | Prints commands and compilation time; keeps intermediate `.s` files. |
@@ -146,10 +147,12 @@ helpers return this classification to `main.c` rather than collapsing every fail
 | `--cache-dir <dir>` | **Cache Location** | directory | Overrides the default `.baa_build/cache` incremental object cache (v0.5.3). |
 
 Direct `.نظم` roots are source-kind dispatch, not inline assembly and not a
-fallback. They bypass the Baa lexer/IR/backend, invoke the external Nazm CLI
-with structured argv, and enter the same object/link plan. Their manifest unit
-records `source_kind: nazm`, `assembler: nazm`, and a cache bypass until a
-verified Nazm version fingerprint becomes part of the key.
+fallback. They bypass the Baa lexer/IR/backend and enter the same object/link
+plan through either the default structured-argv Nazm process or the explicit
+embedded API experiment. Their manifest unit records `source_kind: nazm` and
+`assembler: nazm`. Generated and direct objects share incremental reuse only
+after Baa resolves the exact Nazm API/version/capability fingerprint and adds
+it to the cache slot.
 | `--target=<t>` | **Target Select** | `.s/.o/.exe` | Selects backend target: `x86_64-windows` or `x86_64-linux`. |
 | `-fPIC` / `-fPIE` | **Code Model (ELF)** | `.s/.o/.exe` | Enables PIC/PIE-friendly emission on Linux/ELF. |
 | `-fno-pic` / `-fno-pie` | **Disable PIC/PIE** | `.s/.o/.exe` | Disables PIC/PIE modes. |

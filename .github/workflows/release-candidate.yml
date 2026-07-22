@@ -22,7 +22,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: OmarAglan/Nazm
-          ref: 43d315d76dccb0281900fc2a695d3a2021932744
+          ref: f7fcf8f6d2bf629daf708b3b6028e22c74683ce6
           path: Nazm
       - uses: actions/setup-python@v5
         with:
@@ -82,7 +82,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: OmarAglan/Nazm
-          ref: 43d315d76dccb0281900fc2a695d3a2021932744
+          ref: f7fcf8f6d2bf629daf708b3b6028e22c74683ce6
           path: Nazm
       - uses: actions/setup-python@v5
         with:

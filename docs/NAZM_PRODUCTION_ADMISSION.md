@@ -188,7 +188,8 @@ after the hosted runs reached terminal success.
 
 The default-cutover receipts and approval table above remain historical and
 unchanged. A later guarded extension pins Nazm
-`43d315d76dccb0281900fc2a695d3a2021932744` and adds:
+`f7fcf8f6d2bf629daf708b3b6028e22c74683ce6` (the stable API plus its Linux
+`-Werror=clobbered` portability correction) and adds:
 
 - stable `nazm-api-v1` result ownership, structured diagnostic, OOM-recovery,
   ELF64/COFF option, and object-byte contracts;

@@ -87,6 +87,54 @@ class SemanticQueryTests(unittest.TestCase):
         self.assertIsInstance(result["occurrences"], list)
         return result
 
+    def test_completion_recovers_visible_scope_while_typing(self) -> None:
+        source = (
+            '#تضمين "واجهة.baahd"\n'
+            "صحيح عام = ١.\n"
+            "صحيح الرئيسية(صحيح معامل) {\n"
+            "    صحيح قيمة_خارجية = ٢.\n"
+            "    إذا (خطأ) {\n"
+            "        صحيح سري = ٩.\n"
+            "    }\n"
+            "    إذا (صواب) {\n"
+            "        صحيح معامل = ٣.\n"
+            "        لا_تفعل(مع).\n"
+            "        صحيح مخفي_بعد = ٤.\n"
+            "    }\n"
+            "    صحيح لاحق = ٥.\n"
+            "    إرجع قيمة_خارجية.\n"
+            "}\n"
+        )
+        prefix = "        لا_تفعل(مع"
+        position = (
+            source.encode("utf-8").index((prefix + ").\n").encode("utf-8"))
+            + len(prefix.encode("utf-8"))
+        )
+        with tempfile.TemporaryDirectory(
+            prefix="baa_semantic_completion_مسار_"
+        ) as temp:
+            work = Path(temp)
+            logical = work / "مصدر عربي" / "إكمال.baa"
+            logical.parent.mkdir()
+            (logical.parent / "واجهة.baahd").write_text(
+                "خارجي صحيح من_واجهة(صحيح قيمة).\n",
+                encoding="utf-8",
+            )
+            result = self.query(work, logical, source, position)
+
+        completion = result["completion"]
+        items = {item["label"]: item for item in completion["items"]}
+        self.assertIn("معامل", items, list(items))
+        self.assertEqual(items["معامل"]["scope"], "local")
+        self.assertEqual(items["قيمة_خارجية"]["scope"], "local")
+        self.assertEqual(items["عام"]["scope"], "global")
+        self.assertEqual(items["من_واجهة"]["scope"], "included")
+        self.assertNotIn("سري", items)
+        self.assertNotIn("مخفي_بعد", items)
+        self.assertNotIn("لاحق", items)
+        self.assertEqual(items["معامل"]["insert_text_format"], "plain")
+        self.assertIn("متغير", items["معامل"]["documentation"])
+
     def test_external_identity_is_stable_across_translation_units(self) -> None:
         caller_source = (
             '#تضمين "واجهة.baahd"\n'

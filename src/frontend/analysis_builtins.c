@@ -571,6 +571,101 @@ static const BuiltinErrorFuncSig builtin_error_funcs[] = {
 
 DEFINE_BUILTIN_LOOKUP(builtin_lookup_error_func, BuiltinErrorFuncSig, builtin_error_funcs)
 
+static const DataType builtin_format_param_types[] = { TYPE_STRING };
+static const DataType builtin_variadic_start_param_types[] = {
+    TYPE_POINTER, TYPE_INT
+};
+static const DataType builtin_variadic_next_param_types[] = {
+    TYPE_POINTER, TYPE_INT
+};
+static const DataType builtin_variadic_end_param_types[] = { TYPE_POINTER };
+
+const BaaBuiltinDescriptor* baa_builtin_descriptors(size_t* count)
+{
+    enum
+    {
+        BUILTIN_DESCRIPTOR_CAPACITY =
+            ANALYSIS_ARRAY_LEN(builtin_string_funcs) +
+            ANALYSIS_ARRAY_LEN(builtin_mem_funcs) +
+            ANALYSIS_ARRAY_LEN(builtin_vector_funcs) +
+            ANALYSIS_ARRAY_LEN(builtin_byte_buffer_funcs) +
+            ANALYSIS_ARRAY_LEN(builtin_path_funcs) +
+            ANALYSIS_ARRAY_LEN(builtin_string_builder_funcs) +
+            ANALYSIS_ARRAY_LEN(builtin_file_funcs) +
+            ANALYSIS_ARRAY_LEN(builtin_math_funcs) +
+            ANALYSIS_ARRAY_LEN(builtin_system_funcs) +
+            ANALYSIS_ARRAY_LEN(builtin_time_funcs) +
+            ANALYSIS_ARRAY_LEN(builtin_error_funcs) + 7
+    };
+    static BaaBuiltinDescriptor descriptors[BUILTIN_DESCRIPTOR_CAPACITY];
+    static size_t descriptor_count = 0;
+    static bool initialized = false;
+
+    if (!initialized)
+    {
+#define APPEND_BUILTIN_TABLE(table_name)                                      \
+        do                                                                    \
+        {                                                                     \
+            const size_t table_count =                                        \
+                sizeof(table_name) / sizeof((table_name)[0]);                  \
+            for (size_t i = 0; i < table_count; ++i)                          \
+            {                                                                 \
+                descriptors[descriptor_count++] = (BaaBuiltinDescriptor){      \
+                    (table_name)[i].name,                                     \
+                    (table_name)[i].return_type,                              \
+                    (table_name)[i].param_count,                              \
+                    (table_name)[i].param_types,                              \
+                    false                                                     \
+                };                                                            \
+            }                                                                 \
+        } while (0)
+
+        APPEND_BUILTIN_TABLE(builtin_string_funcs);
+        APPEND_BUILTIN_TABLE(builtin_mem_funcs);
+        APPEND_BUILTIN_TABLE(builtin_vector_funcs);
+        APPEND_BUILTIN_TABLE(builtin_byte_buffer_funcs);
+        APPEND_BUILTIN_TABLE(builtin_path_funcs);
+        APPEND_BUILTIN_TABLE(builtin_string_builder_funcs);
+        APPEND_BUILTIN_TABLE(builtin_file_funcs);
+        APPEND_BUILTIN_TABLE(builtin_math_funcs);
+        APPEND_BUILTIN_TABLE(builtin_system_funcs);
+        APPEND_BUILTIN_TABLE(builtin_time_funcs);
+        APPEND_BUILTIN_TABLE(builtin_error_funcs);
+
+#undef APPEND_BUILTIN_TABLE
+
+#define APPEND_SPECIAL_BUILTIN(name_value, return_value, count_value,         \
+                               params_value, variadic_value)                   \
+        do                                                                    \
+        {                                                                     \
+            descriptors[descriptor_count++] = (BaaBuiltinDescriptor){          \
+                name_value, return_value, count_value, params_value,           \
+                variadic_value                                                 \
+            };                                                                \
+        } while (0)
+
+        APPEND_SPECIAL_BUILTIN("اطبع_منسق", TYPE_VOID, 1,
+                               builtin_format_param_types, true);
+        APPEND_SPECIAL_BUILTIN("نسق", TYPE_STRING, 1,
+                               builtin_format_param_types, true);
+        APPEND_SPECIAL_BUILTIN("اقرأ_منسق", TYPE_INT, 1,
+                               builtin_format_param_types, true);
+        APPEND_SPECIAL_BUILTIN("اقرأ_رقم", TYPE_INT, 0, NULL, false);
+        APPEND_SPECIAL_BUILTIN("بدء_معاملات", TYPE_VOID, 2,
+                               builtin_variadic_start_param_types, false);
+        APPEND_SPECIAL_BUILTIN("معامل_تالي", TYPE_INT, 2,
+                               builtin_variadic_next_param_types, false);
+        APPEND_SPECIAL_BUILTIN("نهاية_معاملات", TYPE_VOID, 1,
+                               builtin_variadic_end_param_types, false);
+
+#undef APPEND_SPECIAL_BUILTIN
+        initialized = true;
+    }
+
+    if (count) *count = descriptor_count;
+    return descriptors;
+}
+
 #undef DEFINE_BUILTIN_LOOKUP
 #undef ANALYSIS_ARRAY_LEN
 

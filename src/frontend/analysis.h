@@ -7,6 +7,7 @@
 #define BAA_FRONTEND_ANALYSIS_H
 
 #include <stdbool.h>
+#include <stddef.h>
 #include <stdint.h>
 #include "ast.h"
 
@@ -47,6 +48,23 @@ typedef struct {
     const char* decl_file; // ملف التعريف (للتحذيرات)
     const Node* decl_node; // عقدة التصريح المالكة داخل AST
 } Symbol;
+
+/**
+ * @struct BaaBuiltinDescriptor
+ * @brief بيانات الدوال المدمجة التي يملكها المترجم ويشاركها مع أدوات الإكمال.
+ */
+typedef struct {
+    const char* name;
+    DataType return_type;
+    int param_count;
+    const DataType* param_types;
+    bool variadic;
+} BaaBuiltinDescriptor;
+
+/**
+ * @brief يعيد الفهرس المعياري للدوال المدمجة القابلة للاستدعاء.
+ */
+const BaaBuiltinDescriptor* baa_builtin_descriptors(size_t* count);
 
 /**
  * @brief تنفيذ مرحلة التحليل الدلالي للتحقق من الأنواع والرموز.

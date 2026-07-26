@@ -10,6 +10,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Added
 
+- **Compiler-owned semantic completion**:
+  - Extended `semantic-query-json-v1` with cursor-specific completion items for
+    parameters, visible lexical locals, root declarations, and explicitly
+    included declarations while preserving shadowing and excluding future or
+    sibling-block declarations.
+  - Exported the analyzer's canonical callable-builtin inventory through
+    `completion-data-json-v1`, including Baa-owned signatures and Arabic
+    documentation for LSP completion resolution.
+  - Added incomplete-edit, Arabic-path, included-header, and static-metadata
+    contract coverage for editor consumers.
+
 - **Compiler-owned canonical source formatting**:
   - Added `--format=json` and the versioned `format-json-v1` contract for one
     saved source or unsaved UTF-8 buffer.

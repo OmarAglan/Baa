@@ -1635,9 +1635,9 @@
   hints, and compiler-owned safe structured fixes for missing delimiters.
 * \[ ] **Token dump mode** — stable token stream for syntax-highlighting/debugging integration.
 * \[x] **Symbol outline mode** — `--dump-symbols=json` emits `symbols-json-v1` for functions, parameters, globals, arrays, structs, unions, enums, fields, enum members, and type aliases with exact UTF-8 byte spans.
-* \[ ] **Completion metadata export** — keywords, builtins, stdlib symbols, and snippets in a stable format.
-  * \[x] `completion-data-json-v1` exports lexer-owned keywords, directives, literals, primitive types, and Arabic snippets through `--completion-data=json`.
-  * \[ ] Extend semantic completion with visible locals, compiler builtins, and declarations from explicitly included standard-library headers.
+* \[x] **Completion metadata export** — keywords, builtins, included declarations, visible locals, and snippets in stable compiler-owned formats.
+  * \[x] `completion-data-json-v1` exports lexer-owned keywords, directives, literals, primitive types, Arabic snippets, and canonical compiler builtin signatures through `--completion-data=json`.
+  * \[x] `semantic-query-json-v1` exports cursor-visible parameters, locals, globals, types, and explicitly included header declarations with lexical shadowing and future/sibling exclusion.
 * \[x] **Cursor semantic query** — `--semantic-query=json --position-byte=N` emits `semantic-query-json-v1` with scope-correct hover declarations, active call signatures, exact definitions, and translation-unit references for saved or unsaved source, including included prototypes, shadowed locals, and temporary typing errors.
 * \[x] **Translation-unit semantic index** — `--semantic-index=json` emits compiler-bound structured identities and definition/declaration/reference occurrences so project-aware tools can fan out without identifier text matching.
 * \[x] **Canonical source formatting** — `--format=json` emits idempotent

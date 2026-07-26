@@ -293,6 +293,7 @@ used by the lexer, so an editor copy cannot become a second language grammar.
       "label": "صحيح",
       "kind": "type",
       "detail": "نوع عدد صحيح",
+      "documentation": "نوع العدد الصحيح الافتراضي في باء.",
       "filter_text": "صحيح",
       "insert_text": "صحيح",
       "insert_text_format": "plain"
@@ -309,19 +310,18 @@ used by the lexer, so an editor copy cannot become a second language grammar.
 }
 ```
 
-Required item fields are `label`, `kind`, `detail`, `filter_text`,
+Required item fields are `label`, `kind`, `detail`, `documentation`, `filter_text`,
 `insert_text`, and `insert_text_format`. Stable `kind` values in this first
-slice are `keyword`, `type`, `value`, `directive`, and `snippet`.
+slice are `keyword`, `type`, `value`, `directive`, `snippet`, and `function`.
 `insert_text_format` is `plain` or `snippet`; snippets use the standard
 `${1:placeholder}` and `${0}` tab-stop notation. The optional `contextual`
 boolean marks words such as `نوع` that the parser interprets contextually
 rather than reserving lexically.
 
-This static document intentionally does not claim scope-aware program symbols.
-Baa-LSP combines it with the current `symbols-json-v1` result. A later additive
-compiler contract must provide visible locals, compiler builtins, and symbols
-from explicitly included standard-library headers before semantic completion is
-considered complete.
+This static document includes the compiler's canonical callable builtin
+inventory and signatures. Scope-aware program symbols are cursor-dependent and
+therefore come from the `completion.items` member of
+`semantic-query-json-v1`; Baa-LSP does not infer them from the document outline.
 
 ### 7.3 `format-json-v1`
 
@@ -416,7 +416,21 @@ comma forms.
         "end": { "line": 1, "column": 10, "byte": 13 }
       }
     }
-  ]
+  ],
+  "completion": {
+    "items": [
+      {
+        "label": "قيمة",
+        "kind": "variable",
+        "detail": "صحيح قيمة",
+        "documentation": "متغير في باء",
+        "filter_text": "قيمة",
+        "insert_text": "قيمة",
+        "insert_text_format": "plain",
+        "scope": "local"
+      }
+    ]
+  }
 }
 ```
 
@@ -430,6 +444,15 @@ explicitly included headers. Project fan-out compares this identity only with
 identities emitted by `semantic-index-json-v1`; consumers must not fall back to
 identifier text matching.
 
+`completion` is always an object with an `items` array. It contains declarations
+visible at `position_byte`: parameters, declarations that precede the cursor in
+the active lexical scope, root globals and types, and declarations from
+explicitly included headers. Inner declarations shadow outer declarations;
+future declarations and sibling-block locals are excluded. Each item requires
+`label`, `kind`, `detail`, `documentation`, `filter_text`, `insert_text`,
+`insert_text_format`, and `scope`. Stable scope values are `local`,
+`parameter`, `global`, and `included`.
+
 Root-buffer ranges use one-based byte line/column coordinates plus zero-based
 absolute byte offsets; consumers should use the byte offsets when converting
 to LSP UTF-16. Included-file ranges omit absolute `byte` members because their
@@ -437,8 +460,9 @@ offsets belong to a different source buffer; consumers convert their one-based
 byte line/column coordinates using that file's UTF-8 contents.
 
 Cursor queries are editing operations, so a query may still return structured
-data when the current buffer has an incomplete call or a temporary semantic
-error such as the empty call inserted by automatic parenthesis pairing.
+data and scope-aware completion when the current buffer has an incomplete call
+or a temporary semantic error such as the empty call inserted by automatic
+parenthesis pairing.
 Unsupported or unresolved results remain explicit `null` values; the compiler
 does not invent declarations or parse identifier text outside its frontend.
 

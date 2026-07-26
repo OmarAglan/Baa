@@ -81,6 +81,26 @@ class CompletionDataTests(unittest.TestCase):
         self.assertNotIn("function", by_filter)
         self.assertNotIn("ifelse", by_filter)
 
+    def test_exports_compiler_owned_builtin_signatures_and_documentation(self) -> None:
+        proc = self.run_baa("--completion-data=json")
+        self.assertEqual(proc.returncode, 0, f"{proc.stdout}\n{proc.stderr}")
+        data = json.loads(proc.stdout)
+        builtins = {
+            item["label"]: item
+            for item in data["items"]
+            if item["kind"] == "function"
+        }
+
+        self.assertIn("ابدأ_عملية", builtins)
+        self.assertIn("اطبع_منسق", builtins)
+        self.assertIn("اقرأ_رقم", builtins)
+        self.assertIn("←", builtins["ابدأ_عملية"]["detail"])
+        self.assertIn("دالة مدمجة", builtins["ابدأ_عملية"]["documentation"])
+        self.assertEqual(
+            builtins["ابدأ_عملية"]["insert_text_format"],
+            "plain",
+        )
+
     def test_rejects_unknown_format_and_positional_source(self) -> None:
         bad_format = self.run_baa("--completion-data=text")
         self.assertEqual(bad_format.returncode, 2)

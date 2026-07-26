@@ -77,9 +77,12 @@ while accepting the editor buffer through stdin. This is an additive Qalam
 contract; it does not change Takween, Nazm, or PyramidOS behavior.
 
 The compiler also owns `completion-data-json-v1`: Baa-LSP loads its Arabic
-keywords, directives, and snippets directly from Baa and combines them with
-version-matched document symbols. Scope-aware local and included-library symbol
-completion remains additive follow-up work.
+keywords, directives, snippets, and canonical builtin signatures directly from
+Baa. Cursor-sensitive `semantic-query-json-v1` completion adds visible
+parameters and locals plus declarations from explicitly included headers,
+while excluding future and sibling-scope declarations. Baa-LSP only filters the
+Arabic prefix, converts the replacement range, resolves documentation, and
+rejects obsolete versions.
 
 Cursor-sensitive hover, call signatures, definitions, and translation-unit
 references use `semantic-query-json-v1`. Baa resolves the active expression,

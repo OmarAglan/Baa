@@ -26,12 +26,16 @@ This document defines the compiler surfaces that external tools may rely on.
 | `-c` | produce object | Takween, future OS experiments |
 | `--check-header` | parse + semantic-check header declarations without codegen | Takween, Qalam |
 | `--check` | parse + semantic check only | Qalam, Takween |
+| `--source-stdin=<file>` | check unsaved UTF-8 source from stdin under a logical file path | Qalam |
 | `--emit-build-manifest <file>` | dependency/cache manifest | Takween |
 | `--incremental` | reuse cached object files when safe | Takween |
 | `--cache-dir <dir>` | select the incremental cache directory | Takween |
 | `--diagnostics=json` | machine-readable diagnostics | Qalam, Takween |
 | `--dump-tokens=json` | stable token stream | Qalam/debug tools |
 | `--dump-symbols=json` | symbol outline | Qalam |
+| `--completion-data=json` | language-owned keywords, directives, and snippets | Baa-LSP, Qalam |
+| `--semantic-query=json --position-byte=N` | compiler-owned hover and call-signature data at a UTF-8 byte position | Baa-LSP, Qalam |
+| `--semantic-index=json` | compiler-owned symbol identities and occurrences for one translation unit | Baa-LSP |
 | `--target=<target>` | target selection | Takween, OS experiments |
 | `--target-info=json` | host target, executable suffix, object format, and capabilities | Takween, CI |
 | `-I <dir>` / `-I<dir>` | include search path | Takween, users |
@@ -44,6 +48,11 @@ Takween may rely on these compiler invocation shapes:
 
 ```bash
 baa --check [-I <dir>...] [--target=<target>] <inputs...>
+baa --check --diagnostics=json --source-stdin=<logical-file>
+baa --dump-symbols=json [--source-stdin=<logical-file> | <source.baa>]
+baa --completion-data=json
+baa --semantic-query=json --position-byte=<offset> [--source-stdin=<logical-file> | <source.baa>]
+baa --semantic-index=json [-I <dir>...] [--source-stdin=<logical-file> | <source.baa>]
 baa --check-header [-I <dir>...] <headers...>
 baa [-O0|-O1|-O2] [--verify] [-I <dir>...] <inputs...> -o <executable>
 baa -c [-O0|-O1|-O2] [-I <dir>...] <inputs...> -o <object>
@@ -61,6 +70,13 @@ parses, runs semantic analysis, and stops before IR lowering, optimization, asse
 object emission, and linking. It may be combined with `--emit-build-manifest`; those
 manifests use `"mode": "check"` and record source/include dependencies without an output
 artifact.
+
+`--source-stdin=<logical-file>` is the unsaved-editor form of `--check`. The compiler reads
+exactly one UTF-8 Baa source from standard input while using `<logical-file>` as the source
+identity for diagnostics and source-relative includes. It accepts no positional source,
+code-generation mode, incremental cache, or build manifest. The logical file need not contain
+the same bytes on disk. This prevents an editor from writing shadow sources into the project
+tree and ensures diagnostic byte offsets describe the supplied buffer.
 
 Stable invocation inputs are:
 
@@ -206,6 +222,244 @@ New v1 JSON outputs must:
 - avoid localized field names; field names stay English for tool stability,
 - put Arabic user-facing messages in values, not keys.
 
+### 7.1 `symbols-json-v1`
+
+`--dump-symbols=json` implies check-only analysis and accepts exactly one Baa
+source. It may consume an unsaved buffer through `--source-stdin=<logical-file>`.
+It cannot be combined with `--diagnostics=json` because each mode owns one
+complete JSON document on stdout.
+
+The output is a document-local declaration tree:
+
+```json
+{
+  "schema_version": "symbols-json-v1",
+  "compiler_version": "0.6.0",
+  "file": "/logical/path/main.baa",
+  "position_encoding": "utf-8-bytes",
+  "symbols": [
+    {
+      "name": "اجمع",
+      "kind": "function",
+      "scope": "global",
+      "span": {
+        "start": { "line": 1, "column": 7, "byte": 11 },
+        "end": { "line": 1, "column": 15, "byte": 19 }
+      },
+      "return_type": { "kind": "int", "display": "صحيح" },
+      "modifiers": {
+        "const": false,
+        "static": false,
+        "extern": false,
+        "prototype": false
+      },
+      "children": []
+    }
+  ]
+}
+```
+
+`line` and `column` are one-based UTF-8 byte coordinates, while `byte` is a
+zero-based absolute UTF-8 offset. Consumers should use the absolute byte spans
+when converting to LSP UTF-16 positions. Included-header declarations are not
+copied into the root document's outline. Stable `kind` values are `function`,
+`parameter`, `variable`, `array`, `type-alias`, `enum`, `enum-member`, `struct`,
+`union`, and `field`. Type objects use stable English `kind` values and Arabic
+`display` values. Removing or changing these required fields requires a schema
+version bump.
+
+### 7.2 `completion-data-json-v1`
+
+`--completion-data=json` accepts no source file and emits the static editing
+surface owned by the Baa compiler. Its keyword records come from the same table
+used by the lexer, so an editor copy cannot become a second language grammar.
+
+```json
+{
+  "schema_version": "completion-data-json-v1",
+  "compiler_version": "0.6.0",
+  "language": "baa",
+  "items": [
+    {
+      "label": "صحيح",
+      "kind": "type",
+      "detail": "نوع عدد صحيح",
+      "filter_text": "صحيح",
+      "insert_text": "صحيح",
+      "insert_text_format": "plain"
+    },
+    {
+      "label": "الرئيسية (دالة)",
+      "kind": "snippet",
+      "detail": "قالب نقطة بداية البرنامج",
+      "filter_text": "الرئيسية",
+      "insert_text": "صحيح الرئيسية() {\n\t${0}\n\tإرجع ٠.\n}",
+      "insert_text_format": "snippet"
+    }
+  ]
+}
+```
+
+Required item fields are `label`, `kind`, `detail`, `filter_text`,
+`insert_text`, and `insert_text_format`. Stable `kind` values in this first
+slice are `keyword`, `type`, `value`, `directive`, and `snippet`.
+`insert_text_format` is `plain` or `snippet`; snippets use the standard
+`${1:placeholder}` and `${0}` tab-stop notation. The optional `contextual`
+boolean marks words such as `نوع` that the parser interprets contextually
+rather than reserving lexically.
+
+This static document intentionally does not claim scope-aware program symbols.
+Baa-LSP combines it with the current `symbols-json-v1` result. A later additive
+compiler contract must provide visible locals, compiler builtins, and symbols
+from explicitly included standard-library headers before semantic completion is
+considered complete.
+
+### 7.3 `semantic-query-json-v1`
+
+`--semantic-query=json --position-byte=<offset>` accepts exactly one Baa source
+and implies check-only frontend analysis. It may consume the current unsaved
+buffer through `--source-stdin=<logical-file>`. The position is a zero-based
+absolute UTF-8 byte offset; values past the end of the buffer are clamped to
+the buffer length.
+
+The compiler resolves the node at the cursor to its analyzed declaration, so
+block shadowing, fields, enum members, function pointers, and included
+prototypes use Baa semantics rather than an editor-side text search. It also
+finds the enclosing call and calculates the active argument while respecting
+nested delimiters, strings, character literals, comments, and both supported
+comma forms.
+
+```json
+{
+  "schema_version": "semantic-query-json-v1",
+  "compiler_version": "0.6.0",
+  "file": "/logical/path/main.baa",
+  "position_encoding": "utf-8-bytes",
+  "position_byte": 42,
+  "symbol": {
+    "domain": "external",
+    "kind": "function",
+    "name": "اجمع"
+  },
+  "hover": {
+    "name": "اجمع",
+    "kind": "function",
+    "display": "صحيح اجمع(صحيح أول، صحيح ثان)",
+    "description": "دالة",
+    "range": {
+      "start": { "line": 5, "column": 11, "byte": 37 },
+      "end": { "line": 5, "column": 15, "byte": 45 }
+    },
+    "declaration": {
+      "file": "/logical/path/main.baa",
+      "line": 1,
+      "column": 6
+    }
+  },
+  "signature_help": {
+    "name": "اجمع",
+    "label": "صحيح اجمع(صحيح أول، صحيح ثان)",
+    "active_parameter": 1,
+    "variadic": false,
+    "parameters": [
+      { "label": "صحيح أول" },
+      { "label": "صحيح ثان" }
+    ],
+    "declaration": {
+      "file": "/logical/path/main.baa",
+      "line": 1,
+      "column": 6
+    }
+  },
+  "definition": {
+    "file": "/logical/path/main.baa",
+    "name": "اجمع",
+    "kind": "function",
+    "range": {
+      "start": { "line": 1, "column": 6, "byte": 5 },
+      "end": { "line": 1, "column": 10, "byte": 13 }
+    }
+  },
+  "references": [
+    {
+      "file": "/logical/path/main.baa",
+      "name": "اجمع",
+      "kind": "function",
+      "role": "declaration",
+      "range": {
+        "start": { "line": 1, "column": 6, "byte": 5 },
+        "end": { "line": 1, "column": 10, "byte": 13 }
+      }
+    }
+  ]
+}
+```
+
+`symbol`, `hover`, `signature_help`, and `definition` are independently `null`
+when no valid result exists. `symbol` is the compiler-owned structured identity
+of the selected declaration. `references` is always an array and contains only AST
+declarations and uses bound to the selected compiler declaration; equal text in
+comments, strings, or a shadowing scope is not a reference. The current
+contract returns references from the analyzed translation unit, including
+explicitly included headers. Project fan-out compares this identity only with
+identities emitted by `semantic-index-json-v1`; consumers must not fall back to
+identifier text matching.
+
+Root-buffer ranges use one-based byte line/column coordinates plus zero-based
+absolute byte offsets; consumers should use the byte offsets when converting
+to LSP UTF-16. Included-file ranges omit absolute `byte` members because their
+offsets belong to a different source buffer; consumers convert their one-based
+byte line/column coordinates using that file's UTF-8 contents.
+
+Cursor queries are editing operations, so a query may still return structured
+data when the current buffer has an incomplete call or a temporary semantic
+error such as the empty call inserted by automatic parenthesis pairing.
+Unsupported or unresolved results remain explicit `null` values; the compiler
+does not invent declarations or parse identifier text outside its frontend.
+
+### 7.4 `semantic-index-json-v1`
+
+`--semantic-index=json` accepts exactly one successfully analyzed Baa
+translation unit and implies check-only frontend analysis. `-I` and
+`--source-stdin=<logical-file>` have the same meaning as in the other editor
+contracts. The output lists only AST declarations and bound uses:
+
+```json
+{
+  "schema_version": "semantic-index-json-v1",
+  "compiler_version": "0.6.0",
+  "file": "/project/source/main.baa",
+  "position_encoding": "utf-8-bytes",
+  "occurrences": [
+    {
+      "symbol": {
+        "domain": "external",
+        "kind": "function",
+        "name": "اجمع"
+      },
+      "role": "reference",
+      "location": {
+        "file": "/project/source/main.baa",
+        "name": "اجمع",
+        "kind": "function",
+        "range": {
+          "start": { "line": 5, "column": 11, "byte": 37 },
+          "end": { "line": 5, "column": 15, "byte": 45 }
+        }
+      }
+    }
+  ]
+}
+```
+
+Roles are `definition`, `declaration`, or `reference`. External functions and
+non-static globals use an identity stable across translation units. File-local
+and local identities include their compiler declaration location; type-like
+declarations use their defining location. Baa-LSP may aggregate equal
+structured identities across the exact source closure supplied by Takween.
+Duplicate header occurrences are deduplicated by location. Invalid source
+returns source exit code `1` rather than a partial index.
+
 ---
 
 ## 8. Contract Versioning
@@ -236,7 +490,9 @@ Qalam should consume:
 - diagnostic JSON,
 - token JSON,
 - symbol JSON,
-- completion metadata.
+- `completion-data-json-v1`,
+- `semantic-query-json-v1`.
+- `semantic-index-json-v1`.
 
 Nazm integration should consume:
 

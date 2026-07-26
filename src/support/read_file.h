@@ -7,5 +7,6 @@
 #define BAA_READ_FILE_H
 
 char* read_file(const char* path);
+char* read_stdin_source(void);
 
 #endif

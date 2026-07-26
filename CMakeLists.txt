@@ -28,6 +28,7 @@ endif()
 # List of source files
 set(SOURCES
     src/frontend/analysis.c    # Semantic Analysis module
+    src/frontend/language_profile.c # Central language/completion metadata
     src/support/error.c
     src/support/file_io.c
     src/support/read_file.c
@@ -77,6 +78,9 @@ set(SOURCES
     src/driver/driver_nazm.c
     src/driver/driver_startup.c
     src/driver/driver_pipeline.c
+    src/driver/driver_symbols.c
+    src/driver/driver_completion.c
+    src/driver/driver_semantic.c
     src/driver/driver_build.c
 )
 

@@ -27,6 +27,9 @@ A project may release independently as long as it stays compatible with the cont
 | `build-manifest-v1` | Baa | Takween |
 | `diagnostics-json-v1` | Baa | Qalam, Takween |
 | `symbols-json-v1` | Baa | Qalam |
+| `completion-data-json-v1` | Baa | Baa-LSP, Qalam |
+| `semantic-query-json-v1` | Baa | Baa-LSP, Qalam |
+| `semantic-index-json-v1` | Baa | Baa-LSP |
 | `tokens-json-v1` | Baa | Qalam |
 | `target-spec-v1` | Baa | Takween, PyramidOS experiments |
 | `conformance-v1` | Baa | Baa, future compilers/tools |
@@ -51,7 +54,7 @@ A project may release independently as long as it stays compatible with the cont
 | v0.5.9 | independent; no integration | manual/experimental | manual/experimental | none | `baa-language-v0.5.9`, `baa-stdlib-v0.5.9`, `baa-hosted-abi-v0.5.9`, `baa-ir-v0.5.9` |
 | v0.6.x | Nazm 0.4 independent; boundary planning | Takween prototype | Qalam prototype | host tools only | compiler-cli-v1 draft, diagnostics-json-v1 implemented draft |
 | v0.7.0 | Baa emission inventory | Takween integration | Qalam not required | host tools only | build-manifest-v1, compiler-cli-v1, baa-nazm-boundary-v0 draft |
-| v0.7.2 | non-default shadow subprocess | Takween integration | Qalam integration | host tools only | diagnostics-json-v1, tokens-json-v1, symbols-json-v1 |
+| v0.7.2 | non-default shadow subprocess | Takween integration | Qalam integration | host tools only | diagnostics-json-v1, tokens-json-v1, symbols-json-v1, completion-data-json-v1, semantic-query-json-v1 |
 | v0.8.x | parity hardening; still gated | stable integration | stable integration | host tools only | conformance-v1 draft, target-spec-v1 |
 | v0.9.0 | default decision only after parity signoff | stable through 1.0 review | stable through 1.0 review | freestanding plan only | all v1 hosted contracts frozen |
 | v0.10.x/post-v0.9 | admitted path or explicit external-assembler fallback | stable | stable | tiny mixed-link experiments | freestanding-v0, architecture target decision |
@@ -65,6 +68,29 @@ with embedding enabled and records the exact `nazm-capabilities-v1` digest in
 its full assembler fingerprint. Takween treats that value as required cache-key
 evidence for Nazm artifacts. CLI/API equivalence is gated on ELF64 and COFF;
 the default process boundary cannot change without a separate admission.
+
+For Qalam's Baa-first live analysis, `compiler-cli-v1` now includes the
+check-only `--source-stdin=<logical-file>` input shape. It preserves
+`diagnostics-json-v1`, source-relative includes, Arabic paths, and exit codes
+while accepting the editor buffer through stdin. This is an additive Qalam
+contract; it does not change Takween, Nazm, or PyramidOS behavior.
+
+The compiler also owns `completion-data-json-v1`: Baa-LSP loads its Arabic
+keywords, directives, and snippets directly from Baa and combines them with
+version-matched document symbols. Scope-aware local and included-library symbol
+completion remains additive follow-up work.
+
+Cursor-sensitive hover, call signatures, definitions, and translation-unit
+references use `semantic-query-json-v1`. Baa resolves the active expression,
+declaration, shadowed local, included prototype, bound reference set, and
+parameter index; Baa-LSP only converts UTF-8 byte positions and paths to LSP
+UTF-16 locations and rejects obsolete document versions.
+
+Project-aware navigation uses `semantic-index-json-v1` together with the
+structured source and include closure in `takween-build-plan-v1`. Baa owns
+symbol identity and occurrence binding; Takween owns project membership;
+Baa-LSP performs only version-safe fan-out, location conversion, sorting, and
+deduplication.
 
 ---
 

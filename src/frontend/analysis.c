@@ -38,10 +38,12 @@
 
 typedef struct {
     char* name; // مملوك (strdup)
+    const Node* decl_node;
     int member_count;
     struct {
         char* name;   // مملوك (strdup)
         int64_t value;
+        const Node* decl_node;
     } members[ANALYSIS_MAX_ENUM_MEMBERS];
 } EnumDef;
 
@@ -56,10 +58,12 @@ typedef struct {
     int offset;
     int size;
     int align;
+    const Node* decl_node;
 } StructFieldDef;
 
 typedef struct {
     char* name; // مملوك (strdup)
+    const Node* decl_node;
     int field_count;
     StructFieldDef fields[ANALYSIS_MAX_STRUCT_FIELDS];
     int size;
@@ -70,6 +74,7 @@ typedef struct {
 
 typedef struct {
     char* name; // مملوك (strdup)
+    const Node* decl_node;
     int field_count;
     StructFieldDef fields[ANALYSIS_MAX_STRUCT_FIELDS];
     int size;
@@ -80,6 +85,7 @@ typedef struct {
 
 typedef struct {
     char* name;              // مملوك (strdup)
+    const Node* decl_node;
     DataType target_type;    // النوع الهدف بعد فك الاسم البديل
     char* target_type_name;  // مملوك (strdup) عند TYPE_ENUM/TYPE_STRUCT/TYPE_UNION
     DataType target_ptr_base_type;
@@ -131,6 +137,7 @@ typedef struct {
     const char* decl_file;
     int decl_line;
     int decl_col;
+    const Node* decl_node;
 } FuncSymbol;
 
 static FuncSymbol func_symbols[ANALYSIS_MAX_FUNCS];
@@ -724,6 +731,10 @@ static void func_register(Node* node)
                 return;
             }
             existing->is_defined = true;
+            existing->decl_file = node->filename ? node->filename : current_filename;
+            existing->decl_line = node->line;
+            existing->decl_col = node->col;
+            existing->decl_node = node;
         }
         return;
     }
@@ -751,6 +762,7 @@ static void func_register(Node* node)
     fs->decl_file = node->filename ? node->filename : current_filename;
     fs->decl_line = node->line;
     fs->decl_col = node->col;
+    fs->decl_node = node;
     fs->is_defined = node->data.func_def.is_prototype ? false : true;
 
     if (fs->return_type == TYPE_POINTER &&

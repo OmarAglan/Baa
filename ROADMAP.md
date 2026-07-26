@@ -1632,8 +1632,12 @@
 * \[x] **Fast check mode** — `--check` parses and semantically checks sources without IR/codegen/toolchain output for editor feedback.
 * \[x] **Machine-readable diagnostics** — `--diagnostics=json` emits `diagnostics-json-v1` with file, line, column, span, code, severity, category, and hint fields.
 * \[ ] **Token dump mode** — stable token stream for syntax-highlighting/debugging integration.
-* \[ ] **Symbol outline mode** — functions, globals, structs, enums, and type aliases for IDE navigation.
+* \[x] **Symbol outline mode** — `--dump-symbols=json` emits `symbols-json-v1` for functions, parameters, globals, arrays, structs, unions, enums, fields, enum members, and type aliases with exact UTF-8 byte spans.
 * \[ ] **Completion metadata export** — keywords, builtins, stdlib symbols, and snippets in a stable format.
+  * \[x] `completion-data-json-v1` exports lexer-owned keywords, directives, literals, primitive types, and Arabic snippets through `--completion-data=json`.
+  * \[ ] Extend semantic completion with visible locals, compiler builtins, and declarations from explicitly included standard-library headers.
+* \[x] **Cursor semantic query** — `--semantic-query=json --position-byte=N` emits `semantic-query-json-v1` with scope-correct hover declarations, active call signatures, exact definitions, and translation-unit references for saved or unsaved source, including included prototypes, shadowed locals, and temporary typing errors.
+* \[x] **Translation-unit semantic index** — `--semantic-index=json` emits compiler-bound structured identities and definition/declaration/reference occurrences so project-aware tools can fan out without identifier text matching.
 * \[x] **No internal Baa IDE roadmap** — `docs/ECOSYSTEM_BOUNDARIES.md` keeps Qalam-facing Baa work limited to compiler/data contracts while Qalam-IDE owns editor UI/UX.
 
   ### v0.7.3: Compiler Testing II 🧪

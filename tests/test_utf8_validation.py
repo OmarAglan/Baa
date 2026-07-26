@@ -100,6 +100,35 @@ class Utf8ValidationTests(unittest.TestCase):
             "0xFF",
         )
 
+    def test_invalid_utf8_from_source_stdin_remains_structured(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="baa_utf8_stdin_") as temp:
+            work = Path(temp)
+            logical = work / "مشروع عربي" / "رئيسي.baa"
+            logical.parent.mkdir()
+            source = (
+                "صحيح ".encode("utf-8")
+                + b"\xff"
+                + " = ١.\nصحيح الرئيسية() { إرجع ٠. }\n".encode("utf-8")
+            )
+            proc = subprocess.run(
+                [
+                    str(self.baa),
+                    "--check",
+                    "--diagnostics=json",
+                    f"--source-stdin={logical}",
+                ],
+                cwd=str(work),
+                input=source,
+                capture_output=True,
+                timeout=20,
+            )
+
+        self.assertEqual(proc.returncode, 1, proc.stderr.decode("utf-8", errors="replace"))
+        data = json.loads(proc.stdout.decode("utf-8"))
+        self.assertEqual(data["schema_version"], "diagnostics-json-v1")
+        self.assertEqual(Path(data["diagnostics"][0]["file"]), logical)
+        self.assertIn("0xFF", data["diagnostics"][0]["message"])
+
     def test_generated_program_accepts_arabic_argv_without_main_alias(self) -> None:
         with tempfile.TemporaryDirectory(prefix="baa_arabic_entry_") as temp:
             work = Path(temp)

@@ -39,6 +39,12 @@ typedef struct
     bool header_check;  // --check-header: فحص الترويسة دون توليد كود
     bool check_only;    // --check: فحص المصدر نحوياً ودلالياً دون توليد كود
     bool diagnostics_json; // --diagnostics=json: إخراج التشخيصات بصيغة JSON
+    bool dump_symbols_json; // --dump-symbols=json: مخطط رموز مستند ثابت
+    bool semantic_query_json; // --semantic-query=json: معلومات دلالية عند موضع بايت
+    bool semantic_index_json; // --semantic-index=json: هويات ومواضع رموز وحدة الترجمة
+    size_t semantic_query_byte; // موضع UTF-8 byte لعقد semantic-query-json-v1
+    bool semantic_query_byte_set;
+    const char *source_stdin_file; // --source-stdin=<path>: محتوى المصدر من stdin مع مسار منطقي
     char *output_file;  // ملف الخرج (.exe, .o, .s)
     const char **include_dirs; // مسارات البحث الإضافية للتضمين (-I)
     size_t include_dir_count;  // عدد مسارات -I

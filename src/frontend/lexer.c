@@ -5,6 +5,7 @@
  */
 
 #include "frontend_internal.h"
+#include "language_profile.h"
 #include <ctype.h>
 #include <stdarg.h>
 
@@ -288,13 +289,13 @@ static char* lex_normalize_existing_path(Lexer* l, const char* path)
 /**
  * @brief تسجيل تبعية بناء مطبعة بدون تكرار.
  */
-static void lex_record_dependency(Lexer* l, const char* resolved_path)
+static const char* lex_record_dependency(Lexer* l, const char* resolved_path)
 {
-    if (!l || !resolved_path || !resolved_path[0]) return;
+    if (!l || !resolved_path || !resolved_path[0]) return NULL;
 
     for (size_t i = 0; i < l->dependency_count; ++i) {
         if (l->dependency_paths[i] && strcmp(l->dependency_paths[i], resolved_path) == 0) {
-            return;
+            return l->dependency_paths[i];
         }
     }
 
@@ -309,7 +310,7 @@ static void lex_record_dependency(Lexer* l, const char* resolved_path)
     }
 
     l->dependency_paths[l->dependency_count] = lex_strdup_heap(l, resolved_path);
-    l->dependency_count++;
+    return l->dependency_paths[l->dependency_count++];
 }
 
 /**

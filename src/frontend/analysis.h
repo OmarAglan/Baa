@@ -45,6 +45,7 @@ typedef struct {
     int decl_line;     // سطر التعريف (للتحذيرات)
     int decl_col;      // عمود التعريف (للتحذيرات)
     const char* decl_file; // ملف التعريف (للتحذيرات)
+    const Node* decl_node; // عقدة التصريح المالكة داخل AST
 } Symbol;
 
 /**

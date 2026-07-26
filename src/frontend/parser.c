@@ -323,7 +323,12 @@ static Node* ast_node_new(NodeType type, Token tok) {
     memset(n, 0, sizeof(Node));
     n->type = type;
     n->next = NULL;
-    n->filename = tok.filename;
+    n->filename = tok.filename ? strdup(tok.filename) : NULL;
+    if (tok.filename && !n->filename) {
+        free(n);
+        error_report(tok, "فشل نسخ مسار المصدر لعقدة AST.");
+        return NULL;
+    }
     n->line = tok.line;
     n->col = tok.col;
     n->length = tok.length > 0 ? tok.length : 1;

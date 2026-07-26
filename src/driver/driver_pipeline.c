@@ -77,6 +77,103 @@ static char* driver_strdup_alloc(const char* text)
     return out;
 }
 
+static bool driver_is_utf8_continuation(unsigned char byte)
+{
+    return (byte & 0xC0u) == 0x80u;
+}
+
+static int driver_utf8_sequence_length(const unsigned char* text, size_t remaining)
+{
+    if (!text || remaining == 0u || text[0] == 0u) return 0;
+    const unsigned char b0 = text[0];
+    if ((b0 & 0x80u) == 0u) return 1;
+
+    if ((b0 & 0xE0u) == 0xC0u)
+    {
+        if (remaining < 2u) return 0;
+        const unsigned char b1 = text[1];
+        if (b1 == 0u || !driver_is_utf8_continuation(b1)) return 0;
+        uint32_t cp = ((uint32_t)(b0 & 0x1Fu) << 6) | (uint32_t)(b1 & 0x3Fu);
+        return cp >= 0x80u ? 2 : 0;
+    }
+    if ((b0 & 0xF0u) == 0xE0u)
+    {
+        if (remaining < 3u) return 0;
+        const unsigned char b1 = text[1];
+        const unsigned char b2 = text[2];
+        if (b1 == 0u || b2 == 0u ||
+            !driver_is_utf8_continuation(b1) || !driver_is_utf8_continuation(b2)) return 0;
+        uint32_t cp = ((uint32_t)(b0 & 0x0Fu) << 12) |
+                      ((uint32_t)(b1 & 0x3Fu) << 6) |
+                      (uint32_t)(b2 & 0x3Fu);
+        return cp >= 0x800u && !(cp >= 0xD800u && cp <= 0xDFFFu) ? 3 : 0;
+    }
+    if ((b0 & 0xF8u) == 0xF0u)
+    {
+        if (remaining < 4u) return 0;
+        const unsigned char b1 = text[1];
+        const unsigned char b2 = text[2];
+        const unsigned char b3 = text[3];
+        if (b1 == 0u || b2 == 0u || b3 == 0u ||
+            !driver_is_utf8_continuation(b1) ||
+            !driver_is_utf8_continuation(b2) ||
+            !driver_is_utf8_continuation(b3)) return 0;
+        uint32_t cp = ((uint32_t)(b0 & 0x07u) << 18) |
+                      ((uint32_t)(b1 & 0x3Fu) << 12) |
+                      ((uint32_t)(b2 & 0x3Fu) << 6) |
+                      (uint32_t)(b3 & 0x3Fu);
+        return cp >= 0x10000u && cp <= 0x10FFFFu ? 4 : 0;
+    }
+    return 0;
+}
+
+static bool driver_validate_stdin_utf8(const char* source,
+                                       const char* logical_path)
+{
+    if (!source) return false;
+
+    int line = 1;
+    int column = 1;
+    size_t remaining = strlen(source);
+    const unsigned char* current = (const unsigned char*)source;
+    while (*current)
+    {
+        const int length = driver_utf8_sequence_length(current, remaining);
+        if (length == 0)
+        {
+            Token token;
+            memset(&token, 0, sizeof(token));
+            token.type = TOKEN_INVALID;
+            token.filename = logical_path ? logical_path : "unknown";
+            token.line = line;
+            token.col = column;
+            token.length = 1;
+            error_init(source);
+            error_register_source(token.filename, source);
+            error_report(token,
+                         "خطأ لفظي: تسلسل UTF-8 غير صالح عند البايت 0x%02X.",
+                         (unsigned int)*current);
+            return false;
+        }
+
+        for (int i = 0; i < length; ++i)
+        {
+            if (*current == '\n')
+            {
+                ++line;
+                column = 1;
+            }
+            else
+            {
+                ++column;
+            }
+            ++current;
+            --remaining;
+        }
+    }
+    return true;
+}
+
 // ============================================================================
 // خط الأنابيب لكل ملف
 // ============================================================================
@@ -254,8 +351,23 @@ static BaaCompilerExitCode compile_one_ir(const CompilerConfig *config,
 
     double t0 = 0.0;
     if (config->time_phases) t0 = driver_time_seconds();
-    char *source = read_file(current_input);
+    char *source = config->source_stdin_file
+        ? read_stdin_source()
+        : read_file(current_input);
     if (config->time_phases) phase_times->read_file_s += (driver_time_seconds() - t0);
+    if (!source)
+    {
+        fprintf(stderr, "خطأ: تعذر قراءة مصدر باء من الدخل القياسي.\n");
+        if (early_obj_file && early_obj_file != config->output_file) free(early_obj_file);
+        return BAA_COMPILER_EXIT_TOOLCHAIN_ERROR;
+    }
+    if (config->source_stdin_file &&
+        !driver_validate_stdin_utf8(source, current_input))
+    {
+        free(source);
+        if (early_obj_file && early_obj_file != config->output_file) free(early_obj_file);
+        return BAA_COMPILER_EXIT_SOURCE_ERROR;
+    }
 
     if (config->time_phases) t0 = driver_time_seconds();
     Lexer lexer;
@@ -267,6 +379,20 @@ static BaaCompilerExitCode compile_one_ir(const CompilerConfig *config,
 
     if (error_has_occurred())
     {
+        if (config->semantic_query_json && ast &&
+            driver_semantic_query_json_write(stdout,
+                                             BAA_VERSION,
+                                             current_input,
+                                             source,
+                                             ast,
+                                             config->semantic_query_byte))
+        {
+            lexer_free_dependencies(&lexer);
+            free(source);
+            if (early_obj_file && early_obj_file != config->output_file)
+                free(early_obj_file);
+            return BAA_COMPILER_EXIT_SUCCESS;
+        }
         fprintf(stderr, "Aborting %s due to syntax errors.\n", current_input);
         lexer_free_dependencies(&lexer);
         free(source);
@@ -279,6 +405,20 @@ static BaaCompilerExitCode compile_one_ir(const CompilerConfig *config,
     if (config->time_phases) t0 = driver_time_seconds();
     if (!analyze(ast))
     {
+        if (config->semantic_query_json &&
+            driver_semantic_query_json_write(stdout,
+                                             BAA_VERSION,
+                                             current_input,
+                                             source,
+                                             ast,
+                                             config->semantic_query_byte))
+        {
+            lexer_free_dependencies(&lexer);
+            free(source);
+            if (early_obj_file && early_obj_file != config->output_file)
+                free(early_obj_file);
+            return BAA_COMPILER_EXIT_SUCCESS;
+        }
         fprintf(stderr, "Aborting %s due to semantic errors.\n", current_input);
         lexer_free_dependencies(&lexer);
         free(source);
@@ -294,6 +434,57 @@ static BaaCompilerExitCode compile_one_ir(const CompilerConfig *config,
         free(source);
         if (early_obj_file && early_obj_file != config->output_file) free(early_obj_file);
         return BAA_COMPILER_EXIT_SOURCE_ERROR;
+    }
+
+    if (config->dump_symbols_json)
+    {
+        if (!driver_symbols_json_write(stdout,
+                                       BAA_VERSION,
+                                       current_input,
+                                       source,
+                                       ast))
+        {
+            fprintf(stderr, "خطأ: فشل إصدار symbols-json-v1.\n");
+            lexer_free_dependencies(&lexer);
+            free(source);
+            if (early_obj_file && early_obj_file != config->output_file) free(early_obj_file);
+            return BAA_COMPILER_EXIT_TOOLCHAIN_ERROR;
+        }
+    }
+
+    if (config->semantic_query_json)
+    {
+        if (!driver_semantic_query_json_write(stdout,
+                                              BAA_VERSION,
+                                              current_input,
+                                              source,
+                                              ast,
+                                              config->semantic_query_byte))
+        {
+            fprintf(stderr, "خطأ: فشل إصدار semantic-query-json-v1.\n");
+            lexer_free_dependencies(&lexer);
+            free(source);
+            if (early_obj_file && early_obj_file != config->output_file)
+                free(early_obj_file);
+            return BAA_COMPILER_EXIT_TOOLCHAIN_ERROR;
+        }
+    }
+
+    if (config->semantic_index_json)
+    {
+        if (!driver_semantic_index_json_write(stdout,
+                                              BAA_VERSION,
+                                              current_input,
+                                              source,
+                                              ast))
+        {
+            fprintf(stderr, "خطأ: فشل إصدار semantic-index-json-v1.\n");
+            lexer_free_dependencies(&lexer);
+            free(source);
+            if (early_obj_file && early_obj_file != config->output_file)
+                free(early_obj_file);
+            return BAA_COMPILER_EXIT_TOOLCHAIN_ERROR;
+        }
     }
 
     if (config->check_only || config->header_check)

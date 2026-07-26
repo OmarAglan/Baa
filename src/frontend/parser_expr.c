@@ -223,7 +223,6 @@ Node* parse_primary() {
 
     // الوصول للأعضاء/القيم المؤهلة: <expr>:<member> (يمكن تكراره للتعشيش)
     while (node && parser.current.type == TOKEN_COLON) {
-        Token tok_colon = parser.current;
         eat(TOKEN_COLON);
 
         if (parser.current.type != TOKEN_IDENTIFIER) {
@@ -231,10 +230,11 @@ Node* parse_primary() {
             break;
         }
 
+        Token tok_member = parser.current;
         char* member = strdup(parser.current.value);
         eat(TOKEN_IDENTIFIER);
 
-        Node* ma = ast_node_new(NODE_MEMBER_ACCESS, tok_colon);
+        Node* ma = ast_node_new(NODE_MEMBER_ACCESS, tok_member);
         if (!ma) return NULL;
         ma->data.member_access.base = node;
         ma->data.member_access.member = member;

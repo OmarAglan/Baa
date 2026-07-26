@@ -218,6 +218,8 @@ static void resolve_member_access(Node* node)
         if (!sym && ed) {
             for (int i = 0; i < ed->member_count; i++) {
                 if (ed->members[i].name && strcmp(ed->members[i].name, member) == 0) {
+                    base->resolved_decl = ed->decl_node;
+                    node->resolved_decl = ed->members[i].decl_node;
                     node->data.member_access.is_enum_value = true;
                     node->data.member_access.enum_name = strdup(base_name);
                     node->data.member_access.enum_value = ed->members[i].value;
@@ -243,6 +245,7 @@ static void resolve_member_access(Node* node)
             semantic_error(node, "متغير غير معرّف '%s'.", base->data.var_ref.name ? base->data.var_ref.name : "???");
             return;
         }
+        bind_symbol_use(base, sym);
         if (sym->is_array) {
             semantic_error(node, "الوصول إلى عضو مصفوفة يتطلب فهرسة أولاً.");
             return;
@@ -264,6 +267,7 @@ static void resolve_member_access(Node* node)
                            base->data.array_op.name ? base->data.array_op.name : "???");
             return;
         }
+        bind_symbol_use(base, sym);
         if (!sym->is_array) {
             semantic_error(node, "'%s' ليس مصفوفة.", sym->name);
             return;
@@ -362,6 +366,7 @@ static void resolve_member_access(Node* node)
     node->data.member_access.member_ptr_base_type_name = f->ptr_base_type_name ? strdup(f->ptr_base_type_name) : NULL;
     node->data.member_access.member_ptr_depth = f->ptr_depth;
     node->data.member_access.member_is_const = base_const || f->is_const;
+    node->resolved_decl = f->decl_node;
 }
 
 static void enum_register_decl(Node* node)
@@ -387,6 +392,7 @@ static void enum_register_decl(Node* node)
     EnumDef* ed = &enum_defs[enum_count++];
     memset(ed, 0, sizeof(*ed));
     ed->name = strdup(name);
+    ed->decl_node = node;
 
     int64_t next = 0;
     for (Node* m = node->data.enum_decl.members; m; m = m->next) {
@@ -408,6 +414,7 @@ static void enum_register_decl(Node* node)
 
         ed->members[ed->member_count].name = strdup(m->data.enum_member.name);
         ed->members[ed->member_count].value = next;
+        ed->members[ed->member_count].decl_node = m;
         ed->member_count++;
 
         m->data.enum_member.value = next;
@@ -443,6 +450,7 @@ static void struct_register_decl(Node* node)
     StructDef* sd = &struct_defs[struct_count++];
     memset(sd, 0, sizeof(*sd));
     sd->name = strdup(name);
+    sd->decl_node = node;
     sd->layout_done = false;
     sd->layout_in_progress = false;
 
@@ -472,6 +480,7 @@ static void struct_register_decl(Node* node)
         out->ptr_base_type_name = f->data.var_decl.ptr_base_type_name ? strdup(f->data.var_decl.ptr_base_type_name) : NULL;
         out->ptr_depth = f->data.var_decl.ptr_depth;
         out->is_const = f->data.var_decl.is_const;
+        out->decl_node = f;
     }
 
     if (sd->field_count <= 0) {
@@ -502,6 +511,7 @@ static void union_register_decl(Node* node)
     UnionDef* ud = &union_defs[union_count++];
     memset(ud, 0, sizeof(*ud));
     ud->name = strdup(name);
+    ud->decl_node = node;
     ud->layout_done = false;
     ud->layout_in_progress = false;
 
@@ -532,6 +542,7 @@ static void union_register_decl(Node* node)
         out->ptr_depth = f->data.var_decl.ptr_depth;
         out->is_const = f->data.var_decl.is_const;
         out->offset = 0;
+        out->decl_node = f;
     }
 
     if (ud->field_count <= 0) {
@@ -621,6 +632,7 @@ static void type_alias_register_decl(Node* node)
     TypeAliasDef* out = &type_alias_defs[type_alias_count++];
     memset(out, 0, sizeof(*out));
     out->name = strdup(name);
+    out->decl_node = node;
     if (!out->name) {
         type_alias_count--;
         semantic_error(node, "نفدت الذاكرة أثناء تسجيل الاسم البديل '%s'.", name);

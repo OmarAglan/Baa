@@ -618,6 +618,36 @@ def _run_json_diagnostics_tests(log_dir: Path) -> StepResult:
     )
 
 
+def _run_symbols_json_tests(log_dir: Path) -> StepResult:
+    return _run_logged(
+        "symbols-json-tests",
+        [sys.executable, str(TESTS_DIR / "test_symbols_json.py")],
+        cwd=ROOT,
+        log_dir=log_dir,
+        timeout_s=120.0,
+    )
+
+
+def _run_completion_data_tests(log_dir: Path) -> StepResult:
+    return _run_logged(
+        "completion-data-tests",
+        [sys.executable, str(TESTS_DIR / "test_completion_data.py")],
+        cwd=ROOT,
+        log_dir=log_dir,
+        timeout_s=120.0,
+    )
+
+
+def _run_semantic_query_tests(log_dir: Path) -> StepResult:
+    return _run_logged(
+        "semantic-query-tests",
+        [sys.executable, str(TESTS_DIR / "test_semantic_query.py")],
+        cwd=ROOT,
+        log_dir=log_dir,
+        timeout_s=120.0,
+    )
+
+
 def _run_target_info_tests(log_dir: Path) -> StepResult:
     return _run_logged(
         "target-info-tests",
@@ -975,6 +1005,21 @@ def main() -> int:
     _print_step(json_diagnostics_res)
     all_results.append(json_diagnostics_res)
     overall_ok = overall_ok and json_diagnostics_res.passed
+
+    symbols_json_res = _run_symbols_json_tests(log_dir)
+    _print_step(symbols_json_res)
+    all_results.append(symbols_json_res)
+    overall_ok = overall_ok and symbols_json_res.passed
+
+    completion_data_res = _run_completion_data_tests(log_dir)
+    _print_step(completion_data_res)
+    all_results.append(completion_data_res)
+    overall_ok = overall_ok and completion_data_res.passed
+
+    semantic_query_res = _run_semantic_query_tests(log_dir)
+    _print_step(semantic_query_res)
+    all_results.append(semantic_query_res)
+    overall_ok = overall_ok and semantic_query_res.passed
 
     target_info_res = _run_target_info_tests(log_dir)
     _print_step(target_info_res)

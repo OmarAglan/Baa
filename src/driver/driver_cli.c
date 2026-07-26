@@ -6,6 +6,8 @@
 
 #include "driver_internal.h"
 
+#include <errno.h>
+#include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -164,7 +166,12 @@ void driver_print_help(void)
     printf("  -c           Compile to object file only (.o)\n");
     printf("  --check      Parse/analyze source files without emitting code\n");
     printf("  --check-header  Parse/analyze header declarations without emitting code\n");
+    printf("  --source-stdin=<file>  Read one --check source from stdin using this logical path\n");
     printf("  --diagnostics=json  Emit machine-readable diagnostics JSON to stdout\n");
+    printf("  --dump-symbols=json  Emit symbols-json-v1 document declarations and stop after analysis\n");
+    printf("  --semantic-query=json --position-byte=N  Emit compiler-owned semantic navigation data\n");
+    printf("  --semantic-index=json  Emit compiler-owned symbol identities and occurrences\n");
+    printf("  --completion-data=json  Emit completion-data-json-v1 language metadata\n");
     printf("  -v           Enable verbose output with timing\n");
     printf("  --startup=custom  Emit the default Arabic startup stub in -S output\n");
     printf("  --dump-ir    Dump Baa IR (Arabic) to stdout after analysis\n");
@@ -419,6 +426,7 @@ bool driver_parse_cli(int argc, char **argv, CompilerConfig *config, DriverParse
     int input_count = 0;
     size_t include_dir_count = 0;
     bool target_info_requested = false;
+    bool completion_data_requested = false;
 
     for (int i = 1; i < argc; i++)
     {
@@ -479,11 +487,92 @@ bool driver_parse_cli(int argc, char **argv, CompilerConfig *config, DriverParse
                 config->check_only = true;
             else if (strcmp(arg, "--check-header") == 0)
                 config->header_check = true;
+            else if (strncmp(arg, "--source-stdin=", 15) == 0)
+            {
+                const char *logical_path = arg + 15;
+                if (!logical_path[0])
+                {
+                    fprintf(stderr, "Error: --source-stdin requires a logical source path\n");
+                    parse_release_temp_arrays(inputs, include_dirs);
+                    return false;
+                }
+                if (config->source_stdin_file)
+                {
+                    fprintf(stderr, "Error: --source-stdin may be specified only once\n");
+                    parse_release_temp_arrays(inputs, include_dirs);
+                    return false;
+                }
+                config->source_stdin_file = logical_path;
+            }
             else if (strcmp(arg, "--diagnostics=json") == 0)
                 config->diagnostics_json = true;
             else if (strncmp(arg, "--diagnostics=", 14) == 0)
             {
                 fprintf(stderr, "Error: Unsupported diagnostics format '%s' (expected json)\n", arg + 14);
+                parse_release_temp_arrays(inputs, include_dirs);
+                return false;
+            }
+            else if (strcmp(arg, "--dump-symbols=json") == 0)
+            {
+                config->dump_symbols_json = true;
+                config->check_only = true;
+            }
+            else if (strncmp(arg, "--dump-symbols=", 15) == 0)
+            {
+                fprintf(stderr, "Error: Unsupported symbol format '%s' (expected json)\n", arg + 15);
+                parse_release_temp_arrays(inputs, include_dirs);
+                return false;
+            }
+            else if (strcmp(arg, "--semantic-query=json") == 0)
+            {
+                config->semantic_query_json = true;
+                config->check_only = true;
+            }
+            else if (strncmp(arg, "--semantic-query=", 17) == 0)
+            {
+                fprintf(stderr,
+                        "Error: Unsupported semantic query format '%s' (expected json)\n",
+                        arg + 17);
+                parse_release_temp_arrays(inputs, include_dirs);
+                return false;
+            }
+            else if (strcmp(arg, "--semantic-index=json") == 0)
+            {
+                config->semantic_index_json = true;
+                config->check_only = true;
+            }
+            else if (strncmp(arg, "--semantic-index=", 17) == 0)
+            {
+                fprintf(stderr,
+                        "Error: Unsupported semantic index format '%s' (expected json)\n",
+                        arg + 17);
+                parse_release_temp_arrays(inputs, include_dirs);
+                return false;
+            }
+            else if (strncmp(arg, "--position-byte=", 16) == 0)
+            {
+                const char* value_text = arg + 16;
+                char* end = NULL;
+                errno = 0;
+                const unsigned long long value = strtoull(value_text, &end, 10);
+                if (!value_text[0] || errno == ERANGE || !end || *end != '\0' ||
+                    value > (unsigned long long)SIZE_MAX)
+                {
+                    fprintf(stderr,
+                            "Error: --position-byte requires a non-negative byte offset\n");
+                    parse_release_temp_arrays(inputs, include_dirs);
+                    return false;
+                }
+                config->semantic_query_byte = (size_t)value;
+                config->semantic_query_byte_set = true;
+            }
+            else if (strcmp(arg, "--completion-data=json") == 0)
+                completion_data_requested = true;
+            else if (strncmp(arg, "--completion-data=", 18) == 0)
+            {
+                fprintf(stderr,
+                        "Error: Unsupported completion data format '%s' (expected json)\n",
+                        arg + 18);
                 parse_release_temp_arrays(inputs, include_dirs);
                 return false;
             }
@@ -737,6 +826,101 @@ bool driver_parse_cli(int argc, char **argv, CompilerConfig *config, DriverParse
         }
     }
 
+    if (completion_data_requested &&
+        (target_info_requested || input_count != 0 || config->source_stdin_file))
+    {
+        fprintf(stderr,
+                "Error: --completion-data=json must be used without sources or target info\n");
+        parse_release_temp_arrays(inputs, include_dirs);
+        return false;
+    }
+
+    if (config->source_stdin_file)
+    {
+        if (!config->check_only || config->header_check || input_count != 0 ||
+            config->build_manifest_file || config->incremental)
+        {
+            fprintf(stderr,
+                    "Error: --source-stdin requires --check, exactly one logical source, "
+                    "and no positional input, incremental cache, or build manifest\n");
+            parse_release_temp_arrays(inputs, include_dirs);
+            return false;
+        }
+        inputs[input_count++] = (char *)config->source_stdin_file;
+    }
+
+    const int machine_readable_source_modes =
+        (config->diagnostics_json ? 1 : 0) +
+        (config->dump_symbols_json ? 1 : 0) +
+        (config->semantic_query_json ? 1 : 0) +
+        (config->semantic_index_json ? 1 : 0);
+    if (machine_readable_source_modes > 1)
+    {
+        fprintf(stderr,
+                "Error: machine-readable compiler modes produce separate JSON documents\n");
+        parse_release_temp_arrays(inputs, include_dirs);
+        return false;
+    }
+    if (config->dump_symbols_json && input_count != 1)
+    {
+        fprintf(stderr, "Error: --dump-symbols=json requires exactly one Baa source\n");
+        parse_release_temp_arrays(inputs, include_dirs);
+        return false;
+    }
+    if (config->dump_symbols_json && driver_nazm_is_source_path(inputs[0]))
+    {
+        fprintf(stderr, "Error: --dump-symbols=json accepts Baa sources only\n");
+        parse_release_temp_arrays(inputs, include_dirs);
+        return false;
+    }
+    if (config->dump_symbols_json) config->verbose = false;
+
+    if (config->semantic_query_json && !config->semantic_query_byte_set)
+    {
+        fprintf(stderr,
+                "Error: --semantic-query=json requires --position-byte=<offset>\n");
+        parse_release_temp_arrays(inputs, include_dirs);
+        return false;
+    }
+    if (!config->semantic_query_json && config->semantic_query_byte_set)
+    {
+        fprintf(stderr,
+                "Error: --position-byte is valid only with --semantic-query=json\n");
+        parse_release_temp_arrays(inputs, include_dirs);
+        return false;
+    }
+    if (config->semantic_query_json && input_count != 1)
+    {
+        fprintf(stderr,
+                "Error: --semantic-query=json requires exactly one Baa source\n");
+        parse_release_temp_arrays(inputs, include_dirs);
+        return false;
+    }
+    if (config->semantic_query_json && driver_nazm_is_source_path(inputs[0]))
+    {
+        fprintf(stderr,
+                "Error: --semantic-query=json accepts Baa sources only\n");
+        parse_release_temp_arrays(inputs, include_dirs);
+        return false;
+    }
+    if (config->semantic_query_json) config->verbose = false;
+
+    if (config->semantic_index_json && input_count != 1)
+    {
+        fprintf(stderr,
+                "Error: --semantic-index=json requires exactly one Baa source\n");
+        parse_release_temp_arrays(inputs, include_dirs);
+        return false;
+    }
+    if (config->semantic_index_json && driver_nazm_is_source_path(inputs[0]))
+    {
+        fprintf(stderr,
+                "Error: --semantic-index=json accepts Baa sources only\n");
+        parse_release_temp_arrays(inputs, include_dirs);
+        return false;
+    }
+    if (config->semantic_index_json) config->verbose = false;
+
     if (config->emit_nazm &&
         (config->assembly_only || config->compile_only ||
          config->check_only || config->header_check))
@@ -803,6 +987,7 @@ bool driver_parse_cli(int argc, char **argv, CompilerConfig *config, DriverParse
 
     parse_set_result(out,
                      config,
+                     completion_data_requested ? DRIVER_CMD_COMPLETION_DATA :
                      target_info_requested ? DRIVER_CMD_TARGET_INFO : DRIVER_CMD_COMPILE,
                      inputs,
                      input_count,

@@ -53,7 +53,8 @@ static void add_symbol(const char* name,
                        int64_t array_total_elems,
                        int decl_line,
                        int decl_col,
-                       const char* decl_file) {
+                       const char* decl_file,
+                       const Node* decl_node) {
     if (!name) {
         semantic_error_loc(decl_file, decl_line, decl_col, "اسم الرمز فارغ.");
         return;
@@ -122,6 +123,7 @@ static void add_symbol(const char* name,
                 existing->decl_line = decl_line;
                 existing->decl_col = decl_col;
                 existing->decl_file = decl_file;
+                existing->decl_node = decl_node;
             }
             return;
         }
@@ -184,6 +186,7 @@ static void add_symbol(const char* name,
         global_symbols[global_count].decl_line = decl_line;
         global_symbols[global_count].decl_col = decl_col;
         global_symbols[global_count].decl_file = decl_file;
+        global_symbols[global_count].decl_node = decl_node;
         symbol_hash_insert(global_symbols, global_symbol_hash_head, global_symbol_hash_next, global_count);
         global_count++;
     } else {
@@ -265,6 +268,7 @@ static void add_symbol(const char* name,
         local_symbols[local_count].decl_line = decl_line;
         local_symbols[local_count].decl_col = decl_col;
         local_symbols[local_count].decl_file = decl_file;
+        local_symbols[local_count].decl_node = decl_node;
         symbol_hash_insert(local_symbols, local_symbol_hash_head, local_symbol_hash_next, local_count);
         local_count++;
     }
@@ -279,6 +283,16 @@ static Symbol* lookup(const char* name, bool mark_used) {
     if (!s) s = global_lookup_by_name(name);
     if (s && mark_used) s->is_used = true;
     return s;
+}
+
+static void bind_symbol_use(Node* node, const Symbol* symbol)
+{
+    if (node && symbol) node->resolved_decl = symbol->decl_node;
+}
+
+static void bind_function_use(Node* node, const FuncSymbol* function)
+{
+    if (node && function) node->resolved_decl = function->decl_node;
 }
 
 static DataType infer_type(Node* node);

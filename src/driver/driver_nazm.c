@@ -13,6 +13,10 @@
 #include <ctype.h>
 #include <limits.h>
 
+#ifdef _WIN32
+#include <windows.h>
+#endif
+
 bool driver_nazm_is_source_path(const char *path)
 {
     static const char suffix[] = ".نظم";
@@ -287,12 +291,37 @@ static bool driver_nazm_write_text(const char *path, const char *text)
     return ok;
 }
 
+static const char *driver_nazm_environment_executable(void)
+{
+#ifdef _WIN32
+    /*
+     * The narrow CRT environment follows the active code page and corrupts an
+     * Arabic executable path before it reaches the UTF-8 process layer.  Read
+     * the native UTF-16 environment and convert it explicitly instead.
+     */
+    static char utf8_value[131072];
+    wchar_t wide_value[32768];
+    DWORD length = GetEnvironmentVariableW(L"BAA_NAZM", wide_value,
+                                            (DWORD)(sizeof(wide_value) /
+                                                    sizeof(wide_value[0])));
+    if (length == 0 || length >= sizeof(wide_value) / sizeof(wide_value[0]))
+        return NULL;
+    int converted = WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS,
+                                        wide_value, -1, utf8_value,
+                                        (int)sizeof(utf8_value), NULL, NULL);
+    return converted > 0 ? utf8_value : NULL;
+#else
+    const char *environment = getenv("BAA_NAZM");
+    return environment && environment[0] ? environment : NULL;
+#endif
+}
+
 const char *driver_nazm_get_executable(const CompilerConfig *config)
 {
     if (config && config->nazm_executable && config->nazm_executable[0])
         return config->nazm_executable;
-    const char *environment = getenv("BAA_NAZM");
-    if (environment && environment[0]) return environment;
+    const char *environment = driver_nazm_environment_executable();
+    if (environment) return environment;
     return "نظم";
 }
 

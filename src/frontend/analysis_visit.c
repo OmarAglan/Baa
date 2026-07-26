@@ -273,7 +273,9 @@ static void analyze_node(Node* node) {
                        0,
                        NULL,
                        0,
-                       node->line, node->col, node->filename ? node->filename : current_filename);
+                       node->line, node->col,
+                       node->filename ? node->filename : current_filename,
+                       node);
             break;
          }
 
@@ -329,7 +331,9 @@ static void analyze_node(Node* node) {
                                 false,
                                 false,
                                 false, 0, NULL, 0,
-                                param->line, param->col, param->filename ? param->filename : current_filename);
+                                param->line, param->col,
+                                param->filename ? param->filename : current_filename,
+                                param);
                      // تعليم المعامل كمستخدم مباشرة
                      if (local_count > 0) {
                          local_symbols[local_count - 1].is_used = true;
@@ -378,6 +382,7 @@ static void analyze_node(Node* node) {
                                     "إسناد إلى متغير غير معرّف '%s'.",
                                     node->data.assign_stmt.name);
             } else {
+                bind_symbol_use(node, sym);
                 if (sym->is_array) {
                     semantic_error(node, "لا يمكن تعيين قيمة للمصفوفة '%s' مباشرة (استخدم الفهرسة).", sym->name);
                 }
@@ -696,6 +701,7 @@ static void analyze_node(Node* node) {
             if (!sym) {
                 semantic_error(node, "القراءة إلى متغير غير معرّف '%s'.", node->data.read_stmt.var_name);
             } else {
+                bind_symbol_use(node, sym);
                 if (sym->is_const) {
                     semantic_error(node, "لا يمكن القراءة إلى متغير ثابت '%s'.", node->data.read_stmt.var_name);
                 }
@@ -723,6 +729,7 @@ static void analyze_node(Node* node) {
             // 1) أعطِ أولوية للرموز في النطاق (متغيرات/معاملات) حتى تعمل الـ shadowing بشكل صحيح.
             Symbol* callee_sym = lookup(fname, true);
             if (callee_sym) {
+                bind_symbol_use(node, callee_sym);
                 if (callee_sym->is_array) {
                     semantic_error(node, "لا يمكن نداء المصفوفة '%s'.", callee_sym->name);
                     analyze_consume_call_args(node->data.call.args);
@@ -761,6 +768,7 @@ static void analyze_node(Node* node) {
                 }
             }
 
+            bind_function_use(node, fs);
             analyze_user_function_call_args(node, fs, node->data.call.args);
             break;
         }
@@ -847,7 +855,8 @@ static void analyze_node(Node* node) {
                        node->data.array_decl.total_elems,
                        node->line,
                        node->col,
-                       node->filename ? node->filename : current_filename);
+                       node->filename ? node->filename : current_filename,
+                       node);
 
             // التحقق من قائمة التهيئة: تسمح بالتهيئة الجزئية كما في C.
             if (node->data.array_decl.has_init) {
@@ -908,6 +917,7 @@ static void analyze_node(Node* node) {
                 (void)infer_type(node->data.array_op.value);
                 break;
             }
+            bind_symbol_use(node, sym);
 
             int supplied = node->data.array_op.index_count;
             if (supplied <= 0) supplied = node_list_count(node->data.array_op.indices);

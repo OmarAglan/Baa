@@ -37,10 +37,13 @@ class JsonDiagnosticsTests(unittest.TestCase):
     def setUpClass(cls) -> None:
         cls.baa = _find_baa()
 
-    def run_baa(self, work: Path, *args: str) -> subprocess.CompletedProcess[str]:
+    def run_baa(
+        self, work: Path, *args: str, input_text: str | None = None
+    ) -> subprocess.CompletedProcess[str]:
         return subprocess.run(
             [str(self.baa), *args],
             cwd=str(work),
+            input=input_text,
             text=True,
             encoding="utf-8",
             errors="replace",
@@ -139,6 +142,89 @@ class JsonDiagnosticsTests(unittest.TestCase):
         self.assertEqual(data["summary"]["errors"], 1)
         self.assertEqual(len(data["diagnostics"]), 1)
         self.assertEqual(data["diagnostics"][0]["code"], "B0001")
+
+    def test_source_stdin_checks_unsaved_text_under_logical_path(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="baa_json_diag_stdin_") as temp:
+            work = Path(temp)
+            logical = work / "مشروع عربي" / "رئيسي.baa"
+            logical.parent.mkdir()
+            logical.write_text(
+                "صحيح الرئيسية() {\n    إرجع ٠.\n}\n",
+                encoding="utf-8",
+            )
+            unsaved = "صحيح الرئيسية() {\n    مفقود = ١.\n    إرجع ٠.\n}\n"
+
+            proc = self.run_baa(
+                work,
+                "--check",
+                "--diagnostics=json",
+                f"--source-stdin={logical}",
+                input_text=unsaved,
+            )
+
+        self.assertEqual(proc.returncode, 1, f"{proc.stdout}\n{proc.stderr}")
+        data = json.loads(proc.stdout)
+        diagnostic = data["diagnostics"][0]
+        self.assertEqual(Path(diagnostic["file"]), logical)
+        self.assertEqual(diagnostic["code"], "B1000")
+        self.assertGreater(diagnostic["span"]["start"]["byte"], 0)
+
+    def test_source_stdin_resolves_includes_from_logical_directory(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="baa_json_diag_stdin_include_") as temp:
+            work = Path(temp)
+            logical = work / "src" / "main.baa"
+            logical.parent.mkdir()
+            (logical.parent / "api.baahd").write_text(
+                "خارجي صحيح اجمع(صحيح أ، صحيح ب).\n",
+                encoding="utf-8",
+            )
+            unsaved = (
+                '#تضمين "api.baahd"\n'
+                "صحيح الرئيسية() {\n"
+                "    إرجع اجمع(١، ٢).\n"
+                "}\n"
+            )
+
+            proc = self.run_baa(
+                work,
+                "--check",
+                "--diagnostics=json",
+                f"--source-stdin={logical}",
+                input_text=unsaved,
+            )
+
+        self.assertEqual(proc.returncode, 0, f"{proc.stdout}\n{proc.stderr}")
+        data = json.loads(proc.stdout)
+        self.assertEqual(data["diagnostics"], [])
+
+    def test_source_stdin_rejects_unsafe_invocation_shapes(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="baa_json_diag_stdin_invalid_") as temp:
+            work = Path(temp)
+            logical = work / "main.baa"
+            logical.write_text("صحيح الرئيسية() { إرجع ٠. }\n", encoding="utf-8")
+
+            without_check = self.run_baa(
+                work, f"--source-stdin={logical}", input_text=""
+            )
+            with_positional = self.run_baa(
+                work,
+                "--check",
+                f"--source-stdin={logical}",
+                str(logical),
+                input_text="",
+            )
+            with_manifest = self.run_baa(
+                work,
+                "--check",
+                f"--source-stdin={logical}",
+                "--emit-build-manifest",
+                str(work / "manifest.json"),
+                input_text="",
+            )
+
+        self.assertEqual(without_check.returncode, 2)
+        self.assertEqual(with_positional.returncode, 2)
+        self.assertEqual(with_manifest.returncode, 2)
 
 
 if __name__ == "__main__":

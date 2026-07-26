@@ -123,14 +123,17 @@ Qalam-IDE owns:
 Baa must support Qalam by providing:
 
 - fast check mode,
+- side-effect-free unsaved-source input with a logical path,
 - diagnostics JSON,
 - token dump JSON,
 - symbol outline JSON,
 - completion metadata,
+- cursor-sensitive semantic query data for hover and call signatures,
 - stable diagnostic codes.
 
 Qalam-facing roadmap entries in Baa must stay limited to compiler/data contracts: check
-modes, machine-readable diagnostics, token streams, symbol metadata, and completion metadata.
+modes, machine-readable diagnostics, token streams, symbol metadata, completion metadata,
+and semantic query data.
 Baa does not own editor widgets, IDE commands, extension packaging, themes, layout, or UI flows.
 
 Qalam should not parse unstable human-readable compiler text when a machine-readable contract exists.

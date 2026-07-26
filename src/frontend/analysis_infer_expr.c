@@ -221,6 +221,7 @@ static DataType infer_type_internal(Node* node) {
                 // قد يكون الاسم اسم دالة مستخدمة كقيمة (مؤشر دالة).
                 FuncSymbol* fs = func_lookup(node->data.var_ref.name);
                 if (fs && fs->ref_funcptr_sig) {
+                    bind_function_use(node, fs);
                     node_set_inferred_funcptr(node, fs->ref_funcptr_sig);
                     return TYPE_FUNC_PTR;
                 }
@@ -236,6 +237,7 @@ static DataType infer_type_internal(Node* node) {
                                     node->data.var_ref.name);
                 return TYPE_INT; // استرداد الخطأ
             }
+            bind_symbol_use(node, sym);
             if (sym->is_array) {
                 semantic_error(node, "لا يمكن استخدام المصفوفة '%s' بدون فهرس.", node->data.var_ref.name);
                 return sym->type;
@@ -290,6 +292,7 @@ static DataType infer_type_internal(Node* node) {
                 }
                 return TYPE_INT;
             }
+            bind_symbol_use(node, sym);
 
             int supplied = node->data.array_op.index_count;
             if (supplied <= 0) supplied = node_list_count(node->data.array_op.indices);
@@ -428,6 +431,7 @@ static DataType infer_type_internal(Node* node) {
             // 1) أعطِ أولوية للرموز في النطاق (متغيرات/معاملات) حتى تعمل الـ shadowing بشكل صحيح.
             Symbol* callee_sym = lookup(fname, true);
             if (callee_sym) {
+                bind_symbol_use(node, callee_sym);
                 if (callee_sym->is_array) {
                     semantic_error(node, "لا يمكن نداء المصفوفة '%s'.", callee_sym->name);
                     analyze_consume_call_args(node->data.call.args);
@@ -482,6 +486,7 @@ static DataType infer_type_internal(Node* node) {
                     return TYPE_INT;
                 }
             }
+            bind_function_use(node, fs);
             // تحقق عدد وأنواع المعاملات
             analyze_user_function_call_args(node, fs, node->data.call.args);
             if (fs->return_type == TYPE_POINTER) {

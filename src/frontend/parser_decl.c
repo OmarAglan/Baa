@@ -20,6 +20,19 @@
 
     if (parser_current_starts_type()) {
         Token tok_type = parser.current;
+        /*
+         * Composite type definitions use the identifier consumed by
+         * parse_type_spec() as their declaration name.  Preserve that token
+         * so tooling receives the identifier span rather than the preceding
+         * `enum`/`struct`/`union` keyword span.
+         */
+        Token tok_composite_name = tok_type;
+        if ((parser.current.type == TOKEN_ENUM ||
+             parser.current.type == TOKEN_STRUCT ||
+             parser.current.type == TOKEN_UNION) &&
+            parser.next.type == TOKEN_IDENTIFIER) {
+            tok_composite_name = parser.next;
+        }
         DataType dt = TYPE_INT;
         char* type_name = NULL;
         DataType ptr_base_type = TYPE_INT;
@@ -47,7 +60,7 @@
                 error_report(parser.current, "لا يمكن وسم تعريف نوع بـ 'ثابت' أو 'ساكن' أو 'خارجي'.");
             }
 
-            Token tok_name = tok_type;
+            Token tok_name = tok_composite_name;
             if (dt == TYPE_ENUM) {
                 eat(TOKEN_LBRACE);
 

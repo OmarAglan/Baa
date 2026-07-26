@@ -79,12 +79,14 @@ Token lexer_next_token(Lexer* l) {
                      }
                      l->stack[l->stack_depth++] = l->state;
                       
+                     const char* stable_include_path =
+                         lex_record_dependency(l, resolved_include_path);
+                     free(resolved_include_path);
                      l->state.source = new_src;
                      l->state.cur_char = new_src;
-                     l->state.filename = resolved_include_path;
+                     l->state.filename = stable_include_path;
                      l->state.line = 1;
                      l->state.col = 1;
-                     lex_record_dependency(l, resolved_include_path);
                      lex_skip_utf8_bom(&l->state);
                       error_register_source(l->state.filename, new_src);
                      
@@ -230,7 +232,6 @@ Token lexer_next_token(Lexer* l) {
             // إذا كنا داخل ملف مضمن، نعود للملف السابق (Pop)
             if (l->stack_depth > 0) {
                 free(l->state.source);
-                free((void*)l->state.filename);
                 l->state = l->stack[--l->stack_depth];
                 continue; 
             }
@@ -637,46 +638,8 @@ Token lexer_next_token(Lexer* l) {
             return lex_finish_token(l, token);
         }
 
-        // 2. الكلمات المفتاحية المحجوزة
-        if (strcmp(word, "إرجع") == 0) token.type = TOKEN_RETURN;
-        else if (strcmp(word, "اطبع") == 0) token.type = TOKEN_PRINT;
-        else if (strcmp(word, "اقرأ") == 0) token.type = TOKEN_READ;
-        else if (strcmp(word, "مجمع") == 0) token.type = TOKEN_ASM;
-        else if (strcmp(word, "صحيح") == 0) token.type = TOKEN_KEYWORD_INT;
-        else if (strcmp(word, "ص٨") == 0) token.type = TOKEN_KEYWORD_I8;
-        else if (strcmp(word, "ص١٦") == 0) token.type = TOKEN_KEYWORD_I16;
-        else if (strcmp(word, "ص٣٢") == 0) token.type = TOKEN_KEYWORD_I32;
-        else if (strcmp(word, "ص٦٤") == 0) token.type = TOKEN_KEYWORD_I64;
-        else if (strcmp(word, "ط٨") == 0) token.type = TOKEN_KEYWORD_U8;
-        else if (strcmp(word, "ط١٦") == 0) token.type = TOKEN_KEYWORD_U16;
-        else if (strcmp(word, "ط٣٢") == 0) token.type = TOKEN_KEYWORD_U32;
-        else if (strcmp(word, "ط٦٤") == 0) token.type = TOKEN_KEYWORD_U64;
-        else if (strcmp(word, "نص") == 0) token.type = TOKEN_KEYWORD_STRING;
-        else if (strcmp(word, "منطقي") == 0) token.type = TOKEN_KEYWORD_BOOL;
-        else if (strcmp(word, "حرف") == 0) token.type = TOKEN_KEYWORD_CHAR;
-        else if (strcmp(word, "عشري") == 0) token.type = TOKEN_KEYWORD_FLOAT;
-        else if (strcmp(word, "عشري٣٢") == 0) token.type = TOKEN_KEYWORD_FLOAT32;
-        else if (strcmp(word, "عدم") == 0) token.type = TOKEN_KEYWORD_VOID;
-        else if (strcmp(word, "كـ") == 0) token.type = TOKEN_CAST;
-        else if (strcmp(word, "حجم") == 0) token.type = TOKEN_SIZEOF;
-        else if (strcmp(word, "ثابت") == 0) token.type = TOKEN_CONST;
-        else if (strcmp(word, "ساكن") == 0) token.type = TOKEN_STATIC;
-        else if (strcmp(word, "خارجي") == 0) token.type = TOKEN_EXTERN;
-        else if (strcmp(word, "إذا") == 0) token.type = TOKEN_IF;
-        else if (strcmp(word, "وإلا") == 0) token.type = TOKEN_ELSE;
-        else if (strcmp(word, "طالما") == 0) token.type = TOKEN_WHILE;
-        else if (strcmp(word, "لكل") == 0) token.type = TOKEN_FOR;
-        else if (strcmp(word, "توقف") == 0) token.type = TOKEN_BREAK;
-        else if (strcmp(word, "استمر") == 0) token.type = TOKEN_CONTINUE;
-        else if (strcmp(word, "اختر") == 0) token.type = TOKEN_SWITCH;
-        else if (strcmp(word, "حالة") == 0) token.type = TOKEN_CASE;
-        else if (strcmp(word, "افتراضي") == 0) token.type = TOKEN_DEFAULT;
-        else if (strcmp(word, "صواب") == 0) token.type = TOKEN_TRUE;
-        else if (strcmp(word, "خطأ") == 0) token.type = TOKEN_FALSE;
-        else if (strcmp(word, "تعداد") == 0) token.type = TOKEN_ENUM;
-        else if (strcmp(word, "هيكل") == 0) token.type = TOKEN_STRUCT;
-        else if (strcmp(word, "اتحاد") == 0) token.type = TOKEN_UNION;
-        else {
+        // 2. الكلمات المفتاحية المحجوزة من ملف تعريف اللغة المركزي
+        if (!baa_language_keyword_token(word, &token.type)) {
             token.type = TOKEN_IDENTIFIER;
             token.value = word;
             return lex_finish_token(l, token);

@@ -62,7 +62,21 @@ typedef struct {
     int start_byte;
     int end_byte;
     char* hint;
+    char* fix_id;
+    char* fix_title;
+    char* fix_filename;
+    DiagnosticSpan fix_span;
+    int fix_start_byte;
+    int fix_end_byte;
+    char* fix_new_text;
 } DiagnosticJsonRecord;
+
+typedef struct {
+    const char* id;
+    const char* title;
+    DiagnosticSpan span;
+    const char* new_text;
+} DiagnosticJsonFix;
 
 static DiagnosticJsonRecord* g_diagnostic_json_records = NULL;
 static int g_diagnostic_json_count = 0;
@@ -223,6 +237,10 @@ static void diagnostic_json_record_free(DiagnosticJsonRecord* record)
     free(record->message);
     free(record->filename);
     free(record->hint);
+    free(record->fix_id);
+    free(record->fix_title);
+    free(record->fix_filename);
+    free(record->fix_new_text);
     memset(record, 0, sizeof(*record));
 }
 
@@ -267,6 +285,7 @@ static void diagnostics_json_add(const char* code,
                                  const char* category,
                                  DiagnosticSpan span,
                                  const char* hint,
+                                 const DiagnosticJsonFix* fix,
                                  const char* message)
 {
     if (!g_diagnostics_json_enabled) return;
@@ -283,6 +302,38 @@ static void diagnostics_json_add(const char* code,
     record->start_byte = diagnostic_byte_offset(record->filename, record->span.line, record->span.col);
     record->end_byte = diagnostic_byte_offset(record->filename, record->span.end_line, record->span.end_col);
     record->hint = hint && hint[0] ? diagnostic_strdup(hint) : NULL;
+    if (fix && fix->id && fix->id[0] && fix->title && fix->title[0] &&
+        fix->new_text) {
+        record->fix_id = diagnostic_strdup(fix->id);
+        record->fix_title = diagnostic_strdup(fix->title);
+        record->fix_filename = diagnostic_strdup(
+            fix->span.filename ? fix->span.filename : record->filename);
+        record->fix_span = fix->span;
+        record->fix_span.filename = record->fix_filename;
+        if (record->fix_span.line <= 0) record->fix_span.line = record->span.line;
+        if (record->fix_span.col <= 0) record->fix_span.col = record->span.col;
+        if (record->fix_span.end_line <= 0)
+            record->fix_span.end_line = record->fix_span.line;
+        if (record->fix_span.end_line < record->fix_span.line)
+            record->fix_span.end_line = record->fix_span.line;
+        if (record->fix_span.end_line == record->fix_span.line &&
+            record->fix_span.end_col < record->fix_span.col)
+            record->fix_span.end_col = record->fix_span.col;
+        if (record->fix_span.end_line > record->fix_span.line &&
+            record->fix_span.end_col <= 0)
+            record->fix_span.end_col = 1;
+        record->fix_start_byte = diagnostic_byte_offset(
+            record->fix_filename,
+            record->fix_span.line,
+            record->fix_span.col);
+        record->fix_end_byte = diagnostic_byte_offset(
+            record->fix_filename,
+            record->fix_span.end_line,
+            record->fix_span.end_col);
+        if (record->fix_end_byte < record->fix_start_byte)
+            record->fix_end_byte = record->fix_start_byte;
+        record->fix_new_text = diagnostic_strdup(fix->new_text);
+    }
 }
 
 static int diagnostic_byte_offset(const char* filename, int line, int col)
@@ -409,6 +460,32 @@ void diagnostics_json_write(FILE* out,
             fputs("\"", out);
             diagnostics_json_escape(out, record->hint);
             fputs("\"", out);
+        }
+        fputs("],\n      \"fixes\": [", out);
+        if (record->fix_id) {
+            fputs("\n        {\n          \"id\": \"", out);
+            diagnostics_json_escape(out, record->fix_id);
+            fputs("\",\n          \"title\": \"", out);
+            diagnostics_json_escape(out, record->fix_title);
+            fputs("\",\n          \"kind\": \"quickfix\",\n"
+                  "          \"applicability\": \"safe\",\n"
+                  "          \"edits\": [\n"
+                  "            {\n              \"file\": \"", out);
+            diagnostics_json_escape(out, record->fix_filename);
+            fputs("\",\n              \"span\": {", out);
+            fprintf(out,
+                    "\"start\": {\"line\": %d, \"column\": %d, \"byte\": %d}, ",
+                    record->fix_span.line,
+                    record->fix_span.col,
+                    record->fix_start_byte);
+            fprintf(out,
+                    "\"end\": {\"line\": %d, \"column\": %d, \"byte\": %d}",
+                    record->fix_span.end_line,
+                    record->fix_span.end_col,
+                    record->fix_end_byte);
+            fputs("},\n              \"new_text\": \"", out);
+            diagnostics_json_escape(out, record->fix_new_text);
+            fputs("\"\n            }\n          ]\n        }\n      ", out);
         }
         fputs("]\n    }", out);
         if (i + 1 < g_diagnostic_json_count) fputs(",", out);
@@ -664,6 +741,7 @@ static void print_hint_line(const char* hint, bool use_color)
 static void error_report_vspan(const char* code,
                                DiagnosticSpan span,
                                const char* hint,
+                               const DiagnosticJsonFix* fix,
                                const char* message,
                                va_list args)
 {
@@ -673,7 +751,8 @@ static void error_report_vspan(const char* code,
     had_error = true;
     bool use_color = g_warning_config.colored_output;
     char* formatted = diagnostic_vformat(message, args);
-    diagnostics_json_add(code, "error", category, span, hint, formatted ? formatted : "");
+    diagnostics_json_add(code, "error", category, span, hint, fix,
+                         formatted ? formatted : "");
     if (g_diagnostics_json_enabled) {
         free(formatted);
         return;
@@ -714,6 +793,7 @@ void error_report_loc(const char* filename, int line, int col, const char* messa
     error_report_vspan(DIAG_CODE_SYNTAX_GENERIC,
                        diagnostic_span_from_loc(filename, line, col),
                        NULL,
+                       NULL,
                        message,
                        args);
     va_end(args);
@@ -728,7 +808,8 @@ void error_report_loc_code(const char* code,
 {
     va_list args;
     va_start(args, message);
-    error_report_vspan(code, diagnostic_span_from_loc(filename, line, col), NULL, message, args);
+    error_report_vspan(code, diagnostic_span_from_loc(filename, line, col),
+                       NULL, NULL, message, args);
     va_end(args);
 }
 
@@ -736,7 +817,7 @@ void error_report_span(DiagnosticSpan span, const char* message, ...)
 {
     va_list args;
     va_start(args, message);
-    error_report_vspan(DIAG_CODE_SYNTAX_GENERIC, span, NULL, message, args);
+    error_report_vspan(DIAG_CODE_SYNTAX_GENERIC, span, NULL, NULL, message, args);
     va_end(args);
 }
 
@@ -744,7 +825,7 @@ void error_report_span_code(const char* code, DiagnosticSpan span, const char* m
 {
     va_list args;
     va_start(args, message);
-    error_report_vspan(code, span, NULL, message, args);
+    error_report_vspan(code, span, NULL, NULL, message, args);
     va_end(args);
 }
 
@@ -752,7 +833,7 @@ void error_report_span_hint(DiagnosticSpan span, const char* hint, const char* m
 {
     va_list args;
     va_start(args, message);
-    error_report_vspan(DIAG_CODE_SYNTAX_GENERIC, span, hint, message, args);
+    error_report_vspan(DIAG_CODE_SYNTAX_GENERIC, span, hint, NULL, message, args);
     va_end(args);
 }
 
@@ -764,7 +845,28 @@ void error_report_span_hint_code(const char* code,
 {
     va_list args;
     va_start(args, message);
-    error_report_vspan(code, span, hint, message, args);
+    error_report_vspan(code, span, hint, NULL, message, args);
+    va_end(args);
+}
+
+void error_report_span_hint_fix(DiagnosticSpan span,
+                                const char* hint,
+                                const char* fix_id,
+                                const char* fix_title,
+                                DiagnosticSpan edit_span,
+                                const char* new_text,
+                                const char* message,
+                                ...)
+{
+    const DiagnosticJsonFix fix = {
+        fix_id,
+        fix_title,
+        edit_span,
+        new_text
+    };
+    va_list args;
+    va_start(args, message);
+    error_report_vspan(DIAG_CODE_SYNTAX_GENERIC, span, hint, &fix, message, args);
     va_end(args);
 }
 
@@ -799,7 +901,8 @@ static void warning_report_vspan(WarningType type,
     const char* warn_category = diagnostic_category_for_code(warn_code);
     const char* severity = g_warning_config.warnings_as_errors ? "error" : "warning";
     char* formatted = diagnostic_vformat(message, args);
-    diagnostics_json_add(warn_code, severity, warn_category, span, NULL, formatted ? formatted : "");
+    diagnostics_json_add(warn_code, severity, warn_category, span, NULL, NULL,
+                         formatted ? formatted : "");
     if (g_diagnostics_json_enabled) {
         free(formatted);
         return;

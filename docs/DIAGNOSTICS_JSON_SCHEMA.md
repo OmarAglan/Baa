@@ -61,6 +61,24 @@ an empty `diagnostics` array when no diagnostics were produced.
   "hints": [
     "تنتهي عبارات باء بنقطة `.` وليس بفاصلة منقوطة إنجليزية."
   ],
+  "fixes": [
+    {
+      "id": "B0001.insert-dot",
+      "title": "أضف '.'",
+      "kind": "quickfix",
+      "applicability": "safe",
+      "edits": [
+        {
+          "file": "examples/bad.baa",
+          "span": {
+            "start": { "line": 3, "column": 19, "byte": 43 },
+            "end": { "line": 3, "column": 19, "byte": 43 }
+          },
+          "new_text": "."
+        }
+      ]
+    }
+  ],
   "related": [
     {
       "message": "بدأت هذه العبارة هنا.",
@@ -88,7 +106,21 @@ an empty `diagnostics` array when no diagnostics were produced.
 | `span` | yes | primary source span |
 | `primary_label` | no | short Arabic label for UI underline |
 | `hints` | no | Arabic fix/help hints |
+| `fixes` | yes | machine-applicable `quickfix` edits; empty when no safe fix exists |
 | `related` | no | secondary spans |
+
+### 4.1 Structured fixes
+
+`fixes` is always an array. Tools must never infer edits from `message`, `hint`, or
+`code`. Each fix has a stable `id`, an Arabic `title`, `kind: "quickfix"`, an
+`applicability` value, and one or more exact UTF-8-byte edits. The first admitted
+`applicability` is `safe`: applying the edit does not delete or reinterpret existing
+source text. Missing `.`, `؛`, `)`, `]`, `{`, and `}` parser delimiters use this
+contract.
+
+An edit range may be empty. Equal start/end byte offsets mean insertion before that
+offset. Consumers must reject stale versions, invalid UTF-8 boundaries, overlapping
+edits, and files outside the active document or declared workspace.
 
 ---
 
@@ -133,6 +165,7 @@ Arabic explanations for the currently emitted codes.
 | `span` | underline range |
 | `message` | diagnostics panel |
 | `hints` | quick-fix/help text |
+| `fixes` | compiler-owned LSP code actions and exact workspace edits |
 | `related` | secondary references |
 
 ---

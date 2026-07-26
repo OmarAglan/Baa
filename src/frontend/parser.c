@@ -291,13 +291,64 @@ static const char* parser_hint_for_expected(BaaTokenType type)
     }
 }
 
+static const char* parser_fix_id_for_expected(BaaTokenType type)
+{
+    switch (type) {
+        case TOKEN_DOT: return "B0001.insert-dot";
+        case TOKEN_SEMICOLON: return "B0001.insert-arabic-semicolon";
+        case TOKEN_RPAREN: return "B0001.insert-right-parenthesis";
+        case TOKEN_RBRACE: return "B0001.insert-right-brace";
+        case TOKEN_LBRACE: return "B0001.insert-left-brace";
+        case TOKEN_RBRACKET: return "B0001.insert-right-bracket";
+        default: return NULL;
+    }
+}
+
+static const char* parser_fix_title_for_expected(BaaTokenType type)
+{
+    switch (type) {
+        case TOKEN_DOT: return "أضف '.'";
+        case TOKEN_SEMICOLON: return "أضف '؛'";
+        case TOKEN_RPAREN: return "أضف ')'";
+        case TOKEN_RBRACE: return "أضف '}'";
+        case TOKEN_LBRACE: return "أضف '{'";
+        case TOKEN_RBRACKET: return "أضف ']'";
+        default: return NULL;
+    }
+}
+
+static const char* parser_fix_text_for_expected(BaaTokenType type)
+{
+    switch (type) {
+        case TOKEN_DOT: return ".";
+        case TOKEN_SEMICOLON: return "؛";
+        case TOKEN_RPAREN: return ")";
+        case TOKEN_RBRACE: return "}";
+        case TOKEN_LBRACE: return "{";
+        case TOKEN_RBRACKET: return "]";
+        default: return NULL;
+    }
+}
+
 static void parser_error_expected_current(BaaTokenType type)
 {
     const char* found_text = parser.current.value ? parser.current.value :
                              token_type_to_str(parser.current.type);
     const char* hint = parser_hint_for_expected(type);
+    const char* fix_id = parser_fix_id_for_expected(type);
+    const char* fix_title = parser_fix_title_for_expected(type);
+    const char* fix_text = parser_fix_text_for_expected(type);
 
-    if (hint) {
+    if (hint && fix_id && fix_title && fix_text) {
+        error_report_token_hint_fix(parser.current,
+                                    hint,
+                                    fix_id,
+                                    fix_title,
+                                    fix_text,
+                                    "متوقع '%s' لكن وُجد '%s'.",
+                                    token_type_to_str(type),
+                                    found_text);
+    } else if (hint) {
         error_report_token_hint(parser.current, hint,
                                 "متوقع '%s' لكن وُجد '%s'.",
                                 token_type_to_str(type),

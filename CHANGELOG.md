@@ -10,6 +10,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Added
 
+- **Compiler-owned safe diagnostic fixes**:
+  - Extended `diagnostics-json-v1` with an always-present `fixes` array carrying
+    stable IDs, Arabic titles, applicability, exact UTF-8 byte spans, and
+    replacement text without requiring consumers to parse messages.
+  - Added non-destructive insertion fixes for missing parser delimiters and
+    exact Arabic-path/byte-offset contract coverage for IDE consumers.
+
 - **Stable Nazm API, fingerprinted reuse, and guarded embedding**:
   - Consumed `nazm-api-v1` through a CMake option that is disabled by default
     and an explicit Arabic `--نظم-داخل-العملية` runtime selector. The normal

@@ -57,6 +57,14 @@ void error_report_span(DiagnosticSpan span, const char* message, ...);
 void error_report_span_code(const char* code, DiagnosticSpan span, const char* message, ...);
 void error_report_span_hint(DiagnosticSpan span, const char* hint, const char* message, ...);
 void error_report_span_hint_code(const char* code, DiagnosticSpan span, const char* hint, const char* message, ...);
+void error_report_span_hint_fix(DiagnosticSpan span,
+                                const char* hint,
+                                const char* fix_id,
+                                const char* fix_title,
+                                DiagnosticSpan edit_span,
+                                const char* new_text,
+                                const char* message,
+                                ...);
 void warning_report(WarningType type, const char* filename, int line, int col, const char* message, ...);
 void warning_report_span(WarningType type, DiagnosticSpan span, const char* message, ...);
 bool error_has_occurred(void);
@@ -102,5 +110,18 @@ void diagnostics_json_write(FILE* out,
                                (token_like).line, \
                                (token_like).col + ((token_like).length > 0 ? (token_like).length : 1)}, \
                                hint_text, __VA_ARGS__)
+
+#define error_report_token_hint_fix(token_like, hint_text, fix_id_text, fix_title_text, new_text_value, ...) \
+    error_report_span_hint_fix( \
+        (DiagnosticSpan){(token_like).filename, (token_like).line, (token_like).col, \
+                         (token_like).line, \
+                         (token_like).col + ((token_like).length > 0 ? (token_like).length : 1)}, \
+        hint_text, \
+        fix_id_text, \
+        fix_title_text, \
+        (DiagnosticSpan){(token_like).filename, (token_like).line, (token_like).col, \
+                         (token_like).line, (token_like).col}, \
+        new_text_value, \
+        __VA_ARGS__)
 
 #endif

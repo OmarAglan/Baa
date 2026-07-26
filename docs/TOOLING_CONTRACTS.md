@@ -222,6 +222,13 @@ New v1 JSON outputs must:
 - avoid localized field names; field names stay English for tool stability,
 - put Arabic user-facing messages in values, not keys.
 
+`diagnostics-json-v1` additionally exposes a `fixes` array on every diagnostic.
+Machine edits are explicit `quickfix` objects with stable IDs, Arabic titles,
+applicability, exact file/span byte ranges, and replacement text. Consumers must not
+derive edits by parsing diagnostic messages or hints. The admitted first slice is
+non-destructive insertion of missing parser delimiters; stale, overlapping, or
+out-of-workspace edits must be refused by the applying tool.
+
 ### 7.1 `symbols-json-v1`
 
 `--dump-symbols=json` implies check-only analysis and accepts exactly one Baa

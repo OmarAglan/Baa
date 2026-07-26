@@ -143,6 +143,50 @@ class JsonDiagnosticsTests(unittest.TestCase):
         self.assertEqual(len(data["diagnostics"]), 1)
         self.assertEqual(data["diagnostics"][0]["code"], "B0001")
 
+    def test_missing_delimiter_reports_safe_structured_insertion(self) -> None:
+        source = (
+            "صحيح الرئيسية() {\n"
+            "    إرجع ٠\n"
+            "}\n"
+        )
+        with tempfile.TemporaryDirectory(prefix="baa_json_diag_fix_") as temp:
+            work = Path(temp)
+            logical = work / "مسار عربي" / "رئيسي.baa"
+            logical.parent.mkdir()
+            logical.write_text(source, encoding="utf-8")
+            proc = subprocess.run(
+                [
+                    str(self.baa),
+                    "--check",
+                    "--diagnostics=json",
+                    f"--source-stdin={logical}",
+                ],
+                cwd=str(work),
+                input=source.encode("utf-8"),
+                capture_output=True,
+                timeout=30,
+            )
+
+        stdout = proc.stdout.decode("utf-8")
+        stderr = proc.stderr.decode("utf-8", errors="replace")
+        self.assertEqual(proc.returncode, 1, f"{stdout}\n{stderr}")
+        data = json.loads(stdout)
+        diagnostic = data["diagnostics"][0]
+        self.assertEqual(diagnostic["code"], "B0001")
+        self.assertEqual(len(diagnostic["fixes"]), 1)
+        fix = diagnostic["fixes"][0]
+        self.assertEqual(fix["id"], "B0001.insert-dot")
+        self.assertEqual(fix["title"], "أضف '.'")
+        self.assertEqual(fix["kind"], "quickfix")
+        self.assertEqual(fix["applicability"], "safe")
+        self.assertEqual(len(fix["edits"]), 1)
+        edit = fix["edits"][0]
+        expected_byte = source.encode("utf-8").index(b"}")
+        self.assertEqual(Path(edit["file"]), logical)
+        self.assertEqual(edit["span"]["start"]["byte"], expected_byte)
+        self.assertEqual(edit["span"]["end"]["byte"], expected_byte)
+        self.assertEqual(edit["new_text"], ".")
+
     def test_source_stdin_checks_unsaved_text_under_logical_path(self) -> None:
         with tempfile.TemporaryDirectory(prefix="baa_json_diag_stdin_") as temp:
             work = Path(temp)

@@ -10,6 +10,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Added
 
+- **Compiler-owned canonical source formatting**:
+  - Added `--format=json` and the versioned `format-json-v1` contract for one
+    saved source or unsaved UTF-8 buffer.
+  - Added a tolerant, source-preserving formatter with canonical LF line
+    endings, four-space indentation, safe spacing, one final newline,
+    incomplete-buffer support, and idempotence coverage.
+  - Preserved strings, characters, comments, directives, Arabic paths, and
+    exact byte metadata without preprocessing, semantic analysis, or codegen.
+
 - **Compiler-owned safe diagnostic fixes**:
   - Extended `diagnostics-json-v1` with an always-present `fixes` array carrying
     stable IDs, Arabic titles, applicability, exact UTF-8 byte spans, and

@@ -20,6 +20,7 @@ typedef enum
     DRIVER_CMD_EXPLAIN = 4,
     DRIVER_CMD_TARGET_INFO = 5,
     DRIVER_CMD_COMPLETION_DATA = 6,
+    DRIVER_CMD_FORMAT = 7,
 } DriverCommand;
 
 typedef struct

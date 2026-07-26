@@ -13,6 +13,7 @@ REQUIRED_DOCS = {
     "docs/COMPATIBILITY_MATRIX.md": ("# Baa Ecosystem Compatibility Matrix", "draft-0.1"),
     "docs/TOOLING_CONTRACTS.md": ("# Baa Tooling Contracts", "draft-0.1"),
     "docs/DIAGNOSTICS_JSON_SCHEMA.md": ("# Baa Diagnostics JSON Schema", "draft-0.1"),
+    "docs/FORMAT_JSON_SCHEMA.md": ("# Baa Formatting JSON Schema", "draft-0.1"),
     "docs/CONFORMANCE_SUITE.md": ("# Baa Conformance Suite", "draft-0.1"),
     "docs/SDK_RELEASE_PLAN.md": ("# Baa SDK Release Plan", "draft-0.1"),
     "docs/NAZM_PRODUCTION_ADMISSION.md": (
@@ -60,6 +61,7 @@ class IntegrationArtifactDocumentationTests(unittest.TestCase):
             "build-manifest-v1",
             "diagnostics-json-v1",
             "symbols-json-v1",
+            "format-json-v1",
             "tokens-json-v1",
             "target-spec-v1",
             "conformance-v1",
@@ -82,6 +84,7 @@ class IntegrationArtifactDocumentationTests(unittest.TestCase):
             "`--diagnostics=json`",
             "`--dump-tokens=json`",
             "`--dump-symbols=json`",
+            "`--format=json`",
             "`--target=<target>`",
             "`--target-info=json`",
             "`-I <dir>` / `-I<dir>`",
@@ -132,6 +135,22 @@ class IntegrationArtifactDocumentationTests(unittest.TestCase):
             "| `B1000`-`B1999` | semantic/type/scope |",
             "| `B9000`-`B9999` | internal compiler errors |",
             "`--diagnostics=json` emits the same codes",
+        ):
+            with self.subTest(marker=marker):
+                self.assertIn(marker, text)
+
+    def test_format_json_schema_covers_canonical_editor_contract(self) -> None:
+        text = _read("docs/FORMAT_JSON_SCHEMA.md")
+        for marker in (
+            '"schema_version": "format-json-v1"',
+            '"position_encoding": "utf-8-bytes"',
+            '"line_ending": "lf"',
+            '"indent_width": 4',
+            '"insert_spaces": true',
+            '"formatted_text":',
+            "accepts incomplete editor buffers",
+            "is idempotent",
+            "full-document UTF-16 `TextEdit`",
         ):
             with self.subTest(marker=marker):
                 self.assertIn(marker, text)

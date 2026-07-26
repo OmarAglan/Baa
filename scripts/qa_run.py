@@ -638,6 +638,16 @@ def _run_completion_data_tests(log_dir: Path) -> StepResult:
     )
 
 
+def _run_format_json_tests(log_dir: Path) -> StepResult:
+    return _run_logged(
+        "format-json-tests",
+        [sys.executable, str(TESTS_DIR / "test_format_json.py")],
+        cwd=ROOT,
+        log_dir=log_dir,
+        timeout_s=120.0,
+    )
+
+
 def _run_semantic_query_tests(log_dir: Path) -> StepResult:
     return _run_logged(
         "semantic-query-tests",
@@ -1015,6 +1025,11 @@ def main() -> int:
     _print_step(completion_data_res)
     all_results.append(completion_data_res)
     overall_ok = overall_ok and completion_data_res.passed
+
+    format_json_res = _run_format_json_tests(log_dir)
+    _print_step(format_json_res)
+    all_results.append(format_json_res)
+    overall_ok = overall_ok and format_json_res.passed
 
     semantic_query_res = _run_semantic_query_tests(log_dir)
     _print_step(semantic_query_res)

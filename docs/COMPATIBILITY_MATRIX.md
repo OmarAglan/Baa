@@ -28,6 +28,7 @@ A project may release independently as long as it stays compatible with the cont
 | `diagnostics-json-v1` | Baa | Qalam, Takween |
 | `symbols-json-v1` | Baa | Qalam |
 | `completion-data-json-v1` | Baa | Baa-LSP, Qalam |
+| `format-json-v1` | Baa | Baa-LSP, Qalam |
 | `semantic-query-json-v1` | Baa | Baa-LSP, Qalam |
 | `semantic-index-json-v1` | Baa | Baa-LSP |
 | `tokens-json-v1` | Baa | Qalam |
@@ -85,6 +86,11 @@ references use `semantic-query-json-v1`. Baa resolves the active expression,
 declaration, shadowed local, included prototype, bound reference set, and
 parameter index; Baa-LSP only converts UTF-8 byte positions and paths to LSP
 UTF-16 locations and rejects obsolete document versions.
+
+Canonical source formatting uses `format-json-v1`. Baa owns the tolerant,
+idempotent four-space/LF style and preserves literal and comment contents;
+Baa-LSP converts the complete replacement to a versioned LSP edit, while Qalam
+only applies an edit that still matches its open document.
 
 Project-aware navigation uses `semantic-index-json-v1` together with the
 structured source and include closure in `takween-build-plan-v1`. Baa owns

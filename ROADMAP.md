@@ -1640,6 +1640,10 @@
   * \[ ] Extend semantic completion with visible locals, compiler builtins, and declarations from explicitly included standard-library headers.
 * \[x] **Cursor semantic query** — `--semantic-query=json --position-byte=N` emits `semantic-query-json-v1` with scope-correct hover declarations, active call signatures, exact definitions, and translation-unit references for saved or unsaved source, including included prototypes, shadowed locals, and temporary typing errors.
 * \[x] **Translation-unit semantic index** — `--semantic-index=json` emits compiler-bound structured identities and definition/declaration/reference occurrences so project-aware tools can fan out without identifier text matching.
+* \[x] **Canonical source formatting** — `--format=json` emits idempotent
+  `format-json-v1` for saved or unsaved UTF-8 buffers, preserves comments and
+  literals, tolerates incomplete editing states, and keeps formatting policy in
+  Baa rather than the IDE or LSP adapter.
 * \[x] **No internal Baa IDE roadmap** — `docs/ECOSYSTEM_BOUNDARIES.md` keeps Qalam-facing Baa work limited to compiler/data contracts while Qalam-IDE owns editor UI/UX.
 
   ### v0.7.3: Compiler Testing II 🧪

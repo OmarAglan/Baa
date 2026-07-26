@@ -166,12 +166,13 @@ void driver_print_help(void)
     printf("  -c           Compile to object file only (.o)\n");
     printf("  --check      Parse/analyze source files without emitting code\n");
     printf("  --check-header  Parse/analyze header declarations without emitting code\n");
-    printf("  --source-stdin=<file>  Read one --check source from stdin using this logical path\n");
+    printf("  --source-stdin=<file>  Read one check/format source from stdin using this logical path\n");
     printf("  --diagnostics=json  Emit machine-readable diagnostics JSON to stdout\n");
     printf("  --dump-symbols=json  Emit symbols-json-v1 document declarations and stop after analysis\n");
     printf("  --semantic-query=json --position-byte=N  Emit compiler-owned semantic navigation data\n");
     printf("  --semantic-index=json  Emit compiler-owned symbol identities and occurrences\n");
     printf("  --completion-data=json  Emit completion-data-json-v1 language metadata\n");
+    printf("  --format=json  Emit compiler-owned format-json-v1 source formatting\n");
     printf("  -v           Enable verbose output with timing\n");
     printf("  --startup=custom  Emit the default Arabic startup stub in -S output\n");
     printf("  --dump-ir    Dump Baa IR (Arabic) to stdout after analysis\n");
@@ -427,6 +428,7 @@ bool driver_parse_cli(int argc, char **argv, CompilerConfig *config, DriverParse
     size_t include_dir_count = 0;
     bool target_info_requested = false;
     bool completion_data_requested = false;
+    bool format_requested = false;
 
     for (int i = 1; i < argc; i++)
     {
@@ -573,6 +575,16 @@ bool driver_parse_cli(int argc, char **argv, CompilerConfig *config, DriverParse
                 fprintf(stderr,
                         "Error: Unsupported completion data format '%s' (expected json)\n",
                         arg + 18);
+                parse_release_temp_arrays(inputs, include_dirs);
+                return false;
+            }
+            else if (strcmp(arg, "--format=json") == 0)
+                format_requested = true;
+            else if (strncmp(arg, "--format=", 9) == 0)
+            {
+                fprintf(stderr,
+                        "Error: Unsupported source format '%s' (expected json)\n",
+                        arg + 9);
                 parse_release_temp_arrays(inputs, include_dirs);
                 return false;
             }
@@ -827,7 +839,8 @@ bool driver_parse_cli(int argc, char **argv, CompilerConfig *config, DriverParse
     }
 
     if (completion_data_requested &&
-        (target_info_requested || input_count != 0 || config->source_stdin_file))
+        (target_info_requested || format_requested ||
+         input_count != 0 || config->source_stdin_file))
     {
         fprintf(stderr,
                 "Error: --completion-data=json must be used without sources or target info\n");
@@ -837,11 +850,13 @@ bool driver_parse_cli(int argc, char **argv, CompilerConfig *config, DriverParse
 
     if (config->source_stdin_file)
     {
-        if (!config->check_only || config->header_check || input_count != 0 ||
+        if ((!config->check_only && !format_requested) ||
+            config->header_check || input_count != 0 ||
             config->build_manifest_file || config->incremental)
         {
             fprintf(stderr,
-                    "Error: --source-stdin requires --check, exactly one logical source, "
+                    "Error: --source-stdin requires --check or --format=json, "
+                    "exactly one logical source, "
                     "and no positional input, incremental cache, or build manifest\n");
             parse_release_temp_arrays(inputs, include_dirs);
             return false;
@@ -853,7 +868,8 @@ bool driver_parse_cli(int argc, char **argv, CompilerConfig *config, DriverParse
         (config->diagnostics_json ? 1 : 0) +
         (config->dump_symbols_json ? 1 : 0) +
         (config->semantic_query_json ? 1 : 0) +
-        (config->semantic_index_json ? 1 : 0);
+        (config->semantic_index_json ? 1 : 0) +
+        (format_requested ? 1 : 0);
     if (machine_readable_source_modes > 1)
     {
         fprintf(stderr,
@@ -921,6 +937,29 @@ bool driver_parse_cli(int argc, char **argv, CompilerConfig *config, DriverParse
     }
     if (config->semantic_index_json) config->verbose = false;
 
+    if (format_requested)
+    {
+        if (target_info_requested || input_count != 1 ||
+            config->check_only || config->header_check ||
+            config->assembly_only || config->emit_nazm ||
+            config->compile_only || config->output_file ||
+            config->build_manifest_file || config->incremental)
+        {
+            fprintf(stderr,
+                    "Error: --format=json requires exactly one Baa source "
+                    "and cannot be combined with compilation modes\n");
+            parse_release_temp_arrays(inputs, include_dirs);
+            return false;
+        }
+        if (driver_nazm_is_source_path(inputs[0]))
+        {
+            fprintf(stderr, "Error: --format=json accepts Baa sources only\n");
+            parse_release_temp_arrays(inputs, include_dirs);
+            return false;
+        }
+        config->verbose = false;
+    }
+
     if (config->emit_nazm &&
         (config->assembly_only || config->compile_only ||
          config->check_only || config->header_check))
@@ -987,6 +1026,7 @@ bool driver_parse_cli(int argc, char **argv, CompilerConfig *config, DriverParse
 
     parse_set_result(out,
                      config,
+                     format_requested ? DRIVER_CMD_FORMAT :
                      completion_data_requested ? DRIVER_CMD_COMPLETION_DATA :
                      target_info_requested ? DRIVER_CMD_TARGET_INFO : DRIVER_CMD_COMPILE,
                      inputs,

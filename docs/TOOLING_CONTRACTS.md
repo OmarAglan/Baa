@@ -34,6 +34,7 @@ This document defines the compiler surfaces that external tools may rely on.
 | `--dump-tokens=json` | stable token stream | Qalam/debug tools |
 | `--dump-symbols=json` | symbol outline | Qalam |
 | `--completion-data=json` | language-owned keywords, directives, and snippets | Baa-LSP, Qalam |
+| `--format=json` | canonical, source-preserving Baa formatting | Baa-LSP, Qalam |
 | `--semantic-query=json --position-byte=N` | compiler-owned hover and call-signature data at a UTF-8 byte position | Baa-LSP, Qalam |
 | `--semantic-index=json` | compiler-owned symbol identities and occurrences for one translation unit | Baa-LSP |
 | `--target=<target>` | target selection | Takween, OS experiments |
@@ -51,6 +52,7 @@ baa --check [-I <dir>...] [--target=<target>] <inputs...>
 baa --check --diagnostics=json --source-stdin=<logical-file>
 baa --dump-symbols=json [--source-stdin=<logical-file> | <source.baa>]
 baa --completion-data=json
+baa --format=json [--source-stdin=<logical-file> | <source.baa>]
 baa --semantic-query=json --position-byte=<offset> [--source-stdin=<logical-file> | <source.baa>]
 baa --semantic-index=json [-I <dir>...] [--source-stdin=<logical-file> | <source.baa>]
 baa --check-header [-I <dir>...] <headers...>
@@ -321,7 +323,23 @@ compiler contract must provide visible locals, compiler builtins, and symbols
 from explicitly included standard-library headers before semantic completion is
 considered complete.
 
-### 7.3 `semantic-query-json-v1`
+### 7.3 `format-json-v1`
+
+`--format=json` accepts exactly one positional Baa source or one unsaved buffer
+through `--source-stdin=<logical-file>`. It performs tolerant lexical formatting
+without preprocessing or semantic analysis and emits the complete replacement
+text. The canonical v1 style uses LF line endings, four-space indentation, and
+one final newline for nonempty files while preserving literal, character, and
+comment contents.
+
+The required fields are `schema_version`, `compiler_version`, `language`,
+`file`, `position_encoding`, `line_ending`, `indent_width`, `insert_spaces`,
+`source_bytes`, `formatted_bytes`, `changed`, and `formatted_text`.
+Formatting the result again must be idempotent. See
+[`FORMAT_JSON_SCHEMA.md`](FORMAT_JSON_SCHEMA.md) for the normative shape,
+error mapping, and consumer rules.
+
+### 7.4 `semantic-query-json-v1`
 
 `--semantic-query=json --position-byte=<offset>` accepts exactly one Baa source
 and implies check-only frontend analysis. It may consume the current unsaved
@@ -424,7 +442,7 @@ error such as the empty call inserted by automatic parenthesis pairing.
 Unsupported or unresolved results remain explicit `null` values; the compiler
 does not invent declarations or parse identifier text outside its frontend.
 
-### 7.4 `semantic-index-json-v1`
+### 7.5 `semantic-index-json-v1`
 
 `--semantic-index=json` accepts exactly one successfully analyzed Baa
 translation unit and implies check-only frontend analysis. `-I` and
@@ -498,6 +516,7 @@ Qalam should consume:
 - token JSON,
 - symbol JSON,
 - `completion-data-json-v1`,
+- `format-json-v1`,
 - `semantic-query-json-v1`.
 - `semantic-index-json-v1`.
 

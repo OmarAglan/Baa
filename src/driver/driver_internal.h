@@ -23,6 +23,7 @@
 #include "driver_startup.h"
 #include "driver_symbols.h"
 #include "driver_completion.h"
+#include "driver_format.h"
 #include "driver_semantic.h"
 #include "process.h"
 #include "../support/version.h"

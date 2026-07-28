@@ -30,6 +30,7 @@ set(SOURCES
     src/frontend/analysis.c    # Semantic Analysis module
     src/frontend/language_profile.c # Central language/completion metadata
     src/frontend/formatter.c  # Canonical source formatting for tools
+    src/frontend/source_tokens.c  # Raw source token stream for tooling
     src/support/error.c
     src/support/file_io.c
     src/support/read_file.c
@@ -80,6 +81,7 @@ set(SOURCES
     src/driver/driver_startup.c
     src/driver/driver_pipeline.c
     src/driver/driver_symbols.c
+    src/driver/driver_tokens.c
     src/driver/driver_completion.c
     src/driver/driver_format.c
     src/driver/driver_semantic.c

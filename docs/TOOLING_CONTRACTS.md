@@ -50,6 +50,7 @@ Takween may rely on these compiler invocation shapes:
 ```bash
 baa --check [-I <dir>...] [--target=<target>] <inputs...>
 baa --check --diagnostics=json --source-stdin=<logical-file>
+baa --dump-tokens=json [--source-stdin=<logical-file> | <source.baa>]
 baa --dump-symbols=json [--source-stdin=<logical-file> | <source.baa>]
 baa --completion-data=json
 baa --format=json [--source-stdin=<logical-file> | <source.baa>]
@@ -79,6 +80,13 @@ identity for diagnostics and source-relative includes. It accepts no positional 
 code-generation mode, incremental cache, or build manifest. The logical file need not contain
 the same bytes on disk. This prevents an editor from writing shadow sources into the project
 tree and ensures diagnostic byte offsets describe the supplied buffer.
+
+`--dump-tokens=json` emits the compiler-owned, source-preserving lexical
+contract `tokens-json-v1`. It accepts saved or unsaved source, validates UTF-8,
+and remains usable while the buffer is syntactically incomplete. It does not
+expand includes or macros, so comments and directives remain available at
+their original byte spans. The complete field and token-kind contract is in
+[`TOKENS_JSON_SCHEMA.md`](TOKENS_JSON_SCHEMA.md).
 
 Stable invocation inputs are:
 

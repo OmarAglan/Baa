@@ -1633,7 +1633,10 @@
 * \[x] **Machine-readable diagnostics** — `--diagnostics=json` emits
   `diagnostics-json-v1` with file, line, column, span, code, severity, category,
   hints, and compiler-owned safe structured fixes for missing delimiters.
-* \[ ] **Token dump mode** — stable token stream for syntax-highlighting/debugging integration.
+* \[x] **Token dump mode** — `--dump-tokens=json` emits
+  `tokens-json-v1` from the compiler-owned raw source scanner for saved or
+  unsaved UTF-8 buffers, preserving comments, directives, literals, and exact
+  byte spans while tolerating incomplete editor syntax.
 * \[x] **Symbol outline mode** — `--dump-symbols=json` emits `symbols-json-v1` for functions, parameters, globals, arrays, structs, unions, enums, fields, enum members, and type aliases with exact UTF-8 byte spans.
 * \[x] **Completion metadata export** — keywords, builtins, included declarations, visible locals, and snippets in stable compiler-owned formats.
   * \[x] `completion-data-json-v1` exports lexer-owned keywords, directives, literals, primitive types, Arabic snippets, and canonical compiler builtin signatures through `--completion-data=json`.

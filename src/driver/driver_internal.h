@@ -22,6 +22,7 @@
 #include "driver_nazm.h"
 #include "driver_startup.h"
 #include "driver_symbols.h"
+#include "driver_tokens.h"
 #include "driver_completion.h"
 #include "driver_format.h"
 #include "driver_semantic.h"

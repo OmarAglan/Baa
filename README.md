@@ -365,6 +365,7 @@ baa --target=x86_64-linux   البرنامج.baa
 | `--verify-ir` | التحقق من صحة IR فقط |
 | `--verify-ssa` | التحقق من صحة SSA فقط |
 | `--diagnostics=json` | إخراج التشخيصات بصيغة JSON مستقرة للأدوات |
+| `--dump-tokens=json` | إخراج `tokens-json-v1` بتصنيفات المترجم ومواضع بايت UTF-8 للتلوين الدلالي، من ملف محفوظ أو `--source-stdin` |
 | `--dump-symbols=json` | إخراج شجرة تصريحات `symbols-json-v1` لمصدر باء واحد دون توليد كود |
 | `--completion-data=json` | إخراج مفردات اللغة والتوجيهات والقوالب في `completion-data-json-v1` دون مصدر |
 | `--format=json` | تنسيق ملف باء أو نص stdin وإخراج `format-json-v1` دون بناء |

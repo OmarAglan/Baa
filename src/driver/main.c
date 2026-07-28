@@ -200,7 +200,7 @@ static int baa_main(int argc, char **argv)
             fprintf(stderr, "خطأ: تعذر قراءة مصدر باء المطلوب تنسيقه.\n");
             return main_cleanup_and_return(
                 &config, &cli, NULL, 0, config.output_file, output_file_owned,
-                BAA_COMPILER_EXIT_INTERNAL_ERROR);
+                BAA_COMPILER_EXIT_SOURCE_ERROR);
         }
         const BaaFormatStatus status =
             driver_format_json_write(stdout, BAA_VERSION, logical_file, source);
@@ -214,6 +214,39 @@ static int baa_main(int argc, char **argv)
             status == BAA_FORMAT_OK
                 ? BAA_COMPILER_EXIT_SUCCESS
                 : status == BAA_FORMAT_INVALID_UTF8
+                    ? BAA_COMPILER_EXIT_SOURCE_ERROR
+                    : BAA_COMPILER_EXIT_INTERNAL_ERROR);
+    }
+    if (cli.cmd == DRIVER_CMD_TOKEN_DUMP)
+    {
+        const char *logical_file =
+            cli.input_count == 1 ? cli.input_files[0] : "";
+        char *source = config.source_stdin_file
+            ? read_stdin_source()
+            : read_file(logical_file);
+        if (!source)
+        {
+            fprintf(stderr,
+                    "خطأ: تعذر قراءة مصدر باء المطلوب استخراج رموزه اللفظية.\n");
+            return main_cleanup_and_return(
+                &config, &cli, NULL, 0, config.output_file, output_file_owned,
+                BAA_COMPILER_EXIT_INTERNAL_ERROR);
+        }
+        const BaaTokensStatus status =
+            driver_tokens_json_write(
+                stdout, BAA_VERSION, logical_file, source);
+        free(source);
+        if (status == BAA_TOKENS_INVALID_UTF8)
+            fprintf(stderr,
+                    "خطأ: مصدر الرموز اللفظية ليس UTF-8 صالحاً.\n");
+        else if (status != BAA_TOKENS_OK)
+            fprintf(stderr,
+                    "خطأ: تعذر إصدار tokens-json-v1.\n");
+        return main_cleanup_and_return(
+            &config, &cli, NULL, 0, config.output_file, output_file_owned,
+            status == BAA_TOKENS_OK
+                ? BAA_COMPILER_EXIT_SUCCESS
+                : status == BAA_TOKENS_INVALID_UTF8
                     ? BAA_COMPILER_EXIT_SOURCE_ERROR
                     : BAA_COMPILER_EXIT_INTERNAL_ERROR);
     }

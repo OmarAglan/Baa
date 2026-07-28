@@ -97,21 +97,21 @@ C-compatible behavior.
 
 ## Tooling Contracts Not Yet Implemented
 
-The following surfaces appear in draft v0.7+ contract documents but are not accepted by the
-current driver:
+The following discovery surfaces remain planning concepts and are not accepted
+by the current driver:
 
-- `--diagnostics=json`
-- JSON token dumps
-- JSON symbol outlines
-- completion metadata export
-- `--print-targets` and `--print-target-spec`
+- `--print-targets`
+- `--print-target-spec`
 
 The files under `tests/conformance/` are a seed layout. Cases that mention the remaining future
 flags do not yet form an executable release gate.
 
-Implemented machine-facing surfaces currently include deterministic build manifests,
-incremental-cache metadata, `--check` fast source validation, `--diagnostics=json`, IR dumps,
-verifier flags, phase timing, and target selection for the two hosted x86-64 targets.
+Implemented machine-facing surfaces currently include deterministic build
+manifests, incremental-cache metadata, `--check` fast source validation,
+`--diagnostics=json`, `--dump-tokens=json`, `--dump-symbols=json`,
+`--completion-data=json`, `--format=json`, semantic query/index JSON, IR dumps,
+verifier flags, phase timing, and target discovery/selection for the two hosted
+x86-64 targets.
 
 ## Release Status
 

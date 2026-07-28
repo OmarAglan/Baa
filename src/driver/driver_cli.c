@@ -166,8 +166,9 @@ void driver_print_help(void)
     printf("  -c           Compile to object file only (.o)\n");
     printf("  --check      Parse/analyze source files without emitting code\n");
     printf("  --check-header  Parse/analyze header declarations without emitting code\n");
-    printf("  --source-stdin=<file>  Read one check/format source from stdin using this logical path\n");
+    printf("  --source-stdin=<file>  Read one tooling source from stdin using this logical path\n");
     printf("  --diagnostics=json  Emit machine-readable diagnostics JSON to stdout\n");
+    printf("  --dump-tokens=json  Emit tokens-json-v1 source tokens without preprocessing\n");
     printf("  --dump-symbols=json  Emit symbols-json-v1 document declarations and stop after analysis\n");
     printf("  --semantic-query=json --position-byte=N  Emit compiler-owned semantic navigation data\n");
     printf("  --semantic-index=json  Emit compiler-owned symbol identities and occurrences\n");
@@ -429,6 +430,7 @@ bool driver_parse_cli(int argc, char **argv, CompilerConfig *config, DriverParse
     bool target_info_requested = false;
     bool completion_data_requested = false;
     bool format_requested = false;
+    bool token_dump_requested = false;
 
     for (int i = 1; i < argc; i++)
     {
@@ -522,6 +524,16 @@ bool driver_parse_cli(int argc, char **argv, CompilerConfig *config, DriverParse
             else if (strncmp(arg, "--dump-symbols=", 15) == 0)
             {
                 fprintf(stderr, "Error: Unsupported symbol format '%s' (expected json)\n", arg + 15);
+                parse_release_temp_arrays(inputs, include_dirs);
+                return false;
+            }
+            else if (strcmp(arg, "--dump-tokens=json") == 0)
+                token_dump_requested = true;
+            else if (strncmp(arg, "--dump-tokens=", 14) == 0)
+            {
+                fprintf(stderr,
+                        "Error: Unsupported token format '%s' (expected json)\n",
+                        arg + 14);
                 parse_release_temp_arrays(inputs, include_dirs);
                 return false;
             }
@@ -850,12 +862,14 @@ bool driver_parse_cli(int argc, char **argv, CompilerConfig *config, DriverParse
 
     if (config->source_stdin_file)
     {
-        if ((!config->check_only && !format_requested) ||
+        if ((!config->check_only && !format_requested &&
+             !token_dump_requested) ||
             config->header_check || input_count != 0 ||
             config->build_manifest_file || config->incremental)
         {
             fprintf(stderr,
-                    "Error: --source-stdin requires --check or --format=json, "
+                    "Error: --source-stdin requires --check, --format=json, "
+                    "or --dump-tokens=json, "
                     "exactly one logical source, "
                     "and no positional input, incremental cache, or build manifest\n");
             parse_release_temp_arrays(inputs, include_dirs);
@@ -866,6 +880,7 @@ bool driver_parse_cli(int argc, char **argv, CompilerConfig *config, DriverParse
 
     const int machine_readable_source_modes =
         (config->diagnostics_json ? 1 : 0) +
+        (token_dump_requested ? 1 : 0) +
         (config->dump_symbols_json ? 1 : 0) +
         (config->semantic_query_json ? 1 : 0) +
         (config->semantic_index_json ? 1 : 0) +
@@ -876,6 +891,29 @@ bool driver_parse_cli(int argc, char **argv, CompilerConfig *config, DriverParse
                 "Error: machine-readable compiler modes produce separate JSON documents\n");
         parse_release_temp_arrays(inputs, include_dirs);
         return false;
+    }
+    if (token_dump_requested)
+    {
+        if (target_info_requested || input_count != 1 ||
+            config->check_only || config->header_check ||
+            config->assembly_only || config->emit_nazm ||
+            config->compile_only || config->output_file ||
+            config->build_manifest_file || config->incremental)
+        {
+            fprintf(stderr,
+                    "Error: --dump-tokens=json requires exactly one Baa "
+                    "source and cannot be combined with compilation modes\n");
+            parse_release_temp_arrays(inputs, include_dirs);
+            return false;
+        }
+        if (driver_nazm_is_source_path(inputs[0]))
+        {
+            fprintf(stderr,
+                    "Error: --dump-tokens=json accepts Baa sources only\n");
+            parse_release_temp_arrays(inputs, include_dirs);
+            return false;
+        }
+        config->verbose = false;
     }
     if (config->dump_symbols_json && input_count != 1)
     {
@@ -1027,6 +1065,7 @@ bool driver_parse_cli(int argc, char **argv, CompilerConfig *config, DriverParse
     parse_set_result(out,
                      config,
                      format_requested ? DRIVER_CMD_FORMAT :
+                     token_dump_requested ? DRIVER_CMD_TOKEN_DUMP :
                      completion_data_requested ? DRIVER_CMD_COMPLETION_DATA :
                      target_info_requested ? DRIVER_CMD_TARGET_INFO : DRIVER_CMD_COMPILE,
                      inputs,

@@ -250,6 +250,39 @@ static int baa_main(int argc, char **argv)
                     ? BAA_COMPILER_EXIT_SOURCE_ERROR
                     : BAA_COMPILER_EXIT_INTERNAL_ERROR);
     }
+    if (cli.cmd == DRIVER_CMD_STRUCTURE_DUMP)
+    {
+        const char *logical_file =
+            cli.input_count == 1 ? cli.input_files[0] : "";
+        char *source = config.source_stdin_file
+            ? read_stdin_source()
+            : read_file(logical_file);
+        if (!source)
+        {
+            fprintf(stderr,
+                    "خطأ: تعذر قراءة مصدر باء المطلوب استخراج بنيته.\n");
+            return main_cleanup_and_return(
+                &config, &cli, NULL, 0, config.output_file, output_file_owned,
+                BAA_COMPILER_EXIT_SOURCE_ERROR);
+        }
+        const BaaStructureStatus status =
+            driver_structure_json_write(
+                stdout, BAA_VERSION, logical_file, source);
+        free(source);
+        if (status == BAA_STRUCTURE_INVALID_UTF8)
+            fprintf(stderr,
+                    "خطأ: مصدر البنية ليس UTF-8 صالحاً.\n");
+        else if (status != BAA_STRUCTURE_OK)
+            fprintf(stderr,
+                    "خطأ: تعذر إصدار structure-json-v1.\n");
+        return main_cleanup_and_return(
+            &config, &cli, NULL, 0, config.output_file, output_file_owned,
+            status == BAA_STRUCTURE_OK
+                ? BAA_COMPILER_EXIT_SUCCESS
+                : status == BAA_STRUCTURE_INVALID_UTF8
+                    ? BAA_COMPILER_EXIT_SOURCE_ERROR
+                    : BAA_COMPILER_EXIT_INTERNAL_ERROR);
+    }
     if (cli.cmd == DRIVER_CMD_EXPLAIN)
     {
         bool ok = driver_print_diagnostic_explain(cli.explain_code);

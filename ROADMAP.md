@@ -1637,6 +1637,10 @@
   `tokens-json-v1` from the compiler-owned raw source scanner for saved or
   unsaved UTF-8 buffers, preserving comments, directives, literals, and exact
   byte spans while tolerating incomplete editor syntax.
+* \[x] **Structural editing ranges** — `--dump-structure=json` emits
+  deterministic `structure-json-v1` folding and selection candidates from the
+  same tolerant raw scanner, excludes delimiter text inside comments and
+  literals, and preserves partial ranges for incomplete editor buffers.
 * \[x] **Symbol outline mode** — `--dump-symbols=json` emits `symbols-json-v1` for functions, parameters, globals, arrays, structs, unions, enums, fields, enum members, and type aliases with exact UTF-8 byte spans.
 * \[x] **Completion metadata export** — keywords, builtins, included declarations, visible locals, and snippets in stable compiler-owned formats.
   * \[x] `completion-data-json-v1` exports lexer-owned keywords, directives, literals, primitive types, Arabic snippets, and canonical compiler builtin signatures through `--completion-data=json`.

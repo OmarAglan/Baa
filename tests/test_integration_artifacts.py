@@ -14,6 +14,7 @@ REQUIRED_DOCS = {
     "docs/TOOLING_CONTRACTS.md": ("# Baa Tooling Contracts", "draft-0.1"),
     "docs/DIAGNOSTICS_JSON_SCHEMA.md": ("# Baa Diagnostics JSON Schema", "draft-0.1"),
     "docs/FORMAT_JSON_SCHEMA.md": ("# Baa Formatting JSON Schema", "draft-0.1"),
+    "docs/STRUCTURE_JSON_SCHEMA.md": ("# Baa Structure JSON Schema", "draft-0.1"),
     "docs/CONFORMANCE_SUITE.md": ("# Baa Conformance Suite", "draft-0.1"),
     "docs/SDK_RELEASE_PLAN.md": ("# Baa SDK Release Plan", "draft-0.1"),
     "docs/NAZM_PRODUCTION_ADMISSION.md": (
@@ -63,6 +64,7 @@ class IntegrationArtifactDocumentationTests(unittest.TestCase):
             "symbols-json-v1",
             "format-json-v1",
             "tokens-json-v1",
+            "structure-json-v1",
             "target-spec-v1",
             "conformance-v1",
             "freestanding-v0",
@@ -83,6 +85,7 @@ class IntegrationArtifactDocumentationTests(unittest.TestCase):
             "`--cache-dir <dir>`",
             "`--diagnostics=json`",
             "`--dump-tokens=json`",
+            "`--dump-structure=json`",
             "`--dump-symbols=json`",
             "`--format=json`",
             "`--target=<target>`",
@@ -151,6 +154,22 @@ class IntegrationArtifactDocumentationTests(unittest.TestCase):
             "accepts incomplete editor buffers",
             "is idempotent",
             "full-document UTF-16 `TextEdit`",
+        ):
+            with self.subTest(marker=marker):
+                self.assertIn(marker, text)
+
+    def test_structure_json_schema_covers_structural_editor_contract(self) -> None:
+        text = _read("docs/STRUCTURE_JSON_SCHEMA.md")
+        for marker in (
+            '"schema_version": "structure-json-v1"',
+            '"position_encoding": "utf-8-bytes"',
+            '"complete": true',
+            '"folding_ranges": [',
+            '"selection_ranges": [',
+            "`region`: a matched multiline",
+            "`token`: one raw source token.",
+            "textDocument/selectionRange",
+            "must not parse Baa source",
         ):
             with self.subTest(marker=marker):
                 self.assertIn(marker, text)

@@ -638,6 +638,16 @@ def _run_tokens_json_tests(log_dir: Path) -> StepResult:
     )
 
 
+def _run_structure_json_tests(log_dir: Path) -> StepResult:
+    return _run_logged(
+        "structure-json-tests",
+        [sys.executable, str(TESTS_DIR / "test_structure_json.py")],
+        cwd=ROOT,
+        log_dir=log_dir,
+        timeout_s=120.0,
+    )
+
+
 def _run_completion_data_tests(log_dir: Path) -> StepResult:
     return _run_logged(
         "completion-data-tests",
@@ -1035,6 +1045,11 @@ def main() -> int:
     _print_step(tokens_json_res)
     all_results.append(tokens_json_res)
     overall_ok = overall_ok and tokens_json_res.passed
+
+    structure_json_res = _run_structure_json_tests(log_dir)
+    _print_step(structure_json_res)
+    all_results.append(structure_json_res)
+    overall_ok = overall_ok and structure_json_res.passed
 
     completion_data_res = _run_completion_data_tests(log_dir)
     _print_step(completion_data_res)

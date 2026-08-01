@@ -32,6 +32,7 @@ This document defines the compiler surfaces that external tools may rely on.
 | `--cache-dir <dir>` | select the incremental cache directory | Takween |
 | `--diagnostics=json` | machine-readable diagnostics | Qalam, Takween |
 | `--dump-tokens=json` | stable token stream | Qalam/debug tools |
+| `--dump-structure=json` | tolerant structural editing ranges | Baa-LSP, Qalam |
 | `--dump-symbols=json` | symbol outline | Qalam |
 | `--completion-data=json` | language-owned keywords, directives, and snippets | Baa-LSP, Qalam |
 | `--format=json` | canonical, source-preserving Baa formatting | Baa-LSP, Qalam |
@@ -51,6 +52,7 @@ Takween may rely on these compiler invocation shapes:
 baa --check [-I <dir>...] [--target=<target>] <inputs...>
 baa --check --diagnostics=json --source-stdin=<logical-file>
 baa --dump-tokens=json [--source-stdin=<logical-file> | <source.baa>]
+baa --dump-structure=json [--source-stdin=<logical-file> | <source.baa>]
 baa --dump-symbols=json [--source-stdin=<logical-file> | <source.baa>]
 baa --completion-data=json
 baa --format=json [--source-stdin=<logical-file> | <source.baa>]
@@ -87,6 +89,13 @@ and remains usable while the buffer is syntactically incomplete. It does not
 expand includes or macros, so comments and directives remain available at
 their original byte spans. The complete field and token-kind contract is in
 [`TOKENS_JSON_SCHEMA.md`](TOKENS_JSON_SCHEMA.md).
+
+`--dump-structure=json` emits the compiler-owned, tolerant
+`structure-json-v1` contract used for folding and semantic selection. It uses
+the same raw source scanner as `tokens-json-v1`, so delimiters inside comments
+or literals never become structural ranges. A temporarily incomplete buffer
+still exits successfully with `complete: false` and every safely recovered
+range. See [`STRUCTURE_JSON_SCHEMA.md`](STRUCTURE_JSON_SCHEMA.md).
 
 Stable invocation inputs are:
 
@@ -521,6 +530,27 @@ each bound parameter or field reference; adapters must not infer these roles
 from spelling or punctuation.
 Duplicate header occurrences are deduplicated by location. Invalid source
 returns source exit code `1` rather than a partial index.
+
+### 7.6 `structure-json-v1`
+
+`--dump-structure=json` accepts exactly one saved Baa source or one unsaved
+buffer through `--source-stdin=<logical-file>`. It performs tolerant raw-source
+scanning only: preprocessing, semantic analysis, IR, and code generation do not
+run. Valid UTF-8 input returns exit code `0` even when delimiters or literals are
+temporarily incomplete; `complete` then becomes `false`.
+
+`folding_ranges` contains multiline delimiter regions and comment regions.
+`selection_ranges` contains exact token, trimmed-line, delimiter-content,
+delimiter-group, brace-construct, and whole-document candidates. Every span
+uses one-based UTF-8 byte line/column coordinates plus zero-based absolute byte
+offsets. Arrays are deterministically sorted by start offset, then decreasing
+end offset, then kind, with duplicates removed.
+
+Baa-LSP validates the full contract and converts byte positions to UTF-16 for
+`textDocument/foldingRange` and `textDocument/selectionRange`. Consumers must
+discard stale results and must not recover hidden structure by parsing source
+text after a contract failure. The normative shape and kind vocabulary are in
+[`STRUCTURE_JSON_SCHEMA.md`](STRUCTURE_JSON_SCHEMA.md).
 
 ---
 

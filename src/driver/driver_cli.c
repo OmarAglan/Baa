@@ -169,6 +169,7 @@ void driver_print_help(void)
     printf("  --source-stdin=<file>  Read one tooling source from stdin using this logical path\n");
     printf("  --diagnostics=json  Emit machine-readable diagnostics JSON to stdout\n");
     printf("  --dump-tokens=json  Emit tokens-json-v1 source tokens without preprocessing\n");
+    printf("  --dump-structure=json  Emit tolerant structure-json-v1 editor ranges\n");
     printf("  --dump-symbols=json  Emit symbols-json-v1 document declarations and stop after analysis\n");
     printf("  --semantic-query=json --position-byte=N  Emit compiler-owned semantic navigation data\n");
     printf("  --semantic-index=json  Emit compiler-owned symbol identities and occurrences\n");
@@ -429,6 +430,7 @@ bool driver_parse_cli(int argc, char **argv, CompilerConfig *config, DriverParse
     size_t include_dir_count = 0;
     bool target_info_requested = false;
     bool completion_data_requested = false;
+    bool structure_dump_requested = false;
     bool format_requested = false;
     bool token_dump_requested = false;
 
@@ -534,6 +536,16 @@ bool driver_parse_cli(int argc, char **argv, CompilerConfig *config, DriverParse
                 fprintf(stderr,
                         "Error: Unsupported token format '%s' (expected json)\n",
                         arg + 14);
+                parse_release_temp_arrays(inputs, include_dirs);
+                return false;
+            }
+            else if (strcmp(arg, "--dump-structure=json") == 0)
+                structure_dump_requested = true;
+            else if (strncmp(arg, "--dump-structure=", 17) == 0)
+            {
+                fprintf(stderr,
+                        "Error: Unsupported structure format '%s' (expected json)\n",
+                        arg + 17);
                 parse_release_temp_arrays(inputs, include_dirs);
                 return false;
             }
@@ -863,13 +875,13 @@ bool driver_parse_cli(int argc, char **argv, CompilerConfig *config, DriverParse
     if (config->source_stdin_file)
     {
         if ((!config->check_only && !format_requested &&
-             !token_dump_requested) ||
+             !token_dump_requested && !structure_dump_requested) ||
             config->header_check || input_count != 0 ||
             config->build_manifest_file || config->incremental)
         {
             fprintf(stderr,
                     "Error: --source-stdin requires --check, --format=json, "
-                    "or --dump-tokens=json, "
+                    "--dump-tokens=json, or --dump-structure=json, "
                     "exactly one logical source, "
                     "and no positional input, incremental cache, or build manifest\n");
             parse_release_temp_arrays(inputs, include_dirs);
@@ -881,6 +893,7 @@ bool driver_parse_cli(int argc, char **argv, CompilerConfig *config, DriverParse
     const int machine_readable_source_modes =
         (config->diagnostics_json ? 1 : 0) +
         (token_dump_requested ? 1 : 0) +
+        (structure_dump_requested ? 1 : 0) +
         (config->dump_symbols_json ? 1 : 0) +
         (config->semantic_query_json ? 1 : 0) +
         (config->semantic_index_json ? 1 : 0) +
@@ -910,6 +923,29 @@ bool driver_parse_cli(int argc, char **argv, CompilerConfig *config, DriverParse
         {
             fprintf(stderr,
                     "Error: --dump-tokens=json accepts Baa sources only\n");
+            parse_release_temp_arrays(inputs, include_dirs);
+            return false;
+        }
+        config->verbose = false;
+    }
+    if (structure_dump_requested)
+    {
+        if (target_info_requested || input_count != 1 ||
+            config->check_only || config->header_check ||
+            config->assembly_only || config->emit_nazm ||
+            config->compile_only || config->output_file ||
+            config->build_manifest_file || config->incremental)
+        {
+            fprintf(stderr,
+                    "Error: --dump-structure=json requires exactly one Baa "
+                    "source and cannot be combined with compilation modes\n");
+            parse_release_temp_arrays(inputs, include_dirs);
+            return false;
+        }
+        if (driver_nazm_is_source_path(inputs[0]))
+        {
+            fprintf(stderr,
+                    "Error: --dump-structure=json accepts Baa sources only\n");
             parse_release_temp_arrays(inputs, include_dirs);
             return false;
         }
@@ -1065,6 +1101,7 @@ bool driver_parse_cli(int argc, char **argv, CompilerConfig *config, DriverParse
     parse_set_result(out,
                      config,
                      format_requested ? DRIVER_CMD_FORMAT :
+                     structure_dump_requested ? DRIVER_CMD_STRUCTURE_DUMP :
                      token_dump_requested ? DRIVER_CMD_TOKEN_DUMP :
                      completion_data_requested ? DRIVER_CMD_COMPLETION_DATA :
                      target_info_requested ? DRIVER_CMD_TARGET_INFO : DRIVER_CMD_COMPILE,

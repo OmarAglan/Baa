@@ -32,6 +32,7 @@ A project may release independently as long as it stays compatible with the cont
 | `semantic-query-json-v1` | Baa | Baa-LSP, Qalam |
 | `semantic-index-json-v1` | Baa | Baa-LSP |
 | `tokens-json-v1` | Baa | Qalam |
+| `structure-json-v1` | Baa | Baa-LSP, Qalam |
 | `target-spec-v1` | Baa | Takween, PyramidOS experiments |
 | `conformance-v1` | Baa | Baa, future compilers/tools |
 | `freestanding-v0` | Baa | PyramidOS experiments |
@@ -102,6 +103,12 @@ Baa-LSP performs only version-safe fan-out, location conversion, sorting, and
 deduplication. The same index owns identifier roles for semantic highlighting,
 including parameters and fields; raw `tokens-json-v1` remains the tolerant
 lexical fallback while a buffer is incomplete.
+
+Structural editing uses `structure-json-v1`. Baa's tolerant raw scanner owns
+delimiter, comment, literal, and exact UTF-8 byte spans; Baa-LSP validates and
+converts them into LSP folding and strictly nested selection ranges. Qalam may
+show an immediate lexical delimiter fallback while typing, but the matching
+server result replaces it and stale results are discarded.
 
 ---
 

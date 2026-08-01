@@ -82,6 +82,7 @@ set(SOURCES
     src/driver/driver_pipeline.c
     src/driver/driver_symbols.c
     src/driver/driver_tokens.c
+    src/driver/driver_structure.c
     src/driver/driver_completion.c
     src/driver/driver_format.c
     src/driver/driver_semantic.c

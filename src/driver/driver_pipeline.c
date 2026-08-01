@@ -844,12 +844,7 @@ BaaCompilerExitCode driver_compile_files(const CompilerConfig *config,
 
     for (int i = 0; i < input_count; i++)
     {
-        char* canonical_input = config->source_stdin_file
-            ? baa_fullpath_utf8(input_files[i])
-            : NULL;
-        const char *current_input = canonical_input
-            ? canonical_input
-            : input_files[i];
+        const char *current_input = input_files[i];
         char *obj_file = NULL;
         char *shadow_object = NULL;
 
@@ -868,7 +863,6 @@ BaaCompilerExitCode driver_compile_files(const CompilerConfig *config,
                              odr_registry_ptr,
                              &obj_file,
                              &shadow_object);
-        free(canonical_input);
 
         if (rc != BAA_COMPILER_EXIT_SUCCESS)
         {

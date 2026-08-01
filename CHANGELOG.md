@@ -465,8 +465,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - **CI metadata, semantic paths, and module governance**:
   - Version synchronization now validates the professional textual release
     marker in `README.md` instead of requiring a particular badge provider.
-  - Windows semantic JSON expands 8.3 aliases to stable long Unicode paths,
-    including unsaved logical files whose parent directory already exists.
+  - Semantic JSON preserves the exact `--source-stdin` logical root while
+    resolved Windows include and dependency paths expand 8.3 aliases to stable
+    long Unicode paths.
   - Split the CLI output, pipeline validation, Nazm diagnostics, and semantic
     completion/output implementations into driver-owned companion fragments;
     all handwritten C modules are again below the 1,000-line hard cap with no

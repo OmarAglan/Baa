@@ -371,10 +371,10 @@ finds the enclosing call and calculates the active argument while respecting
 nested delimiters, strings, character literals, comments, and both supported
 comma forms.
 
-All file identities in semantic query and index output use compiler-resolved
-canonical paths. On Windows, the compiler expands 8.3 aliases to their stable
-long Unicode form. For an unsaved `--source-stdin` leaf, it canonicalizes the
-nearest existing parent and then appends the logical filename.
+The root file identity in semantic query and index output preserves the exact
+logical path supplied through `--source-stdin`. Resolved filesystem files such
+as includes and dependencies use compiler-canonical paths; on Windows, those
+paths expand 8.3 aliases to their stable long Unicode form.
 
 ```json
 {

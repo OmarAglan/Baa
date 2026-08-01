@@ -233,11 +233,11 @@ class SemanticQueryTests(unittest.TestCase):
         )
         self.assertEqual(
             Path(implementation_occurrences[-1]["location"]["file"]),
-            implementation.resolve(),
+            implementation,
         )
 
     @unittest.skipUnless(os.name == "nt", "Windows 8.3 path contract")
-    def test_expands_short_parent_for_unsaved_logical_file(self) -> None:
+    def test_preserves_short_parent_for_unsaved_logical_file(self) -> None:
         import ctypes
 
         source = "صحيح الرئيسية() { إرجع ٠. }\n"
@@ -260,7 +260,7 @@ class SemanticQueryTests(unittest.TestCase):
             logical = short_dir / "unsaved.baa"
             result = self.query(work, logical, source, 0)
 
-        self.assertEqual(Path(result["file"]), (source_dir / "unsaved.baa").resolve())
+        self.assertEqual(Path(result["file"]), logical)
 
     def test_resolves_shadowed_arabic_locals_and_function_signature(self) -> None:
         source = (
@@ -359,7 +359,7 @@ class SemanticQueryTests(unittest.TestCase):
         self.assertEqual(len(result["references"]), 2)
         self.assertEqual(
             {Path(item["file"]) for item in result["references"]},
-            {header.resolve(), logical.resolve()},
+            {header.resolve(), logical},
         )
         encoded = source.encode("utf-8")
         start = hover["range"]["start"]["byte"]

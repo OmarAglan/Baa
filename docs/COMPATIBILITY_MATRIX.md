@@ -99,7 +99,9 @@ Project-aware navigation uses `semantic-index-json-v1` together with the
 structured source and include closure in `takween-build-plan-v1`. Baa owns
 symbol identity and occurrence binding; Takween owns project membership;
 Baa-LSP performs only version-safe fan-out, location conversion, sorting, and
-deduplication.
+deduplication. The same index owns identifier roles for semantic highlighting,
+including parameters and fields; raw `tokens-json-v1` remains the tolerant
+lexical fallback while a buffer is incomplete.
 
 ---
 

@@ -376,9 +376,44 @@ static const char* semantic_node_name(const Node* node)
     }
 }
 
-static const char* semantic_kind(const Node* declaration)
+static bool semantic_node_in_list(const Node* list, const Node* target)
+{
+    for (const Node* node = list; node; node = node->next)
+        if (node == target) return true;
+    return false;
+}
+
+static const char* semantic_declaration_context_kind(
+    const SemanticQuery* query,
+    const Node* declaration)
+{
+    if (!query || !query->program ||
+        query->program->type != NODE_PROGRAM || !declaration)
+        return NULL;
+
+    for (const Node* owner = query->program->data.program.declarations;
+         owner; owner = owner->next)
+    {
+        if (owner->type == NODE_FUNC_DEF &&
+            semantic_node_in_list(owner->data.func_def.params, declaration))
+            return "parameter";
+        if (owner->type == NODE_STRUCT_DECL &&
+            semantic_node_in_list(owner->data.struct_decl.fields, declaration))
+            return "field";
+        if (owner->type == NODE_UNION_DECL &&
+            semantic_node_in_list(owner->data.union_decl.fields, declaration))
+            return "field";
+    }
+    return NULL;
+}
+
+static const char* semantic_kind(const SemanticQuery* query,
+                                 const Node* declaration)
 {
     if (!declaration) return "unknown";
+    const char* context_kind =
+        semantic_declaration_context_kind(query, declaration);
+    if (context_kind) return context_kind;
     switch (declaration->type)
     {
         case NODE_FUNC_DEF: return "function";
@@ -995,7 +1030,7 @@ static void semantic_print_completion(FILE* out,
         fputs("{\"label\":", out);
         semantic_json_escape(out, name);
         fputs(",\"kind\":", out);
-        semantic_json_escape(out, semantic_kind(declaration));
+        semantic_json_escape(out, semantic_kind(query, declaration));
         fputs(",\"detail\":", out);
         semantic_json_escape(out, detail);
         fputs(",\"documentation\":", out);
@@ -1156,6 +1191,7 @@ static const char* semantic_symbol_domain(const Node* declaration)
 }
 
 static void semantic_print_symbol_identity(FILE* out,
+                                           const SemanticQuery* query,
                                            const Node* declaration)
 {
     if (!declaration)
@@ -1168,7 +1204,7 @@ static void semantic_print_symbol_identity(FILE* out,
     fputs("{\"domain\":", out);
     semantic_json_escape(out, domain);
     fputs(",\"kind\":", out);
-    semantic_json_escape(out, semantic_kind(declaration));
+    semantic_json_escape(out, semantic_kind(query, declaration));
     fputs(",\"name\":", out);
     semantic_json_escape(out, semantic_node_name(declaration));
     if (strcmp(domain, "external") != 0)
@@ -1210,7 +1246,7 @@ static void semantic_print_symbol_location(FILE* out,
     fputs(",\"name\":", out);
     semantic_json_escape(out, semantic_node_name(node));
     fputs(",\"kind\":", out);
-    semantic_json_escape(out, semantic_kind(
+    semantic_json_escape(out, semantic_kind(query,
         semantic_query_declaration(query, node)));
     if (role)
     {
@@ -1234,7 +1270,7 @@ static void semantic_print_index_occurrence(SemanticQuery* query,
     if (!query || !query->index_out || !node || !declaration) return;
     if (!query->index_first) fputc(',', query->index_out);
     fputs("{\"symbol\":", query->index_out);
-    semantic_print_symbol_identity(query->index_out, declaration);
+    semantic_print_symbol_identity(query->index_out, query, declaration);
     fputs(",\"role\":", query->index_out);
     semantic_json_escape(query->index_out, semantic_occurrence_role(node));
     fputs(",\"location\":", query->index_out);
@@ -1492,7 +1528,7 @@ static void semantic_print_hover(FILE* out, const SemanticQuery* query)
     fputs("{\"name\":", out);
     semantic_json_escape(out, semantic_node_name(query->hover_node));
     fputs(",\"kind\":", out);
-    semantic_json_escape(out, semantic_kind(declaration));
+    semantic_json_escape(out, semantic_kind(query, declaration));
     fputs(",\"display\":", out);
     semantic_json_escape(out, display);
     fputs(",\"description\":", out);
@@ -1671,7 +1707,8 @@ bool driver_semantic_query_json_write(FILE* out,
     fprintf(out,
             ",\"position_encoding\":\"utf-8-bytes\",\"position_byte\":%zu,\"symbol\":",
             query.position_byte);
-    semantic_print_symbol_identity(out, semantic_selected_declaration(&query));
+    semantic_print_symbol_identity(
+        out, &query, semantic_selected_declaration(&query));
     fputs(",\"hover\":", out);
     semantic_print_hover(out, &query);
     fputs(",\"signature_help\":", out);

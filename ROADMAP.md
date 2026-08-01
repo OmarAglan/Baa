@@ -1642,7 +1642,7 @@
   * \[x] `completion-data-json-v1` exports lexer-owned keywords, directives, literals, primitive types, Arabic snippets, and canonical compiler builtin signatures through `--completion-data=json`.
   * \[x] `semantic-query-json-v1` exports cursor-visible parameters, locals, globals, types, and explicitly included header declarations with lexical shadowing and future/sibling exclusion.
 * \[x] **Cursor semantic query** — `--semantic-query=json --position-byte=N` emits `semantic-query-json-v1` with scope-correct hover declarations, active call signatures, exact definitions, and translation-unit references for saved or unsaved source, including included prototypes, shadowed locals, and temporary typing errors.
-* \[x] **Translation-unit semantic index** — `--semantic-index=json` emits compiler-bound structured identities and definition/declaration/reference occurrences so project-aware tools can fan out without identifier text matching.
+* \[x] **Translation-unit semantic index** — `--semantic-index=json` emits compiler-bound structured identities and definition/declaration/reference occurrences so project-aware tools can fan out without identifier text matching. Identifier kinds distinguish functions, variables, parameters, fields, enum members, arrays, constants, and type declarations for compiler-owned editor coloring as well as navigation.
 * \[x] **Canonical source formatting** — `--format=json` emits idempotent
   `format-json-v1` for saved or unsaved UTF-8 buffers, preserves comments and
   literals, tolerates incomplete editing states, and keeps formatting policy in

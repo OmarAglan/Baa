@@ -514,6 +514,11 @@ non-static globals use an identity stable across translation units. File-local
 and local identities include their compiler declaration location; type-like
 declarations use their defining location. Baa-LSP may aggregate equal
 structured identities across the exact source closure supplied by Takween.
+The compiler-owned `kind` distinguishes `function`, `variable`, `constant`,
+`array`, `parameter`, `field`, `enum-member`, `type-alias`, `enum`, `struct`,
+and `union`. The same kind is emitted in `symbol` and `location`, including for
+each bound parameter or field reference; adapters must not infer these roles
+from spelling or punctuation.
 Duplicate header occurrences are deduplicated by location. Invalid source
 returns source exit code `1` rather than a partial index.
 

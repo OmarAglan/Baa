@@ -87,6 +87,44 @@ class SemanticQueryTests(unittest.TestCase):
         self.assertIsInstance(result["occurrences"], list)
         return result
 
+    def test_semantic_index_classifies_identifier_roles(self) -> None:
+        source = (
+            "تعداد لون { أحمر، أزرق، }\n"
+            "هيكل نقطة {\n"
+            "    صحيح س.\n"
+            "}\n"
+            "صحيح احسب(صحيح معامل) {\n"
+            "    هيكل نقطة قيمة.\n"
+            "    تعداد لون اختيار = لون:أحمر.\n"
+            "    قيمة:س = معامل.\n"
+            "    إذا (اختيار == لون:أحمر) { إرجع قيمة:س. }\n"
+            "    إرجع قيمة:س.\n"
+            "}\n"
+        )
+        with tempfile.TemporaryDirectory(prefix="baa_semantic_roles_") as temp:
+            work = Path(temp)
+            logical = work / "أدوار.baa"
+            result = self.index(work, logical, source)
+
+        occurrences = result["occurrences"]
+        kinds_by_name: dict[str, set[str]] = {}
+        for occurrence in occurrences:
+            name = occurrence["location"]["name"]
+            kinds_by_name.setdefault(name, set()).add(
+                occurrence["location"]["kind"]
+            )
+            self.assertEqual(
+                occurrence["location"]["kind"],
+                occurrence["symbol"]["kind"],
+            )
+
+        self.assertEqual(kinds_by_name["احسب"], {"function"})
+        self.assertEqual(kinds_by_name["قيمة"], {"variable"})
+        self.assertEqual(kinds_by_name["معامل"], {"parameter"})
+        self.assertEqual(kinds_by_name["س"], {"field"})
+        self.assertEqual(kinds_by_name["أحمر"], {"enum-member"})
+        self.assertEqual(kinds_by_name["نقطة"], {"struct"})
+
     def test_completion_recovers_visible_scope_while_typing(self) -> None:
         source = (
             '#تضمين "واجهة.baahd"\n'

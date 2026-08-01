@@ -124,6 +124,7 @@ python .\scripts\qa_run.py --mode release
 | [دليل المستخدم](docs/USER_GUIDE.md) | التثبيت والاستخدام اليومي |
 | [الكتاب العربي](docs/BAA_BOOK_AR.md) | تعلّم اللغة بالعربية |
 | [مواصفة اللغة](docs/LANGUAGE.md) | المرجع الرسمي للصياغة والسلوك |
+| [عقد الوحدات والظهور](docs/MODULES_AND_VISIBILITY.md) | قواعد ملفات `.baa` و`.baahd` والتصريحات والربط |
 | [الأمثلة](examples/README.md) | برامج جاهزة للبناء والتجربة |
 | [المكتبة القياسية](docs/STDLIB_OWNERSHIP.md) | الواجهات وقواعد ملكية الذاكرة |
 | [عقود الأدوات](docs/TOOLING_CONTRACTS.md) | واجهات سطر الأوامر ومخططات JSON |

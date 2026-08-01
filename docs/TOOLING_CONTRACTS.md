@@ -371,6 +371,11 @@ finds the enclosing call and calculates the active argument while respecting
 nested delimiters, strings, character literals, comments, and both supported
 comma forms.
 
+All file identities in semantic query and index output use compiler-resolved
+canonical paths. On Windows, the compiler expands 8.3 aliases to their stable
+long Unicode form. For an unsaved `--source-stdin` leaf, it canonicalizes the
+nearest existing parent and then appends the logical filename.
+
 ```json
 {
   "schema_version": "semantic-query-json-v1",

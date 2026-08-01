@@ -65,7 +65,7 @@ def main() -> int:
     _require(errors, "src/baa.rc", f'VALUE "FileVersion",      "{version}"')
     _require(errors, "src/baa.rc", f'VALUE "ProductVersion",   "{version}"')
     _require(errors, "setup.iss", f'#define MyAppVersion "{version}"')
-    _require(errors, "README.md", f"%D8%A7%D8%B1-{version}-blue.svg")
+    _require(errors, "README.md", f"<code>الإصدار {version}</code>")
 
     for relative in ENGLISH_VERSION_DOCS:
         _require_doc_header(errors, relative, "**Version:**", version)

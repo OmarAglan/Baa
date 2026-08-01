@@ -100,6 +100,21 @@ class VersionSyncTests(unittest.TestCase):
         self.assertIn("docs/LANGUAGE.md", stderr)
         self.assertIn("top-level version header", stderr)
 
+    def test_rejects_stale_readme_version_marker(self) -> None:
+        readme = self.root / "README.md"
+        text = readme.read_text(encoding="utf-8").replace(
+            "<code>الإصدار 0.6.0</code>",
+            "<code>الإصدار 0.5.9</code>",
+            1,
+        )
+        readme.write_text(text, encoding="utf-8")
+
+        result, _, stderr = self.run_guard()
+
+        self.assertEqual(result, 1)
+        self.assertIn("README.md", stderr)
+        self.assertIn("<code>الإصدار 0.6.0</code>", stderr)
+
 
 if __name__ == "__main__":
     unittest.main()

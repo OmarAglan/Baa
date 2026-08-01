@@ -103,6 +103,101 @@ static wchar_t* file_io_absolute_wide_utf8(const char* path)
     return absolute;
 }
 
+static wchar_t* file_io_duplicate_wide(const wchar_t* value)
+{
+    if (!value) return NULL;
+    size_t length = wcslen(value);
+    wchar_t* copy = (wchar_t*)malloc((length + 1u) * sizeof(wchar_t));
+    if (copy) memcpy(copy, value, (length + 1u) * sizeof(wchar_t));
+    return copy;
+}
+
+/**
+ * @brief توسيع أسماء ويندوز القصيرة 8.3 مع إبقاء الورقة غير الموجودة كما هي.
+ *
+ * مسارات المحرر المنطقية قد تشير إلى ملف غير محفوظ بعد. لذلك نوسّع المسار
+ * كاملا عندما يكون موجودا، وإلا نوسّع أقرب مجلد أب موجود ثم نعيد إلحاق الاسم.
+ */
+static wchar_t* file_io_long_wide_path(const wchar_t* absolute)
+{
+    if (!absolute || !absolute[0]) return NULL;
+
+    HANDLE handle = CreateFileW(absolute,
+                                FILE_READ_ATTRIBUTES,
+                                FILE_SHARE_READ | FILE_SHARE_WRITE |
+                                    FILE_SHARE_DELETE,
+                                NULL,
+                                OPEN_EXISTING,
+                                FILE_FLAG_BACKUP_SEMANTICS,
+                                NULL);
+    if (handle != INVALID_HANDLE_VALUE)
+    {
+        DWORD needed = GetFinalPathNameByHandleW(
+            handle, NULL, 0, FILE_NAME_NORMALIZED | VOLUME_NAME_DOS);
+        if (needed > 0)
+        {
+            wchar_t* expanded =
+                (wchar_t*)calloc((size_t)needed + 1u, sizeof(wchar_t));
+            if (!expanded)
+            {
+                CloseHandle(handle);
+                return NULL;
+            }
+            DWORD written = GetFinalPathNameByHandleW(
+                handle,
+                expanded,
+                needed + 1u,
+                FILE_NAME_NORMALIZED | VOLUME_NAME_DOS);
+            CloseHandle(handle);
+            if (written > 0 && written <= needed) return expanded;
+            free(expanded);
+        }
+        else
+        {
+            CloseHandle(handle);
+        }
+    }
+
+    wchar_t* parent = file_io_duplicate_wide(absolute);
+    if (!parent) return NULL;
+    wchar_t* separator = wcsrchr(parent, L'\\');
+    if (!separator || separator == parent ||
+        (separator == parent + 2 && parent[1] == L':'))
+    {
+        return parent;
+    }
+
+    const wchar_t* leaf = separator + 1;
+    size_t leaf_length = wcslen(leaf);
+    *separator = L'\0';
+    wchar_t* expanded_parent = file_io_long_wide_path(parent);
+    if (!expanded_parent)
+    {
+        free(parent);
+        return NULL;
+    }
+
+    size_t parent_length = wcslen(expanded_parent);
+    wchar_t* expanded = (wchar_t*)malloc(
+        (parent_length + 1u + leaf_length + 1u) * sizeof(wchar_t));
+    if (!expanded)
+    {
+        free(parent);
+        free(expanded_parent);
+        return NULL;
+    }
+    memcpy(expanded,
+           expanded_parent,
+           parent_length * sizeof(wchar_t));
+    expanded[parent_length] = L'\\';
+    memcpy(expanded + parent_length + 1u,
+           leaf,
+           (leaf_length + 1u) * sizeof(wchar_t));
+    free(parent);
+    free(expanded_parent);
+    return expanded;
+}
+
 wchar_t* baa_windows_extended_path_utf8(const char* path)
 {
     if (!path || !path[0]) return NULL;
@@ -183,8 +278,11 @@ char* baa_fullpath_utf8(const char* path)
     if (!path || !path[0]) return NULL;
 
 #ifdef _WIN32
-    wchar_t* resolved = file_io_absolute_wide_utf8(path);
-    if (!resolved) return NULL;
+    wchar_t* absolute = file_io_absolute_wide_utf8(path);
+    if (!absolute) return NULL;
+    wchar_t* resolved = file_io_long_wide_path(absolute);
+    if (resolved) free(absolute);
+    else resolved = absolute;
 
     const wchar_t* canonical = resolved;
     wchar_t* unc = NULL;

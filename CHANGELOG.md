@@ -462,6 +462,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Fixed
 
+- **CI metadata, semantic paths, and module governance**:
+  - Version synchronization now validates the professional textual release
+    marker in `README.md` instead of requiring a particular badge provider.
+  - Windows semantic JSON expands 8.3 aliases to stable long Unicode paths,
+    including unsaved logical files whose parent directory already exists.
+  - Split the CLI output, pipeline validation, Nazm diagnostics, and semantic
+    completion/output implementations into driver-owned companion fragments;
+    all handwritten C modules are again below the 1,000-line hard cap with no
+    legacy exceptions.
+
 - **Windows x64 decimal varargs ABI**:
   - Register-passed `عشري` arguments are now mirrored from `XMM0..XMM3` into
     the matching integer argument registers, as required for variadic and

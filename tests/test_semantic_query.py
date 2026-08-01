@@ -236,6 +236,32 @@ class SemanticQueryTests(unittest.TestCase):
             implementation.resolve(),
         )
 
+    @unittest.skipUnless(os.name == "nt", "Windows 8.3 path contract")
+    def test_expands_short_parent_for_unsaved_logical_file(self) -> None:
+        import ctypes
+
+        source = "صحيح الرئيسية() { إرجع ٠. }\n"
+        with tempfile.TemporaryDirectory(prefix="baa_semantic_short_path_") as temp:
+            work = Path(temp)
+            source_dir = work / "semantic project"
+            source_dir.mkdir()
+
+            buffer = ctypes.create_unicode_buffer(32768)
+            written = ctypes.windll.kernel32.GetShortPathNameW(
+                str(source_dir), buffer, len(buffer)
+            )
+            if not written or written >= len(buffer):
+                self.skipTest("Windows did not provide an 8.3 alias")
+
+            short_dir = Path(buffer.value)
+            if str(short_dir).casefold() == str(source_dir.resolve()).casefold():
+                self.skipTest("The test volume has no distinct 8.3 alias")
+
+            logical = short_dir / "unsaved.baa"
+            result = self.query(work, logical, source, 0)
+
+        self.assertEqual(Path(result["file"]), (source_dir / "unsaved.baa").resolve())
+
     def test_resolves_shadowed_arabic_locals_and_function_signature(self) -> None:
         source = (
             "صحيح اجمع(صحيح أول، صحيح ثان) {\n"

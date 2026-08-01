@@ -202,6 +202,11 @@ Current in-place split pattern (2026-03-06):
 - `parser.c` now delegates to `parser_types.c`, `parser_expr.c`, `parser_stmt.c`, and `parser_decl.c`.
 - `analysis.c` now delegates to `analysis_scope.c`, `analysis_types.c`, `analysis_semantic_utils.c`, `analysis_builtins.c`, `analysis_format.c`, `analysis_infer_expr.c`, and `analysis_visit.c`.
 - `lexer.c`, `isel.c`, `regalloc.c`, `ir.c`, `ir_text.c`, `ir_verify_ir.c`, `ir_lower.c`, and `emit.c` also use companion implementation files to shrink the original hotspots while preserving their exported entry points.
+- `driver_cli.c`, `driver_pipeline.c`, `driver_nazm.c`, and
+  `driver_semantic.c` use driver-owned companion implementation fragments for
+  output, validation, diagnostics, completion, and semantic JSON traversal;
+  the public driver entry points and translation-unit ownership remain
+  unchanged.
 - `scripts/module_size_allowlist.txt` is currently empty; the size guard has no active legacy exceptions.
 - `driver*.h` and `process.h` now live under `src/driver/`.
 - `emit.h`, `isel.h`, `regalloc.h`, `target.h`, and `code_model.h` now live under `src/backend/`.

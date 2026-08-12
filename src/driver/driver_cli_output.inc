@@ -22,6 +22,7 @@ void driver_print_help(void)
     printf("  --dump-symbols=json  Emit symbols-json-v1 document declarations and stop after analysis\n");
     printf("  --semantic-query=json --position-byte=N  Emit compiler-owned semantic navigation data\n");
     printf("  --semantic-index=json  Emit compiler-owned symbol identities and occurrences\n");
+    printf("  --inlay-hints=json  Emit compiler-owned Arabic parameter-name hints\n");
     printf("  --completion-data=json  Emit completion-data-json-v1 language metadata\n");
     printf("  --format=json  Emit compiler-owned format-json-v1 source formatting\n");
     printf("  -v           Enable verbose output with timing\n");

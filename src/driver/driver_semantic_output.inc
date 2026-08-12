@@ -119,9 +119,62 @@ static bool semantic_same_declaration(const Node* left, const Node* right)
     return left_name && right_name && strcmp(left_name, right_name) == 0;
 }
 
+static bool semantic_inlay_argument_is_obvious(const Node* argument,
+                                                const char* parameter_name)
+{
+    return argument && argument->type == NODE_VAR_REF &&
+           argument->data.var_ref.name && parameter_name &&
+           strcmp(argument->data.var_ref.name, parameter_name) == 0;
+}
+
+static void semantic_print_call_inlay_hints(SemanticQuery* query,
+                                            const Node* call)
+{
+    if (!query || !query->collect_inlay || !call ||
+        !semantic_same_file(call, query->logical_file))
+        return;
+    const Node* declaration = semantic_query_declaration(query, call);
+    if (!declaration || declaration->type != NODE_FUNC_DEF) return;
+
+    const Node* argument = call->data.call.args;
+    const Node* parameter = declaration->data.func_def.params;
+    while (argument && parameter)
+    {
+        while (parameter && parameter->type != NODE_VAR_DECL)
+            parameter = parameter->next;
+        if (!parameter) break;
+        const char* name = parameter->data.var_decl.name;
+        if (name && name[0] &&
+            semantic_same_file(argument, query->logical_file) &&
+            !semantic_inlay_argument_is_obvious(argument, name))
+        {
+            const size_t position = semantic_byte_offset(
+                query->source, argument->line, argument->col);
+            if (position <= query->source_size &&
+                query->inlay_count < SEMANTIC_MAX_INLAY_HINTS)
+            {
+                query->inlay_hints[query->inlay_count++] =
+                    (SemanticInlayHint){position, name};
+            }
+            else if (position <= query->source_size)
+            {
+                query->inlay_truncated = true;
+            }
+        }
+        argument = argument->next;
+        parameter = parameter->next;
+    }
+}
+
 static void semantic_consider_node(SemanticQuery* query, const Node* node)
 {
     if (!query || !node) return;
+    if (query->collect_inlay)
+    {
+        if (node->type == NODE_CALL_EXPR || node->type == NODE_CALL_STMT)
+            semantic_print_call_inlay_hints(query, node);
+        return;
+    }
     if (query->index_out)
     {
         if (semantic_is_symbol_node(node))

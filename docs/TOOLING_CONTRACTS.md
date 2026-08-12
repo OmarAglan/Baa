@@ -38,6 +38,7 @@ This document defines the compiler surfaces that external tools may rely on.
 | `--format=json` | canonical, source-preserving Baa formatting | Baa-LSP, Qalam |
 | `--semantic-query=json --position-byte=N` | compiler-owned hover and call-signature data at a UTF-8 byte position | Baa-LSP, Qalam |
 | `--semantic-index=json` | compiler-owned symbol identities and occurrences for one translation unit | Baa-LSP |
+| `--inlay-hints=json` | compiler-owned parameter-name hints for one analyzed document | Baa-LSP, Qalam |
 | `--target=<target>` | target selection | Takween, OS experiments |
 | `--target-info=json` | host target, executable suffix, object format, and capabilities | Takween, CI |
 | `-I <dir>` / `-I<dir>` | include search path | Takween, users |
@@ -58,6 +59,7 @@ baa --completion-data=json
 baa --format=json [--source-stdin=<logical-file> | <source.baa>]
 baa --semantic-query=json --position-byte=<offset> [--source-stdin=<logical-file> | <source.baa>]
 baa --semantic-index=json [-I <dir>...] [--source-stdin=<logical-file> | <source.baa>]
+baa --inlay-hints=json [-I <dir>...] [--source-stdin=<logical-file> | <source.baa>]
 baa --check-header [-I <dir>...] <headers...>
 baa [-O0|-O1|-O2] [--verify] [-I <dir>...] <inputs...> -o <executable>
 baa -c [-O0|-O1|-O2] [-I <dir>...] <inputs...> -o <object>
@@ -557,6 +559,26 @@ discard stale results and must not recover hidden structure by parsing source
 text after a contract failure. The normative shape and kind vocabulary are in
 [`STRUCTURE_JSON_SCHEMA.md`](STRUCTURE_JSON_SCHEMA.md).
 
+### 7.7 `inlay-hints-json-v1`
+
+`--inlay-hints=json` accepts exactly one saved Baa source or one unsaved buffer
+through `--source-stdin=<logical-file>`. Baa performs normal parsing and
+semantic binding, then emits Arabic parameter-name hints for resolved call
+arguments. Consumers must not infer hints from source text or function-name
+similarity.
+
+Each hint contains the insertion `position_byte`, compiler-owned `label`, bound
+`parameter`, `kind: "parameter"`, and padding policy. Baa suppresses an obvious
+hint when a variable argument already has exactly the parameter name. Output is
+deterministically sorted. Recovered syntax or semantic errors return a useful
+partial result with exit code `0` and `complete: false`; contract or invocation
+failures still use `compiler-cli-v1` exit codes.
+
+Baa-LSP must validate UTF-8 boundaries, convert positions to UTF-16, filter the
+requested LSP range, and discard results for obsolete document versions. The
+normative schema is in
+[`INLAY_HINTS_JSON_SCHEMA.md`](INLAY_HINTS_JSON_SCHEMA.md).
+
 ---
 
 ## 8. Contract Versioning
@@ -591,6 +613,7 @@ Qalam should consume:
 - `format-json-v1`,
 - `semantic-query-json-v1`.
 - `semantic-index-json-v1`.
+- `inlay-hints-json-v1`.
 
 Nazm integration should consume:
 

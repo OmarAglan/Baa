@@ -341,6 +341,19 @@ bool driver_parse_cli(int argc, char **argv, CompilerConfig *config, DriverParse
                 parse_release_temp_arrays(inputs, include_dirs);
                 return false;
             }
+            else if (strcmp(arg, "--inlay-hints=json") == 0)
+            {
+                config->inlay_hints_json = true;
+                config->check_only = true;
+            }
+            else if (strncmp(arg, "--inlay-hints=", 14) == 0)
+            {
+                fprintf(stderr,
+                        "Error: Unsupported inlay hints format '%s' (expected json)\n",
+                        arg + 14);
+                parse_release_temp_arrays(inputs, include_dirs);
+                return false;
+            }
             else if (strncmp(arg, "--position-byte=", 16) == 0)
             {
                 const char* value_text = arg + 16;
@@ -663,6 +676,7 @@ bool driver_parse_cli(int argc, char **argv, CompilerConfig *config, DriverParse
         (config->dump_symbols_json ? 1 : 0) +
         (config->semantic_query_json ? 1 : 0) +
         (config->semantic_index_json ? 1 : 0) +
+        (config->inlay_hints_json ? 1 : 0) +
         (format_requested ? 1 : 0);
     if (machine_readable_source_modes > 1)
     {
@@ -776,6 +790,22 @@ bool driver_parse_cli(int argc, char **argv, CompilerConfig *config, DriverParse
         return false;
     }
     if (config->semantic_index_json) config->verbose = false;
+
+    if (config->inlay_hints_json && input_count != 1)
+    {
+        fprintf(stderr,
+                "Error: --inlay-hints=json requires exactly one Baa source\n");
+        parse_release_temp_arrays(inputs, include_dirs);
+        return false;
+    }
+    if (config->inlay_hints_json && driver_nazm_is_source_path(inputs[0]))
+    {
+        fprintf(stderr,
+                "Error: --inlay-hints=json accepts Baa sources only\n");
+        parse_release_temp_arrays(inputs, include_dirs);
+        return false;
+    }
+    if (config->inlay_hints_json) config->verbose = false;
 
     if (format_requested)
     {

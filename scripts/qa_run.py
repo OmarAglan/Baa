@@ -678,6 +678,16 @@ def _run_semantic_query_tests(log_dir: Path) -> StepResult:
     )
 
 
+def _run_inlay_hints_tests(log_dir: Path) -> StepResult:
+    return _run_logged(
+        "inlay-hints-tests",
+        [sys.executable, str(TESTS_DIR / "test_inlay_hints.py")],
+        cwd=ROOT,
+        log_dir=log_dir,
+        timeout_s=120.0,
+    )
+
+
 def _run_target_info_tests(log_dir: Path) -> StepResult:
     return _run_logged(
         "target-info-tests",
@@ -1065,6 +1075,11 @@ def main() -> int:
     _print_step(semantic_query_res)
     all_results.append(semantic_query_res)
     overall_ok = overall_ok and semantic_query_res.passed
+
+    inlay_hints_res = _run_inlay_hints_tests(log_dir)
+    _print_step(inlay_hints_res)
+    all_results.append(inlay_hints_res)
+    overall_ok = overall_ok and inlay_hints_res.passed
 
     target_info_res = _run_target_info_tests(log_dir)
     _print_step(target_info_res)

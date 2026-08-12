@@ -15,6 +15,7 @@ REQUIRED_DOCS = {
     "docs/DIAGNOSTICS_JSON_SCHEMA.md": ("# Baa Diagnostics JSON Schema", "draft-0.1"),
     "docs/FORMAT_JSON_SCHEMA.md": ("# Baa Formatting JSON Schema", "draft-0.1"),
     "docs/STRUCTURE_JSON_SCHEMA.md": ("# Baa Structure JSON Schema", "draft-0.1"),
+    "docs/INLAY_HINTS_JSON_SCHEMA.md": ("# Baa Inlay Hints JSON Schema", "draft-0.1"),
     "docs/CONFORMANCE_SUITE.md": ("# Baa Conformance Suite", "draft-0.1"),
     "docs/SDK_RELEASE_PLAN.md": ("# Baa SDK Release Plan", "draft-0.1"),
     "docs/NAZM_PRODUCTION_ADMISSION.md": (
@@ -65,6 +66,7 @@ class IntegrationArtifactDocumentationTests(unittest.TestCase):
             "format-json-v1",
             "tokens-json-v1",
             "structure-json-v1",
+            "inlay-hints-json-v1",
             "target-spec-v1",
             "conformance-v1",
             "freestanding-v0",
@@ -87,6 +89,7 @@ class IntegrationArtifactDocumentationTests(unittest.TestCase):
             "`--dump-tokens=json`",
             "`--dump-structure=json`",
             "`--dump-symbols=json`",
+            "`--inlay-hints=json`",
             "`--format=json`",
             "`--target=<target>`",
             "`--target-info=json`",

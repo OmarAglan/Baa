@@ -25,4 +25,11 @@ bool driver_semantic_index_json_write(FILE* out,
                                       const char* source,
                                       const Node* program);
 
+bool driver_inlay_hints_json_write(FILE* out,
+                                   const char* compiler_version,
+                                   const char* logical_file,
+                                   const char* source,
+                                   const Node* program,
+                                   bool complete);
+
 #endif

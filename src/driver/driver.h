@@ -42,6 +42,7 @@ typedef struct
     bool dump_symbols_json; // --dump-symbols=json: مخطط رموز مستند ثابت
     bool semantic_query_json; // --semantic-query=json: معلومات دلالية عند موضع بايت
     bool semantic_index_json; // --semantic-index=json: هويات ومواضع رموز وحدة الترجمة
+    bool inlay_hints_json; // --inlay-hints=json: تلميحات معاملات يملكها التحليل
     size_t semantic_query_byte; // موضع UTF-8 byte لعقد semantic-query-json-v1
     bool semantic_query_byte_set;
     const char *source_stdin_file; // --source-stdin=<path>: محتوى المصدر من stdin مع مسار منطقي

@@ -157,6 +157,20 @@ static BaaCompilerExitCode compile_one_ir(const CompilerConfig *config,
 
     if (error_has_occurred())
     {
+        if (config->inlay_hints_json && ast &&
+            driver_inlay_hints_json_write(stdout,
+                                          BAA_VERSION,
+                                          current_input,
+                                          source,
+                                          ast,
+                                          false))
+        {
+            lexer_free_dependencies(&lexer);
+            free(source);
+            if (early_obj_file && early_obj_file != config->output_file)
+                free(early_obj_file);
+            return BAA_COMPILER_EXIT_SUCCESS;
+        }
         if (config->semantic_query_json && ast &&
             driver_semantic_query_json_write(stdout,
                                              BAA_VERSION,
@@ -183,6 +197,20 @@ static BaaCompilerExitCode compile_one_ir(const CompilerConfig *config,
     if (config->time_phases) t0 = driver_time_seconds();
     if (!analyze(ast))
     {
+        if (config->inlay_hints_json &&
+            driver_inlay_hints_json_write(stdout,
+                                          BAA_VERSION,
+                                          current_input,
+                                          source,
+                                          ast,
+                                          false))
+        {
+            lexer_free_dependencies(&lexer);
+            free(source);
+            if (early_obj_file && early_obj_file != config->output_file)
+                free(early_obj_file);
+            return BAA_COMPILER_EXIT_SUCCESS;
+        }
         if (config->semantic_query_json &&
             driver_semantic_query_json_write(stdout,
                                              BAA_VERSION,
@@ -257,6 +285,24 @@ static BaaCompilerExitCode compile_one_ir(const CompilerConfig *config,
                                               ast))
         {
             fprintf(stderr, "خطأ: فشل إصدار semantic-index-json-v1.\n");
+            lexer_free_dependencies(&lexer);
+            free(source);
+            if (early_obj_file && early_obj_file != config->output_file)
+                free(early_obj_file);
+            return BAA_COMPILER_EXIT_TOOLCHAIN_ERROR;
+        }
+    }
+
+    if (config->inlay_hints_json)
+    {
+        if (!driver_inlay_hints_json_write(stdout,
+                                           BAA_VERSION,
+                                           current_input,
+                                           source,
+                                           ast,
+                                           true))
+        {
+            fprintf(stderr, "خطأ: فشل إصدار inlay-hints-json-v1.\n");
             lexer_free_dependencies(&lexer);
             free(source);
             if (early_obj_file && early_obj_file != config->output_file)

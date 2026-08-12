@@ -31,6 +31,7 @@ A project may release independently as long as it stays compatible with the cont
 | `format-json-v1` | Baa | Baa-LSP, Qalam |
 | `semantic-query-json-v1` | Baa | Baa-LSP, Qalam |
 | `semantic-index-json-v1` | Baa | Baa-LSP |
+| `inlay-hints-json-v1` | Baa | Baa-LSP, Qalam |
 | `tokens-json-v1` | Baa | Qalam |
 | `structure-json-v1` | Baa | Baa-LSP, Qalam |
 | `target-spec-v1` | Baa | Takween, PyramidOS experiments |
@@ -109,6 +110,11 @@ delimiter, comment, literal, and exact UTF-8 byte spans; Baa-LSP validates and
 converts them into LSP folding and strictly nested selection ranges. Qalam may
 show an immediate lexical delimiter fallback while typing, but the matching
 server result replaces it and stale results are discarded.
+
+Inline parameter guidance uses `inlay-hints-json-v1`. Baa owns semantic call
+binding, Arabic labels, and useful-hint suppression; Baa-LSP only validates,
+converts, range-filters, and rejects stale versions. Qalam renders the returned
+virtual text without reconstructing language semantics in the editor.
 
 ---
 

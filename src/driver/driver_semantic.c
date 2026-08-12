@@ -8,9 +8,11 @@
 #include <stdarg.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #define SEMANTIC_MAX_COMPLETION_ITEMS 1024
+#define SEMANTIC_MAX_INLAY_HINTS 4096
 
 typedef struct
 {
@@ -18,6 +20,12 @@ typedef struct
     const char* scope;
     int priority;
 } SemanticCompletionCandidate;
+
+typedef struct
+{
+    size_t position_byte;
+    const char* parameter;
+} SemanticInlayHint;
 
 typedef struct
 {
@@ -38,6 +46,10 @@ typedef struct
     bool references_first;
     FILE* index_out;
     bool index_first;
+    bool collect_inlay;
+    SemanticInlayHint inlay_hints[SEMANTIC_MAX_INLAY_HINTS];
+    size_t inlay_count;
+    bool inlay_truncated;
     SemanticCompletionCandidate
         completion_items[SEMANTIC_MAX_COMPLETION_ITEMS];
     size_t completion_count;
@@ -67,6 +79,43 @@ static void semantic_json_escape(FILE* out, const char* text)
         }
     }
     fputc('"', out);
+}
+
+static void semantic_json_escape_parameter_label(FILE* out, const char* text)
+{
+    fputc('"', out);
+    if (text)
+    {
+        for (const unsigned char* p = (const unsigned char*)text; *p; ++p)
+        {
+            switch (*p)
+            {
+                case '"': fputs("\\\"", out); break;
+                case '\\': fputs("\\\\", out); break;
+                case '\b': fputs("\\b", out); break;
+                case '\f': fputs("\\f", out); break;
+                case '\n': fputs("\\n", out); break;
+                case '\r': fputs("\\r", out); break;
+                case '\t': fputs("\\t", out); break;
+                default:
+                    if (*p < 0x20u) fprintf(out, "\\u%04x", (unsigned int)*p);
+                    else fputc((int)*p, out);
+                    break;
+            }
+        }
+    }
+    fputc(':', out);
+    fputc('"', out);
+}
+
+static int semantic_compare_inlay_hints(const void* left, const void* right)
+{
+    const SemanticInlayHint* a = (const SemanticInlayHint*)left;
+    const SemanticInlayHint* b = (const SemanticInlayHint*)right;
+    if (a->position_byte < b->position_byte) return -1;
+    if (a->position_byte > b->position_byte) return 1;
+    return strcmp(a->parameter ? a->parameter : "",
+                  b->parameter ? b->parameter : "");
 }
 
 static bool semantic_append(char* buffer, size_t capacity, size_t* used,
@@ -647,6 +696,52 @@ bool driver_semantic_index_json_write(FILE* out,
     semantic_json_escape(out, logical_file);
     fputs(",\"position_encoding\":\"utf-8-bytes\",\"occurrences\":[", out);
     semantic_visit_one(&query, program);
+    fputs("]}\n", out);
+    return ferror(out) == 0;
+}
+
+bool driver_inlay_hints_json_write(FILE* out,
+                                   const char* compiler_version,
+                                   const char* logical_file,
+                                   const char* source,
+                                   const Node* program,
+                                   bool complete)
+{
+    if (!out || !logical_file || !source || !program ||
+        program->type != NODE_PROGRAM)
+        return false;
+
+    SemanticQuery query;
+    memset(&query, 0, sizeof(query));
+    query.logical_file = logical_file;
+    query.source = source;
+    query.program = program;
+    query.source_size = strlen(source);
+    query.collect_inlay = true;
+
+    semantic_visit_one(&query, program);
+    qsort(query.inlay_hints, query.inlay_count,
+          sizeof(query.inlay_hints[0]), semantic_compare_inlay_hints);
+    fputs("{\"schema_version\":\"inlay-hints-json-v1\",\"compiler_version\":",
+          out);
+    semantic_json_escape(out, compiler_version ? compiler_version : "");
+    fputs(",\"file\":", out);
+    semantic_json_escape(out, logical_file);
+    fputs(",\"position_encoding\":\"utf-8-bytes\",\"complete\":", out);
+    fputs(complete && !query.inlay_truncated ? "true" : "false", out);
+    fputs(",\"hints\":[", out);
+    for (size_t index = 0; index < query.inlay_count; ++index)
+    {
+        if (index > 0) fputc(',', out);
+        fprintf(out,
+                "{\"position_byte\":%zu,\"kind\":\"parameter\",\"label\":",
+                query.inlay_hints[index].position_byte);
+        semantic_json_escape_parameter_label(
+            out, query.inlay_hints[index].parameter);
+        fputs(",\"parameter\":", out);
+        semantic_json_escape(out, query.inlay_hints[index].parameter);
+        fputs(",\"padding_right\":true}", out);
+    }
     fputs("]}\n", out);
     return ferror(out) == 0;
 }

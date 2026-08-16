@@ -71,6 +71,14 @@ The linker response file is a small control input, not an artifact copy. It is
 created beside the requested output with a process-unique name, carries the
 Arabic entry symbol as UTF-8, and is deleted after the link.
 
+Because Baa supplies its own Arabic startup instead of MinGW's normal CRT
+startup files, an admitted portable toolchain may also require the driver to
+retain `_pei386_runtime_relocator` explicitly. Baa does this only for the
+versioned portable-toolchain contract when it contains
+`pei386_runtime_relocator=retain`, making that distribution pull required
+pseudo-reloc support from `libmingw32` without changing unmarked UCRT toolchain
+behavior.
+
 Build manifests record a stable source-derived logical `.o` identity for each
 link-mode unit. The process-unique physical object/assembly paths and the
 invocation's final executable spelling are private driver details and never
@@ -78,10 +86,19 @@ enter deterministic per-unit manifests or cache identities. Source and
 dependency canonicalization also uses a UTF-8 → wide full-path → UTF-8
 round trip, so Arabic working directories cannot leak ANSI bytes into JSON.
 
-## Future direct-Unicode toolchains
+## Direct-Unicode portable toolchains
 
-A future bundled GCC/assembler/linker may pass Unicode paths natively. That
-capability must be proven by the same matrix before bypassing the alias adapter.
+An admitted portable toolchain can declare direct Unicode support through
+`BAA-TOOLCHAIN-MANIFEST.txt` at its root. Baa requires both
+`format=baa-portable-toolchain-v1` and `unicode_paths=direct` before passing
+ordinary Unicode and spaced paths directly. Unmarked GCC installations retain
+the measured alias adapter; the marker never enables a silent fallback.
+
+The Qalam Windows package uses the relocatable Qt MinGW-w64 kit that passed
+direct Arabic runtime-archive and executable paths. Paths at or beyond the
+driver's conservative long-path threshold still use the previously admitted
+filesystem-alias contract.
+
 Nazm owns its Unicode-aware object output path independently and is the
 production assembler default after the separate admission gate completed.
 Both Baa and Nazm normalize Windows filesystem operations to absolute extended

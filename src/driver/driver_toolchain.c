@@ -31,6 +31,10 @@
  */
 static char g_gcc_path[MAX_PATH] = "";
 static char g_runtime_library_path[MAX_PATH] = "";
+#ifdef _WIN32
+static bool g_gcc_direct_unicode_paths = false;
+static bool g_gcc_retain_pei386_runtime_relocator = false;
+#endif
 
 static bool runtime_library_exists(const char* path)
 {
@@ -70,8 +74,57 @@ static void runtime_library_resolve_from_exe_dir(const char* exe_dir)
 
 #define BAA_PATH_SUFFIX_GCC_BIN_W L"\\gcc\\bin\\gcc.exe"
 #define BAA_PATH_SUFFIX_GCC_BIN_DEV_W L"\\..\\gcc\\bin\\gcc.exe"
+#define BAA_PORTABLE_TOOLCHAIN_MANIFEST "BAA-TOOLCHAIN-MANIFEST.txt"
 
 static unsigned long g_toolchain_file_counter = 0;
+
+static bool win_portable_toolchain_allows_direct_unicode(const char* gcc_path)
+{
+    if (!gcc_path || !gcc_path[0]) return false;
+
+    char gcc_bin[MAX_PATH];
+    size_t gcc_path_size = strlen(gcc_path) + 1u;
+    if (gcc_path_size > sizeof(gcc_bin)) return false;
+    memcpy(gcc_bin, gcc_path, gcc_path_size);
+
+    char* forward = strrchr(gcc_bin, '/');
+    char* backward = strrchr(gcc_bin, '\\');
+    char* separator = forward;
+    if (!separator || (backward && backward > separator)) separator = backward;
+    if (!separator) return false;
+    *separator = '\0';
+
+    char manifest[MAX_PATH];
+    int count = snprintf(manifest,
+                         sizeof(manifest),
+                         "%s/../%s",
+                         gcc_bin,
+                         BAA_PORTABLE_TOOLCHAIN_MANIFEST);
+    if (count <= 0 || (size_t)count >= sizeof(manifest)) return false;
+
+    FILE* file = baa_fopen_utf8(manifest, "rb");
+    if (!file) return false;
+
+    bool format_ok = false;
+    bool unicode_ok = false;
+    bool relocator_ok = false;
+    char line[160];
+    while (fgets(line, sizeof(line), file)) {
+        size_t length = strlen(line);
+        while (length > 0 && (line[length - 1] == '\n' || line[length - 1] == '\r')) {
+            line[--length] = '\0';
+        }
+        if (strcmp(line, "format=baa-portable-toolchain-v1") == 0)
+            format_ok = true;
+        else if (strcmp(line, "unicode_paths=direct") == 0)
+            unicode_ok = true;
+        else if (strcmp(line, "pei386_runtime_relocator=retain") == 0)
+            relocator_ok = true;
+    }
+    fclose(file);
+    g_gcc_retain_pei386_runtime_relocator = format_ok && relocator_ok;
+    return format_ok && unicode_ok;
+}
 
 static bool win_wide_to_utf8(const wchar_t* text, char* out, size_t out_cap)
 {
@@ -178,6 +231,9 @@ static bool win_prepare_toolchain_path(const char* path,
                                        size_t out_cap)
 {
     if (!path || !out || out_cap == 0) return false;
+    if (g_gcc_direct_unicode_paths && strlen(path) < 240u)
+        return win_copy_path_text(path, out, out_cap);
+
     bool needs_alias = !win_utf8_is_ascii(path) ||
                        strlen(path) >= 240u ||
                        strpbrk(path, " \t") != NULL;
@@ -238,6 +294,8 @@ static bool win_make_link_response_path(const char* output_path,
 void driver_toolchain_resolve_gcc_path(void)
 {
 #ifdef _WIN32
+    g_gcc_direct_unicode_paths = false;
+    g_gcc_retain_pei386_runtime_relocator = false;
     wchar_t exe_path[MAX_PATH];
     DWORD len = GetModuleFileNameW(NULL, exe_path, (DWORD)MAX_PATH);
     if (len == 0 || len >= (DWORD)MAX_PATH)
@@ -260,6 +318,8 @@ void driver_toolchain_resolve_gcc_path(void)
         GetFileAttributesW(candidate) != INVALID_FILE_ATTRIBUTES &&
         win_wide_to_utf8(candidate, g_gcc_path, sizeof(g_gcc_path)))
     {
+        g_gcc_direct_unicode_paths =
+            win_portable_toolchain_allows_direct_unicode(g_gcc_path);
         return;
     }
 
@@ -268,6 +328,8 @@ void driver_toolchain_resolve_gcc_path(void)
         GetFileAttributesW(candidate) != INVALID_FILE_ATTRIBUTES &&
         win_wide_to_utf8(candidate, g_gcc_path, sizeof(g_gcc_path)))
     {
+        g_gcc_direct_unicode_paths =
+            win_portable_toolchain_allows_direct_unicode(g_gcc_path);
         return;
     }
 #else
@@ -455,7 +517,7 @@ BaaCompilerExitCode driver_toolchain_link(const CompilerConfig *config,
     BaaCompilerExitCode rc = BAA_COMPILER_EXIT_TOOLCHAIN_ERROR;
 
     // مساحة إضافية للأعلام الاختيارية (debug/pie/startup/runtime/-lm) + -o + output + NULL
-    int argv_cap = obj_count + 14;
+    int argv_cap = obj_count + 15;
     const char **argv_link = (const char **)calloc((size_t)argv_cap, sizeof(char *));
     if (!argv_link)
     {
@@ -563,6 +625,11 @@ BaaCompilerExitCode driver_toolchain_link(const CompilerConfig *config,
         goto cleanup;
     argv_link[lk++] = "-nostartfiles";
     argv_link[lk++] = entry_response_argument;
+    // يضمن سحب داعم إعادة التمركز من libmingw32 عند حذف ملفات
+    // البدء الاعتيادية؛ نطلبه فقط للحزمة المقبولة التي تصرح به لأن
+    // بعض حزم UCRT الخارجية لا تحتاجه مع مدخل باء المخصص.
+    if (g_gcc_retain_pei386_runtime_relocator)
+        argv_link[lk++] = "-Wl,-u,_pei386_runtime_relocator";
 #else
     argv_link[lk++] = "-nostartfiles";
     argv_link[lk++] = "-Wl,-e,الرئيسية_بدء";

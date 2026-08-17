@@ -20,6 +20,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
   - Added a versioned portable-toolchain marker so an admitted bundled GCC can
     receive Arabic and spaced artifact paths directly instead of depending on
     optional Windows 8.3 aliases.
+  - Gated that direct path mode on an active Windows code page that can
+    represent Arabic without replacement, retaining the no-copy filesystem
+    alias adapter on Western-code-page hosts.
 
 ### Added
 

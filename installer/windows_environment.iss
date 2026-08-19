@@ -23,26 +23,18 @@ end;
 
 function EcoPathContains(const PathValue: string; const Directory: string): Boolean;
 var
-  Remaining, Item, Wanted: string;
-  SeparatorPosition: Integer;
+  Items: TArrayOfString;
+  Item, Wanted: string;
+  Index: Integer;
 begin
   Result := False;
   Wanted := EcoNormalizePath(Directory);
-  Remaining := PathValue;
-  while Remaining <> '' do
+  Items := StringSplit(PathValue, [';'], stExcludeEmpty);
+  for Index := 0 to GetArrayLength(Items) - 1 do
   begin
-    SeparatorPosition := Pos(';', Remaining);
-    if SeparatorPosition > 0 then
-    begin
-      Item := Copy(Remaining, 1, SeparatorPosition - 1);
-      Delete(Remaining, 1, SeparatorPosition);
-    end
-    else
-    begin
-      Item := Remaining;
-      Remaining := '';
-    end;
-    if EcoNormalizePath(Item) = Wanted then
+    Item := Items[Index];
+    if (Trim(Item) = Trim(Directory)) or
+       (EcoNormalizePath(Item) = Wanted) then
     begin
       Result := True;
       Exit;
@@ -64,34 +56,28 @@ end;
 
 function EcoRemovePath(const PathValue: string; const Directory: string): string;
 var
-  Remaining, Item, OutputValue, Wanted: string;
-  SeparatorPosition: Integer;
+  Items, KeptItems: TArrayOfString;
+  Item, Wanted: string;
+  Index, KeptCount: Integer;
 begin
-  Remaining := PathValue;
-  OutputValue := '';
   Wanted := EcoNormalizePath(Directory);
-  while Remaining <> '' do
+  Items := StringSplit(PathValue, [';'], stExcludeEmpty);
+  KeptCount := 0;
+  SetArrayLength(KeptItems, GetArrayLength(Items));
+  for Index := 0 to GetArrayLength(Items) - 1 do
   begin
-    SeparatorPosition := Pos(';', Remaining);
-    if SeparatorPosition > 0 then
-    begin
-      Item := Copy(Remaining, 1, SeparatorPosition - 1);
-      Delete(Remaining, 1, SeparatorPosition);
-    end
-    else
-    begin
-      Item := Remaining;
-      Remaining := '';
-    end;
+    Item := Items[Index];
     Item := Trim(Item);
-    if (Item <> '') and (EcoNormalizePath(Item) <> Wanted) then
+    if (Item <> '') and
+       (Trim(Item) <> Trim(Directory)) and
+       (EcoNormalizePath(Item) <> Wanted) then
     begin
-      if OutputValue <> '' then
-        OutputValue := OutputValue + ';';
-      OutputValue := OutputValue + Item;
+      KeptItems[KeptCount] := Item;
+      KeptCount := KeptCount + 1;
     end;
   end;
-  Result := OutputValue;
+  SetArrayLength(KeptItems, KeptCount);
+  Result := StringJoin(';', KeptItems);
 end;
 
 procedure EcoEnvironmentRoot(var Root: Integer; var Subkey: string);

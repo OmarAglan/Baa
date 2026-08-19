@@ -58,7 +58,7 @@ function Wait-InstallerState {
     throw "Timed out waiting for $Description."
 }
 
-try {
+function Invoke-BaaInstaller {
     $setupProcess = Start-Process -FilePath $Installer -ArgumentList @(
         "/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART", "/SP-",
         "/CURRENTUSER", "/DIR=$InstallDirectory"
@@ -66,12 +66,17 @@ try {
     if ($setupProcess.ExitCode -ne 0) {
         throw "Baa installer failed with exit code $($setupProcess.ExitCode)."
     }
+}
+
+try {
+    Invoke-BaaInstaller
     $installed = $true
     Wait-InstallerState "Baa installation" {
         (Test-Path -LiteralPath $baaExecutable -PathType Leaf) -and
         (Test-Path -LiteralPath $uninstaller -PathType Leaf) -and
         (Test-Path -LiteralPath $markerKey)
     }
+    Invoke-BaaInstaller
 
     foreach ($required in @(
         "libbaa_runtime.a",

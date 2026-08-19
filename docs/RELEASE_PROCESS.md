@@ -16,6 +16,9 @@ Before creating `release/v<version>`:
 4. `docs/RELEASE_CANDIDATE_STATUS.md` records the exact commit and toolchain provenance.
 5. Known limitations, compatibility matrix, roadmap, and changelog are current.
 6. Compiler version metadata and the reproducible build date are synchronized.
+7. The standalone Windows installer builds from the pinned private-linker
+   archive, passes install/compile/run/uninstall checks, and is published with
+   its checksum and toolchain manifest.
 
 The branch must be cut from the exact commit named by both platform receipts.
 

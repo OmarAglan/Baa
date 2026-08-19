@@ -52,6 +52,31 @@
 
 التفاصيل الدقيقة للصياغة والسلوك موجودة في [مواصفة اللغة](docs/LANGUAGE.md)، أما القيود المؤكدة فموجودة في [القيود المعروفة](docs/KNOWN_LIMITATIONS.md).
 
+## التثبيت على ويندوز
+
+ثبّت [نظم](https://github.com/OmarAglan/Nazm) أولاً، ثم شغّل
+`baa-setup-0.6.0-x64.exe`. يثبت مُثبّت باء المستقل `baa.exe` والمكتبة
+القياسية ورابطاً خاصاً داخل مجلد باء، ويضيف باء وحده إلى `PATH`. لا يضيف
+GCC الخاص إلى `PATH` ولا يعتمد على GCC مثبت في النظام؛ يجد مجمّع `نظم`
+المستقل من `PATH`.
+
+التثبيت الافتراضي لكل مستخدمي الجهاز داخل `Program Files\Baa`. يدعم
+المثبت `/CURRENTUSER` للتثبيت دون صلاحيات مدير، كما يدعم الأوضاع الصامتة
+القياسية لـ Inno Setup. بعد التثبيت افتح طرفية جديدة وتحقق:
+
+```powershell
+نظم --إصدار
+baa --version
+```
+
+لبناء المثبت من المصدر:
+
+```powershell
+.\scripts\prepare_gcc_bundle.ps1
+.\scripts\build_installer.ps1 -NazmExecutable C:\path\to\نظم.exe
+.\scripts\test_installer.ps1 -NazmDirectory C:\path\to\nazm-bin
+```
+
 ## البناء
 
 ### المتطلبات

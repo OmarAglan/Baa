@@ -20,11 +20,23 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
   - Added a versioned portable-toolchain marker so an admitted bundled GCC can
     receive Arabic and spaced artifact paths directly instead of depending on
     optional Windows 8.3 aliases.
-  - Gated that direct path mode on an active Windows code page that can
-    represent Arabic without replacement, retaining the no-copy filesystem
-    alias adapter on Western-code-page hosts.
+  - Gated that direct path mode on Windows UTF-8 ACP. Arabic ANSI pages can
+    represent the characters but are still reinterpreted incorrectly by some
+    GNU tools, so all non-UTF-8 hosts retain the no-copy filesystem-alias
+    adapter.
 
 ### Added
+
+- **Standalone Windows installer contract**:
+  - Added an all-users installer with an explicit `/CURRENTUSER` fallback,
+    owned PATH/environment updates, health checks, and clean uninstall.
+  - Added only `baa.exe` to PATH. Nazm is resolved from its standalone PATH
+    installation, while the version-locked GCC/LD payload remains private.
+  - Pinned the private WinLibs archive and SHA-256, reduced it to the required
+    linker/runtime closure, and added dependency, Unicode-capability, installed
+    compile/run, and uninstall probes.
+  - Added a Windows CI artifact for
+    `baa-setup-0.6.0-x64.exe`.
 
 - **Compiler-owned semantic completion**:
   - Extended `semantic-query-json-v1` with cursor-specific completion items for

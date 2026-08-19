@@ -79,28 +79,16 @@ static void runtime_library_resolve_from_exe_dir(const char* exe_dir)
 static unsigned long g_toolchain_file_counter = 0;
 
 /**
- * @brief هل تستطيع صفحة محارف Windows النشطة تمرير الأسماء العربية بلا فقد؟
+ * @brief هل تستخدم صفحة محارف Windows النشطة UTF-8؟
  *
  * CreateProcessW يحفظ سطر الأمر كاملاً، لكن أدوات MinGW القديمة قد تعيد تحويل
- * argv إلى صفحة المحارف النشطة قبل أن يصل المسار إلى GCC/LD. لذلك لا يكفي أن
- * تعلن الحزمة دعم Unicode؛ يجب أن يكون التحويل المحلي قابلاً لتمثيل العربية.
+ * argv إلى صفحة المحارف النشطة قبل أن يصل المسار إلى GCC/LD. قابلية تمثيل
+ * العربية في صفحة ANSI مثل 1256 لا تكفي: بعض أدوات GNU تعيد تفسير البايتات
+ * الضيقة على أنها UTF-8. لذلك يقتصر المسار المباشر على CP_UTF8.
  */
-static bool win_active_code_page_supports_arabic(void)
+static bool win_active_code_page_is_utf8(void)
 {
-    UINT code_page = GetACP();
-    if (code_page == CP_UTF8) return true;
-
-    static const wchar_t probe[] = L"الرئيسية_بدء";
-    BOOL used_default = FALSE;
-    int needed = WideCharToMultiByte(code_page,
-                                     WC_NO_BEST_FIT_CHARS,
-                                     probe,
-                                     -1,
-                                     NULL,
-                                     0,
-                                     NULL,
-                                     &used_default);
-    return needed > 0 && !used_default;
+    return GetACP() == CP_UTF8;
 }
 
 static bool win_portable_toolchain_allows_direct_unicode(const char* gcc_path)
@@ -148,7 +136,7 @@ static bool win_portable_toolchain_allows_direct_unicode(const char* gcc_path)
     }
     fclose(file);
     g_gcc_retain_pei386_runtime_relocator = format_ok && relocator_ok;
-    return format_ok && unicode_ok && win_active_code_page_supports_arabic();
+    return format_ok && unicode_ok && win_active_code_page_is_utf8();
 }
 
 static bool win_wide_to_utf8(const wchar_t* text, char* out, size_t out_cap)

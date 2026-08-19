@@ -92,19 +92,17 @@ An admitted portable toolchain can declare direct Unicode support through
 `BAA-TOOLCHAIN-MANIFEST.txt` at its root. Baa requires both
 `format=baa-portable-toolchain-v1` and `unicode_paths=direct` before passing
 ordinary Unicode and spaced paths directly. Baa also verifies that the active
-Windows code page can represent Arabic without replacement. This matters for
-MinGW programs that receive a wide `CreateProcessW` command line and then
-convert it back to narrow `argv`: a Western code page would otherwise turn the
-path into question marks before GCC/LD opens it. When that host check fails,
-Baa retains the measured no-copy filesystem-alias adapter used by unmarked GCC
+Windows code page is UTF-8. Merely representing Arabic in an ANSI page such as
+1256 is insufficient: some MinGW/GNU tools reinterpret the resulting narrow
+bytes as UTF-8 and corrupt the path. When the UTF-8 host check fails, Baa
+retains the measured no-copy filesystem-alias adapter used by unmarked GCC
 installations.
 
-The Qalam Windows package uses the relocatable Qt MinGW-w64 kit that passed
-direct Arabic runtime-archive and executable paths on Arabic-capable and UTF-8
-Windows hosts. Western-code-page hosts use the same real artifacts through
-ASCII filesystem aliases. Paths at or beyond the driver's conservative
-long-path threshold also use that previously admitted filesystem-alias
-contract.
+The standalone Windows package uses a pinned relocatable WinLibs kit. UTF-8
+Windows hosts may pass direct Arabic runtime-archive and executable paths;
+other code pages use the same real artifacts through ASCII filesystem aliases.
+Paths at or beyond the driver's conservative long-path threshold also use that
+previously admitted filesystem-alias contract.
 
 Nazm owns its Unicode-aware object output path independently and is the
 production assembler default after the separate admission gate completed.

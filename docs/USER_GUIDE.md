@@ -30,24 +30,30 @@ Welcome to Baa (باء)! This guide will help you write your first Arabic comput
 
 ### Installation Methods
 
-#### Windows: Installer with GCC Bundle (Recommended)
+#### Windows: Standalone Installer (Recommended)
 
-The easiest way to install Baa on Windows is using the installer which includes a GCC bundle:
+1. Install the standalone [Nazm](https://github.com/OmarAglan/Nazm) package and
+   open a new terminal so `نظم.exe` is visible on `PATH`.
+2. Download `baa-setup-0.6.0-x64.exe` from the
+   [releases page](https://github.com/OmarAglan/Baa/releases).
+3. Run the installer. Its default is an all-users installation under
+   `Program Files\Baa`; pass `/CURRENTUSER` for a per-user installation.
 
-1. Download the latest `Baa-Setup.exe` from the [releases page](https://github.com/OmarAglan/Baa/releases)
-2. Run the installer and follow the prompts
-3. The installer will automatically:
-   - Install `baa.exe` to the selected directory
-   - Set up the bundled MinGW-w64 GCC toolchain
-   - Install stdlib + examples + docs
-   - Offer optional integration tasks:
-     - add `baa` and bundled GCC to `PATH`
-     - set `BAA_HOME` and `BAA_STDLIB`
-     - associate `.baa/.baahd` files
+The installer:
+
+- installs `baa.exe`, the runtime, standard library, targets, examples, and
+  documentation;
+- adds only the Baa installation directory to the selected `PATH`;
+- manages `BAA_HOME` and `BAA_STDLIB` without overwriting unrelated custom
+  values;
+- keeps its version-locked GCC/LD linker private under `Baa\gcc`, never on
+  `PATH`; and
+- resolves the separately installed Nazm assembler from `PATH`.
 
 After installation, open a new terminal and verify:
 
 ```powershell
+نظم --إصدار
 baa --version
 ```
 
@@ -364,12 +370,13 @@ sudo cp -a usr/* /usr/
 
 ## 6. Deployment Notes
 
-Baa's compiler driver invokes `gcc` to assemble and link output binaries, so deployment typically requires:
+On Windows, use the standalone installer and install Nazm separately. Baa
+invokes `نظم.exe` from `PATH`, then links the produced object through its
+private, version-locked GCC/LD payload. That private payload is not exposed to
+other shells or projects.
 
-- `baa.exe`/`baa` available on the target machine (for example, on `PATH`)
-- MinGW-w64 `gcc` (Windows) or GCC/Clang (Linux) available on `PATH`
-
-If you distribute `baa.exe` to another Windows machine, ensure the MinGW-w64 toolchain is installed there as well (or use the installer with GCC bundle).
+On Linux, `baa`, `نظم`, and the hosted GCC/Clang linker toolchain must be
+available on the target development machine.
 
 ---
 

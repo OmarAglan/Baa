@@ -177,11 +177,12 @@
 
 #### 0.3.2.4-setup: Installer \& GCC Bundling ✅ COMPLETED (2026-02-08)
 
-* \[x] **Bundle MinGW-w64 GCC** — Ship GCC toolchain in `gcc/` subfolder inside the installer.
+* \[x] **Bundle a private MinGW-w64 linker** — Ship the pinned, dependency-complete link-only payload in `gcc/` without exposing it globally.
 * \[x] **Auto-detect bundled GCC** — `resolve\_gcc\_path()` in `main.c` finds `gcc.exe` relative to `baa.exe`.
-* \[x] **Update installer (setup.iss)** — Add `gcc\\\*` files, dual PATH entries, post-install GCC verification.
-* \[x] **GCC bundle script** — `scripts/prepare\_gcc\_bundle.ps1` downloads and prepares the minimal toolchain.
+* \[x] **Update installer (setup.iss)** — Add only Baa to PATH, preserve the private linker, resolve standalone Nazm from PATH, and verify installed components.
+* \[x] **GCC bundle script** — `scripts/prepare\_gcc\_bundle.ps1` downloads a pinned archive, verifies SHA-256, narrows it to the linker closure, and records its capability manifest.
 * \[x] **Sync version metadata** — `baa.rc` and `setup.iss` updated to `0.3.2.4`, publisher to "Omar Aglan".
+* \[x] **Installer lifecycle gate** — Build `baa-setup-0.6.0-x64.exe`, install per-user in isolation, compile/run through PATH Nazm plus the private linker, uninstall, and verify owned state is removed.
 
 \---
 

@@ -223,3 +223,8 @@ if ($unicodeProbePassed) {
 else {
     Write-Output "This Windows code page requires Baa's no-copy short-path adapter for GCC/LD."
 }
+
+# The direct-Unicode probe is advisory: a failure selects Baa's supported
+# short-path adapter. Do not leak that expected native-process status to callers
+# such as the GitHub Actions PowerShell wrapper, which exits with LASTEXITCODE.
+exit 0

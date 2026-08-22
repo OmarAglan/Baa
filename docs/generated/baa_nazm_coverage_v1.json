@@ -12,7 +12,7 @@
   "shadow_corpus": {
     "schema": "baa-nazm-shadow-corpus-v1",
     "compiler": "baa version 0.6.0",
-    "sha256": "26468687a092eb1e0dab209f38219f145a40bdf618c3eff4bff872b0e605cfb0"
+    "sha256": "8354d70ff29d9b1088989aa6ce10d9cc179793ab797d4d49c120f27d875e8377"
   },
   "status_contract": {
     "supported": "The complete inventory form is implemented by Nazm.",
@@ -415,7 +415,7 @@
               "source": "tests/integration/backend/backend_process_runtime_v065_test.baa",
               "status": "emitted",
               "exit_code": 0,
-              "sha256": "04ce74b424dea35e3218bd9d3dd181716a5da6d4f3d4a3df995d6457adc71ba7"
+              "sha256": "0a2f584b1fb12d34df54ab2f7a671017e22fca559c6995e7a419c6bbda5620f9"
             },
             {
               "source": "tests/integration/backend/backend_readline_stdin_test.baa",
@@ -1124,7 +1124,7 @@
           "operands": [
             "symbol"
           ],
-          "count": 1500,
+          "count": 1501,
           "samples": [
             "examples/error_handling_demo.baa:81",
             "examples/error_handling_demo.baa:91",
@@ -1232,7 +1232,7 @@
             "immediate-integer",
             "register"
           ],
-          "count": 1936,
+          "count": 1937,
           "samples": [
             "examples/error_handling_demo.baa:20",
             "examples/error_handling_demo.baa:34",
@@ -1556,7 +1556,7 @@
           "operands": [
             "local-symbol"
           ],
-          "count": 3094,
+          "count": 3095,
           "samples": [
             "examples/error_handling_demo.baa:25",
             "examples/error_handling_demo.baa:39",
@@ -1577,7 +1577,7 @@
           "operands": [
             "local-symbol"
           ],
-          "count": 1388,
+          "count": 1389,
           "samples": [
             "examples/error_handling_demo.baa:24",
             "examples/error_handling_demo.baa:38",
@@ -1622,7 +1622,7 @@
             "memory-rip-relative",
             "register"
           ],
-          "count": 868,
+          "count": 869,
           "samples": [
             "examples/error_handling_demo.baa:113",
             "examples/error_handling_demo.baa:118",
@@ -1642,7 +1642,7 @@
         {
           "mnemonic": "leave",
           "operands": [],
-          "count": 470,
+          "count": 471,
           "samples": [
             "examples/error_handling_demo.baa:31",
             "examples/error_handling_demo.baa:45",
@@ -2006,7 +2006,7 @@
             "immediate-integer",
             "register"
           ],
-          "count": 2745,
+          "count": 2746,
           "samples": [
             "examples/error_handling_demo.baa:27",
             "examples/error_handling_demo.baa:41",
@@ -2146,7 +2146,7 @@
             "register",
             "register"
           ],
-          "count": 11988,
+          "count": 11990,
           "samples": [
             "examples/error_handling_demo.baa:16",
             "examples/error_handling_demo.baa:17",
@@ -2330,7 +2330,7 @@
             "register",
             "register"
           ],
-          "count": 2968,
+          "count": 2969,
           "samples": [
             "examples/error_handling_demo.baa:22",
             "examples/error_handling_demo.baa:36",
@@ -2361,7 +2361,7 @@
             "memory-base-displacement",
             "register"
           ],
-          "count": 1482,
+          "count": 1487,
           "samples": [
             "examples/error_handling_demo.baa:28",
             "examples/error_handling_demo.baa:29",
@@ -2569,7 +2569,7 @@
         {
           "mnemonic": "ret",
           "operands": [],
-          "count": 470,
+          "count": 471,
           "samples": [
             "examples/error_handling_demo.baa:32",
             "examples/error_handling_demo.baa:46",
@@ -2852,7 +2852,7 @@
           "operands": [
             "register"
           ],
-          "count": 450,
+          "count": 451,
           "samples": [
             "examples/error_handling_demo.baa:174",
             "examples/error_handling_demo.baa:288",
@@ -3097,7 +3097,7 @@
             "register",
             "register"
           ],
-          "count": 1383,
+          "count": 1384,
           "samples": [
             "examples/error_handling_demo.baa:23",
             "examples/error_handling_demo.baa:37",
@@ -3136,7 +3136,7 @@
             "register",
             "register"
           ],
-          "count": 1487,
+          "count": 1488,
           "samples": [
             "examples/error_handling_demo.baa:80",
             "examples/error_handling_demo.baa:90",
@@ -3311,7 +3311,7 @@
           "operands": [
             "integer"
           ],
-          "count": 304,
+          "count": 305,
           "samples": [
             "examples/file_copy_small.baa:989",
             "examples/file_copy_small.baa:1002",
@@ -3331,7 +3331,7 @@
           "operands": [
             "integer"
           ],
-          "count": 4168,
+          "count": 4477,
           "samples": [
             "examples/file_copy_small.baa:991",
             "examples/file_copy_small.baa:992",
@@ -3468,7 +3468,7 @@
       "symbols": {
         "defined": 621,
         "global-declaration": 311,
-        "local": 4063,
+        "local": 4066,
         "local-declaration": 10
       },
       "relocation_candidates": [
@@ -3481,13 +3481,13 @@
         },
         {
           "form": "instruction:call:symbol",
-          "count": 1500,
+          "count": 1501,
           "status": "partial",
           "reason": "Local and Arabic external call relocations are supported, but Latin platform ABI symbols still require an Arabic bridge."
         },
         {
           "form": "instruction:leaq:memory-rip-relative,register",
-          "count": 868,
+          "count": 869,
           "status": "supported",
           "nazm_kind": "PC32",
           "acceptance_fixture": "tests/fixtures/baa_coverage/حركة-باء.نظم"
@@ -3528,9 +3528,9 @@
           "unsupported": 38
         },
         "emissions": {
-          "supported": 67160,
-          "partial": 3313,
-          "unsupported": 10141
+          "supported": 67481,
+          "partial": 3315,
+          "unsupported": 10149
         }
       }
     },
@@ -3922,7 +3922,7 @@
               "source": "tests/integration/backend/backend_process_runtime_v065_test.baa",
               "status": "emitted",
               "exit_code": 0,
-              "sha256": "9f86b6a2b9a5e7c9281287c6218a4b8c294fe79b85f161bf047b84a2868c46ff"
+              "sha256": "108ba9f40fba1824a02919a38e906fb1842e47597d688254ba64b9b7f209ba2b"
             },
             {
               "source": "tests/integration/backend/backend_readline_stdin_test.baa",
@@ -4372,7 +4372,7 @@
             "immediate-integer",
             "register"
           ],
-          "count": 3572,
+          "count": 3573,
           "samples": [
             "examples/error_handling_demo.baa:87",
             "examples/error_handling_demo.baa:98",
@@ -4601,7 +4601,7 @@
           "operands": [
             "symbol"
           ],
-          "count": 1500,
+          "count": 1501,
           "samples": [
             "examples/error_handling_demo.baa:86",
             "examples/error_handling_demo.baa:97",
@@ -4709,7 +4709,7 @@
             "immediate-integer",
             "register"
           ],
-          "count": 2061,
+          "count": 2062,
           "samples": [
             "examples/error_handling_demo.baa:20",
             "examples/error_handling_demo.baa:34",
@@ -5033,7 +5033,7 @@
           "operands": [
             "local-symbol"
           ],
-          "count": 3094,
+          "count": 3095,
           "samples": [
             "examples/error_handling_demo.baa:25",
             "examples/error_handling_demo.baa:39",
@@ -5054,7 +5054,7 @@
           "operands": [
             "local-symbol"
           ],
-          "count": 1388,
+          "count": 1389,
           "samples": [
             "examples/error_handling_demo.baa:24",
             "examples/error_handling_demo.baa:38",
@@ -5099,7 +5099,7 @@
             "memory-rip-relative",
             "register"
           ],
-          "count": 866,
+          "count": 867,
           "samples": [
             "examples/error_handling_demo.baa:124",
             "examples/error_handling_demo.baa:131",
@@ -5119,7 +5119,7 @@
         {
           "mnemonic": "leave",
           "operands": [],
-          "count": 470,
+          "count": 471,
           "samples": [
             "examples/error_handling_demo.baa:31",
             "examples/error_handling_demo.baa:45",
@@ -5482,7 +5482,7 @@
             "immediate-integer",
             "register"
           ],
-          "count": 2748,
+          "count": 2749,
           "samples": [
             "examples/error_handling_demo.baa:27",
             "examples/error_handling_demo.baa:41",
@@ -5566,7 +5566,7 @@
             "register",
             "memory-base-displacement"
           ],
-          "count": 5984,
+          "count": 5985,
           "samples": [
             "examples/error_handling_demo.baa:53",
             "examples/error_handling_demo.baa:75",
@@ -5622,7 +5622,7 @@
             "register",
             "register"
           ],
-          "count": 13336,
+          "count": 13338,
           "samples": [
             "examples/error_handling_demo.baa:16",
             "examples/error_handling_demo.baa:17",
@@ -5806,7 +5806,7 @@
             "register",
             "register"
           ],
-          "count": 3002,
+          "count": 3003,
           "samples": [
             "examples/error_handling_demo.baa:22",
             "examples/error_handling_demo.baa:36",
@@ -5837,7 +5837,7 @@
             "memory-base-displacement",
             "register"
           ],
-          "count": 1912,
+          "count": 1919,
           "samples": [
             "examples/error_handling_demo.baa:28",
             "examples/error_handling_demo.baa:29",
@@ -6024,7 +6024,7 @@
         {
           "mnemonic": "ret",
           "operands": [],
-          "count": 470,
+          "count": 471,
           "samples": [
             "examples/error_handling_demo.baa:32",
             "examples/error_handling_demo.baa:46",
@@ -6307,7 +6307,7 @@
           "operands": [
             "register"
           ],
-          "count": 450,
+          "count": 451,
           "samples": [
             "examples/error_handling_demo.baa:198",
             "examples/error_handling_demo.baa:312",
@@ -6429,7 +6429,7 @@
             "immediate-integer",
             "register"
           ],
-          "count": 2699,
+          "count": 2700,
           "samples": [
             "examples/error_handling_demo.baa:79",
             "examples/error_handling_demo.baa:96",
@@ -6552,7 +6552,7 @@
             "register",
             "register"
           ],
-          "count": 1383,
+          "count": 1384,
           "samples": [
             "examples/error_handling_demo.baa:23",
             "examples/error_handling_demo.baa:37",
@@ -6731,7 +6731,7 @@
           "operands": [
             "integer"
           ],
-          "count": 304,
+          "count": 305,
           "samples": [
             "examples/file_copy_small.baa:1061",
             "examples/file_copy_small.baa:1074",
@@ -6751,7 +6751,7 @@
           "operands": [
             "integer"
           ],
-          "count": 4168,
+          "count": 4477,
           "samples": [
             "examples/file_copy_small.baa:1063",
             "examples/file_copy_small.baa:1064",
@@ -6867,7 +6867,7 @@
       "symbols": {
         "defined": 621,
         "global-declaration": 311,
-        "local": 4063
+        "local": 4066
       },
       "relocation_candidates": [
         {
@@ -6879,13 +6879,13 @@
         },
         {
           "form": "instruction:call:symbol",
-          "count": 1500,
+          "count": 1501,
           "status": "partial",
           "reason": "Local and Arabic external call relocations are supported, but Latin platform ABI symbols still require an Arabic bridge."
         },
         {
           "form": "instruction:leaq:memory-rip-relative,register",
-          "count": 866,
+          "count": 867,
           "status": "supported",
           "nazm_kind": "PC32",
           "acceptance_fixture": "tests/fixtures/baa_coverage/حركة-باء.نظم"
@@ -6926,9 +6926,9 @@
           "unsupported": 32
         },
         "emissions": {
-          "supported": 72308,
-          "partial": 3313,
-          "unsupported": 8728
+          "supported": 72632,
+          "partial": 3315,
+          "unsupported": 8737
         }
       }
     }

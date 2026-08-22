@@ -59,6 +59,8 @@
     إذا (ورقة == عدم) { إرجع ١١. }
     اكتب_سطر(ورقة، "ok").
     اغلق_ملف(ورقة).
+    نص مجلد_طويل = ".baa_process_tree/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb/cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc".
+    إذا (انشئ_مجلدات(مجلد_طويل) != ٠) { إرجع ١٥. }
     إذا (احذف_شجرة(".baa_process_tree") != ٠) { إرجع ١٢. }
     إذا (احذف_شجرة(".baa_process_tree") != ٠) { إرجع ١٣. }
     إذا (احذف_شجرة(".") == ٠) { إرجع ١٤. }

@@ -3,7 +3,7 @@
   "compiler": "baa version 0.6.0",
   "source_inventory": {
     "schema": "baa-assembly-surface-v1",
-    "sha256": "1956cdf8f65e3fc5ab8c069b4f4a7381438f6f9c29c217505356fda1ed1ed2f2"
+    "sha256": "b1d3e2770b925a445a870d4e1df23fe138c234ceef29256320c125659aeb74d3"
   },
   "status_contract": {
     "emitted": "Baa emitted canonical Arabic Nazm without Latin letters.",
@@ -292,7 +292,7 @@
           "source": "tests/integration/backend/backend_process_runtime_v065_test.baa",
           "status": "emitted",
           "exit_code": 0,
-          "sha256": "04ce74b424dea35e3218bd9d3dd181716a5da6d4f3d4a3df995d6457adc71ba7"
+          "sha256": "0a2f584b1fb12d34df54ab2f7a671017e22fca559c6995e7a419c6bbda5620f9"
         },
         {
           "source": "tests/integration/backend/backend_readline_stdin_test.baa",
@@ -999,7 +999,7 @@
           "source": "tests/integration/backend/backend_process_runtime_v065_test.baa",
           "status": "emitted",
           "exit_code": 0,
-          "sha256": "9f86b6a2b9a5e7c9281287c6218a4b8c294fe79b85f161bf047b84a2868c46ff"
+          "sha256": "108ba9f40fba1824a02919a38e906fb1842e47597d688254ba64b9b7f209ba2b"
         },
         {
           "source": "tests/integration/backend/backend_readline_stdin_test.baa",

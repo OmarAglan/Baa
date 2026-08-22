@@ -279,7 +279,7 @@
           "operands": [
             "symbol"
           ],
-          "count": 1500,
+          "count": 1501,
           "samples": [
             "examples/error_handling_demo.baa:81",
             "examples/error_handling_demo.baa:91",
@@ -366,7 +366,7 @@
             "immediate-integer",
             "register"
           ],
-          "count": 1936,
+          "count": 1937,
           "samples": [
             "examples/error_handling_demo.baa:20",
             "examples/error_handling_demo.baa:34",
@@ -526,7 +526,7 @@
           "operands": [
             "local-symbol"
           ],
-          "count": 3094,
+          "count": 3095,
           "samples": [
             "examples/error_handling_demo.baa:25",
             "examples/error_handling_demo.baa:39",
@@ -538,7 +538,7 @@
           "operands": [
             "local-symbol"
           ],
-          "count": 1388,
+          "count": 1389,
           "samples": [
             "examples/error_handling_demo.baa:24",
             "examples/error_handling_demo.baa:38",
@@ -564,7 +564,7 @@
             "memory-rip-relative",
             "register"
           ],
-          "count": 868,
+          "count": 869,
           "samples": [
             "examples/error_handling_demo.baa:113",
             "examples/error_handling_demo.baa:118",
@@ -574,7 +574,7 @@
         {
           "mnemonic": "leave",
           "operands": [],
-          "count": 470,
+          "count": 471,
           "samples": [
             "examples/error_handling_demo.baa:31",
             "examples/error_handling_demo.baa:45",
@@ -764,7 +764,7 @@
             "immediate-integer",
             "register"
           ],
-          "count": 2745,
+          "count": 2746,
           "samples": [
             "examples/error_handling_demo.baa:27",
             "examples/error_handling_demo.baa:41",
@@ -829,7 +829,7 @@
             "register",
             "register"
           ],
-          "count": 11988,
+          "count": 11990,
           "samples": [
             "examples/error_handling_demo.baa:16",
             "examples/error_handling_demo.baa:17",
@@ -919,7 +919,7 @@
             "register",
             "register"
           ],
-          "count": 2968,
+          "count": 2969,
           "samples": [
             "examples/error_handling_demo.baa:22",
             "examples/error_handling_demo.baa:36",
@@ -932,7 +932,7 @@
             "memory-base-displacement",
             "register"
           ],
-          "count": 1482,
+          "count": 1487,
           "samples": [
             "examples/error_handling_demo.baa:28",
             "examples/error_handling_demo.baa:29",
@@ -1070,7 +1070,7 @@
         {
           "mnemonic": "ret",
           "operands": [],
-          "count": 470,
+          "count": 471,
           "samples": [
             "examples/error_handling_demo.baa:32",
             "examples/error_handling_demo.baa:46",
@@ -1237,7 +1237,7 @@
           "operands": [
             "register"
           ],
-          "count": 450,
+          "count": 451,
           "samples": [
             "examples/error_handling_demo.baa:174",
             "examples/error_handling_demo.baa:288",
@@ -1389,7 +1389,7 @@
             "register",
             "register"
           ],
-          "count": 1383,
+          "count": 1384,
           "samples": [
             "examples/error_handling_demo.baa:23",
             "examples/error_handling_demo.baa:37",
@@ -1415,7 +1415,7 @@
             "register",
             "register"
           ],
-          "count": 1487,
+          "count": 1488,
           "samples": [
             "examples/error_handling_demo.baa:80",
             "examples/error_handling_demo.baa:90",
@@ -1519,7 +1519,7 @@
           "operands": [
             "integer"
           ],
-          "count": 304,
+          "count": 305,
           "samples": [
             "examples/file_copy_small.baa:989",
             "examples/file_copy_small.baa:1002",
@@ -1531,7 +1531,7 @@
           "operands": [
             "integer"
           ],
-          "count": 4168,
+          "count": 4477,
           "samples": [
             "examples/file_copy_small.baa:991",
             "examples/file_copy_small.baa:992",
@@ -1619,7 +1619,7 @@
       "symbols": {
         "defined": 621,
         "global-declaration": 311,
-        "local": 4063,
+        "local": 4066,
         "local-declaration": 10
       },
       "registers": [
@@ -1641,7 +1641,7 @@
         },
         {
           "name": "%eax",
-          "count": 3164
+          "count": 3166
         },
         {
           "name": "%ebx",
@@ -1657,11 +1657,11 @@
         },
         {
           "name": "%r10",
-          "count": 18865
+          "count": 18870
         },
         {
           "name": "%r10b",
-          "count": 5497
+          "count": 5501
         },
         {
           "name": "%r10d",
@@ -1673,7 +1673,7 @@
         },
         {
           "name": "%r12",
-          "count": 9529
+          "count": 9530
         },
         {
           "name": "%r12b",
@@ -1685,7 +1685,7 @@
         },
         {
           "name": "%r13",
-          "count": 6996
+          "count": 6997
         },
         {
           "name": "%r13b",
@@ -1697,7 +1697,7 @@
         },
         {
           "name": "%r14",
-          "count": 4995
+          "count": 4996
         },
         {
           "name": "%r14b",
@@ -1709,7 +1709,7 @@
         },
         {
           "name": "%r15",
-          "count": 3734
+          "count": 3735
         },
         {
           "name": "%r15b",
@@ -1737,15 +1737,15 @@
         },
         {
           "name": "%rax",
-          "count": 7952
+          "count": 7954
         },
         {
           "name": "%rbp",
-          "count": 17693
+          "count": 17698
         },
         {
           "name": "%rbx",
-          "count": 9869
+          "count": 9870
         },
         {
           "name": "%rcx",
@@ -1753,7 +1753,7 @@
         },
         {
           "name": "%rdi",
-          "count": 1268
+          "count": 1269
         },
         {
           "name": "%rdx",
@@ -1761,7 +1761,7 @@
         },
         {
           "name": "%rip",
-          "count": 962
+          "count": 963
         },
         {
           "name": "%rsi",
@@ -1791,11 +1791,11 @@
         },
         {
           "form": "instruction:call:symbol",
-          "count": 1500
+          "count": 1501
         },
         {
           "form": "instruction:leaq:memory-rip-relative,register",
-          "count": 868
+          "count": 869
         },
         {
           "form": "instruction:movl:memory-rip-relative,register",
@@ -2246,7 +2246,7 @@
             "immediate-integer",
             "register"
           ],
-          "count": 3572,
+          "count": 3573,
           "samples": [
             "examples/error_handling_demo.baa:87",
             "examples/error_handling_demo.baa:98",
@@ -2374,7 +2374,7 @@
           "operands": [
             "symbol"
           ],
-          "count": 1500,
+          "count": 1501,
           "samples": [
             "examples/error_handling_demo.baa:86",
             "examples/error_handling_demo.baa:97",
@@ -2461,7 +2461,7 @@
             "immediate-integer",
             "register"
           ],
-          "count": 2061,
+          "count": 2062,
           "samples": [
             "examples/error_handling_demo.baa:20",
             "examples/error_handling_demo.baa:34",
@@ -2621,7 +2621,7 @@
           "operands": [
             "local-symbol"
           ],
-          "count": 3094,
+          "count": 3095,
           "samples": [
             "examples/error_handling_demo.baa:25",
             "examples/error_handling_demo.baa:39",
@@ -2633,7 +2633,7 @@
           "operands": [
             "local-symbol"
           ],
-          "count": 1388,
+          "count": 1389,
           "samples": [
             "examples/error_handling_demo.baa:24",
             "examples/error_handling_demo.baa:38",
@@ -2659,7 +2659,7 @@
             "memory-rip-relative",
             "register"
           ],
-          "count": 866,
+          "count": 867,
           "samples": [
             "examples/error_handling_demo.baa:124",
             "examples/error_handling_demo.baa:131",
@@ -2669,7 +2669,7 @@
         {
           "mnemonic": "leave",
           "operands": [],
-          "count": 470,
+          "count": 471,
           "samples": [
             "examples/error_handling_demo.baa:31",
             "examples/error_handling_demo.baa:45",
@@ -2858,7 +2858,7 @@
             "immediate-integer",
             "register"
           ],
-          "count": 2748,
+          "count": 2749,
           "samples": [
             "examples/error_handling_demo.baa:27",
             "examples/error_handling_demo.baa:41",
@@ -2897,7 +2897,7 @@
             "register",
             "memory-base-displacement"
           ],
-          "count": 5984,
+          "count": 5985,
           "samples": [
             "examples/error_handling_demo.baa:53",
             "examples/error_handling_demo.baa:75",
@@ -2923,7 +2923,7 @@
             "register",
             "register"
           ],
-          "count": 13336,
+          "count": 13338,
           "samples": [
             "examples/error_handling_demo.baa:16",
             "examples/error_handling_demo.baa:17",
@@ -3013,7 +3013,7 @@
             "register",
             "register"
           ],
-          "count": 3002,
+          "count": 3003,
           "samples": [
             "examples/error_handling_demo.baa:22",
             "examples/error_handling_demo.baa:36",
@@ -3026,7 +3026,7 @@
             "memory-base-displacement",
             "register"
           ],
-          "count": 1912,
+          "count": 1919,
           "samples": [
             "examples/error_handling_demo.baa:28",
             "examples/error_handling_demo.baa:29",
@@ -3152,7 +3152,7 @@
         {
           "mnemonic": "ret",
           "operands": [],
-          "count": 470,
+          "count": 471,
           "samples": [
             "examples/error_handling_demo.baa:32",
             "examples/error_handling_demo.baa:46",
@@ -3319,7 +3319,7 @@
           "operands": [
             "register"
           ],
-          "count": 450,
+          "count": 451,
           "samples": [
             "examples/error_handling_demo.baa:198",
             "examples/error_handling_demo.baa:312",
@@ -3395,7 +3395,7 @@
             "immediate-integer",
             "register"
           ],
-          "count": 2699,
+          "count": 2700,
           "samples": [
             "examples/error_handling_demo.baa:79",
             "examples/error_handling_demo.baa:96",
@@ -3471,7 +3471,7 @@
             "register",
             "register"
           ],
-          "count": 1383,
+          "count": 1384,
           "samples": [
             "examples/error_handling_demo.baa:23",
             "examples/error_handling_demo.baa:37",
@@ -3576,7 +3576,7 @@
           "operands": [
             "integer"
           ],
-          "count": 304,
+          "count": 305,
           "samples": [
             "examples/file_copy_small.baa:1061",
             "examples/file_copy_small.baa:1074",
@@ -3588,7 +3588,7 @@
           "operands": [
             "integer"
           ],
-          "count": 4168,
+          "count": 4477,
           "samples": [
             "examples/file_copy_small.baa:1063",
             "examples/file_copy_small.baa:1064",
@@ -3659,7 +3659,7 @@
       "symbols": {
         "defined": 621,
         "global-declaration": 311,
-        "local": 4063
+        "local": 4066
       },
       "registers": [
         {
@@ -3700,11 +3700,11 @@
         },
         {
           "name": "%r10",
-          "count": 16295
+          "count": 16300
         },
         {
           "name": "%r10b",
-          "count": 5796
+          "count": 5800
         },
         {
           "name": "%r10d",
@@ -3716,7 +3716,7 @@
         },
         {
           "name": "%r12",
-          "count": 5170
+          "count": 5171
         },
         {
           "name": "%r12b",
@@ -3728,7 +3728,7 @@
         },
         {
           "name": "%r13",
-          "count": 3725
+          "count": 3726
         },
         {
           "name": "%r13b",
@@ -3740,7 +3740,7 @@
         },
         {
           "name": "%r14",
-          "count": 3291
+          "count": 3292
         },
         {
           "name": "%r14b",
@@ -3752,7 +3752,7 @@
         },
         {
           "name": "%r15",
-          "count": 2829
+          "count": 2830
         },
         {
           "name": "%r15b",
@@ -3772,23 +3772,23 @@
         },
         {
           "name": "%rax",
-          "count": 7560
+          "count": 7562
         },
         {
           "name": "%rbp",
-          "count": 15927
+          "count": 15934
         },
         {
           "name": "%rbx",
-          "count": 6711
+          "count": 6712
         },
         {
           "name": "%rcx",
-          "count": 2646
+          "count": 2648
         },
         {
           "name": "%rdi",
-          "count": 8840
+          "count": 8841
         },
         {
           "name": "%rdx",
@@ -3796,15 +3796,15 @@
         },
         {
           "name": "%rip",
-          "count": 960
+          "count": 961
         },
         {
           "name": "%rsi",
-          "count": 9905
+          "count": 9906
         },
         {
           "name": "%rsp",
-          "count": 5756
+          "count": 5759
         },
         {
           "name": "%sil",
@@ -3834,11 +3834,11 @@
         },
         {
           "form": "instruction:call:symbol",
-          "count": 1500
+          "count": 1501
         },
         {
           "form": "instruction:leaq:memory-rip-relative,register",
-          "count": 866
+          "count": 867
         },
         {
           "form": "instruction:movl:memory-rip-relative,register",

@@ -139,6 +139,50 @@ static wchar_t* utf8_to_wide(const char* text)
     return out;
 }
 
+static wchar_t* utf8_to_extended_path(const char* path)
+{
+    wchar_t* wide = utf8_to_wide(path);
+    if (!wide) return NULL;
+    if (wcsncmp(wide, L"\\\\?\\", 4) == 0 ||
+        wcsncmp(wide, L"\\\\.\\", 4) == 0) return wide;
+
+    DWORD needed = GetFullPathNameW(wide, 0, NULL, NULL);
+    if (needed == 0) {
+        free(wide);
+        return NULL;
+    }
+    wchar_t* absolute = (wchar_t*)calloc((size_t)needed + 1u, sizeof(wchar_t));
+    if (!absolute) {
+        free(wide);
+        return NULL;
+    }
+    DWORD written = GetFullPathNameW(wide, needed, absolute, NULL);
+    free(wide);
+    if (written == 0 || written >= needed) {
+        free(absolute);
+        return NULL;
+    }
+    for (wchar_t* cursor = absolute; *cursor; ++cursor) {
+        if (*cursor == L'/') *cursor = L'\\';
+    }
+
+    bool unc = absolute[0] == L'\\' && absolute[1] == L'\\';
+    const wchar_t* prefix = unc ? L"\\\\?\\UNC\\" : L"\\\\?\\";
+    const wchar_t* suffix = unc ? absolute + 2 : absolute;
+    size_t prefix_len = wcslen(prefix);
+    size_t suffix_len = wcslen(suffix);
+    wchar_t* extended = (wchar_t*)malloc(
+        (prefix_len + suffix_len + 1u) * sizeof(wchar_t));
+    if (!extended) {
+        free(absolute);
+        return NULL;
+    }
+    memcpy(extended, prefix, prefix_len * sizeof(wchar_t));
+    memcpy(extended + prefix_len, suffix, (suffix_len + 1u) * sizeof(wchar_t));
+    free(absolute);
+    return extended;
+}
+
 static bool wide_buffer_reserve(WideBuffer* b, size_t extra)
 {
     if (!b || extra > SIZE_MAX - b->len - 1u) return false;
@@ -364,13 +408,32 @@ static bool wide_is_dangerous(const wchar_t* path)
     return n <= 0 || path_is_dangerous(utf8);
 }
 
+static wchar_t* first_creatable_component_w(wchar_t* path)
+{
+    if (!path) return NULL;
+    if (wcsncmp(path, L"\\\\?\\UNC\\", 8) == 0) {
+        wchar_t* server_end = wcschr(path + 8, L'\\');
+        return server_end ? wcschr(server_end + 1, L'\\') : NULL;
+    }
+    if (wcsncmp(path, L"\\\\?\\", 4) == 0 &&
+        path[4] && path[5] == L':' && path[6] == L'\\') return path + 6;
+    if (path[0] == L'\\' && path[1] == L'\\') {
+        wchar_t* server_end = wcschr(path + 2, L'\\');
+        return server_end ? wcschr(server_end + 1, L'\\') : NULL;
+    }
+    if (path[0] && path[1] == L':' &&
+        (path[2] == L'\\' || path[2] == L'/')) return path + 2;
+    return path;
+}
+
 static int make_dirs_w(wchar_t* path)
 {
     size_t len = wcslen(path);
     while (len > 1u && (path[len - 1u] == L'/' || path[len - 1u] == L'\\')) path[--len] = L'\0';
-    for (wchar_t* p = path; *p; ++p) {
+    wchar_t* first = first_creatable_component_w(path);
+    if (!first) return -1;
+    for (wchar_t* p = first + (*first != L'\0'); *p; ++p) {
         if (*p != L'/' && *p != L'\\') continue;
-        if (p == path || (p == path + 2 && path[1] == L':')) continue;
         wchar_t saved = *p;
         *p = L'\0';
         if (!CreateDirectoryW(path, NULL) && GetLastError() != ERROR_ALREADY_EXISTS) return -1;
@@ -647,9 +710,12 @@ int64_t baa_runtime_make_dirs(const BaaRuntimeChar* baa_path)
     char* path = baa_text_to_utf8(baa_path);
     if (!path || path_is_dangerous(path)) { free(path); return -1; }
 #ifdef _WIN32
-    wchar_t* wide = utf8_to_wide(path);
-    int result = (!wide || wide_is_dangerous(wide)) ? -1 : make_dirs_w(wide);
-    free(wide);
+    wchar_t* safety_path = utf8_to_wide(path);
+    wchar_t* extended_path = utf8_to_extended_path(path);
+    int result = (!safety_path || wide_is_dangerous(safety_path) ||
+                  !extended_path) ? -1 : make_dirs_w(extended_path);
+    free(safety_path);
+    free(extended_path);
 #else
     int result = make_dirs_utf8(path);
 #endif
@@ -662,9 +728,12 @@ int64_t baa_runtime_remove_tree(const BaaRuntimeChar* baa_path)
     char* path = baa_text_to_utf8(baa_path);
     if (!path || path_is_dangerous(path)) { free(path); return -1; }
 #ifdef _WIN32
-    wchar_t* wide = utf8_to_wide(path);
-    int result = (!wide || wide_is_dangerous(wide)) ? -1 : remove_tree_w(wide);
-    free(wide);
+    wchar_t* safety_path = utf8_to_wide(path);
+    wchar_t* extended_path = utf8_to_extended_path(path);
+    int result = (!safety_path || wide_is_dangerous(safety_path) ||
+                  !extended_path) ? -1 : remove_tree_w(extended_path);
+    free(safety_path);
+    free(extended_path);
 #else
     int result = remove_tree_utf8(path);
 #endif

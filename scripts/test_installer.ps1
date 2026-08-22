@@ -45,6 +45,7 @@ $uninstaller = Join-Path $InstallDirectory "unins000.exe"
 $markerKey = "HKCU:\Software\BaaEcosystem\Baa"
 $programDirectory = Join-Path $env:LOCALAPPDATA "Temp\BaaInstallerProgram"
 $programOutput = Join-Path $programDirectory "hello.exe"
+$missingProgramOutput = Join-Path $programDirectory "missing-nazm.exe"
 $gasProgramOutput = Join-Path $programDirectory "hello-gas.exe"
 $source = Join-Path $root "examples\hello_world.baa"
 $installed = $false
@@ -117,11 +118,33 @@ try {
     $hadNazmOverride = Test-Path Env:BAA_NAZM
     $oldNazmOverride = $env:BAA_NAZM
     try {
-        $env:PATH = "$NazmDirectory;$env:SystemRoot\System32;$env:SystemRoot"
         $env:BAA_HOME = $InstallDirectory
         $env:BAA_STDLIB = Join-Path $InstallDirectory "stdlib"
         Remove-Item Env:BAA_NAZM -ErrorAction SilentlyContinue
 
+        $env:PATH = "$env:SystemRoot\System32;$env:SystemRoot"
+        $oldErrorActionPreference = $ErrorActionPreference
+        $ErrorActionPreference = "Continue"
+        try {
+            $missingNazmOutput = @(
+                & $baaExecutable $source -o $missingProgramOutput 2>&1
+            ) -join "`n"
+            $missingNazmExitCode = $LASTEXITCODE
+        }
+        finally {
+            $ErrorActionPreference = $oldErrorActionPreference
+        }
+        if ($missingNazmExitCode -ne 4) {
+            throw "Installed Baa returned $missingNazmExitCode instead of 4 when Nazm was missing. Output: $missingNazmOutput"
+        }
+        if ([string]::IsNullOrWhiteSpace($missingNazmOutput)) {
+            throw "Installed Baa did not explain that its Nazm dependency was missing."
+        }
+        if (Test-Path -LiteralPath $missingProgramOutput) {
+            throw "Installed Baa produced output even though Nazm was unavailable."
+        }
+
+        $env:PATH = "$NazmDirectory;$env:SystemRoot\System32;$env:SystemRoot"
         & $baaExecutable --version
         if ($LASTEXITCODE -ne 0) { throw "Installed Baa version probe failed." }
         & $baaExecutable $source -o $programOutput

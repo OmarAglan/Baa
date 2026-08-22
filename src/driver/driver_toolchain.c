@@ -232,6 +232,20 @@ static bool win_prepare_output_file(const wchar_t* path)
     return true;
 }
 
+static bool win_toolchain_path_is_long(const char* path)
+{
+    wchar_t* absolute = baa_windows_extended_path_utf8(path);
+    if (!absolute) return true;
+    const wchar_t* measured = absolute;
+    if (wcsncmp(absolute, L"\\\\?\\UNC\\", 8) == 0)
+        measured = absolute + 6;
+    else if (wcsncmp(absolute, L"\\\\?\\", 4) == 0)
+        measured = absolute + 4;
+    bool is_long = wcslen(measured) >= 240u;
+    free(absolute);
+    return is_long;
+}
+
 /**
  * @brief تجهيز مسار الأداة إلى الملف الحقيقي بلا نسخ.
  *
@@ -244,11 +258,12 @@ static bool win_prepare_toolchain_path(const char* path,
                                        size_t out_cap)
 {
     if (!path || !out || out_cap == 0) return false;
-    if (g_gcc_direct_unicode_paths && strlen(path) < 240u)
+    bool is_long = win_toolchain_path_is_long(path);
+    if (g_gcc_direct_unicode_paths && !is_long)
         return win_copy_path_text(path, out, out_cap);
 
     bool needs_alias = !win_utf8_is_ascii(path) ||
-                       strlen(path) >= 240u ||
+                       is_long ||
                        strpbrk(path, " \t") != NULL;
     if (!needs_alias) return win_copy_path_text(path, out, out_cap);
 

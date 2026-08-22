@@ -157,9 +157,37 @@ try {
     $unicodeName = (-join [char[]](0x0645, 0x0633, 0x0627, 0x0631)) + " path"
     $unicodeDirectory = Join-Path $extractDirectory $unicodeName
     [IO.Directory]::CreateDirectory($unicodeDirectory) | Out-Null
-    $unicodeObject = Join-Path $unicodeDirectory "probe.o"
-    $unicodeProgram = Join-Path $unicodeDirectory "probe.exe"
-    Copy-Item -LiteralPath $probeObject -Destination $unicodeObject
+    $unicodeAssemblyName = (-join [char[]](
+        0x0645, 0x062F, 0x062E, 0x0644)) + " input.s"
+    $unicodeObjectName = (-join [char[]](
+        0x0643, 0x0627, 0x0626, 0x0646)) + " output.o"
+    $unicodeResponseName = (-join [char[]](
+        0x062E, 0x064A, 0x0627, 0x0631, 0x0627, 0x062A)) + " link.rsp"
+    $unicodeProgramName = (-join [char[]](
+        0x0628, 0x0631, 0x0646, 0x0627, 0x0645, 0x062C)) + " output.exe"
+    $unicodeEntry = -join [char[]](
+        0x0627, 0x0644, 0x0631, 0x0626, 0x064A, 0x0633, 0x064A, 0x0629,
+        0x005F, 0x0628, 0x062F, 0x0621)
+    $unicodeAssembly = Join-Path $unicodeDirectory $unicodeAssemblyName
+    $unicodeObject = Join-Path $unicodeDirectory $unicodeObjectName
+    $unicodeResponse = Join-Path $unicodeDirectory $unicodeResponseName
+    $unicodeProgram = Join-Path $unicodeDirectory $unicodeProgramName
+    $unicodeAssemblyText = @(
+        ".text",
+        ".globl $unicodeEntry",
+        ".extern ExitProcess",
+        "${unicodeEntry}:",
+        '  sub $40, %rsp',
+        "  xor %ecx, %ecx",
+        "  call ExitProcess"
+    ) -join "`n"
+    [IO.File]::WriteAllText(
+        $unicodeAssembly, $unicodeAssemblyText + "`n",
+        (New-Object Text.UTF8Encoding($false)))
+    [IO.File]::WriteAllText(
+        $unicodeResponse,
+        "-u`n$unicodeEntry`n-e`n$unicodeEntry`n",
+        (New-Object Text.UTF8Encoding($false)))
     $unicodeProbePassed = $false
 
     $oldPath = $env:PATH
@@ -177,11 +205,26 @@ try {
         if ($LASTEXITCODE -ne 0) { throw "Private linker probe executable failed." }
         $savedPreference = $ErrorActionPreference
         $ErrorActionPreference = "Continue"
-        & $gcc -nostartfiles "-Wl,-e,mainCRTStartup" $unicodeObject -lkernel32 -o $unicodeProgram 2>$null
-        $unicodeExitCode = $LASTEXITCODE
+        Push-Location $unicodeDirectory
+        try {
+            & $gcc -c $unicodeAssemblyName -o $unicodeObjectName 2>$null
+            $unicodeAssembleExitCode = $LASTEXITCODE
+            if ($unicodeAssembleExitCode -eq 0) {
+                & $gcc -nostartfiles "-Wl,@$unicodeResponseName" `
+                    $unicodeObjectName -lkernel32 -o $unicodeProgramName 2>$null
+                $unicodeLinkExitCode = $LASTEXITCODE
+            }
+            else {
+                $unicodeLinkExitCode = -1
+            }
+        }
+        finally {
+            Pop-Location
+        }
         $ErrorActionPreference = $savedPreference
         $unicodeProbePassed =
-            ($unicodeExitCode -eq 0) -and
+            ($unicodeAssembleExitCode -eq 0) -and
+            ($unicodeLinkExitCode -eq 0) -and
             (Test-Path -LiteralPath $unicodeProgram -PathType Leaf)
         if ($unicodeProbePassed) {
             & $unicodeProgram
@@ -193,6 +236,7 @@ try {
     }
 
     $gccHash = (Get-FileHash -Algorithm SHA256 -LiteralPath $gcc).Hash
+    $unicodePathMode = if ($unicodeProbePassed) { 'direct' } else { 'short-path' }
     $manifest = @(
         "format=baa-portable-toolchain-v1",
         "target=x86_64-w64-mingw32",
@@ -200,7 +244,7 @@ try {
         "gcc_sha256=$gccHash",
         "archive_sha256=$archiveSha256",
         "source_url=$archiveUrl",
-        "unicode_paths=direct",
+        "unicode_paths=$unicodePathMode",
         "pei386_runtime_relocator=retain",
         "purpose=Baa hosted linking until the native Nazm linker is admitted"
     ) -join "`n"

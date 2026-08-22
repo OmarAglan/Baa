@@ -91,12 +91,17 @@ $manifestLines = [IO.File]::ReadAllLines((Resolve-Path -LiteralPath $manifestPat
 foreach ($requiredLine in @(
     "format=baa-portable-toolchain-v1",
     "target=x86_64-w64-mingw32",
-    "unicode_paths=direct",
     "pei386_runtime_relocator=retain"
 )) {
     if ($manifestLines -notcontains $requiredLine) {
         throw "Private linker manifest is missing '$requiredLine'."
     }
+}
+$unicodePathLines = @($manifestLines | Where-Object {
+    $_ -in @('unicode_paths=direct', 'unicode_paths=short-path')
+})
+if ($unicodePathLines.Count -ne 1) {
+    throw "Private linker manifest must select exactly one admitted Unicode path mode."
 }
 $recordedHashLine = $manifestLines | Where-Object { $_ -like "gcc_sha256=*" } | Select-Object -First 1
 $gccPath = Join-Path $ToolchainDirectory "bin\gcc.exe"

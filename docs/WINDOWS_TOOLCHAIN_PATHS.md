@@ -88,15 +88,15 @@ round trip, so Arabic working directories cannot leak ANSI bytes into JSON.
 
 ## Direct-Unicode portable toolchains
 
-An admitted portable toolchain can declare direct Unicode support through
-`BAA-TOOLCHAIN-MANIFEST.txt` at its root. Baa requires both
-`format=baa-portable-toolchain-v1` and `unicode_paths=direct` before passing
-ordinary Unicode and spaced paths directly. Baa also verifies that the active
-Windows code page is UTF-8. Merely representing Arabic in an ANSI page such as
-1256 is insufficient: some MinGW/GNU tools reinterpret the resulting narrow
-bytes as UTF-8 and corrupt the path. When the UTF-8 host check fails, Baa
-retains the measured no-copy filesystem-alias adapter used by unmarked GCC
-installations.
+An admitted portable toolchain records the result of its Unicode-path probe in
+`BAA-TOOLCHAIN-MANIFEST.txt`. The value is `unicode_paths=direct` only when the
+pinned GCC actually passes; otherwise it is `unicode_paths=short-path`. Baa
+requires the portable manifest and the direct value before passing ordinary
+Unicode and spaced paths directly, and also verifies that the active Windows
+code page is UTF-8. Merely representing Arabic in an ANSI page such as 1256 is
+insufficient: some MinGW/GNU tools reinterpret the resulting narrow bytes as
+UTF-8 and corrupt the path. The measured `short-path` mode uses the same real
+filesystem entities through no-copy ASCII aliases.
 
 The standalone Windows package uses a pinned relocatable WinLibs kit. UTF-8
 Windows hosts may pass direct Arabic runtime-archive and executable paths;

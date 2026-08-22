@@ -25,14 +25,14 @@ EXPECTED_TARGETS = {
         "summary": {"emitted": 100, "unsupported": 0, "error": 0},
         "blockers": {},
         "emitted_sources_sha256": (
-            "a0f36b388029e61e8737c028b5290b853e780e104034f5fea0340e8c403a86ee"
+            "a65683d5f0fed92ef0135bc476c16aea3161e1361ef452fb091791288193cbbb"
         ),
     },
     "x86_64-windows": {
         "summary": {"emitted": 100, "unsupported": 0, "error": 0},
         "blockers": {},
         "emitted_sources_sha256": (
-            "a0f36b388029e61e8737c028b5290b853e780e104034f5fea0340e8c403a86ee"
+            "a65683d5f0fed92ef0135bc476c16aea3161e1361ef452fb091791288193cbbb"
         ),
     },
 }

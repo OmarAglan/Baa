@@ -1178,7 +1178,7 @@ class NazmEmitterTests(unittest.TestCase):
                 "--target=x86_64-windows",
                 "-I",
                 str(ROOT),
-                str(ROOT / "examples" / "error_handling_demo.baa"),
+                str(ROOT / "examples" / "error_handling_demo.باء"),
                 "-o",
                 str(output),
             )
@@ -2030,7 +2030,7 @@ class NazmEmitterTests(unittest.TestCase):
                 self.assertEqual(selected_run.returncode, production_run.returncode)
                 self.assertEqual(selected_run.stdout, production_run.stdout)
                 self.assertEqual(selected_run.stderr, production_run.stderr)
-                if source.name == "math_and_format.baa":
+                if source.name == "math_and_format.باء":
                     self.assertIn(b"0.4794", production_run.stdout)
                     self.assertIn(b"4.794255e-01", production_run.stdout)
 

@@ -48,6 +48,9 @@ ChangesEnvironment=yes
 SetupLogging=yes
 UsePreviousAppDir=yes
 UsePreviousLanguage=yes
+UsePreviousTasks=yes
+CloseApplications=yes
+RestartApplications=no
 UninstallDisplayIcon={app}\{#MyAppExeName}
 UninstallDisplayName={#MyAppName} {#MyAppVersion}
 
@@ -67,6 +70,12 @@ Source: "targets\*"; DestDir: "{app}\targets"; Flags: ignoreversion recursesubdi
 Source: "README.md"; DestDir: "{app}"; Flags: ignoreversion
 Source: "CHANGELOG.md"; DestDir: "{app}"; Flags: ignoreversion
 Source: "ROADMAP.md"; DestDir: "{app}"; Flags: ignoreversion
+
+[InstallDelete]
+Type: files; Name: "{app}\baa.exe"
+Type: files; Name: "{app}\libbaa_runtime.a"
+Type: filesandordirs; Name: "{app}\gcc"
+Type: filesandordirs; Name: "{app}\stdlib"
 
 [Icons]
 Name: "{autoprograms}\باء\دليل باء"; Filename: "{app}\docs\USER_GUIDE.md"
@@ -131,6 +140,8 @@ begin
 end;
 
 procedure ApplyBaaEnvironment;
+var
+  Root: Integer;
 begin
   if EcoEnsurePathContains(ExpandConstant('{app}')) then
     BaaSetOwnedValue(BAA_PATH_OWNED_VALUE, True);
@@ -138,6 +149,11 @@ begin
     BAA_HOME_OWNED_VALUE);
   EnsureBaaOwnedEnvironment('BAA_STDLIB', ExpandConstant('{app}\stdlib'),
     BAA_STDLIB_OWNED_VALUE);
+  BaaRegistryRoot(Root);
+  RegWriteStringValue(Root, BAA_INSTALLER_KEY, 'InstallLocation',
+    ExpandConstant('{app}'));
+  RegWriteStringValue(Root, BAA_INSTALLER_KEY, 'Version',
+    '{#MyAppVersion}');
 end;
 
 function NazmAtInstallRoot(const Root: Integer): Boolean;
@@ -163,6 +179,7 @@ begin
   Result :=
     FileExists(ExpandConstant('{app}\{#MyAppExeName}')) and
     FileExists(ExpandConstant('{app}\libbaa_runtime.a')) and
+    FileExists(ExpandConstant('{app}\stdlib\المكتبة_القياسية.رأسباء')) and
     FileExists(ExpandConstant('{app}\stdlib\baalib.baahd')) and
     FileExists(ExpandConstant('{app}\gcc\bin\gcc.exe')) and
     FileExists(ExpandConstant('{app}\gcc\bin\ld.exe')) and

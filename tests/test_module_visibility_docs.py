@@ -21,12 +21,13 @@ class ModuleVisibilityDocumentationTests(unittest.TestCase):
         self.assertIn("# Baa Module and Visibility Contract", self.text)
         self.assertIn("> **Version:** draft-0.1 | **Applies to:** Baa v0.7.1+", self.text)
 
-    def test_file_role_contract_covers_baa_and_baahd(self) -> None:
+    def test_file_role_contract_covers_canonical_arabic_extensions(self) -> None:
         for marker in (
-            "| `.baa` | implementation/source unit | yes |",
-            "| `.baahd` | header/declaration unit | only with `--check-header` |",
-            "Compile implementation units (`.baa`) as roots.",
-            "Include headers (`.baahd`) from implementation units with `#تضمين`.",
+            "| `.باء` | implementation/source unit | yes |",
+            "| `.رأسباء` | header/declaration unit | only with `--check-header` |",
+            "Compile implementation units (`.باء`) as roots.",
+            "Include headers (`.رأسباء`) from implementation units with `#تضمين`.",
+            "`.baa` and `.baahd` remain accepted compatibility spellings",
             "Use `--check-header` to parse and semantically validate a header",
             "New public headers should be declaration-only by convention.",
             "`--check-header`",

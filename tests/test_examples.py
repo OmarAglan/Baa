@@ -37,9 +37,9 @@ class PublicExamplesCompileTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
         cls.baa = _find_baa()
-        cls.examples = sorted(EXAMPLES.glob("*.baa"))
+        cls.examples = sorted(EXAMPLES.glob("*.باء"))
         if not cls.examples:
-            raise AssertionError("No public examples found under examples/*.baa")
+            raise AssertionError("No public examples found under examples/*.باء")
 
     def test_public_examples_compile_with_verify(self) -> None:
         with tempfile.TemporaryDirectory(prefix="baa_examples_") as temp:

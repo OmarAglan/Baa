@@ -399,7 +399,7 @@ static void lex_fatal_include_cycle(Lexer* l, const char* requested_path, const 
     if (used < sizeof(chain)) {
         (void)snprintf(chain + used, sizeof(chain) - used,
                        ". مساعدة: اكسر دورة التضمين بنقل التصريحات المشتركة إلى ملف "
-                       ".baahd مستقل أو بإزالة أحد مسارات #تضمين المتبادلة");
+                       ".رأسباء مستقل أو بإزالة أحد مسارات #تضمين المتبادلة");
     }
 
     lex_fatal(l, "%s", chain);

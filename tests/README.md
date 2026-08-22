@@ -72,7 +72,7 @@ It also launches six Baa builds concurrently from one directory to reject shared
 artifact names. Other hosts report this platform-specific matrix as skipped.
 Every mode also runs `tests/test_arabic_numerals.py` to verify Arabic numeral rendering in
 machine-readable IR dumps.
-Every mode also runs `tests/test_examples.py`, which compiles every public `examples/*.baa`
+Every mode also runs `tests/test_examples.py`, which compiles every public `examples/*.باء`
 program with `-O2 --verify`.
 Every mode also runs `tests/test_header_self_check.py`, which verifies `--check-header`
 accepts declaration headers, rejects invalid header declarations, and emits no code/output.

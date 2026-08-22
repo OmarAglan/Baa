@@ -47,7 +47,9 @@ $programDirectory = Join-Path $env:LOCALAPPDATA "Temp\BaaInstallerProgram"
 $programOutput = Join-Path $programDirectory "hello.exe"
 $missingProgramOutput = Join-Path $programDirectory "missing-nazm.exe"
 $gasProgramOutput = Join-Path $programDirectory "hello-gas.exe"
-$source = Join-Path $root "examples\hello_world.baa"
+$sourceFixture = Join-Path $root "examples\hello_world.باء"
+$canonicalSourceName = 'hello.' + (-join [char[]](0x0628, 0x0627, 0x0621))
+$source = Join-Path $programDirectory $canonicalSourceName
 $installed = $false
 
 function Wait-InstallerState {
@@ -77,10 +79,22 @@ try {
         (Test-Path -LiteralPath $uninstaller -PathType Leaf) -and
         (Test-Path -LiteralPath $markerKey)
     }
+    $staleUpgradeFile = Join-Path $InstallDirectory "gcc\removed-by-upgrade.tmp"
+    [IO.File]::WriteAllText($staleUpgradeFile, "stale")
     Invoke-BaaInstaller
+    if (Test-Path -LiteralPath $staleUpgradeFile) {
+        throw "Baa repair did not remove an obsolete private-toolchain file."
+    }
+    $marker = Get-ItemProperty -LiteralPath $markerKey
+    if ($marker.Version -ne '0.6.0' -or
+        $marker.InstallLocation -ine $InstallDirectory) {
+        throw 'Baa installer did not record its installed version and location.'
+    }
 
     foreach ($required in @(
         "libbaa_runtime.a",
+        "stdlib\المكتبة_القياسية.رأسباء",
+        "stdlib\المكتبة_القياسية.باء",
         "stdlib\baalib.baahd",
         "gcc\bin\gcc.exe",
         "gcc\bin\ld.exe",
@@ -112,6 +126,7 @@ try {
     }
 
     [IO.Directory]::CreateDirectory($programDirectory) | Out-Null
+    [IO.File]::WriteAllBytes($source, [IO.File]::ReadAllBytes($sourceFixture))
     $oldPath = $env:PATH
     $oldHome = $env:BAA_HOME
     $oldStdlib = $env:BAA_STDLIB

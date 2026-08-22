@@ -18,7 +18,7 @@
 
 ## مثال سريع
 
-احفظ الملف الآتي باسم `مرحبا.baa` بترميز UTF-8:
+احفظ الملف الآتي باسم `مرحبا.باء` بترميز UTF-8:
 
 ```baa
 صحيح الرئيسية() {
@@ -30,12 +30,12 @@
 ثم صرّفه وشغّله:
 
 ```powershell
-.\build\baa.exe .\مرحبا.baa -o .\مرحبا.exe
+.\build\baa.exe .\مرحبا.باء -o .\مرحبا.exe
 .\مرحبا.exe
 ```
 
 ```sh
-./build-linux/baa ./مرحبا.baa -o ./مرحبا
+./build-linux/baa ./مرحبا.باء -o ./مرحبا
 ./مرحبا
 ```
 
@@ -118,11 +118,11 @@ cmake --build build-linux --parallel
 ## أوامر أساسية
 
 ```text
-baa <ملف.baa> -o <البرنامج>
-baa --check <ملف.baa>
-baa -S <ملف.baa>
-baa --target=x86_64-windows <ملف.baa>
-baa --target=x86_64-linux <ملف.baa>
+baa <ملف.باء> -o <البرنامج>
+baa --check <ملف.باء>
+baa -S <ملف.باء>
+baa --target=x86_64-windows <ملف.باء>
+baa --target=x86_64-linux <ملف.باء>
 baa --help
 ```
 
@@ -154,7 +154,8 @@ python .\scripts\qa_run.py --mode release
 | [دليل المستخدم](docs/USER_GUIDE.md) | التثبيت والاستخدام اليومي |
 | [الكتاب العربي](docs/BAA_BOOK_AR.md) | تعلّم اللغة بالعربية |
 | [مواصفة اللغة](docs/LANGUAGE.md) | المرجع الرسمي للصياغة والسلوك |
-| [عقد الوحدات والظهور](docs/MODULES_AND_VISIBILITY.md) | قواعد ملفات `.baa` و`.baahd` والتصريحات والربط |
+| [عقد أسماء الملفات العربية](docs/ARABIC_FILE_EXTENSIONS.md) | امتدادا `.باء` و`.رأسباء` ونافذة توافق المشاريع القديمة |
+| [عقد الوحدات والظهور](docs/MODULES_AND_VISIBILITY.md) | قواعد ملفات المصدر والرأس والتصريحات والربط |
 | [الأمثلة](examples/README.md) | برامج جاهزة للبناء والتجربة |
 | [المكتبة القياسية](docs/STDLIB_OWNERSHIP.md) | الواجهات وقواعد ملكية الذاكرة |
 | [عقود الأدوات](docs/TOOLING_CONTRACTS.md) | واجهات سطر الأوامر ومخططات JSON |

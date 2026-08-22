@@ -3,7 +3,7 @@
   "compiler": "baa version 0.6.0",
   "source_inventory": {
     "schema": "baa-assembly-surface-v1",
-    "sha256": "b1d3e2770b925a445a870d4e1df23fe138c234ceef29256320c125659aeb74d3"
+    "sha256": "82b1d487afa21ef2d6d357557b42fa772fecb3db8c0ff84ac01119f5360710af"
   },
   "status_contract": {
     "emitted": "Baa emitted canonical Arabic Nazm without Latin letters.",
@@ -23,25 +23,25 @@
       "unsupported_blockers": [],
       "sources": [
         {
-          "source": "examples/error_handling_demo.baa",
+          "source": "examples/error_handling_demo.باء",
           "status": "emitted",
           "exit_code": 0,
-          "sha256": "f891de09db5d49f5c83f5fafba26ece64375ed0fb6815fa549bae42836859fc9"
+          "sha256": "118edfc1d02006e914b5d61221673d0ffadfa9a4b03da59312aff1417c992f53"
         },
         {
-          "source": "examples/file_copy_small.baa",
+          "source": "examples/file_copy_small.باء",
           "status": "emitted",
           "exit_code": 0,
           "sha256": "f21cae74ad4e58ec2a0899ce67532797710024e639177b38b87273872fd76ef2"
         },
         {
-          "source": "examples/hello_world.baa",
+          "source": "examples/hello_world.باء",
           "status": "emitted",
           "exit_code": 0,
           "sha256": "5c7f34817a2536e8d50b37aee5e374b25dfc5bc32c71dba50c1ff791da40d28b"
         },
         {
-          "source": "examples/math_and_format.baa",
+          "source": "examples/math_and_format.باء",
           "status": "emitted",
           "exit_code": 0,
           "sha256": "fc653ca401e3036bcaaa3fe395156a712998a0bf95bccf7fecad939d8aea57af"
@@ -730,25 +730,25 @@
       "unsupported_blockers": [],
       "sources": [
         {
-          "source": "examples/error_handling_demo.baa",
+          "source": "examples/error_handling_demo.باء",
           "status": "emitted",
           "exit_code": 0,
-          "sha256": "9fd8c628939520a891e611f84446a87882bc446283708ffcb00da29f9fecdba3"
+          "sha256": "baaff8151b64feb8a4ba0b1ba8610a07baf47346876c8c41c853bd2aa4662ebd"
         },
         {
-          "source": "examples/file_copy_small.baa",
+          "source": "examples/file_copy_small.باء",
           "status": "emitted",
           "exit_code": 0,
           "sha256": "2282a5015b94ebe37e1f1417ed666bdd7acc0ab2e967692b9b00a7b27077f145"
         },
         {
-          "source": "examples/hello_world.baa",
+          "source": "examples/hello_world.باء",
           "status": "emitted",
           "exit_code": 0,
           "sha256": "a54c889ab3ebf56369c7c09c450690a65c6433733907292980d2b35a6d7c1a17"
         },
         {
-          "source": "examples/math_and_format.baa",
+          "source": "examples/math_and_format.باء",
           "status": "emitted",
           "exit_code": 0,
           "sha256": "37fd36cd79c6a7e1bd484373359e6cf70eadc53ad35f30e33c574b3dc8c94f58"

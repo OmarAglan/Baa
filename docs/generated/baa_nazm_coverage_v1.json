@@ -12,7 +12,7 @@
   "shadow_corpus": {
     "schema": "baa-nazm-shadow-corpus-v1",
     "compiler": "baa version 0.6.0",
-    "sha256": "8354d70ff29d9b1088989aa6ce10d9cc179793ab797d4d49c120f27d875e8377"
+    "sha256": "d42dcc6e39600edc14eaf75595f06c6376375b9f95bca54addc2716db565f5a7"
   },
   "status_contract": {
     "supported": "The complete inventory form is implemented by Nazm.",
@@ -34,10 +34,10 @@
         "omitted_source_count": 0,
         "compile_failures": [],
         "sources": [
-          "examples/error_handling_demo.baa",
-          "examples/file_copy_small.baa",
-          "examples/hello_world.baa",
-          "examples/math_and_format.baa",
+          "examples/error_handling_demo.باء",
+          "examples/file_copy_small.باء",
+          "examples/hello_world.باء",
+          "examples/math_and_format.باء",
           "tests/integration/backend/backend_arabic_numeral_source_tokens_v064_test.baa",
           "tests/integration/backend/backend_array_init_test.baa",
           "tests/integration/backend/backend_array_length_operator_test.baa",
@@ -146,25 +146,25 @@
           "unsupported_blockers": [],
           "sources": [
             {
-              "source": "examples/error_handling_demo.baa",
+              "source": "examples/error_handling_demo.باء",
               "status": "emitted",
               "exit_code": 0,
-              "sha256": "f891de09db5d49f5c83f5fafba26ece64375ed0fb6815fa549bae42836859fc9"
+              "sha256": "118edfc1d02006e914b5d61221673d0ffadfa9a4b03da59312aff1417c992f53"
             },
             {
-              "source": "examples/file_copy_small.baa",
+              "source": "examples/file_copy_small.باء",
               "status": "emitted",
               "exit_code": 0,
               "sha256": "f21cae74ad4e58ec2a0899ce67532797710024e639177b38b87273872fd76ef2"
             },
             {
-              "source": "examples/hello_world.baa",
+              "source": "examples/hello_world.باء",
               "status": "emitted",
               "exit_code": 0,
               "sha256": "5c7f34817a2536e8d50b37aee5e374b25dfc5bc32c71dba50c1ff791da40d28b"
             },
             {
-              "source": "examples/math_and_format.baa",
+              "source": "examples/math_and_format.باء",
               "status": "emitted",
               "exit_code": 0,
               "sha256": "fc653ca401e3036bcaaa3fe395156a712998a0bf95bccf7fecad939d8aea57af"
@@ -852,9 +852,9 @@
           ],
           "count": 417,
           "samples": [
-            "examples/error_handling_demo.baa:581",
-            "examples/error_handling_demo.baa:584",
-            "examples/error_handling_demo.baa:587"
+            "examples/error_handling_demo.باء:581",
+            "examples/error_handling_demo.باء:584",
+            "examples/error_handling_demo.باء:587"
           ],
           "status": "unsupported",
           "reason": "Nazm implements this mnemonic, but not this operand shape or width."
@@ -867,9 +867,9 @@
           ],
           "count": 1949,
           "samples": [
-            "examples/error_handling_demo.baa:155",
-            "examples/error_handling_demo.baa:267",
-            "examples/error_handling_demo.baa:269"
+            "examples/error_handling_demo.باء:155",
+            "examples/error_handling_demo.باء:267",
+            "examples/error_handling_demo.باء:269"
           ],
           "status": "supported",
           "nazm": {
@@ -895,9 +895,9 @@
           ],
           "count": 375,
           "samples": [
-            "examples/error_handling_demo.baa:181",
-            "examples/error_handling_demo.baa:601",
-            "examples/file_copy_small.baa:64"
+            "examples/error_handling_demo.باء:181",
+            "examples/error_handling_demo.باء:601",
+            "examples/file_copy_small.باء:64"
           ],
           "status": "supported",
           "nazm": {
@@ -923,7 +923,7 @@
           ],
           "count": 183,
           "samples": [
-            "examples/file_copy_small.baa:509",
+            "examples/file_copy_small.باء:509",
             "tests/integration/backend/backend_custom_startup_test.baa:163",
             "tests/integration/backend/backend_custom_startup_test.baa:211"
           ],
@@ -938,9 +938,9 @@
           ],
           "count": 2410,
           "samples": [
-            "examples/error_handling_demo.baa:224",
-            "examples/error_handling_demo.baa:226",
-            "examples/error_handling_demo.baa:228"
+            "examples/error_handling_demo.باء:224",
+            "examples/error_handling_demo.باء:226",
+            "examples/error_handling_demo.باء:228"
           ],
           "status": "supported",
           "nazm": {
@@ -990,7 +990,7 @@
           ],
           "count": 6,
           "samples": [
-            "examples/file_copy_small.baa:754",
+            "examples/file_copy_small.باء:754",
             "tests/integration/backend/backend_file_io_test.baa:4600",
             "tests/integration/backend/backend_file_io_test.baa:5353"
           ],
@@ -1005,8 +1005,8 @@
           ],
           "count": 18,
           "samples": [
-            "examples/file_copy_small.baa:722",
-            "examples/file_copy_small.baa:742",
+            "examples/file_copy_small.باء:722",
+            "examples/file_copy_small.باء:742",
             "tests/integration/backend/backend_file_io_noheader_test.baa:893"
           ],
           "status": "unsupported",
@@ -1020,9 +1020,9 @@
           ],
           "count": 476,
           "samples": [
-            "examples/error_handling_demo.baa:291",
-            "examples/error_handling_demo.baa:350",
-            "examples/error_handling_demo.baa:352"
+            "examples/error_handling_demo.باء:291",
+            "examples/error_handling_demo.باء:350",
+            "examples/error_handling_demo.باء:352"
           ],
           "status": "unsupported",
           "reason": "Nazm exposes only 64-bit general-purpose register instruction forms."
@@ -1035,9 +1035,9 @@
           ],
           "count": 295,
           "samples": [
-            "examples/error_handling_demo.baa:192",
-            "examples/error_handling_demo.baa:332",
-            "examples/error_handling_demo.baa:401"
+            "examples/error_handling_demo.باء:192",
+            "examples/error_handling_demo.باء:332",
+            "examples/error_handling_demo.باء:401"
           ],
           "status": "unsupported",
           "reason": "Nazm implements this mnemonic, but not this operand shape or width."
@@ -1050,9 +1050,9 @@
           ],
           "count": 595,
           "samples": [
-            "examples/error_handling_demo.baa:194",
-            "examples/error_handling_demo.baa:196",
-            "examples/error_handling_demo.baa:198"
+            "examples/error_handling_demo.باء:194",
+            "examples/error_handling_demo.باء:196",
+            "examples/error_handling_demo.باء:198"
           ],
           "status": "supported",
           "nazm": {
@@ -1078,8 +1078,8 @@
           ],
           "count": 26,
           "samples": [
-            "examples/file_copy_small.baa:98",
-            "examples/file_copy_small.baa:294",
+            "examples/file_copy_small.باء:98",
+            "examples/file_copy_small.باء:294",
             "tests/integration/backend/backend_file_io_noheader_test.baa:100"
           ],
           "status": "supported",
@@ -1126,9 +1126,9 @@
           ],
           "count": 1501,
           "samples": [
-            "examples/error_handling_demo.baa:81",
-            "examples/error_handling_demo.baa:91",
-            "examples/error_handling_demo.baa:95"
+            "examples/error_handling_demo.باء:81",
+            "examples/error_handling_demo.باء:91",
+            "examples/error_handling_demo.باء:95"
           ],
           "status": "partial",
           "nazm": {
@@ -1161,9 +1161,9 @@
           ],
           "count": 50,
           "samples": [
-            "examples/error_handling_demo.baa:183",
-            "examples/file_copy_small.baa:429",
-            "examples/math_and_format.baa:130"
+            "examples/error_handling_demo.باء:183",
+            "examples/file_copy_small.باء:429",
+            "examples/math_and_format.باء:130"
           ],
           "status": "unsupported",
           "reason": "Nazm exposes only 64-bit general-purpose register instruction forms."
@@ -1191,9 +1191,9 @@
           ],
           "count": 100,
           "samples": [
-            "examples/file_copy_small.baa:426",
-            "examples/file_copy_small.baa:443",
-            "examples/file_copy_small.baa:555"
+            "examples/file_copy_small.باء:426",
+            "examples/file_copy_small.باء:443",
+            "examples/file_copy_small.باء:555"
           ],
           "status": "unsupported",
           "reason": "Nazm exposes only 64-bit general-purpose register instruction forms."
@@ -1219,9 +1219,9 @@
           ],
           "count": 524,
           "samples": [
-            "examples/error_handling_demo.baa:346",
-            "examples/error_handling_demo.baa:424",
-            "examples/error_handling_demo.baa:427"
+            "examples/error_handling_demo.باء:346",
+            "examples/error_handling_demo.باء:424",
+            "examples/error_handling_demo.باء:427"
           ],
           "status": "unsupported",
           "reason": "Nazm implements this mnemonic, but not this operand shape or width."
@@ -1234,9 +1234,9 @@
           ],
           "count": 1937,
           "samples": [
-            "examples/error_handling_demo.baa:20",
-            "examples/error_handling_demo.baa:34",
-            "examples/error_handling_demo.baa:83"
+            "examples/error_handling_demo.باء:20",
+            "examples/error_handling_demo.باء:34",
+            "examples/error_handling_demo.باء:83"
           ],
           "status": "supported",
           "nazm": {
@@ -1330,9 +1330,9 @@
           "operands": [],
           "count": 2262,
           "samples": [
-            "examples/error_handling_demo.baa:50",
-            "examples/error_handling_demo.baa:532",
-            "examples/error_handling_demo.baa:537"
+            "examples/error_handling_demo.باء:50",
+            "examples/error_handling_demo.باء:532",
+            "examples/error_handling_demo.باء:537"
           ],
           "status": "supported",
           "nazm": {
@@ -1449,9 +1449,9 @@
           ],
           "count": 2262,
           "samples": [
-            "examples/error_handling_demo.baa:51",
-            "examples/error_handling_demo.baa:533",
-            "examples/error_handling_demo.baa:538"
+            "examples/error_handling_demo.باء:51",
+            "examples/error_handling_demo.باء:533",
+            "examples/error_handling_demo.باء:538"
           ],
           "status": "supported",
           "nazm": {
@@ -1476,9 +1476,9 @@
           ],
           "count": 282,
           "samples": [
-            "examples/error_handling_demo.baa:157",
-            "examples/error_handling_demo.baa:220",
-            "examples/file_copy_small.baa:501"
+            "examples/error_handling_demo.باء:157",
+            "examples/error_handling_demo.باء:220",
+            "examples/file_copy_small.باء:501"
           ],
           "status": "supported",
           "nazm": {
@@ -1558,9 +1558,9 @@
           ],
           "count": 3095,
           "samples": [
-            "examples/error_handling_demo.baa:25",
-            "examples/error_handling_demo.baa:39",
-            "examples/error_handling_demo.baa:88"
+            "examples/error_handling_demo.باء:25",
+            "examples/error_handling_demo.باء:39",
+            "examples/error_handling_demo.باء:88"
           ],
           "status": "supported",
           "nazm": {
@@ -1579,9 +1579,9 @@
           ],
           "count": 1389,
           "samples": [
-            "examples/error_handling_demo.baa:24",
-            "examples/error_handling_demo.baa:38",
-            "examples/error_handling_demo.baa:87"
+            "examples/error_handling_demo.باء:24",
+            "examples/error_handling_demo.باء:38",
+            "examples/error_handling_demo.باء:87"
           ],
           "status": "supported",
           "nazm": {
@@ -1601,9 +1601,9 @@
           ],
           "count": 417,
           "samples": [
-            "examples/error_handling_demo.baa:72",
-            "examples/error_handling_demo.baa:99",
-            "examples/error_handling_demo.baa:527"
+            "examples/error_handling_demo.باء:72",
+            "examples/error_handling_demo.باء:99",
+            "examples/error_handling_demo.باء:527"
           ],
           "status": "supported",
           "nazm": {
@@ -1624,9 +1624,9 @@
           ],
           "count": 869,
           "samples": [
-            "examples/error_handling_demo.baa:113",
-            "examples/error_handling_demo.baa:118",
-            "examples/error_handling_demo.baa:123"
+            "examples/error_handling_demo.باء:113",
+            "examples/error_handling_demo.باء:118",
+            "examples/error_handling_demo.باء:123"
           ],
           "status": "supported",
           "nazm": {
@@ -1644,9 +1644,9 @@
           "operands": [],
           "count": 471,
           "samples": [
-            "examples/error_handling_demo.baa:31",
-            "examples/error_handling_demo.baa:45",
-            "examples/error_handling_demo.baa:58"
+            "examples/error_handling_demo.باء:31",
+            "examples/error_handling_demo.باء:45",
+            "examples/error_handling_demo.باء:58"
           ],
           "status": "unsupported",
           "reason": "Nazm does not implement the leave instruction."
@@ -1659,9 +1659,9 @@
           ],
           "count": 821,
           "samples": [
-            "examples/error_handling_demo.baa:262",
-            "examples/error_handling_demo.baa:301",
-            "examples/error_handling_demo.baa:368"
+            "examples/error_handling_demo.باء:262",
+            "examples/error_handling_demo.باء:301",
+            "examples/error_handling_demo.باء:368"
           ],
           "status": "supported",
           "nazm": {
@@ -1687,9 +1687,9 @@
           ],
           "count": 435,
           "samples": [
-            "examples/error_handling_demo.baa:599",
-            "examples/error_handling_demo.baa:602",
-            "examples/file_copy_small.baa:128"
+            "examples/error_handling_demo.باء:599",
+            "examples/error_handling_demo.باء:602",
+            "examples/file_copy_small.باء:128"
           ],
           "status": "unsupported",
           "reason": "Nazm implements this mnemonic, but not this operand shape or width."
@@ -1730,9 +1730,9 @@
           ],
           "count": 566,
           "samples": [
-            "examples/error_handling_demo.baa:182",
-            "examples/error_handling_demo.baa:278",
-            "examples/error_handling_demo.baa:325"
+            "examples/error_handling_demo.باء:182",
+            "examples/error_handling_demo.باء:278",
+            "examples/error_handling_demo.باء:325"
           ],
           "status": "supported",
           "nazm": {
@@ -1758,9 +1758,9 @@
           ],
           "count": 625,
           "samples": [
-            "examples/error_handling_demo.baa:589",
-            "examples/error_handling_demo.baa:591",
-            "examples/error_handling_demo.baa:594"
+            "examples/error_handling_demo.باء:589",
+            "examples/error_handling_demo.باء:591",
+            "examples/error_handling_demo.باء:594"
           ],
           "status": "supported",
           "nazm": {
@@ -1786,9 +1786,9 @@
           ],
           "count": 1071,
           "samples": [
-            "examples/error_handling_demo.baa:290",
-            "examples/error_handling_demo.baa:349",
-            "examples/error_handling_demo.baa:351"
+            "examples/error_handling_demo.باء:290",
+            "examples/error_handling_demo.باء:349",
+            "examples/error_handling_demo.باء:351"
           ],
           "status": "supported",
           "nazm": {
@@ -1814,7 +1814,7 @@
           ],
           "count": 2,
           "samples": [
-            "examples/error_handling_demo.baa:93",
+            "examples/error_handling_demo.باء:93",
             "tests/integration/backend/backend_error_handling_v043_test.baa:297"
           ],
           "status": "unsupported",
@@ -1828,9 +1828,9 @@
           ],
           "count": 65,
           "samples": [
-            "examples/error_handling_demo.baa:138",
-            "examples/error_handling_demo.baa:659",
-            "examples/math_and_format.baa:23"
+            "examples/error_handling_demo.باء:138",
+            "examples/error_handling_demo.باء:659",
+            "examples/math_and_format.باء:23"
           ],
           "status": "supported",
           "nazm": {
@@ -1856,8 +1856,8 @@
           ],
           "count": 3,
           "samples": [
-            "examples/error_handling_demo.baa:97",
-            "examples/file_copy_small.baa:889",
+            "examples/error_handling_demo.باء:97",
+            "examples/file_copy_small.باء:889",
             "tests/integration/backend/backend_error_handling_v043_test.baa:301"
           ],
           "status": "supported",
@@ -1938,9 +1938,9 @@
           ],
           "count": 217,
           "samples": [
-            "examples/error_handling_demo.baa:101",
-            "examples/error_handling_demo.baa:102",
-            "examples/error_handling_demo.baa:117"
+            "examples/error_handling_demo.باء:101",
+            "examples/error_handling_demo.باء:102",
+            "examples/error_handling_demo.باء:117"
           ],
           "status": "supported",
           "nazm": {
@@ -1966,9 +1966,9 @@
           ],
           "count": 903,
           "samples": [
-            "examples/error_handling_demo.baa:75",
-            "examples/error_handling_demo.baa:164",
-            "examples/error_handling_demo.baa:165"
+            "examples/error_handling_demo.باء:75",
+            "examples/error_handling_demo.باء:164",
+            "examples/error_handling_demo.باء:165"
           ],
           "status": "unsupported",
           "reason": "Nazm implements this mnemonic, but not this operand shape or width."
@@ -2008,9 +2008,9 @@
           ],
           "count": 2746,
           "samples": [
-            "examples/error_handling_demo.baa:27",
-            "examples/error_handling_demo.baa:41",
-            "examples/error_handling_demo.baa:54"
+            "examples/error_handling_demo.باء:27",
+            "examples/error_handling_demo.باء:41",
+            "examples/error_handling_demo.باء:54"
           ],
           "status": "supported",
           "nazm": {
@@ -2036,9 +2036,9 @@
           ],
           "count": 8838,
           "samples": [
-            "examples/error_handling_demo.baa:74",
-            "examples/error_handling_demo.baa:76",
-            "examples/error_handling_demo.baa:168"
+            "examples/error_handling_demo.باء:74",
+            "examples/error_handling_demo.باء:76",
+            "examples/error_handling_demo.باء:168"
           ],
           "status": "supported",
           "nazm": {
@@ -2092,9 +2092,9 @@
           ],
           "count": 4466,
           "samples": [
-            "examples/error_handling_demo.baa:53",
-            "examples/error_handling_demo.baa:73",
-            "examples/error_handling_demo.baa:100"
+            "examples/error_handling_demo.باء:53",
+            "examples/error_handling_demo.باء:73",
+            "examples/error_handling_demo.باء:100"
           ],
           "status": "supported",
           "nazm": {
@@ -2148,9 +2148,9 @@
           ],
           "count": 11990,
           "samples": [
-            "examples/error_handling_demo.baa:16",
-            "examples/error_handling_demo.baa:17",
-            "examples/error_handling_demo.baa:18"
+            "examples/error_handling_demo.باء:16",
+            "examples/error_handling_demo.باء:17",
+            "examples/error_handling_demo.باء:18"
           ],
           "status": "supported",
           "nazm": {
@@ -2208,9 +2208,9 @@
           ],
           "count": 799,
           "samples": [
-            "examples/error_handling_demo.baa:213",
-            "examples/error_handling_demo.baa:214",
-            "examples/error_handling_demo.baa:215"
+            "examples/error_handling_demo.باء:213",
+            "examples/error_handling_demo.باء:214",
+            "examples/error_handling_demo.باء:215"
           ],
           "status": "supported",
           "nazm": {
@@ -2255,9 +2255,9 @@
           ],
           "count": 65,
           "samples": [
-            "examples/error_handling_demo.baa:98",
-            "examples/file_copy_small.baa:471",
-            "examples/file_copy_small.baa:558"
+            "examples/error_handling_demo.باء:98",
+            "examples/file_copy_small.باء:471",
+            "examples/file_copy_small.باء:558"
           ],
           "status": "supported",
           "nazm": {
@@ -2317,9 +2317,9 @@
           ],
           "count": 38,
           "samples": [
-            "examples/error_handling_demo.baa:422",
-            "examples/math_and_format.baa:369",
-            "examples/math_and_format.baa:747"
+            "examples/error_handling_demo.باء:422",
+            "examples/math_and_format.باء:369",
+            "examples/math_and_format.باء:747"
           ],
           "status": "unsupported",
           "reason": "Nazm implements this mnemonic, but not this operand shape or width."
@@ -2332,9 +2332,9 @@
           ],
           "count": 2969,
           "samples": [
-            "examples/error_handling_demo.baa:22",
-            "examples/error_handling_demo.baa:36",
-            "examples/error_handling_demo.baa:85"
+            "examples/error_handling_demo.باء:22",
+            "examples/error_handling_demo.باء:36",
+            "examples/error_handling_demo.باء:85"
           ],
           "status": "supported",
           "nazm": {
@@ -2363,9 +2363,9 @@
           ],
           "count": 1487,
           "samples": [
-            "examples/error_handling_demo.baa:28",
-            "examples/error_handling_demo.baa:29",
-            "examples/error_handling_demo.baa:30"
+            "examples/error_handling_demo.باء:28",
+            "examples/error_handling_demo.باء:29",
+            "examples/error_handling_demo.باء:30"
           ],
           "status": "unsupported",
           "reason": "The unsuffixed GAS form has no width in the inventory and cannot be mapped safely."
@@ -2378,9 +2378,9 @@
           ],
           "count": 711,
           "samples": [
-            "examples/error_handling_demo.baa:13",
-            "examples/error_handling_demo.baa:14",
-            "examples/error_handling_demo.baa:15"
+            "examples/error_handling_demo.باء:13",
+            "examples/error_handling_demo.باء:14",
+            "examples/error_handling_demo.باء:15"
           ],
           "status": "unsupported",
           "reason": "The unsuffixed GAS form has no width in the inventory and cannot be mapped safely."
@@ -2393,9 +2393,9 @@
           ],
           "count": 271,
           "samples": [
-            "examples/error_handling_demo.baa:11",
-            "examples/error_handling_demo.baa:64",
-            "examples/file_copy_small.baa:11"
+            "examples/error_handling_demo.باء:11",
+            "examples/error_handling_demo.باء:64",
+            "examples/file_copy_small.باء:11"
           ],
           "status": "unsupported",
           "reason": "The unsuffixed GAS form has no width in the inventory and cannot be mapped safely."
@@ -2459,9 +2459,9 @@
           ],
           "count": 48,
           "samples": [
-            "examples/file_copy_small.baa:517",
-            "examples/file_copy_small.baa:572",
-            "examples/file_copy_small.baa:620"
+            "examples/file_copy_small.باء:517",
+            "examples/file_copy_small.باء:572",
+            "examples/file_copy_small.باء:620"
           ],
           "status": "unsupported",
           "reason": "Nazm exposes only 64-bit general-purpose register instruction forms."
@@ -2474,8 +2474,8 @@
           ],
           "count": 75,
           "samples": [
-            "examples/file_copy_small.baa:43",
-            "examples/file_copy_small.baa:239",
+            "examples/file_copy_small.باء:43",
+            "examples/file_copy_small.باء:239",
             "tests/integration/backend/backend_file_io_noheader_test.baa:45"
           ],
           "status": "unsupported",
@@ -2489,9 +2489,9 @@
           ],
           "count": 449,
           "samples": [
-            "examples/error_handling_demo.baa:263",
-            "examples/error_handling_demo.baa:299",
-            "examples/error_handling_demo.baa:302"
+            "examples/error_handling_demo.باء:263",
+            "examples/error_handling_demo.باء:299",
+            "examples/error_handling_demo.باء:302"
           ],
           "status": "supported",
           "nazm": {
@@ -2537,9 +2537,9 @@
           ],
           "count": 271,
           "samples": [
-            "examples/error_handling_demo.baa:10",
-            "examples/error_handling_demo.baa:63",
-            "examples/file_copy_small.baa:10"
+            "examples/error_handling_demo.باء:10",
+            "examples/error_handling_demo.باء:63",
+            "examples/file_copy_small.باء:10"
           ],
           "status": "supported",
           "nazm": {
@@ -2571,9 +2571,9 @@
           "operands": [],
           "count": 471,
           "samples": [
-            "examples/error_handling_demo.baa:32",
-            "examples/error_handling_demo.baa:46",
-            "examples/error_handling_demo.baa:59"
+            "examples/error_handling_demo.باء:32",
+            "examples/error_handling_demo.باء:46",
+            "examples/error_handling_demo.باء:59"
           ],
           "status": "supported",
           "nazm": {
@@ -2604,9 +2604,9 @@
           ],
           "count": 27,
           "samples": [
-            "examples/file_copy_small.baa:95",
-            "examples/file_copy_small.baa:291",
-            "examples/file_copy_small.baa:786"
+            "examples/file_copy_small.باء:95",
+            "examples/file_copy_small.باء:291",
+            "examples/file_copy_small.باء:786"
           ],
           "status": "unsupported",
           "reason": "Nazm implements this mnemonic, but not this operand shape or width."
@@ -2619,9 +2619,9 @@
           ],
           "count": 107,
           "samples": [
-            "examples/file_copy_small.baa:62",
-            "examples/file_copy_small.baa:102",
-            "examples/file_copy_small.baa:106"
+            "examples/file_copy_small.باء:62",
+            "examples/file_copy_small.باء:102",
+            "examples/file_copy_small.باء:106"
           ],
           "status": "supported",
           "nazm": {
@@ -2728,9 +2728,9 @@
           ],
           "count": 38,
           "samples": [
-            "examples/error_handling_demo.baa:421",
-            "examples/math_and_format.baa:368",
-            "examples/math_and_format.baa:746"
+            "examples/error_handling_demo.باء:421",
+            "examples/math_and_format.باء:368",
+            "examples/math_and_format.باء:746"
           ],
           "status": "supported",
           "nazm": {
@@ -2749,9 +2749,9 @@
           ],
           "count": 1971,
           "samples": [
-            "examples/error_handling_demo.baa:21",
-            "examples/error_handling_demo.baa:35",
-            "examples/error_handling_demo.baa:84"
+            "examples/error_handling_demo.باء:21",
+            "examples/error_handling_demo.باء:35",
+            "examples/error_handling_demo.باء:84"
           ],
           "status": "supported",
           "nazm": {
@@ -2770,9 +2770,9 @@
           ],
           "count": 99,
           "samples": [
-            "examples/file_copy_small.baa:120",
-            "examples/file_copy_small.baa:143",
-            "examples/file_copy_small.baa:159"
+            "examples/file_copy_small.باء:120",
+            "examples/file_copy_small.باء:143",
+            "examples/file_copy_small.باء:159"
           ],
           "status": "supported",
           "nazm": {
@@ -2791,7 +2791,7 @@
           ],
           "count": 71,
           "samples": [
-            "examples/file_copy_small.baa:514",
+            "examples/file_copy_small.باء:514",
             "tests/integration/backend/backend_custom_startup_test.baa:855",
             "tests/integration/backend/backend_dynamic_memory_test.baa:343"
           ],
@@ -2833,9 +2833,9 @@
           ],
           "count": 78,
           "samples": [
-            "examples/file_copy_small.baa:836",
-            "examples/file_copy_small.baa:856",
-            "examples/file_copy_small.baa:876"
+            "examples/file_copy_small.باء:836",
+            "examples/file_copy_small.باء:856",
+            "examples/file_copy_small.باء:876"
           ],
           "status": "supported",
           "nazm": {
@@ -2854,9 +2854,9 @@
           ],
           "count": 451,
           "samples": [
-            "examples/error_handling_demo.baa:174",
-            "examples/error_handling_demo.baa:288",
-            "examples/error_handling_demo.baa:344"
+            "examples/error_handling_demo.باء:174",
+            "examples/error_handling_demo.باء:288",
+            "examples/error_handling_demo.باء:344"
           ],
           "status": "supported",
           "nazm": {
@@ -2933,9 +2933,9 @@
           ],
           "count": 1557,
           "samples": [
-            "examples/error_handling_demo.baa:218",
-            "examples/error_handling_demo.baa:222",
-            "examples/error_handling_demo.baa:258"
+            "examples/error_handling_demo.باء:218",
+            "examples/error_handling_demo.باء:222",
+            "examples/error_handling_demo.باء:258"
           ],
           "status": "supported",
           "nazm": {
@@ -3069,9 +3069,9 @@
           ],
           "count": 200,
           "samples": [
-            "examples/error_handling_demo.baa:12",
-            "examples/error_handling_demo.baa:65",
-            "examples/file_copy_small.baa:12"
+            "examples/error_handling_demo.باء:12",
+            "examples/error_handling_demo.باء:65",
+            "examples/file_copy_small.باء:12"
           ],
           "status": "unsupported",
           "reason": "The unsuffixed GAS form has no width in the inventory and cannot be mapped safely."
@@ -3099,9 +3099,9 @@
           ],
           "count": 1384,
           "samples": [
-            "examples/error_handling_demo.baa:23",
-            "examples/error_handling_demo.baa:37",
-            "examples/error_handling_demo.baa:86"
+            "examples/error_handling_demo.باء:23",
+            "examples/error_handling_demo.باء:37",
+            "examples/error_handling_demo.باء:86"
           ],
           "status": "unsupported",
           "reason": "Nazm exposes only 64-bit general-purpose register instruction forms."
@@ -3138,9 +3138,9 @@
           ],
           "count": 1488,
           "samples": [
-            "examples/error_handling_demo.baa:80",
-            "examples/error_handling_demo.baa:90",
-            "examples/error_handling_demo.baa:94"
+            "examples/error_handling_demo.باء:80",
+            "examples/error_handling_demo.باء:90",
+            "examples/error_handling_demo.باء:94"
           ],
           "status": "unsupported",
           "reason": "Nazm exposes only 64-bit general-purpose register instruction forms."
@@ -3177,9 +3177,9 @@
           ],
           "count": 495,
           "samples": [
-            "examples/error_handling_demo.baa:2",
-            "examples/error_handling_demo.baa:3",
-            "examples/error_handling_demo.baa:4"
+            "examples/error_handling_demo.باء:2",
+            "examples/error_handling_demo.باء:3",
+            "examples/error_handling_demo.باء:4"
           ],
           "status": "supported",
           "nazm": {
@@ -3232,9 +3232,9 @@
           ],
           "count": 311,
           "samples": [
-            "examples/error_handling_demo.baa:8",
-            "examples/error_handling_demo.baa:61",
-            "examples/file_copy_small.baa:8"
+            "examples/error_handling_demo.باء:8",
+            "examples/error_handling_demo.باء:61",
+            "examples/file_copy_small.باء:8"
           ],
           "status": "partial",
           "nazm": {
@@ -3313,9 +3313,9 @@
           ],
           "count": 305,
           "samples": [
-            "examples/file_copy_small.baa:989",
-            "examples/file_copy_small.baa:1002",
-            "examples/hello_world.baa:140"
+            "examples/file_copy_small.باء:989",
+            "examples/file_copy_small.باء:1002",
+            "examples/hello_world.باء:140"
           ],
           "status": "supported",
           "nazm": {
@@ -3333,9 +3333,9 @@
           ],
           "count": 4477,
           "samples": [
-            "examples/file_copy_small.baa:991",
-            "examples/file_copy_small.baa:992",
-            "examples/file_copy_small.baa:993"
+            "examples/file_copy_small.باء:991",
+            "examples/file_copy_small.باء:992",
+            "examples/file_copy_small.باء:993"
           ],
           "status": "supported",
           "nazm": {
@@ -3376,9 +3376,9 @@
           ],
           "count": 103,
           "samples": [
-            "examples/error_handling_demo.baa:684",
-            "examples/file_copy_small.baa:1015",
-            "examples/hello_world.baa:157"
+            "examples/error_handling_demo.باء:684",
+            "examples/file_copy_small.باء:1015",
+            "examples/hello_world.باء:157"
           ],
           "status": "unsupported",
           "reason": "Nazm supports only its canonical .text and .data section directives."
@@ -3390,9 +3390,9 @@
           ],
           "count": 207,
           "samples": [
-            "examples/error_handling_demo.baa:1",
-            "examples/error_handling_demo.baa:674",
-            "examples/file_copy_small.baa:1"
+            "examples/error_handling_demo.باء:1",
+            "examples/error_handling_demo.باء:674",
+            "examples/file_copy_small.باء:1"
           ],
           "status": "unsupported",
           "reason": "Nazm supports only its canonical .text and .data section directives."
@@ -3402,9 +3402,9 @@
           "operands": [],
           "count": 103,
           "samples": [
-            "examples/error_handling_demo.baa:6",
-            "examples/file_copy_small.baa:6",
-            "examples/hello_world.baa:6"
+            "examples/error_handling_demo.باء:6",
+            "examples/file_copy_small.باء:6",
+            "examples/hello_world.باء:6"
           ],
           "status": "supported",
           "nazm": {
@@ -3541,10 +3541,10 @@
         "omitted_source_count": 0,
         "compile_failures": [],
         "sources": [
-          "examples/error_handling_demo.baa",
-          "examples/file_copy_small.baa",
-          "examples/hello_world.baa",
-          "examples/math_and_format.baa",
+          "examples/error_handling_demo.باء",
+          "examples/file_copy_small.باء",
+          "examples/hello_world.باء",
+          "examples/math_and_format.باء",
           "tests/integration/backend/backend_arabic_numeral_source_tokens_v064_test.baa",
           "tests/integration/backend/backend_array_init_test.baa",
           "tests/integration/backend/backend_array_length_operator_test.baa",
@@ -3653,25 +3653,25 @@
           "unsupported_blockers": [],
           "sources": [
             {
-              "source": "examples/error_handling_demo.baa",
+              "source": "examples/error_handling_demo.باء",
               "status": "emitted",
               "exit_code": 0,
-              "sha256": "9fd8c628939520a891e611f84446a87882bc446283708ffcb00da29f9fecdba3"
+              "sha256": "baaff8151b64feb8a4ba0b1ba8610a07baf47346876c8c41c853bd2aa4662ebd"
             },
             {
-              "source": "examples/file_copy_small.baa",
+              "source": "examples/file_copy_small.باء",
               "status": "emitted",
               "exit_code": 0,
               "sha256": "2282a5015b94ebe37e1f1417ed666bdd7acc0ab2e967692b9b00a7b27077f145"
             },
             {
-              "source": "examples/hello_world.baa",
+              "source": "examples/hello_world.باء",
               "status": "emitted",
               "exit_code": 0,
               "sha256": "a54c889ab3ebf56369c7c09c450690a65c6433733907292980d2b35a6d7c1a17"
             },
             {
-              "source": "examples/math_and_format.baa",
+              "source": "examples/math_and_format.باء",
               "status": "emitted",
               "exit_code": 0,
               "sha256": "37fd36cd79c6a7e1bd484373359e6cf70eadc53ad35f30e33c574b3dc8c94f58"
@@ -4359,9 +4359,9 @@
           ],
           "count": 289,
           "samples": [
-            "examples/error_handling_demo.baa:606",
-            "examples/error_handling_demo.baa:609",
-            "examples/file_copy_small.baa:122"
+            "examples/error_handling_demo.باء:606",
+            "examples/error_handling_demo.باء:609",
+            "examples/file_copy_small.باء:122"
           ],
           "status": "unsupported",
           "reason": "Nazm implements this mnemonic, but not this operand shape or width."
@@ -4374,9 +4374,9 @@
           ],
           "count": 3573,
           "samples": [
-            "examples/error_handling_demo.baa:87",
-            "examples/error_handling_demo.baa:98",
-            "examples/error_handling_demo.baa:103"
+            "examples/error_handling_demo.باء:87",
+            "examples/error_handling_demo.باء:98",
+            "examples/error_handling_demo.باء:103"
           ],
           "status": "supported",
           "nazm": {
@@ -4402,9 +4402,9 @@
           ],
           "count": 372,
           "samples": [
-            "examples/error_handling_demo.baa:205",
-            "examples/error_handling_demo.baa:622",
-            "examples/file_copy_small.baa:66"
+            "examples/error_handling_demo.باء:205",
+            "examples/error_handling_demo.باء:622",
+            "examples/file_copy_small.باء:66"
           ],
           "status": "supported",
           "nazm": {
@@ -4445,9 +4445,9 @@
           ],
           "count": 2422,
           "samples": [
-            "examples/error_handling_demo.baa:248",
-            "examples/error_handling_demo.baa:250",
-            "examples/error_handling_demo.baa:252"
+            "examples/error_handling_demo.باء:248",
+            "examples/error_handling_demo.باء:250",
+            "examples/error_handling_demo.باء:252"
           ],
           "status": "supported",
           "nazm": {
@@ -4497,9 +4497,9 @@
           ],
           "count": 500,
           "samples": [
-            "examples/error_handling_demo.baa:315",
-            "examples/error_handling_demo.baa:374",
-            "examples/error_handling_demo.baa:376"
+            "examples/error_handling_demo.باء:315",
+            "examples/error_handling_demo.باء:374",
+            "examples/error_handling_demo.باء:376"
           ],
           "status": "unsupported",
           "reason": "Nazm exposes only 64-bit general-purpose register instruction forms."
@@ -4512,9 +4512,9 @@
           ],
           "count": 208,
           "samples": [
-            "examples/error_handling_demo.baa:216",
-            "examples/error_handling_demo.baa:428",
-            "examples/error_handling_demo.baa:431"
+            "examples/error_handling_demo.باء:216",
+            "examples/error_handling_demo.باء:428",
+            "examples/error_handling_demo.باء:431"
           ],
           "status": "unsupported",
           "reason": "Nazm implements this mnemonic, but not this operand shape or width."
@@ -4527,9 +4527,9 @@
           ],
           "count": 685,
           "samples": [
-            "examples/error_handling_demo.baa:218",
-            "examples/error_handling_demo.baa:220",
-            "examples/error_handling_demo.baa:222"
+            "examples/error_handling_demo.باء:218",
+            "examples/error_handling_demo.باء:220",
+            "examples/error_handling_demo.باء:222"
           ],
           "status": "supported",
           "nazm": {
@@ -4555,8 +4555,8 @@
           ],
           "count": 26,
           "samples": [
-            "examples/file_copy_small.baa:102",
-            "examples/file_copy_small.baa:309",
+            "examples/file_copy_small.باء:102",
+            "examples/file_copy_small.باء:309",
             "tests/integration/backend/backend_file_io_noheader_test.baa:104"
           ],
           "status": "supported",
@@ -4603,9 +4603,9 @@
           ],
           "count": 1501,
           "samples": [
-            "examples/error_handling_demo.baa:86",
-            "examples/error_handling_demo.baa:97",
-            "examples/error_handling_demo.baa:102"
+            "examples/error_handling_demo.باء:86",
+            "examples/error_handling_demo.باء:97",
+            "examples/error_handling_demo.باء:102"
           ],
           "status": "partial",
           "nazm": {
@@ -4638,9 +4638,9 @@
           ],
           "count": 50,
           "samples": [
-            "examples/error_handling_demo.baa:207",
-            "examples/file_copy_small.baa:457",
-            "examples/math_and_format.baa:164"
+            "examples/error_handling_demo.باء:207",
+            "examples/file_copy_small.باء:457",
+            "examples/math_and_format.باء:164"
           ],
           "status": "unsupported",
           "reason": "Nazm exposes only 64-bit general-purpose register instruction forms."
@@ -4668,9 +4668,9 @@
           ],
           "count": 100,
           "samples": [
-            "examples/file_copy_small.baa:454",
-            "examples/file_copy_small.baa:473",
-            "examples/file_copy_small.baa:593"
+            "examples/file_copy_small.باء:454",
+            "examples/file_copy_small.باء:473",
+            "examples/file_copy_small.باء:593"
           ],
           "status": "unsupported",
           "reason": "Nazm exposes only 64-bit general-purpose register instruction forms."
@@ -4696,9 +4696,9 @@
           ],
           "count": 399,
           "samples": [
-            "examples/error_handling_demo.baa:450",
-            "examples/error_handling_demo.baa:453",
-            "examples/file_copy_small.baa:37"
+            "examples/error_handling_demo.باء:450",
+            "examples/error_handling_demo.باء:453",
+            "examples/file_copy_small.باء:37"
           ],
           "status": "unsupported",
           "reason": "Nazm implements this mnemonic, but not this operand shape or width."
@@ -4711,9 +4711,9 @@
           ],
           "count": 2062,
           "samples": [
-            "examples/error_handling_demo.baa:20",
-            "examples/error_handling_demo.baa:34",
-            "examples/error_handling_demo.baa:89"
+            "examples/error_handling_demo.باء:20",
+            "examples/error_handling_demo.باء:34",
+            "examples/error_handling_demo.باء:89"
           ],
           "status": "supported",
           "nazm": {
@@ -4807,9 +4807,9 @@
           "operands": [],
           "count": 2262,
           "samples": [
-            "examples/error_handling_demo.baa:50",
-            "examples/error_handling_demo.baa:555",
-            "examples/error_handling_demo.baa:560"
+            "examples/error_handling_demo.باء:50",
+            "examples/error_handling_demo.باء:555",
+            "examples/error_handling_demo.باء:560"
           ],
           "status": "supported",
           "nazm": {
@@ -4926,9 +4926,9 @@
           ],
           "count": 2262,
           "samples": [
-            "examples/error_handling_demo.baa:51",
-            "examples/error_handling_demo.baa:556",
-            "examples/error_handling_demo.baa:561"
+            "examples/error_handling_demo.باء:51",
+            "examples/error_handling_demo.باء:556",
+            "examples/error_handling_demo.باء:561"
           ],
           "status": "supported",
           "nazm": {
@@ -4953,9 +4953,9 @@
           ],
           "count": 282,
           "samples": [
-            "examples/error_handling_demo.baa:179",
-            "examples/error_handling_demo.baa:244",
-            "examples/file_copy_small.baa:537"
+            "examples/error_handling_demo.باء:179",
+            "examples/error_handling_demo.باء:244",
+            "examples/file_copy_small.باء:537"
           ],
           "status": "supported",
           "nazm": {
@@ -5035,9 +5035,9 @@
           ],
           "count": 3095,
           "samples": [
-            "examples/error_handling_demo.baa:25",
-            "examples/error_handling_demo.baa:39",
-            "examples/error_handling_demo.baa:94"
+            "examples/error_handling_demo.باء:25",
+            "examples/error_handling_demo.باء:39",
+            "examples/error_handling_demo.باء:94"
           ],
           "status": "supported",
           "nazm": {
@@ -5056,9 +5056,9 @@
           ],
           "count": 1389,
           "samples": [
-            "examples/error_handling_demo.baa:24",
-            "examples/error_handling_demo.baa:38",
-            "examples/error_handling_demo.baa:93"
+            "examples/error_handling_demo.باء:24",
+            "examples/error_handling_demo.باء:38",
+            "examples/error_handling_demo.باء:93"
           ],
           "status": "supported",
           "nazm": {
@@ -5078,9 +5078,9 @@
           ],
           "count": 414,
           "samples": [
-            "examples/error_handling_demo.baa:74",
-            "examples/error_handling_demo.baa:107",
-            "examples/error_handling_demo.baa:550"
+            "examples/error_handling_demo.باء:74",
+            "examples/error_handling_demo.باء:107",
+            "examples/error_handling_demo.باء:550"
           ],
           "status": "supported",
           "nazm": {
@@ -5101,9 +5101,9 @@
           ],
           "count": 867,
           "samples": [
-            "examples/error_handling_demo.baa:124",
-            "examples/error_handling_demo.baa:131",
-            "examples/error_handling_demo.baa:137"
+            "examples/error_handling_demo.باء:124",
+            "examples/error_handling_demo.باء:131",
+            "examples/error_handling_demo.باء:137"
           ],
           "status": "supported",
           "nazm": {
@@ -5121,9 +5121,9 @@
           "operands": [],
           "count": 471,
           "samples": [
-            "examples/error_handling_demo.baa:31",
-            "examples/error_handling_demo.baa:45",
-            "examples/error_handling_demo.baa:58"
+            "examples/error_handling_demo.باء:31",
+            "examples/error_handling_demo.باء:45",
+            "examples/error_handling_demo.باء:58"
           ],
           "status": "unsupported",
           "reason": "Nazm does not implement the leave instruction."
@@ -5136,9 +5136,9 @@
           ],
           "count": 821,
           "samples": [
-            "examples/error_handling_demo.baa:286",
-            "examples/error_handling_demo.baa:325",
-            "examples/error_handling_demo.baa:392"
+            "examples/error_handling_demo.باء:286",
+            "examples/error_handling_demo.باء:325",
+            "examples/error_handling_demo.باء:392"
           ],
           "status": "supported",
           "nazm": {
@@ -5164,9 +5164,9 @@
           ],
           "count": 435,
           "samples": [
-            "examples/error_handling_demo.baa:620",
-            "examples/error_handling_demo.baa:623",
-            "examples/file_copy_small.baa:132"
+            "examples/error_handling_demo.باء:620",
+            "examples/error_handling_demo.باء:623",
+            "examples/file_copy_small.باء:132"
           ],
           "status": "unsupported",
           "reason": "Nazm implements this mnemonic, but not this operand shape or width."
@@ -5207,9 +5207,9 @@
           ],
           "count": 398,
           "samples": [
-            "examples/error_handling_demo.baa:206",
-            "examples/error_handling_demo.baa:302",
-            "examples/error_handling_demo.baa:349"
+            "examples/error_handling_demo.باء:206",
+            "examples/error_handling_demo.باء:302",
+            "examples/error_handling_demo.باء:349"
           ],
           "status": "supported",
           "nazm": {
@@ -5235,9 +5235,9 @@
           ],
           "count": 607,
           "samples": [
-            "examples/error_handling_demo.baa:611",
-            "examples/error_handling_demo.baa:613",
-            "examples/error_handling_demo.baa:615"
+            "examples/error_handling_demo.باء:611",
+            "examples/error_handling_demo.باء:613",
+            "examples/error_handling_demo.باء:615"
           ],
           "status": "supported",
           "nazm": {
@@ -5263,9 +5263,9 @@
           ],
           "count": 1257,
           "samples": [
-            "examples/error_handling_demo.baa:314",
-            "examples/error_handling_demo.baa:373",
-            "examples/error_handling_demo.baa:375"
+            "examples/error_handling_demo.باء:314",
+            "examples/error_handling_demo.باء:373",
+            "examples/error_handling_demo.باء:375"
           ],
           "status": "supported",
           "nazm": {
@@ -5291,7 +5291,7 @@
           ],
           "count": 2,
           "samples": [
-            "examples/error_handling_demo.baa:100",
+            "examples/error_handling_demo.باء:100",
             "tests/integration/backend/backend_error_handling_v043_test.baa:319"
           ],
           "status": "unsupported",
@@ -5305,8 +5305,8 @@
           ],
           "count": 41,
           "samples": [
-            "examples/error_handling_demo.baa:155",
-            "examples/error_handling_demo.baa:696",
+            "examples/error_handling_demo.باء:155",
+            "examples/error_handling_demo.باء:696",
             "tests/integration/backend/backend_file_io_noheader_test.baa:290"
           ],
           "status": "supported",
@@ -5333,7 +5333,7 @@
           ],
           "count": 2,
           "samples": [
-            "examples/error_handling_demo.baa:105",
+            "examples/error_handling_demo.باء:105",
             "tests/integration/backend/backend_error_handling_v043_test.baa:324"
           ],
           "status": "supported",
@@ -5414,9 +5414,9 @@
           ],
           "count": 218,
           "samples": [
-            "examples/error_handling_demo.baa:109",
-            "examples/error_handling_demo.baa:111",
-            "examples/error_handling_demo.baa:129"
+            "examples/error_handling_demo.باء:109",
+            "examples/error_handling_demo.باء:111",
+            "examples/error_handling_demo.باء:129"
           ],
           "status": "supported",
           "nazm": {
@@ -5442,9 +5442,9 @@
           ],
           "count": 900,
           "samples": [
-            "examples/error_handling_demo.baa:77",
-            "examples/error_handling_demo.baa:188",
-            "examples/error_handling_demo.baa:189"
+            "examples/error_handling_demo.باء:77",
+            "examples/error_handling_demo.باء:188",
+            "examples/error_handling_demo.باء:189"
           ],
           "status": "unsupported",
           "reason": "Nazm implements this mnemonic, but not this operand shape or width."
@@ -5484,9 +5484,9 @@
           ],
           "count": 2749,
           "samples": [
-            "examples/error_handling_demo.baa:27",
-            "examples/error_handling_demo.baa:41",
-            "examples/error_handling_demo.baa:54"
+            "examples/error_handling_demo.باء:27",
+            "examples/error_handling_demo.باء:41",
+            "examples/error_handling_demo.باء:54"
           ],
           "status": "supported",
           "nazm": {
@@ -5512,9 +5512,9 @@
           ],
           "count": 7766,
           "samples": [
-            "examples/error_handling_demo.baa:76",
-            "examples/error_handling_demo.baa:78",
-            "examples/error_handling_demo.baa:192"
+            "examples/error_handling_demo.باء:76",
+            "examples/error_handling_demo.باء:78",
+            "examples/error_handling_demo.باء:192"
           ],
           "status": "supported",
           "nazm": {
@@ -5568,9 +5568,9 @@
           ],
           "count": 5985,
           "samples": [
-            "examples/error_handling_demo.baa:53",
-            "examples/error_handling_demo.baa:75",
-            "examples/error_handling_demo.baa:83"
+            "examples/error_handling_demo.باء:53",
+            "examples/error_handling_demo.باء:75",
+            "examples/error_handling_demo.باء:83"
           ],
           "status": "supported",
           "nazm": {
@@ -5624,9 +5624,9 @@
           ],
           "count": 13338,
           "samples": [
-            "examples/error_handling_demo.baa:16",
-            "examples/error_handling_demo.baa:17",
-            "examples/error_handling_demo.baa:18"
+            "examples/error_handling_demo.باء:16",
+            "examples/error_handling_demo.باء:17",
+            "examples/error_handling_demo.باء:18"
           ],
           "status": "supported",
           "nazm": {
@@ -5684,9 +5684,9 @@
           ],
           "count": 799,
           "samples": [
-            "examples/error_handling_demo.baa:237",
-            "examples/error_handling_demo.baa:238",
-            "examples/error_handling_demo.baa:239"
+            "examples/error_handling_demo.باء:237",
+            "examples/error_handling_demo.باء:238",
+            "examples/error_handling_demo.باء:239"
           ],
           "status": "supported",
           "nazm": {
@@ -5731,9 +5731,9 @@
           ],
           "count": 65,
           "samples": [
-            "examples/error_handling_demo.baa:106",
-            "examples/file_copy_small.baa:507",
-            "examples/file_copy_small.baa:596"
+            "examples/error_handling_demo.باء:106",
+            "examples/file_copy_small.باء:507",
+            "examples/file_copy_small.باء:596"
           ],
           "status": "supported",
           "nazm": {
@@ -5808,9 +5808,9 @@
           ],
           "count": 3003,
           "samples": [
-            "examples/error_handling_demo.baa:22",
-            "examples/error_handling_demo.baa:36",
-            "examples/error_handling_demo.baa:91"
+            "examples/error_handling_demo.باء:22",
+            "examples/error_handling_demo.باء:36",
+            "examples/error_handling_demo.باء:91"
           ],
           "status": "supported",
           "nazm": {
@@ -5839,9 +5839,9 @@
           ],
           "count": 1919,
           "samples": [
-            "examples/error_handling_demo.baa:28",
-            "examples/error_handling_demo.baa:29",
-            "examples/error_handling_demo.baa:30"
+            "examples/error_handling_demo.باء:28",
+            "examples/error_handling_demo.باء:29",
+            "examples/error_handling_demo.باء:30"
           ],
           "status": "unsupported",
           "reason": "The unsuffixed GAS form has no width in the inventory and cannot be mapped safely."
@@ -5854,9 +5854,9 @@
           ],
           "count": 895,
           "samples": [
-            "examples/error_handling_demo.baa:13",
-            "examples/error_handling_demo.baa:14",
-            "examples/error_handling_demo.baa:15"
+            "examples/error_handling_demo.باء:13",
+            "examples/error_handling_demo.باء:14",
+            "examples/error_handling_demo.باء:15"
           ],
           "status": "unsupported",
           "reason": "The unsuffixed GAS form has no width in the inventory and cannot be mapped safely."
@@ -5869,9 +5869,9 @@
           ],
           "count": 271,
           "samples": [
-            "examples/error_handling_demo.baa:11",
-            "examples/error_handling_demo.baa:64",
-            "examples/file_copy_small.baa:11"
+            "examples/error_handling_demo.باء:11",
+            "examples/error_handling_demo.باء:64",
+            "examples/file_copy_small.باء:11"
           ],
           "status": "unsupported",
           "reason": "The unsuffixed GAS form has no width in the inventory and cannot be mapped safely."
@@ -5935,9 +5935,9 @@
           ],
           "count": 48,
           "samples": [
-            "examples/file_copy_small.baa:553",
-            "examples/file_copy_small.baa:610",
-            "examples/file_copy_small.baa:662"
+            "examples/file_copy_small.باء:553",
+            "examples/file_copy_small.باء:610",
+            "examples/file_copy_small.باء:662"
           ],
           "status": "unsupported",
           "reason": "Nazm exposes only 64-bit general-purpose register instruction forms."
@@ -5950,8 +5950,8 @@
           ],
           "count": 75,
           "samples": [
-            "examples/file_copy_small.baa:45",
-            "examples/file_copy_small.baa:252",
+            "examples/file_copy_small.باء:45",
+            "examples/file_copy_small.باء:252",
             "tests/integration/backend/backend_file_io_noheader_test.baa:47"
           ],
           "status": "unsupported",
@@ -5965,9 +5965,9 @@
           ],
           "count": 449,
           "samples": [
-            "examples/error_handling_demo.baa:287",
-            "examples/error_handling_demo.baa:323",
-            "examples/error_handling_demo.baa:326"
+            "examples/error_handling_demo.باء:287",
+            "examples/error_handling_demo.باء:323",
+            "examples/error_handling_demo.باء:326"
           ],
           "status": "supported",
           "nazm": {
@@ -5992,9 +5992,9 @@
           ],
           "count": 271,
           "samples": [
-            "examples/error_handling_demo.baa:10",
-            "examples/error_handling_demo.baa:63",
-            "examples/file_copy_small.baa:10"
+            "examples/error_handling_demo.باء:10",
+            "examples/error_handling_demo.باء:63",
+            "examples/file_copy_small.باء:10"
           ],
           "status": "supported",
           "nazm": {
@@ -6026,9 +6026,9 @@
           "operands": [],
           "count": 471,
           "samples": [
-            "examples/error_handling_demo.baa:32",
-            "examples/error_handling_demo.baa:46",
-            "examples/error_handling_demo.baa:59"
+            "examples/error_handling_demo.باء:32",
+            "examples/error_handling_demo.باء:46",
+            "examples/error_handling_demo.باء:59"
           ],
           "status": "supported",
           "nazm": {
@@ -6059,8 +6059,8 @@
           ],
           "count": 26,
           "samples": [
-            "examples/file_copy_small.baa:99",
-            "examples/file_copy_small.baa:306",
+            "examples/file_copy_small.باء:99",
+            "examples/file_copy_small.باء:306",
             "tests/integration/backend/backend_file_io_noheader_test.baa:101"
           ],
           "status": "unsupported",
@@ -6074,9 +6074,9 @@
           ],
           "count": 108,
           "samples": [
-            "examples/file_copy_small.baa:64",
-            "examples/file_copy_small.baa:106",
-            "examples/file_copy_small.baa:110"
+            "examples/file_copy_small.باء:64",
+            "examples/file_copy_small.باء:106",
+            "examples/file_copy_small.باء:110"
           ],
           "status": "supported",
           "nazm": {
@@ -6204,9 +6204,9 @@
           ],
           "count": 2005,
           "samples": [
-            "examples/error_handling_demo.baa:21",
-            "examples/error_handling_demo.baa:35",
-            "examples/error_handling_demo.baa:90"
+            "examples/error_handling_demo.باء:21",
+            "examples/error_handling_demo.باء:35",
+            "examples/error_handling_demo.باء:90"
           ],
           "status": "supported",
           "nazm": {
@@ -6225,9 +6225,9 @@
           ],
           "count": 99,
           "samples": [
-            "examples/file_copy_small.baa:124",
-            "examples/file_copy_small.baa:147",
-            "examples/file_copy_small.baa:163"
+            "examples/file_copy_small.باء:124",
+            "examples/file_copy_small.باء:147",
+            "examples/file_copy_small.باء:163"
           ],
           "status": "supported",
           "nazm": {
@@ -6246,7 +6246,7 @@
           ],
           "count": 71,
           "samples": [
-            "examples/file_copy_small.baa:550",
+            "examples/file_copy_small.باء:550",
             "tests/integration/backend/backend_custom_startup_test.baa:871",
             "tests/integration/backend/backend_dynamic_memory_test.baa:366"
           ],
@@ -6288,9 +6288,9 @@
           ],
           "count": 78,
           "samples": [
-            "examples/file_copy_small.baa:895",
-            "examples/file_copy_small.baa:918",
-            "examples/file_copy_small.baa:941"
+            "examples/file_copy_small.باء:895",
+            "examples/file_copy_small.باء:918",
+            "examples/file_copy_small.باء:941"
           ],
           "status": "supported",
           "nazm": {
@@ -6309,9 +6309,9 @@
           ],
           "count": 451,
           "samples": [
-            "examples/error_handling_demo.baa:198",
-            "examples/error_handling_demo.baa:312",
-            "examples/error_handling_demo.baa:368"
+            "examples/error_handling_demo.باء:198",
+            "examples/error_handling_demo.باء:312",
+            "examples/error_handling_demo.باء:368"
           ],
           "status": "supported",
           "nazm": {
@@ -6388,9 +6388,9 @@
           ],
           "count": 1557,
           "samples": [
-            "examples/error_handling_demo.baa:242",
-            "examples/error_handling_demo.baa:246",
-            "examples/error_handling_demo.baa:282"
+            "examples/error_handling_demo.باء:242",
+            "examples/error_handling_demo.باء:246",
+            "examples/error_handling_demo.باء:282"
           ],
           "status": "supported",
           "nazm": {
@@ -6431,9 +6431,9 @@
           ],
           "count": 2700,
           "samples": [
-            "examples/error_handling_demo.baa:79",
-            "examples/error_handling_demo.baa:96",
-            "examples/error_handling_demo.baa:101"
+            "examples/error_handling_demo.باء:79",
+            "examples/error_handling_demo.باء:96",
+            "examples/error_handling_demo.باء:101"
           ],
           "status": "supported",
           "nazm": {
@@ -6524,9 +6524,9 @@
           ],
           "count": 271,
           "samples": [
-            "examples/error_handling_demo.baa:12",
-            "examples/error_handling_demo.baa:65",
-            "examples/file_copy_small.baa:12"
+            "examples/error_handling_demo.باء:12",
+            "examples/error_handling_demo.باء:65",
+            "examples/file_copy_small.باء:12"
           ],
           "status": "unsupported",
           "reason": "The unsuffixed GAS form has no width in the inventory and cannot be mapped safely."
@@ -6554,9 +6554,9 @@
           ],
           "count": 1384,
           "samples": [
-            "examples/error_handling_demo.baa:23",
-            "examples/error_handling_demo.baa:37",
-            "examples/error_handling_demo.baa:92"
+            "examples/error_handling_demo.باء:23",
+            "examples/error_handling_demo.باء:37",
+            "examples/error_handling_demo.باء:92"
           ],
           "status": "unsupported",
           "reason": "Nazm exposes only 64-bit general-purpose register instruction forms."
@@ -6617,9 +6617,9 @@
           ],
           "count": 495,
           "samples": [
-            "examples/error_handling_demo.baa:2",
-            "examples/error_handling_demo.baa:3",
-            "examples/error_handling_demo.baa:4"
+            "examples/error_handling_demo.باء:2",
+            "examples/error_handling_demo.باء:3",
+            "examples/error_handling_demo.باء:4"
           ],
           "status": "supported",
           "nazm": {
@@ -6672,9 +6672,9 @@
           ],
           "count": 311,
           "samples": [
-            "examples/error_handling_demo.baa:8",
-            "examples/error_handling_demo.baa:61",
-            "examples/file_copy_small.baa:8"
+            "examples/error_handling_demo.باء:8",
+            "examples/error_handling_demo.باء:61",
+            "examples/file_copy_small.باء:8"
           ],
           "status": "partial",
           "nazm": {
@@ -6733,9 +6733,9 @@
           ],
           "count": 305,
           "samples": [
-            "examples/file_copy_small.baa:1061",
-            "examples/file_copy_small.baa:1074",
-            "examples/hello_world.baa:147"
+            "examples/file_copy_small.باء:1061",
+            "examples/file_copy_small.باء:1074",
+            "examples/hello_world.باء:147"
           ],
           "status": "supported",
           "nazm": {
@@ -6753,9 +6753,9 @@
           ],
           "count": 4477,
           "samples": [
-            "examples/file_copy_small.baa:1063",
-            "examples/file_copy_small.baa:1064",
-            "examples/file_copy_small.baa:1065"
+            "examples/file_copy_small.باء:1063",
+            "examples/file_copy_small.باء:1064",
+            "examples/file_copy_small.باء:1065"
           ],
           "status": "supported",
           "nazm": {
@@ -6795,9 +6795,9 @@
           ],
           "count": 207,
           "samples": [
-            "examples/error_handling_demo.baa:1",
-            "examples/error_handling_demo.baa:714",
-            "examples/file_copy_small.baa:1"
+            "examples/error_handling_demo.باء:1",
+            "examples/error_handling_demo.باء:714",
+            "examples/file_copy_small.باء:1"
           ],
           "status": "unsupported",
           "reason": "Nazm supports only its canonical .text and .data section directives."
@@ -6807,9 +6807,9 @@
           "operands": [],
           "count": 103,
           "samples": [
-            "examples/error_handling_demo.baa:6",
-            "examples/file_copy_small.baa:6",
-            "examples/hello_world.baa:6"
+            "examples/error_handling_demo.باء:6",
+            "examples/file_copy_small.باء:6",
+            "examples/hello_world.باء:6"
           ],
           "status": "supported",
           "nazm": {

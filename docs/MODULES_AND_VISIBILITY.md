@@ -19,17 +19,19 @@ the language-level module, header, and visibility contract.
 
 | Extension | Role | Passed as compiler input? | Recommended contents |
 |---|---|---:|---|
-| `.baa` | implementation/source unit | yes | function bodies, global definitions, local helpers, entry point |
-| `.baahd` | header/declaration unit | only with `--check-header` | prototypes, `خارجي` declarations, shared type declarations, macros |
+| `.باء` | implementation/source unit | yes | function bodies, global definitions, local helpers, entry point |
+| `.رأسباء` | header/declaration unit | only with `--check-header` | prototypes, `خارجي` declarations, shared type declarations, macros |
 
 Rules:
 
-- Compile implementation units (`.baa`) as roots.
-- Include headers (`.baahd`) from implementation units with `#تضمين`.
-- Do not use `.baahd` files as independent implementation inputs in normal builds.
+- Compile implementation units (`.باء`) as roots.
+- Include headers (`.رأسباء`) from implementation units with `#تضمين`.
+- Do not use `.رأسباء` files as independent implementation inputs in normal builds.
 - Use `--check-header` to parse and semantically validate a header without emitting IR,
   assembly, object files, or an executable.
 - New public headers should be declaration-only by convention.
+- `.baa` and `.baahd` remain accepted compatibility spellings; new files use
+  `.باء` and `.رأسباء`. See `ARABIC_FILE_EXTENSIONS.md`.
 - The current parser still processes included headers as normal Baa source; `--check-header`
   does not yet enforce a header-only grammar.
 

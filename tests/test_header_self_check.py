@@ -63,6 +63,33 @@ class HeaderSelfCheckTests(unittest.TestCase):
         self.assertEqual(proc.returncode, 0, combined)
         self.assertEqual(outputs, [])
 
+    def test_canonical_arabic_source_and_header_names(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="baa_arabic_extensions_") as temp:
+            work = Path(temp)
+            (work / "واجهة.رأسباء").write_text(
+                "خارجي صحيح اجمع(صحيح أ، صحيح ب).\n",
+                encoding="utf-8",
+            )
+            (work / "رئيسية.باء").write_text(
+                '#تضمين "واجهة.رأسباء"\n'
+                "صحيح الرئيسية() { إرجع ٠. }\n",
+                encoding="utf-8",
+            )
+
+            header = self.run_baa(work, "--check-header", "واجهة.رأسباء")
+            source = self.run_baa(work, "--check", "رئيسية.باء")
+
+        self.assertEqual(header.returncode, 0, f"{header.stdout}\n{header.stderr}")
+        self.assertEqual(source.returncode, 0, f"{source.stdout}\n{source.stderr}")
+
+    def test_canonical_standard_library_header(self) -> None:
+        proc = self.run_baa(
+            ROOT,
+            "--check-header",
+            str(ROOT / "stdlib" / "المكتبة_القياسية.رأسباء"),
+        )
+        self.assertEqual(proc.returncode, 0, f"{proc.stdout}\n{proc.stderr}")
+
     def test_invalid_header_reports_existing_parser_diagnostic(self) -> None:
         with tempfile.TemporaryDirectory(prefix="baa_header_check_bad_") as temp:
             work = Path(temp)

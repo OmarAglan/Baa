@@ -24,6 +24,7 @@ DEFAULT_SOURCE_ROOTS = (
     ROOT / "tests" / "stress",
     ROOT / "examples",
 )
+SOURCE_SUFFIXES = (".باء", ".baa")
 
 LABEL_RE = re.compile(r"^([^\s:]+):\s*(.*)$")
 TOKEN_RE = re.compile(r"^([^\s]+)(?:\s+(.*))?$")
@@ -252,10 +253,11 @@ def _discover_sources(roots: Iterable[Path]) -> list[Path]:
     sources: set[Path] = set()
     for root in roots:
         candidate = Path(root)
-        if candidate.is_file() and candidate.suffix == ".baa":
+        if candidate.is_file() and candidate.suffix in SOURCE_SUFFIXES:
             sources.add(candidate.resolve())
         elif candidate.is_dir():
-            sources.update(path.resolve() for path in candidate.rglob("*.baa"))
+            for suffix in SOURCE_SUFFIXES:
+                sources.update(path.resolve() for path in candidate.rglob(f"*{suffix}"))
     return sorted(sources, key=lambda path: path.as_posix())
 
 

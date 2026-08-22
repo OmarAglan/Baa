@@ -4,12 +4,22 @@ param(
     [string]$ToolchainDirectory = "",
     [string]$NazmExecutable = "",
     [string]$IsccPath = "",
+    [string]$SignToolName = "",
+    [string]$SignToolCommand = "",
     [switch]$SkipBuild,
     [switch]$SkipTests
 )
 
 $ErrorActionPreference = "Stop"
 $root = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
+if ([string]::IsNullOrWhiteSpace($SignToolName) -ne
+    [string]::IsNullOrWhiteSpace($SignToolCommand)) {
+    throw "Pass both -SignToolName and -SignToolCommand, or neither."
+}
+if (-not [string]::IsNullOrWhiteSpace($SignToolName) -and
+    $SignToolName -notmatch "^[A-Za-z0-9_-]+$") {
+    throw "SignToolName may contain only letters, digits, underscore, and hyphen."
+}
 if ([string]::IsNullOrWhiteSpace($BuildDirectory)) {
     $BuildDirectory = Join-Path $root "build"
 }
@@ -113,10 +123,18 @@ if ([string]::IsNullOrWhiteSpace($IsccPath) -or
 
 $resolvedBuild = (Resolve-Path -LiteralPath $BuildDirectory).Path
 $resolvedToolchain = (Resolve-Path -LiteralPath $ToolchainDirectory).Path
+$isccArguments = @(
+    "/DMyAppVersion=$Version",
+    "/DBaaBinaryDir=$resolvedBuild",
+    "/DBaaToolchainDir=$resolvedToolchain"
+)
+if (-not [string]::IsNullOrWhiteSpace($SignToolName)) {
+    $isccArguments += "/DInstallerSignTool=$SignToolName"
+    $isccArguments += "/S$SignToolName=$SignToolCommand"
+}
 Push-Location $root
 try {
-    & $IsccPath "/DMyAppVersion=$Version" "/DBaaBinaryDir=$resolvedBuild" `
-        "/DBaaToolchainDir=$resolvedToolchain" (Join-Path $root "setup.iss")
+    & $IsccPath @isccArguments (Join-Path $root "setup.iss")
     if ($LASTEXITCODE -ne 0) { throw "ISCC failed with exit code $LASTEXITCODE." }
 }
 finally {

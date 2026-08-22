@@ -78,6 +78,10 @@ baa --version
 .\scripts\test_installer.ps1 -NazmDirectory C:\path\to\nazm-bin
 ```
 
+لبناء إصدار Authenticode، مرر `-SignToolName releasesign` و
+`-SignToolCommand '<signtool command using $f>'`. يوقع البناء المثبت وبرنامج
+الإزالة قبل إنشاء ملف SHA-256 المجاور.
+
 ## البناء
 
 ### المتطلبات

@@ -31,6 +31,10 @@ DisableProgramGroupPage=yes
 AllowNoIcons=yes
 OutputDir=dist\installer
 OutputBaseFilename=baa-setup-{#MyAppVersion}-x64
+#ifdef InstallerSignTool
+SignTool={#InstallerSignTool}
+SignedUninstaller=yes
+#endif
 SetupIconFile=resources\icon.ico
 Compression=lzma2/ultra64
 SolidCompression=yes

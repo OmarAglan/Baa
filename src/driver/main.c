@@ -60,6 +60,38 @@ static const char* main_mode_name(const CompilerConfig* config)
     return "link";
 }
 
+/*
+ * Some lexer/preprocessor failures still terminate through exit(1).  Keep the
+ * machine-readable diagnostics contract intact for those paths: exit handlers
+ * run before baa_main's stack is unwound, so the armed invocation remains valid.
+ */
+static const CompilerConfig* g_diagnostics_exit_config = NULL;
+static bool g_diagnostics_exit_handler_registered = false;
+
+static void main_write_diagnostics_json_at_exit(void)
+{
+    const CompilerConfig* config = g_diagnostics_exit_config;
+    g_diagnostics_exit_config = NULL;
+    if (!config || !config->diagnostics_json) return;
+
+    diagnostics_json_write(stdout,
+                           BAA_VERSION,
+                           main_mode_name(config),
+                           config->target ? config->target->name : "",
+                           ".");
+}
+
+static void main_arm_diagnostics_json_exit_handler(const CompilerConfig* config)
+{
+    if (!config || !config->diagnostics_json) return;
+    if (!g_diagnostics_exit_handler_registered)
+    {
+        if (atexit(main_write_diagnostics_json_at_exit) != 0) return;
+        g_diagnostics_exit_handler_registered = true;
+    }
+    g_diagnostics_exit_config = config;
+}
+
 static char *main_nazm_shadow_output_path(const CompilerConfig *config)
 {
     if (!config || !config->output_file) return NULL;
@@ -104,6 +136,8 @@ static int main_cleanup_and_return(const CompilerConfig* config,
                                    bool output_file_owned,
                                    int rc)
 {
+    if (g_diagnostics_exit_config == config)
+        g_diagnostics_exit_config = NULL;
     if (config && config->diagnostics_json && cli && cli->cmd == DRIVER_CMD_COMPILE)
     {
         diagnostics_json_write(stdout,
@@ -162,6 +196,8 @@ static int baa_main(int argc, char **argv)
     diagnostics_set_json_enabled(config.diagnostics_json);
     if (config.diagnostics_json)
         g_warning_config.colored_output = false;
+    if (config.diagnostics_json && cli.cmd == DRIVER_CMD_COMPILE)
+        main_arm_diagnostics_json_exit_handler(&config);
 
     if (cli.cmd == DRIVER_CMD_HELP)
     {

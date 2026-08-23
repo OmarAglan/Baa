@@ -10,6 +10,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Fixed
 
+- **Machine-readable lexical diagnostics**:
+  - Preserved `diagnostics-json-v1` when a lexer or preprocessor fatal path
+    exits early, including unterminated strings from unsaved IDE buffers.
+  - Added an Arabic-path `--source-stdin` regression test matching the LSP
+    analysis path, so editors receive the real source diagnostic instead of a
+    generic compiler-analysis failure.
+
 - **Relocatable Windows linker compatibility**:
   - Kept MinGW-w64's pseudo-relocation runtime reachable when Baa links through
     its Arabic custom startup with `-nostartfiles` under the admitted portable

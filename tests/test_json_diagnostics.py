@@ -143,6 +143,37 @@ class JsonDiagnosticsTests(unittest.TestCase):
         self.assertEqual(len(data["diagnostics"]), 1)
         self.assertEqual(data["diagnostics"][0]["code"], "B0001")
 
+    def test_unterminated_string_preserves_json_contract_for_unsaved_source(self) -> None:
+        source = (
+            "صحيح الرئيسية() {\n"
+            '    اطبع """\n'
+            "    إرجع ٠.\n"
+            "}\n"
+        )
+        with tempfile.TemporaryDirectory(prefix="baa_json_diag_lexical_") as temp:
+            work = Path(temp)
+            logical = work / "مشروع عربي" / "تعليمي.باء"
+            logical.parent.mkdir()
+            proc = self.run_baa(
+                work,
+                "--check",
+                "--diagnostics=json",
+                f"--source-stdin={logical}",
+                input_text=source,
+            )
+
+        self.assertEqual(proc.returncode, 1, f"{proc.stdout}\n{proc.stderr}")
+        self.assertEqual(proc.stderr, "")
+        data = json.loads(proc.stdout)
+        self.assertEqual(data["schema_version"], "diagnostics-json-v1")
+        self.assertEqual(data["invocation"]["mode"], "check")
+        self.assertEqual(data["summary"]["errors"], 1)
+        self.assertEqual(len(data["diagnostics"]), 1)
+        diagnostic = data["diagnostics"][0]
+        self.assertEqual(diagnostic["code"], "B0001")
+        self.assertEqual(Path(diagnostic["file"]), logical)
+        self.assertIn("النص غير مُغلق", diagnostic["message"])
+
     def test_missing_delimiter_reports_safe_structured_insertion(self) -> None:
         source = (
             "صحيح الرئيسية() {\n"

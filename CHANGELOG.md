@@ -39,6 +39,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Added
 
+- **Expanded ecosystem ownership map**:
+  - Registered ArbSh, Baa-LSP, Baa-Developer-Kit, and Pyramid-Engine alongside
+    the existing language tools and PyramidOS consumer boundary.
+  - Recorded the planned `arbsh-host-v1`, `baa-embedding-v0`, shared Arabic
+    corpus, and installer-manifest relationships without turning them into
+    compiler dependencies or implementation claims.
+
 - **Standalone Windows installer contract**:
   - Added an all-users installer with an explicit `/CURRENTUSER` fallback,
     owned PATH/environment updates, health checks, and clean uninstall.

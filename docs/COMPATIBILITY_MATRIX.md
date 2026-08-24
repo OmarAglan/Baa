@@ -1,9 +1,10 @@
 # Baa Ecosystem Compatibility Matrix
 
-> **Version:** draft-0.1 | **Applies to:** Baa v0.5.8+
+> **Version:** draft-0.2 | **Applies to:** Baa v0.6.0+
 
-This document records which versions of Baa, Nazm, Takween, Qalam-IDE, and
-PyramidOS-facing contracts are expected to work together.
+This document records which versions of Baa, Nazm, Takween, Qalam-IDE,
+Baa-LSP, ArbSh, Pyramid-Engine, Baa-Developer-Kit, and PyramidOS-facing
+contracts are expected to work together.
 
 Draft contract names in this matrix are planning commitments, not claims of current
 implementation. See [KNOWN_LIMITATIONS.md](KNOWN_LIMITATIONS.md) for the implemented v0.5.x
@@ -42,6 +43,10 @@ A project may release independently as long as it stays compatible with the cont
 | `nazm-capabilities-v1` | Nazm | Baa and Takween cache fingerprints |
 | `nazm-source-v0.4` | Nazm | humans, Baa canonical Arabic assembly emitter |
 | `elf64-object-v0` / `coff-object-v0` | Nazm | system linkers, Baa builds |
+| `arbsh-host-v1` | ArbSh | Qalam, Baa-Developer-Kit |
+| `eco-installer-manifest-v1` | Baa-Developer-Kit | coordinated Windows release workflow |
+| `baa-embedding-v0` | Baa + Pyramid-Engine | Pyramid-Engine gameplay scripting experiment |
+| `eco-arabic-text-corpus-v1` | ArbSh | Qalam, Pyramid-Engine, future PyramidOS subset |
 | `baa-language-v0.5.9` | Baa | C reference compiler, tests |
 | `baa-stdlib-v0.5.9` | Baa | hosted Baa programs |
 | `baa-hosted-abi-v0.5.9` | Baa | Windows/Linux backends |
@@ -116,6 +121,21 @@ binding, Arabic labels, and useful-hint suppression; Baa-LSP only validates,
 converts, range-filters, and rejects stale versions. Qalam renders the returned
 virtual text without reconstructing language semantics in the editor.
 
+ArbSh is a registered ecosystem shell/terminal project, but its
+`arbsh-host-v1` boundary remains planned. Until that contract and PTY/ConPTY
+gates pass, Qalam must treat ArbSh as an optional shell profile rather than a
+required embedded component. Baa, Nazm, and Takween remain directly invokable.
+
+Baa-Developer-Kit owns `eco-installer-manifest-v1` and coordinates independently
+owned installers. Its manifest does not transfer file, PATH, version, or
+uninstall ownership from component projects. ArbSh is not admitted to the
+default kit until its standalone installer lifecycle passes.
+
+Pyramid-Engine is a future hosted scripting consumer. `baa-embedding-v0` is
+only a planning name until ABI/FFI, runtime ownership, debugger, module loading,
+and hot-reload semantics pass consumer-side tests. PyramidOS remains a separate
+freestanding consumer behind its v0.9 and architecture-target gates.
+
 ---
 
 ## 4. Stability Levels
@@ -138,6 +158,9 @@ Before every Baa release:
 - [ ] State whether Takween is affected.
 - [ ] State whether Qalam-IDE is affected.
 - [ ] State whether Nazm or the assembly boundary is affected.
+- [ ] State whether ArbSh shell/process hosting is affected.
+- [ ] State whether Baa-Developer-Kit packaging is affected.
+- [ ] State whether Pyramid-Engine hosted embedding is affected.
 - [ ] State whether PyramidOS experiments are affected.
 - [ ] Add migration notes for breaking changes.
 - [ ] Follow the RC cut, admission, receipt, and rollback rules in

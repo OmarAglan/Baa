@@ -59,11 +59,16 @@ Accordingly, the driver uses this no-copy contract on Windows:
 1. Baa creates or opens the requested real UTF-8 artifact with wide Windows
    filesystem APIs.
 2. Plain safe ASCII paths are passed unchanged.
-3. Unicode, spaced, or long paths are represented to GCC/LD by a
-   `GetShortPathNameW` alias to that same filesystem entity.
-4. GCC/LD reads or writes the real artifact through the alias; no bytes are
-   copied and no staging directory exists.
-5. If Windows cannot provide an ASCII short alias, Baa returns external
+3. Unicode, spaced, or long file paths use an ASCII 8.3 alias when Windows
+   provides one; otherwise Baa creates a temporary hard link to the same file
+   entity on the same volume.
+4. When the admitted portable GCC root itself is below a Unicode path, Baa
+   exposes that directory through a temporary ASCII junction and supplies
+   explicit `-B` and `-L` search prefixes from the pinned manifest.
+5. GCC/LD reads or writes the real artifact through these aliases; no artifact
+   bytes are copied and no staging directory exists. Temporary aliases are
+   removed when the invocation or compiler process ends.
+6. If Windows cannot provide the required no-copy aliases, Baa returns external
    toolchain status `4` with an explicit diagnostic. It never silently restores
    staging.
 
@@ -96,7 +101,9 @@ Unicode and spaced paths directly, and also verifies that the active Windows
 code page is UTF-8. Merely representing Arabic in an ANSI page such as 1256 is
 insufficient: some MinGW/GNU tools reinterpret the resulting narrow bytes as
 UTF-8 and corrupt the path. The measured `short-path` mode uses the same real
-filesystem entities through no-copy ASCII aliases.
+filesystem entities through no-copy ASCII aliases: 8.3 names or hard links for
+files, and a directory junction plus manifest-derived search prefixes for an
+admitted portable GCC root.
 
 The standalone Windows package uses a pinned relocatable WinLibs kit. UTF-8
 Windows hosts may pass direct Arabic runtime-archive and executable paths;

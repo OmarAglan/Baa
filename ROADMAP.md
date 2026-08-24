@@ -1843,7 +1843,9 @@
   write an object to stdout, so Windows uses a no-copy alias to the real object.
 * \[x] **Direct linking** — pass the real object/runtime entities to GCC/LD and
   write the executable directly to the requested destination through the same
-  no-copy path adapter.
+  no-copy path adapter. Windows uses 8.3 aliases or same-volume hard links for
+  files, and an ASCII directory junction with explicit manifest-derived GCC
+  search prefixes when the admitted portable toolchain root is itself Unicode.
 * \[x] **Explicit incompatibility** — an arbitrary toolchain that fails the Unicode
   capability contract returns a stable external-toolchain error; no silent normal-path
   staging fallback may hide the limitation. A missing filesystem alias is an

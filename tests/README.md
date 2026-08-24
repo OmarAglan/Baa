@@ -66,8 +66,11 @@ invalid `BAA` overrides produce a normal failed QA summary rather than an unhand
 Every mode runs `tests/test_utf8_validation.py`, which creates malformed byte sequences at
 runtime to verify UTF-8 diagnostics without storing invalid UTF-8 source files in the repository.
 On Windows, every mode runs `tests/test_toolchain_unicode_paths.py` against the resolved GCC.
-It proves that no-copy aliases to real Arabic artifacts handle spaces, long paths, multiple
-objects, a UTF-8 response file and Arabic entry symbol, linked output, and runtime behavior.
+It proves that no-copy 8.3 or hard-link aliases to real Arabic artifacts handle spaces, long
+paths, multiple objects, a UTF-8 response file and Arabic entry symbol, linked output, and
+runtime behavior. Qalam's complete-package gate additionally extracts Baa and its admitted
+portable GCC below an Arabic, spaced directory and verifies the GCC-root junction/search-prefix
+adapter through an isolated compile-link-run.
 It also launches six Baa builds concurrently from one directory to reject shared temporary
 artifact names. Other hosts report this platform-specific matrix as skipped.
 Every mode also runs `tests/test_arabic_numerals.py` to verify Arabic numeral rendering in

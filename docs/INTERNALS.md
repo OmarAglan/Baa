@@ -82,9 +82,12 @@ flowchart LR
 >
 > **Windows path adapter:** `-S` writes directly to its requested path. Assemble
 > and link phases also operate on the real artifacts. The selected MSYS2 GCC does
-> not accept Unicode filesystem arguments, so Baa presents a short-name alias to
-> the same real file—never a copied staging file. Missing aliases fail explicitly
-> with toolchain status `4`. The measured matrix and retired-copy accounting live
+> not accept Unicode filesystem arguments, so Baa presents an 8.3 alias or a
+> temporary hard link to the same real file—never a copied staging file. When an
+> admitted portable GCC root is itself below a Unicode path, a temporary ASCII
+> directory junction plus manifest-derived `-B`/`-L` prefixes keeps GCC's internal
+> tool discovery on ASCII paths. Missing aliases fail explicitly with toolchain
+> status `4`. The measured matrix and retired-copy accounting live
 > in [Windows Toolchain Paths](WINDOWS_TOOLCHAIN_PATHS.md).
 
 ### 1.1.1. Component Map

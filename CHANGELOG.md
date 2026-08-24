@@ -22,6 +22,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
     its Arabic custom startup with `-nostartfiles` under the admitted portable
     toolchain contract, avoiding `_pei386_runtime_relocator` failures without
     changing unmarked UCRT link behavior.
+  - Made extracted portable bundles work below Arabic and spaced directories
+    without staging copies: file operands use 8.3 names or same-volume hard
+    links, while an admitted Unicode GCC root uses a temporary ASCII junction
+    and manifest-derived `-B`/`-L` search prefixes. All aliases are removed after
+    use and unsupported toolchains fail visibly with status `4`.
   - Extended the Unicode/path linker matrix to exercise the same explicit
     runtime-retention contract.
   - Added a versioned portable-toolchain marker so an admitted bundled GCC can

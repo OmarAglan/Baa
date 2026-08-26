@@ -87,6 +87,7 @@ Filename: "{app}\{#MyAppExeName}"; Parameters: "--version"; Description: "الت
 
 [Code]
 #include "installer\windows_environment.iss"
+#include "installer\windows_scope_migration.iss"
 
 const
   BAA_INSTALLER_KEY = 'Software\BaaEcosystem\Baa';
@@ -94,6 +95,12 @@ const
   BAA_HOME_OWNED_VALUE = 'HomeOwned';
   BAA_STDLIB_OWNED_VALUE = 'StdlibOwned';
   NAZM_UNINSTALL_KEY = 'Software\Microsoft\Windows\CurrentVersion\Uninstall\{8D3D57AE-41CF-4B8A-95E9-270E4564E2A1}_is1';
+
+function PrepareToInstall(var NeedsRestart: Boolean): string;
+begin
+  Result := EcoMigrateOppositeInstall('{#MyAppName}',
+    'Software\Microsoft\Windows\CurrentVersion\Uninstall\{E4B6D77C-6C22-4E2D-8F9D-61D34A26B0D1}_is1');
+end;
 
 procedure BaaRegistryRoot(var Root: Integer);
 begin

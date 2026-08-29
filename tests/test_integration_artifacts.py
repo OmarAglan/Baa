@@ -9,8 +9,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 
 REQUIRED_DOCS = {
-    "docs/ECOSYSTEM_BOUNDARIES.md": ("# Baa Ecosystem Boundaries", "draft-0.1"),
-    "docs/COMPATIBILITY_MATRIX.md": ("# Baa Ecosystem Compatibility Matrix", "draft-0.1"),
+    "docs/ECOSYSTEM_BOUNDARIES.md": ("# Baa Ecosystem Boundaries", "draft-0.2"),
+    "docs/COMPATIBILITY_MATRIX.md": ("# Baa Ecosystem Compatibility Matrix", "draft-0.2"),
     "docs/TOOLING_CONTRACTS.md": ("# Baa Tooling Contracts", "draft-0.1"),
     "docs/DIAGNOSTICS_JSON_SCHEMA.md": ("# Baa Diagnostics JSON Schema", "draft-0.1"),
     "docs/FORMAT_JSON_SCHEMA.md": ("# Baa Formatting JSON Schema", "draft-0.1"),

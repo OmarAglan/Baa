@@ -424,6 +424,7 @@ static void semantic_collect_completion(SemanticQuery* query)
             active_function = declaration;
     }
 
+    query->completion_inside_function = active_function != NULL;
     if (!active_function) return;
     for (const Node* parameter = active_function->data.func_def.params;
          parameter; parameter = parameter->next)
@@ -436,10 +437,220 @@ static void semantic_collect_completion(SemanticQuery* query)
         query, active_function->data.func_def.body, 0);
 }
 
+typedef struct
+{
+    bool valid;
+    DataType type;
+    const char* type_name;
+    DataType pointer_base;
+    const char* pointer_base_name;
+    int pointer_depth;
+    const FuncPtrSig* function_signature;
+} SemanticCompletionType;
+
+static SemanticCompletionType semantic_completion_parameter_type(
+    const SemanticQuery* query)
+{
+    SemanticCompletionType result = {0};
+    if (!query || !query->signature_decl || query->active_parameter < 0)
+        return result;
+
+    const Node* declaration = query->signature_decl;
+    if (declaration->type == NODE_FUNC_DEF)
+    {
+        int index = 0;
+        for (const Node* parameter = declaration->data.func_def.params;
+             parameter; parameter = parameter->next)
+        {
+            if (parameter->type != NODE_VAR_DECL) continue;
+            if (index++ != query->active_parameter) continue;
+            result.valid = true;
+            result.type = parameter->data.var_decl.type;
+            result.type_name = parameter->data.var_decl.type_name;
+            result.pointer_base = parameter->data.var_decl.ptr_base_type;
+            result.pointer_base_name =
+                parameter->data.var_decl.ptr_base_type_name;
+            result.pointer_depth = parameter->data.var_decl.ptr_depth;
+            result.function_signature = parameter->data.var_decl.func_sig;
+            return result;
+        }
+        return result;
+    }
+
+    if (declaration->type == NODE_VAR_DECL &&
+        declaration->data.var_decl.type == TYPE_FUNC_PTR)
+    {
+        const FuncPtrSig* signature = declaration->data.var_decl.func_sig;
+        const int index = query->active_parameter;
+        if (!signature || index >= signature->param_count) return result;
+        result.valid = true;
+        result.type = signature->param_types
+            ? signature->param_types[index] : TYPE_INT;
+        result.pointer_base = signature->param_ptr_base_types
+            ? signature->param_ptr_base_types[index] : TYPE_INT;
+        result.pointer_base_name = signature->param_ptr_base_type_names
+            ? signature->param_ptr_base_type_names[index] : NULL;
+        result.pointer_depth = signature->param_ptr_depths
+            ? signature->param_ptr_depths[index] : 0;
+    }
+    return result;
+}
+
+static SemanticCompletionType semantic_completion_candidate_type(
+    const Node* declaration)
+{
+    SemanticCompletionType result = {0};
+    if (!declaration) return result;
+    switch (declaration->type)
+    {
+        case NODE_VAR_DECL:
+            result.valid = true;
+            result.type = declaration->data.var_decl.type;
+            result.type_name = declaration->data.var_decl.type_name;
+            result.pointer_base = declaration->data.var_decl.ptr_base_type;
+            result.pointer_base_name =
+                declaration->data.var_decl.ptr_base_type_name;
+            result.pointer_depth = declaration->data.var_decl.ptr_depth;
+            result.function_signature = declaration->data.var_decl.func_sig;
+            break;
+        case NODE_FUNC_DEF:
+            result.valid = true;
+            result.type = declaration->data.func_def.return_type;
+            result.pointer_base =
+                declaration->data.func_def.return_ptr_base_type;
+            result.pointer_base_name =
+                declaration->data.func_def.return_ptr_base_type_name;
+            result.pointer_depth = declaration->data.func_def.return_ptr_depth;
+            result.function_signature =
+                declaration->data.func_def.return_func_sig;
+            break;
+        default:
+            break;
+    }
+    return result;
+}
+
+static bool semantic_completion_same_name(const char* left,
+                                          const char* right)
+{
+    if (!left || !right) return left == right;
+    return strcmp(left, right) == 0;
+}
+
+static bool semantic_completion_same_type(SemanticCompletionType left,
+                                          SemanticCompletionType right)
+{
+    if (!left.valid || !right.valid || left.type != right.type) return false;
+    if (left.type == TYPE_POINTER)
+        return left.pointer_base == right.pointer_base &&
+               left.pointer_depth == right.pointer_depth &&
+               semantic_completion_same_name(
+                   left.pointer_base_name, right.pointer_base_name);
+    if (left.type == TYPE_ENUM || left.type == TYPE_STRUCT ||
+        left.type == TYPE_UNION)
+        return semantic_completion_same_name(left.type_name, right.type_name);
+    if (left.type == TYPE_FUNC_PTR)
+        return left.function_signature == right.function_signature;
+    return true;
+}
+
+static int semantic_completion_relevance(
+    const SemanticCompletionCandidate* candidate,
+    SemanticCompletionType expected)
+{
+    int scope_rank = 40 - candidate->priority;
+    if (scope_rank < 0) scope_rank = 0;
+    if (!expected.valid) return scope_rank;
+
+    const SemanticCompletionType actual =
+        semantic_completion_candidate_type(candidate->declaration);
+    if (semantic_completion_same_type(actual, expected)) return scope_rank;
+    if (candidate->declaration &&
+        (candidate->declaration->type == NODE_VAR_DECL ||
+         candidate->declaration->type == NODE_ARRAY_DECL ||
+         candidate->declaration->type == NODE_FUNC_DEF))
+        return 40 + scope_rank;
+    return 80 + scope_rank;
+}
+
+static void semantic_print_completion_context(
+    FILE* out,
+    const SemanticQuery* query,
+    SemanticCompletionType expected)
+{
+    const char* kind = query->signature_decl
+        ? "call-argument"
+        : (query->completion_inside_function ? "statement" : "top-level");
+    fputs("{\"kind\":", out);
+    semantic_json_escape(out, kind);
+    fputs(",\"ranking\":[", out);
+    const char* const* ranking = NULL;
+    size_t ranking_count = 0u;
+    static const char* const call_ranking[] = {
+        "variable", "parameter", "array", "value", "function",
+        "keyword", "snippet", "type"
+    };
+    static const char* const statement_ranking[] = {
+        "variable", "parameter", "array", "function", "keyword",
+        "value", "snippet", "type"
+    };
+    static const char* const top_level_ranking[] = {
+        "snippet", "type", "keyword", "function", "variable",
+        "array", "value"
+    };
+    if (query->signature_decl)
+    {
+        ranking = call_ranking;
+        ranking_count = sizeof(call_ranking) / sizeof(call_ranking[0]);
+    }
+    else if (query->completion_inside_function)
+    {
+        ranking = statement_ranking;
+        ranking_count =
+            sizeof(statement_ranking) / sizeof(statement_ranking[0]);
+    }
+    else
+    {
+        ranking = top_level_ranking;
+        ranking_count =
+            sizeof(top_level_ranking) / sizeof(top_level_ranking[0]);
+    }
+    for (size_t i = 0; i < ranking_count; ++i)
+    {
+        if (i > 0) fputc(',', out);
+        semantic_json_escape(out, ranking[i]);
+    }
+    fputc(']', out);
+    if (query->signature_decl)
+    {
+        fputs(",\"call_name\":", out);
+        semantic_json_escape(out, semantic_node_name(query->signature_call));
+        fprintf(out, ",\"active_parameter\":%d", query->active_parameter);
+    }
+    if (expected.valid)
+    {
+        char display[1024] = {0};
+        size_t used = 0u;
+        semantic_render_type(display, sizeof(display), &used,
+                             expected.type, expected.type_name,
+                             expected.pointer_base,
+                             expected.pointer_base_name,
+                             expected.pointer_depth,
+                             expected.function_signature);
+        fputs(",\"expected_type\":", out);
+        semantic_json_escape(out, display);
+    }
+    fputc('}', out);
+}
+
 static void semantic_print_completion(FILE* out,
                                       const SemanticQuery* query)
 {
-    fputs("{\"items\":[", out);
+    const SemanticCompletionType expected =
+        semantic_completion_parameter_type(query);
+    fputs("{\"context\":", out);
+    semantic_print_completion_context(out, query, expected);
+    fputs(",\"items\":[", out);
     bool first = true;
     for (size_t i = 0; i < query->completion_count; ++i)
     {
@@ -468,6 +679,8 @@ static void semantic_print_completion(FILE* out,
         fputs(",\"insert_text_format\":\"plain\",\"scope\":", out);
         semantic_json_escape(
             out, candidate->scope ? candidate->scope : "global");
+        fprintf(out, ",\"relevance\":%d",
+                semantic_completion_relevance(candidate, expected));
         fputc('}', out);
         first = false;
     }

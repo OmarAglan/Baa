@@ -65,7 +65,7 @@ class CompletionDataTests(unittest.TestCase):
             {
                 "إرجع", "اطبع", "اقرأ", "مجمع", "صحيح", "ص٨", "ص١٦",
                 "ص٣٢", "ص٦٤", "ط٨", "ط١٦", "ط٣٢", "ط٦٤", "نص",
-                "منطقي", "حرف", "عشري", "عشري٣٢", "عدم", "كـ", "حجم",
+                "منطقي", "حرف", "عشري", "عشري٣٢", "عدم", "دالة", "كـ", "حجم",
                 "نوع", "ثابت", "ساكن", "خارجي", "إذا", "وإلا", "طالما",
                 "لكل", "توقف", "استمر", "اختر", "حالة", "افتراضي",
                 "صواب", "خطأ", "تعداد", "هيكل", "اتحاد",
@@ -74,7 +74,14 @@ class CompletionDataTests(unittest.TestCase):
 
         by_filter = {item["filter_text"]: item for item in items}
         self.assertTrue(by_filter["نوع"]["contextual"])
+        function_pointer_type = next(
+            item for item in items
+            if item["label"] == "دالة" and item["kind"] == "type"
+        )
+        self.assertTrue(function_pointer_type["contextual"])
+        self.assertEqual(function_pointer_type["relevance"], 40)
         self.assertEqual(by_filter["الرئيسية"]["insert_text_format"], "snippet")
+        self.assertEqual(by_filter["الرئيسية"]["relevance"], 20)
         self.assertIn("${0}", by_filter["الرئيسية"]["insert_text"])
         self.assertIn("#تضمين", by_filter)
         self.assertNotIn("main", by_filter)
@@ -100,6 +107,7 @@ class CompletionDataTests(unittest.TestCase):
             builtins["ابدأ_عملية"]["insert_text_format"],
             "plain",
         )
+        self.assertEqual(builtins["ابدأ_عملية"]["relevance"], 30)
 
     def test_rejects_unknown_format_and_positional_source(self) -> None:
         bad_format = self.run_baa("--completion-data=text")

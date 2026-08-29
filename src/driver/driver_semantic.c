@@ -53,6 +53,7 @@ typedef struct
     SemanticCompletionCandidate
         completion_items[SEMANTIC_MAX_COMPLETION_ITEMS];
     size_t completion_count;
+    bool completion_inside_function;
 } SemanticQuery;
 
 static void semantic_json_escape(FILE* out, const char* text)

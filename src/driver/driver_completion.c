@@ -42,7 +42,8 @@ static void completion_print_item(FILE *out,
                                   const char *filter_text,
                                   const char *insert_text,
                                   bool snippet,
-                                  bool contextual)
+                                  bool contextual,
+                                  int relevance)
 {
     fputs("{\"label\":", out);
     completion_json_escape(out, label);
@@ -59,6 +60,7 @@ static void completion_print_item(FILE *out,
     fputs(",\"insert_text_format\":", out);
     completion_json_escape(out, snippet ? "snippet" : "plain");
     if (contextual) fputs(",\"contextual\":true", out);
+    fprintf(out, ",\"relevance\":%d", relevance);
     fputc('}', out);
 }
 
@@ -148,7 +150,8 @@ bool driver_completion_data_json_write(FILE *out, const char *compiler_version)
                               keywords[i].label,
                               keywords[i].label,
                               false,
-                              !keywords[i].lexical_keyword);
+                              !keywords[i].lexical_keyword,
+                              40);
         first = false;
     }
 
@@ -173,7 +176,8 @@ bool driver_completion_data_json_write(FILE *out, const char *compiler_version)
                                   entry->filter_text,
                                   entry->insert_text,
                                   entry->snippet,
-                                  false);
+                                  false,
+                                  group == 0 ? 10 : 20);
             first = false;
         }
     }
@@ -194,7 +198,8 @@ bool driver_completion_data_json_write(FILE *out, const char *compiler_version)
                               builtins[i].name,
                               builtins[i].name,
                               false,
-                              false);
+                              false,
+                              30);
         first = false;
     }
 

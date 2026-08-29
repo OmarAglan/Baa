@@ -315,7 +315,8 @@ used by the lexer, so an editor copy cannot become a second language grammar.
       "documentation": "نوع العدد الصحيح الافتراضي في باء.",
       "filter_text": "صحيح",
       "insert_text": "صحيح",
-      "insert_text_format": "plain"
+      "insert_text_format": "plain",
+      "relevance": 40
     },
     {
       "label": "الرئيسية (دالة)",
@@ -323,19 +324,26 @@ used by the lexer, so an editor copy cannot become a second language grammar.
       "detail": "قالب نقطة بداية البرنامج",
       "filter_text": "الرئيسية",
       "insert_text": "صحيح الرئيسية() {\n\t${0}\n\tإرجع ٠.\n}",
-      "insert_text_format": "snippet"
+      "insert_text_format": "snippet",
+      "relevance": 20
     }
   ]
 }
 ```
 
 Required item fields are `label`, `kind`, `detail`, `documentation`, `filter_text`,
-`insert_text`, and `insert_text_format`. Stable `kind` values in this first
+`insert_text`, `insert_text_format`, and `relevance`. Stable `kind` values in this first
 slice are `keyword`, `type`, `value`, `directive`, `snippet`, and `function`.
 `insert_text_format` is `plain` or `snippet`; snippets use the standard
 `${1:placeholder}` and `${0}` tab-stop notation. The optional `contextual`
 boolean marks words such as `نوع` that the parser interprets contextually
 rather than reserving lexically.
+
+`relevance` is a non-negative compiler-owned baseline where a smaller value is
+more relevant. Consumers may combine it with cursor-local matching and user
+choice history, but must not reinterpret Baa syntax to replace it. The
+contextual type word `دالة` is exported here even though the lexer keeps it as
+an identifier and the type parser recognizes it only in type positions.
 
 This static document includes the compiler's canonical callable builtin
 inventory and signatures. Scope-aware program symbols are cursor-dependent and
@@ -442,6 +450,16 @@ paths expand 8.3 aliases to their stable long Unicode form.
     }
   ],
   "completion": {
+    "context": {
+      "kind": "call-argument",
+      "ranking": [
+        "variable", "parameter", "array", "value", "function",
+        "keyword", "snippet", "type"
+      ],
+      "call_name": "اجمع",
+      "active_parameter": 1,
+      "expected_type": "صحيح"
+    },
     "items": [
       {
         "label": "قيمة",
@@ -451,7 +469,8 @@ paths expand 8.3 aliases to their stable long Unicode form.
         "filter_text": "قيمة",
         "insert_text": "قيمة",
         "insert_text_format": "plain",
-        "scope": "local"
+        "scope": "local",
+        "relevance": 9
       }
     ]
   }
@@ -468,14 +487,23 @@ explicitly included headers. Project fan-out compares this identity only with
 identities emitted by `semantic-index-json-v1`; consumers must not fall back to
 identifier text matching.
 
-`completion` is always an object with an `items` array. It contains declarations
+`completion` is always an object with a `context` object and an `items` array.
+`context.kind` is `top-level`, `statement`, or `call-argument`; `ranking` is
+the compiler-owned preferred order of stable item kinds. A call-argument
+context also identifies the call and active parameter and, when the declared
+parameter exists, its Arabic `expected_type` display. Consumers use these
+fields for generic filtering and ordering and must not recreate grammar or
+type rules.
+
+The items array contains declarations
 visible at `position_byte`: parameters, declarations that precede the cursor in
 the active lexical scope, root globals and types, and declarations from
 explicitly included headers. Inner declarations shadow outer declarations;
 future declarations and sibling-block locals are excluded. Each item requires
 `label`, `kind`, `detail`, `documentation`, `filter_text`, `insert_text`,
-`insert_text_format`, and `scope`. Stable scope values are `local`,
+`insert_text_format`, `scope`, and `relevance`. Stable scope values are `local`,
 `parameter`, `global`, and `included`.
+`relevance` is cursor-specific and non-negative; lower values are preferred.
 
 Root-buffer ranges use one-based byte line/column coordinates plus zero-based
 absolute byte offsets; consumers should use the byte offsets when converting

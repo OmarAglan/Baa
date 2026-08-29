@@ -173,6 +173,43 @@ class SemanticQueryTests(unittest.TestCase):
         self.assertEqual(items["معامل"]["insert_text_format"], "plain")
         self.assertIn("متغير", items["معامل"]["documentation"])
 
+    def test_completion_describes_call_argument_context_and_type_relevance(self) -> None:
+        source = (
+            "صحيح استخدم(صحيح رقم، نص رسالة) { إرجع رقم. }\n"
+            "صحيح الرئيسية() {\n"
+            "    صحيح عدد = ١.\n"
+            '    نص عبارة = "مرحباً".\n'
+            "    إرجع استخدم(عدد، عبار).\n"
+            "}\n"
+        )
+        prefix = "استخدم(عدد، عبار"
+        position = (
+            source.encode("utf-8").index(prefix.encode("utf-8"))
+            + len(prefix.encode("utf-8"))
+        )
+        with tempfile.TemporaryDirectory(
+            prefix="baa_semantic_context_مسار_"
+        ) as temp:
+            work = Path(temp)
+            logical = work / "سياق.baa"
+            result = self.query(work, logical, source, position)
+
+        completion = result["completion"]
+        context = completion["context"]
+        self.assertEqual(context["kind"], "call-argument")
+        self.assertEqual(context["call_name"], "استخدم")
+        self.assertEqual(context["active_parameter"], 1)
+        self.assertEqual(context["expected_type"], "نص")
+        self.assertEqual(context["ranking"][:3], [
+            "variable", "parameter", "array",
+        ])
+
+        items = {item["label"]: item for item in completion["items"]}
+        self.assertLess(items["عبارة"]["relevance"],
+                        items["عدد"]["relevance"])
+        self.assertLess(items["عدد"]["relevance"],
+                        items["استخدم"]["relevance"])
+
     def test_external_identity_is_stable_across_translation_units(self) -> None:
         caller_source = (
             '#تضمين "واجهة.baahd"\n'

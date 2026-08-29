@@ -27,6 +27,7 @@ static const BaaLanguageKeyword g_keywords[] = {
     {"عشري", TOKEN_KEYWORD_FLOAT, "type", "نوع عدد عشري", true},
     {"عشري٣٢", TOKEN_KEYWORD_FLOAT32, "type", "نوع عدد عشري بعرض ٣٢ بت", true},
     {"عدم", TOKEN_KEYWORD_VOID, "type", "نوع بلا قيمة", true},
+    {"دالة", TOKEN_IDENTIFIER, "type", "نوع مؤشر إلى دالة", false},
     {"كـ", TOKEN_CAST, "keyword", "تحويل صريح بين الأنواع", true},
     {"حجم", TOKEN_SIZEOF, "keyword", "حساب حجم النوع أو القيمة", true},
     {"نوع", TOKEN_TYPE_ALIAS, "keyword", "تعريف اسم بديل لنوع", false},

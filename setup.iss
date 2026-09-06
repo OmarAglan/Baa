@@ -1,4 +1,4 @@
-; مثبت مصرّف باء المستقل لويندوز.
+﻿; مثبت مصرّف باء المستقل لويندوز.
 ; نظم اعتماد مستقل يحل من PATH. الرابط الخاص يبقى داخل مجلد باء ولا يدخل PATH.
 
 #define MyAppId "{{E4B6D77C-6C22-4E2D-8F9D-61D34A26B0D1}"
@@ -39,6 +39,13 @@ SetupIconFile=resources\icon.ico
 Compression=lzma2/ultra64
 SolidCompression=yes
 WizardStyle=modern
+WizardSizePercent=110,110
+DisableWelcomePage=no
+WizardImageFile=installer\wizard-sidebar.png
+WizardSmallImageFile=installer\wizard-mark.png
+WizardImageStretch=yes
+LZMANumBlockThreads=1
+CompressionThreads=1
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
 MinVersion=10.0
@@ -53,6 +60,17 @@ CloseApplications=yes
 RestartApplications=no
 UninstallDisplayIcon={app}\{#MyAppExeName}
 UninstallDisplayName={#MyAppName} {#MyAppVersion}
+
+[LangOptions]
+DialogFontName=Segoe UI
+DialogFontSize=10
+WelcomeFontName=Segoe UI
+
+[Messages]
+arabic.WelcomeLabel1=ابدأ البرمجة بلغة باء
+arabic.WelcomeLabel2=مترجم باء ومكتبته القياسية وأدوات ربط البرامج.%n%nثبّت نظم أيضاً لتجميع البرامج. يمكنك اختيار مكان التثبيت في الخطوة التالية.
+english.WelcomeLabel1=Start coding with Baa
+english.WelcomeLabel2=The Baa compiler, standard library and program linker.%n%nInstall Nazm as well to assemble programs. Choose where to install on the next page.
 
 [Languages]
 Name: "arabic"; MessagesFile: "compiler:Languages\Arabic.isl"
@@ -86,6 +104,7 @@ Name: "{autoprograms}\باء\إزالة باء"; Filename: "{uninstallexe}"
 Filename: "{app}\{#MyAppExeName}"; Parameters: "--version"; Description: "التحقق من إصدار باء"; Flags: postinstall skipifsilent unchecked runhidden
 
 [Code]
+#include "installer\windows_wizard.iss"
 #include "installer\windows_environment.iss"
 #include "installer\windows_scope_migration.iss"
 
@@ -203,7 +222,7 @@ begin
     ApplyBaaEnvironment;
     EcoBroadcastEnvironmentChange;
     if not RunBaaHealthProbe then
-      RaiseException('فشل فحص مكونات باء أو رابطه الخاص بعد التثبيت.');
+      EcoInstallFailed('فشل فحص مكونات باء أو رابطه الخاص بعد التثبيت.');
     if not WizardSilent then
     begin
       if NazmAvailable then

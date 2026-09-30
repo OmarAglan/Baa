@@ -35,3 +35,9 @@ mingw64.7z
 __pycache__/
 *.pyc
 /.cache
+
+# مؤقّتات الاختبارات وملفات العمل المؤقتة
+/.pytest_cache/
+/prompt.txt
+/prompt_docs.txt
+

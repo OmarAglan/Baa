@@ -53,7 +53,7 @@ def _inspect_coff_object(data: bytes) -> tuple[set[str], set[str], int]:
     string_table = data[symbol_table_end:]
     sections: set[str] = set()
     for raw_name in raw_section_names:
-        short_name = raw_name.rstrip(b"\0").decode("ascii", errors="replace")
+        short_name = raw_name.rstrip(b"\0").decode("utf-8", errors="strict")
         if short_name.startswith("/") and short_name[1:].isdigit():
             sections.add(_read_c_string(string_table, int(short_name[1:])))
         else:
@@ -68,7 +68,7 @@ def _inspect_coff_object(data: bytes) -> tuple[set[str], set[str], int]:
         if zeroes == 0:
             name = _read_c_string(string_table, string_offset)
         else:
-            name = raw_name.rstrip(b"\0").decode("ascii", errors="replace")
+            name = raw_name.rstrip(b"\0").decode("utf-8", errors="strict")
         section_number = struct.unpack_from("<h", data, offset + 12)[0]
         storage_class = data[offset + 16]
         auxiliary_count = data[offset + 17]
@@ -2056,7 +2056,17 @@ class NazmEmitterTests(unittest.TestCase):
                 if "--debug-info" in flags:
                     self.assertTrue(_debug_sections(sections))
                     self.assertTrue(_debug_sections(production_sections))
-                self.assertEqual(global_symbols, production_global_symbols)
+                # نظم يهرّب أسماء المستخدم المحجوزة (سجلات، بادئات المصدر) بالبادئة
+                # `رمز_باء_`؛ فلا يُطابَق الرمز إلا بعد تطبيق التهريب نفسه.
+                # الاسم الذي يبدأ بالبادئة يُهرّب دائماً كي يبقى التهريب متبايناً.
+                escape_prefix = "رمز_باء_"
+                escaped_production = {
+                    name
+                    if name in global_symbols and not name.startswith(escape_prefix)
+                    else escape_prefix + name
+                    for name in production_global_symbols
+                }
+                self.assertEqual(global_symbols, escaped_production)
 
 
 if __name__ == "__main__":

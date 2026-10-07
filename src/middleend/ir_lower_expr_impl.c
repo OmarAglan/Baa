@@ -817,7 +817,8 @@ IRValue* lower_expr(IRLowerCtx* ctx, Node* expr) {
             int ep = ir_builder_emit_ptr_offset(ctx->builder, ptr_i8_t, base_ptr, idx);
             IRValue* byte_ptr = ir_value_reg(ep, ptr_i8_t);
 
-            IRType* field_val_t = ir_type_from_datatype(m, expr->data.member_access.member_type);
+            IRType* field_val_t = ir_type_from_datatype_ex(m, expr->data.member_access.member_type,
+                                                          expr->inferred_func_sig);
             if (!field_val_t || field_val_t->kind == IR_TYPE_VOID) field_val_t = IR_TYPE_I64_T;
 
             IRType* field_ptr_t = ir_type_ptr(field_val_t);

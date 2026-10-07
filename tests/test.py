@@ -267,7 +267,8 @@ def main() -> int:
         if os.name != "nt":
             st = baa_copy.stat()
             baa_copy.chmod(st.st_mode | 0o111)
-        baa = baa_copy
+        # مسار مطلق: بعض بيئات بايثون (MSYS2) لا تشغّل ملفاً تنفيذياً بمسار نسبي.
+        baa = baa_copy.resolve()
     except Exception:
         baa = baa_real
 

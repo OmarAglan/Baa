@@ -578,6 +578,16 @@ def _run_example_tests(log_dir: Path) -> StepResult:
     )
 
 
+def _run_opt_differential_tests(log_dir: Path) -> StepResult:
+    return _run_logged(
+        "opt-differential-tests",
+        [sys.executable, str(TESTS_DIR / "test_opt_differential.py")],
+        cwd=ROOT,
+        log_dir=log_dir,
+        timeout_s=900.0,
+    )
+
+
 def _run_one_definition_tests(log_dir: Path) -> StepResult:
     return _run_logged(
         "one-definition-tests",
@@ -1147,6 +1157,11 @@ def main() -> int:
         mf_ok, mf_results = _run_multifile_smoke(baa, log_dir)
         all_results.extend(mf_results)
         overall_ok = overall_ok and mf_ok
+
+        opt_differential_res = _run_opt_differential_tests(log_dir)
+        _print_step(opt_differential_res)
+        all_results.append(opt_differential_res)
+        overall_ok = overall_ok and opt_differential_res.passed
 
         build_maturity_res = _run_logged(
             "build-maturity",

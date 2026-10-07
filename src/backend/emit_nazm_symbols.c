@@ -121,6 +121,62 @@ static bool nazm_parse_generated_string_label(const char *name,
     return true;
 }
 
+// بادئة تهريب أسماء المستخدم التي يحجزها نَظْم أو يولّدها هذا المصدر.
+static const char k_nazm_escape_prefix[] = "رمز_باء_";
+
+// أسماء السجلات القديمة التي يرفضها نَظْم 0.4 في موضع الرمز
+// (تطابق LEGACY_REGISTERS في Nazm/src/lexer/lexer.c).
+static const char *const k_nazm_legacy_registers[] = {
+    "مجمع", "عداد", "بيانات", "قاعدة_ب", "مكدس", "قاعدة", "مصدر", "وجهة",
+    "ر0", "ر1", "ر2", "ر3", "ر4", "ر5", "ر6", "ر7",
+    "ر8", "ر9", "ر10", "ر11", "ر12", "ر13", "ر14", "ر15",
+    "سجل_عام_8", "سجل_عام_9", "سجل_عام_10", "سجل_عام_11",
+    "سجل_عام_12", "سجل_عام_13", "سجل_عام_14", "سجل_عام_15",
+};
+
+// بادئات الوسوم التي يولّدها المصدر نفسه؛ اسم مستخدم يبدأ بها قد يتكرر تعريفه.
+static const char *const k_nazm_generated_prefixes[] = {
+    "سلسلة_باء_", "سلسلة_سي_", "تخزين_ساكن_", "كتلة_", k_nazm_escape_prefix,
+};
+
+static bool nazm_name_in_table(const char *name,
+                               const char *const *table,
+                               size_t count)
+{
+    for (size_t i = 0; i < count; ++i)
+    {
+        if (strcmp(name, table[i]) == 0) return true;
+    }
+    return false;
+}
+
+// هل يجب تهريب اسم المستخدم قبل كتابته في مصدر نظم؟
+// التهريب بإضافة البادئة دالة متباينة: الاسم الذي يبدأ بالبادئة يُهرّب أيضاً،
+// فلا يلتقي اسمان مختلفان في الاسم نفسه.
+static bool nazm_symbol_needs_escape(const char *name)
+{
+    if (!name || !*name) return false;
+    if (strcmp(name, "مؤشر_التعليمة") == 0) return true;
+    if (nazm_name_in_table(name, k_nazm_registers, PHYS_REG_COUNT) ||
+        nazm_name_in_table(name, k_nazm_registers_32, PHYS_REG_COUNT) ||
+        nazm_name_in_table(name, k_nazm_registers_16, PHYS_REG_COUNT) ||
+        nazm_name_in_table(name, k_nazm_registers_8, PHYS_REG_COUNT) ||
+        nazm_name_in_table(name, k_nazm_decimal_registers, 16) ||
+        nazm_name_in_table(name, k_nazm_legacy_registers,
+                           sizeof(k_nazm_legacy_registers) /
+                               sizeof(k_nazm_legacy_registers[0])))
+        return true;
+    for (size_t i = 0;
+         i < sizeof(k_nazm_generated_prefixes) /
+                 sizeof(k_nazm_generated_prefixes[0]);
+         ++i)
+    {
+        const char *prefix = k_nazm_generated_prefixes[i];
+        if (strncmp(name, prefix, strlen(prefix)) == 0) return true;
+    }
+    return false;
+}
+
 static bool nazm_operand_is_memory(const MachineOperand *operand)
 {
     return operand &&

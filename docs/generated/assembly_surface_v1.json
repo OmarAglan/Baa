@@ -26,6 +26,7 @@
         "tests/integration/backend/backend_format_arabic_test.baa",
         "tests/integration/backend/backend_func_ptr_shadow_call_test.baa",
         "tests/integration/backend/backend_func_ptr_test.baa",
+        "tests/integration/backend/backend_global_address_v073_test.baa",
         "tests/integration/backend/backend_global_array_init_test.baa",
         "tests/integration/backend/backend_include_bom_test.baa",
         "tests/integration/backend/backend_include_i_compact_form_test.baa",
@@ -37,12 +38,16 @@
         "tests/integration/backend/backend_include_relative_dir_test.baa",
         "tests/integration/backend/backend_inline_test.baa",
         "tests/integration/backend/backend_int_semantics_test.baa",
+        "tests/integration/backend/backend_literal_fixes_v073_test.baa",
         "tests/integration/backend/backend_low_level_ops_test.baa",
         "tests/integration/backend/backend_main_args_test.baa",
         "tests/integration/backend/backend_mod_test.baa",
         "tests/integration/backend/backend_multidim_array_test.baa",
+        "tests/integration/backend/backend_nazm_reserved_symbols_v073_test.baa",
         "tests/integration/backend/backend_path_stdlib_v062_test.baa",
         "tests/integration/backend/backend_pointer_core_test.baa",
+        "tests/integration/backend/backend_pointer_index_assign_v073_test.baa",
+        "tests/integration/backend/backend_postfix_statement_v073_test.baa",
         "tests/integration/backend/backend_pp_nested_test.baa",
         "tests/integration/backend/backend_process_runtime_v065_test.baa",
         "tests/integration/backend/backend_readline_stdin_test.baa",
@@ -58,6 +63,8 @@
         "tests/integration/backend/backend_runtime_mod_zero_fail_v063_test.baa",
         "tests/integration/backend/backend_runtime_null_deref_assign_fail_v063_test.baa",
         "tests/integration/backend/backend_runtime_null_deref_fail_v063_test.baa",
+        "tests/integration/backend/backend_runtime_null_pointer_index_assign_fail_v073_test.baa",
+        "tests/integration/backend/backend_runtime_null_pointer_index_read_fail_v073_test.baa",
         "tests/integration/backend/backend_runtime_panic_location_v063_test.baa",
         "tests/integration/backend/backend_runtime_panic_v055_test.baa",
         "tests/integration/backend/backend_runtime_shift_width_high_fail_v063_test.baa",
@@ -67,6 +74,7 @@
         "tests/integration/backend/backend_scan_arabic_test.baa",
         "tests/integration/backend/backend_scope_test.baa",
         "tests/integration/backend/backend_sha256_file_v066_test.baa",
+        "tests/integration/backend/backend_sizeof_static_init_v073_test.baa",
         "tests/integration/backend/backend_stackargs_test.baa",
         "tests/integration/backend/backend_static_storage_test.baa",
         "tests/integration/backend/backend_stdlib_short_include_test.baa",
@@ -74,6 +82,7 @@
         "tests/integration/backend/backend_string_builder_stdlib_v062_test.baa",
         "tests/integration/backend/backend_string_ops_test.baa",
         "tests/integration/backend/backend_struct_init_test.baa",
+        "tests/integration/backend/backend_struct_sized_fields_v073_test.baa",
         "tests/integration/backend/backend_sysv_6args_test.baa",
         "tests/integration/backend/backend_tailcall_float_test.baa",
         "tests/integration/backend/backend_tailcall_test.baa",
@@ -112,7 +121,7 @@
             "immediate-integer",
             "memory-base-displacement"
           ],
-          "count": 417,
+          "count": 438,
           "samples": [
             "examples/error_handling_demo.باء:581",
             "examples/error_handling_demo.باء:584",
@@ -125,7 +134,7 @@
             "immediate-integer",
             "register"
           ],
-          "count": 1949,
+          "count": 2148,
           "samples": [
             "examples/error_handling_demo.باء:155",
             "examples/error_handling_demo.باء:267",
@@ -138,7 +147,7 @@
             "memory-base-displacement",
             "register"
           ],
-          "count": 375,
+          "count": 382,
           "samples": [
             "examples/error_handling_demo.باء:181",
             "examples/error_handling_demo.باء:601",
@@ -151,7 +160,7 @@
             "register",
             "memory-base-displacement"
           ],
-          "count": 183,
+          "count": 186,
           "samples": [
             "examples/file_copy_small.باء:509",
             "tests/integration/backend/backend_custom_startup_test.baa:163",
@@ -164,7 +173,7 @@
             "register",
             "register"
           ],
-          "count": 2410,
+          "count": 2447,
           "samples": [
             "examples/error_handling_demo.باء:224",
             "examples/error_handling_demo.باء:226",
@@ -267,7 +276,7 @@
           "operands": [
             "register-expression"
           ],
-          "count": 5,
+          "count": 6,
           "samples": [
             "tests/integration/backend/backend_func_ptr_shadow_call_test.baa:53",
             "tests/integration/backend/backend_func_ptr_test.baa:40",
@@ -279,7 +288,7 @@
           "operands": [
             "symbol"
           ],
-          "count": 1501,
+          "count": 1534,
           "samples": [
             "examples/error_handling_demo.باء:81",
             "examples/error_handling_demo.باء:91",
@@ -329,7 +338,7 @@
             "immediate-integer",
             "register"
           ],
-          "count": 100,
+          "count": 115,
           "samples": [
             "examples/file_copy_small.باء:426",
             "examples/file_copy_small.باء:443",
@@ -353,7 +362,7 @@
             "immediate-integer",
             "memory-base-displacement"
           ],
-          "count": 524,
+          "count": 526,
           "samples": [
             "examples/error_handling_demo.باء:346",
             "examples/error_handling_demo.باء:424",
@@ -366,7 +375,7 @@
             "immediate-integer",
             "register"
           ],
-          "count": 1937,
+          "count": 1994,
           "samples": [
             "examples/error_handling_demo.باء:20",
             "examples/error_handling_demo.باء:34",
@@ -405,7 +414,7 @@
             "register",
             "register"
           ],
-          "count": 38,
+          "count": 40,
           "samples": [
             "tests/integration/backend/backend_cast_pointer_diff_test.baa:47",
             "tests/integration/backend/backend_dynamic_memory_test.baa:342",
@@ -415,7 +424,7 @@
         {
           "mnemonic": "cqo",
           "operands": [],
-          "count": 2262,
+          "count": 2352,
           "samples": [
             "examples/error_handling_demo.باء:50",
             "examples/error_handling_demo.باء:532",
@@ -475,7 +484,7 @@
           "operands": [
             "register"
           ],
-          "count": 2262,
+          "count": 2352,
           "samples": [
             "examples/error_handling_demo.باء:51",
             "examples/error_handling_demo.باء:533",
@@ -488,7 +497,7 @@
             "immediate-integer",
             "register"
           ],
-          "count": 282,
+          "count": 303,
           "samples": [
             "examples/error_handling_demo.باء:157",
             "examples/error_handling_demo.باء:220",
@@ -501,7 +510,7 @@
             "memory-base-displacement",
             "register"
           ],
-          "count": 262,
+          "count": 268,
           "samples": [
             "tests/integration/backend/backend_byte_buffer_stdlib_v062_test.baa:496",
             "tests/integration/backend/backend_custom_startup_test.baa:199",
@@ -514,7 +523,7 @@
             "register",
             "register"
           ],
-          "count": 272,
+          "count": 278,
           "samples": [
             "tests/integration/backend/backend_byte_buffer_stdlib_v062_test.baa:526",
             "tests/integration/backend/backend_custom_startup_test.baa:203",
@@ -526,7 +535,7 @@
           "operands": [
             "local-symbol"
           ],
-          "count": 3095,
+          "count": 3173,
           "samples": [
             "examples/error_handling_demo.باء:25",
             "examples/error_handling_demo.باء:39",
@@ -538,7 +547,7 @@
           "operands": [
             "local-symbol"
           ],
-          "count": 1389,
+          "count": 1446,
           "samples": [
             "examples/error_handling_demo.باء:24",
             "examples/error_handling_demo.باء:38",
@@ -551,7 +560,7 @@
             "memory-base-displacement",
             "register"
           ],
-          "count": 417,
+          "count": 434,
           "samples": [
             "examples/error_handling_demo.باء:72",
             "examples/error_handling_demo.باء:99",
@@ -564,7 +573,7 @@
             "memory-rip-relative",
             "register"
           ],
-          "count": 869,
+          "count": 910,
           "samples": [
             "examples/error_handling_demo.باء:113",
             "examples/error_handling_demo.باء:118",
@@ -574,7 +583,7 @@
         {
           "mnemonic": "leave",
           "operands": [],
-          "count": 471,
+          "count": 537,
           "samples": [
             "examples/error_handling_demo.باء:31",
             "examples/error_handling_demo.باء:45",
@@ -587,7 +596,7 @@
             "immediate-integer",
             "register"
           ],
-          "count": 821,
+          "count": 852,
           "samples": [
             "examples/error_handling_demo.باء:262",
             "examples/error_handling_demo.باء:301",
@@ -600,7 +609,7 @@
             "immediate-integer",
             "memory-base-displacement"
           ],
-          "count": 435,
+          "count": 531,
           "samples": [
             "examples/error_handling_demo.باء:599",
             "examples/error_handling_demo.باء:602",
@@ -626,7 +635,7 @@
             "memory-base-displacement",
             "register"
           ],
-          "count": 566,
+          "count": 584,
           "samples": [
             "examples/error_handling_demo.باء:182",
             "examples/error_handling_demo.باء:278",
@@ -639,7 +648,7 @@
             "register",
             "memory-base-displacement"
           ],
-          "count": 625,
+          "count": 653,
           "samples": [
             "examples/error_handling_demo.باء:589",
             "examples/error_handling_demo.باء:591",
@@ -652,7 +661,7 @@
             "register",
             "register"
           ],
-          "count": 1071,
+          "count": 1102,
           "samples": [
             "examples/error_handling_demo.باء:290",
             "examples/error_handling_demo.باء:349",
@@ -665,10 +674,11 @@
             "immediate-integer",
             "memory-base-displacement"
           ],
-          "count": 2,
+          "count": 4,
           "samples": [
             "examples/error_handling_demo.باء:93",
-            "tests/integration/backend/backend_error_handling_v043_test.baa:297"
+            "tests/integration/backend/backend_error_handling_v043_test.baa:297",
+            "tests/integration/backend/backend_struct_sized_fields_v073_test.baa:383"
           ]
         },
         {
@@ -677,7 +687,7 @@
             "immediate-integer",
             "register"
           ],
-          "count": 65,
+          "count": 67,
           "samples": [
             "examples/error_handling_demo.باء:138",
             "examples/error_handling_demo.باء:659",
@@ -690,7 +700,7 @@
             "memory-base-displacement",
             "register"
           ],
-          "count": 3,
+          "count": 5,
           "samples": [
             "examples/error_handling_demo.باء:97",
             "examples/file_copy_small.باء:889",
@@ -727,7 +737,7 @@
             "register",
             "register"
           ],
-          "count": 217,
+          "count": 226,
           "samples": [
             "examples/error_handling_demo.باء:101",
             "examples/error_handling_demo.باء:102",
@@ -740,7 +750,7 @@
             "immediate-integer",
             "memory-base-displacement"
           ],
-          "count": 903,
+          "count": 930,
           "samples": [
             "examples/error_handling_demo.باء:75",
             "examples/error_handling_demo.باء:164",
@@ -764,7 +774,7 @@
             "immediate-integer",
             "register"
           ],
-          "count": 2746,
+          "count": 2884,
           "samples": [
             "examples/error_handling_demo.باء:27",
             "examples/error_handling_demo.باء:41",
@@ -777,7 +787,7 @@
             "memory-base-displacement",
             "register"
           ],
-          "count": 8838,
+          "count": 9022,
           "samples": [
             "examples/error_handling_demo.باء:74",
             "examples/error_handling_demo.باء:76",
@@ -790,7 +800,7 @@
             "memory-rip-relative",
             "register"
           ],
-          "count": 69,
+          "count": 82,
           "samples": [
             "tests/integration/backend/backend_byte_buffer_stdlib_v062_test.baa:257",
             "tests/integration/backend/backend_byte_buffer_stdlib_v062_test.baa:697",
@@ -803,7 +813,7 @@
             "register",
             "memory-base-displacement"
           ],
-          "count": 4466,
+          "count": 4558,
           "samples": [
             "examples/error_handling_demo.باء:53",
             "examples/error_handling_demo.باء:73",
@@ -816,7 +826,7 @@
             "register",
             "memory-rip-relative"
           ],
-          "count": 23,
+          "count": 25,
           "samples": [
             "tests/integration/backend/backend_byte_buffer_stdlib_v062_test.baa:260",
             "tests/integration/backend/backend_dynamic_memory_test.baa:260",
@@ -829,7 +839,7 @@
             "register",
             "register"
           ],
-          "count": 11990,
+          "count": 12575,
           "samples": [
             "examples/error_handling_demo.باء:16",
             "examples/error_handling_demo.باء:17",
@@ -842,7 +852,7 @@
             "register",
             "register"
           ],
-          "count": 7,
+          "count": 14,
           "samples": [
             "tests/integration/backend/backend_file_io_test.baa:1585",
             "tests/integration/backend/backend_file_io_test.baa:1598",
@@ -855,7 +865,7 @@
             "register",
             "register"
           ],
-          "count": 799,
+          "count": 811,
           "samples": [
             "examples/error_handling_demo.باء:213",
             "examples/error_handling_demo.باء:214",
@@ -889,15 +899,49 @@
           ]
         },
         {
+          "mnemonic": "movswl",
+          "operands": [
+            "register",
+            "register"
+          ],
+          "count": 1,
+          "samples": [
+            "tests/integration/backend/backend_struct_sized_fields_v073_test.baa:486"
+          ]
+        },
+        {
+          "mnemonic": "movw",
+          "operands": [
+            "immediate-integer",
+            "memory-base-displacement"
+          ],
+          "count": 1,
+          "samples": [
+            "tests/integration/backend/backend_struct_sized_fields_v073_test.baa:393"
+          ]
+        },
+        {
+          "mnemonic": "movw",
+          "operands": [
+            "memory-base-displacement",
+            "register"
+          ],
+          "count": 1,
+          "samples": [
+            "tests/integration/backend/backend_struct_sized_fields_v073_test.baa:485"
+          ]
+        },
+        {
           "mnemonic": "movzbl",
           "operands": [
             "register",
             "register"
           ],
-          "count": 2,
+          "count": 6,
           "samples": [
             "tests/integration/backend/backend_byte_buffer_stdlib_v062_test.baa:659",
-            "tests/integration/backend/backend_byte_buffer_stdlib_v062_test.baa:660"
+            "tests/integration/backend/backend_byte_buffer_stdlib_v062_test.baa:660",
+            "tests/integration/backend/backend_pointer_index_assign_v073_test.baa:219"
           ]
         },
         {
@@ -919,7 +963,7 @@
             "register",
             "register"
           ],
-          "count": 2969,
+          "count": 3048,
           "samples": [
             "examples/error_handling_demo.باء:22",
             "examples/error_handling_demo.باء:36",
@@ -932,7 +976,7 @@
             "memory-base-displacement",
             "register"
           ],
-          "count": 1487,
+          "count": 1770,
           "samples": [
             "examples/error_handling_demo.باء:28",
             "examples/error_handling_demo.باء:29",
@@ -945,7 +989,7 @@
             "register",
             "memory-base-displacement"
           ],
-          "count": 711,
+          "count": 761,
           "samples": [
             "examples/error_handling_demo.باء:13",
             "examples/error_handling_demo.باء:14",
@@ -958,7 +1002,7 @@
             "register",
             "register"
           ],
-          "count": 271,
+          "count": 288,
           "samples": [
             "examples/error_handling_demo.باء:11",
             "examples/error_handling_demo.باء:64",
@@ -1015,7 +1059,7 @@
             "register",
             "register"
           ],
-          "count": 75,
+          "count": 88,
           "samples": [
             "examples/file_copy_small.باء:43",
             "examples/file_copy_small.باء:239",
@@ -1052,7 +1096,7 @@
           "operands": [
             "register"
           ],
-          "count": 271,
+          "count": 288,
           "samples": [
             "examples/error_handling_demo.باء:10",
             "examples/error_handling_demo.باء:63",
@@ -1070,7 +1114,7 @@
         {
           "mnemonic": "ret",
           "operands": [],
-          "count": 471,
+          "count": 537,
           "samples": [
             "examples/error_handling_demo.باء:32",
             "examples/error_handling_demo.باء:46",
@@ -1177,7 +1221,7 @@
           "operands": [
             "register"
           ],
-          "count": 1971,
+          "count": 1993,
           "samples": [
             "examples/error_handling_demo.باء:21",
             "examples/error_handling_demo.باء:35",
@@ -1225,7 +1269,7 @@
           "operands": [
             "register"
           ],
-          "count": 78,
+          "count": 79,
           "samples": [
             "examples/file_copy_small.باء:836",
             "examples/file_copy_small.باء:856",
@@ -1237,7 +1281,7 @@
           "operands": [
             "register"
           ],
-          "count": 451,
+          "count": 507,
           "samples": [
             "examples/error_handling_demo.باء:174",
             "examples/error_handling_demo.باء:288",
@@ -1261,11 +1305,11 @@
           "operands": [
             "register"
           ],
-          "count": 4,
+          "count": 7,
           "samples": [
+            "tests/integration/backend/backend_literal_fixes_v073_test.baa:76",
             "tests/integration/backend/backend_multidim_array_test.baa:333",
-            "tests/integration/backend/backend_test.baa:3211",
-            "tests/integration/backend/backend_test.baa:3293"
+            "tests/integration/backend/backend_pointer_index_assign_v073_test.baa:282"
           ]
         },
         {
@@ -1287,7 +1331,7 @@
             "immediate-integer",
             "register"
           ],
-          "count": 1557,
+          "count": 1564,
           "samples": [
             "examples/error_handling_demo.باء:218",
             "examples/error_handling_demo.باء:222",
@@ -1313,7 +1357,7 @@
             "immediate-integer",
             "register"
           ],
-          "count": 1202,
+          "count": 1231,
           "samples": [
             "tests/integration/backend/backend_custom_startup_test.baa:157",
             "tests/integration/backend/backend_custom_startup_test.baa:161",
@@ -1363,7 +1407,7 @@
             "immediate-integer",
             "register"
           ],
-          "count": 200,
+          "count": 215,
           "samples": [
             "examples/error_handling_demo.باء:12",
             "examples/error_handling_demo.باء:65",
@@ -1389,7 +1433,7 @@
             "register",
             "register"
           ],
-          "count": 1384,
+          "count": 1441,
           "samples": [
             "examples/error_handling_demo.باء:23",
             "examples/error_handling_demo.باء:37",
@@ -1402,11 +1446,11 @@
             "register",
             "register"
           ],
-          "count": 20,
+          "count": 23,
           "samples": [
             "tests/integration/backend/backend_float_extensions_v042_test.baa:285",
             "tests/integration/backend/backend_float_extensions_v042_test.baa:304",
-            "tests/integration/backend/backend_multidim_array_test.baa:331"
+            "tests/integration/backend/backend_literal_fixes_v073_test.baa:74"
           ]
         },
         {
@@ -1415,7 +1459,7 @@
             "register",
             "register"
           ],
-          "count": 1488,
+          "count": 1522,
           "samples": [
             "examples/error_handling_demo.باء:80",
             "examples/error_handling_demo.باء:90",
@@ -1441,7 +1485,7 @@
           "operands": [
             "string"
           ],
-          "count": 495,
+          "count": 542,
           "samples": [
             "examples/error_handling_demo.باء:2",
             "examples/error_handling_demo.باء:3",
@@ -1451,7 +1495,7 @@
         {
           "directive": ".data",
           "operands": [],
-          "count": 26,
+          "count": 30,
           "samples": [
             "tests/integration/backend/backend_byte_buffer_stdlib_v062_test.baa:6",
             "tests/integration/backend/backend_dynamic_memory_test.baa:6",
@@ -1473,7 +1517,7 @@
           "operands": [
             "symbol"
           ],
-          "count": 311,
+          "count": 339,
           "samples": [
             "examples/error_handling_demo.باء:8",
             "examples/error_handling_demo.باء:61",
@@ -1485,11 +1529,11 @@
           "operands": [
             "symbol"
           ],
-          "count": 10,
+          "count": 12,
           "samples": [
             "tests/integration/backend/backend_multidim_array_test.baa:27",
-            "tests/integration/backend/backend_static_storage_test.baa:7",
-            "tests/integration/backend/backend_static_storage_test.baa:9"
+            "tests/integration/backend/backend_sizeof_static_init_v073_test.baa:9",
+            "tests/integration/backend/backend_sizeof_static_init_v073_test.baa:15"
           ]
         },
         {
@@ -1519,7 +1563,7 @@
           "operands": [
             "integer"
           ],
-          "count": 305,
+          "count": 312,
           "samples": [
             "examples/file_copy_small.باء:989",
             "examples/file_copy_small.باء:1002",
@@ -1531,7 +1575,7 @@
           "operands": [
             "integer"
           ],
-          "count": 4477,
+          "count": 4531,
           "samples": [
             "examples/file_copy_small.باء:991",
             "examples/file_copy_small.باء:992",
@@ -1557,7 +1601,7 @@
             "string",
             "expression"
           ],
-          "count": 103,
+          "count": 112,
           "samples": [
             "examples/error_handling_demo.باء:684",
             "examples/file_copy_small.باء:1015",
@@ -1569,7 +1613,7 @@
           "operands": [
             "symbol"
           ],
-          "count": 207,
+          "count": 232,
           "samples": [
             "examples/error_handling_demo.باء:1",
             "examples/error_handling_demo.باء:674",
@@ -1579,7 +1623,7 @@
         {
           "directive": ".text",
           "operands": [],
-          "count": 103,
+          "count": 112,
           "samples": [
             "examples/error_handling_demo.باء:6",
             "examples/file_copy_small.باء:6",
@@ -1601,26 +1645,26 @@
       "sections": [
         {
           "name": ".data",
-          "count": 26
+          "count": 30
         },
         {
           "name": ".note.GNU-stack",
-          "count": 103
+          "count": 112
         },
         {
           "name": ".rodata",
-          "count": 207
+          "count": 232
         },
         {
           "name": ".text",
-          "count": 103
+          "count": 112
         }
       ],
       "symbols": {
-        "defined": 621,
-        "global-declaration": 311,
-        "local": 4066,
-        "local-declaration": 10
+        "defined": 678,
+        "global-declaration": 339,
+        "local": 4237,
+        "local-declaration": 12
       },
       "registers": [
         {
@@ -1629,7 +1673,11 @@
         },
         {
           "name": "%bl",
-          "count": 2091
+          "count": 2182
+        },
+        {
+          "name": "%bx",
+          "count": 2
         },
         {
           "name": "%cl",
@@ -1641,11 +1689,11 @@
         },
         {
           "name": "%eax",
-          "count": 3166
+          "count": 3240
         },
         {
           "name": "%ebx",
-          "count": 56
+          "count": 68
         },
         {
           "name": "%ecx",
@@ -1653,31 +1701,31 @@
         },
         {
           "name": "%edi",
-          "count": 42
+          "count": 44
         },
         {
           "name": "%r10",
-          "count": 18870
+          "count": 19489
         },
         {
           "name": "%r10b",
-          "count": 5501
+          "count": 5711
         },
         {
           "name": "%r10d",
-          "count": 345
+          "count": 370
         },
         {
           "name": "%r11",
-          "count": 3644
+          "count": 3688
         },
         {
           "name": "%r12",
-          "count": 9530
+          "count": 10228
         },
         {
           "name": "%r12b",
-          "count": 2209
+          "count": 2290
         },
         {
           "name": "%r12d",
@@ -1685,35 +1733,35 @@
         },
         {
           "name": "%r13",
-          "count": 6997
+          "count": 7289
         },
         {
           "name": "%r13b",
-          "count": 1570
+          "count": 1593
         },
         {
           "name": "%r13d",
-          "count": 5
+          "count": 7
         },
         {
           "name": "%r14",
-          "count": 4996
+          "count": 5168
         },
         {
           "name": "%r14b",
-          "count": 1167
+          "count": 1184
         },
         {
           "name": "%r14d",
-          "count": 4
+          "count": 6
         },
         {
           "name": "%r15",
-          "count": 3735
+          "count": 3869
         },
         {
           "name": "%r15b",
-          "count": 1193
+          "count": 1203
         },
         {
           "name": "%r15d",
@@ -1737,15 +1785,15 @@
         },
         {
           "name": "%rax",
-          "count": 7954
+          "count": 8229
         },
         {
           "name": "%rbp",
-          "count": 17698
+          "count": 18348
         },
         {
           "name": "%rbx",
-          "count": 9870
+          "count": 10380
         },
         {
           "name": "%rcx",
@@ -1753,31 +1801,31 @@
         },
         {
           "name": "%rdi",
-          "count": 1269
+          "count": 1305
         },
         {
           "name": "%rdx",
-          "count": 1331
+          "count": 1381
         },
         {
           "name": "%rip",
-          "count": 963
+          "count": 1019
         },
         {
           "name": "%rsi",
-          "count": 747
+          "count": 757
         },
         {
           "name": "%rsp",
-          "count": 511
+          "count": 543
         },
         {
           "name": "%xmm0",
-          "count": 188
+          "count": 194
         },
         {
           "name": "%xmm1",
-          "count": 88
+          "count": 94
         },
         {
           "name": "%xmm2",
@@ -1791,11 +1839,11 @@
         },
         {
           "form": "instruction:call:symbol",
-          "count": 1501
+          "count": 1534
         },
         {
           "form": "instruction:leaq:memory-rip-relative,register",
-          "count": 869
+          "count": 910
         },
         {
           "form": "instruction:movl:memory-rip-relative,register",
@@ -1807,11 +1855,11 @@
         },
         {
           "form": "instruction:movq:memory-rip-relative,register",
-          "count": 69
+          "count": 82
         },
         {
           "form": "instruction:movq:register,memory-rip-relative",
-          "count": 23
+          "count": 25
         }
       ],
       "sources": [
@@ -1837,6 +1885,7 @@
         "tests/integration/backend/backend_format_arabic_test.baa",
         "tests/integration/backend/backend_func_ptr_shadow_call_test.baa",
         "tests/integration/backend/backend_func_ptr_test.baa",
+        "tests/integration/backend/backend_global_address_v073_test.baa",
         "tests/integration/backend/backend_global_array_init_test.baa",
         "tests/integration/backend/backend_include_bom_test.baa",
         "tests/integration/backend/backend_include_i_compact_form_test.baa",
@@ -1848,12 +1897,16 @@
         "tests/integration/backend/backend_include_relative_dir_test.baa",
         "tests/integration/backend/backend_inline_test.baa",
         "tests/integration/backend/backend_int_semantics_test.baa",
+        "tests/integration/backend/backend_literal_fixes_v073_test.baa",
         "tests/integration/backend/backend_low_level_ops_test.baa",
         "tests/integration/backend/backend_main_args_test.baa",
         "tests/integration/backend/backend_mod_test.baa",
         "tests/integration/backend/backend_multidim_array_test.baa",
+        "tests/integration/backend/backend_nazm_reserved_symbols_v073_test.baa",
         "tests/integration/backend/backend_path_stdlib_v062_test.baa",
         "tests/integration/backend/backend_pointer_core_test.baa",
+        "tests/integration/backend/backend_pointer_index_assign_v073_test.baa",
+        "tests/integration/backend/backend_postfix_statement_v073_test.baa",
         "tests/integration/backend/backend_pp_nested_test.baa",
         "tests/integration/backend/backend_process_runtime_v065_test.baa",
         "tests/integration/backend/backend_readline_stdin_test.baa",
@@ -1869,6 +1922,8 @@
         "tests/integration/backend/backend_runtime_mod_zero_fail_v063_test.baa",
         "tests/integration/backend/backend_runtime_null_deref_assign_fail_v063_test.baa",
         "tests/integration/backend/backend_runtime_null_deref_fail_v063_test.baa",
+        "tests/integration/backend/backend_runtime_null_pointer_index_assign_fail_v073_test.baa",
+        "tests/integration/backend/backend_runtime_null_pointer_index_read_fail_v073_test.baa",
         "tests/integration/backend/backend_runtime_panic_location_v063_test.baa",
         "tests/integration/backend/backend_runtime_panic_v055_test.baa",
         "tests/integration/backend/backend_runtime_shift_width_high_fail_v063_test.baa",
@@ -1878,6 +1933,7 @@
         "tests/integration/backend/backend_scan_arabic_test.baa",
         "tests/integration/backend/backend_scope_test.baa",
         "tests/integration/backend/backend_sha256_file_v066_test.baa",
+        "tests/integration/backend/backend_sizeof_static_init_v073_test.baa",
         "tests/integration/backend/backend_stackargs_test.baa",
         "tests/integration/backend/backend_static_storage_test.baa",
         "tests/integration/backend/backend_stdlib_short_include_test.baa",
@@ -1885,6 +1941,7 @@
         "tests/integration/backend/backend_string_builder_stdlib_v062_test.baa",
         "tests/integration/backend/backend_string_ops_test.baa",
         "tests/integration/backend/backend_struct_init_test.baa",
+        "tests/integration/backend/backend_struct_sized_fields_v073_test.baa",
         "tests/integration/backend/backend_sysv_6args_test.baa",
         "tests/integration/backend/backend_tailcall_float_test.baa",
         "tests/integration/backend/backend_tailcall_test.baa",
@@ -2004,6 +2061,18 @@
           ]
         },
         {
+          "source": "tests/integration/backend/backend_runtime_null_pointer_index_assign_fail_v073_test.baa",
+          "flags": [
+            "-fruntime-checks=null"
+          ]
+        },
+        {
+          "source": "tests/integration/backend/backend_runtime_null_pointer_index_read_fail_v073_test.baa",
+          "flags": [
+            "-fruntime-checks=null"
+          ]
+        },
+        {
           "source": "tests/integration/backend/backend_runtime_shift_width_high_fail_v063_test.baa",
           "flags": [
             "-fruntime-checks"
@@ -2120,7 +2189,7 @@
           ]
         }
       ],
-      "compiled_source_count": 100,
+      "compiled_source_count": 109,
       "compile_failures": []
     },
     "x86_64-windows": {
@@ -2147,6 +2216,7 @@
         "tests/integration/backend/backend_format_arabic_test.baa",
         "tests/integration/backend/backend_func_ptr_shadow_call_test.baa",
         "tests/integration/backend/backend_func_ptr_test.baa",
+        "tests/integration/backend/backend_global_address_v073_test.baa",
         "tests/integration/backend/backend_global_array_init_test.baa",
         "tests/integration/backend/backend_include_bom_test.baa",
         "tests/integration/backend/backend_include_i_compact_form_test.baa",
@@ -2158,12 +2228,16 @@
         "tests/integration/backend/backend_include_relative_dir_test.baa",
         "tests/integration/backend/backend_inline_test.baa",
         "tests/integration/backend/backend_int_semantics_test.baa",
+        "tests/integration/backend/backend_literal_fixes_v073_test.baa",
         "tests/integration/backend/backend_low_level_ops_test.baa",
         "tests/integration/backend/backend_main_args_test.baa",
         "tests/integration/backend/backend_mod_test.baa",
         "tests/integration/backend/backend_multidim_array_test.baa",
+        "tests/integration/backend/backend_nazm_reserved_symbols_v073_test.baa",
         "tests/integration/backend/backend_path_stdlib_v062_test.baa",
         "tests/integration/backend/backend_pointer_core_test.baa",
+        "tests/integration/backend/backend_pointer_index_assign_v073_test.baa",
+        "tests/integration/backend/backend_postfix_statement_v073_test.baa",
         "tests/integration/backend/backend_pp_nested_test.baa",
         "tests/integration/backend/backend_process_runtime_v065_test.baa",
         "tests/integration/backend/backend_readline_stdin_test.baa",
@@ -2179,6 +2253,8 @@
         "tests/integration/backend/backend_runtime_mod_zero_fail_v063_test.baa",
         "tests/integration/backend/backend_runtime_null_deref_assign_fail_v063_test.baa",
         "tests/integration/backend/backend_runtime_null_deref_fail_v063_test.baa",
+        "tests/integration/backend/backend_runtime_null_pointer_index_assign_fail_v073_test.baa",
+        "tests/integration/backend/backend_runtime_null_pointer_index_read_fail_v073_test.baa",
         "tests/integration/backend/backend_runtime_panic_location_v063_test.baa",
         "tests/integration/backend/backend_runtime_panic_v055_test.baa",
         "tests/integration/backend/backend_runtime_shift_width_high_fail_v063_test.baa",
@@ -2188,6 +2264,7 @@
         "tests/integration/backend/backend_scan_arabic_test.baa",
         "tests/integration/backend/backend_scope_test.baa",
         "tests/integration/backend/backend_sha256_file_v066_test.baa",
+        "tests/integration/backend/backend_sizeof_static_init_v073_test.baa",
         "tests/integration/backend/backend_stackargs_test.baa",
         "tests/integration/backend/backend_static_storage_test.baa",
         "tests/integration/backend/backend_stdlib_short_include_test.baa",
@@ -2195,6 +2272,7 @@
         "tests/integration/backend/backend_string_builder_stdlib_v062_test.baa",
         "tests/integration/backend/backend_string_ops_test.baa",
         "tests/integration/backend/backend_struct_init_test.baa",
+        "tests/integration/backend/backend_struct_sized_fields_v073_test.baa",
         "tests/integration/backend/backend_sysv_6args_test.baa",
         "tests/integration/backend/backend_tailcall_float_test.baa",
         "tests/integration/backend/backend_tailcall_test.baa",
@@ -2233,7 +2311,7 @@
             "immediate-integer",
             "memory-base-displacement"
           ],
-          "count": 289,
+          "count": 303,
           "samples": [
             "examples/error_handling_demo.باء:606",
             "examples/error_handling_demo.باء:609",
@@ -2246,7 +2324,7 @@
             "immediate-integer",
             "register"
           ],
-          "count": 3573,
+          "count": 3813,
           "samples": [
             "examples/error_handling_demo.باء:87",
             "examples/error_handling_demo.باء:98",
@@ -2259,7 +2337,7 @@
             "memory-base-displacement",
             "register"
           ],
-          "count": 372,
+          "count": 379,
           "samples": [
             "examples/error_handling_demo.باء:205",
             "examples/error_handling_demo.باء:622",
@@ -2272,7 +2350,7 @@
             "register",
             "memory-base-displacement"
           ],
-          "count": 174,
+          "count": 177,
           "samples": [
             "tests/integration/backend/backend_custom_startup_test.baa:169",
             "tests/integration/backend/backend_custom_startup_test.baa:217",
@@ -2285,7 +2363,7 @@
             "register",
             "register"
           ],
-          "count": 2422,
+          "count": 2459,
           "samples": [
             "examples/error_handling_demo.باء:248",
             "examples/error_handling_demo.باء:250",
@@ -2362,7 +2440,7 @@
           "operands": [
             "register-expression"
           ],
-          "count": 5,
+          "count": 6,
           "samples": [
             "tests/integration/backend/backend_func_ptr_shadow_call_test.baa:56",
             "tests/integration/backend/backend_func_ptr_test.baa:42",
@@ -2374,7 +2452,7 @@
           "operands": [
             "symbol"
           ],
-          "count": 1501,
+          "count": 1534,
           "samples": [
             "examples/error_handling_demo.باء:86",
             "examples/error_handling_demo.باء:97",
@@ -2424,7 +2502,7 @@
             "immediate-integer",
             "register"
           ],
-          "count": 100,
+          "count": 115,
           "samples": [
             "examples/file_copy_small.باء:454",
             "examples/file_copy_small.باء:473",
@@ -2448,7 +2526,7 @@
             "immediate-integer",
             "memory-base-displacement"
           ],
-          "count": 399,
+          "count": 401,
           "samples": [
             "examples/error_handling_demo.باء:450",
             "examples/error_handling_demo.باء:453",
@@ -2461,7 +2539,7 @@
             "immediate-integer",
             "register"
           ],
-          "count": 2062,
+          "count": 2119,
           "samples": [
             "examples/error_handling_demo.باء:20",
             "examples/error_handling_demo.باء:34",
@@ -2500,7 +2578,7 @@
             "register",
             "register"
           ],
-          "count": 40,
+          "count": 42,
           "samples": [
             "tests/integration/backend/backend_byte_buffer_stdlib_v062_test.baa:588",
             "tests/integration/backend/backend_cast_pointer_diff_test.baa:47",
@@ -2510,7 +2588,7 @@
         {
           "mnemonic": "cqo",
           "operands": [],
-          "count": 2262,
+          "count": 2352,
           "samples": [
             "examples/error_handling_demo.باء:50",
             "examples/error_handling_demo.باء:555",
@@ -2570,7 +2648,7 @@
           "operands": [
             "register"
           ],
-          "count": 2262,
+          "count": 2352,
           "samples": [
             "examples/error_handling_demo.باء:51",
             "examples/error_handling_demo.باء:556",
@@ -2583,7 +2661,7 @@
             "immediate-integer",
             "register"
           ],
-          "count": 282,
+          "count": 303,
           "samples": [
             "examples/error_handling_demo.باء:179",
             "examples/error_handling_demo.باء:244",
@@ -2596,7 +2674,7 @@
             "memory-base-displacement",
             "register"
           ],
-          "count": 262,
+          "count": 268,
           "samples": [
             "tests/integration/backend/backend_byte_buffer_stdlib_v062_test.baa:523",
             "tests/integration/backend/backend_custom_startup_test.baa:205",
@@ -2609,7 +2687,7 @@
             "register",
             "register"
           ],
-          "count": 272,
+          "count": 278,
           "samples": [
             "tests/integration/backend/backend_byte_buffer_stdlib_v062_test.baa:556",
             "tests/integration/backend/backend_custom_startup_test.baa:209",
@@ -2621,7 +2699,7 @@
           "operands": [
             "local-symbol"
           ],
-          "count": 3095,
+          "count": 3173,
           "samples": [
             "examples/error_handling_demo.باء:25",
             "examples/error_handling_demo.باء:39",
@@ -2633,7 +2711,7 @@
           "operands": [
             "local-symbol"
           ],
-          "count": 1389,
+          "count": 1446,
           "samples": [
             "examples/error_handling_demo.باء:24",
             "examples/error_handling_demo.باء:38",
@@ -2646,7 +2724,7 @@
             "memory-base-displacement",
             "register"
           ],
-          "count": 414,
+          "count": 431,
           "samples": [
             "examples/error_handling_demo.باء:74",
             "examples/error_handling_demo.باء:107",
@@ -2659,7 +2737,7 @@
             "memory-rip-relative",
             "register"
           ],
-          "count": 867,
+          "count": 908,
           "samples": [
             "examples/error_handling_demo.باء:124",
             "examples/error_handling_demo.باء:131",
@@ -2669,7 +2747,7 @@
         {
           "mnemonic": "leave",
           "operands": [],
-          "count": 471,
+          "count": 537,
           "samples": [
             "examples/error_handling_demo.باء:31",
             "examples/error_handling_demo.باء:45",
@@ -2682,7 +2760,7 @@
             "immediate-integer",
             "register"
           ],
-          "count": 821,
+          "count": 852,
           "samples": [
             "examples/error_handling_demo.باء:286",
             "examples/error_handling_demo.باء:325",
@@ -2695,7 +2773,7 @@
             "immediate-integer",
             "memory-base-displacement"
           ],
-          "count": 435,
+          "count": 531,
           "samples": [
             "examples/error_handling_demo.باء:620",
             "examples/error_handling_demo.باء:623",
@@ -2721,7 +2799,7 @@
             "memory-base-displacement",
             "register"
           ],
-          "count": 398,
+          "count": 409,
           "samples": [
             "examples/error_handling_demo.باء:206",
             "examples/error_handling_demo.باء:302",
@@ -2734,7 +2812,7 @@
             "register",
             "memory-base-displacement"
           ],
-          "count": 607,
+          "count": 635,
           "samples": [
             "examples/error_handling_demo.باء:611",
             "examples/error_handling_demo.باء:613",
@@ -2747,7 +2825,7 @@
             "register",
             "register"
           ],
-          "count": 1257,
+          "count": 1295,
           "samples": [
             "examples/error_handling_demo.باء:314",
             "examples/error_handling_demo.باء:373",
@@ -2760,10 +2838,11 @@
             "immediate-integer",
             "memory-base-displacement"
           ],
-          "count": 2,
+          "count": 4,
           "samples": [
             "examples/error_handling_demo.باء:100",
-            "tests/integration/backend/backend_error_handling_v043_test.baa:319"
+            "tests/integration/backend/backend_error_handling_v043_test.baa:319",
+            "tests/integration/backend/backend_struct_sized_fields_v073_test.baa:391"
           ]
         },
         {
@@ -2772,7 +2851,7 @@
             "immediate-integer",
             "register"
           ],
-          "count": 41,
+          "count": 43,
           "samples": [
             "examples/error_handling_demo.باء:155",
             "examples/error_handling_demo.باء:696",
@@ -2785,10 +2864,11 @@
             "memory-base-displacement",
             "register"
           ],
-          "count": 2,
+          "count": 4,
           "samples": [
             "examples/error_handling_demo.باء:105",
-            "tests/integration/backend/backend_error_handling_v043_test.baa:324"
+            "tests/integration/backend/backend_error_handling_v043_test.baa:324",
+            "tests/integration/backend/backend_struct_sized_fields_v073_test.baa:452"
           ]
         },
         {
@@ -2821,7 +2901,7 @@
             "register",
             "register"
           ],
-          "count": 218,
+          "count": 227,
           "samples": [
             "examples/error_handling_demo.باء:109",
             "examples/error_handling_demo.باء:111",
@@ -2834,7 +2914,7 @@
             "immediate-integer",
             "memory-base-displacement"
           ],
-          "count": 900,
+          "count": 927,
           "samples": [
             "examples/error_handling_demo.باء:77",
             "examples/error_handling_demo.باء:188",
@@ -2858,7 +2938,7 @@
             "immediate-integer",
             "register"
           ],
-          "count": 2749,
+          "count": 2887,
           "samples": [
             "examples/error_handling_demo.باء:27",
             "examples/error_handling_demo.باء:41",
@@ -2871,7 +2951,7 @@
             "memory-base-displacement",
             "register"
           ],
-          "count": 7766,
+          "count": 7928,
           "samples": [
             "examples/error_handling_demo.باء:76",
             "examples/error_handling_demo.باء:78",
@@ -2884,7 +2964,7 @@
             "memory-rip-relative",
             "register"
           ],
-          "count": 69,
+          "count": 82,
           "samples": [
             "tests/integration/backend/backend_byte_buffer_stdlib_v062_test.baa:267",
             "tests/integration/backend/backend_byte_buffer_stdlib_v062_test.baa:749",
@@ -2897,7 +2977,7 @@
             "register",
             "memory-base-displacement"
           ],
-          "count": 5985,
+          "count": 6098,
           "samples": [
             "examples/error_handling_demo.باء:53",
             "examples/error_handling_demo.باء:75",
@@ -2910,7 +2990,7 @@
             "register",
             "memory-rip-relative"
           ],
-          "count": 23,
+          "count": 25,
           "samples": [
             "tests/integration/backend/backend_byte_buffer_stdlib_v062_test.baa:270",
             "tests/integration/backend/backend_dynamic_memory_test.baa:270",
@@ -2923,7 +3003,7 @@
             "register",
             "register"
           ],
-          "count": 13338,
+          "count": 13951,
           "samples": [
             "examples/error_handling_demo.باء:16",
             "examples/error_handling_demo.باء:17",
@@ -2936,7 +3016,7 @@
             "register",
             "register"
           ],
-          "count": 7,
+          "count": 14,
           "samples": [
             "tests/integration/backend/backend_file_io_test.baa:1699",
             "tests/integration/backend/backend_file_io_test.baa:1715",
@@ -2949,7 +3029,7 @@
             "register",
             "register"
           ],
-          "count": 799,
+          "count": 811,
           "samples": [
             "examples/error_handling_demo.باء:237",
             "examples/error_handling_demo.باء:238",
@@ -2983,15 +3063,49 @@
           ]
         },
         {
+          "mnemonic": "movswl",
+          "operands": [
+            "register",
+            "register"
+          ],
+          "count": 1,
+          "samples": [
+            "tests/integration/backend/backend_struct_sized_fields_v073_test.baa:500"
+          ]
+        },
+        {
+          "mnemonic": "movw",
+          "operands": [
+            "immediate-integer",
+            "memory-base-displacement"
+          ],
+          "count": 1,
+          "samples": [
+            "tests/integration/backend/backend_struct_sized_fields_v073_test.baa:401"
+          ]
+        },
+        {
+          "mnemonic": "movw",
+          "operands": [
+            "memory-base-displacement",
+            "register"
+          ],
+          "count": 1,
+          "samples": [
+            "tests/integration/backend/backend_struct_sized_fields_v073_test.baa:499"
+          ]
+        },
+        {
           "mnemonic": "movzbl",
           "operands": [
             "register",
             "register"
           ],
-          "count": 2,
+          "count": 6,
           "samples": [
             "tests/integration/backend/backend_byte_buffer_stdlib_v062_test.baa:704",
-            "tests/integration/backend/backend_byte_buffer_stdlib_v062_test.baa:705"
+            "tests/integration/backend/backend_byte_buffer_stdlib_v062_test.baa:705",
+            "tests/integration/backend/backend_pointer_index_assign_v073_test.baa:229"
           ]
         },
         {
@@ -3013,7 +3127,7 @@
             "register",
             "register"
           ],
-          "count": 3003,
+          "count": 3082,
           "samples": [
             "examples/error_handling_demo.باء:22",
             "examples/error_handling_demo.باء:36",
@@ -3026,7 +3140,7 @@
             "memory-base-displacement",
             "register"
           ],
-          "count": 1919,
+          "count": 2308,
           "samples": [
             "examples/error_handling_demo.باء:28",
             "examples/error_handling_demo.باء:29",
@@ -3039,7 +3153,7 @@
             "register",
             "memory-base-displacement"
           ],
-          "count": 895,
+          "count": 959,
           "samples": [
             "examples/error_handling_demo.باء:13",
             "examples/error_handling_demo.باء:14",
@@ -3052,7 +3166,7 @@
             "register",
             "register"
           ],
-          "count": 271,
+          "count": 288,
           "samples": [
             "examples/error_handling_demo.باء:11",
             "examples/error_handling_demo.باء:64",
@@ -3109,7 +3223,7 @@
             "register",
             "register"
           ],
-          "count": 75,
+          "count": 88,
           "samples": [
             "examples/file_copy_small.باء:45",
             "examples/file_copy_small.باء:252",
@@ -3134,7 +3248,7 @@
           "operands": [
             "register"
           ],
-          "count": 271,
+          "count": 288,
           "samples": [
             "examples/error_handling_demo.باء:10",
             "examples/error_handling_demo.باء:63",
@@ -3152,7 +3266,7 @@
         {
           "mnemonic": "ret",
           "operands": [],
-          "count": 471,
+          "count": 537,
           "samples": [
             "examples/error_handling_demo.باء:32",
             "examples/error_handling_demo.باء:46",
@@ -3259,7 +3373,7 @@
           "operands": [
             "register"
           ],
-          "count": 2005,
+          "count": 2027,
           "samples": [
             "examples/error_handling_demo.باء:21",
             "examples/error_handling_demo.باء:35",
@@ -3307,7 +3421,7 @@
           "operands": [
             "register"
           ],
-          "count": 78,
+          "count": 79,
           "samples": [
             "examples/file_copy_small.باء:895",
             "examples/file_copy_small.باء:918",
@@ -3319,7 +3433,7 @@
           "operands": [
             "register"
           ],
-          "count": 451,
+          "count": 507,
           "samples": [
             "examples/error_handling_demo.باء:198",
             "examples/error_handling_demo.باء:312",
@@ -3343,11 +3457,11 @@
           "operands": [
             "register"
           ],
-          "count": 4,
+          "count": 7,
           "samples": [
+            "tests/integration/backend/backend_literal_fixes_v073_test.baa:78",
             "tests/integration/backend/backend_multidim_array_test.baa:352",
-            "tests/integration/backend/backend_test.baa:3612",
-            "tests/integration/backend/backend_test.baa:3710"
+            "tests/integration/backend/backend_pointer_index_assign_v073_test.baa:294"
           ]
         },
         {
@@ -3369,7 +3483,7 @@
             "immediate-integer",
             "register"
           ],
-          "count": 1557,
+          "count": 1564,
           "samples": [
             "examples/error_handling_demo.باء:242",
             "examples/error_handling_demo.باء:246",
@@ -3395,7 +3509,7 @@
             "immediate-integer",
             "register"
           ],
-          "count": 2700,
+          "count": 2763,
           "samples": [
             "examples/error_handling_demo.باء:79",
             "examples/error_handling_demo.باء:96",
@@ -3445,7 +3559,7 @@
             "immediate-integer",
             "register"
           ],
-          "count": 271,
+          "count": 288,
           "samples": [
             "examples/error_handling_demo.باء:12",
             "examples/error_handling_demo.باء:65",
@@ -3471,7 +3585,7 @@
             "register",
             "register"
           ],
-          "count": 1384,
+          "count": 1441,
           "samples": [
             "examples/error_handling_demo.باء:23",
             "examples/error_handling_demo.باء:37",
@@ -3484,11 +3598,11 @@
             "register",
             "register"
           ],
-          "count": 20,
+          "count": 23,
           "samples": [
             "tests/integration/backend/backend_float_extensions_v042_test.baa:295",
             "tests/integration/backend/backend_float_extensions_v042_test.baa:314",
-            "tests/integration/backend/backend_multidim_array_test.baa:350"
+            "tests/integration/backend/backend_literal_fixes_v073_test.baa:76"
           ]
         },
         {
@@ -3510,7 +3624,7 @@
           "operands": [
             "string"
           ],
-          "count": 495,
+          "count": 542,
           "samples": [
             "examples/error_handling_demo.باء:2",
             "examples/error_handling_demo.باء:3",
@@ -3520,7 +3634,7 @@
         {
           "directive": ".data",
           "operands": [],
-          "count": 26,
+          "count": 30,
           "samples": [
             "tests/integration/backend/backend_byte_buffer_stdlib_v062_test.baa:6",
             "tests/integration/backend/backend_dynamic_memory_test.baa:6",
@@ -3542,7 +3656,7 @@
           "operands": [
             "symbol"
           ],
-          "count": 311,
+          "count": 339,
           "samples": [
             "examples/error_handling_demo.باء:8",
             "examples/error_handling_demo.باء:61",
@@ -3576,7 +3690,7 @@
           "operands": [
             "integer"
           ],
-          "count": 305,
+          "count": 312,
           "samples": [
             "examples/file_copy_small.باء:1061",
             "examples/file_copy_small.باء:1074",
@@ -3588,7 +3702,7 @@
           "operands": [
             "integer"
           ],
-          "count": 4477,
+          "count": 4531,
           "samples": [
             "examples/file_copy_small.باء:1063",
             "examples/file_copy_small.باء:1064",
@@ -3613,7 +3727,7 @@
             "symbol",
             "string"
           ],
-          "count": 207,
+          "count": 232,
           "samples": [
             "examples/error_handling_demo.باء:1",
             "examples/error_handling_demo.باء:714",
@@ -3623,7 +3737,7 @@
         {
           "directive": ".text",
           "operands": [],
-          "count": 103,
+          "count": 112,
           "samples": [
             "examples/error_handling_demo.باء:6",
             "examples/file_copy_small.باء:6",
@@ -3645,21 +3759,21 @@
       "sections": [
         {
           "name": ".data",
-          "count": 26
+          "count": 30
         },
         {
           "name": ".rdata",
-          "count": 207
+          "count": 232
         },
         {
           "name": ".text",
-          "count": 103
+          "count": 112
         }
       ],
       "symbols": {
-        "defined": 621,
-        "global-declaration": 311,
-        "local": 4066
+        "defined": 678,
+        "global-declaration": 339,
+        "local": 4237
       },
       "registers": [
         {
@@ -3668,7 +3782,7 @@
         },
         {
           "name": "%bl",
-          "count": 1189
+          "count": 1205
         },
         {
           "name": "%cl",
@@ -3676,63 +3790,63 @@
         },
         {
           "name": "%dil",
-          "count": 1414
+          "count": 1492
         },
         {
           "name": "%eax",
-          "count": 184
+          "count": 190
         },
         {
           "name": "%ebx",
-          "count": 3
+          "count": 5
         },
         {
           "name": "%ecx",
-          "count": 42
-        },
-        {
-          "name": "%edi",
-          "count": 16
-        },
-        {
-          "name": "%esi",
           "count": 44
         },
         {
+          "name": "%edi",
+          "count": 18
+        },
+        {
+          "name": "%esi",
+          "count": 54
+        },
+        {
           "name": "%r10",
-          "count": 16300
+          "count": 16854
         },
         {
           "name": "%r10b",
-          "count": 5800
+          "count": 6032
         },
         {
           "name": "%r10d",
-          "count": 345
+          "count": 370
         },
         {
           "name": "%r11",
-          "count": 3206
+          "count": 3236
         },
         {
           "name": "%r12",
-          "count": 5171
+          "count": 5345
         },
         {
           "name": "%r12b",
-          "count": 948
+          "count": 965
         },
         {
           "name": "%r12d",
-          "count": 6
+          "count": 8
         },
         {
           "name": "%r13",
-          "count": 3726
+          "count": 3860
         },
         {
           "name": "%r13b",
-          "count": 928
+          "count": 938
         },
         {
           "name": "%r13d",
@@ -3740,11 +3854,11 @@
         },
         {
           "name": "%r14",
-          "count": 3292
+          "count": 3416
         },
         {
           "name": "%r14b",
-          "count": 996
+          "count": 1012
         },
         {
           "name": "%r14d",
@@ -3752,11 +3866,11 @@
         },
         {
           "name": "%r15",
-          "count": 2830
+          "count": 2952
         },
         {
           "name": "%r15b",
-          "count": 1105
+          "count": 1115
         },
         {
           "name": "%r15d",
@@ -3772,51 +3886,55 @@
         },
         {
           "name": "%rax",
-          "count": 7562
+          "count": 7823
         },
         {
           "name": "%rbp",
-          "count": 15934
+          "count": 16648
         },
         {
           "name": "%rbx",
-          "count": 6712
+          "count": 6978
         },
         {
           "name": "%rcx",
-          "count": 2648
+          "count": 2716
         },
         {
           "name": "%rdi",
-          "count": 8841
+          "count": 9556
         },
         {
           "name": "%rdx",
-          "count": 2703
+          "count": 2772
         },
         {
           "name": "%rip",
-          "count": 961
+          "count": 1017
         },
         {
           "name": "%rsi",
-          "count": 9906
+          "count": 10411
         },
         {
           "name": "%rsp",
-          "count": 5759
+          "count": 5902
+        },
+        {
+          "name": "%si",
+          "count": 2
         },
         {
           "name": "%sil",
-          "count": 1629
+          "count": 1689
         },
         {
           "name": "%xmm0",
-          "count": 186
+          "count": 192
         },
         {
           "name": "%xmm1",
-          "count": 102
+          "count": 108
         },
         {
           "name": "%xmm2",
@@ -3834,11 +3952,11 @@
         },
         {
           "form": "instruction:call:symbol",
-          "count": 1501
+          "count": 1534
         },
         {
           "form": "instruction:leaq:memory-rip-relative,register",
-          "count": 867
+          "count": 908
         },
         {
           "form": "instruction:movl:memory-rip-relative,register",
@@ -3850,11 +3968,11 @@
         },
         {
           "form": "instruction:movq:memory-rip-relative,register",
-          "count": 69
+          "count": 82
         },
         {
           "form": "instruction:movq:register,memory-rip-relative",
-          "count": 23
+          "count": 25
         }
       ],
       "sources": [
@@ -3880,6 +3998,7 @@
         "tests/integration/backend/backend_format_arabic_test.baa",
         "tests/integration/backend/backend_func_ptr_shadow_call_test.baa",
         "tests/integration/backend/backend_func_ptr_test.baa",
+        "tests/integration/backend/backend_global_address_v073_test.baa",
         "tests/integration/backend/backend_global_array_init_test.baa",
         "tests/integration/backend/backend_include_bom_test.baa",
         "tests/integration/backend/backend_include_i_compact_form_test.baa",
@@ -3891,12 +4010,16 @@
         "tests/integration/backend/backend_include_relative_dir_test.baa",
         "tests/integration/backend/backend_inline_test.baa",
         "tests/integration/backend/backend_int_semantics_test.baa",
+        "tests/integration/backend/backend_literal_fixes_v073_test.baa",
         "tests/integration/backend/backend_low_level_ops_test.baa",
         "tests/integration/backend/backend_main_args_test.baa",
         "tests/integration/backend/backend_mod_test.baa",
         "tests/integration/backend/backend_multidim_array_test.baa",
+        "tests/integration/backend/backend_nazm_reserved_symbols_v073_test.baa",
         "tests/integration/backend/backend_path_stdlib_v062_test.baa",
         "tests/integration/backend/backend_pointer_core_test.baa",
+        "tests/integration/backend/backend_pointer_index_assign_v073_test.baa",
+        "tests/integration/backend/backend_postfix_statement_v073_test.baa",
         "tests/integration/backend/backend_pp_nested_test.baa",
         "tests/integration/backend/backend_process_runtime_v065_test.baa",
         "tests/integration/backend/backend_readline_stdin_test.baa",
@@ -3912,6 +4035,8 @@
         "tests/integration/backend/backend_runtime_mod_zero_fail_v063_test.baa",
         "tests/integration/backend/backend_runtime_null_deref_assign_fail_v063_test.baa",
         "tests/integration/backend/backend_runtime_null_deref_fail_v063_test.baa",
+        "tests/integration/backend/backend_runtime_null_pointer_index_assign_fail_v073_test.baa",
+        "tests/integration/backend/backend_runtime_null_pointer_index_read_fail_v073_test.baa",
         "tests/integration/backend/backend_runtime_panic_location_v063_test.baa",
         "tests/integration/backend/backend_runtime_panic_v055_test.baa",
         "tests/integration/backend/backend_runtime_shift_width_high_fail_v063_test.baa",
@@ -3921,6 +4046,7 @@
         "tests/integration/backend/backend_scan_arabic_test.baa",
         "tests/integration/backend/backend_scope_test.baa",
         "tests/integration/backend/backend_sha256_file_v066_test.baa",
+        "tests/integration/backend/backend_sizeof_static_init_v073_test.baa",
         "tests/integration/backend/backend_stackargs_test.baa",
         "tests/integration/backend/backend_static_storage_test.baa",
         "tests/integration/backend/backend_stdlib_short_include_test.baa",
@@ -3928,6 +4054,7 @@
         "tests/integration/backend/backend_string_builder_stdlib_v062_test.baa",
         "tests/integration/backend/backend_string_ops_test.baa",
         "tests/integration/backend/backend_struct_init_test.baa",
+        "tests/integration/backend/backend_struct_sized_fields_v073_test.baa",
         "tests/integration/backend/backend_sysv_6args_test.baa",
         "tests/integration/backend/backend_tailcall_float_test.baa",
         "tests/integration/backend/backend_tailcall_test.baa",
@@ -4047,6 +4174,18 @@
           ]
         },
         {
+          "source": "tests/integration/backend/backend_runtime_null_pointer_index_assign_fail_v073_test.baa",
+          "flags": [
+            "-fruntime-checks=null"
+          ]
+        },
+        {
+          "source": "tests/integration/backend/backend_runtime_null_pointer_index_read_fail_v073_test.baa",
+          "flags": [
+            "-fruntime-checks=null"
+          ]
+        },
+        {
           "source": "tests/integration/backend/backend_runtime_shift_width_high_fail_v063_test.baa",
           "flags": [
             "-fruntime-checks"
@@ -4163,7 +4302,7 @@
           ]
         }
       ],
-      "compiled_source_count": 100,
+      "compiled_source_count": 109,
       "compile_failures": []
     }
   }

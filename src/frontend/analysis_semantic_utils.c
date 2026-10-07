@@ -234,6 +234,12 @@ static bool eval_const_int_expr(Node* expr, int64_t* out_value)
             *out_value = (int64_t)expr->data.char_lit.value;
             return true;
 
+        case NODE_SIZEOF:
+            // `حجم` يُحسب أثناء الاستنتاج؛ يكون ثابتاً متى عُرف حجمه.
+            if (!expr->data.sizeof_expr.size_known) return false;
+            *out_value = expr->data.sizeof_expr.size_bytes;
+            return true;
+
         case NODE_MEMBER_ACCESS:
             if (expr->data.member_access.is_enum_value) {
                 *out_value = expr->data.member_access.enum_value;
@@ -507,6 +513,9 @@ static bool static_storage_initializer_is_const(Node* expr, DataType decl_type)
     if (decl_type == TYPE_STRING) {
         return expr->type == NODE_STRING;
     }
+
+    // `عدم` ثابت وقت الترجمة للمؤشرات كما هو لمؤشرات الدوال.
+    if (decl_type == TYPE_POINTER && expr->type == NODE_NULL) return true;
 
     if (decl_type == TYPE_FLOAT) {
         double fv = 0.0;

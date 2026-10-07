@@ -10,6 +10,41 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Fixed
 
+- **Bugs found by the optimization differential gate (v0.7.3)**:
+  - Struct and union layout gave `ص٨`/`ط٨`/`ص١٦`/`ط١٦`/`ص٣٢`/`ط٣٢`/`ط٦٤`, `منطقي`, `حرف`,
+    `عشري`, `نص`, pointer, enum, and function-pointer fields size 0, so they overlapped
+    the next field and the last one fell outside the aggregate. Fields now use their
+    natural size and alignment.
+  - `&global` loaded the global's value instead of its address and crashed at every
+    optimization level; globals used as values now lower to `lea`.
+  - `س++.` / `ق[ي]--.` as a statement failed IR lowering with an internal error.
+  - At `-O0`, `imul` with two memory operands or a 64-bit immediate, and sign/zero
+    extension of a constant, produced instructions GAS and Nazm cannot encode. A
+    post-allocation legalization pass now routes them through the reserved scratch
+    register.
+  - Reading a function-pointer struct field lost its signature, so
+    `دالة(صحيح) -> صحيح ف = س:ف.` was rejected; assigning a function with the wrong
+    signature to such a field is now diagnosed instead of accepted. The field also
+    lowered with a generic function type, so `--verify` rejected every read and
+    store of it; it now carries the declared signature.
+  - Through Nazm, globals and functions named like Nazm registers or removed register
+    aliases (`بيانات`, `مصدر`, `قاعدة`, `عداد`, ...) or compiler label prefixes broke the
+    build. The Nazm emitter now escapes them as `رمز_باء_<name>`.
+  - At `-O0` through Nazm, storing a constant that does not fit the destination
+    (`ط٨ ب = 300.`-style truncation) emitted an out-of-range immediate; truncated
+    constants are now masked to the destination width.
+
+- **Literal, switch and static-initializer bugs found by the documentation audit**:
+  - `#تعريف حد ١٠٠` substituted raw Arabic-Indic digits, so every use failed with
+    «رقم غير صالح». Macro number values are now normalized like ordinary literals, and
+    a value with a fractional part becomes a decimal literal.
+  - The documented `'\٠'` escape was rejected with «حرف UTF-8 غير صالح».
+  - `حالة 'أ':` inside an `اختر` over an integer compared against the packed character
+    representation and never matched; case labels are now converted to the switch type.
+  - `حجم(...)` was rejected in global and `ساكن` initializers although it is a
+    compile-time constant, and lowered to `0` when nested directly.
+  - A global or static pointer initialized with `عدم` was rejected as non-constant.
+
 - **Machine-readable lexical diagnostics**:
   - Preserved `diagnostics-json-v1` when a lexer or preprocessor fatal path
     exits early, including unterminated strings from unsaved IDE buffers.
@@ -38,6 +73,27 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
     adapter.
 
 ### Added
+
+- **Assignment through pointer indexing**: `م[i] = ق.`, `م[i]++.` and multi-level
+  `مم[i][j] = ق.` now work for local, global and static pointers, with the same element
+  conversion and narrowing warning as ordinary assignment. Writes into `نص` elements stay
+  rejected. Under `-fruntime-checks=null`, both reads and writes of `م[i]` trap with
+  `فشل_مؤشر_فارغ` on a null base.
+
+- **Documentation audit**: every Baa code block in the README, language reference, Arabic
+  book, user guide, tutorials and style guide was compiled against the current compiler.
+  Examples that relied on unsupported syntax (`#خطأ`, `#إذا (...)`, compound assignment,
+  `?:`, `صحيح[]` parameters, implicit array-to-pointer decay, uninitialized locals,
+  keyword field names) were rewritten, and `KNOWN_LIMITATIONS.md` now lists those limits
+  together with the preprocessor value rules and the Nazm/GCC toolchain split.
+
+- **Optimization differential gate**:
+  - `tests/test_opt_differential.py` builds every backend runtime test and the new
+    `tests/differential/*.baa` programs at `-O0`, `-O1`, `-O2`, and
+    `-O2 -funroll-loops`, and requires identical exit status, stdout, and stderr.
+  - `// DIFF-SKIP: <reason>` opts out programs whose behavior legitimately depends on
+    the optimization level (currently only the tail-call depth test).
+  - Runs in `scripts/qa_run.py` full, stress, and release modes.
 
 - **Expanded ecosystem ownership map**:
   - Registered ArbSh, Baa-LSP, Baa-Developer-Kit, and Pyramid-Engine alongside

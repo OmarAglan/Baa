@@ -114,7 +114,9 @@ static bool parse_float_token_checked(Token tok, double* out)
 static bool utf8_decode_one(const char* s, uint32_t* out_cp)
 {
     if (out_cp) *out_cp = 0;
-    if (!s || !*s) return false;
+    if (!s) return false;
+    // قيمة فارغة لا تأتي إلا من الهروب '\٠' (البايت الصفري ينهي سلسلة C).
+    if (!*s) return true;
 
     const unsigned char b0 = (unsigned char)s[0];
     if ((b0 & 0x80u) == 0x00u) {

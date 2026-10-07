@@ -50,7 +50,7 @@ static void isel_lower_load(ISelCtx *ctx, IRInst *inst)
 
     int bits = isel_type_bits(inst->type);
     MachineOperand dst = mach_op_vreg(inst->dest, bits);
-    MachineOperand ptr = isel_lower_value(ctx, inst->operands[0]);
+    MachineOperand ptr = isel_lower_address(ctx, inst->operands[0]);
 
     // إذا كان المعامل سجلاً، نولد load من الذاكرة
     if (ptr.kind == MACH_OP_VREG)
@@ -88,7 +88,7 @@ static void isel_lower_store(ISelCtx *ctx, IRInst *inst)
         return;
 
     MachineOperand val = isel_lower_value(ctx, inst->operands[0]);
-    MachineOperand ptr = isel_lower_value(ctx, inst->operands[1]);
+    MachineOperand ptr = isel_lower_address(ctx, inst->operands[1]);
     int bits = 64;
     if (inst->operands[0] && inst->operands[0]->type)
         bits = isel_type_bits(inst->operands[0]->type);

@@ -8,6 +8,7 @@
 // التشغيل:
 //   build\baa.exe -O2 tests\integration\backend\backend_tailcall_test.baa -o build\backend_tailcall_test.exe -v
 //   build\backend_tailcall_test.exe
+// DIFF-SKIP: depends on -O2 tail calls; -O0 and -O1 overflow the stack by design.
 // ============================================================================
 
 صحيح تحقق(صحيح فعلي, صحيح متوقع) {

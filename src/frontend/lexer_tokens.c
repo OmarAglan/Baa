@@ -619,12 +619,28 @@ Token lexer_next_token(Lexer* l) {
                 }
             } 
             else if (isdigit((unsigned char)macro_val[0]) || is_arabic_digit(macro_val)) {
-                token.type = TOKEN_INT;
-                token.value = strdup(macro_val);
-                if (!token.value) {
+                // تطبيع الأرقام العربية-الهندية إلى ASCII كما يفعل المحلل اللفظي للأعداد،
+                // وإلا يرفض المحلل `#تعريف حد ١٠٠` عند الاستخدام بـ«رقم غير صالح».
+                size_t vlen = strlen(macro_val);
+                char* val = malloc(vlen + 1);
+                if (!val) {
                     free(word);
                     lex_fatal(l, "خطأ لفظي: نفدت الذاكرة أثناء نسخ قيمة الماكرو.");
                 }
+                size_t out = 0;
+                bool is_float = false;
+                for (size_t i = 0; i < vlen; ) {
+                    if (is_arabic_digit(macro_val + i)) {
+                        val[out++] = (char)(((unsigned char)macro_val[i + 1] - 0xA0) + '0');
+                        i += 2;
+                    } else {
+                        if (macro_val[i] == '.') is_float = true;
+                        val[out++] = macro_val[i++];
+                    }
+                }
+                val[out] = '\0';
+                token.type = is_float ? TOKEN_FLOAT : TOKEN_INT;
+                token.value = val;
             }
             else {
                 token.type = TOKEN_IDENTIFIER;

@@ -207,6 +207,18 @@ static void isel_lower_cast(ISelCtx *ctx, IRInst *inst)
             bool zext = true;
             if (isel_irtype_is_signed_int(src_t))
                 zext = false;
+            if (src.kind == MACH_OP_IMM)
+            {
+                // movsx/movzx لا يقبلان مصدراً فورياً؛ نوسّع الثابت هنا وننسخه.
+                uint64_t mask = (src_bits >= 64) ? UINT64_MAX : ((1ULL << src_bits) - 1);
+                uint64_t bits = (uint64_t)src.data.imm & mask;
+                if (!zext && ((bits >> (src_bits - 1)) & 1ULL))
+                    bits |= ~mask;
+                MachineOperand imm = mach_op_imm((int64_t)bits, dst_bits);
+                MachineInst *mi = isel_emit(ctx, MACH_MOV, dst, imm, mach_op_none());
+                if (mi) mi->ir_reg = inst->dest;
+                return;
+            }
             MachineOp mop = zext ? MACH_MOVZX : MACH_MOVSX;
             MachineInst *mi = isel_emit(ctx, mop, dst, src, mach_op_none());
             if (mi) mi->ir_reg = inst->dest;
@@ -215,7 +227,12 @@ static void isel_lower_cast(ISelCtx *ctx, IRInst *inst)
         {
             // نسخ مباشر (نفس الحجم أو تقليص). عند التقليص، نحدد حجم المصدر.
             if (src_bits > dst_bits && dst_bits > 0)
+            {
                 src.size_bits = dst_bits;
+                // الثابت المقلَّص يجب أن يدخل في عرض الوجهة؛ نظم يرفض `انقل بايت، 300`.
+                if (src.kind == MACH_OP_IMM && dst_bits < 64)
+                    src.data.imm = (int64_t)((uint64_t)src.data.imm & ((1ULL << dst_bits) - 1));
+            }
             MachineInst *mi = isel_emit(ctx, MACH_MOV, dst, src, mach_op_none());
             if (mi) mi->ir_reg = inst->dest;
         }

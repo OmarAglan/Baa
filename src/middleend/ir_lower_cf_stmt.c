@@ -259,6 +259,8 @@ static void lower_switch_stmt(IRLowerCtx* ctx, Node* stmt) {
             // Compare sw == case_value
             IRValue* lhs = sw_is_reg ? ir_value_reg(sw_reg, sw_type) : ir_value_const_int(sw_const, sw_type);
             IRValue* rhs = lower_expr(ctx, case_node->data.case_stmt.value);
+            // `حالة 'أ'` مع تعبير صحيح: نقارن بنقطة-الكود لا بالتمثيل المعبأ للحرف.
+            rhs = cast_to(ctx, rhs, sw_type);
             int cmp_reg = ir_builder_emit_cmp_eq(ctx->builder, lhs, rhs);
             IRValue* cmp_val = ir_value_reg(cmp_reg, IR_TYPE_I1_T);
 
@@ -400,6 +402,11 @@ void lower_stmt(IRLowerCtx* ctx, Node* stmt) {
             (void)lower_expr(ctx, &temp);
             return;
         }
+
+        case NODE_POSTFIX_OP:
+            // `س++.` و`ق[ي]--.` كجملة: الأثر الجانبي فقط، وتُهمل القيمة.
+            (void)lower_expr(ctx, stmt);
+            return;
 
         default:
             ir_lower_report_error(ctx, stmt, "عقدة جملة غير مدعومة (%d).", (int)stmt->type);

@@ -578,6 +578,9 @@ static IRValue* ir_lower_pointer_index_chain(IRLowerCtx* ctx,
     DataType cur_base = base_type;
     int cur_depth = depth;
 
+    // القراءة `م[i]` تفك المؤشر مثل `*م`؛ أما `&م[i]` فتحسب العنوان فقط.
+    if (!return_address) ir_lower_emit_debug_null_check(ctx, site, base_ptr_val);
+
     IRValue* cur_ptr = cast_to(ctx, base_ptr_val, void_ptr_t);
     Node* idx_node = indices;
 
@@ -728,7 +731,8 @@ static IRValue* lower_lvalue_address(IRLowerCtx* ctx, Node* expr, IRType** out_p
         IRValue* idx = ir_value_const_int((int64_t)expr->data.member_access.member_offset, IR_TYPE_I64_T);
         int ep = ir_builder_emit_ptr_offset(ctx->builder, ptr_i8_t, base_ptr, idx);
         IRValue* byte_ptr = ir_value_reg(ep, ptr_i8_t);
-        IRType* ft = ir_type_from_datatype(ctx->builder->module, expr->data.member_access.member_type);
+        IRType* ft = ir_type_from_datatype_ex(ctx->builder->module, expr->data.member_access.member_type,
+                                             expr->inferred_func_sig);
         if (!ft || ft->kind == IR_TYPE_VOID) ft = IR_TYPE_I64_T;
         if (out_pointee_type) *out_pointee_type = ft;
         int fp = ir_builder_emit_cast(ctx->builder, byte_ptr, ir_type_ptr(ft));

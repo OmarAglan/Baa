@@ -37,6 +37,9 @@ static bool regalloc_func_ex(MachineFunc *func, const BaaCallingConv* cc)
     // 7. إعادة كتابة المعاملات
     regalloc_rewrite(ctx);
 
+    // 8. تقنين التعليمات التي لا تقبل معاملات الذاكرة الناتجة عن التسريب
+    regalloc_legalize(ctx);
+
     // تحرير السياق
     regalloc_ctx_free(ctx);
 

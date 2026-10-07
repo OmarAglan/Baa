@@ -353,6 +353,24 @@ static void lower_var_decl(IRLowerCtx* ctx, Node* stmt) {
     ir_lower_tag_last_inst(ctx->builder, IR_OP_STORE, -1, stmt->data.var_decl.name);
 }
 
+// `م[i] = قيمة.` لمؤشر: نحسب عنوان العنصر بسلسلة فهرسة المؤشر نفسها ثم نخزن فيه.
+static void lower_pointer_index_assign(IRLowerCtx* ctx, Node* stmt, IRValue* ptr_val,
+                                       DataType base_type, const char* base_type_name,
+                                       int depth, int index_count)
+{
+    ir_lower_emit_debug_null_check(ctx, stmt, ptr_val);
+    IRType* elem_t = NULL;
+    IRValue* addr = ir_lower_pointer_index_chain(ctx, stmt, ptr_val,
+                                                 base_type, base_type_name, depth,
+                                                 stmt->data.array_op.indices, index_count,
+                                                 true, &elem_t);
+    IRValue* val = lower_expr(ctx, stmt->data.array_op.value);
+    if (elem_t && val && val->type && !ir_types_equal(val->type, elem_t)) {
+        val = cast_to(ctx, val, elem_t);
+    }
+    ir_builder_emit_store(ctx->builder, val, addr);
+}
+
 static void lower_array_assign(IRLowerCtx* ctx, Node* stmt) {
     if (!ctx || !ctx->builder || !stmt) return;
 
@@ -365,6 +383,17 @@ static void lower_array_assign(IRLowerCtx* ctx, Node* stmt) {
     IRLowerBinding* b = find_local(ctx, name);
     if (b) {
         const char* storage_name = ir_lower_binding_storage_name(b);
+        if (b->is_pointer && !b->is_array) {
+            IRType* ptr_t = b->value_type;
+            IRValue* slot = b->is_static_storage
+                ? ir_value_global(storage_name, ptr_t)
+                : ir_value_reg(b->ptr_reg, ir_type_ptr(ptr_t));
+            int loaded = ir_builder_emit_load(ctx->builder, ptr_t, slot);
+            lower_pointer_index_assign(ctx, stmt, ir_value_reg(loaded, ptr_t),
+                                       b->ptr_base_type, b->ptr_base_type_name,
+                                       b->ptr_depth, index_count);
+            return;
+        }
         if (!b->is_array || !b->value_type || b->value_type->kind != IR_TYPE_ARRAY) {
             ir_lower_report_error(ctx, stmt, "'%s' ليس مصفوفة في مسار IR.", name ? name : "???");
             for (Node* idx = stmt->data.array_op.indices; idx; idx = idx->next) {
@@ -425,6 +454,16 @@ static void lower_array_assign(IRLowerCtx* ctx, Node* stmt) {
     IRGlobal* g = NULL;
     if (ctx->builder && ctx->builder->module && name) {
         g = ir_module_find_global(ctx->builder->module, name);
+    }
+    Node* vdecl = g ? ir_lower_find_global_var_decl(ctx, name) : NULL;
+    if (vdecl && vdecl->type == NODE_VAR_DECL && vdecl->data.var_decl.type == TYPE_POINTER &&
+        g->type) {
+        int loaded = ir_builder_emit_load(ctx->builder, g->type, ir_value_global(name, g->type));
+        lower_pointer_index_assign(ctx, stmt, ir_value_reg(loaded, g->type),
+                                   vdecl->data.var_decl.ptr_base_type,
+                                   vdecl->data.var_decl.ptr_base_type_name,
+                                   vdecl->data.var_decl.ptr_depth, index_count);
+        return;
     }
     if (!g || !g->type || g->type->kind != IR_TYPE_ARRAY) {
         ir_lower_report_error(ctx, stmt, "تعيين إلى مصفوفة غير معرّفة '%s'.", name ? name : "???");
@@ -526,7 +565,8 @@ static void lower_member_assign(IRLowerCtx* ctx, Node* stmt) {
     int ep = ir_builder_emit_ptr_offset(ctx->builder, ptr_i8_t, base_ptr, idx);
     IRValue* byte_ptr = ir_value_reg(ep, ptr_i8_t);
 
-    IRType* field_val_t = ir_type_from_datatype(m, target->data.member_access.member_type);
+    IRType* field_val_t = ir_type_from_datatype_ex(m, target->data.member_access.member_type,
+                                                      target->inferred_func_sig);
     if (!field_val_t || field_val_t->kind == IR_TYPE_VOID) field_val_t = IR_TYPE_I64_T;
     IRType* field_ptr_t = ir_type_ptr(field_val_t);
     int fp = ir_builder_emit_cast(ctx->builder, byte_ptr, field_ptr_t);

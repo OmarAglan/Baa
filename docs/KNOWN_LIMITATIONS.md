@@ -1,6 +1,7 @@
 # Baa Known Limitations
 
-> **Baseline:** v0.6.2 development after the frozen v0.5.9 reference-compiler RC
+> **Baseline:** v0.7.3 development (Compiler Testing II) after the frozen v0.5.9 reference-compiler RC.
+> Every statement on this page was checked against the compiler built from this tree.
 
 This page describes unsupported or intentionally deferred behavior in the current C reference
 compiler. Draft roadmap and tooling documents describe future contracts; they do not imply that
@@ -10,10 +11,13 @@ those features are implemented today.
 
 - Supported targets are `x86_64-windows` (COFF/Windows x64 ABI) and `x86_64-linux`
   (ELF/SystemV AMD64 ABI).
-- Cross-target compilation is supported for assembly output (`-S`) only. Object generation and
-  linking require a matching host or cross toolchain.
-- Baa emits GAS/AT&T assembly and relies on host GCC/Clang for assembly and linking. It does not
-  ship an independent assembler or linker.
+- Cross-target compilation is supported for assembly output (`-S`), and `-c` through Nazm can
+  write the other target's object format. Final cross-linking is not supported.
+- The default assembler is the external [Nazm](https://github.com/OmarAglan/Nazm) `نظم`
+  executable; GAS is an explicit rollback (`--assembler=gas`). A Nazm failure is reported and
+  never falls back to GAS silently.
+- Linking always uses a GCC/LD toolchain (the private one bundled with the Windows installer, or
+  the host toolchain). Baa does not ship its own linker.
 - macOS, 32-bit targets, ARM, WebAssembly, and freestanding targets are not supported.
 - `i386-elf`, `i386-pyramidos`, `--freestanding`, and `--no-stdlib` are planning surfaces only.
 - The `baa update` command is implemented on Windows only.
@@ -23,8 +27,9 @@ those features are implemented today.
 
 ### Aggregates
 
-- Named-field initialization with `=` is supported for automatic local structs only; static/global
-  struct field initializers and union field initializers remain deferred.
+- Named-field initialization (`هيكل نقطة ن = { س: ١، ص: ٢ }.`) is supported for automatic local
+  structs only; positional lists (`{ ١، ٢ }`), `=` instead of `:`, static/global struct field
+  initializers and union field initializers are not supported.
 - Whole-aggregate copy assignment is explicitly rejected for aggregate variables, aggregate
   members, aggregate array elements, and dereferenced aggregate pointers; update individual fields
   through member access.
@@ -44,7 +49,8 @@ C-compatible behavior.
 - Explicit casts to or from function-pointer types are not supported.
 - Arrays of function pointers are not supported.
 - Indirect calls use a function-pointer identifier as the callee; arbitrary callee expressions
-  are not supported.
+  are not supported. To call a function-pointer field, copy it to a local first:
+  `دالة(صحيح) -> صحيح ف = س:ف.` then `ف(٢١)`. Direct `س:ف(...)` is rejected.
 
 ### Pointers and const
 
@@ -88,9 +94,36 @@ C-compatible behavior.
   string helpers. They do not query the filesystem, resolve symlinks, or currently fold `.` / `..`
   path segments.
 
+### Syntax not supported
+
+- Compound assignment (`+=`, `-=`, `*=`, `/=`, `%=`) and the ternary operator `?:` do not exist;
+  write `س = س + ١.` and an `إذا` statement. `س++.`/`س--.` work as statements.
+- An automatic scalar or pointer local must be initialized: `صحيح س.` inside a function is a
+  syntax error. Static, global, array and aggregate declarations may omit the initializer.
+- Arrays do not decay to pointers. Pass `&م[٠]` where a `T*` parameter is expected.
+- A global/static pointer can only be initialized with `عدم`; initializing it with `&global` is
+  rejected as non-constant. Assign the address inside a function.
+- Struct types are named with their keyword: `حجم(هيكل س)`, not `حجم(س)` (a bare name is read
+  as an expression).
+- `حالة` (case) and other keywords cannot be used as field or variable names.
+
+### Preprocessor
+
+- The only directives are `#تضمين`, `#تعريف`, `#إذا_عرف`, `#وإلا`, `#نهاية`, `#الغاء_تعريف`.
+  There is no `#خطأ` and no expression condition (`#إذا (...)`).
+- A `#تعريف` value is substituted as one token and must be a non-negative number (ASCII or
+  Arabic-Indic digits), a string literal, or an identifier name. Negative numbers, expressions,
+  keywords (`صواب`) and character literals are not expanded correctly; use `ثابت` instead.
+- Macros take no parameters.
+
 ### Other syntax and runtime limits
 
 - `ساكن` cannot qualify a function definition.
+- Through the Nazm assembler, a global or function whose name is a Nazm register spelling
+  (`سجل_المركم`, `مؤشر_التعليمة`, ...), a removed register alias (`بيانات`, `مصدر`, `قاعدة`,
+  `عداد`, `ر1`, ...), or starts with a compiler label prefix (`كتلة_`, `سلسلة_باء_`,
+  `سلسلة_سي_`, `تخزين_ساكن_`, `رمز_باء_`) is emitted as `رمز_باء_<name>` in the object file.
+  Baa modules link with each other unchanged; foreign objects must use the escaped name.
 - Inline assembly supports only the documented `a`, `c`, and `d` input constraints and `=a`,
   `=c`, and `=d` output constraints.
 - Formatted input does not support `%ح`, `%م`, or dynamic `*` precision.

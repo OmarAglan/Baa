@@ -233,3 +233,105 @@ void regalloc_insert_spill_code(RegAllocCtx *ctx)
     }
 }
 
+// ============================================================================
+// تقنين ما بعد إعادة الكتابة (Post-Rewrite Legalization)
+// ============================================================================
+
+static void mach_block_insert_after_local(MachineBlock* block, MachineInst* pos, MachineInst* inst)
+{
+    if (!block || !pos || !inst) return;
+
+    inst->prev = pos;
+    inst->next = pos->next;
+
+    if (pos->next) pos->next->prev = inst;
+    else block->last = inst;
+
+    pos->next = inst;
+    block->inst_count++;
+}
+
+static bool regalloc_operand_uses_r11(const MachineOperand* op)
+{
+    if (!op) return false;
+    if (op->kind == MACH_OP_VREG) return op->data.vreg == PHYS_R11;
+    if (op->kind == MACH_OP_MEM) return op->data.mem.base_vreg == PHYS_R11;
+    return false;
+}
+
+static bool regalloc_imm_fits_imm32(int64_t v)
+{
+    return v >= INT32_MIN && v <= INT32_MAX;
+}
+
+/**
+ * @brief imul لا يقبل وجهة في الذاكرة ولا ثابتاً أوسع من ٣٢ بت؛ نمرر الحساب عبر R11.
+ *
+ *   imul src, [m]    →  mov [m], r11 ; imul src, r11 ; mov r11, [m]
+ *   imul $imm64, reg →  mov $imm64, r11 ; imul r11, reg
+ *   imul $imm64, [m] →  mov $imm64, r11 ; imul [m], r11 ; mov r11, [m]
+ *
+ * يُطبّق هنا مرة واحدة ليشمل مُصدِّري GAS ونظم معاً.
+ */
+static void regalloc_legalize_imul(MachineBlock* block, MachineInst* inst)
+{
+    if (inst->op != MACH_IMUL) return;
+
+    bool mem_dst = inst->dst.kind == MACH_OP_MEM;
+    bool wide_imm = inst->src2.kind == MACH_OP_IMM && !regalloc_imm_fits_imm32(inst->src2.data.imm);
+    if (!mem_dst && !wide_imm) return;
+    if (regalloc_operand_uses_r11(&inst->dst) || regalloc_operand_uses_r11(&inst->src2)) return;
+
+    int bits = inst->dst.size_bits > 0 ? inst->dst.size_bits : 64;
+    MachineOperand dst = inst->dst;
+    MachineOperand scratch = mach_op_vreg(PHYS_R11, bits);
+
+    if (wide_imm) {
+        // الضرب تبديلي: نحمّل الثابت في R11 ونضربه بالوجهة.
+        MachineOperand imm = inst->src2;
+        imm.size_bits = 64;
+        MachineInst* load = mach_inst_new(MACH_MOV, mach_op_vreg(PHYS_R11, 64), imm,
+                                          mach_op_none());
+        if (!load) return;
+        mach_block_insert_before_local(block, inst, load);
+        if (!mem_dst) {
+            inst->src2 = scratch;
+            return;
+        }
+        MachineInst* store = mach_inst_new(MACH_MOV, dst, scratch, mach_op_none());
+        if (!store) return;
+        mach_block_insert_after_local(block, inst, store);
+        inst->dst = scratch;
+        inst->src1 = scratch;
+        inst->src2 = dst;
+        return;
+    }
+
+    MachineInst* load = mach_inst_new(MACH_MOV, scratch, dst, mach_op_none());
+    MachineInst* store = mach_inst_new(MACH_MOV, dst, scratch, mach_op_none());
+    if (!load || !store) {
+        if (load) mach_inst_free(load);
+        if (store) mach_inst_free(store);
+        return;
+    }
+
+    mach_block_insert_before_local(block, inst, load);
+    mach_block_insert_after_local(block, inst, store);
+    inst->dst = scratch;
+    if (inst->src1.kind == MACH_OP_MEM) inst->src1 = scratch;
+}
+
+void regalloc_legalize(RegAllocCtx *ctx)
+{
+    if (!ctx || !ctx->func)
+        return;
+
+    for (MachineBlock *block = ctx->func->blocks; block; block = block->next)
+    {
+        for (MachineInst *inst = block->first; inst; inst = inst->next)
+        {
+            regalloc_legalize_imul(block, inst);
+        }
+    }
+}
+

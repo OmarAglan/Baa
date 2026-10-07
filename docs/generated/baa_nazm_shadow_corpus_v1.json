@@ -3,7 +3,7 @@
   "compiler": "baa version 0.6.0",
   "source_inventory": {
     "schema": "baa-assembly-surface-v1",
-    "sha256": "82b1d487afa21ef2d6d357557b42fa772fecb3db8c0ff84ac01119f5360710af"
+    "sha256": "fa87ada8c54a6a8fd613ea1eef21a2970b31fc6a6b099b943d08ea064bd2afc5"
   },
   "status_contract": {
     "emitted": "Baa emitted canonical Arabic Nazm without Latin letters.",
@@ -13,9 +13,9 @@
   },
   "targets": {
     "x86_64-linux": {
-      "source_count": 100,
+      "source_count": 109,
       "summary": {
-        "emitted": 100,
+        "emitted": 109,
         "unsupported": 0,
         "error": 0
       },
@@ -158,6 +158,12 @@
           "sha256": "97eab27d706c52cf0ea9310d1f37ca64ee66485e716e7a836994d894a637dc18"
         },
         {
+          "source": "tests/integration/backend/backend_global_address_v073_test.baa",
+          "status": "emitted",
+          "exit_code": 0,
+          "sha256": "3da21ee71879c8c3f6d22b753cb7605642f210cca253dc202396d683a8609f84"
+        },
+        {
           "source": "tests/integration/backend/backend_global_array_init_test.baa",
           "status": "emitted",
           "exit_code": 0,
@@ -247,6 +253,12 @@
           "sha256": "58162dcc8d9205e811c3d12b999c705247144422c1dfc424dd107496ded5442d"
         },
         {
+          "source": "tests/integration/backend/backend_literal_fixes_v073_test.baa",
+          "status": "emitted",
+          "exit_code": 0,
+          "sha256": "762b4772b800c458f1690df151c80fbcab950a0f3df2e51ebe879529ff928f6b"
+        },
+        {
           "source": "tests/integration/backend/backend_low_level_ops_test.baa",
           "status": "emitted",
           "exit_code": 0,
@@ -271,6 +283,12 @@
           "sha256": "633395b133cf85abbd6327ec2a28de2c39635e4db431c5aa80f1f459f3b7271f"
         },
         {
+          "source": "tests/integration/backend/backend_nazm_reserved_symbols_v073_test.baa",
+          "status": "emitted",
+          "exit_code": 0,
+          "sha256": "3ed3e26635ff916b9ccc4d883b3d80ddcaded25e3c70bf4ed00874ac392cd0b6"
+        },
+        {
           "source": "tests/integration/backend/backend_path_stdlib_v062_test.baa",
           "status": "emitted",
           "exit_code": 0,
@@ -281,6 +299,18 @@
           "status": "emitted",
           "exit_code": 0,
           "sha256": "61210da14a74362e120f93b1c2011842be463acdc22c4b0d420096fac9b3a924"
+        },
+        {
+          "source": "tests/integration/backend/backend_pointer_index_assign_v073_test.baa",
+          "status": "emitted",
+          "exit_code": 0,
+          "sha256": "05e997a0c8b03b04ac2788393c5196f463a248a9a654d919bbeff40f94d53c8d"
+        },
+        {
+          "source": "tests/integration/backend/backend_postfix_statement_v073_test.baa",
+          "status": "emitted",
+          "exit_code": 0,
+          "sha256": "c1d143b825298df6c3550fede3f7a7aa2cebc3bc12539fff85019d0f353dc1c1"
         },
         {
           "source": "tests/integration/backend/backend_pp_nested_test.baa",
@@ -394,6 +424,24 @@
           "sha256": "29fbe5bccdf22d50f6a23620bbaba89b51b8feab47dd14f53bd233cd108b8f48"
         },
         {
+          "source": "tests/integration/backend/backend_runtime_null_pointer_index_assign_fail_v073_test.baa",
+          "status": "emitted",
+          "exit_code": 0,
+          "flags": [
+            "-fruntime-checks=null"
+          ],
+          "sha256": "9ac2a8f08224afc2bcb57ad28aa5737e5b011700d586ffeef391b541ea0606ec"
+        },
+        {
+          "source": "tests/integration/backend/backend_runtime_null_pointer_index_read_fail_v073_test.baa",
+          "status": "emitted",
+          "exit_code": 0,
+          "flags": [
+            "-fruntime-checks=null"
+          ],
+          "sha256": "12a0cba038fe54b33c449f3887724816d4b1b4483323e956f5729a24d7630533"
+        },
+        {
           "source": "tests/integration/backend/backend_runtime_panic_location_v063_test.baa",
           "status": "emitted",
           "exit_code": 0,
@@ -460,6 +508,12 @@
           "sha256": "a67fe6fdaf84478dfa8463e1d73f279f308f2ee05ae4c179e4910babf8720628"
         },
         {
+          "source": "tests/integration/backend/backend_sizeof_static_init_v073_test.baa",
+          "status": "emitted",
+          "exit_code": 0,
+          "sha256": "7ae627faf9fcf0fefddf9df892cb5570bf3c47bf564e00aa0cb7687a978e1a82"
+        },
+        {
           "source": "tests/integration/backend/backend_stackargs_test.baa",
           "status": "emitted",
           "exit_code": 0,
@@ -502,6 +556,12 @@
           "sha256": "ac1880a646276ec3d014701906360e2041952b8ce3a95113c7f21fdc7c816dac"
         },
         {
+          "source": "tests/integration/backend/backend_struct_sized_fields_v073_test.baa",
+          "status": "emitted",
+          "exit_code": 0,
+          "sha256": "c7d514336dc88ece42a9024efc3053777f4096c1ccd106cd25138d0a446cd845"
+        },
+        {
           "source": "tests/integration/backend/backend_sysv_6args_test.baa",
           "status": "emitted",
           "exit_code": 0,
@@ -517,7 +577,7 @@
           "source": "tests/integration/backend/backend_tailcall_test.baa",
           "status": "emitted",
           "exit_code": 0,
-          "sha256": "ca60633a7478a756a7824cdbd8f8f5d2301b572906fc2f9bd5c75f3a6a347cb4"
+          "sha256": "db1655035d3b516b131614dcd3c6c3db7aa887f123097878c5b8721ea00862d8"
         },
         {
           "source": "tests/integration/backend/backend_test.baa",
@@ -720,9 +780,9 @@
       ]
     },
     "x86_64-windows": {
-      "source_count": 100,
+      "source_count": 109,
       "summary": {
-        "emitted": 100,
+        "emitted": 109,
         "unsupported": 0,
         "error": 0
       },
@@ -865,6 +925,12 @@
           "sha256": "caea5c24a5c3796aa2fce5cabfdbaa0665ce05fce5738f9ca154d59c9eaa92c5"
         },
         {
+          "source": "tests/integration/backend/backend_global_address_v073_test.baa",
+          "status": "emitted",
+          "exit_code": 0,
+          "sha256": "2d780dd7bcfff0e75d4b81ce0cd0bc244617712b2ecaa994d9475a1e40897e51"
+        },
+        {
           "source": "tests/integration/backend/backend_global_array_init_test.baa",
           "status": "emitted",
           "exit_code": 0,
@@ -954,6 +1020,12 @@
           "sha256": "c89284b9337aae5d398b20beac6f8516a1d428b0b4f27379495edd439727856d"
         },
         {
+          "source": "tests/integration/backend/backend_literal_fixes_v073_test.baa",
+          "status": "emitted",
+          "exit_code": 0,
+          "sha256": "1afe9e9790177c112123bd89590956b8a18155e36d6d74cbda9aa883c7b666e5"
+        },
+        {
           "source": "tests/integration/backend/backend_low_level_ops_test.baa",
           "status": "emitted",
           "exit_code": 0,
@@ -978,6 +1050,12 @@
           "sha256": "0f896ea9e43b6e7b505fcf5d0b7bd59c3f8ebb4ea671251ad339972f96ca3412"
         },
         {
+          "source": "tests/integration/backend/backend_nazm_reserved_symbols_v073_test.baa",
+          "status": "emitted",
+          "exit_code": 0,
+          "sha256": "588cc49c74d5278afa5f3e03e1a86a698e174f80d9e73ba3b55c72284e25a1aa"
+        },
+        {
           "source": "tests/integration/backend/backend_path_stdlib_v062_test.baa",
           "status": "emitted",
           "exit_code": 0,
@@ -988,6 +1066,18 @@
           "status": "emitted",
           "exit_code": 0,
           "sha256": "99b764ff53755c158476881c73198f7157efd04005350f8e9d7d826393d788ed"
+        },
+        {
+          "source": "tests/integration/backend/backend_pointer_index_assign_v073_test.baa",
+          "status": "emitted",
+          "exit_code": 0,
+          "sha256": "71bc2200f5497160deb29e81f4f78786b7c918999fe46ae49f80e045c41328c1"
+        },
+        {
+          "source": "tests/integration/backend/backend_postfix_statement_v073_test.baa",
+          "status": "emitted",
+          "exit_code": 0,
+          "sha256": "c85a4effa5daa7c5aed8b250cfb6f73b1c9cebcf081e1ce11176e25e9ef9a2ef"
         },
         {
           "source": "tests/integration/backend/backend_pp_nested_test.baa",
@@ -1101,6 +1191,24 @@
           "sha256": "68a5edf39b60ef512d946133bafe8d1e55f680fd86ee8ff07ce48efc1e768702"
         },
         {
+          "source": "tests/integration/backend/backend_runtime_null_pointer_index_assign_fail_v073_test.baa",
+          "status": "emitted",
+          "exit_code": 0,
+          "flags": [
+            "-fruntime-checks=null"
+          ],
+          "sha256": "b028dc2ab5877ba342107a574da15443e64df6df39cdff7bb010b76cefd7979d"
+        },
+        {
+          "source": "tests/integration/backend/backend_runtime_null_pointer_index_read_fail_v073_test.baa",
+          "status": "emitted",
+          "exit_code": 0,
+          "flags": [
+            "-fruntime-checks=null"
+          ],
+          "sha256": "377451786b468e0482df9b6583e9d2540da3a2b31d327c3a82b6d2206d92e7b3"
+        },
+        {
           "source": "tests/integration/backend/backend_runtime_panic_location_v063_test.baa",
           "status": "emitted",
           "exit_code": 0,
@@ -1167,6 +1275,12 @@
           "sha256": "2e2a12dd197f8fc5ac09c8f7cc0db0175c5cfccf8f94668cbf1fd425861df6f1"
         },
         {
+          "source": "tests/integration/backend/backend_sizeof_static_init_v073_test.baa",
+          "status": "emitted",
+          "exit_code": 0,
+          "sha256": "e3a8f28b19646db19f2063184425beafd91113b809ba3e8936ab24ee11a6a88c"
+        },
+        {
           "source": "tests/integration/backend/backend_stackargs_test.baa",
           "status": "emitted",
           "exit_code": 0,
@@ -1209,6 +1323,12 @@
           "sha256": "c47e2e968d4bc83b6f297ae52c53909851470cd16a1896f2e475651d74fa269b"
         },
         {
+          "source": "tests/integration/backend/backend_struct_sized_fields_v073_test.baa",
+          "status": "emitted",
+          "exit_code": 0,
+          "sha256": "67b77d930b34083b4c73f37ca13366b38107b1af41706a7d174c5c860942572f"
+        },
+        {
           "source": "tests/integration/backend/backend_sysv_6args_test.baa",
           "status": "emitted",
           "exit_code": 0,
@@ -1224,7 +1344,7 @@
           "source": "tests/integration/backend/backend_tailcall_test.baa",
           "status": "emitted",
           "exit_code": 0,
-          "sha256": "a3de52ebf272a03a3c7e5fbdc9939fbfbafba0b3c11c1eac26e0e5f8a4f7f354"
+          "sha256": "e8580e41d9159cddfbc7e0281f3312dc243b7279a9a744463538569c396e722e"
         },
         {
           "source": "tests/integration/backend/backend_test.baa",

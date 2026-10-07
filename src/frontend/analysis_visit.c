@@ -498,6 +498,8 @@ static void analyze_node(Node* node) {
                                          true)) {
                     semantic_error(node, "عدم تطابق نوع المؤشر في إسناد العضو.");
                 }
+            } else if (expected == TYPE_FUNC_PTR) {
+                check_member_funcptr_assign(node, target, value, got);
             } else if (!types_compatible(got, expected)) {
                 semantic_error(node, "عدم تطابق النوع في إسناد العضو.");
             } else {
@@ -923,15 +925,16 @@ static void analyze_node(Node* node) {
             if (supplied <= 0) supplied = node_list_count(node->data.array_op.indices);
 
             if (!sym->is_array) {
-                if (sym->type == TYPE_STRING) {
-                    semantic_error(node, "لا يمكن تعديل عناصر النص '%s' حالياً.", sym->name);
-                    for (Node* idx = node->data.array_op.indices; idx; idx = idx->next) {
-                        (void)infer_type(idx);
-                    }
-                    (void)infer_type(node->data.array_op.value);
+                if (sym->type == TYPE_POINTER) {
+                    // `م[i] = ...` سكر نحوي لـ `*(م + i) = ...`.
+                    check_pointer_index_assign(node, sym, supplied);
                     break;
                 }
-                semantic_error(node, "'%s' ليس مصفوفة.", sym->name);
+                if (sym->type == TYPE_STRING) {
+                    semantic_error(node, "لا يمكن تعديل عناصر النص '%s' حالياً.", sym->name);
+                } else {
+                    semantic_error(node, "'%s' ليس مصفوفة.", sym->name);
+                }
                 for (Node* idx = node->data.array_op.indices; idx; idx = idx->next) {
                     (void)infer_type(idx);
                 }

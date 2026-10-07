@@ -1660,7 +1660,7 @@
 
 * \[ ] **Coverage reporting** — CI coverage for C compiler core.
 * \[ ] **Fuzz targets** — lexer, parser, IR reader, include resolver.
-* \[ ] **Differential tests** — compare `-O0` vs `-O2` runtime output.
+* \[x] **Differential tests** — compare `-O0` vs `-O2` runtime output. `tests/test_opt_differential.py` builds every backend runtime test plus `tests/differential/*.baa` at `-O0`, `-O1`, `-O2` and `-O2 -funroll-loops` and requires identical exit status, stdout and stderr; it runs in `qa_run.py` full, stress and release modes.
 * \[ ] **Crash minimization workflow** — reduce failing fuzz cases into committed regressions.
 * \[ ] **Backend stress tests** — stack args, calls, structs, arrays, floats, and pointer-heavy programs.
 * \[ ] **Release dashboard** — summarize pass/fail, coverage, fuzz corpus size, and determinism checks.

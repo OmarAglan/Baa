@@ -28,6 +28,10 @@ static int ir_lower_eval_const_i64(Node* expr, int64_t* out_value) {
         case NODE_CHAR:
             *out_value = (int64_t)expr->data.char_lit.value;
             return 1;
+        case NODE_SIZEOF:
+            if (!expr->data.sizeof_expr.size_known) return 0;
+            *out_value = expr->data.sizeof_expr.size_bytes;
+            return 1;
 
         case NODE_UNARY_OP:
         {
@@ -179,6 +183,7 @@ static IRValue* ir_lower_global_init_value(IRBuilder* builder, Node* expr, IRTyp
 
         case NODE_UNARY_OP:
         case NODE_BIN_OP:
+        case NODE_SIZEOF:
         {
             int64_t v = 0;
             if (ir_lower_eval_const_i64(expr, &v)) {

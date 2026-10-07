@@ -145,15 +145,30 @@ static int type_size_align(DataType t, const char* type_name, int* out_align)
 {
     if (out_align) *out_align = 1;
     switch (t) {
+        // المحاذاة الطبيعية تساوي الحجم؛ يجب أن يطابق هذا datatype_size_bytes.
         case TYPE_BOOL:
+        case TYPE_I8:
+        case TYPE_U8:
             if (out_align) *out_align = 1;
             return 1;
+        case TYPE_I16:
+        case TYPE_U16:
+            if (out_align) *out_align = 2;
+            return 2;
+        case TYPE_I32:
+        case TYPE_U32:
+            if (out_align) *out_align = 4;
+            return 4;
         case TYPE_INT:
+        case TYPE_U64:
         case TYPE_ENUM:
+        case TYPE_CHAR:
+        case TYPE_FLOAT:
             if (out_align) *out_align = 8;
             return 8;
         case TYPE_STRING:
         case TYPE_POINTER:
+        case TYPE_FUNC_PTR:
             if (out_align) *out_align = 8;
             return 8;
         case TYPE_STRUCT: {
@@ -367,6 +382,32 @@ static void resolve_member_access(Node* node)
     node->data.member_access.member_ptr_depth = f->ptr_depth;
     node->data.member_access.member_is_const = base_const || f->is_const;
     node->resolved_decl = f->decl_node;
+}
+
+// توقيع حقل مؤشر الدالة محفوظ في عقدة تعريف الحقل التي يربطها resolve_member_access.
+static FuncPtrSig* member_access_func_sig(const Node* node)
+{
+    const Node* field = node ? node->resolved_decl : NULL;
+    return (field && field->type == NODE_VAR_DECL) ? field->data.var_decl.func_sig : NULL;
+}
+
+// تحقق إسناد قيمة إلى حقل مؤشر دالة: يجب أن يطابق التوقيع، و`عدم` يأخذ توقيع الحقل.
+static void check_member_funcptr_assign(Node* node, Node* target, Node* value, DataType got)
+{
+    FuncPtrSig* expected_sig = member_access_func_sig(target);
+    // الخافض يحتاج التوقيع على الهدف ليخزّن بنوع الحقل الحقيقي دون تحويل.
+    if (expected_sig) node_set_inferred_funcptr(target, expected_sig);
+    if (!expected_sig) {
+        semantic_error(node, "توقيع مؤشر الدالة للعضو '%s' مفقود.",
+                       target->data.member_access.member);
+    } else if (value && value->type == NODE_NULL) {
+        value->inferred_type = TYPE_FUNC_PTR;
+        node_set_inferred_funcptr(value, expected_sig);
+    } else if (got != TYPE_FUNC_PTR ||
+               !funcsig_equal(value ? value->inferred_func_sig : NULL, expected_sig)) {
+        semantic_error(node, "عدم تطابق توقيع مؤشر الدالة في إسناد العضو '%s'.",
+                       target->data.member_access.member);
+    }
 }
 
 static void enum_register_decl(Node* node)

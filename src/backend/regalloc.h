@@ -288,6 +288,12 @@ void regalloc_insert_spill_code(RegAllocCtx* ctx);
  */
 void regalloc_rewrite(RegAllocCtx* ctx);
 
+/**
+ * @brief تقنين التعليمات بعد إعادة الكتابة (مثل imul بوجهة مسرّبة عبر R11).
+ * @param ctx سياق تخصيص السجلات.
+ */
+void regalloc_legalize(RegAllocCtx* ctx);
+
 // ============================================================================
 // دوال مساعدة للطباعة (Debug Printing)
 // ============================================================================

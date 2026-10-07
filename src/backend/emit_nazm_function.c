@@ -50,10 +50,10 @@ static void nazm_write_function(FILE *out,
     map->generated_line +=
         nazm_write_debug_location_reset(out, map);
     fputs(".عام ", out);
-    fputs(func->name, out);
+    nazm_write_symbol(out, func->name);
     fputc('\n', out);
     map->generated_line += 1;
-    fputs(func->name, out);
+    nazm_write_symbol(out, func->name);
     fputs(":\n", out);
     fputs("    ادفع مؤشر_القاعدة\n", out);
     fputs("    انقل مؤشر_القاعدة، مؤشر_المكدس\n", out);

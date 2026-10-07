@@ -688,6 +688,8 @@ static void nazm_write_symbol(FILE *out, const char *name)
         nazm_write_generated_string_label(out, is_baa_string, id);
         return;
     }
+    if (nazm_symbol_needs_escape(name))
+        fputs(k_nazm_escape_prefix, out);
     fputs(name, out);
 }
 

@@ -95,6 +95,17 @@ Define compile-time constants (macros). The compiler replaces the identifier wit
 }
 ```
 
+**Macro value rules (current behavior):** the value is the rest of the line, substituted as
+**one token**. It must be exactly one of:
+
+- a non-negative number literal, with ASCII or Arabic-Indic digits (`١٠٠`, `100`, `٢.٥`);
+- a string literal (`"مرحباً"`);
+- the name of an identifier (a variable, constant or function name).
+
+Negative numbers (`-٥`), expressions (`(١ + ٢)`), keywords such as `صواب`, and character
+literals (`'أ'`) are not expanded correctly; they reach the analyzer as an unknown name.
+Use a `ثابت` declaration for those values instead.
+
 ### 2.3. Conditional Compilation (`#إذا_عرف`)
 
 Include or exclude blocks of code based on whether a symbol is defined.
@@ -136,19 +147,12 @@ Remove a previously defined macro.
 // Now 'تصحيح' is undefined
 ```
 
-### 2.5. Error Directive (`#خطأ`)
+### 2.5. Supported Directives (complete list)
 
-Generate a compile-time error with a custom message.
-
-**Syntax:** `#خطأ <message>`
-
-**Example:**
-
-```baa
-#إذا_عرف نظام_غير_مدعوم
-    #خطأ "هذا النظام غير مدعوم"
-#نهاية
-```
+The preprocessor supports exactly these directives: `#تضمين`, `#تعريف`, `#إذا_عرف`,
+`#وإلا`, `#نهاية` and `#الغاء_تعريف`. Any other directive, such as `#خطأ` or an
+expression condition like `#إذا (...)`, is rejected with «خطأ قبلي: توجيه غير معروف.».
+Conditions can only test whether a name is defined; there is no value comparison.
 
 ---
 
@@ -180,22 +184,32 @@ Baa is statically typed. All variables must be declared with their type.
 
 **Syntax:** `<type> <identifier> = <expression>.`
 
+An automatic (non-`ساكن`, non-global) scalar or pointer variable **must** have an initializer;
+`صحيح س.` inside a function is a syntax error («متوقع '=' لكن وُجد '.'»). Arrays, structs,
+unions, `ساكن` locals and globals may omit it and are then zero-initialized (static storage)
+or left for explicit assignment (automatic arrays/aggregates).
+
 ```baa
-// Integer
-صحيح س = ٥٠.
-س = ١٠٠.
-
-// String (حرف[])
-نص رسالة = "مرحباً".
-رسالة = "وداعاً".
-
-// Boolean
-منطقي نشط = صواب.
-نشط = خطأ.
-
-// Void (used for functions with no return)
+// Void (used for functions with no return value)
 عدم فارغ() {
     اطبع "لا قيمة إرجاع".
+}
+
+صحيح الرئيسية() {
+    // Integer
+    صحيح س = ٥٠.
+    س = ١٠٠.
+
+    // String (حرف[])
+    نص رسالة = "مرحباً".
+    رسالة = "وداعاً".
+
+    // Boolean
+    منطقي نشط = صواب.
+    نشط = خطأ.
+
+    فارغ().
+    إرجع ٠.
 }
 ```
 
@@ -553,11 +567,13 @@ Baa is statically typed. All variables must be declared with their type.
 
 - دعم المؤشرات العامة مع تتبع نوع الأساس وعمق المؤشر (مثل `صحيح**`) في التحليل الدلالي.
 - الحساب عبر المؤشرات: `pointer +/- int` و `pointer - pointer` (الطرح يعيد فرق العناصر).
-- **فهرسة المؤشر:** `م[i]` مدعومة وهي سكر نحوي لـ `*(م + i)` (تُسمح فقط عندما يكون نوع الأساس قابلاً للحساب؛ `عدم*` و `هيكل*` و `اتحاد*` غير مسموحة عند عمق ١).
+- **فهرسة المؤشر:** `م[i]` مدعومة قراءةً وكتابةً وهي سكر نحوي لـ `*(م + i)`: `م[i] = ق.`، `م[i]++.`، و`مم[i][j] = ق.` لمؤشر متعدد العمق (تُسمح فقط عندما يكون نوع الأساس قابلاً للحساب؛ `عدم*` و `هيكل*` و `اتحاد*` غير مسموحة عند عمق ١). القيمة المُسندة تُحوَّل إلى نوع العنصر كالإسناد العادي (مع تحذير التضييق الضمني)، وعناصر `نص` لا تُعدَّل عبر الفهرسة.
+- **المصفوفات لا تتحول ضمنياً إلى مؤشرات:** لتمرير مصفوفة إلى معامل `صحيح*` مرّر `&م[٠]`؛ استخدام اسم المصفوفة وحده يُرفض بـ«لا يمكن استخدام المصفوفة ... بدون فهرس».
+- المؤشر العام أو الساكن يقبل التهيئة بـ `عدم` فقط (`صحيح* ع = عدم.`)؛ التهيئة بعنوان مثل `&ق` مرفوضة حالياً، فأسند العنوان داخل دالة.
 - المقارنة بين المؤشرات: `==` و `!=` (مع السماح بـ `عدم`).
 - فك الإشارة يتطلب مؤشراً صالحاً، وأخذ العنوان يتطلب قيمة قابلة للإسناد (L-value).
 - فك الإشارة المباشر للقيمة الفارغة `*عدم` مرفوض بتشخيص عربي صريح.
-- عند تفعيل `-fruntime-checks` أو `-fruntime-checks=null` يضيف الخافض حارساً اختيارياً قبل فك مؤشر متغير أو الإسناد عبره؛ عند الفشل يطبع `فشل_مؤشر_فارغ` ثم ينهي بـ `exit(1)`.
+- عند تفعيل `-fruntime-checks` أو `-fruntime-checks=null` يضيف الخافض حارساً اختيارياً قبل فك مؤشر متغير أو الإسناد عبره، وقبل قراءة `م[i]` أو الكتابة فيه؛ عند الفشل يطبع `فشل_مؤشر_فارغ` ثم ينهي بـ `exit(1)`. أخذ العنوان `&م[i]` لا يُحرس لأنه لا يصل إلى الذاكرة.
 - `ثابت T* م` يعني أن المتغير `م` نفسه ثابت ولا يمكن إعادة إسناده؛ لا توجد صيغة
   `pointer-to-const` بعد، لذلك يُرفض `&` على قيمة `ثابت` كي لا تتحول إلى مؤشر قابل للكتابة.
 - مؤشرات الدوال مدعومة عبر النوع `دالة(...) -> ...` (انظر 5.6).
@@ -1016,8 +1032,8 @@ Reads an input from standard input and stores it in the specified variable.
     عشري ب = ٠.
     نص س = عدم.
 
-    صحيح rc = اقرأ_منسق("%ص %ع %10ن", &أ, &ب, &س).
-    إذا (rc == 3) {
+    صحيح عدد_المقروء = اقرأ_منسق("%ص %ع %10ن", &أ, &ب, &س).
+    إذا (عدد_المقروء == 3) {
         اطبع_منسق("أ=%ص ب=%.2ع س=%ن\س", أ, ب, س).
         حرر_نص(س).
     }
@@ -1276,13 +1292,18 @@ Multi-way branching based on integer or character values.
 **Short-circuit Evaluation:** `&&` stops if left is false; `||` stops if left is true.
 
 ```baa
-// Short-circuit example
-إذا (س > ٠ && س < ١٠) {
-    اطبع "س بين ١ و ٩".
-}
+صحيح الرئيسية() {
+    صحيح س = ٥.
+    // Short-circuit example
+    إذا (س > ٠ && س < ١٠) {
+        اطبع "س بين ١ و ٩".
+    }
 
-إذا (!خطأ) {
-    اطبع "لا يوجد خطأ".
+    منطقي فشل = خطأ.
+    إذا (!فشل) {
+        اطبع "لا يوجد خطأ".
+    }
+    إرجع ٠.
 }
 ```
 
@@ -1302,25 +1323,22 @@ Multi-way branching based on integer or character values.
 - الإزاحة اليمنى تعتمد على نوع المعامل الأيسر (حسابية للموقّع، منطقية لغير الموقّع).
 - قيم الإزاحة الصريحة يجب أن تكون بين `٠` و`٦٣`، ومع `-fruntime-checks` أو `-fruntime-checks=shift` تُحرس قيم الإزاحة الديناميكية أيضاً؛ عند الفشل يطبع البرنامج `فشل_إزاحة_غير_صالحة` ثم ينهي بـ `exit(1)`.
 
-### 8.5. Compound Assignment Operators
+### 8.5. Compound Assignment (not supported)
 
-| Operator | Description | Equivalent |
-|----------|-------------|------------|
-| `+=` | Add and assign | `س += ٥` → `س = س + ٥` |
-| `-=` | Subtract and assign | `س -= ٥` → `س = س - ٥` |
-| `*=` | Multiply and assign | `س *= ٥` → `س = س * ٥` |
-| `/=` | Divide and assign | `س /= ٥` → `س = س / ٥` |
-| `%=` | Modulo and assign | `س %= ٥` → `س = س % ٥` |
-
-**Example:**
+باء لا تدعم حالياً عوامل الإسناد المركّب `+=`، `-=`، `*=`، `/=`، `%=`؛ المحلل يرفضها بخطأ
+«وحدة أو جملة غير متوقعة». اكتب الإسناد صريحاً:
 
 ```baa
-صحيح س = ١٠.
-س += ٥.    // س = ١٥
-س -= ٣.    // س = ١٢
-س *= ٢.    // س = ٢٤
-س /= ٤.    // س = ٦
-س %= ٤.    // س = ٢
+صحيح الرئيسية() {
+    صحيح س = ١٠.
+    س = س + ٥.    // س = ١٥
+    س = س - ٣.    // س = ١٢
+    س = س * ٢.    // س = ٢٤
+    س = س / ٤.    // س = ٦
+    س = س % ٤.    // س = ٢
+    س++.          // الزيادة والنقصان اللاحقان مدعومان كجملة مستقلة
+    إرجع س - ٣.
+}
 ```
 
 ### 8.6. Size Query Operator `حجم` (v0.3.6)
@@ -1328,10 +1346,19 @@ Multi-way branching based on integer or character values.
 `حجم(...)` يعيد حجم النوع/التعبير بالبايت كثابت وقت ترجمة.
 
 ```baa
-صحيح أ = حجم(صحيح).
-صحيح ب = حجم(حرف).
-صحيح ج = حجم(قائمة).
+هيكل قائمة {
+    صحيح عدد.
+    صحيح سعة.
+    صحيح* عناصر.
+}
+
+صحيح أ = حجم(صحيح).   // ٨
+صحيح ب = حجم(حرف).    // ٨ (الحرف معبأ في ٨ بايت)
+صحيح ج = حجم(هيكل قائمة).  // ٢٤
 ```
+
+`حجم` ثابت ترجمة، فيُقبل في تهيئة المتغيرات العامة والساكنة وفي التعابير الثابتة
+مثل `حجم(صحيح) * ٢ + ١`.
 
 ### 8.7. Operator Precedence
 
@@ -1350,7 +1377,7 @@ From highest to lowest:
 11. `|` — Bitwise OR
 12. `&&` — Logical AND
 13. `||` — Logical OR
-14. `=`, `+=`, `-=`, `*=`, `/=`, `%=` — Assignment
+14. `=` — Assignment (no compound assignment)
 
 **Note:** Use parentheses `()` to override precedence when needed.
 
@@ -1504,13 +1531,13 @@ The standard library provides C-like dynamic memory APIs for low-level programmi
     أضف_بايت(مخزن، كـ<ط٨>(٦٦)).
 
     ط٨* بيانات = كـ<ط٨*>(بيانات_مخزن_بايتات(مخزن)).
-    صحيح ok = ١.
-    إذا (طول_مخزن_بايتات(مخزن) != ٢) { ok = ٠. }
-    إذا (*(بيانات + ٠) != كـ<ط٨>(٦٥)) { ok = ٠. }
-    إذا (*(بيانات + ١) != كـ<ط٨>(٦٦)) { ok = ٠. }
+    صحيح سليم = ١.
+    إذا (طول_مخزن_بايتات(مخزن) != ٢) { سليم = ٠. }
+    إذا (*(بيانات + ٠) != كـ<ط٨>(٦٥)) { سليم = ٠. }
+    إذا (*(بيانات + ١) != كـ<ط٨>(٦٦)) { سليم = ٠. }
 
     حرر_مخزن_بايتات(مخزن).
-    إرجع !ok.
+    إرجع !سليم.
 }
 ```
 

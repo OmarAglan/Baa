@@ -156,6 +156,102 @@ static void analyze_user_function_call_args(Node* call_node, FuncSymbol* fs, Nod
  */
 static DataType infer_type_internal(Node* node);
 
+// فهرسة المؤشر: p[i] ⇢ *(p + i). تحلل الفهارس وتعيد نوع العنصر الناتج وتضبط
+// معلومات المؤشر المستنتجة على العقدة. via_text يصبح true إذا مرت الفهرسة الأخيرة عبر نص.
+static DataType infer_pointer_index(Node* node, Symbol* sym, int supplied, bool* via_text)
+{
+    if (via_text) *via_text = false;
+    DataType cur_t = TYPE_POINTER;
+    DataType cur_base = sym->ptr_base_type;
+    const char* cur_base_name = (sym->ptr_base_type_name[0] ? sym->ptr_base_type_name : NULL);
+    int cur_depth = sym->ptr_depth;
+
+    if (cur_depth <= 0) {
+        semantic_error(node, "عمق المؤشر غير صالح في '%s'.", sym->name);
+        node_clear_inferred_ptr(node);
+        return TYPE_INT;
+    }
+
+    Node* idx_node = node->data.array_op.indices;
+    for (int i = 0; i < supplied && idx_node; i++, idx_node = idx_node->next) {
+        DataType it = infer_type(idx_node);
+        if (!types_compatible(it, TYPE_INT) || it == TYPE_FLOAT) {
+            semantic_error(idx_node, "فهرس المؤشر يجب أن يكون صحيحاً.");
+        }
+
+        if (cur_t == TYPE_POINTER) {
+            if (!ptr_arith_allowed(cur_base, cur_depth)) {
+                semantic_error(node, "فهرسة هذا المؤشر غير مسموحة (نوع الأساس غير قابل للحساب).");
+                cur_t = TYPE_INT;
+                break;
+            }
+            if (cur_depth <= 0) {
+                semantic_error(node, "عمق المؤشر غير صالح أثناء فهرسة '%s'.", sym->name);
+                cur_t = TYPE_INT;
+                break;
+            }
+            if (cur_depth == 1) {
+                cur_t = cur_base;
+            } else {
+                cur_depth--;
+                cur_t = TYPE_POINTER;
+            }
+        } else if (cur_t == TYPE_STRING) {
+            cur_t = TYPE_CHAR;
+            if (via_text) *via_text = true;
+        } else {
+            semantic_error(node, "لا يمكن فهرسة الناتج من '%s' بهذه الطريقة.", sym->name);
+            cur_t = TYPE_INT;
+            break;
+        }
+
+        if (cur_t == TYPE_CHAR && i != supplied - 1) {
+            semantic_error(node, "فهرسة متعددة بعد محرف غير مدعومة.");
+            break;
+        }
+    }
+
+    if (cur_t == TYPE_POINTER) {
+        node_set_inferred_ptr(node, cur_base, cur_base_name, cur_depth);
+    } else {
+        node_clear_inferred_ptr(node);
+    }
+
+    if (cur_t == TYPE_STRUCT || cur_t == TYPE_UNION) {
+        semantic_error(node, "استخدام نوع مركب كناتج فهرسة '%s' كقيمة غير مدعوم.", sym->name);
+    }
+    return cur_t;
+}
+
+// تحقق `م[i] = قيمة.` لمؤشر: الهدف هو `*(م + i)`، والقيمة تطابق نوع العنصر.
+static void check_pointer_index_assign(Node* node, Symbol* sym, int supplied)
+{
+    bool via_text = false;
+    DataType elem = infer_pointer_index(node, sym, supplied, &via_text);
+    Node* value = node->data.array_op.value;
+    DataType vt = infer_type(value);
+    if (via_text) {
+        semantic_error(node, "لا يمكن تعديل عناصر النص عبر الفهرسة.");
+    } else if (elem == TYPE_STRUCT || elem == TYPE_UNION) {
+        // أُبلغ عنه في infer_pointer_index.
+    } else if (elem == TYPE_POINTER) {
+        if (!value || !ptr_type_compatible(value->inferred_ptr_base_type,
+                                           value->inferred_ptr_base_type_name,
+                                           value->inferred_ptr_depth,
+                                           node->inferred_ptr_base_type,
+                                           node->inferred_ptr_base_type_name,
+                                           node->inferred_ptr_depth,
+                                           true)) {
+            semantic_error(node, "نوع القيمة في تعيين '%s' غير متوافق.", sym->name);
+        }
+    } else if (!types_compatible(vt, elem)) {
+        semantic_error(node, "نوع القيمة في تعيين '%s' غير متوافق.", sym->name);
+    } else {
+        maybe_warn_implicit_narrowing(vt, elem, value);
+    }
+}
+
+
 static DataType infer_type_internal(Node* node) {
     if (!node) return TYPE_INT; // افتراضي لتجنب الانهيار
 
@@ -274,6 +370,9 @@ static DataType infer_type_internal(Node* node) {
                                           node->data.member_access.member_ptr_base_type,
                                           node->data.member_access.member_ptr_base_type_name,
                                           node->data.member_access.member_ptr_depth);
+                } else if (node->data.member_access.member_type == TYPE_FUNC_PTR) {
+                    // بدون توقيع الحقل لا تطابق القراءة أي تعريف أو إسناد.
+                    node_set_inferred_funcptr(node, member_access_func_sig(node));
                 } else {
                     node_clear_inferred_ptr(node);
                 }
@@ -315,65 +414,7 @@ static DataType infer_type_internal(Node* node) {
 
                 // فهرسة المؤشر: p[i] ⇢ *(p + i)
                 if (sym->type == TYPE_POINTER) {
-                    DataType cur_t = TYPE_POINTER;
-                    DataType cur_base = sym->ptr_base_type;
-                    const char* cur_base_name = (sym->ptr_base_type_name[0] ? sym->ptr_base_type_name : NULL);
-                    int cur_depth = sym->ptr_depth;
-
-                    if (cur_depth <= 0) {
-                        semantic_error(node, "عمق المؤشر غير صالح في '%s'.", sym->name);
-                        node_clear_inferred_ptr(node);
-                        return TYPE_INT;
-                    }
-
-                    Node* idx_node = node->data.array_op.indices;
-                    for (int i = 0; i < supplied && idx_node; i++, idx_node = idx_node->next) {
-                        DataType it = infer_type(idx_node);
-                        if (!types_compatible(it, TYPE_INT) || it == TYPE_FLOAT) {
-                            semantic_error(idx_node, "فهرس المؤشر يجب أن يكون صحيحاً.");
-                        }
-
-                        if (cur_t == TYPE_POINTER) {
-                            if (!ptr_arith_allowed(cur_base, cur_depth)) {
-                                semantic_error(node, "فهرسة هذا المؤشر غير مسموحة (نوع الأساس غير قابل للحساب).");
-                                cur_t = TYPE_INT;
-                                break;
-                            }
-                            if (cur_depth <= 0) {
-                                semantic_error(node, "عمق المؤشر غير صالح أثناء فهرسة '%s'.", sym->name);
-                                cur_t = TYPE_INT;
-                                break;
-                            }
-                            if (cur_depth == 1) {
-                                cur_t = cur_base;
-                            } else {
-                                cur_depth--;
-                                cur_t = TYPE_POINTER;
-                            }
-                        } else if (cur_t == TYPE_STRING) {
-                            cur_t = TYPE_CHAR;
-                        } else {
-                            semantic_error(node, "لا يمكن فهرسة الناتج من '%s' بهذه الطريقة.", sym->name);
-                            cur_t = TYPE_INT;
-                            break;
-                        }
-
-                        if (cur_t == TYPE_CHAR && i != supplied - 1) {
-                            semantic_error(node, "فهرسة متعددة بعد محرف غير مدعومة.");
-                            break;
-                        }
-                    }
-
-                    if (cur_t == TYPE_POINTER) {
-                        node_set_inferred_ptr(node, cur_base, cur_base_name, cur_depth);
-                    } else {
-                        node_clear_inferred_ptr(node);
-                    }
-
-                    if (cur_t == TYPE_STRUCT || cur_t == TYPE_UNION) {
-                        semantic_error(node, "استخدام نوع مركب كناتج فهرسة '%s' كقيمة غير مدعوم.", sym->name);
-                    }
-                    return cur_t;
+                    return infer_pointer_index(node, sym, supplied, NULL);
                 }
 
                 semantic_error(node, "'%s' ليس مصفوفة.", sym->name);

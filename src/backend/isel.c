@@ -387,6 +387,7 @@ static MachineInst *isel_emit(ISelCtx *ctx, MachineOp op,
 
 static int isel_type_bits(IRType *type);
 static MachineOperand isel_lower_value(ISelCtx *ctx, IRValue *val);
+static MachineOperand isel_lower_address(ISelCtx *ctx, IRValue *val);
 static MachineOperand isel_extend_to_gpr64(ISelCtx *ctx, MachineOperand src, IRType *src_type);
 static void isel_lower_binop(ISelCtx *ctx, IRInst *inst, MachineOp mop);
 static void isel_lower_shift(ISelCtx *ctx, IRInst *inst, MachineOp mop);
@@ -537,6 +538,18 @@ static const char* isel_translate_func_name(const char* name)
  * إذا كانت القيمة ثابتاً، يتم تضمينها كقيمة فورية.
  * إذا كانت سجلاً، يتم استخدام سجل افتراضي.
  */
+/**
+ * @brief خفض معامل عنوان لتعليمة تحميل/تخزين.
+ *
+ * المتغير العام يُعنون مباشرة (RIP-relative) دون LEA؛ وأي قيمة أخرى تُخفض كالمعتاد.
+ */
+static MachineOperand isel_lower_address(ISelCtx *ctx, IRValue *val)
+{
+    if (val && val->kind == IR_VAL_GLOBAL)
+        return mach_op_global(val->data.global_name);
+    return isel_lower_value(ctx, val);
+}
+
 static MachineOperand isel_lower_value(ISelCtx *ctx, IRValue *val)
 {
     if (!val)
@@ -554,7 +567,19 @@ static MachineOperand isel_lower_value(ISelCtx *ctx, IRValue *val)
         return mach_op_vreg(val->data.reg_num, bits);
 
     case IR_VAL_GLOBAL:
-        return mach_op_global(val->data.global_name);
+        // قيمة @عام هي عنوانه وليست محتواه: نحمّل العنوان عبر LEA.
+        // التحميل والتخزين يعنونان المتغير مباشرة عبر isel_lower_address.
+        {
+            if (!ctx || !ctx->mfunc || !ctx->mblock)
+            {
+                return mach_op_global(val->data.global_name);
+            }
+
+            int tmp = mach_func_alloc_vreg(ctx->mfunc);
+            MachineOperand dst = mach_op_vreg(tmp, 64);
+            isel_emit(ctx, MACH_LEA, dst, mach_op_global(val->data.global_name), mach_op_none());
+            return dst;
+        }
 
     case IR_VAL_FUNC:
         // مرجع دالة كقيمة: نُحوّله إلى عنوان في سجل عبر LEA (RIP-relative).

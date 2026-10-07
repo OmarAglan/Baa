@@ -13,6 +13,7 @@ tests/
 ├── stress/        # stress tests (large inputs / scale)
 ├── snapshots/     # deterministic IR/QA snapshot contracts
 ├── fixtures/      # include files and multi-file fixtures
+├── differential/  # programs for the -O0 vs optimized differential gate
 ├── corpus_docs/   # extracted examples from docs
 ├── corpus_v2x_docs/ # historical docs corpus by version
 ├── test_arabic_numerals.py # Arabic numeral IR-output regression coverage
@@ -25,6 +26,7 @@ tests/
 ├── test_module_visibility_docs.py # module/header/visibility contract docs gate
 ├── test_nazm_emitter.py # normal and shadow Nazm object/link/runtime parity
 ├── test_one_definition.py # multi-file exported-symbol duplicate diagnostics
+├── test_opt_differential.py # -O0 vs -O1/-O2/unrolled runtime differential gate
 ├── test_target_specs.py # target descriptor schema/contract coverage
 ├── test_utf8_validation.py # malformed UTF-8 and direct -S path regressions
 ├── test_toolchain_unicode_paths.py # direct Windows GCC/LD Unicode path matrix
@@ -48,6 +50,8 @@ Supported line markers inside `.baa` files:
 - `// EXPECT-ERR:` stderr marker for runtime tests
 - `// EXPECT-ASM:` assembly marker for `-S` tests
 - `// EXPECT-NOT-ASM:` assembly marker that must not appear in `-S` tests
+- `// DIFF-SKIP: <reason>` excludes a runtime test from the optimization differential gate;
+  the reason is required
 
 ## Runner Entry Points
 
@@ -109,6 +113,12 @@ prefix comparison signs, copy ownership, and bad `طول_نص`/`قارن_نص`/`
 Full, stress, and release modes run focused unit coverage for the determinism gate. Release mode
 then compares repeated version/build-date output, negative diagnostics and exit status, IR,
 assembly, manifests, verifier behavior, and cross-target assembly.
+
+Full, stress, and release modes run `tests/test_opt_differential.py`. Every runtime test in
+`tests/integration/backend/` and every program in `tests/differential/` is built at `-O0`, `-O1`,
+`-O2`, and `-O2 -funroll-loops`; each optimized executable must reproduce the `-O0` exit status,
+stdout, and stderr exactly. `tests/differential/` programs print many intermediate values and must
+exit 0 at `-O0`. `BAA_DIFF_JOBS` sets how many programs are checked concurrently (default 2).
 
 Full and higher modes also verify that Git-backed historical documentation extraction preserves
 Arabic fenced programs under UTF-8, including on Windows.

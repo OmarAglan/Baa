@@ -22,17 +22,17 @@ SPEC.loader.exec_module(MATRIX)
 
 EXPECTED_TARGETS = {
     "x86_64-linux": {
-        "summary": {"emitted": 109, "unsupported": 0, "error": 0},
+        "summary": {"emitted": 110, "unsupported": 0, "error": 0},
         "blockers": {},
         "emitted_sources_sha256": (
-            "ab1164ed4ff3d37550b8f03ac3bf32d4beb89a580c2001c7099f87289eda740c"
+            "088cfbfc7c2edea42cd37785412f1d3ea63159d6e4a1b1644cfebfc0584611f8"
         ),
     },
     "x86_64-windows": {
-        "summary": {"emitted": 109, "unsupported": 0, "error": 0},
+        "summary": {"emitted": 110, "unsupported": 0, "error": 0},
         "blockers": {},
         "emitted_sources_sha256": (
-            "ab1164ed4ff3d37550b8f03ac3bf32d4beb89a580c2001c7099f87289eda740c"
+            "088cfbfc7c2edea42cd37785412f1d3ea63159d6e4a1b1644cfebfc0584611f8"
         ),
     },
 }
@@ -69,8 +69,8 @@ class NazmShadowCorpusTests(unittest.TestCase):
             target = self.matrix["targets"][target_name]
             expected = EXPECTED_TARGETS[target_name]
             rows = target["sources"]
-            self.assertEqual(target["source_count"], 109)
-            self.assertEqual(len(rows), 109)
+            self.assertEqual(target["source_count"], 110)
+            self.assertEqual(len(rows), 110)
             self.assertEqual(
                 [row["source"] for row in rows], inventory_target["sources"]
             )

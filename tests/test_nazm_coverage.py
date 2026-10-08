@@ -35,8 +35,8 @@ class NazmCoverageTests(unittest.TestCase):
         for target, inventory_target in self.inventory["targets"].items():
             target_coverage = self.coverage["targets"][target]
             corpus = target_coverage["corpus"]
-            self.assertEqual(corpus["source_count"], 109)
-            self.assertEqual(corpus["compiled_source_count"], 109)
+            self.assertEqual(corpus["source_count"], 110)
+            self.assertEqual(corpus["compiled_source_count"], 110)
             self.assertEqual(corpus["omitted_source_count"], 0)
             self.assertEqual(corpus["compile_failures"], [])
             self.assertEqual(corpus["sources"], inventory_target["sources"])

@@ -321,6 +321,38 @@ static void regalloc_legalize_imul(MachineBlock* block, MachineInst* inst)
     if (inst->src1.kind == MACH_OP_MEM) inst->src1 = scratch;
 }
 
+/**
+ * @brief تحويلات الصحيح/العشري تتطلب سجلاً عاماً في طرفها الصحيح؛ نمرر المسرّب عبر R11.
+ *
+ *   cvtsi2sd [m], xmm   →  mov [m], r11 ; cvtsi2sd r11, xmm
+ *   cvttsd2si xmm, [m]  →  cvttsd2si xmm, r11 ; mov r11, [m]
+ *
+ * معامل الذاكرة هنا لا يحمل لاحقة حجم صريحة في GAS، ومُصدِّر نظم يرفضه.
+ */
+static void regalloc_legalize_int_float_cvt(MachineBlock* block, MachineInst* inst)
+{
+    if (inst->op == MACH_CVTSI2SD && inst->src1.kind == MACH_OP_MEM) {
+        if (regalloc_operand_uses_r11(&inst->src1)) return;
+        int bits = inst->src1.size_bits > 0 ? inst->src1.size_bits : 64;
+        MachineOperand scratch = mach_op_vreg(PHYS_R11, bits);
+        MachineInst* load = mach_inst_new(MACH_MOV, scratch, inst->src1, mach_op_none());
+        if (!load) return;
+        mach_block_insert_before_local(block, inst, load);
+        inst->src1 = scratch;
+        return;
+    }
+
+    if (inst->op == MACH_CVTTSD2SI && inst->dst.kind == MACH_OP_MEM) {
+        if (regalloc_operand_uses_r11(&inst->dst)) return;
+        int bits = inst->dst.size_bits > 0 ? inst->dst.size_bits : 64;
+        MachineOperand scratch = mach_op_vreg(PHYS_R11, bits);
+        MachineInst* store = mach_inst_new(MACH_MOV, inst->dst, scratch, mach_op_none());
+        if (!store) return;
+        mach_block_insert_after_local(block, inst, store);
+        inst->dst = scratch;
+    }
+}
+
 void regalloc_legalize(RegAllocCtx *ctx)
 {
     if (!ctx || !ctx->func)
@@ -331,6 +363,7 @@ void regalloc_legalize(RegAllocCtx *ctx)
         for (MachineInst *inst = block->first; inst; inst = inst->next)
         {
             regalloc_legalize_imul(block, inst);
+            regalloc_legalize_int_float_cvt(block, inst);
         }
     }
 }

@@ -380,8 +380,12 @@ IRValue* lower_expr(IRLowerCtx* ctx, Node* expr) {
                         int nr = ir_builder_emit_neg(ctx->builder, IR_TYPE_I64_T, delta);
                         delta = ir_value_reg(nr, IR_TYPE_I64_T);
                     }
-                    int pr = ir_builder_emit_ptr_offset(ctx->builder, ptr_t, base_ptr, delta);
-                    return ir_value_reg(pr, ptr_t);
+                    // الإزاحة هنا بالبايت، لذا نحسبها على مؤشر بايت ثم نعيد النوع؛
+                    // وإلا لضرب الخلفي الفهرس في حجم العنصر مرة ثانية.
+                    IRType* byte_ptr_t = ir_type_ptr(IR_TYPE_I8_T);
+                    IRValue* byte_base = cast_to(ctx, base_ptr, byte_ptr_t);
+                    int pr = ir_builder_emit_ptr_offset(ctx->builder, byte_ptr_t, byte_base, delta);
+                    return cast_to(ctx, ir_value_reg(pr, byte_ptr_t), ptr_t);
                 }
 
                 if (op == OP_SUB &&

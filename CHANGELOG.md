@@ -33,6 +33,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
   - At `-O0` through Nazm, storing a constant that does not fit the destination
     (`ط٨ ب = 300.`-style truncation) emitted an out-of-range immediate; truncated
     constants are now masked to the destination width.
+  - `ptr + n` / `ptr - n` / `n + ptr` scaled the offset by the element size twice
+    (once during lowering and again in instruction selection), so `*(&ق[0] + 2)` read
+    past the array. The offset is now applied once, in bytes. Indexing (`م[i]`) was not
+    affected.
+  - At `-O1`/`-O2` for Linux, when the register allocator spilled the integer source of
+    an integer-to-float conversion (or the destination of a float-to-integer
+    conversion), Nazm rejected the memory operand. These now go through the scratch
+    register.
 
 - **Literal, switch and static-initializer bugs found by the documentation audit**:
   - `#تعريف حد ١٠٠` substituted raw Arabic-Indic digits, so every use failed with

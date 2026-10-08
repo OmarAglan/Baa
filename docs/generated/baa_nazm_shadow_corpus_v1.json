@@ -3,7 +3,7 @@
   "compiler": "baa version 0.6.0",
   "source_inventory": {
     "schema": "baa-assembly-surface-v1",
-    "sha256": "fa87ada8c54a6a8fd613ea1eef21a2970b31fc6a6b099b943d08ea064bd2afc5"
+    "sha256": "bd2785be14ea2fc1456b09b6620cccddff51237fa786ac1afa3236b004d17a77"
   },
   "status_contract": {
     "emitted": "Baa emitted canonical Arabic Nazm without Latin letters.",
@@ -13,9 +13,9 @@
   },
   "targets": {
     "x86_64-linux": {
-      "source_count": 109,
+      "source_count": 110,
       "summary": {
-        "emitted": 109,
+        "emitted": 110,
         "unsupported": 0,
         "error": 0
       },
@@ -293,6 +293,12 @@
           "status": "emitted",
           "exit_code": 0,
           "sha256": "e185dfa92c8f71e8f2be5ceae46080d6da2ae097546f03a51f0ae33a997cc02d"
+        },
+        {
+          "source": "tests/integration/backend/backend_pointer_arith_scale_v073_test.baa",
+          "status": "emitted",
+          "exit_code": 0,
+          "sha256": "5d37ea0a1fe64463a00124d63278b5fbcde27a529bc251282334dd72248b1a3a"
         },
         {
           "source": "tests/integration/backend/backend_pointer_core_test.baa",
@@ -780,9 +786,9 @@
       ]
     },
     "x86_64-windows": {
-      "source_count": 109,
+      "source_count": 110,
       "summary": {
-        "emitted": 109,
+        "emitted": 110,
         "unsupported": 0,
         "error": 0
       },
@@ -1060,6 +1066,12 @@
           "status": "emitted",
           "exit_code": 0,
           "sha256": "cee2cb809f7838f762fce7779e2412734184d53d28ab7a774f9bf091fdddf085"
+        },
+        {
+          "source": "tests/integration/backend/backend_pointer_arith_scale_v073_test.baa",
+          "status": "emitted",
+          "exit_code": 0,
+          "sha256": "739662b671200a9fb40d3c43f36e76a4991ec7793f2132c11b50b7bd06d560c2"
         },
         {
           "source": "tests/integration/backend/backend_pointer_core_test.baa",

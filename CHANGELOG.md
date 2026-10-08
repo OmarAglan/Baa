@@ -10,6 +10,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Fixed
 
+- **Long Arabic output paths on Windows**: the driver held UTF-8 toolchain paths in
+  `MAX_PATH`-byte buffers, but Windows counts `MAX_PATH` in UTF-16 units and an
+  Arabic character takes two UTF-8 bytes. An output path that Windows accepts
+  could therefore overflow the link response-file path and fail with "فشل تجهيز
+  وسيط نقطة الدخول العربية للرابط". UTF-8 path buffers now hold three bytes per
+  unit, and `test_toolchain_unicode_paths.py` links to a 235-unit, 300+-byte path.
 - **Bugs found by the optimization differential gate (v0.7.3)**:
   - Struct and union layout gave `ص٨`/`ط٨`/`ص١٦`/`ط١٦`/`ص٣٢`/`ط٣٢`/`ط٦٤`, `منطقي`, `حرف`,
     `عشري`, `نص`, pointer, enum, and function-pointer fields size 0, so they overlapped

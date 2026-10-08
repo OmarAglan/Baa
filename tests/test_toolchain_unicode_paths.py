@@ -386,6 +386,38 @@ class ToolchainUnicodePathTests(unittest.TestCase):
             self.assertFalse((work / "baa_stage").exists())
             self.assertEqual(list(work.glob("*.baa_*")), [])
 
+    def test_absolute_output_path_wider_than_max_path_in_utf8(self) -> None:
+        # ويندوز يقيس MAX_PATH بوحدات UTF-16، والحرف العربي بايتان في UTF-8؛
+        # مسار يقبله النظام قد يتجاوز ٢٦٠ بايتاً فيجب ألا تقطعه مخازن المشغل.
+        with tempfile.TemporaryDirectory(prefix="baa_utf8_width_") as temp:
+            work = Path(temp) / ("عدة تطوير باء - long path " + "x" * 72)
+            work.mkdir()
+            source = work / "مرحبا.baa"
+            source.write_text(
+                "صحيح الرئيسية() { إرجع ٠. }\n",
+                encoding="utf-8",
+            )
+            stem = "برنامج_"
+            while len(str(work / f"{stem}ب.exe")) < 235:
+                stem += "ب"
+            executable = work / f"{stem}.exe"
+            self.assertLess(len(str(executable)), 260)
+            self.assertGreater(len(str(executable).encode("utf-8")), 290)
+
+            self.run_checked(
+                [str(self.baa), str(source), "-o", str(executable)],
+                cwd=Path(temp),
+                timeout=60,
+            )
+            run = subprocess.run(
+                [str(executable)],
+                cwd=str(work),
+                capture_output=True,
+                timeout=20,
+            )
+            self.assertEqual(run.returncode, 0, run.stderr)
+            self.assertEqual(list(work.glob("*.baa_*")), [])
+
 
 if __name__ == "__main__":
     unittest.main()

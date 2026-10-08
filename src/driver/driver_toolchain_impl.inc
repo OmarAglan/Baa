@@ -24,6 +24,15 @@
 #define MAX_PATH 4096
 #endif
 
+// سعة مسار UTF-8: يقبل ويندوز MAX_PATH وحدة UTF-16، وقد تصير الوحدة ثلاثة
+// بايتات في UTF-8 (والحرف العربي بايتين)، فلا يتسع MAX_PATH بايتاً لمسار عربي
+// طويل يقبله النظام.
+#ifdef _WIN32
+#define BAA_UTF8_PATH_CAP (MAX_PATH * 3)
+#else
+#define BAA_UTF8_PATH_CAP MAX_PATH
+#endif
+
 // ============================================================================
 // البحث عن GCC المرفق (اكتشاف GCC المضمّن)
 // ============================================================================
@@ -31,18 +40,18 @@
 /**
  * @brief مسار GCC المكتشف (فارغ = استخدام "gcc" من PATH).
  */
-static char g_gcc_path[MAX_PATH] = "";
-static char g_runtime_library_path[MAX_PATH] = "";
+static char g_gcc_path[BAA_UTF8_PATH_CAP] = "";
+static char g_runtime_library_path[BAA_UTF8_PATH_CAP] = "";
 #ifdef _WIN32
 static bool g_gcc_direct_unicode_paths = false;
 static bool g_gcc_retain_pei386_runtime_relocator = false;
 static bool g_gcc_directory_alias_failed = false;
 static bool g_gcc_manifest_valid = false;
-static char g_gcc_directory_alias[MAX_PATH] = "";
+static char g_gcc_directory_alias[BAA_UTF8_PATH_CAP] = "";
 #define BAA_GCC_ALIAS_ARGUMENT_COUNT 5
 static char g_gcc_manifest_target[64] = "";
 static char g_gcc_manifest_version[32] = "";
-static char g_gcc_alias_arguments[BAA_GCC_ALIAS_ARGUMENT_COUNT][MAX_PATH + 32] = {{0}};
+static char g_gcc_alias_arguments[BAA_GCC_ALIAS_ARGUMENT_COUNT][BAA_UTF8_PATH_CAP + 32] = {{0}};
 static int g_gcc_alias_argument_count = 0;
 #endif
 
@@ -72,7 +81,7 @@ static void runtime_library_resolve_from_exe_dir(const char* exe_dir)
     if (!exe_dir || !exe_dir[0] || g_runtime_library_path[0]) return;
     if (runtime_library_try_dir(exe_dir)) return;
 
-    char candidate[MAX_PATH];
+    char candidate[BAA_UTF8_PATH_CAP];
     int n = snprintf(candidate, sizeof(candidate), "%s/../lib/baa", exe_dir);
     if (n > 0 && (size_t)n < sizeof(candidate) && runtime_library_try_dir(candidate)) return;
 
@@ -105,7 +114,7 @@ static bool win_portable_toolchain_allows_direct_unicode(const char* gcc_path)
 {
     if (!gcc_path || !gcc_path[0]) return false;
 
-    char gcc_bin[MAX_PATH];
+    char gcc_bin[BAA_UTF8_PATH_CAP];
     size_t gcc_path_size = strlen(gcc_path) + 1u;
     if (gcc_path_size > sizeof(gcc_bin)) return false;
     memcpy(gcc_bin, gcc_path, gcc_path_size);
@@ -117,7 +126,7 @@ static bool win_portable_toolchain_allows_direct_unicode(const char* gcc_path)
     if (!separator) return false;
     *separator = '\0';
 
-    char manifest[MAX_PATH];
+    char manifest[BAA_UTF8_PATH_CAP];
     int count = snprintf(manifest,
                          sizeof(manifest),
                          "%s/../%s",
@@ -391,7 +400,7 @@ static bool win_create_hardlink_alias(const wchar_t* real_path,
 
     bool created = false;
     while (ancestor[0]) {
-        char ancestor_utf8[MAX_PATH];
+        char ancestor_utf8[BAA_UTF8_PATH_CAP];
         if (win_extended_wide_to_utf8(ancestor,
                                       ancestor_utf8,
                                       sizeof(ancestor_utf8)) &&
@@ -582,7 +591,7 @@ static bool win_create_gcc_directory_alias(const wchar_t* gcc_path,
 
     bool created = false;
     while (ancestor[0]) {
-        char ancestor_utf8[MAX_PATH];
+        char ancestor_utf8[BAA_UTF8_PATH_CAP];
         if (win_extended_wide_to_utf8(ancestor,
                                       ancestor_utf8,
                                       sizeof(ancestor_utf8)) &&
@@ -606,7 +615,7 @@ static bool win_create_gcc_directory_alias(const wchar_t* gcc_path,
         wchar_t temp_directory[BAA_WINDOWS_WIDE_PATH_CAP];
         DWORD temp_length = GetTempPathW(BAA_WINDOWS_WIDE_PATH_CAP,
                                          temp_directory);
-        char temp_utf8[MAX_PATH];
+        char temp_utf8[BAA_UTF8_PATH_CAP];
         if (temp_length > 0 && temp_length < BAA_WINDOWS_WIDE_PATH_CAP &&
             win_extended_wide_to_utf8(temp_directory,
                                       temp_utf8,
@@ -693,7 +702,7 @@ static bool win_prepare_gcc_alias_arguments(void)
 
 static bool win_select_gcc_candidate(const wchar_t* candidate)
 {
-    char candidate_utf8[MAX_PATH];
+    char candidate_utf8[BAA_UTF8_PATH_CAP];
     if (!candidate ||
         !win_wide_to_utf8(candidate, candidate_utf8, sizeof(candidate_utf8)))
         return false;
@@ -826,7 +835,7 @@ void driver_toolchain_resolve_gcc_path(void)
         return;
     *last_sep = L'\0';
 
-    char exe_dir_utf8[MAX_PATH];
+    char exe_dir_utf8[BAA_UTF8_PATH_CAP];
     if (win_wide_to_utf8(exe_path, exe_dir_utf8, sizeof(exe_dir_utf8))) {
         runtime_library_resolve_from_exe_dir(exe_dir_utf8);
     }
@@ -848,7 +857,7 @@ void driver_toolchain_resolve_gcc_path(void)
         return;
     }
 #else
-    char exe_path[MAX_PATH];
+    char exe_path[BAA_UTF8_PATH_CAP];
     ssize_t len = readlink("/proc/self/exe", exe_path, sizeof(exe_path) - 1u);
     if (len > 0 && (size_t)len < sizeof(exe_path)) {
         exe_path[len] = '\0';
@@ -980,8 +989,8 @@ BaaCompilerExitCode driver_toolchain_assemble_one(const CompilerConfig *config,
     BaaCompilerExitCode rc = BAA_COMPILER_EXIT_TOOLCHAIN_ERROR;
 
 #ifdef _WIN32
-    char tool_asm[MAX_PATH] = "";
-    char tool_obj[MAX_PATH] = "";
+    char tool_asm[BAA_UTF8_PATH_CAP] = "";
+    char tool_obj[BAA_UTF8_PATH_CAP] = "";
     bool tool_asm_hardlink = false;
     bool tool_obj_hardlink = false;
     (void)driver_toolchain_delete_file_utf8(obj_file);
@@ -1085,21 +1094,21 @@ BaaCompilerExitCode driver_toolchain_link(const CompilerConfig *config,
         free(argv_link);
         return BAA_COMPILER_EXIT_INTERNAL_ERROR;
     }
-    char tool_output[MAX_PATH] = "";
+    char tool_output[BAA_UTF8_PATH_CAP] = "";
     bool tool_output_ready = false;
     bool tool_output_hardlink = false;
-    char tool_runtime[MAX_PATH] = "";
+    char tool_runtime[BAA_UTF8_PATH_CAP] = "";
     bool tool_runtime_hardlink = false;
-    char entry_response_path[MAX_PATH] = "";
-    char tool_entry_response[MAX_PATH] = "";
+    char entry_response_path[BAA_UTF8_PATH_CAP] = "";
+    char tool_entry_response[BAA_UTF8_PATH_CAP] = "";
     bool tool_entry_response_hardlink = false;
-    char entry_response_argument[MAX_PATH + 8] = "";
+    char entry_response_argument[BAA_UTF8_PATH_CAP + 8] = "";
     bool entry_response_ready = false;
 
     bool paths_ok = true;
     for (int i = 0; i < obj_count; i++)
     {
-        tool_objects[i] = (char *)calloc((size_t)MAX_PATH, sizeof(char));
+        tool_objects[i] = (char *)calloc((size_t)BAA_UTF8_PATH_CAP, sizeof(char));
         if (!tool_objects[i]) {
             paths_ok = false;
             break;
@@ -1107,7 +1116,7 @@ BaaCompilerExitCode driver_toolchain_link(const CompilerConfig *config,
         if (!win_prepare_toolchain_path(obj_files[i],
                                         false,
                                         tool_objects[i],
-                                        MAX_PATH,
+                                        BAA_UTF8_PATH_CAP,
                                         &tool_object_hardlinks[i]))
         {
             paths_ok = false;

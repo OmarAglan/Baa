@@ -18,8 +18,6 @@ those features are implemented today.
   never falls back to GAS silently.
 - Linking always uses a GCC/LD toolchain (the private one bundled with the Windows installer, or
   the host toolchain). Baa does not ship its own linker.
-- On Linux, objects assembled by Nazm carry no `.note.GNU-stack` section, so `ld` warns that an
-  executable stack is implied. Programs built with `--assembler=gas` are not affected.
 - macOS, 32-bit targets, ARM, WebAssembly, and freestanding targets are not supported.
 - `i386-elf`, `i386-pyramidos`, `--freestanding`, and `--no-stdlib` are planning surfaces only.
 - The `baa update` command is implemented on Windows only.

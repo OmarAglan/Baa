@@ -232,6 +232,9 @@ def _classify_sections(
     inventory_sections: list[dict[str, Any]], capabilities: dict[str, Any]
 ) -> list[dict[str, Any]]:
     index = {item["gas"]: item for item in capabilities.get("sections", [])}
+    implicit_index = {
+        item["gas"]: item for item in capabilities.get("implicit_sections", [])
+    }
     fixture_index = capabilities.get("baa_acceptance_fixtures", {}).get(
         "sections", {}
     )
@@ -252,6 +255,21 @@ def _classify_sections(
             if not fixture:
                 raise ValueError(
                     f"supported Baa section has no acceptance fixture: {name}"
+                )
+            row["acceptance_fixture"] = fixture
+        elif name in implicit_index:
+            # Nazm writes these itself; Nazm source has no directive for them.
+            row.update(
+                {
+                    "status": "supported",
+                    "implicit": True,
+                    "object": implicit_index[name]["object"],
+                }
+            )
+            fixture = fixture_index.get(name)
+            if not fixture:
+                raise ValueError(
+                    f"implicit Baa section has no acceptance fixture: {name}"
                 )
             row["acceptance_fixture"] = fixture
         else:

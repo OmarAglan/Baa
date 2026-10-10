@@ -28,6 +28,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Fixed
 
+- **Executable stack implied on Linux through Nazm**: Nazm-assembled objects
+  carried no `.note.GNU-stack` section, so `ld` warned and marked the stack
+  executable for programs built with the default assembler. Nazm `14c6cf4`
+  now ends every ELF64 object with the empty marker. CI builds that revision,
+  `scripts/test_linux_package.sh` fails on the linker warning and requires an
+  `RW` `GNU_STACK` segment for the Nazm and GAS paths, and the Nazm coverage
+  contract records `.note.GNU-stack` as an implicit supported section.
 - **Standard library not found by an installed compiler**: `#تضمين` located the
   standard library only through the working directory, `BAA_HOME`, or
   `BAA_STDLIB`, so the Linux packages, which set no environment variables, could

@@ -7,7 +7,7 @@
   "nazm_capabilities": {
     "schema": "nazm-capabilities-v1",
     "assembler": "Nazm 0.4.0",
-    "sha256": "25eed1f73b70a7fbf230c35c69527adef5473a9fdabc92636aa424f171c0f642"
+    "sha256": "0d48baa402d92f3aeecd69ca7bf3f954332a659400bb3f63c25e6b4c53f78521"
   },
   "shadow_corpus": {
     "schema": "baa-nazm-shadow-corpus-v1",
@@ -3575,8 +3575,10 @@
         {
           "name": ".note.GNU-stack",
           "count": 113,
-          "status": "unsupported",
-          "reason": "Nazm does not emit this object section."
+          "status": "supported",
+          "implicit": true,
+          "object": ".note.GNU-stack",
+          "acceptance_fixture": "tests/fixtures/baa_coverage/بيانات-باء.نظم"
         },
         {
           "name": ".rodata",
@@ -3653,14 +3655,14 @@
       ],
       "summary": {
         "forms": {
-          "supported": 90,
+          "supported": 91,
           "partial": 5,
-          "unsupported": 40
+          "unsupported": 39
         },
         "emissions": {
-          "supported": 70161,
+          "supported": 70274,
           "partial": 3414,
-          "unsupported": 11005
+          "unsupported": 10892
         }
       }
     },

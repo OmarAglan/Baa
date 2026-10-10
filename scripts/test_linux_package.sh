@@ -50,6 +50,18 @@ cp "$root/examples/hello_world.باء" "$project/مرحبا.باء"
 cp "$root/examples/math_and_format.باء" "$project/مكتبة.باء"
 base_path="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 
+# Build one program and require a non-executable stack: the linker must not
+# have had to assume one, and the program's GNU_STACK segment must be RW.
+build_program() {
+  local program="${*: -1}"
+  "$@" 2>&1 | tee "$program.log"
+  if grep -E -i 'executable stack|\.note\.GNU-stack' "$program.log" >/dev/null; then
+    fail "the linker warned about an executable stack for $(basename "$program")"
+  fi
+  readelf -l -W "$program" | grep -E 'GNU_STACK .* RW +0x' >/dev/null \
+    || fail "$(basename "$program") was not linked with a non-executable stack"
+}
+
 # Compile, link, and run the two programs with the given compiler. The second
 # one includes the standard library, which must be found without BAA_HOME.
 build_and_run() {
@@ -60,11 +72,11 @@ build_and_run() {
     export PATH="$nazm_dir:$base_path"
     unset BAA_HOME BAA_STDLIB BAA_NAZM
     "$baa" --version
-    "$baa" مرحبا.باء -o "$out/مرحبا"
+    build_program "$baa" مرحبا.باء -o "$out/مرحبا"
     "$out/مرحبا"
-    "$baa" مكتبة.باء -o "$out/مكتبة"
+    build_program "$baa" مكتبة.باء -o "$out/مكتبة"
     "$out/مكتبة"
-    "$baa" --assembler=gas مرحبا.باء -o "$out/مرحبا-gas"
+    build_program "$baa" --assembler=gas مرحبا.باء -o "$out/مرحبا-gas"
     "$out/مرحبا-gas"
   )
 }

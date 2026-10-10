@@ -112,10 +112,11 @@ The Linux gate found two defects that the build-tree ladder could not see, both 
 `b5f4383`: an installed compiler could not find `stdlib/` without `BAA_HOME`, and the `.deb`
 did not declare the host linker it needs.
 
-Open finding from the same gate: on Linux, objects assembled by Nazm carry no `.note.GNU-stack`
-section, so `ld` warns that an executable stack is implied for programs built through the
-default assembler. The GAS rollback path emits the note. Closing this needs either the note from
-Nazm or `-z noexecstack` at link time, and it is tracked as the next Linux hardening gate.
+The same gate found that objects assembled by Nazm `4238099` carried no `.note.GNU-stack`
+section, so `ld` warned and implied an executable stack for programs built through the default
+assembler. Nazm `14c6cf4` ends every ELF64 object with the empty marker, and the Linux package
+contract now fails on that linker warning and requires an `RW` `GNU_STACK` segment for the Nazm
+and GAS paths.
 
 ## History
 

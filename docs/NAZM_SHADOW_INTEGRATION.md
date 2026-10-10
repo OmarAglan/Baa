@@ -71,11 +71,13 @@ inventory omissions:
 
 | Target | Instruction forms S/P/U | Directive forms S/P/U | Sections S/U | Relocations S/P/U |
 |---|---:|---:|---:|---:|
-| `x86_64-linux` | 71 / 2 / 34 | 10 / 1 / 3 | 3 / 1 | 5 / 2 / 0 |
+| `x86_64-linux` | 71 / 2 / 34 | 10 / 1 / 3 | 4 / 0 | 5 / 2 / 0 |
 | `x86_64-windows` | 70 / 2 / 31 | 10 / 1 / 1 | 3 / 0 | 5 / 2 / 0 |
 
 Each supported row names the checked Nazm acceptance fixture that exercises
-its canonical Arabic lowering. Baa emits the entry label as `الرئيسية`; Nazm
+its canonical Arabic lowering. `.note.GNU-stack` is supported as an implicit
+section: Nazm source has no directive for it, and Nazm writes the empty marker
+into every ELF64 object itself. Baa emits the entry label as `الرئيسية`; Nazm
 preserves that exported Arabic symbol as `الرئيسية` in ELF64 and COFF. The
 production and shadow linkers both select the Arabic hosted startup symbol
 `الرئيسية_بدء` without an ASCII alias. On Linux, the shared startup object

@@ -184,7 +184,7 @@
 * \[x] **Sync version metadata** — `baa.rc` and `setup.iss` updated to `0.3.2.4`, publisher to "Omar Aglan".
 * \[x] **Installer lifecycle gate** — Build `baa-setup-0.6.0-x64.exe`, install per-user in isolation, compile/run through PATH Nazm plus the private linker, uninstall, and verify owned state is removed.
 * \[x] **Linux package lifecycle gate** — Build `baa-0.6.0-Linux-x86_64.deb` and `.tar.gz` with checksums, install in a clean `ubuntu:24.04` container without a C toolchain, compile/run through PATH Nazm plus the host linker, remove, and verify nothing is left; the relocated archive finds its own runtime and standard library.
-* \[ ] **Non-executable stack through Nazm on Linux** — Nazm-assembled objects carry no `.note.GNU-stack`, so `ld` warns that an executable stack is implied. Emit the note from Nazm or link with `-z noexecstack`, and assert it in `scripts/test\_linux\_package.sh`.
+* \[x] **Non-executable stack through Nazm on Linux** — Nazm `14c6cf4` ends every ELF64 object with an empty `.note.GNU-stack`, so `ld` no longer assumes an executable stack. `scripts/test\_linux\_package.sh` fails on the linker warning and requires an `RW` `GNU\_STACK` segment for both assemblers.
 
 \---
 

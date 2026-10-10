@@ -225,12 +225,23 @@ The evidence required before step 2 is:
 | An installed compiler with no Nazm executable reachable compiles, links and runs a program through `--نظم-داخل-العملية`, and reports the pinned Nazm revision | `scripts/test_installer.ps1` and `scripts/test_linux_package.sh` in the clean-machine CI jobs |
 | The release candidate ladder still passes on the binary configuration that ships | `release-candidate.yml`, built with `BAA_ENABLE_EMBEDDED_NAZM=ON` |
 
+Step 1 receipts, all on Baa `31a1978` with Nazm `14c6cf4` (2026-10-10):
+
+| Evidence | Result | Receipt |
+|---|---|---|
+| Integration tests against an `opt-in` and a `default` build, Windows and Linux | 5/5 on each build and host; corpus objects byte-identical to the subprocess at `-O0` and `-O2` | [`38058131936`](https://github.com/OmarAglan/Baa/actions/runs/38058131936), `Nazm API v1` jobs |
+| Embedded-default ladder, `BAA_NAZM` empty and no `نظم` on `PATH`, Windows and Linux | quick 34/34, full 52/52, stress 82/82, release 83/83 on both hosts | [`38058138839`](https://github.com/OmarAglan/Baa/actions/runs/38058138839), artifacts `baa-nazm-admission-windows-38058138839` and `baa-nazm-admission-linux-38058138839` |
+| Clean-machine installer, `.deb` and `.tar.gz` with no Nazm executable reachable | `Embedded Nazm 0.4.0 (14c6cf4565067e9e32af72c2c1af6b9ef2456744), opt-in`; compile, link and run through `--نظم-داخل-العملية`; plain compile still exit 4 | [`38058131936`](https://github.com/OmarAglan/Baa/actions/runs/38058131936), `Standalone Windows installer` and `Linux packages on a clean Ubuntu` jobs |
+| Release-candidate ladder on the shipping configuration | quick 34/34, full 52/52, stress 82/82, release 83/83 on both hosts | [`38058141056`](https://github.com/OmarAglan/Baa/actions/runs/38058141056) |
+
+Step 1 is closed. The default is unchanged in every shipped binary.
+
 **Step 2: flip the default.** Release builds add
 `BAA_EMBEDDED_NAZM_DEFAULT=ON`, the clean-machine gates run with
 `-EmbeddedNazmMode default` / `--embedded-mode default` and require a build
 without any Nazm executable to succeed, and the release-candidate ladder runs
-on that configuration. Step 2 needs its own approval after the step 1 receipts
-are recorded here.
+on that configuration. Step 2 needs its own approval now that the step 1
+receipts are recorded above; it has not started.
 
 Selection in a `default` build: `--assembler=gas` and `--nazm-shadow` are
 unchanged; `--nazm-path` or a non-empty `BAA_NAZM` selects that executable in

@@ -1901,8 +1901,8 @@
 * \[x] **Guarded embedding** — `nazm-api-v1` freezes owned result/diagnostic lifetimes and OOM/error status; Baa can call `nazm_assemble_buffer()` only in an explicitly enabled build and only after `--نظم-داخل-العملية`, while the subprocess remains the production default.
 * \[ ] **Embedded Nazm as the release default** — two steps (`docs/NAZM_PRODUCTION_ADMISSION.md` section 11).
   * \[x] Step 1 implementation: release installers and packages link `nazm-api-v1` from the pinned Nazm checkout and stay opt-in; `baa --version` names the linked Nazm version, revision and mode; `BAA_EMBEDDED_NAZM_DEFAULT=ON` builds the default-mode binary used for admission, where `--nazm-path`/`BAA_NAZM` still win.
-  * \[ ] Step 1 receipts: corpus byte parity, the embedded-default quick/full/stress/release ladder with no Nazm executable selected, and the clean-machine installer/package gates on Windows and Linux.
-  * \[ ] Step 2: release builds set `BAA_EMBEDDED_NAZM_DEFAULT=ON`; the clean-machine gates require a build with no Nazm executable to succeed.
+  * \[x] Step 1 receipts (2026-10-10, Baa `31a1978`, Nazm `14c6cf4`): corpus byte parity on both hosts and both build modes (CI `38058131936`); the embedded-default quick/full/stress/release ladder 34/52/82/83 with no Nazm executable selected on Windows and Linux (admission `38058138839`); the clean-machine installer/package gates (CI `38058131936`); the release-candidate ladder on the shipping configuration (`38058141056`).
+  * \[ ] Step 2 (awaiting approval): release builds set `BAA_EMBEDDED_NAZM_DEFAULT=ON`; the clean-machine gates require a build with no Nazm executable to succeed.
 
   ### v1.5.0: Baa + Nazm Assembler Path 🔧
 

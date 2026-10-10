@@ -42,6 +42,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
   ladder with `BAA_NAZM` empty and no `نظم` on `PATH`. The clean-machine
   installer and package gates require an installed compiler to build and run a
   program through its embedded Nazm and to report the pinned Nazm revision.
+  Step 1 receipts on `31a1978` with Nazm `14c6cf4`: CI `38058131936`,
+  embedded-default admission `38058138839` (34/52/82/83 on both hosts) and
+  release candidate `38058141056` (34/52/82/83 on both hosts).
 
 - **v0.6.0 release-candidate receipts**: Actions run `38049343387` on `388b539`
   with Nazm `14c6cf4` passed strict builds and quick (34/34), full (52/52),

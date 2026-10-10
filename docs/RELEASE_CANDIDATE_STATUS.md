@@ -12,21 +12,21 @@ release QA modes pass, and after the artifact a user installs is proven on a cle
 
 | Field | Receipt |
 |---|---|
-| RC implementation commit | `388b539` |
-| Release-candidate run | [`38049343387`](https://github.com/OmarAglan/Baa/actions/runs/38049343387) |
+| RC implementation commit | `31a1978` |
+| Release-candidate run | [`38058141056`](https://github.com/OmarAglan/Baa/actions/runs/38058141056) |
 | CI host | `windows-latest` x86-64 |
 | C toolchain | MSYS2 UCRT64 GCC 15.2.0 |
 | Python | 3.11 |
-| Configure preset | `windows-verify` |
+| Configure preset | `windows-verify` with `BAA_ENABLE_EMBEDDED_NAZM=ON` |
 | Warning policy | `BAA_WARNINGS_AS_ERRORS=ON` |
-| Assembler | Nazm `14c6cf4`, built in the same job |
+| Assembler | Nazm `14c6cf4`, built in the same job and selected as a separate process; the same revision is linked into `baa` as opt-in |
 | Reference implementation | C/RC-only root CMake target |
 
 Build receipt:
 
 ```powershell
 $env:PATH = "C:\msys64\ucrt64\bin;$env:PATH"
-cmake --preset windows-verify
+cmake --preset windows-verify -DBAA_ENABLE_EMBEDDED_NAZM=ON -DBAA_NAZM_SOURCE_DIR=<Nazm checkout>
 cmake --build --preset windows-verify --clean-first
 ```
 
@@ -41,7 +41,7 @@ QA receipts:
 | `stress` | PASS | 82/82 |
 | `release` | PASS | 83/83 |
 
-The run retains every mode summary and hidden QA log as the `qa-release-windows-38049343387`
+The run retains every mode summary and hidden QA log as the `qa-release-windows-38058141056`
 artifact.
 
 ## Linux x86-64
@@ -50,14 +50,14 @@ artifact.
 
 | Field | Receipt |
 |---|---|
-| RC implementation commit | `388b539` |
-| Release-candidate run | [`38049343387`](https://github.com/OmarAglan/Baa/actions/runs/38049343387) |
+| RC implementation commit | `31a1978` |
+| Release-candidate run | [`38058141056`](https://github.com/OmarAglan/Baa/actions/runs/38058141056) |
 | CI host | `ubuntu-latest` x86-64 |
 | C toolchain | GCC 13.3.0 |
 | Python | 3.11 |
-| Configure preset | `linux-verify` |
+| Configure preset | `linux-verify` with `BAA_ENABLE_EMBEDDED_NAZM=ON` |
 | Warning policy | `BAA_WARNINGS_AS_ERRORS=ON` |
-| Assembler | Nazm `14c6cf4`, built in the same job |
+| Assembler | Nazm `14c6cf4`, built in the same job and selected as a separate process; the same revision is linked into `baa` as opt-in |
 | Reference implementation | C-only root CMake target with `updater_stub.c` |
 
 QA receipts:
@@ -76,7 +76,7 @@ gate fails.
 Local equivalent:
 
 ```bash
-cmake --preset linux-verify
+cmake --preset linux-verify -DBAA_ENABLE_EMBEDDED_NAZM=ON -DBAA_NAZM_SOURCE_DIR=<Nazm checkout>
 cmake --build --preset linux-verify --clean-first
 python3 scripts/qa_run.py --mode quick
 python3 scripts/qa_run.py --mode full
@@ -98,14 +98,16 @@ below is the run for the RC implementation commit.
 
 | Artifact | Clean machine | Contract | Receipt |
 |---|---|---|---|
-| `baa-setup-0.6.0-x64.exe` | fresh `windows-latest` runner, per-user install | `scripts/test_installer.ps1` | [`38049326563`](https://github.com/OmarAglan/Baa/actions/runs/38049326563) |
-| `baa-0.6.0-Linux-x86_64.deb` | fresh `ubuntu:24.04` container with no C toolchain | `scripts/test_linux_package.sh` | [`38049326563`](https://github.com/OmarAglan/Baa/actions/runs/38049326563) |
-| `baa-0.6.0-Linux-x86_64.tar.gz` | same container, unpacked under an Arabic path | `scripts/test_linux_package.sh` | [`38049326563`](https://github.com/OmarAglan/Baa/actions/runs/38049326563) |
+| `baa-setup-0.6.0-x64.exe` | fresh `windows-latest` runner, per-user install | `scripts/test_installer.ps1` | [`38058131936`](https://github.com/OmarAglan/Baa/actions/runs/38058131936) |
+| `baa-0.6.0-Linux-x86_64.deb` | fresh `ubuntu:24.04` container with no C toolchain | `scripts/test_linux_package.sh` | [`38058131936`](https://github.com/OmarAglan/Baa/actions/runs/38058131936) |
+| `baa-0.6.0-Linux-x86_64.tar.gz` | same container, unpacked under an Arabic path | `scripts/test_linux_package.sh` | [`38058131936`](https://github.com/OmarAglan/Baa/actions/runs/38058131936) |
 
 Each contract checks the published digest, installs, reports a missing Nazm with exit code 4
 instead of working around it, compiles and runs a plain program and a standard-library program
 through PATH Nazm, exercises the explicit `--assembler=gas` rollback, then removes the package
-and confirms nothing is left behind. No contract sets `BAA_HOME` or `BAA_STDLIB` on Linux, so a
+and confirms nothing is left behind. With no Nazm executable reachable, each also requires
+`baa --version` to report `Embedded Nazm 0.4.0 (14c6cf4…), opt-in` and a program to compile,
+link and run through `--نظم-داخل-العملية`. No contract sets `BAA_HOME` or `BAA_STDLIB` on Linux, so a
 pass also proves the installed compiler finds its own standard library.
 
 The Linux gate found two defects that the build-tree ladder could not see, both fixed in
@@ -116,7 +118,7 @@ The same gate found that objects assembled by Nazm `4238099` carried no `.note.G
 section, so `ld` warned and implied an executable stack for programs built through the default
 assembler. Nazm `14c6cf4` ends every ELF64 object with the empty marker, and the Linux package
 contract now fails on that linker warning and requires an `RW` `GNU_STACK` segment for the Nazm
-and GAS paths. Both changes are in `388b539`, which every receipt above covers.
+and GAS paths. Both changes are in `388b539`, which every receipt above includes.
 
 ## History
 
@@ -132,6 +134,12 @@ and GAS paths. Both changes are in `388b539`, which every receipt above covers.
   clean-machine contracts green in run
   [`38045707261`](https://github.com/OmarAglan/Baa/actions/runs/38045707261). Superseded because
   `388b539` changes the assembler revision and the Linux package contract.
+- v0.6.0, before Nazm was linked into the release binary: run
+  [`38049343387`](https://github.com/OmarAglan/Baa/actions/runs/38049343387) on `388b539`
+  (2026-10-10) — the same ladder, green on both hosts, and the clean-machine contracts green
+  in run [`38049326563`](https://github.com/OmarAglan/Baa/actions/runs/38049326563). Superseded
+  because `31a1978` links `nazm-api-v1` into `baa` and changes the driver and both
+  clean-machine contracts.
 
 The post-cut admission and rollback rules are defined in
 [RELEASE_PROCESS.md](RELEASE_PROCESS.md).

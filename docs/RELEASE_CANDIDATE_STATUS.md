@@ -12,21 +12,21 @@ release QA modes pass, and after the artifact a user installs is proven on a cle
 
 | Field | Receipt |
 |---|---|
-| RC implementation commit | `31a1978` |
-| Release-candidate run | [`38058141056`](https://github.com/OmarAglan/Baa/actions/runs/38058141056) |
+| RC implementation commit | `f73fa4b` |
+| Release-candidate run | [`38059645752`](https://github.com/OmarAglan/Baa/actions/runs/38059645752) |
 | CI host | `windows-latest` x86-64 |
 | C toolchain | MSYS2 UCRT64 GCC 15.2.0 |
 | Python | 3.11 |
-| Configure preset | `windows-verify` with `BAA_ENABLE_EMBEDDED_NAZM=ON` |
+| Configure preset | `windows-verify` with `BAA_ENABLE_EMBEDDED_NAZM=ON` and `BAA_EMBEDDED_NAZM_DEFAULT=ON` |
 | Warning policy | `BAA_WARNINGS_AS_ERRORS=ON` |
-| Assembler | Nazm `14c6cf4`, built in the same job and selected as a separate process; the same revision is linked into `baa` as opt-in |
+| Assembler | Nazm `14c6cf4`, linked into `baa` as the embedded default; `BAA_NAZM` unset and no `نظم` on `PATH`, enforced by a guard step |
 | Reference implementation | C/RC-only root CMake target |
 
 Build receipt:
 
 ```powershell
 $env:PATH = "C:\msys64\ucrt64\bin;$env:PATH"
-cmake --preset windows-verify -DBAA_ENABLE_EMBEDDED_NAZM=ON -DBAA_NAZM_SOURCE_DIR=<Nazm checkout>
+cmake --preset windows-verify -DBAA_ENABLE_EMBEDDED_NAZM=ON -DBAA_EMBEDDED_NAZM_DEFAULT=ON -DBAA_NAZM_SOURCE_DIR=<Nazm checkout>
 cmake --build --preset windows-verify --clean-first
 ```
 
@@ -41,7 +41,7 @@ QA receipts:
 | `stress` | PASS | 82/82 |
 | `release` | PASS | 83/83 |
 
-The run retains every mode summary and hidden QA log as the `qa-release-windows-38058141056`
+The run retains every mode summary and hidden QA log as the `qa-release-windows-38059645752`
 artifact.
 
 ## Linux x86-64
@@ -50,14 +50,14 @@ artifact.
 
 | Field | Receipt |
 |---|---|
-| RC implementation commit | `31a1978` |
-| Release-candidate run | [`38058141056`](https://github.com/OmarAglan/Baa/actions/runs/38058141056) |
+| RC implementation commit | `f73fa4b` |
+| Release-candidate run | [`38059645752`](https://github.com/OmarAglan/Baa/actions/runs/38059645752) |
 | CI host | `ubuntu-latest` x86-64 |
 | C toolchain | GCC 13.3.0 |
 | Python | 3.11 |
-| Configure preset | `linux-verify` with `BAA_ENABLE_EMBEDDED_NAZM=ON` |
+| Configure preset | `linux-verify` with `BAA_ENABLE_EMBEDDED_NAZM=ON` and `BAA_EMBEDDED_NAZM_DEFAULT=ON` |
 | Warning policy | `BAA_WARNINGS_AS_ERRORS=ON` |
-| Assembler | Nazm `14c6cf4`, built in the same job and selected as a separate process; the same revision is linked into `baa` as opt-in |
+| Assembler | Nazm `14c6cf4`, linked into `baa` as the embedded default; `BAA_NAZM` unset and no `نظم` on `PATH`, enforced by a guard step |
 | Reference implementation | C-only root CMake target with `updater_stub.c` |
 
 QA receipts:
@@ -76,8 +76,9 @@ gate fails.
 Local equivalent:
 
 ```bash
-cmake --preset linux-verify -DBAA_ENABLE_EMBEDDED_NAZM=ON -DBAA_NAZM_SOURCE_DIR=<Nazm checkout>
+cmake --preset linux-verify -DBAA_ENABLE_EMBEDDED_NAZM=ON -DBAA_EMBEDDED_NAZM_DEFAULT=ON -DBAA_NAZM_SOURCE_DIR=<Nazm checkout>
 cmake --build --preset linux-verify --clean-first
+export BAA="$PWD/build-linux/presets/verify/baa"
 python3 scripts/qa_run.py --mode quick
 python3 scripts/qa_run.py --mode full
 python3 scripts/qa_run.py --mode stress
@@ -98,17 +99,18 @@ below is the run for the RC implementation commit.
 
 | Artifact | Clean machine | Contract | Receipt |
 |---|---|---|---|
-| `baa-setup-0.6.0-x64.exe` | fresh `windows-latest` runner, per-user install | `scripts/test_installer.ps1` | [`38058131936`](https://github.com/OmarAglan/Baa/actions/runs/38058131936) |
-| `baa-0.6.0-Linux-x86_64.deb` | fresh `ubuntu:24.04` container with no C toolchain | `scripts/test_linux_package.sh` | [`38058131936`](https://github.com/OmarAglan/Baa/actions/runs/38058131936) |
-| `baa-0.6.0-Linux-x86_64.tar.gz` | same container, unpacked under an Arabic path | `scripts/test_linux_package.sh` | [`38058131936`](https://github.com/OmarAglan/Baa/actions/runs/38058131936) |
+| `baa-setup-0.6.0-x64.exe` | fresh `windows-latest` runner, per-user install | `scripts/test_installer.ps1` | [`38059638256`](https://github.com/OmarAglan/Baa/actions/runs/38059638256) |
+| `baa-0.6.0-Linux-x86_64.deb` | fresh `ubuntu:24.04` container with no C toolchain | `scripts/test_linux_package.sh` | [`38059638256`](https://github.com/OmarAglan/Baa/actions/runs/38059638256) |
+| `baa-0.6.0-Linux-x86_64.tar.gz` | same container, unpacked under an Arabic path | `scripts/test_linux_package.sh` | [`38059638256`](https://github.com/OmarAglan/Baa/actions/runs/38059638256) |
 
-Each contract checks the published digest, installs, reports a missing Nazm with exit code 4
-instead of working around it, compiles and runs a plain program and a standard-library program
-through PATH Nazm, exercises the explicit `--assembler=gas` rollback, then removes the package
-and confirms nothing is left behind. With no Nazm executable reachable, each also requires
-`baa --version` to report `Embedded Nazm 0.4.0 (14c6cf4…), opt-in` and a program to compile,
-link and run through `--نظم-داخل-العملية`. No contract sets `BAA_HOME` or `BAA_STDLIB` on Linux, so a
-pass also proves the installed compiler finds its own standard library.
+Each contract checks the published digest, installs, and requires `baa --version` to report
+`Embedded Nazm 0.4.0 (14c6cf4…), default`. With no Nazm executable reachable it compiles, links
+and runs a plain program and a standard-library program with no assembler flag, and again
+through `--نظم-داخل-العملية`. It then assembles through the separate process with `--nazm-path`,
+requires exit code 4 and no output for a `--nazm-path` that does not exist, exercises the
+explicit `--assembler=gas` rollback, removes the package and confirms nothing is left behind.
+No contract sets `BAA_HOME` or `BAA_STDLIB` on Linux, so a pass also proves the installed
+compiler finds its own standard library.
 
 The Linux gate found two defects that the build-tree ladder could not see, both fixed in
 `b5f4383`: an installed compiler could not find `stdlib/` without `BAA_HOME`, and the `.deb`
@@ -140,6 +142,13 @@ and GAS paths. Both changes are in `388b539`, which every receipt above includes
   in run [`38049326563`](https://github.com/OmarAglan/Baa/actions/runs/38049326563). Superseded
   because `31a1978` links `nazm-api-v1` into `baa` and changes the driver and both
   clean-machine contracts.
+- v0.6.0, with Nazm linked as opt-in: run
+  [`38058141056`](https://github.com/OmarAglan/Baa/actions/runs/38058141056) on `31a1978`
+  (2026-10-10) — the same ladder, green on both hosts through the separate Nazm process, and
+  the clean-machine contracts green in run
+  [`38058131936`](https://github.com/OmarAglan/Baa/actions/runs/38058131936). Superseded because
+  `f73fa4b` makes the embedded Nazm the default of release builds and changes both clean-machine
+  contracts.
 
 The post-cut admission and rollback rules are defined in
 [RELEASE_PROCESS.md](RELEASE_PROCESS.md).

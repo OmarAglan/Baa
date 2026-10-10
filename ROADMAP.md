@@ -1899,11 +1899,11 @@
 * \[x] **Shadow integration** — invoke Nazm without changing the production GAS result and compare object/link/runtime semantics.
   * \[x] First executable slice: `--nazm-shadow=<path>` assembles and links a one-input minimal program beside GAS with visible no-fallback failures and host runtime parity coverage.
 * \[x] **Guarded embedding** — `nazm-api-v1` freezes owned result/diagnostic lifetimes and OOM/error status; Baa can call `nazm_assemble_buffer()` only in an explicitly enabled build and only after `--نظم-داخل-العملية`, while the subprocess remains the production default.
-* \[ ] **Embedded Nazm as the release default** — two steps (`docs/NAZM_PRODUCTION_ADMISSION.md` section 11).
+* \[x] **Embedded Nazm as the release default** — two steps (`docs/NAZM_PRODUCTION_ADMISSION.md` section 11).
   * \[x] Step 1 implementation: release installers and packages link `nazm-api-v1` from the pinned Nazm checkout and stay opt-in; `baa --version` names the linked Nazm version, revision and mode; `BAA_EMBEDDED_NAZM_DEFAULT=ON` builds the default-mode binary used for admission, where `--nazm-path`/`BAA_NAZM` still win.
   * \[x] Step 1 receipts (2026-10-10, Baa `31a1978`, Nazm `14c6cf4`): corpus byte parity on both hosts and both build modes (CI `38058131936`); the embedded-default quick/full/stress/release ladder 34/52/82/83 with no Nazm executable selected on Windows and Linux (admission `38058138839`); the clean-machine installer/package gates (CI `38058131936`); the release-candidate ladder on the shipping configuration (`38058141056`).
   * \[x] Step 2 implementation (approved 2026-10-10): release installers and packages set `BAA_EMBEDDED_NAZM_DEFAULT=ON` and need no Nazm executable; `--nazm-path`/`BAA_NAZM` select the separate process and a missing one is exit 4; the Windows installer no longer asks for Nazm; the release-candidate ladder runs on the embedded default with a guard against any reachable Nazm executable.
-  * \[ ] Step 2 receipts: the clean-machine installer/package gates in `default` mode and the release-candidate ladder on Windows and Linux.
+  * \[x] Step 2 receipts (2026-10-10, Baa `f73fa4b`, Nazm `14c6cf4`): the clean-machine installer/package gates in `default` mode with no Nazm executable reachable (CI `38059638256`); the release-candidate ladder 34/52/82/83 on the embedded default on Windows and Linux (`38059645752`); the subprocess ladder 34/52/82/83 on both hosts (admission `38059648700`).
 
   ### v1.5.0: Baa + Nazm Assembler Path 🔧
 

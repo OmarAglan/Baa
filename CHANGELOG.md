@@ -51,14 +51,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
   Step 1 receipts on `31a1978` with Nazm `14c6cf4`: CI `38058131936`,
   embedded-default admission `38058138839` (34/52/82/83 on both hosts) and
   release candidate `38058141056` (34/52/82/83 on both hosts).
+  Step 2 receipts on `f73fa4b` with Nazm `14c6cf4`: CI `38059638256` (clean-machine
+  gates in `default` mode), release candidate `38059645752` on the embedded default
+  (34/52/82/83 on both hosts) and subprocess admission `38059648700`
+  (34/52/82/83 on both hosts).
 
-- **v0.6.0 release-candidate receipts**: Actions run `38049343387` on `388b539`
-  with Nazm `14c6cf4` passed strict builds and quick (34/34), full (52/52),
-  stress (82/82), and release (83/83) QA on Windows and Linux. The Windows
-  installer and Linux package clean-machine contracts, including the
-  non-executable stack check, passed in run `38049326563`.
+- **v0.6.0 release-candidate receipts**: Actions run `38059645752` on `f73fa4b`
+  with Nazm `14c6cf4` as the embedded default passed strict builds and quick
+  (34/34), full (52/52), stress (82/82), and release (83/83) QA on Windows
+  and Linux. The Windows installer and Linux package clean-machine contracts,
+  including the non-executable stack check, passed in run `38059638256`.
   `docs/RELEASE_CANDIDATE_STATUS.md` records both and keeps the superseded
-  `b5f4383` receipts in its history.
+  receipts in its history.
 
 ### Fixed
 

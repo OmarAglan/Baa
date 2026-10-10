@@ -251,6 +251,18 @@ longer asks for a separate Nazm. The gates on that configuration are:
 | Integration tests and corpus object-byte parity against the subprocess on an `opt-in` and a `default` build | `nazm-api-v1` CI job, both hosts |
 | The subprocess default of a build without the option keeps passing its own QA | push CI quick/full jobs and `nazm-production-admission.yml` with `assembler_mode=subprocess` |
 
+Step 2 receipts, all on Baa `f73fa4b` with Nazm `14c6cf4` (2026-10-10):
+
+| Evidence | Result | Receipt |
+|---|---|---|
+| Clean-machine installer, `.deb` and `.tar.gz` in `default` mode with no Nazm executable reachable | `Embedded Nazm 0.4.0 (14c6cf4565067e9e32af72c2c1af6b9ef2456744), default`; compile, link and run with no assembler flag; `--nazm-path` assembles through the separate process; a missing `--nazm-path` is exit 4 with no output | [`38059638256`](https://github.com/OmarAglan/Baa/actions/runs/38059638256), `Standalone Windows installer` and `Linux packages on a clean Ubuntu` jobs |
+| Release-candidate ladder on the strict `default` build, `BAA_NAZM` unset and no `نظم` on `PATH` | quick 34/34, full 52/52, stress 82/82, release 83/83 on both hosts | [`38059645752`](https://github.com/OmarAglan/Baa/actions/runs/38059645752), artifacts `qa-release-windows-38059645752` and `qa-release-linux-38059645752` |
+| Integration tests against an `opt-in` and a `default` build, Windows and Linux | 5/5 on each build and host; corpus objects byte-identical to the subprocess at `-O0` and `-O2` | [`38059638256`](https://github.com/OmarAglan/Baa/actions/runs/38059638256), `Nazm API v1` jobs |
+| Subprocess path of the same commit, Windows and Linux | push CI quick and full jobs; quick 34/34, full 52/52, stress 82/82, release 83/83 on both hosts with `assembler_mode=subprocess` | [`38059638256`](https://github.com/OmarAglan/Baa/actions/runs/38059638256) and [`38059648700`](https://github.com/OmarAglan/Baa/actions/runs/38059648700) |
+
+Step 2 closed: the embedded Nazm is the default of every release installer
+and package.
+
 Selection in a `default` build: `--assembler=gas` and `--nazm-shadow` are
 unchanged; `--nazm-path` or a non-empty `BAA_NAZM` selects that executable in
 a separate process and a missing one is exit 4, never a fallback; otherwise

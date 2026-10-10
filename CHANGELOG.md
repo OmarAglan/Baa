@@ -19,12 +19,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Testing
 
-- **v0.6.0 release-candidate receipts**: Actions run `38045945587` on `b5f4383`
-  passed strict builds and quick (34/34), full (52/52), stress (82/82), and
-  release (83/83) QA on Windows and Linux. The Windows installer and Linux
-  package clean-machine contracts passed in run `38045707261`.
-  `docs/RELEASE_CANDIDATE_STATUS.md` records both, and the open
-  `.note.GNU-stack` finding for Nazm-assembled Linux objects.
+- **v0.6.0 release-candidate receipts**: Actions run `38049343387` on `388b539`
+  with Nazm `14c6cf4` passed strict builds and quick (34/34), full (52/52),
+  stress (82/82), and release (83/83) QA on Windows and Linux. The Windows
+  installer and Linux package clean-machine contracts, including the
+  non-executable stack check, passed in run `38049326563`.
+  `docs/RELEASE_CANDIDATE_STATUS.md` records both and keeps the superseded
+  `b5f4383` receipts in its history.
 
 ### Fixed
 

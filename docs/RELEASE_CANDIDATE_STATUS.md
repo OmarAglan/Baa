@@ -12,14 +12,14 @@ release QA modes pass, and after the artifact a user installs is proven on a cle
 
 | Field | Receipt |
 |---|---|
-| RC implementation commit | `b5f4383` |
-| Release-candidate run | [`38045945587`](https://github.com/OmarAglan/Baa/actions/runs/38045945587) |
+| RC implementation commit | `388b539` |
+| Release-candidate run | [`38049343387`](https://github.com/OmarAglan/Baa/actions/runs/38049343387) |
 | CI host | `windows-latest` x86-64 |
 | C toolchain | MSYS2 UCRT64 GCC 15.2.0 |
 | Python | 3.11 |
 | Configure preset | `windows-verify` |
 | Warning policy | `BAA_WARNINGS_AS_ERRORS=ON` |
-| Assembler | Nazm `4238099`, built in the same job |
+| Assembler | Nazm `14c6cf4`, built in the same job |
 | Reference implementation | C/RC-only root CMake target |
 
 Build receipt:
@@ -41,7 +41,7 @@ QA receipts:
 | `stress` | PASS | 82/82 |
 | `release` | PASS | 83/83 |
 
-The run retains every mode summary and hidden QA log as the `qa-release-windows-38045945587`
+The run retains every mode summary and hidden QA log as the `qa-release-windows-38049343387`
 artifact.
 
 ## Linux x86-64
@@ -50,14 +50,14 @@ artifact.
 
 | Field | Receipt |
 |---|---|
-| RC implementation commit | `b5f4383` |
-| Release-candidate run | [`38045945587`](https://github.com/OmarAglan/Baa/actions/runs/38045945587) |
+| RC implementation commit | `388b539` |
+| Release-candidate run | [`38049343387`](https://github.com/OmarAglan/Baa/actions/runs/38049343387) |
 | CI host | `ubuntu-latest` x86-64 |
 | C toolchain | GCC 13.3.0 |
 | Python | 3.11 |
 | Configure preset | `linux-verify` |
 | Warning policy | `BAA_WARNINGS_AS_ERRORS=ON` |
-| Assembler | Nazm `4238099`, built in the same job |
+| Assembler | Nazm `14c6cf4`, built in the same job |
 | Reference implementation | C-only root CMake target with `updater_stub.c` |
 
 QA receipts:
@@ -98,9 +98,9 @@ below is the run for the RC implementation commit.
 
 | Artifact | Clean machine | Contract | Receipt |
 |---|---|---|---|
-| `baa-setup-0.6.0-x64.exe` | fresh `windows-latest` runner, per-user install | `scripts/test_installer.ps1` | [`38045707261`](https://github.com/OmarAglan/Baa/actions/runs/38045707261) |
-| `baa-0.6.0-Linux-x86_64.deb` | fresh `ubuntu:24.04` container with no C toolchain | `scripts/test_linux_package.sh` | [`38045707261`](https://github.com/OmarAglan/Baa/actions/runs/38045707261) |
-| `baa-0.6.0-Linux-x86_64.tar.gz` | same container, unpacked under an Arabic path | `scripts/test_linux_package.sh` | [`38045707261`](https://github.com/OmarAglan/Baa/actions/runs/38045707261) |
+| `baa-setup-0.6.0-x64.exe` | fresh `windows-latest` runner, per-user install | `scripts/test_installer.ps1` | [`38049326563`](https://github.com/OmarAglan/Baa/actions/runs/38049326563) |
+| `baa-0.6.0-Linux-x86_64.deb` | fresh `ubuntu:24.04` container with no C toolchain | `scripts/test_linux_package.sh` | [`38049326563`](https://github.com/OmarAglan/Baa/actions/runs/38049326563) |
+| `baa-0.6.0-Linux-x86_64.tar.gz` | same container, unpacked under an Arabic path | `scripts/test_linux_package.sh` | [`38049326563`](https://github.com/OmarAglan/Baa/actions/runs/38049326563) |
 
 Each contract checks the published digest, installs, reports a missing Nazm with exit code 4
 instead of working around it, compiles and runs a plain program and a standard-library program
@@ -116,7 +116,7 @@ The same gate found that objects assembled by Nazm `4238099` carried no `.note.G
 section, so `ld` warned and implied an executable stack for programs built through the default
 assembler. Nazm `14c6cf4` ends every ELF64 object with the empty marker, and the Linux package
 contract now fails on that linker warning and requires an `RW` `GNU_STACK` segment for the Nazm
-and GAS paths.
+and GAS paths. Both changes are in `388b539`, which every receipt above covers.
 
 ## History
 
@@ -126,6 +126,12 @@ and GAS paths.
   [`38045139928`](https://github.com/OmarAglan/Baa/actions/runs/38045139928) on `276a594`
   (2026-10-10) — the same 34/52/82/83 ladder, green on both hosts. Superseded because
   `b5f4383` changes compiler sources.
+- v0.6.0, before the non-executable stack fix: run
+  [`38045945587`](https://github.com/OmarAglan/Baa/actions/runs/38045945587) on `b5f4383`
+  (2026-10-10) with Nazm `4238099` — the same ladder, green on both hosts, and the
+  clean-machine contracts green in run
+  [`38045707261`](https://github.com/OmarAglan/Baa/actions/runs/38045707261). Superseded because
+  `388b539` changes the assembler revision and the Linux package contract.
 
 The post-cut admission and rollback rules are defined in
 [RELEASE_PROCESS.md](RELEASE_PROCESS.md).

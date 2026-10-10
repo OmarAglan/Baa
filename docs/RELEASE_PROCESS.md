@@ -80,7 +80,8 @@ when they do not alter generated corpora, tests, packaging inputs, or contract m
 
 ## 6. Current Activation State
 
-The policy is active for v0.5.9. Windows and Linux receipts are green in Actions run
-`28384736088`, so the documentation-only closure commit may be used to cut `release/v0.5.9`.
+The policy is active for v0.6.0. Windows and Linux receipts are green in Actions run
+`38045945587` on `b5f4383`, and the installer and Linux package contracts are green in run
+`38045707261`, so the documentation-only closure commit may be used to cut `release/v0.6.0`.
 Feature development continues on `master`; the release branch accepts only the changes allowed
 above.

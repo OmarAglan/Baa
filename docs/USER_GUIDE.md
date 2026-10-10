@@ -356,17 +356,20 @@ cmake -B build-linux -DCMAKE_BUILD_TYPE=Release -DBAA_WARNINGS_AS_ERRORS=ON
 cmake --build build-linux -j
 ```
 
-Install (DEB):
+Install (DEB). `apt` resolves the `gcc` and `libc6-dev` dependencies, which
+`dpkg -i` alone does not:
 
 ```bash
-sudo dpkg -i build-linux/baa-*-Linux-x86_64.deb
+sudo apt install ./build-linux/baa-0.6.0-Linux-x86_64.deb
 ```
 
-Install (TGZ):
+Install (TGZ). The archive unpacks to `baa-<version>-Linux-x86_64/usr/`; it can
+be used in place from any directory, or copied into `/usr`:
 
 ```bash
-tar -xzf build-linux/baa-*-Linux-x86_64.tar.gz
-sudo cp -a usr/* /usr/
+tar -xzf build-linux/baa-0.6.0-Linux-x86_64.tar.gz
+./baa-0.6.0-Linux-x86_64/usr/bin/baa --version
+sudo cp -a baa-0.6.0-Linux-x86_64/usr/* /usr/
 ```
 
 ---

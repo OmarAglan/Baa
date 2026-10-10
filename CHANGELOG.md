@@ -17,6 +17,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
   exit-4 diagnostic when Nazm is missing, removes the package and verifies
   nothing is left, then repeats the build from the relocated `.tar.gz`.
 
+### Testing
+
+- **v0.6.0 release-candidate receipts**: Actions run `38045945587` on `b5f4383`
+  passed strict builds and quick (34/34), full (52/52), stress (82/82), and
+  release (83/83) QA on Windows and Linux. The Windows installer and Linux
+  package clean-machine contracts passed in run `38045707261`.
+  `docs/RELEASE_CANDIDATE_STATUS.md` records both, and the open
+  `.note.GNU-stack` finding for Nazm-assembled Linux objects.
+
 ### Fixed
 
 - **Standard library not found by an installed compiler**: `#تضمين` located the

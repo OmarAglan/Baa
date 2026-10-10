@@ -18,6 +18,8 @@ those features are implemented today.
   never falls back to GAS silently.
 - Linking always uses a GCC/LD toolchain (the private one bundled with the Windows installer, or
   the host toolchain). Baa does not ship its own linker.
+- On Linux, objects assembled by Nazm carry no `.note.GNU-stack` section, so `ld` warns that an
+  executable stack is implied. Programs built with `--assembler=gas` are not affected.
 - macOS, 32-bit targets, ARM, WebAssembly, and freestanding targets are not supported.
 - `i386-elf`, `i386-pyramidos`, `--freestanding`, and `--no-stdlib` are planning surfaces only.
 - The `baa update` command is implemented on Windows only.
@@ -149,9 +151,10 @@ x86-64 targets.
 ## Release Status
 
 - v0.5.8 establishes the C reference compiler policy; it is not a self-hosting milestone.
-- v0.5.9 Windows and Linux RC signoffs are recorded in
-  [RELEASE_CANDIDATE_STATUS.md](RELEASE_CANDIDATE_STATUS.md); all four QA modes and detailed
-  determinism receipts are green on both hosts.
+- v0.6.0 Windows and Linux RC signoffs are recorded in
+  [RELEASE_CANDIDATE_STATUS.md](RELEASE_CANDIDATE_STATUS.md); all four QA modes and the
+  determinism gate are green on both hosts, and the Windows installer and Linux packages pass
+  their clean-machine contracts.
 - The language, diagnostics, ABI, standard library, and external tooling contracts are not
   stable-beta frozen until the v0.9 gates are completed.
 

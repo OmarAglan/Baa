@@ -115,7 +115,8 @@ The following work is not silently included in this candidate:
   are admitted;
 - cross-target executable linking;
 - making the in-process `nazm_assemble_buffer()` boundary the production
-  default (a later opt-in extension is recorded below);
+  default (a later opt-in extension and its admission as the release default
+  are recorded in sections 10 and 11);
 - changing Baa's reference implementation away from C;
 - removing the GAS selector; and
 - enabling a public package registry or lifecycle scripts in Takween.
@@ -180,10 +181,10 @@ after the hosted runs reached terminal success.
    default-policy changes.
 2. Keep the admitted Nazm API/version/capability fingerprint in every Nazm
    object-cache key.
-3. Keep the optional in-process buffer API behind its build option and Arabic
+3. Keep the in-process buffer API behind its build options and Arabic
    invocation selector without changing the inspected textual contract or the
    explicit subprocess/GAS rollback paths.
-4. Complete the two-step embedded-default admission in section 11.
+4. Keep the embedded default of release builds under the gates of section 11.
 
 ## 10. Post-Admission API and Cache Extension
 
@@ -202,10 +203,10 @@ unchanged. A later guarded extension pins Nazm
 - an opt-in `BAA_ENABLE_EMBEDDED_NAZM` build plus
   `--نظم-داخل-العملية` invocation selector.
 
-This extension does not approve an embedded default. The separate Nazm process
-remains the normal production boundary and direct operational rollback; GAS
-remains the explicit compiler-level rollback. No failure silently switches
-between these paths.
+This extension did not approve an embedded default; section 11 does. The
+separate Nazm process remains the direct operational rollback and GAS remains
+the explicit compiler-level rollback. No failure silently switches between
+these paths.
 
 ## 11. Embedded-Default Admission
 
@@ -234,14 +235,21 @@ Step 1 receipts, all on Baa `31a1978` with Nazm `14c6cf4` (2026-10-10):
 | Clean-machine installer, `.deb` and `.tar.gz` with no Nazm executable reachable | `Embedded Nazm 0.4.0 (14c6cf4565067e9e32af72c2c1af6b9ef2456744), opt-in`; compile, link and run through `--نظم-داخل-العملية`; plain compile still exit 4 | [`38058131936`](https://github.com/OmarAglan/Baa/actions/runs/38058131936), `Standalone Windows installer` and `Linux packages on a clean Ubuntu` jobs |
 | Release-candidate ladder on the shipping configuration | quick 34/34, full 52/52, stress 82/82, release 83/83 on both hosts | [`38058141056`](https://github.com/OmarAglan/Baa/actions/runs/38058141056) |
 
-Step 1 is closed. The default is unchanged in every shipped binary.
+Step 1 closed with the default unchanged in every shipped binary.
 
-**Step 2: flip the default.** Release builds add
-`BAA_EMBEDDED_NAZM_DEFAULT=ON`, the clean-machine gates run with
-`-EmbeddedNazmMode default` / `--embedded-mode default` and require a build
-without any Nazm executable to succeed, and the release-candidate ladder runs
-on that configuration. Step 2 needs its own approval now that the step 1
-receipts are recorded above; it has not started.
+**Step 2: flip the default.** Approved on 2026-10-10 after the step 1
+receipts. Release builds set `BAA_EMBEDDED_NAZM_DEFAULT=ON`:
+`scripts/build_installer.ps1` and `scripts/package_linux.sh` build the
+`default` mode unless told otherwise, and `baa --version` reports
+`Embedded Nazm <version> (<revision>), default`. The Windows installer no
+longer asks for a separate Nazm. The gates on that configuration are:
+
+| Evidence | Where it runs |
+|---|---|
+| An installed compiler with no Nazm executable reachable compiles, links and runs programs without any assembler flag; `--nazm-path` still assembles through the separate process, and a missing `--nazm-path` is exit 4 with no output | `scripts/test_installer.ps1 -EmbeddedNazmMode default` and `scripts/test_linux_package.sh --embedded-mode default` in the clean-machine CI jobs |
+| Quick, full, stress and release QA on the strict `default` build with `BAA_NAZM` unset and no `نظم` on `PATH`; a guard step fails the run otherwise | `release-candidate.yml` |
+| Integration tests and corpus object-byte parity against the subprocess on an `opt-in` and a `default` build | `nazm-api-v1` CI job, both hosts |
+| The subprocess default of a build without the option keeps passing its own QA | push CI quick/full jobs and `nazm-production-admission.yml` with `assembler_mode=subprocess` |
 
 Selection in a `default` build: `--assembler=gas` and `--nazm-shadow` are
 unchanged; `--nazm-path` or a non-empty `BAA_NAZM` selects that executable in

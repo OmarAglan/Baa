@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Verify the Baa Linux packages the way test_installer.ps1 verifies the Windows
-# installer: digest, install, compile and run through the embedded Nazm, PATH
-# Nazm and the host linker, removal, and nothing left behind.
+# installer: digest, install, compile and run through the embedded Nazm with no
+# Nazm executable reachable, the --nazm-path and GAS rollbacks, the host linker,
+# removal, and nothing left behind.
 #
 # Run it as root on a machine without Baa or a C toolchain. CI runs it in a
 # fresh ubuntu:24.04 container, so whatever Baa needs must come from the
@@ -18,7 +19,7 @@ deb=""
 tgz=""
 nazm_dir=""
 nazm_revision=""
-embedded_mode="opt-in"
+embedded_mode="default"
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --deb) deb="$2"; shift 2 ;;
@@ -84,6 +85,15 @@ build_and_run() {
     "$out/مكتبة"
     build_program "$baa" --assembler=gas مرحبا.باء -o "$out/مرحبا-gas"
     "$out/مرحبا-gas"
+    # --nazm-path is the per-invocation rollback to the separate Nazm process.
+    # A missing executable there is exit 4, never a fallback.
+    build_program "$baa" --nazm-path="$nazm_dir/نظم" مرحبا.باء -o "$out/مرحبا-نظم"
+    "$out/مرحبا-نظم"
+    local status=0
+    "$baa" --nazm-path="$out/نظم-غائب" مرحبا.باء -o "$out/غائب" \
+      >"$out/absent-nazm.log" 2>&1 || status=$?
+    [[ "$status" == 4 ]] || { cat "$out/absent-nazm.log" >&2; fail "Baa returned $status instead of 4 for a missing --nazm-path"; }
+    [[ ! -e "$out/غائب" ]] || fail "Baa produced output although --nazm-path named a missing Nazm"
   )
 }
 

@@ -1,5 +1,5 @@
 ﻿; مثبت مصرّف باء المستقل لويندوز.
-; نظم اعتماد مستقل يحل من PATH. الرابط الخاص يبقى داخل مجلد باء ولا يدخل PATH.
+; مجمّع نظم مضمن داخل baa.exe وهو الافتراضي. الرابط الخاص يبقى داخل مجلد باء ولا يدخل PATH.
 
 #define MyAppId "{{E4B6D77C-6C22-4E2D-8F9D-61D34A26B0D1}"
 #define MyAppName "مصرّف باء"
@@ -68,9 +68,9 @@ WelcomeFontName=Segoe UI
 
 [Messages]
 arabic.WelcomeLabel1=ابدأ البرمجة بلغة باء
-arabic.WelcomeLabel2=مترجم باء ومكتبته القياسية وأدوات ربط البرامج.%n%nثبّت نظم أيضاً لتجميع البرامج. يمكنك اختيار مكان التثبيت في الخطوة التالية.
+arabic.WelcomeLabel2=مترجم باء ومكتبته القياسية ومجمّع نظم المضمن وأدوات ربط البرامج.%n%nيمكنك اختيار مكان التثبيت في الخطوة التالية.
 english.WelcomeLabel1=Start coding with Baa
-english.WelcomeLabel2=The Baa compiler, standard library and program linker.%n%nInstall Nazm as well to assemble programs. Choose where to install on the next page.
+english.WelcomeLabel2=The Baa compiler, standard library, embedded Nazm assembler and program linker.%n%nChoose where to install on the next page.
 
 [Languages]
 Name: "arabic"; MessagesFile: "compiler:Languages\Arabic.isl"
@@ -113,7 +113,6 @@ const
   BAA_PATH_OWNED_VALUE = 'PathOwned';
   BAA_HOME_OWNED_VALUE = 'HomeOwned';
   BAA_STDLIB_OWNED_VALUE = 'StdlibOwned';
-  NAZM_UNINSTALL_KEY = 'Software\Microsoft\Windows\CurrentVersion\Uninstall\{8D3D57AE-41CF-4B8A-95E9-270E4564E2A1}_is1';
 
 function PrepareToInstall(var NeedsRestart: Boolean): string;
 begin
@@ -182,22 +181,6 @@ begin
     '{#MyAppVersion}');
 end;
 
-function NazmAtInstallRoot(const Root: Integer): Boolean;
-var
-  InstallLocation: string;
-begin
-  Result := RegQueryStringValue(Root, NAZM_UNINSTALL_KEY, 'InstallLocation',
-    InstallLocation) and
-    FileExists(AddBackslash(InstallLocation) + 'bin\نظم.exe');
-end;
-
-function NazmAvailable: Boolean;
-begin
-  Result :=
-    (FileSearch('نظم.exe', GetEnv('PATH')) <> '') or
-    NazmAtInstallRoot(HKCU) or NazmAtInstallRoot(HKLM);
-end;
-
 function RunBaaHealthProbe: Boolean;
 var
   ExitCode: Integer;
@@ -224,14 +207,8 @@ begin
     if not RunBaaHealthProbe then
       EcoInstallFailed('فشل فحص مكونات باء أو رابطه الخاص بعد التثبيت.');
     if not WizardSilent then
-    begin
-      if NazmAvailable then
-        MsgBox('اكتمل تثبيت باء. افتح طرفية جديدة لاستخدام baa.',
-          mbInformation, MB_OK)
-      else
-        MsgBox('اكتمل تثبيت باء، لكن نظم غير مثبت أو غير ظاهر في PATH. ثبّت نظم قبل بناء البرامج.',
-          mbInformation, MB_OK);
-    end;
+      MsgBox('اكتمل تثبيت باء. افتح طرفية جديدة لاستخدام baa.',
+        mbInformation, MB_OK);
   end;
 end;
 

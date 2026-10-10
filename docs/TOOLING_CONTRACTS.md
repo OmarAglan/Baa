@@ -705,10 +705,12 @@ override), and the last field is the selection mode. Assembler selection is:
 5. Otherwise (`opt-in` builds and builds without Nazm linked in): `نظم` from
    `PATH`, exit 4 when it is missing.
 
-`opt-in` is the shipped mode: omitting the selector retains the separate Nazm
-process, and explicit GAS remains the compiler-level rollback. `default` is
-selected only by `BAA_EMBEDDED_NAZM_DEFAULT=ON` at build time and is under
-admission; see `docs/NAZM_PRODUCTION_ADMISSION.md`.
+`default` is the shipped mode: release installers and packages are built with
+`BAA_EMBEDDED_NAZM_DEFAULT=ON` and need no Nazm executable. Rule 3 is the
+per-invocation rollback to the separate Nazm process and explicit GAS remains
+the compiler-level rollback. `opt-in` is what a build without that option
+reports. The admission evidence is in `docs/NAZM_PRODUCTION_ADMISSION.md`
+section 11.
 
 PyramidOS experiments should consume:
 

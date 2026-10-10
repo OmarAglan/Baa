@@ -9,8 +9,9 @@ void driver_print_help(void)
     printf("  -S, -s       Compile to assembly only (.s)\n");
     printf("  --emit-nazm  Emit canonical Arabic Nazm source only (.نظم)\n");
     printf("  --assembler=gas|nazm  Select the normal assembler (default: nazm)\n");
-    printf("  --nazm-path=<path>  Nazm executable; otherwise BAA_NAZM or نظم from PATH\n");
-    printf("  --نظم-داخل-العملية  Use linked nazm-api-v1 (builds with embedded Nazm; see --version)\n");
+    printf("  --nazm-path=<path>  Run this Nazm executable; otherwise BAA_NAZM, then the\n");
+    printf("                      embedded Nazm or نظم from PATH (--version names the default)\n");
+    printf("  --نظم-داخل-العملية  Force the linked nazm-api-v1 (builds with embedded Nazm)\n");
     printf("  --nazm-shadow=<path>  Compare explicit GAS rollback with a Nazm shadow beside it\n");
     printf("  -c           Compile to object file only (.o)\n");
     printf("  --check      Parse/analyze source files without emitting code\n");

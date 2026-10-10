@@ -14,8 +14,10 @@ jobs:
   release-windows:
     runs-on: windows-latest
     timeout-minutes: 45
+    # NAZM serves the tests that drive Nazm directly. BAA_NAZM is not set: it
+    # would select the separate process instead of the default that ships.
     env:
-      BAA_NAZM: ${{ github.workspace }}\Nazm\build-release\nazm.exe
+      BAA: ${{ github.workspace }}\build\presets\windows-verify\baa.exe
       NAZM: ${{ github.workspace }}\Nazm\build-release\nazm.exe
     steps:
       - uses: actions/checkout@v4
@@ -33,15 +35,31 @@ jobs:
           if (Test-Path ".\gcc\bin") {
             "$env:GITHUB_WORKSPACE\gcc\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
           }
-      # The candidate is built the way it ships: nazm-api-v1 linked in.
+      # The candidate is built the way it ships: nazm-api-v1 linked in and
+      # selected by default.
       - name: Configure strict Windows C reference build
         run: |
-          cmake --preset windows-verify -DBAA_ENABLE_EMBEDDED_NAZM=ON -DBAA_NAZM_SOURCE_DIR="$env:GITHUB_WORKSPACE/Nazm"
+          cmake --preset windows-verify -DBAA_ENABLE_EMBEDDED_NAZM=ON -DBAA_EMBEDDED_NAZM_DEFAULT=ON -DBAA_NAZM_SOURCE_DIR="$env:GITHUB_WORKSPACE/Nazm"
           cmake -S Nazm -B Nazm/build-release -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release
       - name: Clean strict Windows build
         run: |
           cmake --build --preset windows-verify --clean-first
           cmake --build Nazm/build-release --clean-first
+      - name: Verify the ladder runs on the embedded default
+        shell: pwsh
+        run: |
+          $embedded = @(& $env:BAA --version) |
+            Where-Object { $_ -like "Embedded Nazm *" } | Select-Object -First 1
+          $expected = "(" + (git -C Nazm rev-parse HEAD).Trim() + "), default"
+          if (-not $embedded -or -not $embedded.EndsWith($expected)) {
+            throw "Expected the candidate to embed the pinned Nazm as its default; --version says: $embedded"
+          }
+          if ($env:BAA_NAZM) { throw "BAA_NAZM must be unset in the release-candidate run" }
+          $arabicNazm = -join [char[]](0x0646, 0x0638, 0x0645)
+          if (Get-Command $arabicNazm -ErrorAction SilentlyContinue) {
+            throw "A Nazm executable is on PATH; the ladder must not be able to reach one"
+          }
+          Write-Host $embedded
       - name: Windows quick QA
         env:
           PYTHONUTF8: "1"
@@ -75,8 +93,10 @@ jobs:
   release-linux:
     runs-on: ubuntu-latest
     timeout-minutes: 45
+    # NAZM serves the tests that drive Nazm directly. BAA_NAZM is not set: it
+    # would select the separate process instead of the default that ships.
     env:
-      BAA_NAZM: ${{ github.workspace }}/Nazm/build-release/nazm
+      BAA: ${{ github.workspace }}/build-linux/presets/verify/baa
       NAZM: ${{ github.workspace }}/Nazm/build-release/nazm
     steps:
       - uses: actions/checkout@v4
@@ -88,15 +108,33 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-      # The candidate is built the way it ships: nazm-api-v1 linked in.
+      # The candidate is built the way it ships: nazm-api-v1 linked in and
+      # selected by default.
       - name: Configure strict Linux C reference build
         run: |
-          cmake --preset linux-verify -DBAA_ENABLE_EMBEDDED_NAZM=ON -DBAA_NAZM_SOURCE_DIR="$GITHUB_WORKSPACE/Nazm"
+          cmake --preset linux-verify -DBAA_ENABLE_EMBEDDED_NAZM=ON -DBAA_EMBEDDED_NAZM_DEFAULT=ON -DBAA_NAZM_SOURCE_DIR="$GITHUB_WORKSPACE/Nazm"
           cmake -S Nazm -B Nazm/build-release -DCMAKE_BUILD_TYPE=Release
       - name: Clean strict Linux build
         run: |
           cmake --build --preset linux-verify --clean-first -j
           cmake --build Nazm/build-release --clean-first -j
+      - name: Verify the ladder runs on the embedded default
+        run: |
+          embedded="$("$BAA" --version | grep -E '^Embedded Nazm ' || true)"
+          expected="($(git -C Nazm rev-parse HEAD)), default"
+          if [[ "$embedded" != *"$expected" ]]; then
+            echo "Expected the candidate to embed the pinned Nazm as its default; --version says: $embedded" >&2
+            exit 1
+          fi
+          if [[ -n "${BAA_NAZM:-}" ]]; then
+            echo "BAA_NAZM must be unset in the release-candidate run" >&2
+            exit 1
+          fi
+          if command -v نظم >/dev/null; then
+            echo "A Nazm executable is on PATH; the ladder must not be able to reach one" >&2
+            exit 1
+          fi
+          echo "$embedded"
       - name: Linux quick QA
         env:
           PYTHONUTF8: "1"

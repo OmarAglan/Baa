@@ -49,8 +49,20 @@ class ReleaseCandidateWorkflowTests(unittest.TestCase):
     def test_builds_the_candidate_with_the_embedded_assembler_it_ships(self) -> None:
         self.assertEqual(self.text.count("-DBAA_ENABLE_EMBEDDED_NAZM=ON"), 2)
         self.assertEqual(self.text.count("-DBAA_NAZM_SOURCE_DIR="), 2)
-        # الافتراضي يبقى ملف نظم التنفيذي حتى يُقبل المضمن افتراضيا.
-        self.assertNotIn("BAA_EMBEDDED_NAZM_DEFAULT", self.text)
+        self.assertEqual(self.text.count("-DBAA_EMBEDDED_NAZM_DEFAULT=ON"), 2)
+
+    def test_runs_the_ladder_on_the_embedded_default(self) -> None:
+        # BAA_NAZM يختار العملية المنفصلة، فلا يُضبط؛ NAZM للاختبارات التي
+        # تشغّل نظم مباشرة فقط.
+        self.assertNotIn("BAA_NAZM: ", self.text)
+        self.assertEqual(self.text.count("      NAZM: ${{ github.workspace }}"), 2)
+        self.assertEqual(self.text.count("      BAA: ${{ github.workspace }}"), 2)
+        self.assertEqual(
+            self.text.count("- name: Verify the ladder runs on the embedded default"), 2
+        )
+        self.assertEqual(self.text.count('), default"'), 2)
+        self.assertEqual(self.text.count("BAA_NAZM must be unset"), 2)
+        self.assertEqual(self.text.count("A Nazm executable is on PATH"), 2)
 
 
 class NazmProductionAdmissionWorkflowTests(unittest.TestCase):

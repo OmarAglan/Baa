@@ -7,7 +7,8 @@ param(
     [string]$IsccPath = "",
     [string]$SignToolName = "",
     [string]$SignToolCommand = "",
-    [switch]$EmbeddedNazmDefault,
+    [ValidateSet("default", "opt-in")]
+    [string]$EmbeddedNazmMode = "default",
     [switch]$SkipBuild,
     [switch]$SkipTests
 )
@@ -43,8 +44,8 @@ if ($cmakeText -notmatch "project\(baa\s+VERSION\s+$([regex]::Escape($Version))"
 }
 
 if (-not $SkipBuild) {
-    # The installed compiler links the in-process nazm-api-v1 assembler, so the
-    # build needs the pinned Nazm source tree.
+    # The installed compiler assembles with the in-process nazm-api-v1 by
+    # default, so the build needs the pinned Nazm source tree.
     if ([string]::IsNullOrWhiteSpace($NazmSourceDirectory)) {
         $NazmSourceDirectory = @(
             (Join-Path $root "Nazm"),
@@ -58,7 +59,7 @@ if (-not $SkipBuild) {
         throw "The installer embeds Nazm. Pass -NazmSourceDirectory with its source tree."
     }
     $nazmSource = (Resolve-Path -LiteralPath $NazmSourceDirectory).Path -replace "\\", "/"
-    $embeddedDefault = if ($EmbeddedNazmDefault) { "ON" } else { "OFF" }
+    $embeddedDefault = if ($EmbeddedNazmMode -eq "default") { "ON" } else { "OFF" }
     & cmake -S $root -B $BuildDirectory -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release `
         -DBAA_ENABLE_EMBEDDED_NAZM=ON `
         "-DBAA_EMBEDDED_NAZM_DEFAULT=$embeddedDefault" `
@@ -75,15 +76,14 @@ foreach ($file in @($baaExecutable, $runtimeLibrary)) {
         throw "Required Baa installer input is missing: $file"
     }
 }
-$expectedNazmMode = if ($EmbeddedNazmDefault) { "default" } else { "opt-in" }
 $embeddedNazmLine = @(& $baaExecutable --version) |
     Where-Object { $_ -match '^Embedded Nazm \S+ \([A-Za-z0-9._-]+\), (opt-in|default)$' } |
     Select-Object -First 1
 if (-not $embeddedNazmLine) {
     throw "The installer must ship a Baa built with BAA_ENABLE_EMBEDDED_NAZM=ON."
 }
-if ($embeddedNazmLine -notmatch ", $expectedNazmMode`$") {
-    throw "Installer input reports '$embeddedNazmLine'; expected the $expectedNazmMode mode."
+if ($embeddedNazmLine -notmatch ", $EmbeddedNazmMode`$") {
+    throw "Installer input reports '$embeddedNazmLine'; expected the $EmbeddedNazmMode mode."
 }
 Write-Host $embeddedNazmLine
 
@@ -93,16 +93,28 @@ if (-not $SkipTests) {
         throw "Nazm is required for Baa quick QA. Pass -NazmExecutable."
     }
     $oldBaa = $env:BAA
-    $oldNazm = $env:BAA_NAZM
+    $hadBaaNazm = Test-Path Env:BAA_NAZM
+    $oldBaaNazm = $env:BAA_NAZM
+    $oldNazm = $env:NAZM
     try {
         $env:BAA = (Resolve-Path -LiteralPath $baaExecutable).Path
-        $env:BAA_NAZM = (Resolve-Path -LiteralPath $NazmExecutable).Path
+        # NAZM serves the tests that drive Nazm directly. BAA_NAZM would select
+        # the subprocess, so the default build runs its QA without it.
+        $env:NAZM = (Resolve-Path -LiteralPath $NazmExecutable).Path
+        if ($EmbeddedNazmMode -eq "default") {
+            Remove-Item Env:BAA_NAZM -ErrorAction SilentlyContinue
+        }
+        else {
+            $env:BAA_NAZM = $env:NAZM
+        }
         & python (Join-Path $root "scripts\qa_run.py") --mode quick
         if ($LASTEXITCODE -ne 0) { throw "Baa quick QA failed." }
     }
     finally {
         $env:BAA = $oldBaa
-        $env:BAA_NAZM = $oldNazm
+        $env:NAZM = $oldNazm
+        if ($hadBaaNazm) { $env:BAA_NAZM = $oldBaaNazm }
+        else { Remove-Item Env:BAA_NAZM -ErrorAction SilentlyContinue }
     }
 }
 

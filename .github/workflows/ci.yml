@@ -111,7 +111,7 @@ jobs:
       - name: Build Baa and Nazm
         shell: pwsh
         run: |
-          cmake -S . -B build -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release -DBAA_ENABLE_EMBEDDED_NAZM=ON -DBAA_NAZM_SOURCE_DIR="$env:GITHUB_WORKSPACE/Nazm"
+          cmake -S . -B build -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release -DBAA_ENABLE_EMBEDDED_NAZM=ON -DBAA_EMBEDDED_NAZM_DEFAULT=ON -DBAA_NAZM_SOURCE_DIR="$env:GITHUB_WORKSPACE/Nazm"
           cmake --build build --target baa baa_runtime
           cmake -S Nazm -B Nazm/build -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release
           cmake --build Nazm/build
@@ -125,7 +125,7 @@ jobs:
         shell: pwsh
         run: |
           .\scripts\test_installer.ps1 -NazmDirectory "$env:GITHUB_WORKSPACE\Nazm\build" `
-            -NazmRevision (git -C Nazm rev-parse HEAD).Trim() -EmbeddedNazmMode opt-in
+            -NazmRevision (git -C Nazm rev-parse HEAD).Trim() -EmbeddedNazmMode default
       - name: Upload standalone installer
         uses: actions/upload-artifact@v4
         with:
@@ -163,7 +163,7 @@ jobs:
               --tgz build-linux/baa-0.6.0-Linux-x86_64.tar.gz \
               --nazm-dir Nazm/build \
               --nazm-revision "$(git -C Nazm rev-parse HEAD)" \
-              --embedded-mode opt-in
+              --embedded-mode default
       - name: Upload Linux packages
         uses: actions/upload-artifact@v4
         with:

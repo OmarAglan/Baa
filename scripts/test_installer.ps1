@@ -3,8 +3,8 @@ param(
     [string]$InstallDirectory = "",
     [string]$NazmDirectory = "",
     [string]$NazmRevision = "",
-    [ValidateSet("opt-in", "default")]
-    [string]$EmbeddedNazmMode = "opt-in"
+    [ValidateSet("default", "opt-in")]
+    [string]$EmbeddedNazmMode = "default"
 )
 
 $ErrorActionPreference = "Stop"
@@ -54,6 +54,8 @@ $inProcessFlag = "--" + (-join [char[]](0x0646, 0x0638, 0x0645)) + "-" +
     (-join [char[]](0x062F, 0x0627, 0x062E, 0x0644)) + "-" +
     (-join [char[]](0x0627, 0x0644, 0x0639, 0x0645, 0x0644, 0x064A, 0x0629))
 $gasProgramOutput = Join-Path $programDirectory "hello-gas.exe"
+$subprocessProgramOutput = Join-Path $programDirectory "hello-nazm-path.exe"
+$absentNazmProgramOutput = Join-Path $programDirectory "absent-nazm-path.exe"
 $sourceFixture = Join-Path $root "examples\hello_world.باء"
 $canonicalSourceName = 'hello.' + (-join [char[]](0x0628, 0x0627, 0x0621))
 $source = Join-Path $programDirectory $canonicalSourceName
@@ -205,10 +207,38 @@ try {
         & $baaExecutable $source -o $programOutput
         if ($LASTEXITCODE -ne 0 -or
             -not (Test-Path -LiteralPath $programOutput -PathType Leaf)) {
-            throw "Installed Baa failed to compile and link through PATH Nazm."
+            throw "Installed Baa failed to compile and link with Nazm on PATH."
         }
         & $programOutput
         if ($LASTEXITCODE -ne 0) { throw "Program linked by installed Baa failed to run." }
+
+        # --nazm-path is the per-invocation rollback to the separate Nazm
+        # process. A missing executable there is exit 4, never a fallback.
+        $nazmExecutable = Join-Path $NazmDirectory $arabicNazm
+        & $baaExecutable "--nazm-path=$nazmExecutable" $source -o $subprocessProgramOutput
+        if ($LASTEXITCODE -ne 0 -or
+            -not (Test-Path -LiteralPath $subprocessProgramOutput -PathType Leaf)) {
+            throw "Installed Baa failed to compile and link through --nazm-path."
+        }
+        & $subprocessProgramOutput
+        if ($LASTEXITCODE -ne 0) { throw "Program assembled through --nazm-path failed to run." }
+        $absentNazm = Join-Path $programDirectory "absent-nazm.exe"
+        $ErrorActionPreference = "Continue"
+        try {
+            $absentNazmOutput = @(
+                & $baaExecutable "--nazm-path=$absentNazm" $source -o $absentNazmProgramOutput 2>&1
+            ) -join "`n"
+            $absentNazmExitCode = $LASTEXITCODE
+        }
+        finally {
+            $ErrorActionPreference = $oldErrorActionPreference
+        }
+        if ($absentNazmExitCode -ne 4) {
+            throw "Installed Baa returned $absentNazmExitCode instead of 4 for a missing --nazm-path. Output: $absentNazmOutput"
+        }
+        if (Test-Path -LiteralPath $absentNazmProgramOutput) {
+            throw "Installed Baa produced output although --nazm-path named a missing Nazm."
+        }
         & $baaExecutable --assembler=gas $source -o $gasProgramOutput
         if ($LASTEXITCODE -ne 0 -or
             -not (Test-Path -LiteralPath $gasProgramOutput -PathType Leaf)) {

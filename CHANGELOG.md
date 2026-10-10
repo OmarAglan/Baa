@@ -10,26 +10,32 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Added
 
-- **Embedded Nazm in release builds (opt-in)**: the Windows installer and the
-  Linux `.deb`/`.tar.gz` now link `nazm-api-v1` from the pinned Nazm checkout.
-  `baa --version` prints `Embedded Nazm <version> (<revision>), <mode>`, so a
-  binary names the exact Nazm source it carries. The default is unchanged: the
-  separate `نظم` process still assembles unless `--نظم-داخل-العملية` is
-  given, and a missing Nazm is still exit 4.
-- **`BAA_EMBEDDED_NAZM_DEFAULT` build option**: a build configured with it
-  assembles in-process without the flag. `--nazm-path` and a non-empty
-  `BAA_NAZM` still select an executable (a missing one is exit 4, never a
-  fallback), `نظم` on `PATH` is not consulted, and `--assembler=gas` and
-  `--nazm-shadow` are unchanged. No release build sets it yet; it exists so
-  the full QA ladder can run against that configuration first
-  (`docs/NAZM_PRODUCTION_ADMISSION.md` section 11).
+- **Embedded Nazm is the release default**: the Windows installer and the
+  Linux `.deb`/`.tar.gz` link `nazm-api-v1` from the pinned Nazm checkout and
+  assemble with it by default, so an installed Baa needs no separate `نظم`.
+  `baa --version` prints `Embedded Nazm <version> (<revision>), default`, so a
+  binary names the exact Nazm source it carries. `--nazm-path` and a non-empty
+  `BAA_NAZM` still select a Nazm executable in a separate process (a missing
+  one is exit 4, never a fallback), `نظم` on `PATH` is not consulted, and
+  `--assembler=gas` and `--nazm-shadow` are unchanged. The Windows installer
+  no longer asks for Nazm to be installed first. Admitted in two steps
+  (`docs/NAZM_PRODUCTION_ADMISSION.md` section 11): the binaries first shipped
+  the linked assembler as opt-in, then the default changed.
+- **`BAA_ENABLE_EMBEDDED_NAZM` and `BAA_EMBEDDED_NAZM_DEFAULT` build options**:
+  the first links Nazm and enables `--نظم-داخل-العملية`; the second makes it
+  the default. A source build without them is unchanged and assembles through
+  `نظم` from `PATH`. `scripts/build_installer.ps1 -EmbeddedNazmMode opt-in`
+  and `BAA_EMBEDDED_NAZM_DEFAULT=OFF bash scripts/package_linux.sh` build the
+  opt-in variant.
 
 - **Linux package lifecycle gate**: CI builds the `.deb` and `.tar.gz` with
   SHA-256 files and runs `scripts/test_linux_package.sh` in a fresh
   `ubuntu:24.04` container without a C toolchain. It installs the `.deb`,
-  compiles and runs programs through PATH Nazm and the host linker, checks the
-  exit-4 diagnostic when Nazm is missing, removes the package and verifies
-  nothing is left, then repeats the build from the relocated `.tar.gz`.
+  compiles and runs programs through the embedded Nazm and the host linker
+  with no Nazm executable reachable, checks the `--nazm-path` and GAS
+  rollbacks and the exit-4 diagnostic for a missing `--nazm-path`, removes the
+  package and verifies nothing is left, then repeats the build from the
+  relocated `.tar.gz`.
 
 ### Testing
 

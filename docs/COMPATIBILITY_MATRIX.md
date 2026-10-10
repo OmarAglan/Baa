@@ -39,7 +39,7 @@ A project may release independently as long as it stays compatible with the cont
 | `conformance-v1` | Baa | Baa, future compilers/tools |
 | `freestanding-v0` | Baa | PyramidOS experiments |
 | `baa-nazm-boundary-v0` | Baa + Nazm | Baa backend, Nazm CLI/API |
-| `nazm-api-v1` | Nazm | opt-in embedded Baa path, API/CLI parity gates |
+| `nazm-api-v1` | Nazm | embedded default of Baa release builds, API/CLI parity gates |
 | `nazm-capabilities-v1` | Nazm | Baa and Takween cache fingerprints |
 | `nazm-source-v0.4` | Nazm | humans, Baa canonical Arabic assembly emitter |
 | `elf64-object-v0` / `coff-object-v0` | Nazm | system linkers, Baa builds |
@@ -70,12 +70,14 @@ A project may release independently as long as it stays compatible with the cont
 ### Current admitted ecosystem snapshot
 
 The implementation has advanced beyond the original version forecast above:
-Nazm is the production assembler default with explicit GAS rollback, while the
-new in-process path remains opt-in. Baa consumes `nazm-api-v1` only when built
+Nazm is the production assembler default with explicit GAS rollback. Release
+builds of Baa link it and assemble in-process by default, with `--nazm-path`
+or `BAA_NAZM` selecting the separate Nazm process. Baa consumes `nazm-api-v1` only when built
 with embedding enabled and records the exact `nazm-capabilities-v1` digest in
 its full assembler fingerprint. Takween treats that value as required cache-key
 evidence for Nazm artifacts. CLI/API equivalence is gated on ELF64 and COFF;
-the default process boundary cannot change without a separate admission.
+the embedded default was admitted in the two steps recorded in
+`NAZM_PRODUCTION_ADMISSION.md` section 11.
 
 For Qalam's Baa-first live analysis, `compiler-cli-v1` now includes the
 check-only `--source-stdin=<logical-file>` input shape. It preserves

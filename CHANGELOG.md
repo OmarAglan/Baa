@@ -8,6 +8,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-10-10
+
+**Systems Language Completeness, Tooling Contracts, and the Nazm Assembler**
+
 ### Added
 
 - **Embedded Nazm is the release default**: the Windows installer and the

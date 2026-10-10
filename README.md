@@ -54,6 +54,16 @@
 
 ## التثبيت على ويندوز
 
+نزّل `baa-setup-0.6.0-x64.exe` وملف `baa-setup-0.6.0-x64.exe.sha256` المجاور له من
+[صفحة الإصدار 0.6.0](https://github.com/OmarAglan/Baa/releases/tag/v0.6.0). المثبت
+غير موقّع بتوقيع Authenticode في هذا الإصدار، فقد يعرض Windows SmartScreen تحذيراً
+عند تشغيله؛ طابق بصمة SHA-256 قبل التشغيل:
+
+```powershell
+(Get-FileHash .\baa-setup-0.6.0-x64.exe -Algorithm SHA256).Hash
+Get-Content .\baa-setup-0.6.0-x64.exe.sha256
+```
+
 شغّل `baa-setup-0.6.0-x64.exe`. يثبت مُثبّت باء المستقل `baa.exe` والمكتبة
 القياسية ورابطاً خاصاً داخل مجلد باء، ويضيف باء وحده إلى `PATH`. لا يضيف
 GCC الخاص إلى `PATH` ولا يعتمد على GCC مثبت في النظام. مجمّع
@@ -90,6 +100,22 @@ baa --version
 لبناء إصدار Authenticode، مرر `-SignToolName releasesign` و
 `-SignToolCommand '<signtool command using $f>'`. يوقع البناء المثبت وبرنامج
 الإزالة قبل إنشاء ملف SHA-256 المجاور.
+
+## التثبيت على لينكس
+
+تنشر [صفحة الإصدار 0.6.0](https://github.com/OmarAglan/Baa/releases/tag/v0.6.0)
+حزمة `baa-0.6.0-Linux-x86_64.deb` والأرشيف `baa-0.6.0-Linux-x86_64.tar.gz` مع ملف
+`.sha256` لكل منهما. مجمّع نظم مضمن داخل `baa` وهو الافتراضي، ويربط باء عبر
+`gcc` و`libc6-dev` من النظام:
+
+```sh
+sha256sum -c baa-0.6.0-Linux-x86_64.deb.sha256
+sudo apt install ./baa-0.6.0-Linux-x86_64.deb
+baa --version
+```
+
+يعمل الأرشيف من أي مجلد بعد فكه دون تثبيت. التفاصيل في
+[دليل المستخدم](docs/USER_GUIDE.md).
 
 ## البناء
 

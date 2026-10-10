@@ -81,7 +81,9 @@ when they do not alter generated corpora, tests, packaging inputs, or contract m
 ## 6. Current Activation State
 
 The policy is active for v0.6.0. Windows and Linux receipts are green in Actions run
-`38049343387` on `388b539`, and the installer and Linux package contracts are green in run
-`38049326563`, so the documentation-only closure commit may be used to cut `release/v0.6.0`.
-Feature development continues on `master`; the release branch accepts only the changes allowed
-above.
+`38059645752` on `f73fa4b`, and the installer and Linux package contracts are green in run
+`38059638256`. `release/v0.6.0` is cut from the documentation-only release commit that follows
+those receipts, and the `v0.6.0` tag names that commit; the published installer and Linux
+packages are the artifacts of the `Baa CI` run on it. The v0.6.0 installer is not
+Authenticode-signed; its published SHA-256 file is the integrity check. Feature development
+continues on `master`; the release branch accepts only the changes allowed above.

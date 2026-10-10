@@ -46,6 +46,13 @@ class ReleaseCandidateWorkflowTests(unittest.TestCase):
         self.assertEqual(self.text.count("if-no-files-found: error"), 2)
         self.assertEqual(self.text.count("include-hidden-files: true"), 2)
 
+    def test_builds_the_candidate_with_the_embedded_assembler_it_ships(self) -> None:
+        self.assertEqual(self.text.count("-DBAA_ENABLE_EMBEDDED_NAZM=ON"), 2)
+        self.assertEqual(self.text.count("-DBAA_NAZM_SOURCE_DIR="), 2)
+        # الافتراضي يبقى ملف نظم التنفيذي حتى يُقبل المضمن افتراضيا.
+        self.assertNotIn("BAA_EMBEDDED_NAZM_DEFAULT", self.text)
+
+
 class NazmProductionAdmissionWorkflowTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
@@ -117,6 +124,24 @@ class NazmProductionAdmissionWorkflowTests(unittest.TestCase):
             2,
         )
         self.assertEqual(self.text.count("if-no-files-found: error"), 2)
+
+    def test_can_admit_the_embedded_assembler_without_a_nazm_executable(self) -> None:
+        self.assertIn("assembler_mode:", self.text)
+        self.assertIn("default: subprocess", self.text)
+        self.assertIn("- embedded-default", self.text)
+        self.assertEqual(self.text.count("-DBAA_ENABLE_EMBEDDED_NAZM=ON"), 2)
+        self.assertEqual(self.text.count("-DBAA_EMBEDDED_NAZM_DEFAULT=ON"), 2)
+        # لا يُختار ملف نظم تنفيذي في وضع المضمن: BAA_NAZM فارغ على المضيفين.
+        self.assertEqual(
+            self.text.count("BAA_NAZM: ${{ inputs.assembler_mode == 'subprocess' && "),
+            2,
+        )
+        self.assertEqual(self.text.count("BAA_NAZM must be unset"), 2)
+        self.assertEqual(
+            self.text.count("A Nazm executable is on PATH"),
+            2,
+        )
+        self.assertEqual(self.text.count("tests/test_nazm_api_integration.py"), 2)
 
 
 if __name__ == "__main__":

@@ -202,7 +202,7 @@ baa [options] <source.baa> [-o <output>]
 | `--emit-nazm` | Emit canonical Arabic Nazm source plus its `baa-nazm-source-map-v1` sidecar. | `.\baa.exe --emit-nazm main.baa -o main.نظم` |
 | `--assembler=gas\|nazm` | Select the normal assembler. Nazm is the production default; GAS is an explicit rollback. Nazm emits canonical Arabic source, invokes `نظم`, and passes its object to the normal linker. | `.\baa.exe --assembler=gas main.baa -o main.exe` |
 | `--nazm-path=<path>` | Explicit Nazm executable for `--assembler=nazm` or direct `.نظم` roots. Without it, Baa uses `BAA_NAZM`, then resolves the primary Arabic command `نظم` from `PATH`. | `.\baa.exe --nazm-path=C:\tools\نظم.exe main.baa helper.نظم` |
-| `--نظم-داخل-العملية` | Opt into linked `nazm-api-v1`. This requires a Baa build configured with `BAA_ENABLE_EMBEDDED_NAZM=ON`; the normal production path remains the external Nazm process. | `.\baa.exe --نظم-داخل-العملية -c main.baa` |
+| `--نظم-داخل-العملية` | Assemble with the Nazm linked into `baa` instead of a Nazm executable. Release builds link it (`baa --version` prints an `Embedded Nazm <version> (<revision>), <mode>` line); a build without it rejects the flag. In `opt-in` mode the external Nazm process stays the default. | `.\baa.exe --نظم-داخل-العملية -c main.baa` |
 | `--nazm-shadow=<path>` | Select an explicit GAS comparison leg and also assemble/link a Nazm shadow. Nazm failures are visible, never fall back to GAS, and assembler locations are mapped back to the original Baa source. | `.\baa.exe main.baa -o main.exe --nazm-shadow=C:\tools\nazm.exe` |
 | `-c` | **Compile and Assemble.** Produces object file (`.o`), does not link. | `.\baa.exe -c main.baa` (creates `main.o`) |
 | `-v` | Enable verbose output (shows all compilation steps with timing). | `.\baa.exe -v main.baa` |
@@ -216,7 +216,7 @@ baa [options] <source.baa> [-o <output>]
 | `-fruntime-checks=<list>` | Enable selected runtime safety checks. Use comma or plus between `all`, `bounds`, `null`, `div-zero`/`div0`/`div`, `shift`, and `none`. | `.\baa.exe -fruntime-checks=bounds,null main.baa` |
 | `-fno-runtime-checks` | Disable optional runtime safety checks (default). | `.\baa.exe -fno-runtime-checks main.baa` |
 | `--help`, `-h` | Display help message and usage. | `.\baa.exe --help` |
-| `--version` | Display compiler version. | `.\baa.exe --version` |
+| `--version` | Display compiler version and, when Nazm is linked in, its version, source revision and mode. | `.\baa.exe --version` |
 | `--explain <CODE>` | Print an Arabic explanation for a stable diagnostic code. | `.\baa.exe --explain B1000` |
 | `-O0` / `-O1` / `-O2` | Optimization levels (default: `-O1`). | `.\baa.exe -O2 main.baa` |
 | `--target=<t>` | Select backend target (`x86_64-windows` or `x86_64-linux`). `-c --assembler=nazm` may write the other target's object format; final cross-linking remains deferred. | `.\baa.exe --target=x86_64-linux main.baa` |
@@ -273,12 +273,25 @@ baa [options] <source.baa> [-o <output>]
 - Header invalidation is content-hash based: changing a `#تضمين` file rebuilds only source units that depended on it.
 - Nazm-generated and direct `.نظم` objects are reusable only after Baa obtains the exact `nazm-api-v1;version=...;capabilities=nazm-capabilities-v1:<sha256>` fingerprint. It is part of the object-cache slot and is empty for GAS builds.
 
-The embedded experiment is disabled by default. Configure it with
-`-DBAA_ENABLE_EMBEDDED_NAZM=ON -DBAA_NAZM_SOURCE_DIR=<Nazm source tree>`, then
-select it per invocation with `--نظم-داخل-العملية`. It preserves the same
-canonical Arabic `.نظم` text and produces byte-identical ELF64/COFF objects in
-the parity gate. Omitting the flag keeps the independent Nazm process as the
-production and rollback boundary.
+Release installers and packages link Nazm into `baa`; a source build links it
+with `-DBAA_ENABLE_EMBEDDED_NAZM=ON -DBAA_NAZM_SOURCE_DIR=<Nazm source tree>`.
+`baa --version` then prints one extra line:
+
+```text
+Embedded Nazm 0.4.0 (14c6cf4565067e9e32af72c2c1af6b9ef2456744), opt-in
+```
+
+It names the linked Nazm version, the exact Nazm source revision, and the
+mode. In `opt-in` mode the embedded assembler runs only after
+`--نظم-داخل-العملية`, and omitting the flag keeps the independent Nazm process
+as the production and rollback boundary. A build configured with
+`-DBAA_EMBEDDED_NAZM_DEFAULT=ON` reports `default` and assembles in-process
+without the flag; a Nazm executable named by `--nazm-path` or `BAA_NAZM` still
+wins, a missing one is an exit-4 error rather than a fallback, a `نظم` found
+only on `PATH` is not consulted, and `--assembler=gas` and `--nazm-shadow` are
+unchanged. Both modes preserve the same canonical Arabic `.نظم` text and
+produce byte-identical ELF64/COFF objects in the parity gate. The embedded
+assembler writes no listing, so listing work keeps using the `نظم` command.
 
 ### CMake Build Profiles (v0.5.3)
 
@@ -328,11 +341,16 @@ cmake --build build-linux -j
 Or run the helper script, which also writes a `.sha256` file beside each package:
 
 ```bash
-bash scripts/package_linux.sh
+BAA_NAZM_SOURCE_DIR=/path/to/Nazm bash scripts/package_linux.sh
 ```
 
+The script links Nazm into the packaged `baa`, so it needs the Nazm source
+tree: `BAA_NAZM_SOURCE_DIR`, else `./Nazm`, else `../Nazm`.
+
 The `.deb` depends on `gcc` and `libc6-dev`, because Baa links through the host
-toolchain. Nazm is installed separately and found on `PATH`. An installed Baa
+toolchain. The packaged default still assembles through the `نظم` command,
+which is installed separately and found on `PATH`; the linked Nazm is used
+after `--نظم-داخل-العملية`. An installed Baa
 finds its standard library under `share/baa` beside its `bin` directory, so
 neither package needs `BAA_HOME`.
 

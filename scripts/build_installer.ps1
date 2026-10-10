@@ -3,9 +3,11 @@ param(
     [string]$BuildDirectory = "",
     [string]$ToolchainDirectory = "",
     [string]$NazmExecutable = "",
+    [string]$NazmSourceDirectory = "",
     [string]$IsccPath = "",
     [string]$SignToolName = "",
     [string]$SignToolCommand = "",
+    [switch]$EmbeddedNazmDefault,
     [switch]$SkipBuild,
     [switch]$SkipTests
 )
@@ -41,7 +43,26 @@ if ($cmakeText -notmatch "project\(baa\s+VERSION\s+$([regex]::Escape($Version))"
 }
 
 if (-not $SkipBuild) {
-    & cmake -S $root -B $BuildDirectory -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release
+    # The installed compiler links the in-process nazm-api-v1 assembler, so the
+    # build needs the pinned Nazm source tree.
+    if ([string]::IsNullOrWhiteSpace($NazmSourceDirectory)) {
+        $NazmSourceDirectory = @(
+            (Join-Path $root "Nazm"),
+            (Join-Path $root "..\Nazm")
+        ) | Where-Object {
+            Test-Path -LiteralPath (Join-Path $_ "include\nazm.h") -PathType Leaf
+        } | Select-Object -First 1
+    }
+    if ([string]::IsNullOrWhiteSpace($NazmSourceDirectory) -or
+        -not (Test-Path -LiteralPath (Join-Path $NazmSourceDirectory "include\nazm.h") -PathType Leaf)) {
+        throw "The installer embeds Nazm. Pass -NazmSourceDirectory with its source tree."
+    }
+    $nazmSource = (Resolve-Path -LiteralPath $NazmSourceDirectory).Path -replace "\\", "/"
+    $embeddedDefault = if ($EmbeddedNazmDefault) { "ON" } else { "OFF" }
+    & cmake -S $root -B $BuildDirectory -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release `
+        -DBAA_ENABLE_EMBEDDED_NAZM=ON `
+        "-DBAA_EMBEDDED_NAZM_DEFAULT=$embeddedDefault" `
+        "-DBAA_NAZM_SOURCE_DIR=$nazmSource"
     if ($LASTEXITCODE -ne 0) { throw "Baa CMake configure failed." }
     & cmake --build $BuildDirectory --clean-first --target baa baa_runtime
     if ($LASTEXITCODE -ne 0) { throw "Baa build failed." }
@@ -54,6 +75,17 @@ foreach ($file in @($baaExecutable, $runtimeLibrary)) {
         throw "Required Baa installer input is missing: $file"
     }
 }
+$expectedNazmMode = if ($EmbeddedNazmDefault) { "default" } else { "opt-in" }
+$embeddedNazmLine = @(& $baaExecutable --version) |
+    Where-Object { $_ -match '^Embedded Nazm \S+ \([A-Za-z0-9._-]+\), (opt-in|default)$' } |
+    Select-Object -First 1
+if (-not $embeddedNazmLine) {
+    throw "The installer must ship a Baa built with BAA_ENABLE_EMBEDDED_NAZM=ON."
+}
+if ($embeddedNazmLine -notmatch ", $expectedNazmMode`$") {
+    throw "Installer input reports '$embeddedNazmLine'; expected the $expectedNazmMode mode."
+}
+Write-Host $embeddedNazmLine
 
 if (-not $SkipTests) {
     if ([string]::IsNullOrWhiteSpace($NazmExecutable) -or

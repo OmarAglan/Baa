@@ -127,7 +127,7 @@ helpers return this classification to `main.c` rather than collapsing every fail
 | `-S`, `-s` | **Assembly Only** | `.s` / `.نظم` | Stops after code emission. The selected assembler controls the emitted dialect. |
 | `--assembler=gas\|nazm` | **Assembler Select** | `.s/.نظم/.o/.exe` | Nazm is the production default; GAS is an explicit rollback. Nazm emits canonical Arabic source, assembles it directly to the selected object, then reuses the normal linker. |
 | `--nazm-path=<path>` | **Nazm Tool Select** | - | Overrides `BAA_NAZM` and the primary Arabic `نظم` lookup from `PATH`. |
-| `--نظم-داخل-العملية` | **Nazm API Experiment** | `.o/.exe` | Uses linked `nazm-api-v1` only in a build configured with `BAA_ENABLE_EMBEDDED_NAZM=ON`; subprocess Nazm remains the default. |
+| `--نظم-داخل-العملية` | **Embedded Nazm** | `.o/.exe` | Uses linked `nazm-api-v1` in a build configured with `BAA_ENABLE_EMBEDDED_NAZM=ON` (release builds are; `--version` names the linked Nazm version, source revision and mode). A build that also sets `BAA_EMBEDDED_NAZM_DEFAULT=ON` assembles in-process without the flag unless `--nazm-path` or `BAA_NAZM` selects an executable; shadow mode and `--assembler=gas` are unaffected. |
 | `-c` | **Compile Only** | `.o` | Stops after assembling. Writes `<input>.o` (or `-o` when a single input file is used). |
 | `--check` | **Fast Check** | none | Stops after parse and semantic analysis for editor/tool feedback; no IR, assembly, object, or executable is emitted. |
 | `-v` | **Verbose** | - | Prints commands and compilation time; keeps intermediate `.s` files. |

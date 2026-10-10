@@ -11,12 +11,22 @@ on:
         description: Exact 40-hex Nazm candidate commit SHA
         required: true
         type: string
+      assembler_mode:
+        description: >-
+          subprocess runs the built Nazm executable; embedded-default links
+          nazm-api-v1 into Baa as its default and selects no Nazm executable
+        required: true
+        type: choice
+        default: subprocess
+        options:
+          - subprocess
+          - embedded-default
 
 permissions:
   contents: read
 
 concurrency:
-  group: baa-nazm-admission-${{ inputs.baa_ref }}-${{ inputs.nazm_ref }}
+  group: baa-nazm-admission-${{ inputs.baa_ref }}-${{ inputs.nazm_ref }}-${{ inputs.assembler_mode }}
   cancel-in-progress: false
 
 jobs:
@@ -25,8 +35,11 @@ jobs:
     timeout-minutes: 60
     env:
       PYTHONUTF8: "1"
+      ASSEMBLER_MODE: ${{ inputs.assembler_mode }}
       BAA: ${{ github.workspace }}\build\presets\windows-verify\baa.exe
-      BAA_NAZM: ${{ github.workspace }}\Nazm\build-admission\nazm.exe
+      # An empty BAA_NAZM selects nothing, so the embedded-default run has no
+      # Nazm executable to fall back to; NAZM stays for tests that call Nazm.
+      BAA_NAZM: ${{ inputs.assembler_mode == 'subprocess' && format('{0}\Nazm\build-admission\nazm.exe', github.workspace) || '' }}
       NAZM: ${{ github.workspace }}\Nazm\build-admission\nazm.exe
     steps:
       - uses: actions/checkout@v4
@@ -72,12 +85,20 @@ jobs:
             workflow = "${{ github.sha }}"
             baa = $actualBaa
             nazm = $actualNazm
+            assembler_mode = $env:ASSEMBLER_MODE
           } | ConvertTo-Json |
             Set-Content -Path admission-revisions-windows.json -Encoding utf8
       - name: Configure strict Baa and Nazm builds
         shell: pwsh
         run: |
-          cmake --preset windows-verify
+          $embedded = @()
+          if ($env:ASSEMBLER_MODE -eq "embedded-default") {
+            $embedded = @(
+              "-DBAA_ENABLE_EMBEDDED_NAZM=ON",
+              "-DBAA_EMBEDDED_NAZM_DEFAULT=ON",
+              "-DBAA_NAZM_SOURCE_DIR=$env:GITHUB_WORKSPACE/Nazm")
+          }
+          cmake --preset windows-verify @embedded
           cmake -S Nazm -B Nazm/build-admission -G "MinGW Makefiles" `
             -DCMAKE_BUILD_TYPE=Release
       - name: Build Baa and Nazm
@@ -85,6 +106,30 @@ jobs:
         run: |
           cmake --build --preset windows-verify --clean-first
           cmake --build Nazm/build-admission --clean-first
+      - name: Verify the assembler selection under test
+        shell: pwsh
+        run: |
+          $embedded = @(& $env:BAA --version) |
+            Where-Object { $_ -like "Embedded Nazm *" } | Select-Object -First 1
+          if ($env:ASSEMBLER_MODE -eq "embedded-default") {
+            $expected = "(${{ inputs.nazm_ref }}), default"
+            if (-not $embedded -or -not $embedded.EndsWith($expected)) {
+              throw "Expected Baa to embed Nazm ${{ inputs.nazm_ref }} as its default; --version says: $embedded"
+            }
+            if ($env:BAA_NAZM) { throw "BAA_NAZM must be unset in the embedded-default run" }
+            $arabicNazm = -join [char[]](0x0646, 0x0638, 0x0645)
+            if (Get-Command $arabicNazm -ErrorAction SilentlyContinue) {
+              throw "A Nazm executable is on PATH; this run must not be able to fall back to it"
+            }
+            $env:BAA_EMBEDDED_NAZM_TEST = "1"
+            $env:BAA_EMBEDDED_NAZM_EXPECT_MODE = "default"
+            $env:BAA_EMBEDDED_NAZM_EXPECT_REVISION = "${{ inputs.nazm_ref }}"
+            python tests/test_nazm_api_integration.py
+            if ($LASTEXITCODE -ne 0) { throw "Embedded Nazm integration tests failed" }
+          }
+          elseif ($embedded -and $embedded.EndsWith(", default")) {
+            throw "The subprocess run needs a Baa whose default is the Nazm executable; --version says: $embedded"
+          }
       - name: Windows quick admission
         run: >
           python scripts/qa_run.py --mode quick
@@ -125,8 +170,11 @@ jobs:
     timeout-minutes: 60
     env:
       PYTHONUTF8: "1"
+      ASSEMBLER_MODE: ${{ inputs.assembler_mode }}
       BAA: ${{ github.workspace }}/build-linux/presets/verify/baa
-      BAA_NAZM: ${{ github.workspace }}/Nazm/build-admission/nazm
+      # An empty BAA_NAZM selects nothing, so the embedded-default run has no
+      # Nazm executable to fall back to; NAZM stays for tests that call Nazm.
+      BAA_NAZM: ${{ inputs.assembler_mode == 'subprocess' && format('{0}/Nazm/build-admission/nazm', github.workspace) || '' }}
       NAZM: ${{ github.workspace }}/Nazm/build-admission/nazm
     steps:
       - uses: actions/checkout@v4
@@ -169,16 +217,51 @@ jobs:
             '  "host": "linux",' \
             "  \"workflow\": \"${{ github.sha }}\"," \
             "  \"baa\": \"$actual_baa\"," \
-            "  \"nazm\": \"$actual_nazm\"" \
+            "  \"nazm\": \"$actual_nazm\"," \
+            "  \"assembler_mode\": \"$ASSEMBLER_MODE\"" \
             '}' > admission-revisions-linux.json
       - name: Configure strict Baa and Nazm builds
+        shell: bash
         run: |
-          cmake --preset linux-verify
+          embedded=()
+          if [[ "$ASSEMBLER_MODE" == "embedded-default" ]]; then
+            embedded=(
+              -DBAA_ENABLE_EMBEDDED_NAZM=ON
+              -DBAA_EMBEDDED_NAZM_DEFAULT=ON
+              "-DBAA_NAZM_SOURCE_DIR=$GITHUB_WORKSPACE/Nazm")
+          fi
+          cmake --preset linux-verify "${embedded[@]}"
           cmake -S Nazm -B Nazm/build-admission -DCMAKE_BUILD_TYPE=Release
       - name: Build Baa and Nazm
         run: |
           cmake --build --preset linux-verify --clean-first -j
           cmake --build Nazm/build-admission --clean-first -j
+      - name: Verify the assembler selection under test
+        shell: bash
+        run: |
+          embedded="$("$BAA" --version | grep -E '^Embedded Nazm ' || true)"
+          if [[ "$ASSEMBLER_MODE" == "embedded-default" ]]; then
+            expected='(${{ inputs.nazm_ref }}), default'
+            if [[ "$embedded" != *"$expected" ]]; then
+              echo "Expected Baa to embed Nazm ${{ inputs.nazm_ref }} as its default; --version says: $embedded" >&2
+              exit 2
+            fi
+            if [[ -n "${BAA_NAZM:-}" ]]; then
+              echo "BAA_NAZM must be unset in the embedded-default run" >&2
+              exit 2
+            fi
+            if command -v نظم >/dev/null; then
+              echo "A Nazm executable is on PATH; this run must not be able to fall back to it" >&2
+              exit 2
+            fi
+            BAA_EMBEDDED_NAZM_TEST=1 \
+            BAA_EMBEDDED_NAZM_EXPECT_MODE=default \
+            BAA_EMBEDDED_NAZM_EXPECT_REVISION='${{ inputs.nazm_ref }}' \
+              python3 tests/test_nazm_api_integration.py
+          elif [[ "$embedded" == *", default" ]]; then
+            echo "The subprocess run needs a Baa whose default is the Nazm executable; --version says: $embedded" >&2
+            exit 2
+          fi
       - name: Linux quick admission
         run: >
           python3 scripts/qa_run.py --mode quick

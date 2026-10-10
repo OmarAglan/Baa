@@ -33,9 +33,10 @@ jobs:
           if (Test-Path ".\gcc\bin") {
             "$env:GITHUB_WORKSPACE\gcc\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
           }
+      # The candidate is built the way it ships: nazm-api-v1 linked in.
       - name: Configure strict Windows C reference build
         run: |
-          cmake --preset windows-verify
+          cmake --preset windows-verify -DBAA_ENABLE_EMBEDDED_NAZM=ON -DBAA_NAZM_SOURCE_DIR="$env:GITHUB_WORKSPACE/Nazm"
           cmake -S Nazm -B Nazm/build-release -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release
       - name: Clean strict Windows build
         run: |
@@ -87,9 +88,10 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
+      # The candidate is built the way it ships: nazm-api-v1 linked in.
       - name: Configure strict Linux C reference build
         run: |
-          cmake --preset linux-verify
+          cmake --preset linux-verify -DBAA_ENABLE_EMBEDDED_NAZM=ON -DBAA_NAZM_SOURCE_DIR="$GITHUB_WORKSPACE/Nazm"
           cmake -S Nazm -B Nazm/build-release -DCMAKE_BUILD_TYPE=Release
       - name: Clean strict Linux build
         run: |

@@ -74,9 +74,13 @@ baa --version
 
 ```powershell
 .\scripts\prepare_gcc_bundle.ps1
-.\scripts\build_installer.ps1 -NazmExecutable C:\path\to\نظم.exe
+.\scripts\build_installer.ps1 -NazmExecutable C:\path\to\نظم.exe -NazmSourceDirectory C:\path\to\Nazm
 .\scripts\test_installer.ps1 -NazmDirectory C:\path\to\nazm-bin
 ```
+
+يربط المثبت مجمّع نظم داخل `baa` من شجرة مصدر نظم (`-NazmSourceDirectory`، وإلا
+`.\Nazm` ثم `..\Nazm`)، ويطبع `baa --version` إصداره ومراجعته. يبقى الأمر `نظم`
+المستقل هو الافتراضي، ويُختار المضمن بالعلم `--نظم-داخل-العملية`.
 
 لبناء إصدار Authenticode، مرر `-SignToolName releasesign` و
 `-SignToolCommand '<signtool command using $f>'`. يوقع البناء المثبت وبرنامج

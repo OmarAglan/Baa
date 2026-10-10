@@ -36,6 +36,26 @@ BaaCompilerExitCode driver_emit_nazm_source(const CompilerConfig *config,
 const char *driver_nazm_get_executable(const CompilerConfig *config);
 
 /**
+ * @brief هل اختار المستخدم ملف نظم تنفيذيا صراحة عبر --nazm-path أو BAA_NAZM؟
+ *
+ * الاختيار الصريح يتقدم دائما على المجمّع المضمن. البحث في PATH ليس اختيارا صريحا.
+ */
+bool driver_nazm_has_explicit_executable(const CompilerConfig *config);
+
+/**
+ * @brief تفعيل المجمّع المضمن افتراضيا في البناء المعد لذلك.
+ *
+ * لا يغير شيئا في بناء بلا nazm-api-v1 أو بلا BAA_EMBEDDED_NAZM_DEFAULT، ولا
+ * عند اختيار GAS أو وضع الظل أو ملف نظم تنفيذي صريح.
+ */
+void driver_nazm_apply_embedded_default(CompilerConfig *config);
+
+/**
+ * @brief طباعة هوية نظم المضمن في `--version`؛ لا تطبع شيئا في بناء بلا تضمين.
+ */
+void driver_nazm_print_embedded_version(void);
+
+/**
  * @brief تثبيت بصمة إصدار/قدرات نظم الدقيقة في إعداد البناء.
  */
 BaaCompilerExitCode driver_nazm_resolve_fingerprint(CompilerConfig *config);

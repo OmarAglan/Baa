@@ -37,23 +37,40 @@ jobs:
         run: |
           cmake -S Nazm -B Nazm/build -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release
           cmake -B build-embedded -G "MinGW Makefiles" -DBAA_ENABLE_EMBEDDED_NAZM=ON -DBAA_NAZM_SOURCE_DIR="$env:GITHUB_WORKSPACE/Nazm"
+          cmake -B build-embedded-default -G "MinGW Makefiles" -DBAA_ENABLE_EMBEDDED_NAZM=ON -DBAA_EMBEDDED_NAZM_DEFAULT=ON -DBAA_NAZM_SOURCE_DIR="$env:GITHUB_WORKSPACE/Nazm"
       - name: Configure embedded path (Linux)
         if: runner.os == 'Linux'
         run: |
           cmake -S Nazm -B Nazm/build -DCMAKE_BUILD_TYPE=Release
           cmake -B build-embedded -DCMAKE_BUILD_TYPE=Release -DBAA_ENABLE_EMBEDDED_NAZM=ON -DBAA_NAZM_SOURCE_DIR="$GITHUB_WORKSPACE/Nazm"
+          cmake -B build-embedded-default -DCMAKE_BUILD_TYPE=Release -DBAA_ENABLE_EMBEDDED_NAZM=ON -DBAA_EMBEDDED_NAZM_DEFAULT=ON -DBAA_NAZM_SOURCE_DIR="$GITHUB_WORKSPACE/Nazm"
       - name: Build embedded path
         run: |
           cmake --build Nazm/build --parallel
           cmake --build build-embedded --parallel
+          cmake --build build-embedded-default --parallel
       - name: Verify API, subprocess parity, and cache identity
         shell: pwsh
         env:
           PYTHONUTF8: "1"
           BAA_EMBEDDED_NAZM_TEST: "1"
+          BAA_EMBEDDED_NAZM_EXPECT_MODE: opt-in
           BAA: ${{ github.workspace }}/build-embedded/baa${{ runner.os == 'Windows' && '.exe' || '' }}
           NAZM: ${{ github.workspace }}/Nazm/build/nazm${{ runner.os == 'Windows' && '.exe' || '' }}
-        run: python tests/test_nazm_api_integration.py
+        run: |
+          $env:BAA_EMBEDDED_NAZM_EXPECT_REVISION = (git -C Nazm rev-parse HEAD).Trim()
+          python tests/test_nazm_api_integration.py
+      - name: Verify the embedded-default build without a Nazm executable
+        shell: pwsh
+        env:
+          PYTHONUTF8: "1"
+          BAA_EMBEDDED_NAZM_TEST: "1"
+          BAA_EMBEDDED_NAZM_EXPECT_MODE: default
+          BAA: ${{ github.workspace }}/build-embedded-default/baa${{ runner.os == 'Windows' && '.exe' || '' }}
+          NAZM: ${{ github.workspace }}/Nazm/build/nazm${{ runner.os == 'Windows' && '.exe' || '' }}
+        run: |
+          $env:BAA_EMBEDDED_NAZM_EXPECT_REVISION = (git -C Nazm rev-parse HEAD).Trim()
+          python tests/test_nazm_api_integration.py
 
   build-windows:
     runs-on: windows-latest
@@ -94,7 +111,7 @@ jobs:
       - name: Build Baa and Nazm
         shell: pwsh
         run: |
-          cmake -S . -B build -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release
+          cmake -S . -B build -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release -DBAA_ENABLE_EMBEDDED_NAZM=ON -DBAA_NAZM_SOURCE_DIR="$env:GITHUB_WORKSPACE/Nazm"
           cmake --build build --target baa baa_runtime
           cmake -S Nazm -B Nazm/build -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release
           cmake --build Nazm/build
@@ -106,7 +123,9 @@ jobs:
         run: .\scripts\build_installer.ps1 -SkipBuild -SkipTests
       - name: Verify install, compile, run, and uninstall
         shell: pwsh
-        run: .\scripts\test_installer.ps1 -NazmDirectory "$env:GITHUB_WORKSPACE\Nazm\build"
+        run: |
+          .\scripts\test_installer.ps1 -NazmDirectory "$env:GITHUB_WORKSPACE\Nazm\build" `
+            -NazmRevision (git -C Nazm rev-parse HEAD).Trim() -EmbeddedNazmMode opt-in
       - name: Upload standalone installer
         uses: actions/upload-artifact@v4
         with:
@@ -129,11 +148,12 @@ jobs:
           path: Nazm
       - name: Build the Baa packages and Nazm
         run: |
-          bash scripts/package_linux.sh
+          BAA_NAZM_SOURCE_DIR="$PWD/Nazm" bash scripts/package_linux.sh
           cmake -S Nazm -B Nazm/build -DCMAKE_BUILD_TYPE=Release
           cmake --build Nazm/build -j
       # A fresh container has no Baa, no C toolchain, and no Nazm on PATH, so a
-      # pass means the .deb brings what it needs and removes what it installed.
+      # pass means the .deb brings what it needs, including the assembler linked
+      # into baa, and removes what it installed.
       - name: Verify install, compile, run, and removal on a clean Ubuntu 24.04
         timeout-minutes: 15
         run: |
@@ -141,7 +161,9 @@ jobs:
             bash scripts/test_linux_package.sh \
               --deb build-linux/baa-0.6.0-Linux-x86_64.deb \
               --tgz build-linux/baa-0.6.0-Linux-x86_64.tar.gz \
-              --nazm-dir Nazm/build
+              --nazm-dir Nazm/build \
+              --nazm-revision "$(git -C Nazm rev-parse HEAD)" \
+              --embedded-mode opt-in
       - name: Upload Linux packages
         uses: actions/upload-artifact@v4
         with:

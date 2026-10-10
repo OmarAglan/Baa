@@ -140,6 +140,43 @@ const char *driver_nazm_get_executable(const CompilerConfig *config)
     return "نظم";
 }
 
+bool driver_nazm_has_explicit_executable(const CompilerConfig *config)
+{
+    if (config && config->nazm_executable && config->nazm_executable[0])
+        return true;
+    return driver_nazm_environment_executable() != NULL;
+}
+
+void driver_nazm_apply_embedded_default(CompilerConfig *config)
+{
+#if defined(BAA_EMBEDDED_NAZM) && defined(BAA_EMBEDDED_NAZM_DEFAULT)
+    if (!config || config->nazm_in_process) return;
+    if (config->assembler != BAA_ASSEMBLER_NAZM ||
+        config->nazm_shadow_executable ||
+        driver_nazm_has_explicit_executable(config))
+        return;
+    config->nazm_in_process = true;
+#else
+    (void)config;
+#endif
+}
+
+void driver_nazm_print_embedded_version(void)
+{
+#ifdef BAA_EMBEDDED_NAZM
+#ifdef BAA_EMBEDDED_NAZM_DEFAULT
+    const char *mode = "default";
+#else
+    const char *mode = "opt-in";
+#endif
+    NazmApiInfo info = nazm_api_info();
+    printf("Embedded Nazm %s (%s), %s\n",
+           info.version && info.version[0] ? info.version : "unknown",
+           BAA_EMBEDDED_NAZM_REVISION,
+           mode);
+#endif
+}
+
 #ifdef BAA_EMBEDDED_NAZM
 static char *driver_nazm_copy_text(const char *text)
 {

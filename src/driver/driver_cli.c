@@ -893,6 +893,7 @@ bool driver_parse_cli(int argc, char **argv, CompilerConfig *config, DriverParse
         parse_release_temp_arrays(inputs, include_dirs);
         return false;
     }
+    driver_nazm_apply_embedded_default(config);
 
     parse_set_result(out,
                      config,

@@ -10,7 +10,7 @@ void driver_print_help(void)
     printf("  --emit-nazm  Emit canonical Arabic Nazm source only (.نظم)\n");
     printf("  --assembler=gas|nazm  Select the normal assembler (default: nazm)\n");
     printf("  --nazm-path=<path>  Nazm executable; otherwise BAA_NAZM or نظم from PATH\n");
-    printf("  --نظم-داخل-العملية  Use linked nazm-api-v1 (opt-in build only)\n");
+    printf("  --نظم-داخل-العملية  Use linked nazm-api-v1 (builds with embedded Nazm; see --version)\n");
     printf("  --nazm-shadow=<path>  Compare explicit GAS rollback with a Nazm shadow beside it\n");
     printf("  -c           Compile to object file only (.o)\n");
     printf("  --check      Parse/analyze source files without emitting code\n");
@@ -84,6 +84,7 @@ void driver_print_version(void)
 {
     printf("baa version %s\n", BAA_VERSION);
     printf("Built on %s\n", BAA_BUILD_DATE);
+    driver_nazm_print_embedded_version();
 }
 
 static const char *target_object_format_name(const BaaTarget *target)

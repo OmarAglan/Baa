@@ -10,6 +10,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Added
 
+- **Embedded Nazm in release builds (opt-in)**: the Windows installer and the
+  Linux `.deb`/`.tar.gz` now link `nazm-api-v1` from the pinned Nazm checkout.
+  `baa --version` prints `Embedded Nazm <version> (<revision>), <mode>`, so a
+  binary names the exact Nazm source it carries. The default is unchanged: the
+  separate `نظم` process still assembles unless `--نظم-داخل-العملية` is
+  given, and a missing Nazm is still exit 4.
+- **`BAA_EMBEDDED_NAZM_DEFAULT` build option**: a build configured with it
+  assembles in-process without the flag. `--nazm-path` and a non-empty
+  `BAA_NAZM` still select an executable (a missing one is exit 4, never a
+  fallback), `نظم` on `PATH` is not consulted, and `--assembler=gas` and
+  `--nazm-shadow` are unchanged. No release build sets it yet; it exists so
+  the full QA ladder can run against that configuration first
+  (`docs/NAZM_PRODUCTION_ADMISSION.md` section 11).
+
 - **Linux package lifecycle gate**: CI builds the `.deb` and `.tar.gz` with
   SHA-256 files and runs `scripts/test_linux_package.sh` in a fresh
   `ubuntu:24.04` container without a C toolchain. It installs the `.deb`,
@@ -18,6 +32,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
   nothing is left, then repeats the build from the relocated `.tar.gz`.
 
 ### Testing
+
+- **Embedded-default admission evidence**: `tests/test_nazm_api_integration.py`
+  now checks the `--version` identity, the selection rules with no Nazm
+  executable reachable, and object-byte parity with the subprocess over the
+  integration corpus at `-O0` and `-O2`; CI runs it against an opt-in and a
+  default build on both hosts. `nazm-production-admission.yml` gained
+  `assembler_mode=embedded-default`, which runs the quick/full/stress/release
+  ladder with `BAA_NAZM` empty and no `نظم` on `PATH`. The clean-machine
+  installer and package gates require an installed compiler to build and run a
+  program through its embedded Nazm and to report the pinned Nazm revision.
 
 - **v0.6.0 release-candidate receipts**: Actions run `38049343387` on `388b539`
   with Nazm `14c6cf4` passed strict builds and quick (34/34), full (52/52),

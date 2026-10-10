@@ -183,6 +183,7 @@ after the hosted runs reached terminal success.
 3. Keep the optional in-process buffer API behind its build option and Arabic
    invocation selector without changing the inspected textual contract or the
    explicit subprocess/GAS rollback paths.
+4. Complete the two-step embedded-default admission in section 11.
 
 ## 10. Post-Admission API and Cache Extension
 
@@ -205,3 +206,36 @@ This extension does not approve an embedded default. The separate Nazm process
 remains the normal production boundary and direct operational rollback; GAS
 remains the explicit compiler-level rollback. No failure silently switches
 between these paths.
+
+## 11. Embedded-Default Admission
+
+Making the linked assembler the default is admitted in two steps, so that the
+binaries users already run carry the code before the default changes.
+
+**Step 1: ship it, leave the default alone.** Release installers and packages
+are built with `BAA_ENABLE_EMBEDDED_NAZM=ON` from the pinned Nazm checkout and
+report `Embedded Nazm <version> (<revision>), opt-in` in `baa --version`. The
+default stays the separate Nazm process, and a missing Nazm is still exit 4.
+The evidence required before step 2 is:
+
+| Evidence | Where it runs |
+|---|---|
+| Version, revision and mode identity; selection rules; exit 4 for a missing explicit executable; object-byte parity with the subprocess on a minimal program and on the integration corpus at `-O0`/`-O2` | `tests/test_nazm_api_integration.py`, against an `opt-in` and a `default` build on Windows and Linux in the `nazm-api-v1` CI job |
+| Quick, full, stress and release QA against a `default` build with `BAA_NAZM` empty and no `نظم` on `PATH`, so an accidental subprocess selection fails instead of passing | `nazm-production-admission.yml` with `assembler_mode=embedded-default`, both hosts, exact Baa and Nazm SHAs |
+| An installed compiler with no Nazm executable reachable compiles, links and runs a program through `--نظم-داخل-العملية`, and reports the pinned Nazm revision | `scripts/test_installer.ps1` and `scripts/test_linux_package.sh` in the clean-machine CI jobs |
+| The release candidate ladder still passes on the binary configuration that ships | `release-candidate.yml`, built with `BAA_ENABLE_EMBEDDED_NAZM=ON` |
+
+**Step 2: flip the default.** Release builds add
+`BAA_EMBEDDED_NAZM_DEFAULT=ON`, the clean-machine gates run with
+`-EmbeddedNazmMode default` / `--embedded-mode default` and require a build
+without any Nazm executable to succeed, and the release-candidate ladder runs
+on that configuration. Step 2 needs its own approval after the step 1 receipts
+are recorded here.
+
+Selection in a `default` build: `--assembler=gas` and `--nazm-shadow` are
+unchanged; `--nazm-path` or a non-empty `BAA_NAZM` selects that executable in
+a separate process and a missing one is exit 4, never a fallback; otherwise
+the embedded assembler runs and `نظم` on `PATH` is not consulted. Rollback is
+therefore one flag or one environment variable per invocation, or
+`--assembler=gas`, without rebuilding Baa. The standalone `نظم` command keeps
+shipping as its own tool; the embedded API writes no listing.

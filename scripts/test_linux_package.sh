@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Verify the Baa Linux packages the way test_installer.ps1 verifies the Windows
-# installer: digest, install, compile and run through PATH Nazm and the host
-# linker, removal, and nothing left behind.
+# installer: digest, install, compile and run through the embedded Nazm, PATH
+# Nazm and the host linker, removal, and nothing left behind.
 #
 # Run it as root on a machine without Baa or a C toolchain. CI runs it in a
 # fresh ubuntu:24.04 container, so whatever Baa needs must come from the
@@ -9,22 +9,28 @@
 set -euo pipefail
 
 usage() {
-  echo "usage: scripts/test_linux_package.sh --deb FILE --tgz FILE --nazm-dir DIR" >&2
+  echo "usage: scripts/test_linux_package.sh --deb FILE --tgz FILE --nazm-dir DIR" \
+       "[--nazm-revision REV] [--embedded-mode opt-in|default]" >&2
   exit 2
 }
 
 deb=""
 tgz=""
 nazm_dir=""
+nazm_revision=""
+embedded_mode="opt-in"
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --deb) deb="$2"; shift 2 ;;
     --tgz) tgz="$2"; shift 2 ;;
     --nazm-dir) nazm_dir="$2"; shift 2 ;;
+    --nazm-revision) nazm_revision="$2"; shift 2 ;;
+    --embedded-mode) embedded_mode="$2"; shift 2 ;;
     *) usage ;;
   esac
 done
 [[ -f "$deb" && -f "$tgz" && -d "$nazm_dir" ]] || usage
+[[ "$embedded_mode" == "opt-in" || "$embedded_mode" == "default" ]] || usage
 
 fail() { echo "FAIL: $*" >&2; exit 1; }
 
@@ -94,15 +100,46 @@ for required in \
   /usr/share/baa/stdlib/المكتبة_القياسية.رأسباء; do
   [[ -f "$required" ]] || fail "the package did not install $required"
 done
+# The assembler is linked into baa; Nazm's own files belong to Nazm's package.
+if dpkg -L baa | grep -E -i 'nazm|نظم' | grep -v '^/usr/share/baa/' >/dev/null; then
+  fail "the package installs Nazm files outside Baa's own documentation"
+fi
 command -v gcc >/dev/null || fail "the package did not bring the host linker it needs"
 
-echo "== missing Nazm is reported, not worked around"
+# No Nazm executable is reachable in this section: only the assembler linked
+# into the installed compiler can produce objects.
+echo "== the embedded Nazm is identified and works without a Nazm executable"
+embedded_line="$(env -u BAA_NAZM PATH="$base_path" baa --version \
+  | grep -E '^Embedded Nazm [^ ]+ \([A-Za-z0-9._-]+\), (opt-in|default)$' || true)"
+[[ -n "$embedded_line" ]] || fail "Baa does not report an embedded Nazm in --version"
+echo "$embedded_line"
+[[ "$embedded_line" == *", $embedded_mode" ]] \
+  || fail "Baa reports '$embedded_line'; expected the $embedded_mode mode"
+if [[ -n "$nazm_revision" ]]; then
+  [[ "$embedded_line" == *"($nazm_revision), "* ]] \
+    || fail "Baa reports '$embedded_line'; expected Nazm $nazm_revision"
+fi
+(
+  cd "$project"
+  export PATH="$base_path"
+  unset BAA_HOME BAA_STDLIB BAA_NAZM
+  build_program baa --نظم-داخل-العملية مرحبا.باء -o "$work/مضمن"
+  "$work/مضمن"
+)
+
 status=0
 (cd "$project" && env -u BAA_NAZM PATH="$base_path" baa مرحبا.باء -o "$work/بدون-نظم") \
   >"$work/missing-nazm.log" 2>&1 || status=$?
-[[ "$status" == 4 ]] || { cat "$work/missing-nazm.log" >&2; fail "Baa returned $status instead of 4 when Nazm was missing"; }
-[[ -s "$work/missing-nazm.log" ]] || fail "Baa did not explain that Nazm was missing"
-[[ ! -e "$work/بدون-نظم" ]] || fail "Baa produced output even though Nazm was unavailable"
+if [[ "$embedded_mode" == "default" ]]; then
+  echo "== the default build needs no Nazm executable"
+  [[ "$status" == 0 ]] || { cat "$work/missing-nazm.log" >&2; fail "Baa returned $status without a Nazm executable although its embedded Nazm is the default"; }
+  "$work/بدون-نظم"
+else
+  echo "== missing Nazm is reported, not worked around"
+  [[ "$status" == 4 ]] || { cat "$work/missing-nazm.log" >&2; fail "Baa returned $status instead of 4 when Nazm was missing"; }
+  [[ -s "$work/missing-nazm.log" ]] || fail "Baa did not explain that Nazm was missing"
+  [[ ! -e "$work/بدون-نظم" ]] || fail "Baa produced output even though Nazm was unavailable"
+fi
 
 echo "== compile and run with the installed package"
 build_and_run /usr/bin/baa "$work/من الحزمة"

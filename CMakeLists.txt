@@ -7,10 +7,19 @@ set(CMAKE_C_STANDARD 11)
 option(BAA_ENABLE_WARNINGS "Enable compiler warnings for Baa" ON)
 option(BAA_WARNINGS_AS_ERRORS "Treat warnings as errors for hardening builds" OFF)
 option(BAA_ENABLE_EMBEDDED_NAZM
-       "Enable the opt-in in-process nazm-api-v1 assembler path" OFF)
+       "Link the in-process nazm-api-v1 assembler into baa" OFF)
+option(BAA_EMBEDDED_NAZM_DEFAULT
+       "Assemble in-process by default; an explicit Nazm executable still wins" OFF)
 set(BAA_NAZM_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../Nazm" CACHE PATH
     "Nazm source tree used when BAA_ENABLE_EMBEDDED_NAZM is enabled")
+set(BAA_NAZM_REVISION "" CACHE STRING
+    "Nazm source revision shown by baa --version (read from git when empty)")
 set(BAA_REPRODUCIBLE_BUILD_DATE "" CACHE STRING "Override baa --version build date for reproducible builds")
+
+if(BAA_EMBEDDED_NAZM_DEFAULT AND NOT BAA_ENABLE_EMBEDDED_NAZM)
+    message(FATAL_ERROR
+        "BAA_EMBEDDED_NAZM_DEFAULT requires BAA_ENABLE_EMBEDDED_NAZM=ON")
+endif()
 
 if(BAA_ENABLE_EMBEDDED_NAZM)
     if(NOT EXISTS "${BAA_NAZM_SOURCE_DIR}/include/nazm.h")
@@ -23,6 +32,55 @@ if(BAA_ENABLE_EMBEDDED_NAZM)
     add_subdirectory("${BAA_NAZM_SOURCE_DIR}"
                      "${CMAKE_BINARY_DIR}/nazm-embedded"
                      EXCLUDE_FROM_ALL)
+
+    # The linked assembler is identified by the exact source revision it was
+    # built from. Only a checkout whose root is the Nazm tree itself counts, so
+    # a tree unpacked inside another repository never reports that repository.
+    set(baa_nazm_revision "${BAA_NAZM_REVISION}")
+    if(NOT baa_nazm_revision)
+        find_package(Git QUIET)
+        if(GIT_FOUND)
+            execute_process(
+                COMMAND "${GIT_EXECUTABLE}" -C "${BAA_NAZM_SOURCE_DIR}"
+                        rev-parse --show-toplevel
+                OUTPUT_VARIABLE baa_nazm_toplevel
+                OUTPUT_STRIP_TRAILING_WHITESPACE
+                ERROR_QUIET
+                RESULT_VARIABLE baa_nazm_git_result)
+            get_filename_component(baa_nazm_source_real
+                "${BAA_NAZM_SOURCE_DIR}" REALPATH)
+            if(baa_nazm_git_result EQUAL 0 AND baa_nazm_toplevel)
+                get_filename_component(baa_nazm_toplevel_real
+                    "${baa_nazm_toplevel}" REALPATH)
+            endif()
+            if(baa_nazm_git_result EQUAL 0 AND
+               "${baa_nazm_toplevel_real}" STREQUAL "${baa_nazm_source_real}")
+                execute_process(
+                    COMMAND "${GIT_EXECUTABLE}" -C "${BAA_NAZM_SOURCE_DIR}"
+                            rev-parse HEAD
+                    OUTPUT_VARIABLE baa_nazm_revision
+                    OUTPUT_STRIP_TRAILING_WHITESPACE
+                    ERROR_QUIET)
+                execute_process(
+                    COMMAND "${GIT_EXECUTABLE}" -C "${BAA_NAZM_SOURCE_DIR}"
+                            status --porcelain --untracked-files=no
+                    OUTPUT_VARIABLE baa_nazm_dirty
+                    OUTPUT_STRIP_TRAILING_WHITESPACE
+                    ERROR_QUIET)
+                if(baa_nazm_revision AND baa_nazm_dirty)
+                    string(APPEND baa_nazm_revision "-dirty")
+                endif()
+            endif()
+        endif()
+    endif()
+    if(NOT baa_nazm_revision)
+        set(baa_nazm_revision "unknown")
+    endif()
+    if(NOT baa_nazm_revision MATCHES "^[A-Za-z0-9._-]+$")
+        message(FATAL_ERROR
+            "BAA_NAZM_REVISION may only contain letters, digits, '.', '_' and '-'")
+    endif()
+    message(STATUS "Embedded Nazm revision: ${baa_nazm_revision}")
 endif()
 
 # List of source files
@@ -102,7 +160,12 @@ add_executable(baa ${SOURCES})
 
 if(BAA_ENABLE_EMBEDDED_NAZM)
     target_link_libraries(baa PRIVATE libnazm)
-    target_compile_definitions(baa PRIVATE BAA_EMBEDDED_NAZM=1)
+    target_compile_definitions(baa PRIVATE
+        BAA_EMBEDDED_NAZM=1
+        BAA_EMBEDDED_NAZM_REVISION="${baa_nazm_revision}")
+    if(BAA_EMBEDDED_NAZM_DEFAULT)
+        target_compile_definitions(baa PRIVATE BAA_EMBEDDED_NAZM_DEFAULT=1)
+    endif()
 endif()
 
 # مكتبة وقت التشغيل التي ترتبط بها برامج باء عند استخدام واجهات النظام.

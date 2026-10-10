@@ -673,14 +673,42 @@ object generation invokes Nazm. GAS/AT&T remains available through explicit
 `--assembler=gas`; the shadow path selects a measured GAS comparison leg and
 cannot hide an unsupported form behind silent fallback.
 
-An opt-in build may link Nazm and expose the Arabic runtime selector
+A build may link Nazm and expose the Arabic runtime selector
 `--نظم-داخل-العملية`. CMake keeps this disabled unless
 `BAA_ENABLE_EMBEDDED_NAZM=ON` points at a source tree implementing
-`nazm-api-v1`. The API path preserves the canonical emitted Arabic text,
-returns owned object bytes and structured diagnostics, and is tested against
-the CLI for exact ELF64/COFF object bytes and matching primary failures. It is
-not the production default: omitting the selector always retains the separate
-Nazm process, and explicit GAS remains the compiler-level rollback.
+`nazm-api-v1`; release installers and packages enable it. The API path
+preserves the canonical emitted Arabic text, returns owned object bytes and
+structured diagnostics, and is tested against the CLI for exact ELF64/COFF
+object bytes and matching primary failures, both on a minimal program and over
+the integration corpus at `-O0` and `-O2`.
+
+Such a build adds exactly one line to `baa --version`:
+
+```text
+Embedded Nazm <version> (<revision>), <opt-in|default>
+```
+
+`<version>` comes from `nazm_api_info()`, `<revision>` is the Nazm source
+revision the build read from the Nazm checkout (`-dirty` when tracked files
+were modified, `unknown` outside a checkout, or the `BAA_NAZM_REVISION`
+override), and the last field is the selection mode. Assembler selection is:
+
+1. `--assembler=gas` or `--nazm-shadow=<path>`: GAS, as before.
+2. `--نظم-داخل-العملية`: the embedded assembler, also over `BAA_NAZM`.
+   Combining the flag with `--nazm-path`, shadow mode or GAS is a usage error
+   (exit 2).
+3. `--nazm-path=<path>`, else a non-empty `BAA_NAZM`: that Nazm executable in a
+   separate process. A missing or failing executable is exit 4, never a
+   fallback to the embedded assembler.
+4. No selection in a `default` build: the embedded assembler. `نظم` on `PATH`
+   is not consulted.
+5. Otherwise (`opt-in` builds and builds without Nazm linked in): `نظم` from
+   `PATH`, exit 4 when it is missing.
+
+`opt-in` is the shipped mode: omitting the selector retains the separate Nazm
+process, and explicit GAS remains the compiler-level rollback. `default` is
+selected only by `BAA_EMBEDDED_NAZM_DEFAULT=ON` at build time and is under
+admission; see `docs/NAZM_PRODUCTION_ADMISSION.md`.
 
 PyramidOS experiments should consume:
 

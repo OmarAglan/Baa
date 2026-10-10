@@ -1,7 +1,10 @@
 param(
     [string]$Installer = "",
     [string]$InstallDirectory = "",
-    [string]$NazmDirectory = ""
+    [string]$NazmDirectory = "",
+    [string]$NazmRevision = "",
+    [ValidateSet("opt-in", "default")]
+    [string]$EmbeddedNazmMode = "opt-in"
 )
 
 $ErrorActionPreference = "Stop"
@@ -46,6 +49,10 @@ $markerKey = "HKCU:\Software\BaaEcosystem\Baa"
 $programDirectory = Join-Path $env:LOCALAPPDATA "Temp\BaaInstallerProgram"
 $programOutput = Join-Path $programDirectory "hello.exe"
 $missingProgramOutput = Join-Path $programDirectory "missing-nazm.exe"
+$embeddedProgramOutput = Join-Path $programDirectory "hello-embedded.exe"
+$inProcessFlag = "--" + (-join [char[]](0x0646, 0x0638, 0x0645)) + "-" +
+    (-join [char[]](0x062F, 0x0627, 0x062E, 0x0644)) + "-" +
+    (-join [char[]](0x0627, 0x0644, 0x0639, 0x0645, 0x0644, 0x064A, 0x0629))
 $gasProgramOutput = Join-Path $programDirectory "hello-gas.exe"
 $sourceFixture = Join-Path $root "examples\hello_world.باء"
 $canonicalSourceName = 'hello.' + (-join [char[]](0x0628, 0x0627, 0x0621))
@@ -137,7 +144,30 @@ try {
         $env:BAA_STDLIB = Join-Path $InstallDirectory "stdlib"
         Remove-Item Env:BAA_NAZM -ErrorAction SilentlyContinue
 
+        # No Nazm executable is reachable from here on: only the assembler
+        # linked into the installed compiler can produce objects.
         $env:PATH = "$env:SystemRoot\System32;$env:SystemRoot"
+        $embeddedNazmLine = @(& $baaExecutable --version) |
+            Where-Object { $_ -match '^Embedded Nazm \S+ \(([A-Za-z0-9._-]+)\), (opt-in|default)$' } |
+            Select-Object -First 1
+        if (-not $embeddedNazmLine) {
+            throw "Installed Baa does not report an embedded Nazm in --version."
+        }
+        $null = $embeddedNazmLine -match '\(([A-Za-z0-9._-]+)\), (opt-in|default)$'
+        if ($Matches[2] -cne $EmbeddedNazmMode) {
+            throw "Installed Baa reports '$embeddedNazmLine'; expected the $EmbeddedNazmMode mode."
+        }
+        if (-not [string]::IsNullOrWhiteSpace($NazmRevision) -and $Matches[1] -cne $NazmRevision) {
+            throw "Installed Baa embeds Nazm $($Matches[1]); expected $NazmRevision."
+        }
+        & $baaExecutable $inProcessFlag $source -o $embeddedProgramOutput
+        if ($LASTEXITCODE -ne 0 -or
+            -not (Test-Path -LiteralPath $embeddedProgramOutput -PathType Leaf)) {
+            throw "Installed Baa failed to compile and link through its embedded Nazm."
+        }
+        & $embeddedProgramOutput
+        if ($LASTEXITCODE -ne 0) { throw "Program assembled by the embedded Nazm failed to run." }
+
         $oldErrorActionPreference = $ErrorActionPreference
         $ErrorActionPreference = "Continue"
         try {
@@ -149,14 +179,24 @@ try {
         finally {
             $ErrorActionPreference = $oldErrorActionPreference
         }
-        if ($missingNazmExitCode -ne 4) {
-            throw "Installed Baa returned $missingNazmExitCode instead of 4 when Nazm was missing. Output: $missingNazmOutput"
+        if ($EmbeddedNazmMode -eq "default") {
+            if ($missingNazmExitCode -ne 0 -or
+                -not (Test-Path -LiteralPath $missingProgramOutput -PathType Leaf)) {
+                throw "Installed Baa returned $missingNazmExitCode without a Nazm executable although its embedded Nazm is the default. Output: $missingNazmOutput"
+            }
+            & $missingProgramOutput
+            if ($LASTEXITCODE -ne 0) { throw "Program built without a Nazm executable failed to run." }
         }
-        if ([string]::IsNullOrWhiteSpace($missingNazmOutput)) {
-            throw "Installed Baa did not explain that its Nazm dependency was missing."
-        }
-        if (Test-Path -LiteralPath $missingProgramOutput) {
-            throw "Installed Baa produced output even though Nazm was unavailable."
+        else {
+            if ($missingNazmExitCode -ne 4) {
+                throw "Installed Baa returned $missingNazmExitCode instead of 4 when Nazm was missing. Output: $missingNazmOutput"
+            }
+            if ([string]::IsNullOrWhiteSpace($missingNazmOutput)) {
+                throw "Installed Baa did not explain that its Nazm dependency was missing."
+            }
+            if (Test-Path -LiteralPath $missingProgramOutput) {
+                throw "Installed Baa produced output even though Nazm was unavailable."
+            }
         }
 
         $env:PATH = "$NazmDirectory;$env:SystemRoot\System32;$env:SystemRoot"

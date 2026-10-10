@@ -42,6 +42,7 @@
  */
 static char g_gcc_path[BAA_UTF8_PATH_CAP] = "";
 static char g_runtime_library_path[BAA_UTF8_PATH_CAP] = "";
+static char g_install_home[BAA_UTF8_PATH_CAP] = "";
 #ifdef _WIN32
 static bool g_gcc_direct_unicode_paths = false;
 static bool g_gcc_retain_pei386_runtime_relocator = false;
@@ -87,6 +88,28 @@ static void runtime_library_resolve_from_exe_dir(const char* exe_dir)
 
     n = snprintf(candidate, sizeof(candidate), "%s/../lib64/baa", exe_dir);
     if (n > 0 && (size_t)n < sizeof(candidate)) (void)runtime_library_try_dir(candidate);
+}
+
+static bool install_home_try_dir(const char* directory)
+{
+    char probe[BAA_UTF8_PATH_CAP];
+    int n = snprintf(probe, sizeof(probe), "%s/stdlib/baalib.baahd", directory);
+    if (n <= 0 || (size_t)n >= sizeof(probe) || !runtime_library_exists(probe)) return false;
+    memcpy(g_install_home, directory, strlen(directory) + 1u);
+    return true;
+}
+
+/**
+ * @brief جذر التثبيت: مجلد المصرّف نفسه (مثبّت ويندوز) أو ../share/baa (حزم لينكس).
+ */
+static void install_home_resolve_from_exe_dir(const char* exe_dir)
+{
+    g_install_home[0] = '\0';
+    if (!exe_dir || !exe_dir[0] || install_home_try_dir(exe_dir)) return;
+
+    char candidate[BAA_UTF8_PATH_CAP];
+    int n = snprintf(candidate, sizeof(candidate), "%s/../share/baa", exe_dir);
+    if (n > 0 && (size_t)n < sizeof(candidate)) (void)install_home_try_dir(candidate);
 }
 
 #ifdef _WIN32
@@ -838,6 +861,7 @@ void driver_toolchain_resolve_gcc_path(void)
     char exe_dir_utf8[BAA_UTF8_PATH_CAP];
     if (win_wide_to_utf8(exe_path, exe_dir_utf8, sizeof(exe_dir_utf8))) {
         runtime_library_resolve_from_exe_dir(exe_dir_utf8);
+        install_home_resolve_from_exe_dir(exe_dir_utf8);
     }
 
     // المسار 1: <baa_dir>\gcc\bin\gcc.exe
@@ -865,6 +889,7 @@ void driver_toolchain_resolve_gcc_path(void)
         if (last_sep) {
             *last_sep = '\0';
             runtime_library_resolve_from_exe_dir(exe_path);
+            install_home_resolve_from_exe_dir(exe_path);
         }
     }
 #endif
@@ -874,6 +899,11 @@ void driver_toolchain_resolve_gcc_path(void)
 const char* driver_toolchain_get_runtime_library(void)
 {
     return g_runtime_library_path[0] ? g_runtime_library_path : NULL;
+}
+
+const char* driver_toolchain_get_install_home(void)
+{
+    return g_install_home[0] ? g_install_home : NULL;
 }
 
 const char *driver_toolchain_get_gcc_command(void)

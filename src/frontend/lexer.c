@@ -162,6 +162,26 @@ static bool lex_utf8_validate_at(const char* s, int* out_len)
 #define LEX_ENV_BAA_STDLIB "BAA_STDLIB"
 #define LEX_ENV_BAA_HOME "BAA_HOME"
 
+static char g_lex_default_home[4096] = "";
+
+void lexer_set_default_home(const char* home)
+{
+    size_t length = home ? strlen(home) : 0u;
+    if (length >= sizeof(g_lex_default_home)) length = 0u;
+    if (length > 0u) memcpy(g_lex_default_home, home, length);
+    g_lex_default_home[length] = '\0';
+}
+
+/**
+ * @brief جذر باء: BAA_HOME إن ضُبط، وإلا جذر التثبيت المكتشف بجانب المصرّف.
+ */
+static const char* lex_baa_home(void)
+{
+    const char* home = getenv(LEX_ENV_BAA_HOME);
+    if (home && home[0]) return home;
+    return g_lex_default_home[0] ? g_lex_default_home : NULL;
+}
+
 /**
  * @brief هل المسار يحتوي فواصل مجلدات؟
  */
@@ -429,7 +449,7 @@ static char* lex_try_read_include_candidate(Lexer* l, const char* candidate, cha
  * ترتيب البحث:
  * 1) المسار النسبي من مجلد الملف الحالي (مثل C local include).
  * 2) كما كُتب في الكود.
- * 3) إن كان نسبياً: تحت BAA_HOME.
+ * 3) إن كان نسبياً: تحت BAA_HOME (أو جذر التثبيت إن لم يُضبط).
  * 4) مسارات -I من سطر الأوامر بالترتيب.
  * 5) إن كان اسماً مجرداً (بدون / أو \\):
  *    stdlib/ من مجلد الملف الحالي، ثم stdlib/ محلي، ثم BAA_STDLIB، ثم BAA_HOME/stdlib.
@@ -456,7 +476,7 @@ static char* lex_resolve_and_read_include(Lexer* l, const char* requested_path, 
         return source;
     }
 
-    const char* baa_home = getenv(LEX_ENV_BAA_HOME);
+    const char* baa_home = lex_baa_home();
     if (!lex_path_is_absolute(requested_path) && baa_home && baa_home[0]) {
         char* home_candidate = lex_join_paths(l, baa_home, requested_path);
         source = lex_try_read_include_candidate(l, home_candidate, out_resolved_path);

@@ -459,7 +459,9 @@ When `#تضمين "file"` is encountered:
 2. Include resolution tries, in order:
    - source-file directory (`<source_dir>/<path>`),
    - exact path as written,
-   - `{BAA_HOME}/<path>` (for relative paths),
+   - `{BAA_HOME}/<path>` (for relative paths); without `BAA_HOME`, the driver passes the
+     installation root it found beside the executable (`<exe_dir>` or `<exe_dir>/../share/baa`)
+     through `lexer_set_default_home()`,
    - CLI include paths from `-I` (in the user-provided order),
    - for bare names: `<source_dir>/stdlib/<name>`, `stdlib/<name>`, `{BAA_STDLIB}/<name>`, `{BAA_HOME}/stdlib/<name>`.
 3. The first successful candidate is normalized to a canonical active path.

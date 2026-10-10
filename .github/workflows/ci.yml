@@ -116,6 +116,43 @@ jobs:
             dist/installer/baa-setup-0.6.0-x64.exe.sha256
           if-no-files-found: error
 
+  linux-package:
+    name: Linux packages on a clean Ubuntu
+    # Pinned so the packages' glibc floor matches the container they are tested in.
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: OmarAglan/Nazm
+          ref: 42380994625f142fbcfdff92421da2d3f1e8df2f
+          path: Nazm
+      - name: Build the Baa packages and Nazm
+        run: |
+          bash scripts/package_linux.sh
+          cmake -S Nazm -B Nazm/build -DCMAKE_BUILD_TYPE=Release
+          cmake --build Nazm/build -j
+      # A fresh container has no Baa, no C toolchain, and no Nazm on PATH, so a
+      # pass means the .deb brings what it needs and removes what it installed.
+      - name: Verify install, compile, run, and removal on a clean Ubuntu 24.04
+        timeout-minutes: 15
+        run: |
+          docker run --rm -v "$PWD:/work" -w /work ubuntu:24.04 \
+            bash scripts/test_linux_package.sh \
+              --deb build-linux/baa-0.6.0-Linux-x86_64.deb \
+              --tgz build-linux/baa-0.6.0-Linux-x86_64.tar.gz \
+              --nazm-dir Nazm/build
+      - name: Upload Linux packages
+        uses: actions/upload-artifact@v4
+        with:
+          name: baa-0.6.0-linux-x86_64
+          path: |
+            build-linux/baa-0.6.0-Linux-x86_64.deb
+            build-linux/baa-0.6.0-Linux-x86_64.deb.sha256
+            build-linux/baa-0.6.0-Linux-x86_64.tar.gz
+            build-linux/baa-0.6.0-Linux-x86_64.tar.gz.sha256
+          if-no-files-found: error
+
   quick-windows:
     runs-on: windows-latest
     needs: build-windows

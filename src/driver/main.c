@@ -177,6 +177,7 @@ static int baa_main(int argc, char **argv)
 
     // البحث عن GCC المضمّن (إن وُجد)
     driver_toolchain_resolve_gcc_path();
+    lexer_set_default_home(driver_toolchain_get_install_home());
 
     // تسجيل وقت البدء
     config.start_time = driver_time_seconds();

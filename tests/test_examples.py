@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import shutil
 import subprocess
 import tempfile
 import unittest
@@ -60,6 +61,46 @@ class PublicExamplesCompileTests(unittest.TestCase):
                     combined = f"{proc.stdout}\n{proc.stderr}"
                     self.assertEqual(proc.returncode, 0, combined)
                     self.assertTrue(out.exists(), f"missing output for {example.name}")
+
+
+class InstalledLayoutTests(unittest.TestCase):
+    """An installed compiler finds its standard library without BAA_HOME."""
+
+    LAYOUTS = {
+        "beside-compiler": (Path("."), Path(".")),
+        "prefix-share": (Path("bin"), Path("share") / "baa"),
+    }
+
+    def test_installed_compiler_finds_stdlib_without_environment(self) -> None:
+        baa = _find_baa()
+        env = {k: v for k, v in os.environ.items() if k not in ("BAA_HOME", "BAA_STDLIB")}
+        for name, (bin_dir, home) in self.LAYOUTS.items():
+            with tempfile.TemporaryDirectory(prefix="baa_layout_") as temp:
+                root = Path(temp) / "تثبيت باء"
+                (root / bin_dir).mkdir(parents=True, exist_ok=True)
+                installed = root / bin_dir / baa.name
+                shutil.copy2(baa, installed)
+                shutil.copytree(ROOT / "stdlib", root / home / "stdlib")
+                project = Path(temp) / "مشروع"
+                project.mkdir()
+                shutil.copy2(EXAMPLES / "math_and_format.باء", project / "نسبي.باء")
+                (project / "مجرد.باء").write_text(
+                    '#تضمين "baalib.baahd"\n\nصحيح الرئيسية() {\n    إرجع ٠.\n}\n',
+                    encoding="utf-8",
+                )
+                for source in ("نسبي.باء", "مجرد.باء"):
+                    with self.subTest(layout=name, source=source):
+                        proc = subprocess.run(
+                            [str(installed), "--check", source],
+                            cwd=str(project),
+                            env=env,
+                            text=True,
+                            encoding="utf-8",
+                            errors="replace",
+                            capture_output=True,
+                            timeout=30,
+                        )
+                        self.assertEqual(proc.returncode, 0, f"{proc.stdout}\n{proc.stderr}")
 
 
 if __name__ == "__main__":

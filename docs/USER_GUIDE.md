@@ -325,10 +325,28 @@ cmake --build build-linux -j
 (cd build-linux && cpack -G DEB)
 ```
 
-Or run the helper script:
+Or run the helper script, which also writes a `.sha256` file beside each package:
 
 ```bash
 bash scripts/package_linux.sh
+```
+
+The `.deb` depends on `gcc` and `libc6-dev`, because Baa links through the host
+toolchain. Nazm is installed separately and found on `PATH`. An installed Baa
+finds its standard library under `share/baa` beside its `bin` directory, so
+neither package needs `BAA_HOME`.
+
+CI verifies both packages in a fresh `ubuntu:24.04` container that has no C
+toolchain: digest, install, compile and run (including a standard-library
+program and the explicit GAS rollback), removal with nothing left behind, and
+the relocated `.tar.gz` from an Arabic path. To repeat it as root on a clean
+machine:
+
+```bash
+bash scripts/test_linux_package.sh \
+  --deb build-linux/baa-0.6.0-Linux-x86_64.deb \
+  --tgz build-linux/baa-0.6.0-Linux-x86_64.tar.gz \
+  --nazm-dir /path/to/nazm-bin
 ```
 
 Build with strict warnings (quality gate):
@@ -422,7 +440,7 @@ Use header files for function prototypes and shared declarations.
 .\baa.exe main.baa math.baa -o myapp.exe
 ```
 
-> **Note:** `#تضمين` search order is: (1) current source-file directory, (2) exact path, (3) `{BAA_HOME}/<path>` for relative paths, (4) CLI `-I` paths in order; and for bare names (e.g. `baalib.baahd`) it also tries `<source_dir>/stdlib/`, `stdlib/`, `BAA_STDLIB`, then `{BAA_HOME}/stdlib`. Successful include paths are normalized before activation, so equivalent forms like `a.baahd` and `./a.baahd` collapse to one identity, and include cycles now produce an Arabic include-chain diagnostic.
+> **Note:** `#تضمين` search order is: (1) current source-file directory, (2) exact path, (3) `{BAA_HOME}/<path>` for relative paths, (4) CLI `-I` paths in order; and for bare names (e.g. `baalib.baahd`) it also tries `<source_dir>/stdlib/`, `stdlib/`, `BAA_STDLIB`, then `{BAA_HOME}/stdlib`. When `BAA_HOME` is not set, an installed compiler uses its own installation root (its directory, or `../share/baa` beside it). Successful include paths are normalized before activation, so equivalent forms like `a.baahd` and `./a.baahd` collapse to one identity, and include cycles now produce an Arabic include-chain diagnostic.
 
 **Visibility rules for multi-file code:**
 

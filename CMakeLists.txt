@@ -179,6 +179,9 @@ if(UNIX AND NOT APPLE)
     set(CPACK_DEBIAN_PACKAGE_MAINTAINER "Omar Aglan")
     set(CPACK_DEBIAN_PACKAGE_SECTION "devel")
     set(CPACK_DEBIAN_PACKAGE_PRIORITY "optional")
+    # Baa links through the host GCC, so the package declares it instead of
+    # assuming it; shared-library dependencies are appended to this list.
+    set(CPACK_DEBIAN_PACKAGE_DEPENDS "gcc, libc6-dev")
     set(CPACK_DEBIAN_PACKAGE_SHLIBDEPS ON)
 endif()
 

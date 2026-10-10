@@ -22,6 +22,11 @@ void driver_toolchain_resolve_gcc_path(void);
 const char* driver_toolchain_get_runtime_library(void);
 
 /**
+ * @brief إرجاع جذر تثبيت باء الذي يحوي stdlib/، أو NULL إذا لم يوجد.
+ */
+const char* driver_toolchain_get_install_home(void);
+
+/**
  * @brief إرجاع أمر GCC المناسب ("gcc" أو مسار كامل على Windows).
  */
 const char *driver_toolchain_get_gcc_command(void);

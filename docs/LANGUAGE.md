@@ -58,7 +58,7 @@ Include other files (headers) into the current file. This works like C's `#inclu
 
 1. Relative to the current source file directory (C-like local include behavior).
 2. The exact path as written.
-3. If relative and `BAA_HOME` is set: `{BAA_HOME}/<path>`.
+3. If relative: `{BAA_HOME}/<path>`. When `BAA_HOME` is not set, an installed compiler uses its own installation root instead: the compiler's directory, or `../share/baa` beside it, whichever holds `stdlib/`.
 4. User include directories from CLI (`-I <dir>` or `-I<dir>`) in the same order provided.
 5. For bare names (e.g., `baalib.baahd`): `<source_dir>/stdlib/<name>`, then `stdlib/<name>`, then `{BAA_STDLIB}/<name>`, then `{BAA_HOME}/stdlib/<name>`.
 

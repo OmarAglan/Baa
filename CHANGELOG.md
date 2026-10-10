@@ -8,8 +8,25 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+### Added
+
+- **Linux package lifecycle gate**: CI builds the `.deb` and `.tar.gz` with
+  SHA-256 files and runs `scripts/test_linux_package.sh` in a fresh
+  `ubuntu:24.04` container without a C toolchain. It installs the `.deb`,
+  compiles and runs programs through PATH Nazm and the host linker, checks the
+  exit-4 diagnostic when Nazm is missing, removes the package and verifies
+  nothing is left, then repeats the build from the relocated `.tar.gz`.
+
 ### Fixed
 
+- **Standard library not found by an installed compiler**: `#تضمين` located the
+  standard library only through the working directory, `BAA_HOME`, or
+  `BAA_STDLIB`, so the Linux packages, which set no environment variables, could
+  not compile a program that includes it. When `BAA_HOME` is not set, the driver
+  now uses the installation root beside the executable: its own directory
+  (Windows installer layout) or `../share/baa` (Linux packages).
+- **Undeclared linker dependency in the `.deb`**: the package now depends on
+  `gcc` and `libc6-dev`, which Baa needs to link on Linux.
 - **Long Arabic output paths on Windows**: the driver held UTF-8 toolchain paths in
   `MAX_PATH`-byte buffers, but Windows counts `MAX_PATH` in UTF-16 units and an
   Arabic character takes two UTF-8 bytes. An output path that Windows accepts

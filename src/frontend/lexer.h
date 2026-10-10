@@ -191,6 +191,11 @@ void lexer_init(Lexer* lexer,
                 const char* const* include_dirs,
                 size_t include_dir_count);
 
+/**
+ * @brief ضبط جذر التثبيت الذي يُبحث فيه عن stdlib/ عند غياب BAA_HOME.
+ */
+void lexer_set_default_home(const char* home);
+
 // قراءة ملف بالكامل إلى ذاكرة
 
 /**

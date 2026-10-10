@@ -9,5 +9,11 @@ cmake --build "${build_dir}" -j
 
 (cd "${build_dir}" && cpack -G TGZ)
 (cd "${build_dir}" && cpack -G DEB)
+(
+  cd "${build_dir}"
+  for package in baa-*.tar.gz baa-*.deb; do
+    sha256sum "${package}" > "${package}.sha256"
+  done
+)
 
 echo "Packages generated in: ${build_dir}"

@@ -19,6 +19,9 @@ Before creating `release/v<version>`:
 7. The standalone Windows installer builds from the pinned private-linker
    archive, passes install/compile/run/uninstall checks, and is published with
    its checksum and toolchain manifest.
+8. The Linux `.deb` and `.tar.gz` build with their checksums and pass
+   `scripts/test_linux_package.sh` in a clean container: install, compile, run,
+   and removal with nothing left behind.
 
 The branch must be cut from the exact commit named by both platform receipts.
 

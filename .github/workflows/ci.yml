@@ -19,7 +19,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: OmarAglan/Nazm
-          ref: 8e8077997da08f6023ed6365ac4fbddbe3184788
+          ref: 0a3f397c46ab1ca217336d5111f52a9b80ee6a1b
           path: Nazm
       - uses: actions/setup-python@v5
         with:
@@ -100,7 +100,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: OmarAglan/Nazm
-          ref: 8e8077997da08f6023ed6365ac4fbddbe3184788
+          ref: 0a3f397c46ab1ca217336d5111f52a9b80ee6a1b
           path: Nazm
       - uses: actions/setup-python@v5
         with:
@@ -144,7 +144,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: OmarAglan/Nazm
-          ref: 8e8077997da08f6023ed6365ac4fbddbe3184788
+          ref: 0a3f397c46ab1ca217336d5111f52a9b80ee6a1b
           path: Nazm
       - name: Build the Baa packages and Nazm
         run: |
@@ -186,7 +186,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: OmarAglan/Nazm
-          ref: 8e8077997da08f6023ed6365ac4fbddbe3184788
+          ref: 0a3f397c46ab1ca217336d5111f52a9b80ee6a1b
           path: Nazm
       - uses: actions/setup-python@v5
         with:
@@ -236,7 +236,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: OmarAglan/Nazm
-          ref: 8e8077997da08f6023ed6365ac4fbddbe3184788
+          ref: 0a3f397c46ab1ca217336d5111f52a9b80ee6a1b
           path: Nazm
       - uses: actions/setup-python@v5
         with:
@@ -304,7 +304,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: OmarAglan/Nazm
-          ref: 8e8077997da08f6023ed6365ac4fbddbe3184788
+          ref: 0a3f397c46ab1ca217336d5111f52a9b80ee6a1b
           path: Nazm
       - uses: actions/setup-python@v5
         with:
@@ -345,7 +345,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: OmarAglan/Nazm
-          ref: 8e8077997da08f6023ed6365ac4fbddbe3184788
+          ref: 0a3f397c46ab1ca217336d5111f52a9b80ee6a1b
           path: Nazm
       - uses: actions/setup-python@v5
         with:
@@ -387,7 +387,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: OmarAglan/Nazm
-          ref: 8e8077997da08f6023ed6365ac4fbddbe3184788
+          ref: 0a3f397c46ab1ca217336d5111f52a9b80ee6a1b
           path: Nazm
       - uses: actions/setup-python@v5
         with:
@@ -421,7 +421,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: OmarAglan/Nazm
-          ref: 8e8077997da08f6023ed6365ac4fbddbe3184788
+          ref: 0a3f397c46ab1ca217336d5111f52a9b80ee6a1b
           path: Nazm
       - uses: actions/setup-python@v5
         with:

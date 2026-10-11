@@ -10,7 +10,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Changed
 
-- **Builds against Nazm `0a3f397`**: every workflow checks out the Nazm
+- **Builds against Nazm `e405681`**: every workflow checks out the Nazm
   revision that fails each allocation point behind `nazm-api-v1` in its own
   tests and returns `NAZM_STATUS_OUT_OF_MEMORY` with nothing leaked, and that
   fuzzes its lexer and parser over the same injected build. That revision
@@ -19,10 +19,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
   64 bits instead of wrapping them, and never cuts a diagnostic inside a
   character. The Nazm source Baa emits contains none of the rejected forms.
   It also carries Nazm's written compatibility policy and tests that pin the
-  `nazm-api-v1` struct layout and status values Baa links against.
+  `nazm-api-v1` struct layout and status values Baa links against, and its
+  1.0 readiness review: a list of the conditions still open before Nazm 1.0
+  and a differential test that assembles 116,442 statements covering every
+  register in every operand position of every implemented form and compares
+  them with GNU as. The review changed no Nazm library source.
   `nazm-api-v1`, the capability fingerprint and the emitted object bytes are
   unchanged. A build from this commit reports
-  `Embedded Nazm 0.4.0 (0a3f397...), default`; the published 0.6.0 artifacts
+  `Embedded Nazm 0.4.0 (e405681...), default`; the published 0.6.0 artifacts
   carry `14c6cf4`.
 
 ## [0.6.0] - 2026-10-10

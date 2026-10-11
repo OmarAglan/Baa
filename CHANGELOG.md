@@ -8,6 +8,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+### Changed
+
+- **Builds against Nazm `ea03ff1`**: every workflow checks out the Nazm
+  revision that fails each allocation point behind `nazm-api-v1` in its own
+  tests and returns `NAZM_STATUS_OUT_OF_MEMORY` with nothing leaked, and that
+  fixes a diagnostic-string leak on that path. `nazm-api-v1`, the capability
+  fingerprint and the emitted object bytes are unchanged. A build from this
+  commit reports `Embedded Nazm 0.4.0 (ea03ff1...), default`; the published
+  0.6.0 artifacts carry `14c6cf4`.
+
 ## [0.6.0] - 2026-10-10
 
 **Systems Language Completeness, Tooling Contracts, and the Nazm Assembler**

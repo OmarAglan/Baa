@@ -10,13 +10,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Changed
 
-- **Builds against Nazm `ea03ff1`**: every workflow checks out the Nazm
+- **Builds against Nazm `8e80779`**: every workflow checks out the Nazm
   revision that fails each allocation point behind `nazm-api-v1` in its own
   tests and returns `NAZM_STATUS_OUT_OF_MEMORY` with nothing leaked, and that
-  fixes a diagnostic-string leak on that path. `nazm-api-v1`, the capability
-  fingerprint and the emitted object bytes are unchanged. A build from this
-  commit reports `Embedded Nazm 0.4.0 (ea03ff1...), default`; the published
-  0.6.0 artifacts carry `14c6cf4`.
+  fuzzes its lexer and parser over the same injected build. That revision
+  fixes a diagnostic-string leak on the out-of-memory path, rejects ill-formed
+  UTF-8 inside comments and string literals, rejects number literals beyond
+  64 bits instead of wrapping them, and never cuts a diagnostic inside a
+  character. The Nazm source Baa emits contains none of the rejected forms.
+  `nazm-api-v1`, the capability fingerprint and the emitted object bytes are
+  unchanged. A build from this commit reports
+  `Embedded Nazm 0.4.0 (8e80779...), default`; the published 0.6.0 artifacts
+  carry `14c6cf4`.
 
 ## [0.6.0] - 2026-10-10
 

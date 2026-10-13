@@ -279,7 +279,7 @@ default; a source build does the same with
 `baa --version` then prints one extra line:
 
 ```text
-Embedded Nazm 0.4.0 (14c6cf4565067e9e32af72c2c1af6b9ef2456744), default
+Embedded Nazm 0.5.0 (a68c6c37f977161a11d63da7c2b6ef576ff7080c), default
 ```
 
 It names the linked Nazm version, the exact Nazm source revision, and the

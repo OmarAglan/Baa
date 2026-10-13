@@ -22,7 +22,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Changed
 
-- **Builds against Nazm `4a4da86`**: the revision that closes Nazm's open 1.0
+- **Builds against Nazm `0.5.0`** (`a68c6c3`): the release that carries the
+  changes below. Only the version, the capability digest and the fingerprint
+  differ from `4a4da86`, so the generated coverage records carry the new
+  digest and `baa --version` reports `Embedded Nazm 0.5.0 (a68c6c3...), default`.
+- **Built against Nazm `4a4da86` before that**: the revision that closes Nazm's open 1.0
   conditions. It reserves the register prefixes above, rejects a jump or call
   whose target is neither a label nor a 64-bit register (Baa emits neither
   rejected form), raises the section alignment an `.محاذاة` asks for, and

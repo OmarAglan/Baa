@@ -56,6 +56,13 @@ void driver_nazm_apply_embedded_default(CompilerConfig *config);
 void driver_nazm_print_embedded_version(void);
 
 /**
+ * @brief مراجعة نظم المضمنة في هذا البناء، أو نص فارغ في بناء بلا تضمين.
+ *
+ * تدخل مفتاح ذاكرة الكائنات لأن بصمة نظم لا تتغير بين بناءين من الإصدار نفسه.
+ */
+const char *driver_nazm_embedded_revision(void);
+
+/**
  * @brief تثبيت بصمة إصدار/قدرات نظم الدقيقة في إعداد البناء.
  */
 BaaCompilerExitCode driver_nazm_resolve_fingerprint(CompilerConfig *config);

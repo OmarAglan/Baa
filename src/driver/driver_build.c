@@ -168,6 +168,9 @@ static void build_slot_hex(const CompilerConfig* config, const char* source, cha
         (driver_nazm_is_source_path(source) ||
          config->assembler == BAA_ASSEMBLER_NAZM))
         hash_string(&h, config->nazm_fingerprint);
+    // البصمة هوية إصدار لا هوية بناء؛ المراجعة المضمنة تميّز بناءين من الإصدار نفسه.
+    if (config && config->nazm_in_process)
+        hash_string(&h, driver_nazm_embedded_revision());
 
     char tmp[128];
     snprintf(tmp,

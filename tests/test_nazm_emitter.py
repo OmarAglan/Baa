@@ -1230,13 +1230,14 @@ class NazmEmitterTests(unittest.TestCase):
             nazm_text = shadow_source.read_text(encoding="utf-8")
             self.assertIsNone(re.search(r"[A-Za-z]", nazm_text))
             self.assertIn(".بيانات", nazm_text)
-            self.assertIn("مؤشر_عام: .عدد٦٤ ضاعف", nazm_text)
+            # `مؤشر_` بادئة يحجزها نظم للسجلات، فيُهرَّب الاسم في المصدر والكائن.
+            self.assertIn("رمز_باء_مؤشر_عام: .عدد٦٤ ضاعف", nazm_text)
 
             sections, global_symbols, relocation_count = _inspect_object(
                 shadow_object
             )
             self.assertIn(".data", sections)
-            self.assertIn("مؤشر_عام", global_symbols)
+            self.assertIn("رمز_باء_مؤشر_عام", global_symbols)
             self.assertGreaterEqual(relocation_count, 1)
 
             production_run = subprocess.run(

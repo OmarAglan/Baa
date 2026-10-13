@@ -174,7 +174,7 @@
             "register",
             "register"
           ],
-          "count": 2449,
+          "count": 2450,
           "samples": [
             "examples/error_handling_demo.باء:224",
             "examples/error_handling_demo.باء:226",
@@ -289,7 +289,7 @@
           "operands": [
             "symbol"
           ],
-          "count": 1536,
+          "count": 1537,
           "samples": [
             "examples/error_handling_demo.باء:81",
             "examples/error_handling_demo.باء:91",
@@ -376,7 +376,7 @@
             "immediate-integer",
             "register"
           ],
-          "count": 2000,
+          "count": 2003,
           "samples": [
             "examples/error_handling_demo.باء:20",
             "examples/error_handling_demo.باء:34",
@@ -536,7 +536,7 @@
           "operands": [
             "local-symbol"
           ],
-          "count": 3189,
+          "count": 3191,
           "samples": [
             "examples/error_handling_demo.باء:25",
             "examples/error_handling_demo.باء:39",
@@ -548,7 +548,7 @@
           "operands": [
             "local-symbol"
           ],
-          "count": 1457,
+          "count": 1459,
           "samples": [
             "examples/error_handling_demo.باء:24",
             "examples/error_handling_demo.باء:38",
@@ -584,7 +584,7 @@
         {
           "mnemonic": "leave",
           "operands": [],
-          "count": 547,
+          "count": 550,
           "samples": [
             "examples/error_handling_demo.باء:31",
             "examples/error_handling_demo.باء:45",
@@ -662,7 +662,7 @@
             "register",
             "register"
           ],
-          "count": 1105,
+          "count": 1106,
           "samples": [
             "examples/error_handling_demo.باء:290",
             "examples/error_handling_demo.باء:349",
@@ -775,7 +775,7 @@
             "immediate-integer",
             "register"
           ],
-          "count": 2902,
+          "count": 2905,
           "samples": [
             "examples/error_handling_demo.باء:27",
             "examples/error_handling_demo.باء:41",
@@ -801,7 +801,7 @@
             "memory-rip-relative",
             "register"
           ],
-          "count": 82,
+          "count": 85,
           "samples": [
             "tests/integration/backend/backend_byte_buffer_stdlib_v062_test.baa:257",
             "tests/integration/backend/backend_byte_buffer_stdlib_v062_test.baa:697",
@@ -840,7 +840,7 @@
             "register",
             "register"
           ],
-          "count": 12665,
+          "count": 12669,
           "samples": [
             "examples/error_handling_demo.باء:16",
             "examples/error_handling_demo.باء:17",
@@ -964,7 +964,7 @@
             "register",
             "register"
           ],
-          "count": 3059,
+          "count": 3062,
           "samples": [
             "examples/error_handling_demo.باء:22",
             "examples/error_handling_demo.باء:36",
@@ -977,7 +977,7 @@
             "memory-base-displacement",
             "register"
           ],
-          "count": 1820,
+          "count": 1832,
           "samples": [
             "examples/error_handling_demo.باء:28",
             "examples/error_handling_demo.باء:29",
@@ -990,7 +990,7 @@
             "register",
             "memory-base-displacement"
           ],
-          "count": 766,
+          "count": 768,
           "samples": [
             "examples/error_handling_demo.باء:13",
             "examples/error_handling_demo.باء:14",
@@ -1003,7 +1003,7 @@
             "register",
             "register"
           ],
-          "count": 289,
+          "count": 290,
           "samples": [
             "examples/error_handling_demo.باء:11",
             "examples/error_handling_demo.باء:64",
@@ -1060,7 +1060,7 @@
             "register",
             "register"
           ],
-          "count": 89,
+          "count": 90,
           "samples": [
             "examples/file_copy_small.باء:43",
             "examples/file_copy_small.باء:239",
@@ -1097,7 +1097,7 @@
           "operands": [
             "register"
           ],
-          "count": 289,
+          "count": 290,
           "samples": [
             "examples/error_handling_demo.باء:10",
             "examples/error_handling_demo.باء:63",
@@ -1115,7 +1115,7 @@
         {
           "mnemonic": "ret",
           "operands": [],
-          "count": 547,
+          "count": 550,
           "samples": [
             "examples/error_handling_demo.باء:32",
             "examples/error_handling_demo.باء:46",
@@ -1282,7 +1282,7 @@
           "operands": [
             "register"
           ],
-          "count": 516,
+          "count": 519,
           "samples": [
             "examples/error_handling_demo.باء:174",
             "examples/error_handling_demo.باء:288",
@@ -1408,7 +1408,7 @@
             "immediate-integer",
             "register"
           ],
-          "count": 216,
+          "count": 217,
           "samples": [
             "examples/error_handling_demo.باء:12",
             "examples/error_handling_demo.باء:65",
@@ -1434,7 +1434,7 @@
             "register",
             "register"
           ],
-          "count": 1452,
+          "count": 1454,
           "samples": [
             "examples/error_handling_demo.باء:23",
             "examples/error_handling_demo.باء:37",
@@ -1460,7 +1460,7 @@
             "register",
             "register"
           ],
-          "count": 1524,
+          "count": 1525,
           "samples": [
             "examples/error_handling_demo.باء:80",
             "examples/error_handling_demo.باء:90",
@@ -1518,7 +1518,7 @@
           "operands": [
             "symbol"
           ],
-          "count": 340,
+          "count": 344,
           "samples": [
             "examples/error_handling_demo.باء:8",
             "examples/error_handling_demo.باء:61",
@@ -1576,7 +1576,7 @@
           "operands": [
             "integer"
           ],
-          "count": 4536,
+          "count": 4539,
           "samples": [
             "examples/file_copy_small.باء:991",
             "examples/file_copy_small.باء:992",
@@ -1662,9 +1662,9 @@
         }
       ],
       "symbols": {
-        "defined": 682,
-        "global-declaration": 340,
-        "local": 4266,
+        "defined": 686,
+        "global-declaration": 344,
+        "local": 4271,
         "local-declaration": 12
       },
       "registers": [
@@ -1674,7 +1674,7 @@
         },
         {
           "name": "%bl",
-          "count": 2215
+          "count": 2218
         },
         {
           "name": "%bx",
@@ -1690,7 +1690,7 @@
         },
         {
           "name": "%eax",
-          "count": 3244
+          "count": 3246
         },
         {
           "name": "%ebx",
@@ -1706,11 +1706,11 @@
         },
         {
           "name": "%r10",
-          "count": 19531
+          "count": 19539
         },
         {
           "name": "%r10b",
-          "count": 5723
+          "count": 5730
         },
         {
           "name": "%r10d",
@@ -1722,11 +1722,11 @@
         },
         {
           "name": "%r12",
-          "count": 10333
+          "count": 10340
         },
         {
           "name": "%r12b",
-          "count": 2299
+          "count": 2303
         },
         {
           "name": "%r12d",
@@ -1734,7 +1734,7 @@
         },
         {
           "name": "%r13",
-          "count": 7334
+          "count": 7336
         },
         {
           "name": "%r13b",
@@ -1746,7 +1746,7 @@
         },
         {
           "name": "%r14",
-          "count": 5205
+          "count": 5207
         },
         {
           "name": "%r14b",
@@ -1758,7 +1758,7 @@
         },
         {
           "name": "%r15",
-          "count": 3892
+          "count": 3894
         },
         {
           "name": "%r15b",
@@ -1786,15 +1786,15 @@
         },
         {
           "name": "%rax",
-          "count": 8260
+          "count": 8264
         },
         {
           "name": "%rbp",
-          "count": 18445
+          "count": 18461
         },
         {
           "name": "%rbx",
-          "count": 10479
+          "count": 10488
         },
         {
           "name": "%rcx",
@@ -1802,7 +1802,7 @@
         },
         {
           "name": "%rdi",
-          "count": 1307
+          "count": 1309
         },
         {
           "name": "%rdx",
@@ -1810,7 +1810,7 @@
         },
         {
           "name": "%rip",
-          "count": 1022
+          "count": 1025
         },
         {
           "name": "%rsi",
@@ -1818,7 +1818,7 @@
         },
         {
           "name": "%rsp",
-          "count": 545
+          "count": 547
         },
         {
           "name": "%xmm0",
@@ -1840,7 +1840,7 @@
         },
         {
           "form": "instruction:call:symbol",
-          "count": 1536
+          "count": 1537
         },
         {
           "form": "instruction:leaq:memory-rip-relative,register",
@@ -1856,7 +1856,7 @@
         },
         {
           "form": "instruction:movq:memory-rip-relative,register",
-          "count": 82
+          "count": 85
         },
         {
           "form": "instruction:movq:register,memory-rip-relative",
@@ -2327,7 +2327,7 @@
             "immediate-integer",
             "register"
           ],
-          "count": 3848,
+          "count": 3849,
           "samples": [
             "examples/error_handling_demo.باء:87",
             "examples/error_handling_demo.باء:98",
@@ -2366,7 +2366,7 @@
             "register",
             "register"
           ],
-          "count": 2461,
+          "count": 2462,
           "samples": [
             "examples/error_handling_demo.باء:248",
             "examples/error_handling_demo.باء:250",
@@ -2455,7 +2455,7 @@
           "operands": [
             "symbol"
           ],
-          "count": 1536,
+          "count": 1537,
           "samples": [
             "examples/error_handling_demo.باء:86",
             "examples/error_handling_demo.باء:97",
@@ -2542,7 +2542,7 @@
             "immediate-integer",
             "register"
           ],
-          "count": 2125,
+          "count": 2128,
           "samples": [
             "examples/error_handling_demo.باء:20",
             "examples/error_handling_demo.باء:34",
@@ -2702,7 +2702,7 @@
           "operands": [
             "local-symbol"
           ],
-          "count": 3189,
+          "count": 3191,
           "samples": [
             "examples/error_handling_demo.باء:25",
             "examples/error_handling_demo.باء:39",
@@ -2714,7 +2714,7 @@
           "operands": [
             "local-symbol"
           ],
-          "count": 1457,
+          "count": 1459,
           "samples": [
             "examples/error_handling_demo.باء:24",
             "examples/error_handling_demo.باء:38",
@@ -2750,7 +2750,7 @@
         {
           "mnemonic": "leave",
           "operands": [],
-          "count": 547,
+          "count": 550,
           "samples": [
             "examples/error_handling_demo.باء:31",
             "examples/error_handling_demo.باء:45",
@@ -2828,7 +2828,7 @@
             "register",
             "register"
           ],
-          "count": 1299,
+          "count": 1300,
           "samples": [
             "examples/error_handling_demo.باء:314",
             "examples/error_handling_demo.باء:373",
@@ -2941,7 +2941,7 @@
             "immediate-integer",
             "register"
           ],
-          "count": 2905,
+          "count": 2908,
           "samples": [
             "examples/error_handling_demo.باء:27",
             "examples/error_handling_demo.باء:41",
@@ -2967,7 +2967,7 @@
             "memory-rip-relative",
             "register"
           ],
-          "count": 82,
+          "count": 85,
           "samples": [
             "tests/integration/backend/backend_byte_buffer_stdlib_v062_test.baa:267",
             "tests/integration/backend/backend_byte_buffer_stdlib_v062_test.baa:749",
@@ -2980,7 +2980,7 @@
             "register",
             "memory-base-displacement"
           ],
-          "count": 6112,
+          "count": 6113,
           "samples": [
             "examples/error_handling_demo.باء:53",
             "examples/error_handling_demo.باء:75",
@@ -3006,7 +3006,7 @@
             "register",
             "register"
           ],
-          "count": 14042,
+          "count": 14046,
           "samples": [
             "examples/error_handling_demo.باء:16",
             "examples/error_handling_demo.باء:17",
@@ -3130,7 +3130,7 @@
             "register",
             "register"
           ],
-          "count": 3093,
+          "count": 3096,
           "samples": [
             "examples/error_handling_demo.باء:22",
             "examples/error_handling_demo.باء:36",
@@ -3143,7 +3143,7 @@
             "memory-base-displacement",
             "register"
           ],
-          "count": 2378,
+          "count": 2394,
           "samples": [
             "examples/error_handling_demo.باء:28",
             "examples/error_handling_demo.باء:29",
@@ -3156,7 +3156,7 @@
             "register",
             "memory-base-displacement"
           ],
-          "count": 966,
+          "count": 968,
           "samples": [
             "examples/error_handling_demo.باء:13",
             "examples/error_handling_demo.باء:14",
@@ -3169,7 +3169,7 @@
             "register",
             "register"
           ],
-          "count": 289,
+          "count": 290,
           "samples": [
             "examples/error_handling_demo.باء:11",
             "examples/error_handling_demo.باء:64",
@@ -3226,7 +3226,7 @@
             "register",
             "register"
           ],
-          "count": 89,
+          "count": 90,
           "samples": [
             "examples/file_copy_small.باء:45",
             "examples/file_copy_small.باء:252",
@@ -3251,7 +3251,7 @@
           "operands": [
             "register"
           ],
-          "count": 289,
+          "count": 290,
           "samples": [
             "examples/error_handling_demo.باء:10",
             "examples/error_handling_demo.باء:63",
@@ -3269,7 +3269,7 @@
         {
           "mnemonic": "ret",
           "operands": [],
-          "count": 547,
+          "count": 550,
           "samples": [
             "examples/error_handling_demo.باء:32",
             "examples/error_handling_demo.باء:46",
@@ -3436,7 +3436,7 @@
           "operands": [
             "register"
           ],
-          "count": 516,
+          "count": 519,
           "samples": [
             "examples/error_handling_demo.باء:198",
             "examples/error_handling_demo.باء:312",
@@ -3512,7 +3512,7 @@
             "immediate-integer",
             "register"
           ],
-          "count": 2765,
+          "count": 2766,
           "samples": [
             "examples/error_handling_demo.باء:79",
             "examples/error_handling_demo.باء:96",
@@ -3562,7 +3562,7 @@
             "immediate-integer",
             "register"
           ],
-          "count": 289,
+          "count": 290,
           "samples": [
             "examples/error_handling_demo.باء:12",
             "examples/error_handling_demo.باء:65",
@@ -3588,7 +3588,7 @@
             "register",
             "register"
           ],
-          "count": 1452,
+          "count": 1454,
           "samples": [
             "examples/error_handling_demo.باء:23",
             "examples/error_handling_demo.باء:37",
@@ -3659,7 +3659,7 @@
           "operands": [
             "symbol"
           ],
-          "count": 340,
+          "count": 344,
           "samples": [
             "examples/error_handling_demo.باء:8",
             "examples/error_handling_demo.باء:61",
@@ -3705,7 +3705,7 @@
           "operands": [
             "integer"
           ],
-          "count": 4536,
+          "count": 4539,
           "samples": [
             "examples/file_copy_small.باء:1063",
             "examples/file_copy_small.باء:1064",
@@ -3774,9 +3774,9 @@
         }
       ],
       "symbols": {
-        "defined": 682,
-        "global-declaration": 340,
-        "local": 4266
+        "defined": 686,
+        "global-declaration": 344,
+        "local": 4271
       },
       "registers": [
         {
@@ -3793,7 +3793,7 @@
         },
         {
           "name": "%dil",
-          "count": 1500
+          "count": 1504
         },
         {
           "name": "%eax",
@@ -3817,11 +3817,11 @@
         },
         {
           "name": "%r10",
-          "count": 16893
+          "count": 16901
         },
         {
           "name": "%r10b",
-          "count": 6048
+          "count": 6055
         },
         {
           "name": "%r10d",
@@ -3833,7 +3833,7 @@
         },
         {
           "name": "%r12",
-          "count": 5376
+          "count": 5378
         },
         {
           "name": "%r12b",
@@ -3845,7 +3845,7 @@
         },
         {
           "name": "%r13",
-          "count": 3890
+          "count": 3892
         },
         {
           "name": "%r13b",
@@ -3857,7 +3857,7 @@
         },
         {
           "name": "%r14",
-          "count": 3433
+          "count": 3435
         },
         {
           "name": "%r14b",
@@ -3869,7 +3869,7 @@
         },
         {
           "name": "%r15",
-          "count": 2968
+          "count": 2970
         },
         {
           "name": "%r15b",
@@ -3889,23 +3889,23 @@
         },
         {
           "name": "%rax",
-          "count": 7852
+          "count": 7856
         },
         {
           "name": "%rbp",
-          "count": 16762
+          "count": 16782
         },
         {
           "name": "%rbx",
-          "count": 7021
+          "count": 7023
         },
         {
           "name": "%rcx",
-          "count": 2720
+          "count": 2723
         },
         {
           "name": "%rdi",
-          "count": 9663
+          "count": 9670
         },
         {
           "name": "%rdx",
@@ -3913,15 +3913,15 @@
         },
         {
           "name": "%rip",
-          "count": 1020
+          "count": 1023
         },
         {
           "name": "%rsi",
-          "count": 10505
+          "count": 10514
         },
         {
           "name": "%rsp",
-          "count": 5911
+          "count": 5916
         },
         {
           "name": "%si",
@@ -3929,7 +3929,7 @@
         },
         {
           "name": "%sil",
-          "count": 1719
+          "count": 1722
         },
         {
           "name": "%xmm0",
@@ -3955,7 +3955,7 @@
         },
         {
           "form": "instruction:call:symbol",
-          "count": 1536
+          "count": 1537
         },
         {
           "form": "instruction:leaq:memory-rip-relative,register",
@@ -3971,7 +3971,7 @@
         },
         {
           "form": "instruction:movq:memory-rip-relative,register",
-          "count": 82
+          "count": 85
         },
         {
           "form": "instruction:movq:register,memory-rip-relative",

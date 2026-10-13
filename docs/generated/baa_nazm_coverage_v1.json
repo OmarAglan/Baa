@@ -7,12 +7,12 @@
   "nazm_capabilities": {
     "schema": "nazm-capabilities-v1",
     "assembler": "Nazm 0.4.0",
-    "sha256": "0d48baa402d92f3aeecd69ca7bf3f954332a659400bb3f63c25e6b4c53f78521"
+    "sha256": "3098b84e056aa608ce7ba348190a768a35a67339e23d815d448fccf71760e4df"
   },
   "shadow_corpus": {
     "schema": "baa-nazm-shadow-corpus-v1",
     "compiler": "baa version 0.6.0",
-    "sha256": "b29cbf31c35cc66c9b7a898fabdbc1176b7315f7be47f35e812873efd0a7c012"
+    "sha256": "67406f1beb65433e6d6e9711f5c76e904028a8d2eaa47d2a7ef503df40c2178f"
   },
   "status_contract": {
     "supported": "The complete inventory form is implemented by Nazm.",
@@ -419,7 +419,7 @@
               "source": "tests/integration/backend/backend_nazm_reserved_symbols_v073_test.baa",
               "status": "emitted",
               "exit_code": 0,
-              "sha256": "3ed3e26635ff916b9ccc4d883b3d80ddcaded25e3c70bf4ed00874ac392cd0b6"
+              "sha256": "e492ab5cba7bae2273d5ab9ea07470f9261abca03b974a1796c5f4d6d2a22696"
             },
             {
               "source": "tests/integration/backend/backend_path_stdlib_v062_test.baa",
@@ -443,7 +443,7 @@
               "source": "tests/integration/backend/backend_pointer_index_assign_v073_test.baa",
               "status": "emitted",
               "exit_code": 0,
-              "sha256": "05e997a0c8b03b04ac2788393c5196f463a248a9a654d919bbeff40f94d53c8d"
+              "sha256": "b4892bfaa213e70b71e8a87c073551688208b300c2452ac2ec87f5d2c3348223"
             },
             {
               "source": "tests/integration/backend/backend_postfix_statement_v073_test.baa",
@@ -1012,7 +1012,7 @@
             "register",
             "register"
           ],
-          "count": 2449,
+          "count": 2450,
           "samples": [
             "examples/error_handling_demo.باء:224",
             "examples/error_handling_demo.باء:226",
@@ -1200,7 +1200,7 @@
           "operands": [
             "symbol"
           ],
-          "count": 1536,
+          "count": 1537,
           "samples": [
             "examples/error_handling_demo.باء:81",
             "examples/error_handling_demo.باء:91",
@@ -1214,7 +1214,7 @@
             ],
             "width_bits": 64
           },
-          "reason": "Only labels defined in the same .text input are supported; external call relocations are not implemented."
+          "reason": "Arabic labels defined in the input and symbols declared with .خارجي are supported, the latter through a PC-relative relocation; Latin linker identifiers are not accepted."
         },
         {
           "mnemonic": "cmpb",
@@ -1308,7 +1308,7 @@
             "immediate-integer",
             "register"
           ],
-          "count": 2000,
+          "count": 2003,
           "samples": [
             "examples/error_handling_demo.باء:20",
             "examples/error_handling_demo.باء:34",
@@ -1632,7 +1632,7 @@
           "operands": [
             "local-symbol"
           ],
-          "count": 3189,
+          "count": 3191,
           "samples": [
             "examples/error_handling_demo.باء:25",
             "examples/error_handling_demo.باء:39",
@@ -1653,7 +1653,7 @@
           "operands": [
             "local-symbol"
           ],
-          "count": 1457,
+          "count": 1459,
           "samples": [
             "examples/error_handling_demo.باء:24",
             "examples/error_handling_demo.باء:38",
@@ -1718,7 +1718,7 @@
         {
           "mnemonic": "leave",
           "operands": [],
-          "count": 547,
+          "count": 550,
           "samples": [
             "examples/error_handling_demo.باء:31",
             "examples/error_handling_demo.باء:45",
@@ -1860,7 +1860,7 @@
             "register",
             "register"
           ],
-          "count": 1105,
+          "count": 1106,
           "samples": [
             "examples/error_handling_demo.باء:290",
             "examples/error_handling_demo.باء:349",
@@ -2083,7 +2083,7 @@
             "immediate-integer",
             "register"
           ],
-          "count": 2902,
+          "count": 2905,
           "samples": [
             "examples/error_handling_demo.باء:27",
             "examples/error_handling_demo.باء:41",
@@ -2139,7 +2139,7 @@
             "memory-rip-relative",
             "register"
           ],
-          "count": 82,
+          "count": 85,
           "samples": [
             "tests/integration/backend/backend_byte_buffer_stdlib_v062_test.baa:257",
             "tests/integration/backend/backend_byte_buffer_stdlib_v062_test.baa:697",
@@ -2223,7 +2223,7 @@
             "register",
             "register"
           ],
-          "count": 12665,
+          "count": 12669,
           "samples": [
             "examples/error_handling_demo.باء:16",
             "examples/error_handling_demo.باء:17",
@@ -2267,14 +2267,17 @@
             "width_bits": {
               "source": [
                 8,
+                16,
                 32
               ],
               "destination": [
+                16,
                 32,
                 64
               ]
             }
           },
+          "constraint": "destination-is-wider-than-source",
           "acceptance_fixture": "tests/fixtures/baa_coverage/حساب-وتحكم-باء.نظم"
         },
         {
@@ -2299,14 +2302,17 @@
             "width_bits": {
               "source": [
                 8,
+                16,
                 32
               ],
               "destination": [
+                16,
                 32,
                 64
               ]
             }
           },
+          "constraint": "destination-is-wider-than-source",
           "acceptance_fixture": "tests/fixtures/baa_coverage/حساب-وتحكم-باء.نظم"
         },
         {
@@ -2346,14 +2352,17 @@
             "width_bits": {
               "source": [
                 8,
+                16,
                 32
               ],
               "destination": [
+                16,
                 32,
                 64
               ]
             }
           },
+          "constraint": "destination-is-wider-than-source",
           "acceptance_fixture": "tests/fixtures/baa_coverage/حساب-وتحكم-باء.نظم"
         },
         {
@@ -2366,8 +2375,28 @@
           "samples": [
             "tests/integration/backend/backend_struct_sized_fields_v073_test.baa:486"
           ],
-          "status": "unsupported",
-          "reason": "Nazm exposes only 64-bit general-purpose register instruction forms."
+          "status": "supported",
+          "nazm": {
+            "mnemonic": "وسع_بإشارة",
+            "operands": [
+              "register",
+              "register"
+            ],
+            "width_bits": {
+              "source": [
+                8,
+                16,
+                32
+              ],
+              "destination": [
+                16,
+                32,
+                64
+              ]
+            }
+          },
+          "constraint": "destination-is-wider-than-source",
+          "acceptance_fixture": "tests/fixtures/baa_coverage/حساب-وتحكم-باء.نظم"
         },
         {
           "mnemonic": "movw",
@@ -2429,14 +2458,17 @@
             ],
             "width_bits": {
               "source": [
-                8
+                8,
+                16
               ],
               "destination": [
+                16,
                 32,
                 64
               ]
             }
           },
+          "constraint": "destination-is-wider-than-source",
           "acceptance_fixture": "tests/fixtures/baa_coverage/حساب-وتحكم-باء.نظم"
         },
         {
@@ -2460,7 +2492,7 @@
             "register",
             "register"
           ],
-          "count": 3059,
+          "count": 3062,
           "samples": [
             "examples/error_handling_demo.باء:22",
             "examples/error_handling_demo.باء:36",
@@ -2475,14 +2507,17 @@
             ],
             "width_bits": {
               "source": [
-                8
+                8,
+                16
               ],
               "destination": [
+                16,
                 32,
                 64
               ]
             }
           },
+          "constraint": "destination-is-wider-than-source",
           "acceptance_fixture": "tests/fixtures/baa_coverage/حساب-وتحكم-باء.نظم"
         },
         {
@@ -2491,7 +2526,7 @@
             "memory-base-displacement",
             "register"
           ],
-          "count": 1820,
+          "count": 1832,
           "samples": [
             "examples/error_handling_demo.باء:28",
             "examples/error_handling_demo.باء:29",
@@ -2506,7 +2541,7 @@
             "register",
             "memory-base-displacement"
           ],
-          "count": 766,
+          "count": 768,
           "samples": [
             "examples/error_handling_demo.باء:13",
             "examples/error_handling_demo.باء:14",
@@ -2521,7 +2556,7 @@
             "register",
             "register"
           ],
-          "count": 289,
+          "count": 290,
           "samples": [
             "examples/error_handling_demo.باء:11",
             "examples/error_handling_demo.باء:64",
@@ -2602,7 +2637,7 @@
             "register",
             "register"
           ],
-          "count": 89,
+          "count": 90,
           "samples": [
             "examples/file_copy_small.باء:43",
             "examples/file_copy_small.باء:239",
@@ -2665,7 +2700,7 @@
           "operands": [
             "register"
           ],
-          "count": 289,
+          "count": 290,
           "samples": [
             "examples/error_handling_demo.باء:10",
             "examples/error_handling_demo.باء:63",
@@ -2699,7 +2734,7 @@
         {
           "mnemonic": "ret",
           "operands": [],
-          "count": 547,
+          "count": 550,
           "samples": [
             "examples/error_handling_demo.باء:32",
             "examples/error_handling_demo.باء:46",
@@ -2982,7 +3017,7 @@
           "operands": [
             "register"
           ],
-          "count": 516,
+          "count": 519,
           "samples": [
             "examples/error_handling_demo.باء:174",
             "examples/error_handling_demo.باء:288",
@@ -3197,7 +3232,7 @@
             "immediate-integer",
             "register"
           ],
-          "count": 216,
+          "count": 217,
           "samples": [
             "examples/error_handling_demo.باء:12",
             "examples/error_handling_demo.باء:65",
@@ -3227,7 +3262,7 @@
             "register",
             "register"
           ],
-          "count": 1452,
+          "count": 1454,
           "samples": [
             "examples/error_handling_demo.باء:23",
             "examples/error_handling_demo.باء:37",
@@ -3266,7 +3301,7 @@
             "register",
             "register"
           ],
-          "count": 1524,
+          "count": 1525,
           "samples": [
             "examples/error_handling_demo.باء:80",
             "examples/error_handling_demo.باء:90",
@@ -3360,7 +3395,7 @@
           "operands": [
             "symbol"
           ],
-          "count": 340,
+          "count": 344,
           "samples": [
             "examples/error_handling_demo.باء:8",
             "examples/error_handling_demo.باء:61",
@@ -3461,7 +3496,7 @@
           "operands": [
             "integer"
           ],
-          "count": 4536,
+          "count": 4539,
           "samples": [
             "examples/file_copy_small.باء:991",
             "examples/file_copy_small.باء:992",
@@ -3598,9 +3633,9 @@
         }
       ],
       "symbols": {
-        "defined": 682,
-        "global-declaration": 340,
-        "local": 4266,
+        "defined": 686,
+        "global-declaration": 344,
+        "local": 4271,
         "local-declaration": 12
       },
       "relocation_candidates": [
@@ -3613,7 +3648,7 @@
         },
         {
           "form": "instruction:call:symbol",
-          "count": 1536,
+          "count": 1537,
           "status": "partial",
           "reason": "Local and Arabic external call relocations are supported, but Latin platform ABI symbols still require an Arabic bridge."
         },
@@ -3640,7 +3675,7 @@
         },
         {
           "form": "instruction:movq:memory-rip-relative,register",
-          "count": 82,
+          "count": 85,
           "status": "supported",
           "nazm_kind": "PC32",
           "acceptance_fixture": "tests/fixtures/baa_coverage/حركة-باء.نظم"
@@ -3655,14 +3690,14 @@
       ],
       "summary": {
         "forms": {
-          "supported": 91,
+          "supported": 92,
           "partial": 5,
-          "unsupported": 39
+          "unsupported": 38
         },
         "emissions": {
-          "supported": 70274,
-          "partial": 3414,
-          "unsupported": 10892
+          "supported": 70310,
+          "partial": 3420,
+          "unsupported": 10914
         }
       }
     },
@@ -4058,7 +4093,7 @@
               "source": "tests/integration/backend/backend_nazm_reserved_symbols_v073_test.baa",
               "status": "emitted",
               "exit_code": 0,
-              "sha256": "588cc49c74d5278afa5f3e03e1a86a698e174f80d9e73ba3b55c72284e25a1aa"
+              "sha256": "958e3ef5767b456bb75500a767aae98bf3955dce127b00c2ba9bbc6288549059"
             },
             {
               "source": "tests/integration/backend/backend_path_stdlib_v062_test.baa",
@@ -4082,7 +4117,7 @@
               "source": "tests/integration/backend/backend_pointer_index_assign_v073_test.baa",
               "status": "emitted",
               "exit_code": 0,
-              "sha256": "71bc2200f5497160deb29e81f4f78786b7c918999fe46ae49f80e045c41328c1"
+              "sha256": "a4a1e7eefb8c27b4477f8a3dd2cb2c8e6a4d087d84601be642fcbaaeac134034"
             },
             {
               "source": "tests/integration/backend/backend_postfix_statement_v073_test.baa",
@@ -4580,7 +4615,7 @@
             "immediate-integer",
             "register"
           ],
-          "count": 3848,
+          "count": 3849,
           "samples": [
             "examples/error_handling_demo.باء:87",
             "examples/error_handling_demo.باء:98",
@@ -4651,7 +4686,7 @@
             "register",
             "register"
           ],
-          "count": 2461,
+          "count": 2462,
           "samples": [
             "examples/error_handling_demo.باء:248",
             "examples/error_handling_demo.باء:250",
@@ -4809,7 +4844,7 @@
           "operands": [
             "symbol"
           ],
-          "count": 1536,
+          "count": 1537,
           "samples": [
             "examples/error_handling_demo.باء:86",
             "examples/error_handling_demo.باء:97",
@@ -4823,7 +4858,7 @@
             ],
             "width_bits": 64
           },
-          "reason": "Only labels defined in the same .text input are supported; external call relocations are not implemented."
+          "reason": "Arabic labels defined in the input and symbols declared with .خارجي are supported, the latter through a PC-relative relocation; Latin linker identifiers are not accepted."
         },
         {
           "mnemonic": "cmpb",
@@ -4917,7 +4952,7 @@
             "immediate-integer",
             "register"
           ],
-          "count": 2125,
+          "count": 2128,
           "samples": [
             "examples/error_handling_demo.باء:20",
             "examples/error_handling_demo.باء:34",
@@ -5241,7 +5276,7 @@
           "operands": [
             "local-symbol"
           ],
-          "count": 3189,
+          "count": 3191,
           "samples": [
             "examples/error_handling_demo.باء:25",
             "examples/error_handling_demo.باء:39",
@@ -5262,7 +5297,7 @@
           "operands": [
             "local-symbol"
           ],
-          "count": 1457,
+          "count": 1459,
           "samples": [
             "examples/error_handling_demo.باء:24",
             "examples/error_handling_demo.باء:38",
@@ -5327,7 +5362,7 @@
         {
           "mnemonic": "leave",
           "operands": [],
-          "count": 547,
+          "count": 550,
           "samples": [
             "examples/error_handling_demo.باء:31",
             "examples/error_handling_demo.باء:45",
@@ -5469,7 +5504,7 @@
             "register",
             "register"
           ],
-          "count": 1299,
+          "count": 1300,
           "samples": [
             "examples/error_handling_demo.باء:314",
             "examples/error_handling_demo.باء:373",
@@ -5692,7 +5727,7 @@
             "immediate-integer",
             "register"
           ],
-          "count": 2905,
+          "count": 2908,
           "samples": [
             "examples/error_handling_demo.باء:27",
             "examples/error_handling_demo.باء:41",
@@ -5748,7 +5783,7 @@
             "memory-rip-relative",
             "register"
           ],
-          "count": 82,
+          "count": 85,
           "samples": [
             "tests/integration/backend/backend_byte_buffer_stdlib_v062_test.baa:267",
             "tests/integration/backend/backend_byte_buffer_stdlib_v062_test.baa:749",
@@ -5776,7 +5811,7 @@
             "register",
             "memory-base-displacement"
           ],
-          "count": 6112,
+          "count": 6113,
           "samples": [
             "examples/error_handling_demo.باء:53",
             "examples/error_handling_demo.باء:75",
@@ -5832,7 +5867,7 @@
             "register",
             "register"
           ],
-          "count": 14042,
+          "count": 14046,
           "samples": [
             "examples/error_handling_demo.باء:16",
             "examples/error_handling_demo.باء:17",
@@ -5876,14 +5911,17 @@
             "width_bits": {
               "source": [
                 8,
+                16,
                 32
               ],
               "destination": [
+                16,
                 32,
                 64
               ]
             }
           },
+          "constraint": "destination-is-wider-than-source",
           "acceptance_fixture": "tests/fixtures/baa_coverage/حساب-وتحكم-باء.نظم"
         },
         {
@@ -5908,14 +5946,17 @@
             "width_bits": {
               "source": [
                 8,
+                16,
                 32
               ],
               "destination": [
+                16,
                 32,
                 64
               ]
             }
           },
+          "constraint": "destination-is-wider-than-source",
           "acceptance_fixture": "tests/fixtures/baa_coverage/حساب-وتحكم-باء.نظم"
         },
         {
@@ -5955,14 +5996,17 @@
             "width_bits": {
               "source": [
                 8,
+                16,
                 32
               ],
               "destination": [
+                16,
                 32,
                 64
               ]
             }
           },
+          "constraint": "destination-is-wider-than-source",
           "acceptance_fixture": "tests/fixtures/baa_coverage/حساب-وتحكم-باء.نظم"
         },
         {
@@ -5975,8 +6019,28 @@
           "samples": [
             "tests/integration/backend/backend_struct_sized_fields_v073_test.baa:500"
           ],
-          "status": "unsupported",
-          "reason": "Nazm exposes only 64-bit general-purpose register instruction forms."
+          "status": "supported",
+          "nazm": {
+            "mnemonic": "وسع_بإشارة",
+            "operands": [
+              "register",
+              "register"
+            ],
+            "width_bits": {
+              "source": [
+                8,
+                16,
+                32
+              ],
+              "destination": [
+                16,
+                32,
+                64
+              ]
+            }
+          },
+          "constraint": "destination-is-wider-than-source",
+          "acceptance_fixture": "tests/fixtures/baa_coverage/حساب-وتحكم-باء.نظم"
         },
         {
           "mnemonic": "movw",
@@ -6038,14 +6102,17 @@
             ],
             "width_bits": {
               "source": [
-                8
+                8,
+                16
               ],
               "destination": [
+                16,
                 32,
                 64
               ]
             }
           },
+          "constraint": "destination-is-wider-than-source",
           "acceptance_fixture": "tests/fixtures/baa_coverage/حساب-وتحكم-باء.نظم"
         },
         {
@@ -6069,7 +6136,7 @@
             "register",
             "register"
           ],
-          "count": 3093,
+          "count": 3096,
           "samples": [
             "examples/error_handling_demo.باء:22",
             "examples/error_handling_demo.باء:36",
@@ -6084,14 +6151,17 @@
             ],
             "width_bits": {
               "source": [
-                8
+                8,
+                16
               ],
               "destination": [
+                16,
                 32,
                 64
               ]
             }
           },
+          "constraint": "destination-is-wider-than-source",
           "acceptance_fixture": "tests/fixtures/baa_coverage/حساب-وتحكم-باء.نظم"
         },
         {
@@ -6100,7 +6170,7 @@
             "memory-base-displacement",
             "register"
           ],
-          "count": 2378,
+          "count": 2394,
           "samples": [
             "examples/error_handling_demo.باء:28",
             "examples/error_handling_demo.باء:29",
@@ -6115,7 +6185,7 @@
             "register",
             "memory-base-displacement"
           ],
-          "count": 966,
+          "count": 968,
           "samples": [
             "examples/error_handling_demo.باء:13",
             "examples/error_handling_demo.باء:14",
@@ -6130,7 +6200,7 @@
             "register",
             "register"
           ],
-          "count": 289,
+          "count": 290,
           "samples": [
             "examples/error_handling_demo.باء:11",
             "examples/error_handling_demo.باء:64",
@@ -6211,7 +6281,7 @@
             "register",
             "register"
           ],
-          "count": 89,
+          "count": 90,
           "samples": [
             "examples/file_copy_small.باء:45",
             "examples/file_copy_small.باء:252",
@@ -6253,7 +6323,7 @@
           "operands": [
             "register"
           ],
-          "count": 289,
+          "count": 290,
           "samples": [
             "examples/error_handling_demo.باء:10",
             "examples/error_handling_demo.باء:63",
@@ -6287,7 +6357,7 @@
         {
           "mnemonic": "ret",
           "operands": [],
-          "count": 547,
+          "count": 550,
           "samples": [
             "examples/error_handling_demo.باء:32",
             "examples/error_handling_demo.باء:46",
@@ -6570,7 +6640,7 @@
           "operands": [
             "register"
           ],
-          "count": 516,
+          "count": 519,
           "samples": [
             "examples/error_handling_demo.باء:198",
             "examples/error_handling_demo.باء:312",
@@ -6692,7 +6762,7 @@
             "immediate-integer",
             "register"
           ],
-          "count": 2765,
+          "count": 2766,
           "samples": [
             "examples/error_handling_demo.باء:79",
             "examples/error_handling_demo.باء:96",
@@ -6785,7 +6855,7 @@
             "immediate-integer",
             "register"
           ],
-          "count": 289,
+          "count": 290,
           "samples": [
             "examples/error_handling_demo.باء:12",
             "examples/error_handling_demo.باء:65",
@@ -6815,7 +6885,7 @@
             "register",
             "register"
           ],
-          "count": 1452,
+          "count": 1454,
           "samples": [
             "examples/error_handling_demo.باء:23",
             "examples/error_handling_demo.باء:37",
@@ -6933,7 +7003,7 @@
           "operands": [
             "symbol"
           ],
-          "count": 340,
+          "count": 344,
           "samples": [
             "examples/error_handling_demo.باء:8",
             "examples/error_handling_demo.باء:61",
@@ -7014,7 +7084,7 @@
           "operands": [
             "integer"
           ],
-          "count": 4536,
+          "count": 4539,
           "samples": [
             "examples/file_copy_small.باء:1063",
             "examples/file_copy_small.باء:1064",
@@ -7128,9 +7198,9 @@
         }
       ],
       "symbols": {
-        "defined": 682,
-        "global-declaration": 340,
-        "local": 4266
+        "defined": 686,
+        "global-declaration": 344,
+        "local": 4271
       },
       "relocation_candidates": [
         {
@@ -7142,7 +7212,7 @@
         },
         {
           "form": "instruction:call:symbol",
-          "count": 1536,
+          "count": 1537,
           "status": "partial",
           "reason": "Local and Arabic external call relocations are supported, but Latin platform ABI symbols still require an Arabic bridge."
         },
@@ -7169,7 +7239,7 @@
         },
         {
           "form": "instruction:movq:memory-rip-relative,register",
-          "count": 82,
+          "count": 85,
           "status": "supported",
           "nazm_kind": "PC32",
           "acceptance_fixture": "tests/fixtures/baa_coverage/حركة-باء.نظم"
@@ -7184,14 +7254,14 @@
       ],
       "summary": {
         "forms": {
-          "supported": 89,
+          "supported": 90,
           "partial": 5,
-          "unsupported": 34
+          "unsupported": 33
         },
         "emissions": {
-          "supported": 75420,
-          "partial": 3414,
-          "unsupported": 9671
+          "supported": 75459,
+          "partial": 3420,
+          "unsupported": 9696
         }
       }
     }

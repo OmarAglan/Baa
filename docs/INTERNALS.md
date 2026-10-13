@@ -155,7 +155,10 @@ plan through either the default structured-argv Nazm process or the explicit
 embedded API experiment. Their manifest unit records `source_kind: nazm` and
 `assembler: nazm`. Generated and direct objects share incremental reuse only
 after Baa resolves the exact Nazm API/version/capability fingerprint and adds
-it to the cache slot.
+it to the cache slot. The fingerprint names a Nazm release, not a build, so an
+in-process build also adds the embedded Nazm revision to the slot: two
+compilers carrying different Nazm commits of the same version never share an
+object.
 | `--target=<t>` | **Target Select** | `.s/.o/.exe` | Selects backend target: `x86_64-windows` or `x86_64-linux`. |
 | `-fPIC` / `-fPIE` | **Code Model (ELF)** | `.s/.o/.exe` | Enables PIC/PIE-friendly emission on Linux/ELF. |
 | `-fno-pic` / `-fno-pie` | **Disable PIC/PIE** | `.s/.o/.exe` | Disables PIC/PIE modes. |

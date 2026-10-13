@@ -121,7 +121,8 @@ C-compatible behavior.
 - `ساكن` cannot qualify a function definition.
 - Through the Nazm assembler, a global or function whose name is a Nazm register spelling
   (`سجل_المركم`, `مؤشر_التعليمة`, ...), a removed register alias (`بيانات`, `مصدر`, `قاعدة`,
-  `عداد`, `ر1`, ...), or starts with a compiler label prefix (`كتلة_`, `سلسلة_باء_`,
+  `عداد`, `ر1`, ...), starts with a prefix Nazm reserves for register names (`سجل_`,
+  `مؤشر_`, `فهرس_`), or starts with a compiler label prefix (`كتلة_`, `سلسلة_باء_`,
   `سلسلة_سي_`, `تخزين_ساكن_`, `رمز_باء_`) is emitted as `رمز_باء_<name>` in the object file.
   Baa modules link with each other unchanged; foreign objects must use the escaped name.
 - Inline assembly supports only the documented `a`, `c`, and `d` input constraints and `=a`,

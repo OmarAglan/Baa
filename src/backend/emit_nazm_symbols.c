@@ -139,6 +139,23 @@ static const char *const k_nazm_generated_prefixes[] = {
     "سلسلة_باء_", "سلسلة_سي_", "تخزين_ساكن_", "كتلة_", k_nazm_escape_prefix,
 };
 
+// البادئات التي يحجزها نَظْم 0.5 لأسماء السجلات، فيرفض أي وسم يبدأ بها
+// (تطابق RESERVED_PREFIXES في Nazm/src/lexer/lexer.c).
+static const char *const k_nazm_reserved_prefixes[] = {
+    "سجل_", "مؤشر_", "فهرس_",
+};
+
+static bool nazm_name_has_prefix(const char *name,
+                                 const char *const *table,
+                                 size_t count)
+{
+    for (size_t i = 0; i < count; ++i)
+    {
+        if (strncmp(name, table[i], strlen(table[i])) == 0) return true;
+    }
+    return false;
+}
+
 static bool nazm_name_in_table(const char *name,
                                const char *const *table,
                                size_t count)
@@ -166,15 +183,12 @@ static bool nazm_symbol_needs_escape(const char *name)
                            sizeof(k_nazm_legacy_registers) /
                                sizeof(k_nazm_legacy_registers[0])))
         return true;
-    for (size_t i = 0;
-         i < sizeof(k_nazm_generated_prefixes) /
-                 sizeof(k_nazm_generated_prefixes[0]);
-         ++i)
-    {
-        const char *prefix = k_nazm_generated_prefixes[i];
-        if (strncmp(name, prefix, strlen(prefix)) == 0) return true;
-    }
-    return false;
+    return nazm_name_has_prefix(name, k_nazm_reserved_prefixes,
+                                sizeof(k_nazm_reserved_prefixes) /
+                                    sizeof(k_nazm_reserved_prefixes[0])) ||
+           nazm_name_has_prefix(name, k_nazm_generated_prefixes,
+                                sizeof(k_nazm_generated_prefixes) /
+                                    sizeof(k_nazm_generated_prefixes[0]));
 }
 
 static bool nazm_operand_is_memory(const MachineOperand *operand)

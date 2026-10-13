@@ -271,7 +271,7 @@ baa [options] <source.baa> [-o <output>]
 - `--incremental` is opt-in and only affects object-producing builds (`-c` and normal link mode).
 - Cache hits are disabled for observable compiler/debug modes: IR dumps, `--emit-ir`, and verifier flags.
 - Header invalidation is content-hash based: changing a `#تضمين` file rebuilds only source units that depended on it.
-- Nazm-generated and direct `.نظم` objects are reusable only after Baa obtains the exact `nazm-api-v1;version=...;capabilities=nazm-capabilities-v1:<sha256>` fingerprint. It is part of the object-cache slot and is empty for GAS builds.
+- Nazm-generated and direct `.نظم` objects are reusable only after Baa obtains the exact `nazm-api-v1;version=...;capabilities=nazm-capabilities-v1:<sha256>` fingerprint. It is part of the object-cache slot and is empty for GAS builds. When the embedded assembler is used, the Nazm revision printed by `baa --version` is part of the slot too.
 
 Release installers and packages link Nazm into `baa` and assemble with it by
 default; a source build does the same with

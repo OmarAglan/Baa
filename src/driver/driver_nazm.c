@@ -161,6 +161,15 @@ void driver_nazm_apply_embedded_default(CompilerConfig *config)
 #endif
 }
 
+const char *driver_nazm_embedded_revision(void)
+{
+#ifdef BAA_EMBEDDED_NAZM
+    return BAA_EMBEDDED_NAZM_REVISION;
+#else
+    return "";
+#endif
+}
+
 void driver_nazm_print_embedded_version(void)
 {
 #ifdef BAA_EMBEDDED_NAZM

@@ -3,7 +3,7 @@
   "compiler": "baa version 0.6.0",
   "source_inventory": {
     "schema": "baa-assembly-surface-v1",
-    "sha256": "bd2785be14ea2fc1456b09b6620cccddff51237fa786ac1afa3236b004d17a77"
+    "sha256": "822d3896e70bfc971ee2cc2c014cd127271bab1cb8cc133d1946e5b7a3c3e231"
   },
   "status_contract": {
     "emitted": "Baa emitted canonical Arabic Nazm without Latin letters.",
@@ -286,7 +286,7 @@
           "source": "tests/integration/backend/backend_nazm_reserved_symbols_v073_test.baa",
           "status": "emitted",
           "exit_code": 0,
-          "sha256": "3ed3e26635ff916b9ccc4d883b3d80ddcaded25e3c70bf4ed00874ac392cd0b6"
+          "sha256": "e492ab5cba7bae2273d5ab9ea07470f9261abca03b974a1796c5f4d6d2a22696"
         },
         {
           "source": "tests/integration/backend/backend_path_stdlib_v062_test.baa",
@@ -310,7 +310,7 @@
           "source": "tests/integration/backend/backend_pointer_index_assign_v073_test.baa",
           "status": "emitted",
           "exit_code": 0,
-          "sha256": "05e997a0c8b03b04ac2788393c5196f463a248a9a654d919bbeff40f94d53c8d"
+          "sha256": "b4892bfaa213e70b71e8a87c073551688208b300c2452ac2ec87f5d2c3348223"
         },
         {
           "source": "tests/integration/backend/backend_postfix_statement_v073_test.baa",
@@ -1059,7 +1059,7 @@
           "source": "tests/integration/backend/backend_nazm_reserved_symbols_v073_test.baa",
           "status": "emitted",
           "exit_code": 0,
-          "sha256": "588cc49c74d5278afa5f3e03e1a86a698e174f80d9e73ba3b55c72284e25a1aa"
+          "sha256": "958e3ef5767b456bb75500a767aae98bf3955dce127b00c2ba9bbc6288549059"
         },
         {
           "source": "tests/integration/backend/backend_path_stdlib_v062_test.baa",
@@ -1083,7 +1083,7 @@
           "source": "tests/integration/backend/backend_pointer_index_assign_v073_test.baa",
           "status": "emitted",
           "exit_code": 0,
-          "sha256": "71bc2200f5497160deb29e81f4f78786b7c918999fe46ae49f80e045c41328c1"
+          "sha256": "a4a1e7eefb8c27b4477f8a3dd2cb2c8e6a4d087d84601be642fcbaaeac134034"
         },
         {
           "source": "tests/integration/backend/backend_postfix_statement_v073_test.baa",

@@ -8,9 +8,29 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+### Fixed
+
+- **Names starting with a Nazm register prefix build again**: Nazm reserves
+  `سجل_`, `مؤشر_` and `فهرس_` for register names and rejects a label that
+  starts with one. A global or function named that way (`مؤشر_القائمة`,
+  `فهرس_الحلقة`) is now emitted as `رمز_باء_<name>`, like the register
+  spellings themselves. Baa modules link with each other unchanged.
+- **The object cache tells two embedded Nazm builds apart**: the Nazm
+  fingerprint names a release, so two compilers carrying different Nazm
+  commits of the same version shared cache slots. The embedded Nazm revision
+  is now part of the slot.
+
 ### Changed
 
-- **Builds against Nazm `e405681`**: every workflow checks out the Nazm
+- **Builds against Nazm `4a4da86`**: the revision that closes Nazm's open 1.0
+  conditions. It reserves the register prefixes above, rejects a jump or call
+  whose target is neither a label nor a 64-bit register (Baa emits neither
+  rejected form), raises the section alignment an `.محاذاة` asks for, and
+  declares the 16-bit widening forms: `movswl`, which Baa emits once in its
+  corpus, moves from unsupported to supported in
+  `docs/generated/baa_nazm_coverage_v1.json`. A build from this commit reports
+  `Embedded Nazm 0.4.0 (4a4da86...), default`.
+- **Built against Nazm `e405681` before that**: every workflow checked out the Nazm
   revision that fails each allocation point behind `nazm-api-v1` in its own
   tests and returns `NAZM_STATUS_OUT_OF_MEMORY` with nothing leaked, and that
   fuzzes its lexer and parser over the same injected build. That revision

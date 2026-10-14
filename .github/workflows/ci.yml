@@ -100,8 +100,8 @@ jobs:
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          if (Test-Path ".\gccin") {
-            "$env:GITHUB_WORKSPACE\gccin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+          if (Test-Path ".\gcc\bin") {
+            "$env:GITHUB_WORKSPACE\gcc\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
           }
       - name: Build baa_frontend and its probe
         shell: bash

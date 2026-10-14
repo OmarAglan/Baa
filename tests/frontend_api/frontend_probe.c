@@ -27,6 +27,26 @@
 #include <unistd.h>
 #endif
 
+/* المسارات UTF-8؛ fopen على Windows يفسرها بصفحة ANSI فيفشل مع مسار عربي. */
+static FILE *probe_fopen_utf8(const char *path, const wchar_t *wide_mode, const char *mode)
+{
+#ifdef _WIN32
+    (void)mode;
+    int needed = MultiByteToWideChar(CP_UTF8, 0, path, -1, NULL, 0);
+    if (needed <= 0) return NULL;
+    wchar_t *wide = (wchar_t *)malloc((size_t)needed * sizeof(wchar_t));
+    if (!wide) return NULL;
+    FILE *file = NULL;
+    if (MultiByteToWideChar(CP_UTF8, 0, path, -1, wide, needed) > 0)
+        file = _wfopen(wide, wide_mode);
+    free(wide);
+    return file;
+#else
+    (void)wide_mode;
+    return fopen(path, mode);
+#endif
+}
+
 static unsigned long long probe_resident_kib(void)
 {
 #ifdef _WIN32
@@ -158,7 +178,7 @@ static int probe_main(int argc, char **argv)
 
     if (memory_report)
     {
-        FILE *report = fopen(memory_report, "w");
+        FILE *report = probe_fopen_utf8(memory_report, L"w", "w");
         if (report)
         {
             fprintf(report, "%llu %llu\n", first_kib, last_kib);

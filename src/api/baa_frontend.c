@@ -447,7 +447,8 @@ static void frontend_leave_directory(FrontendNativeChar *saved)
 #ifdef _WIN32
     (void)_wchdir(saved);
 #else
-    (void)chdir(saved);
+    // لا بديل إن تعذرت العودة؛ النداء التالي يحدد مجلده من جديد.
+    if (chdir(saved) != 0) errno = 0;
 #endif
     free(saved);
 }

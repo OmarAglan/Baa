@@ -62,8 +62,23 @@ static void nazm_write_function(FILE *out,
     int frame_size = nazm_frame_size(func, target, callee_count);
     if (frame_size > 0)
     {
+        int remaining = frame_size;
+        // يلتزم Windows المكدس صفحة بعد صفحة عبر صفحة حراسة؛ إطار أكبر من صفحة
+        // يُحجز صفحة صفحة مع لمس كل صفحة، وإلا تقفز أول كتابة فوق صفحة الحراسة.
+        if (target->obj_format == BAA_OBJFORMAT_COFF)
+        {
+            while (remaining > BAA_COFF_STACK_PAGE_BYTES)
+            {
+                fputs("    اطرح مؤشر_المكدس، ", out);
+                nazm_write_unsigned(out, (uint64_t)BAA_COFF_STACK_PAGE_BYTES);
+                fputc('\n', out);
+                fputs("    انقل [مؤشر_المكدس]، مؤشر_المكدس\n", out);
+                map->generated_line += 2;
+                remaining -= BAA_COFF_STACK_PAGE_BYTES;
+            }
+        }
         fputs("    اطرح مؤشر_المكدس، ", out);
-        nazm_write_unsigned(out, (uint64_t)frame_size);
+        nazm_write_unsigned(out, (uint64_t)remaining);
         fputc('\n', out);
         map->generated_line += 1;
     }

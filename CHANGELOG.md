@@ -28,6 +28,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
   language reference promises short-circuit evaluation. A guard such as
   `س != عدم && طول_نص(س) > ٠` crashed on `عدم`. The right operand now runs in
   its own block and only when the left one does not decide the result.
+- **Stack frames larger than a page work on Windows**: Windows commits the
+  stack one guard page at a time, but the prologue subtracted the whole frame
+  at once, so a function with more than 4 KiB of locals could write past the
+  guard page and the process ended without an exception. Whether it crashed
+  depended on how much stack was already committed, so it failed only
+  sometimes; Takween's configuration parser, about 21 KiB of frame, crashed
+  in roughly one `takween check` out of four. On `x86_64-windows` the prologue
+  now reserves such a frame one page at a time and touches each page, with
+  both assemblers.
 - **Names starting with a Nazm register prefix build again**: Nazm reserves
   `سجل_`, `مؤشر_` and `فهرس_` for register names and rejects a label that
   starts with one. A global or function named that way (`مؤشر_القائمة`,

@@ -44,7 +44,17 @@ static void emit_prologue(MachineFunc* func, FILE* out,
     }
 
     if (total_frame > 0) {
-        fprintf(out, "    sub $%d, %%rsp\n", total_frame);
+        int remaining = total_frame;
+        // يلتزم Windows المكدس صفحة بعد صفحة عبر صفحة حراسة؛ إطار أكبر من صفحة
+        // يُحجز صفحة صفحة مع لمس كل صفحة، وإلا تقفز أول كتابة فوق صفحة الحراسة.
+        if (g_emit_target && g_emit_target->obj_format == BAA_OBJFORMAT_COFF) {
+            while (remaining > BAA_COFF_STACK_PAGE_BYTES) {
+                fprintf(out, "    sub $%d, %%rsp\n", BAA_COFF_STACK_PAGE_BYTES);
+                fprintf(out, "    mov %%rsp, (%%rsp)\n");
+                remaining -= BAA_COFF_STACK_PAGE_BYTES;
+            }
+        }
+        fprintf(out, "    sub $%d, %%rsp\n", remaining);
         emit_comment(out, "حجز إطار مكدس بحجم %d بايت", total_frame);
     }
 

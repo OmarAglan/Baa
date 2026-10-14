@@ -5,6 +5,7 @@
  */
 
 #include "driver_internal.h"
+#include "../api/baa_frontend_internal.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -66,7 +67,9 @@ static const char* main_mode_name(const CompilerConfig* config)
  * run before baa_main's stack is unwound, so the armed invocation remains valid.
  */
 static const CompilerConfig* g_diagnostics_exit_config = NULL;
+#ifndef BAA_FRONTEND_LIBRARY
 static bool g_diagnostics_exit_handler_registered = false;
+#endif
 
 static void main_write_diagnostics_json_at_exit(void)
 {
@@ -84,11 +87,14 @@ static void main_write_diagnostics_json_at_exit(void)
 static void main_arm_diagnostics_json_exit_handler(const CompilerConfig* config)
 {
     if (!config || !config->diagnostics_json) return;
+#ifndef BAA_FRONTEND_LIBRARY
+    // داخل العملية يستدعي baa_frontend_exit هذا المعالج قبل الرجوع.
     if (!g_diagnostics_exit_handler_registered)
     {
         if (atexit(main_write_diagnostics_json_at_exit) != 0) return;
         g_diagnostics_exit_handler_registered = true;
     }
+#endif
     g_diagnostics_exit_config = config;
 }
 
@@ -153,6 +159,34 @@ static int main_cleanup_and_return(const CompilerConfig* config,
     return rc;
 }
 
+#ifdef BAA_FRONTEND_LIBRARY
+/**
+ * @brief الأوامر التي تشغلها baa-frontend-api-v1: الفحص والأدوات بلا ملفات ناتجة.
+ */
+static bool main_frontend_command_allowed(const CompilerConfig* config,
+                                          const DriverParseResult* cli)
+{
+    switch (cli->cmd)
+    {
+    case DRIVER_CMD_HELP:
+    case DRIVER_CMD_VERSION:
+    case DRIVER_CMD_EXPLAIN:
+    case DRIVER_CMD_TARGET_INFO:
+    case DRIVER_CMD_COMPLETION_DATA:
+    case DRIVER_CMD_FORMAT:
+    case DRIVER_CMD_TOKEN_DUMP:
+    case DRIVER_CMD_STRUCTURE_DUMP:
+        return true;
+    case DRIVER_CMD_COMPILE:
+        return (config->check_only || config->header_check) &&
+               !config->build_manifest_file && !config->incremental &&
+               !config->nazm_shadow_executable;
+    default:
+        return false;
+    }
+}
+#endif
+
 // ============================================================================
 // نقطة الدخول (Main Entry Point)
 // ============================================================================
@@ -194,6 +228,16 @@ static int baa_main(int argc, char **argv)
         return main_cleanup_and_return(&config, &cli, NULL, 0, config.output_file,
                                        output_file_owned, BAA_COMPILER_EXIT_INVALID_INVOCATION);
     }
+#ifdef BAA_FRONTEND_LIBRARY
+    if (!main_frontend_command_allowed(&config, &cli))
+    {
+        fprintf(stderr,
+                "خطأ: الواجهة داخل العملية تقبل أوضاع الفحص والأدوات فقط، "
+                "لا توليد الكود أو الربط أو التحديث.\n");
+        return main_cleanup_and_return(&config, &cli, NULL, 0, config.output_file,
+                                       output_file_owned, BAA_COMPILER_EXIT_INVALID_INVOCATION);
+    }
+#endif
     diagnostics_set_json_enabled(config.diagnostics_json);
     if (config.diagnostics_json)
         g_warning_config.colored_output = false;
@@ -593,7 +637,17 @@ static int baa_main(int argc, char **argv)
                                    output_file_owned, BAA_COMPILER_EXIT_SUCCESS);
 }
 
-#ifdef _WIN32
+#ifdef BAA_FRONTEND_LIBRARY
+int baa_driver_main(int argc, char** argv)
+{
+    return baa_main(argc, argv);
+}
+
+void baa_driver_on_frontend_exit(void)
+{
+    main_write_diagnostics_json_at_exit();
+}
+#elif defined(_WIN32)
 /**
  * @brief تحويل وسيط UTF-16 من سطر أوامر ويندوز إلى UTF-8 مملوك.
  */

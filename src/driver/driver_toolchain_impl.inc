@@ -836,8 +836,37 @@ static bool win_make_link_response_path(const char* output_path,
  */
 #endif
 
+#ifdef BAA_FRONTEND_LIBRARY
+static char g_frontend_executable_dir[BAA_UTF8_PATH_CAP] = "";
+
+void driver_toolchain_set_frontend_executable_dir(const char* directory)
+{
+    g_frontend_executable_dir[0] = '\0';
+    if (!directory) return;
+    size_t length = strlen(directory);
+    if (length >= sizeof(g_frontend_executable_dir)) return;
+    memcpy(g_frontend_executable_dir, directory, length + 1u);
+}
+#endif
+
 void driver_toolchain_resolve_gcc_path(void)
 {
+#ifdef BAA_FRONTEND_LIBRARY
+    // داخل العملية لا يُبحث عن gcc (أوضاع الأدوات لا تربط)، ويُحل جذر
+    // التثبيت من مجلد baa الذي يقوم النداء مقامه.
+    g_gcc_path[0] = '\0';
+    g_runtime_library_path[0] = '\0';
+    if (g_frontend_executable_dir[0])
+    {
+        runtime_library_resolve_from_exe_dir(g_frontend_executable_dir);
+        install_home_resolve_from_exe_dir(g_frontend_executable_dir);
+    }
+    else
+    {
+        g_install_home[0] = '\0';
+    }
+    return;
+#endif
 #ifdef _WIN32
     win_cleanup_gcc_directory_alias();
     g_gcc_direct_unicode_paths = false;

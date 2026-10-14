@@ -824,3 +824,12 @@ void ir_inst_free(IRInst* inst) {
 
 #include "ir_containers.c"
 #include "ir_printing.c"
+
+#ifdef BAA_FRONTEND_LIBRARY
+/** @brief تصفير مؤشرات IR العامة بعد نداء داخل العملية. */
+void ir_forget_state(void)
+{
+    g_ir_current_module = NULL;
+    g_ir_print_current_func = NULL;
+}
+#endif

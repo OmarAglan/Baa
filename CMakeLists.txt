@@ -181,6 +181,55 @@ set_target_properties(baa_runtime PROPERTIES
     ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}"
 )
 
+# ============================================================================
+# baa-frontend-api-v1: أوضاع الفحص والأدوات داخل عملية المستدعي
+# ============================================================================
+# تُبنى المصادر نفسها مرة ثانية تحت ترويسة مفروضة تعيد توجيه المخرجات و exit
+# والتخصيصات (baa_frontend_prefix.h)، فلا يتغير baa نفسه.
+option(BAA_BUILD_FRONTEND_LIBRARY
+       "Build baa_frontend, the in-process baa-frontend-api-v1 library" OFF)
+if(BAA_BUILD_FRONTEND_LIBRARY)
+    set(BAA_FRONTEND_SOURCES ${SOURCES})
+    list(REMOVE_ITEM BAA_FRONTEND_SOURCES
+        src/baa.rc src/support/updater.c src/support/updater_stub.c)
+    list(APPEND BAA_FRONTEND_SOURCES
+        src/support/updater_stub.c
+        src/api/baa_frontend.c)
+    add_library(baa_frontend STATIC ${BAA_FRONTEND_SOURCES})
+    set(baa_frontend_prefix "${CMAKE_CURRENT_SOURCE_DIR}/src/api/baa_frontend_prefix.h")
+    if(MSVC)
+        target_compile_options(baa_frontend PRIVATE "/FI${baa_frontend_prefix}")
+    else()
+        target_compile_options(baa_frontend PRIVATE -include "${baa_frontend_prefix}")
+    endif()
+    target_include_directories(baa_frontend INTERFACE
+        "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src/api>")
+    if(NOT WIN32)
+        find_package(Threads REQUIRED)
+        target_link_libraries(baa_frontend PUBLIC Threads::Threads)
+    endif()
+    if(BAA_ENABLE_WARNINGS AND CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
+        target_compile_options(baa_frontend PRIVATE -Wall -Wextra -Wformat=2 -Wshadow)
+        if(BAA_WARNINGS_AS_ERRORS)
+            target_compile_options(baa_frontend PRIVATE -Werror)
+        endif()
+    endif()
+
+    # مسبار يشغّل الواجهة بوسائط سطر الأوامر لتقارن الاختبارات مخرجاته بـ baa.
+    add_executable(baa_frontend_probe tests/frontend_api/frontend_probe.c)
+    target_link_libraries(baa_frontend_probe PRIVATE baa_frontend)
+    if(WIN32)
+        target_link_libraries(baa_frontend_probe PRIVATE psapi)
+    endif()
+    if(MINGW)
+        set_property(TARGET baa_frontend_probe APPEND_STRING PROPERTY LINK_FLAGS " -municode")
+    endif()
+
+    # يستورد المستهلكون (Baa-LSP) الهدف Baa::baa_frontend من شجرة البناء.
+    export(TARGETS baa_frontend NAMESPACE Baa::
+        FILE "${CMAKE_BINARY_DIR}/BaaFrontendTargets.cmake")
+endif()
+
 # MinGW needs the Unicode CRT entrypoint so wmain receives the original UTF-16
 # command line. main.c converts it once to the compiler's internal UTF-8 contract.
 if(MINGW)
@@ -189,6 +238,10 @@ endif()
 
 if(BAA_REPRODUCIBLE_BUILD_DATE)
     target_compile_definitions(baa PRIVATE BAA_BUILD_DATE_OVERRIDE="${BAA_REPRODUCIBLE_BUILD_DATE}")
+    if(TARGET baa_frontend)
+        target_compile_definitions(baa_frontend PRIVATE
+            BAA_BUILD_DATE_OVERRIDE="${BAA_REPRODUCIBLE_BUILD_DATE}")
+    endif()
 endif()
 
 # نبقي مسارات التضمين العامة مغلقة عمداً.

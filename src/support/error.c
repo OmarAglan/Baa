@@ -94,7 +94,10 @@ WarningConfig g_warning_config;
  * @brief التحقق من دعم الألوان في الطرفية.
  */
 static bool supports_color(void) {
-#ifdef _WIN32
+#if defined(BAA_FRONTEND_LIBRARY)
+    // المخرجات داخل العملية ملف مؤقت، وطرفية المضيف ليست ملكاً للمصرّف.
+    return false;
+#elif defined(_WIN32)
     // تفعيل دعم ANSI في Windows 10+
     HANDLE hOut = GetStdHandle(STD_ERROR_HANDLE);
     if (hOut == INVALID_HANDLE_VALUE) return false;
@@ -962,3 +965,21 @@ void warning_report_span(WarningType type, DiagnosticSpan span, const char* mess
     warning_report_vspan(type, span, message, args);
     va_end(args);
 }
+
+#ifdef BAA_FRONTEND_LIBRARY
+/** @brief تصفير حالة التشخيصات بعد نداء داخل العملية دون تحرير. */
+void error_forget_state(void)
+{
+    current_source = NULL;
+    had_error = false;
+    had_warning = false;
+    warning_count = 0;
+    g_error_sources = NULL;
+    g_error_sources_count = 0;
+    g_error_sources_cap = 0;
+    g_diagnostic_json_records = NULL;
+    g_diagnostic_json_count = 0;
+    g_diagnostic_json_cap = 0;
+    g_diagnostics_json_enabled = false;
+}
+#endif

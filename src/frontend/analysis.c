@@ -858,3 +858,31 @@ static void func_register(Node* node)
 #include "analysis_format.c"
 #include "analysis_infer_expr.c"
 #include "analysis_visit.c"
+
+#ifdef BAA_FRONTEND_LIBRARY
+/**
+ * @brief تصفير حالة التحليل بعد نداء داخل العملية دون تحرير ملكياتها.
+ *
+ * يحرر متتبع baa_frontend ذاكرة النداء كلها بعده؛ تصفير العدادات يمنع
+ * reset_analysis() في النداء التالي من تحرير مؤشرات حُررت.
+ */
+void analysis_forget_state(void)
+{
+    enum_count = 0;
+    struct_count = 0;
+    union_count = 0;
+    type_alias_count = 0;
+    global_count = 0;
+    local_count = 0;
+    func_count = 0;
+    scope_depth = 0;
+    has_error = false;
+    inside_loop = false;
+    inside_switch = false;
+    in_function = false;
+    current_filename = NULL;
+    current_func_return_ptr_base_type_name = NULL;
+    current_func_return_func_sig = NULL;
+    current_func_variadic_anchor_name = NULL;
+}
+#endif

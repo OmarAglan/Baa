@@ -8,6 +8,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+### Added
+
+- **In-process frontend API (`baa-frontend-api-v1`)**: with
+  `-DBAA_BUILD_FRONTEND_LIBRARY=ON` the build adds the static library
+  `baa_frontend` (exported as `Baa::baa_frontend`). `baa_frontend_run` takes
+  baa's arguments, standard input and working directory and returns the exit
+  code, stdout and stderr that `baa` would have produced, for the checking,
+  dump, query and format modes. It is the same sources compiled a second time:
+  output is redirected to the call, `exit` returns to the caller, and every
+  allocation the call made is freed after it. A check takes about 5 ms instead
+  of about 45 ms for a new process. Code generation stays in the executable.
+  See `docs/TOOLING_CONTRACTS.md` §7.8.
+
 ### Fixed
 
 - **`&&` and `||` short-circuit**: both operands were evaluated at every

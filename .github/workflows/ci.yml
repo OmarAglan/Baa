@@ -72,6 +72,52 @@ jobs:
           $env:BAA_EMBEDDED_NAZM_EXPECT_REVISION = (git -C Nazm rev-parse HEAD).Trim()
           python tests/test_nazm_api_integration.py
 
+  frontend-api-v1:
+    name: Frontend API v1 (${{ matrix.name }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: windows
+            os: windows-latest
+            configure: -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release -DBAA_WARNINGS_AS_ERRORS=ON
+            skip_memory_bound: "0"
+          - name: linux
+            os: ubuntu-latest
+            configure: -DCMAKE_BUILD_TYPE=Release -DBAA_WARNINGS_AS_ERRORS=ON
+            skip_memory_bound: "0"
+          - name: linux-asan
+            os: ubuntu-latest
+            configure: -DCMAKE_BUILD_TYPE=RelWithDebInfo "-DCMAKE_C_FLAGS=-fsanitize=address -fno-omit-frame-pointer" "-DCMAKE_EXE_LINKER_FLAGS=-fsanitize=address"
+            skip_memory_bound: "1"
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Add bundled toolchain to PATH (if present)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          if (Test-Path ".\gccin") {
+            "$env:GITHUB_WORKSPACE\gccin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+          }
+      - name: Build baa_frontend and its probe
+        shell: bash
+        run: |
+          cmake -B build-frontend ${{ matrix.configure }} -DBAA_BUILD_FRONTEND_LIBRARY=ON
+          cmake --build build-frontend --parallel
+      - name: Verify in-process parity, state reset, and memory
+        shell: bash
+        env:
+          PYTHONUTF8: "1"
+          BAA_FRONTEND_PROBE_REQUIRED: "1"
+          BAA_FRONTEND_SKIP_MEMORY_BOUND: ${{ matrix.skip_memory_bound }}
+          BAA_FRONTEND_PROBE: ${{ github.workspace }}/build-frontend/baa_frontend_probe${{ runner.os == 'Windows' && '.exe' || '' }}
+          ASAN_OPTIONS: detect_leaks=0
+        run: python tests/test_frontend_api.py
+
   build-windows:
     runs-on: windows-latest
     steps:

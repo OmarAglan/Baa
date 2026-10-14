@@ -449,3 +449,12 @@ Node* parse(Lexer* l) {
     program->data.program.declarations = head;
     return program;
 }
+
+#ifdef BAA_FRONTEND_LIBRARY
+/** @brief تصفير حالة المحلل القواعدي بعد نداء داخل العملية. */
+void parser_forget_state(void)
+{
+    memset(&parser, 0, sizeof(parser));
+    parser_type_alias_count = 0;
+}
+#endif

@@ -607,6 +607,53 @@ requested LSP range, and discard results for obsolete document versions. The
 normative schema is in
 [`INLAY_HINTS_JSON_SCHEMA.md`](INLAY_HINTS_JSON_SCHEMA.md).
 
+### 7.8 `baa-frontend-api-v1`
+
+A tool that would otherwise start `baa` for every request can link the same
+frontend instead. Configure Baa with `-DBAA_BUILD_FRONTEND_LIBRARY=ON`: the
+build adds the static library `baa_frontend`, exports it as
+`Baa::baa_frontend` in `<build>/BaaFrontendTargets.cmake`, and builds
+`baa_frontend_probe`. The header is `src/api/baa_frontend.h`.
+
+```c
+BaaFrontendRequest request = {
+    executable_path,     /* baa whose directory holds the stdlib; NULL = this process */
+    working_directory,   /* NULL = unchanged */
+    arguments, count,    /* baa's arguments without argv[0] */
+    text, text_size,     /* standard input, e.g. for --source-stdin */
+};
+BaaFrontendResult result;
+if (baa_frontend_run(&request, &result) == BAA_FRONTEND_OK) {
+    /* result.exit_code, result.standard_output/_size, result.standard_error/_size */
+    baa_frontend_result_free(&result);
+}
+```
+
+The contract:
+
+- A call returns the same exit code and the same stdout and stderr bytes as
+  `baa` started with those arguments, standard input and working directory,
+  including on Windows, where stdout is in text mode. The library is the
+  executable's sources compiled a second time; there is no second analyser.
+- Only the tooling commands run: `--check`, `--diagnostics=json`, the dump
+  and query modes of §7, `--format=json`, `--completion-data=json`,
+  `--target-info=json`, `--version`, `--help` and `--explain`. Anything that
+  would write files or start a process (compilation, `-S`, `-c`,
+  `--emit-nazm`, manifests, incremental builds, `update`) returns exit code
+  `2` with a message on stderr.
+- Every call frees what it allocated and resets the compiler's global state,
+  including when the compiler leaves through `exit` (a lexer error). Repeated
+  calls return identical bytes and the process does not grow.
+- Calls are serialized by a process-wide lock. The working directory is
+  process state, so it is changed for the call and restored after it.
+- The status is `BAA_FRONTEND_OK` whenever the call ran; the compiler's own
+  failures are in `exit_code`. Other statuses mean the request was invalid or
+  the call could not capture its output.
+
+`tests/test_frontend_api.py` compares every tooling mode with the executable
+byte for byte and checks repeated calls for identical output and flat memory.
+CI runs it on Windows, on Linux, and on Linux under AddressSanitizer.
+
 ---
 
 ## 8. Contract Versioning

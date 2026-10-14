@@ -158,7 +158,7 @@ top-level fields:
   "target": "x86_64-linux",
   "mode": "link",
   "assembler": "nazm",
-  "assembler_fingerprint": "nazm-api-v1;version=0.5.0;capabilities=nazm-capabilities-v1:<sha256>",
+  "assembler_fingerprint": "nazm-api-v1;version=1.0.0;capabilities=nazm-capabilities-v1:<sha256>",
   "opt_level": 2,
   "runtime_checks": false,
   "runtime_check_mask": 0,

@@ -22,10 +22,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Changed
 
-- **Builds against Nazm `0.5.0`** (`a68c6c3`): the release that carries the
-  changes below. Only the version, the capability digest and the fingerprint
-  differ from `4a4da86`, so the generated coverage records carry the new
-  digest and `baa --version` reports `Embedded Nazm 0.5.0 (a68c6c3...), default`.
+- **Builds against Nazm `1.0.0`** (`f58faf0`), the first stable release. It
+  differs from `0.5.0` only in the version, the capability digest and the
+  fingerprint, so the generated coverage records carry the new digest and
+  `baa --version` reports `Embedded Nazm 1.0.0 (f58faf0...), default`.
+- **Built against Nazm `0.5.0` before that** (`a68c6c3`): the release that
+  carries the changes below. Only the version, the capability digest and the
+  fingerprint differ from `4a4da86`.
 - **Built against Nazm `4a4da86` before that**: the revision that closes Nazm's open 1.0
   conditions. It reserves the register prefixes above, rejects a jump or call
   whose target is neither a label nor a 64-bit register (Baa emits neither

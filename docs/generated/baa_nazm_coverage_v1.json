@@ -6,8 +6,8 @@
   },
   "nazm_capabilities": {
     "schema": "nazm-capabilities-v1",
-    "assembler": "Nazm 0.5.0",
-    "sha256": "6520f967332f07106f8584ef8fdbad3420ba5e8371bc4b4909cec0d274f75b31"
+    "assembler": "Nazm 1.0.0",
+    "sha256": "34817a4ea4ccd6d04ca32f8e901368e018359e792a44b68744ccffee66860801"
   },
   "shadow_corpus": {
     "schema": "baa-nazm-shadow-corpus-v1",

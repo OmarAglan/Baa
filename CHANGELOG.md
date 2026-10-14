@@ -10,6 +10,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Fixed
 
+- **`&&` and `||` short-circuit**: both operands were evaluated at every
+  optimization level, in conditions and assignments alike, although the
+  language reference promises short-circuit evaluation. A guard such as
+  `س != عدم && طول_نص(س) > ٠` crashed on `عدم`. The right operand now runs in
+  its own block and only when the left one does not decide the result.
 - **Names starting with a Nazm register prefix build again**: Nazm reserves
   `سجل_`, `مؤشر_` and `فهرس_` for register names and rejects a label that
   starts with one. A global or function named that way (`مؤشر_القائمة`,

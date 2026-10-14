@@ -610,16 +610,37 @@ IRValue* lower_expr(IRLowerCtx* ctx, Node* expr) {
                 return ir_value_reg(dest, IR_TYPE_I1_T);
             }
 
-            // Logical AND/OR (non-short-circuit form for now; proper short-circuit will be handled
-            // during control-flow lowering by introducing blocks).
+            // && و|| بتقييم مختصر: لا يقيَّم الطرف الأيمن إلا إذا لم يحسم الأيسر النتيجة.
+            // تحفظ النتيجة في alloca من نوع i1 يرقّيها mem2reg إلى phi.
             if (op == OP_AND || op == OP_OR) {
                 IRValue* lhs = lower_to_bool(ctx, lower_expr(ctx, expr->data.bin_op.left));
+
+                IRType* i1_ptr_t = ir_type_ptr(IR_TYPE_I1_T);
+                int slot_reg = ir_builder_emit_alloca(ctx->builder, IR_TYPE_I1_T);
+                IRBlock* rhs_block = cf_create_block(ctx, (op == OP_AND) ? "و_منطقي_يمين" : "أو_منطقي_يمين");
+                IRBlock* end_block = cf_create_block(ctx, (op == OP_AND) ? "و_منطقي_نهاية" : "أو_منطقي_نهاية");
+                if (slot_reg < 0 || !rhs_block || !end_block) {
+                    ir_lower_report_error(ctx, expr, "فشل خفض التقييم المختصر للعملية المنطقية.");
+                    return ir_value_const_int(0, IR_TYPE_I1_T);
+                }
+
+                IRValue* slot = ir_value_reg(slot_reg, i1_ptr_t);
+                ir_builder_emit_store(ctx->builder, lhs, slot);
+                if (op == OP_AND) {
+                    ir_builder_emit_br_cond(ctx->builder, lhs, rhs_block, end_block);
+                } else {
+                    ir_builder_emit_br_cond(ctx->builder, lhs, end_block, rhs_block);
+                }
+
+                ir_builder_set_insert_point(ctx->builder, rhs_block);
+                ir_lower_set_loc(ctx->builder, expr);
                 IRValue* rhs = lower_to_bool(ctx, lower_expr(ctx, expr->data.bin_op.right));
+                ir_builder_emit_store(ctx->builder, rhs, slot);
+                ir_builder_emit_br(ctx->builder, end_block);
 
-                int dest = -1;
-                if (op == OP_AND) dest = ir_builder_emit_and(ctx->builder, IR_TYPE_I1_T, lhs, rhs);
-                else dest = ir_builder_emit_or(ctx->builder, IR_TYPE_I1_T, lhs, rhs);
-
+                ir_builder_set_insert_point(ctx->builder, end_block);
+                ir_lower_set_loc(ctx->builder, expr);
+                int dest = ir_builder_emit_load(ctx->builder, IR_TYPE_I1_T, slot);
                 return ir_value_reg(dest, IR_TYPE_I1_T);
             }
 

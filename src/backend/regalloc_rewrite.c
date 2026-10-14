@@ -353,6 +353,37 @@ static void regalloc_legalize_int_float_cvt(MachineBlock* block, MachineInst* in
     }
 }
 
+/**
+ * @brief setcc على قيمة مسرّبة يكتب في R11B ثم يخزنها.
+ *
+ *   setcc [m]  →  setcc r11b ; mov r11b, [m]
+ *
+ * قيم i1 العابرة للكتل (نتيجة && و|| المختصرين) قد تُسرّب. لنظم شاهد قبول من باء
+ * لـ sete على الذاكرة وحده، فيبقى كما هو وتمر بقية الشروط عبر R11B.
+ */
+static void regalloc_legalize_setcc(MachineBlock* block, MachineInst* inst)
+{
+    switch (inst->op) {
+        case MACH_SETNE:
+        case MACH_SETG: case MACH_SETL:
+        case MACH_SETGE: case MACH_SETLE:
+        case MACH_SETA: case MACH_SETB:
+        case MACH_SETAE: case MACH_SETBE:
+        case MACH_SETP: case MACH_SETNP:
+            break;
+        default:
+            return;
+    }
+    if (inst->dst.kind != MACH_OP_MEM) return;
+    if (regalloc_operand_uses_r11(&inst->dst)) return;
+
+    MachineOperand scratch = mach_op_vreg(PHYS_R11, 8);
+    MachineInst* store = mach_inst_new(MACH_MOV, inst->dst, scratch, mach_op_none());
+    if (!store) return;
+    mach_block_insert_after_local(block, inst, store);
+    inst->dst = scratch;
+}
+
 void regalloc_legalize(RegAllocCtx *ctx)
 {
     if (!ctx || !ctx->func)
@@ -364,6 +395,7 @@ void regalloc_legalize(RegAllocCtx *ctx)
         {
             regalloc_legalize_imul(block, inst);
             regalloc_legalize_int_float_cvt(block, inst);
+            regalloc_legalize_setcc(block, inst);
         }
     }
 }

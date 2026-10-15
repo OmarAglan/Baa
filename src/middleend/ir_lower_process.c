@@ -35,6 +35,14 @@ static bool ir_lower_try_process_builtin(IRLowerCtx* ctx, Node* expr, IRValue** 
         symbol = "baa_runtime_make_dirs";
     } else if (strcmp(name, "احذف_شجرة") == 0) {
         symbol = "baa_runtime_remove_tree";
+    } else if (strcmp(name, "انقل_مسار") == 0) {
+        symbol = "baa_runtime_rename_path";
+        expected = 2;
+    } else if (strcmp(name, "استبدل_ملف") == 0) {
+        symbol = "baa_runtime_replace_file";
+        expected = 2;
+    } else if (strcmp(name, "اجعل_قابلا_للتنفيذ") == 0) {
+        symbol = "baa_runtime_make_executable";
     } else if (strcmp(name, "تجزئة_ملف_شا٢٥٦") == 0) {
         symbol = "baa_runtime_sha256_file";
         result_type = get_char_ptr_type(ctx->builder->module);

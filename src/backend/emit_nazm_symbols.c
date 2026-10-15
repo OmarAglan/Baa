@@ -65,6 +65,9 @@ static const NazmArabicAbiSymbol k_nazm_arabic_abi_symbols[] = {
     {"baa_runtime_process_free", "وقت_تشغيل_حرر_عملية"},
     {"baa_runtime_make_dirs", "وقت_تشغيل_انشئ_مجلدات"},
     {"baa_runtime_remove_tree", "وقت_تشغيل_احذف_شجرة"},
+    {"baa_runtime_rename_path", "وقت_تشغيل_انقل_مسار"},
+    {"baa_runtime_replace_file", "وقت_تشغيل_استبدل_ملف"},
+    {"baa_runtime_make_executable", "وقت_تشغيل_اجعل_قابلا_للتنفيذ"},
     {"baa_runtime_sha256_file", "وقت_تشغيل_تجزئة_ملف"},
 };
 

@@ -481,6 +481,9 @@ static const BuiltinSystemFuncSig builtin_system_funcs[] = {
     { "حرر_عملية", TYPE_VOID, 1, { TYPE_POINTER } },
     { "انشئ_مجلدات", TYPE_INT, 1, { TYPE_STRING } },
     { "احذف_شجرة", TYPE_INT, 1, { TYPE_STRING } },
+    { "انقل_مسار", TYPE_INT, 2, { TYPE_STRING, TYPE_STRING } },
+    { "استبدل_ملف", TYPE_INT, 2, { TYPE_STRING, TYPE_STRING } },
+    { "اجعل_قابلا_للتنفيذ", TYPE_INT, 1, { TYPE_STRING } },
     { "تجزئة_ملف_شا٢٥٦", TYPE_STRING, 1, { TYPE_STRING } },
 };
 

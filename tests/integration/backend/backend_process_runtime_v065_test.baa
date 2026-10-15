@@ -61,6 +61,37 @@
     اغلق_ملف(ورقة).
     نص مجلد_طويل = ".baa_process_tree/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb/cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc".
     إذا (انشئ_مجلدات(مجلد_طويل) != ٠) { إرجع ١٥. }
+
+    إذا (انقل_مسار(".baa_process_tree/a/b/file.txt"، ".baa_process_tree/a/moved.txt") != ٠) { إرجع ٣٠. }
+    إذا (انقل_مسار(".baa_process_tree/a/b/file.txt"، ".baa_process_tree/a/again.txt") == ٠) { إرجع ٣١. }
+    إذا (انقل_مسار(".baa_process_tree/a"، ".baa_process_tree/a/b") == ٠) { إرجع ٣٢. }
+    إذا (انقل_مسار(".baa_process_tree/a"، ".baa_process_tree/جديد") != ٠) { إرجع ٣٣. }
+    عدم* نسخة = فتح_ملف(".baa_process_tree/جديد/moved.txt"، "قراءة").
+    إذا (نسخة == عدم) { إرجع ٣٤. }
+    اغلق_ملف(نسخة).
+    إذا (انقل_مسار(".baa_process_tree/جديد/moved.txt"، ".baa_process_tree/جديد/b") == ٠) { إرجع ٣٥. }
+    إذا (انقل_مسار(".baa_process_tree/جديد"، "../خارج") == ٠) { إرجع ٣٦. }
+    إذا (اجعل_قابلا_للتنفيذ(".baa_process_tree/جديد/moved.txt") != ٠) { إرجع ٣٧. }
+    إذا (اجعل_قابلا_للتنفيذ(".baa_process_tree/جديد") == ٠) { إرجع ٣٨. }
+    إذا (اجعل_قابلا_للتنفيذ(".baa_process_tree/مفقود") == ٠) { إرجع ٣٩. }
+
+    عدم* بديل = فتح_ملف(".baa_process_tree/جديد/بديل.txt"، "كتابة").
+    إذا (بديل == عدم) { إرجع ٤٠. }
+    اكتب_سطر(بديل، "new").
+    اغلق_ملف(بديل).
+    إذا (استبدل_ملف(".baa_process_tree/جديد/بديل.txt"، ".baa_process_tree/جديد/moved.txt") != ٠) { إرجع ٤١. }
+    عدم* مستبدل = فتح_ملف(".baa_process_tree/جديد/moved.txt"، "قراءة").
+    إذا (مستبدل == عدم) { إرجع ٤٢. }
+    نص سطر_مستبدل = اقرأ_سطر(مستبدل).
+    اغلق_ملف(مستبدل).
+    إذا (سطر_مستبدل == عدم || قارن_نص(سطر_مستبدل، "new") != ٠) { إرجع ٤٣. }
+    حرر_نص(سطر_مستبدل).
+    عدم* قديم = فتح_ملف(".baa_process_tree/جديد/بديل.txt"، "قراءة").
+    إذا (قديم != عدم) { اغلق_ملف(قديم). إرجع ٤٤. }
+    إذا (استبدل_ملف(".baa_process_tree/جديد/moved.txt"، ".baa_process_tree/جديد") == ٠) { إرجع ٤٥. }
+    إذا (استبدل_ملف(".baa_process_tree/جديد"، ".baa_process_tree/مجلد_ملف") == ٠) { إرجع ٤٦. }
+    إذا (استبدل_ملف(".baa_process_tree/مفقود"، ".baa_process_tree/جديد/moved.txt") == ٠) { إرجع ٤٧. }
+
     إذا (احذف_شجرة(".baa_process_tree") != ٠) { إرجع ١٢. }
     إذا (احذف_شجرة(".baa_process_tree") != ٠) { إرجع ١٣. }
     إذا (احذف_شجرة(".") == ٠) { إرجع ١٤. }

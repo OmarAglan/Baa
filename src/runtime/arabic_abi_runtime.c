@@ -222,6 +222,24 @@ int64_t baa_abi_remove_tree(const BaaRuntimeChar *path)
 {
     return baa_runtime_remove_tree(path);
 }
+int64_t baa_abi_rename_path(const BaaRuntimeChar *from, const BaaRuntimeChar *to)
+    BAA_ABI_NAME("وقت_تشغيل_انقل_مسار");
+int64_t baa_abi_rename_path(const BaaRuntimeChar *from, const BaaRuntimeChar *to)
+{
+    return baa_runtime_rename_path(from, to);
+}
+int64_t baa_abi_replace_file(const BaaRuntimeChar *from, const BaaRuntimeChar *to)
+    BAA_ABI_NAME("وقت_تشغيل_استبدل_ملف");
+int64_t baa_abi_replace_file(const BaaRuntimeChar *from, const BaaRuntimeChar *to)
+{
+    return baa_runtime_replace_file(from, to);
+}
+int64_t baa_abi_make_executable(const BaaRuntimeChar *path)
+    BAA_ABI_NAME("وقت_تشغيل_اجعل_قابلا_للتنفيذ");
+int64_t baa_abi_make_executable(const BaaRuntimeChar *path)
+{
+    return baa_runtime_make_executable(path);
+}
 BaaRuntimeChar *baa_abi_sha256_file(const BaaRuntimeChar *path)
     BAA_ABI_NAME("وقت_تشغيل_تجزئة_ملف");
 BaaRuntimeChar *baa_abi_sha256_file(const BaaRuntimeChar *path)

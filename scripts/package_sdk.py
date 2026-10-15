@@ -37,6 +37,7 @@ LINKER_MANIFEST = "BAA-TOOLCHAIN-MANIFEST.txt"
 MAX_FILES = 8192
 MAX_FILE_BYTES = 256 * 1024 * 1024
 MAX_TOTAL_BYTES = 1024 * 1024 * 1024
+MAX_PATH_BYTES = 240
 
 
 def fail(message: str) -> None:
@@ -107,6 +108,14 @@ def sha256_file(path: Path) -> str:
     return digest.hexdigest()
 
 
+def check_sdk_path(relative: str) -> None:
+    # BAA-SDK.json writes paths without escapes, so characters that need one are refused.
+    if any(ch in '"\\' or ord(ch) < 0x20 or ord(ch) == 0x7F for ch in relative):
+        fail(f"SDK paths may not contain quotes, backslashes or control characters: {relative!r}")
+    if len(relative.encode("utf-8")) > MAX_PATH_BYTES:
+        fail(f"SDK path longer than {MAX_PATH_BYTES} bytes: {relative}")
+
+
 def inventory(stage: Path) -> list[dict]:
     files = []
     for path in stage.rglob("*"):
@@ -114,6 +123,7 @@ def inventory(stage: Path) -> list[dict]:
             relative = path.relative_to(stage).as_posix()
             if relative == METADATA:
                 continue
+            check_sdk_path(relative)
             files.append(
                 {
                     "path": relative,
@@ -133,6 +143,26 @@ def inventory(stage: Path) -> list[dict]:
     if total > MAX_TOTAL_BYTES:
         fail("the SDK exceeds the total size limit")
     return files
+
+
+def canonical_metadata(metadata: dict) -> str:
+    """BAA-SDK.json in canonical form: indented, one inventory entry per line."""
+    head = dict(metadata)
+    files = head.pop("files")
+    text = json.dumps(head, ensure_ascii=False, indent=2)
+    entries = [
+        "    " + json.dumps(
+            {
+                "path": entry["path"],
+                "size": entry["size"],
+                "sha256": entry["sha256"],
+                "executable": entry["executable"],
+            },
+            ensure_ascii=False,
+        )
+        for entry in files
+    ]
+    return text[:-2] + ',\n  "files": [\n' + ",\n".join(entries) + "\n  ]\n}\n"
 
 
 def write_archive(stage: Path, top: str, archive: Path, files: list[dict]) -> None:
@@ -244,7 +274,7 @@ def main() -> int:
             },
             "files": files,
         }
-        text = json.dumps(metadata, ensure_ascii=False, indent=2) + "\n"
+        text = canonical_metadata(metadata)
         (stage / METADATA).write_bytes(text.encode("utf-8"))
 
         if args.layout_only:

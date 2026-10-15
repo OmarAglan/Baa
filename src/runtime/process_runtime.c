@@ -740,3 +740,104 @@ int64_t baa_runtime_remove_tree(const BaaRuntimeChar* baa_path)
     free(path);
     return result;
 }
+
+/**
+ * @brief نقل ملف أو مجلد إلى مسار غير موجود في نفس وحدة التخزين.
+ *
+ * يفشل إن وُجدت الوجهة، فلا يستبدل شيئا. النقل نفسه ذري: إما أن يظهر المسار
+ * الجديد كاملا وإما أن يبقى القديم.
+ */
+int64_t baa_runtime_rename_path(const BaaRuntimeChar* baa_from, const BaaRuntimeChar* baa_to)
+{
+    char* from = baa_text_to_utf8(baa_from);
+    char* to = baa_text_to_utf8(baa_to);
+    int result = -1;
+    if (from && to && !path_is_dangerous(from) && !path_is_dangerous(to)) {
+#ifdef _WIN32
+        wchar_t* from_w = utf8_to_extended_path(from);
+        wchar_t* to_w = utf8_to_extended_path(to);
+        if (from_w && to_w && !wide_is_dangerous(from_w) && !wide_is_dangerous(to_w) &&
+            MoveFileExW(from_w, to_w, 0)) {
+            result = 0;
+        }
+        free(from_w);
+        free(to_w);
+#else
+        struct stat st;
+        if (lstat(to, &st) != 0 && errno == ENOENT && rename(from, to) == 0) result = 0;
+#endif
+    }
+    free(from);
+    free(to);
+    return result;
+}
+
+/**
+ * @brief يضع ملفا عاديا مكان ملف آخر ذريا، أو في مسار غير موجود.
+ *
+ * يرى القارئ الملف القديم كاملا أو الجديد كاملا، ولا يستبدل مجلدا أبدا.
+ */
+int64_t baa_runtime_replace_file(const BaaRuntimeChar* baa_from, const BaaRuntimeChar* baa_to)
+{
+    char* from = baa_text_to_utf8(baa_from);
+    char* to = baa_text_to_utf8(baa_to);
+    int result = -1;
+    if (from && to && !path_is_dangerous(from) && !path_is_dangerous(to)) {
+#ifdef _WIN32
+        wchar_t* from_w = utf8_to_extended_path(from);
+        wchar_t* to_w = utf8_to_extended_path(to);
+        DWORD from_attrs = from_w ? GetFileAttributesW(from_w) : INVALID_FILE_ATTRIBUTES;
+        DWORD to_attrs = to_w ? GetFileAttributesW(to_w) : INVALID_FILE_ATTRIBUTES;
+        const DWORD not_file = FILE_ATTRIBUTE_DIRECTORY | FILE_ATTRIBUTE_REPARSE_POINT;
+        if (from_w && to_w && !wide_is_dangerous(from_w) && !wide_is_dangerous(to_w) &&
+            from_attrs != INVALID_FILE_ATTRIBUTES && !(from_attrs & not_file) &&
+            (to_attrs == INVALID_FILE_ATTRIBUTES || !(to_attrs & not_file)) &&
+            MoveFileExW(from_w, to_w, MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH)) {
+            result = 0;
+        }
+        free(from_w);
+        free(to_w);
+#else
+        struct stat from_st;
+        struct stat to_st;
+        bool to_ok = lstat(to, &to_st) == 0 ? S_ISREG(to_st.st_mode) : errno == ENOENT;
+        if (lstat(from, &from_st) == 0 && S_ISREG(from_st.st_mode) && to_ok &&
+            rename(from, to) == 0) {
+            result = 0;
+        }
+#endif
+    }
+    free(from);
+    free(to);
+    return result;
+}
+
+/**
+ * @brief يمنح ملفا عاديا إذن التنفيذ لكل من يملك إذن قراءته (0644 ← 0755).
+ *
+ * لا إذن تنفيذ منفصل على ويندوز، فيكفي أن يكون الملف موجودا.
+ */
+int64_t baa_runtime_make_executable(const BaaRuntimeChar* baa_path)
+{
+    char* path = baa_text_to_utf8(baa_path);
+    int result = -1;
+    if (path && !path_is_dangerous(path)) {
+#ifdef _WIN32
+        wchar_t* wide = utf8_to_extended_path(path);
+        DWORD attrs = wide ? GetFileAttributesW(wide) : INVALID_FILE_ATTRIBUTES;
+        if (attrs != INVALID_FILE_ATTRIBUTES &&
+            !(attrs & (FILE_ATTRIBUTE_DIRECTORY | FILE_ATTRIBUTE_REPARSE_POINT))) {
+            result = 0;
+        }
+        free(wide);
+#else
+        struct stat st;
+        if (lstat(path, &st) == 0 && S_ISREG(st.st_mode)) {
+            mode_t mode = (st.st_mode & 07777) | ((st.st_mode & 0444) >> 2);
+            if (chmod(path, mode) == 0) result = 0;
+        }
+#endif
+    }
+    free(path);
+    return result;
+}

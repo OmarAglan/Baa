@@ -53,7 +53,7 @@ contains Arabic or spaces, with no environment variables.
 
 ## 2. `BAA-SDK.json`
 
-UTF-8 JSON, written with sorted inventory and stable key order:
+UTF-8 JSON in the canonical form described below:
 
 ```json
 {
@@ -72,14 +72,21 @@ UTF-8 JSON, written with sorted inventory and stable key order:
     "targets":   { "path": "share/baa/targets" }
   },
   "files": [
-    { "path": "bin/baa.exe", "size": 1234, "sha256": "<hex>", "executable": true }
+    {"path": "bin/baa.exe", "size": 1234, "sha256": "<hex>", "executable": true}
   ]
 }
 ```
 
 - `files` lists every file in the SDK except `BAA-SDK.json` itself, sorted by
-  the UTF-8 bytes of `path`. Paths are relative, use `/`, and never contain
-  `.` or `..` segments.
+  the UTF-8 bytes of `path`. Paths are relative, use `/`, are at most 240
+  UTF-8 bytes, never contain `.` or `..` segments, and never contain `"`, `\`
+  or control characters, so they are written without escapes.
+- **Canonical form.** The file is the indented JSON shown above, except that
+  each `files` entry is on one line of its own, exactly
+  `    {"path": "…", "size": N, "sha256": "<64 lowercase hex>", "executable": true|false}`
+  followed by `,` on every line but the last, and the array closes with
+  `  ]` and `}`. An installer may read the inventory line by line and must
+  reject a file that is not in this form.
 - `executable` is true for files under `bin/`, `gcc/bin/` and `gcc/libexec/`
   and for `.exe` and `.dll` files.
 - `assembler.kind` is `nazm-embedded` when Nazm is linked into the compiler and
@@ -104,6 +111,8 @@ bytes.
 
 - POSIX ustar, entries sorted by the UTF-8 bytes of their path, all under the
   single top-level directory `baa-sdk-<version>-<host>/`;
+- `BAA-SDK.json` is the first entry, so an installer knows the inventory
+  before it writes any other file;
 - regular files only: no directory, link or device entries;
 - mtime 0, uid and gid 0, empty user and group names, mode `0755` for
   executable files and `0644` for the others;

@@ -25,6 +25,9 @@ void baa_runtime_process_free(void* handle);
 
 int64_t baa_runtime_make_dirs(const BaaRuntimeChar* path);
 int64_t baa_runtime_remove_tree(const BaaRuntimeChar* path);
+int64_t baa_runtime_rename_path(const BaaRuntimeChar* from, const BaaRuntimeChar* to);
+int64_t baa_runtime_replace_file(const BaaRuntimeChar* from, const BaaRuntimeChar* to);
+int64_t baa_runtime_make_executable(const BaaRuntimeChar* path);
 BaaRuntimeChar* baa_runtime_sha256_file(const BaaRuntimeChar* path);
 
 #endif

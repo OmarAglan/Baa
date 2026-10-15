@@ -6,6 +6,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -177,8 +178,26 @@ class SdkPackageTests(unittest.TestCase):
                 self.assertEqual((member.uid, member.gid), (0, 0))
                 self.assertIn(member.mode, (0o644, 0o755))
 
+            # المثبّت يقرأ الجرد قبل أي ملف آخر.
+            self.assertEqual(names[0], f"{top}/BAA-SDK.json")
             metadata_member = tar.getmember(f"{top}/BAA-SDK.json")
-            metadata = json.loads(tar.extractfile(metadata_member).read().decode("utf-8"))
+            text = tar.extractfile(metadata_member).read().decode("utf-8")
+            metadata = json.loads(text)
+
+            # الصيغة القياسية: سطر واحد لكل ملف في الجرد، ولا هروب في المسارات.
+            lines = text.split("\n")
+            start = lines.index('  "files": [')
+            self.assertEqual(lines[-3:], ["  ]", "}", ""])
+            entry_lines = lines[start + 1:-3]
+            self.assertEqual(len(entry_lines), len(metadata["files"]))
+            pattern = re.compile(
+                r'^    \{"path": "[^"\\\x00-\x1f\x7f]+", "size": (0|[1-9][0-9]*), '
+                r'"sha256": "[0-9a-f]{64}", "executable": (true|false)\}(,?)$'
+            )
+            for number, line in enumerate(entry_lines):
+                match = pattern.match(line)
+                self.assertIsNotNone(match, line)
+                self.assertEqual(match.group(3), "" if number == len(entry_lines) - 1 else ",")
             self.assertEqual(metadata["schema_version"], "baa-sdk-v1")
             self.assertEqual(metadata["name"], "baa-sdk")
             self.assertEqual(top, f"baa-sdk-{metadata['version']}-{metadata['host']}")

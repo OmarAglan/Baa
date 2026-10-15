@@ -1632,6 +1632,9 @@ Path helpers operate on `نص` values and return newly allocated `نص` results.
 | **Free Process** | `عدم حرر_عملية(مقبض_عملية)` | Releases the handle; a still-running child is cancelled and collected first. |
 | **Create Directories** | `صحيح انشئ_مجلدات(نص مسار)` | Creates a directory tree with UTF-8 path handling. |
 | **Remove Tree** | `صحيح احذف_شجرة(نص مسار)` | Removes one file/tree without following directory links; rejects roots, `.`, and `..` traversal. |
+| **Move Path** | `صحيح انقل_مسار(نص من، نص إلى)` | Atomically renames a file or directory to a path that does not exist yet, on the same volume; fails instead of replacing an existing destination. Returns `0` on success. |
+| **Replace File** | `صحيح استبدل_ملف(نص من، نص إلى)` | Atomically puts a regular file in place of another regular file (or at a path that does not exist), so readers see the old file or the new one, never a partial one. Never replaces a directory. Returns `0` on success. |
+| **Make Executable** | `صحيح اجعل_قابلا_للتنفيذ(نص مسار)` | Adds execute permission wherever read permission exists on a regular file (`0644` → `0755`). On Windows it only checks that the file exists. Returns `0` on success. |
 | **SHA-256 File Hash** | `نص تجزئة_ملف_شا٢٥٦(نص مسار)` | Returns a newly allocated 64-character lowercase SHA-256 hex digest, or `عدم` when the file cannot be read. |
 
 **Memory Rule:** You must free the result of `متغير_بيئة(...)` and

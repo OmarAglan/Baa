@@ -22,6 +22,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - **`baa --sdk-info=json` (`baa-sdk-info-v1`)**: prints the SDK root,
   standard library, targets, runtime, assembler and linker this compiler
   actually uses, or `null` for a part it did not find.
+- **`انقل_مسار`, `استبدل_ملف` and `اجعل_قابلا_للتنفيذ`**: `انقل_مسار(من، إلى)`
+  atomically renames a file or directory and never replaces an existing
+  destination, so a tool can build a directory under a temporary name and
+  publish it in one step, or take a lock. `استبدل_ملف(من، إلى)` atomically
+  puts a regular file in place of another, for databases written as a
+  temporary file first. `اجعل_قابلا_للتنفيذ(مسار)` gives a regular file execute permission
+  where it has read permission. All three return `0` on success. Takween uses them
+  to install SDKs.
 - **In-process frontend API (`baa-frontend-api-v1`)**: with
   `-DBAA_BUILD_FRONTEND_LIBRARY=ON` the build adds the static library
   `baa_frontend` (exported as `Baa::baa_frontend`). `baa_frontend_run` takes

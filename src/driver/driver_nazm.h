@@ -63,6 +63,16 @@ void driver_nazm_print_embedded_version(void);
 const char *driver_nazm_embedded_revision(void);
 
 /**
+ * @brief إصدار نظم المضمن، أو NULL في بناء بلا تضمين.
+ */
+const char *driver_nazm_embedded_version(void);
+
+/**
+ * @brief هل نظم المضمن هو المجمّع الافتراضي في هذا البناء.
+ */
+bool driver_nazm_embedded_is_default(void);
+
+/**
  * @brief تثبيت بصمة إصدار/قدرات نظم الدقيقة في إعداد البناء.
  */
 BaaCompilerExitCode driver_nazm_resolve_fingerprint(CompilerConfig *config);

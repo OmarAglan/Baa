@@ -41,6 +41,7 @@ This document defines the compiler surfaces that external tools may rely on.
 | `--inlay-hints=json` | compiler-owned parameter-name hints for one analyzed document | Baa-LSP, Qalam |
 | `--target=<target>` | target selection | Takween, OS experiments |
 | `--target-info=json` | host target, executable suffix, object format, and capabilities | Takween, CI |
+| `--sdk-info=json` | the SDK root, stdlib, targets, runtime, assembler and linker this compiler uses | Takween |
 | `-I <dir>` / `-I<dir>` | include search path | Takween, users |
 
 ---
@@ -66,11 +67,17 @@ baa -c [-O0|-O1|-O2] [-I <dir>...] <inputs...> -o <object>
 baa -S [-O0|-O1|-O2] [--target=<target>] <input> -o <assembly>
 baa --incremental --cache-dir <dir> --emit-build-manifest <file> <inputs...> -o <output>
 baa [--target=<target>] --target-info=json
+baa --sdk-info=json
 ```
 
 `--target-info=json` emits the stable `target-info-v1` discovery document. Takween must use
 its `host_target`, `selected_target`, `targets[].executable_suffix`, object format, and
 capability booleans instead of inferring platform behavior from the host OS or filename.
+
+`--sdk-info=json` emits `baa-sdk-info-v1`: the paths and tools this compiler resolved at run
+time, with `null` for a part it did not find. Takween uses it to check an installed
+`baa-sdk-v1` SDK and to record which compiler, assembler and linker a build used. It must be
+the only argument. See [`BAA_SDK_V1.md`](BAA_SDK_V1.md).
 
 `--check` is the fast editor/build-tool validation mode: it reads sources and includes,
 parses, runs semantic analysis, and stops before IR lowering, optimization, assembly,

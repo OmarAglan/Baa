@@ -4,6 +4,10 @@
 
 This document defines the future Baa SDK concept. It is not a new repository requirement yet.
 
+The compiler SDK archive, its layout and its metadata are now fixed by
+[`BAA_SDK_V1.md`](BAA_SDK_V1.md) (`baa-sdk-v1`); the layout in §4 below is the earlier
+sketch, kept for the bundle profiles.
+
 ---
 
 ## 1. Purpose

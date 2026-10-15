@@ -17,6 +17,21 @@
 void driver_toolchain_resolve_gcc_path(void);
 
 /**
+ * @brief مجلد ملف baa التنفيذي الذي حُلّت منه المسارات، أو NULL.
+ */
+const char* driver_toolchain_get_executable_dir(void);
+
+/**
+ * @brief المسار الحقيقي لأداة الربط المرفقة بباء، أو NULL إن استُخدمت أداة PATH.
+ */
+const char* driver_toolchain_get_bundled_linker(void);
+
+/**
+ * @brief إصدار أداة الربط المرفقة من بيانها، أو NULL.
+ */
+const char* driver_toolchain_get_bundled_linker_version(void);
+
+/**
  * @brief إرجاع مسار مكتبة وقت تشغيل باء، أو NULL إذا لم توجد.
  */
 const char* driver_toolchain_get_runtime_library(void);

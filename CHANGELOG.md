@@ -10,6 +10,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Added
 
+- **Baa SDK v1 (`baa-sdk-v1`)**: `scripts/package_sdk.py` packages a built
+  compiler as a self-contained, versioned SDK: `bin/baa`, `lib/baa` with the
+  runtime, `share/baa` with the standard library, targets, docs and examples,
+  and on Windows the bundled GCC under `gcc/`. `BAA-SDK.json` records the
+  version, host, compiler, assembler and linker, and the size and SHA-256 of
+  every file. The `.tar.gz` is reproducible byte for byte, and an extracted SDK
+  works from any directory with nothing on `PATH`. The linker is recorded as a
+  replaceable component (`kind`), ready for Baa's own linker. See
+  `docs/BAA_SDK_V1.md`.
+- **`baa --sdk-info=json` (`baa-sdk-info-v1`)**: prints the SDK root,
+  standard library, targets, runtime, assembler and linker this compiler
+  actually uses, or `null` for a part it did not find.
 - **In-process frontend API (`baa-frontend-api-v1`)**: with
   `-DBAA_BUILD_FRONTEND_LIBRARY=ON` the build adds the static library
   `baa_frontend` (exported as `Baa::baa_frontend`). `baa_frontend_run` takes

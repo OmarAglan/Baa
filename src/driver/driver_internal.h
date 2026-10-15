@@ -27,6 +27,7 @@
 #include "driver_completion.h"
 #include "driver_format.h"
 #include "driver_semantic.h"
+#include "driver_sdk.h"
 #include "process.h"
 #include "../support/version.h"
 #include "../support/file_io.h"

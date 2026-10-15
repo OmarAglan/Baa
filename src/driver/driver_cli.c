@@ -195,6 +195,7 @@ bool driver_parse_cli(int argc, char **argv, CompilerConfig *config, DriverParse
     int input_count = 0;
     size_t include_dir_count = 0;
     bool target_info_requested = false;
+    bool sdk_info_requested = false;
     bool completion_data_requested = false;
     bool structure_dump_requested = false;
     bool format_requested = false;
@@ -482,6 +483,17 @@ bool driver_parse_cli(int argc, char **argv, CompilerConfig *config, DriverParse
             else if (strcmp(arg, "--target-info=json") == 0 ||
                      strcmp(arg, "--print-target-info=json") == 0)
                 target_info_requested = true;
+            else if (strcmp(arg, "--sdk-info=json") == 0 ||
+                     strcmp(arg, "--print-sdk-info=json") == 0)
+            {
+                if (argc != 2)
+                {
+                    fprintf(stderr, "Error: %s must be the only argument\n", arg);
+                    parse_release_temp_arrays(inputs, include_dirs);
+                    return false;
+                }
+                sdk_info_requested = true;
+            }
             else if (strncmp(arg, "--target-info=", 14) == 0)
             {
                 fprintf(stderr, "Error: Unsupported target info format '%s' (expected json)\n", arg + 14);
@@ -897,6 +909,7 @@ bool driver_parse_cli(int argc, char **argv, CompilerConfig *config, DriverParse
 
     parse_set_result(out,
                      config,
+                     sdk_info_requested ? DRIVER_CMD_SDK_INFO :
                      format_requested ? DRIVER_CMD_FORMAT :
                      structure_dump_requested ? DRIVER_CMD_STRUCTURE_DUMP :
                      token_dump_requested ? DRIVER_CMD_TOKEN_DUMP :

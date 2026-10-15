@@ -145,6 +145,7 @@ set(SOURCES
     src/driver/driver_format.c
     src/driver/driver_semantic.c
     src/driver/driver_build.c
+    src/driver/driver_sdk.c
 )
 
 # Add resource file for Windows (Icon & Version Info)

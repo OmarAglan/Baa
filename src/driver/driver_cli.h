@@ -23,6 +23,7 @@ typedef enum
     DRIVER_CMD_FORMAT = 7,
     DRIVER_CMD_TOKEN_DUMP = 8,
     DRIVER_CMD_STRUCTURE_DUMP = 9,
+    DRIVER_CMD_SDK_INFO = 10,
 } DriverCommand;
 
 typedef struct

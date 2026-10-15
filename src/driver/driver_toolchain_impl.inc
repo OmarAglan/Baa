@@ -43,7 +43,10 @@
 static char g_gcc_path[BAA_UTF8_PATH_CAP] = "";
 static char g_runtime_library_path[BAA_UTF8_PATH_CAP] = "";
 static char g_install_home[BAA_UTF8_PATH_CAP] = "";
+static char g_executable_dir[BAA_UTF8_PATH_CAP] = "";
 #ifdef _WIN32
+// المسار الحقيقي لـ GCC المرفق، لا الاسم البديل المؤقت الذي يُمرَّر للأداة.
+static char g_gcc_bundled_path[BAA_UTF8_PATH_CAP] = "";
 static bool g_gcc_direct_unicode_paths = false;
 static bool g_gcc_retain_pei386_runtime_relocator = false;
 static bool g_gcc_directory_alias_failed = false;
@@ -105,6 +108,9 @@ static bool install_home_try_dir(const char* directory)
 static void install_home_resolve_from_exe_dir(const char* exe_dir)
 {
     g_install_home[0] = '\0';
+    g_executable_dir[0] = '\0';
+    if (exe_dir && strlen(exe_dir) < sizeof(g_executable_dir))
+        memcpy(g_executable_dir, exe_dir, strlen(exe_dir) + 1u);
     if (!exe_dir || !exe_dir[0] || install_home_try_dir(exe_dir)) return;
 
     char candidate[BAA_UTF8_PATH_CAP];
@@ -864,11 +870,13 @@ void driver_toolchain_resolve_gcc_path(void)
     else
     {
         g_install_home[0] = '\0';
+        g_executable_dir[0] = '\0';
     }
     return;
 #endif
 #ifdef _WIN32
     win_cleanup_gcc_directory_alias();
+    g_gcc_bundled_path[0] = '\0';
     g_gcc_direct_unicode_paths = false;
     g_gcc_retain_pei386_runtime_relocator = false;
     g_gcc_directory_alias_failed = false;
@@ -899,14 +907,16 @@ void driver_toolchain_resolve_gcc_path(void)
         GetFileAttributesW(candidate) != INVALID_FILE_ATTRIBUTES &&
         win_select_gcc_candidate(candidate))
     {
+        (void)win_wide_to_utf8(candidate, g_gcc_bundled_path, sizeof(g_gcc_bundled_path));
         return;
     }
 
-    // المسار 2: <baa_dir>\..\gcc\bin\gcc.exe (هيكل التطوير)
+    // المسار 2: <baa_dir>\..\gcc\bin\gcc.exe (هيكل التطوير وطقم baa-sdk-v1)
     if (path_build_suffix_w(candidate, MAX_PATH, exe_path, BAA_PATH_SUFFIX_GCC_BIN_DEV_W) &&
         GetFileAttributesW(candidate) != INVALID_FILE_ATTRIBUTES &&
         win_select_gcc_candidate(candidate))
     {
+        (void)win_wide_to_utf8(candidate, g_gcc_bundled_path, sizeof(g_gcc_bundled_path));
         return;
     }
 #else
@@ -923,6 +933,31 @@ void driver_toolchain_resolve_gcc_path(void)
     }
 #endif
     // لم يُوجد gcc مضمّن ← سيُستخدم "gcc" من PATH
+}
+
+const char* driver_toolchain_get_executable_dir(void)
+{
+    return g_executable_dir[0] ? g_executable_dir : NULL;
+}
+
+const char* driver_toolchain_get_bundled_linker(void)
+{
+#ifdef _WIN32
+    return g_gcc_bundled_path[0] ? g_gcc_bundled_path : NULL;
+#else
+    return NULL;
+#endif
+}
+
+const char* driver_toolchain_get_bundled_linker_version(void)
+{
+#ifdef _WIN32
+    return g_gcc_bundled_path[0] && g_gcc_manifest_valid && g_gcc_manifest_version[0]
+               ? g_gcc_manifest_version
+               : NULL;
+#else
+    return NULL;
+#endif
 }
 
 const char* driver_toolchain_get_runtime_library(void)

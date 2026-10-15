@@ -262,6 +262,13 @@ static int baa_main(int argc, char **argv)
         return main_cleanup_and_return(&config, &cli, NULL, 0, config.output_file,
                                        output_file_owned, BAA_COMPILER_EXIT_SUCCESS);
     }
+    if (cli.cmd == DRIVER_CMD_SDK_INFO)
+    {
+        bool ok = driver_sdk_info_json_write(stdout);
+        return main_cleanup_and_return(
+            &config, &cli, NULL, 0, config.output_file, output_file_owned,
+            ok ? BAA_COMPILER_EXIT_SUCCESS : BAA_COMPILER_EXIT_INTERNAL_ERROR);
+    }
     if (cli.cmd == DRIVER_CMD_COMPLETION_DATA)
     {
         bool ok = driver_completion_data_json_write(stdout, BAA_VERSION);

@@ -170,6 +170,25 @@ const char *driver_nazm_embedded_revision(void)
 #endif
 }
 
+const char *driver_nazm_embedded_version(void)
+{
+#ifdef BAA_EMBEDDED_NAZM
+    NazmApiInfo info = nazm_api_info();
+    return info.version && info.version[0] ? info.version : NULL;
+#else
+    return NULL;
+#endif
+}
+
+bool driver_nazm_embedded_is_default(void)
+{
+#if defined(BAA_EMBEDDED_NAZM) && defined(BAA_EMBEDDED_NAZM_DEFAULT)
+    return true;
+#else
+    return false;
+#endif
+}
+
 void driver_nazm_print_embedded_version(void)
 {
 #ifdef BAA_EMBEDDED_NAZM

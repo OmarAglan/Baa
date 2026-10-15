@@ -50,6 +50,7 @@ void driver_print_help(void)
     printf("  -funroll-loops  Unroll small constant-count loops (after Out-of-SSA)\n");
     printf("  --target=<t>    Target: x86_64-windows | x86_64-linux\n");
     printf("  --target-info=json  Print stable host/target capabilities as JSON\n");
+    printf("  --sdk-info=json     Print the SDK paths and tools this compiler uses as JSON\n");
     printf("  -fPIC           Emit PIC-friendly code (ELF/Linux)\n");
     printf("  -fPIE           Build as PIE (ELF/Linux; adds -pie at link)\n");
     printf("  -fno-pic        Disable PIC\n");

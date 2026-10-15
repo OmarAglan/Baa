@@ -708,6 +708,16 @@ def _run_target_info_tests(log_dir: Path) -> StepResult:
     )
 
 
+def _run_sdk_tests(log_dir: Path) -> StepResult:
+    return _run_logged(
+        "sdk-tests",
+        [sys.executable, str(TESTS_DIR / "test_sdk.py")],
+        cwd=ROOT,
+        log_dir=log_dir,
+        timeout_s=600.0,
+    )
+
+
 def _run_cli_exit_code_tests(log_dir: Path) -> StepResult:
     return _run_logged(
         "compiler-cli-exit-code-tests",
@@ -1095,6 +1105,11 @@ def main() -> int:
     _print_step(target_info_res)
     all_results.append(target_info_res)
     overall_ok = overall_ok and target_info_res.passed
+
+    sdk_res = _run_sdk_tests(log_dir)
+    _print_step(sdk_res)
+    all_results.append(sdk_res)
+    overall_ok = overall_ok and sdk_res.passed
 
     cli_exit_code_res = _run_cli_exit_code_tests(log_dir)
     _print_step(cli_exit_code_res)

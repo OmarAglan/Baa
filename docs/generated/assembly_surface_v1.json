@@ -1580,7 +1580,7 @@
           "operands": [
             "integer"
           ],
-          "count": 4865,
+          "count": 4881,
           "samples": [
             "examples/file_copy_small.باء:991",
             "examples/file_copy_small.باء:992",
@@ -3730,7 +3730,7 @@
           "operands": [
             "integer"
           ],
-          "count": 4865,
+          "count": 4881,
           "samples": [
             "examples/file_copy_small.باء:1063",
             "examples/file_copy_small.باء:1064",

@@ -46,6 +46,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Fixed
 
+- **`متغير_بيئة` returns UTF-8 on Windows**: it lowered to the CRT `getenv`,
+  which decodes the environment in the ANSI code page, so an Arabic value such
+  as a data directory under an Arabic user name came back as `?`. It now
+  lowers to `baa_getenv_utf8` in `libbaa_runtime.a`, which reads the Unicode
+  environment with `GetEnvironmentVariableW` on Windows and calls `getenv` on
+  POSIX.
 - **`&&` and `||` short-circuit**: both operands were evaluated at every
   optimization level, in conditions and assignments alike, although the
   language reference promises short-circuit evaluation. A guard such as

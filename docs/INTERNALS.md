@@ -1547,7 +1547,8 @@ Currently lowered expressions:
   - `نهاية_معاملات`: clears variadic cursor.
 - Builtin standard-library module calls in `NODE_CALL_EXPR` (`v0.4.2`):
   - Math: `جذر_تربيعي` -> `sqrt`, `أس` -> `pow`, `جيب` -> `sin`, `جيب_تمام` -> `cos`, `ظل` -> `tan`, `مطلق` -> `llabs`, `عشوائي` -> `rand`
-  - System: `متغير_بيئة` -> `getenv` (+ C-string → Baa string conversion), `نفذ_أمر` -> `system`
+  - System: `متغير_بيئة` -> `baa_getenv_utf8` (`GetEnvironmentVariableW` on Windows,
+    `getenv` on POSIX; + C-string → Baa string conversion), `نفذ_أمر` -> `system`
   - Structured process/runtime: `ابدأ_عملية/حالة_عملية/انتظر_عملية/الغ_عملية/كود_خروج_عملية/حرر_عملية`
     lower to `libbaa_runtime.a`, which uses `CreateProcessW` on Windows and `fork` + direct
     `exec` on POSIX. `انشئ_مجلدات/احذف_شجرة/انقل_مسار/استبدل_ملف/اجعل_قابلا_للتنفيذ/تجزئة_ملف_شا٢٥٦` use the same

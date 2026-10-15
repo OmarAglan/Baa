@@ -99,6 +99,12 @@ int baa_abi_rand(void) { return rand(); }
 
 char *baa_abi_getenv(const char *name) BAA_ABI_NAME("متغير_بيئة_سي");
 char *baa_abi_getenv(const char *name) { return getenv(name); }
+const char *baa_abi_getenv_utf8(const char *name)
+    BAA_ABI_NAME("متغير_بيئة_بترميز_موحد");
+const char *baa_abi_getenv_utf8(const char *name)
+{
+    return baa_getenv_utf8(name);
+}
 int baa_abi_system(const char *command) BAA_ABI_NAME("نفذ_نظام_سي");
 int baa_abi_system(const char *command) { return system(command); }
 int64_t baa_abi_time(int64_t *destination) BAA_ABI_NAME("وقت_حالي_سي");

@@ -42,6 +42,7 @@ static const NazmArabicAbiSymbol k_nazm_arabic_abi_symbols[] = {
     {"time", "وقت_حالي_سي"},
     {"ctime", "وقت_كنص_سي"},
     {"baa_fopen_utf8", "افتح_ملف_بترميز_موحد"},
+    {"baa_getenv_utf8", "متغير_بيئة_بترميز_موحد"},
     {"fclose", "اغلق_ملف_سي"},
     {"fgetc", "اقرأ_محرف_ملف_سي"},
     {"fputc", "اكتب_محرف_ملف_سي"},

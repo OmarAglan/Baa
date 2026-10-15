@@ -258,6 +258,51 @@ FILE* baa_fopen_utf8(const char* path, const char* mode)
 #endif
 }
 
+const char* baa_getenv_utf8(const char* name)
+{
+    if (!name) return NULL;
+
+#ifdef _WIN32
+    static char* last_value = NULL;
+    wchar_t* name_w = file_io_utf8_to_wide(name);
+    if (!name_w) return NULL;
+
+    DWORD capacity = 256u;
+    wchar_t* value_w = NULL;
+    for (;;)
+    {
+        wchar_t* grown = (wchar_t*)realloc(value_w, capacity * sizeof(wchar_t));
+        if (!grown)
+        {
+            free(value_w);
+            free(name_w);
+            return NULL;
+        }
+        value_w = grown;
+        SetLastError(ERROR_SUCCESS);
+        DWORD length = GetEnvironmentVariableW(name_w, value_w, capacity);
+        if (length == 0u && GetLastError() == ERROR_ENVVAR_NOT_FOUND)
+        {
+            free(value_w);
+            free(name_w);
+            return NULL;
+        }
+        if (length < capacity) break;
+        capacity = length;
+    }
+    free(name_w);
+
+    char* value = file_io_wide_to_utf8(value_w);
+    free(value_w);
+    if (!value) return NULL;
+    free(last_value);
+    last_value = value;
+    return last_value;
+#else
+    return getenv(name);
+#endif
+}
+
 int baa_mkdir_utf8(const char* path)
 {
     if (!path) return -1;

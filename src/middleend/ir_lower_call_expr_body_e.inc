@@ -57,9 +57,9 @@
             ir_builder_set_insert_point(ctx->builder, callb);
             ir_lower_set_loc(ctx->builder, expr);
             IRValue* args[1] = { key_i8 };
-            int r = ir_builder_emit_call(ctx->builder, "getenv", i8_ptr_t, args, 1);
+            int r = ir_builder_emit_call(ctx->builder, "baa_getenv_utf8", i8_ptr_t, args, 1);
             if (r < 0) {
-                ir_lower_report_error(ctx, expr, "فشل خفض نداء getenv.");
+                ir_lower_report_error(ctx, expr, "فشل خفض نداء baa_getenv_utf8.");
                 ir_builder_emit_store(ctx->builder, ir_value_const_int(0, i8_ptr_t), out_ptr);
             } else {
                 ir_builder_emit_store(ctx->builder, ir_value_reg(r, i8_ptr_t), out_ptr);

@@ -29,6 +29,14 @@ int baa_mkdir_utf8(const char* path);
  */
 char* baa_fullpath_utf8(const char* path);
 
+/**
+ * @brief قراءة متغير بيئة باسم وقيمة UTF-8.
+ *
+ * على Windows تقرأ القيمة من كتلة البيئة الموحدة لا من صفحة ANSI، فلا تتلف
+ * المسارات العربية. النتيجة صالحة حتى النداء التالي ولا يحررها المستدعي.
+ */
+const char* baa_getenv_utf8(const char* name);
+
 #ifdef _WIN32
 /**
  * @brief تحويل مسار UTF-8 إلى مسار Windows مطلق ببادئة المسارات الطويلة.

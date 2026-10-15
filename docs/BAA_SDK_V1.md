@@ -78,9 +78,13 @@ UTF-8 JSON in the canonical form described below:
 ```
 
 - `files` lists every file in the SDK except `BAA-SDK.json` itself, sorted by
-  the UTF-8 bytes of `path`. Paths are relative, use `/`, are at most 240
-  UTF-8 bytes, never contain `.` or `..` segments, and never contain `"`, `\`
-  or control characters, so they are written without escapes.
+  the UTF-8 bytes of `path`. Paths are relative, use `/`, and are at most 240
+  UTF-8 bytes. So that they are written without escapes and extract on both
+  Windows and Linux, a path never contains control characters or any of
+  `" \ : < > | ? *`; no segment is empty, `.` or `..`, or ends in `.` or a
+  space; no segment is a Windows device name (`CON`, `PRN`, `AUX`, `NUL`,
+  `COM1`–`COM9`, `LPT1`–`LPT9`, in any case, alone or before a `.`); and no
+  path is `BAA-SDK.json` or `.تكوين-طقم-v1` (Takween's install receipt).
 - **Canonical form.** The file is the indented JSON shown above, except that
   each `files` entry is on one line of its own, exactly
   `    {"path": "…", "size": N, "sha256": "<64 lowercase hex>", "executable": true|false}`
@@ -109,10 +113,10 @@ Limits: at most 8192 files, 256 MiB per file and 1 GiB in total.
 The archive is reproducible: packaging the same inputs twice gives the same
 bytes.
 
-- POSIX ustar, entries sorted by the UTF-8 bytes of their path, all under the
-  single top-level directory `baa-sdk-<version>-<host>/`;
+- POSIX ustar, all under the single top-level directory
+  `baa-sdk-<version>-<host>/`;
 - `BAA-SDK.json` is the first entry, so an installer knows the inventory
-  before it writes any other file;
+  before it writes any other file; the files follow in inventory order;
 - regular files only: no directory, link or device entries;
 - mtime 0, uid and gid 0, empty user and group names, mode `0755` for
   executable files and `0644` for the others;

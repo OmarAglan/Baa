@@ -38,6 +38,13 @@ MAX_FILES = 8192
 MAX_FILE_BYTES = 256 * 1024 * 1024
 MAX_TOTAL_BYTES = 1024 * 1024 * 1024
 MAX_PATH_BYTES = 240
+# The metadata and Takween's install receipt; no SDK file may take these names.
+RESERVED_NAMES = (METADATA, ".تكوين-طقم-v1")
+WINDOWS_DEVICE_NAMES = frozenset(
+    ["CON", "PRN", "AUX", "NUL"]
+    + [f"COM{n}" for n in range(1, 10)]
+    + [f"LPT{n}" for n in range(1, 10)]
+)
 
 
 def fail(message: str) -> None:
@@ -109,11 +116,19 @@ def sha256_file(path: Path) -> str:
 
 
 def check_sdk_path(relative: str) -> None:
-    # BAA-SDK.json writes paths without escapes, so characters that need one are refused.
-    if any(ch in '"\\' or ord(ch) < 0x20 or ord(ch) == 0x7F for ch in relative):
-        fail(f"SDK paths may not contain quotes, backslashes or control characters: {relative!r}")
+    # BAA-SDK.json writes paths without escapes, and every SDK must extract on
+    # both Windows and Linux, so the path rules are the intersection of the two.
+    if any(ch in '"\\:<>|?*' or ord(ch) < 0x20 or ord(ch) == 0x7F for ch in relative):
+        fail(f"SDK paths may not contain control characters or any of \"\\:<>|?*: {relative!r}")
     if len(relative.encode("utf-8")) > MAX_PATH_BYTES:
         fail(f"SDK path longer than {MAX_PATH_BYTES} bytes: {relative}")
+    if relative in RESERVED_NAMES:
+        fail(f"SDK path is reserved for the SDK metadata or an installer: {relative}")
+    for segment in relative.split("/"):
+        if not segment or segment.endswith((".", " ")):
+            fail(f"SDK path has an empty segment or one ending in '.' or space: {relative}")
+        if segment.split(".")[0].upper() in WINDOWS_DEVICE_NAMES:
+            fail(f"SDK path uses a Windows device name: {relative}")
 
 
 def inventory(stage: Path) -> list[dict]:
@@ -171,8 +186,9 @@ def write_archive(stage: Path, top: str, archive: Path, files: list[dict]) -> No
     ) as gz, tarfile.open(
         fileobj=gz, mode="w", format=tarfile.USTAR_FORMAT, encoding="utf-8"
     ) as tar:
+        # The metadata leads so an installer reads the inventory first; the
+        # files follow in inventory order.
         entries = [{"path": METADATA, "executable": False}] + files
-        entries.sort(key=lambda entry: entry["path"].encode("utf-8"))
         for entry in entries:
             source = stage / entry["path"]
             info = tarfile.TarInfo(f"{top}/{entry['path']}")

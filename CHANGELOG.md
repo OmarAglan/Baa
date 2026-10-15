@@ -17,7 +17,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
   version, host, compiler, assembler and linker, and the size and SHA-256 of
   every file. The `.tar.gz` is reproducible byte for byte, and an extracted SDK
   works from any directory with nothing on `PATH`. The linker is recorded as a
-  replaceable component (`kind`), ready for Baa's own linker. See
+  replaceable component (`kind`), ready for Baa's own linker. Inventory paths
+  follow rules that hold on both Windows and Linux (no reserved characters,
+  device names, or segments ending in `.` or a space), and `BAA-SDK.json` is
+  always the first archive entry. See
   `docs/BAA_SDK_V1.md`.
 - **`baa --sdk-info=json` (`baa-sdk-info-v1`)**: prints the SDK root,
   standard library, targets, runtime, assembler and linker this compiler

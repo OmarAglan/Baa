@@ -264,5 +264,30 @@ class SdkPackageTests(unittest.TestCase):
         self.assertIn("مرحبا من الطقم", run.stdout.decode("utf-8"))
 
 
+class SdkPathRuleTests(unittest.TestCase):
+    """Every inventory path must be writable unescaped and extract on Windows and Linux."""
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        import importlib.util
+
+        spec = importlib.util.spec_from_file_location("package_sdk", PACKAGER)
+        cls.packager = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(cls.packager)
+
+    def test_accepts_portable_paths(self) -> None:
+        for path in ("bin/baa.exe", "share/baa/stdlib/نص.baa", "share/baa/a b/c.d",
+                     "share/console.txt", "share/COM10", "share/nul2.txt"):
+            self.packager.check_sdk_path(path)
+
+    def test_rejects_unportable_paths(self) -> None:
+        for path in ('a"b', "a\\b", "a:b", "a<b", "a>b", "a|b", "a?b", "a*b", "a\tb",
+                     "a//b", "a/", "/a", "a/.", "a/../b", "a/b.", "a/b ", "CON",
+                     "share/aux.txt", "share/Com1", "lpt9.log", "BAA-SDK.json",
+                     ".تكوين-طقم-v1", "x" * 241):
+            with self.subTest(path=path), self.assertRaises(SystemExit):
+                self.packager.check_sdk_path(path)
+
+
 if __name__ == "__main__":
     unittest.main()

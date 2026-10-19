@@ -78,6 +78,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Changed
 
+- **A build tree mirrors the installed layout**: the build copies `stdlib/`
+  and `targets/` beside `baa`, so a compiler run from its build directory finds
+  `baalib.baahd` and its target files without `BAA_HOME` or `BAA_STDLIB`, and
+  `--sdk-info=json` reports them. An explicitly set `BAA_HOME` still wins.
 - **Builds against Nazm `1.0.0`** (`f58faf0`), the first stable release. It
   differs from `0.5.0` only in the version, the capability digest and the
   fingerprint, so the generated coverage records carry the new digest and

@@ -95,13 +95,11 @@ class SdkInfoTests(unittest.TestCase):
         self.assertEqual(
             Path(data["executable_dir"]).resolve(), self.baa.resolve().parent
         )
-        # شجرة البناء ليس فيها مكتبة قياسية بجوار المصرّف، فيكون المسار null.
-        if data["install_home"] is None:
-            self.assertIsNone(data["stdlib_dir"])
-            self.assertIsNone(data["targets_dir"])
-        else:
-            self.assertTrue((Path(data["stdlib_dir"]) / "baalib.baahd").is_file())
-            self.assertTrue((Path(data["targets_dir"]) / "x86_64-windows.json").is_file())
+        # شجرة البناء تنسخ stdlib/ و targets/ بجوار المصرّف كتخطيط التثبيت،
+        # فلكل مصرّف مبني أو مثبت جذر تثبيت.
+        self.assertIsNotNone(data["install_home"])
+        self.assertTrue((Path(data["stdlib_dir"]) / "baalib.baahd").is_file())
+        self.assertTrue((Path(data["targets_dir"]) / "x86_64-windows.json").is_file())
         self.assertTrue(Path(data["runtime_library"]).is_file())
         for key in ("executable_dir", "install_home", "stdlib_dir", "targets_dir",
                     "runtime_library"):

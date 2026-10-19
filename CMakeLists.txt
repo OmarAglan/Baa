@@ -182,6 +182,27 @@ set_target_properties(baa_runtime PROPERTIES
     ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}"
 )
 
+# شجرة البناء تحاكي تخطيط التثبيت بجوار المصرّف: stdlib/ و targets/ بجانب baa،
+# فيجد المصرّف المبني مكتبته القياسية دون BAA_HOME أو BAA_STDLIB.
+file(GLOB baa_layout_files CONFIGURE_DEPENDS
+    "${CMAKE_CURRENT_SOURCE_DIR}/stdlib/*"
+    "${CMAKE_CURRENT_SOURCE_DIR}/targets/*")
+set(baa_layout_stamp "${CMAKE_BINARY_DIR}/CMakeFiles/baa_build_tree_layout.stamp")
+add_custom_command(
+    OUTPUT "${baa_layout_stamp}"
+    COMMAND "${CMAKE_COMMAND}" -E remove_directory "${CMAKE_BINARY_DIR}/stdlib"
+    COMMAND "${CMAKE_COMMAND}" -E remove_directory "${CMAKE_BINARY_DIR}/targets"
+    COMMAND "${CMAKE_COMMAND}" -E copy_directory
+            "${CMAKE_CURRENT_SOURCE_DIR}/stdlib" "${CMAKE_BINARY_DIR}/stdlib"
+    COMMAND "${CMAKE_COMMAND}" -E copy_directory
+            "${CMAKE_CURRENT_SOURCE_DIR}/targets" "${CMAKE_BINARY_DIR}/targets"
+    COMMAND "${CMAKE_COMMAND}" -E touch "${baa_layout_stamp}"
+    DEPENDS ${baa_layout_files}
+    COMMENT "Mirroring stdlib/ and targets/ beside baa"
+    VERBATIM)
+add_custom_target(baa_build_tree_layout ALL DEPENDS "${baa_layout_stamp}")
+add_dependencies(baa baa_build_tree_layout)
+
 # ============================================================================
 # baa-frontend-api-v1: أوضاع الفحص والأدوات داخل عملية المستدعي
 # ============================================================================
